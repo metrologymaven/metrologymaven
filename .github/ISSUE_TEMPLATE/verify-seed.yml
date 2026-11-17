@@ -1,0 +1,18 @@
+name: Verify or fix a competitor feature row
+description: Confirm, correct or add rows in seeds/
+title: "seeds: <PREFIX.AREA.NN>"
+labels: [seeds, good first issue]
+body:
+  - type: input
+    id: rows
+    attributes:
+      label: Seed row IDs
+      placeholder: GOM.ALN.04, GOM.ALN.05
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What you know (in your own words; don't paste vendor docs)
+    validations:
+      required: true

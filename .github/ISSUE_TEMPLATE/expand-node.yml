@@ -1,0 +1,26 @@
+name: Expand node
+description: Claim an open spec node to split it or finish it as a leaf
+title: "expand: <NODE.ID>"
+labels: [expand]
+body:
+  - type: input
+    id: node
+    attributes:
+      label: Node path
+      placeholder: spec/aln/NODE.md
+    validations:
+      required: true
+  - type: dropdown
+    id: plan
+    attributes:
+      label: Intended outcome
+      options: [split, leaf, decision, not sure yet]
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before starting
+      options:
+        - label: I searched open PRs and issues for this node (check, then claim)
+          required: true
+        - label: I will set claimed_by in the node and release the claim if I stop
+          required: true
