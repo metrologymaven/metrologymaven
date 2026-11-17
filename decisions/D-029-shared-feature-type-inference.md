@@ -1,11 +1,11 @@
 ---
 id: D-029
 title: Where feature-type inference from points lives
-status: open
+status: accepted
 raised_by: IND.PORT split
 blocks: [IND.PORT.RECOG]
 decide_by: before IND.PORT.RECOG or CMM.STRAT.LEARN is finished as a leaf
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-029: Where feature-type inference from points lives
@@ -36,4 +36,6 @@ A. The inference is a pure computation over fits that KRN already owns, it belon
 
 ## Decision
 
-_Open._ When decided: update `IND.PORT.RECOG` (status open, depends on the owner) and `CMM.STRAT.LEARN`, and add the owning node if option A.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A. The inference is a pure computation over fits that KRN already owns, it belongs below every app, and the kernel's determinism rules then apply automatically.

@@ -1,11 +1,11 @@
 ---
 id: D-034
 title: Architecture layers and artifact (non-code) dependencies
-status: proposed
+status: accepted
 raised_by: level-3 review
 blocks: []
 decide_by: before level-3 expansion
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-034: Architecture layers and artifact dependencies
@@ -59,4 +59,6 @@ A + B. In the next expansion, every agent converts its "interface note instead o
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A + B. In the next expansion, every agent converts its "interface note instead of dependency" text into `uses_artifacts:` or a layer-legal `depends_on:`.

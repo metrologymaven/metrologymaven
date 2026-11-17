@@ -4,8 +4,7 @@ title: Controlled, watertight tessellation of CAD bodies
 level: 3
 parent: GEO.CAD
 kind: module
-status: decision
-decision: D-024
+status: open
 phase: P1b
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [GEO.CAD.TOPO, GEO.NURBS.EVAL, GEO.TYPES.MESH]
 cli: [fid geo tessellate-body, fid geo set-tessellation-tolerance]
 mcp: [geo_tessellate_body, geo_set_tessellation_tolerance]
 journal: [geo.tessellate_body@1, geo.set_tessellation_tolerance@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.CAD.TESS: Controlled, watertight tessellation of CAD bodies
@@ -60,6 +59,7 @@ EDGE (shared edge discretisation), FACE (parameter-space meshing inside loops), 
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-024 (B-rep kernel - own Rust crate or OCCT out of process) is accepted. Apply its Decision section (`decisions/D-024-*.md`) when this node is expanded.
 - **Blocked on D-024** (B-rep kernel: own Rust crate or OCCT out of process). Under options A, C and D the tessellator is Rust code in `fid-geo-cad` and can reach D1 or D0; under option B it is the OCCT mesher in a worker process, which changes the determinism class (likely D1 per pinned build or N), rules out a WASM tessellator and moves the leaf's crate boundary. Splitting before the decision would be guessing.
 - REQ-GEO.CAD-006 calls the tolerance change W2; whether per-view display tolerances (not stored in the document) also need a command is a VIZ question.
 

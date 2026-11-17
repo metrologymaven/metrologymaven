@@ -45,6 +45,8 @@ When torn between A and B, choose B. When torn between B and C, choose C only if
 5. Each child gets refined requirements: more specific than the parent, testable, one `shall` each, IDs `REQ-<child id>-NNN`.
 6. Fill in each child's Scope: In and Out. Out names the sibling that owns each excluded item.
 7. Fill in each child's Interfaces. Children inherit the target's CLI/MCP/journal patterns and narrow them.
+   - Dependencies follow CONSTITUTION §2.1. Use `depends_on:` for code dependencies on specific nodes in the same or lower layers. Use `uses_artifacts:` when a node only reads a file or format another node publishes.
+   - If the target's Open questions contain "interface note instead of dependency" text, convert it into one of those two fields.
 8. Update the **target only**:
    - set `status: split`;
    - replace `## Children` with a table: `| ID | Title | Satisfies | Covers |`;

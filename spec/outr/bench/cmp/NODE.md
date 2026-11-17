@@ -4,8 +4,7 @@ title: Comparisons with incumbent products
 level: 3
 parent: OUTR.BENCH
 kind: module
-status: decision
-decision: D-021
+status: open
 phase: P1a
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [OUTR.BENCH.RUN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BENCH.CMP: Comparisons with incumbent products
@@ -53,6 +52,7 @@ After D-021: SOURCE (how incumbent results are obtained), RECIPE (shared-dataset
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-021 (Publishing benchmark comparisons with incumbent products) is accepted. Apply its Decision section (`decisions/D-021-*.md`) when this node is expanded.
 - Blocked on D-021. Incumbent licence terms may forbid publishing benchmark comparisons [unverified] (carried from OUTR.BENCH).
 
 ## Children

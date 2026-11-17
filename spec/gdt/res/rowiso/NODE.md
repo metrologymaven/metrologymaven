@@ -4,8 +4,7 @@ title: ISO GPS DMT row set
 level: 3
 parent: GDT.RES
 kind: module
-status: decision
-decision: D-016
+status: open
 phase: P1a
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [GDT.RES.SCHEMA, GDT.RES.ROWFLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.RES.ROWISO: ISO GPS DMT row set
@@ -54,6 +53,7 @@ STUBS (P1a placeholder generator; a leaf once D-016 settles whether placeholders
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-016 (Acquiring and sharing standards texts for DMT authoring and review) is accepted. Apply its Decision section (`decisions/D-016-*.md`) when this node is expanded.
 - **Blocked on D-016** for the P1b rows. The P1a placeholder rows need no standards text and could be split out as a leaf once the decision is taken.
 
 ## Children

@@ -1,11 +1,11 @@
 ---
 id: D-028
 title: Definition of the actual edge for trim-line deviation
-status: open
+status: accepted
 raised_by: SCAN.EDGE split
 blocks: [SCAN.EDGE.EST]
 decide_by: before SCAN.EDGE.EST is expanded
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-028: Definition of the actual edge for trim-line deviation
@@ -35,4 +35,6 @@ D, with C as default for free edges of meshes and A for one-sided sheet scans [u
 
 ## Decision
 
-_Open._ When decided: the option, who decided, the date, and any follow-up nodes to update (SCAN.EDGE.EST, possibly IND.SHEET).
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+D, with C as default for free edges of meshes and A for one-sided sheet scans [unverified]; confirm with at least two sheet-metal users before the leaf is written.

@@ -5,7 +5,7 @@ level: 2
 parent: TRUST
 kind: subsystem
 status: split
-phase: P1a
+phase: P0
 size: L
 owners: []
 claimed_by:
@@ -15,7 +15,7 @@ depends_on: [CORE, TRUST.PKG, TRUST.SIGN]
 cli: [fid verify check-chain]
 mcp: [verify_check_chain]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.CHAIN: Journal chain and checkpoint verification

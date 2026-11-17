@@ -8,7 +8,7 @@ Sources: condensed from Design Baseline v3.1 (`../docs/concept/00-design-baselin
 
 | # | Principle |
 |---|---|
-| C1 | **Deterministic kernel.** Every value of record (fits, evaluations, uncertainties, decisions) is computed by a pure-Rust, f64, CPU kernel with no I/O. The command bus is its only caller. LLMs never compute, edit or override a value of record. |
+| C1 | **Deterministic kernel.** Every value of record (fits, evaluations, uncertainties, decisions) is computed by a pure-Rust, f64, CPU kernel with no I/O. The command bus is its only caller. LLMs never compute, edit or override a value of record. User arithmetic becomes a value of record only through the kernel command `expr.evaluate_formula@1` (D-027). AUTO owns the expression syntax and typing; KRN owns evaluation. |
 | C2 | **The GPU is for display only.** No value of record comes from the GPU. Picks and lassos are resolved on the CPU into index sets or semantic queries before they are journaled. GPU output is tested against a CPU reference. |
 | C3 | **One command registry, no side doors.** Every change to document, record or configuration state is a registry command. GUI menus, CLI, MCP tools, Python bindings, the control channel and documentation are **generated** from the registry manifest. |
 | C4 | **Record everything.** Every command is written to a semantic journal that can be replayed, diffed and turned into a program. Screenshots and video capture are commands too. |
@@ -24,8 +24,26 @@ Sources: condensed from Design Baseline v3.1 (`../docs/concept/00-design-baselin
 - **Engine first, thin UI.** Pure-data document model + command engine + UI. Crate layering is enforced at build time: the kernel depends on nothing above it.
 - **Languages:** Rust for the engine, kernel, apps and CLI. **wgpu** for rendering. Native GUI with no webview, plus a WASM build of the viewer and apps for the web. Python for user scripting (an out-of-process host). TypeScript only for an MCP App host shim if one is needed.
 - **UI toolkit** (D-005, provisional): egui + winit + wgpu. It is confirmed only after prototype spikes on the element tree (10k items), the characteristic table and the report designer.
-- **Binaries:** `fid` (CLI, including `fid mcp`), one desktop app per focused app, and `fid-verify` (verifier, never licence-checked).
+- **Binaries:**
+  - `fid`: the CLI, including `fid mcp` and the optional self-hosted server, `fid server` (ENT);
+  - one desktop app per focused app;
+  - `fid-verify`: the verifier, never licence-checked;
+  - `fid-eval`: the agent evaluation harness (D-032). It sits outside the registry, so it is never on MCP, and its oracles never appear in the manifest.
 - **Crates** use the `fid-` prefix. Dependencies of the kernel graph are on an allowlist.
+
+### 2.1 Layers (D-034)
+
+Each crate belongs to one layer and may depend only on its own layer or lower ones.
+
+| Layer | Contents | May not depend on |
+|---|---|---|
+| L0 Foundation | Pure libraries: KRN.*, GEO geometry libraries (everything except `*.CMD` and storage), UNC math (MODEL, PROP, XFM), the unit catalogue (GEO.FRAME.UNITS), canonical JSON (CORE.JRN.CANON), HAL.IDL types | CORE or anything above |
+| L1 Core | CORE.* | L2, L3 |
+| L2 Domain services | Command crates, in this order: IO < ALN < GDT < UNC commands < SCAN < RPT < TRUST < HAL < CMM < LVM < IND < MIG < ENT | A later L2 domain, or L3 |
+| L3 Surfaces and apps | AUTO, VIZ, ECO.APPS, FLOW runners, AGENT, I18N runtime, UX token consumers | — |
+| Tooling | ECO CI/REL/RULES/PARITY, OUTR, PLAT checks, QUAL evidence, UNC.RDL/ORS suites, test harnesses | Product crates: tooling reads **artifacts** only |
+
+**Artifact dependencies.** A node that reads a file or format another node publishes declares `uses_artifacts: [NODE.ID]`, not `depends_on`. The publisher's Interfaces section names the file and its schema version. Artifact dependencies are validated but are not code edges, and they are excluded from cycle checks.
 
 ## 3. Commands, CLI, MCP and journal names
 
@@ -33,6 +51,7 @@ Sources: condensed from Design Baseline v3.1 (`../docs/concept/00-design-baselin
 - **MCP tool name:** drop `@major` and replace dots with underscores (`align_run_bestfit`). Pattern `[a-z0-9_]`, at most 64 characters. A breaking change adds `_vN`. No hand-written aliases.
 - **CLI:** `fid <domain> <verb-object> [args]`, e.g. `fid align run-bestfit`. Every command supports `--json` output and dry-run where meaningful.
 - **Journal event:** the command ID plus a result digest. One event per committed command.
+- **Reads (D-031):** R0 and R1 commands are not written to the Record Journal. They go to the unchained Activity Log, and only while a recording session is active or when the command is a step of a Command Program. A W-class command that consumes an R1 result journals that result's digest.
 - In node frontmatter, `cli:`, `mcp:` and `journal:` hold these names, or patterns with `*` above leaf level.
 
 ### Side-effect classes
@@ -55,6 +74,14 @@ Every command declares one class. The class decides how it is projected to MCP.
 
 Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agents never pass raw file paths; they get handles to approved import and export roots and cannot widen those roots.
 
+**Human-only commands (D-031).** A registry command may declare `human_only: true`. The bus then refuses agent and script principals whatever the command's class, and MCP projects it as request-only. All adoption commands (`*.adopt_*`) and manual readings use it. Such a command stays W2 unless it releases a controlled record (W3).
+
+**Principals (D-012, D-030).**
+- CLI and Python callers are `script` by default.
+- A person can upgrade a CLI session or script run to `human` for its lifetime by confirming in the running app, or with an OS user-presence check when headless. The session records the human as the principal from then on.
+- Raw file paths stay refused for `script`.
+- On the self-hosted server, every caller except a service credential is `script`, with the user recorded as `on_behalf_of`. Releases and signatures on server-held records are made in a desktop app and pushed.
+
 **Motion (D-008):**
 - Agents may not file run requests over MCP. Their only motion-related tools are `run:hold` and read-only status.
 - A program that an agent authored, in whole or in part, needs release by a human other than the requester. The Regulated profile requires this for every program.
@@ -70,6 +97,13 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agen
 | Live alarm sound or visual | Not a command (UI effect). Acknowledging an alarm is W2. |
 | MCP "describe, then invoke by command ID" dispatcher | Allowed for R0/R1 only. It is generated, so it is not an alias. |
 | Single-verb CLI command where the domain is the verb (e.g. `fid doctor`) | Allowed when generated from the registry |
+| Motion hold request (D-031) | W1: rate-limited, journaled, advisory. It is the only MCP-originated motion effect. |
+| Launching another app (D-031) | Not a command (UI or OS action). Passing a project to another app means opening it. |
+| Site-wide update-check or telemetry policy (D-031) | A0 |
+| A user's own update-check or telemetry consent (D-031) | W2, journaled. It never defaults to on. |
+| Data leaving the machine (D-031) | Only through the CORE.BUS primitive `egress.send@1` (X1, request-only for agents), which takes a staged artifact and a declared destination. Other domains stage artifacts and call it. |
+| Connecting to a driver host on another machine (D-023) | As decided in D-023 |
+| A leaf with several commands | `side_effect:` may be a list, one class per command in cli/mcp order |
 
 ## 4. Numerics, determinism and replay
 
@@ -117,6 +151,10 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agen
 Every node carries a `phase:` tag, which the steering group may change only through a decision.
 
 A phase means **when work starts** (D-006). A parent's phase is the earliest phase of any of its children, and `scope.py` warns when a child would start before its parent.
+
+**App milestones (D-017).** An app reaches 1.0 only when every phase that holds its core workflow is finished: Report and Inspect after P1b, Probe after P2, Network after P3. Earlier releases are alpha or beta and are labelled by the scope they cover.
+
+**Verifier in P0 (D-025).** The chain-only verifier path is P0: TRUST.CHAIN, TRUST.PKG.MANIFEST/READER and TRUST.VERIFY.CLI. In P0 it reports the signature and replay sections as `not_available`.
 
 | Phase | Theme |
 |---|---|

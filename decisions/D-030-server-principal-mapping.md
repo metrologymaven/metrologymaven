@@ -1,11 +1,11 @@
 ---
 id: D-030
 title: Principal kinds for callers authenticated by the self-hosted server
-status: open
+status: accepted
 raised_by: ENT split
 blocks: [ENT.IAM]
 decide_by: before ENT.IAM is split into modules
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-030: Principal kinds for callers authenticated by the self-hosted server
@@ -42,4 +42,6 @@ B for the first server release, because it keeps release and signing (S1) on the
 
 ## Decision
 
-_Open._ When decided: amend `CORE.BUS.PRIN` (channel kinds) if A or C is chosen, then split `ENT.IAM` and update the W3 requirements in `ENT.SRV`.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+B for the first server release, because it keeps release and signing (S1) on the desktop where `TRUST.ESIG` and the OS keystore already live, and needs no change to `CORE.BUS.PRIN`. Revisit A once D-012 is decided, since both questions are about proving human presence outside the desktop GUI.

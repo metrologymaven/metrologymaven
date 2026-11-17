@@ -1,11 +1,11 @@
 ---
 id: D-010
 title: Tier 1 OS version window and ARM64 tiers
-status: open
+status: accepted
 raised_by: PLAT.MATRIX split
 blocks: [PLAT.MATRIX.POLICY]
 decide_by: before the P1a support matrix is published
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-010: Tier 1 OS version window and ARM64 tiers
@@ -33,4 +33,6 @@ B. Keep Windows 10 Tier 1 while Microsoft's extended security updates are availa
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+B. Keep Windows 10 Tier 1 while Microsoft's extended security updates are available to enterprises [unverified], then demote per REQ-PLAT.MATRIX-006.

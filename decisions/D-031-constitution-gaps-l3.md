@@ -1,11 +1,11 @@
 ---
 id: D-031
 title: Constitution gaps found at level 3 (journaling of reads, human-only commands, missing classes)
-status: proposed
+status: accepted
 raised_by: level-3 review
 blocks: []
 decide_by: before level-3 expansion
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-031: Constitution gaps found at level 3
@@ -32,4 +32,6 @@ Accept all seven and amend CONSTITUTION §3 and §6.
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+Accept all seven and amend CONSTITUTION §3 and §6.

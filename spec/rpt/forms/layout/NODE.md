@@ -4,8 +4,7 @@ title: Fixed form templates for FAI and PPAP
 level: 3
 parent: RPT.FORMS
 kind: module
-status: decision
-decision: D-015
+status: open
 phase: P1a
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [RPT.MODEL.TMPL, RPT.FORMS.HDR, RPT.FORMS.ROWS, RPT.FORMS.PPAP]
 cli: [fid report show-layout-fai, fid report show-layout-ppap]
 mcp: [report_show_layout_fai, report_show_layout_ppap]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.FORMS.LAYOUT: Fixed form templates for FAI and PPAP
@@ -57,6 +56,7 @@ FAI (form 1–3 templates), PPAP (dimensional template), MAP (field maps), PAGE 
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-015 (How closely AS9102 and PPAP form layouts may follow the published forms) is accepted. Apply its Decision section (`decisions/D-015-*.md`) when this node is expanded.
 - **Blocked on D-015:** may the layout follow the published forms' field order and grid, or must it be an original arrangement? Choosing either now would be guessing on a legal question, so this node stays in `decision` until D-015 is decided.
 
 ## Children

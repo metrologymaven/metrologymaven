@@ -1,11 +1,11 @@
 ---
 id: D-027
 title: Derived values of record from user arithmetic
-status: open
+status: accepted
 raised_by: AUTO.PROG and AUTO.SCRIPTED level-3 expansion
 blocks: []
 decide_by: before AUTO.SCRIPTED.RESULT is split
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-027: Derived values of record from user arithmetic
@@ -36,4 +36,6 @@ A. The expression language and its checker can be shared with `AUTO.PROG.EXPR` (
 
 ## Decision
 
-_Open._ When decided: add the command to a KRN node, update `AUTO.PROG.EXPR` and `AUTO.SCRIPTED.RESULT`.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A. The expression language and its checker can be shared with `AUTO.PROG.EXPR` (AUTO owns syntax and typing, KRN owns evaluation for values of record). UNC decides whether formula results start at UEC-0.

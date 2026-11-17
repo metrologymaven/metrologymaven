@@ -1,11 +1,11 @@
 ---
 id: D-020
 title: How the offline verifier obtains historical kernel artifacts
-status: open
+status: accepted
 raised_by: TRUST.REPLAY split
 blocks: [TRUST.REPLAY.KART]
 decide_by: before the first kernel release after 1.0
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-020: How the offline verifier obtains historical kernel artifacts
@@ -32,4 +32,6 @@ C: bundle the current major's artifacts, accept an in-package artifact when pres
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+C: bundle the current major's artifacts, accept an in-package artifact when present (hash-checked like any other), allow an explicit opt-in fetch from the project's release archive, and document the reproducible rebuild path. Report the artifact's source in the replay report.

@@ -5,7 +5,7 @@ level: 3
 parent: TRUST.CHAIN
 kind: feature
 status: leaf
-phase: P1a
+phase: P0
 size: M
 owners: []
 claimed_by:
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid verify check-chain]
 mcp: [verify_check_chain]
 journal: [verify.check_chain@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.CHAIN.LINKS: Chain walk, findings and check-chain command

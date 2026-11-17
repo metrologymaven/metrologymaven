@@ -57,6 +57,7 @@ SECT (sections), EDGE (edges and trims), SPT (surface points), SYS (system plane
 
 ## Open questions
 
+- **Owner assigned (D-027, accepted 2026-11-17):** the kernel command `expr.evaluate_formula@1` (typed, unit-checked expressions evaluated under KNP-1, D0) lives here or in a new KRN.CONS child. AUTO.PROG.EXPR owns syntax and typing; UNC decides the starting uncertainty class.
 - Layering conflict: `GEO.DIST` and `GEO.NURBS` sit above the kernel (they depend on `GEO.TYPES`, which depends on `CORE`), yet a construction must be a kernel function. Either the deterministic evaluators move into the kernel graph (the concept doc puts nominal geometry in `kgeom`, inside the kernel) or DERIV runs outside the kernel. Raise with GEO before this node is expanded.
 - Overlap with `SCAN` on section and edge curves: this node constructs the curve; `SCAN` compares against it.
 

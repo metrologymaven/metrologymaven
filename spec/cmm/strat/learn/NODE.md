@@ -57,6 +57,7 @@ INFER (type inference and ranking), EXTRACT (strategy extraction), DRAFT (draft 
 
 ## Open questions
 
+- **Owner assigned (D-029, accepted 2026-11-17):** feature-type inference from probed points moves to KRN (a pure computation over fits). This node calls it instead of owning it.
 - Ranking criteria between, for example, a short cylinder and a circle need a domain expert.
 
 ## Children

@@ -8,23 +8,9 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 |---|---:|
 | Nodes in scope | 803 |
 | Buildable leaves | 322 |
-| Open nodes still to expand | 337 |
-| Nodes blocked on decisions | 12 |
+| Open nodes still to expand | 349 |
+| Nodes blocked on decisions | 0 |
 | Build waves | 63 |
-
-## Blocking decisions
-
-- D-011
-- D-012
-- D-013
-- D-015
-- D-016
-- D-017
-- D-019
-- D-020
-- D-021
-- D-024
-- D-028
 
 ## Dependencies on excluded nodes (review)
 
@@ -314,7 +300,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ALN.QA.CMP](../../spec/aln/qa/cmp/NODE.md) Comparison of two alignments (S, P1a)
 - [ALN.QA.HIST](../../spec/aln/qa/hist/NODE.md) Convergence history and published convergence criteria (S, P1a)
 - [ALN.QA.REPORT](../../spec/aln/qa/report/NODE.md) Residual report type, statistics and read command (M, P1a)
-- [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P1a)
+- [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
 - [UNC.RDL.FORMAT](../../spec/unc/rdl/format/NODE.md) RDL dataset record format and listing (M, P0)
 - [UNC.RDL.REP](../../spec/unc/rdl/rep/NODE.md) Replay equivalence tolerance table (REP-1) and classifier (M, P0)
 - [UNC.UEC.STMT](../../spec/unc/uec/stmt/NODE.md) Uncertainty statement and evidence class types (M, P1a)
@@ -323,7 +309,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 
 - [ALN.QA.COND](../../spec/aln/qa/cond/NODE.md) Conditioning and weak-DoF diagnostics (M, P1a)
 - [TRUST.PKG.EXPORT](../../spec/trust/pkg/export/NODE.md) Export an unsigned Result Package to an export root (M, P1a)
-- [TRUST.PKG.READER](../../spec/trust/pkg/reader/NODE.md) Bounded package reader and inspect command (M, P1a)
+- [TRUST.PKG.READER](../../spec/trust/pkg/reader/NODE.md) Bounded package reader and inspect command (M, P0)
 - [UNC.RDL.FREEZE](../../spec/unc/rdl/freeze/NODE.md) Frozen RDL release sets and suite digest (S, P0)
 - [UNC.UEC.CLASS](../../spec/unc/uec/class/NODE.md) Evidence class assignment rules (S, P1a)
 - [UNC.UEC.EXPL](../../spec/unc/uec/expl/NODE.md) Show and explain uncertainty queries (M, P1a)
@@ -595,6 +581,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - AUTO.SURF.DOCS Generated command reference pages
 - CORE.BUS.PIPE Execute pipeline, handler contract and typed errors
 - CORE.BUS.POL Side-effect, projection, file-handle and egress policy
+- CORE.BUS.PRIN Principal model and channel binding
 - CORE.BUS.ROUTE Branch routing, optimistic concurrency and idempotency
 - CORE.DEP.RECOMP Deterministic recompute with failure isolation and single-entry commit
 - CORE.JRN.BR Branches, diff, protection and promotion
@@ -666,7 +653,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - GDT.PROF.RUNOUT Circular, total and axial runout
 - GDT.PROF.SURF Profile of a surface, including composite profile
 - GDT.PROF.ZDEF Profile zone definitions
+- GDT.RES.ROWASME P1a ASME Y14.5-2018 DMT row set
 - GDT.RES.ROWFLOW DMT row proposal, review and sign-off workflow
+- GDT.RES.ROWISO ISO GPS DMT row set
 - GDT.ZONE.COMP Composite feature-control-frame tiers
 - GDT.ZONE.GROUP Patterns and simultaneous requirements
 - GDT.ZONE.MATL Material-condition modifiers, bonus and virtual-condition boundaries
@@ -674,6 +663,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - GDT.ZONE.POSE Zone-pose solve and certificates
 - GEO.CAD.ASSY CAD parts, assemblies and instance placement
 - GEO.CAD.NOMINAL Nominal element generation from CAD faces and edges
+- GEO.CAD.TESS Controlled, watertight tessellation of CAD bodies
 - GEO.CAD.TOPO B-rep topology model, trimming and validation
 - GEO.DIST.FACE Point-to-trimmed-face and point-to-body projection
 - GEO.SEL.QUERY Semantic selection queries and re-evaluation
@@ -690,6 +680,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - IO.CAD.PMI AP242 semantic PMI mapping to QIF MBD
 - IO.CAD.STEP STEP B-rep geometry import
 - IO.CAD.WORKER Isolated CAD kernel worker process
+- IO.CAD.XLATE Native CAD translator plugin contract
 - IO.CLOUD.E57 E57 reader and writer with multi-scan poses
 - IO.CLOUD.LAS LAS, LAZ and COPC reader and writer with scaled-integer precision
 - IO.CLOUD.STREAM Streaming point sink and attribute selection for cloud readers and writers
@@ -741,10 +732,12 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - MIG.TEMPL Customer form and report template recreation
 - OUTR.BENCH.ACC Accuracy benchmarks against reference data
 - OUTR.BENCH.CASE User case studies
+- OUTR.BENCH.CMP Comparisons with incumbent products
 - OUTR.BENCH.FIDEL Format fidelity benchmarks
 - OUTR.BENCH.PERF Performance benchmarks
 - OUTR.BENCH.RUN Benchmark recipes, release re-runs and result pages
 - OUTR.BRAND.ASSET Original outreach assets and attribution
+- OUTR.BRAND.COPY Copied-text detection rule
 - OUTR.BRAND.GUIDE Brand usage guidelines and visual identity
 - OUTR.COMM.CHAN Community channel inventory and listing
 - OUTR.COMM.METRIC Adoption metric definitions and collection
@@ -763,6 +756,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - OUTR.LAUNCH.ANN Announcement plan and drafts
 - OUTR.LAUNCH.GATE Milestone gate check and report
 - OUTR.LAUNCH.KIT Conference and trade-show demo kits
+- OUTR.LAUNCH.PLAN Launch plan and milestone definitions
 - OUTR.LAUNCH.REVIEW Post-launch reviews
 - OUTR.SITE.DL Download page
 - OUTR.SITE.GEN Static build and generated-data import
@@ -807,6 +801,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - RPT.DESIGN.UI Designer panel
 - RPT.FORMS.FINAL Form completeness check and finalisation
 - RPT.FORMS.HDR FAI header and accountability data (forms 1 and 2)
+- RPT.FORMS.LAYOUT Fixed form templates for FAI and PPAP
 - RPT.FORMS.PPAP PPAP dimensional results data
 - RPT.FORMS.ROWS Characteristic accountability rows (form 3)
 - RPT.MODEL.BIND Binding resolution and report generation
@@ -825,6 +820,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - SCAN.CLOUD.REG Multi-scan registration
 - SCAN.CMP.DEV Deviation primitive and surface comparison against CAD
 - SCAN.CMP.GPUPV GPU deviation preview with CPU cross-check
+- SCAN.EDGE.EST Edge estimation on wrapped meshes and clouds
 - SCAN.MESHOP.CUT Cut, clip, merge and invert
 - SCAN.MESHOP.HOLES Hole filling and closing
 - SCAN.MESHOP.REPAIR Self-intersection and non-manifold repair
@@ -832,7 +828,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - SCAN.POLY.SURF Single-cloud surface reconstruction
 - TRUST.PKG.CONTENT Package content selection and evidence tiers
 - TRUST.PROFILE.GATE Profile query API and enforcement hooks
+- TRUST.REPLAY.KART Kernel artifact sourcing for verifier replay
 - TRUST.SIGN.KEYSTORE OS keystore backends and key lifecycle commands
+- TRUST.SIGN.UV User-verification release and S1 refusal
 - TRUST.VERIFY.WEB In-browser verifier
 - UNC.INST.IEMPS Instrument Error Model Parameter Sets for virtual-CMM simulation
 - UNC.INST.LIB Instrument-profile library

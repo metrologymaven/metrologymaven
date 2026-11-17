@@ -5,7 +5,7 @@ level: 2
 parent: TRUST
 kind: subsystem
 status: split
-phase: P1a
+phase: P0
 size: L
 owners: []
 claimed_by:
@@ -15,7 +15,7 @@ depends_on: [CORE, IO]
 cli: [fid sign export-package, fid verify inspect-package]
 mcp: [verify_inspect_package]
 journal: [sign.export_package@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PKG: Result Package format

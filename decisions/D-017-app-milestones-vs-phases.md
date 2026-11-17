@@ -1,11 +1,11 @@
 ---
 id: D-017
 title: How app milestones relate to phases
-status: open
+status: accepted
 raised_by: OUTR.LAUNCH split
 blocks: [OUTR.LAUNCH.PLAN]
 decide_by: before the first alpha announcement
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-017: How app milestones relate to phases
@@ -32,4 +32,6 @@ A, with offline subsets shipped as beta and labelled by scope. It is the option 
 
 ## Decision
 
-_Open._ When decided: OUTR.LAUNCH.PLAN returns to `open` and writes per-app criteria accordingly.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A, with offline subsets shipped as beta and labelled by scope. It is the option least likely to overstate status, in line with the honest-status rule (CONSTITUTION §8). [unverified that users accept long pre-1.0 periods]

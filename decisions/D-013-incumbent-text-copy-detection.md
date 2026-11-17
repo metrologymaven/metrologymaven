@@ -1,11 +1,11 @@
 ---
 id: D-013
 title: Copy detection against incumbents' public text
-status: open
+status: accepted
 raised_by: OUTR.BRAND split
 blocks: [OUTR.BRAND.COPY]
 decide_by: before the first public website release
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-013: Copy detection against incumbents' public text
@@ -32,4 +32,8 @@ C now, revisit B after counsel review if copied text is ever found in project ma
 
 ## Decision
 
-_Open._ When decided: update REQ-OUTR.BRAND-005 (keep or retire through the steering group), and set OUTR.BRAND.COPY to `open` or replace it.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+C now, revisit B after counsel review if copied text is ever found in project material. The human review already has a "copied text" checklist item (OUTR.BRAND.REVIEW). Evidence on the legal status of hashed shingles is [unverified].
+
+**Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.

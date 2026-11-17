@@ -1,11 +1,11 @@
 ---
 id: D-023
 title: Side-effect class of connecting to a driver host on another machine
-status: open
+status: accepted
 raised_by: PLAT.XHOST split
 blocks: [PLAT.XHOST.DISCOV, PLAT.DOCTOR.HOSTCHK]
 decide_by: before PLAT.XHOST.DISCOV is expanded
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-023: Side-effect class of connecting to a driver host on another machine
@@ -32,4 +32,6 @@ C. It keeps live measurement usable while still treating project data leaving th
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+C. It keeps live measurement usable while still treating project data leaving the machine as egress. A read-only handshake (`fid doctor --check-hosts`) would then be R0 against already-configured hosts.

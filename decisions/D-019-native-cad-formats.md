@@ -1,11 +1,11 @@
 ---
 id: D-019
 title: Native CAD formats: plugin-only translators or out of scope
-status: open
+status: accepted
 raised_by: IO.CAD split
 blocks: [IO.CAD.XLATE]
 decide_by: before IO.CAD.XLATE is expanded (P1b)
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-019: Native CAD formats: plugin-only translators or out of scope
@@ -34,4 +34,6 @@ A now, with C revisited in P4. The contract is small and keeps the parity row ho
 
 ## Decision
 
-_Open._ When decided: the option, who decided, the date, and follow-ups: set `IO.CAD.XLATE` to `open` (A or C) or move GOM.IMP.06 and the native parts of PW.IMP.03, PCD.CAD.01 and SA.CAD.01 to `seeds/out-of-scope.md` (B); update `IO.REG.PLUGIN` host kinds.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A now, with C revisited in P4. The contract is small and keeps the parity row honest ("via plugin"), and B remains the documented fallback for users without a translator.

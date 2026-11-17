@@ -4,8 +4,7 @@ title: Kernel artifact sourcing for verifier replay
 level: 3
 parent: TRUST.REPLAY
 kind: module
-status: decision
-decision: D-020
+status: open
 phase: P1a
 size: M
 owners: []
@@ -16,7 +15,7 @@ depends_on: [KRN.MAN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.KART: Kernel artifact sourcing for verifier replay
@@ -53,6 +52,7 @@ Once D-020 is decided this is likely one M leaf (lookup chain + cache directory)
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-020 (How the offline verifier obtains historical kernel artifacts) is accepted. Apply its Decision section (`decisions/D-020-*.md`) when this node is expanded.
 - Blocked on D-020. Size M is an estimate; it stays non-leaf until the decision fixes the sources.
 
 ## Children

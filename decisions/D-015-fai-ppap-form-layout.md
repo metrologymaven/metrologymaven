@@ -1,11 +1,11 @@
 ---
 id: D-015
 title: How closely AS9102 and PPAP form layouts may follow the published forms
-status: open
+status: accepted
 raised_by: RPT.FORMS split
 blocks: [RPT.FORMS.LAYOUT]
 decide_by: before RPT.FORMS.LAYOUT is expanded
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-015: How closely AS9102 and PPAP form layouts may follow the published forms
@@ -35,4 +35,8 @@ The data model, form 3 row mapping, PPAP rows and finalisation (RPT.FORMS.HDR, R
 
 ## Decision
 
-_Open._ When decided: the option, who decided, the date, and any follow-up nodes to update (RPT.FORMS.LAYOUT; possibly RPT.DESIGN for user-imported form templates).
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+**C**, with a counsel check of whether A's field order may follow the standards' clause order [unverified]. It keeps the shipped project clean and lets licensed users reproduce exact forms with the general designer. Revisit D if a standards body offers terms compatible with D-001.
+
+**Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.

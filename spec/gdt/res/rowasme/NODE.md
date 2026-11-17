@@ -4,8 +4,7 @@ title: P1a ASME Y14.5-2018 DMT row set
 level: 3
 parent: GDT.RES
 kind: module
-status: decision
-decision: D-016
+status: open
 phase: P1a
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [GDT.RES.SCHEMA, GDT.RES.ROWFLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.RES.ROWASME: P1a ASME Y14.5-2018 DMT row set
@@ -57,6 +56,7 @@ One child per tolerance family inventory (FORM rows, ORIENT rows, POS rows, SIZE
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-016 (Acquiring and sharing standards texts for DMT authoring and review) is accepted. Apply its Decision section (`decisions/D-016-*.md`) when this node is expanded.
 - **Blocked on D-016:** rows cannot be written until the project has lawful access to the ASME Y14.5-2018 and Y14.5.1-2019 texts for each author and both reviewers, and it is undecided who buys them and under what licence terms.
 - Concentricity and symmetry rows for legacy-edition ASME drawings: whether to have them at all is an expert call (raised on `GDT.LOC`).
 

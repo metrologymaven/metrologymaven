@@ -5,7 +5,7 @@ level: 2
 parent: TRUST
 kind: subsystem
 status: split
-phase: P1a
+phase: P0
 size: L
 owners: []
 claimed_by:
@@ -15,7 +15,7 @@ depends_on: [TRUST.PKG, TRUST.SIGN, TRUST.CHAIN, TRUST.REPLAY]
 cli: [fid verify package, fid-verify, fid-verify mcp]
 mcp: [verify_package, verify_list_files]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.VERIFY: fid-verify binary and verification report

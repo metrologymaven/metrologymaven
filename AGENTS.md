@@ -46,6 +46,12 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 6. **`main` is PR-only.** CI and tooling changes go in their own PRs, never mixed with spec expansions.
 7. **Keep this file under 10 KB.** Agents may not follow links, so put essential rules here.
 
+## Dependencies (CONSTITUTION §2.1, D-034)
+
+- Depend on specific nodes (level 2 or 3), not whole domains, and only on the same or lower layers.
+- If you only read a file or format another node publishes (a test suite, manifest, report, token file), use `uses_artifacts: [NODE.ID]` instead of `depends_on`. Never leave a dependency as a prose "interface note".
+- Mark adoption commands and manual readings `human_only: true` in their Design (D-031).
+
 ## IDs and paths
 
 - Node ID: dotted uppercase segments, e.g. `ALN.RPS.ITER`. Folder: `spec/aln/rps/iter/NODE.md` (lowercase last segment).

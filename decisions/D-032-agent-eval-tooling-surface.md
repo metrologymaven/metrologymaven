@@ -1,11 +1,11 @@
 ---
 id: D-032
 title: Surface and side-effect class of the agent evaluation tooling
-status: open
+status: accepted
 raised_by: AGENT level-2 split
 blocks: []
 decide_by: before AGENT.HARNESS or AGENT.EVAL is split
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-032: Surface and side-effect class of the agent evaluation tooling
@@ -40,4 +40,6 @@ A. Evaluation is test infrastructure, not product state, and keeping it out of t
 
 ## Decision
 
-_Open._ When decided: amend CONSTITUTION §2 (option A) or REQ-AUTO.MCP.SRV-002 (option B), then fix the interfaces of `AGENT.HARNESS`, `AGENT.EVAL`, `AGENT.BOARD` and `AGENT.LOCAL`.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A. Evaluation is test infrastructure, not product state, and keeping it out of the manifest removes the oracle-leak and process-launch paths entirely [unverified that no product workflow needs to start an eval run].

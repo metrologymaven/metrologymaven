@@ -1,11 +1,11 @@
 ---
 id: D-018
 title: Phase tags for CMM level-3 children later than P2
-status: open
+status: accepted
 raised_by: CMM level-2 expansion
 blocks: []
 decide_by: before CMM.GEN.PMI or CMM.COLL.ROT is expanded
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-018: Phase tags for CMM level-3 children later than P2
@@ -41,4 +41,6 @@ A. Revisit `CMM.COLL.ROT` (option C) if a P2 partner machine has a rotary table.
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A. Revisit `CMM.COLL.ROT` (option C) if a P2 partner machine has a rotary table.

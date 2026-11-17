@@ -1,11 +1,11 @@
 ---
 id: D-011
 title: Signing user verification where the OS offers none
-status: open
+status: accepted
 raised_by: TRUST.SIGN split
 blocks: [TRUST.SIGN.UV]
 decide_by: before TRUST.SIGN.UV is built
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-011: Signing user verification where the OS offers none
@@ -33,4 +33,6 @@ D, with the Regulated profile requiring C (token with presence check) on Linux. 
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+D, with the Regulated profile requiring C (token with presence check) on Linux. Record `uv_method` in the signature statement so verifiers can see how the signer was verified.

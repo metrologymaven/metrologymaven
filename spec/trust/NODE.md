@@ -5,7 +5,7 @@ level: 1
 parent: FID
 kind: domain
 status: split
-phase: P1a
+phase: P0
 size: XL
 owners: []
 claimed_by:
@@ -15,7 +15,7 @@ depends_on: [CORE, UNC]
 cli: [fid verify *, fid sign *]
 mcp: [verify_*]
 journal: [sign.*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST: Signing and independent verification

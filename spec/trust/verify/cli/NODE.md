@@ -5,7 +5,7 @@ level: 3
 parent: TRUST.VERIFY
 kind: feature
 status: leaf
-phase: P1a
+phase: P0
 size: M
 owners: []
 claimed_by:
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid verify package, fid-verify]
 mcp: [verify_package]
 journal: [verify.package@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.VERIFY.CLI: fid-verify binary and verify-package command

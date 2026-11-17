@@ -4,8 +4,7 @@ title: Running scripts from every surface and principal assignment
 level: 3
 parent: AUTO.PY
 kind: module
-status: decision
-decision: D-012
+status: open
 phase: P1b
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [AUTO.PY.HOST]
 cli: [fid script run]
 mcp: [script_run]
 journal: [script.run]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.PY.RUN: Running scripts from every surface and principal assignment
@@ -55,6 +54,7 @@ CMD (the `script.run@1` command and job), PRIN (principal assignment table). Lik
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-012 (Principal kind of a human at the CLI or starting a Python script) is accepted. Apply its Decision section (`decisions/D-012-*.md`) when this node is expanded.
 - **Blocked on D-012.** REQ-AUTO.PY-005 says a human-started script runs under the human's principal; REQ-CORE.BUS-002 says every CLI and Python caller is `script`. Until D-012 decides, REQ-AUTO.PY.RUN-002 cannot be made concrete.
 
 ## Children

@@ -4,8 +4,7 @@ title: User-verification release and S1 refusal
 level: 3
 parent: TRUST.SIGN
 kind: module
-status: decision
-decision: D-011
+status: open
 phase: P1a
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [TRUST.SIGN.KEYSTORE, CORE]
 cli: []
 mcp: []
 journal: [sign.refuse@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.SIGN.UV: User-verification release and S1 refusal
@@ -58,6 +57,7 @@ GATE (principal/channel policy + tests), WINUV, MACUV, LINUV (per-OS prompt; LIN
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-011 (Signing user verification where the OS offers none) is accepted. Apply its Decision section (`decisions/D-011-*.md`) when this node is expanded.
 - Blocked on D-011 (Linux fallback). Windows and macOS parts could proceed, but a split now would guess at the shape of the Linux path and at `uv_method` values.
 - REQ-CORE.BUS-002 assigns principal kind `script` to every CLI invocation, so an "interactive CLI" signing session (REQ-TRUST.ESIG-001) is refused by REQ-TRUST.SIGN.UV-002 unless CORE.BUS defines an attended-terminal human principal. This is the open decision D-012 (principal kind of a human at the CLI).
 

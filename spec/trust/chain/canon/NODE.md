@@ -5,7 +5,7 @@ level: 3
 parent: TRUST.CHAIN
 kind: task
 status: leaf
-phase: P1a
+phase: P0
 size: M
 owners: []
 claimed_by:
@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.CHAIN.CANON: Independent RFC 8785 canonicaliser and golden vectors

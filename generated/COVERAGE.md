@@ -55,7 +55,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.IMP.03 | Import native measurement project or mesh format | [IO.REG.PLUGIN](../spec/io/reg/plugin/NODE.md) | open |
 | GOM.IMP.04 | Import ASCII point clouds | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md) | leaf |
 | GOM.IMP.05 | Import CAD via STEP and IGES | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md) | open |
-| GOM.IMP.06 | Import native CAD (CATIA, NX, Creo, SolidWorks, Parasolid, JT) | [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | decision |
+| GOM.IMP.06 | Import native CAD (CATIA, NX, Creo, SolidWorks, Parasolid, JT) | [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
 | GOM.IMP.07 | Import PMI (semantic GD&T and datums) from CAD | [IO.CAD.PMI](../spec/io/cad/pmi/NODE.md) | open |
 | GOM.IMP.08 | Import nominal points from CSV or tables | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md) | leaf |
 | GOM.IMP.09 | Import further measurements as new stages | [IO.REG.ENV](../spec/io/reg/env/NODE.md) | open |
@@ -82,7 +82,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.CAD.01 | CAD body display and face (patch) selection | [GEO.SEL.QUERY](../spec/geo/sel/query/NODE.md), [GEO.SEL.RESOLVE](../spec/geo/sel/resolve/NODE.md) | leaf, open |
 | GOM.CAD.02 | CAD groups and part handling | [GEO.CAD.ASSY](../spec/geo/cad/assy/NODE.md), [GEO.CAD.GROUP](../spec/geo/cad/group/NODE.md) | leaf, open |
 | GOM.CAD.03 | Generate nominal elements from CAD faces | [GEO.CAD.NOMINAL](../spec/geo/cad/nominal/NODE.md) | open |
-| GOM.CAD.04 | Control CAD tessellation quality | [GEO.CAD.TESS](../spec/geo/cad/tess/NODE.md) | decision |
+| GOM.CAD.04 | Control CAD tessellation quality | [GEO.CAD.TESS](../spec/geo/cad/tess/NODE.md) | open |
 | GOM.CON.01 | Construct point | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
 | GOM.CON.02 | Construct line | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
 | GOM.CON.03 | Construct plane | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
@@ -122,7 +122,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.SRF.03 | Deviation labels | [SCAN.CMP.LABEL](../spec/scan/cmp/label/NODE.md) | leaf |
 | GOM.SRF.04 | Whisker plots on sections | [SCAN.SECT.WHISK](../spec/scan/sect/whisk/NODE.md) | leaf |
 | GOM.SRF.05 | Section comparison | [SCAN.SECT.CUT](../spec/scan/sect/cut/NODE.md), [SCAN.SECT.WHISK](../spec/scan/sect/whisk/NODE.md) | leaf |
-| GOM.SRF.06 | Edge and trim-line deviation | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | decision, leaf |
+| GOM.SRF.06 | Edge and trim-line deviation | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | leaf, open |
 | GOM.SRF.07 | Wall thickness analysis | [SCAN.THK.RAY](../spec/scan/thk/ray/NODE.md), [SCAN.THK.SPHERE](../spec/scan/thk/sphere/NODE.md) | leaf |
 | GOM.SRF.08 | Material thickness | [SCAN.THK.MAT](../spec/scan/thk/mat/NODE.md) | leaf |
 | GOM.SRF.09 | Max and min deviation search | [SCAN.CMP.EXTR](../spec/scan/cmp/extr/NODE.md) | leaf |
@@ -183,7 +183,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.RPT.05 | Diagrams in reports | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
 | GOM.RPT.06 | PDF output | [RPT.OUTPUT.PDF](../spec/rpt/output/pdf/NODE.md) | open |
 | GOM.RPT.07 | Multi-stage reports | [RPT.MODEL.BIND](../spec/rpt/model/bind/NODE.md) | open |
-| GOM.AUT.01 | Python scripting | [AUTO.PY.GEN](../spec/auto/py/gen/NODE.md), [AUTO.PY.RUN](../spec/auto/py/run/NODE.md) | decision, leaf |
+| GOM.AUT.01 | Python scripting | [AUTO.PY.GEN](../spec/auto/py/gen/NODE.md), [AUTO.PY.RUN](../spec/auto/py/run/NODE.md) | leaf, open |
 | GOM.AUT.02 | Script recording | [AUTO.REC.CONV](../spec/auto/rec/conv/NODE.md), [AUTO.REC.LIFT](../spec/auto/rec/lift/NODE.md), [AUTO.REC.MACRO](../spec/auto/rec/macro/NODE.md) | leaf, open |
 | GOM.AUT.03 | Scripted elements | [AUTO.SCRIPTED.DECL](../spec/auto/scripted/decl/NODE.md), [AUTO.SCRIPTED.GRAPH](../spec/auto/scripted/graph/NODE.md) | leaf, open |
 | GOM.AUT.04 | Scripted checks | [AUTO.SCRIPTED.DECL](../spec/auto/scripted/decl/NODE.md), [AUTO.SCRIPTED.RESULT](../spec/auto/scripted/result/NODE.md) | leaf, open |
@@ -266,7 +266,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PCD.DIM.04 | Bonus tolerances | [GDT.ZONE.MATL](../spec/gdt/zone/matl/NODE.md) | open |
 | PCD.DIM.05 | ISO or ASME standard selection | [GDT.CHAR.SPEC](../spec/gdt/char/spec/NODE.md) | leaf |
 | PCD.DIM.06 | Profile with best-fit options | [GDT.PROF.BESTFIT](../spec/gdt/prof/bestfit/NODE.md) | open |
-| PCD.CAD.01 | CAD import (direct, STEP, IGES, native) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | decision, open |
+| PCD.CAD.01 | CAD import (direct, STEP, IGES, native) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
 | PCD.CAD.02 | PMI import and automatic program creation | [GDT.PMI.MAP](../spec/gdt/pmi/map/NODE.md) | open |
 | PCD.CAD.03 | CAD-based automatic feature generation | [CMM.GEN.CAD](../spec/cmm/gen/cad/NODE.md) | open |
 | PCD.PTH.01 | Move points and clearance planes | [CMM.PATH.CLEAR](../spec/cmm/path/clear/NODE.md) | open |
@@ -300,7 +300,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PCD.RPT.07 | Inspection results database | [RPT.CATALOG.STORE](../spec/rpt/catalog/store/NODE.md) | open |
 | PCD.IND.01 | Blade (airfoil) analysis | [IND.AIRFOIL.FORM](../spec/ind/airfoil/form/NODE.md), [IND.AIRFOIL.PARAMS](../spec/ind/airfoil/params/NODE.md), [IND.AIRFOIL.SECTION](../spec/ind/airfoil/section/NODE.md), [IND.AIRFOIL.STACK](../spec/ind/airfoil/stack/NODE.md) | open |
 | PCD.IND.02 | Gear analysis | [IND.GEAR.DEF](../spec/ind/gear/def/NODE.md), [IND.GEAR.FLANK](../spec/ind/gear/flank/NODE.md), [IND.GEAR.GRADE](../spec/ind/gear/grade/NODE.md), [IND.GEAR.PITCH](../spec/ind/gear/pitch/NODE.md), [IND.GEAR.SIZE](../spec/ind/gear/size/NODE.md) | leaf, open |
-| PCD.IND.03 | Portable arm and tracker workflows | [IND.PORT.GUIDE](../spec/ind/port/guide/NODE.md), [IND.PORT.RECOG](../spec/ind/port/recog/NODE.md), [IND.PORT.REPLAY](../spec/ind/port/replay/NODE.md), [IND.PORT.ROUTINE](../spec/ind/port/routine/NODE.md) | decision, open |
+| PCD.IND.03 | Portable arm and tracker workflows | [IND.PORT.GUIDE](../spec/ind/port/guide/NODE.md), [IND.PORT.RECOG](../spec/ind/port/recog/NODE.md), [IND.PORT.REPLAY](../spec/ind/port/replay/NODE.md), [IND.PORT.ROUTINE](../spec/ind/port/routine/NODE.md) | open |
 | PCD.IND.04 | Tube inspection | [IND.TUBE.BEND](../spec/ind/tube/bend/NODE.md), [IND.TUBE.CMP](../spec/ind/tube/cmp/NODE.md), [IND.TUBE.CORR](../spec/ind/tube/corr/NODE.md), [IND.TUBE.EXP](../spec/ind/tube/exp/NODE.md), [IND.TUBE.MODEL](../spec/ind/tube/model/NODE.md), [IND.TUBE.RECON](../spec/ind/tube/recon/NODE.md) | leaf, open |
 | PCD.LAS.01 | Laser scanning on a CMM | [HAL.IPP.MEAS](../spec/hal/ipp/meas/NODE.md) | open |
 | PCD.LAS.02 | Point cloud operations and CAD comparison | [SCAN.CLOUD.FILTER](../spec/scan/cloud/filter/NODE.md), [SCAN.CLOUD.MGMT](../spec/scan/cloud/mgmt/NODE.md), [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | leaf, open |
@@ -320,7 +320,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PW.PRJ.05 | Inspection project templates | [CORE.PRJ.TPL](../spec/core/prj/tpl/NODE.md) | open |
 | PW.IMP.01 | Import point clouds (ASCII, E57, PTX, vendor formats) | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md), [IO.CLOUD.E57](../spec/io/cloud/e57/NODE.md), [IO.CLOUD.PTX](../spec/io/cloud/ptx/NODE.md) | leaf, open |
 | PW.IMP.02 | Import polygonal meshes | [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.STL](../spec/io/mesh/stl/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf |
-| PW.IMP.03 | Import CAD (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | decision, open |
+| PW.IMP.03 | Import CAD (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
 | PW.IMP.04 | Import PMI / GD&T | [IO.CAD.PMI](../spec/io/cad/pmi/NODE.md) | open |
 | PW.IMP.05 | Import CMM measurement data | [IO.RES.TRANS](../spec/io/res/trans/NODE.md) | open |
 | PW.EXP.01 | Export points and meshes | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md), [IO.CLOUD.E57](../spec/io/cloud/e57/NODE.md), [IO.CLOUD.LAS](../spec/io/cloud/las/NODE.md), [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.STL](../spec/io/mesh/stl/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf, open |
@@ -351,7 +351,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PW.CMP.01 | Color maps of data against CAD | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
 | PW.CMP.02 | Cross-sections | [SCAN.SECT.CUT](../spec/scan/sect/cut/NODE.md), [SCAN.SECT.DEF](../spec/scan/sect/def/NODE.md) | leaf |
 | PW.CMP.03 | Comparison points with tolerances | [SCAN.CMP.CPT](../spec/scan/cmp/cpt/NODE.md) | leaf |
-| PW.CMP.04 | Boundary and edge comparison | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | decision, leaf |
+| PW.CMP.04 | Boundary and edge comparison | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | leaf, open |
 | PW.CMP.05 | Thickness analysis | [SCAN.THK.MAT](../spec/scan/thk/mat/NODE.md), [SCAN.THK.RAY](../spec/scan/thk/ray/NODE.md), [SCAN.THK.TFIELD](../spec/scan/thk/tfield/NODE.md) | leaf |
 | PW.CMP.06 | Deviation annotations | [SCAN.CMP.LABEL](../spec/scan/cmp/label/NODE.md) | leaf |
 | PW.GDT.01 | Dimensions (distance, angle, diameter) | [GDT.DIM.ANGLE](../spec/gdt/dim/angle/NODE.md), [GDT.DIM.LINEAR](../spec/gdt/dim/linear/NODE.md), [GDT.DIM.RADIAL](../spec/gdt/dim/radial/NODE.md), [GDT.DIM.SIZEASME](../spec/gdt/dim/sizeasme/NODE.md) | leaf, open |
@@ -441,7 +441,7 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | SA.BLD.03 | Vector groups (deviation vectors) | [LVM.WATCH.VECTOR](../spec/lvm/watch/vector/NODE.md) | open |
 | SA.BLD.04 | Live surface relationships | [LVM.WATCH.LIVEREL](../spec/lvm/watch/liverel/NODE.md) | open |
 | SA.BLD.05 | Audible and visual alarms | [LVM.GUIDE.ALARM](../spec/lvm/guide/alarm/NODE.md) | open |
-| SA.CAD.01 | CAD import (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | decision, open |
+| SA.CAD.01 | CAD import (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
 | SA.CAD.02 | CAD-to-point comparison | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
 | SA.CAD.03 | CAD layer management | [GEO.CAD.GROUP](../spec/geo/cad/group/NODE.md) | leaf |
 | SA.MP.01 | Measurement plan scripting language | [AUTO.PROG.EXPR](../spec/auto/prog/expr/NODE.md), [AUTO.PROG.FMT](../spec/auto/prog/fmt/NODE.md) | leaf, open |

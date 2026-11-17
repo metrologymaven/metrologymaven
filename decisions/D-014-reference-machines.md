@@ -1,11 +1,11 @@
 ---
 id: D-014
 title: Who hosts and pays for reference benchmark machines
-status: open
+status: accepted
 raised_by: PLAT.HW split
 blocks: [PLAT.HW.REFMACH, PLAT.HW.RUN]
 decide_by: before the first P1a release benchmark
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-014: Who hosts and pays for reference benchmark machines
@@ -33,4 +33,6 @@ A for the minimum-profile machine (a cheap, typical shop-floor PC) plus C for th
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A for the minimum-profile machine (a cheap, typical shop-floor PC) plus C for the recommended profile until sponsorship allows owning it. Publish who hosts each machine with the results.

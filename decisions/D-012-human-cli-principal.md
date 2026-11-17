@@ -1,11 +1,11 @@
 ---
 id: D-012
 title: Principal kind of a human at the CLI or starting a Python script
-status: open
+status: accepted
 raised_by: AUTO.SURF and AUTO.PY level-3 expansion
 blocks: [AUTO.PY.RUN]
 decide_by: before AUTO.PY.RUN or AUTO.CLI.GATE is built
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-012: Principal kind of a human at the CLI or starting a Python script
@@ -40,4 +40,6 @@ C. Keep CORE.BUS-002 as the default; add a confirmation step in the running app 
 
 ## Decision
 
-_Open._ When decided: update REQ-CORE.BUS-002 or REQ-AUTO.PY-005 accordingly, unblock `AUTO.PY.RUN`, and resolve the open question in `AUTO.SURF`.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+C. Keep CORE.BUS-002 as the default; add a confirmation step in the running app (or OS user-presence check when headless) to upgrade a session; amend REQ-AUTO.PY-005 to say "under the human's principal after confirmation". Raw paths remain refused for `script`.

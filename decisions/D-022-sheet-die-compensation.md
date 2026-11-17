@@ -1,11 +1,11 @@
 ---
 id: D-022
 title: Die compensation from springback results
-status: open
+status: accepted
 raised_by: IND.SHEET split
 blocks: []
 decide_by: before IND.SHEET.SPRING is finished as a leaf
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-022: Die compensation from springback results
@@ -32,4 +32,6 @@ B, as a later child of `IND.SHEET.SPRING`, with A as the default until a stampin
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+B, as a later child of `IND.SHEET.SPRING`, with A as the default until a stamping maintainer volunteers. Mark incumbent behaviour `[unverified]` until checked.

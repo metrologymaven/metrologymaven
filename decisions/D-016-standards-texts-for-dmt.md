@@ -1,11 +1,11 @@
 ---
 id: D-016
 title: Acquiring and sharing standards texts for DMT authoring and review
-status: open
+status: accepted
 raised_by: GDT.RES split
 blocks: [GDT.RES.ROWASME, GDT.RES.ROWISO]
 decide_by: before the first DMT row is authored
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-016: Acquiring and sharing standards texts for DMT authoring and review
@@ -34,4 +34,6 @@ A, with C as the source of reviewers where a partner exists. Add an "edition hel
 
 ## Decision
 
-_Open._
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A, with C as the source of reviewers where a partner exists. Add an "edition held" attestation field to the review record in `GDT.RES.ROWFLOW`.

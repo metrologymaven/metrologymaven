@@ -4,8 +4,7 @@ title: Auto feature recognition from probed points
 level: 3
 parent: IND.PORT
 kind: module
-status: decision
-decision: D-029
+status: open
 phase: P3
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [KRN]
 cli: [fid pack recognize-portable-feature]
 mcp: [pack_recognize_portable_feature]
 journal: [pack.recognize_portable_feature@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IND.PORT.RECOG: Auto feature recognition from probed points
@@ -53,6 +52,7 @@ None until D-029 is decided.
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-029 (Where feature-type inference from points lives) is accepted. Apply its Decision section (`decisions/D-029-*.md`) when this node is expanded.
 - **Blocked on D-029:** `CMM.STRAT.LEARN` specifies the same inference (ranked candidate fits from manual hits). Whether this lives in KRN, in CMM, or here decides whether this node is a thin wrapper or a full module. Splitting it now would be guessing.
 
 ## Children

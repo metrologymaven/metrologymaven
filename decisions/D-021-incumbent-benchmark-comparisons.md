@@ -1,11 +1,11 @@
 ---
 id: D-021
 title: Publishing benchmark comparisons with incumbent products
-status: open
+status: accepted
 raised_by: OUTR.BENCH split
 blocks: [OUTR.BENCH.CMP]
 decide_by: before the first comparison is published
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-021: Publishing benchmark comparisons with incumbent products
@@ -32,4 +32,8 @@ A for the first releases, then B once there are users willing to publish. Counse
 
 ## Decision
 
-_Open._ When decided: OUTR.BENCH.CMP returns to `open` (B or C) or is retired with a change to REQ-OUTR.BENCH-005 through the steering group (A).
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A for the first releases, then B once there are users willing to publish. Counsel review is needed before any option B or C publication. [unverified: actual licence terms]
+
+**Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.

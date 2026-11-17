@@ -4,8 +4,7 @@ title: Principal model and channel binding
 level: 3
 parent: CORE.BUS
 kind: task
-status: decision
-decision: D-012
+status: open
 phase: P0
 size: S
 owners: []
@@ -18,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.BUS.PRIN: Principal model and channel binding
@@ -71,6 +70,7 @@ Defines who is acting. A principal is derived only from the authenticated channe
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-012 (Principal kind of a human at the CLI or starting a Python script) is accepted. Apply its Decision section (`decisions/D-012-*.md`) when this node is expanded.
 - **Blocked on D-012** (open, raised concurrently by AUTO): whether a person at the CLI, or a script a person starts, is `human` or `script`. The content above is written to option A, which is REQ-CORE.BUS-002 as accepted. If D-012 picks C, add a per-session confirmation that upgrades the principal (new requirement and acceptance criterion) and keep `script` as the default; if it picks B, change REQ-003 and AC-3. Return this node to `leaf` once D-012 is decided.
 - Whether a GUI call driven by an accessibility automation tool should count as `human`; this leaf treats every GUI-widget call in an interactive session as `human`.
 

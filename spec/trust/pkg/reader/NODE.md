@@ -5,7 +5,7 @@ level: 3
 parent: TRUST.PKG
 kind: feature
 status: leaf
-phase: P1a
+phase: P0
 size: M
 owners: []
 claimed_by:
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid verify inspect-package]
 mcp: [verify_inspect_package]
 journal: [verify.inspect_package@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PKG.READER: Bounded package reader and inspect command

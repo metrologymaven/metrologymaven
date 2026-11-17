@@ -1,11 +1,11 @@
 ---
 id: D-025
 title: Phase of the verifier (P0 per constitution vs P1a for TRUST)
-status: open
+status: accepted
 raised_by: TRUST level-2 split and TRUST.VERIFY expansion
 blocks: []
 decide_by: before P0 scope is frozen
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-025: Phase of the verifier (P0 per constitution vs P1a for TRUST)
@@ -32,4 +32,6 @@ B. The chain-only path is roughly seven S/M leaves and makes the P0 claim true.
 
 ## Decision
 
-_Open._ When decided: update the `phase:` of the moved nodes and of TRUST and its affected subsystems, or amend CONSTITUTION §7.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+B. The chain-only path is roughly seven S/M leaves and makes the P0 claim true.

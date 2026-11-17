@@ -4,8 +4,7 @@ title: Copied-text detection rule
 level: 3
 parent: OUTR.BRAND
 kind: module
-status: decision
-decision: D-013
+status: open
 phase: P0
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [OUTR.BRAND.LINT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BRAND.COPY: Copied-text detection rule
@@ -52,6 +51,7 @@ After D-013: SET (reference set build), RULE (matcher), FIX (fixtures).
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-013 (Copy detection against incumbents' public text) is accepted. Apply its Decision section (`decisions/D-013-*.md`) when this node is expanded.
 - Blocked on D-013: whether a reference set may be kept at all, and in what form. If D-013 chooses option C, this node is retired and REQ-OUTR.BRAND-005 is changed by the steering group.
 
 ## Children

@@ -4,8 +4,7 @@ title: Native CAD translator plugin contract
 level: 3
 parent: IO.CAD
 kind: module
-status: decision
-decision: D-019
+status: open
 phase: P1b
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [IO.REG.PLUGIN, IO.CAD.STEP, IO.CAD.PMI]
 cli: [fid import cad-native]
 mcp: [import_cad_native]
 journal: [import.cad_native@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.XLATE: Native CAD translator plugin contract
@@ -53,6 +52,7 @@ DESC (descriptor), BRIDGE (STEP hand-off), DIRECT (direct entity output), after 
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-019 (Native CAD formats: plugin-only translators or out of scope) is accepted. Apply its Decision section (`decisions/D-019-*.md`) when this node is expanded.
 - **Blocked on D-019**: plugin-only translators (as REQ-IO.CAD-011 assumes) versus native CAD out of scope. If D-019 chooses out of scope, this node is removed and the native parts of the covered seeds move to `seeds/out-of-scope.md`.
 
 ## Children

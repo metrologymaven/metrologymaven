@@ -1,11 +1,11 @@
 ---
 id: D-033
 title: Which incumbent program and project formats migration may read
-status: open
+status: accepted
 raised_by: MIG split
 blocks: [MIG.PROGEQ]
 decide_by: before MIG.SRC admits any incumbent-native format (P1a) and before MIG.PROGEQ grows its incumbent-format child (P4)
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-033: Which incumbent program and project formats migration may read
@@ -34,4 +34,8 @@ A for P1a through P2 (DMIS and open exports cover stages 1 to 5 in part), then B
 
 ## Decision
 
-_Open._ When decided: `MIG.SRC` records outcomes; `MIG.PROGEQ` adds or drops its INCUMB child; `MIG.PROJ` mapping profiles are added for admitted formats.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+A for P1a through P2 (DMIS and open exports cover stages 1 to 5 in part), then B per format at P4 when program conversion from incumbents is scheduled. [unverified: availability of public specifications]
+
+**Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.

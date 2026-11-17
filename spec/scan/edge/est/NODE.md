@@ -4,8 +4,7 @@ title: Edge estimation on wrapped meshes and clouds
 level: 3
 parent: SCAN.EDGE
 kind: module
-status: decision
-decision: D-028
+status: open
 phase: P1b
 size: L
 owners: []
@@ -16,7 +15,7 @@ depends_on: [SCAN.EDGE.NOMEDGE, SCAN.EDGE.MESHBND, GEO.INDEX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.EDGE.EST: Edge estimation on wrapped meshes and clouds
@@ -56,6 +55,7 @@ One leaf per method accepted by D-028, plus a shared fixture generator for round
 
 ## Open questions
 
+- **Unblocked (2026-11-17):** D-028 (Definition of the actual edge for trim-line deviation) is accepted. Apply its Decision section (`decisions/D-028-*.md`) when this node is expanded.
 - Blocked on D-028: definition of the actual edge on rounded, chamfered or burred edges.
 
 ## Children

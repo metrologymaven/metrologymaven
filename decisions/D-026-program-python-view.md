@@ -1,11 +1,11 @@
 ---
 id: D-026
 title: Python authoring view for Command Programs
-status: open
+status: accepted
 raised_by: AUTO.PROG level-3 expansion
 blocks: []
 decide_by: before AUTO.PROG.EDIT is split
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # D-026: Python authoring view for Command Programs
@@ -36,4 +36,6 @@ B for P1b, revisit A after field use of the editor views. The canonical JSON is 
 
 ## Decision
 
-_Open._ When decided: update `AUTO.PROG.EDIT` scope and the open question in `AUTO`.
+**Accepted (recommendation as written above), 2026-11-17, founder.**
+
+B for P1b, revisit A after field use of the editor views. The canonical JSON is already diffable; a script export covers users who want Python.
