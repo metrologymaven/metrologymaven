@@ -4,7 +4,7 @@ title: Station moves (leapfrog)
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -56,10 +56,23 @@ Moving an instrument to a new position and tying it back to the existing network
 
 PLAN (common-point choice and coverage), SOLVE (quick pose solve), CHECK (geometry quality and thresholds), CHAIN (accumulated uncertainty).
 
+## Split rationale
+
+The dividing principle is **the order of a move**: solve a candidate pose (SOLVE), see what it costs in uncertainty (PROP), judge and accept it (CHECK), then track how moves accumulate (CHAIN). Planning (common-point choice) is folded into SOLVE because the plan is just its input list.
+
+Alternatives considered:
+- **Separate PLAN child.** Rejected: listing shared common points is a small query with no rules of its own.
+- **Merge PROP into CHECK.** Rejected: PROP depends on UNC propagation and models, which CHECK's count, spread and conditioning rules do not need, so CHECK can ship first.
+
 ## Open questions
 
-- Default thresholds for "weak geometry" need a large-volume metrology reviewer; the 25 % spread figure is a placeholder.
+- Default thresholds for "weak geometry" need a large-volume metrology reviewer; the 25 % spread figure is a placeholder. Carried in `LVM.MOVE.CHECK`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.MOVE.SOLVE | Move sessions and quick pose solve | 001 | SA.NET.02 |
+| LVM.MOVE.CHECK | Move geometry checks and acceptance | 002 003 | none |
+| LVM.MOVE.PROP | Move pose uncertainty and far-end propagation | 004 | none |
+| LVM.MOVE.CHAIN | Move history and accumulated chain uncertainty | 005 | none |

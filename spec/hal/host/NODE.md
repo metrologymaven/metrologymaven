@@ -4,7 +4,7 @@ title: Driver tiers, driver host protocol and driver SDK
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -67,6 +67,21 @@ TIER1 (in-process driver API), PROTO (host protocol and data channel), SUPER (la
 
 - Vendor SDK terms (cost, NDA scope, redistribution) are unverified for every portable-device vendor; the Tier-2 default is chosen to stay safe under any outcome.
 
+## Split rationale
+
+The split follows **the three questions every driver raises**: how it runs (TIER1 for in-process Rust, PROTO for the out-of-process contract, WASM for sandboxed components), how it is kept safe while running (SUPER), and how it is packaged and written (PKG, SDK). The protocol is separated from supervision because outside host authors implement the protocol but never the supervisor.
+
+Alternatives considered:
+- **One child per tier.** Rejected: Tier 2 alone would hold protocol, supervision, packaging and SDK, which is XL, while packaging is shared by all tiers.
+- **Packaging inside ECO.** Rejected for the HAL-specific manifest fields and allowlist; generic plugin packaging stays in `ECO`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.HOST.TIER1 | In-process (Tier-1) driver API and registration — leaf | 001 | none |
+| HAL.HOST.PROTO | Driver host protocol (control and data channels) | 001 007 | none |
+| HAL.HOST.SUPER | Driver host launch, allowlist check and supervision — leaf | 002 003 | none |
+| HAL.HOST.WASM | Tier-3 WASM component sandbox for readers and sensor models | 003 004 | none |
+| HAL.HOST.PKG | Driver package format, install and allowlist | 001 006 | none |
+| HAL.HOST.SDK | Driver SDK and generated host templates | 005 007 | none |

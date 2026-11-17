@@ -4,7 +4,7 @@ title: Point-pair, scaled and known-matrix transforms
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -58,10 +58,27 @@ Closed-form transforms between corresponding point sets (rigid, or similarity wi
 
 PAIRS (rigid point-pair solver with weights and locks), SCALE (similarity), MATRIX (known-matrix entry and validation), LEAP (single-device leapfrog).
 
+## Split rationale
+
+The split follows the decomposition hints, one child per **source of the transform**: correspondences (PAIRS), correspondences with scale (SCALE), a user-given transform (MATRIX) and a device move (LEAP). All four are small and closed-form or fixed-schedule, so all are finished as leaves. SCALE extends PAIRS' command with a parameter instead of adding a command, so the CLI/MCP surface stays as the parent declared.
+
+Alternatives considered:
+- **SCALE inside PAIRS.** Rejected: the reflection-and-scale derivation and its ppm reporting are a separate, small test surface, and keeping PAIRS rigid-only makes it the stable building block for PRE and LVM.
+- **LEAP in LVM.** Rejected: the single-device move needs no network; LVM.MOVE remains the network workflow and calls PAIRS.
+
+Phase: LEAP is tagged P3 with the live-portable schedule; the node stays P1a.
+
 ## Open questions
 
 - PCD.ALN.06 (leapfrog) is split between HAL (device bookkeeping), LVM (multi-station networks) and here (the single transform). Confirm with LVM's expansion that it does not also claim the single-move transform.
 
+- Resolution for the leapfrog question: `ALN.XFM.LEAP` owns only the single-device move; `LVM.MOVE` should call `ALN.XFM.PAIRS`'s R1 solver for its quick pose solve. LVM.MOVE's text ("via ALN point-pair transforms") is consistent with this.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.XFM.PAIRS | Rigid point-pair transform solver (leaf) | 001 003 007 | SA.XFM.01 |
+| ALN.XFM.SCALE | Similarity point-pair transform with uniform scale (leaf) | 002 003 007 | SA.XFM.05 |
+| ALN.XFM.MATRIX | Known-matrix transform entry and validation (leaf) | 004 005 | GOM.ALN.09 |
+| ALN.XFM.LEAP | Single-device leapfrog transform (leaf) | 006 | PCD.ALN.06 |

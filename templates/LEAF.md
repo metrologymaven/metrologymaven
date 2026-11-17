@@ -68,3 +68,10 @@ What data the tests need, where it comes from and its licence (e.g. NIST ATS, a 
 ## Children
 
 _Leaf: none._
+
+<!--
+side_effect: one class, or a list with one class per command in cli/mcp order, e.g. [W2, W1]
+for an import (W2) plus an export to a local root (W1, CONSTITUTION §3.1).
+-->
+
+

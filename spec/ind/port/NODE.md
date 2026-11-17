@@ -4,7 +4,7 @@ title: Portable-device workflow pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -63,8 +63,23 @@ ROUTINE (routine model and authoring), RECOG (auto feature recognition), GUIDE (
 ## Open questions
 
 - PCD.IND.03's row text is short [unverified]; a user of portable incumbents should confirm the expected workflow set before this node is split.
-- Auto feature recognition could arguably be a core capability (useful on CMMs too). If CMM wants it, it should move to KRN or CMM through a decision rather than be duplicated.
+- Auto feature recognition could arguably be a core capability (useful on CMMs too). `CMM.STRAT.LEARN` already specifies the same inference, so decision **D-029** was opened; `IND.PORT.RECOG` is blocked on it.
+
+## Split rationale
+
+The split separates **authoring** a routine (ROUTINE) from **running** it step by step (GUIDE) and **re-running** it on new parts (REPLAY), with recognition (RECOG) isolated because its owner may change (D-029). DATA owns the simulator-based end-to-end proof and TPL the report. REQ-IND.PORT-003 is shared deliberately: RECOG computes the type, GUIDE owns the operator prompt that follows.
+
+Alternatives considered:
+- **Merge GUIDE and REPLAY.** Rejected: REPLAY is about binding a routine version to a new part and replay semantics (CORE), GUIDE about per-step interaction with HAL.
+- **Keep RECOG inside GUIDE.** Rejected: it would bury a capability that D-029 may move to KRN.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.PORT.ROUTINE | Guided routine model and authoring | 001 002 | PCD.IND.03 |
+| IND.PORT.RECOG | Auto feature recognition from probed points (decision D-029) | 003 | PCD.IND.03 |
+| IND.PORT.GUIDE | In-routine guidance and retakes | 003 004 006 | PCD.IND.03 |
+| IND.PORT.REPLAY | Re-running a routine on a new part | 005 | PCD.IND.03 |
+| IND.PORT.DATA | Portable routine simulator runs and reference datasets | 007 008 | none |
+| IND.PORT.TPL | Routine report template | 001 | none |

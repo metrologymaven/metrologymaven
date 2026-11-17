@@ -4,7 +4,7 @@ title: Mesh formats: STL, PLY, OBJ, 3MF
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -65,8 +65,23 @@ STL, PLY, OBJ, TMF (3MF), one module each, sharing a GEO mesh builder; a small E
 
 ## Open questions
 
-- 3MF is a ZIP container with XML parts; the ZIP reader needs its own bomb limits (compression ratio, entry count) inside the `IO.REG` limits.
+- 3MF is a ZIP container with XML parts; the ZIP reader needs its own bomb limits (compression ratio, entry count) inside the `IO.REG` limits. Handled in `IO.MESH.TMF` (REQ-IO.MESH.TMF-002).
+- Each format leaf carries an import command (W2) and an export command (W1, `fs_effect: write_root`); its `side_effect:` field names the stronger class (W2). If the tooling should carry one class per command, the leaf frontmatter convention needs a tools change.
+
+## Split rationale
+
+One child per **file format**, each owning reader and writer together (as the IO split chose), plus one shared builder (MBLD) that owns the cross-format rules: no repair, defect counts, and the single-precision rounding report. All five are leaves in crate `fid-io-mesh`.
+
+Alternatives considered:
+- **Reader module plus writer module.** Rejected: the format knowledge and round-trip tests would be split across two leaves.
+- **One leaf for all four formats.** Rejected: too large for one PR (size L).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.MESH.STL | STL reader and writer (leaf) | 001 002 007 010 | GOM.IMP.01, GOM.EXP.01, PW.IMP.02, PW.EXP.01 |
+| IO.MESH.PLY | PLY reader and writer (leaf) | 003 007 008 | GOM.IMP.02, GOM.EXP.01, PW.IMP.02, PW.EXP.01 |
+| IO.MESH.OBJ | OBJ geometry reader and writer (leaf) | 004 007 | GOM.IMP.02, GOM.EXP.01, PW.IMP.02, PW.EXP.01 |
+| IO.MESH.TMF | 3MF core mesh reader and writer (leaf) | 005 007 | GOM.IMP.02, GOM.EXP.01, PW.IMP.02, PW.EXP.01 |
+| IO.MESH.MBLD | Shared mesh builder, import report and precision report (leaf) | 006 009 | none |

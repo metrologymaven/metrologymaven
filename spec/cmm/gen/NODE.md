@@ -4,7 +4,7 @@ title: Program generation from CAD, PMI, templates and DMIS
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -69,6 +69,23 @@ CAD (features from CAD selection), PMI (features from characteristics), SEQ (seq
 - Phasing: the concept docs put DMIS import and templated prismatic programs in P2, and auto-path from PMI in P3 (Design Baseline §8). Child nodes for PMI-driven generation may need `phase: P3`; changing a phase needs a decision.
 - Which DMIS statements map to Command Program steps is a domain-expert task; the conversion report makes gaps visible rather than guessing.
 
+## Split rationale
+
+The split follows the **sources of a program** only at the edge, and funnels them through one assembler. CAD, PMI, TMPL and DMIS each turn their source into features or steps; SEQ is the single assembler that produces the draft Command Program (alignment block, grouping, evaluation steps), so every source yields the same program shape; PROV is the shared provenance and agent-authored computation that all of them call, kept small because D-008 makes the flag a release gate. DMIS export (assigned to `CMM.GEN` in the level-2 review) sits with DMIS import in `CMM.GEN.DMIS`, because both directions share the mapping table and report model.
+
+Alternatives considered:
+- **No separate SEQ** (each source assembles its own program). Rejected: four assemblers would drift apart and the alignment-block rule would be enforced four times.
+- **DMIS export as its own child.** Rejected: it shares the mapping table and report with import, and has no parent requirement of its own; it becomes a grandchild instead.
+
+Phase: `CMM.GEN.PMI` is tagged P3 and DMIS export will be `later`; both are proposed for ratification in D-018.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.GEN.CAD](cad/NODE.md) | Measurement features from CAD selection | 001 008 | PCD.CAD.03 |
+| [CMM.GEN.PMI](pmi/NODE.md) | Measurement features and programs from PMI | 002 | |
+| [CMM.GEN.SEQ](seq/NODE.md) | Measurement sequence assembly as a draft Command Program | 003 005 008 | PW.CMM.02 |
+| [CMM.GEN.TMPL](tmpl/NODE.md) | Parameterised program templates and part families | 006 008 | |
+| [CMM.GEN.DMIS](dmis/NODE.md) | DMIS program conversion to and from Command Programs | 007 008 | |
+| [CMM.GEN.PROV](prov/NODE.md) | Generated-program provenance and agent-authored flag | 004 | |

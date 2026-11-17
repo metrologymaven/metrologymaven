@@ -4,7 +4,7 @@ title: Web viewer build and viewer package
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -62,6 +62,14 @@ The read-only browser viewer built to WASM from the same render, scene and overl
 
 BUILD (WASM target and CI guards), FALLBACK, PKG (ViewerPackage format), EXPORT, LOADER, LITEUI.
 
+## Split rationale
+
+The dividing principle is **the package's path from desktop to browser**: EXPORT writes it, PKG defines it, LOADER reads it safely, LITEUI shows it, while BUILD and FALLBACK make the same crates run in the browser at all. Each child owns one of the node's guarantees: no kernel (BUILD), graceful degradation (FALLBACK), every number traceable to f64 package data (PKG, LITEUI), fail-closed loading and visible integrity (LOADER), visible redactions (EXPORT, PKG).
+
+Alternatives considered:
+- **PKG and EXPORT together.** Rejected: the format is consumed by RPT, TRUST and OUTR independently of the export command.
+- **LOADER inside LITEUI.** Rejected: the loader is the untrusted-input boundary and needs its own fuzzing and limits.
+
 ## Open questions
 
 - Phase: the concept places the browser viewer in P1b while the parent is P1a; tagged P1b here [unverified].
@@ -69,4 +77,11 @@ BUILD (WASM target and CI guards), FALLBACK, PKG (ViewerPackage format), EXPORT,
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.WEB.BUILD | WASM build and no-kernel CI guards (leaf) | 001 002 | none |
+| VIZ.WEB.FALLBACK | Browser backend fallback chain and budgets | 003 009 | none |
+| VIZ.WEB.PKG | ViewerPackage format | 004 008 | none |
+| VIZ.WEB.EXPORT | ViewerPackage export command | 008 | none |
+| VIZ.WEB.LOADER | Bounded package loader and integrity display | 005 006 | none |
+| VIZ.WEB.LITEUI | Read-only web viewer UI | 004 007 | none |

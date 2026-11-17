@@ -4,7 +4,7 @@ title: Jobs: long-running commands, progress and cancellation
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -68,6 +68,20 @@ MODEL (job states and records), PROG (progress and cancellation tokens), SCHED (
 
 - Is `job.cancel_job` a W1 command (it changes job state but no document state) or R0? Proposed W1 so it is attributable; confirm against CONSTITUTION §3 classes.
 
+## Split rationale
+
+The dividing principle is **handler-side handles, engine, and command surface**: PROG gives a running handler its one-way progress and cancellation handles; SCHED owns the job model, queue, limits, timeouts and lifecycle events; CMD owns the registry commands and the job-status contract that every surface maps onto. Each is small, sits in one crate (`fid-jobs`) and has concrete fixtures, so all three are leaves.
+
+The parent's open question (is cancel W1 or R0?) is settled by CONSTITUTION §3.1 (D-007): W1 for the requester's own jobs; another principal's job needs a human. CMD encodes this as a precondition; `CORE.BUS.POL` enforces it.
+
+Alternatives considered:
+- **MODEL as its own child** (as the hints suggest). Rejected: the state machine is only meaningful together with the scheduler that drives it.
+- **Commands inside SCHED.** Rejected: the commands carry policy (W1 cancel, principal filtering) and a public schema; keeping them apart keeps SCHED a pure engine.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JOB.PROG | Progress sink and cancellation token (leaf) | 002 003 010 | none |
+| CORE.JOB.SCHED | Job model, queue, priorities, limits and timeouts (leaf) | 001 004 005 006 007 009 | none |
+| CORE.JOB.CMD | Job commands and surface task contract (leaf) | 008 | none |

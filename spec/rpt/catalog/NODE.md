@@ -4,7 +4,7 @@ title: Results catalog and historical import
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -62,10 +62,27 @@ A local, offline index of ResultRecords across every project on the machine (or 
 
 STORE (schema and incremental indexing), QUERY (query model and ordering), CHECK (integrity and rebuild), IMPORT (historical import mapping), SHARE (shared-folder catalogs).
 
+## Split rationale
+
+The split follows the **life of an index entry**: it is written (STORE), read (QUERY), verified against its source and rebuilt (CHECK), brought in from older systems (IMPORT), and shared with a team (SHARE). Only STORE writes entries from project journals; IMPORT writes into a project and lets STORE index it, so the catalog stays an index and never becomes a source of truth (REQ-RPT.CATALOG-009).
+
+- CHECK is separate from STORE because its digest and rebuild guarantees are what make the catalog trustworthy for statistics, and they are tested independently.
+- SHARE carries PW.MSP.03 only for the shared-folder part; the server question stays open there.
+
+Alternatives considered:
+- **Local vs. shared catalogs** (two children). Rejected: both would duplicate schema, query and check logic.
+- **Import inside IO.** Rejected: IO parses files; mapping imported results into historical projects and the catalog is RPT's responsibility (parent scope).
+
 ## Open questions
 
 - PW.MSP.03 is a central, server-based data management and collaboration product [unverified]. This node covers the local and shared-folder part only. Whether the project should build a self-hosted server, or mark the server part out of scope, belongs to the maintainers; raise a decision if a later expansion needs it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.CATALOG.STORE | Catalog store and incremental indexing | 001 002 007 | PW.MSP.04, PCD.RPT.07 |
+| RPT.CATALOG.QUERY | Catalog query model | 004 008 | none |
+| RPT.CATALOG.CHECK | Catalog integrity check and rebuild | 003 009 | none |
+| RPT.CATALOG.IMPORT | Historical results import | 005 006 | none |
+| RPT.CATALOG.SHARE | Shared-folder catalogs | 001 007 | PW.MSP.03 |

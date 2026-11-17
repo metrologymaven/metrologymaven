@@ -4,7 +4,7 @@ title: View state and saved views
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -64,10 +64,29 @@ Owns the complete, serialisable state of what a viewport shows and the commands 
 
 STATE (ViewState model and canonical form), CAMERA (camera commands, orientations, fly-to, highlight), CLIP, VISIB (visibility and explorer filters), TRANSP, NAMED (NamedView lifecycle), MULTI (multi-viewport and sync).
 
+## Split rationale
+
+The dividing principle is **one part of the ViewState per child, plus the model and the bundle**:
+- STATE is the data model and canonical form every other child edits (a leaf);
+- CAMERA, CLIP, VISIB and TRANSP each own the commands for one part of the state;
+- NAMED owns the saved bundle and the exact-restore contract; MULTI owns layouts of several viewports.
+
+Alternatives considered:
+- **Commands grouped by side-effect class** (journaled vs transient). Rejected: CAMERA mixes both and the class of `view.set_camera` is still open, so grouping by class would guess.
+- **CLIP and TRANSP folded into one "appearance" child.** Rejected: both are small finishable leaves covering different seed rows.
+
 ## Open questions
 
 - Whether camera changes made inside a NamedView edit session are W2 (working document) or presentation-only is to be fixed with CORE at leaf level.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.VIEW.STATE | ViewState model and canonical form (leaf) | 001 002 | none |
+| VIZ.VIEW.CAMERA | Camera commands, fly-to and agent highlight | 006 008 | none |
+| VIZ.VIEW.CLIP | Clipping planes and boxes (leaf) | 005 007 | GOM.VIZ.02 |
+| VIZ.VIEW.VISIB | Visibility, layers and explorer filters | 005 009 | GOM.VIZ.06 |
+| VIZ.VIEW.TRANSP | Per-entity and per-group transparency (leaf) | 005 | GOM.VIZ.03 |
+| VIZ.VIEW.NAMED | NamedView lifecycle and exact restore | 001 002 003 004 005 | GOM.VIZ.01, PW.VIZ.02 |
+| VIZ.VIEW.MULTI | Multi-viewport layouts and camera sync | 001 002 | PW.VIZ.02 |

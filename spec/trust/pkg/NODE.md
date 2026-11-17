@@ -4,14 +4,14 @@ title: Result Package format
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-TRUST-001, REQ-TRUST-003]
 covers: []
-depends_on: [CORE, IO, UNC]
+depends_on: [CORE, IO]
 cli: [fid sign export-package, fid verify inspect-package]
 mcp: [verify_inspect_package]
 journal: [sign.export_package@1]
@@ -58,18 +58,34 @@ Defines the open, versioned **Result Package**: the self-contained bundle that c
 ## Interfaces
 
 - **Offers:** the Result Package specification and its JSON Schema; `sign.export_package@1` (CLI `fid sign export-package`); a bounded package reader library used by `TRUST.SIGN`, `TRUST.CHAIN`, `TRUST.REPLAY` and `TRUST.VERIFY`; `verify.inspect_package` (R0) listing a package's contents.
-- **Consumes:** ResultRecords and journal segments from `CORE`; QIF Results serialisation from `IO`; UEC status from `UNC`; kernel manifest from `KRN`.
+- **Consumes:** ResultRecords (including their UEC status, defined by UNC) and journal segments from `CORE`; QIF Results serialisation from `IO`; kernel manifest from `KRN`.
 
 ## Decomposition hints
 
 MANIFEST (schema + versioning), EXPORT (assembler command), READER (bounded reader + limits), FIXTURES (golden packages, malformed-package corpus).
 
+## Split rationale
+
+The split follows **the package's life from definition to consumption**: the byte format and statement (MANIFEST), deciding what goes in (CONTENT), writing it out (EXPORT), reading it back safely (READER), and the public conformance set (FIXTURE). Only CONTENT reaches into CORE, IO and KRN, so the format, writer and reader stay small and dependency-light for `fid-verify`.
+
+Alternatives considered:
+- **Writer vs reader halves only.** Rejected: content selection rules and the format contract change for different reasons, and the reader is the fuzzing hot spot.
+- **Fixtures inside each leaf.** Rejected: third-party verifiers need one published conformance set with its own spec text.
+
 ## Open questions
 
-- Container choice (ZIP, tar or directory + manifest) is a leaf design choice; it must be readable by common tools without fid.
-- Whether the package export is X1 (egress) or a W-class write to an export root needs a ruling consistent with AUTO's export-root model.
-- The in-toto predicate type URI needs a stable home, which depends on D-002 (project name).
+- Container choice is settled in `TRUST.PKG.MANIFEST`: ZIP with zip64 and deterministic metadata, readable with common tools.
+- The export class is settled by D-007 / CONSTITUTION §3.1: W1 with `fs_effect: write_root` for a local export root; X1 only off-machine (`TRUST.PKG.EXPORT`).
+- The in-toto predicate type URI needs a stable home, which depends on D-002 (project name); one crate constant holds it.
+- `depends_on` no longer lists UNC: the UEC status the package carries is a ResultRecord field (CONSTITUTION §5) read through CORE. The edge closed a dependency cycle with `GDT.RES.ROWFLOW -> TRUST.ESIG -> TRUST.PKG -> UNC -> UNC.ORS -> GDT.RES`.
+- The MCP tool `sign_export_package` falls outside TRUST's `verify_*` MCP pattern (already raised in TRUST).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.PKG.MANIFEST | Package container layout, manifest and in-toto statement | 001 002 008 | none |
+| TRUST.PKG.CONTENT | Package content selection and evidence tiers | 003 004 005 006 | none |
+| TRUST.PKG.EXPORT | Export an unsigned Result Package to an export root | 008 009 | none |
+| TRUST.PKG.READER | Bounded package reader and inspect command | 007 | none |
+| TRUST.PKG.FIXTURE | Published package spec and conformance fixtures | 001 007 008 | none |

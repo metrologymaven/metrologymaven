@@ -4,7 +4,7 @@ title: Envelope, tangential and constrained fits
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -67,6 +67,19 @@ MCC (circumscribed and convex cross-check), MIC (inscribed with trust region and
 - No NMI reference datasets exist for MIC or MCC on partial features [unverified]; validation relies on the open reference suites in `UNC`.
 - The planar datum default (minimax versus constrained L2) is an edition-specific choice that belongs to `GDT`; this subsystem only provides both.
 
+## Split rationale
+
+The split follows the **association criterion**, because each has its own objective, failure mode and safeguard: minimum circumscribed (MCC: convex for circle and sphere, non-convex for cylinder), maximum inscribed (MIC: always non-convex, needs the trust region), and tangential and datum-simulator fits (TAN: one-sided contact, rocking candidate sets). The independent combinatorial cross-checks (Welzl for MCC, Voronoi for MIC) form a fourth child, XCHK, so the paths that check the conic results are built and reviewed apart from them; XCHK reuses the Voronoi primitives of `KRN.MZ.VOR`.
+
+Alternatives considered:
+- **Split by primitive (circle, sphere, cylinder, plane).** Rejected: the safeguards (trust region, rocking sets, convex cross-check) are per criterion, not per primitive.
+- **Cross-checks inside MCC and MIC.** Rejected for the same independence reason as `KRN.MZ.VOR`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.ENV.MCC | Minimum circumscribed fits | 001 003 004 005 009 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.MIC | Maximum inscribed fits with trust region | 001 003 005 006 008 009 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.TAN | Tangential fits and datum simulators | 002 003 005 007 009 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.XCHK | Combinatorial cross-checks for MCC and MIC | 004 008 | none |

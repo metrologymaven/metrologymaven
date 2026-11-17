@@ -4,7 +4,7 @@ title: Command bus: execution, principals and side-effect enforcement
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -83,6 +83,22 @@ PIPE (execute pipeline and typed errors), PRIN (principal model and channel bind
 - Should the bus also write the local Activity Log for R0/R1 calls (concept doc 03 §4.1), or does `CORE.JRN` own that stream? This split gives the stream to `CORE.JRN`; the bus only calls it.
 - Pending-request records for `request_only` commands overlap with the VIZ Proposal Inbox; VIZ renders them, BUS creates them.
 
+## Split rationale
+
+The dividing principle is **one child per pipeline stage concern**, with the pipeline itself as the integrating child: PIPE owns stage order, validation, preconditions, handler purity, effects and errors; PRIN owns *who* (principal derivation); POL owns *may they* (class, projection, file handles, egress, network); ROUTE owns *where and whether again* (branch, concurrency, idempotency); UNIT owns literal normalisation; LINT owns the structural build-time proof that no other path to state exists. UNIT and LINT are small and fully specified, so they are leaves. PRIN is written to leaf depth but is blocked on D-012 (principal kind of a human at the CLI), raised concurrently by AUTO.
+
+Alternatives considered:
+- **IDEM as its own child** (as the hints suggest). Rejected: idempotency lookup is keyed by branch and shares the writer lock with concurrency checks; splitting it would force two children to own one table.
+- **Validation inside POL.** Rejected: schema validation is mechanical and belongs with the pipeline; POL stays purely about authorisation.
+- **Pending requests in JRN.** Rejected: the decision to create one is policy; JRN only stores the resulting W1 entry.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.BUS.PIPE | Execute pipeline, handler contract and typed errors | 003 007 008 015 | none |
+| CORE.BUS.PRIN | Principal model and channel binding (decision D-012) | 001 002 | none |
+| CORE.BUS.POL | Side-effect, projection, file-handle and egress policy | 004 005 011 012 013 | none |
+| CORE.BUS.ROUTE | Branch routing, optimistic concurrency and idempotency | 006 009 010 | none |
+| CORE.BUS.UNIT | Authored literal normalisation to SI (leaf) | 014 | none |
+| CORE.BUS.LINT | No-side-doors crate-graph check (leaf) | 016 | none |

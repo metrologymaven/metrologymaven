@@ -4,7 +4,7 @@ title: Constructions and live relationships
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -74,6 +74,26 @@ OPS (intersect, project, offset, midpoint, symmetry, bisector), ELEM (construct 
 - The kernel depends on nothing above it, yet constructions must recompute through `CORE`. This node assumes the declaration is data the kernel emits and `CORE` consumes, with no crate dependency from the kernel to `CORE`.
 - Phase: the concept baseline puts constructions in P1a [unverified for relationships, which SpatialAnalyzer users need from P3].
 
+## Split rationale
+
+The split follows **what a construction is built from**, with the shared contract first. DECL fixes the construction contract (purity, dependency declaration as data, typed errors, journal shape) that every other child implements, which answers the layering question in Open questions: the kernel emits declarations as data and `CORE.DEP` consumes them. Then:
+- OPS: geometric operations on existing elements (intersect, project, offset, midpoint, symmetry, bisector);
+- ELEM: building a primitive from several elements, including best fit through feature centres and constructed sets;
+- DERIV: elements derived from nominal geometry (sections, edges, trims, surface points) and system planes and coordinate systems;
+- AUTO: automatic construction from CAD faces with nominal-actual pairing, which starts with CAD in P1b;
+- REL: live relationships, which are constructions whose output is a value (distance, angle, deviation) rather than a feature.
+
+Alternatives considered:
+- **One child per output primitive** (construct point, construct line...). Rejected: each would repeat every operation; the seeds list both views, so ELEM covers the per-primitive seeds and OPS the per-operation ones.
+- **Relationships outside KRN** (in `GDT` or `RPT`). Rejected: they must recompute through the dependency graph like any construction; only their reporting is elsewhere.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.CONS.DECL | Construction contract and dependency declarations | 002 003 004 009 010 | none |
+| KRN.CONS.OPS | Construction operations on element pairs | 001 002 004 009 010 | GOM.CON.14-17, PCD.CON.01, PW.CON.04 |
+| KRN.CONS.ELEM | Primitives built from elements and constructed sets | 005 009 010 | GOM.CON.01-09, PCD.CON.01, PCD.CON.03, PW.CON.04 |
+| KRN.CONS.DERIV | Derived curves, surface points and system elements | 006 009 010 | GOM.CON.10-13 |
+| KRN.CONS.AUTO | Automatic construction from CAD with nominal-actual pairing | 007 009 010 | GOM.CON.22 |
+| KRN.CONS.REL | Live relationships | 008 009 010 | SA.REL.02, SA.REL.03 |

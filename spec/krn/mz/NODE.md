@@ -4,7 +4,7 @@ title: Minimum-zone (Chebyshev) fits
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -64,6 +64,19 @@ LIN (lines and plane), RND (circle, sphere, cylinder), VOR (exact 2D circle cros
 
 - Which primitives beyond the TraCIM set have a published reference for minimum zone; where none exists, results carry `reference_basis: fiducial-ORS` or `none` (owned by `UNC`).
 
+## Split rationale
+
+The split follows **convexity and reference coverage**. Lines and the plane (LIN) linearise to near-convex LP problems and are certified by TraCIM. Circle, sphere and cylinder (RND) are non-convex, need sequential linearisation, multi-start and partial-coverage checks, and are also certified by TraCIM. The exact Voronoi path for the 2D circle (VOR) is an independent algorithm family used as a cross-check and is reused by `KRN.ENV` for the maximum inscribed circle, so it stands alone. The remaining primitives (EXT) have no NMI reference and start later.
+
+Alternatives considered:
+- **One child per primitive.** Rejected: the six TraCIM primitives share two formulations.
+- **Fold VOR into RND.** Rejected: an independent cross-check should be built and reviewed separately from the path it checks.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MZ.LIN | Minimum-zone lines and plane | 001 003 004 005 009 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.RND | Minimum-zone circle, sphere and cylinder | 001 003 004 005 007 008 009 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.VOR | Exact Voronoi-based minimum-zone 2D circle | 006 | none |
+| KRN.MZ.EXT | Minimum-zone cone, slot, rectangle, ellipse and planar curves | 002 004 005 008 009 | GOM.CON.19, PW.CON.05 |

@@ -4,7 +4,7 @@ title: Kernel identity, WASM reference artifact and validation evidence
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -72,7 +72,24 @@ KCI (call interface and digest checks), CARD (algorithm IDs, spec-card format an
 
 - Native artifacts may compute values of record only after a later phase gate (the concept baseline says from P1b). That is a phase-policy choice for the steering group; this node only measures and reports.
 - TraCIM test-result redistribution terms are unverified (see UNC's open question on dataset licences).
+- **WASM target (assumed at this split):** the reference artifact is a `wasm32-wasip1` command module whose only imports are an allowlisted minimal WASI set used by an in-wasm I/O shim outside the kernel graph. This avoids `unsafe` export glue (the constitution allows no `unsafe` in the kernel) at the cost of a non-empty but allowlisted import section; the concept doc's example showed `wasm32-wasip2` with no imports. See `KRN.MAN.WASM`.
+
+## Split rationale
+
+The split follows the **evidence chain** from a single call to a published release: the call interface that hashes inputs and outputs (KCI); the algorithm identity and spec cards (CARD); the manifest that binds algorithms, sources, toolchain and artifacts into one digest (MANI); the WASM reference artifact (WASM); reproducible builds (REPRO); cross-host and cross-artifact bit-identity measurement and the patch-release gate (XART); and the validation harness and per-release report (VAL). Each produces one kind of evidence and has its own reviewers. Dependencies run in that order, and no child depends on a fit subsystem, so the kernel's layering and the spec's dependency graph stay acyclic (fit subsystems depend on MAN, not the reverse).
+
+Alternatives considered:
+- **Fold REPRO into WASM.** Rejected: reproducibility covers native artifacts too, and the independent rebuild is run by different people.
+- **Fold XART into VAL.** Rejected: XART compares digests across artifacts and hosts (no reference values needed), while VAL compares outputs with reference results; they gate different things.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MAN.KCI | Kernel call interface and digests | 001 002 | none |
+| KRN.MAN.CARD | Algorithm IDs and spec-card registry | 003 | none |
+| KRN.MAN.MANI | Kernel manifest and digest | 004 | none |
+| KRN.MAN.WASM | WASM reference artifact and import check | 005 | none |
+| KRN.MAN.REPRO | Reproducible build and independent rebuild | 009 | none |
+| KRN.MAN.XART | Cross-host and cross-artifact bit-identity gate | 006 007 010 | none |
+| KRN.MAN.VAL | Validation harness and per-release report | 003 008 | none |

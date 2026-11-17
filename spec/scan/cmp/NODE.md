@@ -4,7 +4,7 @@ title: Surface comparison and comparison points
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -74,6 +74,22 @@ DEV (deviation primitive and field), ACT (actual-to-actual comparison), BAND (to
 - Sign convention for actual-to-actual comparison when the reference is a cloud without a material side: proposed rule is the reference normal direction; confirm with users.
 - Whether comparison points should be GDT characteristics (owned by GDT) or SCAN characteristics reported through GDT's result model. This node assumes the latter.
 
+## Split rationale
+
+The split puts the **value of record** first: DEV owns the one deviation primitive, the `DeviationField` element and the CAD comparison at full scale. Everything else is a consumer of a field with one clear job: actual-to-actual comparison through the same primitive (ACT), kernel-side band and colour binning that VIZ.OVERLAY draws verbatim (BAND), toleranced comparison points reported through GDT.CHAR (CPT), read-only labels (LABEL), extreme search (EXTR), and the GPU preview that must never become a value of record (GPUPV). ACT, BAND, CPT, LABEL and EXTR are leaves in `fid-scan-cmp`; DEV and GPUPV stay open (method details, out-of-core scale, GPU path).
+
+Alternatives considered:
+- **Merge LABEL into CPT.** Rejected: labels have no tolerance, no decision and no ResultRecord; merging would blur what is reported.
+- **Put binning in VIZ or KRN.** Rejected: VIZ must never compute a bin (REQ-VIZ.OVERLAY-001) and the band set is specific to deviation and thickness fields; the boundary agreed at review puts kernel-side binning here.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.CMP.DEV | Deviation primitive and surface comparison against CAD | 001 002 003 004 012 | GOM.SRF.01, PW.CMP.01, SA.CAD.02, SA.SCN.02, PCD.LAS.02 |
+| SCAN.CMP.ACT | Actual-to-actual surface comparison | 006 | GOM.SRF.02 |
+| SCAN.CMP.BAND | Tolerance bands and kernel colour binning | 007 | GOM.SRF.10 |
+| SCAN.CMP.CPT | Comparison points and their ResultRecords | 008 009 | PW.CMP.03 |
+| SCAN.CMP.LABEL | Deviation labels | 010 | GOM.SRF.03, PW.CMP.06 |
+| SCAN.CMP.EXTR | Maximum and minimum deviation search | 011 | GOM.SRF.09 |
+| SCAN.CMP.GPUPV | GPU deviation preview with CPU cross-check | 004 005 | none |

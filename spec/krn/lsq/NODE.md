@@ -4,7 +4,7 @@ title: Fit contract and least-squares (Gaussian) fits
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -70,7 +70,32 @@ TRAIT (fit contract, result and error types), LIN (point, line, plane), RND (cir
 
 - Whether the R1/W2 split for fit commands is one command with a commit flag or two commands is a CORE registry convention; follow CORE when it is decided.
 - Exact TraCIM default MPE values must be taken from PTB's published test conditions, not recalled [unverified].
+- **R1/W2 convention (assumed at this split):** each fit is one registry command of class W2 whose dry-run returns the R1 scratch result (CONSTITUTION §3: dry-run where meaningful). Revisit if `CORE` decides on two commands.
+- **Kernel layering (cross-domain):** `GEO.TYPES` depends on `CORE`, but the kernel may depend on nothing above it. The children therefore take a borrowed, plain-data `PointsView` that `GEO.TYPES` can produce, with no crate dependency from the kernel to `GEO.TYPES` or `CORE`; and fit commands are declared as data rows read by `CORE.REG` rather than through `CORE` macros. Confirm with GEO and CORE.
+
+## Split rationale
+
+The split separates the **shared contract** (TRAIT) and **start-value machinery** (INIT) from the fits, and groups the fits by **mathematical family**, because primitives in one family share parameterisation, start strategy and validation data:
+- LIN: point, lines and plane (closed form through an eigen or singular-value problem);
+- RND: circles and sphere (iterative, algebraic start, convex enough for one start);
+- AXIS: cylinder, cone and torus (iterative, axis parameterisation, multi-start);
+- PLAN2D: slot, rectangle and ellipse (compound or conic planar shapes);
+- CURVE: paraboloid, polyline and spline curves (no TraCIM reference).
+
+The TraCIM Gaussian set falls in LIN, RND and AXIS, so those three carry REQ-KRN.LSQ-004 and -005.
+
+Alternatives considered:
+- **One child per primitive.** Rejected: 15 children, with the same start and validation logic repeated.
+- **Split by dimension (2D versus 3D).** Rejected: 2D and 3D circles share the method and the test data; only the projection differs.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.LSQ.TRAIT | Fit contract, result types and degeneracy checks | 001 003 006 007 009 010 | PW.CON.01 |
+| KRN.LSQ.INIT | Initial estimates for axial primitives | 003 008 | none |
+| KRN.LSQ.LIN | Least-squares point, line and plane fits | 002 003 004 005 006 007 009 010 | GOM.CON.18, PW.CON.01, PW.CON.02, SA.REL.01 |
+| KRN.LSQ.RND | Least-squares circle and sphere fits | 002 003 004 005 006 007 009 010 | GOM.CON.18, PW.CON.01, PW.CON.02, SA.REL.01 |
+| KRN.LSQ.AXIS | Least-squares cylinder, cone and torus fits | 002 003 004 005 006 007 008 009 010 | GOM.CON.18, PW.CON.02, PW.CON.07, SA.REL.01 |
+| KRN.LSQ.PLAN2D | Least-squares slot, rectangle and ellipse fits | 002 003 006 007 009 010 | GOM.CON.18, PW.CON.03 |
+| KRN.LSQ.CURVE | Least-squares paraboloid, polyline and spline fits | 002 003 006 007 009 010 | GOM.CON.18, PW.CON.03, SA.REL.01 |

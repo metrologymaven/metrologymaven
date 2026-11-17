@@ -4,7 +4,7 @@ title: QIF 3.0 model, XML and lossless QIF-JSON
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -74,6 +74,20 @@ GEN (XSD → Schema IR → Rust types and JSON Schema), XML (validating reader a
 - Do incumbents preserve `Attributes`/`UserDataXML` on QIF round trips? Needs empirical tests [unverified]; affects how strict REQ-IO.QIF-011 can be against third-party files.
 - Large `MeasuredPointSets`: the inline-versus-external-blob threshold is a data-model choice owned by CORE; this node needs it before the JSON leaf.
 
+## Split rationale
+
+The split follows the **pipeline from schema to bytes**: GEN turns the XSDs into types and schemas, XML and JSON are the two serialisations, NORM defines what "equal" means between them, and IDS owns the identity and extension rules that both serialisations must respect. Each has its own oracle (generator determinism, XSD validation, canonical-JSON digests, normalised equality, ID preservation tests).
+
+Alternatives considered:
+- **Split by QIF application area** (MBD, Plans, Results, Statistics). Rejected: the generator covers all areas at once; area mapping belongs to the consumers (`IO.RES`, `IO.CAD`).
+- **Fold NORM into JSON.** Rejected: the normaliser is also used by `IO.CORP` and by third-party round-trip tests that never touch JSON.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.QIF.GEN | XSD to Schema IR code generator | 001 002 012 | none |
+| IO.QIF.XML | Validating QIF-XML reader and writer | 003 004 005 013 | none |
+| IO.QIF.JSON | Lossless QIF-JSON projection, canonical form and digests | 008 009 | none |
+| IO.QIF.NORM | The qif-norm normaliser and round-trip equality check (leaf) | 006 007 | none |
+| IO.QIF.IDS | Identifier preservation and extension pass-through | 010 011 | none |

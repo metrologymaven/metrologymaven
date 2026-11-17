@@ -4,7 +4,7 @@ title: PMI to characteristics
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -63,6 +63,19 @@ MAP (PMI entity to characteristic), LINK (faces and datums), REVIEW (proposal se
 
 - Whether an MCP agent may run `propose` on a document it did not import itself, or only on handles to approved import roots (CONSTITUTION §3).
 
+## Split rationale
+
+The dividing principle is **the review workflow's stages**, following the hints: translate PMI into proposals (MAP), keep the trace to the model (LINK), adopt under human control (REVIEW), and handle revisions (DIFF). LINK, REVIEW and DIFF are mechanical and finished as leaves; MAP stays open because the AP242 entity inventory is large and its supported subset follows the DMT row sets.
+
+Alternatives considered:
+- **Fold LINK into MAP.** Rejected: the link invariants span MAP, REVIEW and DIFF, so one owner avoids three copies.
+- **Fold DIFF into MAP.** Rejected: DIFF compares against adopted state and has its own command.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PMI.MAP | Semantic PMI to proposed characteristics | 001 004 005 007 | GOM.GDT.16, PCD.CAD.02, SA.GDT.01 |
+| GDT.PMI.LINK | PMI source, face and datum links (leaf) | 003 | none |
+| GDT.PMI.REVIEW | Proposal review and human adoption (leaf) | 002 | GOM.GDT.16 |
+| GDT.PMI.DIFF | PMI re-import diff (leaf) | 006 | GOM.GDT.16 |

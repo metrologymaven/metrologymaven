@@ -4,7 +4,7 @@ title: DMIS 5.3 parsing, import and export
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -56,7 +56,7 @@ Reads and writes DMIS 5.3 (ANSI; ISO 22093:2011): output files (`.dmo`, measured
 
 ## Interfaces
 
-- **Offers:** `import.dmis_output@1` (P1a, results), `import.dmis_program@1` (P2), `export.dmis_output@1` and `export.dmis_program@1` (later); the DMIS syntax-tree and program-model types consumed by CMM and `IO.RES`; the generated conformance table.
+- **Offers:** (results import is `import.results_dmis@1` in `IO.RES.TRANS`), `import.dmis_program@1` (P2), `export.dmis_output@1` and `export.dmis_program@1` (later); the DMIS syntax-tree and program-model types consumed by CMM and `IO.RES`; the generated conformance table.
 - **Consumes:** `IO.REG` harness and provenance; `IO.QIF` feature, characteristic and plan types.
 
 ## Decomposition hints
@@ -67,7 +67,23 @@ PARSE (lexer, grammar, syntax tree, printer), OUT (output-file reader, P1a), PRO
 
 - Phase: this node is tagged P1a because output-file reading feeds the P1a transcription track; program import is P2 and program export is later (CONSTITUTION §7; concept roadmap puts DMIS export in P4). Children should carry their own phases.
 - Is there a DMIS 5.3 conformance test suite, or only the 5.2-era NIST suite? [unverified]
+- Resolved in level-3 review (2026-11-16): the duplicate `import.dmis_output@1` was dropped; DMIS results import is the single command `import.results_dmis@1` in `IO.RES.TRANS`.
+
+## Split rationale
+
+The split follows the **language pipeline and the phase line**: one shared front end (PARSE), then one child per use of the tree with its own phase: output reading (OUT, P1a), program import (PROG, P2), export (EXPORT, P4). Dialects (DIAL) are data that modify the front end, and the conformance table (CONF) is generated from what the others declare, so it cannot overclaim.
+
+Alternatives considered:
+- **Split by direction only** (import, export). Rejected: P1a output reading and P2 program import share nothing beyond the parser and must be scheduled separately.
+- **Dialects inside PARSE.** Rejected: profiles are versioned data with their own listing command and clean-room constraints.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.DMIS.PARSE | Bounded DMIS lexer, parser, syntax tree and printer (P1a) | 001 002 010 | none |
+| IO.DMIS.OUT | DMIS output-file reader for measured results (P1a) | 003 006 | none |
+| IO.DMIS.PROG | DMIS program import to a program model and QIF (P2) | 004 005 006 | none |
+| IO.DMIS.DIAL | Vendor DMIS dialect profiles as data (P1a) | 007 | none |
+| IO.DMIS.EXPORT | DMIS output and program export (P4) | 009 | PCD.EXP.01 |
+| IO.DMIS.CONF | Generated DMIS conformance table (leaf, P1a) | 008 | none |

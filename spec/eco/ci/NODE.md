@@ -4,7 +4,7 @@ title: Shared CI actions and automated review
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -64,11 +64,26 @@ The shared CI that every repository calls on every PR: format, lint (including t
 
 WF (reusable workflows and required checks), LINT (format and never-crash lints), LIC (licence and attribution), BOTS (review bots), GATES (calls into layering, rules and spec checks).
 
+## Split rationale
+
+The split is **one child per gate owned by CI**, plus the wiring. LINT and LIC are the two checks whose logic CI itself owns (REQ-ECO.CI-002 and -003); GATES decides which externally owned checks run for a change and enforces the CI-change isolation rule; WF wires everything into pinned reusable workflows and the required-check set; BOTS owns automated review. The layering, house-rules and spec-tree checks stay with ECO.REPO, ECO.RULES and ECO.COMM, as the ECO split rationale requires, so GATES only plans them.
+
+Alternatives considered:
+- **Hinted GATES as "calls into other checks" only, with isolation inside WF.** Rejected: the CI-change isolation rule is a path rule exactly like gate selection, so one planner owns both.
+- **Licence allowlist content inside LIC.** Rejected: the level-2 review assigned the SPDX allowlist to ECO.RULES; LIC only evaluates against it.
+
 ## Open questions
 
-- Which hosted review bots are acceptable given the licence decision and the rule that standards text never goes to external services: reviewers must not be fed standards text from the repo [unverified that bot configs can exclude paths].
-- D-001 sets the SPDX allowlist.
+- Which hosted review bots are acceptable given the licence decision and the rule that standards text never goes to external services (now owned by ECO.CI.BOTS) [unverified that bot configs can exclude paths].
+- D-001 is accepted; the SPDX allowlist content is owned by ECO.RULES.SPDX and evaluated by ECO.CI.LIC.
+- PLAT.MATRIX depends on ECO.CI, so no ECO.CI child may depend on PLAT (it would close a dependency cycle); the platform build matrix is passed into ECO.CI.WF as input data instead.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.CI.WF | Reusable workflows, required checks and test reporting | 001 007 008 | none |
+| ECO.CI.GATES | Path-scoped check planning and CI-change isolation (leaf) | 004 006 | none |
+| ECO.CI.LINT | Format and never-crash lint gate (leaf) | 002 | none |
+| ECO.CI.LIC | Dependency licence and attribution check (leaf) | 003 | none |
+| ECO.CI.BOTS | Automated review bots and finding triage | 005 | none |

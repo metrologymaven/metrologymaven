@@ -4,7 +4,7 @@ title: Open reference suites for GD&T and uncertainty
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -59,8 +59,27 @@ DRF, GDT, SIZE, ALN, FLT, PROJ, UNC (one module per suite), plus TRACE (clause a
 
 ## Open questions
 
-- Which suite cases need review by a GD&T domain expert before being frozen is not yet defined.
+- Which suite cases need review by a GD&T domain expert before being frozen: resolved at expansion by D-009 and `UNC.ORS.TRACE` (every case citing a DMT row needs two-expert sign-off before release).
+
+## Split rationale
+
+Split into **two machinery children and seven content suites**. TRACE owns the case format and the checks every suite must pass (citations, DMT rows, expert review per D-009, licence, versioning); RUN owns execution and published statistics. Each suite named in the scope (DRF, GDT, SIZE, ALN, FLT, PROJ, UNC) is its own child, because each needs different expertise and reviewers and has its own phase: FLT and PROJ start in P1b with scan filtering and CAD projection. Content children stay open: under D-009 their interpretation content is authored by experts, so an agent cannot finish them as leaves.
+
+Alternatives considered:
+- **Content by dialect** (ASME suite, ISO suite). Rejected: the same geometry and generators serve both dialects; dialect is a per-case field.
+- **TRACE inside RDL.FORMAT.** Rejected: citation and DMT-row rules are ORS policy tied to GDT and D-009, while RDL's format serves every tier.
+- **Fewer children by merging FLT and PROJ.** Rejected: different reviewers (filtering versus CAD geometry) and different consuming domains.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.TRACE | Suite case format, citation checks and suite versioning (leaf) | 002 003 006 007 | none |
+| UNC.ORS.RUN | Suite execution in CI and published pass statistics (leaf) | 004 | none |
+| UNC.ORS.DRF | ORS-DRF: datum reference frame cases | 001 002 003 | none |
+| UNC.ORS.GDT | ORS-GDT: tolerance evaluation cases | 001 002 003 | none |
+| UNC.ORS.SIZE | ORS-SIZE: size definition cases | 001 002 003 | none |
+| UNC.ORS.ALN | ORS-ALN: alignment cases | 002 003 | none |
+| UNC.ORS.FLT | ORS-FLT: filter, resampling and outlier cases | 002 003 | none |
+| UNC.ORS.PROJ | ORS-PROJ: projection onto CAD faces | 002 003 | none |
+| UNC.ORS.UNC | ORS-UNC: coverage of uncertainty intervals on known-truth parts | 005 | none |

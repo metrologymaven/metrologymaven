@@ -4,7 +4,7 @@ title: Build and fixture guidance with alarms
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -58,10 +58,23 @@ Guides an operator to set a part, tool or fixture detail to its nominal position
 
 TARGET (build targets and tolerances), SEQ (build sequences), DIRECT (move-direction guidance), ALARM (rules, output and acknowledgement).
 
+## Split rationale
+
+The dividing principle is **definition, computation, supervision and workflow**: what is to be set (TARGET), the pure "move this way, this much" function (DIRECT), the alarms that watch it (ALARM), and the session that steps an operator through targets and records set-in (SESSION). TARGET and DIRECT have no live dependencies and can be built and tested first.
+
+Alternatives considered:
+- **Merge DIRECT into SESSION.** Rejected: the pure computation is D0 and testable without live data; the session is live, stateful and observed.
+- **Split ALARM into rules and acknowledgement.** Deferred to the next level; the decomposition hints in `LVM.GUIDE.ALARM` suggest it.
+
 ## Open questions
 
-- Should alarm sound output be treated as device I/O (D1) on MCP or as plain UI output? This node assumes UI output, not device I/O.
+- Should alarm sound output be treated as device I/O (D1) on MCP or as plain UI output? **Resolved by CONSTITUTION §3.1 (D-007):** live alarm sound or visual is a UI effect, not a command; acknowledging an alarm is W2. Applied in `LVM.GUIDE.ALARM`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.GUIDE.TARGET | Build targets and tolerance bands | 001 | none |
+| LVM.GUIDE.DIRECT | Move-direction guidance computation | 002 | SA.BLD.02 |
+| LVM.GUIDE.ALARM | Alarm rules, alarm state and acknowledgement | 003 004 005 006 | SA.BLD.05 |
+| LVM.GUIDE.SESSION | Guide sessions, build sequences and set-in | 002 007 | none |

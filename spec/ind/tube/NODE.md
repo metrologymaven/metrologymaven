@@ -4,7 +4,7 @@ title: Pipe and tube pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -62,6 +62,14 @@ Inspection of bent tubes and pipes: reconstruct the measured centreline from sca
 
 MODEL (tube element and nominal), RECON (centreline reconstruction), BEND (XYZ and LRA conversion), CMP (comparison and best-fit), CORR (bend corrections), EXP (bend-data export), DATA, TPL.
 
+## Split rationale
+
+The split follows the **tube-shop workflow**: define the nominal (MODEL), reconstruct the measured centreline from cylinder fits (RECON), convert between XYZ and LRA (BEND), compare (CMP), correct (CORR), export bend data (EXP), plus datasets (DATA) and template (TPL). BEND is separate from RECON because the conversion is used by MODEL, CMP, CORR and EXP alike and is pure geometry that can be finished as a leaf now. Corrections are separate from comparison because they are advisory and never values of record (REQ-IND.TUBE-006).
+
+Alternatives considered:
+- **Merge RECON and BEND.** Rejected: nominals need conversion without reconstruction, and keeping them apart gives two clean leaves.
+- **Merge CORR into EXP.** Rejected: corrections are also shown in reports, and the correction model needs its own owner.
+
 ## Open questions
 
 - Which bender file formats to export first needs a tube-shop expert; formats must be implemented from public specifications only (CONSTITUTION §8 clean room).
@@ -69,4 +77,13 @@ MODEL (tube element and nominal), RECON (centreline reconstruction), BEND (XYZ a
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.TUBE.MODEL | Tube element and nominal (leaf) | 001 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.RECON | Measured centreline reconstruction (leaf) | 002 005 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.BEND | XYZ and LRA bend data conversion (leaf) | 002 003 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.CMP | Measured versus nominal tube comparison | 004 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.CORR | Bend corrections | 006 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.EXP | Bend-data export | 001 | PW.IND.04, PCD.IND.04 |
+| IND.TUBE.DATA | Tube method declarations and reference datasets | 007 008 | none |
+| IND.TUBE.TPL | Tube report template | 001 | none |

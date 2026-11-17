@@ -4,7 +4,7 @@ title: Docs portal and book
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -69,6 +69,21 @@ REF (reference page generation and drift check), VER (versioning and offline bun
 - ECO's scope lists "Docs site and book". This split assigns ECO the docs **build in CI and the generators**, and OUTR.DOCS the **portal structure, content and publishing**. If ECO's expansion claims the portal itself, the overlap must be resolved by a human reviewer.
 - How long a release stays "in support" is ECO's call; REQ-OUTR.DOCS-004 follows whatever ECO decides.
 
+## Split rationale
+
+The split follows the **kind of page and its source of truth**, with the shared frame and the gates pulled out. REF is pure registry output with a drift check; BOOK and CONTRIB are authored text with executable examples; FRAME holds editions, navigation, guide slots and offline bundles for all of them; SEARCH and QA are cross-cutting services. QA reuses the OUTR.SITE.QA gates instead of building a second crawler.
+
+Alternatives considered:
+- **Split by release lifecycle** (build, publish, archive). Rejected: every stage touches every page type, so ownership would blur.
+- **Merge SEARCH into FRAME.** Rejected: search has its own offline and no-third-party constraints and a separate index budget, and is a natural unit for one contributor.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.DOCS.REF](ref/NODE.md) | Generated command reference pages | 001 002 003 | none |
+| [OUTR.DOCS.FRAME](frame/NODE.md) | Portal frame, release editions and offline bundles | 004 007 | none |
+| [OUTR.DOCS.BOOK](book/NODE.md) | User guide (the book) | 005 | none |
+| [OUTR.DOCS.CONTRIB](contrib/NODE.md) | Contributor guide with checked commands (leaf) | 006 | none |
+| [OUTR.DOCS.SEARCH](search/NODE.md) | Client-side docs search | 008 | none |
+| [OUTR.DOCS.QA](qa/NODE.md) | Docs quality gates and link checks | 008 009 010 | none |

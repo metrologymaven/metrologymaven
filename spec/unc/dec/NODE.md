@@ -4,7 +4,7 @@ title: Typed conformance decision rules
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -68,6 +68,21 @@ TYPE (rule schema and catalog), EVAL (outcome and probability), RISK (specific a
 
 - Current edition and reaffirmation status of ASME B89.7.3.1 needs confirmation [unverified].
 
+## Split rationale
+
+Split by **layer and purpose**: the kernel side holds the rule type and catalog (TYPE), the pure evaluation that produces outcomes and conformance probability (EVAL) and the risk figures (RISK), all in `fid-kdec` because outcomes are values of record; the command side (`fid-dec`) holds rule resolution with dialect defaults and the read/evaluate commands (DEFAULT), and the audited write path for bindings, changes, adoption and tenant defaults (BIND). Every requirement lands in exactly one place: outcome semantics in EVAL, "which rule" in DEFAULT, "who changed it and when" in BIND.
+
+Alternatives considered:
+- **Following the decomposition hints literally** (DEFAULT holding only defaults, BIND holding bindings and queries). Adjusted: the read commands need resolution, so they sit with it, and BIND stays a pure write path.
+- **Risk inside EVAL.** Rejected: global risk needs a declared prior and numerical integration that most evaluations never use; keeping it separate keeps EVAL small and testable.
+- **Rule types in the command crate.** Rejected: the kernel evaluates rules, and the kernel cannot depend on crates above it.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.DEC.TYPE | Decision rule type and built-in catalog (leaf) | 001 002 | none |
+| UNC.DEC.EVAL | Rule evaluation and conformance probability (leaf) | 002 003 006 007 010 | none |
+| UNC.DEC.RISK | Specific and global conformity risk (leaf) | 006 | none |
+| UNC.DEC.DEFAULT | Rule resolution, dialect defaults and decide queries (leaf) | 001 003 004 005 | none |
+| UNC.DEC.BIND | Rule binding, change audit and adoption (leaf) | 008 009 | none |

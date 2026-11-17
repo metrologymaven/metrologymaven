@@ -4,7 +4,7 @@ title: Alignment object model, hierarchy and save/recall
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,9 +12,9 @@ claimed_by:
 satisfies: [REQ-ALN-001, REQ-ALN-006, REQ-ALN-008]
 covers: [GOM.ALN.08, PCD.ALN.04, PW.ALN.08, SA.XFM.02]
 depends_on: [CORE, GEO]
-cli: [fid align list-*, fid align get-*, fid align set-active, fid align save-*, fid align recall-*, fid align adopt-*, fid align delete-*]
-mcp: [align_list_*, align_get_*, align_set_active, align_save_*, align_recall_*, align_delete_*]
-journal: [align.set_active@*, align.save_*, align.recall_*, align.adopt_*, align.delete_*]
+cli: [fid align list-*, fid align get-*, fid align set-active, fid align set-parent, fid align create-*, fid align edit-group, fid align save-*, fid align recall-*, fid align adopt-*, fid align delete-*]
+mcp: [align_list_*, align_get_*, align_set_active, align_set_parent, align_create_*, align_edit_group, align_save_*, align_recall_*, align_adopt_*, align_delete_*]
+journal: [align.set_active@*, align.set_parent@*, align.create_*, align.edit_group@*, align.save_*, align.recall_*, align.adopt_*, align.delete_*]
 updated: 2026-11-16
 ---
 
@@ -65,10 +65,28 @@ Defines the `Alignment` element that every alignment method produces: what it st
 
 ELEM (element type and graph registration), HIER (chaining, groups, frames, cycle checks), ACTIVE (active alignment and result stamping), LIB (save and recall), ADOPT (provenance and adoption).
 
+## Split rationale
+
+The split follows the **lifecycle of one alignment element**: what it is and how it recomputes (ELEM), where it sits relative to others (HIER), how results bind to it (ACTIVE), how its definition outlives its data (LIB), and who may vouch for it (ADOPT). Each child owns one set of commands, so the CLI/MCP surface splits cleanly, and four of the five are small enough to finish as leaves now.
+
+Alternatives considered:
+- **Merge ACTIVE into HIER.** Rejected: stamping is called by every evaluating domain and has a different consumer set than hierarchy editing.
+- **Put adoption in CORE as a generic mechanism.** Rejected for now: C5 is generic, but the release-block closure and the agent-edit-reverts-to-proposed rule are alignment-specific; CORE can later absorb the state machine if other domains repeat it.
+- **Split HIER further now** (chain, groups, frames, delete). Deferred to its own expansion; it is the one child that still needs GEO.FRAME's leaf shape.
+
 ## Open questions
 
 - Does recall-on-new-data belong here or in AUTO's re-targeted replay? Current split: the alignment definition is here; AUTO replays commands that call it.
 
+- Frontmatter `cli`/`mcp`/`journal` now also list the HIER commands (`set-parent`, `create-frame`, `create-group`, `edit-group`), which the level-2 interface omitted.
+- `align.adopt_alignment` is classed W3 in `ALN.MODEL.ADOPT` (human-only request on MCP); reviewers should confirm this reading of CONSTITUTION §3.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.MODEL.ELEM | Alignment element type and dependency-graph registration (leaf) | 001 002 | none |
+| ALN.MODEL.HIER | Alignment hierarchy, groups, frames and deletion | 003 004 006 | GOM.ALN.08, PW.ALN.08, SA.XFM.02 |
+| ALN.MODEL.ACTIVE | Active alignment and result stamping (leaf) | 005 | none |
+| ALN.MODEL.LIB | Alignment save and recall library (leaf) | 007 | PCD.ALN.04 |
+| ALN.MODEL.ADOPT | Agent provenance and human adoption of alignments (leaf) | 008 009 | none |

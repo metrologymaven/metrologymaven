@@ -4,7 +4,7 @@ title: Out-of-core point clouds and level of detail
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -59,6 +59,17 @@ Point clouds of 10⁸ points and more that do not fit in memory: a chunked on-di
 
 LAYOUT (partitioning and on-disk chunk format), CACHE (memory budget and eviction), STREAM (ordered iteration), QUERY (cross-chunk queries), LOD (summaries for display).
 
+## Split rationale
+
+The split follows the **life of a chunked cloud**: how it is laid out and built (LAYOUT), how chunks are loaded under a memory budget with integrity checks (CACHE), how kernel code reads every point in a fixed order (STREAM), how neighbour queries span chunks with in-memory-identical results (QUERY), how display summaries are made without ever feeding values of record (LOD), and the registry commands (CMD, in `fid-geo-cmd`). All six are leaves. `fid-geo-ooc` sits outside the kernel graph because it does storage I/O; kernel code reads chunked clouds only through the `PointSource` trait defined in `fid-geo-types` (GEO.TYPES.ENV).
+
+The open COPC question is resolved in GEO.OOC.LAYOUT for now: an own chunk format inside the CORE store, with IO converting COPC through the streaming writer, so GEO does not depend on a format IO owns.
+
+Alternatives considered:
+- **LOD inside LAYOUT** (one octree for both). Rejected: LOD must be independent of chunk size (REQ-GEO.OOC.LOD-002) and type-separated from full-resolution data (REQ-GEO.OOC-005).
+- **Memory-mapped COPC as the native layout.** Deferred as above.
+- **Stream and query in one child.** Rejected: different oracles (exactly-once order versus identity with GEO.INDEX).
+
 ## Open questions
 
 - Whether the on-disk chunk format should follow COPC so IO can memory-map files directly; that couples GEO to a file format owned by IO.
@@ -66,4 +77,11 @@ LAYOUT (partitioning and on-disk chunk format), CACHE (memory budget and evictio
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.OOC.LAYOUT | Chunk layout, manifest and conversion (leaf) | 001 007 | none |
+| GEO.OOC.CACHE | Chunk cache, memory budget and integrity checks (leaf) | 001 006 | none |
+| GEO.OOC.STREAM | Ordered full-resolution point streaming (leaf) | 002 005 | none |
+| GEO.OOC.QUERY | Cross-chunk neighbour queries (leaf) | 003 | none |
+| GEO.OOC.LOD | Level-of-detail summaries for display (leaf) | 004 005 | none |
+| GEO.OOC.CMD | Chunked cloud and LOD commands (leaf) | 001 006 007 | none |

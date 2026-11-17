@@ -4,7 +4,7 @@ title: Support matrix: OS and architecture tiers with platform CI
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -63,9 +63,21 @@ FILE (matrix schema and data), POLICY (tier definitions, promotion and EOL rules
 
 ## Open questions
 
-- Linux ARM64 and Windows ARM64 tiers: inherited from PLAT; decide when the matrix is expanded.
-- Which "current macOS" and "current Ubuntu LTS" means in practice (latest only, or latest two) needs a maintainer call.
+- Linux ARM64 and Windows ARM64 tiers, and what "current macOS" and "current Ubuntu LTS" mean (latest only or latest two): raised as **D-010**, which blocks part of `PLAT.MATRIX.POLICY`.
+
+## Split rationale
+
+The split is by **artefact of the matrix**: one child owns the file format and its only parser (FILE), one owns what the file says and the rules for changing it (POLICY), and two are pure generators over the file (CI for the job list and release gate, PAGE for the docs page). Every other consumer reads the matrix through FILE, so a format change touches one place.
+
+Alternatives considered:
+- **Split by tier** (Tier 1 / Tier 2 / Tier 3). Rejected: each tier needs the same schema, job generator and page; ownership would repeat.
+- **Merge CI and PAGE into FILE.** Rejected: the release gate has its own fixtures and failure semantics, and keeping it separate makes each piece a small leaf.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.MATRIX.FILE | Support matrix schema, data file and validator | 001 007 | none |
+| PLAT.MATRIX.POLICY | Tier definitions, Tier 1 set and end-of-life policy | 005 006 | none |
+| PLAT.MATRIX.CI | Platform CI job list and release gate | 003 004 | none |
+| PLAT.MATRIX.PAGE | Generated support matrix page and consistency check | 002 | none |

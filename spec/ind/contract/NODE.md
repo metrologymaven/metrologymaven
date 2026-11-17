@@ -4,7 +4,7 @@ title: Pack contract and lifecycle
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -65,11 +65,26 @@ Defines what an industry pack is and how the platform hosts it: the pack manifes
 
 MANIFEST (schema and load-time validation), PROFILE (extension-point allowlist for packs), LIFE (install/enable/disable/remove), VERIFY (reference-dataset harness), PROV (pack identity stamping and replay), ORPHAN (missing-pack read-only behaviour).
 
+## Split rationale
+
+The split follows the **lifecycle of a pack**: what it declares (MANIFEST), what it may touch (PROFILE), how it is managed (LIFE), how its published results are checked (VERIFY), how its results carry identity through replay (PROV), and what happens when it is gone (ORPHAN). Each child owns one class of host behaviour, so every requirement has exactly one home and pack authors can read the contract one concern at a time.
+
+Alternatives considered:
+- **Split by side-effect class** (R0 reads, A0 admin, R1 verify). Rejected: it would scatter the manifest checks across three nodes.
+- **Merge PROV and ORPHAN.** Rejected: stamping and replay are CORE-facing, while the orphan behaviour is project-facing; they have different consumers.
+
 ## Open questions
 
-- Side-effect class for pack install/enable/disable: A0 (admin configuration) seems right because packs add executable code, but ECO has not yet fixed the class for generic plugins. REQ-012 only states the agent restriction; align the class once ECO's SDK node is expanded.
-- Whether third-party (non-first-party) packs may register new element types or only checks on existing ones. Assumed allowed, subject to ECO sandboxing.
+- Side-effect class for pack install, enable, disable and remove is now fixed by CONSTITUTION §3.1 (D-007): A0, never on MCP; listing is R0. `IND.CONTRACT.LIFE` applies it.
+- Whether third-party (non-first-party) packs may register new element types or only checks on existing ones. Assumed allowed, subject to ECO sandboxing; carried by `IND.CONTRACT.PROFILE`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.CONTRACT.MANIFEST | Pack manifest schema and load-time validation | 001 003 004 005 | none |
+| IND.CONTRACT.PROFILE | Pack extension-point profile | 002 | none |
+| IND.CONTRACT.LIFE | Pack lifecycle commands | 004 012 | none |
+| IND.CONTRACT.VERIFY | Reference-dataset conformance harness (leaf) | 006 | none |
+| IND.CONTRACT.PROV | Pack provenance stamping and replay | 007 008 009 | none |
+| IND.CONTRACT.ORPHAN | Missing and disabled pack behaviour | 010 011 | none |

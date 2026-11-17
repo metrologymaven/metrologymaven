@@ -4,7 +4,7 @@ title: Geometry element types and invariants
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -64,10 +64,25 @@ The typed, in-memory representation of every geometric element the platform hold
 
 POINTS (point set and attributes), MESH (indexed triangle mesh and topology facts), DIGEST (canonical layout and digest), REG (CORE registration and describe commands).
 
+## Split rationale
+
+The split follows the **layers of an element's life**: the shared envelope and error model (ENV), the two concrete storage families (POINTS for point sets and clouds, MESH for indexed triangles), the identity of content (DIGEST), and the bridge into the document and the command surface (REG). The first four are pure library code in `fid-geo-types` inside the kernel graph; REG lives in the command adapter crate `fid-geo-cmd`, because the kernel graph may not depend on CORE (C1).
+
+Alternatives considered:
+- **One child per element kind including the envelope in each.** Rejected: the frame slot, error enum and kind guards would be duplicated, and REQ-GEO.TYPES-001 needs one closed kind set.
+- **Digest inside each storage child.** Rejected: the canonical layout must be one documented format across kinds (REQ-GEO.TYPES-005), so it is owned once.
+- **A separate scanner-structured cloud kind.** Rejected for now, following the open question: scanner structure is attributes on `PointCloud` (REQ-GEO.TYPES.POINTS-006).
+
 ## Open questions
 
 - Whether a point cloud with scanner structure (organised grids, per-scan origins) is a separate kind or attributes on `PointSet`. Leaning towards attributes; IO's E57/PTX readers should confirm.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.TYPES.ENV | Element envelope and kind tags (leaf) | 001 002 | none |
+| GEO.TYPES.POINTS | Point sets, point clouds and per-point attributes (leaf) | 001 003 004 006 | none |
+| GEO.TYPES.MESH | Indexed triangle mesh and topology facts (leaf) | 001 003 004 006 | none |
+| GEO.TYPES.DIGEST | Canonical byte layout and element digest (leaf) | 002 005 | none |
+| GEO.TYPES.REG | Element registration and describe command (leaf) | 007 008 | none |

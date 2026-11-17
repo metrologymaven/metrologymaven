@@ -4,7 +4,7 @@ title: Local storage, crash-safe writes and settings
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -78,6 +78,21 @@ LAYOUT (project directory and lock), SQL (SQLite schema and append-only enforcem
 - Single-file project archive vs folder: affects sharing and cloud sync tools. Decide at leaf level unless maintainers want it as a product decision.
 - Chunk encoding for point data (Arrow IPC plus zstd in the concept docs) must be reconciled with GEO's out-of-core format; STO stores opaque chunks only.
 
+## Split rationale
+
+The dividing principle is **one child per kind of persistence**: LAYOUT (where things are and who may write), SQL (the database and atomic durable commits), CAS (large content-addressed data), CACHE (disposable derived data), SET (typed configuration), PRIV (the offline and telemetry guarantees). This follows the parent's hints, with TXN folded into SQL because atomicity is a property of the database transaction that also orders blob flushes. CACHE and PRIV are small and fully specified, so they are leaves.
+
+Alternatives considered:
+- **TXN as its own child.** Rejected: the transaction and the append-only schema are one SQLite unit; splitting would put REQ-002/003 across two children that share one connection.
+- **PRIV inside SET.** Rejected: the offline guarantee is a cross-cutting test and the consent rules differ from ordinary settings (W3, human-only, description-bound).
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.STO.LAYOUT | Project directory layout, locking and cross-platform file behaviour | 012 013 | none |
+| CORE.STO.SQL | Project database, append-only enforcement and atomic durable commits | 001 002 003 | none |
+| CORE.STO.CAS | Content-addressed blob store with chunking and integrity | 004 005 006 | none |
+| CORE.STO.CACHE | Evictable cache store for snapshots and memoised results (leaf) | 011 | none |
+| CORE.STO.SET | Settings model, scopes and settings commands | 009 010 | none |
+| CORE.STO.PRIV | Offline operation and telemetry consent (leaf) | 007 008 | none |

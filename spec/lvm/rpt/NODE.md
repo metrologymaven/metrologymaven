@@ -4,7 +4,7 @@ title: Network residual and quality reports
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -56,10 +56,23 @@ Makes an adjusted network reviewable. It turns the statistics that `LVM.ADJ` and
 
 TABLES (residual tables), SUMMARY (network summary block), COMPARE (adjustment comparison), EXPORT (report sections and CSV export through IO).
 
+## Split rationale
+
+The dividing principle is **the parts of a report**: the detailed tables (TABLES), the one-block verdict (SUMMARY), the difference between two solutions (COMPARE), and the assembly and export of all of them (EXPORT). Every child only reads results; none computes a value of record.
+
+Alternatives considered:
+- **Split per table** (observation, station, point). Rejected: the tables share ordering and source rules and are small.
+- **Put export in RPT.** Rejected: RPT owns the generic engine; the network-specific block set and CSV columns belong here.
+
 ## Open questions
 
 - None yet.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.RPT.TABLES | Residual tables, flagged observations and ellipsoid data | 001 | SA.NET.04 |
+| LVM.RPT.SUMMARY | Network summary block and simulated marking | 002 005 | none |
+| LVM.RPT.COMPARE | Comparison of two adjustments | 003 | none |
+| LVM.RPT.EXPORT | Network report assembly, RPT sections and CSV export | 004 | none |

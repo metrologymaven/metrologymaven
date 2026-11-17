@@ -4,7 +4,7 @@ title: I++ DME client for CMM controllers
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -71,6 +71,21 @@ SESS (session, framing, events, reconnection), TOOLS (tools, heads, changers, ro
 - Hold latency on real controllers is unknown; REQ-HAL.IPP-003's bound needs a hardware measurement.
 - Whether I++ camera objects (vision CMMs) belong here or in `HAL.DRV` is deferred to P4; `HAL.DRV` covers vision for now.
 
+## Split rationale
+
+The split follows **the hint list, by protocol concern**: the session core with the motion-caller guard and connection-loss behaviour (SESS), what the controller reports about its hardware (TOOLS), how measurements become observations (MEAS), who compensates the probe tip (COMP), what the operator does at the machine (MODES), and how controller support is proven and published (DIAL). Every motion instruction stays behind the SESS guard, so the single audited motion path is one module, not spread across children.
+
+Alternatives considered:
+- **Split by controller family.** Rejected: one client serves all I++ servers; family differences are data (dialect profiles), not code.
+- **COMP inside MEAS.** Rejected: compensation ownership is a machine-profile policy with A0 configuration and depends on spec cards, while point mapping does not.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.IPP.SESS | I++ session, framing, queues, events and connection loss | 001 003 | PCD.MCH.01, PCD.MCH.02, DEV.CMM.01, DEV.CMM.02 |
+| HAL.IPP.TOOLS | Tools, probe heads, changers and rotary tables via the controller | 001 005 | PCD.MCH.04, DEV.CMM.04, DEV.CMM.05 |
+| HAL.IPP.MEAS | Point and scan measurement mapping, including laser line sensors | 001 004 | PW.PRB.05, PCD.LAS.01 |
+| HAL.IPP.COMP | Probe-compensation ownership per machine profile | 004 005 | none |
+| HAL.IPP.MODES | Manual and DCC modes and jog-box events — leaf | 006 | PCD.MCH.05, PCD.MCH.06 |
+| HAL.IPP.DIAL | Controller dialect profiles, conformance gate and controller matrix | 002 007 | DEV.CMM.01, DEV.CMM.02 |

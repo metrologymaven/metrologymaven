@@ -4,7 +4,7 @@ title: Device runtime and acquisition manager
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -72,6 +72,22 @@ REG (device registry and negotiation execution), SESS (sessions, configuration, 
 
 - Production `device_io` on MCP: concept doc 08 (H-D18) proposes none in P2 beyond status and configuration drafts. CONSTITUTION §3 already makes D1 request-only; confirm whether request-only D1 tools ship in P2 or later.
 
+## Split rationale
+
+The split follows **the life of one batch** through the runtime: control (SESS) opens the session; data arrives through ingest (INGEST), is time-mapped (TIME) and converted (CONV), is checked against calibration and classified (POLICY), and is stamped, stored and journaled by the single writer (STAMP). File imports and manual entries (FILEDEV) join the same path without a live driver, which is why they are a sibling rather than an IO concern. TIME, CONV and POLICY are pure functions and are finished as leaves.
+
+Alternatives considered:
+- **Control plane versus data plane (two children).** Rejected: each would be XL, and the pure functions would be buried inside them.
+- **FILEDEV inside STAMP.** Rejected: it is the P1a deliverable and has its own commands and IO dependency.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.ACQ.SESS | Device registry, sessions, configuration and health supervision | 009 | none |
+| HAL.ACQ.TIME | Session timebase, clock offset and drift estimation, sync flag — leaf | 006 | none |
+| HAL.ACQ.CONV | Deterministic conversion of declared encodings to f64 SI values — leaf | 005 | none |
+| HAL.ACQ.INGEST | Data-plane ingest, back-pressure, sequencing and gaps | 003 004 | none |
+| HAL.ACQ.STAMP | Provenance stamping, raw-batch storage and batch journaling | 001 002 | none |
+| HAL.ACQ.POLICY | Calibration-state policy and ExternalClaim classification — leaf | 007 008 | none |
+| HAL.ACQ.FILEDEV | File pseudo-devices and manual-entry provenance | 001 | none |

@@ -4,7 +4,7 @@ title: Dimensional and size checks
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -67,8 +67,27 @@ LINEAR (distance, caliper, point deviation), ANGULAR, RADIAL (diameter, radius),
 
 ## Open questions
 
-- Checks on sections depend on SCAN (phase P1b); the section variant may need to move to P1b with SCAN.
+- Checks on sections depend on SCAN (phase P1b); resolved by giving them their own child `GDT.DIM.SECT` at P1b.
+- `GDT.DIM.SIZEASME` and `GDT.DIM.SIZEISO` are not leaves: pairing rules, envelope definitions and modifier definitions are DMT content that awaits expert rows (D-009, D-016).
+
+## Split rationale
+
+The dividing principle is **measurand family**, following the hints: linear (distance, caliper), angular, radial, scalar and min/max, point and feature deviations, then size per dialect. Sections are split out by phase (SCAN is P1b). The plain checks need no expert interpretation beyond a trivial DMT row, so they are finished as leaves; the size children carry the interpretation-heavy content and stay open.
+
+Alternatives considered:
+- **One leaf per seed row (nine children).** Rejected: distance, element distance and caliper share one computation; separating them would duplicate the pair table.
+- **Sections inside SCALAR.** Rejected: different phase and an external dependency on `SCAN.SECT`.
+- **One SIZE child for both dialects.** Rejected: different phases, row sets and source texts.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DIM.LINEAR | Distance and caliper checks (leaf) | 001 002 003 007 | GOM.DIM.01, GOM.DIM.02, GOM.DIM.05, PW.GDT.01, PCD.DIM.01 |
+| GDT.DIM.ANGLE | Angle checks between elements (leaf) | 001 002 007 | GOM.DIM.03, PW.GDT.01, PCD.DIM.01 |
+| GDT.DIM.RADIAL | Diameter and radius checks (leaf) | 001 002 007 | GOM.DIM.04, PW.GDT.01 |
+| GDT.DIM.SCALAR | Scalar property and min/max checks (leaf) | 001 002 007 | GOM.DIM.06, GOM.DIM.08 |
+| GDT.DIM.SECT | Checks on section elements | 001 002 007 | GOM.DIM.07 |
+| GDT.DIM.PTDEV | Point deviations and feature-versus-nominal checks (leaf) | 001 002 004 007 | GOM.DIM.09, SA.GDT.02 |
+| GDT.DIM.SIZEASME | ASME feature-of-size: two-point size and Rule #1 envelope | 001 005 007 | PW.GDT.01 |
+| GDT.DIM.SIZEISO | ISO 14405-1 size modifiers | 001 006 007 | none |

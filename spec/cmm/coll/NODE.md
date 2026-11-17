@@ -4,7 +4,7 @@ title: Machine, fixture and collision models
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -69,6 +69,20 @@ MACH (machine model and envelope), ROT (rotary tables), FIXT (fixtures and part 
 - The stated limitation stands: collision checking is only as good as the setup model, and true part placement is known only after alignment. This is why `CMM.EXEC` requires setup runs and per-cycle placement checks.
 - Articulating-head and rotary kinematics beyond 3-axis Cartesian are marked P3 in the concept docs; rotary tables are in this domain's scope, so a phase decision may be needed for their children.
 
+## Split rationale
+
+The split separates the **world models** from the **query** that uses them. MACH, ROT and FIXT each own one kind of world entity with its own digest (the ticket's `machine_model`, `fixture` and `part_placement`); MACH and FIXT are leaves. SWEEP owns the conservative probe-assembly geometry, and CHECK owns the single deterministic verdict that planning, simulation and the Motion Executive share. CHECK takes generic move segments rather than the plan type, so `CMM.PATH` depends on `CMM.COLL` and not the reverse. Performance (decomposition hint PERF) stays inside CHECK because the budget is a property of the query.
+
+Alternatives considered:
+- **SWEEP inside CHECK.** Rejected: the over-approximation bound is a correctness argument of its own and deserves separate review.
+- **Rotary tables inside MACH.** Rejected: rotary kinematics are proposed for P3 (D-018), while the 3-axis model is needed in P2.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.COLL.MACH](mach/NODE.md) | Machine model, envelope and obstruction bodies | 001 002 | PCD.PTH.06 |
+| [CMM.COLL.ROT](rot/NODE.md) | Rotary tables in the machine model | 001 003 | |
+| [CMM.COLL.FIXT](fixt/NODE.md) | Fixture models and nominal part placement | 001 | PCD.PTH.06 |
+| [CMM.COLL.SWEEP](sweep/NODE.md) | Swept volumes of the probe assembly | 004 | |
+| [CMM.COLL.CHECK](check/NODE.md) | Collision and clearance queries and verdicts | 004 005 006 007 008 | PCD.PTH.03 |

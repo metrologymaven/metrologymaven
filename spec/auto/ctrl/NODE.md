@@ -4,7 +4,7 @@ title: Loopback control channel
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -68,7 +68,26 @@ WIRE (framing, schema, versioning, bounds), AUTH (token file, challenge, replay 
 ## Open questions
 
 - Should a human be able to mark a control-channel session as human-driven (for test harnesses run by the user), lifting agent limits? This node says no; humans use the GUI or CLI.
+- The human-driven session question above stays "no" here: `AUTO.CTRL.EXEC` binds every client as principal kind `agent`. How humans get working-branch commits from scripts is D-012.
+
+## Split rationale
+
+The split follows the protocol stack, bottom up: transport and bounds (WIRE), identity (AUTH), then the operation families split by what they touch: registry commands and jobs (EXEC), the live UI (UIOPS), and UI-level recordings (TRACE). CLIENT is the other end of the wire, kept separate because three consumers (MCP bridge, CLI app target, SDK users) depend on it and not on the server.
+
+EXEC is separated from UIOPS because EXEC can be finished now against the bus, while UIOPS and TRACE wait on VIZ hooks (widget tree, input injection) that are not yet specified.
+
+Alternatives considered:
+- **One OPS child for all operations.** Rejected: it would mix a leaf-ready part (command execution) with parts blocked on VIZ.
+- **A separate CONF/fuzz child.** Rejected: fuzzing is an acceptance criterion of WIRE, and auth vectors belong to AUTH.
+- **Authentication inside WIRE.** Rejected: the security review surface of AUTH (token permissions, proofs, replay) deserves its own node and tests.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.CTRL.WIRE | Loopback listener, discovery, framing and bounds (leaf) | 001 008 | none |
+| AUTO.CTRL.AUTH | Token file and challenge-response authentication (leaf) | 002 003 004 | none |
+| AUTO.CTRL.EXEC | Command listing, execution and jobs over the channel (leaf) | 005 006 007 010 | SA.MP.02 |
+| AUTO.CTRL.UIOPS | UI inspection, input driving and screenshots | 005 009 | none |
+| AUTO.CTRL.TRACE | UI action-trace record and playback | 005 011 | none |
+| AUTO.CTRL.CLIENT | Rust control-channel client and fid ctrl diagnostics (leaf) | 010 | SA.MP.02 |

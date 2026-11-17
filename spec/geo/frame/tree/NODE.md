@@ -1,0 +1,84 @@
+---
+id: GEO.FRAME.TREE
+title: Frame tree and chain resolution
+level: 3
+parent: GEO.FRAME
+kind: task
+status: leaf
+phase: P0
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-GEO.FRAME-001, REQ-GEO.FRAME-002]
+covers: []
+depends_on: [GEO.FRAME.XFORM]
+side_effect: R1
+determinism: D0
+cli: []
+mcp: []
+journal: []
+updated: 2026-11-16
+---
+
+# GEO.FRAME.TREE: Frame tree and chain resolution
+
+## Purpose
+
+The per-document tree of coordinate frames: one world root, every other frame with exactly one parent and one transform to it, cycle-free edits, and resolution of the transform between any two frames by composing through their lowest common ancestor in a fixed order.
+
+## Scope
+
+**In:**
+- `Frame { id, name, kind, parent, to_parent }` with kinds world, part, instrument, alignment and user
+- `FrameTree` value with insert, reparent, set transform and remove operations, each returning a new tree or a typed error
+- Cycle rejection and single-world-root invariant
+- `resolve(a, b) -> Transform` mapping coordinates in frame a to frame b
+- A tree digest for replay checks
+
+**Out:**
+- Registry commands and journaling (owned by `GEO.FRAME.CMD`)
+- Transform arithmetic (owned by `GEO.FRAME.XFORM`)
+- Which elements reference a frame (owned by CORE element tree; checked in `GEO.FRAME.CMD`)
+
+## Requirements
+
+- **REQ-GEO.FRAME.TREE-001** The frame tree shall have exactly one frame of kind world, with no parent, created with the tree.
+- **REQ-GEO.FRAME.TREE-002** If an insert or reparent would make a frame its own ancestor, then the operation shall fail with `Cycle { path }` and return the tree unchanged.
+- **REQ-GEO.FRAME.TREE-003** When `resolve(a, b)` is called, the tree shall find the lowest common ancestor c, compose the transforms from a up to c in child-to-parent order, compose the inverses from c down to b, and return the result.
+- **REQ-GEO.FRAME.TREE-004** If a frame to be removed still has child frames, then removal shall fail with `HasChildren`.
+- **REQ-GEO.FRAME.TREE-005** The tree shall store frames in an ordered map keyed by frame ID, so iteration order and the tree digest are platform-independent.
+- **REQ-GEO.FRAME.TREE-006** `resolve(a, a)` shall return the exact identity, and `resolve(a, b)` composed with `resolve(b, a)` shall map any point within 100 m back within 1e-12 m.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture `fixtures/geo/frame/tree_7.json` (world, two parts, two instruments, two alignments, depth 4), when `resolve` runs for all 49 ordered pairs, then each result matches the fixture's expected matrix as IEEE hex on x86-64, ARM64 and wasm32.
+- **AC-2** (error path) Given `tree_7`, when frame `part_a` is reparented under its own descendant `align_1`, then the result is `Cycle` with the path `[part_a, align_1]` and the tree digest is unchanged.
+- **AC-3** (error path) Given `tree_7`, when `part_a` (which has children) is removed, then the result is `HasChildren`.
+- **AC-4** Given any pair from `tree_7` and 10⁵ seeded points, when mapped a→b→a, then the maximum error is ≤ 1e-12 m.
+- **AC-5** Given the same edits applied in the same order on two platforms, when the tree digest is computed, then it is identical.
+
+## Design
+
+- **Registry command(s):** none; library leaf (commands are in GEO.FRAME.CMD).
+- **Data structures:** `FrameId([u8; 16])`; `FrameKind`; `Frame`; `FrameTree { frames: BTreeMap<FrameId, Frame>, world: FrameId }`.
+- **Algorithm:** ancestor lists by walking parents (depth bounded by frame count); LCA as the last common entry of the two root-first lists; composition as `T_{c←a} = T_{c←p1} ∘ … ∘ T_{p_k←a}`, evaluated left-fold from a upward; then `T_{b←a} = inverse(T_{c←b}) ∘ T_{c←a}`.
+- **Errors:** `UnknownFrame`, `Cycle { path }`, `HasChildren`, `WorldImmutable`.
+- **Determinism:** D0.
+- **Performance budget:** resolve on a 1 000-frame tree of depth 20 under 20 µs [unverified].
+- **Crate:** `fid-geo-frame` (kernel graph, KNP-1 applies).
+
+## Test fixtures
+
+- `fixtures/geo/frame/tree_7.json`: hand-designed tree with transforms from `xform_cases.json`; expected matrices computed by the independent Python script. CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-geo-frame` (pure Rust, no I/O, KNP-1), implement module `tree`: `FrameId([u8;16])`, `FrameKind { World, Part, Instrument, Alignment, User }`, `Frame { id, name, kind, parent: Option<FrameId>, to_parent: Transform }`, and `FrameTree { frames: BTreeMap<FrameId, Frame>, world }` with `new()` (creates the single world frame), `insert`, `reparent`, `set_transform`, `remove`, `resolve(a, b) -> Result<Transform, FrameError>` and `digest()`. Reject cycles (`Cycle{path}`), removing frames with children (`HasChildren`), editing the world frame (`WorldImmutable`) and unknown IDs. `resolve` composes from a up to the lowest common ancestor in child-to-parent order, then applies the inverse chain down to b; `resolve(a,a)` is exact identity. Acceptance: AC-1 all 49 pairs of `tree_7.json` bit-exact on three targets; AC-2 cycle rejected with path and unchanged digest; AC-3 `HasChildren`; AC-4 round trip ≤ 1e-12 m; AC-5 identical digest across platforms. Constraints: CONSTITUTION §8 (no panic, no `unsafe`), KNP-1 (BTreeMap, no HashMap, no FMA). Uses `Transform` from module `xform`. Files: `crates/fid-geo-frame/src/tree.rs`, `tests/tree.rs`, `fixtures/geo/frame/tree_7.json`.
+
+## Open questions
+
+- None.
+
+## Children
+
+_Leaf: none._

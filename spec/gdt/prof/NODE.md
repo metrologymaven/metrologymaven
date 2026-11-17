@@ -4,7 +4,7 @@ title: Profile and runout tolerances
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -63,6 +63,22 @@ LINE, SURF, ZONES (non-uniform and unequal), BESTFIT, RUNOUT.
 
 - Grouping runout with profile is a judgement call (shared nominal-deviation machinery); runout could move to `GDT.LOC` if its implementation turns out closer to coaxiality.
 
+## Split rationale
+
+The dividing principle is **shared deviation machinery, then zone definitions, then symbols and options**: signed deviations from nominal (DEV) feed everything; zone definitions (ZDEF) turn the characteristic's zone statement into per-point intervals; then profile of a line (LINE), profile of a surface including composite (SURF), the best-fit options (BESTFIT) and runout (RUNOUT). DEV has no interpretation content and is finished as a leaf; the rest depend on expert rows.
+
+Alternatives considered:
+- **Hint split LINE / SURF / ZONES / BESTFIT / RUNOUT.** Adopted, plus DEV so the projection and approximation-error contract (REQ-GDT.PROF-005) has one owner.
+- **Composite profile as its own child.** Rejected: the tier solve is in `GDT.ZONE.COMP`; what remains is surface-profile problem construction, which SURF owns.
+- **Runout under `GDT.LOC`.** Rejected for now (parent open question): runout reuses DEV, not derived features.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PROF.DEV | Signed deviations from nominal with approximation error (leaf) | 005 006 | none |
+| GDT.PROF.ZDEF | Profile zone definitions | 002 | none |
+| GDT.PROF.LINE | Profile of a line | 001 006 | GOM.GDT.11, PW.GDT.05 |
+| GDT.PROF.SURF | Profile of a surface, including composite profile | 001 006 | GOM.GDT.12, PW.GDT.05 |
+| GDT.PROF.BESTFIT | Profile best-fit options | 003 | PCD.DIM.06 |
+| GDT.PROF.RUNOUT | Circular, total and axial runout | 004 006 | GOM.GDT.13, PW.GDT.06 |

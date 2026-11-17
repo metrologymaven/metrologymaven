@@ -4,7 +4,7 @@ title: fid-verify binary and verification report
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,8 +12,8 @@ claimed_by:
 satisfies: [REQ-TRUST-002, REQ-TRUST-003]
 covers: []
 depends_on: [TRUST.PKG, TRUST.SIGN, TRUST.CHAIN, TRUST.REPLAY]
-cli: [fid verify package, fid-verify]
-mcp: [verify_package]
+cli: [fid verify package, fid-verify, fid-verify mcp]
+mcp: [verify_package, verify_list_files]
 journal: []
 updated: 2026-11-16
 ---
@@ -64,11 +64,26 @@ The standalone, free and open `fid-verify` program that anyone can run on a Resu
 
 CLI (args, exit codes, human summary), REPORT (schema + JSON), MCP (stdio server), WEB (browser build), REPRO (reproducible build + layering guard).
 
+## Split rationale
+
+The split separates **the contract** (REPORT: schema, verdict, exit codes) from **each delivery surface** (CLI binary and registry command, stdio MCP server, browser build) and from **the evidence that the binary itself can be trusted** (REPRO). Every surface renders the same report, so parity tests are simple equality checks against the CLI.
+
+Alternatives considered:
+- **One leaf per surface with its own verdict logic.** Rejected: exit codes and verdict rules would drift.
+- **Browser build inside CLI.** Rejected: it has its own shell, streaming and memory limits, and starts later (P1b).
+
 ## Open questions
 
-- CONSTITUTION §7 lists the verifier under P0 while TRUST is tagged P1a. A minimal chain-only verifier may be needed in P0; moving the phase needs a steering decision.
-- Whether `fid-verify` is a thin wrapper over the `fid verify` registry commands or a separate binary with a smaller dependency set; the separate binary is assumed here (CONSTITUTION §2 names it).
+- CONSTITUTION §7 lists the verifier under P0 while TRUST is tagged P1a; opened as D-025 (recommendation: move the chain-only path to P0).
+- `fid-verify` is a separate binary with a smaller dependency set (CONSTITUTION §2 names it); `TRUST.VERIFY.REPRO` enforces the crate allowlist.
+- `TRUST.VERIFY.WEB` uses VIZ.WEB conventions without a `depends_on`, because VIZ.WEB depends on TRUST and the reverse edge would form a cycle.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.VERIFY.REPORT | Verification report schema, verdict and exit codes | 003 004 005 | none |
+| TRUST.VERIFY.CLI | fid-verify binary and verify-package command | 001 002 003 007 | none |
+| TRUST.VERIFY.MCP | fid-verify local stdio MCP server | 006 | none |
+| TRUST.VERIFY.WEB | In-browser verifier | 002 | none |
+| TRUST.VERIFY.REPRO | Verifier reproducible build and layering guard | 001 008 009 | none |

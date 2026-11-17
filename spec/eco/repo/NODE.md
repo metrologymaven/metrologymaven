@@ -4,7 +4,7 @@ title: Repository topology and build-time layering
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -61,11 +61,25 @@ Defines how the code is laid out across repositories and crates, and enforces th
 
 TOPO (repository set and pinning), LAYERS (layer map and check), ALLOW (kernel allowlist), TPL (repo template).
 
+## Split rationale
+
+The split follows the hints, one child per **constraint file and its check**: TOPO (`repos.toml` and cross-repository pins), LAYERS (`layers.toml` and the upward-dependency check), ALLOW (`kernel-allowlist.toml` and the kernel closure check), and TPL (the template that bundles them for a new repository). The three checks are small, offline repository tools and are leaves; TPL stays open because its content assembles outputs of ECO.RULES and ECO.CI.
+
+Alternatives considered:
+- **ALLOW inside LAYERS.** Rejected: the allowlist is a supply-chain policy with its own reviewers and changes far more often than the layer order.
+- **Template as part of ECO.RULES.** Rejected: the template carries code-layout files (lints, layers, pins) that ECO.REPO owns; it only consumes the rules block.
+
 ## Open questions
 
-- D-005 decides whether any TypeScript host shims exist and which layer they sit in.
-- Until there is more than one code repository, the "repository set" is this spec repo plus one code monorepo; when to split is a maintainer call.
+- D-005 is accepted provisionally (egui, Rust-only); any TypeScript MCP App host shim would sit outside the crate layer map (ECO.REPO.LAYERS) and need a template variant (ECO.REPO.TPL).
+- Until there is more than one code repository, the "repository set" is this spec repo plus one code monorepo; when to split is a maintainer call, recorded in `repos.toml` (ECO.REPO.TOPO).
+- ECO.RULES, ECO.CI, ECO.APPS, ECO.SDK and ECO.DATA depend on ECO.REPO, so no ECO.REPO child may declare a dependency on them.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REPO.TOPO | Repository map and cross-repository pin check (leaf) | 005 | none |
+| ECO.REPO.LAYERS | Crate layer map and layering check (leaf) | 001 002 004 007 | none |
+| ECO.REPO.ALLOW | Kernel-graph dependency allowlist (leaf) | 003 | none |
+| ECO.REPO.TPL | Repository template | 006 | none |

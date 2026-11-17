@@ -4,7 +4,7 @@ title: Benchmark datasets and example projects
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -59,10 +59,24 @@ The shared machinery for public datasets and example projects: a catalogue with 
 
 CAT (catalogue and policy), FETCH (fetch, cache, verify), BENCH (harness and results), EX (example projects).
 
+## Split rationale
+
+The split follows the **life of a dataset**: admitted to the catalogue (CAT), fetched and verified (FETCH), measured against (BENCH), and bundled into replayable examples (EX). CAT and FETCH are small, self-contained tools and are leaves; BENCH and EX depend on PLAT.HW and CORE replay, which are still open, so they stay open. Publishing numbers as release data sits in BENCH (one generated bundle), so no child owns publication twice.
+
+Alternatives considered:
+- **Separate PUB child for REQ-ECO.DATA-007.** Rejected: the bundle is just the harness's release output plus fidelity reports; a separate node would only move a JSON file.
+- **Catalogue policy as part of the house rules.** Rejected: the redistribution list applies only to datasets and is checked with the catalogue.
+
 ## Open questions
 
-- Hosting for large datasets (tens of GB of scans) without a paid account is unresolved; mirrors or academic hosting may be needed [unverified].
+- Hosting for large datasets (tens of GB of scans) without a paid account is unresolved; mirrors or academic hosting may be needed [unverified]. ECO.DATA.FETCH supports several URLs per dataset so mirrors can be added later.
+- Cross-domain: PLAT.HW also claims "the benchmark suite: workloads, datasets and metrics". ECO.DATA.BENCH takes the runner and provenance only and defers suite content and result-schema fields to PLAT.HW; to be confirmed by both domains' reviewers.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.DATA.CAT | Dataset catalogue and admission check (leaf) | 001 004 | none |
+| ECO.DATA.FETCH | Dataset fetch, cache and verify tool (leaf) | 002 003 | none |
+| ECO.DATA.BENCH | Benchmark harness, provenance and release numbers | 005 007 | none |
+| ECO.DATA.EX | Example projects with replayable journals | 006 | none |

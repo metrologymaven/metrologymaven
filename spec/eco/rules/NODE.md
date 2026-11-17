@@ -4,7 +4,7 @@ title: House rules and their sync into every repository
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -60,11 +60,28 @@ Keeps one canonical source for contributor and agent rules and copies it into ev
 
 SRC (canonical source layout and budgets), BLOCK (block format and digest), SYNC (sync tool), CHECK (tamper, stale and missing checks).
 
+## Split rationale
+
+The split follows the hints for the sync machinery (SRC the canonical source, BLOCK the format, SYNC the writer, CHECK the verifier) and adds one child per **rule set** the level-2 review assigned here: SPDX (the dependency and asset licence allowlist from D-001) and VOCAB (the product UI-string vocabulary lint). Both rule sets live in the canonical source, so they satisfy REQ-ECO.RULES-001; their evaluation is split from their content where another node already runs the check (ECO.CI.LIC evaluates the allowlist). The sync tools are Python standard library, like the spec-tree tools, so they run in every repository's CI without a Rust toolchain.
+
+Alternatives considered:
+- **Allowlist and vocabulary rules inside SRC.** Rejected: each has its own review rule and consumers, and SRC would mix content of different owners.
+- **Block format inside SYNC.** Rejected: CHECK needs the same parser; a shared library avoids two definitions of the digest.
+
 ## Open questions
 
-- **Owner assigned (level-2 review, accepted 2026-11-16):** ECO.RULES owns the vocabulary lint for product UI strings (OUTR.BRAND owns the outreach-material lint), and the dependency SPDX licence allowlist from D-001. Include both when this node is expanded.
-- Until a `fid-contrib` repo exists, the canonical source is this repository's AGENTS.md; the block format should be in place before the second repo is created.
+- **Owner assigned (level-2 review, accepted 2026-11-16):** ECO.RULES owns the vocabulary lint for product UI strings (now ECO.RULES.VOCAB; OUTR.BRAND owns the outreach-material lint) and the dependency SPDX licence allowlist from D-001 (now ECO.RULES.SPDX). Both are included in the split.
+- Until a `fid-contrib` repo exists, the canonical source is a `house-rules/` directory in this repository (ECO.RULES.SRC); the block format should be in place before the second repo is created.
+- Cross-domain: ECO.RULES.VOCAB and OUTR.BRAND's lint should share one rule format and engine, hosted here because OUTR depends on ECO.
+- ECO.RULES.SPDX leaves MPL-2.0 out of the proposed allowlist; adding it is a maintainer call under D-001.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.RULES.SRC | Canonical house-rules source and its manifest (leaf) | 001 006 | none |
+| ECO.RULES.BLOCK | Generated block format and digest library (leaf) | 002 | none |
+| ECO.RULES.SYNC | House-rules sync tool (leaf) | 007 008 | none |
+| ECO.RULES.CHECK | House-rules check: edited, stale, missing, budgets (leaf) | 003 004 005 006 008 | none |
+| ECO.RULES.SPDX | SPDX licence allowlist for dependencies and assets (leaf) | 001 | none |
+| ECO.RULES.VOCAB | Product UI-string vocabulary lint | 001 | none |

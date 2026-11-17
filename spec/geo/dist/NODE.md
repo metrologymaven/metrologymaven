@@ -4,7 +4,7 @@ title: Distance and closest-point projection
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,10 +60,25 @@ The CPU primitive that turns "where is this point relative to that surface" into
 
 MESH (point-to-mesh), FACE (point-to-trimmed-face), SIGN (sign rules and pseudo-normals), BATCH (parallel deterministic batches and options).
 
+## Split rationale
+
+The split follows **target kind and pipeline stage**: point-to-mesh geometry (MESH), the sign convention shared by meshes and CAD (SIGN), exact projection onto trimmed faces and bodies (FACE), the deterministic batch driver with options and the frame check (BATCH), and the registry command (CMD, in `fid-geo-cmd`). MESH, SIGN, BATCH and CMD are leaves; FACE stays open until GEO.CAD.TOPO fixes the trimming API. FACE does not use tessellation, so it is not blocked by D-024.
+
+Alternatives considered:
+- **Sign inside MESH and FACE separately.** Rejected: REQ-GEO.DIST-003 asks for one documented rule; two implementations could disagree at edges.
+- **Batch logic inside each target.** Rejected: thread-count independence (REQ-GEO.DIST-004) and options are the same for every target, so they are written once behind the `ProjectionTarget` trait.
+- **Candidate search through tessellation for CAD.** Rejected: it would tie values of record to the D-024 engine; face bounding boxes from control hulls are enough.
+
 ## Open questions
 
 - Phase set to P1b to match scan-to-CAD in CONSTITUTION §7; point-to-mesh may be needed earlier by ALN in P1a. Confirm in review.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.DIST.MESH | Point-to-triangle and point-to-mesh closest point (leaf) | 001 005 008 | none |
+| GEO.DIST.SIGN | Signed distance and pseudo-normal rules (leaf) | 003 | none |
+| GEO.DIST.FACE | Point-to-trimmed-face and point-to-body projection | 001 002 008 | none |
+| GEO.DIST.BATCH | Deterministic batch projection and options (leaf) | 004 005 006 007 | none |
+| GEO.DIST.CMD | Point projection command (leaf) | 001 006 | none |

@@ -4,7 +4,7 @@ title: Replay engine and state reconstruction
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -84,6 +84,23 @@ RECON (snapshots, reconstruct, resume), EXACT (exact re-execution and observatio
 - The normative equivalence tolerance table (REP-1 in the concept docs) has no owner node yet. RPL assumes UNC or KRN publishes it; if neither does, a decision is needed.
 - Verifier replay overlaps with TRUST's `fid-verify`. Proposed boundary: RPL is the engine, TRUST packages it into the free verifier binary.
 
+## Split rationale
+
+The dividing principle is **reconstruct versus re-execute, then by mode, with the shared judges pulled out**: RECON brings state back by trusting events (open, resume, head moves); EXEC re-executes to check (exact and verifier modes, observation substitution, Replay Report); RETGT re-executes to produce new state (re-targeted, dry-run, and rebase for promotion); XVER re-executes under two kernels. CLASS (outcome classification) and BISECT (first divergence and attribution) are pure functions every mode uses, so they are separate leaves.
+
+The equivalence tolerance table (REP-1) is owned by `UNC.RDL` per the level-2 review; CLASS consumes it through a trait, which resolves the parent's first open question. Step mode is an API on EXEC's cursor rather than its own child, because it has no requirement of its own.
+
+Alternatives considered:
+- **One child per replay mode, including classification inside each.** Rejected: it would duplicate the decision-invariance rule five times.
+- **Dry-run in EXEC.** Rejected: dry-run creates (throwaway) state and needs the same branch handling as re-targeted replay, not the checking path.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.RPL.RECON | Snapshots, reconstruction and crash resume | 001 002 003 015 | none |
+| CORE.RPL.EXEC | Exact and verifier re-execution with observation substitution | 004 005 014 | none |
+| CORE.RPL.CLASS | Replay outcome classification and decision invariance (leaf) | 006 007 008 009 | none |
+| CORE.RPL.RETGT | Re-targeted, dry-run and rebase re-execution | 010 011 | none |
+| CORE.RPL.XVER | Cross-version diff | 012 | none |
+| CORE.RPL.BISECT | First-divergence search and attribution (leaf) | 013 | none |

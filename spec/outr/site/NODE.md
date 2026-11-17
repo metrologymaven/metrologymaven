@@ -4,7 +4,7 @@ title: Project website
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -72,7 +72,23 @@ GEN (static build and data import from generated reports), APPS (per-app and sta
 
 - An existing site project may already exist in `../../metrology maven/site` [unverified relationship]. Decide whether OUTR.SITE reuses it (carried over from OUTR).
 - The static site generator choice is an implementation choice for the leaf; the constitution's Rust-first rule targets the product, and whether it binds project tooling is not stated.
+- OUTR.SITE.CLAIM assumes `parity.json` exposes `release` and `rows[]` with `seed_id` and `live`; ECO.PARITY must confirm when it is expanded.
+
+## Split rationale
+
+The split follows the **page families and their data sources**, with the shared build and the shared quality gates pulled out. GEN owns the reproducible static build and the import of generated inputs; PAGES, STATUS and DL each render one kind of page from one kind of generated source (app status, parity and coverage reports, release manifest); CLAIM is the honest-status check on hand-written pages; QA runs the gates every page must pass and is reusable by OUTR.DOCS.
+
+Alternatives considered:
+- **One child per page** (home, each app, blog, status, roadmap, download). Rejected: too many tiny nodes sharing the same data import and checks.
+- **Content vs tooling** (all pages in one child, all checks in another). Rejected: the checks are of different kinds (claim, size, trackers, accessibility), and the per-release download and status pages need their own generation logic.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.SITE.GEN](gen/NODE.md) | Static build and generated-data import | 006 | none |
+| [OUTR.SITE.PAGES](pages/NODE.md) | Home page, per-app pages and blog | 001 | none |
+| [OUTR.SITE.STATUS](status/NODE.md) | Status, parity and roadmap pages | 002 004 | none |
+| [OUTR.SITE.CLAIM](claim/NODE.md) | Capability-claim check (leaf) | 003 | none |
+| [OUTR.SITE.DL](dl/NODE.md) | Download page | 005 | none |
+| [OUTR.SITE.QA](qa/NODE.md) | Static-site quality gates | 007 008 009 010 | none |

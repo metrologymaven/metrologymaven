@@ -4,7 +4,7 @@ title: Screenshots, view track and video
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -67,6 +67,17 @@ The presentation recording layer (CONSTITUTION §6, layer 2): screenshots as com
 
 SHOT (screenshots), TRACK (view track), VIDEO (readback, encode, segments), OSCAP (full-window capture), ANIM (turntable and camera paths), REPLAY (re-rendered replay), POLICY (governance and redaction).
 
+## Split rationale
+
+The dividing principle is **one kind of recorded medium per child, with governance in its own child**:
+- SHOT (stills), TRACK (view keyframes), VIDEO (viewport pixels), OSCAP (full-window pixels, later phase) and ANIM (scripted camera stills) each own one medium and its storage;
+- REC owns the session, indicator, policy and agent rule that every medium obeys;
+- EXPORT is the only path from the project store to a folder.
+
+Alternatives considered:
+- **Split by host surface** (GUI capture vs headless capture). Rejected: the same commands serve both; headless is a property of VIZ.RENDER.
+- **REC folded into VIDEO.** Rejected: screenshots and the view track also obey the policy, so governance must sit beside them, not inside one medium.
+
 ## Open questions
 
 - Video codec choice (licence-compatible, hardware-encodable) is open; it may need a decision once D-001 sets the licence allowlist.
@@ -74,4 +85,12 @@ SHOT (screenshots), TRACK (view track), VIDEO (readback, encode, segments), OSCA
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.CAPTURE.SHOT | Screenshot command (leaf) | 001 002 | GOM.VIZ.07 |
+| VIZ.CAPTURE.REC | Recording sessions, indicator and governance | 006 007 008 009 | none |
+| VIZ.CAPTURE.TRACK | View track and re-rendered replay | 002 003 | none |
+| VIZ.CAPTURE.VIDEO | Viewport video capture in hash-chained segments | 002 004 005 011 | none |
+| VIZ.CAPTURE.ANIM | Turntable and camera-path animations (leaf) | 010 | GOM.VIZ.08 |
+| VIZ.CAPTURE.EXPORT | Media export to an approved local root (leaf) | 009 | none |
+| VIZ.CAPTURE.OSCAP | Full-window capture through OS APIs | 002 | none |

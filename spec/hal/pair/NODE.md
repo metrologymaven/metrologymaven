@@ -4,7 +4,7 @@ title: Pairing ceremony and driver trust grades
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: L
 owners: []
@@ -62,6 +62,19 @@ CER (ceremony state machine and SAS), KEYS (pinned keys, enrolment, unpairing), 
 
 - Whether some customers' safety policies require approval on the controller HMI instead of the kiosk affects which endpoints are paired (concept doc 08, open question 8).
 
+## Split rationale
+
+The split follows **the order of a trust relationship**: it is established once in person (CER), its result is held and checked on every connection (KEYS), every message on it is attributed to a principal (PRIN), and the data that flows over it is graded (GRADE). PRIN and GRADE are pure functions and are finished as leaves; CER and KEYS carry the cryptographic and platform choices that need review.
+
+Alternatives considered:
+- **Ceremony and keys as one child.** Rejected: the ceremony is reviewed as a protocol, the key store as platform code with per-OS hardware keys.
+- **Trust grading in HAL.ACQ.** Rejected by the parent split: the grade is a security rule and stays with pairing; ACQ only writes it.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.PAIR.CER | Pairing ceremony state machine and short authentication string | 001 002 003 | none |
+| HAL.PAIR.KEYS | Pinned keys, enrolment, unpairing and re-pairing | 004 006 | none |
+| HAL.PAIR.PRIN | Principal binding on paired channels — leaf | 004 | none |
+| HAL.PAIR.GRADE | Trust-grade rules and firmware-drift signal — leaf | 005 | none |

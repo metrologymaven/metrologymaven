@@ -4,7 +4,7 @@ title: Sections, section comparison and cloud slicing
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -64,6 +64,19 @@ DEF (section definitions and series), CUT (mesh, CAD and cloud intersection), WH
 
 - Should section surfaces other than planes (cylindrical, curve-normal) be in P1b scope? Proposed: planes only for P1b; others later.
 
+## Split rationale
+
+The split follows the **section pipeline**: define the planes (DEF), cut sources into section curves (CUT), compare actual against nominal with whiskers and statistics (WHISK), and the cloud-specific slab slicing with its fit hand-off (SLICE). Nominal CAD section curves are KRN.CONS constructions (boundary agreed at review); CUT requests and stores them and owns only the actual-data cuts. All four children are leaves in `fid-scan-sect`; DEF is an internal task with no command of its own.
+
+Alternatives considered:
+- **One leaf for create and compare.** Rejected: the section element is reused by reports, slicing and fits without comparison, and the compare step has its own parameters and statistics.
+- **Put cloud slab extraction in CUT.** Rejected: slicing for fits is a separate workflow (SA.SCN.03) with its own 2D frame and recompute link; CUT reuses SLICE's function instead.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.SECT.DEF | Section plane definitions and series | 001 002 | PW.CMP.02 |
+| SCAN.SECT.CUT | Section creation through meshes, clouds and CAD | 001 003 | GOM.SRF.05, PW.CMP.02 |
+| SCAN.SECT.WHISK | Section comparison, whiskers and statistics | 005 006 | GOM.SRF.04, GOM.SRF.05 |
+| SCAN.SECT.SLICE | Cloud slab slicing and fit hand-off | 004 007 | SA.SCN.03 |

@@ -4,7 +4,7 @@ title: Point-cloud formats: ASCII/CSV, E57, LAS/LAZ, COPC, PTX
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -70,6 +70,20 @@ ASCII (column mapping and roles), E57, LAS (LAS, LAZ and COPC together; shared s
 - Will verifiers accept COPC's scaled-integer storage as evidence, or must evidence-grade point data be E57 f64? Belongs to TRUST/UNC; affects which export is the default.
 - E57 library choice and its licence depend on the D-001 allowlist.
 
+## Split rationale
+
+One child per **format family**, each owning reader and writer, plus a shared STREAM child for out-of-core staging and export attribute selection. LAS, LAZ and COPC stay together because they share the scaled-integer model and the quantisation rules (REQ-IO.CLOUD-005/009).
+
+Alternatives considered:
+- **Separate COPC from LAS.** Rejected: COPC is LAZ 1.4 plus a hierarchy; separating them would duplicate the precision rules.
+- **No STREAM child.** Rejected: REQ-IO.CLOUD-007 is a cross-format memory bound that each reader would otherwise solve differently.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CLOUD.ASCII | ASCII, CSV and XYZ point tables (leaf) | 001 002 008 011 | GOM.IMP.04, GOM.IMP.08, GOM.EXP.02, PCD.EXP.02, PW.IMP.01, PW.EXP.01 |
+| IO.CLOUD.E57 | E57 reader and writer with multi-scan poses | 003 004 008 010 | PW.IMP.01, PW.EXP.01 |
+| IO.CLOUD.LAS | LAS, LAZ and COPC with scaled-integer precision | 005 008 009 | PW.EXP.01 |
+| IO.CLOUD.PTX | PTX reader with per-scan header transforms (leaf) | 006 | PW.IMP.01 |
+| IO.CLOUD.STREAM | Streaming point sink and attribute selection | 007 008 | none |

@@ -4,7 +4,7 @@ title: Shop-floor deployment: offline, non-admin, enterprise and kiosk
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -65,8 +65,24 @@ OFFLINE (air-gapped install, offline bundle, no-egress CI test), NOADMIN (per-us
 
 ## Open questions
 
-- Linux and macOS equivalents of enterprise managed configuration (e.g. configuration profiles on macOS) need selection at module level.
+- Linux and macOS equivalents of enterprise managed configuration: `PLAT.DEPLOY.MCONF` uses one file-based policy at a fixed machine-wide path on every OS; OS-native channels (Windows Group Policy templates, macOS configuration profiles) are left for a later sibling.
+- CORE.STO must consult `PLAT.DEPLOY.MCONF` and show the locked flag in its settings commands (cross-domain dependency, not yet in CORE.STO's requirements).
+
+## Split rationale
+
+The split follows **the deployment situations a site faces**, each with its own test environment: an air-gapped machine (OFFLINE), a locked-down machine without admin rights (NOADMIN), fleet distribution by IT (SILENT and MCONF), a dedicated station (KIOSK), and updating without network (UPDATE). Managed configuration is split from silent install because it is a run-time layer in the app, small enough to be a leaf now, while silent install is an installer contract tested in CI.
+
+Alternatives considered:
+- **Split by OS** (Windows / Linux / macOS deployment). Rejected: every situation above applies to every OS; the per-OS detail belongs one level down.
+- **Merge UPDATE into OFFLINE.** Rejected: update verification has its own security rules (signatures, key rotation, downgrade) and depends on ECO and TRUST signing, while the offline bundle does not.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.OFFLINE | Air-gapped install bundle and no-egress test | 001 002 003 | none |
+| PLAT.DEPLOY.NOADMIN | Per-user install without admin rights and write scope | 004 007 | none |
+| PLAT.DEPLOY.SILENT | Silent enterprise install and uninstall | 005 | none |
+| PLAT.DEPLOY.MCONF | Managed machine-wide policy configuration layer | 006 | none |
+| PLAT.DEPLOY.KIOSK | OS-level kiosk and touchscreen station setup | 008 | none |
+| PLAT.DEPLOY.UPDATE | Offline signed update bundles | 009 | none |

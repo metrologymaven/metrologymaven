@@ -4,7 +4,7 @@ title: DSSE signing and key custody
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -63,12 +63,28 @@ The cryptographic layer: creating and holding signing keys in the operating-syst
 
 DSSE (encode/verify), KEYSTORE (per-OS backends behind one trait), UV (user-verification release), TRUSTROOT (trusted keys, rotation, revocation files), INTEROP (third-party verifier CI test).
 
+## Split rationale
+
+The split separates **what is pure and portable** from **what is platform policy**: the DSSE core (DSSE) builds everywhere including WASM and is shared with `fid-verify`; key custody (KEYSTORE) is per-OS code; the user-verification gate (UV) is the small S1 policy in front of every key operation; trust decisions (TROOT) turn a valid signature into a trusted one using offline files; and interop and tamper evidence (INTEROP) are their own CI work.
+
+Alternatives considered:
+- **One crate per OS including DSSE.** Rejected: the verifier must not link keystore code.
+- **UV inside KEYSTORE.** Rejected: the S1 refusal rule must be reviewable on its own and is blocked on D-011 while the backends are not.
+
 ## Open questions
 
-- Algorithm set (e.g. Ed25519 and ECDSA P-256) depends on what OS keystores support with hardware backing; settle at the KEYSTORE leaf.
-- Linux has no single user-verification API; the fallback when none exists needs a ruling (refuse, or passphrase prompt).
+- Algorithm set: ECDSA P-256 and Ed25519, fixed in `TRUST.SIGN.DSSE`; hardware backing per OS is settled in `TRUST.SIGN.KEYSTORE`.
+- Linux user-verification fallback: opened as D-011; `TRUST.SIGN.UV` is blocked on it.
 - Sigstore keyless signing would need network access and an identity provider; it conflicts with C7 by default and is out unless a decision adds it as opt-in.
+- `sign.export_pubkey@1` is listed as X1 above; under CONSTITUTION §3.1 (D-007) a local export-root write is W1 with `fs_effect: write_root`. `TRUST.SIGN.KEYSTORE` proposes W1.
+- REQ-CORE.BUS-002 makes every CLI caller a `script` principal, which conflicts with signing from an "interactive CLI" (REQ-TRUST.ESIG-001); this is open decision D-012.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.SIGN.DSSE | DSSE envelope encoding, algorithms and key fingerprints | 001 003 008 009 | none |
+| TRUST.SIGN.KEYSTORE | OS keystore backends and key lifecycle commands | 004 009 | none |
+| TRUST.SIGN.UV | User-verification release and S1 refusal (decision D-011) | 005 006 | none |
+| TRUST.SIGN.TROOT | Offline trust roots, revocation and signature check command | 007 009 | none |
+| TRUST.SIGN.INTEROP | Third-party DSSE interop test and envelope fuzz corpus | 002 008 | none |

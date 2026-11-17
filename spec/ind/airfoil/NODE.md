@@ -4,7 +4,7 @@ title: Airfoil and blade pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -62,10 +62,25 @@ Gauging of turbine and compressor blades and other airfoil sections: from measur
 
 SECTION (element and zone split), CAMBER (mean camber line), PARAMS (chord, thickness, edges, angles), STACK (multi-section bow, lean, twist), DATA (reference datasets), TPL (report template).
 
+## Split rationale
+
+The split follows the **evaluation pipeline of a blade section**: the element and its zones (SECTION), single-section parameters (PARAMS), zone form (FORM), multi-section stacking (STACK), then the pack's declarations and datasets (DATA) and its report template (TPL). Camber line is kept inside PARAMS rather than its own child because chord, thicknesses and edge definitions all depend on it and nothing else does.
+
+Alternatives considered:
+- **One child per parameter** (chord, thickness, edges, angles). Rejected: they share the camber line and zone data, so children would depend on each other in a chain.
+- **Merge FORM into PARAMS.** Rejected: form is a deviation evaluation that needs ALN and GDT; parameters are geometric constructions that need only KRN.
+
 ## Open questions
 
-- Several leading-edge radius definitions exist in industry practice (best-fit circle over a zone, curvature at the stagnation point) [unverified]. The pack should support more than one, selected explicitly; a domain maintainer should confirm the list.
+- Several leading-edge radius definitions exist in industry practice (best-fit circle over a zone, curvature at the stagnation point) [unverified]. The pack should support more than one, selected explicitly; a domain maintainer should confirm the list. Carried by `IND.AIRFOIL.PARAMS`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.AIRFOIL.SECTION | Airfoil section element and zone split | 001 002 004 | GOM.SPE.05, PCD.IND.01, PW.IND.01 |
+| IND.AIRFOIL.PARAMS | Airfoil section parameters | 003 006 009 | GOM.SPE.05, PCD.IND.01, PW.IND.01 |
+| IND.AIRFOIL.FORM | Zone-wise airfoil profile form | 001 006 | GOM.SPE.05, PCD.IND.01, PW.IND.01 |
+| IND.AIRFOIL.STACK | Blade section stacking | 005 006 | GOM.SPE.05, PCD.IND.01, PW.IND.01 |
+| IND.AIRFOIL.DATA | Airfoil method declarations and reference datasets | 007 008 | none |
+| IND.AIRFOIL.TPL | Blade section report template | 001 | none |

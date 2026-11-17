@@ -4,7 +4,7 @@ title: Sheet metal pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: XL
 owners: []
@@ -65,10 +65,26 @@ Inspection elements that only make sense for thin formed parts: holes and slots 
 
 CTX (sheet context), HOLE (holes and slots), TRIM (trim and edge points), SPRING (springback), HEM (hem), DATA, TPL.
 
+## Split rationale
+
+The split is **one child per sheet element family**, plus the shared sheet context and the pack's declarations and template. The context (CTX) is its own child because every element needs the same material side, thickness and compensation rule; making it a dependency avoids each element re-implementing compensation. Holes (HOLE) and trim/surface points (TRIM) are separate because holes need shape fits while points need only local deviation decomposition. Springback (SPRING) is a region-statistics evaluation on top of SCAN and ALN, and hems (HEM) are section-based.
+
+Alternatives considered:
+- **Split by data source** (scan elements vs section elements). Rejected: it would put holes and hems together although they share no algorithm.
+- **Fold CTX into each element.** Rejected: duplicated compensation logic and a risk of inconsistent sign conventions.
+
 ## Open questions
 
-- Die compensation (morphing CAD to counter springback) is offered by some incumbents [unverified] but borders on reverse-engineering surface modelling, which FID puts out of scope. Needs a maintainer decision before anyone specifies it.
+- Die compensation (morphing CAD to counter springback) is offered by some incumbents [unverified] but borders on reverse-engineering surface modelling, which FID puts out of scope. Opened as decision **D-022**; `IND.SHEET.SPRING` excludes it until decided.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.SHEET.CTX | Sheet context element (leaf) | 001 002 | GOM.SPE.01, PW.IND.03 |
+| IND.SHEET.HOLE | Sheet-metal holes and slots | 003 005 | GOM.SPE.01 |
+| IND.SHEET.TRIM | Trim, edge and surface points | 004 005 | GOM.SPE.01, PW.IND.03 |
+| IND.SHEET.SPRING | Springback assessment | 006 | GOM.SPE.02 |
+| IND.SHEET.HEM | Hem evaluation | 005 007 | GOM.SPE.03, PW.IND.03 |
+| IND.SHEET.DATA | Sheet metal method declarations and reference datasets | 008 009 | none |
+| IND.SHEET.TPL | Sheet metal report template | 001 | none |

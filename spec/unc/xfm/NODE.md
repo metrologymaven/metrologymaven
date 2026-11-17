@@ -4,7 +4,7 @@ title: Transform uncertainty and spatial uncertainty fields
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -62,6 +62,19 @@ TCOV (transform covariance), APPLY (propagation into transformed entities), CHAI
 
 - The parameterisation of rotation covariance (Lie algebra vs Euler angles) is a design choice for a leaf, but reports must state it.
 
+## Split rationale
+
+Split along the **path of transform uncertainty**: estimate the covariance of one transform (TCOV), push it into the entities expressed in the new frame (APPLY), accumulate it along chains with shared observations (CHAIN), and sample it jointly with instrument models over space (FIELD). APPLY is a closed-form kernel function and is finished as a leaf; the others depend on ALN solver internals or on the MCM engine and stay open.
+
+Alternatives considered:
+- **LPU and MCM routes as separate children.** Rejected: each artifact (transform covariance, field) needs both routes and their agreement check; splitting by method would share every artifact.
+- **FIELD under LVM.** Rejected: the parent scope assigns fields here, and `UNC.PLAN` and CMM volumes use them too.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.XFM.TCOV | Transform parameter covariance | 001 005 006 | SA.UNC.03 |
+| UNC.XFM.APPLY | Propagating transform covariance into transformed points and features (leaf) | 002 | SA.UNC.03 |
+| UNC.XFM.CHAIN | Covariance along chained transforms | 003 | SA.UNC.03 |
+| UNC.XFM.FIELD | Monte Carlo spatial uncertainty fields | 004 006 | SA.UNC.02 |

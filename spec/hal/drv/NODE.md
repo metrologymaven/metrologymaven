@@ -4,7 +4,7 @@ title: Device drivers and the device-support catalog
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XXL
 owners: []
@@ -74,6 +74,24 @@ CAT (catalog and generated support page), GAU (gauges), ENV (environment sensors
 - SA.INS.06 (indoor GPS-style systems) has no DEV row; this node covers it, but a DEV row should be added to the seed catalog by its owner.
 - Concept doc 08 suggests a later I++ path for vision CMMs (camera objects in I++ 3.0); if that lands, DEV.CAM.01 and PCD.LAS.03 may move to `HAL.IPP`.
 
+## Split rationale
+
+The split follows **the hint list: one catalog child plus one child per device family**. The catalog and its generated page (CAT) are separate from every driver because they hold the status rules that no driver may override. Device families are grouped where they share capabilities, tiers and vendor-terms risk: gauges (GAU), environment sensors (ENV, a leaf), line-profile sensors (LIN), trackers with 6DoF probes (TRK), arms with arm scanners (ARM), area and terrestrial scanners with the P1b–P2 file path (ARE), other large-volume instruments (LVI), and the P3–P4 remainder of cameras, encoder retrofits and shop-floor protocols (MISC). Every DEV row except the I++ and simulator rows is covered by exactly one family child.
+
+Alternatives considered:
+- **Split by integration path (SDK, FILE, STD).** Rejected: a family such as scanners moves from FILE to SDK over time, and the conformance profile follows the capability, not the path.
+- **Cameras, encoder retrofits and shop-floor protocols as three children.** Rejected: it would exceed nine children; they are all P3–P4 and can split when expanded.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.DRV.CAT | Device-support catalog and generated support page | 001 002 003 006 | none |
+| HAL.DRV.GAU | Gauge drivers | 001 003 004 | DEV.GAU.01-03 |
+| HAL.DRV.ENV | Environment-sensor driver (Modbus and serial temperature probes) — leaf | 001 003 008 | PCD.MCH.03, DEV.ENV.01 |
+| HAL.DRV.LIN | Line-profile sensor drivers | 001 003 006 | DEV.LIN.01-03 |
+| HAL.DRV.TRK | Laser tracker, 6DoF probe and tracker-scanner drivers | 001 003 006 | SA.INS.01, SA.INS.09, DEV.TRK.01-04 |
+| HAL.DRV.ARM | Portable arm and arm-scanner drivers | 001 003 006 | SA.INS.02, DEV.ARM.01-03 |
+| HAL.DRV.ARE | Structured-light, handheld and terrestrial scanner integration | 001 005 006 | SA.INS.03, DEV.ARE.01-02 |
+| HAL.DRV.LVI | Photogrammetry, total stations and indoor positioning systems | 001 005 006 | SA.INS.04-06, DEV.PHO.01, DEV.TST.01-02 |
+| HAL.DRV.MISC | Vision cameras, encoder retrofits and shop-floor protocols | 001 003 006 007 | PCD.LAS.03, DEV.CMM.03, DEV.CAM.01, DEV.CTL.01 |

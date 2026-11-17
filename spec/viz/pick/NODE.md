@@ -4,7 +4,7 @@ title: Picking, selection and readouts
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -63,10 +63,28 @@ Turns pointer gestures into semantic, CPU-resolved selections that commands can 
 
 RESOLVE (ID buffer to CPU hit), SNAP, LASSO, SELSET (selection set algebra and grow), READOUT, AGENTSEL (selection read and notification).
 
+## Split rationale
+
+The dividing principle is **one gesture or consumer per child**, all sharing the rule that only CPU-resolved, semantic data leaves the module:
+- RESOLVE (single pick) is the base every other child builds on; SNAP refines it;
+- LASSO produces semantic queries and owns the 10⁸-point budget;
+- SELSET holds selection state and algebra; AGENTSEL exposes it to agents; READOUT answers hover.
+
+Alternatives considered:
+- **Snap folded into RESOLVE.** Rejected: both are finishable leaves and snapping depends on CAD and feature geometry that the base pick does not need.
+- **AGENTSEL folded into SELSET.** Rejected: SELSET still has an open side-effect question, while the read command is ready now.
+
 ## Open questions
 
 - Side-effect class of `view.set_selection` (UI context only, or journaled working-document state) is to be fixed at leaf level against CORE's rules.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.PICK.RESOLVE | Single pick resolved on the CPU (leaf) | 001 002 003 008 | none |
+| VIZ.PICK.SNAP | Snapping modes (leaf) | 003 | none |
+| VIZ.PICK.LASSO | Lasso selection as semantic queries | 001 002 004 005 009 | none |
+| VIZ.PICK.SELSET | Selection sets, algebra and grow | 002 009 | none |
+| VIZ.PICK.READOUT | Hover readouts (leaf) | 006 | none |
+| VIZ.PICK.AGENTSEL | Selection read and change notification for agents (leaf) | 007 | none |

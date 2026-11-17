@@ -4,7 +4,7 @@ title: Instrument uncertainty models
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -66,6 +66,22 @@ SCHEMA (model data format), MPE (spec-derived models per ISO 10360 part), PORT (
 - Ownership of the device descriptor format is with HAL; this node only maps parameters to contributors.
 - Licensing or interfacing PTB's VCMM for ISO/TS 15530-4 is open [unverified].
 
+## Split rationale
+
+Split by **kind of instrument evidence**, around one shared data format: the format with import, binding and range check (SCHEMA); MPE-derived models from datasheets (MPE); per-observation covariance models for portables and scanners (PORT); maker parameter sets for virtual-CMM simulation (IEMPS); the curated profile library (LIB); and the weight transform consumed by networks and alignment (WEIGHT). Each evidence kind has its own provenance, review needs and phase: MPE and LIB in P1a, PORT and WEIGHT in P1b for scan and transform work, IEMPS in P2 with ISO/TS 15530-4.
+
+Alternatives considered:
+- **One child per device class** (CMM, tracker, arm, scanner). Rejected: the format, range check and weighting would be repeated in each, and MPE derivation spans classes.
+- **Range check as its own child.** Rejected: it is a property of the format (declared range axes), so it sits with SCHEMA.
+- **WEIGHT inside LVM.** Rejected: `UNC.XFM` also needs it, and the parent requires UNC to export weights.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.INST.SCHEMA | Instrument model data format, import, binding and range check (leaf) | 001 004 | SA.UNC.01 |
+| UNC.INST.MPE | Specification-derived models from ISO 10360 MPE terms | 002 003 | SA.UNC.01 |
+| UNC.INST.PORT | Per-observation models for trackers, arms and scanners | 002 005 | SA.UNC.01 |
+| UNC.INST.IEMPS | Instrument Error Model Parameter Sets for virtual-CMM simulation | 007 | SA.UNC.01 |
+| UNC.INST.LIB | Instrument-profile library | 002 008 | SA.UNC.01 |
+| UNC.INST.WEIGHT | Covariance and weight export for networks and transforms (leaf) | 006 | none |

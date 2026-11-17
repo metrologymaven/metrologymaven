@@ -4,7 +4,7 @@ title: Selection model
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -58,10 +58,26 @@ How the platform records "which part of the geometry" a command acts on: index s
 
 MODEL (index sets and digests), QUERY (semantic query language and evaluation), RESOLVE (CPU pick and lasso resolution), ALGEBRA (set operations and grow/shrink).
 
+## Split rationale
+
+The split follows the **two forms of a selection and the ways they are produced**: the index-set model with digests and the stale check (MODEL), semantic queries and their re-evaluation (QUERY), CPU resolution of picks and lassos from explicit camera parameters (RESOLVE), pure set algebra and grow or shrink (ALGEBRA), and the registry commands that journal index-set selections (CMD, in `fid-geo-cmd`). MODEL, RESOLVE, ALGEBRA and CMD are P0 leaves on points and triangles. QUERY stays open: its grammar is still to be designed (C6), and its CAD and distance predicates wait for GEO.CAD and GEO.DIST (P1b), as the parent's open question anticipated.
+
+GOM.CAD.01 (face and patch selection) is covered by QUERY (by group, layer and tangent growth) and RESOLVE (face picks and lassos on tessellations with per-triangle face IDs).
+
+Alternatives considered:
+- **Commands inside each library child.** Rejected for the same crate-boundary reason as the other GEO subsystems (C1).
+- **CAD face growth in ALGEBRA.** Rejected: tangent continuity needs CAD topology and an angle tolerance, so it is a query predicate, keeping ALGEBRA a P0 leaf with no CAD dependency.
+
 ## Open questions
 
 - The semantic query language needs a grammar; it should be small and closed so it cannot carry untrusted instructions (C6).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.SEL.MODEL | Index-set selections, digests and staleness (leaf) | 001 004 | none |
+| GEO.SEL.QUERY | Semantic selection queries and re-evaluation | 001 005 006 | GOM.CAD.01 |
+| GEO.SEL.RESOLVE | CPU resolution of picks and lassos (leaf) | 002 003 | GOM.CAD.01 |
+| GEO.SEL.ALGEBRA | Selection set algebra and grow or shrink (leaf) | 007 | none |
+| GEO.SEL.CMD | Selection commands (leaf) | 001 002 007 | none |

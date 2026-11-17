@@ -4,7 +4,7 @@ title: Feature-pattern pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -63,6 +63,19 @@ FIND (recognition), INST (batch instantiation), SUM (pattern summaries), DATA, T
 
 - REQ-IND-003 does not name a pattern pack among those needing a named maintainer, so this node does not satisfy it; it still names a maintainer through its manifest (REQ-007).
 
+## Split rationale
+
+The split follows the **three steps a user takes** with a repeated feature: find the patterns (FIND), create checks for every member at once (INST), and read one summary per pattern (SUM), plus the pack's declarations and datasets (DATA) and template (TPL). REQ-IND.PATTERN-003 (determinism) sits with FIND because member order is fixed there; INST and SUM inherit it.
+
+Alternatives considered:
+- **Merge FIND and INST.** Rejected: recognition is R1 and reviewable before any document change, while instantiation is W2 and lands on an agent branch when an agent asks; keeping them apart preserves that review step.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.PATTERN.FIND | Feature-pattern recognition | 002 003 | GOM.SPE.06 |
+| IND.PATTERN.INST | Batch instantiation of pattern checks | 004 005 | GOM.SPE.06 |
+| IND.PATTERN.SUM | Pattern result summary (leaf) | 006 | GOM.SPE.06 |
+| IND.PATTERN.DATA | Pattern method declarations and reference datasets | 007 008 | none |
+| IND.PATTERN.TPL | Pattern report template | 001 | none |

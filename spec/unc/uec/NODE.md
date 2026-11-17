@@ -4,7 +4,7 @@ title: Uncertainty evidence classes and result uncertainty statement
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -66,6 +66,20 @@ STMT (statement schema and QIF mapping), CLASS (class assignment rules), DECL (d
 
 - Which QIF 3.0 extension hook carries the method tag and model digest is not yet confirmed [unverified].
 
+## Split rationale
+
+Split by **artifact and responsibility**: the value type and its invariants (STMT), the rule that grants a class (CLASS), the only human write path (DECL), the read-only explanation surface (EXPL), and the exchange mapping (QIF). Types and class rules sit in the kernel crate because the class is part of the value of record; the commands sit above it.
+
+Alternatives considered:
+- **UEC-0 handling as its own child.** Rejected: the UEC-0 invariant is a type rule (STMT), its reason is chosen by CLASS and its fixes are shown by EXPL; a separate child would share all three.
+- **QIF mapping inside IO.QIF.** Rejected for now: the field semantics (what may be imported as which class) are UNC policy; IO.QIF only provides the types.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.UEC.STMT | Uncertainty statement and evidence class types (leaf) | 001 004 | none |
+| UNC.UEC.CLASS | Evidence class assignment rules (leaf) | 002 005 006 | none |
+| UNC.UEC.DECL | Declared uncertainty command (leaf) | 007 008 | none |
+| UNC.UEC.EXPL | Show and explain uncertainty queries (leaf) | 003 | none |
+| UNC.UEC.QIF | QIF 3.0 mapping of the uncertainty statement | 009 | none |

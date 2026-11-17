@@ -4,7 +4,7 @@ title: Feature and scan measurement strategies
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -71,6 +71,22 @@ FEAT (auto-feature strategies per type), SCAN (scan strategy types), FILT (scan 
 - Edge point and slot strategies may need GDT input on which points define the measurand; confirm with `GDT` when that domain splits.
 - Default sampling counts per feature type are a domain-expert choice; incumbents' defaults are not copied [unverified].
 
+## Split rationale
+
+The split separates **what a strategy is** from **the checks and groupings around it**. FEAT and SCAN own the two families of target generators (discrete hits and continuous scans), which differ in parameters, geometry and sensor needs. CHECK is a shared gate that both families and the program generators call, and it owns the HitTarget type so the dependency points one way. FILT is cut from SCAN because filter provenance is a result-record concern with its own small command. LEARN, SET and LIB are workflows on top of strategies (teach from hits, group, reuse) with their own commands and no shared state with each other.
+
+Alternatives considered:
+- **One child per feature type.** Rejected: eleven near-identical children that would duplicate the command surface and the check.
+- **CHECK inside FEAT.** Rejected: scan strategies and `CMM.GEN` also need it.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.STRAT.FEAT](feat/NODE.md) | Auto-feature strategy types and hit generation | 001 002 | PCD.FEA.01, PCD.FEA.02, PCD.FEA.05 |
+| [CMM.STRAT.CHECK](check/NODE.md) | Minimum-point and distribution check for strategies | 003 | |
+| [CMM.STRAT.SCAN](scan/NODE.md) | Scan strategy types | 004 005 | PCD.SCN.01, PCD.SCN.02, PCD.SCN.03, PCD.SCN.04 |
+| [CMM.STRAT.FILT](filt/NODE.md) | Scan filter settings and filter provenance | 006 | PCD.SCN.05 |
+| [CMM.STRAT.LEARN](learn/NODE.md) | Manually learned features | 007 | PCD.FEA.03 |
+| [CMM.STRAT.SET](set/NODE.md) | Feature sets with shared strategy settings | 008 | PCD.FEA.04 |
+| [CMM.STRAT.LIB](lib/NODE.md) | Strategy libraries and defaults | 009 | |

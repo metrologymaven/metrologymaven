@@ -4,7 +4,7 @@ title: Workspace shell, palette and accessibility
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -72,11 +72,31 @@ The native application frame shared by every focused app: docking workspace, mod
 
 DOCK (workspace and docking), TREE (element tree and inspector), PALETTE (palette and schema forms), KEYMAP, LAYOUT (role layouts), RAIL (workflow rail), STATUS (status bar and "Why?" host), THEME, L10N, CTRLUI (control-channel UI side), A11Y.
 
+## Split rationale
+
+D-005 is accepted provisionally (egui + winit + wgpu), confirmed only after three prototype spikes. The split therefore has two layers:
+- **Gate:** SPKTREE, SPKTABLE and SPKRPT are explicit task leaves, one per screen named in D-005. Their reports go to the maintainers, who confirm or reopen D-005; every production child below depends on them.
+- **Production modules**, divided by what the user touches: DOCK (frame, status bar, rail, role layouts), TREE (dense data panels), PALETTE (keyboard-first command access), THEME (tokens, scaling, motion, localisation) and A11Y (accessibility tree, describe view and the control-channel UI side, which share one widget tree).
+
+Alternatives considered:
+- **One child per decomposition hint** (DOCK, TREE, PALETTE, KEYMAP, LAYOUT, RAIL, STATUS, THEME, L10N, CTRLUI, A11Y). Rejected: eleven children plus three spikes; KEYMAP belongs with the palette (both generated from the registry), LAYOUT, RAIL and STATUS are parts of the frame, L10N is a theme-level hook.
+- **Spikes under a single SPIKE child.** Rejected: the brief asks for the spikes as explicit task children, and each spike is already a finishable leaf.
+- **CTRLUI separate from A11Y.** Rejected: the control channel's UI inspection and the accessibility API are two projections of the same widget tree; separating them would duplicate it.
+
 ## Open questions
 
-- D-005 (UI toolkit and TypeScript boundary) is due "when VIZ.SHELL is expanded". This node cannot be split further until D-005 is decided; the requirements above are toolkit-neutral.
+- D-005 is now accepted provisionally (egui + winit + wgpu); confirmation depends on the three spike children. If a spike fails, the maintainers reopen D-005 (option B) for the affected screens; the production children's requirements stay toolkit-neutral.
 - Whether accessibility should become its own level-2 node if the baseline grows (for example EN 301 549 conformance for EU procurement) [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.SPKTREE | Toolkit spike - element tree with 10k items (leaf) | 009 | none |
+| VIZ.SHELL.SPKTABLE | Toolkit spike - characteristic table (leaf) | 003 004 | none |
+| VIZ.SHELL.SPKRPT | Toolkit spike - report designer canvas (leaf) | 003 004 | none |
+| VIZ.SHELL.DOCK | Workspace frame, docking, status bar and role layouts | 001 008 | none |
+| VIZ.SHELL.TREE | Element tree, inspector and results panels | 001 009 | none |
+| VIZ.SHELL.PALETTE | Command palette, generated forms, menus and keymap | 001 002 003 | none |
+| VIZ.SHELL.THEME | Theming, scaling, motion and localisation | 006 007 010 011 | none |
+| VIZ.SHELL.A11Y | Accessibility tree, describe view and UI inspection | 004 005 007 | none |

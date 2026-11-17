@@ -4,7 +4,7 @@ title: Multi-part statistics, SPC, capability and dashboards
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -12,9 +12,9 @@ claimed_by:
 satisfies: [REQ-RPT-004, REQ-RPT-007]
 covers: [GOM.TRD.*, PW.MSP.01, PW.MSP.02, PW.MSP.04, PW.MSP.05]
 depends_on: [RPT.CATALOG, RPT.MODEL, KRN]
-cli: [fid stats compute-*, fid stats *-limits, fid stats *-chart, fid stats compare-*, fid stats *-dashboard]
-mcp: [stats_compute_*, stats_*_limits, stats_*_chart, stats_compare_*, stats_*_dashboard]
-journal: [stats.compute_*, stats.*_limits, stats.*_chart, stats.compare_*, stats.*_dashboard]
+cli: [fid stats compute-*, fid stats *-limits, fid stats *-chart, fid stats compare-*, fid stats *-dashboard, fid stats *-dataset]
+mcp: [stats_compute_*, stats_*_limits, stats_*_chart, stats_compare_*, stats_*_dashboard, stats_*_dataset]
+journal: [stats.compute_*, stats.*_limits, stats.*_chart, stats.compare_*, stats.*_dashboard, stats.*_dataset]
 updated: 2026-11-16
 ---
 
@@ -71,6 +71,19 @@ Statistics across parts, stages and runs, per characteristic: descriptive statis
 
 DSET (data-set selection and exclusions), DESC (descriptive statistics), TREND (trend series), SPC (control charts, limits, run rules), CAP (capability indices), CMP (part-to-part comparison and piece stepping), DASH (dashboards).
 
+## Split rationale
+
+The split follows the **statistical method**, with one shared input: every statistic reads a digested, ordered `DataSet` (DSET), which is what makes "which results were used" answerable and results reproducible. Methods then split by what they compute: descriptive statistics (DESC), trend and histogram series plus the shared `ChartSeries` contract (TREND), control charts and run rules (SPC), capability indices (CAP), and part comparison with piece stepping (CMP). Dashboards (DASH) are saved definitions over the others and compute nothing themselves.
+
+- DESC is finished as a leaf: the method is standard, the NIST StRD univariate datasets give certified answers, and its command is R1.
+- The chart-series contract sits in TREND, the simplest producer, so SPC and LVM depend on it rather than on a separate contract child.
+- REQ-RPT.STATS-002 (reproducibility) is satisfied by every computing child; REQ-RPT.STATS-014 (citations) by the three method children that cite standards.
+- `*-dataset` was added to this node's CLI, MCP and journal patterns for DSET.
+
+Alternatives considered:
+- **By chart type** (trend, control, histogram). Rejected: limits and indices are not charts, and series building would be duplicated.
+- **Merge CAP into SPC.** Rejected: capability needs no control limits for Pp/Ppk and ships earlier; the expert question on constants affects SPC more than CAP.
+
 ## Open questions
 
 - Which reference (ISO 22514 parts, ISO 7870-2, AIAG SPC manual) and which edition defines the default constants and run rules? Needs a domain expert; may become a decision before the SPC leaf.
@@ -78,4 +91,12 @@ DSET (data-set selection and exclusions), DESC (descriptive statistics), TREND (
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.DSET | Data sets, ordering and exclusions | 002 009 | PW.MSP.01 |
+| RPT.STATS.DESC | Descriptive statistics per characteristic (leaf) | 001 002 014 | GOM.TRD.01, PW.MSP.01 |
+| RPT.STATS.TREND | Trend series and the chart-series contract | 003 | GOM.TRD.02 |
+| RPT.STATS.SPC | Control charts, control limits and run rules | 002 004 005 006 014 | GOM.TRD.05, PW.MSP.02 |
+| RPT.STATS.CAP | Capability and performance indices | 002 007 008 014 | GOM.TRD.03 |
+| RPT.STATS.CMP | Part-to-part comparison and piece stepping | 010 011 | GOM.TRD.04, PW.MSP.05 |
+| RPT.STATS.DASH | Dashboards | 012 013 | PW.MSP.04 |

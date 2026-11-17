@@ -4,7 +4,7 @@ title: Colour maps, legends and annotations
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -66,10 +66,29 @@ Everything drawn on top of geometry that carries a number or a verdict: deviatio
 
 CMAP (ColorMapSpec, kernel re-binning round trip), LEGEND, SCALEED (colour-scale editor), LABEL (labels, leader lines, layout), WHISK (whiskers, flags), VECTOR (vector plots), GDTGLYPH (FCF and datum rendering), STATUS (status markers, provenance badges).
 
+## Split rationale
+
+The dividing principle is **one kind of kernel output per child**, so each child carries its own "display equals kernel" test:
+- CMAP owns the colour-map entity and the bin-index round trip; LEGEND draws the kernel's legend object; SCALEED is the only UI-heavy child and depends on the shell;
+- LABEL, WHISK and GDTGLYPH are the three kinds of anchored annotation (text labels, directional vectors, GD&T frames), each with different inputs (formatted values, f64 vectors, semantic characteristics);
+- STATUS is the shared, pure status and provenance mapping every other child and the kiosk reuse.
+
+Alternatives considered:
+- **CMAP and LEGEND together.** Rejected: the legend is a small, finishable leaf with its own byte-equality test, while the re-binning round trip is not.
+- **STATUS folded into the shell theme.** Rejected: the locked-palette rule is a value-display rule (REQ-VIZ.OVERLAY-006) and must stay toolkit-independent.
+
 ## Open questions
 
 - Which node owns the kernel-side binning command (SCAN or a shared KRN utility)? This node assumes SCAN supplies bins for surface comparison and GDT for characteristic-level zones.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.OVERLAY.CMAP | ColorMapSpec and kernel re-binning round trip | 001 003 009 | none |
+| VIZ.OVERLAY.LEGEND | Kernel legend display and placement (leaf) | 002 009 | PW.VIZ.03 |
+| VIZ.OVERLAY.SCALEED | Colour-scale editor | 003 009 | GOM.VIZ.04 |
+| VIZ.OVERLAY.LABEL | Labels, leader lines and label layout | 004 007 009 | GOM.VIZ.05, PW.VIZ.04 |
+| VIZ.OVERLAY.WHISK | Whiskers, flags and vector plots | 004 010 | SA.VIZ.03 |
+| VIZ.OVERLAY.GDTGLYPH | GD&T annotation rendering | 004 005 | PW.VIZ.04 |
+| VIZ.OVERLAY.STATUS | Status markers, locked palette guard and provenance badges (leaf) | 005 006 008 | none |

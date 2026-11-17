@@ -4,7 +4,7 @@ title: Path planning, clearance and optimisation
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -71,6 +71,23 @@ PLAN (plan model and compilation), CLEAR (clearance surfaces and move points), A
 - The concept docs require a path-planning patent freedom-to-operate review before P2 work starts; that is a maintainer action, not a spec choice.
 - Auto-path from PMI and the path editor are P3 in the Design Baseline §8; children for those may need a phase decision.
 
+## Split rationale
+
+The split separates the **plan artifact** from the **decisions that shape it**. PLAN owns the model, the compilation pipeline and the digest that the collision checker, simulator and Motion Executive bind to. CLEAR (safe travel geometry and move points), ANGLE (which tip and angle) and CAP (velocity clamping) are inputs to compilation with their own small, testable rules; ANGLE and CAP are leaves. AUTO and OPT are the two higher-level planners that iterate over PLAN and the collision checker: AUTO makes a path exist, OPT makes it shorter. Keeping CAP apart from PLAN keeps the speed policy's compiled form auditable on its own.
+
+Alternatives considered:
+- **CAP inside PLAN.** Rejected: the cap is what the Motion Executive's setup scope relies on, so its clamp rule should be reviewable in isolation.
+- **AUTO and OPT merged.** Rejected: OPT is a proposal-then-accept flow with seeded search; AUTO is a deterministic remedy loop producing a draft.
+
+Phase: all children P2. A graphical path editor (P3 in the Design Baseline) is out of these children; if one is added it is proposed for P3 in D-018.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.PATH.PLAN](plan/NODE.md) | Motion plan model, compilation and digest | 001 002 | |
+| [CMM.PATH.CLEAR](clear/NODE.md) | Clearance surfaces, move points and transits | 003 004 | PCD.PTH.01 |
+| [CMM.PATH.ANGLE](angle/NODE.md) | Head-angle and tip selection per feature | 005 | |
+| [CMM.PATH.AUTO](auto/NODE.md) | Automatic path from a selected feature list | 006 | PCD.PTH.05 |
+| [CMM.PATH.OPT](opt/NODE.md) | Feature ordering optimisation | 007 008 | PCD.PTH.02 |
+| [CMM.PATH.CAP](cap/NODE.md) | Velocity cap compilation and clamp records | 009 | |

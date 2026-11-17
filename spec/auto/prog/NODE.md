@@ -4,7 +4,7 @@ title: Command Program format, interpreter and editor model
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XXL
 owners: []
@@ -79,7 +79,31 @@ FMT (schema, serialization, step IDs), EXPR (types, units, expressions), FLOW (l
 - Inherited from AUTO: should Command Programs also be authored as Python (an authoring view) with the canonical form underneath? Default yes; the canonical form above stays authoritative, and a Python view would be a lossless projection or would not ship. Confirm when FMT is expanded.
 - Whether the expression evaluator should live in the kernel under KNP-1, which would let expressions produce values of record and would simplify `AUTO.SCRIPTED`. REQ-AUTO.PROG-005 assumes not.
 - PCD.PRG.10 (DMIS import and export) is split three ways: IO parses, CMM converts, PROG owns the mapping contract. Export of a Command Program back to DMIS has no owner yet; CMM is the likely owner.
+- The Python authoring view (first question above) is now D-026 (recommendation: not in P1b); the canonical form stays authoritative either way.
+- The kernel expression question (second above) is now D-027; REQ-AUTO.PROG-005 holds until it is decided.
+- DMIS export of a Command Program was assigned to `CMM.GEN` at level-2 review (see `CMM.GEN` open questions); `AUTO.PROG.DMISMAP` provides only the mapping table.
+
+## Split rationale
+
+The split follows the classic language pipeline, applied to a document format rather than a text language: **syntax** (FMT), **meaning of the parts** (EXPR for values, FLOW for control, OPER for operator interaction, FAMILY for run parameters), **static checking** (CHECK), **execution** (INTERP, including mark-and-execute and the debugger), and **editing** (EDIT). DMISMAP is separate because it is a data contract consumed by other domains (IO, CMM) and needs a domain expert, not a language implementer.
+
+FMT is deliberately thin: it stores expressions as source text and treats operator descriptors and parameter declarations as embedded objects, so it can be built and frozen first while EXPR and FLOW are still open.
+
+Alternatives considered:
+- **CHECK spread across EXPR, FLOW, OPER and FAMILY with no own child.** Rejected: command resolution against the manifest and the side-effect summary have no other home, and users see one `program.check` command.
+- **DEBUG as its own child.** Rejected to stay within nine children; the debugger is a mode of the interpreter and will be a child of INTERP.
+- **OPER and FAMILY merged as "run inputs".** Rejected: OPER is shared with script dialogs and kiosk playback; FAMILY is shared with batch tables. Different consumers, different change rates.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.PROG.FMT | Program document format, canonical serialisation and step IDs (leaf) | 001 002 003 | SA.MP.01 |
+| AUTO.PROG.EXPR | Typed variables and unit-aware expressions | 004 005 | PCD.PRG.02, SA.MP.01 |
+| AUTO.PROG.FLOW | Loops, branches, jumps and subroutines | 006 | PCD.PRG.03-05 |
+| AUTO.PROG.OPER | Operator steps and operator-interaction descriptors (leaf) | 008 | PCD.PRG.07, SA.MP.04 |
+| AUTO.PROG.FAMILY | Part-family parameters and binding validation (leaf) | 009 | PCD.PRG.08 |
+| AUTO.PROG.CHECK | Static program checker | 003 | none |
+| AUTO.PROG.INTERP | Interpreter, mark-and-execute and debugger | 005 007 008 010 011 012 013 | PCD.PRG.09, PW.AUT.02 |
+| AUTO.PROG.EDIT | Editor model: command view, summary view and edit commands | 002 014 | PCD.PRG.01, PW.AUT.02 |
+| AUTO.PROG.DMISMAP | DMIS mapping contract | 015 | PCD.PRG.10 |

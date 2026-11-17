@@ -4,7 +4,7 @@ title: Report and statistics output
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -61,11 +61,27 @@ Turns a resolved report into deliverable files (PDF, spreadsheet, CSV) and sends
 
 PDF (page renderer and font embedding), SHEET (spreadsheet and CSV), SPC (Q-DAS, QIF Statistics, CSV export mapping), META (export metadata and digests).
 
+## Split rationale
+
+The split follows the **output format family**, with one shared envelope: PDF (paged, byte-reproducible rendering), SHEET (tabular spreadsheet and CSV of report tables), and SPC (statistics data to SPC systems through IO writers). All three write through META, which owns the export metadata record and the only code that writes into export roots, so the side-effect rule from D-007 / CONSTITUTION §3.1 (local export is W1 `write_root`; leaving the machine is X1) is enforced once.
+
+- META is finished as a leaf (kind task): it has no command of its own, concrete rules and a crash-safety test.
+- SPC export is P1b because data sets come from `RPT.STATS` (P1b).
+
+Alternatives considered:
+- **One child per file format** (PDF, XLSX, CSV, AQDEF, QIF). Rejected: CSV appears in both report and statistics exports with different inputs, and AQDEF/QIF bytes belong to IO.
+- **Metadata inside each exporter.** Rejected: export-root handling and the W1/X1 boundary would be duplicated.
+
 ## Open questions
 
-- Which side-effect class applies to writing a file into a local export root is not stated by the constitution (W1, W2 or X1). Proposed: W1 for local roots, X1 for network destinations. Needs confirmation by CORE or a decision.
+- Resolved by D-007 (CONSTITUTION §3.1): writing into a local export root is W1 with `fs_effect: write_root`; X1 only when data leaves the machine. Enforced in `RPT.OUTPUT.META`.
 - PDF/A conformance for archiving (ISO 19005) is likely wanted by regulated users [unverified]; not required yet.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.OUTPUT.META | Export envelope: metadata and export-root writes (leaf) | 003 007 | none |
+| RPT.OUTPUT.PDF | PDF renderer | 001 002 005 008 009 | GOM.RPT.06, PW.RPT.04, SA.RPT.03 |
+| RPT.OUTPUT.SHEET | Spreadsheet and CSV export of report tables | 004 005 008 | PCD.RPT.04, PW.RPT.04, SA.RPT.03 |
+| RPT.OUTPUT.SPC | Statistics export to SPC systems | 006 | PCD.RPT.05, PCD.RPT.06 |

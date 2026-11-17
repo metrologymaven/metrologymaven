@@ -4,7 +4,7 @@ title: Stations, common points and the observation store
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -62,11 +62,25 @@ The network data model that every other LVM subsystem reads. A **station** is on
 
 MODEL (network types and invariants), OBS (observation types and covariance), MATCH (common-point naming and matching), IMPORT (transcripts and files), CAPTURE (live intake from HAL).
 
+## Split rationale
+
+The dividing principle is **the life of one observation**: the data model it lives in (MODEL), what one observation is (OBS), how observations of one physical target are tied together (MATCH), and the two ways observations arrive, offline (IMPORT) and live (CAPTURE). Offline adjustment (REQ-LVM-007) needs only MODEL, OBS, MATCH and IMPORT.
+
+Alternatives considered:
+- **Split by instrument type.** Rejected: observation types already carry the differences, and the store must stay instrument-agnostic.
+- **Fold MATCH into MODEL.** Rejected: implicit name linking is a model rule, but merge, rename and exclusion are user workflows with their own undo semantics.
+
 ## Open questions
 
-- Should image-level photogrammetry observations (image coordinates per camera) be stored, enabling a true image-space bundle, or only the Cartesian point sets the photogrammetry system exports? This node assumes Cartesian with covariance for now.
-- Which interchange format, if any, should carry raw network observations (QIF extension hook or a project-specific schema)? Needs IO input.
+- Image-level photogrammetry observations (image coordinates per camera): **owner assigned at level-2 review** to `LVM.ADJ`, as the later child `LVM.ADJ.IMG`, which extends the `LVM.STATION.OBS` payload type set. This node keeps Cartesian point sets with covariance as the photogrammetry form for P3.
+- Which interchange format, if any, should carry raw network observations (QIF extension hook or a project-specific schema)? Needs IO input; carried in `LVM.STATION.IMPORT`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.STATION.MODEL | Network document model and stations | 001 | none |
+| LVM.STATION.OBS | Observation types, provenance and enable flags | 002 006 007 | none |
+| LVM.STATION.MATCH | Common-point matching, renaming and exclusion | 003 007 | none |
+| LVM.STATION.IMPORT | Import of recorded and file-based observations | 004 005 | none |
+| LVM.STATION.CAPTURE | Live observation intake from HAL | 002 006 | none |

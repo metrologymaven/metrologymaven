@@ -4,7 +4,7 @@ title: Command registry and manifest
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -75,6 +75,24 @@ DEF (definition model and schema keywords), VAL (build-time validation rules), M
 - Precondition language: CEL or a restricted Starlark (concept doc 03 open question 2). This can be decided inside the REG subtree; it does not need the maintainers unless it adds a dependency outside the licence allowlist (D-001).
 - Should licence-tier entitlement tags exist in the manifest at all? That depends on D-001; leave the field out until D-001 is decided.
 
+## Split rationale
+
+The dividing principle is **one job per stage of a definition's life**: a command is *declared* against a data model (DEF), *checked* on its own (VAL), *exported* as the canonical manifest (MAN), *compared* with earlier releases (VER), and *queried* by surfaces and agents (QRY). DEF and VER stay open because each holds a real design choice (precondition language and quantity catalogue; compatibility rules and migrators). VAL, MAN and QRY are small, pure and fully specified, so they are finished as leaves.
+
+Alternatives considered:
+- **Merge VAL into DEF.** Rejected: validation is a pure function with its own fixtures, while DEF holds macros and the catalogue; keeping them apart lets VAL be built and tested before the macro API settles.
+- **Put the diff command in VER.** Rejected: VER owns the classifier as a library; the R0 command surface belongs with the other query commands so one leaf owns all registry read commands except `show_manifest`, which lives with the manifest it shows.
+- **A separate precondition-language child.** Rejected for now: no parent requirement names preconditions on their own, so the language choice sits inside DEF's decomposition hints.
+
+The canonical JSON encoder is shared with the journal and the verifier; MAN depends on `CORE.JRN.CANON` rather than owning a second implementation.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.REG.DEF | Command definition model, schema keywords and quantity catalogue | 001 004 | none |
+| CORE.REG.VAL | Build-time declaration validation (leaf) | 001 002 003 004 | none |
+| CORE.REG.MAN | Canonical manifest export and digests (leaf) | 005 006 007 | none |
+| CORE.REG.VER | Versioning, lifecycle and breaking-change detection | 008 009 010 011 | none |
+| CORE.REG.QRY | Registry query commands (leaf) | 011 012 | none |
+

@@ -4,7 +4,7 @@ title: Cross-platform strategy for single-OS instrument SDKs
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: L
 owners: []
@@ -61,8 +61,22 @@ SDKTAB (SDK platform table), TOPO (supported topologies), PKG (standalone host i
 
 ## Open questions
 
-- Whether a cross-machine host connection counts as egress (X1) under CONSTITUTION §3 is for HAL and CORE to settle; this node assumes the HAL protocol handles authentication.
+- Whether a cross-machine host connection counts as egress (X1) under CONSTITUTION §3: raised as **D-023**, which blocks `PLAT.XHOST.DISCOV` and shapes `PLAT.XHOST.TOPO` and `PLAT.DOCTOR.HOSTCHK`. This node still assumes the HAL protocol handles authentication.
+
+## Split rationale
+
+The split follows **the life of a single-OS driver host**: SDKTAB records where each SDK can run (data, a leaf now), TOPO states where the host may sit relative to the app, PKG installs it, DISCOV connects the app to it, and CI proves it per release. Each concern has different consumers (docs and doctor, HAL, ECO installers, users, the release gate), and the one open policy question (D-023) is isolated in DISCOV.
+
+Alternatives considered:
+- **Split by vendor or device class.** Rejected: packaging, discovery and CI rules are the same for every SDK; per-vendor children would repeat them.
+- **Merge DISCOV into TOPO.** Rejected: TOPO is a platform table and test, while DISCOV is user-facing configuration with its own class question.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.XHOST.SDKTAB | SDK platform table and catalog cross-check | 001 | none |
+| PLAT.XHOST.TOPO | Supported driver-host topologies | 002 003 | none |
+| PLAT.XHOST.PKG | Standalone driver-host install | 004 | none |
+| PLAT.XHOST.DISCOV | Driver-host configuration, connection checks and status | 003 005 007 | none |
+| PLAT.XHOST.CI | Driver-host build and simulator CI per host OS | 006 | none |

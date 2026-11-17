@@ -4,7 +4,7 @@ title: Format corpora, fuzzing and fidelity scores
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -62,8 +62,22 @@ MANIF (manifest format and licence checks), HOSTILE (hostile corpus and expected
 
 ## Open questions
 
-- Who may approve a fidelity waiver (REQ-IO.CORP-008) depends on D-003 governance.
+- Who may approve a fidelity waiver (REQ-IO.CORP-008): D-003 is accepted (approval by a maintainer other than the author); applied in `IO.CORP.GATE`.
+
+## Split rationale
+
+The split follows the **evidence chain**: what files exist and may be shipped (MANIF), how they are made hostile (HOSTILE), how readers are attacked continuously (FUZZ), how fidelity is measured (SCORE), and how the numbers are published and defended in CI (GATE). Each is a separate tool in `fid-io-corp` with its own failure codes, and all five are leaves.
+
+Alternatives considered:
+- **Per-format corpus children.** Rejected: the point of IO.CORP is uniform scoring that no format owner controls; per-format data lives in manifests instead.
+- **Merge SCORE and GATE.** Rejected: SCORE is a user-facing R1 command; GATE is CI policy with governance rules.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CORP.MANIF | Corpus manifest format, licence checks and fetching (leaf) | 001 002 | none |
+| IO.CORP.HOSTILE | Hostile corpus generator and expected errors (leaf) | 003 | none |
+| IO.CORP.FUZZ | Fuzz targets for every reader and CI fuzz budgets (leaf) | 004 | none |
+| IO.CORP.SCORE | Round-trip and fidelity metrics and the scoring command (leaf) | 005 006 009 | none |
+| IO.CORP.GATE | Generated fidelity reports and the CI regression gate (leaf) | 007 008 | none |

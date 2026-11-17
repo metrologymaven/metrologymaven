@@ -4,7 +4,7 @@ title: Spatial indexes and neighbour queries
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -59,10 +59,25 @@ In-memory spatial acceleration structures for points and triangles, and the dete
 
 KDTREE (point index and queries), BVH (primitive index), BUDGET (memory accounting and caching), BENCH (reference hardware and performance fixtures).
 
+## Split rationale
+
+The split follows the **index kind first, then the cross-cutting concerns**: the point k-d tree (KDTREE) and the primitive BVH (BVH) are independent algorithms; memory budgets and the digest-keyed cache (BUDGET) apply to both; the registry surface (CMD) is kept in the command adapter crate `fid-geo-cmd` so `fid-geo-index` stays in the kernel graph; and the performance targets get their own benchmark leaf (BENCH) so they are measured, not asserted.
+
+Alternatives considered:
+- **One generic `SpatialIndex` child with backends.** Rejected: the two structures have different query contracts (exact neighbours versus conservative candidates) and test oracles.
+- **Folding BENCH into KDTREE.** Rejected: the benchmark needs reference hardware (an open PLAT question) and must not block the functional leaf.
+- **Approximate nearest-neighbour modes.** Not split out: the parent asks for exact results by default; an approximate mode would be a later leaf.
+
 ## Open questions
 
 - Reference hardware for the performance targets is not defined yet; it is likely a PLAT concern.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.INDEX.KDTREE | Point k-d tree with exact k-nearest, radius and box queries (leaf) | 001 002 003 004 | none |
+| GEO.INDEX.BVH | Primitive bounding volume hierarchy (leaf) | 003 007 | none |
+| GEO.INDEX.BUDGET | Index memory budgets and digest-keyed cache (leaf) | 006 008 | none |
+| GEO.INDEX.CMD | Index build and neighbour query commands (leaf) | 001 006 008 | none |
+| GEO.INDEX.BENCH | Index performance and memory benchmarks (leaf) | 004 005 | none |

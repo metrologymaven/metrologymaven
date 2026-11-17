@@ -4,7 +4,7 @@ title: Hardware profiles, reference machines and release benchmarks
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -62,9 +62,24 @@ PROFILE (profile file and docs), REFMACH (reference machine registry), SUITE (wo
 
 ## Open questions
 
-- Who hosts and pays for physical reference machines is a maintainer question (possibly a decision).
-- Journal behaviour for R1 benchmark runs follows CORE; left empty here.
+- Who hosts and pays for physical reference machines: raised as **D-014**, which blocks `PLAT.HW.REFMACH` and part of `PLAT.HW.RUN`.
+- Journal behaviour for R1 benchmark runs follows CORE; `PLAT.HW.CMD` names the event `doctor.run_benchmark@1` and defers the R1 journaling rule to CORE.
+
+## Split rationale
+
+The split separates **formats, content, machines, execution and the user command**: PROFILE and SCHEMA are the two published formats (small leaves), SUITE decides what is measured, REFMACH decides where it is measured, CMD is the one runner that both users and the release pipeline call, and RUN orchestrates release-time runs and regression flags. The money question (D-014) is isolated in REFMACH and RUN, so the rest can proceed.
+
+Alternatives considered:
+- **Split by metric family** (render, compute, I/O). Rejected: each family would need its own runner, schema and publishing.
+- **Separate runners for users and reference machines.** Rejected: identical results require identical code; RUN calls CMD.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.HW.PROFILE | Hardware profile file and validator | 001 | none |
+| PLAT.HW.REFMACH | Reference benchmark machine registry | 002 | none |
+| PLAT.HW.SCHEMA | Benchmark suite manifest and result schema | 004 | none |
+| PLAT.HW.SUITE | Benchmark workloads, datasets and metrics | 004 007 | none |
+| PLAT.HW.RUN | Release benchmark runs, publishing and regression flags | 003 005 | none |
+| PLAT.HW.CMD | fid doctor run-benchmark command and runner | 006 | none |

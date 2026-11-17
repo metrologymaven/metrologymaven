@@ -4,7 +4,7 @@ title: Python API and out-of-process script host
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -70,7 +70,26 @@ GEN (package generator and typed units), HOST (process isolation, limits, cancel
 
 - Sandboxing depth for scripts (OS-level sandbox vs process isolation only) differs by OS; may need a PLAT input.
 - Whether a human-started script that later blocks for an agent's input keeps the human principal. This node assumes the principal is fixed at start.
+- The principal question is now D-012 (opened during this expansion): REQ-AUTO.PY-005 conflicts with REQ-CORE.BUS-002. `AUTO.PY.RUN` is blocked on it; the other children are not.
+- The second question above (principal fixed at start) is adopted as REQ-AUTO.PY.RUN-003.
+
+## Split rationale
+
+The split separates the three things a script touches: the **package** it imports (GEN, with VER as its support policy), the **wire** it talks over (PROTO, which is also the contract for other languages), and the **process** it runs in (HOST). Starting runs and choosing principals is its own child (RUN) because it is the policy question, now blocked on D-012. Dialogs (DLG) and bundles (SDK) are separate because each depends on another domain's work (`AUTO.PROG.OPER` and VIZ for dialogs, ECO for bundles).
+
+Alternatives considered:
+- **PROTO inside HOST.** Rejected: the protocol is a published contract with conformance transcripts (PCD.PRG.06 external scripting); the host is one implementation of its server side.
+- **Principal assignment inside HOST.** Rejected: it is a policy decision that is now blocked (D-012), and the host must be buildable without it.
+- **VER inside GEN.** Rejected only for size and ownership: the version policy is a maintainer-facing statement with its own CI check.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.PY.GEN | Generated fiducial Python package (leaf) | 001 002 008 | GOM.AUT.01 |
+| AUTO.PY.HOST | Out-of-process script host | 003 004 007 | none |
+| AUTO.PY.RUN | Running scripts from every surface and principal assignment (decision D-012) | 005 006 | GOM.AUT.01 |
+| AUTO.PY.PROTO | Script host protocol for Python and other languages (leaf) | 004 008 010 | PCD.PRG.06 |
+| AUTO.PY.DLG | Custom dialogs for scripts | 009 | GOM.AUT.08 |
+| AUTO.PY.SDK | Script-bundle (app) contract | 001 008 | GOM.AUT.05, PW.AUT.03 |
+| AUTO.PY.VER | Supported CPython versions and test matrix (leaf) | 011 | none |

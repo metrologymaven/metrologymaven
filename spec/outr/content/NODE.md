@@ -4,7 +4,7 @@ title: Tutorials, migration guides and videos
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -65,6 +65,20 @@ TUT (tutorials per app), MIG (migration guides per incumbent), VIDEO (recording 
 - Phase set to P1a because tutorials need a usable app; content for P0 (CLI and journal walkthroughs) could start earlier.
 - Videos must be self-hosted to satisfy REQ-OUTR-003 (no third-party trackers); mirroring to video platforms is a maintainer choice.
 
+## Split rationale
+
+The split follows the **content type**, with the shared machinery pulled out. TUT, MIG and VIDEO each own one kind of content with its own rules (per-app coverage, seed-driven mapping and no-copy, media and captions). PUB owns the manifest every item carries and the pre-publication check; REPRO owns replay across releases and the outdated marker. Every content child publishes through PUB and is checked by REPRO, so neither rule is implemented twice. The hints are kept, with PUB added.
+
+Alternatives considered:
+- **One child per app** (Inspect content, Probe content, ...). Rejected: migration guides follow incumbents, not our apps, and the video pipeline is shared across apps.
+- **Fold the manifest check into REPRO.** Rejected: the manifest check is needed at authoring time, before any release candidate exists.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.CONTENT.TUT](tut/NODE.md) | Tutorials per focused app | 001 | none |
+| [OUTR.CONTENT.MIG](mig/NODE.md) | Migration guides from incumbent workflows | 001 006 007 | none |
+| [OUTR.CONTENT.VIDEO](video/NODE.md) | Video production with built-in capture | 001 004 005 | none |
+| [OUTR.CONTENT.REPRO](repro/NODE.md) | Content replay check across releases | 002 003 | none |
+| [OUTR.CONTENT.PUB](pub/NODE.md) | Content manifest and publication check (leaf) | 001 008 | none |

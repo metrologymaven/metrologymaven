@@ -4,7 +4,7 @@ title: The fid command-line interface
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -67,7 +67,26 @@ TREE (generated command tree and help), ARGS (typed and unit-bearing parameters)
 ## Open questions
 
 - Should an M1 invocation from the CLI create a run-ticket request for the Approval Station (CMM) or simply refuse? This node requires "not executed directly" and leaves the request path to CMM.
+- The M1 question above is settled for this node: `AUTO.CLI.GATE` refuses M1 without contacting the bus and points to the approval station. Whether a human CLI user may file a run request is for `CMM.EXEC` (D-008 forbids it only for agents over MCP).
+- The CLI principal kind (human or script) is D-012; `AUTO.CLI.GATE` and `AUTO.CLI.TARGET` take it as an input.
+
+## Split rationale
+
+The split follows one invocation through the binary: the tree that says which commands exist (TREE, with COMP as its shell-completion rendering), parsing the arguments (ARGS), gating before anything is sent (GATE), watching and interrupting the job (JOB), rendering the result and exit code (OUT), and choosing where the command runs (TARGET). Every child renders the shared contracts of `AUTO.SURF`; none derives names or classifies timeouts itself.
+
+Alternatives considered:
+- **Split by headless vs app target first.** Rejected: both targets share every other concern; TARGET isolates the difference as a transport choice.
+- **Dry run inside OUT.** Rejected: dry run is a pre-send decision tied to the projection's dry-run flag, like the M1/S1/A0 refusals, so it sits in GATE.
+- **Completions inside TREE.** Rejected only for size: completions are four shell templates with their own tests, and TREE is already M.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.CLI.TREE | Generated command tree and help (leaf) | 001 009 | none |
+| AUTO.CLI.ARGS | Typed and unit-bearing parameter parsing (leaf) | 007 | none |
+| AUTO.CLI.OUT | JSON and human output with exit codes (leaf) | 002 005 | none |
+| AUTO.CLI.GATE | Dry-run handling and class gating at the CLI (leaf) | 003 004 008 | none |
+| AUTO.CLI.JOB | Terminal progress and interrupt-to-cancel (leaf) | 006 | none |
+| AUTO.CLI.TARGET | Session targeting: headless project or running app | 001 006 | none |
+| AUTO.CLI.COMP | Generated shell completions (leaf) | 001 009 | none |

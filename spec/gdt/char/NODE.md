@@ -4,7 +4,7 @@ title: Characteristic model, dialects and result records
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -70,6 +70,20 @@ MODEL (QIF characteristic + FCF types), SPEC (governing spec and defaults profil
 - Should a tenant default dialect be allowed at all, or must every plan pick explicitly? The concept docs allow a tenant default shown on every report; confirm with the steering group.
 - Who may publish a defaults profile (any contributor, or only reviewers of the DMT)? Linked to the DMT authorship question on `GDT`.
 
+## Split rationale
+
+The dividing principle is **one owner per kind of data**: the faithful QIF mirror (MODEL), identity (IDENT), the per-characteristic rulebook choice (SPEC), the rulebook objects themselves (DPROF), and the output contract (RECORD). Each has a different change rate and a different reviewer: MODEL changes with QIF, DPROF content changes with expert-authored DMT work (D-009), RECORD changes with CONSTITUTION §5.
+
+Alternatives considered:
+- **Hint split MODEL / SPEC / RECORD / IDENT (four children).** Adopted with one change: defaults profiles moved out of SPEC into DPROF, because immutability, versioning and agent-branch publication are a separate lifecycle from validating one characteristic's spec.
+- **Fold IDENT into MODEL.** Rejected: identity rules are used by export and evaluation paths too, and are small enough to finish as a leaf now while MODEL stays open.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.CHAR.MODEL | Characteristic and feature-control-frame model on QIF 3.0 | 005 | PCD.DIM.02 |
+| GDT.CHAR.IDENT | Stable characteristic identity (leaf) | 009 | none |
+| GDT.CHAR.SPEC | Governing spec, dialect selection and refusal (leaf) | 001 002 003 | GOM.GDT.17, PCD.DIM.05, PW.GDT.08 |
+| GDT.CHAR.DPROF | Defaults profiles: immutable versioned objects (leaf) | 004 | none |
+| GDT.CHAR.RECORD | ResultRecord assembly and decision binding (leaf) | 006 007 008 | none |

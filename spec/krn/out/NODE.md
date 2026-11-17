@@ -4,7 +4,7 @@ title: Point selection and outlier policies for fits
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -65,9 +65,25 @@ POL (policy types and parameters), STAT (n-sigma and M-estimators), RANSAC, GATE
 
 ## Open questions
 
-- C5 says agent-authored filters need human adoption before release; adoption is a CORE/TRUST mechanism, but this node must expose the provenance tag. Confirm the field name with CORE.
+- C5 says agent-authored filters need human adoption before release; adoption is a CORE/TRUST mechanism, but this node must expose the provenance tag. Confirm the field name with CORE. At this split the assumption is that the command bus attaches provenance to every command, so the kernel types carry none.
 - The 25 % exclusion ceiling is a placeholder [unverified]; it may belong in a defaults profile.
+
+## Split rationale
+
+The split separates the **policy model** from the **methods** and from the **record**. POL fixes the types, parameter validation and guards that every method obeys (so REQ-KRN.OUT-004 and -006 hold once). STAT, RANSAC and GATE are the methods, grouped by how they decide: residual statistics, seeded consensus, and geometry against a nominal or band. DISC is the audit record (excluded set, digest, impact disclosure). RUN is the `fit.reject_outliers` command and the reject-and-refit loop that composes a policy with a fit. SEL is the separate `fit.select_points` command for choosing points by index set or source before any outlier step.
+
+Alternatives considered:
+- **One child per command (two children).** Rejected: the RANSAC and statistics methods are independent, testable units with different determinism classes.
+- **Put the impact disclosure inside RUN.** Rejected: `RPT` and `TRUST` consume the record without the loop, and SEL's selections use the same record.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.OUT.POL | Outlier policy types, validation and guards | 001 004 006 | none |
+| KRN.OUT.STAT | Residual-statistics policies (n-sigma and robust scale) | 001 | GOM.CON.21, PCD.CON.02, SA.REL.04 |
+| KRN.OUT.RANSAC | Seeded RANSAC consensus policy | 001 005 | GOM.CON.21, SA.REL.04 |
+| KRN.OUT.GATE | Distance-to-nominal and tolerance-band policies | 001 | GOM.CON.21, GOM.CON.23 |
+| KRN.OUT.DISC | Excluded-set record and impact disclosure | 002 003 | none |
+| KRN.OUT.RUN | Reject-outliers command and reject-and-refit loop | 002 007 009 | GOM.CON.21, PCD.CON.02, SA.REL.04 |
+| KRN.OUT.SEL | Point-selection command | 008 009 | PW.CON.06 |

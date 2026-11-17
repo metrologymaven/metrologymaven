@@ -4,7 +4,7 @@ title: Meshing from points
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,6 +60,18 @@ SURF (single-cloud surface reconstruction), MULTI (multi-scan merge meshing), QU
 
 - Which reconstruction family (implicit-function versus advancing-front or Delaunay-based) is chosen is a leaf-level decision; D0 determinism constrains parallel strategies.
 
+## Split rationale
+
+The split separates the **reconstruction core** (SURF: one oriented cloud to one mesh, with its gate, fidelity bound and performance budget) from the **multi-scan layer** that decides which measured points represent each overlapping region (MULTI), and from the **quality metrics** (QUAL) that SCAN.MESHOP also reuses. QUAL is already a leaf (pure function, small); SURF and MULTI stay open because the reconstruction family and the overlap-reduction rule are still leaf-level choices.
+
+Alternatives considered:
+- **One child per reconstruction algorithm** (implicit versus Delaunay). Rejected: the product needs one default method first; alternatives can be added as further leaves under SURF.
+- **Put QUAL under SCAN.MESHOP.** Rejected: every polygonization must attach the report, and MESHOP already depends on POLY's output type, not the other way round.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.POLY.SURF | Single-cloud surface reconstruction | 001 002 003 006 007 | GOM.MSH.01, PW.PCL.03 |
+| SCAN.POLY.MULTI | Multi-scan merge meshing | 001 004 | PW.PCL.03 |
+| SCAN.POLY.QUAL | Mesh quality report | 005 | none |

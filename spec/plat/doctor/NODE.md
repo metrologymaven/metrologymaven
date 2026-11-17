@@ -4,7 +4,7 @@ title: fid doctor environment diagnostics
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -51,6 +51,7 @@ updated: 2026-11-16
 - **REQ-PLAT.DOCTOR-006** If a probe fails, then the report shall mark that item as unknown with the reason and the command shall still complete.
 - **REQ-PLAT.DOCTOR-007** The command shall complete within 10 seconds on the minimum hardware profile, excluding optional driver-host checks [unverified: target to be measured].
 - **REQ-PLAT.DOCTOR-008** The report shall contain no user names, host names or file paths outside the install directory unless the user passes an explicit flag, so it can be shared in a bug report.
+- **REQ-PLAT.DOCTOR-009** When the user opts in, the system shall send crash reports and user-initiated issue reports (optionally with a redacted journal excerpt and the doctor report) to the project's issue intake, and shall send nothing without explicit per-report consent.
 
 ## Interfaces
 
@@ -63,9 +64,25 @@ PROBE (environment probes), LOOKUP (tier and profile verdicts), SCHEMA (report s
 
 ## Open questions
 
-- `fid doctor` does not follow the `fid <domain> <verb-object>` form if called bare; the parent pattern `fid doctor *` is kept and a bare `fid doctor` alias would be an AUTO question. No hand-written aliases are allowed (CONSTITUTION §3), so the bare form may need a decision.
-- Whether R0 doctor runs are journaled follows CORE; left empty here.
+- The bare `fid doctor` form is now allowed by CONSTITUTION §3.1 (D-007) when generated from the registry. `PLAT.DOCTOR.CMD` declares it with a `cli_bare` flag on `doctor.run_check@1`; AUTO's CLI generator must support that flag (cross-domain, not yet in AUTO's spec).
+- Whether R0 doctor runs are journaled follows CORE; `PLAT.DOCTOR.CMD` names the events and makes its journal criterion conditional.
+- Driver-host checks may cross a machine boundary: **D-023** (raised by the XHOST split) blocks part of `PLAT.DOCTOR.HOSTCHK`.
+
+## Split rationale
+
+The split follows the doctor's **pipeline**: PROBE observes the machine (the only non-deterministic step), LOOKUP decides (pure), REPORT formats and redacts (pure), CMD wires them into registry commands with exit codes and time limits, and HOSTCHK adds opt-in checks that depend on later subsystems. Keeping observation separate from decision lets every verdict be tested from JSON snapshots with no hardware. Four children are leaves now; HOSTCHK waits for DEPLOY and XHOST.
+
+Alternatives considered:
+- **Split by item** (OS / CPU / RAM / GPU). Rejected: each item needs the same probe, verdict and rendering plumbing; the pipeline split shares it.
+- **Merge REPORT into CMD.** Rejected: redaction and the schema are reused by `show-report` and by bug-report tooling, and are easier to test as pure functions.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DOCTOR.PROBE | Environment probes | 001 006 | none |
+| PLAT.DOCTOR.LOOKUP | Tier and hardware-profile verdicts | 001 002 005 | none |
+| PLAT.DOCTOR.REPORT | Doctor report schema, text rendering and redaction | 003 008 | none |
+| PLAT.DOCTOR.CMD | fid doctor run-check and show-report commands | 001 003 004 005 007 | none |
+| PLAT.DOCTOR.HOSTCHK | Optional driver-host and install-integrity checks | 003 006 007 | none |
+| PLAT.DOCTOR.FEEDBK | Opt-in crash and issue reporting | 009 | none |

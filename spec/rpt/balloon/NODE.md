@@ -4,7 +4,7 @@ title: Drawing ballooning and manual readings
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,9 +12,9 @@ claimed_by:
 satisfies: [REQ-RPT-006, REQ-RPT-002]
 covers: []
 depends_on: [RPT.MODEL, CORE, IO, VIZ]
-cli: [fid report *-balloon, fid report *-reading]
-mcp: [report_*_balloon, report_*_reading]
-journal: [report.*_balloon, report.*_reading]
+cli: [fid report *-balloon, fid report *-reading, fid report *-gauge]
+mcp: [report_*_balloon, report_*_reading, report_*_gauge]
+journal: [report.*_balloon, report.*_reading, report.*_gauge]
 updated: 2026-11-16
 ---
 
@@ -65,11 +65,32 @@ Lets a user load a 2D drawing (PDF or raster), place numbered balloons on its ca
 
 SHEET (drawing documents), REG (balloon register and renumbering), CHAR (characteristic from balloon), GAUGE (gauge register), ENTRY (manual reading entry), BLOCK (ballooned-drawing report block).
 
+## Split rationale
+
+The split follows the **objects an operator handles**: drawings (SHEET), balloons on them (REG), characteristics created from balloons when there is no CAD (CHAR), the gauges readings cite (GAUGE), the readings themselves (ENTRY), and the report block that shows the result (BLOCK). Each owns its own commands, and the order matches the workflow: load drawing, balloon, define, register gauges, enter readings, report.
+
+- REG is finished as a leaf: its numbering rules are exact and FAI and PPAP row order depends on them.
+- GAUGE is separate from ENTRY because the register outlives any one reading and may later be shared with `HAL.DRV` (see Open questions).
+- Gauge commands (`*-gauge`) were added to this node's CLI, MCP and journal patterns.
+
+Alternatives considered:
+- **Drawing work vs. readings** (two children). Rejected: each would be XL and mix asset data (gauges) with results.
+- **Gauge register in HAL.** Not chosen unilaterally: it is in this node's agreed scope; the overlap is raised as a cross-domain question.
+
 ## Open questions
 
 - Automatic balloon proposal from PDF callouts or 3D PMI is a common incumbent-adjacent feature [unverified]. Not assigned to any node yet; candidate for a later child or for IND.
-- The constraint "agents shall not enter readings" is a proposed reading of C5 and REQ-FID-021; confirm with maintainers.
+- The constraint "agents shall not enter readings" is a proposed reading of C5 and REQ-FID-021; confirm with maintainers (carried into `RPT.BALLOON.ENTRY`).
+- No IO node names a PDF or raster page reader for drawings (raised in `RPT.BALLOON.SHEET`).
+- Gauge register overlap with `HAL.DRV` (raised in `RPT.BALLOON.GAUGE`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.BALLOON.SHEET | Drawing sheets and drawing revisions | 009 010 | none |
+| RPT.BALLOON.REG | Balloon register and renumbering (leaf) | 001 002 003 009 | none |
+| RPT.BALLOON.CHAR | Characteristics from balloons | 002 | none |
+| RPT.BALLOON.GAUGE | Gauge register | 006 007 008 | none |
+| RPT.BALLOON.ENTRY | Manual reading entry | 004 005 006 007 008 010 | none |
+| RPT.BALLOON.BLOCK | Ballooned-drawing report block | 009 | none |

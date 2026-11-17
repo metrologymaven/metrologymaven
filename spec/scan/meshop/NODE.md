@@ -4,7 +4,7 @@ title: Mesh operations, selection and repair
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -72,6 +72,22 @@ DECIM (thin, refine), SMOOTH (smooth, spike and noise removal), HOLES (fill hole
 
 - Should spike removal live here or in SCAN.CLOUD when applied before meshing? Proposed: here for meshes, while SCAN.CLOUD owns outlier removal on clouds.
 
+## Split rationale
+
+The split puts the **shared invariants** (new version, input untouched, determinism class, synthesized-triangle flag, before/after quality) into one task leaf, PROV, and then divides the operations by **algorithm family and failure mode**: density changes (DECIM), bounded vertex moves and small-component removal (SMOOTH), creating new surface (HOLES), splitting along cuts and combining meshes (CUT), defect detection and repair (REPAIR), and geometric selection with delete and isolate (SEL). DECIM, SMOOTH, SEL and PROV are leaves in `fid-scan-mesh`; HOLES, CUT and REPAIR stay open because they need robust predicates or method choices. Each performance budget in REQ-SCAN.MESHOP-010 is owned by the child that runs that operation.
+
+Alternatives considered:
+- **One child per incumbent menu item** (thirteen children). Rejected: too many, and several items share algorithms (thin and refine; cut and clip).
+- **No PROV child, repeat the flag rule in each operation.** Rejected: the flag is what keeps comparison honest; one builder enforces it by construction.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.MESHOP.PROV | Mesh operation contract and synthesized-triangle flag | 001 005 009 | none |
+| SCAN.MESHOP.DECIM | Thin and refine meshes | 001 002 010 | GOM.MSH.02, GOM.MSH.04 |
+| SCAN.MESHOP.SMOOTH | Smoothing, spike and noise removal | 001 003 005 010 | GOM.MSH.03, GOM.MSH.06 |
+| SCAN.MESHOP.HOLES | Hole filling and closing | 001 004 005 007 | GOM.MSH.05, GOM.MSH.07 |
+| SCAN.MESHOP.CUT | Cut, clip, merge and invert | 001 005 | GOM.MSH.08-10, PW.PCL.04 |
+| SCAN.MESHOP.REPAIR | Self-intersection and non-manifold repair | 001 006 010 | GOM.MSH.13 |
+| SCAN.MESHOP.SEL | Geometric mesh selection, delete and isolate | 001 008 | GOM.MSH.11, GOM.MSH.12, PW.PCL.04 |

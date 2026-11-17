@@ -4,7 +4,7 @@ title: Journal chain and checkpoint verification
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -60,11 +60,25 @@ Independent, offline checking of the journal evidence inside a Result Package: t
 
 CANON (independent RFC 8785 implementation + golden vectors), LINKS (chain walk + findings), CKPT (checkpoint check), RESLINK (ResultRecord linkage).
 
+## Split rationale
+
+The split follows **the order a verifier establishes trust in the journal**: bytes to hashes (CANON), hashes to an unbroken chain (LINKS), chain to signed checkpoints (CKPT), and chain to the results that claim to come from it (RESLINK). LINKS also owns the `verify.check_chain@1` command that composes the other three, so there is one entry point and no separate orchestration leaf.
+
+Alternatives considered:
+- **One leaf for the whole chain check.** Rejected: the independent canonicaliser alone is an M-sized, differential-fuzzed unit.
+- **Command in its own child.** Rejected: composing three library calls into one report is too small to stand alone.
+
 ## Open questions
 
-- REQ-TRUST.CHAIN-007 asks for an independent canonicaliser; if maintainers prefer one shared audited crate, record that as a decision.
-- The checkpoint format is owned by CORE; this node assumes it includes the chain head digest and entry index.
+- REQ-TRUST.CHAIN-007 asks for an independent canonicaliser (`TRUST.CHAIN.CANON`); if maintainers prefer one shared audited crate, record that as a decision.
+- The checkpoint format is owned by CORE.JRN (still open); `TRUST.CHAIN.CKPT` assumes format version, index and head digest, and P0 signed linear heads only.
+- CONSTITUTION §7 lists the verifier in P0 while this subsystem is P1a; see the phase decision referenced from `TRUST.VERIFY`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.CHAIN.CANON | Independent RFC 8785 canonicaliser and golden vectors | 007 | none |
+| TRUST.CHAIN.LINKS | Chain walk, findings and check-chain command | 001 002 006 | none |
+| TRUST.CHAIN.CKPT | Checkpoint check and signed-checkpoint verification | 003 004 | none |
+| TRUST.CHAIN.RESLINK | ResultRecord to journal linkage | 005 | none |

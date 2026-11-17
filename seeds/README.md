@@ -21,6 +21,7 @@ Each file lists one incumbent's functional areas as rows with stable IDs. Togeth
 | PCD | [pc-dmis.md](pc-dmis.md) | PC-DMIS | no |
 | SA | [spatialanalyzer.md](spatialanalyzer.md) | SpatialAnalyzer | no |
 | DEV | [devices.md](devices.md) | Device support catalog (instruments we must support; owned by HAL) | no |
+| JOB | [journeys.md](journeys.md) | Personas, acceptance jobs and usability bars (owned by FLOW) | no |
 
 ## Wanted: more inventories
 

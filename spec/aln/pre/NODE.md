@@ -4,7 +4,7 @@ title: Prealignment and picked point-pair alignment
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -59,10 +59,27 @@ Gets measured data roughly onto the reference with no prior pose: an automatic, 
 
 GLOBAL (pick-free search), HINTS (constraints and ambiguity), PAIRS (picked pairs and quick alignment), CORPUS (prealignment test corpus and metrics).
 
+## Split rationale
+
+The split separates the **search** (GLOBAL), the **decision about its candidates** (AMBIG), the **correspondence-given fallback** (PAIRS) and the **yardstick** (CORPUS). The search is the only open-ended research piece; isolating it lets the other three be finished as leaves now and lets the corpus pick the search method.
+
+Alternatives considered:
+- **Hints inside GLOBAL.** Rejected: hint filtering and ambiguity are deterministic post-processing with their own fixtures, and keeping them out of the search keeps the search replaceable.
+- **PAIRS in ALN.XFM.** Rejected: XFM owns the solver; PAIRS owns the pick-resolution and quick-preset workflow that calls it.
+
+Phase: GLOBAL, AMBIG and CORPUS are tagged P1b (scan-to-CAD, CONSTITUTION §7); PAIRS stays P1a, so the node itself stays P1a.
+
 ## Open questions
 
 - Prealignment against meshes and CAD is scan-to-CAD work, which the constitution places in P1b; should this child move to P1b? A phase move needs a steering decision, so it stays P1a for now.
 
+- Resolution proposed for the phase question above: the scan-to-CAD children are tagged P1b and the node stays P1a through `ALN.PRE.PAIRS`. No phase of an existing node changed; reviewers should confirm.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.PRE.GLOBAL | Pick-free global prealignment search | 001 002 004 007 | GOM.ALN.01 |
+| ALN.PRE.AMBIG | Prealignment hints and ambiguity reporting (leaf) | 003 | none |
+| ALN.PRE.PAIRS | Picked point-pair initial alignment and quick alignment (leaf) | 005 006 | GOM.ALN.11, PW.ALN.01, SA.XFM.06 |
+| ALN.PRE.CORPUS | Prealignment test corpus, success metric and benchmark (leaf) | 002 007 | none |

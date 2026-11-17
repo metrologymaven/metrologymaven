@@ -4,7 +4,7 @@ title: Report model, templates and content blocks
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -12,9 +12,9 @@ claimed_by:
 satisfies: [REQ-RPT-001, REQ-RPT-002, REQ-RPT-007]
 covers: [GOM.RPT.01, GOM.RPT.02, GOM.RPT.03, GOM.RPT.04, GOM.RPT.05, GOM.RPT.07, PCD.RPT.01, PCD.RPT.03, PW.RPT.02, PW.RPT.03, SA.RPT.01, SA.RPT.02, SA.RPT.04]
 depends_on: [CORE, GDT, UNC, VIZ]
-cli: [fid report *-report, fid report *-template, fid report *-block]
-mcp: [report_*_report, report_*_template, report_*_block]
-journal: [report.*_report, report.*_template, report.*_block]
+cli: [fid report *-report, fid report *-page, fid report *-template, fid report *-block]
+mcp: [report_*_report, report_*_page, report_*_template, report_*_block]
+journal: [report.*_report, report.*_page, report.*_template, report.*_block]
 updated: 2026-11-16
 ---
 
@@ -73,11 +73,28 @@ The pure-data report document and the engine that fills it. A report is an order
 
 DOC (report/page/block types and storage), TMPL (template format, slots and repetition), BIND (binding resolution and digest), FMT (formatter use, conformance-safe rounding, labelling), BLOCKS (table, chart, view, text block types), STARTER (built-in templates).
 
+## Split rationale
+
+The split follows the **generation pipeline**: the document (DOC) holds pages and blocks; templates (TMPL) say what to bind; binding (BIND) resolves against a journal head and digests; formatting (FMT) is the only place values become text; and block kinds (BLOCKS) describe what each block shows. FMT is separate from BIND so that every RPT node (forms, dashboards, output) shares one conformance-safe formatting layer over `KRN.NUM`.
+
+- The starter templates were folded into TMPL rather than a separate STARTER child: they are data in the template format and have no logic of their own.
+- Page commands (`*-page`) were added to this node's CLI, MCP and journal patterns for DOC.
+
+Alternatives considered:
+- **By block type** (one child per block with its own binding). Rejected: binding, digests and formatting would be duplicated per block.
+- **Template and binding together.** Rejected: the template format is an exchanged, versioned contract, while binding is an engine; they change at different rates.
+
 ## Open questions
 
 - Should templates be stored as QIF extensions or as a separate JSON format? QIF's sanctioned hooks (CONSTITUTION §5) may not fit page layout. To decide at the TMPL leaf.
-- The kernel's versioned number formatters are assumed to exist in KRN or CORE; no node names them yet. Raised here for KRN or CORE.
+- The kernel's versioned number formatters (`fmt.*`) and the exact decimal comparator (`kdec`) are owned by `KRN.NUM` (level-2 review); `RPT.MODEL.FMT` depends on it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.MODEL.DOC | Report document model and storage (leaf) | 001 015 | GOM.RPT.01 |
+| RPT.MODEL.TMPL | Template format, slots, repetition and starter templates | 011 013 014 015 | GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01 |
+| RPT.MODEL.BIND | Binding resolution and report generation | 002 003 004 013 | GOM.RPT.07 |
+| RPT.MODEL.FMT | Value formatting, decision display and source labels | 005 006 007 008 009 | none |
+| RPT.MODEL.BLOCKS | Content block types | 001 010 012 | GOM.RPT.03-05, PCD.RPT.03, PW.RPT.03, SA.RPT.02/04 |

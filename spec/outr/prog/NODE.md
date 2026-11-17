@@ -4,7 +4,7 @@ title: Instrument-vendor and university programs
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -49,6 +49,9 @@ Two outreach programs with their own audiences: one for instrument vendors (how 
 - **REQ-OUTR.PROG-006** Every dataset offered to universities shall state its licence, origin and digest, and shall be redistributable for teaching.
 - **REQ-OUTR.PROG-007** Every teaching kit shall run entirely offline on the PLAT minimum hardware profile with no account, using simulators in place of instruments.
 - **REQ-OUTR.PROG-008** Program pages shall pass the OUTR.BRAND claim lint, and shall never describe participation as certification by the project.
+- **REQ-OUTR.PROG-009** The project shall run a user training and certification program (curriculum, hands-on exercises on published example projects, proctored or reproducible exams) whose levels map to the acceptance jobs.
+- **REQ-OUTR.PROG-010** The project shall participate in the relevant standards and interoperability bodies (QIF/DMSC, ISO TC 213 through national mirrors, the I++ group) and publish a participation log with positions taken.
+- **REQ-OUTR.PROG-011** The project shall run a partner-lab program giving maintainers hardware-in-the-loop test access (CMMs, trackers, arms, scanners) and organising physical round-robin measurements of reference artifacts, with results published.
 
 ## Interfaces
 
@@ -63,6 +66,23 @@ VENDOR (vendor journey and listing), CONF (conformance status listing), UNI (uni
 
 - Phase P1b is chosen because teaching kits need a usable app; the vendor program's conformance listing realistically follows HAL in P2. A maintainer may want to split phases between the two programs.
 
+## Split rationale
+
+The split follows the **two partner journeys**, each cut into its front door and its deliverables. Vendors: VENDOR (journey page, intake, simulator requirement) and CONF (the generated conformance status). Universities: UNI (program page, intake, course listing), KIT (teaching kits) and DATA (teaching datasets). This also lets the vendor side carry phase P2, following HAL, while the university side starts in P1b, which answers the parent's open question on phases without a phase move.
+
+Alternatives considered:
+- **Two children** (vendor, university). Rejected: each would hold both a process and a checkable deliverable, and the conformance status rule is a clean leaf on its own.
+- **Merge DATA into KIT.** Rejected: datasets are offered on their own, not only inside kits, and need their own licence check.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.PROG.VENDOR](vendor/NODE.md) | Instrument-vendor program journey | 001 004 008 | none |
+| [OUTR.PROG.CONF](conf/NODE.md) | Driver conformance listing status (leaf) | 002 003 | none |
+| [OUTR.PROG.UNI](uni/NODE.md) | University program and course listing | 008 | none |
+| [OUTR.PROG.KIT](kit/NODE.md) | University teaching kits | 005 007 | none |
+| [OUTR.PROG.DATA](data/NODE.md) | Teaching datasets | 006 | none |
+| OUTR.PROG.CERT | User training and certification program | 009 | none |
+| OUTR.PROG.STDS | Standards-body participation | 010 | none |
+| OUTR.PROG.LAB | Partner labs: hardware-in-the-loop access and round-robins | 011 | none |

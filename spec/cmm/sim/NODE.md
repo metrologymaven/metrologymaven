@@ -4,7 +4,7 @@ title: Offline program simulation
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: L
 owners: []
@@ -66,6 +66,20 @@ RUN (simulation driver over the I++ simulator), REPORT (report model and digest)
 
 - Whether the gate should also accept a clean report at a higher simulator fidelity level (L2) as equivalent to L1.
 
+## Split rationale
+
+The split follows the **two readers of a simulation**. RUN, HITS and REPORT produce the evidence: RUN drives the simulator and collects verdicts, HITS produces the `simulated` observations, and REPORT defines the digested artifact and the clean rule. GATE serves the Motion Executive (does a clean report exist for this exact tuple?), and TIME serves the programmer and viewer (poses and events over time). REPORT, GATE and TIME are small, pure and fail-closed, so they are leaves; RUN and HITS stay open because they depend on the HAL simulator and geometry queries.
+
+Alternatives considered:
+- **GATE inside REPORT.** Rejected: the gate is what the Motion Executive calls; keeping it a tiny separate query makes the trust path easy to review.
+- **TIME inside RUN.** Rejected: the timeline is a read over a stored report and must not require re-simulation.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.SIM.RUN](run/NODE.md) | Simulation driver over the I++ simulator | 001 004 008 | PCD.PTH.04 |
+| [CMM.SIM.REPORT](report/NODE.md) | Simulation report model, clean rule and digest | 002 005 | |
+| [CMM.SIM.GATE](gate/NODE.md) | Clean-simulation query for a digest tuple | 006 008 | |
+| [CMM.SIM.HITS](hits/NODE.md) | Simulated probe hits and scan data | 003 | |
+| [CMM.SIM.TIME](time/NODE.md) | Animation timeline of tool poses | 007 008 | PCD.PTH.04 |

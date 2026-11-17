@@ -4,7 +4,7 @@ title: Community channels and adoption metrics
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -65,6 +65,20 @@ CHAN (channel inventory and setup), MOD (moderation procedure and log), METRIC (
 - Which hosted channel providers meet REQ-OUTR.COMM-002 and REQ-OUTR.COMM-008 is not yet researched [unverified].
 - The 72-hour and 10-respondent figures are proposals for maintainers to confirm.
 
+## Split rationale
+
+The split follows the **data each part handles**: CHAN handles third-party channel providers, MOD handles sensitive moderation data, METRIC handles public signals, SURVEY handles opt-in respondent data, and REPORT turns the last three into one public statement. Each data kind has its own privacy rule, so each gets its own owner. The hints (CHAN, MOD, METRIC, SURVEY, REPORT) are kept as given.
+
+Alternatives considered:
+- **Channels vs metrics** (two children). Rejected: moderation and surveys carry personal data with rules of their own and would hide inside larger nodes.
+- **Merge SURVEY into METRIC.** Rejected: survey data is not a public signal, and keeping it apart makes the no-telemetry boundary of METRIC easy to check.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.COMM.CHAN](chan/NODE.md) | Community channel inventory and listing | 001 002 008 | none |
+| [OUTR.COMM.MOD](mod/NODE.md) | Moderation procedure and moderation log | 003 | none |
+| [OUTR.COMM.METRIC](metric/NODE.md) | Adoption metric definitions and collection | 004 005 | none |
+| [OUTR.COMM.SURVEY](survey/NODE.md) | Opt-in surveys | 007 | none |
+| [OUTR.COMM.REPORT](report/NODE.md) | Quarterly adoption report | 006 | none |

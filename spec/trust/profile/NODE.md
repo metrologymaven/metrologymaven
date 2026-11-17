@@ -4,7 +4,7 @@ title: Governance profiles
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -58,12 +58,26 @@ Lets a tenant choose how strictly human review and signing are enforced: **Lean*
 
 DEFS (three profiles + schema), SELECT (A0 command + journal), GATE (query API + bus hooks), MAP (Regulated control mapping doc).
 
+## Split rationale
+
+The split separates **data** (DEFS: what each profile says), **choice** (SELECT: which one is active, an A0 act), **effect** (GATE: where the bus, export, ceremony and GUI consult it) and **documentation** (MAP: the citation-only regulatory mapping). DEFS has no CORE dependency so the verifier can read profile documents in packages.
+
+Alternatives considered:
+- **One leaf per profile.** Rejected: the three profiles share one schema and differ only in values.
+- **Enforcement inside each consumer.** Rejected: the registry-invariance test and digest stamping need one owner.
+
 ## Open questions
 
-- D-001 (and the TRUST open question) asks whether Part 11 controls belong in the open core. This node assumes yes under D-001 option A/C; a different outcome would move the Regulated profile out.
-- Tenant-defined profiles beyond the three built-ins are not specified; propose via decision if users ask.
-- The Assistive-only rule in REQ-TRUST.PROFILE-005 needs CORE to expose principal type on every command; confirm against CORE's bus design.
+- D-001 (accepted) keeps everything open source, including the Regulated profile; Part 11-oriented controls are in the open core.
+- Tenant-defined profiles beyond the three built-ins are not specified; `TRUST.PROFILE.DEFS` allows only tenant meanings and the Regulated meaning sequence as tenant parameters. Propose more via decision if users ask.
+- The Assistive-only rule in REQ-TRUST.PROFILE-005 needs CORE to expose principal kind and a bus precondition hook; tracked in `TRUST.PROFILE.GATE`.
+- Setting a profile needs a human principal; while D-012 (CLI principal kind) is open, CLI callers are `script` and `set-profile` is GUI-only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.PROFILE.DEFS | Built-in profile definitions, schema and digest | 001 006 | none |
+| TRUST.PROFILE.SELECT | Set and show the active governance profile | 002 | none |
+| TRUST.PROFILE.GATE | Profile query API and enforcement hooks | 003 004 005 006 | none |
+| TRUST.PROFILE.MAP | Regulated profile control mapping document | 007 | none |

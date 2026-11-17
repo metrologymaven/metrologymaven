@@ -4,7 +4,7 @@ title: Probe and sensor configuration and qualification
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
@@ -72,6 +72,21 @@ MODEL (tips, stylus, extensions, stars), HEAD (articulating and indexing heads),
 - Whether qualification on the controller side (server-owned compensation, as the run ticket's `compensation_owner: server` suggests) or client side is the default per controller type [unverified].
 - Default qualification form-residual limit and expiry period need a domain expert; no default is set here.
 
+## Split rationale
+
+The split follows the **entities of the probe model** plus the one workflow that changes their state of record. MODEL, HEAD, RACK and SENSOR are pure configuration entities, each with its own digest and validation, and are small enough to be leaves. QUAL is the only place where measured data changes a tip's state, so it is kept apart from the configuration entities. VALID is split from QUAL because the status query is read by the Motion Executive's validators and must stay a small, pure, R0 function independent of the reduction code.
+
+Alternatives considered:
+- **By sensor family** (tactile, scanning, laser, vision). Rejected: every family needs the same build-up, digest and validity machinery, so it would duplicate them.
+- **QUAL and VALID merged.** Rejected: the validator path would then depend on the kernel fit and the template generator.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.PROBE.MODEL](model/NODE.md) | Probe build-up model and configuration digest | 001 002 | PCD.PRB.01 |
+| [CMM.PROBE.HEAD](head/NODE.md) | Articulating and indexing head angle sets | 003 | PCD.PRB.02 |
+| [CMM.PROBE.RACK](rack/NODE.md) | Probe changer racks and port assignment | 004 | PCD.PRB.04 |
+| [CMM.PROBE.SENSOR](sensor/NODE.md) | Scanning-probe and non-contact sensor configuration | 005 | PCD.PRB.05, PCD.PRB.06 |
+| [CMM.PROBE.QUAL](qual/NODE.md) | Probe qualification reduction, records and templates | 006 007 010 | PCD.PRB.03 |
+| [CMM.PROBE.VALID](valid/NODE.md) | Qualification validity and probe status query | 008 009 | |

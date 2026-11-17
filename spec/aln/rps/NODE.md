@@ -4,7 +4,7 @@ title: 3-2-1, iterative 3-2-1, RPS and sheet-metal alignment
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -59,10 +59,23 @@ The sequential, constraint-by-constraint alignments: classic 3-2-1 (primary plan
 
 CLASSIC (3-2-1 and frame from geometry), ITER (iterative 3-2-1), RPSLOCK (RPS direction locks and DoF accounting), VECTOR (sheet-metal vector-point iteration).
 
+## Split rationale
+
+The split follows the decomposition hints: one child per **lock scheme**. CLASSIC is closed-form over fitted elements; LOCK is the general per-point direction-lock solve; ITER and VECTOR are **outer loops** that re-derive deviations and call a lock solve each iteration. ITER and VECTOR stay open because their re-derivation rules need domain confirmation (ITER) or GEO's ray queries (VECTOR).
+
+Alternatives considered:
+- **Express 3-2-1 as RPS with a fixed lock pattern** and drop CLASSIC. Rejected: classic 3-2-1 works on fitted planes and lines, not points, and the SA three-point frame is a different construction; it is also the simplest D0 leaf.
+- **Merge ITER into VECTOR.** Rejected for now: ITER groups points by 3-2-1 role on CMM data, VECTOR works per point and on scan surfaces; the ITER open question may later merge them.
+
 ## Open questions
 
 - Incumbent definitions of "iterative" 3-2-1 differ in what they re-measure between iterations [unverified]; on a live CMM re-measurement is a CMM program loop, not part of this solver. Confirm with a domain expert.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.RPS.CLASSIC | Classic 3-2-1 alignment and frame from geometry (leaf) | 001 002 007 | GOM.ALN.04, PW.ALN.04, SA.XFM.03 |
+| ALN.RPS.ITER | Iterative 3-2-1 alignment on nominal-located points | 003 007 | PCD.ALN.01 |
+| ALN.RPS.LOCK | RPS alignment with per-point direction locks (leaf) | 004 005 007 | GOM.ALN.05, PW.ALN.05 |
+| ALN.RPS.VECTOR | Sheet-metal iterative alignment on vector points | 003 006 007 | PCD.ALN.03 |

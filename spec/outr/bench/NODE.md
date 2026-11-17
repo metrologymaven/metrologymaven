@@ -4,7 +4,7 @@ title: Public benchmarks and case studies
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -61,9 +61,24 @@ ACC (accuracy benchmarks), FID (format fidelity), PERF (performance), CMP (incum
 
 ## Open questions
 
-- Incumbent licence terms may forbid publishing benchmark comparisons [unverified]; check each EULA before REQ-OUTR.BENCH-005 is used.
+- Incumbent licence terms may forbid publishing benchmark comparisons [unverified]; check each EULA before REQ-OUTR.BENCH-005 is used. Opened as D-021; OUTR.BENCH.CMP is blocked on it.
 - ECO's REQ-ECO-008 publishes benchmark **datasets**; this node publishes **results**. A reviewer should confirm the boundary when ECO is split.
+
+## Split rationale
+
+The split follows the **kind of claim**, with the shared reproducibility machinery pulled out. RUN owns recipes, release re-runs, result pages and regression display for every benchmark. ACC, FIDEL and PERF each own one kind of measured claim with its own reporting rule (reference citation and UEC, corpus counts, run statistics on a named machine). CMP isolates comparisons with incumbents, which are blocked on D-021. CASE handles third-party case studies with consent and verification.
+
+Alternatives considered:
+- **Hints as given** (ACC, FID, PERF, CMP, CASE) without RUN. Rejected: REQ-OUTR.BENCH-001, -002 and -006 would be implemented three times.
+- **Segment FID for fidelity.** Renamed FIDEL to avoid confusion with the product codename prefix `fid`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BENCH.RUN](run/NODE.md) | Benchmark recipes, release re-runs and result pages | 001 002 006 008 | none |
+| [OUTR.BENCH.ACC](acc/NODE.md) | Accuracy benchmarks against reference data | 001 003 | none |
+| [OUTR.BENCH.FIDEL](fidel/NODE.md) | Format fidelity benchmarks | 001 | none |
+| [OUTR.BENCH.PERF](perf/NODE.md) | Performance benchmarks | 001 004 | none |
+| [OUTR.BENCH.CMP](cmp/NODE.md) | Comparisons with incumbent products (decision D-021) | 005 | none |
+| [OUTR.BENCH.CASE](case/NODE.md) | User case studies | 007 008 | none |

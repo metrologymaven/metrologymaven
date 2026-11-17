@@ -4,7 +4,7 @@ title: Renderer core and scene
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -74,6 +74,18 @@ The display engine every other VIZ child draws through: the semantic scene graph
 
 SCENE (scene graph and ID tables), FRAME (frame graph, passes, backends), PREC (camera-relative precision and CI guard), LOD (cloud streaming), SHADE (mesh/CAD shading, edges, OIT, clipping raster), GLYPH (instruments, probes, machines), HEADLESS, RECOVER (device loss), ORACLE (CPU reference rasterizer).
 
+## Split rationale
+
+The dividing principle is **one GPU concern per child, with the CPU-side contracts separated from the GPU passes**:
+- SCENE is the CPU identity layer every pass draws from (no GPU code);
+- FRAME owns the device, passes, tiers and the shader rule (C2); LOD, SHADE and GLYPH plug passes into it, one per kind of content (points, surfaces, physical actors);
+- PREC, HEADLESS and RECOVER are cross-cutting properties small enough to finish as leaves now;
+- ORACLE is the test oracle (REQ-VIZ.RENDER-011) and stays independent of the paths it checks.
+
+Alternatives considered:
+- **Split by backend** (native, WebGPU, GL). Rejected: wgpu abstracts backends; tiers are a property of FRAME, not separate modules.
+- **One child per decomposition hint with RECOVER and HEADLESS folded into FRAME.** Rejected: FRAME would stay too large for a leaf, and the two folded concerns already pass the leaf test on their own.
+
 ## Open questions
 
 - The reference mid-range GPU profile is defined by PLAT; the 10⁸-point budget is a hypothesis until measured there.
@@ -81,4 +93,14 @@ SCENE (scene graph and ID tables), FRAME (frame graph, passes, backends), PREC (
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.SCENE | Semantic scene graph and ID tables | 005 007 | none |
+| VIZ.RENDER.FRAME | Frame graph, backends and capability tiers | 006 009 | none |
+| VIZ.RENDER.PREC | Camera-relative precision and far-origin guard (leaf) | 003 004 | none |
+| VIZ.RENDER.LOD | Point-cloud LOD streaming and point rasterization | 001 002 | PW.VIZ.01 |
+| VIZ.RENDER.SHADE | Mesh and CAD shading, transparency and clip raster | 001 | SA.VIZ.01 |
+| VIZ.RENDER.GLYPH | Instruments, probes and machine models | 012 | SA.VIZ.02 |
+| VIZ.RENDER.HEADLESS | Headless off-screen renderer (leaf) | 010 | none |
+| VIZ.RENDER.RECOVER | GPU device-loss recovery (leaf) | 008 | none |
+| VIZ.RENDER.ORACLE | CPU reference rasterizer and golden-image CI | 011 | none |

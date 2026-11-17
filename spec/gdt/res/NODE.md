@@ -4,7 +4,7 @@ title: Interpretation resolver, DMT and support matrix
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -22,7 +22,7 @@ updated: 2026-11-16
 
 ## Purpose
 
-The kernel-side **interpretation resolver**: given a characteristic, its context (feature type, datum references, modifiers) and its governing spec, it selects a row of the versioned **Defaults Mapping Table (DMT)** and returns a documented **operator chain** in the ISO 17450 operator vocabulary (partition, extraction, filtration, association, collection, construction, reduction, evaluation). Interpretation is data, not code, so a disputed reading becomes a reviewable change to one DMT row. The published support matrix is generated from the same table, so what the project claims and what the kernel does cannot drift apart.
+The kernel-side **interpretation resolver**: given a characteristic, its context (feature type, datum references, modifiers) and its governing spec, it selects a row of the versioned **Dialect Mapping Table (DMT)** (name fixed by D-009) and returns a documented **operator chain** in the ISO 17450 operator vocabulary (partition, extraction, filtration, association, collection, construction, reduction, evaluation). Interpretation is data, not code, so a disputed reading becomes a reviewable change to one DMT row. The published support matrix is generated from the same table, so what the project claims and what the kernel does cannot drift apart.
 
 ## Scope
 
@@ -66,10 +66,28 @@ SCHEMA (DMT row and operator-chain types), RESOLVE (the pure resolver), ROWS-ASM
 
 ## Open questions
 
-- Who authors and reviews DMT rows in an open project (credentialed experts; baseline budgets 150–300 h for the first subset)? Inherited from `GDT`; a decision record is likely needed before ROWS-ASME can be frozen.
-- Standards texts must be purchased before rows are written; the purchase is a steering-group budget item.
-- The concept documents expand DMT as "Dialect Mapping Table" while `GDT` says "Dialect Mapping Table"; same artifact, naming to be unified.
+- Authorship and review of rows: settled by D-009 (paid expert authors, two-expert sign-off, partner); implemented as a workflow in `GDT.RES.ROWFLOW`.
+- Access to standards texts for authors and reviewers: open as D-016, blocking `GDT.RES.ROWASME` and `GDT.RES.ROWISO`.
+- Naming: settled by D-009 as "Dialect Mapping Table (DMT)".
+- Parent interface lists `gdt.export_support_matrix@1` as R0 to a file handle; CONSTITUTION §3.1 (D-007) makes a local export W1 with `fs_effect: write_root`, which `GDT.RES.MATRIX` follows.
+- Children consume `UNC.ORS` case IDs and `TRUST.ESIG` signatures as data through interfaces, not `depends_on`: declaring them creates a dependency cycle (UNC and TRUST reach `GDT.DRF` through `ALN.DATUM`). The cross-domain layering should be reviewed.
+
+## Split rationale
+
+The dividing principle is **structure and machinery versus expert content** (D-009): agents can build and test the schema, resolver, generator, lint and workflow against synthetic rows now, while the row sets are expert-authored and blocked on access to the texts (D-016). Content is split by dialect because the two row sets have different phases, authors and source texts.
+
+Alternatives considered:
+- **Hint split (SCHEMA, RESOLVE, ROWS-ASME, ROWS-ISO, MATRIX, LINT).** Adopted, plus ROWFLOW: the D-009 proposal and two-expert sign-off process needs one owner, and putting it in LINT or SCHEMA would mix a stateful workflow with pure checks.
+- **One row-set child per tolerance family.** Rejected at this level: row sets are released and reviewed per dialect and edition; per-family splits are left as hints inside ROWASME.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.RES.SCHEMA | DMT row and operator-chain schema (leaf) | 002 005 | none |
+| GDT.RES.RESOLVE | Pure interpretation resolver (leaf) | 001 002 003 004 008 | none |
+| GDT.RES.ROWASME | P1a ASME Y14.5-2018 DMT row set (decision D-016) | 009 | none |
+| GDT.RES.ROWISO | ISO GPS DMT row set (decision D-016) | 009 | none |
+| GDT.RES.ROWFLOW | DMT row proposal, review and sign-off workflow | 005 | none |
+| GDT.RES.MATRIX | Generated support matrix (leaf) | 007 | none |
+| GDT.RES.LINT | DMT copyright and ORS-link lint (leaf) | 005 006 | none |

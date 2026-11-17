@@ -4,7 +4,7 @@ title: CAD exchange: STEP AP242 with semantic PMI, IGES, native translators
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XXL
 owners: []
@@ -67,10 +67,25 @@ STEP (geometry), PMI (semantic PMI to QIF MBD, report classification), IGES, EXP
 
 ## Open questions
 
-- Native CAD (GOM.IMP.06): plugin-only, or out of scope? Needs licensed translators. REQ-IO.CAD-011 assumes plugin-only; the expander of this node should open a decision record to confirm it, as the IO parent noted.
+- Native CAD (GOM.IMP.06): plugin-only, or out of scope? Opened as **D-019**; `IO.CAD.XLATE` is blocked on it (status `decision`). REQ-IO.CAD-011 assumes plugin-only.
 - REQ-IO.CAD-010 implies a worker-process boundary for the CAD kernel; the concept docs name OCCT (LGPL) in a worker process, which depends on D-001.
 - Which STEP schemas besides AP242 must the geometry reader accept? [unverified]
 
+## Split rationale
+
+The split follows **format and data role**: STEP geometry, AP242 semantic PMI, IGES geometry and the export writers each have their own entity sets, oracles and corpus; the worker child isolates the native CAD kernel once for all of them (REQ-IO.CAD-010); the translator child is separated because it is blocked on a maintainer decision (D-019) and must not hold up the rest.
+
+Alternatives considered:
+- **PMI inside STEP.** Rejected: PMI mapping is a semantic problem with its own oracle (NIST MBE PMI models) and its own boundary with GDT; it would make STEP too large.
+- **Worker inside STEP.** Rejected: IGES and export may also use the kernel, and isolation rules must be identical.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.WORKER | Isolated CAD kernel worker process | 010 | none |
+| IO.CAD.STEP | STEP B-rep geometry import | 001 002 006 | GOM.IMP.05, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |
+| IO.CAD.PMI | AP242 semantic PMI mapping to QIF MBD | 003 004 005 007 | GOM.IMP.07, PW.IMP.04 |
+| IO.CAD.IGES | IGES geometry import | 008 | GOM.IMP.05, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |
+| IO.CAD.EXPORT | STEP and IGES export of geometric elements | 009 | GOM.EXP.07, PW.EXP.03 |
+| IO.CAD.XLATE | Native CAD translator plugin contract (decision D-019) | 011 | GOM.IMP.06, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |

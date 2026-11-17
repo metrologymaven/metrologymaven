@@ -4,7 +4,7 @@ title: Gear pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -64,6 +64,14 @@ Analytical inspection of cylindrical involute gears measured on a CMM or from de
 
 DEF (gear definition and nominals), PROF (profile), HELIX (helix), PITCH (pitch and runout), SIZE (over balls, tooth thickness), GRADE (accuracy grade), DATA, TPL.
 
+## Split rationale
+
+The split follows **gear metrology's own families of deviations**: the definition and nominal flanks (DEF), flank-trace deviations for profile and helix (FLANK), pitch (PITCH), ball-or-pin based values: runout, size over balls and tooth thickness (SIZE), and grading against a standard (GRADE), plus the pack's declarations and datasets (DATA) and template (TPL). Profile and helix share one child because they use the same trace, mean-line and total/form/slope structure; runout moved from pitch to SIZE because it uses ball contacts in the tooth spaces, not single flank points.
+
+Alternatives considered:
+- **Separate PROF and HELIX children.** Rejected: the algorithms are the same over different parameters; splitting them would duplicate the mean-line method.
+- **Grade inside each deviation child.** Rejected: grading depends on the declared standard and needs one owner for standards interpretation.
+
 ## Open questions
 
 - Bevel, worm and spline gears are not in PCD.IND.02's row text and are left out [unverified]. If incumbents cover them, a maintainer should add rows to the seeds and a child here.
@@ -71,4 +79,12 @@ DEF (gear definition and nominals), PROF (profile), HELIX (helix), PITCH (pitch 
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.GEAR.DEF | Gear definition and nominal flanks | 001 003 | PCD.IND.02 |
+| IND.GEAR.FLANK | Profile and helix deviations | 004 005 007 | PCD.IND.02 |
+| IND.GEAR.PITCH | Gear pitch deviations (leaf) | 006 007 | PCD.IND.02 |
+| IND.GEAR.SIZE | Runout, size over balls and tooth thickness | 001 007 | PCD.IND.02 |
+| IND.GEAR.GRADE | Gear accuracy grade classification | 008 | PCD.IND.02 |
+| IND.GEAR.DATA | Gear standards declarations and reference datasets | 002 009 | none |
+| IND.GEAR.TPL | Gear report template | 001 | none |

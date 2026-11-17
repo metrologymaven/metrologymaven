@@ -4,7 +4,7 @@ title: Verifier replay with the reference kernel
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -63,11 +63,27 @@ When a Result Package includes input points, re-run the recorded computations th
 
 SELECT (replayable set), SANDBOX (WASM runtime + limits), COMPARE (classification + tolerances), CORPUS (replay conformance packages).
 
+## Split rationale
+
+The split follows **the replay pipeline**: decide what can be replayed (SELECT), find the kernel (KART), execute it safely (SANDBOX), judge the outcome (COMPARE), and wire them into one command (RUN); the cross-platform evidence set is its own task (CORPUS). The sandbox is isolated because it is the only place the verifier runs external code; artifact sourcing is isolated because it is blocked on a maintainer choice (D-020) and must not hold up the rest.
+
+Alternatives considered:
+- **Reuse CORE.RPL's engine directly.** Rejected for the verifier: it must run standalone without the project store or GUI crates (REQ-TRUST.VERIFY-009). CORE.RPL remains the engine for in-app modes; both must agree on outcome definitions (CONSTITUTION §4).
+- **Fold KART into SANDBOX.** Rejected: hashing and running an artifact is fixed; where it comes from is policy.
+
 ## Open questions
 
-- How the verifier obtains kernel artifacts for older versions offline: bundled, fetched once on opt-in, or included in the package. Bundling keeps C7; including in the package grows packages. Needs a ruling with KRN.
-- Tolerances for `EQUIVALENT` per determinism class should come from KRN's published tolerance table; this node references it but does not own it.
+- How the verifier obtains kernel artifacts for older versions offline: opened as D-020; `TRUST.REPLAY.KART` is blocked, the rest builds against the `ArtifactSource` trait.
+- Tolerances for `EQUIVALENT` come from the REP-1 replay equivalence-tolerance table owned by `UNC.RDL` (accepted level-2 review); `TRUST.REPLAY.COMPARE` consumes it and records its digest. UNC.RDL has not yet published the table schema.
+- CORE owns the replay engine for all in-app modes; this subsystem is the standalone verifier-mode replayer. Boundary to be confirmed with CORE.RPL.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.REPLAY.SELECT | Replayable-set selection and NOT_REPLAYABLE reasons | 005 | none |
+| TRUST.REPLAY.SANDBOX | WASM kernel sandbox with digest check and limits | 007 009 | none |
+| TRUST.REPLAY.COMPARE | Replay outcome classification and aggregation | 002 003 004 006 | none |
+| TRUST.REPLAY.KART | Kernel artifact sourcing for verifier replay (decision D-020) | 001 | none |
+| TRUST.REPLAY.RUN | Verifier replay command | 001 | none |
+| TRUST.REPLAY.CORPUS | Replay conformance corpus and cross-platform gate | 008 | none |

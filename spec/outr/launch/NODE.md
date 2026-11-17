@@ -4,7 +4,7 @@ title: Launch plan, milestones and event kits
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -62,8 +62,22 @@ PLAN (milestone definitions), GATE (gate-check report), ANN (announcement plan),
 
 ## Open questions
 
-- Whether "1.0" of an app can precede the P2 live-device phase for that app is a maintainer choice and may need a decision record.
+- Whether "1.0" of an app can precede the P2 live-device phase for that app is a maintainer choice. Opened as D-017; OUTR.LAUNCH.PLAN is blocked on it.
+
+## Split rationale
+
+The split follows the **launch cycle**: define milestones (PLAN), check them (GATE), announce (ANN), demonstrate at events (KIT), and learn (REVIEW). Each step has a different owner and output, and the gate sits between the plan and every public statement. The hints are kept as given.
+
+Alternatives considered:
+- **One child per milestone** (alpha, beta, 1.0). Rejected: the same plan, gate and announcement machinery serves every milestone.
+- **Merge GATE into PLAN.** Rejected: the plan is written by people and blocked on D-017, while the gate is a deterministic check that should not be blocked with it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.LAUNCH.PLAN](plan/NODE.md) | Launch plan and milestone definitions (decision D-017) | 001 002 | none |
+| [OUTR.LAUNCH.GATE](gate/NODE.md) | Milestone gate check and report | 003 004 | none |
+| [OUTR.LAUNCH.ANN](ann/NODE.md) | Announcement plan and drafts | 004 005 | none |
+| [OUTR.LAUNCH.KIT](kit/NODE.md) | Conference and trade-show demo kits | 006 007 | none |
+| [OUTR.LAUNCH.REVIEW](review/NODE.md) | Post-launch reviews | 008 | none |

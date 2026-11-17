@@ -4,7 +4,7 @@ title: Gap and flush pack
 level: 2
 parent: IND
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -60,10 +60,25 @@ Measurement of gap (the opening between two adjacent panels) and flush (their st
 
 DEF (definitions and sign conventions), SECT (evaluation from sections), SENSOR (evaluation from profile sensors), JOINT (along-joint stations and parallelism), DATA, TPL.
 
+## Split rationale
+
+The split separates **what gap and flush mean** (DEF: definitions, sign conventions, elements) from **where the data comes from** (SECT: scan sections; SENSOR: profile-sensor readings) and **how many places are evaluated** (JOINT: stations along a joint), plus datasets (DATA) and template (TPL). REQ-IND.GAPFL-005 asks that sensors use the same definitions as sections, so SENSOR depends on SECT's definition evaluation instead of re-implementing it.
+
+Alternatives considered:
+- **Merge SECT and SENSOR.** Rejected: SENSOR depends on HAL and has a different evaluation basis; keeping it apart lets SECT ship before profile devices are catalogued.
+- **Put JOINT inside SECT.** Rejected: station placement and aggregation are independent of how one station is evaluated, and JOINT can be finished as a leaf now.
+
 ## Open questions
 
-- The catalogue of gap definitions to ship first needs an automotive domain expert; the list in Scope is a starting proposal.
+- The catalogue of gap definitions to ship first needs an automotive domain expert; the list in Scope is a starting proposal. Carried by `IND.GAPFL.DEF`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IND.GAPFL.DEF | Gap and flush definitions and elements | 001 002 007 | GOM.SPE.04, PW.IND.02 |
+| IND.GAPFL.SECT | Gap and flush from scan sections | 003 004 | GOM.SPE.04, PW.IND.02 |
+| IND.GAPFL.SENSOR | Gap and flush from profile sensors | 005 | GOM.SPE.04, PW.IND.02 |
+| IND.GAPFL.JOINT | Gap and flush along a joint (leaf) | 006 | GOM.SPE.04, PW.IND.02 |
+| IND.GAPFL.DATA | Gap and flush reference datasets | 008 | none |
+| IND.GAPFL.TPL | Gap and flush report template | 001 | none |

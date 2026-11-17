@@ -4,7 +4,7 @@ title: Motion Executive, Approval Station and run tickets
 level: 2
 parent: CMM
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: XXL
 owners: []
@@ -100,11 +100,32 @@ REQ (run requests and queue), TICKET (ticket schema, issue, voiding), STATION (A
 
 ## Open questions
 
-- **Released-by-other rule** (Design Baseline §8): whether a human other than the requester must release agent-authored programs, or all programs under the Regulated profile. Pending a founder and counsel decision; no decision record exists yet. REQ-CMM.EXEC-004 is written to hold under either outcome. The child that implements the release check should be blocked on a decision when this node is expanded.
-- Whether an agent may file the inert run request at all, or only humans. The constitution says M1 is never on MCP, and the Design Baseline says a run request from any gateway is an inert queued record. This node takes the stricter reading (no MCP run request) until a decision says otherwise.
+- **Released-by-other rule:** settled by D-008 (option B, accepted 2026-11-16). Released-by-other is required for agent-authored programs and under the Regulated profile; otherwise the same person may release and approve as two distinct acts, with mandatory simulation and a setup run. Implemented in `CMM.EXEC.TICKET`. Counsel review is still recommended before the first live-machine release.
+- **Agent run requests:** settled by D-008: agents may not file run requests over MCP; their only motion-related tools are the hold request (`run:hold`) and read-only status. Implemented in `CMM.EXEC.REQ`.
 - I++ DME details (port number, fast-queue stop semantics) are taken from concept docs and are [unverified] against VDMA 8722:2026-10.
 - The 30 % setup cap is taken from the Design Baseline §8 and is a policy choice, not a measured safety figure.
 
+## Split rationale
+
+The split follows the **run lifecycle across the trust boundary**: a request is filed (REQ), a ticket is bound and released-checked (TICKET), a present human approves it at the station (STATION) with an assertion the Motion Executive verifies itself (AUTHN), deterministic validators and the simulation gate must pass (VALID), the armed run is driven under lease, look-ahead and hold rules (DRIVE), the speed policy and per-cycle placement check constrain it (SCOPE), and the outcome is recorded with its thermal context (RECORD). DOCS carries the positioning obligation (not a safety function) as a guarded documentation task. Each child is a separately reviewable piece of review zone Z3; DRIVE and VALID are the largest and will split again.
+
+Alternatives considered:
+- **Hold handling in one child** (request and execution together). Rejected: the hold request is the only MCP-reachable surface and should be reviewed with the other request records, while hold execution belongs to the armed loop.
+- **Temperature inputs as their own child.** Rejected to keep nine children; they are recorded in the run record and form a decomposition hint of `CMM.EXEC.RECORD`.
+- **Station and AUTHN merged.** Rejected: the station is untrusted UI, while verification runs inside the Motion Executive; merging would blur the boundary D-008 and the baseline rely on.
+
+D-008 (accepted) is applied: no run requests over MCP; released-by-other for agent-authored programs and the Regulated profile.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [CMM.EXEC.REQ](req/NODE.md) | Run and hold requests and the request queue | 001 003 | |
+| [CMM.EXEC.TICKET](ticket/NODE.md) | Run tickets, release check and arming-time voiding | 004 006 | |
+| [CMM.EXEC.AUTHN](authn/NODE.md) | WebAuthn verification of ticket approvals | 005 | |
+| [CMM.EXEC.STATION](station/NODE.md) | Approval Station view and flow | 022 | |
+| [CMM.EXEC.VALID](valid/NODE.md) | Motion Executive validator suite and simulation gate | 007 008 | |
+| [CMM.EXEC.DRIVE](drive/NODE.md) | Armed run loop, lease, look-ahead and hold | 002 015 016 017 018 | PW.CMM.01 |
+| [CMM.EXEC.SCOPE](scope/NODE.md) | Setup and run-batch scopes, speed policy and placement check | 009 010 011 012 013 014 | |
+| [CMM.EXEC.RECORD](record/NODE.md) | Run records and temperature compensation inputs | 019 020 | |
+| [CMM.EXEC.DOCS](docs/NODE.md) | Motion Executive positioning, instructions for use and IQ text | 021 | |

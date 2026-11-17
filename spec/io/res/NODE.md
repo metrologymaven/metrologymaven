@@ -4,7 +4,7 @@ title: Results and SPC formats, transcription records
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -72,6 +72,21 @@ TRANS (transcription record model and source mapping), QIFR (QIF Results and Sta
 - AQDEF is owned by a competitor; certification terms and fees are [unverified]. VDA QDX as a neutral alternative is not in IO's scope yet.
 - Where the ResultRecord type itself lives (CORE data model or GDT) is not settled in the parents; this node only consumes it.
 
+## Split rationale
+
+One child owns the **meaning** of a transcribed result (TRANS: record model, status, outcome and display rules, plus the DMIS command whose parser lives elsewhere); the others own one **format family** each, in and out, and all call TRANS so the "never presented as re-evaluated" rule is enforced once. REPORT is only an export envelope around RPT output.
+
+Alternatives considered:
+- **Inbound vs outbound children.** Rejected: column maps, K-field tables and QIF mappings are shared by the two directions of each format.
+- **Transcription rules inside each format child.** Rejected: REQ-IO.RES-002..005 must be identical for every source.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.RES.TRANS | Transcription record model, source mapping and DMIS results import | 001 002 003 004 005 | PW.IMP.05 |
+| IO.RES.QIFR | QIF Results and QIF Statistics in and out | 008 009 013 | PCD.EXP.03 |
+| IO.RES.CSV | CSV and table result exchange through versioned column maps | 006 007 013 | GOM.EXP.02, GOM.EXP.06, PW.EXP.02 |
+| IO.RES.AQDEF | AQDEF DFQ export and historical import (uncertified) | 010 013 | GOM.EXP.04, PW.EXP.04 |
+| IO.RES.PIWEB | PiWeb-importable results export | 011 | GOM.EXP.05 |
+| IO.RES.REPORT | Report-file export envelope (leaf) | 012 | GOM.EXP.03 |

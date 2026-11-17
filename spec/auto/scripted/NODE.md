@@ -4,7 +4,7 @@ title: Scripted elements and scripted checks
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -64,7 +64,23 @@ DECL (declaration schema), GRAPH (dependency registration and recompute), RESULT
 ## Open questions
 
 - REQ-AUTO.SCRIPTED-004 makes scripted checks orchestrate kernel commands rather than compute. If users need arithmetic on kernel results (for example a ratio of two distances) as a value of record, the kernel must offer a deterministic expression command. See the matching question in `AUTO.PROG`; this may need a KRN input.
+- The kernel-arithmetic question above is now D-027 (opened during this expansion). `AUTO.SCRIPTED.RESULT` keeps REQ-AUTO.SCRIPTED-004 as written until it is decided.
+- `AUTO.SCRIPTED.FAIL` proposes a stricter rule than REQ-AUTO.SCRIPTED-005: only R0 and R1 calls during recompute.
+
+## Split rationale
+
+The split follows the life of a scripted element: it is **declared** (DECL, which also registers its graph edges), **recomputed** (GRAPH), **guarded** while it runs (FAIL), and its **results are labelled and checked** (RESULT). DECL and FAIL can be finished now; GRAPH waits on the CORE.DEP contract for out-of-process work inside a recompute, and RESULT waits on D-027.
+
+Alternatives considered:
+- **Edge registration in GRAPH.** Rejected: edges are created in the same commit as the element, so they belong to the create command; GRAPH owns only what happens when inputs change.
+- **FAIL inside GRAPH.** Rejected: the guard is a self-contained safety policy (class allowlist, time limit, staleness) with its own tests, reusable if other out-of-process element types appear.
+- **One child per implementation kind (Python, Command Program).** Rejected: both kinds share declaration, recompute, guard and result rules; the difference is hidden behind the `ScriptRunner` trait.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.SCRIPTED.DECL | Declaring scripted elements and checks (leaf) | 001 | GOM.AUT.03, GOM.AUT.04 |
+| AUTO.SCRIPTED.GRAPH | Recompute of scripted elements in the dependency graph | 002 | GOM.AUT.03 |
+| AUTO.SCRIPTED.RESULT | ResultRecord labelling and the value-of-record rule | 003 004 007 | GOM.AUT.04 |
+| AUTO.SCRIPTED.FAIL | Recompute guard: class limits, time limit and staleness (leaf) | 005 006 | none |

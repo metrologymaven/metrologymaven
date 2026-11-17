@@ -4,7 +4,7 @@ title: Device interface definitions and capability contracts
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -68,6 +68,23 @@ BASE (`Device` base, health, errors), CAPS (the eleven capability contracts, pos
 - Concept doc 08 proposes proto3 plus Arrow schemas plus generated WIT as the package format (H-D2). That is an implementation choice to settle at a leaf; the spec here only requires versioned, generated contracts.
 - The stamp schema must be frozen in P0, before most capabilities exist; the remaining capabilities follow their consumer phases (P2 to P4).
 
+## Split rationale
+
+The split follows **what a driver author imports**, from the most shared to the most specific. Value types (UNITS) and the frozen record schemas (STAMP) come first because P0 must freeze them before any capability exists. The `Device` base with health and errors (BASE) and the version rules (NEG) are shared by every package. The capability packages are grouped by semantics: the I++-aligned CMM packages with their motion class (CNC) and the non-motion sensor packages (SENS). The descriptor that names an instrument model (PROFILE) and the generation toolchain with the discovery commands (GEN) close the set.
+
+Alternatives considered:
+- **One child per capability (eleven children).** Rejected: over the nine-child limit, and the P3–P4 packages would sit as empty shells for years.
+- **Schemas and stamps folded into BASE.** Rejected: the stamp must freeze in P0, while the `Device` base can only settle once the first live driver exists.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.IDL.BASE | Device base package, health state machine and error model | 001 005 | none |
+| HAL.IDL.STAMP | AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) — leaf | 001 004 | none |
+| HAL.IDL.UNITS | Quantities, declared encodings, frames and timestamp types — leaf | 003 | none |
+| HAL.IDL.NEG | Capability versioning and negotiation rules — leaf | 002 007 | none |
+| HAL.IDL.CNC | CMM capability packages (CncMotion, TactileProbe, Rotary) | 001 006 | none |
+| HAL.IDL.SENS | Sensor capability packages | 001 | none |
+| HAL.IDL.PROFILE | Instrument-profile descriptor (instrument-profile/v1) — leaf | 004 | none |
+| HAL.IDL.GEN | Package format, stub and schema generation, capability discovery commands | 001 | none |

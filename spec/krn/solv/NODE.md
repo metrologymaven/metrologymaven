@@ -4,7 +4,7 @@ title: Deterministic optimisation solvers and certificates
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -70,6 +70,21 @@ NLLS (Gauss-Newton and Levenberg-Marquardt), CONIC (vendored LP/QP/SOCP and its 
 - Vendoring Clarabel depends on its licence passing D-001 [unverified].
 - The multi-start agreement tolerance may need to be per quantity kind; reuse the REP-1 table from the concept doc once it is adopted in the constitution.
 
+## Split rationale
+
+The split follows the **solver family**, with the certificate machinery separate because every family hands it the same kind of output. NLLS (Gauss-Newton and Levenberg-Marquardt) serves least-squares fits and alignments. CONIC is the vendored LP/QP/SOCP solver and its KNP-1 audit, a distinct reviewable job. SEQ is the sequential-linearisation driver that turns non-convex minimax and envelope problems into a series of conic solves. MSTART is the generic seeded multi-start and agreement check used by both NLLS and SEQ callers. CERT turns any converged conic result into an active set, a recomputed value and a checked optimality certificate, so iterates never become values of record.
+
+Alternatives considered:
+- **Put multi-start inside SEQ.** Rejected: least-squares cylinder, cone and torus fits (`KRN.LSQ`) need multi-start without sequential linearisation.
+- **Put the certificate inside CONIC.** Rejected: the certificate must be independent of the solver that produced the iterates, so a vendored solver update cannot change reported values.
+- **Split CONIC into LP, QP and SOCP.** Rejected at this level: one vendored solver serves all three; a further split belongs to CONIC's own expansion.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.SOLV.NLLS | Nonlinear least-squares driver (Gauss-Newton and Levenberg-Marquardt) | 001 002 009 | none |
+| KRN.SOLV.CONIC | Vendored LP, QP and SOCP solver with KNP-1 audit | 001 003 009 010 | none |
+| KRN.SOLV.SEQ | Sequential linearisation driver | 001 008 009 | none |
+| KRN.SOLV.MSTART | Deterministic seeded multi-start and agreement check | 001 008 | none |
+| KRN.SOLV.CERT | Active-set certificates, recomputation and tie-break | 001 004 005 006 007 | none |

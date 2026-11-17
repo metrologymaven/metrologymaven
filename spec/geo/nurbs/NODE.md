@@ -4,7 +4,7 @@ title: NURBS curve and surface evaluation
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,6 +60,17 @@ The exact-geometry evaluator: B-spline and NURBS curves and surfaces, plus the a
 
 DATA (types and validation), EVAL (de Boor style evaluation and derivatives), ANALYTIC (closed-form surfaces), INVERT (point inversion), REF (reference fixtures and comparison).
 
+## Split rationale
+
+The split follows the **evaluation pipeline**: validated data (DATA), spline evaluation and the shared `Curve`/`Surface` traits (EVAL), closed-form analytic geometry behind the same traits (ANALYTIC), global point inversion (INVERT), the reference oracle and fixtures (REF), and the registry surface (CMD, in `fid-geo-cmd`). All library children live in `fid-geo-nurbs` in the kernel graph.
+
+The parent's open question on the reference evaluator is answered by GEO.NURBS.REF: the project writes its own exact-rational and high-precision oracle in Python, so no third-party evaluator and no licence question is involved.
+
+Alternatives considered:
+- **Analytic surfaces converted to NURBS.** Rejected by REQ-GEO.NURBS-007.
+- **Inversion inside DIST.** Rejected: single-surface inversion is testable on its own and GEO.CAD.NOMINAL and SEL may use it without trimming.
+- **Using an existing CAD kernel as the oracle.** Rejected: licence coupling and a shared-bug risk; independent code is a stronger check.
+
 ## Open questions
 
 - Phase set to P1b to match CONSTITUTION §7 (CAD + PMI); confirm in review.
@@ -67,4 +78,11 @@ DATA (types and validation), EVAL (de Boor style evaluation and derivatives), AN
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.NURBS.DATA | B-spline and NURBS data types and validation (leaf) | 001 002 | none |
+| GEO.NURBS.EVAL | NURBS evaluation, derivatives, normals and curvature (leaf) | 001 004 006 | none |
+| GEO.NURBS.ANALYTIC | Closed-form analytic curves and surfaces (leaf) | 004 006 007 | none |
+| GEO.NURBS.INVERT | Point inversion on NURBS curves and surfaces (leaf) | 005 006 | none |
+| GEO.NURBS.REF | NURBS reference fixtures and independent oracle (leaf) | 003 | none |
+| GEO.NURBS.CMD | Curve and surface evaluation and inversion commands (leaf) | 001 005 | none |

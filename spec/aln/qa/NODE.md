@@ -4,7 +4,7 @@ title: Alignment residuals and diagnostics
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -58,10 +58,23 @@ One residual report and diagnostic model for every alignment method: per-input r
 
 REPORT (type and statistics), COND (conditioning and weak-DoF detection), HIST (convergence history and documentation), CMP (alignment comparison).
 
+## Split rationale
+
+The split follows the decomposition hints, one child per **kind of quality evidence**: residual statistics (REPORT), sensitivity of the solve (COND), how the iteration got there and how that is documented (HIST), and the difference between two alignments (CMP). Each has its own fixture family and its own read command, and all four are small enough to finish as leaves.
+
+Alternatives considered:
+- **One diagnostics leaf for COND and HIST.** Rejected: HIST also owns a registry-manifest schema and CI check, which is tooling work rather than kernel numerics.
+- **CMP under ALN.MODEL.** Rejected: it is a read-only numeric comparison with no effect on the document, matching QA's R0/R1 surface.
+
 ## Open questions
 
 - Should a residual report feed UNC directly as input to transform uncertainty, or should UNC re-derive it? Left to UNC's expansion.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.QA.REPORT | Residual report type, statistics and read command (leaf) | 001 005 007 | none |
+| ALN.QA.COND | Conditioning and weak-DoF diagnostics (leaf) | 002 005 007 | none |
+| ALN.QA.HIST | Convergence history and published convergence criteria (leaf) | 003 004 | none |
+| ALN.QA.CMP | Comparison of two alignments (leaf) | 006 | none |

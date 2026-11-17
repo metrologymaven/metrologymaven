@@ -4,7 +4,7 @@ title: Reference data library and kernel validation
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -54,10 +54,11 @@ The **Reference Data Library**: a versioned, open, content-addressed collection 
 - **REQ-UNC.RDL-007** The TraCIM client shall submit fit results for public test runs and record the returned verdict with the kernel manifest digest.
 - **REQ-UNC.RDL-008** When the point-of-use subset is run, the system shall write a journaled record with kernel version, subset digest and per-case outcome.
 - **REQ-UNC.RDL-009** If kernel source references an RDL dataset ID, file name or reference constant, then the lint shall fail the build.
+- **REQ-UNC.RDL-010** The RDL shall publish a versioned replay equivalence-tolerance table (REP-1) with bounds per quantity kind and rules per determinism class, together with a classifier that `CORE.RPL` and `TRUST.REPLAY` use, and any change to a bound shall require a new table version.
 
 ## Interfaces
 
-- **Offers:** `RdlDataset` format; `rdl.list_dataset@1` (R0), `rdl.generate_dataset@1` (R1), `rdl.run_selftest@1` (R1, record W2 journal `rdl.run_selftest`), `rdl.submit_tracim@1` (X1); frozen release-set digest for the kernel manifest.
+- **Offers:** `RdlDataset` format; the REP-1 table and classifier (`fid-rep`); `rdl.list_dataset@1` (R0), `rdl.generate_dataset@1` (R1), `rdl.run_selftest@1` (R1, record W2 journal `rdl.run_selftest`), `rdl.submit_tracim@1` (X1); frozen release-set digest for the kernel manifest.
 - **Consumes:** kernel fits and manifest from KRN; signatures from TRUST for distributed subsets.
 
 ## Decomposition hints
@@ -66,10 +67,29 @@ FORMAT, EXT (tier X import), GEN (generators), FREEZE (release sets), AST (self-
 
 ## Open questions
 
-- **Owner assigned (level-2 review, accepted 2026-11-16):** UNC.RDL owns the REP-1 replay equivalence-tolerance table that CORE.RPL and TRUST.REPLAY consume. Include it when this node is expanded.
+- **Owner assigned (level-2 review, accepted 2026-11-16):** UNC.RDL owns the REP-1 replay equivalence-tolerance table that CORE.RPL and TRUST.REPLAY consume. Incorporated at expansion as REQ-UNC.RDL-010 and child `UNC.RDL.REP`.
 - Licence terms for redistributing NIST ATS and PTB datasets are unverified; tier X redistribution waits on confirmation.
 - Whether automated CI submission of paid TraCIM orders is acceptable is to be asked of PTB [unverified].
 
+## Split rationale
+
+Split by **pipeline stage of reference data**: the record format every tier shares (FORMAT); the three ways data enters (EXT for external NMI data, GEN for generated data with oracle cross-checks, BLIND for sealed sets and challenges); freezing a release whose digest enters kernel identity (FREEZE); running cases and recording outcomes (AST); the external certification client (TRACIM); the data side of the anti-overfitting lint (LINT); and the replay equivalence policy (REP). REQ-UNC.RDL-010 was added at expansion to carry the level-2 review's assignment of the REP-1 table to this node; it is owned by REP.
+
+Alternatives considered:
+- **REP-1 in KRN.MAN or CORE.RPL.** Rejected by the level-2 review, which assigned it here; it is also data-like (a versioned table) and its tolerances derive from RDL's MPE conventions.
+- **LINT owned only by KRN.NUM.** Kept split: KRN.NUM owns the lint engine (REQ-KRN.NUM-009); RDL owns the denylist and a canary that proves the lint bites.
+- **Point-of-use run as its own child.** Rejected: it is the same runner on a subset; only the selection differs.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.RDL.FORMAT | RDL dataset record format and listing (leaf) | 001 002 | none |
+| UNC.RDL.EXT | Tier X external dataset import | 001 002 | none |
+| UNC.RDL.GEN | Tier G synthetic generators and oracle cross-checks | 003 004 | none |
+| UNC.RDL.FREEZE | Frozen RDL release sets and suite digest (leaf) | 005 | none |
+| UNC.RDL.AST | Algorithm self-test runner and point-of-use run (leaf) | 006 008 | none |
+| UNC.RDL.TRACIM | PTB TraCIM client | 007 | none |
+| UNC.RDL.BLIND | Tier B blind sets and challenge handling | 002 | none |
+| UNC.RDL.LINT | Kernel reference-data denylist (leaf) | 009 | none |
+| UNC.RDL.REP | Replay equivalence tolerance table (REP-1) and classifier (leaf) | 010 | none |

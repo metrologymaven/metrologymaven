@@ -4,7 +4,7 @@ title: Kiosk and operator mode
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,10 +60,24 @@ The locked-down front end for the shop-floor operator: choose a released Command
 
 SESSION (enter, exit, resume), PROGPICK, STEPS (operator-step renderers), STATUS (big status), CYCLE (end-of-cycle and loops), ESCAL (errors and supervisor escalation).
 
+## Split rationale
+
+The dividing principle is **the operator's cycle in time order**: the admin sets the station up (SESSION), the operator picks a program and serial (PROGPICK), works through declared steps (STEPS) while watching the big status (STATUS), and the cycle ends or escalates (CYCLE). Each child carries one lock-down rule: admin-only entry, released-only programs, declared-steps-only, never-colour-only status, declared-decisions-only.
+
+Alternatives considered:
+- **Split by permission** (admin, operator, supervisor surfaces). Rejected: the supervisor appears only in escalation, which would leave a one-requirement child.
+- **STATUS folded into STEPS.** Rejected: the status display is a small finishable leaf reused across steps and the summary.
+
 ## Open questions
 
 - Phase: the concept places scan-program kiosk in P1b and CNC kiosk in P2; the parent is P1a. A phase change would need a decision; this child is tagged P1b as the earliest it can be useful [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.KIOSK.SESSION | Kiosk session enter, exit and resume (leaf) | 003 007 | none |
+| VIZ.KIOSK.PROGPICK | Released-program chooser and serial entry (leaf) | 001 | none |
+| VIZ.KIOSK.STEPS | Operator-step renderers and lock-down | 002 006 | none |
+| VIZ.KIOSK.STATUS | Large live status display (leaf) | 005 | none |
+| VIZ.KIOSK.CYCLE | End-of-cycle actions, loops and escalation | 004 | none |

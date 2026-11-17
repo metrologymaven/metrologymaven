@@ -4,7 +4,7 @@ title: Element-based and datum-system alignment
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -59,11 +59,30 @@ Aligns data by fitting measured geometric elements to their nominals (any mix of
 
 ELEM (feature-pair alignment and DoF accounting), ASME (datum system per ASME Y14.5-2018), ISO (datum system per ISO 5459:2011), RESID (unconstrained-DoF handling).
 
+## Split rationale
+
+The hints proposed ELEM, ASME, ISO and RESID. This split keeps ELEM, merges **RESID into a shared DoF leaf** (DOF) that both element and datum alignment need, and divides the datum work into **one engine** (SYS, carrying ASME in P1a) and **one dialect enablement** (ISO, P1b). Splitting ASME and ISO into two engines would duplicate the gate, precedence and recording logic; the dialect differences live in GDT's DMT rows, not in this domain's code.
+
+Alternatives considered:
+- **ASME and ISO as two engines.** Rejected: same mechanism, different rows.
+- **DoF accounting inside each solver.** Rejected: the precedence guarantee (REQ-004) is easiest to prove once, in a small D0 leaf.
+- **Fold datum-system alignment into GDT.DRF.** Rejected here (cross-domain, and the parent requires the alignment object); instead SYS delegates construction to GDT.DRF.
+
+Phase: ISO is tagged P1b per CONSTITUTION §7; the node stays P1a.
+
 ## Open questions
 
 - GDT depends on ALN and this node depends on GDT's resolver, which risks a cycle. Proposed resolution: GDT exposes the resolver as a lower-level module that ALN.DATUM depends on, while GDT's evaluation modules depend on ALN. Raise in GDT's expansion; no edit made there.
 - ISO GPS is a P1b dialect in the constitution; the ISO half of this node may need to be scheduled P1b by decision.
 
+- Children resolve the second question by tagging `ALN.DATUM.ISO` P1b; no phase of an existing node changed.
+- `ALN.DATUM.SYS` overlaps `GDT.DRF` (DRF construction) and `ALN.DATUM.DOF` overlaps GDT.DRF's DoF bookkeeping; both should be reconciled in GDT.DRF's expansion.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.DATUM.ELEM | Priority-ordered alignment by geometric elements | 001 004 007 | GOM.ALN.06, PW.ALN.03 |
+| ALN.DATUM.DOF | Degree-of-freedom accounting and unconstrained-DoF policy (leaf) | 001 002 | none |
+| ALN.DATUM.SYS | Datum-system alignment engine and ASME dialect | 003 004 005 006 007 | GOM.ALN.07, PCD.ALN.05, PW.ALN.06 |
+| ALN.DATUM.ISO | ISO 5459 datum-system alignment enablement | 003 006 007 | GOM.ALN.07, PW.ALN.06 |

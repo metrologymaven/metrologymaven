@@ -4,7 +4,7 @@ title: CAD bodies, topology, groups and tessellation
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -65,11 +65,28 @@ The exact-CAD side of the geometry model: B-rep bodies with shells, faces, loops
 
 TOPO (B-rep topology and validation), TESS (tessellation), NOMINAL (primitive recognition and nominal elements), GROUP (groups, parts, layers), KERNEL (B-rep kernel boundary; blocked until the open question is decided).
 
+## Split rationale
+
+The split separates **what is the same under every kernel choice from what is not**. The Rust topology model with stable IDs, adjacency, trimming classification and validation (TOPO), nominal element generation (NOMINAL), groups and layers (GROUP) and instance placement and part handling (ASSY) all work on the Rust model whichever engine builds bodies, so they proceed now. Tessellation (TESS) is the part whose engine, determinism class, crate boundary and WASM availability depend on the B-rep kernel choice, so it is blocked on decision **D-024**.
+
+Seed coverage: GOM.CAD.02 is split between GROUP (groups) and ASSY (part handling); GOM.CAD.03 is NOMINAL; GOM.CAD.04 is TESS; SA.CAD.03 is GROUP.
+
+Alternatives considered:
+- **Block the whole node on D-024.** Rejected: values of record (trim classification, recognition) must be Rust under C1 regardless, so only tessellation and STEP B-rep building actually depend on the choice.
+- **A separate KERNEL child** (the decomposition hint). Rejected: under options A, C and D there is no kernel boundary inside GEO, and under B the boundary is IO.CAD's worker process; the decision is attached to TESS, the one GEO child it changes.
+- **Groups, layers and parts in one child.** Rejected: assemblies need frames and per-instance IDs and are larger; groups and layers are a self-contained leaf.
+
 ## Open questions
 
-- Should the B-rep kernel be its own crate, or OCCT in a separate process (the baseline uses LGPL OCCT out of process)? This touches licensing (D-001) and the C1 kernel boundary, so whoever expands this node will likely need a decision record.
+- Should the B-rep kernel be its own crate, or OCCT in a separate process (the baseline uses LGPL OCCT out of process)? This touches licensing (D-001) and the C1 kernel boundary, so whoever expands this node will likely need a decision record. **Opened as D-024**; it blocks GEO.CAD.TESS only (see Split rationale).
 - Phase set to P1b to match CONSTITUTION §7 (CAD + PMI); confirm in review.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.CAD.TOPO | B-rep topology model, trimming and validation | 001 002 010 | none |
+| GEO.CAD.TESS | Controlled, watertight tessellation of CAD bodies (decision D-024) | 003 004 005 006 | GOM.CAD.04 |
+| GEO.CAD.NOMINAL | Nominal element generation from CAD faces and edges | 008 009 | GOM.CAD.03 |
+| GEO.CAD.GROUP | CAD groups and layers (leaf) | 007 | GOM.CAD.02, SA.CAD.03 |
+| GEO.CAD.ASSY | CAD parts, assemblies and instance placement | 001 | GOM.CAD.02 |

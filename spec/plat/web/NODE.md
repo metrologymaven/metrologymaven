@@ -4,7 +4,7 @@ title: Browser support for the WASM build
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -63,8 +63,26 @@ BROWSERS (browser tiers), GFX (WebGPU and fallback policy), LIMITS (memory and f
 ## Open questions
 
 - Phase set to P1b because the desktop viewer lands in P1a; moving it is a steering-group decision.
-- Whether a WebGL2 fallback is worth supporting at all is open.
+- Whether a WebGL2 fallback is worth supporting: VIZ.WEB already specifies one (REQ-VIZ.WEB-003); `PLAT.WEB.GFX` limits WebGL2-only browsers to Tier 2 at most.
+- Cross-domain: VIZ.WEB's last fallback (server-rendered stills) conflicts with REQ-PLAT.WEB-003 unless the renderer is local or self-hosted; carried by `PLAT.WEB.GFX` and `PLAT.WEB.OFFLINE`.
+- Cross-domain: REQ-PLAT.WEB-008 (non-device workflows in the browser) and CONSTITUTION §2 (WASM build of the apps) versus REQ-VIZ.WEB-002 (web viewer links no metrology kernel). Read together, the read-only viewer is kernel-free while the WASM app builds (ECO) must carry the kernel; this should be stated by VIZ and ECO.
+- Cross-domain: `PLAT.WEB.DIFF` needs a `web` availability flag in CORE.REG's manifest schema.
+
+## Split rationale
+
+The split follows **the ways a browser differs from a desktop**: which browsers (BROWSERS), which graphics (GFX), how much memory (LIMITS), how the network and data boundary is kept (OFFLINE), which commands are missing (DIFF), and how all of that is tested (CI). Each child maps to one requirement cluster of the parent and to one set of browser checks. DIFF is a leaf now because it only reads the registry manifest.
+
+Alternatives considered:
+- **Split by browser engine** (Chromium / Gecko / WebKit). Rejected: graphics, limits and offline rules apply to every engine; per-engine detail is data in BROWSERS and LIMITS.
+- **Fold CI into each sibling.** Rejected: all browser checks share one harness and one gate integration, unlike the desktop where `PLAT.MATRIX.CI` already provides it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.WEB.BROWSERS | Browser tiers and minimum versions | 001 002 | none |
+| PLAT.WEB.GFX | Browser graphics requirements and fallback notice | 006 | none |
+| PLAT.WEB.LIMITS | Browser memory and file-size limits | 005 | none |
+| PLAT.WEB.OFFLINE | Local-first and offline operation in the browser | 003 008 | none |
+| PLAT.WEB.DIFF | Generated desktop-versus-web feature difference list | 004 | none |
+| PLAT.WEB.CI | Headless browser CI per engine | 007 | none |

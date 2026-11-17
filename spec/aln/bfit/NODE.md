@@ -4,7 +4,7 @@ title: Global, local and constrained best-fit
 level: 2
 parent: ALN
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -66,10 +66,28 @@ Refines a pose by minimising deviations between measured data and a reference (C
 
 CORE (iteration loop and metrics), LOCAL (region selection), CONSTR (DoF locks and weights), FEAT (feature-to-nominal best-fit), STOP (convergence and non-convergence), BENCH (reference corpus and accuracy numbers).
 
+## Split rationale
+
+The split puts the **two solver loops** (surface ICP and feature-to-nominal) in their own children, and pulls out everything both loops share as small, independently testable leaves: **scope** (LOCAL), **locks and weights** (CONSTR), **stopping** (STOP) and the **accuracy and timing corpus** (BENCH). The loops stay open because correspondence search, metrics and per-feature deviation definitions each need their own leaves.
+
+Alternatives considered:
+- **One child per metric** (point-to-point, point-to-plane). Rejected: metrics share the loop, scope, locks and stopping; they become leaves under ICP.
+- **Locks inside ICP.** Rejected: FEAT uses the same parameterisation, and the 1e-12 lock guarantee is best tested on its own.
+- **Feature best-fit under ALN.DATUM.** Rejected: DATUM applies features in priority order with DoF accounting; FEAT is one simultaneous least-squares objective (PC-DMIS best-fit alignments).
+
 ## Open questions
 
 - Should a min-max (Chebyshev) surface best-fit be offered alongside least squares? It overlaps GDT profile evaluation; defer until GDT's profile node is expanded.
 
+- Global and local best-fit stay P1a as the parent states, although surface best-fit to CAD mainly serves P1b scan-to-CAD.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.BFIT.ICP | Surface best-fit iteration loop, metrics and command | 001 002 006 008 009 | GOM.ALN.02, PW.ALN.02 |
+| ALN.BFIT.LOCAL | Best-fit scope resolution for local best-fit (leaf) | 001 | GOM.ALN.03 |
+| ALN.BFIT.CONSTR | Degree-of-freedom locks and weights for best-fit (leaf) | 003 004 | GOM.ALN.10, PW.ALN.07, SA.XFM.04 |
+| ALN.BFIT.FEAT | Feature-to-nominal best-fit alignment | 001 008 | PCD.ALN.02 |
+| ALN.BFIT.STOP | Best-fit stopping criteria and non-convergence handling (leaf) | 005 007 | none |
+| ALN.BFIT.BENCH | Best-fit accuracy and timing corpus (leaf) | 006 009 | none |

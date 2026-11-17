@@ -4,7 +4,7 @@ title: Human e-signature ceremony and meanings
 level: 2
 parent: TRUST
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -13,7 +13,7 @@ satisfies: [REQ-TRUST-004]
 covers: []
 depends_on: [TRUST.SIGN, TRUST.PKG, TRUST.PROFILE, CORE]
 cli: [fid sign sign-package, fid sign list-meanings]
-mcp: []
+mcp: [sign_list_meanings]
 journal: [sign.sign_package@1, sign.refuse@1]
 updated: 2026-11-16
 ---
@@ -61,11 +61,26 @@ The human act of signing: who signs, what the signature means (authored, reviewe
 
 MEANING (catalogue + tenant meanings), CEREMONY (preview, confirm, UV), BIND (statement fields + journal event), MULTI (sequenced signers), HOOKS (UI contract).
 
+## Split rationale
+
+The split separates **data contracts** from **the stateful flow**: what a signature can mean (MEANING), the exact bytes signed and the events recorded (BIND), how several signatures chain (MULTI), and the attended ceremony that drives them (CEREMONY). The three data leaves are pure, build for WASM and are reused by `fid-verify`; only CEREMONY touches the UI, the bus and the user-verification gate.
+
+Alternatives considered:
+- **HOOKS as its own child** (decomposition hint). Rejected at this level: the hook contract only exists to drive the ceremony state machine, so it is a hint inside CEREMONY.
+- **MULTI folded into BIND.** Rejected: sequence rules are optional policy driven by the profile, while BIND is a fixed format.
+
 ## Open questions
 
-- Regulated users may need identity proof beyond the OS account (e.g. two distinct components per 21 CFR 11.200 [unverified]); whether that belongs in the open core is part of D-001.
+- Regulated users may need identity proof beyond the OS account (e.g. two distinct components per 21 CFR 11.200 [unverified]). D-001 keeps the Regulated profile in the open core; how identity proof is done (OS account plus `uv_method`, see D-011) is recorded per signature.
 - Signing a report PDF (RPT) versus signing the Result Package: proposed rule is that only packages are signed and reports embed the package digest; confirm with RPT.
+- REQ-TRUST.ESIG-001 allows an interactive CLI session, but REQ-CORE.BUS-002 makes every CLI caller a `script` principal; until D-012 is decided, signing is GUI-only.
+- `sign.list_meanings@1` is an R0 MCP tool (`sign_list_meanings`) outside TRUST's `verify_*` pattern (already raised in TRUST).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.ESIG.MEANING | Signature meanings catalogue | 008 | none |
+| TRUST.ESIG.CEREMONY | Signing ceremony, UI hooks and refusal paths | 001 002 005 006 | none |
+| TRUST.ESIG.BIND | Signature statement and signing journal events | 003 004 | none |
+| TRUST.ESIG.MULTI | Ordered multi-signer sequences | 007 | none |

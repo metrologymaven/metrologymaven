@@ -4,7 +4,7 @@ title: Re-targeted runs, operator playback and batch processing
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -68,7 +68,25 @@ BIND (binding and run record), EXEC (run orchestration over the interpreter), CM
 ## Open questions
 
 - SA.MP.03 (spreadsheet export and interaction) is covered here as tabular bindings and result tables. Live two-way spreadsheet links may need an X1 or plugin path; out of scope here until requested.
+- SA.MP.03 is covered by `AUTO.RUN.TABLE` as tabular bindings and results tables; live two-way spreadsheet links remain out of scope as stated above.
+- `AUTO.RUN.CMP` needs the interpreter to write step ID and iteration path into each run entry's metadata; recorded as a requirement for `AUTO.PROG.INTERP` when it is split.
+
+## Split rationale
+
+The split separates **deciding a run may happen** (BIND: lifecycle, binding, record), **making it happen** (EXEC for one run, BATCH for many, PLAY for an operator), and **judging what happened** (CMP). TABLE is separate because it is a pure data mapping shared by batch input and batch output and can be finished before any execution exists.
+
+Alternatives considered:
+- **BIND inside EXEC.** Rejected: the preconditions (released only, human trial runs, deprecation override) are policy that EXEC, BATCH and PLAY must all apply identically; a library leaf keeps one copy.
+- **PLAY as a VIZ concern only.** Rejected: the restriction "nothing outside the program" must hold in the engine, not only in the kiosk screens, or any other client could bypass it.
+- **TABLE inside BATCH.** Rejected: the mapping is testable without running anything, and SA.MP.03 (spreadsheet interaction) is about the table contract, not batch control.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.RUN.BIND | Run binding validation and run records (leaf) | 001 002 | PW.AUT.05 |
+| AUTO.RUN.EXEC | Single re-targeted run orchestration | 002 004 009 | PW.AUT.05 |
+| AUTO.RUN.CMP | Run comparison against a reference run (leaf) | 003 | none |
+| AUTO.RUN.PLAY | Operator playback mode | 005 | GOM.AUT.06, PW.AUT.04 |
+| AUTO.RUN.BATCH | Batch runs and resume | 006 007 009 | GOM.AUT.07 |
+| AUTO.RUN.TABLE | Tabular bindings and results tables (leaf) | 008 | SA.MP.03 |

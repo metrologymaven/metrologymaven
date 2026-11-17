@@ -71,6 +71,13 @@ See `seeds/out-of-scope.md`.
 - **REQ-FID-022** The project shall have a public website, a docs portal and an adoption plan whose claims are generated from, or checked against, the spec tree and parity reports.
 - **REQ-FID-023** The project shall publish and test a support matrix of operating systems, architectures, GPU backends and hardware profiles, including offline shop-floor deployment.
 - **REQ-FID-024** The system shall support a published catalog of instruments and data sources (see `seeds/devices.md`), each through a named integration path and phase.
+- **REQ-FID-025** Each app shall be accepted against end-to-end jobs and personas (`seeds/journeys.md`) with time, quality and usability targets, replayed nightly from golden journals.
+- **REQ-FID-026** Users of incumbent software shall be able to migrate in stages, and shall be able to compare our results with their incumbent's on the same data, with every significant difference explained.
+- **REQ-FID-027** Regulated and accredited customers shall receive validation evidence packs. The project shall operate a documented security, vulnerability-handling and product-compliance process.
+- **REQ-FID-028** Multi-user and multi-site organisations shall be able to self-host a server for results, programs and identities, and to integrate with MES, QMS, ERP, PLM and SPC systems, without losing local-first operation.
+- **REQ-FID-029** The product, reports and docs shall be localisable, and shall ship in the major metrology markets' languages with reviewed terminology.
+- **REQ-FID-030** Agent assistance shall be backed by curated skills and a published, reproducible evaluation of agents on metrology tasks, including adversarial safety tasks.
+- **REQ-FID-031** All apps, reports, docs and the website shall share one design system, and every primary screen shall be designed and usability-tested with practising metrologists.
 
 ## Interfaces
 
@@ -113,3 +120,10 @@ Alternatives considered:
 | ECO | Ecosystem, apps, SDK and community | 013 014 015 017 | none |
 | OUTR | Outreach: website, docs portal, launch and adoption | 022 | none |
 | PLAT | Platform support: OS, hardware, GPU, deployment | 017 023 | none |
+| FLOW | End-to-end workflows, personas, acceptance suite | 025 | JOB |
+| MIG | Migration from incumbents and result correlation | 026 | none |
+| QUAL | Customer validation, compliance and security | 027 | none |
+| ENT | Enterprise server, identity and integrations | 028 | none |
+| I18N | Internationalisation and localisation | 029 | none |
+| AGENT | Agent skills, recipes and evaluation | 030 | none |
+| UX | Design system, interaction design, user research | 031 | none |

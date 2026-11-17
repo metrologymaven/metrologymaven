@@ -4,7 +4,7 @@ title: Edge and trim-line deviation
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -58,8 +58,21 @@ NOMEDGE (nominal edge selection), EXTRACT (actual boundary extraction), EDEV (st
 
 ## Open questions
 
-- How a rounded or burred edge is defined for extraction (tangency break, curvature threshold, or projected silhouette) needs input from sheet-metal users.
+- How a rounded or burred edge is defined for extraction (tangency break, curvature threshold, or projected silhouette) needs input from sheet-metal users: opened as D-028, blocking `SCAN.EDGE.EST` only.
+
+## Split rationale
+
+The split separates what is **independent of the edge-definition question** from what depends on it. NOMEDGE (station placement and the t, n, b frame on exact CAD) and MESHBND (the extraction interface plus the free-boundary method, where the mesh boundary is unambiguously the edge) are leaves; EDEV (the command, trim and normal decomposition, statistics, edge comparison points) is a leaf that works with any extraction method. EST holds the methods for wrapped meshes and clouds and is blocked on D-028, because how a rounded or burred edge is defined changes the reported values and needs sheet-metal users' input.
+
+Alternatives considered:
+- **Block the whole of SCAN.EDGE on the edge definition.** Rejected: free-boundary trim deviation is well defined and is the common case for one-sided sheet scans.
+- **Merge NOMEDGE into EDEV.** Rejected: EST and MESHBND need the same station frames, and the frame math on exact CAD is separately testable.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.EDGE.NOMEDGE | Nominal edge chains and station frames | 001 002 | none |
+| SCAN.EDGE.MESHBND | Edge extraction interface and mesh free-boundary method | 003 004 006 | GOM.SRF.06, PW.CMP.04 |
+| SCAN.EDGE.EST | Edge estimation on wrapped meshes and clouds (decision D-028) | 003 004 006 | GOM.SRF.06, PW.CMP.04 |
+| SCAN.EDGE.EDEV | Edge comparison, station deviations and statistics | 001 002 003 005 006 | GOM.SRF.06, PW.CMP.04 |

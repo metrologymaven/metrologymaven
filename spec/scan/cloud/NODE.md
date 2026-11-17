@@ -4,7 +4,7 @@ title: Point cloud processing and multi-scan registration
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -68,6 +68,20 @@ FILTER (outlier and noise removal), SUBS (subsampling), NORM (normal estimation 
 - Multi-scan registration is placed here (per the SCAN open question) and reuses ALN's best-fit solver. If ALN later owns a general "register data to data" alignment, REG may shrink to a thin wrapper.
 - Out-of-core processing order must stay fixed-order (KNP-1) so that chunked results equal in-memory results; confirm GEO's chunk iteration contract supports this.
 
+## Split rationale
+
+The split follows **one operation family per child**, each producing a new cloud version: cleanup (FILTER), reduction (SUBS), normals (NORM), bookkeeping of scans and groups (MGMT), and registration (REG). FILTER, SUBS, NORM and MGMT are single-crate leaves sharing `fid-scan-cloud`; REG stays open because it composes ALN's solver with a global adjustment that still needs a method choice. Each performance budget in REQ-SCAN.CLOUD-008 is owned by the leaf that runs the operation.
+
+Alternatives considered:
+- **Split by storage (in-memory versus out-of-core).** Rejected: KNP-1 requires the same result either way, so each operation must own both paths.
+- **Put normals inside FILTER as "preprocessing".** Rejected: normals have their own validity mask and orientation modes consumed by POLY and REG.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.CLOUD.FILTER | Statistical and radius outlier removal | 001 002 008 | PW.PCL.01, PCD.LAS.02 |
+| SCAN.CLOUD.SUBS | Point cloud subsampling | 001 003 008 | PW.PCL.02 |
+| SCAN.CLOUD.NORM | Normal estimation and orientation | 001 004 005 008 | PW.PCL.06 |
+| SCAN.CLOUD.MGMT | Cloud grouping, splitting and merging | 001 007 | SA.SCN.01, PCD.LAS.02 |
+| SCAN.CLOUD.REG | Multi-scan registration | 001 006 | PW.PCL.05 |

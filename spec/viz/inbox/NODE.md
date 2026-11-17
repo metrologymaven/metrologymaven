@@ -4,7 +4,7 @@ title: Proposal Inbox
 level: 2
 parent: VIZ
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -62,10 +62,24 @@ The human review surface for agent work. Every agent branch (or tagged span of o
 
 LIST, DIFF (four layers), PLANPREV, ACTIONS (chips and batch rules), STALE, GATES (governance-profile gates).
 
+## Split rationale
+
+The dividing principle is **the review sequence**: see the queue (LIST), understand one proposal (DIFF), check it is still valid (STALE), act on it (ACTIONS), pass the governance gates (GATES). Each step has its own safety rule: untrusted text in LIST and DIFF, staleness in STALE, human-only promotion in ACTIONS, signing and two-person rules in GATES.
+
+Alternatives considered:
+- **One child per diff layer.** Rejected at this level: the four layers share one command (`view.show_proposal`) and one panel; they are DIFF's decomposition hints instead.
+- **GATES folded into ACTIONS.** Rejected: gates depend on TRUST and differ per governance profile, while ACTIONS is the same everywhere.
+
 ## Open questions
 
 - The result-diff computation is assumed to be a CORE/kernel service; if it is not, it needs an owner.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.INBOX.LIST | Proposal list (leaf) | 001 006 | none |
+| VIZ.INBOX.DIFF | Four-layer proposal diff | 002 006 007 | none |
+| VIZ.INBOX.STALE | Stale proposal detection and apply gate (leaf) | 004 | none |
+| VIZ.INBOX.ACTIONS | Action chips, plan preview and batch apply | 003 005 008 | none |
+| VIZ.INBOX.GATES | Governance-profile gates on promotion | 003 | none |

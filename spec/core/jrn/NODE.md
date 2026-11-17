@@ -4,7 +4,7 @@ title: Semantic journal: hash chain, streams, branches and undo
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -85,6 +85,24 @@ ENTRY (entry model and canonical encoding), CHAIN (append, chain, verify), BR (b
 - Activity Log chaining and compaction are P1b in the concept docs; P0 here has an unchained local log.
 - Merkle (C2SP tlog-checkpoint) checkpoints are P1b [unverified that the format fits]; P0 is a signed linear head.
 
+## Split rationale
+
+The dividing principle is **bytes, then entries, then chain, then logic**: CANON turns values into canonical bytes; ENTRY defines what an entry holds and commits to; CHAIN appends entries durably in one physical chain and verifies it; BR and UNDO are the two kinds of logical-DAG operation (named branches with promotion, and head moves with supersession); STREAM decides which stream an entry belongs to and owns the Activity Log and the Access Ledger format (assigned to CORE.JRN by the level-2 review). CANON is a small, standalone crate shared with the registry and verifier, so it is a leaf.
+
+Alternatives considered:
+- **CKPT as its own child** (as the hints suggest). Rejected: checkpoints are heads of the physical chain and are verified by the same command, so they sit in CHAIN.
+- **Undo inside BR.** Rejected: undo trees, barriers and supersession have their own commands and rules; BR is already large.
+- **Access Ledger in AUTO or TRUST.** Rejected by the level-2 review assignment: the ledger shares the entry header and checkpoint anchoring with the journal, so the format lives here; the gateway that writes it stays in AUTO/TRUST.
+
+The parent's single `promote` command at "W2 or W3" became two commands in BR, because one registry command has exactly one class.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JRN.CANON | Canonical JSON encoding and digests (leaf) | 002 003 004 | none |
+| CORE.JRN.ENTRY | Entry model, salted commitments and session header | 002 005 014 | none |
+| CORE.JRN.CHAIN | Append, hash chain, checkpoints and verification | 001 006 007 015 017 | none |
+| CORE.JRN.BR | Branches, diff, protection and promotion | 010 011 012 | none |
+| CORE.JRN.UNDO | Undo, redo, undo tree and supersession | 008 009 013 | GOM.PRJ.06, PW.PRJ.04 |
+| CORE.JRN.STREAM | Streams: Record Journal, Activity Log and Access Ledger format | 016 | none |

@@ -4,7 +4,7 @@ title: Instrument I/O transcripts and playback
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P2
 size: L
 owners: []
@@ -62,6 +62,19 @@ FMT (transcript format and reader), REC (boundary recording), PLAY (playback dev
 
 - Transcripts of NDA vendor-SDK hosts may reveal protected protocol detail; whether redaction is enough or such transcripts must stay local needs a decision when the first NDA host exists.
 
+## Split rationale
+
+The split follows **the hint list and the data flow of a transcript**: one format with a bounded reader that everything shares (FMT), capture on the hot path (REC), turning a transcript back into a device (PLAY), and the user-facing inspection, trim and export commands (TOOLS). FMT, PLAY and TOOLS are small and concrete and are finished as leaves; REC touches every driver tier and carries the overhead budget, so it stays open.
+
+Alternatives considered:
+- **Format and recording together.** Rejected: the format is a pure library needed by playback and tools before recording is wired into every tier.
+- **Export inside AUTO support tooling.** Rejected: local export with redaction is a transcript operation; only egress off the machine (X1) belongs elsewhere.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.XSCR.FMT | Transcript format, writer and bounded reader — leaf | 002 005 | none |
+| HAL.XSCR.REC | Transcript recording at the HAL boundary | 001 002 006 | none |
+| HAL.XSCR.PLAY | Transcript playback device and divergence detection — leaf | 003 004 | none |
+| HAL.XSCR.TOOLS | Transcript inspection, trimming, redaction and export — leaf | 002 | none |

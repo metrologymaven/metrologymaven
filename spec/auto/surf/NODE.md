@@ -4,7 +4,7 @@ title: Surface generation and shared surface contract
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -68,7 +68,25 @@ PROJ (projection model and naming), GEN (generator and stale check), DOCS (refer
 ## Open questions
 
 - Whether a human principal at the CLI may pass raw paths (likely yes, since it is the user's own shell) while agents never may. This child assumes yes for human-run CLI and no for every automation principal.
+- The raw-path question above is now D-012 (CORE.BUS-002 assigns `script` to every CLI caller). `AUTO.SURF.ROOTS` keys its rule on principal kind, so it is correct under any outcome.
+
+## Split rationale
+
+The split follows the life of a command's surface description: derive it (PROJ), write it (GEN), prove it is complete and fresh (CHECK), document it (DOCS), and then the three runtime contracts every surface shares at call time: the result shape (ENV), job and timeout behaviour (JOBS), and file access (ROOTS). Build-time children live in the xtask crate `fid-surface-gen`; runtime children live in `fid-surface`, which each surface links.
+
+Alternatives considered:
+- **One generator child per surface here.** Rejected: emitters belong to the surface nodes (`AUTO.CLI.TREE`, `AUTO.MCP.PROJ`, `AUTO.PY.GEN`); SURF owns only the shared framework, so a surface cannot redefine names.
+- **CHECK inside GEN.** Rejected: the check must regenerate and compare independently of a developer's local generation, and it is the gate CI calls; keeping it separate keeps GEN a pure writer.
+- **JOBS inside ENV.** Rejected: ENV is a pure data contract (D0); JOBS is a timing-dependent state machine (N) with its own property tests.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.SURF.PROJ | Surface projection model and name derivation (leaf) | 001 | none |
+| AUTO.SURF.GEN | Surface generator framework and digest stamping (leaf) | 001 004 | none |
+| AUTO.SURF.CHECK | CI surface-completeness and staleness check (leaf) | 002 003 | none |
+| AUTO.SURF.DOCS | Generated command reference pages | 001 002 | none |
+| AUTO.SURF.ENV | Shared result envelope and error-code set (leaf) | 005 | none |
+| AUTO.SURF.JOBS | Progress, cancellation and honest timeouts for surfaces (leaf) | 006 007 | none |
+| AUTO.SURF.ROOTS | Root handles and raw-path refusal (leaf) | 008 009 010 | none |

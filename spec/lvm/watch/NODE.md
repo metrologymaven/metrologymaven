@@ -4,7 +4,7 @@ title: Live deviations: watch windows, vector groups, live relationships
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: XL
 owners: []
@@ -59,10 +59,24 @@ Shows where the instrument's target is, relative to nominal, while the instrumen
 
 WINDOW (watch-window model and readouts), PIPE (live stream to kernel to display), VECTOR (vector groups), LIVEREL (live relationships), CAPTURE (committing readings).
 
+## Split rationale
+
+The dividing principle is **what is being watched and how it becomes a record**: a readout definition (WINDOW), the live machinery that feeds every readout (PIPE), the two richer readout kinds (VECTOR for point sets against nominal surfaces, LIVEREL for KRN relationships bound to a live instrument), and the one path from live to record (CAPTURE).
+
+Alternatives considered:
+- **Merge VECTOR and LIVEREL.** Rejected: vector groups are many points against nominal geometry with display-only magnification; live relationships are single KRN operations whose live-offline equivalence is their main contract.
+- **Put PIPE in HAL.** Rejected: HAL delivers samples; the per-sample kernel computation, decimation and stale rules are LVM policy.
+
 ## Open questions
 
-- Should watch-window layouts be saved per project or per user profile? Saved layouts are configuration state and must be registry commands either way.
+- Should watch-window layouts be saved per project or per user profile? Carried in `LVM.WATCH.WINDOW` (definitions in the project; panel placement in `VIZ.SHELL`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.WATCH.WINDOW | Watch-window definitions and readouts | 001 | SA.BLD.01 |
+| LVM.WATCH.PIPE | Live update pipeline, decimation and stale state | 002 003 | none |
+| LVM.WATCH.VECTOR | Vector groups | 004 | SA.BLD.03 |
+| LVM.WATCH.LIVEREL | Live surface and feature relationships | 006 | SA.BLD.04 |
+| LVM.WATCH.CAPTURE | Capturing live readings | 005 | none |

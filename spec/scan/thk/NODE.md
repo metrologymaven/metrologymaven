@@ -4,7 +4,7 @@ title: Wall and material thickness
 level: 2
 parent: SCAN
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,8 +60,21 @@ RAY (ray-cast wall thickness), SPHERE (inscribed-sphere wall thickness), MAT (ma
 
 ## Open questions
 
-- None yet.
+- None.
+
+## Split rationale
+
+The split is **one child per definition of thickness**, plus one child for the field they all write. RAY (ray to the opposite surface; owns `compare.thickness_wall@1`), SPHERE (largest inscribed sphere; a method of the same command, selected by parameter as REQ-SCAN.THK-003 requires), and MAT (one measured side against the nominal opposite side, via SCAN.CMP's primitive) each document their own definition ID. TFIELD owns the `ThicknessField` element, min/max limit classification, statistics and thickness comparison points, so the three methods report identically. All four are leaves in `fid-scan-thk`.
+
+Alternatives considered:
+- **One leaf for both wall-thickness methods.** Rejected: the inscribed-sphere iteration has its own convergence and failure modes and is independently testable.
+- **Put limit classification in SCAN.CMP.BAND.** Partly adopted: colour bands for thickness maps use BAND, while the below/within/above limit counts and region statistics stay with the field here.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.THK.TFIELD | Thickness field, limits, statistics and thickness points | 001 006 | PW.CMP.05 |
+| SCAN.THK.RAY | Ray-cast wall thickness | 001 002 005 006 007 | GOM.SRF.07, PW.CMP.05 |
+| SCAN.THK.SPHERE | Inscribed-sphere wall thickness method | 003 005 006 007 | GOM.SRF.07 |
+| SCAN.THK.MAT | Material thickness to the nominal opposite side | 001 004 005 006 007 | GOM.SRF.08, PW.CMP.05 |

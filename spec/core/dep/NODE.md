@@ -4,7 +4,7 @@ title: Parametric dependency graph and recompute
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -71,6 +71,19 @@ EDGE (edge recording and cycle detection), PROP (propagation and marking), RECOM
 - Parent Open question: DEP in CORE or a shared document-model subsystem with GEO. This split follows the parent's recommendation (CORE.DEP; element types from their domains).
 - Should recompute of thousands of independent elements run in parallel? Allowed only if the result is order-independent; KNP-1 fixed-order reductions inside each element still apply.
 
+## Split rationale
+
+The dividing principle is **the three phases of a parametric update, plus its main user action**: EDGE records what depends on what (and refuses cycles); PROP marks dependents outdated and decides whether to recompute (mode); RECOMP recomputes deterministically and commits once; REPL is the input-replacement action that drives the other three. EDGE, PROP and REPL are small and fully specified with test-kit fixtures, so they are leaves; RECOMP holds the hard parts (ordering, failure isolation, rollback, parallelism) and stays open.
+
+Alternatives considered:
+- **MODE as its own child** (as the hints suggest). Rejected: the mode only decides whether propagation submits a recompute, so it sits with PROP.
+- **Queries as their own child.** Rejected: the dependency query reads the edge index and belongs with EDGE.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.DEP.EDGE | Dependency edges, cycle rejection and dependency queries (leaf) | 001 002 | none |
+| CORE.DEP.PROP | Change propagation and recompute mode (leaf) | 003 008 011 | none |
+| CORE.DEP.RECOMP | Deterministic recompute with failure isolation and single-entry commit | 004 005 006 009 010 | GOM.PRJ.05 |
+| CORE.DEP.REPL | Input replacement (leaf) | 007 | GOM.PRJ.07 |

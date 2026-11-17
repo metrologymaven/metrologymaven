@@ -4,7 +4,7 @@ title: GPU backend support and rendering fallbacks
 level: 2
 parent: PLAT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -63,9 +63,24 @@ POLICY (per-platform backend order and minimums), DETECT (adapter probing and se
 
 ## Open questions
 
-- Whether the software fallback is a CPU rasteriser shipped with the app or a system-provided software adapter is a VIZ implementation choice; this node only constrains behaviour.
-- Remote-desktop behaviour on Windows (DX12 over RDP) needs a measured check [unverified].
+- Whether the software fallback is a CPU rasteriser shipped with the app or a system-provided software adapter is a VIZ implementation choice; carried by `PLAT.GPU.FALLBK`.
+- Remote-desktop behaviour on Windows (DX12 over RDP) needs a measured check [unverified]; carried by `PLAT.GPU.FALLBK`.
+- Hosted GPU CI runners may be insufficient; carried by `PLAT.GPU.CI` (see D-014).
+
+## Split rationale
+
+The split follows the **path from data to behaviour**: POLICY publishes the rules as data, DETECT applies them as a pure function, FALLBK defines what happens when nothing qualifies, NOTICE makes the degraded state visible, and CI proves all of it per release. Each child has a different consumer (VIZ, `fid doctor`, users, the release gate), and the two data-and-function children are small enough to be leaves now.
+
+Alternatives considered:
+- **Split by backend** (Vulkan / Metal / DX12 / software). Rejected: selection and fallback rules span backends; per-backend children would each re-implement ordering.
+- **Fold NOTICE into FALLBK.** Rejected: the notice also covers known-bad workarounds on a working GPU, which is not a fallback.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.GPU.POLICY | GPU backend policy and known-bad driver list files | 001 002 006 | none |
+| PLAT.GPU.DETECT | GPU adapter probing and backend selection | 003 006 008 | none |
+| PLAT.GPU.FALLBK | Software and reduced renderer fallback contract | 003 005 008 | none |
+| PLAT.GPU.NOTICE | Fallback and workaround notice | 004 006 | none |
+| PLAT.GPU.CI | Rendering CI jobs per backend | 002 007 008 | none |

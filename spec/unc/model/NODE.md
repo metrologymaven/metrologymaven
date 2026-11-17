@@ -4,7 +4,7 @@ title: Measurement models and contributor library
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -64,6 +64,21 @@ GRAPH (schema, digest, validation), DIST (distributions and correlation), CONTRI
 
 - ISO 15530-3 component naming and any newer edition must be checked against the purchased text [unverified].
 
+## Split rationale
+
+Split by **the object each child owns**: the graph and its identity (GRAPH), the probability layer shared by both propagation methods (DIST), reusable non-instrument contributor sub-graphs (CONTRIB), the plan binding and adoption record (BIND), and the one standardized workflow that produces a model-free task-specific U (SUBST).
+
+Alternatives considered:
+- **Distributions inside GRAPH.** Rejected: LPU and MCM in `UNC.PROP` and Monte Carlo fields in `UNC.XFM` use the distributions directly, without the graph; a separate kernel module keeps one sampling semantics.
+- **Templates as their own child.** Rejected: a template is a model version with unbound inputs, so it is covered by GRAPH (schema) and BIND (input mapping).
+- **Agent adoption in CORE only.** Kept here as a digest-level adoption record so the release gate has one fact to check; branch promotion remains CORE's.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.MODEL.GRAPH | Model graph schema, digest, validation and versioning | 001 003 004 | none |
+| UNC.MODEL.DIST | Input distributions and correlation (leaf) | 002 003 | none |
+| UNC.MODEL.CONTRIB | Contributor plug-in contract and non-instrument contributor library | 005 | none |
+| UNC.MODEL.BIND | Model binding to characteristics and human adoption (leaf) | 004 007 | none |
+| UNC.MODEL.SUBST | ISO 15530-3 substitution evaluation | 006 | none |

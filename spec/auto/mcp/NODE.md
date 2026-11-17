@@ -4,7 +4,7 @@ title: MCP servers, modes and side-effect projection
 level: 2
 parent: AUTO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -71,7 +71,26 @@ PROJ (class-based projection and request-only tools), SRV (server partitioning a
 
 - Partitioning: one server per app (CONSTITUTION §2 app family, D-004) or one per domain group? Depends on D-004.
 - Progressive disclosure needs a generic "describe then invoke by command ID" tool. Is a dispatcher tool a "hand-written alias" under CONSTITUTION §3? This node assumes no, because it adds no name for any one command and enforces the same class rules; confirm at review.
+- The dispatcher question above is settled by D-007 / CONSTITUTION §3.1: a generated dispatcher is allowed for R0/R1 only. `AUTO.MCP.DISC` adds named tools for W1, W2 and request-only commands through a list-changed notification instead.
+- Partitioning: D-004 (accepted) asks for one shared `fid` MCP surface; `AUTO.MCP.SRV` proposes one profile per app plus a core profile, all from the same binary, and leaves the declaration owner (`CORE.REG` or `ECO.APPS`) open.
+
+## Split rationale
+
+The split separates **what an agent may see and call** from **how a session runs**. PROJ owns the safety-critical mapping from side-effect class to tool (and the D-008 motion allowlist); SRV and DISC own which tools are listed and how the rest are reached; TAINT owns C6 on the way back. SESS owns the runtime of one session (transport, principal, jobs), and MODES owns where that session executes (bridge, headless, auto). SKILLS is a separate emitter because its input (task guides) and checks differ from tool definitions.
+
+Alternatives considered:
+- **A separate CONF (conformance) child.** Rejected: each child carries its own acceptance tests against the fake bus and a reference client; a separate conformance node would duplicate their responsibilities.
+- **Transport as its own child (XPORT).** Rejected for now: only stdio is in P0 and it is inseparable from the session handshake; later transports can be added under SESS.
+- **Disclosure inside SRV.** Rejected: profiles are a declaration problem; disclosure is a runtime protocol with its own class rule (§3.1, R0/R1 only for the dispatcher).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.MCP.PROJ | Class-based tool projection and request-only tools (leaf) | 001 002 003 004 010 | none |
+| AUTO.MCP.SRV | Server partitioning and front-door tool sets | 005 | none |
+| AUTO.MCP.DISC | Progressive disclosure tools | 005 | none |
+| AUTO.MCP.MODES | Bridge, headless and auto modes | 002 006 007 008 | none |
+| AUTO.MCP.SESS | MCP session, stdio transport, principal binding and jobs (leaf) | 009 011 | none |
+| AUTO.MCP.SKILLS | Generated Skills and task guides (leaf) | 010 | none |
+| AUTO.MCP.TAINT | Untrusted-content marking in tool results (leaf) | 012 | none |

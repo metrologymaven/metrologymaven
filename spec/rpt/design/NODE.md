@@ -4,7 +4,7 @@ title: Report designer
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -60,10 +60,27 @@ The interactive editor where users build and adjust reports and templates: place
 
 PAGE (page setup), PLACE (placement and grid), STYLE (style sets), PREVIEW (live preview), UI (designer panel).
 
+## Split rationale
+
+The split follows **what an edit changes**: page geometry (PAGE), block frames and flow (PLACE), appearance (STYLE), the scratch view of the result (PREVIEW), and the interactive panel (UI). The first three own registry commands; PREVIEW owns one R1 command; UI owns none and only issues its siblings' commands, which keeps the designer a thin UI over the registry (REQ-RPT.DESIGN-001).
+
+- PAGE is finished as a leaf: it is small, has exact integer geometry and a concrete fixture.
+- Overflow detection sits in PLACE, not PAGE, because it depends on block frames.
+
+Alternatives considered:
+- **Model vs. UI only** (two children). Rejected: the model half would be XL and mix geometry with styles.
+- **A separate TEMPLATE child for save and apply.** Rejected: those are `RPT.MODEL.TMPL` commands; the designer only calls them.
+
 ## Open questions
 
 - Should the designer also run in the WASM web build (VIZ)? Assumed yes, not required here.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.DESIGN.PAGE | Page setup (leaf) | 001 003 | none |
+| RPT.DESIGN.PLACE | Block placement, sizing and overflow | 001 002 006 007 | PW.RPT.01 |
+| RPT.DESIGN.STYLE | Style sets | 001 005 007 | none |
+| RPT.DESIGN.PREVIEW | Live preview | 004 | none |
+| RPT.DESIGN.UI | Designer panel | 001 | PCD.RPT.02, PW.RPT.01 |

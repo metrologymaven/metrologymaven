@@ -4,7 +4,7 @@ title: Plugin system and SDK
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -65,12 +65,29 @@ The public way for third parties to extend the platform without forking: the ver
 
 API (SDK crates and versioning policy), EXT (extension-point catalogue), PKG (package format and manifest), LIFE (install and enable commands), ISO (isolation and capability grants), SIGN (trust policy), TPL (template and example plugin).
 
+## Split rationale
+
+The split follows the hints, one child per **stage a plugin passes through**: compiled against the SDK (API), declares what it adds (EXT), is shipped as a package (PKG), is judged for trust (SIGN), is installed and enabled (LIFE), runs isolated (ISO), and is demonstrated end to end (TPL). Extension-point profiles live in EXT as a mechanism only, so IND.CONTRACT (packs) and HAL.HOST (drivers) fill their own profiles and manifest sections without ECO owning their content. Lifecycle commands follow D-007: reads R0 on MCP, every state change A0.
+
+Alternatives considered:
+- **Merge SIGN into PKG.** Rejected: trust policy has its own commands (A0 key management) and its own dependency on TRUST, which the bounded reader should not carry.
+- **Merge ISO into EXT.** Rejected: the isolation mechanism is the biggest open design question of the SDK and may need a decision; keeping it separate lets EXT and PKG proceed.
+
 ## Open questions
 
-- Isolation mechanism (WASM components, out-of-process host, or both by tier) is a design choice for the ISO child; it must keep the KNP-1 numeric profile for values of record [unverified feasibility for WASM floating point].
-- Whether plugins may be native in-process code at all may need a decision once threat modelling is done.
-- D-001 sets which plugin licences the project may distribute or list.
+- Isolation mechanism (WASM components, out-of-process host, or both by tier) is owned by ECO.SDK.ISO; it must keep the KNP-1 numeric profile for values of record [unverified feasibility for WASM floating point].
+- Whether plugins may be native in-process code at all may need a decision once ECO.SDK.ISO's threat model is written.
+- D-001 is accepted; which plugin licences the project may list or distribute is still open and belongs with a future marketplace node (P4) or ECO.SDK.SIGN's reviewed-tier question.
+- HAL.HOST.PKG and IND.CONTRACT depend on ECO.SDK, so SDK children must not depend on HAL or IND; their manifest sections and profiles plug into ECO.SDK.PKG and ECO.SDK.EXT.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.SDK.API | SDK crates, versioning and compatibility policy | 001 002 | none |
+| ECO.SDK.EXT | Extension-point catalogue and plugin registration | 003 008 | none |
+| ECO.SDK.PKG | Plugin package format and manifest | 009 | none |
+| ECO.SDK.LIFE | Plugin lifecycle commands | 006 009 | none |
+| ECO.SDK.ISO | Plugin isolation, capability grants and fault containment | 004 005 | none |
+| ECO.SDK.SIGN | Plugin signing and trust policy | 007 | none |
+| ECO.SDK.TPL | Plugin template and example plugin | 003 | none |

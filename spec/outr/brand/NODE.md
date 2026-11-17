@@ -4,7 +4,7 @@ title: Brand, vocabulary and claim rules
 level: 2
 parent: OUTR
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -63,8 +63,22 @@ GUIDE (brand guidelines and assets, blocked on D-002), LINT (claim and vocabular
 
 - The brand guidelines part is blocked by D-002 (project name). The claim lint is not, and can proceed first.
 - REQ-OUTR-007 refers to "the vocabulary lint" as if it existed. No node yet owns a product-wide vocabulary lint; this node owns the outreach one. If a product UI-string lint is wanted, it belongs to VIZ or ECO.
-- Keeping a reference set of incumbent text to detect copying may itself raise copyright questions; a maintainer should confirm REQ-OUTR.BRAND-005 is wanted.
+- Keeping a reference set of incumbent text to detect copying may itself raise copyright questions; a maintainer should confirm REQ-OUTR.BRAND-005 is wanted. Opened as D-013; OUTR.BRAND.COPY is blocked on it.
+
+## Split rationale
+
+The split separates **rules for people** from **rules for machines**, and isolates the parts with outside blockers. GUIDE (blocked for publication by D-002) holds the written guidelines; ASSET holds files whose provenance can be checked; LINT is the automated wording check every OUTR build runs; COPY is the copied-text rule, blocked on D-013 because it needs third-party text; REVIEW is the human trade-dress gate that automation cannot replace.
+
+Alternatives considered:
+- **Following the hints exactly** (GUIDE, LINT, REVIEW). Rejected: the copy-detection rule and the asset provenance check would have hidden blockers inside otherwise ready nodes.
+- **One LINT node including copy detection.** Rejected: it would block the lint, which every other OUTR child needs, on D-013.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BRAND.GUIDE](guide/NODE.md) | Brand usage guidelines and visual identity | 001 008 | none |
+| [OUTR.BRAND.ASSET](asset/NODE.md) | Original outreach assets and attribution | 002 | none |
+| [OUTR.BRAND.LINT](lint/NODE.md) | Outreach claim and vocabulary lint (leaf) | 003 004 006 007 | none |
+| [OUTR.BRAND.COPY](copy/NODE.md) | Copied-text detection rule (decision D-013) | 005 | none |
+| [OUTR.BRAND.REVIEW](review/NODE.md) | Human trade-dress review gate (leaf) | 008 | none |

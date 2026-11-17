@@ -4,7 +4,7 @@ title: App family: focused apps composed from shared crates
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -61,11 +61,30 @@ Defines which focused desktop and web apps the project ships and how each one is
 
 LIST (app list and ownership), MANIFEST (schema and loader), HANDOFF (cross-app open and launch), STATUS (status and gaps data), SUITE (later, option C host).
 
+## Split rationale
+
+The split separates **shared app machinery** from **each app's composition**. LIST, MANIFEST, POLICY and HANDOFF are written once and used by every app; INSPECT, PROBE, NETWORK and REPORT each hold one D-004 app's manifest content, defaults and end-to-end test, so each app can have its own owner and phase (the Craft lesson of one maintainer group per focused app). Status and known gaps are data inside each manifest (MANIFEST owns the schema and export), so the hinted STATUS child was folded into MANIFEST; the suite host (D-004 option C) is only a composition hook in MANIFEST until it is scheduled.
+
+Alternatives considered:
+- **One child per hint** (LIST, MANIFEST, HANDOFF, STATUS, SUITE). Rejected: it leaves no place for app-specific policy (defaults, templates, acceptance workflows), which by REQ-ECO.APPS-002 must live in the app, not in shared crates.
+- **Per-app nodes only.** Rejected: the manifest schema, the policy check and cross-app hand-off would be written four times.
+
 ## Open questions
 
-- Blocked on D-004 (one integrated app vs a family of focused apps). The split of this node depends on the chosen option; the requirements above are written for option B and still hold, with a single entry in the app list, under option A.
-- D-005 (UI toolkit and TypeScript boundary) affects how panels are declared in the manifest.
+- D-004 is accepted (option B now, C later): the app family is Inspect, Probe, Network and Report. The proposed per-app phases (Report P1a, Inspect P1b, Probe P2, Network P3) follow the CONSTITUTION §7 phase themes and need maintainer confirmation in the PR.
+- D-005 (provisional egui) affects how panels are named in the manifest; MANIFEST references panels by catalogue ID so a toolkit change does not change manifests.
+- POLICY needs CORE.REG's registry manifest to record each command's defining crate and schema digests (cross-domain request to CORE.REG).
+- HANDOFF: launching another app may be a UI effect rather than a command; settle at leaf level or by decision.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.APPS.LIST | App list file and its check (leaf) | 001 007 | none |
+| ECO.APPS.MANIFEST | App manifest schema, loader and status data | 002 006 | none |
+| ECO.APPS.POLICY | App-policy boundary and cross-app command identity | 002 003 | none |
+| ECO.APPS.HANDOFF | Cross-app project opening and hand-off | 004 005 | none |
+| ECO.APPS.REPORT | Report app composition (reporting and SPC) | 002 006 | none |
+| ECO.APPS.INSPECT | Inspect app composition (scan-to-CAD inspection) | 002 006 | none |
+| ECO.APPS.PROBE | Probe app composition (CMM programming and execution) | 002 006 | none |
+| ECO.APPS.NETWORK | Network app composition (large-volume networks) | 002 006 | none |

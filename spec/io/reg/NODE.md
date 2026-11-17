@@ -4,7 +4,7 @@ title: Format registry and safe-read framework
 level: 2
 parent: IO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -78,9 +78,26 @@ DETECT (signatures and registry listing), LIMITS (limit harness and error taxono
 
 ## Open questions
 
-- Which side-effect class applies to writing an export file to a local export root: R0 (no document change) or X1 (data may leave the machine)? CONSTITUTION §3 does not say. Probably needs a decision before the first export leaf.
+- Resolved by D-007 (CONSTITUTION §3.1): writing an export file into a local export root is W1 with `fs_effect: write_root`; X1 only when the destination leaves the machine. Applied in `IO.REG.WRITE` and `IO.REG.ENV`.
 - GOM.IMP.03 (an incumbent's native project or mesh format) is covered here only as "readable through a plugin". First-party readers for undocumented vendor formats would conflict with the clean-room rule (CONSTITUTION §8) unless the format is publicly documented [unverified for each vendor].
+
+## Split rationale
+
+The split follows the **stages of one import or export call**: identify the format (DETECT), bound the reader (LIMITS), find the file (ROOTS), record where data came from and in which unit (PROV), write output safely (WRITE), tie them into a transactional command (ENV), and open the same path to third parties (PLUGIN). Each stage is a separately testable library with its own error codes, and the leaves can be built in parallel in one crate (`fid-io-reg`) before any format reader exists.
+
+Alternatives considered:
+- **Split by direction** (import framework vs export framework). Rejected: limits, roots and provenance are shared by both directions.
+- **Merge PROV into ENV.** Rejected: unit resolution and hashing are pure and testable without a document; ENV needs CORE transactions.
+- **Put plugin isolation in each format child.** Rejected: REQ-IO.REG-014 requires identical limits and error rules for every plugin.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.REG.DETECT | Format registry listing and content-signature detection (leaf) | 001 002 003 | none |
+| IO.REG.LIMITS | Reader limit harness, error taxonomy and untrusted strings (leaf) | 004 005 006 015 | none |
+| IO.REG.ENV | Generic import and export command envelope | 007 013 | GOM.IMP.09 |
+| IO.REG.PROV | Source provenance, unit and frame capture (leaf) | 010 011 012 | none |
+| IO.REG.ROOTS | Approved import and export root handles (leaf) | 008 009 | none |
+| IO.REG.PLUGIN | Format-plugin interface for third-party readers and writers | 014 | GOM.IMP.03 |
+| IO.REG.WRITE | Atomic export writes and overwrite protection (leaf) | 016 017 | none |

@@ -4,7 +4,7 @@ title: Coordinate frames, transforms and units
 level: 2
 parent: GEO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -62,10 +62,25 @@ The single frame system that points, meshes, clouds and CAD share. It defines na
 
 TREE (frame tree and resolution), XFORM (transform types, composition, rotation parameterisations), APPLY (transforming elements), UNITS (authored quantities and conversion).
 
+## Split rationale
+
+The split separates **values from structure from surface**: transform values and rotation parameterisations (XFORM), the frame tree and chain resolution (TREE), moving elements between frames plus the frame-mismatch guard (APPLY), authored quantities and unit conversion (UNITS), and the registry commands that journal all of them (CMD). The four library children live in `fid-geo-frame` inside the kernel graph (D0, KNP-1); CMD lives in the command adapter crate `fid-geo-cmd`, so the kernel never depends on CORE.
+
+Alternatives considered:
+- **Commands inside each library child.** Rejected: it would put CORE dependencies into a kernel-graph crate (C1) and make each child span two crates.
+- **Units as its own level-2 subsystem.** Rejected at level 1 already; length and angle are the only quantity kinds GEO needs.
+- **Non-uniform scale as a transform kind.** Left out, as the open question below records.
+
 ## Open questions
 
 - Is a non-uniform scale (e.g. thermal anisotropy compensation) ever needed as a frame transform, or always as a separate correction? Currently out.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.FRAME.XFORM | Rigid and similarity transforms and rotation parameterisations (leaf) | 004 005 006 | none |
+| GEO.FRAME.TREE | Frame tree and chain resolution (leaf) | 001 002 | none |
+| GEO.FRAME.APPLY | Transforming elements and the frame-mismatch guard (leaf) | 006 008 | none |
+| GEO.FRAME.UNITS | Authored quantities and unit conversion (leaf) | 007 | none |
+| GEO.FRAME.CMD | Frame, transform and unit commands (leaf) | 003 007 008 | none |

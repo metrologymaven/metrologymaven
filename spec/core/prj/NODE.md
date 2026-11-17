@@ -4,7 +4,7 @@ title: Project model: container, stages and element tree
 level: 2
 parent: CORE
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -75,6 +75,26 @@ CONT (container hierarchy and IDs), STAGE (stages), TREE (element tree, states, 
 - Is the active stage document state (a W2 command) or view state? This split treats it as document state because results depend on it; confirm with VIZ.
 - Stage is a GOM concept; PolyWorks multi-piece projects may differ [unverified]. Confirm with seed verification.
 
+## Split rationale
+
+The dividing principle is **the parts of the document, plus its external mapping**: CONT owns the container hierarchy and identity; STAGE owns multiple measured instances; TREE owns the element tree, states and type registration; META owns tags and metadata; TPL owns templates; QIF owns the mapping to the native exchange model. REQ-CORE.PRJ-011 (every change is a command) is satisfied by each child that declares mutating commands. META is small and fully specified, so it is a leaf.
+
+Seed coverage: GOM.PRJ.01 (projects and templates) is covered by CONT for projects and by TPL for templates; each child owns one half.
+
+Alternatives considered:
+- **IDs as their own child.** Rejected: the ID service is small and its rules are tied to container creation and save-as.
+- **Metadata inside TREE.** Rejected: TREE owns the slot, but the commands, limits and untrusted-text rules form a clean, testable leaf.
+- **QIF mapping in IO.** Rejected: the parent assigns the mapping to PRJ; IO implements file I/O against it.
+
+TPL is tagged P1a (later than its P0 parent), because templates matter once reports exist.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.PRJ.CONT | Project container hierarchy and entity IDs | 001 002 003 011 | GOM.PRJ.01, PW.PRJ.01 |
+| CORE.PRJ.STAGE | Stages: several parts or measurements in one project | 004 005 011 | GOM.PRJ.02, PW.PRJ.02 |
+| CORE.PRJ.TREE | Element tree, element states and type registration | 006 007 008 011 | GOM.PRJ.03, PW.PRJ.03 |
+| CORE.PRJ.META | Tags, keywords and metadata (leaf) | 009 011 | GOM.PRJ.04 |
+| CORE.PRJ.TPL | Project templates | 010 011 | GOM.PRJ.01, PW.PRJ.05 |
+| CORE.PRJ.QIF | Mapping of the project model onto QIF 3.0 | 012 | none |

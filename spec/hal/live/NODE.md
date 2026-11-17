@@ -4,7 +4,7 @@ title: Live probing and scanning sessions with portable devices
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: XL
 owners: []
@@ -69,6 +69,21 @@ PROBE (live probing and portable compensation), GUIDE (guided probing), SCANS (l
 - Field-check procedures for specific trackers and arms may follow ISO 10360 interim-check ideas; symbols and procedures are to be confirmed [unverified].
 - Live portable devices arrive in P3; offline leapfrog from recorded observations could come earlier through `LVM`.
 
+## Split rationale
+
+The split follows **the operator's workflows**, one child per thing an operator does with portable devices: probe (PROBE, with portable compensation), follow a plan (GUIDE), scan (SCANS, with parameters and preview), move the instrument (LEAP, a bookkeeping leaf), check the instrument (CHECK), and run several instruments together (MULTI). Simulator-based end-to-end runs (REQ-HAL.LIVE-008) are a requirement on each workflow child rather than a child of their own.
+
+Alternatives considered:
+- **Split by device class (arm, tracker).** Rejected: probing, scanning and leapfrog behave the same across classes; the drivers already separate the classes.
+- **Leapfrog inside LVM.** Rejected by the parent split: recording positions and common points happens live at the device; only the adjustment belongs to `LVM`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.LIVE.PROBE | Live probing sessions and portable probe compensation | 001 002 008 | PW.PRB.01, PW.PRB.02, PW.PRB.06 |
+| HAL.LIVE.GUIDE | Guided probing workflows | 003 | PW.PRB.03 |
+| HAL.LIVE.SCANS | Live scanning sessions, scanner parameters and preview meshing | 004 008 | PW.SCN.01-04 |
+| HAL.LIVE.LEAP | Device positions and common points (leapfrog bookkeeping) — leaf | 005 | PW.PRB.04 |
+| HAL.LIVE.CHECK | Instrument field checks and health checks | 006 | SA.INS.07 |
+| HAL.LIVE.MULTI | Multi-instrument live sessions | 007 008 | SA.INS.08 |

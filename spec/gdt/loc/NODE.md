@@ -4,7 +4,7 @@ title: Orientation and location tolerances
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -61,8 +61,23 @@ ORIENT (parallelism, perpendicularity, angularity), POS (single and pattern posi
 
 ## Open questions
 
-- Whether to evaluate concentricity / symmetry under ASME at all for 2018-governed drawings (legacy drawings may still use earlier editions); needs a DMT-level expert call.
+- Whether to evaluate concentricity / symmetry under ASME at all for 2018-governed drawings (legacy drawings may still use earlier editions); needs a DMT-level expert call. Routed to the DMT reviewers (D-009) through `GDT.LOC.COAX` and `GDT.LOC.SYM`, both P1b.
+
+## Split rationale
+
+The dividing principle is **shared front end, then symbol families**: derived-feature extraction (DERIV) and the common payload (LRES) are used by every symbol; then orientation (ORIENT), position (POS), coaxiality and concentricity (COAX), and symmetry (SYM). ORIENT and POS carry the P1a subset; COAX and SYM depend on ISO rows and an expert call on ASME, so they are P1b.
+
+Alternatives considered:
+- **Hint split ORIENT / POS / DERIV / COAX / SYM.** Adopted, plus LRES: the payload and DRF-deviation helpers are pure and small, so they are finished as a leaf now and keep the symbol modules thin.
+- **Merge COAX and SYM.** Rejected: different derived elements (axes versus median points and surfaces) and zone shapes.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.LOC.LRES | Location and orientation result payload (leaf) | 001 002 | none |
+| GDT.LOC.DERIV | Derived-feature extraction | 005 | none |
+| GDT.LOC.ORIENT | Parallelism, perpendicularity and angularity | 001 006 | GOM.GDT.05, GOM.GDT.06, GOM.GDT.07, PW.GDT.03 |
+| GDT.LOC.POS | Position of features and patterns | 002 003 006 | GOM.GDT.08, PW.GDT.04 |
+| GDT.LOC.COAX | Coaxiality and concentricity | 004 | GOM.GDT.09 |
+| GDT.LOC.SYM | Symmetry | 004 | GOM.GDT.10 |

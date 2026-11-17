@@ -4,7 +4,7 @@ title: Network and bundle adjustment
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: XL
 owners: []
@@ -66,12 +66,27 @@ The solver that turns the observation store into one consistent network: adjuste
 
 OBSEQ (observation equations per type), WEIGHT (UNC-driven weighting and fallback), DATUM (datum definition and rank checks), SOLVE (iteration, convergence, covariance), STATS (residual statistics and gross-error flags).
 
+## Split rationale
+
+The dividing principle is **the stages of one least-squares solve**: what each observation predicts (OBSEQ), how much it counts (WEIGHT), what fixes the frame and where iteration starts (DATUM), the solve itself (SOLVE) and what the solution says about its own quality (STATS). Image-level photogrammetry (IMG) is a separate, later extension because it adds new parameters (cameras) and a new observation type rather than changing the stages.
+
+Alternatives considered:
+- **Split by observation type** (polar, Cartesian, image). Rejected: weighting, datum and statistics are shared by all types; only OBSEQ and IMG are type-specific.
+- **Merge STATS into SOLVE.** Rejected: statistics have their own open reviewer questions (gross-error test, scaling) and UEC gating, and must not hold up the solver.
+
 ## Open questions
 
-- **Owner assigned (level-2 review, accepted 2026-11-16):** LVM.ADJ owns image-level photogrammetry bundle adjustment as a later extension (phase `later` until decided otherwise). Include it when this node is expanded.
-- Which gross-error test (data snooping, tau test or another) and which thresholds should be the default? Needs a geodesy or large-volume metrology reviewer.
-- Should robust estimators (for example iteratively reweighted) be offered, or only flagging with manual exclusion? Robust reweighting changes values of record and needs human adoption under C5.
+- **Owner assigned (level-2 review, accepted 2026-11-16):** LVM.ADJ owns image-level photogrammetry bundle adjustment as a later extension (phase `later` until decided otherwise). Placed in `LVM.ADJ.IMG`.
+- Which gross-error test (data snooping, tau test or another) and which thresholds should be the default? Needs a geodesy or large-volume metrology reviewer. Carried in `LVM.ADJ.STATS`.
+- Should robust estimators (for example iteratively reweighted) be offered, or only flagging with manual exclusion? Robust reweighting changes values of record and needs human adoption under C5. Carried in `LVM.ADJ.STATS`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.ADJ.OBSEQ | Observation equations and Jacobians | 001 | none |
+| LVM.ADJ.WEIGHT | Observation weighting from UNC instrument models | 002 003 | SA.NET.03 |
+| LVM.ADJ.DATUM | Datum definition, initial values and rank checks | 004 | none |
+| LVM.ADJ.SOLVE | Adjustment solve, convergence and covariance | 001 005 007 008 | SA.NET.01 |
+| LVM.ADJ.STATS | Residual statistics, gross-error flags and UEC gating | 006 009 | none |
+| LVM.ADJ.IMG | Image-level photogrammetry bundle extension (later) | 001 002 | none |

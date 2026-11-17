@@ -32,7 +32,7 @@ LEAF_SIZES = {"S", "M"}
 SIDE_EFFECTS = {"R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"}
 DETERMINISM = {"D0", "D1", "D2", "D3", "N"}
 REQUIRED = ["id", "title", "level", "parent", "kind", "status", "phase", "size"]
-LIST_FIELDS = {"covers", "depends_on", "satisfies", "cli", "mcp", "journal", "owners"}
+LIST_FIELDS = {"covers", "depends_on", "uses_artifacts", "satisfies", "cli", "mcp", "journal", "owners"}
 SECTIONS_ALL = ["## Purpose", "## Scope", "## Requirements", "## Children"]
 SECTIONS_LEAF = ["## Acceptance criteria", "## Design", "## Build prompt"]
 MAX_DEPTH = 7
@@ -220,6 +220,10 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
                 rep.err(w, "depends on itself")
             elif d not in by_id:
                 rep.warn(w, f"depends_on '{d}' does not exist yet")
+        # Artifact dependencies (D-034): reads a published file or format; not a code edge, not in cycles.
+        for d in n.lst("uses_artifacts"):
+            if d not in by_id:
+                rep.warn(w, f"uses_artifacts '{d}' does not exist yet")
 
         for p in n.lst("covers"):
             if seed_ids and not any(fnmatch.fnmatchcase(s, p) for s in seed_ids):
@@ -234,8 +238,11 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             for s in SECTIONS_LEAF:
                 if s not in n.body:
                     rep.err(w, f"leaf missing section '{s}'")
-            if m.get("side_effect") not in SIDE_EFFECTS:
-                rep.err(w, f"leaf needs side_effect in {sorted(SIDE_EFFECTS)}")
+            se = m.get("side_effect")
+            se_list = se if isinstance(se, list) else [se]
+            if not se_list or any(s not in SIDE_EFFECTS for s in se_list):
+                rep.err(w, f"leaf needs side_effect in {sorted(SIDE_EFFECTS)} "
+                           "(one value, or a [list] with one class per command in cli/mcp order)")
             if m.get("determinism") not in DETERMINISM:
                 rep.err(w, f"leaf needs determinism in {sorted(DETERMINISM)}")
             if m.get("kind") == "feature":
@@ -471,6 +478,137 @@ def cmd_open(args) -> int:
     return 0
 
 
+def cmd_milestone(args) -> int:
+    """Compute a milestone's build plan: dependency closure, leaf waves, open work, blocking decisions."""
+    rep = Report()
+    path = Path(args.file)
+    if not path.is_absolute():
+        path = ROOT / path
+    meta, body = parse_front(path.read_text(encoding="utf-8"))
+    if meta is None:
+        print(f"ERROR {path}: {body}")
+        return 1
+    nodes = load_nodes(rep)
+    seeds, oos = load_seeds(rep)
+    by_id = validate(nodes, seeds, oos, Report())
+    children = defaultdict(list)
+    for n in nodes:
+        if n.parent:
+            children[n.parent].append(n.id)
+
+    def subtree(nid: str) -> set[str]:
+        out, stack = set(), [nid]
+        while stack:
+            x = stack.pop()
+            if x in out:
+                continue
+            out.add(x)
+            stack.extend(children.get(x, []))
+        return out
+
+    def ancestors(nid: str) -> list[str]:
+        out, cur = [], by_id.get(nid)
+        while cur is not None and cur.parent:
+            out.append(cur.parent)
+            cur = by_id.get(cur.parent)
+        return out
+
+    targets = meta.get("targets", []) if isinstance(meta.get("targets"), list) else []
+    excludes = meta.get("exclude", []) if isinstance(meta.get("exclude"), list) else []
+    excluded = set().union(*[subtree(e) for e in excludes if e in by_id]) if excludes else set()
+    scope: set[str] = set()
+    pulled: dict[str, str] = {}
+    missing = [t for t in targets if t not in by_id]
+    for t in targets:
+        if t in by_id:
+            scope |= subtree(t) - excluded
+    blocked_by_exclude: list[str] = []
+    changed = True
+    while changed:
+        changed = False
+        for nid in sorted(scope):
+            n = by_id[nid]
+            for d in n.lst("depends_on"):
+                if d not in by_id or d in scope:
+                    continue
+                if d in excluded:
+                    blocked_by_exclude.append(f"{nid} -> {d}")
+                    continue
+                pulled[d] = nid
+                scope |= subtree(d) - excluded
+                changed = True
+
+    leaves = sorted(x for x in scope if by_id[x].status == "leaf")
+    open_nodes = sorted(x for x in scope if by_id[x].status == "open")
+    dec_nodes = sorted(x for x in scope if by_id[x].status == "decision")
+    decisions = sorted({by_id[x].meta.get("decision", "") for x in dec_nodes} - {""})
+
+    # Effective dependencies of a leaf: its own and its ancestors' depends_on, mapped to leaves in scope.
+    leaf_set = set(leaves)
+    leaf_deps: dict[str, set[str]] = {}
+    for lf in leaves:
+        deps = set()
+        # Domain-level (level-1) depends_on are too coarse for build order; use the leaf's own and its
+        # subsystem/module ancestors' dependencies only.
+        for owner in [lf] + [a for a in ancestors(lf) if by_id[a].level >= 2]:
+            for d in by_id[owner].lst("depends_on"):
+                if d in by_id:
+                    deps |= subtree(d) & leaf_set
+        deps.discard(lf)
+        # A leaf never waits on its own ancestors' subtree siblings through the ancestor's own deps.
+        leaf_deps[lf] = deps
+    waves: list[list[str]] = []
+    done: set[str] = set()
+    remaining = set(leaves)
+    while remaining:
+        wave = sorted(x for x in remaining if leaf_deps[x] <= done)
+        if not wave:
+            wave = sorted(remaining)  # residual cycle: emit together, flagged below
+            waves.append(["CYCLE"] + wave)
+            break
+        waves.append(wave)
+        done |= set(wave)
+        remaining -= set(wave)
+
+    mid = meta.get("id", path.stem)
+    out_dir = GEN / "milestones"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    lines = [f"# Milestone {mid}: {meta.get('title', '')}", "",
+             "_Generated by `tools/scope.py milestone`. Do not edit; edit the milestone file instead._", "",
+             f"Source: [{path.name}](../../milestones/{path.name})", "",
+             "| | Count |", "|---|---:|",
+             f"| Nodes in scope | {len(scope)} |",
+             f"| Buildable leaves | {len(leaves)} |",
+             f"| Open nodes still to expand | {len(open_nodes)} |",
+             f"| Nodes blocked on decisions | {len(dec_nodes)} |",
+             f"| Build waves | {len([w for w in waves if w and w[0] != 'CYCLE'])} |", ""]
+    if missing:
+        lines += ["**Unknown targets:** " + ", ".join(missing), ""]
+    if decisions:
+        lines += ["## Blocking decisions", ""] + [f"- {d}" for d in decisions] + [""]
+    if pulled:
+        lines += ["## Pulled in by dependencies", "", "| Node | Pulled in by |", "|---|---|"]
+        lines += [f"| {k} | {v} |" for k, v in sorted(pulled.items())] + [""]
+    if blocked_by_exclude:
+        lines += ["## Dependencies on excluded nodes (review)", ""] + [f"- {x}" for x in sorted(set(blocked_by_exclude))] + [""]
+    lines += ["## Build waves", "", "Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.", ""]
+    for i, w in enumerate(waves, 1):
+        if w and w[0] == "CYCLE":
+            lines += [f"### Unordered (dependency cycle among {len(w) - 1} leaves)", ""] + [f"- {x}" for x in w[1:]] + [""]
+            continue
+        lines += [f"### Wave {i} ({len(w)} leaves)", ""]
+        lines += [f"- {link(by_id[x], out_dir)} {by_id[x].meta.get('title', '')} "
+                  f"({by_id[x].meta.get('size', '')}, {by_id[x].meta.get('phase', '')})" for x in w] + [""]
+    lines += ["## Still to expand (open)", ""] + [f"- {x} {by_id[x].meta.get('title', '')}" for x in open_nodes] + [""]
+    out = out_dir / f"{mid}.md"
+    text = "\n".join(lines).replace("](../spec/", "](../../spec/")
+    out.write_text(text, encoding="utf-8")
+    print(f"{mid}: {len(scope)} nodes, {len(leaves)} leaves in {len([w for w in waves if w[0] != 'CYCLE'])} waves, "
+          f"{len(open_nodes)} open, {len(dec_nodes)} blocked on {len(decisions)} decisions, "
+          f"{len(pulled)} pulled in. Wrote {rel(out)}")
+    return 0
+
+
 def cmd_stats(_args) -> int:
     rep = Report()
     nodes = load_nodes(rep)
@@ -491,6 +629,9 @@ def main() -> int:
     o.add_argument("--limit", type=int, default=0)
     o.set_defaults(fn=cmd_open)
     sub.add_parser("stats").set_defaults(fn=cmd_stats)
+    ms = sub.add_parser("milestone")
+    ms.add_argument("file", help="milestone file, e.g. milestones/launch-1.md")
+    ms.set_defaults(fn=cmd_milestone)
     args = ap.parse_args()
     return args.fn(args)
 

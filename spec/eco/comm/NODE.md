@@ -4,7 +4,7 @@ title: Contributor workflow, RFC tooling and spec-tree tooling
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -52,6 +52,7 @@ The tooling that lets any person or agent find work, claim it, expand or build i
 - **REQ-ECO.COMM-006** When an RFC enters its comment period, the RFC tooling shall record the start, close it after 3 days (7 days for adding or removing an app or changing the process), and block approval by the RFC's author.
 - **REQ-ECO.COMM-007** The maintainer-eligibility report shall list, per domain, contributors who meet the GOVERNANCE.md nomination thresholds, computed from repository history alone.
 - **REQ-ECO.COMM-008** The spec-tree tools shall run on Windows, Linux and macOS.
+- **REQ-ECO.COMM-009** The project shall publish an integrator and support-partner program (listing criteria, training requirements, escalation path to maintainers) so that organisations can obtain paid deployment and support from listed partners.
 
 ## Interfaces
 
@@ -62,10 +63,29 @@ The tooling that lets any person or agent find work, claim it, expand or build i
 
 SCOPE (spec-tree validator and reports), GROW (tree-growth driver), CLAIM (claims and code-to-node traceability), BOTS (PR timeline), RFC (RFC tooling), LADDER (eligibility report).
 
+## Split rationale
+
+The split is **one child per tool**, each a small, standard-library-only program with one job: SCOPE validates the tree and lists open work, GROW drives agents over open nodes, CLAIM keeps claims fresh and code PRs traced, TIMELINE runs the PR clock, RFC runs comment periods, LADDER computes eligibility. Every bot is a pure evaluator over exported forge data plus a `--now` input, so it is deterministic and testable offline; posting comments and labels is a thin workflow in ECO.CI.WF. This keeps ECO.COMM free of forge credentials and lets each tool be a leaf now.
+
+Alternatives considered:
+- **Separate spec-tree tooling from contributor tooling into two level-3 groups** (as the ECO rationale anticipated). Rejected: with each tool already leaf-sized, an intermediate level would add nodes without dividing any work.
+- **One "bots" child for claims, timelines and RFCs.** Rejected: three different state machines with different inputs; one leaf would exceed size M.
+
 ## Open questions
 
-- RFC timings and the ladder thresholds are proposals until D-003 is accepted; the tools should read them from config.
+- D-003 is accepted; RFC timings and ladder thresholds are still read from config by ECO.COMM.RFC and ECO.COMM.LADDER so a governance change needs no code change.
+- ECO.COMM.RFC needs three new frontmatter fields in `templates/DECISION.md` (`rfc_kind`, `comment_period_start`, `comment_period_days`); that template change is a separate tooling PR.
+- REQ-ECO.COMM-007 says "repository history alone", but review data lives on the forge; ECO.COMM.LADDER takes a review export as a second input (see its open questions).
+- ECO.CI depends on ECO.COMM, so no ECO.COMM child may depend on ECO.CI; forge actions are therefore described here as tool outputs and wired up in ECO.CI.WF.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.COMM.SCOPE | Spec-tree validator, open-node listing and generated reports (leaf) | 001 002 008 | none |
+| ECO.COMM.GROW | Cross-platform tree-growth driver (leaf) | 008 | none |
+| ECO.COMM.CLAIM | Claim staleness and code-to-node traceability (leaf) | 003 004 | none |
+| ECO.COMM.TIMELINE | PR-timeline evaluator, author-blocked clock (leaf) | 005 | none |
+| ECO.COMM.RFC | RFC comment-period tooling (leaf) | 006 | none |
+| ECO.COMM.LADDER | Maintainer-eligibility report (leaf) | 007 | none |
+| ECO.COMM.PARTNER | Integrator and support-partner program | 009 | none |

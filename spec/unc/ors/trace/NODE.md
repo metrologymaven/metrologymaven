@@ -1,0 +1,86 @@
+---
+id: UNC.ORS.TRACE
+title: Suite case format, citation checks and suite versioning
+level: 3
+parent: UNC.ORS
+kind: feature
+status: leaf
+phase: P1a
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-UNC.ORS-002, REQ-UNC.ORS-003, REQ-UNC.ORS-006, REQ-UNC.ORS-007]
+covers: []
+depends_on: [UNC.RDL.FORMAT, GDT.RES]
+side_effect: R1
+determinism: D0
+cli: [fid rdl list-suite, fid rdl check-suite]
+mcp: [rdl_list_suite, rdl_check_suite]
+journal: [rdl.list_suite@1, rdl.check_suite@1]
+updated: 2026-11-16
+---
+
+# UNC.ORS.TRACE: Suite case format, citation checks and suite versioning
+
+## Purpose
+
+Defines what an ORS case is (an RDL tier O record extended with standards citations, the Dialect Mapping Table (DMT) row it exercises, dialect, expected result and acceptance tolerance, and its expert review state) and the checker that CI runs on every suite: citations present and well formed, DMT rows resolvable, free text short enough that no standards text can hide in it, two-expert sign-off on interpretation cases as D-009 requires, open licence, and a version bump with a reason whenever an expected result changes.
+
+## Scope
+
+**In:**
+- `ors-case/v1` extension of `rdl-dataset/v1`: `citations [{designator, edition, clause}]`, `dmt_row` (optional), `dialect` (`ASME | ISO_GPS | none`), `expected`, `acceptance_tolerance`, `review {authors, reviewers, status}`, `note` (≤ 280 characters)
+- Suite manifest `ors-<suite>@<semver>` with changelog
+- `rdl.check_suite@1` (R1) and `rdl.list_suite@1` (R0)
+
+**Out:**
+- Case content (owned by the suite children `UNC.ORS.DRF` … `UNC.ORS.UNC`)
+- Running suites (owned by `UNC.ORS.RUN`)
+- The DMT itself and its row-to-case link check (owned by `GDT.RES`, REQ-GDT.RES-006)
+
+## Requirements
+
+- **REQ-UNC.ORS.TRACE-001** Every case shall cite at least one standard by designator, edition and clause, or carry `citations: none` with a `basis` of `closed_form_math` for cases that rest only on mathematics.
+- **REQ-UNC.ORS.TRACE-002** If a case names a `dmt_row`, then the checker shall verify that the row exists in the DMT with the digest pinned by the suite manifest, and fail with `dmt_row_unknown` otherwise.
+- **REQ-UNC.ORS.TRACE-003** Every case shall state `expected`, `acceptance_tolerance` with unit, and `dialect`, and the checker shall fail with `case_incomplete` naming the field otherwise.
+- **REQ-UNC.ORS.TRACE-004** Every free-text field of a case shall be at most 280 characters, and the checker shall fail with `text_too_long` otherwise, so that no standards passage can be carried.
+- **REQ-UNC.ORS.TRACE-005** If a case with a `dmt_row` is included in a suite release with review status other than `reviewed` by two distinct credentialed reviewers different from its author (D-009), then the checker shall fail with `review_missing`.
+- **REQ-UNC.ORS.TRACE-006** Every suite manifest shall declare an open licence (CC-BY-4.0 by default), and the checker shall fail with `licence_not_open` for any other value.
+- **REQ-UNC.ORS.TRACE-007** When a case's expected result or tolerance differs from the previous released suite version, the checker shall require a higher suite semver and a changelog entry naming the case and reason, and fail with `version_not_bumped` otherwise.
+
+## Acceptance criteria
+
+- **AC-1** Given `fixtures/ors/trace/good_suite/` (6 cases, DMT stub `fixtures/ors/trace/dmt_stub.json`), when `fid rdl check-suite --suite <handle> --json` runs, then it passes with zero findings.
+- **AC-2** (error paths) Given each case in `fixtures/ors/trace/bad/` (no citation, unknown DMT row, missing tolerance, 600-character note, one reviewer only, author as reviewer, licence `proprietary`), then the checker reports the matching error code for each.
+- **AC-3** (versioning) Given `good_suite` v1.0.0 as previous release and a copy with one expected value changed but version unchanged, then the checker fails with `version_not_bumped`; with version 1.1.0 and a changelog entry, it passes.
+- **AC-4** Given the good suite installed, when `fid rdl list-suite --json` runs, then it returns suite name, version, case count, licence and DMT digest.
+- **AC-5** (replay) Given a journal of AC-1 and AC-4, when replayed in exact mode, then the outcome is `IDENTICAL`.
+
+## Design
+
+- **Registry command(s):** `rdl.check_suite@1` (R1; `suite: ImportHandle | name`, optional `previous: name`; returns `Findings`), `rdl.list_suite@1` (R0; returns `Vec<SuiteSummary>`).
+- **Data structures:** `OrsCase` (extends `RdlDataset`), `SuiteManifest { name, version, licence, dmt_digest, cases, changelog }`, `Finding { case_id, code, field }`.
+- **Algorithm:** validate each case through `UNC.RDL.FORMAT` then the ORS checks in a fixed order; resolve DMT rows against the pinned DMT digest through `GDT.RES`; diff expected and tolerance against the previous release by case ID.
+- **Errors:** findings are data; command errors only for unreadable input (`suite_invalid`).
+- **Determinism:** D0.
+- **Performance budget:** check 5,000 cases in under 2 s [unverified until measured].
+- **Crate:** `fid-ors`.
+
+## Test fixtures
+
+`fixtures/ors/trace/`: a stub DMT with 4 rows, a good suite of 6 synthetic cases, and bad variants (project-authored, CC-BY-4.0). No standards text appears in any fixture.
+
+## Build prompt
+
+> Create crate `fid-ors`. Define `ors-case/v1` as an extension of the `fid-rdl` `RdlDataset` with: `citations [{designator, edition, clause}]` or `none` plus `basis: closed_form_math`; optional `dmt_row`; `dialect` (`ASME | ISO_GPS | none`); `expected`; `acceptance_tolerance` with unit; `review {authors, reviewers, status}`; `note` ≤ 280 chars. Suite manifest `ors-<suite>@<semver>` with licence (default CC-BY-4.0), pinned DMT digest, case list and changelog.
+> Implement `rdl.check_suite@1` (R1; CLI `fid rdl check-suite`; MCP `rdl_check_suite`) returning findings with codes `case_incomplete{field}`, `dmt_row_unknown`, `text_too_long`, `review_missing` (cases with a DMT row need two distinct reviewers, neither the author, status `reviewed`; Decision D-009), `licence_not_open`, `version_not_bumped` (expected or tolerance changed versus `--previous` without higher semver and changelog entry). Implement `rdl.list_suite@1` (R0). Both journaled, `--json`. DMT rows are resolved through the `GDT.RES` resolver API against the pinned digest.
+> Tests with `fixtures/ors/trace/`: good suite passes; each bad case yields its code; versioning rule; list output; exact replay IDENTICAL. Never include standards text in code, fixtures or messages. No panics, no `unwrap`.
+
+## Open questions
+
+- The 280-character limit should match whatever threshold `GDT.RES` sets for DMT free text (REQ-GDT.RES-005 says it is still to be set) [unverified].
+- How reviewer credentials are recorded and verified (D-009's community DMT-reviewer role) is for ECO or TRUST to define; this leaf checks only that two distinct named reviewers signed.
+
+## Children
+
+_Leaf: none._

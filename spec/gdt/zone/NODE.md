@@ -4,7 +4,7 @@ title: Tolerance-zone engine, modifiers and composite frames
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -63,6 +63,21 @@ POSE (core solve and certificates), MATL (MMC / LMC, bonus, virtual condition), 
 
 - In P1a, form zones may be referenced to least-squares rather than minimum-zone until KRN's MZ is green (declared conservative upper bound per concept doc 05 §13); confirm the declaration format.
 
+## Split rationale
+
+The dividing principle is **one core problem plus constraint layers**: zone shapes (ZTYPE) and the core pose solve (POSE), then each layer that adds variables or constraints to that same problem: material condition (MATL), shared poses (GROUP), tiers (COMP), datum mobility (MOBSRCH). Each layer maps to a step on the concept-doc scope ladder, so phases fall out cleanly (MATL and GROUP patterns P1a; COMP and MOBSRCH P1b).
+
+Alternatives considered:
+- **Hint split POSE / MATL / GROUP / COMP / MOB.** Adopted, plus ZTYPE: the closed-form shape functions are small, pure and testable now, so they are finished as a leaf while the optimizer stays open.
+- **Put MOBSRCH in `GDT.DRF`.** Rejected: DRF owns the envelope; searching it is part of the zone problem (parent Scope says so).
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.ZONE.ZTYPE | Tolerance-zone shapes and fixed-pose usage (leaf) | 001 | none |
+| GDT.ZONE.POSE | Zone-pose solve and certificates | 001 006 007 | none |
+| GDT.ZONE.MATL | Material-condition modifiers, bonus and virtual-condition boundaries | 002 007 | GOM.GDT.15, PCD.DIM.04 |
+| GDT.ZONE.GROUP | Patterns and simultaneous requirements | 003 007 | none |
+| GDT.ZONE.COMP | Composite feature-control-frame tiers | 004 007 | PCD.DIM.03, PW.GDT.09 |
+| GDT.ZONE.MOBSRCH | Zone solve within datum mobility | 005 007 | none |

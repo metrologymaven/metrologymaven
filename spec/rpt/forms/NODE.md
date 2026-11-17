@@ -4,7 +4,7 @@ title: Industry forms: AS9102 FAI and PPAP dimensional
 level: 2
 parent: RPT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -60,11 +60,28 @@ Fixed, non-editable report templates for the regulated deliverables customers as
 
 FAI1, FAI2, FAI3 (one per form), PPAP (dimensional report), FINAL (completeness check and W3 finalisation).
 
+## Split rationale
+
+The split separates **form data from form appearance**, because only the appearance is exposed to the copyright question. HDR (FAI header, forms 1 and 2), ROWS (form 3 rows and the draft FAI) and PPAP (dimensional rows) are pure data built from the project, the balloon register and journaled results; FINAL owns the completeness check and the human-only W3 transition; LAYOUT owns the fixed visual templates and is blocked on decision D-015 (how closely layouts may follow the published forms).
+
+- The hint's FAI1/FAI2/FAI3 per-form split was merged into HDR (forms 1 and 2 share the header and are small) and ROWS (form 3 is the large one).
+- Finalisation of FAI and PPAP is one child so that the W3 rules are written once.
+
+Alternatives considered:
+- **One child per form including its layout.** Rejected: every child would then be blocked on D-015.
+- **Block the whole node on D-015.** Rejected: the data, rows and finalisation do not depend on the layout answer and are needed in P1a.
+
 ## Open questions
 
-- Can the project ship form layouts that resemble the published forms closely enough for auditors without infringing copyright? Needs a maintainer or legal view; open a decision before the FAI leaves are built if it is not clear.
+- Can the project ship form layouts that resemble the published forms closely enough for auditors without infringing copyright? Opened as **D-015**; it blocks only `RPT.FORMS.LAYOUT`.
 - Which AS9102 revision and PPAP edition to target first; the revisions named above are [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.FORMS.HDR | FAI header and accountability data (forms 1 and 2) | 001 006 | none |
+| RPT.FORMS.ROWS | Characteristic accountability rows (form 3) | 003 004 | none |
+| RPT.FORMS.PPAP | PPAP dimensional results data | 002 | none |
+| RPT.FORMS.FINAL | Form completeness check and finalisation | 005 007 | none |
+| RPT.FORMS.LAYOUT | Fixed form templates for FAI and PPAP (decision D-015) | 001 002 008 | none |

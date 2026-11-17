@@ -4,7 +4,7 @@ title: Propagation engine: LPU, Monte Carlo and multivariate
 level: 2
 parent: UNC
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -67,6 +67,23 @@ LPU, NLIN (nonlinearity check), MCM, MVAR (multivariate), SELECT (method selecti
 
 - GUM-7 rework of Supplement 1 may change the adaptive procedure; absorb via a `gum_suite_profile` field [unverified].
 
+## Split rationale
+
+Split by **engine and policy**: each propagation method is its own engine (LPU, MCM, MVAR), the two checks that decide whether LPU can be trusted are separate pure functions (NLIN for the amendment's nonlinearity criteria, VALID for the Supplement 1 comparison), ranking is a pure function over engine outputs (RANK), and SELECT owns the versioned choice of method, the estimator policy and the only W2 commit path. Engines stay free of policy so that a policy change is a version bump in one leaf.
+
+Alternatives considered:
+- **One child per GUM document** (100, 101, 102). Rejected: validation of 100 by 101 and the estimator policy span documents.
+- **Commit inside each engine.** Rejected: three W2 paths would each need the stale-input check; one commit command in SELECT keeps the journal shape uniform.
+- **NLIN inside LPU.** Rejected: its criteria come from a newly published text that needs its own spec card and expert review.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.PROP.LPU | Linear propagation with analytic sensitivities | 001 | none |
+| UNC.PROP.NLIN | Nonlinearity assessment for LPU | 002 | none |
+| UNC.PROP.MCM | Adaptive Monte Carlo propagation through the kernel pipeline | 003 004 | none |
+| UNC.PROP.VALID | Validation of LPU against Monte Carlo (leaf) | 005 | none |
+| UNC.PROP.MVAR | Multivariate propagation of feature parameter vectors | 006 | none |
+| UNC.PROP.SELECT | Method selection, estimator policy and statement commit (leaf) | 007 008 | none |
+| UNC.PROP.RANK | Contributor ranking (leaf) | 009 | none |

@@ -4,7 +4,7 @@ title: Simulators and conformance suites
 level: 2
 parent: HAL
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -67,6 +67,24 @@ IPPSIM (I++ protocol engine and kinematics), WORK (virtual workpiece and contact
 - The seed catalog places DEV.SIM.01 in P0, while concept doc 08 makes the L0 skeleton a P1b stretch and L1/L2 P2. The node phase is P0 to match the earliest deliverable; children will carry their own phases.
 - Licence of the simulator and suite depends on D-001; concept doc 08 proposes a permissive licence under every option (H-D13).
 
+## Split rationale
+
+The split has two axes. The I++ simulator is divided **by fidelity layer**: protocol engine with L0 and L1 plus the shared launcher (IPPSIM), the geometric world it measures (WORK), seeded error injection for L2 (ERR) and recorded-controller replay for L3 (REPLAY). The other simulators are grouped **by device family and phase**: portable pose and probing (PORT), scanners (SCANSIM), gauges and environment sensors (GAUENV, the first end-to-end target and a leaf), and the P3–P4 surface and camera sources (SURFCAM). Conformance suites and signed reports (CONF) are one child because the same runner and report format serve every capability.
+
+Alternatives considered:
+- **One child per capability simulator (eleven).** Rejected: over the limit, and gauge and environment simulators are too small to stand alone.
+- **Conformance inside each simulator child.** Rejected: suites test third-party drivers too, and one report format must serve all.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.SIM.IPPSIM | Open I++ DME simulator (protocol engine, L0 and L1) and simulator launcher | 001 002 005 007 008 | DEV.SIM.01 |
+| HAL.SIM.WORK | Virtual workpiece, stylus contact model and collision detection | 004 | none |
+| HAL.SIM.ERR | L2 seeded error and noise injection | 002 003 | none |
+| HAL.SIM.REPLAY | L3 controller replay from recorded sessions | 002 | none |
+| HAL.SIM.PORT | Portable-device simulators (trackers, arms, 6DoF probes) | 001 005 | DEV.SIM.02 |
+| HAL.SIM.SCANSIM | Line and area scanner simulators | 001 005 008 | DEV.SIM.02 |
+| HAL.SIM.GAUENV | Gauge and environment-sensor simulators — leaf | 001 005 008 | none |
+| HAL.SIM.SURFCAM | Surface-topography, profile and camera simulators | 001 005 | none |
+| HAL.SIM.CONF | Conformance suites and signed conformance reports | 006 007 008 | none |

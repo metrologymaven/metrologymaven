@@ -4,7 +4,7 @@ title: Scale bars and reference lengths
 level: 2
 parent: LVM
 kind: subsystem
-status: open
+status: split
 phase: P3
 size: L
 owners: []
@@ -57,10 +57,23 @@ Scale bars and other calibrated reference lengths fix the scale of a network, wh
 
 DEF (artefact definitions and certificates), THERM (thermal correction), CONSTR (constraint contribution), CHECK (post-adjustment scale check).
 
+## Split rationale
+
+The dividing principle is **the path of one reference length**: what was calibrated (DEF), where it sat in the network and how it enters the adjustment (BIND), the temperature it was measured at (THERM), and how well the adjusted network reproduces it (CHECK).
+
+Alternatives considered:
+- **Fold THERM into BIND.** Rejected: thermal correction has its own inputs, sources and uncertainty model, and will later take live sensor readings.
+- **Merge DEF and BIND.** Rejected: one artefact is placed many times; definitions are immutable records of a calibration, bindings are per-placement network data.
+
 ## Open questions
 
-- Should scale bars observed in several orientations be modelled as one artefact with repeat observations, or as separate reference lengths?
+- Should scale bars observed in several orientations be modelled as one artefact with repeat observations, or as separate reference lengths? **Resolved in this split:** one immutable artefact definition with one binding per placement (`LVM.SCALE.BIND`). The correlation between bindings of one artefact is still open there.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| LVM.SCALE.DEF | Reference-length artefact definitions | 001 | SA.NET.05 |
+| LVM.SCALE.BIND | Reference-length binding and scale constraints | 003 005 | none |
+| LVM.SCALE.THERM | Thermal correction of reference lengths | 002 | none |
+| LVM.SCALE.CHECK | Post-adjustment scale check | 004 | none |

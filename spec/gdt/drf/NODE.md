@@ -4,7 +4,7 @@ title: Datum reference frames and datum mobility
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -64,6 +64,21 @@ SIM (datum-feature simulators and candidate sets), BUILD (precedence and DOF boo
 
 - The planar-datum default simulator differs between ISO 5459 editions and ASME Y14.5-2018 [unverified]; each must come from a purchased text and a DMT row, not from this node.
 
+## Split rationale
+
+The dividing principle is **the pipeline from declaration to result**: declare datums (DATUM), simulate each datum feature (SIM; COMMON for multi-feature and target datums), assemble the frame with DOF bookkeeping (BUILD), derive mobility (MOB), and report the transform-used fields (CHECK). The P1a scope (planar and cylindrical datums at RMB) is carried by DATUM, SIM, BUILD and CHECK; COMMON and MOB are P1b.
+
+Alternatives considered:
+- **Hint split SIM / BUILD / COMMON / MOB / CHECK.** Adopted, plus DATUM, because `gdt.define_datum@1` needs an owner and is a small leaf independent of simulation.
+- **Merge CHECK into MOB.** Rejected: CHECK is needed in P1a (trivial envelope, alignment-substitute flag) while MOB is P1b.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DRF.DATUM | Datum feature and datum target definitions (leaf) | 001 | GOM.GDT.14, SA.GDT.03 |
+| GDT.DRF.SIM | Datum-feature simulators and rocking candidate sets | 001 005 007 | GOM.GDT.14 |
+| GDT.DRF.BUILD | DRF construction, precedence and DOF bookkeeping (leaf) | 001 002 006 007 | GOM.GDT.14, PW.GDT.07, SA.GDT.03 |
+| GDT.DRF.COMMON | Common datums and datum targets | 001 007 | PW.GDT.07 |
+| GDT.DRF.MOB | Datum mobility envelope | 003 | PW.GDT.07 |
+| GDT.DRF.CHECK | Transform-used and within-envelope result fields | 004 | none |

@@ -4,7 +4,7 @@ title: fid-num numerics facade and KNP-1 enforcement
 level: 2
 parent: KRN
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -35,6 +35,7 @@ The bottom of the kernel graph. `fid-num` is the only place where the kernel tou
 - NaN and FP-environment checks at kernel entry, mapped to typed errors
 - The KNP-1 lint set (no FMA or contraction, no `powi`, no `f64::min`/`max`, no std HashMap/HashSet, no runtime SIMD dispatch, no `unsafe`, no I/O), applied transitively over the whole kernel dependency graph
 - The kernel dependency allowlist check (the SPDX allowlist itself comes from D-001)
+- The exact decimal comparator `kdec` and the versioned kernel number formatters `fmt.*@version` (owner assigned at the level-2 review, 2026-11-16)
 
 **Out** (and which node owns it instead):
 - LP, QP and SOCP solvers and nonlinear least-squares drivers (`KRN.SOLV`)
@@ -54,10 +55,12 @@ The bottom of the kernel graph. `fid-num` is the only place where the kernel tou
 - **REQ-KRN.NUM-008** When CI runs, the KNP-1 lint shall scan the whole kernel dependency graph and fail the build on any banned API (FMA, `mul_add`, `powi`, platform libm, `f64::min`/`max`, std HashMap/HashSet, runtime CPU-feature dispatch, `unsafe`, file, network, clock or environment access).
 - **REQ-KRN.NUM-009** The KNP-1 lint shall fail the build on any kernel source reference to a reference-dataset ID, file name or embedded reference constant.
 - **REQ-KRN.NUM-010** The facade shall ship a self-test of at least 10 000 [unverified] fixed inputs per function whose output digest is identical on x86-64, ARM64 and wasm32.
+- **REQ-KRN.NUM-011** The facade shall provide an exact decimal comparator (`kdec`) that orders any finite f64 against any decimal limit by exact rational comparison, without converting the limit to f64.
+- **REQ-KRN.NUM-012** The facade shall provide versioned number formatters `fmt.<kind>@<major>` that turn an SI f64 value into a decimal string in a requested unit, and that never print a value lying on the nonconforming side of a limit as equal to that limit.
 
 ## Interfaces
 
-- **Offers:** the `fid-num` crate API (transcendentals, total-order ops, reductions, dense LA, RNG, numeric error type); the `knp1-lint` CI check; a facade self-test digest consumed by `KRN.MAN`.
+- **Offers:** the `fid-num` crate API (transcendentals, total-order ops, reductions, dense LA, RNG, numeric error type, `kdec`, `fmt.*@version`); the `knp1-lint` CI check; a facade self-test digest consumed by `KRN.MAN`.
 - **Consumes:** nothing inside the platform.
 
 ## Decomposition hints
@@ -66,10 +69,30 @@ FN (transcendentals and total-order ops), RED (reductions), LA (QR, SVD, eigen),
 
 ## Open questions
 
-- **Owner assigned (level-2 review, accepted 2026-11-16):** KRN.NUM owns the kernel number formatters `fmt.*@version` and the exact decimal comparator (`kdec`). They compare f64 values to decimal limits exactly, and never print a nonconforming value as equal to a limit (RPT REQ-RPT-007; baseline principle P2). Include them when this node is expanded.
+- **Owner assigned (level-2 review, accepted 2026-11-16):** KRN.NUM owns the kernel number formatters `fmt.*@version` and the exact decimal comparator (`kdec`). They compare f64 values to decimal limits exactly, and never print a nonconforming value as equal to a limit (RPT REQ-RPT-007; baseline principle P2). **Incorporated** at this split as REQ-KRN.NUM-011 and -012, owned by `KRN.NUM.KDEC` and `KRN.NUM.FMT`. RPT's open question (formatters not yet named) is answered by those two nodes.
 - Which vendored libm source (the concept doc names a musl-derived crate) and its licence fit D-001 [unverified].
 - Whether contraction can be disabled reliably for every target through compiler flags alone, or needs source-level checks too [unverified].
 
+## Split rationale
+
+The split follows the **kinds of numeric primitive** that can differ between hosts, plus enforcement. Each child is one module of `fid-num` (or, for LINT, one CI tool), so leaves stay in one crate and are reviewable on their own: elementary functions (FN), reductions (RED), dense linear algebra (LA), random numbers (RNG), error and FP-environment checks (ERR), lint enforcement (LINT), and the decimal pair added by the level-2 review: the exact comparator (KDEC) and the formatters (FMT). FMT depends on KDEC because both need the same exact dyadic-versus-decimal arithmetic, and KDEC is the part Track A needs first.
+
+REQ-KRN.NUM-011 and -012 were added at this split to record the owner assignment accepted at the level-2 review; no existing requirement was changed.
+
+Alternatives considered:
+- **Put `kdec` and `fmt.*` in a separate KRN subsystem.** Rejected: the review assigned them here, and they share the facade's error type and exactness rules.
+- **One child for all of linear algebra and reductions.** Rejected: reductions are small and needed by every other child; LA is the largest and riskiest piece and will split again.
+- **Fold ERR into FN.** Rejected: every child returns the same error type, so it must sit below all of them.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.NUM.ERR | Numeric error type and FP-environment checks | 001 007 | none |
+| KRN.NUM.FN | Transcendentals and total-order operations | 001 002 003 007 010 | none |
+| KRN.NUM.RED | Fixed-order reductions | 001 004 007 | none |
+| KRN.NUM.LA | Deterministic dense linear algebra | 001 005 007 | none |
+| KRN.NUM.RNG | Counter-based random number generator | 001 006 | none |
+| KRN.NUM.LINT | KNP-1 lint and kernel dependency allowlist check | 001 008 009 | none |
+| KRN.NUM.KDEC | Exact decimal type and comparator (kdec) | 001 007 011 | none |
+| KRN.NUM.FMT | Versioned kernel number formatters (fmt.*) | 001 007 012 | none |

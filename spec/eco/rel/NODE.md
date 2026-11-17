@@ -4,7 +4,7 @@ title: Packaging, signed installers and release channels
 level: 2
 parent: ECO
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -53,6 +53,7 @@ Turns a tagged revision into signed, checksummed installers for Windows, Linux a
 - **REQ-ECO.REL-006** When the same tag is built twice on the reference builder, the non-signature bytes of each artefact shall be identical [unverified for all three OS installers].
 - **REQ-ECO.REL-007** The project shall maintain nightly, beta and stable channels, and an installed app shall not check for updates unless the user enables it.
 - **REQ-ECO.REL-008** The web bundle shall be servable from any static host with no server-side code and no third-party requests.
+- **REQ-ECO.REL-009** The project shall offer a long-term-support release channel with a published support window, security-only and correctness-only backports, and kernel bit-identity across LTS patch releases.
 
 ## Interfaces
 
@@ -63,11 +64,29 @@ Turns a tagged revision into signed, checksummed installers for Windows, Linux a
 
 PROC (process, versioning, channels), PKG (per-OS installers), WEB (WASM bundle), SIGN (artefact signing, checksums, SBOM), REPRO (reproducibility), NOTES (release notes).
 
+## Split rationale
+
+The split follows the **artefact path from tag to user**: PROC orchestrates the release and its channels; PKG builds installers and WEB the static bundle; SIGN signs, checksums and lists dependencies; REPRO proves the bytes came from the source; UPD is the only in-product piece, telling an opted-in user that a release exists. Human-only signing (REQ-ECO.REL-005) sits in SIGN together with key custody, so exactly one node holds keys.
+
+Alternatives considered:
+- **Separate NOTES child** (hint). Rejected: release notes are one generated step of the release workflow and share its inputs; folded into PROC.
+- **Update check inside PROC.** Rejected: it is product code with its own side-effect class (X1) and privacy rules, unlike the rest of the pipeline.
+
 ## Open questions
 
-- Signing certificates for Windows and macOS cost money and need an accountable legal entity; who holds them depends on D-003 (governance) [unverified cost].
-- D-002 (name) must settle before the first public installer.
+- Signing certificates for Windows and macOS cost money and need an accountable legal entity; who holds them depends on governance (D-003) and may need a decision record before the first public installer [unverified cost]. Tracked in ECO.REL.SIGN.
+- D-002 (name) must settle before the first public installer; ECO.REL.PKG refuses stable publication while placeholder names remain.
+- PLAT.HW.RUN, PLAT.DEPLOY, PLAT.WEB and several OUTR nodes depend on ECO.REL, so ECO.REL children read their data as files rather than declaring dependencies on them.
+- ECO.REL.UPD: whether the update policy setting is W2 or A0 is not in CONSTITUTION §3.1.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REL.PROC | Release process, versioning, channels and notes | 004 007 | none |
+| ECO.REL.PKG | Per-OS installers and packages | 001 | none |
+| ECO.REL.WEB | Self-hostable web bundle | 001 008 | none |
+| ECO.REL.SIGN | Release signing, checksums and SBOM | 002 003 005 | none |
+| ECO.REL.REPRO | Reproducible builds and their verification | 006 | none |
+| ECO.REL.UPD | Opt-in update check | 007 | none |
+| ECO.REL.LTS | Long-term-support channel | 009 | none |

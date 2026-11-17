@@ -4,7 +4,7 @@ title: Form tolerances
 level: 2
 parent: GDT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -60,6 +60,20 @@ FLAT, STRAIGHT (line element and derived), ROUND (with cross-section extraction)
 
 - None beyond the inherited DMT authorship question.
 
+## Split rationale
+
+The dividing principle is **one shared core plus one child per symbol**: the policy every form check shares (minimum points, minimum zone versus least squares with the conservative flag, payload) lives in FCORE so the symbol leaves stay thin; then flatness, straightness, roundness and cylindricity. Flatness, roundness and cylindricity are plain minimum-zone problems with explicit extraction parameters and are finished as leaves; straightness stays open because its derived-median-line form needs expert derivation rules and the MMC engine.
+
+Alternatives considered:
+- **Hint split FLAT / STRAIGHT / ROUND / CYL only.** Rejected: REQ-GDT.FORM-002..004 would be repeated in four places.
+- **Split straightness into line-element and derived children here.** Deferred to STRAIGHT's own expansion; both share one command.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.FORM.FCORE | Form evaluation contract and reference-association policy (leaf) | 001 002 003 004 | PW.GDT.02 |
+| GDT.FORM.FLAT | Flatness (leaf) | 001 005 | GOM.GDT.01, PW.GDT.02 |
+| GDT.FORM.STRAIGHT | Straightness of line elements and of a derived median line | 001 005 | GOM.GDT.02, PW.GDT.02 |
+| GDT.FORM.ROUND | Roundness (circularity) with cross-section extraction (leaf) | 001 005 | GOM.GDT.03, PW.GDT.02 |
+| GDT.FORM.CYL | Cylindricity (leaf) | 001 005 | GOM.GDT.04, PW.GDT.02 |
