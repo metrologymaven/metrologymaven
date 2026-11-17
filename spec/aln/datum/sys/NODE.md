@@ -4,18 +4,18 @@ title: Datum-system alignment engine and ASME dialect
 level: 3
 parent: ALN.DATUM
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ALN.DATUM-003, REQ-ALN.DATUM-004, REQ-ALN.DATUM-005, REQ-ALN.DATUM-006, REQ-ALN.DATUM-007]
 covers: [GOM.ALN.07, PCD.ALN.05, PW.ALN.06]
-depends_on: [ALN.DATUM.DOF, ALN.DATUM.ELEM, ALN.MODEL.ELEM, ALN.QA.REPORT, GDT.RES, GDT.DRF]
+depends_on: [ALN.MODEL.ELEM, ALN.QA.REPORT, GDT.RES, GDT.DRF]
 cli: [fid align run-datum-system]
 mcp: [align_run_datum_system]
 journal: [align.run_datum_system@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.DATUM.SYS: Datum-system alignment engine and ASME dialect
@@ -29,7 +29,7 @@ Aligns the part to a datum reference frame named by datum features in precedence
 **In:**
 - The dialect gate: dialect, standard edition and defaults profile must be stated
 - Resolver call per datum feature and recording of the DMT row IDs, chain digest and DMT digest
-- Precedence application through `ALN.DATUM.DOF` projectors
+- Precedence application through GDT.DRF's construction and DoF table (GDT.DRF.BUILD)
 - The ASME Y14.5-2018 path (RMB datum features in P1a, matching `GDT.DRF`'s P1a scope)
 - `align.run_datum_system@1` and alignment wrapping
 
@@ -52,7 +52,7 @@ Aligns the part to a datum reference frame named by datum features in precedence
 ## Interfaces
 
 - **Offers:** `align.run_datum_system@1` (W2; params `datums: [primary, secondary?, tertiary?]` as datum-feature references, `dialect`, `edition`, `defaults_profile`, `unconstrained`, `parent`); the resulting alignment as GDT's starting frame.
-- **Consumes:** `GDT.RES` resolver; `GDT.DRF` DRF construction (preferred) or `ALN.DATUM.ELEM`'s level solve with the resolver's simulators; `ALN.DATUM.DOF`; `ALN.MODEL.ELEM`; `ALN.QA.REPORT`.
+- **Consumes:** `GDT.RES` resolver; `GDT.DRF.SIM` simulators and `GDT.DRF.BUILD` DRF construction with its DoF table; `ALN.MODEL.ELEM`; `ALN.QA.REPORT`.
 
 ## Decomposition hints
 
@@ -60,9 +60,15 @@ GATE (dialect gate and resolver calls), BUILD (frame build via GDT.DRF or level 
 
 ## Open questions
 
-- **Overlap with GDT.DRF.** GDT.DRF already builds a DRF from datum features in precedence order. This node should call that construction as an R1 entry rather than re-implement it; GDT.DRF's expansion should expose one. Until then BUILD is described both ways.
+- **Resolved: overlap with GDT.DRF.** BUILD calls GDT.DRF's pure construction (the R1 path of `gdt.build_drf@1`, GDT.DRF.BUILD) and simulators (GDT.DRF.SIM); GDT.DRF owns the single DoF table, so this node no longer uses `ALN.DATUM.DOF` or `ALN.DATUM.ELEM` (removed from depends_on). The unconstrained policy (`keep_parent` / `reject`) keeps the same names and error code as ALN.DATUM.DOF.
+- **Unresolved: layer order.** CONSTITUTION §2.1 puts ALN before GDT in L2, so ALN may not depend on GDT. GATE and BUILD depend on GDT.RES.RESOLVE, GDT.DRF.SIM and GDT.DRF.BUILD, which are pure kernel code in `fid-gps`. This is layer-legal only if `fid-gps` (resolver, DMT schema, DRF construction, simulators) is classed L0; otherwise datum-system alignment must move to GDT. Needs a ruling at review (possibly an amendment to D-034's L0 list); not opened as a decision because the caller fixed this boundary.
 - The GDT/ALN dependency cycle risk noted in the parent remains: GDT.DRF depends on ALN.MODEL and ALN.BFIT, and this node depends on GDT.DRF. That is acyclic only while ALN.MODEL and ALN.BFIT never depend on ALN.DATUM.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.DATUM.SYS.GATE | Dialect gate and per-datum resolver calls (leaf) | 001 002 004 007 | none |
+| ALN.DATUM.SYS.BUILD | Datum-system frame build through GDT.DRF and unconstrained-DoF policy (leaf) | 003 005 006 007 | none |
+| ALN.DATUM.SYS.CMD | Datum-system alignment command and recording (leaf) | 001 002 004 006 007 | GOM.ALN.07, PCD.ALN.05, PW.ALN.06 |
+| ALN.DATUM.SYS.FIXT | Datum-system alignment fixtures with known transforms (leaf) | 005 | none |

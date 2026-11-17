@@ -4,7 +4,7 @@ title: Circular, total and axial runout
 level: 3
 parent: GDT.PROF
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.PROF.DEV, GDT.DRF.BUILD]
 cli: [fid check eval-circular-runout, fid check eval-total-runout]
 mcp: [check_eval_circular_runout, check_eval_total_runout]
 journal: [check.eval_circular_runout@1, check.eval_total_runout@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.PROF.RUNOUT: Circular, total and axial runout
@@ -55,7 +55,17 @@ CIRC (circular runout given explicit circles; likely a leaf), TOTAL, AXIAL.
 ## Open questions
 
 - Whether runout belongs here or with coaxiality in `GDT.LOC` (raised on `GDT.PROF`); kept here because it reuses DEV.
+- The indicator direction for runout on non-cylindrical surfaces (normal to the surface or radial) is DMT content; `GDT.PROF.RUNOUT.EXTR` takes it from the chain.
+- Runout to a common datum axis (A-B) needs `GDT.DRF.COMMON` (P1b, open); until it lands, such characteristics return `UNSUPPORTED`.
+
+## Split rationale
+
+Hint AXIAL is folded into the shared extraction leaf (EXTR) as a direction variant: radial and axial runout differ only in the measuring direction and in whether circles are cross-sections or radius bands, so the two commands (CIRC, TOTAL) stay thin.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PROF.RUNOUT.EXTR | Runout directions and measuring circles (leaf) | 001 002 | none |
+| GDT.PROF.RUNOUT.CIRC | Circular runout command (leaf) | 001 003 | GOM.GDT.13, PW.GDT.06 |
+| GDT.PROF.RUNOUT.TOTAL | Total runout command (leaf) | 002 003 | GOM.GDT.13, PW.GDT.06 |

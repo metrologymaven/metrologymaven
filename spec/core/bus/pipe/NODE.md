@@ -4,18 +4,18 @@ title: Execute pipeline, handler contract and typed errors
 level: 3
 parent: CORE.BUS
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.BUS-003, REQ-CORE.BUS-007, REQ-CORE.BUS-008, REQ-CORE.BUS-015]
 covers: []
-depends_on: [CORE.REG, CORE.JRN, CORE.JOB, CORE.BUS.PRIN, CORE.BUS.POL, CORE.BUS.ROUTE, CORE.BUS.UNIT]
+depends_on: [CORE.REG.DEF, CORE.REG.VER, CORE.JRN.CHAIN, CORE.JRN.STREAM, CORE.JOB.SCHED, CORE.BUS.PRIN, CORE.BUS.POL, CORE.BUS.ROUTE, CORE.BUS.UNIT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.BUS.PIPE: Execute pipeline, handler contract and typed errors
@@ -68,8 +68,14 @@ STAGE (pipeline orchestration and all-or-nothing), VALID (schema validation with
 
 ## Open questions
 
-- Which stage writes R0/R1 calls to the Activity Log: the pipeline after return, or the journal module when called? This split has PIPE call `CORE.JRN` for both streams; JRN decides the stream.
+- **Resolved by D-031 (CONSTITUTION §3 Reads):** R0 and R1 calls never reach the Record Journal; the pipeline hands a completed read to `CORE.JRN.STREAM.ALOG`, which writes it only while a recording session is active or when the call is a Command Program step. A W-class call that consumes an R1 result carries that result's digest into its entry (`CORE.BUS.PIPE.STAGE`).
+- `CORE.DEP.RECOMP` needs a handler-only path for system principals (no per-element entries). `CORE.BUS.PIPE.STAGE` offers it as `Bus::run_handlers_as_system`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.BUS.PIPE.STAGE | Stage orchestration, all-or-nothing commit, jobs, reads and overhead (leaf) | 001 008 010 | none |
+| CORE.BUS.PIPE.VALID | Command resolution, parameter validation and preconditions (leaf) | 002 003 004 005 | none |
+| CORE.BUS.PIPE.HANDLER | Handler contract, state view and effects check (leaf) | 006 007 | none |
+| CORE.BUS.PIPE.ERR | Closed bus error code set (leaf) | 009 | none |

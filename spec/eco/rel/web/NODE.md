@@ -4,18 +4,19 @@ title: Self-hostable web bundle
 level: 3
 parent: ECO.REL
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ECO.REL-001, REQ-ECO.REL-008]
 covers: []
-depends_on: [VIZ.WEB, ECO.CI.WF]
+depends_on: [ECO.CI.WF]
+uses_artifacts: [VIZ.WEB.BUILD, PLAT.WEB.BROWSERS, ECO.APPS.MANIFEST]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.REL.WEB: Self-hostable web bundle
@@ -47,17 +48,22 @@ Packages the WASM build of the viewer and apps as a static bundle that anyone ca
 
 ## Interfaces
 
-- **Offers:** web bundle archive per release; hosting guide.
-- **Consumes:** VIZ.WEB WASM build; ECO.CI.WF; PLAT.WEB browser list (as data, to pick test browsers).
+- **Offers:** `fid-web-<version>.tar.gz` and `.zip`, `bundle-manifest.json`, the CSP (in the HTML and as `_headers.example`), `HOSTING.md` (ASSEMBLE); `web/egress-report.json` (EGRESS).
+- **Consumes (as files):** WASM build outputs (`VIZ.WEB.BUILD`); browser list (`PLAT.WEB.BROWSERS`) to choose test browsers; app manifests (`ECO.APPS.MANIFEST`) to know which apps support web.
+- **Code dependency:** build jobs of `ECO.CI.WF`.
 
 ## Decomposition hints
 
-ASSEMBLE, CSP, EGRESS (outbound-request check), GUIDE.
+ASSEMBLE (layout, CSP, hosting guide), EGRESS (outbound-request and local-processing check).
 
 ## Open questions
 
 - PLAT.WEB depends on ECO.REL, so this node reads PLAT.WEB's browser list as data rather than declaring a dependency.
+- PLAT.WEB.OFFLINE (local-first behaviour in the browser) overlaps REQ-004; this node only proves the release bundle uploads nothing.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REL.WEB.ASSEMBLE | Bundle assembly, content-security policy and hosting guide (leaf) | 001 003 | none |
+| ECO.REL.WEB.EGRESS | Outbound-request and local-processing check (leaf) | 002 004 | none |

@@ -4,18 +4,19 @@ title: User guide (the book)
 level: 3
 parent: OUTR.DOCS
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.DOCS-005]
 covers: []
-depends_on: [OUTR.DOCS.FRAME, ECO.APPS]
+depends_on: [OUTR.DOCS.FRAME]
+uses_artifacts: [ECO.APPS.LIST, ECO.PARITY.GEN, ECO.REL.PKG, ECO.DATA.EX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.DOCS.BOOK: User guide (the book)
@@ -56,8 +57,17 @@ CONCEPT (cross-cutting chapters), APPCH (one per app), EXAMPLE (runnable-example
 
 ## Open questions
 
-- REQ-OUTR.DOCS.BOOK-004 reuses the capability-tag idea of OUTR.SITE.CLAIM; the check could be shared if the book uses the same tag syntax.
+- REQ-OUTR.DOCS.BOOK-004 reuses the OUTR.SITE.CLAIM capability tags, plus a planned-capability tag with a fixed label (OUTR.DOCS.BOOK.CHECK).
+- CONSTITUTION §2.1 (D-034): the former code dependency on ECO.APPS is now `uses_artifacts` on the app list file, parity report, release binaries and example projects.
+- The app list names Probe and Network from the start; their chapters start in P2 and P3, and stub chapters from OUTR.DOCS.BOOK.CONCEPT keep REQ-OUTR.DOCS.BOOK-001 true until then.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.DOCS.BOOK.CHECK](check/NODE.md) | User-guide structure, example and availability check (leaf) | 001 002 003 004 005 | none |
+| [OUTR.DOCS.BOOK.CONCEPT](concept/NODE.md) | Concept chapters (leaf) | 001 002 003 004 005 | none |
+| [OUTR.DOCS.BOOK.REPORT](report/NODE.md) | Report app chapter (leaf) | 001 003 004 005 | none |
+| [OUTR.DOCS.BOOK.INSPECT](inspect/NODE.md) | Inspect app chapter (leaf) | 001 003 004 005 | none |
+| [OUTR.DOCS.BOOK.PROBE](probe/NODE.md) | Probe app chapters | 001 003 004 005 | none |
+| [OUTR.DOCS.BOOK.NETWORK](network/NODE.md) | Network app chapters | 001 003 004 005 | none |

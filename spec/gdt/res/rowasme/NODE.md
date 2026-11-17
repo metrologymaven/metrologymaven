@@ -4,7 +4,7 @@ title: P1a ASME Y14.5-2018 DMT row set
 level: 3
 parent: GDT.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -47,8 +47,8 @@ The expert-authored DMT rows for the P1a scope: every ASME Y14.5-2018 (with Y14.
 
 ## Interfaces
 
-- **Offers:** the released P1a `DmtTable` and the ASME defaults profile content.
-- **Consumes:** schema (GDT.RES.SCHEMA); workflow (GDT.RES.ROWFLOW); ORS cases (UNC.ORS); purchased standards texts (D-016).
+- **Offers:** the released P1a `DmtTable` and the ASME defaults profile content; the inventory file format `dmt-inventory/v1` (INV) and the dialect release gate (GATE), both reused by `GDT.RES.ROWISO`.
+- **Consumes:** schema (GDT.RES.SCHEMA); workflow (GDT.RES.ROWFLOW); ORS cases and run results (UNC.ORS, read as artifacts); standards texts held under D-016.
 
 ## Decomposition hints
 
@@ -56,10 +56,23 @@ One child per tolerance family inventory (FORM rows, ORIENT rows, POS rows, SIZE
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-016 (Acquiring and sharing standards texts for DMT authoring and review) is accepted. Apply its Decision section (`decisions/D-016-*.md`) when this node is expanded.
-- **Blocked on D-016:** rows cannot be written until the project has lawful access to the ASME Y14.5-2018 and Y14.5.1-2019 texts for each author and both reviewers, and it is undecided who buys them and under what licence terms.
-- Concentricity and symmetry rows for legacy-edition ASME drawings: whether to have them at all is an expert call (raised on `GDT.LOC`).
+- **Applied D-016 (accepted 2026-11-17):** the project buys one licence of ASME Y14.5-2018 and Y14.5.1-2019 per paid author; community reviewers hold their own copies (or a partner's institutional access, D-009 option C) and attest "edition held" on every review (`GDT.RES.ROWFLOW.STATE`). The node is no longer blocked; its content children remain open because the rows are expert work, never agent-written.
+- Purchasing the author licences is a steering-group budget action outside the tree; `GDT.RES.ROWASME.GATE` checks only what the project records (roster basis and attestations), not the purchase itself.
+- Concentricity and symmetry rows for legacy-edition ASME drawings: whether to have them at all is an expert call (raised on `GDT.LOC`); routed to `GDT.RES.ROWASME.POS`.
+
+## Split rationale
+
+Machinery versus content again (as in `GDT.RES`): INV (the machine-readable inventory and its coverage check) and GATE (the set-level release gate) are agent-buildable leaves tested on synthetic rows; the content children follow the decomposition hint, one per tolerance family, plus DPROF for the defaults profile values, because each family is authored and reviewed as a unit and maps to one consuming GDT subsystem. Hint RELEASE is GATE; the per-row adoption command already exists in `GDT.RES.ROWFLOW.ADOPT`. DIM rows are folded into SIZE: both serve `GDT.DIM` and share authors.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.RES.ROWASME.INV | DMT inventory file and coverage check (leaf) | 001 | none |
+| GDT.RES.ROWASME.GATE | Dialect row-set release gate (leaf) | 001 002 003 004 | none |
+| GDT.RES.ROWASME.SIZE | ASME dimensional and size rows | 001 002 003 004 | none |
+| GDT.RES.ROWASME.FORM | ASME form rows | 001 002 003 004 | none |
+| GDT.RES.ROWASME.ORIENT | ASME orientation rows | 001 002 003 004 | none |
+| GDT.RES.ROWASME.POS | ASME position rows | 001 002 003 004 | none |
+| GDT.RES.ROWASME.DRF | ASME datum and DRF rows | 001 002 003 004 | none |
+| GDT.RES.ROWASME.DPROF | ASME Y14.5-2018 defaults profile values | 001 002 004 | none |

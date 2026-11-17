@@ -2,8 +2,8 @@
 id: launch-1
 title: Inspect + Report beachhead (free scan inspection, reporting and published correlation)
 status: proposed
-targets: [CORE, KRN, GEO, IO, ALN, GDT, UNC, SCAN, VIZ, RPT, TRUST, AUTO, PLAT, ECO, QUAL, MIG, FLOW, UX, OUTR, AGENT, HAL.IDL, HAL.ACQ]
-exclude: [CMM, LVM, IND, ENT, I18N, HAL.IPP, HAL.LIVE, HAL.DRV, HAL.PAIR, HAL.HOST, HAL.SIM, HAL.XSCR, AUTO.PY, AUTO.SCRIPTED, TRUST.ESIG, UNC.PLAN, UNC.XFM, VIZ.WEB, ECO.SDK, PLAT.XHOST, PLAT.WEB, OUTR.PROG, MIG.PROGEQ, FLOW.PROBE, FLOW.NETWORK]
+targets: [CORE, KRN, GEO, IO, ALN, GDT, UNC, SCAN, VIZ, RPT, TRUST, AUTO, PLAT, ECO, QUAL, MIG, FLOW, UX, OUTR, AGENT, I18N, HAL.IDL, HAL.ACQ]
+exclude: [CMM, LVM, IND, ENT, I18N.XLATE, I18N.GLOSS, I18N.SCRIPT, I18N.CONTENT, HAL.IPP, HAL.LIVE, HAL.DRV, HAL.PAIR, HAL.HOST, HAL.SIM, HAL.XSCR, HAL.ACQ.INGEST.BENCH, AUTO.PY, AUTO.SCRIPTED, TRUST.ESIG, UNC.PLAN, UNC.XFM, VIZ.WEB, VIZ.INBOX.GATES.REG, VIZ.SHELL.TREE.CONSOLE, ECO.SDK, ECO.APPS.PROBE, ECO.APPS.NETWORK, PLAT.XHOST, PLAT.WEB, OUTR.PROG, MIG.PROGEQ, FLOW.PROBE, FLOW.NETWORK, FLOW.INSPECT.J7GF]
 updated: 2026-11-16
 ---
 
@@ -23,7 +23,7 @@ This category is software-only (no motion safety), well understood by buyers, an
   - JOB.ACC.03: drawing-only FAI
   - JOB.ACC.05: kiosk run
   - JOB.ACC.07: **sections and thickness only**. Gap and flush needs the IND.GAPFL pack (P3) and moves to launch-2.
-- MIG correlation study #1 is published under the MIG protocol (subject to D-021 and counsel review).
+- MIG correlation study #1 is published under the MIG protocol. Under D-021 option A, the project publishes no comparisons with named incumbents. Study #1 therefore compares results against public reference data (UNC.RDL, NIST/PTB-style sets) and reports parallel-run *method* agreement only. A comparison against a named incumbent can follow later, only when run by a third party with a licence attestation (D-021 option B, after counsel review).
 - PLAT Tier 1 platforms are green in CI, and the release ships through ECO.REL with QUAL's SBOM and IQ/OQ pack.
 - AGENT's evaluation suite runs against the shipped MCP servers, and the scoreboard is published.
 

@@ -4,18 +4,19 @@ title: Style sets
 level: 3
 parent: RPT.DESIGN
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.DESIGN-001, REQ-RPT.DESIGN-005, REQ-RPT.DESIGN-007]
 covers: []
-depends_on: [RPT.MODEL.TMPL]
-cli: [fid report set-style, fid report save-style, fid report apply-style, fid report show-style]
-mcp: [report_set_style, report_save_style, report_apply_style, report_show_style]
-journal: [report.set_style@1, report.save_style@1, report.apply_style@1]
-updated: 2026-11-16
+depends_on: [RPT.MODEL.TMPL, RPT.MODEL.DOC, CORE.STO.CAS]
+uses_artifacts: [UX.REPORT, UX.TOKENS, ECO.RULES.SPDX]
+cli: [fid report set-style, fid report save-style, fid report apply-style, fid report show-style, fid report set-block-style]
+mcp: [report_set_style, report_save_style, report_apply_style, report_show_style, report_set_block_style]
+journal: [report.set_style@1, report.save_style@1, report.apply_style@1, report.set_block_style@1]
+updated: 2026-11-17
 ---
 
 # RPT.DESIGN.STYLE: Style sets
@@ -57,8 +58,14 @@ SET (style-set model and commands), FONT (font references and bundled font list)
 
 ## Open questions
 
-- Which open-licence font families to bundle as defaults (clean room, CONSTITUTION §8; licence per D-001).
+- Resolved (agreed at review): the default style set is adopted from `UX.REPORT` (values through `UX.TOKENS`), declared as `uses_artifacts`; RPT holds no literal design values for it (`RPT.DESIGN.STYLE.SET`).
+- Which open-licence font families to bundle follows the `UX.TOKENS` typography choice; `RPT.DESIGN.STYLE.FONT` enforces licence (`ECO.RULES.SPDX`) and digest only.
+- Per-block overrides need one more command, `report.set_block_style@1`, added to this node's command lists.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.DESIGN.STYLE.SET | Style-set model, default style set and style commands (leaf) | 001 002 003 005 | none |
+| RPT.DESIGN.STYLE.FONT | Font references and bundled font list (leaf) | 004 006 | none |
+| RPT.DESIGN.STYLE.OVR | Per-block style overrides (leaf) | 002 003 | none |

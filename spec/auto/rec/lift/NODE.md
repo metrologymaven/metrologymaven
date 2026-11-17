@@ -4,7 +4,7 @@ title: Parameter lifting and selection translation
 level: 3
 parent: AUTO.REC
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.REC.CONV, AUTO.PROG.FAMILY, AUTO.PROG.EXPR]
 cli: [fid program lift-*]
 mcp: [program_lift_*]
 journal: [program.lift_*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.REC.LIFT: Parameter lifting and selection translation
@@ -56,7 +56,13 @@ HANDLES (data-handle lifting), VALUES (nominal and element lifting rules), SELEC
 ## Open questions
 
 - Which semantic queries GEO offers (by feature name, by CAD face ID, by region) is not yet fixed; selection translation waits on `GEO.SEL`.
+- Lift commands are `program.lift_parameters@1`, `program.lift_value@1` and `program.lift_selections@1`, all W1 on drafts; each re-checks that exact replay with the default binding stays `IDENTICAL` (REQ-004).
+- `AUTO.PROG.FMT` has no per-step metadata field for `retargetable` and source provenance, which `AUTO.REC.CONV` already assumes; an additive FMT change is needed (see `AUTO.REC.LIFT.SELECT`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.REC.LIFT.PASS | Data-handle lifting pass, lift report and lift command (leaf) | 001 002 004 | GOM.AUT.02 |
+| AUTO.REC.LIFT.VALUES | Lifting chosen nominal values and element references (leaf) | 002 004 | GOM.AUT.02 |
+| AUTO.REC.LIFT.SELECT | Selection translation to semantic queries (leaf) | 003 004 | GOM.AUT.02 |

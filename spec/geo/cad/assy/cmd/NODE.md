@@ -1,0 +1,83 @@
+---
+id: GEO.CAD.ASSY.CMD
+title: Part assignment and instance placement commands
+level: 4
+parent: GEO.CAD.ASSY
+kind: feature
+status: leaf
+phase: P1b
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-GEO.CAD.ASSY-004, REQ-GEO.CAD.ASSY-005]
+covers: [GOM.CAD.02]
+depends_on: [GEO.CAD.ASSY.MODEL, GEO.CAD.ASSY.FLAT, GEO.FRAME.CMD, GEO.TYPES.REG, CORE.PRJ, CORE.REG, CORE.DEP]
+side_effect: [W2, W2, R0]
+determinism: D0
+cli: [fid geo assign-part, fid geo place-instance, fid geo list-part-cad]
+mcp: [geo_assign_part, geo_place_instance, geo_list_part_cad]
+journal: [geo.assign_part@1, geo.place_instance@1, geo.list_part_cad@1]
+updated: 2026-11-17
+---
+
+# GEO.CAD.ASSY.CMD: Part assignment and instance placement commands
+
+## Purpose
+
+The registry commands for the part-handling half of GOM.CAD.02: place a body definition as an instance under a frame, assign instances to the project parts that are inspected (or remove them), and list which CAD each part holds. This is the L2 command adapter for GEO.CAD.ASSY.
+
+## Scope
+
+**In:**
+- `geo.place_instance@1` (W2): one instance of a definition body, with a placement relative to a parent frame; creates the frame through GEO.FRAME.CMD's library path in the same transaction
+- `geo.assign_part@1` (W2): add or remove instances to or from a CORE.PRJ part revision
+- `geo.list_part_cad@1` (R0): instances and bodies per part, paged
+- Dependency edges from each instance to its definition body and frame
+
+**Out** (and which node owns it instead):
+- Flattening logic and placement checks (owned by `GEO.CAD.ASSY.FLAT`)
+- Import of whole assemblies (owned by `IO.CAD.STEP`, which commits a `FlattenPlan` in its import command)
+- Groups and layers (owned by `GEO.CAD.GROUP`)
+
+## Requirements
+
+- **REQ-GEO.CAD.ASSY.CMD-001** `geo.place_instance@1` and `geo.assign_part@1` shall each be class W2 and produce exactly one Record Journal entry when they commit.
+- **REQ-GEO.CAD.ASSY.CMD-002** If a placement given to `geo.place_instance@1` is rejected by GEO.CAD.ASSY.FLAT's classification, then the command shall fail with `unsupported_placement` and the reason, and journal nothing.
+- **REQ-GEO.CAD.ASSY.CMD-003** When an instance is assigned to a part that already holds it, the command shall leave membership unchanged and report `already_member` as a warning, not an error.
+- **REQ-GEO.CAD.ASSY.CMD-004** The commands shall register each instance with a dependency edge to its definition body and its frame, so a frame change recomputes projection, selection and tessellation results on that instance through CORE.DEP rather than by copying geometry.
+- **REQ-GEO.CAD.ASSY.CMD-005** `geo.list_part_cad@1` shall be class R0, write no Record Journal entry and return instances in ascending instance ID order, at most 1 000 per page.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture project `fixtures/geo/cad/assy/proj_bolts` (a bolt body and a part `P1`), when `fid geo place-instance --definition <bolt> --parent <world> --translation 10mm,0,0 --json` runs twice with different translations and `fid geo assign-part P1 --add <i1> <i2> --json` runs, then the part lists both instances and the Record Journal grew by exactly three entries.
+- **AC-2** (error path) Given a placement with scale (1, 1, 2), when placed, then `unsupported_placement` with reason `NonUniformScale` and the journal is unchanged.
+- **AC-3** Given the AC-1 project, when the parent frame of `i1` is moved with `geo.set_transform@1`, then CORE.DEP marks dependents of `i1` stale and none of `i2`.
+- **AC-4** Given AC-1, when `fid geo list-part-cad P1 --json` runs, then two instances are returned in ascending ID order and the journal length is unchanged.
+- **AC-5** (replay) Given the AC-1 journal, when replayed in exact mode, then the outcome is `IDENTICAL`.
+- **AC-6** Given the generated manifest, then `geo_place_instance` and `geo_assign_part` are named tools (agents write to their branch) and `geo_list_part_cad` is exposed.
+
+## Design
+
+- **Registry command(s):** `geo.place_instance@1` W2 `{ definition: ElementRef, parent: FrameId, rotation?: RotationParam, translation: [AuthoredLength; 3], scale?: decimal, label?: string }` → `{ instance, frame }`; `geo.assign_part@1` W2 `{ part: PartRef, add?: [InstanceRef], remove?: [InstanceRef] }` → part CAD digest; `geo.list_part_cad@1` R0 `{ part, page? }` → instances.
+- **Data structures:** schemas only; instances are CORE elements registered through GEO.TYPES.REG with UUIDv7 IDs for commands and UUIDv5 for import-derived ones.
+- **Algorithm:** validate, classify placement with `assy::flat` rules, create the frame and instance in one transaction, add dependency edges.
+- **Errors:** `not_found`, `not_cad_body`, `unsupported_placement`, `unknown_frame`, `unknown_part`, `bad_quantity`, `bad_label`.
+- **Determinism:** D0.
+- **Performance budget:** command overhead under 5 ms [unverified].
+- **Crate:** `fid-geo-cmd` (L2 command crate).
+
+## Test fixtures
+
+- `fixtures/geo/cad/assy/proj_bolts`: a test project generated by a script from the `two_bolts.json` body. CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-geo-cmd` (L2), register `geo.place_instance@1` (W2), `geo.assign_part@1` (W2) and `geo.list_part_cad@1` (R0) through CORE.REG; CLI and MCP are generated from the manifest. `place_instance` parses authored lengths with GEO.FRAME.UNITS, classifies the placement with `fid-geo-cad::assy::flat` (rigid or uniform similarity, else `unsupported_placement` with reason), creates the instance frame and the instance element in one transaction, and adds CORE.DEP edges to the definition body and the frame. `assign_part` adds or removes instances in a CORE.PRJ part revision (`already_member` is a warning). `list_part_cad` pages 1 000 instances in ascending ID order and writes no Record Journal entry. Acceptance: AC-1 three journal entries; AC-2 `unsupported_placement`; AC-3 frame move invalidates only `i1` dependents; AC-4 listing; AC-5 exact replay `IDENTICAL`; AC-6 manifest projection. Constraints: CONSTITUTION §3 (classes, naming, agents write to their branch), C6 for labels, §8 (no panic, no `unsafe`). Files: `crates/fid-geo-cmd/src/cad_assy.rs`, `tests/cad_assy_cmd.rs`, `fixtures/geo/cad/assy/proj_bolts/`.
+
+## Open questions
+
+- `geo.list_part_cad@1` is added here to cover the "listing parts' CAD" item of the parent's scope; the parent's frontmatter names only the two W2 commands.
+
+## Children
+
+_Leaf: none._

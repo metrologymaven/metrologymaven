@@ -4,7 +4,7 @@ title: Repository template
 level: 3
 parent: ECO.REPO
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-ECO.REPO-006]
 covers: []
 depends_on: [ECO.REPO.LAYERS, ECO.REPO.TOPO]
+uses_artifacts: [ECO.RULES.BLOCK, ECO.RULES.SYNC, ECO.CI.WF, ECO.CI.GATES]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.REPO.TPL: Repository template
@@ -45,17 +46,23 @@ The starting point for every new repository: standard files, workspace configura
 
 ## Interfaces
 
-- **Offers:** template repository; instantiation script; promotion procedure.
-- **Consumes:** ECO.RULES generated block and sync tool; ECO.CI required-check set and caller workflow; ECO.REPO.LAYERS and ECO.REPO.TOPO files. (ECO.RULES and ECO.CI depend on ECO.REPO, so these are consumed as files, not declared dependencies.)
+- **Offers:** `templates/repo/` with variants `code` and `spec`, and `python -m repo_template new` (FILES); the self-test job (SELFTEST); `PROMOTE.md` and `python -m repo_template promote` (PROMOTE).
+- **Consumes (as files):** the house-rules block format and sync tool (`ECO.RULES.BLOCK`, `ECO.RULES.SYNC`); `required-checks.toml` and the reusable caller workflow (`ECO.CI.WF`); `ci-gates.toml` defaults (`ECO.CI.GATES`).
+- **Code dependency:** `layers.toml` schema and checker (`ECO.REPO.LAYERS`) and `repos.toml` schema and pin checker (`ECO.REPO.TOPO`).
 
 ## Decomposition hints
 
-FILES (template content), SELFTEST (instantiate-and-check job), PROMOTE (library promotion procedure).
+FILES (template content and instantiation), SELFTEST (instantiate-and-check job), PROMOTE (library promotion procedure).
 
 ## Open questions
 
-- D-005 (provisional egui): if a TypeScript MCP App host shim is ever needed, the template needs a variant for it.
+- D-005 (provisional egui): if a TypeScript MCP App host shim is ever needed, the template needs a variant for it; the FILES child keeps variants as data so one can be added.
+- ECO.RULES and ECO.CI depend on ECO.REPO, so the children consume their outputs as files (`uses_artifacts`), never as code dependencies.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REPO.TPL.FILES | Template file set and instantiation script (leaf) | 002 | none |
+| ECO.REPO.TPL.SELFTEST | Template self-test job (leaf) | 001 003 | none |
+| ECO.REPO.TPL.PROMOTE | Library promotion procedure and tool (leaf) | 004 | none |

@@ -4,7 +4,7 @@ title: Workspace frame, docking, status bar and role layouts
 level: 3
 parent: VIZ.SHELL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.SHELL.SPKTREE, VIZ.SHELL.SPKTABLE, VIZ.SHELL.SPKRPT, CORE, VIZ.
 cli: [fid view save-layout, fid view apply-layout, fid view list-layouts]
 mcp: [view_save_layout, view_apply_layout, view_list_layouts]
 journal: [view.save_layout@*, view.apply_layout@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.SHELL.DOCK: Workspace frame, docking, status bar and role layouts
@@ -62,7 +62,13 @@ FRAME (windows and docking), HOST (panel host API), STATBAR, RAIL, LAYOUT (role 
 ## Open questions
 
 - Depends on the D-005 spikes passing; if a spike fails, the affected panels may move to another toolkit while the frame stays (concept doc migration triggers).
+- Applied: the panel catalogue (`panels.json`, HOST) and layout catalogue (`layouts.json`, LAYOUT) are the formats `ECO.APPS.MANIFEST.SCHEMA` reads; that node should declare `uses_artifacts` on them.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.DOCK.HOST | Window frame, docking, panel host and viewport host (leaf) | 001 006 | none |
+| VIZ.SHELL.DOCK.STATBAR | Status bar as provenance strip (leaf) | 003 | none |
+| VIZ.SHELL.DOCK.RAIL | Workflow rail driven by the dependency graph (leaf) | 004 | none |
+| VIZ.SHELL.DOCK.LAYOUT | Role layouts saved and applied as commands (leaf) | 002 005 | none |

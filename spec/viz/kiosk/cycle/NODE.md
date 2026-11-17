@@ -4,18 +4,18 @@ title: End-of-cycle actions, loops and escalation
 level: 3
 parent: VIZ.KIOSK
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.KIOSK-004]
 covers: []
-depends_on: [VIZ.KIOSK.STEPS, AUTO.RUN]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+depends_on: [VIZ.KIOSK.SESSION, VIZ.KIOSK.STATUS, AUTO.RUN.PLAY, AUTO.RUN.BIND, CORE.BUS.PRIN]
+cli: [fid view resolve-kiosk-escalation]
+mcp: [view_resolve_kiosk_escalation]
+journal: [view.resolve_kiosk_escalation@*]
+updated: 2026-11-17
 ---
 
 # VIZ.KIOSK.CYCLE: End-of-cycle actions, loops and escalation
@@ -55,8 +55,13 @@ ENDACT, LOOP, ERRDEC (declared decisions), ESCAL (supervisor escalation), SUMMAR
 
 ## Open questions
 
-- RPT generation and export are consumed through registry commands only, not as a `depends_on`: RPT depends on VIZ as a whole, so the reverse edge would form a cycle.
+- RPT generation and export are consumed as program steps run by the interpreter, not as a `depends_on` (RPT depends on VIZ, so the reverse edge would form a cycle). End-of-cycle actions are therefore declared program steps (`VIZ.KIOSK.CYCLE.SUMMARY`).
+- AUTO's program format has no per-step operator decisions on failure yet (`on_error` is noted in `AUTO.PROG.INTERP.CALL` as a possible additive change); until it exists, every failure escalates to a supervisor (`VIZ.KIOSK.CYCLE.ESCAL`) [cross-domain].
+- Supervisors are listed in the admin setting `kiosk.supervisors` and confirmed by OS user presence, since CORE.BUS defines no roles.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.KIOSK.CYCLE.ESCAL | Failed-step decisions and supervisor escalation (leaf) | 001 002 | none |
+| VIZ.KIOSK.CYCLE.SUMMARY | Cycle summary, loop progress and end-of-cycle outcomes (leaf) | 003 004 | none |

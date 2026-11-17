@@ -4,7 +4,7 @@ title: Native CAD translator plugin contract
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -52,9 +52,14 @@ DESC (descriptor), BRIDGE (STEP hand-off), DIRECT (direct entity output), after 
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-019 (Native CAD formats: plugin-only translators or out of scope) is accepted. Apply its Decision section (`decisions/D-019-*.md`) when this node is expanded.
-- **Blocked on D-019**: plugin-only translators (as REQ-IO.CAD-011 assumes) versus native CAD out of scope. If D-019 chooses out of scope, this node is removed and the native parts of the covered seeds move to `seeds/out-of-scope.md`.
+- D-019 accepted (option A now, C revisited in P4) and applied: plugin-only translators; no first-party native reader. Parity rows for GOM.IMP.06, PCD.CAD.01, PW.IMP.03 and SA.CAD.01 must say "via plugin". Option B (convert to STEP AP242 in the user's CAD system) stays the documented fallback. A first-party JT reader (option C) is not part of this subtree until revisited in P4.
+- D-024 (option C) applied: OCCT-style healers are translator plugins with input format `step` under the same contract.
+- `IO.REG.PLUGIN` must offer an out-of-process native host (translator SDKs are native libraries); its open question already names this.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.XLATE.DESC | Translator descriptor schema and native-format recognition (leaf) | 001 003 | none |
+| IO.CAD.XLATE.BRIDGE | Native CAD import command with STEP hand-off (leaf) | 002 003 | GOM.IMP.06, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |
+| IO.CAD.XLATE.DIRECT | Direct translator output validation and commit (leaf) | 001 | none |

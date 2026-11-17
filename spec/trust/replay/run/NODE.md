@@ -11,13 +11,13 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-001]
 covers: []
-depends_on: [TRUST.REPLAY.SELECT, TRUST.REPLAY.SANDBOX, TRUST.REPLAY.COMPARE, TRUST.REPLAY.KART]
+depends_on: [TRUST.REPLAY.SELECT, TRUST.REPLAY.SANDBOX, TRUST.REPLAY.COMPARE, TRUST.REPLAY.KART.LOOKUP]
 side_effect: R1
 determinism: D0
 cli: [fid verify replay]
 mcp: [verify_replay]
 journal: [verify.replay@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.RUN: Verifier replay command
@@ -71,7 +71,8 @@ The `verify.replay@1` command: builds the plan (SELECT), obtains the kernel (KAR
 
 ## Open questions
 
-- Depends on `TRUST.REPLAY.KART` (D-020) only through the `ArtifactSource` trait; a bundled-only source is enough to build and test this leaf.
+- Depends on `TRUST.REPLAY.KART.LOOKUP` (D-020 option C) only through the `ArtifactSource` trait; the opt-in network fetch (`TRUST.REPLAY.KART.FETCH`) is a separate `fid` command and is never linked here.
+- Boundary with CORE.RPL: this is the standalone verifier replayer working from a package only; `CORE.RPL.EXEC` (including `CORE.RPL.EXEC.VERIFY`) is the in-app replay engine over a project store. They share outcome definitions (`CORE.RPL.CLASS`) as artifacts, not code.
 
 ## Children
 

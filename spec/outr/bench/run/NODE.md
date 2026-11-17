@@ -4,18 +4,19 @@ title: Benchmark recipes, release re-runs and result pages
 level: 3
 parent: OUTR.BENCH
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.BENCH-001, REQ-OUTR.BENCH-002, REQ-OUTR.BENCH-006, REQ-OUTR.BENCH-008]
 covers: []
-depends_on: [ECO.REL, ECO.DATA, OUTR.BRAND.LINT]
+depends_on: [OUTR.BRAND.LINT]
+uses_artifacts: [ECO.REL, ECO.DATA, PLAT.HW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BENCH.RUN: Benchmark recipes, release re-runs and result pages
@@ -58,8 +59,14 @@ RECIPE (format and validation), HARNESS (release re-run), PAGES (generator and r
 
 ## Open questions
 
-- Where the harness runs (project CI or a donated reference machine) affects performance results; PLAT.HW owns reference machines.
+- Where the harness runs (project CI or a donated reference machine) affects performance results; PLAT.HW owns reference machines. OUTR.BENCH.RUN.HARNESS runs `command` recipes only on a machine whose profile matches, and otherwise reuses the release-numbers bundle (ECO.DATA.BENCH, PLAT.HW.RUN).
+- The former code dependencies on ECO.REL and ECO.DATA are artifact reads (release binaries, checksum file, dataset catalogue, release-numbers bundle) and are now `uses_artifacts` (CONSTITUTION 2.1, D-034).
+- REQ-OUTR.BENCH.RUN-001 says a recipe states "the release"; the children read this as `since_release` in the recipe and the actual release in each result record.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BENCH.RUN.RECIPE](recipe/NODE.md) | Benchmark recipe format and validator (leaf) | 001 | none |
+| [OUTR.BENCH.RUN.HARNESS](harness/NODE.md) | Release re-run harness and result store (leaf) | 002 003 | none |
+| [OUTR.BENCH.RUN.PAGES](pages/NODE.md) | Result-page generator with regression display (leaf) | 002 004 005 006 | none |

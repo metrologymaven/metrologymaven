@@ -4,7 +4,7 @@ title: Proposal brief and computed impact
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [CORE.JRN.BR, AUTO.MCP.TAINT]
 cli: [fid agent attach-brief, fid agent compute-impact, fid agent show-brief]
 mcp: [agent_attach_brief, agent_compute_impact, agent_show_brief]
 journal: [agent.attach_brief@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.PROPOSE: Proposal brief and computed impact
@@ -59,6 +59,10 @@ Defines what an agent proposal contains so a human can adopt or reject it from t
 
 SCHEMA (brief type and limits), ATTACH (W1 command and head binding), IMPACT (diff to affected characteristics and decision moves), SHOW (completeness, staleness and claim mismatch).
 
+## Split rationale
+
+Split by **who produces the data**: the agent's words (BRIEF, W1), the system's computation from the diff (IMPACT, R1), and the verdict that compares the two (SHOW, R0). Each child is one registry command in crate `fid-agent`. Alternative considered: a separate SCHEMA child; rejected because the schema has exactly one writer (the attach command) and would be a leaf with no command of its own.
+
 ## Open questions
 
 - REQ-CORE.JRN.BR-007 accepts a promotion request without a brief. Should CORE refuse an agent promotion request whose source head has no complete brief, or should the Inbox only flag it? Needs CORE agreement; AGENT cannot change CORE.JRN.BR.
@@ -67,4 +71,8 @@ SCHEMA (brief type and limits), ATTACH (W1 command and head binding), IMPACT (di
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.PROPOSE.BRIEF | Proposal brief schema and attach command | 001 002 003 008 | none |
+| AGENT.PROPOSE.IMPACT | Computed proposal impact from the branch diff | 004 | none |
+| AGENT.PROPOSE.SHOW | Brief completeness, staleness and claim mismatch | 003 005 006 007 | none |

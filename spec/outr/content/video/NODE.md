@@ -4,18 +4,19 @@ title: Video production with built-in capture
 level: 3
 parent: OUTR.CONTENT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.CONTENT-001, REQ-OUTR.CONTENT-004, REQ-OUTR.CONTENT-005]
 covers: []
-depends_on: [VIZ.CAPTURE, OUTR.CONTENT.PUB]
+depends_on: [OUTR.CONTENT.PUB]
+uses_artifacts: [VIZ.CAPTURE.VIDEO, VIZ.CAPTURE.TRACK, VIZ.CAPTURE.EXPORT, OUTR.CONTENT.REPRO.MARK]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.CONTENT.VIDEO: Video production with built-in capture
@@ -56,8 +57,14 @@ REC (recording procedure), CAP (captions and transcripts), PKG (package and host
 
 ## Open questions
 
+- CONSTITUTION §2.1 (D-034): the former code dependency on VIZ.CAPTURE is now `uses_artifacts` on its exported segments, view track and journal.
+- The capture commands are P1b (VIZ.CAPTURE.REC, VIZ.CAPTURE.VIDEO), so the children start in P1b.
 - Mirroring to video platforms would add third-party trackers on those platforms; a maintainer choice (carried from OUTR.CONTENT).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.CONTENT.VIDEO.REC](rec/NODE.md) | Recording procedure and edit-list check (leaf) | 001 | none |
+| [OUTR.CONTENT.VIDEO.CAP](cap/NODE.md) | Captions, transcript and caption review check (leaf) | 002 | none |
+| [OUTR.CONTENT.VIDEO.PKG](pkg/NODE.md) | Video package, self-hosting and outdated marker check (leaf) | 001 003 004 005 | none |

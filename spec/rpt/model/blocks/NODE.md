@@ -4,18 +4,19 @@ title: Content block types
 level: 3
 parent: RPT.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.MODEL-001, REQ-RPT.MODEL-010, REQ-RPT.MODEL-012]
 covers: [GOM.RPT.03, GOM.RPT.04, GOM.RPT.05, PCD.RPT.03, PW.RPT.03, SA.RPT.02, SA.RPT.04]
-depends_on: [RPT.MODEL.DOC, VIZ.VIEW, VIZ.CAPTURE]
-cli: [fid report set-table-block, fid report set-chart-block, fid report set-view-block]
-mcp: [report_set_table_block, report_set_chart_block, report_set_view_block]
-journal: [report.set_table_block@1, report.set_chart_block@1, report.set_view_block@1]
-updated: 2026-11-16
+depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND, RPT.MODEL.FMT, RPT.STATS.TREND, CORE.STO]
+uses_artifacts: [VIZ.VIEW.NAMED, VIZ.CAPTURE.SHOT]
+cli: [fid report set-table-block, fid report set-chart-block, fid report set-view-block, fid report set-text-block, fid report set-image-block]
+mcp: [report_set_table_block, report_set_chart_block, report_set_view_block, report_set_text_block, report_set_image_block]
+journal: [report.set_table_block@1, report.set_chart_block@1, report.set_view_block@1, report.set_text_block@1, report.set_image_block@1]
+updated: 2026-11-17
 ---
 
 # RPT.MODEL.BLOCKS: Content block types
@@ -64,7 +65,14 @@ TABLE (table block and column model), CHART (chart block), VIEW (view block and 
 ## Open questions
 
 - Chart blocks are P1a in this node, but their main series source (`RPT.STATS`) starts in P1b; P1a can ship table, text, view and image blocks first.
+- **Applied at split (2026-11-17, D-034):** `VIZ.VIEW` and `VIZ.CAPTURE` were code dependencies on an L3 surface, which CONSTITUTION §2.1 forbids for an L2 domain. The view block now reads NamedView and capture-manifest records as published artifacts (`uses_artifacts`) and returns the NamedView ID to the GUI, which performs the restore. Text and image editing commands were added (`set-text-block`, `set-image-block`) within the parent's `*-block` pattern.
+- **Applied at split:** `RPT.MODEL.BLOCKS.CHART` is phase P1b, as this node's earlier note proposed; P1a ships table, text, image, header, footer and view blocks.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.MODEL.BLOCKS.TABLE | Characteristic table block with column and row customisation (leaf) | 001 002 003 | GOM.RPT.04, PW.RPT.03, SA.RPT.04 |
+| RPT.MODEL.BLOCKS.CHART | Chart block referencing ChartSeries (leaf, P1b) | 001 004 | GOM.RPT.05, PCD.RPT.03, SA.RPT.02 |
+| RPT.MODEL.BLOCKS.VIEW | Restorable 3D view block (leaf) | 001 005 006 | GOM.RPT.03, PW.RPT.03 |
+| RPT.MODEL.BLOCKS.TEXT | Text, image, header and footer blocks (leaf) | 001 007 008 009 | PCD.RPT.03 |

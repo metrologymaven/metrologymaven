@@ -4,18 +4,19 @@ title: Golden-journal acceptance runner, pass rules and GA gates
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-FLOW-002, REQ-FLOW-003, REQ-FLOW-004]
 covers: [JOB.USE.04]
-depends_on: [FLOW.STUDY, CORE.RPL, CORE.JRN, CORE.BUS, ECO.DATA, ECO.CI, PLAT.HW, VIZ.CAPTURE]
+depends_on: [CORE.RPL, CORE.JRN, CORE.BUS, ECO.DATA, AUTO.CTRL, VIZ.SHELL]
+uses_artifacts: [FLOW.STUDY, ECO.CI, PLAT.HW, PLAT.DOCTOR, VIZ.CAPTURE, UNC.ORS]
 cli: [fid accept run-suite, fid accept show-report, fid accept evaluate-gate]
 mcp: [accept_run_suite, accept_show_report, accept_evaluate_gate]
 journal: [accept.*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # FLOW.RUNNER: Golden-journal acceptance runner, pass rules and GA gates
@@ -69,9 +70,27 @@ PKG (package format and validation), NIGHTLY (runner and report), UNASSIST (agen
 ## Open questions
 
 - The parent names `fid accept run`; CONSTITUTION §3 gives verb-object CLI names, so this node uses `fid accept run-suite`.
-- Reference-machine hosting is D-014 (open); until it is decided, nightly machine times come from hosted runners and are labelled as such.
-- A per-app GA gate presumes per-app milestones; D-017 (open) decides how they relate to phases.
+- Reference-machine hosting follows D-014 (accepted: a cheap minimum-profile machine plus a sponsored recommended-profile machine, hosts published with results); until they exist, nightly times come from hosted runners and are labelled as such.
+- Per-app gates follow D-017 (accepted, option A): an app's 1.0 needs every phase of its core workflow; the gate is evaluated per app and per milestone, and packages list the milestones they gate.
+- REQ-010's "journaled" report is read under D-031: `accept.run_suite@1` is R1, so it writes an Activity Log entry with the report digest inside a recording session, not a Record Journal entry.
+
+## Split rationale
+
+The dividing principle is **format, checks, orchestration, reporting and gate**. The package format (PKG) is the contract every job family writes to. Checks split by what they read: stored values through R0 commands (CHKVAL), the UI and presentation track (CHKUI), principal attribution (UNASSIST) and crash survival (RELIAB, which also owns the `JOB.USE.04` crash-free rate). NIGHTLY orchestrates them into the report defined by VERDICT, and GATE combines reports with partner study aggregates. Study records are read as an artifact, so RUNNER no longer has a code dependency on STUDY.
+
+Alternatives considered:
+- **One checks child.** Rejected: UI checks need the control channel and accessibility tree (P1a), value checks need only the bus (P0); separating them keeps P0 work unblocked.
+- **Trend history as its own child.** Rejected: it is an append-only file with one read command and fits VERDICT.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.RUNNER.PKG](pkg/NODE.md) | Acceptance-job package format and validator | 001 011 | |
+| [FLOW.RUNNER.UNASSIST](unassist/NODE.md) | Unassisted-run principal check | 004 | |
+| [FLOW.RUNNER.RELIAB](reliab/NODE.md) | Forced-kill harness and crash-free session rate | 008 009 | JOB.USE.04 |
+| [FLOW.RUNNER.CHKVAL](chkval/NODE.md) | Value and record quality-check evaluators | 002 | |
+| [FLOW.RUNNER.CHKUI](chkui/NODE.md) | UI and presentation-track quality-check evaluators | 002 | |
+| [FLOW.RUNNER.VERDICT](verdict/NODE.md) | Nightly acceptance report, show command and trend history | 005 010 | |
+| [FLOW.RUNNER.NIGHTLY](nightly/NODE.md) | Nightly suite runner command | 002 003 004 010 | |
+| [FLOW.RUNNER.GATE](gate/NODE.md) | Pass rules and per-app GA gate evaluation | 005 006 007 011 | |

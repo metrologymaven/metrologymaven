@@ -4,7 +4,7 @@ title: Accessibility tree, describe view and UI inspection
 level: 3
 parent: VIZ.SHELL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.SHELL.DOCK, VIZ.RENDER.SCENE, AUTO.CTRL]
 cli: [fid view describe-view]
 mcp: [view_describe_view]
 journal: [view.describe_view@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.SHELL.A11Y: Accessibility tree, describe view and UI inspection
@@ -57,7 +57,16 @@ AXTREE (platform exposure), DESCRIBE (describe-view command, likely a leaf), INS
 ## Open questions
 
 - AccessKit coverage on Linux is weaker [unverified]; PLAT decides Linux support tier for accessibility.
+- Applied: stable widget IDs, the metrology roles (`value_of_record`, `not_decidable`, `catalogued_state`, `explanation`) and attributes (`command`, `reason_code`, `standards_ref`, `basis`, `entity_id`, `message_id`, `secret`) requested by `FLOW.DEADEND.WHY`, `FLOW.RUNNER.CHKUI`, `AUTO.CTRL.UIOPS`, `AUTO.CTRL.TRACE` and `ECO.APPS.HANDOFF` are specified in AXTREE; the `UiHost` implementation is UIHOST.
+- Added: a fourth D-005 spike for CJK IME composition and font fallback (SPKIME), raised by I18N.SCRIPT.
+- Cross-domain (unresolved): `CORE.BUS.PRIN` needs an injected-input origin so commands triggered through the control channel carry the channel principal (see UIHOST).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.A11Y.AXTREE | Widget tree, stable widget IDs, roles and platform exposure (leaf) | 001 003 | none |
+| VIZ.SHELL.A11Y.UIHOST | Control-channel UI host, input injection and origin binding (leaf) | 003 004 | none |
+| VIZ.SHELL.A11Y.DESCR | Deterministic describe-view command (leaf) | 002 | none |
+| VIZ.SHELL.A11Y.AUDIT | Accessibility baseline, CI checks and release audit (leaf) | 005 | none |
+| VIZ.SHELL.A11Y.SPKIME | Toolkit spike - CJK IME composition and font fallback (leaf) | 001 | none |

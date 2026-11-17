@@ -4,18 +4,19 @@ title: Optional driver-host and install-integrity checks
 level: 3
 parent: PLAT.DOCTOR
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DOCTOR-003, REQ-PLAT.DOCTOR-006, REQ-PLAT.DOCTOR-007]
 covers: []
-depends_on: [PLAT.DOCTOR.CMD, PLAT.DEPLOY, PLAT.XHOST]
+depends_on: [PLAT.DOCTOR.CMD, PLAT.DEPLOY.OFFLINE.BUNDLE]
+uses_artifacts: [PLAT.XHOST.DISCOV, PLAT.XHOST.SDKTAB]
 cli: [fid doctor run-check]
 mcp: [doctor_run_check]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.DOCTOR.HOSTCHK: Optional host and install checks
@@ -47,17 +48,25 @@ Extends `fid doctor run-check` with opt-in checks that go beyond the local machi
 
 ## Interfaces
 
-- **Offers:** report sections `install` and `hosts` (schema bump of `PLAT.DOCTOR.REPORT`).
-- **Consumes:** install manifest (`PLAT.DEPLOY.OFFLINE`); driver-host configuration and handshake (`PLAT.XHOST.DISCOV`, HAL host protocol).
+- **Offers:** report sections `install` (P1a) and `hosts` (P2) through a schema bump of `PLAT.DOCTOR.REPORT`.
+- **Consumes:** install manifest library (`PLAT.DEPLOY.OFFLINE.BUNDLE`); base command (`PLAT.DOCTOR.CMD`). Artifacts only, for the deferred host part: the driver-host configuration file (`PLAT.XHOST.DISCOV`) and the SDK platform table (`PLAT.XHOST.SDKTAB`).
 
 ## Decomposition hints
 
-INSTALL (manifest verification; leaf once the manifest format exists), HOSTS (host handshake check; after `PLAT.XHOST.DISCOV` and its side-effect class are settled).
+See Children.
 
 ## Open questions
 
-- Contacting a host on another machine may be egress; its side-effect class is open as **D-023** (raised by the `PLAT.XHOST` split). Until it is settled, `--check-hosts` may contact only loopback hosts if the doctor is to stay R0.
+- PLAT.XHOST is out of milestone launch-1, so this node takes no code dependency on it. The install check ships in P1a; the host check is deferred to P2 as `PLAT.DOCTOR.HOSTCHK.HOSTS`.
+- D-023 (accepted, option C) makes `--check-hosts` R0 against already-configured hosts. `CORE.BUS.POL.EGRESS` REQ-004 issues a `NetPermit` only to X1, I1 and D1 handlers, so an R0 doctor command cannot open a socket to a remote host as specified today. CORE.BUS.POL must grant a permit to D-023's read-only handshake (cross-domain, carried by `PLAT.DOCTOR.HOSTCHK.HOSTS`).
+
+## Split rationale
+
+Split by **what is checked and when it can ship**: install integrity needs only the install manifest (P1a, launch-1); the host check needs PLAT.XHOST and the HAL host protocol (P2) and a resolution of the socket-permit rule. Keeping them apart lets the install check ship without pulling excluded subsystems into launch-1.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DOCTOR.HOSTCHK.INSTALL | Install-integrity check (--check-install) | 001 003 004 | none |
+| PLAT.DOCTOR.HOSTCHK.HOSTS | Configured driver-host check (--check-hosts) | 002 003 004 005 | none |

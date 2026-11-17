@@ -4,18 +4,19 @@ title: Threat model and security architecture review
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-003]
 covers: []
-depends_on: [ECO.REL.PROC]
+depends_on: []
+uses_artifacts: [ECO.REL.PROC.GATES, ECO.REL.PROC.NOTES, CORE.REG.MAN, ECO.CI.GATES, QUAL.VULN.ADVIS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.THREAT: Threat model and security architecture review
@@ -52,18 +53,30 @@ Keeps a written, versioned threat model for the whole platform and runs the secu
 ## Interfaces
 
 - **Offers:** threat model document; threat register data file; per-minor review record; register check and review-trigger rule (run by `ECO.CI`).
-- **Consumes:** the release runbook and minor-version tags (`ECO.REL.PROC`); the side-effect class table (CONSTITUTION §3); the spec tree for requirement ID resolution.
+- **Consumes (as artifacts):** the `qual-threat` gate and `--pre-tag` mode (`ECO.REL.PROC.GATES`), which read `threat/reviews/<MAJOR.MINOR>.toml`; release notes (`ECO.REL.PROC.NOTES`), which read the `high` count; the Registry Manifest (`CORE.REG.MAN`) for command classes; gate selection (`ECO.CI.GATES`); the published advisory feed (`QUAL.VULN.ADVIS`); the spec tree for requirement ID resolution.
 
 ## Decomposition hints
 
 MODEL (document and register schema), REVIEW (per-minor review record and gate), TRIGGER (PR-level change triggers), CHECK (requirement-ID resolution).
 
+## Split rationale
+
+The split follows the three moments the threat model is touched: continuously as data with a CI check (REG), once per minor release as a signed-off review (REVIEW), and on any PR that changes the architecture (TRIGGER). Each has a different input (the register, two register versions, a PR diff) and a different consumer (CI, the release gate, PR review).
+
+Alternatives considered:
+- **Separate MODEL and CHECK leaves** (the hints). Rejected: the check is the schema's validator; splitting them would put one file format in two leaves.
+- **Folding TRIGGER into REG.** Rejected: TRIGGER reads Registry Manifests and PR events, a different input set and failure mode.
+
 ## Open questions
 
-- The minor-release gate needs a step in `ECO.REL.PROC`'s runbook; cross-domain.
-- Who may act as reviewer (a maintainer other than the author, or an external reviewer) is a governance choice for D-003.
-- The concept doc's threat table (01 §10.2) is a starting point and needs re-checking against the current spec before it is imported [unverified currency].
+- Resolved: the minor-release gate exists as `ECO.REL.PROC.GATES` gate `qual-threat` and runbook step `threat-review-minor` (`ECO.REL.PROC.RUNBOOK`); `QUAL.THREAT.REVIEW` adopts its proposed path.
+- Resolved: the reviewer is a maintainer other than the author (D-003).
+- The concept doc's threat table (01 §10.2) needs re-checking against the current spec before import [unverified currency].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.THREAT.REG | Threat model document, register schema and register check | 001 002 003 006 007 | none |
+| QUAL.THREAT.REVIEW | Per-minor-release threat-model review record | 004 | none |
+| QUAL.THREAT.TRIGGER | PR-level threat-model review trigger | 005 | none |

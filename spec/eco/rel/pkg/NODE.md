@@ -4,18 +4,19 @@ title: Per-OS installers and packages
 level: 3
 parent: ECO.REL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ECO.REL-001]
 covers: []
-depends_on: [PLAT.MATRIX, ECO.APPS.LIST, ECO.CI.WF]
+depends_on: [ECO.CI.WF]
+uses_artifacts: [PLAT.MATRIX.FILE, ECO.APPS.LIST, ECO.APPS.MANIFEST, PLAT.DEPLOY.SILENT, PLAT.DEPLOY.NOADMIN, PLAT.DEPLOY.OFFLINE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.REL.PKG: Per-OS installers and packages
@@ -50,17 +51,26 @@ Builds the installable packages for each released app, the `fid` CLI and `fid-ve
 
 ## Interfaces
 
-- **Offers:** installers and packages per Tier 1 combination; installed-app registry entries.
-- **Consumes:** PLAT.MATRIX tier file; ECO.APPS.LIST; ECO.CI.WF build jobs; ECO.APPS.MANIFEST branding slot.
+- **Offers:** `package-plan.json` and `packages/gate.json` (PLAN); MSI and portable ZIP packages (WIN); DMG and tar.gz packages (MAC); tar.gz, deb and rpm packages (LINUX); the installed-app registration contract and entries (REG, consumed as a file format by `ECO.APPS.HANDOFF`).
+- **Consumes (as files):** `platform/support-matrix.toml` (`PLAT.MATRIX.FILE`); `apps.toml` (`ECO.APPS.LIST`); `apps-status.json` and the branding slot (`ECO.APPS.MANIFEST`); MSI property contract (`PLAT.DEPLOY.SILENT`); per-user layout rules (`PLAT.DEPLOY.NOADMIN`); offline-bundle layout (`PLAT.DEPLOY.OFFLINE`).
+- **Code dependency:** build jobs of `ECO.CI.WF`.
 
 ## Decomposition hints
 
-WIN, MAC, LINUX (one per OS family), REGISTER (installed-app registration), VERIFY (standalone fid-verify package).
+PLAN (package plan, Tier 1 gate, placeholder-name gate), WIN, MAC, LINUX (one per OS family), REG (installed-app registration). The standalone `fid-verify` package is a row of the plan, built by each OS child.
 
 ## Open questions
 
-- Package format choices per OS are leaf-level, but app-store distribution (for example a store listing) would need an account and is a maintainer decision.
+- Package format choices per OS are made in the OS children; app-store distribution (for example a store listing) would need an account and is a maintainer decision.
+- PLAT.DEPLOY.* depend on ECO.REL, so their layout and property contracts are read as files, not declared dependencies.
+- Linux package formats were "shared with ECO.REL" in PLAT.DEPLOY.SILENT; ECO.REL.PKG.LINUX picks tar.gz, deb and rpm, and PLAT should align.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REL.PKG.PLAN | Package plan, Tier 1 build gate and placeholder-name gate (leaf) | 001 003 005 | none |
+| ECO.REL.PKG.WIN | Windows packages (leaf) | 001 002 003 006 | none |
+| ECO.REL.PKG.MAC | macOS packages (leaf) | 001 002 003 006 | none |
+| ECO.REL.PKG.LINUX | Linux packages (leaf) | 001 002 003 006 | none |
+| ECO.REL.PKG.REG | Installed-app registration and file association (leaf) | 004 | none |

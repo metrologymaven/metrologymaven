@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.SIGN-002, REQ-TRUST.SIGN-008]
 covers: []
-depends_on: [TRUST.SIGN.DSSE, TRUST.PKG.FIXTURE]
+depends_on: [TRUST.SIGN.DSSE]
+uses_artifacts: [TRUST.PKG.FIXTURE]
 side_effect: R1
 determinism: D2
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.SIGN.INTEROP: Third-party DSSE interop test and envelope fuzz corpus

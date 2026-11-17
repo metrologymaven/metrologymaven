@@ -4,18 +4,19 @@ title: Original outreach assets and attribution
 level: 3
 parent: OUTR.BRAND
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.BRAND-002]
 covers: []
-depends_on: [ECO.RULES]
+depends_on: []
+uses_artifacts: [ECO.RULES.SPDX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BRAND.ASSET: Original outreach assets and attribution
@@ -57,8 +58,12 @@ PACK (asset files and layout), ATTR (attribution check), FONT (self-hostable fon
 ## Open questions
 
 - How an asset is "marked original" (sidecar file, folder convention or `ATTRIBUTION.md` section) is for the leaf to fix.
-- The allowlist does not exist yet; ECO.RULES is open.
+- The allowlist is now specified by ECO.RULES.SPDX (`house-rules/spdx-allowlist.toml`, `asset_licences`). The former code dependency on ECO.RULES is an artifact read and is now `uses_artifacts` (CONSTITUTION 2.1, D-034).
+- Resolved in OUTR.BRAND.ASSET.ATTR: an asset is marked original by a row with origin `original` in `ATTRIBUTION.md`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BRAND.ASSET.ATTR](attr/NODE.md) | Outreach attribution and font-origin check (leaf) | 001 002 003 004 | none |
+| [OUTR.BRAND.ASSET.PACK](pack/NODE.md) | Outreach asset pack, fonts and logo variants (leaf) | 004 005 | none |

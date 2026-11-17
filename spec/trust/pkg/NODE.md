@@ -11,7 +11,8 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-001, REQ-TRUST-003]
 covers: []
-depends_on: [CORE, IO]
+depends_on: []
+uses_artifacts: [CORE.JRN.ENTRY, KRN.MAN.MANI.SCHEMA, IO.RES.QIFR.ROUT]
 cli: [fid sign export-package, fid verify inspect-package]
 mcp: [verify_inspect_package]
 journal: [sign.export_package@1]
@@ -79,6 +80,7 @@ Alternatives considered:
 - The in-toto predicate type URI needs a stable home, which depends on D-002 (project name); one crate constant holds it.
 - `depends_on` no longer lists UNC: the UEC status the package carries is a ResultRecord field (CONSTITUTION §5) read through CORE. The edge closed a dependency cycle with `GDT.RES.ROWFLOW -> TRUST.ESIG -> TRUST.PKG -> UNC -> UNC.ORS -> GDT.RES`.
 - The MCP tool `sign_export_package` falls outside TRUST's `verify_*` MCP pattern (already raised in TRUST).
+- Dependencies narrowed (2026-11-17, D-034): the format, reader and fixtures need no CORE or IO code. Only `TRUST.PKG.CONTENT`'s children and `TRUST.PKG.EXPORT` link CORE (and IO) leaves, inside `fid-pkg`'s non-default `export` feature so `fid-verify` never links them. Journal entry, kernel manifest and QIF Results formats are `uses_artifacts`.
 
 ## Children
 

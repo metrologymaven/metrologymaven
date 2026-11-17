@@ -4,7 +4,7 @@ title: Mesh and CAD shading, transparency and clip raster
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.SCENE, VIZ.RENDER.FRAME, GEO.CAD]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.SHADE: Mesh and CAD shading, transparency and clip raster
@@ -64,4 +64,9 @@ MESH, CADFACE (faces, edges, silhouettes), ASSY (culling, instancing), OIT, CLIP
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.SHADE.MESH | Mesh shading, display modes and triangle IDs (leaf) | 001 006 | none |
+| VIZ.RENDER.SHADE.CAD | CAD faces, edges and large-assembly display (leaf, P1b) | 002 006 | SA.VIZ.01 |
+| VIZ.RENDER.SHADE.OIT | Order-independent transparency and report-quality peeling (leaf) | 003 | none |
+| VIZ.RENDER.SHADE.CLIPR | Clip-plane raster and display caps (leaf) | 004 005 | none |

@@ -4,7 +4,7 @@ title: Adaptive Monte Carlo propagation through the kernel pipeline
 level: 3
 parent: UNC.PROP
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL.GRAPH, UNC.MODEL.DIST, KRN]
 cli: [fid unc propagate-mcm]
 mcp: [unc_propagate_mcm]
 journal: [unc.propagate_mcm@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.MCM: Adaptive Monte Carlo propagation through the kernel pipeline
@@ -59,9 +59,16 @@ BLOCK (trial blocks and parallel evaluation with fixed-order reduction), ADAPT (
 
 ## Open questions
 
-- The adaptive stopping rule must be written from the published JCGM 101 text into a spec card before leaves are written [unverified: details of the procedure].
-- Memory budget for retained sample sets on large models is unmeasured.
+- **Applied (adaptive rule):** the stopping rule is specified in `UNC.PROP.MCM.ADAPT` as `mcm-adapt@1`, paraphrased from the adaptive procedure of JCGM 101:2008 [unverified: clause 7.9 numbering and block-size rule]. A spec card in our own words is part of that leaf, and an uncertainty expert should review it.
+- **Applied (memory):** retained sample sets are capped (`UNC.PROP.MCM.SAMP`, default 64 MiB [unverified]). Over the cap, no samples are retained and the result carries `samples_not_retained`; DEC and XFM consumers then fall back to interval-only use.
+- **Layering:** engine functions (BLOCK, ADAPT, INTVL, SAMP) are L0 in `fid-kunc`; thread scheduling, job progress and blob storage are in the L2 command (CMD, `fid-unc`), so the kernel stays single-threaded and I/O-free.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.PROP.MCM.BLOCK | Trial-block sampling and per-trial kernel evaluation (leaf) | 001 004 005 | none |
+| UNC.PROP.MCM.ADAPT | Adaptive stopping rule and trial cap (leaf) | 002 003 | none |
+| UNC.PROP.MCM.INTVL | Coverage intervals and estimate outputs from samples (leaf) | 006 | none |
+| UNC.PROP.MCM.SAMP | Retained sample sets and their digest (leaf) | 004 | none |
+| UNC.PROP.MCM.CMD | The unc.propagate_mcm@1 command and block scheduling (leaf) | 001 004 | none |

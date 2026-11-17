@@ -4,18 +4,18 @@ title: Difference attribution ("Why is it different?")
 level: 2
 parent: MIG
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-MIG-003]
 covers: []
-depends_on: [MIG.PARALLEL, CORE.RPL.RETGT, ALN.QA.CMP, GDT.RES.RESOLVE, GDT.FORM.FCORE]
-cli: [fid correlate explain-differences, fid correlate show-explanation]
-mcp: [correlate_explain_differences, correlate_show_explanation]
-journal: [correlate.explain_differences@1]
-updated: 2026-11-16
+depends_on: [MIG.PARALLEL, CORE.RPL.RETGT, ALN.QA.CMP, ALN.XFM.MATRIX, GDT.RES.RESOLVE, GDT.FORM.FCORE, KRN.OUT, RPT.MODEL.FMT]
+cli: [fid correlate explain-differences, fid correlate adopt-explanation, fid correlate show-explanation]
+mcp: [correlate_explain_differences, correlate_adopt_explanation, correlate_show_explanation]
+journal: [correlate.explain_differences@1, correlate.adopt_explanation@1, correlate.show_explanation@1]
+updated: 2026-11-17
 ---
 
 # MIG.EXPLAIN: Difference attribution
@@ -32,7 +32,7 @@ For every flagged pair in a parallel-run report, finds which named factor accoun
 - Single-factor and ordered two-factor probes, with a bounded probe budget per pair
 - Attribution result per pair: credited factors with residual difference after each probe, or `UNEXPLAINED`
 - Explanation records attached to the parallel-run report, with "Why?" text generated from templates in our own words
-- `correlate.explain_differences@1` (W2: writes explanation records), `correlate.show_explanation@1` (R0)
+- `correlate.explain_differences@1` (W2: writes explanation records), `correlate.adopt_explanation@1` (W2, `human_only`, D-031), `correlate.show_explanation@1` (R0)
 
 **Out** (and which node owns it instead):
 - Pairing and flagging (owned by `MIG.PARALLEL`)
@@ -53,8 +53,8 @@ For every flagged pair in a parallel-run report, finds which named factor accoun
 
 ## Interfaces
 
-- **Offers:** `correlate.explain_differences@1` (W2), `correlate.show_explanation@1` (R0); `DifferenceAttribution` type and factor catalogue consumed by `MIG.STUDY` and UX "Why?" panels.
-- **Consumes:** `MIG.PARALLEL` reports; `CORE.RPL.RETGT` re-targeted replay; `ALN.QA.CMP`; `GDT.RES.RESOLVE` for datum interpretation variants; `GDT.FORM.FCORE` association policies for fit-method variants.
+- **Offers:** `correlate.explain_differences@1` (W2), `correlate.adopt_explanation@1` (W2, human_only), `correlate.show_explanation@1` (R0); `DifferenceAttribution` type (schema `mig-attribution@1`) and the factor catalogue consumed by `MIG.STUDY` and UX "Why?" panels.
+- **Consumes:** `MIG.PARALLEL.REPORT` and `MIG.PARALLEL.DIFF`; `CORE.RPL.RETGT` re-targeted and dry-run replay; `ALN.QA.CMP` and `ALN.XFM.MATRIX`; `GDT.RES.RESOLVE` for datum interpretation variants; `GDT.FORM.FCORE` association policies for fit-method variants; `KRN.OUT` point-filter policies; `RPT.MODEL.FMT` value formatting.
 
 ## Decomposition hints
 
@@ -63,7 +63,23 @@ CAT (factor catalogue and probe definitions), PROBE (scratch-branch probe runner
 ## Open questions
 
 - Filter probes need filter settings from the incumbent export; many exports do not state them [unverified]. Then FILTER can only be probed with user-selected candidates.
+- REQ-002's "with one previously credited factor" leaves open how a factor that only reduces (but does not close) the difference enters a two-factor probe. `MIG.EXPLAIN.ATTR` interprets it as a provisional "lead" factor that is credited only if the pair closes; a metrology reviewer should confirm.
+- `correlate.adopt_explanation@1` is added beyond the original command list so REQ-007's human adoption has a registry command (D-031 requires `human_only` adoption commands).
+
+## Split rationale
+
+Split along the **probe pipeline**: what may be varied (CAT), how one factor change becomes a concrete re-evaluation request (VARIANT), how requests run safely and within budget (PROBE), how results become credits and records (ATTR), and how records are explained to people (TEXT). This keeps the numerical rule (ATTR) separate from the per-domain knowledge of how to vary a fit, a datum or an alignment (VARIANT), which touches GDT, ALN and KRN and is the largest piece.
+
+Alternatives considered:
+- **One child per factor.** Rejected: the budget, crediting rule and record format must be shared; six children would each re-implement the runner.
+- **Folding TEXT into ATTR.** Rejected: templates are user-facing wording with a separate review path (own words, standards citations by designator only) and a read-only command.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [MIG.EXPLAIN.CAT](cat/NODE.md) | Closed factor catalogue and probe candidates (leaf) | 001 007 | none |
+| [MIG.EXPLAIN.VARIANT](variant/NODE.md) | Single-factor re-evaluation variants per factor | 002 | none |
+| [MIG.EXPLAIN.PROBE](probe/NODE.md) | Scratch-branch probe runner and probe budget (leaf) | 002 003 004 005 | none |
+| [MIG.EXPLAIN.ATTR](attr/NODE.md) | Attribution rule, explanation records and adoption (leaf) | 001 002 004 005 007 | none |
+| [MIG.EXPLAIN.TEXT](text/NODE.md) | Difference explanation templates and view (leaf) | 006 | none |

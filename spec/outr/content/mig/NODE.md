@@ -4,18 +4,19 @@ title: Migration guides from incumbent workflows
 level: 3
 parent: OUTR.CONTENT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.CONTENT-001, REQ-OUTR.CONTENT-006, REQ-OUTR.CONTENT-007]
 covers: []
-depends_on: [OUTR.CONTENT.PUB, ECO.PARITY]
+depends_on: [OUTR.CONTENT.PUB]
+uses_artifacts: [ECO.PARITY.TRACE, ECO.COMM.SCOPE, ECO.DATA.EX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.CONTENT.MIG: Migration guides from incumbent workflows
@@ -56,8 +57,16 @@ MAP (mapping table generator), one child per incumbent guide (GOM, PWK, PCD, SA)
 
 ## Open questions
 
-- Seed rows are all `[unverified]`; guides should say so until rows are confirmed by users of each product.
+- Seed rows are all `[unverified]`; each guide says so near its top (REQ-OUTR.CONTENT.MIG.GOM-004 and its siblings).
+- CONSTITUTION §2.1 (D-034): OUTR is tooling and reads artifacts only, so the former code dependency on ECO.PARITY is now `uses_artifacts` on ECO.PARITY.TRACE (trace.json) and ECO.COMM.SCOPE (`generated/COVERAGE.md`).
+- PC-DMIS and SpatialAnalyzer guides start in P2 and P3, when Probe and Network have their core workflows; they stay open until then.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.CONTENT.MIG.MAP](map/NODE.md) | Migration mapping table generator and drift check (leaf) | 001 002 003 | none |
+| [OUTR.CONTENT.MIG.GOM](gom/NODE.md) | Migration guide for ZEISS INSPECT (GOM) users (leaf) | 001 004 005 | none |
+| [OUTR.CONTENT.MIG.PW](pw/NODE.md) | Migration guide for PolyWorks Inspector users (leaf) | 001 004 005 | none |
+| [OUTR.CONTENT.MIG.PCD](pcd/NODE.md) | Migration guide for PC-DMIS users | 001 004 005 | none |
+| [OUTR.CONTENT.MIG.SA](sa/NODE.md) | Migration guide for SpatialAnalyzer users | 001 004 005 | none |

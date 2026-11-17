@@ -4,7 +4,7 @@ title: Instruments, probes and machine models
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.SCENE, VIZ.RENDER.FRAME, GEO.FRAME]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.GLYPH: Instruments, probes and machine models
@@ -58,7 +58,12 @@ STATION, STYLUS, MACHINE, PATH, GHOST.
 ## Open questions
 
 - Tagged P1b: P1a has no live instruments; path review arrives in P1b per the concept doc [unverified].
+- Probe and path inputs are plain data types defined here (`StylusSpec`, `PathPolyline`); apps map `CMM.PROBE.MODEL` and program paths into them, so GLYPH takes no code edge to CMM or LVM (LVM depends on VIZ).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.GLYPH.ACTOR | Instrument, station, machine and fixture nodes (leaf) | 001 003 | SA.VIZ.02 |
+| VIZ.RENDER.GLYPH.STYLUS | Parametric probe, stylus and ghost-probe display (leaf) | 001 002 004 | SA.VIZ.02 |
+| VIZ.RENDER.GLYPH.PATH | Measurement-path polylines by move type (leaf) | 005 | none |

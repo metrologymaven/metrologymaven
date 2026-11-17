@@ -4,7 +4,7 @@ title: Editor model: command view, summary view and edit commands
 level: 3
 parent: AUTO.PROG
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.PROG.FMT, AUTO.PROG.CHECK]
 cli: [fid program edit-*, fid program show]
 mcp: [program_edit_*, program_show]
 journal: [program.edit_*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.PROG.EDIT: Editor model: command view, summary view and edit commands
@@ -56,7 +56,13 @@ VIEWS (command and summary projections), OPS (edit commands), PROV (agent proven
 
 - Whether a third, Python-like text view is added is D-026 (recommendation there: not in P1b).
 - Adoption of agent-authored steps is checked at release by `AUTO.REC.ADOPT`; which command a human uses to adopt steps (a generic CORE adoption command or `program.adopt_steps@1`) needs agreement with `CORE`.
+- The adoption-command question is settled: humans adopt agent-authored steps with `program.adopt_steps@1` (W2, `human_only: true`, D-031) in `AUTO.REC.ADOPT`, which also owns the provenance store that `AUTO.PROG.EDIT.OPS` writes and `AUTO.PROG.EDIT.VIEWS` reads.
+- Edit commands are named `program.edit_insert_steps@1`, `program.edit_delete_steps@1`, `program.edit_move_steps@1`, `program.edit_update_step@1`, `program.edit_wrap_steps@1`, `program.edit_extract_subroutine@1` and `program.edit_rename_variable@1`, all W1 on drafts.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.PROG.EDIT.VIEWS | Command view, summary view and program.show (leaf) | 003 004 | PCD.PRG.01 |
+| AUTO.PROG.EDIT.OPS | Basic step edit commands and the edit-apply core (leaf) | 001 002 004 | PCD.PRG.01, PW.AUT.02 |
+| AUTO.PROG.EDIT.REFACT | Structural edits: wrap, extract subroutine, rename variable (leaf) | 001 002 | PW.AUT.02 |

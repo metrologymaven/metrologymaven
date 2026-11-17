@@ -4,7 +4,7 @@ title: Versioned kernel number formatters (fmt.*)
 level: 3
 parent: KRN.NUM
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.NUM.KDEC, KRN.NUM.ERR]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.NUM.FMT: Versioned kernel number formatters (fmt.*)
@@ -39,7 +39,7 @@ A rounded number in a report is a reported value, so the kernel owns how values 
 - The exact comparator and decimal type (`KRN.NUM.KDEC`)
 - Deciding conformance (`UNC`), and which digits a report template shows (`RPT`)
 - Legend binning of deviation colours (`VIZ`, `SCAN`)
-- Locale-specific separators and typography (`RPT`, `VIZ`)
+- Locale rules and transforms for separators, grouping, minus sign and typography (`I18N.LOCALE` supplies them; `RPT` and `VIZ` apply them)
 
 ## Requirements
 
@@ -63,7 +63,12 @@ LEN (length and dimensionless formatters, exact factors, side-preserving rule; P
 
 - Whether a conforming value that rounds to its limit (0.0499996 against 0.050) may print as the limit. Common practice allows it [unverified]; REQ-RPT-007 only forbids the nonconforming case. Confirm with `RPT` and `UNC` before the LEN leaf.
 - The concept doc also allows directed rounding with a marker instead of extra digits. This node chooses extra digits; a marker variant would be a separate formatter kind.
+- **Applied at split (2026-11-17):** the Out line now names `I18N.LOCALE` as the supplier of locale rules and transforms. The conforming-rounds-to-limit question is carried into `KRN.NUM.FMT.LEN` (REQ-006 allows it, pending RPT and UNC confirmation). A nonconforming value that still ties at 17 significant digits is returned with `tie_at_max_precision`, which `RPT.MODEL.FMT` turns into its visible marker.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.NUM.FMT.LEN | Length and dimensionless formatters with the side-preserving rule | 002 003 005 006 | none |
+| KRN.NUM.FMT.ANG | Angle formatters with a rational enclosure of pi | 004 005 006 | none |
+| KRN.NUM.FMT.REG | Formatter registry, dispatch, hex rendering and version guard | 001 006 | none |

@@ -4,18 +4,19 @@ title: App manifest schema, loader and status data
 level: 3
 parent: ECO.APPS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ECO.APPS-002, REQ-ECO.APPS-006]
 covers: []
-depends_on: [ECO.APPS.LIST, CORE.REG, VIZ.SHELL]
+depends_on: [CORE.REG, VIZ.SHELL]
+uses_artifacts: [ECO.APPS.LIST]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.APPS.MANIFEST: App manifest schema, loader and status data
@@ -52,8 +53,8 @@ The declarative file that turns the shared engine into one focused app: which re
 
 ## Interfaces
 
-- **Offers:** manifest schema; `load_manifest` used by app binaries; `apps-status.json` (status and known gaps per app) consumed by `ECO.PARITY.STATUS`; composition function for a future suite host.
-- **Consumes:** CORE.REG registry manifest (namespaces, setting keys); VIZ.SHELL panel and layout catalogue; RPT template identifiers; ECO.APPS.LIST.
+- **Offers:** manifest schema `app.toml` v1 and the loader in crate `fid-app-manifest` (ECO.APPS.MANIFEST.SCHEMA); `apps-status.json` v1 with per-app status, status scope, known gaps, enabled namespaces, effective commands and branding-placeholder flag (ECO.APPS.MANIFEST.EXPORT; read by ECO.PARITY.STATUS, ECO.APPS.POLICY, ECO.APPS.HANDOFF.RTRIP and ECO.REL); `compose()` for a future suite host (ECO.APPS.MANIFEST.COMPOSE).
+- **Consumes:** CORE.REG registry manifest (namespaces, classes, definition digests); VIZ.SHELL panel and layout catalogue; CORE.STO.SET setting keys; RPT.MODEL template identifiers; `apps.toml` from ECO.APPS.LIST (artifact).
 
 ## Decomposition hints
 
@@ -62,8 +63,13 @@ SCHEMA (schema and validation), LOAD (loader and start-up refusal), EXPORT (stat
 ## Open questions
 
 - D-005 is accepted only provisionally (egui). Panels are referenced by catalogue ID so the manifest does not change if the toolkit is reopened, but the catalogue itself is VIZ.SHELL's and does not exist yet.
-- Format of the file (TOML vs JSON) is a leaf-level choice.
+- File format settled at leaf level: TOML (`app.toml`), matching `apps.toml`.
+- D-017 (accepted): an app reaches `stable` (1.0) only after every phase holding its core workflow is finished; earlier releases are `alpha` or `beta` labelled by scope. ECO.APPS.MANIFEST.SCHEMA adds a `status_scope` label required for non-stable status.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.APPS.MANIFEST.SCHEMA | Manifest schema, validation and start-up loader (leaf) | 001 002 003 004 007 | none |
+| ECO.APPS.MANIFEST.EXPORT | Status, gaps and effective-command export (leaf) | 005 007 | none |
+| ECO.APPS.MANIFEST.COMPOSE | Order-independent manifest composition (leaf) | 006 | none |

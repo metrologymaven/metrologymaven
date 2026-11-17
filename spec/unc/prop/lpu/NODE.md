@@ -4,7 +4,7 @@ title: Linear propagation with analytic sensitivities
 level: 3
 parent: UNC.PROP
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL.GRAPH, UNC.MODEL.DIST, KRN]
 cli: [fid unc propagate-lpu]
 mcp: [unc_propagate_lpu]
 journal: [unc.propagate_lpu@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.LPU: Linear propagation with analytic sensitivities
@@ -57,9 +57,19 @@ TANGENT (operator tangent contract and coverage of the P1a operator set), IMPLIC
 
 ## Open questions
 
-- Whether effective degrees of freedom (Welch–Satterthwaite) are offered or only fixed k is a profile choice for reviewers [unverified].
-- Tangent coverage depends on KRN exposing tangents for every P1a operator; this must be raised with KRN owners.
+- **Applied (Welch-Satterthwaite):** `UNC.PROP.LPU.COMB` offers both under the versioned profile `lpu-profile@1`: fixed k = 2 by default, and k from effective degrees of freedom when every type-A input declares its degrees of freedom. The default is for review by an uncertainty expert [unverified].
+- **Applied (tangent coverage):** tangents are supplied through one contract and table (`UNC.PROP.LPU.TAN`) in `fid-kunc`, which may depend on KRN (both L0). A CI coverage report lists every kernel-manifest operator without a tangent; such operators make LPU fail with `no_derivative`, and `UNC.PROP.SELECT` then needs MCM. KRN owners need not change their fits.
+- **Cross-domain (open):** if GDT registers characteristic-evaluation operators (distance, angle, size, form value) in the kernel manifest, their tangents must be supplied through the same contract. `UNC.PROP.LPU.TCONS` covers KRN constructions and evaluation operators that are in the kernel; GDT owners should confirm where evaluation operators live.
+- **D-027:** formula results start at UEC-0 (`model_missing`) until a model is bound; LPU can then propagate through formulas using `UNC.PROP.LPU.TFORM`. Stated in that child.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.PROP.LPU.TAN | Operator tangent contract, table and coverage report (leaf) | 001 | none |
+| UNC.PROP.LPU.TCONS | Tangents for kernel constructions and evaluation operators | 001 | none |
+| UNC.PROP.LPU.TFORM | Tangents of kernel formula IR and formula UEC start (leaf) | 001 004 | none |
+| UNC.PROP.LPU.IMPL | Implicit differentiation at least-squares fit solutions (leaf) | 001 002 | none |
+| UNC.PROP.LPU.ASET | Active-set sensitivities and non-smoothness flag for certified fits (leaf) | 001 004 | none |
+| UNC.PROP.LPU.COMB | Graph accumulation, covariance combination and coverage factor (leaf) | 003 005 | none |
+| UNC.PROP.LPU.CMD | The unc.propagate_lpu@1 command (leaf) | 005 | none |

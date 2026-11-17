@@ -4,7 +4,7 @@ title: Multi-scan merge meshing
 level: 3
 parent: SCAN.POLY
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.POLY.SURF, SCAN.CLOUD.MGMT, SCAN.CLOUD.REG]
 cli: [fid mesh polygonize-scans]
 mcp: [mesh_polygonize_scans]
 journal: [mesh.polygonize_scans@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.POLY.MULTI: Multi-scan merge meshing
@@ -58,7 +58,12 @@ OVLP (overlap detection between scans), REDUCE (overlap reduction rule and contr
 ## Open questions
 
 - Which reduction rule is the default (incidence angle, distance to sensor, local noise) needs user input; PolyWorks-style behaviour is reported to weight by scan quality [unverified].
+- **At split (2026-11-17):** no default is invented; `SCAN.POLY.MULTI.REDUCE` offers the three rules by name and the rule is a required parameter until users choose a default. The "marked as registered" check uses the `RegisteredMarker` written by `SCAN.CLOUD.REG.RREP`; propagation of that marker through `cloud.merge_clouds@1` is a change for `SCAN.CLOUD.MGMT`'s owner.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.POLY.MULTI.OVLP | Per-point overlap detection between scans (leaf) | 002 004 | none |
+| SCAN.POLY.MULTI.REDUCE | Overlap reduction rules and scan contribution report (leaf) | 002 003 004 | none |
+| SCAN.POLY.MULTI.CMD | Polygonize-scans command (leaf) | 001 002 003 004 005 | PW.PCL.03 |

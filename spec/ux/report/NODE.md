@@ -4,7 +4,7 @@ title: Report visual language
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.TOKENS, UX.ICONS, UX.COMP]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.REPORT: Report visual language
@@ -61,10 +61,26 @@ How printed and exported reports look: the default style set, page grids for com
 
 STYLE (default style set and print typography), PAGE (page grids), CHART (chart styles), BALLOON (balloon style), MOCK (reference report mockups).
 
+## Split rationale
+
+The dividing principle is **one print concern per child, with mockups last**: STYLE (the default style set RPT.DESIGN.STYLE adopts, print typography and greyscale-safe outcomes), PAGE (page grids), CHART (chart styles and colour-map snapshot legend), BALLOON (balloon style), MOCK (reference mockups that apply all of them and carry the trade-dress review). This follows the decomposition hints. Each style child is a token-referencing file plus a check in `fid-design`; MOCK is the visual proof.
+
+Alternatives considered:
+- **BALLOON inside STYLE.** Rejected: balloons carry their own clearance rules that RPT.BALLOON's placement must honour, and their own review evidence (no leader overlap).
+- **Designing the fixed AS9102 and PPAP forms here.** Rejected: D-015 (option C) keeps original form layouts in RPT.FORMS.LAYOUT; they can still pass the UX design review.
+
 ## Open questions
 
-- Whether the original form layouts (if D-015 decides layouts must be original) are designed here or in RPT.FORMS.LAYOUT; this node currently excludes them.
+- Boundary with RPT (agreed): UX.REPORT supplies RPT.DESIGN.STYLE's default styles as `report/style.json`; RPT owns the StyleSet model and commands and should declare `uses_artifacts: [UX.REPORT.STYLE]`. RPT.BALLOON and RPT.STATS should likewise read UX.REPORT.BALLOON and UX.REPORT.CHART (not editable from here).
+- Form layouts under D-015: kept out of this node (see Split rationale).
+- Font licences for print: shared with UX.TOKENS.TYPE and RPT.DESIGN.STYLE-006; the allowlist is ECO.RULES' to publish [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.REPORT.STYLE](style/NODE.md) | Default report style set and print typography (leaf) | 001 002 005 | none |
+| [UX.REPORT.PAGE](page/NODE.md) | Report page grids and margins (leaf) | 005 | none |
+| [UX.REPORT.CHART](chart/NODE.md) | Report chart styles and colour-map snapshot legend (leaf) | 003 004 | none |
+| [UX.REPORT.BALLOON](balloon/NODE.md) | Balloon style (leaf) | 006 | none |
+| [UX.REPORT.MOCK](mock/NODE.md) | Reference report mockups (leaf) | 006 007 | none |

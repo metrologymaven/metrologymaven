@@ -4,7 +4,7 @@ title: Element tree, inspector and results panels
 level: 3
 parent: VIZ.SHELL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.SHELL.SPKTREE, VIZ.SHELL.SPKTABLE, VIZ.SHELL.DOCK, CORE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.SHELL.TREE: Element tree, inspector and results panels
@@ -59,7 +59,15 @@ ELTREE, INSPECT, RESULTS, PROBLEMS, CONSOLE, WHY.
 ## Open questions
 
 - Blocked in practice until SPKTREE and SPKTABLE report; their findings set the widget approach.
+- Applied: the roles and attributes requested by `FLOW.DEADEND.WHY` and `FLOW.RUNNER.CHKUI` are set by RESULTS, INSPECT, PROBLEMS and WHY using the vocabulary of `VIZ.SHELL.A11Y.AXTREE`; read-only provenance from `ECO.APPS.HANDOFF.RO` arrives through the `ReadOnlyInfo` trait in ELTREE (no code edge, since RO depends on this node).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.TREE.ELTREE | Virtualised element tree with status chips and read-only provenance (leaf) | 001 002 005 | none |
+| VIZ.SHELL.TREE.INSPECT | Inspector property grid (leaf) | 001 003 004 005 | none |
+| VIZ.SHELL.TREE.RESULTS | Results table with outcome filters and fly-to (leaf) | 001 004 005 | none |
+| VIZ.SHELL.TREE.PROBLEMS | Problems panel with catalogued fix actions (leaf) | 001 005 | none |
+| VIZ.SHELL.TREE.CONSOLE | Python console host panel (leaf, P1b) | 001 005 | none |
+| VIZ.SHELL.TREE.WHY | Why? provenance panel host (leaf) | 004 005 | none |

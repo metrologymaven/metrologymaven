@@ -4,18 +4,18 @@ title: CMM capability packages (CncMotion, TactileProbe, Rotary)
 level: 3
 parent: HAL.IDL
 kind: module
-status: open
+status: split
 phase: P2
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-HAL.IDL-001, REQ-HAL.IDL-006]
 covers: []
-depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.STAMP]
+depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.STAMP, HAL.IDL.GEN.FMT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # HAL.IDL.CNC: CMM capability packages (CncMotion, TactileProbe, Rotary)
@@ -57,11 +57,24 @@ The three capability packages that model a CNC CMM: `CncMotion` (sessions, homin
 
 MOTION (`CncMotion` control operations and events), TACT (`TactileProbe` payload and tip selection), ROT (`Rotary`), SCANSTR (scan-stream payload), CARDS (clause-ID mapping table derived from spec cards).
 
+## Split rationale
+
+The split separates **what can be specified now** from **what waits for the I++ spec cards**. The two packages with no motion semantics, `TactileProbe@1` (TACT, also used by arms and 6DoF probes) and `Rotary@1` (ROT, angle reports only), are finished as leaves. `CncMotion@1` (MOTION) and the clause-ID table (CARDS) stay open: the operation set must be reconciled with the founder-written spec cards, which exist only from the start of P2. The scan-stream payload hint (SCANSTR) is folded into TACT, because scan results are sequences of probe points.
+
+Alternatives considered:
+- **One child per hint (MOTION, TACT, ROT, SCANSTR, CARDS).** Rejected: a separate scan-stream child would duplicate the point payload.
+- **Clause IDs inside each package child.** Rejected: one table lets a reviewer check clause coverage and the no-quoted-text rule in one place.
+
 ## Open questions
 
-- The I++ DME 3.0 specification is single-user licensed; the clause mapping waits for founder-written spec cards at the start of P2 [unverified].
-- Whether head-angle changes count as motion (M1) on every head type is assumed yes here; confirm with the spec cards.
+- The I++ DME 3.0 specification is single-user licensed; the clause mapping waits for founder-written spec cards at the start of P2 [unverified]. `HAL.IDL.CNC.MOTION` and `HAL.IDL.CNC.CARDS` stay open until then.
+- Whether head-angle changes count as motion (M1) on every head type is assumed yes; confirm with the spec cards.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.IDL.CNC.MOTION | CncMotion@1 package (operations, queue, hold and abort, events) | 001 002 006 | none |
+| HAL.IDL.CNC.TACT | TactileProbe@1 package (tip selection, point and scan-point payloads) (leaf) | 003 | none |
+| HAL.IDL.CNC.ROT | Rotary@1 package (angle reports only) (leaf) | 004 | none |
+| HAL.IDL.CNC.CARDS | I++ DME clause-ID mapping table and own-words semantics notes | 001 005 | none |

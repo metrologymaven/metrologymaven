@@ -4,18 +4,19 @@ title: Software and reduced renderer fallback contract
 level: 3
 parent: PLAT.GPU
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.GPU-003, REQ-PLAT.GPU-005, REQ-PLAT.GPU-008]
 covers: []
-depends_on: [PLAT.GPU.DETECT, VIZ]
+depends_on: [PLAT.GPU.DETECT]
+uses_artifacts: [VIZ.RENDER.FRAME, VIZ.RENDER.HEADLESS, PLAT.HW.SCHEMA, PLAT.HW.REFMACH, ECO.DATA.EX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.GPU.FALLBK: Fallback renderer contract
@@ -37,7 +38,7 @@ Defines what "software or reduced renderer" means for virtual machines, remote d
 - Renderer implementation and the choice between a bundled CPU rasteriser and a system software adapter (`VIZ`)
 - Backend selection (`PLAT.GPU.DETECT`)
 - The notice (`PLAT.GPU.NOTICE`)
-- CI jobs that measure the floor (`PLAT.GPU.CI`)
+- CI jobs that run these tests per release (`PLAT.GPU.CI`)
 
 ## Requirements
 
@@ -50,18 +51,27 @@ Defines what "software or reduced renderer" means for virtual machines, remote d
 
 ## Interfaces
 
-- **Offers:** fallback tier definitions and the reduced-feature list (read by VIZ, `PLAT.GPU.NOTICE` and the docs).
-- **Consumes:** `GpuSelection` from `PLAT.GPU.DETECT`; VIZ renderer and its capability tiers; `PLAT.HW` minimum profile.
+- **Offers:** `platform/gpu-fallback.toml` (tiers, reduced features, software floor; read by VIZ, `PLAT.GPU.NOTICE` and docs); the floor check; the headless and forced-fallback smoke tests; the invariance harness `xtask plat-gpu invariance` (run by `PLAT.GPU.CI`); the RDP start test.
+- **Consumes:** `GpuSelection` (`PLAT.GPU.DETECT`). Artifacts: VIZ capability tiers and `view.get_render_info@1` output (`VIZ.RENDER.FRAME`), headless rendering (`VIZ.RENDER.HEADLESS`), benchmark results (`PLAT.HW.SCHEMA`) of the minimum-profile reference machine (`PLAT.HW.REFMACH`), and the example project (`ECO.DATA.EX`).
 
 ## Decomposition hints
 
-TIERS (fallback tiers and reduced-feature list file; likely leaf in `fid-platform`), HEADLESS (no-GPU CLI/MCP guarantee and its test), INVAR (cross-backend journal-digest invariance test), RDP (remote desktop measurement and policy).
+See Children.
 
 ## Open questions
 
 - Bundled CPU rasteriser versus a system software adapter is a VIZ implementation choice (inherited from PLAT.GPU).
-- DX12 over RDP needs a measured check [unverified].
+- DX12 over RDP needs a measured check [unverified]; carried by `PLAT.GPU.FALLBK.RDP`.
+
+## Split rationale
+
+Split by **kind of guarantee**: a data file and its floor check (TIERS), start-up guarantees without a GPU (SMOKE), the value-of-record invariance harness (INVAR), and the remote-desktop case (RDP), which needs its own environment. Each is tested differently and has a different owner of failures.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.GPU.FALLBK.TIERS | Fallback tier file, reduced-feature list and software floor check | 002 003 | none |
+| PLAT.GPU.FALLBK.SMOKE | No-GPU headless and forced-fallback start tests | 001 004 | none |
+| PLAT.GPU.FALLBK.INVAR | Cross-backend value-of-record invariance harness | 005 | none |
+| PLAT.GPU.FALLBK.RDP | Windows remote desktop start test | 001 006 | none |

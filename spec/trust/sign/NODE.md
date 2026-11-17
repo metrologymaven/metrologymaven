@@ -11,11 +11,12 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-001, REQ-TRUST-002, REQ-TRUST-004]
 covers: []
-depends_on: [TRUST.PKG, CORE]
+depends_on: []
+uses_artifacts: [TRUST.PKG.MANIFEST]
 cli: [fid sign create-key, fid sign list-keys, fid sign export-pubkey, fid verify check-signature]
 mcp: [verify_check_signature]
 journal: [sign.create_key@1, sign.export_pubkey@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.SIGN: DSSE signing and key custody
@@ -78,6 +79,7 @@ Alternatives considered:
 - Sigstore keyless signing would need network access and an identity provider; it conflicts with C7 by default and is out unless a decision adds it as opt-in.
 - `sign.export_pubkey@1` is listed as X1 above; under CONSTITUTION §3.1 (D-007) a local export-root write is W1 with `fs_effect: write_root`. `TRUST.SIGN.KEYSTORE` proposes W1.
 - REQ-CORE.BUS-002 makes every CLI caller a `script` principal, which conflicts with signing from an "interactive CLI" (REQ-TRUST.ESIG-001); this is open decision D-012.
+- Dependencies narrowed (2026-11-17, D-034): the statement bytes are a format published by `TRUST.PKG.MANIFEST` (`uses_artifacts`); principal and channel data from `CORE.BUS.PRIN` are needed only by `TRUST.SIGN.UV.GATE`, and registry integration only by `TRUST.SIGN.KEYSTORE.CMDS`.
 
 ## Children
 

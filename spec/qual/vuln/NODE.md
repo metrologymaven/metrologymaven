@@ -4,18 +4,19 @@ title: Security policy, vulnerability disclosure and advisories
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-004]
 covers: []
-depends_on: [QUAL.THREAT, QUAL.SBOM, ECO.REL.PROC]
+depends_on: []
+uses_artifacts: [QUAL.SBOM.VEX, ECO.REL.LTS, ECO.REL.PROC.CHANNEL, ECO.REL.PROC.NOTES, ECO.REL.UPD, ECO.REL.SIGN.CUSTODY]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.VULN: Security policy, vulnerability disclosure and advisories
@@ -56,18 +57,30 @@ The project's coordinated vulnerability disclosure process: a published security
 ## Interfaces
 
 - **Offers:** `SECURITY.md`; advisory feed (machine-readable) and advisory pages; vulnerability records with `actively_exploited` flag (to `QUAL.CRA`); advisory list (to `QUAL.VAP` review report and `ECO.REL.UPD`).
-- **Consumes:** threat register references (`QUAL.THREAT`); `affected` dependency findings (`QUAL.SBOM`); patch-release path (`ECO.REL.PROC`).
+- **Consumes (as artifacts):** `sbom/affected.json` (`QUAL.SBOM.VEX`); LTS lines (`ECO.REL.LTS`) and channels (`ECO.REL.PROC.CHANNEL`) for supported versions; the PR export (`ECO.REL.PROC.NOTES`) for the embargo scan. Patch releases go through the normal release flow (`ECO.REL.PROC.FLOW`). The threat register refers to advisories, not the reverse, so no dependency on `QUAL.THREAT` remains.
 
 ## Decomposition hints
 
 POLICY (SECURITY.md and channel), TRIAGE (workflow, scoring, targets), EMBARGO (private fix and coordinated release), ADVIS (advisory format, CVE assignment and feed).
 
+## Split rationale
+
+The split follows the life of a vulnerability: the public promise before any report (POLICY), the private handling while it is open (TRIAGE, including embargo), and the public record once fixed (ADVIS). The private/public boundary is the main reason: TRIAGE runs in a private repository and its outputs are filtered, while POLICY and ADVIS produce public files.
+
+Alternatives considered:
+- **A separate EMBARGO leaf** (the hints). Rejected: the embargo rules need the record's codewords and dates, and the scan is small; it sits with the records.
+- **Advisories inside TRIAGE.** Rejected: publication has its own format, leak check and consumers (`ECO.REL.UPD`, `QUAL.VAP.REVIEW`).
+
 ## Open questions
 
 - Becoming a CVE Numbering Authority versus requesting IDs through a platform is a maintainer choice.
-- The private channel choice (encrypted mail, a platform's private reporting feature, or both) interacts with C7 and with maintainer capacity.
+- The private channel choice (encrypted mail, a platform's private reporting feature, or both) interacts with C7 and with maintainer capacity; `QUAL.VULN.POLICY` requires encrypted mail at minimum.
 - Bug bounties are out of scope unless funded; not decided.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.VULN.POLICY | SECURITY.md, reporting channel and policy check | 001 002 | none |
+| QUAL.VULN.TRIAGE | Vulnerability records, triage timers and embargo checks | 003 004 006 007 008 | none |
+| QUAL.VULN.ADVIS | Advisory format, pages and feed | 005 009 | none |

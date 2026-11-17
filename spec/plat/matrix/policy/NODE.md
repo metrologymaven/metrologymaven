@@ -4,7 +4,7 @@ title: Tier definitions, Tier 1 set and end-of-life policy
 level: 3
 parent: PLAT.MATRIX
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-PLAT.MATRIX-005, REQ-PLAT.MATRIX-006]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]
+uses_artifacts: [PLAT.MATRIX.CI]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.MATRIX.POLICY: Tier policy and matrix content
@@ -50,18 +51,26 @@ Owns what the support matrix *says*: the written tier definitions, the actual ro
 
 ## Interfaces
 
-- **Offers:** the matrix rows; `platform/os-eol.toml` (os, version, vendor end-of-support date, source URL); the tier definitions page.
-- **Consumes:** `PLAT.MATRIX.FILE` schema and validator; `PLAT.MATRIX.CI` job results history (for promotion); D-010.
+- **Offers:** `docs/platform/tiers.md`; the matrix rows; `platform/os-eol.toml` (os, version, vendor end-of-support date, source URL, `extended_until` for paid extended updates); `xtask plat-matrix eol-check` and `xtask plat-matrix promote-check`.
+- **Consumes:** `PLAT.MATRIX.FILE` schema and lookup. Artifact: job result history of `PLAT.MATRIX.CI` (gate verdict files per release candidate).
 
 ## Decomposition hints
 
-DEFS (tier definitions page), ROWS (initial matrix content after D-010), EOL (end-of-support list, warning check, demotion rule). EOL is a likely leaf (a dated list plus a CI check in `fid-platform`).
+See Children.
 
 ## Open questions
 
-- Blocked in part on **D-010** (Tier 1 version window; Linux and Windows ARM64 tiers). EOL and DEFS can proceed before it.
+- D-010 is accepted (option B): the Tier 1 window is the latest two Ubuntu LTS releases and the latest two macOS major releases; Linux ARM64 is Tier 2 and Windows ARM64 Tier 3; Windows 10 stays Tier 1 while Microsoft's extended security updates are available to enterprises [unverified], then is demoted by the EOL rule. Applied in `PLAT.MATRIX.POLICY.ROWS` and `PLAT.MATRIX.POLICY.EOL`.
 - Vendor end-of-support dates must be cited from vendor pages and marked [unverified] until checked.
+
+## Split rationale
+
+Split by **artefact**: a definitions document (DEFS), the matrix rows with their promotion check (ROWS), and the end-of-support list with its warning and demotion checks (EOL). Rows change with each OS release; the EOL list changes with vendor announcements; definitions rarely change.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.MATRIX.POLICY.DEFS | Tier definitions document and its lint | 001 | none |
+| PLAT.MATRIX.POLICY.ROWS | Matrix rows per D-010 and the promotion check | 002 003 007 | none |
+| PLAT.MATRIX.POLICY.EOL | End-of-support list, warning and demotion check | 004 005 006 | none |

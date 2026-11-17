@@ -4,7 +4,7 @@ title: Straightness of line elements and of a derived median line
 level: 3
 parent: GDT.FORM
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.FORM.FCORE, GDT.ZONE.MATL, GDT.LOC.DERIV]
 cli: [fid check eval-straightness]
 mcp: [check_eval_straightness]
 journal: [check.eval_straightness@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.FORM.STRAIGHT: Straightness of line elements and of a derived median line
@@ -54,8 +54,12 @@ LINEEL (line-element straightness; a leaf once line-element extraction defaults 
 
 ## Open questions
 
-- Line-element extraction defaults (spacing, which planes) and median-line derivation are DMT content (D-009, D-016), so this node is not a leaf yet.
+- Line-element extraction defaults (spacing, which planes) and median-line derivation are DMT content (D-009, D-016). Resolved at split: the line-element leaf takes every extraction parameter explicitly from the chain (no defaults in code), the derived leaf consumes the median line from `GDT.LOC.DERIV` (whose definition stays open there), and the command dispatches on the chain's operators rather than on FCF symbols.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.FORM.STRAIGHT.LINEEL | Line-element extraction and line-element straightness (leaf) | 001 004 | GOM.GDT.02, PW.GDT.02 |
+| GDT.FORM.STRAIGHT.DERIVED | Straightness of a derived median line with optional MMC (leaf) | 002 003 004 | GOM.GDT.02 |
+| GDT.FORM.STRAIGHT.CMD | Straightness command and dispatch (leaf) | 001 002 | GOM.GDT.02, PW.GDT.02 |

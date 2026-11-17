@@ -4,7 +4,7 @@ title: Single re-targeted run orchestration
 level: 3
 parent: AUTO.RUN
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -14,8 +14,8 @@ covers: [PW.AUT.05]
 depends_on: [AUTO.RUN.BIND, AUTO.PROG.INTERP, CORE.JOB]
 cli: [fid program run]
 mcp: [program_run]
-journal: [program.run]
-updated: 2026-11-16
+journal: [program.run@1]
+updated: 2026-11-17
 ---
 
 # AUTO.RUN.EXEC: Single re-targeted run orchestration
@@ -56,8 +56,22 @@ CMD (`program.run@1` and job), BRANCH (branch and Run entity), RETARGET (not-re-
 
 ## Open questions
 
-- How a run waits for CMM approval (event subscription vs polling a ticket) depends on `CMM.EXEC`'s ticket interface.
+- Settled for this split: the run waits for CMM approval through `AUTO.RUN.EXEC.APPR`, which watches the request and ticket through CMM's R0 reads and events, behind the `StepGate` hook (trait defined in `AUTO.RUN.EXEC.RETGT`, called by `AUTO.RUN.EXEC.CMD`). Until `APPR` (P2) is built, `CMD` refuses M1 steps with `motion_unavailable`.
+- Requirement on `AUTO.PROG.INTERP` (open, not edited from here): the interpreter must call a pre-step hook (`StepGate::before_step(step_id, iteration_path, command_id, class)`) before every `invoke` and a post-step hook after each committed step, so `RETGT`, `APPR` and pause (`AUTO.RUN.PLAY.STATE`) can hold or stop a run at a step boundary.
+
+## Split rationale
+
+The split follows what can be built and tested alone: the run's place in the journal and project (BRANCH), the guard that stops re-targeted runs at non-re-targetable steps (RETGT), the command and job that drive the interpreter and finalise the record (CMD), and the motion hand-off (APPR), which is P2 because it needs the CMM approval station. CMD calls a `StepGate` chain (the trait lives in RETGT, the first gate) so that RETGT, APPR and the pause of operator playback plug in without CMD depending on any of them, which keeps P1b work free of P2 code.
+
+Alternatives considered:
+- **One M leaf.** Rejected: branch handling, job orchestration, the step guard and the approval wait together exceed one PR, and the approval part cannot be tested before P2.
+- **APPR inside CMD with a feature flag.** Rejected: CMD would then depend on a P2 node.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.RUN.EXEC.BRANCH | Run branch and Run entity (leaf) | 001 | none |
+| AUTO.RUN.EXEC.RETGT | Not-re-targetable step guard (leaf) | 002 | none |
+| AUTO.RUN.EXEC.CMD | The program.run command, job, progress and cancellation (leaf) | 003 004 | PW.AUT.05 |
+| AUTO.RUN.EXEC.APPR | Motion approval hand-off inside a run (leaf) | 005 | none |

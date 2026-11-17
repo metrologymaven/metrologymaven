@@ -4,7 +4,7 @@ title: Alignment hierarchy, groups, frames and deletion
 level: 3
 parent: ALN.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [ALN.MODEL.ELEM, GEO.FRAME, CORE.DEP]
 cli: [fid align set-parent, fid align create-frame, fid align create-group, fid align edit-group, fid align delete-alignment]
 mcp: [align_set_parent, align_create_frame, align_create_group, align_edit_group, align_delete_alignment]
 journal: [align.set_parent@1, align.create_frame@1, align.create_group@1, align.edit_group@1, align.delete_alignment@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.MODEL.HIER: Alignment hierarchy, groups, frames and deletion
@@ -62,8 +62,14 @@ CHAIN (parent assignment, composition, cycles, depth), GROUP (alignment groups),
 
 ## Open questions
 
+- Split follows the hints. Each alignment is mirrored as a GEO frame (CHAIN), so composition, cycles and the frame/alignment nesting use GEO.FRAME.TREE's single rule. Plain frame creation stays `geo.create_frame@1`; `align.create_frame@1` adds alignment parents and snapshots.
 - Whether a frame built from an alignment should stay live (follow the alignment) or be a snapshot. Current requirement: snapshot with source digest; a live frame is just a child alignment.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.MODEL.HIER.CHAIN | Alignment parent chain, composition to root and invalidation (leaf) | 001 002 005 007 | GOM.ALN.08 |
+| ALN.MODEL.HIER.GROUP | Alignment groups (leaf) | 003 | PW.ALN.08 |
+| ALN.MODEL.HIER.FRAME | Named frames nested under alignments and frames from alignments (leaf) | 002 004 | SA.XFM.02 |
+| ALN.MODEL.HIER.DEL | Alignment deletion with dependent handling (leaf) | 006 | none |

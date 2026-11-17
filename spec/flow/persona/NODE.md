@@ -4,18 +4,19 @@ title: Personas, journey-map format and journey coverage
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-FLOW-001]
 covers: [JOB.PER.*]
-depends_on: [ECO.APPS]
+depends_on: [CORE.REG, CORE.BUS, CORE.JRN]
+uses_artifacts: [ECO.APPS, ECO.COMM, TRUST.PROFILE]
 cli: [fid accept list-journeys, fid accept show-journey, fid accept check-journeys]
 mcp: [accept_list_journeys, accept_show_journey, accept_check_journeys]
-journal: []
-updated: 2026-11-16
+journal: [accept.list_journeys@1, accept.show_journey@1, accept.check_journeys@1]
+updated: 2026-11-17
 ---
 
 # FLOW.PERSONA: Personas, journey-map format and journey coverage
@@ -64,6 +65,19 @@ SCHEMA (journey-map format and validation), PERS (persona definitions), MAPS (pe
 - `JOB.PER.08` (instrument-maker) and `JOB.PER.06` (auditor) have no acceptance job of their own. Should a driver-SDK job and a verifier job be added to `seeds/journeys.md`? That is a seed change for maintainers.
 - Doc 10 §3.9 names an expert-reviewer persona that is not a seed row; left out until the seed is updated.
 
+## Split rationale
+
+The dividing principle is **format, content and check**: the format and its structural validator (SCHEMA) are written once and reused by every FLOW map; the persona records (PERS) and persona maps (MAPS) are content; the registry commands and CI coverage check (CHECK) cross-check all maps against the manifest and the spec tree. Content children read the format as an artifact; only CHECK and SCHEMA are code.
+
+Alternatives considered:
+- **Maps grouped by app (one child per app).** Rejected: nine small maps written to one format fit one content leaf, and app grouping would duplicate the persona-to-app link already in PERS.
+- **Check inside SCHEMA.** Rejected: the structural validator has no registry or spec-tree dependency and is used by every map author offline; the check needs the live manifest.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.PERSONA.SCHEMA](schema/NODE.md) | Journey-map format, schema and structural validator | 003 005 | |
+| [FLOW.PERSONA.PERS](pers/NODE.md) | Persona definitions file | 001 007 | JOB.PER.* |
+| [FLOW.PERSONA.MAPS](maps/NODE.md) | Persona journey maps | 002 006 007 | JOB.PER.* |
+| [FLOW.PERSONA.CHECK](check/NODE.md) | Journey list, show and coverage check commands | 004 005 006 | |

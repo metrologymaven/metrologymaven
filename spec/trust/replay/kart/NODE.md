@@ -4,14 +4,15 @@ title: Kernel artifact sourcing for verifier replay
 level: 3
 parent: TRUST.REPLAY
 kind: module
-status: open
+status: split
 phase: P1a
 size: M
 owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-001]
 covers: []
-depends_on: [KRN.MAN]
+depends_on: []
+uses_artifacts: [KRN.MAN.WASM, KRN.MAN.MANI.SCHEMA, KRN.MAN.REPRO]
 cli: []
 mcp: []
 journal: []
@@ -48,13 +49,17 @@ Finds the exact WASM reference kernel artifact named by a package's kernel manif
 
 ## Decomposition hints
 
-Once D-020 is decided this is likely one M leaf (lookup chain + cache directory) plus, if option B is chosen, a minor format change in `TRUST.PKG.MANIFEST`.
+Per D-020 option C: an offline lookup chain inside the verifier (LOOKUP) and an explicit, opt-in X1 fetch command that fills the local cache from the project's release archive (FETCH). The fetch lives in `fid`, not `fid-verify`, so the verifier binary keeps no network-capable dependency (REQ-TRUST.VERIFY.CLI-001).
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-020 (How the offline verifier obtains historical kernel artifacts) is accepted. Apply its Decision section (`decisions/D-020-*.md`) when this node is expanded.
-- Blocked on D-020. Size M is an estimate; it stays non-leaf until the decision fixes the sources.
+- D-020 (accepted 2026-11-17) chose option C: bundled current-major artifacts, an in-package artifact when present (hash-checked), an explicit opt-in fetch from the project's release archive, and a documented reproducible rebuild path; the artifact's origin is reported. Applied by the children below.
+- Nothing yet writes an in-package kernel artifact. `TRUST.REPLAY.KART.LOOKUP` accepts a manifest-listed member `kernel/<sha256>.wasm`; adding an export option for it belongs to `TRUST.PKG.CONTENT` (a later minor format addition, documented by `TRUST.PKG.FIXTURE`).
+- The project's release-archive URL depends on D-002 (project name) and ECO.REL hosting; FETCH reads it from configuration.
 
 ## Children
 
-_None yet: status `decision` (D-020)._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.REPLAY.KART.LOOKUP | Offline kernel artifact lookup chain | 001 003 | none |
+| TRUST.REPLAY.KART.FETCH | Opt-in kernel artifact fetch into the local cache | 002 003 | none |

@@ -4,7 +4,7 @@ title: Binding resolution and report generation
 level: 3
 parent: RPT.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [RPT.MODEL.TMPL, RPT.MODEL.FMT, CORE.JRN, GDT.CHAR]
 cli: [fid report generate-report, fid report bind-block, fid report save-report]
 mcp: [report_generate_report, report_bind_block, report_save_report]
 journal: [report.bind_block@1, report.save_report@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.MODEL.BIND: Binding resolution and report generation
@@ -64,7 +64,12 @@ RESOLVE (binding lookup against a journal head), EXPAND (repetition and multi-st
 ## Open questions
 
 - Should a resolved report embed snapshot images or reference them by digest only? Assumed by digest, with `RPT.OUTPUT` fetching bytes.
+- **Applied at split (2026-11-17):** snapshots are referenced by digest only (`RPT.MODEL.BIND.GEN` REQ-006). Block kinds plug in through the `BlockResolver` trait of `RPT.MODEL.BIND.RESOLVE`; form data plugs in through the `FieldSource` trait of `RPT.MODEL.BIND.RESOLVE`. Saved views and chart series are resolved by their block kinds, so this module needs no code edge to VIZ (L3) or RPT.STATS.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.MODEL.BIND.RESOLVE | Block binding and resolution of stable IDs against a journal head (leaf) | 001 004 005 | GOM.RPT.07 |
+| RPT.MODEL.BIND.EXPAND | Slot, repetition and multi-stage expansion (leaf) | 006 | GOM.RPT.07 |
+| RPT.MODEL.BIND.GEN | Report generation, resolved document, provenance and digest (leaf) | 002 003 007 008 009 | none |

@@ -4,18 +4,18 @@ title: ORS-ALN: alignment cases
 level: 3
 parent: UNC.ORS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.ORS-002, REQ-UNC.ORS-003]
 covers: []
-depends_on: [UNC.ORS.TRACE]
+depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.ALN: ORS-ALN: alignment cases
@@ -53,9 +53,15 @@ P321, RPS, BEST, CONSTR. Each sub-suite becomes a content task once its cases ha
 
 ## Open questions
 
+- Split by construction method. Alignment cases rest on mathematics, not on reading a GD&T standard, so all three children are leaves whose cases carry `citations: none` with basis `closed_form_math`; none cites a DMT row. Datum-system alignment (`align.run_datum_system@1`) is a DRF interpretation and belongs to `UNC.ORS.DRF`. ORS is Tooling (CONSTITUTION §2.1): cases name their aim by registry command ID and `UNC.ORS.RUN` dispatches them; no product crate is linked.
+
 - Interpretation content (expected results that depend on reading a standard, and every DMT row citation) is authored by paid or credentialed GD&T experts and signed off by two reviewers, per D-009; agents may draft structure, generators and closed-form mathematics only.
 - Expected results that cannot be derived in closed form need an independent oracle result recorded as a cross-check [unverified: which cases].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.ALN.EXACT | Exact-solution cases for 3-2-1, RPS and point-pair alignments (leaf) | 001 002 003 | none |
+| UNC.ORS.ALN.BEST | Best-fit cases with null-space constructed residuals (leaf) | 001 002 003 | none |
+| UNC.ORS.ALN.CONSTR | Constrained best-fit cases with known active constraints (leaf) | 001 002 | none |

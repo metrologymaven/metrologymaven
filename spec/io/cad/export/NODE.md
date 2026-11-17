@@ -4,18 +4,18 @@ title: STEP and IGES export of geometric elements
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-IO.CAD-009]
 covers: [GOM.EXP.07, PW.EXP.03]
-depends_on: [IO.CAD.WORKER, IO.REG.ENV, IO.REG.WRITE, GEO.TYPES]
+depends_on: [IO.CAD.STEP.P21, IO.CAD.IGES.SECT, IO.REG.ENV, IO.REG.WRITE, GEO.TYPES]
 cli: [fid export cad-step, fid export cad-iges]
 mcp: [export_cad_step, export_cad_iges]
 journal: [export.cad_step@1, export.cad_iges@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.EXPORT: STEP and IGES export of geometric elements
@@ -55,8 +55,12 @@ MAP (element mapping), BOUND (extents), STEPW, IGESW.
 
 ## Open questions
 
-- A first-party writer for these simple entities may avoid the CAD kernel entirely; decide at the next split.
+- Resolved at this split: the writers are first-party (no CAD kernel, no worker; writing trusted in-memory elements needs no isolation), built on the shared Part 21 printer (`IO.CAD.STEP.P21`) and IGES section writer (`IO.CAD.IGES.SECT`). `depends_on` changed accordingly (IO.CAD.WORKER dropped).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.EXPORT.BOUND | Export plan and extents for unbounded elements (leaf) | 002 | none |
+| IO.CAD.EXPORT.STEPW | STEP export of geometric elements (leaf) | 001 003 004 005 | GOM.EXP.07 |
+| IO.CAD.EXPORT.IGESW | IGES export of geometric elements (leaf) | 001 003 004 005 | GOM.EXP.07, PW.EXP.03 |

@@ -4,18 +4,18 @@ title: Drawing sheets and drawing revisions
 level: 3
 parent: RPT.BALLOON
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.BALLOON-009, REQ-RPT.BALLOON-010]
 covers: []
-depends_on: [IO.REG, CORE.STO, CORE.PRJ]
-cli: [fid report add-drawing-balloon, fid report list-drawing-balloon]
-mcp: [report_add_drawing_balloon, report_list_drawing_balloon]
-journal: [report.add_drawing_balloon@1]
-updated: 2026-11-16
+depends_on: [IO.REG.PLUGIN.DRAW, IO.REG.ROOTS, CORE.STO.CAS, CORE.PRJ.CONT, CORE.BUS.PIPE]
+cli: [fid report add-drawing-balloon, fid report list-drawing-balloon, fid report set-size-drawing-balloon, fid report carry-drawing-balloon]
+mcp: [report_add_drawing_balloon, report_list_drawing_balloon, report_set_size_drawing_balloon, report_carry_drawing_balloon]
+journal: [report.add_drawing_balloon@1, report.set_size_drawing_balloon@1, report.carry_drawing_balloon@1]
+updated: 2026-11-17
 ---
 
 # RPT.BALLOON.SHEET: Drawing sheets and drawing revisions
@@ -57,9 +57,14 @@ IMPORT (drawing revision import), COORD (sheet coordinate system), CARRY (carry 
 
 ## Open questions
 
-- **Cross-domain:** no IO node names a PDF or raster-image page reader for drawings. IO should own it (format reading is out of RPT); raised here for IO.
-- Command names `*_drawing_balloon` are chosen to stay inside the parent's `*_balloon` pattern; `report.import_drawing` would read better.
+- Resolved: the drawing reader is owned by IO as `IO.REG.PLUGIN.DRAW` (agreed at review); `RPT.BALLOON.SHEET.IMPORT` depends on it.
+- **Cross-domain:** rendering vector PDF page content to pixels for display has no owner (raised in `IO.REG.PLUGIN.DRAW`).
+- Text extraction from drawings (REQ-RPT.BALLOON.SHEET-004) is not offered by the reader yet; no child extracts text, so only user-entered metadata is untrusted text today.
+- Carry-forward writes balloons through an injected `BalloonSink` trait, because `RPT.BALLOON.REG` depends on this node and a direct dependency would close a cycle.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.BALLOON.SHEET.IMPORT | Drawing revision import and sheet coordinates (leaf) | 001 002 003 004 005 | none |
+| RPT.BALLOON.SHEET.CARRY | Carry balloons forward to a new drawing revision (leaf) | 006 | none |

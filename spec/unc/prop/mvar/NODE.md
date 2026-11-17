@@ -4,7 +4,7 @@ title: Multivariate propagation of feature parameter vectors
 level: 3
 parent: UNC.PROP
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-UNC.PROP-006]
 covers: []
 depends_on: [UNC.PROP.LPU, UNC.PROP.MCM]
+uses_artifacts: [UNC.ORS.UNC]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.MVAR: Multivariate propagation of feature parameter vectors
@@ -55,8 +56,14 @@ PARAM (parameterisations per feature type), VLPU, VMCM, REGION (coverage regions
 
 ## Open questions
 
-- Parameterisations for cones and tori with near-degenerate apex or radius need a stable choice; coordinate with KRN fit outputs.
+- **Applied (cones and tori):** `UNC.PROP.MVAR.PARAM` uses the kernel fit parameterisations of `KRN.LSQ.TRAIT` (axis by two tangent-plane parameters, cone by reference point at the foot of the centroid, radius there and half-angle, with no apex parameter). Tori are not in `fcov-param@1` and return `parameterisation_missing` until a later version.
+- Coverage regions (hint REGION) are folded into VLPU (ellipsoidal) and VMCM (sample-based), because each is a small function of its engine's output.
+- The ORS-UNC position case is read as an artifact from `UNC.ORS.UNC` (still open).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.PROP.MVAR.PARAM | Feature covariance type and parameterisations (leaf) | 001 004 | none |
+| UNC.PROP.MVAR.VLPU | Multivariate LPU and joint covariance of characteristic groups (leaf) | 002 003 | none |
+| UNC.PROP.MVAR.VMCM | Joint Monte Carlo samples and sample covariance (leaf) | 002 003 | none |

@@ -4,7 +4,7 @@ title: Hole filling and closing
 level: 3
 parent: SCAN.MESHOP
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.MESHOP.PROV, SCAN.MESHOP.REPAIR]
 cli: [fid mesh fill-*, fid mesh close]
 mcp: [mesh_fill_*, mesh_close]
 journal: [mesh.fill_*, mesh.close@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.MESHOP.HOLES: Hole filling and closing
@@ -62,7 +62,12 @@ FILL (loop triangulation, flat and curvature-continuous), CLOSE (watertight clos
 
 - Loop IDs must be stable for the interactive mode; proposed: the lowest vertex index on the loop, as reported by QUAL.
 - Curvature-continuous fill method (for example minimum-energy fairing) is a leaf-level choice.
+- **Resolved at split (2026-11-17):** loop IDs are the lowest vertex index on the loop (`SCAN.MESHOP.HOLES.FLAT`); the curvature-continuous shape is refinement plus uniform bi-Laplacian fairing (`SCAN.MESHOP.HOLES.FAIR`). `SCAN.MESHOP.REPAIR.FIXSELF` reuses FLAT's loop triangulation.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.MESHOP.HOLES.FLAT | Hole fill commands and minimal-area loop triangulation (leaf) | 001 002 003 004 005 008 | GOM.MSH.05 |
+| SCAN.MESHOP.HOLES.FAIR | Curvature-continuous fill by refinement and fairing (leaf) | 004 005 008 | GOM.MSH.05 |
+| SCAN.MESHOP.HOLES.CLOSE | Close a mesh into a watertight body (leaf) | 001 005 006 007 008 | GOM.MSH.07 |

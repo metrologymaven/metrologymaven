@@ -4,18 +4,18 @@ title: Least-squares paraboloid, polyline and spline fits
 level: 3
 parent: KRN.LSQ
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.LSQ-002, REQ-KRN.LSQ-003, REQ-KRN.LSQ-006, REQ-KRN.LSQ-007, REQ-KRN.LSQ-009, REQ-KRN.LSQ-010]
 covers: [GOM.CON.18, PW.CON.03, SA.REL.01]
-depends_on: [KRN.LSQ.TRAIT, KRN.LSQ.INIT, KRN.SOLV.NLLS, KRN.SOLV.MSTART]
+depends_on: [KRN.LSQ.TRAIT, KRN.LSQ.INIT, KRN.SOLV.NLLS, KRN.SOLV.MSTART, GEO.NURBS.EVAL]
 cli: [fid fit ls-paraboloid, fid fit ls-polyline, fid fit ls-spline]
 mcp: [fit_ls_paraboloid, fit_ls_polyline, fit_ls_spline]
 journal: [fit.ls_paraboloid@1, fit.ls_polyline@1, fit.ls_spline@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.LSQ.CURVE: Least-squares paraboloid, polyline and spline fits
@@ -56,9 +56,13 @@ PARAB (paraboloid of revolution), POLY (polyline), SPLINE (smoothing spline curv
 
 ## Open questions
 
-- Spline basis evaluation lives in `GEO.NURBS`, which is above the kernel; the kernel needs its own deterministic B-spline evaluator or GEO must expose a kernel-safe one. Raise with GEO.
+- **Resolved by CONSTITUTION §2.1 (D-034):** `GEO.NURBS.EVAL` is an L0 geometry library in the kernel graph (crate `fid-geo-nurbs`, KNP-1 applies), so `KRN.LSQ.CURVE.SPLINE` uses its B-spline basis directly and no second evaluator is written.
 - Phase: P1b, after scan-to-CAD work starts; SpatialAnalyzer users need paraboloids in P3 at the latest [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.LSQ.CURVE.PARAB | Least-squares paraboloid of revolution | 001 004 005 | GOM.CON.18, SA.REL.01 |
+| KRN.LSQ.CURVE.POLY | Least-squares polyline with a given vertex count | 002 004 005 | GOM.CON.18, PW.CON.03 |
+| KRN.LSQ.CURVE.SPLINE | Least-squares smoothing spline curves | 003 004 005 | PW.CON.03 |

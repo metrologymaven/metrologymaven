@@ -4,7 +4,7 @@ title: Lossless QIF-JSON projection, canonical form and digests
 level: 3
 parent: IO.QIF
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.QIF.GEN, IO.REG.ENV]
 cli: [fid import qif-json, fid export qif-json]
 mcp: [import_qif_json, export_qif_json]
 journal: [import.qif_json@1, export.qif_json@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.QIF.JSON: Lossless QIF-JSON projection
@@ -57,8 +57,14 @@ PROJ (projection tables), LEX (lexical types), JCS (canonical serialiser and dig
 
 ## Open questions
 
-- Inline-versus-external-blob threshold for `MeasuredPointSets` is a CORE data-model choice and is needed before the projection leaf (carried from IO.QIF).
+- Inline-versus-external-blob threshold for `MeasuredPointSets` is a CORE data-model choice (carried from IO.QIF). Resolved for this node: `IO.QIF.JSON.PROJ` supports both forms (`$blob` when the model holds a blob reference), so the threshold no longer blocks the projection; CORE still has to state it.
+- `qif_digest` is an IO library; CORE (a lower layer) must not call it and hashes with `CORE.JRN.CANON` directly (see `IO.QIF.JSON.DIGEST`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.QIF.JSON.PROJ | Lossless QIF-JSON projection rules and lexical values (leaf) | 002 003 | none |
+| IO.QIF.JSON.DIGEST | Canonical QIF-JSON bytes and document digest (leaf) | 001 | none |
+| IO.QIF.JSON.AGENT | QIF-JSON form markers, agent view and lossy-form rejection (leaf) | 005 006 | none |
+| IO.QIF.JSON.CMD | QIF-JSON import and export commands (leaf) | 004 006 | none |

@@ -1,0 +1,84 @@
+---
+id: RPT.MODEL.BIND.RESOLVE
+title: Block binding and resolution of stable IDs against a journal head
+level: 4
+parent: RPT.MODEL.BIND
+kind: feature
+status: leaf
+phase: P1a
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-RPT.MODEL.BIND-001, REQ-RPT.MODEL.BIND-004, REQ-RPT.MODEL.BIND-005]
+covers: [GOM.RPT.07]
+depends_on: [RPT.MODEL.DOC, RPT.MODEL.TMPL.SLOT, CORE.JRN, CORE.PRJ.CONT, GDT.CHAR.RECORD]
+side_effect: W2
+determinism: D0
+cli: [fid report bind-block]
+mcp: [report_bind_block]
+journal: [report.bind_block@1]
+updated: 2026-11-17
+---
+
+# RPT.MODEL.BIND.RESOLVE: Block binding and resolution of stable IDs against a journal head
+
+## Purpose
+
+Two halves of the same contract. `report.bind_block@1` stores in a block only the stable IDs it shows (ResultRecords, characteristics, saved views, statistics series), never copied values. The resolver then looks every stored ID up as of an explicit journal head and hands the block kind a typed `Resolved` view, refusing IDs that are not journaled by that head or that belong to another project. Block kinds plug in through the `BlockResolver` trait defined here, so the engine never needs to know each kind.
+
+## Scope
+
+**In:** `Binding` type (a list of typed stable-ID references) stored in a block's payload envelope; `report.bind_block@1` (W2); `ResolveContext` (project, journal head, stage and run selection, optional `FieldSource`s); `BlockResolver` trait and its registry; `FieldSource` trait through which form data (FAI, PPAP) supplies field values and table rows; ID lookup against the journal; errors `report.unjournaled_record` and `report.cross_project_binding`.
+
+**Out:** repetition and multi-stage expansion (`RPT.MODEL.BIND.EXPAND`); the resolved document, digest and generation commands (`RPT.MODEL.BIND.GEN`); formatting (`RPT.MODEL.FMT`); per-kind payloads and their resolver implementations (`RPT.MODEL.BLOCKS.*`, `RPT.FORMS.LAYOUT.MAP`, `RPT.BALLOON.BLOCK`); slot rule language (`RPT.MODEL.TMPL.SLOT`).
+
+## Requirements
+
+- **REQ-RPT.MODEL.BIND.RESOLVE-001** When `report.bind_block@1` runs, the system shall store in the block only typed stable-ID references (`result`, `characteristic`, `named_view`, `series`, `field`) and shall reject any payload carrying a numeric value or formatted text for a bound reference with error `report.binding_has_value`.
+- **REQ-RPT.MODEL.BIND.RESOLVE-002** When a binding is resolved, the resolver shall look up every referenced ResultRecord and characteristic as of the journal head given in the `ResolveContext`, never as of the current head.
+- **REQ-RPT.MODEL.BIND.RESOLVE-003** If a referenced ResultRecord is not committed in the journal up to the given head, then resolution shall fail with error `report.unjournaled_record` naming the block ID and record ID, and nothing shall be journaled.
+- **REQ-RPT.MODEL.BIND.RESOLVE-004** If a binding names a ResultRecord or characteristic of another project, then resolution shall fail with error `report.cross_project_binding` naming the block and the foreign project ID.
+- **REQ-RPT.MODEL.BIND.RESOLVE-005** Each block kind shall be resolved through the `BlockResolver` registered for its kind ID, and if none is registered then resolution shall fail with error `report.no_resolver` naming the kind.
+- **REQ-RPT.MODEL.BIND.RESOLVE-006** If `report.bind_block@1` names a reference that does not exist at the current head, then it shall fail with error `report.not_found` and journal nothing.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture `fixtures/rpt/model/bracket_3stage` and a `table` block, when `fid report bind-block --block <b> --results r1,r2 --json` runs, then the stored payload contains only the two record IDs and one `report.bind_block@1` event is journaled.
+- **AC-2** (error path) Given a payload that carries `"value": 12.003` next to a bound record, when bound, then it fails with `report.binding_has_value`.
+- **AC-3** Given AC-1 and head H0 before record r2 was committed, when resolved at H0, then it fails with `report.unjournaled_record` naming r2; resolved at the current head, it succeeds.
+- **AC-4** (error path) Given fixture `fixtures/rpt/model/two_projects`, when a block binds a record of project B inside project A, then resolution fails with `report.cross_project_binding`.
+- **AC-5** (error path) Given a block of a kind with no registered resolver, when resolved, then it fails with `report.no_resolver`.
+- **AC-6** (replay) Given the journal from AC-1, when replayed in exact mode, then the outcome is `IDENTICAL`.
+
+## Design
+
+- **Registry command:** `report.bind_block@1(report: ReportId, block: BlockId, refs: Vec<Ref>) -> Binding` (W2).
+- **Data structures:** `Ref { kind: Result | Characteristic | NamedView | Series | Field, id }`; `Binding { refs: Vec<Ref> }` (order kept); `ResolveContext { project, head: JournalHash, stages: Vec<StageId>, runs: Vec<RunId>, sources: Vec<&dyn FieldSource> }`; `trait BlockResolver { fn kind(&self) -> BlockKindId; fn resolve(&self, block: &Block, ctx: &ResolveContext, lookup: &dyn Lookup) -> Result<ResolvedBlock, ResolveError>; }`; `trait FieldSource { fn field(&self, id: &FieldId) -> Option<FieldValue>; fn rows(&self, table: &TableId) -> Vec<RowSource>; }`; `trait Lookup { fn result(&self, id) -> Result<ResultRecord, ResolveError>; fn characteristic(&self, id) -> ...; }` backed by journal reads at `head`.
+- **Errors:** `report.binding_has_value`, `report.unjournaled_record`, `report.cross_project_binding`, `report.no_resolver`, `report.not_found`.
+- **Determinism:** D0; lookups are pure reads at a fixed head.
+- **Performance budget:** 10 000 lookups in under 100 ms on reference hardware [unverified until measured].
+- **Crate:** `fid-report`.
+
+## Test fixtures
+
+`fixtures/rpt/model/bracket_3stage` (one part, 3 stages, 50 characteristics with results; CORE project test builder) and `fixtures/rpt/model/two_projects`. Synthetic, CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-report`, implement block binding and ID resolution.
+>
+> **Command:** `report.bind_block@1(report, block, refs)` (W2, one journal event; CLI `fid report bind-block --json`). Payloads store typed stable-ID references only (`result`, `characteristic`, `named_view`, `series`, `field`); a payload carrying a value for a bound reference -> `report.binding_has_value`; unknown reference -> `report.not_found`.
+>
+> **Resolver:** `ResolveContext { project, head, stages, runs, sources }`; `BlockResolver` trait plus registry keyed by block kind; `FieldSource` trait (`field(id)`, `rows(table)`) for form data providers (`report.no_resolver` when missing); `Lookup` over journal reads at exactly `head`. Records not committed by `head` -> `report.unjournaled_record`; records or characteristics of another project -> `report.cross_project_binding`. Failures journal nothing.
+>
+> **Acceptance:** AC-1..AC-6 in `spec/rpt/model/bind/resolve/NODE.md`.
+>
+> **Constraints:** CONSTITUTION C1 (no value is copied or computed here), C6, §5 stable IDs, §8 (no panic, no `unsafe`, deny `unwrap`/`expect`); no std HashMap/HashSet.
+
+## Open questions
+
+- Cross-project data enters reports only as statistics series (`series` references resolved by the chart block); this leaf therefore checks project ownership only for results and characteristics.
+
+## Children
+
+_Leaf: none._

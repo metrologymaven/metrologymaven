@@ -4,7 +4,7 @@ title: Characteristic and feature-control-frame model on QIF 3.0
 level: 3
 parent: GDT.CHAR
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.QIF, CORE.PRJ]
 cli: [fid gdt create-characteristic, fid gdt edit-characteristic]
 mcp: [gdt_create_characteristic, gdt_edit_characteristic]
 journal: [gdt.create_characteristic@1, gdt.edit_characteristic@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.CHAR.MODEL: Characteristic and feature-control-frame model on QIF 3.0
@@ -61,8 +61,14 @@ TYPES (Rust types and JSON Schema), QIFMAP (mapping to and from IO.QIF types), C
 
 ## Open questions
 
-- Which QIF 3.0 characteristic types are needed in P1a versus later; the full set is large. A P1a subset may need the parent to accept a staged REQ-GDT.CHAR-005.
+- Resolved at split: the full QIF 3.0 characteristic type set is represented as data from P1a (`GDT.CHAR.MODEL.TYPES`), because the types are generated from the QIF schema and carry no evaluation. Which types can be *evaluated* in P1a is staged by the DMT support matrix (`GDT.RES`), so REQ-GDT.CHAR-005 needs no staging.
+- Resolved at split: SCAN-owned comparison points (`SCAN.CMP.CPT`) are carried as an `Extension` characteristic through the QIF `Attributes` hook (`GDT.CHAR.MODEL.TYPES`, `GDT.CHAR.MODEL.QIFMAP`); GDT never reads their payload.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.CHAR.MODEL.TYPES | Characteristic and FCF types with JSON Schemas (leaf) | 001 002 004 | PCD.DIM.02 |
+| GDT.CHAR.MODEL.QIFMAP | Mapping between QIF model types and characteristic types (leaf) | 001 003 | none |
+| GDT.CHAR.MODEL.CMDS | Create and edit characteristic commands (leaf) | 002 005 | PCD.DIM.02 |
+| GDT.CHAR.MODEL.RTRIP | QIF corpus round-trip test for characteristics (leaf) | 003 | none |

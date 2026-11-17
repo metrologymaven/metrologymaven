@@ -4,7 +4,7 @@ title: ISO GPS DMT row set
 level: 3
 parent: GDT.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -44,8 +44,8 @@ The ISO GPS rows of the DMT: ISO 1101, ISO 5459 (2011 legacy and 2024), ISO 2692
 
 ## Interfaces
 
-- **Offers:** ISO rows and ISO defaults profiles.
-- **Consumes:** schema, workflow, ORS cases, purchased ISO texts (D-016).
+- **Offers:** ISO rows and ISO defaults profiles; the ISO counterpart map and P1a ISO inventory (STUBS).
+- **Consumes:** schema, workflow, inventory format and release gate (`GDT.RES.ROWASME.INV`, `GDT.RES.ROWASME.GATE`), ORS cases, licensed ISO texts (D-016).
 
 ## Decomposition hints
 
@@ -53,9 +53,20 @@ STUBS (P1a placeholder generator; a leaf once D-016 settles whether placeholders
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-016 (Acquiring and sharing standards texts for DMT authoring and review) is accepted. Apply its Decision section (`decisions/D-016-*.md`) when this node is expanded.
-- **Blocked on D-016** for the P1b rows. The P1a placeholder rows need no standards text and could be split out as a leaf once the decision is taken.
+- **Applied D-016 (accepted 2026-11-17):** P1b authors work from project-purchased licences of each cited ISO edition; reviewers hold their own copies or partner access and attest "edition held" per review. Placeholders contain no interpretation, so their reviews use the attestation `not_required_placeholder` that `GDT.RES.ROWFLOW.STATE` allows only for `unsupported` rows with empty chains; they still need two reviewers, because the released-table lint (L5) requires sign-off on every row. That settles the question the STUBS hint raised.
+- The schema requires at least one clause reference per row; placeholders cite only the standard's scope clause (see `GDT.RES.ROWISO.STUBS`). Allowing an empty clause list for `unsupported` rows would be cleaner and is a schema question for the RES maintainers.
+
+## Split rationale
+
+P1a machinery (STUBS, a leaf) is separated from the P1b content, which is split per standard family because each family has its own texts, editions, authors and reviewers: ISO 1101 tolerances (GEOTOL), ISO 5459 datums (DATUM), ISO 2692 material requirements (MATREQ), ISO 14405-1 size (SIZE), and the ISO defaults profiles with the ISO 14253-1 decision-rule hint (DPROF). The inventory format and release gate are reused from `GDT.RES.ROWASME` rather than duplicated.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.RES.ROWISO.STUBS | ISO counterpart map and P1a placeholder rows (leaf) | 001 | none |
+| GDT.RES.ROWISO.GEOTOL | ISO 1101 geometrical tolerance rows | 002 003 | none |
+| GDT.RES.ROWISO.DATUM | ISO 5459 datum and datum-system rows | 002 003 | none |
+| GDT.RES.ROWISO.MATREQ | ISO 2692 material-requirement rows | 002 003 | none |
+| GDT.RES.ROWISO.SIZE | ISO 14405-1 size rows | 002 003 | none |
+| GDT.RES.ROWISO.DPROF | ISO defaults profiles and decision-rule hint | 002 003 | none |

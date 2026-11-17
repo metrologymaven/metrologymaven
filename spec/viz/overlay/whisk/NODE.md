@@ -4,18 +4,18 @@ title: Whiskers, flags and vector plots
 level: 3
 parent: VIZ.OVERLAY
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.OVERLAY-004, REQ-VIZ.OVERLAY-010]
 covers: [SA.VIZ.03]
-depends_on: [VIZ.RENDER, VIZ.OVERLAY.CMAP, KRN.NUM]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+depends_on: [VIZ.RENDER.FRAME, VIZ.OVERLAY.CMAP, VIZ.OVERLAY.STATUS, SCAN.SECT.WHISK, SCAN.CMP.CPT, KRN.NUM.FMT.REG]
+cli: [fid view set-deviation-glyphs]
+mcp: [view_set_deviation_glyphs]
+journal: [view.set_deviation_glyphs@*]
+updated: 2026-11-17
 ---
 
 # VIZ.OVERLAY.WHISK: Whiskers, flags and vector plots
@@ -56,8 +56,13 @@ WHISKER, FLAG, VECTOR, AMPLIFY.
 
 ## Open questions
 
-- Tagged P1b with scan sections; vector plots for networks follow LVM (P3) [unverified].
+- Tagged P1b with scan sections; network residual vectors follow LVM (P3, outside launch-1) and plug in as another `VectorGroup` producer without a dependency now [unverified].
+- The amplification factor is stored in a `DeviationGlyphStyle` element per view key and changed only by `view.set_deviation_glyphs@1` (`VIZ.OVERLAY.WHISK.WHISKER`).
+- Whisker colours need kernel bins for section-comparison values; `SCAN.CMP.BAND` must confirm that a section-comparison element is a valid field for `compare.surface_bin@1` [cross-domain].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.OVERLAY.WHISK.WHISKER | Section whiskers, flags and amplification (leaf) | 001 002 003 004 005 | none |
+| VIZ.OVERLAY.WHISK.VECTOR | Colour vector plots for point groups (leaf) | 001 002 004 | SA.VIZ.03 |

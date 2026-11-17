@@ -4,18 +4,19 @@ title: Incumbent source register and clean-room admission
 level: 2
 parent: MIG
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-MIG-007]
 covers: []
-depends_on: [IO.REG.DETECT, IO.REG.ENV]
+depends_on: [IO.REG.DETECT, IO.REG.ENV, CORE.JRN.CANON]
+uses_artifacts: [CORE.REG.MAN, ECO.PARITY.GEN]
 cli: [fid migrate list-sources, fid migrate check-source]
 mcp: [migrate_list_sources, migrate_check_source]
-journal: []
-updated: 2026-11-16
+journal: [migrate.list_sources@1, migrate.check_source@1]
+updated: 2026-11-17
 ---
 
 # MIG.SRC: Incumbent source register and clean-room admission
@@ -35,7 +36,7 @@ The single place that says which incumbent artefacts migration tooling may read,
 
 **Out** (and which node owns it instead):
 - Parsing of any format (owned by `IO`)
-- The decision on which incumbent program and project formats are admissible (open as a decision; this node records outcomes)
+- The decision on which incumbent program and project formats are admissible (D-033, accepted; this node records outcomes)
 - Copy detection of incumbent text in our content (owned by `OUTR.BRAND` and D-013)
 - Use of the sources in each ladder stage (owned by `MIG.TEMPL`, `MIG.PROJ`, `MIG.PROGEQ`, `MIG.PARALLEL`)
 
@@ -50,8 +51,9 @@ The single place that says which incumbent artefacts migration tooling may read,
 
 ## Interfaces
 
-- **Offers:** `migrate.list_sources@1` (R0), `migrate.check_source@1` (R1), `SourceRegister` data, `source_gate(format_id)` check used by MIG import and conversion commands.
-- **Consumes:** `IO.REG.DETECT` format IDs and detection; `IO.REG.ENV` import envelope (the gate runs inside it for MIG commands).
+- **Offers:** `migrate.list_sources@1` (R0), `migrate.check_source@1` (R1), `SourceRegister` data (`mig-sources@1`, with version), `source_gate(format_id, source_id?)` check used by MIG import and conversion commands, the generated sources page (`mig-sources.md` with the `ECO.PARITY.GEN` header).
+- **Consumes (code):** `IO.REG.DETECT` format IDs and detection; `IO.REG.ENV` import envelope (the gate runs inside it for MIG commands); `CORE.JRN.CANON`.
+- **Consumes (artifacts):** `CORE.REG.MAN` registry manifest for the build check; `ECO.PARITY.GEN` header format for the generated page.
 
 ## Decomposition hints
 
@@ -59,8 +61,19 @@ REG (register schema and data), GATE (refusal gate and build check), PAGE (gener
 
 ## Open questions
 
-- Which incumbent program and project formats can be admitted at all needs counsel; opened as D-033 (see the MIG node). Until decided, all incumbent-native program and project formats are `PENDING_REVIEW` and only open exports are usable.
+- D-033 is accepted: option A (open exports only) through P2, then per-format counsel review (option B) at P4. Until then every incumbent-native program and project format is `NOT_ADMITTED` or `PENDING_REVIEW`; `MIG.SRC.REG` enforces this with a register policy field. D-033's condition (counsel review before the node is published or released) applies to the register's first release.
+
+## Split rationale
+
+Split by **who reads the register and when**: the register itself, its listing and its generated page (REG: data plus an R0 read, all describing the same entries), and the enforcement path (GATE: the runtime refusal every MIG reader calls, plus the build check that every MIG input format is registered). PAGE is folded into REG because the page is a rendering of the same `list_sources` output.
+
+Alternatives considered:
+- **Leaf.** Rejected: data schema with review records, a runtime gate wired into the IO envelope, a build check and two commands exceed one M PR.
+- **Gate inside `IO.REG.ENV`.** Rejected: the admission policy is a MIG rule (REQ-MIG-007); IO stays policy-free and only offers the hook.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [MIG.SRC.REG](reg/NODE.md) | Source register, review records, listing and sources page (leaf) | 001 002 005 006 | none |
+| [MIG.SRC.GATE](gate/NODE.md) | Admission gate, check command and register build check (leaf) | 003 004 | none |

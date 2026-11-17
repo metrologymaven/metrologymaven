@@ -4,18 +4,18 @@ title: Branches, diff, protection and promotion
 level: 3
 parent: CORE.JRN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.JRN-010, REQ-CORE.JRN-011, REQ-CORE.JRN-012]
 covers: []
-depends_on: [CORE.JRN.CHAIN]
-cli: [fid journal create-branch, fid journal list-branches, fid journal diff-branch, fid journal promote-branch, fid journal promote-protected-branch, fid journal request-promote-branch, fid journal protect-branch]
+depends_on: [CORE.JRN.CHAIN, CORE.REG.DEF]
+cli: [fid journal create-branch, fid journal list-branches, fid journal diff-branch, fid journal promote-branch, fid journal promote-protected-branch, fid journal request-promote-branch, fid journal protect-branch, fid journal set-branch-coediting]
 mcp: [journal_create_branch, journal_list_branches, journal_diff_branch, journal_promote_branch, journal_request_promote_branch]
-journal: [journal.create_branch@1, journal.promote_branch@1, journal.promote_protected_branch@1, journal.request_promote_branch@1, journal.protect_branch@1]
-updated: 2026-11-16
+journal: [journal.create_branch@1, journal.promote_branch@1, journal.promote_protected_branch@1, journal.request_promote_branch@1, journal.protect_branch@1, journal.set_branch_coediting@1]
+updated: 2026-11-17
 ---
 
 # CORE.JRN.BR: Branches, diff, protection and promotion
@@ -66,7 +66,13 @@ NAME (create, list, naming rules), DIFF (entity and result diff), PROMO (fast-fo
 
 - `VIZ.INBOX` asks who computes the "result diff"; this child offers output-digest diff per entity, and value-level deltas would come from `CORE.RPL.XVER`-style comparison. Confirm with VIZ.
 - The parent's interface listed one promote command at W2 or W3; this child splits it in two because a registry command has exactly one class.
+- Non-fast-forward promotion needs `CORE.RPL.RETGT`'s rebase, but `CORE.RPL` depends on `CORE.JRN`, so a code edge would form a cycle. `CORE.JRN.BR.PROMO` defines a `Rebaser` trait that the replay crate implements and the app wires at start-up; no `depends_on` is declared.
+- `journal.set_branch_coediting@1` (W2, `human_only`) is added in `CORE.JRN.BR.NAME` to record the human opt-in that `CORE.BUS.ROUTE` reads (REQ-CORE.BUS-006).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JRN.BR.NAME | Branch create, list, protection and co-editing opt-in (leaf) | 001 008 | none |
+| CORE.JRN.BR.DIFF | Entity and result diff between branches (leaf) | 002 | none |
+| CORE.JRN.BR.PROMO | Promotion and promotion requests (leaf) | 003 004 005 006 007 | none |

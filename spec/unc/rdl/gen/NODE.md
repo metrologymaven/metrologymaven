@@ -4,7 +4,7 @@ title: Tier G synthetic generators and oracle cross-checks
 level: 3
 parent: UNC.RDL
 kind: module
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.RDL.FORMAT]
 cli: [fid rdl generate-dataset]
 mcp: [rdl_generate_dataset]
 journal: [rdl.generate_dataset@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.RDL.GEN: Tier G synthetic generators and oracle cross-checks
@@ -56,8 +56,18 @@ One leaf per family: LSNULL (least-squares null-space), MZEQ (minimum-zone equio
 
 ## Open questions
 
-- The high-precision arithmetic for generators lives outside the kernel (generators are not values of record); whether the generator tool is Rust with MPFR or Python with mpmath is left to the leaves, provided the oracle uses the other route.
+- **Applied (arithmetic route):** generators are Rust in crate `fid-rdl-gen`, using a pure-Rust arbitrary-precision float library whose licence must be on the D-001 allowlist [unverified: library choice]. The independent oracle (external `fiducial-oracles` repository) uses Python with mpmath, the other route. `fid-rdl-gen` never links the kernel's fit code; it may use the kernel's counter-based RNG for seeding only.
+- **Layering:** RDL data and generators are tooling for kernel validation, but `rdl.generate_dataset@1` is a registry command, so `UNC.RDL.GEN.CMD` sits in the UNC-commands part of L2 and depends on CORE bus nodes. Other nodes consume generated data only as artifacts (frozen releases).
+- Oracle results enter as files (artifact of the external repository). Records whose cross-check is `pending` must not be frozen; `UNC.RDL.FREEZE` should check this (cross-node note).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.RDL.GEN.HPREC | High-precision arithmetic, rounding and generator record (leaf) | 001 002 | none |
+| UNC.RDL.GEN.LSNULL | Least-squares null-space generators for six primitives (leaf) | 002 004 | none |
+| UNC.RDL.GEN.MZEQ | Minimum-zone equioscillation generators | 002 004 | none |
+| UNC.RDL.GEN.GEOM | Partial-coverage and extreme-aspect-ratio families (leaf) | 004 | none |
+| UNC.RDL.GEN.STRESS | Noise-level and outlier stress families (leaf) | 004 | none |
+| UNC.RDL.GEN.XCHECK | Oracle cross-check recording and gating (leaf) | 003 | none |
+| UNC.RDL.GEN.CMD | The rdl.generate_dataset@1 command and family registry (leaf) | 001 | none |

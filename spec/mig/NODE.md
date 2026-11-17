@@ -11,7 +11,7 @@ owners: []
 claimed_by:
 satisfies: [REQ-FID-026]
 covers: []
-depends_on: [IO, AUTO, CMM, GDT, RPT]
+depends_on: [IO, GDT, RPT]
 cli: [fid migrate *, fid correlate *]
 mcp: [migrate_*, correlate_*]
 journal: [migrate.*, correlate.*]

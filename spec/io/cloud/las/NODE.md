@@ -4,7 +4,7 @@ title: LAS, LAZ and COPC reader and writer with scaled-integer precision
 level: 3
 parent: IO.CLOUD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.CLOUD.STREAM, IO.REG.ENV, IO.REG.WRITE]
 cli: [fid import cloud-las, fid export cloud-las]
 mcp: [import_cloud_las, export_cloud_las]
 journal: [import.cloud_las@1, export.cloud_las@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CLOUD.LAS: LAS, LAZ and COPC
@@ -58,7 +58,14 @@ HDR (headers, VLRs, PDRF), LAZ (codec binding), COPC (hierarchy read and octree 
 
 - LAZ codec: the concept docs name `laz-rs` [unverified: licence on the D-001 allowlist].
 - Default export container for evidence (E57 versus COPC) is a TRUST/UNC question (carried from IO.CLOUD).
+- REQ-IO.CLOUD.LAS-002 asks for "one rounding per axis"; KNP-1 forbids FMA, so `IO.CLOUD.LAS.QUANT` uses error-free transformations (Dekker product, two-sum) and rounds once in software.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CLOUD.LAS.HDR | LAS headers, VLRs and point data record formats (leaf) | 004 | none |
+| IO.CLOUD.LAS.QUANT | Scaled-integer coordinates and quantisation (leaf) | 001 002 003 | none |
+| IO.CLOUD.LAS.LAZ | LAZ chunked compression binding (leaf) | 004 | none |
+| IO.CLOUD.LAS.COPC | COPC hierarchy reading and octree writing (leaf) | 005 | none |
+| IO.CLOUD.LAS.CMD | LAS, LAZ and COPC import and export commands (leaf) | 001 003 004 | PW.EXP.01 |

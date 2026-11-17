@@ -4,7 +4,7 @@ title: User research and usability testing
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [FLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.RESEARCH: User research and usability testing
@@ -62,11 +62,25 @@ The evidence that the design works for real metrologists and operators: intervie
 
 PLAN (research plan, recruitment, consent and data handling), INQUIRY (interviews and contextual inquiry), USAB (per-release usability tests and severity scale), SUS (SUS tracking and release reports).
 
+## Split rationale
+
+The dividing principle is **the research cycle**: PROTO (protocol, consent, data handling and the publication check, governing all activities), INQUIRY (the P0 discovery round before the workflow rail is approved), USAB (per-release usability sessions, severity scale and issue filing), SUS (scoring, history, regression flag and the release report). This follows the decomposition hints. PROTO and INQUIRY start in P0; USAB and SUS start in P1a, the first release with a GUI.
+
+Alternatives considered:
+- **USAB and SUS as one child.** Rejected: session recording is a field activity with a record format, while SUS reporting is a deterministic calculation with its own statistics fixtures.
+- **Reusing FLOW.STUDY's record format.** Rejected for now: it would add a code edge from UX to FLOW's study crate; the formats can be merged later by decision.
+
 ## Open questions
 
-- REQ-UX-005 does not say whether failing usability results block GA. FLOW owns GA gates (REQ-FLOW-003); a link from SUS to GA would need a maintainer decision.
+- REQ-UX-005 does not say whether failing usability results block GA. FLOW owns GA gates (REQ-FLOW-003); a link from SUS to GA would need a maintainer decision (see UX.RESEARCH.SUS). Not opened as a decision now because nothing here is blocked by it.
 - Recruiting 5 practising participants per release depends on design partners; feasibility for a volunteer project is [unverified].
+- FLOW.STUDY.PROTO also measures SUS (bar 70 [unverified]) for design-partner sessions; the two programmes should share participants' consent wording and avoid double-booking partners.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.RESEARCH.PROTO](proto/NODE.md) | Research plan, protocol, consent and data handling (leaf) | 007 008 009 010 | none |
+| [UX.RESEARCH.INQUIRY](inquiry/NODE.md) | Interviews and contextual inquiry before the P1a rail (leaf) | 001 | none |
+| [UX.RESEARCH.USAB](usab/NODE.md) | Per-release usability tests, severity scale and issue filing (leaf) | 002 003 005 | none |
+| [UX.RESEARCH.SUS](sus/NODE.md) | SUS scoring, history and release research reports (leaf) | 004 006 | none |

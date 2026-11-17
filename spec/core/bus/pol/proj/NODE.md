@@ -1,0 +1,84 @@
+---
+id: CORE.BUS.POL.PROJ
+title: MCP projection, pending requests and approval
+level: 4
+parent: CORE.BUS.POL
+kind: feature
+status: leaf
+phase: P0
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-CORE.BUS.POL-002, REQ-CORE.BUS.POL-003, REQ-CORE.BUS.POL-004]
+covers: []
+depends_on: [CORE.REG.DEF, CORE.BUS.PRIN, CORE.BUS.PIPE.ERR, CORE.BUS.PIPE.HANDLER, CORE.JRN.ENTRY]
+side_effect: [R0, W1, W1]
+determinism: D0
+cli: [fid request list-requests, fid request withdraw-request, fid request reject-request]
+mcp: [request_list_requests, request_withdraw_request]
+journal: [request.file_request@1, request.withdraw_request@1, request.reject_request@1]
+updated: 2026-11-17
+---
+
+# CORE.BUS.POL.PROJ: MCP projection, pending requests and approval
+
+## Purpose
+
+Enforces each command's MCP projection at the bus, behind the generated MCP surface: `exposed` runs, `request_only` becomes a pending request for a human, `never` is refused. A pending request is a W1 Record Journal entry holding the command, its parameters digest and the requester. A human approves by invoking the same command with `approval_of` set; the command then runs with the human as principal and records the requester and request ID. Requesters may withdraw and humans may reject. The VIZ Proposal Inbox renders these records.
+
+## Scope
+
+**In:** projection check on MCP channels (local and server); `request_only` for every `human_only` command (D-031) and for X1 commands filed by agents and scripts; the pending-request record and its states; approval checks; `request.list_requests@1`, `request.withdraw_request@1`, `request.reject_request@1`; the internal `request.file_request@1` entry.
+**Out:** rendering requests (`VIZ.INBOX`); motion run requests and the approval station (`CMM`); executing the approved command (`CORE.BUS.PIPE.STAGE`); X1-specific approval content (`CORE.BUS.POL.EGRESS`).
+
+## Requirements
+
+- **REQ-CORE.BUS.POL.PROJ-001** If a command whose projection is `request_only`, or whose definition has `human_only: true`, is invoked through an MCP channel, then the bus shall return `PendingRequest`, and the pipeline shall append one W1 `request.file_request@1` entry holding the command ID and major, the parameters commitment, the requester principal and the branch head at filing, and return the request ID.
+- **REQ-CORE.BUS.POL.PROJ-002** If a command whose projection is `never` is invoked through an MCP channel, then the bus shall return `policy` with reason `not_on_mcp` and commit nothing.
+- **REQ-CORE.BUS.POL.PROJ-003** When a `human` principal invokes a command with `approval_of` naming a pending request whose command and parameters digest match the invocation, the bus shall allow it, mark the request `approved` in the same commit, and record the requester and request ID in the entry.
+- **REQ-CORE.BUS.POL.PROJ-004** If `approval_of` names a request that is not pending, whose parameters digest differs, or the approver is not `human`, then the bus shall return `policy` with reason `bad_approval` and commit nothing.
+- **REQ-CORE.BUS.POL.PROJ-005** When `request.withdraw_request@1` is invoked by the requester of a pending request, the bus shall mark it `withdrawn`; any other principal shall get `policy` with reason `not_requester`.
+- **REQ-CORE.BUS.POL.PROJ-006** When a `human` principal invokes `request.reject_request@1` with a reason, the bus shall mark the pending request `rejected` and store the reason as an untrusted text commitment.
+- **REQ-CORE.BUS.POL.PROJ-007** When `request.list_requests@1` runs, the bus shall return the caller's own requests, or all requests for a `human` caller, sorted by filing sequence, filterable by state.
+- **REQ-CORE.BUS.POL.PROJ-008** If approval executes the command and any later pipeline stage fails, then the request shall stay `pending` and nothing shall be committed.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture `fixtures/core/bus/pol/proj/registry.json` (commands with projections exposed, request_only and never, and one `human_only` W2 command), when an MCP agent invokes the `request_only` and the `human_only` command, then each returns a request ID, the Record Journal gains one `request.file_request@1` entry each, and no handler runs.
+- **AC-2** (error path) Given the `never` command over MCP, then `policy` / `not_on_mcp` and nothing is journaled.
+- **AC-3** Given a pending request R, when a GUI human invokes the same command and parameters with `approval_of: R`, then one entry is appended with principal `human`, `requested_by` = the agent and `request_id` = R, and `fid request list-requests --json` shows R as `approved`.
+- **AC-4** (error path) Given R and an approval whose parameters differ by one field, then `policy` / `bad_approval`; given an agent setting `approval_of`, then `policy` / `bad_approval`.
+- **AC-5** Given R, when the agent withdraws it, then R is `withdrawn`; when another agent withdraws it, then `policy` / `not_requester`.
+- **AC-6** Given R, when a human runs `fid request reject-request R --reason "wrong datum" --json`, then R is `rejected` and the reason is stored as untrusted text.
+- **AC-7** (replay) Given the journal from AC-1 and AC-3, when replayed in exact mode, then the outcome is `IDENTICAL`.
+
+## Design
+
+- **Registry command(s):**
+  - `request.list_requests@1` R0; params `{ state?: RequestState }`; result `{ requests: [RequestSummary] }`.
+  - `request.withdraw_request@1` W1; params `{ request: RequestId }`; projection `exposed`.
+  - `request.reject_request@1` W1; params `{ request: RequestId, reason: Untrusted<String> (≤2,000) }`; `human_only: true`; projection `never` (rejecting is a human act in a desktop app or upgraded CLI).
+  - `request.file_request@1` W1; exposure `internal` (written only by the pipeline, never invoked by a surface).
+- **Data structures:** `PendingRequest { id: RequestId (UUIDv7), command: CommandRef, params_commitment, requester: Principal, filed_at_head: EntryHash, state: pending|approved|rejected|withdrawn }`; `fn authorise_projection(channel, def) -> Decision`.
+- **Algorithm:** on MCP channels: `never` → refuse; `request_only` or `human_only` → PendingRequest; else Run. For `approval_of`: load the request, check state, principal and parameters digest, then let the pipeline continue with the human principal and add a `RequestApproved` event to the same commit.
+- **Errors:** `policy` (reasons `not_on_mcp`, `bad_approval`, `not_requester`), `not_found`.
+- **Determinism:** D0; request IDs are UUIDv7 recorded as observed inputs.
+- **Performance budget:** listing 10,000 requests in < 50 ms [unverified until measured].
+- **Crate:** `fid-bus` (module `policy::projection`).
+
+## Test fixtures
+
+`fixtures/core/bus/pol/proj/registry.json`, a synthetic test registry; CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-bus`, add module `policy::projection`. `authorise_projection(channel, def)`: on MCP channels, projection `never` → `policy`/`not_on_mcp`; projection `request_only` or `human_only: true` → `Decision::PendingRequest`, which the pipeline commits as one W1 `request.file_request@1` entry (command ref, parameters commitment, requester, head at filing) and returns the request ID. Approval: a human invocation with `approval_of: RequestId` is allowed only if the request is pending and the command and parameters digest match; the commit carries `RequestApproved` plus the requester and request ID; any failure leaves the request pending (`bad_approval` for mismatches or non-human approvers). Register `request.list_requests@1` (R0; own requests, all for humans; sorted by filing sequence), `request.withdraw_request@1` (W1; requester only, else `not_requester`) and `request.reject_request@1` (W1, `human_only`, projection never; untrusted reason ≤2,000 chars). CLI `fid request list-requests | withdraw-request | reject-request`; MCP `request_list_requests`, `request_withdraw_request`. Tests: AC-1..AC-7 with `fixtures/core/bus/pol/proj/registry.json`. Constraints: CONSTITUTION §3 (projections, human-only D-031, agents never adopt their own proposals), C5, C6, §8.
+
+## Open questions
+
+- Pending requests do not expire; an expiry setting may be added later. A request filed against an old head is still re-validated (preconditions, conflicts) when approved.
+- The surface for approving on the CLI is an upgraded human session (D-012) passing `--approve-request <id>`; the flag name belongs to `AUTO.CLI`.
+
+## Children
+
+_Leaf: none._

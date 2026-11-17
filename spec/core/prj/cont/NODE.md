@@ -4,18 +4,18 @@ title: Project container hierarchy and entity IDs
 level: 3
 parent: CORE.PRJ
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.PRJ-001, REQ-CORE.PRJ-002, REQ-CORE.PRJ-003, REQ-CORE.PRJ-011]
 covers: [GOM.PRJ.01, PW.PRJ.01]
-depends_on: [CORE.BUS, CORE.JRN, CORE.STO]
-cli: [fid project create-project, fid project open-project, fid project close-project, fid project save-project-as, fid project list-projects, fid project create-revision, fid project create-plan, fid project create-run]
-mcp: [project_create_project, project_open_project, project_close_project, project_save_project_as, project_list_projects, project_create_revision, project_create_plan, project_create_run]
-journal: [project.create_project@1, project.save_project_as@1, project.create_revision@1, project.create_plan@1, project.create_run@1]
-updated: 2026-11-16
+depends_on: [CORE.BUS.PIPE, CORE.JRN.CHAIN, CORE.STO.LAYOUT, CORE.STO.SQL]
+cli: [fid project create-project, fid project open-project, fid project close-project, fid project save-project-as, fid project list-projects, fid project create-part, fid project create-revision, fid project create-plan, fid project create-run]
+mcp: [project_create_project, project_open_project, project_close_project, project_save_project_as, project_list_projects, project_create_part, project_create_revision, project_create_plan, project_create_run]
+journal: [project.create_project@1, project.save_project_as@1, project.create_part@1, project.create_revision@1, project.create_plan@1, project.create_run@1]
+updated: 2026-11-17
 ---
 
 # CORE.PRJ.CONT: Project container hierarchy and entity IDs
@@ -63,8 +63,13 @@ HIER (container entities and invariants), LIFE (create, open, close, save-as, li
 
 ## Open questions
 
-- Whether open and close are commands at all (they change session, not document, state); listed as R0 here so they appear on every surface.
+- Whether open and close are commands at all (they change session, not document, state); listed as R0 here so they appear on every surface. Under D-031 they reach the Activity Log only while recording or as a program step.
+- `project.save_project_as@1` writes a new project folder into an approved export root, which CONSTITUTION §3.1 classes as W1 with `fs_effect: write_root`; REQ-008 says W2. `CORE.PRJ.CONT.LIFE` uses W1 per §3.1 (the constitution wins) and records that here for the maintainers.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.PRJ.CONT.ID | Entity ID service (leaf) | 003 004 005 006 | none |
+| CORE.PRJ.CONT.HIER | Container entities and hierarchy commands (leaf) | 001 002 008 | none |
+| CORE.PRJ.CONT.LIFE | Project lifecycle: create, open, close, save-as, list (leaf) | 006 007 008 | GOM.PRJ.01, PW.PRJ.01 |

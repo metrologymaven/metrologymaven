@@ -11,11 +11,12 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-003]
 covers: []
-depends_on: [TRUST.PKG, KRN, UNC, CORE]
+depends_on: [TRUST.PKG.READER]
+uses_artifacts: [KRN.MAN.WASM, KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA, UNC.RDL.REP, CORE.RPL.CLASS]
 cli: [fid verify replay]
 mcp: [verify_replay]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY: Verifier replay with the reference kernel
@@ -76,6 +77,8 @@ Alternatives considered:
 - How the verifier obtains kernel artifacts for older versions offline: opened as D-020; `TRUST.REPLAY.KART` is blocked, the rest builds against the `ArtifactSource` trait.
 - Tolerances for `EQUIVALENT` come from the REP-1 replay equivalence-tolerance table owned by `UNC.RDL` (accepted level-2 review); `TRUST.REPLAY.COMPARE` consumes it and records its digest. UNC.RDL has not yet published the table schema.
 - CORE owns the replay engine for all in-app modes; this subsystem is the standalone verifier-mode replayer. Boundary to be confirmed with CORE.RPL.
+- Boundary with CORE.RPL (2026-11-17): `CORE.RPL.EXEC` (incl. `CORE.RPL.EXEC.VERIFY`) is the product replay engine for every in-app mode, running against a project store. `TRUST.REPLAY.RUN` is the standalone verifier replayer that sees only a Result Package. They share no code; they share the outcome vocabulary and decision-invariance rule of `CORE.RPL.CLASS`, the REP-1 table of `UNC.RDL.REP` and the WASM artifact of `KRN.MAN.WASM`, all as `uses_artifacts`. A parity test on the replay conformance corpus (`TRUST.REPLAY.CORPUS`) is the agreement check.
+- Dependencies narrowed (2026-11-17, D-034): kernel manifest, call encoding and WASM artifact (`KRN.MAN.*`), REP-1 (`UNC.RDL.REP`) and outcome definitions (`CORE.RPL.CLASS`) are artifacts; `fid-vreplay` links no KRN, UNC or CORE crate, matching the `TRUST.VERIFY.REPRO` allowlist.
 
 ## Children
 

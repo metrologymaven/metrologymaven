@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-008]
 covers: []
-depends_on: [TRUST.REPLAY.RUN, TRUST.PKG.FIXTURE, KRN.MAN]
+depends_on: [TRUST.REPLAY.RUN]
+uses_artifacts: [TRUST.PKG.FIXTURE, KRN.MAN.WASM]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.CORPUS: Replay conformance corpus and cross-platform gate

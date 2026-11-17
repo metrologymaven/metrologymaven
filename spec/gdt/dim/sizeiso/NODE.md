@@ -4,7 +4,7 @@ title: ISO 14405-1 size modifiers
 level: 3
 parent: GDT.DIM
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DIM-001, REQ-GDT.DIM-006, REQ-GDT.DIM-007]
 covers: []
 depends_on: [GDT.DIM.SIZEASME, GDT.RES.RESOLVE, KRN.ENV, KRN.LSQ, KRN.MZ]
+uses_artifacts: [GDT.RES.ROWISO, UNC.ORS.SIZE]
 cli: [fid check eval-size]
 mcp: [check_eval_size]
 journal: [check.eval_size@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DIM.SIZEISO: ISO 14405-1 size modifiers
@@ -54,8 +55,14 @@ LOCAL (LP, LS), GLOBAL (GG, GX, GN, GC), CALC (CC, CA, CV), RANK (rank-order sta
 
 ## Open questions
 
-- ISO 14405-1:2025 reportedly narrowed its scope [unverified]; the edition split must come from the purchased text (D-016).
+- ISO 14405-1:2025 reportedly narrowed its scope [unverified]; the edition split must come from the purchased text (D-016). Local and calculated size definitions are therefore kept in open children (`GDT.DIM.SIZEISO.LOCAL`, `GDT.DIM.SIZEISO.CALC`); dispatch, global sizes from a named association and rank-order statistics are mechanics and are leaves.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DIM.SIZEISO.DISP | ISO size evaluator, edition tag and unsupported refusal (leaf) | 001 002 | none |
+| GDT.DIM.SIZEISO.GLOBAL | Global sizes from a named association (leaf) | 004 | none |
+| GDT.DIM.SIZEISO.RANK | Rank-order statistics over local sizes (leaf) | 003 004 | none |
+| GDT.DIM.SIZEISO.LOCAL | ISO local sizes (two-point and spherical) | 004 | none |
+| GDT.DIM.SIZEISO.CALC | ISO calculated sizes (circumference, area, volume) | 004 | none |

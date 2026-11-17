@@ -4,18 +4,18 @@ title: ColorMapSpec and kernel re-binning round trip
 level: 3
 parent: VIZ.OVERLAY
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.OVERLAY-001, REQ-VIZ.OVERLAY-003, REQ-VIZ.OVERLAY-009]
 covers: []
-depends_on: [VIZ.RENDER, SCAN.CMP, CORE]
+depends_on: [VIZ.RENDER.FRAME, VIZ.RENDER.ORACLE, SCAN.CMP.BAND, KRN.NUM.KDEC, CORE.JRN, CORE.REG]
 cli: [fid view set-colormap]
 mcp: [view_set_colormap]
 journal: [view.set_colormap@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.OVERLAY.CMAP: ColorMapSpec and kernel re-binning round trip
@@ -61,8 +61,13 @@ SPEC (model, canonical form, validation; likely a leaf), CMD (`view.set_colormap
 ## Open questions
 
 - Tagged P1b: deviation colour maps arrive with scan comparison (SCAN.CMP, P1b) [unverified].
-- The kernel-side binning command is assumed to be owned by SCAN.CMP (tolerance-band classification); GDT characteristic zones may need a second source.
+- Settled boundary: colour binning is `SCAN.CMP.BAND` (`compare.surface_bin@1`, R1); this module maps its ColorMapSpec to a `BandSet` and only looks up colours. Palette values are the UX artifact `palette-catalogue@1` (`UX.TOKENS.DATAPAL`), read through `uses_artifacts`.
+- GDT characteristic-level zones are not binned through this path; if a characteristic colour map is needed, a second kernel source must be named.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.OVERLAY.CMAP.SPEC | ColorMapSpec model and the set-colormap command (leaf) | 003 005 006 | none |
+| VIZ.OVERLAY.CMAP.REBIN | Kernel re-binning round trip and updating state (leaf) | 004 | none |
+| VIZ.OVERLAY.CMAP.LUT | Bin-index LUT pass and continuous mode (leaf) | 001 002 | none |

@@ -4,18 +4,19 @@ title: Vendored LP, QP and SOCP solver with KNP-1 audit
 level: 3
 parent: KRN.SOLV
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.SOLV-001, REQ-KRN.SOLV-003, REQ-KRN.SOLV-009, REQ-KRN.SOLV-010]
 covers: []
-depends_on: [KRN.NUM.LA, KRN.NUM.FN, KRN.NUM.RED, KRN.NUM.LINT]
+depends_on: [KRN.NUM.FN, KRN.NUM.RED, KRN.NUM.ERR]
+uses_artifacts: [KRN.NUM.LINT.FIND, ECO.RULES.SPDX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.SOLV.CONIC: Vendored LP, QP and SOCP solver with KNP-1 audit
@@ -51,7 +52,7 @@ The interior-point conic solver that minimum-zone, envelope, tangential and GD&T
 ## Interfaces
 
 - **Offers:** `fid_solv::conic::{solve_lp, solve_qp, solve_socp, ConicProblem, ConicSolution, ConicLimits}`; the audit record file; limits and tolerances for `KRN.MAN` manifest generation.
-- **Consumes:** `KRN.NUM` (LA, transcendentals, reductions), `KRN.NUM.LINT` (audit lint run).
+- **Consumes:** `KRN.NUM.FN`, `KRN.NUM.RED`, `KRN.NUM.ERR` (code); the KNP-1 lint report from `KRN.NUM.LINT.FIND` and the SPDX allowlist from `ECO.RULES.SPDX` (artifacts, read by the audit check). The earlier code dependency on `KRN.NUM.LA` is dropped because the patched solver keeps its own sparse LDL (see `KRN.SOLV.CONIC.PATCH`), and the dependency on `KRN.NUM.LINT` became an artifact dependency (D-034).
 
 ## Decomposition hints
 
@@ -64,4 +65,11 @@ VEND (vendoring, digest, KNP-1 patches and audit record), WRAP (canonical proble
 
 ## Children
 
-_None yet: status `open`._
+The split follows the hints, with vendoring separated from patching: VEND is a tooling check over the vendored tree and audit record, PATCH is the kernel-layer code change, WRAP is the kernel-facing API, and XTEST is the cross-target proof.
+
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.SOLV.CONIC.VEND | Vendored solver tree, source digest and audit record check | 001 002 006 | none |
+| KRN.SOLV.CONIC.PATCH | KNP-1 patches to the vendored interior-point solver | 002 | none |
+| KRN.SOLV.CONIC.WRAP | Kernel conic API, fixed limits and error mapping | 003 004 | none |
+| KRN.SOLV.CONIC.XTEST | Frozen conic test set and cross-target bit-identity check | 005 | none |

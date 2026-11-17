@@ -4,7 +4,7 @@ title: Position of features and patterns
 level: 3
 parent: GDT.LOC
 kind: module
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.LOC-002, REQ-GDT.LOC-003, REQ-GDT.LOC-006]
 covers: [GOM.GDT.08, PW.GDT.04]
 depends_on: [GDT.LOC.DERIV, GDT.LOC.LRES, GDT.ZONE.MATL, GDT.ZONE.GROUP, GDT.DRF.BUILD]
+uses_artifacts: [GDT.RES.ROWASME, UNC.ORS.GDT]
 cli: [fid check eval-position]
 mcp: [check_eval_position]
 journal: [check.eval_position@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.LOC.POS: Position of features and patterns
@@ -55,8 +56,14 @@ RFS (single feature RFS; first leaf), MMC (bonus and virtual condition), PATTERN
 
 ## Open questions
 
-- Surface versus axis precedence and the position-value convention for each zone shape are DMT content (D-009, D-016).
+- Surface versus axis precedence and the position-value convention for each zone shape are DMT content (D-009, D-016). Resolved at split: the leaves execute the zone shape, value convention and deciding variant that the resolved row names and never choose them; non-round features, whose derived elements and boundaries are interpretation-heavy, stay open in `GDT.LOC.POS.SLOT` (P1b).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.LOC.POS.RFS | True position and RFS position value of a single feature (leaf) | 001 004 | GOM.GDT.08, PW.GDT.04 |
+| GDT.LOC.POS.MMC | Position at MMC and LMC through the material-condition engine (leaf) | 001 002 004 | GOM.GDT.08, PW.GDT.04 |
+| GDT.LOC.POS.PATTERN | Pattern position with one shared pose (leaf) | 001 003 004 | PW.GDT.04 |
+| GDT.LOC.POS.CMD | Position command and dual-variant reporting (leaf) | 001 002 003 | GOM.GDT.08, PW.GDT.04 |
+| GDT.LOC.POS.SLOT | Position of slots, tabs and width features | 001 004 | GOM.GDT.08 |

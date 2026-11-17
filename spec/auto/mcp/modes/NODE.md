@@ -4,7 +4,7 @@ title: Bridge, headless and auto modes
 level: 3
 parent: AUTO.MCP
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.MCP.SESS, AUTO.CTRL.CLIENT]
 cli: [fid mcp, fid mcp --bridge, fid mcp --headless]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.MCP.MODES: Bridge, headless and auto modes
@@ -56,8 +56,14 @@ SELECT (mode selection and setting), BRIDGE (control-channel transport), HEADLES
 
 ## Open questions
 
-- If a headless MCP session and a running app both want the same project, the locking rules of `AUTO.CLI.TARGET` should apply; one shared rule may belong in `CORE.STO`.
+- If a headless MCP session and a running app both want the same project, the locking rules of `AUTO.CLI.TARGET` should apply; one shared rule may belong in `CORE.STO`. `AUTO.MCP.MODES.HEADLESS` applies the same rule (write lock if free, read-only otherwise, W-class calls refused with `conflict`).
+- In P0, before `AUTO.MCP.MODES.SELECT` (P1a) exists, `fid mcp` without a flag runs headless.
+- The "app closed" setting is declared by `AUTO.MCP.MODES.SELECT` as `mcp.app_closed_action` with the admin flag, so it changes only through the A0 settings command.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.MCP.MODES.HEADLESS | Headless in-process MCP session (leaf, P0) | 002 004 | none |
+| AUTO.MCP.MODES.BRIDGE | Bridge mode over the control channel (leaf, P1a) | 001 004 | none |
+| AUTO.MCP.MODES.SELECT | Auto mode selection, app-closed setting and app launch (leaf, P1a) | 003 | none |

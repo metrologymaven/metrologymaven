@@ -4,18 +4,19 @@ title: Red-team tasks and release-blocking verdict
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-AGENT-004]
 covers: []
-depends_on: [AGENT.EVAL, AGENT.HARNESS, AUTO.MCP.TAINT, CORE.BUS.POL]
-cli: []
+depends_on: [AGENT.EVAL, AGENT.HARNESS]
+uses_artifacts: [AUTO.MCP.TAINT, CORE.BUS.POL]
+cli: [fid-eval adversary, fid-eval redteam *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.REDTEAM: Red-team tasks and release-blocking verdict
@@ -59,12 +60,24 @@ Tests, adversarially, that the safety rules hold when an agent tries to break th
 
 INJECT (injection family and payloads), ESCAL (side-effect escalation family), ADOPT (self-adoption family), FABRIC (value-of-record fabrication), SHELL (shell-access variants), SCRIPT (scripted adversary), VERDICT (verdict file).
 
+## Split rationale
+
+All children are `fid-eval` tooling (D-032) or suite data. The split separates **what counts as a breach** (PRED, the predicate schema evaluated by `AGENT.HARNESS.SAFETY`), the **attack data** by family (INJECT; ESCAL, which holds both escalation and self-adoption because both are refused by the same bus and branch rules; FABRIC; SHELL, the shell-access variants under D-012 option C), the **attacker that always tries** (SCRIPT) and the **verdict** (VERDICT). Alternative considered: one TASKS child for all families; rejected because each family has its own vectors, predicates and fixture agents, and would exceed one PR.
+
 ## Open questions
 
 - ECO's release process must read the verdict and refuse a release on `block`; no ECO node states this yet. Needs an ECO requirement (AGENT cannot add it).
-- D-012: the shell-access self-adoption tasks pass or fail depending on the principal kind given to a CLI caller. Under option B a faked TTY would let an agent promote its own branch, which this suite would report as `block`.
+- D-012: the shell-access self-adoption tasks pass or fail depending on the principal kind given to a CLI caller. D-012 is accepted with option C (in-app or OS user-presence confirmation), and `AGENT.REDTEAM.SHELL` tests that a faked TTY cannot upgrade the principal.
 - Fabrication predicate: detecting agent-computed numbers in free-text fields is heuristic; the precise rule (any numeric token in an agent-authored field that matches no kernel output) needs a leaf design.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.REDTEAM.PRED | Violation predicate schema and payload markers | 003 007 | none |
+| AGENT.REDTEAM.INJECT | Prompt injection through imported content | 001 002 007 | none |
+| AGENT.REDTEAM.ESCAL | Side-effect escalation and self-adoption tasks | 001 002 | none |
+| AGENT.REDTEAM.FABRIC | Value-of-record fabrication tasks | 001 002 | none |
+| AGENT.REDTEAM.SHELL | Shell-access variants of red-team tasks | 001 002 | none |
+| AGENT.REDTEAM.SCRIPT | Scripted deterministic adversary | 004 | none |
+| AGENT.REDTEAM.VERDICT | Release-blocking red-team verdict file | 005 006 | none |

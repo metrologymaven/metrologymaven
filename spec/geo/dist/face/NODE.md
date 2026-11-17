@@ -4,7 +4,7 @@ title: Point-to-trimmed-face and point-to-body projection
 level: 3
 parent: GEO.DIST
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.CAD.TOPO, GEO.NURBS.INVERT, GEO.NURBS.ANALYTIC, GEO.INDEX.BVH, 
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.DIST.FACE: Point-to-trimmed-face and point-to-body projection
@@ -59,9 +59,16 @@ FACE1 (single trimmed face: inversion plus trim test plus boundary fallback), BO
 
 ## Open questions
 
+- GEO.CAD.TOPO is now split into leaves (MODEL, ADJ, PCURVE, TRIM); the children depend on those leaves directly.
+- Two API needs raised for other nodes: GEO.NURBS.INVERT should expose a per-Bézier-patch Newton entry point (GEO.DIST.FACE.ONE), and GEO.INDEX.BVH should accept a list of boxes (GEO.DIST.FACE.BODY). Both children state a fallback.
 - Waits for GEO.CAD.TOPO to define the trimming and orientation API; it does not wait for D-024.
 - Reference fixtures for trimmed NURBS faces need either analytic bodies with known answers or an independent oracle; GEO.NURBS.REF's approach should extend to trimmed faces.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.DIST.FACE.ONE | Closest point on a single trimmed face (leaf) | 001 002 005 006 | none |
+| GEO.DIST.FACE.BODY | Face-set and body projection targets (leaf) | 001 003 004 005 006 | none |
+| GEO.DIST.FACE.INCID | Incident normals and angles for CAD signed distance (leaf) | 001 006 | none |
+| GEO.DIST.FACE.REF | Reference fixtures for trimmed-face projection (leaf) | 002 005 | none |

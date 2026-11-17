@@ -4,18 +4,19 @@ title: Static-site quality gates
 level: 3
 parent: OUTR.SITE
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.SITE-007, REQ-OUTR.SITE-008, REQ-OUTR.SITE-009, REQ-OUTR.SITE-010]
 covers: []
-depends_on: [OUTR.SITE.GEN, OUTR.BRAND.LINT, VIZ.SHELL]
+depends_on: [OUTR.SITE.GEN, OUTR.BRAND.LINT]
+uses_artifacts: [VIZ.SHELL.A11Y, UX.TOKENS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.SITE.QA: Static-site quality gates
@@ -61,7 +62,13 @@ CRAWL (off-origin request check), A11Y (accessibility gate), SIZE (size budget),
 
 - VIZ has no VIZ.A11Y node; accessibility sits inside VIZ.SHELL. The required conformance level (for example WCAG 2.2 AA [unverified]) is VIZ's to state.
 - The size budget of 500 KB is a proposal for maintainers to confirm.
+- Per CONSTITUTION §2.1, OUTR is tooling and may not take a code edge to the product layer, so the former `depends_on: VIZ.SHELL` is now `uses_artifacts: [VIZ.SHELL.A11Y, UX.TOKENS]`: the gate reads the baseline level and the token values only.
+- The accessibility gate is an in-house static checker (OUTR.SITE.QA.A11Y) because the common browser-side rule engines are under licences outside the current allowlist [unverified]; its coverage is the automatable subset of WCAG 2.2 AA, not a conformance claim.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.SITE.QA.CRAWL](crawl/NODE.md) | Headless-browser crawl and off-origin request gate (leaf) | 001 002 | none |
+| [OUTR.SITE.QA.A11Y](a11y/NODE.md) | Static accessibility gate for built pages (leaf) | 003 | none |
+| [OUTR.SITE.QA.RUN](run/NODE.md) | Gate runner, configuration, claim-lint and size gates, combined report (leaf) | 004 005 006 | none |

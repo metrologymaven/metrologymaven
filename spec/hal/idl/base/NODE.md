@@ -4,18 +4,18 @@ title: Device base package, health state machine and error model
 level: 3
 parent: HAL.IDL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-HAL.IDL-001, REQ-HAL.IDL-005]
 covers: []
-depends_on: [HAL.IDL.UNITS, HAL.IDL.STAMP]
+depends_on: [HAL.IDL.UNITS, HAL.IDL.STAMP, HAL.IDL.GEN.FMT, CORE.JRN.CANON]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # HAL.IDL.BASE: Device base package, health state machine and error model
@@ -62,11 +62,26 @@ The `Device@1` capability package that every device, driver, simulator, playback
 
 HEALTH (state machine and transition table), ERR (error codes and runtime behaviour table), CFG (configuration typing, acquisition-relevant subset, vendor extensions, digest), DESC (describe and `DeviceInstance`), PROF (`Device-core@1` test list). The first three may each be a leaf.
 
+## Split rationale
+
+The split follows **the four things every package imports from the base**, each testable alone: the error model with untrusted device text (ERR), the health state machine (HEALTH), the configuration model and digest (CFG), and the `Device@1` package that ties them together with its conformance profile (DESC). The `PROF` hint is folded into DESC, because a profile is a list of test items owned by the package it tests.
+
+All four live in the L0 crate `fid-hal-idl` and depend only on L0 nodes (`HAL.IDL.*` and the canonical-JSON library `CORE.JRN.CANON`), as CONSTITUTION §2.1 requires for HAL.IDL types.
+
+Alternatives considered:
+- **A single leaf.** Rejected: four independent rule sets with separate fixtures exceed one M-sized PR.
+- **ERR inside HEALTH.** Rejected: error behaviours are reused by every package operation, not only by health.
+
 ## Open questions
 
-- Whether `MAINTENANCE` can be entered by software (for example during a driver update) or only reported by the device is not settled; the transition table must decide.
-- The package file format (proto3 plus Arrow schemas plus WIT, concept doc 08 H-D2) is chosen at the leaf that implements generation (`HAL.IDL.GEN`).
+- Resolved here: `MAINTENANCE` is enterable by the device (any state except `BUSY` and `SAFETY_STOPPED`) and by the runtime only from `OFFLINE`; see `HAL.IDL.BASE.HEALTH`.
+- The package file format is chosen in `HAL.IDL.GEN.FMT` (a project-owned `capability-package/v1` description exported from Rust types) rather than proto3 plus Arrow (concept doc 08 H-D2).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.IDL.BASE.ERR | Device error model, untrusted device text and operator hint IDs (leaf) | 003 004 | none |
+| HAL.IDL.BASE.HEALTH | Health state machine and transition table (leaf) | 002 005 | none |
+| HAL.IDL.BASE.CFG | Typed configuration, acquisition-relevant subset and configuration digest (leaf) | 007 | none |
+| HAL.IDL.BASE.DESC | Device@1 package operations, DeviceInstance, calibration-state references and Device-core@1 (leaf) | 001 004 006 | none |

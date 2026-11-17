@@ -4,18 +4,19 @@ title: Per-user install without admin rights and write scope
 level: 3
 parent: PLAT.DEPLOY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DEPLOY-004, REQ-PLAT.DEPLOY-007]
 covers: []
-depends_on: [PLAT.MATRIX, ECO.REL, ECO.CI]
+depends_on: [PLAT.MATRIX]
+uses_artifacts: [ECO.REL.PKG.WIN, ECO.REL.PKG.LINUX, ECO.REL.PKG.MAC, ECO.REL.SIGN.OSSIGN, CORE.STO.LAYOUT, PLAT.DEPLOY.OFFLINE.NOEGRESS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.DEPLOY.NOADMIN: Per-user install and write scope
@@ -48,17 +49,26 @@ Lets a shop-floor user install and run the apps without asking IT for administra
 
 ## Interfaces
 
-- **Offers:** per-user install layout requirements for ECO.REL; allowed write locations (constraint on CORE.STO and IO export roots); the write-audit CI job.
-- **Consumes:** ECO.REL per-user installers; ECO.CI runners with a standard-user account; CORE.STO directory layout.
+- **Offers:** `platform/peruser-layout.toml` (per-OS install path and allowed write locations; read by ECO.REL packaging and CORE.STO as an artifact); the write-audit CI job; `docs/deploy/allow-listing.md`.
+- **Consumes (artifacts):** per-user packages (`ECO.REL.PKG.WIN`, `ECO.REL.PKG.LINUX`, `ECO.REL.PKG.MAC`); publisher identities (`ECO.REL.SIGN.OSSIGN`); the CORE.STO directory layout (`CORE.STO.LAYOUT`); the reference non-device workflow script (`PLAT.DEPLOY.OFFLINE.NOEGRESS`). Code: Tier 1 set from `PLAT.MATRIX`.
 
 ## Decomposition hints
 
-LAYOUT (per-OS per-user paths and the allowed-locations list; leaf candidate in `fid-platform`), AUDIT (write-audit CI test per OS), ALLOW (allow-listing documentation).
+See Children.
 
 ## Open questions
 
-- Write auditing differs per OS (e.g. kernel tracing on Linux, ETW on Windows, endpoint security on macOS) and may need privileged CI runners even though the app runs unprivileged [unverified].
+- Write auditing differs per OS and may need privileged CI runners even though the app runs unprivileged [unverified]; carried by `PLAT.DEPLOY.NOADMIN.AUDIT`.
+- `CORE.STO.LAYOUT` must keep its per-user directories inside the allowed list of `platform/peruser-layout.toml` (cross-domain constraint; CORE.STO does not yet cite this file).
+
+## Split rationale
+
+Split by **artefact**: one data file with its validator (the layout and allowed write locations), one CI job that audits real installs against that file, and one administrator document generated from the file plus signing identities. The CI job and the document both read the file, so the rule lives in one place.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.NOADMIN.LAYOUT | Per-user install layout and allowed write locations file | 001 002 003 | none |
+| PLAT.DEPLOY.NOADMIN.AUDIT | Standard-user install and write-audit CI job | 001 002 003 004 | none |
+| PLAT.DEPLOY.NOADMIN.ALLOW | Allow-listing guide generated from layout and signing identities | 005 | none |

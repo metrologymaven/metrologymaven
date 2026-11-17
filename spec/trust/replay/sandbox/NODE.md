@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-007, REQ-TRUST.REPLAY-009]
 covers: []
-depends_on: [KRN.MAN]
+depends_on: []
+uses_artifacts: [KRN.MAN.WASM, KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.SANDBOX: WASM kernel sandbox with digest check and limits

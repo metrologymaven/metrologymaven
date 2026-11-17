@@ -4,7 +4,7 @@ title: CPU reference rasterizer and golden-image CI
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.FRAME, VIZ.RENDER.HEADLESS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.ORACLE: CPU reference rasterizer and golden-image CI
@@ -58,7 +58,12 @@ CPURAST (per-path reference), MASK (tolerance masks), GOLDEN (storage and regene
 ## Open questions
 
 - Whether the oracle reuses the software adapter for some paths or must be fully independent of wgpu is to be fixed at leaf level.
+- Resolved in CPURAST: the oracle is fully independent of wgpu (no software-adapter reuse).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.ORACLE.CPURAST | CPU reference rasterizer for every render path (leaf) | 001 | none |
+| VIZ.RENDER.ORACLE.GATE | Tolerance masks, golden images and CI comparison gate (leaf) | 002 003 004 | none |
+| VIZ.RENDER.ORACLE.PROBE | Pixel-probe harness (leaf) | 005 | none |

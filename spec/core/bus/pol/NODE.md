@@ -4,18 +4,18 @@ title: Side-effect, projection, file-handle and egress policy
 level: 3
 parent: CORE.BUS
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.BUS-004, REQ-CORE.BUS-005, REQ-CORE.BUS-011, REQ-CORE.BUS-012, REQ-CORE.BUS-013]
 covers: []
-depends_on: [CORE.REG, CORE.JRN, CORE.BUS.PRIN]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+depends_on: [CORE.REG.DEF, CORE.JRN.ENTRY, CORE.BUS.PRIN]
+cli: [fid request *, fid egress send]
+mcp: [request_*, egress_send]
+journal: [request.*, egress.send@1]
+updated: 2026-11-17
 ---
 
 # CORE.BUS.POL: Side-effect, projection, file-handle and egress policy
@@ -64,10 +64,16 @@ CLASS (class and principal matrix), PROJ (MCP projection and pending requests), 
 
 ## Open questions
 
-- Should a pending request expire? The concept docs are silent; a default expiry would be a policy setting owned here.
-- D-023 (open) asks whether device traffic to a driver host on the local network is X1; REQ-008 allows network use inside I1 and D1 commands and will need no change if D-023 keeps that traffic in D1, but the EGRESS child must follow its outcome.
-- The network guard needs an OS-level test (for example a sandbox that denies sockets); the mechanism per platform is left to the FS/EGRESS leaves.
+- Should a pending request expire? The concept docs are silent. `CORE.BUS.POL.PROJ` keeps requests pending until approved, rejected or withdrawn, and records the head they were filed against; an expiry setting can be added there later.
+- **Applied D-023 (accepted, option C):** connecting to a configured remote driver host stays D1 and its control and reading traffic is device I/O; any command that sends project data to another machine goes through `egress.send@1` (X1). `CORE.BUS.POL.EGRESS` follows this.
+- **Applied D-031:** `human_only` (CONSTITUTION §3) is enforced in `CORE.BUS.POL.CLASS`; the X1 primitive `egress.send@1` is owned by `CORE.BUS.POL.EGRESS`. CONSTITUTION §3 also refuses raw paths for `script` principals (D-012), which `CORE.BUS.POL.FS` enforces beyond REQ-005's agent rule.
+- The new command namespaces `request.*` and `egress.*` are not yet listed in the `cli:` and `mcp:` fields of `CORE` and `CORE.BUS`; a maintainer should add them there.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.BUS.POL.CLASS | Class, principal and human-only matrix (leaf) | 001 009 | none |
+| CORE.BUS.POL.PROJ | MCP projection, pending requests and approval (leaf) | 002 003 004 | none |
+| CORE.BUS.POL.FS | File handles and approved roots (leaf) | 005 006 | none |
+| CORE.BUS.POL.EGRESS | Egress primitive and network guard (leaf) | 007 008 | none |

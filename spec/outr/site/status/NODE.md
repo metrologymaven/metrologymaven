@@ -4,18 +4,19 @@ title: Status, parity and roadmap pages
 level: 3
 parent: OUTR.SITE
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.SITE-002, REQ-OUTR.SITE-004]
 covers: []
-depends_on: [OUTR.SITE.GEN, ECO.PARITY]
+depends_on: [OUTR.SITE.GEN]
+uses_artifacts: [ECO.PARITY, ECO.COMM.SCOPE, OUTR.LAUNCH.PLAN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.SITE.STATUS: Status, parity and roadmap pages
@@ -55,8 +56,12 @@ PARITY (embed and byte check), ROAD (roadmap generator), DATES (milestone-date c
 
 ## Open questions
 
-- The machine-readable form of launch-plan milestone dates is not yet defined; OUTR.LAUNCH owns it.
+- The machine-readable form of launch-plan milestone dates is not yet defined; OUTR.LAUNCH owns it. OUTR.SITE.STATUS.ROAD states an assumed minimal contract (`milestones.toml`: id, app, name, date) for OUTR.LAUNCH.PLAN to confirm.
+- Per CONSTITUTION §2.1 the former `depends_on: [ECO.PARITY]` is now `uses_artifacts`, together with the spec-tree index (ECO.COMM.SCOPE) and the launch plan (OUTR.LAUNCH.PLAN), which were previously consumed without a declared edge.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.SITE.STATUS.PARITY](parity/NODE.md) | Per-release status page embedding parity and coverage reports (leaf) | 001 002 005 | none |
+| [OUTR.SITE.STATUS.ROAD](road/NODE.md) | Roadmap page from spec-tree phases and the milestone-date check (leaf) | 003 004 | none |

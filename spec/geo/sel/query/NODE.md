@@ -4,7 +4,7 @@ title: Semantic selection queries and re-evaluation
 level: 3
 parent: GEO.SEL
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.SEL.MODEL, GEO.SEL.ALGEBRA, GEO.INDEX.KDTREE, GEO.DIST.BATCH, G
 cli: [fid geo query-selection, fid geo reevaluate-selection]
 mcp: [geo_query_selection, geo_reevaluate_selection]
 journal: [geo.query_selection@1, geo.reevaluate_selection@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.SEL.QUERY: Semantic selection queries and re-evaluation
@@ -63,9 +63,17 @@ GRAMMAR (AST, parser, canonical form, digest), POINTPRED (attribute and spatial 
 
 ## Open questions
 
+- Resolved in the split: the grammar is a closed JSON AST only (schema v1 in GEO.SEL.QUERY.GRAMMAR); no text syntax (C6).
+- Layering (D-034): GRAMMAR, EVAL, NEAR and CAD are L0 in `fid-geo-sel`; group and layer membership reaches them through a trait, so only GEO.SEL.QUERY.CMD depends on GEO.CAD.GROUP and CORE.
 - The grammar needs a concrete syntax (JSON AST only, or also a compact text form for the CLI). A JSON AST alone is the safest for C6; a text form would need its own bounded parser.
 - Distance predicates depend on GEO.DIST (P1b) and CAD predicates on GEO.CAD (P1b); this node starts in P0 with point and triangle predicates only, as the parent noted.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.SEL.QUERY.GRAMMAR | JSON AST grammar, bounded parser, canonical form and digest (leaf) | 001 002 | none |
+| GEO.SEL.QUERY.EVAL | Query evaluation core with point and triangle predicates (leaf) | 003 006 | none |
+| GEO.SEL.QUERY.NEAR | Distance predicates for semantic selections (leaf) | 003 006 | none |
+| GEO.SEL.QUERY.CAD | CAD face predicates and tangent growth (leaf) | 003 005 006 | GOM.CAD.01 |
+| GEO.SEL.QUERY.CMD | Semantic selection commands and re-evaluation (leaf) | 001 004 | GOM.CAD.01 |

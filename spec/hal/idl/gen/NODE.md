@@ -4,18 +4,18 @@ title: Package format, stub and schema generation, capability discovery commands
 level: 3
 parent: HAL.IDL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-HAL.IDL-001]
 covers: []
-depends_on: [HAL.IDL.BASE, CORE.REG]
-cli: [fid device describe-capability, fid device list-capabilities]
-mcp: [device_describe_capability, device_list_capabilities]
-journal: [device.describe_capability@1, device.list_capabilities@1]
-updated: 2026-11-16
+depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, CORE.REG.DEF, CORE.JRN.CANON]
+cli: [fid device list-capabilities, fid device describe-capability]
+mcp: [device_list_capabilities, device_describe_capability]
+journal: [device.list_capabilities@1, device.describe_capability@1]
+updated: 2026-11-17
 ---
 
 # HAL.IDL.GEN: Package format, stub and schema generation, capability discovery commands
@@ -54,10 +54,24 @@ Turns capability packages into everything that consumes them: the on-disk packag
 
 FMT (package layout; settles proto3 plus Arrow plus WIT or an alternative), RUSTGEN, HOSTGEN (C#, C++, Python), SCHEMA (JSON Schema and docs), CMDS (the two R0 commands; likely a leaf).
 
+## Split rationale
+
+The split follows **layers** (CONSTITUTION §2.1, D-034) as much as tasks. The format and validator (FMT) and the package inventory with its exporter and drift check (EXPORT) live in the L0 crate `fid-hal-idl`. The host stub generators (HOSTGEN) are Tooling and read only the exported descriptions. The two discovery commands (CMDS) are registry commands and therefore live in the L2 HAL runtime crate, which is the only place allowed to use the CORE registry API. The hints RUSTGEN and SCHEMA are folded into EXPORT because Rust types are the source of truth and JSON Schemas are derived from them in the same pass.
+
+Alternatives considered:
+- **proto3 plus Arrow as the package source (concept doc 08 H-D2).** Rejected at `HAL.IDL.GEN.FMT`: it adds a generation toolchain to an L0 crate before the D-001 licence allowlist exists; Arrow IPC remains possible as an export.
+- **Keeping the commands in the L0 crate.** Rejected: L0 may not depend on CORE.
+
 ## Open questions
 
-- Concept doc 08 proposes proto3 with custom options plus Arrow schemas (H-D2); the choice is made at the FMT leaf, since the spec only requires versioned, generated contracts.
+- Resolved at `HAL.IDL.GEN.FMT`: packages are Rust types plus a project-owned `capability-package/v1` description; proto3 plus Arrow is not used as the source.
+- The parent `HAL.IDL` lists `CORE` as a dependency although HAL.IDL types are L0; only `HAL.IDL.GEN.CMDS` (L2) uses CORE here, and `CORE.JRN.CANON` is itself L0.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.IDL.GEN.FMT | Capability-package description format (leaf) | 001 | none |
+| HAL.IDL.GEN.EXPORT | Package inventory, description and JSON Schema export, reference docs and drift check (leaf) | 002 003 | none |
+| HAL.IDL.GEN.HOSTGEN | Host stub generators (C#/.NET, C++, Python) and WIT for Tier-3 packages | 002 003 | none |
+| HAL.IDL.GEN.CMDS | Capability discovery commands (leaf) | 004 005 | none |

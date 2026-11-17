@@ -4,7 +4,7 @@ title: Contributor plug-in contract and non-instrument contributor library
 level: 3
 parent: UNC.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL.GRAPH, UNC.MODEL.DIST]
 cli: [fid unc list-contributor, fid unc show-contributor]
 mcp: [unc_list_contributor, unc_show_contributor]
 journal: [unc.list_contributor@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.MODEL.CONTRIB: Contributor plug-in contract and non-instrument contributor library
@@ -56,9 +56,17 @@ CONTRACT (plug-in contract and expansion), THERM, STYLUS, SAMPLE, REG (one leaf 
 
 ## Open questions
 
+- Split: the contract, expansion and read commands are one leaf (CONTRACT); each library contributor is a kernel operator plus a data file. Thermal and stylus contributors rest on textbook physics and are leaves; the sampling (unsampled form) and scan-registration contributors need a metrology review of the model choice and stay open.
+
 - The unsampled-form model (for example a harmonic or Gaussian-process prior) needs a metrology review before it is fixed [unverified].
 - Whether third-party contributor plug-ins are code (A0 install) or data only should follow ECO.SDK; this node assumes data-only sub-graphs.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.MODEL.CONTRIB.CONTRACT | Contributor contract, expansion and read commands (leaf) | 001 002 006 | none |
+| UNC.MODEL.CONTRIB.THERM | Thermal expansion contributor (leaf) | 003 005 | none |
+| UNC.MODEL.CONTRIB.STYLUS | Probe and stylus qualification contributor (leaf) | 005 | none |
+| UNC.MODEL.CONTRIB.SAMPLE | Sampling and unsampled-form contributor | 004 005 | none |
+| UNC.MODEL.CONTRIB.REG | Scan registration contributor | 005 | none |

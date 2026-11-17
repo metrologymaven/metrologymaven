@@ -4,7 +4,7 @@ title: Camera commands, fly-to and agent highlight
 level: 3
 parent: VIZ.VIEW
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.VIEW.STATE, CORE]
 cli: [fid view set-camera, fid view fly-to, fid view highlight]
 mcp: [view_set_camera, view_fly_to, view_highlight]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.VIEW.CAMERA: Camera commands, fly-to and agent highlight
@@ -60,7 +60,12 @@ GESTURE (transient navigation), ORIENT (standard views), SETCAM, FLYTO, HILITE (
 ## Open questions
 
 - Whether `view.set_camera@1` is journaled (W2 on the working document) or presentation-only is to be fixed with CORE at leaf level (parent open question).
+- Fixed at leaf level (to confirm with CORE): `view.set_camera@1` is W2 like `view.set_clip@1`; `view.fly_to@1` and `view.highlight@1` are R1 presentation commands that change no document state.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.VIEW.CAMERA.NAV | Transient navigation, standard orientations and fit (leaf) | 001 005 006 | none |
+| VIZ.VIEW.CAMERA.SET | Set-camera and fly-to commands (leaf) | 002 003 004 005 | none |
+| VIZ.VIEW.CAMERA.HILITE | Highlight and proposal ghost overlays (leaf) | 004 | none |

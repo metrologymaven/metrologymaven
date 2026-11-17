@@ -4,7 +4,7 @@ title: Curated skill catalog and worked recipes
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.MCP.SKILLS, AUTO.MCP.SRV, AGENT.PROPOSE, FLOW]
 cli: [fid agent list-recipes, fid agent show-recipe]
 mcp: [agent_list_recipes, agent_show_recipe]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.SKILLS: Curated skill catalog and worked recipes
@@ -61,6 +61,10 @@ Decides **what** agents are taught and keeps it true. AUTO.MCP.SKILLS is the gen
 
 CATALOG (workflow list per profile and its CI check), STYLE (guide and recipe content standard and linter), RECIPE (recipe format, extraction from golden journals, replay check), QUERY (list and show commands).
 
+## Split rationale
+
+Split by **artifact**: the catalog (which workflows, CATALOG), the prose rules (STYLE), the recipe files and their replay (RECIPE), and the two R0 commands that serve recipes (QUERY). CATALOG, STYLE and RECIPE are CI checks in crate `fid-agent`; QUERY is the only registry surface. RECIPE and QUERY start in P1a because FLOW golden journals exist only from P1a. Alternative considered: merging QUERY into RECIPE; rejected because one is a CI tool and the other a registry feature with its own MCP projection.
+
 ## Open questions
 
 - Who curates the catalog for each app: the app's domain owners or AGENT owners? Proposed: domain owners propose, AGENT owners review.
@@ -68,4 +72,9 @@ CATALOG (workflow list per profile and its CI check), STYLE (guide and recipe co
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.SKILLS.CATALOG | Workflow catalog per server profile and its CI check | 001 002 003 | none |
+| AGENT.SKILLS.STYLE | Guide and recipe content standard and linter | 005 006 007 | none |
+| AGENT.SKILLS.RECIPE | Worked recipes from golden journals and replay check | 004 | none |
+| AGENT.SKILLS.QUERY | List and show recipe commands | 008 | none |

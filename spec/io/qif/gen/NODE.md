@@ -4,7 +4,7 @@ title: XSD to Schema IR code generator for QIF 3.0 types and JSON Schema
 level: 3
 parent: IO.QIF
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: []
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.QIF.GEN: XSD to Schema IR code generator
@@ -58,8 +58,17 @@ PIN (manifest and fetch), PARSE (XSD to IR), NORM (IR flattening and naming), RU
 
 ## Open questions
 
-- Whether the normative XSLT checks (22 in QIF 3.0 per concept doc 04 [unverified]) are re-expressed from the IR or run as XSLT in a separate process; owned with `IO.QIF.XML`.
+- Whether the normative XSLT checks (22 in QIF 3.0 per concept doc 04 [unverified]) are re-expressed from the IR or run as XSLT in a separate process: settled in `IO.QIF.XML.XSLT` (re-expressed in Rust, no C dependency). The XSLT files are pinned with role `xslt` by `IO.QIF.GEN.PIN`.
+- The JSON projection rules are read as a published data file (`uses_artifacts: [IO.QIF.JSON.PROJ]` on `IO.QIF.GEN.JSCHEMA`), not as a code dependency, which avoids a GEN/JSON cycle.
+- The `ExtensionBag` container type lives in the small `fid-qif-ir` crate so generated types can carry it; its rules belong to `IO.QIF.IDS.EXT`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.QIF.GEN.PIN | Pinned XSD manifest and digest check (leaf) | 001 | none |
+| IO.QIF.GEN.PARSE | XSD parser into the Schema IR (leaf) | 004 | none |
+| IO.QIF.GEN.FLAT | Schema IR normalisation, naming and validation tables (leaf) | 004 005 | none |
+| IO.QIF.GEN.RUST | Rust model emitter for the fid-qif-model crate (leaf) | 006 | none |
+| IO.QIF.GEN.JSCHEMA | QIF-JSON JSON Schema and type reference emitter (leaf) | 005 | none |
+| IO.QIF.GEN.GATE | Generator determinism and regeneration CI gate (leaf) | 002 003 | none |

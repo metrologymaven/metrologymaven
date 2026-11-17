@@ -4,18 +4,18 @@ title: Capability and performance indices
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.STATS-002, REQ-RPT.STATS-007, REQ-RPT.STATS-008, REQ-RPT.STATS-014]
 covers: [GOM.TRD.03]
-depends_on: [RPT.STATS.DSET, RPT.STATS.DESC, KRN.NUM]
+depends_on: [RPT.STATS.DSET, RPT.STATS.DESC, RPT.STATS.SPC, GDT.CHAR, KRN.NUM]
 cli: [fid stats compute-capability]
 mcp: [stats_compute_capability]
 journal: [stats.compute_capability@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.STATS.CAP: Capability and performance indices
@@ -57,8 +57,13 @@ Probably one or two leaves: overall indices (Pp, Ppk) first, then within-subgrou
 
 ## Open questions
 
-- The default minimum sample size and the default within-subgroup estimator need a domain expert (shared with the SPC question).
+- The default minimum sample size and the default within-subgroup estimator need a domain expert (shared with the SPC question). The leaves keep both as parameters with flagged defaults (25 values; `rbar_d2@1` / `mrbar_d2@1` [unverified]).
+- Cp/Cpk reuse SPC subgrouping, subgroup statistics and constants (`RPT.STATS.SPC.SUB`, `.LIM`, `.CONST`), so `RPT.STATS.SPC` was added to `depends_on`; the tolerance source (`GDT.CHAR`) is now explicit too.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.CAP.INDEX | Capability index kernel (leaf) | 001 002 003 004 005 006 | |
+| RPT.STATS.CAP.SIGMA | Within-subgroup spread estimators (leaf; default estimator flagged) | 001 005 | |
+| RPT.STATS.CAP.CMD | Capability command (leaf) | 001 002 003 005 | GOM.TRD.03 |

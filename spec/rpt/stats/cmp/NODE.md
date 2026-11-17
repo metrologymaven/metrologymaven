@@ -4,7 +4,7 @@ title: Part-to-part comparison and piece stepping
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-RPT.STATS-010, REQ-RPT.STATS-011]
 covers: [GOM.TRD.04, PW.MSP.05]
 depends_on: [RPT.STATS.DSET, KRN.NUM]
-cli: [fid stats compare-parts, fid stats compare-reference]
-mcp: [stats_compare_parts, stats_compare_reference]
-journal: [stats.compare_parts@1, stats.compare_reference@1]
-updated: 2026-11-16
+cli: [fid stats compare-parts, fid stats compare-reference, fid stats step-dataset]
+mcp: [stats_compare_parts, stats_compare_reference, stats_step_dataset]
+journal: [stats.compare_parts@1, stats.compare_reference@1, stats.step_dataset@1]
+updated: 2026-11-17
 ---
 
 # RPT.STATS.CMP: Part-to-part comparison and piece stepping
@@ -46,7 +46,7 @@ Compares results characteristic by characteristic between two parts, or between 
 ## Interfaces
 
 - **Offers:** `stats.compare_parts@1`, `stats.compare_reference@1` (R1); type `PartComparison`; a current-piece selector for reports and VIZ.
-- **Consumes:** data sets (`RPT.STATS.DSET`), numerics (`KRN.NUM`), view state (`VIZ.VIEW`).
+- **Consumes:** data sets (`RPT.STATS.DSET`), numerics (`KRN.NUM`). VIZ (L3) consumes the `PieceCursor` this node offers; there is no dependency on VIZ (D-034).
 
 ## Decomposition hints
 
@@ -54,8 +54,11 @@ DIFF (comparison), STEP (piece stepping).
 
 ## Open questions
 
-- Should piece stepping be recorded on the presentation track (CONSTITUTION §6) for session replay? Assumed yes, as view state.
+- Should piece stepping be recorded on the presentation track (CONSTITUTION §6) for session replay? Assumed yes, as view state held and recorded by VIZ. Stepping is the R0 command `stats.step_dataset@1` plus a pure `PieceCursor` (`RPT.STATS.CMP.STEP`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.CMP.DIFF | Part-to-part and part-to-reference comparison (leaf) | 001 002 003 | GOM.TRD.04 |
+| RPT.STATS.CMP.STEP | Piece stepping in a multi-piece data set (leaf) | 004 005 | PW.MSP.05 |

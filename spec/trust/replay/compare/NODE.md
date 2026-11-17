@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-002, REQ-TRUST.REPLAY-003, REQ-TRUST.REPLAY-004, REQ-TRUST.REPLAY-006]
 covers: []
-depends_on: [UNC.RDL, TRUST.PKG.READER]
+depends_on: [TRUST.PKG.READER]
+uses_artifacts: [UNC.RDL.REP, CORE.RPL.CLASS]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.COMPARE: Replay outcome classification and aggregation

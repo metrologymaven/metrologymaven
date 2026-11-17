@@ -4,7 +4,7 @@ title: Generic import and export command envelope
 level: 3
 parent: IO.REG
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.REG.DETECT, IO.REG.LIMITS, IO.REG.PROV, IO.REG.ROOTS, IO.REG.WRI
 cli: [fid import file, fid export file]
 mcp: [import_file, export_file]
 journal: [import.file@1, export.file@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.REG.ENV: Generic import and export command envelope
@@ -59,8 +59,13 @@ IMPORT (skeleton, staging, transaction, stage target), EXPORT (writer dispatch t
 
 ## Open questions
 
-- Large imports (10^8 points) cannot be staged fully in memory; staging must write blobs to CORE.STO first and make them reachable only on commit. Needs the CORE.STO blob lifecycle (garbage collection of uncommitted blobs).
+- Large imports (10^8 points) stage payloads as CORE blobs that become reachable only on commit (`IO.REG.ENV.IMPORT`). Garbage collection of blobs left unreferenced by failed, cancelled or dry-run imports must be provided by `CORE.STO.CAS` or `CORE.STO.SQL`; neither scope names it yet.
+- "Import further measurements as new stages" (GOM.IMP.09) is an import into an existing named stage; creating the stage stays with `CORE.PRJ.STAGE`, so one import still yields exactly one journal event.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.REG.ENV.REPORT | Import and export report types (leaf) | 006 | none |
+| IO.REG.ENV.IMPORT | Generic import command and transactional import skeleton (leaf) | 001 002 003 004 005 007 | GOM.IMP.09 |
+| IO.REG.ENV.EXPORT | Generic export command and export skeleton (leaf) | 005 | none |

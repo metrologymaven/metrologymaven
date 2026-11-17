@@ -4,7 +4,7 @@ title: Datum-feature simulators and rocking candidate sets
 level: 3
 parent: GDT.DRF
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DRF-001, REQ-GDT.DRF-005, REQ-GDT.DRF-007]
 covers: [GOM.GDT.14]
 depends_on: [KRN.ENV, GDT.RES.RESOLVE]
+uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.DRF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DRF.SIM: Datum-feature simulators and rocking candidate sets
@@ -55,8 +56,14 @@ FIT (single-candidate simulation with precedence constraints; likely a leaf), RO
 
 ## Open questions
 
-- The default planar simulator and the rocking selection rule are edition-specific DMT content (D-009 authorship; texts per D-016); this node cannot be a leaf until those rows exist or a placeholder rule is accepted for tests only.
+- The default planar simulator and the rocking selection rule are edition-specific DMT content (D-009 authorship; texts per D-016). Resolved at split: executing a named fit (`GDT.DRF.SIM.FIT`) and filtering candidates (`GDT.DRF.SIM.ROCK`) are mechanics and are leaves; applying a selection rule (`GDT.DRF.SIM.SELECT`) stays open.
+- DoF table: the fixed DoFs come from the single table owned by `GDT.DRF.BUILD`. The R1 entry for `ALN.DATUM.SYS` is the dry-run of `gdt.build_drf@1` (owned by `GDT.DRF.BUILD`), which calls these simulators; no simulator command is exposed separately.
+- `KRN.ENV.TAN` must accept orientation and location constraints from higher datums (raised in `GDT.DRF.SIM.FIT`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DRF.SIM.FIT | Single-feature datum simulation with precedence constraints (leaf) | 001 004 | GOM.GDT.14 |
+| GDT.DRF.SIM.ROCK | Rocking candidate sets within a tie tolerance (leaf) | 002 003 004 | none |
+| GDT.DRF.SIM.SELECT | Applying a DMT selection rule to rocking candidates | 002 004 | none |

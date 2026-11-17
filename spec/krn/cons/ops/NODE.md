@@ -4,7 +4,7 @@ title: Construction operations on element pairs
 level: 3
 parent: KRN.CONS
 kind: module
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.CONS.DECL]
 cli: [fid construct intersect-elements, fid construct project-element, fid construct offset-element, fid construct midpoint-elements, fid construct symmetry-elements, fid construct bisect-elements]
 mcp: [construct_intersect_elements, construct_project_element, construct_offset_element, construct_midpoint_elements, construct_symmetry_elements, construct_bisect_elements]
 journal: [construct.intersect_elements@1, construct.project_element@1, construct.offset_element@1, construct.midpoint_elements@1, construct.symmetry_elements@1, construct.bisect_elements@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.CONS.OPS: Construction operations on element pairs
@@ -58,8 +58,17 @@ INTER (intersections, the largest group), PROJ (projections), OFFS (offsets), MI
 
 ## Open questions
 
-- Incumbents differ on skew-line intersection (closest point on the first line, or midpoint of the common perpendicular) [unverified]; this node defaults to the midpoint and records the rule as a parameter.
+- Incumbents differ on skew-line intersection (closest point on the first line, or midpoint of the common perpendicular) [unverified]; this node defaults to the midpoint and records the rule as a parameter (owned by `KRN.CONS.OPS.INTLIN`).
+- Several operations yield more than one result (line-sphere gives two points; plane-cylinder gives an ellipse or two lines). The split keeps one element per call and selects among multiple results by a required `branch` parameter; returning all branches as a set waits on a `Set` variant in `KRN.CONS.DECL`.
+- Plane-cylinder and plane-cone sections are ellipses or other conics; this module returns circles and ellipses only and `Undefined{reason: conic_not_supported}` for parabolas and hyperbolas.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.CONS.OPS.INTLIN | Intersections of points, lines and planes | 001 002 003 004 | GOM.CON.14 |
+| KRN.CONS.OPS.INTQUAD | Intersections involving circles, spheres, cylinders and cones | 001 002 004 | GOM.CON.14 |
+| KRN.CONS.OPS.PROJ | Projections onto planes and lines | 001 002 004 | GOM.CON.15 |
+| KRN.CONS.OPS.OFFS | Offsets of points, lines, planes and circles | 001 002 004 | GOM.CON.16 |
+| KRN.CONS.OPS.MID | Midpoint, mid-plane, symmetry element and bisector | 001 002 004 | GOM.CON.17 |
+| KRN.CONS.OPS.TABLE | Support table, dispatch and the six operation commands | 001 002 005 | PCD.CON.01, PW.CON.04 |

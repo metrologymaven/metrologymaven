@@ -4,18 +4,19 @@ title: SBOM policy, dependency vulnerability scanning and VEX
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-005]
 covers: []
-depends_on: [ECO.REL.SIGN, ECO.CI.WF, ECO.CI.LIC]
+depends_on: []
+uses_artifacts: [ECO.REL.SIGN.SBOM, ECO.REL.PKG.PLAN, ECO.CI.WF.CALL, ECO.REL.PROC.GATES]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.SBOM: SBOM policy, dependency vulnerability scanning and VEX
@@ -27,7 +28,7 @@ Sets what the per-release SBOM must contain and proves it is complete, scans eve
 ## Scope
 
 **In:**
-- SBOM content policy: format (SPDX or CycloneDX), minimum fields per component (name, version, supplier or source, licence expression, package URL, digest), one SBOM per shipped artefact
+- SBOM content policy: format (SPDX 2.3 JSON, chosen jointly with `ECO.REL.SIGN.SBOM`), minimum fields per component (name, version, supplier or source, licence expression, package URL, digest), one SBOM per shipped artefact
 - Completeness check: every resolved dependency in each lockfile and every vendored or bundled native component appears in the SBOM
 - Vulnerability scanning against at least one public advisory database on PRs, nightly and at release
 - Severity thresholds and the release gate
@@ -54,18 +55,30 @@ Sets what the per-release SBOM must contain and proves it is complete, scans eve
 ## Interfaces
 
 - **Offers:** SBOM policy and completeness check; scan job and release gate (run in `ECO.CI.WF`); VEX documents (to `QUAL.EVID`, `QUAL.CRA`); `affected` findings (to `QUAL.VULN`).
-- **Consumes:** SBOM files from `ECO.REL.SIGN`; reusable workflows and required checks from `ECO.CI.WF`; licence data from `ECO.CI.LIC`.
+- **Consumes (as artifacts, CONSTITUTION §2.1 Tooling):** SPDX SBOM files from `ECO.REL.SIGN.SBOM`; the package plan from `ECO.REL.PKG.PLAN`; reusable workflows from `ECO.CI.WF.CALL`. `ECO.REL.PROC.GATES` reads the gate file `sbom/vuln-gate.json`.
 
 ## Decomposition hints
 
 POLICY (format and field rules), COMPLETE (lockfile to SBOM check), SCAN (scanner jobs and database freshness), GATE (thresholds), VEX (statement format and review).
 
+## Split rationale
+
+The split follows the three artefacts this subsystem answers for: the SBOM itself (is it complete and well-formed), the findings against it (scan and gate), and the project's exploitability judgement on each finding (VEX). VEX is its own leaf because it is human-reviewed data with its own publication and hand-off, while the scan is a mechanical matcher; the scan depends on the VEX types to apply the gate.
+
+Alternatives considered:
+- **Separate POLICY and GATE leaves** (the decomposition hints). Rejected: the policy is a short file checked by the completeness tool, and the gate is a few lines of the scan; each alone would be far below size S.
+- **Scan and VEX in one leaf.** Rejected: together they exceed size M, and they change for different reasons (database format versus review process).
+
 ## Open questions
 
-- `ECO.REL.SIGN` leaves the SBOM format unverified; the concept doc proposes CycloneDX. One format should be chosen jointly; cross-domain.
+- Resolved: the SBOM format is SPDX 2.3 JSON, chosen jointly with `ECO.REL.SIGN.SBOM`; REQ-QUAL.SBOM-001 still reads "SPDX or CycloneDX" and the children narrow it to SPDX.
 - The concept doc requires a dependency decision record for every new core dependency; no ECO node owns that yet; cross-domain.
-- Scanner and database choice is a leaf-level decision; both must run offline-capable in CI mirrors for air-gapped builds [unverified].
+- Scanner database choice and offline mirroring are settled at leaf level in `QUAL.SBOM.SCAN` [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.SBOM.COMPLETE | SBOM content policy and completeness check | 001 002 | none |
+| QUAL.SBOM.SCAN | Dependency vulnerability scan and release gate | 003 004 008 | none |
+| QUAL.SBOM.VEX | VEX statements, review and publication | 005 006 007 | none |

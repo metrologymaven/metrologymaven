@@ -4,18 +4,18 @@ title: Re-targeted, dry-run and rebase re-execution
 level: 3
 parent: CORE.RPL
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.RPL-010, REQ-CORE.RPL-011]
 covers: []
-depends_on: [CORE.JRN, CORE.BUS, CORE.RPL.EXEC]
+depends_on: [CORE.JRN.CHAIN, CORE.JRN.BR, CORE.BUS.PIPE, CORE.RPL.EXEC.LOOP]
 cli: [fid journal replay-retargeted, fid journal replay-dry-run]
 mcp: [journal_replay_retargeted, journal_replay_dry_run]
 journal: [journal.replay_retargeted@1, journal.replay_dry_run@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.RPL.RETGT: Re-targeted, dry-run and rebase re-execution
@@ -48,18 +48,24 @@ Re-execution that produces *new* state rather than checking old state. Re-target
 
 ## Interfaces
 
-- **Offers:** `Replay::run(mode: Retargeted { bindings } | DryRun, span)`, `Replay::rebase(source, target_head) -> RebaseResult`; changeset diff type (shared with `CORE.JRN.BR` diff).
+- **Offers:** `Replay::run(Retargeted { bindings }, span)` and `journal.replay_retargeted@1` (RUN); `Replay::run(DryRun, span)` and `journal.replay_dry_run@1` (DRY); `Replay::rebase(source, target_head) -> RebaseResult` (REBASE), called by `CORE.JRN.BR` through an injected trait; the changeset diff type is `CORE.JRN.BR`'s diff result.
 - **Commands:** `journal.replay_retargeted@1` (W2), `journal.replay_dry_run@1` (R1).
-- **Consumes:** `CORE.JRN`, `CORE.BUS`, `CORE.RPL.EXEC`.
+- **Consumes:** `CORE.JRN.CHAIN`, `CORE.JRN.BR` (branch creation and diff type), `CORE.BUS.PIPE`, `CORE.RPL.EXEC.LOOP`.
 
 ## Decomposition hints
 
-BIND (binding model and checks), RETGT (re-targeted command), DRY (throwaway branch and changeset diff), REBASE (rebase for promotion).
+Applied: RUN (binding model plus the re-targeted command), DRY, REBASE. BIND was folded into RUN, its only user.
 
 ## Open questions
 
-- Where throwaway-branch entries live (an in-memory journal or a temporary table discarded on completion) is left to DRY; REQ-004 only fixes the observable outcome.
+- **Resolved:** throwaway-branch entries live in an in-memory scratch sink (`CORE.RPL.EXEC.LOOP`), never in a database table, so REQ-004 holds by construction.
+- `CORE.JRN.BR` must call REBASE through an injected trait; a crate dependency from BR to RPL would form a cycle through `CORE.BUS.PIPE → CORE.JRN` (cross-node follow-up).
+- `MIG.EXPLAIN` depends on this node for re-targeted replay; it should narrow its dependency to `CORE.RPL.RETGT.RUN`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.RPL.RETGT.RUN | Re-targeted replay to a new branch (leaf) | 001 002 | none |
+| CORE.RPL.RETGT.DRY | Dry-run replay with changeset diff (leaf) | 003 004 | none |
+| CORE.RPL.RETGT.REBASE | Rebase re-execution for non-fast-forward promotion (leaf) | 005 | none |

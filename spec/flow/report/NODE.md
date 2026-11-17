@@ -4,18 +4,19 @@ title: Report-app acceptance jobs (transcription FAI, drawing-only FAI, SPC, sup
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-FLOW-001, REQ-FLOW-002, REQ-FLOW-004]
 covers: [JOB.ACC.02, JOB.ACC.03, JOB.ACC.06, JOB.ACC.08, JOB.USE.06]
-depends_on: [FLOW.PERSONA, FLOW.RUNNER, IO.RES, IO.DMIS, RPT.BALLOON, RPT.FORMS, RPT.STATS, RPT.CATALOG, RPT.OUTPUT, TRUST.PKG, TRUST.VERIFY, VIZ.SHELL, ECO.DATA]
+depends_on: [IO.RES, IO.DMIS, RPT.BALLOON, RPT.FORMS, RPT.STATS, RPT.CATALOG, RPT.MODEL, RPT.OUTPUT, TRUST.PKG, TRUST.VERIFY, VIZ.SHELL, VIZ.OVERLAY, VIZ.CAPTURE]
+uses_artifacts: [FLOW.PERSONA, FLOW.RUNNER, ECO.DATA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # FLOW.REPORT: Report-app acceptance jobs
@@ -64,9 +65,24 @@ J2 (transcription AS9102), J3 (drawing-only FAI), J6 (SPC continuity), J8 (suppl
 
 ## Open questions
 
-- AS9102 form layout fidelity depends on D-015 (open); J2 and J3 targets assume a layout that customers accept.
-- J6 and J8 are tracked; doc 10 says either becomes gating if a design partner's contract depends on it. Changing a gating flag should be a maintainer decision, not an agent edit.
+- AS9102 form layout follows D-015 (accepted: option C, the general designer with no reproduced form layout; counsel review before release). J2 and J3 targets assume customers accept that layout [unverified].
+- J6 and J8 are tracked; doc 10 says either becomes gating if a design partner's contract depends on it. Changing a gating flag is a maintainer decision, made by editing the package under review (REQ-FLOW.RUNNER-011).
+- Cross-domain: no RPT node yet owns the lint that compares drawing requirements with transcribed source values (J2), or a disposition command for received packages (J8). Both are noted in the child nodes.
+
+## Split rationale
+
+The dividing principle is **one child per acceptance job**, each owning its own synthetic data, plus one child for the keyboard-only variants. Unlike Inspect, the Report jobs share no dataset (DMIS output, vector PDF plus CSVs, SPC history, result packages), so data stays with its job. The keyboard-only variants (`JOB.USE.06`) re-record J2 and J3 on their datasets and need the presentation track, so they are one child that reads J2 and J3 as artifacts.
+
+Alternatives considered:
+- **A shared DATA child.** Rejected: no dataset is shared, so it would only add a dependency.
+- **Keyboard variants inside J2 and J3.** Rejected: they need the presentation track (`VIZ.CAPTURE.TRACK`, P1b) while J2 and J3 are P1a.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.REPORT.J2](j2/NODE.md) | J2 transcription AS9102 from an existing CMM report | 001 002 003 004 010 011 | JOB.ACC.02 |
+| [FLOW.REPORT.J3](j3/NODE.md) | J3 drawing-only first-article inspection from CMM, arm and hand-gauge data | 001 005 006 010 011 | JOB.ACC.03 |
+| [FLOW.REPORT.J6](j6/NODE.md) | J6 SPC continuity from imported history plus new runs | 001 008 010 011 | JOB.ACC.06 |
+| [FLOW.REPORT.J8](j8/NODE.md) | J8 supplier package intake with tamper detection | 001 009 010 011 | JOB.ACC.08 |
+| [FLOW.REPORT.KBD](kbd/NODE.md) | Keyboard-only variants of J2 and J3 | 007 010 | JOB.USE.06 |

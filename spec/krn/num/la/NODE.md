@@ -4,7 +4,7 @@ title: Deterministic dense linear algebra
 level: 3
 parent: KRN.NUM
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.NUM.ERR, KRN.NUM.FN, KRN.NUM.RED]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.NUM.LA: Deterministic dense linear algebra
@@ -59,8 +59,15 @@ QR (Householder QR, pivoting, triangular and least-squares solves; P0 first), SV
 
 ## Open questions
 
-- Whether small fixed-size (3 x 3, 4 x 4) eigen solvers for line and plane fits should be specialised closed forms or the general Jacobi path [unverified accuracy trade-off].
+- Whether small fixed-size (3 x 3, 4 x 4) eigen solvers for line and plane fits should be specialised closed forms or the general Jacobi path [unverified accuracy trade-off]. **Resolved at split (2026-11-17):** `KRN.NUM.LA.EIG` uses the general Jacobi path for every size; revisit only on profiling evidence.
 
 ## Children
 
-_None yet: status `open`._
+The split follows the decomposition hints: one shared base (types, triangular solves, rank rule and condition estimator, so all factorizations report diagnostics the same way) and one leaf per factorization. COND was merged into MAT because QR is its only estimator user, while SVD and EIG compute condition exactly from their spectra.
+
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.NUM.LA.MAT | Dense matrix types, triangular solves, rank and condition estimation | 003 004 005 | none |
+| KRN.NUM.LA.QR | Householder QR, column pivoting and least-squares solve | 001 003 004 005 006 | none |
+| KRN.NUM.LA.SVD | One-sided Jacobi singular value decomposition | 002 003 004 005 006 | none |
+| KRN.NUM.LA.EIG | Cyclic Jacobi symmetric eigendecomposition | 002 003 004 005 | none |

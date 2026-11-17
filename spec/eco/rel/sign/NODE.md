@@ -4,18 +4,19 @@ title: Release signing, checksums and SBOM
 level: 3
 parent: ECO.REL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ECO.REL-002, REQ-ECO.REL-003, REQ-ECO.REL-005]
 covers: []
-depends_on: [ECO.REL.PKG]
+depends_on: []
+uses_artifacts: [ECO.REL.PKG, ECO.REL.WEB, TRUST.SIGN.DSSE, ECO.CI.LIC]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.REL.SIGN: Release signing, checksums and SBOM
@@ -30,13 +31,14 @@ Signs every release artefact with the project's release key after a human approv
 - Release key custody model and the human approval step
 - Signed checksum file covering every artefact
 - OS code signing and notarisation (Windows, macOS) and Linux package signing
-- SBOM generation per artefact in a standard format [unverified: format choice, for example SPDX or CycloneDX]
-- Public-key publication and a verification guide for users
+- SBOM generation per artefact in SPDX 2.3 JSON (chosen jointly with `QUAL.SBOM`; see ECO.REL.SIGN.SBOM)
+- Public-key publication, key transitions and a verification guide for users
 
 **Out** (and which node owns it instead):
 - Result signing and the Result Package (owned by `TRUST`)
 - Plugin package signing policy (owned by `ECO.SDK`)
 - Dependency licence check (owned by `ECO.CI.LIC`)
+- SBOM content policy, completeness check, vulnerability gate and VEX (owned by `QUAL.SBOM`)
 
 ## Requirements
 
@@ -49,8 +51,8 @@ Signs every release artefact with the project's release key after a human approv
 
 ## Interfaces
 
-- **Offers:** signed checksum file; SBOMs; signed and notarised installers; public keys and verification guide.
-- **Consumes:** artefacts from ECO.REL.PKG and ECO.REL.WEB; approval step in the release workflow (ECO.REL.PROC); dependency metadata.
+- **Offers:** `SHA256SUMS`, its DSSE envelope and SSH signature (SUMS, CUSTODY); signed channel feeds, release manifest and evidence statement (CUSTODY); approval record `approval.json` (CUSTODY); OS-signed installers and `signing/os-readiness.json` (OSSIGN); per-artefact SPDX SBOMs (SBOM); `KEYS.md`, public keys and key-transition statements (GUIDE).
+- **Consumes (as files):** artefacts from `ECO.REL.PKG` and `ECO.REL.WEB`; DSSE envelope format (`TRUST.SIGN.DSSE`); licence data (`ECO.CI.LIC`); feed and manifest payloads (`ECO.REL.PROC.CHANNEL`); evidence statement (`QUAL.EVID`).
 
 ## Decomposition hints
 
@@ -58,9 +60,17 @@ CUSTODY (keys and approval), SUMS (checksum file), OSSIGN (code signing and nota
 
 ## Open questions
 
-- Vendor code-signing certificates need an accountable legal entity and cost money; who holds them depends on governance (D-003 accepted founder-led start) and on a future legal entity [unverified cost]. This may need a decision record when the first public installer is due.
+- Vendor code-signing certificates need an accountable legal entity and cost money; who holds them depends on governance (D-003 accepted founder-led start) and on a future legal entity [unverified cost]. ECO.REL.SIGN.OSSIGN can be built and tested with test certificates; a decision record is needed before the first public beta or stable installer, not before implementation.
 - D-002 must settle before the first public installer (product name in signing certificates).
+- **SBOM format (joint with QUAL.SBOM):** SPDX 2.3 JSON is chosen here. Reasons: the dependency allowlist (D-001, ECO.RULES.SPDX) and licence check already speak SPDX licence expressions; SPDX is published as ISO/IEC 5962 [unverified: that standard's edition corresponds to SPDX 2.2.1, not 2.3]. QUAL.SBOM should narrow its "SPDX or CycloneDX" wording to SPDX when expanded.
+- QUAL.SBOM, QUAL.EVID, QUAL.IQOQ and ENT.OPS depend on ECO.REL.SIGN, so SIGN children read their files as artefacts and declare no dependency on them.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REL.SIGN.CUSTODY | Release key custody, approval record and statement signing (leaf) | 001 002 003 | none |
+| ECO.REL.SIGN.SUMS | Checksum file and checksum statement (leaf) | 001 | none |
+| ECO.REL.SIGN.OSSIGN | OS code signing, notarisation and Linux package signing (leaf) | 005 | none |
+| ECO.REL.SIGN.SBOM | Per-artefact SPDX SBOM generation (leaf) | 004 | none |
+| ECO.REL.SIGN.GUIDE | Public keys, key transitions and offline verification guide (leaf) | 006 | none |

@@ -4,7 +4,7 @@ title: Point-cloud LOD streaming and point rasterization
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.SCENE, VIZ.RENDER.FRAME, GEO.OOC]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.LOD: Point-cloud LOD streaming and point rasterization
@@ -63,7 +63,13 @@ SSE (traversal and budget), CACHE (GPU cache and eviction), RASTER (three tiers)
 
 - GEO.OOC (out-of-core streaming) is tagged P1b; P1a work on this node starts with in-memory chunk hierarchies for small CMM point sets, and streaming lands with GEO.OOC.
 - The 10⁸-point budget is a hypothesis until measured on PLAT's reference profile; whether T0 compute raster is P1a or P1b depends on PLAT tier-1 targets.
+- Applied: P1a work uses in-memory hierarchies (TRAV, RASTER, ATTR); streaming from `GEO.OOC.LOD` lands in CACHE (P1b).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.LOD.TRAV | Screen-space-error traversal, budget and point counts (leaf) | 001 003 004 006 | PW.VIZ.01 |
+| VIZ.RENDER.LOD.CACHE | GPU chunk cache and out-of-core streaming source (leaf, P1b) | 002 003 | none |
+| VIZ.RENDER.LOD.RASTER | Point raster tiers writing point indices (leaf) | 005 006 | PW.VIZ.01 |
+| VIZ.RENDER.LOD.ATTR | Point attribute modes, eye-dome lighting and excluded style (leaf) | 007 | none |

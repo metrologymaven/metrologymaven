@@ -4,18 +4,19 @@ title: Reproducible builds and their verification
 level: 3
 parent: ECO.REL
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ECO.REL-006]
 covers: []
-depends_on: [ECO.REL.PKG, ECO.REL.SIGN]
+depends_on: [ECO.CI.WF]
+uses_artifacts: [ECO.REL.PKG, ECO.REL.WEB, ECO.REL.SIGN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.REL.REPRO: Reproducible builds and their verification
@@ -29,7 +30,7 @@ Makes release artefacts reproducible, so that anyone building the same tag on th
 **In:**
 - Build-environment pinning (toolchain, dependencies, timestamps, paths)
 - Signature stripping and comparison rules per artefact type
-- A second, independent rebuild per release and a published comparison result
+- A second, independent rebuild per release, a published comparison result, and a build provenance statement per artefact
 - A documented recipe for third parties to rebuild
 
 **Out** (and which node owns it instead):
@@ -45,17 +46,25 @@ Makes release artefacts reproducible, so that anyone building the same tag on th
 
 ## Interfaces
 
-- **Offers:** rebuild comparison report per release; rebuild recipe.
-- **Consumes:** ECO.REL.PKG build definitions; ECO.REL.SIGN signature formats (for stripping).
+- **Offers:** `build-env.lock` and the pin check (PIN); `repro-formats.toml` and `cargo xtask rel repro-compare` (STRIP); `rebuild-report.json` and per-artefact provenance statements (REBUILD; consumed by `QUAL.EVID` as a bundle member); `REBUILD.md` and `cargo xtask rel rebuild` (RECIPE).
+- **Consumes (as files):** artefacts and build definitions from `ECO.REL.PKG` and `ECO.REL.WEB`; signature formats from `ECO.REL.SIGN` (for stripping).
+- **Code dependency:** build jobs of `ECO.CI.WF`.
 
 ## Decomposition hints
 
-PIN (environment pinning), STRIP (signature stripping per format), REBUILD (independent rebuild job), RECIPE.
+PIN (environment pinning), STRIP (signature stripping and comparison per format), REBUILD (independent rebuild job, report and provenance), RECIPE.
 
 ## Open questions
 
 - Reproducibility of signed macOS and Windows installers is known to be difficult [unverified]; REQ-002 states the honest status per format rather than promising it.
+- QUAL.EVID left build provenance (SLSA) out of its P1a member set because this node is P1b; ECO.REL.REPRO.REBUILD now produces the statements, so QUAL.EVID can add them as a member from P1b.
+- "Independent" rebuild means a different runner instance from a clean image, not a different organisation; third-party rebuilders are invited through the RECIPE.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.REL.REPRO.PIN | Build-environment pinning and pin check (leaf) | 001 004 | none |
+| ECO.REL.REPRO.STRIP | Signature stripping and per-format comparison (leaf) | 001 002 | none |
+| ECO.REL.REPRO.REBUILD | Independent rebuild, comparison report and provenance (leaf) | 001 003 | none |
+| ECO.REL.REPRO.RECIPE | Third-party offline rebuild recipe (leaf) | 004 | none |

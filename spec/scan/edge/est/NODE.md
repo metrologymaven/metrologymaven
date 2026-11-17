@@ -4,7 +4,7 @@ title: Edge estimation on wrapped meshes and clouds
 level: 3
 parent: SCAN.EDGE
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -22,7 +22,7 @@ updated: 2026-11-17
 
 ## Purpose
 
-Estimates where the actual part edge lies when the scan has no clean free boundary: point clouds, and meshes that wrap around a rounded, chamfered or burred edge. It adds further extraction methods behind the same `extract_edge` interface that `SCAN.EDGE.MESHBND` defines. It is blocked on D-028 because the definition of the actual edge on such data changes the reported values and needs user input.
+Estimates where the actual part edge lies when the scan has no clean free boundary: point clouds, and meshes that wrap around a rounded, chamfered or burred edge. It adds further extraction methods behind the same `extract_edge` interface that `SCAN.EDGE.MESHBND` defines. The edge definition follows D-028 (accepted): tangency break and projected silhouette are offered as named methods, the method and parameters are recorded with every result, and the default is set per defaults profile.
 
 ## Scope
 
@@ -56,8 +56,14 @@ One leaf per method accepted by D-028, plus a shared fixture generator for round
 ## Open questions
 
 - **Unblocked (2026-11-17):** D-028 (Definition of the actual edge for trim-line deviation) is accepted. Apply its Decision section (`decisions/D-028-*.md`) when this node is expanded.
-- Blocked on D-028: definition of the actual edge on rounded, chamfered or burred edges.
+- **Applied at split (2026-11-17):** D-028 option D. Children TANG (option A) and SILH (option C) are the methods, DEFS resolves the default (silhouette for meshes, tangency break for clouds) and EFIX is the shared fixture generator. D-028 still asks for confirmation of the defaults with at least two sheet-metal users [unverified].
+- Cross-domain: `SCAN.EDGE.EDEV` should call `SCAN.EDGE.EST.DEFS` when no method is given, and the defaults-profile key `scan.edge.extraction_method` needs adding to the `GDT.RES` key schema.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.EDGE.EST.EFIX | Synthetic rounded, chamfered and burred edge fixtures (leaf) | 004 | none |
+| SCAN.EDGE.EST.TANG | Tangency-break edge method (leaf) | 001 002 003 004 | GOM.SRF.06, PW.CMP.04 |
+| SCAN.EDGE.EST.SILH | Projected-silhouette edge method (leaf) | 001 002 003 004 | GOM.SRF.06, PW.CMP.04 |
+| SCAN.EDGE.EST.DEFS | Default edge method per data kind and defaults profile (leaf) | 002 003 | none |

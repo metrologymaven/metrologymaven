@@ -4,18 +4,18 @@ title: Catalog query model
 level: 3
 parent: RPT.CATALOG
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.CATALOG-004, REQ-RPT.CATALOG-008]
 covers: []
-depends_on: [RPT.CATALOG.STORE]
+depends_on: [RPT.CATALOG.STORE, CORE.STO.SET]
 cli: [fid stats query-results, fid stats save-query-catalog]
 mcp: [stats_query_results, stats_save_query_catalog]
 journal: [stats.save_query_catalog@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.CATALOG.QUERY: Catalog query model
@@ -57,8 +57,11 @@ MODEL (query type and SQL translation), ORDER (ordering and cursor), PERF (index
 
 ## Open questions
 
-- Where saved queries live (catalog settings or a project) when the catalog is shared; coordinate with `RPT.CATALOG.SHARE`.
+- Resolved: saved queries live in the user's catalog settings (user scope), also when a shared catalog is attached (`RPT.CATALOG.QUERY.SAVE`). Queries across local and attached catalogs are `RPT.CATALOG.SHARE.FED`, built on the per-catalog executor of `RPT.CATALOG.QUERY.EXEC`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.CATALOG.QUERY.EXEC | Typed catalog query, ordering and pagination (leaf) | 001 002 003 004 005 | none |
+| RPT.CATALOG.QUERY.SAVE | Saved catalog queries (leaf) | 006 | none |

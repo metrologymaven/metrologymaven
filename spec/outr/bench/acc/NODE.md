@@ -4,18 +4,19 @@ title: Accuracy benchmarks against reference data
 level: 3
 parent: OUTR.BENCH
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.BENCH-001, REQ-OUTR.BENCH-003]
 covers: []
-depends_on: [OUTR.BENCH.RUN, UNC.RDL]
+depends_on: [OUTR.BENCH.RUN]
+uses_artifacts: [UNC.RDL, UNC.ORS, ECO.DATA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BENCH.ACC: Accuracy benchmarks against reference data
@@ -55,7 +56,13 @@ FIT (feature-fit accuracy), EVAL (GD&T evaluation accuracy, once UNC.ORS referen
 ## Open questions
 
 - Which reference datasets allow redistribution is for UNC.RDL to record [unverified].
+- The former code dependency on UNC.RDL is an artifact read (RDL release sets, self-test and suite run records) and is now `uses_artifacts` (CONSTITUTION 2.1, D-034).
+- Signed deviations and UEC levels are not yet fields of the UNC.RDL.AST run record; see OUTR.BENCH.ACC.FMT.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BENCH.ACC.FMT](fmt/NODE.md) | Accuracy recipe section and result table (leaf) | 001 002 003 004 | none |
+| [OUTR.BENCH.ACC.FIT](fit/NODE.md) | Feature-fit accuracy recipes (leaf) | 005 | none |
+| [OUTR.BENCH.ACC.EVAL](eval/NODE.md) | GD&T evaluation accuracy recipes (leaf) | 005 | none |

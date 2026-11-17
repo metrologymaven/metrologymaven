@@ -4,7 +4,7 @@ title: Transcription record model, source mapping and DMIS results import
 level: 3
 parent: IO.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.REG.ENV, IO.DMIS.OUT]
 cli: [fid import results-dmis]
 mcp: [import_results_dmis]
 journal: [import.results_dmis@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.RES.TRANS: Transcription record model and source mapping
@@ -57,8 +57,13 @@ MODEL (record types), MAP (value and outcome mapping), VIEW (display rule helper
 
 ## Open questions
 
-- Where ResultRecord lives (CORE data model or GDT) is unsettled in the parents (carried from IO.RES); this node cannot become a leaf until it is fixed.
+- Where ResultRecord lives was unsettled (carried from IO.RES). Found: `GDT.CHAR.RECORD` owns the ResultRecord builder, and GDT is a later L2 domain than IO (CONSTITUTION §2.1), so IO cannot depend on it. Resolved for this node: `IO.RES.TRANS.MODEL` defines the transcribed variant (schema `transcribed-result@1`) with the CONSTITUTION §5 fields and reads GDT's canonical JSON only through `uses_artifacts`. **Cross-domain:** a shared ResultRecord schema in CORE (L1) would remove the duplication; GDT should at least publish its record schema as a versioned file.
+- DMIS results import is the single command `import.results_dmis@1`, in `IO.RES.TRANS.DMIS`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.RES.TRANS.MODEL | Transcription record model and value mapping (leaf) | 001 002 003 004 | none |
+| IO.RES.TRANS.VIEW | Transcribed-status marking for views and exports (leaf) | 005 | none |
+| IO.RES.TRANS.DMIS | DMIS results import command (leaf) | 006 | PW.IMP.05 |

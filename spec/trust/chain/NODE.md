@@ -11,7 +11,8 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-002]
 covers: []
-depends_on: [CORE, TRUST.PKG, TRUST.SIGN]
+depends_on: [TRUST.PKG.READER, TRUST.SIGN.TROOT]
+uses_artifacts: [CORE.JRN.ENTRY, CORE.JRN.CANON, CORE.JRN.CHAIN.CKPT]
 cli: [fid verify check-chain]
 mcp: [verify_check_chain]
 journal: []
@@ -73,6 +74,7 @@ Alternatives considered:
 - REQ-TRUST.CHAIN-007 asks for an independent canonicaliser (`TRUST.CHAIN.CANON`); if maintainers prefer one shared audited crate, record that as a decision.
 - The checkpoint format is owned by CORE.JRN (still open); `TRUST.CHAIN.CKPT` assumes format version, index and head digest, and P0 signed linear heads only.
 - CONSTITUTION §7 lists the verifier in P0 while this subsystem is P1a; see the phase decision referenced from `TRUST.VERIFY`.
+- Dependencies narrowed (2026-11-17, D-034): CORE's journal entry, canonical-JSON vectors and checkpoint format are read as artifacts (`uses_artifacts`), not linked; the chain checker stays an independent re-implementation.
 
 ## Children
 

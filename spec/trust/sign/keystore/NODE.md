@@ -4,7 +4,7 @@ title: OS keystore backends and key lifecycle commands
 level: 3
 parent: TRUST.SIGN
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [TRUST.SIGN.DSSE]
 cli: [fid sign create-key, fid sign list-keys, fid sign export-pubkey]
 mcp: [sign_list_keys]
 journal: [sign.create_key@1, sign.export_pubkey@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.SIGN.KEYSTORE: OS keystore backends and key lifecycle commands
@@ -60,9 +60,16 @@ TRAIT (trait, conformance suite, software test backend), WIN, MAC, LINUX (one ba
 
 ## Open questions
 
-- `sign.export_pubkey@1` is X1 in the parent's interface list, but CONSTITUTION §3.1 (D-007) makes a local export-root write W1 with `fs_effect: write_root`; this node proposes W1 and leaves X1 for off-machine destinations.
-- Ed25519 support in hardware stores is limited [unverified]; whether non-hardware Ed25519 keys are allowed under the Regulated profile is for `TRUST.PROFILE`.
+- `sign.export_pubkey@1` is X1 in the parent's interface list, but CONSTITUTION §3.1 (D-007) makes a local export-root write W1 with `fs_effect: write_root`; `TRUST.SIGN.KEYSTORE.CMDS` specifies W1 and leaves X1 for off-machine destinations (via `egress.send@1`).
+- Ed25519 support in hardware stores is limited [unverified]; hardware backends offer P-256 only, and the Regulated profile's `allow_software_keys: false` then rules out Ed25519 software keys there.
+- D-011 (accepted) shapes the Linux backend: PKCS#11 token keys (hardware) and passphrase-wrapped software keys; the passphrase prompt itself is `TRUST.SIGN.UV.LINUV`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.SIGN.KEYSTORE.TRAIT | KeyStore trait, test backend, conformance suite and key-bytes scan | 001 006 007 | none |
+| TRUST.SIGN.KEYSTORE.WIN | Windows CNG keystore backend | 001 002 007 | none |
+| TRUST.SIGN.KEYSTORE.MAC | macOS Keychain and Secure Enclave backend | 001 002 007 | none |
+| TRUST.SIGN.KEYSTORE.LINUX | Linux PKCS#11 and wrapped-key backend | 001 002 007 | none |
+| TRUST.SIGN.KEYSTORE.CMDS | Key lifecycle registry commands | 003 004 005 | none |

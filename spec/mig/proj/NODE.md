@@ -4,18 +4,19 @@ title: Incumbent project and point-export import for re-evaluation
 level: 2
 parent: MIG
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-MIG-001, REQ-MIG-007]
 covers: []
-depends_on: [IO.QIF.IDS, IO.CLOUD.ASCII, IO.DMIS.OUT, IO.RES.CSV, ALN.XFM.MATRIX, GDT.CHAR.MODEL, MIG.SRC]
+depends_on: [IO.QIF.IDS, IO.CLOUD.ASCII, IO.DMIS.OUT, IO.RES.CSV, IO.REG.ENV, IO.REG.PROV, ALN.XFM.MATRIX, GDT.CHAR.MODEL, GDT.CHAR.SPEC, GDT.CHAR.IDENT, MIG.SRC.GATE, MIG.SRC.REG]
+uses_artifacts: [MIG.COVER.TAXO]
 cli: [fid migrate import-project-export, fid migrate import-point-export]
 mcp: [migrate_import_project_export, migrate_import_point_export]
 journal: [migrate.import_project_export@1, migrate.import_point_export@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # MIG.PROJ: Incumbent project and point-export import for re-evaluation
@@ -54,8 +55,8 @@ Ladder stage 3. Brings the measurement content of incumbent work into a project 
 
 ## Interfaces
 
-- **Offers:** `migrate.import_project_export@1` (W2), `migrate.import_point_export@1` (W2); `MigrationMappingProfile` data; external-ID index used by `MIG.PARALLEL`; mapping reports for `MIG.COVER`.
-- **Consumes:** `IO.QIF.IDS`, `IO.CLOUD.ASCII`, `IO.DMIS.OUT`, `IO.RES.CSV`, `ALN.XFM.MATRIX`, `GDT.CHAR.MODEL`, `MIG.SRC` gate.
+- **Offers:** `migrate.import_project_export@1` (W2), `migrate.import_point_export@1` (W2); `MigrationMappingProfile` data (`mig-profile@1`); the external-ID index used by `MIG.PARALLEL.PAIR`; mapping reports (`mig-mapreport@1`) read by `MIG.COVER.GEN`; imported alignments used as `ALIGNMENT` probe candidates by `MIG.EXPLAIN.VARIANT`.
+- **Consumes:** `IO.QIF.IDS`, `IO.CLOUD.ASCII`, `IO.DMIS.OUT`, `IO.RES.CSV`, `IO.REG.ENV`, `IO.REG.PROV`, `ALN.XFM.MATRIX`, `GDT.CHAR.MODEL`, `GDT.CHAR.SPEC`, `GDT.CHAR.IDENT`, `MIG.SRC.GATE` and `MIG.SRC.REG`; construct IDs from `MIG.COVER.TAXO` taxonomies (artifact).
 
 ## Decomposition hints
 
@@ -63,8 +64,25 @@ PROFILE (mapping profile schema and loader), POINTS (point and nominal feature i
 
 ## Open questions
 
-- Which documented incumbent CSV and project exports exist and are admissible is not verified [unverified]; profiles are added only as `MIG.SRC` entries are admitted.
+- Which documented incumbent CSV and project exports exist and are admissible is not verified [unverified]; profiles are added only as `MIG.SRC` entries are admitted (D-033: open exports only until P4).
+- `IO.CLOUD.ASCII` is phased P1b while this node is P1a. Until it lands, `migrate.import_point_export@1` can read point data only from QIF measured points; the IO maintainers should consider moving the ASCII point-table reader to P1a.
+
+## Split rationale
+
+Split by **entity kind being mapped** (points and nominal features, alignments, characteristics), with the three shared rules pulled into their own leaves so they hold identically for both commands: mapping profiles (PROFILE), identity (XID) and the mapping report (MAPREP). The two commands are separate leaves because the point-export import is usable alone (many shops can export points but not whole projects) and is smaller.
+
+Alternatives considered:
+- **One child per incumbent product.** Rejected: profiles are data, so per-product code would duplicate the mapping engine and split the clean-room gate.
+- **One child per source format (QIF, DMIS output, CSV).** Rejected: format parsing is IO's; the MIG-owned work is entity mapping, which is shared across formats.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [MIG.PROJ.PROFILE](profile/NODE.md) | Mapping profile schema and loader (leaf) | 001 006 | none |
+| [MIG.PROJ.XID](xid/NODE.md) | External-ID index and stable entity IDs (leaf) | 002 | none |
+| [MIG.PROJ.MAPREP](maprep/NODE.md) | Mapping report model and classification (leaf) | 001 | none |
+| [MIG.PROJ.POINTS](points/NODE.md) | Point-export import of measured points and nominal features (leaf) | 001 005 006 | none |
+| [MIG.PROJ.ALIGN](align/NODE.md) | Incumbent alignments as labelled known transforms (leaf) | 003 | none |
+| [MIG.PROJ.CHAR](char/NODE.md) | Characteristic, tolerance and datum mapping (leaf) | 004 | none |
+| [MIG.PROJ.PROJECT](project/NODE.md) | Project-export import command (leaf) | 001 002 006 | none |

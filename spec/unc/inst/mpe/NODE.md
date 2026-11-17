@@ -4,7 +4,7 @@ title: Specification-derived models from ISO 10360 MPE terms
 level: 3
 parent: UNC.INST
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.INST.SCHEMA, UNC.MODEL.GRAPH]
 cli: [fid unc derive-instrument-model]
 mcp: [unc_derive_instrument_model]
 journal: [unc.derive_instrument_model@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.INST.MPE: Specification-derived models from ISO 10360 MPE terms
@@ -55,8 +55,16 @@ One leaf per ISO 10360 part in scope (CMM2, ARM12, TRK10, OPT8, OPT13), plus DER
 
 ## Open questions
 
+- Split: the shared format, review state and derivation engine are agent-buildable (DERIVE); each part's table is content that must be checked against the purchased standard by an instrument-metrology expert, so those children stay open.
+
 - Term symbols and their mapping must be checked against the purchased standards; ISO 10360-2 is under periodic review and ISO 10360-102 introduces a symbol grammar that may become the canonical identifier scheme [unverified]. Needs review by an instrument-metrology expert before leaves are finished.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.INST.MPE.DERIVE | Mapping-table format, review state and derivation command (leaf) | 002 003 004 005 | SA.UNC.01 |
+| UNC.INST.MPE.CMM | CMM mapping table (ISO 10360-2 and -5) | 001 002 005 | SA.UNC.01 |
+| UNC.INST.MPE.ARM | Articulated-arm mapping table (ISO 10360-12) | 001 002 005 | SA.UNC.01 |
+| UNC.INST.MPE.TRK | Laser-tracker mapping table (ISO 10360-10) | 001 002 005 | SA.UNC.01 |
+| UNC.INST.MPE.OPT | Optical-sensor and optical 3D system mapping tables (ISO 10360-8 and -13) | 001 002 005 | SA.UNC.01 |

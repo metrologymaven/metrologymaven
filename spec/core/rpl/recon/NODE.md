@@ -4,18 +4,18 @@ title: Snapshots, reconstruction and crash resume
 level: 3
 parent: CORE.RPL
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.RPL-001, REQ-CORE.RPL-002, REQ-CORE.RPL-003, REQ-CORE.RPL-015]
 covers: []
-depends_on: [CORE.JRN, CORE.STO]
+depends_on: [CORE.JRN.CHAIN, CORE.JRN.ENTRY, CORE.STO.SQL, CORE.STO.CACHE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.RPL.RECON: Snapshots, reconstruction and crash resume
@@ -36,8 +36,8 @@ Brings the live document back from storage. RECON takes snapshots (materialised 
 
 **Out** (and which node owns it instead):
 - Re-executing commands and comparing digests (owned by `CORE.RPL.EXEC`)
-- Snapshot byte storage and cache eviction (owned by `CORE.STO`)
-- The state model being reconstructed (owned by `CORE.PRJ`)
+- Snapshot byte storage and cache eviction (owned by `CORE.STO.CACHE`); the snapshot record table (owned by `CORE.STO.SQL`)
+- The state model being reconstructed and its event application (owned by `CORE.PRJ`, which implements RECON's `DocState` trait)
 
 ## Requirements
 
@@ -51,17 +51,21 @@ Brings the live document back from storage. RECON takes snapshots (materialised 
 
 ## Interfaces
 
-- **Offers:** `Replay::reconstruct(project, head) -> State`, `Snapshot::take/validate`, fold-invariant test hook.
-- **Consumes:** `CORE.JRN` (entries, heads, `SnapshotTaken` records), `CORE.STO` (snapshot blobs, cache).
+- **Offers:** `DocState` trait (apply event, digest, encode, decode, format version) that `CORE.PRJ` implements; `Snapshot::take/select_valid` (SNAP); `Replay::reconstruct(project, head) -> State` and the fold-invariant hook (FOLD), called by `CORE.PRJ.CONT` on open and by `CORE.JRN.UNDO` and `CORE.JRN.BR` on head moves through an injected trait.
+- **Consumes:** journal entries and heads (`CORE.JRN.CHAIN`, `CORE.JRN.ENTRY`), the snapshot record table (`CORE.STO.SQL`), snapshot bytes (`CORE.STO.CACHE`).
 
 ## Decomposition hints
 
-SNAP (snapshot policy, take and validate), FOLD (apply events, fold invariant), RESUME (crash and device-loss resume tests), PERF (reconstruction benchmark).
+Applied: SNAP (policy, take, validate, fallback selection) and FOLD (reconstruct, head moves, fold invariant, crash resume, performance). RESUME and PERF were folded into FOLD: both are properties of the same reconstruct path and share its fixtures.
 
 ## Open questions
 
-- Snapshot content is "QIF projection plus indices" in the concept docs; the exact projection depends on `CORE.PRJ.QIF`.
+- Snapshot content is "QIF projection plus indices" in the concept docs; the exact projection depends on `CORE.PRJ.QIF`. RECON treats snapshot bytes as opaque through `DocState::encode/decode`, so the choice does not block these leaves.
+- `CORE.PRJ` must implement `DocState` and call `reconstruct` on open; `CORE.JRN.UNDO` and `CORE.JRN.BR` must call it through an injected trait, not a crate dependency, because `CORE.BUS.PIPE` and RECON depend on `CORE.JRN` (cross-node follow-ups).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.RPL.RECON.SNAP | Snapshot policy, validation and fallback selection (leaf) | 002 004 | none |
+| CORE.RPL.RECON.FOLD | Reconstruction, head moves, fold invariant and crash resume (leaf) | 001 003 005 006 007 | none |

@@ -4,7 +4,7 @@ title: Visibility, layers and explorer filters
 level: 3
 parent: VIZ.VIEW
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.VIEW.STATE, GEO.SEL, CORE]
 cli: [fid view set-visibility]
 mcp: [view_set_visibility]
 journal: [view.set_visibility@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.VIEW.VISIB: Visibility, layers and explorer filters
@@ -57,7 +57,11 @@ RULES (model and precedence), FILTER (explorer queries), LAYER, CMD.
 ## Open questions
 
 - Name-pattern filters over untrusted entity names must be bounded (pattern size and time) to stay fail-closed.
+- Applied: name patterns are bounded to 256 characters with a linear-time matcher (MODEL REQ-004).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.VIEW.VISIB.MODEL | Visibility rules, layers, explorer filters and precedence (leaf) | 002 004 005 | GOM.VIZ.06 |
+| VIZ.VIEW.VISIB.CMD | Set-visibility command with isolate, show-only and layers (leaf) | 001 003 | GOM.VIZ.06 |

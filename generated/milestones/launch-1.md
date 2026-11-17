@@ -6,891 +6,1546 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 | | Count |
 |---|---:|
-| Nodes in scope | 803 |
-| Buildable leaves | 322 |
-| Open nodes still to expand | 349 |
+| Nodes in scope | 1817 |
+| Buildable leaves | 1336 |
+| Open nodes still to expand | 72 |
 | Nodes blocked on decisions | 0 |
-| Build waves | 63 |
+| Build waves | 39 |
 
 ## Dependencies on excluded nodes (review)
 
-- ECO.REL.WEB -> VIZ.WEB
 - FLOW.INSPECT -> IND.GAPFL
-- HAL.ACQ.STAMP -> HAL.PAIR.GRADE
-- MIG -> CMM
-- MIG.COVER -> MIG.PROGEQ
-- OUTR.DOCS.REF -> AUTO.PY
-- OUTR.LAUNCH.KIT -> HAL.SIM
-- PLAT.DOCTOR.HOSTCHK -> PLAT.XHOST
-- QUAL.IQOQ -> TRUST.ESIG.BIND
-- VIZ.INBOX.GATES -> TRUST.ESIG
+- HAL.ACQ.SESS -> HAL.PAIR.GRADE
+- HAL.ACQ.SESS.LIFE -> HAL.PAIR.GRADE
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (11 leaves)
+### Wave 1 (125 leaves)
 
+- [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
+- [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
+- [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
+- [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
+- [AGENT.LOCAL.REF](../../spec/agent/local/ref/NODE.md) Reference local agent configuration (S, P1a)
+- [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
+- [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
+- [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
+- [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
+- [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
+- [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
+- [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
+- [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
 - [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
-- [CORE.REG.VAL](../../spec/core/reg/val/NODE.md) Build-time declaration validation (M, P0)
-- [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
-- [CORE.STO.PRIV](../../spec/core/sto/priv/NODE.md) Offline operation and telemetry consent (M, P0)
+- [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
+- [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
+- [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
+- [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
+- [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
+- [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
+- [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
+- [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
+- [ECO.CI.BOTS.REG](../../spec/eco/ci/bots/reg/NODE.md) Bot register and restricted-path exclusion check (S, P0)
+- [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
 - [ECO.COMM.SCOPE](../../spec/eco/comm/scope/NODE.md) Spec-tree validator, open-node listing and generated reports (M, P0)
 - [ECO.COMM.TIMELINE](../../spec/eco/comm/timeline/NODE.md) PR-timeline evaluator (author-blocked clock) (M, P0)
+- [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
+- [ECO.REL.PKG.PLAN](../../spec/eco/rel/pkg/plan/NODE.md) Package plan, Tier 1 build gate and placeholder-name gate (M, P1a)
+- [ECO.REL.PKG.REG](../../spec/eco/rel/pkg/reg/NODE.md) Installed-app registration and file association (S, P1a)
+- [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)
+- [ECO.REL.PROC.VERSION](../../spec/eco/rel/proc/version/NODE.md) Version scheme and tag check (S, P1a)
+- [ECO.REL.REPRO.PIN](../../spec/eco/rel/repro/pin/NODE.md) Build-environment pinning and pin check (S, P1b)
+- [ECO.REL.REPRO.STRIP](../../spec/eco/rel/repro/strip/NODE.md) Signature stripping and per-format comparison (M, P1b)
+- [ECO.REL.SIGN.CUSTODY](../../spec/eco/rel/sign/custody/NODE.md) Release key custody, approval record and statement signing (M, P1a)
+- [ECO.REL.SIGN.GUIDE](../../spec/eco/rel/sign/guide/NODE.md) Public keys, key transitions and offline verification guide (S, P1a)
+- [ECO.REL.SIGN.OSSIGN](../../spec/eco/rel/sign/ossign/NODE.md) OS code signing, notarisation and Linux package signing (M, P1a)
+- [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
+- [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
 - [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
+- [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
+- [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
+- [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
+- [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
+- [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
+- [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
+- [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
+- [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
+- [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
+- [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
+- [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
+- [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
+- [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
+- [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
+- [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
+- [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
+- [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)
+- [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
 - [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
+- [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
+- [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
+- [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
+- [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
+- [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
+- [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
 - [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
+- [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
+- [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
+- [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
+- [OUTR.CONTENT.MIG.MAP](../../spec/outr/content/mig/map/NODE.md) Migration mapping table generator and drift check (M, P1a)
+- [OUTR.CONTENT.VIDEO.REC](../../spec/outr/content/video/rec/NODE.md) Recording procedure and edit-list check (S, P1b)
+- [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
+- [OUTR.DOCS.FRAME.NAV](../../spec/outr/docs/frame/nav/NODE.md) Edition build, page frame and navigation (M, P0)
+- [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
+- [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
+- [OUTR.SITE.GEN.IMPORT](../../spec/outr/site/gen/import/NODE.md) Generated-input lock file, fetch, digest check and build manifest (M, P0)
+- [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
+- [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
+- [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
+- [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
+- [PLAT.DEPLOY.OFFLINE.NOEGRESS](../../spec/plat/deploy/offline/noegress/NODE.md) Reference workflow and sandboxed no-egress CI job (M, P1a)
+- [PLAT.DEPLOY.SILENT.UNIX](../../spec/plat/deploy/silent/unix/NODE.md) Unattended Linux and macOS install contract, guide and test (M, P1a)
+- [PLAT.DEPLOY.SILENT.WIN](../../spec/plat/deploy/silent/win/NODE.md) Silent-install contract file and Windows MSI install, upgrade and uninstall test (M, P1a)
+- [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
+- [PLAT.GPU.FALLBK.RDP](../../spec/plat/gpu/fallbk/rdp/NODE.md) Windows remote desktop start test (S, P1a)
+- [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
+- [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
+- [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
+- [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
+- [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
+- [QUAL.CRA.CLASS](../../spec/qual/cra/class/NODE.md) CRA classification record and distribution-gate status (S, P1a)
+- [QUAL.CRA.EXPORT](../../spec/qual/cra/export/NODE.md) Export-control notes and data-tag vocabulary (S, P1a)
+- [QUAL.CRA.REPORT](../../spec/qual/cra/report/NODE.md) Exploited-vulnerability reporting procedure and deadline tracker (S, P1a)
+- [QUAL.CRA.SUPPORT](../../spec/qual/cra/support/NODE.md) Support-period statement and security-update policy (S, P1a)
+- [QUAL.CRA.TECHDOC](../../spec/qual/cra/techdoc/NODE.md) CRA technical-documentation index and citation check (S, P1a)
+- [QUAL.EVID.ANOM](../../spec/qual/evid/anom/NODE.md) Known-anomalies list and its check (S, P1a)
+- [QUAL.EVID.IMPACT](../../spec/qual/evid/impact/NODE.md) Change-impact report against the previous release (M, P1a)
+- [QUAL.EVID.LAYOUT](../../spec/qual/evid/layout/NODE.md) Evidence bundle layout and release-evidence statement (S, P1a)
+- [QUAL.MATRIX.DATA](../../spec/qual/matrix/data/NODE.md) Compliance matrix schema, rows and review rules (M, P1a)
+- [QUAL.MATRIX.TERMS](../../spec/qual/matrix/terms/NODE.md) Regulated-term list, cross-lint consistency and QUAL document lint (S, P1a)
+- [QUAL.SBOM.COMPLETE](../../spec/qual/sbom/complete/NODE.md) SBOM content policy and completeness check (S, P1a)
+- [QUAL.SBOM.VEX](../../spec/qual/sbom/vex/NODE.md) VEX statements, review and publication (M, P1a)
+- [QUAL.THREAT.REG](../../spec/qual/threat/reg/NODE.md) Threat model document, register schema and register check (M, P1a)
+- [QUAL.THREAT.TRIGGER](../../spec/qual/threat/trigger/NODE.md) PR-level threat-model review trigger (S, P1a)
+- [QUAL.VAP.TPL](../../spec/qual/vap/tpl/NODE.md) Template format, URS, risk assessment and PQ guidance templates (M, P1a)
+- [QUAL.VULN.POLICY](../../spec/qual/vuln/policy/NODE.md) SECURITY.md, reporting channel and policy check (S, P1a)
+- [QUAL.VULN.TRIAGE](../../spec/qual/vuln/triage/NODE.md) Vulnerability records, triage timers and embargo checks (M, P1a)
+- [TRUST.CHAIN.CANON](../../spec/trust/chain/canon/NODE.md) Independent RFC 8785 canonicaliser and golden vectors (M, P0)
+- [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
+- [TRUST.PROFILE.DEFS](../../spec/trust/profile/defs/NODE.md) Built-in profile definitions, schema and digest (M, P1a)
+- [TRUST.PROFILE.GATE.INVAR](../../spec/trust/profile/gate/invar/NODE.md) Registry-invariance CI test across profiles (S, P1a)
+- [TRUST.REPLAY.SANDBOX](../../spec/trust/replay/sandbox/NODE.md) WASM kernel sandbox with digest check and limits (M, P1a)
+- [TRUST.SIGN.DSSE](../../spec/trust/sign/dsse/NODE.md) DSSE envelope encoding, algorithms and key fingerprints (M, P1a)
+- [UNC.RDL.BLIND.CUST](../../spec/unc/rdl/blind/cust/NODE.md) Custody model, repository guard and sealed CI job (M, P1b)
+- [UNC.RDL.TRACIM.PUBLIC](../../spec/unc/rdl/tracim/public/NODE.md) Nightly public-test job (S, P0)
+- [UX.RESEARCH.PROTO](../../spec/ux/research/proto/NODE.md) Research plan, protocol, consent and data handling (M, P0)
+- [UX.SYSTEM.PKG](../../spec/ux/system/pkg/NODE.md) Design-system package format, versioning, changelog and deprecation (M, P0)
+- [VIZ.CAPTURE.VIDEO.ENCODE](../../spec/viz/capture/video/encode/NODE.md) AV1 encoder and WebM segment muxer (M, P1b)
+- [VIZ.OVERLAY.GDTGLYPH.ATLAS](../../spec/viz/overlay/gdtglyph/atlas/NODE.md) GD&T symbol MSDF atlas from the original drawings (S, P1a)
+- [VIZ.RENDER.FRAME.SHLINT](../../spec/viz/render/frame/shlint/NODE.md) Shader manifest, readback lint and toolkit-free check (S, P1a)
+- [VIZ.SHELL.A11Y.SPKIME](../../spec/viz/shell/a11y/spkime/NODE.md) Toolkit spike - CJK IME composition and font fallback (M, P1a)
+- [VIZ.SHELL.SPKRPT](../../spec/viz/shell/spkrpt/NODE.md) Toolkit spike - report designer canvas (M, P1a)
+- [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
+- [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (10 leaves)
+### Wave 2 (121 leaves)
 
+- [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
+- [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
+- [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
+- [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
+- [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
+- [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
+- [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
+- [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
+- [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
+- [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
+- [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
+- [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
 - [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
-- [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
+- [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
+- [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
+- [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
+- [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
+- [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
+- [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
+- [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
+- [CORE.STO.SQL.SCHEMA](../../spec/core/sto/sql/schema/NODE.md) Database schema, append-only triggers and forward migrations (M, P0)
+- [ECO.CI.LINT](../../spec/eco/ci/lint/NODE.md) Format and never-crash lint gate (M, P0)
 - [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
 - [ECO.COMM.GROW](../../spec/eco/comm/grow/NODE.md) Cross-platform tree-growth driver (S, P0)
 - [ECO.COMM.LADDER](../../spec/eco/comm/ladder/NODE.md) Maintainer-eligibility report (M, P0)
 - [ECO.COMM.RFC](../../spec/eco/comm/rfc/NODE.md) RFC comment-period tooling (M, P0)
-- [ECO.REPO.ALLOW](../../spec/eco/repo/allow/NODE.md) Kernel-graph dependency allowlist (S, P0)
-- [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
-- [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
-- [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)
-
-### Wave 3 (6 leaves)
-
-- [CORE.JOB.CMD](../../spec/core/job/cmd/NODE.md) Job commands and surface task contract (M, P0)
-- [CORE.REG.MAN](../../spec/core/reg/man/NODE.md) Canonical manifest export and digests (M, P0)
-- [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
-- [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
-- [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
-- [KRN.NUM.RED](../../spec/krn/num/red/NODE.md) Fixed-order reductions (S, P0)
-
-### Wave 4 (8 leaves)
-
-- [CORE.REG.QRY](../../spec/core/reg/qry/NODE.md) Registry query commands (M, P0)
 - [ECO.DATA.FETCH](../../spec/eco/data/fetch/NODE.md) Dataset fetch, cache and verify tool (M, P0)
+- [ECO.REL.LTS](../../spec/eco/rel/lts/NODE.md) Long-term-support channel (M, P1b)
+- [ECO.REL.PROC.CHANNEL](../../spec/eco/rel/proc/channel/NODE.md) Channels, promotion, release manifest and channel feeds (M, P1a)
+- [ECO.REL.PROC.GATES](../../spec/eco/rel/proc/gates/NODE.md) Aggregated release gate (M, P1a)
+- [ECO.REL.PROC.NOTES](../../spec/eco/rel/proc/notes/NODE.md) Release notes generator (S, P1a)
+- [ECO.REL.REPRO.RECIPE](../../spec/eco/rel/repro/recipe/NODE.md) Third-party offline rebuild recipe (S, P1b)
+- [ECO.REPO.ALLOW](../../spec/eco/repo/allow/NODE.md) Kernel-graph dependency allowlist (S, P0)
+- [ECO.REPO.TPL.PROMOTE](../../spec/eco/repo/tpl/promote/NODE.md) Library promotion procedure and tool (M, P0)
+- [ECO.REPO.TPL.SELFTEST](../../spec/eco/repo/tpl/selftest/NODE.md) Template self-test job (S, P0)
 - [ECO.RULES.CHECK](../../spec/eco/rules/check/NODE.md) House-rules check (edited, stale, missing, budgets) (M, P0)
 - [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
 - [ECO.RULES.SYNC](../../spec/eco/rules/sync/NODE.md) House-rules sync tool (M, P0)
-- [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
-- [KRN.SOLV.MSTART](../../spec/krn/solv/mstart/NODE.md) Deterministic seeded multi-start and agreement check (S, P0)
-- [KRN.SOLV.NLLS](../../spec/krn/solv/nlls/NODE.md) Nonlinear least-squares driver (Gauss-Newton and Levenberg-Marquardt) (M, P0)
+- [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
+- [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
+- [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
+- [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
+- [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
+- [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
+- [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
+- [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
+- [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
+- [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
+- [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
+- [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)
+- [IO.CAD.WORKER.PROTO](../../spec/io/cad/worker/proto/NODE.md) CAD worker protocol, framing and message validation (M, P1b)
+- [IO.CLOUD.E57.PHYS](../../spec/io/cloud/e57/phys/NODE.md) E57 file header, paged physical layer and page checksums (S, P1b)
+- [IO.CLOUD.LAS.HDR](../../spec/io/cloud/las/hdr/NODE.md) LAS headers, VLRs and point data record formats 0 to 10 (M, P1b)
+- [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
+- [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
+- [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
+- [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
+- [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)
+- [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
+- [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
+- [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
+- [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
+- [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
+- [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
+- [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
+- [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)
+- [MIG.LADDER.DEF](../../spec/mig/ladder/def/NODE.md) Ladder data file and stage-independence check (S, P1a)
+- [OUTR.BENCH.ACC.FMT](../../spec/outr/bench/acc/fmt/NODE.md) Accuracy recipe section and result table (S, P1a)
+- [OUTR.BENCH.CASE](../../spec/outr/bench/case/NODE.md) User case studies (M, P1b)
+- [OUTR.BENCH.RUN.HARNESS](../../spec/outr/bench/run/harness/NODE.md) Release re-run harness and result store (M, P1a)
+- [OUTR.BRAND.ASSET.PACK](../../spec/outr/brand/asset/pack/NODE.md) Outreach asset pack, fonts and logo variants (S, P0)
+- [OUTR.BRAND.GUIDE.DRESS](../../spec/outr/brand/guide/dress/NODE.md) Trade-dress distinctness list (S, P0)
+- [OUTR.BRAND.GUIDE.VISUAL](../../spec/outr/brand/guide/visual/NODE.md) Visual identity principles and screenshot conventions (S, P1a)
+- [OUTR.COMM.CHAN](../../spec/outr/comm/chan/NODE.md) Community channel inventory and listing (M, P0)
+- [OUTR.COMM.METRIC.SNAP](../../spec/outr/comm/metric/snap/NODE.md) Metric snapshot store and quarterly values (S, P0)
+- [OUTR.COMM.SURVEY.QSET](../../spec/outr/comm/survey/qset/NODE.md) Survey definitions, privacy statement and announcements (S, P1a)
+- [OUTR.CONTENT.PUB](../../spec/outr/content/pub/NODE.md) Content manifest and publication check (M, P1a)
+- [OUTR.CONTENT.VIDEO.CAP](../../spec/outr/content/video/cap/NODE.md) Captions, transcript and caption review check (S, P1b)
+- [OUTR.DOCS.FRAME.BUNDLE](../../spec/outr/docs/frame/bundle/NODE.md) Offline bundle per release (S, P0)
+- [OUTR.DOCS.FRAME.ED](../../spec/outr/docs/frame/ed/NODE.md) Release editions, version list and latest alias (S, P0)
+- [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
+- [OUTR.LAUNCH.ANN](../../spec/outr/launch/ann/NODE.md) Announcement plan and drafts (M, P0)
+- [OUTR.LAUNCH.GATE](../../spec/outr/launch/gate/NODE.md) Milestone gate check and report (M, P0)
+- [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)
+- [OUTR.LAUNCH.REVIEW](../../spec/outr/launch/review/NODE.md) Post-launch reviews (S, P0)
+- [PLAT.DEPLOY.KIOSK.GUIDE](../../spec/plat/deploy/kiosk/guide/NODE.md) Per-OS kiosk deployment guides and guide lint (M, P1a)
+- [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
+- [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
+- [PLAT.DEPLOY.UPDATE.KEYROT](../../spec/plat/deploy/update/keyrot/NODE.md) Trusted-key set from key-transition statements (S, P1a)
+- [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)
+- [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
+- [PLAT.HW.SUITE.DATA](../../spec/plat/hw/suite/data/NODE.md) Suite manifest content, pinned datasets and time budget (S, P1a)
+- [PLAT.MATRIX.PAGE](../../spec/plat/matrix/page/NODE.md) Generated support matrix page and consistency check (S, P0)
+- [PLAT.MATRIX.POLICY.EOL](../../spec/plat/matrix/policy/eol/NODE.md) End-of-support list, warning and demotion check (S, P0)
+- [PLAT.MATRIX.POLICY.ROWS](../../spec/plat/matrix/policy/rows/NODE.md) Matrix rows per D-010 and the promotion check (M, P0)
+- [QUAL.EVID.ASSEMBLE](../../spec/qual/evid/assemble/NODE.md) Evidence bundle assembly and completeness gate (M, P1a)
+- [QUAL.MATRIX.CHECK](../../spec/qual/matrix/check/NODE.md) Matrix reference and profile-map import check (S, P1a)
+- [QUAL.MATRIX.PAGE](../../spec/qual/matrix/page/NODE.md) Per-release matrix rendering (S, P1a)
+- [QUAL.SBOM.SCAN](../../spec/qual/sbom/scan/NODE.md) Dependency vulnerability scan and release gate (M, P1a)
+- [QUAL.THREAT.REVIEW](../../spec/qual/threat/review/NODE.md) Per-minor-release threat-model review record (S, P1a)
+- [QUAL.VAP.CHECK](../../spec/qual/vap/check/NODE.md) Framework checklists (17025, Part 11 and Annex 11) (S, P1a)
+- [QUAL.VAP.PROTO](../../spec/qual/vap/proto/NODE.md) IQ and OQ protocol templates and their command check (S, P1a)
+- [QUAL.VAP.SUPQ](../../spec/qual/vap/supq/NODE.md) Supplier questionnaire and GAMP categorisation rationale (S, P1a)
+- [QUAL.VULN.ADVIS](../../spec/qual/vuln/advis/NODE.md) Advisory format, pages and feed (M, P1a)
+- [TRUST.PKG.FIXTURE](../../spec/trust/pkg/fixture/NODE.md) Published package spec and conformance fixtures (M, P1a)
+- [TRUST.PKG.READER](../../spec/trust/pkg/reader/NODE.md) Bounded package reader and inspect command (M, P0)
+- [TRUST.PROFILE.MAP](../../spec/trust/profile/map/NODE.md) Regulated profile control mapping document (S, P1a)
+- [TRUST.SIGN.INTEROP](../../spec/trust/sign/interop/NODE.md) Third-party DSSE interop test and envelope fuzz corpus (S, P1a)
+- [TRUST.SIGN.KEYSTORE.TRAIT](../../spec/trust/sign/keystore/trait/NODE.md) KeyStore trait, test backend, conformance suite and key-bytes scan (S, P1a)
+- [UX.ICONS.GRID](../../spec/ux/icons/grid/NODE.md) Icon style guide, grid and SVG rules (S, P1a)
+- [UX.REPORT.PAGE](../../spec/ux/report/page/NODE.md) Report page grids and margins (S, P1a)
+- [UX.RESEARCH.INQUIRY](../../spec/ux/research/inquiry/NODE.md) Interviews and contextual inquiry before the P1a rail (S, P0)
+- [UX.RESEARCH.USAB](../../spec/ux/research/usab/NODE.md) Per-release usability tests, severity scale and issue filing (M, P1a)
+- [UX.SYSTEM.LINT](../../spec/ux/system/lint/NODE.md) Consumption-contract literal-value lint (M, P0)
+- [UX.SYSTEM.PRINC](../../spec/ux/system/princ/NODE.md) Design principles and UI writing guide (S, P0)
+- [UX.SYSTEM.TOOL](../../spec/ux/system/tool/NODE.md) Design tool, design-file storage and contribution workflow (S, P0)
+- [UX.TOKENS.COLOR](../../spec/ux/tokens/color/NODE.md) Token tiers, colour roles, the four themes and the brand tier (M, P1a)
+- [UX.TOKENS.DATAPAL](../../spec/ux/tokens/datapal/NODE.md) Deviation palette catalogue (S, P1a)
+- [UX.TOKENS.SPACE](../../spec/ux/tokens/space/NODE.md) Spacing, density, target size, elevation and motion tokens (S, P1a)
+- [UX.TOKENS.STATUS](../../spec/ux/tokens/status/NODE.md) Locked status palette values (S, P1a)
+- [UX.TOKENS.TYPE](../../spec/ux/tokens/type/NODE.md) Typography tokens and font licence rule (S, P1a)
 
-### Wave 5 (6 leaves)
+### Wave 3 (63 leaves)
 
-- [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
-- [CORE.BUS.UNIT](../../spec/core/bus/unit/NODE.md) Authored literal normalisation to SI (M, P0)
+- [AGENT.HARNESS.RUN](../../spec/agent/harness/run/NODE.md) Run orchestration, MCP tap and budgets (M, P0)
+- [AGENT.HARNESS.SCORE](../../spec/agent/harness/score/NODE.md) Oracle matching and computed adoptability (M, P0)
+- [AUTO.CTRL.AUTH](../../spec/auto/ctrl/auth/NODE.md) Token file and challenge-response authentication (M, P1a)
+- [CORE.JOB.CMD](../../spec/core/job/cmd/NODE.md) Job commands and surface task contract (M, P0)
+- [CORE.REG.VER.COMPAT](../../spec/core/reg/ver/compat/NODE.md) Compatibility classifier and manifest diff engine (M, P0)
+- [CORE.RPL.EXEC.SUBST](../../spec/core/rpl/exec/subst/NODE.md) Observation substitution and missing-item detection (M, P0)
+- [CORE.STO.SQL.TXN](../../spec/core/sto/sql/txn/NODE.md) Transaction API, blob-before-row ordering and durability (M, P0)
+- [ECO.APPS.LIST](../../spec/eco/apps/list/NODE.md) App list file and its check (S, P1a)
 - [ECO.CI.GATES](../../spec/eco/ci/gates/NODE.md) Path-scoped check planning and CI-change isolation (S, P0)
 - [ECO.CI.LIC](../../spec/eco/ci/lic/NODE.md) Dependency licence and attribution check (M, P0)
-- [ECO.CI.LINT](../../spec/eco/ci/lint/NODE.md) Format and never-crash lint gate (M, P0)
-- [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
-
-### Wave 6 (4 leaves)
-
-- [CORE.PRJ.META](../../spec/core/prj/meta/NODE.md) Tags, keywords and metadata (M, P0)
-- [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
+- [ECO.DATA.BENCH.RUN](../../spec/eco/data/bench/run/NODE.md) Provenance-capturing benchmark runner and history store (M, P0)
+- [ECO.DATA.EX](../../spec/eco/data/ex/NODE.md) Example projects with replayable journals (M, P1a)
+- [FLOW.RUNNER.VERDICT](../../spec/flow/runner/verdict/NODE.md) Nightly acceptance report, show command and trend history (S, P0)
+- [GEO.TYPES.MESH](../../spec/geo/types/mesh/NODE.md) Indexed triangle mesh and topology facts (M, P0)
+- [HAL.ACQ.INGEST.CREDIT](../../spec/hal/acq/ingest/credit/NODE.md) Credit ledger for data-plane flow control (S, P2)
+- [HAL.IDL.BASE.ERR](../../spec/hal/idl/base/err/NODE.md) Device error model, untrusted device text and operator hint IDs (S, P1a)
+- [HAL.IDL.PROFILE](../../spec/hal/idl/profile/NODE.md) Instrument-profile descriptor (instrument-profile/v1) (M, P1a)
+- [IO.CLOUD.E57.XML](../../spec/io/cloud/e57/xml/NODE.md) Hardened E57 XML section reader and writer (M, P1b)
+- [IO.CLOUD.LAS.LAZ](../../spec/io/cloud/las/laz/NODE.md) LAZ chunked compression and decompression binding (S, P1b)
+- [IO.CLOUD.LAS.QUANT](../../spec/io/cloud/las/quant/NODE.md) Scaled-integer coordinates, writer scale and offset, quantisation metadata (S, P1b)
+- [IO.DMIS.PARSE.TREE](../../spec/io/dmis/parse/tree/NODE.md) Statement tree, descriptor registry, Unknown nodes and statement-class list (M, P1a)
+- [IO.QIF.GEN.PARSE](../../spec/io/qif/gen/parse/NODE.md) XSD parser into the Schema IR (M, P0)
+- [IO.REG.WRITE](../../spec/io/reg/write/NODE.md) Atomic export writes and overwrite protection (S, P0)
+- [KRN.MAN.MANI.IMPL](../../spec/krn/man/mani/impl/NODE.md) Per-algorithm implementation digest over the crate closure (M, P0)
+- [KRN.MAN.MANI.SCHEMA](../../spec/krn/man/mani/schema/NODE.md) Manifest schema, canonical encoding and digest (S, P0)
 - [KRN.MAN.WASM](../../spec/krn/man/wasm/NODE.md) WASM reference artifact and import check (M, P0)
-- [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
+- [KRN.NUM.FMT.LEN](../../spec/krn/num/fmt/len/NODE.md) Length and dimensionless formatters with the side-preserving rule (M, P0)
+- [KRN.NUM.LINT.DATA](../../spec/krn/num/lint/data/NODE.md) Reference-dataset denylist matcher (S, P0)
+- [KRN.NUM.LINT.SYN](../../spec/krn/num/lint/syn/NODE.md) Syntax-level banned-API scan over the kernel closure (M, P0)
+- [KRN.NUM.LINT.TYPED](../../spec/krn/num/lint/typed/NODE.md) Type-aware banned-API check on expanded workspace code (S, P0)
+- [KRN.NUM.RED](../../spec/krn/num/red/NODE.md) Fixed-order reductions (S, P0)
+- [KRN.SOLV.MSTART](../../spec/krn/solv/mstart/NODE.md) Deterministic seeded multi-start and agreement check (S, P0)
+- [MIG.STUDY.PROTO](../../spec/mig/study/proto/NODE.md) Protocol document, declaration schema and declare command (M, P1a)
+- [OUTR.BENCH.ACC.EVAL](../../spec/outr/bench/acc/eval/NODE.md) GD&T evaluation accuracy recipes (S, P1a)
+- [OUTR.BENCH.ACC.FIT](../../spec/outr/bench/acc/fit/NODE.md) Feature-fit accuracy recipes (S, P1a)
+- [OUTR.BENCH.RUN.PAGES](../../spec/outr/bench/run/pages/NODE.md) Result-page generator with regression display (M, P1a)
+- [OUTR.COMM.METRIC.COLLECT](../../spec/outr/comm/metric/collect/NODE.md) Public-signal collector (M, P0)
+- [OUTR.COMM.REPORT](../../spec/outr/comm/report/NODE.md) Quarterly adoption report (M, P0)
+- [OUTR.COMM.SURVEY.AGG](../../spec/outr/comm/survey/agg/NODE.md) Survey aggregation, cell suppression and deletion record (S, P1a)
+- [OUTR.CONTENT.MIG.GOM](../../spec/outr/content/mig/gom/NODE.md) Migration guide for ZEISS INSPECT (GOM) users (M, P1b)
+- [OUTR.CONTENT.MIG.PW](../../spec/outr/content/mig/pw/NODE.md) Migration guide for PolyWorks Inspector users (M, P1b)
+- [OUTR.CONTENT.REPRO.MARK](../../spec/outr/content/repro/mark/NODE.md) Outdated markers and re-verification updates (S, P1a)
+- [OUTR.CONTENT.REPRO.RUN](../../spec/outr/content/repro/run/NODE.md) Content replay harness and reproducibility report (M, P1a)
+- [OUTR.CONTENT.VIDEO.PKG](../../spec/outr/content/video/pkg/NODE.md) Video package, self-hosting and outdated marker check (M, P1b)
+- [OUTR.DOCS.FRAME.SLOT](../../spec/outr/docs/frame/slot/NODE.md) Guide registration, navigation slots and outdated markers (S, P0)
+- [OUTR.DOCS.SEARCH.UI](../../spec/outr/docs/search/ui/NODE.md) In-browser search page with no network requests (S, P0)
+- [PLAT.DEPLOY.NOADMIN.ALLOW](../../spec/plat/deploy/noadmin/allow/NODE.md) Allow-listing guide generated from layout and signing identities (S, P1a)
+- [PLAT.DEPLOY.NOADMIN.AUDIT](../../spec/plat/deploy/noadmin/audit/NODE.md) Standard-user install and write-audit CI job (M, P1a)
+- [PLAT.DEPLOY.UPDATE.VERIFY](../../spec/plat/deploy/update/verify/NODE.md) Update manifest format and bundle verification library (M, P1a)
+- [RPT.DESIGN.STYLE.FONT](../../spec/rpt/design/style/font/NODE.md) Font references and bundled font list (S, P1b)
+- [RPT.OUTPUT.PDF.TEXT](../../spec/rpt/output/pdf/text/NODE.md) Bundled fonts, text shaping, metrics and font subsetting (M, P1a)
+- [TRUST.CHAIN.RESLINK](../../spec/trust/chain/reslink/NODE.md) ResultRecord to journal linkage (S, P0)
+- [TRUST.PKG.CONTENT.EVID](../../spec/trust/pkg/content/evid/NODE.md) Evidence tiers and point-set gathering (S, P1a)
+- [TRUST.REPLAY.COMPARE](../../spec/trust/replay/compare/NODE.md) Replay outcome classification and aggregation (M, P1a)
+- [TRUST.REPLAY.KART.LOOKUP](../../spec/trust/replay/kart/lookup/NODE.md) Offline kernel artifact lookup chain (S, P1a)
+- [TRUST.REPLAY.SELECT](../../spec/trust/replay/select/NODE.md) Replayable-set selection and NOT_REPLAYABLE reasons (M, P1a)
+- [TRUST.SIGN.KEYSTORE.LINUX](../../spec/trust/sign/keystore/linux/NODE.md) Linux PKCS#11 and wrapped-key backend (M, P1a)
+- [TRUST.SIGN.KEYSTORE.MAC](../../spec/trust/sign/keystore/mac/NODE.md) macOS Keychain and Secure Enclave backend (M, P1a)
+- [TRUST.SIGN.KEYSTORE.WIN](../../spec/trust/sign/keystore/win/NODE.md) Windows CNG keystore backend (M, P1a)
+- [TRUST.SIGN.TROOT](../../spec/trust/sign/troot/NODE.md) Offline trust roots, revocation and signature check command (M, P1a)
+- [UX.RESEARCH.SUS](../../spec/ux/research/sus/NODE.md) SUS scoring, history and release research reports (S, P1a)
+- [UX.SYSTEM.REVIEW](../../spec/ux/system/review/NODE.md) Design review checklist, originality declaration and PR gate (M, P0)
+- [UX.TOKENS.CHECK](../../spec/ux/tokens/check/NODE.md) Automated contrast and colour-vision release check (M, P1a)
 
-### Wave 7 (6 leaves)
+### Wave 4 (32 leaves)
 
-- [CORE.DEP.EDGE](../../spec/core/dep/edge/NODE.md) Dependency edges, cycle rejection and dependency queries (M, P0)
-- [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
+- [AGENT.HARNESS.RECORD](../../spec/agent/harness/record/NODE.md) Run records, repetition statistics and suite report (M, P0)
+- [CORE.REG.VER.GATE](../../spec/core/reg/ver/gate/NODE.md) Build gate against the released baseline (S, P0)
+- [CORE.STO.SQL.CRASH](../../spec/core/sto/sql/crash/NODE.md) Crash and power-loss harness (M, P0)
+- [ECO.CI.WF.CALL](../../spec/eco/ci/wf/call/NODE.md) Reusable workflows and the pin check (M, P0)
+- [FLOW.RUNNER.GATE](../../spec/flow/runner/gate/NODE.md) Pass rules and per-app GA gate evaluation (M, P1a)
+- [GEO.TYPES.DIGEST](../../spec/geo/types/digest/NODE.md) Canonical byte layout and element digest (S, P0)
+- [HAL.IDL.BASE.HEALTH](../../spec/hal/idl/base/health/NODE.md) Health state machine and transition table (S, P1a)
+- [HAL.IDL.GEN.FMT](../../spec/hal/idl/gen/fmt/NODE.md) Capability-package description format (capability-package/v1) (M, P1a)
+- [IO.CLOUD.E57.CVEC](../../spec/io/cloud/e57/cvec/NODE.md) E57 compressed-vector sections and bit-pack codec (M, P1b)
+- [IO.CLOUD.LAS.COPC](../../spec/io/cloud/las/copc/NODE.md) COPC hierarchy reading and octree writing (M, P1b)
+- [IO.DMIS.DIAL](../../spec/io/dmis/dial/NODE.md) Vendor DMIS dialect profiles as data (M, P1a)
+- [IO.DMIS.PARSE.GDEF](../../spec/io/dmis/parse/gdef/NODE.md) Grammar for header, unit, feature, tolerance and datum statements (M, P1a)
+- [IO.DMIS.PARSE.GEXEC](../../spec/io/dmis/parse/gexec/NODE.md) Grammar for sensor, motion, measurement, alignment, flow and output statements (M, P2)
+- [IO.DMIS.PARSE.PRINT](../../spec/io/dmis/parse/print/NODE.md) DMIS printer and parse-print-parse identity (S, P1a)
+- [IO.QIF.GEN.FLAT](../../spec/io/qif/gen/flat/NODE.md) Schema IR normalisation, naming and validation tables (M, P0)
 - [KRN.MAN.REPRO](../../spec/krn/man/repro/NODE.md) Reproducible build and independent rebuild (S, P0)
 - [KRN.MAN.XART](../../spec/krn/man/xart/NODE.md) Cross-host and cross-artifact bit-identity gate (M, P0)
-- [PLAT.MATRIX.CI](../../spec/plat/matrix/ci/NODE.md) Platform CI job list and release gate (M, P0)
-- [PLAT.MATRIX.PAGE](../../spec/plat/matrix/page/NODE.md) Generated support matrix page and consistency check (S, P0)
+- [KRN.NUM.FMT.ANG](../../spec/krn/num/fmt/ang/NODE.md) Angle formatters with a rational enclosure of pi (M, P0)
+- [KRN.NUM.LA.MAT](../../spec/krn/num/la/mat/NODE.md) Dense matrix types, triangular solves, rank and condition estimation (M, P0)
+- [KRN.NUM.LINT.CLI](../../spec/krn/num/lint/cli/NODE.md) fid-knp1-lint command, exit codes and seeded-violation suite (S, P0)
+- [KRN.SOLV.CONIC.PATCH](../../spec/krn/solv/conic/patch/NODE.md) KNP-1 patches to the vendored interior-point solver (M, P0)
+- [OUTR.BENCH.CMP](../../spec/outr/bench/cmp/NODE.md) Comparisons with incumbent products (S, P1a)
+- [OUTR.BENCH.FIDEL](../../spec/outr/bench/fidel/NODE.md) Format fidelity benchmarks (M, P1a)
+- [OUTR.BENCH.PERF](../../spec/outr/bench/perf/NODE.md) Performance benchmarks (M, P1a)
+- [OUTR.CONTENT.TUT.CHECK](../../spec/outr/content/tut/check/NODE.md) Tutorial coverage and step-output check (M, P1a)
+- [OUTR.LAUNCH.KIT.CHECK](../../spec/outr/launch/kit/check/NODE.md) Demo kit manifest and kit check (M, P1a)
+- [SCAN.EDGE.EST.EFIX](../../spec/scan/edge/est/efix/NODE.md) Synthetic rounded, chamfered and burred edge fixtures (S, P1b)
+- [TRUST.CHAIN.CKPT](../../spec/trust/chain/ckpt/NODE.md) Checkpoint check and signed-checkpoint verification (S, P0)
+- [TRUST.REPLAY.RUN](../../spec/trust/replay/run/NODE.md) Verifier replay command (S, P1a)
+- [UNC.PROP.MCM.INTVL](../../spec/unc/prop/mcm/intvl/NODE.md) Coverage intervals and estimate outputs from samples (S, P1a)
+- [UX.ICONS.PROV](../../spec/ux/icons/prov/NODE.md) Icon provenance records and icon-set checks (S, P1a)
+- [UX.SCREENS.INV](../../spec/ux/screens/inv/NODE.md) Screen inventory, wireframe-ID convention and approval records (M, P1a)
 
-### Wave 8 (4 leaves)
+### Wave 5 (34 leaves)
 
-- [CORE.DEP.PROP](../../spec/core/dep/prop/NODE.md) Change propagation and recompute mode (M, P0)
-- [PLAT.DEPLOY.MCONF](../../spec/plat/deploy/mconf/NODE.md) Managed machine-wide policy configuration layer (M, P1a)
-- [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
-- [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
+- [AGENT.BOARD.RECOMP](../../spec/agent/board/recomp/NODE.md) Score recompute check and third-party submissions (S, P1a)
+- [AGENT.HARNESS.PANEL](../../spec/agent/harness/panel/NODE.md) Human reviewer panel verdicts (S, P1a)
+- [AGENT.REDTEAM.VERDICT](../../spec/agent/redteam/verdict/NODE.md) Release-blocking red-team verdict file (S, P0)
+- [CORE.JRN.CHAIN.APPEND](../../spec/core/jrn/chain/append/NODE.md) Atomic durable append, sequence and immutability (M, P0)
+- [ECO.CI.WF.FORK](../../spec/eco/ci/wf/fork/NODE.md) Fork-PR safety lint for workflows (S, P0)
+- [ECO.CI.WF.REQSET](../../spec/eco/ci/wf/reqset/NODE.md) Required-check set file and branch-protection payload (S, P0)
+- [ECO.CI.WF.TESTRPT](../../spec/eco/ci/wf/testrpt/NODE.md) Test job and acceptance-criterion test report (M, P0)
+- [ECO.CI.WF.TIME](../../spec/eco/ci/wf/time/NODE.md) Required-check duration record and p90 report (S, P0)
+- [GEO.SEL.MODEL](../../spec/geo/sel/model/NODE.md) Index-set selections, digests and staleness (M, P0)
+- [HAL.IDL.BASE.DESC](../../spec/hal/idl/base/desc/NODE.md) Device@1 package operations, DeviceInstance, calibration-state references and Device-core@1 (M, P1a)
+- [IO.DMIS.OUT](../../spec/io/dmis/out/NODE.md) DMIS output-file reader for measured results (M, P1a)
+- [IO.DMIS.PROG.MODEL](../../spec/io/dmis/prog/model/NODE.md) DMIS program model built from the syntax tree (M, P2)
+- [IO.QIF.GEN.JSCHEMA](../../spec/io/qif/gen/jschema/NODE.md) QIF-JSON JSON Schema and type reference emitter (M, P0)
+- [IO.QIF.GEN.RUST](../../spec/io/qif/gen/rust/NODE.md) Rust model emitter for the fid-qif-model crate (M, P0)
+- [IO.QIF.XML.VALID](../../spec/io/qif/xml/valid/NODE.md) XSD validation with identity constraints and count checks (M, P0)
+- [KRN.MAN.MANI.GEN](../../spec/krn/man/mani/gen/NODE.md) Build-time manifest generator and two-stage embedding (M, P0)
+- [KRN.MAN.VAL.RUN](../../spec/krn/man/val/run/NODE.md) Case-to-call mapping and pass criteria as data (M, P0)
+- [KRN.NUM.FMT.REG](../../spec/krn/num/fmt/reg/NODE.md) Formatter registry, dispatch, hex rendering and version guard (S, P0)
+- [KRN.NUM.LA.EIG](../../spec/krn/num/la/eig/NODE.md) Cyclic Jacobi symmetric eigendecomposition (M, P0)
+- [KRN.NUM.LA.QR](../../spec/krn/num/la/qr/NODE.md) Householder QR, column pivoting and least-squares solve (M, P0)
+- [KRN.NUM.LA.SVD](../../spec/krn/num/la/svd/NODE.md) One-sided Jacobi singular value decomposition (M, P0)
+- [KRN.SOLV.CONIC.WRAP](../../spec/krn/solv/conic/wrap/NODE.md) Kernel conic API, fixed limits and error mapping (M, P0)
+- [OUTR.CONTENT.TUT.CORE](../../spec/outr/content/tut/core/NODE.md) First steps: CLI, journal, replay and verification (S, P1a)
+- [OUTR.CONTENT.TUT.INSPECT](../../spec/outr/content/tut/inspect/NODE.md) Inspect app tutorial: scan-to-CAD inspection (S, P1b)
+- [OUTR.CONTENT.TUT.REPORT](../../spec/outr/content/tut/report/NODE.md) Report app tutorial: a transcription inspection report (S, P1a)
+- [OUTR.LAUNCH.KIT.SCAN](../../spec/outr/launch/kit/scan/NODE.md) Inspect and Report demo kit for launch-1 events (M, P1b)
+- [SCAN.CMP.DEV.FIELD](../../spec/scan/cmp/dev/field/NODE.md) DeviationField element, builder and canonical digest (S, P1b)
+- [TRUST.CHAIN.LINKS](../../spec/trust/chain/links/NODE.md) Chain walk, findings and check-chain command (M, P0)
+- [TRUST.REPLAY.CORPUS](../../spec/trust/replay/corpus/NODE.md) Replay conformance corpus and cross-platform gate (M, P1a)
+- [UNC.PROP.MCM.ADAPT](../../spec/unc/prop/mcm/adapt/NODE.md) Adaptive stopping rule and trial cap (S, P1a)
+- [UX.COMP.SCHEMA](../../spec/ux/comp/schema/NODE.md) Component-spec format and completeness check (M, P1a)
+- [UX.ICONS.CLASS](../../spec/ux/icons/class/NODE.md) Side-effect class icons, status glyphs and provenance badges (S, P1a)
+- [UX.ICONS.CORESET](../../spec/ux/icons/coreset/NODE.md) Core UI icon set and brand-neutral app and file icons (M, P1a)
+- [UX.ICONS.GDT](../../spec/ux/icons/gdt/NODE.md) GD&T symbol drawing specifications (M, P1a)
 
-### Wave 9 (1 leaves)
+### Wave 6 (43 leaves)
 
-- [CORE.DEP.REPL](../../spec/core/dep/repl/NODE.md) Input replacement (M, P0)
-
-### Wave 10 (7 leaves)
-
-- [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
-- [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
-- [AUTO.SURF.PROJ](../../spec/auto/surf/proj/NODE.md) Surface projection model and name derivation (M, P0)
-- [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
+- [AGENT.BOARD.BUNDLE](../../spec/agent/board/bundle/NODE.md) Static scoreboard bundle (M, P1a)
+- [AGENT.LOCAL.CIRUN](../../spec/agent/local/cirun/NODE.md) Offline CI evaluation of the reference agent (S, P1a)
+- [ALN.BFIT.STOP](../../spec/aln/bfit/stop/NODE.md) Best-fit stopping criteria and non-convergence handling (S, P1a)
+- [ALN.DATUM.SYS.FIXT](../../spec/aln/datum/sys/fixt/NODE.md) Datum-system alignment fixtures with known transforms (S, P1a)
+- [CORE.JRN.CHAIN.CKPT](../../spec/core/jrn/chain/ckpt/NODE.md) Branch heads and checkpoints (S, P0)
+- [ECO.CI.BOTS.REVIEW](../../spec/eco/ci/bots/review/NODE.md) Self-hosted reviewer and comment poster (M, P0)
+- [ECO.REL.PKG.LINUX](../../spec/eco/rel/pkg/linux/NODE.md) Linux packages (M, P1a)
+- [ECO.REL.PKG.MAC](../../spec/eco/rel/pkg/mac/NODE.md) macOS packages (M, P1a)
+- [ECO.REL.PKG.WIN](../../spec/eco/rel/pkg/win/NODE.md) Windows packages (M, P1a)
+- [ECO.REL.PROC.FLOW](../../spec/eco/rel/proc/flow/NODE.md) Release workflow from tag to publication (M, P1a)
+- [ECO.REL.REPRO.REBUILD](../../spec/eco/rel/repro/rebuild/NODE.md) Independent rebuild, comparison report and provenance (M, P1b)
+- [ECO.REL.WEB.ASSEMBLE](../../spec/eco/rel/web/assemble/NODE.md) Bundle assembly, content-security policy and hosting guide (S, P1b)
+- [GDT.DIM.SIZEISO.RANK](../../spec/gdt/dim/sizeiso/rank/NODE.md) Rank-order statistics over local sizes (S, P1b)
+- [GDT.RES.SCHEMA](../../spec/gdt/res/schema/NODE.md) DMT row and operator-chain schema (M, P1a)
+- [GEO.FRAME.UNITS](../../spec/geo/frame/units/NODE.md) Authored quantities and unit conversion (M, P0)
+- [GEO.FRAME.XFORM](../../spec/geo/frame/xform/NODE.md) Rigid and similarity transforms and rotation parameterisations (M, P0)
+- [GEO.INDEX.BVH](../../spec/geo/index/bvh/NODE.md) Primitive bounding volume hierarchy (M, P0)
+- [GEO.INDEX.KDTREE](../../spec/geo/index/kdtree/NODE.md) Point k-d tree with exact k-nearest, radius and box queries (M, P0)
+- [GEO.NURBS.EVAL](../../spec/geo/nurbs/eval/NODE.md) NURBS evaluation, derivatives, normals and curvature (M, P1b)
+- [HAL.ACQ.POLICY](../../spec/hal/acq/policy/NODE.md) Calibration-state policy and ExternalClaim classification (M, P2)
+- [HAL.IDL.CNC.ROT](../../spec/hal/idl/cnc/rot/NODE.md) Rotary@1 package (angle reports only) (S, P2)
+- [HAL.IDL.CNC.TACT](../../spec/hal/idl/cnc/tact/NODE.md) TactileProbe@1 package (tip selection, point and scan-point payloads) (M, P2)
+- [HAL.IDL.GEN.EXPORT](../../spec/hal/idl/gen/export/NODE.md) Package inventory, description and JSON Schema export, reference docs and drift check (M, P1a)
 - [HAL.IDL.NEG](../../spec/hal/idl/neg/NODE.md) Capability versioning and negotiation rules (S, P1a)
-- [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
-- [TRUST.PROFILE.DEFS](../../spec/trust/profile/defs/NODE.md) Built-in profile definitions, schema and digest (M, P1a)
+- [HAL.IDL.SENS.STREAM](../../spec/hal/idl/sens/stream/NODE.md) Shared streaming template, vendor-extension rule and batch-size profile items (S, P2)
+- [IO.QIF.GEN.GATE](../../spec/io/qif/gen/gate/NODE.md) Generator determinism and regeneration CI gate (S, P0)
+- [IO.QIF.IDS.EXT](../../spec/io/qif/ids/ext/NODE.md) Extension-hook pass-through and fx typed carriage (M, P0)
+- [IO.QIF.XML.XSLT](../../spec/io/qif/xml/xslt/NODE.md) Normative QIF XSLT checks re-expressed as Rust rules (M, P0)
+- [KRN.MAN.VAL.CROSS](../../spec/krn/man/val/cross/NODE.md) Out-of-kernel cross-check solvers in CI (M, P0)
+- [KRN.MAN.VAL.RPT](../../spec/krn/man/val/rpt/NODE.md) Per-release validation report and spec-card evidence (M, P0)
+- [KRN.SOLV.CERT.AS](../../spec/krn/solv/cert/as/NODE.md) Active-set extraction, candidate enumeration and tie-break order (M, P0)
+- [KRN.SOLV.CONIC.XTEST](../../spec/krn/solv/conic/xtest/NODE.md) Frozen conic test set and cross-target bit-identity check (S, P0)
+- [KRN.SOLV.NLLS](../../spec/krn/solv/nlls/NODE.md) Nonlinear least-squares driver (Gauss-Newton and Levenberg-Marquardt) (M, P0)
+- [RPT.STATS.CAP.INDEX](../../spec/rpt/stats/cap/index/NODE.md) Capability index kernel (S, P1b)
+- [RPT.STATS.SPC.CONST](../../spec/rpt/stats/spc/const/NODE.md) Versioned control-chart constants table (S, P1b)
+- [RPT.STATS.SPC.RULES](../../spec/rpt/stats/spc/rules/NODE.md) Run-rule sets and violation detection (M, P1b)
+- [RPT.STATS.TREND.HIST](../../spec/rpt/stats/trend/hist/NODE.md) Histogram binning kernel (S, P1b)
+- [TRUST.VERIFY.REPORT](../../spec/trust/verify/report/NODE.md) Verification report schema, verdict and exit codes (M, P1a)
+- [UX.COMP.CMD](../../spec/ux/comp/cmd/NODE.md) Command component specs (palette, menus, toolbar, approval chips, argument forms) (M, P1a)
+- [UX.COMP.CONT](../../spec/ux/comp/cont/NODE.md) Container component specs (panels, tabs, wizard and rail, dialog, toast, status bar) (M, P1a)
+- [UX.COMP.DATA](../../spec/ux/comp/data/NODE.md) Data component specs (tree, table, property grid, legend frame, value display) (M, P1a)
+- [UX.PATTERN.SCHEMA](../../spec/ux/pattern/schema/NODE.md) Pattern-spec format and completeness check (S, P1a)
+- [UX.REPORT.STYLE](../../spec/ux/report/style/NODE.md) Default report style set and print typography (M, P1a)
 
-### Wave 11 (9 leaves)
+### Wave 7 (39 leaves)
 
+- [CORE.JRN.STREAM.LEDGER](../../spec/core/jrn/stream/ledger/NODE.md) Access Ledger format, pseudonyms and anchoring (M, P1b)
+- [CORE.REG.DEF.SCHEMA](../../spec/core/reg/def/schema/NODE.md) Schema keyword vocabulary, meta-schema and catalogue facade (M, P0)
+- [ECO.REL.WEB.EGRESS](../../spec/eco/rel/web/egress/NODE.md) Outbound-request and local-processing check (M, P1b)
+- [GDT.RES.LINT](../../spec/gdt/res/lint/NODE.md) DMT copyright and ORS-link lint (S, P1a)
+- [GDT.RES.MATRIX](../../spec/gdt/res/matrix/NODE.md) Generated support matrix (S, P1a)
+- [GDT.RES.RESOLVE](../../spec/gdt/res/resolve/NODE.md) Pure interpretation resolver (M, P1a)
+- [GDT.RES.ROWASME.INV](../../spec/gdt/res/rowasme/inv/NODE.md) DMT inventory file and coverage check (S, P1a)
+- [GDT.RES.ROWFLOW.STATE](../../spec/gdt/res/rowflow/state/NODE.md) Row revisions, review state machine and invariants (M, P1a)
+- [GEO.DIST.MESH](../../spec/geo/dist/mesh/NODE.md) Point-to-triangle and point-to-mesh closest point (M, P1b)
+- [GEO.FRAME.APPLY](../../spec/geo/frame/apply/NODE.md) Transforming elements and the frame-mismatch guard (S, P0)
+- [GEO.FRAME.TREE](../../spec/geo/frame/tree/NODE.md) Frame tree and chain resolution (M, P0)
+- [GEO.INDEX.BENCH](../../spec/geo/index/bench/NODE.md) Index performance and memory benchmarks (S, P0)
+- [GEO.INDEX.BUDGET](../../spec/geo/index/budget/NODE.md) Index memory budgets and digest-keyed cache (S, P0)
+- [GEO.NURBS.ANALYTIC](../../spec/geo/nurbs/analytic/NODE.md) Closed-form analytic curves and surfaces (M, P1b)
+- [GEO.NURBS.INVERT](../../spec/geo/nurbs/invert/NODE.md) Point inversion on NURBS curves and surfaces (M, P1b)
+- [GEO.SEL.ALGEBRA](../../spec/geo/sel/algebra/NODE.md) Selection set algebra and grow or shrink (M, P0)
+- [GEO.SEL.QUERY.GRAMMAR](../../spec/geo/sel/query/grammar/NODE.md) JSON AST grammar, bounded parser, canonical form and digest (M, P0)
+- [GEO.SEL.RESOLVE](../../spec/geo/sel/resolve/NODE.md) CPU resolution of picks and lassos (M, P0)
+- [HAL.ACQ.INGEST.SEQ](../../spec/hal/acq/ingest/seq/NODE.md) Sequencing, gap detection and batch admission (S, P2)
+- [HAL.ACQ.SESS.REG](../../spec/hal/acq/sess/reg/NODE.md) Device registry of serving sources and their kinds (S, P1a)
+- [HAL.IDL.SENS.GAUENV](../../spec/hal/idl/sens/gauenv/NODE.md) Gauge@1 and Environment@1 packages (M, P2)
+- [HAL.IDL.SENS.LINE](../../spec/hal/idl/sens/line/NODE.md) LineScan@1 package (profile batches) (M, P2)
+- [IO.QIF.JSON.PROJ](../../spec/io/qif/json/proj/NODE.md) Lossless QIF-JSON projection rules and lexical values (M, P0)
+- [KRN.LSQ.TRAIT](../../spec/krn/lsq/trait/NODE.md) Fit contract, result types and degeneracy checks (M, P0)
+- [KRN.SOLV.CERT.RECOMP](../../spec/krn/solv/cert/recomp/NODE.md) ActiveSetProblem callback and deterministic recomputation (M, P0)
+- [PLAT.MATRIX.CI](../../spec/plat/matrix/ci/NODE.md) Platform CI job list and release gate (M, P0)
+- [RPT.STATS.TREND.CONTRACT](../../spec/rpt/stats/trend/contract/NODE.md) ChartSeries contract and versioning (S, P1b)
+- [SCAN.POLY.SURF.PREP](../../spec/scan/poly/surf/prep/NODE.md) Resolution resampling and bounded smoothing before meshing (S, P1b)
+- [TRUST.PKG.CONTENT.JSEG](../../spec/trust/pkg/content/jseg/NODE.md) Journal segment and checkpoint choice (S, P1a)
+- [TRUST.VERIFY.CLI](../../spec/trust/verify/cli/NODE.md) fid-verify binary and verify-package command (M, P0)
+- [TRUST.VERIFY.WEB.LIB](../../spec/trust/verify/web/lib/NODE.md) wasm32 verifier library build and CLI parity test (S, P1b)
+- [UX.COMP.WHY](../../spec/ux/comp/why/NODE.md) The "Why?" panel spec (S, P1a)
+- [UX.PATTERN.CMDFLOW](../../spec/ux/pattern/cmdflow/NODE.md) Command palette flow and undo presentation (S, P1a)
+- [UX.PATTERN.GUIDE](../../spec/ux/pattern/guide/NODE.md) Onboarding and in-app guidance pattern (S, P1a)
+- [UX.PATTERN.OPERATE](../../spec/ux/pattern/operate/NODE.md) Operator prompts and controlled-action confirmation (S, P1a)
+- [UX.PATTERN.PROPOSE](../../spec/ux/pattern/propose/NODE.md) Proposal review and agent provenance pattern (M, P1a)
+- [UX.PATTERN.SELECT](../../spec/ux/pattern/select/NODE.md) Selection, pick and lasso pattern (S, P1a)
+- [UX.REPORT.BALLOON](../../spec/ux/report/balloon/NODE.md) Balloon style (S, P1a)
+- [UX.REPORT.CHART](../../spec/ux/report/chart/NODE.md) Report chart styles and colour-map snapshot legend (M, P1a)
+
+### Wave 8 (36 leaves)
+
+- [ALN.BFIT.FEAT.DEV](../../spec/aln/bfit/feat/dev/NODE.md) Per-type feature deviation vectors and angular scaling (M, P1a)
+- [ALN.DATUM.SYS.GATE](../../spec/aln/datum/sys/gate/NODE.md) Dialect gate and per-datum resolver calls (S, P1a)
+- [CORE.REG.DEF.MACRO](../../spec/core/reg/def/macro/NODE.md) Declaration macros and compile-time handler checks (M, P0)
+- [GDT.RES.ROWASME.GATE](../../spec/gdt/res/rowasme/gate/NODE.md) Dialect row-set release gate (M, P1a)
+- [GDT.RES.ROWISO.STUBS](../../spec/gdt/res/rowiso/stubs/NODE.md) ISO counterpart map and P1a placeholder rows (S, P1a)
+- [GEO.CAD.TOPO.MODEL](../../spec/geo/cad/topo/model/NODE.md) B-rep arena, typed IDs, builder and canonical encoding (M, P1b)
+- [GEO.DIST.SIGN](../../spec/geo/dist/sign/NODE.md) Signed distance and pseudo-normal rules (M, P1b)
+- [GEO.SEL.QUERY.EVAL](../../spec/geo/sel/query/eval/NODE.md) Query evaluation core with point and triangle predicates (M, P0)
+- [HAL.ACQ.STAMP.ASSEMBLE](../../spec/hal/acq/stamp/assemble/NODE.md) Stamp assembly, runtime overrides, simulated derivation and ungraded trust (M, P1a)
+- [IO.CAD.EXPORT.BOUND](../../spec/io/cad/export/bound/NODE.md) Element-to-entity export plan with extents for unbounded elements (S, P1b)
+- [IO.QIF.JSON.AGENT](../../spec/io/qif/json/agent/NODE.md) QIF-JSON form markers, agent view and lossy-form rejection (S, P0)
+- [IO.QIF.JSON.DIGEST](../../spec/io/qif/json/digest/NODE.md) Canonical QIF-JSON bytes and document digest (S, P0)
+- [KRN.CONS.DECL](../../spec/krn/cons/decl/NODE.md) Construction contract and dependency declarations (M, P1a)
+- [KRN.ENV.MIC.TR](../../spec/krn/env/mic/tr/NODE.md) Trust region, unbounded-envelope error and MIC defined pairs (S, P1a)
+- [KRN.ENV.TAN.ROCK](../../spec/krn/env/tan/rock/NODE.md) Rocking candidate sets, tie-break and tangential variant table (M, P1a)
+- [KRN.LSQ.CURVE.PARAB](../../spec/krn/lsq/curve/parab/NODE.md) Least-squares paraboloid of revolution (M, P1b)
+- [KRN.LSQ.CURVE.SPLINE](../../spec/krn/lsq/curve/spline/NODE.md) Least-squares smoothing spline curves (M, P1b)
+- [KRN.LSQ.INIT](../../spec/krn/lsq/init/NODE.md) Initial estimates for axial primitives (M, P0)
+- [KRN.LSQ.LIN](../../spec/krn/lsq/lin/NODE.md) Least-squares point, line and plane fits (M, P0)
+- [KRN.LSQ.PLAN2D.ASSIGN](../../spec/krn/lsq/plan2d/assign/NODE.md) Deterministic segment assignment for compound planar profiles (S, P1a)
+- [KRN.LSQ.PLAN2D.ELL](../../spec/krn/lsq/plan2d/ell/NODE.md) Least-squares orthogonal-distance ellipse (M, P1a)
+- [KRN.MZ.EXT.UNDEF](../../spec/krn/mz/ext/undef/NODE.md) Minimum-zone defined-pairs table and method_undefined (S, P1a)
+- [KRN.MZ.VOR](../../spec/krn/mz/vor/NODE.md) Exact Voronoi-based minimum-zone 2D circle (M, P0)
+- [KRN.OUT.POL](../../spec/krn/out/pol/NODE.md) Outlier policy types, validation and guards (S, P1b)
+- [KRN.SOLV.CERT.KKT](../../spec/krn/solv/cert/kkt/NODE.md) Independent KKT optimality check at the recomputed point (S, P0)
+- [PLAT.GPU.CI](../../spec/plat/gpu/ci/NODE.md) Rendering CI jobs per backend (M, P1a)
+- [SCAN.CLOUD.REG.RREP](../../spec/scan/cloud/reg/rrep/NODE.md) Registration report and registered cloud versions (S, P1b)
+- [SCAN.POLY.SURF.FAN](../../spec/scan/poly/surf/fan/NODE.md) Local tangent-plane Delaunay fans (M, P1b)
+- [TRUST.VERIFY.MCP](../../spec/trust/verify/mcp/NODE.md) fid-verify local stdio MCP server (M, P1a)
+- [TRUST.VERIFY.REPRO](../../spec/trust/verify/repro/NODE.md) Verifier reproducible build and layering guard (M, P1a)
+- [TRUST.VERIFY.WEB.STREAM](../../spec/trust/verify/web/stream/NODE.md) Browser file-API package source (S, P1b)
+- [TRUST.VERIFY.WEB.WREPLAY](../../spec/trust/verify/web/wreplay/NODE.md) Worker-based replay with browser limits (M, P1b)
+- [UNC.PROP.MVAR.PARAM](../../spec/unc/prop/mvar/param/NODE.md) Feature covariance type and parameterisations (M, P1a)
+- [UX.COMP.REF](../../spec/ux/comp/ref/NODE.md) Component reference renderings and visual baselines (M, P1a)
+- [UX.PATTERN.ERROR](../../spec/ux/pattern/error/NODE.md) Error, unresolved and not-decidable states; progress and cancel (S, P1a)
+- [UX.REPORT.MOCK](../../spec/ux/report/mock/NODE.md) Reference report mockups (M, P1a)
+
+### Wave 9 (40 leaves)
+
+- [CORE.BUS.PIPE.HANDLER](../../spec/core/bus/pipe/handler/NODE.md) Handler contract, state view and effects check (S, P0)
+- [CORE.BUS.UNIT](../../spec/core/bus/unit/NODE.md) Authored literal normalisation to SI (M, P0)
+- [CORE.JRN.BR.NAME](../../spec/core/jrn/br/name/NODE.md) Branch create, list, protection and co-editing opt-in (M, P0)
+- [CORE.JRN.CHAIN.VERIFY](../../spec/core/jrn/chain/verify/NODE.md) Verify and list commands (M, P0)
+- [CORE.JRN.UNDO.SUPER](../../spec/core/jrn/undo/super/NODE.md) Supersession of released records (S, P0)
+- [CORE.REG.VAL](../../spec/core/reg/val/NODE.md) Build-time declaration validation (M, P0)
+- [CORE.STO.SET](../../spec/core/sto/set/NODE.md) Settings model, scopes and settings commands (M, P0)
+- [GEO.CAD.ASSY.MODEL](../../spec/geo/cad/assy/model/NODE.md) Instances and per-instance entity IDs (S, P1b)
+- [GEO.CAD.TESS.SPIKE](../../spec/geo/cad/tess/spike/NODE.md) Time-boxed evaluation of an existing Rust B-rep crate as tessellator base (S, P1b)
+- [GEO.CAD.TOPO.ADJ](../../spec/geo/cad/topo/adj/NODE.md) Topology adjacency queries (S, P1b)
+- [GEO.CAD.TOPO.PCURVE](../../spec/geo/cad/topo/pcurve/NODE.md) Parameter-space curves for coedges (M, P1b)
+- [GEO.DIST.BATCH](../../spec/geo/dist/batch/NODE.md) Deterministic batch projection and options (M, P1b)
+- [HAL.IDL.GEN.CMDS](../../spec/hal/idl/gen/cmds/NODE.md) Capability discovery commands (list and describe) (S, P1a)
+- [KRN.CONS.AUTO.PAIR](../../spec/krn/cons/auto/pair/NODE.md) Nominal-actual point pairing with gates and conflict rule (M, P1b)
+- [KRN.CONS.DERIV.FORMULA](../../spec/krn/cons/deriv/formula/NODE.md) Kernel formula evaluation for derived values (D-027) (M, P1b)
+- [KRN.CONS.DERIV.SYS](../../spec/krn/cons/deriv/sys/NODE.md) System planes, axes and coordinate-system elements (S, P1a)
+- [KRN.CONS.ELEM.PRIM](../../spec/krn/cons/elem/prim/NODE.md) Definitional point, line, plane, circle and sphere builds (M, P1a)
+- [KRN.CONS.ELEM.SET](../../spec/krn/cons/elem/set/NODE.md) Constructed sets (S, P1a)
+- [KRN.CONS.ELEM.SHAPE](../../spec/krn/cons/elem/shape/NODE.md) Definitional cylinder, cone, slot and rectangle builds (M, P1a)
+- [KRN.CONS.OPS.INTLIN](../../spec/krn/cons/ops/intlin/NODE.md) Intersections of points, lines and planes (M, P1a)
+- [KRN.CONS.OPS.INTQUAD](../../spec/krn/cons/ops/intquad/NODE.md) Intersections involving circles, spheres, cylinders and cones (M, P1a)
+- [KRN.CONS.OPS.MID](../../spec/krn/cons/ops/mid/NODE.md) Midpoint, mid-plane, symmetry element and bisector (M, P1a)
+- [KRN.CONS.OPS.OFFS](../../spec/krn/cons/ops/offs/NODE.md) Offsets of points, lines, planes and circles (S, P1a)
+- [KRN.CONS.OPS.PROJ](../../spec/krn/cons/ops/proj/NODE.md) Projections onto planes and lines (S, P1a)
+- [KRN.CONS.REL](../../spec/krn/cons/rel/NODE.md) Live relationships (M, P1a)
+- [KRN.ENV.XCHK](../../spec/krn/env/xchk/NODE.md) Combinatorial cross-checks for MCC and MIC (M, P1a)
+- [KRN.LSQ.AXIS.CONE](../../spec/krn/lsq/axis/cone/NODE.md) Least-squares cone (M, P0)
+- [KRN.LSQ.AXIS.CYL](../../spec/krn/lsq/axis/cyl/NODE.md) Least-squares cylinder (M, P0)
+- [KRN.LSQ.AXIS.TORUS](../../spec/krn/lsq/axis/torus/NODE.md) Least-squares torus (M, P1a)
+- [KRN.LSQ.CURVE.POLY](../../spec/krn/lsq/curve/poly/NODE.md) Least-squares polyline with a given vertex count (M, P1b)
+- [KRN.LSQ.PLAN2D.RECT](../../spec/krn/lsq/plan2d/rect/NODE.md) Least-squares rectangle with optional corner radii (M, P1a)
+- [KRN.LSQ.RND](../../spec/krn/lsq/rnd/NODE.md) Least-squares circle and sphere fits (M, P0)
+- [KRN.OUT.DISC](../../spec/krn/out/disc/NODE.md) Excluded-set record and impact disclosure (S, P1b)
+- [KRN.OUT.GATE](../../spec/krn/out/gate/NODE.md) Distance-to-nominal and tolerance-band policies (S, P1b)
+- [KRN.OUT.STAT](../../spec/krn/out/stat/NODE.md) Residual-statistics policies (n-sigma and robust scale) (S, P1b)
+- [KRN.SOLV.CERT.CT](../../spec/krn/solv/cert/ct/NODE.md) Certificate type, certify pipeline and digest rule (M, P0)
+- [QUAL.IQOQ.GOLDEN](../../spec/qual/iqoq/golden/NODE.md) Golden-journal registration for upgrade OQ (S, P1a)
+- [QUAL.IQOQ.RECORD](../../spec/qual/iqoq/record/NODE.md) Qualification record type, show command and qualification status (S, P1a)
+- [SCAN.POLY.SURF.STITCH](../../spec/scan/poly/surf/stitch/NODE.md) Fan agreement, manifold assembly and orientation (M, P1b)
+- [TRUST.VERIFY.WEB.SHELL](../../spec/trust/verify/web/shell/NODE.md) Static page shell, offline guarantee and report view (M, P1b)
+
+### Wave 10 (28 leaves)
+
+- [CORE.BUS.PIPE.VALID](../../spec/core/bus/pipe/valid/NODE.md) Command resolution, parameter validation and preconditions (M, P0)
+- [CORE.BUS.PRIN](../../spec/core/bus/prin/NODE.md) Principal model, channel binding and human session upgrade (M, P0)
+- [CORE.JRN.BR.DIFF](../../spec/core/jrn/br/diff/NODE.md) Entity and result diff between branches (M, P0)
+- [CORE.JRN.STREAM.ALOG](../../spec/core/jrn/stream/alog/NODE.md) Stream routing and the P0 Activity Log (M, P0)
+- [CORE.JRN.UNDO.MOVE](../../spec/core/jrn/undo/move/NODE.md) Undo, redo, undo tree and barriers (M, P0)
+- [CORE.PRJ.CONT.HIER](../../spec/core/prj/cont/hier/NODE.md) Container entities and hierarchy commands (M, P0)
+- [CORE.REG.MAN](../../spec/core/reg/man/NODE.md) Canonical manifest export and digests (M, P0)
+- [CORE.RPL.RECON.SNAP](../../spec/core/rpl/recon/snap/NODE.md) Snapshot policy, validation and fallback selection (M, P0)
+- [CORE.STO.PRIV](../../spec/core/sto/priv/NODE.md) Offline operation and telemetry consent (M, P0)
+- [GEO.CAD.ASSY.FLAT](../../spec/geo/cad/assy/flat/NODE.md) Assembly tree flattening and placement checks (M, P1b)
+- [GEO.CAD.NOMINAL.DIRECT](../../spec/geo/cad/nominal/direct/NODE.md) Nominal element types and direct analytic mapping (M, P1b)
+- [GEO.CAD.TESS.EDGE](../../spec/geo/cad/tess/edge/NODE.md) Shared edge discretisation (M, P1b)
+- [GEO.CAD.TOPO.TRIM](../../spec/geo/cad/topo/trim/NODE.md) Trimmed-face point classification (M, P1b)
+- [GEO.CAD.TOPO.VALID](../../spec/geo/cad/topo/valid/NODE.md) B-rep defect detection without repair (M, P1b)
+- [GEO.DIST.FACE.INCID](../../spec/geo/dist/face/incid/NODE.md) Incident normals and angles for CAD signed distance (S, P1b)
+- [GEO.SEL.QUERY.CAD](../../spec/geo/sel/query/cad/NODE.md) CAD face predicates and tangent growth (M, P1b)
+- [KRN.CONS.AUTO.FACE](../../spec/krn/cons/auto/face/NODE.md) Face eligibility, nominal creation and auto-from-CAD command (M, P1b)
+- [KRN.CONS.AUTO.INFER](../../spec/krn/cons/auto/infer/NODE.md) Feature-type inference from points (D-029) (M, P2)
+- [KRN.CONS.ELEM.FITC](../../spec/krn/cons/elem/fitc/NODE.md) Best fit through feature centres and element points (M, P1a)
+- [KRN.CONS.OPS.TABLE](../../spec/krn/cons/ops/table/NODE.md) Support table, dispatch and the six operation commands (M, P1a)
+- [KRN.ENV.MCC.CVX](../../spec/krn/env/mcc/cvx/NODE.md) Minimum circumscribed circle and sphere with duality-gap certificate (M, P1a)
+- [KRN.LSQ.PLAN2D.SLOT](../../spec/krn/lsq/plan2d/slot/NODE.md) Least-squares slot (M, P1a)
+- [KRN.OUT.RANSAC](../../spec/krn/out/ransac/NODE.md) Seeded RANSAC consensus policy (M, P1b)
+- [KRN.OUT.SEL](../../spec/krn/out/sel/NODE.md) Point-selection command (S, P1b)
+- [KRN.SOLV.SEQ](../../spec/krn/solv/seq/NODE.md) Sequential linearisation driver (M, P0)
+- [RPT.CATALOG.STORE.SCHEMA](../../spec/rpt/catalog/store/schema/NODE.md) Catalog database schema and migrations (M, P1b)
+- [SCAN.CLOUD.REG.CTGT](../../spec/scan/cloud/reg/ctgt/NODE.md) Oriented-cloud projection target and overlap fraction (S, P1b)
+- [VIZ.CAPTURE.REC.POLICY](../../spec/viz/capture/rec/policy/NODE.md) Recording policy keys and policy evaluation (S, P1b)
+
+### Wave 11 (34 leaves)
+
+- [CORE.BUS.POL.CLASS](../../spec/core/bus/pol/class/NODE.md) Class, principal and human-only matrix (S, P0)
+- [CORE.BUS.POL.FS](../../spec/core/bus/pol/fs/NODE.md) File handles and approved roots (M, P0)
+- [CORE.BUS.POL.PROJ](../../spec/core/bus/pol/proj/NODE.md) MCP projection, pending requests and approval (M, P0)
+- [CORE.JRN.BR.PROMO](../../spec/core/jrn/br/promo/NODE.md) Promotion and promotion requests (M, P0)
+- [CORE.JRN.STREAM.COMPACT](../../spec/core/jrn/stream/compact/NODE.md) Activity Log chaining and compaction (M, P1b)
+- [CORE.PRJ.TREE.MODEL](../../spec/core/prj/tree/model/NODE.md) Element record, states, state view and type registry (M, P0)
+- [CORE.REG.QRY](../../spec/core/reg/qry/NODE.md) Registry query commands (M, P0)
+- [CORE.RPL.RECON.FOLD](../../spec/core/rpl/recon/fold/NODE.md) Reconstruction, head moves, fold invariant and crash resume (M, P0)
+- [FLOW.RUNNER.UNASSIST](../../spec/flow/runner/unassist/NODE.md) Unassisted-run principal check (S, P0)
+- [GEO.CAD.NOMINAL.RECOG](../../spec/geo/cad/nominal/recog/NODE.md) Recognition of NURBS-encoded primitives (M, P1b)
+- [GEO.CAD.TESS.FACE](../../spec/geo/cad/tess/face/NODE.md) Constrained parameter-space meshing of trimmed faces (M, P1b)
+- [GEO.DIST.FACE.ONE](../../spec/geo/dist/face/one/NODE.md) Closest point on a single trimmed face (M, P1b)
+- [GEO.OOC.LAYOUT](../../spec/geo/ooc/layout/NODE.md) Chunk layout, manifest and conversion (M, P1b)
+- [KRN.ENV.MCC.CYL](../../spec/krn/env/mcc/cyl/NODE.md) Minimum circumscribed cylinder (M, P1a)
+- [KRN.ENV.MIC.CIRSPH](../../spec/krn/env/mic/cirsph/NODE.md) Maximum inscribed circle and sphere (M, P1a)
+- [KRN.ENV.MIC.CYL](../../spec/krn/env/mic/cyl/NODE.md) Maximum inscribed cylinder (M, P1a)
+- [KRN.ENV.TAN.CYL](../../spec/krn/env/tan/cyl/NODE.md) Tangential cylinder, inner and outer (M, P1a)
+- [KRN.ENV.TAN.LINE](../../spec/krn/env/tan/line/NODE.md) Tangential 2D line in three variants (S, P1a)
+- [KRN.ENV.TAN.PLANE](../../spec/krn/env/tan/plane/NODE.md) Tangential plane in three variants (M, P1a)
+- [KRN.MZ.EXT.CONE](../../spec/krn/mz/ext/cone/NODE.md) Minimum-zone cone (M, P1a)
+- [KRN.MZ.EXT.CURVE](../../spec/krn/mz/ext/curve/NODE.md) Minimum-zone planar curve about a nominal (M, P1b)
+- [KRN.MZ.EXT.ELL](../../spec/krn/mz/ext/ell/NODE.md) Minimum-zone ellipse (S, P1a)
+- [KRN.MZ.EXT.PLAN](../../spec/krn/mz/ext/plan/NODE.md) Minimum-zone slot and rectangle (M, P1a)
+- [KRN.MZ.LIN.FLAT](../../spec/krn/mz/lin/flat/NODE.md) Minimum-zone 2D line and plane (LP) (M, P0)
+- [KRN.MZ.LIN.LINE3](../../spec/krn/mz/lin/line3/NODE.md) Minimum-zone 3D line (SOCP) (M, P0)
+- [KRN.MZ.RND.CIRC](../../spec/krn/mz/rnd/circ/NODE.md) Minimum-zone 2D circle and Voronoi agreement job (M, P0)
+- [KRN.MZ.RND.CYL](../../spec/krn/mz/rnd/cyl/NODE.md) Minimum-zone cylinder (M, P0)
+- [KRN.MZ.RND.SPH](../../spec/krn/mz/rnd/sph/NODE.md) Minimum-zone sphere (M, P0)
+- [KRN.OUT.RUN](../../spec/krn/out/run/NODE.md) Reject-outliers command and reject-and-refit loop (M, P1b)
+- [MIG.EXPLAIN.CAT](../../spec/mig/explain/cat/NODE.md) Closed factor catalogue and probe candidates (S, P1a)
+- [PLAT.DEPLOY.MCONF](../../spec/plat/deploy/mconf/NODE.md) Managed machine-wide policy configuration layer (M, P1a)
+- [RPT.CATALOG.SHARE.LOCK](../../spec/rpt/catalog/share/lock/NODE.md) Single-writer locking and file-share safety check (M, P1b)
+- [SCAN.CLOUD.REG.GRAPH](../../spec/scan/cloud/reg/graph/NODE.md) Scan overlap matrix and pair graph (S, P1b)
+- [TRUST.SIGN.UV.GATE](../../spec/trust/sign/uv/gate/NODE.md) S1 principal and channel gate, policy and uv_method (S, P1a)
+
+### Wave 12 (35 leaves)
+
+- [AGENT.PROPOSE.IMPACT](../../spec/agent/propose/impact/NODE.md) Computed proposal impact from the branch diff (M, P0)
+- [ALN.QA.HIST](../../spec/aln/qa/hist/NODE.md) Convergence history and published convergence criteria (S, P1a)
 - [AUTO.PROG.FAMILY](../../spec/auto/prog/family/NODE.md) Part-family parameters and binding validation (M, P1b)
 - [AUTO.PROG.OPER](../../spec/auto/prog/oper/NODE.md) Operator steps and operator-interaction descriptors (M, P1b)
-- [AUTO.SURF.GEN](../../spec/auto/surf/gen/NODE.md) Surface generator framework and digest stamping (M, P0)
-- [AUTO.SURF.JOBS](../../spec/auto/surf/jobs/NODE.md) Progress, cancellation and honest timeouts for surfaces (M, P0)
-- [AUTO.SURF.ROOTS](../../spec/auto/surf/roots/NODE.md) Root handles and raw-path refusal (M, P0)
-- [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
-- [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
-- [TRUST.PROFILE.MAP](../../spec/trust/profile/map/NODE.md) Regulated profile control mapping document (S, P1a)
+- [AUTO.SURF.PROJ](../../spec/auto/surf/proj/NODE.md) Surface projection model and name derivation (M, P0)
+- [CORE.BUS.POL.EGRESS](../../spec/core/bus/pol/egress/NODE.md) Egress primitive and network guard (M, P0)
+- [CORE.BUS.ROUTE](../../spec/core/bus/route/NODE.md) Branch routing, optimistic concurrency and idempotency (M, P0)
+- [CORE.PRJ.CONT.LIFE](../../spec/core/prj/cont/life/NODE.md) Project lifecycle: create, open, close, save-as, list (M, P0)
+- [CORE.PRJ.STAGE.MODEL](../../spec/core/prj/stage/model/NODE.md) Stage entity, per-stage slots and stage commands (M, P0)
+- [CORE.PRJ.TPL.PKG](../../spec/core/prj/tpl/pkg/NODE.md) Template package format, digest, integrity and listing (M, P1a)
+- [CORE.PRJ.TREE.GROUP](../../spec/core/prj/tree/group/NODE.md) Groups, move, rename and visibility commands (M, P0)
+- [CORE.PRJ.TREE.QUERY](../../spec/core/prj/tree/query/NODE.md) List and describe queries at scale (M, P0)
+- [ECO.PARITY.TRACE](../../spec/eco/parity/trace/NODE.md) Seed-to-command traceability and the live rule (M, P0)
+- [FLOW.RUNNER.RELIAB](../../spec/flow/runner/reliab/NODE.md) Forced-kill harness and crash-free session rate (M, P0)
+- [GDT.CHAR.DPROF](../../spec/gdt/char/dprof/NODE.md) Defaults profiles: immutable versioned objects (M, P1a)
+- [GDT.DIM.SIZEASME.ENVLP](../../spec/gdt/dim/sizeasme/envlp/NODE.md) Actual mating envelope size and Rule #1 clearance (M, P1a)
+- [GDT.DIM.SIZEISO.GLOBAL](../../spec/gdt/dim/sizeiso/global/NODE.md) Global sizes from a named association (M, P1b)
+- [GEO.CAD.NOMINAL.MERGE](../../spec/geo/cad/nominal/merge/NODE.md) Merging faces of one primitive (S, P1b)
+- [GEO.CAD.TESS.REFINE](../../spec/geo/cad/tess/refine/NODE.md) Tolerance-driven refinement of face meshes (M, P1b)
+- [GEO.DIST.FACE.BODY](../../spec/geo/dist/face/body/NODE.md) Face-set and body projection targets (M, P1b)
+- [GEO.NURBS.CMD](../../spec/geo/nurbs/cmd/NODE.md) Curve and surface evaluation and inversion commands (S, P1b)
+- [GEO.OOC.CACHE](../../spec/geo/ooc/cache/NODE.md) Chunk cache, memory budget and integrity checks (M, P1b)
+- [IO.REG.DETECT](../../spec/io/reg/detect/NODE.md) Format registry listing and content-signature detection (M, P0)
+- [QUAL.IQOQ.BUNDLE](../../spec/qual/iqoq/bundle/NODE.md) Qualification evidence bundle export (M, P1a)
+- [QUAL.VAP.GEN](../../spec/qual/vap/gen/NODE.md) Validation pack generator command (M, P1a)
+- [QUAL.VAP.REVIEW](../../spec/qual/vap/review/NODE.md) Periodic-review report command (S, P1a)
+- [RPT.MODEL.DOC](../../spec/rpt/model/doc/NODE.md) Report document model and storage (M, P1a)
 - [TRUST.PROFILE.SELECT](../../spec/trust/profile/select/NODE.md) Set and show the active governance profile (S, P1a)
+- [TRUST.SIGN.KEYSTORE.CMDS](../../spec/trust/sign/keystore/cmds/NODE.md) Key lifecycle registry commands (S, P1a)
+- [TRUST.SIGN.UV.LINUV](../../spec/trust/sign/uv/linuv/NODE.md) Linux token PIN and passphrase verification (D-011) (M, P1a)
+- [TRUST.SIGN.UV.OSUV](../../spec/trust/sign/uv/osuv/NODE.md) Windows and macOS per-operation user verification (M, P1a)
+- [VIZ.CAPTURE.REC.SESSION](../../spec/viz/capture/rec/session/NODE.md) Recording session start, stop and status (M, P1b)
+- [VIZ.OVERLAY.CMAP.SPEC](../../spec/viz/overlay/cmap/spec/NODE.md) ColorMapSpec model and the set-colormap command (M, P1b)
+- [VIZ.OVERLAY.LABEL.MODEL](../../spec/viz/overlay/label/model/NODE.md) LabelSet entity, templates and label commands (M, P1a)
+- [VIZ.VIEW.STATE](../../spec/viz/view/state/NODE.md) ViewState model and canonical form (M, P1a)
 
-### Wave 12 (5 leaves)
+### Wave 13 (29 leaves)
 
-- [AUTO.REC.CONV](../../spec/auto/rec/conv/NODE.md) Journal range to draft program (M, P1b)
-- [AUTO.REC.LIFE](../../spec/auto/rec/life/NODE.md) Lifecycle states and content identity for programs and scripts (M, P1b)
-- [AUTO.SURF.CHECK](../../spec/auto/surf/check/NODE.md) CI surface-completeness and staleness check (M, P0)
-- [GEO.TYPES.MESH](../../spec/geo/types/mesh/NODE.md) Indexed triangle mesh and topology facts (M, P0)
-- [HAL.IDL.PROFILE](../../spec/hal/idl/profile/NODE.md) Instrument-profile descriptor (instrument-profile/v1) (M, P1a)
+- [AUTO.PROG.EXPR.TYPES](../../spec/auto/prog/expr/types/NODE.md) Type system, unit algebra and variable scoping (M, P1b)
+- [AUTO.SURF.GEN](../../spec/auto/surf/gen/NODE.md) Surface generator framework and digest stamping (M, P0)
+- [AUTO.SURF.ROOTS](../../spec/auto/surf/roots/NODE.md) Root handles and raw-path refusal (M, P0)
+- [CORE.BUS.PIPE.STAGE](../../spec/core/bus/pipe/stage/NODE.md) Stage orchestration, all-or-nothing commit, jobs, reads and overhead (M, P0)
+- [CORE.PRJ.STAGE.SWITCH](../../spec/core/prj/stage/switch/NODE.md) Active stage and per-stage value cache (M, P0)
+- [ECO.PARITY.GEN](../../spec/eco/parity/gen/NODE.md) Parity report generator (M, P0)
+- [ECO.REL.UPD](../../spec/eco/rel/upd/NODE.md) Opt-in update check (M, P1a)
+- [FLOW.DEADEND.RESULT](../../spec/flow/deadend/result/NODE.md) Suggested-fix resolution per principal and result projection contract (M, P1a)
+- [GEO.CAD.TESS.BODY](../../spec/geo/cad/tess/body/NODE.md) Body tessellation driver and watertight assembly (M, P1b)
+- [GEO.OOC.QUERY](../../spec/geo/ooc/query/NODE.md) Cross-chunk neighbour queries (M, P1b)
+- [GEO.OOC.STREAM](../../spec/geo/ooc/stream/NODE.md) Ordered full-resolution point streaming (S, P1b)
+- [GEO.SEL.QUERY.NEAR](../../spec/geo/sel/query/near/NODE.md) Distance predicates for semantic selections (S, P1b)
+- [IO.CORP.FUZZ](../../spec/io/corp/fuzz/NODE.md) Fuzz targets for every reader and CI fuzz budgets (M, P0)
+- [IO.QIF.IDS.MAP](../../spec/io/qif/ids/map/NODE.md) QIF identifier map, minting and export renumbering (M, P0)
+- [IO.RES.CSV.XLSX](../../spec/io/res/csv/xlsx/NODE.md) Bounded workbook reader for layouts and cell tables (M, P1a)
+- [IO.RES.TRANS.MODEL](../../spec/io/res/trans/model/NODE.md) Transcription record model and value mapping (M, P1a)
+- [MIG.COVER.TAXO](../../spec/mig/cover/taxo/NODE.md) Per-format construct taxonomies (S, P1a)
+- [MIG.SRC.REG](../../spec/mig/src/reg/NODE.md) Source register, review records, listing and sources page (M, P1a)
+- [RPT.CATALOG.STORE.REG](../../spec/rpt/catalog/store/reg/NODE.md) Project registration commands (S, P1b)
+- [RPT.DESIGN.PAGE](../../spec/rpt/design/page/NODE.md) Page setup (S, P1b)
+- [RPT.MODEL.TMPL.FORMAT](../../spec/rpt/model/tmpl/format/NODE.md) Template document format, bounded parser and schema migration (M, P1a)
+- [SCAN.CMP.DEV.PRIM](../../spec/scan/cmp/dev/prim/NODE.md) Signed deviation primitive and its batch form (M, P1b)
+- [TRUST.PROFILE.GATE.QUERY](../../spec/trust/profile/gate/query/NODE.md) Read-only profile query API and GUI gating flags (S, P1a)
+- [TRUST.REPLAY.KART.FETCH](../../spec/trust/replay/kart/fetch/NODE.md) Opt-in kernel artifact fetch into the local cache (S, P1a)
+- [VIZ.CAPTURE.TRACK.SAMPLE](../../spec/viz/capture/track/sample/NODE.md) View-track sampling, delta format and attachment (M, P1b)
+- [VIZ.CAPTURE.VIDEO.PIPE](../../spec/viz/capture/video/pipe/NODE.md) Segment pipeline, storage and journal attachment (M, P1b)
+- [VIZ.INBOX.GATES.PLAN](../../spec/viz/inbox/gates/plan/NODE.md) Gate plan selection from profile, protection and principal (S, P1a)
+- [VIZ.RENDER.SCENE.IDTAB](../../spec/viz/render/scene/idtab/NODE.md) Render ID allocation and entity lookup tables (S, P1a)
+- [VIZ.VIEW.NAMED.STORE](../../spec/viz/view/named/store/NODE.md) Save, rename, delete and list NamedViews (M, P1a)
 
-### Wave 13 (8 leaves)
+### Wave 14 (43 leaves)
 
-- [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
 - [AUTO.CLI.TREE](../../spec/auto/cli/tree/NODE.md) Generated command tree and help (M, P0)
-- [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
-- [AUTO.REC.MACRO](../../spec/auto/rec/macro/NODE.md) Live macro recording (S, P1b)
-- [GEO.TYPES.DIGEST](../../spec/geo/types/digest/NODE.md) Canonical byte layout and element digest (S, P0)
-- [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
-- [HAL.ACQ.POLICY](../../spec/hal/acq/policy/NODE.md) Calibration-state policy and ExternalClaim classification (M, P2)
-- [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
+- [AUTO.MCP.PROJ](../../spec/auto/mcp/proj/NODE.md) Class-based tool projection and request-only tools (M, P0)
+- [AUTO.PROG.EXPR.EVAL](../../spec/auto/prog/expr/eval/NODE.md) Deterministic control evaluator and function library (M, P1b)
+- [AUTO.PROG.EXPR.FORMULA](../../spec/auto/prog/expr/formula/NODE.md) Compilation of formulas to the kernel formula IR (S, P1b)
+- [AUTO.PROG.FLOW](../../spec/auto/prog/flow/NODE.md) Loops, branches, jumps and subroutines (M, P1b)
+- [AUTO.REC.ADOPT](../../spec/auto/rec/adopt/NODE.md) Agent-provenance gate on release (M, P1b)
+- [AUTO.SURF.CHECK](../../spec/auto/surf/check/NODE.md) CI surface-completeness and staleness check (M, P0)
+- [AUTO.SURF.DOCS](../../spec/auto/surf/docs/NODE.md) Generated command reference records (M, P0)
+- [AUTO.SURF.JOBS](../../spec/auto/surf/jobs/NODE.md) Progress, cancellation and honest timeouts for surfaces (M, P0)
+- [CORE.DEP.EDGE](../../spec/core/dep/edge/NODE.md) Dependency edges, cycle rejection and dependency queries (M, P0)
+- [CORE.PRJ.META](../../spec/core/prj/meta/NODE.md) Tags, keywords and metadata (M, P0)
+- [CORE.RPL.EXEC.LOOP](../../spec/core/rpl/exec/loop/NODE.md) Re-execution loop, old-major dispatch and step cursor (M, P0)
+- [ECO.PARITY.DRIFT](../../spec/eco/parity/drift/NODE.md) Report regeneration (drift) check (S, P0)
+- [ECO.PARITY.STATUS](../../spec/eco/parity/status/NODE.md) Per-app status and known-gaps report (M, P1a)
+- [FLOW.DEADEND.CHECK](../../spec/flow/deadend/check/NODE.md) Fix-catalogue consistency check against the registry manifest (S, P1a)
+- [FLOW.PERSONA.CHECK](../../spec/flow/persona/check/NODE.md) Journey list, show and coverage check commands (M, P0)
+- [FLOW.RUNNER.CHKVAL](../../spec/flow/runner/chkval/NODE.md) Value and record quality-check evaluators (M, P0)
+- [FLOW.STUDY.RECORD](../../spec/flow/study/record/NODE.md) Study record format, import and aggregates (M, P1a)
+- [GDT.RES.ROWFLOW.ADOPT](../../spec/gdt/res/rowflow/adopt/NODE.md) Adopt signed-off rows into a released table (M, P1a)
+- [GDT.RES.ROWFLOW.PROPOSE](../../spec/gdt/res/rowflow/propose/NODE.md) Propose a DMT row revision (S, P1a)
+- [GDT.RES.ROWFLOW.REVIEW](../../spec/gdt/res/rowflow/review/NODE.md) Review a DMT row with edition-held attestation (S, P1a)
+- [GEO.OOC.LOD](../../spec/geo/ooc/lod/NODE.md) Level-of-detail summaries for display (M, P1b)
+- [HAL.ACQ.SESS.GATE](../../spec/hal/acq/sess/gate/NODE.md) Driver-call gate (no state change without a journaled command) (S, P2)
+- [HAL.ACQ.STAMP.EMIT](../../spec/hal/acq/stamp/emit/NODE.md) Batch writer - raw storage, stamp validation and journaling (M, P1a)
+- [IO.QIF.IDS.XREF](../../spec/io/qif/ids/xref/NODE.md) Cross-document xId references (S, P0)
+- [IO.QIF.XML.WRITE](../../spec/io/qif/xml/write/NODE.md) Deterministic QIF-XML writer with pre-commit validation (M, P0)
+- [IO.REG.ENV.EXPORT](../../spec/io/reg/env/export/NODE.md) Generic export command and export skeleton (S, P0)
+- [IO.RES.TRANS.VIEW](../../spec/io/res/trans/view/NODE.md) Transcribed-status marking for views and exports (S, P1a)
+- [MIG.COVER.CORPUS](../../spec/mig/cover/corpus/NODE.md) Migration corpus admission and construct inventory (S, P1a)
+- [MIG.PROJ.PROFILE](../../spec/mig/proj/profile/NODE.md) Mapping profile schema and loader (S, P1a)
+- [PLAT.DEPLOY.UPDATE.APPLY](../../spec/plat/deploy/update/apply/NODE.md) Verify-bundle and apply-bundle commands with atomic install (M, P1a)
+- [RPT.CATALOG.IMPORT.MAP](../../spec/rpt/catalog/import/map/NODE.md) Mapping historical results into a historical-results project (M, P1b)
+- [RPT.DESIGN.PLACE.FRAME](../../spec/rpt/design/place/frame/NODE.md) Block frames, move, resize and grid snapping (M, P1b)
+- [RPT.MODEL.TMPL.SLOT](../../spec/rpt/model/tmpl/slot/NODE.md) Slot, binding-rule and repetition-rule language (M, P1a)
+- [SCAN.CMP.GPUPV.PVFIELD](../../spec/scan/cmp/gpupv/pvfield/NODE.md) PreviewField type and preview marker (S, P1b)
+- [SCAN.POLY.MULTI.OVLP](../../spec/scan/poly/multi/ovlp/NODE.md) Per-point overlap detection between scans (S, P1b)
+- [SCAN.POLY.SURF.OOC](../../spec/scan/poly/surf/ooc/NODE.md) Chunked reconstruction identical to in-memory (M, P1b)
+- [TRUST.PROFILE.GATE.ASSIST](../../spec/trust/profile/gate/assist/NODE.md) Assistive-only agent-write bus hook (S, P1a)
+- [TRUST.PROFILE.GATE.RELEASE](../../spec/trust/profile/gate/release/NODE.md) Regulated release precondition (S, P1a)
+- [TRUST.PROFILE.GATE.STAMP](../../spec/trust/profile/gate/stamp/NODE.md) Profile digest stamping of sessions and packages (S, P1a)
+- [VIZ.CAPTURE.VIDEO.VERIFY](../../spec/viz/capture/video/verify/NODE.md) Recorded media verification against journal digests (S, P1b)
+- [VIZ.VIEW.CAMERA.HILITE](../../spec/viz/view/camera/hilite/NODE.md) Highlight and proposal ghost overlays (M, P1a)
+- [VIZ.VIEW.NAMED.EXPORT](../../spec/viz/view/named/export/NODE.md) NamedView package format for reports and web packages (S, P1a)
 
-### Wave 14 (7 leaves)
+### Wave 15 (35 leaves)
 
 - [AUTO.CLI.ARGS](../../spec/auto/cli/args/NODE.md) Typed and unit-bearing parameter parsing (M, P0)
 - [AUTO.CLI.COMP](../../spec/auto/cli/comp/NODE.md) Generated shell completions (S, P0)
 - [AUTO.CLI.GATE](../../spec/auto/cli/gate/NODE.md) Dry-run handling and class gating at the CLI (S, P0)
 - [AUTO.CLI.JOB](../../spec/auto/cli/job/NODE.md) Terminal progress and interrupt-to-cancel (S, P0)
-- [AUTO.CTRL.AUTH](../../spec/auto/ctrl/auth/NODE.md) Token file and challenge-response authentication (M, P1a)
-- [AUTO.RUN.BIND](../../spec/auto/run/bind/NODE.md) Run binding validation and run records (M, P1b)
-- [GEO.TYPES.REG](../../spec/geo/types/reg/NODE.md) Element registration and describe command (M, P0)
-
-### Wave 15 (10 leaves)
-
+- [AUTO.CLI.TARGET.SELECT](../../spec/auto/cli/target/select/NODE.md) Target resolution from flags and environment (S, P0)
 - [AUTO.CTRL.CLIENT](../../spec/auto/ctrl/client/NODE.md) Rust control-channel client and fid ctrl diagnostics (M, P1a)
 - [AUTO.CTRL.EXEC](../../spec/auto/ctrl/exec/NODE.md) Command listing, execution and jobs over the channel (M, P1a)
-- [AUTO.RUN.CMP](../../spec/auto/run/cmp/NODE.md) Run comparison against a reference run (M, P1b)
-- [AUTO.RUN.TABLE](../../spec/auto/run/table/NODE.md) Tabular bindings and results tables (M, P1b)
-- [GEO.FRAME.UNITS](../../spec/geo/frame/units/NODE.md) Authored quantities and unit conversion (M, P0)
-- [GEO.FRAME.XFORM](../../spec/geo/frame/xform/NODE.md) Rigid and similarity transforms and rotation parameterisations (M, P0)
-- [GEO.INDEX.BVH](../../spec/geo/index/bvh/NODE.md) Primitive bounding volume hierarchy (M, P0)
-- [GEO.INDEX.KDTREE](../../spec/geo/index/kdtree/NODE.md) Point k-d tree with exact k-nearest, radius and box queries (M, P0)
-- [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
-- [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
-
-### Wave 16 (6 leaves)
-
-- [AUTO.MCP.PROJ](../../spec/auto/mcp/proj/NODE.md) Class-based tool projection and request-only tools (M, P0)
-- [GEO.FRAME.APPLY](../../spec/geo/frame/apply/NODE.md) Transforming elements and the frame-mismatch guard (S, P0)
-- [GEO.FRAME.TREE](../../spec/geo/frame/tree/NODE.md) Frame tree and chain resolution (M, P0)
-- [GEO.INDEX.BENCH](../../spec/geo/index/bench/NODE.md) Index performance and memory benchmarks (S, P0)
-- [GEO.INDEX.BUDGET](../../spec/geo/index/budget/NODE.md) Index memory budgets and digest-keyed cache (S, P0)
-- [GEO.NURBS.EVAL](../../spec/geo/nurbs/eval/NODE.md) NURBS evaluation, derivatives, normals and curvature (M, P1b)
-
-### Wave 17 (7 leaves)
-
 - [AUTO.MCP.SESS](../../spec/auto/mcp/sess/NODE.md) MCP session, stdio transport, principal binding and jobs (M, P0)
 - [AUTO.MCP.SKILLS](../../spec/auto/mcp/skills/NODE.md) Generated Skills and task guides (M, P0)
+- [AUTO.MCP.SRV](../../spec/auto/mcp/srv/NODE.md) Server partitioning and front-door tool sets (M, P0)
 - [AUTO.MCP.TAINT](../../spec/auto/mcp/taint/NODE.md) Untrusted-content marking in tool results (S, P0)
+- [AUTO.PROG.CHECK](../../spec/auto/prog/check/NODE.md) Static program checker (M, P1b)
+- [AUTO.PROG.INTERP.CALL](../../spec/auto/prog/interp/call/NODE.md) Step invocation through the bus and outcome handling (S, P1b)
+- [AUTO.REC.LIFE](../../spec/auto/rec/life/NODE.md) Lifecycle states and content identity for programs and scripts (M, P1b)
+- [CORE.DEP.PROP](../../spec/core/dep/prop/NODE.md) Change propagation and recompute mode (M, P0)
+- [CORE.PRJ.QIF](../../spec/core/prj/qif/NODE.md) Mapping of the project model onto QIF 3.0 (M, P0)
+- [CORE.PRJ.TPL.CREATE](../../spec/core/prj/tpl/create/NODE.md) Create a project from a template (M, P1a)
+- [CORE.PRJ.TPL.SAVE](../../spec/core/prj/tpl/save/NODE.md) Save a project as a template (M, P1a)
+- [CORE.RPL.EXEC.VERIFY](../../spec/core/rpl/exec/verify/NODE.md) Verifier worker sandbox, kernel lookup and memo bypass (M, P0)
+- [CORE.RPL.RETGT.DRY](../../spec/core/rpl/retgt/dry/NODE.md) Dry-run replay with changeset diff (M, P0)
+- [CORE.RPL.RETGT.REBASE](../../spec/core/rpl/retgt/rebase/NODE.md) Rebase re-execution for non-fast-forward promotion (S, P0)
+- [CORE.RPL.RETGT.RUN](../../spec/core/rpl/retgt/run/NODE.md) Re-targeted replay to a new branch (M, P0)
+- [ECO.DATA.BENCH.BUNDLE](../../spec/eco/data/bench/bundle/NODE.md) Release-numbers bundle generator (S, P0)
+- [FLOW.STUDY.CLAIM](../../spec/flow/study/claim/NODE.md) Published study summary and public-claim evidence rule (S, P1a)
+- [HAL.ACQ.SESS.LIFE](../../spec/hal/acq/sess/life/NODE.md) Session lifecycle, controlling-writer lock and session context (M, P2)
+- [IO.DMIS.PROG.FEAT](../../spec/io/dmis/prog/feat/NODE.md) DMIS feature definitions to QIF features (M, P2)
+- [IO.RES.AQDEF.OUT](../../spec/io/res/aqdef/out/NODE.md) AQDEF DFQ export (uncertified) (M, P1b)
+- [IO.RES.CSV.OUT](../../spec/io/res/csv/out/NODE.md) Result table export through a column map (M, P1a)
+- [IO.RES.QIFR.ROUT](../../spec/io/res/qifr/rout/NODE.md) QIF Results export of ResultRecords (M, P1a)
+- [MIG.COVER.GEN](../../spec/mig/cover/gen/NODE.md) Coverage table generator and drift check (M, P1a)
+- [MIG.PROJ.MAPREP](../../spec/mig/proj/maprep/NODE.md) Mapping report model and classification (S, P1a)
+- [OUTR.SITE.CLAIM](../../spec/outr/site/claim/NODE.md) Capability-claim check (S, P0)
+- [RPT.DESIGN.PLACE.ARRANGE](../../spec/rpt/design/place/arrange/NODE.md) Align, distribute, group and z-order (M, P1b)
+- [RPT.DESIGN.PLACE.FLOW](../../spec/rpt/design/place/flow/NODE.md) Overflow detection and page-break flow (M, P1b)
+- [RPT.MODEL.TMPL.VER](../../spec/rpt/model/tmpl/ver/NODE.md) Template versions, immutability and template commands (M, P1a)
+
+### Wave 16 (26 leaves)
+
+- [AGENT.PROPOSE.BRIEF](../../spec/agent/propose/brief/NODE.md) Proposal brief schema and attach command (M, P0)
+- [AGENT.SKILLS.QUERY](../../spec/agent/skills/query/NODE.md) List and show recipe commands (S, P1a)
+- [AUTO.CLI.TARGET.APP](../../spec/auto/cli/target/app/NODE.md) Running-app target over the control channel (S, P1a)
+- [AUTO.CLI.TARGET.HEADLESS](../../spec/auto/cli/target/headless/NODE.md) Headless project session with locking and human upgrade (M, P0)
+- [AUTO.CTRL.UIOPS](../../spec/auto/ctrl/uiops/NODE.md) UI inspection, input driving and screenshots (M, P1a)
+- [AUTO.MCP.DISC](../../spec/auto/mcp/disc/NODE.md) Progressive disclosure tools (M, P0)
+- [AUTO.MCP.MODES.BRIDGE](../../spec/auto/mcp/modes/bridge/NODE.md) Bridge mode over the control channel (S, P1a)
+- [AUTO.MCP.MODES.HEADLESS](../../spec/auto/mcp/modes/headless/NODE.md) Headless in-process MCP session (M, P0)
+- [AUTO.PROG.EDIT.OPS](../../spec/auto/prog/edit/ops/NODE.md) Basic step edit commands and the edit-apply core (M, P1b)
+- [AUTO.PROG.EDIT.VIEWS](../../spec/auto/prog/edit/views/NODE.md) Command view, summary view and program.show (M, P1b)
+- [AUTO.PROG.INTERP.ENGINE](../../spec/auto/prog/interp/engine/NODE.md) Execution engine, run context, limits and step hooks (M, P1b)
+- [AUTO.RUN.BIND](../../spec/auto/run/bind/NODE.md) Run binding validation and run records (M, P1b)
+- [AUTO.RUN.PLAY.SELECT](../../spec/auto/run/play/select/NODE.md) Released program and variant list for operators (S, P1b)
+- [CORE.DEP.RECOMP](../../spec/core/dep/recomp/NODE.md) Deterministic recompute with failure isolation and single-entry commit (M, P0)
+- [CORE.RPL.EXEC.REPORT](../../spec/core/rpl/exec/report/NODE.md) Replay Report schema and replay commands (M, P0)
+- [CORE.RPL.XVER](../../spec/core/rpl/xver/NODE.md) Cross-version diff (M, P0)
+- [HAL.ACQ.INGEST.SINK](../../spec/hal/acq/ingest/sink/NODE.md) BatchSink, batch assembly and hand-off pipeline (M, P2)
+- [HAL.ACQ.SESS.CFG](../../spec/hal/acq/sess/cfg/NODE.md) Device configuration commands and configuration digests (M, P2)
+- [HAL.ACQ.SESS.HEALTH](../../spec/hal/acq/sess/health/NODE.md) Health supervision and error-to-behaviour mapping (M, P2)
+- [IO.DMIS.PROG.TOL](../../spec/io/dmis/prog/tol/NODE.md) DMIS tolerance and datum definitions to QIF characteristics and datums (M, P2)
+- [IO.RES.PIWEB](../../spec/io/res/piweb/NODE.md) PiWeb-importable results export (S, P1b)
+- [OUTR.DOCS.BOOK.CHECK](../../spec/outr/docs/book/check/NODE.md) User-guide structure, example and availability check (M, P0)
+- [OUTR.SITE.GEN.BUILD](../../spec/outr/site/gen/build/NODE.md) Single-command static site build and shared page template (M, P0)
+- [RPT.MODEL.TMPL.STARTER](../../spec/rpt/model/tmpl/starter/NODE.md) Built-in starter templates (S, P1a)
+- [TRUST.PKG.CONTENT.SELECT](../../spec/trust/pkg/content/select/NODE.md) Selection resolution, record completeness and content assembly (M, P1a)
+- [VIZ.RENDER.SCENE.PROJ](../../spec/viz/render/scene/proj/NODE.md) View-model projection and dirty-set re-projection (M, P1a)
+
+### Wave 17 (30 leaves)
+
+- [AGENT.PROPOSE.SHOW](../../spec/agent/propose/show/NODE.md) Brief completeness, staleness and claim mismatch (S, P0)
+- [AGENT.SKILLS.RECIPE](../../spec/agent/skills/recipe/NODE.md) Worked recipes from golden journals and replay check (M, P1a)
+- [AUTO.CTRL.TRACE](../../spec/auto/ctrl/trace/NODE.md) UI action-trace record and playback (M, P1a)
+- [AUTO.MCP.MODES.SELECT](../../spec/auto/mcp/modes/select/NODE.md) Auto mode selection, app-closed setting and app launch (S, P1a)
+- [AUTO.PROG.EDIT.REFACT](../../spec/auto/prog/edit/refact/NODE.md) Structural edits: wrap, extract subroutine, rename variable (M, P1b)
+- [AUTO.PROG.INTERP.DEBUG](../../spec/auto/prog/interp/debug/NODE.md) Debug sessions, breakpoints, stepping and inspection (M, P1b)
+- [AUTO.PROG.INTERP.OPIN](../../spec/auto/prog/interp/opin/NODE.md) Operator steps: waiting, operator input and run-input journaling (S, P1b)
+- [AUTO.REC.CONV](../../spec/auto/rec/conv/NODE.md) Journal range to draft program (M, P1b)
+- [AUTO.RUN.CMP](../../spec/auto/run/cmp/NODE.md) Run comparison against a reference run (M, P1b)
+- [AUTO.RUN.EXEC.BRANCH](../../spec/auto/run/exec/branch/NODE.md) Run branch and Run entity (S, P1b)
+- [AUTO.RUN.EXEC.RETGT](../../spec/auto/run/exec/retgt/NODE.md) Not-re-targetable step guard (S, P1b)
+- [AUTO.RUN.TABLE](../../spec/auto/run/table/NODE.md) Tabular bindings and results tables (M, P1b)
+- [CORE.DEP.REPL](../../spec/core/dep/repl/NODE.md) Input replacement (M, P0)
+- [FLOW.SETUP.ONBOARD](../../spec/flow/setup/onboard/NODE.md) First tutorial hand-off in step mode with "your turn" checks (M, P1a)
+- [HAL.ACQ.INGEST.CMDS](../../spec/hal/acq/ingest/cmds/NODE.md) Start and stop acquisition commands and stop summary (M, P2)
+- [IO.DMIS.PROG.PLAN](../../spec/io/dmis/prog/plan/NODE.md) DMIS sensors, measurement blocks and outputs to QIF resources and plan items (M, P2)
+- [OUTR.DOCS.BOOK.CONCEPT](../../spec/outr/docs/book/concept/NODE.md) Concept chapters (M, P0)
+- [OUTR.DOCS.BOOK.INSPECT](../../spec/outr/docs/book/inspect/NODE.md) Inspect app chapter (M, P1b)
+- [OUTR.DOCS.BOOK.REPORT](../../spec/outr/docs/book/report/NODE.md) Report app chapter (M, P1a)
+- [OUTR.SITE.DL](../../spec/outr/site/dl/NODE.md) Download page (M, P0)
+- [OUTR.SITE.GEN.HOST](../../spec/outr/site/gen/host/NODE.md) Self-hosting guide and generic static-server test (S, P0)
+- [OUTR.SITE.PAGES.APP](../../spec/outr/site/pages/app/NODE.md) Home page app cards and per-app pages with generated status blocks (M, P0)
+- [OUTR.SITE.STATUS.PARITY](../../spec/outr/site/status/parity/NODE.md) Per-release status page embedding parity and coverage reports (M, P0)
+- [OUTR.SITE.STATUS.ROAD](../../spec/outr/site/status/road/NODE.md) Roadmap page from spec-tree phases and the milestone-date check (M, P0)
+- [RPT.DESIGN.STYLE.SET](../../spec/rpt/design/style/set/NODE.md) Style-set model, default style set and style commands (M, P1b)
+- [TRUST.PKG.EXPORT](../../spec/trust/pkg/export/NODE.md) Export an unsigned Result Package to an export root (M, P1a)
+- [VIZ.RENDER.FRAME.GRAPH](../../spec/viz/render/frame/graph/NODE.md) Frame graph, backend selection and ID and depth buffers (M, P1a)
+- [VIZ.RENDER.ORACLE.CPURAST](../../spec/viz/render/oracle/cpurast/NODE.md) CPU reference rasterizer for every render path (M, P1a)
+- [VIZ.RENDER.SCENE.STALE](../../spec/viz/render/scene/stale/NODE.md) Stale marking and digest check (S, P1a)
+- [VIZ.VIEW.CAMERA.NAV](../../spec/viz/view/camera/nav/NODE.md) Transient navigation, standard orientations and fit (M, P1a)
+
+### Wave 18 (16 leaves)
+
+- [AUTO.PROG.INTERP.MARK](../../spec/auto/prog/interp/mark/NODE.md) Mark and execute selected steps (S, P1b)
+- [AUTO.REC.LIFT.PASS](../../spec/auto/rec/lift/pass/NODE.md) Data-handle lifting pass, lift report and lift command (M, P1b)
+- [AUTO.REC.MACRO](../../spec/auto/rec/macro/NODE.md) Live macro recording (S, P1b)
+- [GEO.TYPES.REG](../../spec/geo/types/reg/NODE.md) Element registration and describe command (M, P0)
+- [OUTR.SITE.PAGES.BLOG](../../spec/outr/site/pages/blog/NODE.md) Blog posts, release-note posts and Atom feed (S, P0)
+- [OUTR.SITE.QA.CRAWL](../../spec/outr/site/qa/crawl/NODE.md) Headless-browser crawl and off-origin request gate (M, P0)
+- [RPT.DESIGN.STYLE.OVR](../../spec/rpt/design/style/ovr/NODE.md) Per-block style overrides (S, P1b)
+- [VIZ.RENDER.FRAME.TIER](../../spec/viz/render/frame/tier/NODE.md) Capability tiers and render-info command (S, P1a)
+- [VIZ.RENDER.GLYPH.PATH](../../spec/viz/render/glyph/path/NODE.md) Measurement-path polylines by move type (S, P1b)
+- [VIZ.RENDER.LOD.TRAV](../../spec/viz/render/lod/trav/NODE.md) Screen-space-error traversal, budget and point counts (M, P1a)
+- [VIZ.RENDER.SHADE.MESH](../../spec/viz/render/shade/mesh/NODE.md) Mesh shading, display modes and triangle IDs (M, P1a)
+- [VIZ.SHELL.DOCK.HOST](../../spec/viz/shell/dock/host/NODE.md) Window frame, docking, panel host and viewport host (M, P1a)
+- [VIZ.VIEW.CAMERA.SET](../../spec/viz/view/camera/set/NODE.md) Set-camera and fly-to commands (M, P1a)
+- [VIZ.VIEW.CLIP](../../spec/viz/view/clip/NODE.md) Clipping planes and boxes (M, P1a)
+- [VIZ.VIEW.MULTI](../../spec/viz/view/multi/NODE.md) Multi-viewport layouts and camera sync (M, P1b)
+- [VIZ.VIEW.TRANSP](../../spec/viz/view/transp/NODE.md) Per-entity and per-group transparency (S, P1a)
+
+### Wave 19 (28 leaves)
+
+- [ALN.BFIT.BENCH](../../spec/aln/bfit/bench/NODE.md) Best-fit accuracy and timing corpus (M, P1a)
+- [ALN.PRE.CORPUS](../../spec/aln/pre/corpus/NODE.md) Prealignment test corpus, success metric and benchmark (M, P1b)
+- [AUTO.REC.LIFT.VALUES](../../spec/auto/rec/lift/values/NODE.md) Lifting chosen nominal values and element references (S, P1b)
+- [AUTO.RUN.EXEC.CMD](../../spec/auto/run/exec/cmd/NODE.md) The program.run command, job, progress and cancellation (M, P1b)
+- [GEO.CAD.GROUP](../../spec/geo/cad/group/NODE.md) CAD groups and layers (M, P1b)
+- [GEO.CAD.TOPO.CMD](../../spec/geo/cad/topo/cmd/NODE.md) Describe and validate body commands (S, P1b)
+- [GEO.DIST.CMD](../../spec/geo/dist/cmd/NODE.md) Point projection command (S, P1b)
 - [GEO.FRAME.CMD](../../spec/geo/frame/cmd/NODE.md) Frame, transform and unit commands (M, P0)
 - [GEO.INDEX.CMD](../../spec/geo/index/cmd/NODE.md) Index build and neighbour query commands (S, P0)
-- [GEO.NURBS.ANALYTIC](../../spec/geo/nurbs/analytic/NODE.md) Closed-form analytic curves and surfaces (M, P1b)
-- [GEO.NURBS.INVERT](../../spec/geo/nurbs/invert/NODE.md) Point inversion on NURBS curves and surfaces (M, P1b)
-
-### Wave 18 (2 leaves)
-
-- [GEO.NURBS.CMD](../../spec/geo/nurbs/cmd/NODE.md) Curve and surface evaluation and inversion commands (S, P1b)
-- [GEO.OOC.LAYOUT](../../spec/geo/ooc/layout/NODE.md) Chunk layout, manifest and conversion (M, P1b)
-
-### Wave 19 (2 leaves)
-
-- [GEO.CAD.GROUP](../../spec/geo/cad/group/NODE.md) CAD groups and layers (M, P1b)
-- [GEO.OOC.CACHE](../../spec/geo/ooc/cache/NODE.md) Chunk cache, memory budget and integrity checks (M, P1b)
-
-### Wave 20 (4 leaves)
-
-- [GEO.DIST.MESH](../../spec/geo/dist/mesh/NODE.md) Point-to-triangle and point-to-mesh closest point (M, P1b)
-- [GEO.OOC.QUERY](../../spec/geo/ooc/query/NODE.md) Cross-chunk neighbour queries (M, P1b)
-- [GEO.OOC.STREAM](../../spec/geo/ooc/stream/NODE.md) Ordered full-resolution point streaming (S, P1b)
-- [GEO.SEL.MODEL](../../spec/geo/sel/model/NODE.md) Index-set selections, digests and staleness (M, P0)
-
-### Wave 21 (4 leaves)
-
-- [GEO.DIST.SIGN](../../spec/geo/dist/sign/NODE.md) Signed distance and pseudo-normal rules (M, P1b)
-- [GEO.OOC.LOD](../../spec/geo/ooc/lod/NODE.md) Level-of-detail summaries for display (M, P1b)
-- [GEO.SEL.ALGEBRA](../../spec/geo/sel/algebra/NODE.md) Selection set algebra and grow or shrink (M, P0)
-- [GEO.SEL.RESOLVE](../../spec/geo/sel/resolve/NODE.md) CPU resolution of picks and lassos (M, P0)
-
-### Wave 22 (3 leaves)
-
-- [GEO.DIST.BATCH](../../spec/geo/dist/batch/NODE.md) Deterministic batch projection and options (M, P1b)
 - [GEO.OOC.CMD](../../spec/geo/ooc/cmd/NODE.md) Chunked cloud and LOD commands (S, P1b)
 - [GEO.SEL.CMD](../../spec/geo/sel/cmd/NODE.md) Selection commands (M, P0)
-
-### Wave 23 (1 leaves)
-
-- [GEO.DIST.CMD](../../spec/geo/dist/cmd/NODE.md) Point projection command (S, P1b)
-
-### Wave 24 (6 leaves)
-
-- [ALN.MODEL.ELEM](../../spec/aln/model/elem/NODE.md) Alignment element type and dependency-graph registration (M, P1a)
-- [IO.REG.DETECT](../../spec/io/reg/detect/NODE.md) Format registry listing and content-signature detection (M, P0)
-- [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
-- [KRN.LSQ.TRAIT](../../spec/krn/lsq/trait/NODE.md) Fit contract, result types and degeneracy checks (M, P0)
-- [VIZ.RENDER.HEADLESS](../../spec/viz/render/headless/NODE.md) Headless off-screen renderer (M, P1a)
-- [VIZ.RENDER.RECOVER](../../spec/viz/render/recover/NODE.md) GPU device-loss recovery (M, P1a)
-
-### Wave 25 (8 leaves)
-
-- [ALN.MODEL.ACTIVE](../../spec/aln/model/active/NODE.md) Active alignment and result stamping (S, P1a)
-- [ALN.MODEL.ADOPT](../../spec/aln/model/adopt/NODE.md) Agent provenance and human adoption of alignments (S, P1a)
-- [ALN.MODEL.LIB](../../spec/aln/model/lib/NODE.md) Alignment save and recall library (M, P1a)
-- [IO.REG.PROV](../../spec/io/reg/prov/NODE.md) Source provenance, unit and frame capture (M, P0)
-- [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
-- [KRN.LSQ.INIT](../../spec/krn/lsq/init/NODE.md) Initial estimates for axial primitives (M, P0)
-- [KRN.LSQ.LIN](../../spec/krn/lsq/lin/NODE.md) Least-squares point, line and plane fits (M, P0)
-- [VIZ.RENDER.PREC](../../spec/viz/render/prec/NODE.md) Camera-relative precision and far-origin guard (M, P1a)
-
-### Wave 26 (7 leaves)
-
-- [IO.REG.WRITE](../../spec/io/reg/write/NODE.md) Atomic export writes and overwrite protection (S, P0)
-- [KRN.LSQ.RND](../../spec/krn/lsq/rnd/NODE.md) Least-squares circle and sphere fits (M, P0)
-- [VIZ.PICK.AGENTSEL](../../spec/viz/pick/agentsel/NODE.md) Selection read and change notification for agents (S, P1a)
-- [VIZ.PICK.RESOLVE](../../spec/viz/pick/resolve/NODE.md) Single pick resolved on the CPU (M, P1a)
-- [VIZ.SHELL.SPKRPT](../../spec/viz/shell/spkrpt/NODE.md) Toolkit spike - report designer canvas (M, P1a)
-- [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
-- [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
-
-### Wave 27 (10 leaves)
-
-- [IO.CLOUD.ASCII](../../spec/io/cloud/ascii/NODE.md) ASCII, CSV and XYZ point tables in and out (M, P1b)
-- [IO.CLOUD.PTX](../../spec/io/cloud/ptx/NODE.md) PTX reader with per-scan header transforms (S, P1b)
-- [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
 - [IO.MESH.MBLD](../../spec/io/mesh/mbld/NODE.md) Shared mesh builder, import report and precision report (S, P1b)
-- [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
-- [KRN.CONS.DECL](../../spec/krn/cons/decl/NODE.md) Construction contract and dependency declarations (M, P1a)
-- [KRN.MZ.VOR](../../spec/krn/mz/vor/NODE.md) Exact Voronoi-based minimum-zone 2D circle (M, P0)
-- [KRN.OUT.POL](../../spec/krn/out/pol/NODE.md) Outlier policy types, validation and guards (S, P1b)
+- [OUTR.SITE.QA.RUN](../../spec/outr/site/qa/run/NODE.md) Gate runner, configuration, claim-lint and size gates, combined report (M, P0)
+- [SCAN.CMP.GPUPV.PVGPU](../../spec/scan/cmp/gpupv/pvgpu/NODE.md) GPU deviation preview command (M, P1b)
+- [SCAN.POLY.QUAL](../../spec/scan/poly/qual/NODE.md) Mesh quality report (S, P1b)
+- [VIZ.CAPTURE.VIDEO.READBACK](../../spec/viz/capture/video/readback/NODE.md) Viewport frame readback and capture-rate control (M, P1b)
+- [VIZ.INBOX.DIFF.VISUAL](../../spec/viz/inbox/diff/visual/NODE.md) Visual proposal diff with before/after toggle and split (M, P1a)
+- [VIZ.RENDER.GLYPH.ACTOR](../../spec/viz/render/glyph/actor/NODE.md) Instrument, station, machine and fixture nodes (M, P1b)
+- [VIZ.RENDER.HEADLESS](../../spec/viz/render/headless/NODE.md) Headless off-screen renderer (M, P1a)
+- [VIZ.RENDER.LOD.CACHE](../../spec/viz/render/lod/cache/NODE.md) GPU chunk cache and out-of-core streaming source (M, P1b)
+- [VIZ.RENDER.LOD.RASTER](../../spec/viz/render/lod/raster/NODE.md) Point raster tiers writing point indices (M, P1a)
+- [VIZ.RENDER.RECOVER](../../spec/viz/render/recover/NODE.md) GPU device-loss recovery (M, P1a)
+- [VIZ.RENDER.SHADE.CLIPR](../../spec/viz/render/shade/clipr/NODE.md) Clip-plane raster and display caps (M, P1a)
+- [VIZ.RENDER.SHADE.OIT](../../spec/viz/render/shade/oit/NODE.md) Order-independent transparency and report-quality peeling (M, P1a)
+- [VIZ.SHELL.A11Y.AXTREE](../../spec/viz/shell/a11y/axtree/NODE.md) Widget tree, stable widget IDs, roles and platform exposure (M, P1a)
+- [VIZ.SHELL.DOCK.LAYOUT](../../spec/viz/shell/dock/layout/NODE.md) Role layouts saved and applied as commands (M, P1a)
+- [VIZ.SHELL.DOCK.STATBAR](../../spec/viz/shell/dock/statbar/NODE.md) Status bar as provenance strip (S, P1a)
+- [VIZ.SHELL.THEME.L10N](../../spec/viz/shell/theme/l10n/NODE.md) UI text lookup hook and locale-formatted UI numbers (M, P1a)
+
+### Wave 20 (39 leaves)
+
+- [ALN.BFIT.CONSTR](../../spec/aln/bfit/constr/NODE.md) Degree-of-freedom locks and weights for best-fit (M, P1a)
+- [ALN.BFIT.ICP.CORR](../../spec/aln/bfit/icp/corr/NODE.md) Surface best-fit correspondence search and tie-break (S, P1a)
+- [ALN.DATUM.DOF](../../spec/aln/datum/dof/NODE.md) Degree-of-freedom accounting and unconstrained-DoF policy (M, P1a)
+- [ALN.MODEL.ELEM](../../spec/aln/model/elem/NODE.md) Alignment element type and dependency-graph registration (M, P1a)
+- [ALN.PRE.AMBIG](../../spec/aln/pre/ambig/NODE.md) Prealignment hints and ambiguity reporting (M, P1b)
+- [AUTO.RUN.BATCH](../../spec/auto/run/batch/NODE.md) Batch runs and resume (M, P1b)
+- [AUTO.RUN.EXEC.APPR](../../spec/auto/run/exec/appr/NODE.md) Motion approval hand-off inside a run (M, P2)
+- [AUTO.RUN.PLAY.ANSWER](../../spec/auto/run/play/answer/NODE.md) Operator step answers (M, P1b)
+- [AUTO.RUN.PLAY.SESSION](../../spec/auto/run/play/session/NODE.md) Operator session start and command allow-list (M, P1b)
+- [AUTO.RUN.PLAY.STATE](../../spec/auto/run/play/state/NODE.md) Run state, pause and resume (M, P1b)
+- [GDT.DIM.SECT.SPAN](../../spec/gdt/dim/sect/span/NODE.md) 2D element extraction from a section-curve span (M, P1b)
+- [GDT.DRF.SIM.FIT](../../spec/gdt/drf/sim/fit/NODE.md) Single-feature datum simulation with precedence constraints (M, P1a)
+- [GDT.LOC.DERIV.TYPES](../../spec/gdt/loc/deriv/types/NODE.md) Derived-element type, dispatch and failure reasons (S, P1a)
+- [GDT.ZONE.ZTYPE](../../spec/gdt/zone/ztype/NODE.md) Tolerance-zone shapes and fixed-pose usage (M, P1a)
+- [GEO.CAD.ASSY.CMD](../../spec/geo/cad/assy/cmd/NODE.md) Part assignment and instance placement commands (M, P1b)
+- [GEO.CAD.NOMINAL.CMD](../../spec/geo/cad/nominal/cmd/NODE.md) Extract nominal elements command (M, P1b)
+- [GEO.CAD.TESS.CMD](../../spec/geo/cad/tess/cmd/NODE.md) Tessellation commands (M, P1b)
+- [GEO.SEL.QUERY.CMD](../../spec/geo/sel/query/cmd/NODE.md) Semantic selection commands and re-evaluation (M, P0)
+- [IO.REG.PROV](../../spec/io/reg/prov/NODE.md) Source provenance, unit and frame capture (M, P0)
+- [KRN.CONS.DERIV.EDGE](../../spec/krn/cons/deriv/edge/NODE.md) Edge and trim curves of nominal faces (M, P1b)
+- [KRN.CONS.DERIV.SPT](../../spec/krn/cons/deriv/spt/NODE.md) Surface points with nominal normals (M, P1b)
+- [OUTR.DOCS.QA](../../spec/outr/docs/qa/NODE.md) Docs quality gates and link checks (M, P0)
+- [SCAN.CLOUD.FILTER](../../spec/scan/cloud/filter/NODE.md) Statistical and radius outlier removal (M, P1b)
+- [SCAN.CLOUD.NORM](../../spec/scan/cloud/norm/NODE.md) Normal estimation and orientation (M, P1b)
+- [SCAN.CLOUD.SUBS](../../spec/scan/cloud/subs/NODE.md) Point cloud subsampling (M, P1b)
+- [SCAN.MESHOP.PROV](../../spec/scan/meshop/prov/NODE.md) Mesh operation contract and synthesized-triangle flag (S, P1b)
+- [SCAN.MESHOP.REPAIR.DETECT](../../spec/scan/meshop/repair/detect/NODE.md) Mesh defect detection and check command (M, P1b)
+- [VIZ.CAPTURE.SHOT](../../spec/viz/capture/shot/NODE.md) Screenshot command (M, P1a)
+- [VIZ.CAPTURE.TRACK.REPLAY](../../spec/viz/capture/track/replay/NODE.md) Re-rendered replay with captions (M, P1b)
+- [VIZ.PICK.RESOLVE](../../spec/viz/pick/resolve/NODE.md) Single pick resolved on the CPU (M, P1a)
+- [VIZ.RENDER.GLYPH.STYLUS](../../spec/viz/render/glyph/stylus/NODE.md) Parametric probe, stylus and ghost-probe display (M, P1b)
+- [VIZ.RENDER.LOD.ATTR](../../spec/viz/render/lod/attr/NODE.md) Point attribute modes, eye-dome lighting and excluded style (M, P1a)
+- [VIZ.RENDER.ORACLE.GATE](../../spec/viz/render/oracle/gate/NODE.md) Tolerance masks, golden images and CI comparison gate (M, P1a)
+- [VIZ.RENDER.ORACLE.PROBE](../../spec/viz/render/oracle/probe/NODE.md) Pixel-probe harness (S, P1a)
+- [VIZ.RENDER.PREC](../../spec/viz/render/prec/NODE.md) Camera-relative precision and far-origin guard (M, P1a)
+- [VIZ.SHELL.A11Y.UIHOST](../../spec/viz/shell/a11y/uihost/NODE.md) Control-channel UI host, input injection and origin binding (M, P1a)
+- [VIZ.SHELL.PALETTE.SEARCH](../../spec/viz/shell/palette/search/NODE.md) Command palette search, enabled state and execution (M, P1a)
+- [VIZ.SHELL.TREE.PROBLEMS](../../spec/viz/shell/tree/problems/NODE.md) Problems panel with catalogued fix actions (S, P1a)
+- [VIZ.VIEW.NAMED.RESTORE](../../spec/viz/view/named/restore/NODE.md) Exact restore with missing-reference report and headless check (M, P1a)
+
+### Wave 21 (49 leaves)
+
+- [ALN.BFIT.ICP.METRIC](../../spec/aln/bfit/icp/metric/NODE.md) Point-to-point and point-to-plane residuals and Jacobians (S, P1a)
+- [ALN.BFIT.LOCAL](../../spec/aln/bfit/local/NODE.md) Best-fit scope resolution for local best-fit (S, P1a)
+- [ALN.MODEL.ADOPT](../../spec/aln/model/adopt/NODE.md) Agent provenance and human adoption of alignments (S, P1a)
+- [ALN.MODEL.HIER.CHAIN](../../spec/aln/model/hier/chain/NODE.md) Alignment parent chain, composition to root and invalidation (M, P1a)
+- [ALN.MODEL.LIB](../../spec/aln/model/lib/NODE.md) Alignment save and recall library (M, P1a)
+- [ALN.PRE.GLOBAL.SAMPLE](../../spec/aln/pre/global/sample/NODE.md) Prealignment down-sampling, normals and local shape descriptors (M, P1b)
+- [ALN.QA.REPORT](../../spec/aln/qa/report/NODE.md) Residual report type, statistics and read command (M, P1a)
+- [ALN.XFM.MATRIX](../../spec/aln/xfm/matrix/NODE.md) Known-matrix transform entry and validation (S, P1a)
+- [AUTO.REC.LIFT.SELECT](../../spec/auto/rec/lift/select/NODE.md) Selection translation to semantic queries (M, P1b)
+- [GDT.DRF.SIM.ROCK](../../spec/gdt/drf/sim/rock/NODE.md) Rocking candidate sets within a tie tolerance (S, P1a)
+- [GDT.LOC.DERIV.AXIS](../../spec/gdt/loc/deriv/axis/NODE.md) Axis of an associated feature (M, P1a)
+- [GDT.PROF.DEV](../../spec/gdt/prof/dev/NODE.md) Signed deviations from nominal with approximation error (M, P1b)
+- [IO.CAD.IGES.SECT](../../spec/io/cad/iges/sect/NODE.md) Bounded IGES fixed-column section parser and writer (M, P1b)
+- [IO.CAD.STEP.HDR](../../spec/io/cad/step/hdr/NODE.md) STEP schema detection and unit contexts (S, P1b)
+- [IO.CAD.WORKER.HOST](../../spec/io/cad/worker/host/NODE.md) Worker spawning, OS caps, kill on limit and failure mapping (M, P1b)
+- [IO.REG.ENV.IMPORT](../../spec/io/reg/env/import/NODE.md) Generic import command and transactional import skeleton (M, P0)
+- [SCAN.CLOUD.MGMT](../../spec/scan/cloud/mgmt/NODE.md) Cloud grouping, splitting and merging (M, P1b)
+- [SCAN.CMP.DEV.SURFCAD](../../spec/scan/cmp/dev/surfcad/NODE.md) Surface comparison against CAD command (M, P1b)
+- [SCAN.EDGE.NOMEDGE](../../spec/scan/edge/nomedge/NODE.md) Nominal edge chains and station frames (S, P1b)
+- [SCAN.MESHOP.CUT.INVERT](../../spec/scan/meshop/cut/invert/NODE.md) Invert normals of a mesh or selection (S, P1b)
+- [SCAN.MESHOP.CUT.MERGE](../../spec/scan/meshop/cut/merge/NODE.md) Merge meshes with boundary welding (S, P1b)
+- [SCAN.MESHOP.CUT.PLANE](../../spec/scan/meshop/cut/plane/NODE.md) Plane cut, half-space clip and box clip (M, P1b)
+- [SCAN.MESHOP.DECIM](../../spec/scan/meshop/decim/NODE.md) Thin and refine meshes (M, P1b)
+- [SCAN.MESHOP.HOLES.FAIR](../../spec/scan/meshop/holes/fair/NODE.md) Curvature-continuous fill by refinement and fairing (M, P1b)
+- [SCAN.MESHOP.HOLES.FLAT](../../spec/scan/meshop/holes/flat/NODE.md) Hole fill commands and minimal-area loop triangulation (M, P1b)
+- [SCAN.MESHOP.REPAIR.FIXTOPO](../../spec/scan/meshop/repair/fixtopo/NODE.md) Non-manifold, duplicate, degenerate and orientation fixes (M, P1b)
+- [SCAN.MESHOP.SEL](../../spec/scan/meshop/sel/NODE.md) Geometric mesh selection, delete and isolate (M, P1b)
+- [SCAN.MESHOP.SMOOTH](../../spec/scan/meshop/smooth/NODE.md) Smoothing, spike and noise removal (M, P1b)
+- [SCAN.POLY.SURF.CMD](../../spec/scan/poly/surf/cmd/NODE.md) Polygonize-cloud command, input gate and fidelity check (M, P1b)
+- [SCAN.SECT.DEF](../../spec/scan/sect/def/NODE.md) Section plane definitions and series (S, P1b)
+- [UNC.DEC.TYPE](../../spec/unc/dec/type/NODE.md) Decision rule type and built-in catalog (M, P1a)
+- [UNC.INST.WEIGHT](../../spec/unc/inst/weight/NODE.md) Covariance and weight export for networks and transforms (S, P1b)
+- [UNC.MODEL.DIST](../../spec/unc/model/dist/NODE.md) Input distributions and correlation (M, P1a)
+- [UNC.RDL.FORMAT](../../spec/unc/rdl/format/NODE.md) RDL dataset record format and listing (M, P0)
+- [UNC.RDL.REP](../../spec/unc/rdl/rep/NODE.md) Replay equivalence tolerance table (REP-1) and classifier (M, P0)
+- [UNC.UEC.STMT](../../spec/unc/uec/stmt/NODE.md) Uncertainty statement and evidence class types (M, P1a)
+- [VIZ.CAPTURE.ANIM](../../spec/viz/capture/anim/NODE.md) Turntable and camera-path animations (M, P1b)
+- [VIZ.CAPTURE.EXPORT](../../spec/viz/capture/export/NODE.md) Media export to an approved local root (S, P1a)
+- [VIZ.KIOSK.STEPS.PICK](../../spec/viz/kiosk/steps/pick/NODE.md) Element pick step on a simplified 3D view (M, P1b)
+- [VIZ.PICK.LASSO](../../spec/viz/pick/lasso/NODE.md) Lasso selection as semantic queries (M, P1a)
 - [VIZ.PICK.READOUT](../../spec/viz/pick/readout/NODE.md) Hover readouts (M, P1a)
+- [VIZ.PICK.SELSET.STATE](../../spec/viz/pick/selset/state/NODE.md) Current selection, set-selection command and algebra orchestration (M, P1a)
 - [VIZ.PICK.SNAP](../../spec/viz/pick/snap/NODE.md) Snapping modes (M, P1b)
+- [VIZ.RENDER.SHADE.CAD](../../spec/viz/render/shade/cad/NODE.md) CAD faces, edges and large-assembly display (M, P1b)
+- [VIZ.SHELL.A11Y.AUDIT](../../spec/viz/shell/a11y/audit/NODE.md) Accessibility baseline, CI checks and release audit (M, P1a)
+- [VIZ.SHELL.DOCK.RAIL](../../spec/viz/shell/dock/rail/NODE.md) Workflow rail driven by the dependency graph (S, P1a)
+- [VIZ.SHELL.PALETTE.FORMS](../../spec/viz/shell/palette/forms/NODE.md) Schema-generated argument forms with units and exact decimals (M, P1a)
+- [VIZ.SHELL.PALETTE.KEYMAP](../../spec/viz/shell/palette/keymap/NODE.md) Generated menus, keymap, overrides and keyboard-completeness check (M, P1a)
+- [VIZ.VIEW.VISIB.MODEL](../../spec/viz/view/visib/model/NODE.md) Visibility rules, layers, explorer filters and precedence (M, P1a)
 
-### Wave 28 (13 leaves)
+### Wave 22 (68 leaves)
 
-- [IO.CORP.FUZZ](../../spec/io/corp/fuzz/NODE.md) Fuzz targets for every reader and CI fuzz budgets (M, P0)
-- [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
+- [ALN.MODEL.HIER.FRAME](../../spec/aln/model/hier/frame/NODE.md) Named frames nested under alignments and frames from alignments (S, P1a)
+- [ALN.MODEL.HIER.GROUP](../../spec/aln/model/hier/group/NODE.md) Alignment groups (S, P1a)
+- [ALN.QA.COND](../../spec/aln/qa/cond/NODE.md) Conditioning and weak-DoF diagnostics (M, P1a)
+- [ALN.RPS.CLASSIC](../../spec/aln/rps/classic/NODE.md) Classic 3-2-1 alignment and frame from geometry (M, P1a)
+- [ALN.RPS.LOCK](../../spec/aln/rps/lock/NODE.md) RPS alignment with per-point direction locks (M, P1a)
+- [ALN.XFM.PAIRS](../../spec/aln/xfm/pairs/NODE.md) Rigid point-pair transform solver (M, P1a)
+- [GDT.PROF.LINE.SECT](../../spec/gdt/prof/line/sect/NODE.md) Section bands and line-element deviations (S, P1b)
+- [GDT.PROF.ZDEF.UNIF](../../spec/gdt/prof/zdef/unif/NODE.md) Constant-width zone intervals and dispatch (S, P1b)
+- [IO.CAD.IGES.ENT](../../spec/io/cad/iges/ent/NODE.md) IGES entity mapping to GEO elements with transforms as frames (M, P1b)
+- [IO.CAD.PMI.READ](../../spec/io/cad/pmi/read/NODE.md) AP242 PMI entity graph extraction and semantic or graphic classification (M, P1b)
+- [IO.CAD.STEP.GEOM](../../spec/io/cad/step/geom/NODE.md) STEP curve and surface mapping with approximation error (M, P1b)
+- [IO.CLOUD.STREAM](../../spec/io/cloud/stream/NODE.md) Streaming point sink and attribute selection for cloud readers and writers (M, P1b)
 - [IO.CORP.SCORE](../../spec/io/corp/score/NODE.md) Round-trip and fidelity metrics and the scoring command (M, P0)
-- [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
+- [IO.DMIS.EXPORT.OUTW](../../spec/io/dmis/export/outw/NODE.md) DMIS output-file export from features and results (M, P4)
+- [IO.DMIS.EXPORT.PROGW](../../spec/io/dmis/export/progw/NODE.md) DMIS program writer and program export from QIF definitions (M, P4)
+- [IO.DMIS.PROG.CMD](../../spec/io/dmis/prog/cmd/NODE.md) DMIS program import command, strict mode and import report (S, P2)
 - [IO.MESH.OBJ](../../spec/io/mesh/obj/NODE.md) OBJ geometry reader and writer (S, P1b)
 - [IO.MESH.PLY](../../spec/io/mesh/ply/NODE.md) PLY reader and writer (ASCII and binary, meshes and point sets) (M, P1b)
 - [IO.MESH.STL](../../spec/io/mesh/stl/NODE.md) STL reader and writer (ASCII and binary) (M, P1b)
 - [IO.MESH.TMF](../../spec/io/mesh/tmf/NODE.md) 3MF core mesh reader and writer (M, P1b)
-- [KRN.ENV.XCHK](../../spec/krn/env/xchk/NODE.md) Combinatorial cross-checks for MCC and MIC (M, P1a)
-- [KRN.OUT.DISC](../../spec/krn/out/disc/NODE.md) Excluded-set record and impact disclosure (S, P1b)
-- [KRN.OUT.GATE](../../spec/krn/out/gate/NODE.md) Distance-to-nominal and tolerance-band policies (S, P1b)
-- [KRN.OUT.RANSAC](../../spec/krn/out/ransac/NODE.md) Seeded RANSAC consensus policy (M, P1b)
-- [KRN.OUT.STAT](../../spec/krn/out/stat/NODE.md) Residual-statistics policies (n-sigma and robust scale) (S, P1b)
-
-### Wave 29 (4 leaves)
-
-- [IO.CORP.GATE](../../spec/io/corp/gate/NODE.md) Generated fidelity reports and the CI regression gate (S, P0)
+- [IO.QIF.JSON.CMD](../../spec/io/qif/json/cmd/NODE.md) QIF-JSON import and export commands (M, P0)
+- [IO.QIF.XML.CMD](../../spec/io/qif/xml/cmd/NODE.md) QIF-XML import and export commands with original-bytes blob (M, P0)
+- [IO.REG.PLUGIN.ABI](../../spec/io/reg/plugin/abi/NODE.md) Versioned format-plugin contract and descriptor (M, P1a)
+- [IO.RES.AQDEF.IN](../../spec/io/res/aqdef/in/NODE.md) AQDEF DFQ import as historical transcribed results (M, P1b)
+- [IO.RES.CSV.IN](../../spec/io/res/csv/in/NODE.md) Result table import through a column map (M, P1a)
 - [IO.RES.REPORT](../../spec/io/res/report/NODE.md) Report-file export envelope (S, P1a)
-- [KRN.OUT.RUN](../../spec/krn/out/run/NODE.md) Reject-outliers command and reject-and-refit loop (M, P1b)
-- [KRN.OUT.SEL](../../spec/krn/out/sel/NODE.md) Point-selection command (S, P1b)
-
-### Wave 30 (7 leaves)
-
-- [ALN.QA.CMP](../../spec/aln/qa/cmp/NODE.md) Comparison of two alignments (S, P1a)
-- [ALN.QA.HIST](../../spec/aln/qa/hist/NODE.md) Convergence history and published convergence criteria (S, P1a)
-- [ALN.QA.REPORT](../../spec/aln/qa/report/NODE.md) Residual report type, statistics and read command (M, P1a)
-- [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
-- [UNC.RDL.FORMAT](../../spec/unc/rdl/format/NODE.md) RDL dataset record format and listing (M, P0)
-- [UNC.RDL.REP](../../spec/unc/rdl/rep/NODE.md) Replay equivalence tolerance table (REP-1) and classifier (M, P0)
-- [UNC.UEC.STMT](../../spec/unc/uec/stmt/NODE.md) Uncertainty statement and evidence class types (M, P1a)
-
-### Wave 31 (6 leaves)
-
-- [ALN.QA.COND](../../spec/aln/qa/cond/NODE.md) Conditioning and weak-DoF diagnostics (M, P1a)
-- [TRUST.PKG.EXPORT](../../spec/trust/pkg/export/NODE.md) Export an unsigned Result Package to an export root (M, P1a)
-- [TRUST.PKG.READER](../../spec/trust/pkg/reader/NODE.md) Bounded package reader and inspect command (M, P0)
-- [UNC.RDL.FREEZE](../../spec/unc/rdl/freeze/NODE.md) Frozen RDL release sets and suite digest (S, P0)
-- [UNC.UEC.CLASS](../../spec/unc/uec/class/NODE.md) Evidence class assignment rules (S, P1a)
-- [UNC.UEC.EXPL](../../spec/unc/uec/expl/NODE.md) Show and explain uncertainty queries (M, P1a)
-
-### Wave 32 (10 leaves)
-
-- [ALN.BFIT.BENCH](../../spec/aln/bfit/bench/NODE.md) Best-fit accuracy and timing corpus (M, P1a)
-- [ALN.BFIT.CONSTR](../../spec/aln/bfit/constr/NODE.md) Degree-of-freedom locks and weights for best-fit (M, P1a)
-- [ALN.BFIT.LOCAL](../../spec/aln/bfit/local/NODE.md) Best-fit scope resolution for local best-fit (S, P1a)
-- [ALN.BFIT.STOP](../../spec/aln/bfit/stop/NODE.md) Best-fit stopping criteria and non-convergence handling (S, P1a)
-- [ALN.RPS.CLASSIC](../../spec/aln/rps/classic/NODE.md) Classic 3-2-1 alignment and frame from geometry (M, P1a)
-- [ALN.RPS.LOCK](../../spec/aln/rps/lock/NODE.md) RPS alignment with per-point direction locks (M, P1a)
-- [ALN.XFM.MATRIX](../../spec/aln/xfm/matrix/NODE.md) Known-matrix transform entry and validation (S, P1a)
-- [UNC.RDL.AST](../../spec/unc/rdl/ast/NODE.md) Algorithm self-test runner and point-of-use run (M, P0)
-- [UNC.RDL.LINT](../../spec/unc/rdl/lint/NODE.md) Kernel reference-data denylist (S, P0)
-- [UNC.UEC.DECL](../../spec/unc/uec/decl/NODE.md) Declared uncertainty command (S, P1a)
-
-### Wave 33 (3 leaves)
-
-- [ALN.XFM.PAIRS](../../spec/aln/xfm/pairs/NODE.md) Rigid point-pair transform solver (M, P1a)
-- [UNC.MODEL.BIND](../../spec/unc/model/bind/NODE.md) Model binding to characteristics and human adoption (M, P1a)
-- [UNC.MODEL.DIST](../../spec/unc/model/dist/NODE.md) Input distributions and correlation (M, P1a)
-
-### Wave 34 (6 leaves)
-
-- [ALN.XFM.LEAP](../../spec/aln/xfm/leap/NODE.md) Single-device leapfrog transform (M, P3)
-- [ALN.XFM.SCALE](../../spec/aln/xfm/scale/NODE.md) Similarity point-pair transform with uniform scale (S, P1a)
-- [UNC.INST.SCHEMA](../../spec/unc/inst/schema/NODE.md) Instrument model data format, import, binding and range check (M, P1a)
-- [UNC.INST.WEIGHT](../../spec/unc/inst/weight/NODE.md) Covariance and weight export for networks and transforms (S, P1b)
-- [UNC.PROP.RANK](../../spec/unc/prop/rank/NODE.md) Contributor ranking (S, P1a)
-- [UNC.PROP.VALID](../../spec/unc/prop/valid/NODE.md) Validation of LPU against Monte Carlo (S, P1a)
-
-### Wave 35 (4 leaves)
-
-- [ALN.PRE.AMBIG](../../spec/aln/pre/ambig/NODE.md) Prealignment hints and ambiguity reporting (M, P1b)
-- [ALN.PRE.CORPUS](../../spec/aln/pre/corpus/NODE.md) Prealignment test corpus, success metric and benchmark (M, P1b)
-- [ALN.PRE.PAIRS](../../spec/aln/pre/pairs/NODE.md) Picked point-pair initial alignment and quick alignment (M, P1a)
-- [UNC.PROP.SELECT](../../spec/unc/prop/select/NODE.md) Method selection, estimator policy and statement commit (M, P1a)
-
-### Wave 36 (1 leaves)
-
-- [UNC.DEC.TYPE](../../spec/unc/dec/type/NODE.md) Decision rule type and built-in catalog (M, P1a)
-
-### Wave 37 (2 leaves)
-
+- [IO.RES.TRANS.DMIS](../../spec/io/res/trans/dmis/NODE.md) DMIS results import command (M, P1a)
+- [MIG.SRC.GATE](../../spec/mig/src/gate/NODE.md) Admission gate, check command and register build check (S, P1a)
+- [SCAN.CLOUD.REG.GLOBAL](../../spec/scan/cloud/reg/global/NODE.md) Global multi-scan registration command (M, P1b)
+- [SCAN.CMP.ACT](../../spec/scan/cmp/act/NODE.md) Actual-to-actual surface comparison (M, P1b)
+- [SCAN.CMP.BAND](../../spec/scan/cmp/band/NODE.md) Tolerance bands and kernel colour binning (M, P1b)
+- [SCAN.CMP.EXTR](../../spec/scan/cmp/extr/NODE.md) Maximum and minimum deviation search (S, P1b)
+- [SCAN.CMP.GPUPV.XCHECK](../../spec/scan/cmp/gpupv/xcheck/NODE.md) GPU preview versus CPU field cross-check (S, P1b)
+- [SCAN.EDGE.MESHBND](../../spec/scan/edge/meshbnd/NODE.md) Edge extraction interface and mesh free-boundary method (S, P1b)
+- [SCAN.MESHOP.CUT.CURVE](../../spec/scan/meshop/cut/curve/NODE.md) Closed-curve cut and selection cut-out (M, P1b)
+- [SCAN.MESHOP.HOLES.CLOSE](../../spec/scan/meshop/holes/close/NODE.md) Close a mesh into a watertight body (M, P1b)
+- [SCAN.MESHOP.REPAIR.FIXSELF](../../spec/scan/meshop/repair/fixself/NODE.md) Self-intersection removal and re-triangulation (M, P1b)
+- [SCAN.POLY.MULTI.REDUCE](../../spec/scan/poly/multi/reduce/NODE.md) Overlap reduction rules and scan contribution report (M, P1b)
+- [SCAN.SECT.SLICE](../../spec/scan/sect/slice/NODE.md) Cloud slab slicing and fit hand-off (M, P1b)
 - [UNC.DEC.BIND](../../spec/unc/dec/bind/NODE.md) Rule binding, change audit and adoption (M, P1a)
 - [UNC.DEC.EVAL](../../spec/unc/dec/eval/NODE.md) Rule evaluation and conformance probability (M, P1a)
+- [UNC.INST.PORT.ARM](../../spec/unc/inst/port/arm/NODE.md) Articulated-arm point covariance without joint data (S, P1b)
+- [UNC.INST.PORT.OPT](../../spec/unc/inst/port/opt/NODE.md) Scanner point covariance from range and incidence (S, P1b)
+- [UNC.INST.PORT.SPH](../../spec/unc/inst/port/sph/NODE.md) Spherical observation covariance for trackers and total stations (S, P1b)
+- [UNC.INST.SCHEMA](../../spec/unc/inst/schema/NODE.md) Instrument model data format, import, binding and range check (M, P1a)
+- [UNC.MODEL.GRAPH.SCHEMA](../../spec/unc/model/graph/schema/NODE.md) Model graph types, canonical form and digest (M, P1a)
+- [UNC.ORS.TRACE](../../spec/unc/ors/trace/NODE.md) Suite case format, citation checks and suite versioning (M, P1a)
+- [UNC.PROP.RANK](../../spec/unc/prop/rank/NODE.md) Contributor ranking (S, P1a)
+- [UNC.PROP.VALID](../../spec/unc/prop/valid/NODE.md) Validation of LPU against Monte Carlo (S, P1a)
+- [UNC.RDL.BLIND.CHAL](../../spec/unc/rdl/blind/chal/NODE.md) The rdl.submit_challenge@1 command (S, P1b)
+- [UNC.RDL.BLIND.ROT](../../spec/unc/rdl/blind/rot/NODE.md) Rotation and disclosure as tier G (S, P1b)
+- [UNC.RDL.EXT.LIC](../../spec/unc/rdl/ext/lic/NODE.md) Licence evidence records and visibility gating (S, P0)
+- [UNC.RDL.FREEZE](../../spec/unc/rdl/freeze/NODE.md) Frozen RDL release sets and suite digest (S, P0)
+- [UNC.RDL.GEN.HPREC](../../spec/unc/rdl/gen/hprec/NODE.md) High-precision arithmetic, rounding and generator record (M, P0)
+- [UNC.RDL.TRACIM.ARCH](../../spec/unc/rdl/tracim/arch/NODE.md) Verbatim archive of exchanges and reports (S, P0)
+- [UNC.UEC.CLASS](../../spec/unc/uec/class/NODE.md) Evidence class assignment rules (S, P1a)
+- [UNC.UEC.EXPL](../../spec/unc/uec/expl/NODE.md) Show and explain uncertainty queries (M, P1a)
+- [VIZ.CAPTURE.REC.REDACT](../../spec/viz/capture/rec/redact/NODE.md) Panel redaction marks and frame masking (S, P1b)
+- [VIZ.INBOX.ACTIONS.REQS](../../spec/viz/inbox/actions/reqs/NODE.md) Pending request review, approval and rejection (M, P1a)
+- [VIZ.INBOX.DIFF.HEADER](../../spec/viz/inbox/diff/header/NODE.md) Proposal header with brief, verdict and confidence words (S, P1a)
+- [VIZ.INBOX.GATES.LEAN](../../spec/viz/inbox/gates/lean/NODE.md) Count-confirm and reason gate steps (S, P1a)
+- [VIZ.INBOX.LIST](../../spec/viz/inbox/list/NODE.md) Proposal list (M, P1a)
+- [VIZ.KIOSK.SESSION](../../spec/viz/kiosk/session/NODE.md) Kiosk session enter, exit and resume (M, P1b)
+- [VIZ.OVERLAY.STATUS](../../spec/viz/overlay/status/NODE.md) Status markers, locked palette guard and provenance badges (M, P1a)
+- [VIZ.PICK.SELSET.ARGS](../../spec/viz/pick/selset/args/NODE.md) Picked point pairs and datum features as typed command arguments (S, P1a)
+- [VIZ.PICK.SELSET.NAMED](../../spec/viz/pick/selset/named/NODE.md) Named selection sets (S, P1a)
+- [VIZ.SHELL.A11Y.DESCR](../../spec/viz/shell/a11y/descr/NODE.md) Deterministic describe-view command (M, P1a)
+- [VIZ.VIEW.VISIB.CMD](../../spec/viz/view/visib/cmd/NODE.md) Set-visibility command with isolate, show-only and layers (M, P1a)
 
-### Wave 38 (1 leaves)
+### Wave 23 (66 leaves)
 
+- [ALN.BFIT.FEAT.SOLVE](../../spec/aln/bfit/feat/solve/NODE.md) Weighted feature best-fit solve, 2D mode and determinacy check (M, P1a)
+- [ALN.BFIT.ICP.LOOP](../../spec/aln/bfit/icp/loop/NODE.md) Surface best-fit iteration loop and R1 entry point (M, P1a)
+- [ALN.DATUM.ELEM.LEVELS](../../spec/aln/datum/elem/levels/NODE.md) Priority-level element solve with DoF projectors (M, P1a)
+- [ALN.MODEL.HIER.DEL](../../spec/aln/model/hier/del/NODE.md) Alignment deletion with dependent handling (S, P1a)
+- [ALN.PRE.GLOBAL.HYPO](../../spec/aln/pre/global/hypo/NODE.md) Pose hypothesis generation by descriptor consensus and principal axes (M, P1b)
+- [ALN.PRE.PAIRS](../../spec/aln/pre/pairs/NODE.md) Picked point-pair initial alignment and quick alignment (M, P1a)
+- [ALN.RPS.VECTOR.LOOP](../../spec/aln/rps/vector/loop/NODE.md) Vector-point iterative locked-direction solve (M, P1a)
+- [ALN.XFM.SCALE](../../spec/aln/xfm/scale/NODE.md) Similarity point-pair transform with uniform scale (S, P1a)
+- [FLOW.REPORT.J8](../../spec/flow/report/j8/NODE.md) J8 supplier package intake with tamper detection (M, P1a)
+- [FLOW.REPORT.KBD](../../spec/flow/report/kbd/NODE.md) Keyboard-only variants of J2 and J3 (S, P1b)
+- [FLOW.RUNNER.CHKUI](../../spec/flow/runner/chkui/NODE.md) UI and presentation-track quality-check evaluators (M, P1a)
+- [GDT.CHAR.MODEL.TYPES](../../spec/gdt/char/model/types/NODE.md) Characteristic and FCF types with JSON Schemas (M, P1a)
+- [IO.CAD.EXPORT.IGESW](../../spec/io/cad/export/igesw/NODE.md) IGES export of geometric elements (M, P1b)
+- [IO.CAD.EXPORT.STEPW](../../spec/io/cad/export/stepw/NODE.md) STEP export of geometric elements (M, P1b)
+- [IO.CAD.PMI.CTX](../../spec/io/cad/pmi/ctx/NODE.md) Proposed spec context from dialect evidence in the file (S, P1b)
+- [IO.CAD.PMI.DAT](../../spec/io/cad/pmi/dat/NODE.md) Datum features, datum targets and datum reference frames to QIF (M, P1b)
+- [IO.CAD.PMI.DIM](../../spec/io/cad/pmi/dim/NODE.md) Dimensions with plus-minus, limits and fits to QIF characteristics (M, P1b)
+- [IO.CAD.STEP.BREP](../../spec/io/cad/step/brep/NODE.md) STEP B-rep topology to GEO CAD bodies with entity numbers and names (M, P1b)
+- [IO.CLOUD.ASCII](../../spec/io/cloud/ascii/NODE.md) ASCII, CSV and XYZ point tables in and out (M, P1b)
+- [IO.CLOUD.E57.READ](../../spec/io/cloud/e57/read/NODE.md) E57 import command with per-scan poses as frames (M, P1b)
+- [IO.CLOUD.E57.WRITE](../../spec/io/cloud/e57/write/NODE.md) E57 export command with bit-exact f64 round trip (M, P1b)
+- [IO.CLOUD.LAS.CMD](../../spec/io/cloud/las/cmd/NODE.md) LAS, LAZ and COPC import and export commands (M, P1b)
+- [IO.CLOUD.PTX](../../spec/io/cloud/ptx/NODE.md) PTX reader with per-scan header transforms (S, P1b)
+- [IO.CORP.GATE](../../spec/io/corp/gate/NODE.md) Generated fidelity reports and the CI regression gate (S, P0)
+- [IO.REG.PLUGIN.DRAW](../../spec/io/reg/plugin/draw/NODE.md) Bounded drawing reader for PDF pages and raster images (M, P1a)
+- [IO.REG.PLUGIN.NATIVE](../../spec/io/reg/plugin/native/NODE.md) Out-of-process host for native plugins (M, P1b)
+- [IO.REG.PLUGIN.VALID](../../spec/io/reg/plugin/valid/NODE.md) Plugin output validation and plugin provenance (M, P1b)
+- [IO.REG.PLUGIN.WASM](../../spec/io/reg/plugin/wasm/NODE.md) Sandboxed WASM component host for plugins (M, P1b)
+- [IO.RES.QIFR.RIN](../../spec/io/res/qifr/rin/NODE.md) QIF Results import as transcribed results (M, P1a)
+- [IO.RES.QIFR.STATS](../../spec/io/res/qifr/stats/NODE.md) QIF Statistics import and export (M, P1a)
+- [MIG.LADDER.ASSESS](../../spec/mig/ladder/assess/NODE.md) Stage assessment for a project and incumbent source (M, P1a)
+- [MIG.LADDER.STATUS](../../spec/mig/ladder/status/NODE.md) Per-project stage records and ladder status view (M, P1a)
+- [MIG.TEMPL.MAP](../../spec/mig/templ/map/NODE.md) Form import and form-map draft template (M, P1a)
+- [SCAN.EDGE.EST.SILH](../../spec/scan/edge/est/silh/NODE.md) Projected-silhouette edge method (S, P1b)
+- [SCAN.EDGE.EST.TANG](../../spec/scan/edge/est/tang/NODE.md) Tangency-break edge method (M, P1b)
+- [SCAN.MESHOP.REPAIR.RCMD](../../spec/scan/meshop/repair/rcmd/NODE.md) Mesh repair command and before/after report (S, P1b)
+- [SCAN.POLY.MULTI.CMD](../../spec/scan/poly/multi/cmd/NODE.md) Polygonize-scans command (S, P1b)
+- [SCAN.SECT.CUT](../../spec/scan/sect/cut/NODE.md) Section creation through meshes, clouds and CAD (M, P1b)
 - [UNC.DEC.RISK](../../spec/unc/dec/risk/NODE.md) Specific and global conformity risk (M, P1a)
+- [UNC.INST.IEMPS](../../spec/unc/inst/iemps/NODE.md) Instrument Error Model Parameter Sets for virtual-CMM simulation (M, P2)
+- [UNC.INST.MPE.DERIVE](../../spec/unc/inst/mpe/derive/NODE.md) Mapping-table format, review state and derivation command (M, P1a)
+- [UNC.INST.PORT.EVAL](../../spec/unc/inst/port/eval/NODE.md) Observation covariance entry point, dispatch, checks and batch (S, P1b)
+- [UNC.MODEL.GRAPH.CHECK](../../spec/unc/model/graph/check/NODE.md) Structural validation passes (M, P1a)
+- [UNC.MODEL.SUBST.INPUT](../../spec/unc/model/subst/input/NODE.md) Substitution inputs, procedure profiles and condition checks (M, P1a)
+- [UNC.RDL.AST](../../spec/unc/rdl/ast/NODE.md) Algorithm self-test runner and point-of-use run (M, P0)
+- [UNC.RDL.EXT.IMP](../../spec/unc/rdl/ext/imp/NODE.md) Importer contract and the rdl.import_external@1 command (M, P0)
+- [UNC.RDL.GEN.LSNULL](../../spec/unc/rdl/gen/lsnull/NODE.md) Least-squares null-space generators for six primitives (M, P0)
+- [UNC.RDL.GEN.XCHECK](../../spec/unc/rdl/gen/xcheck/NODE.md) Oracle cross-check recording and gating (S, P0)
+- [UNC.RDL.LINT](../../spec/unc/rdl/lint/NODE.md) Kernel reference-data denylist (S, P0)
+- [UNC.RDL.TRACIM.RUN](../../spec/unc/rdl/tracim/run/NODE.md) The rdl.submit_tracim@1 command over a protocol trait (M, P0)
+- [UNC.UEC.DECL](../../spec/unc/uec/decl/NODE.md) Declared uncertainty command (S, P1a)
+- [UNC.UEC.QIF](../../spec/unc/uec/qif/NODE.md) QIF 3.0 mapping of the uncertainty statement (M, P1a)
+- [VIZ.CAPTURE.OSCAP.SRC](../../spec/viz/capture/oscap/src/NODE.md) Window frame source contract, permission fallback and redaction (M, P2)
+- [VIZ.CAPTURE.REC.INDIC](../../spec/viz/capture/rec/indic/NODE.md) Unsuppressible recording indicator (S, P1b)
+- [VIZ.INBOX.ACTIONS.REJECT](../../spec/viz/inbox/actions/reject/NODE.md) Reject a proposal and keep it in history (S, P1a)
+- [VIZ.INBOX.STALE](../../spec/viz/inbox/stale/NODE.md) Stale proposal detection and apply gate (S, P1a)
+- [VIZ.KIOSK.CYCLE.ESCAL](../../spec/viz/kiosk/cycle/escal/NODE.md) Failed-step decisions and supervisor escalation (M, P1b)
+- [VIZ.KIOSK.PROGPICK](../../spec/viz/kiosk/progpick/NODE.md) Released-program chooser and serial entry (S, P1b)
+- [VIZ.KIOSK.STATUS](../../spec/viz/kiosk/status/NODE.md) Large live status display (S, P1b)
+- [VIZ.KIOSK.STEPS.LOCK](../../spec/viz/kiosk/steps/lock/NODE.md) Kiosk step host, response allow-list and step sequencing (M, P1b)
+- [VIZ.OVERLAY.CMAP.REBIN](../../spec/viz/overlay/cmap/rebin/NODE.md) Kernel re-binning round trip and updating state (S, P1b)
+- [VIZ.PICK.AGENTSEL](../../spec/viz/pick/agentsel/NODE.md) Selection read and change notification for agents (S, P1a)
+- [VIZ.SHELL.THEME.TOKENS](../../spec/viz/shell/theme/tokens/NODE.md) Runtime token model, theme switching and skin validation (M, P1a)
+- [VIZ.SHELL.TREE.ELTREE](../../spec/viz/shell/tree/eltree/NODE.md) Virtualised element tree with status chips and read-only provenance (M, P1a)
+- [VIZ.SHELL.TREE.RESULTS](../../spec/viz/shell/tree/results/NODE.md) Results table with outcome filters and fly-to (M, P1a)
+- [VIZ.SHELL.TREE.WHY](../../spec/viz/shell/tree/why/NODE.md) Why? provenance panel host (M, P1a)
 
-### Wave 39 (1 leaves)
+### Wave 24 (38 leaves)
 
+- [ALN.BFIT.FEAT.CMD](../../spec/aln/bfit/feat/cmd/NODE.md) Feature best-fit command and alignment wrapping (S, P1a)
+- [ALN.BFIT.ICP.CMD](../../spec/aln/bfit/icp/cmd/NODE.md) Surface best-fit command and alignment wrapping (S, P1a)
+- [ALN.DATUM.ELEM.CMD](../../spec/aln/datum/elem/cmd/NODE.md) Element alignment command and alignment wrapping (S, P1a)
+- [ALN.MODEL.ACTIVE](../../spec/aln/model/active/NODE.md) Active alignment and result stamping (S, P1a)
+- [ALN.PRE.GLOBAL.SCORE](../../spec/aln/pre/global/score/NODE.md) Prealignment candidate scoring and short refinement (M, P1b)
+- [ALN.QA.CMP](../../spec/aln/qa/cmp/NODE.md) Comparison of two alignments (S, P1a)
+- [ALN.RPS.ITER](../../spec/aln/rps/iter/NODE.md) Iterative 3-2-1 alignment on nominal-located points (S, P1a)
+- [ALN.RPS.VECTOR.CMD](../../spec/aln/rps/vector/cmd/NODE.md) Vector-point alignment command and alignment wrapping (S, P1a)
+- [ALN.RPS.VECTOR.SURF](../../spec/aln/rps/vector/surf/NODE.md) Measured-surface deviation provider for vector points (S, P1b)
+- [ALN.XFM.LEAP](../../spec/aln/xfm/leap/NODE.md) Single-device leapfrog transform (M, P3)
+- [FLOW.RUNNER.NIGHTLY](../../spec/flow/runner/nightly/NODE.md) Nightly suite runner command (M, P0)
+- [GDT.CHAR.MODEL.CMDS](../../spec/gdt/char/model/cmds/NODE.md) Create and edit characteristic commands (M, P1a)
+- [GDT.CHAR.MODEL.QIFMAP](../../spec/gdt/char/model/qifmap/NODE.md) Mapping between QIF model types and characteristic types (M, P1a)
+- [IO.CAD.PMI.TOL](../../spec/io/cad/pmi/tol/NODE.md) Geometric tolerances and modifiers to QIF characteristics (M, P1b)
+- [IO.CAD.STEP.ASM](../../spec/io/cad/step/asm/NODE.md) STEP product structure and placements as frames and instances (M, P1b)
+- [IO.CAD.XLATE.DESC](../../spec/io/cad/xlate/desc/NODE.md) Translator descriptor schema and native-format recognition (S, P1b)
+- [MIG.TEMPL.ADOPT](../../spec/mig/templ/adopt/NODE.md) Agent provenance and human adoption of form maps (S, P1a)
+- [QUAL.IQOQ.OQ](../../spec/qual/iqoq/oq/NODE.md) Operational qualification run (M, P1a)
+- [RPT.BALLOON.SHEET.IMPORT](../../spec/rpt/balloon/sheet/import/NODE.md) Drawing revision import and sheet coordinates (M, P1a)
+- [RPT.CATALOG.IMPORT.BATCH](../../spec/rpt/catalog/import/batch/NODE.md) Historical import command, duplicates and limits (M, P1b)
+- [SCAN.CLOUD.REG.PAIR](../../spec/scan/cloud/reg/pair/NODE.md) Pairwise scan registration command (M, P1b)
+- [SCAN.EDGE.EST.DEFS](../../spec/scan/edge/est/defs/NODE.md) Default edge method per data kind and defaults profile (S, P1b)
+- [SCAN.SECT.WHISK](../../spec/scan/sect/whisk/NODE.md) Section comparison, whiskers and statistics (M, P1b)
 - [UNC.DEC.DEFAULT](../../spec/unc/dec/default/NODE.md) Rule resolution, dialect defaults and decide queries (M, P1a)
+- [UNC.INST.LIB.FORMAT](../../spec/unc/inst/lib/format/NODE.md) Profile library release format and profile reads (M, P1a)
+- [UNC.MODEL.CONTRIB.CONTRACT](../../spec/unc/model/contrib/contract/NODE.md) Contributor contract, expansion and read commands (M, P1a)
+- [UNC.MODEL.GRAPH.STORE](../../spec/unc/model/graph/store/NODE.md) Create, validate and show commands and version immutability (M, P1a)
+- [UNC.MODEL.SUBST.CMD](../../spec/unc/model/subst/cmd/NODE.md) Substitution command, result and UEC-3 validation record (M, P1a)
+- [UNC.ORS.RUN](../../spec/unc/ors/run/NODE.md) Suite execution in CI and published pass statistics (M, P1a)
+- [UNC.RDL.GEN.GEOM](../../spec/unc/rdl/gen/geom/NODE.md) Partial-coverage and extreme-aspect-ratio families (S, P0)
+- [UNC.RDL.GEN.STRESS](../../spec/unc/rdl/gen/stress/NODE.md) Noise-level and outlier stress families (S, P0)
+- [VIZ.CAPTURE.OSCAP.LINUX](../../spec/viz/capture/oscap/linux/NODE.md) Linux window-capture backend (M, P2)
+- [VIZ.CAPTURE.OSCAP.MAC](../../spec/viz/capture/oscap/mac/NODE.md) macOS window-capture backend (M, P2)
+- [VIZ.CAPTURE.OSCAP.WIN](../../spec/viz/capture/oscap/win/NODE.md) Windows window-capture backend (M, P2)
+- [VIZ.KIOSK.CYCLE.SUMMARY](../../spec/viz/kiosk/cycle/summary/NODE.md) Cycle summary, loop progress and end-of-cycle outcomes (S, P1b)
+- [VIZ.OVERLAY.CMAP.LUT](../../spec/viz/overlay/cmap/lut/NODE.md) Bin-index LUT pass and continuous mode (M, P1b)
+- [VIZ.SHELL.THEME.SCALE](../../spec/viz/shell/theme/scale/NODE.md) UI scale, target sizes and reduced motion (S, P1a)
+- [VIZ.SHELL.TREE.INSPECT](../../spec/viz/shell/tree/inspect/NODE.md) Inspector property grid (M, P1a)
 
-### Wave 40 (2 leaves)
+### Wave 25 (15 leaves)
 
-- [GDT.CHAR.DPROF](../../spec/gdt/char/dprof/NODE.md) Defaults profiles: immutable versioned objects (M, P1a)
+- [ALN.PRE.GLOBAL.CMD](../../spec/aln/pre/global/cmd/NODE.md) Prealignment command, R1 pipeline entry and alignment wrapping (S, P1b)
+- [FLOW.DEADEND.WHY](../../spec/flow/deadend/why/NODE.md) Why? and fix-reachability coverage check over golden journals (M, P1a)
+- [GDT.CHAR.MODEL.RTRIP](../../spec/gdt/char/model/rtrip/NODE.md) QIF corpus round-trip test for characteristics (S, P1a)
+- [IO.CAD.WORKER.BIN](../../spec/io/cad/worker/bin/NODE.md) Sandboxed CAD worker executable (S, P1b)
+- [RPT.BALLOON.SHEET.CARRY](../../spec/rpt/balloon/sheet/carry/NODE.md) Carry balloons forward to a new drawing revision (S, P1a)
+- [UNC.INST.LIB.REG](../../spec/unc/inst/lib/reg/NODE.md) Instrument and gauge register (M, P1a)
+- [UNC.MODEL.BIND](../../spec/unc/model/bind/NODE.md) Model binding to characteristics and human adoption (M, P1a)
+- [UNC.MODEL.CONTRIB.STYLUS](../../spec/unc/model/contrib/stylus/NODE.md) Probe and stylus qualification contributor (S, P1a)
+- [UNC.MODEL.CONTRIB.THERM](../../spec/unc/model/contrib/therm/NODE.md) Thermal expansion contributor (S, P1a)
+- [UNC.PROP.LPU.TAN](../../spec/unc/prop/lpu/tan/NODE.md) Operator tangent contract, table and coverage report (M, P1a)
+- [UNC.PROP.MCM.BLOCK](../../spec/unc/prop/mcm/block/NODE.md) Trial-block sampling and per-trial kernel evaluation (M, P1a)
+- [UNC.RDL.GEN.CMD](../../spec/unc/rdl/gen/cmd/NODE.md) The rdl.generate_dataset@1 command and family registry (S, P0)
+- [VIZ.OVERLAY.LEGEND](../../spec/viz/overlay/legend/NODE.md) Kernel legend display and placement (M, P1b)
+- [VIZ.OVERLAY.WHISK.WHISKER](../../spec/viz/overlay/whisk/whisker/NODE.md) Section whiskers, flags and amplification (M, P1b)
+- [VIZ.SHELL.THEME.CHECK](../../spec/viz/shell/theme/check/NODE.md) Rendered contrast, focus-visible and target-size checks per theme (S, P1a)
+
+### Wave 26 (25 leaves)
+
+- [FLOW.SETUP.STEPS](../../spec/flow/setup/steps/NODE.md) Wizard step bindings to owning domain commands (M, P1a)
 - [GDT.CHAR.IDENT](../../spec/gdt/char/ident/NODE.md) Stable characteristic identity (S, P1a)
-
-### Wave 41 (1 leaves)
-
 - [GDT.CHAR.SPEC](../../spec/gdt/char/spec/NODE.md) Governing spec, dialect selection and refusal (M, P1a)
+- [GDT.DRF.DATUM](../../spec/gdt/drf/datum/NODE.md) Datum feature and datum target definitions (S, P1a)
+- [GDT.PMI.LINK](../../spec/gdt/pmi/link/NODE.md) PMI source, face and datum links (S, P1b)
+- [HAL.ACQ.FILEDEV](../../spec/hal/acq/filedev/NODE.md) File pseudo-devices and import-time provenance (M, P1a)
+- [IO.CAD.IGES.CMD](../../spec/io/cad/iges/cmd/NODE.md) IGES import command and import report (S, P1b)
+- [IO.CAD.STEP.CMD](../../spec/io/cad/step/cmd/NODE.md) STEP import command, source blob and body commit (M, P1b)
+- [RPT.BALLOON.GAUGE](../../spec/rpt/balloon/gauge/NODE.md) Gauge citation checks for manual readings (S, P1a)
+- [RPT.FORMS.HDR](../../spec/rpt/forms/hdr/NODE.md) FAI header and accountability data (forms 1 and 2) (M, P1a)
+- [UNC.ORS.ALN.BEST](../../spec/unc/ors/aln/best/NODE.md) Best-fit cases with null-space constructed residuals (M, P1a)
+- [UNC.ORS.ALN.CONSTR](../../spec/unc/ors/aln/constr/NODE.md) Constrained best-fit cases with known active constraints (S, P1a)
+- [UNC.ORS.ALN.EXACT](../../spec/unc/ors/aln/exact/NODE.md) Exact-solution cases for 3-2-1, RPS and point-pair alignments (M, P1a)
+- [UNC.ORS.DRF.GEOM](../../spec/unc/ors/drf/geom/NODE.md) Form-perfect DRF cases with closed-form frames (M, P1a)
+- [UNC.ORS.FLT.OUTLIER](../../spec/unc/ors/flt/outlier/NODE.md) Planted-outlier cases with exact excluded index sets (M, P1b)
+- [UNC.ORS.PROJ.ANALYTIC](../../spec/unc/ors/proj/analytic/NODE.md) Projection cases on analytic faces (M, P1b)
+- [UNC.ORS.PROJ.EDGE](../../spec/unc/ors/proj/edge/NODE.md) Face assignment near seams, edges and trim boundaries (M, P1b)
+- [UNC.ORS.PROJ.NURBS](../../spec/unc/ors/proj/nurbs/NODE.md) Projection cases on trimmed NURBS faces (M, P1b)
+- [UNC.ORS.SIZE.GEOM](../../spec/unc/ors/size/geom/NODE.md) Lobed and tapered features with closed-form sizes per association (M, P1a)
+- [UNC.ORS.UNC.HARNESS](../../spec/unc/ors/unc/harness/NODE.md) Coverage harness, binomial band and coverage reporting (M, P1a)
+- [UNC.PROP.LPU.COMB](../../spec/unc/prop/lpu/comb/NODE.md) Graph accumulation, covariance combination and coverage factor (M, P1a)
+- [UNC.PROP.LPU.IMPL](../../spec/unc/prop/lpu/impl/NODE.md) Implicit differentiation at least-squares fit solutions (M, P1a)
+- [UNC.PROP.LPU.TFORM](../../spec/unc/prop/lpu/tform/NODE.md) Tangents of kernel formula IR and formula UEC start (S, P1b)
+- [UNC.PROP.MCM.SAMP](../../spec/unc/prop/mcm/samp/NODE.md) Retained sample sets and their digest (S, P1a)
+- [VIZ.KIOSK.STEPS.FORM](../../spec/viz/kiosk/steps/form/NODE.md) Operator prompt and field renderers (M, P1b)
 
-### Wave 42 (1 leaves)
+### Wave 27 (20 leaves)
 
+- [FLOW.INSPECT.DATA](../../spec/flow/inspect/data/NODE.md) Synthetic scan datasets with seeded known-truth deviations (M, P1b)
+- [FLOW.SETUP.WIZARD](../../spec/flow/setup/wizard/NODE.md) Wizard state machine, commands and resume (M, P1a)
 - [GDT.CHAR.RECORD](../../spec/gdt/char/record/NODE.md) ResultRecord assembly and decision binding (M, P1a)
+- [GDT.DRF.BUILD](../../spec/gdt/drf/build/NODE.md) DRF construction, precedence and DOF bookkeeping (M, P1a)
+- [GDT.DRF.COMMON.COVER](../../spec/gdt/drf/common/cover/NODE.md) Datum target coverage check (S, P1b)
+- [GDT.PMI.MAP.ITEM](../../spec/gdt/pmi/map/item/NODE.md) PMI entity to proposal item with evaluability status (M, P1b)
+- [GDT.PMI.REVIEW](../../spec/gdt/pmi/review/NODE.md) Proposal review and human adoption (M, P1b)
+- [GDT.ZONE.GROUP.IDS](../../spec/gdt/zone/group/ids/NODE.md) Group identity, pose digest and incomplete groups (S, P1a)
+- [IO.CAD.PMI.CMD](../../spec/io/cad/pmi/cmd/NODE.md) PMI import command, import report and NIST model conformance (M, P1b)
+- [IO.CAD.XLATE.DIRECT](../../spec/io/cad/xlate/direct/NODE.md) Direct translator output validation and commit (S, P1b)
+- [MIG.PROJ.XID](../../spec/mig/proj/xid/NODE.md) External-ID index and stable entity IDs (S, P1a)
+- [UNC.ORS.GDT.GEOM](../../spec/unc/ors/gdt/geom/NODE.md) Closed-form form, orientation, location and runout drafts (M, P1a)
+- [UNC.ORS.UNC.BASE](../../spec/unc/ors/unc/base/NODE.md) Known-truth cases for LPU, MCM and correlated multivariate propagation (M, P1a)
+- [UNC.PROP.LPU.ASET](../../spec/unc/prop/lpu/aset/NODE.md) Active-set sensitivities and non-smoothness flag for certified fits (M, P1a)
+- [UNC.PROP.LPU.CMD](../../spec/unc/prop/lpu/cmd/NODE.md) The unc.propagate_lpu@1 command (S, P1a)
+- [UNC.PROP.MCM.CMD](../../spec/unc/prop/mcm/cmd/NODE.md) The unc.propagate_mcm@1 command and block scheduling (M, P1a)
+- [UNC.PROP.MVAR.VLPU](../../spec/unc/prop/mvar/vlpu/NODE.md) Multivariate LPU and joint covariance of characteristic groups (M, P1a)
+- [UNC.PROP.MVAR.VMCM](../../spec/unc/prop/mvar/vmcm/NODE.md) Joint Monte Carlo samples and sample covariance (S, P1a)
+- [UNC.PROP.NLIN](../../spec/unc/prop/nlin/NODE.md) Nonlinearity assessment for LPU (M, P1a)
+- [VIZ.OVERLAY.GDTGLYPH.COMPOSE](../../spec/viz/overlay/gdtglyph/compose/NODE.md) Feature control frame and datum glyph composition (M, P1a)
 
-### Wave 43 (1 leaves)
+### Wave 28 (33 leaves)
 
-- [GDT.RES.SCHEMA](../../spec/gdt/res/schema/NODE.md) DMT row and operator-chain schema (M, P1a)
-
-### Wave 44 (3 leaves)
-
-- [GDT.RES.LINT](../../spec/gdt/res/lint/NODE.md) DMT copyright and ORS-link lint (S, P1a)
-- [GDT.RES.MATRIX](../../spec/gdt/res/matrix/NODE.md) Generated support matrix (S, P1a)
-- [GDT.RES.RESOLVE](../../spec/gdt/res/resolve/NODE.md) Pure interpretation resolver (M, P1a)
-
-### Wave 45 (8 leaves)
-
+- [ALN.DATUM.SYS.BUILD](../../spec/aln/datum/sys/build/NODE.md) Datum-system frame build through GDT.DRF and unconstrained-DoF policy (M, P1a)
+- [FLOW.INSPECT.J5](../../spec/flow/inspect/j5/NODE.md) J5 kiosk production run of a released scan program (M, P1b)
+- [FLOW.SETUP.RULEGATE](../../spec/flow/setup/rulegate/NODE.md) Decision-rule skip acknowledgement and rule_missing link (S, P1a)
 - [GDT.DIM.ANGLE](../../spec/gdt/dim/angle/NODE.md) Angle checks between elements (S, P1a)
 - [GDT.DIM.LINEAR](../../spec/gdt/dim/linear/NODE.md) Distance and caliper checks (M, P1a)
 - [GDT.DIM.PTDEV](../../spec/gdt/dim/ptdev/NODE.md) Point deviations and feature-versus-nominal checks (M, P1a)
 - [GDT.DIM.RADIAL](../../spec/gdt/dim/radial/NODE.md) Diameter and radius checks (S, P1a)
 - [GDT.DIM.SCALAR](../../spec/gdt/dim/scalar/NODE.md) Scalar property and min/max checks (M, P1a)
-- [GDT.DRF.DATUM](../../spec/gdt/drf/datum/NODE.md) Datum feature and datum target definitions (S, P1a)
-- [GDT.PMI.LINK](../../spec/gdt/pmi/link/NODE.md) PMI source, face and datum links (S, P1b)
-- [UNC.ORS.TRACE](../../spec/unc/ors/trace/NODE.md) Suite case format, citation checks and suite versioning (M, P1a)
-
-### Wave 46 (4 leaves)
-
-- [GDT.DRF.BUILD](../../spec/gdt/drf/build/NODE.md) DRF construction, precedence and DOF bookkeeping (M, P1a)
-- [GDT.PMI.DIFF](../../spec/gdt/pmi/diff/NODE.md) PMI re-import diff (M, P1b)
-- [GDT.PMI.REVIEW](../../spec/gdt/pmi/review/NODE.md) Proposal review and human adoption (M, P1b)
-- [UNC.ORS.RUN](../../spec/unc/ors/run/NODE.md) Suite execution in CI and published pass statistics (M, P1a)
-
-### Wave 47 (2 leaves)
-
-- [ALN.DATUM.DOF](../../spec/aln/datum/dof/NODE.md) Degree-of-freedom accounting and unconstrained-DoF policy (M, P1a)
-- [GDT.ZONE.ZTYPE](../../spec/gdt/zone/ztype/NODE.md) Tolerance-zone shapes and fixed-pose usage (M, P1a)
-
-### Wave 48 (7 leaves)
-
+- [GDT.DIM.SIZEASME.CMD](../../spec/gdt/dim/sizeasme/cmd/NODE.md) Size command, dialect dispatch and ASME size payload (M, P1a)
+- [GDT.DRF.CHECK.FIELDS](../../spec/gdt/drf/check/fields/NODE.md) Datum-mobility result fields, RMB membership and frame flag (S, P1a)
+- [GDT.DRF.MOB.REPR](../../spec/gdt/drf/mob/repr/NODE.md) Mobility envelope representation and digest (M, P1b)
 - [GDT.FORM.FCORE](../../spec/gdt/form/fcore/NODE.md) Form evaluation contract and reference-association policy (M, P1a)
 - [GDT.LOC.LRES](../../spec/gdt/loc/lres/NODE.md) Location and orientation result payload (S, P1a)
-- [GDT.PROF.DEV](../../spec/gdt/prof/dev/NODE.md) Signed deviations from nominal with approximation error (M, P1b)
-- [SCAN.CLOUD.FILTER](../../spec/scan/cloud/filter/NODE.md) Statistical and radius outlier removal (M, P1b)
-- [SCAN.CLOUD.MGMT](../../spec/scan/cloud/mgmt/NODE.md) Cloud grouping, splitting and merging (M, P1b)
-- [SCAN.CLOUD.NORM](../../spec/scan/cloud/norm/NODE.md) Normal estimation and orientation (M, P1b)
-- [SCAN.CLOUD.SUBS](../../spec/scan/cloud/subs/NODE.md) Point cloud subsampling (M, P1b)
+- [GDT.PMI.MAP.CMD](../../spec/gdt/pmi/map/cmd/NODE.md) Propose characteristics from PMI command (M, P1b)
+- [GDT.PROF.BESTFIT.OPTS](../../spec/gdt/prof/bestfit/opts/NODE.md) Best-fit option model, DOF selection and flags (S, P1b)
+- [GDT.PROF.RUNOUT.EXTR](../../spec/gdt/prof/runout/extr/NODE.md) Runout directions and measuring circles (S, P1b)
+- [GDT.ZONE.POSE.FIXED](../../spec/gdt/zone/pose/fixed/NODE.md) Fixed-pose zone evaluation (S, P1a)
+- [IO.CAD.XLATE.BRIDGE](../../spec/io/cad/xlate/bridge/NODE.md) Native CAD import command with STEP hand-off (M, P1b)
+- [MIG.PARALLEL.DIFF](../../spec/mig/parallel/diff/NODE.md) Per-pair difference, tolerance fraction and flag rule (S, P1a)
+- [MIG.PARALLEL.PAIR](../../spec/mig/parallel/pair/NODE.md) Result pairing by external ID and confirmed pairing table (M, P1a)
+- [MIG.PROJ.ALIGN](../../spec/mig/proj/align/NODE.md) Incumbent alignments as labelled known transforms (S, P1a)
+- [MIG.PROJ.CHAR](../../spec/mig/proj/char/NODE.md) Characteristic, tolerance and datum mapping (M, P1a)
+- [MIG.PROJ.POINTS](../../spec/mig/proj/points/NODE.md) Point-export import of measured points and nominal features (M, P1a)
+- [RPT.BALLOON.ENTRY.RECORD](../../spec/rpt/balloon/entry/record/NODE.md) Single manual reading entry, voiding and listing (M, P1a)
+- [RPT.BALLOON.REG](../../spec/rpt/balloon/reg/NODE.md) Balloon register and renumbering (M, P1a)
+- [RPT.CATALOG.STORE.INDEX](../../spec/rpt/catalog/store/index/NODE.md) Incremental indexing from project journals (M, P1b)
+- [RPT.MODEL.BIND.RESOLVE](../../spec/rpt/model/bind/resolve/NODE.md) Block binding and resolution of stable IDs against a journal head (M, P1a)
+- [RPT.MODEL.FMT](../../spec/rpt/model/fmt/NODE.md) Value formatting, decision display and source labels (M, P1a)
+- [SCAN.CMP.CPT](../../spec/scan/cmp/cpt/NODE.md) Comparison points and their ResultRecords (M, P1b)
+- [UNC.PROP.SELECT](../../spec/unc/prop/select/NODE.md) Method selection, estimator policy and statement commit (M, P1a)
+- [VIZ.INBOX.DIFF.SEMRES](../../spec/viz/inbox/diff/semres/NODE.md) Semantic and result diff layers from kernel records (M, P1a)
+- [VIZ.OVERLAY.GDTGLYPH.PLACE](../../spec/viz/overlay/gdtglyph/place/NODE.md) GD&T annotation anchoring, occlusion fade and hover (M, P1a)
+- [VIZ.OVERLAY.SCALEED](../../spec/viz/overlay/scaleed/NODE.md) Colour-scale editor (M, P1b)
 
-### Wave 49 (4 leaves)
+### Wave 29 (33 leaves)
 
+- [ALN.DATUM.SYS.CMD](../../spec/aln/datum/sys/cmd/NODE.md) Datum-system alignment command and recording (S, P1a)
+- [GDT.DIM.SECT.CMDS](../../spec/gdt/dim/sect/cmds/NODE.md) Section distance, angle and radius commands (M, P1b)
+- [GDT.DIM.SIZEISO.DISP](../../spec/gdt/dim/sizeiso/disp/NODE.md) ISO size evaluator, edition tag and unsupported refusal (S, P1b)
+- [GDT.DRF.CHECK.MEMB](../../spec/gdt/drf/check/memb/NODE.md) Membership test of a transform in a mobility envelope (S, P1b)
+- [GDT.DRF.MOB.GROUP](../../spec/gdt/drf/mob/group/NODE.md) Rigid-group mobility envelopes for datum patterns (S, P1b)
 - [GDT.FORM.CYL](../../spec/gdt/form/cyl/NODE.md) Cylindricity (S, P1a)
 - [GDT.FORM.FLAT](../../spec/gdt/form/flat/NODE.md) Flatness (S, P1a)
 - [GDT.FORM.ROUND](../../spec/gdt/form/round/NODE.md) Roundness (circularity) with cross-section extraction (M, P1a)
-- [SCAN.POLY.QUAL](../../spec/scan/poly/qual/NODE.md) Mesh quality report (S, P1b)
-
-### Wave 50 (5 leaves)
-
-- [SCAN.CMP.ACT](../../spec/scan/cmp/act/NODE.md) Actual-to-actual surface comparison (M, P1b)
-- [SCAN.CMP.BAND](../../spec/scan/cmp/band/NODE.md) Tolerance bands and kernel colour binning (M, P1b)
-- [SCAN.CMP.CPT](../../spec/scan/cmp/cpt/NODE.md) Comparison points and their ResultRecords (M, P1b)
-- [SCAN.CMP.EXTR](../../spec/scan/cmp/extr/NODE.md) Maximum and minimum deviation search (S, P1b)
-- [SCAN.MESHOP.PROV](../../spec/scan/meshop/prov/NODE.md) Mesh operation contract and synthesized-triangle flag (S, P1b)
-
-### Wave 51 (4 leaves)
-
+- [GDT.FORM.STRAIGHT.LINEEL](../../spec/gdt/form/straight/lineel/NODE.md) Line-element extraction and line-element straightness (M, P1a)
+- [GDT.LOC.COAX](../../spec/gdt/loc/coax/NODE.md) Coaxiality and concentricity (M, P1b)
+- [GDT.LOC.SYM](../../spec/gdt/loc/sym/NODE.md) Symmetry (M, P1b)
+- [GDT.PMI.MAP.CORPUS](../../spec/gdt/pmi/map/corpus/NODE.md) PMI proposal hit-rate measurement (S, P1b)
+- [GDT.ZONE.MATL.BONUS](../../spec/gdt/zone/matl/bonus/NODE.md) Bonus tolerance from actual size (S, P1a)
+- [GDT.ZONE.POSE.LIN](../../spec/gdt/zone/pose/lin/NODE.md) Per-shape linearisation and active-set callbacks (M, P1a)
+- [MIG.EXPLAIN.PROBE](../../spec/mig/explain/probe/NODE.md) Scratch-branch probe runner and probe budget (M, P1a)
+- [MIG.PARALLEL.REPORT](../../spec/mig/parallel/report/NODE.md) Parallel-run report, digest and commands (M, P1a)
+- [MIG.PROJ.PROJECT](../../spec/mig/proj/project/NODE.md) Project-export import command (M, P1a)
+- [RPT.BALLOON.BLOCK](../../spec/rpt/balloon/block/NODE.md) Ballooned-drawing report block (M, P1a)
+- [RPT.BALLOON.CHAR](../../spec/rpt/balloon/char/NODE.md) Characteristics from balloons (M, P1a)
+- [RPT.BALLOON.ENTRY.SERIES](../../spec/rpt/balloon/entry/series/NODE.md) Multi-part reading series entry (S, P1a)
+- [RPT.CATALOG.CHECK](../../spec/rpt/catalog/check/NODE.md) Catalog integrity check and rebuild (M, P1b)
+- [RPT.CATALOG.QUERY.EXEC](../../spec/rpt/catalog/query/exec/NODE.md) Typed catalog query, ordering and pagination (M, P1b)
+- [RPT.FORMS.LAYOUT.MAP](../../spec/rpt/forms/layout/map/NODE.md) Form field maps, form_field block kind, locking and clearance (M, P1a)
+- [RPT.MODEL.BIND.EXPAND](../../spec/rpt/model/bind/expand/NODE.md) Slot, repetition and multi-stage expansion (M, P1a)
+- [RPT.MODEL.BLOCKS.TABLE](../../spec/rpt/model/blocks/table/NODE.md) Characteristic table block with column and row customisation (M, P1a)
+- [RPT.MODEL.BLOCKS.TEXT](../../spec/rpt/model/blocks/text/NODE.md) Text, image, header and footer blocks (M, P1a)
+- [RPT.MODEL.BLOCKS.VIEW](../../spec/rpt/model/blocks/view/NODE.md) Restorable 3D view block (S, P1a)
 - [SCAN.CMP.LABEL](../../spec/scan/cmp/label/NODE.md) Deviation labels (S, P1b)
-- [SCAN.MESHOP.DECIM](../../spec/scan/meshop/decim/NODE.md) Thin and refine meshes (M, P1b)
-- [SCAN.MESHOP.SEL](../../spec/scan/meshop/sel/NODE.md) Geometric mesh selection, delete and isolate (M, P1b)
-- [SCAN.MESHOP.SMOOTH](../../spec/scan/meshop/smooth/NODE.md) Smoothing, spike and noise removal (M, P1b)
-
-### Wave 52 (5 leaves)
-
-- [SCAN.EDGE.NOMEDGE](../../spec/scan/edge/nomedge/NODE.md) Nominal edge chains and station frames (S, P1b)
-- [SCAN.SECT.DEF](../../spec/scan/sect/def/NODE.md) Section plane definitions and series (S, P1b)
+- [SCAN.EDGE.EDEV](../../spec/scan/edge/edev/NODE.md) Edge comparison, station deviations and statistics (M, P1b)
 - [SCAN.THK.TFIELD](../../spec/scan/thk/tfield/NODE.md) Thickness field, limits, statistics and thickness points (M, P1b)
-- [VIZ.OVERLAY.LEGEND](../../spec/viz/overlay/legend/NODE.md) Kernel legend display and placement (M, P1b)
-- [VIZ.OVERLAY.STATUS](../../spec/viz/overlay/status/NODE.md) Status markers, locked palette guard and provenance badges (M, P1a)
+- [VIZ.INBOX.DIFF.SHOW](../../spec/viz/inbox/diff/show/NODE.md) Show-proposal command and command diff layer (M, P1a)
+- [VIZ.OVERLAY.GDTGLYPH.PMIQA](../../spec/viz/overlay/gdtglyph/pmiqa/NODE.md) Graphic PMI quality-check overlay (S, P1b)
+- [VIZ.OVERLAY.WHISK.VECTOR](../../spec/viz/overlay/whisk/vector/NODE.md) Colour vector plots for point groups (M, P1b)
 
-### Wave 53 (6 leaves)
+### Wave 30 (17 leaves)
 
-- [SCAN.EDGE.MESHBND](../../spec/scan/edge/meshbnd/NODE.md) Edge extraction interface and mesh free-boundary method (S, P1b)
-- [SCAN.SECT.SLICE](../../spec/scan/sect/slice/NODE.md) Cloud slab slicing and fit hand-off (M, P1b)
+- [ALN.DATUM.ISO](../../spec/aln/datum/iso/NODE.md) ISO 5459 datum-system alignment enablement (S, P1b)
+- [GDT.DIM.SECT.STALE](../../spec/gdt/dim/sect/stale/NODE.md) Staleness of section results after a re-cut (S, P1b)
+- [GDT.PMI.DIFF](../../spec/gdt/pmi/diff/NODE.md) PMI re-import diff (M, P1b)
+- [GDT.PROF.RUNOUT.CIRC](../../spec/gdt/prof/runout/circ/NODE.md) Circular runout command (S, P1b)
+- [GDT.PROF.RUNOUT.TOTAL](../../spec/gdt/prof/runout/total/NODE.md) Total runout command (S, P1b)
+- [GDT.ZONE.MOBSRCH.VERIFY](../../spec/gdt/zone/mobsrch/verify/NODE.md) Envelope post-check of the transform used (S, P1b)
+- [GDT.ZONE.POSE.SOLVE](../../spec/gdt/zone/pose/solve/NODE.md) Zone-pose solve driver and certificates (M, P1a)
+- [MIG.EXPLAIN.ATTR](../../spec/mig/explain/attr/NODE.md) Attribution rule, explanation records and adoption (M, P1a)
+- [RPT.CATALOG.QUERY.SAVE](../../spec/rpt/catalog/query/save/NODE.md) Saved catalog queries (S, P1b)
+- [RPT.CATALOG.SHARE.ATTACH](../../spec/rpt/catalog/share/attach/NODE.md) Attach and detach shared catalogs with owner rules (M, P1b)
+- [RPT.FORMS.LAYOUT.FAI](../../spec/rpt/forms/layout/fai/NODE.md) Original locked templates for FAI forms 1 to 3 (M, P1a)
+- [RPT.FORMS.LAYOUT.PPAP](../../spec/rpt/forms/layout/ppap/NODE.md) Original locked template for the PPAP dimensional results report (S, P1a)
+- [RPT.MODEL.BIND.GEN](../../spec/rpt/model/bind/gen/NODE.md) Report generation, resolved document, provenance and digest (M, P1a)
 - [SCAN.THK.MAT](../../spec/scan/thk/mat/NODE.md) Material thickness to the nominal opposite side (S, P1b)
 - [SCAN.THK.RAY](../../spec/scan/thk/ray/NODE.md) Ray-cast wall thickness (M, P1b)
-- [VIZ.KIOSK.SESSION](../../spec/viz/kiosk/session/NODE.md) Kiosk session enter, exit and resume (M, P1b)
-- [VIZ.VIEW.STATE](../../spec/viz/view/state/NODE.md) ViewState model and canonical form (M, P1a)
+- [VIZ.INBOX.ACTIONS.CHIPS](../../spec/viz/inbox/actions/chips/NODE.md) Action chips, apply through promotion, edit and explain (M, P1a)
+- [VIZ.OVERLAY.LABEL.DRAW](../../spec/viz/overlay/label/draw/NODE.md) Label value resolution, kernel formatting, leaders and text (M, P1a)
 
-### Wave 54 (7 leaves)
+### Wave 31 (16 leaves)
 
-- [SCAN.EDGE.EDEV](../../spec/scan/edge/edev/NODE.md) Edge comparison, station deviations and statistics (M, P1b)
-- [SCAN.SECT.CUT](../../spec/scan/sect/cut/NODE.md) Section creation through meshes, clouds and CAD (M, P1b)
-- [SCAN.THK.SPHERE](../../spec/scan/thk/sphere/NODE.md) Inscribed-sphere wall thickness method (M, P1b)
-- [VIZ.KIOSK.PROGPICK](../../spec/viz/kiosk/progpick/NODE.md) Released-program chooser and serial entry (S, P1b)
-- [VIZ.KIOSK.STATUS](../../spec/viz/kiosk/status/NODE.md) Large live status display (S, P1b)
-- [VIZ.VIEW.CLIP](../../spec/viz/view/clip/NODE.md) Clipping planes and boxes (M, P1a)
-- [VIZ.VIEW.TRANSP](../../spec/viz/view/transp/NODE.md) Per-entity and per-group transparency (S, P1a)
-
-### Wave 55 (3 leaves)
-
-- [SCAN.SECT.WHISK](../../spec/scan/sect/whisk/NODE.md) Section comparison, whiskers and statistics (M, P1b)
-- [VIZ.CAPTURE.SHOT](../../spec/viz/capture/shot/NODE.md) Screenshot command (M, P1a)
-- [VIZ.INBOX.LIST](../../spec/viz/inbox/list/NODE.md) Proposal list (M, P1a)
-
-### Wave 56 (3 leaves)
-
-- [VIZ.CAPTURE.ANIM](../../spec/viz/capture/anim/NODE.md) Turntable and camera-path animations (M, P1b)
-- [VIZ.CAPTURE.EXPORT](../../spec/viz/capture/export/NODE.md) Media export to an approved local root (S, P1a)
-- [VIZ.INBOX.STALE](../../spec/viz/inbox/stale/NODE.md) Stale proposal detection and apply gate (S, P1a)
-
-### Wave 57 (3 leaves)
-
-- [ECO.APPS.LIST](../../spec/eco/apps/list/NODE.md) App list file and its check (S, P1a)
-- [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
-- [RPT.MODEL.DOC](../../spec/rpt/model/doc/NODE.md) Report document model and storage (M, P1a)
-
-### Wave 58 (6 leaves)
-
-- [ECO.PARITY.TRACE](../../spec/eco/parity/trace/NODE.md) Seed-to-command traceability and the live rule (M, P0)
-- [PLAT.GPU.DETECT](../../spec/plat/gpu/detect/NODE.md) GPU adapter probing and backend selection (M, P1a)
-- [RPT.BALLOON.REG](../../spec/rpt/balloon/reg/NODE.md) Balloon register and renumbering (M, P1a)
-- [RPT.DESIGN.PAGE](../../spec/rpt/design/page/NODE.md) Page setup (S, P1b)
+- [GDT.ZONE.GROUP.PATTERN](../../spec/gdt/zone/group/pattern/NODE.md) Shared-pose solve for a pattern (M, P1a)
+- [GDT.ZONE.MATL.VCB](../../spec/gdt/zone/matl/vcb/NODE.md) Virtual-condition boundary containment (M, P1a)
+- [GDT.ZONE.MOBSRCH.JOINT](../../spec/gdt/zone/mobsrch/joint/NODE.md) Joint zone and datum-mobility solve (M, P1b)
+- [GDT.ZONE.POSE.INFEAS](../../spec/gdt/zone/pose/infeas/NODE.md) Infeasibility result at a stated size (S, P1a)
+- [MIG.EXPLAIN.TEXT](../../spec/mig/explain/text/NODE.md) Difference explanation templates and view (S, P1a)
+- [MIG.TEMPL.CHECK](../../spec/mig/templ/check/NODE.md) Form-map fill check and fill report (M, P1a)
+- [RPT.CATALOG.SHARE.FED](../../spec/rpt/catalog/share/fed/NODE.md) Queries across local and attached catalogs (S, P1b)
+- [RPT.FORMS.PPAP](../../spec/rpt/forms/ppap/NODE.md) PPAP dimensional results data (M, P1a)
+- [RPT.FORMS.ROWS](../../spec/rpt/forms/rows/NODE.md) Characteristic accountability rows (form 3) (M, P1a)
 - [RPT.OUTPUT.META](../../spec/rpt/output/meta/NODE.md) Export envelope: metadata and export-root writes (M, P1a)
-- [RPT.STATS.DESC](../../spec/rpt/stats/desc/NODE.md) Descriptive statistics per characteristic (M, P1b)
+- [RPT.OUTPUT.PDF.LAYOUT](../../spec/rpt/output/pdf/layout/NODE.md) Page layout engine with page breaks and continuation headers (M, P1a)
+- [RPT.OUTPUT.SHEET.CELL](../../spec/rpt/output/sheet/cell/NODE.md) Table-to-cell model, unit headers and formula-injection neutralisation (S, P1a)
+- [RPT.STATS.DSET.DEF](../../spec/rpt/stats/dset/def/NODE.md) Data-set definition and save (S, P1b)
+- [SCAN.THK.SPHERE](../../spec/scan/thk/sphere/NODE.md) Inscribed-sphere wall thickness method (M, P1b)
+- [VIZ.INBOX.ACTIONS.BATCH](../../spec/viz/inbox/actions/batch/NODE.md) Plan preview and batch apply by span (M, P1a)
+- [VIZ.OVERLAY.LABEL.LAYOUT](../../spec/viz/overlay/label/layout/NODE.md) Deterministic automatic label layout (M, P1a)
 
-### Wave 59 (2 leaves)
+### Wave 32 (14 leaves)
 
-- [ECO.PARITY.GEN](../../spec/eco/parity/gen/NODE.md) Parity report generator (M, P0)
-- [PLAT.HW.CMD](../../spec/plat/hw/cmd/NODE.md) fid doctor run-benchmark command and runner (M, P1a)
+- [GDT.LOC.ORIENT.ZONE](../../spec/gdt/loc/orient/zone/NODE.md) Orientation zone evaluation with fixed direction and free location (M, P1a)
+- [GDT.LOC.POS.RFS](../../spec/gdt/loc/pos/rfs/NODE.md) True position and RFS position value of a single feature (M, P1a)
+- [GDT.PROF.BESTFIT.LSQ](../../spec/gdt/prof/bestfit/lsq/NODE.md) Least-squares objective variant (M, P1b)
+- [GDT.PROF.LINE.EVAL](../../spec/gdt/prof/line/eval/NODE.md) Line-profile command and per-section evaluation (M, P1b)
+- [GDT.PROF.SURF.PROB](../../spec/gdt/prof/surf/prob/NODE.md) Single-segment surface-profile problem (M, P1b)
+- [GDT.ZONE.MATL.BOTH](../../spec/gdt/zone/matl/both/NODE.md) Axis and surface variants with the deciding variant (S, P1a)
+- [MIG.TEMPL.FILL](../../spec/mig/templ/fill/NODE.md) Filling a copy of the customer workbook (M, P1a)
+- [PLAT.GPU.DETECT](../../spec/plat/gpu/detect/NODE.md) GPU adapter probing and backend selection (M, P1a)
+- [RPT.FORMS.FINAL.CHECK](../../spec/rpt/forms/final/check/NODE.md) Form completeness check and adoption of agent-authored form content (M, P1a)
+- [RPT.OUTPUT.PDF.DRAW](../../spec/rpt/output/pdf/draw/NODE.md) Block painters for tables, text, images, views, drawings and form fields (M, P1a)
+- [RPT.OUTPUT.SHEET.CSV](../../spec/rpt/output/sheet/csv/NODE.md) CSV export of report tables (S, P1a)
+- [RPT.OUTPUT.SHEET.XLSX](../../spec/rpt/output/sheet/xlsx/NODE.md) Deterministic spreadsheet workbook export (M, P1a)
+- [RPT.STATS.DASH.DEF](../../spec/rpt/stats/dash/def/NODE.md) Dashboard definition, save and list (S, P1b)
+- [RPT.STATS.DSET.EXCL](../../spec/rpt/stats/dset/excl/NODE.md) Automatic and user exclusions (S, P1b)
 
-### Wave 60 (2 leaves)
+### Wave 33 (10 leaves)
 
-- [ECO.PARITY.DRIFT](../../spec/eco/parity/drift/NODE.md) Report regeneration (drift) check (S, P0)
+- [GDT.FORM.STRAIGHT.DERIVED](../../spec/gdt/form/straight/derived/NODE.md) Straightness of a derived median line with optional MMC (M, P1a)
+- [GDT.LOC.ORIENT.CMDS](../../spec/gdt/loc/orient/cmds/NODE.md) Parallelism, perpendicularity and angularity commands (M, P1a)
+- [GDT.LOC.POS.MMC](../../spec/gdt/loc/pos/mmc/NODE.md) Position at MMC and LMC through the material-condition engine (M, P1a)
+- [GDT.ZONE.COMP](../../spec/gdt/zone/comp/NODE.md) Composite feature-control-frame tiers (M, P1b)
 - [PLAT.DOCTOR.PROBE](../../spec/plat/doctor/probe/NODE.md) Environment probes (M, P0)
+- [PLAT.GPU.NOTICE](../../spec/plat/gpu/notice/NODE.md) Fallback and workaround notice (S, P1a)
+- [PLAT.HW.CMD](../../spec/plat/hw/cmd/NODE.md) fid doctor run-benchmark command and runner (M, P1a)
+- [RPT.FORMS.FINAL.FREEZE](../../spec/rpt/forms/final/freeze/NODE.md) W3 finalisation of FAI and PPAP forms with immutable revisions (M, P1a)
+- [RPT.OUTPUT.PDF.WRITE](../../spec/rpt/output/pdf/write/NODE.md) Deterministic PDF writer and the PDF export command (M, P1a)
+- [RPT.STATS.DSET.MAT](../../spec/rpt/stats/dset/mat/NODE.md) Data-set materialisation, ordering and digest (M, P1b)
 
-### Wave 61 (3 leaves)
+### Wave 34 (13 leaves)
 
-- [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
-- [OUTR.SITE.CLAIM](../../spec/outr/site/claim/NODE.md) Capability-claim check (S, P0)
+- [GDT.FORM.STRAIGHT.CMD](../../spec/gdt/form/straight/cmd/NODE.md) Straightness command and dispatch (S, P1a)
+- [GDT.LOC.POS.PATTERN](../../spec/gdt/loc/pos/pattern/NODE.md) Pattern position with one shared pose (M, P1a)
+- [GDT.PROF.SURF.COMP](../../spec/gdt/prof/surf/comp/NODE.md) Composite and multi-segment profile tiers (S, P1b)
+- [PLAT.DOCTOR.FEEDBK.CRASH](../../spec/plat/doctor/feedbk/crash/NODE.md) Local crash capture, queue and list command (M, P1a)
 - [PLAT.DOCTOR.LOOKUP](../../spec/plat/doctor/lookup/NODE.md) Tier and hardware-profile verdicts (S, P0)
+- [PLAT.HW.SUITE.COMPUTE](../../spec/plat/hw/suite/compute/NODE.md) Load, fit, compare and report workloads (M, P1a)
+- [PLAT.HW.SUITE.RENDER](../../spec/plat/hw/suite/render/NODE.md) Hardware and software render workloads (M, P1a)
+- [RPT.OUTPUT.SPC](../../spec/rpt/output/spc/NODE.md) Statistics export to SPC systems (M, P1b)
+- [RPT.STATS.CMP.DIFF](../../spec/rpt/stats/cmp/diff/NODE.md) Part-to-part and part-to-reference comparison (M, P1b)
+- [RPT.STATS.CMP.STEP](../../spec/rpt/stats/cmp/step/NODE.md) Piece stepping in a multi-piece data set (S, P1b)
+- [RPT.STATS.DESC](../../spec/rpt/stats/desc/NODE.md) Descriptive statistics per characteristic (M, P1b)
+- [RPT.STATS.SPC.SUB](../../spec/rpt/stats/spc/sub/NODE.md) Subgrouping of a data set (S, P1b)
+- [RPT.STATS.TREND.BUILD](../../spec/rpt/stats/trend/build/NODE.md) Trend and histogram chart builder (M, P1b)
 
-### Wave 62 (2 leaves)
+### Wave 35 (8 leaves)
 
-- [OUTR.CONTENT.PUB](../../spec/outr/content/pub/NODE.md) Content manifest and publication check (M, P1a)
+- [GDT.LOC.POS.CMD](../../spec/gdt/loc/pos/cmd/NODE.md) Position command and dual-variant reporting (M, P1a)
+- [GDT.PROF.SURF.CMD](../../spec/gdt/prof/surf/cmd/NODE.md) Surface-profile command and payload (M, P1b)
+- [MIG.STUDY.STATS](../../spec/mig/study/stats/NODE.md) Agreement statistics per characteristic type (S, P1a)
 - [PLAT.DOCTOR.REPORT](../../spec/plat/doctor/report/NODE.md) Doctor report schema, text rendering and redaction (S, P0)
+- [PLAT.HW.REFMACH](../../spec/plat/hw/refmach/NODE.md) Reference benchmark machine registry (M, P1a)
+- [RPT.MODEL.BLOCKS.CHART](../../spec/rpt/model/blocks/chart/NODE.md) Chart block referencing ChartSeries (S, P1b)
+- [RPT.OUTPUT.PDF.CHART](../../spec/rpt/output/pdf/chart/NODE.md) Vector chart painter for ChartSeries (M, P1b)
+- [RPT.STATS.SPC.LIM](../../spec/rpt/stats/spc/lim/NODE.md) Control-limit calculation (M, P1b)
 
-### Wave 63 (1 leaves)
+### Wave 36 (16 leaves)
 
+- [ECO.APPS.MANIFEST.SCHEMA](../../spec/eco/apps/manifest/schema/NODE.md) Manifest schema, validation and start-up loader (M, P1a)
+- [FLOW.INSPECT.J1](../../spec/flow/inspect/j1/NODE.md) J1 scan first-article inspection from CAD and PMI (M, P1b)
+- [FLOW.INSPECT.J7](../../spec/flow/inspect/j7/NODE.md) J7 sections and thickness on a sheet-metal part (launch-1 scope) (M, P1b)
+- [FLOW.REPORT.J2](../../spec/flow/report/j2/NODE.md) J2 transcription AS9102 from an existing CMM report (M, P1a)
+- [FLOW.REPORT.J3](../../spec/flow/report/j3/NODE.md) J3 drawing-only first-article inspection from CMM, arm and hand-gauge data (M, P1a)
+- [FLOW.SETUP.SAMPLE](../../spec/flow/setup/sample/NODE.md) Sample job on public data (wizard step 8) (M, P1a)
+- [MIG.STUDY.RUN](../../spec/mig/study/run/NODE.md) Study execution, freeze check and conformance labelling (M, P1a)
 - [PLAT.DOCTOR.CMD](../../spec/plat/doctor/cmd/NODE.md) fid doctor run-check and show-report commands (M, P0)
+- [PLAT.DOCTOR.FEEDBK.COMPOSE](../../spec/plat/doctor/feedbk/compose/NODE.md) Feedback bundle composer, redaction and preview (M, P1a)
+- [PLAT.HW.RUN.COMPARE](../../spec/plat/hw/run/compare/NODE.md) Regression comparison against the previous release (S, P1a)
+- [QUAL.IQOQ.IQ](../../spec/qual/iqoq/iq/NODE.md) Installation qualification run (M, P1a)
+- [RPT.DESIGN.PREVIEW.INCR](../../spec/rpt/design/preview/incr/NODE.md) Incremental preview regeneration (M, P1b)
+- [RPT.DESIGN.PREVIEW.RASTER](../../spec/rpt/design/preview/raster/NODE.md) CPU page rasteriser for preview (M, P1b)
+- [RPT.DESIGN.UI.PANEL](../../spec/rpt/design/ui/panel/NODE.md) Block palette, property panel, template browser and undo (M, P1b)
+- [RPT.STATS.CAP.SIGMA](../../spec/rpt/stats/cap/sigma/NODE.md) Within-subgroup spread estimators (S, P1b)
+- [RPT.STATS.SPC.FREEZE](../../spec/rpt/stats/spc/freeze/NODE.md) Frozen control limits (S, P1b)
 
-### Unordered (dependency cycle among 17 leaves)
+### Wave 37 (12 leaves)
 
-- TRUST.CHAIN.CANON
-- TRUST.CHAIN.CKPT
-- TRUST.CHAIN.LINKS
-- TRUST.CHAIN.RESLINK
-- TRUST.PKG.FIXTURE
-- TRUST.REPLAY.COMPARE
-- TRUST.REPLAY.CORPUS
-- TRUST.REPLAY.RUN
-- TRUST.REPLAY.SANDBOX
-- TRUST.REPLAY.SELECT
-- TRUST.SIGN.DSSE
-- TRUST.SIGN.INTEROP
-- TRUST.SIGN.TROOT
-- TRUST.VERIFY.CLI
-- TRUST.VERIFY.MCP
-- TRUST.VERIFY.REPORT
-- TRUST.VERIFY.REPRO
+- [ECO.APPS.HANDOFF.EDITORS](../../spec/eco/apps/handoff/editors/NODE.md) Which installed apps can edit an element (S, P1b)
+- [ECO.APPS.MANIFEST.COMPOSE](../../spec/eco/apps/manifest/compose/NODE.md) Order-independent manifest composition (S, P1a)
+- [ECO.APPS.MANIFEST.EXPORT](../../spec/eco/apps/manifest/export/NODE.md) Status, gaps and effective-command export (S, P1a)
+- [FLOW.SETUP.JOURNEY](../../spec/flow/setup/journey/NODE.md) Setup journey map, golden setup journal and time-to-first-project target (S, P1a)
+- [MIG.STUDY.REPORT](../../spec/mig/study/report/NODE.md) Correlation report export, replay links and publication gates (M, P1a)
+- [PLAT.DOCTOR.FEEDBK.SEND](../../spec/plat/doctor/feedbk/send/NODE.md) Consent, site policy and send through the egress primitive (M, P1a)
+- [PLAT.DOCTOR.HOSTCHK.INSTALL](../../spec/plat/doctor/hostchk/install/NODE.md) Install-integrity check (--check-install) (S, P1a)
+- [PLAT.HW.RUN.PIPE](../../spec/plat/hw/run/pipe/NODE.md) Release-time dispatch to reference machines and missing-run report (M, P1a)
+- [RPT.DESIGN.PREVIEW.HEADLESS](../../spec/rpt/design/preview/headless/NODE.md) Headless PNG preview command (S, P1b)
+- [RPT.DESIGN.UI.CANVAS](../../spec/rpt/design/ui/canvas/NODE.md) Designer page canvas, handles and proposal overlay (M, P1b)
+- [RPT.STATS.CAP.CMD](../../spec/rpt/stats/cap/cmd/NODE.md) Capability command (M, P1b)
+- [RPT.STATS.SPC.CHART](../../spec/rpt/stats/spc/chart/NODE.md) Control-chart series builder (M, P1b)
+
+### Wave 38 (5 leaves)
+
+- [ECO.APPS.HANDOFF.OPENIN](../../spec/eco/apps/handoff/openin/NODE.md) Open-in hand-off with write-lock release (M, P1b)
+- [ECO.APPS.HANDOFF.RO](../../spec/eco/apps/handoff/ro/NODE.md) Edit guard and read-only provenance for foreign elements (M, P1b)
+- [FLOW.REPORT.J6](../../spec/flow/report/j6/NODE.md) J6 SPC continuity from imported history plus new runs (M, P1b)
+- [RPT.DESIGN.UI.KEYS](../../spec/rpt/design/ui/keys/NODE.md) Keyboard operation and accessibility of the designer (S, P1b)
+- [RPT.STATS.DASH.OPEN](../../spec/rpt/stats/dash/open/NODE.md) Dashboard open and tile evaluation (M, P1b)
+
+### Wave 39 (2 leaves)
+
+- [ECO.APPS.INSPECT](../../spec/eco/apps/inspect/NODE.md) Inspect app composition (scan-to-CAD inspection) (M, P1b)
+- [ECO.APPS.REPORT](../../spec/eco/apps/report/NODE.md) Report app composition (reporting and SPC) (M, P1a)
 
 ## Still to expand (open)
 
-- AGENT.BOARD Published scoreboard and claim register
-- AGENT.EVAL Evaluation task suite, oracles and fixtures
-- AGENT.HARNESS Agent-agnostic evaluation runner and scoring
-- AGENT.LOCAL Reference local agent and open-weight model guidance
-- AGENT.PROPOSE Proposal brief and computed impact
-- AGENT.REDTEAM Red-team tasks and release-blocking verdict
-- AGENT.SKILLS Curated skill catalog and worked recipes
-- ALN.BFIT.FEAT Feature-to-nominal best-fit alignment
-- ALN.BFIT.ICP Surface best-fit iteration loop, metrics and command
-- ALN.DATUM.ELEM Priority-ordered alignment by geometric elements
-- ALN.DATUM.ISO ISO 5459 datum-system alignment enablement
-- ALN.DATUM.SYS Datum-system alignment engine and ASME dialect
-- ALN.MODEL.HIER Alignment hierarchy, groups, frames and deletion
-- ALN.PRE.GLOBAL Pick-free global prealignment search
-- ALN.RPS.ITER Iterative 3-2-1 alignment on nominal-located points
-- ALN.RPS.VECTOR Sheet-metal iterative alignment on vector points
-- AUTO.CLI.TARGET Session targeting: headless project or running app
-- AUTO.CTRL.TRACE UI action-trace record and playback
-- AUTO.CTRL.UIOPS UI inspection, input driving and screenshots
-- AUTO.MCP.DISC Progressive disclosure tools
-- AUTO.MCP.MODES Bridge, headless and auto modes
-- AUTO.MCP.SRV Server partitioning and front-door tool sets
-- AUTO.PROG.CHECK Static program checker
-- AUTO.PROG.DMISMAP DMIS mapping contract
-- AUTO.PROG.EDIT Editor model: command view, summary view and edit commands
-- AUTO.PROG.EXPR Typed variables and unit-aware expressions
-- AUTO.PROG.FLOW Loops, branches, jumps and subroutines
-- AUTO.PROG.INTERP Interpreter, mark-and-execute and debugger
-- AUTO.REC.ADOPT Agent-provenance gate on release
-- AUTO.REC.LIFT Parameter lifting and selection translation
-- AUTO.RUN.BATCH Batch runs and resume
-- AUTO.RUN.EXEC Single re-targeted run orchestration
-- AUTO.RUN.PLAY Operator playback mode
-- AUTO.SURF.DOCS Generated command reference pages
-- CORE.BUS.PIPE Execute pipeline, handler contract and typed errors
-- CORE.BUS.POL Side-effect, projection, file-handle and egress policy
-- CORE.BUS.PRIN Principal model and channel binding
-- CORE.BUS.ROUTE Branch routing, optimistic concurrency and idempotency
-- CORE.DEP.RECOMP Deterministic recompute with failure isolation and single-entry commit
-- CORE.JRN.BR Branches, diff, protection and promotion
-- CORE.JRN.CHAIN Append, hash chain, checkpoints and verification
-- CORE.JRN.ENTRY Entry model, salted commitments and session header
-- CORE.JRN.STREAM Streams: Record Journal, Activity Log and Access Ledger format
-- CORE.JRN.UNDO Undo, redo, undo tree and supersession
-- CORE.PRJ.CONT Project container hierarchy and entity IDs
-- CORE.PRJ.QIF Mapping of the project model onto QIF 3.0
-- CORE.PRJ.STAGE Stages: several parts or measurements in one project
-- CORE.PRJ.TPL Project templates
-- CORE.PRJ.TREE Element tree, element states and type registration
-- CORE.REG.DEF Command definition model, schema keywords and quantity catalogue
-- CORE.REG.VER Versioning, lifecycle and breaking-change detection
-- CORE.RPL.EXEC Exact and verifier re-execution with observation substitution
-- CORE.RPL.RECON Snapshots, reconstruction and crash resume
-- CORE.RPL.RETGT Re-targeted, dry-run and rebase re-execution
-- CORE.RPL.XVER Cross-version diff
-- CORE.STO.CAS Content-addressed blob store with chunking and integrity
-- CORE.STO.LAYOUT Project directory layout, locking and cross-platform file behaviour
-- CORE.STO.SET Settings model, scopes and settings commands
-- CORE.STO.SQL Project database, append-only enforcement and atomic durable commits
-- ECO.APPS.HANDOFF Cross-app project opening and hand-off
-- ECO.APPS.INSPECT Inspect app composition (scan-to-CAD inspection)
-- ECO.APPS.MANIFEST App manifest schema, loader and status data
-- ECO.APPS.NETWORK Network app composition (large-volume networks)
-- ECO.APPS.POLICY App-policy boundary and cross-app command identity
-- ECO.APPS.PROBE Probe app composition (CMM programming and execution)
-- ECO.APPS.REPORT Report app composition (reporting and SPC)
-- ECO.CI.BOTS Automated review bots and finding triage
-- ECO.CI.WF Reusable workflows, required checks and test reporting
-- ECO.COMM.PARTNER Integrator and support-partner program
-- ECO.DATA.BENCH Benchmark harness, provenance and release numbers
-- ECO.DATA.EX Example projects with replayable journals
-- ECO.PARITY.STATUS Per-app status and known-gaps report
-- ECO.REL.LTS Long-term-support channel
-- ECO.REL.PKG Per-OS installers and packages
-- ECO.REL.PROC Release process, versioning, channels and notes
-- ECO.REL.REPRO Reproducible builds and their verification
-- ECO.REL.SIGN Release signing, checksums and SBOM
-- ECO.REL.UPD Opt-in update check
-- ECO.REL.WEB Self-hostable web bundle
-- ECO.REPO.TPL Repository template
-- ECO.RULES.VOCAB Product UI-string vocabulary lint
-- FLOW.DEADEND No dead ends - suggested-fix catalogue and "Why?" coverage
-- FLOW.INSPECT Inspect-app acceptance jobs (scan FAI, kiosk run, sections and gap/flush)
-- FLOW.PERSONA Personas, journey-map format and journey coverage
-- FLOW.REPORT Report-app acceptance jobs (transcription FAI, drawing-only FAI, SPC, supplier intake)
-- FLOW.RUNNER Golden-journal acceptance runner, pass rules and GA gates
-- FLOW.SETUP First-run Shop Setup wizard and onboarding
-- FLOW.STUDY Design-partner timing and usability study protocol
-- GDT.CHAR.MODEL Characteristic and feature-control-frame model on QIF 3.0
-- GDT.DIM.SECT Checks on section elements
-- GDT.DIM.SIZEASME ASME feature-of-size: two-point size and Rule #1 envelope
-- GDT.DIM.SIZEISO ISO 14405-1 size modifiers
-- GDT.DRF.CHECK Transform-used and within-envelope result fields
-- GDT.DRF.COMMON Common datums and datum targets
-- GDT.DRF.MOB Datum mobility envelope
-- GDT.DRF.SIM Datum-feature simulators and rocking candidate sets
-- GDT.FORM.STRAIGHT Straightness of line elements and of a derived median line
-- GDT.LOC.COAX Coaxiality and concentricity
-- GDT.LOC.DERIV Derived-feature extraction
-- GDT.LOC.ORIENT Parallelism, perpendicularity and angularity
-- GDT.LOC.POS Position of features and patterns
-- GDT.LOC.SYM Symmetry
-- GDT.PMI.MAP Semantic PMI to proposed characteristics
-- GDT.PROF.BESTFIT Profile best-fit options
-- GDT.PROF.LINE Profile of a line
-- GDT.PROF.RUNOUT Circular, total and axial runout
-- GDT.PROF.SURF Profile of a surface, including composite profile
-- GDT.PROF.ZDEF Profile zone definitions
-- GDT.RES.ROWASME P1a ASME Y14.5-2018 DMT row set
-- GDT.RES.ROWFLOW DMT row proposal, review and sign-off workflow
-- GDT.RES.ROWISO ISO GPS DMT row set
-- GDT.ZONE.COMP Composite feature-control-frame tiers
-- GDT.ZONE.GROUP Patterns and simultaneous requirements
-- GDT.ZONE.MATL Material-condition modifiers, bonus and virtual-condition boundaries
-- GDT.ZONE.MOBSRCH Zone solve within datum mobility
-- GDT.ZONE.POSE Zone-pose solve and certificates
-- GEO.CAD.ASSY CAD parts, assemblies and instance placement
-- GEO.CAD.NOMINAL Nominal element generation from CAD faces and edges
-- GEO.CAD.TESS Controlled, watertight tessellation of CAD bodies
-- GEO.CAD.TOPO B-rep topology model, trimming and validation
-- GEO.DIST.FACE Point-to-trimmed-face and point-to-body projection
-- GEO.SEL.QUERY Semantic selection queries and re-evaluation
-- HAL.ACQ.FILEDEV File pseudo-devices and manual-entry provenance
-- HAL.ACQ.INGEST Data-plane ingest, back-pressure, sequencing and gaps
-- HAL.ACQ.SESS Device registry, sessions, configuration and health supervision
-- HAL.ACQ.STAMP Provenance stamping, raw-batch storage and batch journaling
-- HAL.IDL.BASE Device base package, health state machine and error model
-- HAL.IDL.CNC CMM capability packages (CncMotion, TactileProbe, Rotary)
-- HAL.IDL.GEN Package format, stub and schema generation, capability discovery commands
-- HAL.IDL.SENS Sensor capability packages (pose, scan, surface, gauge, environment, camera)
-- IO.CAD.EXPORT STEP and IGES export of geometric elements
-- IO.CAD.IGES IGES geometry import
-- IO.CAD.PMI AP242 semantic PMI mapping to QIF MBD
-- IO.CAD.STEP STEP B-rep geometry import
-- IO.CAD.WORKER Isolated CAD kernel worker process
-- IO.CAD.XLATE Native CAD translator plugin contract
-- IO.CLOUD.E57 E57 reader and writer with multi-scan poses
-- IO.CLOUD.LAS LAS, LAZ and COPC reader and writer with scaled-integer precision
-- IO.CLOUD.STREAM Streaming point sink and attribute selection for cloud readers and writers
-- IO.DMIS.DIAL Vendor DMIS dialect profiles as data
-- IO.DMIS.EXPORT DMIS output and program export
-- IO.DMIS.OUT DMIS output-file reader for measured results
-- IO.DMIS.PARSE Bounded DMIS lexer, parser, syntax tree and printer
-- IO.DMIS.PROG DMIS program import to a program model and QIF
-- IO.QIF.GEN XSD to Schema IR code generator for QIF 3.0 types and JSON Schema
-- IO.QIF.IDS Identifier preservation and extension pass-through
-- IO.QIF.JSON Lossless QIF-JSON projection, canonical form and digests
-- IO.QIF.XML Validating QIF-XML reader and writer
-- IO.REG.ENV Generic import and export command envelope
-- IO.REG.PLUGIN Format-plugin interface for third-party readers and writers
-- IO.RES.AQDEF AQDEF DFQ export and historical import (uncertified)
-- IO.RES.CSV CSV and table result exchange through versioned column maps
-- IO.RES.PIWEB PiWeb-importable results export
-- IO.RES.QIFR QIF Results and QIF Statistics in and out
-- IO.RES.TRANS Transcription record model, source mapping and DMIS results import
-- KRN.CONS.AUTO Automatic construction from CAD with nominal-actual pairing
-- KRN.CONS.DERIV Derived curves, surface points and system elements
-- KRN.CONS.ELEM Primitives built from elements and constructed sets
-- KRN.CONS.OPS Construction operations on element pairs
-- KRN.CONS.REL Live relationships
-- KRN.ENV.MCC Minimum circumscribed fits
-- KRN.ENV.MIC Maximum inscribed fits with trust region
-- KRN.ENV.TAN Tangential fits and datum simulators
-- KRN.LSQ.AXIS Least-squares cylinder, cone and torus fits
-- KRN.LSQ.CURVE Least-squares paraboloid, polyline and spline fits
-- KRN.LSQ.PLAN2D Least-squares slot, rectangle and ellipse fits
-- KRN.MAN.MANI Kernel manifest and digest
-- KRN.MAN.VAL Validation harness and per-release report
-- KRN.MZ.EXT Minimum-zone cone, slot, rectangle, ellipse and planar curves
-- KRN.MZ.LIN Minimum-zone lines and plane
-- KRN.MZ.RND Minimum-zone circle, sphere and cylinder
-- KRN.NUM.FMT Versioned kernel number formatters (fmt.*)
-- KRN.NUM.LA Deterministic dense linear algebra
-- KRN.NUM.LINT KNP-1 lint and kernel dependency allowlist check
-- KRN.SOLV.CERT Active-set certificates, recomputation and tie-break
-- KRN.SOLV.CONIC Vendored LP, QP and SOCP solver with KNP-1 audit
-- KRN.SOLV.SEQ Sequential linearisation driver
-- MIG.COVER Migration test corpora and generated coverage tables
-- MIG.EXPLAIN Difference attribution ("Why is it different?")
-- MIG.LADDER Migration ladder stages and per-project stage status
-- MIG.PARALLEL Parallel-run pairing and per-characteristic difference report
-- MIG.PROJ Incumbent project and point-export import for re-evaluation
-- MIG.SRC Incumbent source register and clean-room admission
-- MIG.STUDY Correlation-study protocol and reproducible correlation reports
-- MIG.TEMPL Customer form and report template recreation
-- OUTR.BENCH.ACC Accuracy benchmarks against reference data
-- OUTR.BENCH.CASE User case studies
-- OUTR.BENCH.CMP Comparisons with incumbent products
-- OUTR.BENCH.FIDEL Format fidelity benchmarks
-- OUTR.BENCH.PERF Performance benchmarks
-- OUTR.BENCH.RUN Benchmark recipes, release re-runs and result pages
-- OUTR.BRAND.ASSET Original outreach assets and attribution
-- OUTR.BRAND.COPY Copied-text detection rule
-- OUTR.BRAND.GUIDE Brand usage guidelines and visual identity
-- OUTR.COMM.CHAN Community channel inventory and listing
-- OUTR.COMM.METRIC Adoption metric definitions and collection
-- OUTR.COMM.MOD Moderation procedure and moderation log
-- OUTR.COMM.REPORT Quarterly adoption report
-- OUTR.COMM.SURVEY Opt-in surveys
-- OUTR.CONTENT.MIG Migration guides from incumbent workflows
-- OUTR.CONTENT.REPRO Content replay check across releases
-- OUTR.CONTENT.TUT Tutorials per focused app
-- OUTR.CONTENT.VIDEO Video production with built-in capture
-- OUTR.DOCS.BOOK User guide (the book)
-- OUTR.DOCS.FRAME Portal frame, release editions and offline bundles
-- OUTR.DOCS.QA Docs quality gates and link checks
-- OUTR.DOCS.REF Generated command reference pages
-- OUTR.DOCS.SEARCH Client-side docs search
-- OUTR.LAUNCH.ANN Announcement plan and drafts
-- OUTR.LAUNCH.GATE Milestone gate check and report
-- OUTR.LAUNCH.KIT Conference and trade-show demo kits
-- OUTR.LAUNCH.PLAN Launch plan and milestone definitions
-- OUTR.LAUNCH.REVIEW Post-launch reviews
-- OUTR.SITE.DL Download page
-- OUTR.SITE.GEN Static build and generated-data import
-- OUTR.SITE.PAGES Home page, per-app pages and blog
-- OUTR.SITE.QA Static-site quality gates
-- OUTR.SITE.STATUS Status, parity and roadmap pages
-- PLAT.DEPLOY.KIOSK OS-level kiosk and touchscreen station setup
-- PLAT.DEPLOY.NOADMIN Per-user install without admin rights and write scope
-- PLAT.DEPLOY.OFFLINE Air-gapped install bundle and no-egress test
-- PLAT.DEPLOY.SILENT Silent enterprise install and uninstall
-- PLAT.DEPLOY.UPDATE Offline signed update bundles
-- PLAT.DOCTOR.FEEDBK Opt-in crash and issue reporting
-- PLAT.DOCTOR.HOSTCHK Optional driver-host and install-integrity checks
-- PLAT.GPU.CI Rendering CI jobs per backend
-- PLAT.GPU.FALLBK Software and reduced renderer fallback contract
-- PLAT.GPU.NOTICE Fallback and workaround notice
-- PLAT.HW.REFMACH Reference benchmark machine registry
-- PLAT.HW.RUN Release benchmark runs, publishing and regression flags
-- PLAT.HW.SUITE Benchmark workloads, datasets and metrics
-- PLAT.MATRIX.POLICY Tier definitions, Tier 1 set and end-of-life policy
-- QUAL.CRA EU Cyber Resilience Act and export-control documentation
-- QUAL.EVID Per-release software verification evidence bundle
-- QUAL.IQOQ Automated IQ and OQ runs and qualification evidence bundle
-- QUAL.MATRIX Compliance matrix and regulated-claim wording
-- QUAL.SBOM SBOM policy, dependency vulnerability scanning and VEX
-- QUAL.THREAT Threat model and security architecture review
-- QUAL.VAP Validation Accelerator Pack documents and templates
-- QUAL.VULN Security policy, vulnerability disclosure and advisories
-- RPT.BALLOON.BLOCK Ballooned-drawing report block
-- RPT.BALLOON.CHAR Characteristics from balloons
-- RPT.BALLOON.ENTRY Manual reading entry
-- RPT.BALLOON.GAUGE Gauge register
-- RPT.BALLOON.SHEET Drawing sheets and drawing revisions
-- RPT.CATALOG.CHECK Catalog integrity check and rebuild
-- RPT.CATALOG.IMPORT Historical results import
-- RPT.CATALOG.QUERY Catalog query model
-- RPT.CATALOG.SHARE Shared-folder catalogs
-- RPT.CATALOG.STORE Catalog store and incremental indexing
-- RPT.DESIGN.PLACE Block placement, sizing and overflow
-- RPT.DESIGN.PREVIEW Live preview
-- RPT.DESIGN.STYLE Style sets
-- RPT.DESIGN.UI Designer panel
-- RPT.FORMS.FINAL Form completeness check and finalisation
-- RPT.FORMS.HDR FAI header and accountability data (forms 1 and 2)
-- RPT.FORMS.LAYOUT Fixed form templates for FAI and PPAP
-- RPT.FORMS.PPAP PPAP dimensional results data
-- RPT.FORMS.ROWS Characteristic accountability rows (form 3)
-- RPT.MODEL.BIND Binding resolution and report generation
-- RPT.MODEL.BLOCKS Content block types
-- RPT.MODEL.FMT Value formatting, decision display and source labels
-- RPT.MODEL.TMPL Template format, slots, repetition and starter templates
-- RPT.OUTPUT.PDF PDF renderer
-- RPT.OUTPUT.SHEET Spreadsheet and CSV export of report tables
-- RPT.OUTPUT.SPC Statistics export to SPC systems
-- RPT.STATS.CAP Capability and performance indices
-- RPT.STATS.CMP Part-to-part comparison and piece stepping
-- RPT.STATS.DASH Dashboards
-- RPT.STATS.DSET Data sets, ordering and exclusions
-- RPT.STATS.SPC Control charts, control limits and run rules
-- RPT.STATS.TREND Trend series and the chart-series contract
-- SCAN.CLOUD.REG Multi-scan registration
-- SCAN.CMP.DEV Deviation primitive and surface comparison against CAD
-- SCAN.CMP.GPUPV GPU deviation preview with CPU cross-check
-- SCAN.EDGE.EST Edge estimation on wrapped meshes and clouds
-- SCAN.MESHOP.CUT Cut, clip, merge and invert
-- SCAN.MESHOP.HOLES Hole filling and closing
-- SCAN.MESHOP.REPAIR Self-intersection and non-manifold repair
-- SCAN.POLY.MULTI Multi-scan merge meshing
-- SCAN.POLY.SURF Single-cloud surface reconstruction
-- TRUST.PKG.CONTENT Package content selection and evidence tiers
-- TRUST.PROFILE.GATE Profile query API and enforcement hooks
-- TRUST.REPLAY.KART Kernel artifact sourcing for verifier replay
-- TRUST.SIGN.KEYSTORE OS keystore backends and key lifecycle commands
-- TRUST.SIGN.UV User-verification release and S1 refusal
-- TRUST.VERIFY.WEB In-browser verifier
-- UNC.INST.IEMPS Instrument Error Model Parameter Sets for virtual-CMM simulation
-- UNC.INST.LIB Instrument-profile library
-- UNC.INST.MPE Specification-derived models from ISO 10360 MPE terms
-- UNC.INST.PORT Per-observation models for trackers, arms and scanners
-- UNC.MODEL.CONTRIB Contributor plug-in contract and non-instrument contributor library
-- UNC.MODEL.GRAPH Model graph schema, digest, validation and versioning
-- UNC.MODEL.SUBST ISO 15530-3 substitution evaluation
-- UNC.ORS.ALN ORS-ALN: alignment cases
-- UNC.ORS.DRF ORS-DRF: datum reference frame cases
-- UNC.ORS.FLT ORS-FLT: filter, resampling and outlier cases
-- UNC.ORS.GDT ORS-GDT: tolerance evaluation cases
-- UNC.ORS.PROJ ORS-PROJ: projection onto CAD faces
-- UNC.ORS.SIZE ORS-SIZE: size definition cases
-- UNC.ORS.UNC ORS-UNC: coverage of uncertainty intervals on known-truth parts
-- UNC.PROP.LPU Linear propagation with analytic sensitivities
-- UNC.PROP.MCM Adaptive Monte Carlo propagation through the kernel pipeline
-- UNC.PROP.MVAR Multivariate propagation of feature parameter vectors
-- UNC.PROP.NLIN Nonlinearity assessment for LPU
-- UNC.RDL.BLIND Tier B blind sets and challenge handling
-- UNC.RDL.EXT Tier X external dataset import
-- UNC.RDL.GEN Tier G synthetic generators and oracle cross-checks
-- UNC.RDL.TRACIM PTB TraCIM client
-- UNC.UEC.QIF QIF 3.0 mapping of the uncertainty statement
-- UX.COMP Component library specification
-- UX.ICONS Original icon set and GD&T symbol drawings
-- UX.PATTERN Shared interaction and guidance patterns
-- UX.REPORT Report visual language
-- UX.RESEARCH User research and usability testing
-- UX.SCREENS Wireframes and mockups of primary screens
-- UX.SYSTEM Design principles, design-system package and open design workflow
-- UX.TOKENS Design tokens, themes and data colour palettes
-- VIZ.CAPTURE.OSCAP Full-window capture through OS APIs
-- VIZ.CAPTURE.REC Recording sessions, indicator and governance
-- VIZ.CAPTURE.TRACK View track and re-rendered replay
-- VIZ.CAPTURE.VIDEO Viewport video capture in hash-chained segments
-- VIZ.INBOX.ACTIONS Action chips, plan preview and batch apply
-- VIZ.INBOX.DIFF Four-layer proposal diff
-- VIZ.INBOX.GATES Governance-profile gates on promotion
-- VIZ.KIOSK.CYCLE End-of-cycle actions, loops and escalation
-- VIZ.KIOSK.STEPS Operator-step renderers and lock-down
-- VIZ.OVERLAY.CMAP ColorMapSpec and kernel re-binning round trip
-- VIZ.OVERLAY.GDTGLYPH GD&T annotation rendering
-- VIZ.OVERLAY.LABEL Labels, leader lines and label layout
-- VIZ.OVERLAY.SCALEED Colour-scale editor
-- VIZ.OVERLAY.WHISK Whiskers, flags and vector plots
-- VIZ.PICK.LASSO Lasso selection as semantic queries
-- VIZ.PICK.SELSET Selection sets, algebra and grow
-- VIZ.RENDER.FRAME Frame graph, backends and capability tiers
-- VIZ.RENDER.GLYPH Instruments, probes and machine models
-- VIZ.RENDER.LOD Point-cloud LOD streaming and point rasterization
-- VIZ.RENDER.ORACLE CPU reference rasterizer and golden-image CI
-- VIZ.RENDER.SCENE Semantic scene graph and ID tables
-- VIZ.RENDER.SHADE Mesh and CAD shading, transparency and clip raster
-- VIZ.SHELL.A11Y Accessibility tree, describe view and UI inspection
-- VIZ.SHELL.DOCK Workspace frame, docking, status bar and role layouts
-- VIZ.SHELL.PALETTE Command palette, generated forms, menus and keymap
-- VIZ.SHELL.THEME Theming, scaling, motion and localisation
-- VIZ.SHELL.TREE Element tree, inspector and results panels
-- VIZ.VIEW.CAMERA Camera commands, fly-to and agent highlight
-- VIZ.VIEW.MULTI Multi-viewport layouts and camera sync
-- VIZ.VIEW.NAMED NamedView lifecycle and exact restore
-- VIZ.VIEW.VISIB Visibility, layers and explorer filters
+- GDT.DIM.SIZEASME.LOCAL ASME two-point local size under a DMT pairing rule
+- GDT.DIM.SIZEISO.CALC ISO calculated sizes (circumference, area, volume)
+- GDT.DIM.SIZEISO.LOCAL ISO local sizes (two-point and spherical)
+- GDT.DRF.COMMON.CDAT Common datums from several features
+- GDT.DRF.COMMON.TARGET Datums established from datum targets
+- GDT.DRF.MOB.BOUND Envelope constraints from MMB, LMB and rocking
+- GDT.DRF.SIM.SELECT Applying a DMT selection rule to rocking candidates
+- GDT.LOC.DERIV.MLINE Derived median line from section centres
+- GDT.LOC.DERIV.MSURF Derived median surface and median points
+- GDT.LOC.ORIENT.TANG Tangent-plane modifier for orientation
+- GDT.LOC.POS.SLOT Position of slots, tabs and width features
+- GDT.PROF.ZDEF.NONUNIF Non-uniform profile zone intervals
+- GDT.RES.ROWASME.DPROF ASME Y14.5-2018 defaults profile values
+- GDT.RES.ROWASME.DRF ASME datum and DRF rows
+- GDT.RES.ROWASME.FORM ASME form rows
+- GDT.RES.ROWASME.ORIENT ASME orientation rows
+- GDT.RES.ROWASME.POS ASME position rows
+- GDT.RES.ROWASME.SIZE ASME dimensional and size rows
+- GDT.RES.ROWISO.DATUM ISO 5459 datum and datum-system rows
+- GDT.RES.ROWISO.DPROF ISO defaults profiles and decision-rule hint
+- GDT.RES.ROWISO.GEOTOL ISO 1101 geometrical tolerance rows
+- GDT.RES.ROWISO.MATREQ ISO 2692 material-requirement rows
+- GDT.RES.ROWISO.SIZE ISO 14405-1 size rows
+- GDT.ZONE.GROUP.SIMREQ Simultaneous-requirement groups across callouts
+- HAL.IDL.CNC.CARDS I++ DME clause-ID mapping table and own-words semantics notes
+- HAL.IDL.CNC.MOTION CncMotion@1 package (operations, queue, hold and abort, events)
+- HAL.IDL.GEN.HOSTGEN Host stub generators (C#/.NET, C++, Python) and WIT for Tier-3 packages
+- HAL.IDL.SENS.AREA AreaScan@1 package (point frames)
+- HAL.IDL.SENS.CAM Camera@1 package (frames and intrinsics)
+- HAL.IDL.SENS.PORT PortablePose@1 package (6DoF pose stream)
+- HAL.IDL.SENS.SURF HeightMap@1 and Profile@1 packages (areal and profile surface data)
+- I18N.CATALOG String catalog, message IDs, plurals and hard-coded string lint
+- I18N.LOCALE Locale data, display formatting and locale-aware input parsing
+- I18N.UNITS Display-unit preferences and display-unit input
+- KRN.CONS.DERIV.SECT Section curves of nominal surfaces
+- MIG.EXPLAIN.VARIANT Single-factor re-evaluation variants per factor
+- OUTR.CONTENT.MIG.PCD Migration guide for PC-DMIS users
+- OUTR.CONTENT.MIG.SA Migration guide for SpatialAnalyzer users
+- OUTR.CONTENT.TUT.NETWORK Network app tutorials
+- OUTR.CONTENT.TUT.PROBE Probe app tutorials
+- OUTR.DOCS.BOOK.NETWORK Network app chapters
+- OUTR.DOCS.BOOK.PROBE Probe app chapters
+- PLAT.DOCTOR.HOSTCHK.HOSTS Configured driver-host check (--check-hosts)
+- UNC.INST.LIB.CURATE First curated profile set
+- UNC.INST.MPE.ARM Articulated-arm mapping table (ISO 10360-12)
+- UNC.INST.MPE.CMM CMM mapping table (ISO 10360-2 and -5)
+- UNC.INST.MPE.OPT Optical-sensor and optical 3D system mapping tables (ISO 10360-8 and -13)
+- UNC.INST.MPE.TRK Laser-tracker mapping table (ISO 10360-10)
+- UNC.MODEL.CONTRIB.REG Scan registration contributor
+- UNC.MODEL.CONTRIB.SAMPLE Sampling and unsampled-form contributor
+- UNC.MODEL.SUBST.EVAL Component formulas, bias treatment and combination
+- UNC.ORS.DRF.MOD Datum references at MMB and LMB
+- UNC.ORS.DRF.SIM Datum features with form error and simulator contact
+- UNC.ORS.FLT.FILTER Profile and areal filter transmission cases
+- UNC.ORS.FLT.RESAMPLE Resampling cases on known surfaces
+- UNC.ORS.GDT.COMP Composite and simultaneous requirements
+- UNC.ORS.GDT.MOD Position with material modifiers, bonus and datum shift
+- UNC.ORS.GDT.PROF Profile of a line and of a surface
+- UNC.ORS.SIZE.ASME ASME envelope and size cases
+- UNC.ORS.SIZE.ISO ISO 14405-1 size modifier cases
+- UNC.ORS.UNC.NZERO Non-negative quantities with true value zero
+- UNC.PROP.LPU.TCONS Tangents for kernel constructions and evaluation operators
+- UNC.RDL.EXT.NIST NIST Algorithm Testing System importer
+- UNC.RDL.EXT.PTBSG PTB softgauge set importer
+- UNC.RDL.GEN.MZEQ Minimum-zone equioscillation generators
+- UNC.RDL.TRACIM.PROTO TraCIM protocol and XML mapping
+- UX.SCREENS.COMMON Shared shell, Shop Setup and first-run screens
+- UX.SCREENS.FLOOR Kiosk and Approval Station screens
+- UX.SCREENS.INSPECT Inspect app screens
+- UX.SCREENS.NETWORK Network app screens
+- UX.SCREENS.PROBE Probe app screens
+- UX.SCREENS.RPTAPP Report app screens

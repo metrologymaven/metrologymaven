@@ -4,7 +4,7 @@ title: Derived-feature extraction
 level: 3
 parent: GDT.LOC
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.LOC-005]
 covers: []
 depends_on: [KRN.LSQ, KRN.CONS, GDT.RES.RESOLVE]
+uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.GDT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.LOC.DERIV: Derived-feature extraction
@@ -53,8 +54,14 @@ AXIS (axis of associated feature; likely a leaf), MLINE (derived median line), M
 
 ## Open questions
 
-- Derived median line and median surface definitions differ by dialect and edition (ISO 1101 versus ASME) and are DMT content (D-009, D-016).
+- Derived median line and median surface definitions differ by dialect and edition (ISO 1101 versus ASME) and are DMT content (D-009, D-016): `GDT.LOC.DERIV.MLINE` and `GDT.LOC.DERIV.MSURF` stay open. The element type, dispatch and the axis of an associated feature are mechanics and are leaves.
+- MSURF is P1b because its only consumers (`GDT.LOC.SYM`, concentricity in `GDT.LOC.COAX`) are P1b.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.LOC.DERIV.TYPES | Derived-element type, dispatch and failure reasons (leaf) | 001 002 | none |
+| GDT.LOC.DERIV.AXIS | Axis of an associated feature (leaf) | 001 003 | none |
+| GDT.LOC.DERIV.MLINE | Derived median line from section centres | 001 002 003 | none |
+| GDT.LOC.DERIV.MSURF | Derived median surface and median points | 001 002 003 | none |

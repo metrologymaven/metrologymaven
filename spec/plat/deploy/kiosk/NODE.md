@@ -4,18 +4,19 @@ title: OS-level kiosk and touchscreen station setup
 level: 3
 parent: PLAT.DEPLOY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DEPLOY-008]
 covers: []
-depends_on: [PLAT.MATRIX, VIZ.KIOSK]
+depends_on: [PLAT.MATRIX]
+uses_artifacts: [VIZ.KIOSK.SESSION, ECO.REL.PKG.WIN, PLAT.DEPLOY.MCONF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.DEPLOY.KIOSK: OS-level kiosk deployment
@@ -46,17 +47,25 @@ Documents and tests how to turn a shop-floor PC or touchscreen panel into a dedi
 
 ## Interfaces
 
-- **Offers:** kiosk guides; reference kiosk display; kiosk smoke-test job.
-- **Consumes:** VIZ.KIOSK (`view.get_kiosk_status@1`, kiosk entry); ECO.REL installers; `PLAT.DEPLOY.MCONF` for locked settings on stations.
+- **Offers:** kiosk guides and their configuration snippets (`docs/deploy/kiosk/`); `platform/kiosk-display.toml`; the kiosk smoke-test job.
+- **Consumes (artifacts):** `view.get_kiosk_status@1` JSON output and `fid view enter-kiosk` behaviour (`VIZ.KIOSK.SESSION`); the Windows MSI (`ECO.REL.PKG.WIN`); the managed policy file format (`PLAT.DEPLOY.MCONF`). Code: the Tier 1 set from `PLAT.MATRIX`.
 
 ## Decomposition hints
 
-WIN (Windows assigned access guide and smoke test), LINUX (session-level kiosk guide), MAC (macOS guide; may be Tier 2 practice), DISPLAY (reference display choice).
+See Children.
 
 ## Open questions
 
-- macOS has limited single-app kiosk support for desktop apps [unverified]; the guide may need to state reduced guarantees.
+- macOS has limited single-app kiosk support for desktop apps [unverified]; `PLAT.DEPLOY.KIOSK.GUIDE` states reduced guarantees for it.
+
+## Split rationale
+
+Split by **artefact**: written guides (checked by a lint), a release-time CI smoke test on Windows, and one data file naming the reference display. Each has a different consumer (site IT, the release gate, VIZ) and can be built independently. A per-OS split was rejected because only Windows has a CI smoke test, and the guides share one structure and lint.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.KIOSK.GUIDE | Per-OS kiosk deployment guides and guide lint | 001 002 | none |
+| PLAT.DEPLOY.KIOSK.SMOKE | Windows kiosk image smoke and restart test | 002 004 | none |
+| PLAT.DEPLOY.KIOSK.DISPLAY | Reference kiosk display file | 003 | none |

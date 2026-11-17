@@ -4,7 +4,7 @@ title: Maximum inscribed fits with trust region
 level: 3
 parent: KRN.ENV
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.LSQ.RND, KRN.LSQ.AXIS, KRN.SOLV.SEQ, KRN.SOLV.CERT, KRN.SOLV.MS
 cli: [fid fit mic-circle2d, fid fit mic-sphere, fid fit mic-cylinder]
 mcp: [fit_mic_circle2d, fit_mic_sphere, fit_mic_cylinder]
 journal: [fit.mic_circle2d@1, fit.mic_sphere@1, fit.mic_cylinder@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.ENV.MIC: Maximum inscribed fits with trust region
@@ -56,8 +56,13 @@ TR (trust region and `unbounded_envelope`), CIRC (2D circle and agreement job), 
 
 ## Open questions
 
-- Default trust-region size must be tuned on the ORS-SIZE partial-arc cases from `UNC` [unverified].
+- Default trust-region size must be tuned on the ORS-SIZE partial-arc cases from `UNC` [unverified]. `KRN.ENV.MIC.TR` makes the size a required, recorded parameter so tuning never changes a past result silently.
+- Slot and rectangle inscribed envelopes: no accepted definition is cited yet [unverified]; `KRN.ENV.MIC.TR` lists them as `method_undefined` in the MIC defined-pairs table until one is.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.ENV.MIC.TR | Trust region, unbounded-envelope error and MIC defined pairs | 002 003 | none |
+| KRN.ENV.MIC.CIRSPH | Maximum inscribed circle and sphere | 001 004 005 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.MIC.CYL | Maximum inscribed cylinder | 001 005 | GOM.CON.20, PW.CON.05 |

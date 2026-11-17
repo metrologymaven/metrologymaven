@@ -4,18 +4,18 @@ title: Selection sets, algebra and grow
 level: 3
 parent: VIZ.PICK
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.PICK-002, REQ-VIZ.PICK-009]
 covers: []
-depends_on: [VIZ.PICK.RESOLVE, GEO.SEL, CORE]
-cli: [fid view set-selection]
-mcp: [view_set_selection]
-journal: [view.set_selection@*]
-updated: 2026-11-16
+depends_on: [VIZ.PICK.RESOLVE, VIZ.SHELL.PALETTE, GEO.SEL.CMD, GEO.SEL.QUERY.CMD, CORE.JRN.ENTRY, CORE.PRJ.TREE.MODEL]
+cli: [fid view set-selection, fid view save-selection-set, fid view delete-selection-set, fid view list-selection-sets]
+mcp: [view_set_selection, view_save_selection_set, view_delete_selection_set, view_list_selection_sets]
+journal: [view.set_selection@*, view.save_selection_set@*, view.delete_selection_set@*, view.list_selection_sets@*]
+updated: 2026-11-17
 ---
 
 # VIZ.PICK.SELSET: Selection sets, algebra and grow
@@ -58,8 +58,14 @@ STATE (current selection and command), ALGEBRA, GROW, NAMED (named sets), ARGS (
 
 ## Open questions
 
-- Side-effect class of `view.set_selection@1`: UI context only (R0-like, not journaled as document state) or W2 on the working document. CORE.BUS rules decide; named selection sets are certainly W2.
+- Settled: `view.set_selection@1` is R1. The current selection is session scratch state, not document state; it reaches the Activity Log while recording (D-031), and W-class commands acting on it record its digest as an `r1_result` input. Named sets are W2 document entities (`VIZ.PICK.SELSET.NAMED`). A maintainer should confirm this reading of R1.
+- Index-level algebra and grow or shrink are GEO commands (`GEO.SEL.CMD`); curvature and normal-angle grow criteria are not available in `GEO.SEL.ALGEBRA` [cross-domain].
+- The pick schema keywords used by `VIZ.PICK.SELSET.ARGS` must be added to `CORE.REG.DEF.SCHEMA` [cross-domain].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.PICK.SELSET.STATE | Current selection, set-selection command and algebra orchestration (leaf) | 001 002 003 004 005 | none |
+| VIZ.PICK.SELSET.NAMED | Named selection sets (leaf) | 001 004 | none |
+| VIZ.PICK.SELSET.ARGS | Picked point pairs and datum features as typed command arguments (leaf) | 001 | none |

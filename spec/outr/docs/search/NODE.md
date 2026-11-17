@@ -4,7 +4,7 @@ title: Client-side docs search
 level: 3
 parent: OUTR.DOCS
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [OUTR.DOCS.FRAME]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.DOCS.SEARCH: Client-side docs search
@@ -59,4 +59,7 @@ INDEX (index build), UI (search box and results), RANK (command-ID ranking).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.DOCS.SEARCH.INDEX](index/NODE.md) | Per-edition search index with command-name table (leaf) | 001 003 004 005 | none |
+| [OUTR.DOCS.SEARCH.UI](ui/NODE.md) | In-browser search page with no network requests (leaf) | 001 002 003 004 | none |

@@ -4,18 +4,18 @@ title: Four-layer proposal diff
 level: 3
 parent: VIZ.INBOX
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.INBOX-002, REQ-VIZ.INBOX-006, REQ-VIZ.INBOX-007]
 covers: []
-depends_on: [VIZ.INBOX.LIST, CORE, VIZ.VIEW]
+depends_on: [VIZ.INBOX.LIST, VIZ.INBOX.STALE, CORE.JRN.BR, AGENT.PROPOSE, GDT.CHAR.RECORD, VIZ.VIEW]
 cli: [fid view show-proposal]
 mcp: [view_show_proposal]
 journal: [view.show_proposal@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.INBOX.DIFF: Four-layer proposal diff
@@ -57,8 +57,14 @@ CMDDIFF, SEMDIFF, RESDIFF, VISDIFF, HEADER (rationale and confidence).
 
 ## Open questions
 
-- The result diff is assumed to be a CORE/kernel service (parent open question); if CORE does not own it, an owner is needed before RESDIFF can be finished.
+- Resolved: the result diff is `AGENT.PROPOSE.IMPACT` (R1) over `CORE.JRN.BR.DIFF`, with values read from stored ResultRecords and formatted by the kernel formatter (`VIZ.INBOX.DIFF.SEMRES`). The brief, verdict and confidence word come from `AGENT.PROPOSE.SHOW` (`VIZ.INBOX.DIFF.HEADER`).
+- Split rationale: one child per layer family plus the assembling command; the split view needs `VIZ.VIEW.MULTI` (P1b), so P1a may ship the toggle only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.INBOX.DIFF.SHOW | Show-proposal command and command diff layer (leaf) | 001 003 | none |
+| VIZ.INBOX.DIFF.SEMRES | Semantic and result diff layers from kernel records (leaf) | 002 | none |
+| VIZ.INBOX.DIFF.VISUAL | Visual proposal diff with before/after toggle and split (leaf) | 005 | none |
+| VIZ.INBOX.DIFF.HEADER | Proposal header with brief, verdict and confidence words (leaf) | 003 004 | none |

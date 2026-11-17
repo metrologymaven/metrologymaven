@@ -4,18 +4,19 @@ title: Design-partner timing and usability study protocol
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-FLOW-003, REQ-FLOW-007]
 covers: [JOB.USE.02, JOB.USE.03]
-depends_on: [FLOW.PERSONA, CORE.JRN, OUTR.BENCH, OUTR.BRAND]
+depends_on: [CORE.JRN, CORE.BUS, AUTO.SURF]
+uses_artifacts: [FLOW.PERSONA]
 cli: [fid accept import-timing, fid accept show-study]
-mcp: [accept_show_study]
-journal: [accept.import_timing@1]
-updated: 2026-11-16
+mcp: [accept_import_timing, accept_show_study]
+journal: [accept.import_timing@1, accept.show_study@1]
+updated: 2026-11-17
 ---
 
 # FLOW.STUDY: Design-partner timing and usability study protocol
@@ -61,9 +62,22 @@ PROTO (protocol document), RECORD (record format, anonymisation and import), USA
 
 ## Open questions
 
-- Incumbent licence terms may forbid publishing benchmark numbers [unverified]; the publishing side is D-021 (open). This node defines only the evidence.
-- Opt-in crash and performance telemetry from pilot installs is a third measurement source in doc 10; it is consumed by `FLOW.RUNNER`, not here.
+- Incumbent licence terms may forbid publishing benchmark numbers [unverified]. D-021 is accepted (option A for the first releases: no incumbent comparisons; B later after counsel review), so incumbent baselines stay internal and `FLOW.STUDY.CLAIM` refuses to publish them.
+- Opt-in crash and performance telemetry from pilot installs is a third measurement source in doc 10; it is consumed by `FLOW.RUNNER.RELIAB`, not here.
+- REQ-007 ("not exposed over MCP") is met as CONSTITUTION §3 requires for human-only commands: request-only on MCP, never callable by an agent.
+
+## Split rationale
+
+The dividing principle is **method, data and publication**: the protocol and task list (PROTO) say how sessions are run; the record format, import and aggregates (RECORD) are the only path by which study data enters the project and the only thing the gate reads; the summary and evidence rule (CLAIM) govern what may be said publicly. The usability measures sit in PROTO (definition) and RECORD (fields and aggregates) rather than in a separate child, because they are two more fields of the same session.
+
+Alternatives considered:
+- **A USAB child for first-time success and SUS.** Rejected: it would own two fields and one paragraph of protocol, splitting one session's record across nodes.
+- **Leaf.** Rejected: a protocol document, a human-only import with anonymisation, and a publication tool are three independent deliverables with different reviewers.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.STUDY.PROTO](proto/NODE.md) | Timing and usability study protocol and task list | 001 002 005 | JOB.USE.02 JOB.USE.03 |
+| [FLOW.STUDY.RECORD](record/NODE.md) | Study record format, import and aggregates | 002 003 004 007 | JOB.USE.02 JOB.USE.03 |
+| [FLOW.STUDY.CLAIM](claim/NODE.md) | Published study summary and public-claim evidence rule | 006 | |

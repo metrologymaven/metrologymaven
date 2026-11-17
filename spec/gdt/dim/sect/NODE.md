@@ -4,7 +4,7 @@ title: Checks on section elements
 level: 3
 parent: GDT.DIM
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DIM-001, REQ-GDT.DIM-002, REQ-GDT.DIM-007]
 covers: [GOM.DIM.07]
 depends_on: [GDT.DIM.LINEAR, GDT.DIM.ANGLE, GDT.DIM.RADIAL]
+uses_artifacts: [SCAN.SECT]
 cli: [fid check eval-section-distance, fid check eval-section-angle, fid check eval-section-radius]
 mcp: [check_eval_section_distance, check_eval_section_angle, check_eval_section_radius]
 journal: [check.eval_section_distance@1, check.eval_section_angle@1, check.eval_section_radius@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DIM.SECT: Checks on section elements
@@ -53,9 +54,13 @@ SPAN (element extraction from a curve span), CMDS (the three commands), STALE (s
 
 ## Open questions
 
-- `SCAN.SECT` is consumed through its interface, not `depends_on`: SCAN already depends on GDT, so declaring it creates a cycle.
-- Whether section checks should be variants of the 3D commands (with a `section` parameter) instead of separate commands; separate commands keep the 3D leaves small.
+- Resolved at split (D-034): the section curve is read as an artifact (`uses_artifacts: [SCAN.SECT]` on `GDT.DIM.SECT.SPAN`), not a code dependency, because SCAN is a later L2 domain than GDT.
+- Resolved at split: section checks are separate commands (`GDT.DIM.SECT.CMDS`) that reuse the 3D computations, so the P1a 3D leaves stay unchanged.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DIM.SECT.SPAN | 2D element extraction from a section-curve span (leaf) | 001 002 | GOM.DIM.07 |
+| GDT.DIM.SECT.CMDS | Section distance, angle and radius commands (leaf) | 001 002 | GOM.DIM.07 |
+| GDT.DIM.SECT.STALE | Staleness of section results after a re-cut (leaf) | 002 003 | none |

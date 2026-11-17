@@ -4,7 +4,7 @@ title: Least-squares slot, rectangle and ellipse fits
 level: 3
 parent: KRN.LSQ
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.LSQ.TRAIT, KRN.LSQ.LIN, KRN.LSQ.RND, KRN.SOLV.NLLS]
 cli: [fid fit ls-slot, fid fit ls-rectangle, fid fit ls-ellipse]
 mcp: [fit_ls_slot, fit_ls_rectangle, fit_ls_ellipse]
 journal: [fit.ls_slot@1, fit.ls_rectangle@1, fit.ls_ellipse@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.LSQ.PLAN2D: Least-squares slot, rectangle and ellipse fits
@@ -61,6 +61,13 @@ SLOT, RECT (with corner radii), ELL (orthogonal-distance ellipse, for example th
 - No NMI reference data exist for these shapes [unverified]; validation relies on synthetic and ORS cases from `UNC`.
 - Phase: P1a here because CMM and scan users need slots early; the concept doc lists slot and ellipse as "later" for least squares.
 
+- Ellipse reference: the orthogonal-distance method of Ahn et al. 2001 is cited by `KRN.LSQ.PLAN2D.ELL` as background only [unverified reference]; the leaf's acceptance rests on synthetic data, not on that paper.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.LSQ.PLAN2D.ASSIGN | Deterministic segment assignment for compound planar profiles | 002 004 005 | none |
+| KRN.LSQ.PLAN2D.SLOT | Least-squares slot | 001 004 005 006 | GOM.CON.18, PW.CON.03 |
+| KRN.LSQ.PLAN2D.RECT | Least-squares rectangle with optional corner radii | 001 004 005 006 | GOM.CON.18, PW.CON.03 |
+| KRN.LSQ.PLAN2D.ELL | Least-squares orthogonal-distance ellipse | 001 003 004 005 006 | GOM.CON.18, PW.CON.03 |

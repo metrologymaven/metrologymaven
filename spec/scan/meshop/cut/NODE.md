@@ -4,7 +4,7 @@ title: Cut, clip, merge and invert
 level: 3
 parent: SCAN.MESHOP
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.MESHOP.PROV, GEO.SEL, GEO.FRAME]
 cli: [fid mesh cut-*, fid mesh clip-*, fid mesh merge-meshes, fid mesh invert-normals]
 mcp: [mesh_cut_*, mesh_clip_*, mesh_merge_meshes, mesh_invert_normals]
 journal: [mesh.cut_*, mesh.clip_*, mesh.merge_meshes@1, mesh.invert_normals@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.MESHOP.CUT: Cut, clip, merge and invert
@@ -62,7 +62,13 @@ PLANE (plane cut and half-space and box clip), CURVE (closed-curve and selection
 ## Open questions
 
 - Robust exact predicates for triangle splitting near the cut plane must stay within KNP-1 (no FMA); confirm with KRN.NUM whether adaptive-precision predicates are available.
+- **At split (2026-11-17):** children assume exact-sign predicates without FMA from `KRN.NUM` (`fid_num::pred`). `KRN.NUM` has no predicates child yet (the only implementation is inside `KRN.MZ.VOR`); this cross-domain gap is shared with `SCAN.MESHOP.REPAIR` and `SCAN.POLY.SURF`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.MESHOP.CUT.PLANE | Plane cut, half-space clip and box clip (leaf) | 001 002 003 007 | GOM.MSH.08 |
+| SCAN.MESHOP.CUT.CURVE | Closed-curve cut and selection cut-out (leaf) | 001 003 007 | GOM.MSH.08, PW.PCL.04 |
+| SCAN.MESHOP.CUT.MERGE | Merge meshes with boundary welding (leaf) | 001 004 005 007 | GOM.MSH.10 |
+| SCAN.MESHOP.CUT.INVERT | Invert normals of a mesh or selection (leaf) | 001 006 007 | GOM.MSH.09, PW.PCL.04 |

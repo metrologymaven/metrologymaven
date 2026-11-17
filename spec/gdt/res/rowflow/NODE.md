@@ -4,18 +4,18 @@ title: DMT row proposal, review and sign-off workflow
 level: 3
 parent: GDT.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-GDT.RES-005]
 covers: []
-depends_on: [GDT.RES.SCHEMA, CORE.JRN]
+depends_on: [GDT.RES.SCHEMA, GDT.RES.LINT, CORE.JRN, CORE.BUS]
 cli: [fid gdt propose-dmt-row, fid gdt review-dmt-row, fid gdt adopt-dmt-row]
-mcp: [gdt_propose_dmt_row]
+mcp: [gdt_propose_dmt_row, gdt_review_dmt_row, gdt_adopt_dmt_row]
 journal: [gdt.propose_dmt_row@1, gdt.review_dmt_row@1, gdt.adopt_dmt_row@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.RES.ROWFLOW: DMT row proposal, review and sign-off workflow
@@ -28,15 +28,17 @@ Implements the D-009 process as commands and states: anyone (including an agent,
 
 **In:**
 - `gdt.propose_dmt_row@1` (W1, agent branch allowed, provenance-tagged)
-- `gdt.review_dmt_row@1` (W2, human reviewer only; records approve / request-changes)
+- `gdt.review_dmt_row@1` (W2, human only: records approve / request-changes)
 - `gdt.adopt_dmt_row@1` (W3, human only: promotes a signed-off row into a released table)
 - Review state machine `draft → under_review → signed_off` with the two-distinct-reviewer rule
 - IDR records linked to rows
 - Reviewer sign-off check used by `GDT.RES.LINT`
+- The "edition held" attestation on every review record (D-016)
+- The DMT reviewer roster file format and lookup (no other node owns it yet)
 
 **Out** (and which node owns it instead):
-- Credentialing and the DMT-reviewer role (owned by `ECO.COMM`)
-- E-signatures (owned by `TRUST.ESIG`)
+- Credentialing policy and the community DMT-reviewer role as a governance process (owned by `ECO.COMM`; see Open questions)
+- E-signatures over a released table package (owned by `TRUST.ESIG`, which reads the released table as an artifact)
 - Row content (owned by `GDT.RES.ROWASME`, `GDT.RES.ROWISO`)
 
 ## Requirements
@@ -49,8 +51,8 @@ Implements the D-009 process as commands and states: anyone (including an agent,
 
 ## Interfaces
 
-- **Offers:** the three commands above; `ReviewState` transitions; IDR type.
-- **Consumes:** DMT schema; journal and branches (CORE.JRN); e-signature (TRUST.ESIG); reviewer role registry (ECO.COMM).
+- **Offers:** the three commands above; `RowRevision`, `ReviewRecord` (with edition-held attestation) and `Idr` types; the reviewer roster format `dmt-reviewers/v1`; the released `DmtTable` file with its digest, which `TRUST` may sign and `GDT.RES.ROWASME.GATE` checks.
+- **Consumes:** DMT schema (GDT.RES.SCHEMA); release-mode lint (GDT.RES.LINT); journal and branches (CORE.JRN); principals and `human_only` enforcement (CORE.BUS).
 
 ## Decomposition hints
 
@@ -58,8 +60,16 @@ STATE (state machine and invariants, a likely leaf), CMDS (three commands), IDR 
 
 ## Open questions
 
-- Whether adoption into a released table is W3 (controlled record) or W2 depends on whether the DMT is a controlled record under the governance profiles (`TRUST.PROFILE`); W3 is assumed here.
+- Adoption into a released table is W3 (controlled record) under the assumption that a released DMT table is a controlled record; D-031 makes every `*.adopt_*` command `human_only`, so the class only matters for W2 versus W3 audit treatment. If `TRUST.PROFILE` later says the DMT is not controlled, `gdt.adopt_dmt_row@1` becomes W2 and nothing else changes.
+- The earlier dependency on `TRUST.ESIG` is removed: GDT is below TRUST in the L2 order (D-034), so GDT may not depend on it. Review approvals are journaled human-only commands; a signed release of the table is TRUST's job, reading the released table file as an artifact.
+- Cross-domain: no `ECO.COMM` node owns the DMT reviewer credentialing process (D-009's community reviewer role and partner institutions). `GDT.RES.ROWFLOW.ROSTER` defines the roster file and lookup so the workflow can run; `ECO.COMM` should own the policy for adding and removing reviewers when it is expanded.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.RES.ROWFLOW.STATE | Row revisions, review state machine and invariants (leaf) | 002 003 005 | none |
+| GDT.RES.ROWFLOW.ROSTER | DMT reviewer roster file and role lookup (leaf) | 002 | none |
+| GDT.RES.ROWFLOW.PROPOSE | Propose a DMT row revision (leaf) | 001 003 | none |
+| GDT.RES.ROWFLOW.REVIEW | Review a DMT row with edition-held attestation (leaf) | 002 005 | none |
+| GDT.RES.ROWFLOW.ADOPT | Adopt signed-off rows into a released table (leaf) | 004 005 | none |

@@ -4,7 +4,7 @@ title: E57 reader and writer with multi-scan poses
 level: 3
 parent: IO.CLOUD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.CLOUD.STREAM, IO.REG.ENV, IO.REG.WRITE, GEO.FRAME]
 cli: [fid import cloud-e57, fid export cloud-e57]
 mcp: [import_cloud_e57, export_cloud_e57]
 journal: [import.cloud_e57@1, export.cloud_e57@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CLOUD.E57: E57 reader and writer
@@ -57,9 +57,15 @@ PHYS (paged physical layer and CRC), XML (section parser), CVEC (compressed-vect
 
 ## Open questions
 
-- Library choice: the concept docs name libE57Format (BSL-1.0, C++) [unverified]; a C++ dependency implies FFI and a worker process (CONSTITUTION §8 forbids `unsafe` without a named exception). A pure-Rust reader may be preferable; needs the D-001 dependency allowlist (ECO.RULES).
+- Resolved at this split: first-party pure-Rust implementation in `fid-io-e57` (no libE57Format FFI), so no worker process or `unsafe` exception is needed. Only the XML parser crate needs to pass the D-001 allowlist (ECO.RULES).
 - Will verifiers require E57 f64 as evidence-grade point data (carried from IO.CLOUD)?
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CLOUD.E57.PHYS | E57 file header and paged physical layer (leaf) | 004 | none |
+| IO.CLOUD.E57.XML | Hardened E57 XML section reader and writer (leaf) | 001 | none |
+| IO.CLOUD.E57.CVEC | Compressed-vector sections and bit-pack codec (leaf) | 002 005 | none |
+| IO.CLOUD.E57.READ | E57 import command with per-scan poses as frames (leaf) | 001 002 003 006 | PW.IMP.01 |
+| IO.CLOUD.E57.WRITE | E57 export command with bit-exact f64 round trip (leaf) | 005 | PW.EXP.01 |

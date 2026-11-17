@@ -4,7 +4,7 @@ title: Isolated CAD kernel worker process
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.REG.LIMITS, IO.REG.ENV]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.WORKER: Isolated CAD kernel worker process
@@ -56,8 +56,13 @@ PROTO (protocol and validation), HOST (spawn, caps, kill per OS), SHIM (worker-s
 
 ## Open questions
 
-- The CAD kernel choice and its licence (LGPL, dynamic linking) must pass the dependency allowlist that ECO.RULES writes under D-001.
+- Resolved by D-024 (accepted, option C): the worker runs the first-party pure-Rust STEP and IGES readers; OCCT is never part of this worker and may only appear as an optional, separately installed healer/translator plugin hosted by `IO.REG.PLUGIN`. The Purpose's mention of OCCT is superseded.
+- In the WASM web build, processes cannot be spawned; whether CAD import is offered there at all is open [unverified: web build import scope].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.WORKER.PROTO | CAD worker protocol, framing and message validation (leaf) | 003 004 | none |
+| IO.CAD.WORKER.HOST | Worker spawning, OS caps, kill on limit and failure mapping (leaf) | 001 002 005 | none |
+| IO.CAD.WORKER.BIN | Sandboxed CAD worker executable (leaf) | 003 005 | none |

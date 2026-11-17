@@ -11,7 +11,7 @@ owners: []
 claimed_by:
 satisfies: [REQ-HAL-001, REQ-HAL-006]
 covers: []
-depends_on: [HAL.IDL, HAL.ACQ, HAL.PAIR, ECO]
+depends_on: [HAL.IDL, HAL.ACQ, HAL.PAIR, ECO.SDK]
 cli: [fid device *-driver, fid device *-drivers]
 mcp: [device_list_drivers, device_show_driver]
 journal: [device.*_driver]

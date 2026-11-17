@@ -4,7 +4,7 @@ title: Feature-to-nominal best-fit alignment
 level: 3
 parent: ALN.BFIT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [ALN.BFIT.CONSTR, ALN.BFIT.STOP, ALN.MODEL.ELEM, ALN.QA.REPORT, KRN.
 cli: [fid align run-bestfit-features]
 mcp: [align_run_bestfit_features]
 journal: [align.run_bestfit_features@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.BFIT.FEAT: Feature-to-nominal best-fit alignment
@@ -57,8 +57,14 @@ DEV (per-type deviation vectors and scaling), MODE2D (planar best-fit), SOLVE (w
 
 ## Open questions
 
+- DEV is the single pair-residual implementation; `ALN.DATUM.ELEM.LEVELS` depends on it rather than re-implementing per-type residuals (parent hint for ELEM's PAIRRES).
+- 2D mode is realised as a fixed lock pattern (tz, a, b in the working-plane frame) on `ALN.BFIT.CONSTR`, so no separate 2D solver exists.
 - PC-DMIS offers several best-fit variants (with and without scale, 2D and 3D) [unverified]; scale is excluded here and available through `ALN.XFM.SCALE` on feature centres.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.BFIT.FEAT.DEV | Per-type feature deviation vectors and angular scaling (leaf) | 002 006 | none |
+| ALN.BFIT.FEAT.SOLVE | Weighted feature best-fit solve, 2D mode and determinacy check (leaf) | 001 003 004 005 006 | none |
+| ALN.BFIT.FEAT.CMD | Feature best-fit command and alignment wrapping (leaf) | 001 004 | PCD.ALN.02 |

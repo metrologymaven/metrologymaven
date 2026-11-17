@@ -4,18 +4,19 @@ title: DMIS output and program export
 level: 3
 parent: IO.DMIS
 kind: module
-status: open
+status: split
 phase: P4
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-IO.DMIS-009]
 covers: [PCD.EXP.01]
-depends_on: [IO.DMIS.PARSE, IO.REG.WRITE, IO.DMIS.CONF]
+depends_on: [IO.DMIS.PARSE, IO.DMIS.PROG, IO.REG.WRITE]
 cli: [fid export dmis-output, fid export dmis-program]
 mcp: [export_dmis_output, export_dmis_program]
 journal: [export.dmis_output@1, export.dmis_program@1]
-updated: 2026-11-16
+uses_artifacts: [IO.DMIS.CONF]
+updated: 2026-11-17
 ---
 
 # IO.DMIS.EXPORT: DMIS output and program export
@@ -54,7 +55,11 @@ OUTW (output writer), PROGW (program writer).
 ## Open questions
 
 - Phase P4 follows the concept roadmap; maintainers may pull output export earlier for PCD.EXP.01 parity.
+- `IO.DMIS.CONF` is read as an artifact (support declarations and the generated table), so it moved from `depends_on` to `uses_artifacts` (D-034). `IO.DMIS.PROG` added to `depends_on` because the program writer works on its `DmisProgram` model, which `CMM.GEN.DMIS` also uses for Command Program → DMIS export.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.DMIS.EXPORT.OUTW | DMIS output-file export from features and results (leaf) | 001 002 003 004 | PCD.EXP.01 |
+| IO.DMIS.EXPORT.PROGW | DMIS program writer and program export from QIF definitions (leaf) | 001 002 003 004 | none |

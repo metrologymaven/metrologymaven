@@ -4,7 +4,7 @@ title: ASME feature-of-size: two-point size and Rule #1 envelope
 level: 3
 parent: GDT.DIM
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DIM-001, REQ-GDT.DIM-005, REQ-GDT.DIM-007]
 covers: [PW.GDT.01]
 depends_on: [GDT.CHAR.SPEC, GDT.CHAR.RECORD, GDT.RES.RESOLVE, KRN.ENV]
+uses_artifacts: [GDT.RES.ROWASME, UNC.ORS.SIZE]
 cli: [fid check eval-size]
 mcp: [check_eval_size]
 journal: [check.eval_size@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DIM.SIZEASME: ASME feature-of-size: two-point size and Rule #1 envelope
@@ -56,9 +57,13 @@ LOCAL (two-point local size given a pairing rule; a leaf once rows exist), ENVLP
 
 ## Open questions
 
-- Not a leaf: the pairing rule and envelope definition are DMT content awaiting expert rows (`GDT.RES.ROWASME`, blocked on D-016).
-- `check.eval_size@1` is shared with `GDT.DIM.SIZEISO`; the command is owned here and dispatches by dialect.
+- The pairing rule is DMT content (`GDT.RES.ROWASME`, D-009; D-016 accepted), so `GDT.DIM.SIZEASME.LOCAL` stays open; the envelope step and the command are mechanics and are leaves.
+- `check.eval_size@1` is owned by `GDT.DIM.SIZEASME.CMD` and dispatches by dialect through a registry; the ISO evaluator is registered by `GDT.DIM.SIZEISO`, so the command does not depend on the ISO module.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DIM.SIZEASME.LOCAL | ASME two-point local size under a DMT pairing rule | 001 004 | PW.GDT.01 |
+| GDT.DIM.SIZEASME.ENVLP | Actual mating envelope size and Rule #1 clearance (leaf) | 002 003 004 | PW.GDT.01 |
+| GDT.DIM.SIZEASME.CMD | Size command, dialect dispatch and ASME size payload (leaf) | 001 002 003 | PW.GDT.01 |

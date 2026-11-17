@@ -4,7 +4,7 @@ title: B-rep topology model, trimming and validation
 level: 3
 parent: GEO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.NURBS.DATA, GEO.NURBS.EVAL, GEO.NURBS.ANALYTIC, GEO.TYPES.ENV]
 cli: [fid geo describe-body, fid geo validate-body]
 mcp: [geo_describe_body, geo_validate_body]
 journal: [geo.describe_body@1, geo.validate_body@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.CAD.TOPO: B-rep topology model, trimming and validation
@@ -63,9 +63,18 @@ MODEL (arena and IDs), ADJ (adjacency queries), TRIM (parameter-space loops and 
 
 ## Open questions
 
+- Resolved in the split: trimming uses pcurves (imported, or derived by GEO.CAD.TOPO.PCURVE) and GEO.CAD.TOPO.VALID reports disagreement above tolerance.
+- Layering (D-034): MODEL, ADJ, PCURVE, TRIM and VALID are L0 library code in `fid-geo-cad` with no CORE dependency; only GEO.CAD.TOPO.CMD (in `fid-geo-cmd`) depends on CORE.
 - Whether trimming is defined primarily by parameter-space curves (pcurves) or 3D edge curves when both exist and disagree; STEP files may carry either. The classification should use pcurves and the validator should report disagreement above tolerance.
 - The default validation tolerance (e.g. 1e-7 m) needs a reference from real STEP corpora (IO.CORP) [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.CAD.TOPO.MODEL | B-rep arena, typed IDs, builder and canonical encoding (leaf) | 001 006 | none |
+| GEO.CAD.TOPO.ADJ | Topology adjacency queries (leaf) | 002 006 | none |
+| GEO.CAD.TOPO.PCURVE | Parameter-space curves for coedges (leaf) | 003 | none |
+| GEO.CAD.TOPO.TRIM | Trimmed-face point classification (leaf) | 003 | none |
+| GEO.CAD.TOPO.VALID | B-rep defect detection without repair (leaf) | 004 005 | none |
+| GEO.CAD.TOPO.CMD | Describe and validate body commands (leaf) | 007 | none |

@@ -4,18 +4,18 @@ title: Profile query API and enforcement hooks
 level: 3
 parent: TRUST.PROFILE
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-TRUST.PROFILE-003, REQ-TRUST.PROFILE-004, REQ-TRUST.PROFILE-005, REQ-TRUST.PROFILE-006]
 covers: []
-depends_on: [TRUST.PROFILE.DEFS, TRUST.PROFILE.SELECT, CORE]
+depends_on: [TRUST.PROFILE.DEFS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PROFILE.GATE: Profile query API and enforcement hooks
@@ -58,9 +58,17 @@ QUERY (API + GUI flags), BUSHOOK (Assistive-only hook, needs CORE.BUS hook point
 
 ## Open questions
 
-- REQ-TRUST.PROFILE-005 needs CORE.BUS to expose principal kind and a precondition hook point; CORE.BUS lists principal kinds (REQ-CORE.BUS-001) but the hook API is not yet specified.
-- "Released" export: the parent assumes a released state for packages; whether that is a W3 release of the run (CORE) or a package flag needs alignment with CORE's W3 model.
+- REQ-TRUST.PROFILE-005 needs a CORE.BUS hook point. CORE.BUS.POL.CLASS defines a fixed class/principal matrix but no extension hook for a tenant policy; `TRUST.PROFILE.GATE.ASSIST` specifies the hook it needs (`PolicyHook`, called at the authorise stage) and CORE.BUS must add it [cross-domain, unresolved].
+- REQ-TRUST.PROFILE.GATE-004 needs a `profile_digest` field in the `session_header` entry. CORE.JRN.ENTRY (REQ-CORE.JRN.ENTRY-006) records only registry and kernel manifest digests and the app version today; `TRUST.PROFILE.GATE.STAMP` supplies the value and CORE.JRN.ENTRY must add the field [cross-domain, unresolved].
+- "Released" package: there is still no single W3 release command; `TRUST.PROFILE.GATE.RELEASE` offers a pure precondition that whichever W3 release command (the ESIG ceremony or a CORE run release) calls before releasing.
+- Dependencies narrowed (2026-11-17, D-034): this module depends only on `TRUST.PROFILE.DEFS`; each child names its own CORE leaves, and the registry-invariance test (`INVAR`) reads artifacts only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.PROFILE.GATE.QUERY | Read-only profile query API and GUI gating flags | 005 | none |
+| TRUST.PROFILE.GATE.ASSIST | Assistive-only agent-write bus hook | 003 | none |
+| TRUST.PROFILE.GATE.RELEASE | Regulated release precondition | 002 | none |
+| TRUST.PROFILE.GATE.STAMP | Profile digest stamping of sessions and packages | 004 | none |
+| TRUST.PROFILE.GATE.INVAR | Registry-invariance CI test across profiles | 001 | none |

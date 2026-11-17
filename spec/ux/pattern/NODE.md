@@ -4,7 +4,7 @@ title: Shared interaction and guidance patterns
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.COMP, FLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.PATTERN: Shared interaction and guidance patterns
@@ -67,10 +67,29 @@ The behaviours that span components and apps, specified once so every app behave
 
 SELECT (selection, pick and lasso), UNDO (undo and history presentation), PROPOSE (proposal review and agent provenance), OPERATE (operator prompts, controlled-action confirmation), ERROR (errors, suggested fixes, progress and cancel), GUIDE (onboarding and guidance).
 
+## Split rationale
+
+The dividing principle is **one user situation per child, plus a shared format**: SCHEMA (the `pattern-spec@1` format and check enforcing REQ-UX.PATTERN-001), SELECT (selection, pick and lasso), CMDFLOW (palette flow and undo, the two halves of running a command), PROPOSE (proposal review and agent provenance), OPERATE (operator prompts and controlled-action confirmation), ERROR (dead ends, progress and cancel), GUIDE (onboarding and guidance). This follows the decomposition hints; the palette flow joins undo because both present the command bus's commit unit.
+
+Alternatives considered:
+- **Confirmation inside PROPOSE.** Rejected: confirmation of controlled actions applies to human-initiated commands too, and shares the floor-theme constraints of operator prompts.
+- **No SCHEMA child (reuse the component check).** Rejected: patterns need journey and command links that component specs do not have.
+
+FLOW is read as artifacts (journey maps, fix catalogue, setup journey) with `uses_artifacts`, not code edges, so UX stays upstream of VIZ even though FLOW depends on VIZ.
+
 ## Open questions
 
-- `CMM.EXEC.STATION` notes that accessibility of the agent-authored flag needs a UX review; REQ-UX.PATTERN-006 is intended to cover it.
+- CMM.EXEC.STATION's request for a UX review of the agent-authored flag is covered by UX.PATTERN.PROPOSE (REQ-005, AC-3).
+- The parent's `depends_on: [UX.COMP, FLOW]` stays as written; children use `uses_artifacts` on specific FLOW nodes, which avoids the cycle risk noted in UX (FLOW depends on VIZ and RPT).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.PATTERN.SCHEMA](schema/NODE.md) | Pattern-spec format and completeness check (leaf) | 001 | none |
+| [UX.PATTERN.SELECT](select/NODE.md) | Selection, pick and lasso pattern (leaf) | 001 002 | none |
+| [UX.PATTERN.CMDFLOW](cmdflow/NODE.md) | Command palette flow and undo presentation (leaf) | 001 003 | none |
+| [UX.PATTERN.PROPOSE](propose/NODE.md) | Proposal review and agent provenance pattern (leaf) | 001 004 005 006 | none |
+| [UX.PATTERN.OPERATE](operate/NODE.md) | Operator prompts and controlled-action confirmation (leaf) | 001 008 009 | none |
+| [UX.PATTERN.ERROR](error/NODE.md) | Error, unresolved and not-decidable states; progress and cancel (leaf) | 001 007 011 | none |
+| [UX.PATTERN.GUIDE](guide/NODE.md) | Onboarding and in-app guidance pattern (leaf) | 001 010 | none |

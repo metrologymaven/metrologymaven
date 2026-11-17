@@ -4,18 +4,18 @@ title: Action chips, plan preview and batch apply
 level: 3
 parent: VIZ.INBOX
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.INBOX-003, REQ-VIZ.INBOX-005, REQ-VIZ.INBOX-008]
 covers: []
-depends_on: [VIZ.INBOX.DIFF, VIZ.INBOX.STALE, CORE]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+depends_on: [VIZ.INBOX.DIFF, VIZ.INBOX.STALE, VIZ.INBOX.GATES, CORE.JRN.BR, CORE.BUS.POL.PROJ]
+cli: [fid view reject-proposal]
+mcp: [view_reject_proposal]
+journal: [view.reject_proposal@*]
+updated: 2026-11-17
 ---
 
 # VIZ.INBOX.ACTIONS: Action chips, plan preview and batch apply
@@ -58,8 +58,15 @@ CHIPS, PLANPREV, BATCH, EDIT, REJECT.
 
 ## Open questions
 
-- None beyond the CORE promotion API.
+- CORE has no branch-close command, so rejection is the human-only W2 command `view.reject_proposal@1` owned by `VIZ.INBOX.ACTIONS.REJECT`; `VIZ.INBOX.LIST` must read its closed state from it.
+- Pending requests filed by `CORE.BUS.POL.PROJ` (for example agent requests to start a recording or send an egress) are reviewed in `VIZ.INBOX.ACTIONS.REQS`.
+- Split: single-proposal controls (CHIPS), multi-span batches (BATCH), rejection (REJECT, the only owned command) and pending requests (REQS). The gate dependency now points one way: ACTIONS uses `VIZ.INBOX.GATES.PLAN`; GATES no longer depends on ACTIONS.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.INBOX.ACTIONS.CHIPS | Action chips, apply through promotion, edit and explain (leaf) | 001 002 005 | none |
+| VIZ.INBOX.ACTIONS.BATCH | Plan preview and batch apply by span (leaf) | 001 003 005 | none |
+| VIZ.INBOX.ACTIONS.REJECT | Reject a proposal and keep it in history (leaf) | 004 | none |
+| VIZ.INBOX.ACTIONS.REQS | Pending request review, approval and rejection (leaf) | 001 002 | none |

@@ -4,18 +4,19 @@ title: Package content selection and evidence tiers
 level: 3
 parent: TRUST.PKG
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-TRUST.PKG-003, REQ-TRUST.PKG-004, REQ-TRUST.PKG-005, REQ-TRUST.PKG-006]
 covers: []
-depends_on: [TRUST.PKG.MANIFEST, TRUST.PROFILE.DEFS, CORE, IO, KRN]
+depends_on: [TRUST.PKG.MANIFEST]
+uses_artifacts: [CORE.JRN.ENTRY, KRN.MAN.MANI.SCHEMA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PKG.CONTENT: Package content selection and evidence tiers
@@ -64,9 +65,15 @@ SELECT (selection to records, completeness), EVID (tiers and point gathering), J
 
 ## Open questions
 
-- REQ-TRUST.PKG.CONTENT-008 assumes CORE.JRN's detachable-field commitments (REQ-CORE.JRN-005) let a segment be shipped without the detached bodies; confirm when CORE.JRN is split.
+- REQ-TRUST.PKG.CONTENT-008 assumes CORE.JRN's detachable-field commitments let a segment be shipped without the detached bodies. CORE.JRN.ENTRY now specifies header/payload separation with salted commitments (128-bit salt, SHA-256 over salt then canonical bytes), which is what `TRUST.PKG.CONTENT.JSEG` relies on.
 - Very large point sets may need chunked members; a chunking rule would be a minor format version.
+- Where ResultRecords are stored in the project (which CORE or GDT leaf owns the record table) is not yet stated by CORE; the children read them through the bus `StateView` (`CORE.BUS.PIPE.HANDLER`) [unverified that the view exposes them].
+- D-020 lets a package carry its own kernel artifact. Nothing here adds it yet; an optional `include_kernel` flag would be a later minor change (see `TRUST.REPLAY.KART`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.PKG.CONTENT.SELECT | Selection resolution, record completeness and content assembly | 001 006 | none |
+| TRUST.PKG.CONTENT.EVID | Evidence tiers and point-set gathering | 002 003 007 | none |
+| TRUST.PKG.CONTENT.JSEG | Journal segment and checkpoint choice | 004 005 008 | none |

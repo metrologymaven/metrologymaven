@@ -4,7 +4,7 @@ title: Minimum-zone circle, sphere and cylinder
 level: 3
 parent: KRN.MZ
 kind: module
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.MZ-001, REQ-KRN.MZ-003, REQ-KRN.MZ-004, REQ-KRN.MZ-005, REQ-KRN.MZ-007, REQ-KRN.MZ-008, REQ-KRN.MZ-009]
 covers: [GOM.CON.19, PW.CON.05]
 depends_on: [KRN.LSQ.RND, KRN.LSQ.AXIS, KRN.SOLV.SEQ, KRN.SOLV.CERT, KRN.SOLV.MSTART]
+uses_artifacts: [UNC.RDL.FREEZE]
 cli: [fid fit mz-circle2d, fid fit mz-sphere, fid fit mz-cylinder]
 mcp: [fit_mz_circle2d, fit_mz_sphere, fit_mz_cylinder]
 journal: [fit.mz_circle2d@1, fit.mz_sphere@1, fit.mz_cylinder@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.MZ.RND: Minimum-zone circle, sphere and cylinder
@@ -60,6 +61,12 @@ CIRC (2D circle and its VOR agreement job), SPH (sphere), CYL (cylinder, axis li
 
 - The concept doc notes MZ may slip to early P1a; the phase stays P0 here.
 
+- `KRN.MZ.VOR` is used by `KRN.MZ.RND.CIRC` in CI only (agreement job), declared as a `depends_on` of that leaf because the test links it; it never enters the fit's call path.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MZ.RND.CIRC | Minimum-zone 2D circle and Voronoi agreement job | 001 002 003 004 005 006 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.RND.SPH | Minimum-zone sphere | 001 002 003 004 005 006 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.RND.CYL | Minimum-zone cylinder | 001 002 003 004 005 006 | GOM.CON.19, PW.CON.05 |

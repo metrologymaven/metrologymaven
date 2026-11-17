@@ -1,0 +1,75 @@
+---
+id: VIZ.OVERLAY.WHISK.WHISKER
+title: Section whiskers, flags and amplification
+level: 4
+parent: VIZ.OVERLAY.WHISK
+kind: feature
+status: leaf
+phase: P1b
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-VIZ.OVERLAY.WHISK-001, REQ-VIZ.OVERLAY.WHISK-002, REQ-VIZ.OVERLAY.WHISK-003, REQ-VIZ.OVERLAY.WHISK-004, REQ-VIZ.OVERLAY.WHISK-005]
+covers: []
+depends_on: [SCAN.SECT.WHISK, VIZ.OVERLAY.CMAP.REBIN, VIZ.OVERLAY.CMAP.LUT, VIZ.OVERLAY.STATUS, KRN.NUM.FMT.REG, KRN.NUM.KDEC, VIZ.RENDER.FRAME]
+uses_artifacts: []
+side_effect: W2
+determinism: D0
+cli: [fid view set-deviation-glyphs]
+mcp: [view_set_deviation_glyphs]
+journal: [view.set_deviation_glyphs@1]
+updated: 2026-11-17
+---
+
+# VIZ.OVERLAY.WHISK.WHISKER: Section whiskers, flags and amplification
+
+## Purpose
+
+Draws the whiskers that `SCAN.SECT.WHISK` computes along section curves (signed in-plane deviation at each station, along the station's in-plane normal) and the per-section flags with minimum, maximum, mean and RMS. Directions and magnitudes come from the kernel's f64 stations and are scaled by a display amplification factor, which is the only thing the user changes here, through `view.set_deviation_glyphs@1`. Colours are the LUT colours of kernel bin indices, and flag numbers are kernel-formatted strings. The amplification factor also applies to vector plots (`VIZ.OVERLAY.WHISK.VECTOR`).
+
+## Scope
+
+**In:** `DeviationGlyphStyle { amplification: DecimalString (0 < a ≤ 10,000), show_flags, flag_fields }` per view key, created and changed only by `view.set_deviation_glyphs@1` (W2); whisker geometry (station position + a × value × normal, computed in f64 relative to the camera origin, converted to f32 offsets for display); whisker colour from the kernel bin of each station value; section flags with kernel-formatted statistics and status glyphs; legend line "amplification ×a".
+**Out:** computing stations and statistics (`SCAN.SECT.WHISK`); binning (`SCAN.CMP.BAND` via `VIZ.OVERLAY.CMAP.REBIN`); general labels (`VIZ.OVERLAY.LABEL`); vector plots (`VIZ.OVERLAY.WHISK.VECTOR`).
+
+## Requirements
+
+- **REQ-VIZ.OVERLAY.WHISK.WHISKER-001** Each whisker shall start at the station position and point along the station's in-plane normal with length equal to the amplification factor times the kernel's f64 value, computed in f64 and converted to f32 only as a camera-relative display offset.
+- **REQ-VIZ.OVERLAY.WHISK.WHISKER-002** While whiskers or vectors are visible, the legend shall show the amplification factor as its authored decimal text.
+- **REQ-VIZ.OVERLAY.WHISK.WHISKER-003** Every number in a flag shall be the kernel formatter's string for the stored f64 statistic, with formatter ID and provenance badge.
+- **REQ-VIZ.OVERLAY.WHISK.WHISKER-004** Each whisker's colour shall be the LUT entry of the kernel bin index of its station value under the active ColorMapSpec, and stations without a bin result shall be drawn in the no-data colour.
+- **REQ-VIZ.OVERLAY.WHISK.WHISKER-005** Changing the amplification factor shall change no flag text, legend text other than the factor, or stored value, and shall be done only by `view.set_deviation_glyphs@1`, journaled.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture `fixtures/viz/whisk/sections3` (three sections with 1,000 stations each from `compare.section_compare@1`), when rendered with amplification 50, then each whisker end point equals the f64 reference end point within the display tolerance (projected pixel check) and colours equal the LUT entries of the kernel bins (pixel probe).
+- **AC-2** Given `fid view set-deviation-glyphs --view main --amplification 100 --json`, then one entry is journaled, the legend reads "×100", and every flag string is byte-identical to before.
+- **AC-3** Given flags, then each statistic string equals `fid_num::fmt::format` of the stored value.
+- **AC-4** (error path) Given amplification `0` or `20000`, then the command fails with `AmplificationOutOfRange` and journals nothing.
+- **AC-5** (replay) Given the journal of AC-2, then exact replay is `IDENTICAL`.
+
+## Design
+
+- **Registry command(s):** `view.set_deviation_glyphs@1`, W2, D0; params `{ view: ViewKey, amplification?: DecimalString, show_flags?: bool, flag_fields?: [Min|Max|Mean|Rms] }`; result `{ style_digest }`.
+- **Data structures:** `DeviationGlyphStyle` element per view key with canonical digest; `WhiskerInstance { start_rel: [f32; 3], offset: [f32; 3], bin: u16 }`.
+- **Algorithm:** amplification parsed once with `kdec` to f64 (single rounding); end = start + a·v·n in f64; subtract camera origin; cast; instance draw; bins from a `compare.surface_bin@1` result over the section-comparison values.
+- **Errors:** `AmplificationOutOfRange`, `UnknownView`.
+- **Determinism:** D0 for geometry and style; pixels per VIZ.RENDER tolerances.
+- **Performance budget:** 100 sections × 1,000 stations at 60 fps [unverified].
+- **Crate:** `fid-overlay` (module `whisk::whisker`).
+
+## Test fixtures
+
+`fixtures/viz/whisk/sections3`: generated by a committed script through SCAN commands on a synthetic mesh; CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-overlay`, add module `whisk::whisker`: a `DeviationGlyphStyle` element per view key (amplification as exact decimal 0 < a ≤ 10,000, flags on/off, flag fields) changed only by `view.set_deviation_glyphs@1` (W2; CLI `fid view set-deviation-glyphs`, MCP `view_set_deviation_glyphs`); draw whiskers from `compare.section_compare@1` stations as start + a·value·normal computed in f64, camera-relative, cast to f32 for display; colour by the LUT entry of each station's kernel bin (no-data colour without one); section flags show kernel-formatted min/max/mean/RMS with formatter IDs and provenance; legend shows "×a". Changing amplification changes no value text. Tests AC-1..AC-5. Rules: values from the kernel only (C1, C2); no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable.
+
+## Open questions
+
+- `SCAN.CMP.BAND` bins "field elements" (deviation, thickness); whether a section-comparison element counts as a field for `compare.surface_bin@1` must be confirmed by SCAN [cross-domain]. Until then whiskers without bins use the no-data colour.
+
+## Children
+
+_Leaf: none._

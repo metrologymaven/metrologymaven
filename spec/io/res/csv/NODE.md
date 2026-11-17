@@ -4,7 +4,7 @@ title: CSV and table result exchange through versioned column maps
 level: 3
 parent: IO.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.RES.TRANS, IO.REG.ENV, IO.REG.WRITE]
 cli: [fid import results-csv, fid export results-csv]
 mcp: [import_results_csv, export_results_csv]
 journal: [import.results_csv@1, export.results_csv@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.RES.CSV: CSV and table result exchange
@@ -54,8 +54,14 @@ MAP (schema, versioning, built-ins), IN, OUT.
 
 ## Open questions
 
-- None.
+- Agreed at review: IO owns a bounded workbook (XLSX) reader for `MIG.TEMPL`. It is `IO.RES.CSV.XLSX`, which also lets `import.results_csv@1` read result tables from one workbook sheet. **Cross-domain:** `MIG.TEMPL` should depend on `IO.RES.CSV.XLSX` for its READ step instead of owning a reader.
+- Workbook writing stays with `RPT.OUTPUT.SHEET`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.RES.CSV.MAP | Versioned result column maps and table dialect (leaf) | 001 003 | none |
+| IO.RES.CSV.IN | Result table import through a column map (leaf) | 001 004 | none |
+| IO.RES.CSV.OUT | Result table export through a column map (leaf) | 002 003 | GOM.EXP.02, GOM.EXP.06, PW.EXP.02 |
+| IO.RES.CSV.XLSX | Bounded workbook reader for layouts and cell tables (leaf) | 004 | none |

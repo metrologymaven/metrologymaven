@@ -4,7 +4,7 @@ title: Patterns and simultaneous requirements
 level: 3
 parent: GDT.ZONE
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.ZONE.POSE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.ZONE.GROUP: Patterns and simultaneous requirements
@@ -45,7 +45,7 @@ Solves several toleranced features with **one shared pose** of their zone framew
 
 ## Interfaces
 
-- **Offers:** `solve_group(members, drf, constraints) -> GroupSolution`.
+- **Offers:** `solve_group(members, drf, constraints) -> GroupSolution` (PATTERN, used by SIMREQ); `GroupRef { group_id, pose_digest }` (IDS).
 - **Consumes:** pose solve (GDT.ZONE.POSE); group membership from the characteristic model (GDT.CHAR.MODEL).
 
 ## Decomposition hints
@@ -54,8 +54,13 @@ PATTERN (P1a pattern within one callout), SIMREQ (P1b simultaneous requirements)
 
 ## Open questions
 
-- Whether a failed member should fail the whole group (REQ-003) or report the rest with a flag is a behaviour choice an expert should confirm.
+- Whether a failed member should fail the whole group (REQ-003) or report the rest with a flag is a behaviour choice an expert should confirm. `GDT.ZONE.GROUP.IDS` implements REQ-003 as written; changing it is a requirement change here, routed to the DMT reviewers (D-009).
+- Default simultaneous-requirement grouping needs a DMT field (which DRF components must match) that `GDT.RES.SCHEMA` does not define yet; `GDT.ZONE.GROUP.SIMREQ` stays open until the schema and a signed-off row provide it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.ZONE.GROUP.IDS | Group identity, pose digest and incomplete groups (leaf) | 002 003 | none |
+| GDT.ZONE.GROUP.PATTERN | Shared-pose solve for a pattern (leaf) | 001 004 | none |
+| GDT.ZONE.GROUP.SIMREQ | Simultaneous-requirement groups across callouts | 001 002 004 | none |

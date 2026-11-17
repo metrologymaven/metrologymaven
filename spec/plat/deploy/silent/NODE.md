@@ -4,18 +4,19 @@ title: Silent enterprise install and uninstall
 level: 3
 parent: PLAT.DEPLOY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DEPLOY-005]
 covers: []
-depends_on: [PLAT.MATRIX, ECO.REL, ECO.CI]
+depends_on: [PLAT.MATRIX]
+uses_artifacts: [ECO.REL.PKG.WIN, ECO.REL.PKG.LINUX, ECO.REL.PKG.MAC, PLAT.DEPLOY.MCONF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.DEPLOY.SILENT: Silent enterprise install
@@ -50,17 +51,24 @@ Makes the apps deployable across a fleet by enterprise software-distribution too
 
 ## Interfaces
 
-- **Offers:** MSI property and exit-code contract for ECO.REL; unattended-install docs; CI job definitions.
-- **Consumes:** ECO.REL installers; ECO.CI Windows runners with admin rights; previous release artefacts.
+- **Offers:** `platform/silent-contract.toml` (MSI public properties, exit codes, log rule, per-OS unattended commands; read by `ECO.REL.PKG.WIN`, `ECO.REL.PKG.LINUX`, `ECO.REL.PKG.MAC`); `docs/deploy/silent-install.md`; CI job entries.
+- **Consumes (artifacts):** the packages from `ECO.REL.PKG.*`; the policy file path from `PLAT.DEPLOY.MCONF`. Code: Tier 1 set from `PLAT.MATRIX`.
 
 ## Decomposition hints
 
-MSI (Windows contract and CI test), UNIX (Linux packages and macOS package or scripted install), DOCS (admin guide).
+See Children.
 
 ## Open questions
 
-- Which Linux package formats to ship (deb, rpm, AppImage, Flatpak) is shared with ECO.REL; not decided here.
+- Which Linux package formats ship (deb, rpm, AppImage, Flatpak) is ECO.REL's choice (`ECO.REL.PKG.LINUX`); `PLAT.DEPLOY.SILENT.UNIX` tests whichever formats the package plan lists.
+
+## Split rationale
+
+Split by **installer technology**: the Windows MSI contract and its upgrade/uninstall CI test form one unit; Linux and macOS unattended installs share a shell-driven contract and test harness. The shared exit-code and log rule lives in one contract file owned by `PLAT.DEPLOY.SILENT.WIN` and read by `PLAT.DEPLOY.SILENT.UNIX`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.SILENT.WIN | Silent-install contract file and Windows MSI install, upgrade and uninstall test | 001 002 003 004 005 007 | none |
+| PLAT.DEPLOY.SILENT.UNIX | Unattended Linux and macOS install contract, guide and test | 002 005 006 | none |

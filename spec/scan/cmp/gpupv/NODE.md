@@ -4,7 +4,7 @@ title: GPU deviation preview with CPU cross-check
 level: 3
 parent: SCAN.CMP
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.CMP.DEV, VIZ.RENDER]
 cli: [fid compare surface-preview]
 mcp: [compare_surface_preview]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.CMP.GPUPV: GPU deviation preview with CPU cross-check
@@ -57,7 +57,13 @@ PVFIELD (preview type and its non-convertibility), PVGPU (the compute shader pat
 ## Open questions
 
 - Whether a preview is needed in P1b at all, or can move to a later phase once CPU timings are measured; the phase is kept at P1b pending those timings.
+- **Layer conflict (D-034):** this node depends on `VIZ.RENDER` (L3) while SCAN is L2. The split places the preview in its own display-only crate `fid-scan-preview` in L3 (children PVFIELD, PVGPU, XCHECK), which also makes the non-convertibility rule a layering fact: `fid-scan-cmp` cannot name `PreviewField`. Needs confirmation at review.
+- The preview command is R1, so it goes to the Activity Log only and is not a Record-Journal event (CONSTITUTION §3).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.CMP.GPUPV.PVFIELD | PreviewField type and preview marker (leaf) | 001 002 | none |
+| SCAN.CMP.GPUPV.PVGPU | GPU deviation preview command (leaf) | 002 004 005 | none |
+| SCAN.CMP.GPUPV.XCHECK | GPU preview versus CPU field cross-check (leaf) | 003 | none |

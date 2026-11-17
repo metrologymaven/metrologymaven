@@ -4,7 +4,7 @@ title: Self-intersection and non-manifold repair
 level: 3
 parent: SCAN.MESHOP
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.MESHOP.PROV, SCAN.POLY.QUAL, GEO.INDEX]
 cli: [fid mesh repair, fid mesh check-defects]
 mcp: [mesh_repair, mesh_check_defects]
 journal: [mesh.repair@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.MESHOP.REPAIR: Self-intersection and non-manifold repair
@@ -58,7 +58,13 @@ DETECT (defect detection and check command), FIXTOPO (non-manifold, duplicate, d
 ## Open questions
 
 - Exact triangle-triangle intersection predicates under KNP-1 (no FMA) need a robust-arithmetic approach; shared concern with `SCAN.MESHOP.CUT`.
+- **At split (2026-11-17):** DETECT assumes exact-sign predicates from `KRN.NUM`, which has no predicates child yet (cross-domain gap). FIXSELF removes and refills intersecting regions using the loop triangulation of `SCAN.MESHOP.HOLES.FLAT`; `SCAN.MESHOP.HOLES.CLOSE` in turn calls DETECT and FIXTOPO, so the two modules depend on each other's leaves but not in a cycle.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.MESHOP.REPAIR.DETECT | Mesh defect detection and check command (leaf) | 002 004 006 007 | GOM.MSH.13 |
+| SCAN.MESHOP.REPAIR.FIXTOPO | Non-manifold, duplicate, degenerate and orientation fixes (leaf) | 005 006 | none |
+| SCAN.MESHOP.REPAIR.FIXSELF | Self-intersection removal and re-triangulation (leaf) | 005 006 | none |
+| SCAN.MESHOP.REPAIR.RCMD | Mesh repair command and before/after report (leaf) | 001 003 005 006 007 | GOM.MSH.13 |

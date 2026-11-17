@@ -4,7 +4,7 @@ title: Block placement, sizing and overflow
 level: 3
 parent: RPT.DESIGN
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-RPT.DESIGN-001, REQ-RPT.DESIGN-002, REQ-RPT.DESIGN-006, REQ-RPT.DESIGN-007]
 covers: [PW.RPT.01]
 depends_on: [RPT.DESIGN.PAGE, RPT.MODEL.DOC]
-cli: [fid report move-block-layout, fid report align-block-layout, fid report group-block-layout, fid report order-block-layout]
-mcp: [report_move_block_layout, report_align_block_layout, report_group_block_layout, report_order_block_layout]
-journal: [report.move_block_layout@1, report.align_block_layout@1, report.group_block_layout@1, report.order_block_layout@1]
-updated: 2026-11-16
+cli: [fid report move-block-layout, fid report align-block-layout, fid report group-block-layout, fid report order-block-layout, fid report set-break-block-layout]
+mcp: [report_move_block_layout, report_align_block_layout, report_group_block_layout, report_order_block_layout, report_set_break_block_layout]
+journal: [report.move_block_layout@1, report.align_block_layout@1, report.group_block_layout@1, report.order_block_layout@1, report.set_break_block_layout@1]
+updated: 2026-11-17
 ---
 
 # RPT.DESIGN.PLACE: Block placement, sizing and overflow
@@ -58,8 +58,13 @@ FRAME (frames, move, resize, snapping), ARRANGE (align, distribute, group, z-ord
 
 ## Open questions
 
-- Page-break flow depends on rendered row heights, which depend on fonts (`RPT.OUTPUT.PDF`); the measurement contract between layout and renderer needs to be fixed at leaf level.
+- Resolved: the measurement contract between layout and renderer is the `RowMeasure` trait defined in `RPT.DESIGN.PLACE.FLOW`; `RPT.OUTPUT.PDF` implements it and uses the same `PagePlan` for export (cross-domain within RPT: OUTPUT is open).
+- Break rules need one more command, `report.set_break_block_layout@1`, added to this node's command lists.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.DESIGN.PLACE.FRAME | Block frames, move, resize and grid snapping (leaf) | 001 002 003 006 | PW.RPT.01 |
+| RPT.DESIGN.PLACE.ARRANGE | Align, distribute, group and z-order (leaf) | 003 006 | PW.RPT.01 |
+| RPT.DESIGN.PLACE.FLOW | Overflow detection and page-break flow (leaf) | 004 005 006 | none |

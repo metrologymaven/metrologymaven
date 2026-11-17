@@ -4,18 +4,18 @@ title: ORS-PROJ: projection onto CAD faces
 level: 3
 parent: UNC.ORS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.ORS-002, REQ-UNC.ORS-003]
 covers: []
-depends_on: [UNC.ORS.TRACE]
+depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.PROJ: ORS-PROJ: projection onto CAD faces
@@ -53,9 +53,15 @@ ANALYTIC, NURBS, EDGE. Each sub-suite becomes a content task once its cases have
 
 ## Open questions
 
+- Split by nominal geometry type. Projection is mathematics plus the project's own tie rule (lowest face ID, `GEO.DIST.FACE`), not a standards interpretation, so all three children are leaves with `citations: none` and basis `closed_form_math`. Aim: `geo.project_points@1`.
+
 - Interpretation content (expected results that depend on reading a standard, and every DMT row citation) is authored by paid or credentialed GD&T experts and signed off by two reviewers, per D-009; agents may draft structure, generators and closed-form mathematics only.
 - Expected results that cannot be derived in closed form need an independent oracle result recorded as a cross-check [unverified: which cases].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.PROJ.ANALYTIC | Projection cases on analytic faces (leaf) | 001 003 | none |
+| UNC.ORS.PROJ.NURBS | Projection cases on trimmed NURBS faces (leaf) | 001 003 | none |
+| UNC.ORS.PROJ.EDGE | Face assignment near seams, edges and trim boundaries (leaf) | 002 003 | none |

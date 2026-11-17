@@ -4,18 +4,18 @@ title: Operator-step renderers and lock-down
 level: 3
 parent: VIZ.KIOSK
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.KIOSK-002, REQ-VIZ.KIOSK-006]
 covers: []
-depends_on: [VIZ.KIOSK.SESSION, AUTO.PROG, AUTO.RUN]
+depends_on: [VIZ.KIOSK.SESSION, VIZ.PICK.RESOLVE, AUTO.PROG.OPER, AUTO.RUN.PLAY]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.KIOSK.STEPS: Operator-step renderers and lock-down
@@ -56,8 +56,14 @@ PROMPT, INPUT, PICK, CONFIRM, ALLOW (step-scoped allow-list).
 
 ## Open questions
 
-- Pick steps on 3D views need a reduced picking UI; whether it reuses VIZ.PICK.RESOLVE directly is to be fixed at leaf level.
+- Resolved: pick steps reuse `VIZ.PICK.RESOLVE` directly (`VIZ.KIOSK.STEPS.PICK`).
+- The UI emit filter in `VIZ.KIOSK.STEPS.LOCK` mirrors the engine-side operator session allow-list of `AUTO.RUN.PLAY.SESSION`; that list currently omits `view.get_kiosk_status@1` and the kiosk escalation command [cross-domain].
+- Split: the host and its allow-list (LOCK), the descriptor field renderers (FORM) and the 3D element pick (PICK) have different inputs and tests.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.KIOSK.STEPS.LOCK | Kiosk step host, response allow-list and step sequencing (leaf) | 001 002 005 | none |
+| VIZ.KIOSK.STEPS.FORM | Operator prompt and field renderers (leaf) | 002 003 004 | none |
+| VIZ.KIOSK.STEPS.PICK | Element pick step on a simplified 3D view (leaf) | 002 004 | none |

@@ -4,7 +4,7 @@ title: Identifier preservation and extension pass-through
 level: 3
 parent: IO.QIF
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.QIF.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.QIF.IDS: Identifier preservation and extension pass-through
@@ -56,8 +56,13 @@ MAP (ID mapping and renumbering), EXT (extension bag), XREF (cross-document refe
 
 ## Open questions
 
-- Whether incumbents keep `Attributes` and `UserDataXML` on QIF round trips needs empirical tests [unverified]; affects how this node reports third-party loss.
+- Whether incumbents keep `Attributes` and `UserDataXML` on QIF round trips needs empirical tests [unverified]; affects how this node reports third-party loss (carried into `IO.QIF.IDS.EXT`).
+- The `fx` extension schema is read as a published artifact of `CORE.PRJ.QIF` (`uses_artifacts`), not a code dependency.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.QIF.IDS.MAP | QIF identifier map, minting and export renumbering (leaf) | 001 002 003 | none |
+| IO.QIF.IDS.EXT | Extension-hook pass-through and fx typed carriage (leaf) | 004 005 | none |
+| IO.QIF.IDS.XREF | Cross-document xId references (leaf) | 001 | none |

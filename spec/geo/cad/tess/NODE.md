@@ -4,7 +4,7 @@ title: Controlled, watertight tessellation of CAD bodies
 level: 3
 parent: GEO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -59,10 +59,18 @@ EDGE (shared edge discretisation), FACE (parameter-space meshing inside loops), 
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-024 (B-rep kernel - own Rust crate or OCCT out of process) is accepted. Apply its Decision section (`decisions/D-024-*.md`) when this node is expanded.
-- **Blocked on D-024** (B-rep kernel: own Rust crate or OCCT out of process). Under options A, C and D the tessellator is Rust code in `fid-geo-cad` and can reach D1 or D0; under option B it is the OCCT mesher in a worker process, which changes the determinism class (likely D1 per pinned build or N), rules out a WASM tessellator and moves the leaf's crate boundary. Splitting before the decision would be guessing.
+- **D-024 applied (2026-11-17):** option C. The tessellator is Rust code in `fid-geo-cad` (L0, KNP-1, wasm32-buildable, D0 by design against the D1 requirement); OCCT is never on the tessellation path (it may only appear as an optional import plugin under IO.CAD). Option D is evaluated by the time-boxed task GEO.CAD.TESS.SPIKE, whose report EDGE, FACE and REFINE read as an artifact. D-024's counsel condition concerns shipping or recommending an LGPL plugin; it does not touch these leaves, which contain no LGPL code (my reading; confirm in review).
+- REQ-GEO.CAD.TESS-001's 1e-9 m vertex-on-surface bound cannot hold for edge vertices on real STEP data whose edges sit only within the model tolerance of their surfaces; GEO.CAD.TESS.EDGE reports the gap instead. Suggest the requirement read "within max(1e-9 m, the body's edge-to-surface gap)".
+- Layering (D-034): SPIKE produces a report only; EDGE, FACE, REFINE and BODY are L0; only GEO.CAD.TESS.CMD depends on CORE.
 - REQ-GEO.CAD-006 calls the tolerance change W2; whether per-view display tolerances (not stored in the document) also need a command is a VIZ question.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.CAD.TESS.SPIKE | Time-boxed evaluation of an existing Rust B-rep crate as tessellator base (leaf) | 003 | none |
+| GEO.CAD.TESS.EDGE | Shared edge discretisation (leaf) | 001 002 003 | none |
+| GEO.CAD.TESS.FACE | Constrained parameter-space meshing of trimmed faces (leaf) | 001 005 006 | none |
+| GEO.CAD.TESS.REFINE | Tolerance-driven refinement of face meshes (leaf) | 001 003 | none |
+| GEO.CAD.TESS.BODY | Body tessellation driver and watertight assembly (leaf) | 002 003 005 006 | none |
+| GEO.CAD.TESS.CMD | Tessellation commands (leaf) | 004 | GOM.CAD.04 |

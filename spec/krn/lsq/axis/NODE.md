@@ -4,7 +4,7 @@ title: Least-squares cylinder, cone and torus fits
 level: 3
 parent: KRN.LSQ
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.LSQ-002, REQ-KRN.LSQ-003, REQ-KRN.LSQ-004, REQ-KRN.LSQ-005, REQ-KRN.LSQ-006, REQ-KRN.LSQ-007, REQ-KRN.LSQ-008, REQ-KRN.LSQ-009, REQ-KRN.LSQ-010]
 covers: [GOM.CON.18, PW.CON.02, PW.CON.07, SA.REL.01]
 depends_on: [KRN.LSQ.TRAIT, KRN.LSQ.INIT, KRN.SOLV.NLLS, KRN.SOLV.MSTART]
+uses_artifacts: [UNC.RDL.FREEZE]
 cli: [fid fit ls-cylinder, fid fit ls-cone, fid fit ls-torus]
 mcp: [fit_ls_cylinder, fit_ls_cone, fit_ls_torus]
 journal: [fit.ls_cylinder@1, fit.ls_cone@1, fit.ls_torus@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.LSQ.AXIS: Least-squares cylinder, cone and torus fits
@@ -58,8 +59,13 @@ CYL (cylinder with constraints; TraCIM), CONE (cone, apex handling and ill-posed
 
 ## Open questions
 
-- Which cone parameterisation (apex versus a point on the axis plus radius at that point) is better conditioned for shallow cones [unverified]; the ISO 10360-6 exclusion of wide-angle cones is a reference for the error thresholds.
+- Which cone parameterisation (apex versus a point on the axis plus radius at that point) is better conditioned for shallow cones [unverified]; the ISO 10360-6 exclusion of wide-angle cones is a reference for the error thresholds. `KRN.LSQ.AXIS.CONE` decides it at the leaf (apex-free parameterisation by a point on the axis and the radius there) and cites ISO 10360-6 by designator and clause only.
+- Reference datasets are read at test time from the frozen RDL release (`uses_artifacts: UNC.RDL.FREEZE`), never built in.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.LSQ.AXIS.CYL | Least-squares cylinder | 001 002 003 005 006 | GOM.CON.18, PW.CON.02, SA.REL.01 |
+| KRN.LSQ.AXIS.CONE | Least-squares cone | 001 002 003 004 005 006 | GOM.CON.18, PW.CON.02, SA.REL.01 |
+| KRN.LSQ.AXIS.TORUS | Least-squares torus | 001 002 005 006 | PW.CON.07 |

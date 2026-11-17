@@ -4,7 +4,7 @@ title: Data sets, ordering and exclusions
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-RPT.STATS-002, REQ-RPT.STATS-009]
 covers: [PW.MSP.01]
 depends_on: [RPT.CATALOG.QUERY, CORE.PRJ]
-cli: [fid stats compute-dataset, fid stats exclude-dataset]
-mcp: [stats_compute_dataset, stats_exclude_dataset]
-journal: [stats.compute_dataset@1, stats.exclude_dataset@1]
-updated: 2026-11-16
+cli: [fid stats *-dataset]
+mcp: [stats_*_dataset]
+journal: [stats.*_dataset@1]
+updated: 2026-11-17
 ---
 
 # RPT.STATS.DSET: Data sets, ordering and exclusions
@@ -56,8 +56,13 @@ DEF (definition and save), MAT (materialisation, ordering and digest), EXCL (aut
 
 ## Open questions
 
+- Resolved at leaf level: commands are `stats.save_dataset@1` (W2), `stats.list_dataset@1` (R0), `stats.compute_dataset@1` (R1), `stats.exclude_dataset@1` and `stats.reinclude_dataset@1` (W2). The piece ID that CMP needs is defined in DSET.MAT.
 - Should user exclusions be stored on the data-set definition or as annotations on the records? Assumed on the definition, so the same record can be in or out in different analyses.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.DSET.DEF | Data-set definition and save (leaf) | 001 003 | |
+| RPT.STATS.DSET.EXCL | Automatic and user exclusions (leaf) | 004 005 | |
+| RPT.STATS.DSET.MAT | Data-set materialisation, ordering and digest (leaf) | 001 002 003 006 | PW.MSP.01 |

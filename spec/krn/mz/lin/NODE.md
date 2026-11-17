@@ -4,7 +4,7 @@ title: Minimum-zone lines and plane
 level: 3
 parent: KRN.MZ
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.MZ-001, REQ-KRN.MZ-003, REQ-KRN.MZ-004, REQ-KRN.MZ-005, REQ-KRN.MZ-009]
 covers: [GOM.CON.19, PW.CON.05]
 depends_on: [KRN.LSQ.LIN, KRN.SOLV.CONIC, KRN.SOLV.SEQ, KRN.SOLV.CERT]
+uses_artifacts: [UNC.RDL.FREEZE]
 cli: [fid fit mz-line2d, fid fit mz-line3d, fid fit mz-plane]
 mcp: [fit_mz_line2d, fit_mz_line3d, fit_mz_plane]
 journal: [fit.mz_line2d@1, fit.mz_line3d@1, fit.mz_plane@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.MZ.LIN: Minimum-zone lines and plane
@@ -56,6 +57,11 @@ LINE2 (2D line and plane, LP), LINE3 (3D line, SOCP), CERT (active-set callbacks
 
 - TraCIM's Chebyshev set may not include the 3D line [unverified]; if not, it is validated on ORS cases only.
 
+- The hint's shared CERT child was folded into the two fit leaves: the equal-deviation systems differ for the LP (2D line, plane) and SOCP (3D line) cases, and `KRN.SOLV.CERT` already owns the shared framework.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MZ.LIN.FLAT | Minimum-zone 2D line and plane (LP) | 001 002 003 004 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.LIN.LINE3 | Minimum-zone 3D line (SOCP) | 001 002 004 | GOM.CON.19, PW.CON.05 |

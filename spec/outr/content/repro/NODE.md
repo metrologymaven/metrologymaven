@@ -4,18 +4,19 @@ title: Content replay check across releases
 level: 3
 parent: OUTR.CONTENT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.CONTENT-002, REQ-OUTR.CONTENT-003]
 covers: []
-depends_on: [CORE.RPL, OUTR.CONTENT.PUB]
+depends_on: [OUTR.CONTENT.PUB]
+uses_artifacts: [CORE.RPL, ECO.REL.PKG, ECO.DATA.EX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.CONTENT.REPRO: Content replay check across releases
@@ -56,8 +57,12 @@ RUN (replay harness), REPORT (report and markers).
 
 ## Open questions
 
+- CONSTITUTION §2.1 (D-034): the former code dependency on CORE.RPL is now `uses_artifacts`: the harness runs the release candidate's `fid` binary and reads its Replay Report JSON.
 - Whether `EQUIVALENT` is acceptable for tutorials with exact expected outputs is for maintainers; the requirement treats it as current.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.CONTENT.REPRO.RUN](run/NODE.md) | Content replay harness and reproducibility report (leaf) | 001 002 005 | none |
+| [OUTR.CONTENT.REPRO.MARK](mark/NODE.md) | Outdated markers and re-verification updates (leaf) | 003 004 | none |

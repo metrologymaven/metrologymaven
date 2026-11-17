@@ -11,7 +11,8 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.CHAIN-007]
 covers: []
-depends_on: [CORE.JRN]
+depends_on: []
+uses_artifacts: [CORE.JRN.CANON, CORE.JRN.ENTRY]
 side_effect: R1
 determinism: D0
 cli: []

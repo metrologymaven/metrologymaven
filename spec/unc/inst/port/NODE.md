@@ -4,7 +4,7 @@ title: Per-observation models for trackers, arms and scanners
 level: 3
 parent: UNC.INST
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.INST.SCHEMA, UNC.MODEL.DIST]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.INST.PORT: Per-observation models for trackers, arms and scanners
@@ -55,9 +55,16 @@ SPH (spherical instruments), ARM (arm pose models), OPT (scanner point models).
 
 ## Open questions
 
+- Split: the three model kinds are pure kernel functions in `fid-kunc` (UNC math, layer L0) that take typed parameters; EVAL in `fid-unc-inst` adapts a bound `instrument-model/v1` to them, applies the range check and the PSD check, and offers the batch entry point. Kernel children therefore do not depend on `UNC.INST.SCHEMA`.
+
 - Arm pose-dependent models need joint-angle data from HAL; whether drivers expose them is unconfirmed.
 - Default parameter values for example models must come from public sources only [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.INST.PORT.EVAL | Observation covariance entry point, dispatch, checks and batch (leaf) | 001 004 005 | SA.UNC.01 |
+| UNC.INST.PORT.SPH | Spherical observation covariance for trackers and total stations (leaf) | 001 002 | SA.UNC.01 |
+| UNC.INST.PORT.ARM | Articulated-arm point covariance without joint data (leaf) | 001 | SA.UNC.01 |
+| UNC.INST.PORT.OPT | Scanner point covariance from range and incidence (leaf) | 001 003 | SA.UNC.01 |

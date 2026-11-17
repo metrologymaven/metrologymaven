@@ -4,18 +4,18 @@ title: Sheet-metal iterative alignment on vector points
 level: 3
 parent: ALN.RPS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ALN.RPS-003, REQ-ALN.RPS-006, REQ-ALN.RPS-007]
 covers: [PCD.ALN.03]
-depends_on: [ALN.RPS.LOCK, ALN.MODEL.ELEM, ALN.QA.REPORT, GEO.DIST, KRN.SOLV]
+depends_on: [ALN.MODEL.ELEM, ALN.QA.REPORT, GEO.DIST, KRN.SOLV]
 cli: [fid align run-rps-vector]
 mcp: [align_run_rps_vector]
 journal: [align.run_rps_vector@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.RPS.VECTOR: Sheet-metal iterative alignment on vector points
@@ -33,7 +33,7 @@ The sheet-metal iterative alignment on vector points: each point has a nominal p
 - `align.run_rps_vector@1`
 
 **Out** (and which node owns it instead):
-- The locked-direction solve per iteration (`ALN.RPS.LOCK`)
+- Frame-axis RPS locks (`ALN.RPS.LOCK`); the per-iteration solve here uses KRN.SOLV directly (see Open questions)
 - Re-measurement on a machine (`CMM`)
 - Sheet-metal pack checks such as trim, hem and hole position (`IND.SHEET`)
 - Ray-mesh intersection primitives (`GEO.DIST`)
@@ -50,7 +50,7 @@ The sheet-metal iterative alignment on vector points: each point has a nominal p
 ## Interfaces
 
 - **Offers:** `align.run_rps_vector@1` (W2; params `points` with nominal position, vector, lock flag and source; `threshold`, `max_iterations`, `search_length`, `parent`).
-- **Consumes:** `ALN.RPS.LOCK` solve; GEO ray-surface intersection; `ALN.MODEL.ELEM`; `ALN.QA.REPORT`.
+- **Consumes:** KRN.SOLV NLLS solve; GEO ray-surface intersection; `ALN.MODEL.ELEM`; `ALN.QA.REPORT`.
 
 ## Decomposition hints
 
@@ -58,8 +58,13 @@ HITS (discrete-hit deviation along vectors), SURF (scan-surface intersection alo
 
 ## Open questions
 
+- Hints HITS and LOOP are merged into LOOP (the hit provider is a few lines); SURF is its own P1b leaf because it needs GEO.DIST.BATCH's directional projection (P1b). LOOP calls the kernel NLLS driver directly because ALN.RPS.LOCK only locks shared frame axes, so `ALN.RPS.LOCK` is removed from depends_on. `ALN.RPS.ITER` reuses LOOP.
 - Whether unlocked vector points should contribute to the fit with low weight (some incumbents' "best-fit with RPS" variants) [unverified]; currently they are reported only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.RPS.VECTOR.LOOP | Vector-point iterative locked-direction solve (leaf) | 001 003 004 005 006 | none |
+| ALN.RPS.VECTOR.SURF | Measured-surface deviation provider for vector points (leaf, P1b) | 001 002 | none |
+| ALN.RPS.VECTOR.CMD | Vector-point alignment command and alignment wrapping (leaf) | 003 004 | PCD.ALN.03 |

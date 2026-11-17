@@ -4,18 +4,19 @@ title: Adoption metric definitions and collection
 level: 3
 parent: OUTR.COMM
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.COMM-004, REQ-OUTR.COMM-005]
 covers: []
-depends_on: [OUTR.COMM.CHAN, ECO.REL]
+depends_on: []
+uses_artifacts: [OUTR.COMM.CHAN, ECO.REL, ECO.REPO]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.COMM.METRIC: Adoption metric definitions and collection
@@ -57,7 +58,12 @@ DEF (definition file), COLLECT (collector per source), SNAP (snapshot storage).
 ## Open questions
 
 - The repository and release hosts are not chosen yet; the collector's sources follow ECO.REL and ECO.REPO.
+- The former code dependencies on OUTR.COMM.CHAN and ECO.REL are reads of published files and public pages (channel inventory, release host statistics) and are now `uses_artifacts` (CONSTITUTION 2.1, D-034).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.COMM.METRIC.DEF](def/NODE.md) | Metric definition file, source list and guard (leaf) | 001 002 003 | none |
+| [OUTR.COMM.METRIC.COLLECT](collect/NODE.md) | Public-signal collector (leaf) | 002 003 005 | none |
+| [OUTR.COMM.METRIC.SNAP](snap/NODE.md) | Metric snapshot store and quarterly values (leaf) | 004 | none |

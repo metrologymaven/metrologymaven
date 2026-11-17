@@ -1,0 +1,84 @@
+---
+id: PLAT.DEPLOY.UPDATE.VERIFY
+title: Update manifest format and bundle verification library
+level: 4
+parent: PLAT.DEPLOY.UPDATE
+kind: task
+status: leaf
+phase: P1a
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-PLAT.DEPLOY.UPDATE-001, REQ-PLAT.DEPLOY.UPDATE-002, REQ-PLAT.DEPLOY.UPDATE-003, REQ-PLAT.DEPLOY.UPDATE-004]
+covers: []
+depends_on: [TRUST.SIGN.DSSE, PLAT.DEPLOY.OFFLINE.BUNDLE, PLAT.DEPLOY.UPDATE.KEYROT]
+side_effect: R0
+determinism: D0
+cli: []
+mcp: []
+journal: []
+updated: 2026-11-17
+---
+
+# PLAT.DEPLOY.UPDATE.VERIFY: Bundle verification
+
+## Purpose
+
+The pure check behind every offline update: given the bytes of a bundle directory, the trusted key set and the installed version, it verifies the DSSE-signed update manifest first, then every file digest, then the version order, and returns either a verified plan or exactly which check failed. It reads no network and changes nothing.
+
+## Scope
+
+**In:**
+- `update-manifest.json` schema 1: `version`, `channel`, `os`, `arch`, `from_versions` (SemVer range), `files: [{ relpath, sha256, size }]`, optional `key_transitions: [DSSE envelope]`
+- Verification order: envelope → payload schema → platform match → file digests (streaming) → version order
+- The `VerifiedBundle` result and the typed failure
+
+**Out** (and which node owns it instead):
+- Deciding which keys are trusted (`PLAT.DEPLOY.UPDATE.KEYROT`)
+- Commands and installing (`PLAT.DEPLOY.UPDATE.APPLY`)
+- DSSE parsing and signature primitives (`TRUST.SIGN.DSSE`)
+
+## Requirements
+
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-001** The verifier shall open only `update-manifest.dsse.json` until the envelope's signature has verified against a key in the trusted set, and the test harness shall show no other file in the bundle was opened before that.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-002** If the envelope is missing, malformed, has payload type other than `application/vnd.fid.update-bundle+json`, or has no signature from a trusted key, then the result shall be `Refused(SignatureInvalid | SignatureMissing | WrongPayloadType)` naming the check.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-003** If any listed file is missing, has a different size or SHA-256, or the bundle contains an unlisted file, then the result shall be `Refused(FileMismatch { relpath, reason })` for the first such file in byte order.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-004** If the manifest's `os` or `arch` differs from the installed platform, or the installed version is outside `from_versions`, then the result shall be `Refused(WrongPlatform | NotUpgradableFrom)`.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-005** If the manifest version is lower than the installed version by SemVer 2.0.0 precedence, then the result shall be `Refused(Downgrade)` unless `allow_downgrade` is true, and equal versions shall be `Refused(SameVersion)`.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-006** The verifier shall use no network, no clock-based expiry check and no online revocation, and shall link no network crate.
+- **REQ-PLAT.DEPLOY.UPDATE.VERIFY-007** If the manifest exceeds 32 MiB or 200 000 files, or a relpath is absolute or contains `..`, then the result shall be `Refused(Malformed)` without panicking.
+
+## Acceptance criteria
+
+- **AC-1** Given `fixtures/plat/deploy/update/ok/` signed with test key A, trusted set {A}, installed 1.2.0, when `verify` runs, then the result is `Verified { version: 1.3.0, files: 4 }`.
+- **AC-2** (error path) Given `tampered-file/` (one byte changed), then `FileMismatch { relpath: "app/fid.exe", reason: digest }`.
+- **AC-3** (error path) Given `unsigned/`, then `SignatureMissing`; given `signed-by-unknown/` (key C), then `SignatureInvalid`; and an instrumented file opener records only the envelope read.
+- **AC-4** (error path) Given `ok/` with installed 1.4.0, then `Downgrade`; with `allow_downgrade`, then `Verified`.
+- **AC-5** Given a test that runs `verify` in a socket-denying sandbox, then it succeeds unchanged.
+- **AC-6** (determinism) Given AC-2 run twice, then the serialised results are byte-identical.
+
+## Design
+
+- **Registry command(s):** none; library used by `PLAT.DEPLOY.UPDATE.APPLY`.
+- **Data structures:** `UpdateManifest { schema_version, version, channel, os, arch, from_versions, files, key_transitions }`; `VerifiedBundle { manifest, root, manifest_digest }`; `Refusal` enum as in the requirements.
+- **Algorithm:** read envelope (cap 32 MiB) → `KeySet::from_installed(...).extend_with(transitions)` from KEYROT → DSSE verify → parse payload → platform and range checks → walk bundle directory without following symlinks, hash in byte order → version precedence.
+- **Errors:** the `Refusal` variants; I/O errors map to `FileMismatch { reason: unreadable }`.
+- **Determinism:** D0.
+- **Performance budget:** hashing at disk speed [unverified].
+- **Crate:** `fid-update-offline` (depends on `fid-sign-core` from TRUST.SIGN, `fid-platform`).
+
+## Test fixtures
+
+Bundles under `fixtures/plat/deploy/update/` signed with test-only Ed25519 keys generated by a fixture script with a fixed seed; never real release keys. Licensed with the code.
+
+## Build prompt
+
+> Create crate `fid-update-offline` with `verify(bundle_dir, trusted: &KeySet, installed: &Installed, allow_downgrade) -> Result<VerifiedBundle, Refusal>`. Define `update-manifest.json` schema 1 (version, channel, os, arch, from_versions SemVer range, files {relpath, sha256, size}, optional key_transitions as DSSE envelopes) carried in `update-manifest.dsse.json` with payload type `application/vnd.fid.update-bundle+json`. Order: read only the envelope; extend the key set with verified transitions (module from PLAT.DEPLOY.UPDATE.KEYROT); verify DSSE (TRUST.SIGN.DSSE verifier); parse payload (32 MiB, 200 000 files caps; relpaths relative, no `..`); check os/arch and from_versions; hash every file in byte order without following symlinks, fail on missing, mismatched or unlisted files; compare SemVer precedence (Downgrade unless allowed; SameVersion). No network, no clock checks. Tests: AC-1..AC-6 with test-only keys. Constraints: CONSTITUTION §8 (no panic, fail closed), C7. Commit: `feat(fid-update-offline): bundle verification`.
+
+## Open questions
+
+- None beyond ECO.REL producing the manifest (see parent).
+
+## Children
+
+_Leaf: none._

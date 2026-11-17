@@ -4,7 +4,7 @@ title: Deviation primitive and surface comparison against CAD
 level: 3
 parent: SCAN.CMP
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.DIST, GEO.INDEX, GEO.OOC, GEO.FRAME, SCAN.MESHOP.PROV, ALN]
 cli: [fid compare surface-cad]
 mcp: [compare_surface_cad]
 journal: [compare.surface_cad@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.CMP.DEV: Deviation primitive and surface comparison against CAD
@@ -63,7 +63,12 @@ PRIM (the primitive and its sign and cutoff rules, with exhaustive edge and vert
 
 - The exact meaning of method `normal` (projection along the nominal normal at the foot point versus a ray along the actual normal) must be fixed by PRIM and documented against incumbent behaviour [unverified].
 - Whether nominal meshes (STL nominals) are compared through the same command or a separate `compare.surface_mesh@1`; proposed: same command, nominal type inferred.
+- **Resolved at split (2026-11-17):** `SCAN.CMP.DEV.PRIM` fixes `normal` as (a − f)·n_f at the closest-point foot f, with off-edge feet giving `NO_MATCH`; STL nominals go through `compare.surface_cad@1` with the kind inferred (`SCAN.CMP.DEV.SURFCAD`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.CMP.DEV.FIELD | DeviationField element, builder and canonical digest (leaf) | 003 005 006 | none |
+| SCAN.CMP.DEV.PRIM | Signed deviation primitive and its batch form (leaf) | 001 002 005 006 | none |
+| SCAN.CMP.DEV.SURFCAD | Surface comparison against CAD command (leaf) | 003 004 006 007 | GOM.SRF.01, PW.CMP.01, SA.CAD.02, SA.SCN.02, PCD.LAS.02 |

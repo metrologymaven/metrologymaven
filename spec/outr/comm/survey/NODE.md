@@ -4,7 +4,7 @@ title: Opt-in surveys
 level: 3
 parent: OUTR.COMM
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-OUTR.COMM-007]
 covers: []
 depends_on: []
+uses_artifacts: [OUTR.COMM.CHAN, OUTR.BRAND.LINT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.COMM.SURVEY: Opt-in surveys
@@ -61,4 +62,8 @@ TOOL (tool criteria and setup), QSET (question sets), AGG (aggregation and suppr
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.COMM.SURVEY.TOOL](tool/NODE.md) | Survey tool criteria and tracking check (leaf) | 002 | none |
+| [OUTR.COMM.SURVEY.QSET](qset/NODE.md) | Survey definitions, privacy statement and announcements (leaf) | 001 002 005 | none |
+| [OUTR.COMM.SURVEY.AGG](agg/NODE.md) | Survey aggregation, cell suppression and deletion record (leaf) | 003 004 | none |

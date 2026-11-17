@@ -1,0 +1,72 @@
+---
+id: UNC.ORS.GDT.GEOM
+title: Closed-form form, orientation, location and runout drafts
+level: 4
+parent: UNC.ORS.GDT
+kind: task
+status: leaf
+phase: P1a
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-UNC.ORS.GDT-001, REQ-UNC.ORS.GDT-003]
+covers: []
+depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN, UNC.ORS.DRF.GEOM]
+uses_artifacts: [GDT.RES]
+side_effect: R1
+determinism: D0
+cli: []
+mcp: []
+journal: []
+updated: 2026-11-17
+---
+
+# UNC.ORS.GDT.GEOM: Closed-form form, orientation, location and runout drafts
+
+## Purpose
+
+Generates draft ORS-GDT cases whose expected geometric deviation follows from construction alone: form (`check.eval_flatness@1`, `check.eval_straightness@1`, `check.eval_roundness@1`, `check.eval_cylindricity@1`) from minimum-zone equioscillation sets and least-squares null-space sets; orientation (`check.eval_parallelism@1`, `check.eval_perpendicularity@1`, `check.eval_angularity@1`) and location at RFS (`check.eval_position@1` without modifiers, `check.eval_coaxiality@1`, `check.eval_symmetry@1`) against form-perfect datums from `UNC.ORS.DRF.GEOM`; and runout (`check.eval_circular_runout@1`, `check.eval_total_runout@1`) of cylinders with known eccentricity and taper. Each case records the geometric quantities it was built from and the expected value under the operator chain of a proposed DMT key; an expert confirms the row and two reviewers sign off before release.
+
+## Scope
+
+**In:** generator `ors_gdt::geom`; one or more cases per characteristic above for which the pinned DMT has a `supported` key; recorded construction quantities (zone width, axis offset vector, eccentricity, taper); expected deviation; tolerance 1e-9 m [unverified: adequacy for MZ solvers]; `dmt_key_proposed`; `review.status: draft`; `gaps.json` for supported keys with no case.
+**Out:** material modifiers (owned by `UNC.ORS.GDT.MOD`); profile (owned by `UNC.ORS.GDT.PROF`); composite and simultaneous (owned by `UNC.ORS.GDT.COMP`); decisions (not tested here; a case states deviation, not conformance).
+
+## Requirements
+
+- **REQ-UNC.ORS.GDT.GEOM-001** For each characteristic aim in Purpose whose DMT key is `supported` in the pinned DMT artifact, the generator shall emit at least one case with a closed-form expected deviation.
+- **REQ-UNC.ORS.GDT.GEOM-002** Form cases shall be built from equioscillation sets (minimum zone) or null-space sets (least squares) by `UNC.RDL.GEN`, with the association method recorded in the case.
+- **REQ-UNC.ORS.GDT.GEOM-003** Every case shall record the construction quantities from which the expected value was derived, so an expert can confirm the value under the confirmed DMT row without regenerating.
+- **REQ-UNC.ORS.GDT.GEOM-004** Every case shall carry `dmt_key_proposed`, `review.status: draft` and no `dmt_row`, and every `supported` key without a case shall be listed in `gaps.json` so that REQ-GDT.RES-006 coverage can be tracked.
+- **REQ-UNC.ORS.GDT.GEOM-005** The generator shall be byte-reproducible per seed, and the draft suite shall pass `rdl.check_suite@1` except for `review_missing` findings.
+
+## Acceptance criteria
+
+- **AC-1** Given seed `0x47445431` and the DMT stub, then two runs give identical files and the suite check reports only `review_missing` findings.
+- **AC-2** Given each form case, when the 50-digit reference script checks the equioscillation or normal-equation condition, then it holds within 1e-20 and the zone width equals the expected value within 1e-12 m.
+- **AC-3** Given each runout case (eccentricity e, no form error), then the expected circular runout recorded is 2e within 1e-15 m relative to the construction.
+- **AC-4** Given a DMT stub marking straightness `unsupported`, then no straightness case is emitted and `gaps.json` does not list it (only `supported` keys are tracked).
+
+## Design
+
+- **Registry command(s):** none; generator `ors-gen gdt-geom`.
+- **Algorithm:** reuse `UNC.RDL.GEN` MZ and LS constructions; place features relative to form-perfect datum frames from `ors_drf::geom`; round to 16 digits; recompute expected values at 50 digits.
+- **Determinism:** D0.
+- **Performance budget:** generation under 60 s.
+- **Crate:** `fid-ors` (Tooling; reads the DMT JSON artifact only).
+
+## Test fixtures
+
+`fixtures/ors/gdt/` (generated, CC-BY-4.0); DMT stub from `UNC.ORS.TRACE`.
+
+## Build prompt
+
+> In tooling crate `fid-ors`, add generator `ors_gdt::geom` (`ors-gen gdt-geom`), seeded. For aims `check.eval_flatness@1`, `check.eval_straightness@1`, `check.eval_roundness@1`, `check.eval_cylindricity@1`, `check.eval_parallelism@1`, `check.eval_perpendicularity@1`, `check.eval_angularity@1`, `check.eval_position@1` (RFS, no modifiers), `check.eval_coaxiality@1`, `check.eval_symmetry@1`, `check.eval_circular_runout@1`, `check.eval_total_runout@1`: emit ≥ 1 case for each whose DMT key is `supported` in the pinned DMT JSON artifact (read as a file). Build form sets with the `fid-rdl` MZ (equioscillation) and LS (null-space) generators, orientation and location against form-perfect datums from `ors_drf::geom`, runout from eccentric and tapered cylinders; round to 16 digits and recompute at 50. Record construction quantities, expected deviation, tolerance 1e-9 m, association method, `dmt_key_proposed`, `review.status: draft`, no `dmt_row`; list supported keys without cases in `gaps.json`. Byte-reproducible. Tests AC-1..AC-4. Never write standards text.
+
+## Open questions
+
+- Whether an expected value stated as a geometric quantity (for example diametral zone of an axis offset) matches the confirmed DMT row's chain is the expert's check, recorded in `review`.
+
+## Children
+
+_Leaf: none._

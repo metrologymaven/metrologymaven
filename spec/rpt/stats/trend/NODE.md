@@ -4,7 +4,7 @@ title: Trend series and the chart-series contract
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [RPT.STATS.DSET]
 cli: [fid stats build-chart]
 mcp: [stats_build_chart]
 journal: [stats.build_chart@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.STATS.TREND: Trend series and the chart-series contract
@@ -55,8 +55,13 @@ CONTRACT (ChartSeries type and versioning), TREND (trend builder), HIST (histogr
 
 ## Open questions
 
-- Default histogram binning rule (for example Sturges or Freedman-Diaconis) needs a choice at leaf level.
+- Default histogram binning rule: chosen at leaf level as `sturges@1` (`RPT.STATS.TREND.HIST`); Freedman-Diaconis is deferred until a quantile definition is chosen.
+- Control charts are built by a separate command, `stats.build_control_chart@1`, owned by `RPT.STATS.SPC.CHART`; `stats.build_chart@1` covers trend and histogram kinds only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.TREND.CONTRACT | ChartSeries contract and versioning (leaf) | 004 005 | |
+| RPT.STATS.TREND.HIST | Histogram binning kernel (leaf) | 003 | |
+| RPT.STATS.TREND.BUILD | Trend and histogram chart builder (leaf) | 001 002 003 004 | GOM.TRD.02 |

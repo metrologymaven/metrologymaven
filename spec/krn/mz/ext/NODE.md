@@ -4,18 +4,18 @@ title: Minimum-zone cone, slot, rectangle, ellipse and planar curves
 level: 3
 parent: KRN.MZ
 kind: module
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.MZ-002, REQ-KRN.MZ-004, REQ-KRN.MZ-005, REQ-KRN.MZ-008, REQ-KRN.MZ-009]
 covers: [GOM.CON.19, PW.CON.05]
-depends_on: [KRN.LSQ.AXIS, KRN.LSQ.PLAN2D, KRN.LSQ.CURVE, KRN.SOLV.SEQ, KRN.SOLV.CERT, KRN.SOLV.MSTART]
+depends_on: [KRN.LSQ.AXIS, KRN.LSQ.PLAN2D, KRN.SOLV.NLLS, KRN.SOLV.SEQ, KRN.SOLV.CERT, KRN.SOLV.MSTART]
 cli: [fid fit mz-cone, fid fit mz-slot, fid fit mz-rectangle, fid fit mz-ellipse, fid fit mz-curve2d]
 mcp: [fit_mz_cone, fit_mz_slot, fit_mz_rectangle, fit_mz_ellipse, fit_mz_curve2d]
 journal: [fit.mz_cone@1, fit.mz_slot@1, fit.mz_rectangle@1, fit.mz_ellipse@1, fit.mz_curve2d@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.MZ.EXT: Minimum-zone cone, slot, rectangle, ellipse and planar curves
@@ -46,7 +46,7 @@ Minimum-zone fits beyond the TraCIM set: cone, slot, rectangle, ellipse and plan
 ## Interfaces
 
 - **Offers:** commands `fit.mz_cone@1`, `fit.mz_slot@1`, `fit.mz_rectangle@1`, `fit.mz_ellipse@1`, `fit.mz_curve2d@1` (W2, dry-run R1); the defined-pairs table as data.
-- **Consumes:** `KRN.LSQ.AXIS`, `KRN.LSQ.PLAN2D`, `KRN.LSQ.CURVE`, `KRN.SOLV`.
+- **Consumes:** `KRN.LSQ.AXIS`, `KRN.LSQ.PLAN2D`, `KRN.SOLV` (NLLS for the curve placement start, SEQ, CERT, MSTART).
 
 ## Decomposition hints
 
@@ -56,6 +56,14 @@ CONE, PLAN (slot and rectangle), ELL (ellipse), CURVE (planar curves), UNDEF (de
 
 - Which of these zones have a published definition in ISO 1101 or ISO 12180/12181 style specifications versus being project definitions; results without one need `reference_basis: none` (owned by `UNC`) [unverified].
 
+- The planar-curve zone is defined here as the minimum-width band of constant width centred on a caller-given nominal curve under free in-plane rigid placement (form only, no datums). It needs a least-squares placement start, not a free-curve fit, so the dependency on `KRN.LSQ.CURVE` was replaced by `KRN.SOLV.NLLS`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MZ.EXT.UNDEF | Minimum-zone defined-pairs table and method_undefined | 002 | none |
+| KRN.MZ.EXT.CONE | Minimum-zone cone | 001 003 004 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.EXT.PLAN | Minimum-zone slot and rectangle | 001 003 004 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.EXT.ELL | Minimum-zone ellipse | 001 003 004 | GOM.CON.19, PW.CON.05 |
+| KRN.MZ.EXT.CURVE | Minimum-zone planar curve about a nominal | 001 003 004 | GOM.CON.19, PW.CON.05 |

@@ -4,18 +4,19 @@ title: Brand usage guidelines and visual identity
 level: 3
 parent: OUTR.BRAND
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.BRAND-001, REQ-OUTR.BRAND-008]
 covers: []
-depends_on: [OUTR.BRAND.ASSET]
+depends_on: []
+uses_artifacts: [OUTR.BRAND.ASSET, OUTR.BRAND.LINT, UX.TOKENS, UX.ICONS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.BRAND.GUIDE: Brand usage guidelines and visual identity
@@ -58,9 +59,14 @@ NAME (name and third-party usage), VISUAL (identity principles), DRESS (trade-dr
 
 ## Open questions
 
-- Blocked for publication by D-002 (accepted as a process; the name is not yet chosen). Drafting is not blocked.
+- Blocked for publication by D-002 (accepted as a process; the name is not yet chosen). Drafting is not blocked. OUTR.BRAND.GUIDE.NAME enforces this with a publish guard and a single `{{FAMILY_NAME}}` token.
+- The former code dependency on OUTR.BRAND.ASSET is an artifact read (logo variant manifest) and is now `uses_artifacts` (CONSTITUTION 2.1, D-034). Outreach colour and type come from the shared design system (UX.TOKENS), read as artifacts.
 - Describing incumbents' trade dress precisely enough to avoid it, without copying their material, needs care; a maintainer should review REQ-OUTR.BRAND.GUIDE-004 entries.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.BRAND.GUIDE.NAME](name/NODE.md) | Name, logo and third-party usage rules (leaf) | 001 002 003 | none |
+| [OUTR.BRAND.GUIDE.VISUAL](visual/NODE.md) | Visual identity principles and screenshot conventions (leaf) | 005 | none |
+| [OUTR.BRAND.GUIDE.DRESS](dress/NODE.md) | Trade-dress distinctness list (leaf) | 004 | none |

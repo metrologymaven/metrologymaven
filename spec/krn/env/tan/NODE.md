@@ -4,18 +4,18 @@ title: Tangential fits and datum simulators
 level: 3
 parent: KRN.ENV
 kind: module
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.ENV-002, REQ-KRN.ENV-003, REQ-KRN.ENV-005, REQ-KRN.ENV-007, REQ-KRN.ENV-009]
 covers: [GOM.CON.20, PW.CON.05]
-depends_on: [KRN.LSQ.LIN, KRN.LSQ.AXIS, KRN.SOLV.CONIC, KRN.SOLV.SEQ, KRN.SOLV.CERT]
+depends_on: [KRN.LSQ.LIN, KRN.LSQ.AXIS, KRN.SOLV.CONIC, KRN.SOLV.SEQ, KRN.SOLV.CERT, KRN.SOLV.MSTART]
 cli: [fid fit tan-line, fid fit tan-plane, fid fit tan-cylinder]
 mcp: [fit_tan_line, fit_tan_plane, fit_tan_cylinder]
 journal: [fit.tan_line@1, fit.tan_plane@1, fit.tan_cylinder@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.ENV.TAN: Tangential fits and datum simulators
@@ -55,8 +55,14 @@ PLANE (plane, three variants; the main datum case), LINE (line), CYL (cylinder),
 
 ## Open questions
 
-- The constrained-L1 variant's exact definition should follow published work on datum establishment [unverified]; it must not be taken from standards text.
+- The constrained-L1 variant's exact definition should follow published work on datum establishment [unverified]; it must not be taken from standards text. Each leaf states the objective in its own words and cites published work by author and year only.
+- A tangential 3D line has no defined material side; `fit.tan_line` is 2D (in a given plane) and a 3D request returns `method_undefined` (table in `KRN.ENV.TAN.ROCK`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.ENV.TAN.ROCK | Rocking candidate sets, tie-break and tangential variant table | 003 004 | none |
+| KRN.ENV.TAN.PLANE | Tangential plane in three variants | 001 002 005 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.TAN.LINE | Tangential 2D line in three variants | 001 002 005 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.TAN.CYL | Tangential cylinder, inner and outer | 001 002 005 | GOM.CON.20, PW.CON.05 |

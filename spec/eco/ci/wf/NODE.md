@@ -4,7 +4,7 @@ title: Reusable workflows, required checks and test reporting
 level: 3
 parent: ECO.CI
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [ECO.CI.GATES]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.CI.WF: Reusable workflows, required checks and test reporting
@@ -50,18 +50,28 @@ The shared workflow definitions that every repository calls (the common-actions 
 
 ## Interfaces
 
-- **Offers:** reusable workflows; `required-checks` file; `test-report.json` per run (consumed by `ECO.PARITY.TRACE`); duration metrics.
-- **Consumes:** ECO.CI.GATES check plan; each check tool (ECO.REPO, ECO.RULES, ECO.COMM, ECO.CI.LINT, ECO.CI.LIC); ECO.DATA fetch tool for tests that need datasets.
+- **Offers:** reusable workflows and the pin check (ECO.CI.WF.CALL); `required-checks.toml` and the derived branch-protection payload (ECO.CI.WF.REQSET); `test-report.json` v1 `{revision, results[] {leaf, ac, outcome, test}}` consumed by ECO.PARITY.TRACE (ECO.CI.WF.TESTRPT); the workflow security lint (ECO.CI.WF.FORK); `ci-durations.jsonl` and the monthly p90 report (ECO.CI.WF.TIME).
+- **Consumes:** ECO.CI.GATES check plan; each check tool (ECO.REPO, ECO.RULES, ECO.COMM, ECO.CI.LINT, ECO.CI.LIC); ECO.DATA fetch tool for tests that need datasets; the PLAT build matrix as input data (no dependency, to avoid a cycle with PLAT.MATRIX).
 
 ## Decomposition hints
 
 CALL (reusable workflows and pin check), REQSET (required-check set file), TESTRPT (test job and JSON report), FORK (fork-PR safety), TIME (duration metrics).
 
+## Split rationale
+
+One child per hint: each is a separate file format or lint with its own inputs, and each is leaf-sized. CALL owns the workflow files themselves, so the other children only add jobs or checks to them.
+
 ## Open questions
 
-- The hosting platform for CI (GitHub Actions is assumed by the Craft pattern and the `gh` tooling) is not recorded as a decision; if maintainers want another forge, the workflow format changes but these requirements do not.
-- Test tagging convention (how a Rust test names its leaf and AC) must be agreed with every domain; propose a test-name prefix `ac_<leaf>_<n>` at leaf level.
+- The hosting platform for CI (GitHub Actions is assumed by the Craft pattern and the `gh` tooling) is not recorded as a decision; if maintainers want another forge, the workflow format changes but these requirements do not. The leaves name GitHub Actions syntax [unverified for other forges].
+- Test tagging convention settled in ECO.CI.WF.TESTRPT: test names `ac_<leaf id with dots as underscores, lowercase>__<n>`; every domain's build prompts should use it (cross-domain note for agents writing leaves).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.CI.WF.CALL | Reusable workflows and the pin check (leaf) | 001 | none |
+| ECO.CI.WF.REQSET | Required-check set file and branch-protection payload (leaf) | 002 | none |
+| ECO.CI.WF.TESTRPT | Test job and acceptance-criterion test report (leaf) | 003 | none |
+| ECO.CI.WF.FORK | Fork-PR safety lint for workflows (leaf) | 004 | none |
+| ECO.CI.WF.TIME | Required-check duration record and p90 report (leaf) | 005 | none |

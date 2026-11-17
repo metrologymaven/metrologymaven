@@ -4,18 +4,18 @@ title: Priority-ordered alignment by geometric elements
 level: 3
 parent: ALN.DATUM
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ALN.DATUM-001, REQ-ALN.DATUM-004, REQ-ALN.DATUM-007]
 covers: [GOM.ALN.06, PW.ALN.03]
-depends_on: [ALN.DATUM.DOF, ALN.MODEL.ELEM, ALN.QA.REPORT, KRN.LSQ, KRN.SOLV, GEO.FRAME]
+depends_on: [ALN.DATUM.DOF, ALN.BFIT.FEAT, ALN.MODEL.ELEM, ALN.QA.REPORT, KRN.LSQ, KRN.SOLV, GEO.FRAME]
 cli: [fid align run-elements]
 mcp: [align_run_elements]
 journal: [align.run_elements@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.DATUM.ELEM: Priority-ordered alignment by geometric elements
@@ -58,8 +58,13 @@ PAIRRES (per-type pair residuals and scaling), LEVELS (priority-level solve with
 
 ## Open questions
 
+- Hint PAIRRES is not a child: per-type pair residuals come from `ALN.BFIT.FEAT.DEV`, the single implementation (LEVELS depends on it). Two children remain because the solver (kernel layer) and the command (command layer) live in different crates.
+- The R1 entry formerly offered to `ALN.DATUM.SYS` is no longer needed: SYS builds frames through GDT.DRF (known boundary), so LEVELS is offered only to this node's command.
 - GOM's and PolyWorks' element alignments may treat equal-priority pairs differently [unverified]; the same-level least-squares rule is this node's proposal.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.DATUM.ELEM.LEVELS | Priority-level element solve with DoF projectors (leaf) | 001 002 003 004 005 006 | none |
+| ALN.DATUM.ELEM.CMD | Element alignment command and alignment wrapping (leaf) | 001 004 | GOM.ALN.06, PW.ALN.03 |

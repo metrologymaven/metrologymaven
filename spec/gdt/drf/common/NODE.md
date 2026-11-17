@@ -4,7 +4,7 @@ title: Common datums and datum targets
 level: 3
 parent: GDT.DRF
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DRF-001, REQ-GDT.DRF-007]
 covers: [PW.GDT.07]
 depends_on: [GDT.DRF.SIM, GDT.DRF.DATUM]
+uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.DRF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DRF.COMMON: Common datums and datum targets
@@ -53,8 +54,13 @@ COMMON (multi-feature datums), TARGET (datum targets), COVER (coverage checks).
 
 ## Open questions
 
-- Common datums can also carry mobility (P1b); coordinate with `GDT.DRF.MOB` on how a common datum's mobility is represented.
+- Common-datum mobility (P1b) is represented as one envelope over the common datum's simulated axis or plane; ownership sits with `GDT.DRF.MOB.BOUND`, to be confirmed when `GDT.DRF.COMMON.CDAT` rows exist.
+- Combination and contact rules are DMT content, so `GDT.DRF.COMMON.CDAT` and `GDT.DRF.COMMON.TARGET` stay open; the coverage check is plain geometry and is a leaf.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DRF.COMMON.CDAT | Common datums from several features | 001 004 | PW.GDT.07 |
+| GDT.DRF.COMMON.TARGET | Datums established from datum targets | 002 004 | none |
+| GDT.DRF.COMMON.COVER | Datum target coverage check (leaf) | 003 | none |

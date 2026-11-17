@@ -11,13 +11,13 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.PKG-008, REQ-TRUST.PKG-009]
 covers: []
-depends_on: [TRUST.PKG.MANIFEST, TRUST.PKG.CONTENT, CORE]
+depends_on: [TRUST.PKG.MANIFEST, TRUST.PKG.CONTENT, CORE.REG.DEF, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.FS]
 side_effect: W1
 determinism: D0
 cli: [fid sign export-package]
 mcp: [sign_export_package]
 journal: [sign.export_package@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PKG.EXPORT: Export an unsigned Result Package to an export root

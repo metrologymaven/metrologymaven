@@ -3,19 +3,21 @@ id: CORE.BUS.ROUTE
 title: Branch routing, optimistic concurrency and idempotency
 level: 3
 parent: CORE.BUS
-kind: module
-status: open
+kind: task
+status: leaf
 phase: P0
-size: L
+size: M
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.BUS-006, REQ-CORE.BUS-009, REQ-CORE.BUS-010]
 covers: []
-depends_on: [CORE.JRN, CORE.BUS.PRIN]
+depends_on: [CORE.JRN.CHAIN, CORE.JRN.BR, CORE.BUS.PRIN, CORE.BUS.PIPE.ERR, CORE.STO.SQL]
+side_effect: R0
+determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.BUS.ROUTE: Branch routing, optimistic concurrency and idempotency
@@ -26,39 +28,53 @@ The route stage of the pipeline. ROUTE decides which branch a commit lands on (a
 
 ## Scope
 
-**In:**
-- Branch selection: human working branch, agent branch `agent/<client>/<n>`, opt-in co-editing
-- `expected_head` check and typed conflict error
-- One writer per branch (serialisation of concurrent commits)
-- Idempotency keys: store, lookup, mismatch detection, retention
-
-**Out** (and which node owns it instead):
-- Creating, diffing and promoting branches (owned by `CORE.JRN.BR`)
-- Principal derivation (owned by `CORE.BUS.PRIN`)
+**In:** branch selection (session working branch, agent branch `agent/<client>/<n>`, recorded co-editing opt-in); `expected_head` check; one writer per branch; the idempotency table (store, lookup, mismatch, retention).
+**Out:** creating, diffing and promoting branches (`CORE.JRN.BR.NAME`, `CORE.JRN.BR.PROMO`); principal derivation and session upgrade (`CORE.BUS.PRIN`); the MCP session that names the agent (`AUTO.MCP.SESS`); the database tables (`CORE.STO.SQL`).
 
 ## Requirements
 
-- **REQ-CORE.BUS.ROUTE-001** When an agent principal commits a W1 or W2 command, the bus shall route it to the agent branch `agent/<client>/<n>` for that agent session, creating the branch from the current working head on first use.
-- **REQ-CORE.BUS.ROUTE-002** The bus shall not route an agent commit to a human's working branch unless a human has recorded an opt-in for that branch, and each such entry shall be flagged as agent co-edited.
-- **REQ-CORE.BUS.ROUTE-003** If a command's `expected_head` differs from the target branch head, then the bus shall return a typed `conflict` error carrying the current head and commit nothing.
-- **REQ-CORE.BUS.ROUTE-004** While a commit to a branch is in progress, the bus shall not start another commit to the same branch.
-- **REQ-CORE.BUS.ROUTE-005** When a command carries an idempotency key already committed on the same branch with the same arguments digest, the bus shall return the original result without committing again.
-- **REQ-CORE.BUS.ROUTE-006** If an idempotency key is reused on the same branch with a different arguments digest, then the bus shall return a typed `idempotency_mismatch` error.
-- **REQ-CORE.BUS.ROUTE-007** The bus shall keep idempotency records for at least as long as the branch exists.
+- **REQ-CORE.BUS.ROUTE-001** When an `agent` principal commits a W1 or W2 command, the bus shall route it to the agent branch `agent/<client>/<n>` of that agent session, where `<client>` is the session's configured agent name reduced to `[a-z0-9-]{1,32}` and `<n>` the next unused positive integer for that client, creating the branch from the session's working head on first use.
+- **REQ-CORE.BUS.ROUTE-002** The bus shall not route an agent commit to a non-agent branch unless a `human` has recorded an opt-in for that branch and agent session, and each such entry shall carry the flag `agent_coedited`.
+- **REQ-CORE.BUS.ROUTE-003** When a non-agent principal commits, the bus shall route the commit to the branch the session has open.
+- **REQ-CORE.BUS.ROUTE-004** If a command's `expected_head` differs from the target branch head, then the bus shall return `conflict` carrying the current head and commit nothing.
+- **REQ-CORE.BUS.ROUTE-005** While a commit to a branch is in progress, the bus shall not start another commit to the same branch, and waiting writers shall be served in arrival order.
+- **REQ-CORE.BUS.ROUTE-006** When a command carries an idempotency key already committed on the same branch with the same arguments digest, the bus shall return the original result and entry hash without committing again.
+- **REQ-CORE.BUS.ROUTE-007** If an idempotency key is reused on the same branch with a different arguments digest, then the bus shall return `idempotency_mismatch` and commit nothing.
+- **REQ-CORE.BUS.ROUTE-008** The bus shall keep idempotency records for as long as their branch exists, and the record shall be written in the same transaction as the entry it refers to.
 
-## Interfaces
+## Acceptance criteria
 
-- **Offers:** `Route::target(principal, channel, def) -> BranchRef`; `Route::guard(branch, expected_head)`; idempotency table (stored through `CORE.JRN` in the project database).
-- **Consumes:** `CORE.JRN` (heads, branch creation), `CORE.BUS.PRIN`.
+- **AC-1** Given fixture `fixtures/core/bus/route/project` (working branch `main` with 3 entries) and an MCP agent session named `Claude Code`, when the agent commits a W2 test command, then branch `agent/claude-code/1` exists, forked from `main`'s head, and holds the entry; `main` is unchanged. A second session of the same agent gets `agent/claude-code/2`.
+- **AC-2** Given a human opt-in recorded for `main` and that agent session, when the agent commits, then the entry is on `main` with `agent_coedited: true`.
+- **AC-3** Given a CLI session upgraded to human (D-012), when it commits, then the entry lands on the branch the session has open.
+- **AC-4** (error path) Given `expected_head` set to an older hash, then `conflict` with the current head, and nothing is journaled.
+- **AC-5** Given 8 threads committing 1,000 W2 test commands each to one branch, then the branch holds exactly 8,000 new entries with gap-free sequence numbers and no interleaving error.
+- **AC-6** Given a command with key `k1` committed once, when it is retried with the same arguments, then the original entry hash is returned and the entry count is unchanged; (error path) with different arguments, then `idempotency_mismatch`.
+- **AC-7** (error path) Given a crash injected after the entry append but before return, when the project reopens and the retry arrives, then the original result is returned (record and entry were atomic).
 
-## Decomposition hints
+## Design
 
-TARGET (branch selection and opt-in), CONC (expected_head and writer lock), IDEM (idempotency table).
+- **Registry command(s):** none. The co-editing opt-in is recorded by `journal.set_branch_coediting@1` (W2, `human_only`), owned by `CORE.JRN.BR.NAME`; ROUTE only reads it.
+- **Data structures:** `BranchRef`; `RouteTarget { branch, coedited: bool }`; table `idempotency(branch, key, args_digest, entry_hash, result_digest)` with primary key `(branch, key)`; per-branch `Mutex` with a FIFO wait queue.
+- **Algorithm:** `target(principal, session)`: agent → look up the session's agent branch or allocate `<client>/<n>` (max existing n + 1) and create it through the branch API; otherwise the session's branch; check opt-in for agent-to-non-agent. `guard(branch, expected_head)`: lock, compare head, look up idempotency. Insert the idempotency row in the append transaction.
+- **Errors:** `conflict`, `idempotency_mismatch`.
+- **Determinism:** D0; branch numbering derives from journal state only.
+- **Performance budget:** lock plus lookup < 20 µs uncontended [unverified until measured].
+- **Crate:** `fid-bus` (module `route`).
+
+## Test fixtures
+
+`fixtures/core/bus/route/project`: a synthetic project with a 3-entry `main` branch, built by a committed generator script; CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-bus`, add module `route` with `target(principal, session) -> RouteTarget` and `guard(target, expected_head, idem_key, args_digest) -> Result<Guard, BusError>`. Agent W1/W2 commits go to `agent/<client>/<n>`: `<client>` is the session's configured agent name lower-cased and reduced to `[a-z0-9-]{1,32}`, `<n>` is the next unused integer for that client; create the branch from the session's working head through the journal branch API on first use. Agents reach a non-agent branch only with a recorded human opt-in, and such entries carry `agent_coedited`. Other principals commit to the session's open branch. Hold one FIFO-fair writer lock per branch for the whole commit; compare `expected_head` (`conflict` with the current head); look up `(branch, key)` in the idempotency table: same args digest returns the original result, different gives `idempotency_mismatch`. Write the idempotency row in the same database transaction as the entry. Tests: AC-1..AC-7 with `fixtures/core/bus/route/project`, including a crash-injection test. Constraints: CONSTITUTION §3 (agents write to an agent branch), C5, §8 (no panic, no unsafe, deny unwrap/expect).
 
 ## Open questions
 
-- How `<client>` and `<n>` are assigned for an agent session (per MCP connection, per client ID) needs agreement with `AUTO.MCP`.
+- **Resolved here:** `<client>` comes from the agent name bound by `AUTO.MCP.SESS` (REQ-AUTO.MCP.SESS-001), not from self-asserted client data, and `<n>` is per client. Confirm with `AUTO.MCP.SESS`.
+- Whether an agent's undo on its own branch should be W1 rather than W2 (raised by `CORE.JRN.UNDO`) does not change routing: both classes go to the agent branch.
 
 ## Children
 
-_None yet: status `open`._
+_Leaf: none._

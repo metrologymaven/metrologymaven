@@ -4,7 +4,7 @@ title: NamedView lifecycle and exact restore
 level: 3
 parent: VIZ.VIEW
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.VIEW.STATE, VIZ.RENDER.HEADLESS, CORE]
 cli: [fid view save-view, fid view restore-view, fid view list-views, fid view delete-view]
 mcp: [view_save_view, view_restore_view, view_list_views, view_delete_view]
 journal: [view.save_view@*, view.restore_view@*, view.delete_view@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.VIEW.NAMED: NamedView lifecycle and exact restore
@@ -59,7 +59,12 @@ SAVE, RESTORE (exact restore and missing references), LIST, RENAME, DELETE, EXPO
 ## Open questions
 
 - `view.rename_view` is not in the parent frontmatter; the parent's scope lists rename, so it is added here as a command name to confirm.
+- Applied: `view.rename_view@1` is specified in STORE.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.VIEW.NAMED.STORE | Save, rename, delete and list NamedViews (leaf) | 001 005 006 | GOM.VIZ.01, PW.VIZ.02 |
+| VIZ.VIEW.NAMED.RESTORE | Exact restore with missing-reference report and headless check (leaf) | 002 003 004 005 | GOM.VIZ.01 |
+| VIZ.VIEW.NAMED.EXPORT | NamedView package format for reports and web packages (leaf) | 002 | none |

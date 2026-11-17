@@ -4,7 +4,7 @@ title: Zone-pose solve and certificates
 level: 3
 parent: GDT.ZONE
 kind: module
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.ZONE.ZTYPE, GDT.DRF.BUILD, KRN.SOLV, KRN.MZ]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.ZONE.POSE: Zone-pose solve and certificates
@@ -52,7 +52,7 @@ The core optimizer: find the pose of a zone, within the free DOFs of the DRF, th
 
 ## Interfaces
 
-- **Offers:** `solve_zone(shape, points, drf, free_dofs, extra_constraints) -> ZoneSolution` used by FORM, LOC, PROF and by the sibling modules.
+- **Offers:** `solve_zone(shape, points, drf, free_dofs, extra_constraints) -> ZoneSolution` used by FORM, LOC, PROF and by the sibling modules; the `DeviationOracle` callback trait for offset zones; the `ExtraConstraints` hook that MATL, GROUP, COMP and MOBSRCH use.
 - **Consumes:** solvers and certificates (KRN.SOLV, KRN.MZ); DRF (GDT.DRF.BUILD); shapes (GDT.ZONE.ZTYPE).
 
 ## Decomposition hints
@@ -61,8 +61,14 @@ FIXED (no free DOF; a leaf), LIN (linearization per shape), SOLVE (solver loop a
 
 ## Open questions
 
-- In P1a, form zones may be referenced to least squares until KRN minimum zone is green (declared conservative upper bound); the flag is owned by `GDT.FORM.FCORE`, and this module must accept a least-squares reference pose as an input.
+- In P1a, form zones may be referenced to least squares until KRN minimum zone is green (declared conservative upper bound); the flag is owned by `GDT.FORM.FCORE`. Resolved here: `GDT.ZONE.POSE.FIXED` accepts a caller-supplied reference pose (for example a least-squares pose) and records `reference: caller_pose`.
+- `KRN.SOLV.SEQ` and `KRN.SOLV.CERT` are still open; LIN and SOLVE are written against their documented interfaces (`LinearisableProblem`, `ActiveSetProblem`, `certify`) and must be re-checked when those leaves are written.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.ZONE.POSE.FIXED | Fixed-pose zone evaluation (leaf) | 001 002 | none |
+| GDT.ZONE.POSE.LIN | Per-shape linearisation and active-set callbacks (leaf) | 001 003 | none |
+| GDT.ZONE.POSE.SOLVE | Zone-pose solve driver and certificates (leaf) | 001 003 004 005 | none |
+| GDT.ZONE.POSE.INFEAS | Infeasibility result at a stated size (leaf) | 001 | none |

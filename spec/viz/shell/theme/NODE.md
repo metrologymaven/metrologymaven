@@ -4,7 +4,7 @@ title: Theming, scaling, motion and localisation
 level: 3
 parent: VIZ.SHELL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.OVERLAY.STATUS, VIZ.SHELL.DOCK]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.SHELL.THEME: Theming, scaling, motion and localisation
@@ -27,16 +27,17 @@ Design tokens as data (colour, spacing, type), the light, dark, high-contrast an
 ## Scope
 
 **In:**
-- Token model and the four built-in themes
+- Runtime token model and switching among the four built-in themes (token names and values are owned by `UX.TOKENS`)
 - White-label skins (brand tokens and logos only) and their validation
 - UI scale factors and minimum target sizes
 - Reduced-motion setting consumed by camera and panel animations
-- Localisation catalogue hook (message IDs keyed by command ID) and locale formatting of UI-only numbers
+- Localisation lookup hook and locale formatting of UI-only numbers (catalog format and extraction are owned by `I18N.CATALOG`)
 - Contrast and focus-visibility checks on themes
 
 **Out** (and which node owns it instead):
 - Status glyph mapping and palette guard logic (`VIZ.OVERLAY.STATUS`; THEME calls it)
-- Translations themselves (community, `OUTR`)
+- Translations themselves (`I18N.XLATE`)
+- Catalog format, extraction and lint (`I18N.CATALOG`); token names and values (`UX.TOKENS`)
 - Kernel number formatting of values of record (`KRN.NUM`)
 
 ## Requirements
@@ -60,7 +61,13 @@ TOKENS, THEMES, SKIN (white-label validation), SCALE, MOTION, L10N.
 ## Open questions
 
 - Applicability of EN 301 549 and the European Accessibility Act to B2B desktop software needs checking [unverified].
+- Agreed boundaries applied: VIZ.SHELL.THEME owns the runtime theme model (TOKENS) and UX.TOKENS owns token names and values (read as an artifact); I18N.CATALOG owns the catalog format and extraction and THEME keeps only the UI lookup hook (L10N, `uses_artifacts: [I18N.CATALOG]`); translations are owned by I18N.XLATE, not OUTR. This node's Scope bullets "token model and the four built-in themes" and "Localisation catalogue hook" are to be read in that sense.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.THEME.TOKENS | Runtime token model, theme switching and skin validation (leaf) | 004 | none |
+| VIZ.SHELL.THEME.SCALE | UI scale, target sizes and reduced motion (leaf) | 001 002 | none |
+| VIZ.SHELL.THEME.L10N | UI text lookup hook and locale-formatted UI numbers (leaf) | 005 006 | none |
+| VIZ.SHELL.THEME.CHECK | Rendered contrast, focus-visible and target-size checks per theme (leaf) | 003 | none |

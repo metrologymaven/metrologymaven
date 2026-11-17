@@ -4,18 +4,19 @@ title: Designer panel
 level: 3
 parent: RPT.DESIGN
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.DESIGN-001]
 covers: [PCD.RPT.02, PW.RPT.01]
-depends_on: [RPT.DESIGN.PAGE, RPT.DESIGN.PLACE, RPT.DESIGN.STYLE, RPT.DESIGN.PREVIEW, VIZ.SHELL]
+depends_on: [RPT.DESIGN.PAGE, RPT.DESIGN.PLACE, RPT.DESIGN.STYLE, RPT.DESIGN.PREVIEW, RPT.MODEL.DOC, RPT.MODEL.BLOCKS, RPT.MODEL.TMPL, CORE.JRN.UNDO, VIZ.SHELL.DOCK, VIZ.SHELL.PALETTE, VIZ.SHELL.A11Y, VIZ.INBOX]
+uses_artifacts: [VIZ.SHELL.SPKRPT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.DESIGN.UI: Designer panel
@@ -59,7 +60,13 @@ SPIKE (D-005 prototype), CANVAS (canvas and handles), PANEL (palette, property p
 ## Open questions
 
 - Whether the designer also ships in the WASM web build (VIZ.WEB); assumed yes, not required here.
+- Layering (CONSTITUTION §2.1): the children are built in an L3 surface crate `fid-report-designer`, so depending on `VIZ.SHELL.*` and `VIZ.INBOX` is layer-legal; the L2 `fid-report` crate never depends on it. Confirm with maintainers.
+- The D-005 spike is owned by `VIZ.SHELL.SPKRPT`; `RPT.DESIGN.UI.CANVAS` reads its result record (`uses_artifacts`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.DESIGN.UI.CANVAS | Designer page canvas, handles and proposal overlay (leaf) | 001 004 005 | PW.RPT.01 |
+| RPT.DESIGN.UI.PANEL | Block palette, property panel, template browser and undo (leaf) | 001 002 | PCD.RPT.02, PW.RPT.01 |
+| RPT.DESIGN.UI.KEYS | Keyboard operation and accessibility of the designer (leaf) | 003 | none |

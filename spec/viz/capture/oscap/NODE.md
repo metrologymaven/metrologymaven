@@ -4,7 +4,7 @@ title: Full-window capture through OS APIs
 level: 3
 parent: VIZ.CAPTURE
 kind: module
-status: open
+status: split
 phase: P2
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.CAPTURE.VIDEO, VIZ.CAPTURE.REC]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.CAPTURE.OSCAP: Full-window capture through OS APIs
@@ -55,8 +55,15 @@ WIN, MAC, LINUX, PERM.
 
 ## Open questions
 
-- Tagged P2 following the concept doc [unverified]; per-OS API names are background only and need checking.
+- Tagged P2 following the concept doc [unverified]; per-OS API names in the backend leaves are [unverified] and need checking against platform documentation.
+- Split: one OS-independent source leaf (own-windows-only handle type, fallback, redaction, timestamps) plus one backend leaf per OS, each in its own crate so `unsafe` OS bindings stay isolated. Full-window capture is requested through `capture.start_recording@1` with source `window_video` (`VIZ.CAPTURE.REC.SESSION`).
+- On Wayland, the backend composes the app's own UI instead of using the screencast portal, which cannot be limited to one window [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.CAPTURE.OSCAP.SRC | Window frame source contract, permission fallback and redaction (leaf) | 001 002 003 004 | none |
+| VIZ.CAPTURE.OSCAP.WIN | Windows window-capture backend (leaf) | 002 | none |
+| VIZ.CAPTURE.OSCAP.MAC | macOS window-capture backend (leaf) | 002 | none |
+| VIZ.CAPTURE.OSCAP.LINUX | Linux window-capture backend (leaf) | 002 | none |

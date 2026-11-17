@@ -4,7 +4,7 @@ title: Command palette, generated forms, menus and keymap
 level: 3
 parent: VIZ.SHELL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [CORE.REG, VIZ.SHELL.DOCK]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.SHELL.PALETTE: Command palette, generated forms, menus and keymap
@@ -34,7 +34,7 @@ The keyboard-first way into everything: a command palette that lists every regis
 
 **Out** (and which node owns it instead):
 - The registry and manifest (`CORE.REG`)
-- Localised command titles catalogue (`VIZ.SHELL.THEME` hosts the localisation hook)
+- Localised command titles catalogue (`I18N.CATALOG`; `VIZ.SHELL.THEME.L10N` hosts the UI lookup hook)
 - Agent invocation of commands (`AUTO.MCP`)
 
 ## Requirements
@@ -58,7 +58,12 @@ SEARCH, FORMS (schema-generated forms), MENUS, KEYMAP, KBDCI (completeness check
 ## Open questions
 
 - Ranking signals (recency, context) must stay local; no telemetry (C7).
+- Applied: ranking uses local data only (SEARCH REQ-003). Localised command titles come from `I18N.CATALOG` through the THEME lookup hook (`VIZ.SHELL.THEME.L10N`), not from THEME itself.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.SHELL.PALETTE.SEARCH | Command palette search, enabled state and execution (leaf) | 001 005 | none |
+| VIZ.SHELL.PALETTE.FORMS | Schema-generated argument forms with units and exact decimals (leaf) | 002 006 | none |
+| VIZ.SHELL.PALETTE.KEYMAP | Generated menus, keymap, overrides and keyboard-completeness check (leaf) | 003 004 | none |

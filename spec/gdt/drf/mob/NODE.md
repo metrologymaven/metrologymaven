@@ -4,7 +4,7 @@ title: Datum mobility envelope
 level: 3
 parent: GDT.DRF
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.DRF-003]
 covers: [PW.GDT.07]
 depends_on: [GDT.DRF.BUILD, KRN.SOLV]
+uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.DRF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DRF.MOB: Datum mobility envelope
@@ -53,8 +54,13 @@ REPR (envelope type and digest; likely a leaf), MMB (boundary-derived constraint
 
 ## Open questions
 
-- Whether non-convex envelopes (for example rocking plus clearance) must be supported, or approximated conservatively with a flag; needs an expert call through the DMT.
+- Whether non-convex envelopes (for example rocking plus clearance) must be supported, or approximated conservatively with a flag, needs an expert call through the DMT; carried by `GDT.DRF.MOB.BOUND`, which may never approximate silently.
+- The envelope's free-DoF set is copied from the single DoF table owned by `GDT.DRF.BUILD`; no child keeps its own table.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DRF.MOB.REPR | Mobility envelope representation and digest (leaf) | 002 | none |
+| GDT.DRF.MOB.BOUND | Envelope constraints from MMB, LMB and rocking | 001 004 | PW.GDT.07 |
+| GDT.DRF.MOB.GROUP | Rigid-group mobility envelopes for datum patterns (leaf) | 003 004 | PW.GDT.07 |

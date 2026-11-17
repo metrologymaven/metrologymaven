@@ -4,18 +4,19 @@ title: ORS-DRF: datum reference frame cases
 level: 3
 parent: UNC.ORS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.ORS-001, REQ-UNC.ORS-002, REQ-UNC.ORS-003]
 covers: []
-depends_on: [UNC.ORS.TRACE, GDT.RES]
+depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]
+uses_artifacts: [GDT.RES]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.DRF: ORS-DRF: datum reference frame cases
@@ -53,9 +54,15 @@ PLANAR (3-2-1 planar schemes), CYL (cylindrical datums), MOD (datum material mod
 
 ## Open questions
 
+- Split by kind of work (instruction at review: agents write structure, closed-form geometry and placeholders, not interpretations). GEOM builds form-perfect datum features, where every reading of the DRF rules gives the same frame, so expected frames are pure mathematics; its cases still carry a proposed DMT key and need expert confirmation and two-expert sign-off (D-009) before release. SIM (imperfect datum features and simulator contact) and MOD (material boundary modifiers) are interpretation content and stay open for expert authors. GDT.RES is now read as an artifact (`uses_artifacts`, CONSTITUTION §2.1 and D-034), not a code dependency.
+
 - Interpretation content (expected results that depend on reading a standard, and every DMT row citation) is authored by paid or credentialed GD&T experts and signed off by two reviewers, per D-009; agents may draft structure, generators and closed-form mathematics only.
 - Expected results that cannot be derived in closed form need an independent oracle result recorded as a cross-check [unverified: which cases].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.DRF.GEOM | Form-perfect DRF cases with closed-form frames (leaf) | 001 002 003 | none |
+| UNC.ORS.DRF.SIM | Datum features with form error and simulator contact | 001 002 003 | none |
+| UNC.ORS.DRF.MOD | Datum references at MMB and LMB | 001 002 003 | none |

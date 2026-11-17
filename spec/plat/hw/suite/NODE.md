@@ -4,18 +4,19 @@ title: Benchmark workloads, datasets and metrics
 level: 3
 parent: PLAT.HW
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.HW-004, REQ-PLAT.HW-007]
 covers: []
-depends_on: [PLAT.HW.SCHEMA, ECO.DATA, VIZ]
+depends_on: [PLAT.HW.SCHEMA, PLAT.HW.CMD, CORE.BUS, VIZ.RENDER.HEADLESS]
+uses_artifacts: [ECO.DATA.CAT, CORE.REG.MAN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.HW.SUITE: Benchmark workloads
@@ -34,7 +35,7 @@ Chooses and implements what is measured: a small, stable set of workloads that r
 
 **Out** (and which node owns it instead):
 - Manifest and result formats (`PLAT.HW.SCHEMA`)
-- The runner and CLI (`PLAT.HW.CMD`)
+- The runner and CLI (`PLAT.HW.CMD`); the provenance-capturing harness (`ECO.DATA.BENCH.RUN`)
 - Release-time execution (`PLAT.HW.RUN`)
 - Dataset hosting and fetch (`ECO.DATA`)
 - Optimising the measured code (`VIZ`, `KRN`, `SCAN`)
@@ -49,18 +50,26 @@ Chooses and implements what is measured: a small, stable set of workloads that r
 
 ## Interfaces
 
-- **Offers:** `platform/bench-suite.toml`; workload implementations registered with the runner in `PLAT.HW.CMD`.
-- **Consumes:** `PLAT.HW.SCHEMA`; ECO.DATA datasets; registry commands of IO, KRN, SCAN and RPT; VIZ scripted camera path.
+- **Offers:** `platform/bench-suite.toml` (read by `PLAT.HW.CMD`, `ECO.DATA.BENCH.RUN`, `PLAT.HW.RUN`); workloads registered with the `fid-bench` runner: `load_10m`, `fit_1000`, `compare_1m`, `report_20p`, `render_10m`, `render_software_1m` (the last read by `PLAT.GPU.FALLBK.TIERS` as the software floor).
+- **Consumes:** `PLAT.HW.SCHEMA`; `PLAT.HW.CMD` (`Workload` trait); `CORE.BUS` (commands invoked by ID); `VIZ.RENDER.HEADLESS`. Artifacts: dataset catalogue (`ECO.DATA.CAT`) and registry manifest (`CORE.REG.MAN`) to check that every command a workload invokes exists.
 
 ## Decomposition hints
 
-LOAD, RENDER, FIT, CMP, REPORT (one workload each, likely S leaves once the commands they drive exist), DATA (dataset selection with ECO.DATA).
+See Children.
 
 ## Open questions
 
 - Workload sizes and the 15-minute budget are guesses until the first runs.
-- The render workload needs a VIZ hook for a scripted camera path; VIZ has not yet specified one.
+- Resolved: the render workload uses VIZ's off-screen renderer with a scripted orbit of view states instead of waiting for an interactive camera-path hook. Off-screen frame rate is a proxy for on-screen rate [unverified]; VIZ may later offer a presented-frame hook.
+
+## Split rationale
+
+Split by **what a workload drives**: DATA owns the manifest and dataset choice (data only); COMPUTE owns the four workloads that drive registry commands through the bus; RENDER owns the two workloads that drive the renderer. The compute and render workloads have different dependencies (bus versus VIZ) and different failure owners.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.HW.SUITE.DATA | Suite manifest content, pinned datasets and time budget | 001 002 005 | none |
+| PLAT.HW.SUITE.COMPUTE | Load, fit, compare and report workloads | 001 004 | none |
+| PLAT.HW.SUITE.RENDER | Hardware and software render workloads | 001 003 004 | none |

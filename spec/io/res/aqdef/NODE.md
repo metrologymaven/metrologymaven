@@ -4,7 +4,7 @@ title: AQDEF DFQ export and historical import (uncertified)
 level: 3
 parent: IO.RES
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.RES.TRANS, IO.REG.ENV, IO.REG.WRITE]
 cli: [fid import results-aqdef, fid export results-aqdef]
 mcp: [import_results_aqdef, export_results_aqdef]
 journal: [import.results_aqdef@1, export.results_aqdef@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.RES.AQDEF: AQDEF DFQ export and historical import
@@ -54,7 +54,14 @@ KSET (subset table), WRITE, READ.
 ## Open questions
 
 - AQDEF is owned by a competitor; certification terms and fees are [unverified]. VDA QDX as a neutral alternative is not in IO's scope (carried from IO.RES).
+- Which K-fields are publicly documented, and under what terms, is [unverified]; `IO.RES.AQDEF.KSET` makes the citation mandatory per row, so the gap is visible in CI rather than hidden.
+- DFD/DFX pair reading is deferred (`IO.RES.AQDEF.IN`).
+- The `piweb` profile of `IO.RES.AQDEF.OUT` is reused by `IO.RES.PIWEB`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.RES.AQDEF.KSET | Published AQDEF K-field subset table (leaf) | 001 | none |
+| IO.RES.AQDEF.OUT | AQDEF DFQ export, uncertified (leaf) | 001 002 004 | GOM.EXP.04, PW.EXP.04 |
+| IO.RES.AQDEF.IN | AQDEF DFQ import as historical transcribed results (leaf) | 003 | none |

@@ -4,7 +4,7 @@ title: Single-cloud surface reconstruction
 level: 3
 parent: SCAN.POLY
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [SCAN.CLOUD.NORM, SCAN.POLY.QUAL, GEO.TYPES, GEO.INDEX, GEO.OOC]
 cli: [fid mesh polygonize-cloud]
 mcp: [mesh_polygonize_cloud]
 journal: [mesh.polygonize_cloud@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # SCAN.POLY.SURF: Single-cloud surface reconstruction
@@ -63,7 +63,14 @@ GATE (input validation and parameter recording), RECON (the reconstruction algor
 
 - Reconstruction family (implicit function such as screened Poisson, versus advancing front or Delaunay-based) is still to be chosen at the leaf; D0 rules out non-deterministic parallel solvers, and implicit methods need care to meet REQ-005 without trimming.
 - Seam handling between out-of-core chunks must give the same mesh as in-memory processing; confirm feasibility with GEO.OOC's chunk contract.
+- **Resolved at split (2026-11-17):** the family is localized tangent-plane Delaunay (per-vertex fans with three-way agreement), chosen because it is local and order-independent, which gives D0 and chunk identity by construction (`SCAN.POLY.SURF.OOC`) and keeps vertices at measured points (fidelity). It needs exact-sign predicates from `KRN.NUM`, which has no predicates child yet (cross-domain gap shared with `SCAN.MESHOP`). The kernel entry `reconstruct` is offered by `SCAN.POLY.SURF.OOC`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| SCAN.POLY.SURF.PREP | Resolution resampling and bounded smoothing before meshing (leaf) | 002 003 005 | none |
+| SCAN.POLY.SURF.FAN | Local tangent-plane Delaunay fans (leaf) | 003 006 | none |
+| SCAN.POLY.SURF.STITCH | Fan agreement, manifold assembly and orientation (leaf) | 003 006 | none |
+| SCAN.POLY.SURF.OOC | Chunked reconstruction identical to in-memory (leaf) | 003 007 | none |
+| SCAN.POLY.SURF.CMD | Polygonize-cloud command, input gate and fidelity check (leaf) | 001 002 003 004 005 007 | GOM.MSH.01, PW.PCL.03 |

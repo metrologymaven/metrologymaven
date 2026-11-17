@@ -4,7 +4,7 @@ title: CAD parts, assemblies and instance placement
 level: 3
 parent: GEO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.CAD.TOPO, GEO.FRAME.TREE, GEO.FRAME.CMD]
 cli: [fid geo assign-part, fid geo place-instance]
 mcp: [geo_assign_part, geo_place_instance]
 journal: [geo.assign_part@1, geo.place_instance@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.CAD.ASSY: CAD parts, assemblies and instance placement
@@ -59,8 +59,13 @@ MODEL (instances and IDs), FLATTEN (assembly tree to instances), PART (part assi
 
 ## Open questions
 
+- Layering (D-034): MODEL and FLAT are L0 library code in `fid-geo-cad`; only GEO.CAD.ASSY.CMD (in `fid-geo-cmd`) depends on CORE. The parent-level dependency on GEO.FRAME.CMD is carried by the CMD child only.
 - Whether non-uniform scale placements in real assemblies (mirrored parts, scaled imports) need support; mirrored instances need an improper transform, which GEO.FRAME rejects today.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.CAD.ASSY.MODEL | Instances and per-instance entity IDs (leaf) | 002 005 | none |
+| GEO.CAD.ASSY.FLAT | Assembly tree flattening and placement checks (leaf) | 001 003 | none |
+| GEO.CAD.ASSY.CMD | Part assignment and instance placement commands (leaf) | 004 005 | GOM.CAD.02 |

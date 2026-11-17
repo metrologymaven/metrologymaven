@@ -4,7 +4,7 @@ title: Session targeting: headless project or running app
 level: 3
 parent: AUTO.CLI
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.SURF.JOBS, AUTO.CTRL.CLIENT]
 cli: [fid --project *, fid --app *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.CLI.TARGET: Session targeting: headless project or running app
@@ -57,9 +57,14 @@ HEADLESS (in-process session and locking), APP (control-channel target), SELECT 
 
 ## Open questions
 
-- Whether `--project` with a raw path is allowed depends on D-012 (CLI principal kind).
-- Whether a headless session may open a project read-only while the app holds it for writing (for R0 queries) depends on `CORE.STO` locking.
+- D-012 (accepted): raw paths stay refused for `script`; `--project` takes a root handle unless the session was upgraded to `human` with `--confirm-human` (`AUTO.CLI.TARGET.HEADLESS`, `AUTO.CLI.TARGET.APP`).
+- Read-only headless opens for R0/R1 while an app holds the write lock are specified in `AUTO.CLI.TARGET.HEADLESS` (REQ-004); `CORE.STO.LAYOUT` must allow a read-only open that takes no lock.
+- `AUTO.CTRL.EXEC` binds control-channel clients as `agent`; the app target needs `script` plus the in-app confirmation (see `AUTO.CLI.TARGET.APP` open questions).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.CLI.TARGET.SELECT | Target resolution from flags and environment (leaf) | 004 005 | none |
+| AUTO.CLI.TARGET.HEADLESS | Headless project session with locking and human upgrade (leaf) | 001 003 004 | none |
+| AUTO.CLI.TARGET.APP | Running-app target over the control channel (leaf, P1a) | 002 004 | none |

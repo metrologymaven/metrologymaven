@@ -4,18 +4,19 @@ title: Agent-agnostic evaluation runner and scoring
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-AGENT-002, REQ-AGENT-003]
 covers: []
-depends_on: [AGENT.EVAL, AGENT.PROPOSE, AUTO.MCP.MODES, AUTO.SURF.ROOTS, CORE.JRN.STREAM]
-cli: []
+depends_on: [AGENT.EVAL]
+uses_artifacts: [AGENT.PROPOSE, AUTO.MCP.MODES, AUTO.SURF.ROOTS, CORE.JRN.STREAM]
+cli: [fid-eval *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.HARNESS: Agent-agnostic evaluation runner and scoring
@@ -64,12 +65,26 @@ Runs any MCP-capable agent, unchanged, on the eval suite and scores it automatic
 
 ADAPT (adapter contract and two reference adapters), SANDBOX (start state and roots), RUN (budgets and termination), SCORE (oracle matching), SAFETY (attempt and violation counting), RECORD (run records and repetition), PANEL (human reviewer verdicts).
 
+## Split rationale
+
+D-032 (accepted) makes the harness part of the separate `fid-eval` binary, and D-034 places test harnesses in the Tooling layer, which reads artifacts only. So every child lives in crate `fid-eval-harness`, drives `fid` only as a process, and reads journals, logs and `fid ... --json` output as artifacts. The split follows the **run pipeline**: describe the agent (ADAPT), prepare the world (SANDBOX), run and observe (RUN), judge the result (SCORE), judge the behaviour (SAFETY), record and aggregate (RECORD), and collect human verdicts (PANEL, P1a). SCORE and SAFETY are separate because one compares results with oracles and the other reads enforcement evidence; SCORE consumes SAFETY's violation count for adoptability. D-012 (accepted, option C) settles shell-access attribution: CLI calls stay `script` unless a person confirms in the app, so every `script` entry in a fresh sandbox is attributed to the run.
+
+Alternative considered: merging SANDBOX into RUN; rejected because the sandbox's isolation rules (roots, private home, snapshots) are tested on their own and reused by the scripted adversary runs.
+
 ## Open questions
 
-- D-032 decides whether the harness is a registry command or a separate `fid-eval` binary.
-- D-012: if an agent under test also has shell access, the `fid` CLI it calls runs as `script` (or `human` under option B). The harness must attribute those commands to the agent run; how depends on D-012.
+- Resolved by D-032 (accepted): the harness is the separate `fid-eval` binary (Tooling layer, D-034).
+- D-012: if an agent under test also has shell access, the `fid` CLI it calls runs as `script` (or `human` under option B). Resolved by D-012 (accepted, option C): CLI calls stay `script` unless a person confirms, and the `fid` shim of `AGENT.HARNESS.RUN` attributes them to the run.
 - Run-to-run variance of LLM agents is determinism class `N`; the minimum repetition count needs a measured variance study.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.HARNESS.ADAPT | Agent adapter contract and reference adapters | 001 | none |
+| AGENT.HARNESS.SANDBOX | Per-run sandbox project and task-scoped roots | 002 010 | none |
+| AGENT.HARNESS.RUN | Run orchestration, MCP tap and budgets | 003 010 | none |
+| AGENT.HARNESS.SCORE | Oracle matching and computed adoptability | 003 006 | none |
+| AGENT.HARNESS.SAFETY | Safety attempt and violation counting | 004 | none |
+| AGENT.HARNESS.RECORD | Run records, repetition statistics and suite report | 005 008 009 | none |
+| AGENT.HARNESS.PANEL | Human reviewer panel verdicts | 007 | none |

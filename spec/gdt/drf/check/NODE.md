@@ -4,7 +4,7 @@ title: Transform-used and within-envelope result fields
 level: 3
 parent: GDT.DRF
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.DRF.BUILD, GDT.DRF.MOB, GDT.CHAR.RECORD]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.DRF.CHECK: Transform-used and within-envelope result fields
@@ -52,8 +52,11 @@ RMB (single-pose case, a leaf for P1a), MEMB (general membership once `GDT.DRF.M
 
 ## Open questions
 
-- Not a leaf yet because the envelope representation is owned by `GDT.DRF.MOB` (open); the RMB-only part could be split out as a P1a leaf.
+- Resolved at split: the RMB-only part and the frame flag are a P1a leaf (`GDT.DRF.CHECK.FIELDS`) that reaches general envelopes only through a `MembershipTest` trait; the general test (`GDT.DRF.CHECK.MEMB`, P1b) uses the representation fixed by `GDT.DRF.MOB.REPR`. The parent's `depends_on: [GDT.DRF.MOB]` therefore applies to MEMB only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.DRF.CHECK.FIELDS | Datum-mobility result fields, RMB membership and frame flag (leaf) | 001 002 003 | none |
+| GDT.DRF.CHECK.MEMB | Membership test of a transform in a mobility envelope (leaf) | 001 | none |

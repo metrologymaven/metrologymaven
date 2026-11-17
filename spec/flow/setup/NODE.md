@@ -4,18 +4,19 @@ title: First-run Shop Setup wizard and onboarding
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-FLOW-001, REQ-FLOW-005]
 covers: [JOB.USE.01, JOB.USE.07, JOB.USE.08]
-depends_on: [TRUST.PROFILE, TRUST.SIGN, UNC.DEC, UNC.INST, RPT.MODEL, RPT.FORMS, AUTO.MCP, CORE.STO, CORE.RPL, OUTR.CONTENT, FLOW.DEADEND]
+depends_on: [TRUST.PROFILE, TRUST.SIGN, UNC.DEC, UNC.INST, RPT.MODEL, RPT.OUTPUT, CORE.STO, CORE.RPL, CORE.PRJ, CORE.BUS, ECO.DATA]
+uses_artifacts: [OUTR.CONTENT, FLOW.DEADEND, FLOW.PERSONA, FLOW.RUNNER, FLOW.STUDY]
 cli: [fid setup *]
-mcp: [setup_show_status]
+mcp: [setup_*]
 journal: [setup.*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # FLOW.SETUP: First-run Shop Setup wizard and onboarding
@@ -66,10 +67,26 @@ WIZARD (state machine, resume, defaults), STEPS (binding of each step to its own
 
 ## Open questions
 
-- Step 2 and step 7 are A0 and step 3 is A0 per doc 10 §5; `setup.complete_step@1` is W2 only because it records wizard progress, not the setting. Confirm this does not open a side door (CONSTITUTION C3).
-- Signing-identity user verification on Linux depends on D-011 (open); the step must still be completable where D-011 is undecided, perhaps marked degraded.
-- Whether "defer setup" should be allowed at all under the Regulated profile is a governance question for `TRUST.PROFILE`.
+- Resolved (side door): `setup.complete_step@1` carries no setting value and is accepted only when the journal shows the step's bound domain command committed since wizard start, or an allowed default is kept (`FLOW.SETUP.STEPS`). Settings are made only by their owning commands, which keep their own class (A0 for steps 2 and 7).
+- Resolved by D-011 (accepted): Linux signing uses a hardware token where present, otherwise a passphrase, with the method recorded; Regulated requires the token. Step 3 is completable on Linux.
+- Whether "defer setup" should be allowed at all under the Regulated profile is a governance question for `TRUST.PROFILE`; `FLOW.SETUP.WIZARD` allows it for every profile until told otherwise.
+- The tutorial "your turn" check (`setup_check_turn`, R1) is on MCP; REQ-006's MCP limit applies to the wizard steps only. Human-only wizard commands appear on MCP as generated request-only tools (CONSTITUTION §3, D-031), so `setup_show_status` stays the only directly callable wizard tool.
+
+## Split rationale
+
+The dividing principle is **the wizard's layers**: what each step binds to (STEPS, a pure table and predicate), the state machine and its commands (WIZARD), the one guarded step (RULEGATE), the sample job (SAMPLE), the tutorial hand-off (ONBOARD), and the journey as an acceptance artifact with its time target (JOURNEY). WIZARD depends on STEPS; RULEGATE and SAMPLE depend on WIZARD; JOURNEY depends on the three; nothing depends back.
+
+Alternatives considered:
+- **One child per wizard step.** Rejected: steps 1, 5, 6 and 7 are a few table rows each; only step 4 has its own behaviour.
+- **Time measurement as its own child.** Rejected: it is a target in the journey packages plus a study task definition; the measurement method belongs to `FLOW.STUDY`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.SETUP.STEPS](steps/NODE.md) | Wizard step bindings to owning domain commands | 002 003 006 | JOB.USE.07 |
+| [FLOW.SETUP.WIZARD](wizard/NODE.md) | Wizard state machine, commands and resume | 001 003 006 007 | JOB.USE.07 |
+| [FLOW.SETUP.RULEGATE](rulegate/NODE.md) | Decision-rule skip acknowledgement and rule_missing link | 004 005 | JOB.USE.07 |
+| [FLOW.SETUP.SAMPLE](sample/NODE.md) | Sample job on public data (wizard step 8) | 008 | JOB.USE.07 |
+| [FLOW.SETUP.ONBOARD](onboard/NODE.md) | First tutorial hand-off in step mode with "your turn" checks | 009 | JOB.USE.08 |
+| [FLOW.SETUP.JOURNEY](journey/NODE.md) | Setup journey map, golden setup journal and time-to-first-project target | 010 011 | JOB.USE.01 |

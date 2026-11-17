@@ -4,18 +4,19 @@ title: Per-release software verification evidence bundle
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-001]
 covers: []
-depends_on: [QUAL.SBOM, KRN.MAN.VAL, KRN.MAN.MANI, KRN.MAN.XART, UNC.ORS.RUN, UNC.RDL.FREEZE, TRUST.REPLAY.CORPUS, TRUST.SIGN.DSSE, ECO.REL.PROC, ECO.REL.SIGN]
+depends_on: []
+uses_artifacts: [QUAL.SBOM.VEX, QUAL.SBOM.SCAN, KRN.MAN.VAL, KRN.MAN.MANI, KRN.MAN.XART, UNC.ORS.RUN, UNC.RDL.AST, UNC.RDL.FREEZE, TRUST.REPLAY.CORPUS, TRUST.SIGN.DSSE, ECO.REL.SIGN.SBOM, ECO.REL.SIGN.CUSTODY, ECO.REL.PROC.GATES, ECO.REL.PROC.RUNBOOK, ECO.REL.PROC.CHANNEL]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.EVID: Per-release software verification evidence bundle
@@ -54,18 +55,31 @@ Assembles, for every release, one signed bundle of the project's own verificatio
 ## Interfaces
 
 - **Offers:** evidence bundle and its top-level statement digest (to `QUAL.IQOQ`, `QUAL.VAP`, `QUAL.MATRIX`, `ECO.REL.PROC` release notes, `OUTR` publication); change-impact report; known-anomalies list.
-- **Consumes:** reports from `KRN.MAN.VAL`, `UNC.ORS.RUN`, `TRUST.REPLAY.CORPUS`, `KRN.MAN.XART`; `KRN.MAN.MANI`; `UNC.RDL.FREEZE`; SBOM and VEX from `QUAL.SBOM`; DSSE encoding from `TRUST.SIGN.DSSE`; release workflow from `ECO.REL.PROC`; signing step from `ECO.REL.SIGN`.
+- **Consumes (all as artifacts; QUAL evidence is Tooling, CONSTITUTION §2.1):** reports from `KRN.MAN.VAL`, `UNC.ORS.RUN`, `TRUST.REPLAY.CORPUS`, `KRN.MAN.XART`; `KRN.MAN.MANI`; `UNC.RDL.FREEZE`; SBOM and VEX from `QUAL.SBOM`; DSSE encoding from `TRUST.SIGN.DSSE`; release workflow from `ECO.REL.PROC`; signing step from `ECO.REL.SIGN`.
 
 ## Decomposition hints
 
 LAYOUT (bundle layout and statement), ASSEMBLE (CI step and completeness gate), IMPACT (change-impact report), ANOM (known-anomalies list).
 
+## Split rationale
+
+The split separates the public contract (LAYOUT: what a statement is, read by IQ, the matrix and third parties) from the release-time mechanics (ASSEMBLE: collect, cross-check, gate), and pulls out the two members QUAL itself authors rather than copies: the computed change-impact report (IMPACT) and the reviewed anomalies list (ANOM). Signing stays with `ECO.REL.SIGN.CUSTODY`, which already signs the evidence statement.
+
+Alternatives considered:
+- **LAYOUT inside ASSEMBLE.** Rejected: the statement schema is consumed by product code (`QUAL.IQOQ.IQ`) and must be reviewable on its own.
+- **A SIGN child.** Rejected: signing is already specified in `ECO.REL.SIGN.CUSTODY`.
+
 ## Open questions
 
-- Adding the completeness gate to the release runbook needs a step in `ECO.REL.PROC`; cross-domain.
+- Resolved: the completeness gate is `ECO.REL.PROC.GATES` gate `qual-evid` (file `evidence/completeness.json`) and runbook step `evidence-complete`.
 - TraCIM report redistribution terms are unverified (also raised in `KRN.MAN.VAL`).
-- The concept doc also lists build provenance (SLSA) and the MCP tool-definition manifest digest as members; build provenance belongs to `ECO.REL.REPRO` (P1b), so it is left out of the P1a member set and should be added when that node is specified.
+- Build provenance (SLSA) and the MCP tool-definition manifest digest are left out of the P1a member set until `ECO.REL.REPRO` is specified.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.EVID.LAYOUT | Evidence bundle layout and release-evidence statement | 001 005 006 008 | none |
+| QUAL.EVID.ASSEMBLE | Evidence bundle assembly and completeness gate | 002 003 005 | none |
+| QUAL.EVID.IMPACT | Change-impact report against the previous release | 004 | none |
+| QUAL.EVID.ANOM | Known-anomalies list and its check | 007 | none |

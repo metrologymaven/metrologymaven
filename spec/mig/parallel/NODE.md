@@ -4,18 +4,18 @@ title: Parallel-run pairing and per-characteristic difference report
 level: 2
 parent: MIG
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-MIG-002]
 covers: []
-depends_on: [IO.RES.TRANS, IO.RES.QIFR, GDT.CHAR.IDENT, GDT.CHAR.RECORD, MIG.PROJ]
+depends_on: [IO.RES.TRANS, IO.RES.QIFR, GDT.CHAR.IDENT, GDT.CHAR.RECORD, MIG.PROJ.XID, KRN.NUM, CORE.JRN.CANON, IO.REG.ROOTS]
 cli: [fid correlate run-parallel, fid correlate show-diff]
 mcp: [correlate_run_parallel, correlate_show_diff]
-journal: [correlate.run_parallel@1]
-updated: 2026-11-16
+journal: [correlate.run_parallel@1, correlate.show_diff@1]
+updated: 2026-11-17
 ---
 
 # MIG.PARALLEL: Parallel-run pairing and difference report
@@ -52,8 +52,8 @@ Parallel-run mode: the user has an incumbent result (transcribed, basis `RESULTS
 
 ## Interfaces
 
-- **Offers:** `correlate.run_parallel@1` (W2), `correlate.show_diff@1` (R0); `ParallelRunReport` and `PairedCharacteristic` types consumed by `MIG.EXPLAIN` and `MIG.STUDY`.
-- **Consumes:** `IO.RES.TRANS` transcription records, `IO.RES.QIFR`, `GDT.CHAR.IDENT` stable identity, `GDT.CHAR.RECORD` ResultRecords, `MIG.PROJ` external-ID index.
+- **Offers:** `correlate.run_parallel@1` (W2), `correlate.show_diff@1` (R0); `ParallelRunReport` (schema `mig-parallel@1`) and `PairedCharacteristic` types consumed by `MIG.EXPLAIN` and `MIG.STUDY`; the pure difference function consumed by `MIG.EXPLAIN.PROBE`.
+- **Consumes:** `IO.RES.TRANS` transcription records, `IO.RES.QIFR` QIF results import (as transcription records), `GDT.CHAR.IDENT` stable identity, `GDT.CHAR.RECORD` ResultRecords, `MIG.PROJ.XID` external-ID index, `KRN.NUM` arithmetic, `CORE.JRN.CANON`, `IO.REG.ROOTS` handles for pairing tables.
 
 ## Decomposition hints
 
@@ -62,7 +62,20 @@ PAIR (pairing and confirmation table), DIFF (difference and flag computation), R
 ## Open questions
 
 - Default flag threshold needs field input from pilot users [unverified].
+- Under D-021 option A, the first published study compares with public reference data rather than an incumbent. The "incumbent" side of a parallel run is therefore any transcription record (incumbent software or a reference dataset); the report states which, from the transcription record's source fields.
+
+## Split rationale
+
+Split by **pipeline stage with different purity**: pairing (identity matching, needs the external-ID index and a user table), differencing (pure numeric rule, reused by `MIG.EXPLAIN.PROBE`), and the report command (journaled W2 entity plus read view). DIFF is a separate leaf precisely because the explainer must recompute residuals with the identical function.
+
+Alternatives considered:
+- **Leaf.** Rejected: two commands, a pairing-table format and a reusable numeric rule exceed one M PR, and the reuse by `MIG.EXPLAIN` argues for a separate unit.
+- **Pairing inside `MIG.PROJ.XID`.** Rejected: XID maps incumbent identities on import; pairing results is a parallel-run concern with its own confirmation table.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [MIG.PARALLEL.PAIR](pair/NODE.md) | Result pairing by external ID and confirmed pairing table (leaf) | 001 006 | none |
+| [MIG.PARALLEL.DIFF](diff/NODE.md) | Per-pair difference, tolerance fraction and flag rule (leaf) | 002 003 004 | none |
+| [MIG.PARALLEL.REPORT](report/NODE.md) | Parallel-run report, digest and commands (leaf) | 001 005 006 | none |

@@ -4,18 +4,18 @@ title: Data-plane ingest, back-pressure, sequencing and gaps
 level: 3
 parent: HAL.ACQ
 kind: module
-status: open
+status: split
 phase: P2
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-HAL.ACQ-003, REQ-HAL.ACQ-004]
 covers: []
-depends_on: [HAL.ACQ.SESS, HAL.ACQ.CONV, HAL.ACQ.TIME, HAL.ACQ.STAMP]
+depends_on: [HAL.ACQ.SESS, HAL.ACQ.CONV, HAL.ACQ.TIME, HAL.ACQ.POLICY, HAL.ACQ.STAMP]
 cli: [fid device start-acquisition, fid device stop-acquisition]
 mcp: [device_start_acquisition, device_stop_acquisition]
 journal: [device.start_acquisition@1, device.stop_acquisition@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # HAL.ACQ.INGEST: Data-plane ingest, back-pressure, sequencing and gaps
@@ -30,7 +30,7 @@ The streaming path from a driver's data plane into stamped batches: start and st
 - `device.start_acquisition@1` and `device.stop_acquisition@1` (D1) with stop summaries (counts, gaps, last sequence)
 - Credit-based flow control towards drivers, simulators and playback sources
 - Sequence checking and `Gap { from, to, reason }` events
-- Shared-memory ring for same-host sources and a stream reader for remote hosts (transport supplied by `HAL.HOST.PROTO`)
+- The `BatchSink` into which same-host rings and remote stream readers push (the transports themselves are owned by `HAL.HOST.PROTO`, which depends on this node)
 - Batch assembly within the recommended size (1–8 MB or 50 ms) and hand-off to `HAL.ACQ.CONV` and `HAL.ACQ.STAMP`
 - Per-batch telemetry summaries (rate, latency, gap count)
 
@@ -56,11 +56,25 @@ The streaming path from a driver's data plane into stamped batches: start and st
 
 CREDIT (flow control), SEQ (sequencing and gaps), SHM (same-host ring), CMDS (start and stop commands and summaries), BENCH (throughput benchmark harness against the LineScan simulator).
 
+## Split rationale
+
+The split follows **one batch's path through ingest**: admission rules that are pure state machines (CREDIT for flow control, SEQ for sequencing, gaps and rejection), the fixed pipeline that every source pushes into (SINK), the two commands that open and close a stream (CMDS), and the release-gating throughput measurement (BENCH).
+
+Alternatives considered:
+- **A shared-memory ring child (SHM).** Rejected: the same-host ring and the remote stream are part of the host protocol's data channel (`HAL.HOST.PROTO`), which already depends on this node's `BatchSink`; owning the ring here would create a dependency cycle.
+- **Commands folded into SINK.** Rejected: the pipeline is reused by transcript playback and Tier-1 drivers without the commands' lock and policy checks.
+
 ## Open questions
 
-- The 64 MB per-batch rejection limit is a proposal [unverified]; the conformance profile recommends 1–8 MB.
+- The 64 MB per-batch rejection limit is a proposal [unverified]; the conformance profiles recommend 1 to 8 MB (`HAL.IDL.SENS.STREAM`). Applied in `HAL.ACQ.INGEST.SEQ`.
 - The gap reasons, including `REJECTED`, are defined in `HAL.IDL.STAMP`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| HAL.ACQ.INGEST.CREDIT | Credit ledger for data-plane flow control (leaf) | 001 | none |
+| HAL.ACQ.INGEST.SEQ | Sequencing, gap detection and batch admission (leaf) | 002 005 | none |
+| HAL.ACQ.INGEST.SINK | BatchSink, batch assembly and hand-off pipeline (leaf) | 001 002 003 | none |
+| HAL.ACQ.INGEST.CMDS | Start and stop acquisition commands and stop summary (leaf) | 004 | none |
+| HAL.ACQ.INGEST.BENCH | LineScan throughput benchmark harness (leaf) | 003 | none |

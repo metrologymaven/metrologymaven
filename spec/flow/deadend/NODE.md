@@ -4,7 +4,7 @@ title: No dead ends - suggested-fix catalogue and "Why?" coverage
 level: 2
 parent: FLOW
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [CORE.REG, CORE.BUS, UNC.UEC, UNC.DEC, GDT.RES, VIZ.SHELL]
 cli: [fid accept check-fixes, fid accept check-why]
 mcp: [accept_check_fixes, accept_check_why]
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # FLOW.DEADEND: No dead ends - suggested-fix catalogue and "Why?" coverage
@@ -59,10 +59,24 @@ Enforces the rule that no workflow ends in a state the user cannot act on. It ow
 
 CATALOG (fix catalogue format and entries), CHECK (manifest consistency check in CI), RESULT (fix projection into CLI and MCP results), WHY (Why? coverage check over golden journals).
 
+## Split rationale
+
+The dividing principle is **data, gate, runtime and GUI**: the catalogue is data (CATALOG); the CI consistency gate reads it with the manifest (CHECK); the runtime library turns entries into fixes on results for a given principal (RESULT); and the GUI-side coverage of "Why?" and fix reachability is checked on golden journals (WHY). CHECK, RESULT and WHY depend only on CATALOG, so there are no cycles.
+
+Alternatives considered:
+- **Catalogue in each command's manifest entry, FLOW only checking.** Rejected for now: it needs a new `CORE.REG.DEF` field; recorded as an open question in CATALOG.
+- **One check command for fixes and "Why?".** Rejected: the fix check is a fast static manifest check that runs on every PR; the "Why?" check replays journals in a headless app and runs nightly.
+
 ## Open questions
 
-- Should the catalogue live in each emitting domain's command manifest entry, with FLOW only checking it, rather than as a FLOW-owned file? Putting it in the manifest fits CONSTITUTION C3 better, but needs `CORE.REG` to add a field.
+- Resolved: the catalogue lives in a FLOW-owned file (`fid-fixes`), with per-domain fix tables referenced by ID (see `FLOW.DEADEND.CATALOG`). Moving it into the manifest stays possible later through `CORE.REG`.
+- Cross-domain: `CORE.REG.DEF` needs an `x-reason-code` schema annotation so reason codes are declared in the manifest (REQ-001); `AUTO.SURF.ENV` needs an optional `suggested_fixes` field (REQ-003); `VIZ.SHELL.A11Y` and `VIZ.SHELL.TREE` need roles and attributes for the "Why?" check (REQ-005, REQ-006).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [FLOW.DEADEND.CATALOG](catalog/NODE.md) | Suggested-fix catalogue format and initial entries | 001 | JOB.USE.05 |
+| [FLOW.DEADEND.CHECK](check/NODE.md) | Fix-catalogue consistency check against the registry manifest | 001 002 | JOB.USE.05 |
+| [FLOW.DEADEND.RESULT](result/NODE.md) | Suggested-fix resolution per principal and result projection contract | 003 004 | JOB.USE.05 |
+| [FLOW.DEADEND.WHY](why/NODE.md) | "Why?" and fix-reachability coverage check over golden journals | 005 006 007 | JOB.USE.05 JOB.USE.09 |

@@ -4,7 +4,7 @@ title: Design tokens, themes and data colour palettes
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.SYSTEM]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.TOKENS: Design tokens, themes and data colour palettes
@@ -74,11 +74,29 @@ The values of the design system: colour, typography, spacing, size, elevation an
 
 COLOR (primitive and semantic colour, four themes), DATAPAL (deviation palette catalogue and colour-vision checks), STATUS (locked status palette values), TYPE (typography and font licence), SPACE (spacing, density, target sizes, elevation, motion), CHECK (automated contrast and colour-vision release check).
 
+## Split rationale
+
+The dividing principle is **one value family per child, plus one verifier**: COLOR (tier structure, colour roles, four themes, brand tier), DATAPAL (deviation palette catalogue), STATUS (locked status palette), TYPE (typography and font licence), SPACE (spacing, density, targets, elevation, motion), and CHECK (the automated contrast and colour-vision release gate). Values and their verification are separated so the check is written once and every value child is checked by it; each value child carries its own structural check in `fid-design`.
+
+Alternatives considered:
+- **Brand tier as its own child.** Rejected: it is a list of names inside the colour tier structure plus one typography role, too small to stand alone.
+- **STATUS inside DATAPAL.** Rejected: the status palette is locked, consumed by a runtime guard and has a different rule (distance between sets, not between adjacent steps).
+- **Checks inside each value child.** Rejected for contrast and colour vision: the colour science (CIELAB, CIEDE2000, CVD simulation) would be duplicated.
+
 ## Open questions
 
-- VIZ.SHELL.THEME's scope lists the "token model and the four built-in themes". This node assumes VIZ owns the runtime model and UX owns the names and values; the boundary needs confirming in VIZ.SHELL.THEME (not editable from here).
-- The ΔE thresholds in REQ-UX.TOKENS-007 and 009 are design targets that need validation in the CHECK leaf.
+- Boundary with VIZ.SHELL.THEME (agreed): UX.TOKENS owns token names and values, VIZ.SHELL.THEME owns the runtime model. VIZ.SHELL.THEME's scope text still says "token model and the four built-in themes" and should be reworded there and declare `uses_artifacts` on UX.TOKENS.COLOR (not editable from here).
+- VIZ.OVERLAY.STATUS should read its guard threshold and formula from UX.TOKENS.STATUS (`uses_artifacts`); VIZ.OVERLAY.CMAP should resolve palette IDs from UX.TOKENS.DATAPAL.
+- OUTR.BRAND.GUIDE.VISUAL's `brand/brand-tier.toml` maps onto `tokens/brand-tier.json` (UX.TOKENS.COLOR); values move into the package only by a reviewed PR, since UX does not read OUTR files.
+- The ΔE thresholds in REQ-UX.TOKENS-007 and 009 remain design targets [unverified]; UX.TOKENS.CHECK reports them.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.TOKENS.COLOR](color/NODE.md) | Token tiers, colour roles, the four themes and the brand tier (leaf) | 001 002 003 004 010 | none |
+| [UX.TOKENS.DATAPAL](datapal/NODE.md) | Deviation palette catalogue (leaf) | 006 007 | none |
+| [UX.TOKENS.STATUS](status/NODE.md) | Locked status palette values (leaf) | 009 | none |
+| [UX.TOKENS.TYPE](type/NODE.md) | Typography tokens and font licence rule (leaf) | 001 011 | none |
+| [UX.TOKENS.SPACE](space/NODE.md) | Spacing, density, target size, elevation and motion tokens (leaf) | 001 012 013 | none |
+| [UX.TOKENS.CHECK](check/NODE.md) | Automated contrast and colour-vision release check (leaf) | 002 003 004 005 007 008 009 | none |

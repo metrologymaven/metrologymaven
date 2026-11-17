@@ -4,7 +4,7 @@ title: Original icon set and GD&T symbol drawings
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.SYSTEM, UX.TOKENS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.ICONS: Original icon set and GD&T symbol drawings
@@ -62,11 +62,27 @@ An original icon set drawn for this project, plus drawing specifications for geo
 
 GRID (style guide, grid, sizes), CORESET (general UI icons), CLASS (side-effect class and status glyphs), GDT (GD&T symbol specs), PROV (provenance and icon-set checks).
 
+## Split rationale
+
+The dividing principle is **rules, artwork by meaning, and evidence**: GRID (style guide and SVG profile), CORESET (general UI icons and brand-neutral app icons), CLASS (glyphs that carry safety and conformance meaning and must be told apart by shape), GDT (standards-cited symbol geometry shared by viewer and reports), PROV (provenance, attribution and registry cross-checks). The meaning-carrying glyphs and the GD&T drawings are separate from the core set because each has its own measurable check (shape distinctness; geometric fidelity).
+
+Alternatives considered:
+- **Provenance inside each artwork child.** Rejected: one check over the whole set is simpler and is the trade-dress evidence reviewers look for.
+- **A GD&T symbol font.** Left to consumers: UX.ICONS.GDT publishes reference geometry and a comparison tool, so either a font or vector drawings pass if they match.
+
 ## Open questions
 
-- Whether standard GD&T symbol shapes raise any copyright or trade-dress question is assumed not to (they are functional notation), but this is [unverified].
-- A GD&T symbol font versus vector drawings is an implementation choice left to leaves; it affects REQ-UX.ICONS-006.
+- Whether standard GD&T symbol shapes raise any copyright or trade-dress question is assumed not to (functional notation) [unverified].
+- GD&T font versus vectors: resolved by UX.ICONS.GDT's `gdt-compare`; consumers may use either if they pass.
+- The registry manifest (CORE.REG.MAN) has no per-command icon field yet; REQ-UX.ICONS-008 needs CORE.REG to add one (see UX.ICONS.PROV).
+- VIZ.OVERLAY.STATUS should take glyph IDs from UX.ICONS.CLASS's index (`uses_artifacts` on the VIZ side).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.ICONS.GRID](grid/NODE.md) | Icon style guide, grid and SVG rules (leaf) | 001 | none |
+| [UX.ICONS.CORESET](coreset/NODE.md) | Core UI icon set and brand-neutral app and file icons (leaf) | 001 007 | none |
+| [UX.ICONS.CLASS](class/NODE.md) | Side-effect class icons, status glyphs and provenance badges (leaf) | 001 003 004 007 | none |
+| [UX.ICONS.GDT](gdt/NODE.md) | GD&T symbol drawing specifications (leaf) | 001 005 006 | none |
+| [UX.ICONS.PROV](prov/NODE.md) | Icon provenance records and icon-set checks (leaf) | 002 007 008 | none |

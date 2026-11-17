@@ -4,18 +4,19 @@ title: Air-gapped install bundle and no-egress test
 level: 3
 parent: PLAT.DEPLOY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DEPLOY-001, REQ-PLAT.DEPLOY-002, REQ-PLAT.DEPLOY-003]
 covers: []
-depends_on: [PLAT.MATRIX, ECO.REL, ECO.CI]
+depends_on: [PLAT.MATRIX]
+uses_artifacts: [ECO.REL.PROC.CHANNEL, ECO.REL.PKG.PLAN, CORE.REG.MAN, ECO.DATA.EX]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # PLAT.DEPLOY.OFFLINE: Air-gapped install and operation
@@ -48,18 +49,26 @@ Guarantees that the platform installs and runs on a machine with no network at a
 
 ## Interfaces
 
-- **Offers:** offline bundle layout requirements for ECO.REL; install manifest format; no-egress CI job definitions (added to the platform job list); the network-feature list.
-- **Consumes:** ECO.REL bundles; ECO.CI runners with network sandboxing; `PLAT.MATRIX` Tier 1 set; a reference non-device workflow (likely the P1a transcription-report example project).
+- **Offers:** `offline-bundle.json` (bundle layout, schema 1) and `install-manifest.json` (schema 1; read by `PLAT.DOCTOR.HOSTCHK.INSTALL` and `PLAT.DEPLOY.UPDATE`); `platform/ref-workflow.toml` (the reference non-device workflow, read by `PLAT.DEPLOY.NOADMIN.AUDIT`); the no-egress job entries; `docs/deploy/network-features.md` generated from the registry manifest.
+- **Consumes (artifacts):** the release manifest (`ECO.REL.PROC.CHANNEL`) and package plan (`ECO.REL.PKG.PLAN`); the registry manifest (`CORE.REG.MAN`); the P1a example project (`ECO.DATA.EX`). Code: Tier 1 set from `PLAT.MATRIX`.
 
 ## Decomposition hints
 
-BUNDLE (bundle layout and install manifest format; leaf candidate), NOEGRESS (sandboxed CI test per OS: network namespace on Linux, firewall rules on Windows, a sandbox profile on macOS), NETLIST (generated list of network-using features from the registry, if commands declare network use).
+See Children.
 
 ## Open questions
 
-- Whether commands should declare "uses network" in the registry manifest (so NETLIST is generated) is a CORE.REG question; raised here, not decided.
-- Recording DNS attempts on macOS CI runners may need a privileged helper [unverified].
+- Resolved: "uses network" needs no new registry field. Since D-031 and CORE.BUS.POL.EGRESS, only X1, I1 and D1 commands may open sockets, so `PLAT.DEPLOY.OFFLINE.NETLIST` generates the list from command classes in the registry manifest.
+- Recording DNS attempts on macOS CI runners may need a privileged helper [unverified]; carried by `PLAT.DEPLOY.OFFLINE.NOEGRESS`.
+
+## Split rationale
+
+Split by **artefact**: a bundle layout and install manifest format (consumed by ECO.REL, the doctor and the updater), a CI job that proves no egress, and a generated network-feature list. They change for different reasons (packaging, sandboxing tooling, registry contents) and are each a small leaf.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.OFFLINE.BUNDLE | Offline bundle layout, install manifest format and bundle check | 001 002 | none |
+| PLAT.DEPLOY.OFFLINE.NOEGRESS | Reference workflow and sandboxed no-egress CI job | 003 004 | none |
+| PLAT.DEPLOY.OFFLINE.NETLIST | Network-feature list generated from the registry manifest | 005 | none |

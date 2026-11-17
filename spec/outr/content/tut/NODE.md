@@ -4,18 +4,19 @@ title: Tutorials per focused app
 level: 3
 parent: OUTR.CONTENT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.CONTENT-001]
 covers: []
-depends_on: [OUTR.CONTENT.PUB, ECO.DATA, ECO.APPS]
+depends_on: [OUTR.CONTENT.PUB]
+uses_artifacts: [ECO.DATA.EX, ECO.APPS.LIST, ECO.APPS.MANIFEST, ECO.REL.PKG]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.CONTENT.TUT: Tutorials per focused app
@@ -58,8 +59,16 @@ P0 (CLI and journal tutorials), then one child per app (INSPECT, PROBE, NETWORK,
 
 ## Open questions
 
+- CONSTITUTION §2.1 (D-034): the former code dependencies on ECO.DATA and ECO.APPS are now `uses_artifacts` (example projects, `apps.toml`, the app status export, release binaries).
 - CLI and journal walkthroughs need no app and could start in P0 (carried from OUTR.CONTENT). Moving this node or its parent to P0 needs a decision (CONSTITUTION §7); it stays P1a here.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.CONTENT.TUT.CHECK](check/NODE.md) | Tutorial coverage and step-output check (leaf) | 001 002 004 005 | none |
+| [OUTR.CONTENT.TUT.CORE](core/NODE.md) | First steps: CLI, journal, replay and verification (leaf) | 002 003 004 005 | none |
+| [OUTR.CONTENT.TUT.REPORT](report/NODE.md) | Report app tutorial: a transcription inspection report (leaf) | 001 003 004 005 | none |
+| [OUTR.CONTENT.TUT.INSPECT](inspect/NODE.md) | Inspect app tutorial: scan-to-CAD inspection (leaf) | 001 003 004 005 | none |
+| [OUTR.CONTENT.TUT.PROBE](probe/NODE.md) | Probe app tutorials | 001 003 004 005 | none |
+| [OUTR.CONTENT.TUT.NETWORK](network/NODE.md) | Network app tutorials | 001 003 004 005 | none |

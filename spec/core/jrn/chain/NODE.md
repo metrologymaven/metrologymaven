@@ -4,18 +4,18 @@ title: Append, hash chain, checkpoints and verification
 level: 3
 parent: CORE.JRN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.JRN-001, REQ-CORE.JRN-006, REQ-CORE.JRN-007, REQ-CORE.JRN-015, REQ-CORE.JRN-017]
 covers: []
-depends_on: [CORE.STO, CORE.JRN.ENTRY]
+depends_on: [CORE.STO.SQL, CORE.STO.CAS, CORE.JRN.ENTRY]
 cli: [fid journal list-entries, fid journal verify-chain]
 mcp: [journal_list_entries, journal_verify_chain]
 journal: [journal.list_entries@1, journal.verify_chain@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.JRN.CHAIN: Append, hash chain, checkpoints and verification
@@ -67,7 +67,12 @@ APPEND (atomic durable append and sequence), HEAD (head cache and checkpoints), 
 
 - Merkle checkpoints in the C2SP tlog-checkpoint format are P1b [unverified that the format fits]; the P0 checkpoint layout should leave room for them.
 - The parent's interface names `journal verify`; this child uses `journal.verify_chain@1` to follow the `verb_object` rule.
+- **Applied D-031:** both commands are R0, so they are written only to the Activity Log (when recording or as a program step) and never to the Record Journal; the `journal:` field names their Activity Log events.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JRN.CHAIN.APPEND | Atomic durable append, sequence and immutability (leaf) | 001 002 003 004 009 | none |
+| CORE.JRN.CHAIN.CKPT | Branch heads and checkpoints (leaf) | 005 | none |
+| CORE.JRN.CHAIN.VERIFY | Verify and list commands (leaf) | 006 007 008 | none |

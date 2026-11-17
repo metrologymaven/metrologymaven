@@ -4,7 +4,7 @@ title: Profile zone definitions
 level: 3
 parent: GDT.PROF
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.PROF.DEV, GDT.ZONE.ZTYPE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.PROF.ZDEF: Profile zone definitions
@@ -53,8 +53,11 @@ UNIF (uniform, unilateral and unequally disposed; a leaf once row semantics are 
 
 ## Open questions
 
-- Non-uniform zone interpolation along a surface is not fully specified by a single parameter [unverified]; needs an expert row.
+- Non-uniform zone interpolation along a surface is not fully specified by a single parameter [unverified]; needs an expert row. Owned by `GDT.PROF.ZDEF.NONUNIF`, which stays open until a signed-off row exists.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PROF.ZDEF.UNIF | Constant-width zone intervals and dispatch (leaf) | 001 002 003 | none |
+| GDT.PROF.ZDEF.NONUNIF | Non-uniform profile zone intervals | 001 002 | none |

@@ -4,18 +4,18 @@ title: Stages: several parts or measurements in one project
 level: 3
 parent: CORE.PRJ
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.PRJ-004, REQ-CORE.PRJ-005, REQ-CORE.PRJ-011]
 covers: [GOM.PRJ.02, PW.PRJ.02]
-depends_on: [CORE.BUS, CORE.PRJ.CONT, CORE.PRJ.TREE]
-cli: [fid project add-stage, fid project remove-stage, fid project set-active-stage, fid project list-stages]
-mcp: [project_add_stage, project_remove_stage, project_set_active_stage, project_list_stages]
-journal: [project.add_stage@1, project.remove_stage@1, project.set_active_stage@1]
-updated: 2026-11-16
+depends_on: [CORE.BUS.PIPE, CORE.PRJ.CONT, CORE.PRJ.TREE]
+cli: [fid project add-stage, fid project remove-stage, fid project reorder-stages, fid project set-active-stage, fid project list-stages]
+mcp: [project_add_stage, project_remove_stage, project_reorder_stages, project_set_active_stage, project_list_stages]
+journal: [project.add_stage@1, project.remove_stage@1, project.reorder_stages@1, project.set_active_stage@1, project.list_stages@1]
+updated: 2026-11-17
 ---
 
 # CORE.PRJ.STAGE: Stages
@@ -64,4 +64,7 @@ MODEL (stage entity and per-stage slots), CMD (stage commands), SWITCH (active s
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.PRJ.STAGE.MODEL | Stage entity, per-stage slots and stage commands (leaf) | 001 003 004 006 | GOM.PRJ.02, PW.PRJ.02 |
+| CORE.PRJ.STAGE.SWITCH | Active stage and per-stage value cache (leaf) | 002 005 006 | none |

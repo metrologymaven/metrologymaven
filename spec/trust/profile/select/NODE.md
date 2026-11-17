@@ -11,13 +11,13 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.PROFILE-002]
 covers: []
-depends_on: [TRUST.PROFILE.DEFS, CORE]
+depends_on: [TRUST.PROFILE.DEFS, CORE.REG.DEF, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.STO.SET]
 side_effect: A0
 determinism: D0
 cli: [fid sign set-profile, fid sign show-profile]
 mcp: [sign_show_profile]
 journal: [sign.set_profile@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PROFILE.SELECT: Set and show the active governance profile

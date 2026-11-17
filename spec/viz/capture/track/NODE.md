@@ -4,7 +4,7 @@ title: View track and re-rendered replay
 level: 3
 parent: VIZ.CAPTURE
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-VIZ.CAPTURE-002, REQ-VIZ.CAPTURE-003]
 covers: []
 depends_on: [VIZ.CAPTURE.REC, VIZ.VIEW.STATE, CORE.JRN]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+cli: [fid capture read-track, fid capture render-replay]
+mcp: [capture_read_track, capture_render_replay]
+journal: [capture.attach_track_segment@*, capture.read_track@*, capture.render_replay@*]
+updated: 2026-11-17
 ---
 
 # VIZ.CAPTURE.TRACK: View track and re-rendered replay
@@ -56,8 +56,12 @@ SAMPLE, FORMAT (segments and deltas), ATTACH, REPLAY, CAPTION.
 
 ## Open questions
 
-- Whether CORE.RPL drives the replay clock or TRACK does is to be fixed with CORE.
+- Settled: the view track drives the replay clock; `CORE.RPL.RECON.FOLD` only reconstructs document state at an entry (`VIZ.CAPTURE.TRACK.REPLAY`).
+- Split: recording (SAMPLE, with the internal `capture.attach_track_segment@1` entry and the published `fid-viewtrack@1` format) and playback (REPLAY, `capture.read_track@1` R0 and `capture.render_replay@1` W2) have different inputs and tests.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.CAPTURE.TRACK.SAMPLE | View-track sampling, delta format and attachment (leaf) | 001 002 003 004 | none |
+| VIZ.CAPTURE.TRACK.REPLAY | Re-rendered replay with captions (leaf) | 005 | none |

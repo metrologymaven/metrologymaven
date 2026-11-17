@@ -4,7 +4,7 @@ title: ISO 15530-3 substitution evaluation
 level: 3
 parent: UNC.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL.GRAPH, UNC.UEC.CLASS]
 cli: [fid unc run-substitution]
 mcp: [unc_run_substitution]
 journal: [unc.run_substitution@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.MODEL.SUBST: ISO 15530-3 substitution evaluation
@@ -55,8 +55,14 @@ INPUT (structure and procedure profiles), EVAL (component formulas and combinati
 
 ## Open questions
 
+- Split: input structure and checks (INPUT) and the command with its validation record (CMD) are agent-buildable leaves; the component formulas and bias treatment (EVAL) must be checked against the purchased ISO 15530-3 text by an uncertainty expert (D-016 gives access) and stay open. CMD calls EVAL through a fixed result type, so it can be built and tested against a stub engine first.
+
 - Component names, minimum run counts and the bias treatment must be checked against the purchased text of ISO 15530-3:2011 and any newer edition [unverified]. A GD&T or uncertainty domain expert should review before this node becomes a leaf.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.MODEL.SUBST.INPUT | Substitution inputs, procedure profiles and condition checks (leaf) | 001 002 005 | none |
+| UNC.MODEL.SUBST.EVAL | Component formulas, bias treatment and combination | 003 004 | none |
+| UNC.MODEL.SUBST.CMD | Substitution command, result and UEC-3 validation record (leaf) | 001 003 | none |

@@ -4,14 +4,14 @@ title: User-verification release and S1 refusal
 level: 3
 parent: TRUST.SIGN
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-TRUST.SIGN-005, REQ-TRUST.SIGN-006]
 covers: []
-depends_on: [TRUST.SIGN.KEYSTORE, CORE]
+depends_on: [TRUST.SIGN.KEYSTORE.TRAIT]
 cli: []
 mcp: []
 journal: [sign.refuse@1]
@@ -57,10 +57,14 @@ GATE (principal/channel policy + tests), WINUV, MACUV, LINUV (per-OS prompt; LIN
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-011 (Signing user verification where the OS offers none) is accepted. Apply its Decision section (`decisions/D-011-*.md`) when this node is expanded.
-- Blocked on D-011 (Linux fallback). Windows and macOS parts could proceed, but a split now would guess at the shape of the Linux path and at `uv_method` values.
-- REQ-CORE.BUS-002 assigns principal kind `script` to every CLI invocation, so an "interactive CLI" signing session (REQ-TRUST.ESIG-001) is refused by REQ-TRUST.SIGN.UV-002 unless CORE.BUS defines an attended-terminal human principal. This is the open decision D-012 (principal kind of a human at the CLI).
+- D-011 (accepted 2026-11-17) chose option D: on Linux a PKCS#11 token with PIN (and touch where the token enforces it) when present, otherwise an app-owned passphrase unlocking an Argon2id-wrapped key; the Regulated profile requires the token path on Linux (its `allow_software_keys: false` already excludes wrapped software keys). `uv_method` is recorded in the signature statement. Applied in `TRUST.SIGN.UV.LINUV` and `TRUST.SIGN.UV.GATE`.
+- D-012 (accepted) lets a person upgrade a CLI session to `human` after confirmation. `TRUST.SIGN.UV.GATE` therefore accepts `human` principals on the GUI channel or an upgraded CLI terminal session, and still refuses MCP, the control channel and the Python script host whatever the principal, as REQ-TRUST.SIGN-006 requires.
+- The `sign.refuse@1` event shape is owned by `TRUST.ESIG.BIND` (excluded from launch-1); GATE reads it as an artifact.
 
 ## Children
 
-_None yet: status `decision` (D-011)._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| TRUST.SIGN.UV.GATE | S1 principal and channel gate, policy and uv_method | 002 003 004 | none |
+| TRUST.SIGN.UV.OSUV | Windows and macOS per-operation user verification | 001 003 004 | none |
+| TRUST.SIGN.UV.LINUV | Linux token PIN and passphrase verification (D-011) | 001 003 004 005 | none |

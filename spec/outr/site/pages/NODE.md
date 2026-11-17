@@ -4,18 +4,19 @@ title: Home page, per-app pages and blog
 level: 3
 parent: OUTR.SITE
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.SITE-001]
 covers: []
-depends_on: [OUTR.SITE.GEN, ECO.PARITY, ECO.APPS]
+depends_on: [OUTR.SITE.GEN]
+uses_artifacts: [ECO.PARITY, ECO.APPS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.SITE.PAGES: Home page, per-app pages and blog
@@ -58,8 +59,13 @@ HOME, APP (per-app page template with generated blocks), BLOG (posts and feed).
 
 ## Open questions
 
-- Whether an app with status pre-alpha gets a full page or a stub is an editorial choice for maintainers.
+- Whether an app with status pre-alpha gets a full page or a stub is an editorial choice for maintainers. OUTR.SITE.PAGES.APP always renders the page and its generated block; only the hand-written text length is open.
+- Per CONSTITUTION §2.1 the former `depends_on: [ECO.PARITY, ECO.APPS]` is now `uses_artifacts`: the pages read `apps.toml` and `status.json` only.
+- The home page is rendered by OUTR.SITE.PAGES.APP, because its only generated content is the app cards.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.SITE.PAGES.APP](app/NODE.md) | Home page app cards and per-app pages with generated status blocks (leaf) | 001 002 003 | none |
+| [OUTR.SITE.PAGES.BLOG](blog/NODE.md) | Blog posts, release-note posts and Atom feed (leaf) | 004 005 | none |

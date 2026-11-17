@@ -4,18 +4,19 @@ title: Compliance matrix and regulated-claim wording
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-002, REQ-QUAL-007]
 covers: []
-depends_on: [QUAL.EVID, QUAL.VAP, TRUST.PROFILE.MAP, ECO.RULES.VOCAB, OUTR.BRAND.LINT]
+depends_on: []
+uses_artifacts: [QUAL.EVID.LAYOUT, QUAL.EVID.ASSEMBLE, TRUST.PROFILE.MAP, ECO.RULES.VOCAB, OUTR.BRAND.LINT, ECO.CI.WF.TESTRPT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.MATRIX: Compliance matrix and regulated-claim wording
@@ -55,18 +56,31 @@ Publishes, per release, the compliance matrix that maps customer frameworks (AS9
 ## Interfaces
 
 - **Offers:** matrix data file and rendered page per release; the regulated-term list; the matrix and term-consistency checks (run by `ECO.CI`).
-- **Consumes:** evidence-bundle member names and digest (`QUAL.EVID`); VAP checklist row IDs (`QUAL.VAP`); `TRUST.PROFILE.MAP` CSV; rule files of `ECO.RULES.VOCAB` and `OUTR.BRAND.LINT`.
+- **Consumes (all as artifacts):** evidence-statement schema and per-release statement (`QUAL.EVID.LAYOUT`, `QUAL.EVID.ASSEMBLE`); CI test report (`ECO.CI.WF.TESTRPT`); the VAP checklists link to matrix rows, not the reverse, so no VAP dependency remains; `TRUST.PROFILE.MAP` CSV; rule files of `ECO.RULES.VOCAB` and `OUTR.BRAND.LINT`.
 
 ## Decomposition hints
 
 DATA (matrix schema and rows per framework), CHECK (reference and import check), PAGE (rendering), TERMS (regulated-term list and consistency test).
 
+## Split rationale
+
+The split separates the matrix data and its local rules (DATA) from checks that need other nodes' artifacts (CHECK), from the per-release publication (PAGE), and from the regulated-term list that governs wording across the project (TERMS). TERMS sits here because, like the matrix, it decides what the project may say about compliance.
+
+Alternatives considered:
+- **DATA and CHECK in one leaf.** Rejected: the reference check reads four external artifacts and runs at release time, while the schema check runs on every PR to the matrix.
+- **TERMS as its own QUAL subsystem.** Rejected at level 2 (see `QUAL` split rationale); as a leaf it is size S.
+
 ## Open questions
 
-- The two lints currently list different word forms (the outreach lint includes "traceable"; the product lint does not). REQ-007 will fail until `ECO.RULES.VOCAB` adds it; cross-domain.
-- Which frameworks are in the P1a matrix is a maintainer choice; the concept's list is broad and clause IDs need expert review [unverified clause IDs].
-- Frameworks that have been revised (for example AS9100 to IA9100) need an edition policy for rows.
+- The two lints listed different word forms ("traceable"); `ECO.RULES.VOCAB` now says its product rule set includes it. `QUAL.MATRIX.TERMS` will confirm.
+- Which frameworks are in the P1a matrix is a maintainer choice; clause IDs need expert review [unverified clause IDs].
+- Frameworks that have been revised (for example AS9100 to IA9100) follow the one-edition-per-row policy in `QUAL.MATRIX.DATA`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.MATRIX.DATA | Compliance matrix schema, rows and review rules | 001 002 004 005 | none |
+| QUAL.MATRIX.CHECK | Matrix reference and profile-map import check | 003 006 | none |
+| QUAL.MATRIX.PAGE | Per-release matrix rendering | 001 004 | none |
+| QUAL.MATRIX.TERMS | Regulated-term list, cross-lint consistency and QUAL document lint | 007 008 | none |

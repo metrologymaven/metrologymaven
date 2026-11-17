@@ -4,18 +4,18 @@ title: Template format, slots, repetition and starter templates
 level: 3
 parent: RPT.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.MODEL-011, REQ-RPT.MODEL-013, REQ-RPT.MODEL-014, REQ-RPT.MODEL-015]
 covers: [GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01]
-depends_on: [RPT.MODEL.DOC, CORE.STO]
+depends_on: [RPT.MODEL.DOC, CORE.STO, CORE.JRN]
 cli: [fid report save-template, fid report apply-template, fid report show-template, fid report list-template]
 mcp: [report_save_template, report_apply_template, report_show_template, report_list_template]
 journal: [report.save_template@1, report.apply_template@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.MODEL.TMPL: Template format, slots, repetition and starter templates
@@ -66,7 +66,13 @@ FORMAT (schema, parser, migration), SLOT (binding and repetition rule language),
 
 - QIF extension or separate JSON format for templates? QIF's sanctioned extension hooks (CONSTITUTION §5) may not fit page layout. Decide at the FORMAT leaf; open a decision if it changes the exchange contract.
 - Should templates be shareable across projects (a user template library in settings)? Assumed yes, stored by digest.
+- **Applied at split (2026-11-17):** templates are a separate versioned canonical-JSON format (`RPT.MODEL.TMPL.FORMAT`), not a QIF extension; the QIF exchange contract is unchanged, so no decision was needed. The format also carries the `locked` flag and continuation flags needed by the fixed forms (`RPT.FORMS.LAYOUT`). The cross-project user template library stays open (`RPT.MODEL.TMPL.VER`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.MODEL.TMPL.FORMAT | Template document format, bounded parser and schema migration (leaf) | 001 007 008 009 | GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01 |
+| RPT.MODEL.TMPL.SLOT | Slot, binding-rule and repetition-rule language (leaf) | 002 003 004 009 | none |
+| RPT.MODEL.TMPL.VER | Template versions, immutability and template commands (leaf) | 005 006 | GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01 |
+| RPT.MODEL.TMPL.STARTER | Built-in starter templates (leaf) | 010 | GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01 |

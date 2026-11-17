@@ -4,18 +4,19 @@ title: Portal frame, release editions and offline bundles
 level: 3
 parent: OUTR.DOCS
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.DOCS-004, REQ-OUTR.DOCS-007]
 covers: []
-depends_on: [ECO.REL]
+depends_on: []
+uses_artifacts: [ECO.REL.PROC, ECO.REL.LTS, OUTR.CONTENT.REPRO.MARK, OUTR.BRAND.ASSET]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.DOCS.FRAME: Portal frame, release editions and offline bundles
@@ -59,8 +60,14 @@ NAV (frame and navigation), ED (editions, switcher and latest alias), SLOT (guid
 
 ## Open questions
 
+- CONSTITUTION §2.1 (D-034): the former code dependency on ECO.REL is now `uses_artifacts`: the edition step reads a support list generated from ECO.REL's channel feeds and support policy.
 - How long a release stays "in support" is ECO's call (carried from OUTR.DOCS).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.DOCS.FRAME.NAV](nav/NODE.md) | Edition build, page frame and navigation (leaf) | 002 006 | none |
+| [OUTR.DOCS.FRAME.ED](ed/NODE.md) | Release editions, version list and latest alias (leaf) | 001 002 003 | none |
+| [OUTR.DOCS.FRAME.SLOT](slot/NODE.md) | Guide registration, navigation slots and outdated markers (leaf) | 004 | none |
+| [OUTR.DOCS.FRAME.BUNDLE](bundle/NODE.md) | Offline bundle per release (leaf) | 005 006 | none |

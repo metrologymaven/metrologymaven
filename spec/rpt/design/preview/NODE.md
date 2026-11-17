@@ -4,18 +4,18 @@ title: Live preview
 level: 3
 parent: RPT.DESIGN
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.DESIGN-004]
 covers: []
-depends_on: [RPT.MODEL.BIND, RPT.DESIGN.PLACE, RPT.DESIGN.STYLE]
+depends_on: [RPT.MODEL.BIND, RPT.DESIGN.PLACE, RPT.DESIGN.STYLE, RPT.OUTPUT.PDF, CORE.STO.CACHE]
 cli: [fid report preview-layout]
 mcp: [report_preview_layout]
-journal: []
-updated: 2026-11-16
+journal: [report.preview_layout@1]
+updated: 2026-11-17
 ---
 
 # RPT.DESIGN.PREVIEW: Live preview
@@ -56,8 +56,12 @@ INCR (incremental regeneration), RASTER (page rasterisation), HEADLESS (PNG prev
 
 ## Open questions
 
-- Whether page rasterisation should reuse the PDF renderer's layout and draw with wgpu (VIZ) or a CPU rasteriser; decide with `RPT.OUTPUT.PDF`.
+- Resolved at leaf level: pages are rasterised on the CPU (`RPT.DESIGN.PREVIEW.RASTER`) from display lists of the page layout engine shared with `RPT.OUTPUT.PDF`; wgpu only displays the image. **Cross-domain within RPT:** `RPT.OUTPUT.PDF` (open) must expose that engine as page display lists.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.DESIGN.PREVIEW.INCR | Incremental preview regeneration (leaf) | 001 002 005 | none |
+| RPT.DESIGN.PREVIEW.RASTER | CPU page rasteriser for preview (leaf) | 002 | none |
+| RPT.DESIGN.PREVIEW.HEADLESS | Headless PNG preview command (leaf) | 003 004 | none |

@@ -4,18 +4,18 @@ title: Catalog store and incremental indexing
 level: 3
 parent: RPT.CATALOG
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.CATALOG-001, REQ-RPT.CATALOG-002, REQ-RPT.CATALOG-007]
 covers: [PW.MSP.04, PCD.RPT.07]
-depends_on: [CORE.STO, CORE.JRN, CORE.PRJ]
+depends_on: [CORE.STO.LAYOUT, CORE.STO.SET, CORE.JRN.CHAIN, CORE.PRJ.CONT, IO.REG.ROOTS, GDT.CHAR.RECORD]
 cli: [fid stats register-catalog, fid stats unregister-catalog, fid stats reindex-catalog]
 mcp: [stats_register_catalog, stats_unregister_catalog, stats_reindex_catalog]
 journal: [stats.register_catalog@1, stats.unregister_catalog@1, stats.reindex_catalog@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.CATALOG.STORE: Catalog store and incremental indexing
@@ -58,8 +58,13 @@ SCHEMA (tables and migrations), REG (registration commands), INDEX (incremental 
 
 ## Open questions
 
-- Whether the catalog stores values or only references needs a choice at leaf level; storing values (with digests) is assumed for query speed.
+- Resolved: the catalog stores values with digests, not only references (decided in `RPT.CATALOG.STORE.SCHEMA`) for query speed; every row still points to its source record and journal entry hash.
+- Catalog commands (W1) journal to the user settings journal, not to any project.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.CATALOG.STORE.SCHEMA | Catalog database schema and migrations (leaf) | 001 005 | PW.MSP.04, PCD.RPT.07 |
+| RPT.CATALOG.STORE.REG | Project registration commands (leaf) | 003 004 | none |
+| RPT.CATALOG.STORE.INDEX | Incremental indexing from project journals (leaf) | 001 002 006 | PW.MSP.04, PCD.RPT.07 |

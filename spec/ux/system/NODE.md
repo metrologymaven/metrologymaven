@@ -4,7 +4,7 @@ title: Design principles, design-system package and open design workflow
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: []
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.SYSTEM: Design principles, design-system package and open design workflow
@@ -72,11 +72,28 @@ The rules and the container for everything else in UX. It writes the design prin
 
 PRINC (principles and writing guide), PKG (package format, versioning, changelog, deprecation), LINT (consumption-contract rule), REVIEW (design-review checklist, originality declaration, record format), TOOL (design-file storage and tool choice; may need a decision).
 
+## Split rationale
+
+The dividing principle is **one artefact or gate per child**, following the decomposition hints: PRINC (principles and writing guide), PKG (the package container and its versioning), LINT (the consumption-contract rule consumers run), REVIEW (the review gate, originality and placeholder name), TOOL (design-file storage, tool choice and contribution). Each child is one document set plus one check in the tooling crate `fid-design`, so each is a leaf.
+
+Alternatives considered:
+- **Merging PKG and LINT.** Rejected: consumers run the lint in their own CI without needing the versioning rules, and the two have different fixtures.
+- **Putting contribution workflow in REVIEW.** Rejected: contribution is about where files live and who can edit them (TOOL); review is the merge gate.
+- **Opening a decision for the design tool.** Not needed: the tool choice does not bind the project's licences (D-001); TOOL records a recommendation (Penpot) that maintainers adopt by reviewing the leaf.
+
 ## Open questions
 
-- Which open design tool and file format: Penpot (open source) or Figma with tokens exported to the repository? This needs a small maintainer decision when TOOL is expanded; it does not block this split. REQ-UX.SYSTEM-006 constrains either option.
-- The token interchange format: the W3C Design Tokens Community Group format is a candidate, but its stability is [unverified]; choose at leaf level.
+- Design tool: resolved as a recommendation in UX.SYSTEM.TOOL (Penpot; repository text files remain the source of truth). No decision opened, because the choice binds no licence.
+- Token interchange format: resolved in UX.SYSTEM.PKG (DTCG JSON pinned to one named draft with project constraints; draft stability [unverified]).
+- Trade-dress rules arrive from OUTR.BRAND.GUIDE.DRESS by a human PR into the slot UX.SYSTEM.REVIEW defines; an artifact edge from UX to OUTR would need maintainer agreement.
+- The registry manifest (CORE.REG.MAN) has no command title-style or icon field yet; see UX.ICONS.PROV.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.SYSTEM.PRINC](princ/NODE.md) | Design principles and UI writing guide (leaf) | 001 010 | none |
+| [UX.SYSTEM.PKG](pkg/NODE.md) | Design-system package format, versioning, changelog and deprecation (leaf) | 002 003 004 | none |
+| [UX.SYSTEM.LINT](lint/NODE.md) | Consumption-contract literal-value lint (leaf) | 005 | none |
+| [UX.SYSTEM.REVIEW](review/NODE.md) | Design review checklist, originality declaration and PR gate (leaf) | 001 007 008 009 011 | none |
+| [UX.SYSTEM.TOOL](tool/NODE.md) | Design tool, design-file storage and contribution workflow (leaf) | 006 007 | none |

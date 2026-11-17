@@ -4,7 +4,7 @@ title: Streams: Record Journal, Activity Log and Access Ledger format
 level: 3
 parent: CORE.JRN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [CORE.JRN.CHAIN, CORE.JRN.ENTRY]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.JRN.STREAM: Streams: Record Journal, Activity Log and Access Ledger format
@@ -63,7 +63,13 @@ ROUTE (stream routing table), ALOG (P0 Activity Log and rotation), LEDGER (Acces
 
 - The concept doc puts the Access Ledger format in P1a and its implementation in P1b; this child is P0 because the Activity Log is P0, and its LEDGER child should be tagged P1a or P1b when expanded.
 - REQ-CORE-003 does not mention the Access Ledger; it is included here only as the format owner, per the level-2 review assignment.
+- **Applied D-031 (CONSTITUTION §3 Reads):** R0 and R1 calls reach the Activity Log only while a recording session is active or when the call is a Command Program step. REQ-001 above predates that rule; `CORE.JRN.STREAM.ALOG` narrows it (REQ-CORE.JRN.STREAM.ALOG-002). The recording session itself is owned by `VIZ.CAPTURE.REC`, a higher layer, which sets ALOG's recording flag through ALOG's API.
+- LEDGER is tagged P1b (format and implementation with the first hosted or consent-gated access); COMPACT is P1b as the parent's Open questions state.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JRN.STREAM.ALOG | Stream routing and the P0 Activity Log (leaf) | 001 002 003 007 | none |
+| CORE.JRN.STREAM.LEDGER | Access Ledger format, pseudonyms and anchoring (leaf) | 004 005 006 | none |
+| CORE.JRN.STREAM.COMPACT | Activity Log chaining and compaction (leaf) | 008 | none |

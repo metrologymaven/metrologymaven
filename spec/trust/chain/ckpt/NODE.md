@@ -11,7 +11,8 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.CHAIN-003, REQ-TRUST.CHAIN-004]
 covers: []
-depends_on: [TRUST.CHAIN.CANON, TRUST.SIGN.TROOT, CORE.JRN]
+depends_on: [TRUST.CHAIN.CANON, TRUST.SIGN.TROOT]
+uses_artifacts: [CORE.JRN.CHAIN.CKPT]
 side_effect: R1
 determinism: D0
 cli: []

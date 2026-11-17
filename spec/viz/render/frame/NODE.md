@@ -4,7 +4,7 @@ title: Frame graph, backends and capability tiers
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.SCENE]
 cli: [fid view get-render-info]
 mcp: [view_get_render_info]
 journal: [view.get_render_info@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.FRAME: Frame graph, backends and capability tiers
@@ -62,7 +62,12 @@ BACKEND (selection and limits), TIER (classification), PASSES (graph and lifetim
 ## Open questions
 
 - The tier names follow the concept doc (T0 native atomics, T1 WebGPU, T2 WebGL2/GL, T3 server stills); PLAT.GPU owns which hardware maps to which tier.
+- Cross-domain: `PLAT.GPU.DETECT` depends on the whole `VIZ` domain, so GRAPH reads the GPU policy file as an artifact (`uses_artifacts: [PLAT.GPU.POLICY]`) and takes the adapter selection as injected data instead of a code edge.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.FRAME.GRAPH | Frame graph, backend selection and ID and depth buffers (leaf) | 001 004 | none |
+| VIZ.RENDER.FRAME.TIER | Capability tiers and render-info command (leaf) | 002 003 | none |
+| VIZ.RENDER.FRAME.SHLINT | Shader manifest, readback lint and toolkit-free check (leaf) | 005 006 | none |

@@ -4,7 +4,7 @@ title: Control charts, control limits and run rules
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-RPT.STATS-002, REQ-RPT.STATS-004, REQ-RPT.STATS-005, REQ-RPT.STATS-006, REQ-RPT.STATS-014]
 covers: [GOM.TRD.05, PW.MSP.02]
 depends_on: [RPT.STATS.DSET, RPT.STATS.TREND, KRN.NUM]
-cli: [fid stats compute-limits, fid stats freeze-limits]
-mcp: [stats_compute_limits, stats_freeze_limits]
-journal: [stats.compute_limits@1, stats.freeze_limits@1]
-updated: 2026-11-16
+cli: [fid stats *-limits, fid stats build-control-chart]
+mcp: [stats_*_limits, stats_build_control_chart]
+journal: [stats.*_limits@1, stats.build_control_chart@1]
+updated: 2026-11-17
 ---
 
 # RPT.STATS.SPC: Control charts, control limits and run rules
@@ -59,8 +59,16 @@ SUB (subgrouping), LIM (limits and constants table), FREEZE (frozen limits), RUL
 
 ## Open questions
 
-- Which reference (ISO 7870-2, AIAG SPC manual, other) and edition defines the default constants and run rules needs a domain expert [unverified]. Raise a decision before the LIM or RULES leaf if no maintainer with SPC expertise can choose.
+- Which reference (ISO 7870-2, AIAG SPC manual, other) and edition defines the default constants and run rules needs a domain expert [unverified]. The split does not wait for it: `RPT.STATS.SPC.CONST` ships a versioned table with every row `UNVERIFIED`, `RPT.STATS.SPC.RULES` ships the plain `beyond_limits@1` default and the published sets as `UNVERIFIED` data, and results carry those flags. Raise a decision before release if no maintainer with SPC expertise can choose.
+- Control-chart series use their own command, `stats.build_control_chart@1` (`RPT.STATS.SPC.CHART`), and unfreezing is `stats.unfreeze_limits@1`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.SPC.SUB | Subgrouping of a data set (leaf) | 006 007 | |
+| RPT.STATS.SPC.CONST | Versioned control-chart constants table (leaf; values UNVERIFIED) | 002 007 | |
+| RPT.STATS.SPC.LIM | Control-limit calculation (leaf) | 001 002 007 | GOM.TRD.05 |
+| RPT.STATS.SPC.FREEZE | Frozen control limits (leaf) | 003 004 | GOM.TRD.05 |
+| RPT.STATS.SPC.RULES | Run-rule sets and violation detection (leaf; published sets UNVERIFIED) | 005 007 | |
+| RPT.STATS.SPC.CHART | Control-chart series builder (leaf) | 004 005 007 | PW.MSP.02 |

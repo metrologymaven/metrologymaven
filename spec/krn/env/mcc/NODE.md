@@ -4,7 +4,7 @@ title: Minimum circumscribed fits
 level: 3
 parent: KRN.ENV
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [KRN.LSQ.RND, KRN.LSQ.AXIS, KRN.SOLV.CONIC, KRN.SOLV.SEQ, KRN.SOLV.C
 cli: [fid fit mcc-circle2d, fid fit mcc-sphere, fid fit mcc-cylinder]
 mcp: [fit_mcc_circle2d, fit_mcc_sphere, fit_mcc_cylinder]
 journal: [fit.mcc_circle2d@1, fit.mcc_sphere@1, fit.mcc_cylinder@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.ENV.MCC: Minimum circumscribed fits
@@ -55,8 +55,11 @@ CVX (circle and sphere SOCP with duality gap), CYL (cylinder, non-convex), PLAN 
 
 ## Open questions
 
-- Whether slot and rectangle circumscribed envelopes have an accepted definition [unverified]; if not, they return `method_undefined`.
+- Whether slot and rectangle circumscribed envelopes have an accepted definition [unverified]; if not, they return `method_undefined`. The split assumes no accepted definition: `KRN.ENV.MCC.CVX` owns the defined-pairs table, which lists slot and rectangle as undefined until one is cited.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.ENV.MCC.CVX | Minimum circumscribed circle and sphere with duality-gap certificate | 001 002 004 005 | GOM.CON.20, PW.CON.05 |
+| KRN.ENV.MCC.CYL | Minimum circumscribed cylinder | 001 003 005 | GOM.CON.20, PW.CON.05 |

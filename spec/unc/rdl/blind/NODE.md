@@ -4,18 +4,19 @@ title: Tier B blind sets and challenge handling
 level: 3
 parent: UNC.RDL
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.RDL-002]
 covers: []
-depends_on: [UNC.RDL.FORMAT, UNC.RDL.AST]
+depends_on: [UNC.RDL.FORMAT]
+uses_artifacts: [UNC.RDL.AST, KRN.MAN.WASM]
 cli: [fid rdl submit-challenge]
 mcp: [rdl_submit_challenge]
 journal: [rdl.submit_challenge@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.RDL.BLIND: Tier B blind sets and challenge handling
@@ -54,9 +55,15 @@ CUSTODY (process and sealed job definition), CHALLENGE (command), ROTATE.
 
 ## Open questions
 
-- Who the external custodian is (a founding expert or an escrow service) is for maintainers to decide; this may need a decision record at P1b.
-- The side-effect class of `rdl.submit_challenge@1` (R1 locally, X1 if served from a hosted verifier) depends on where it runs.
+- Who the external custodian is (a founding expert or an escrow service) is for maintainers to decide. The custody model in `UNC.RDL.BLIND.CUST` is written against a custodian role and does not depend on that choice. A decision record is needed before the first blind set is sealed (P1b), not to write the specs.
+- **Applied (side-effect class):** `rdl.submit_challenge@1` is R1 and runs locally on the challenger's own machine with their own kernel. A hosted verifier would be an ENT service that wraps it and is out of scope here.
+- **OUTR request (AST run records):** OUTR asked that `UNC.RDL.AST` run records carry the signed deviation and UEC level per output. The sealed job (`UNC.RDL.BLIND.CUST`) reads AST records as artifacts but publishes only per-aim aggregates. Signed per-case deviations must never leave the sealed job, because they would leak the blind references. A per-aim signed bias summary is acceptable [unverified: leakage analysis]. The AST change itself belongs to `UNC.RDL.AST`.
+- Dependencies converted (D-034): the sealed job reads the AST runner and the WASM kernel as artifacts (tooling), not as crate dependencies.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.RDL.BLIND.CUST | Custody model, repository guard and sealed CI job (leaf) | 001 002 | none |
+| UNC.RDL.BLIND.CHAL | The rdl.submit_challenge@1 command (leaf) | 003 | none |
+| UNC.RDL.BLIND.ROT | Rotation and disclosure as tier G (leaf) | 004 | none |

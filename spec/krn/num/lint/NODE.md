@@ -4,7 +4,7 @@ title: KNP-1 lint and kernel dependency allowlist check
 level: 3
 parent: KRN.NUM
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.NUM-001, REQ-KRN.NUM-008, REQ-KRN.NUM-009]
 covers: []
 depends_on: []
+uses_artifacts: [ECO.REPO.ALLOW, ECO.RULES.SPDX, UNC.RDL.LINT, KRN.MAN.WASM]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.NUM.LINT: KNP-1 lint and kernel dependency allowlist check
@@ -53,7 +54,7 @@ The CI tool that enforces KNP-1 on the whole kernel dependency graph, not just t
 ## Interfaces
 
 - **Offers:** `fid-knp1-lint` CLI tool used by CI (not a registry command); JSON findings report consumed by `KRN.MAN` (lint result in the manifest and solver audit) and `KRN.SOLV` (audit record).
-- **Consumes:** the lockfile; the allowlist from `ECO.RULES`; the dataset denylist from `UNC.RDL`.
+- **Consumes (artifacts, D-034):** the lockfile; `kernel-allowlist.toml` (`ECO.REPO.ALLOW`); `house-rules/spdx-allowlist.toml` (`ECO.RULES.SPDX`); `rdl-denylist.json` and its canary crate (`UNC.RDL.LINT`); the wasm reference module (`KRN.MAN.WASM`). The lint is tooling (CONSTITUTION §2.1) and has no code dependency on product crates.
 
 ## Decomposition hints
 
@@ -63,7 +64,18 @@ GRAPH (closure from lockfile and allowlist check), SCAN (syntax-level source sca
 
 - Whether FMA contraction can be excluded by build flags alone on every target, or whether a codegen-level check (for example scanning emitted assembly or wasm for fused instructions) is also needed [unverified].
 - Macro-generated code: a syntax-level scan may miss banned calls produced by macros from dependencies; scanning expanded code may be required [unverified].
+- **Applied at split (2026-11-17):** FMA by flags is checked in `KRN.NUM.LINT.FLAGS`, which also scans the wasm reference module for relaxed multiply-add opcodes; native object code is left as an open question there. Macro-generated code is covered by token scanning of macro bodies in `KRN.NUM.LINT.SYN` and by a type-aware pass on expanded workspace code in `KRN.NUM.LINT.TYPED`; generated `build.rs` output in third-party crates remains a documented gap. The allowlist owner is `ECO.REPO.ALLOW` (`kernel-allowlist.toml`) and the licence list owner is `ECO.RULES.SPDX`; both are read as artifacts.
 
 ## Children
 
-_None yet: status `open`._
+The split follows the hints, with the report and waivers moved into a shared base (FIND) so every check emits the same findings, a type-aware pass (TYPED) added for macro-expanded code, and the driver and self-test separated (CLI). All children are modules of the one tooling crate `fid-knp1-lint`.
+
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.NUM.LINT.FIND | Lint findings model, report schema and waivers | 002 006 | none |
+| KRN.NUM.LINT.GRAPH | Kernel dependency closure, allowlist and licence check | 001 004 | none |
+| KRN.NUM.LINT.SYN | Syntax-level banned-API scan over the kernel closure | 001 002 007 | none |
+| KRN.NUM.LINT.TYPED | Type-aware banned-API check on expanded workspace code | 002 007 | none |
+| KRN.NUM.LINT.FLAGS | Kernel build-configuration and emitted-code FMA check | 003 007 | none |
+| KRN.NUM.LINT.DATA | Reference-dataset denylist matcher | 005 007 | none |
+| KRN.NUM.LINT.CLI | fid-knp1-lint command, exit codes and seeded-violation suite | 001 002 007 | none |

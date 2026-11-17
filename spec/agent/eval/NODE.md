@@ -4,18 +4,19 @@ title: Evaluation task suite, oracles and fixtures
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-AGENT-002]
 covers: []
-depends_on: [FLOW, AGENT.SKILLS, CORE.JRN.CANON]
-cli: []
+depends_on: []
+uses_artifacts: [FLOW.RUNNER, AGENT.SKILLS.CATALOG, CORE.JRN.CANON]
+cli: [fid-eval suite *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.EVAL: Evaluation task suite, oracles and fixtures
@@ -61,11 +62,20 @@ Defines the metrology tasks agents are evaluated on and the machine-checkable or
 
 FORMAT (task and oracle schema), ORACLE (tolerance and outcome matching rules), CHECK (consistency, coverage and isolation check), CORPUS (the first task set, one per curated workflow).
 
+## Split rationale
+
+D-032 (accepted) puts all evaluation tooling in the separate `fid-eval` binary, outside the registry and never on MCP, so the children have CLI entries `fid-eval suite *` and no MCP tools or journal events. The split separates the **format** (FORMAT, the shared parser and suite digest for every `fid-eval` crate), the **static checks** (CHECK) and the **data** (CORPUS, P1a, because FLOW golden journals start in P1a). Alternative considered: an ORACLE child for matching rules; rejected because matching is scoring and belongs to `AGENT.HARNESS.SCORE`, while the oracle schema belongs to FORMAT.
+
 ## Open questions
 
-- D-032: whether the suite check is a `fid agent` command or part of a separate `fid-eval` binary.
+- Resolved by D-032 (accepted): the suite check is `fid-eval suite check`.
+- D-027 is accepted, so REQ-AGENT.EVAL-008 no longer constrains the suite; `AGENT.EVAL.CORPUS` admits formula-derived values only via `expr.evaluate_formula@1`. Retire -008 at the next revision.
 - Oracle tolerance for values when an agent legitimately reaches the result by a different command path (for example another fit method): proposed per-characteristic tolerance in the task, defaulting to exact match of decision outcome and 1e-9 m on value [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.EVAL.FORMAT | Task and oracle file format and suite version | 001 002 004 006 007 | none |
+| AGENT.EVAL.CHECK | Suite consistency, coverage and oracle isolation check | 003 005 | none |
+| AGENT.EVAL.CORPUS | First evaluation task corpus | 002 006 008 | none |

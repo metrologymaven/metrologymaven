@@ -4,18 +4,19 @@ title: PDF renderer
 level: 3
 parent: RPT.OUTPUT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.OUTPUT-001, REQ-RPT.OUTPUT-002, REQ-RPT.OUTPUT-005, REQ-RPT.OUTPUT-008, REQ-RPT.OUTPUT-009]
 covers: [GOM.RPT.06, PW.RPT.04, SA.RPT.03]
-depends_on: [RPT.OUTPUT.META, RPT.MODEL.BIND, VIZ.CAPTURE]
+depends_on: [RPT.OUTPUT.META, RPT.MODEL.BIND, RPT.STATS.TREND, CORE.STO]
+uses_artifacts: [VIZ.CAPTURE.SHOT, RPT.DESIGN.PAGE, RPT.DESIGN.PLACE, RPT.DESIGN.STYLE, I18N.SCRIPT]
 cli: [fid report export-pdf]
 mcp: [report_export_pdf]
 journal: [report.export_pdf@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.OUTPUT.PDF: PDF renderer
@@ -62,7 +63,15 @@ LAYOUT (page layout and breaks), TEXT (shaping and font subsetting), DRAW (table
 
 - PDF/A conformance (ISO 19005) for archiving is likely wanted by regulated users [unverified]; not required yet.
 - Choice of PDF and text-shaping libraries must pass the D-001 licence allowlist and the determinism test.
+- **Applied at split (2026-11-17, D-034):** `VIZ.CAPTURE` (an L3 surface) is no longer a code dependency; snapshots are read by digest as artifacts. Designer data (`RPT.DESIGN.*`, P1b) and script fonts (`I18N.SCRIPT`, L3) are read as published data, so the P1a renderer works with defaults before they exist. The layout engine (`RPT.OUTPUT.PDF.LAYOUT`) is the one `RPT.DESIGN.PREVIEW` should reuse.
+- **Applied at split:** chart painting is a P1b child (`RPT.OUTPUT.PDF.CHART`); until it lands, chart blocks fail with `report.unsupported_block` as REQ-005 requires.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.OUTPUT.PDF.TEXT | Bundled fonts, text shaping, metrics and font subsetting (leaf) | 001 002 | none |
+| RPT.OUTPUT.PDF.LAYOUT | Page layout engine with page breaks and continuation headers (leaf) | 002 | GOM.RPT.06 |
+| RPT.OUTPUT.PDF.DRAW | Block painters for tables, text, images, views, drawings and form fields (leaf) | 004 005 | PW.RPT.04, SA.RPT.03 |
+| RPT.OUTPUT.PDF.CHART | Vector chart painter for ChartSeries (leaf, P1b) | 004 005 | GOM.RPT.06 |
+| RPT.OUTPUT.PDF.WRITE | Deterministic PDF writer and the PDF export command (leaf) | 002 003 005 006 007 | GOM.RPT.06, PW.RPT.04, SA.RPT.03 |

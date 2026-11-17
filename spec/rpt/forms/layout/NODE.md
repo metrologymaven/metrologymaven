@@ -4,17 +4,18 @@ title: Fixed form templates for FAI and PPAP
 level: 3
 parent: RPT.FORMS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.FORMS-001, REQ-RPT.FORMS-002, REQ-RPT.FORMS-008]
 covers: []
-depends_on: [RPT.MODEL.TMPL, RPT.FORMS.HDR, RPT.FORMS.ROWS, RPT.FORMS.PPAP]
+depends_on: [RPT.MODEL.TMPL, RPT.MODEL.BIND]
+uses_artifacts: [RPT.FORMS.HDR, RPT.FORMS.ROWS, RPT.FORMS.PPAP]
 cli: [fid report show-layout-fai, fid report show-layout-ppap]
 mcp: [report_show_layout_fai, report_show_layout_ppap]
-journal: []
+journal: [report.show_layout_fai@1, report.show_layout_ppap@1]
 updated: 2026-11-17
 ---
 
@@ -56,9 +57,13 @@ FAI (form 1–3 templates), PPAP (dimensional template), MAP (field maps), PAGE 
 
 ## Open questions
 
-- **Unblocked (2026-11-17):** D-015 (How closely AS9102 and PPAP form layouts may follow the published forms) is accepted. Apply its Decision section (`decisions/D-015-*.md`) when this node is expanded.
-- **Blocked on D-015:** may the layout follow the published forms' field order and grid, or must it be an original arrangement? Choosing either now would be guessing on a legal question, so this node stays in `decision` until D-015 is decided.
+- **Applied (2026-11-17): D-015 accepted, option C.** The project ships only original layouts (own labels, own arrangement, citations by designator, revision or edition, and clause only) plus machine-readable field maps; licensed users who need the published form's look import or build their own template in `RPT.DESIGN` and bind it to the same field IDs. The D-015 condition (counsel review before publication or release) is enforced by a `clearance` state on each built-in template and a release-profile packaging test (`RPT.FORMS.LAYOUT.MAP`). Whether field order may follow the standards' clause order awaits that counsel check [unverified]; field order is template data, so the answer changes data only.
+- **Applied (D-034):** the form data nodes are read as published schemas (`uses_artifacts`), not code dependencies; form data providers implement the `FieldSource` trait defined in `RPT.MODEL.BIND.RESOLVE`.
 
 ## Children
 
-_None yet: status `decision`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.FORMS.LAYOUT.MAP | Form field maps, form_field block kind, locking and clearance (leaf) | 001 002 003 005 | none |
+| RPT.FORMS.LAYOUT.FAI | Original locked templates for FAI forms 1 to 3 (leaf) | 001 002 003 004 | none |
+| RPT.FORMS.LAYOUT.PPAP | Original locked template for the PPAP dimensional results report (leaf) | 001 002 003 004 | none |

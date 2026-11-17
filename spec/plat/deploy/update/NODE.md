@@ -4,18 +4,19 @@ title: Offline signed update bundles
 level: 3
 parent: PLAT.DEPLOY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-PLAT.DEPLOY-009]
 covers: []
-depends_on: [PLAT.DEPLOY.OFFLINE, ECO.REL]
-cli: []
-mcp: []
-journal: []
-updated: 2026-11-16
+depends_on: [PLAT.DEPLOY.OFFLINE.BUNDLE, TRUST.SIGN.DSSE, CORE.BUS]
+uses_artifacts: [ECO.REL.SIGN.GUIDE, ECO.REL.SIGN.CUSTODY, PLAT.DEPLOY.SILENT]
+cli: [fid update verify-bundle, fid update apply-bundle]
+mcp: [update_verify_bundle]
+journal: [update.verify_bundle@1, update.apply_bundle@1]
+updated: 2026-11-17
 ---
 
 # PLAT.DEPLOY.UPDATE: Offline signed updates
@@ -35,7 +36,7 @@ Lets an air-gapped site update by carrying a bundle in on removable media, while
 **Out** (and which node owns it instead):
 - Producing and signing bundles; key custody (`ECO.REL`, `TRUST.SIGN`)
 - The base offline bundle and install manifest (`PLAT.DEPLOY.OFFLINE`)
-- Online update checks (an opt-in network feature; listed by `PLAT.DEPLOY.OFFLINE`)
+- Online update checks (`ECO.REL.UPD`; listed by `PLAT.DEPLOY.OFFLINE.NETLIST`)
 
 ## Requirements
 
@@ -48,17 +49,26 @@ Lets an air-gapped site update by carrying a bundle in on removable media, while
 
 ## Interfaces
 
-- **Offers:** update-bundle manifest requirements for ECO.REL; verification rules.
-- **Consumes:** ECO.REL signing and manifest; TRUST.SIGN primitives (signature verification); `PLAT.DEPLOY.OFFLINE` install manifest; `PLAT.DEPLOY.SILENT` for installer behaviour.
+- **Offers:** the update manifest format `update-manifest.json` in a DSSE envelope (payload type `application/vnd.fid.update-bundle+json`, schema 1; produced and signed by ECO.REL); `update.verify_bundle@1` (R0); `update.apply_bundle@1` (A0, never on MCP, `human_only`).
+- **Consumes:** DSSE verification (`TRUST.SIGN.DSSE`); the install manifest and bundle layout (`PLAT.DEPLOY.OFFLINE.BUNDLE`); command registration (`CORE.BUS`). Artifacts: release keys and key-transition statements (`ECO.REL.SIGN.GUIDE`, `ECO.REL.SIGN.CUSTODY`); installer switches (`PLAT.DEPLOY.SILENT`).
 
 ## Decomposition hints
 
-VERIFY (manifest signature and digest verification library; leaf once ECO.REL fixes the signature scheme), KEYROT (key transition statements), APPLY (atomic apply and rollback, per OS installer technology).
+See Children.
 
 ## Open questions
 
-- The signature scheme and key format are ECO.REL and TRUST decisions; this node only requires offline verifiability.
+- Resolved: installing an application update is an admin act (CONSTITUTION §3.1 treats installing and updating plugins as A0; the same reasoning applies to the product), so `update.apply_bundle@1` is A0 and never on MCP. The read-only check is R0.
+- `ECO.REL` must produce `update-manifest.json` per Tier 1 platform and sign it with the release key (cross-domain; ECO.REL.SIGN does not yet list this artefact).
+
+## Split rationale
+
+Split into two **pure verification libraries** and one **command**: VERIFY checks one envelope and the bundle against trusted keys; KEYROT decides which keys are trusted by walking key-transition statements; APPLY wraps both into registry commands and owns the atomic install step that differs per OS. The libraries are testable with fixture keys and no installer.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| PLAT.DEPLOY.UPDATE.VERIFY | Update manifest format and bundle verification library | 001 002 003 004 | none |
+| PLAT.DEPLOY.UPDATE.KEYROT | Trusted-key set from key-transition statements | 004 005 | none |
+| PLAT.DEPLOY.UPDATE.APPLY | Verify-bundle and apply-bundle commands with atomic install | 001 002 003 006 | none |

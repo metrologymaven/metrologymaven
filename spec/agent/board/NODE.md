@@ -4,18 +4,19 @@ title: Published scoreboard and claim register
 level: 2
 parent: AGENT
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-AGENT-005]
 covers: []
-depends_on: [AGENT.HARNESS, AGENT.REDTEAM]
-cli: []
+depends_on: [AGENT.HARNESS]
+uses_artifacts: [AGENT.REDTEAM]
+cli: [fid-eval board *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT.BOARD: Published scoreboard and claim register
@@ -56,12 +57,20 @@ Publishes evaluation results per release and per model, with everything needed t
 
 BUNDLE (board data and static page), RECOMP (recompute check), SUBMIT (third-party submissions), CLAIMS (claim register and check).
 
+## Split rationale
+
+All children are `fid-eval board *` subcommands in crate `fid-eval-board` (D-032, Tooling layer). The split follows the **three things publication must guarantee**: the numbers can be recomputed and third-party numbers are admitted only that way (RECOMP), the published page shows capability next to safety and works offline (BUNDLE), and public wording is backed by a published figure (CLAIMS). SUBMIT was folded into RECOMP because admission of a third-party submission is exactly the recompute check plus a label.
+
 ## Open questions
 
 - Who pays for runs of third-party hosted models for the public board? Sponsorship may be needed; until then the board may list only open-weight models run in project CI and third-party submissions.
 - Some model providers' terms may restrict publishing benchmark results [unverified]; maintainers should check before publishing scores of hosted models.
-- D-032 sets whether the recompute check is a `fid agent` command or part of `fid-eval`.
+- Resolved by D-032 (accepted): the recompute check is `fid-eval board recompute`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AGENT.BOARD.BUNDLE | Static scoreboard bundle | 001 004 006 | none |
+| AGENT.BOARD.RECOMP | Score recompute check and third-party submissions | 002 003 | none |
+| AGENT.BOARD.CLAIMS | Claim register and claim check | 005 | none |

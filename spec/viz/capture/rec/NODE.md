@@ -4,7 +4,7 @@ title: Recording sessions, indicator and governance
 level: 3
 parent: VIZ.CAPTURE
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-VIZ.CAPTURE-006, REQ-VIZ.CAPTURE-007, REQ-VIZ.CAPTURE-008, REQ-VIZ.CAPTURE-009]
 covers: []
 depends_on: [CORE, VIZ.SHELL.DOCK]
-cli: [fid capture start-recording, fid capture stop-recording]
-mcp: [capture_start_recording, capture_stop_recording]
-journal: [capture.start_recording@*, capture.stop_recording@*]
-updated: 2026-11-16
+cli: [fid capture start-recording, fid capture stop-recording, fid capture get-recording-status]
+mcp: [capture_start_recording, capture_stop_recording, capture_get_recording_status]
+journal: [capture.start_recording@*, capture.stop_recording@*, capture.get_recording_status@*]
+updated: 2026-11-17
 ---
 
 # VIZ.CAPTURE.REC: Recording sessions, indicator and governance
@@ -60,8 +60,15 @@ SESSION (start, stop, state), POLICY, INDIC (indicator), AGENTREQ (proposal path
 
 ## Open questions
 
-- Retention rules follow export-control classification in project metadata; the owner of that metadata (IO or CORE) must be confirmed.
+- Retention rules may later follow an export-control classification in project metadata (candidate owner `CORE.PRJ.META`); `VIZ.CAPTURE.REC.POLICY` only computes `retain_until`, and payload disposal is TRUST's (per `CORE.STO.CAS`), not yet specified there.
+- Split: policy (data), session (commands and the Activity Log recording flag, CONSTITUTION Â§3 D-031), indicator (UI rule) and redaction (frame rule) are independent and each testable alone. Agent start requests use `human_only` and the generic pending-request path (`CORE.BUS.POL.PROJ`), approved in `VIZ.INBOX.ACTIONS.REQS`. Media leaves the machine only through `egress.send@1` (CONSTITUTION Â§3.1).
+- `VIZ.SHELL.DOCK` must expose a reserved per-window draw layer and per-frame layout snapshots (requested by INDIC and REDACT).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.CAPTURE.REC.POLICY | Recording policy keys and policy evaluation (leaf) | 003 004 | none |
+| VIZ.CAPTURE.REC.SESSION | Recording session start, stop and status (leaf) | 002 003 004 005 | none |
+| VIZ.CAPTURE.REC.INDIC | Unsuppressible recording indicator (leaf) | 001 | none |
+| VIZ.CAPTURE.REC.REDACT | Panel redaction marks and frame masking (leaf) | 006 | none |

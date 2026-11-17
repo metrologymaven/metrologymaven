@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.REPLAY-005]
 covers: []
-depends_on: [TRUST.PKG.READER, KRN.MAN]
+depends_on: [TRUST.PKG.READER]
+uses_artifacts: [KRN.MAN.MANI.SCHEMA, KRN.MAN.KCI]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.REPLAY.SELECT: Replayable-set selection and NOT_REPLAYABLE reasons

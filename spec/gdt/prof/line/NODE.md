@@ -4,18 +4,18 @@ title: Profile of a line
 level: 3
 parent: GDT.PROF
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-GDT.PROF-001, REQ-GDT.PROF-006]
 covers: [GOM.GDT.11, PW.GDT.05]
-depends_on: [GDT.PROF.DEV, GDT.PROF.ZDEF, GDT.ZONE.POSE]
+depends_on: [GDT.PROF.DEV, GDT.PROF.ZDEF, GDT.ZONE.POSE, GDT.PROF.BESTFIT]
 cli: [fid check eval-line-profile]
 mcp: [check_eval_line_profile]
 journal: [check.eval_line_profile@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.PROF.LINE: Profile of a line
@@ -44,7 +44,7 @@ Evaluates profile of a line: line elements of the surface, taken in stated secti
 ## Interfaces
 
 - **Offers:** `check.eval_line_profile@1` (W2, dry-run R1).
-- **Consumes:** siblings DEV and ZDEF; pose solve (GDT.ZONE.POSE).
+- **Consumes:** siblings DEV and ZDEF; pose solve (GDT.ZONE.POSE); best-fit options (GDT.PROF.BESTFIT).
 
 ## Decomposition hints
 
@@ -52,8 +52,12 @@ SECT (section extraction of nominal and points), EVAL (per-section value).
 
 ## Open questions
 
-- Default section spacing when the drawing is silent is DMT content.
+- Default section spacing when the drawing is silent is DMT content; `GDT.PROF.LINE.SECT` refuses with `section_positions_missing` rather than inventing a default.
+- Line elements are taken from the 3D deviation of each point (with an optional in-plane correction) rather than by intersecting the nominal faces with each plane; explicit section curves live in `SCAN.SECT`, which GDT may not depend on (layer order). If an expert row requires true nominal section curves, a GEO-level plane-face intersection node is needed.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PROF.LINE.SECT | Section bands and line-element deviations (leaf) | 001 | none |
+| GDT.PROF.LINE.EVAL | Line-profile command and per-section evaluation (leaf) | 001 002 003 | GOM.GDT.11, PW.GDT.05 |

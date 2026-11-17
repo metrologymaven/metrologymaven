@@ -4,7 +4,7 @@ title: Undo, redo, undo tree and supersession
 level: 3
 parent: CORE.JRN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -14,8 +14,8 @@ covers: [GOM.PRJ.06, PW.PRJ.04]
 depends_on: [CORE.JRN.CHAIN, CORE.JRN.BR]
 cli: [fid journal undo, fid journal redo, fid journal show-undo-tree, fid journal supersede-record]
 mcp: [journal_undo, journal_redo, journal_show_undo_tree]
-journal: [journal.undo@1, journal.redo@1, journal.supersede_record@1]
-updated: 2026-11-16
+journal: [journal.undo@1, journal.redo@1, journal.show_undo_tree@1, journal.supersede_record@1]
+updated: 2026-11-17
 ---
 
 # CORE.JRN.UNDO: Undo, redo, undo tree and supersession
@@ -65,4 +65,7 @@ MOVE (HeadMove and undo/redo commands), TREE (undo-tree model and query), BARRIE
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.JRN.UNDO.MOVE | Undo, redo, undo tree and barriers (leaf) | 001 002 003 004 005 007 | GOM.PRJ.06, PW.PRJ.04 |
+| CORE.JRN.UNDO.SUPER | Supersession of released records (leaf) | 006 | none |

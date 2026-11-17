@@ -4,7 +4,7 @@ title: IGES geometry import
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.CAD.WORKER, IO.REG.ENV, GEO.NURBS]
 cli: [fid import cad-iges]
 mcp: [import_cad_iges]
 journal: [import.cad_iges@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.IGES: IGES geometry import
@@ -56,8 +56,12 @@ SECT (section parser), ENT (entity mapping), XFORM (transforms), CMD. A pure-Rus
 
 ## Open questions
 
-- Worker-hosted kernel versus first-party pure-Rust IGES parser.
+- Resolved by D-024 (option C): the IGES reader is first-party pure Rust (`fid-io-iges`) and runs inside the isolated CAD worker (REQ-IO.CAD-010).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.IGES.SECT | Bounded IGES fixed-column section parser and writer (leaf) | 003 005 | none |
+| IO.CAD.IGES.ENT | IGES entity mapping to GEO elements with transforms as frames (leaf) | 001 002 004 | none |
+| IO.CAD.IGES.CMD | IGES import command and import report (leaf) | 001 002 003 | GOM.IMP.05, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |

@@ -4,18 +4,18 @@ title: GD&T annotation rendering
 level: 3
 parent: VIZ.OVERLAY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.OVERLAY-004, REQ-VIZ.OVERLAY-005]
 covers: [PW.VIZ.04]
-depends_on: [VIZ.RENDER, GDT.CHAR, KRN.NUM]
+depends_on: [VIZ.RENDER.FRAME, VIZ.VIEW.CAMERA, GDT.CHAR, GDT.PMI.LINK, IO.CAD.PMI.READ, KRN.NUM.FMT.REG]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.OVERLAY.GDTGLYPH: GD&T annotation rendering
@@ -60,7 +60,14 @@ COMPOSE (frame layout), SYMBOLS (atlas and dialect sets), ANCHOR, HOVER, PMIQA.
 ## Open questions
 
 - P1a characteristics come from drawings and QIF MBD without CAD; annotation-plane anchoring needs CAD PMI (P1b), so P1a anchors on billboards [unverified].
+- Symbols are drawn by `UX.ICONS.GDT` (`gdt-symbols@1`) and read here as an artifact; this module only converts them into an MSDF atlas (`VIZ.OVERLAY.GDTGLYPH.ATLAS`), so the clean-room rule is enforced at the drawing source.
+- Authored tolerances are exact decimal text in the characteristic model; frames show them verbatim in their authored unit and use the kernel formatter only for converted values (`VIZ.OVERLAY.GDTGLYPH.COMPOSE`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.OVERLAY.GDTGLYPH.COMPOSE | Feature control frame and datum glyph composition (leaf) | 001 002 003 | PW.VIZ.04 |
+| VIZ.OVERLAY.GDTGLYPH.ATLAS | GD&T symbol MSDF atlas from the original drawings (leaf) | 003 006 | none |
+| VIZ.OVERLAY.GDTGLYPH.PLACE | GD&T annotation anchoring, occlusion fade and hover (leaf) | 004 | PW.VIZ.04 |
+| VIZ.OVERLAY.GDTGLYPH.PMIQA | Graphic PMI quality-check overlay (leaf) | 005 | none |

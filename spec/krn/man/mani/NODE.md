@@ -4,7 +4,7 @@ title: Kernel manifest and digest
 level: 3
 parent: KRN.MAN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.MAN-004]
 covers: []
 depends_on: [KRN.MAN.KCI, KRN.MAN.CARD, KRN.MAN.REPRO, KRN.NUM.FN]
+uses_artifacts: [KRN.MAN.WASM, KRN.SOLV.CONIC, UNC.RDL.FREEZE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.MAN.MANI: Kernel manifest and digest
@@ -49,7 +50,7 @@ The kernel's identity. One manifest lists the kernel name and semver, numeric pr
 ## Interfaces
 
 - **Offers:** `KernelManifest` schema and digest (recorded in every ResultRecord by `CORE`); manifest file in each release for `TRUST` and `ECO`.
-- **Consumes:** `KRN.MAN.KCI` (hashing, canonical JSON), `KRN.MAN.CARD` (card digests), `KRN.MAN.REPRO` (build settings), `KRN.NUM.FN` (self-test digest), solver limits from `KRN.SOLV.CONIC`, reference digests from `UNC` at build time.
+- **Consumes:** `KRN.MAN.KCI` (hashing, canonical JSON), `KRN.MAN.CARD` (card digests), `KRN.MAN.REPRO` (build settings), `KRN.NUM.FN` (self-test digest); artifacts read at build time (`uses_artifacts`): the built WASM and native artifacts (`KRN.MAN.WASM`), the solver-limits file (`KRN.SOLV.CONIC`) and the frozen RDL release digests (`UNC.RDL.FREEZE`).
 
 ## Decomposition hints
 
@@ -60,6 +61,13 @@ SCHEMA (schema, encoding, digest), GEN (build-time generator), IMPL (implementat
 - How fine the implementation-digest closure is (crate level, module level, or item level through a dependency analysis) [unverified feasibility]; crate level is simplest but makes unrelated changes invalidate attestations.
 - Embedding the manifest digest in the artifact that the manifest itself hashes is circular; the artifact hash must be taken over a build that embeds the digest of the manifest without the artifact fields (two-stage), to be designed here.
 
+- **Resolved at this split:** the implementation-digest closure is crate-level (`KRN.MAN.MANI.IMPL`), with module-level refinement left as a later minor version; and the circular embedding is broken in two stages (`KRN.MAN.MANI.GEN`): artifacts embed the digest of the manifest core (every field except artifact hashes), and the full manifest binds that core digest to the artifact hashes.
+- Two-stage embedding means a running artifact reports the **core** digest; `CORE` records the full `kernel_manifest_digest` from the release manifest shipped beside the artifact and checks that it contains the reported core digest. Confirm with `CORE` and `TRUST`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MAN.MANI.SCHEMA | Manifest schema, canonical encoding and digest | 001 002 | none |
+| KRN.MAN.MANI.IMPL | Per-algorithm implementation digest over the crate closure | 003 | none |
+| KRN.MAN.MANI.GEN | Build-time manifest generator and two-stage embedding | 001 002 004 | none |

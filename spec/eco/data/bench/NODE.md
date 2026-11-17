@@ -4,7 +4,7 @@ title: Benchmark harness, provenance and release numbers
 level: 3
 parent: ECO.DATA
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-ECO.DATA-005, REQ-ECO.DATA-007]
 covers: []
 depends_on: [ECO.DATA.FETCH]
+uses_artifacts: [PLAT.HW.SCHEMA, PLAT.HW.SUITE, PLAT.HW.CMD, PLAT.HW.PROFILE, IO.CORP.GATE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ECO.DATA.BENCH: Benchmark harness, provenance and release numbers
@@ -46,19 +47,26 @@ The developer-side harness that runs named benchmarks against catalogue datasets
 
 ## Interfaces
 
-- **Offers:** harness API and runner; result store; `release-numbers.json` per release (consumed by ECO.PARITY, ECO.REL and OUTR).
-- **Consumes:** ECO.DATA.FETCH; PLAT.HW suite definition, machine profiles and result schema; IO.CORP fidelity reports.
+- **Offers:** `cargo xtask bench run` and the provenance record `bench-record.json` v1 appended to `bench-history/` (ECO.DATA.BENCH.RUN); `release-numbers.json` v1 per release (ECO.DATA.BENCH.BUNDLE; read by ECO.PARITY, ECO.REL and OUTR).
+- **Consumes (all as artifacts, per CONSTITUTION §2.1 for tooling):** the suite manifest `platform/bench-suite.toml` (PLAT.HW.SUITE, schema from PLAT.HW.SCHEMA); the `fid doctor run-benchmark` binary and its result document (PLAT.HW.CMD, PLAT.HW.SCHEMA); hardware profile IDs (PLAT.HW.PROFILE); per-format fidelity reports (IO.CORP.GATE); the dataset fetch library (ECO.DATA.FETCH, a tooling-to-tooling code dependency).
 
 ## Decomposition hints
 
 HARN (runner and provenance), STORE (history), BUNDLE (release-numbers document).
 
+## Split rationale
+
+Two leaves: RUN wraps the PLAT.HW runner with dataset verification, repetitions and provenance and appends to the history store (HARN and STORE merged, since the store is only the runner's append target); BUNDLE is a separate release-time generator with different inputs (history plus fidelity reports).
+
 ## Open questions
 
-- Boundary with PLAT.HW: PLAT.HW lists "the benchmark suite: workloads, datasets and metrics" and a result schema, while REQ-ECO-008 and REQ-ECO.DATA-005 give ECO a harness. This node takes the runner and provenance and defers suite content and schema fields to PLAT.HW; a reviewer of both domains should confirm (cross-domain).
-- PLAT.HW.SUITE depends on ECO.DATA, so this node cannot declare a dependency on PLAT.HW without a cycle; PLAT.HW consumes the harness and this node reads PLAT.HW's suite definition and schema as data.
+- Resolved boundary (per the launch instruction for this expansion): PLAT.HW owns the suite content, workloads, result schema and reference machines; this node is the provenance-capturing runner and bundle, and reads PLAT.HW's files as artifacts. The PLAT.HW.SUITE → ECO.DATA dependency therefore no longer forms a code cycle.
+- Cross-domain (PLAT.HW.RUN, open): release runs on reference machines should invoke `cargo xtask bench run` so published numbers carry this provenance; raise when PLAT.HW.RUN is expanded.
 - Reference machine noise and repetition counts need measurement before thresholds are meaningful [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ECO.DATA.BENCH.RUN | Provenance-capturing benchmark runner and history store (leaf) | 001 002 003 | none |
+| ECO.DATA.BENCH.BUNDLE | Release-numbers bundle generator (leaf) | 004 005 | none |

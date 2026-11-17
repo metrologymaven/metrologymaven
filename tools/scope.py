@@ -548,9 +548,9 @@ def cmd_milestone(args) -> int:
     leaf_deps: dict[str, set[str]] = {}
     for lf in leaves:
         deps = set()
-        # Domain-level (level-1) depends_on are too coarse for build order; use the leaf's own and its
-        # subsystem/module ancestors' dependencies only.
-        for owner in [lf] + [a for a in ancestors(lf) if by_id[a].level >= 2]:
+        # Build order uses each leaf's OWN depends_on. Ancestors' depends_on describe whole subsystems and are
+        # too coarse (they create false cycles, e.g. a pure L0 leaf inheriting its parent's CORE dependency).
+        for owner in [lf]:
             for d in by_id[owner].lst("depends_on"):
                 if d in by_id:
                     deps |= subtree(d) & leaf_set

@@ -4,18 +4,19 @@ title: EU Cyber Resilience Act and export-control documentation
 level: 2
 parent: QUAL
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-QUAL-006]
 covers: []
-depends_on: [QUAL.VULN, QUAL.SBOM, QUAL.THREAT, ECO.REL.PROC]
+depends_on: []
+uses_artifacts: [QUAL.VULN.TRIAGE, QUAL.VULN.POLICY, QUAL.SBOM.VEX, ECO.REL.SIGN.SBOM, QUAL.THREAT.REG, ECO.REL.PROC.GATES, ECO.REL.LTS, ECO.REL.PROC.CHANNEL, ECO.REL.PKG.PLAN, ECO.APPS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # QUAL.CRA: EU Cyber Resilience Act and export-control documentation
@@ -56,18 +57,33 @@ The product-regulation paperwork that must exist before the software is distribu
 ## Interfaces
 
 - **Offers:** support-period statement; security-update policy; CRA technical-documentation index; classification record; exploited-vulnerability reporting procedure; export-control notes; data-tag vocabulary and projection policy (to `AUTO.MCP.PROJ`, `CORE.PRJ`).
-- **Consumes:** vulnerability records and `actively_exploited` flag (`QUAL.VULN`); SBOM and VEX (`QUAL.SBOM`); threat register (`QUAL.THREAT`); distribution-channel step in the runbook (`ECO.REL.PROC`).
+- **Consumes (as artifacts):** `vuln/exploited.json` (`QUAL.VULN.TRIAGE`); `SECURITY.md` (`QUAL.VULN.POLICY`); SBOMs and VEX (`ECO.REL.SIGN.SBOM`, `QUAL.SBOM.VEX`); the threat register (`QUAL.THREAT.REG`); LTS lines, channels, package plan and app list (`ECO.REL.LTS`, `ECO.REL.PROC.CHANNEL`, `ECO.REL.PKG.PLAN`, `ECO.APPS`). `ECO.REL.PROC.GATES` gate `qual-cra` reads `cra/status.json`.
 
 ## Decomposition hints
 
 SUPPORT (support period and update policy), TECHDOC (documentation index and check), CLASS (classification record and review), REPORT (exploited-vulnerability reporting procedure), EXPORT (export-control notes), TAGS (data-tag vocabulary and policy).
 
+## Split rationale
+
+The split follows the separate documents the Act and export rules ask for, grouped by who reads them: the support statement (customers), the classification record and gate status (the release gate), the technical-documentation index (market surveillance), the exploited-vulnerability reporting tracker (the security team under a deadline), and export notes with the data-tag vocabulary (customers and the enforcing domains). SUPPORT and CLASS stay apart because the support statement is public product information while the classification is a legal position; CLASS writes the gate file from both.
+
+Alternatives considered:
+- **TAGS separate from EXPORT** (the hints). Rejected: the vocabulary is one small file that shares the counsel gate and readers with the export notes.
+- **One STATUS leaf for support and classification.** Rejected: they are reviewed by different people and change on different schedules.
+
 ## Open questions
 
 - Counsel review is needed for CRA classification, the project's role (manufacturer versus open-source steward) and export control (EAR, Wassenaar) before EU or foreign distribution. These are people's decisions; a decision record should be opened when counsel input exists.
-- No node enforces export-control data tags: `AUTO.MCP.PROJ` projects by side-effect class only, and `CORE.PRJ` has no tag field. Cross-domain; needs an owner.
+- Cross-domain, unowned: no node enforces export-control data tags; `AUTO.MCP.PROJ` projects by side-effect class only, and `CORE.PRJ.META` stores free-form tags only. `QUAL.CRA.EXPORT` publishes the vocabulary for them.
 - The parent's export-control scope has no numbered requirement in QUAL; this node carries it under REQ-QUAL-006. Maintainers may wish to add a parent requirement.
+- Resolved: the EU distribution gate is `ECO.REL.PROC.GATES` gate `qual-cra` with runbook step `eu-venue-gate`; `QUAL.CRA.CLASS` writes the status file it reads.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| QUAL.CRA.SUPPORT | Support-period statement and security-update policy | 001 | none |
+| QUAL.CRA.CLASS | CRA classification record and distribution-gate status | 002 004 | none |
+| QUAL.CRA.TECHDOC | CRA technical-documentation index and citation check | 003 008 | none |
+| QUAL.CRA.REPORT | Exploited-vulnerability reporting procedure and deadline tracker | 005 | none |
+| QUAL.CRA.EXPORT | Export-control notes and data-tag vocabulary | 006 007 | none |

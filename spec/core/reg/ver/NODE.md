@@ -4,18 +4,18 @@ title: Versioning, lifecycle and breaking-change detection
 level: 3
 parent: CORE.REG
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.REG-008, REQ-CORE.REG-009, REQ-CORE.REG-010, REQ-CORE.REG-011]
 covers: []
-depends_on: [CORE.REG.DEF]
+depends_on: [CORE.REG.DEF.FIELD]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.REG.VER: Versioning, lifecycle and breaking-change detection
@@ -37,7 +37,7 @@ Keeps command definitions stable over time. VER owns the per-major lifecycle (`a
 
 **Out** (and which node owns it instead):
 - The diff command surface (owned by `CORE.REG.QRY`)
-- Executing migrators during replay (owned by `CORE.RPL`)
+- Executing migrators during replay (owned by `CORE.RPL.EXEC.LOOP`)
 - Rejecting calls to hidden majors at run time (owned by `CORE.BUS`)
 
 ## Requirements
@@ -53,17 +53,22 @@ Keeps command definitions stable over time. VER owns the per-major lifecycle (`a
 
 ## Interfaces
 
-- **Offers:** `Lifecycle`, `Compat::classify(old, new) -> Vec<Change>`, `ManifestDiff`, the build-gate entry point used by the registry build; migrator records in the manifest.
-- **Consumes:** `CORE.REG.DEF` definition types.
+- **Offers:** `Lifecycle`, `MigratorRecord` (`CORE.REG.VER.LIFE`); `Compat::classify(old, new) -> Vec<Change>`, `ManifestDiff` (`CORE.REG.VER.COMPAT`), used by `CORE.REG.QRY` and `ENT.EVENTS`; `cargo xtask registry-gate` (`CORE.REG.VER.GATE`).
+- **Consumes:** `CORE.REG.DEF.FIELD` definition types.
 
 ## Decomposition hints
 
-LIFE (lifecycle states and metadata), COMPAT (classifier and diff engine), GATE (build gate against the released baseline), MIGR (migrator declaration and manifest record).
+Applied: LIFE (lifecycle and migrator records), COMPAT (classifier and diff engine), GATE (build gate). MIGR was folded into LIFE: a migrator record is lifecycle metadata of the target major.
 
 ## Open questions
 
-- "A default that preserves prior behaviour bit-for-bit" cannot be proven statically; the classifier trusts the declaration, and replay CI (`CORE.RPL`) catches violations. Confirm this division with the RPL subtree.
+- "A default that preserves prior behaviour bit-for-bit" cannot be proven statically; the classifier trusts the declaration, and replay CI catches violations (exact replay of the fixture journals through `CORE.RPL.EXEC` under the new build). Recorded in COMPAT; RPL needs no new requirement for it.
+- The new policy fields from `CORE.REG.DEF.FIELD` (`human_only`, `network`, `web`, `cli_bare`) are classified in COMPAT: tightening `human_only` or changing `network` is breaking, `web`/`web_note` and `cli_bare` changes are additive.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.REG.VER.LIFE | Lifecycle states, retention and migrator records (leaf) | 001 002 003 007 | none |
+| CORE.REG.VER.COMPAT | Compatibility classifier and manifest diff engine (leaf) | 004 008 | none |
+| CORE.REG.VER.GATE | Build gate against the released baseline (leaf) | 005 006 | none |

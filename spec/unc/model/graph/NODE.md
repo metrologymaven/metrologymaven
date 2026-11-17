@@ -4,7 +4,7 @@ title: Model graph schema, digest, validation and versioning
 level: 3
 parent: UNC.MODEL
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL.DIST, KRN]
 cli: [fid unc create-model, fid unc validate-model, fid unc show-model]
 mcp: [unc_create_model, unc_validate_model, unc_show_model]
 journal: [unc.create_model@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.MODEL.GRAPH: Model graph schema, digest, validation and versioning
@@ -61,8 +61,12 @@ SCHEMA (types, canonical form, digest), CHECK (validation passes), STORE (create
 
 ## Open questions
 
-- How a model references a kernel pipeline that is itself parameterised (for example a fit with an outlier policy) is not settled: either the operator node pins the full parameter digest, or parameters are model inputs. Decide when splitting.
+- Resolved at split: an operator node pins the operator's algorithm ID, version and the digest of its full parameter set (for example a fit with its outlier policy). A parameter that carries uncertainty must instead be an input node wired to an operator port. This keeps one digest per model and leaves no hidden uncertain constant.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.MODEL.GRAPH.SCHEMA | Model graph types, canonical form and digest (leaf) | 001 | none |
+| UNC.MODEL.GRAPH.CHECK | Structural validation passes (leaf) | 002 003 004 005 008 | none |
+| UNC.MODEL.GRAPH.STORE | Create, validate and show commands and version immutability (leaf) | 006 007 | none |

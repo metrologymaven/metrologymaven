@@ -4,7 +4,7 @@ title: Semantic scene graph and ID tables
 level: 3
 parent: VIZ.RENDER
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO, CORE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.RENDER.SCENE: Semantic scene graph and ID tables
@@ -62,7 +62,12 @@ IDTAB (render ID allocation and tables), PROJ (view-model projection), DIRTY (di
 ## Open questions
 
 - Whether render IDs are recycled within a session (and how stale ID-buffer reads are guarded) is to be fixed at leaf level with VIZ.PICK.
+- Resolved in IDTAB: render IDs are never recycled within a session; tombstones guard stale ID-buffer reads (agreed boundary with `VIZ.PICK.RESOLVE`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.RENDER.SCENE.IDTAB | Render ID allocation and entity lookup tables (leaf) | 001 002 005 | none |
+| VIZ.RENDER.SCENE.PROJ | View-model projection and dirty-set re-projection (leaf) | 003 006 007 | none |
+| VIZ.RENDER.SCENE.STALE | Stale marking and digest check (leaf) | 004 | none |

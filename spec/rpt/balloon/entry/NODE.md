@@ -4,18 +4,18 @@ title: Manual reading entry
 level: 3
 parent: RPT.BALLOON
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.BALLOON-004, REQ-RPT.BALLOON-005, REQ-RPT.BALLOON-006, REQ-RPT.BALLOON-007, REQ-RPT.BALLOON-008, REQ-RPT.BALLOON-010]
 covers: []
-depends_on: [RPT.BALLOON.GAUGE, RPT.BALLOON.REG, GDT.CHAR, UNC.DEC, CORE.BUS]
-cli: [fid report enter-reading, fid report void-reading, fid report list-reading]
-mcp: [report_list_reading]
-journal: [report.enter_reading@1, report.void_reading@1]
-updated: 2026-11-16
+depends_on: [RPT.BALLOON.GAUGE, GDT.CHAR.RECORD, CORE.BUS.UNIT, CORE.BUS.PRIN, CORE.BUS.PIPE, CORE.PRJ.STAGE]
+cli: [fid report enter-reading, fid report void-reading, fid report list-reading, fid report enter-series-reading]
+mcp: [report_enter_reading, report_void_reading, report_list_reading, report_enter_series_reading]
+journal: [report.enter_reading@1, report.void_reading@1, report.enter_series_reading@1]
+updated: 2026-11-17
 ---
 
 # RPT.BALLOON.ENTRY: Manual reading entry
@@ -60,8 +60,13 @@ PARSE (decimal and unit parsing), CHECK (gauge, calibration and resolution check
 
 ## Open questions
 
-- The rule that agents never enter readings is a proposed reading of C5 and REQ-FID-021 inherited from the parent; maintainers should confirm it. MCP exposes only `report_list_reading` until then.
+- Resolved: CONSTITUTION §3 (D-031) now makes manual readings `human_only`. The children declare `report.enter_reading@1`, `report.void_reading@1` and `report.enter_series_reading@1` with `human_only: true`, so the bus refuses agent and script principals and MCP projects them as request-only; REQ-RPT.BALLOON.ENTRY-007 is met by that bus refusal.
+- Gauge records are owned by `UNC.INST.LIB` (agreed at review); `RPT.BALLOON.GAUGE` only references them.
+- **Cross-domain:** `GDT.CHAR.RECORD` needs a `DIRECT_READING` variant of its DMT-row and duplicate-result rules (raised in `RPT.BALLOON.ENTRY.RECORD`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.BALLOON.ENTRY.RECORD | Single manual reading entry, voiding and listing (leaf) | 001 002 003 004 005 006 007 008 | none |
+| RPT.BALLOON.ENTRY.SERIES | Multi-part reading series entry (leaf) | 001 007 | none |

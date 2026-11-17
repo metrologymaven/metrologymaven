@@ -4,7 +4,7 @@ title: QIF Results and QIF Statistics in and out
 level: 3
 parent: IO.RES
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.RES.TRANS, IO.QIF.XML, IO.QIF.IDS]
 cli: [fid import results-qif, fid import results-qif-stats, fid export results-qif, fid export results-qif-stats]
 mcp: [import_results_qif, import_results_qif_stats, export_results_qif, export_results_qif_stats]
 journal: [import.results_qif@1, import.results_qif_stats@1, export.results_qif@1, export.results_qif_stats@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.RES.QIFR: QIF Results and QIF Statistics
@@ -54,8 +54,13 @@ RIN (Results import), ROUT (Results export), SIN (Statistics import), SOUT (Stat
 
 ## Open questions
 
-- Whether the platform's own QIF Results re-import is transcription (another system's claim) or restoration of its own records needs a TRUST view (signature check on the file).
+- Whether the platform's own QIF Results re-import is transcription or restoration needs a TRUST view (signature check). TRUST is a later L2 layer, so IO cannot call it: re-import is always a transcription here, and the exported uncertainty class, decision rule and outcome survive in the `as_reported` block (`IO.RES.QIFR.RIN`), which is how REQ-IO.RES.QIFR-005 is met. A TRUST-owned "restore signed records" command could build on this import later.
+- ResultRecords are read in GDT's published canonical JSON (`uses_artifacts: [GDT.CHAR.RECORD]`), since GDT is a later layer than IO.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.RES.QIFR.RIN | QIF Results import as transcribed results (leaf) | 004 005 | none |
+| IO.RES.QIFR.ROUT | QIF Results export of ResultRecords (leaf) | 001 003 | PCD.EXP.03 |
+| IO.RES.QIFR.STATS | QIF Statistics import and export (leaf) | 002 | none |

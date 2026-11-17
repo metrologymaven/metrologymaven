@@ -11,13 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST.VERIFY-006]
 covers: []
-depends_on: [TRUST.VERIFY.CLI, AUTO.MCP]
+depends_on: [TRUST.VERIFY.CLI]
+uses_artifacts: [AUTO.MCP.PROJ, AUTO.MCP.TAINT, AUTO.MCP.SESS]
 side_effect: R1
 determinism: D0
 cli: [fid-verify mcp]
 mcp: [verify_package, verify_check_signature, verify_check_chain, verify_replay, verify_inspect_package]
 journal: [verify.package@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.VERIFY.MCP: fid-verify local stdio MCP server
@@ -65,7 +66,7 @@ Lets an agent verify a Result Package without the full app: `fid-verify mcp --ro
 - **Errors:** `verify.bad_handle`, plus each tool's errors.
 - **Determinism:** D0 for results.
 - **Performance budget:** tool call overhead under 20 ms beyond the check itself [unverified until measured].
-- **Crate:** `fid-verify` (module `mcp`), using the MCP server library from `AUTO.MCP`.
+- **Crate:** `fid-verify` (module `mcp`). It implements a minimal stdio MCP server itself and follows the published `AUTO.MCP` conventions (tool naming and projection from `AUTO.MCP.PROJ`, untrusted-content marking from `AUTO.MCP.TAINT`, stdio framing from `AUTO.MCP.SESS`) as artifacts, not as a crate dependency: `AUTO` is layer L3, and `TRUST.VERIFY.REPRO`'s crate allowlist excludes it.
 
 ## Test fixtures
 
@@ -73,7 +74,7 @@ Lets an agent verify a Result Package without the full app: `fid-verify mcp --ro
 
 ## Build prompt
 
-> In crate `fid-verify`, add module `mcp` and the `fid-verify mcp --root <dir>...` subcommand: a local stdio MCP server built on `AUTO.MCP`'s server library with tools generated from the registry entries `verify.package@1`, `verify.check_signature@1`, `verify.check_chain@1`, `verify.replay@1`, `verify.inspect_package@1` and a new `verify.list_files@1` (R0). Only R0/R1 tools may be listed (CI check). Package arguments are handles `{root, path}` confined to the command-line roots (reject absolute, `..`, escaping symlinks, unknown roots with `verify.bad_handle`); no tool changes roots; strings from package content are marked untrusted. Results must equal the CLI JSON. No network. Tests: the five acceptance criteria with transcripts in `fixtures/verify/mcp/`. Constraints: CONSTITUTION §3 (handles only for agents), C6, C7, C8, §8.
+> In crate `fid-verify`, add module `mcp` and the `fid-verify mcp --root <dir>...` subcommand: a minimal local stdio MCP server (implemented in this crate, following the published AUTO.MCP naming, projection, untrusted-marking and stdio conventions; do not link any AUTO or CORE crate) with tools generated from the registry entries `verify.package@1`, `verify.check_signature@1`, `verify.check_chain@1`, `verify.replay@1`, `verify.inspect_package@1` and a new `verify.list_files@1` (R0). Only R0/R1 tools may be listed (CI check). Package arguments are handles `{root, path}` confined to the command-line roots (reject absolute, `..`, escaping symlinks, unknown roots with `verify.bad_handle`); no tool changes roots; strings from package content are marked untrusted. Results must equal the CLI JSON. No network. Tests: the five acceptance criteria with transcripts in `fixtures/verify/mcp/`. Constraints: CONSTITUTION §3 (handles only for agents), C6, C7, C8, §8.
 
 ## Open questions
 

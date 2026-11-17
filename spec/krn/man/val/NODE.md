@@ -4,7 +4,7 @@ title: Validation harness and per-release report
 level: 3
 parent: KRN.MAN
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-KRN.MAN-003, REQ-KRN.MAN-008]
 covers: []
 depends_on: [KRN.MAN.KCI, KRN.MAN.CARD, KRN.MAN.XART]
+uses_artifacts: [UNC.RDL.FREEZE, UNC.RDL.FORMAT, KRN.MAN.WASM]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.MAN.VAL: Validation harness and per-release report
@@ -49,7 +50,7 @@ Turns reference datasets into published evidence. For every release, the harness
 ## Interfaces
 
 - **Offers:** the validation report and digest (to `KRN.MAN.MANI`, `ECO`, `OUTR`); validation evidence for spec cards (`KRN.MAN.CARD`).
-- **Consumes:** `KRN.MAN.KCI`, `KRN.MAN.XART` (artifact runner), reference sets from `UNC.RDL` at test time.
+- **Consumes:** `KRN.MAN.KCI`, `KRN.MAN.CARD`, `KRN.MAN.XART` (artifact runner); artifacts read at test time (`uses_artifacts`): the frozen RDL release and its record format (`UNC.RDL.FREEZE`, `UNC.RDL.FORMAT`) and the WASM reference artifact (`KRN.MAN.WASM`).
 
 ## Decomposition hints
 
@@ -60,6 +61,12 @@ MAP (case-to-call mapping per reference set), CRIT (pass criteria as data), RPT 
 - TraCIM test-result redistribution terms are unverified; the public report may need to show pass status without reference values.
 - The internal pass limit (1/10 of the TraCIM default MPE) is from the parent's requirements and is [unverified] until the TraCIM published test conditions are read.
 
+- The harness is test tooling (CONSTITUTION §2.1): its children read reference data and the WASM artifact as artifacts and use only the `KRN.MAN.XART` runner and `KRN.MAN.KCI` hashing as code; no child links a fit crate directly.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.MAN.VAL.RUN | Case-to-call mapping and pass criteria as data | 001 002 | none |
+| KRN.MAN.VAL.RPT | Per-release validation report and spec-card evidence | 003 004 | none |
+| KRN.MAN.VAL.CROSS | Out-of-kernel cross-check solvers in CI | 005 | none |

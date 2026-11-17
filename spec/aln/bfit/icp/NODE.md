@@ -4,7 +4,7 @@ title: Surface best-fit iteration loop, metrics and command
 level: 3
 parent: ALN.BFIT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [ALN.BFIT.LOCAL, ALN.BFIT.CONSTR, ALN.BFIT.STOP, ALN.MODEL.ELEM, ALN
 cli: [fid align run-bestfit]
 mcp: [align_run_bestfit]
 journal: [align.run_bestfit@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.BFIT.ICP: Surface best-fit iteration loop, metrics and command
@@ -61,8 +61,15 @@ CORR (correspondence search and tie-break), METRIC (point-to-point and point-to-
 
 ## Open questions
 
+- Split follows the hints: CORR, METRIC, LOOP (hint STEP folded into LOOP, since the step is one QR call), CMD. The R1 `bestfit` entry lives in LOOP (kernel layer); scope resolution needs the document and is called by CMD.
+- Phase conflict: GEO.DIST (mesh and CAD projection) and KRN.OUT.POL are P1b while this node is P1a; see the children's open questions. A phase decision should settle whether surface best-fit is P1b.
 - A min-max (Chebyshev) surface best-fit stays deferred until GDT.PROF is expanded (parent question).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.BFIT.ICP.CORR | Surface best-fit correspondence search and tie-break (leaf) | 001 003 005 006 | none |
+| ALN.BFIT.ICP.METRIC | Point-to-point and point-to-plane residuals and Jacobians (leaf) | 002 005 | none |
+| ALN.BFIT.ICP.LOOP | Surface best-fit iteration loop and R1 entry point (leaf) | 001 004 005 006 007 | none |
+| ALN.BFIT.ICP.CMD | Surface best-fit command and alignment wrapping (leaf) | 001 002 007 | GOM.ALN.02, PW.ALN.02 |

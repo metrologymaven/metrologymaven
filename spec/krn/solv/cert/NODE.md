@@ -4,18 +4,18 @@ title: Active-set certificates, recomputation and tie-break
 level: 3
 parent: KRN.SOLV
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.SOLV-001, REQ-KRN.SOLV-004, REQ-KRN.SOLV-005, REQ-KRN.SOLV-006, REQ-KRN.SOLV-007]
 covers: []
-depends_on: [KRN.NUM.LA, KRN.NUM.RED, KRN.SOLV.CONIC]
+depends_on: [KRN.NUM.LA.QR, KRN.NUM.RED, KRN.SOLV.CONIC.WRAP, CORE.JRN.CANON]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.SOLV.CERT: Active-set certificates, recomputation and tie-break
@@ -52,7 +52,7 @@ Solver iterates are not results. This module takes a converged conic solution, e
 ## Interfaces
 
 - **Offers:** `fid_solv::cert::{certify, ActiveSetProblem, Certificate, CertFlags}`; certificates carried by `KRN.MZ`, `KRN.ENV`, `GDT` results and rechecked by `TRUST`.
-- **Consumes:** `KRN.SOLV.CONIC` solutions, `KRN.NUM.LA`, `KRN.NUM.RED`.
+- **Consumes:** `KRN.SOLV.CONIC.WRAP` solutions, `KRN.NUM.LA.QR`, `KRN.NUM.RED`, and `CORE.JRN.CANON` (L0) for the certificate digest.
 
 ## Decomposition hints
 
@@ -60,8 +60,16 @@ AS (active-set extraction and thresholds), RECOMP (the callback and direct solve
 
 ## Open questions
 
-- Certificate serialisation must match what the verifier in `TRUST` rechecks; agree on the schema when `TRUST.VERIFY` is expanded.
+- Certificate serialisation must match what the verifier in `TRUST` rechecks; agree on the schema when `TRUST.VERIFY` is expanded. Carried into `KRN.SOLV.CERT.CT` as schema `fid.cert@1`.
+- **Applied at split (2026-11-17):** nonlinear active-set equations (circles, cylinders) are solved from a start derived from the set itself (`start_from_set`), so the recomputed value cannot depend on the iterate (`KRN.SOLV.CERT.RECOMP`). Callers already written against this interface (`GDT.ZONE.POSE.LIN`, `KRN.MZ.LIN`) need to provide that method.
 
 ## Children
 
-_None yet: status `open`._
+The split follows the hints, with the tie-break folded into extraction (it is the order in which candidates are listed) and the pipeline placed with the certificate type, so the three steps below it have no dependency on the certificate.
+
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.SOLV.CERT.AS | Active-set extraction, candidate enumeration and tie-break order | 001 004 | none |
+| KRN.SOLV.CERT.RECOMP | ActiveSetProblem callback and deterministic recomputation | 002 006 | none |
+| KRN.SOLV.CERT.KKT | Independent KKT optimality check at the recomputed point | 003 | none |
+| KRN.SOLV.CERT.CT | Certificate type, certify pipeline and digest rule | 003 004 005 006 | none |

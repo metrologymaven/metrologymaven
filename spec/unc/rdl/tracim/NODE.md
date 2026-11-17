@@ -4,18 +4,18 @@ title: PTB TraCIM client
 level: 3
 parent: UNC.RDL
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.RDL-007]
 covers: []
-depends_on: [UNC.RDL.FORMAT, KRN]
+depends_on: [UNC.RDL.FORMAT, KRN.MAN.KCI, CORE.BUS.POL.EGRESS]
 cli: [fid rdl submit-tracim]
 mcp: [rdl_submit_tracim]
 journal: [rdl.submit_tracim@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.RDL.TRACIM: PTB TraCIM client
@@ -56,10 +56,17 @@ PROTO (protocol and XML mapping), RUN (compute and submit), ARCHIVE (verbatim st
 
 ## Open questions
 
-- The TraCIM REST and XML schemas have not been inspected for this spec [unverified].
-- Whether automated CI submission of paid orders is acceptable must be asked of PTB [unverified].
+- The TraCIM REST and XML schemas have not been inspected for this spec [unverified]; `UNC.RDL.TRACIM.PROTO` stays open until a person reads the PTB documentation. The command (`UNC.RDL.TRACIM.RUN`) is written against a protocol trait so that it can be built and tested with a mock service.
+- Whether automated CI submission of paid orders is acceptable must be asked of PTB [unverified]. `UNC.RDL.TRACIM.PUBLIC` therefore runs only the free public test; paid orders stay human-run.
 - Redistribution of TraCIM test data and reports is limited to verbatim copies [unverified]; archived test data is `reference_only`.
+- **Cross-domain (open):** CONSTITUTION 3.1 routes all data leaving the machine through `egress.send@1`, which is specified as send-only. A TraCIM exchange needs the response body (test data, verdict report). `CORE.BUS.POL.EGRESS` should confirm a bounded response body (the same need is recorded by `ECO.REL.UPD` and `TRUST.REPLAY.KART.FETCH`).
+- `depends_on` was narrowed from `KRN` to specific nodes (D-034).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.RDL.TRACIM.RUN | The rdl.submit_tracim@1 command over a protocol trait (leaf) | 001 003 004 005 | none |
+| UNC.RDL.TRACIM.ARCH | Verbatim archive of exchanges and reports (leaf) | 002 005 | none |
+| UNC.RDL.TRACIM.PROTO | TraCIM protocol and XML mapping | 001 004 | none |
+| UNC.RDL.TRACIM.PUBLIC | Nightly public-test job (leaf) | 001 | none |

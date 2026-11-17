@@ -4,7 +4,7 @@ title: Interpreter, mark-and-execute and debugger
 level: 3
 parent: AUTO.PROG
 kind: module
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.PROG.CHECK, AUTO.SURF.JOBS, CORE.BUS, CORE.JOB]
 cli: [fid program debug-*]
 mcp: [program_debug_*]
 journal: [program.debug_*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.PROG.INTERP: Interpreter, mark-and-execute and debugger
@@ -62,7 +62,17 @@ ENGINE (execution and run context), BUS (invocation and outcome handling), OPIN 
 
 - Error-handling syntax in programs (`on_error: stop | continue | goto`) is not yet in FMT; proposed as an optional field on `invoke`, which would be an additive FMT change.
 - Debugger command classes: breakpoints and stepping change session state only; proposed W1 (debug session is a draft-scope state).
+- The pre-step hook requested by `AUTO.RUN.EXEC` is specified in `AUTO.PROG.INTERP.ENGINE` as `StepHook` (`before_step` / `after_step`, decisions `Allow | Stop | Hold`); `AUTO.RUN.EXEC.CMD` adapts its `StepGate` chain to it, since the interpreter cannot depend on `AUTO.RUN`.
+- Error-handling syntax: not added; every non-success outcome stops the run (`AUTO.PROG.INTERP.CALL`). An `on_error` field remains a possible additive FMT change.
+- Debugger command classes: W1 for session-changing debug commands, R0 for inspect (`AUTO.PROG.INTERP.DEBUG`).
+- Operator answers arrive through `program.answer_step@1` (human-only, owned by `AUTO.RUN.PLAY.ANSWER`), which calls `RunHandle::submit_operator_input` (`AUTO.PROG.INTERP.OPIN`); the interpreter journals the answer as a run input. Mark-and-execute is `program.execute_marked@1`, not yet in `AUTO.PROG`'s `cli`/`mcp`/`journal` patterns.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.PROG.INTERP.ENGINE | Execution engine, run context, limits and step hooks (leaf) | 001 003 007 | none |
+| AUTO.PROG.INTERP.CALL | Step invocation through the bus and outcome handling (leaf) | 002 007 | none |
+| AUTO.PROG.INTERP.OPIN | Operator steps: waiting, operator input and run-input journaling (leaf) | 004 | none |
+| AUTO.PROG.INTERP.DEBUG | Debug sessions, breakpoints, stepping and inspection (leaf) | 006 | PW.AUT.02 |
+| AUTO.PROG.INTERP.MARK | Mark and execute selected steps (leaf) | 005 | PCD.PRG.09 |

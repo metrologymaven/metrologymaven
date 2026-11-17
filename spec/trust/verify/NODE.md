@@ -11,7 +11,8 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-002, REQ-TRUST-003]
 covers: []
-depends_on: [TRUST.PKG, TRUST.SIGN, TRUST.CHAIN, TRUST.REPLAY]
+depends_on: [TRUST.PKG.READER]
+uses_artifacts: [TRUST.VERIFY.REPORT]
 cli: [fid verify package, fid-verify, fid-verify mcp]
 mcp: [verify_package, verify_list_files]
 journal: []
@@ -77,6 +78,7 @@ Alternatives considered:
 - CONSTITUTION §7 lists the verifier under P0 while TRUST is tagged P1a; opened as D-025 (recommendation: move the chain-only path to P0).
 - `fid-verify` is a separate binary with a smaller dependency set (CONSTITUTION §2 names it); `TRUST.VERIFY.REPRO` enforces the crate allowlist.
 - `TRUST.VERIFY.WEB` uses VIZ.WEB conventions without a `depends_on`, because VIZ.WEB depends on TRUST and the reverse edge would form a cycle.
+- Dependencies narrowed (2026-11-17, D-034): each child names the check leaves it composes; the report schema (`TRUST.VERIFY.REPORT`) is read by MCP, WEB and REPRO as an artifact. `TRUST.VERIFY.MCP` follows AUTO.MCP conventions as artifacts (AUTO is L3).
 
 ## Children
 

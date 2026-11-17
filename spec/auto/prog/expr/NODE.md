@@ -4,7 +4,7 @@ title: Typed variables and unit-aware expressions
 level: 3
 parent: AUTO.PROG
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [AUTO.PROG.FMT, CORE.REG]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AUTO.PROG.EXPR: Typed variables and unit-aware expressions
@@ -57,7 +57,14 @@ GRAMMAR (syntax and parser), TYPES (type system and unit algebra), EVAL (evaluat
 ## Open questions
 
 - D-027 decides whether the kernel offers a formula command for values of record; if yes, this node should share its grammar and type checker with that command.
+- **Applied D-027 (accepted):** the grammar and type checker are shared with the kernel formula path by compiling to the kernel's `FormulaIr` (`AUTO.PROG.EXPR.FORMULA`, depending on `KRN.CONS.DERIV.FORMULA`), not by sharing a parser; the kernel (L0) cannot depend on AUTO (L3). Control expressions stay `not_of_record`.
+- REQ-AUTO.PROG.EXPR-003 needs a manifest keyword marking parameters that hold values of record (`AUTO.PROG.EXPR.TYPES` open question, owner `CORE.REG.DEF`).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| AUTO.PROG.EXPR.GRAMMAR | Expression grammar and bounded parser (leaf) | 005 | SA.MP.01 |
+| AUTO.PROG.EXPR.TYPES | Type system, unit algebra and variable scoping (leaf) | 001 002 003 | PCD.PRG.02 |
+| AUTO.PROG.EXPR.EVAL | Deterministic control evaluator and function library (leaf) | 003 004 005 | PCD.PRG.02 |
+| AUTO.PROG.EXPR.FORMULA | Compilation of formulas to the kernel formula IR (leaf) | 003 | PCD.PRG.02 |

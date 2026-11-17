@@ -4,7 +4,7 @@ title: STEP B-rep geometry import
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.CAD.WORKER, IO.REG.ENV, GEO.CAD]
 cli: [fid import cad-step]
 mcp: [import_cad_step]
 journal: [import.cad_step@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.STEP: STEP B-rep geometry import
@@ -60,7 +60,15 @@ HDR (header, schema, units), ASM (assembly structure to frames), BREP (bodies, t
 
 - Which STEP schemas besides AP242 are required [unverified; carried from IO.CAD]?
 - Large assemblies (10^5 faces) and memory: the worker cap must be tuned on the CAx-IF corpus [unverified].
+- D-024 (accepted, option C) applied: STEP parsing, geometry mapping and B-rep building are first-party Rust (`fid-io-step`) running inside the isolated CAD worker; OCCT or other healers are optional plugins only (`IO.CAD.XLATE`, `IO.REG.PLUGIN`), never on this path. The time-boxed spike on adopting an existing Rust B-rep crate (option D) concerns GEO.CAD.TESS, not this reader.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.STEP.P21 | Bounded ISO 10303-21 exchange-structure parser and printer (leaf) | 001 003 | none |
+| IO.CAD.STEP.HDR | STEP schema detection and unit contexts (leaf) | 003 006 | none |
+| IO.CAD.STEP.GEOM | STEP curve and surface mapping with approximation error (leaf) | 004 | none |
+| IO.CAD.STEP.BREP | STEP B-rep topology to GEO CAD bodies (leaf) | 001 | none |
+| IO.CAD.STEP.ASM | STEP product structure and placements (leaf) | 005 | none |
+| IO.CAD.STEP.CMD | STEP import command, source blob and body commit (leaf) | 001 002 | GOM.IMP.05, PCD.CAD.01, PW.IMP.03, SA.CAD.01 |

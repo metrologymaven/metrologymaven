@@ -4,7 +4,7 @@ title: Tier X external dataset import
 level: 3
 parent: UNC.RDL
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -13,9 +13,9 @@ satisfies: [REQ-UNC.RDL-001, REQ-UNC.RDL-002]
 covers: []
 depends_on: [UNC.RDL.FORMAT]
 cli: [fid rdl import-external]
-mcp: []
+mcp: [rdl_import_external]
 journal: [rdl.import_external@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.RDL.EXT: Tier X external dataset import
@@ -54,9 +54,15 @@ NIST (ATS file format importer), PTBSG (PTB softgauge set importer), LIC (licenc
 
 ## Open questions
 
-- Licence terms for redistributing NIST ATS data (US-government data, likely public domain) and the PTB softgauge set (reported CC-BY-4.0) are unverified [unverified]. Redistribution waits on confirmation.
-- The NIST ATS file format has not been inspected for this spec [unverified].
+- Licence terms for redistributing NIST ATS data (US-government data, likely public domain) and the PTB softgauge set (reported CC-BY-4.0) are unverified [unverified]. Redistribution waits on confirmation, which is recorded through `UNC.RDL.EXT.LIC` evidence.
+- The NIST ATS and PTB file formats have not been inspected for this spec [unverified], so `UNC.RDL.EXT.NIST` and `UNC.RDL.EXT.PTBSG` stay open. They can become leaves once a person has read the formats and written fixtures.
+- `rdl.import_external@1` is `human_only: true` (it records provenance claims and retrieval facts that a person vouches for), so its MCP tool `rdl_import_external` is request-only (CONSTITUTION 3, D-031).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.RDL.EXT.IMP | Importer contract and the rdl.import_external@1 command (leaf) | 001 003 004 | none |
+| UNC.RDL.EXT.LIC | Licence evidence records and visibility gating (leaf) | 002 | none |
+| UNC.RDL.EXT.NIST | NIST Algorithm Testing System importer | 001 003 004 | none |
+| UNC.RDL.EXT.PTBSG | PTB softgauge set importer | 001 003 004 | none |

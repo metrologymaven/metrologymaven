@@ -4,18 +4,18 @@ title: DMIS program import to a program model and QIF
 level: 3
 parent: IO.DMIS
 kind: module
-status: open
+status: split
 phase: P2
 size: XL
 owners: []
 claimed_by:
 satisfies: [REQ-IO.DMIS-004, REQ-IO.DMIS-005, REQ-IO.DMIS-006]
 covers: []
-depends_on: [IO.DMIS.PARSE, IO.QIF.GEN, IO.QIF.IDS, IO.REG.ENV]
+depends_on: [IO.DMIS.PARSE, IO.DMIS.DIAL, IO.QIF.GEN, IO.QIF.IDS, IO.REG.ENV]
 cli: [fid import dmis-program]
 mcp: [import_dmis_program]
 journal: [import.dmis_program@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.DMIS.PROG: DMIS program import
@@ -55,8 +55,15 @@ MODEL, FEAT, TOL, DATUM, SENS, MAPQIF, CMD.
 
 ## Open questions
 
-- None beyond the parent's.
+- `IO.DMIS.DIAL` added to `depends_on`: the import command selects dialect profiles.
+- The `DmisProgram` model (`IO.DMIS.PROG.MODEL`) is the shared program representation for `CMM.GEN.DMIS`, `MIG.PROGEQ` and `IO.DMIS.EXPORT.PROGW`; its support table should be kept consistent with `AUTO.PROG.DMISMAP` by review, since IO cannot depend on AUTO.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.DMIS.PROG.MODEL | DMIS program model built from the syntax tree (leaf) | 001 | none |
+| IO.DMIS.PROG.FEAT | Feature definitions to QIF features (leaf) | 003 004 | none |
+| IO.DMIS.PROG.TOL | Tolerances and datums to QIF (leaf) | 003 004 | none |
+| IO.DMIS.PROG.PLAN | Sensors, measurement blocks and outputs to QIF resources and plan items (leaf) | 004 | none |
+| IO.DMIS.PROG.CMD | DMIS program import command, strict mode and report (leaf) | 001 002 003 | none |

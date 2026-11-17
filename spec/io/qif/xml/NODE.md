@@ -4,7 +4,7 @@ title: Validating QIF-XML reader and writer
 level: 3
 parent: IO.QIF
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.QIF.GEN, IO.REG.LIMITS, IO.REG.ENV]
 cli: [fid import qif-xml, fid export qif-xml]
 mcp: [import_qif_xml, export_qif_xml]
 journal: [import.qif_xml@1, export.qif_xml@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.QIF.XML: Validating QIF-XML reader and writer
@@ -58,8 +58,15 @@ PARSE (hardened streaming reader), VALID (XSD and identity constraints), XSLT (n
 
 ## Open questions
 
-- Normative XSLT 1.0 checks: run with an external XSLT engine in a separate process (C dependency, allowlist per D-001) or re-express them in Rust from the IR? Needs a maintainer choice when this node is split [unverified: count and nature of checks].
+- Normative XSLT 1.0 checks: settled in `IO.QIF.XML.XSLT` by re-expressing each check as a Rust rule traced to its pinned stylesheet, with a CI count check and honest `checks_skipped` reporting. No external XSLT engine or C dependency is added; adding one later would need a maintainer decision on the D-001 dependency allowlist [unverified: count and nature of checks].
+- The hardened reader (`IO.QIF.XML.PARSE`) is a small shared crate `fid-xml` so XSD reading (`IO.QIF.GEN.PARSE`) and workbook reading (`IO.RES.CSV.XLSX`) reuse the same defences.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.QIF.XML.PARSE | Hardened streaming XML reader (leaf) | 003 007 | none |
+| IO.QIF.XML.VALID | XSD validation with identity constraints and count checks (leaf) | 001 002 004 | none |
+| IO.QIF.XML.XSLT | Normative QIF XSLT checks re-expressed as Rust rules (leaf) | 001 002 | none |
+| IO.QIF.XML.WRITE | Deterministic QIF-XML writer with pre-commit validation (leaf) | 005 | none |
+| IO.QIF.XML.CMD | QIF-XML import and export commands with original-bytes blob (leaf) | 001 005 006 | none |

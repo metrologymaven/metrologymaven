@@ -4,18 +4,18 @@ title: Pick-free global prealignment search
 level: 3
 parent: ALN.PRE
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-ALN.PRE-001, REQ-ALN.PRE-002, REQ-ALN.PRE-004, REQ-ALN.PRE-007]
 covers: [GOM.ALN.01]
-depends_on: [ALN.MODEL.ELEM, ALN.PRE.AMBIG, ALN.QA.REPORT, GEO.INDEX, GEO.DIST, KRN.NUM]
+depends_on: [ALN.MODEL.ELEM, ALN.PRE.AMBIG, ALN.QA.REPORT, ALN.BFIT.ICP, ALN.XFM.PAIRS, GEO.INDEX, GEO.DIST, GEO.CAD.TESS, KRN.NUM]
 cli: [fid align run-prealign]
 mcp: [align_run_prealign]
 journal: [align.run_prealign@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # ALN.PRE.GLOBAL: Pick-free global prealignment search
@@ -59,9 +59,15 @@ SAMPLE (down-sampling and descriptors), HYPO (hypothesis generation, e.g. princi
 
 ## Open questions
 
+- Method chosen at this level: descriptor-consensus hypotheses with a principal-axes fallback set (HYPO), refined and scored by short point-to-plane best-fit through `ALN.BFIT.ICP.LOOP` (SCORE). The corpus rate (REQ-003) decides whether it stays.
 - Phase P1b follows CONSTITUTION §7 (scan-to-CAD inspection is P1b); the picked-pair fallback in `ALN.PRE.PAIRS` stays P1a. Reviewers should confirm this tag.
 - Algorithm family is not chosen here; incumbents' methods are not documented publicly [unverified].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| ALN.PRE.GLOBAL.SAMPLE | Prealignment down-sampling, normals and local shape descriptors (leaf) | 004 005 006 | none |
+| ALN.PRE.GLOBAL.HYPO | Pose hypothesis generation by descriptor consensus and principal axes (leaf) | 001 003 004 005 | none |
+| ALN.PRE.GLOBAL.SCORE | Prealignment candidate scoring and short refinement (leaf) | 002 003 004 005 | none |
+| ALN.PRE.GLOBAL.CMD | Prealignment command, R1 pipeline entry and alignment wrapping (leaf) | 001 002 004 006 | GOM.ALN.01 |

@@ -43,86 +43,86 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 
 | Seed | Feature | Covered by | Status |
 |---|---|---|---|
-| GOM.PRJ.01 | Projects and project templates | [CORE.PRJ.CONT](../spec/core/prj/cont/NODE.md), [CORE.PRJ.TPL](../spec/core/prj/tpl/NODE.md) | open |
-| GOM.PRJ.02 | Stages: multiple parts or measurements in one project | [CORE.PRJ.STAGE](../spec/core/prj/stage/NODE.md) | open |
-| GOM.PRJ.03 | Element explorer: tree of all elements and their state | [CORE.PRJ.TREE](../spec/core/prj/tree/NODE.md) | open |
+| GOM.PRJ.01 | Projects and project templates | [CORE.PRJ.CONT.LIFE](../spec/core/prj/cont/life/NODE.md), [CORE.PRJ.TPL.CREATE](../spec/core/prj/tpl/create/NODE.md), [CORE.PRJ.TPL.SAVE](../spec/core/prj/tpl/save/NODE.md) | leaf |
+| GOM.PRJ.02 | Stages: multiple parts or measurements in one project | [CORE.PRJ.STAGE.MODEL](../spec/core/prj/stage/model/NODE.md) | leaf |
+| GOM.PRJ.03 | Element explorer: tree of all elements and their state | [CORE.PRJ.TREE.MODEL](../spec/core/prj/tree/model/NODE.md), [CORE.PRJ.TREE.QUERY](../spec/core/prj/tree/query/NODE.md) | leaf |
 | GOM.PRJ.04 | Tags, keywords and project metadata | [CORE.PRJ.META](../spec/core/prj/meta/NODE.md) | leaf |
-| GOM.PRJ.05 | Parametric dependency graph with automatic recompute | [CORE.DEP.RECOMP](../spec/core/dep/recomp/NODE.md) | open |
-| GOM.PRJ.06 | Undo and redo | [CORE.JRN.UNDO](../spec/core/jrn/undo/NODE.md) | open |
+| GOM.PRJ.05 | Parametric dependency graph with automatic recompute | [CORE.DEP.RECOMP](../spec/core/dep/recomp/NODE.md) | leaf |
+| GOM.PRJ.06 | Undo and redo | [CORE.JRN.UNDO.MOVE](../spec/core/jrn/undo/move/NODE.md) | leaf |
 | GOM.PRJ.07 | Change an input and recompute all dependents (e.g. replace the mesh) | [CORE.DEP.REPL](../spec/core/dep/repl/NODE.md) | leaf |
 | GOM.IMP.01 | Import STL meshes | [IO.MESH.STL](../spec/io/mesh/stl/NODE.md) | leaf |
 | GOM.IMP.02 | Import PLY, OBJ and other mesh formats | [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf |
-| GOM.IMP.03 | Import native measurement project or mesh format | [IO.REG.PLUGIN](../spec/io/reg/plugin/NODE.md) | open |
+| GOM.IMP.03 | Import native measurement project or mesh format | [IO.REG.PLUGIN.WASM](../spec/io/reg/plugin/wasm/NODE.md) | leaf |
 | GOM.IMP.04 | Import ASCII point clouds | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md) | leaf |
-| GOM.IMP.05 | Import CAD via STEP and IGES | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md) | open |
-| GOM.IMP.06 | Import native CAD (CATIA, NX, Creo, SolidWorks, Parasolid, JT) | [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
-| GOM.IMP.07 | Import PMI (semantic GD&T and datums) from CAD | [IO.CAD.PMI](../spec/io/cad/pmi/NODE.md) | open |
+| GOM.IMP.05 | Import CAD via STEP and IGES | [IO.CAD.IGES.CMD](../spec/io/cad/iges/cmd/NODE.md), [IO.CAD.STEP.CMD](../spec/io/cad/step/cmd/NODE.md) | leaf |
+| GOM.IMP.06 | Import native CAD (CATIA, NX, Creo, SolidWorks, Parasolid, JT) | [IO.CAD.XLATE.BRIDGE](../spec/io/cad/xlate/bridge/NODE.md) | leaf |
+| GOM.IMP.07 | Import PMI (semantic GD&T and datums) from CAD | [IO.CAD.PMI.CMD](../spec/io/cad/pmi/cmd/NODE.md) | leaf |
 | GOM.IMP.08 | Import nominal points from CSV or tables | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md) | leaf |
-| GOM.IMP.09 | Import further measurements as new stages | [IO.REG.ENV](../spec/io/reg/env/NODE.md) | open |
+| GOM.IMP.09 | Import further measurements as new stages | [IO.REG.ENV.IMPORT](../spec/io/reg/env/import/NODE.md) | leaf |
 | GOM.EXP.01 | Export meshes | [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.STL](../spec/io/mesh/stl/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf |
-| GOM.EXP.02 | Export points and values as CSV or ASCII | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md), [IO.RES.CSV](../spec/io/res/csv/NODE.md) | leaf, open |
+| GOM.EXP.02 | Export points and values as CSV or ASCII | [IO.RES.CSV.OUT](../spec/io/res/csv/out/NODE.md) | leaf |
 | GOM.EXP.03 | Export reports as PDF | [IO.RES.REPORT](../spec/io/res/report/NODE.md) | leaf |
-| GOM.EXP.04 | Export Q-DAS (AQDEF) | [IO.RES.AQDEF](../spec/io/res/aqdef/NODE.md) | open |
-| GOM.EXP.05 | Export to PiWeb | [IO.RES.PIWEB](../spec/io/res/piweb/NODE.md) | open |
-| GOM.EXP.06 | Export tables | [IO.RES.CSV](../spec/io/res/csv/NODE.md) | open |
-| GOM.EXP.07 | Export geometric elements as STEP or IGES | [IO.CAD.EXPORT](../spec/io/cad/export/NODE.md) | open |
-| GOM.MSH.01 | Polygonize a mesh from points | [SCAN.POLY.SURF](../spec/scan/poly/surf/NODE.md) | open |
+| GOM.EXP.04 | Export Q-DAS (AQDEF) | [IO.RES.AQDEF.OUT](../spec/io/res/aqdef/out/NODE.md) | leaf |
+| GOM.EXP.05 | Export to PiWeb | [IO.RES.PIWEB](../spec/io/res/piweb/NODE.md) | leaf |
+| GOM.EXP.06 | Export tables | [IO.RES.CSV.OUT](../spec/io/res/csv/out/NODE.md) | leaf |
+| GOM.EXP.07 | Export geometric elements as STEP or IGES | [IO.CAD.EXPORT.IGESW](../spec/io/cad/export/igesw/NODE.md), [IO.CAD.EXPORT.STEPW](../spec/io/cad/export/stepw/NODE.md) | leaf |
+| GOM.MSH.01 | Polygonize a mesh from points | [SCAN.POLY.SURF.CMD](../spec/scan/poly/surf/cmd/NODE.md) | leaf |
 | GOM.MSH.02 | Thin a mesh | [SCAN.MESHOP.DECIM](../spec/scan/meshop/decim/NODE.md) | leaf |
 | GOM.MSH.03 | Smooth a mesh | [SCAN.MESHOP.SMOOTH](../spec/scan/meshop/smooth/NODE.md) | leaf |
 | GOM.MSH.04 | Refine a mesh | [SCAN.MESHOP.DECIM](../spec/scan/meshop/decim/NODE.md) | leaf |
-| GOM.MSH.05 | Fill holes, automatically or interactively | [SCAN.MESHOP.HOLES](../spec/scan/meshop/holes/NODE.md) | open |
+| GOM.MSH.05 | Fill holes, automatically or interactively | [SCAN.MESHOP.HOLES.FAIR](../spec/scan/meshop/holes/fair/NODE.md), [SCAN.MESHOP.HOLES.FLAT](../spec/scan/meshop/holes/flat/NODE.md) | leaf |
 | GOM.MSH.06 | Remove spikes and noise | [SCAN.MESHOP.SMOOTH](../spec/scan/meshop/smooth/NODE.md) | leaf |
-| GOM.MSH.07 | Close a mesh into a watertight body | [SCAN.MESHOP.HOLES](../spec/scan/meshop/holes/NODE.md) | open |
-| GOM.MSH.08 | Cut and clip a mesh with planes or selections | [SCAN.MESHOP.CUT](../spec/scan/meshop/cut/NODE.md) | open |
-| GOM.MSH.09 | Invert normals | [SCAN.MESHOP.CUT](../spec/scan/meshop/cut/NODE.md) | open |
-| GOM.MSH.10 | Merge meshes | [SCAN.MESHOP.CUT](../spec/scan/meshop/cut/NODE.md) | open |
+| GOM.MSH.07 | Close a mesh into a watertight body | [SCAN.MESHOP.HOLES.CLOSE](../spec/scan/meshop/holes/close/NODE.md) | leaf |
+| GOM.MSH.08 | Cut and clip a mesh with planes or selections | [SCAN.MESHOP.CUT.CURVE](../spec/scan/meshop/cut/curve/NODE.md), [SCAN.MESHOP.CUT.PLANE](../spec/scan/meshop/cut/plane/NODE.md) | leaf |
+| GOM.MSH.09 | Invert normals | [SCAN.MESHOP.CUT.INVERT](../spec/scan/meshop/cut/invert/NODE.md) | leaf |
+| GOM.MSH.10 | Merge meshes | [SCAN.MESHOP.CUT.MERGE](../spec/scan/meshop/cut/merge/NODE.md) | leaf |
 | GOM.MSH.11 | Selection tools: patch, curvature, lasso, on surface, through or visible only | [SCAN.MESHOP.SEL](../spec/scan/meshop/sel/NODE.md) | leaf |
 | GOM.MSH.12 | Delete or isolate selections | [SCAN.MESHOP.SEL](../spec/scan/meshop/sel/NODE.md) | leaf |
-| GOM.MSH.13 | Repair meshes (self-intersections, non-manifold geometry) | [SCAN.MESHOP.REPAIR](../spec/scan/meshop/repair/NODE.md) | open |
-| GOM.CAD.01 | CAD body display and face (patch) selection | [GEO.SEL.QUERY](../spec/geo/sel/query/NODE.md), [GEO.SEL.RESOLVE](../spec/geo/sel/resolve/NODE.md) | leaf, open |
-| GOM.CAD.02 | CAD groups and part handling | [GEO.CAD.ASSY](../spec/geo/cad/assy/NODE.md), [GEO.CAD.GROUP](../spec/geo/cad/group/NODE.md) | leaf, open |
-| GOM.CAD.03 | Generate nominal elements from CAD faces | [GEO.CAD.NOMINAL](../spec/geo/cad/nominal/NODE.md) | open |
-| GOM.CAD.04 | Control CAD tessellation quality | [GEO.CAD.TESS](../spec/geo/cad/tess/NODE.md) | open |
-| GOM.CON.01 | Construct point | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.02 | Construct line | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.03 | Construct plane | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.04 | Construct circle | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.05 | Construct slot | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.06 | Construct rectangle | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.07 | Construct cylinder | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.08 | Construct cone | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.09 | Construct sphere | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
-| GOM.CON.10 | Section curves | [KRN.CONS.DERIV](../spec/krn/cons/deriv/NODE.md) | open |
-| GOM.CON.11 | Edge and trim curves | [KRN.CONS.DERIV](../spec/krn/cons/deriv/NODE.md) | open |
-| GOM.CON.12 | Surface points | [KRN.CONS.DERIV](../spec/krn/cons/deriv/NODE.md) | open |
-| GOM.CON.13 | System planes and coordinate systems | [KRN.CONS.DERIV](../spec/krn/cons/deriv/NODE.md) | open |
-| GOM.CON.14 | Construct by intersection | [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
-| GOM.CON.15 | Construct by projection | [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
-| GOM.CON.16 | Construct by offset | [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
-| GOM.CON.17 | Construct symmetry, midpoint and bisector | [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
-| GOM.CON.18 | Gaussian (least-squares) best-fit | [KRN.LSQ.AXIS](../spec/krn/lsq/axis/NODE.md), [KRN.LSQ.CURVE](../spec/krn/lsq/curve/NODE.md), [KRN.LSQ.LIN](../spec/krn/lsq/lin/NODE.md), [KRN.LSQ.PLAN2D](../spec/krn/lsq/plan2d/NODE.md), [KRN.LSQ.RND](../spec/krn/lsq/rnd/NODE.md) | leaf, open |
-| GOM.CON.19 | Chebyshev (minimum-zone) fit | [KRN.MZ.EXT](../spec/krn/mz/ext/NODE.md), [KRN.MZ.LIN](../spec/krn/mz/lin/NODE.md), [KRN.MZ.RND](../spec/krn/mz/rnd/NODE.md) | open |
-| GOM.CON.20 | Inner and outer tangential fits | [KRN.ENV.MCC](../spec/krn/env/mcc/NODE.md), [KRN.ENV.MIC](../spec/krn/env/mic/NODE.md), [KRN.ENV.TAN](../spec/krn/env/tan/NODE.md) | open |
+| GOM.MSH.13 | Repair meshes (self-intersections, non-manifold geometry) | [SCAN.MESHOP.REPAIR.DETECT](../spec/scan/meshop/repair/detect/NODE.md), [SCAN.MESHOP.REPAIR.RCMD](../spec/scan/meshop/repair/rcmd/NODE.md) | leaf |
+| GOM.CAD.01 | CAD body display and face (patch) selection | [GEO.SEL.QUERY.CAD](../spec/geo/sel/query/cad/NODE.md), [GEO.SEL.QUERY.CMD](../spec/geo/sel/query/cmd/NODE.md) | leaf |
+| GOM.CAD.02 | CAD groups and part handling | [GEO.CAD.ASSY.CMD](../spec/geo/cad/assy/cmd/NODE.md) | leaf |
+| GOM.CAD.03 | Generate nominal elements from CAD faces | [GEO.CAD.NOMINAL.CMD](../spec/geo/cad/nominal/cmd/NODE.md) | leaf |
+| GOM.CAD.04 | Control CAD tessellation quality | [GEO.CAD.TESS.CMD](../spec/geo/cad/tess/cmd/NODE.md) | leaf |
+| GOM.CON.01 | Construct point | [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md) | leaf |
+| GOM.CON.02 | Construct line | [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md) | leaf |
+| GOM.CON.03 | Construct plane | [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md) | leaf |
+| GOM.CON.04 | Construct circle | [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md) | leaf |
+| GOM.CON.05 | Construct slot | [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md) | leaf |
+| GOM.CON.06 | Construct rectangle | [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md) | leaf |
+| GOM.CON.07 | Construct cylinder | [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md) | leaf |
+| GOM.CON.08 | Construct cone | [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md) | leaf |
+| GOM.CON.09 | Construct sphere | [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md) | leaf |
+| GOM.CON.10 | Section curves | [KRN.CONS.DERIV.SECT](../spec/krn/cons/deriv/sect/NODE.md) | open |
+| GOM.CON.11 | Edge and trim curves | [KRN.CONS.DERIV.EDGE](../spec/krn/cons/deriv/edge/NODE.md) | leaf |
+| GOM.CON.12 | Surface points | [KRN.CONS.DERIV.SPT](../spec/krn/cons/deriv/spt/NODE.md) | leaf |
+| GOM.CON.13 | System planes and coordinate systems | [KRN.CONS.DERIV.SYS](../spec/krn/cons/deriv/sys/NODE.md) | leaf |
+| GOM.CON.14 | Construct by intersection | [KRN.CONS.OPS.INTLIN](../spec/krn/cons/ops/intlin/NODE.md), [KRN.CONS.OPS.INTQUAD](../spec/krn/cons/ops/intquad/NODE.md) | leaf |
+| GOM.CON.15 | Construct by projection | [KRN.CONS.OPS.PROJ](../spec/krn/cons/ops/proj/NODE.md) | leaf |
+| GOM.CON.16 | Construct by offset | [KRN.CONS.OPS.OFFS](../spec/krn/cons/ops/offs/NODE.md) | leaf |
+| GOM.CON.17 | Construct symmetry, midpoint and bisector | [KRN.CONS.OPS.MID](../spec/krn/cons/ops/mid/NODE.md) | leaf |
+| GOM.CON.18 | Gaussian (least-squares) best-fit | [KRN.LSQ.AXIS.CONE](../spec/krn/lsq/axis/cone/NODE.md), [KRN.LSQ.AXIS.CYL](../spec/krn/lsq/axis/cyl/NODE.md), [KRN.LSQ.CURVE.PARAB](../spec/krn/lsq/curve/parab/NODE.md), [KRN.LSQ.CURVE.POLY](../spec/krn/lsq/curve/poly/NODE.md), [KRN.LSQ.PLAN2D.ELL](../spec/krn/lsq/plan2d/ell/NODE.md), [KRN.LSQ.PLAN2D.RECT](../spec/krn/lsq/plan2d/rect/NODE.md), [KRN.LSQ.PLAN2D.SLOT](../spec/krn/lsq/plan2d/slot/NODE.md) | leaf |
+| GOM.CON.19 | Chebyshev (minimum-zone) fit | [KRN.MZ.EXT.CONE](../spec/krn/mz/ext/cone/NODE.md), [KRN.MZ.EXT.CURVE](../spec/krn/mz/ext/curve/NODE.md), [KRN.MZ.EXT.ELL](../spec/krn/mz/ext/ell/NODE.md), [KRN.MZ.EXT.PLAN](../spec/krn/mz/ext/plan/NODE.md), [KRN.MZ.LIN.FLAT](../spec/krn/mz/lin/flat/NODE.md), [KRN.MZ.LIN.LINE3](../spec/krn/mz/lin/line3/NODE.md), [KRN.MZ.RND.CIRC](../spec/krn/mz/rnd/circ/NODE.md), [KRN.MZ.RND.CYL](../spec/krn/mz/rnd/cyl/NODE.md), [KRN.MZ.RND.SPH](../spec/krn/mz/rnd/sph/NODE.md) | leaf |
+| GOM.CON.20 | Inner and outer tangential fits | [KRN.ENV.MCC.CVX](../spec/krn/env/mcc/cvx/NODE.md), [KRN.ENV.MCC.CYL](../spec/krn/env/mcc/cyl/NODE.md), [KRN.ENV.MIC.CIRSPH](../spec/krn/env/mic/cirsph/NODE.md), [KRN.ENV.MIC.CYL](../spec/krn/env/mic/cyl/NODE.md), [KRN.ENV.TAN.CYL](../spec/krn/env/tan/cyl/NODE.md), [KRN.ENV.TAN.LINE](../spec/krn/env/tan/line/NODE.md), [KRN.ENV.TAN.PLANE](../spec/krn/env/tan/plane/NODE.md) | leaf |
 | GOM.CON.21 | Outlier filtering in fits | [KRN.OUT.GATE](../spec/krn/out/gate/NODE.md), [KRN.OUT.RANSAC](../spec/krn/out/ransac/NODE.md), [KRN.OUT.RUN](../spec/krn/out/run/NODE.md), [KRN.OUT.STAT](../spec/krn/out/stat/NODE.md) | leaf |
-| GOM.CON.22 | Automatic construction from CAD with nominal and actual pairing | [KRN.CONS.AUTO](../spec/krn/cons/auto/NODE.md) | open |
+| GOM.CON.22 | Automatic construction from CAD with nominal and actual pairing | [KRN.CONS.AUTO.FACE](../spec/krn/cons/auto/face/NODE.md), [KRN.CONS.AUTO.PAIR](../spec/krn/cons/auto/pair/NODE.md) | leaf |
 | GOM.CON.23 | Select fitting points by tolerance band | [KRN.OUT.GATE](../spec/krn/out/gate/NODE.md) | leaf |
-| GOM.ALN.01 | Automatic prealignment | [ALN.PRE.GLOBAL](../spec/aln/pre/global/NODE.md) | open |
-| GOM.ALN.02 | Global best-fit alignment | [ALN.BFIT.ICP](../spec/aln/bfit/icp/NODE.md) | open |
+| GOM.ALN.01 | Automatic prealignment | [ALN.PRE.GLOBAL.CMD](../spec/aln/pre/global/cmd/NODE.md) | leaf |
+| GOM.ALN.02 | Global best-fit alignment | [ALN.BFIT.ICP.CMD](../spec/aln/bfit/icp/cmd/NODE.md) | leaf |
 | GOM.ALN.03 | Local best-fit on selected regions | [ALN.BFIT.LOCAL](../spec/aln/bfit/local/NODE.md) | leaf |
 | GOM.ALN.04 | 3-2-1 alignment | [ALN.RPS.CLASSIC](../spec/aln/rps/classic/NODE.md) | leaf |
 | GOM.ALN.05 | RPS alignment | [ALN.RPS.LOCK](../spec/aln/rps/lock/NODE.md) | leaf |
-| GOM.ALN.06 | Alignment by geometric elements | [ALN.DATUM.ELEM](../spec/aln/datum/elem/NODE.md) | open |
-| GOM.ALN.07 | Alignment by datum system (ISO 5459 / ASME) | [ALN.DATUM.ISO](../spec/aln/datum/iso/NODE.md), [ALN.DATUM.SYS](../spec/aln/datum/sys/NODE.md) | open |
-| GOM.ALN.08 | Alignment hierarchy and chained alignments | [ALN.MODEL.HIER](../spec/aln/model/hier/NODE.md) | open |
+| GOM.ALN.06 | Alignment by geometric elements | [ALN.DATUM.ELEM.CMD](../spec/aln/datum/elem/cmd/NODE.md) | leaf |
+| GOM.ALN.07 | Alignment by datum system (ISO 5459 / ASME) | [ALN.DATUM.SYS.CMD](../spec/aln/datum/sys/cmd/NODE.md) | leaf |
+| GOM.ALN.08 | Alignment hierarchy and chained alignments | [ALN.MODEL.HIER.CHAIN](../spec/aln/model/hier/chain/NODE.md) | leaf |
 | GOM.ALN.09 | Transformation by a known matrix | [ALN.XFM.MATRIX](../spec/aln/xfm/matrix/NODE.md) | leaf |
 | GOM.ALN.10 | Constrained best-fit (locked degrees of freedom) | [ALN.BFIT.CONSTR](../spec/aln/bfit/constr/NODE.md) | leaf |
 | GOM.ALN.11 | Initial alignment by picked point pairs | [ALN.PRE.PAIRS](../spec/aln/pre/pairs/NODE.md) | leaf |
-| GOM.SRF.01 | Surface comparison on CAD as a color map | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
+| GOM.SRF.01 | Surface comparison on CAD as a color map | [SCAN.CMP.DEV.SURFCAD](../spec/scan/cmp/dev/surfcad/NODE.md) | leaf |
 | GOM.SRF.02 | Surface comparison on actual data | [SCAN.CMP.ACT](../spec/scan/cmp/act/NODE.md) | leaf |
 | GOM.SRF.03 | Deviation labels | [SCAN.CMP.LABEL](../spec/scan/cmp/label/NODE.md) | leaf |
 | GOM.SRF.04 | Whisker plots on sections | [SCAN.SECT.WHISK](../spec/scan/sect/whisk/NODE.md) | leaf |
 | GOM.SRF.05 | Section comparison | [SCAN.SECT.CUT](../spec/scan/sect/cut/NODE.md), [SCAN.SECT.WHISK](../spec/scan/sect/whisk/NODE.md) | leaf |
-| GOM.SRF.06 | Edge and trim-line deviation | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | leaf, open |
+| GOM.SRF.06 | Edge and trim-line deviation | [SCAN.EDGE.EST.SILH](../spec/scan/edge/est/silh/NODE.md), [SCAN.EDGE.EST.TANG](../spec/scan/edge/est/tang/NODE.md) | leaf |
 | GOM.SRF.07 | Wall thickness analysis | [SCAN.THK.RAY](../spec/scan/thk/ray/NODE.md), [SCAN.THK.SPHERE](../spec/scan/thk/sphere/NODE.md) | leaf |
 | GOM.SRF.08 | Material thickness | [SCAN.THK.MAT](../spec/scan/thk/mat/NODE.md) | leaf |
 | GOM.SRF.09 | Max and min deviation search | [SCAN.CMP.EXTR](../spec/scan/cmp/extr/NODE.md) | leaf |
@@ -133,25 +133,25 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.DIM.04 | Diameter and radius | [GDT.DIM.RADIAL](../spec/gdt/dim/radial/NODE.md) | leaf |
 | GOM.DIM.05 | Caliper checks | [GDT.DIM.LINEAR](../spec/gdt/dim/linear/NODE.md) | leaf |
 | GOM.DIM.06 | Scalar checks on element properties | [GDT.DIM.SCALAR](../spec/gdt/dim/scalar/NODE.md) | leaf |
-| GOM.DIM.07 | Checks on sections | [GDT.DIM.SECT](../spec/gdt/dim/sect/NODE.md) | open |
+| GOM.DIM.07 | Checks on sections | [GDT.DIM.SECT.CMDS](../spec/gdt/dim/sect/cmds/NODE.md), [GDT.DIM.SECT.SPAN](../spec/gdt/dim/sect/span/NODE.md) | leaf |
 | GOM.DIM.08 | Min and max checks | [GDT.DIM.SCALAR](../spec/gdt/dim/scalar/NODE.md) | leaf |
 | GOM.DIM.09 | Point deviations in x, y, z and along the normal | [GDT.DIM.PTDEV](../spec/gdt/dim/ptdev/NODE.md) | leaf |
 | GOM.GDT.01 | Flatness | [GDT.FORM.FLAT](../spec/gdt/form/flat/NODE.md) | leaf |
-| GOM.GDT.02 | Straightness | [GDT.FORM.STRAIGHT](../spec/gdt/form/straight/NODE.md) | open |
+| GOM.GDT.02 | Straightness | [GDT.FORM.STRAIGHT.CMD](../spec/gdt/form/straight/cmd/NODE.md), [GDT.FORM.STRAIGHT.DERIVED](../spec/gdt/form/straight/derived/NODE.md), [GDT.FORM.STRAIGHT.LINEEL](../spec/gdt/form/straight/lineel/NODE.md) | leaf |
 | GOM.GDT.03 | Roundness | [GDT.FORM.ROUND](../spec/gdt/form/round/NODE.md) | leaf |
 | GOM.GDT.04 | Cylindricity | [GDT.FORM.CYL](../spec/gdt/form/cyl/NODE.md) | leaf |
-| GOM.GDT.05 | Parallelism | [GDT.LOC.ORIENT](../spec/gdt/loc/orient/NODE.md) | open |
-| GOM.GDT.06 | Perpendicularity | [GDT.LOC.ORIENT](../spec/gdt/loc/orient/NODE.md) | open |
-| GOM.GDT.07 | Angularity | [GDT.LOC.ORIENT](../spec/gdt/loc/orient/NODE.md) | open |
-| GOM.GDT.08 | Position | [GDT.LOC.POS](../spec/gdt/loc/pos/NODE.md) | open |
-| GOM.GDT.09 | Concentricity and coaxiality | [GDT.LOC.COAX](../spec/gdt/loc/coax/NODE.md) | open |
-| GOM.GDT.10 | Symmetry | [GDT.LOC.SYM](../spec/gdt/loc/sym/NODE.md) | open |
-| GOM.GDT.11 | Profile of a line | [GDT.PROF.LINE](../spec/gdt/prof/line/NODE.md) | open |
-| GOM.GDT.12 | Profile of a surface | [GDT.PROF.SURF](../spec/gdt/prof/surf/NODE.md) | open |
-| GOM.GDT.13 | Circular and total runout | [GDT.PROF.RUNOUT](../spec/gdt/prof/runout/NODE.md) | open |
-| GOM.GDT.14 | Datum systems and datum reference frames | [GDT.DRF.BUILD](../spec/gdt/drf/build/NODE.md), [GDT.DRF.DATUM](../spec/gdt/drf/datum/NODE.md), [GDT.DRF.SIM](../spec/gdt/drf/sim/NODE.md) | leaf, open |
-| GOM.GDT.15 | Material condition modifiers (MMC, LMC) | [GDT.ZONE.MATL](../spec/gdt/zone/matl/NODE.md) | open |
-| GOM.GDT.16 | Create checks automatically from PMI | [GDT.PMI.DIFF](../spec/gdt/pmi/diff/NODE.md), [GDT.PMI.MAP](../spec/gdt/pmi/map/NODE.md), [GDT.PMI.REVIEW](../spec/gdt/pmi/review/NODE.md) | leaf, open |
+| GOM.GDT.05 | Parallelism | [GDT.LOC.ORIENT.CMDS](../spec/gdt/loc/orient/cmds/NODE.md), [GDT.LOC.ORIENT.ZONE](../spec/gdt/loc/orient/zone/NODE.md) | leaf |
+| GOM.GDT.06 | Perpendicularity | [GDT.LOC.ORIENT.CMDS](../spec/gdt/loc/orient/cmds/NODE.md), [GDT.LOC.ORIENT.ZONE](../spec/gdt/loc/orient/zone/NODE.md) | leaf |
+| GOM.GDT.07 | Angularity | [GDT.LOC.ORIENT.CMDS](../spec/gdt/loc/orient/cmds/NODE.md), [GDT.LOC.ORIENT.ZONE](../spec/gdt/loc/orient/zone/NODE.md) | leaf |
+| GOM.GDT.08 | Position | [GDT.LOC.POS.CMD](../spec/gdt/loc/pos/cmd/NODE.md), [GDT.LOC.POS.MMC](../spec/gdt/loc/pos/mmc/NODE.md), [GDT.LOC.POS.RFS](../spec/gdt/loc/pos/rfs/NODE.md), [GDT.LOC.POS.SLOT](../spec/gdt/loc/pos/slot/NODE.md) | leaf, open |
+| GOM.GDT.09 | Concentricity and coaxiality | [GDT.LOC.COAX](../spec/gdt/loc/coax/NODE.md) | leaf |
+| GOM.GDT.10 | Symmetry | [GDT.LOC.SYM](../spec/gdt/loc/sym/NODE.md) | leaf |
+| GOM.GDT.11 | Profile of a line | [GDT.PROF.LINE.EVAL](../spec/gdt/prof/line/eval/NODE.md) | leaf |
+| GOM.GDT.12 | Profile of a surface | [GDT.PROF.SURF.CMD](../spec/gdt/prof/surf/cmd/NODE.md), [GDT.PROF.SURF.PROB](../spec/gdt/prof/surf/prob/NODE.md) | leaf |
+| GOM.GDT.13 | Circular and total runout | [GDT.PROF.RUNOUT.CIRC](../spec/gdt/prof/runout/circ/NODE.md), [GDT.PROF.RUNOUT.TOTAL](../spec/gdt/prof/runout/total/NODE.md) | leaf |
+| GOM.GDT.14 | Datum systems and datum reference frames | [GDT.DRF.SIM.FIT](../spec/gdt/drf/sim/fit/NODE.md) | leaf |
+| GOM.GDT.15 | Material condition modifiers (MMC, LMC) | [GDT.ZONE.MATL.BONUS](../spec/gdt/zone/matl/bonus/NODE.md), [GDT.ZONE.MATL.BOTH](../spec/gdt/zone/matl/both/NODE.md), [GDT.ZONE.MATL.VCB](../spec/gdt/zone/matl/vcb/NODE.md) | leaf |
+| GOM.GDT.16 | Create checks automatically from PMI | [GDT.PMI.MAP.CMD](../spec/gdt/pmi/map/cmd/NODE.md), [GDT.PMI.MAP.ITEM](../spec/gdt/pmi/map/item/NODE.md) | leaf |
 | GOM.GDT.17 | ISO or ASME dialect selection | [GDT.CHAR.SPEC](../spec/gdt/char/spec/NODE.md) | leaf |
 | GOM.SPE.01 | Sheet metal: hole and trim positions | [IND.SHEET.CTX](../spec/ind/sheet/ctx/NODE.md), [IND.SHEET.HOLE](../spec/ind/sheet/hole/NODE.md), [IND.SHEET.TRIM](../spec/ind/sheet/trim/NODE.md) | leaf, open |
 | GOM.SPE.02 | Sheet metal: springback | [IND.SHEET.SPRING](../spec/ind/sheet/spring/NODE.md) | open |
@@ -160,36 +160,36 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | GOM.SPE.05 | Airfoil and turbine blade analysis | [IND.AIRFOIL.FORM](../spec/ind/airfoil/form/NODE.md), [IND.AIRFOIL.PARAMS](../spec/ind/airfoil/params/NODE.md), [IND.AIRFOIL.SECTION](../spec/ind/airfoil/section/NODE.md), [IND.AIRFOIL.STACK](../spec/ind/airfoil/stack/NODE.md) | open |
 | GOM.SPE.06 | Pattern and hole-pattern checks | [IND.PATTERN.FIND](../spec/ind/pattern/find/NODE.md), [IND.PATTERN.INST](../spec/ind/pattern/inst/NODE.md), [IND.PATTERN.SUM](../spec/ind/pattern/sum/NODE.md) | leaf, open |
 | GOM.TRD.01 | Statistics across stages | [RPT.STATS.DESC](../spec/rpt/stats/desc/NODE.md) | leaf |
-| GOM.TRD.02 | Trend charts | [RPT.STATS.TREND](../spec/rpt/stats/trend/NODE.md) | open |
-| GOM.TRD.03 | Process capability (Cp, Cpk) | [RPT.STATS.CAP](../spec/rpt/stats/cap/NODE.md) | open |
-| GOM.TRD.04 | Part-to-part comparison | [RPT.STATS.CMP](../spec/rpt/stats/cmp/NODE.md) | open |
-| GOM.TRD.05 | SPC control limits | [RPT.STATS.SPC](../spec/rpt/stats/spc/NODE.md) | open |
+| GOM.TRD.02 | Trend charts | [RPT.STATS.TREND.BUILD](../spec/rpt/stats/trend/build/NODE.md) | leaf |
+| GOM.TRD.03 | Process capability (Cp, Cpk) | [RPT.STATS.CAP.CMD](../spec/rpt/stats/cap/cmd/NODE.md) | leaf |
+| GOM.TRD.04 | Part-to-part comparison | [RPT.STATS.CMP.DIFF](../spec/rpt/stats/cmp/diff/NODE.md) | leaf |
+| GOM.TRD.05 | SPC control limits | [RPT.STATS.SPC.FREEZE](../spec/rpt/stats/spc/freeze/NODE.md), [RPT.STATS.SPC.LIM](../spec/rpt/stats/spc/lim/NODE.md) | leaf |
 | GOM.CT.01 | CT volume import | out of scope | - |
 | GOM.CT.02 | Surface determination from volume | out of scope | - |
 | GOM.CT.03 | Porosity and defect analysis | out of scope | - |
 | GOM.CT.04 | Volume-to-volume comparison | out of scope | - |
-| GOM.VIZ.01 | Saved views | [VIZ.VIEW.NAMED](../spec/viz/view/named/NODE.md) | open |
+| GOM.VIZ.01 | Saved views | [VIZ.VIEW.NAMED.RESTORE](../spec/viz/view/named/restore/NODE.md), [VIZ.VIEW.NAMED.STORE](../spec/viz/view/named/store/NODE.md) | leaf |
 | GOM.VIZ.02 | Clipping planes | [VIZ.VIEW.CLIP](../spec/viz/view/clip/NODE.md) | leaf |
 | GOM.VIZ.03 | Transparency | [VIZ.VIEW.TRANSP](../spec/viz/view/transp/NODE.md) | leaf |
-| GOM.VIZ.04 | Color scale editor | [VIZ.OVERLAY.SCALEED](../spec/viz/overlay/scaleed/NODE.md) | open |
-| GOM.VIZ.05 | Label layout | [VIZ.OVERLAY.LABEL](../spec/viz/overlay/label/NODE.md) | open |
-| GOM.VIZ.06 | Visibility and explorer filters | [VIZ.VIEW.VISIB](../spec/viz/view/visib/NODE.md) | open |
+| GOM.VIZ.04 | Color scale editor | [VIZ.OVERLAY.SCALEED](../spec/viz/overlay/scaleed/NODE.md) | leaf |
+| GOM.VIZ.05 | Label layout | [VIZ.OVERLAY.LABEL.DRAW](../spec/viz/overlay/label/draw/NODE.md), [VIZ.OVERLAY.LABEL.MODEL](../spec/viz/overlay/label/model/NODE.md) | leaf |
+| GOM.VIZ.06 | Visibility and explorer filters | [VIZ.VIEW.VISIB.CMD](../spec/viz/view/visib/cmd/NODE.md), [VIZ.VIEW.VISIB.MODEL](../spec/viz/view/visib/model/NODE.md) | leaf |
 | GOM.VIZ.07 | Screenshots | [VIZ.CAPTURE.SHOT](../spec/viz/capture/shot/NODE.md) | leaf |
 | GOM.VIZ.08 | Turntable and animations | [VIZ.CAPTURE.ANIM](../spec/viz/capture/anim/NODE.md) | leaf |
 | GOM.RPT.01 | Report pages | [RPT.MODEL.DOC](../spec/rpt/model/doc/NODE.md) | leaf |
-| GOM.RPT.02 | Report templates | [RPT.MODEL.TMPL](../spec/rpt/model/tmpl/NODE.md) | open |
-| GOM.RPT.03 | 3D views in the report that can be restored in the scene | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| GOM.RPT.04 | Tables in reports | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| GOM.RPT.05 | Diagrams in reports | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| GOM.RPT.06 | PDF output | [RPT.OUTPUT.PDF](../spec/rpt/output/pdf/NODE.md) | open |
-| GOM.RPT.07 | Multi-stage reports | [RPT.MODEL.BIND](../spec/rpt/model/bind/NODE.md) | open |
+| GOM.RPT.02 | Report templates | [RPT.MODEL.TMPL.FORMAT](../spec/rpt/model/tmpl/format/NODE.md), [RPT.MODEL.TMPL.STARTER](../spec/rpt/model/tmpl/starter/NODE.md), [RPT.MODEL.TMPL.VER](../spec/rpt/model/tmpl/ver/NODE.md) | leaf |
+| GOM.RPT.03 | 3D views in the report that can be restored in the scene | [RPT.MODEL.BLOCKS.VIEW](../spec/rpt/model/blocks/view/NODE.md) | leaf |
+| GOM.RPT.04 | Tables in reports | [RPT.MODEL.BLOCKS.TABLE](../spec/rpt/model/blocks/table/NODE.md) | leaf |
+| GOM.RPT.05 | Diagrams in reports | [RPT.MODEL.BLOCKS.CHART](../spec/rpt/model/blocks/chart/NODE.md) | leaf |
+| GOM.RPT.06 | PDF output | [RPT.OUTPUT.PDF.CHART](../spec/rpt/output/pdf/chart/NODE.md), [RPT.OUTPUT.PDF.LAYOUT](../spec/rpt/output/pdf/layout/NODE.md), [RPT.OUTPUT.PDF.WRITE](../spec/rpt/output/pdf/write/NODE.md) | leaf |
+| GOM.RPT.07 | Multi-stage reports | [RPT.MODEL.BIND.EXPAND](../spec/rpt/model/bind/expand/NODE.md), [RPT.MODEL.BIND.RESOLVE](../spec/rpt/model/bind/resolve/NODE.md) | leaf |
 | GOM.AUT.01 | Python scripting | [AUTO.PY.GEN](../spec/auto/py/gen/NODE.md), [AUTO.PY.RUN](../spec/auto/py/run/NODE.md) | leaf, open |
-| GOM.AUT.02 | Script recording | [AUTO.REC.CONV](../spec/auto/rec/conv/NODE.md), [AUTO.REC.LIFT](../spec/auto/rec/lift/NODE.md), [AUTO.REC.MACRO](../spec/auto/rec/macro/NODE.md) | leaf, open |
+| GOM.AUT.02 | Script recording | [AUTO.REC.LIFT.PASS](../spec/auto/rec/lift/pass/NODE.md), [AUTO.REC.LIFT.SELECT](../spec/auto/rec/lift/select/NODE.md), [AUTO.REC.LIFT.VALUES](../spec/auto/rec/lift/values/NODE.md) | leaf |
 | GOM.AUT.03 | Scripted elements | [AUTO.SCRIPTED.DECL](../spec/auto/scripted/decl/NODE.md), [AUTO.SCRIPTED.GRAPH](../spec/auto/scripted/graph/NODE.md) | leaf, open |
 | GOM.AUT.04 | Scripted checks | [AUTO.SCRIPTED.DECL](../spec/auto/scripted/decl/NODE.md), [AUTO.SCRIPTED.RESULT](../spec/auto/scripted/result/NODE.md) | leaf, open |
 | GOM.AUT.05 | Apps and app store | [AUTO.PY.SDK](../spec/auto/py/sdk/NODE.md) | open |
-| GOM.AUT.06 | Kiosk operator interface | [AUTO.RUN.PLAY](../spec/auto/run/play/NODE.md) | open |
-| GOM.AUT.07 | Batch processing | [AUTO.RUN.BATCH](../spec/auto/run/batch/NODE.md) | open |
+| GOM.AUT.06 | Kiosk operator interface | [AUTO.RUN.PLAY.SESSION](../spec/auto/run/play/session/NODE.md) | leaf |
+| GOM.AUT.07 | Batch processing | [AUTO.RUN.BATCH](../spec/auto/run/batch/NODE.md) | leaf |
 | GOM.AUT.08 | Custom dialogs for scripts | [AUTO.PY.DLG](../spec/auto/py/dlg/NODE.md) | open |
 | GOM.ACQ.01 | Scanner sensor control | out of scope | - |
 | GOM.ACQ.02 | Sensor calibration | out of scope | - |
@@ -202,34 +202,34 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 
 | Seed | Feature | Covered by | Status |
 |---|---|---|---|
-| JOB.PER.01 | Quality engineer at a multi-brand job shop: transcription reports from existing CMM output | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.02 | Scan inspector: scan-file inspection against CAD | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.03 | Shop-floor operator: gauge entry and kiosk runs | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.04 | CMM programmer: re-evaluation, then I++ runs | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.05 | Quality manager: release, SPC, governance | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.06 | Auditor or calibration-lab verifier | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.07 | Supplier-network buyer / OEM supplier quality | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.08 | Instrument-maker engineer | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.PER.09 | Large-volume metrologist: tracker networks, build and fixture guidance | [FLOW.PERSONA](../spec/flow/persona/NODE.md) | open |
-| JOB.ACC.01 | Scan first-article inspection from CAD + PMI to a colour map and GD&T report | [FLOW.INSPECT](../spec/flow/inspect/NODE.md) | open |
-| JOB.ACC.02 | Transcription AS9102 from an existing CMM report against a ballooned drawing | [FLOW.REPORT](../spec/flow/report/NODE.md) | open |
-| JOB.ACC.03 | Drawing-only first-article inspection from CMM, arm and hand-gauge data | [FLOW.REPORT](../spec/flow/report/NODE.md) | open |
+| JOB.PER.01 | Quality engineer at a multi-brand job shop: transcription reports from existing CMM output | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.02 | Scan inspector: scan-file inspection against CAD | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.03 | Shop-floor operator: gauge entry and kiosk runs | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.04 | CMM programmer: re-evaluation, then I++ runs | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.05 | Quality manager: release, SPC, governance | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.06 | Auditor or calibration-lab verifier | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.07 | Supplier-network buyer / OEM supplier quality | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.08 | Instrument-maker engineer | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.PER.09 | Large-volume metrologist: tracker networks, build and fixture guidance | [FLOW.PERSONA.MAPS](../spec/flow/persona/maps/NODE.md), [FLOW.PERSONA.PERS](../spec/flow/persona/pers/NODE.md) | leaf |
+| JOB.ACC.01 | Scan first-article inspection from CAD + PMI to a colour map and GD&T report | [FLOW.INSPECT.DATA](../spec/flow/inspect/data/NODE.md), [FLOW.INSPECT.J1](../spec/flow/inspect/j1/NODE.md) | leaf |
+| JOB.ACC.02 | Transcription AS9102 from an existing CMM report against a ballooned drawing | [FLOW.REPORT.J2](../spec/flow/report/j2/NODE.md) | leaf |
+| JOB.ACC.03 | Drawing-only first-article inspection from CMM, arm and hand-gauge data | [FLOW.REPORT.J3](../spec/flow/report/j3/NODE.md) | leaf |
 | JOB.ACC.04 | Re-evaluation from CMM points with uncertainty and a decision rule | [FLOW.PROBE](../spec/flow/probe/NODE.md) | open |
-| JOB.ACC.05 | Kiosk production run of a released scan program by an operator | [FLOW.INSPECT](../spec/flow/inspect/NODE.md) | open |
-| JOB.ACC.06 | SPC continuity from imported history plus new runs | [FLOW.REPORT](../spec/flow/report/NODE.md) | open |
-| JOB.ACC.07 | Sections, gap and flush, and thickness on a sheet-metal or moulded part | [FLOW.INSPECT](../spec/flow/inspect/NODE.md) | open |
-| JOB.ACC.08 | Supplier package intake with tamper detection | [FLOW.REPORT](../spec/flow/report/NODE.md) | open |
+| JOB.ACC.05 | Kiosk production run of a released scan program by an operator | [FLOW.INSPECT.DATA](../spec/flow/inspect/data/NODE.md), [FLOW.INSPECT.J5](../spec/flow/inspect/j5/NODE.md) | leaf |
+| JOB.ACC.06 | SPC continuity from imported history plus new runs | [FLOW.REPORT.J6](../spec/flow/report/j6/NODE.md) | leaf |
+| JOB.ACC.07 | Sections, gap and flush, and thickness on a sheet-metal or moulded part | [FLOW.INSPECT.DATA](../spec/flow/inspect/data/NODE.md), [FLOW.INSPECT.J7](../spec/flow/inspect/j7/NODE.md), [FLOW.INSPECT.J7GF](../spec/flow/inspect/j7gf/NODE.md) | leaf |
+| JOB.ACC.08 | Supplier package intake with tamper detection | [FLOW.REPORT.J8](../spec/flow/report/j8/NODE.md) | leaf |
 | JOB.ACC.09 | Tracker network: multi-station adjustment and build guidance | [FLOW.NETWORK](../spec/flow/network/NODE.md) | open |
 | JOB.ACC.10 | CMM program from PMI, simulated, then run on an I++ machine after approval | [FLOW.PROBE](../spec/flow/probe/NODE.md) | open |
-| JOB.USE.01 | Shop Setup to first project in under 10 minutes (Lean profile) | [FLOW.SETUP](../spec/flow/setup/NODE.md) | open |
-| JOB.USE.02 | Unassisted first-time success on the first three jobs after one tutorial | [FLOW.STUDY](../spec/flow/study/NODE.md) | open |
-| JOB.USE.03 | System Usability Scale score | [FLOW.STUDY](../spec/flow/study/NODE.md) | open |
-| JOB.USE.04 | Crash-free sessions, and zero committed-command loss | [FLOW.RUNNER](../spec/flow/runner/NODE.md) | open |
-| JOB.USE.05 | No dead ends: every unresolved item offers a suggested fix | [FLOW.DEADEND](../spec/flow/deadend/NODE.md) | open |
-| JOB.USE.06 | Keyboard-complete data entry and mapping | [FLOW.REPORT](../spec/flow/report/NODE.md) | open |
-| JOB.USE.07 | First-run Shop Setup wizard (units, profile, signing identity, decision rules, instrument library, templates, agent access) | [FLOW.SETUP](../spec/flow/setup/NODE.md) | open |
-| JOB.USE.08 | Guided tutorials as recorded programs replayed in step mode, with "your turn" checks | [FLOW.SETUP](../spec/flow/setup/NODE.md) | open |
-| JOB.USE.09 | A "Why?" panel on every number and every not-decidable result | [FLOW.DEADEND](../spec/flow/deadend/NODE.md) | open |
+| JOB.USE.01 | Shop Setup to first project in under 10 minutes (Lean profile) | [FLOW.SETUP.JOURNEY](../spec/flow/setup/journey/NODE.md) | leaf |
+| JOB.USE.02 | Unassisted first-time success on the first three jobs after one tutorial | [FLOW.STUDY.PROTO](../spec/flow/study/proto/NODE.md), [FLOW.STUDY.RECORD](../spec/flow/study/record/NODE.md) | leaf |
+| JOB.USE.03 | System Usability Scale score | [FLOW.STUDY.PROTO](../spec/flow/study/proto/NODE.md), [FLOW.STUDY.RECORD](../spec/flow/study/record/NODE.md) | leaf |
+| JOB.USE.04 | Crash-free sessions, and zero committed-command loss | [FLOW.RUNNER.RELIAB](../spec/flow/runner/reliab/NODE.md) | leaf |
+| JOB.USE.05 | No dead ends: every unresolved item offers a suggested fix | [FLOW.DEADEND.CATALOG](../spec/flow/deadend/catalog/NODE.md), [FLOW.DEADEND.CHECK](../spec/flow/deadend/check/NODE.md), [FLOW.DEADEND.RESULT](../spec/flow/deadend/result/NODE.md), [FLOW.DEADEND.WHY](../spec/flow/deadend/why/NODE.md) | leaf |
+| JOB.USE.06 | Keyboard-complete data entry and mapping | [FLOW.REPORT.KBD](../spec/flow/report/kbd/NODE.md) | leaf |
+| JOB.USE.07 | First-run Shop Setup wizard (units, profile, signing identity, decision rules, instrument library, templates, agent access) | [FLOW.SETUP.RULEGATE](../spec/flow/setup/rulegate/NODE.md), [FLOW.SETUP.SAMPLE](../spec/flow/setup/sample/NODE.md), [FLOW.SETUP.STEPS](../spec/flow/setup/steps/NODE.md), [FLOW.SETUP.WIZARD](../spec/flow/setup/wizard/NODE.md) | leaf |
+| JOB.USE.08 | Guided tutorials as recorded programs replayed in step mode, with "your turn" checks | [FLOW.SETUP.ONBOARD](../spec/flow/setup/onboard/NODE.md) | leaf |
+| JOB.USE.09 | A "Why?" panel on every number and every not-decidable result | [FLOW.DEADEND.WHY](../spec/flow/deadend/why/NODE.md) | leaf |
 
 ## pc-dmis.md
 
@@ -251,23 +251,23 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PCD.SCN.03 | Perimeter scans | [CMM.STRAT.SCAN](../spec/cmm/strat/scan/NODE.md) | open |
 | PCD.SCN.04 | High-speed analog scanning | [CMM.STRAT.SCAN](../spec/cmm/strat/scan/NODE.md) | open |
 | PCD.SCN.05 | Scan filtering | [CMM.STRAT.FILT](../spec/cmm/strat/filt/NODE.md) | leaf |
-| PCD.ALN.01 | Iterative 3-2-1 alignment | [ALN.RPS.ITER](../spec/aln/rps/iter/NODE.md) | open |
-| PCD.ALN.02 | Best-fit alignments | [ALN.BFIT.FEAT](../spec/aln/bfit/feat/NODE.md) | open |
-| PCD.ALN.03 | Iterative alignment for sheet metal (vector points) | [ALN.RPS.VECTOR](../spec/aln/rps/vector/NODE.md) | open |
+| PCD.ALN.01 | Iterative 3-2-1 alignment | [ALN.RPS.ITER](../spec/aln/rps/iter/NODE.md) | leaf |
+| PCD.ALN.02 | Best-fit alignments | [ALN.BFIT.FEAT.CMD](../spec/aln/bfit/feat/cmd/NODE.md) | leaf |
+| PCD.ALN.03 | Iterative alignment for sheet metal (vector points) | [ALN.RPS.VECTOR.CMD](../spec/aln/rps/vector/cmd/NODE.md) | leaf |
 | PCD.ALN.04 | Save and recall alignments | [ALN.MODEL.LIB](../spec/aln/model/lib/NODE.md) | leaf |
-| PCD.ALN.05 | Datum-defined alignments | [ALN.DATUM.SYS](../spec/aln/datum/sys/NODE.md) | open |
+| PCD.ALN.05 | Datum-defined alignments | [ALN.DATUM.SYS.CMD](../spec/aln/datum/sys/cmd/NODE.md) | leaf |
 | PCD.ALN.06 | Leapfrog for portable devices | [ALN.XFM.LEAP](../spec/aln/xfm/leap/NODE.md) | leaf |
-| PCD.CON.01 | Constructed features (best-fit, intersect, mid, offset, projection) | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md), [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
+| PCD.CON.01 | Constructed features (best-fit, intersect, mid, offset, projection) | [KRN.CONS.ELEM.FITC](../spec/krn/cons/elem/fitc/NODE.md), [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md), [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md), [KRN.CONS.OPS.TABLE](../spec/krn/cons/ops/table/NODE.md) | leaf |
 | PCD.CON.02 | Feature filters | [KRN.OUT.RUN](../spec/krn/out/run/NODE.md), [KRN.OUT.STAT](../spec/krn/out/stat/NODE.md) | leaf |
-| PCD.CON.03 | Constructed sets | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md) | open |
+| PCD.CON.03 | Constructed sets | [KRN.CONS.ELEM.SET](../spec/krn/cons/elem/set/NODE.md) | leaf |
 | PCD.DIM.01 | Legacy dimensions (location, distance, angle) | [GDT.DIM.ANGLE](../spec/gdt/dim/angle/NODE.md), [GDT.DIM.LINEAR](../spec/gdt/dim/linear/NODE.md) | leaf |
-| PCD.DIM.02 | GD&T feature control frames | [GDT.CHAR.MODEL](../spec/gdt/char/model/NODE.md) | open |
-| PCD.DIM.03 | Composite tolerances | [GDT.ZONE.COMP](../spec/gdt/zone/comp/NODE.md) | open |
-| PCD.DIM.04 | Bonus tolerances | [GDT.ZONE.MATL](../spec/gdt/zone/matl/NODE.md) | open |
+| PCD.DIM.02 | GD&T feature control frames | [GDT.CHAR.MODEL.CMDS](../spec/gdt/char/model/cmds/NODE.md), [GDT.CHAR.MODEL.TYPES](../spec/gdt/char/model/types/NODE.md) | leaf |
+| PCD.DIM.03 | Composite tolerances | [GDT.ZONE.COMP](../spec/gdt/zone/comp/NODE.md) | leaf |
+| PCD.DIM.04 | Bonus tolerances | [GDT.ZONE.MATL.BONUS](../spec/gdt/zone/matl/bonus/NODE.md) | leaf |
 | PCD.DIM.05 | ISO or ASME standard selection | [GDT.CHAR.SPEC](../spec/gdt/char/spec/NODE.md) | leaf |
-| PCD.DIM.06 | Profile with best-fit options | [GDT.PROF.BESTFIT](../spec/gdt/prof/bestfit/NODE.md) | open |
-| PCD.CAD.01 | CAD import (direct, STEP, IGES, native) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
-| PCD.CAD.02 | PMI import and automatic program creation | [GDT.PMI.MAP](../spec/gdt/pmi/map/NODE.md) | open |
+| PCD.DIM.06 | Profile with best-fit options | [GDT.PROF.BESTFIT.LSQ](../spec/gdt/prof/bestfit/lsq/NODE.md), [GDT.PROF.BESTFIT.OPTS](../spec/gdt/prof/bestfit/opts/NODE.md) | leaf |
+| PCD.CAD.01 | CAD import (direct, STEP, IGES, native) | [IO.CAD.IGES.CMD](../spec/io/cad/iges/cmd/NODE.md), [IO.CAD.STEP.CMD](../spec/io/cad/step/cmd/NODE.md), [IO.CAD.XLATE.BRIDGE](../spec/io/cad/xlate/bridge/NODE.md) | leaf |
+| PCD.CAD.02 | PMI import and automatic program creation | [GDT.PMI.MAP.CMD](../spec/gdt/pmi/map/cmd/NODE.md), [GDT.PMI.MAP.CORPUS](../spec/gdt/pmi/map/corpus/NODE.md) | leaf |
 | PCD.CAD.03 | CAD-based automatic feature generation | [CMM.GEN.CAD](../spec/cmm/gen/cad/NODE.md) | open |
 | PCD.PTH.01 | Move points and clearance planes | [CMM.PATH.CLEAR](../spec/cmm/path/clear/NODE.md) | open |
 | PCD.PTH.02 | Path optimization | [CMM.PATH.OPT](../spec/cmm/path/opt/NODE.md) | open |
@@ -275,94 +275,94 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PCD.PTH.04 | Offline simulation and animation of programs | [CMM.SIM.RUN](../spec/cmm/sim/run/NODE.md), [CMM.SIM.TIME](../spec/cmm/sim/time/NODE.md) | leaf, open |
 | PCD.PTH.05 | Automatic path from selected features | [CMM.PATH.AUTO](../spec/cmm/path/auto/NODE.md) | open |
 | PCD.PTH.06 | Machine and fixture models | [CMM.COLL.FIXT](../spec/cmm/coll/fixt/NODE.md), [CMM.COLL.MACH](../spec/cmm/coll/mach/NODE.md) | leaf |
-| PCD.PRG.01 | Program editor (command and summary modes) | [AUTO.PROG.EDIT](../spec/auto/prog/edit/NODE.md) | open |
-| PCD.PRG.02 | Variables and expressions | [AUTO.PROG.EXPR](../spec/auto/prog/expr/NODE.md) | open |
-| PCD.PRG.03 | Loops | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | open |
-| PCD.PRG.04 | Conditional flow (if, else, goto) | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | open |
-| PCD.PRG.05 | Subroutines | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | open |
+| PCD.PRG.01 | Program editor (command and summary modes) | [AUTO.PROG.EDIT.OPS](../spec/auto/prog/edit/ops/NODE.md), [AUTO.PROG.EDIT.VIEWS](../spec/auto/prog/edit/views/NODE.md) | leaf |
+| PCD.PRG.02 | Variables and expressions | [AUTO.PROG.EXPR.EVAL](../spec/auto/prog/expr/eval/NODE.md), [AUTO.PROG.EXPR.FORMULA](../spec/auto/prog/expr/formula/NODE.md), [AUTO.PROG.EXPR.TYPES](../spec/auto/prog/expr/types/NODE.md) | leaf |
+| PCD.PRG.03 | Loops | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | leaf |
+| PCD.PRG.04 | Conditional flow (if, else, goto) | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | leaf |
+| PCD.PRG.05 | Subroutines | [AUTO.PROG.FLOW](../spec/auto/prog/flow/NODE.md) | leaf |
 | PCD.PRG.06 | External scripting | [AUTO.PY.PROTO](../spec/auto/py/proto/NODE.md) | leaf |
 | PCD.PRG.07 | Operator comments and prompts | [AUTO.PROG.OPER](../spec/auto/prog/oper/NODE.md) | leaf |
 | PCD.PRG.08 | Parameterized programs for part families | [AUTO.PROG.FAMILY](../spec/auto/prog/family/NODE.md) | leaf |
-| PCD.PRG.09 | Mark and execute selected steps | [AUTO.PROG.INTERP](../spec/auto/prog/interp/NODE.md) | open |
-| PCD.PRG.10 | DMIS program import and export | [AUTO.PROG.DMISMAP](../spec/auto/prog/dmismap/NODE.md) | open |
+| PCD.PRG.09 | Mark and execute selected steps | [AUTO.PROG.INTERP.MARK](../spec/auto/prog/interp/mark/NODE.md) | leaf |
+| PCD.PRG.10 | DMIS program import and export | [AUTO.PROG.DMISMAP](../spec/auto/prog/dmismap/NODE.md) | leaf |
 | PCD.MCH.01 | Machine controller interfaces | [HAL.IPP.SESS](../spec/hal/ipp/sess/NODE.md) | open |
 | PCD.MCH.02 | I++ support | [HAL.IPP.SESS](../spec/hal/ipp/sess/NODE.md) | open |
 | PCD.MCH.03 | Temperature compensation | [HAL.DRV.ENV](../spec/hal/drv/env/NODE.md) | leaf |
 | PCD.MCH.04 | Rotary tables | [HAL.IPP.TOOLS](../spec/hal/ipp/tools/NODE.md) | open |
 | PCD.MCH.05 | Manual and DCC modes | [HAL.IPP.MODES](../spec/hal/ipp/modes/NODE.md) | leaf |
 | PCD.MCH.06 | Jog box support | [HAL.IPP.MODES](../spec/hal/ipp/modes/NODE.md) | leaf |
-| PCD.RPT.01 | Report templates | [RPT.MODEL.TMPL](../spec/rpt/model/tmpl/NODE.md) | open |
-| PCD.RPT.02 | Custom report editor | [RPT.DESIGN.UI](../spec/rpt/design/ui/NODE.md) | open |
-| PCD.RPT.03 | Text and graphical analysis | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| PCD.RPT.04 | Report to spreadsheet or CSV | [RPT.OUTPUT.SHEET](../spec/rpt/output/sheet/NODE.md) | open |
-| PCD.RPT.05 | Statistics output to SPC databases | [RPT.OUTPUT.SPC](../spec/rpt/output/spc/NODE.md) | open |
-| PCD.RPT.06 | Q-DAS output | [RPT.OUTPUT.SPC](../spec/rpt/output/spc/NODE.md) | open |
-| PCD.RPT.07 | Inspection results database | [RPT.CATALOG.STORE](../spec/rpt/catalog/store/NODE.md) | open |
+| PCD.RPT.01 | Report templates | [RPT.MODEL.TMPL.FORMAT](../spec/rpt/model/tmpl/format/NODE.md), [RPT.MODEL.TMPL.STARTER](../spec/rpt/model/tmpl/starter/NODE.md), [RPT.MODEL.TMPL.VER](../spec/rpt/model/tmpl/ver/NODE.md) | leaf |
+| PCD.RPT.02 | Custom report editor | [RPT.DESIGN.UI.PANEL](../spec/rpt/design/ui/panel/NODE.md) | leaf |
+| PCD.RPT.03 | Text and graphical analysis | [RPT.MODEL.BLOCKS.CHART](../spec/rpt/model/blocks/chart/NODE.md), [RPT.MODEL.BLOCKS.TEXT](../spec/rpt/model/blocks/text/NODE.md) | leaf |
+| PCD.RPT.04 | Report to spreadsheet or CSV | [RPT.OUTPUT.SHEET.CELL](../spec/rpt/output/sheet/cell/NODE.md), [RPT.OUTPUT.SHEET.CSV](../spec/rpt/output/sheet/csv/NODE.md), [RPT.OUTPUT.SHEET.XLSX](../spec/rpt/output/sheet/xlsx/NODE.md) | leaf |
+| PCD.RPT.05 | Statistics output to SPC databases | [RPT.OUTPUT.SPC](../spec/rpt/output/spc/NODE.md) | leaf |
+| PCD.RPT.06 | Q-DAS output | [RPT.OUTPUT.SPC](../spec/rpt/output/spc/NODE.md) | leaf |
+| PCD.RPT.07 | Inspection results database | [RPT.CATALOG.STORE.INDEX](../spec/rpt/catalog/store/index/NODE.md), [RPT.CATALOG.STORE.SCHEMA](../spec/rpt/catalog/store/schema/NODE.md) | leaf |
 | PCD.IND.01 | Blade (airfoil) analysis | [IND.AIRFOIL.FORM](../spec/ind/airfoil/form/NODE.md), [IND.AIRFOIL.PARAMS](../spec/ind/airfoil/params/NODE.md), [IND.AIRFOIL.SECTION](../spec/ind/airfoil/section/NODE.md), [IND.AIRFOIL.STACK](../spec/ind/airfoil/stack/NODE.md) | open |
 | PCD.IND.02 | Gear analysis | [IND.GEAR.DEF](../spec/ind/gear/def/NODE.md), [IND.GEAR.FLANK](../spec/ind/gear/flank/NODE.md), [IND.GEAR.GRADE](../spec/ind/gear/grade/NODE.md), [IND.GEAR.PITCH](../spec/ind/gear/pitch/NODE.md), [IND.GEAR.SIZE](../spec/ind/gear/size/NODE.md) | leaf, open |
 | PCD.IND.03 | Portable arm and tracker workflows | [IND.PORT.GUIDE](../spec/ind/port/guide/NODE.md), [IND.PORT.RECOG](../spec/ind/port/recog/NODE.md), [IND.PORT.REPLAY](../spec/ind/port/replay/NODE.md), [IND.PORT.ROUTINE](../spec/ind/port/routine/NODE.md) | open |
 | PCD.IND.04 | Tube inspection | [IND.TUBE.BEND](../spec/ind/tube/bend/NODE.md), [IND.TUBE.CMP](../spec/ind/tube/cmp/NODE.md), [IND.TUBE.CORR](../spec/ind/tube/corr/NODE.md), [IND.TUBE.EXP](../spec/ind/tube/exp/NODE.md), [IND.TUBE.MODEL](../spec/ind/tube/model/NODE.md), [IND.TUBE.RECON](../spec/ind/tube/recon/NODE.md) | leaf, open |
 | PCD.LAS.01 | Laser scanning on a CMM | [HAL.IPP.MEAS](../spec/hal/ipp/meas/NODE.md) | open |
-| PCD.LAS.02 | Point cloud operations and CAD comparison | [SCAN.CLOUD.FILTER](../spec/scan/cloud/filter/NODE.md), [SCAN.CLOUD.MGMT](../spec/scan/cloud/mgmt/NODE.md), [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | leaf, open |
+| PCD.LAS.02 | Point cloud operations and CAD comparison | [SCAN.CMP.DEV.SURFCAD](../spec/scan/cmp/dev/surfcad/NODE.md) | leaf |
 | PCD.LAS.03 | Vision measurement | [HAL.DRV.MISC](../spec/hal/drv/misc/NODE.md) | open |
-| PCD.EXP.01 | DMIS output | [IO.DMIS.EXPORT](../spec/io/dmis/export/NODE.md) | open |
+| PCD.EXP.01 | DMIS output | [IO.DMIS.EXPORT.OUTW](../spec/io/dmis/export/outw/NODE.md) | leaf |
 | PCD.EXP.02 | XYZ and ASCII export | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md) | leaf |
-| PCD.EXP.03 | QIF results export | [IO.RES.QIFR](../spec/io/res/qifr/NODE.md) | open |
+| PCD.EXP.03 | QIF results export | [IO.RES.QIFR.ROUT](../spec/io/res/qifr/rout/NODE.md) | leaf |
 
 ## polyworks.md
 
 | Seed | Feature | Covered by | Status |
 |---|---|---|---|
-| PW.PRJ.01 | Workspaces and projects | [CORE.PRJ.CONT](../spec/core/prj/cont/NODE.md) | open |
-| PW.PRJ.02 | Multi-piece inspection projects | [CORE.PRJ.STAGE](../spec/core/prj/stage/NODE.md) | open |
-| PW.PRJ.03 | Object tree | [CORE.PRJ.TREE](../spec/core/prj/tree/NODE.md) | open |
-| PW.PRJ.04 | Undo | [CORE.JRN.UNDO](../spec/core/jrn/undo/NODE.md) | open |
-| PW.PRJ.05 | Inspection project templates | [CORE.PRJ.TPL](../spec/core/prj/tpl/NODE.md) | open |
-| PW.IMP.01 | Import point clouds (ASCII, E57, PTX, vendor formats) | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md), [IO.CLOUD.E57](../spec/io/cloud/e57/NODE.md), [IO.CLOUD.PTX](../spec/io/cloud/ptx/NODE.md) | leaf, open |
+| PW.PRJ.01 | Workspaces and projects | [CORE.PRJ.CONT.LIFE](../spec/core/prj/cont/life/NODE.md) | leaf |
+| PW.PRJ.02 | Multi-piece inspection projects | [CORE.PRJ.STAGE.MODEL](../spec/core/prj/stage/model/NODE.md) | leaf |
+| PW.PRJ.03 | Object tree | [CORE.PRJ.TREE.MODEL](../spec/core/prj/tree/model/NODE.md), [CORE.PRJ.TREE.QUERY](../spec/core/prj/tree/query/NODE.md) | leaf |
+| PW.PRJ.04 | Undo | [CORE.JRN.UNDO.MOVE](../spec/core/jrn/undo/move/NODE.md) | leaf |
+| PW.PRJ.05 | Inspection project templates | [CORE.PRJ.TPL.CREATE](../spec/core/prj/tpl/create/NODE.md), [CORE.PRJ.TPL.PKG](../spec/core/prj/tpl/pkg/NODE.md) | leaf |
+| PW.IMP.01 | Import point clouds (ASCII, E57, PTX, vendor formats) | [IO.CLOUD.E57.READ](../spec/io/cloud/e57/read/NODE.md) | leaf |
 | PW.IMP.02 | Import polygonal meshes | [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.STL](../spec/io/mesh/stl/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf |
-| PW.IMP.03 | Import CAD (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
-| PW.IMP.04 | Import PMI / GD&T | [IO.CAD.PMI](../spec/io/cad/pmi/NODE.md) | open |
-| PW.IMP.05 | Import CMM measurement data | [IO.RES.TRANS](../spec/io/res/trans/NODE.md) | open |
-| PW.EXP.01 | Export points and meshes | [IO.CLOUD.ASCII](../spec/io/cloud/ascii/NODE.md), [IO.CLOUD.E57](../spec/io/cloud/e57/NODE.md), [IO.CLOUD.LAS](../spec/io/cloud/las/NODE.md), [IO.MESH.OBJ](../spec/io/mesh/obj/NODE.md), [IO.MESH.PLY](../spec/io/mesh/ply/NODE.md), [IO.MESH.STL](../spec/io/mesh/stl/NODE.md), [IO.MESH.TMF](../spec/io/mesh/tmf/NODE.md) | leaf, open |
-| PW.EXP.02 | Export CSV and tables | [IO.RES.CSV](../spec/io/res/csv/NODE.md) | open |
-| PW.EXP.03 | Export features as IGES | [IO.CAD.EXPORT](../spec/io/cad/export/NODE.md) | open |
-| PW.EXP.04 | Export SPC formats (e.g. Q-DAS) | [IO.RES.AQDEF](../spec/io/res/aqdef/NODE.md) | open |
+| PW.IMP.03 | Import CAD (native, STEP, IGES) | [IO.CAD.IGES.CMD](../spec/io/cad/iges/cmd/NODE.md), [IO.CAD.STEP.CMD](../spec/io/cad/step/cmd/NODE.md), [IO.CAD.XLATE.BRIDGE](../spec/io/cad/xlate/bridge/NODE.md) | leaf |
+| PW.IMP.04 | Import PMI / GD&T | [IO.CAD.PMI.CMD](../spec/io/cad/pmi/cmd/NODE.md) | leaf |
+| PW.IMP.05 | Import CMM measurement data | [IO.RES.TRANS.DMIS](../spec/io/res/trans/dmis/NODE.md) | leaf |
+| PW.EXP.01 | Export points and meshes | [IO.CLOUD.E57.WRITE](../spec/io/cloud/e57/write/NODE.md), [IO.CLOUD.LAS.CMD](../spec/io/cloud/las/cmd/NODE.md) | leaf |
+| PW.EXP.02 | Export CSV and tables | [IO.RES.CSV.OUT](../spec/io/res/csv/out/NODE.md) | leaf |
+| PW.EXP.03 | Export features as IGES | [IO.CAD.EXPORT.IGESW](../spec/io/cad/export/igesw/NODE.md) | leaf |
+| PW.EXP.04 | Export SPC formats (e.g. Q-DAS) | [IO.RES.AQDEF.OUT](../spec/io/res/aqdef/out/NODE.md) | leaf |
 | PW.PCL.01 | Point cloud cleanup (noise and outliers) | [SCAN.CLOUD.FILTER](../spec/scan/cloud/filter/NODE.md) | leaf |
 | PW.PCL.02 | Subsampling | [SCAN.CLOUD.SUBS](../spec/scan/cloud/subs/NODE.md) | leaf |
-| PW.PCL.03 | Meshing from point clouds | [SCAN.POLY.MULTI](../spec/scan/poly/multi/NODE.md), [SCAN.POLY.SURF](../spec/scan/poly/surf/NODE.md) | open |
-| PW.PCL.04 | Mesh editing | [SCAN.MESHOP.CUT](../spec/scan/meshop/cut/NODE.md), [SCAN.MESHOP.SEL](../spec/scan/meshop/sel/NODE.md) | leaf, open |
-| PW.PCL.05 | Multi-scan registration | [SCAN.CLOUD.REG](../spec/scan/cloud/reg/NODE.md) | open |
+| PW.PCL.03 | Meshing from point clouds | [SCAN.POLY.MULTI.CMD](../spec/scan/poly/multi/cmd/NODE.md), [SCAN.POLY.SURF.CMD](../spec/scan/poly/surf/cmd/NODE.md) | leaf |
+| PW.PCL.04 | Mesh editing | [SCAN.MESHOP.CUT.CURVE](../spec/scan/meshop/cut/curve/NODE.md), [SCAN.MESHOP.CUT.INVERT](../spec/scan/meshop/cut/invert/NODE.md) | leaf |
+| PW.PCL.05 | Multi-scan registration | [SCAN.CLOUD.REG.GLOBAL](../spec/scan/cloud/reg/global/NODE.md), [SCAN.CLOUD.REG.PAIR](../spec/scan/cloud/reg/pair/NODE.md) | leaf |
 | PW.PCL.06 | Normal estimation | [SCAN.CLOUD.NORM](../spec/scan/cloud/norm/NODE.md) | leaf |
 | PW.CON.01 | Extract features from data by fitting | [KRN.LSQ.LIN](../spec/krn/lsq/lin/NODE.md), [KRN.LSQ.RND](../spec/krn/lsq/rnd/NODE.md), [KRN.LSQ.TRAIT](../spec/krn/lsq/trait/NODE.md) | leaf |
-| PW.CON.02 | Primitives: plane, line, circle, cylinder, cone, sphere | [KRN.LSQ.AXIS](../spec/krn/lsq/axis/NODE.md), [KRN.LSQ.LIN](../spec/krn/lsq/lin/NODE.md), [KRN.LSQ.RND](../spec/krn/lsq/rnd/NODE.md) | leaf, open |
-| PW.CON.03 | Slots, polylines and curves | [KRN.LSQ.CURVE](../spec/krn/lsq/curve/NODE.md), [KRN.LSQ.PLAN2D](../spec/krn/lsq/plan2d/NODE.md) | open |
-| PW.CON.04 | Construct features by operations | [KRN.CONS.ELEM](../spec/krn/cons/elem/NODE.md), [KRN.CONS.OPS](../spec/krn/cons/ops/NODE.md) | open |
-| PW.CON.05 | Fit methods: least squares, minimum zone, inscribed, circumscribed | [KRN.ENV.MCC](../spec/krn/env/mcc/NODE.md), [KRN.ENV.MIC](../spec/krn/env/mic/NODE.md), [KRN.ENV.TAN](../spec/krn/env/tan/NODE.md), [KRN.MZ.EXT](../spec/krn/mz/ext/NODE.md), [KRN.MZ.LIN](../spec/krn/mz/lin/NODE.md), [KRN.MZ.RND](../spec/krn/mz/rnd/NODE.md) | open |
+| PW.CON.02 | Primitives: plane, line, circle, cylinder, cone, sphere | [KRN.LSQ.AXIS.CONE](../spec/krn/lsq/axis/cone/NODE.md), [KRN.LSQ.AXIS.CYL](../spec/krn/lsq/axis/cyl/NODE.md) | leaf |
+| PW.CON.03 | Slots, polylines and curves | [KRN.LSQ.CURVE.POLY](../spec/krn/lsq/curve/poly/NODE.md), [KRN.LSQ.CURVE.SPLINE](../spec/krn/lsq/curve/spline/NODE.md), [KRN.LSQ.PLAN2D.ELL](../spec/krn/lsq/plan2d/ell/NODE.md), [KRN.LSQ.PLAN2D.RECT](../spec/krn/lsq/plan2d/rect/NODE.md), [KRN.LSQ.PLAN2D.SLOT](../spec/krn/lsq/plan2d/slot/NODE.md) | leaf |
+| PW.CON.04 | Construct features by operations | [KRN.CONS.ELEM.FITC](../spec/krn/cons/elem/fitc/NODE.md), [KRN.CONS.ELEM.PRIM](../spec/krn/cons/elem/prim/NODE.md), [KRN.CONS.ELEM.SHAPE](../spec/krn/cons/elem/shape/NODE.md), [KRN.CONS.OPS.TABLE](../spec/krn/cons/ops/table/NODE.md) | leaf |
+| PW.CON.05 | Fit methods: least squares, minimum zone, inscribed, circumscribed | [KRN.ENV.MCC.CVX](../spec/krn/env/mcc/cvx/NODE.md), [KRN.ENV.MCC.CYL](../spec/krn/env/mcc/cyl/NODE.md), [KRN.ENV.MIC.CIRSPH](../spec/krn/env/mic/cirsph/NODE.md), [KRN.ENV.MIC.CYL](../spec/krn/env/mic/cyl/NODE.md), [KRN.ENV.TAN.CYL](../spec/krn/env/tan/cyl/NODE.md), [KRN.ENV.TAN.LINE](../spec/krn/env/tan/line/NODE.md), [KRN.ENV.TAN.PLANE](../spec/krn/env/tan/plane/NODE.md), [KRN.MZ.EXT.CONE](../spec/krn/mz/ext/cone/NODE.md), [KRN.MZ.EXT.CURVE](../spec/krn/mz/ext/curve/NODE.md), [KRN.MZ.EXT.ELL](../spec/krn/mz/ext/ell/NODE.md), [KRN.MZ.EXT.PLAN](../spec/krn/mz/ext/plan/NODE.md), [KRN.MZ.LIN.FLAT](../spec/krn/mz/lin/flat/NODE.md), [KRN.MZ.LIN.LINE3](../spec/krn/mz/lin/line3/NODE.md), [KRN.MZ.RND.CIRC](../spec/krn/mz/rnd/circ/NODE.md), [KRN.MZ.RND.CYL](../spec/krn/mz/rnd/cyl/NODE.md), [KRN.MZ.RND.SPH](../spec/krn/mz/rnd/sph/NODE.md) | leaf |
 | PW.CON.06 | Extraction methods: probing, cross-sections, surface | [KRN.OUT.SEL](../spec/krn/out/sel/NODE.md) | leaf |
-| PW.CON.07 | Torus | [KRN.LSQ.AXIS](../spec/krn/lsq/axis/NODE.md) | open |
+| PW.CON.07 | Torus | [KRN.LSQ.AXIS.TORUS](../spec/krn/lsq/axis/torus/NODE.md) | leaf |
 | PW.ALN.01 | Initial alignment by picked points | [ALN.PRE.PAIRS](../spec/aln/pre/pairs/NODE.md) | leaf |
-| PW.ALN.02 | Data-to-reference best-fit | [ALN.BFIT.ICP](../spec/aln/bfit/icp/NODE.md) | open |
-| PW.ALN.03 | Feature-based alignment | [ALN.DATUM.ELEM](../spec/aln/datum/elem/NODE.md) | open |
+| PW.ALN.02 | Data-to-reference best-fit | [ALN.BFIT.ICP.CMD](../spec/aln/bfit/icp/cmd/NODE.md) | leaf |
+| PW.ALN.03 | Feature-based alignment | [ALN.DATUM.ELEM.CMD](../spec/aln/datum/elem/cmd/NODE.md) | leaf |
 | PW.ALN.04 | 3-2-1 alignment | [ALN.RPS.CLASSIC](../spec/aln/rps/classic/NODE.md) | leaf |
 | PW.ALN.05 | RPS alignment | [ALN.RPS.LOCK](../spec/aln/rps/lock/NODE.md) | leaf |
-| PW.ALN.06 | Datum-based alignment | [ALN.DATUM.ISO](../spec/aln/datum/iso/NODE.md), [ALN.DATUM.SYS](../spec/aln/datum/sys/NODE.md) | open |
+| PW.ALN.06 | Datum-based alignment | [ALN.DATUM.SYS.CMD](../spec/aln/datum/sys/cmd/NODE.md) | leaf |
 | PW.ALN.07 | Constrained best-fit | [ALN.BFIT.CONSTR](../spec/aln/bfit/constr/NODE.md) | leaf |
-| PW.ALN.08 | Alignment groups | [ALN.MODEL.HIER](../spec/aln/model/hier/NODE.md) | open |
-| PW.CMP.01 | Color maps of data against CAD | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
+| PW.ALN.08 | Alignment groups | [ALN.MODEL.HIER.GROUP](../spec/aln/model/hier/group/NODE.md) | leaf |
+| PW.CMP.01 | Color maps of data against CAD | [SCAN.CMP.DEV.SURFCAD](../spec/scan/cmp/dev/surfcad/NODE.md) | leaf |
 | PW.CMP.02 | Cross-sections | [SCAN.SECT.CUT](../spec/scan/sect/cut/NODE.md), [SCAN.SECT.DEF](../spec/scan/sect/def/NODE.md) | leaf |
 | PW.CMP.03 | Comparison points with tolerances | [SCAN.CMP.CPT](../spec/scan/cmp/cpt/NODE.md) | leaf |
-| PW.CMP.04 | Boundary and edge comparison | [SCAN.EDGE.EDEV](../spec/scan/edge/edev/NODE.md), [SCAN.EDGE.EST](../spec/scan/edge/est/NODE.md), [SCAN.EDGE.MESHBND](../spec/scan/edge/meshbnd/NODE.md) | leaf, open |
+| PW.CMP.04 | Boundary and edge comparison | [SCAN.EDGE.EST.SILH](../spec/scan/edge/est/silh/NODE.md), [SCAN.EDGE.EST.TANG](../spec/scan/edge/est/tang/NODE.md) | leaf |
 | PW.CMP.05 | Thickness analysis | [SCAN.THK.MAT](../spec/scan/thk/mat/NODE.md), [SCAN.THK.RAY](../spec/scan/thk/ray/NODE.md), [SCAN.THK.TFIELD](../spec/scan/thk/tfield/NODE.md) | leaf |
 | PW.CMP.06 | Deviation annotations | [SCAN.CMP.LABEL](../spec/scan/cmp/label/NODE.md) | leaf |
-| PW.GDT.01 | Dimensions (distance, angle, diameter) | [GDT.DIM.ANGLE](../spec/gdt/dim/angle/NODE.md), [GDT.DIM.LINEAR](../spec/gdt/dim/linear/NODE.md), [GDT.DIM.RADIAL](../spec/gdt/dim/radial/NODE.md), [GDT.DIM.SIZEASME](../spec/gdt/dim/sizeasme/NODE.md) | leaf, open |
-| PW.GDT.02 | Form tolerances | [GDT.FORM.CYL](../spec/gdt/form/cyl/NODE.md), [GDT.FORM.FCORE](../spec/gdt/form/fcore/NODE.md), [GDT.FORM.FLAT](../spec/gdt/form/flat/NODE.md), [GDT.FORM.ROUND](../spec/gdt/form/round/NODE.md), [GDT.FORM.STRAIGHT](../spec/gdt/form/straight/NODE.md) | leaf, open |
-| PW.GDT.03 | Orientation tolerances | [GDT.LOC.ORIENT](../spec/gdt/loc/orient/NODE.md) | open |
-| PW.GDT.04 | Position, including patterns | [GDT.LOC.POS](../spec/gdt/loc/pos/NODE.md) | open |
-| PW.GDT.05 | Profile | [GDT.PROF.LINE](../spec/gdt/prof/line/NODE.md), [GDT.PROF.SURF](../spec/gdt/prof/surf/NODE.md) | open |
-| PW.GDT.06 | Runout | [GDT.PROF.RUNOUT](../spec/gdt/prof/runout/NODE.md) | open |
-| PW.GDT.07 | Datum reference frames with datum mobility | [GDT.DRF.BUILD](../spec/gdt/drf/build/NODE.md), [GDT.DRF.COMMON](../spec/gdt/drf/common/NODE.md), [GDT.DRF.MOB](../spec/gdt/drf/mob/NODE.md) | leaf, open |
+| PW.GDT.01 | Dimensions (distance, angle, diameter) | [GDT.DIM.SIZEASME.CMD](../spec/gdt/dim/sizeasme/cmd/NODE.md), [GDT.DIM.SIZEASME.ENVLP](../spec/gdt/dim/sizeasme/envlp/NODE.md), [GDT.DIM.SIZEASME.LOCAL](../spec/gdt/dim/sizeasme/local/NODE.md) | leaf, open |
+| PW.GDT.02 | Form tolerances | [GDT.FORM.STRAIGHT.CMD](../spec/gdt/form/straight/cmd/NODE.md), [GDT.FORM.STRAIGHT.LINEEL](../spec/gdt/form/straight/lineel/NODE.md) | leaf |
+| PW.GDT.03 | Orientation tolerances | [GDT.LOC.ORIENT.CMDS](../spec/gdt/loc/orient/cmds/NODE.md), [GDT.LOC.ORIENT.TANG](../spec/gdt/loc/orient/tang/NODE.md), [GDT.LOC.ORIENT.ZONE](../spec/gdt/loc/orient/zone/NODE.md) | leaf, open |
+| PW.GDT.04 | Position, including patterns | [GDT.LOC.POS.CMD](../spec/gdt/loc/pos/cmd/NODE.md), [GDT.LOC.POS.MMC](../spec/gdt/loc/pos/mmc/NODE.md), [GDT.LOC.POS.PATTERN](../spec/gdt/loc/pos/pattern/NODE.md), [GDT.LOC.POS.RFS](../spec/gdt/loc/pos/rfs/NODE.md) | leaf |
+| PW.GDT.05 | Profile | [GDT.PROF.LINE.EVAL](../spec/gdt/prof/line/eval/NODE.md), [GDT.PROF.SURF.CMD](../spec/gdt/prof/surf/cmd/NODE.md), [GDT.PROF.SURF.COMP](../spec/gdt/prof/surf/comp/NODE.md) | leaf |
+| PW.GDT.06 | Runout | [GDT.PROF.RUNOUT.CIRC](../spec/gdt/prof/runout/circ/NODE.md), [GDT.PROF.RUNOUT.TOTAL](../spec/gdt/prof/runout/total/NODE.md) | leaf |
+| PW.GDT.07 | Datum reference frames with datum mobility | [GDT.DRF.COMMON.CDAT](../spec/gdt/drf/common/cdat/NODE.md), [GDT.DRF.MOB.BOUND](../spec/gdt/drf/mob/bound/NODE.md), [GDT.DRF.MOB.GROUP](../spec/gdt/drf/mob/group/NODE.md) | leaf, open |
 | PW.GDT.08 | ASME and ISO standards | [GDT.CHAR.SPEC](../spec/gdt/char/spec/NODE.md) | leaf |
-| PW.GDT.09 | Composite tolerances | [GDT.ZONE.COMP](../spec/gdt/zone/comp/NODE.md) | open |
+| PW.GDT.09 | Composite tolerances | [GDT.ZONE.COMP](../spec/gdt/zone/comp/NODE.md) | leaf |
 | PW.PRB.01 | Live probing with portable arms | [HAL.LIVE.PROBE](../spec/hal/live/probe/NODE.md) | open |
 | PW.PRB.02 | Probing with laser trackers | [HAL.LIVE.PROBE](../spec/hal/live/probe/NODE.md) | open |
 | PW.PRB.03 | Guided probing workflows | [HAL.LIVE.GUIDE](../spec/hal/live/guide/NODE.md) | open |
@@ -373,24 +373,24 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | PW.SCN.02 | Scanning with tracker-based scanners | [HAL.LIVE.SCANS](../spec/hal/live/scans/NODE.md) | open |
 | PW.SCN.03 | Real-time meshing during scanning | [HAL.LIVE.SCANS](../spec/hal/live/scans/NODE.md) | open |
 | PW.SCN.04 | Scanner parameter control | [HAL.LIVE.SCANS](../spec/hal/live/scans/NODE.md) | open |
-| PW.MSP.01 | Multi-piece statistical analysis | [RPT.STATS.DESC](../spec/rpt/stats/desc/NODE.md), [RPT.STATS.DSET](../spec/rpt/stats/dset/NODE.md) | leaf, open |
-| PW.MSP.02 | SPC charts | [RPT.STATS.SPC](../spec/rpt/stats/spc/NODE.md) | open |
-| PW.MSP.03 | Central data management and collaboration (DataLoop) | [RPT.CATALOG.SHARE](../spec/rpt/catalog/share/NODE.md) | open |
-| PW.MSP.04 | Results database and dashboards | [RPT.CATALOG.STORE](../spec/rpt/catalog/store/NODE.md), [RPT.STATS.DASH](../spec/rpt/stats/dash/NODE.md) | open |
-| PW.MSP.05 | Step through pieces in a multi-piece project | [RPT.STATS.CMP](../spec/rpt/stats/cmp/NODE.md) | open |
-| PW.RPT.01 | Report editor | [RPT.DESIGN.PLACE](../spec/rpt/design/place/NODE.md), [RPT.DESIGN.UI](../spec/rpt/design/ui/NODE.md) | open |
-| PW.RPT.02 | Report templates | [RPT.MODEL.TMPL](../spec/rpt/model/tmpl/NODE.md) | open |
-| PW.RPT.03 | Tables and snapshots | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| PW.RPT.04 | PDF and spreadsheet export | [RPT.OUTPUT.PDF](../spec/rpt/output/pdf/NODE.md), [RPT.OUTPUT.SHEET](../spec/rpt/output/sheet/NODE.md) | open |
+| PW.MSP.01 | Multi-piece statistical analysis | [RPT.STATS.DSET.MAT](../spec/rpt/stats/dset/mat/NODE.md) | leaf |
+| PW.MSP.02 | SPC charts | [RPT.STATS.SPC.CHART](../spec/rpt/stats/spc/chart/NODE.md) | leaf |
+| PW.MSP.03 | Central data management and collaboration (DataLoop) | [RPT.CATALOG.SHARE.ATTACH](../spec/rpt/catalog/share/attach/NODE.md) | leaf |
+| PW.MSP.04 | Results database and dashboards | [RPT.CATALOG.STORE.INDEX](../spec/rpt/catalog/store/index/NODE.md), [RPT.CATALOG.STORE.SCHEMA](../spec/rpt/catalog/store/schema/NODE.md), [RPT.STATS.DASH.DEF](../spec/rpt/stats/dash/def/NODE.md), [RPT.STATS.DASH.OPEN](../spec/rpt/stats/dash/open/NODE.md) | leaf |
+| PW.MSP.05 | Step through pieces in a multi-piece project | [RPT.STATS.CMP.STEP](../spec/rpt/stats/cmp/step/NODE.md) | leaf |
+| PW.RPT.01 | Report editor | [RPT.DESIGN.PLACE.ARRANGE](../spec/rpt/design/place/arrange/NODE.md), [RPT.DESIGN.PLACE.FRAME](../spec/rpt/design/place/frame/NODE.md), [RPT.DESIGN.UI.CANVAS](../spec/rpt/design/ui/canvas/NODE.md), [RPT.DESIGN.UI.PANEL](../spec/rpt/design/ui/panel/NODE.md) | leaf |
+| PW.RPT.02 | Report templates | [RPT.MODEL.TMPL.FORMAT](../spec/rpt/model/tmpl/format/NODE.md), [RPT.MODEL.TMPL.STARTER](../spec/rpt/model/tmpl/starter/NODE.md), [RPT.MODEL.TMPL.VER](../spec/rpt/model/tmpl/ver/NODE.md) | leaf |
+| PW.RPT.03 | Tables and snapshots | [RPT.MODEL.BLOCKS.TABLE](../spec/rpt/model/blocks/table/NODE.md), [RPT.MODEL.BLOCKS.VIEW](../spec/rpt/model/blocks/view/NODE.md) | leaf |
+| PW.RPT.04 | PDF and spreadsheet export | [RPT.OUTPUT.PDF.DRAW](../spec/rpt/output/pdf/draw/NODE.md), [RPT.OUTPUT.PDF.WRITE](../spec/rpt/output/pdf/write/NODE.md), [RPT.OUTPUT.SHEET.XLSX](../spec/rpt/output/sheet/xlsx/NODE.md) | leaf |
 | PW.AUT.01 | Macro recording | [AUTO.REC.MACRO](../spec/auto/rec/macro/NODE.md) | leaf |
-| PW.AUT.02 | Macro editing and debugging | [AUTO.PROG.EDIT](../spec/auto/prog/edit/NODE.md), [AUTO.PROG.INTERP](../spec/auto/prog/interp/NODE.md) | open |
+| PW.AUT.02 | Macro editing and debugging | [AUTO.PROG.EDIT.OPS](../spec/auto/prog/edit/ops/NODE.md), [AUTO.PROG.EDIT.REFACT](../spec/auto/prog/edit/refact/NODE.md), [AUTO.PROG.INTERP.DEBUG](../spec/auto/prog/interp/debug/NODE.md) | leaf |
 | PW.AUT.03 | Plug-ins and SDK | [AUTO.PY.SDK](../spec/auto/py/sdk/NODE.md) | open |
-| PW.AUT.04 | Operator playback of an inspection sequence | [AUTO.RUN.PLAY](../spec/auto/run/play/NODE.md) | open |
-| PW.AUT.05 | Reuse an inspection on new parts | [AUTO.RUN.BIND](../spec/auto/run/bind/NODE.md), [AUTO.RUN.EXEC](../spec/auto/run/exec/NODE.md) | leaf, open |
-| PW.VIZ.01 | 3D scene with large point clouds | [VIZ.RENDER.LOD](../spec/viz/render/lod/NODE.md) | open |
-| PW.VIZ.02 | View management | [VIZ.VIEW.MULTI](../spec/viz/view/multi/NODE.md), [VIZ.VIEW.NAMED](../spec/viz/view/named/NODE.md) | open |
+| PW.AUT.04 | Operator playback of an inspection sequence | [AUTO.RUN.PLAY.SESSION](../spec/auto/run/play/session/NODE.md) | leaf |
+| PW.AUT.05 | Reuse an inspection on new parts | [AUTO.RUN.EXEC.CMD](../spec/auto/run/exec/cmd/NODE.md) | leaf |
+| PW.VIZ.01 | 3D scene with large point clouds | [VIZ.RENDER.LOD.RASTER](../spec/viz/render/lod/raster/NODE.md), [VIZ.RENDER.LOD.TRAV](../spec/viz/render/lod/trav/NODE.md) | leaf |
+| PW.VIZ.02 | View management | [VIZ.VIEW.NAMED.STORE](../spec/viz/view/named/store/NODE.md) | leaf |
 | PW.VIZ.03 | Color legends | [VIZ.OVERLAY.LEGEND](../spec/viz/overlay/legend/NODE.md) | leaf |
-| PW.VIZ.04 | Annotations | [VIZ.OVERLAY.GDTGLYPH](../spec/viz/overlay/gdtglyph/NODE.md), [VIZ.OVERLAY.LABEL](../spec/viz/overlay/label/NODE.md) | open |
+| PW.VIZ.04 | Annotations | [VIZ.OVERLAY.GDTGLYPH.COMPOSE](../spec/viz/overlay/gdtglyph/compose/NODE.md), [VIZ.OVERLAY.GDTGLYPH.PLACE](../spec/viz/overlay/gdtglyph/place/NODE.md), [VIZ.OVERLAY.LABEL.MODEL](../spec/viz/overlay/label/model/NODE.md) | leaf |
 | PW.IND.01 | Airfoil gauging | [IND.AIRFOIL.FORM](../spec/ind/airfoil/form/NODE.md), [IND.AIRFOIL.PARAMS](../spec/ind/airfoil/params/NODE.md), [IND.AIRFOIL.SECTION](../spec/ind/airfoil/section/NODE.md), [IND.AIRFOIL.STACK](../spec/ind/airfoil/stack/NODE.md) | open |
 | PW.IND.02 | Gap and flush | [IND.GAPFL.DEF](../spec/ind/gapfl/def/NODE.md), [IND.GAPFL.JOINT](../spec/ind/gapfl/joint/NODE.md), [IND.GAPFL.SECT](../spec/ind/gapfl/sect/NODE.md), [IND.GAPFL.SENSOR](../spec/ind/gapfl/sensor/NODE.md) | leaf, open |
 | PW.IND.03 | Sheet metal hem and trim | [IND.SHEET.CTX](../spec/ind/sheet/ctx/NODE.md), [IND.SHEET.HEM](../spec/ind/sheet/hem/NODE.md), [IND.SHEET.TRIM](../spec/ind/sheet/trim/NODE.md) | leaf, open |
@@ -420,20 +420,20 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | SA.NET.04 | Network residual reporting | [LVM.RPT.TABLES](../spec/lvm/rpt/tables/NODE.md) | open |
 | SA.NET.05 | Scale bars and reference lengths | [LVM.SCALE.DEF](../spec/lvm/scale/def/NODE.md) | leaf |
 | SA.XFM.01 | Point-to-point best-fit transformation | [ALN.XFM.PAIRS](../spec/aln/xfm/pairs/NODE.md) | leaf |
-| SA.XFM.02 | Frames: create, nest, build from geometry | [ALN.MODEL.HIER](../spec/aln/model/hier/NODE.md) | open |
+| SA.XFM.02 | Frames: create, nest, build from geometry | [ALN.MODEL.HIER.FRAME](../spec/aln/model/hier/frame/NODE.md) | leaf |
 | SA.XFM.03 | 3-2-1 frame construction | [ALN.RPS.CLASSIC](../spec/aln/rps/classic/NODE.md) | leaf |
 | SA.XFM.04 | Transformations with constraints (DoF locks, weights) | [ALN.BFIT.CONSTR](../spec/aln/bfit/constr/NODE.md) | leaf |
 | SA.XFM.05 | Scale in transformations | [ALN.XFM.SCALE](../spec/aln/xfm/scale/NODE.md) | leaf |
 | SA.XFM.06 | Quick alignment | [ALN.PRE.PAIRS](../spec/aln/pre/pairs/NODE.md) | leaf |
-| SA.REL.01 | Geometry fitting (plane, line, circle, cylinder, sphere, cone, paraboloid) | [KRN.LSQ.AXIS](../spec/krn/lsq/axis/NODE.md), [KRN.LSQ.CURVE](../spec/krn/lsq/curve/NODE.md), [KRN.LSQ.LIN](../spec/krn/lsq/lin/NODE.md), [KRN.LSQ.RND](../spec/krn/lsq/rnd/NODE.md) | leaf, open |
-| SA.REL.02 | Live point-to-object and object-to-object relationships | [KRN.CONS.REL](../spec/krn/cons/rel/NODE.md) | open |
-| SA.REL.03 | Relationship tolerances and reporting | [KRN.CONS.REL](../spec/krn/cons/rel/NODE.md) | open |
+| SA.REL.01 | Geometry fitting (plane, line, circle, cylinder, sphere, cone, paraboloid) | [KRN.LSQ.AXIS.CONE](../spec/krn/lsq/axis/cone/NODE.md), [KRN.LSQ.AXIS.CYL](../spec/krn/lsq/axis/cyl/NODE.md), [KRN.LSQ.CURVE.PARAB](../spec/krn/lsq/curve/parab/NODE.md) | leaf |
+| SA.REL.02 | Live point-to-object and object-to-object relationships | [KRN.CONS.REL](../spec/krn/cons/rel/NODE.md) | leaf |
+| SA.REL.03 | Relationship tolerances and reporting | [KRN.CONS.REL](../spec/krn/cons/rel/NODE.md) | leaf |
 | SA.REL.04 | Automatic filtering and outlier rejection | [KRN.OUT.RANSAC](../spec/krn/out/ransac/NODE.md), [KRN.OUT.RUN](../spec/krn/out/run/NODE.md), [KRN.OUT.STAT](../spec/krn/out/stat/NODE.md) | leaf |
-| SA.UNC.01 | Instrument uncertainty models | [UNC.INST.IEMPS](../spec/unc/inst/iemps/NODE.md), [UNC.INST.LIB](../spec/unc/inst/lib/NODE.md), [UNC.INST.MPE](../spec/unc/inst/mpe/NODE.md), [UNC.INST.PORT](../spec/unc/inst/port/NODE.md), [UNC.INST.SCHEMA](../spec/unc/inst/schema/NODE.md) | leaf, open |
+| SA.UNC.01 | Instrument uncertainty models | [UNC.INST.LIB.CURATE](../spec/unc/inst/lib/curate/NODE.md), [UNC.INST.LIB.FORMAT](../spec/unc/inst/lib/format/NODE.md), [UNC.INST.LIB.REG](../spec/unc/inst/lib/reg/NODE.md), [UNC.INST.MPE.ARM](../spec/unc/inst/mpe/arm/NODE.md), [UNC.INST.MPE.CMM](../spec/unc/inst/mpe/cmm/NODE.md), [UNC.INST.MPE.DERIVE](../spec/unc/inst/mpe/derive/NODE.md), [UNC.INST.MPE.OPT](../spec/unc/inst/mpe/opt/NODE.md), [UNC.INST.MPE.TRK](../spec/unc/inst/mpe/trk/NODE.md), [UNC.INST.PORT.ARM](../spec/unc/inst/port/arm/NODE.md), [UNC.INST.PORT.EVAL](../spec/unc/inst/port/eval/NODE.md), [UNC.INST.PORT.OPT](../spec/unc/inst/port/opt/NODE.md), [UNC.INST.PORT.SPH](../spec/unc/inst/port/sph/NODE.md) | leaf, open |
 | SA.UNC.02 | Monte Carlo uncertainty fields | [UNC.XFM.FIELD](../spec/unc/xfm/field/NODE.md) | open |
 | SA.UNC.03 | Uncertainty in transformations | [UNC.XFM.APPLY](../spec/unc/xfm/apply/NODE.md), [UNC.XFM.CHAIN](../spec/unc/xfm/chain/NODE.md), [UNC.XFM.TCOV](../spec/unc/xfm/tcov/NODE.md) | leaf, open |
 | SA.UNC.04 | Measurability and visibility planning | [UNC.PLAN.PRED](../spec/unc/plan/pred/NODE.md), [UNC.PLAN.RANK](../spec/unc/plan/rank/NODE.md), [UNC.PLAN.REPORT](../spec/unc/plan/report/NODE.md), [UNC.PLAN.VIS](../spec/unc/plan/vis/NODE.md) | leaf, open |
-| SA.GDT.01 | GD&T from MBD / PMI | [GDT.PMI.MAP](../spec/gdt/pmi/map/NODE.md) | open |
+| SA.GDT.01 | GD&T from MBD / PMI | [GDT.PMI.MAP.CMD](../spec/gdt/pmi/map/cmd/NODE.md), [GDT.PMI.MAP.ITEM](../spec/gdt/pmi/map/item/NODE.md) | leaf |
 | SA.GDT.02 | Feature checks against CAD | [GDT.DIM.PTDEV](../spec/gdt/dim/ptdev/NODE.md) | leaf |
 | SA.GDT.03 | Datum frames | [GDT.DRF.BUILD](../spec/gdt/drf/build/NODE.md), [GDT.DRF.DATUM](../spec/gdt/drf/datum/NODE.md) | leaf |
 | SA.BLD.01 | Watch windows with live readouts | [LVM.WATCH.WINDOW](../spec/lvm/watch/window/NODE.md) | open |
@@ -441,20 +441,20 @@ Each competitor feature (seed row) is shown with the deepest spec nodes that cov
 | SA.BLD.03 | Vector groups (deviation vectors) | [LVM.WATCH.VECTOR](../spec/lvm/watch/vector/NODE.md) | open |
 | SA.BLD.04 | Live surface relationships | [LVM.WATCH.LIVEREL](../spec/lvm/watch/liverel/NODE.md) | open |
 | SA.BLD.05 | Audible and visual alarms | [LVM.GUIDE.ALARM](../spec/lvm/guide/alarm/NODE.md) | open |
-| SA.CAD.01 | CAD import (native, STEP, IGES) | [IO.CAD.IGES](../spec/io/cad/iges/NODE.md), [IO.CAD.STEP](../spec/io/cad/step/NODE.md), [IO.CAD.XLATE](../spec/io/cad/xlate/NODE.md) | open |
-| SA.CAD.02 | CAD-to-point comparison | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
+| SA.CAD.01 | CAD import (native, STEP, IGES) | [IO.CAD.IGES.CMD](../spec/io/cad/iges/cmd/NODE.md), [IO.CAD.STEP.CMD](../spec/io/cad/step/cmd/NODE.md), [IO.CAD.XLATE.BRIDGE](../spec/io/cad/xlate/bridge/NODE.md) | leaf |
+| SA.CAD.02 | CAD-to-point comparison | [SCAN.CMP.DEV.SURFCAD](../spec/scan/cmp/dev/surfcad/NODE.md) | leaf |
 | SA.CAD.03 | CAD layer management | [GEO.CAD.GROUP](../spec/geo/cad/group/NODE.md) | leaf |
-| SA.MP.01 | Measurement plan scripting language | [AUTO.PROG.EXPR](../spec/auto/prog/expr/NODE.md), [AUTO.PROG.FMT](../spec/auto/prog/fmt/NODE.md) | leaf, open |
+| SA.MP.01 | Measurement plan scripting language | [AUTO.PROG.EXPR.GRAMMAR](../spec/auto/prog/expr/grammar/NODE.md) | leaf |
 | SA.MP.02 | SDK and external control | [AUTO.CTRL.CLIENT](../spec/auto/ctrl/client/NODE.md), [AUTO.CTRL.EXEC](../spec/auto/ctrl/exec/NODE.md) | leaf |
 | SA.MP.03 | Spreadsheet export and interaction | [AUTO.RUN.TABLE](../spec/auto/run/table/NODE.md) | leaf |
 | SA.MP.04 | Operator-guided plans | [AUTO.PROG.OPER](../spec/auto/prog/oper/NODE.md) | leaf |
-| SA.RPT.01 | Report templates | [RPT.MODEL.TMPL](../spec/rpt/model/tmpl/NODE.md) | open |
-| SA.RPT.02 | Vector group plots | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| SA.RPT.03 | Reports to spreadsheet and PDF | [RPT.OUTPUT.PDF](../spec/rpt/output/pdf/NODE.md), [RPT.OUTPUT.SHEET](../spec/rpt/output/sheet/NODE.md) | open |
-| SA.RPT.04 | Table customization | [RPT.MODEL.BLOCKS](../spec/rpt/model/blocks/NODE.md) | open |
-| SA.VIZ.01 | 3D view of large assemblies | [VIZ.RENDER.SHADE](../spec/viz/render/shade/NODE.md) | open |
-| SA.VIZ.02 | Instrument visualization | [VIZ.RENDER.GLYPH](../spec/viz/render/glyph/NODE.md) | open |
-| SA.VIZ.03 | Color vector plots | [VIZ.OVERLAY.WHISK](../spec/viz/overlay/whisk/NODE.md) | open |
+| SA.RPT.01 | Report templates | [RPT.MODEL.TMPL.FORMAT](../spec/rpt/model/tmpl/format/NODE.md), [RPT.MODEL.TMPL.STARTER](../spec/rpt/model/tmpl/starter/NODE.md), [RPT.MODEL.TMPL.VER](../spec/rpt/model/tmpl/ver/NODE.md) | leaf |
+| SA.RPT.02 | Vector group plots | [RPT.MODEL.BLOCKS.CHART](../spec/rpt/model/blocks/chart/NODE.md) | leaf |
+| SA.RPT.03 | Reports to spreadsheet and PDF | [RPT.OUTPUT.PDF.DRAW](../spec/rpt/output/pdf/draw/NODE.md), [RPT.OUTPUT.PDF.WRITE](../spec/rpt/output/pdf/write/NODE.md), [RPT.OUTPUT.SHEET.CSV](../spec/rpt/output/sheet/csv/NODE.md), [RPT.OUTPUT.SHEET.XLSX](../spec/rpt/output/sheet/xlsx/NODE.md) | leaf |
+| SA.RPT.04 | Table customization | [RPT.MODEL.BLOCKS.TABLE](../spec/rpt/model/blocks/table/NODE.md) | leaf |
+| SA.VIZ.01 | 3D view of large assemblies | [VIZ.RENDER.SHADE.CAD](../spec/viz/render/shade/cad/NODE.md) | leaf |
+| SA.VIZ.02 | Instrument visualization | [VIZ.RENDER.GLYPH.ACTOR](../spec/viz/render/glyph/actor/NODE.md), [VIZ.RENDER.GLYPH.STYLUS](../spec/viz/render/glyph/stylus/NODE.md) | leaf |
+| SA.VIZ.03 | Color vector plots | [VIZ.OVERLAY.WHISK.VECTOR](../spec/viz/overlay/whisk/vector/NODE.md) | leaf |
 | SA.SCN.01 | Point cloud management | [SCAN.CLOUD.MGMT](../spec/scan/cloud/mgmt/NODE.md) | leaf |
-| SA.SCN.02 | Cloud-to-CAD comparison | [SCAN.CMP.DEV](../spec/scan/cmp/dev/NODE.md) | open |
+| SA.SCN.02 | Cloud-to-CAD comparison | [SCAN.CMP.DEV.SURFCAD](../spec/scan/cmp/dev/surfcad/NODE.md) | leaf |
 | SA.SCN.03 | Cloud slicing and fitting | [SCAN.SECT.SLICE](../spec/scan/sect/slice/NODE.md) | leaf |

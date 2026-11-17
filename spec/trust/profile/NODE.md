@@ -11,11 +11,11 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-005]
 covers: []
-depends_on: [CORE]
+depends_on: []
 cli: [fid sign set-profile, fid sign show-profile]
 mcp: [sign_show_profile]
 journal: [sign.set_profile@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # TRUST.PROFILE: Governance profiles
@@ -72,6 +72,7 @@ Alternatives considered:
 - Tenant-defined profiles beyond the three built-ins are not specified; `TRUST.PROFILE.DEFS` allows only tenant meanings and the Regulated meaning sequence as tenant parameters. Propose more via decision if users ask.
 - The Assistive-only rule in REQ-TRUST.PROFILE-005 needs CORE to expose principal kind and a bus precondition hook; tracked in `TRUST.PROFILE.GATE`.
 - Setting a profile needs a human principal; while D-012 (CLI principal kind) is open, CLI callers are `script` and `set-profile` is GUI-only.
+- Dependencies narrowed (2026-11-17, D-034): only the leaves that register commands or hook the bus (`TRUST.PROFILE.SELECT`, `TRUST.PROFILE.GATE.*`) name specific CORE leaves; `TRUST.PROFILE.DEFS` stays CORE-free.
 
 ## Children
 

@@ -4,7 +4,7 @@ title: AP242 semantic PMI mapping to QIF MBD
 level: 3
 parent: IO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [IO.CAD.STEP, IO.QIF.GEN, IO.QIF.IDS]
 cli: [fid import cad-pmi]
 mcp: [import_cad_pmi]
 journal: [import.cad_pmi@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # IO.CAD.PMI: AP242 semantic PMI mapping to QIF MBD
@@ -60,7 +60,15 @@ READ (semantic PMI entities), MAPTOL (tolerances and modifiers), MAPDAT (datums 
 
 - Mapping rules for modifiers are standards interpretation; any ambiguity is a GDT/D-009 matter, not decided here.
 - CAx-IF recommended practices and NIST SFA as oracles [unverified: licences and edition].
+- Interface change (2026-11-17): `import.cad_step@1` has no `pmi=true` flag. To keep dependencies acyclic, PMI import is `import.cad_pmi@1` (`IO.CAD.PMI.CMD`), which imports geometry and PMI together from a source, or adds PMI to an earlier STEP import. PMI reading runs in the CAD worker (`IO.CAD.WORKER.BIN` dispatches to `IO.CAD.PMI.READ`); QIF mapping runs in the document process.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| IO.CAD.PMI.READ | AP242 PMI entity graph extraction and classification (leaf) | 003 004 | none |
+| IO.CAD.PMI.DAT | Datums and datum reference frames to QIF (leaf) | 002 004 | none |
+| IO.CAD.PMI.TOL | Geometric tolerances to QIF characteristics (leaf) | 001 004 005 | none |
+| IO.CAD.PMI.DIM | Dimensions to QIF characteristics (leaf) | 001 004 005 | none |
+| IO.CAD.PMI.CTX | Proposed spec context from dialect evidence (leaf) | 007 | none |
+| IO.CAD.PMI.CMD | PMI import command, report and NIST model conformance (leaf) | 001 003 004 006 | GOM.IMP.07, PW.IMP.04 |

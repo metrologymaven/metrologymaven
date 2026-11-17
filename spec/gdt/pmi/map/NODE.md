@@ -4,7 +4,7 @@ title: Semantic PMI to proposed characteristics
 level: 3
 parent: GDT.PMI
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.PMI-001, REQ-GDT.PMI-004, REQ-GDT.PMI-005, REQ-GDT.PMI-007]
 covers: [GOM.GDT.16, PCD.CAD.02, SA.GDT.01]
 depends_on: [GDT.CHAR.MODEL, GDT.CHAR.SPEC, GDT.RES.RESOLVE, GDT.PMI.LINK]
+uses_artifacts: [IO.CAD.PMI, IO.CORP]
 cli: [fid gdt propose-characteristics-from-pmi]
 mcp: [gdt_propose_characteristics_from_pmi]
 journal: [gdt.propose_characteristics_from_pmi@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.PMI.MAP: Semantic PMI to proposed characteristics
@@ -59,9 +60,13 @@ TABLE (entity-type mapping per AP242 and QIF), SPEC (governing-spec proposal), F
 
 ## Open questions
 
-- Inherited from `GDT.PMI`: whether an MCP agent may run `propose` on a document it did not import itself, or only on handles to approved import roots (CONSTITUTION §3). This node assumes handles only.
-- The AP242 PMI entity inventory is large; a P1b subset aligned with the ASME and ISO rows actually supported may be needed.
+- Inherited from `GDT.PMI`: whether an MCP agent may run `propose` on a document it did not import itself, or only on handles to approved import roots (CONSTITUTION §3). `GDT.PMI.MAP.CMD` accepts handles to approved roots only.
+- Resolved at split: the AP242 entity inventory is mapped to QIF MBD by `IO.CAD.PMI`, so this module consumes QIF MBD characteristics plus IO's import report (read as an artifact) and reuses the characteristic QIF mapping; the supported subset follows the DMT through resolvability flags, with no separate P1b entity list.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.PMI.MAP.ITEM | PMI entity to proposal item with evaluability status (leaf) | 001 002 | GOM.GDT.16, SA.GDT.01 |
+| GDT.PMI.MAP.CMD | Propose characteristics from PMI command (leaf) | 001 003 | GOM.GDT.16, PCD.CAD.02, SA.GDT.01 |
+| GDT.PMI.MAP.CORPUS | PMI proposal hit-rate measurement (leaf) | 004 | PCD.CAD.02 |

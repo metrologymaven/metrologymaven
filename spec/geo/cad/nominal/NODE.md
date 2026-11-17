@@ -4,7 +4,7 @@ title: Nominal element generation from CAD faces and edges
 level: 3
 parent: GEO.CAD
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GEO.CAD.TOPO, GEO.NURBS.ANALYTIC, GEO.NURBS.INVERT]
 cli: [fid geo extract-nominal]
 mcp: [geo_extract_nominal]
 journal: [geo.extract_nominal@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.CAD.NOMINAL: Nominal element generation from CAD faces and edges
@@ -59,9 +59,15 @@ DIRECT (analytic faces and edges), RECOG (NURBS-encoded recognition and deviatio
 
 ## Open questions
 
+- Layering (D-034): DIRECT, RECOG and MERGE are L0 library code in `fid-geo-cad`; only GEO.CAD.NOMINAL.CMD (in `fid-geo-cmd`) depends on CORE and GEO.SEL.
 - Where the typed nominal element types live: GEO, or a shared feature model owned by KRN or GDT that both nominal generation and fitting use. A single type is preferable; the owner should be agreed with KRN.
 - The recognition tolerance default and sample grid need evidence from real STEP corpora (IO.CORP).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GEO.CAD.NOMINAL.DIRECT | Nominal element types and direct analytic mapping (leaf) | 001 006 | none |
+| GEO.CAD.NOMINAL.RECOG | Recognition of NURBS-encoded primitives (leaf) | 002 003 006 | none |
+| GEO.CAD.NOMINAL.MERGE | Merging faces of one primitive (leaf) | 004 006 | none |
+| GEO.CAD.NOMINAL.CMD | Extract nominal elements command (leaf) | 003 005 | GOM.CAD.03 |

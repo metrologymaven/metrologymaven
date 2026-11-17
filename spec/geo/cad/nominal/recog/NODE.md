@@ -1,0 +1,85 @@
+---
+id: GEO.CAD.NOMINAL.RECOG
+title: Recognition of NURBS-encoded primitives
+level: 4
+parent: GEO.CAD.NOMINAL
+kind: task
+status: leaf
+phase: P1b
+size: M
+owners: []
+claimed_by:
+satisfies: [REQ-GEO.CAD.NOMINAL-002, REQ-GEO.CAD.NOMINAL-003, REQ-GEO.CAD.NOMINAL-006]
+covers: []
+depends_on: [GEO.CAD.NOMINAL.DIRECT, GEO.CAD.TOPO.TRIM, GEO.NURBS.EVAL, GEO.NURBS.ANALYTIC]
+side_effect: R1
+determinism: D0
+cli: []
+mcp: []
+journal: []
+updated: 2026-11-17
+---
+
+# GEO.CAD.NOMINAL.RECOG: Recognition of NURBS-encoded primitives
+
+## Purpose
+
+Many CAD exporters write planes, cylinders and spheres as NURBS. This leaf recognises those faces and edges within a recognition tolerance, measures and records the worst deviation on a stated sample grid, and returns a typed `NotRecognised` for genuinely freeform geometry instead of an approximate primitive. It is also the single `recognise` entry point that dispatches analytic geometry to GEO.CAD.NOMINAL.DIRECT.
+
+## Scope
+
+**In:**
+- `recognise_face(face, tol)`, `recognise_edge(edge, tol)`: analytic → DIRECT; NURBS → recognition
+- Candidate construction from differential geometry at the sample grid: principal curvatures and directions (GEO.NURBS.EVAL) give plane (k1 = k2 = 0), sphere (k1 = k2 ≠ 0), cylinder (one zero, one constant), cone and torus (axis from curvature lines)
+- Verification: distance of every sample point to the candidate via GEO.NURBS.ANALYTIC inversion; accept if the maximum is within tolerance
+- Sample grid: n × n parameters over the face domain (default n = 17 [unverified]), keeping only points classified `Inside` or `OnBoundary` by GEO.CAD.TOPO.TRIM, plus 33 samples per boundary edge
+- Edges: line (zero curvature) and circle (constant curvature, zero torsion)
+- Fixed candidate order: plane, sphere, cylinder, cone, torus; first that passes wins
+
+**Out** (and which node owns it instead):
+- Merging faces (owned by `GEO.CAD.NOMINAL.MERGE`)
+- Fitting to measured points (owned by `KRN`)
+
+## Requirements
+
+- **REQ-GEO.CAD.NOMINAL.RECOG-001** When a NURBS face matches a primitive within the recognition tolerance (default 1e-7 m [unverified]) at every sample, the system shall return that primitive with `method = Recognised`, the maximum sample deviation and the grid size used.
+- **REQ-GEO.CAD.NOMINAL.RECOG-002** If no candidate passes, then the system shall return `NotRecognised { face, best_kind, best_deviation_m }` and no element.
+- **REQ-GEO.CAD.NOMINAL.RECOG-003** When the geometry is analytic, `recognise_face` and `recognise_edge` shall return exactly GEO.CAD.NOMINAL.DIRECT's result.
+- **REQ-GEO.CAD.NOMINAL.RECOG-004** Candidates shall be tried in the fixed order plane, sphere, cylinder, cone, torus, so a face satisfying two candidates (for example a tiny spherical patch that is also within tolerance of a plane) always yields the first.
+- **REQ-GEO.CAD.NOMINAL.RECOG-005** Recognition shall be deterministic class D0 under KNP-1, with a fixed sample set for given face and grid size.
+- **REQ-GEO.CAD.NOMINAL.RECOG-006** If the tolerance is not finite and positive or the grid size is outside 3..=129, then the system shall return `BadParameter`.
+
+## Acceptance criteria
+
+- **AC-1** Given fixture `fixtures/geo/cad/nominal/nurbs_primitives.json` (exact rational NURBS encodings of a plane, cylinder, cone, sphere and torus, plus a line and circle edge), when recognised with 1e-7 m, then each kind is found, parameters match the generating analytic values within 1e-12 m and 1e-12 rad, and recorded deviations are below 1e-12 m.
+- **AC-2** Given fixture `fixtures/geo/cad/nominal/freeform.json` (a bicubic bump), then `NotRecognised` is returned with a `best_deviation_m` above 1e-4.
+- **AC-3** Given the cylinder of AC-1 perturbed by 1e-6 m at one control point, then it is `NotRecognised` at 1e-7 m and recognised at 1e-5 m with deviation about 1e-6 m.
+- **AC-4** Given the analytic block from GEO.CAD.NOMINAL.DIRECT, then results equal DIRECT's.
+- **AC-5** (error path) Given grid size 2, then `BadParameter`.
+- **AC-6** Given AC-1 on three OSes, then outputs are bit-identical.
+
+## Design
+
+- **Registry command(s):** none; library leaf.
+- **Data structures:** `Recognition { Element(NominalElement), NotRecognised { face, best_kind, best_deviation_m } }`; `RecogParams { tol_m, grid: u32 }`.
+- **Algorithm:** evaluate the grid in row-major order; build each candidate from curvature data at the grid sample nearest the domain centre (cylinder axis from the zero-curvature direction; sphere centre p + n/k; cone apex and half-angle from two rulings; torus from two curvature-line circles); verify by analytic inversion of every sample; take the maximum with total-order max.
+- **Errors:** `BadParameter`; recognition failure is a result, not an error.
+- **Determinism:** D0.
+- **Performance budget:** under 2 ms per face at n = 17 [unverified].
+- **Crate:** `fid-geo-cad` (L0, KNP-1 applies).
+
+## Test fixtures
+
+- `nurbs_primitives.json`: generated by a Python script with exact rational NURBS constructions (after Piegl and Tiller, *The NURBS Book*, ch. 7 and 8, cited not copied) from binary-exact analytic parameters; `freeform.json`: a seeded bicubic patch (seed 21). CC-BY-4.0.
+
+## Build prompt
+
+> In crate `fid-geo-cad` (L0, no I/O, KNP-1), add module `nominal::recog` with `recognise_face(&Body, face, RecogParams)` and `recognise_edge(...)` returning `Recognition`. Analytic geometry delegates to `nominal::direct`. For NURBS: sample an n × n grid (default 17, allowed 3..=129) over the face domain keeping points `topo::trim` classifies `Inside`/`OnBoundary`, plus 33 samples per boundary edge; build candidates from principal curvatures (`fid-geo-nurbs` eval) in the fixed order plane, sphere, cylinder, cone, torus; verify each by analytic inversion of all samples; return the first whose maximum deviation ≤ tol (default 1e-7 m) with `method = Recognised` and the deviation, else `NotRecognised { face, best_kind, best_deviation_m }`. Edges: line or circle. Acceptance: AC-1 five surfaces and two edges recognised exactly; AC-2 freeform not recognised; AC-3 tolerance boundary; AC-4 analytic passthrough; AC-5 `BadParameter`; AC-6 bit-identical on three OSes. Constraints: CONSTITUTION §8, KNP-1 (no FMA, `fid-num` transcendentals, total-order max). Files: `crates/fid-geo-cad/src/nominal/recog.rs`, `tests/nominal_recog.rs`, `fixtures/geo/cad/nominal/`, `tools/fixtures/nurbs_primitives.py`.
+
+## Open questions
+
+- The default tolerance and grid size need evidence from IO.CORP STEP corpora (inherited from the parent) [unverified].
+
+## Children
+
+_Leaf: none._

@@ -4,18 +4,18 @@ title: Governance-profile gates on promotion
 level: 3
 parent: VIZ.INBOX
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.INBOX-003]
 covers: []
-depends_on: [VIZ.INBOX.ACTIONS, TRUST.ESIG, TRUST.PROFILE]
+depends_on: [TRUST.PROFILE.SELECT, TRUST.PROFILE.DEFS, CORE.JRN.BR]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.INBOX.GATES: Governance-profile gates on promotion
@@ -55,8 +55,15 @@ SELECT (gate selection), REASON, TWOPERS, ESIGUI, STEPCONF.
 
 ## Open questions
 
-- P1a uses OS-keystore user verification; WebAuthn arrives in P1b per the concept doc [unverified]. TRUST owns that phasing.
+- Launch-1 excludes TRUST.ESIG, so the Lean profile must work without it: `VIZ.INBOX.GATES.PLAN` defines a `CeremonyProvider` trait that is optional, and `VIZ.INBOX.GATES.LEAN` needs no signing. Only `VIZ.INBOX.GATES.REG` (open, P1b) depends on TRUST.ESIG; the launch-1 milestone should exclude it.
+- Without a ceremony, promotion into a protected branch (`main` after the first release) is unavailable in launch-1; TRUST must say how Lean obtains the human assertion that `CORE.JRN.BR.PROMO` requires [cross-domain gap].
+- The dependency on `VIZ.INBOX.ACTIONS` was removed: GATES offers the plan, ACTIONS consumes it.
+- P1a uses OS-keystore user verification and WebAuthn arrives in P1b per the concept doc [unverified]; TRUST owns that phasing.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.INBOX.GATES.PLAN | Gate plan selection from profile, protection and principal (leaf) | 001 003 004 | none |
+| VIZ.INBOX.GATES.LEAN | Count-confirm and reason gate steps (leaf) | 003 004 | none |
+| VIZ.INBOX.GATES.REG | Signature ceremony, second-person and step-confirm gates | 001 002 | none |

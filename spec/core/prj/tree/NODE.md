@@ -4,18 +4,18 @@ title: Element tree, element states and type registration
 level: 3
 parent: CORE.PRJ
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.PRJ-006, REQ-CORE.PRJ-007, REQ-CORE.PRJ-008, REQ-CORE.PRJ-011]
 covers: [GOM.PRJ.03, PW.PRJ.03]
-depends_on: [CORE.BUS, CORE.PRJ.CONT]
+depends_on: [CORE.BUS.PIPE, CORE.PRJ.CONT]
 cli: [fid project list-elements, fid project describe-element, fid project create-group, fid project move-element, fid project rename-element, fid project set-visibility]
 mcp: [project_list_elements, project_describe_element, project_create_group, project_move_element, project_rename_element, project_set_visibility]
 journal: [project.create_group@1, project.move_element@1, project.rename_element@1, project.set_visibility@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.PRJ.TREE: Element tree, element states and type registration
@@ -66,4 +66,8 @@ MODEL (element record and states), TYPES (type registration), GROUP (groups and 
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.PRJ.TREE.MODEL | Element record, states, state view and type registry (leaf) | 001 003 004 007 | GOM.PRJ.03, PW.PRJ.03 |
+| CORE.PRJ.TREE.GROUP | Groups, move, rename and visibility commands (leaf) | 005 006 007 | none |
+| CORE.PRJ.TREE.QUERY | List and describe queries at scale (leaf) | 002 006 | GOM.PRJ.03, PW.PRJ.03 |

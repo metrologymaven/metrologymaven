@@ -4,7 +4,7 @@ title: Component library specification
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.TOKENS, UX.ICONS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.COMP: Component library specification
@@ -62,10 +62,27 @@ Toolkit-neutral specifications of the reusable UI components every app is built 
 
 DATA (tree, table, property grid, value display), CMD (palette, menus, approval chips, argument forms), CONT (panels, wizard and rail, dialog, toast, status bar), WHY (the "Why?" panel), REF (reference renderings and visual baselines).
 
+## Split rationale
+
+The dividing principle is **component family, plus a shared format and a shared rendering set**: SCHEMA (the `component-spec@1` format and the check that enforces anatomy, states, keyboard, accessibility, focus and disabled reasons), DATA (tree, table, property grid, legend frame, value display), CMD (palette, menus, toolbar, approval chips, argument forms), CONT (panels, tabs, stepper and rail, dialog, toast, status bar), WHY (the "Why?" panel), REF (reference renderings in four themes at two scales). The format and check come first so every family is checked the same way; the renderings come last because they depend on all specs.
+
+Alternatives considered:
+- **WHY inside DATA.** Rejected: the "Why?" panel has its own content contract (REQ-UX.COMP-007) tied to the data model and FLOW.DEADEND.WHY coverage.
+- **Renderings inside each family.** Rejected: one completeness and staleness check over all renderings is simpler, and VIZ consumes them as one baseline set.
+
 ## Open questions
 
-- If a D-005 spike fails and the toolkit changes, component specs should need no change because they are toolkit-neutral; this is an assumption to confirm after the spikes.
+- Toolkit neutrality after the D-005 spikes is still an assumption to confirm; the specs avoid toolkit terms, and any spike-forced change goes through the package changelog (UX.COMP.DATA AC-4).
+- VIZ.SHELL spikes (SPKTREE, SPKTABLE, SPKRPT) should test against UX.COMP.DATA and may use UX.COMP.REF baselines; they would declare `uses_artifacts` on those nodes (not editable from here).
+- The registry manifest lacks icon and title-style fields used by UX.COMP.CMD's mapping (CORE.REG).
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.COMP.SCHEMA](schema/NODE.md) | Component-spec format and completeness check (leaf) | 001 002 003 004 008 | none |
+| [UX.COMP.DATA](data/NODE.md) | Data component specs (leaf) | 001 002 003 005 006 009 | none |
+| [UX.COMP.CMD](cmd/NODE.md) | Command component specs (leaf) | 001 002 003 006 008 | none |
+| [UX.COMP.CONT](cont/NODE.md) | Container component specs (leaf) | 001 002 003 004 006 008 | none |
+| [UX.COMP.WHY](why/NODE.md) | The "Why?" panel spec (leaf) | 001 002 003 006 007 | none |
+| [UX.COMP.REF](ref/NODE.md) | Component reference renderings and visual baselines (leaf) | 010 | none |

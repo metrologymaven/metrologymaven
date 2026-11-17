@@ -4,18 +4,18 @@ title: ORS-FLT: filter, resampling and outlier cases
 level: 3
 parent: UNC.ORS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.ORS-002, REQ-UNC.ORS-003]
 covers: []
-depends_on: [UNC.ORS.TRACE]
+depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.FLT: ORS-FLT: filter, resampling and outlier cases
@@ -53,9 +53,15 @@ PROFILE, AREAL, RESAMPLE, OUTLIER. Each sub-suite becomes a content task once it
 
 ## Open questions
 
+- Split by evaluation family. Outlier policies are project-defined (`KRN.OUT`, `SCAN.CLOUD.FILTER`) and their cases are closed-form by construction, so OUTLIER is a leaf. No node yet owns an ISO 16610 filter command or a resampling command (`KRN.OUT` names GDT as owner of profile filtration, but no GDT leaf defines it), so FILTER and RESAMPLE stay open until their aims exist; FILTER's expected transmissions also need a filtration expert's check against the standard (D-016).
+
 - Interpretation content (expected results that depend on reading a standard, and every DMT row citation) is authored by paid or credentialed GD&T experts and signed off by two reviewers, per D-009; agents may draft structure, generators and closed-form mathematics only.
 - Expected results that cannot be derived in closed form need an independent oracle result recorded as a cross-check [unverified: which cases].
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.FLT.OUTLIER | Planted-outlier cases with exact excluded index sets (leaf) | 002 003 | none |
+| UNC.ORS.FLT.FILTER | Profile and areal filter transmission cases | 001 003 | none |
+| UNC.ORS.FLT.RESAMPLE | Resampling cases on known surfaces | 003 | none |

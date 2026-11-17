@@ -4,18 +4,19 @@ title: Static build and generated-data import
 level: 3
 parent: OUTR.SITE
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-OUTR.SITE-006]
 covers: []
-depends_on: [ECO.PARITY, ECO.REL]
+depends_on: []
+uses_artifacts: [ECO.PARITY, ECO.REL]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # OUTR.SITE.GEN: Static build and generated-data import
@@ -58,9 +59,15 @@ BUILD (pinned generator and command), IMPORT (fetch and digest check of generate
 
 ## Open questions
 
-- The static site generator is an implementation choice. Whether the Rust-first rule of CONSTITUTION §2 binds project tooling is not stated (carried from OUTR.SITE).
-- Reuse of an existing site project in `../../metrology maven/site` is still undecided [unverified relationship] (carried from OUTR.SITE).
+- Resolved in OUTR.SITE.GEN.BUILD: the generator is written in Rust inside the `fid-outreach` tooling crate; this is a choice, since CONSTITUTION §2 does not say whether the Rust-first rule binds tooling.
+- Resolved in OUTR.SITE.GEN.BUILD: the existing site project in `../../metrology maven/site` was evaluated and is not reused (separate consultancy brand, third-party font requests, no generator or data import). A maintainer may overrule in review.
+- Inputs are vendored and pinned (OUTR.SITE.GEN.IMPORT) rather than downloaded at build time, so the build is offline and reproducible; a new release's reports arrive through a reviewed pull request made by `site import fetch`.
+- Per CONSTITUTION §2.1 the former `depends_on: [ECO.PARITY, ECO.REL]` is now `uses_artifacts`: SITE reads their published files only.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [OUTR.SITE.GEN.BUILD](build/NODE.md) | Single-command static site build and shared page template (leaf) | 001 002 003 | none |
+| [OUTR.SITE.GEN.IMPORT](import/NODE.md) | Generated-input lock file, fetch, digest check and build manifest (leaf) | 004 005 | none |
+| [OUTR.SITE.GEN.HOST](host/NODE.md) | Self-hosting guide and generic static-server test (leaf) | 006 | none |

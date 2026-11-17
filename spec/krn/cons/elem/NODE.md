@@ -4,18 +4,18 @@ title: Primitives built from elements and constructed sets
 level: 3
 parent: KRN.CONS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-KRN.CONS-005, REQ-KRN.CONS-009, REQ-KRN.CONS-010]
 covers: [GOM.CON.01, GOM.CON.02, GOM.CON.03, GOM.CON.04, GOM.CON.05, GOM.CON.06, GOM.CON.07, GOM.CON.08, GOM.CON.09, PCD.CON.01, PCD.CON.03, PW.CON.04]
-depends_on: [KRN.CONS.DECL, KRN.LSQ.LIN, KRN.LSQ.RND, KRN.LSQ.AXIS, KRN.LSQ.PLAN2D]
+depends_on: [KRN.CONS.DECL, KRN.LSQ.LIN, KRN.LSQ.RND]
 cli: [fid construct build-*, fid construct fit-centres, fid construct make-set]
 mcp: [construct_build_*, construct_fit_centres, construct_make_set]
 journal: [construct.build_*, construct.fit_centres@1, construct.make_set@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.CONS.ELEM: Primitives built from elements and constructed sets
@@ -56,8 +56,15 @@ DEF (definitional builds per primitive), FITC (best fit through centres and poin
 
 ## Open questions
 
-- Whether best fit through centres should weight centres by their own uncertainty is a `UNC` question; this node fits unweighted unless weights are given explicitly.
+- Whether best fit through centres should weight centres by their own uncertainty is a `UNC` question. The least-squares fits in `KRN.LSQ` take no weights today, so `KRN.CONS.ELEM.FITC` fits unweighted and rejects weights with a typed error until `KRN.LSQ.TRAIT` offers them.
+- Constructed sets and coordinate-system outputs need `ConstructedElement` variants that `KRN.CONS.DECL` does not define yet (it has Feature and Value only); raised for its owner (see `KRN.CONS.ELEM.SET`).
+- The dependency on `KRN.LSQ.AXIS` and `KRN.LSQ.PLAN2D` was dropped: definitional cylinders, cones, slots and rectangles need no fit, and best fit through centres is limited to line, plane, circle and sphere.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| KRN.CONS.ELEM.PRIM | Definitional point, line, plane, circle and sphere builds | 001 004 005 | GOM.CON.01-04, GOM.CON.09, PCD.CON.01, PW.CON.04 |
+| KRN.CONS.ELEM.SHAPE | Definitional cylinder, cone, slot and rectangle builds | 001 004 005 | GOM.CON.05-08, PCD.CON.01, PW.CON.04 |
+| KRN.CONS.ELEM.FITC | Best fit through feature centres and element points | 002 004 005 | PCD.CON.01, PW.CON.04 |
+| KRN.CONS.ELEM.SET | Constructed sets | 003 005 | PCD.CON.03 |

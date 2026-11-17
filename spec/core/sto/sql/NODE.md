@@ -4,7 +4,7 @@ title: Project database, append-only enforcement and atomic durable commits
 level: 3
 parent: CORE.STO
 kind: module
-status: open
+status: split
 phase: P0
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [CORE.STO.LAYOUT, CORE.STO.CAS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # CORE.STO.SQL: Project database, append-only enforcement and atomic durable commits
@@ -49,17 +49,22 @@ The per-project SQLite database in WAL mode and the transaction primitive every 
 
 ## Interfaces
 
-- **Offers:** `Store::transaction() -> Txn`, append-only table API, schema version query.
-- **Consumes:** `CORE.STO.LAYOUT` (database path, lock), `CORE.STO.CAS` (blob put and flush).
+- **Offers:** `Store::transaction() -> Txn`, append-only table API, schema version query (SCHEMA, TXN); the crash harness, reused by `CORE.RPL.RECON.FOLD` and `CORE.JRN.CHAIN` tests (CRASH).
+- **Consumes:** `CORE.STO.LAYOUT` (database path, lock), `CORE.STO.CAS` (blob put and flush), `CORE.JRN.CANON` (the harness's synthetic chain).
 
 ## Decomposition hints
 
-SCHEMA (tables, triggers, migrations), TXN (transaction API and ordering of blob and row writes), CRASH (kill and power-loss harness).
+Applied: SCHEMA, TXN, CRASH.
 
 ## Open questions
 
-- Power-loss testing needs a fault-injecting file-system layer [unverified which tool]; CRASH should pick one available on Linux CI and document the gap on Windows and macOS.
+- Power-loss testing needs a fault-injecting file-system layer [unverified which tool]; CRASH picks one available on Linux CI and documents the gap on Windows and macOS.
+- The "journal chain check" in REQ-005 cannot call `CORE.JRN.CHAIN` (CHAIN depends on `CORE.STO`, so a dependency would form a cycle). CRASH checks a synthetic chain of its own built with `CORE.JRN.CANON`; `CORE.JRN.CHAIN` runs the same harness with real entries in its own tests.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.STO.SQL.SCHEMA | Database schema, append-only triggers and forward migrations (leaf) | 001 006 | none |
+| CORE.STO.SQL.TXN | Transaction API, blob-before-row ordering and durability (leaf) | 002 003 004 | none |
+| CORE.STO.SQL.CRASH | Crash and power-loss harness (leaf) | 005 | none |

@@ -4,7 +4,7 @@ title: Parallelism, perpendicularity and angularity
 level: 3
 parent: GDT.LOC
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -12,10 +12,11 @@ claimed_by:
 satisfies: [REQ-GDT.LOC-001, REQ-GDT.LOC-006]
 covers: [GOM.GDT.05, GOM.GDT.06, GOM.GDT.07, PW.GDT.03]
 depends_on: [GDT.LOC.DERIV, GDT.LOC.LRES, GDT.ZONE.POSE, GDT.DRF.BUILD]
+uses_artifacts: [UNC.ORS.GDT]
 cli: [fid check eval-parallelism, fid check eval-perpendicularity, fid check eval-angularity]
 mcp: [check_eval_parallelism, check_eval_perpendicularity, check_eval_angularity]
 journal: [check.eval_parallelism@1, check.eval_perpendicularity@1, check.eval_angularity@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.LOC.ORIENT: Parallelism, perpendicularity and angularity
@@ -56,8 +57,13 @@ PLANE (planar surfaces to planar datums; first leaf), AXIS (axes, including MMC)
 
 ## Open questions
 
-- Tangent-plane modifier and line-element orientation defaults are DMT content.
+- Tangent-plane modifier semantics are DMT content: `GDT.LOC.ORIENT.TANG` stays open (P1b). Line-element orientation reuses the explicit-parameter extractor of `GDT.FORM.STRAIGHT.LINEEL`, so its defaults are DMT content too but no code waits on them.
+- Free rotation left by the DRF (REQ-GDT.LOC.ORIENT-003) is decided by a row policy (`optimize` or `unsupported`), executed in `GDT.LOC.ORIENT.ZONE`; the free DoFs come from the DoF table of `GDT.DRF.BUILD`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.LOC.ORIENT.ZONE | Orientation zone evaluation with fixed direction and free location (leaf) | 001 002 003 004 | GOM.GDT.05, GOM.GDT.06, GOM.GDT.07, PW.GDT.03 |
+| GDT.LOC.ORIENT.CMDS | Parallelism, perpendicularity and angularity commands (leaf) | 001 002 004 | GOM.GDT.05, GOM.GDT.06, GOM.GDT.07, PW.GDT.03 |
+| GDT.LOC.ORIENT.TANG | Tangent-plane modifier for orientation | 001 004 | PW.GDT.03 |

@@ -4,18 +4,18 @@ title: Form completeness check and finalisation
 level: 3
 parent: RPT.FORMS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.FORMS-005, REQ-RPT.FORMS-007]
 covers: []
-depends_on: [RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.BUS, TRUST.PROFILE]
-cli: [fid report check-fai, fid report finalize-fai, fid report check-ppap, fid report finalize-ppap]
-mcp: [report_check_fai, report_check_ppap]
-journal: [report.finalize_fai@1, report.finalize_ppap@1]
-updated: 2026-11-16
+depends_on: [RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.BUS, CORE.JRN, CORE.STO]
+cli: [fid report check-fai, fid report finalize-fai, fid report check-ppap, fid report finalize-ppap, fid report adopt-fai, fid report adopt-ppap, fid report list-final-fai]
+mcp: [report_check_fai, report_check_ppap, report_adopt_fai, report_adopt_ppap, report_list_final_fai]
+journal: [report.finalize_fai@1, report.finalize_ppap@1, report.adopt_fai@1, report.adopt_ppap@1]
+updated: 2026-11-17
 ---
 
 # RPT.FORMS.FINAL: Form completeness check and finalisation
@@ -58,6 +58,12 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 - Is a `NONCONFORMS` row a blocker for finalisation, or is a failed FAI still a valid final record? Assumed valid: an FAI may document a failure, but every row must have a result.
 
+- **Applied at split (2026-11-17, D-034):** `TRUST.PROFILE` was removed from `depends_on` because TRUST is a later L2 domain than RPT (CONSTITUTION §2.1). Profile ceremony reaches finalisation through the bus precondition hook owned by `TRUST.PROFILE.GATE`, so no code edge is needed.
+- **Applied at split:** `NOT_DECIDABLE` rows are non-blocking notes (see `RPT.FORMS.FINAL.CHECK`); human adoption of agent-authored form content is the human-only `report.adopt_fai@1` / `report.adopt_ppap@1`.
+
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.FORMS.FINAL.CHECK | Form completeness check and adoption of agent-authored form content (leaf) | 001 002 003 | none |
+| RPT.FORMS.FINAL.FREEZE | W3 finalisation of FAI and PPAP forms with immutable revisions (leaf) | 002 003 004 005 | none |

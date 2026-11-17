@@ -4,7 +4,7 @@ title: Material-condition modifiers, bonus and virtual-condition boundaries
 level: 3
 parent: GDT.ZONE
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [GDT.ZONE.POSE, GDT.DIM.SIZEASME]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GDT.ZONE.MATL: Material-condition modifiers, bonus and virtual-condition boundaries
@@ -46,7 +46,7 @@ Handles MMC and LMC on toleranced features of size: bonus tolerance from the act
 
 ## Interfaces
 
-- **Offers:** `solve_with_material_condition(...)` to `GDT.LOC.POS`, `GDT.FORM.STRAIGHT` (derived median line at MMC) and orientation checks at MMC.
+- **Offers:** `solve_with_material_condition(...)` to `GDT.LOC.POS`, `GDT.FORM.STRAIGHT` (derived median line at MMC) and orientation checks at MMC; built from `bonus(...)` (BONUS), `vc_containment(...)` (VCB) and `evaluate_both(...)` (BOTH).
 - **Consumes:** pose solve (GDT.ZONE.POSE); actual size (GDT.DIM.SIZEASME); DMT rows.
 
 ## Decomposition hints
@@ -55,8 +55,12 @@ BONUS (bonus arithmetic given an actual size; a leaf), VCB (virtual-condition bo
 
 ## Open questions
 
-- Surface versus axis precedence for ASME position is DMT content (concept doc 05 §2.5 example row, to be confirmed against the purchased text, D-016).
+- Surface versus axis precedence for ASME position is DMT content (concept doc 05 §2.5 example row, to be confirmed against the purchased text). D-016 is accepted (authors hold licensed copies, reviewers attest the edition held); the precedence still awaits a signed-off row in `GDT.RES.ROWASME.POS`. `GDT.ZONE.MATL.BOTH` reads the deciding variant from the row and never hard-codes it.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| GDT.ZONE.MATL.BONUS | Bonus tolerance from actual size (leaf) | 001 003 004 | GOM.GDT.15, PCD.DIM.04 |
+| GDT.ZONE.MATL.VCB | Virtual-condition boundary containment (leaf) | 002 003 004 | GOM.GDT.15 |
+| GDT.ZONE.MATL.BOTH | Axis and surface variants with the deciding variant (leaf) | 001 002 004 | GOM.GDT.15 |

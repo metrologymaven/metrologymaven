@@ -4,18 +4,18 @@ title: Historical results import
 level: 3
 parent: RPT.CATALOG
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.CATALOG-005, REQ-RPT.CATALOG-006]
 covers: []
-depends_on: [IO.RES, IO.REG, RPT.CATALOG.STORE, CORE.PRJ]
+depends_on: [IO.RES.TRANS.MODEL, IO.RES.CSV, IO.RES.AQDEF, IO.RES.QIFR, IO.REG.ROOTS, IO.REG.LIMITS, RPT.CATALOG.STORE, CORE.PRJ.CONT]
 cli: [fid stats import-history]
 mcp: [stats_import_history]
 journal: [stats.import_history@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.CATALOG.IMPORT: Historical results import
@@ -55,8 +55,12 @@ MAP (file to part, run and characteristic mapping), BATCH (multi-file import, du
 
 ## Open questions
 
-- Should historical imports go into one historical project per part number instead of one per catalog? Leave to the MAP leaf.
+- Resolved: one historical-results project per catalog by default (`RPT.CATALOG.IMPORT.MAP`).
+- **Cross-domain:** the IO results readers (`IO.RES.CSV`, `IO.RES.AQDEF`, `IO.RES.QIFR`) are still open; `RPT.CATALOG.IMPORT.BATCH` assumes bounded readers returning transcription records with a first-error location.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.CATALOG.IMPORT.MAP | Mapping historical results into a historical-results project (leaf) | 001 | none |
+| RPT.CATALOG.IMPORT.BATCH | Historical import command, duplicates and limits (leaf) | 002 003 004 005 | none |

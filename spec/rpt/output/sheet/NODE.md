@@ -4,7 +4,7 @@ title: Spreadsheet and CSV export of report tables
 level: 3
 parent: RPT.OUTPUT
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
@@ -15,7 +15,7 @@ depends_on: [RPT.OUTPUT.META, RPT.MODEL.BIND]
 cli: [fid report export-spreadsheet, fid report export-csv]
 mcp: [report_export_spreadsheet, report_export_csv]
 journal: [report.export_spreadsheet@1, report.export_csv@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # RPT.OUTPUT.SHEET: Spreadsheet and CSV export of report tables
@@ -60,7 +60,12 @@ CSV (CSV writer and dialect), XLSX (deterministic workbook writer), SAFE (formul
 ## Open questions
 
 - Should the numeric cell carry the full-precision f64 or the formatted decimal? Assumed the formatted decimal value, so the cell equals the shown text; full precision belongs to QIF and IO.RES exports.
+- **Applied at split (2026-11-17):** numeric cells carry the formatted canonical decimal. SI output is produced by generating the resolved report with an SI unit override (`RPT.MODEL.BIND.GEN`); the exporters never convert values.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.OUTPUT.SHEET.CELL | Table-to-cell model, unit headers and formula-injection neutralisation (leaf) | 002 003 004 006 | PCD.RPT.04 |
+| RPT.OUTPUT.SHEET.CSV | CSV export of report tables (leaf) | 001 005 007 | PCD.RPT.04, SA.RPT.03 |
+| RPT.OUTPUT.SHEET.XLSX | Deterministic spreadsheet workbook export (leaf) | 001 003 005 007 | PCD.RPT.04, PW.RPT.04, SA.RPT.03 |

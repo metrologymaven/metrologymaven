@@ -4,18 +4,18 @@ title: Dashboards
 level: 3
 parent: RPT.STATS
 kind: module
-status: open
+status: split
 phase: P1b
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-RPT.STATS-012, REQ-RPT.STATS-013]
 covers: [PW.MSP.04]
-depends_on: [RPT.STATS.DSET, RPT.STATS.TREND, RPT.MODEL.FMT]
+depends_on: [RPT.STATS.DSET, RPT.STATS.DESC, RPT.STATS.TREND, RPT.STATS.SPC, RPT.STATS.CAP, RPT.MODEL.FMT]
 cli: [fid stats save-dashboard, fid stats open-dashboard, fid stats list-dashboard]
 mcp: [stats_save_dashboard, stats_open_dashboard, stats_list_dashboard]
-journal: [stats.save_dashboard@1]
-updated: 2026-11-16
+journal: [stats.save_dashboard@1, stats.open_dashboard@1]
+updated: 2026-11-17
 ---
 
 # RPT.STATS.DASH: Dashboards
@@ -55,8 +55,12 @@ DEF (definition and commands), TILE (tile kinds and evaluation).
 
 ## Open questions
 
+- Tiles call DESC, SPC and CAP as well as TREND, so those siblings were added to `depends_on`.
 - Shared dashboards across users on a shared catalog depend on `RPT.CATALOG.SHARE`.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| RPT.STATS.DASH.DEF | Dashboard definition, save and list (leaf) | 001 004 | PW.MSP.04 |
+| RPT.STATS.DASH.OPEN | Dashboard open and tile evaluation (leaf) | 002 003 004 005 | PW.MSP.04 |

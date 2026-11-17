@@ -4,7 +4,7 @@ title: Wireframes and mockups of primary screens
 level: 2
 parent: UX
 kind: subsystem
-status: open
+status: split
 phase: P1a
 size: XL
 owners: []
@@ -15,7 +15,7 @@ depends_on: [UX.COMP, UX.PATTERN, UX.RESEARCH, FLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UX.SCREENS: Wireframes and mockups of primary screens
@@ -62,11 +62,29 @@ The screen inventory and the designs for every primary screen of Inspect, Probe,
 
 INV (screen inventory and approval records), INSPECT, PROBE, NETWORK, RPTAPP (one per app; RPTAPP is the Report app's screens, not report pages, which `UX.REPORT` owns), FLOOR (kiosk and Approval Station), SETUP (Shop Setup and first run).
 
+## Split rationale
+
+The dividing principle is **one register plus one child per app surface**, following the decomposition hints: INV (inventory, the wireframe-ID convention, approval records, staleness and the implementation gate) is a leaf because it is one format and one check; COMMON (shared shell, Shop Setup and first run), RPTAPP, INSPECT, PROBE, NETWORK and FLOOR (kiosk and Approval Station) hold the design work per app. The app children are left `open` because each spans several screen groups and two deliverables at different times (wireframes before implementation, mockups before GA), so each will split into per-group leaves. Their phases follow when each app's work starts: COMMON and RPTAPP P1a, INSPECT and FLOOR P1b, PROBE P2, NETWORK P3.
+
+Alternatives considered:
+- **Split by fidelity (all wireframes, all mockups).** Rejected: approvals and GA gates are per app (D-017 app milestones), so per-app children match the gating.
+- **SETUP as its own child.** Merged into COMMON with the shell frame, because Shop Setup screens sit in the shell frame and are designed together with it.
+
 ## Open questions
 
-- REQ-UX.SCREENS-002 gates implementation leaves in other domains. Those leaves do not yet cite wireframe IDs; adding a `wireframe:` frontmatter field or a scope.py check is a tooling change for maintainers.
+- **Wireframe-ID convention (added):** screen IDs `SCR.<APP>.<NAME>`, wireframes `WF.<APP>.<NAME>@<rev>`, mockups `MK.<APP>.<NAME>@<rev>`, defined in UX.SCREENS.INV. Implementation leaves cite them in a `Wireframes:` line in `## Design` until maintainers add a `wireframes:` frontmatter field and wire `fid-design screens-gate` into scope.py or CI (a tooling PR, not done here).
+- FLOW.PERSONA.SCHEMA can now validate journey-map `screen` values against the inventory (FLOW-side `uses_artifacts`, not editable from here).
 - The app list follows D-004; any change to the app family changes the inventory.
+- FLOW.PROBE and FLOW.NETWORK are still `open`; UX.SCREENS.PROBE and UX.SCREENS.NETWORK trace only to persona maps until their job maps exist.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| [UX.SCREENS.INV](inv/NODE.md) | Screen inventory, wireframe-ID convention and approval records (leaf) | 001 002 003 008 009 | none |
+| [UX.SCREENS.COMMON](common/NODE.md) | Shared shell, Shop Setup and first-run screens | 002 003 004 005 006 007 008 | none |
+| [UX.SCREENS.RPTAPP](rptapp/NODE.md) | Report app screens | 002 003 004 005 006 007 008 | none |
+| [UX.SCREENS.INSPECT](inspect/NODE.md) | Inspect app screens | 002 003 004 005 006 007 008 | none |
+| [UX.SCREENS.FLOOR](floor/NODE.md) | Kiosk and Approval Station screens | 002 003 004 005 006 007 008 | none |
+| [UX.SCREENS.PROBE](probe/NODE.md) | Probe app screens | 002 003 004 005 006 007 008 | none |
+| [UX.SCREENS.NETWORK](network/NODE.md) | Network app screens | 002 003 004 005 006 007 008 | none |

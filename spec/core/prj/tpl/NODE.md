@@ -4,18 +4,18 @@ title: Project templates
 level: 3
 parent: CORE.PRJ
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-CORE.PRJ-010, REQ-CORE.PRJ-011]
 covers: [GOM.PRJ.01, PW.PRJ.05]
-depends_on: [CORE.BUS, CORE.PRJ.CONT, CORE.PRJ.TREE, CORE.PRJ.META]
+depends_on: [CORE.BUS.PIPE, CORE.PRJ.CONT, CORE.PRJ.TREE, CORE.PRJ.META]
 cli: [fid project create-from-template, fid project save-as-template, fid project list-templates]
 mcp: [project_create_from_template, project_save_as_template, project_list_templates]
-journal: [project.create_from_template@1, project.save_as_template@1]
-updated: 2026-11-16
+journal: [project.create_from_template@1, project.save_as_template@1, project.list_templates@1]
+updated: 2026-11-17
 ---
 
 # CORE.PRJ.TPL: Project templates
@@ -63,4 +63,8 @@ PKG (template package format and digest), SAVE (strip and save), CREATE (instant
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| CORE.PRJ.TPL.PKG | Template package format, digest, integrity and listing (leaf) | 003 005 006 | PW.PRJ.05 |
+| CORE.PRJ.TPL.SAVE | Save a project as a template (leaf) | 002 006 | GOM.PRJ.01 |
+| CORE.PRJ.TPL.CREATE | Create a project from a template (leaf) | 001 004 005 006 | GOM.PRJ.01, PW.PRJ.05 |

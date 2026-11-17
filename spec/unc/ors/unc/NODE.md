@@ -4,18 +4,19 @@ title: ORS-UNC: coverage of uncertainty intervals on known-truth parts
 level: 3
 parent: UNC.ORS
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-UNC.ORS-005]
 covers: []
-depends_on: [UNC.ORS.TRACE, UNC.PROP, UNC.RDL.GEN]
+depends_on: [UNC.ORS.TRACE, UNC.ORS.RUN, UNC.RDL.GEN]
+uses_artifacts: [UNC.PROP.SELECT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.UNC: ORS-UNC: coverage of uncertainty intervals on known-truth parts
@@ -55,9 +56,15 @@ HARNESS (repetition loop and binomial band, likely a leaf), CASES (the known-tru
 
 ## Open questions
 
+- Split: the harness (repetition loop, binomial band, reporting) and the cases whose correct coverage follows from standard theory (linear-Gaussian models where LPU is exact, a smooth nonlinear model for MCM, a correlated-datum linear model) are leaves. Near-zero non-negative cases (form, radial position) need an uncertainty expert to fix the pass convention under estimator bias, so NZERO stays open. ORS is Tooling: propagation is reached by command ID (`unc.propagate_auto@1`) through `UNC.ORS.RUN`'s bus dispatch, and `UNC.PROP.SELECT` is recorded as an artifact dependency (its published statement format), not linked.
+
 - Near-zero form cases are expected to show bias even when intervals cover; whether the pass criterion for those cases uses the disclosed-bias convention needs an uncertainty expert's review [unverified].
 - Runtime of 1000 repetitions with MCM per repetition may exceed the CI budget of `UNC.ORS.RUN`; a nightly job may be needed.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| UNC.ORS.UNC.HARNESS | Coverage harness, binomial band and coverage reporting (leaf) | 001 002 004 005 | none |
+| UNC.ORS.UNC.BASE | Known-truth cases for LPU, MCM and correlated multivariate propagation (leaf) | 001 003 | none |
+| UNC.ORS.UNC.NZERO | Non-negative quantities with true value zero | 001 003 | none |

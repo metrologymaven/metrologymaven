@@ -4,18 +4,18 @@ title: Labels, leader lines and label layout
 level: 3
 parent: VIZ.OVERLAY
 kind: module
-status: open
+status: split
 phase: P1a
 size: L
 owners: []
 claimed_by:
 satisfies: [REQ-VIZ.OVERLAY-004, REQ-VIZ.OVERLAY-007, REQ-VIZ.OVERLAY-009]
 covers: [GOM.VIZ.05, PW.VIZ.04]
-depends_on: [VIZ.RENDER, KRN.NUM, CORE]
+depends_on: [VIZ.RENDER.FRAME, VIZ.VIEW.STATE, VIZ.OVERLAY.STATUS, SCAN.CMP.LABEL, GDT.CHAR.RECORD, KRN.NUM.FMT.REG, CORE.PRJ.TREE.MODEL]
 cli: [fid view add-label, fid view edit-label, fid view remove-label, fid view layout-labels]
 mcp: [view_add_label, view_edit_label, view_remove_label, view_layout_labels]
 journal: [view.add_label@*, view.edit_label@*, view.remove_label@*, view.layout_labels@*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # VIZ.OVERLAY.LABEL: Labels, leader lines and label layout
@@ -59,8 +59,13 @@ MODEL (LabelSet and commands), TMPL (label templates), LEADER, AUTOLAY (greedy l
 
 ## Open questions
 
-- Label placements per NamedView: whether a placement is stored in the LabelSet or in the NamedView is to be agreed with VIZ.VIEW.
+- Settled boundary: SCAN holds comparison-point and deviation-label values (`SCAN.CMP.LABEL`), GDT holds results; the LabelSet holds only presentation (source reference, template, pin, placements) and VIZ styles the values.
+- Label placements are stored in the LabelSet per view key (viewport or NamedView ID); `VIZ.VIEW.NAMED` references the LabelSet. To be confirmed with VIZ.VIEW.
 
 ## Children
 
-_None yet: status `open`._
+| ID | Title | Satisfies | Covers |
+|---|---|---|---|
+| VIZ.OVERLAY.LABEL.MODEL | LabelSet entity, templates and label commands (leaf) | 004 006 | GOM.VIZ.05, PW.VIZ.04 |
+| VIZ.OVERLAY.LABEL.DRAW | Label value resolution, kernel formatting, leaders and text (leaf) | 001 | GOM.VIZ.05 |
+| VIZ.OVERLAY.LABEL.LAYOUT | Deterministic automatic label layout (leaf) | 002 003 004 005 006 | none |
