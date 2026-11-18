@@ -200,7 +200,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
 - [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
 - [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
-- [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
+- [B] [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
 - [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
 - [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
 - [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)

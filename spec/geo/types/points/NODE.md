@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-types]
+built_pr: 138
 satisfies: [REQ-GEO.TYPES-001, REQ-GEO.TYPES-003, REQ-GEO.TYPES-004, REQ-GEO.TYPES-006]
 covers: []
 depends_on: [GEO.TYPES.ENV]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # GEO.TYPES.POINTS: Point sets, point clouds and per-point attributes
@@ -53,7 +55,7 @@ The in-memory storage for measured and scanned points: a structure-of-arrays coo
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/geo/types/pointset_small`, when `PointSet::new(frame, buffer, attrs)` runs, then it succeeds and `len()` is 1 000 and coordinates read back bit-identically.
+- **AC-1** Given fixture `fixtures/geo/types/pointset_small` (coordinates in `pointset_small.txt`, normals and intensity in the companion `pointset_small_attrs.txt`), when `PointSet::new(frame, buffer, attrs)` runs, then it succeeds and `len()` is 1 000 and coordinates read back bit-identically.
 - **AC-2** (error path) Given `pointset_small` with point 517's y set to NaN, when constructed, then it fails with `NonFinite { index: 517 }` and no element exists.
 - **AC-3** (error path) Given an intensity channel of 999 values for 1 000 points, when constructed, then it fails with `AttributeLength { name: "intensity", expected: 1000, found: 999 }`.
 - **AC-4** (error path) Given a normal of length 1 + 1e-6, when constructed, then it fails with `BadNormal`; a normal of length 1 + 1e-10 is accepted unchanged.
@@ -65,14 +67,14 @@ The in-memory storage for measured and scanned points: a structure-of-arrays coo
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `PointBuffer { x: Vec<f64>, y: Vec<f64>, z: Vec<f64> }`; `AttributeSet { normal: Option<[Vec<f64>; 3]>, intensity: Option<Vec<f32>>, colour: Option<Vec<[u8; 3]>>, scanner_id: Option<Vec<u32>>, timestamp_ns: Option<Vec<i64>>, quality: Option<Vec<u16>>, scan_origins: Vec<(u32, [f64; 3])>, grid: Option<(u64, u64)> }` with `scan_origins` sorted by scanner ID (no HashMap); `PointSet { frame, buf, attrs }`; `PointCloud { frame, buf, attrs }`.
 - **Algorithm:** one linear validation pass per channel, in index order, reporting the first failure.
-- **Errors:** `NonFinite`, `AttributeLength`, `BadNormal`, `GridShape { rows, cols, count }`.
+- **Errors:** `NonFinite`, `AttributeLength`, `BadNormal`, `ScanOrigin { scanner_id }` (a scan origin that is non-finite, repeated or out of ascending ID order; checked after normals, before the grid), `GridShape { rows, cols, count }`.
 - **Determinism:** D0. Validation reads values; normal length uses `fid-num::sqrt`.
 - **Performance budget:** validation of 10⁸ points with normals under 1 s single-threaded on reference hardware [unverified].
 - **Crate:** `fid-geo-types` (kernel graph, KNP-1 applies).
 
 ## Test fixtures
 
-- `fixtures/geo/types/pointset_small` (shared with GEO.TYPES.ENV): seeded generator, seed 1, with normals and intensity. CC-BY-4.0.
+- `fixtures/geo/types/pointset_small` (shared with GEO.TYPES.ENV): seeded generator, seed 1. Coordinates in `pointset_small.txt` (stream 0); normals and intensity in the companion `pointset_small_attrs.txt` (stream 1), both from stdlib Python references. CC-BY-4.0.
 - `fixtures/geo/types/cloud_grid_2scans`: synthetic organised grids from two simulated scanner origins, seed 2. CC-BY-4.0.
 
 ## Build prompt
@@ -82,6 +84,7 @@ The in-memory storage for measured and scanned points: a structure-of-arrays coo
 ## Open questions
 
 - REQ-GEO.TYPES.POINTS-006 follows the parent's lean (scanner structure as attributes); IO's E57 and PTX readers should confirm that nothing more is needed.
+- A single per-cloud `grid: (rows, cols)` cannot describe several scans with different shapes. The AC-5 test's combined 128 × 48 grid works only because both scans have 48 columns. The IO E57 and PTX readers need per-scan grids (for example keyed by scanner ID beside `scan_origins`) or a decision that a multi-scan cloud with differing shapes declares no grid.
 
 ## Children
 
