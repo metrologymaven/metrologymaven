@@ -106,6 +106,18 @@ jobs:
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
           python -m unittest discover -s tools/repo_template/tests -v
+      - name: Contributor guide passes claim lint and its commands run (OUTR.DOCS.CONTRIB AC-6, AC-1, AC-3)
+        # The committed guide states the main commit it was written against; a commit cannot name
+        # itself, so the guide is checked as a copy stating this checkout's HEAD.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo run -q -p fid-brand-lint -- claim-lint --rules crates/fid-brand-lint/rules/claim-rules.toml docs/contributor/guide.md
+          guide="$RUNNER_TEMP/contributor-guide.md"
+          sed "s/^revision: .*/revision: $(git rev-parse HEAD)/" docs/contributor/guide.md > "$guide"
+          before=$(git status --porcelain)
+          cargo run -q -p fid-outreach -- doc-run --guide "$guide" --repo .
+          test "$before" = "$(git status --porcelain)"
       - name: Repository template code variant passes clippy (ECO.REPO.TPL.FILES AC-4)
         # +stable overrides the template's rust-toolchain.toml pin so no extra toolchain is installed.
         if: runner.os == 'Linux'
