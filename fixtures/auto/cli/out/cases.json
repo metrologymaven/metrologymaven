@@ -1,0 +1,347 @@
+{
+ "cases": [
+  {
+   "emit": [],
+   "expect": {
+    "exit": 0,
+    "human": [
+     "demo.show_thing@1",
+     "computed"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "computed",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "computed",
+    "result": {
+     "thing": "probe-1"
+    }
+   }
+  },
+  {
+   "emit": [
+    [
+     "warn",
+     "calibration is 3 days old"
+    ],
+    [
+     "progress",
+     "probing 1/2"
+    ],
+    [
+     "log",
+     "bus: sent"
+    ],
+    [
+     "progress",
+     "probing 2/2"
+    ],
+    [
+     "warn",
+     "second warning"
+    ]
+   ],
+   "expect": {
+    "exit": 0,
+    "human": [
+     "computed"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "computed with warnings and progress",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "computed",
+    "result": {
+     "thing": "probe-1"
+    }
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 0,
+    "human": [
+     "committed",
+     "sha256:abababababababababababababababababababababababababababababababab"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "committed",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "journal_entry_hash": "sha256:abababababababababababababababababababababababababababababababab",
+    "outcome": "committed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 0,
+    "human": [
+     "dry_run"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "dry_run",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "dry_run",
+    "result": {
+     "would_change": 1
+    }
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 1,
+    "human": [
+     "internal_error",
+     "kernel crashed"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "internal error",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "internal_error",
+     "message": "kernel crashed"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 2,
+    "human": [
+     "usage_error",
+     "missing --plane"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "usage error",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "usage_error",
+     "message": "missing --plane"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 2,
+    "human": [
+     "dry_run_unsupported"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "dry run unsupported",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "dry_run_unsupported",
+     "message": "no dry run"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 3,
+    "human": [
+     "policy_refused",
+     "M1 needs the approval station"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "policy refused",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "policy_refused",
+     "message": "M1 needs the approval station"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 3,
+    "human": [
+     "raw_path_refused"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "raw path refused",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "raw_path_refused",
+     "message": "raw path"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [
+    [
+     "warn",
+     "calibration is 3 days old"
+    ],
+    [
+     "progress",
+     "probing 1/2"
+    ],
+    [
+     "log",
+     "bus: sent"
+    ],
+    [
+     "progress",
+     "probing 2/2"
+    ],
+    [
+     "warn",
+     "second warning"
+    ]
+   ],
+   "expect": {
+    "exit": 4,
+    "human": [
+     "precondition_failed",
+     "no alignment"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "command failed",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "precondition_failed",
+     "message": "no alignment"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 4,
+    "human": [
+     "validation_error"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "validation error",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "validation_error",
+     "message": "bad value"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 5,
+    "human": [
+     "cancelled"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "cancelled",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "cancelled"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 6,
+    "human": [
+     "not_run"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "not_run timeout",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "not_run"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 7,
+    "human": [
+     "no_reply"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "no_reply timeout",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "no_reply"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 8,
+    "human": [
+     "request_filed",
+     "req-42"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "request filed",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "request_filed",
+    "request_id": "req-42"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 1,
+    "human": [],
+    "stdout_lines": 0
+   },
+   "name": "unencodable envelope",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "outcome": "committed"
+   }
+  }
+ ],
+ "command_id": "demo.show_thing@1"
+}

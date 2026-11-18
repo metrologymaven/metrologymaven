@@ -3,7 +3,9 @@
 //! First slice: `fid canon` exposes the canonical-JSON crate (CORE.JRN.CANON) so
 //! people, agents and CI can hash journal-style JSON exactly the way the kernel will.
 //! The registry-driven command surface (AUTO.SURF) replaces this hand-written parser later.
+//! Exit codes and `--json` output follow AUTO.CLI.OUT (`fid_cli::ExitCode`, `fid_cli::Output`).
 
+use fid_cli::{ExitCode as Fx, Output};
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
@@ -19,7 +21,7 @@ USAGE:
     fid --version                 Print the version
     fid --help                    Print this help
 
-Exit codes: 0 ok, 1 invalid input, 2 usage error.";
+EXIT CODES (docs/cli/exit-codes.md):";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -29,15 +31,24 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         None | Some("--help" | "-h" | "help") => {
-            println!("{USAGE}");
+            println!("{}", help());
             ExitCode::SUCCESS
         }
         Some("canon") => canon(&args[1..]),
         Some(other) => {
-            eprintln!("error: unknown command `{other}`\n\n{USAGE}");
-            ExitCode::from(2)
+            eprintln!("error: unknown command `{other}`\n\n{}", help());
+            Fx::Usage.into()
         }
     }
+}
+
+/// The usage text followed by the exit-code table, generated from [`fid_cli::ExitCode`].
+fn help() -> String {
+    let mut s = USAGE.to_string();
+    for c in Fx::ALL {
+        s.push_str(&format!("\n    {}  {:<15} {}", c.code(), c.name(), c.meaning()));
+    }
+    s
 }
 
 fn canon(args: &[String]) -> ExitCode {
@@ -50,12 +61,12 @@ fn canon(args: &[String]) -> ExitCode {
             "--json" => want_json = true,
             s if s.starts_with('-') && s != "-" => {
                 eprintln!("error: unknown option `{s}`");
-                return ExitCode::from(2);
+                return Fx::Usage.into();
             }
             s if file.is_none() => file = Some(s.to_string()),
             _ => {
                 eprintln!("error: more than one input file");
-                return ExitCode::from(2);
+                return Fx::Usage.into();
             }
         }
     }
@@ -66,7 +77,7 @@ fn canon(args: &[String]) -> ExitCode {
                 Ok(_) => buf,
                 Err(e) => {
                     eprintln!("error: reading stdin: {e}");
-                    return ExitCode::from(1);
+                    return Fx::Failed.into();
                 }
             }
         }
@@ -74,7 +85,7 @@ fn canon(args: &[String]) -> ExitCode {
             Ok(b) => b,
             Err(e) => {
                 eprintln!("error: reading {path}: {e}");
-                return ExitCode::from(1);
+                return Fx::Failed.into();
             }
         },
     };
@@ -93,50 +104,38 @@ fn canon(args: &[String]) -> ExitCode {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(e) => {
                     eprintln!("error: writing output: {e}");
-                    ExitCode::from(1)
+                    Fx::Internal.into()
                 }
             }
         }
         Err(e) => {
             eprintln!("error[{}]: {e}", e.code());
-            ExitCode::from(1)
+            Fx::Failed.into()
         }
     }
 }
 
-/// `fid canon --json`: the same work, reported as a result envelope (AUTO.SURF.ENV).
+/// `fid canon --json`: the same work, reported as a result envelope (AUTO.SURF.ENV)
+/// through the single output sink (AUTO.CLI.OUT).
 fn canon_json(input: &[u8]) -> ExitCode {
     use fid_canon::CValue;
     use fid_surface::{Envelope, ErrorCode};
     use std::collections::BTreeMap;
 
     const COMMAND: &str = "canon.canonicalize@1";
-    let (env, code) = match fid_canon::parse(input).and_then(|v| fid_canon::digest(&v).map(|d| (v, d))) {
+    let env = match fid_canon::parse(input).and_then(|v| fid_canon::digest(&v).map(|d| (v, d))) {
         Ok((value, digest)) => {
             let mut result = BTreeMap::new();
             result.insert("canonical".to_string(), value);
             result.insert("digest".to_string(), CValue::Str(digest.to_string()));
-            (Envelope::computed(COMMAND, CValue::Obj(result)), ExitCode::SUCCESS)
+            Envelope::computed(COMMAND, CValue::Obj(result))
         }
         Err(e) => {
             let details = CValue::Obj(BTreeMap::from([("canon_error".to_string(), CValue::Str(e.code().into()))]));
-            (Envelope::failed(COMMAND, ErrorCode::ValidationError, &e.to_string(), Some(details)), ExitCode::from(1))
+            Envelope::failed(COMMAND, ErrorCode::ValidationError, &e.to_string(), Some(details))
         }
     };
-    match env.encode() {
-        Ok(bytes) => {
-            let mut out = std::io::stdout().lock();
-            match out.write_all(&bytes).and_then(|()| writeln!(out)) {
-                Ok(()) => code,
-                Err(e) => {
-                    eprintln!("error: writing output: {e}");
-                    ExitCode::from(1)
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("error[internal_error]: envelope: {e}");
-            ExitCode::from(1)
-        }
-    }
+    let mut stdout = std::io::stdout().lock();
+    let mut stderr = std::io::stderr().lock();
+    Output::new(true, &mut stdout, &mut stderr).finish(&env).into()
 }
