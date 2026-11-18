@@ -1,0 +1,38 @@
+# PLAT.GPU.POLICY AC-5 (hand-written). INVENTED TEST DATA, NOT REAL DRIVER CLAIMS: the vendor
+# IDs (0x7E570001 and up) are above the 16-bit PCI range and outside the Khronos vendor-ID
+# block, so no real GPU reports them; the references use the reserved .invalid domain.
+# Expected: exit 0, "known-bad: 3 entries, 0 errors".
+schema_version = 1
+
+[[entry]]
+id = "fixture-avoid-1"
+os = "windows"
+backend = "vulkan"
+vendor_id = 0x7E570001
+device_ids = { min = 0x0100, max = 0x01FF }
+driver = { min = "1.2.0", max = "1.4" }
+action = "avoid_backend"
+reason = "Fixture: invented device range that should skip Vulkan on driver 1.2 up to (not including) 1.4."
+reference = "https://example.invalid/gpu-known-bad/fixture-avoid-1"
+
+[[entry]]
+id = "fixture-software-2"
+os = "linux"
+backend = "vulkan"
+vendor_id = 0x7E570002
+device_ids = "any"
+driver = { max = "2.0" }
+action = "force_software"
+reason = "Fixture: every invented device of this vendor below driver 2.0 falls back to software."
+reference = "https://example.invalid/gpu-known-bad/fixture-software-2"
+
+[[entry]]
+id = "fixture-workaround-3"
+os = "macos"
+backend = "metal"
+vendor_id = 0x7E570003
+device_ids = { min = 0x0042, max = 0x0042 }
+driver = "any"
+action = "workaround:no_msaa"
+reason = "Fixture: an invented single device that needs the no_msaa workaround on every driver."
+reference = "https://example.invalid/gpu-known-bad/fixture-workaround-3"
