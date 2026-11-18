@@ -318,7 +318,13 @@ mod tests {
     fn nested_maps_and_sequences() {
         let src = "# head\n---\na:\n  b:\n    - \"x/**\"   # c\n    - 'it''s'\n  c: [p, \"q, r\", 's']\nd:\n- one\n- two\ne: plain value\n";
         let want = m(vec![
-            ("a", m(vec![("b", Node::Seq(vec![s("x/**"), s("it's")])), ("c", Node::Seq(vec![s("p"), s("q, r"), s("s")]))])),
+            (
+                "a",
+                m(vec![
+                    ("b", Node::Seq(vec![s("x/**"), s("it's")])),
+                    ("c", Node::Seq(vec![s("p"), s("q, r"), s("s")])),
+                ]),
+            ),
             ("d", Node::Seq(vec![s("one"), s("two")])),
             ("e", s("plain value")),
         ]);
@@ -343,7 +349,10 @@ mod tests {
     #[test]
     fn escapes_and_empties() {
         assert_eq!(parse("a: \"q\\\"#x\"\n", 64).unwrap(), m(vec![("a", s("q\"#x"))]));
-        assert_eq!(parse("a:\nb: []\nc: {}\n", 64).unwrap(), m(vec![("a", Node::Other), ("b", Node::Seq(vec![])), ("c", Node::Map(BTreeMap::new()))]));
+        assert_eq!(
+            parse("a:\nb: []\nc: {}\n", 64).unwrap(),
+            m(vec![("a", Node::Other), ("b", Node::Seq(vec![])), ("c", Node::Map(BTreeMap::new()))])
+        );
         assert_eq!(parse("# only a comment\n", 64).unwrap(), Node::Other);
         assert_eq!(parse("url: http://x.invalid/a#b\n", 64).unwrap(), m(vec![("url", s("http://x.invalid/a#b"))]));
     }

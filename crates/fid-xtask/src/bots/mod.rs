@@ -382,7 +382,8 @@ pub fn parse_config(name: &str, text: &str) -> Result<Node, String> {
     let ext = Path::new(name).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
     match ext.as_str() {
         "toml" => {
-            let t: toml::Table = text.parse().map_err(|e: toml::de::Error| format!("not valid TOML: {}", e.message()))?;
+            let t: toml::Table =
+                text.parse().map_err(|e: toml::de::Error| format!("not valid TOML: {}", e.message()))?;
             Ok(from_toml(&toml::Value::Table(t)))
         }
         "yml" | "yaml" => yaml::parse(text, MAX_DEPTH).map_err(|e| format!("YAML: {e}")),
@@ -500,7 +501,12 @@ pub fn check_export(text: &str, accounts: &BTreeSet<String>) -> BTreeSet<Finding
 
 /// Runs the whole check. `Err` is a usage error (an invalid `--today`); everything else
 /// is a finding. An empty result means the register passes.
-pub fn check(register: &Path, restricted: &Path, today: &str, review_export: Option<&Path>) -> Result<Vec<Finding>, String> {
+pub fn check(
+    register: &Path,
+    restricted: &Path,
+    today: &str,
+    review_export: Option<&Path>,
+) -> Result<Vec<Finding>, String> {
     let today = parse_date(today).ok_or_else(|| format!("--today {today} is not an ISO date (YYYY-MM-DD)"))?;
     let mut findings = BTreeSet::new();
     let patterns = match read_bounded(restricted, MAX_RESTRICTED_BYTES) {

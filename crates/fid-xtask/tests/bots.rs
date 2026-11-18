@@ -63,7 +63,10 @@ fn ac2_missing_exclusion() {
 #[test]
 fn ac3_stale() {
     assert_eq!(findings("ok", "ok", "2028-06-01", None), expected("ok/expected-2028-06-01.txt"));
-    assert_eq!(findings("stale-boundary", "stale-boundary", "2028-06-01", None), expected("stale-boundary/expected.txt"));
+    assert_eq!(
+        findings("stale-boundary", "stale-boundary", "2028-06-01", None),
+        expected("stale-boundary/expected.txt")
+    );
     assert!(findings("stale-boundary", "stale-boundary", "2028-05-31", None).is_empty());
 }
 
@@ -120,7 +123,8 @@ fn missing_inputs_and_usage() {
     let codes: Vec<(&str, &str)> = got.iter().map(|f| (f.code, f.subject.as_str())).collect();
     assert_eq!(codes, [("BOTS-IO", "register"), ("BOTS-IO", "restricted")]);
     assert!(check(&fx("ok/bots.toml"), &fx("ok/restricted-paths.txt"), "2027-1-10", None).is_err());
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).args(["bots-check", "--today", "2027-01-10"]).output().unwrap();
+    let out =
+        Command::new(env!("CARGO_BIN_EXE_fid-xtask")).args(["bots-check", "--today", "2027-01-10"]).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
     let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
         .args(["bots-check", "--today", "2027-01-10", "--today", "2027-01-11"])
