@@ -1,0 +1,1934 @@
+[
+  {
+    "delimiter": "comma",
+    "fields": [
+      "a",
+      "b",
+      "c"
+    ],
+    "record": "a,b,c"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      "x",
+      ""
+    ],
+    "record": ",x,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": ","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "has,comma",
+      "has;semi",
+      "has\ttab"
+    ],
+    "record": "\"has,comma\",has;semi,has\ttab"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "say \"hi\"",
+      "\"",
+      "\"\""
+    ],
+    "record": "\"say \"\"hi\"\"\",\"\"\"\",\"\"\"\"\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "line\nbreak",
+      "cr\rhere",
+      "crlf\r\nboth"
+    ],
+    "record": "\"line\nbreak\",\"cr\rhere\",\"crlf\r\nboth\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      " lead",
+      "trail ",
+      "  "
+    ],
+    "record": " lead,trail ,  "
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "=SUM(A1)",
+      "+1",
+      "-0.012",
+      "@x"
+    ],
+    "record": "=SUM(A1),+1,-0.012,@x"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "Ma\u00df",
+      "\u00e9t\u00e9",
+      "\u65e5\u672c"
+    ],
+    "record": "Ma\u00df,\u00e9t\u00e9,\u65e5\u672c"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0,0100",
+      "1.5e-3",
+      "-7"
+    ],
+    "record": "\"0,0100\",1.5e-3,-7"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "ba",
+      "a \t;\"="
+    ],
+    "record": "ba,\"a \t;\"\"=\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0 \u00dfa ",
+      "a;a ",
+      ";=",
+      ""
+    ],
+    "record": "0 \u00dfa ,a;a ,;=,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      " \t0 ",
+      " b\"\t",
+      "a",
+      "\"0\r,\n0",
+      "\t\t=;ab"
+    ],
+    "record": " \t0 ,\" b\"\"\t\",a,\"\"\"0\r,\n0\",\t\t=;ab"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\n\u00df",
+      "\t\u00df\u00df0",
+      "=,\u00df"
+    ],
+    "record": "\"\n\u00df\",\t\u00df\u00df0,\"=,\u00df\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00dfb= \n,",
+      "\t\"\u00df0\r0",
+      ""
+    ],
+    "record": "\"\u00dfb= \n,\",\"\t\"\"\u00df0\r0\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\t",
+      "\t\ra",
+      "\tb",
+      " a;a",
+      ""
+    ],
+    "record": "\t,\"\t\ra\",\tb, a;a,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00df\r",
+      "\t==",
+      " b\"0a",
+      "\ra\"a00"
+    ],
+    "record": "\"\u00df\r\",\t==,\" b\"\"0a\",\"\ra\"\"a00\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r0;",
+      "\t,==,"
+    ],
+    "record": "\"\r0;\",\"\t,==,\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "=\t",
+      "\na;\n\u00df"
+    ],
+    "record": "=\t,\"\na;\n\u00df\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      " =;",
+      " ",
+      "0",
+      ",=\n",
+      "\u00df\r\u00df\t\n\u00df"
+    ],
+    "record": " =;, ,0,\",=\n\",\"\u00df\r\u00df\t\n\u00df\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      "0;\r=0\t",
+      ",=",
+      " \t,\r"
+    ],
+    "record": ",\"0;\r=0\t\",\",=\",\" \t,\r\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00dfab\"\u00df",
+      "\n",
+      "\""
+    ],
+    "record": "\"\u00dfab\"\"\u00df\",\"\n\",\"\"\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "= \r ",
+      ""
+    ],
+    "record": "\"= \r \","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r\t\t\r",
+      "\u00df",
+      "\"\",\r ",
+      ","
+    ],
+    "record": "\"\r\t\t\r\",\u00df,\"\"\"\"\",\r \",\",\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r\n;",
+      "=\n;b"
+    ],
+    "record": "\"\r\n;\",\"=\n;b\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";0=\tb\u00df",
+      "0\u00dfb",
+      "=\r;\tb0"
+    ],
+    "record": ";0=\tb\u00df,0\u00dfb,\"=\r;\tb0\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      "\"\"=\t"
+    ],
+    "record": ",\"\"\"\"\"=\t\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": ","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r\u00df0ab"
+    ],
+    "record": "\"\r\u00df0ab\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";aa0\t\n",
+      "",
+      "",
+      "=",
+      "=,b"
+    ],
+    "record": "\";aa0\t\n\",,,=,\"=,b\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\t=0\r ",
+      ";",
+      "==\n;",
+      "\u00df\u00dfb",
+      "b"
+    ],
+    "record": "\"\t=0\r \",;,\"==\n;\",\u00df\u00dfb,b"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";=b0a",
+      ",,a",
+      " ,bb\"\r",
+      "\t",
+      ""
+    ],
+    "record": ";=b0a,\",,a\",\" ,bb\"\"\r\",\t,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\""
+    ],
+    "record": "\"\"\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\t\r0\tb\"",
+      "",
+      "",
+      ","
+    ],
+    "record": "\"\t\r0\tb\"\"\",,,\",\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "a \r=\u00df\r",
+      ","
+    ],
+    "record": "\"a \r=\u00df\r\",\",\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";\u00df==",
+      "=b\t",
+      "\r ",
+      "\na,\r==",
+      "="
+    ],
+    "record": ";\u00df==,=b\t,\"\r \",\"\na,\r==\",="
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ",\u00dfa",
+      ""
+    ],
+    "record": "\",\u00dfa\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0 \"",
+      "a"
+    ],
+    "record": "\"0 \"\"\",a"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "=b\n\r0",
+      "b0 \""
+    ],
+    "record": "\"=b\n\r0\",\"b0 \"\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ",,\"\"",
+      "\"\n0,,;",
+      ""
+    ],
+    "record": "\",,\"\"\"\"\",\"\"\"\n0,,;\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\n",
+      ", ",
+      "0\"\u00df b",
+      " \t,a\u00df0",
+      ""
+    ],
+    "record": "\"\n\",\", \",\"0\"\"\u00df b\",\" \t,a\u00df0\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00df\"",
+      ",\"\r=\ta",
+      ";;",
+      "=b,"
+    ],
+    "record": "\"\u00df\"\"\",\",\"\"\r=\ta\",;;,\"=b,\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "a,a"
+    ],
+    "record": "\"a,a\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\n\n\r\r,a",
+      "\n\"a,b ",
+      "\u00df",
+      "a\n\ra\u00df",
+      ";;"
+    ],
+    "record": "\"\n\n\r\r,a\",\"\n\"\"a,b \",\u00df,\"a\n\ra\u00df\",;;"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "b0=b\t",
+      "=="
+    ],
+    "record": "b0=b\t,=="
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0b; \n\t",
+      "\n;;\t\t\r",
+      "0",
+      "0\r,\r0\t",
+      "\r\ta\n,0"
+    ],
+    "record": "\"0b; \n\t\",\"\n;;\t\t\r\",0,\"0\r,\r0\t\",\"\r\ta\n,0\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";b=,=",
+      "=",
+      "0"
+    ],
+    "record": "\";b=,=\",=,0"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\"a\u00df,0",
+      "0\t,\t",
+      "\na\t=0\"",
+      "\u00df; ",
+      ""
+    ],
+    "record": "\"\"\"a\u00df,0\",\"0\t,\t\",\"\na\t=0\"\"\",\u00df; ,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r\r"
+    ],
+    "record": "\"\r\r\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r0",
+      "\n=a\"\r;",
+      "\n\r\n\n\u00df\n",
+      "=bb,a\"",
+      "\t\n"
+    ],
+    "record": "\"\r0\",\"\n=a\"\"\r;\",\"\n\r\n\n\u00df\n\",\"=bb,a\"\"\",\"\t\n\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      "\t=b "
+    ],
+    "record": ",\t=b "
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\t\"",
+      "\n ,0a",
+      ""
+    ],
+    "record": "\"\t\"\"\",\"\n ,0a\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\n b",
+      "\u00dfb;a"
+    ],
+    "record": "\"\n b\",\u00dfb;a"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "",
+      "\u00df",
+      " \r\n,\n\"",
+      ";,b",
+      ";"
+    ],
+    "record": ",\u00df,\" \r\n,\n\"\"\",\";,b\",;"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0",
+      ";a ",
+      "=\r,="
+    ],
+    "record": "0,;a ,\"=\r,=\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\t\u00df=",
+      "a\u00df\n\" ",
+      ", \t\",a",
+      "\"\t=",
+      "\"\u00df\u00dfa"
+    ],
+    "record": "\t\u00df=,\"a\u00df\n\"\" \",\", \t\"\",a\",\"\"\"\t=\",\"\"\"\u00df\u00dfa\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00df",
+      "\tb\r\n\t\r",
+      "\t,a"
+    ],
+    "record": "\u00df,\"\tb\r\n\t\r\",\"\t,a\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r",
+      ""
+    ],
+    "record": "\"\r\","
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ",0",
+      "a\u00dfb,\u00df",
+      ";\"bb\";",
+      "\n0\r;\r",
+      "a\n,\n0\u00df"
+    ],
+    "record": "\",0\",\"a\u00dfb,\u00df\",\";\"\"bb\"\";\",\"\n0\r;\r\",\"a\n,\n0\u00df\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00df\r",
+      "a\t0"
+    ],
+    "record": "\"\u00df\r\",a\t0"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0 "
+    ],
+    "record": "0 "
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\n\"aa=="
+    ],
+    "record": "\"\n\"\"aa==\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\r\u00df",
+      ",",
+      "\n="
+    ],
+    "record": "\"\r\u00df\",\",\",\"\n=\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";ab",
+      ";0\u00df0\t0",
+      ""
+    ],
+    "record": ";ab,;0\u00df0\t0,"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\"b0b\tb",
+      "a==",
+      ",\"\t",
+      "",
+      "\"\t;\ta"
+    ],
+    "record": "\"\"\"b0b\tb\",a==,\",\"\"\t\",,\"\"\"\t;\ta\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "=\"a",
+      "",
+      "0;\u00df",
+      "0a\u00df\u00df,"
+    ],
+    "record": "\"=\"\"a\",,0;\u00df,\"0a\u00df\u00df,\""
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "\u00df"
+    ],
+    "record": "\u00df"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      ";"
+    ],
+    "record": ";"
+  },
+  {
+    "delimiter": "comma",
+    "fields": [
+      "0\u00dfb=\"",
+      "0",
+      "\n\raa,\r",
+      ",,",
+      ""
+    ],
+    "record": "\"0\u00dfb=\"\"\",0,\"\n\raa,\r\",\",,\","
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "a",
+      "b",
+      "c"
+    ],
+    "record": "a;b;c"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      "x",
+      ""
+    ],
+    "record": ";x;"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": ";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "has,comma",
+      "has;semi",
+      "has\ttab"
+    ],
+    "record": "has,comma;\"has;semi\";has\ttab"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "say \"hi\"",
+      "\"",
+      "\"\""
+    ],
+    "record": "\"say \"\"hi\"\"\";\"\"\"\";\"\"\"\"\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "line\nbreak",
+      "cr\rhere",
+      "crlf\r\nboth"
+    ],
+    "record": "\"line\nbreak\";\"cr\rhere\";\"crlf\r\nboth\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      " lead",
+      "trail ",
+      "  "
+    ],
+    "record": " lead;trail ;  "
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "=SUM(A1)",
+      "+1",
+      "-0.012",
+      "@x"
+    ],
+    "record": "=SUM(A1);+1;-0.012;@x"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "Ma\u00df",
+      "\u00e9t\u00e9",
+      "\u65e5\u672c"
+    ],
+    "record": "Ma\u00df;\u00e9t\u00e9;\u65e5\u672c"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0,0100",
+      "1.5e-3",
+      "-7"
+    ],
+    "record": "0,0100;1.5e-3;-7"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "ba",
+      "a \t;\"="
+    ],
+    "record": "ba;\"a \t;\"\"=\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0 \u00dfa ",
+      "a;a ",
+      ";=",
+      ""
+    ],
+    "record": "0 \u00dfa ;\"a;a \";\";=\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      " \t0 ",
+      " b\"\t",
+      "a",
+      "\"0\r,\n0",
+      "\t\t=;ab"
+    ],
+    "record": " \t0 ;\" b\"\"\t\";a;\"\"\"0\r,\n0\";\"\t\t=;ab\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\n\u00df",
+      "\t\u00df\u00df0",
+      "=,\u00df"
+    ],
+    "record": "\"\n\u00df\";\t\u00df\u00df0;=,\u00df"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00dfb= \n,",
+      "\t\"\u00df0\r0",
+      ""
+    ],
+    "record": "\"\u00dfb= \n,\";\"\t\"\"\u00df0\r0\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\t",
+      "\t\ra",
+      "\tb",
+      " a;a",
+      ""
+    ],
+    "record": "\t;\"\t\ra\";\tb;\" a;a\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00df\r",
+      "\t==",
+      " b\"0a",
+      "\ra\"a00"
+    ],
+    "record": "\"\u00df\r\";\t==;\" b\"\"0a\";\"\ra\"\"a00\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r0;",
+      "\t,==,"
+    ],
+    "record": "\"\r0;\";\t,==,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "=\t",
+      "\na;\n\u00df"
+    ],
+    "record": "=\t;\"\na;\n\u00df\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      " =;",
+      " ",
+      "0",
+      ",=\n",
+      "\u00df\r\u00df\t\n\u00df"
+    ],
+    "record": "\" =;\"; ;0;\",=\n\";\"\u00df\r\u00df\t\n\u00df\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      "0;\r=0\t",
+      ",=",
+      " \t,\r"
+    ],
+    "record": ";\"0;\r=0\t\";,=;\" \t,\r\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00dfab\"\u00df",
+      "\n",
+      "\""
+    ],
+    "record": "\"\u00dfab\"\"\u00df\";\"\n\";\"\"\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "= \r ",
+      ""
+    ],
+    "record": "\"= \r \";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r\t\t\r",
+      "\u00df",
+      "\"\",\r ",
+      ","
+    ],
+    "record": "\"\r\t\t\r\";\u00df;\"\"\"\"\",\r \";,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r\n;",
+      "=\n;b"
+    ],
+    "record": "\"\r\n;\";\"=\n;b\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";0=\tb\u00df",
+      "0\u00dfb",
+      "=\r;\tb0"
+    ],
+    "record": "\";0=\tb\u00df\";0\u00dfb;\"=\r;\tb0\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      "\"\"=\t"
+    ],
+    "record": ";\"\"\"\"\"=\t\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": ";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r\u00df0ab"
+    ],
+    "record": "\"\r\u00df0ab\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";aa0\t\n",
+      "",
+      "",
+      "=",
+      "=,b"
+    ],
+    "record": "\";aa0\t\n\";;;=;=,b"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\t=0\r ",
+      ";",
+      "==\n;",
+      "\u00df\u00dfb",
+      "b"
+    ],
+    "record": "\"\t=0\r \";\";\";\"==\n;\";\u00df\u00dfb;b"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";=b0a",
+      ",,a",
+      " ,bb\"\r",
+      "\t",
+      ""
+    ],
+    "record": "\";=b0a\";,,a;\" ,bb\"\"\r\";\t;"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\""
+    ],
+    "record": "\"\"\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\t\r0\tb\"",
+      "",
+      "",
+      ","
+    ],
+    "record": "\"\t\r0\tb\"\"\";;;,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "a \r=\u00df\r",
+      ","
+    ],
+    "record": "\"a \r=\u00df\r\";,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";\u00df==",
+      "=b\t",
+      "\r ",
+      "\na,\r==",
+      "="
+    ],
+    "record": "\";\u00df==\";=b\t;\"\r \";\"\na,\r==\";="
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ",\u00dfa",
+      ""
+    ],
+    "record": ",\u00dfa;"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0 \"",
+      "a"
+    ],
+    "record": "\"0 \"\"\";a"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "=b\n\r0",
+      "b0 \""
+    ],
+    "record": "\"=b\n\r0\";\"b0 \"\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ",,\"\"",
+      "\"\n0,,;",
+      ""
+    ],
+    "record": "\",,\"\"\"\"\";\"\"\"\n0,,;\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\n",
+      ", ",
+      "0\"\u00df b",
+      " \t,a\u00df0",
+      ""
+    ],
+    "record": "\"\n\";, ;\"0\"\"\u00df b\"; \t,a\u00df0;"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00df\"",
+      ",\"\r=\ta",
+      ";;",
+      "=b,"
+    ],
+    "record": "\"\u00df\"\"\";\",\"\"\r=\ta\";\";;\";=b,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "a,a"
+    ],
+    "record": "a,a"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\n\n\r\r,a",
+      "\n\"a,b ",
+      "\u00df",
+      "a\n\ra\u00df",
+      ";;"
+    ],
+    "record": "\"\n\n\r\r,a\";\"\n\"\"a,b \";\u00df;\"a\n\ra\u00df\";\";;\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "b0=b\t",
+      "=="
+    ],
+    "record": "b0=b\t;=="
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0b; \n\t",
+      "\n;;\t\t\r",
+      "0",
+      "0\r,\r0\t",
+      "\r\ta\n,0"
+    ],
+    "record": "\"0b; \n\t\";\"\n;;\t\t\r\";0;\"0\r,\r0\t\";\"\r\ta\n,0\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";b=,=",
+      "=",
+      "0"
+    ],
+    "record": "\";b=,=\";=;0"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\"a\u00df,0",
+      "0\t,\t",
+      "\na\t=0\"",
+      "\u00df; ",
+      ""
+    ],
+    "record": "\"\"\"a\u00df,0\";0\t,\t;\"\na\t=0\"\"\";\"\u00df; \";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r\r"
+    ],
+    "record": "\"\r\r\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r0",
+      "\n=a\"\r;",
+      "\n\r\n\n\u00df\n",
+      "=bb,a\"",
+      "\t\n"
+    ],
+    "record": "\"\r0\";\"\n=a\"\"\r;\";\"\n\r\n\n\u00df\n\";\"=bb,a\"\"\";\"\t\n\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      "\t=b "
+    ],
+    "record": ";\t=b "
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\t\"",
+      "\n ,0a",
+      ""
+    ],
+    "record": "\"\t\"\"\";\"\n ,0a\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\n b",
+      "\u00dfb;a"
+    ],
+    "record": "\"\n b\";\"\u00dfb;a\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "",
+      "\u00df",
+      " \r\n,\n\"",
+      ";,b",
+      ";"
+    ],
+    "record": ";\u00df;\" \r\n,\n\"\"\";\";,b\";\";\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0",
+      ";a ",
+      "=\r,="
+    ],
+    "record": "0;\";a \";\"=\r,=\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\t\u00df=",
+      "a\u00df\n\" ",
+      ", \t\",a",
+      "\"\t=",
+      "\"\u00df\u00dfa"
+    ],
+    "record": "\t\u00df=;\"a\u00df\n\"\" \";\", \t\"\",a\";\"\"\"\t=\";\"\"\"\u00df\u00dfa\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00df",
+      "\tb\r\n\t\r",
+      "\t,a"
+    ],
+    "record": "\u00df;\"\tb\r\n\t\r\";\t,a"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r",
+      ""
+    ],
+    "record": "\"\r\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ",0",
+      "a\u00dfb,\u00df",
+      ";\"bb\";",
+      "\n0\r;\r",
+      "a\n,\n0\u00df"
+    ],
+    "record": ",0;a\u00dfb,\u00df;\";\"\"bb\"\";\";\"\n0\r;\r\";\"a\n,\n0\u00df\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00df\r",
+      "a\t0"
+    ],
+    "record": "\"\u00df\r\";a\t0"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0 "
+    ],
+    "record": "0 "
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\n\"aa=="
+    ],
+    "record": "\"\n\"\"aa==\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\r\u00df",
+      ",",
+      "\n="
+    ],
+    "record": "\"\r\u00df\";,;\"\n=\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";ab",
+      ";0\u00df0\t0",
+      ""
+    ],
+    "record": "\";ab\";\";0\u00df0\t0\";"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\"b0b\tb",
+      "a==",
+      ",\"\t",
+      "",
+      "\"\t;\ta"
+    ],
+    "record": "\"\"\"b0b\tb\";a==;\",\"\"\t\";;\"\"\"\t;\ta\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "=\"a",
+      "",
+      "0;\u00df",
+      "0a\u00df\u00df,"
+    ],
+    "record": "\"=\"\"a\";;\"0;\u00df\";0a\u00df\u00df,"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "\u00df"
+    ],
+    "record": "\u00df"
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      ";"
+    ],
+    "record": "\";\""
+  },
+  {
+    "delimiter": "semicolon",
+    "fields": [
+      "0\u00dfb=\"",
+      "0",
+      "\n\raa,\r",
+      ",,",
+      ""
+    ],
+    "record": "\"0\u00dfb=\"\"\";0;\"\n\raa,\r\";,,;"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "a",
+      "b",
+      "c"
+    ],
+    "record": "a\tb\tc"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      "x",
+      ""
+    ],
+    "record": "\tx\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": "\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "has,comma",
+      "has;semi",
+      "has\ttab"
+    ],
+    "record": "has,comma\thas;semi\t\"has\ttab\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "say \"hi\"",
+      "\"",
+      "\"\""
+    ],
+    "record": "\"say \"\"hi\"\"\"\t\"\"\"\"\t\"\"\"\"\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "line\nbreak",
+      "cr\rhere",
+      "crlf\r\nboth"
+    ],
+    "record": "\"line\nbreak\"\t\"cr\rhere\"\t\"crlf\r\nboth\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      " lead",
+      "trail ",
+      "  "
+    ],
+    "record": " lead\ttrail \t  "
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "=SUM(A1)",
+      "+1",
+      "-0.012",
+      "@x"
+    ],
+    "record": "=SUM(A1)\t+1\t-0.012\t@x"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "Ma\u00df",
+      "\u00e9t\u00e9",
+      "\u65e5\u672c"
+    ],
+    "record": "Ma\u00df\t\u00e9t\u00e9\t\u65e5\u672c"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0,0100",
+      "1.5e-3",
+      "-7"
+    ],
+    "record": "0,0100\t1.5e-3\t-7"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "ba",
+      "a \t;\"="
+    ],
+    "record": "ba\t\"a \t;\"\"=\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0 \u00dfa ",
+      "a;a ",
+      ";=",
+      ""
+    ],
+    "record": "0 \u00dfa \ta;a \t;=\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      " \t0 ",
+      " b\"\t",
+      "a",
+      "\"0\r,\n0",
+      "\t\t=;ab"
+    ],
+    "record": "\" \t0 \"\t\" b\"\"\t\"\ta\t\"\"\"0\r,\n0\"\t\"\t\t=;ab\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\n\u00df",
+      "\t\u00df\u00df0",
+      "=,\u00df"
+    ],
+    "record": "\"\n\u00df\"\t\"\t\u00df\u00df0\"\t=,\u00df"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00dfb= \n,",
+      "\t\"\u00df0\r0",
+      ""
+    ],
+    "record": "\"\u00dfb= \n,\"\t\"\t\"\"\u00df0\r0\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\t",
+      "\t\ra",
+      "\tb",
+      " a;a",
+      ""
+    ],
+    "record": "\"\t\"\t\"\t\ra\"\t\"\tb\"\t a;a\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00df\r",
+      "\t==",
+      " b\"0a",
+      "\ra\"a00"
+    ],
+    "record": "\"\u00df\r\"\t\"\t==\"\t\" b\"\"0a\"\t\"\ra\"\"a00\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r0;",
+      "\t,==,"
+    ],
+    "record": "\"\r0;\"\t\"\t,==,\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "=\t",
+      "\na;\n\u00df"
+    ],
+    "record": "\"=\t\"\t\"\na;\n\u00df\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      " =;",
+      " ",
+      "0",
+      ",=\n",
+      "\u00df\r\u00df\t\n\u00df"
+    ],
+    "record": " =;\t \t0\t\",=\n\"\t\"\u00df\r\u00df\t\n\u00df\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      "0;\r=0\t",
+      ",=",
+      " \t,\r"
+    ],
+    "record": "\t\"0;\r=0\t\"\t,=\t\" \t,\r\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00dfab\"\u00df",
+      "\n",
+      "\""
+    ],
+    "record": "\"\u00dfab\"\"\u00df\"\t\"\n\"\t\"\"\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "= \r ",
+      ""
+    ],
+    "record": "\"= \r \"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r\t\t\r",
+      "\u00df",
+      "\"\",\r ",
+      ","
+    ],
+    "record": "\"\r\t\t\r\"\t\u00df\t\"\"\"\"\",\r \"\t,"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r\n;",
+      "=\n;b"
+    ],
+    "record": "\"\r\n;\"\t\"=\n;b\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";0=\tb\u00df",
+      "0\u00dfb",
+      "=\r;\tb0"
+    ],
+    "record": "\";0=\tb\u00df\"\t0\u00dfb\t\"=\r;\tb0\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      "\"\"=\t"
+    ],
+    "record": "\t\"\"\"\"\"=\t\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      ""
+    ],
+    "record": "\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r\u00df0ab"
+    ],
+    "record": "\"\r\u00df0ab\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";aa0\t\n",
+      "",
+      "",
+      "=",
+      "=,b"
+    ],
+    "record": "\";aa0\t\n\"\t\t\t=\t=,b"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\t=0\r ",
+      ";",
+      "==\n;",
+      "\u00df\u00dfb",
+      "b"
+    ],
+    "record": "\"\t=0\r \"\t;\t\"==\n;\"\t\u00df\u00dfb\tb"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";=b0a",
+      ",,a",
+      " ,bb\"\r",
+      "\t",
+      ""
+    ],
+    "record": ";=b0a\t,,a\t\" ,bb\"\"\r\"\t\"\t\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\""
+    ],
+    "record": "\"\"\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\t\r0\tb\"",
+      "",
+      "",
+      ","
+    ],
+    "record": "\"\t\r0\tb\"\"\"\t\t\t,"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "a \r=\u00df\r",
+      ","
+    ],
+    "record": "\"a \r=\u00df\r\"\t,"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";\u00df==",
+      "=b\t",
+      "\r ",
+      "\na,\r==",
+      "="
+    ],
+    "record": ";\u00df==\t\"=b\t\"\t\"\r \"\t\"\na,\r==\"\t="
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ",\u00dfa",
+      ""
+    ],
+    "record": ",\u00dfa\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0 \"",
+      "a"
+    ],
+    "record": "\"0 \"\"\"\ta"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "=b\n\r0",
+      "b0 \""
+    ],
+    "record": "\"=b\n\r0\"\t\"b0 \"\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ",,\"\"",
+      "\"\n0,,;",
+      ""
+    ],
+    "record": "\",,\"\"\"\"\"\t\"\"\"\n0,,;\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\n",
+      ", ",
+      "0\"\u00df b",
+      " \t,a\u00df0",
+      ""
+    ],
+    "record": "\"\n\"\t, \t\"0\"\"\u00df b\"\t\" \t,a\u00df0\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00df\"",
+      ",\"\r=\ta",
+      ";;",
+      "=b,"
+    ],
+    "record": "\"\u00df\"\"\"\t\",\"\"\r=\ta\"\t;;\t=b,"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ""
+    ],
+    "record": "\"\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "a,a"
+    ],
+    "record": "a,a"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\n\n\r\r,a",
+      "\n\"a,b ",
+      "\u00df",
+      "a\n\ra\u00df",
+      ";;"
+    ],
+    "record": "\"\n\n\r\r,a\"\t\"\n\"\"a,b \"\t\u00df\t\"a\n\ra\u00df\"\t;;"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "b0=b\t",
+      "=="
+    ],
+    "record": "\"b0=b\t\"\t=="
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0b; \n\t",
+      "\n;;\t\t\r",
+      "0",
+      "0\r,\r0\t",
+      "\r\ta\n,0"
+    ],
+    "record": "\"0b; \n\t\"\t\"\n;;\t\t\r\"\t0\t\"0\r,\r0\t\"\t\"\r\ta\n,0\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";b=,=",
+      "=",
+      "0"
+    ],
+    "record": ";b=,=\t=\t0"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\"a\u00df,0",
+      "0\t,\t",
+      "\na\t=0\"",
+      "\u00df; ",
+      ""
+    ],
+    "record": "\"\"\"a\u00df,0\"\t\"0\t,\t\"\t\"\na\t=0\"\"\"\t\u00df; \t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r\r"
+    ],
+    "record": "\"\r\r\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r0",
+      "\n=a\"\r;",
+      "\n\r\n\n\u00df\n",
+      "=bb,a\"",
+      "\t\n"
+    ],
+    "record": "\"\r0\"\t\"\n=a\"\"\r;\"\t\"\n\r\n\n\u00df\n\"\t\"=bb,a\"\"\"\t\"\t\n\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      "\t=b "
+    ],
+    "record": "\t\"\t=b \""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\t\"",
+      "\n ,0a",
+      ""
+    ],
+    "record": "\"\t\"\"\"\t\"\n ,0a\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\n b",
+      "\u00dfb;a"
+    ],
+    "record": "\"\n b\"\t\u00dfb;a"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "",
+      "\u00df",
+      " \r\n,\n\"",
+      ";,b",
+      ";"
+    ],
+    "record": "\t\u00df\t\" \r\n,\n\"\"\"\t;,b\t;"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0",
+      ";a ",
+      "=\r,="
+    ],
+    "record": "0\t;a \t\"=\r,=\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\t\u00df=",
+      "a\u00df\n\" ",
+      ", \t\",a",
+      "\"\t=",
+      "\"\u00df\u00dfa"
+    ],
+    "record": "\"\t\u00df=\"\t\"a\u00df\n\"\" \"\t\", \t\"\",a\"\t\"\"\"\t=\"\t\"\"\"\u00df\u00dfa\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00df",
+      "\tb\r\n\t\r",
+      "\t,a"
+    ],
+    "record": "\u00df\t\"\tb\r\n\t\r\"\t\"\t,a\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r",
+      ""
+    ],
+    "record": "\"\r\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ",0",
+      "a\u00dfb,\u00df",
+      ";\"bb\";",
+      "\n0\r;\r",
+      "a\n,\n0\u00df"
+    ],
+    "record": ",0\ta\u00dfb,\u00df\t\";\"\"bb\"\";\"\t\"\n0\r;\r\"\t\"a\n,\n0\u00df\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00df\r",
+      "a\t0"
+    ],
+    "record": "\"\u00df\r\"\t\"a\t0\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0 "
+    ],
+    "record": "0 "
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\n\"aa=="
+    ],
+    "record": "\"\n\"\"aa==\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\r\u00df",
+      ",",
+      "\n="
+    ],
+    "record": "\"\r\u00df\"\t,\t\"\n=\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";ab",
+      ";0\u00df0\t0",
+      ""
+    ],
+    "record": ";ab\t\";0\u00df0\t0\"\t"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\"b0b\tb",
+      "a==",
+      ",\"\t",
+      "",
+      "\"\t;\ta"
+    ],
+    "record": "\"\"\"b0b\tb\"\ta==\t\",\"\"\t\"\t\t\"\"\"\t;\ta\""
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "=\"a",
+      "",
+      "0;\u00df",
+      "0a\u00df\u00df,"
+    ],
+    "record": "\"=\"\"a\"\t\t0;\u00df\t0a\u00df\u00df,"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "\u00df"
+    ],
+    "record": "\u00df"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      ";"
+    ],
+    "record": ";"
+  },
+  {
+    "delimiter": "tab",
+    "fields": [
+      "0\u00dfb=\"",
+      "0",
+      "\n\raa,\r",
+      ",,",
+      ""
+    ],
+    "record": "\"0\u00dfb=\"\"\"\t0\t\"\n\raa,\r\"\t,,\t"
+  }
+]

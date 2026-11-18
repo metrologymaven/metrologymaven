@@ -1,0 +1,101 @@
+{
+  "schema": "colmap@1",
+  "id": "fid.results.wide",
+  "version": "1.0.0",
+  "layout": "wide",
+  "dialect": {
+    "delimiter": "comma",
+    "decimal_mark": ".",
+    "header": true,
+    "quote": "rfc4180",
+    "encoding": "utf-8",
+    "line_ending": "lf"
+  },
+  "columns": [
+    {
+      "field": "part_id",
+      "header": "part_id",
+      "required": true
+    },
+    {
+      "field": "timestamp_text",
+      "header": "timestamp_text",
+      "required": false
+    },
+    {
+      "field": "source_software",
+      "header": "source_software",
+      "required": false
+    },
+    {
+      "field": "source_version",
+      "header": "source_version",
+      "required": false
+    },
+    {
+      "field": "characteristic_name",
+      "header": "characteristic_name",
+      "required": false
+    },
+    {
+      "field": "nominal",
+      "header": "nominal",
+      "required": false
+    },
+    {
+      "field": "actual",
+      "header": "actual",
+      "required": false
+    },
+    {
+      "field": "deviation",
+      "header": "deviation",
+      "required": false
+    },
+    {
+      "field": "lower_limit",
+      "header": "lower_limit",
+      "required": false
+    },
+    {
+      "field": "upper_limit",
+      "header": "upper_limit",
+      "required": false
+    },
+    {
+      "field": "unit",
+      "header": "unit",
+      "required": false
+    },
+    {
+      "field": "status",
+      "header": "status",
+      "required": false
+    },
+    {
+      "field": "evaluation_basis",
+      "header": "evaluation_basis",
+      "required": false
+    },
+    {
+      "field": "uec",
+      "header": "uec",
+      "required": false
+    },
+    {
+      "field": "decision_rule",
+      "header": "decision_rule",
+      "required": false
+    },
+    {
+      "field": "record_status",
+      "header": "record_status",
+      "required": false
+    },
+    {
+      "field": "comment",
+      "header": "comment",
+      "required": false
+    }
+  ]
+}

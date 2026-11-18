@@ -215,7 +215,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
 - [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)
 - [B] [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
-- [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
+- [B] [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
 - [B] [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
 - [B] [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
 - [B] [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)

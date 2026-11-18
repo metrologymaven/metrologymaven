@@ -10,6 +10,8 @@ fixtures/io/e57/phys/** -text
 fixtures/io/dmis/parse/lex/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
 fixtures/flow/pkg/** -text
+# IO.RES.CSV.MAP fixtures: digests and RFC 4180 records are compared byte for byte (CR, LF, tabs).
+fixtures/io/res/csv/map/** -text
 # PLAT.GPU.POLICY fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
