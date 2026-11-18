@@ -764,10 +764,8 @@ fn read_item(path: &Path, name: &str, limit: u64) -> io::Result<ReadOutcome> {
     let Some(digest_line) = header.strip_prefix(expected_start.as_bytes()) else {
         return Ok(ReadOutcome::Damaged);
     };
-    let stored = std::str::from_utf8(digest_line)
-        .ok()
-        .and_then(|l| l.strip_suffix('\n'))
-        .and_then(|l| Digest::parse(l).ok());
+    let stored =
+        std::str::from_utf8(digest_line).ok().and_then(|l| l.strip_suffix('\n')).and_then(|l| Digest::parse(l).ok());
     let content = bytes.split_off(header_len);
     match stored {
         Some(d) if d == Digest::from_bytes(Sha256::digest(&content).into()) => Ok(ReadOutcome::Hit(content)),
