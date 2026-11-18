@@ -234,7 +234,10 @@ fn kind_mismatch_is_a_finding() {
     }
     let d = scratch_case("mismatch-cli", &["fid.msi"], &[("fid.msi", Some("signature"))]);
     let out = out_dir("mismatch-cli-out");
-    assert_eq!(cli_case(&d, &out), (1, "SUMS-KIND-MISMATCH fid.msi (kind signature, name implies an artefact)\n".to_string()));
+    assert_eq!(
+        cli_case(&d, &out),
+        (1, "SUMS-KIND-MISMATCH fid.msi (kind signature, name implies an artefact)\n".to_string())
+    );
 }
 
 /// Names that only look like a never-summed family are ordinary artefacts and are summed.
