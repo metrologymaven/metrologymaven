@@ -19,7 +19,9 @@ USAGE:
                                   entry's board figure meets its threshold (exact fractions) on a
                                   release whose red-team verdict is `pass`, and no paragraph uses
                                   a capability phrase without a tag. <BUNDLE> is a bundle folder
-                                  holding board.json, or the file itself. The phrase list
+                                  holding board.json, or the file itself. With one board,
+                                  entries for other (e.g. earlier) releases report
+                                  entry_missing; this is intended. The phrase list
                                   defaults to claim-phrases.txt next to the register. With
                                   --json print {\"claims\",\"files\",\"findings\",\"ok\",\"tags\"}.
     fid-eval-board --version      Print the version

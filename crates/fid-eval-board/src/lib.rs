@@ -7,12 +7,16 @@
 //! model, scope, metric) and a threshold. The check fails when
 //!
 //! - a tag names an ID absent from the register (`unknown_claim`),
-//! - a register entry names no board entry (`entry_missing`),
+//! - a register entry names no board entry (`entry_missing`); the check takes one board, so
+//!   entries for any other release (for example claims about earlier releases kept in the
+//!   register) report `entry_missing`. This is intended: check each release's claims against
+//!   that release's board, or retire claims about superseded releases,
 //! - the board figure does not meet the entry's threshold, compared as exact fractions
 //!   (`threshold_not_met`),
 //! - the release's red-team verdict is `block` or `incomplete` (`claim_on_blocked_release`),
-//! - a paragraph contains an agent-capability phrase from `agent/claim-phrases.txt` but no tag
-//!   (`untagged_claim`, a heuristic).
+//! - a unit (paragraph, heading, list item, table row; HTML block element) contains an
+//!   agent-capability phrase from `agent/claim-phrases.txt` but no tag (`untagged_claim`, a
+//!   heuristic; markup and character references are removed first, see the `scan` module).
 //!
 //! "Claim" here means a public capability claim. It is unrelated to *work* claims: the
 //! `/claim` issue-comment workflow (`.github/workflows/claim.yml`, which assigns an issue) and
@@ -30,7 +34,7 @@ pub use board::{parse_board, Board, Figures, ModelEntry, Outcome};
 pub use check::{check_claims, Inputs, Report};
 pub use fraction::Fraction;
 pub use register::{is_claim_id, parse_register, Claim, Metric, Register, Scope, ScopeKind, REGISTER_FORMAT};
-pub use scan::{parse_phrases, scan_text, Tag, SOURCE_EXTENSIONS};
+pub use scan::{parse_phrases, scan_text, SourceKind, Tag, SOURCE_EXTENSIONS};
 
 use std::fmt;
 

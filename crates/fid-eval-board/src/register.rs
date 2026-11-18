@@ -142,7 +142,7 @@ pub fn parse_register(bytes: &[u8], file: &str) -> Result<Register, Vec<Finding>
     }
     let v = fid_canon::parse_with_limits(bytes, MAX_INPUT_BYTES, MAX_DEPTH)
         .map_err(|e| vec![err(0, None, format!("not valid JSON: {e}"))])?;
-    let text = String::from_utf8_lossy(bytes);
+    let id_lines = claim_id_lines(bytes);
     let mut errs = Vec::new();
     let Some(top) = as_obj(&v) else {
         return Err(vec![err(0, None, "top level is not an object".into())]);
@@ -158,7 +158,7 @@ pub fn parse_register(bytes: &[u8], file: &str) -> Result<Register, Vec<Finding>
         Some(CValue::Arr(items)) => {
             for (i, item) in items.iter().enumerate() {
                 let at = format!("claims[{i}]");
-                match parse_claim(item, &at, &text) {
+                match parse_claim(item, &at, id_lines.get(i).copied().unwrap_or(0)) {
                     Ok(c) => {
                         if !seen.insert(c.id.clone()) {
                             errs.push(err(c.line, Some(&c.id), format!("{at}: duplicate claim id")));
@@ -185,7 +185,7 @@ pub fn parse_register(bytes: &[u8], file: &str) -> Result<Register, Vec<Finding>
 
 type ClaimErr = (usize, Option<String>, Vec<String>);
 
-fn parse_claim(v: &CValue, at: &str, text: &str) -> Result<Claim, ClaimErr> {
+fn parse_claim(v: &CValue, at: &str, id_line: usize) -> Result<Claim, ClaimErr> {
     let Some(m) = as_obj(v) else {
         return Err((0, None, vec![format!("{at}: not an object")]));
     };
@@ -212,7 +212,7 @@ fn parse_claim(v: &CValue, at: &str, text: &str) -> Result<Claim, ClaimErr> {
     if !id.is_empty() && !id_ok {
         ds.push(format!("{at}.id: {id:?} is not a claim id ([a-z0-9][a-z0-9._-]*, at most 64)"));
     }
-    let line = if id_ok { line_of_id(text, &id) } else { 0 };
+    let line = id_line;
     let metric = Metric::parse(&metric_s);
     if metric.is_none() && !metric_s.is_empty() {
         ds.push(format!("{at}.metric: {metric_s:?} is not success, adoptability, human-adoption or violations"));
@@ -278,20 +278,56 @@ fn parse_claim(v: &CValue, at: &str, text: &str) -> Result<Claim, ClaimErr> {
     }
 }
 
-/// The 1-based line holding `"id": "<id>"` (whitespace around the colon allowed), or 0.
-fn line_of_id(text: &str, id: &str) -> usize {
-    let quoted = format!("\"{id}\"");
-    for (i, line) in text.lines().enumerate() {
-        for (k, _) in line.match_indices("\"id\"") {
-            let rest = line[k + 4..].trim_start();
-            if let Some(r) = rest.strip_prefix(':') {
-                if r.trim_start().starts_with(&quoted) {
-                    return i + 1;
+/// For each element of the top-level `claims` array, in order, the 1-based line of that
+/// entry's own `"id"` key (0 if it has none). Keys of nested objects, such as `scope.id`, are
+/// not counted. `bytes` is valid JSON when this is used, so a small scanner suffices.
+fn claim_id_lines(bytes: &[u8]) -> Vec<usize> {
+    let mut out = Vec::new();
+    let mut stack: Vec<u8> = Vec::new();
+    let mut line = 1;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\n' => line += 1,
+            c @ (b'{' | b'[') => {
+                stack.push(c);
+                if stack.as_slice() == b"{[{" {
+                    out.push(0);
                 }
             }
+            b'}' | b']' => {
+                stack.pop();
+            }
+            b'"' => {
+                let start = i + 1;
+                let mut j = start;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    if bytes[j] == b'\\' {
+                        j += 1;
+                    }
+                    j += 1;
+                }
+                let key = bytes.get(start..j).unwrap_or_default();
+                if key == b"id" && stack.as_slice() == b"{[{" {
+                    let mut k = j + 1;
+                    while k < bytes.len() && bytes[k].is_ascii_whitespace() {
+                        k += 1;
+                    }
+                    if bytes.get(k) == Some(&b':') {
+                        if let Some(last) = out.last_mut() {
+                            if *last == 0 {
+                                *last = line;
+                            }
+                        }
+                    }
+                }
+                i = j;
+            }
+            _ => {}
         }
+        i += 1;
     }
-    0
+    out
 }
 
 pub(crate) fn as_obj(v: &CValue) -> Option<&BTreeMap<String, CValue>> {
@@ -360,6 +396,28 @@ mod tests {
         let text = format!("{{\"format\":\"fid-claims@1\",\"claims\":[{one},{one}]}}");
         let e = parse_register(text.as_bytes(), "claims.json").unwrap_err();
         assert!(e.iter().any(|f| f.detail.contains("duplicate claim id")));
+    }
+
+    #[test]
+    fn id_line_is_the_entry_own_id_not_scope_id() {
+        // The first entry's scope.id (line 5) equals its own id (line 7) and comes first.
+        let text = [
+            r#"{"#,
+            r#""format": "fid-claims@1","#,
+            r#""claims": ["#,
+            r#"{"scope": {"kind": "family","#,
+            r#" "id": "c1"},"#,
+            r#""summary": "s", "release": "r", "model": "m","#,
+            r#""id": "c1","#,
+            r#""metric": "success", "threshold": "1/2"},"#,
+            r#"{"id": "c2", "scope": {"kind": "app", "id": "x"}, "summary": "s","#,
+            r#""release": "r", "model": "m", "metric": "success", "threshold": "1"}"#,
+            r#"]}"#,
+        ]
+        .join("\n");
+        let r = parse_register(text.as_bytes(), "claims.json").unwrap();
+        assert_eq!(r.claims[0].line, 7);
+        assert_eq!(r.claims[1].line, 9);
     }
 
     #[test]

@@ -1,0 +1,8 @@
+# Agent-capability phrases (fixture copy; project-authored).
+# One phrase per line, matched case-insensitively on whole words, across line breaks.
+our agent
+the agent can
+agent programs
+programs a part
+reviewers adopted
+adoptable program

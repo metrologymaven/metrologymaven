@@ -25,6 +25,64 @@
       "line": 89
     }
   ],
+  "evasion-html": [
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/fence.html",
+      "line": 5
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/min.html",
+      "line": 1
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/min.html",
+      "line": 1
+    }
+  ],
+  "evasion-md": [
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 5
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 7
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 9
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 11
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 14
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/evasion.md",
+      "line": 19
+    }
+  ],
   "ok": [],
   "threshold": [
     {

@@ -106,6 +106,18 @@ fn req004_blocked_and_incomplete_verdicts() {
 }
 
 #[test]
+fn markup_list_and_table_evasion_in_markdown() {
+    let r = assert_case("evasion-md");
+    assert!(r.findings.iter().all(|f| f.code == Code::UntaggedClaim));
+}
+
+#[test]
+fn minified_html_and_fence_lines_in_html() {
+    let r = assert_case("evasion-html");
+    assert!(r.findings.iter().all(|f| f.code == Code::UntaggedClaim));
+}
+
+#[test]
 fn entries_missing_from_board() {
     assert_case("entry-missing");
 }
@@ -142,7 +154,7 @@ fn repo_register_and_phrase_list_are_valid() {
     let list = parse_phrases(&phrases);
     assert!(!list.is_empty());
     // AC-4's sentence must be caught by the project's own list too.
-    let (_, f) = scan_text("our agent programs a part from PMI\n", "x.md", &list);
+    let (_, f) = scan_text("our agent programs a part from PMI\n", "x.md", SourceKind::Markdown, &list);
     assert_eq!(f.len(), 1);
     assert_eq!(f[0].code, Code::UntaggedClaim);
 }

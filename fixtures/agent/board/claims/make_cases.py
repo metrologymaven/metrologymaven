@@ -126,6 +126,55 @@ agent across a line break.
 Agents in general are a research topic; this sentence has no phrase.
 """
 
+# Markup must not hide a phrase; a tag covers only its own list item or table row.
+EVASION_MD = """\
+# Evasion
+
+Plain intro with no capability wording.
+
+Our <b>agent</b> drafts plans.
+
+Then our&nbsp;agent checks them.
+
+Also our *agent* reviews.
+
+See [our](https://example.org/a_(b)) agent at work.
+
+- Covered item <!-- fid-claim: c1 -->
+- an item where our agent is untagged
+
+| Row | Text |
+|---|---|
+| 1 | covered row <!-- fid-claim: c2 --> |
+| 2 | a row where our agent is untagged |
+"""
+
+# Minified HTML on one line: two untagged units (a paragraph and a list item); `<br>` splits
+# "our" from "agent"; pre/code/script/style content is skipped.
+MIN_HTML = (
+    "<!doctype html><html><body><h1>Results</h1>"
+    "<p>Covered: our agent ran. <!-- fid-claim: c3 --></p>"
+    "<p>Our&nbsp;<em>agent</em> too</p>"
+    "<p>our<br>agent split by a line break</p>"
+    "<ul><li>item <!-- fid-claim: c4 --></li><li>our agent again</li></ul>"
+    "<pre><code>our agent</code></pre>"
+    "<script>var s = '</p>our agent';</script>"
+    "<style>p::after{content:'our agent'}</style>"
+    "</body></html>\n"
+)
+
+# Markdown fences mean nothing in HTML: the phrase between ``` lines is prose.
+FENCE_HTML = """\
+<!doctype html>
+<html><body>
+<div>
+```
+our agent
+```
+</div>
+</body></html>
+"""
+
 BASE_DOCS = {"docs/index.md": INDEX_MD, "docs/site/index.html": SITE_HTML}
 
 
@@ -200,6 +249,31 @@ def cases():
     assert line_of(BLOG_MD, "our agent programs a part from PMI") == 3
     assert line_of(BLOG_MD, "names our") == 5
     out["untagged"] = (BASE_CLAIMS, board("pass"), docs, exp)
+
+    # Review of #110: markup, entities, links, list items and table rows (Markdown).
+    docs = dict(BASE_DOCS, **{"docs/evasion.md": EVASION_MD})
+    needles = [
+        "Our <b>agent</b>",
+        "our&nbsp;agent",
+        "our *agent*",
+        "[our](",
+        "an item where our agent",
+        "a row where our agent",
+    ]
+    exp = [
+        {"code": "untagged_claim", "claim": None, "file": "docs/evasion.md", "line": line_of(EVASION_MD, n)}
+        for n in needles
+    ]
+    out["evasion-md"] = (BASE_CLAIMS, board("pass"), docs, exp)
+
+    # Review of #110: minified HTML and ``` lines in HTML.
+    docs = dict(BASE_DOCS, **{"docs/min.html": MIN_HTML, "docs/fence.html": FENCE_HTML})
+    exp = [
+        {"code": "untagged_claim", "claim": None, "file": "docs/min.html", "line": 1},
+        {"code": "untagged_claim", "claim": None, "file": "docs/min.html", "line": 1},
+        {"code": "untagged_claim", "claim": None, "file": "docs/fence.html", "line": line_of(FENCE_HTML, "our agent")},
+    ]
+    out["evasion-html"] = (BASE_CLAIMS, board("pass"), docs, exp)
 
     # REQ-004: claims on a release whose red-team verdict is block or incomplete.
     for outcome in ("block", "incomplete"):

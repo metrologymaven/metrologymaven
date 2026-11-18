@@ -2,7 +2,7 @@
 
 use crate::board::{parse_board, Board, Outcome};
 use crate::register::{parse_register, Claim, Register, MAX_INPUT_BYTES};
-use crate::scan::{parse_phrases, scan_text, Tag, SOURCE_EXTENSIONS};
+use crate::scan::{parse_phrases, scan_text, SourceKind, Tag};
 use crate::{display_path, Code, Finding};
 use std::cmp::Ordering;
 use std::fs;
@@ -17,7 +17,8 @@ pub struct Inputs<'a> {
     pub board: &'a Path,
     /// The phrase list; `None` means `claim-phrases.txt` next to the register.
     pub phrases: Option<&'a Path>,
-    /// Source files or directories (scanned recursively for `.md`, `.markdown`, `.html`, `.htm`).
+    /// Source files or directories (scanned recursively for `.md`, `.markdown`, `.html`, `.htm`;
+    /// a file given directly with another extension is read as Markdown).
     pub sources: &'a [PathBuf],
 }
 
@@ -77,7 +78,8 @@ pub fn check_claims(inp: &Inputs<'_>) -> Report {
                     report.files += 1;
                     match read_text(&path, &shown) {
                         Ok(text) => {
-                            let (t, f) = scan_text(&text, &shown, &phrases);
+                            let kind = SourceKind::from_path(&path).unwrap_or(SourceKind::Markdown);
+                            let (t, f) = scan_text(&text, &shown, kind, &phrases);
                             tags.extend(t);
                             report.findings.extend(f);
                         }
@@ -89,6 +91,7 @@ pub fn check_claims(inp: &Inputs<'_>) -> Report {
         }
     }
     tags.sort();
+    tags.dedup();
     report.claims = register.claims.len();
     report.tags = tags.len();
 
@@ -107,7 +110,6 @@ pub fn check_claims(inp: &Inputs<'_>) -> Report {
         evaluate(c, &register, &board, &tags, &mut report.findings);
     }
     report.findings.sort();
-    report.findings.dedup();
     report
 }
 
@@ -218,8 +220,7 @@ fn walk(dir: &Path, shown: &str, out: &mut Vec<(PathBuf, String)>) -> Result<(),
         if ft.is_dir() {
             walk(&path, &child, out)?;
         } else if ft.is_file() {
-            let ext = path.extension().map(|x| x.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
-            if SOURCE_EXTENSIONS.contains(&ext.as_str()) {
+            if SourceKind::from_path(&path).is_some() {
                 out.push((path, child));
             }
         }
