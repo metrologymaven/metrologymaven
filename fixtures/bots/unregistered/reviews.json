@@ -1,0 +1,8 @@
+[
+  {"author": "fid-review[bot]", "author_is_bot": true, "path": "crates/a.rs"},
+  {"author": "alice", "author_is_bot": false},
+  {"author": "lint-bot[bot]", "author_is_bot": true},
+  {"author": "hosted-x[bot]", "author_is_bot": true},
+  {"author": "lint-bot[bot]", "author_is_bot": true},
+  {"author": "carol-ci", "author_is_bot": false}
+]

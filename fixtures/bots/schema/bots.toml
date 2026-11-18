@@ -1,0 +1,94 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# REQ-001: malformed entries. Expected findings are in expected.txt, labelled by hand.
+
+# Missing account; kind not in the allowed set.
+[[bot]]
+id = "no-account"
+kind = "cloud"
+terms = "MIT"
+data_handling = "x"
+reviewed_on = "2026-11-17"
+approved_by = "maintainer-a"
+sends_content = false
+
+# reviewed_on is not a calendar date; sends_content is not a boolean.
+[[bot]]
+id = "bad-date"
+kind = "hosted"
+account = "bad-date[bot]"
+terms = "MIT"
+data_handling = "x"
+reviewed_on = "2026-02-30"
+approved_by = "maintainer-a"
+sends_content = "no"
+
+# Sends content without config or exclude_key; an unknown field.
+[[bot]]
+id = "no-config"
+kind = "hosted"
+account = "no-config[bot]"
+terms = "https://example.invalid/terms"
+data_handling = "x"
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = true
+canary_verified_on = 2026-11-18
+colour = "blue"
+
+# No id (reported as bot[3]); data_handling spans two lines.
+[[bot]]
+kind = "self-hosted"
+account = "anon[bot]"
+terms = "MIT"
+data_handling = """two
+lines"""
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = false
+
+# Config path leaves the register's directory; empty key-path segment; terms neither SPDX nor URL.
+[[bot]]
+id = "escape"
+kind = "hosted"
+account = "escape[bot]"
+terms = "see our website!"
+data_handling = "x"
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = true
+config = "../secret.yml"
+exclude_key = "a..b"
+canary_verified_on = 2026-11-17
+
+# Valid.
+[[bot]]
+id = "dup"
+kind = "self-hosted"
+account = "dup[bot]"
+terms = "MIT"
+data_handling = "x"
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = false
+
+# Repeats the id "dup".
+[[bot]]
+id = "dup"
+kind = "self-hosted"
+account = "dup-two[bot]"
+terms = "MIT"
+data_handling = "x"
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = false
+
+# Repeats the account of "dup".
+[[bot]]
+id = "dup-account"
+kind = "self-hosted"
+account = "dup[bot]"
+terms = "MIT"
+data_handling = "x"
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = false
