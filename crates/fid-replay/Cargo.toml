@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
 # Test-only: reads the JSON case fixture. fid-canon sits below fid-replay in layers.toml.
