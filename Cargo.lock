@@ -53,6 +53,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
+name = "fid-agent"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
@@ -83,10 +91,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-nurbs"
+version = "0.0.1"
+
+[[package]]
 name = "fid-geo-types"
 version = "0.0.1"
 dependencies = [
  "fid-num",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-hal-idl"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-uuid",
+]
+
+[[package]]
+name = "fid-io-reg"
+version = "0.0.1"
+dependencies = [
  "fid-types",
 ]
 
@@ -136,8 +163,17 @@ name = "fid-project"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-uuid",
  "getrandom",
- "sha1",
+]
+
+[[package]]
+name = "fid-qif-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-types",
+ "sha2",
+ "toml",
 ]
 
 [[package]]
@@ -175,6 +211,13 @@ dependencies = [
 [[package]]
 name = "fid-types"
 version = "0.0.1"
+
+[[package]]
+name = "fid-uuid"
+version = "0.0.1"
+dependencies = [
+ "sha1",
+]
 
 [[package]]
 name = "fid-xtask"
