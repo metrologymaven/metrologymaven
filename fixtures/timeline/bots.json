@@ -1,0 +1,22 @@
+[
+ {
+  "at": "2026-03-02T00:00:00Z",
+  "actor": "alice",
+  "kind": "opened"
+ },
+ {
+  "at": "2026-03-02T00:00:00Z",
+  "actor": "bob",
+  "kind": "review_changes_requested"
+ },
+ {
+  "at": "2026-03-05T00:00:00Z",
+  "actor": "mm-ci[bot]",
+  "kind": "comment"
+ },
+ {
+  "at": "2026-03-12T00:00:00Z",
+  "actor": "mm-ci[bot]",
+  "kind": "comment"
+ }
+]

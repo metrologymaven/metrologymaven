@@ -1,0 +1,45 @@
+empty_stream.jsonl
+mal_array.jsonl malformed:-
+mal_deep_nesting.jsonl malformed:-
+mal_duplicate_key.jsonl malformed:-
+mal_empty_line.jsonl malformed:-
+mal_extra_field.jsonl malformed:13
+mal_hello_bad_version.jsonl malformed:32
+mal_hello_extra_field.jsonl malformed:31
+mal_hello_no_versions.jsonl malformed:29
+mal_hello_too_many.jsonl malformed:33
+mal_hello_versions_string.jsonl malformed:30
+mal_id_fraction.jsonl malformed:-
+mal_id_negative.jsonl malformed:-
+mal_id_string.jsonl malformed:-
+mal_id_too_big.jsonl malformed:-
+mal_invalid_utf8.jsonl malformed:-
+mal_missing_id.jsonl malformed:-
+mal_missing_params.jsonl malformed:11
+mal_missing_v.jsonl malformed:12
+mal_nan.jsonl malformed:-
+mal_not_json.jsonl malformed:-
+mal_op_empty.jsonl malformed:16
+mal_op_number.jsonl malformed:19
+mal_op_too_long.jsonl malformed:18
+mal_op_trailing_dot.jsonl malformed:17
+mal_op_upper.jsonl malformed:15
+mal_params_array.jsonl malformed:14
+mal_string.jsonl malformed:-
+mal_truncated_json.jsonl malformed:-
+mal_v_fraction.jsonl malformed:22
+mal_v_negative.jsonl malformed:20
+mal_v_string.jsonl malformed:23
+mal_v_too_big.jsonl malformed:21
+multi_three_lines.jsonl ok:ping malformed:- ok:a.b
+ok_dotted_op.jsonl ok:ui.screenshot
+ok_hello.jsonl ok:hello
+ok_hello_empty_versions.jsonl ok:hello
+ok_hello_unknown_versions.jsonl ok:hello
+ok_max_id.jsonl ok:ping
+ok_ping.jsonl ok:ping
+ok_unicode_params.jsonl ok:ping
+ok_v_future.jsonl ok:ping
+ok_whitespace.jsonl ok:jobs.list
+partial_after_line.jsonl ok:ping partial
+partial_no_newline.jsonl partial

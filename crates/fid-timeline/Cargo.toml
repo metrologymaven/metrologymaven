@@ -1,0 +1,21 @@
+[package]
+name = "fid-timeline"
+description = "Metrology Maven PR-timeline evaluator: author-blocked clock, reminder and closure proposal (spec node ECO.COMM.TIMELINE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-timeline"
+path = "src/main.rs"
+
+# fid-canon: its bounded, duplicate-key-rejecting JSON parser reads the event file and
+# JSON configs (no serde). The TOML config reader is a small bounded subset parser.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true
