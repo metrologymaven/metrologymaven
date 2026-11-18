@@ -5,8 +5,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_platform::gpu_policy::{
-    check_coverage, parse_known_bad, parse_policy, validate_known_bad, validate_policy, Backend, BadAction,
-    GpuOs, GpuPolicyError, IdRange, Limit, Probe, VersionRange, MAX_BYTES, MAX_ENTRIES,
+    check_coverage, parse_known_bad, parse_policy, validate_known_bad, validate_policy, Backend, BadAction, GpuOs,
+    GpuPolicyError, IdRange, Limit, Probe, VersionRange, MAX_BYTES, MAX_ENTRIES,
 };
 use fid_platform::matrix::{self, Arch, OsFamily, Phase, Version};
 use std::path::PathBuf;
@@ -90,10 +90,12 @@ fn ac2_windows_without_vulkan() {
 
 #[test]
 fn ac3_missing_macos_row_at_p1a() {
-    let (code, out) =
-        cli(&["--policy", &gpu("policy-missing-row.toml"), "--matrix", MATRIX_FIXTURE, "--phase", "P1a"]);
+    let (code, out) = cli(&["--policy", &gpu("policy-missing-row.toml"), "--matrix", MATRIX_FIXTURE, "--phase", "P1a"]);
     assert_eq!(code, 1, "{out}");
-    assert_eq!(out, "NoPolicyRow { os: macos, arch: aarch64 }\npolicy: 2 rows, 1 errors\nknown-bad: 0 entries, 0 errors\n");
+    assert_eq!(
+        out,
+        "NoPolicyRow { os: macos, arch: aarch64 }\npolicy: 2 rows, 1 errors\nknown-bad: 0 entries, 0 errors\n"
+    );
 
     let p = parse_policy(&read(&gpu("policy-missing-row.toml"))).unwrap();
     let m = matrix::parse(&read(MATRIX_FIXTURE)).unwrap();
@@ -181,18 +183,25 @@ const ROW: &str = "schema_version = 1\n[[row]]\nos = \"linux\"\narch = \"x86_64\
 
 #[test]
 fn req001_unknown_keys_are_rejected() {
-    let text = format!("{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ api = \"1.1\", extra = 1 }}\ncolour = 1\n");
+    let text = format!(
+        "{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ api = \"1.1\", extra = 1 }}\ncolour = 1\n"
+    );
     let errs = policy_errors(&text);
     assert_eq!(errs.len(), 2, "{errs:?}");
     assert_eq!(errs[0].to_string(), "BadField: row 1: colour is not a known key");
     assert_eq!(errs[1].to_string(), "BadField: row 1: min.vulkan.extra is not a known key");
     let errs = policy_errors("schema_version = 1\nrows = []\n");
-    assert_eq!(errs, vec![GpuPolicyError::BadField { item: None, field: "rows".into(), msg: "is not a known key".into() }]);
+    assert_eq!(
+        errs,
+        vec![GpuPolicyError::BadField { item: None, field: "rows".into(), msg: "is not a known key".into() }]
+    );
 }
 
 #[test]
 fn req001_unknown_backend_and_os() {
-    let errs = policy_errors("schema_version = 1\n[[row]]\nos = \"bsd\"\narch = \"x86_64\"\nbackends = [\"opengl\", \"software\"]\n");
+    let errs = policy_errors(
+        "schema_version = 1\n[[row]]\nos = \"bsd\"\narch = \"x86_64\"\nbackends = [\"opengl\", \"software\"]\n",
+    );
     assert_eq!(errs.len(), 2, "{errs:?}");
     assert!(errs[0].to_string().starts_with("BadField: row 1: os is not one of windows, linux, macos"));
     assert!(errs[1].to_string().starts_with("BadField: row 1: backends has an element"));
@@ -207,21 +216,27 @@ fn req001_hardware_backend_needs_a_minimum_and_minimums_need_a_backend() {
     ));
     assert_eq!(errs.len(), 1, "{errs:?}");
     assert_eq!(errs[0].to_string(), "BadField: row 1: min.metal names a backend that is not in backends");
-    let errs = policy_errors(&format!("{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ api = \"1.x\" }}\n"));
+    let errs =
+        policy_errors(&format!("{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ api = \"1.x\" }}\n"));
     assert_eq!(errs.len(), 1, "{errs:?}");
     assert!(errs[0].to_string().starts_with("BadField: row 1: min.vulkan.api is not a dotted numeric version"));
-    let errs = policy_errors(&format!("{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ driver = \"1\" }}\n"));
-    assert_eq!(errs, vec![GpuPolicyError::BadField {
-        item: Some("row 1".into()),
-        field: "min.vulkan.api".into(),
-        msg: "is missing".into()
-    }]);
+    let errs =
+        policy_errors(&format!("{ROW}backends = [\"vulkan\", \"software\"]\nmin.vulkan = {{ driver = \"1\" }}\n"));
+    assert_eq!(
+        errs,
+        vec![GpuPolicyError::BadField {
+            item: Some("row 1".into()),
+            field: "min.vulkan.api".into(),
+            msg: "is missing".into()
+        }]
+    );
 }
 
 #[test]
 fn req003_mandatory_backends_per_os() {
     // Windows without both: two diagnostics in Backend::ALL order (vulkan, dx12).
-    let errs = policy_errors("schema_version = 1\n[[row]]\nos = \"windows\"\narch = \"x86_64\"\nbackends = [\"software\"]\n");
+    let errs =
+        policy_errors("schema_version = 1\n[[row]]\nos = \"windows\"\narch = \"x86_64\"\nbackends = [\"software\"]\n");
     assert_eq!(
         errs,
         vec![
@@ -231,7 +246,12 @@ fn req003_mandatory_backends_per_os() {
                 arch: Arch::X86_64,
                 backend: Backend::Vulkan
             },
-            GpuPolicyError::MissingMandatoryBackend { row: 1, os: GpuOs::Windows, arch: Arch::X86_64, backend: Backend::Dx12 },
+            GpuPolicyError::MissingMandatoryBackend {
+                row: 1,
+                os: GpuOs::Windows,
+                arch: Arch::X86_64,
+                backend: Backend::Dx12
+            },
         ]
     );
     let errs = policy_errors("schema_version = 1\n[[row]]\nos = \"macos\"\narch = \"aarch64\"\nbackends = [\"vulkan\", \"software\"]\nmin.vulkan = { api = \"1.2\" }\n");
@@ -251,8 +271,12 @@ fn req003_mandatory_backends_per_os() {
 
 #[test]
 fn req004_software_must_be_last() {
-    let errs = policy_errors(&format!("{ROW}backends = [\"software\", \"vulkan\"]\nmin.vulkan = {{ api = \"1.1\" }}\n"));
-    assert_eq!(errs, vec![GpuPolicyError::NoSoftwareFallback { row: 1, os: Some(GpuOs::Linux), arch: Some(Arch::X86_64) }]);
+    let errs =
+        policy_errors(&format!("{ROW}backends = [\"software\", \"vulkan\"]\nmin.vulkan = {{ api = \"1.1\" }}\n"));
+    assert_eq!(
+        errs,
+        vec![GpuPolicyError::NoSoftwareFallback { row: 1, os: Some(GpuOs::Linux), arch: Some(Arch::X86_64) }]
+    );
 }
 
 #[test]
@@ -340,11 +364,17 @@ fn req007_too_many_entries() {
     assert!(text.len() < MAX_BYTES);
     assert_eq!(bad_errors(&text), vec![GpuPolicyError::TooLarge { limit: Limit::Entries, found: 10_001, max: 10_000 }]);
     let rows = text.replace("[[entry]]", "[[row]]");
-    assert_eq!(policy_errors(&rows), vec![GpuPolicyError::TooLarge { limit: Limit::Entries, found: 10_001, max: 10_000 }]);
+    assert_eq!(
+        policy_errors(&rows),
+        vec![GpuPolicyError::TooLarge { limit: Limit::Entries, found: 10_001, max: 10_000 }]
+    );
     // Inline arrays escape the header prescan but not the post-parse count.
     let inline = format!("schema_version = 1\nentry = [{}{{}}]\n", "{},".repeat(MAX_ENTRIES));
     assert!(inline.len() < MAX_BYTES);
-    assert_eq!(bad_errors(&inline), vec![GpuPolicyError::TooLarge { limit: Limit::Entries, found: 10_001, max: 10_000 }]);
+    assert_eq!(
+        bad_errors(&inline),
+        vec![GpuPolicyError::TooLarge { limit: Limit::Entries, found: 10_001, max: 10_000 }]
+    );
 }
 
 // ---------------------------------------------------------------- known-bad rules
@@ -388,9 +418,10 @@ fn base_entry_is_valid() {
 #[test]
 fn req006_reason_and_reference_are_mandatory() {
     assert_eq!(bad_errors(&entry_with("reason", "")), vec![GpuPolicyError::MissingReason { id: "t-1".into() }]);
-    assert_eq!(bad_errors(&entry_with("reason", "reason = \"   \"")), vec![GpuPolicyError::MissingReason {
-        id: "t-1".into()
-    }]);
+    assert_eq!(
+        bad_errors(&entry_with("reason", "reason = \"   \"")),
+        vec![GpuPolicyError::MissingReason { id: "t-1".into() }]
+    );
     assert_eq!(bad_errors(&entry_with("reference", "")), vec![GpuPolicyError::MissingReference { id: "t-1".into() }]);
     for bad in ["\"\"", "\"see the forum\"", "\"http://example.invalid/x\"", "\"https://\"", "\"https://a b\"", "7"] {
         assert_eq!(
@@ -448,11 +479,14 @@ fn req005_bad_ranges() {
 #[test]
 fn known_bad_unknown_keys_and_duplicate_ids() {
     let errs = bad_errors(&format!("{ENTRY}severity = 3\n"));
-    assert_eq!(errs, vec![GpuPolicyError::BadField {
-        item: Some("entry 1".into()),
-        field: "severity".into(),
-        msg: "is not a known key".into()
-    }]);
+    assert_eq!(
+        errs,
+        vec![GpuPolicyError::BadField {
+            item: Some("entry 1".into()),
+            field: "severity".into(),
+            msg: "is not a known key".into()
+        }]
+    );
     let second = ENTRY.replace("schema_version = 1\n", "");
     let errs = bad_errors(&format!("{ENTRY}{second}"));
     assert_eq!(errs, vec![GpuPolicyError::DuplicateId { id: "t-1".into() }]);
@@ -465,7 +499,13 @@ fn known_bad_unknown_keys_and_duplicate_ids() {
 #[test]
 fn matching_is_inclusive_on_devices_and_half_open_on_drivers() {
     let k = parse_known_bad(&read(&gpu("known-bad-valid.toml"))).unwrap();
-    let probe = |os, backend, vendor_id, device_id, driver: &str| Probe { os, backend, vendor_id, device_id, driver: v(driver) };
+    let probe = |os, backend, vendor_id, device_id, driver: &str| Probe {
+        os,
+        backend,
+        vendor_id,
+        device_id,
+        driver: v(driver),
+    };
     let ids = |p: &Probe| k.matching(p).iter().map(|e| e.id.clone()).collect::<Vec<_>>();
     let w = |device, driver| probe(GpuOs::Windows, Backend::Vulkan, 0x7E57_0001, device, driver);
 
@@ -498,7 +538,8 @@ fn matching_is_inclusive_on_devices_and_half_open_on_drivers() {
 
 #[test]
 fn matching_returns_every_match_in_file_order() {
-    let second = ENTRY.replace("schema_version = 1\n", "").replace("t-1", "t-0").replace("avoid_backend", "force_software");
+    let second =
+        ENTRY.replace("schema_version = 1\n", "").replace("t-1", "t-0").replace("avoid_backend", "force_software");
     let k = parse_known_bad(format!("{ENTRY}{second}").as_bytes()).unwrap();
     let p = Probe { os: GpuOs::Linux, backend: Backend::Vulkan, vendor_id: 0x7E57_0009, device_id: 7, driver: v("1") };
     let got: Vec<&str> = k.matching(&p).iter().map(|e| e.id.as_str()).collect();
