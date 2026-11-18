@@ -104,7 +104,6 @@ fn is_branch(s: &str) -> bool {
         && b.all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'/' | b'-'))
 }
 
-
 /// RFC 3339 UTC instant: `YYYY-MM-DDTHH:MM:SS[.fraction]Z`, 1 to 9 fraction digits (`$defs/utc`).
 fn is_utc(s: &str) -> bool {
     let b = s.as_bytes();
@@ -314,7 +313,6 @@ pub const COMMAND_REQUIRED: [&str; 10] =
     ["id", "major", "class", "determinism", "seed", "args_commit", "events_commit", "inputs", "outputs", "algorithms"];
 
 // ------------------------------------------------------------------ headers
-
 
 /// Checks a header value against the rules of `schema/entry.schema.json`; any
 /// violation is a `schema` error (REQ-011).

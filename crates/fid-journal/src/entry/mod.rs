@@ -684,12 +684,7 @@ pub struct Entry {
 /// Builds an entry from a draft: commits every detachable field with a salt from
 /// `salts`, checks the header against the schema rules and hashes it. `seq` starts at
 /// [`FIRST_SEQ`] and `prev` of the first entry of a stream is [`GENESIS_PREV`].
-pub fn build(
-    draft: &EntryDraft,
-    seq: u64,
-    prev: Digest,
-    salts: &mut dyn SaltSource,
-) -> Result<Entry, EntryError> {
+pub fn build(draft: &EntryDraft, seq: u64, prev: Digest, salts: &mut dyn SaltSource) -> Result<Entry, EntryError> {
     let mut payload = EntryPayload::default();
     let mut commit = |field: Field, value: CValue| -> Result<Digest, EntryError> {
         let salt = salts.salt(field)?;
