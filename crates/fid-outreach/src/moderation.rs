@@ -14,19 +14,20 @@
 //! opening any file. The checkout is `--repo-root`, or else the git top level of the working
 //! directory; when neither exists there is no checkout to guard.
 //!
-//! Log format (every key required unless marked optional; any other key is `field_invalid`, so
-//! the log cannot carry names, e-mail addresses or the text of removed posts):
+//! Log format (every key required unless marked optional; any other key is reported as
+//! `field_invalid unknown_key`, without its name, so the log cannot carry names, e-mail addresses
+//! or the text of removed posts):
 //!
 //! ```toml
 //! [[case]]
-//! id = "MOD-2027-001"                       # [A-Za-z0-9][A-Za-z0-9._-]*, at most 64, unique
+//! id = "MOD-2027-001"                       # MOD-<4 digits>-<3 digits>, unique
 //! filed_at = "2027-01-04T09:00:00Z"         # UTC, string or TOML offset date-time
 //! acknowledged_at = "2027-01-04T15:30:00Z"  # not before filed_at
-//! channel = "forum"                         # channel ID: [a-z0-9][a-z0-9._-]*, at most 64
+//! channel = "forum"                         # one of CHANNELS (the IDs in RULES.md)
 //! outcome = "warning"                       # no_action | warning | removal | ban
 //! moderator = "handle"                      # GitHub login grammar, must be on the roster
-//! parties_conflicted = []                   # moderator handles with a conflict
-//! handover = { from = "a", to = "handle" }  # optional; `to` is the handling moderator
+//! parties_conflicted = []                   # roster handles with a conflict
+//! handover = { from = "a", to = "handle" }  # optional; roster handles; `to` is the handler
 //!
 //! [[anon]]                                  # an anonymised case
 //! quarter = "2024Q3"
@@ -34,8 +35,12 @@
 //! ack_within_target = true
 //! ```
 //!
-//! Findings never echo a field's value, only the case ID (or `case#<n>` / `anon#<n>`, 1-based,
-//! when the ID itself is missing or invalid) and the field name.
+//! Every handle in a case (handling moderator, `parties_conflicted`, `handover`) must be on the
+//! roster (`moderator_unknown` otherwise), so no login of a non-moderator can be stored.
+//!
+//! Findings never echo a value or an unknown key's name, only the case ID (or `case#<n>` /
+//! `anon#<n>`, 1-based, when the ID itself is missing or invalid) and a known field name or the
+//! fixed token `unknown_key`.
 //!
 //! Determinism D0: dates come from the log and `--today`; there are no clock reads, and findings
 //! are sorted.
@@ -56,8 +61,10 @@ pub const MAX_LOG_BYTES: usize = 1024 * 1024;
 pub const MAX_ROSTER_BYTES: usize = 64 * 1024;
 /// Months after filing when an unanonymised case is overdue (PROCEDURE.md; a proposal).
 pub const RETENTION_MONTHS: u32 = 24;
-/// Longest case or channel ID.
-pub const MAX_ID_LEN: usize = 64;
+/// The channel IDs defined in `community/moderation/RULES.md`, the only values of `channel`.
+pub const CHANNELS: [&str; 5] = ["chat", "forum", "issues", "mailing-list", "private"];
+/// Field name reported for any key the format does not define (its own name is never echoed).
+pub const UNKNOWN_KEY: &str = "unknown_key";
 /// Largest accepted `--target-hours` (one year).
 pub const MAX_TARGET_HOURS: u32 = 8784;
 
@@ -373,15 +380,13 @@ pub struct Log {
     pub anon_entries: usize,
 }
 
-/// True for a case or channel ID: ASCII, starts with a letter or digit, then letters, digits,
-/// `.`, `_` or `-`, at most [`MAX_ID_LEN`] bytes. `lower` restricts letters to lowercase.
-fn is_id(s: &str, lower: bool) -> bool {
+/// True for a case ID `MOD-<4 digits>-<3 digits>` (`^MOD-[0-9]{4}-[0-9]{3}$`).
+pub fn is_case_id(s: &str) -> bool {
     let b = s.as_bytes();
-    let ok_char = |c: &u8| c.is_ascii_digit() || (if lower { c.is_ascii_lowercase() } else { c.is_ascii_alphabetic() });
-    !b.is_empty()
-        && b.len() <= MAX_ID_LEN
-        && b.first().is_some_and(ok_char)
-        && b.iter().all(|c| ok_char(c) || matches!(c, b'.' | b'_' | b'-'))
+    b.len() == 12
+        && b.starts_with(b"MOD-")
+        && b.get(8) == Some(&b'-')
+        && b.iter().enumerate().all(|(i, c)| i < 4 || i == 8 || c.is_ascii_digit())
 }
 
 fn stamp_text(v: &toml::Value) -> Option<String> {
@@ -429,16 +434,16 @@ fn outcome_of(v: &toml::Value) -> Option<Outcome> {
 }
 
 fn parse_case(t: &toml::Table, n: usize, ids: &mut BTreeSet<String>, findings: &mut Vec<Finding>) -> Option<Case> {
-    let id_ok = t.get("id").and_then(toml::Value::as_str).filter(|s| is_id(s, false));
+    let id_ok = t.get("id").and_then(toml::Value::as_str).filter(|s| is_case_id(s));
     let subject = id_ok.map_or_else(|| format!("case#{n}"), str::to_string);
     let mut cx = EntryCtx { subject, findings };
     let before = cx.findings.len();
     for key in t.keys() {
         if !CASE_KEYS.contains(&key.as_str()) {
-            cx.push(Code::FieldInvalid, key);
+            cx.push(Code::FieldInvalid, UNKNOWN_KEY);
         }
     }
-    let id = cx.get(t, "id", |v| v.as_str().filter(|s| is_id(s, false)).map(str::to_string));
+    let id = cx.get(t, "id", |v| v.as_str().filter(|s| is_case_id(s)).map(str::to_string));
     if let Some(id) = &id {
         if !ids.insert(id.clone()) {
             cx.push(Code::FieldInvalid, "id");
@@ -451,7 +456,7 @@ fn parse_case(t: &toml::Table, n: usize, ids: &mut BTreeSet<String>, findings: &
             cx.push(Code::FieldInvalid, "acknowledged_at");
         }
     }
-    let channel = cx.get(t, "channel", |v| v.as_str().filter(|s| is_id(s, true)).map(str::to_string));
+    let channel = cx.get(t, "channel", |v| v.as_str().filter(|s| CHANNELS.contains(s)).map(str::to_string));
     let outcome = cx.get(t, "outcome", outcome_of);
     let moderator = cx.get(t, "moderator", handle_of);
     let parties_conflicted = cx.get(t, "parties_conflicted", |v| {
@@ -504,7 +509,7 @@ fn parse_anon(t: &toml::Table, n: usize, findings: &mut Vec<Finding>) -> Option<
     let before = cx.findings.len();
     for key in t.keys() {
         if !ANON_KEYS.contains(&key.as_str()) {
-            cx.push(Code::FieldInvalid, key);
+            cx.push(Code::FieldInvalid, UNKNOWN_KEY);
         }
     }
     let quarter = cx.get(t, "quarter", |v| v.as_str().and_then(Quarter::parse));
@@ -521,7 +526,8 @@ pub fn parse_log(table: &toml::Table) -> Log {
     let mut log = Log::default();
     for key in table.keys() {
         if key != "case" && key != "anon" {
-            log.findings.push(Finding { code: Code::FieldInvalid, field: Some(key.clone()), subject: "log".into() });
+            let field = Some(UNKNOWN_KEY.to_string());
+            log.findings.push(Finding { code: Code::FieldInvalid, field, subject: "log".into() });
         }
     }
     let mut ids = BTreeSet::new();
@@ -579,11 +585,18 @@ pub fn parse_roster(table: &toml::Table, path: &str) -> Result<BTreeSet<String>,
 // ------------------------------------------------------------------ checks
 
 /// Roster, conflict and retention checks on the valid cases (REQ-OUTR.COMM.MOD-004, -006, -007).
+/// Every handle in a case (moderator, `parties_conflicted`, `handover`) must be on the roster.
 pub fn check(log: &Log, roster: &BTreeSet<String>, today: Date) -> Vec<Finding> {
     let mut out = log.findings.clone();
     for c in &log.cases {
         let finding = |code| Finding { code, field: None, subject: c.id.clone() };
-        if !roster.contains(&c.moderator) {
+        let mut handles: Vec<&String> = vec![&c.moderator];
+        handles.extend(c.parties_conflicted.iter());
+        if let Some(h) = &c.handover {
+            handles.push(&h.from);
+            handles.push(&h.to);
+        }
+        if handles.iter().any(|h| !roster.contains(*h)) {
             out.push(finding(Code::ModeratorUnknown));
         }
         if c.parties_conflicted.contains(&c.moderator) {

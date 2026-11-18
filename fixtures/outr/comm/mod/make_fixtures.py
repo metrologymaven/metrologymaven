@@ -155,7 +155,7 @@ EXPECTED = {
     "old": (1, ["retention_overdue MOD-2024-031"]),
     "bad-category": (1, ["field_invalid outcome MOD-2027-003"]),
     "unknown-moderator": (1, ["moderator_unknown MOD-2027-005"]),
-    "personal-data": (1, ["field_invalid moderator MOD-2027-001", "field_invalid reporter_name MOD-2027-001"]),
+    "personal-data": (1, ["field_invalid moderator MOD-2027-001", "field_invalid unknown_key MOD-2027-001"]),
 }
 
 COUNTS = {

@@ -2,7 +2,7 @@
 
 This page says how the project enforces its code of conduct on official community channels. It implements spec node `OUTR.COMM.MOD`. The code of conduct itself and the roles named here (maintainers, steering group) are set by [GOVERNANCE.md](../../GOVERNANCE.md); this page does not restate them. Per-channel rules are in [RULES.md](RULES.md); the people who moderate are listed in [roster.toml](roster.toml).
 
-Figures marked *proposed* (the 72-hour acknowledgement target and the 24-month retention period) are proposals that the maintainers still have to confirm.
+Everything marked *proposed* is a proposal the maintainers still have to confirm: the 72-hour acknowledgement target, the 24-month retention period, and every rule on this page that neither the spec node nor GOVERNANCE.md sets (the definition of a conflict of interest, the escalation and review triggers, what the reporter is told, reporter confidentiality and the deletion of working notes).
 
 ## 1. Reporting
 
@@ -28,11 +28,11 @@ Every report ends in exactly one of four outcome categories:
 | Removal | `removal` | One or more posts were taken down (with or without a warning). |
 | Ban | `ban` | The person may no longer take part on one or more official channels, for a stated time or permanently. |
 
-The moderator tells the reporter which category the report ended in, but not the details of any action against another person.
+*Proposed:* the moderator tells the reporter which category the report ended in, but not the details of any action against another person.
 
 ## 4. Conflicts of interest
 
-A moderator has a conflict of interest in a case when they are the reporter or the reported person, are a close colleague, friend or relative of either, or for any other reason could not be seen as fair. A moderator with a conflict:
+*Proposed definition:* a moderator has a conflict of interest in a case when they are the reporter or the reported person, are a close colleague, friend or relative of either, or for any other reason could not be seen as fair. A moderator with a conflict:
 
 1. says so as soon as they notice it;
 2. hands the case to another moderator without a conflict, and takes no further part in it;
@@ -42,21 +42,25 @@ A case is never decided by a moderator listed as conflicted in it. If every mode
 
 ## 5. Escalation to the steering group
 
-A case goes to the steering group when:
+That cases can be escalated to the steering group is set by the spec node; the triggers below are *proposed*. A case goes to the steering group when:
 
 - the reported person is a moderator, a maintainer or a member of the steering group;
 - every moderator has a conflict;
 - the outcome would be a permanent ban; or
 - the reporter or the reported person asks for a review of a decision.
 
-Steering-group members with a conflict follow section 4 in the same way. The steering group's decision is final and is recorded in the same log.
+Steering-group members with a conflict follow section 4 in the same way. *Proposed:* the steering group's decision is final and is recorded in the same log.
+
+## 5a. Confidentiality of reporters
+
+*Proposed:* moderators and steering-group members do not reveal who filed a report to the reported person or to anyone outside the moderators and the steering group, unless the reporter agrees or the law requires it. The moderation log never records the reporter at all.
 
 ## 6. The moderation log
 
 Moderators record each case by hand in a private moderation log. No tool writes it.
 
 - **Where.** The log is kept **outside every public repository**, in a place every steering-group member can read and only moderators and the steering group can change. The project's tools refuse to read a log that lies inside a repository checkout. Which storage is used is a maintainer choice; it must not hand the log's contents to third parties.
-- **What.** Each entry holds only: a case ID, the date and time filed and acknowledged (UTC), the channel ID, the outcome category, the handling moderator's handle, the handles of moderators with a conflict, and the hand-over if one happened. It holds **no** names, e-mail addresses or other contact details, and **no** text, screenshots or links of the posts concerned. Working notes that a case needs while it is open are kept by the moderators elsewhere and deleted when the case is closed.
+- **What.** Each entry holds only: a case ID of the form `MOD-<year>-<number>` (for example `MOD-2027-001`), the date and time filed and acknowledged (UTC), the channel ID (one of those defined in [RULES.md](RULES.md)), the outcome category, the handling moderator's handle, the handles of moderators with a conflict, and the hand-over if one happened. Every handle in the log must be on the [roster](roster.toml); no other person's account name is recorded. It holds **no** names, e-mail addresses or other contact details, and **no** text, screenshots or links of the posts concerned. *Proposed:* working notes that a case needs while it is open are kept by the moderators elsewhere and deleted when the case is closed.
 - **Who reads it.** Every steering-group member may audit the log at any time.
 - **Retention.** After **24 months** (*proposed*) from the date filed, an entry is anonymised: it is replaced by an entry that keeps only the quarter, the outcome category and whether the acknowledgement target was met.
 

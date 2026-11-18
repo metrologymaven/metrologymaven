@@ -59,7 +59,7 @@ const EXPECTED: [(&str, u8, &[&str]); 6] = [
     ("old", 1, &["retention_overdue MOD-2024-031"]),
     ("bad-category", 1, &["field_invalid outcome MOD-2027-003"]),
     ("unknown-moderator", 1, &["moderator_unknown MOD-2027-005"]),
-    ("personal-data", 1, &["field_invalid moderator MOD-2027-001", "field_invalid reporter_name MOD-2027-001"]),
+    ("personal-data", 1, &["field_invalid moderator MOD-2027-001", "field_invalid unknown_key MOD-2027-001"]),
 ];
 
 #[test]
@@ -209,7 +209,7 @@ fn table(text: &str) -> toml::Table {
 
 const ONE_CASE: &str = r#"
 [[case]]
-id = "C1"
+id = "MOD-2027-901"
 filed_at = 2027-01-04T09:00:00Z
 acknowledged_at = "2027-01-04T09:00:00Z"
 channel = "forum"
@@ -229,30 +229,36 @@ fn toml_datetimes_and_strings_both_parse() {
 fn field_rules() {
     let roster = parse_roster(&table(r#"moderators = ["mod-ash"]"#), "r").unwrap();
     let today = Date::parse("2027-04-02").unwrap();
-    let cases: [(&str, &str, &str); 7] = [
-        ("moderator = \"mod-ash\"\n", "", "field_missing moderator C1"),
+    let cases: [(&str, &str, &str); 9] = [
+        ("moderator = \"mod-ash\"\n", "", "field_missing moderator MOD-2027-901"),
         (
             "acknowledged_at = \"2027-01-04T09:00:00Z\"\n",
             "acknowledged_at = \"2027-01-04T08:59:59Z\"\n",
-            "field_invalid acknowledged_at C1",
+            "field_invalid acknowledged_at MOD-2027-901",
         ),
-        ("channel = \"forum\"\n", "channel = \"Forum\"\n", "field_invalid channel C1"),
+        ("channel = \"forum\"\n", "channel = \"forum-2\"\n", "field_invalid channel MOD-2027-901"),
         (
             "parties_conflicted = []\n",
             "parties_conflicted = [\"mod-ash\", \"mod-ash\"]\n",
-            "field_invalid parties_conflicted C1",
+            "field_invalid parties_conflicted MOD-2027-901",
         ),
         (
             "parties_conflicted = []\n",
             "parties_conflicted = []\nhandover = { from = \"mod-x\", to = \"mod-y\" }\n",
-            "field_invalid handover C1",
+            "field_invalid handover MOD-2027-901",
         ),
         (
             "parties_conflicted = []\n",
             "parties_conflicted = []\nnote = \"text of a removed post\"\n",
-            "field_invalid note C1",
+            "field_invalid unknown_key MOD-2027-901",
         ),
-        ("id = \"C1\"\n", "id = \"a b\"\n", "field_invalid id case#1"),
+        ("id = \"MOD-2027-901\"\n", "id = \"C1\"\n", "field_invalid id case#1"),
+        ("id = \"MOD-2027-901\"\n", "id = \"MOD-2027-9010\"\n", "field_invalid id case#1"),
+        (
+            "parties_conflicted = []\n",
+            "parties_conflicted = []\n\"someone@example.invalid\" = \"x\"\n",
+            "field_invalid unknown_key MOD-2027-901",
+        ),
     ];
     for (from, to, want) in cases {
         let text = ONE_CASE.replace(from, to);
@@ -263,7 +269,7 @@ fn field_rules() {
     // A duplicate case ID.
     let text = format!("{ONE_CASE}{ONE_CASE}");
     let got: Vec<String> = check(&parse_log(&table(&text)), &roster, today).iter().map(ToString::to_string).collect();
-    assert_eq!(got, vec!["field_invalid id C1".to_string()]);
+    assert_eq!(got, vec!["field_invalid id MOD-2027-901".to_string()]);
 }
 
 #[test]
@@ -286,7 +292,7 @@ fn retention_boundary_and_month_ends() {
     let log = parse_log(&table(&ONE_CASE.replace("2027-01-04", "2025-01-04")));
     assert!(check(&log, &roster, d("2027-01-04")).is_empty());
     let got: Vec<String> = check(&log, &roster, d("2027-01-05")).iter().map(ToString::to_string).collect();
-    assert_eq!(got, vec!["retention_overdue C1".to_string()]);
+    assert_eq!(got, vec!["retention_overdue MOD-2027-901".to_string()]);
 }
 
 #[test]
@@ -322,4 +328,56 @@ fn repository_roster_parses() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../community/moderation/roster.toml");
     let text = std::fs::read_to_string(&path).unwrap();
     assert!(parse_roster(&table(&text), "roster.toml").is_ok());
+}
+
+#[test]
+fn unknown_keys_are_never_echoed() {
+    let anon = r#"
+[[anon]]
+quarter = "2024Q3"
+outcome = "ban"
+ack_within_target = true
+"Real Name" = "x"
+"#;
+    let text = format!("\"someone@example.invalid\" = 1\n{ONE_CASE}{anon}");
+    let log = parse_log(&table(&text));
+    let got: Vec<String> = log.findings.iter().map(ToString::to_string).collect();
+    let want = ["field_invalid unknown_key anon#1", "field_invalid unknown_key log"];
+    assert_eq!(got, want.map(str::to_string).to_vec());
+    let report = format!("{got:?}");
+    assert!(!report.contains('@') && !report.contains("Real"), "{report}");
+}
+
+#[test]
+fn every_case_handle_must_be_on_the_roster() {
+    let roster = parse_roster(&table(r#"moderators = ["mod-ash", "mod-birch"]"#), "r").unwrap();
+    let today = Date::parse("2027-04-02").unwrap();
+    let ok = ONE_CASE.replace("parties_conflicted = []", "parties_conflicted = [\"mod-birch\"]");
+    assert!(check(&parse_log(&table(&ok)), &roster, today).is_empty());
+    for (from, to) in [
+        ("parties_conflicted = []", "parties_conflicted = [\"outsider\"]"),
+        (
+            "parties_conflicted = []",
+            "parties_conflicted = [\"outsider\"]\nhandover = { from = \"outsider\", to = \"mod-ash\" }",
+        ),
+        ("moderator = \"mod-ash\"", "moderator = \"outsider\""),
+    ] {
+        let text = ONE_CASE.replace(from, to);
+        let got: Vec<String> =
+            check(&parse_log(&table(&text)), &roster, today).iter().map(ToString::to_string).collect();
+        assert_eq!(got, vec!["moderator_unknown MOD-2027-901".to_string()], "{text}");
+    }
+}
+
+#[test]
+fn channels_match_rules_md() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../community/moderation/RULES.md");
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut ids: Vec<&str> = text
+        .lines()
+        .filter_map(|l| l.strip_prefix("## `"))
+        .filter_map(|l| l.split('`').next())
+        .collect();
+    ids.sort_unstable();
+    assert_eq!(ids, fid_outreach::moderation::CHANNELS.to_vec());
 }
