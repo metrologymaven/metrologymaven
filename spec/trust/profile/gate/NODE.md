@@ -43,7 +43,7 @@ Where the active profile takes effect: a read-only query API that the GUI, comma
 
 - **REQ-TRUST.PROFILE.GATE-001** A CI test shall build the registry manifest under each of the three profiles and fail if the three manifest digests differ.
 - **REQ-TRUST.PROFILE.GATE-002** While Regulated is active, a request to mark a Result Package released shall be refused with `profile.signatures_missing` naming each required meaning not yet applied in order.
-- **REQ-TRUST.PROFILE.GATE-003** While Assistive-only is active, the bus hook shall refuse W1 and W2 commands from agent principals with `profile.agent_write_forbidden`, except commands that create or update a proposal on that agent's branch.
+- **REQ-TRUST.PROFILE.GATE-003** While Assistive-only is active, the bus hook shall refuse W1 and W2 commands from agent principals with `agent_write_forbidden`, except commands that create or update a proposal on that agent's branch.
 - **REQ-TRUST.PROFILE.GATE-004** Every journal session header and every exported package shall carry the active profile digest, and a session whose profile changes mid-way shall record the change as the `sign.set_profile@1` event.
 - **REQ-TRUST.PROFILE.GATE-005** The query API shall be read-only and shall return the same answers for the same profile digest.
 

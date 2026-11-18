@@ -1,0 +1,1 @@
+[{"column":17,"crate_name":"fid-clarabel","crate_version":"0.1.0","excerpt_digest":"sha256:26f0daeafa1fd1945a05fcb5777df49310dc716762c2fdc3eb88a9c28c90009b","file":"src/solver.rs","line":11,"message":"powf call","rule":"KNP1-POW"}]
