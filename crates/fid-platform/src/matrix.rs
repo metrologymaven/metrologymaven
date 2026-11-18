@@ -1,7 +1,7 @@
 //! Metrology Maven support matrix (spec node `PLAT.MATRIX.FILE`): the typed schema of
 //! `platform/support-matrix.toml`, a strict bounded validator and the tier lookup.
 //! Every other PLAT consumer reads the matrix through this crate, so there is exactly one
-//! parser and one meaning of "tier". Repository tooling, layer `tool`.
+//! parser and one meaning of "tier".
 //!
 //! Determinism D0: pure functions over bytes; tables are `BTreeMap`-backed (the `toml`
 //! crate without `preserve_order`), and diagnostics have a fixed order (see [`validate`]).
@@ -337,7 +337,7 @@ pub struct Validation {
 }
 
 impl Validation {
-    /// The report the `plat-matrix validate` command prints: one diagnostic per line, then
+    /// The report `cargo xtask plat-matrix validate` prints: one diagnostic per line, then
     /// `<rows> rows, <errors> errors`. Byte-identical for identical input (REQ-007).
     pub fn render(&self) -> String {
         let mut out = String::new();

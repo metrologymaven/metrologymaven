@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-reg]
+built_pr: 68
 satisfies: [REQ-IO.REG-004, REQ-IO.REG-005, REQ-IO.REG-006, REQ-IO.REG-015]
 covers: []
 depends_on: []

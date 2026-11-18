@@ -1,6 +1,6 @@
 [package]
-name = "fid-plat-matrix"
-description = "Metrology Maven support matrix: schema, strict validator and tier lookup (spec node PLAT.MATRIX.FILE)"
+name = "fid-platform"
+description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,7 +9,7 @@ repository.workspace = true
 publish = false
 
 [[bin]]
-name = "plat-matrix"
+name = "fid-platform"
 path = "src/main.rs"
 
 [dependencies]

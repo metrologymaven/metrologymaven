@@ -122,7 +122,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fid-plat-matrix"
+name = "fid-platform"
 version = "0.0.1"
 dependencies = [
  "toml",

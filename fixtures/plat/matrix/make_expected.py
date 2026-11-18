@@ -3,7 +3,7 @@
 
 Reads the hand-written fixture files with Python's tomllib and applies the spec's rules
 (NODE.md Requirements and Design) directly, without running or reading the Rust crate.
-The Rust tests compare `fid_plat_matrix::validate(..).render()` and `Matrix::lookup` with
+The Rust tests compare `fid_platform::matrix::validate(..).render()` and `Matrix::lookup` with
 the values recorded here. Fixtures and this script: MIT OR Apache-2.0 (D-001).
 Run:  python fixtures/plat/matrix/make_expected.py   (Python 3.11+)
 """

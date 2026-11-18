@@ -3,7 +3,7 @@
 //! `fixtures/plat/matrix/make_expected.py` (recorded in `expected.toml`).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_plat_matrix::{
+use fid_platform::matrix::{
     parse, validate, Arch, EffectiveTier, Limit, MatrixError, OsFamily, Phase, Problem, Tier, Version, MAX_BYTES,
     MAX_ROWS,
 };
@@ -19,9 +19,14 @@ fn read(name: &str) -> Vec<u8> {
     std::fs::read(fixture(name)).unwrap()
 }
 
-/// Runs `plat-matrix validate <fixture>`; returns (exit code, stdout).
+/// Runs `fid-platform plat-matrix validate <fixture>` (what `cargo xtask plat-matrix validate`
+/// runs; the wrapper itself is exercised by the rust.yml step for AC-1); returns (exit code, stdout).
 fn cli(name: &str) -> (i32, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_plat-matrix")).arg("validate").arg(fixture(name)).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-platform"))
+        .args(["plat-matrix", "validate"])
+        .arg(fixture(name))
+        .output()
+        .unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap())
 }
 
@@ -178,7 +183,11 @@ fn repository_support_matrix_is_valid_and_ci_only() {
     for r in &m.rows {
         assert!(r.version_max.is_some(), "rows cover only the OS version CI ran");
         assert!(r.notes.contains("[unverified]"), "tiers are pending PLAT.MATRIX.POLICY");
+        assert_eq!(r.since_phase, Phase::P1a, "no row may claim a tier before P1a");
     }
+    assert_eq!(m.lookup("ubuntu", "26.04.1", "x86_64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
+    assert_eq!(m.lookup("windows", "10.0.26100", "x86_64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
+    assert_eq!(m.lookup("macos", "26.7.2", "aarch64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
 }
 
 #[test]
@@ -236,7 +245,7 @@ fn many_overlaps_are_capped() {
         "[[row]]\nos=\"ubuntu\"\nversion_min=\"1\"\narch=\"x86_64\"\ntier=\"tier1\"\nsince_phase=\"P0\"\nnotes=\"\"\n";
     let text = "schema_version = 1\n".to_string() + &row.repeat(100);
     let v = validate(text.as_bytes());
-    assert_eq!(v.errors.len(), fid_plat_matrix::MAX_ERRORS + 1);
-    assert_eq!(v.errors.last(), Some(&MatrixError::TooManyErrors { limit: fid_plat_matrix::MAX_ERRORS }));
+    assert_eq!(v.errors.len(), fid_platform::matrix::MAX_ERRORS + 1);
+    assert_eq!(v.errors.last(), Some(&MatrixError::TooManyErrors { limit: fid_platform::matrix::MAX_ERRORS }));
     assert_eq!(validate(text.as_bytes()).render(), v.render());
 }

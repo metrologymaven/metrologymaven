@@ -4,13 +4,15 @@ use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
-                     cargo xtask datasets-check --catalogue <toml> --domains <file>";
+                     cargo xtask datasets-check --catalogue <toml> --domains <file>
+                            cargo xtask plat-matrix validate <file>";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
+        Some("plat-matrix") => plat_matrix(&args),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)
@@ -32,6 +34,24 @@ fn datasets_check(args: &[String]) -> ExitCode {
         Err(e) => {
             println!("DATA-IO -: cannot run cargo: {e}");
             ExitCode::from(1)
+        }
+    }
+}
+
+/// PLAT.MATRIX.FILE: runs `fid-platform plat-matrix ...` through Cargo, for the same layer
+/// reason as `datasets-check` (`fid-platform` is a `tool` crate).
+fn plat_matrix(args: &[String]) -> ExitCode {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
+    let status = Command::new(cargo)
+        .args(["run", "-q", "--manifest-path", manifest, "-p", "fid-platform", "--bin", "fid-platform", "--"])
+        .args(args)
+        .status();
+    match status {
+        Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
+        Err(e) => {
+            eprintln!("plat-matrix: cannot run cargo: {e}");
+            ExitCode::from(2)
         }
     }
 }
