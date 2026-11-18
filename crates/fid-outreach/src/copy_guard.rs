@@ -438,8 +438,7 @@ pub fn check_rules(policy: &Policy, checklist: &BTreeSet<String>, records: &[Rec
 /// reported before anything else.
 pub fn run(inputs: &Inputs<'_>) -> Result<Report, GuardError> {
     let policy = parse_policy(&read_toml(inputs.policy, policy_err)?, &inputs.policy.display().to_string())?;
-    let checklist =
-        parse_checklist(&read_toml(inputs.checklist, input_err)?, &inputs.checklist.display().to_string())?;
+    let checklist = parse_checklist(&read_toml(inputs.checklist, input_err)?, &inputs.checklist.display().to_string())?;
     let records = read_records(inputs.records)?;
     let refsets = if policy.mode == REVIEW_ONLY { scan_reference_sets(inputs.root)? } else { Vec::new() };
     Ok(check_rules(&policy, &checklist, &records, &refsets))

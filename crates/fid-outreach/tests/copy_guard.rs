@@ -49,11 +49,7 @@ fn show(o: &Output) -> String {
 
 /// Finding lines of a text-mode run (the summary line is dropped).
 fn lines(o: &Output) -> Vec<String> {
-    String::from_utf8_lossy(&o.stdout)
-        .lines()
-        .filter(|l| !l.starts_with("copy-guard:"))
-        .map(str::to_string)
-        .collect()
+    String::from_utf8_lossy(&o.stdout).lines().filter(|l| !l.starts_with("copy-guard:")).map(str::to_string).collect()
 }
 
 #[test]
