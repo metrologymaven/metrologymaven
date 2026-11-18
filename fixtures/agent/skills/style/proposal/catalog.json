@@ -1,0 +1,27 @@
+{
+  "format": "fid.agent-catalog",
+  "version": 1,
+  "workflows": [
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.plan_bore",
+      "title": "Plan a bore check",
+      "guide_id": "demo.plan_bore",
+      "recipes": []
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.plan_no_brief",
+      "title": "Plan without a brief",
+      "guide_id": "demo.plan_no_brief",
+      "recipes": []
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.plan_wrong_order",
+      "title": "Plan with the closing pair reversed",
+      "guide_id": "demo.plan_wrong_order",
+      "recipes": []
+    }
+  ]
+}
