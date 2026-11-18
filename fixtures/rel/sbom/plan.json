@@ -1,0 +1,32 @@
+{
+  "version": "1.4.0",
+  "commit_time": "2026-11-17T09:30:00Z",
+  "artefacts": [
+    {
+      "package": "fid",
+      "kind": "cli",
+      "os": "linux",
+      "arch": "x86_64",
+      "file_name": "fid-cli-x86_64-linux.tar.gz",
+      "target": "x86_64-unknown-linux-gnu",
+      "contents": [
+        "fid-cli"
+      ],
+      "features": [],
+      "sha256": "2a7991eddb2e30e1221b67af1cd3a2e22b6cef31b38b9c13c4b62222e88a8414"
+    },
+    {
+      "package": "fid",
+      "kind": "cli",
+      "os": "windows",
+      "arch": "x86_64",
+      "file_name": "fid-cli-x86_64-windows.zip",
+      "target": "x86_64-pc-windows-msvc",
+      "contents": [
+        "fid-cli"
+      ],
+      "features": [],
+      "sha256": "0cd2090db30768be17b6dc5e49e3d6a5af828a8c55d0c7a2fbae7f5d3761cbd3"
+    }
+  ]
+}

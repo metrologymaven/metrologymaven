@@ -18,6 +18,9 @@
 //!
 //! `rel sums`: the release checksum file and checksum statement (spec node
 //! `ECO.REL.SIGN.SUMS`), in [`rel::sums`].
+//!
+//! `rel sbom`: one SPDX 2.3 JSON SBOM per planned artefact (spec node `ECO.REL.SIGN.SBOM`), in
+//! [`rel::sbom`].
 
 pub mod crate_graph;
 pub mod plat_matrix_tiers;

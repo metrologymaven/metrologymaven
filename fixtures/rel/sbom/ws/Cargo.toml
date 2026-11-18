@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["fid-cli", "fid-core", "fid-winio"]
