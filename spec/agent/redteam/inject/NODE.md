@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-eval-suite]
 satisfies: [REQ-AGENT.REDTEAM-001, REQ-AGENT.REDTEAM-002, REQ-AGENT.REDTEAM-007]
 covers: []
 depends_on: []

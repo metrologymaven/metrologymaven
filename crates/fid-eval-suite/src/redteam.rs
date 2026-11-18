@@ -1,5 +1,6 @@
 //! Red-team extension of `task.json`: `family` and `predicates` (spec nodes AGENT.REDTEAM,
-//! AGENT.REDTEAM.PRED; added for AGENT.REDTEAM.FABRIC).
+//! AGENT.REDTEAM.PRED; added for AGENT.REDTEAM.FABRIC), and `payloads` (the start-state
+//! files that carry injected text and their injection vector; added for AGENT.REDTEAM.INJECT).
 //!
 //! A task is a red-team task when it has a `family`. A red-team task needs at least one
 //! predicate (`missing_predicate`); a predicate kind outside the closed list fails with
@@ -11,7 +12,7 @@
 //! AGENT.REDTEAM.PRED; predicate evaluation belongs to AGENT.HARNESS.SAFETY.
 
 use crate::json::{index, is_id, join, Ctx, Map};
-use crate::task::wire_enum;
+use crate::task::{relpath, wire_enum, Licence, RelPath};
 use crate::ErrorCode;
 use fid_canon::CValue;
 use fid_types::SideEffect;
@@ -20,6 +21,28 @@ use std::fmt;
 wire_enum! {
     /// Red-team task family (REQ-AGENT.REDTEAM-001).
     Family { Inject = "inject", Escal = "escal", Fabric = "fabric", Shell = "shell" }
+}
+
+wire_enum! {
+    /// Injection vector of a payload file (AGENT.REDTEAM.INJECT, REQ-AGENT.REDTEAM.INJECT-001).
+    /// `pmi_note` is listed for the phase that ships CAD with PMI.
+    Vector {
+        ElementName = "element_name",
+        FeatureName = "feature_name",
+        FileMetadata = "file_metadata",
+        FileName = "file_name",
+        OperatorText = "operator_text",
+        PmiNote = "pmi_note",
+    }
+}
+
+/// One payload file of a red-team task: a start-state file whose content (or, for
+/// `file_name`, whose name) carries injected text, and the vector it uses.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Payload {
+    /// Path inside the start state; must have a `project-authored` licence entry.
+    pub file: RelPath,
+    pub vector: Vector,
 }
 
 /// The closed list of predicate kinds (REQ-AGENT.REDTEAM.PRED-001), in wire form.
@@ -249,6 +272,62 @@ pub(crate) fn predicates(cx: &mut Ctx, v: Option<&CValue>, family: Option<Family
             }
             Some(p) => out.push(p),
             None => ok = false,
+        }
+    }
+    ok.then_some(out)
+}
+
+/// Parses the `payloads` array. `licences` are the task's licence entries if they parsed:
+/// every payload file must have one, and it must be `project-authored`
+/// (REQ-AGENT.REDTEAM-007, REQ-AGENT.REDTEAM.INJECT-003).
+pub(crate) fn payloads(cx: &mut Ctx, v: Option<&CValue>, licences: Option<&[Licence]>) -> Option<Vec<Payload>> {
+    let items = cx.arr(v, "payloads")?;
+    if items.is_empty() {
+        cx.err("payloads", "needs at least one payload file");
+        return None;
+    }
+    let mut out: Vec<Payload> = Vec::new();
+    let mut ok = true;
+    for (i, item) in items.iter().enumerate() {
+        let f = index("payloads", i);
+        let Some(m) = cx.obj(Some(item), &f, &["file", "vector"], &["file", "vector"]) else {
+            ok = false;
+            continue;
+        };
+        let ff = join(&f, "file");
+        let file = relpath(cx, m.get("file"), &ff);
+        if let (Some(p), Some(ls)) = (&file, licences) {
+            match ls.iter().find(|l| &l.file == p) {
+                None => {
+                    cx.err(&ff, "payload file has no licence entry");
+                    ok = false;
+                }
+                Some(l) if l.spdx != "project-authored" => {
+                    cx.err(&ff, "a payload file must be project-authored");
+                    ok = false;
+                }
+                Some(_) => {}
+            }
+        }
+        let vf = join(&f, "vector");
+        let vector = cx.string(m.get("vector"), &vf).and_then(|s| {
+            let x = Vector::parse(s);
+            if x.is_none() {
+                cx.err(&vf, format!("{s:?} is not an injection vector"));
+            }
+            x
+        });
+        match (file, vector) {
+            (Some(file), Some(vector)) => {
+                let p = Payload { file, vector };
+                if out.contains(&p) {
+                    cx.err(&f, "repeated payload");
+                    ok = false;
+                } else {
+                    out.push(p);
+                }
+            }
+            _ => ok = false,
         }
     }
     ok.then_some(out)

@@ -4,8 +4,8 @@
 //! check` (fail-closed load including the red-team predicate schema, AGENT.REDTEAM.PRED).
 
 use fid_canon::CValue;
-use fid_eval_suite::{load_suite, FormatError, Suite};
-use std::collections::BTreeMap;
+use fid_eval_suite::{load_suite, FormatError, PredicateKind, Suite};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -20,8 +20,9 @@ USAGE:
     fid-eval suite check --suite <DIR> [--json]
                                   Load the suite fail-closed (format and red-team
                                   predicate schema) and print a summary; with --json
-                                  print {\"families\",\"predicates\",\"suite_version\",\"tasks\"}
-                                  or {\"errors\"}
+                                  print {\"families\",\"markers\",\"payloads\",\"predicates\",
+                                  \"suite_version\",\"tasks\"} or {\"errors\"}; markers counts
+                                  the distinct entry_with_marker markers
     fid-eval --version            Print the version
     fid-eval --help               Print this help
 
@@ -88,7 +89,15 @@ fn summary(st: &Suite, mode: Mode) -> CValue {
         Mode::Check => {
             let mut families: BTreeMap<String, CValue> = BTreeMap::new();
             let mut predicates = 0usize;
+            let mut payloads = 0usize;
+            let mut markers: BTreeSet<&str> = BTreeSet::new();
             for t in &st.tasks {
+                payloads += t.task.payloads.len();
+                for p in &t.task.predicates {
+                    if let PredicateKind::EntryWithMarker { marker } = &p.kind {
+                        markers.insert(marker);
+                    }
+                }
                 if let Some(f) = t.task.family {
                     let n = match families.get(f.as_str()) {
                         Some(CValue::Num(n)) => *n,
@@ -100,6 +109,8 @@ fn summary(st: &Suite, mode: Mode) -> CValue {
             }
             m.insert("families".to_string(), CValue::Obj(families));
             m.insert("predicates".to_string(), CValue::Num(predicates as f64));
+            m.insert("payloads".to_string(), CValue::Num(payloads as f64));
+            m.insert("markers".to_string(), CValue::Num(markers.len() as f64));
         }
     }
     CValue::Obj(m)

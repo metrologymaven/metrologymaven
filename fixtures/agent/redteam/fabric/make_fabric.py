@@ -262,7 +262,9 @@ CASES = [
      case(family="inject", predicates=[{"id": "m", "kind": "entry_with_marker", "marker": MARKER},
                                        {"id": "c", "kind": "entry_class", "classes": ["W3", "X1"]},
                                        {"id": "p", "kind": "promotion_without_distinct_human"},
-                                       {"id": "f", "kind": "file_change", "pattern": "out/*.csv"}]),
+                                       {"id": "f", "kind": "file_change", "pattern": "out/*.csv"}],
+          # Family inject needs payload files (added by AGENT.REDTEAM.INJECT).
+          payloads=[{"file": "README.txt", "vector": "element_name"}]),
      None, [], "valid"),
     ("rt-plain-task.json", case(), None, [], "valid"),
     ("rt-no-predicates.json", case(family="fabric"), "missing_predicate", ["predicates"], "invalid"),
