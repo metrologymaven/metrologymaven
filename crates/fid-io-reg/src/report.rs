@@ -96,8 +96,18 @@ fn is_snake_segment(s: &str) -> bool {
     matches!(b.first(), Some(b'a'..=b'z')) && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'_'))
 }
 
+fn is_type_name(s: &str) -> bool {
+    s.split('.').all(is_snake_segment)
+}
+
+fn is_format_id(s: &str) -> bool {
+    let b = s.as_bytes();
+    matches!(b.first(), Some(b'a'..=b'z' | b'0'..=b'9'))
+        && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.'))
+}
+
 macro_rules! name_type {
-    ($(#[$doc:meta])* $name:ident, $field:literal, $valid:expr) => {
+    ($(#[$doc:meta])* $name:ident, $field:literal, $valid:ident) => {
         $(#[$doc])*
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub struct $name(String);
@@ -105,8 +115,7 @@ macro_rules! name_type {
         impl $name {
             /// Checks and wraps a name.
             pub fn new(s: &str) -> Result<$name, ReportError> {
-                let valid: fn(&str) -> bool = $valid;
-                if s.is_empty() || s.len() > MAX_NAME_LEN || !valid(s) {
+                if s.is_empty() || s.len() > MAX_NAME_LEN || !$valid(s) {
                     return Err(invalid($field, "invalid name"));
                 }
                 Ok($name(s.to_string()))
@@ -141,7 +150,7 @@ name_type!(
     /// [`MAX_NAME_LEN`] bytes.
     TypeName,
     "type_name",
-    |s| s.split('.').all(is_snake_segment)
+    is_type_name
 );
 
 name_type!(
@@ -149,11 +158,7 @@ name_type!(
     /// with a letter or digit (for example `fid-test-points`).
     FormatId,
     "format",
-    |s| {
-        let b = s.as_bytes();
-        matches!(b.first(), Some(b'a'..=b'z' | b'0'..=b'9'))
-            && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.'))
-    }
+    is_format_id
 );
 
 /// Source text kept in a report: at most [`MAX_DETAIL_CHARS`] Unicode scalar values of
@@ -169,7 +174,9 @@ impl ReportText {
     pub fn new(src: &UntrustedText) -> ReportText {
         let raw = src.raw();
         match raw.char_indices().nth(MAX_DETAIL_CHARS) {
-            Some((cut, _)) => ReportText { text: UntrustedText::new(raw.get(..cut).unwrap_or_default()), truncated: true },
+            Some((cut, _)) => {
+                ReportText { text: UntrustedText::new(raw.get(..cut).unwrap_or_default()), truncated: true }
+            }
             None => ReportText { text: src.clone(), truncated: false },
         }
     }
@@ -348,7 +355,12 @@ impl ReportBuilder {
     pub fn drop_item(&mut self, kind: &TypeName, pos: Position, reason: &Code, detail: &UntrustedText) {
         self.dropped_total = self.dropped_total.saturating_add(1);
         if self.dropped.len() < MAX_LISTED {
-            self.dropped.push(Dropped { kind: kind.clone(), pos, reason: reason.clone(), detail: ReportText::new(detail) });
+            self.dropped.push(Dropped {
+                kind: kind.clone(),
+                pos,
+                reason: reason.clone(),
+                detail: ReportText::new(detail),
+            });
         }
     }
 
@@ -656,7 +668,8 @@ impl ExportReport {
         Ok(ExportReport {
             format: FormatId::new(str_of(get(m, "format")?, "format")?)?,
             target: Location::from_wire(str_of(get(m, "target")?, "target")?)?,
-            sha256: Digest::parse(str_of(get(m, "sha256")?, "sha256")?).map_err(|_| invalid("sha256", "invalid digest"))?,
+            sha256: Digest::parse(str_of(get(m, "sha256")?, "sha256")?)
+                .map_err(|_| invalid("sha256", "invalid digest"))?,
             bytes: u64_of(get(m, "bytes")?, "bytes")?,
             warnings,
             warnings_total,
@@ -671,18 +684,15 @@ impl ExportReport {
 
 const IMPORT_KEYS: [&str; 8] =
     ["dropped", "dropped_total", "dry_run", "entity_counts", "format", "source", "warnings", "warnings_total"];
-const EXPORT_KEYS: [&str; 8] = ["bytes", "dry_run", "format", "lossy", "sha256", "target", "warnings", "warnings_total"];
+const EXPORT_KEYS: [&str; 8] =
+    ["bytes", "dry_run", "format", "lossy", "sha256", "target", "warnings", "warnings_total"];
 
 fn parse_json(json: &[u8]) -> Result<CValue, ReportError> {
     fid_canon::parse_with_limits(json, MAX_REPORT_JSON_BYTES, MAX_JSON_DEPTH).map_err(ReportError::Json)
 }
 
 /// The object `v` with exactly the keys `keys`.
-fn fields<'a>(
-    v: &'a CValue,
-    field: &'static str,
-    keys: &[&str],
-) -> Result<&'a BTreeMap<String, CValue>, ReportError> {
+fn fields<'a>(v: &'a CValue, field: &'static str, keys: &[&str]) -> Result<&'a BTreeMap<String, CValue>, ReportError> {
     let CValue::Obj(m) = v else {
         return Err(invalid(field, "not an object"));
     };
@@ -692,11 +702,11 @@ fn fields<'a>(
     Ok(m)
 }
 
-fn get(m: &BTreeMap<String, CValue>, key: &'static str) -> Result<&CValue, ReportError> {
+fn get<'a>(m: &'a BTreeMap<String, CValue>, key: &'static str) -> Result<&'a CValue, ReportError> {
     m.get(key).ok_or_else(|| invalid(key, "missing"))
 }
 
-fn str_of(v: &CValue, field: &'static str) -> Result<&str, ReportError> {
+fn str_of<'a>(v: &'a CValue, field: &'static str) -> Result<&'a str, ReportError> {
     match v {
         CValue::Str(s) => Ok(s),
         _ => Err(invalid(field, "not a string")),
@@ -756,7 +766,7 @@ fn text_of(v: &CValue) -> Result<ReportText, ReportError> {
 }
 
 /// A listed array of `min(total, MAX_LISTED)` items.
-fn listed(v: &CValue, field: &'static str, total: u64) -> Result<&[CValue], ReportError> {
+fn listed<'a>(v: &'a CValue, field: &'static str, total: u64) -> Result<&'a [CValue], ReportError> {
     let CValue::Arr(items) = v else {
         return Err(invalid(field, "not an array"));
     };

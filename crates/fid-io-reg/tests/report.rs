@@ -266,9 +266,8 @@ fn display_escapes_untrusted_text_and_keeps_items_on_one_line() {
     let shown = r.to_string();
     // Hand-labelled: the bidi override, newline, tab, control and DEL are escaped, the
     // backslash doubled; the raw characters never appear.
-    assert!(shown.contains(
-        "  unknown_header at byte 8: \"evil\\u{202e}txt.exe\\u{a}next\\u{9}line \"q\" \\\\ \\u{1}\\u{7f}\""
-    ));
+    assert!(shown
+        .contains("  unknown_header at byte 8: \"evil\\u{202e}txt.exe\\u{a}next\\u{9}line \"q\" \\\\ \\u{1}\\u{7f}\""));
     for c in ['\u{202e}', '\t', '\u{1}', '\u{7f}'] {
         assert!(!shown.contains(c), "{c:?}");
     }
