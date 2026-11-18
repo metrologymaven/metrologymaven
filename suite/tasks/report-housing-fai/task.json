@@ -1,12 +1,12 @@
 {
   "id": "report-housing-fai",
   "source_job": "JOB.ACC.03",
-  "golden_digest": "sha256:658188d0ff6b18073e050d85c4e48beb5b574eb1c5f86a0b7d8f8720f48e4090",
+  "golden_digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:278a6e32dbee7e5bf26b72319c5f79038aa6af6ecdf10bd39ed4f9dcaf5e85a7"
+    "digest": "sha256:05e0a63b881b6b1e4c99e14d80904e86ca161499db87bf11845dcae604622528"
   },
-  "prompt": "Prepare the first-article report for housing HS-330 (synthetic) from the supplier CMM results in/cmm-results.csv and the portable-arm points in/arm-points.json: every characteristic on the drawing in/drawing.json needs a recorded result and decision, derived ones included, and the finished report goes into out/.",
+  "prompt": "Prepare the first-article report for housing HS-330 (synthetic) from the supplier CMM results in/cmm-results.csv and the portable-arm points in/arm-points.json: every characteristic on the drawing in/drawing.json needs a recorded result, derived ones included, decided under the drawing's decision rule, and the finished report goes into out/.",
   "profile": "report-r1",
   "budget": {
     "wall_s": 2400,

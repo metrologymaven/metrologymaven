@@ -12,6 +12,8 @@ Given a corpus suite directory (default `suite/`) with its `TRACE.json`:
 - formula (REQ-004): an item whose record is formula-derived must cite an
   `expr.evaluate_formula@1` entry, require the record's evaluation basis, and be flagged in the
   trace; a flagged row must cite such an entry.
+- decision rules: a transcribed record stays `dr:as-reported-by-source@1` NOT_DECIDABLE(label_only)
+  with null algorithm and kernel version; every other record uses the bound `dr:simple-acceptance@1`.
 - licences (REQ-003, AC-3): every licence is `project-authored` or on the project allowlist
   (`[policy] redistributable` of datasets.toml), and the licence entries list exactly the files
   in the start-state archive. A failure names the task and the file.
@@ -32,6 +34,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TIERS = ("single_command", "multi_step", "full_job")
 FORMULA_COMMAND = "expr.evaluate_formula@1"
+# Decision rules (UNC.DEC.TYPE dr-catalog@1): the rule every corpus drawing binds as plan
+# default, and the label-only rule of transcribed results.
+SIMPLE_RULE = "dr:simple-acceptance@1"
+TRANSCRIBED_RULE = "dr:as-reported-by-source@1"
 
 
 def sha(b: bytes) -> str:
@@ -193,6 +199,17 @@ def check(suite: Path, root: Path = ROOT) -> list:
                     errs.append(f"task {tid}: {ch} value {iv['amount']} != golden {rv['amount']}")
                 if iv["unit"] != rv["unit"]:
                     errs.append(f"task {tid}: {ch} unit {iv['unit']} != golden {rv['unit']}")
+            # Transcribed results are never re-decided (IO.RES REQ-002, UNC.DEC.DEFAULT AC-5).
+            if r.get("status") == "transcribed":
+                d = r["decision"]
+                if (d.get("rule") != TRANSCRIBED_RULE or d.get("outcome") != "NOT_DECIDABLE"
+                        or d.get("reason") != "label_only" or r.get("algorithm") is not None
+                        or r.get("kernel_version") is not None):
+                    errs.append(f"task {tid}: transcribed {ch} must be {TRANSCRIBED_RULE} "
+                                "NOT_DECIDABLE(label_only) with null algorithm and kernel version")
+            elif r["decision"].get("rule") != SIMPLE_RULE:
+                errs.append(f"task {tid}: {ch} is decided under {r['decision'].get('rule')}, not the bound "
+                            f"{SIMPLE_RULE}")
             derived = r.get("derivation") == "formula"
             if derived and e["command"] != FORMULA_COMMAND:
                 errs.append(f"task {tid}: formula-derived {ch} comes from {e['command']}, not {FORMULA_COMMAND}")

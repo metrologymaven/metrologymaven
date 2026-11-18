@@ -1,10 +1,10 @@
 {
   "id": "inspect-plate-holes",
   "source_job": "JOB.ACC.01",
-  "golden_digest": "sha256:d01caa1ccba99d13231fefd8b574b59d36f63b59baa9a0abfba550a41489096e",
+  "golden_digest": "sha256:23cc4a33b98ea4ef009432902bf51f7523c45c2622a68fbc7d3a1d39ab66ca03",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:bc739a99a8dc75f57c78263569cbaa5cde92ec0306a0f2906237ba9df4d97564"
+    "digest": "sha256:d6cbb672db2fef1b625bc889ca7a46868ae4ce111a5a8182668e351259fba1ca"
   },
   "prompt": "Bracket BK-210 (synthetic): bore B1 is already evaluated. Evaluate the flatness of face A, the diameters of holes H1 and H2, and the distance between the centres of H1 and H2, each against the drawing in in/drawing.json, using the scan points in in/scan-points.json. Record a result and a conformance decision for every one of these characteristics.",
   "profile": "inspect-r1",

@@ -124,6 +124,13 @@ class CorpusTests(unittest.TestCase):
         self.assertFinding(errs, "JOB.ACC.01", "entry 2 hash")
         self.assertFinding(errs, "JOB.ACC.01", "digest")
 
+    def test_transcribed_result_must_stay_label_only(self):
+        def f(g):
+            r = g["entries"][0]["result_records"][0]
+            r["decision"].update(rule="dr:simple-acceptance@1", outcome="CONFORMS")
+        self.c.edit(f"{GOLDEN}/JOB.ACC.03.json", f)
+        self.assertFinding(self.c.run(), "report-import-cmm", "transcribed C1", "as-reported-by-source")
+
     def test_req004_formula_flag_required(self):
         def f(tr):
             for row in tr["tasks"]:

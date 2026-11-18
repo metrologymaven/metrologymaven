@@ -8,8 +8,8 @@
   "kernel_version": "ref-py-corpus@1",
   "input_files": {
     "in/arm-points.json": "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
-    "in/cmm-results.csv": "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-    "in/drawing.json": "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+    "in/cmm-results.csv": "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5",
+    "in/drawing.json": "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
   },
   "entries": [
     {
@@ -20,7 +20,7 @@
         "id": "human:golden-operator"
       },
       "prev": null,
-      "note": "import the supplier CMM report",
+      "note": "transcribe the supplier CMM report (as reported, not re-decided)",
       "inputs": [
         "in/cmm-results.csv"
       ],
@@ -29,6 +29,7 @@
           "characteristic": "C1",
           "measurand": "diameter",
           "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
           "value": {
             "amount": "0x3fafc016dbe497c5",
             "unit": "m"
@@ -37,31 +38,28 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
-            "outcome": "CONFORMS",
-            "limits": {
-              "lower": "0x3fafba8826aa8eb4",
-              "upper": "0x3fafc2656abde3fc",
-              "unit": "m"
-            }
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
           },
-          "spec_context": {
-            "defaults_profile": "project-synthetic"
-          },
-          "algorithm": {
-            "id": "import_reported_value",
-            "version": 1
-          },
-          "kernel_version": "ref-py-corpus@1",
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
-          ]
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "62.0124",
+            "unit": "mm",
+            "status": "OK"
+          }
         },
         {
           "characteristic": "C2",
           "measurand": "diameter",
           "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
           "value": {
             "amount": "0x3faba4d02e811ccb",
             "unit": "m"
@@ -70,31 +68,28 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
-            "outcome": "CONFORMS",
-            "limits": {
-              "lower": "0x3faba1f4b1ee2435",
-              "upper": "0x3faba9d1f601797d",
-              "unit": "m"
-            }
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
           },
-          "spec_context": {
-            "defaults_profile": "project-synthetic"
-          },
-          "algorithm": {
-            "id": "import_reported_value",
-            "version": 1
-          },
-          "kernel_version": "ref-py-corpus@1",
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
-          ]
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "53.9918",
+            "unit": "mm",
+            "status": "OK"
+          }
         },
         {
           "characteristic": "C3",
           "measurand": "length",
           "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
           "value": {
             "amount": "0x3fbebb05242c2f33",
             "unit": "m"
@@ -103,31 +98,28 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
-            "outcome": "CONFORMS",
-            "limits": {
-              "lower": "0x3fbeb1c432ca57a8",
-              "upper": "0x3fbebedfa43fe5c9",
-              "unit": "m"
-            }
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
           },
-          "spec_context": {
-            "defaults_profile": "project-synthetic"
-          },
-          "algorithm": {
-            "id": "import_reported_value",
-            "version": 1
-          },
-          "kernel_version": "ref-py-corpus@1",
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
-          ]
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "120.0412",
+            "unit": "mm",
+            "status": "OK"
+          }
         },
         {
           "characteristic": "C4",
           "measurand": "length",
           "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
           "value": {
             "amount": "0x3fa1f3ca6797bece",
             "unit": "m"
@@ -136,31 +128,28 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
-            "outcome": "NONCONFORMS",
-            "limits": {
-              "lower": "0x3fa1e4f765fd8adb",
-              "upper": "0x3fa1f212d77318fc",
-              "unit": "m"
-            }
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "NOK"
           },
-          "spec_context": {
-            "defaults_profile": "project-synthetic"
-          },
-          "algorithm": {
-            "id": "import_reported_value",
-            "version": 1
-          },
-          "kernel_version": "ref-py-corpus@1",
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
-          ]
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "35.0631",
+            "unit": "mm",
+            "status": "NOK"
+          }
         },
         {
           "characteristic": "C5",
           "measurand": "distance",
           "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
           "value": {
             "amount": "0x3f9996cb88ffee62",
             "unit": "m"
@@ -169,29 +158,25 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
-            "outcome": "CONFORMS",
-            "limits": {
-              "lower": "0x3f99930be0ded289",
-              "upper": "0x3f99a027525460aa",
-              "unit": "m"
-            }
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
           },
-          "spec_context": {
-            "defaults_profile": "project-synthetic"
-          },
-          "algorithm": {
-            "id": "import_reported_value",
-            "version": 1
-          },
-          "kernel_version": "ref-py-corpus@1",
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
-          ]
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "24.9893",
+            "unit": "mm",
+            "status": "OK"
+          }
         }
       ],
-      "hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66"
+      "hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116"
     },
     {
       "seq": 2,
@@ -200,7 +185,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+      "prev": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
       "note": "derived wall thickness T1",
       "inputs": [
         "C1",
@@ -219,11 +204,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x3f70385c67dfe32a",
-              "upper": "0x3f708c3f3e0370ce",
+              "lower": "0.00396",
+              "upper": "0.00404",
               "unit": "m"
             }
           },
@@ -236,8 +222,8 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5",
+            "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
           ],
           "derivation": "formula",
           "formula": {
@@ -249,7 +235,7 @@
           }
         }
       ],
-      "hash": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111"
+      "hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2"
     },
     {
       "seq": 3,
@@ -258,7 +244,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111",
+      "prev": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
       "note": "fit boss D7",
       "inputs": [
         "D7"
@@ -276,11 +262,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x3f92617c1bda511a",
-              "upper": "0x3f927bb2fec56d5d",
+              "lower": "0.01795",
+              "upper": "0.01805",
               "unit": "m"
             }
           },
@@ -294,11 +281,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
-            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+            "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
           ]
         }
       ],
-      "hash": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603"
+      "hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1"
     },
     {
       "seq": 4,
@@ -307,11 +294,11 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603",
+      "prev": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
       "note": "export the first-article report",
       "inputs": [],
       "result_records": [],
-      "hash": "sha256:16df245d84952da491adc63740bd9a9b598507c12bff20262ea2439a27b1a941"
+      "hash": "sha256:dc76e23362e9523db3c01209c3a0f62aa93c6ecb3e7dbabe82e46852d1334782"
     }
   ]
 }

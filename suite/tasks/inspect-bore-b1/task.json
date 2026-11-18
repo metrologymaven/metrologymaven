@@ -1,10 +1,10 @@
 {
   "id": "inspect-bore-b1",
   "source_job": "JOB.ACC.01",
-  "golden_digest": "sha256:d01caa1ccba99d13231fefd8b574b59d36f63b59baa9a0abfba550a41489096e",
+  "golden_digest": "sha256:23cc4a33b98ea4ef009432902bf51f7523c45c2622a68fbc7d3a1d39ab66ca03",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:f710681240b535cda73c9edb96555436f44951f1f7bae4b539ff8136965d8e7a"
+    "digest": "sha256:200a0cf30c32fbdcaf1d45e091f267c8e576ce232caa5e41c1d91e643559032c"
   },
   "prompt": "Bracket BK-210 (synthetic) has been scanned and the scan is already in the project. Find out whether bore B1 meets its diameter tolerance on the drawing in in/drawing.json, using the scan points in in/scan-points.json and a least-squares circle, and record the result.",
   "profile": "inspect-r1",

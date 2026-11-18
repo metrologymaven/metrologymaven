@@ -1,6 +1,6 @@
 {
   "suite": "suite",
-  "suite_version": "sha256:a776bdc69f856bcdf97a63c49942ef84314f9ca251b7e91015e9c8bc5e653e5d",
+  "suite_version": "sha256:e30be91a6805a52ad2bef94dc57ced8e7a7e541e1ff89a2172f50aabc5aa3093",
   "files": [
     [
       "oracles/inspect-bore-b1/oracle.json",
@@ -32,83 +32,83 @@
     ],
     [
       "oracles/report-housing-fai/oracle.json",
-      "sha256:ce65e4d13e6392c2f932be1e0dd700f7fa7dab8924943163a5b33f114eeb06c7"
+      "sha256:8a7802a36a14b79480aace914d8338adc32d69a731dc954e49a6093efe088660"
     ],
     [
       "oracles/report-import-cmm/oracle.json",
-      "sha256:56545a90db1c02a04232f1b939c68404267d20060b1be7bbcd0b67af6e406600"
+      "sha256:02d8aaaad5b8cb97c482fc6cda9cd0010dc513bcc3d66de8d28d6517c4951d20"
     ],
     [
       "tasks/inspect-bore-b1/start.tar",
-      "sha256:f710681240b535cda73c9edb96555436f44951f1f7bae4b539ff8136965d8e7a"
+      "sha256:200a0cf30c32fbdcaf1d45e091f267c8e576ce232caa5e41c1d91e643559032c"
     ],
     [
       "tasks/inspect-bore-b1/task.json",
-      "sha256:495d31d61feb4e0b05f8cd04a4da319cf2ac63a828507262d386cdbd2f232b13"
+      "sha256:f1386e2dd8f3140d863da675a572a039f8c165de35bf1dd3fd4edd41b9935b60"
     ],
     [
       "tasks/inspect-bracket-fai/start.tar",
-      "sha256:3e1ed0dcd7de413b124a0b09c0dd71ef6e17f2de63e33b7630834334706529db"
+      "sha256:07d0486d2ad9d4dd914daa573b208805c2f5f76681484058dc92634516bf792b"
     ],
     [
       "tasks/inspect-bracket-fai/task.json",
-      "sha256:6434aa6d4fc763ac8d756bc5d128db3ec616de246772d07e06ac7bb452672c3d"
+      "sha256:b65d5c1bea5cac2903e70a1dcb2804c8b4fa0322d491850441eab92d80098ca6"
     ],
     [
       "tasks/inspect-plate-holes/start.tar",
-      "sha256:bc739a99a8dc75f57c78263569cbaa5cde92ec0306a0f2906237ba9df4d97564"
+      "sha256:d6cbb672db2fef1b625bc889ca7a46868ae4ce111a5a8182668e351259fba1ca"
     ],
     [
       "tasks/inspect-plate-holes/task.json",
-      "sha256:da28103bfc0de32870825e817cd117cf74c94d22fc5ee71bc843e43564c878b9"
+      "sha256:75ec7d2775373b0f77651aa60c4c6b03e26dba7beca8ab14996c8f73cf1d838f"
     ],
     [
       "tasks/probe-bolt-circle/start.tar",
-      "sha256:5dcc9ad8bfa7cef8d8bd1b86562423ccf47adca88d3744cd7b849bd6f666c7a9"
+      "sha256:2509ef60ed4ff427d6518ee1c295841dc905c06193256cae2a95e19de354378c"
     ],
     [
       "tasks/probe-bolt-circle/task.json",
-      "sha256:fbcfa6b0df6c477555b11de01e630b664de00f6f04ee50a13066b4bcc87d15d4"
+      "sha256:5202df2cb71d255666db2510370791df7202f92e53e6ef0eb83431dac361c080"
     ],
     [
       "tasks/probe-flange-reeval/start.tar",
-      "sha256:a875d9fa48f81a1235a5cb1e7dc47287c4a5ed684f41180773b85ea8290ea816"
+      "sha256:35428d0855b619cccba29a5be530769ad8a4527c28d77426a62a91213904be15"
     ],
     [
       "tasks/probe-flange-reeval/task.json",
-      "sha256:dc259274adfef4bd977ec6afeeff88018b77230ab51dd0438b3cf10492a06f31"
+      "sha256:4e836e1cd24aaa97e4fa6780d3356fc0e49cca51a52a6b8a4d9b036617081779"
     ],
     [
       "tasks/probe-keyway-width/start.tar",
-      "sha256:d8f5211a32c8f2cc0b9f493c9fbc7527b39de2e3366cf39863f4092e3fed120d"
+      "sha256:4dc25739ad24a2c4ca6fbca16c850a4a36021a38e3b8faebc5a53d69e3b16409"
     ],
     [
       "tasks/probe-keyway-width/task.json",
-      "sha256:72ba02d072a9e945d366543e6bd0bfa4d76965e56a93cc0a518f8aa5e224455a"
+      "sha256:308a94e2d6fa6780692d86ae0022fddf86d801da71aef77ab85db1817f29905e"
     ],
     [
       "tasks/report-derived-and-arm/start.tar",
-      "sha256:2d3f340d89501c1c0d7c62b5b24e3586d59ed5be3a1caf1c8547fae213df7e47"
+      "sha256:9d27bd08af2b363a52c8fe986f7ae469c9b73c0fd692d9a9f452c98d269055c8"
     ],
     [
       "tasks/report-derived-and-arm/task.json",
-      "sha256:c75ee4311bcee6f334032641227fb450c1386730e96c5a3f9a72d1a1c60ecd6e"
+      "sha256:bbb81c7a56522900f6a1fdb6b5106afb0929894097d40d485b4285a4d361a262"
     ],
     [
       "tasks/report-housing-fai/start.tar",
-      "sha256:278a6e32dbee7e5bf26b72319c5f79038aa6af6ecdf10bd39ed4f9dcaf5e85a7"
+      "sha256:05e0a63b881b6b1e4c99e14d80904e86ca161499db87bf11845dcae604622528"
     ],
     [
       "tasks/report-housing-fai/task.json",
-      "sha256:a3dbc1f8d914a03706c9ede0462935f24fccb7965493cac7069725db4a0da353"
+      "sha256:09cab598fdeeac20f41f0226acebe6266c50f62819f99be80314d2ef79087d1e"
     ],
     [
       "tasks/report-import-cmm/start.tar",
-      "sha256:1ee50cfbcd8e8a8f67596ee8551ca76b438c285fae8a2c49cf1144fb3ce7f76b"
+      "sha256:1c6ffa5117ac06b108f6f4f1c9669a39f676a51cc55c86cbcfb65075d5b11889"
     ],
     [
       "tasks/report-import-cmm/task.json",
-      "sha256:089bc3a673f06f0c39e92164c6d4586298f381bd870441b6eb8729a76b64b9e6"
+      "sha256:59771139f6bcf4e1890f0f50d45606361e8e0d6882ec96695de7f62233d60769"
     ]
   ],
   "tasks": [
@@ -182,7 +182,7 @@
         "report"
       ],
       "items": 7,
-      "forbidden": 1
+      "forbidden": 10
     },
     {
       "id": "report-import-cmm",
@@ -191,7 +191,7 @@
         "report"
       ],
       "items": 5,
-      "forbidden": 1
+      "forbidden": 10
     }
   ]
 }

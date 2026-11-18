@@ -1,12 +1,12 @@
 {
   "id": "report-import-cmm",
   "source_job": "JOB.ACC.03",
-  "golden_digest": "sha256:658188d0ff6b18073e050d85c4e48beb5b574eb1c5f86a0b7d8f8720f48e4090",
+  "golden_digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:1ee50cfbcd8e8a8f67596ee8551ca76b438c285fae8a2c49cf1144fb3ce7f76b"
+    "digest": "sha256:1c6ffa5117ac06b108f6f4f1c9669a39f676a51cc55c86cbcfb65075d5b11889"
   },
-  "prompt": "Housing HS-330 (synthetic): a supplier sent its CMM results as in/cmm-results.csv. Bring those results into the project and decide each of them against the drawing in in/drawing.json.",
+  "prompt": "Housing HS-330 (synthetic): a supplier sent its CMM results as in/cmm-results.csv. Bring those results into the project as the supplier reported them, against the characteristics of the drawing in in/drawing.json.",
   "profile": "report-r1",
   "budget": {
     "wall_s": 600,

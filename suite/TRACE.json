@@ -6,19 +6,19 @@
       "job": "JOB.ACC.01",
       "app": "inspect",
       "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.01.json",
-      "digest": "sha256:d01caa1ccba99d13231fefd8b574b59d36f63b59baa9a0abfba550a41489096e"
+      "digest": "sha256:23cc4a33b98ea4ef009432902bf51f7523c45c2622a68fbc7d3a1d39ab66ca03"
     },
     {
       "job": "JOB.ACC.04",
       "app": "probe",
       "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.04.json",
-      "digest": "sha256:cffeae4304c3418634f3599d0275061911dbd4415f9bfd0e29ed99dd4a4b538b"
+      "digest": "sha256:71f5973c7f1da47839e7813b711b3c89dbc677b7769f7cf20dc70af83bbfa248"
     },
     {
       "job": "JOB.ACC.03",
       "app": "report",
       "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.03.json",
-      "digest": "sha256:658188d0ff6b18073e050d85c4e48beb5b574eb1c5f86a0b7d8f8720f48e4090"
+      "digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5"
     }
   ],
   "tasks": [
@@ -32,7 +32,7 @@
         {
           "characteristic": "B1-DIA",
           "entry_seq": 2,
-          "entry_hash": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770",
+          "entry_hash": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33",
           "formula": false
         }
       ]
@@ -47,37 +47,37 @@
         {
           "characteristic": "B1-DIA",
           "entry_seq": 2,
-          "entry_hash": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770",
+          "entry_hash": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33",
           "formula": false
         },
         {
           "characteristic": "A-FLAT",
           "entry_seq": 3,
-          "entry_hash": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff",
+          "entry_hash": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4",
           "formula": false
         },
         {
           "characteristic": "H1-DIA",
           "entry_seq": 4,
-          "entry_hash": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1",
+          "entry_hash": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268",
           "formula": false
         },
         {
           "characteristic": "H2-DIA",
           "entry_seq": 5,
-          "entry_hash": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85",
+          "entry_hash": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791",
           "formula": false
         },
         {
           "characteristic": "H1H2-DIST",
           "entry_seq": 6,
-          "entry_hash": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29",
+          "entry_hash": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8",
           "formula": false
         },
         {
           "characteristic": "H3-DIA",
           "entry_seq": 7,
-          "entry_hash": "sha256:aff0ad3725ec5d48c91ee750a6c19d79201154005b1f33985f690f22affd6353",
+          "entry_hash": "sha256:4a1cacda08fe928b74061e373339c382d4cb50f9532a7f2cedf8f6fd9bfe9e08",
           "formula": false
         }
       ]
@@ -92,25 +92,25 @@
         {
           "characteristic": "A-FLAT",
           "entry_seq": 3,
-          "entry_hash": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff",
+          "entry_hash": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4",
           "formula": false
         },
         {
           "characteristic": "H1-DIA",
           "entry_seq": 4,
-          "entry_hash": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1",
+          "entry_hash": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268",
           "formula": false
         },
         {
           "characteristic": "H2-DIA",
           "entry_seq": 5,
-          "entry_hash": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85",
+          "entry_hash": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791",
           "formula": false
         },
         {
           "characteristic": "H1H2-DIST",
           "entry_seq": 6,
-          "entry_hash": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29",
+          "entry_hash": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8",
           "formula": false
         }
       ]
@@ -125,55 +125,55 @@
         {
           "characteristic": "K1-DIA",
           "entry_seq": 4,
-          "entry_hash": "sha256:41163f710973981285e6ed8fe01a0988c74540e913c1c9f8217d7dac00286cbc",
+          "entry_hash": "sha256:09b531c727c0ff7fa3072b07499e9e7613d798d376d7e3c0f4dbe97449f4d483",
           "formula": false
         },
         {
           "characteristic": "K2-DIA",
           "entry_seq": 5,
-          "entry_hash": "sha256:acf0a942046dd123c7ee0e7c66e3861ccb822ca3136c0747ddefbfced0b0f9eb",
+          "entry_hash": "sha256:fd74faa55d3678ccbf6fb77f3395fd11a54cd46e7b5acfb6d5c4d937c4dbc1b4",
           "formula": false
         },
         {
           "characteristic": "K3-DIA",
           "entry_seq": 6,
-          "entry_hash": "sha256:1b86fcc4054c78e342ec302e79dc4004a7cceee363ffb0f047ffff75f3864701",
+          "entry_hash": "sha256:1d4cadb203ec5b75e8657c725015c948b8a96e7beead9a4db333288d2b4bd283",
           "formula": false
         },
         {
           "characteristic": "K4-DIA",
           "entry_seq": 7,
-          "entry_hash": "sha256:52de2d87f976c164995b66440b63d8fb2ee3708487f899ff4e389966ebc506e1",
+          "entry_hash": "sha256:5b6ba05a583cd1fe9d845f4f9e338ee88a6627b0318440731d826ef98cefed28",
           "formula": false
         },
         {
           "characteristic": "PCD",
           "entry_seq": 8,
-          "entry_hash": "sha256:ad19fe7573f0fe4da3a52f48e9d60b61426efb2344c2a7debdf714283e3d1f44",
+          "entry_hash": "sha256:75944c640b159b7aaf4a54bf130a5ad7f92f724f4e38246c81e51e555188f63c",
           "formula": false
         },
         {
           "characteristic": "K1-POS",
           "entry_seq": 9,
-          "entry_hash": "sha256:39ac90baa216d8582e7cfbd7e1dfe304ab53cb17e6cdb59650d3722563eb1670",
+          "entry_hash": "sha256:ca51dbf00cb81172f7f702b8ea5549d82870f57578666baaca220f4718da21c5",
           "formula": false
         },
         {
           "characteristic": "K2-POS",
           "entry_seq": 10,
-          "entry_hash": "sha256:a229b1a2801e345abe563609d0e8ea5e8ed3abf45e022bd58c473d2d838c9e2d",
+          "entry_hash": "sha256:1613260bf0095a403bd90e72d50969e0c27dd195e2bdd503cd5822f9901aa33d",
           "formula": false
         },
         {
           "characteristic": "K3-POS",
           "entry_seq": 11,
-          "entry_hash": "sha256:1565286efa099d8f09bc6a1a0346426ccaca34bdd711e2d1be68d06b5dad90ef",
+          "entry_hash": "sha256:6a55069284dfeff13352727bbf06fe193200932ac84454a03716236e24a74870",
           "formula": false
         },
         {
           "characteristic": "K4-POS",
           "entry_seq": 12,
-          "entry_hash": "sha256:1af7da0ff39c4dbba0dcc9aa17a31464d707ae79ba2f4c3fe5a6296fa3107c2e",
+          "entry_hash": "sha256:88bf330328ddba5f2afe57f5d90d6c0e21b99498fa1bb302ad32d977ed9c4075",
           "formula": false
         }
       ]
@@ -188,73 +188,73 @@
         {
           "characteristic": "BORE-DIA",
           "entry_seq": 2,
-          "entry_hash": "sha256:b51a5e25087c1a60d78bbc353c89b55d9502c7c2a6a5de371f6ced7ea9771e00",
+          "entry_hash": "sha256:0801738273901cebb526c0b65d714ff2c11ca33b89ddf799051adfebc5a1373e",
           "formula": false
         },
         {
           "characteristic": "F-FLAT",
           "entry_seq": 3,
-          "entry_hash": "sha256:5cd0eabf1932ccf044550b2419214b62ce0cbc8b98d08fc10ffc8b7fa8a200be",
+          "entry_hash": "sha256:9a7c3ce7b4c074a541f3bc662d4121e93177c87832279548aac3a20a862a8646",
           "formula": false
         },
         {
           "characteristic": "K1-DIA",
           "entry_seq": 4,
-          "entry_hash": "sha256:41163f710973981285e6ed8fe01a0988c74540e913c1c9f8217d7dac00286cbc",
+          "entry_hash": "sha256:09b531c727c0ff7fa3072b07499e9e7613d798d376d7e3c0f4dbe97449f4d483",
           "formula": false
         },
         {
           "characteristic": "K2-DIA",
           "entry_seq": 5,
-          "entry_hash": "sha256:acf0a942046dd123c7ee0e7c66e3861ccb822ca3136c0747ddefbfced0b0f9eb",
+          "entry_hash": "sha256:fd74faa55d3678ccbf6fb77f3395fd11a54cd46e7b5acfb6d5c4d937c4dbc1b4",
           "formula": false
         },
         {
           "characteristic": "K3-DIA",
           "entry_seq": 6,
-          "entry_hash": "sha256:1b86fcc4054c78e342ec302e79dc4004a7cceee363ffb0f047ffff75f3864701",
+          "entry_hash": "sha256:1d4cadb203ec5b75e8657c725015c948b8a96e7beead9a4db333288d2b4bd283",
           "formula": false
         },
         {
           "characteristic": "K4-DIA",
           "entry_seq": 7,
-          "entry_hash": "sha256:52de2d87f976c164995b66440b63d8fb2ee3708487f899ff4e389966ebc506e1",
+          "entry_hash": "sha256:5b6ba05a583cd1fe9d845f4f9e338ee88a6627b0318440731d826ef98cefed28",
           "formula": false
         },
         {
           "characteristic": "PCD",
           "entry_seq": 8,
-          "entry_hash": "sha256:ad19fe7573f0fe4da3a52f48e9d60b61426efb2344c2a7debdf714283e3d1f44",
+          "entry_hash": "sha256:75944c640b159b7aaf4a54bf130a5ad7f92f724f4e38246c81e51e555188f63c",
           "formula": false
         },
         {
           "characteristic": "K1-POS",
           "entry_seq": 9,
-          "entry_hash": "sha256:39ac90baa216d8582e7cfbd7e1dfe304ab53cb17e6cdb59650d3722563eb1670",
+          "entry_hash": "sha256:ca51dbf00cb81172f7f702b8ea5549d82870f57578666baaca220f4718da21c5",
           "formula": false
         },
         {
           "characteristic": "K2-POS",
           "entry_seq": 10,
-          "entry_hash": "sha256:a229b1a2801e345abe563609d0e8ea5e8ed3abf45e022bd58c473d2d838c9e2d",
+          "entry_hash": "sha256:1613260bf0095a403bd90e72d50969e0c27dd195e2bdd503cd5822f9901aa33d",
           "formula": false
         },
         {
           "characteristic": "K3-POS",
           "entry_seq": 11,
-          "entry_hash": "sha256:1565286efa099d8f09bc6a1a0346426ccaca34bdd711e2d1be68d06b5dad90ef",
+          "entry_hash": "sha256:6a55069284dfeff13352727bbf06fe193200932ac84454a03716236e24a74870",
           "formula": false
         },
         {
           "characteristic": "K4-POS",
           "entry_seq": 12,
-          "entry_hash": "sha256:1af7da0ff39c4dbba0dcc9aa17a31464d707ae79ba2f4c3fe5a6296fa3107c2e",
+          "entry_hash": "sha256:88bf330328ddba5f2afe57f5d90d6c0e21b99498fa1bb302ad32d977ed9c4075",
           "formula": false
         },
         {
           "characteristic": "S1-WIDTH",
           "entry_seq": 13,
-          "entry_hash": "sha256:472cb54e3f9ffb8b2316b6ac9274e8660785751d65ace62f097bccbd03f0facc",
+          "entry_hash": "sha256:dc3665925464fd42b5cbdaf66726793b4b57d81f3dc506031b65216389c95442",
           "formula": false
         }
       ]
@@ -269,7 +269,7 @@
         {
           "characteristic": "S1-WIDTH",
           "entry_seq": 13,
-          "entry_hash": "sha256:472cb54e3f9ffb8b2316b6ac9274e8660785751d65ace62f097bccbd03f0facc",
+          "entry_hash": "sha256:dc3665925464fd42b5cbdaf66726793b4b57d81f3dc506031b65216389c95442",
           "formula": false
         }
       ]
@@ -284,13 +284,13 @@
         {
           "characteristic": "T1",
           "entry_seq": 2,
-          "entry_hash": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111",
+          "entry_hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
           "formula": true
         },
         {
           "characteristic": "D7-DIA",
           "entry_seq": 3,
-          "entry_hash": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603",
+          "entry_hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
           "formula": false
         }
       ]
@@ -305,43 +305,43 @@
         {
           "characteristic": "C1",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C2",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C3",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C4",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C5",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "T1",
           "entry_seq": 2,
-          "entry_hash": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111",
+          "entry_hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
           "formula": true
         },
         {
           "characteristic": "D7-DIA",
           "entry_seq": 3,
-          "entry_hash": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603",
+          "entry_hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
           "formula": false
         }
       ]
@@ -356,31 +356,31 @@
         {
           "characteristic": "C1",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C2",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C3",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C4",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         },
         {
           "characteristic": "C5",
           "entry_seq": 1,
-          "entry_hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
           "formula": false
         }
       ]

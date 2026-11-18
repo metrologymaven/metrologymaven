@@ -28,6 +28,8 @@ import io
 import json
 import math
 import struct
+from decimal import Decimal
+from fractions import Fraction
 import sys
 import tarfile
 from pathlib import Path
@@ -46,7 +48,13 @@ PROVISIONAL = ("Provisional synthetic golden journal (AGENT.EVAL.CORPUS): a stan
                "the entry without its 'hash' member. Amounts are IEEE 754 binary64 bits ('0x' + 16 hex digits) "
                "in SI units, as in CORE.JRN.CANON.")
 KERNEL = "ref-py-corpus@1"
-RULE = "fid.simple_acceptance@1"
+RULE = "dr:simple-acceptance@1"  # UNC.DEC.TYPE built-in catalog (dr-catalog@1)
+RULE_TRANSCRIBED = "dr:as-reported-by-source@1"  # label only (IO.RES REQ-002, UNC.DEC.DEFAULT AC-5)
+# Bound on every drawing as the plan default rule (UNC.DEC.DEFAULT resolution level plan_default).
+DECISION_RULE = {"plan_default": RULE,
+                 "note": ("Every characteristic is decided by simple acceptance: the measured value against the "
+                          "limits, with uncertainty not evaluated (UEC-0). Results imported from another system "
+                          "are not re-decided: they keep rule dr:as-reported-by-source@1 (label only).")}
 GOLDEN_PRINCIPAL = {"kind": "human", "id": "human:golden-operator"}
 
 
@@ -180,7 +188,15 @@ class Journal:
 
 
 def decide(value_mm, lo_mm, hi_mm):
-    return "CONFORMS" if lo_mm <= value_mm <= hi_mm else "NONCONFORMS"
+    """Simple acceptance on exact numbers: the binary64 value (or an exact Fraction) against the
+    decimal limits, compared as rationals (no rounded f64 sums such as 7.985000000000001)."""
+    v = Fraction(value_mm)
+    return "CONFORMS" if Fraction(lo_mm) <= v <= Fraction(hi_mm) else "NONCONFORMS"
+
+
+def m_text(mm: Decimal) -> str:
+    """A decimal limit in mm as exact decimal text in m."""
+    return format(mm.scaleb(-3).normalize(), "f")
 
 
 def record(char, measurand, basis, value_mm, lo_mm, hi_mm, algorithm, input_digests, outcome=None, unit="m",
@@ -192,8 +208,8 @@ def record(char, measurand, basis, value_mm, lo_mm, hi_mm, algorithm, input_dige
     r = {"characteristic": char, "measurand": measurand, "evaluation_basis": basis,
          "value": None if value_mm is None else {"amount": bits(value_mm / 1000.0), "unit": unit},
          "uncertainty": {"uec": "UEC-0"},
-         "decision": {"rule": RULE, "outcome": outcome,
-                      "limits": {"lower": bits(lo_mm / 1000.0), "upper": bits(hi_mm / 1000.0), "unit": unit}},
+         "decision": {"rule": RULE, "resolved_from": "plan_default", "outcome": outcome,
+                      "limits": {"lower": m_text(lo_mm), "upper": m_text(hi_mm), "unit": unit}},
          "spec_context": {"defaults_profile": "project-synthetic"},
          "algorithm": algorithm, "kernel_version": KERNEL, "input_digests": input_digests}
     if derivation:
@@ -209,11 +225,23 @@ def char_by_id(drawing, cid):
 
 
 def limits(c):
-    return c["nominal"] + c["lower"], c["nominal"] + c["upper"]
+    """Exact decimal limits in mm (the drawing's numbers read as decimal text)."""
+    nom = Decimal(repr(c["nominal"]))
+    return nom + Decimal(repr(c["lower"])), nom + Decimal(repr(c["upper"]))
 
 
-def tolerance_text(c):
-    return f"{c['nominal']:.3f} {c['lower']:+.3f}/{c['upper']:+.3f} mm"
+def transcribed(char, measurand, text_mm, source_status, input_digests):
+    """A result imported from another system (IO.RES.TRANS.MODEL REQ-002): status transcribed,
+    UEC-0 without value, rule dr:as-reported-by-source@1 with NOT_DECIDABLE(label_only) and the
+    source status as label, null kernel version and algorithm (UNC.DEC.DEFAULT AC-5)."""
+    return {"characteristic": char, "measurand": measurand, "evaluation_basis": "RESULTS_ONLY",
+            "status": "transcribed",
+            "value": {"amount": bits(float(text_mm) / 1000.0), "unit": "m"},
+            "uncertainty": {"uec": "UEC-0"},
+            "decision": {"rule": RULE_TRANSCRIBED, "outcome": "NOT_DECIDABLE", "reason": "label_only",
+                         "label": source_status},
+            "spec_context": None, "algorithm": None, "kernel_version": None, "input_digests": input_digests,
+            "as_reported": {"value": text_mm, "unit": "mm", "status": source_status}}
 
 
 ALG_CIRCLE = {"id": "lsq_circle_2d", "version": 1}
@@ -238,6 +266,7 @@ def job_inspect():
     scan = {"part": "BK-210", "synthetic": True, "units": "mm", "source": "synthetic optical scan export",
             "features": {k: {"type": {"A": "plane"}.get(k, "circle"), "points": v} for k, v in pts.items()}}
     drawing = {"part": "BK-210", "title": "Bracket (synthetic)", "synthetic": True, "units": "mm",
+               "decision_rule": DECISION_RULE,
                "characteristics": [
                    {"id": "B1-DIA", "feature": "B1", "kind": "diameter", "nominal": 12.0, "lower": 0.0, "upper": 0.018},
                    {"id": "A-FLAT", "feature": "A", "kind": "flatness", "nominal": 0.0, "lower": 0.0, "upper": 0.05},
@@ -341,6 +370,7 @@ def job_probe():
     chars.append({"id": "S1-WIDTH", "features": ["S1-L", "S1-R"], "kind": "slot_width", "nominal": 10.0,
                   "lower": 0.0, "upper": 0.022})
     drawing = {"part": "FL-480", "title": "Flange (synthetic)", "synthetic": True, "units": "mm",
+               "decision_rule": DECISION_RULE,
                "characteristics": chars,
                "notes": ["Sizes use least-squares (Gaussian) association.",
                          "Flatness is the peak-to-valley distance from the least-squares plane.",
@@ -410,7 +440,8 @@ def job_probe():
 
 # ---------------------------------------------------------------- job 3: Report (JOB.ACC.03)
 
-CMM_ROWS = [("C1", "62.0124"), ("C2", "53.9918"), ("C3", "120.0412"), ("C4", "35.0631"), ("C5", "24.9893")]
+CMM_ROWS = [("C1", "62.0124", "OK"), ("C2", "53.9918", "OK"), ("C3", "120.0412", "OK"), ("C4", "35.0631", "NOK"),
+            ("C5", "24.9893", "OK")]
 
 
 def job_report():
@@ -418,8 +449,9 @@ def job_report():
            "source": "synthetic portable-arm export, probe-radius compensated",
            "features": {"D7": {"type": "circle",
                                "points": circle_pts(40.0, 18.0, 9.0104, 10, 0.3, [(2, 0.004, 0.9), (3, 0.002, 0.2)])}}}
-    csv = "characteristic,measured_mm\n" + "".join(f"{c},{v}\n" for c, v in CMM_ROWS)
+    csv = "characteristic,measured_mm,status\n" + "".join(f"{c},{v},{st}\n" for c, v, st in CMM_ROWS)
     drawing = {"part": "HS-330", "title": "Housing (synthetic)", "synthetic": True, "units": "mm",
+               "decision_rule": DECISION_RULE,
                "characteristics": [
                    {"id": "C1", "kind": "diameter", "label": "outside diameter", "nominal": 62.0, "lower": -0.03,
                     "upper": 0.03, "source": "cmm"},
@@ -436,7 +468,8 @@ def job_report():
                    {"id": "D7-DIA", "feature": "D7", "kind": "diameter", "label": "boss diameter", "nominal": 18.0,
                     "lower": -0.05, "upper": 0.05, "source": "arm"},
                ],
-               "notes": ["C1 to C5 come from the supplier CMM report in/cmm-results.csv.",
+               "notes": ["C1 to C5 come from the supplier CMM report in/cmm-results.csv; they are recorded as "
+                         "reported by the supplier (status column kept as a label) and are not re-decided.",
                          "T1 is derived from the recorded C1 and C2 by the formula given.",
                          "D7 uses a least-squares (Gaussian) circle through the arm points."]}
     files = {"in/cmm-results.csv": csv.encode("utf-8"), "in/arm-points.json": jbytes(arm),
@@ -445,18 +478,17 @@ def job_report():
     d_cmm = [j.digest_of("in/cmm-results.csv"), j.digest_of("in/drawing.json")]
     recs = []
     vals_m = {}
-    for cid, text in CMM_ROWS:
+    for cid, text, status in CMM_ROWS:
         c = char_by_id(drawing, cid)
-        v = float(text)
-        recs.append(record(cid, c["kind"], "RESULTS_ONLY", v, *limits(c), {"id": "import_reported_value",
-                                                                            "version": 1}, d_cmm))
-        vals_m[cid] = v / 1000.0
-    j.add("report.import_results@1", ["in/cmm-results.csv"], recs, "import the supplier CMM report")
+        recs.append(transcribed(cid, c["kind"], text, status, [j.digest_of("in/cmm-results.csv")]))
+        vals_m[cid] = float(text) / 1000.0
+    j.add("report.import_results@1", ["in/cmm-results.csv"], recs,
+          "transcribe the supplier CMM report (as reported, not re-decided)")
     c = char_by_id(drawing, "T1")
     t_m = (vals_m["C1"] - vals_m["C2"]) / 2.0  # SI arithmetic on the recorded values
     lo, hi = limits(c)
     rec = record("T1", "wall_thickness", "RESULTS_ONLY", None, lo, hi, {"id": "expr.evaluate_formula", "version": 1},
-                 d_cmm, outcome=decide(t_m * 1000.0, lo, hi), derivation="formula")
+                 d_cmm, outcome=decide(Fraction(t_m) * 1000, lo, hi), derivation="formula")
     rec["value"] = {"amount": bits(t_m), "unit": "m"}
     rec["formula"] = {"text": "(C1 - C2) / 2", "inputs": ["C1", "C2"]}
     j.add("expr.evaluate_formula@1", ["C1", "C2"], [rec], "derived wall thickness T1")
@@ -470,8 +502,8 @@ def job_report():
     tasks = [
         {"id": "report-import-cmm", "tier": "single_command", "first": 1, "last": 1, "workflow_hint": "transcribe",
          "prompt": ("Housing HS-330 (synthetic): a supplier sent its CMM results as in/cmm-results.csv. Bring "
-                    "those results into the project and decide each of them against the drawing in "
-                    "in/drawing.json.")},
+                    "those results into the project as the supplier reported them, against the characteristics "
+                    "of the drawing in in/drawing.json.")},
         {"id": "report-derived-and-arm", "tier": "multi_step", "first": 2, "last": 3, "workflow_hint": "derived",
          "prompt": ("Housing HS-330 (synthetic): the supplier CMM results are already recorded. Two "
                     "characteristics on the drawing in/drawing.json are still open: the wall thickness T1, "
@@ -481,8 +513,9 @@ def job_report():
         {"id": "report-housing-fai", "tier": "full_job", "first": 1, "last": 4, "workflow_hint": "first article",
          "prompt": ("Prepare the first-article report for housing HS-330 (synthetic) from the supplier CMM "
                     "results in/cmm-results.csv and the portable-arm points in/arm-points.json: every "
-                    "characteristic on the drawing in/drawing.json needs a recorded result and decision, "
-                    "derived ones included, and the finished report goes into out/.")},
+                    "characteristic on the drawing in/drawing.json needs a recorded result, derived ones "
+                    "included, decided under the drawing's decision rule, and the finished report goes into "
+                    "out/.")},
     ]
     return j, files, tasks, "report-r1", ["report"]
 

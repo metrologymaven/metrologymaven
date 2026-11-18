@@ -7,7 +7,7 @@
   "synthetic": true,
   "kernel_version": "ref-py-corpus@1",
   "input_files": {
-    "in/drawing.json": "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe",
+    "in/drawing.json": "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba",
     "in/scan-points.json": "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638"
   },
   "entries": [
@@ -51,11 +51,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x3f889374bc6a7efa",
-              "upper": "0x3f889ce4a7b4e550",
+              "lower": "0.012",
+              "upper": "0.012018",
               "unit": "m"
             }
           },
@@ -69,11 +70,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770"
+      "hash": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33"
     },
     {
       "seq": 3,
@@ -82,7 +83,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770",
+      "prev": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33",
       "note": "flatness of face A",
       "inputs": [
         "A"
@@ -100,11 +101,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x0000000000000000",
-              "upper": "0x3f0a36e2eb1c432d",
+              "lower": "0",
+              "upper": "0.00005",
               "unit": "m"
             }
           },
@@ -118,11 +120,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff"
+      "hash": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4"
     },
     {
       "seq": 4,
@@ -131,7 +133,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff",
+      "prev": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4",
       "note": "fit circle H1",
       "inputs": [
         "H1"
@@ -149,11 +151,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x3f805a708ede54b5",
-              "upper": "0x3f806a2b1704ff44",
+              "lower": "0.007985",
+              "upper": "0.008015",
               "unit": "m"
             }
           },
@@ -167,11 +170,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1"
+      "hash": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268"
     },
     {
       "seq": 5,
@@ -180,7 +183,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1",
+      "prev": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268",
       "note": "fit circle H2",
       "inputs": [
         "H2"
@@ -198,11 +201,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "NONCONFORMS",
             "limits": {
-              "lower": "0x3f805a708ede54b5",
-              "upper": "0x3f806a2b1704ff44",
+              "lower": "0.007985",
+              "upper": "0.008015",
               "unit": "m"
             }
           },
@@ -216,11 +220,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85"
+      "hash": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791"
     },
     {
       "seq": 6,
@@ -229,7 +233,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85",
+      "prev": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791",
       "note": "centre distance H1-H2",
       "inputs": [
         "H1",
@@ -248,11 +252,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "CONFORMS",
             "limits": {
-              "lower": "0x3fa996fa82e87d2c",
-              "upper": "0x3fa99c38b04ab607",
+              "lower": "0.04998",
+              "upper": "0.05002",
               "unit": "m"
             }
           },
@@ -266,11 +271,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29"
+      "hash": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8"
     },
     {
       "seq": 7,
@@ -279,7 +284,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29",
+      "prev": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8",
       "note": "fit circle H3: two points only, the fit is not decidable",
       "inputs": [
         "H3"
@@ -294,11 +299,12 @@
             "uec": "UEC-0"
           },
           "decision": {
-            "rule": "fid.simple_acceptance@1",
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
             "outcome": "NOT_DECIDABLE",
             "limits": {
-              "lower": "0x3f747064ece9a2c7",
-              "upper": "0x3f74855da272862f",
+              "lower": "0.00499",
+              "upper": "0.00501",
               "unit": "m"
             }
           },
@@ -312,11 +318,11 @@
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
             "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
-            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+            "sha256:1876d1a41a98fba61d3debddf31f7a1a930149dad5ff677dce64675ff033d8ba"
           ]
         }
       ],
-      "hash": "sha256:aff0ad3725ec5d48c91ee750a6c19d79201154005b1f33985f690f22affd6353"
+      "hash": "sha256:4a1cacda08fe928b74061e373339c382d4cb50f9532a7f2cedf8f6fd9bfe9e08"
     },
     {
       "seq": 8,
@@ -325,11 +331,11 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:aff0ad3725ec5d48c91ee750a6c19d79201154005b1f33985f690f22affd6353",
+      "prev": "sha256:4a1cacda08fe928b74061e373339c382d4cb50f9532a7f2cedf8f6fd9bfe9e08",
       "note": "export the inspection report",
       "inputs": [],
       "result_records": [],
-      "hash": "sha256:3522bbfcba4e8b108620325ecac45f035341861ae1506938e5335044eead35e0"
+      "hash": "sha256:515de1c0430d568a49ffa15a730155c199d91575d48af397e3f2620d06c39711"
     }
   ]
 }

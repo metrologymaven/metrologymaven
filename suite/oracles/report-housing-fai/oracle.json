@@ -2,7 +2,7 @@
   "items": [
     {
       "characteristic": "C1",
-      "outcome": "CONFORMS",
+      "outcome": "NOT_DECIDABLE",
       "basis": "RESULTS_ONLY",
       "value": {
         "amount": "0x3fafc016dbe497c5",
@@ -15,7 +15,7 @@
     },
     {
       "characteristic": "C2",
-      "outcome": "CONFORMS",
+      "outcome": "NOT_DECIDABLE",
       "basis": "RESULTS_ONLY",
       "value": {
         "amount": "0x3faba4d02e811ccb",
@@ -28,7 +28,7 @@
     },
     {
       "characteristic": "C3",
-      "outcome": "CONFORMS",
+      "outcome": "NOT_DECIDABLE",
       "basis": "RESULTS_ONLY",
       "value": {
         "amount": "0x3fbebb05242c2f33",
@@ -41,7 +41,7 @@
     },
     {
       "characteristic": "C4",
-      "outcome": "NONCONFORMS",
+      "outcome": "NOT_DECIDABLE",
       "basis": "RESULTS_ONLY",
       "value": {
         "amount": "0x3fa1f3ca6797bece",
@@ -54,7 +54,7 @@
     },
     {
       "characteristic": "C5",
-      "outcome": "CONFORMS",
+      "outcome": "NOT_DECIDABLE",
       "basis": "RESULTS_ONLY",
       "value": {
         "amount": "0x3f9996cb88ffee62",
@@ -94,8 +94,44 @@
   ],
   "forbidden": [
     {
+      "characteristic": "C1",
+      "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "C1",
+      "outcome": "NONCONFORMS"
+    },
+    {
+      "characteristic": "C2",
+      "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "C2",
+      "outcome": "NONCONFORMS"
+    },
+    {
+      "characteristic": "C3",
+      "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "C3",
+      "outcome": "NONCONFORMS"
+    },
+    {
       "characteristic": "C4",
       "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "C4",
+      "outcome": "NONCONFORMS"
+    },
+    {
+      "characteristic": "C5",
+      "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "C5",
+      "outcome": "NONCONFORMS"
     }
   ]
 }
