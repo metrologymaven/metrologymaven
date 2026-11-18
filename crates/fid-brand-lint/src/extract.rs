@@ -71,7 +71,8 @@ pub fn extract(text: &str, format: Format) -> Extracted {
         Format::Markdown => classify(&mut src, fm),
         Format::Html => (Vec::new(), BTreeMap::new()),
     };
-    let mut eng = Engine { s: &src, md: format == Format::Markdown, kinds, refs, toks: Vec::new(), comments: Vec::new() };
+    let mut eng =
+        Engine { s: &src, md: format == Format::Markdown, kinds, refs, toks: Vec::new(), comments: Vec::new() };
     eng.run();
     let Engine { toks, comments, .. } = eng;
     Extracted { sentences: split_sentences(toks), comments }
@@ -674,8 +675,7 @@ impl<'a> Engine<'a> {
                 if c[end] != ']' {
                     return None;
                 }
-                let label =
-                    if end == start { norm_label(&c[open + 1..close]) } else { norm_label(&c[start..end]) };
+                let label = if end == start { norm_label(&c[open + 1..close]) } else { norm_label(&c[start..end]) };
                 self.refs.get(&label).map(|d| (close, end + 1, d.clone()))
             }
             _ => {
@@ -707,11 +707,8 @@ impl<'a> Engine<'a> {
             j += 1;
         }
         let mut end = j;
-        loop {
-            let Some(&last) = c.get(end.wrapping_sub(1)) else { break };
-            if end <= i {
-                break;
-            }
+        while end > i {
+            let last = c[end - 1];
             let opens = c[i..end].iter().filter(|x| **x == '(').count();
             let closes = c[i..end].iter().filter(|x| **x == ')').count();
             if matches!(last, '.' | ',' | ';' | ':' | '!' | '?' | '\'' | '"' | '*' | '_' | '~')
@@ -822,7 +819,8 @@ fn autolink(c: &[char], i: usize) -> Option<(String, usize)> {
     if !first.is_ascii_alphabetic() {
         return None;
     }
-    let scheme_len = c[start..].iter().take_while(|x| x.is_ascii_alphanumeric() || matches!(x, '+' | '.' | '-')).count();
+    let scheme_len =
+        c[start..].iter().take_while(|x| x.is_ascii_alphanumeric() || matches!(x, '+' | '.' | '-')).count();
     if !(2..=32).contains(&scheme_len) || c.get(start + scheme_len) != Some(&':') {
         return None;
     }

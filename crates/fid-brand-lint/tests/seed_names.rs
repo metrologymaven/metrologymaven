@@ -29,8 +29,7 @@ fn title_products(title: &str) -> Vec<String> {
 
 fn covered(product: &str, names: &[String]) -> bool {
     names.iter().any(|n| {
-        product.starts_with(n.as_str())
-            && product[n.len()..].chars().next().map_or(true, |c| !c.is_alphanumeric())
+        product.starts_with(n.as_str()) && product[n.len()..].chars().next().map_or(true, |c| !c.is_alphanumeric())
     })
 }
 
@@ -38,7 +37,7 @@ fn covered(product: &str, names: &[String]) -> bool {
 fn title_parsing_is_hand_checked() {
     assert_eq!(title_products("Alpha Gauge / Beta Scan Pro 3D"), vec!["Alpha Gauge", "Beta Scan Pro 3D"]);
     assert_eq!(title_products("Gamma (Module A, Module B)"), vec!["Gamma"]);
-    let names = vec!["Beta Scan".to_string()];
+    let names = ["Beta Scan".to_string()];
     assert!(covered("Beta Scan Pro 3D", &names));
     assert!(!covered("Beta Scanner", &names));
 }
@@ -61,10 +60,7 @@ fn ac9_every_seed_title_product_is_listed() {
             continue;
         }
         let text = std::fs::read_to_string(&f).unwrap();
-        let title = text
-            .lines()
-            .find_map(|l| l.strip_prefix("# "))
-            .unwrap_or_else(|| panic!("{name}: no title line"));
+        let title = text.lines().find_map(|l| l.strip_prefix("# ")).unwrap_or_else(|| panic!("{name}: no title line"));
         for p in title_products(title) {
             checked += 1;
             if !covered(&p, &names) {

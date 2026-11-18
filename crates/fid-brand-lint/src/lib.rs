@@ -147,7 +147,12 @@ fn parse_marker_body(rest: &str) -> Result<(String, String), String> {
 /// Turn one file's text into engine units: one unit per sentence, with its links and the
 /// suppressions of every marker on the line before the sentence or on a line it spans.
 /// `rules` is the set of rule IDs a marker may name.
-pub fn units_for_text(file: &str, text: &str, format: Format, rules: &BTreeSet<String>) -> Result<Vec<Unit>, LintError> {
+pub fn units_for_text(
+    file: &str,
+    text: &str,
+    format: Format,
+    rules: &BTreeSet<String>,
+) -> Result<Vec<Unit>, LintError> {
     let ex = extract(text, format);
     let mut markers = Vec::new();
     for c in &ex.comments {
@@ -259,8 +264,8 @@ pub fn read_input(path: &Path) -> Result<String, LintError> {
 
 /// Load the rule file and add the extra benchmark prefixes to every comparison (`cooccur`) rule.
 pub fn load_rules(path: &Path, bench_prefixes: &[String]) -> Result<RuleSet, LintError> {
-    let mut rules = RuleSet::load(path)
-        .map_err(|e| LintError::RulesParse { path: display_path(path), reason: e.to_string() })?;
+    let mut rules =
+        RuleSet::load(path).map_err(|e| LintError::RulesParse { path: display_path(path), reason: e.to_string() })?;
     for r in &mut rules.rules {
         if r.kind == Kind::Cooccur {
             for p in bench_prefixes {
