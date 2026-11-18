@@ -1,0 +1,2 @@
+# Stub binaries print JSON for --version --json; Windows runs the .cmd twins.
+*.cmd text eol=crlf
