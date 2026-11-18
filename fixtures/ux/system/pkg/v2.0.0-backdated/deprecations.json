@@ -1,0 +1,8 @@
+[
+  {
+    "name": "space.2",
+    "replacement": "space.3",
+    "since": "1.0.0",
+    "remove_after": "1.1.0"
+  }
+]

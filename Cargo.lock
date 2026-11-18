@@ -107,6 +107,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-design"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-design-pkg",
+]
+
+[[package]]
+name = "fid-design-pkg"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "toml",
+]
+
+[[package]]
 name = "fid-geo-nurbs"
 version = "0.0.1"
 

@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**43** of **1336** leaves built in code ([B]).
+**44** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 37 built)
+### Wave 1 (125 leaves, 38 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -145,7 +145,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UNC.RDL.BLIND.CUST](../../spec/unc/rdl/blind/cust/NODE.md) Custody model, repository guard and sealed CI job (M, P1b)
 - [UNC.RDL.TRACIM.PUBLIC](../../spec/unc/rdl/tracim/public/NODE.md) Nightly public-test job (S, P0)
 - [UX.RESEARCH.PROTO](../../spec/ux/research/proto/NODE.md) Research plan, protocol, consent and data handling (M, P0)
-- [UX.SYSTEM.PKG](../../spec/ux/system/pkg/NODE.md) Design-system package format, versioning, changelog and deprecation (M, P0)
+- [B] [UX.SYSTEM.PKG](../../spec/ux/system/pkg/NODE.md) Design-system package format, versioning, changelog and deprecation (M, P0)
 - [VIZ.CAPTURE.VIDEO.ENCODE](../../spec/viz/capture/video/encode/NODE.md) AV1 encoder and WebM segment muxer (M, P1b)
 - [VIZ.OVERLAY.GDTGLYPH.ATLAS](../../spec/viz/overlay/gdtglyph/atlas/NODE.md) GD&T symbol MSDF atlas from the original drawings (S, P1a)
 - [VIZ.RENDER.FRAME.SHLINT](../../spec/viz/render/frame/shlint/NODE.md) Shader manifest, readback lint and toolkit-free check (S, P1a)
