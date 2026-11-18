@@ -5,9 +5,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_outreach::moderation::{
-    check, parse_log, parse_roster, stats, Date, Quarter, Stamp, RETENTION_MONTHS,
-};
+use fid_outreach::moderation::{check, parse_log, parse_roster, stats, Date, Quarter, Stamp, RETENTION_MONTHS};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -233,16 +231,33 @@ fn field_rules() {
     let today = Date::parse("2027-04-02").unwrap();
     let cases: [(&str, &str, &str); 7] = [
         ("moderator = \"mod-ash\"\n", "", "field_missing moderator C1"),
-        ("acknowledged_at = \"2027-01-04T09:00:00Z\"\n", "acknowledged_at = \"2027-01-04T08:59:59Z\"\n", "field_invalid acknowledged_at C1"),
+        (
+            "acknowledged_at = \"2027-01-04T09:00:00Z\"\n",
+            "acknowledged_at = \"2027-01-04T08:59:59Z\"\n",
+            "field_invalid acknowledged_at C1",
+        ),
         ("channel = \"forum\"\n", "channel = \"Forum\"\n", "field_invalid channel C1"),
-        ("parties_conflicted = []\n", "parties_conflicted = [\"mod-ash\", \"mod-ash\"]\n", "field_invalid parties_conflicted C1"),
-        ("parties_conflicted = []\n", "parties_conflicted = []\nhandover = { from = \"mod-x\", to = \"mod-y\" }\n", "field_invalid handover C1"),
-        ("parties_conflicted = []\n", "parties_conflicted = []\nnote = \"text of a removed post\"\n", "field_invalid note C1"),
+        (
+            "parties_conflicted = []\n",
+            "parties_conflicted = [\"mod-ash\", \"mod-ash\"]\n",
+            "field_invalid parties_conflicted C1",
+        ),
+        (
+            "parties_conflicted = []\n",
+            "parties_conflicted = []\nhandover = { from = \"mod-x\", to = \"mod-y\" }\n",
+            "field_invalid handover C1",
+        ),
+        (
+            "parties_conflicted = []\n",
+            "parties_conflicted = []\nnote = \"text of a removed post\"\n",
+            "field_invalid note C1",
+        ),
         ("id = \"C1\"\n", "id = \"a b\"\n", "field_invalid id case#1"),
     ];
     for (from, to, want) in cases {
         let text = ONE_CASE.replace(from, to);
-        let got: Vec<String> = check(&parse_log(&table(&text)), &roster, today).iter().map(ToString::to_string).collect();
+        let got: Vec<String> =
+            check(&parse_log(&table(&text)), &roster, today).iter().map(ToString::to_string).collect();
         assert_eq!(got, vec![want.to_string()], "{text}");
     }
     // A duplicate case ID.

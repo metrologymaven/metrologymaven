@@ -102,9 +102,9 @@ impl ModError {
     pub fn reason(&self) -> &str {
         match self {
             ModError::LogInRepo { .. } => "the moderation log must be kept outside the public repository",
-            ModError::LogParse { reason, .. } | ModError::RosterParse { reason, .. } | ModError::Unreadable { reason, .. } => {
-                reason
-            }
+            ModError::LogParse { reason, .. }
+            | ModError::RosterParse { reason, .. }
+            | ModError::Unreadable { reason, .. } => reason,
         }
     }
 
@@ -377,9 +377,7 @@ pub struct Log {
 /// `.`, `_` or `-`, at most [`MAX_ID_LEN`] bytes. `lower` restricts letters to lowercase.
 fn is_id(s: &str, lower: bool) -> bool {
     let b = s.as_bytes();
-    let ok_char = |c: &u8| {
-        c.is_ascii_digit() || (if lower { c.is_ascii_lowercase() } else { c.is_ascii_alphabetic() })
-    };
+    let ok_char = |c: &u8| c.is_ascii_digit() || (if lower { c.is_ascii_lowercase() } else { c.is_ascii_alphabetic() });
     !b.is_empty()
         && b.len() <= MAX_ID_LEN
         && b.first().is_some_and(ok_char)

@@ -541,7 +541,8 @@ fn moderation_cmd(cmd: &str, args: &[String]) -> ExitCode {
     let Some(log) = opts.get("--log").map(PathBuf::from) else { return usage() };
     let repo_root = opts.get("--repo-root").map(PathBuf::from);
     if cmd == "mod-check" {
-        let (Some(roster), Some(today)) = (opts.get("--roster"), opts.get("--today").and_then(|d| moderation::Date::parse(d)))
+        let (Some(roster), Some(today)) =
+            (opts.get("--roster"), opts.get("--today").and_then(|d| moderation::Date::parse(d)))
         else {
             return usage();
         };
