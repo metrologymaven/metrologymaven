@@ -1,0 +1,2 @@
+# Byte-exact fixtures (make_fixtures.py --check compares bytes): no EOL conversion.
+* -text
