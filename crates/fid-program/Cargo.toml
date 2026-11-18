@@ -1,0 +1,20 @@
+[package]
+name = "fid-program"
+description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (spec node AUTO.PROG.FMT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# Test-only: counting global allocator for the peak-memory test (tests/alloc_peak.rs).
+# The workspace forbids `unsafe`, so the test cannot implement GlobalAlloc itself.
+cap = { version = "0.1.2", features = ["stats"] }
+
+[lints]
+workspace = true
