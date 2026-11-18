@@ -4,7 +4,7 @@
 //! platform lets the test create links; junction tests run on Windows.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_io_reg::{IoError, Principal, RelPath, RootAccess, RootHandle, RootId, RootSet, RootWarning};
+use fid_io_reg::{IoError, Principal, RelPath, RootAccess, RootHandle, RootId, RootSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -108,7 +108,8 @@ fn symlink_file(target: &Path, link: &Path) -> bool {
 /// Creates a Windows junction (no privilege needed).
 #[cfg(windows)]
 fn junction(target: &Path, link: &Path) {
-    let st = std::process::Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(link).arg(target).status().unwrap();
+    let st =
+        std::process::Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(link).arg(target).status().unwrap();
     assert!(st.success(), "mklink /J {} {}", link.display(), target.display());
 }
 
@@ -261,7 +262,8 @@ fn ac4_windows_junctions_and_links_leaving_the_root_fail() {
     junction(&windir, &r.join("link"));
     junction(&plain(&t.canon), &r.join("up"));
     let s = set(&t, "imp", RootAccess::ImportExport);
-    let mut handles = vec!["root://imp/link/hosts", "root://imp/link/System32/drivers/etc/hosts", "root://imp/up/secret.txt"];
+    let mut handles =
+        vec!["root://imp/link/hosts", "root://imp/link/System32/drivers/etc/hosts", "root://imp/up/secret.txt"];
     // Symbolic links need a privilege the runner may lack; test them when it is held.
     if symlink_dir(Path::new(".."), &r.join("sym-up")) {
         handles.push("root://imp/sym-up/secret.txt");
@@ -376,6 +378,6 @@ fn hard_links_are_reported_not_refused() {
     fs::hard_link(t.root().join("a").join("part.stl"), t.raw.join("outside.stl")).unwrap();
     let s = set(&t, "imp", RootAccess::Import);
     let f = s.resolve_import(Principal::Agent, "root://imp/a/part.stl").unwrap();
-    assert_eq!(f.warnings, [RootWarning::HardLinked { links: 2 }]);
+    assert_eq!(f.warnings, [fid_io_reg::RootWarning::HardLinked { links: 2 }]);
     assert_eq!(f.warnings[0].code(), "hard_linked");
 }
