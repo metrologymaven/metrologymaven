@@ -26,7 +26,9 @@ fn main() -> ExitCode {
         [group, cmd, file] if group == "plat-matrix" && cmd == "validate" => validate(file),
         [group, cmd] if group == "plat-hw" && cmd == "validate" => validate_hw(hw_profile::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-hw" && cmd == "validate" && flag == "--file" => validate_hw(file),
-        [group, cmd] if group == "plat-hw" && cmd == "validate-suite" => validate_suite(bench_schema::SUITE_DEFAULT_PATH),
+        [group, cmd] if group == "plat-hw" && cmd == "validate-suite" => {
+            validate_suite(bench_schema::SUITE_DEFAULT_PATH)
+        }
         [group, cmd, flag, file] if group == "plat-hw" && cmd == "validate-suite" && flag == "--file" => {
             validate_suite(file)
         }

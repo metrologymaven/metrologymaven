@@ -7,8 +7,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_platform::bench_schema::{
-    parse_suite, result_json_schema_bytes, validate_result, validate_suite, BenchResult, Better, Context,
-    MetricResult, SchemaError, Status, Unit, WorkloadResult, MAX_BYTES,
+    parse_suite, result_json_schema_bytes, validate_result, validate_suite, BenchResult, Better, Context, MetricResult,
+    SchemaError, Status, Unit, WorkloadResult, MAX_BYTES,
 };
 use fid_platform::matrix::{Arch, OsFamily};
 use fid_types::Digest;
@@ -30,7 +30,12 @@ fn read(path: PathBuf) -> Vec<u8> {
 /// Runs `fid-platform plat-hw <args>` from the repository root (what `cargo xtask plat-hw`
 /// runs; the wrapper is exercised by the rust.yml step).
 fn cli(args: &[&str]) -> (i32, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-platform")).current_dir(root()).arg("plat-hw").args(args).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-platform"))
+        .current_dir(root())
+        .arg("plat-hw")
+        .args(args)
+        .output()
+        .unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap())
 }
 
@@ -57,7 +62,10 @@ fn ac1_mini_suite_validates() {
     assert_eq!(w.repetitions, 5);
     assert_eq!(w.timeout_s, 120);
     assert_eq!(w.metrics.len(), 2);
-    assert_eq!((w.metrics[0].name.as_str(), w.metrics[0].unit, w.metrics[0].better), ("load_time", Unit::S, Better::Lower));
+    assert_eq!(
+        (w.metrics[0].name.as_str(), w.metrics[0].unit, w.metrics[0].better),
+        ("load_time", Unit::S, Better::Lower)
+    );
     assert_eq!((w.metrics[1].name.as_str(), w.metrics[1].unit), ("memory_peak", Unit::MiB));
     let r = &s.workloads[1];
     assert_eq!((r.id.as_str(), r.repetitions, r.timeout_s), ("mini.render", 3, 300));
@@ -187,7 +195,10 @@ fn suite_other_field_errors() {
     let no_id = base.replace("id = \"w\"\n", "").replace("unit = \"ms\"", "unit = \"km\"");
     let errs = suite_errs(&no_id);
     assert!(is_parse(&errs[0], "id is missing in workload workloads[0]"));
-    assert_eq!(errs[1], SchemaError::BadUnit { workload: "workloads[0]".into(), metric: "m".into(), unit: "km".into() });
+    assert_eq!(
+        errs[1],
+        SchemaError::BadUnit { workload: "workloads[0]".into(), metric: "m".into(), unit: "km".into() }
+    );
 }
 
 #[test]
@@ -226,7 +237,10 @@ fn ac4_sample_result_is_valid_and_needs_gpu_driver_version() {
     assert_eq!(r.workloads[1].metrics[1].median, None);
 
     let err = mutate(|t| *t = t.replace("    \"gpu_driver_version\": \"0.0.0-fixture\",\n", "")).unwrap_err();
-    assert!(matches!(&err, SchemaError::Parse { msg, .. } if msg == "gpu_driver_version is missing in context"), "{err}");
+    assert!(
+        matches!(&err, SchemaError::Parse { msg, .. } if msg == "gpu_driver_version is missing in context"),
+        "{err}"
+    );
 }
 
 #[test]
@@ -235,7 +249,10 @@ fn result_rule_violations() {
     let e = mutate(|t| *t = t.replacen(&format!("          {digest1}"), "", 1)).unwrap_err();
     assert_eq!(e, SchemaError::MissingDigest { workload: "mini.load".into() });
     let e = mutate(|t| *t = t.replacen("\"unit\": \"s\"", "\"unit\": \"furlongs\"", 1)).unwrap_err();
-    assert_eq!(e, SchemaError::BadUnit { workload: "mini.load".into(), metric: "load_time".into(), unit: "furlongs".into() });
+    assert_eq!(
+        e,
+        SchemaError::BadUnit { workload: "mini.load".into(), metric: "load_time".into(), unit: "furlongs".into() }
+    );
     let e = mutate(|t| *t = t.replacen("\"repetitions\": 5", "\"repetitions\": 101", 1)).unwrap_err();
     assert_eq!(e, SchemaError::BadRepetitions { workload: "mini.load".into(), found: 101 });
     let e = mutate(|t| *t = t.replacen("\"schema_version\": 1", "\"schema_version\": 2", 1)).unwrap_err();
@@ -249,16 +266,31 @@ fn result_rule_violations() {
     };
     parse(&|t: &mut String| *t = t.replacen("\"median\": 1.25", "\"median\": 2", 1), "min <= median <= max");
     parse(&|t: &mut String| *t = t.replacen("\"median\": 1.25", "\"median\": null", 1), "status ok needs");
-    parse(&|t: &mut String| *t = t.replacen("\"median\": null", "\"median\": 1", 1), "needs median, min and max to be null");
+    parse(
+        &|t: &mut String| *t = t.replacen("\"median\": null", "\"median\": 1", 1),
+        "needs median, min and max to be null",
+    );
     parse(&|t: &mut String| *t = t.replacen("\"min\": 1.125", "\"min\": -1", 1), "non-negative");
     parse(&|t: &mut String| *t = t.replacen("\"status\": \"ok\"", "\"status\": \"crashed\"", 1), "status in");
     parse(&|t: &mut String| *t = t.replace("\"os\": \"ubuntu\"", "\"os\": \"plan9\""), "os in context");
     parse(&|t: &mut String| *t = t.replace("\"ram_mib\": 16384", "\"ram_mib\": 0.5"), "ram_mib");
-    parse(&|t: &mut String| *t = t.replace("\"machine\": \"local\"", "\"machine\": \"local\", \"colour\": \"red\""), "unknown field `colour` in context");
-    parse(&|t: &mut String| *t = t.replacen("\"status\": \"ok\"", "\"status\": \"ok\", \"note\": 1", 1), "unknown field `note`");
+    parse(
+        &|t: &mut String| *t = t.replace("\"machine\": \"local\"", "\"machine\": \"local\", \"colour\": \"red\""),
+        "unknown field `colour` in context",
+    );
+    parse(
+        &|t: &mut String| *t = t.replacen("\"status\": \"ok\"", "\"status\": \"ok\", \"note\": 1", 1),
+        "unknown field `note`",
+    );
     parse(&|t: &mut String| *t = t.replace("\"machine\": \"local\"", "\"machine\": \"\""), "machine in context");
-    parse(&|t: &mut String| *t = t.replacen("\"schema_version\": 1", "\"schema_version\": 1, \"schema_version\": 1", 1), "duplicate_key");
-    parse(&|t: &mut String| *t = t.replacen("\"name\": \"memory_peak\"", "\"name\": \"load_time\"", 1), "duplicate metric name");
+    parse(
+        &|t: &mut String| *t = t.replacen("\"schema_version\": 1", "\"schema_version\": 1, \"schema_version\": 1", 1),
+        "duplicate_key",
+    );
+    parse(
+        &|t: &mut String| *t = t.replacen("\"name\": \"memory_peak\"", "\"name\": \"load_time\"", 1),
+        "duplicate metric name",
+    );
     assert!(validate_result(b"[]").is_err());
     assert!(validate_result(&vec![b' '; MAX_BYTES + 1]).is_err());
 }

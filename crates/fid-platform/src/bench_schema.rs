@@ -838,10 +838,7 @@ fn closed_object(keys: &[&str], props: Vec<(&str, CValue)>) -> Vec<(String, CVal
         ("type".to_string(), s("object")),
         ("additionalProperties".to_string(), CValue::Bool(false)),
         ("required".to_string(), required(keys)),
-        (
-            "properties".to_string(),
-            CValue::Obj(props.into_iter().map(|(k, v)| (k.to_string(), v)).collect()),
-        ),
+        ("properties".to_string(), CValue::Obj(props.into_iter().map(|(k, v)| (k.to_string(), v)).collect())),
     ]
 }
 
@@ -849,11 +846,7 @@ fn context_field_schema(key: &str) -> CValue {
     match key {
         "os" => object([("enum", names(OsFamily::ALL, OsFamily::as_str))]),
         "arch" => object([("enum", names(Arch::ALL, Arch::as_str))]),
-        "ram_mib" => object([
-            ("type", s("integer")),
-            ("minimum", num(1.0)),
-            ("maximum", num(f64::from(u32::MAX))),
-        ]),
+        "ram_mib" => object([("type", s("integer")), ("minimum", num(1.0)), ("maximum", num(f64::from(u32::MAX)))]),
         _ => nonempty_string(),
     }
 }
