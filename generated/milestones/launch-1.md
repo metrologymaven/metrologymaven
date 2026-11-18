@@ -18,11 +18,15 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 - HAL.ACQ.SESS -> HAL.PAIR.GRADE
 - HAL.ACQ.SESS.LIFE -> HAL.PAIR.GRADE
 
+## Build progress
+
+**7** of **1336** leaves built in code ([B]).
+
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves)
+### Wave 1 (125 leaves, 7 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -35,13 +39,13 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
 - [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
-- [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
+- [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
 - [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
 - [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
-- [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
-- [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
+- [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
+- [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
 - [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
-- [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
+- [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
 - [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
 - [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
@@ -62,7 +66,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.SIGN.OSSIGN](../../spec/eco/rel/sign/ossign/NODE.md) OS code signing, notarisation and Linux package signing (M, P1a)
 - [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
 - [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
-- [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
+- [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
 - [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
 - [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
@@ -81,8 +85,8 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
 - [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
 - [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)
-- [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
-- [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
+- [B] [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
+- [B] [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
 - [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
 - [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
 - [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
@@ -150,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves)
+### Wave 2 (121 leaves, 0 built)
 
 - [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -274,7 +278,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.TOKENS.STATUS](../../spec/ux/tokens/status/NODE.md) Locked status palette values (S, P1a)
 - [UX.TOKENS.TYPE](../../spec/ux/tokens/type/NODE.md) Typography tokens and font licence rule (S, P1a)
 
-### Wave 3 (63 leaves)
+### Wave 3 (63 leaves, 0 built)
 
 - [AGENT.HARNESS.RUN](../../spec/agent/harness/run/NODE.md) Run orchestration, MCP tap and budgets (M, P0)
 - [AGENT.HARNESS.SCORE](../../spec/agent/harness/score/NODE.md) Oracle matching and computed adoptability (M, P0)
@@ -340,7 +344,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.SYSTEM.REVIEW](../../spec/ux/system/review/NODE.md) Design review checklist, originality declaration and PR gate (M, P0)
 - [UX.TOKENS.CHECK](../../spec/ux/tokens/check/NODE.md) Automated contrast and colour-vision release check (M, P1a)
 
-### Wave 4 (32 leaves)
+### Wave 4 (32 leaves, 0 built)
 
 - [AGENT.HARNESS.RECORD](../../spec/agent/harness/record/NODE.md) Run records, repetition statistics and suite report (M, P0)
 - [CORE.REG.VER.GATE](../../spec/core/reg/ver/gate/NODE.md) Build gate against the released baseline (S, P0)
@@ -375,7 +379,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.ICONS.PROV](../../spec/ux/icons/prov/NODE.md) Icon provenance records and icon-set checks (S, P1a)
 - [UX.SCREENS.INV](../../spec/ux/screens/inv/NODE.md) Screen inventory, wireframe-ID convention and approval records (M, P1a)
 
-### Wave 5 (34 leaves)
+### Wave 5 (34 leaves, 0 built)
 
 - [AGENT.BOARD.RECOMP](../../spec/agent/board/recomp/NODE.md) Score recompute check and third-party submissions (S, P1a)
 - [AGENT.HARNESS.PANEL](../../spec/agent/harness/panel/NODE.md) Human reviewer panel verdicts (S, P1a)
@@ -412,7 +416,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.ICONS.CORESET](../../spec/ux/icons/coreset/NODE.md) Core UI icon set and brand-neutral app and file icons (M, P1a)
 - [UX.ICONS.GDT](../../spec/ux/icons/gdt/NODE.md) GD&T symbol drawing specifications (M, P1a)
 
-### Wave 6 (43 leaves)
+### Wave 6 (43 leaves, 0 built)
 
 - [AGENT.BOARD.BUNDLE](../../spec/agent/board/bundle/NODE.md) Static scoreboard bundle (M, P1a)
 - [AGENT.LOCAL.CIRUN](../../spec/agent/local/cirun/NODE.md) Offline CI evaluation of the reference agent (S, P1a)
@@ -458,7 +462,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.PATTERN.SCHEMA](../../spec/ux/pattern/schema/NODE.md) Pattern-spec format and completeness check (S, P1a)
 - [UX.REPORT.STYLE](../../spec/ux/report/style/NODE.md) Default report style set and print typography (M, P1a)
 
-### Wave 7 (39 leaves)
+### Wave 7 (39 leaves, 0 built)
 
 - [CORE.JRN.STREAM.LEDGER](../../spec/core/jrn/stream/ledger/NODE.md) Access Ledger format, pseudonyms and anchoring (M, P1b)
 - [CORE.REG.DEF.SCHEMA](../../spec/core/reg/def/schema/NODE.md) Schema keyword vocabulary, meta-schema and catalogue facade (M, P0)
@@ -500,7 +504,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.REPORT.BALLOON](../../spec/ux/report/balloon/NODE.md) Balloon style (S, P1a)
 - [UX.REPORT.CHART](../../spec/ux/report/chart/NODE.md) Report chart styles and colour-map snapshot legend (M, P1a)
 
-### Wave 8 (36 leaves)
+### Wave 8 (36 leaves, 0 built)
 
 - [ALN.BFIT.FEAT.DEV](../../spec/aln/bfit/feat/dev/NODE.md) Per-type feature deviation vectors and angular scaling (M, P1a)
 - [ALN.DATUM.SYS.GATE](../../spec/aln/datum/sys/gate/NODE.md) Dialect gate and per-datum resolver calls (S, P1a)
@@ -539,7 +543,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UX.PATTERN.ERROR](../../spec/ux/pattern/error/NODE.md) Error, unresolved and not-decidable states; progress and cancel (S, P1a)
 - [UX.REPORT.MOCK](../../spec/ux/report/mock/NODE.md) Reference report mockups (M, P1a)
 
-### Wave 9 (40 leaves)
+### Wave 9 (40 leaves, 0 built)
 
 - [CORE.BUS.PIPE.HANDLER](../../spec/core/bus/pipe/handler/NODE.md) Handler contract, state view and effects check (S, P0)
 - [CORE.BUS.UNIT](../../spec/core/bus/unit/NODE.md) Authored literal normalisation to SI (M, P0)
@@ -582,7 +586,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [SCAN.POLY.SURF.STITCH](../../spec/scan/poly/surf/stitch/NODE.md) Fan agreement, manifold assembly and orientation (M, P1b)
 - [TRUST.VERIFY.WEB.SHELL](../../spec/trust/verify/web/shell/NODE.md) Static page shell, offline guarantee and report view (M, P1b)
 
-### Wave 10 (28 leaves)
+### Wave 10 (28 leaves, 0 built)
 
 - [CORE.BUS.PIPE.VALID](../../spec/core/bus/pipe/valid/NODE.md) Command resolution, parameter validation and preconditions (M, P0)
 - [CORE.BUS.PRIN](../../spec/core/bus/prin/NODE.md) Principal model, channel binding and human session upgrade (M, P0)
@@ -613,7 +617,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [SCAN.CLOUD.REG.CTGT](../../spec/scan/cloud/reg/ctgt/NODE.md) Oriented-cloud projection target and overlap fraction (S, P1b)
 - [VIZ.CAPTURE.REC.POLICY](../../spec/viz/capture/rec/policy/NODE.md) Recording policy keys and policy evaluation (S, P1b)
 
-### Wave 11 (34 leaves)
+### Wave 11 (34 leaves, 0 built)
 
 - [CORE.BUS.POL.CLASS](../../spec/core/bus/pol/class/NODE.md) Class, principal and human-only matrix (S, P0)
 - [CORE.BUS.POL.FS](../../spec/core/bus/pol/fs/NODE.md) File handles and approved roots (M, P0)
@@ -650,7 +654,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [SCAN.CLOUD.REG.GRAPH](../../spec/scan/cloud/reg/graph/NODE.md) Scan overlap matrix and pair graph (S, P1b)
 - [TRUST.SIGN.UV.GATE](../../spec/trust/sign/uv/gate/NODE.md) S1 principal and channel gate, policy and uv_method (S, P1a)
 
-### Wave 12 (35 leaves)
+### Wave 12 (35 leaves, 0 built)
 
 - [AGENT.PROPOSE.IMPACT](../../spec/agent/propose/impact/NODE.md) Computed proposal impact from the branch diff (M, P0)
 - [ALN.QA.HIST](../../spec/aln/qa/hist/NODE.md) Convergence history and published convergence criteria (S, P1a)
@@ -688,7 +692,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.OVERLAY.LABEL.MODEL](../../spec/viz/overlay/label/model/NODE.md) LabelSet entity, templates and label commands (M, P1a)
 - [VIZ.VIEW.STATE](../../spec/viz/view/state/NODE.md) ViewState model and canonical form (M, P1a)
 
-### Wave 13 (29 leaves)
+### Wave 13 (29 leaves, 0 built)
 
 - [AUTO.PROG.EXPR.TYPES](../../spec/auto/prog/expr/types/NODE.md) Type system, unit algebra and variable scoping (M, P1b)
 - [AUTO.SURF.GEN](../../spec/auto/surf/gen/NODE.md) Surface generator framework and digest stamping (M, P0)
@@ -720,7 +724,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.RENDER.SCENE.IDTAB](../../spec/viz/render/scene/idtab/NODE.md) Render ID allocation and entity lookup tables (S, P1a)
 - [VIZ.VIEW.NAMED.STORE](../../spec/viz/view/named/store/NODE.md) Save, rename, delete and list NamedViews (M, P1a)
 
-### Wave 14 (43 leaves)
+### Wave 14 (43 leaves, 0 built)
 
 - [AUTO.CLI.TREE](../../spec/auto/cli/tree/NODE.md) Generated command tree and help (M, P0)
 - [AUTO.MCP.PROJ](../../spec/auto/mcp/proj/NODE.md) Class-based tool projection and request-only tools (M, P0)
@@ -766,7 +770,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.VIEW.CAMERA.HILITE](../../spec/viz/view/camera/hilite/NODE.md) Highlight and proposal ghost overlays (M, P1a)
 - [VIZ.VIEW.NAMED.EXPORT](../../spec/viz/view/named/export/NODE.md) NamedView package format for reports and web packages (S, P1a)
 
-### Wave 15 (35 leaves)
+### Wave 15 (35 leaves, 0 built)
 
 - [AUTO.CLI.ARGS](../../spec/auto/cli/args/NODE.md) Typed and unit-bearing parameter parsing (M, P0)
 - [AUTO.CLI.COMP](../../spec/auto/cli/comp/NODE.md) Generated shell completions (S, P0)
@@ -804,7 +808,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.DESIGN.PLACE.FLOW](../../spec/rpt/design/place/flow/NODE.md) Overflow detection and page-break flow (M, P1b)
 - [RPT.MODEL.TMPL.VER](../../spec/rpt/model/tmpl/ver/NODE.md) Template versions, immutability and template commands (M, P1a)
 
-### Wave 16 (26 leaves)
+### Wave 16 (26 leaves, 0 built)
 
 - [AGENT.PROPOSE.BRIEF](../../spec/agent/propose/brief/NODE.md) Proposal brief schema and attach command (M, P0)
 - [AGENT.SKILLS.QUERY](../../spec/agent/skills/query/NODE.md) List and show recipe commands (S, P1a)
@@ -833,7 +837,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [TRUST.PKG.CONTENT.SELECT](../../spec/trust/pkg/content/select/NODE.md) Selection resolution, record completeness and content assembly (M, P1a)
 - [VIZ.RENDER.SCENE.PROJ](../../spec/viz/render/scene/proj/NODE.md) View-model projection and dirty-set re-projection (M, P1a)
 
-### Wave 17 (30 leaves)
+### Wave 17 (30 leaves, 0 built)
 
 - [AGENT.PROPOSE.SHOW](../../spec/agent/propose/show/NODE.md) Brief completeness, staleness and claim mismatch (S, P0)
 - [AGENT.SKILLS.RECIPE](../../spec/agent/skills/recipe/NODE.md) Worked recipes from golden journals and replay check (M, P1a)
@@ -866,7 +870,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.RENDER.SCENE.STALE](../../spec/viz/render/scene/stale/NODE.md) Stale marking and digest check (S, P1a)
 - [VIZ.VIEW.CAMERA.NAV](../../spec/viz/view/camera/nav/NODE.md) Transient navigation, standard orientations and fit (M, P1a)
 
-### Wave 18 (16 leaves)
+### Wave 18 (16 leaves, 0 built)
 
 - [AUTO.PROG.INTERP.MARK](../../spec/auto/prog/interp/mark/NODE.md) Mark and execute selected steps (S, P1b)
 - [AUTO.REC.LIFT.PASS](../../spec/auto/rec/lift/pass/NODE.md) Data-handle lifting pass, lift report and lift command (M, P1b)
@@ -885,7 +889,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.VIEW.MULTI](../../spec/viz/view/multi/NODE.md) Multi-viewport layouts and camera sync (M, P1b)
 - [VIZ.VIEW.TRANSP](../../spec/viz/view/transp/NODE.md) Per-entity and per-group transparency (S, P1a)
 
-### Wave 19 (28 leaves)
+### Wave 19 (28 leaves, 0 built)
 
 - [ALN.BFIT.BENCH](../../spec/aln/bfit/bench/NODE.md) Best-fit accuracy and timing corpus (M, P1a)
 - [ALN.PRE.CORPUS](../../spec/aln/pre/corpus/NODE.md) Prealignment test corpus, success metric and benchmark (M, P1b)
@@ -916,7 +920,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.DOCK.STATBAR](../../spec/viz/shell/dock/statbar/NODE.md) Status bar as provenance strip (S, P1a)
 - [VIZ.SHELL.THEME.L10N](../../spec/viz/shell/theme/l10n/NODE.md) UI text lookup hook and locale-formatted UI numbers (M, P1a)
 
-### Wave 20 (39 leaves)
+### Wave 20 (39 leaves, 0 built)
 
 - [ALN.BFIT.CONSTR](../../spec/aln/bfit/constr/NODE.md) Degree-of-freedom locks and weights for best-fit (M, P1a)
 - [ALN.BFIT.ICP.CORR](../../spec/aln/bfit/icp/corr/NODE.md) Surface best-fit correspondence search and tie-break (S, P1a)
@@ -958,7 +962,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.TREE.PROBLEMS](../../spec/viz/shell/tree/problems/NODE.md) Problems panel with catalogued fix actions (S, P1a)
 - [VIZ.VIEW.NAMED.RESTORE](../../spec/viz/view/named/restore/NODE.md) Exact restore with missing-reference report and headless check (M, P1a)
 
-### Wave 21 (49 leaves)
+### Wave 21 (49 leaves, 0 built)
 
 - [ALN.BFIT.ICP.METRIC](../../spec/aln/bfit/icp/metric/NODE.md) Point-to-point and point-to-plane residuals and Jacobians (S, P1a)
 - [ALN.BFIT.LOCAL](../../spec/aln/bfit/local/NODE.md) Best-fit scope resolution for local best-fit (S, P1a)
@@ -1010,7 +1014,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.PALETTE.KEYMAP](../../spec/viz/shell/palette/keymap/NODE.md) Generated menus, keymap, overrides and keyboard-completeness check (M, P1a)
 - [VIZ.VIEW.VISIB.MODEL](../../spec/viz/view/visib/model/NODE.md) Visibility rules, layers, explorer filters and precedence (M, P1a)
 
-### Wave 22 (68 leaves)
+### Wave 22 (68 leaves, 0 built)
 
 - [ALN.MODEL.HIER.FRAME](../../spec/aln/model/hier/frame/NODE.md) Named frames nested under alignments and frames from alignments (S, P1a)
 - [ALN.MODEL.HIER.GROUP](../../spec/aln/model/hier/group/NODE.md) Alignment groups (S, P1a)
@@ -1081,7 +1085,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.A11Y.DESCR](../../spec/viz/shell/a11y/descr/NODE.md) Deterministic describe-view command (M, P1a)
 - [VIZ.VIEW.VISIB.CMD](../../spec/viz/view/visib/cmd/NODE.md) Set-visibility command with isolate, show-only and layers (M, P1a)
 
-### Wave 23 (66 leaves)
+### Wave 23 (66 leaves, 0 built)
 
 - [ALN.BFIT.FEAT.SOLVE](../../spec/aln/bfit/feat/solve/NODE.md) Weighted feature best-fit solve, 2D mode and determinacy check (M, P1a)
 - [ALN.BFIT.ICP.LOOP](../../spec/aln/bfit/icp/loop/NODE.md) Surface best-fit iteration loop and R1 entry point (M, P1a)
@@ -1150,7 +1154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.TREE.RESULTS](../../spec/viz/shell/tree/results/NODE.md) Results table with outcome filters and fly-to (M, P1a)
 - [VIZ.SHELL.TREE.WHY](../../spec/viz/shell/tree/why/NODE.md) Why? provenance panel host (M, P1a)
 
-### Wave 24 (38 leaves)
+### Wave 24 (38 leaves, 0 built)
 
 - [ALN.BFIT.FEAT.CMD](../../spec/aln/bfit/feat/cmd/NODE.md) Feature best-fit command and alignment wrapping (S, P1a)
 - [ALN.BFIT.ICP.CMD](../../spec/aln/bfit/icp/cmd/NODE.md) Surface best-fit command and alignment wrapping (S, P1a)
@@ -1191,7 +1195,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.THEME.SCALE](../../spec/viz/shell/theme/scale/NODE.md) UI scale, target sizes and reduced motion (S, P1a)
 - [VIZ.SHELL.TREE.INSPECT](../../spec/viz/shell/tree/inspect/NODE.md) Inspector property grid (M, P1a)
 
-### Wave 25 (15 leaves)
+### Wave 25 (15 leaves, 0 built)
 
 - [ALN.PRE.GLOBAL.CMD](../../spec/aln/pre/global/cmd/NODE.md) Prealignment command, R1 pipeline entry and alignment wrapping (S, P1b)
 - [FLOW.DEADEND.WHY](../../spec/flow/deadend/why/NODE.md) Why? and fix-reachability coverage check over golden journals (M, P1a)
@@ -1209,7 +1213,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.OVERLAY.WHISK.WHISKER](../../spec/viz/overlay/whisk/whisker/NODE.md) Section whiskers, flags and amplification (M, P1b)
 - [VIZ.SHELL.THEME.CHECK](../../spec/viz/shell/theme/check/NODE.md) Rendered contrast, focus-visible and target-size checks per theme (S, P1a)
 
-### Wave 26 (25 leaves)
+### Wave 26 (25 leaves, 0 built)
 
 - [FLOW.SETUP.STEPS](../../spec/flow/setup/steps/NODE.md) Wizard step bindings to owning domain commands (M, P1a)
 - [GDT.CHAR.IDENT](../../spec/gdt/char/ident/NODE.md) Stable characteristic identity (S, P1a)
@@ -1237,7 +1241,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UNC.PROP.MCM.SAMP](../../spec/unc/prop/mcm/samp/NODE.md) Retained sample sets and their digest (S, P1a)
 - [VIZ.KIOSK.STEPS.FORM](../../spec/viz/kiosk/steps/form/NODE.md) Operator prompt and field renderers (M, P1b)
 
-### Wave 27 (20 leaves)
+### Wave 27 (20 leaves, 0 built)
 
 - [FLOW.INSPECT.DATA](../../spec/flow/inspect/data/NODE.md) Synthetic scan datasets with seeded known-truth deviations (M, P1b)
 - [FLOW.SETUP.WIZARD](../../spec/flow/setup/wizard/NODE.md) Wizard state machine, commands and resume (M, P1a)
@@ -1260,7 +1264,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UNC.PROP.NLIN](../../spec/unc/prop/nlin/NODE.md) Nonlinearity assessment for LPU (M, P1a)
 - [VIZ.OVERLAY.GDTGLYPH.COMPOSE](../../spec/viz/overlay/gdtglyph/compose/NODE.md) Feature control frame and datum glyph composition (M, P1a)
 
-### Wave 28 (33 leaves)
+### Wave 28 (33 leaves, 0 built)
 
 - [ALN.DATUM.SYS.BUILD](../../spec/aln/datum/sys/build/NODE.md) Datum-system frame build through GDT.DRF and unconstrained-DoF policy (M, P1a)
 - [FLOW.INSPECT.J5](../../spec/flow/inspect/j5/NODE.md) J5 kiosk production run of a released scan program (M, P1b)
@@ -1296,7 +1300,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.OVERLAY.GDTGLYPH.PLACE](../../spec/viz/overlay/gdtglyph/place/NODE.md) GD&T annotation anchoring, occlusion fade and hover (M, P1a)
 - [VIZ.OVERLAY.SCALEED](../../spec/viz/overlay/scaleed/NODE.md) Colour-scale editor (M, P1b)
 
-### Wave 29 (33 leaves)
+### Wave 29 (33 leaves, 0 built)
 
 - [ALN.DATUM.SYS.CMD](../../spec/aln/datum/sys/cmd/NODE.md) Datum-system alignment command and recording (S, P1a)
 - [GDT.DIM.SECT.CMDS](../../spec/gdt/dim/sect/cmds/NODE.md) Section distance, angle and radius commands (M, P1b)
@@ -1332,7 +1336,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.OVERLAY.GDTGLYPH.PMIQA](../../spec/viz/overlay/gdtglyph/pmiqa/NODE.md) Graphic PMI quality-check overlay (S, P1b)
 - [VIZ.OVERLAY.WHISK.VECTOR](../../spec/viz/overlay/whisk/vector/NODE.md) Colour vector plots for point groups (M, P1b)
 
-### Wave 30 (17 leaves)
+### Wave 30 (17 leaves, 0 built)
 
 - [ALN.DATUM.ISO](../../spec/aln/datum/iso/NODE.md) ISO 5459 datum-system alignment enablement (S, P1b)
 - [GDT.DIM.SECT.STALE](../../spec/gdt/dim/sect/stale/NODE.md) Staleness of section results after a re-cut (S, P1b)
@@ -1352,7 +1356,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.INBOX.ACTIONS.CHIPS](../../spec/viz/inbox/actions/chips/NODE.md) Action chips, apply through promotion, edit and explain (M, P1a)
 - [VIZ.OVERLAY.LABEL.DRAW](../../spec/viz/overlay/label/draw/NODE.md) Label value resolution, kernel formatting, leaders and text (M, P1a)
 
-### Wave 31 (16 leaves)
+### Wave 31 (16 leaves, 0 built)
 
 - [GDT.ZONE.GROUP.PATTERN](../../spec/gdt/zone/group/pattern/NODE.md) Shared-pose solve for a pattern (M, P1a)
 - [GDT.ZONE.MATL.VCB](../../spec/gdt/zone/matl/vcb/NODE.md) Virtual-condition boundary containment (M, P1a)
@@ -1371,7 +1375,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.INBOX.ACTIONS.BATCH](../../spec/viz/inbox/actions/batch/NODE.md) Plan preview and batch apply by span (M, P1a)
 - [VIZ.OVERLAY.LABEL.LAYOUT](../../spec/viz/overlay/label/layout/NODE.md) Deterministic automatic label layout (M, P1a)
 
-### Wave 32 (14 leaves)
+### Wave 32 (14 leaves, 0 built)
 
 - [GDT.LOC.ORIENT.ZONE](../../spec/gdt/loc/orient/zone/NODE.md) Orientation zone evaluation with fixed direction and free location (M, P1a)
 - [GDT.LOC.POS.RFS](../../spec/gdt/loc/pos/rfs/NODE.md) True position and RFS position value of a single feature (M, P1a)
@@ -1388,7 +1392,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.STATS.DASH.DEF](../../spec/rpt/stats/dash/def/NODE.md) Dashboard definition, save and list (S, P1b)
 - [RPT.STATS.DSET.EXCL](../../spec/rpt/stats/dset/excl/NODE.md) Automatic and user exclusions (S, P1b)
 
-### Wave 33 (10 leaves)
+### Wave 33 (10 leaves, 0 built)
 
 - [GDT.FORM.STRAIGHT.DERIVED](../../spec/gdt/form/straight/derived/NODE.md) Straightness of a derived median line with optional MMC (M, P1a)
 - [GDT.LOC.ORIENT.CMDS](../../spec/gdt/loc/orient/cmds/NODE.md) Parallelism, perpendicularity and angularity commands (M, P1a)
@@ -1401,7 +1405,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.OUTPUT.PDF.WRITE](../../spec/rpt/output/pdf/write/NODE.md) Deterministic PDF writer and the PDF export command (M, P1a)
 - [RPT.STATS.DSET.MAT](../../spec/rpt/stats/dset/mat/NODE.md) Data-set materialisation, ordering and digest (M, P1b)
 
-### Wave 34 (13 leaves)
+### Wave 34 (13 leaves, 0 built)
 
 - [GDT.FORM.STRAIGHT.CMD](../../spec/gdt/form/straight/cmd/NODE.md) Straightness command and dispatch (S, P1a)
 - [GDT.LOC.POS.PATTERN](../../spec/gdt/loc/pos/pattern/NODE.md) Pattern position with one shared pose (M, P1a)
@@ -1417,7 +1421,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.STATS.SPC.SUB](../../spec/rpt/stats/spc/sub/NODE.md) Subgrouping of a data set (S, P1b)
 - [RPT.STATS.TREND.BUILD](../../spec/rpt/stats/trend/build/NODE.md) Trend and histogram chart builder (M, P1b)
 
-### Wave 35 (8 leaves)
+### Wave 35 (8 leaves, 0 built)
 
 - [GDT.LOC.POS.CMD](../../spec/gdt/loc/pos/cmd/NODE.md) Position command and dual-variant reporting (M, P1a)
 - [GDT.PROF.SURF.CMD](../../spec/gdt/prof/surf/cmd/NODE.md) Surface-profile command and payload (M, P1b)
@@ -1428,7 +1432,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.OUTPUT.PDF.CHART](../../spec/rpt/output/pdf/chart/NODE.md) Vector chart painter for ChartSeries (M, P1b)
 - [RPT.STATS.SPC.LIM](../../spec/rpt/stats/spc/lim/NODE.md) Control-limit calculation (M, P1b)
 
-### Wave 36 (16 leaves)
+### Wave 36 (16 leaves, 0 built)
 
 - [ECO.APPS.MANIFEST.SCHEMA](../../spec/eco/apps/manifest/schema/NODE.md) Manifest schema, validation and start-up loader (M, P1a)
 - [FLOW.INSPECT.J1](../../spec/flow/inspect/j1/NODE.md) J1 scan first-article inspection from CAD and PMI (M, P1b)
@@ -1447,7 +1451,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.STATS.CAP.SIGMA](../../spec/rpt/stats/cap/sigma/NODE.md) Within-subgroup spread estimators (S, P1b)
 - [RPT.STATS.SPC.FREEZE](../../spec/rpt/stats/spc/freeze/NODE.md) Frozen control limits (S, P1b)
 
-### Wave 37 (12 leaves)
+### Wave 37 (12 leaves, 0 built)
 
 - [ECO.APPS.HANDOFF.EDITORS](../../spec/eco/apps/handoff/editors/NODE.md) Which installed apps can edit an element (S, P1b)
 - [ECO.APPS.MANIFEST.COMPOSE](../../spec/eco/apps/manifest/compose/NODE.md) Order-independent manifest composition (S, P1a)
@@ -1462,7 +1466,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.STATS.CAP.CMD](../../spec/rpt/stats/cap/cmd/NODE.md) Capability command (M, P1b)
 - [RPT.STATS.SPC.CHART](../../spec/rpt/stats/spc/chart/NODE.md) Control-chart series builder (M, P1b)
 
-### Wave 38 (5 leaves)
+### Wave 38 (5 leaves, 0 built)
 
 - [ECO.APPS.HANDOFF.OPENIN](../../spec/eco/apps/handoff/openin/NODE.md) Open-in hand-off with write-lock release (M, P1b)
 - [ECO.APPS.HANDOFF.RO](../../spec/eco/apps/handoff/ro/NODE.md) Edit guard and read-only provenance for foreign elements (M, P1b)
@@ -1470,7 +1474,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [RPT.DESIGN.UI.KEYS](../../spec/rpt/design/ui/keys/NODE.md) Keyboard operation and accessibility of the designer (S, P1b)
 - [RPT.STATS.DASH.OPEN](../../spec/rpt/stats/dash/open/NODE.md) Dashboard open and tile evaluation (M, P1b)
 
-### Wave 39 (2 leaves)
+### Wave 39 (2 leaves, 0 built)
 
 - [ECO.APPS.INSPECT](../../spec/eco/apps/inspect/NODE.md) Inspect app composition (scan-to-CAD inspection) (M, P1b)
 - [ECO.APPS.REPORT](../../spec/eco/apps/report/NODE.md) Report app composition (reporting and SPC) (M, P1a)
