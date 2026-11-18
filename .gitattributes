@@ -12,5 +12,8 @@ fixtures/io/dmis/parse/lex/** -text
 fixtures/flow/pkg/** -text
 # IO.RES.CSV.MAP fixtures: digests and RFC 4180 records are compared byte for byte (CR, LF, tabs).
 fixtures/io/res/csv/map/** -text
+# PLAT.GPU.POLICY fixtures are hand-labelled byte for byte: never convert line endings.
+fixtures/plat/gpu/policy-*.toml -text
+fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text

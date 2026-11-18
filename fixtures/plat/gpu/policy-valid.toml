@@ -1,0 +1,30 @@
+# PLAT.GPU.POLICY AC-1 (hand-written): the four proposal rows. Every Tier 1 / Tier 2 row of
+# fixtures/plat/matrix/valid.toml that is effective at P1a (windows x86_64, ubuntu x86_64,
+# macos aarch64) has a row here; Linux aarch64 is listed too (tier2 from P1b in that fixture).
+# Expected: exit 0, "policy: 4 rows, 0 errors". Minimum versions are illustrative [unverified].
+schema_version = 1
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "vulkan", "software"]
+min.dx12 = { api = "11.0" }
+min.vulkan = { api = "1.1", driver = "1.0" }
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "linux"
+arch = "aarch64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "macos"
+arch = "aarch64"
+backends = ["metal", "software"]
+min.metal = { api = "2" }

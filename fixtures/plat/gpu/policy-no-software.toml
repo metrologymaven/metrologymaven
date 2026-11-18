@@ -1,0 +1,22 @@
+# PLAT.GPU.POLICY AC-4 (hand-written): row 2 (linux x86_64) has no software fallback; every
+# other rule holds. Expected: exit 1 with exactly one diagnostic, NoSoftwareFallback (row 2).
+schema_version = 1
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "vulkan", "software"]
+min.dx12 = { api = "11.0" }
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan"]
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "macos"
+arch = "aarch64"
+backends = ["metal", "software"]
+min.metal = { api = "2" }

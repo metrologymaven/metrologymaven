@@ -1,0 +1,18 @@
+# PLAT.GPU.POLICY AC-3 (hand-written): no macos aarch64 row. Against
+# fixtures/plat/matrix/valid.toml at phase P1a, macos 15..16 aarch64 is tier1 since P1a, so it
+# is effective. Expected: exit 1 with exactly one diagnostic,
+# NoPolicyRow { os: macos, arch: aarch64 }.
+schema_version = 1
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "vulkan", "software"]
+min.dx12 = { api = "11.0" }
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" }
