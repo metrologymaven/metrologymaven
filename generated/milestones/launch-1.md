@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**18** of **1336** leaves built in code ([B]).
+**19** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 12 built)
+### Wave 1 (125 leaves, 14 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -37,7 +37,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
 - [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
-- [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
+- [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
 - [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
@@ -78,7 +78,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
 - [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
 - [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
-- [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
+- [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
 - [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
 - [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 6 built)
+### Wave 2 (121 leaves, 5 built)
 
 - [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -217,7 +217,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
 - [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
 - [B] [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
-- [B] [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
+- [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
 - [B] [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
 - [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
 - [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
