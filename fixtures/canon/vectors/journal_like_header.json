@@ -1,0 +1,11 @@
+{
+  "schema_version": 1, "kind": "command", "stream": "main", "seq": "41",
+  "prev": "sha256:00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+  "branch": "main", "time": {"utc": "2026-11-17T09:30:00Z", "mono_ns": "123456789012", "sync": "ntp"},
+  "principal": {"kind": "human", "commit": "sha256:ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"},
+  "ai_assistance": "suggested",
+  "command": {"id": "geo.fit.plane", "major": 1, "class": "R1", "determinism": "D0", "seed": "0",
+              "inputs": [], "outputs": [], "algorithms": ["lsq-plane@1"]},
+  "manifests": {"registry": "sha256:aa", "kernel": "sha256:bb"},
+  "tolerance": "0x3f50624dd2f1a9fc"
+}

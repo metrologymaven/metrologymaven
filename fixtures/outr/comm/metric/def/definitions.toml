@@ -1,0 +1,22 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Valid baseline definitions; pairs with sources.toml.
+
+[[metric]]
+id = "repo_stars"
+title = "Repository stars"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"
+biases = ["Bots are not excluded."]
+
+[[metric]]
+id = "contributors"
+title = "Distinct contributors per quarter"
+source = "repo-api"
+method = "git_history"
+unit = "contributors"
+aggregation = "last"
+biases = ["One person with two identities is counted twice."]

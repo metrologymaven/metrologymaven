@@ -1,0 +1,7 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Unparsable: duplicate key. Expected: exit 2, parse.
+
+[[metric]]
+id = "a"
+id = "b"

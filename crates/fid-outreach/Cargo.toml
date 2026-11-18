@@ -1,6 +1,6 @@
 [package]
 name = "fid-outreach"
-description = "Metrology Maven outreach tooling (domain OUTR): site and docs quality gates and related subcommands"
+description = "Metrology Maven outreach tooling (domain OUTR): adoption metric definitions, site and docs quality gates"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,10 +12,13 @@ publish = false
 name = "fid-outreach"
 path = "src/main.rs"
 
-# HTML and CSS are read by bounded in-house parsers (no parser crates). fid-canon: reads the
-# token and configuration JSON and writes the report as canonical JSON.
+# toml: reads the definition and source files as untyped tables (no serde derive); same pinned
+# dependency as fid-platform and fid-knp1-lint, already in Cargo.lock. Duplicate keys and
+# malformed TOML are rejected by the parser. fid-canon: writes the --json report as canonical JSON,
+# and reads the a11y token and configuration JSON. HTML and CSS (qa a11y) use bounded in-house parsers.
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]
 workspace = true

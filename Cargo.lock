@@ -179,6 +179,7 @@ name = "fid-outreach"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "toml",
 ]
 
 [[package]]
