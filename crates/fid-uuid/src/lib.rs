@@ -28,7 +28,6 @@ impl fmt::Display for UuidError {
 
 impl std::error::Error for UuidError {}
 
-
 /// A 128-bit UUID. Immutable: there is no way to change one in place.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Uuid([u8; 16]);
