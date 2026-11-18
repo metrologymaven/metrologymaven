@@ -12,13 +12,10 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
-<<<<<<< HEAD
+                     cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
                      cargo xtask rel version-compare <a> <b>";
-=======
-                     cargo xtask personas-check [--personas <json>] [--apps <toml>]";
->>>>>>> origin/main
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -31,12 +28,9 @@ fn main() -> ExitCode {
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => plat_matrix(&args),
         Some("pins") => pins::cli(&args[1..]),
-<<<<<<< HEAD
+        Some("personas-check") => personas_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
-=======
-        Some("personas-check") => personas_check(&args[1..]),
->>>>>>> origin/main
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");

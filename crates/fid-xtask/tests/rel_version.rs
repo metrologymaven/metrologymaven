@@ -187,18 +187,10 @@ fn binaries_ok_and_json_report() {
 /// name order, after the workspace check.
 #[test]
 fn broken_binaries_fail() {
-    let e = version_check(
-        "v1.4.0",
-        Channel::Stable,
-        &fixture("bin-broken"),
-        Some(&fixture("bin-broken").join("bin")),
-    )
-    .unwrap_err();
+    let e = version_check("v1.4.0", Channel::Stable, &fixture("bin-broken"), Some(&fixture("bin-broken").join("bin")))
+        .unwrap_err();
     let got: Vec<(&str, Option<&str>)> = e.iter().map(|f| (f.code(), f.subject())).collect();
-    assert_eq!(
-        got,
-        vec![("VERSION-BINARY-FAILED", Some("fid")), ("VERSION-BINARY-FAILED", Some("fid-verify"))]
-    );
+    assert_eq!(got, vec![("VERSION-BINARY-FAILED", Some("fid")), ("VERSION-BINARY-FAILED", Some("fid-verify"))]);
     assert!(matches!(&e[0], VersionError::BinaryFailed { reason, .. } if reason.contains("not JSON")), "{e:?}");
 }
 

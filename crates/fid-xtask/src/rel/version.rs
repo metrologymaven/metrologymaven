@@ -446,7 +446,11 @@ pub fn binary_version(path: &Path, timeout: Duration) -> Result<String, String> 
 fn compare_reported(binary: &str, found: &str, expected: &Version) -> Option<VersionError> {
     match parse_version(found) {
         Ok(v) if v == *expected => None,
-        _ => Some(VersionError::Mismatch { binary: binary.to_string(), found: clip(found), expected: expected.to_string() }),
+        _ => Some(VersionError::Mismatch {
+            binary: binary.to_string(),
+            found: clip(found),
+            expected: expected.to_string(),
+        }),
     }
 }
 
