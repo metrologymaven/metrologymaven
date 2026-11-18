@@ -1,0 +1,5 @@
+/* Synthetic fixture: comment tricks. */
+@font-face { src: url(/f/*.woff2) }
+@font-face { src: url(https://fonts.example.net/o.woff2) } /* */
+/* @import url(https://fonts.example.net/p.css); */
+/* it's */ @import url(https://fonts.example.net/q.css);
