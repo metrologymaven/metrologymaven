@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.LOC.DERIV-001, REQ-GDT.LOC.DERIV-002, REQ-GDT.LOC.DERIV-003]
 covers: []
 depends_on: [GDT.LOC.DERIV.TYPES, KRN.LSQ]

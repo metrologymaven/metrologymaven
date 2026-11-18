@@ -2,3 +2,9 @@ generated/logs/
 __pycache__/
 *.pyc
 plan/
+
+# build output
+target/
+site/dist/
+node_modules/
+.wrangler/

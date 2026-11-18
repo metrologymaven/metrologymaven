@@ -1,0 +1,14 @@
+[package]
+name = "fid-canon"
+description = "RFC 8785 canonical JSON and SHA-256 digests for Metrology Maven journals (spec node CORE.JRN.CANON)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sha2 = "0.10"
+
+[lints]
+workspace = true

@@ -1,0 +1,24 @@
+name: expert-queue
+# Keeps one GitHub issue per spec node that needs a human expert (needs_expert:),
+# labelled expert:<area>, so experts can find and claim work without a maintainer.
+on:
+  push:
+    branches: [main]
+    paths: ["spec/**", "tools/scope.py", "tools/sync_expert_issues.py"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency: expert-queue
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Sync expert-queue issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/sync_expert_issues.py

@@ -1,0 +1,32 @@
+name: rust
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
+        run: node fixtures/core/jrn/canon/runner.mjs
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q -p fid-cli -- canon)
+          test "$out" = '{"a":[1e+21,0.1],"b":1}'

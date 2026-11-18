@@ -13,10 +13,20 @@ Every unit of work in this project is a node in the spec tree, which makes it ea
 | 5 | **Expand an open node** (split it or finish it as a leaf) | `spec/**/NODE.md` with `status: open` | Follow `prompts/expand-node.md` |
 | 6 | **Become a domain maintainer** | `GOVERNANCE.md` | Sustained contributions |
 
+## Expert contributions
+
+Some nodes must be written or reviewed by a person with real domain expertise: GD&T interpretation, measurement uncertainty, CMM control. They carry `needs_expert: <area>` in their frontmatter, agents skip them, and each one has a GitHub issue labelled `expert-queue` and `expert:<area>` (kept in sync automatically from [generated/EXPERT-QUEUE.md](generated/EXPERT-QUEUE.md)).
+
+1. Browse issues labelled [`expert-queue`](../../issues?q=is%3Aissue+is%3Aopen+label%3Aexpert-queue), or open an **Offer expertise** issue and we'll route work to you.
+2. Comment `/claim` to be assigned (`/unclaim` to release).
+3. Either expand the node yourself, or comment your review in your own words and an agent drafts the PR for you to approve.
+
+Experts are credited in the node's `owners` field, in `CONTRIBUTORS.md` and in release notes.
+
 ## Claiming a node
 
 1. Run `python tools/scope.py open` or look at `generated/INDEX.md`.
-2. Open an issue with the **Expand node** template, or comment on the existing one.
+2. Open an issue with the **Expand node** template, or comment `/claim` on the existing one (you're assigned automatically).
 3. Set `claimed_by: <your-handle>` in the node's frontmatter in your PR. Claims older than 14 days with no PR can be taken over.
 
 ## Expanding with an agent

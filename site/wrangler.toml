@@ -1,0 +1,20 @@
+# Cloudflare Worker serving metrologymaven.io (D-039).
+# Same Worker name as the earlier site, so the custom-domain routes set in the
+# dashboard stay attached. Build first:  python site/build.py
+# Deploy:  cd site && npx wrangler@4 deploy
+name = "metrologymaven-site"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+
+[assets]
+directory = "dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+html_handling = "auto-trailing-slash"
+run_worker_first = true
+
+# Server-side page counts: no cookies, no client script, no third parties.
+[[analytics_engine_datasets]]
+binding = "SITE_AE"
+dataset = "mm_site"

@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: uncertainty
 satisfies: [REQ-UNC.ORS.FLT-001, REQ-UNC.ORS.FLT-003]
 covers: []
 depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]

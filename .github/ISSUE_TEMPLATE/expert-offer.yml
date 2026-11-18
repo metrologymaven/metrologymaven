@@ -1,0 +1,42 @@
+name: Offer expertise
+description: You know GD&T, uncertainty, CMMs, scanners, trackers or quality systems and want to help.
+title: "[expert offer] "
+labels: ["expert-offer"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. The fastest way to help is to pick an issue labelled `expert-queue` and comment `/claim`.
+        Use this form if you'd rather tell us what you know and let us route work to you.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - GD&T interpretation (ASME Y14.5, ISO GPS)
+        - Measurement uncertainty (GUM, ISO 15530, ISO 14253)
+        - CMM controllers and motion
+        - Instrument hardware and drivers
+        - Optical scanning and CT
+        - Laser trackers and large-volume metrology
+        - Quality systems (AS9102, PPAP, ISO 17025)
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: Roles, software you have used, standards committees, certifications (e.g. ASME GDTP). Share only what you're happy to make public.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How would you like to help?
+      options:
+        - Review agent drafts and comment (a few hours a month)
+        - Write or expand spec nodes myself
+        - Become a domain maintainer
+    validations:
+      required: true

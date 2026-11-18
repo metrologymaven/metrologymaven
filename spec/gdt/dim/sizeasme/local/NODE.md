@@ -9,6 +9,7 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.DIM.SIZEASME-001, REQ-GDT.DIM.SIZEASME-004]
 covers: [PW.GDT.01]
 depends_on: [GDT.RES.RESOLVE, KRN.LSQ]

@@ -9,6 +9,7 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
+needs_expert: uncertainty
 satisfies: [REQ-UNC.ORS.SIZE-002, REQ-UNC.ORS.SIZE-003]
 covers: []
 depends_on: [UNC.ORS.TRACE, UNC.ORS.SIZE.GEOM]

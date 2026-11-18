@@ -1,0 +1,18 @@
+[package]
+name = "fid-cli"
+description = "The `fid` command-line interface of Metrology Maven"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "fid"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

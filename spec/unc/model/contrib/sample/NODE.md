@@ -9,6 +9,7 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
+needs_expert: uncertainty
 satisfies: [REQ-UNC.MODEL.CONTRIB-004, REQ-UNC.MODEL.CONTRIB-005]
 covers: []
 depends_on: [UNC.MODEL.CONTRIB.CONTRACT]

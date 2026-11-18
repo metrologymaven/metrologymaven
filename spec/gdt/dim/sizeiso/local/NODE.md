@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.DIM.SIZEISO-004]
 covers: []
 depends_on: [GDT.RES.RESOLVE, KRN.LSQ]

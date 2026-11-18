@@ -14,4 +14,4 @@ jobs:
       - name: Validate spec tree and coverage
         run: python tools/scope.py check
       - name: Generated reports are up to date
-        run: git diff --exit-code -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md
+        run: git diff --exit-code -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md

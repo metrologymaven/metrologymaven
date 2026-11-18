@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.LOC.ORIENT-001, REQ-GDT.LOC.ORIENT-004]
 covers: [PW.GDT.03]
 depends_on: [GDT.LOC.ORIENT.ZONE, KRN.ENV, GDT.RES.RESOLVE]

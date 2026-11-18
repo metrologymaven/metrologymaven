@@ -9,6 +9,7 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.DRF.SIM-002, REQ-GDT.DRF.SIM-004]
 covers: []
 depends_on: [GDT.DRF.SIM.ROCK, GDT.RES.RESOLVE]

@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.LOC.POS-001, REQ-GDT.LOC.POS-004]
 covers: [GOM.GDT.08]
 depends_on: [GDT.LOC.POS.RFS, GDT.LOC.DERIV.TYPES, GDT.ZONE.MATL]

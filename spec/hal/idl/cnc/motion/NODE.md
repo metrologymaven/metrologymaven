@@ -9,6 +9,7 @@ phase: P2
 size: L
 owners: []
 claimed_by:
+needs_expert: cmm-control
 satisfies: [REQ-HAL.IDL.CNC-001, REQ-HAL.IDL.CNC-002, REQ-HAL.IDL.CNC-006]
 covers: []
 depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.CNC.TACT, HAL.IDL.GEN.FMT]

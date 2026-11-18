@@ -39,6 +39,8 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 10. **Research-risk nodes (D-036 rule 4).** Nodes under KRN.MAN.VAL, UNC.PROP, UNC.MODEL.SUBST, UNC.ORS, TRUST.REPLAY and AGENT.REDTEAM state acceptance criteria as **measurable hypotheses against public reference data**: "H-n: method X achieves ≤ Y against reference set Z, measured by W".
 11. **Paid-service boundary (D-036 rule 3).** Never move a capability the open apps need behind a paid service. Nodes that define a paid service say `service` in their Purpose.
 12. **Optional private context.** If `../docs/funding-strategy.md` exists, read it for context before expanding ECO, TRUST, QUAL, OUTR, KRN, GDT, UNC or AGENT nodes. Never copy its contents into this repository. Public contributors won't have it, and that's fine.
+13. **Expert nodes (D-039 pipeline).** Never expand a node that has `needs_expert:` set; `scope.py open` already skips them. You may draft a PR from an expert's written review on its issue, naming the expert as reviewer. Add `needs_expert: <area>` (areas in `tools/scope.py`) to an open node only when getting it wrong would make measurements wrong and no public reference settles it.
+
 ## Working rules (adapted from the Craft family's house rules)
 
 1. **A person is accountable** for everything an agent opens or comments. The PR description names the agent tool that generated content (D-036 rule 2), and every commit is DCO signed-off.

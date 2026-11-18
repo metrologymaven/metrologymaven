@@ -1,0 +1,33 @@
+name: claim
+# "/claim" on an issue assigns the commenter; "/unclaim" releases it.
+# Works on expert-queue and expand-node issues so contributors never wait for a maintainer.
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  issues: write
+jobs:
+  claim:
+    if: ${{ !github.event.issue.pull_request && (startsWith(github.event.comment.body, '/claim') || startsWith(github.event.comment.body, '/unclaim')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign or release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          WHO: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+          ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ' ') }}
+        run: |
+          if [[ "$BODY" == /unclaim* ]]; then
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-assignee "$WHO"
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-label claimed || true
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Released. Anyone can \`/claim\` this now."
+          elif [ -n "$ASSIGNEES" ] && [[ " $ASSIGNEES " != *" $WHO "* ]]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "@$WHO this is already claimed by $ASSIGNEES. Claims with no activity for 14 days are released; comment here if you'd like to help in the meantime."
+          else
+            gh label create claimed --repo "$REPO" --color 2e7d4f --description "Someone is working on this" --force
+            gh issue edit "$ISSUE" --repo "$REPO" --add-assignee "$WHO" --add-label claimed
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Claimed by @$WHO. Next: read the linked spec node and \`prompts/expand-node.md\`, then open a PR (or comment your review here and an agent will draft the PR). Comment \`/unclaim\` to release."
+          fi

@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.PROF.ZDEF-001, REQ-GDT.PROF.ZDEF-002]
 covers: []
 depends_on: [GDT.PROF.ZDEF.UNIF, GDT.PROF.DEV, GEO.CAD.TOPO]

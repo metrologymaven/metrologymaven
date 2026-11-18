@@ -34,3 +34,5 @@ A. Shortlist 5–10 coined names and get a counsel knockout search. Don't publis
 ## Decision
 
 **Accepted as a process, 2026-11-16, founder.** Shortlist 5-10 coined names, run a counsel knockout search, publish nothing before then. The name itself is still to be chosen; `fid`/Fiducial stays the internal working name, with one global rename at first publication.
+
+**Superseded in part by [D-039](D-039-metrology-maven-name-and-public-home.md), 2026-11-17:** the name is Metrology Maven; the `fid` identifiers stay.

@@ -9,6 +9,7 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
+needs_expert: uncertainty
 satisfies: [REQ-UNC.INST.MPE-001, REQ-UNC.INST.MPE-002, REQ-UNC.INST.MPE-005]
 covers: [SA.UNC.01]
 depends_on: [UNC.INST.MPE.DERIVE]

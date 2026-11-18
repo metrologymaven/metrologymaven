@@ -9,6 +9,7 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
+needs_expert: gdt
 satisfies: [REQ-GDT.DRF.MOB-001, REQ-GDT.DRF.MOB-004]
 covers: [PW.GDT.07]
 depends_on: [GDT.DRF.MOB.REPR, GDT.DRF.SIM, GDT.RES.RESOLVE, KRN.ENV]

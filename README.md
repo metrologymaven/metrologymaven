@@ -1,17 +1,38 @@
-# Fiducial spec tree
+# Metrology Maven
 
-> **Working name:** Fiducial (internal only; see [D-002](decisions/D-002-project-name.md)).
-> **Stage:** specification. This repository holds requirements and design, **not implementation**.
+**Open-source dimensional metrology software**, built in the open: [metrologymaven.io](https://metrologymaven.io)
 
-Fiducial is an open-source dimensional metrology platform meant to replace GOM/ZEISS INSPECT, PolyWorks, CMM programming suites (PC-DMIS, CALYPSO) and SpatialAnalyzer. It is MCP and CLI first, records everything, renders on the GPU (wgpu), and is written in modern languages: Rust everywhere (including the web, via WASM) and Python for user scripting. See [design lessons from the Craft app family](research/artcraft-design-lessons.md).
+> **Stage:** pre-alpha. The whole product is specified as a tree of small, testable work orders, and the first code (`crates/`) is being built from it. Nothing is usable for measurement yet.
 
-This repository decomposes the whole project **recursively** until every piece is small enough to become one implementation prompt. It also contains the tooling that lets people and coding agents keep growing the tree, so it can grow without one central planner.
+Metrology Maven aims to replace GOM/ZEISS INSPECT, PolyWorks, CMM programming suites (PC-DMIS, CALYPSO) and SpatialAnalyzer with four focused apps on one shared core: **Report**, **Inspect**, **Probe** and **Network**. It is MCP and CLI first, records everything, renders on the GPU (wgpu), and is written in Rust (including the web, via WASM), with Python for user scripting. Results can be re-checked by anyone with the free verifier.
+
+This one repository holds everything:
+
+| Path | What |
+|---|---|
+| [`spec/`](spec/), [`seeds/`](seeds/), [`decisions/`](decisions/) | The specification tree, competitor inventories and decision records |
+| [`crates/`](crates/) | The Rust workspace (`fid` CLI, `fid-*` crates) |
+| [`site/`](site/) | The website, generated from the spec tree (`python site/build.py`) |
+| [`fixtures/`](fixtures/) | Test data and conformance vectors |
+| [`generated/`](generated/) | Reports generated from the tree, including the [expert queue](generated/EXPERT-QUEUE.md) |
+
+**Want to help?** If you know GD&T, measurement uncertainty or CMM control, see the [expert queue](generated/EXPERT-QUEUE.md) and comment `/claim` on an `expert-queue` issue. Everyone else: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+The internal command and crate prefix `fid` comes from *fiducial*, a reference mark in metrology ([D-039](decisions/D-039-metrology-maven-name-and-public-home.md)).
+
+## Build
+
+```bash
+cargo test --workspace                          # Rust crates
+echo '{"b":1,"a":2}' | cargo run -q -p fid-cli -- canon
+python site/build.py                            # website into site/dist/
+```
 
 ## How the tree grows
 
 ```
-spec/NODE.md                     L0  product (FID)
-spec/<domain>/NODE.md            L1  17 domains (CORE, GEO, KRN, ALN, GDT, ...)
+spec/NODE.md                     L0  product
+spec/<domain>/NODE.md            L1  26 domains (CORE, GEO, KRN, ALN, GDT, ...)
 spec/<domain>/<sub>/NODE.md      L2  subsystems (usually one crate each)
 ...                              L3+ modules -> features -> tasks (leaves)
 ```
@@ -70,4 +91,8 @@ The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), 
 
 ## Background
 
-This tree is seeded from the concept workspace one folder up (`../docs/`), in particular Design Baseline v3.1 and docs 01–10. That workspace planned a solo commercial product. This repository takes the open-source, community-built direction. Where the two disagree, the disagreement is recorded as a decision instead of being resolved silently.
+The tree was seeded from the founder's earlier design baseline. Where the open-source direction disagrees with it, the disagreement is recorded as a decision instead of being resolved silently.
+
+## Licence
+
+Code: MIT OR Apache-2.0. Specification and documentation: CC-BY-4.0. "Metrology Maven" is a trademark of its steward company and is not covered by these licences. See [LICENSE.md](LICENSE.md).

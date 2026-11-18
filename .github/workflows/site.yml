@@ -1,0 +1,36 @@
+name: site
+# Builds metrologymaven.io from the spec tree on every PR; deploys on main (D-039).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: site-${{ github.ref }}
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build static site
+        run: python site/build.py
+      - name: No third-party origins in built pages (REQ-OUTR.SITE-007)
+        run: |
+          if grep -rEo '(src|href)="https?://[^"]+' site/dist --include=*.html --include=*.css \
+               | grep -vE '="https://(metrologymaven\.io|github\.com/metrologymaven)' \
+               | grep -E '(src)=|stylesheet' ; then
+            echo "Built pages load third-party resources"; exit 1; fi
+      - name: Deploy to Cloudflare
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 4a32f08b7717354bc88faae8f95f425c
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN secret not set; skipping deploy."; exit 0; fi
+          npx --yes wrangler@4 deploy
