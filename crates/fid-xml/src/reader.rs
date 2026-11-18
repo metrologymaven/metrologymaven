@@ -705,7 +705,10 @@ impl<R: Read> XmlReader<R> {
                 }
                 decls.push(NsBinding { prefix: None, uri: value });
             } else if prefix == Some("xmlns") {
-                let bad = local == "xmlns" || value.is_empty() || value == XMLNS_NS || ((local == "xml") != (value == XML_NS));
+                let bad = local == "xmlns"
+                    || value.is_empty()
+                    || value == XMLNS_NS
+                    || ((local == "xml") != (value == XML_NS));
                 if bad {
                     return Err(self.malformed("bad_namespace_declaration", at));
                 }
@@ -783,14 +786,16 @@ impl<R: Read> XmlReader<R> {
 /// Parses `<?xml` VersionInfo EncodingDecl? SDDecl? S? (the bytes before `?>`).
 /// Returns the byte range of the encoding name, or the index of the first error.
 fn parse_decl(d: &[u8]) -> Result<Option<(usize, usize)>, usize> {
-    let (mut i, (vs, ve)) = pseudo_attr(d, 5, b"version")?.ok_or(5usize)?;
+    let version_attr = pseudo_attr(d, 5, b"version")?.ok_or(5usize)?;
+    let (vs, ve) = version_attr.value;
+    let mut i = version_attr.next;
     let version = d.get(vs..ve).unwrap_or(&[]);
     let digits = version.strip_prefix(b"1.").unwrap_or(&[]);
     if digits.is_empty() || !digits.iter().all(u8::is_ascii_digit) {
         return Err(vs);
     }
     let mut encoding = None;
-    if let Some((next, (es, ee))) = pseudo_attr(d, i, b"encoding")? {
+    if let Some(Pseudo { next, value: (es, ee) }) = pseudo_attr(d, i, b"encoding")? {
         let e = d.get(es..ee).unwrap_or(&[]);
         let valid = e.first().is_some_and(u8::is_ascii_alphabetic)
             && e.iter().all(|&b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'));
@@ -800,7 +805,7 @@ fn parse_decl(d: &[u8]) -> Result<Option<(usize, usize)>, usize> {
         encoding = Some((es, ee));
         i = next;
     }
-    if let Some((next, (ss, se))) = pseudo_attr(d, i, b"standalone")? {
+    if let Some(Pseudo { next, value: (ss, se) }) = pseudo_attr(d, i, b"standalone")? {
         let s = d.get(ss..se).unwrap_or(&[]);
         if s != b"yes" && s != b"no" {
             return Err(ss);
@@ -814,9 +819,15 @@ fn parse_decl(d: &[u8]) -> Result<Option<(usize, usize)>, usize> {
     Ok(encoding)
 }
 
+/// A pseudo-attribute of the XML declaration: the index after it and its value's range.
+struct Pseudo {
+    next: usize,
+    value: (usize, usize),
+}
+
 /// One pseudo-attribute `S name S? = S? "value"` of the XML declaration starting at
-/// `i`: the index after it and the value's range, `None` if `name` is not next.
-fn pseudo_attr(d: &[u8], i: usize, name: &[u8]) -> Result<Option<(usize, (usize, usize))>, usize> {
+/// `i`; `None` if `name` is not next.
+fn pseudo_attr(d: &[u8], i: usize, name: &[u8]) -> Result<Option<Pseudo>, usize> {
     let j = skip_ws(d, i);
     if j == i || !d.get(j..).is_some_and(|r| r.starts_with(name)) {
         return Ok(None);
@@ -832,5 +843,5 @@ fn pseudo_attr(d: &[u8], i: usize, name: &[u8]) -> Result<Option<(usize, (usize,
     };
     let vs = q + 1;
     let len = d.get(vs..).and_then(|r| r.iter().position(|&b| b == quote)).ok_or(vs)?;
-    Ok(Some((vs + len + 1, (vs, vs + len))))
+    Ok(Some(Pseudo { next: vs + len + 1, value: (vs, vs + len) }))
 }

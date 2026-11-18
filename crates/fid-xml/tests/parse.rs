@@ -132,8 +132,7 @@ fn render(events: &[XmlEvent]) -> String {
     out
 }
 
-const OK_FIXTURES: &[&str] =
-    &["basic", "basic_bom", "ns", "utf16", "utf16be", "utf16_twin", "deep64", "attrs256"];
+const OK_FIXTURES: &[&str] = &["basic", "basic_bom", "ns", "utf16", "utf16be", "utf16_twin", "deep64", "attrs256"];
 
 /// Every well-formed fixture gives exactly expat's events, read in one go and read one
 /// byte at a time.
@@ -257,11 +256,7 @@ fn ac2_depth_65_fails() {
         XmlError::LimitExceeded {
             limit: XmlLimit::Depth,
             value: num(&e, "deep65.value"),
-            at: Position::line_col(
-                num(&e, "deep65.byte"),
-                num(&e, "deep65.line") as u32,
-                num(&e, "deep65.col") as u32
-            ),
+            at: Position::line_col(num(&e, "deep65.byte"), num(&e, "deep65.line") as u32, num(&e, "deep65.col") as u32),
         }
     );
     assert_eq!(u64::from(MAX_DEPTH), num(&e, "deep65.value"));
@@ -337,7 +332,10 @@ fn req002_text_and_token_length() {
     let ok = read_slice_with(b"<r>0123456789abcdef</r>", budget(), opts()).unwrap();
     assert_eq!(ok.len(), 3);
     let err = read_slice_with(b"<r>0123456789abcdefg</r>", budget(), opts()).unwrap_err();
-    assert_eq!(err, XmlError::LimitExceeded { limit: XmlLimit::TextLength, value: 16, at: Position::line_col(3, 1, 4) });
+    assert_eq!(
+        err,
+        XmlError::LimitExceeded { limit: XmlLimit::TextLength, value: 16, at: Position::line_col(3, 1, 4) }
+    );
     // Unterminated text grows the buffer only up to the limit.
     let unterminated = format!("<r>{}", "x".repeat(100));
     let err = read_slice_with(unterminated.as_bytes(), budget(), opts().with_read_chunk(4)).unwrap_err();
@@ -427,10 +425,8 @@ fn ac4_other_encodings_fail() {
 fn ac6_subtree_copy_round_trips() {
     let data = bytes("ns.xml");
     let events = read(&data).unwrap();
-    let first = events
-        .iter()
-        .position(|ev| matches!(&ev.kind, EventKind::Start(e) if e.name.local == "block"))
-        .unwrap();
+    let first =
+        events.iter().position(|ev| matches!(&ev.kind, EventKind::Start(e) if e.name.local == "block")).unwrap();
     let EventKind::Start(block) = &events[first].kind else { unreachable!() };
     let scope = block.ns_scope.to_vec();
     assert_eq!(
@@ -441,10 +437,8 @@ fn ac6_subtree_copy_round_trips() {
             NsBinding { prefix: Some("q".into()), uri: "urn:example:q".into() },
         ]
     );
-    let last = events
-        .iter()
-        .position(|ev| matches!(&ev.kind, EventKind::End { name, .. } if name.local == "block"))
-        .unwrap();
+    let last =
+        events.iter().position(|ev| matches!(&ev.kind, EventKind::End { name, .. } if name.local == "block")).unwrap();
     let EventKind::End { element, .. } = &events[last].kind else { unreachable!() };
     assert_eq!(element.start, events[first].span.start);
     assert_eq!(element.end, events[last].span.end);
