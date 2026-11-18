@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-store]
+built_pr: 125
 satisfies: [REQ-CORE.STO-004, REQ-CORE.STO-005, REQ-CORE.STO-006]
 covers: []
 depends_on: [CORE.STO.LAYOUT, CORE.JRN.CANON]

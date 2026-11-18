@@ -56,5 +56,15 @@
         "annotation"
       ]
     }
+  ],
+  "given": [
+    {
+      "amount": 0.05,
+      "unit": "m"
+    },
+    {
+      "amount": 2e-05,
+      "unit": "m"
+    }
   ]
 }

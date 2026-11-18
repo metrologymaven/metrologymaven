@@ -1,0 +1,8 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# The exclusion list lacks standards/** (AC-2). The sequence sits at its key's indent.
+reviews:
+  path_filters:
+    exclude:
+    - 'customers/**'
+    - "target/**"
+    - "standards/*"   # close, but not verbatim

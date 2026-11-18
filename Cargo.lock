@@ -157,6 +157,8 @@ name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -251,7 +253,10 @@ dependencies = [
 name = "fid-store"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
+ "fid-types",
  "rustix",
+ "sha2",
 ]
 
 [[package]]
@@ -292,6 +297,7 @@ name = "fid-xtask"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "toml",
 ]
 
 [[package]]

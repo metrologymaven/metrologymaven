@@ -1,0 +1,7 @@
+{
+  "ignore": {
+    "paths": ["customers/**", "standards/**", "vendor/**"],
+    "size_kib": 512
+  },
+  "language": "en"
+}
