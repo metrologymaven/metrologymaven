@@ -1,0 +1,2 @@
+# Synthetic fixture: the release ships the CLI and MCP surfaces.
+surfaces = ["cli", "mcp"]

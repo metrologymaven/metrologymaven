@@ -51,6 +51,15 @@
 //! checkout. `mod-check` exits 0 with no findings and 1 with any; `mod-stats` exits 0 after
 //! writing `--out`, and 1 (writing nothing) when the log has field findings. Unreadable or
 //! unparsable input and bad usage exit 2.
+//!
+//! `ref-render --records <dir> --manifest <file> --surfaces <file> --release <tag> --out <dir>`
+//! and `ref-check --records <dir> --manifest <file> --surfaces <file> --ref <dir> [--json]` (spec
+//! node `OUTR.DOCS.REF`): render the CLI, MCP and Python reference pages of every command major
+//! from its `docs-ref-v1` record, or compare a published page tree with a fresh rendering.
+//! `ref-render` exits 0 after writing, 1 (writing nothing) on `manifest_digest_mismatch` or
+//! `record_missing`, and 2 on unreadable or unparsable input or bad usage. `ref-check` exits 0
+//! with no findings, 1 with any, and 2 on unreadable or unparsable input (including
+//! `manifest_digest_mismatch`) or bad usage.
 
 use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
@@ -60,6 +69,7 @@ use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
+use fid_outreach::ref_pages;
 use fid_outreach::review_gate;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -77,7 +87,9 @@ commands:
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
   asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]
   mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]
-  mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]";
+  mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]
+  ref-render --records <dir> --manifest <file> --surfaces <file> --release <tag> --out <dir>
+  ref-check --records <dir> --manifest <file> --surfaces <file> --ref <dir> [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -91,6 +103,7 @@ fn main() -> ExitCode {
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
+        (Some(cmd @ ("ref-render" | "ref-check")), _) => ref_pages_cmd(cmd, args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -593,6 +606,76 @@ fn moderation_cmd(cmd: &str, args: &[String]) -> ExitCode {
         }
         Err(e) => {
             eprintln!("mod-stats: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn ref_pages_cmd(cmd: &str, args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (cmd, a.as_str()) {
+            ("ref-check", "--json") => json = true,
+            (_, flag @ ("--records" | "--manifest" | "--surfaces"))
+            | ("ref-render", flag @ ("--release" | "--out"))
+            | ("ref-check", flag @ "--ref") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(records), Some(manifest), Some(surfaces)) =
+        (opts.get("--records"), opts.get("--manifest"), opts.get("--surfaces"))
+    else {
+        return usage();
+    };
+    let inputs =
+        ref_pages::Inputs { records: Path::new(records), manifest: Path::new(manifest), surfaces: Path::new(surfaces) };
+    if cmd == "ref-render" {
+        let (Some(release), Some(out)) = (opts.get("--release"), opts.get("--out")) else {
+            return usage();
+        };
+        if !ref_pages::valid_release(release) {
+            return usage();
+        }
+        return match ref_pages::render_tree(&inputs, release, Path::new(out)) {
+            Ok(ref_pages::RenderOutcome::Written(n)) => {
+                println!("ref-render: wrote {n} page(s) under {}", Path::new(out).join(release).join("ref").display());
+                ExitCode::SUCCESS
+            }
+            Ok(ref_pages::RenderOutcome::Refused(findings)) => {
+                for f in &findings {
+                    println!("{f}");
+                }
+                println!("ref-render: {} finding(s), nothing written", findings.len());
+                ExitCode::from(1)
+            }
+            Err(e) => {
+                eprintln!("ref-render: {e}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    let Some(ref_dir) = opts.get("--ref") else { return usage() };
+    match ref_pages::check(&inputs, Path::new(ref_dir)) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("ref-check: {e}");
             ExitCode::from(2)
         }
     }
