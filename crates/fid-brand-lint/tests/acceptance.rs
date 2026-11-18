@@ -286,6 +286,8 @@ fn unclosed_openers_fail_closed() {
         ("<p>Fine.</p><style>p {}<p>The software is certified.</p>", Format::Html),
         ("<p>Fine.</p><pre>x\n<p>The software is certified.</p>", Format::Html),
         ("Use the <code> element.\n\nThe software is certified.\n", Format::Markdown),
+        ("Fine.\n\n```text\nnot closed\n\nThe software is certified.\n", Format::Markdown),
+        ("Fine.\n\n~~~~\nnot closed\n~~~\nThe software is certified.", Format::Markdown),
     ] {
         let e = extract(text, format).expect_err(text);
         assert!(e.reason.contains("unclosed"), "{e:?}");
@@ -295,6 +297,15 @@ fn unclosed_openers_fail_closed() {
     let e = obj(report(&out).get("error").unwrap()).clone();
     assert_eq!(st(&e, "code"), "input_parse");
     assert!(st(&e, "message").contains(":3:"), "{}", st(&e, "message"));
+}
+
+#[test]
+fn unclosed_fence_reports_its_line() {
+    let e = extract("Intro.\n\n```\ncode\n\nThe software is certified.\n", Format::Markdown).expect_err("fence");
+    assert_eq!(e.line, 3);
+    assert!(e.reason.contains("code fence"), "{e:?}");
+    // A closed fence is still fine.
+    assert!(extract("Intro.\n\n```\ncode\n```\n", Format::Markdown).is_ok());
 }
 
 #[test]

@@ -76,7 +76,7 @@ pub fn extract(text: &str, format: Format) -> Result<Extracted, ExtractError> {
         src.blank_line(l);
     }
     let (kinds, refs) = match format {
-        Format::Markdown => classify(&mut src, fm),
+        Format::Markdown => classify(&mut src, fm)?,
         Format::Html => (Vec::new(), BTreeMap::new()),
     };
     let md = format == Format::Markdown;
@@ -351,12 +351,14 @@ fn url_like(d: &str) -> bool {
         || d.trim_end_matches('.').contains('.')
 }
 
-/// Classify Markdown lines and blank the excluded ones. Returns line kinds and link references.
-fn classify(s: &mut Src, fm: usize) -> (Vec<Kind>, BTreeMap<String, String>) {
+/// Classify Markdown lines and blank the excluded ones. Returns line kinds and link references,
+/// or an error when a code fence is never closed (it would hide the rest of the file).
+fn classify(s: &mut Src, fm: usize) -> Result<(Vec<Kind>, BTreeMap<String, String>), ExtractError> {
     let n = s.n_lines();
     let mut kinds = vec![Kind::Excluded; n];
     let mut refs = BTreeMap::new();
     let mut fence: Option<(char, usize)> = None;
+    let mut fence_line = 0usize;
     let mut prev_quote = false;
     for (l, kind) in kinds.iter_mut().enumerate().skip(fm) {
         let t = s.text(l);
@@ -371,6 +373,7 @@ fn classify(s: &mut Src, fm: usize) -> (Vec<Kind>, BTreeMap<String, String>) {
         let quote = is_quote(t);
         *kind = if let Some(f) = fence_open(t) {
             fence = Some(f);
+            fence_line = l;
             Kind::Excluded
         } else if t.iter().all(|c| c.is_whitespace()) {
             Kind::Blank
@@ -390,12 +393,19 @@ fn classify(s: &mut Src, fm: usize) -> (Vec<Kind>, BTreeMap<String, String>) {
         };
         prev_quote = quote;
     }
+    if fence.is_some() {
+        let line = u32::try_from(fence_line + 1).unwrap_or(u32::MAX);
+        return Err(ExtractError {
+            line,
+            reason: "unclosed code fence: the rest of the file would be hidden".to_string(),
+        });
+    }
     for (l, k) in kinds.iter().enumerate() {
         if *k == Kind::Excluded {
             s.blank_line(l);
         }
     }
-    (kinds, refs)
+    Ok((kinds, refs))
 }
 
 // ------------------------------------------------------------------ inline scanner
