@@ -330,6 +330,8 @@ fn dropped_listeners_are_removed() {
 }
 
 /// The only real-time test: background publisher thread, real clock, generous bounds.
+/// Phase 1 (1.5 s): the handler reports every ~5 ms. Phase 2 (2.2 s): it reports nothing, so
+/// only real-clock heartbeats keep listeners informed.
 #[test]
 fn real_time_smoke() {
     let progress = Arc::new(Progress::with_system_clock());
@@ -343,13 +345,22 @@ fn real_time_smoke() {
         sink.report(f.min(1.0), "smoke");
         std::thread::sleep(Duration::from_millis(5));
     }
+    let silent_from = start.elapsed();
+    std::thread::sleep(Duration::from_millis(2200));
     publisher.stop();
     let updates = drain(&rx);
     assert!(updates.len() >= 2, "{} updates", updates.len());
     assert_valid_fractions(&updates);
-    // Holds by construction of the publication times, however slow the machine is.
+    // Holds by construction: the bound is on publication decision times (`at`), however slow
+    // the machine is.
     assert_at_most_20_per_second(&updates);
     assert!(updates.iter().any(|u| u.report_seq > 0), "handler reports reached the listener");
-    // Generous: a very slow runner may starve the thread, but not for 5 s.
-    assert!(updates.windows(2).all(|w| w[1].at - w[0].at < Duration::from_secs(5)));
+    // The silent phase produced at least one real-clock heartbeat.
+    assert!(
+        updates.iter().any(|u| u.heartbeat && u.at >= silent_from),
+        "no heartbeat during the silent phase: {updates:?}"
+    );
+    // Generous for slow CI: the nominal maximum gap is 0.9 s plus one polling interval.
+    let max_gap = updates.windows(2).map(|w| w[1].at - w[0].at).max().unwrap();
+    assert!(max_gap <= Duration::from_millis(1500), "max gap {max_gap:?}");
 }

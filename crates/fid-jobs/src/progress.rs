@@ -32,7 +32,8 @@ use std::time::{Duration, Instant};
 
 /// Longest stage label kept, in characters (Unicode scalar values) (REQ-CORE.JOB.PROG-001).
 pub const MAX_STAGE_CHARS: usize = 128;
-/// Shortest time between two publications: at most 20 per second (REQ-CORE.JOB.PROG-003).
+/// Shortest time between two publications: at most 20 per second (REQ-CORE.JOB.PROG-003),
+/// counted over half-open 1 s windows `[t, t + 1 s)` of publication times.
 pub const MIN_PUBLISH_INTERVAL: Duration = Duration::from_millis(50);
 /// Time without a publication after which the last value is republished.
 ///
@@ -178,7 +179,7 @@ impl Shared {
 // ------------------------------------------------------------------ handler handles
 
 /// Handler-side progress handle. Cheap to clone; `report` returns nothing.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ProgressSink {
     shared: Arc<Shared>,
 }
@@ -212,7 +213,7 @@ impl ProgressSink {
 }
 
 /// Handler-side cancellation handle: an atomic flag the handler checks at its checkpoints.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CancelToken {
     shared: Arc<Shared>,
 }
@@ -221,6 +222,20 @@ impl CancelToken {
     /// True once cancellation has been requested for this job.
     pub fn is_cancelled(&self) -> bool {
         self.shared.cancelled.load(Ordering::Acquire)
+    }
+}
+
+// Debug prints only the type name: the handles give a handler no information beyond the
+// cancelled flag (REQ-CORE.JOB.PROG-006).
+impl std::fmt::Debug for ProgressSink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ProgressSink")
+    }
+}
+
+impl std::fmt::Debug for CancelToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("CancelToken")
     }
 }
 
@@ -316,8 +331,10 @@ impl Progress {
     /// has passed since the last publication; or, as a heartbeat repeating the last value,
     /// when [`HEARTBEAT_INTERVAL`] has passed. Returns `None` otherwise.
     pub fn tick(&self) -> Option<ProgressUpdate> {
-        let now = self.clock.now();
+        // Read the time under the publisher lock, so publication times are ordered and spaced
+        // exactly as the decisions below see them.
         let mut state = lock(&self.publisher);
+        let now = self.clock.now();
         let update = {
             let last = lock(&self.shared.last);
             let fresh = last.seq != state.published_seq;
