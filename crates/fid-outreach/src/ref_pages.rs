@@ -410,7 +410,8 @@ pub fn parse_record(bytes: &[u8], file: &str) -> Result<Record, RefError> {
     if bytes.len() > MAX_RECORD_BYTES {
         return Err(err(format!("larger than {MAX_RECORD_BYTES} bytes")));
     }
-    let root = fid_canon::parse_with_limits(bytes, MAX_RECORD_BYTES, MAX_RECORD_DEPTH).map_err(|e| err(e.to_string()))?;
+    let root =
+        fid_canon::parse_with_limits(bytes, MAX_RECORD_BYTES, MAX_RECORD_DEPTH).map_err(|e| err(e.to_string()))?;
     let CValue::Obj(o) = root else { return Err(err("not a JSON object".into())) };
     if let Some(schema) = opt_str(&o, "schema").map_err(err)? {
         if schema != "docs-ref-v1" {
@@ -491,7 +492,9 @@ fn value_text(v: &CValue) -> String {
     match v {
         CValue::Null => String::new(),
         CValue::Str(s) => s.clone(),
-        other => fid_canon::to_canonical_bytes(other).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default(),
+        other => {
+            fid_canon::to_canonical_bytes(other).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default()
+        }
     }
 }
 
@@ -694,7 +697,8 @@ pub fn render_tree(inputs: &Inputs<'_>, release: &str, out: &Path) -> Result<Ren
     let base = out.join(release).join("ref");
     for (rel, bytes) in &pages {
         let path = base.join(rel);
-        let unwritable = |e: std::io::Error| RefError::Unwritable { path: path.display().to_string(), reason: e.to_string() };
+        let unwritable =
+            |e: std::io::Error| RefError::Unwritable { path: path.display().to_string(), reason: e.to_string() };
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(unwritable)?;
         }
@@ -745,9 +749,12 @@ impl Report {
     }
 }
 
+/// A page tree as read: page bytes keyed `<surface>/<name>`, and stray entry paths.
+type Tree = (BTreeMap<String, Vec<u8>>, BTreeSet<String>);
+
 /// Reads the page tree: files keyed `<surface>/<name>`, plus the paths of entries that cannot
 /// be pages (anything outside the three surface directories, and subdirectories in them).
-fn read_tree(dir: &Path) -> Result<(BTreeMap<String, Vec<u8>>, BTreeSet<String>), RefError> {
+fn read_tree(dir: &Path) -> Result<Tree, RefError> {
     let unreadable = |p: &Path, e: String| RefError::Unreadable { path: p.display().to_string(), reason: e };
     let mut files = BTreeMap::new();
     let mut strays = BTreeSet::new();
