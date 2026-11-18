@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/eval-suite-v1.schema.json",
+  "title": "Metrology Maven evaluation suite header (AGENT.EVAL.FORMAT, suite/suite.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "name"],
+  "properties": {
+    "format": {"const": "fid-eval-suite@1"},
+    "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"}
+  }
+}

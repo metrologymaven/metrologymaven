@@ -1,0 +1,10 @@
+# Test fixture for PLAT.MATRIX.FILE AC-6: a schema version this reader does not support.
+schema_version = 99
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "fixture"
