@@ -1,0 +1,13 @@
+# Spec card. Cite designators and clause numbers only; never paste standards text.
+id = "gdt.flatness.mz@0.1.0"
+title = "Minimum-zone flatness"
+method = "Exact minimum zone between two parallel planes via the convex-hull antipodal pair search."
+applicability = "Any planar point set with at least 4 non-collinear points."
+references = [
+  "ASME Y14.5-2018, clause 5.4.4 (flatness)",
+]
+determinism = "D0"
+failure_modes = [
+  "Collinear points give an undefined plane.",
+]
+validation = "Pending: reference values from the PTB softgauges (see UNC.RDL.EXT.PTBSG)."

@@ -1,0 +1,14 @@
+# Spec card. Cite designators and clause numbers only; never paste standards text.
+id = "fit.cylinder.ls@1.0.0"
+title = "Least-squares cylinder"
+method = "Gauss-Newton on the orthogonal distance to the cylinder surface, started from a PCA axis estimate."
+references = [
+  "ISO 10360-6:2001, clause 5 (test method for the software)",
+  "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89.",
+]
+determinism = "D0"
+failure_modes = [
+  "Points on a narrow arc make the radius ill-conditioned.",
+  "Two axis directions fit equally well when the points lie on a ring.",
+]
+validation = "Pending: NIST ATS cylinder datasets (see UNC.RDL.EXT.NIST)."

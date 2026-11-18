@@ -1,0 +1,13 @@
+# Spec card. Cite designators and clause numbers only; never paste standards text.
+id = "unc.mc.sample@1.2.3"
+title = "Monte Carlo uncertainty propagation"
+method = "Counter-based random streams, fixed sample count, fixed-order reductions."
+applicability = "Models with finite variance inputs; outputs reported with a coverage interval."
+references = [
+  "JCGM 101:2008, clause 7 (propagation of distributions)",
+]
+determinism = "D1"
+failure_modes = [
+  "Heavy-tailed inputs need more samples than the default.",
+]
+validation = "Pending: JCGM 101 worked examples reproduced in own words (see UNC.RDL.EXT.JCGM)."
