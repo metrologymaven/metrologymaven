@@ -412,7 +412,7 @@ fn unhex(h: &str) -> Vec<u8> {
     (0..h.len()).step_by(2).map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap()).collect()
 }
 
-/// `as_display` escapes exactly `\` (as `\`) and the code points of general category
+/// `as_display` escapes exactly `\` (as `\\`) and the code points of general category
 /// Cc, Cf, Zl and Zp, as listed by the Python reference `make_escape_cases.py`
 /// (Unicode 16.0), and matches its display of every sample string.
 #[test]
@@ -446,10 +446,10 @@ fn untrusted_display_matches_python_reference() {
             None => continue,
         };
         let shown = UntrustedText::new(c.encode_utf8(&mut buf)).as_display().to_string();
-        let want = if c == '\' {
+        let want = if c == '\\' {
             "\\\\".to_string()
         } else if ranges.iter().any(|&(lo, hi)| lo <= cp && cp <= hi) {
-            format!("\u{{{cp:x}}}")
+            format!("\\u{{{cp:x}}}")
         } else {
             c.to_string()
         };
