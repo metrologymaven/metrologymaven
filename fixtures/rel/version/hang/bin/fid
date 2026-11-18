@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stub for ECO.REL.PROC.VERSION tests (CC-BY-4.0): exits at once but leaves a
+# background process holding stdout for 30 s. Unix only (no .cmd twin).
+(sleep 30) &
+echo '{"version":"1.4.0"}'

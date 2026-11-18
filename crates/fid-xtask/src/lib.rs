@@ -12,9 +12,13 @@
 //!
 //! `plat-matrix lint-tiers`: the tier definitions lint (spec node
 //! `PLAT.MATRIX.POLICY.DEFS`), in [`plat_matrix_tiers`].
+//!
+//! `rel version-check` and `rel version-compare`: the product version scheme and tag check
+//! (spec node `ECO.REL.PROC.VERSION`), in [`rel::version`].
 
 pub mod crate_graph;
 pub mod plat_matrix_tiers;
+pub mod rel;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};

@@ -58,7 +58,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.PKG.PLAN](../../spec/eco/rel/pkg/plan/NODE.md) Package plan, Tier 1 build gate and placeholder-name gate (M, P1a)
 - [ECO.REL.PKG.REG](../../spec/eco/rel/pkg/reg/NODE.md) Installed-app registration and file association (S, P1a)
 - [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)
-- [ECO.REL.PROC.VERSION](../../spec/eco/rel/proc/version/NODE.md) Version scheme and tag check (S, P1a)
+- [B] [ECO.REL.PROC.VERSION](../../spec/eco/rel/proc/version/NODE.md) Version scheme and tag check (S, P1a)
 - [ECO.REL.REPRO.PIN](../../spec/eco/rel/repro/pin/NODE.md) Build-environment pinning and pin check (S, P1b)
 - [ECO.REL.REPRO.STRIP](../../spec/eco/rel/repro/strip/NODE.md) Signature stripping and per-format comparison (M, P1b)
 - [ECO.REL.SIGN.CUSTODY](../../spec/eco/rel/sign/custody/NODE.md) Release key custody, approval record and statement signing (M, P1a)
