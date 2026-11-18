@@ -6,8 +6,8 @@
 
 use fid_io_reg::{BoundedSource, Budget, LimitRequest, Principal, UntrustedText};
 use fid_io_step::{
-    parse, parse_source, parse_with, print, print_with, Bound, DanglingRef, P21File, Param, ParseOptions,
-    PrintOptions, RealStyle, StepError, StepText,
+    parse, parse_source, parse_with, print, print_with, Bound, DanglingRef, P21File, Param, ParseOptions, PrintOptions,
+    RealStyle, StepError, StepText,
 };
 use std::path::{Path, PathBuf};
 
@@ -177,14 +177,11 @@ fn instance_budget_file_size_and_tokens_are_bounded() {
     assert!(matches!(err, StepError::LimitExceeded { bound: Bound::Bytes, .. }), "{err:?}");
 
     let minimal = read("minimal.stp");
-    let src = BoundedSource::new(&minimal[..], {
-        Budget::new(Principal::Script, &LimitRequest::default().bytes(100)).unwrap()
-    });
+    let tight = Budget::new(Principal::Script, &LimitRequest::default().bytes(100)).unwrap();
+    let src = BoundedSource::new(&minimal[..], tight);
     let err = parse_source(src, &ParseOptions::default()).unwrap_err();
     assert!(matches!(err, StepError::LimitExceeded { bound: Bound::Bytes, .. }), "{err:?}");
-    let src = BoundedSource::new(&minimal[..], {
-        Budget::new(Principal::Script, &LimitRequest::default()).unwrap()
-    });
+    let src = BoundedSource::new(&minimal[..], Budget::new(Principal::Script, &LimitRequest::default()).unwrap());
     assert_eq!(parse_source(src, &ParseOptions::default()).unwrap().data.len(), 12);
 
     let long = wrap(&format!("#1=A({});", "1".repeat(5000)));
@@ -284,9 +281,21 @@ fn reals_are_correctly_rounded_and_keep_their_lexeme() {
 fn error_paths_are_classified() {
     let cases: &[(bool, &str, &str)] = &[
         (false, "ISO-10303-21;\nHEADER;\nENDSEC;\nANCHOR;\nENDSEC;\nEND-ISO-10303-21;\n", "step_feature_unsupported"),
-        (false, "ISO-10303-21;\nHEADER;\nENDSEC;\nREFERENCE;\nENDSEC;\nEND-ISO-10303-21;\n", "step_feature_unsupported"),
-        (false, "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\nSIGNATURE;\n", "step_feature_unsupported"),
-        (false, "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA(('x'));\nENDSEC;\nEND-ISO-10303-21;\n", "step_feature_unsupported"),
+        (
+            false,
+            "ISO-10303-21;\nHEADER;\nENDSEC;\nREFERENCE;\nENDSEC;\nEND-ISO-10303-21;\n",
+            "step_feature_unsupported",
+        ),
+        (
+            false,
+            "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\nSIGNATURE;\n",
+            "step_feature_unsupported",
+        ),
+        (
+            false,
+            "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA(('x'));\nENDSEC;\nEND-ISO-10303-21;\n",
+            "step_feature_unsupported",
+        ),
         (true, "#1=A('\\PB\\x');", "step_feature_unsupported"),
         (true, "@1=A();", "step_feature_unsupported"),
         (true, "#1=A('\\Q');", "malformed"),
@@ -339,8 +348,32 @@ fn ac6_mutated_inputs_never_panic_and_accepted_ones_round_trip() {
         state
     };
     const PIECES: &[&[u8]] = &[
-        b"(", b")", b",", b";", b"'", b"\"", b"#", b"$", b"*", b".", b"\\", b"\\X2\\", b"\\X0\\", b"/*", b"*/",
-        b"E", b"-", b"9", b"=", b"\n", b"\xff", b"\xc3\xa9", b"ENDSEC;", b"#1", b"T(", b"@",
+        b"(",
+        b")",
+        b",",
+        b";",
+        b"'",
+        b"\"",
+        b"#",
+        b"$",
+        b"*",
+        b".",
+        b"\\",
+        b"\\X2\\",
+        b"\\X0\\",
+        b"/*",
+        b"*/",
+        b"E",
+        b"-",
+        b"9",
+        b"=",
+        b"\n",
+        b"\xff",
+        b"\xc3\xa9",
+        b"ENDSEC;",
+        b"#1",
+        b"T(",
+        b"@",
     ];
     let mut accepted = 0;
     for stem in ACCEPT.iter().chain(["dup_entity"].iter()) {
