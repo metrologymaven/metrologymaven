@@ -132,8 +132,9 @@ PLAIN_PROMPT = "Evaluate the flatness of plane PL1 against its tolerance and rep
 
 
 def task_def(tid, start, prompt=PLAIN_PROMPT, source_job="JOB.ACC.01", golden=None, oracle=FLAT_ORACLE,
-             roots=None, workflows=("inspect.evaluate_flatness",), licensed=None):
+             roots=None, workflows=("inspect.evaluate_flatness",), licensed=None, given=None):
     return {
+        "given": given,
         "id": tid, "start": start, "prompt": prompt, "source_job": source_job,
         "golden": golden if golden is not None else GOLDEN.get(source_job, b""),
         "oracle": oracle, "roots": roots or {"read": ["in"], "write": ["out"]},
@@ -170,6 +171,8 @@ def build_suite(name, tasks):
             "workflows": t["workflows"],
             "licences": [{"file": n, "spdx": "project-authored"} for n in sorted(licensed)],
         }
+        if t["given"] is not None:
+            task["given"] = t["given"]
         built["task"][t["id"]] = write_json(root / "tasks" / t["id"] / "task.json", task)
         built["archive"][t["id"]] = archive
 
@@ -212,6 +215,35 @@ build_suite("suite-faults", [
 ])
 
 
+# Hand-labelled cases the reference shares its design with, so their expectations are
+# written by hand below (HAND), not computed: duplicate and case-colliding archive paths,
+# a root reached through case or a trailing dot, a lower-case outcome in the prompt, and
+# the `given` exclusion.
+H_PROMPT_GIVEN = "Plane PL1-FLAT has a drawing nominal of 12.5 um; evaluate it and report the decision."
+build_suite("suite-hostile", [
+    task_def("h-dup", [("in/part.qif", PART), ("in/notes.json", b"harmless notes\n"),
+                       ("in/notes.json", lambda b: b["oracle"]["h-dup"])],
+             licensed=["in/part.qif", "in/notes.json"]),
+    task_def("h-case", [("in/part.qif", PART), ("IN/oracle.json", lambda b: b["oracle"]["h-case"])]),
+    task_def("h-dot", [("in/part.qif", PART), ("in./copy.txt", GOLDEN["JOB.ACC.01"])]),
+    task_def("h-collide", [("in/part.qif", PART), ("in/Part.qif", b"another part\n")]),
+    task_def("h-lower", [("in/part.qif", PART)],
+             prompt="Check pl1-flat against its tolerance; expected: conforms."),
+    task_def("h-given", [("in/part.qif", PART)], prompt=H_PROMPT_GIVEN,
+             given=[{"amount": 1.25e-05, "unit": "m"}]),
+    task_def("h-given-other", [("in/part.qif", PART)], prompt=H_PROMPT_GIVEN,
+             given=[{"amount": 1e-05, "unit": "m"}]),
+])
+HAND = sorted([
+    ("parse_error", "h-dup", "tasks/h-dup/start.tar"),
+    ("oracle_leak", "h-case", "IN/oracle.json"),
+    ("oracle_leak", "h-dot", "in./copy.txt"),
+    ("parse_error", "h-collide", "tasks/h-collide/start.tar"),
+    ("oracle_in_prompt", "h-lower", "tasks/h-lower/task.json"),
+    ("oracle_in_prompt", "h-given-other", "tasks/h-given-other/task.json"),
+])
+
+
 # ---------------------------------------------------------------- reference check
 
 def norm_entry(name):
@@ -219,24 +251,36 @@ def norm_entry(name):
     if name.startswith("/") or "\\" in name:
         return None
     segs = [s for s in name.split("/") if s not in ("", ".")]
-    if not segs or any(s == ".." or ":" in s for s in segs):
+    if not segs or any(s == ".." or ":" in s or fold_seg(s) == "" for s in segs):
         return None
     return "/".join(segs)
 
 
+def fold_seg(s):
+    """ASCII-lowercase, trailing dots and spaces removed (Windows / macOS resolution)."""
+    return "".join(c.lower() if c.isascii() else c for c in s.rstrip(". "))
+
+
+def fold(path):
+    return "/".join(fold_seg(s) for s in path.split("/"))
+
+
 def unpack(archive: bytes):
-    """[(path, sha)] of regular files, or None if any entry is unsafe or not a file/dir."""
+    """[(path, folded, sha)] of regular files, or None if any entry is unsafe, not a
+    file/dir, or shares its folded path with another entry."""
     out = []
+    seen = set()
     with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as tf:
         for m in tf.getmembers():
             if not (m.isfile() or m.isdir()):
                 return None
             p = norm_entry(m.name)
-            if p is None:
+            if p is None or fold(p) in seen:
                 return None
+            seen.add(fold(p))
             if m.isfile():
                 f = tf.extractfile(m)
-                out.append((p, sha(f.read())))
+                out.append((p, fold(p), sha(f.read())))
     return out
 
 
@@ -253,17 +297,20 @@ NUMBER = re.compile(r"(?<![A-Za-z0-9_.+\-])([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][
 def has_token(text, tok):
     """tok occurs with no ASCII letter, digit, `_` or `-` directly before or after it."""
     pat = r"(?<![A-Za-z0-9_\-])" + re.escape(tok) + r"(?![A-Za-z0-9_\-])"
-    return re.search(pat, text) is not None
+    return re.search(pat, text, re.ASCII | re.IGNORECASE) is not None
 
 
-def value_in_prompt(prompt, amount, unit, tol):
+def value_in_prompt(prompt, amount, unit, tol, given=()):
     scales = UNIT_SCALES.get(unit, [(unit, 1.0)] if unit != "1" else [])
     for m in NUMBER.finditer(prompt):
         n = float(m.group(1))
         rest = prompt[m.end():].lstrip(" \t")
         for sym, scale in scales:
             if rest.startswith(sym) and not re.match(r"[A-Za-z0-9_]", rest[len(sym):len(sym) + 1]):
-                if abs(n * scale - amount) <= tol:
+                si = n * scale
+                if any(g["unit"] == unit and abs(si - g["amount"]) <= tol for g in given):
+                    continue  # a value the task deliberately gives the agent
+                if abs(si - amount) <= tol:
                     return True
     return False
 
@@ -319,12 +366,10 @@ def reference_check(suite_dir: Path, catalog_path: Path, jobs_dir: Path):
         for oid, y in tasks.items():
             if oid != tid:
                 others |= {sha(y["task_bytes"]), sha(y["archive"])}
-        roots = x["task"]["roots"]["read"] + x["task"]["roots"]["write"]
-        seen = set()
-        for p, d in entries:
-            if p in seen or not any(p == r or p.startswith(r + "/") for r in roots):
+        roots = [fold(r) for r in x["task"]["roots"]["read"] + x["task"]["roots"]["write"]]
+        for p, fp, d in entries:
+            if not any(fp == r or fp.startswith(r + "/") for r in roots):
                 continue
-            seen.add(p)
             if d in oracle_digests or d in golden_digests or d in others:
                 findings.append({"rule": "oracle_leak", "task": tid, "file": p, "subject": None})
 
@@ -338,7 +383,8 @@ def reference_check(suite_dir: Path, catalog_path: Path, jobs_dir: Path):
                                  "subject": c})
             if "value" in item:
                 tol = item.get("tol", {"amount": 1e-9})["amount"]
-                if value_in_prompt(prompt, item["value"]["amount"], item["value"]["unit"], tol):
+                if value_in_prompt(prompt, item["value"]["amount"], item["value"]["unit"], tol,
+                                   x["task"].get("given", [])):
                     findings.append({"rule": "oracle_in_prompt", "task": tid,
                                      "file": f"tasks/{tid}/task.json", "subject": c})
 
@@ -352,6 +398,7 @@ CASES = [
     ("ac3-uncovered", "suite-mini", "catalog-index-uncovered.json"),
     ("ac4-prompt", "suite-prompt", "catalog-index-mini.json"),
     ("ac5-faults", "suite-faults", "catalog-index-faults.json"),
+    ("hand-hostile", "suite-hostile", "catalog-index-mini.json"),
 ]
 
 out = []
@@ -379,6 +426,9 @@ assert sorted((f["rule"], f["task"] or "", f["file"] or "") for f in by["ac5-fau
     ("parse_error", "fa-link", "tasks/fa-link/start.tar"),
     ("uncovered_workflow", "", ""),
 ])
+
+assert sorted((f["rule"], f["task"], f["file"]) for f in by["hand-hostile"]["findings"]) == HAND, \
+    by["hand-hostile"]["findings"]
 
 write_json(HERE / "check-expected.json", {"cases": out})
 print(f"{len(out)} check cases written")

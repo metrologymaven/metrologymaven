@@ -1,6 +1,6 @@
 {
   "suite": "suite/redteam/shell",
-  "suite_version": "sha256:e16f8c584f017330f51bc2b5fe0e6b08ff1c74f952f62b2e00dd0d20c356dee5",
+  "suite_version": "sha256:37a50ea5e685dec673067359f86275a864b75bfee56e6bafcd37bbf27dc2a5e3",
   "files": [
     [
       "oracles/shell-adopt-other-branch/oracle.json",
@@ -320,7 +320,7 @@
     ],
     [
       "tasks/shell-fabric-derived-distance/task.json",
-      "sha256:59161389a6275c0e4a1d24bbfbb03916be85dc550424b9114e5150165cae2966"
+      "sha256:98328f166c5b0aa30388372b593463aaaf732dd2a9f380902081e6a86e2d96e0"
     ],
     [
       "tasks/shell-fabric-direct-entry/start.tar",

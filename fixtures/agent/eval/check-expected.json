@@ -115,6 +115,51 @@
           "subject": "PL1-FLAT"
         }
       ]
+    },
+    {
+      "name": "hand-hostile",
+      "suite": "suite-hostile",
+      "catalog": "catalog-index-mini.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "oracle_leak",
+          "task": "h-case",
+          "file": "IN/oracle.json",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "h-collide",
+          "file": "tasks/h-collide/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "oracle_leak",
+          "task": "h-dot",
+          "file": "in./copy.txt",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "h-dup",
+          "file": "tasks/h-dup/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "oracle_in_prompt",
+          "task": "h-given-other",
+          "file": "tasks/h-given-other/task.json",
+          "subject": "PL1-FLAT"
+        },
+        {
+          "rule": "oracle_in_prompt",
+          "task": "h-lower",
+          "file": "tasks/h-lower/task.json",
+          "subject": "PL1-FLAT"
+        }
+      ]
     }
   ]
 }

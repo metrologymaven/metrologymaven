@@ -17,7 +17,8 @@
 //! The check is static (D0): archives are listed in memory, never extracted.
 
 use crate::json::{parse_bounded, Ctx};
-use crate::suite::{is_real_dir, list_dir, load_suite, read_bounded, Suite};
+use crate::oracle::Quantity;
+use crate::suite::{is_real_dir, list_dir, load_suite_lenient, read_bounded, Suite};
 use crate::task::{relpath, wire_enum};
 use crate::{file_digest, tar, ErrorCode, FormatError};
 use fid_canon::CValue;
@@ -234,8 +235,11 @@ pub fn load_jobs(jobs: &Path) -> (Vec<JobPackage>, Vec<CheckFinding>) {
 /// Loads the suite, catalog index and job packages and applies every rule.
 pub fn check_suite(suite_dir: &Path, catalog: &Path, jobs: &Path) -> CheckReport {
     let mut findings = Vec::new();
-    let suite = match load_suite(suite_dir) {
-        Ok(s) => Some(s),
+    let suite = match load_suite_lenient(suite_dir) {
+        Ok((s, mismatches)) => {
+            findings.extend(mismatches.iter().map(CheckFinding::from_format_error));
+            Some(s)
+        }
         Err(errs) => {
             findings.extend(errs.iter().map(CheckFinding::from_format_error));
             None
@@ -350,13 +354,10 @@ pub fn check_loaded(
                 continue;
             }
         };
-        let roots: Vec<&str> = t.roots.read.iter().chain(&t.roots.write).map(|r| r.as_str()).collect();
-        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        // Compare folded paths: `IN/x` or `in./x` reaches root `in` on Windows and macOS.
+        let roots: Vec<String> = t.roots.read.iter().chain(&t.roots.write).map(|r| tar::fold(r.as_str())).collect();
         for e in &entries {
-            let granted = roots
-                .iter()
-                .any(|r| e.path == *r || (e.path.starts_with(r) && e.path.as_bytes().get(r.len()) == Some(&b'/')));
-            if !granted || !seen.insert(e.path.as_str()) {
+            if !roots.iter().any(|r| under_root(&e.folded, r)) {
                 continue;
             }
             let Some(hits) = protected.get(&e.digest) else { continue };
@@ -386,7 +387,7 @@ pub fn check_loaded(
                 ));
             }
             if let (Some(v), Some(tol)) = (&item.value, &item.tol) {
-                if value_in_prompt(prompt, v.amount, &v.unit, tol.amount) {
+                if value_in_prompt(prompt, v.amount, &v.unit, tol.amount, &t.task.given) {
                     out.push(CheckFinding::new(
                         Rule::OracleInPrompt,
                         Some(&t.task.id),
@@ -400,19 +401,25 @@ pub fn check_loaded(
     out
 }
 
+/// Whether `path` is `root` or lies below it (both already folded).
+fn under_root(path: &str, root: &str) -> bool {
+    path == root || (path.starts_with(root) && path.as_bytes().get(root.len()) == Some(&b'/'))
+}
+
 /// A byte that continues an identifier: ASCII letter, digit, `_` or `-`.
 fn is_word(c: u8) -> bool {
     c.is_ascii_alphanumeric() || c == b'_' || c == b'-'
 }
 
-/// Whether `tok` occurs in `text` with no identifier byte directly before or after it.
+/// Whether `tok` occurs in `text`, ignoring ASCII case, with no identifier byte directly
+/// before or after it.
 pub fn has_token(text: &str, tok: &str) -> bool {
     if tok.is_empty() {
         return false;
     }
     let b = text.as_bytes();
     (0..b.len()).any(|i| {
-        b[i..].starts_with(tok.as_bytes())
+        b.get(i..i + tok.len()).is_some_and(|w| w.eq_ignore_ascii_case(tok.as_bytes()))
             && !(i > 0 && is_word(b[i - 1]))
             && !b.get(i + tok.len()).is_some_and(|c| is_word(*c))
     })
@@ -477,7 +484,10 @@ fn number_end(b: &[u8], i: usize) -> Option<usize> {
 
 /// Whether the prompt states `amount` (within `tol`) as a number followed by a symbol
 /// of `unit` or a scaled unit (e.g. `12.5 um` for 1.25e-5 m).
-pub fn value_in_prompt(prompt: &str, amount: f64, unit: &str, tol: f64) -> bool {
+///
+/// An occurrence whose SI value matches one of the task's `given` quantities of the same
+/// unit (within `tol`) is a value the task deliberately hands the agent and is skipped.
+pub fn value_in_prompt(prompt: &str, amount: f64, unit: &str, tol: f64, given: &[Quantity]) -> bool {
     let scales = unit_scales(unit);
     if scales.is_empty() {
         return false;
@@ -492,7 +502,9 @@ pub fn value_in_prompt(prompt: &str, amount: f64, unit: &str, tol: f64) -> bool 
                 for &(sym, scale) in &scales {
                     let bounded = rest.starts_with(sym)
                         && !rest.as_bytes().get(sym.len()).is_some_and(|c| c.is_ascii_alphanumeric() || *c == b'_');
-                    if bounded && (n * scale - amount).abs() <= tol {
+                    let si = n * scale;
+                    let is_given = given.iter().any(|g| g.unit == unit && (si - g.amount).abs() <= tol);
+                    if bounded && !is_given && (si - amount).abs() <= tol {
                         return true;
                     }
                 }

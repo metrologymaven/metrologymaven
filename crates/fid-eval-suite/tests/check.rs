@@ -217,23 +217,83 @@ fn copy_dir(src: &Path, tag: &str) -> PathBuf {
     dst
 }
 
-/// REQ-001 (hand-labelled): a start-state archive that no longer matches its recorded
-/// digest fails with digest_mismatch naming the task.
+/// REQ-001 and REQ-005 (hand-labelled): a start-state archive that no longer matches its
+/// recorded digest fails with digest_mismatch naming the task, and the other rules still run
+/// (here the uncovered workflow of catalog-index-uncovered.json is reported too).
 #[test]
-fn req1_start_state_digest_mismatch() {
+fn req1_start_state_digest_mismatch_keeps_checking() {
     let suite = copy_dir(&fix("suite-mini"), "start");
     let tar = suite.join("tasks/mini-probe-01/start.tar");
     let mut b = std::fs::read(&tar).unwrap();
-    let last = b.len() - 1;
-    b[last] ^= 1;
+    // First byte of the first file's data (after one 512-byte header): content changes,
+    // the archive stays well formed.
+    b[512] ^= 1;
     std::fs::write(&tar, b).unwrap();
-    let report = check_suite(&suite, &fix("catalog-index-mini.json"), &fix("jobs"));
+    let report = check_suite(&suite, &fix("catalog-index-uncovered.json"), &fix("jobs"));
     let t = triples_of(&report.findings);
     assert_eq!(
         t,
-        vec![("digest_mismatch".to_string(), "mini-probe-01".to_string(), "tasks/mini-probe-01/task.json".to_string())]
+        vec![
+            ("digest_mismatch".to_string(), "mini-probe-01".to_string(), "tasks/mini-probe-01/task.json".to_string()),
+            ("uncovered_workflow".to_string(), String::new(), String::new()),
+        ]
     );
+    assert!(report.suite.is_some());
     let _ = std::fs::remove_dir_all(&suite);
+}
+
+/// Hand-labelled (written here from the spec and review rules, not taken from the reference
+/// script): repeated and case-colliding archive paths, roots reached through case or a
+/// trailing dot, a lower-case outcome in the prompt, and the `given` exclusion.
+#[test]
+fn hand_labelled_hostile_suite() {
+    let report = check_suite(&fix("suite-hostile"), &fix("catalog-index-mini.json"), &fix("jobs"));
+    let want: Vec<Triple> = {
+        let mut v: Vec<Triple> = [
+            ("parse_error", "h-dup", "tasks/h-dup/start.tar"),
+            ("oracle_leak", "h-case", "IN/oracle.json"),
+            ("oracle_leak", "h-dot", "in./copy.txt"),
+            ("parse_error", "h-collide", "tasks/h-collide/start.tar"),
+            ("oracle_in_prompt", "h-lower", "tasks/h-lower/task.json"),
+            ("oracle_in_prompt", "h-given-other", "tasks/h-given-other/task.json"),
+        ]
+        .iter()
+        .map(|(r, t, f)| (r.to_string(), t.to_string(), f.to_string()))
+        .collect();
+        v.sort();
+        v
+    };
+    assert_eq!(triples_of(&report.findings), want, "{:#?}", report.findings);
+    let detail = |task: &str| {
+        report.findings.iter().find(|f| f.task.as_deref() == Some(task)).map(|f| f.detail.clone()).unwrap()
+    };
+    assert!(detail("h-dup").contains("more than once"));
+    assert!(detail("h-collide").contains("case-insensitive"));
+    assert!(detail("h-case").contains("oracle"));
+    assert!(detail("h-dot").contains("golden journal"));
+}
+
+/// The optional task field `given` parses as SI quantities and rejects other units.
+#[test]
+fn task_given_field() {
+    let base = std::fs::read_to_string(fix("suite-mini/tasks/mini-inspect-01/task.json")).unwrap();
+    let with = |given: &str| base.replacen("\"tier\":", &format!("\"given\": {given},\n  \"tier\":"), 1);
+    let t = parse_task(with(r#"[{"amount": 0.05, "unit": "m"}]"#).as_bytes(), "t.json").unwrap();
+    assert_eq!(t.given, vec![Quantity { amount: 0.05, unit: "m".to_string() }]);
+    let t = parse_task(base.as_bytes(), "t.json").unwrap();
+    assert!(t.given.is_empty());
+    let errs = parse_task(with(r#"[{"amount": 50, "unit": "mm"}]"#).as_bytes(), "t.json").unwrap_err();
+    assert_eq!(errs[0].code, ErrorCode::InvalidTask);
+    assert_eq!(errs[0].field, "given[0].unit");
+}
+
+/// Drift guard: the task schema's quantity units equal the Rust list.
+#[test]
+fn task_schema_quantity_units_match_rust() {
+    let schema = parse(&std::fs::read(fix("../../../schema/eval-task-v1.schema.json")).unwrap()).unwrap();
+    let q = obj(&obj(&obj(&schema)["$defs"])["quantity"]);
+    let units: Vec<String> = arr(&obj(&obj(&q["properties"])["unit"])["enum"]).iter().map(opt_str).collect();
+    assert_eq!(units, SI_UNITS.iter().map(|u| u.to_string()).collect::<Vec<_>>());
 }
 
 /// REQ-001 (hand-labelled): a package whose golden journal changed is reported, and the
@@ -282,21 +342,31 @@ fn parse_errors_and_usage() {
 fn prompt_scanning_rules() {
     assert!(has_token("check PL1-FLAT: expected CONFORMS.", "CONFORMS"));
     assert!(!has_token("check PL1-FLAT: NONCONFORMS", "CONFORMS"));
+    assert!(has_token("check pl1-flat: expected conforms", "CONFORMS"));
+    assert!(has_token("check pl1-flat: expected conforms", "PL1-FLAT"));
     assert!(!has_token("plane PL1-FLATNESS", "PL1-FLAT"));
     assert!(has_token("(PL1-FLAT)", "PL1-FLAT"));
 
     // 1.25e-5 m with tolerance 1e-7 m
     let (a, tol) = (1.25e-5, 1e-7);
-    assert!(value_in_prompt("measured 12.5 um", a, "m", tol));
-    assert!(value_in_prompt("measured 0.0125mm.", a, "m", tol));
-    assert!(value_in_prompt("measured 1.25e-5 m", a, "m", tol));
-    assert!(value_in_prompt("measured 12.5 \u{b5}m", a, "m", tol));
-    assert!(!value_in_prompt("measured 12.5 min", a, "m", tol));
-    assert!(!value_in_prompt("measured 12.5", a, "m", tol));
-    assert!(!value_in_prompt("measured 13 um", a, "m", tol));
-    assert!(!value_in_prompt("part A12.5 um", a, "m", tol));
+    assert!(value_in_prompt("measured 12.5 um", a, "m", tol, &[]));
+    assert!(value_in_prompt("measured 0.0125mm.", a, "m", tol, &[]));
+    assert!(value_in_prompt("measured 1.25e-5 m", a, "m", tol, &[]));
+    assert!(value_in_prompt("measured 12.5 \u{b5}m", a, "m", tol, &[]));
+    assert!(!value_in_prompt("measured 12.5 min", a, "m", tol, &[]));
+    assert!(!value_in_prompt("measured 12.5", a, "m", tol, &[]));
+    assert!(!value_in_prompt("measured 13 um", a, "m", tol, &[]));
+    assert!(!value_in_prompt("part A12.5 um", a, "m", tol, &[]));
     // degrees for an angle in radians
-    assert!(value_in_prompt("rotate by 90 deg", std::f64::consts::FRAC_PI_2, "rad", 1e-9));
+    assert!(value_in_prompt("rotate by 90 deg", std::f64::consts::FRAC_PI_2, "rad", 1e-9, &[]));
+    // a value the task gives on purpose is not a leak; another given value does not excuse it
+    let given = [Quantity { amount: 1.25e-5, unit: "m".to_string() }];
+    assert!(!value_in_prompt("drawing nominal 12.5 um", a, "m", tol, &given));
+    assert!(!value_in_prompt("drawing nominal 0.0125 mm", a, "m", tol, &given));
+    let other = [Quantity { amount: 1e-5, unit: "m".to_string() }];
+    assert!(value_in_prompt("drawing nominal 12.5 um", a, "m", tol, &other));
+    let wrong_unit = [Quantity { amount: 1.25e-5, unit: "rad".to_string() }];
+    assert!(value_in_prompt("drawing nominal 12.5 um", a, "m", tol, &wrong_unit));
     // dimensionless values are never matched
-    assert!(!value_in_prompt("count 3", 3.0, "1", 1e-9));
+    assert!(!value_in_prompt("count 3", 3.0, "1", 1e-9, &[]));
 }

@@ -20,7 +20,7 @@ determinism: D0
 cli: [fid-eval suite check]
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # AGENT.EVAL.CHECK: Suite consistency, coverage and oracle isolation check
@@ -58,7 +58,7 @@ One CI check that a suite is fit to run: every file parses and matches its diges
 
 - **Registry command(s):** none (D-032). CLI `fid-eval suite check --suite <dir> --catalog <catalog-index.json> --jobs <dir> [--json]`.
 - **Data structures:** `CheckFinding { rule, task?, file?, detail }`; the task `workflows` field of `AGENT.EVAL.FORMAT`.
-- **Algorithm:** parse with `fid-eval-suite`; unpack each start state into a temp directory; hash every file under granted roots and compare with the set of oracle, golden-journal and other-task digests; scan prompts for oracle outcome words next to their characteristic IDs and for oracle values formatted in the task's units.
+- **Algorithm:** parse with `fid-eval-suite`; unpack each start state into a temp directory; hash every file under granted roots and compare with the set of oracle, golden-journal and other-task digests; scan prompts for oracle outcome words next to their characteristic IDs (ASCII case-insensitive) and for oracle values formatted in the task's units, skipping values the task lists in `given` (AGENT.EVAL.FORMAT), compared in SI units. Archive paths are compared folded (ASCII-lowercased, trailing dots and spaces removed per segment), and an archive with a repeated or colliding folded path, a link, an unsafe path or trailing data fails as `parse_error`. A start-state digest mismatch is reported without stopping the other rules.
 - **Errors:** rule codes above; `parse_error` passthrough.
 - **Determinism:** D0.
 - **Performance budget:** < 60 s for 1,000 tasks [unverified].
@@ -74,7 +74,8 @@ Project-authored suites `suite-mini`, `suite-leak` and fixture job packages unde
 
 ## Open questions
 
-- None.
+- Leak detection compares whole-file digests only: an oracle copied with changed formatting, embedded in another file or nested in an inner archive is not detected. Content-level matching (canonical JSON of oracle items, inner archives) is not specified yet.
+- The real corpus (`suite/`) does not pass the full check yet: its tasks name `workflows: []`, so every catalog workflow is reported `uncovered_workflow`, and no FLOW acceptance-job packages exist for its source jobs (`unknown_job`). The rule is kept as specified; the corpus needs workflow tags (AGENT.EVAL.CORPUS) and FLOW job packages (FLOW.RUNNER.PKG) before the check can gate it.
 
 ## Children
 
