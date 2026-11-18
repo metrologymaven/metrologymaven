@@ -1,0 +1,17 @@
+[[allow]]
+name = "ext-a"
+version = "^2"
+reason = "fixture: only the 2.x line is approved"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-b"
+version = ">=0.3.0, <0.4.0"
+reason = "fixture build dependency of ext-a"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-m"
+version = "*"
+reason = "fixture proc-macro of ext-a"
+reviewer = "fixture"

@@ -1,0 +1,9 @@
+# Fixture subset of house-rules/spdx-allowlist.toml (ECO.RULES.SPDX schema).
+licences = ["MIT", "Apache-2.0"]
+exceptions = ["LLVM-exception"]
+asset_licences = ["CC-BY-4.0"]
+asset_paths = ["assets/**"]
+
+[basis]
+MIT = "project licence"
+Apache-2.0 = "project licence"

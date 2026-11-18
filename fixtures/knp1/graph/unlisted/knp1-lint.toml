@@ -1,0 +1,8 @@
+# AC-2: the ok/ workspace with ext-b missing from the allowlist.
+[graph]
+workspace = "../ok"
+roots = ["fid-num"]
+third_party_dir = "../ok/vendor"
+exclude = ["tests/**", "benches/**", "examples/**", "src/bin/**"]
+allowlist = "kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"

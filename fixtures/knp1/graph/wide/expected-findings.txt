@@ -1,0 +1,2 @@
+KNP1-ALLOW-VERSION ext-dup 2.0.0 ext-dup 2.0.0 does not satisfy ^1 via fid-k -> ext-reg -> ext-dup
+KNP1-ALLOW-LICENCE ext-win 0.1.0 ext-win 0.1.0 has no licence expression

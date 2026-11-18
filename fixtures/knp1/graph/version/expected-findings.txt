@@ -1,0 +1,1 @@
+KNP1-ALLOW-VERSION ext-a 1.2.0 ext-a 1.2.0 does not satisfy ^2 via fid-num -> ext-a

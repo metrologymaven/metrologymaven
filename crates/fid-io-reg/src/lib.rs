@@ -1,6 +1,6 @@
 //! The safe-read framework of Metrology Maven (spec node `IO.REG`). This crate grows one
-//! leaf at a time; today it holds `IO.REG.LIMITS`: the harness every format reader runs
-//! inside.
+//! leaf at a time; today it holds `IO.REG.LIMITS`, the harness every format reader runs
+//! inside, and `IO.REG.ROOTS`, the approved import and export root handles ([`roots`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
@@ -18,6 +18,7 @@
 mod budget;
 mod error;
 mod limits;
+pub mod roots;
 mod source;
 pub mod toy;
 mod untrusted;
@@ -28,5 +29,6 @@ pub use limits::{
     LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
     DEFAULT_WALL_MS,
 };
+pub use roots::{Direction, ExportTarget, ImportFile, RelPath, RootAccess, RootHandle, RootId, RootSet, RootWarning};
 pub use source::BoundedSource;
 pub use untrusted::{UntrustedDisplay, UntrustedText};
