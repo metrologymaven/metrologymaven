@@ -257,8 +257,12 @@ fn rel_sums(args: &[String]) -> ExitCode {
 /// nothing written; 2: bad usage or an unusable input (SBOM-PLAN-PARSE, SBOM-NATIVE-PARSE,
 /// SBOM-METADATA). Offline: `cargo metadata` runs with `--locked --offline`.
 fn rel_sbom(args: &[String]) -> ExitCode {
-    let (mut plan, mut native, mut out, mut artefacts): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) =
-        (None, None, None, None);
+    let (mut plan, mut native, mut out, mut artefacts): (
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+    ) = (None, None, None, None);
     let mut commit_time: Option<String> = None;
     let mut workspace = PathBuf::from(".");
     let mut it = args.iter();

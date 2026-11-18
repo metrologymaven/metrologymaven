@@ -90,10 +90,7 @@ fn ac1_documents_match_reference() {
         );
     }
     let names: Vec<String> = packages(&read_doc(&out, LINUX)).into_keys().collect();
-    assert_eq!(
-        names,
-        ["Fixture Sans", "fid-cli", "fid-cli-x86_64-linux.tar.gz", "fid-core", "fid-sbom-fixture-dep"]
-    );
+    assert_eq!(names, ["Fixture Sans", "fid-cli", "fid-cli-x86_64-linux.tar.gz", "fid-core", "fid-sbom-fixture-dep"]);
     // Only the two documents are written: no temporary files are left behind.
     let mut files: Vec<String> =
         std::fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
@@ -197,8 +194,10 @@ fn input_errors_exit_2() {
     let (code, stdout) = cli(&["--plan", "native-components.toml", "--native", "native-components.toml"], &out);
     assert_eq!(code, 2);
     assert!(stdout.starts_with("SBOM-PLAN-PARSE: "), "{stdout}");
-    let (code, stdout) =
-        cli(&["--plan", "plan.json", "--workspace", "ws", "--native", "native-components.toml", "--commit-time", "now"], &out);
+    let (code, stdout) = cli(
+        &["--plan", "plan.json", "--workspace", "ws", "--native", "native-components.toml", "--commit-time", "now"],
+        &out,
+    );
     assert_eq!(code, 2);
     assert!(stdout.starts_with("SBOM-PLAN-PARSE: commit time"), "{stdout}");
     let o = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).args(["rel", "sbom", "--plan"]).output().unwrap();
@@ -257,7 +256,8 @@ fn ac5_policy_fields_present() {
             for f in ["name", "versionInfo", "downloadLocation", "licenseDeclared", "externalRefs"] {
                 assert!(p.contains_key(f), "{name}: {pname} lacks {f}");
             }
-            let locked_with_sum = lock.contains(&format!("name = \"{pname}\"\nversion = \"{}\"\nsource", st(&p["versionInfo"])));
+            let locked_with_sum =
+                lock.contains(&format!("name = \"{pname}\"\nversion = \"{}\"\nsource", st(&p["versionInfo"])));
             if locked_with_sum || st(&p["SPDXID"]).starts_with("SPDXRef-Native-") {
                 assert!(p.contains_key("checksums"), "{name}: {pname} lacks checksums");
             }

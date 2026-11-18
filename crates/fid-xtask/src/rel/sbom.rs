@@ -452,8 +452,9 @@ const NATIVE_KEYS: [&str; 6] = ["name", "version", "source", "license", "sha256"
 /// reported.
 pub fn parse_native(text: &str) -> Result<Vec<Native>, Vec<SbomError>> {
     let perr = |m: String| vec![SbomError::NativeParse(m)];
-    let table: Table =
-        text.parse::<Table>().map_err(|e| perr(format!("native components: {}", e.to_string().trim_end().replace('\n', " "))))?;
+    let table: Table = text
+        .parse::<Table>()
+        .map_err(|e| perr(format!("native components: {}", e.to_string().trim_end().replace('\n', " "))))?;
     if let Some(k) = table.keys().find(|k| k.as_str() != "component") {
         return Err(perr(format!("native components: unknown key {k:?}")));
     }
@@ -1127,9 +1128,9 @@ mod tests {
         let bad_digest = good.replace("0000000000000000000000000000000000000000000000000000000000000000", "abc");
         assert_eq!(parse_native(&bad_digest), Err(vec![SbomError::NativeDigest("F@1".into())]));
         let bad_licence = good.replace("OFL-1.1", "OFL-1.1 AND");
-        assert!(matches!(parse_native(&bad_licence).as_deref(), Err([SbomError::Licence { .. }])));
+        assert!(matches!(parse_native(&bad_licence).as_ref().map_err(Vec::as_slice), Err([SbomError::Licence { .. }])));
         let unknown = format!("{good}extra = 1\n");
-        assert!(matches!(parse_native(&unknown).as_deref(), Err([SbomError::NativeParse(_)])));
+        assert!(matches!(parse_native(&unknown).as_ref().map_err(Vec::as_slice), Err([SbomError::NativeParse(_)])));
     }
 
     #[test]
