@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
 satisfies: [REQ-HAL.IDL-001, REQ-HAL.IDL-004]
 covers: []
 depends_on: [HAL.IDL.UNITS]

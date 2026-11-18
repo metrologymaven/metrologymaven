@@ -4,10 +4,18 @@
 //!
 //! - [`units`]: SI quantities, declared exact encodings, frames and timestamp types
 //!   (`HAL.IDL.UNITS`).
+//! - [`stamp`]: the frozen v0 provenance stamp, acquisition-batch envelope and external
+//!   claim schemas, their validator and canonical digests (`HAL.IDL.STAMP`).
 
+pub mod stamp;
 pub mod units;
 
 pub use units::{
     EncodingDescriptor, Frame, FrameEdge, FrameGraph, FrameId, FrameKind, NumericType, Quantity, RawValue, SiUnit,
     TimeSource, Timestamp, UnitVector3, UnitsError,
+};
+
+pub use stamp::{
+    validate, AcquisitionBatchEnvelope, ExternalClaim, ProvenanceStamp, Record, RecordKind, StampError, StampErrorKind,
+    UntrustedText,
 };

@@ -1,2 +1,6 @@
 * text=auto eol=lf
 *.ps1 text eol=crlf
+# Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
+# compare bytes, so no end-of-line conversion.
+fixtures/hal/idl/stamp/** -text
+schemas/hal/** -text

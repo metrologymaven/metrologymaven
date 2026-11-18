@@ -1,0 +1,77 @@
+{
+  "$id": "https://metrologymaven.io/schemas/hal/external-claim-0.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "External claim v0: a quantity a device computed itself, never a value of record (spec node HAL.IDL.STAMP).",
+  "properties": {
+    "algorithm_source": {
+      "enum": [
+        "device"
+      ]
+    },
+    "batch": {
+      "additionalProperties": false,
+      "properties": {
+        "batch_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "batch_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "batch_digest",
+        "batch_id"
+      ],
+      "type": "object"
+    },
+    "method": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "type": "string"
+    },
+    "quantity": {
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "external-claim/0"
+    },
+    "value": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "m",
+            "rad",
+            "s",
+            "K",
+            "Pa",
+            "1"
+          ]
+        },
+        "value": {
+          "pattern": "^0x[0-9a-f]{16}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "value"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "algorithm_source",
+    "batch",
+    "method",
+    "quantity",
+    "schema",
+    "value"
+  ],
+  "title": "external-claim/0",
+  "type": "object"
+}
