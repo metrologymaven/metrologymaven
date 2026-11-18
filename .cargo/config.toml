@@ -2,3 +2,7 @@
 # cargo xtask layers  (ECO.REPO.LAYERS)
 # cargo xtask datasets-check --catalogue <toml> --domains <file>  (ECO.DATA.CAT)
 xtask = "run -q -p fid-xtask --"
+
+# Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.81).
+[resolver]
+incompatible-rust-versions = "fallback"

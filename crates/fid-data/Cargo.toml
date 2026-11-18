@@ -12,8 +12,9 @@ publish = false
 name = "fid-data"
 path = "src/main.rs"
 
-# No dependencies: the catalogue reader is a bounded TOML subset parser.
+# The catalogue reader is a bounded TOML subset parser (no TOML crate). fid-types: digest syntax.
 [dependencies]
+fid-types = { path = "../fid-types" }
 
 # Test-only: checks the SHA-256 digests in the repository catalogue (layer test-support).
 [dev-dependencies]

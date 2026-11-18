@@ -13,6 +13,7 @@
 //! booleans and one-level arrays of those, which may span lines. Anything else is a
 //! `DATA-SCHEMA` finding for the whole file.
 
+use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::Read;
@@ -528,8 +529,9 @@ fn is_entry_id(s: &str) -> bool {
         && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'.' | b'_' | b'-'))
 }
 
+/// 64 lowercase hex digits: the hex part of a `fid_types::Digest`.
 fn is_sha256(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+    Digest::is_valid(&format!("sha256:{s}"))
 }
 
 /// `http://` or `https://` followed by at least one character and no whitespace.
@@ -660,8 +662,7 @@ fn check_entry(t: &Table, subject: &str, allowed: &BTreeSet<String>, domains: &B
     if t.keys.get("contains_standards_text") == Some(&Value::Bool(true)) {
         out.push(at(DATA_STANDARDS, "declares standards text".into()));
     }
-    if t.keys.get("contains_customer_data") == Some(&Value::Bool(true)) && nonempty_str(t, "release_ref").is_none()
-    {
+    if t.keys.get("contains_customer_data") == Some(&Value::Bool(true)) && nonempty_str(t, "release_ref").is_none() {
         out.push(at(DATA_CUSTOMER, "declares customer data without a release_ref".into()));
     }
     out

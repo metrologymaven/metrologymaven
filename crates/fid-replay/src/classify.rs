@@ -15,31 +15,17 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-/// Determinism class of the replayed step (CONSTITUTION §4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Determinism {
-    D0,
-    D1,
-    D2,
-    D3,
-    N,
+/// Determinism class of the replayed step (CONSTITUTION §4); shared from `fid-types`.
+pub use fid_types::Determinism;
+
+/// Replay rules attached to a [`Determinism`] class.
+pub trait DeterminismExt {
+    /// Classes that must replay bit-identically on the same kernel and platform class.
+    fn requires_bit_identity(self) -> bool;
 }
 
-impl Determinism {
-    /// Parses `D0` .. `D3` or `N`.
-    pub fn parse(s: &str) -> Option<Self> {
-        Some(match s {
-            "D0" => Determinism::D0,
-            "D1" => Determinism::D1,
-            "D2" => Determinism::D2,
-            "D3" => Determinism::D3,
-            "N" => Determinism::N,
-            _ => return None,
-        })
-    }
-
-    /// Classes that must replay bit-identically on the same kernel and platform class.
-    pub fn requires_bit_identity(self) -> bool {
+impl DeterminismExt for Determinism {
+    fn requires_bit_identity(self) -> bool {
         matches!(self, Determinism::D0 | Determinism::D1 | Determinism::D2)
     }
 }

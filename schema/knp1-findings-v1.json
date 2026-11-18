@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.org/schema/knp1-findings-v1.json",
+  "title": "KNP-1 lint findings report, schema 1 (knp1-findings.json)",
+  "description": "Spec node KRN.NUM.LINT.FIND. Written as RFC 8785 canonical JSON by fid-knp1-lint. Not frozen: readers KRN.MAN.MANI and KRN.SOLV.CONIC.VEND must agree before freezing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "tool", "tool_version", "inputs", "findings", "waived", "warnings", "summary"],
+  "properties": {
+    "schema": { "const": 1 },
+    "tool": { "const": "fid-knp1-lint" },
+    "tool_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config", "lockfile", "waivers", "denylist"],
+      "properties": {
+        "config": { "$ref": "#/$defs/digest" },
+        "lockfile": { "$ref": "#/$defs/digest" },
+        "waivers": { "$ref": "#/$defs/digest" },
+        "denylist": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "waived": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding", "waiver"],
+        "properties": {
+          "finding": { "$ref": "#/$defs/finding" },
+          "waiver": { "$ref": "#/$defs/waiver" }
+        }
+      }
+    },
+    "warnings": {
+      "description": "Non-fatal warnings, in waiver-file order (not sorted).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "waiver"],
+        "properties": {
+          "code": { "enum": ["KNP1-WAIVER-UNUSED"] },
+          "waiver": { "$ref": "#/$defs/waiver" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findings", "waived", "warnings", "by_rule"],
+      "properties": {
+        "findings": { "$ref": "#/$defs/count" },
+        "waived": { "$ref": "#/$defs/count" },
+        "warnings": { "$ref": "#/$defs/count" },
+        "by_rule": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/rule" },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "pos": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+    "rule": {
+      "type": "string",
+      "pattern": "^KNP1-((FMA|POW|LIBM|MINMAX|HASH|SIMD|UNSAFE|IO-FS|IO-NET|CLOCK|ENV|THREAD)|(FLAG|ALLOW|DATA)-[A-Z0-9]+(-[A-Z0-9]+)*)$",
+      "maxLength": 64
+    },
+    "relpath": {
+      "description": "Path relative to the crate root, '/' separated, no absolute, drive, backslash or '..' parts.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!(.*/)?\\.\\.(/|$)).+$"
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "crate_name", "crate_version", "file", "line", "column", "excerpt_digest", "message"],
+      "properties": {
+        "rule": { "$ref": "#/$defs/rule" },
+        "crate_name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "crate_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "file": { "$ref": "#/$defs/relpath" },
+        "line": { "$ref": "#/$defs/pos" },
+        "column": { "$ref": "#/$defs/pos" },
+        "excerpt_digest": { "$ref": "#/$defs/digest" },
+        "message": { "type": "string", "maxLength": 4096 }
+      }
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["crate", "file", "lines", "rule", "justification", "reviewer", "date", "lines_sha256"],
+      "properties": {
+        "crate": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "file": { "$ref": "#/$defs/relpath" },
+        "lines": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/pos" }, { "$ref": "#/$defs/pos" }], "minItems": 2, "maxItems": 2 },
+        "rule": { "$ref": "#/$defs/rule" },
+        "justification": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "reviewer": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "lines_sha256": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

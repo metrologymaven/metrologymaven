@@ -6,6 +6,7 @@
 
 use fid_canon::{parse, CValue};
 use fid_kci::AlgorithmId;
+use fid_types::{CommandName, TypesError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -47,20 +48,14 @@ macro_rules! closed_enum {
     };
 }
 
-closed_enum!(
-    /// Side-effect class (CONSTITUTION §3.1).
-    SideEffect, "side_effect" {
-        R0 => "R0", R1 => "R1", W1 => "W1", W2 => "W2", W3 => "W3", X1 => "X1",
-        I1 => "I1", D1 => "D1", M1 => "M1", S1 => "S1", A0 => "A0",
-    }
-);
+/// Determinism class (CONSTITUTION §4); shared from `fid-types`.
+pub use fid_types::Determinism;
+/// Side-effect class (CONSTITUTION §3); shared from `fid-types`.
+pub use fid_types::SideEffect;
+
 closed_enum!(
     /// How the command appears to MCP clients. Ordered `Never` < `RequestOnly` < `Exposed`.
     Projection, "mcp_projection" { Never => "never", RequestOnly => "request_only", Exposed => "exposed" }
-);
-closed_enum!(
-    /// Determinism class (CONSTITUTION §4).
-    Determinism, "determinism" { D0 => "D0", D1 => "D1", D2 => "D2", D3 => "D3", N => "N" }
 );
 closed_enum!(
     /// Whether repeating a call is safe.
@@ -199,12 +194,9 @@ pub const FIELDS: [&str; 22] = [
     "cli_bare",
 ];
 
-/// `[a-z0-9_.]`, starting and ending with an alphanumeric.
-fn valid_id(s: &str) -> bool {
-    !s.is_empty()
-        && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'.')
-        && s.bytes().next().is_some_and(|b| b.is_ascii_alphanumeric())
-        && s.bytes().last().is_some_and(|b| b.is_ascii_alphanumeric())
+/// Reads a `fid-types` class, reporting a bad value as `bad_enum` on `field`.
+fn class<T>(field: &'static str, value: String, parse: fn(&str) -> Result<T, TypesError>) -> Result<T, DefError> {
+    parse(&value).map_err(|_| DefError::BadEnum { field, value })
 }
 
 struct Reader(BTreeMap<String, CValue>);
@@ -259,7 +251,7 @@ impl CommandDef {
         }
         let mut r = Reader(map);
         let id = r.string("id")?;
-        if !valid_id(&id) {
+        if !CommandName::is_valid(&id) {
             return Err(DefError::BadId(id));
         }
         let major = match r.req("major")? {
@@ -270,9 +262,9 @@ impl CommandDef {
         let description = r.string("description")?;
         let params_schema = r.req("params_schema")?;
         let result_schema = r.req("result_schema")?;
-        let side_effect = SideEffect::parse(&r.string("side_effect")?)?;
+        let side_effect = class("side_effect", r.string("side_effect")?, SideEffect::parse)?;
         let mcp_projection = Projection::parse(&r.string("mcp_projection")?)?;
-        let determinism = Determinism::parse(&r.string("determinism")?)?;
+        let determinism = class("determinism", r.string("determinism")?, Determinism::parse)?;
         let idempotency = Idempotency::parse(&r.string("idempotency")?)?;
         let fs_effect = FsEffect::parse(&r.string("fs_effect")?)?;
         let undo = Undo::parse(&r.string("undo")?)?;
@@ -428,7 +420,7 @@ pub fn command_def_schema() -> CValue {
         (
             "properties",
             obj([
-                ("id", obj([("type", s("string")), ("pattern", s("^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$"))])),
+                ("id", obj([("type", s("string")), ("pattern", s(CommandName::PATTERN))])),
                 ("major", obj([("type", s("integer")), ("minimum", CValue::Num(0.0)), ("maximum", CValue::Num(f64::from(u32::MAX)))])),
                 ("title", obj([("type", s("string"))])),
                 ("description", obj([("type", s("string"))])),
