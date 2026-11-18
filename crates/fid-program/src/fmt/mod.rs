@@ -11,7 +11,7 @@
 mod shape;
 mod uuid;
 
-pub use shape::{program_schema, COMMAND_PATTERN, IDENT_PATTERN, UUID7_PATTERN};
+pub use shape::{program_schema, COMMAND_PATTERN, IDENT_PATTERN, MAX_MAJOR, UUID7_PATTERN};
 pub use uuid::Uuid7;
 
 use fid_canon::{digest_bytes, format_number, parse_with_limits, to_canonical_bytes, CValue, CanonError};
@@ -228,17 +228,22 @@ impl Program {
         let mut dec = Decoder::default();
         let program = dec.program(value)?;
         // The decoder is lossless by construction; this guards the invariant of REQ-002.
+        // The encoder writes from the program itself, so no second tree is built.
         if program.encode_bytes()?.as_slice() != bytes {
             return Err(ProgramError::NonCanonical);
         }
         Ok(program)
     }
 
-    /// The stored (canonical) bytes. Fails if the program would not parse back, so
-    /// everything this returns is a valid stored program.
+    /// The stored (canonical) bytes. Applies the rules of [`Program::parse`] to the
+    /// in-memory program first, so everything this returns parses back to an equal program.
     pub fn to_canonical(&self) -> Result<Vec<u8>, ProgramError> {
+        Checker::default().program(self)?;
         let bytes = self.encode_bytes()?;
-        Program::parse(&bytes)?;
+        if bytes.len() > MAX_BYTES {
+            return Err(ProgramError::ProgramTooLarge(Bound::Bytes));
+        }
+        prescan(&bytes)?;
         Ok(bytes)
     }
 
@@ -277,10 +282,10 @@ impl Program {
     }
 }
 
-/// Counts structural tokens and objects outside strings, so hostile input cannot build a
-/// huge tree (REQ-AUTO.PROG.FMT-006, AC-6).
+/// Counts structural tokens, objects and nesting outside strings, so hostile input cannot
+/// build a huge tree (REQ-AUTO.PROG.FMT-006, AC-6). Also bounds encoded output.
 fn prescan(bytes: &[u8]) -> Result<(), ProgramError> {
-    let (mut tokens, mut objects) = (0usize, 0usize);
+    let (mut tokens, mut objects, mut depth) = (0usize, 0usize, 0usize);
     let (mut in_str, mut escaped) = (false, false);
     for &c in bytes {
         if in_str {
@@ -295,14 +300,24 @@ fn prescan(bytes: &[u8]) -> Result<(), ProgramError> {
         }
         match c {
             b'"' => in_str = true,
-            b'{' => {
-                objects += 1;
+            b'{' | b'[' => {
                 tokens += 1;
-                if objects > MAX_OBJECTS {
-                    return Err(ProgramError::ProgramTooLarge(Bound::Objects));
+                depth += 1;
+                if depth > MAX_DEPTH {
+                    return Err(ProgramError::ProgramTooLarge(Bound::Depth));
+                }
+                if c == b'{' {
+                    objects += 1;
+                    if objects > MAX_OBJECTS {
+                        return Err(ProgramError::ProgramTooLarge(Bound::Objects));
+                    }
                 }
             }
-            b'[' | b',' | b':' => tokens += 1,
+            b'}' | b']' => {
+                depth = depth.saturating_sub(1);
+                continue;
+            }
+            b',' | b':' => tokens += 1,
             _ => continue,
         }
         if tokens > MAX_TOKENS {
@@ -507,7 +522,11 @@ impl Decoder {
     }
 
     fn steps(&mut self, items: Vec<CValue>, at: &At<'_>) -> Result<Vec<Step>, ProgramError> {
-        let mut out = Vec::with_capacity(items.len());
+        // Refuse before allocating: `[0,0,...]` must not reserve room for millions of steps.
+        if self.count.saturating_add(items.len()) > MAX_STEPS {
+            return Err(ProgramError::ProgramTooLarge(Bound::Steps));
+        }
+        let mut out = Vec::with_capacity(items.len().min(MAX_STEPS - self.count));
         for (i, item) in items.into_iter().enumerate() {
             out.push(self.step(item, &at.idx(i))?);
         }
@@ -614,141 +633,361 @@ fn args(map: Opaque, at: &At<'_>) -> Result<BTreeMap<String, Arg>, ProgramError>
     Ok(out)
 }
 
-// ------------------------------------------------------------------ encoding
+// ------------------------------------------------------------------ checking
 
-/// Deepest step nesting the encoder walks; deeper programs cannot be stored anyway
-/// (each level costs at least two JSON levels of [`MAX_DEPTH`]).
+/// Deepest step nesting the checker and encoder walk; deeper programs cannot be stored
+/// anyway (each level costs at least two JSON levels of [`MAX_DEPTH`]).
 const MAX_STEP_NESTING: usize = MAX_DEPTH / 2;
 
-fn obj<const N: usize>(pairs: [(&str, CValue); N]) -> BTreeMap<String, CValue> {
-    pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
+fn field_ty(shape: &Shape, name: &str) -> Ty {
+    shape.fields.iter().find(|f| f.name == name).map_or(Ty::Json, |f| f.ty)
 }
 
-fn s(v: &str) -> CValue {
-    CValue::Str(v.to_string())
+/// Checks a string field of an in-memory program against the field table.
+fn want_str(shape: &Shape, name: &'static str, v: &str, at: &At<'_>) -> Result<(), ProgramError> {
+    let ty = field_ty(shape, name);
+    if ty.admits_str(v) {
+        Ok(())
+    } else {
+        Err(invalid(&at.key(name), format!("must be {}", ty.expected())))
+    }
 }
 
-fn num(n: u32) -> CValue {
-    CValue::Num(f64::from(n))
+fn want_u32(shape: &Shape, name: &'static str, v: u32, at: &At<'_>) -> Result<(), ProgramError> {
+    let ty = field_ty(shape, name);
+    if ty.admits_u32(v) {
+        Ok(())
+    } else {
+        Err(invalid(&at.key(name), format!("must be {}", ty.expected())))
+    }
 }
 
-fn enc_var(v: &VarDecl) -> CValue {
-    CValue::Obj(obj([("name", s(&v.name)), ("type", s(&v.ty))]))
+fn want_args(args: &BTreeMap<String, Arg>, at: &At<'_>) -> Result<(), ProgramError> {
+    match args.keys().find(|k| !shape::is_ident(k)) {
+        Some(_) => Err(invalid(&at.key("args"), format!("must be {}", Ty::ArgMap.expected()))),
+        None => Ok(()),
+    }
 }
 
-fn enc_args(args: &BTreeMap<String, Arg>) -> CValue {
-    CValue::Obj(
-        args.iter()
-            .map(|(k, a)| {
-                let v = match a {
-                    Arg::Literal(l) => obj([("literal", l.clone())]),
-                    Arg::Expr(e) => obj([("expr", s(e))]),
+fn want_var(v: &VarDecl, at: &At<'_>) -> Result<(), ProgramError> {
+    want_str(&shape::VAR_DECL, "name", &v.name, at)
+}
+
+/// Validates an in-memory program with the same rules as [`Program::parse`], without
+/// building a second tree. Literal and opaque contents are bounded on the encoded bytes.
+#[derive(Default)]
+struct Checker {
+    count: usize,
+    ids: BTreeSet<Uuid7>,
+}
+
+impl Checker {
+    fn program(&mut self, p: &Program) -> Result<(), ProgramError> {
+        if p.format_version != FORMAT_VERSION {
+            return Err(ProgramError::FormatVersionUnsupported(p.format_version.to_string()));
+        }
+        let at_v = ROOT.key("variables");
+        for (i, v) in p.variables.iter().enumerate() {
+            want_var(v, &at_v.idx(i))?;
+        }
+        self.steps(&p.main, &ROOT.key("main"), 1)?;
+        let at_s = ROOT.key("subroutines");
+        for (i, sub) in p.subroutines.iter().enumerate() {
+            let at = at_s.idx(i);
+            want_str(&shape::SUBROUTINE, "name", &sub.name, &at)?;
+            let at_p = at.key("params");
+            for (j, v) in sub.params.iter().enumerate() {
+                want_var(v, &at_p.idx(j))?;
+            }
+            self.steps(&sub.body, &at.key("body"), 1)?;
+        }
+        Ok(())
+    }
+
+    fn steps(&mut self, steps: &[Step], at: &At<'_>, depth: usize) -> Result<(), ProgramError> {
+        if depth > MAX_STEP_NESTING {
+            return Err(ProgramError::ProgramTooLarge(Bound::Depth));
+        }
+        for (i, st) in steps.iter().enumerate() {
+            self.step(st, &at.idx(i), depth)?;
+        }
+        Ok(())
+    }
+
+    fn step(&mut self, st: &Step, at: &At<'_>, depth: usize) -> Result<(), ProgramError> {
+        self.count += 1;
+        if self.count > MAX_STEPS {
+            return Err(ProgramError::ProgramTooLarge(Bound::Steps));
+        }
+        if !self.ids.insert(st.step_id) {
+            return Err(ProgramError::DuplicateStepId(st.step_id));
+        }
+        match &st.kind {
+            StepKind::Invoke { command, major, args, bind } => {
+                let sh = &shape::STEP_INVOKE;
+                want_str(sh, "command", command, at)?;
+                want_u32(sh, "major", *major, at)?;
+                want_args(args, at)?;
+                if let Some(b) = bind {
+                    want_str(sh, "bind", b, at)?;
+                }
+            }
+            StepKind::Assign { var, .. } => want_str(&shape::STEP_ASSIGN, "var", var, at)?,
+            StepKind::If { branches, else_body } => {
+                if branches.is_empty() {
+                    let ty = field_ty(&shape::STEP_IF, "branches");
+                    return Err(invalid(&at.key("branches"), format!("must be {}", ty.expected())));
+                }
+                let at_b = at.key("branches");
+                for (i, b) in branches.iter().enumerate() {
+                    self.steps(&b.body, &at_b.idx(i).key("body"), depth + 1)?;
+                }
+                self.steps(else_body, &at.key("else_body"), depth + 1)?;
+            }
+            StepKind::Loop { mode, max_iterations, body } => {
+                let sh = match mode {
+                    LoopMode::Counted { var, .. } => {
+                        want_str(&shape::STEP_LOOP_COUNTED, "var", var, at)?;
+                        &shape::STEP_LOOP_COUNTED
+                    }
+                    LoopMode::While { .. } => &shape::STEP_LOOP_WHILE,
                 };
-                (k.clone(), CValue::Obj(v))
-            })
-            .collect(),
-    )
-}
-
-fn enc_steps(steps: &[Step], depth: usize) -> Result<CValue, ProgramError> {
-    if depth > MAX_STEP_NESTING {
-        return Err(ProgramError::ProgramTooLarge(Bound::Depth));
-    }
-    steps.iter().map(|st| enc_step(st, depth)).collect::<Result<Vec<_>, _>>().map(CValue::Arr)
-}
-
-fn enc_step(st: &Step, depth: usize) -> Result<CValue, ProgramError> {
-    let mut m = obj([("step_id", s(&st.step_id.to_string())), ("kind", s(st.kind.as_str()))]);
-    let mut put = |k: &str, v: CValue| {
-        m.insert(k.to_string(), v);
-    };
-    match &st.kind {
-        StepKind::Invoke { command, major, args, bind } => {
-            put("command", s(command));
-            put("major", num(*major));
-            put("args", enc_args(args));
-            if let Some(b) = bind {
-                put("bind", s(b));
+                want_u32(sh, "max_iterations", *max_iterations, at)?;
+                self.steps(body, &at.key("body"), depth + 1)?;
             }
-        }
-        StepKind::Assign { var, expr } => {
-            put("var", s(var));
-            put("expr", s(expr));
-        }
-        StepKind::If { branches, else_body } => {
-            let mut bs = Vec::with_capacity(branches.len());
-            for b in branches {
-                bs.push(CValue::Obj(obj([("cond", s(&b.cond)), ("body", enc_steps(&b.body, depth + 1)?)])));
-            }
-            put("branches", CValue::Arr(bs));
-            put("else_body", enc_steps(else_body, depth + 1)?);
-        }
-        StepKind::Loop { mode, max_iterations, body } => {
-            match mode {
-                LoopMode::Counted { var, from, to, step } => {
-                    put("mode", s("counted"));
-                    put("var", s(var));
-                    put("from", s(from));
-                    put("to", s(to));
-                    put("step", s(step));
-                }
-                LoopMode::While { cond } => {
-                    put("mode", s("while"));
-                    put("cond", s(cond));
+            StepKind::Call { subroutine, args, bind } => {
+                let sh = &shape::STEP_CALL;
+                want_str(sh, "subroutine", subroutine, at)?;
+                want_args(args, at)?;
+                if let Some(b) = bind {
+                    want_str(sh, "bind", b, at)?;
                 }
             }
-            put("max_iterations", num(*max_iterations));
-            put("body", enc_steps(body, depth + 1)?);
+            StepKind::Label { name } => want_str(&shape::STEP_LABEL, "name", name, at)?,
+            StepKind::Jump { label, .. } => want_str(&shape::STEP_JUMP, "label", label, at)?,
+            StepKind::Return { .. } | StepKind::Operator { .. } | StepKind::Comment { .. } => {}
         }
-        StepKind::Call { subroutine, args, bind } => {
-            put("subroutine", s(subroutine));
-            put("args", enc_args(args));
-            if let Some(b) = bind {
-                put("bind", s(b));
-            }
-        }
-        StepKind::Return { expr } => {
-            if let Some(e) = expr {
-                put("expr", s(e));
-            }
-        }
-        StepKind::Label { name } => put("name", s(name)),
-        StepKind::Jump { label, cond } => {
-            put("label", s(label));
-            if let Some(c) = cond {
-                put("cond", s(c));
-            }
-        }
-        StepKind::Operator { descriptor } => put("descriptor", CValue::Obj(descriptor.clone())),
-        StepKind::Comment { text } => put("text", s(text)),
+        Ok(())
     }
-    Ok(CValue::Obj(m))
+}
+
+// ------------------------------------------------------------------ encoding
+
+/// A borrowed field value. The encoder writes straight from the program, so storing a
+/// program never holds a second copy of its tree (REQ-AUTO.PROG.FMT-006, AC-6).
+enum Val<'a> {
+    Str(&'a str),
+    Id(Uuid7),
+    Num(u32),
+    Json(&'a CValue),
+    Obj(&'a Opaque),
+    Objs(&'a [Opaque]),
+    Vars(&'a [VarDecl]),
+    Subs(&'a [Subroutine]),
+    Steps(&'a [Step]),
+    Branches(&'a [Branch]),
+    Args(&'a BTreeMap<String, Arg>),
+}
+
+/// RFC 8785 §3.2.3: property names sort by their UTF-16 code units.
+fn utf16_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    a.encode_utf16().cmp(b.encode_utf16())
+}
+
+struct Encoder {
+    out: Vec<u8>,
+}
+
+impl Encoder {
+    /// RFC 8785 §3.2.2.2 string serialisation.
+    fn string(&mut self, s: &str) {
+        self.out.push(b'"');
+        for c in s.chars() {
+            match c {
+                '"' => self.out.extend_from_slice(b"\\\""),
+                '\\' => self.out.extend_from_slice(b"\\\\"),
+                '\u{8}' => self.out.extend_from_slice(b"\\b"),
+                '\t' => self.out.extend_from_slice(b"\\t"),
+                '\n' => self.out.extend_from_slice(b"\\n"),
+                '\u{c}' => self.out.extend_from_slice(b"\\f"),
+                '\r' => self.out.extend_from_slice(b"\\r"),
+                c if (c as u32) < 0x20 => self.out.extend_from_slice(format!("\\u{:04x}", c as u32).as_bytes()),
+                c => {
+                    let mut buf = [0u8; 4];
+                    self.out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+                }
+            }
+        }
+        self.out.push(b'"');
+    }
+
+    fn json(&mut self, v: &CValue) -> Result<(), ProgramError> {
+        let bytes = to_canonical_bytes(v).map_err(|e| ProgramError::InvalidJson(e.code()))?;
+        self.out.extend_from_slice(&bytes);
+        Ok(())
+    }
+
+    /// An object of fixed field names (all ASCII, so byte order is UTF-16 order).
+    fn object(&mut self, mut fields: Vec<(&str, Val<'_>)>, depth: usize) -> Result<(), ProgramError> {
+        fields.sort_by(|a, b| utf16_cmp(a.0, b.0));
+        self.out.push(b'{');
+        for (i, (k, v)) in fields.into_iter().enumerate() {
+            if i > 0 {
+                self.out.push(b',');
+            }
+            self.string(k);
+            self.out.push(b':');
+            self.val(v, depth)?;
+        }
+        self.out.push(b'}');
+        Ok(())
+    }
+
+    fn opaque(&mut self, m: &Opaque) -> Result<(), ProgramError> {
+        let mut keys: Vec<(&String, &CValue)> = m.iter().collect();
+        keys.sort_by(|a, b| utf16_cmp(a.0, b.0));
+        self.out.push(b'{');
+        for (i, (k, v)) in keys.into_iter().enumerate() {
+            if i > 0 {
+                self.out.push(b',');
+            }
+            self.string(k);
+            self.out.push(b':');
+            self.json(v)?;
+        }
+        self.out.push(b'}');
+        Ok(())
+    }
+
+    fn array<T>(&mut self, items: &[T], mut each: impl FnMut(&mut Self, &T) -> Result<(), ProgramError>) -> Result<(), ProgramError> {
+        self.out.push(b'[');
+        for (i, item) in items.iter().enumerate() {
+            if i > 0 {
+                self.out.push(b',');
+            }
+            each(self, item)?;
+        }
+        self.out.push(b']');
+        Ok(())
+    }
+
+    fn val(&mut self, v: Val<'_>, depth: usize) -> Result<(), ProgramError> {
+        match v {
+            Val::Str(s) => self.string(s),
+            Val::Id(id) => self.string(&id.to_string()),
+            Val::Num(n) => self.out.extend_from_slice(n.to_string().as_bytes()),
+            Val::Json(j) => self.json(j)?,
+            Val::Obj(m) => self.opaque(m)?,
+            Val::Objs(items) => self.array(items, |e, m| e.opaque(m))?,
+            Val::Vars(items) => self.array(items, |e, v| {
+                e.object(vec![("name", Val::Str(&v.name)), ("type", Val::Str(&v.ty))], depth)
+            })?,
+            Val::Subs(items) => self.array(items, |e, sub| {
+                let mut f = vec![("name", Val::Str(&sub.name)), ("params", Val::Vars(&sub.params)), ("body", Val::Steps(&sub.body))];
+                if let Some(r) = &sub.returns {
+                    f.push(("returns", Val::Str(r)));
+                }
+                e.object(f, depth)
+            })?,
+            Val::Steps(steps) => {
+                if depth >= MAX_STEP_NESTING {
+                    return Err(ProgramError::ProgramTooLarge(Bound::Depth));
+                }
+                self.array(steps, |e, st| e.step(st, depth + 1))?
+            }
+            Val::Branches(items) => self.array(items, |e, b| {
+                e.object(vec![("cond", Val::Str(&b.cond)), ("body", Val::Steps(&b.body))], depth)
+            })?,
+            Val::Args(args) => {
+                let mut keys: Vec<(&String, &Arg)> = args.iter().collect();
+                keys.sort_by(|a, b| utf16_cmp(a.0, b.0));
+                self.out.push(b'{');
+                for (i, (k, a)) in keys.into_iter().enumerate() {
+                    if i > 0 {
+                        self.out.push(b',');
+                    }
+                    self.string(k);
+                    self.out.push(b':');
+                    let f = match a {
+                        Arg::Literal(l) => ("literal", Val::Json(l)),
+                        Arg::Expr(x) => ("expr", Val::Str(x)),
+                    };
+                    self.object(vec![f], depth)?;
+                }
+                self.out.push(b'}');
+            }
+        }
+        Ok(())
+    }
+
+    fn step(&mut self, st: &Step, depth: usize) -> Result<(), ProgramError> {
+        let mut f = vec![("step_id", Val::Id(st.step_id)), ("kind", Val::Str(st.kind.as_str()))];
+        match &st.kind {
+            StepKind::Invoke { command, major, args, bind } => {
+                f.extend([("command", Val::Str(command)), ("major", Val::Num(*major)), ("args", Val::Args(args))]);
+                if let Some(b) = bind {
+                    f.push(("bind", Val::Str(b)));
+                }
+            }
+            StepKind::Assign { var, expr } => f.extend([("var", Val::Str(var)), ("expr", Val::Str(expr))]),
+            StepKind::If { branches, else_body } => {
+                f.extend([("branches", Val::Branches(branches)), ("else_body", Val::Steps(else_body))]);
+            }
+            StepKind::Loop { mode, max_iterations, body } => {
+                match mode {
+                    LoopMode::Counted { var, from, to, step } => f.extend([
+                        ("mode", Val::Str("counted")),
+                        ("var", Val::Str(var)),
+                        ("from", Val::Str(from)),
+                        ("to", Val::Str(to)),
+                        ("step", Val::Str(step)),
+                    ]),
+                    LoopMode::While { cond } => f.extend([("mode", Val::Str("while")), ("cond", Val::Str(cond))]),
+                }
+                f.extend([("max_iterations", Val::Num(*max_iterations)), ("body", Val::Steps(body))]);
+            }
+            StepKind::Call { subroutine, args, bind } => {
+                f.extend([("subroutine", Val::Str(subroutine)), ("args", Val::Args(args))]);
+                if let Some(b) = bind {
+                    f.push(("bind", Val::Str(b)));
+                }
+            }
+            StepKind::Return { expr } => {
+                if let Some(e) = expr {
+                    f.push(("expr", Val::Str(e)));
+                }
+            }
+            StepKind::Label { name } => f.push(("name", Val::Str(name))),
+            StepKind::Jump { label, cond } => {
+                f.push(("label", Val::Str(label)));
+                if let Some(c) = cond {
+                    f.push(("cond", Val::Str(c)));
+                }
+            }
+            StepKind::Operator { descriptor } => f.push(("descriptor", Val::Obj(descriptor))),
+            StepKind::Comment { text } => f.push(("text", Val::Str(text))),
+        }
+        self.object(f, depth)
+    }
 }
 
 impl Program {
-    fn encode(&self) -> Result<CValue, ProgramError> {
-        let mut subs = Vec::with_capacity(self.subroutines.len());
-        for sub in &self.subroutines {
-            let mut m = obj([
-                ("name", s(&sub.name)),
-                ("params", CValue::Arr(sub.params.iter().map(enc_var).collect())),
-                ("body", enc_steps(&sub.body, 1)?),
-            ]);
-            if let Some(r) = &sub.returns {
-                m.insert("returns".into(), s(r));
-            }
-            subs.push(CValue::Obj(m));
-        }
-        Ok(CValue::Obj(obj([
-            ("format", s(FORMAT)),
-            ("format_version", num(self.format_version)),
-            ("program_id", s(&self.program_id.to_string())),
-            ("meta", CValue::Obj(self.meta.clone())),
-            ("params", CValue::Arr(self.params.iter().map(|p| CValue::Obj(p.clone())).collect())),
-            ("variables", CValue::Arr(self.variables.iter().map(enc_var).collect())),
-            ("subroutines", CValue::Arr(subs)),
-            ("main", enc_steps(&self.main, 1)?),
-        ])))
+    fn encode_bytes(&self) -> Result<Vec<u8>, ProgramError> {
+        let mut e = Encoder { out: Vec::new() };
+        e.object(
+            vec![
+                ("format", Val::Str(FORMAT)),
+                ("format_version", Val::Num(self.format_version)),
+                ("program_id", Val::Id(self.program_id)),
+                ("meta", Val::Obj(&self.meta)),
+                ("params", Val::Objs(&self.params)),
+                ("variables", Val::Vars(&self.variables)),
+                ("subroutines", Val::Subs(&self.subroutines)),
+                ("main", Val::Steps(&self.main)),
+            ],
+            0,
+        )?;
+        Ok(e.out)
     }
 }
 

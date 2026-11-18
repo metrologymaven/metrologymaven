@@ -26,6 +26,10 @@
       "code": "invalid_json",
       "detail": "invalid_utf8"
     },
+    "bind-newline": {
+      "code": "schema_invalid",
+      "path": "/main/1/bind"
+    },
     "command-with-major": {
       "code": "schema_invalid",
       "path": "/main/1/command"
@@ -75,6 +79,10 @@
       "path": "/main/4/max_iterations"
     },
     "major-fraction": {
+      "code": "schema_invalid",
+      "path": "/main/1/major"
+    },
+    "major-too-big": {
       "code": "schema_invalid",
       "path": "/main/1/major"
     },

@@ -17,6 +17,9 @@ pub const COMMAND_PATTERN: &str = CommandName::PATTERN;
 /// Canonical UUIDv7 text.
 pub const UUID7_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$";
 
+/// Largest command major: five decimal digits, as in `fid_types::CommandId`.
+pub const MAX_MAJOR: u32 = 99_999;
+
 /// The type of one field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Ty {
@@ -24,9 +27,10 @@ pub(crate) enum Ty {
     Const(&'static str),
     /// Exactly this integer.
     IntConst(u32),
-    /// An integer in `min..=u32::MAX`.
+    /// An integer in `min..=max`.
     U32 {
         min: u32,
+        max: u32,
     },
     Uuid7,
     Ident,
@@ -106,7 +110,7 @@ pub(crate) const STEP_INVOKE: Shape = Shape {
         STEP_ID,
         req("kind", Ty::Const("invoke")),
         req("command", Ty::CommandId),
-        req("major", Ty::U32 { min: 0 }),
+        req("major", Ty::U32 { min: 0, max: MAX_MAJOR }),
         req("args", Ty::ArgMap),
         opt("bind", Ty::Ident),
     ],
@@ -137,7 +141,7 @@ pub(crate) const STEP_LOOP_COUNTED: Shape = Shape {
         req("from", Ty::Text),
         req("to", Ty::Text),
         req("step", Ty::Text),
-        req("max_iterations", Ty::U32 { min: 1 }),
+        req("max_iterations", Ty::U32 { min: 1, max: u32::MAX }),
         req("body", STEPS),
     ],
 };
@@ -149,7 +153,7 @@ pub(crate) const STEP_LOOP_WHILE: Shape = Shape {
         req("kind", Ty::Const("loop")),
         req("mode", Ty::Const("while")),
         req("cond", Ty::Text),
-        req("max_iterations", Ty::U32 { min: 1 }),
+        req("max_iterations", Ty::U32 { min: 1, max: u32::MAX }),
         req("body", STEPS),
     ],
 };
@@ -238,13 +242,10 @@ impl Ty {
     /// Whether `v` has this type. Nested `$defs` entries are checked when decoded.
     pub(crate) fn admits(self, v: &CValue) -> bool {
         match self {
-            Ty::Const(c) => matches!(v, CValue::Str(s) if s == c),
-            Ty::IntConst(n) => as_u32(v) == Some(n),
-            Ty::U32 { min } => as_u32(v).is_some_and(|x| x >= min),
-            Ty::Uuid7 => matches!(v, CValue::Str(s) if Uuid7::parse(s).is_some()),
-            Ty::Ident => matches!(v, CValue::Str(s) if is_ident(s)),
-            Ty::CommandId => matches!(v, CValue::Str(s) if CommandName::is_valid(s)),
-            Ty::Text => matches!(v, CValue::Str(_)),
+            Ty::Const(_) | Ty::Uuid7 | Ty::Ident | Ty::CommandId | Ty::Text => {
+                matches!(v, CValue::Str(s) if self.admits_str(s))
+            }
+            Ty::IntConst(_) | Ty::U32 { .. } => as_u32(v).is_some_and(|n| self.admits_u32(n)),
             Ty::Json => true,
             Ty::Object => matches!(v, CValue::Obj(_)),
             Ty::Objects => matches!(v, CValue::Arr(items) if items.iter().all(|i| matches!(i, CValue::Obj(_)))),
@@ -253,12 +254,33 @@ impl Ty {
         }
     }
 
+    /// Whether a string value has this type (false for non-string types).
+    pub(crate) fn admits_str(self, s: &str) -> bool {
+        match self {
+            Ty::Const(c) => s == c,
+            Ty::Uuid7 => Uuid7::parse(s).is_some(),
+            Ty::Ident => is_ident(s),
+            Ty::CommandId => CommandName::is_valid(s),
+            Ty::Text => true,
+            _ => false,
+        }
+    }
+
+    /// Whether an integer value has this type (false for non-integer types).
+    pub(crate) fn admits_u32(self, n: u32) -> bool {
+        match self {
+            Ty::IntConst(c) => n == c,
+            Ty::U32 { min, max } => (min..=max).contains(&n),
+            _ => false,
+        }
+    }
+
     /// What the field must be, for error messages.
     pub(crate) fn expected(self) -> String {
         match self {
             Ty::Const(c) => format!("the string {c:?}"),
             Ty::IntConst(n) => format!("the integer {n}"),
-            Ty::U32 { min } => format!("an integer in {min}..=4294967295"),
+            Ty::U32 { min, max } => format!("an integer in {min}..={max}"),
             Ty::Uuid7 => "a lowercase hyphenated UUIDv7".into(),
             Ty::Ident => "an identifier matching ^[A-Za-z_][A-Za-z0-9_]{0,63}$".into(),
             Ty::CommandId => "a registry command ID without the major".into(),
@@ -299,7 +321,7 @@ fn ty_schema(t: Ty) -> CValue {
     match t {
         Ty::Const(c) => obj([("const", s(c))]),
         Ty::IntConst(n) => obj([("const", num(n))]),
-        Ty::U32 { min } => obj([("type", s("integer")), ("minimum", num(min)), ("maximum", num(u32::MAX))]),
+        Ty::U32 { min, max } => obj([("type", s("integer")), ("minimum", num(min)), ("maximum", num(max))]),
         Ty::Uuid7 => pattern(UUID7_PATTERN),
         Ty::Ident => pattern(IDENT_PATTERN),
         Ty::CommandId => pattern(COMMAND_PATTERN),

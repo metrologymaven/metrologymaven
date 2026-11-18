@@ -4,7 +4,7 @@
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_program::{
-    program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES, MAX_OBJECTS,
+    program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES, MAX_MAJOR, MAX_OBJECTS,
     MAX_STEPS, MAX_TOKENS, STEP_KINDS,
 };
 use std::collections::BTreeMap;
@@ -269,6 +269,16 @@ fn to_canonical_refuses_invalid_programs() {
         kind: StepKind::Invoke { command: "a.b".into(), major: 1, args, bind: None },
     });
     assert_eq!(p.to_canonical().unwrap_err(), ProgramError::InvalidJson("non_finite_number"));
+
+    let mut p = Program::parse(&read("valid/minimal.json")).unwrap();
+    p.main.push(Step {
+        step_id: Uuid7::from_parts(1, [0; 10]),
+        kind: StepKind::Invoke { command: "a.b".into(), major: MAX_MAJOR + 1, args: BTreeMap::new(), bind: None },
+    });
+    assert_eq!(
+        p.to_canonical().unwrap_err(),
+        ProgramError::SchemaInvalid { path: "/main/0/major".into(), reason: "must be an integer in 0..=99999".into() }
+    );
 
     let mut p = Program::parse(&read("valid/minimal.json")).unwrap();
     let id = Uuid7::from_parts(1, [0; 10]);

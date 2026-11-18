@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # AUTO.PROG.FMT: Program document format, canonical serialisation and step IDs
@@ -50,7 +50,7 @@ Defines what a Command Program is on disk and in memory: a versioned JSON docume
 - **REQ-AUTO.PROG.FMT-003** Every step shall carry a `step_id` that is a UUIDv7, and if two steps share an ID, then parsing shall fail with `duplicate_step_id`.
 - **REQ-AUTO.PROG.FMT-004** The only step kind that names a state-changing action shall be `invoke`, holding a command ID, a major version, arguments (each either a canonical JSON literal or an expression source string) and an optional result variable; the schema shall admit no other field through which a step can change state.
 - **REQ-AUTO.PROG.FMT-005** The program digest shall be the SHA-256 of the canonical bytes.
-- **REQ-AUTO.PROG.FMT-006** Parsing shall be bounded (16 MiB, nesting depth 64, 100,000 steps [unverified]) and fail closed with `program_too_large` beyond those bounds.
+- **REQ-AUTO.PROG.FMT-006** Parsing shall be bounded (16 MiB, nesting depth 64, 100,000 steps, 250,000 JSON objects and 2,000,000 JSON structural tokens [unverified]) and fail closed with `program_too_large` beyond any of those bounds. The object and token bounds keep the in-memory tree under 256 MiB (AC-6); every step, argument wrapper and opaque object counts toward the object bound, so an invoke-heavy program reaches it first (an `invoke` with two arguments costs about 4 objects, which allows about 60,000 such steps), while the 100,000-step bound is reachable only by programs whose steps carry few objects (for example comments, assignments and labels).
 - **REQ-AUTO.PROG.FMT-007** The JSON Schema `schema/program-v1.json` shall be generated from the Rust types, and a test shall fail if the checked-in schema differs.
 
 ## Acceptance criteria

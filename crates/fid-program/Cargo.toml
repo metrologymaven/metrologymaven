@@ -11,5 +11,10 @@ repository.workspace = true
 fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
 
+[dev-dependencies]
+# Test-only: counting global allocator for the peak-memory test (tests/alloc_peak.rs).
+# The workspace forbids `unsafe`, so the test cannot implement GlobalAlloc itself.
+cap = { version = "0.1.2", features = ["stats"] }
+
 [lints]
 workspace = true

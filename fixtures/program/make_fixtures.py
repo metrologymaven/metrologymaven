@@ -261,6 +261,8 @@ invalid = {
     "bad-mode": (mutate(set_(["main", 5, "mode"], "until")), {"code": "schema_invalid", "path": "/main/5"}),
     "null-bind": (mutate(set_(["main", 1, "bind"], None)), {"code": "schema_invalid", "path": "/main/1/bind"}),
     "missing-major": (mutate(delete(["main", 1, "major"])), {"code": "schema_invalid", "path": "/main/1"}),
+    "major-too-big": (mutate(set_(["main", 1, "major"], 100000)), {"code": "schema_invalid", "path": "/main/1/major"}),
+    "bind-newline": (mutate(set_(["main", 1, "bind"], "bore\n")), {"code": "schema_invalid", "path": "/main/1/bind"}),
     "major-fraction": (mutate(set_(["main", 1, "major"], 1.5)), {"code": "schema_invalid", "path": "/main/1/major"}),
     "command-with-major": (mutate(set_(["main", 1, "command"], "feature.fit_cylinder@1")),
                            {"code": "schema_invalid", "path": "/main/1/command"}),
@@ -280,6 +282,24 @@ invalid = {
 }
 
 SCHEMA_CODES = {"unknown_field", "schema_invalid"}
+
+
+def strict_validator(jsonschema):
+    """Draft 2020-12 whose `pattern` anchors `$` at the very end (ECMA-262 semantics).
+
+    Python's `re.search` lets `$` match before a trailing newline, which would accept
+    "bore\n" as an identifier; the Rust checks and ECMA-262 do not.
+    """
+    import re
+
+    def pattern(validator, pat, instance, schema):
+        if not validator.is_type(instance, "string"):
+            return
+        strict = pat[:-1] + r"\Z" if pat.endswith("$") else pat
+        if not re.search(strict, instance):
+            yield jsonschema.ValidationError(f"{instance!r} does not match {pat!r}")
+
+    return jsonschema.validators.extend(jsonschema.Draft202012Validator, {"pattern": pattern})
 
 
 def main():
@@ -313,7 +333,7 @@ def main():
         print("schema/program-v1.json missing; schema cross-check skipped")
         return
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    v = jsonschema.Draft202012Validator(schema)
+    v = strict_validator(jsonschema)(schema)
     for name, p in valid.items():
         errs = list(v.iter_errors(p))
         assert not errs, (name, errs[0].message)
