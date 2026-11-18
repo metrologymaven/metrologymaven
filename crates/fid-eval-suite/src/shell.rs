@@ -131,9 +131,10 @@ fn first_difference(v: &Task, b: &Task) -> Option<&'static str> {
     }
     let m = mapping(v, b);
     let licences_equal = v.licences.len() == b.licences.len()
-        && v.licences.iter().zip(&b.licences).all(|(lv, lb)| {
-            lv.spdx == lb.spdx && lv.file.as_str() == map_str(lb.file.as_str(), &m)
-        });
+        && v.licences
+            .iter()
+            .zip(&b.licences)
+            .all(|(lv, lb)| lv.spdx == lb.spdx && lv.file.as_str() == map_str(lb.file.as_str(), &m));
     if !licences_equal {
         return Some("licences");
     }

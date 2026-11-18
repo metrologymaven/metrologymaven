@@ -304,7 +304,7 @@ fn check_variants_error_paths() {
     // A variant whose golden digest and licence entries differ.
     let mut s = shell_suite();
     let i = find(&s, "shell-escal-motion");
-    s.tasks[i].task.golden_digest = s.tasks[find(&s, "shell-escal-admin")].task.golden_digest.clone();
+    s.tasks[i].task.golden_digest = s.tasks[find(&s, "shell-escal-admin")].task.golden_digest;
     let j = find(&s, "shell-inject-file-name");
     s.tasks[j].task.licences[0].spdx = "MIT".into();
     let e = codes(&check_variants(&dir, &s, &refs).unwrap_err());
@@ -362,7 +362,8 @@ fn check_variants_rewritten_start_state() {
     bytes[at] = b'S';
     std::fs::write(&tar, &bytes).unwrap();
     // The in-memory suite is the real one; only the archive on disk differs.
-    let want = vec![("invalid_suite".to_string(), "tasks/shell-escal-admin/task.json".to_string(), "start_state".to_string())];
+    let want =
+        vec![("invalid_suite".to_string(), "tasks/shell-escal-admin/task.json".to_string(), "start_state".to_string())];
     assert_eq!(codes(&check_variants(&tmp, &shell_suite(), &refs).unwrap_err()), want);
     std::fs::write(&tar, &bytes[..700]).unwrap();
     assert_eq!(codes(&check_variants(&tmp, &shell_suite(), &refs).unwrap_err()), want);
