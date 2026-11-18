@@ -13,8 +13,8 @@ use std::fmt;
 
 use crate::cards::{AlgorithmId, CardRegistry};
 use fid_num::err::{probe_fp_env, NumError};
-use json::{fixed_object, Flat};
 pub use fid_types::Digest;
+use json::{fixed_object, Flat};
 pub use sha256::{sha256, sha256_digest, to_hex, Sha256};
 
 /// One kernel call (REQ-KRN.MAN.KCI-002).

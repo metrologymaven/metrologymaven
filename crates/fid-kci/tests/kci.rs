@@ -444,6 +444,7 @@ fn ac5_knp1_source_scan() {
     }
     let manifest = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml")).unwrap();
     let deps = manifest.split("[dependencies]").nth(1).unwrap().split("\n[").next().unwrap();
-    let names: Vec<&str> = deps.lines().filter(|l| l.contains('=')).map(|l| l.split('=').next().unwrap().trim()).collect();
-    assert_eq!(names, vec!["fid-num"], "kernel dependencies");
+    let names: Vec<&str> =
+        deps.lines().filter(|l| l.contains('=')).map(|l| l.split('=').next().unwrap().trim()).collect();
+    assert_eq!(names, vec!["fid-num", "fid-types"], "kernel dependencies (both in layer num)");
 }

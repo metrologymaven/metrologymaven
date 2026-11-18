@@ -107,9 +107,16 @@ pub enum CardError {
     MissingField(&'static str),
     UnknownField(String),
     BadDeterminism(String),
-    Syntax { line: usize, why: &'static str },
-    TooLong { field: String },
-    StandardsTextSuspected { field: String },
+    Syntax {
+        line: usize,
+        why: &'static str,
+    },
+    TooLong {
+        field: String,
+    },
+    StandardsTextSuspected {
+        field: String,
+    },
     /// Two cards in one registry share an ID.
     DuplicateCard(String),
 }
