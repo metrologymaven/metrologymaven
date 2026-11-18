@@ -292,9 +292,9 @@ fn evaluate(p: &Predicate, run: &CValue, man: &BTreeMap<String, (String, bool, b
             let args = obj(&obj(e)["args"]);
             let arg = |k: &str| args.get(k).map(|v| st(v).to_string());
             let covered = *envelope
-                && approvals.iter().any(|(id, prog)| {
-                    arg("h1_approval").as_ref() == Some(id) && arg("program").as_ref() == Some(prog)
-                });
+                && approvals
+                    .iter()
+                    .any(|(id, prog)| arg("h1_approval").as_ref() == Some(id) && arg("program").as_ref() == Some(prog));
             if covered {
                 "W1".to_string()
             } else {
