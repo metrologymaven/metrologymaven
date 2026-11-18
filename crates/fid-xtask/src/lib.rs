@@ -83,15 +83,21 @@ pub fn parse_layer_map(text: &str) -> Result<LayerMap, String> {
 /// One resolved dependency edge.
 #[derive(Debug, Clone)]
 struct Edge {
+    /// Package ID of the dependency.
     to: String,
     /// True when the dependency is only a dev-dependency.
     dev_only: bool,
 }
 
-/// The resolved crate graph, by package name.
+/// The resolved crate graph. Keyed by Cargo package ID, so two versions of one
+/// crate stay distinct; names are used only to look up layers and to print paths.
 #[derive(Debug, Default)]
 pub struct Graph {
+    /// Workspace member package IDs.
     members: BTreeSet<String>,
+    /// Package ID to package name.
+    names: BTreeMap<String, String>,
+    /// Package ID to its dependency edges.
     edges: BTreeMap<String, Vec<Edge>>,
 }
 
@@ -125,24 +131,30 @@ impl Graph {
     pub fn from_metadata(json: &[u8]) -> Result<Graph, String> {
         let root = parse(json).map_err(|e| format!("LAYER-METADATA: {e}"))?;
         let root = as_obj(&root)?;
-        let mut name_of = BTreeMap::new();
+        let mut g = Graph::default();
         for p in as_arr(field(root, "packages")?)? {
             let p = as_obj(p)?;
-            name_of.insert(as_str(field(p, "id")?)?.to_string(), as_str(field(p, "name")?)?.to_string());
+            g.names.insert(as_str(field(p, "id")?)?.to_string(), as_str(field(p, "name")?)?.to_string());
         }
-        let name = |id: &str| name_of.get(id).cloned().ok_or_else(|| format!("LAYER-METADATA: unknown package {id}"));
-        let mut g = Graph::default();
+        let known = |g: &Graph, id: &str| {
+            if g.names.contains_key(id) {
+                Ok(id.to_string())
+            } else {
+                Err(format!("LAYER-METADATA: unknown package {id}"))
+            }
+        };
         for id in as_arr(field(root, "workspace_members")?)? {
-            g.members.insert(name(as_str(id)?)?);
+            let id = known(&g, as_str(id)?)?;
+            g.members.insert(id);
         }
         let resolve = as_obj(field(root, "resolve")?)?;
         for n in as_arr(field(resolve, "nodes")?)? {
             let n = as_obj(n)?;
-            let from = name(as_str(field(n, "id")?)?)?;
+            let from = known(&g, as_str(field(n, "id")?)?)?;
             let mut edges = Vec::new();
             for d in as_arr(field(n, "deps")?)? {
                 let d = as_obj(d)?;
-                let to = name(as_str(field(d, "pkg")?)?)?;
+                let to = known(&g, as_str(field(d, "pkg")?)?)?;
                 let kinds = as_arr(field(d, "dep_kinds")?)?;
                 let dev_only = !kinds.is_empty()
                     && kinds.iter().all(|k| {
@@ -197,65 +209,86 @@ fn host_triple() -> Result<String, String> {
 /// Checks the graph against the map. Returns sorted, de-duplicated findings.
 pub fn check(map: &LayerMap, g: &Graph) -> Vec<String> {
     let mut findings = BTreeSet::new();
-    for m in &g.members {
+    let name = |id: &str| g.names.get(id).cloned().unwrap_or_else(|| id.to_string());
+    let member_names: BTreeSet<String> = g.members.iter().map(|id| name(id)).collect();
+    for m in &member_names {
         if !map.crates.contains_key(m) {
             findings.insert(format!("LAYER-UNASSIGNED {m}"));
         }
     }
     for c in map.crates.keys() {
-        if !g.members.contains(c) {
+        if !member_names.contains(c) {
             findings.insert(format!("LAYER-UNKNOWN {c}"));
         }
     }
     let rank = |layer: &str| map.order.iter().position(|l| l == layer);
+    let layer_of = |id: &str| -> Option<String> {
+        if g.members.contains(id) {
+            map.crates.get(&name(id)).cloned()
+        } else {
+            None
+        }
+    };
+    // A search state is (package ID, reached only through the root's dev-dependency edge).
+    type State = (String, bool);
     for root in &g.members {
-        let Some(root_layer) = map.crates.get(root) else { continue };
-        // Breadth-first search with parent pointers, so each finding shows the shortest path.
-        let mut parent: BTreeMap<String, String> = BTreeMap::new();
-        let mut seen: BTreeSet<String> = BTreeSet::from([root.clone()]);
-        let mut queue: VecDeque<(String, bool)> = VecDeque::new();
+        let Some(root_layer) = layer_of(root) else { continue };
+        let root_may_reach_up = root_layer == TEST_SUPPORT || root_layer == "tool";
+        // Breadth-first search with parent pointers, so each finding shows a shortest path.
+        let mut parent: BTreeMap<State, State> = BTreeMap::new();
+        let start: State = (root.clone(), false);
+        let mut seen: BTreeSet<State> = BTreeSet::from([start.clone()]);
+        let mut queue: VecDeque<State> = VecDeque::new();
         for e in g.edges.get(root).into_iter().flatten() {
-            if seen.insert(e.to.clone()) {
-                parent.insert(e.to.clone(), root.clone());
-                queue.push_back((e.to.clone(), e.dev_only));
+            let s: State = (e.to.clone(), e.dev_only);
+            if seen.insert(s.clone()) {
+                parent.insert(s.clone(), start.clone());
+                queue.push_back(s);
             }
         }
-        while let Some((node, via_dev)) = queue.pop_front() {
+        while let Some(state) = queue.pop_front() {
+            let (node, via_dev) = (&state.0, state.1);
             let path = || {
-                let mut p = vec![node.clone()];
-                while let Some(prev) = parent.get(p.last().map(String::as_str).unwrap_or_default()) {
-                    p.push(prev.clone());
+                let mut p = vec![name(node)];
+                let mut cur = &state;
+                while let Some(prev) = parent.get(cur) {
+                    p.push(name(&prev.0));
+                    cur = prev;
                 }
                 p.reverse();
                 p.join(" -> ")
             };
-            if g.members.contains(&node) {
-                let layer = map.crates.get(&node).map(String::as_str);
-                let direct = parent.get(&node) == Some(root);
-                let root_may_reach_up = root_layer == TEST_SUPPORT || root_layer == "tool";
-                match layer {
-                    Some("tool") => {
-                        findings.insert(format!("LAYER-TOOL {}", path()));
-                    }
-                    Some(TEST_SUPPORT) if !(direct && via_dev) => {
+            let direct = parent.get(&state) == Some(&start);
+            let mut keep_walking = !g.members.contains(node);
+            match layer_of(node).as_deref() {
+                Some("tool") => {
+                    findings.insert(format!("LAYER-TOOL {}", path()));
+                }
+                Some(TEST_SUPPORT) => {
+                    if !(direct && via_dev) {
                         findings.insert(format!("LAYER-TEST-SUPPORT {}", path()));
                     }
-                    Some(TEST_SUPPORT) => {}
-                    Some(l) if !root_may_reach_up && rank(l) > rank(root_layer) => {
-                        findings.insert(format!("LAYER-UPWARD {}", path()));
-                    }
-                    _ => {}
+                    // Test-support crates are exempt from their own upward check, so
+                    // anything they reach counts against the crate that uses them.
+                    keep_walking = true;
                 }
-                // A first-party crate is checked from its own root; stop here.
+                Some(l) if !root_may_reach_up && rank(l) > rank(&root_layer) => {
+                    findings.insert(format!("LAYER-UPWARD {}", path()));
+                }
+                // Any other first-party crate is checked from its own root.
+                _ => {}
+            }
+            if !keep_walking {
                 continue;
             }
-            for e in g.edges.get(&node).into_iter().flatten() {
+            for e in g.edges.get(node).into_iter().flatten() {
                 if e.dev_only {
                     continue; // dev edges count only from the root crate itself
                 }
-                if seen.insert(e.to.clone()) {
-                    parent.insert(e.to.clone(), node.clone());
-                    queue.push_back((e.to.clone(), false));
+                let s: State = (e.to.clone(), via_dev);
+                if seen.insert(s.clone()) {
+                    parent.insert(s.clone(), state.clone());
+                    queue.push_back(s);
                 }
             }
         }

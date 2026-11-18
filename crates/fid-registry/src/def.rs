@@ -283,7 +283,12 @@ impl CommandDef {
             .into_iter()
             .map(|s| AlgorithmId::parse(&s).map_err(|_| DefError::BadAlgorithm(s)))
             .collect::<Result<Vec<_>, _>>()?;
-        let exposure = r.strings("exposure")?.iter().map(|s| Surface::parse(s)).collect::<Result<BTreeSet<_>, _>>()?;
+        let exposure_list = r.strings("exposure")?.iter().map(|s| Surface::parse(s)).collect::<Result<Vec<_>, _>>()?;
+        let exposure: BTreeSet<Surface> = exposure_list.iter().copied().collect();
+        if exposure.len() != exposure_list.len() {
+            // Same rule as the schema (`uniqueItems`).
+            return Err(DefError::BadType { field: "exposure".into(), expected: "a list of distinct surfaces" });
+        }
         let lifecycle = match r.req("lifecycle")? {
             CValue::Obj(o) => o,
             _ => return Err(DefError::BadType { field: "lifecycle".into(), expected: "an object" }),
@@ -304,7 +309,8 @@ impl CommandDef {
             Some(CValue::Str(s)) => Some(s),
             Some(_) => return Err(DefError::BadType { field: "web_note".into(), expected: "a string" }),
         };
-        if web != Web::Available && web_note.as_deref().map(str::trim).unwrap_or_default().is_empty() {
+        // Same rule as the schema (`minLength: 1`).
+        if web != Web::Available && web_note.as_deref().unwrap_or_default().is_empty() {
             return Err(DefError::WebNoteMissing);
         }
         let cli_bare = r.flag("cli_bare")?;

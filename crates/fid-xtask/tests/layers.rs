@@ -50,6 +50,7 @@ fn ac5_test_support_and_tool() {
     check_fixture("testsupport");
     check_fixture("testsupport-normal");
     check_fixture("tool");
+    check_fixture("testsupport-transit");
 }
 
 #[test]

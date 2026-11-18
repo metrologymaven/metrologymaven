@@ -1,0 +1,6 @@
+order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"]
+
+[crates]
+"fid-krn" = "kernel"
+"fid-testkit" = "test-support"
+"fid-viz" = "viewer"

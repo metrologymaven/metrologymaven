@@ -88,6 +88,33 @@ fn ac5_schema_is_generated() {
     );
 }
 
+/// AC-1: the re-serialised value fits the schema's shape (every required field present,
+/// no field outside `properties`). Full JSON Schema validation of the inputs runs in CI.
+#[test]
+fn ac1_serialised_value_fits_schema() {
+    let CValue::Obj(schema) = command_def_schema() else { panic!() };
+    let CValue::Arr(required) = &schema["required"] else { panic!() };
+    let CValue::Obj(props) = &schema["properties"] else { panic!() };
+    let CValue::Arr(defs) = fixture("defs_valid.json") else { panic!() };
+    for v in defs {
+        let CValue::Obj(out) = CommandDef::from_value(v).unwrap().to_value() else { panic!() };
+        for r in required {
+            let CValue::Str(r) = r else { panic!() };
+            assert!(out.contains_key(r), "missing required {r}");
+        }
+        for k in out.keys() {
+            assert!(props.contains_key(k), "{k} is not in the schema");
+        }
+    }
+}
+
+#[test]
+fn duplicate_exposure_is_refused() {
+    let CValue::Obj(mut o) = base().to_value() else { panic!() };
+    o.insert("exposure".into(), CValue::Arr(vec![CValue::Str("cli".into()), CValue::Str("cli".into())]));
+    assert_eq!(CommandDef::from_value(CValue::Obj(o)).unwrap_err().code(), "bad_type");
+}
+
 #[test]
 fn bad_types_and_ids() {
     let mut o = match base().to_value() {

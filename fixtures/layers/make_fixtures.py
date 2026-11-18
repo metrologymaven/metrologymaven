@@ -67,4 +67,9 @@ workspace("tool", ["appx", "xt"], [("fid-app-x", "app"), ("fid-xt", "tool")], ["
 workspace("upward-dev", ["krn", "viz"], [("fid-krn", "kernel"), ("fid-viz", "viewer")],
           ["LAYER-UPWARD fid-krn -> fid-viz"],
           lambda ws: (crate(ws, "krn", "fid-krn", dev=[("fid-viz", "../viz")]), crate(ws, "viz", "fid-viz")))
+workspace("testsupport-transit", ["krn", "testkit", "viz"],
+          [("fid-krn", "kernel"), ("fid-testkit", "test-support"), ("fid-viz", "viewer")],
+          ["LAYER-UPWARD fid-krn -> fid-testkit -> fid-viz"],
+          lambda ws: (crate(ws, "krn", "fid-krn", dev=[("fid-testkit", "../testkit")]),
+                      crate(ws, "testkit", "fid-testkit", [("fid-viz", "../viz")]), crate(ws, "viz", "fid-viz")))
 print("ok")
