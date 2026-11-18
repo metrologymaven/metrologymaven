@@ -118,6 +118,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-journal"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
+ "fid-types",
+ "getrandom",
+]
+
+[[package]]
 name = "fid-kci"
 version = "0.0.1"
 dependencies = [
