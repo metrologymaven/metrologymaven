@@ -212,6 +212,7 @@ def build_package(contents, force_zip64=False):
     members.sort(key=lambda t: t[0].encode("utf-8"))
     paths = [t[0] for t in members]
     assert len(set(paths)) == len(paths)
+    assert len({p.lower() for p in paths}) == len(paths), "paths collide after case folding"
     manifest = {
         "format": FORMAT_NAME,
         "format_version": FORMAT_VERSION,

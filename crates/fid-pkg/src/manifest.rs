@@ -21,7 +21,7 @@ use crate::version::{check_compatible, SemVer};
 use fid_canon::CValue;
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::io::{ErrorKind, Read};
 
 /// The fixed package format name carried in every manifest's `format`.
@@ -159,7 +159,10 @@ pub fn check_media_type(s: &str) -> Result<(), PkgError> {
 
 /// Order and uniqueness of manifest members: strictly increasing by path bytes
 /// ([`PkgError::DuplicatePath`] for a repeat, [`PkgError::SchemaInvalid`] for disorder), and
-/// no member path is a folder of another member ([`PkgError::DuplicatePath`]).
+/// no two member paths collide on a case-insensitive file system: paths that differ only by
+/// case, or a path that is a folder of another up to case, are [`PkgError::DuplicatePath`].
+///
+/// Case folding is Unicode lowercasing (`str::to_lowercase`), applied to the whole path.
 pub fn check_members(members: &[Member]) -> Result<(), PkgError> {
     for pair in members.windows(2) {
         if let [a, b] = pair {
@@ -171,14 +174,17 @@ pub fn check_members(members: &[Member]) -> Result<(), PkgError> {
             }
         }
     }
-    let all: BTreeSet<&str> = members.iter().map(|m| m.path.as_str()).collect();
+    let mut folded: BTreeMap<String, &str> = BTreeMap::new();
     for m in members {
         let p = m.path.as_str();
-        for (i, _) in p.match_indices('/') {
-            if let Some(folder) = p.get(..i) {
-                if all.contains(folder) {
-                    return Err(PkgError::duplicate(folder));
-                }
+        if let Some(earlier) = folded.insert(p.to_lowercase(), p) {
+            return Err(PkgError::duplicate(earlier));
+        }
+    }
+    for f in folded.keys() {
+        for (i, _) in f.match_indices('/') {
+            if let Some(folder) = f.get(..i).and_then(|k| folded.get(k)) {
+                return Err(PkgError::duplicate(folder));
             }
         }
     }
@@ -434,6 +440,27 @@ mod tests {
             assert_eq!(EvidenceTier::parse(t.as_str()), Ok(t));
         }
         assert!(EvidenceTier::parse("all").is_err());
+    }
+
+    fn members(paths: &[&str]) -> Vec<Member> {
+        let m = |p: &&str| Member {
+            path: PkgPath::parse(p).unwrap(),
+            media_type: "application/json".into(),
+            length: 0,
+            sha256: hash_bytes(b""),
+        };
+        paths.iter().map(m).collect()
+    }
+
+    #[test]
+    fn case_fold_collisions() {
+        let code = |paths: &[&str]| check_members(&members(paths)).map_err(|e| e.code());
+        assert_eq!(code(&["results/A.json", "results/a.json"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["Results/x", "results/x"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/\u{c9}", "results/\u{e9}"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/Dir", "results/dir/x"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/a", "results/a/b"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/a.json", "results/b.json", "results/c/d.json"]), Ok(()));
     }
 
     #[test]

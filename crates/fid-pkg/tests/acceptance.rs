@@ -111,10 +111,40 @@ fn temp_file(tag: &str, bytes: &[u8]) -> PathBuf {
     p
 }
 
-/// Runs `cmd args`, returning stdout when the tool exists and succeeds.
-fn run_tool(cmd: &str, args: &[&str]) -> Option<Vec<u8>> {
-    let out = Command::new(cmd).args(args).env("PYTHONIOENCODING", "utf-8").output().ok()?;
-    out.status.success().then_some(out.stdout)
+/// Runs the first of `candidates` that exists with `args` and returns its stdout.
+///
+/// A tool that runs and exits non-zero fails the test. When none of the candidates exists,
+/// the check is skipped locally but fails when the `CI` environment variable is set.
+fn run_tool(candidates: &[&str], args: &[&str]) -> Option<Vec<u8>> {
+    for cmd in candidates {
+        match Command::new(cmd).args(args).env("PYTHONIOENCODING", "utf-8").output() {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => panic!("{cmd}: could not run: {e}"),
+            Ok(out) => {
+                let err = String::from_utf8_lossy(&out.stderr);
+                assert!(out.status.success(), "{cmd} {args:?} failed with {}: {err}", out.status);
+                return Some(out.stdout);
+            }
+        }
+    }
+    assert!(std::env::var_os("CI").is_none(), "none of {candidates:?} found, and CI requires the check");
+    eprintln!("none of {candidates:?} found: check skipped");
+    None
+}
+
+/// Git for Windows ships Info-ZIP `unzip` and coreutils outside the default PATH.
+const GIT_USR_BIN: &str = r"C:\Program Files\Git\usr\bin";
+
+fn unzip_tools() -> Vec<String> {
+    vec!["unzip".to_string(), format!(r"{GIT_USR_BIN}\unzip.exe")]
+}
+
+fn sha256sum_tools() -> Vec<String> {
+    vec!["sha256sum".to_string(), format!(r"{GIT_USR_BIN}\sha256sum.exe")]
+}
+
+fn names(v: &[String]) -> Vec<&str> {
+    v.iter().map(String::as_str).collect()
 }
 
 /// Entry names from the central directory, read here without the crate (classic records).
@@ -199,22 +229,17 @@ fn ac2_listing_is_manifest_order_plus_statement() {
 
     let file = temp_file("ac2.zip", &pkg.container);
     let path = file.to_str().unwrap();
-    match run_tool("unzip", &["-Z1", path]) {
-        Some(out) => {
-            let listed: Vec<String> = String::from_utf8(out).unwrap().lines().map(str::to_string).collect();
-            assert_eq!(listed, want, "Info-ZIP unzip listing");
-            assert!(run_tool("unzip", &["-tq", path]).is_some(), "unzip -t failed");
-        }
-        None => eprintln!("unzip not available: Info-ZIP listing skipped"),
+    let unzip = unzip_tools();
+    if let Some(out) = run_tool(&names(&unzip), &["-Z1", path]) {
+        let listed: Vec<String> = String::from_utf8(out).unwrap().lines().map(str::to_string).collect();
+        assert_eq!(listed, want, "Info-ZIP unzip listing");
+        run_tool(&names(&unzip), &["-tq", path]);
     }
     let script = "import sys, zipfile\nz = zipfile.ZipFile(sys.argv[1])\nassert z.testzip() is None\n\
                   print('\\n'.join(z.namelist()))";
-    match run_tool("python3", &["-c", script, path]).or_else(|| run_tool("python", &["-c", script, path])) {
-        Some(out) => {
-            let listed: Vec<String> = String::from_utf8(out).unwrap().lines().map(str::to_string).collect();
-            assert_eq!(listed, want, "Python zipfile listing");
-        }
-        None => eprintln!("python not available: zipfile listing skipped"),
+    if let Some(out) = run_tool(&["python", "python3"], &["-c", script, path]) {
+        let listed: Vec<String> = String::from_utf8(out).unwrap().lines().map(str::to_string).collect();
+        assert_eq!(listed, want, "Python zipfile listing");
     }
     let _ = std::fs::remove_file(&file);
 }
@@ -255,13 +280,10 @@ fn ac3_manifest_matches_schema_constants_and_member_digests() {
         assert_eq!(entry.length, m.body.len() as u64);
         assert_eq!(entry.sha256, hash_bytes(&m.body));
         let file = temp_file("ac3.member", &m.body);
-        match run_tool("sha256sum", &[file.to_str().unwrap()]) {
-            Some(out) => {
-                let text = String::from_utf8(out).unwrap();
-                let hex = text.split_whitespace().next().unwrap().trim_start_matches('\\');
-                assert_eq!(hex, entry.sha256.hex(), "sha256sum {}", m.path);
-            }
-            None => eprintln!("sha256sum not available: skipped"),
+        if let Some(out) = run_tool(&names(&sha256sum_tools()), &[file.to_str().unwrap()]) {
+            let text = String::from_utf8(out).unwrap();
+            let hex = text.split_whitespace().next().unwrap().trim_start_matches('\\');
+            assert_eq!(hex, entry.sha256.hex(), "sha256sum {}", m.path);
         }
         let _ = std::fs::remove_file(&file);
     }
@@ -371,6 +393,10 @@ fn builder_errors_are_typed() {
         build_code(vec![member("results/a", b"1"), member("results/a-b", b""), member("results/a/b", b"2")]),
         Err("pkg.duplicate_path")
     );
+    // Paths that collide on a case-insensitive file system.
+    let dup = Err("pkg.duplicate_path");
+    assert_eq!(build_code(vec![member("results/A.json", b""), member("results/a.json", b"")]), dup);
+    assert_eq!(build_code(vec![member("results/Dir", b""), member("results/dir/x", b"")]), dup);
     for p in ["manifest.json", "statement.json", "signatures/0.dsse.json", "other/x", "results"] {
         assert_eq!(build_code(vec![member(p, b"")]), Err("pkg.bad_path"), "{p}");
     }

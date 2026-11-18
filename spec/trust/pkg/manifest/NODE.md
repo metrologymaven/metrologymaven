@@ -92,6 +92,7 @@ Defines the byte-level shape of a Result Package: the container, the fixed membe
 
 - The predicate type URI is a placeholder until D-002 picks the public name; one constant keeps the rename trivial.
 - Whether a `points/` member may be split across several files above a size threshold is left to `TRUST.PKG.CONTENT`.
+- The path rules allow `:` after the first two bytes (e.g. `results/a:b`), which Windows cannot extract as a plain file name; rejecting or mapping such names when writing to disk is left to `TRUST.PKG.EXPORT` (and reader-side extraction).
 
 ## Children
 
