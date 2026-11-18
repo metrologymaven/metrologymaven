@@ -142,10 +142,13 @@ fn ac5_round_trip_200() {
         assert_eq!(b.sha256.hex(), sha, "case {n}");
         assert_eq!(b.body, body, "case {n}");
         assert!(b.is_intact(), "case {n}");
-        // The same block with CRLF line endings keeps its fields and digest.
-        let crlf = find_blocks(&text.replace('\n', "\r\n")).unwrap();
-        assert_eq!(crlf[0].sha256, b.sha256, "case {n} crlf");
-        assert_eq!(crlf[0].computed_digest(), b.sha256, "case {n} crlf");
+        // The same block converted to CRLF line endings keeps its digest (bodies without CR only:
+        // converting a body that already has CR would change its content).
+        if !body.contains('\r') {
+            let crlf = find_blocks(&text.replace('\n', "\r\n")).unwrap();
+            assert_eq!(crlf[0].sha256, b.sha256, "case {n} crlf");
+            assert_eq!(crlf[0].computed_digest(), b.sha256, "case {n} crlf");
+        }
         n += 1;
     }
     assert_eq!(n, 200);
@@ -155,8 +158,9 @@ fn ac5_round_trip_200() {
 /// builds on shared runners: the scan must stay linear, well under a second.
 #[test]
 fn hundred_kb_is_fast() {
-    let block = render("core", "r", "0123456789abcdef0123456789abcdef01234567", "rule text line\n".repeat(40).trim_end())
-        .unwrap();
+    let block =
+        render("core", "r", "0123456789abcdef0123456789abcdef01234567", "rule text line\n".repeat(40).trim_end())
+            .unwrap();
     let mut text = String::new();
     while text.len() < 100 * 1024 {
         text.push_str("some ordinary markdown text\n");
