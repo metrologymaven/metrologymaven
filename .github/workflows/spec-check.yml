@@ -12,6 +12,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate spec tree and coverage
-        run: python tools/scope.py check
+        run: |
+          python tools/scope.py check
+          python tools/scope.py milestone milestones/launch-1.md
       - name: Generated reports are up to date
-        run: git diff --exit-code -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md
+        run: git diff --exit-code -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md generated/BUILT.md generated/milestones/launch-1.md

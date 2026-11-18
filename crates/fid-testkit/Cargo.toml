@@ -1,0 +1,15 @@
+[package]
+name = "fid-testkit"
+description = "Metrology Maven test-support helpers (dev-dependency only; layer test-support)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+sha2 = "0.10"
+
+[lints]
+workspace = true
