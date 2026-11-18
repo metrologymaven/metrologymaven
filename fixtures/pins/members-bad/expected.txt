@@ -1,0 +1,5 @@
+PIN-MANIFEST Cargo.toml unsupported member pattern crates/**
+PIN-MANIFEST Cargo.toml unsupported member pattern crates/[ab]
+PIN-MANIFEST crates/empty/Cargo.toml missing
+PIN-MANIFEST missing/Cargo.toml missing
+PIN-MANIFEST nodir cannot read folder for member pattern nodir/*
