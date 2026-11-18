@@ -1,0 +1,6 @@
+# Fixture for ECO.REL.PROC.VERSION (CC-BY-4.0): a minimal workspace whose product version is 1.4.0.
+[workspace]
+members = []
+
+[workspace.package]
+version = "1.4.0"

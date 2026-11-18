@@ -3,6 +3,7 @@
 mod pins;
 
 use fid_xtask::plat_matrix_tiers;
+use fid_xtask::rel::version;
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -12,7 +13,10 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
                      cargo xtask plat-hw validate [--file <path>]\n       \
-                     cargo xtask personas-check [--personas <json>] [--apps <toml>]";
+                     cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
+                     cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
+                     [--workspace <dir>] [--binaries <dir>] [--json]\n       \
+                     cargo xtask rel version-compare <a> <b>";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -27,6 +31,8 @@ fn main() -> ExitCode {
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -137,6 +143,85 @@ fn lint_tiers(args: &[String]) -> ExitCode {
         println!("{f}");
     }
     ExitCode::from(1)
+}
+
+/// ECO.REL.PROC.VERSION: `rel version-check`. Exit 0: the tag, workspace and binaries agree;
+/// 1: findings (one per line, or one JSON report with `--json`); 2: bad usage. Offline: the
+/// tag comes from `--tag`, never from git or the network, and nothing is written.
+fn version_check(args: &[String]) -> ExitCode {
+    let mut tag: Option<&str> = None;
+    let mut channel: Option<version::Channel> = None;
+    let mut workspace = PathBuf::from(".");
+    let mut binaries: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--json" {
+            json = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--tag", Some(v)) => tag = Some(v),
+            ("--channel", Some(v)) => match version::Channel::parse(v) {
+                Some(c) => channel = Some(c),
+                None => {
+                    eprintln!("rel version-check: unknown channel {v:?}\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            },
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--binaries", Some(v)) => binaries = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(tag), Some(channel)) = (tag, channel) else {
+        eprintln!("rel version-check: --tag and --channel are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let result = version::version_check(tag, channel, &workspace, binaries.as_deref());
+    if json {
+        println!("{}", version::report_json(tag, channel, &result));
+    }
+    match result {
+        Ok(v) => {
+            if !json {
+                println!("version-check: ok {v} ({})", channel.name());
+            }
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            if !json {
+                for f in findings {
+                    println!("{f}");
+                }
+            }
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// ECO.REL.PROC.VERSION: `rel version-compare <a> <b>` prints `lt`, `eq` or `gt` (SemVer
+/// 2.0.0 precedence of a against b). Either may carry the tag's `v`. Only the tag grammar is
+/// accepted: build metadata (`+...`) is rejected with VERSION-TAG-FORMAT. Exit 1 on an
+/// invalid version, 2 on bad usage.
+fn version_compare(args: &[String]) -> ExitCode {
+    let [a, b] = args else {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    };
+    match (version::parse_any(a), version::parse_any(b)) {
+        (Ok(a), Ok(b)) => {
+            println!("{}", version::ordering_word(a.precedence(&b)));
+            ExitCode::SUCCESS
+        }
+        (Err(e), _) | (_, Err(e)) => {
+            println!("{e}");
+            ExitCode::from(1)
+        }
+    }
 }
 
 fn layers(args: &[String]) -> ExitCode {
