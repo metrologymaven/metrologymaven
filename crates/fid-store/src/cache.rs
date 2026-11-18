@@ -11,17 +11,38 @@
 //! | entry | content |
 //! |---|---|
 //! | `items/<h0h1>/<hex>` | one item: [`ITEM_TAG`] line, key digest line, content digest line, content |
-//! | `tmp/` | files being written; anything left there is deleted when the cache is loaded |
+//! | `tmp/` | files being written; files older than [`STALE_TEMP_SECS`] are deleted on load |
 //! | `index` | [`INDEX_TAG`] line, `next=<counter>`, then `<hex> <size> <counter>` per item |
 //!
 //! `<hex>` is the SHA-256 of the key's canonical JSON ([`CacheKey::canonical_bytes`]). Only a
-//! [`CacheKey`] can name an item and it has exactly two forms, so an unkeyed put does not
-//! compile:
+//! [`CacheKey`] can name an item and it has exactly two forms. A keyed put compiles:
+//!
+//! ```
+//! use fid_store::cache::{Cache, CacheKey};
+//! use fid_types::Digest;
+//! let mut cache = Cache::disabled();
+//! let key = CacheKey::Snapshot { entry_hash: Digest::TOMBSTONE, format: 1 };
+//! cache.put(&key, b"snapshot bytes");
+//! ```
+//!
+//! The same put with anything else in the key position (here a bare digest) does not
+//! (AC-5):
 //!
 //! ```compile_fail
-//! let mut cache = fid_store::cache::Cache::disabled();
-//! cache.put(b"result bytes"); // no key: there is no such method
+//! use fid_store::cache::{Cache, CacheKey};
+//! use fid_types::Digest;
+//! let mut cache = Cache::disabled();
+//! let key = Digest::TOMBSTONE;
+//! cache.put(&key, b"snapshot bytes");
 //! ```
+//!
+//! Several processes may share one cache directory. Every read is checked, sizes are taken
+//! from the files when a handle loads, temp files are only swept once stale, and a file
+//! another process deleted counts as already gone. Handles do not serialise with each other,
+//! so each enforces the limit over the items it knows: until a handle reloads, items stored
+//! by another process are counted only once it reads them, and the directory may briefly
+//! exceed the limit. Recency updates from one process can be overwritten by another's index
+//! write; that only changes eviction order, never a value.
 //!
 //! Eviction is least-recently-used by a monotonic access counter (a logical clock, never the
 //! wall clock): every put and every hit takes the next counter value, and after a put the
@@ -49,6 +70,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 /// Default size limit: 10 GiB (REQ-CORE.STO.CACHE-003).
 pub const DEFAULT_LIMIT: u64 = 10 * 1024 * 1024 * 1024;
@@ -74,6 +96,13 @@ pub const INDEX_FILE: &str = "index";
 pub const FLUSH_EVERY: u32 = 1024;
 /// Most warnings a handle keeps until [`Cache::take_warnings`]; later ones are counted only.
 pub const MAX_WARNINGS: usize = 256;
+/// Age (by modification time) after which a file in `tmp/` is an abandoned write and is
+/// deleted on load. Younger files may be another process's write in progress. Only cleanup
+/// uses the wall clock; eviction never does.
+pub const STALE_TEMP_SECS: u64 = 3600;
+/// When the next access counter read from the index reaches this value, counters are
+/// renumbered `0..n` in their order on load, so they can never run out.
+pub const RENUMBER_AT: u64 = u64::MAX / 2;
 
 /// Largest index file read: one line of at most 107 bytes per item, plus the header.
 const MAX_INDEX_BYTES: u64 = MAX_ENTRIES as u64 * 112 + 1024;
@@ -350,7 +379,7 @@ impl Cache {
                     None
                 }
                 Ok(ReadOutcome::Damaged) => {
-                    let removed = remove_file(&path);
+                    let removed = remove_item(&path);
                     idx.remove(&name);
                     warn = Some(match removed {
                         Ok(()) => CacheWarning::Integrity(digest_of_hex(&name)),
@@ -413,7 +442,7 @@ impl Cache {
         if self.index().is_none() {
             return;
         }
-        match remove_file(&item_path(&dir, &name)) {
+        match remove_item(&item_path(&dir, &name)) {
             Ok(()) => {
                 if let Some(idx) = self.index() {
                     idx.remove(&name);
@@ -530,7 +559,7 @@ impl Cache {
                 if Some(name.as_str()) == keep {
                     continue;
                 }
-                match remove_file(&item_path(dir, &name)) {
+                match remove_item(&item_path(dir, &name)) {
                     Ok(()) => {
                         idx.remove(&name);
                     }
@@ -568,12 +597,55 @@ fn is_hex(s: &str, len: usize) -> bool {
     s.len() == len && s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-/// Deletes a file; a file that is already gone counts as deleted.
-fn remove_file(path: &Path) -> io::Result<()> {
+fn is_not_found(e: &io::Error) -> bool {
+    e.kind() == io::ErrorKind::NotFound
+}
+
+/// Whether the fan-out directory holding `item` exists as a real directory. A link or a
+/// file in its place is an error: the cache never reads or deletes through it.
+fn fan_dir_present(item: &Path) -> io::Result<bool> {
+    let Some(fan) = item.parent() else { return Ok(false) };
+    match real_dir(fan) {
+        Ok(()) => Ok(true),
+        Err(e) if is_not_found(&e) => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+/// Deletes an item file; a file that is already gone counts as deleted.
+fn remove_item(path: &Path) -> io::Result<()> {
+    if !fan_dir_present(path)? {
+        return Ok(());
+    }
     match fs::remove_file(path) {
-        Err(e) if e.kind() != io::ErrorKind::NotFound => Err(e),
+        Err(e) if !is_not_found(&e) => Err(e),
         _ => Ok(()),
     }
+}
+
+/// True if a file in `tmp/` is older than [`STALE_TEMP_SECS`] by its modification time. A
+/// younger file may be another process's write in progress. Unknown or future times are not
+/// stale.
+fn is_stale_temp(meta: &fs::Metadata, now: SystemTime) -> bool {
+    meta.modified().ok().and_then(|m| now.duration_since(m).ok()).is_some_and(|age| age.as_secs() >= STALE_TEMP_SECS)
+}
+
+/// Renumbers access counters to `0..n` (order kept) once they near the end of `u64`.
+fn renumber_if_needed(idx: &mut Index) {
+    if idx.next < RENUMBER_AT {
+        return;
+    }
+    let order: Vec<(u64, String)> = std::mem::take(&mut idx.order).into_iter().collect();
+    let mut tick = 0u64;
+    for (_, name) in order {
+        if let Some(e) = idx.entries.get_mut(&name) {
+            e.tick = tick;
+        }
+        idx.order.insert((tick, name));
+        tick += 1;
+    }
+    idx.next = tick;
+    idx.changes = idx.changes.saturating_add(1);
 }
 
 /// Creates `path` as a directory if missing; refuses a link or a file in its place.
@@ -606,9 +678,10 @@ fn load(dir: &Path, warnings: &mut Vec<CacheWarning>) -> io::Result<Index> {
     let tmp = dir.join(TMP_DIR);
     ensure_dir(&items)?;
     ensure_dir(&tmp)?;
+    let now = SystemTime::now();
     for e in fs::read_dir(&tmp)? {
-        let e = e?;
-        if e.file_type().is_ok_and(|t| t.is_file()) {
+        let Ok(e) = e else { continue };
+        if e.file_type().is_ok_and(|t| t.is_file()) && e.metadata().is_ok_and(|m| is_stale_temp(&m, now)) {
             // Leftovers of an interrupted write; a failure only leaves a file behind.
             let _ = fs::remove_file(e.path());
         }
@@ -621,19 +694,41 @@ fn load(dir: &Path, warnings: &mut Vec<CacheWarning>) -> io::Result<Index> {
         }
     };
     let mut idx = Index { next, ..Index::default() };
+    // Another process may add or delete entries while this scan runs: entries that vanish
+    // are skipped, not errors.
     for d1 in fs::read_dir(&items)? {
-        let d1 = d1?;
+        let Ok(d1) = d1 else { continue };
         let fan = d1.file_name().to_string_lossy().into_owned();
-        if !is_hex(&fan, 2) || !d1.file_type().is_ok_and(|t| t.is_dir()) {
+        let Ok(kind) = d1.file_type() else { continue };
+        if !(is_hex(&fan, 2) && kind.is_dir()) {
+            // Only fan-out directories belong here; stray files and links are removed
+            // (a link itself, never its target), stray directories left alone.
+            if !kind.is_dir() {
+                let _ = fs::remove_file(d1.path());
+            }
             continue;
         }
-        for f in fs::read_dir(d1.path())? {
-            let f = f?;
+        let entries = match fs::read_dir(d1.path()) {
+            Ok(x) => x,
+            Err(e) if is_not_found(&e) => continue,
+            Err(e) => return Err(e),
+        };
+        for f in entries {
+            let Ok(f) = f else { continue };
             let name = f.file_name().to_string_lossy().into_owned();
-            if !is_hex(&name, 64) || !name.starts_with(&fan) || !f.file_type().is_ok_and(|t| t.is_file()) {
+            let Ok(kind) = f.file_type() else { continue };
+            let item = is_hex(&name, 64) && name.starts_with(&fan) && kind.is_file();
+            if !item {
+                if !kind.is_dir() {
+                    let _ = fs::remove_file(f.path());
+                }
                 continue;
             }
-            let size = f.metadata()?.len();
+            let size = match f.metadata() {
+                Ok(m) => m.len(),
+                Err(e) if is_not_found(&e) => continue,
+                Err(e) => return Err(e),
+            };
             // Items the index does not know (stored before a crash) count as oldest.
             let tick = prev.get(&name).map_or(0, |p| p.1);
             idx.insert(&name, size, tick);
@@ -643,6 +738,7 @@ fn load(dir: &Path, warnings: &mut Vec<CacheWarning>) -> io::Result<Index> {
     let same = prev.len() == idx.entries.len()
         && idx.entries.iter().all(|(n, e)| prev.get(n).is_some_and(|p| p.0 == e.size && p.1 == e.tick));
     idx.changes = if same { 0 } else { 1 };
+    renumber_if_needed(&mut idx);
     Ok(idx)
 }
 
@@ -739,6 +835,9 @@ fn write_item(dir: &Path, name: &str, content: &[u8]) -> io::Result<()> {
 /// Reads and checks one item. Damaged: wrong header, wrong key line, content digest
 /// mismatch, or larger than any item this cache stores.
 fn read_item(path: &Path, name: &str, limit: u64) -> io::Result<ReadOutcome> {
+    if !fan_dir_present(path)? {
+        return Ok(ReadOutcome::Absent);
+    }
     let meta = match fs::symlink_metadata(path) {
         Ok(m) => m,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(ReadOutcome::Absent),
@@ -746,6 +845,11 @@ fn read_item(path: &Path, name: &str, limit: u64) -> io::Result<ReadOutcome> {
     };
     if !meta.is_file() {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "item is not a regular file"));
+    }
+    // No item this cache stores is shorter than its header or longer than the limit; such a
+    // file is damaged and is not read at all.
+    if meta.len() < ITEM_HEADER_LEN || meta.len() > limit {
+        return Ok(ReadOutcome::Damaged);
     }
     let mut f = match File::open(path) {
         Ok(f) => f,

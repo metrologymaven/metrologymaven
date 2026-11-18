@@ -481,7 +481,13 @@ fn accounting_recovers_from_a_crash_at_any_point() {
     // Crash: no flush, so the index lists only items 0..3 and their old recency.
     std::mem::forget(cache);
     // A write interrupted between temp file and rename, and an item deleted by hand.
-    std::fs::write(dir.0.join(TMP_DIR).join("0123456789abcdef0123456789abcdef"), [0u8; 5000]).unwrap();
+    // It is two hours old, far past STALE_TEMP_SECS, so the test has no timing race.
+    let stale = dir.0.join(TMP_DIR).join("0123456789abcdef0123456789abcdef");
+    std::fs::write(&stale, [0u8; 5000]).unwrap();
+    age(&stale, 7200);
+    // A write still in progress in another process (fresh): left alone.
+    let fresh = dir.0.join(TMP_DIR).join("fedcba9876543210fedcba9876543210");
+    std::fs::write(&fresh, [0u8; 10]).unwrap();
     let gone = open(&dir.0, 1 << 20).path_of(&snap(0)).unwrap();
     std::fs::remove_file(&gone).unwrap();
 
@@ -489,7 +495,9 @@ fn accounting_recovers_from_a_crash_at_any_point() {
     let on_disk: u64 = tree(&dir.0.join(ITEMS_DIR)).values().map(|b| b.len() as u64).sum();
     assert_eq!(cache.total_bytes(), on_disk);
     assert_eq!(on_disk, (1..6).map(|i| ITEM_HEADER_LEN + 100 + i).sum::<u64>());
-    assert!(tree(&dir.0.join(TMP_DIR)).is_empty(), "leftover temp files are cleared");
+    assert!(!stale.exists(), "abandoned temp files are cleared");
+    assert!(fresh.exists(), "fresh temp files may be another process's write");
+    std::fs::remove_file(&fresh).unwrap();
     assert_eq!(cache.get(&snap(0)), None);
     for i in 1..6 {
         assert_eq!(cache.get(&snap(i)), Some(vec![i as u8; 100 + i]));
@@ -544,4 +552,132 @@ fn eviction_order_is_deterministic_for_an_access_sequence() {
     assert_eq!(a, run());
     let expect: Vec<Digest> = [0, 2, 4, 5].iter().map(|i| snap(*i).digest().unwrap()).collect();
     assert_eq!(a, expect);
+}
+
+/// Sets a file's modification time `secs` seconds into the past.
+fn age(path: &Path, secs: u64) {
+    let f = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+    f.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(secs)).unwrap();
+}
+
+#[test]
+fn two_handles_share_one_cache_directory() {
+    let dir = TempDir::new("shared");
+    let limit = 3 * (ITEM_HEADER_LEN + 10);
+    let mut a = open(&dir.0, limit);
+    let mut b = open(&dir.0, limit);
+    assert!(a.put(&snap(1), &[1; 10]));
+    // Each handle sees what the other stored and what it deleted.
+    assert_eq!(b.get(&snap(1)), Some(vec![1; 10]));
+    assert!(b.put(&snap(2), &[2; 10]));
+    assert_eq!(a.get(&snap(2)), Some(vec![2; 10]));
+    b.remove(&snap(1));
+    assert_eq!(a.get(&snap(1)), None);
+    assert!(a.put(&snap(3), &[3; 10]));
+    assert!(a.put(&snap(4), &[4; 10]));
+    // b does not know 3 and 4 yet: the directory may briefly exceed the limit.
+    assert!(b.put(&snap(5), &[5; 10]));
+    assert!(a.total_bytes() <= limit && b.total_bytes() <= limit);
+    assert_eq!(a.get(&snap(5)), Some(vec![5; 10]));
+    assert_eq!(b.get(&snap(3)), Some(vec![3; 10]));
+    assert!(a.take_warnings().is_empty());
+    assert!(b.take_warnings().is_empty());
+    drop(a);
+    drop(b);
+    // A fresh handle accounts the real files and evicts down to the limit.
+    let mut c = open(&dir.0, limit);
+    let on_disk: u64 = tree(&dir.0.join(ITEMS_DIR)).values().map(|b| b.len() as u64).sum();
+    assert_eq!(c.total_bytes(), on_disk);
+    assert!(on_disk <= limit);
+    assert_eq!(c.lru_order().len(), 3);
+    for i in 2..6 {
+        if let Some(v) = c.get(&snap(i)) {
+            assert_eq!(v, vec![i as u8; 10]);
+        }
+    }
+    assert!(c.take_warnings().is_empty());
+}
+
+#[test]
+fn access_counters_are_renumbered_before_they_run_out() {
+    let dir = TempDir::new("renumber");
+    let mut cache = open(&dir.0, 1 << 20);
+    for i in 0..3 {
+        assert!(cache.put(&snap(i), &[i as u8; 4]));
+    }
+    drop(cache);
+    let hex = |i: usize| snap(i).digest().unwrap().hex().to_string();
+    let size = ITEM_HEADER_LEN + 4;
+    let max = u64::MAX;
+    let index = format!(
+        "fid-cache-index@1\nnext={}\n{} {size} {}\n{} {size} {}\n{} {size} {}\n",
+        max - 2,
+        hex(0),
+        max - 5,
+        hex(1),
+        max - 3,
+        hex(2),
+        max - 10
+    );
+    std::fs::write(dir.0.join("index"), index).unwrap();
+    let mut cache = open(&dir.0, 1 << 20);
+    let order = |c: &mut Cache| c.lru_order().iter().map(|d| d.hex().to_string()).collect::<Vec<_>>();
+    assert_eq!(order(&mut cache), [hex(2), hex(0), hex(1)]);
+    assert!(cache.put(&snap(3), &[3; 4]));
+    assert_eq!(order(&mut cache), [hex(2), hex(0), hex(1), hex(3)]);
+    assert!(cache.take_warnings().is_empty());
+    drop(cache);
+    let text = std::fs::read_to_string(dir.0.join("index")).unwrap();
+    assert!(text.starts_with("fid-cache-index@1\nnext=4\n"), "{text}");
+    let mut cache = open(&dir.0, 1 << 20);
+    assert_eq!(order(&mut cache), [hex(2), hex(0), hex(1), hex(3)]);
+}
+
+#[test]
+fn stray_files_in_the_items_directory_are_removed() {
+    let dir = TempDir::new("stray");
+    let mut cache = open(&dir.0, 1 << 20);
+    assert!(cache.put(&snap(1), b"item"));
+    let fan = cache.path_of(&snap(1)).unwrap().parent().unwrap().to_path_buf();
+    drop(cache);
+    let items = dir.0.join(ITEMS_DIR);
+    std::fs::write(items.join("notes.txt"), b"stray").unwrap();
+    std::fs::write(fan.join("notes.txt"), b"stray").unwrap();
+    std::fs::create_dir(items.join("keep")).unwrap();
+    std::fs::write(items.join("keep").join("x"), b"not ours to judge").unwrap();
+    let mut cache = open(&dir.0, 1 << 20);
+    assert_eq!(cache.total_bytes(), ITEM_HEADER_LEN + 4);
+    assert!(!items.join("notes.txt").exists() && !fan.join("notes.txt").exists());
+    assert!(items.join("keep").join("x").exists(), "unknown directories are left alone");
+    assert_eq!(cache.get(&snap(1)), Some(b"item".to_vec()));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_linked_fan_out_directory_is_never_followed() {
+    let dir = TempDir::new("link");
+    let outside = TempDir::new("outside");
+    let mut cache = open(&dir.0, 1 << 20);
+    assert!(cache.put(&snap(1), b"item"));
+    let path = cache.path_of(&snap(1)).unwrap();
+    let fan = path.parent().unwrap().to_path_buf();
+    let target = outside.0.join(path.file_name().unwrap());
+    std::fs::copy(&path, &target).unwrap();
+    std::fs::remove_dir_all(&fan).unwrap();
+    std::os::unix::fs::symlink(&outside.0, &fan).unwrap();
+
+    assert_eq!(cache.get(&snap(1)), None);
+    cache.remove(&snap(1));
+    assert!(!cache.put(&snap(1), b"other"));
+    let codes: Vec<&str> = cache.take_warnings().iter().map(CacheWarning::code).collect();
+    assert_eq!(codes, ["io", "io", "io"]);
+    assert_eq!(std::fs::read_dir(&outside.0).unwrap().count(), 1);
+    assert!(target.exists(), "nothing is read or deleted through a link");
+    drop(cache);
+
+    // On reload the link itself is removed; its target is untouched.
+    let mut cache = open(&dir.0, 1 << 20);
+    assert_eq!(cache.total_bytes(), 0);
+    assert!(std::fs::symlink_metadata(&fan).is_err());
+    assert!(target.exists());
 }
