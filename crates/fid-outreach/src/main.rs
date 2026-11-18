@@ -51,6 +51,13 @@
 //! checkout. `mod-check` exits 0 with no findings and 1 with any; `mod-stats` exits 0 after
 //! writing `--out`, and 1 (writing nothing) when the log has field findings. Unreadable or
 //! unparsable input and bad usage exit 2.
+//!
+//! `site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>`
+//! and `site import fetch --site <dir> --release <tag> --base-url <url>` (spec node
+//! `OUTR.SITE.GEN.IMPORT`): verify checks the vendored inputs against `inputs.lock.toml` and each
+//! release manifest, then stages them with `build-manifest.json` (no network); fetch adds one
+//! release from an allowlisted host. Both print one line per finding and exit 1 on any, 0 on
+//! success, and 2 on unreadable or unparsable input or bad usage.
 
 use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
@@ -61,6 +68,7 @@ use fid_outreach::metrics::def;
 use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
 use fid_outreach::review_gate;
+use fid_outreach::site::import;
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -77,7 +85,9 @@ commands:
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
   asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]
   mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]
-  mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]";
+  mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]
+  site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>
+  site import fetch --site <dir> --release <tag> --base-url <url>";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -91,6 +101,7 @@ fn main() -> ExitCode {
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
+        (Some("site"), Some("import")) => site_import_cmd(args.get(2..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -593,6 +604,56 @@ fn moderation_cmd(cmd: &str, args: &[String]) -> ExitCode {
         }
         Err(e) => {
             eprintln!("mod-stats: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn site_import_cmd(args: &[String]) -> ExitCode {
+    let Some(sub) = args.first().map(String::as_str) else { return usage() };
+    let flags: &[&str] = match sub {
+        "verify" => &["--site", "--stage", "--revision", "--revision-date"],
+        "fetch" => &["--site", "--release", "--base-url"],
+        _ => return usage(),
+    };
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut it = args.iter().skip(1);
+    while let Some(a) = it.next() {
+        let Some(flag) = flags.iter().find(|f| **f == a.as_str()) else { return usage() };
+        let Some(v) = it.next() else { return usage() };
+        if opts.insert(*flag, v.as_str()).is_some() {
+            return usage();
+        }
+    }
+    if opts.len() != flags.len() {
+        return usage();
+    }
+    let get = |k: &str| opts.get(k).copied().unwrap_or("");
+    let site = Path::new(get("--site"));
+    let result = if sub == "verify" {
+        let stage = Path::new(get("--stage"));
+        let a = import::VerifyArgs { site, stage, revision: get("--revision"), revision_date: get("--revision-date") };
+        import::verify_and_stage(&a).map(|findings| (findings, format!("verified; staged to {}", stage.display())))
+    } else {
+        let a = import::fetch::FetchArgs { site, release: get("--release"), base_url: get("--base-url") };
+        import::fetch::fetch(&a).map(|r| match r {
+            Ok(f) => (Vec::new(), format!("fetched {} file(s) into inputs/{}/", f.entries.len(), get("--release"))),
+            Err(findings) => (findings, String::new()),
+        })
+    };
+    match result {
+        Ok((findings, summary)) if findings.is_empty() => {
+            println!("site import {sub}: {summary}");
+            ExitCode::SUCCESS
+        }
+        Ok((findings, _)) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("{e}");
             ExitCode::from(2)
         }
     }

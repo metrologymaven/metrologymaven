@@ -16,8 +16,12 @@ path = "src/main.rs"
 # dependency as fid-platform and fid-knp1-lint, already in Cargo.lock. Duplicate keys and
 # malformed TOML are rejected by the parser. fid-canon: writes the --json reports as canonical JSON,
 # and reads the a11y token and configuration JSON. HTML and CSS (qa a11y) use bounded in-house parsers.
+# fid-types and sha2 (site import, OUTR.SITE.GEN.IMPORT): the shared `sha256:` digest type and
+# streaming SHA-256 of vendored inputs; sha2 0.10 is already in the graph through fid-canon.
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+sha2 = "0.10"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]

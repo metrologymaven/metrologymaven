@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "id": "fid-studio",
+      "status": "beta"
+    }
+  ],
+  "release": "0.1.0"
+}

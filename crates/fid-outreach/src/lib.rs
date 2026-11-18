@@ -17,6 +17,8 @@
 //!   `OUTR.BRAND.GUIDE.NAME`).
 //! - [`moderation`]: private moderation log check and quarterly counts (spec node
 //!   `OUTR.COMM.MOD`).
+//! - [`site::import`]: generated-input lock file, fetch, digest check and build manifest of the
+//!   website (spec node `OUTR.SITE.GEN.IMPORT`).
 
 pub mod asset_check;
 pub mod copy_guard;
@@ -27,3 +29,4 @@ pub mod metrics;
 pub mod moderation;
 pub mod qa;
 pub mod review_gate;
+pub mod site;
