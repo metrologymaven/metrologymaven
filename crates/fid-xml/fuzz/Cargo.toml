@@ -1,0 +1,28 @@
+# cargo-fuzz harness for fid-xml (IO.QIF.XML.PARSE AC-5). Not a workspace member: it needs
+# nightly and libFuzzer. Run from crates/fid-xml/fuzz, seeded with the hand-written
+# fixtures (and the IO.CORP hostile corpus once it holds XML):
+#   cargo +nightly fuzz run xml_reader ../../../fixtures/io/qif/xml/parse \
+#     ../../../fixtures/io/qif/xml/parse/malformed -- -max_total_time=600 -rss_limit_mb=256
+[package]
+name = "fid-xml-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-xml = { path = ".." }
+
+[[bin]]
+name = "xml_reader"
+path = "fuzz_targets/xml_reader.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this harness out of the repository workspace.
+[workspace]

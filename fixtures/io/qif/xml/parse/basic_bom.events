@@ -1,0 +1,37 @@
+M	 leading comment 
+P	app-hint	mode="fast" 
+S		{}root	:{}id=r1	:{}note=tab here\tkept	:{}multi=line one line two
+T	\n  
+S		{}item	:{}n=1
+T	alpha & beta <gamma> "delta" 'eps'
+E	{}item
+T	\n  
+S		{}item	:{}n=2
+T	AB😀 café µm
+E	{}item
+T	\n  
+S		{}empty
+E	{}empty
+T	\n  
+S		{}code
+C	if (a < b && c > d) { x = "]]"; }
+E	{}code
+T	\n  
+M	 inner comment 
+T	\n  
+S		{}mixed
+T	one
+S		{}b
+T	two
+E	{}b
+T	three\nfour
+C	
+E	{}mixed
+T	\n  
+P	proc	data with  spaces 
+T	\n  
+S		{}e2
+E	{}e2
+T	\n
+E	{}root
+M	 trailing comment 

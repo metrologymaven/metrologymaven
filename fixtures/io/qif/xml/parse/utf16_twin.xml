@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<messung einheit="mm">
+  <wert typ="Länge">12.5 µm ± 0.1</wert>
+  <notiz>𝄞 Größe ≤ 3</notiz>
+</messung>
