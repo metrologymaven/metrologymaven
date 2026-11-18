@@ -781,3 +781,15 @@ fn pi_target_without_colon() {
     );
     assert!(read(b"<r><?a-b x?></r>").is_ok());
 }
+
+/// An inherited scope over the binding limit fails closed instead of dropping bindings.
+#[test]
+fn inherited_scope_over_the_limit_fails_closed() {
+    let scope: Vec<NsBinding> =
+        (0..257).map(|i| NsBinding { prefix: Some(format!("p{i}")), uri: format!("urn:{i}").into() }).collect();
+    let want = XmlError::LimitExceeded { limit: XmlLimit::Namespaces, value: 256, at: Position::line_col(0, 1, 1) };
+    let options = XmlOptions::default().with_inherited_namespaces(&scope);
+    assert_eq!(read_slice_with(b"<p256:a/>", budget(), options).unwrap_err(), want);
+    let options = XmlOptions::default().with_inherited_namespaces(&scope[..256]);
+    assert!(read_slice_with(b"<p255:a/>", budget(), options).is_ok());
+}

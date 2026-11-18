@@ -348,7 +348,12 @@ impl<R: Read> XmlReader<R> {
             scope.push(b.clone());
         }
         scope.sort();
-        scope.truncate(opts.max_namespaces);
+        // Fail closed: dropping a binding could change how a prefix resolves.
+        let failed = (scope.len() > opts.max_namespaces).then(|| XmlError::LimitExceeded {
+            limit: XmlLimit::Namespaces,
+            value: opts.max_namespaces as u64,
+            at: Position::line_col(0, 1, 1),
+        });
         XmlReader {
             input: Input::new(source, opts.read_chunk),
             opts,
@@ -360,7 +365,7 @@ impl<R: Read> XmlReader<R> {
             seen_root: false,
             ready: None,
             pending: None,
-            failed: None,
+            failed,
         }
     }
 
