@@ -43,6 +43,14 @@
 //! attributed under an allowlisted licence, and that no CSS or HTML loads a font or stylesheet
 //! from another origin. Exits 0 with no findings, 1 with any, and 2 on unreadable or unparsable
 //! input or bad usage.
+//!
+//! `mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]` and
+//! `mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]`
+//! (spec node `OUTR.COMM.MOD`): check the private moderation log, or write one quarter's counts.
+//! Both exit 2 with `log_in_repo`, reading nothing, when the log lies inside the repository
+//! checkout. `mod-check` exits 0 with no findings and 1 with any; `mod-stats` exits 0 after
+//! writing `--out`, and 1 (writing nothing) when the log has field findings. Unreadable or
+//! unparsable input and bad usage exit 2.
 
 use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
@@ -50,6 +58,7 @@ use fid_outreach::doc_run;
 use fid_outreach::guide_check;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
+use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
 use fid_outreach::review_gate;
 use std::collections::BTreeMap;
@@ -66,7 +75,9 @@ commands:
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
-  asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]";
+  asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]
+  mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]
+  mod-stats --log <file> --quarter <YYYYQn> --target-hours <n> --out <file> [--repo-root <dir>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -79,6 +90,7 @@ fn main() -> ExitCode {
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
+        (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -504,6 +516,83 @@ fn asset_check_cmd(args: &[String]) -> ExitCode {
                 }
             }
             eprintln!("asset-check: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn moderation_cmd(cmd: &str, args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (cmd, a.as_str()) {
+            ("mod-check", "--json") => json = true,
+            ("mod-check", flag @ ("--log" | "--roster" | "--today" | "--repo-root"))
+            | ("mod-stats", flag @ ("--log" | "--quarter" | "--target-hours" | "--out" | "--repo-root")) => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let Some(log) = opts.get("--log").map(PathBuf::from) else { return usage() };
+    let repo_root = opts.get("--repo-root").map(PathBuf::from);
+    if cmd == "mod-check" {
+        let (Some(roster), Some(today)) =
+            (opts.get("--roster"), opts.get("--today").and_then(|d| moderation::Date::parse(d)))
+        else {
+            return usage();
+        };
+        let options = moderation::CheckOptions { log, roster: PathBuf::from(roster), today, repo_root };
+        return match moderation::run_check(&options) {
+            Ok(report) => {
+                if json {
+                    emit(&report.to_json());
+                } else {
+                    print!("{}", report.render());
+                }
+                ExitCode::from(report.exit_code())
+            }
+            Err(e) => {
+                if json {
+                    emit(&e.to_json());
+                }
+                eprintln!("mod-check: {e}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    let quarter = opts.get("--quarter").and_then(|q| moderation::Quarter::parse(q));
+    let hours = opts.get("--target-hours").and_then(|h| h.parse::<u32>().ok());
+    let (Some(quarter), Some(target_hours), Some(out)) = (quarter, hours, opts.get("--out")) else {
+        return usage();
+    };
+    if !(1..=moderation::MAX_TARGET_HOURS).contains(&target_hours) {
+        return usage();
+    }
+    match moderation::run_stats(&moderation::StatsOptions { log, quarter, target_hours, repo_root }) {
+        Ok(moderation::StatsResult::Counts(bytes)) => match std::fs::write(out, &bytes) {
+            Ok(()) => {
+                println!("mod-stats: wrote {out}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("mod-stats: output_unwritable {out}: {e}");
+                ExitCode::from(2)
+            }
+        },
+        Ok(moderation::StatsResult::Invalid(findings)) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            println!("mod-stats: {} finding(s), nothing written", findings.len());
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("mod-stats: {e}");
             ExitCode::from(2)
         }
     }

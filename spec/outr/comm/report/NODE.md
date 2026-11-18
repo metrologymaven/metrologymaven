@@ -78,6 +78,7 @@ Synthetic inputs under `fixtures/outr/comm/report/` (`ok`, `gap`, `lint-fail`) s
 
 ## Open questions
 
+- Moderation counts from `fid-outreach mod-stats` (OUTR.COMM.MOD) can identify people when a cell is small (for example one ban in a quarter on a small channel). Proposal: apply small-count suppression to them as REQ-OUTR.COMM-007 does for surveys, e.g. show any outcome cell under 10 as "fewer than 10" and hide the acknowledgement share when the quarter's total is under 10 [unverified threshold].
 - Before any survey runs, the survey section is simply marked unavailable.
 - `due` needs a start point; it starts from the earliest report in the folder, so the first report must be committed by maintainers once metrics collection begins.
 - OUTR.COMM.MOD and OUTR.COMM.SURVEY.AGG outputs are read as files (`uses_artifacts`); the earlier `depends_on` on OUTR.COMM.SURVEY is replaced (CONSTITUTION 2.1, D-034).
