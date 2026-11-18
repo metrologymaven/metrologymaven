@@ -104,8 +104,8 @@ pub struct CommandDef {
     pub idempotency: Idempotency,
     pub fs_effect: FsEffect,
     pub undo: Undo,
-    /// Precondition sources; checked by CORE.REG.DEF.PRED.
-    pub preconditions: Vec<String>,
+    /// Preconditions; the expressions are checked by CORE.REG.DEF.PRED.
+    pub preconditions: Vec<Precondition>,
     /// Journal event types this command may emit, e.g. `align.run_321@1`.
     pub effects: Vec<String>,
     pub algorithms: Vec<AlgorithmId>,
@@ -117,6 +117,54 @@ pub struct CommandDef {
     pub web: Web,
     pub web_note: Option<String>,
     pub cli_bare: bool,
+}
+
+/// Largest step bound the definition format accepts. FPL itself caps evaluation at
+/// `pred::MAX_BOUND`; a larger declared bound fails the registry build (`fpl_bound`).
+pub const MAX_PRECONDITION_BOUND: u32 = 1_000_000;
+
+/// One precondition: an FPL expression, its step bound and the message key returned when it
+/// is false. JSON form: `{"expr": "...", "bound": N, "message_key": "..."}`, all required.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Precondition {
+    pub expr: String,
+    /// 1..=[`MAX_PRECONDITION_BOUND`].
+    pub bound: u32,
+    /// Same shape as a command ID: `[a-z0-9_.]`, starting and ending alphanumeric.
+    pub message_key: String,
+}
+
+impl Precondition {
+    fn from_value(v: CValue) -> Result<Self, DefError> {
+        let bad = |why: &str| DefError::BadPrecondition(why.to_string());
+        let CValue::Obj(mut o) = v else { return Err(bad("must be an object")) };
+        if let Some(k) = o.keys().find(|k| !matches!(k.as_str(), "expr" | "bound" | "message_key")) {
+            return Err(bad(&format!("unknown field {k}")));
+        }
+        let expr = match o.remove("expr") {
+            Some(CValue::Str(s)) => s,
+            _ => return Err(bad("expr must be a string")),
+        };
+        let bound = match o.remove("bound") {
+            Some(CValue::Num(n)) if n.fract() == 0.0 && (1.0..=f64::from(MAX_PRECONDITION_BOUND)).contains(&n) => {
+                n as u32
+            }
+            _ => return Err(bad("bound must be an integer 1..=1000000")),
+        };
+        let message_key = match o.remove("message_key") {
+            Some(CValue::Str(s)) if valid_id(&s) => s,
+            _ => return Err(bad("message_key must match [a-z0-9_.]")),
+        };
+        Ok(Precondition { expr, bound, message_key })
+    }
+
+    fn to_value(&self) -> CValue {
+        obj([
+            ("expr", s(&self.expr)),
+            ("bound", CValue::Num(f64::from(self.bound))),
+            ("message_key", s(&self.message_key)),
+        ])
+    }
 }
 
 /// Definition errors with stable codes.
@@ -134,6 +182,7 @@ pub enum DefError {
     },
     BadId(String),
     BadAlgorithm(String),
+    BadPrecondition(String),
     WebMissing,
     WebNoteMissing,
     /// The JSON could not be parsed (`fid-canon` error code).
@@ -150,6 +199,7 @@ impl DefError {
             DefError::BadEnum { .. } => "bad_enum",
             DefError::BadId(_) => "bad_id",
             DefError::BadAlgorithm(_) => "bad_algorithm",
+            DefError::BadPrecondition(_) => "bad_precondition",
             DefError::WebMissing => "web_missing",
             DefError::WebNoteMissing => "web_note_missing",
             DefError::Json(c) => c,
@@ -166,6 +216,7 @@ impl fmt::Display for DefError {
             DefError::BadEnum { field, value } => write!(f, "bad_enum: {field} = {value:?}"),
             DefError::BadId(s) => write!(f, "bad_id: {s:?}"),
             DefError::BadAlgorithm(s) => write!(f, "bad_algorithm: {s:?}"),
+            DefError::BadPrecondition(s) => write!(f, "bad_precondition: {s}"),
             other => f.write_str(other.code()),
         }
     }
@@ -276,7 +327,10 @@ impl CommandDef {
         let idempotency = Idempotency::parse(&r.string("idempotency")?)?;
         let fs_effect = FsEffect::parse(&r.string("fs_effect")?)?;
         let undo = Undo::parse(&r.string("undo")?)?;
-        let preconditions = r.strings("preconditions")?;
+        let preconditions = match r.req("preconditions")? {
+            CValue::Arr(items) => items.into_iter().map(Precondition::from_value).collect::<Result<Vec<_>, _>>()?,
+            _ => return Err(DefError::BadType { field: "preconditions".into(), expected: "an array" }),
+        };
         let effects = r.strings("effects")?;
         let algorithms = r
             .strings("algorithms")?
@@ -357,7 +411,7 @@ impl CommandDef {
         o.insert("idempotency".into(), s(self.idempotency.as_str()));
         o.insert("fs_effect".into(), s(self.fs_effect.as_str()));
         o.insert("undo".into(), s(self.undo.as_str()));
-        o.insert("preconditions".into(), strs(&self.preconditions));
+        o.insert("preconditions".into(), CValue::Arr(self.preconditions.iter().map(Precondition::to_value).collect()));
         o.insert("effects".into(), strs(&self.effects));
         o.insert("algorithms".into(), CValue::Arr(self.algorithms.iter().map(|a| s(&a.to_string())).collect()));
         o.insert("exposure".into(), CValue::Arr(self.exposure.iter().map(|x| s(x.as_str())).collect()));
@@ -440,7 +494,38 @@ pub fn command_def_schema() -> CValue {
                 ("idempotency", enum_of(&idem)),
                 ("fs_effect", enum_of(&fs)),
                 ("undo", enum_of(&undo)),
-                ("preconditions", string_array()),
+                (
+                    "preconditions",
+                    obj([
+                        ("type", s("array")),
+                        (
+                            "items",
+                            obj([
+                                ("type", s("object")),
+                                ("additionalProperties", CValue::Bool(false)),
+                                ("required", strs(&["expr", "bound", "message_key"])),
+                                (
+                                    "properties",
+                                    obj([
+                                        ("expr", obj([("type", s("string"))])),
+                                        (
+                                            "bound",
+                                            obj([
+                                                ("type", s("integer")),
+                                                ("minimum", CValue::Num(1.0)),
+                                                ("maximum", CValue::Num(f64::from(MAX_PRECONDITION_BOUND))),
+                                            ]),
+                                        ),
+                                        (
+                                            "message_key",
+                                            obj([("type", s("string")), ("pattern", s("^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$"))]),
+                                        ),
+                                    ]),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                ),
                 ("effects", string_array()),
                 (
                     "algorithms",

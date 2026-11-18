@@ -6,25 +6,32 @@
 //! `all(x in list, body)` and `exists(x in list, body)`. There are no loops, recursion,
 //! assignment, user functions, I/O, clock or randomness (REQ-001).
 //!
-//! Limits: a declaration is at most [`MAX_SRC_BYTES`] bytes, the AST and the parser nest at
-//! most [`MAX_DEPTH`] levels, and every evaluation stops at its declared step bound
-//! (at most [`MAX_BOUND`]). The evaluator walks the tree with an explicit work stack, counts
-//! one step per AST node visited and one per list element visited by `all`/`exists`, and
-//! checks the counter before each visit (REQ-003, REQ-004). It reads state only through
-//! [`PredContext`] (REQ-006).
+//! Limits: an expression is at most [`MAX_SRC_BYTES`] bytes, and the AST and the parser nest
+//! at most [`MAX_DEPTH`] levels. A flat chain `a && b && c` (or `||`) is one n-ary node, so
+//! it does not count as nesting. Every evaluation stops at its declared step bound (at most
+//! [`MAX_BOUND`]). The evaluator walks the tree with an explicit work stack, counts one step
+//! per AST node visited and one per list element visited by `all`/`exists`, and checks the
+//! counter before each visit (REQ-003, REQ-004). `&&`, `||`, `?:`, `all` and `exists`
+//! short-circuit, left to right. It reads state only through [`PredContext`] (REQ-006).
 //!
-//! A declaration may start with annotations: `@bound(500) @message(align.needs_points) expr`.
-//! Without `@bound` the bound is [`MAX_BOUND`]; without `@message` the caller's default key
-//! is used.
+//! Cost model: a context path read (`params.a.b`), `in` and `size` each cost one step, but
+//! their work is linear in the size of the value read or searched (O(n) within one step).
+//! Values are bounded by what the [`PredContext`] supplies.
+//!
+//! Numbers: `-0.0` is normalised to `+0.0` when a value enters evaluation (float literals and
+//! context reads); otherwise floats compare under IEEE 754 total order (REQ-007).
+//!
+//! The step bound and the message key are declared next to the expression, in
+//! [`crate::def::Precondition`].
 
-use crate::def::CommandDef;
+use crate::def::{CommandDef, Precondition};
 use fid_canon::CValue;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt;
 
 /// Largest step bound a precondition may declare (REQ-003).
-pub const MAX_BOUND: u16 = 10_000;
+pub const MAX_BOUND: u32 = 10_000;
 /// Nesting limit of the parser and of the AST.
 pub const MAX_DEPTH: usize = 64;
 /// Largest precondition declaration, in bytes.
@@ -235,8 +242,10 @@ pub enum ExprKind {
     /// Field access on a map value.
     Field(Box<Expr>, String),
     Not(Box<Expr>),
-    And(Box<Expr>, Box<Expr>),
-    Or(Box<Expr>, Box<Expr>),
+    /// A flat `&&` chain of two or more operands.
+    And(Vec<Expr>),
+    /// A flat `||` chain of two or more operands.
+    Or(Vec<Expr>),
     Cmp(CmpOp, Box<Expr>, Box<Expr>),
     In(Box<Expr>, Box<Expr>),
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -253,9 +262,11 @@ pub enum ExprKind {
 
 fn node(kind: ExprKind, pos: usize) -> Result<Expr, ParseError> {
     let child = match &kind {
-        ExprKind::List(items) => items.iter().map(|e| e.depth).max().unwrap_or(0),
+        ExprKind::List(items) | ExprKind::And(items) | ExprKind::Or(items) => {
+            items.iter().map(|e| e.depth).max().unwrap_or(0)
+        }
         ExprKind::Field(a, _) | ExprKind::Not(a) | ExprKind::Size(a) | ExprKind::Has(a) => a.depth,
-        ExprKind::And(a, b) | ExprKind::Or(a, b) | ExprKind::Cmp(_, a, b) | ExprKind::In(a, b) => a.depth.max(b.depth),
+        ExprKind::Cmp(_, a, b) | ExprKind::In(a, b) => a.depth.max(b.depth),
         ExprKind::Quant { list, body, .. } => list.depth.max(body.depth),
         ExprKind::Cond(a, b, c) => a.depth.max(b.depth).max(c.depth),
         _ => 0,
@@ -290,15 +301,16 @@ enum Tok {
     Eof,
 }
 
-/// Words FPL refuses outright: loops, definitions, assignment and other statement forms.
+/// Words FPL refuses where an identifier starts an expression or names a variable: loops,
+/// definitions, assignment and other statement forms. After `.` they are ordinary field names.
 const FORBIDDEN: &[&str] = &[
     "for", "while", "loop", "do", "foreach", "repeat", "until", "break", "continue", "goto", "def", "fn", "function",
     "lambda", "let", "var", "const", "return", "yield", "import", "load", "null", "nil", "now", "rand", "random",
 ];
 
-fn lex(src: &str, start: usize) -> Result<Vec<(Tok, usize)>, ParseError> {
+fn lex(src: &str) -> Result<Vec<(Tok, usize)>, ParseError> {
     let b = src.as_bytes();
-    let mut i = start;
+    let mut i = 0;
     let mut out = Vec::new();
     while i < b.len() {
         let c = b[i];
@@ -351,11 +363,7 @@ fn lex(src: &str, start: usize) -> Result<Vec<(Tok, usize)>, ParseError> {
                 while end < b.len() && (b[end].is_ascii_alphanumeric() || b[end] == b'_') {
                     end += 1;
                 }
-                let word = &src[i..end];
-                if FORBIDDEN.contains(&word) {
-                    return Err(ParseError::syntax(p, format!("`{word}` is not part of FPL")));
-                }
-                out.push((Tok::Ident(word.to_string()), p));
+                out.push((Tok::Ident(src[i..end].to_string()), p));
                 i = end;
                 continue;
             }
@@ -405,7 +413,7 @@ fn number(src: &str, start: usize) -> Result<(Tok, usize), ParseError> {
     let text = &src[start..i];
     if float {
         match text.parse::<f64>() {
-            Ok(f) if f.is_finite() => Ok((Tok::Float(f), i)),
+            Ok(f) if f.is_finite() => Ok((Tok::Float(positive_zero(f)), i)),
             _ => Err(ParseError::syntax(start, "number out of range")),
         }
     } else {
@@ -497,23 +505,31 @@ impl Parser {
     }
 
     fn or(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.and()?;
-        while *self.peek() == Tok::OrOr {
-            let p = self.bump().1;
-            let rhs = self.and()?;
-            lhs = node(ExprKind::Or(Box::new(lhs), Box::new(rhs)), p)?;
+        let first = self.and()?;
+        if *self.peek() != Tok::OrOr {
+            return Ok(first);
         }
-        Ok(lhs)
+        let p = self.pos();
+        let mut items = vec![first];
+        while *self.peek() == Tok::OrOr {
+            self.bump();
+            items.push(self.and()?);
+        }
+        node(ExprKind::Or(items), p)
     }
 
     fn and(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.rel()?;
-        while *self.peek() == Tok::AndAnd {
-            let p = self.bump().1;
-            let rhs = self.rel()?;
-            lhs = node(ExprKind::And(Box::new(lhs), Box::new(rhs)), p)?;
+        let first = self.rel()?;
+        if *self.peek() != Tok::AndAnd {
+            return Ok(first);
         }
-        Ok(lhs)
+        let p = self.pos();
+        let mut items = vec![first];
+        while *self.peek() == Tok::AndAnd {
+            self.bump();
+            items.push(self.rel()?);
+        }
+        node(ExprKind::And(items), p)
     }
 
     fn rel_op(&self) -> Option<Option<CmpOp>> {
@@ -609,6 +625,9 @@ impl Parser {
             "true" => return node(ExprKind::Bool(true), p),
             "false" => return node(ExprKind::Bool(false), p),
             "in" => return Err(ParseError::syntax(p, "unexpected `in`")),
+            word if FORBIDDEN.contains(&word) => {
+                return Err(ParseError::syntax(p, format!("`{word}` is not part of FPL")));
+            }
             _ => {}
         }
         if *self.peek() == Tok::LParen {
@@ -642,7 +661,9 @@ impl Parser {
         let Tok::Ident(var) = t else {
             return Err(ParseError::syntax(vp, "expected a variable name"));
         };
-        if matches!(var.as_str(), "true" | "false" | "in" | "size" | "has" | "all" | "exists") {
+        if matches!(var.as_str(), "true" | "false" | "in" | "size" | "has" | "all" | "exists")
+            || FORBIDDEN.contains(&var.as_str())
+        {
             return Err(ParseError::syntax(vp, format!("`{var}` cannot be a variable")));
         }
         if self.vars.contains(&var) {
@@ -662,80 +683,18 @@ impl Parser {
     }
 }
 
-/// Parses an FPL expression (no annotations).
+/// Parses an FPL expression.
 pub fn parse(src: &str) -> Result<Expr, ParseError> {
-    parse_from(src, 0)
-}
-
-fn parse_from(src: &str, start: usize) -> Result<Expr, ParseError> {
     if src.len() > MAX_SRC_BYTES {
         return Err(ParseError::syntax(MAX_SRC_BYTES, format!("precondition longer than {MAX_SRC_BYTES} bytes")));
     }
-    let toks = lex(src, start)?;
+    let toks = lex(src)?;
     let mut p = Parser { toks, i: 0, level: 0, vars: Vec::new() };
     let e = p.expr()?;
     if *p.peek() != Tok::Eof {
         return Err(ParseError::syntax(p.pos(), "unexpected token after expression"));
     }
     Ok(e)
-}
-
-/// Annotations at the start of a declaration.
-struct Header {
-    bound: Option<u16>,
-    message: Option<String>,
-    end: usize,
-}
-
-fn header(src: &str) -> Result<Header, ParseError> {
-    let b = src.as_bytes();
-    let mut h = Header { bound: None, message: None, end: 0 };
-    let mut i = 0;
-    loop {
-        while i < b.len() && b[i].is_ascii_whitespace() {
-            i += 1;
-        }
-        if i >= b.len() || b[i] != b'@' {
-            h.end = i;
-            return Ok(h);
-        }
-        let at = i;
-        let rest = &src[i..];
-        let (is_bound, open) = if rest.starts_with("@bound(") {
-            (true, 7)
-        } else if rest.starts_with("@message(") {
-            (false, 9)
-        } else {
-            return Err(ParseError::syntax(at, "unknown annotation; use @bound(N) or @message(key)"));
-        };
-        let arg_start = i + open;
-        let Some(close) = src[arg_start..].find(')') else {
-            return Err(ParseError::syntax(at, "unterminated annotation"));
-        };
-        let arg = &src[arg_start..arg_start + close];
-        if is_bound {
-            if h.bound.is_some() {
-                return Err(ParseError::syntax(at, "duplicate @bound"));
-            }
-            let n =
-                if !arg.is_empty() && arg.bytes().all(|c| c.is_ascii_digit()) { arg.parse::<u32>().ok() } else { None };
-            match n {
-                Some(n) if (1..=u32::from(MAX_BOUND)).contains(&n) => h.bound = u16::try_from(n).ok(),
-                _ => return Err(ParseError::syntax(arg_start, format!("@bound must be an integer 1..={MAX_BOUND}"))),
-            }
-        } else {
-            if h.message.is_some() {
-                return Err(ParseError::syntax(at, "duplicate @message"));
-            }
-            if arg.is_empty()
-                || !arg.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'.')
-            {
-                return Err(ParseError::syntax(arg_start, "@message key must be non-empty [a-z0-9_.]"));
-            }
-            h.message = Some(arg.to_string());
-        }
-        i = arg_start + close + 1;
-    }
 }
 
 // ---------------------------------------------------------------- types
@@ -900,9 +859,10 @@ impl<'a> Checker<'a> {
                 self.want_bool(a)?;
                 (Type::Bool, None)
             }
-            ExprKind::And(a, b) | ExprKind::Or(a, b) => {
-                self.want_bool(a)?;
-                self.want_bool(b)?;
+            ExprKind::And(items) | ExprKind::Or(items) => {
+                for it in items {
+                    self.want_bool(it)?;
+                }
                 (Type::Bool, None)
             }
             ExprKind::Cmp(op, a, b) => {
@@ -997,41 +957,44 @@ pub fn typecheck(e: &Expr, params: &ParamSchema, ctx: &ContextTypes) -> Result<(
 /// A checked precondition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Predicate {
-    /// The full declaration, annotations included.
+    /// The expression source.
     pub src: String,
     pub ast: Expr,
     /// Step bound, 1..=[`MAX_BOUND`].
-    pub bound: u16,
+    pub bound: u32,
     /// Message key returned when the predicate is false.
     pub message_key: String,
 }
 
 impl Predicate {
-    /// Parses annotations and expression, then type-checks. `default_key` is used when the
-    /// declaration has no `@message`.
+    /// Parses and type-checks `expr`. A bound outside 1..=[`MAX_BOUND`] is `fpl_bound`.
     pub fn compile(
-        decl: &str,
-        default_key: &str,
+        expr: &str,
+        bound: u32,
+        message_key: &str,
         params: &ParamSchema,
         ctx: &ContextTypes,
     ) -> Result<Predicate, ParseError> {
-        if decl.len() > MAX_SRC_BYTES {
-            return Err(ParseError::syntax(MAX_SRC_BYTES, format!("precondition longer than {MAX_SRC_BYTES} bytes")));
+        if !(1..=MAX_BOUND).contains(&bound) {
+            return Err(ParseError {
+                code: "fpl_bound",
+                pos: 0,
+                message: format!("step bound {bound} is outside 1..={MAX_BOUND}"),
+            });
         }
-        let h = header(decl)?;
-        let ast = parse_from(decl, h.end)?;
+        let ast = parse(expr)?;
         typecheck(&ast, params, ctx)?;
-        Ok(Predicate {
-            src: decl.to_string(),
-            ast,
-            bound: h.bound.unwrap_or(MAX_BOUND),
-            message_key: h.message.unwrap_or_else(|| default_key.to_string()),
-        })
+        Ok(Predicate { src: expr.to_string(), ast, bound, message_key: message_key.to_string() })
+    }
+
+    /// Compiles one declared precondition.
+    pub fn from_decl(decl: &Precondition, params: &ParamSchema, ctx: &ContextTypes) -> Result<Predicate, ParseError> {
+        Predicate::compile(&decl.expr, decl.bound, &decl.message_key, params, ctx)
     }
 }
 
 /// A registry-build failure: which command, which precondition, and the parse/type error
-/// with its byte position (REQ-002).
+/// with its byte position in the expression (REQ-002).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildError {
     /// `id@major`.
@@ -1049,15 +1012,14 @@ impl fmt::Display for BuildError {
 
 impl std::error::Error for BuildError {}
 
-/// Compiles every precondition of a command for the registry build. The default message key
-/// of precondition `i` is `<id>.precondition_<i>`.
+/// Compiles every precondition of a command for the registry build.
 pub fn compile_command(def: &CommandDef, ctx: &ContextTypes) -> Result<Vec<Predicate>, BuildError> {
     let params = ParamSchema::from_json_schema(&def.params_schema);
     def.preconditions
         .iter()
         .enumerate()
-        .map(|(index, src)| {
-            Predicate::compile(src, &format!("{}.precondition_{index}", def.id), &params, ctx)
+        .map(|(index, decl)| {
+            Predicate::from_decl(decl, &params, ctx)
                 .map_err(|error| BuildError { command: format!("{}@{}", def.id, def.major), index, error })
         })
         .collect()
@@ -1079,22 +1041,34 @@ pub struct Evaluation {
     pub steps: u32,
 }
 
+/// Progress of one `all`/`exists`.
+struct Quant<'a> {
+    is_all: bool,
+    var: &'a str,
+    body: &'a Expr,
+    pos: usize,
+    items: Vec<Value>,
+    idx: usize,
+    /// Display path of the list, for error messages.
+    origin: String,
+}
+
 enum Task<'a> {
     Visit(&'a Expr),
     Not(usize),
-    AndRhs(&'a Expr, usize),
-    OrRhs(&'a Expr, usize),
-    WantBool(usize),
+    /// Next operand of an n-ary `&&` (`is_and`) or `||`.
+    Chain { is_and: bool, items: &'a [Expr], idx: usize, pos: usize },
     Cmp(CmpOp, usize),
     In(usize),
     Cond(&'a Expr, &'a Expr, usize),
     Size(usize),
-    Field(&'a str, usize),
+    /// Field access; carries the field node to name the full path when it is missing.
+    Field(&'a Expr, &'a str, usize),
     HasField(&'a str, usize),
     MakeList(usize),
-    QuantList { is_all: bool, var: &'a str, body: &'a Expr, pos: usize },
-    QuantNext { is_all: bool, var: &'a str, body: &'a Expr, pos: usize, items: Vec<Value>, idx: usize, acc: bool },
-    QuantAfter { is_all: bool, var: &'a str, body: &'a Expr, pos: usize, items: Vec<Value>, idx: usize, acc: bool },
+    QuantList { is_all: bool, var: &'a str, list: &'a Expr, body: &'a Expr, pos: usize },
+    QuantNext(Quant<'a>),
+    QuantAfter(Quant<'a>),
 }
 
 struct Machine<'a> {
@@ -1102,11 +1076,34 @@ struct Machine<'a> {
     bound: u32,
     steps: u32,
     vals: Vec<Value>,
-    env: Vec<(&'a str, Value)>,
+    /// Bound variables: name, value, display path (e.g. `params.items[1]`).
+    env: Vec<(&'a str, Value, String)>,
 }
 
 fn type_err(pos: usize, detail: String) -> PredError {
     PredError::TypeError { pos, detail }
+}
+
+/// `-0.0` becomes `+0.0`; every other value is unchanged.
+fn positive_zero(f: f64) -> f64 {
+    if f.to_bits() == (-0.0f64).to_bits() {
+        0.0
+    } else {
+        f
+    }
+}
+
+/// Normalises every float in a value read from the context, without recursion.
+fn normalize(v: &mut Value) {
+    let mut stack: Vec<&mut Value> = vec![v];
+    while let Some(v) = stack.pop() {
+        match v {
+            Value::Float(f) => *f = positive_zero(*f),
+            Value::List(items) => stack.extend(items.iter_mut()),
+            Value::Map(m) => stack.extend(m.values_mut()),
+            _ => {}
+        }
+    }
 }
 
 impl<'a> Machine<'a> {
@@ -1129,8 +1126,32 @@ impl<'a> Machine<'a> {
         }
     }
 
+    /// Display path of a path, variable or field chain, e.g. `params.items[1].n`.
+    /// Walks the chain iteratively.
+    fn path_of(&self, e: &Expr) -> String {
+        let mut names = Vec::new();
+        let mut cur = e;
+        while let ExprKind::Field(base, name) = &cur.kind {
+            names.push(name.as_str());
+            cur = base.as_ref();
+        }
+        let mut out = match &cur.kind {
+            ExprKind::Path(p) => p.to_string(),
+            ExprKind::Var(v) => match self.env.iter().rev().find(|(n, _, _)| *n == v.as_str()) {
+                Some((_, _, origin)) => origin.clone(),
+                None => v.clone(),
+            },
+            _ => "<value>".to_string(),
+        };
+        for n in names.iter().rev() {
+            out.push('.');
+            out.push_str(n);
+        }
+        out
+    }
+
     fn run(&mut self, root: &'a Expr) -> Result<bool, PredError> {
-        let mut work: Vec<Task<'a>> = vec![Task::WantBool(root.pos), Task::Visit(root)];
+        let mut work: Vec<Task<'a>> = vec![Task::Visit(root)];
         while let Some(task) = work.pop() {
             match task {
                 Task::Visit(e) => {
@@ -1141,25 +1162,15 @@ impl<'a> Machine<'a> {
                     let b = self.pop_bool(pos)?;
                     self.vals.push(Value::Bool(!b));
                 }
-                Task::AndRhs(rhs, pos) => {
-                    if self.pop_bool(pos)? {
-                        work.push(Task::WantBool(pos));
-                        work.push(Task::Visit(rhs));
-                    } else {
-                        self.vals.push(Value::Bool(false));
-                    }
-                }
-                Task::OrRhs(rhs, pos) => {
-                    if self.pop_bool(pos)? {
-                        self.vals.push(Value::Bool(true));
-                    } else {
-                        work.push(Task::WantBool(pos));
-                        work.push(Task::Visit(rhs));
-                    }
-                }
-                Task::WantBool(pos) => {
+                Task::Chain { is_and, items, idx, pos } => {
                     let b = self.pop_bool(pos)?;
-                    self.vals.push(Value::Bool(b));
+                    if b != is_and || idx >= items.len() {
+                        // `false` ends an `&&`, `true` ends an `||`; or the chain is done.
+                        self.vals.push(Value::Bool(b));
+                    } else if let Some(next) = items.get(idx) {
+                        work.push(Task::Chain { is_and, items, idx: idx + 1, pos });
+                        work.push(Task::Visit(next));
+                    }
                 }
                 Task::Cmp(op, pos) => {
                     let b = self.pop(pos)?;
@@ -1206,10 +1217,10 @@ impl<'a> Machine<'a> {
                     };
                     self.vals.push(Value::Int(i64::try_from(n).unwrap_or(i64::MAX)));
                 }
-                Task::Field(name, pos) => match self.pop(pos)? {
+                Task::Field(node, name, pos) => match self.pop(pos)? {
                     Value::Map(mut m) => match m.remove(name) {
                         Some(v) => self.vals.push(v),
-                        None => return Err(PredError::MissingField { path: name.to_string() }),
+                        None => return Err(PredError::MissingField { path: self.path_of(node) }),
                     },
                     v => return Err(type_err(pos, format!("field access on {}", v.kind()))),
                 },
@@ -1222,27 +1233,34 @@ impl<'a> Machine<'a> {
                     let items = self.vals.split_off(at);
                     self.vals.push(Value::List(items));
                 }
-                Task::QuantList { is_all, var, body, pos } => match self.pop(pos)? {
+                Task::QuantList { is_all, var, list, body, pos } => match self.pop(pos)? {
                     Value::List(items) => {
-                        work.push(Task::QuantNext { is_all, var, body, pos, items, idx: 0, acc: is_all });
+                        let origin = self.path_of(list);
+                        work.push(Task::QuantNext(Quant { is_all, var, body, pos, items, idx: 0, origin }));
                     }
                     v => return Err(type_err(pos, format!("all()/exists() over {}", v.kind()))),
                 },
-                Task::QuantNext { is_all, var, body, pos, items, idx, acc } => {
-                    let Some(item) = items.get(idx).cloned() else {
-                        self.vals.push(Value::Bool(acc));
+                Task::QuantNext(q) => {
+                    let Some(item) = q.items.get(q.idx).cloned() else {
+                        self.vals.push(Value::Bool(q.is_all));
                         continue;
                     };
                     self.tick()?;
-                    self.env.push((var, item));
-                    work.push(Task::QuantAfter { is_all, var, body, pos, items, idx, acc });
+                    self.env.push((q.var, item, format!("{}[{}]", q.origin, q.idx)));
+                    let body = q.body;
+                    work.push(Task::QuantAfter(q));
                     work.push(Task::Visit(body));
                 }
-                Task::QuantAfter { is_all, var, body, pos, items, idx, acc } => {
-                    let b = self.pop_bool(pos)?;
+                Task::QuantAfter(mut q) => {
+                    let b = self.pop_bool(q.pos)?;
                     self.env.pop();
-                    let acc = if is_all { acc && b } else { acc || b };
-                    work.push(Task::QuantNext { is_all, var, body, pos, items, idx: idx + 1, acc });
+                    if b != q.is_all {
+                        // `all` stops at the first false element, `exists` at the first true one.
+                        self.vals.push(Value::Bool(b));
+                    } else {
+                        q.idx += 1;
+                        work.push(Task::QuantNext(q));
+                    }
                 }
             }
         }
@@ -1253,7 +1271,7 @@ impl<'a> Machine<'a> {
         match &e.kind {
             ExprKind::Bool(b) => self.vals.push(Value::Bool(*b)),
             ExprKind::Int(n) => self.vals.push(Value::Int(*n)),
-            ExprKind::Float(f) => self.vals.push(Value::Float(*f)),
+            ExprKind::Float(f) => self.vals.push(Value::Float(positive_zero(*f))),
             ExprKind::Str(s) => self.vals.push(Value::Str(s.clone())),
             ExprKind::List(items) => {
                 work.push(Task::MakeList(items.len()));
@@ -1262,28 +1280,30 @@ impl<'a> Machine<'a> {
                 }
             }
             ExprKind::Path(p) => {
-                let v = self.ctx.get(p)?;
+                let mut v = self.ctx.get(p)?;
+                normalize(&mut v);
                 self.vals.push(v);
             }
-            ExprKind::Var(name) => match self.env.iter().rev().find(|(n, _)| *n == name.as_str()) {
-                Some((_, v)) => self.vals.push(v.clone()),
+            ExprKind::Var(name) => match self.env.iter().rev().find(|(n, _, _)| *n == name.as_str()) {
+                Some((_, v, _)) => self.vals.push(v.clone()),
                 None => return Err(type_err(e.pos, format!("unbound variable `{name}`"))),
             },
             ExprKind::Field(base, name) => {
-                work.push(Task::Field(name, e.pos));
+                work.push(Task::Field(e, name, e.pos));
                 work.push(Task::Visit(base));
             }
             ExprKind::Not(a) => {
                 work.push(Task::Not(e.pos));
                 work.push(Task::Visit(a));
             }
-            ExprKind::And(a, b) => {
-                work.push(Task::AndRhs(b, e.pos));
-                work.push(Task::Visit(a));
-            }
-            ExprKind::Or(a, b) => {
-                work.push(Task::OrRhs(b, e.pos));
-                work.push(Task::Visit(a));
+            ExprKind::And(items) | ExprKind::Or(items) => {
+                let is_and = matches!(e.kind, ExprKind::And(_));
+                if let Some(first) = items.first() {
+                    work.push(Task::Chain { is_and, items, idx: 1, pos: e.pos });
+                    work.push(Task::Visit(first));
+                } else {
+                    self.vals.push(Value::Bool(is_and));
+                }
             }
             ExprKind::Cmp(op, a, b) => {
                 work.push(Task::Cmp(*op, e.pos));
@@ -1321,7 +1341,7 @@ impl<'a> Machine<'a> {
                 _ => return Err(type_err(a.pos, "has() takes a field".into())),
             },
             ExprKind::Quant { is_all, var, list, body } => {
-                work.push(Task::QuantList { is_all: *is_all, var: var.as_str(), body, pos: e.pos });
+                work.push(Task::QuantList { is_all: *is_all, var: var.as_str(), list, body, pos: e.pos });
                 work.push(Task::Visit(list));
             }
         }
@@ -1330,7 +1350,8 @@ impl<'a> Machine<'a> {
 }
 
 /// Exact numeric order; NaN is `nan_operand` (REQ-007). Floats use IEEE 754 total order
-/// (so `-0.0 < 0.0`); an integer and a float compare by exact value.
+/// (`-0.0` never reaches here: it is normalised on entry); an integer and a float compare
+/// by exact value.
 fn num_cmp(a: &Value, b: &Value, pos: usize) -> Option<Result<Ordering, PredError>> {
     let nan = |f: &f64| f.is_nan();
     Some(match (a, b) {
@@ -1409,7 +1430,7 @@ fn order(a: &Value, b: &Value, pos: usize) -> Result<Ordering, PredError> {
 
 /// Evaluates a predicate and reports the step count (REQ-003..REQ-005). Never panics.
 pub fn evaluate(pred: &Predicate, ctx: &dyn PredContext) -> Evaluation {
-    let bound = u32::from(pred.bound.min(MAX_BOUND));
+    let bound = pred.bound.min(MAX_BOUND);
     let mut m = Machine { ctx, bound, steps: 0, vals: Vec::new(), env: Vec::new() };
     let result = match m.run(&pred.ast) {
         Ok(true) => Ok(Verdict::True),

@@ -4,8 +4,8 @@
 use fid_canon::{parse, CValue};
 use fid_registry::pred::{self, MAX_BOUND};
 use fid_registry::{
-    compile_command, evaluate, CommandDef, ContextTypes, FieldPath, ParamSchema, PredContext, PredError, Predicate,
-    Type, Value, Verdict,
+    compile_command, evaluate, CommandDef, ContextTypes, FieldPath, ParamSchema, PredContext, PredError, Precondition,
+    Predicate, Type, Value, Verdict,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -96,7 +96,12 @@ fn run_cases() -> Vec<String> {
     for c in cases {
         let CValue::Obj(c) = c else { panic!() };
         let name = str_of(c, "name");
-        let pred = Predicate::compile(str_of(c, "expr"), "test.precondition_0", &params, &ctx_types)
+        let bound = match c.get("bound") {
+            Some(CValue::Num(b)) => *b as u32,
+            _ => MAX_BOUND,
+        };
+        let key = c.get("message_key").map_or("test.precondition_0", |_| str_of(c, "message_key"));
+        let pred = Predicate::compile(str_of(c, "expr"), bound, key, &params, &ctx_types)
             .unwrap_or_else(|e| panic!("{name}: {e}"));
         let ctx = MapCtx(to_value(&c["context"]));
         let ev = evaluate(&pred, &ctx);
@@ -122,27 +127,36 @@ fn ac1_cases() {
     run_cases();
 }
 
-/// AC-2: the registry build rejects each bad declaration, naming the command, the
-/// precondition and the byte position.
-#[test]
-fn ac2_bad_syntax_fails_build() {
-    let o = fixture("def/pred/bad_syntax.json");
-    let (_, ctx_types) = types(&o);
+fn decl(expr: &str) -> Precondition {
+    Precondition { expr: expr.to_string(), bound: MAX_BOUND, message_key: "test.ok".to_string() }
+}
+
+fn base_def(params_schema: &CValue) -> CommandDef {
     let CValue::Arr(defs) =
         parse(&std::fs::read(root().join("fixtures/core/reg/def/field/defs_valid.json")).unwrap()).unwrap()
     else {
         panic!()
     };
     let mut def = CommandDef::from_value(defs[0].clone()).unwrap();
-    def.params_schema = o["params_schema"].clone();
-    def.preconditions = vec!["true".to_string()];
+    def.params_schema = params_schema.clone();
+    def
+}
+
+/// AC-2: the registry build rejects each bad declaration, naming the command, the
+/// precondition and the byte position.
+#[test]
+fn ac2_bad_syntax_fails_build() {
+    let o = fixture("def/pred/bad_syntax.json");
+    let (_, ctx_types) = types(&o);
+    let mut def = base_def(&o["params_schema"]);
+    def.preconditions = vec![decl("true")];
     assert_eq!(compile_command(&def, &ctx_types).unwrap().len(), 1);
 
     let CValue::Arr(cases) = &o["cases"] else { panic!() };
     for c in cases {
         let CValue::Obj(c) = c else { panic!() };
         let name = str_of(c, "name");
-        def.preconditions = vec!["params.n > 0".to_string(), str_of(c, "decl").to_string()];
+        def.preconditions = vec![decl("params.n > 0"), decl(str_of(c, "expr"))];
         let err = compile_command(&def, &ctx_types).expect_err(name);
         assert_eq!(err.command, format!("{}@{}", def.id, def.major), "{name}");
         assert_eq!(err.index, 1, "{name}");
@@ -152,10 +166,15 @@ fn ac2_bad_syntax_fails_build() {
         let shown = err.to_string();
         assert!(shown.contains(&def.id) && shown.contains(&format!("byte {}", err.error.pos)), "{shown}");
     }
+
+    // A declared bound above FPL's cap fails the build too.
+    def.preconditions = vec![Precondition { bound: 20_000, ..decl("true") }];
+    let err = compile_command(&def, &ctx_types).unwrap_err();
+    assert_eq!((err.index, err.error.code), (0, "fpl_bound"));
 }
 
 fn ids(n: usize) -> MapCtx {
-    let ids = (0..n).map(|k| Value::Str(format!("id{k:03}"))).collect();
+    let ids = (0..n).map(|k| Value::Str(format!("id{k:04}"))).collect();
     let params = Value::Map([("ids".to_string(), Value::List(ids))].into_iter().collect());
     MapCtx(Value::Map([("params".to_string(), params)].into_iter().collect()))
 }
@@ -166,16 +185,21 @@ fn ids_schema() -> ParamSchema {
     ParamSchema::from_json_schema(&schema)
 }
 
-/// AC-3: the quadratic uniqueness check over 200 IDs stops at exactly 10,000 steps.
+fn compile(expr: &str) -> Predicate {
+    Predicate::compile(expr, MAX_BOUND, "k", &ids_schema(), &ContextTypes::new()).unwrap()
+}
+
+/// AC-3: a quadratic membership check over 1,000 distinct IDs stops with
+/// `precondition_budget` after exactly 10,000 steps, even with short-circuiting.
 #[test]
 fn ac3_budget() {
-    let src = "all(x in params.ids, all(y in params.ids, x != y))";
-    let pred = Predicate::compile(src, "k", &ids_schema(), &ContextTypes::new()).unwrap();
-    assert_eq!(pred.bound, MAX_BOUND);
-    let ev = evaluate(&pred, &ids(200));
+    let pred = compile("all(x in params.ids, exists(y in params.ids, y == x))");
+    let ev = evaluate(&pred, &ids(1000));
     assert_eq!(ev.result, Err(PredError::Budget { steps: 10_000 }));
     assert_eq!(ev.result.as_ref().unwrap_err().code(), "precondition_budget");
     assert_eq!(ev.steps, 10_000);
+    // The same check over 10 IDs finishes: true, within budget.
+    assert_eq!(evaluate(&pred, &ids(10)).result, Ok(Verdict::True));
 }
 
 /// AC-4: results are a pure function of the input. AC-1 compares every result and step
@@ -186,8 +210,68 @@ fn ac4_identical_runs() {
     assert_eq!(run_cases(), run_cases());
 }
 
-/// Bounds: declarations are size- and depth-limited, the bound annotation is capped, and the
-/// evaluator never panics on hostile context values.
+/// Words refused at the start of an expression are ordinary field names after `.`.
+#[test]
+fn keywords_are_field_names_after_dot() {
+    for src in ["params.load > 0", "params.repeat", "doc.now", "params.for.while == 1", "params.in"] {
+        assert!(pred::parse(src).is_ok(), "{src}");
+    }
+    for src in ["load > 0", "while", "now", "all(let in params.ids, true)"] {
+        assert_eq!(pred::parse(src).unwrap_err().code, "fpl_syntax", "{src}");
+    }
+}
+
+/// `-0.0` is normalised to `+0.0` on entry, from literals and from context reads.
+#[test]
+fn negative_zero_is_normalised() {
+    let schema = parse(br#"{"type":"object","properties":{"tol":{"type":"number"}}}"#).unwrap();
+    let params = ParamSchema::from_json_schema(&schema);
+    let ctx = MapCtx(Value::Map(
+        [("params".to_string(), Value::Map([("tol".to_string(), Value::Float(-0.0))].into_iter().collect()))]
+            .into_iter()
+            .collect(),
+    ));
+    for (src, want) in [("0.0 == -0.0", true), ("-0.0 < 0.0", false), ("params.tol >= 0.0", true)] {
+        let pred = Predicate::compile(src, MAX_BOUND, "k", &params, &ContextTypes::new()).unwrap();
+        assert_eq!(pred::eval(&pred, &ctx), Ok(want), "{src}");
+    }
+}
+
+/// A missing field is reported with its full path.
+#[test]
+fn missing_field_names_full_path() {
+    let schema = parse(
+        br#"{"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{"n":{"type":"integer"}}}}}}"#,
+    )
+    .unwrap();
+    let params = ParamSchema::from_json_schema(&schema);
+    let item = |n: Option<i64>| Value::Map(n.map(|n| ("n".to_string(), Value::Int(n))).into_iter().collect());
+    let items = Value::List(vec![item(Some(1)), item(None)]);
+    let ctx = MapCtx(Value::Map(
+        [("params".to_string(), Value::Map([("items".to_string(), items)].into_iter().collect()))].into_iter().collect(),
+    ));
+    let pred = Predicate::compile("all(it in params.items, it.n > 0)", MAX_BOUND, "k", &params, &ContextTypes::new())
+        .unwrap();
+    assert_eq!(evaluate(&pred, &ctx).result, Err(PredError::MissingField { path: "params.items[1].n".to_string() }));
+    let pred = Predicate::compile("params.items.n > 0", MAX_BOUND, "k", &params, &ContextTypes::new());
+    assert_eq!(pred.unwrap_err().code, "fpl_type");
+    let pred = Predicate::compile("params.gone.n > 0", MAX_BOUND, "k", &params, &ContextTypes::new());
+    assert_eq!(pred.unwrap_err().code, "fpl_type");
+}
+
+/// Only real nesting counts toward the depth limit: flat `&&`/`||` chains do not.
+#[test]
+fn flat_chains_are_not_nesting() {
+    let flat = vec!["true"; 200].join(" && ");
+    assert_eq!(pred::parse(&flat).unwrap().depth, 2);
+    let flat = vec!["true"; 200].join(" || ");
+    assert_eq!(pred::parse(&flat).unwrap().depth, 2);
+    let nested = format!("{}true{}", "true && (".repeat(70), ")".repeat(70));
+    assert_eq!(pred::parse(&nested).unwrap_err().code, "fpl_syntax");
+}
+
+/// Bounds: expressions are size- and depth-limited, and the evaluator never panics on
+/// hostile context values.
 #[test]
 fn limits_and_hostile_input() {
     let long = format!("true{}", " ".repeat(pred::MAX_SRC_BYTES));
@@ -195,6 +279,10 @@ fn limits_and_hostile_input() {
     let deep = format!("{}true{}", "(".repeat(200), ")".repeat(200));
     assert_eq!(pred::parse(&deep).unwrap_err().code, "fpl_syntax");
     assert!(pred::parse(&format!("{}true{}", "(".repeat(40), ")".repeat(40))).is_ok());
+    for bad in [0, MAX_BOUND + 1] {
+        let err = Predicate::compile("true", bad, "k", &ids_schema(), &ContextTypes::new()).unwrap_err();
+        assert_eq!(err.code, "fpl_bound");
+    }
 
     // A context that returns the wrong type for every path: typed errors, never a panic.
     struct Liar;
@@ -203,13 +291,9 @@ fn limits_and_hostile_input() {
             Ok(Value::Float(f64::NAN))
         }
     }
-    let pred =
-        Predicate::compile("all(x in params.ids, x == \"a\")", "k", &ids_schema(), &ContextTypes::new()).unwrap();
-    assert_eq!(evaluate(&pred, &Liar).result.unwrap_err().code(), "type_error");
-    let pred = Predicate::compile("size(params.ids) > 0", "k", &ids_schema(), &ContextTypes::new()).unwrap();
-    assert_eq!(evaluate(&pred, &Liar).result.unwrap_err().code(), "type_error");
-    let pred = Predicate::compile("has(params.ids)", "k", &ids_schema(), &ContextTypes::new()).unwrap();
-    assert_eq!(pred::eval(&pred, &Liar), Ok(true));
+    assert_eq!(evaluate(&compile("all(x in params.ids, x == \"a\")"), &Liar).result.unwrap_err().code(), "type_error");
+    assert_eq!(evaluate(&compile("size(params.ids) > 0"), &Liar).result.unwrap_err().code(), "type_error");
+    assert_eq!(pred::eval(&compile("has(params.ids)"), &Liar), Ok(true));
 
     // Non-ASCII input is rejected with a position, not a panic.
     assert_eq!(pred::parse("params.n > 1 \u{e9}").unwrap_err().pos, 13);

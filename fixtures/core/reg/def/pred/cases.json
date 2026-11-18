@@ -68,6 +68,12 @@
       "type": "number"
      }
     }
+   },
+   "load": {
+    "type": "integer"
+   },
+   "repeat": {
+    "type": "boolean"
    }
   }
  },
@@ -83,7 +89,8 @@
   "doc.meta": "map",
   "doc.meta.owner": "string",
   "doc.flags": "list<bool>",
-  "doc.grid": "list<list<int>>"
+  "doc.grid": "list<list<int>>",
+  "doc.now": "int"
  },
  "cases": [
   {
@@ -137,7 +144,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -181,7 +190,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -240,7 +250,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -284,7 +296,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -344,7 +357,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -388,7 +403,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -447,7 +463,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -491,7 +509,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -550,7 +569,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -594,7 +615,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -654,7 +676,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -698,7 +722,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -757,7 +782,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -801,7 +828,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -861,7 +889,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -905,7 +935,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -964,7 +995,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1008,7 +1041,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1067,7 +1101,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1111,7 +1147,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1170,7 +1207,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1214,7 +1253,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1273,7 +1313,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1317,7 +1359,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1376,7 +1419,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1420,7 +1465,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1479,7 +1525,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1523,7 +1571,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1582,7 +1631,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1626,7 +1677,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1685,7 +1737,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1729,7 +1783,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1788,7 +1843,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1832,7 +1889,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1891,7 +1949,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -1935,7 +1995,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -1994,7 +2055,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2038,7 +2101,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2097,7 +2161,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2141,7 +2207,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2200,7 +2267,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2244,7 +2313,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2303,7 +2373,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2347,7 +2419,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2406,7 +2479,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2450,7 +2525,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2509,7 +2585,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2553,7 +2631,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2608,7 +2687,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2652,7 +2733,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2711,7 +2793,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2755,7 +2839,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2814,7 +2899,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2858,7 +2945,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -2918,7 +3006,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -2962,7 +3052,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3021,7 +3112,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3065,7 +3158,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3124,7 +3218,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3168,7 +3264,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3227,7 +3324,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3271,7 +3370,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3330,7 +3430,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3374,7 +3476,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3433,7 +3536,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3477,7 +3582,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3536,7 +3642,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3580,7 +3688,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3639,7 +3748,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3683,7 +3794,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3743,7 +3855,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3787,7 +3901,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3846,7 +3961,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3890,7 +4007,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -3949,7 +4067,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -3993,7 +4113,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4052,7 +4173,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4094,7 +4217,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4154,7 +4278,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4198,7 +4324,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4257,7 +4384,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4301,7 +4430,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4361,7 +4491,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4405,7 +4537,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4464,7 +4597,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4508,7 +4643,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4567,7 +4703,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4611,7 +4749,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4670,7 +4809,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4714,7 +4855,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4774,7 +4916,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4818,7 +4962,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4877,7 +5022,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -4921,7 +5068,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -4980,7 +5128,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5024,7 +5174,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5083,7 +5234,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5127,7 +5280,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5186,7 +5340,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5230,7 +5386,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5290,7 +5447,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5334,7 +5493,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5393,7 +5553,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5437,7 +5599,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5496,7 +5659,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5540,7 +5705,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5599,7 +5765,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5643,7 +5811,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5703,7 +5872,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5747,7 +5918,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5806,7 +5978,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5850,7 +6024,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -5909,7 +6084,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -5953,7 +6130,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6012,7 +6190,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6056,12 +6236,13 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
     "result": true,
-    "steps": 6
+    "steps": 4
    }
   },
   {
@@ -6115,7 +6296,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6159,7 +6342,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6215,7 +6399,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6259,7 +6445,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6314,7 +6501,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6358,7 +6547,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6417,7 +6607,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6461,7 +6653,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6521,7 +6714,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6565,7 +6760,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6624,7 +6820,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6668,7 +6866,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6678,7 +6877,8 @@
   },
   {
    "name": "message_key",
-   "expr": "@message(align.needs_four) size(params.ids) >= 4",
+   "expr": "size(params.ids) >= 4",
+   "message_key": "align.needs_four",
    "context": {
     "params": {
      "n": 5,
@@ -6727,7 +6927,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6771,7 +6973,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6782,7 +6985,8 @@
   },
   {
    "name": "bound_exact",
-   "expr": "@bound(5) params.n == 5 && params.flag",
+   "expr": "params.n == 5 && params.flag",
+   "bound": 5,
    "context": {
     "params": {
      "n": 5,
@@ -6831,7 +7035,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6875,7 +7081,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6885,7 +7092,8 @@
   },
   {
    "name": "bound_one_short",
-   "expr": "@bound(4) params.n == 5 && params.flag",
+   "expr": "params.n == 5 && params.flag",
+   "bound": 4,
    "context": {
     "params": {
      "n": 5,
@@ -6934,7 +7142,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -6978,7 +7188,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -6988,7 +7199,8 @@
   },
   {
    "name": "bound_quant",
-   "expr": "@bound(3) all(i in params.ids, true)",
+   "expr": "all(i in params.ids, true)",
+   "bound": 3,
    "context": {
     "params": {
      "n": 5,
@@ -7037,7 +7249,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7081,7 +7295,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7091,7 +7306,9 @@
   },
   {
    "name": "bound_and_message",
-   "expr": "@bound(100) @message(doc.too_few) doc.count > 5",
+   "expr": "doc.count > 5",
+   "bound": 100,
+   "message_key": "doc.too_few",
    "context": {
     "params": {
      "n": 5,
@@ -7140,7 +7357,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7184,12 +7403,543 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
     "result": false,
     "message_key": "doc.too_few",
+    "steps": 3
+   }
+  },
+  {
+   "name": "flat_and_chain_70",
+   "expr": "params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag && params.flag",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 71
+   }
+  },
+  {
+   "name": "flat_or_chain_short",
+   "expr": "params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4 || params.n > 4",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "keyword_field_load",
+   "expr": "params.load > 0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "keyword_field_repeat",
+   "expr": "params.repeat",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 1
+   }
+  },
+  {
+   "name": "keyword_field_now",
+   "expr": "doc.now == 7",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
     "steps": 3
    }
   },
@@ -7244,7 +7994,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7288,7 +8040,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7347,7 +8100,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7391,7 +8146,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7450,7 +8206,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7494,7 +8252,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7553,7 +8312,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7597,7 +8358,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7656,7 +8418,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7700,7 +8464,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7709,7 +8474,7 @@
    }
   },
   {
-   "name": "neg_zero_total_order_eq",
+   "name": "neg_zero_read_eq",
    "expr": "params.x == 0.0",
    "context": {
     "params": {
@@ -7759,7 +8524,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7803,17 +8570,17 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
-    "result": false,
-    "message_key": "test.precondition_0",
+    "result": true,
     "steps": 3
    }
   },
   {
-   "name": "neg_zero_total_order_lt",
+   "name": "neg_zero_read_not_lt",
    "expr": "params.x < 0.0",
    "context": {
     "params": {
@@ -7863,7 +8630,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -7907,7 +8676,434 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_read_ge",
+   "expr": "doc.tol >= 0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "-0.0"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_literal_eq",
+   "expr": "0.0 == -0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_literal_not_lt",
+   "expr": "-0.0 < 0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_in_list",
+   "expr": "0.0 in params.fs",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "1.0"
+      },
+      {
+       "$float": "-0.0"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -7966,7 +9162,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8010,7 +9208,114 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "total_order_tiny",
+   "expr": "params.x > 0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "5e-324"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8071,7 +9376,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8115,7 +9422,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8176,7 +9484,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8220,7 +9530,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8282,7 +9593,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8326,7 +9639,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8385,7 +9699,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "mode": "edit",
@@ -8428,7 +9744,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8438,7 +9755,7 @@
   },
   {
    "name": "missing_item_field",
-   "expr": "exists(it in params.items, it.n > 2)",
+   "expr": "exists(it in params.items, it.n > 3)",
    "context": {
     "params": {
      "n": 5,
@@ -8486,7 +9803,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8530,7 +9849,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8589,7 +9909,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "mode": "edit",
@@ -8632,7 +9954,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8691,7 +10014,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "mode": "edit",
@@ -8734,7 +10059,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8794,7 +10120,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8838,7 +10166,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8897,7 +10226,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -8941,7 +10272,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
@@ -8950,8 +10282,432 @@
    }
   },
   {
-   "name": "uniq_small",
-   "expr": "all(x in params.ids, all(y in params.ids, x != y))",
+   "name": "all_stops_at_false",
+   "expr": "all(i in params.nums, i < 2)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 10
+   }
+  },
+  {
+   "name": "exists_stops_at_true",
+   "expr": "exists(i in params.nums, i == 1)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 6
+   }
+  },
+  {
+   "name": "exists_stops_before_error",
+   "expr": "exists(it in params.items, it.n > 2)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle"
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 7
+   }
+  },
+  {
+   "name": "all_stops_before_error",
+   "expr": "all(it in params.items, it.n > 3)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle"
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     },
+     "load": 4,
+     "repeat": true
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ],
+     "now": 7
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 7
+   }
+  },
+  {
+   "name": "membership_small",
+   "expr": "all(x in params.ids, exists(y in params.ids, y == x))",
    "context": {
     "params": {
      "n": 5,
@@ -9007,7 +10763,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -9051,18 +10809,18 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {
-    "result": false,
-    "message_key": "test.precondition_0",
-    "steps": 432
+    "result": true,
+    "steps": 252
    }
   },
   {
    "name": "ac3_budget",
-   "expr": "all(x in params.ids, all(y in params.ids, x != y))",
+   "expr": "all(x in params.ids, exists(y in params.ids, y == x))",
    "context": {
     "params": {
      "n": 5,
@@ -9072,206 +10830,1006 @@
      "name": "probe",
      "flag": true,
      "ids": [
-      "id000",
-      "id001",
-      "id002",
-      "id003",
-      "id004",
-      "id005",
-      "id006",
-      "id007",
-      "id008",
-      "id009",
-      "id010",
-      "id011",
-      "id012",
-      "id013",
-      "id014",
-      "id015",
-      "id016",
-      "id017",
-      "id018",
-      "id019",
-      "id020",
-      "id021",
-      "id022",
-      "id023",
-      "id024",
-      "id025",
-      "id026",
-      "id027",
-      "id028",
-      "id029",
-      "id030",
-      "id031",
-      "id032",
-      "id033",
-      "id034",
-      "id035",
-      "id036",
-      "id037",
-      "id038",
-      "id039",
-      "id040",
-      "id041",
-      "id042",
-      "id043",
-      "id044",
-      "id045",
-      "id046",
-      "id047",
-      "id048",
-      "id049",
-      "id050",
-      "id051",
-      "id052",
-      "id053",
-      "id054",
-      "id055",
-      "id056",
-      "id057",
-      "id058",
-      "id059",
-      "id060",
-      "id061",
-      "id062",
-      "id063",
-      "id064",
-      "id065",
-      "id066",
-      "id067",
-      "id068",
-      "id069",
-      "id070",
-      "id071",
-      "id072",
-      "id073",
-      "id074",
-      "id075",
-      "id076",
-      "id077",
-      "id078",
-      "id079",
-      "id080",
-      "id081",
-      "id082",
-      "id083",
-      "id084",
-      "id085",
-      "id086",
-      "id087",
-      "id088",
-      "id089",
-      "id090",
-      "id091",
-      "id092",
-      "id093",
-      "id094",
-      "id095",
-      "id096",
-      "id097",
-      "id098",
-      "id099",
-      "id100",
-      "id101",
-      "id102",
-      "id103",
-      "id104",
-      "id105",
-      "id106",
-      "id107",
-      "id108",
-      "id109",
-      "id110",
-      "id111",
-      "id112",
-      "id113",
-      "id114",
-      "id115",
-      "id116",
-      "id117",
-      "id118",
-      "id119",
-      "id120",
-      "id121",
-      "id122",
-      "id123",
-      "id124",
-      "id125",
-      "id126",
-      "id127",
-      "id128",
-      "id129",
-      "id130",
-      "id131",
-      "id132",
-      "id133",
-      "id134",
-      "id135",
-      "id136",
-      "id137",
-      "id138",
-      "id139",
-      "id140",
-      "id141",
-      "id142",
-      "id143",
-      "id144",
-      "id145",
-      "id146",
-      "id147",
-      "id148",
-      "id149",
-      "id150",
-      "id151",
-      "id152",
-      "id153",
-      "id154",
-      "id155",
-      "id156",
-      "id157",
-      "id158",
-      "id159",
-      "id160",
-      "id161",
-      "id162",
-      "id163",
-      "id164",
-      "id165",
-      "id166",
-      "id167",
-      "id168",
-      "id169",
-      "id170",
-      "id171",
-      "id172",
-      "id173",
-      "id174",
-      "id175",
-      "id176",
-      "id177",
-      "id178",
-      "id179",
-      "id180",
-      "id181",
-      "id182",
-      "id183",
-      "id184",
-      "id185",
-      "id186",
-      "id187",
-      "id188",
-      "id189",
-      "id190",
-      "id191",
-      "id192",
-      "id193",
-      "id194",
-      "id195",
-      "id196",
-      "id197",
-      "id198",
-      "id199"
+      "id0000",
+      "id0001",
+      "id0002",
+      "id0003",
+      "id0004",
+      "id0005",
+      "id0006",
+      "id0007",
+      "id0008",
+      "id0009",
+      "id0010",
+      "id0011",
+      "id0012",
+      "id0013",
+      "id0014",
+      "id0015",
+      "id0016",
+      "id0017",
+      "id0018",
+      "id0019",
+      "id0020",
+      "id0021",
+      "id0022",
+      "id0023",
+      "id0024",
+      "id0025",
+      "id0026",
+      "id0027",
+      "id0028",
+      "id0029",
+      "id0030",
+      "id0031",
+      "id0032",
+      "id0033",
+      "id0034",
+      "id0035",
+      "id0036",
+      "id0037",
+      "id0038",
+      "id0039",
+      "id0040",
+      "id0041",
+      "id0042",
+      "id0043",
+      "id0044",
+      "id0045",
+      "id0046",
+      "id0047",
+      "id0048",
+      "id0049",
+      "id0050",
+      "id0051",
+      "id0052",
+      "id0053",
+      "id0054",
+      "id0055",
+      "id0056",
+      "id0057",
+      "id0058",
+      "id0059",
+      "id0060",
+      "id0061",
+      "id0062",
+      "id0063",
+      "id0064",
+      "id0065",
+      "id0066",
+      "id0067",
+      "id0068",
+      "id0069",
+      "id0070",
+      "id0071",
+      "id0072",
+      "id0073",
+      "id0074",
+      "id0075",
+      "id0076",
+      "id0077",
+      "id0078",
+      "id0079",
+      "id0080",
+      "id0081",
+      "id0082",
+      "id0083",
+      "id0084",
+      "id0085",
+      "id0086",
+      "id0087",
+      "id0088",
+      "id0089",
+      "id0090",
+      "id0091",
+      "id0092",
+      "id0093",
+      "id0094",
+      "id0095",
+      "id0096",
+      "id0097",
+      "id0098",
+      "id0099",
+      "id0100",
+      "id0101",
+      "id0102",
+      "id0103",
+      "id0104",
+      "id0105",
+      "id0106",
+      "id0107",
+      "id0108",
+      "id0109",
+      "id0110",
+      "id0111",
+      "id0112",
+      "id0113",
+      "id0114",
+      "id0115",
+      "id0116",
+      "id0117",
+      "id0118",
+      "id0119",
+      "id0120",
+      "id0121",
+      "id0122",
+      "id0123",
+      "id0124",
+      "id0125",
+      "id0126",
+      "id0127",
+      "id0128",
+      "id0129",
+      "id0130",
+      "id0131",
+      "id0132",
+      "id0133",
+      "id0134",
+      "id0135",
+      "id0136",
+      "id0137",
+      "id0138",
+      "id0139",
+      "id0140",
+      "id0141",
+      "id0142",
+      "id0143",
+      "id0144",
+      "id0145",
+      "id0146",
+      "id0147",
+      "id0148",
+      "id0149",
+      "id0150",
+      "id0151",
+      "id0152",
+      "id0153",
+      "id0154",
+      "id0155",
+      "id0156",
+      "id0157",
+      "id0158",
+      "id0159",
+      "id0160",
+      "id0161",
+      "id0162",
+      "id0163",
+      "id0164",
+      "id0165",
+      "id0166",
+      "id0167",
+      "id0168",
+      "id0169",
+      "id0170",
+      "id0171",
+      "id0172",
+      "id0173",
+      "id0174",
+      "id0175",
+      "id0176",
+      "id0177",
+      "id0178",
+      "id0179",
+      "id0180",
+      "id0181",
+      "id0182",
+      "id0183",
+      "id0184",
+      "id0185",
+      "id0186",
+      "id0187",
+      "id0188",
+      "id0189",
+      "id0190",
+      "id0191",
+      "id0192",
+      "id0193",
+      "id0194",
+      "id0195",
+      "id0196",
+      "id0197",
+      "id0198",
+      "id0199",
+      "id0200",
+      "id0201",
+      "id0202",
+      "id0203",
+      "id0204",
+      "id0205",
+      "id0206",
+      "id0207",
+      "id0208",
+      "id0209",
+      "id0210",
+      "id0211",
+      "id0212",
+      "id0213",
+      "id0214",
+      "id0215",
+      "id0216",
+      "id0217",
+      "id0218",
+      "id0219",
+      "id0220",
+      "id0221",
+      "id0222",
+      "id0223",
+      "id0224",
+      "id0225",
+      "id0226",
+      "id0227",
+      "id0228",
+      "id0229",
+      "id0230",
+      "id0231",
+      "id0232",
+      "id0233",
+      "id0234",
+      "id0235",
+      "id0236",
+      "id0237",
+      "id0238",
+      "id0239",
+      "id0240",
+      "id0241",
+      "id0242",
+      "id0243",
+      "id0244",
+      "id0245",
+      "id0246",
+      "id0247",
+      "id0248",
+      "id0249",
+      "id0250",
+      "id0251",
+      "id0252",
+      "id0253",
+      "id0254",
+      "id0255",
+      "id0256",
+      "id0257",
+      "id0258",
+      "id0259",
+      "id0260",
+      "id0261",
+      "id0262",
+      "id0263",
+      "id0264",
+      "id0265",
+      "id0266",
+      "id0267",
+      "id0268",
+      "id0269",
+      "id0270",
+      "id0271",
+      "id0272",
+      "id0273",
+      "id0274",
+      "id0275",
+      "id0276",
+      "id0277",
+      "id0278",
+      "id0279",
+      "id0280",
+      "id0281",
+      "id0282",
+      "id0283",
+      "id0284",
+      "id0285",
+      "id0286",
+      "id0287",
+      "id0288",
+      "id0289",
+      "id0290",
+      "id0291",
+      "id0292",
+      "id0293",
+      "id0294",
+      "id0295",
+      "id0296",
+      "id0297",
+      "id0298",
+      "id0299",
+      "id0300",
+      "id0301",
+      "id0302",
+      "id0303",
+      "id0304",
+      "id0305",
+      "id0306",
+      "id0307",
+      "id0308",
+      "id0309",
+      "id0310",
+      "id0311",
+      "id0312",
+      "id0313",
+      "id0314",
+      "id0315",
+      "id0316",
+      "id0317",
+      "id0318",
+      "id0319",
+      "id0320",
+      "id0321",
+      "id0322",
+      "id0323",
+      "id0324",
+      "id0325",
+      "id0326",
+      "id0327",
+      "id0328",
+      "id0329",
+      "id0330",
+      "id0331",
+      "id0332",
+      "id0333",
+      "id0334",
+      "id0335",
+      "id0336",
+      "id0337",
+      "id0338",
+      "id0339",
+      "id0340",
+      "id0341",
+      "id0342",
+      "id0343",
+      "id0344",
+      "id0345",
+      "id0346",
+      "id0347",
+      "id0348",
+      "id0349",
+      "id0350",
+      "id0351",
+      "id0352",
+      "id0353",
+      "id0354",
+      "id0355",
+      "id0356",
+      "id0357",
+      "id0358",
+      "id0359",
+      "id0360",
+      "id0361",
+      "id0362",
+      "id0363",
+      "id0364",
+      "id0365",
+      "id0366",
+      "id0367",
+      "id0368",
+      "id0369",
+      "id0370",
+      "id0371",
+      "id0372",
+      "id0373",
+      "id0374",
+      "id0375",
+      "id0376",
+      "id0377",
+      "id0378",
+      "id0379",
+      "id0380",
+      "id0381",
+      "id0382",
+      "id0383",
+      "id0384",
+      "id0385",
+      "id0386",
+      "id0387",
+      "id0388",
+      "id0389",
+      "id0390",
+      "id0391",
+      "id0392",
+      "id0393",
+      "id0394",
+      "id0395",
+      "id0396",
+      "id0397",
+      "id0398",
+      "id0399",
+      "id0400",
+      "id0401",
+      "id0402",
+      "id0403",
+      "id0404",
+      "id0405",
+      "id0406",
+      "id0407",
+      "id0408",
+      "id0409",
+      "id0410",
+      "id0411",
+      "id0412",
+      "id0413",
+      "id0414",
+      "id0415",
+      "id0416",
+      "id0417",
+      "id0418",
+      "id0419",
+      "id0420",
+      "id0421",
+      "id0422",
+      "id0423",
+      "id0424",
+      "id0425",
+      "id0426",
+      "id0427",
+      "id0428",
+      "id0429",
+      "id0430",
+      "id0431",
+      "id0432",
+      "id0433",
+      "id0434",
+      "id0435",
+      "id0436",
+      "id0437",
+      "id0438",
+      "id0439",
+      "id0440",
+      "id0441",
+      "id0442",
+      "id0443",
+      "id0444",
+      "id0445",
+      "id0446",
+      "id0447",
+      "id0448",
+      "id0449",
+      "id0450",
+      "id0451",
+      "id0452",
+      "id0453",
+      "id0454",
+      "id0455",
+      "id0456",
+      "id0457",
+      "id0458",
+      "id0459",
+      "id0460",
+      "id0461",
+      "id0462",
+      "id0463",
+      "id0464",
+      "id0465",
+      "id0466",
+      "id0467",
+      "id0468",
+      "id0469",
+      "id0470",
+      "id0471",
+      "id0472",
+      "id0473",
+      "id0474",
+      "id0475",
+      "id0476",
+      "id0477",
+      "id0478",
+      "id0479",
+      "id0480",
+      "id0481",
+      "id0482",
+      "id0483",
+      "id0484",
+      "id0485",
+      "id0486",
+      "id0487",
+      "id0488",
+      "id0489",
+      "id0490",
+      "id0491",
+      "id0492",
+      "id0493",
+      "id0494",
+      "id0495",
+      "id0496",
+      "id0497",
+      "id0498",
+      "id0499",
+      "id0500",
+      "id0501",
+      "id0502",
+      "id0503",
+      "id0504",
+      "id0505",
+      "id0506",
+      "id0507",
+      "id0508",
+      "id0509",
+      "id0510",
+      "id0511",
+      "id0512",
+      "id0513",
+      "id0514",
+      "id0515",
+      "id0516",
+      "id0517",
+      "id0518",
+      "id0519",
+      "id0520",
+      "id0521",
+      "id0522",
+      "id0523",
+      "id0524",
+      "id0525",
+      "id0526",
+      "id0527",
+      "id0528",
+      "id0529",
+      "id0530",
+      "id0531",
+      "id0532",
+      "id0533",
+      "id0534",
+      "id0535",
+      "id0536",
+      "id0537",
+      "id0538",
+      "id0539",
+      "id0540",
+      "id0541",
+      "id0542",
+      "id0543",
+      "id0544",
+      "id0545",
+      "id0546",
+      "id0547",
+      "id0548",
+      "id0549",
+      "id0550",
+      "id0551",
+      "id0552",
+      "id0553",
+      "id0554",
+      "id0555",
+      "id0556",
+      "id0557",
+      "id0558",
+      "id0559",
+      "id0560",
+      "id0561",
+      "id0562",
+      "id0563",
+      "id0564",
+      "id0565",
+      "id0566",
+      "id0567",
+      "id0568",
+      "id0569",
+      "id0570",
+      "id0571",
+      "id0572",
+      "id0573",
+      "id0574",
+      "id0575",
+      "id0576",
+      "id0577",
+      "id0578",
+      "id0579",
+      "id0580",
+      "id0581",
+      "id0582",
+      "id0583",
+      "id0584",
+      "id0585",
+      "id0586",
+      "id0587",
+      "id0588",
+      "id0589",
+      "id0590",
+      "id0591",
+      "id0592",
+      "id0593",
+      "id0594",
+      "id0595",
+      "id0596",
+      "id0597",
+      "id0598",
+      "id0599",
+      "id0600",
+      "id0601",
+      "id0602",
+      "id0603",
+      "id0604",
+      "id0605",
+      "id0606",
+      "id0607",
+      "id0608",
+      "id0609",
+      "id0610",
+      "id0611",
+      "id0612",
+      "id0613",
+      "id0614",
+      "id0615",
+      "id0616",
+      "id0617",
+      "id0618",
+      "id0619",
+      "id0620",
+      "id0621",
+      "id0622",
+      "id0623",
+      "id0624",
+      "id0625",
+      "id0626",
+      "id0627",
+      "id0628",
+      "id0629",
+      "id0630",
+      "id0631",
+      "id0632",
+      "id0633",
+      "id0634",
+      "id0635",
+      "id0636",
+      "id0637",
+      "id0638",
+      "id0639",
+      "id0640",
+      "id0641",
+      "id0642",
+      "id0643",
+      "id0644",
+      "id0645",
+      "id0646",
+      "id0647",
+      "id0648",
+      "id0649",
+      "id0650",
+      "id0651",
+      "id0652",
+      "id0653",
+      "id0654",
+      "id0655",
+      "id0656",
+      "id0657",
+      "id0658",
+      "id0659",
+      "id0660",
+      "id0661",
+      "id0662",
+      "id0663",
+      "id0664",
+      "id0665",
+      "id0666",
+      "id0667",
+      "id0668",
+      "id0669",
+      "id0670",
+      "id0671",
+      "id0672",
+      "id0673",
+      "id0674",
+      "id0675",
+      "id0676",
+      "id0677",
+      "id0678",
+      "id0679",
+      "id0680",
+      "id0681",
+      "id0682",
+      "id0683",
+      "id0684",
+      "id0685",
+      "id0686",
+      "id0687",
+      "id0688",
+      "id0689",
+      "id0690",
+      "id0691",
+      "id0692",
+      "id0693",
+      "id0694",
+      "id0695",
+      "id0696",
+      "id0697",
+      "id0698",
+      "id0699",
+      "id0700",
+      "id0701",
+      "id0702",
+      "id0703",
+      "id0704",
+      "id0705",
+      "id0706",
+      "id0707",
+      "id0708",
+      "id0709",
+      "id0710",
+      "id0711",
+      "id0712",
+      "id0713",
+      "id0714",
+      "id0715",
+      "id0716",
+      "id0717",
+      "id0718",
+      "id0719",
+      "id0720",
+      "id0721",
+      "id0722",
+      "id0723",
+      "id0724",
+      "id0725",
+      "id0726",
+      "id0727",
+      "id0728",
+      "id0729",
+      "id0730",
+      "id0731",
+      "id0732",
+      "id0733",
+      "id0734",
+      "id0735",
+      "id0736",
+      "id0737",
+      "id0738",
+      "id0739",
+      "id0740",
+      "id0741",
+      "id0742",
+      "id0743",
+      "id0744",
+      "id0745",
+      "id0746",
+      "id0747",
+      "id0748",
+      "id0749",
+      "id0750",
+      "id0751",
+      "id0752",
+      "id0753",
+      "id0754",
+      "id0755",
+      "id0756",
+      "id0757",
+      "id0758",
+      "id0759",
+      "id0760",
+      "id0761",
+      "id0762",
+      "id0763",
+      "id0764",
+      "id0765",
+      "id0766",
+      "id0767",
+      "id0768",
+      "id0769",
+      "id0770",
+      "id0771",
+      "id0772",
+      "id0773",
+      "id0774",
+      "id0775",
+      "id0776",
+      "id0777",
+      "id0778",
+      "id0779",
+      "id0780",
+      "id0781",
+      "id0782",
+      "id0783",
+      "id0784",
+      "id0785",
+      "id0786",
+      "id0787",
+      "id0788",
+      "id0789",
+      "id0790",
+      "id0791",
+      "id0792",
+      "id0793",
+      "id0794",
+      "id0795",
+      "id0796",
+      "id0797",
+      "id0798",
+      "id0799",
+      "id0800",
+      "id0801",
+      "id0802",
+      "id0803",
+      "id0804",
+      "id0805",
+      "id0806",
+      "id0807",
+      "id0808",
+      "id0809",
+      "id0810",
+      "id0811",
+      "id0812",
+      "id0813",
+      "id0814",
+      "id0815",
+      "id0816",
+      "id0817",
+      "id0818",
+      "id0819",
+      "id0820",
+      "id0821",
+      "id0822",
+      "id0823",
+      "id0824",
+      "id0825",
+      "id0826",
+      "id0827",
+      "id0828",
+      "id0829",
+      "id0830",
+      "id0831",
+      "id0832",
+      "id0833",
+      "id0834",
+      "id0835",
+      "id0836",
+      "id0837",
+      "id0838",
+      "id0839",
+      "id0840",
+      "id0841",
+      "id0842",
+      "id0843",
+      "id0844",
+      "id0845",
+      "id0846",
+      "id0847",
+      "id0848",
+      "id0849",
+      "id0850",
+      "id0851",
+      "id0852",
+      "id0853",
+      "id0854",
+      "id0855",
+      "id0856",
+      "id0857",
+      "id0858",
+      "id0859",
+      "id0860",
+      "id0861",
+      "id0862",
+      "id0863",
+      "id0864",
+      "id0865",
+      "id0866",
+      "id0867",
+      "id0868",
+      "id0869",
+      "id0870",
+      "id0871",
+      "id0872",
+      "id0873",
+      "id0874",
+      "id0875",
+      "id0876",
+      "id0877",
+      "id0878",
+      "id0879",
+      "id0880",
+      "id0881",
+      "id0882",
+      "id0883",
+      "id0884",
+      "id0885",
+      "id0886",
+      "id0887",
+      "id0888",
+      "id0889",
+      "id0890",
+      "id0891",
+      "id0892",
+      "id0893",
+      "id0894",
+      "id0895",
+      "id0896",
+      "id0897",
+      "id0898",
+      "id0899",
+      "id0900",
+      "id0901",
+      "id0902",
+      "id0903",
+      "id0904",
+      "id0905",
+      "id0906",
+      "id0907",
+      "id0908",
+      "id0909",
+      "id0910",
+      "id0911",
+      "id0912",
+      "id0913",
+      "id0914",
+      "id0915",
+      "id0916",
+      "id0917",
+      "id0918",
+      "id0919",
+      "id0920",
+      "id0921",
+      "id0922",
+      "id0923",
+      "id0924",
+      "id0925",
+      "id0926",
+      "id0927",
+      "id0928",
+      "id0929",
+      "id0930",
+      "id0931",
+      "id0932",
+      "id0933",
+      "id0934",
+      "id0935",
+      "id0936",
+      "id0937",
+      "id0938",
+      "id0939",
+      "id0940",
+      "id0941",
+      "id0942",
+      "id0943",
+      "id0944",
+      "id0945",
+      "id0946",
+      "id0947",
+      "id0948",
+      "id0949",
+      "id0950",
+      "id0951",
+      "id0952",
+      "id0953",
+      "id0954",
+      "id0955",
+      "id0956",
+      "id0957",
+      "id0958",
+      "id0959",
+      "id0960",
+      "id0961",
+      "id0962",
+      "id0963",
+      "id0964",
+      "id0965",
+      "id0966",
+      "id0967",
+      "id0968",
+      "id0969",
+      "id0970",
+      "id0971",
+      "id0972",
+      "id0973",
+      "id0974",
+      "id0975",
+      "id0976",
+      "id0977",
+      "id0978",
+      "id0979",
+      "id0980",
+      "id0981",
+      "id0982",
+      "id0983",
+      "id0984",
+      "id0985",
+      "id0986",
+      "id0987",
+      "id0988",
+      "id0989",
+      "id0990",
+      "id0991",
+      "id0992",
+      "id0993",
+      "id0994",
+      "id0995",
+      "id0996",
+      "id0997",
+      "id0998",
+      "id0999"
      ],
      "nums": [
       1,
@@ -9308,7 +11866,9 @@
       "limit": {
        "$float": "2.0"
       }
-     }
+     },
+     "load": 4,
+     "repeat": true
     },
     "doc": {
      "count": 3,
@@ -9352,7 +11912,8 @@
       [
        3
       ]
-     ]
+     ],
+     "now": 7
     }
    },
    "expect": {

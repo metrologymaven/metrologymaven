@@ -68,6 +68,12 @@
       "type": "number"
      }
     }
+   },
+   "load": {
+    "type": "integer"
+   },
+   "repeat": {
+    "type": "boolean"
    }
   }
  },
@@ -83,210 +89,217 @@
   "doc.meta": "map",
   "doc.meta.owner": "string",
   "doc.flags": "list<bool>",
-  "doc.grid": "list<list<int>>"
+  "doc.grid": "list<list<int>>",
+  "doc.now": "int"
  },
  "cases": [
   {
    "name": "loop_while",
-   "decl": "while params.n > 0",
+   "expr": "while params.n > 0",
    "code": "fpl_syntax",
    "pos": 0
   },
   {
    "name": "loop_for",
-   "decl": "params.flag && for(i in params.ids, true)",
+   "expr": "params.flag && for(i in params.ids, true)",
    "code": "fpl_syntax",
    "pos": 15
   },
   {
    "name": "user_function",
-   "decl": "my_check(params.n)",
+   "expr": "my_check(params.n)",
    "code": "fpl_syntax",
    "pos": 0
   },
   {
    "name": "user_function_inner",
-   "decl": "params.n > 0 && double(params.n) > 2",
+   "expr": "params.n > 0 && double(params.n) > 2",
    "code": "fpl_syntax",
    "pos": 16
   },
   {
    "name": "method_call",
-   "decl": "params.ids.contains(\"a\")",
+   "expr": "params.ids.contains(\"a\")",
    "code": "fpl_syntax",
    "pos": 11
   },
   {
    "name": "lambda",
-   "decl": "lambda x: x",
+   "expr": "lambda x: x",
    "code": "fpl_syntax",
    "pos": 0
   },
   {
    "name": "assignment",
-   "decl": "params.n = 5",
+   "expr": "params.n = 5",
    "code": "fpl_syntax",
    "pos": 9
   },
   {
    "name": "arithmetic",
-   "decl": "params.n + 1 > 2",
+   "expr": "params.n + 1 > 2",
    "code": "fpl_syntax",
    "pos": 9
   },
   {
    "name": "chained_comparison",
-   "decl": "params.n > 1 > 0",
+   "expr": "params.n > 1 > 0",
    "code": "fpl_syntax",
    "pos": 13
   },
   {
    "name": "unterminated_string",
-   "decl": "params.name == \"abc",
+   "expr": "params.name == \"abc",
    "code": "fpl_syntax",
    "pos": 15
   },
   {
-   "name": "bound_too_large",
-   "decl": "@bound(20000) true",
-   "code": "fpl_syntax",
-   "pos": 7
-  },
-  {
-   "name": "bound_zero",
-   "decl": "@bound(0) true",
-   "code": "fpl_syntax",
-   "pos": 7
-  },
-  {
-   "name": "unknown_annotation",
-   "decl": "@colour(red) true",
+   "name": "annotation_char",
+   "expr": "@bound(5) true",
    "code": "fpl_syntax",
    "pos": 0
   },
   {
+   "name": "keyword_root",
+   "expr": "now > 3",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "keyword_variable",
+   "expr": "all(for in params.ids, true)",
+   "code": "fpl_syntax",
+   "pos": 4
+  },
+  {
    "name": "int_overflow",
-   "decl": "params.n > 99999999999999999999",
+   "expr": "params.n > 99999999999999999999",
    "code": "fpl_syntax",
    "pos": 11
   },
   {
    "name": "has_literal",
-   "decl": "has(1)",
+   "expr": "has(1)",
    "code": "fpl_syntax",
    "pos": 4
   },
   {
    "name": "rebound_var",
-   "decl": "all(x in params.ids, all(x in params.ids, true))",
+   "expr": "all(x in params.ids, all(x in params.ids, true))",
    "code": "fpl_syntax",
    "pos": 25
   },
   {
    "name": "stray_char",
-   "decl": "params.n > 1 # c",
+   "expr": "params.n > 1 # c",
    "code": "fpl_syntax",
    "pos": 13
   },
   {
    "name": "depth_not",
-   "decl": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!true",
+   "expr": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!true",
    "code": "fpl_syntax",
    "pos": 63
   },
   {
-   "name": "depth_and_chain",
-   "decl": "true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true && true",
+   "name": "depth_parens",
+   "expr": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
    "code": "fpl_syntax",
-   "pos": 509
+   "pos": 64
+  },
+  {
+   "name": "depth_nested_and",
+   "expr": "true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "code": "fpl_syntax",
+   "pos": 576
   },
   {
    "name": "unknown_param",
-   "decl": "params.nope == 1",
+   "expr": "params.nope == 1",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "unknown_doc_field",
-   "decl": "doc.count > 0 && doc.cnt > 0",
+   "expr": "doc.count > 0 && doc.cnt > 0",
    "code": "fpl_type",
    "pos": 17
   },
   {
    "name": "unknown_item_field",
-   "decl": "all(it in params.items, it.colour == \"red\")",
+   "expr": "all(it in params.items, it.colour == \"red\")",
    "code": "fpl_type",
    "pos": 27
   },
   {
    "name": "untyped_map_field",
-   "decl": "params.tags.a == \"1\"",
+   "expr": "params.tags.a == \"1\"",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "mismatch_int_string",
-   "decl": "params.n == \"5\"",
+   "expr": "params.n == \"5\"",
    "code": "fpl_type",
    "pos": 9
   },
   {
    "name": "mismatch_order",
-   "decl": "params.name > 3",
+   "expr": "params.name > 3",
    "code": "fpl_type",
    "pos": 12
   },
   {
    "name": "mismatch_size",
-   "decl": "size(params.n) > 0",
+   "expr": "size(params.n) > 0",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "mismatch_and",
-   "decl": "params.n && true",
+   "expr": "params.n && true",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "mismatch_not",
-   "decl": "!params.name",
+   "expr": "!params.name",
    "code": "fpl_type",
    "pos": 1
   },
   {
    "name": "mismatch_branches",
-   "decl": "params.flag ? 1 : \"a\"",
+   "expr": "params.flag ? 1 : \"a\"",
    "code": "fpl_type",
    "pos": 12
   },
   {
    "name": "mismatch_list_eq",
-   "decl": "params.ids == params.ids",
+   "expr": "params.ids == params.ids",
    "code": "fpl_type",
    "pos": 11
   },
   {
    "name": "mismatch_quant",
-   "decl": "all(i in params.n, true)",
+   "expr": "all(i in params.n, true)",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "mismatch_ref_string",
-   "decl": "params.feature == \"F1\"",
+   "expr": "params.feature == \"F1\"",
    "code": "fpl_type",
    "pos": 15
   },
   {
    "name": "not_bool",
-   "decl": "params.n",
+   "expr": "params.n",
    "code": "fpl_type",
    "pos": 0
   },
   {
    "name": "empty_list",
-   "decl": "params.n in []",
+   "expr": "params.n in []",
    "code": "fpl_type",
    "pos": 12
   }

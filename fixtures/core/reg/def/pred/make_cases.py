@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """Generate CORE.REG.DEF.PRED fixtures (CC-BY-4.0 project data).
 
-cases.json      AC-1/AC-3: expression, context, expected
+cases.json      AC-1/AC-3: expression, optional bound and message key, context, expected
                 result or error, expected step count; one parameter schema and one set of context
                 types (top level) type every case. Results come from the small reference
                 evaluator below, written independently of the Rust crate from the leaf's rules:
                   * one step per AST node visited, one per list element visited by all/exists;
                   * the counter is checked before each visit: at `steps == bound` evaluation
                     stops with precondition_budget (so steps == bound);
-                  * && and || short-circuit left to right; ?: visits one branch;
-                    all/exists visit every element (no short-circuit, see AC-3);
+                  * a flat chain a && b && c (or ||) is one node; && and || short-circuit
+                    left to right; ?: visits one branch; all stops at the first false element,
+                    exists at the first true one;
                   * has(path) costs the has node plus its argument nodes;
                   * a dotted context path (params.a.b) is one node;
-                  * ints compare exactly, floats by IEEE 754 total order, int vs float by exact
-                    value; NaN in any comparison is nan_operand.
+                  * -0.0 becomes +0.0 when it enters (literals, context reads); ints compare
+                    exactly, floats by IEEE 754 total order, int vs float by exact value; NaN in
+                    any comparison is nan_operand.
 bad_syntax.json AC-2: declarations that must fail the registry build, with the error code and
                 the byte position, hand-labelled as the offset of a named token.
 Run:  python fixtures/core/reg/def/pred/make_cases.py
@@ -134,18 +136,18 @@ class P:
         return c
 
     def or_(self):
-        e = self.and_()
+        items = [self.and_()]
         while self.peek()[0] == "||":
             self.take()
-            e = ("or", e, self.and_())
-        return e
+            items.append(self.and_())
+        return items[0] if len(items) == 1 else ("or", items)
 
     def and_(self):
-        e = self.rel()
+        items = [self.rel()]
         while self.peek()[0] == "&&":
             self.take()
-            e = ("and", e, self.rel())
-        return e
+            items.append(self.rel())
+        return items[0] if len(items) == 1 else ("and", items)
 
     def rel(self):
         a = self.unary()
@@ -175,7 +177,7 @@ class P:
     def primary(self):
         k, v = self.take()
         if k == "num":
-            return ("lit", v)
+            return ("lit", 0.0 if v == 0 and isinstance(v, float) else v)
         if k == "str":
             return ("lit", v)
         if k == "(":
@@ -212,23 +214,6 @@ class P:
         if v in self.vars:
             return ("var", v)
         return ("path", [v])
-
-
-def header(s):
-    bound, msg, i = None, None, 0
-    while True:
-        while i < len(s) and s[i] in " \t\r\n":
-            i += 1
-        if s.startswith("@bound(", i):
-            j = s.index(")", i)
-            bound = int(s[i + 7:j])
-            i = j + 1
-        elif s.startswith("@message(", i):
-            j = s.index(")", i)
-            msg = s[i + 9:j]
-            i = j + 1
-        else:
-            return bound, msg, i
 
 
 # ------------------------------------------------------------------ reference evaluator
@@ -307,7 +292,7 @@ class Ev:
             if not isinstance(cur, dict) or seg not in cur:
                 raise FplError("missing_field")
             cur = cur[seg]
-        return cur
+        return norm(cur)
 
     def want_bool(self, n):
         v = self.ev(n)
@@ -338,10 +323,12 @@ class Ev:
             return b[n[2]]
         if t == "not":
             return not self.want_bool(n[1])
-        if t == "and":
-            return self.want_bool(n[2]) if self.want_bool(n[1]) else False
-        if t == "or":
-            return True if self.want_bool(n[1]) else self.want_bool(n[2])
+        if t in ("and", "or"):
+            stop = t == "or"  # value that ends the chain early
+            for x in n[1]:
+                if self.want_bool(x) == stop:
+                    return stop
+            return not stop
         if t == "cmp":
             a, b = self.ev(n[2]), self.ev(n[3])
             op = n[1]
@@ -388,21 +375,31 @@ class Ev:
             items = self.ev(lst)
             if kind(items) != "list":
                 raise FplError("type_error")
-            acc = is_all
             for it in items:
                 self.tick()
                 self.env.append((var, it))
                 b = self.want_bool(body)
                 self.env.pop()
-                acc = (acc and b) if is_all else (acc or b)
-            return acc
+                if b != is_all:
+                    return b
+            return is_all
         raise AssertionError(t)
 
 
-def run(decl, ctx):
-    bound, msg, start = header(decl)
+def norm(v):
+    """-0.0 -> +0.0, deep (fixture values are shallow, so recursion is fine here)."""
+    if isinstance(v, float) and v == 0:
+        return 0.0
+    if isinstance(v, list):
+        return [norm(x) for x in v]
+    if isinstance(v, dict):
+        return {k: norm(x) for k, x in v.items()}
+    return v
+
+
+def run(decl, ctx, bound=None, msg=None):
     bound = bound or MAX_BOUND
-    ast = P(tokenize(decl, start)).expr()
+    ast = P(tokenize(decl, 0)).expr()
     ev = Ev(ctx, bound)
     try:
         ok = ev.want_bool(ast)
@@ -445,12 +442,15 @@ SCHEMA = {
             "kind": {"type": "string"}, "n": {"type": "integer"}}}},
         "tags": {"type": "object"},
         "cfg": {"type": "object", "properties": {"mode": {"type": "string"}, "limit": {"type": "number"}}},
+        "load": {"type": "integer"},
+        "repeat": {"type": "boolean"},
     },
 }
 TYPES = {
     "doc": "map", "doc.count": "int", "doc.mode": "string", "doc.active": "ref", "doc.tol": "float",
     "doc.points": "list<map>", "doc.points[].x": "float", "doc.points[].id": "ref",
     "doc.meta": "map", "doc.meta.owner": "string", "doc.flags": "list<bool>", "doc.grid": "list<list<int>>",
+    "doc.now": "int",
 }
 
 
@@ -458,13 +458,14 @@ def base_params():
     return {"n": 5, "x": 2.5, "name": "probe", "flag": True, "ids": ["a", "b", "c"], "nums": [1, 2, 3],
             "fs": [0.5, 1.5], "feature": Ref("F1"),
             "items": [{"kind": "plane", "n": 3}, {"kind": "circle", "n": 1}],
-            "tags": {"a": "1", "b": "2"}, "cfg": {"mode": "fast", "limit": 2.0}}
+            "tags": {"a": "1", "b": "2"}, "cfg": {"mode": "fast", "limit": 2.0},
+            "load": 4, "repeat": True}
 
 
 def base_doc():
     return {"count": 3, "mode": "edit", "active": Ref("F1"), "tol": 0.01,
             "points": [{"x": 0.0, "id": Ref("P1")}, {"x": 1.0, "id": Ref("P2")}],
-            "meta": {"owner": "qa"}, "flags": [True, False], "grid": [[1, 2], [3]]}
+            "meta": {"owner": "qa"}, "flags": [True, False], "grid": [[1, 2], [3]], "now": 7}
 
 
 cases = []
@@ -480,11 +481,16 @@ def case(name, expr, params=None, doc=None, **kw):
     for k in kw.get("drop_params", []):
         p.pop(k, None)
     ctx = {"params": p, "doc": d}
-    expect = run(expr, ctx)
+    expect = run(expr, ctx, kw.get("bound"), kw.get("message_key"))
     if "want" in kw:  # hand-stated result, cross-checks the reference evaluator
         got = expect.get("error", expect.get("result"))
         assert got == kw["want"], (name, expect, kw["want"])
-    cases.append({"name": name, "expr": expr, "context": enc(ctx), "expect": expect})
+    c = {"name": name, "expr": expr}
+    for k in ("bound", "message_key"):
+        if k in kw:
+            c[k] = kw[k]
+    c.update(context=enc(ctx), expect=expect)
+    cases.append(c)
 
 
 NAN = float("nan")
@@ -553,33 +559,55 @@ case("has_var_field", "all(it in params.items, has(it.n))",
      params={"items": [{"kind": "plane", "n": 3}, {"kind": "circle"}]}, want=False)
 case("doc_guard", "has(doc.meta.owner) && doc.meta.owner == \"qa\"", want=True)
 case("doc_and", "doc.count >= 3 && doc.mode != \"locked\"", want=True)
-case("message_key", "@message(align.needs_four) size(params.ids) >= 4", want=False)
-case("bound_exact", "@bound(5) params.n == 5 && params.flag", want=True)
-case("bound_one_short", "@bound(4) params.n == 5 && params.flag", want="precondition_budget")
-case("bound_quant", "@bound(3) all(i in params.ids, true)", want="precondition_budget")
-case("bound_and_message", "@bound(100) @message(doc.too_few) doc.count > 5", want=False)
+case("message_key", "size(params.ids) >= 4", message_key="align.needs_four", want=False)
+case("bound_exact", "params.n == 5 && params.flag", bound=5, want=True)
+case("bound_one_short", "params.n == 5 && params.flag", bound=4, want="precondition_budget")
+case("bound_quant", "all(i in params.ids, true)", bound=3, want="precondition_budget")
+case("bound_and_message", "doc.count > 5", bound=100, message_key="doc.too_few", want=False)
+case("flat_and_chain_70", " && ".join(["params.flag"] * 70), want=True)
+assert cases[-1]["expect"]["steps"] == 71
+case("flat_or_chain_short", " || ".join(["params.n > 4"] * 70), want=True)
+assert cases[-1]["expect"]["steps"] == 4
+case("keyword_field_load", "params.load > 0", want=True)
+case("keyword_field_repeat", "params.repeat", want=True)
+case("keyword_field_now", "doc.now == 7", want=True)
 case("nan_lt", "doc.tol < 1.0", doc={"tol": NAN}, want="nan_operand")
 case("nan_self_eq", "doc.tol == doc.tol", doc={"tol": NAN}, want="nan_operand")
 case("nan_mixed", "params.n == doc.tol", doc={"tol": NAN}, want="nan_operand")
 case("nan_in_list", "1.0 in params.fs", params={"fs": [NAN, 1.0]}, want="nan_operand")
 case("nan_unvisited", "params.flag || doc.tol < 1.0", doc={"tol": NAN}, want=True)
-case("neg_zero_total_order_eq", "params.x == 0.0", params={"x": -0.0}, want=False)
-case("neg_zero_total_order_lt", "params.x < 0.0", params={"x": -0.0}, want=True)
+case("neg_zero_read_eq", "params.x == 0.0", params={"x": -0.0}, want=True)
+case("neg_zero_read_not_lt", "params.x < 0.0", params={"x": -0.0}, want=False)
+case("neg_zero_read_ge", "doc.tol >= 0.0", doc={"tol": -0.0}, want=True)
+case("neg_zero_literal_eq", "0.0 == -0.0", want=True)
+case("neg_zero_literal_not_lt", "-0.0 < 0.0", want=False)
+case("neg_zero_in_list", "0.0 in params.fs", params={"fs": [1.0, -0.0]}, want=True)
 case("neg_zero_vs_int", "0 == params.x", params={"x": -0.0}, want=True)
+case("total_order_tiny", "params.x > 0.0", params={"x": 5e-324}, want=True)
 case("int_max_vs_float", "params.n < 9223372036854775807.0", params={"n": 2 ** 63 - 1}, want=True)
 case("exact_big_int_ne", "params.n == 9007199254740993.0", params={"n": 2 ** 53 + 1}, want=False)
 case("exact_big_int_gt", "params.n > 9007199254740992.0", params={"n": 2 ** 53 + 1}, want=True)
 case("missing_doc_field", "doc.count > 1", drop_doc=["count"], want="missing_field")
-case("missing_item_field", "exists(it in params.items, it.n > 2)",
+case("missing_item_field", "exists(it in params.items, it.n > 3)",
      params={"items": [{"kind": "plane", "n": 3}, {"kind": "circle"}]}, want="missing_field")
 case("missing_unvisited_cond", "params.flag ? true : doc.count > 1", drop_doc=["count"], want=True)
 case("missing_unvisited_and", "!params.flag && doc.count > 1", drop_doc=["count"], want=False)
 case("runtime_type_mismatch", "doc.mode == \"edit\"", doc={"mode": 7}, want="type_error")
 case("runtime_not_bool", "!params.flag", params={"flag": "yes"}, want="type_error")
-case("uniq_small", "all(x in params.ids, all(y in params.ids, x != y))",
-     params={"ids": ["i%d" % k for k in range(10)]}, want=False)
-case("ac3_budget", "all(x in params.ids, all(y in params.ids, x != y))",
-     params={"ids": ["id%03d" % k for k in range(200)]}, want="precondition_budget")
+case("all_stops_at_false", "all(i in params.nums, i < 2)", want=False)
+assert cases[-1]["expect"]["steps"] == 2 + 2 * 4
+case("exists_stops_at_true", "exists(i in params.nums, i == 1)", want=True)
+assert cases[-1]["expect"]["steps"] == 2 + 4
+case("exists_stops_before_error", "exists(it in params.items, it.n > 2)",
+     params={"items": [{"kind": "plane", "n": 3}, {"kind": "circle"}]}, want=True)
+case("all_stops_before_error", "all(it in params.items, it.n > 3)",
+     params={"items": [{"kind": "plane", "n": 3}, {"kind": "circle"}]}, want=False)
+case("membership_small", "all(x in params.ids, exists(y in params.ids, y == x))",
+     params={"ids": ["i%d" % k for k in range(10)]}, want=True)
+# 2 + sum over k of (3 + 4 * (k + 1)) for k < 10
+assert cases[-1]["expect"]["steps"] == 2 + sum(3 + 4 * (k + 1) for k in range(10))
+case("ac3_budget", "all(x in params.ids, exists(y in params.ids, y == x))",
+     params={"ids": ["id%04d" % k for k in range(1000)]}, want="precondition_budget")
 assert cases[-1]["expect"]["steps"] == 10000
 
 # ------------------------------------------------------------------ AC-2: build failures
@@ -591,7 +619,7 @@ def bad_case(name, decl, code, needle, nth=1):
     pos = -1
     for _ in range(nth):
         pos = decl.index(needle, pos + 1)
-    bad.append({"name": name, "decl": decl, "code": code, "pos": pos})
+    bad.append({"name": name, "expr": decl, "code": code, "pos": pos})
 
 
 bad_case("loop_while", "while params.n > 0", "fpl_syntax", "while")
@@ -604,15 +632,16 @@ bad_case("assignment", "params.n = 5", "fpl_syntax", "=")
 bad_case("arithmetic", "params.n + 1 > 2", "fpl_syntax", "+")
 bad_case("chained_comparison", "params.n > 1 > 0", "fpl_syntax", ">", 2)
 bad_case("unterminated_string", "params.name == \"abc", "fpl_syntax", "\"")
-bad_case("bound_too_large", "@bound(20000) true", "fpl_syntax", "20000")
-bad_case("bound_zero", "@bound(0) true", "fpl_syntax", "0")
-bad_case("unknown_annotation", "@colour(red) true", "fpl_syntax", "@")
+bad_case("annotation_char", "@bound(5) true", "fpl_syntax", "@")
+bad_case("keyword_root", "now > 3", "fpl_syntax", "now")
+bad_case("keyword_variable", "all(for in params.ids, true)", "fpl_syntax", "for")
 bad_case("int_overflow", "params.n > 99999999999999999999", "fpl_syntax", "9")
 bad_case("has_literal", "has(1)", "fpl_syntax", "1")
 bad_case("rebound_var", "all(x in params.ids, all(x in params.ids, true))", "fpl_syntax", "x", 2)
 bad_case("stray_char", "params.n > 1 # c", "fpl_syntax", "#")
 bad_case("depth_not", "!" * 70 + "true", "fpl_syntax", "!", 64)
-bad_case("depth_and_chain", " && ".join(["true"] * 70), "fpl_syntax", "&&", 64)
+bad_case("depth_parens", "(" * 70 + "true" + ")" * 70, "fpl_syntax", "(", 65)
+bad_case("depth_nested_and", "true && (" * 70 + "true" + ")" * 70, "fpl_syntax", "true", 65)
 bad_case("unknown_param", "params.nope == 1", "fpl_type", "params")
 bad_case("unknown_doc_field", "doc.count > 0 && doc.cnt > 0", "fpl_type", "doc.cnt")
 bad_case("unknown_item_field", "all(it in params.items, it.colour == \"red\")", "fpl_type", "colour")
