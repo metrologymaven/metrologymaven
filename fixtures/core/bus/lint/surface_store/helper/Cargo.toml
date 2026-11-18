@@ -1,0 +1,8 @@
+[package]
+name = "helper"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-store = { path = "../store" }

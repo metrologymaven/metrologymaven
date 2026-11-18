@@ -39,6 +39,8 @@ jobs:
         run: cargo test --workspace
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: No side doors (CORE.BUS.LINT)
+        run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
@@ -63,6 +65,7 @@ jobs:
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
           python tools/check_command_defs.py
+          python tools/check_entries.py
           python tools/check_knp1_findings.py
           python -m unittest discover -s tools/house_rules/tests -v
   msrv:
