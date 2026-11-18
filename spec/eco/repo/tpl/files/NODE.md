@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [tools/repo_template]
+built_pr: 91
 satisfies: [REQ-ECO.REPO.TPL-002]
 covers: []
 depends_on: []
