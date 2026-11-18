@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 122
 satisfies: [REQ-OUTR.DOCS-001, REQ-OUTR.DOCS-002, REQ-OUTR.DOCS-003]
 covers: []
 depends_on: []
@@ -88,6 +90,8 @@ The AUTO.SURF.DOCS golden records for `fixtures/manifest/min-classes.json` (copi
 - D-026 and launch-1 exclude AUTO.PY, so this leaf does not depend on it: the Python page is rendered from the registry-derived Python name in the record, and states that bindings are absent when the release does not ship them. This keeps REQ-OUTR.DOCS-001 (one Python page per command) true without Python bindings; a reviewer may still prefer to qualify REQ-OUTR.DOCS-001 with "for each surface the release ships".
 - CONSTITUTION §2.1 (D-034): the former code dependencies on CORE.REG, AUTO.CLI, AUTO.MCP and AUTO.PY are replaced by `uses_artifacts` on CORE.REG.MAN (manifest digest and IDs) and AUTO.SURF.DOCS (`docs-ref-v1` records), as AUTO.SURF.DOCS's own Open questions propose.
 - AUTO.SURF.DOCS is still open; if its record schema changes, only the input contract above changes.
+- Pages are HTML fragments that `OUTR.DOCS.FRAME` must insert as raw HTML, never through a Markdown processor. As a safeguard, the renderer writes every line break inside a value as `&#10;` (and CR as `&#13;`), so no page has a blank line that could end a CommonMark HTML block (for example inside `<pre class="help">`).
+- Until AUTO.SURF.DOCS publishes `schema/docs-ref-v1.json`, the stand-in fixtures are validated against a provisional schema, `fixtures/outr/docs/ref/docs-ref-v1.schema.json`. Whether a `human_only` command's MCP entry says `available: true` with its tool name (as the fixture assumes) or `available: false` is a guess pending AUTO.SURF.DOCS; the renderer handles both.
 
 ## Children
 

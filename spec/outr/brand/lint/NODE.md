@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-brand-lint]
+built_pr: 79
 satisfies: [REQ-OUTR.BRAND-003, REQ-OUTR.BRAND-004, REQ-OUTR.BRAND-006, REQ-OUTR.BRAND-007]
 covers: []
 depends_on: []
@@ -57,14 +59,14 @@ One lint, used by every outreach build (website, docs, content, launch material,
 
 ## Design
 
-- **Command:** `fid-outreach claim-lint --rules <file> [--bench-prefix <url>]... [--json] <paths>...`. Project tooling, not a registry command; nearest class R0.
+- **Command:** `fid-brand-lint claim-lint --rules <file> [--bench-prefix <url>]... [--json] <paths>...`. Project tooling, not a registry command; nearest class R0.
 - **Rule file** (`claim-rules.toml`): `version`, then one table per rule with `id`, `severity` (`error` or `warn`), `words` or `phrases` (case-insensitive, whole-word), and rule-specific settings: CL001 `designator_pattern` (default matches an organisation prefix such as ISO, ASME, VDA, IEC, DIN or EN followed by a number and an edition year), CL002 `incumbents_file` and `bench_prefixes`.
 - **Data structures:** `Sentence { file, line, col, text, links }`, `Finding { rule, file, line, col, matched }`, `Suppression { rule, file, line, reason }`, `Report { rules_version, findings, suppressions }`.
 - **Algorithm:** for each file in sorted path order: strip front matter; for Markdown, parse with a CommonMark parser and keep text and link destinations outside code; for HTML, parse with a bounded HTML tokenizer and keep text and `href` values outside `code`, `pre`, `script` and `style`; split text into sentences at `.`, `!`, `?` followed by whitespace and an uppercase letter, or at block boundaries; apply each rule; apply suppressions from markers on the same or preceding line; sort findings by file, line, column, rule; write canonical JSON (RFC 8785).
 - **Errors:** `RulesParse(path, reason)`, `InputUnreadable(path)`, `InputTooLarge(path)` (files over 5 MB are refused, exit 2).
 - **Determinism:** D0. No clock, no randomness, sorted inputs, BTreeMap only.
 - **Performance budget:** 2,000 pages totalling 20 MB in under 5 s on a PLAT reference machine [unverified until measured].
-- **Crate:** `fid-outreach`, module `claim_lint`; rule file and incumbent list ship in the crate's `rules/` folder.
+- **Crate:** `fid-brand-lint` (layer `tool`), the Markdown and HTML adapter of the shared engine `fid-vocab` (ECO.RULES.VOCAB.ENGINE): each sentence becomes one engine unit, and matching, suppression accounting and the report come from the engine. The rule file (`rules/claim-rules.toml`, format `fid-vocab-rules/1`) and incumbent list (`rules/incumbents.txt`) ship in the crate's `rules/` folder; CL002's benchmark prefixes are the rule's `link_prefixes`, extended by `--bench-prefix`.
 
 ## Test fixtures
 
@@ -90,6 +92,7 @@ Synthetic, hand-written Markdown and HTML fixtures under `fixtures/outr/lint/` (
 
 - The nouns "conformance" and "compliance" are left out of CL001 because "conformance decision" is product vocabulary (CONSTITUTION §5). Maintainers may add them with an exception list.
 - A copy-detection rule (REQ-OUTR.BRAND-005) waits on D-011; it would be added as a new rule in the same file.
+- The benchmark-results URL prefix in `rules/claim-rules.toml` (`link_prefixes`, currently `https://metrologymaven.io/bench/results/`) is provisional until [OUTR.BENCH](../../bench/NODE.md) fixes where published results live.
 
 ## Children
 

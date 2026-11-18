@@ -1,7 +1,7 @@
 ---
 id: D-040
 title: Vendored SunPro and MIT libm ports in fid-num
-status: proposed
+status: accepted
 raised_by: review of PR #72 (KRN.NUM.FN)
 blocks: [KRN.NUM.FN]
 decide_by: before PR #72 merges
@@ -10,7 +10,7 @@ updated: 2026-11-18
 
 # D-040: Vendored SunPro and MIT libm ports in fid-num
 
-**Status: PROPOSED. This needs the maintainer's decision. Agents must not accept it.**
+**Status: ACCEPTED 2026-11-18, maintainer.**
 
 ## Question
 
@@ -58,4 +58,12 @@ works; counsel may want to confirm.]
 
 ## Decision
 
-_Open (proposed)._ Needs the maintainer's decision. PR #72 is blocked until then.
+**Accepted 2026-11-18, maintainer.**
+
+1. The code in `crates/fid-num/src/f/vendor/` is a port of permissively licensed fdlibm
+   (SunPro notice) and musl (MIT) algorithms. Their notices are preserved in
+   `crates/fid-num/src/f/vendor/VENDOR.md` (and in the file headers and `ATTRIBUTION.md`).
+2. This is an explicit, recorded exception to the clean-room rule of CONSTITUTION §8,
+   limited to that directory. It does not extend to any other directory or crate.
+3. The port (not a verbatim rust-lang/libm copy) is accepted, including the documented
+   atan2 and Payne-Hanek deviations recorded in `VENDOR.md`.

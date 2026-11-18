@@ -9,8 +9,34 @@
 //!
 //! `lint-crate-graph`: the no-side-doors check (spec node `CORE.BUS.LINT`), in
 //! [`crate_graph`]; it reuses the resolved graph built here.
+//!
+//! `plat-matrix lint-tiers`: the tier definitions lint (spec node
+//! `PLAT.MATRIX.POLICY.DEFS`), in [`plat_matrix_tiers`].
+//!
+//! `plat-deploy netlist`: the network-feature list generated from the registry manifest
+//! (spec node `PLAT.DEPLOY.OFFLINE.NETLIST`), in [`plat_deploy_netlist`].
+//!
+//! `rel version-check` and `rel version-compare`: the product version scheme and tag check
+//! (spec node `ECO.REL.PROC.VERSION`), in [`rel::version`].
+//!
+//! `rel sums`: the release checksum file and checksum statement (spec node
+//! `ECO.REL.SIGN.SUMS`), in [`rel::sums`].
+//!
+//! `rel sbom`: one SPDX 2.3 JSON SBOM per planned artefact (spec node `ECO.REL.SIGN.SBOM`), in
+//! [`rel::sbom`].
+//!
+//! `plat-gpu invariance`: the cross-backend value-of-record invariance harness (spec node
+//! `PLAT.GPU.FALLBK.INVAR`), in [`plat_gpu_invar`].
+//!
+//! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
+//! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 
+pub mod apps_policy;
 pub mod crate_graph;
+pub mod plat_deploy_netlist;
+pub mod plat_gpu_invar;
+pub mod plat_matrix_tiers;
+pub mod rel;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -104,6 +130,12 @@ pub struct Graph {
     names: BTreeMap<String, String>,
     /// Package ID to its dependency edges.
     edges: BTreeMap<String, Vec<Edge>>,
+    /// Package ID to its `Cargo.toml` path, when `cargo metadata` gives one.
+    manifest_paths: BTreeMap<String, String>,
+    /// Package ID to its declared dependencies as (package name, dev-only), from
+    /// `packages[].dependencies`. Unlike the resolved edges, these include dependencies on
+    /// binary-only packages, which Cargo leaves out of `resolve`.
+    declared: BTreeMap<String, BTreeSet<(String, bool)>>,
 }
 
 fn field<'a>(o: &'a BTreeMap<String, CValue>, k: &str) -> Result<&'a CValue, String> {
@@ -139,7 +171,21 @@ impl Graph {
         let mut g = Graph::default();
         for p in as_arr(field(root, "packages")?)? {
             let p = as_obj(p)?;
-            g.names.insert(as_str(field(p, "id")?)?.to_string(), as_str(field(p, "name")?)?.to_string());
+            let id = as_str(field(p, "id")?)?.to_string();
+            if let Some(CValue::Str(m)) = p.get("manifest_path") {
+                g.manifest_paths.insert(id.clone(), m.clone());
+            }
+            if let Some(CValue::Arr(deps)) = p.get("dependencies") {
+                let mut set = BTreeSet::new();
+                for d in deps {
+                    let CValue::Obj(d) = d else { continue };
+                    let Some(CValue::Str(n)) = d.get("name") else { continue };
+                    let dev = matches!(d.get("kind"), Some(CValue::Str(k)) if k == "dev");
+                    set.insert((n.clone(), dev));
+                }
+                g.declared.insert(id.clone(), set);
+            }
+            g.names.insert(id, as_str(field(p, "name")?)?.to_string());
         }
         let known = |g: &Graph, id: &str| {
             if g.names.contains_key(id) {

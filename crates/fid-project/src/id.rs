@@ -21,10 +21,8 @@
 //! either fails, nothing is recorded, so a retry leaves a clean `now_ms, random_bits` log.
 
 use fid_canon::{to_canonical_bytes, CValue, CanonError};
-use sha1::{Digest as _, Sha1};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Random bits in a UUIDv7 (12 bits `rand_a` + 62 bits `rand_b`).
@@ -82,92 +80,11 @@ impl std::error::Error for IdError {}
 
 // ------------------------------------------------------------------ UUID value
 
-/// A 128-bit UUID. Immutable: there is no way to change one in place.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Uuid([u8; 16]);
+pub use fid_uuid::{uuid_v5, Uuid};
 
-impl Uuid {
-    /// The nil UUID (all zero).
-    pub const NIL: Uuid = Uuid([0; 16]);
-    /// The max UUID (all one).
-    pub const MAX: Uuid = Uuid([0xff; 16]);
-
-    pub const fn from_bytes(bytes: [u8; 16]) -> Uuid {
-        Uuid(bytes)
-    }
-
-    pub const fn as_bytes(&self) -> &[u8; 16] {
-        &self.0
-    }
-
-    pub const fn from_u128(v: u128) -> Uuid {
-        Uuid(v.to_be_bytes())
-    }
-
-    pub const fn as_u128(&self) -> u128 {
-        u128::from_be_bytes(self.0)
-    }
-
-    /// The version field (top nibble of octet 6).
-    pub const fn version(&self) -> u8 {
-        self.0[6] >> 4
-    }
-
-    /// The top two bits of octet 8; `0b10` for RFC 9562 UUIDs.
-    pub const fn variant_bits(&self) -> u8 {
-        self.0[8] >> 6
-    }
-
-    /// Parses the 36-character hyphenated form (`8-4-4-4-12` hex digits, either case).
-    pub fn parse(text: &str) -> Result<Uuid, IdError> {
-        let s = text.as_bytes();
-        if s.len() != 36 {
-            return Err(IdError::BadId);
-        }
-        let mut out = [0u8; 16];
-        let mut nibble = 0usize;
-        for (i, &c) in s.iter().enumerate() {
-            if matches!(i, 8 | 13 | 18 | 23) {
-                if c != b'-' {
-                    return Err(IdError::BadId);
-                }
-                continue;
-            }
-            let v = hex_val(c).ok_or(IdError::BadId)?;
-            let slot = out.get_mut(nibble / 2).ok_or(IdError::BadId)?;
-            *slot |= if nibble % 2 == 0 { v << 4 } else { v };
-            nibble += 1;
-        }
-        Ok(Uuid(out))
-    }
-}
-
-fn hex_val(c: u8) -> Option<u8> {
-    match c {
-        b'0'..=b'9' => Some(c - b'0'),
-        b'a'..=b'f' => Some(c - b'a' + 10),
-        b'A'..=b'F' => Some(c - b'A' + 10),
-        _ => None,
-    }
-}
-
-impl fmt::Display for Uuid {
-    /// Lowercase hyphenated form.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, b) in self.0.iter().enumerate() {
-            if matches!(i, 4 | 6 | 8 | 10) {
-                f.write_str("-")?;
-            }
-            write!(f, "{b:02x}")?;
-        }
-        Ok(())
-    }
-}
-
-impl FromStr for Uuid {
-    type Err = IdError;
-    fn from_str(s: &str) -> Result<Uuid, IdError> {
-        Uuid::parse(s)
+impl From<fid_uuid::UuidError> for IdError {
+    fn from(_: fid_uuid::UuidError) -> IdError {
+        IdError::BadId
     }
 }
 
@@ -181,22 +98,6 @@ pub fn uuid_v7(unix_ms: u64, random: &Bits) -> Result<Uuid, IdError> {
     let rand_b = r & ((1u128 << 62) - 1);
     let n = (u128::from(unix_ms) << 80) | (0x7u128 << 76) | (rand_a << 64) | (0b10u128 << 62) | rand_b;
     Ok(Uuid::from_u128(n))
-}
-
-/// UUIDv5 (RFC 9562 §5.5): SHA-1 of namespace bytes and name, with version and variant set.
-/// SHA-1 serves identity only, not security.
-pub fn uuid_v5(namespace: &Uuid, name: &[u8]) -> Uuid {
-    let mut h = Sha1::new();
-    h.update(namespace.as_bytes());
-    h.update(name);
-    let digest = h.finalize();
-    let mut b = [0u8; 16];
-    for (o, d) in b.iter_mut().zip(digest.iter()) {
-        *o = *d;
-    }
-    b[6] = (b[6] & 0x0f) | 0x50;
-    b[8] = (b[8] & 0x3f) | 0x80;
-    Uuid(b)
 }
 
 // ------------------------------------------------------------------ observations

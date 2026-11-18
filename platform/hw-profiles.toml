@@ -1,0 +1,35 @@
+# Metrology Maven hardware profiles (spec node PLAT.HW.PROFILE; schema in crates/fid-platform,
+# module hw_profile). Validate with:  cargo xtask plat-hw validate
+#
+# PROVISIONAL: every value below is the initial proposal from the PLAT.HW.PROFILE spec and is
+# [unverified]. No value was measured on any machine: no benchmark has run yet, and the
+# repository's CI runners are not reference machines (they have no GPU this file could
+# describe). PLAT.HW.SUITE results on PLAT.HW.REFMACH machines are to confirm or change them;
+# changing them is a reviewed PR.
+schema_version = 1
+
+# The least a machine needs to run the apps [unverified].
+[profiles.minimum]
+cores = 4
+ram_gib = 16
+gpu_class = "integrated"
+vram_gib = 2 # shared with system RAM on an integrated GPU
+storage_free_gib = 20
+display = [1920, 1080]
+
+[profiles.minimum.cpu_level]
+x86_64 = "x86-64-v2"
+aarch64 = "armv8.0"
+
+# What the apps are tuned for [unverified].
+[profiles.recommended]
+cores = 8
+ram_gib = 32
+gpu_class = "discrete_mid"
+vram_gib = 8
+storage_free_gib = 100
+display = [2560, 1440]
+
+[profiles.recommended.cpu_level]
+x86_64 = "x86-64-v3"
+aarch64 = "armv8.2"

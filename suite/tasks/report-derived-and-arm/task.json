@@ -1,0 +1,50 @@
+{
+  "id": "report-derived-and-arm",
+  "source_job": "JOB.ACC.03",
+  "golden_digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:9d27bd08af2b363a52c8fe986f7ae469c9b73c0fd692d9a9f452c98d269055c8"
+  },
+  "prompt": "Housing HS-330 (synthetic): the supplier CMM results are already recorded. Two characteristics on the drawing in/drawing.json are still open: the wall thickness T1, which the drawing defines from the recorded outside and inside diameters, and the boss diameter D7, measured with a portable arm (points in in/arm-points.json). Record both with conformance decisions; T1 must come out of the software, not a hand calculation.",
+  "profile": "report-r1",
+  "budget": {
+    "wall_s": 1200,
+    "tool_calls": 80
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "multi_step",
+  "apps": [
+    "report"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/arm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-results.csv",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

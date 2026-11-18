@@ -1,0 +1,9 @@
+# Native (non-Rust) components bundled into artefacts: ECO.REL.SIGN.SBOM fixture.
+
+[[component]]
+name = "Fixture Sans"
+version = "1.0"
+source = "https://example.org/fonts/fixture-sans-1.0.ttf"
+license = "OFL-1.1"
+sha256 = "706f807e95256c2dc839950050809321c42467ed45cdc432b2bd9df548ce4d93"
+artefacts = ["fid"]

@@ -1,0 +1,20 @@
+[package]
+name = "fid-accept"
+description = "Metrology Maven acceptance tooling: persona definitions file and its check (FLOW.PERSONA.PERS) and study task list and its check (FLOW.STUDY.PROTO)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Bounded JSON parser that rejects duplicate keys (the project's canonical-JSON crate).
+fid-canon = { path = "../fid-canon" }
+# Shared command-ID syntax (`name@major`) for the study task list check (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+# Reads the ECO.APPS.LIST app list (`apps.toml`) as an untyped table, like fid-vocab and fid-xtask.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

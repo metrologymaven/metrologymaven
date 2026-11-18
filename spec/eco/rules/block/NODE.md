@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [tools/house_rules]
+built_pr: 74
 satisfies: [REQ-ECO.RULES-002]
 covers: []
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # ECO.RULES.BLOCK: Generated block format and digest library
@@ -30,7 +32,7 @@ Defines the exact text format of a generated house-rules block inside a Markdown
 
 **In:**
 - Marker syntax and the digest rule
-- `render(block_id, source_rev, body) -> str`, `find_blocks(text) -> list`, `parse` with typed errors
+- `render(block_id, source_repo, source_rev, body) -> str`, `find_blocks(text) -> list[Block]` (the parser) with typed errors, `digest(body)`, `is_intact(block)`
 
 **Out:**
 - Writing files (owned by `ECO.RULES.SYNC`)
@@ -45,17 +47,18 @@ Defines the exact text format of a generated house-rules block inside a Markdown
 
 ## Acceptance criteria
 
-- **AC-1** Given `fixtures/blocks/one.md` (text, one valid block, text), when `find_blocks` runs, then it returns one block with the recorded ID, revision and digest, and `sha256(body)` equals the recorded digest.
+- **AC-1** Given `fixtures/eco/rules/block/one.md` (text, one valid block, text), when `find_blocks` runs, then it returns one block with the recorded ID, revision and digest, and `sha256(body)` equals the recorded digest.
 - **AC-2** Given a body with CRLF line endings, then the computed digest equals that of the same body with LF endings.
-- **AC-3** (error path) Given `fixtures/blocks/unbalanced.md` (begin without end), then parsing raises `BlockError("unbalanced", line=<n>)`.
-- **AC-4** (error path) Given `fixtures/blocks/nested.md`, then parsing raises `BlockError("nested", line=<n>)`.
+- **AC-3** (error path) Given `fixtures/eco/rules/block/unbalanced.md` (begin without end), then parsing raises `BlockError("unbalanced", line=<n>)`.
+- **AC-4** (error path) Given `fixtures/eco/rules/block/nested.md`, then parsing raises `BlockError("nested", line=<n>)`.
 - **AC-5** (round trip) For 200 generated bodies from a seeded generator (seed 42), render then parse returns identical fields.
 
 ## Design
 
 - **Registry command(s):** none; library module.
 - **Data structures:** `Block(id, source_repo, source_rev, sha256, body, begin_line, end_line)`; `BlockError(kind, line)`.
-- **Algorithm:** line scan with two compiled regular expressions; normalise CRLF to LF before hashing; block IDs match `^[a-z][a-z0-9-]{1,31}$`.
+- **Algorithm:** line scan with two compiled regular expressions; normalise CRLF to LF before hashing; block IDs match `^[a-z][a-z0-9-]{1,31}$`; repo IDs match `^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$`; revisions and digests are lowercase hex. Lines split on LF; one trailing CR is part of the line ending, so CRLF files give the same blocks; the body excludes the last body line's ending. One leading U+FEFF in the text is ignored.
+- **Marker-line rule (fail closed):** any line whose text after leading spaces and tabs starts with `<!-- house-rules:` is a marker line and must be an exact begin or end marker, otherwise `bad-marker`. This applies inside fenced code blocks too, and indented markers or markers with trailing whitespace are `bad-marker`. A stray end marker is `unbalanced` at its line; a begin never closed is `unbalanced` at the begin line. `render` refuses invalid IDs or revisions, a body containing a marker line, and a body ending in CR (so REQ-004 holds for bodies without a marker line and not ending in CR). A digest mismatch is not a parse error (`is_intact` reports it; CHECK decides).
 - **Errors:** `unbalanced`, `nested`, `id-mismatch`, `bad-marker`.
 - **Determinism:** D0.
 - **Performance budget:** under 10 ms for a 100 KB file.
@@ -63,7 +66,7 @@ Defines the exact text format of a generated house-rules block inside a Markdown
 
 ## Test fixtures
 
-Hand-written Markdown files under `tools/tests/fixtures/blocks/` and a seeded body generator.
+Markdown files and expected results under `fixtures/eco/rules/block/`, written by the independent reference `fixtures/eco/rules/block/make_fixtures.py` (200 bodies from `random.Random(42)` for AC-5); tests in `tools/house_rules/tests/`.
 
 ## Build prompt
 

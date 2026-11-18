@@ -1,0 +1,21 @@
+# Fixture app list (ECO.APPS.LIST shape).
+[[app]]
+id = "a"
+job = "Fixture app a"
+owner = "vacant"
+phase = "P1a"
+decision = "D-004"
+
+[[app]]
+id = "b"
+job = "Fixture app b"
+owner = "vacant"
+phase = "P1a"
+decision = "D-004"
+
+[[app]]
+id = "c"
+job = "Fixture app c, no manifest yet"
+owner = "vacant"
+phase = "P2"
+decision = "D-004"

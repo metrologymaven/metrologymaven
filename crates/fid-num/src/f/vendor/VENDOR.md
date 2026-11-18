@@ -30,7 +30,7 @@ each bit pattern against the decimal value published in the fdlibm sources. The 
 
 ## Licence notices
 
-Status: **pending maintainer decision D-040** (vendored SunPro/MIT ports in `fid-num`).
+Status: **accepted, maintainer decision D-040 (2026-11-18)**: a recorded exception to the CONSTITUTION §8 clean-room rule, limited to this directory.
 Every `.rs` file in this directory carries both notices below in its header; the root
 `ATTRIBUTION.md` lists them too.
 

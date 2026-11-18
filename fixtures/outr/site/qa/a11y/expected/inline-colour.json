@@ -1,0 +1,10 @@
+{
+  "exit": 1,
+  "violations": [
+    {
+      "line": 12,
+      "page": "index.html",
+      "rule": "A13"
+    }
+  ]
+}

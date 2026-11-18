@@ -1,0 +1,14 @@
+{
+  "motion": {
+    "fast": {
+      "$type": "duration",
+      "$value": "100ms"
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "2": {
+      "$value": "8px"
+    }
+  }
+}

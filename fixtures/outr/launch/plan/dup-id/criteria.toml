@@ -1,0 +1,19 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+# Expected: duplicate_id RPT-A-01 only.
+version = 1
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "signoff"
+role = "release-manager"
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "node_status"
+node = "RPT"
+in = ["split"]

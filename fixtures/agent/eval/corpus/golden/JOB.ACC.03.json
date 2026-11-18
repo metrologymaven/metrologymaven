@@ -1,0 +1,304 @@
+{
+  "provisional": "Provisional synthetic golden journal (AGENT.EVAL.CORPUS): a stand-in until the FLOW app nodes publish real golden journals and CORE.JRN.ENTRY fixes the entry layout. Command IDs other than expr.evaluate_formula@1 are placeholders. Entry hash = sha256 of the RFC 8785 canonical JSON of the entry without its 'hash' member. Amounts are IEEE 754 binary64 bits ('0x' + 16 hex digits) in SI units, as in CORE.JRN.CANON.",
+  "format": "fid.eval-corpus-golden@0",
+  "job": "JOB.ACC.03",
+  "app": "report",
+  "part": "HS-330",
+  "synthetic": true,
+  "kernel_version": "ref-py-corpus@1",
+  "input_files": {
+    "in/arm-points.json": "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
+    "in/cmm-results.csv": "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5",
+    "in/drawing.json": "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
+  },
+  "entries": [
+    {
+      "seq": 1,
+      "command": "report.import_results@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": null,
+      "note": "transcribe the supplier CMM report (as reported, not re-decided)",
+      "inputs": [
+        "in/cmm-results.csv"
+      ],
+      "result_records": [
+        {
+          "characteristic": "C1",
+          "measurand": "diameter",
+          "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
+          "value": {
+            "amount": "0x3fafc016dbe497c5",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
+          },
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "62.0124",
+            "unit": "mm",
+            "status": "OK"
+          }
+        },
+        {
+          "characteristic": "C2",
+          "measurand": "diameter",
+          "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
+          "value": {
+            "amount": "0x3faba4d02e811ccb",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
+          },
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "53.9918",
+            "unit": "mm",
+            "status": "OK"
+          }
+        },
+        {
+          "characteristic": "C3",
+          "measurand": "length",
+          "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
+          "value": {
+            "amount": "0x3fbebb05242c2f33",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
+          },
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "120.0412",
+            "unit": "mm",
+            "status": "OK"
+          }
+        },
+        {
+          "characteristic": "C4",
+          "measurand": "length",
+          "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
+          "value": {
+            "amount": "0x3fa1f3ca6797bece",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "NOK"
+          },
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "35.0631",
+            "unit": "mm",
+            "status": "NOK"
+          }
+        },
+        {
+          "characteristic": "C5",
+          "measurand": "distance",
+          "evaluation_basis": "RESULTS_ONLY",
+          "status": "transcribed",
+          "value": {
+            "amount": "0x3f9996cb88ffee62",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:as-reported-by-source@1",
+            "outcome": "NOT_DECIDABLE",
+            "reason": "label_only",
+            "label": "OK"
+          },
+          "spec_context": null,
+          "algorithm": null,
+          "kernel_version": null,
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5"
+          ],
+          "as_reported": {
+            "value": "24.9893",
+            "unit": "mm",
+            "status": "OK"
+          }
+        }
+      ],
+      "hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116"
+    },
+    {
+      "seq": 2,
+      "command": "expr.evaluate_formula@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+      "note": "derived wall thickness T1",
+      "inputs": [
+        "C1",
+        "C2"
+      ],
+      "result_records": [
+        {
+          "characteristic": "T1",
+          "measurand": "wall_thickness",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3f706d1ab58debe8",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0.00396",
+              "upper": "0.00404",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "expr.evaluate_formula",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:ba2f8dd31f167083692d669f392940c74b566648bae3d5835a5f2800d2cfb9e5",
+            "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
+          ],
+          "derivation": "formula",
+          "formula": {
+            "text": "(C1 - C2) / 2",
+            "inputs": [
+              "C1",
+              "C2"
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2"
+    },
+    {
+      "seq": 3,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
+      "note": "fit boss D7",
+      "inputs": [
+        "D7"
+      ],
+      "result_records": [
+        {
+          "characteristic": "D7-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3f92740bb27b70be",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "dr:simple-acceptance@1",
+            "resolved_from": "plan_default",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0.01795",
+              "upper": "0.01805",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
+            "sha256:8826fc047ca2a53613108b408fa6baa664db0dcf5d59a0d0cf758b0d3e747853"
+          ]
+        }
+      ],
+      "hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1"
+    },
+    {
+      "seq": 4,
+      "command": "report.export_fai@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
+      "note": "export the first-article report",
+      "inputs": [],
+      "result_records": [],
+      "hash": "sha256:dc76e23362e9523db3c01209c3a0f62aa93c6ecb3e7dbabe82e46852d1334782"
+    }
+  ]
+}

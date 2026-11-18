@@ -1,0 +1,109 @@
+{
+  "format": "persona-set@1",
+  "personas": [
+    {
+      "id": "JOB.PER.01",
+      "role": "Quality engineer at a contract machining job shop that runs CMMs from several makers",
+      "goals": [
+        "Turn existing CMM output into a customer-ready inspection report without retyping results",
+        "Use one report layout whichever machine or software produced the data",
+        "Hand the customer a report whose every value traces back to the source file"
+      ],
+      "environment": "office",
+      "primary_app": "report",
+      "entry_phase": "P1a",
+      "governance_profile": "lean"
+    },
+    {
+      "id": "JOB.PER.02",
+      "role": "Scan inspector comparing optical or laser scan data of parts against their CAD models",
+      "goals": [
+        "Align a scanned part to its CAD model and see where and by how much it deviates",
+        "Evaluate the drawing's tolerances on scan data with a clear basis for each result",
+        "Run the same inspection on the next part of the batch with no manual set-up"
+      ],
+      "environment": "lab",
+      "primary_app": "inspect",
+      "entry_phase": "P1b",
+      "governance_profile": "lean"
+    },
+    {
+      "id": "JOB.PER.03",
+      "role": "Shop-floor operator who enters hand-gauge readings and starts released inspection runs",
+      "goals": [
+        "Start a released inspection from a kiosk screen without editing the program",
+        "Enter hand-gauge readings quickly and be warned at once when a value is out of tolerance",
+        "Know clearly whether the part passed and what to do next"
+      ],
+      "environment": "shop_floor",
+      "primary_app": "inspect",
+      "entry_phase": "P1b",
+      "governance_profile": "lean"
+    },
+    {
+      "id": "JOB.PER.04",
+      "role": "CMM programmer who writes, simulates and runs measurement programs",
+      "goals": [
+        "Re-evaluate existing measurement data against the drawing without re-measuring the part",
+        "Build and simulate a probing program before running it on the machine",
+        "Run programs on an I++ DME capable machine and keep the results with their program version"
+      ],
+      "environment": "lab",
+      "primary_app": "probe",
+      "entry_phase": "P2",
+      "governance_profile": "lean"
+    },
+    {
+      "id": "JOB.PER.05",
+      "role": "Quality manager who releases reports, watches process trends and owns the sign-off rules",
+      "goals": [
+        "Approve and release reports with an electronic signature that names its meaning",
+        "Follow process capability and control charts across parts and lots",
+        "Set which approvals a release needs and see who signed what and when"
+      ],
+      "environment": "office",
+      "primary_app": "report",
+      "entry_phase": "P1a",
+      "governance_profile": "regulated"
+    },
+    {
+      "id": "JOB.PER.06",
+      "role": "Auditor or calibration-lab reviewer who verifies a received results package",
+      "goals": [
+        "Check that a results package is complete and has not been altered since release",
+        "Confirm signatures and replay evidence without a licence, an account or a network connection",
+        "Write down what was verified and what could not be checked"
+      ],
+      "environment": "office",
+      "primary_app": "verifier",
+      "entry_phase": "P0",
+      "governance_profile": "regulated"
+    },
+    {
+      "id": "JOB.PER.08",
+      "role": "Engineer at a measuring-instrument maker who writes the driver for their device",
+      "goals": [
+        "Connect a measuring device through a documented driver interface",
+        "Test the driver against a simulator and the project's conformance checks",
+        "Ship the driver without changing the core software"
+      ],
+      "environment": "lab",
+      "primary_app": "sdk",
+      "entry_phase": "P2",
+      "governance_profile": "lean"
+    },
+    {
+      "id": "JOB.PER.09",
+      "role": "Large-volume metrologist who runs laser-tracker networks for build and fixture work",
+      "goals": [
+        "Combine several instrument stations into one network with stated uncertainty",
+        "Guide the build and setting of jigs and fixtures from live readings",
+        "Report network results with the instrument data behind them"
+      ],
+      "environment": "field",
+      "primary_app": "network",
+      "entry_phase": "P3",
+      "governance_profile": "lean"
+    }
+  ]
+}

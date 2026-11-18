@@ -1,0 +1,24 @@
+{
+  "sem": {
+    "$type": "color",
+    "focus": {
+      "ring": {
+        "$value": "{prim.color.blue.500}",
+        "$description": "Focus indicator."
+      },
+      "outline": {
+        "$value": "#174a94"
+      }
+    },
+    "status": {
+      "ok": {
+        "$value": "{prim.color.green.500}"
+      }
+    },
+    "text": {
+      "muted": {
+        "$value": "{prim.color.grey.700}"
+      }
+    }
+  }
+}

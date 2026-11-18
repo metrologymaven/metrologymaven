@@ -1,0 +1,4 @@
+{"id":"cl001-fail.md#1","file":"fixtures/outr/lint/cl001-fail.md","line":1,"col":1,"text":"The software is certified for GD&T evaluation."}
+{"id":"cl001-pass.md#1","file":"fixtures/outr/lint/cl001-pass.md","line":1,"col":1,"text":"Probing error was validated per ISO 10360-2:2009 on the evidence page.","links":["https://metrologymaven.org/evidence/probing"]}
+{"id":"cl002-fail.md#1","file":"fixtures/outr/lint/cl002-fail.md","line":1,"col":1,"text":"Faster than PolyWorks for best-fit alignment."}
+{"id":"cl002-pass.md#1","file":"fixtures/outr/lint/cl002-pass.md","line":1,"col":1,"text":"Faster than PolyWorks for best-fit alignment.","links":["https://metrologymaven.org/benchmarks/results/align-2026"]}

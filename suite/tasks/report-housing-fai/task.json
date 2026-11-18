@@ -1,0 +1,50 @@
+{
+  "id": "report-housing-fai",
+  "source_job": "JOB.ACC.03",
+  "golden_digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:05e0a63b881b6b1e4c99e14d80904e86ca161499db87bf11845dcae604622528"
+  },
+  "prompt": "Prepare the first-article report for housing HS-330 (synthetic) from the supplier CMM results in/cmm-results.csv and the portable-arm points in/arm-points.json: every characteristic on the drawing in/drawing.json needs a recorded result, derived ones included, decided under the drawing's decision rule, and the finished report goes into out/.",
+  "profile": "report-r1",
+  "budget": {
+    "wall_s": 2400,
+    "tool_calls": 200
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "full_job",
+  "apps": [
+    "report"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/arm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-results.csv",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

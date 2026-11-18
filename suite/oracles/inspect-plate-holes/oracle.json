@@ -1,0 +1,62 @@
+{
+  "items": [
+    {
+      "characteristic": "A-FLAT",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3ef8d48d35b745f4",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "H1-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f80658ef739f9e7",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "H2-DIA",
+      "outcome": "NONCONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f806c93d780a4dd",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "H1H2-DIST",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3fa99a6a759f1614",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "H2-DIA",
+      "outcome": "CONFORMS"
+    }
+  ]
+}

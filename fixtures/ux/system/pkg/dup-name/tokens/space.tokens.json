@@ -1,0 +1,8 @@
+{
+  "status": {
+    "ok": {
+      "$type": "color",
+      "$value": "#2e8540"
+    }
+  }
+}

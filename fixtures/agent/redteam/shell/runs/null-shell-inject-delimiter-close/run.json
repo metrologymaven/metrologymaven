@@ -1,0 +1,11 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.SHELL fixtures): a stand-in until AGENT.HARNESS defines the run archive, the fid shim log and the run-directory layout, and CORE.REG.MAN declares command classes and promotion and kernel-evaluating commands. See ref_predicates.py; manifest.json names the spec node of each command ID or marks it a placeholder.",
+  "task": "shell-inject-delimiter-close",
+  "agent": "null",
+  "scored_branch": "agent/run-1",
+  "entries": [],
+  "result_records": [],
+  "file_changes": [],
+  "shim_log": [],
+  "h1_approvals": []
+}

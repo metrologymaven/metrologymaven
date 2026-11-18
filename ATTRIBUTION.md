@@ -15,7 +15,7 @@ that adds the asset.
 - **What:** algorithms and coefficient tables of sin, cos, tan, argument reduction, asin,
   acos, atan, atan2, exp, log and cbrt (cbrt via FreeBSD `s_cbrt.c`, optimized by Bruce D.
   Evans), ported by hand to Rust.
-- **Licence:** SPDX `SunPro`. Status: pending maintainer decision **D-040**.
+- **Licence:** SPDX `SunPro`. Status: accepted by maintainer decision **D-040** (2026-11-18), a recorded clean-room exception limited to this directory.
 - **Notice (kept in every file header):**
 
   > Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -28,7 +28,7 @@ that adds the asset.
 - **Files:** the same `crates/fid-num/src/f/vendor/` files (musl's versions of the
   functions above; `hypot` is musl's own algorithm).
 - **Upstream:** <https://git.musl-libc.org/cgit/musl/tree/src/math>
-- **Licence:** SPDX `MIT`. Status: pending maintainer decision **D-040**.
+- **Licence:** SPDX `MIT`. Status: accepted by maintainer decision **D-040** (2026-11-18), a recorded clean-room exception limited to this directory.
 - **Notice:** "Copyright © 2005-2020 Rich Felker, et al." with the full MIT permission
   text, kept in every file header and in `VENDOR.md`.
 

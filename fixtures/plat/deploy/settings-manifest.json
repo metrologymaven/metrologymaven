@@ -1,0 +1,8 @@
+{
+ "format": 1,
+ "settings": [
+  {"key": "egress.destinations", "schema": {"type": "array"}, "default": [], "scopes": ["machine"], "admin": true, "owner": "core"},
+  {"key": "update.channel", "schema": {"type": "string", "enum": ["beta", "stable", "lts"]}, "default": "stable", "scopes": ["user"], "admin": false, "owner": "eco"},
+  {"key": "update.consent", "schema": {"type": "string", "enum": ["on", "off"]}, "default": "off", "scopes": ["user"], "admin": false, "owner": "eco"}
+ ]
+}

@@ -1,0 +1,10 @@
+/* Synthetic fixture: every font and stylesheet is on the site origin. */
+@import url("/css/base.css");
+@import "https://example.org/css/print.css";
+@font-face {
+  font-family: "Examplo Sans";
+  src: url(../fonts/examplo-sans.woff2) format("woff2"),
+       url("https://example.org:443/fonts/examplo-sans.woff2") format("woff2");
+}
+/* @import url(/css/old.css); a same-origin URL in a comment. */
+body { font-family: "Examplo Sans", sans-serif; }

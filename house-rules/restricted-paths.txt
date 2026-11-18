@@ -1,0 +1,3 @@
+**/standards-excerpts/**
+**/customer-data/**
+**/unpublished-datasets/**

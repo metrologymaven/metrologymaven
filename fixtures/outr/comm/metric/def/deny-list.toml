@@ -1,0 +1,138 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Deny-list cases (REQ-003): one source per pattern, with case, separator ("-", "_", none) and
+# percent-encoding (single and double) variants, all marked public. Pairs with definitions.toml.
+# Expected: one product_data_source per source dNN / activation-keys, naming the pattern given in
+# the comment; repo-api is clean.
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = true
+public_basis = "Example public repository statistics, readable without an account."
+
+# expected: product_data_source telemetry
+[[source]]
+id = "d01"
+url = "https://example.org/TeleMetry/x"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source crash
+[[source]]
+id = "d02"
+url = "https://example.org/crash_reports"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source support-bundle
+[[source]]
+id = "d03"
+url = "https://example.org/support-bundle"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source support-bundle
+[[source]]
+id = "d04"
+url = "https://example.org/support_bundle"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source support-bundle
+[[source]]
+id = "d05"
+url = "https://example.org/SupportBundle"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source update-check
+[[source]]
+id = "d06"
+url = "https://example.org/update_check"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source activation
+[[source]]
+id = "activation-keys"
+url = "https://example.org/keys"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source licence-server
+[[source]]
+id = "d08"
+url = "https://example.org/licence%2Dserver"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source license-server
+[[source]]
+id = "d09"
+url = "https://example.org/LicenseServer"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source diagnostic
+[[source]]
+id = "d10"
+url = "https://example.org/%64iagnostics"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source analytics
+[[source]]
+id = "d11"
+url = "https://example.org/analytics/v1"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source usage-stats
+[[source]]
+id = "d12"
+url = "https://example.org/usage_stats"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source phone-home
+[[source]]
+id = "d13"
+url = "https://example.org/phonehome"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source heartbeat
+[[source]]
+id = "d14"
+url = "https://example.org/heart-beat"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source error-report
+[[source]]
+id = "d15"
+url = "https://example.org/error_reports"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source sentry
+[[source]]
+id = "d16"
+url = "https://o1.ingest.example.org/api/sentry/store"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source licensing
+[[source]]
+id = "d17"
+url = "https://example.org/Licensing/v2"
+public = true
+public_basis = "Claimed public."
+
+# expected: product_data_source telemetry
+[[source]]
+id = "d18"
+url = "https://example.org/%2574elemetry"
+public = true
+public_basis = "Claimed public."

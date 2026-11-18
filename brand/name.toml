@@ -1,0 +1,11 @@
+# Family-name state for the brand guidelines (spec node OUTR.BRAND.GUIDE.NAME).
+# Read by `fid-outreach guide-check`. Setting `accepted = true` is a human act by pull request.
+# D-002 left the name open; D-039 (accepted 2026-11-17, founder) chose it, so acceptance is
+# recorded here with D-039 as the decision reference.
+accepted = true
+name = "Metrology Maven"
+decision = "D-039"
+date = "2026-11-17"
+# Names that must never appear literally in brand/guidelines/ (whole word, case-sensitive,
+# outside code spans): the former working names.
+working_names = ["Fiducial", "fid"]
