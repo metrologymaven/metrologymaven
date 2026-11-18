@@ -33,8 +33,11 @@ pub const MAX_RECORDS: usize = 4096;
 pub const MAX_WALK_ENTRIES: usize = 200_000;
 /// Deepest directory nesting visited by the reference-set scan.
 pub const MAX_WALK_DEPTH: usize = 64;
-/// Directory names the scan does not enter: version-control and build output, not content.
-pub const SKIPPED_DIRS: [&str; 3] = [".git", "target", "node_modules"];
+/// Directory names the scan never enters, at any depth: version-control data, not content.
+pub const SKIPPED_DIRS: [&str; 1] = [".git"];
+/// Directory names the scan does not enter directly under the scan root only: build output.
+/// Deeper directories with these names (for example `brand/target/`) are scanned.
+pub const SKIPPED_ROOT_DIRS: [&str; 2] = ["target", "node_modules"];
 /// The only policy mode under which D-013 option C holds.
 pub const REVIEW_ONLY: &str = "review_only";
 /// The decision the policy file must name.
@@ -161,7 +164,9 @@ pub struct Policy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
     pub release: String,
-    /// `answers.copied_text.result`, if present.
+    /// `answers.copied_text.result` when the record answers `copied_text`; an answer without a
+    /// string `result` reads as `""` (not a pass). `None` when there is no answer at all (that is
+    /// the review gate's `missing_answer`).
     pub copied_text: Option<String>,
 }
 
@@ -299,9 +304,7 @@ pub fn parse_record(table: &toml::Table, path: &str) -> Result<Record, GuardErro
         .get("answers")
         .and_then(toml::Value::as_table)
         .and_then(|a| a.get(COPIED_TEXT))
-        .and_then(toml::Value::as_table)
-        .and_then(|t| non_empty_str(t, "result"))
-        .map(str::to_string);
+        .map(|v| v.as_table().and_then(|t| t.get("result")).and_then(toml::Value::as_str).unwrap_or("").to_string());
     Ok(Record { release, copied_text })
 }
 
@@ -332,32 +335,52 @@ fn ext_lower(name: &str) -> Option<String> {
     name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase())
 }
 
-/// True when TOML or JSON `bytes` have a top-level `kind = "incumbent_text"`. Content that does
-/// not mention the kind at all is not parsed; content that mentions it but does not parse fails
-/// closed with an error naming the file.
+fn contains(hay: &[u8], needle: &[u8]) -> bool {
+    hay.windows(needle.len()).any(|w| w == needle)
+}
+
+/// True when TOML or JSON `bytes` have a top-level `kind = "incumbent_text"`.
+///
+/// A file is parsed when it contains `incumbent_text` literally or any `\u` / `\U` escape (JSON
+/// and TOML escapes can spell the key or the value). Content with neither cannot declare the kind
+/// and is not parsed. A parse failure fails closed (error naming the file) when the file contains
+/// `incumbent_text` literally, or `kind` together with an escape; otherwise the unparsable file
+/// cannot be a declaration and is ignored.
 pub fn declares_incumbent_text(bytes: &[u8], ext: &str, path: &Path) -> Result<bool, GuardError> {
-    let needle = INCUMBENT_KIND.as_bytes();
-    if !bytes.windows(needle.len()).any(|w| w == needle) {
+    let literal = contains(bytes, INCUMBENT_KIND.as_bytes());
+    let escaped = contains(bytes, b"\\u") || contains(bytes, b"\\U");
+    if !literal && !escaped {
         return Ok(false);
     }
+    let suspicious = literal || contains(bytes, b"kind");
     let shown = path.display().to_string();
-    let fail = |reason: String| input_err(shown.clone(), format!("mentions {INCUMBENT_KIND} but {reason}"));
+    let fail = |reason: String| {
+        if suspicious {
+            Err(input_err(shown.clone(), format!("may declare {INCUMBENT_KIND} but {reason}")))
+        } else {
+            Ok(false)
+        }
+    };
     if ext == "json" {
         match fid_canon::parse_with_limits(bytes, MAX_SCAN_BYTES, fid_canon::MAX_DEPTH) {
             Ok(CValue::Obj(o)) => Ok(matches!(o.get("kind"), Some(CValue::Str(k)) if k == INCUMBENT_KIND)),
             Ok(_) => Ok(false),
-            Err(e) => Err(fail(format!("does not parse as JSON ({})", e.code()))),
+            Err(e) => fail(format!("does not parse as JSON ({})", e.code())),
         }
     } else {
-        let text = std::str::from_utf8(bytes).map_err(|_| fail("is not UTF-8".into()))?;
-        let t = text.parse::<toml::Table>().map_err(|e| fail(format!("does not parse as TOML ({})", e.message())))?;
-        Ok(t.get("kind").and_then(toml::Value::as_str) == Some(INCUMBENT_KIND))
+        let Ok(text) = std::str::from_utf8(bytes) else { return fail("is not UTF-8".into()) };
+        match text.parse::<toml::Table>() {
+            Ok(t) => Ok(t.get("kind").and_then(toml::Value::as_str) == Some(INCUMBENT_KIND)),
+            Err(e) => fail(format!("does not parse as TOML ({})", e.message())),
+        }
     }
 }
 
 /// Root-relative paths (with `/`) of files that declare themselves reference sets of
-/// third-party text (REQ-OUTR.BRAND.COPY-004). Sorted walk; symbolic links are not followed;
-/// [`SKIPPED_DIRS`] are not entered.
+/// third-party text (REQ-OUTR.BRAND.COPY-004). Sorted walk; symbolic links are not followed, and
+/// a symbolic link named `*.toml` or `*.json` (whose target cannot be checked) is an error rather
+/// than a silent skip; [`SKIPPED_DIRS`] are not entered at any depth and [`SKIPPED_ROOT_DIRS`]
+/// not directly under the root.
 pub fn scan_reference_sets(root: &Path) -> Result<Vec<String>, GuardError> {
     let mut found = Vec::new();
     let mut visited = 0usize;
@@ -380,7 +403,9 @@ pub fn scan_reference_sets(root: &Path) -> Result<Vec<String>, GuardError> {
         for (name, path, ft) in entries {
             let rel = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
             if ft.is_dir() {
-                if SKIPPED_DIRS.contains(&name.as_str()) {
+                let skipped = SKIPPED_DIRS.contains(&name.as_str())
+                    || (depth == 0 && SKIPPED_ROOT_DIRS.contains(&name.as_str()));
+                if skipped {
                     continue;
                 }
                 if depth >= MAX_WALK_DEPTH {
@@ -393,10 +418,13 @@ pub fn scan_reference_sets(root: &Path) -> Result<Vec<String>, GuardError> {
                 found.push(rel);
                 continue;
             }
+            let Some(ext) = ext_lower(&name).filter(|e| e == "toml" || e == "json") else { continue };
+            if ft.is_symlink() {
+                return Err(unreadable(&path, "symbolic link to a TOML or JSON file is not followed"));
+            }
             if !ft.is_file() {
                 continue;
             }
-            let Some(ext) = ext_lower(&name).filter(|e| e == "toml" || e == "json") else { continue };
             let bytes = read_bounded(&path, MAX_SCAN_BYTES)?;
             if declares_incumbent_text(&bytes, &ext, &path)? {
                 found.push(rel);
@@ -422,7 +450,9 @@ pub fn check_rules(policy: &Policy, checklist: &BTreeSet<String>, records: &[Rec
     }
     let revisited: BTreeSet<&str> = policy.revisits.iter().map(|r| r.release.as_str()).collect();
     for r in records {
-        if r.copied_text.as_deref() == Some("fail") && !revisited.contains(r.release.as_str()) {
+        // Any recorded result other than exactly "pass" counts as a fail (fail closed).
+        let failed = r.copied_text.as_deref().is_some_and(|res| res != "pass");
+        if failed && !revisited.contains(r.release.as_str()) {
             findings.insert(Finding { code: Code::D013RevisitDue, subject: r.release.clone() });
         }
     }

@@ -6,8 +6,10 @@
 
 use fid_canon::CValue;
 use fid_outreach::copy_guard::{
-    check_rules, is_refset_name, parse_policy, scan_reference_sets, Code, Policy, Record, Revisit,
+    check_rules, declares_incumbent_text, is_refset_name, parse_policy, parse_record, scan_reference_sets, Code,
+    Policy, Record, Revisit,
 };
+use std::path::Path;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::process::{Command, Output};
@@ -223,4 +225,94 @@ fn scan_is_sorted_and_fails_closed_on_unparsable_declaration() {
     let e = scan_reference_sets(&base).unwrap_err();
     assert_eq!(e.code(), "input_parse");
     let _ = std::fs::remove_dir_all(&base);
+}
+
+/// A fresh empty directory under the system temp dir, unique per test.
+fn scratch(test: &str) -> PathBuf {
+    let base = std::env::temp_dir().join(format!("fid-copy-guard-{}-{test}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&base).unwrap();
+    base
+}
+
+#[test]
+fn build_dirs_are_skipped_only_at_the_scan_root() {
+    let base = scratch("rootskip");
+    for d in ["target", "node_modules", "brand/target", "brand/node_modules", "brand/.git"] {
+        std::fs::create_dir_all(base.join(d)).unwrap();
+    }
+    std::fs::write(base.join("target/a.refset.json"), "{}").unwrap();
+    std::fs::write(base.join("node_modules/b.refset"), "").unwrap();
+    std::fs::write(base.join("brand/target/x.refset.json"), "{}").unwrap();
+    std::fs::write(base.join("brand/node_modules/y.refset"), "").unwrap();
+    std::fs::write(base.join("brand/.git/z.refset"), "").unwrap();
+    assert_eq!(scan_reference_sets(&base).unwrap(), ["brand/node_modules/y.refset", "brand/target/x.refset.json"]);
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[test]
+fn escaped_kind_declarations_are_parsed() {
+    let p = Path::new("x");
+    // `_` is `_`: the value spells incumbent_text without containing it literally.
+    assert!(declares_incumbent_text(br#"{"kind":"incumbent_text"}"#, "json", p).unwrap());
+    // Key and value both escaped: neither `kind` nor `incumbent_text` appears literally.
+    assert!(declares_incumbent_text(br#"{"kind":"incumbent_text"}"#, "json", p).unwrap());
+    assert!(declares_incumbent_text(br#"kind = "incumbent_text""#, "toml", p).unwrap());
+    assert!(declares_incumbent_text(br#""kind" = "\U00000069ncumbent_text""#, "toml", p).unwrap());
+    // Escapes spelling something else are not a declaration.
+    assert!(!declares_incumbent_text(br#"{"kind":"café"}"#, "json", p).unwrap());
+    // Unparsable with `kind` and an escape fails closed; with an escape only it is ignored.
+    assert_eq!(declares_incumbent_text(br#"{"kind":"i"#, "json", p).unwrap_err().code(), "input_parse");
+    assert!(!declares_incumbent_text(br#"{"a":"\u00"#, "json", p).unwrap());
+    // Through the scan as well.
+    let base = scratch("escaped");
+    std::fs::write(base.join("e.json"), br#"{"kind":"incumbent_text"}"#).unwrap();
+    assert_eq!(scan_reference_sets(&base).unwrap(), ["e.json"]);
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinked_toml_or_json_is_not_skipped_silently() {
+    let base = scratch("symlink");
+    std::fs::create_dir_all(base.join("outside")).unwrap();
+    std::fs::create_dir_all(base.join("tree")).unwrap();
+    std::fs::write(base.join("outside/decl.json"), r#"{"kind":"incumbent_text"}"#).unwrap();
+    std::os::unix::fs::symlink(base.join("outside/decl.json"), base.join("tree/link.json")).unwrap();
+    let e = scan_reference_sets(&base.join("tree")).unwrap_err();
+    assert_eq!(e.code(), "input_unreadable");
+    assert!(e.to_string().contains("link.json"));
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[test]
+fn any_copied_text_result_other_than_pass_is_a_fail() {
+    let items = BTreeSet::from(["copied_text".to_string()]);
+    let policy = Policy { mode: "review_only".into(), counsel_review: None, revisits: vec![] };
+    let rec = |release: &str, body: &str| {
+        let text = format!("release = \"{release}\"\n[answers]\n{body}\n");
+        parse_record(&table(&text), "r").unwrap()
+    };
+    let records = vec![
+        rec("r-pass", "copied_text = { result = \"pass\" }"),
+        rec("r-upper", "copied_text = { result = \"FAIL\" }"),
+        rec("r-cap", "copied_text = { result = \"Pass\" }"),
+        rec("r-skip", "copied_text = { result = \"skipped\" }"),
+        rec("r-empty", "copied_text = { result = \"\" }"),
+        rec("r-bool", "copied_text = { result = true }"),
+        rec("r-noresult", "copied_text = { note = \"n\" }"),
+        rec("r-absent", "colours = { result = \"pass\" }"),
+    ];
+    let got: Vec<String> = check_rules(&policy, &items, &records, &[]).findings.iter().map(|f| f.to_string()).collect();
+    assert_eq!(
+        got,
+        [
+            "d013_revisit_due r-bool",
+            "d013_revisit_due r-cap",
+            "d013_revisit_due r-empty",
+            "d013_revisit_due r-noresult",
+            "d013_revisit_due r-skip",
+            "d013_revisit_due r-upper",
+        ]
+    );
 }
