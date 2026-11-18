@@ -94,7 +94,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
 - [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
-- [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
+- [B] [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
 - [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
 - [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
