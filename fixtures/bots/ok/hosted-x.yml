@@ -1,0 +1,18 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# Configuration of a fictional hosted reviewer; the exclusion list is at
+# reviews.path_filters.exclude.
+---
+language: en
+reviews:
+  profile: "chill"   # a trailing comment
+  path_filters:
+    include: ["src/**", 'docs/**']
+    exclude:
+      - "standards/**"
+      - 'customers/**'
+      - "target/**"
+  tools:
+    - name: lint
+      enabled: true
+    - name: "spell # not a comment"
+      enabled: false

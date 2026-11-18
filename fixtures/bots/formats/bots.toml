@@ -1,0 +1,42 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# Exclusion lists read from JSON (complete), TOML (lacks customers/**) and YAML at a key
+# path that does not exist (lacks both patterns).
+
+[[bot]]
+id = "json-bot"
+kind = "hosted"
+account = "json-bot[bot]"
+terms = "https://json-bot.example.invalid/terms"
+data_handling = "Receives diffs outside the excluded paths."
+reviewed_on = 2027-01-01
+approved_by = "maintainer-a"
+sends_content = true
+config = "configs/json-bot.json"
+exclude_key = "ignore.paths"
+canary_verified_on = 2027-01-02
+
+[[bot]]
+id = "toml-bot"
+kind = "hosted"
+account = "toml-bot[bot]"
+terms = "https://toml-bot.example.invalid/terms"
+data_handling = "Receives diffs outside the excluded paths."
+reviewed_on = 2027-01-01
+approved_by = "maintainer-a"
+sends_content = true
+config = "configs/toml-bot.toml"
+exclude_key = "review.exclude"
+canary_verified_on = 2027-01-02
+
+[[bot]]
+id = "yaml-bot"
+kind = "hosted"
+account = "yaml-bot[bot]"
+terms = "https://yaml-bot.example.invalid/terms"
+data_handling = "Receives diffs outside the excluded paths."
+reviewed_on = 2027-01-01
+approved_by = "maintainer-a"
+sends_content = true
+config = "configs/yaml-bot.yaml"
+exclude_key = "review.paths.ignore"
+canary_verified_on = 2027-01-02
