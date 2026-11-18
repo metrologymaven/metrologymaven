@@ -63,7 +63,8 @@ fn command_ids_match_the_envelope_rule() {
     for ok in ["align.run_321@1", "a@1", "gdt.evaluate_flatness@12", "x@0", "x@99999", "9.a_b@3"] {
         assert!(CommandId::is_valid(ok), "{ok}");
     }
-    for bad in ["", "@1", "Align.run@1", "align.run", "align.run@", "align.run@x", ".a@1", "a.@1", "a@123456", "a-b@1"] {
+    for bad in ["", "@1", "Align.run@1", "align.run", "align.run@", "align.run@x", ".a@1", "a.@1", "a@123456", "a-b@1"]
+    {
         assert!(!CommandId::is_valid(bad), "{bad}");
     }
     let id: CommandId = "egress.send@1".parse().unwrap();
