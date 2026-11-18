@@ -1,0 +1,18 @@
+# Expected findings per fixture, labelled by hand from REQ-FLOW.PERSONA.PERS-001..004.
+# Format: <fixture>\t<CODE> <subject>, in the check's output order (code, then subject).
+# `ok` means no findings. Checked against apps.toml (the four D-004 apps).
+valid.json	ok
+missing-07.json	PERS-MISSING JOB.PER.07
+bad-app.json	PERS-APP JOB.PER.01
+bad-profile.json	PERS-PROFILE JOB.PER.05
+extra.json	PERS-EXTRA JOB.PER.10
+duplicate.json	PERS-EXTRA JOB.PER.03
+bad-schema.json	PERS-SCHEMA JOB.PER.01
+bad-schema.json	PERS-SCHEMA JOB.PER.02
+bad-schema.json	PERS-SCHEMA JOB.PER.04
+bad-schema.json	PERS-SCHEMA JOB.PER.05
+bad-schema.json	PERS-SCHEMA JOB.PER.08
+bad-schema.json	PERS-SCHEMA JOB.PER.09
+auditor.json	PERS-APP JOB.PER.06
+auditor.json	PERS-SCHEMA JOB.PER.06
+wrong-format.json	PERS-SCHEMA -

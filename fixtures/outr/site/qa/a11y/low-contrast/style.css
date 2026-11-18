@@ -1,0 +1,3 @@
+body{background:var(--surface-base);color:var(--text-body)}
+.note{color:var(--text-muted)}
+.big{color:var(--text-muted);font-size:26px}
