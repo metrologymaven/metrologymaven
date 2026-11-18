@@ -670,13 +670,8 @@ fn run_line(cmd: &RunLine, dir: &Path, deadline: Instant) -> LineResult {
             command.env(key, v);
         }
     }
-    let spawned = command
-        .args(args)
-        .current_dir(dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+    let spawned =
+        command.args(args).current_dir(dir).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn();
     let mut child = match spawned {
         Ok(c) => c,
         Err(e) => return fail(e.to_string()),
