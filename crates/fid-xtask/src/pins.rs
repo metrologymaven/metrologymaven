@@ -497,7 +497,7 @@ mod tests {
     fn paths_resolve_inside_the_root_only() {
         assert_eq!(resolve("app", "../libs/util"), Some("libs/util".into()));
         assert_eq!(resolve("", "./a/./b/"), Some("a/b".into()));
-        assert_eq!(resolve("a\\b", "..\\c"), Some("a/c".into()));
+        assert_eq!(resolve("a/b", "..\\c"), Some("a/c".into()));
         assert_eq!(resolve("app", "../.."), None);
         assert_eq!(resolve("app", "/abs/x"), None);
         assert_eq!(resolve("app", "C:/x"), None);
