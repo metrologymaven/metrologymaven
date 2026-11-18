@@ -496,7 +496,8 @@ impl<T: Send + 'static> Inner<T> {
                             self.transition(entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
                         }
                         Err(HandlerError::Cancelled) => {
-                            entry.record.error_detail = Some("handler reported cancellation without a request".to_string());
+                            entry.record.error_detail =
+                                Some("handler reported cancellation without a request".to_string());
                             self.transition(entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
                         }
                     }
@@ -640,7 +641,8 @@ impl<T: Send + 'static> Jobs<T> {
             error_detail: None,
         };
         self.inner.emit(&record, None);
-        st.jobs.insert(id, Entry { record, progress, timeout: opts.timeout, handler: Some(exec.handler), result: None });
+        st.jobs
+            .insert(id, Entry { record, progress, timeout: opts.timeout, handler: Some(exec.handler), result: None });
         match opts.class {
             JobClass::Interactive => st.interactive.push_back(id),
             JobClass::Batch => st.batch.push_back(id),

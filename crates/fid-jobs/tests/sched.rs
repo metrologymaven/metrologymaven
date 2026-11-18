@@ -13,9 +13,9 @@
 
 use fid_canon::{parse, CValue};
 use fid_jobs::{
-    default_max_running, CancelToken, Clock, Execution, HandlerError, JobClass, JobErrorCode, JobId, JobOpts,
-    JobState, Jobs, JobsConfig, LifecycleEvent, LifecycleSink, ManualClock, NullLifecycleSink, PrincipalKind,
-    ProgressSink, SystemClock,
+    default_max_running, CancelToken, Clock, Execution, HandlerError, JobClass, JobErrorCode, JobId, JobOpts, JobState,
+    Jobs, JobsConfig, LifecycleEvent, LifecycleSink, ManualClock, NullLifecycleSink, PrincipalKind, ProgressSink,
+    SystemClock,
 };
 use fid_types::CommandId;
 use std::collections::{BTreeMap, BTreeSet};
@@ -254,8 +254,10 @@ fn as_arr(v: &CValue) -> &[CValue] {
 fn ac1_mixed_queue_start_order_and_fast_submit() {
     let fx = load("mixed_queue.json");
     let limit = as_u64(field(&fx, "limit")) as usize;
-    let expected: Vec<String> =
-        as_arr(field(&load("mixed_queue.expected.json"), "start_order")).iter().map(|v| as_str(v).to_string()).collect();
+    let expected: Vec<String> = as_arr(field(&load("mixed_queue.expected.json"), "start_order"))
+        .iter()
+        .map(|v| as_str(v).to_string())
+        .collect();
 
     let log = Arc::new(ActivityLog::default());
     let journal = RecordJournal::default();
@@ -409,7 +411,9 @@ fn ac2_late_result_after_timeout_is_discarded() {
     let timeout = Some(Duration::from_millis(200));
     let a = jobs.submit(Execution::new(cmd(), stubborn), JobOpts { timeout, ..opts(JobClass::Batch) }).unwrap();
     // A second job can start only once the first handler has returned (limit 1).
-    let b = jobs.submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("b".to_string())), opts(JobClass::Batch)).unwrap();
+    let b = jobs
+        .submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("b".to_string())), opts(JobClass::Batch))
+        .unwrap();
 
     clock.set(Duration::from_millis(300));
     assert_eq!(jobs.check_timeouts(), 1);
@@ -460,7 +464,9 @@ fn ac3_cancelled_queued_job_never_runs() {
     let gate = Gate::new();
     let live = Arc::new(Live::default());
 
-    let a = jobs.submit(Execution::new(cmd(), sleep_handler("a".into(), 5, gate.clone(), live)), opts(JobClass::Batch)).unwrap();
+    let a = jobs
+        .submit(Execution::new(cmd(), sleep_handler("a".into(), 5, gate.clone(), live)), opts(JobClass::Batch))
+        .unwrap();
     let ran = Arc::new(AtomicBool::new(false));
     let r = ran.clone();
     let b_handler = move |_: &ProgressSink, _: &CancelToken| {
@@ -479,7 +485,9 @@ fn ac3_cancelled_queued_job_never_runs() {
     gate.open();
     assert_eq!(jobs.wait(a, LONG).unwrap().state, JobState::Succeeded);
     // A job submitted after `a` runs only after the slot freed; by then `b` would have run.
-    let c = jobs.submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("c".to_string())), opts(JobClass::Batch)).unwrap();
+    let c = jobs
+        .submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("c".to_string())), opts(JobClass::Batch))
+        .unwrap();
     assert_eq!(jobs.wait(c, LONG).unwrap().state, JobState::Succeeded);
     assert!(!ran.load(Ordering::SeqCst), "the cancelled job's handler ran");
     assert_eq!(jobs.take_result(b), None);
@@ -567,7 +575,9 @@ fn queue_cap_refuses_with_queue_full() {
 #[test]
 fn unknown_id_is_not_found() {
     let other: Jobs<String> = Jobs::new(config(1), Arc::new(NullLifecycleSink)).unwrap();
-    let foreign = other.submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok(String::new())), opts(JobClass::Batch)).unwrap();
+    let foreign = other
+        .submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok(String::new())), opts(JobClass::Batch))
+        .unwrap();
     let jobs: Jobs<String> = Jobs::new(config(1), Arc::new(NullLifecycleSink)).unwrap();
     assert_eq!(jobs.status(foreign), Err(JobErrorCode::NotFound));
     assert_eq!(jobs.cancel(foreign), Err(JobErrorCode::NotFound));
@@ -585,7 +595,12 @@ fn cancelling_a_running_job_discards_its_result() {
     let jobs: Jobs<String> = Jobs::new(config(2), log.clone()).unwrap();
     // One handler stops on the token; the other ignores it and returns a value anyway.
     let gate = Gate::new();
-    let polite = jobs.submit(Execution::new(cmd(), sleep_handler("p".into(), 1, gate.clone(), Arc::default())), opts(JobClass::Batch)).unwrap();
+    let polite = jobs
+        .submit(
+            Execution::new(cmd(), sleep_handler("p".into(), 1, gate.clone(), Arc::default())),
+            opts(JobClass::Batch),
+        )
+        .unwrap();
     let release = Gate::new();
     let entered = Arc::new(AtomicBool::new(false));
     let (rel, ent) = (release.clone(), entered.clone());
@@ -636,7 +651,12 @@ fn handler_failure_is_failed_with_handler_failed() {
 fn wait_returns_current_record_at_deadline() {
     let jobs: Jobs<String> = Jobs::new(config(1), Arc::new(NullLifecycleSink)).unwrap();
     let gate = Gate::new();
-    let id = jobs.submit(Execution::new(cmd(), sleep_handler("w".into(), 1, gate.clone(), Arc::default())), opts(JobClass::Batch)).unwrap();
+    let id = jobs
+        .submit(
+            Execution::new(cmd(), sleep_handler("w".into(), 1, gate.clone(), Arc::default())),
+            opts(JobClass::Batch),
+        )
+        .unwrap();
     assert_eq!(jobs.wait(id, Duration::from_millis(10)).unwrap().state, JobState::Running);
     assert!(!jobs.forget(id), "a running job is not forgotten");
     gate.open();
@@ -648,8 +668,18 @@ fn dropping_the_scheduler_cancels_queued_jobs() {
     let log = Arc::new(ActivityLog::default());
     let jobs: Jobs<String> = Jobs::new(config(1), log.clone()).unwrap();
     let gate = Gate::new();
-    let a = jobs.submit(Execution::new(cmd(), sleep_handler("a".into(), 1, gate.clone(), Arc::default())), opts(JobClass::Batch)).unwrap();
-    let b = jobs.submit(Execution::new(cmd(), sleep_handler("b".into(), 1, gate.clone(), Arc::default())), opts(JobClass::Batch)).unwrap();
+    let a = jobs
+        .submit(
+            Execution::new(cmd(), sleep_handler("a".into(), 1, gate.clone(), Arc::default())),
+            opts(JobClass::Batch),
+        )
+        .unwrap();
+    let b = jobs
+        .submit(
+            Execution::new(cmd(), sleep_handler("b".into(), 1, gate.clone(), Arc::default())),
+            opts(JobClass::Batch),
+        )
+        .unwrap();
     drop(jobs);
     let b_states: Vec<JobState> = log.of(b).iter().map(|e| e.to).collect();
     assert_eq!(b_states, vec![JobState::Queued, JobState::Cancelled]);
