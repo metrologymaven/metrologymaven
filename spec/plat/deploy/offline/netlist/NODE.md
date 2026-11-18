@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-xtask]
+built_pr: 108
 satisfies: [REQ-PLAT.DEPLOY.OFFLINE-005]
 covers: []
 depends_on: []
