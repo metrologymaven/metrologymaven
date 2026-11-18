@@ -1,15 +1,22 @@
 //! Rule file format `fid-vocab-rules/1` (REQ-ECO.RULES.VOCAB.ENGINE-001).
 
+use crate::text::nfc;
 use crate::text::Matcher;
-use crate::{read_limited, VocabError, MAX_RULES_BYTES, RULES_FORMAT};
-use regex::Regex;
+use crate::{read_limited, VocabError, MAX_RULES, MAX_RULES_BYTES, RULES_FORMAT};
+use regex::{Regex, RegexBuilder};
 use std::collections::BTreeSet;
+use std::path::Component;
 use std::path::Path;
 
 /// Default designator pattern: an organisation prefix (ISO, ASME, VDA, IEC, DIN or EN, possibly
 /// stacked such as "DIN EN ISO"), a number with optional parts, and optionally an edition year.
 pub const DEFAULT_DESIGNATOR_PATTERN: &str =
     r"\b(?:ISO|ASME|VDA|IEC|DIN|EN)(?:[ /][A-Z]{1,4})*\s?[A-Z]?\d+(?:[.\-]\d+)*(?:[:\-](?:19|20)\d{2})?\b";
+
+/// Compiled-size limit of a designator pattern (256 KiB).
+pub const MAX_REGEX_BYTES: usize = 256 * 1024;
+/// Nesting limit of a designator pattern.
+pub const MAX_REGEX_NEST: u32 = 32;
 
 /// Rule kinds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -179,7 +186,11 @@ fn read_names(base: Option<&Path>, rel: &str, ctx: &str) -> Result<Vec<String>, 
     let Some(base) = base else {
         return Err(perr(format!("{ctx}: `names_file` needs a rule file on disk")));
     };
-    let path = base.join(rel);
+    let relpath = Path::new(rel);
+    if relpath.is_absolute() || relpath.components().any(|c| !matches!(c, Component::Normal(_) | Component::CurDir)) {
+        return Err(perr(format!("{ctx}: names_file {rel:?} must be a relative path without `..`")));
+    }
+    let path = base.join(relpath);
     let bytes = read_limited(&path, MAX_RULES_BYTES, "names file")?;
     let text = String::from_utf8(bytes).map_err(|_| perr(format!("{ctx}: names file {rel} is not UTF-8")))?;
     Ok(text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).map(str::to_string).collect())
@@ -233,7 +244,14 @@ fn parse_rule(t: &toml::Table, base: Option<&Path>, index: usize) -> Result<Rule
     }
     let designator = if qualifiers.contains(&Qualifier::Designator) {
         let pat = get_str(t, "designator_pattern", &ctx)?.unwrap_or_else(|| DEFAULT_DESIGNATOR_PATTERN.to_string());
-        Some(Regex::new(&pat).map_err(|e| perr(format!("{ctx}: designator_pattern: {e}")))?)
+        Some(
+            RegexBuilder::new(&nfc(&pat))
+                .size_limit(MAX_REGEX_BYTES)
+                .dfa_size_limit(MAX_REGEX_BYTES)
+                .nest_limit(MAX_REGEX_NEST)
+                .build()
+                .map_err(|e| perr(format!("{ctx}: designator_pattern: {e}")))?,
+        )
     } else {
         None
     };
@@ -309,6 +327,9 @@ impl RuleSet {
         };
         let mut rules: Vec<Rule> = Vec::new();
         let mut seen = BTreeSet::new();
+        if items.len() > MAX_RULES {
+            return Err(perr(format!("rule file: {} rules, more than the limit of {MAX_RULES}", items.len())));
+        }
         for (i, item) in items.iter().enumerate() {
             let toml::Value::Table(t) = item else {
                 return Err(perr(format!("rule[{i}]: must be a table")));

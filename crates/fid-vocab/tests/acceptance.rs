@@ -285,3 +285,77 @@ fn sentence_scope_and_nominative_contexts() {
         ]
     );
 }
+
+fn claim_rules(extra: &str) -> String {
+    format!(
+        "format = \"fid-vocab-rules/1\"\nversion = \"t\"\n[[rule]]\nid = \"C1\"\nkind = \"claim\"\nseverity = \"error\"\n\
+         message = \"m\"\nwords = [\"certified\", \"approved\"]\nqualifiers = [\"designator\"]\nscope = \"sentence\"\n{extra}"
+    )
+}
+
+#[test]
+fn large_unit_stays_linear() {
+    let mut text = String::new();
+    for i in 0..100_000 {
+        text.push_str(&format!("Part {i:06} is certified. "));
+    }
+    let mut rules_text = claim_rules("");
+    rules_text.push_str(
+        "[[rule]]\nid = \"N1\"\nkind = \"name\"\nseverity = \"warn\"\nmessage = \"m\"\nwords = [\"PolyWorks\"]\n\
+         allow_phrases = [\"import from\"]\nscope = \"sentence\"\n",
+    );
+    let rules = RuleSet::parse(&rules_text, None).unwrap();
+    let started = std::time::Instant::now();
+    let r = lint(&rules, &[Unit::new("big", text)]);
+    let elapsed = started.elapsed();
+    assert_eq!(r.findings.len(), 100_000);
+    // Each sentence is 26 characters; "certified" starts at character 15 of it.
+    assert_eq!(r.findings[0].offset, 15);
+    assert_eq!(r.findings[99_999].offset, 26 * 99_999 + 15);
+    assert!(elapsed.as_secs() < 30, "took {elapsed:?}");
+}
+
+#[test]
+fn names_file_must_stay_below_the_rule_directory() {
+    let base = fix("");
+    let name_rule = |file: &str| {
+        format!(
+            "format = \"fid-vocab-rules/1\"\nversion = \"t\"\n[[rule]]\nid = \"N\"\nkind = \"name\"\nseverity = \"error\"\n\
+             message = \"m\"\nnames_file = {file:?}\n"
+        )
+    };
+    assert!(RuleSet::parse(&name_rule("incumbents.txt"), Some(&base)).is_ok());
+    assert!(RuleSet::parse(&name_rule("./incumbents.txt"), Some(&base)).is_ok());
+    let abs = fix("incumbents.txt").to_string_lossy().into_owned();
+    for bad in ["../engine/incumbents.txt", "sub/../incumbents.txt", "/etc/passwd", abs.as_str()] {
+        let e = RuleSet::parse(&name_rule(bad), Some(&base)).unwrap_err();
+        assert_eq!(e.code(), "rules_parse", "{bad}");
+    }
+}
+
+#[test]
+fn designator_pattern_limits_and_nfc() {
+    let deep = format!("designator_pattern = '{}ISO{}'\n", "(".repeat(40), ")".repeat(40));
+    assert_eq!(RuleSet::parse(&claim_rules(&deep), None).unwrap_err().code(), "rules_parse");
+    let huge = "designator_pattern = '\\w{2000}\\w{2000}'\n";
+    assert_eq!(RuleSet::parse(&claim_rules(huge), None).unwrap_err().code(), "rules_parse");
+
+    // A decomposed pattern still matches precomposed text: both are NFC-normalised.
+    let decomposed = "designator_pattern = 'NORME\u{301} \\d+'\n";
+    let rules = RuleSet::parse(&claim_rules(decomposed), None).unwrap();
+    assert!(lint(&rules, &[Unit::new("a", "Approved per NORM\u{c9} 12.")]).findings.is_empty());
+    assert_eq!(lint(&rules, &[Unit::new("b", "Approved per NORM 12.")]).findings.len(), 1);
+}
+
+#[test]
+fn rule_count_is_capped() {
+    let mut text = "format = \"fid-vocab-rules/1\"\nversion = \"t\"\n".to_string();
+    for i in 0..=fid_vocab::MAX_RULES {
+        text.push_str(&format!(
+            "[[rule]]\nid = \"R{i}\"\nkind = \"preferred\"\nseverity = \"warn\"\nmessage = \"m\"\nwords = [\"x\"]\n\
+             preferred = \"y\"\n"
+        ));
+    }
+    let e = RuleSet::parse(&text, None).unwrap_err();
+    assert!(e.to_string().contains("1000"), "{e}");
+}

@@ -3,6 +3,7 @@
 //! misbehaves), 2 unreadable or unparsable rule file or input, or bad usage.
 
 use fid_vocab::{lint, parse_units, read_limited, test_rules, RuleSet, MAX_UNITS_BYTES};
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -37,6 +38,13 @@ fn usage() -> ExitCode {
 fn fail(e: impl std::fmt::Display) -> ExitCode {
     eprintln!("fid-vocab: error: {e}");
     ExitCode::from(2)
+}
+
+/// Writes `bytes` to locked stdout and flushes; a write error (for example a closed pipe)
+/// is reported by the caller with exit 2.
+fn emit(bytes: &[u8]) -> Result<(), String> {
+    let mut out = std::io::stdout().lock();
+    out.write_all(bytes).and_then(|()| out.flush()).map_err(|e| format!("cannot write the report: {e}"))
 }
 
 fn main() -> ExitCode {
@@ -79,15 +87,21 @@ fn run_lint(args: &Args) -> ExitCode {
         Err(e) => return fail(e),
     };
     let report = lint(&rules, &units);
-    if args.json {
+    let mut body = if args.json {
         match report.to_json() {
-            Ok(bytes) => println!("{}", String::from_utf8_lossy(&bytes)),
+            Ok(bytes) => bytes,
             Err(e) => return fail(format!("report encoding: {}", e.code())),
         }
     } else {
-        print!("{}", report.to_text());
+        report.to_text().into_bytes()
+    };
+    if args.json {
+        body.push(b'\n');
     }
-    ExitCode::from(report.exit_code())
+    match emit(&body) {
+        Ok(()) => ExitCode::from(report.exit_code()),
+        Err(e) => fail(e),
+    }
 }
 
 fn run_test_rules(args: &Args) -> ExitCode {
@@ -98,15 +112,18 @@ fn run_test_rules(args: &Args) -> ExitCode {
         Ok(r) => r,
         Err(e) => return fail(e),
     };
-    println!("fid-vocab: rules version {}", rules.version);
     let problems = test_rules(&rules);
+    let mut out = format!("fid-vocab: rules version {}\n", rules.version);
     for p in &problems {
-        println!("{p}");
+        out.push_str(p);
+        out.push('\n');
     }
     if problems.is_empty() {
-        println!("{} rule(s): all examples behave", rules.rules.len());
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::from(1)
+        out.push_str(&format!("{} rule(s): all examples behave\n", rules.rules.len()));
+    }
+    match emit(out.as_bytes()) {
+        Ok(()) if problems.is_empty() => ExitCode::SUCCESS,
+        Ok(()) => ExitCode::from(1),
+        Err(e) => fail(e),
     }
 }

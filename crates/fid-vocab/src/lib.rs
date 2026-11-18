@@ -10,7 +10,10 @@ pub mod rules;
 pub mod text;
 pub mod units;
 
-pub use rules::{Example, Kind, Qualifier, Rule, RuleSet, Scope, Severity, DEFAULT_DESIGNATOR_PATTERN};
+pub use rules::{
+    Example, Kind, Qualifier, Rule, RuleSet, Scope, Severity, DEFAULT_DESIGNATOR_PATTERN, MAX_REGEX_BYTES,
+    MAX_REGEX_NEST,
+};
 pub use units::{parse_units, Suppression, Unit};
 
 use fid_canon::CValue;
@@ -24,6 +27,8 @@ use text::{nfc, sentences, tokenize, Token};
 pub const RULES_FORMAT: &str = "fid-vocab-rules/1";
 /// Largest accepted rule file (and names file): 1 MiB.
 pub const MAX_RULES_BYTES: usize = 1024 * 1024;
+/// Most rules accepted in one rule file.
+pub const MAX_RULES: usize = 1000;
 /// Largest accepted unit stream: 50 MiB.
 pub const MAX_UNITS_BYTES: usize = 50 * 1024 * 1024;
 
@@ -91,7 +96,8 @@ pub struct Finding {
     pub file: String,
     pub line: u32,
     pub col: u32,
-    /// Character offset (NFC text) of the first matched word inside the unit.
+    /// Offset of the first matched word inside the unit, counted in Unicode scalar values
+    /// (characters, not bytes) of the unit text after NFC normalisation.
     pub offset: u32,
     pub rule: String,
     pub severity: Severity,
@@ -222,10 +228,12 @@ impl Report {
     }
 }
 
-/// A unit prepared for matching: NFC text, tokens and sentence ranges.
+/// A unit prepared for matching: NFC text, tokens, the character offset of each token start
+/// (one forward pass) and sentence ranges.
 struct Prepared {
     text: String,
     toks: Vec<Token>,
+    tok_chars: Vec<u32>,
     sents: Vec<(usize, usize)>,
 }
 
@@ -233,19 +241,24 @@ impl Prepared {
     fn new(raw: &str) -> Prepared {
         let text = nfc(raw);
         let toks = tokenize(&text);
+        let mut tok_chars = Vec::with_capacity(toks.len());
+        let mut chars = 0usize;
+        let mut byte = 0usize;
+        for t in &toks {
+            chars += text[byte..t.start].chars().count();
+            byte = t.start;
+            tok_chars.push(u32::try_from(chars).unwrap_or(u32::MAX));
+        }
         let sents = sentences(&text);
-        Prepared { text, toks, sents }
+        Prepared { text, toks, tok_chars, sents }
     }
 
-    /// Token index range lying inside the byte range `[s, e)`.
+    /// Token index range lying inside the byte range `[s, e)` (binary search; tokens are sorted
+    /// and never cross a sentence boundary).
     fn token_range(&self, s: usize, e: usize) -> (usize, usize) {
-        let lo = self.toks.iter().position(|t| t.start >= s).unwrap_or(self.toks.len());
-        let hi = self.toks[lo..].iter().position(|t| t.end > e).map_or(self.toks.len(), |p| lo + p);
+        let lo = self.toks.partition_point(|t| t.start < s);
+        let hi = lo + self.toks[lo..].partition_point(|t| t.end <= e);
         (lo, hi)
-    }
-
-    fn char_offset(&self, byte: usize) -> u32 {
-        u32::try_from(self.text[..byte].chars().count()).unwrap_or(u32::MAX)
     }
 }
 
@@ -261,9 +274,13 @@ fn eval_rule(rule: &Rule, id: &str, links: &[String], p: &Prepared) -> Vec<Hit> 
         Scope::Sentence => p.sents.clone(),
     };
     let link_ok = || links.iter().any(|l| rule.link_prefixes.iter().any(|pre| l.starts_with(pre.as_str())));
-    let nominative = || {
-        rule.allow_id_prefixes.iter().any(|pre| id.starts_with(pre.as_str()))
-            || !rule.allow_phrases.find(&p.toks).is_empty()
+    // Evaluated at most once per unit, so sentence scope stays linear in the unit size.
+    let mut nominative: Option<bool> = None;
+    let mut is_nominative = || {
+        *nominative.get_or_insert_with(|| {
+            rule.allow_id_prefixes.iter().any(|pre| id.starts_with(pre.as_str()))
+                || !rule.allow_phrases.find(&p.toks).is_empty()
+        })
     };
     let mut hits = Vec::new();
     for (s, e) in scopes {
@@ -281,7 +298,7 @@ fn eval_rule(rule: &Rule, id: &str, links: &[String], p: &Prepared) -> Vec<Hit> 
                         Qualifier::Link => links.is_empty(),
                     })
             }
-            Kind::Name => !nominative(),
+            Kind::Name => !is_nominative(),
             Kind::Cooccur => {
                 let cmp = rule.comparison.find(toks);
                 if cmp.is_empty() || link_ok() {
@@ -299,8 +316,8 @@ fn eval_rule(rule: &Rule, id: &str, links: &[String], p: &Prepared) -> Vec<Hit> 
         }
         let matched: Vec<String> =
             spans.iter().map(|&(i, j)| p.text[toks[i].start..toks[j - 1].end].to_string()).collect();
-        let first = spans.first().map_or(s, |&(i, _)| toks[i].start);
-        hits.push(Hit { offset: p.char_offset(first), matched });
+        let offset = spans.first().map_or(0, |&(i, _)| p.tok_chars[lo + i]);
+        hits.push(Hit { offset, matched });
     }
     hits
 }
