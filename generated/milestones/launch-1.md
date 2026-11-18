@@ -198,7 +198,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
 - [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
 - [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
-- [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
+- [B] [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
 - [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
 - [B] [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
 - [B] [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)

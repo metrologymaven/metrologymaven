@@ -154,6 +154,7 @@ jobs:
           python fixtures/io/dmis/conf/make_expected.py --check
           python fixtures/io/e57/phys/make_fixtures.py --check
           python fixtures/flow/study/tasks/make_fixtures.py --check
+          python fixtures/flow/pkg/make_fixtures.py --check
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
           python fixtures/auto/cli/out/make_cases.py --check

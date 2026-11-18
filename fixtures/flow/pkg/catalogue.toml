@@ -1,0 +1,16 @@
+# Dataset catalogue for the FLOW.RUNNER.PKG fixtures (ECO.DATA.CAT form).
+# Only `id` and `sha256` are read by the package validator.
+
+[policy]
+redistributable = ["CC-BY-4.0"]
+
+[[dataset]]
+id = "flow-pkg-demo-part"
+title = "Synthetic demo part for the package fixtures"
+source = "https://github.com/metrologymaven/metrologymaven"
+licence = "CC-BY-4.0"
+size_bytes = 19
+sha256 = "8043373484b9636b6461a3baaf18362a6e1da437ca281c01a982aa64cc92eb89"
+owner = "FLOW"
+redistribution = "mirror"
+urls = ["https://github.com/metrologymaven/metrologymaven"]
