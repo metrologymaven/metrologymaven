@@ -1,0 +1,16 @@
+[package]
+name = "fid-io-e57"
+description = "Metrology Maven E57 reader and writer, pure Rust: file header and paged physical layer with CRC-32C page checksums (spec node IO.CLOUD.E57.PHYS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Reader harness (IO.REG.LIMITS): limit kinds and the default input byte limit.
+fid-io-reg = { path = "../fid-io-reg" }
+
+[lints]
+workspace = true

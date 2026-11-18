@@ -1,0 +1,19 @@
+# Expected outcome of LogicalReader::open followed by verify_all, per fixture.
+# Written by make_fixtures.py from the leaf's rules; do not edit by hand.
+bad_checksum_crc_field.e57 checksum_mismatch 2048
+bad_checksum_page0.e57 checksum_mismatch 0
+bad_checksum_page1.e57 checksum_mismatch 1024
+bad_checksum_page5_of_64.e57 checksum_mismatch 320
+bad_file_length_big.e57 malformed file_length
+bad_file_length_small.e57 malformed file_length
+bad_file_length_unaligned.e57 malformed file_length
+bad_major_version.e57 malformed major_version
+bad_page_size.e57 malformed page_size
+bad_signature.e57 malformed signature
+bad_xml_length.e57 malformed xml_length
+bad_xml_offset_beyond.e57 malformed xml_offset
+bad_xml_offset_checksum.e57 malformed xml_offset
+bad_xml_offset_header.e57 malformed xml_offset
+ok_1024.e57 ok page_size=1024 file_length=3072 xml_offset=2556 xml_length=50 pages=3
+ok_64.e57 ok page_size=64 file_length=448 xml_offset=368 xml_length=50 pages=7
+truncated_header.e57 truncated_file 20
