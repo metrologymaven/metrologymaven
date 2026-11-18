@@ -19,7 +19,8 @@ fn expected(name: &str) -> Vec<String> {
 
 fn findings(name: &str) -> Vec<String> {
     let ws = fixture(name);
-    run(&ws, &ws.join("lint-allowlist.toml"), &ws.join("storage-writers.toml")).unwrap_or_else(|e| panic!("{name}: {e}"))
+    run(&ws, &ws.join("lint-allowlist.toml"), &ws.join("storage-writers.toml"))
+        .unwrap_or_else(|e| panic!("{name}: {e}"))
 }
 
 /// Runs `cargo xtask lint-crate-graph` (the built binary) on a fixture: (exit code, stdout).
@@ -97,12 +98,16 @@ fn req4_surface_depends_on_core() {
 }
 
 /// REQ-003: the storage writers come from storage-writers.toml (CORE.STO.LAYOUT); without
-/// it, the store itself is not a writer and is reported.
+/// it, the store is not a writer: it is reported, and so is the bus, which now reaches the
+/// driver through the store (the store is no longer a door for this rule).
 #[test]
 fn req3_writers_file_is_read() {
     let ws = fixture("clean");
     let got = run(&ws, &ws.join("lint-allowlist.toml"), &ws.join("no-such-writers.toml")).unwrap();
-    assert_eq!(got, ["fid-store: sqlite_driver fid-store -> rusqlite"]);
+    assert_eq!(
+        got,
+        ["fid-bus: sqlite_driver fid-bus -> fid-store -> rusqlite", "fid-store: sqlite_driver fid-store -> rusqlite"]
+    );
 }
 
 #[test]
