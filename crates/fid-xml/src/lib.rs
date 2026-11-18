@@ -11,7 +11,8 @@
 //!   anything is resolved. Nothing is ever fetched, so there is no external-entity (XXE)
 //!   or entity-expansion attack surface. Numeric character references are allowed.
 //! - Bounded: element depth 64, 256 attributes per element, names of 1,024 bytes, text
-//!   nodes and tokens of 64 MiB (`limit_exceeded`), plus the byte, element, allocation
+//!   nodes and tokens of 64 MiB, namespace names of 8 KiB, 256 namespace bindings in
+//!   scope (`limit_exceeded`), plus the byte, element, allocation
 //!   and wall-time budget of the harness. Growth of the reader's buffer is charged to the
 //!   allocation budget before it happens.
 //! - Streaming: the source is read in 8 KiB chunks and only the token being read is
@@ -40,7 +41,7 @@ mod text;
 pub use error::{Construct, XmlError, XmlLimit, CODES};
 pub use reader::{
     Attr, Element, EventKind, NsBinding, NsScope, QName, XmlEvent, XmlOptions, XmlReader, MAX_ATTRIBUTES, MAX_DEPTH,
-    MAX_NAME_LEN, MAX_TEXT_LEN, XINCLUDE_NS, XMLNS_NS, XML_NS,
+    MAX_NAMESPACES, MAX_NAME_LEN, MAX_TEXT_LEN, MAX_URI_LEN, XINCLUDE_NS, XMLNS_NS, XML_NS,
 };
 pub use text::XmlText;
 
@@ -51,11 +52,13 @@ pub fn read_slice(data: &[u8], budget: Budget) -> Result<Vec<XmlEvent>, XmlError
     read_slice_with(data, budget, XmlOptions::default())
 }
 
-/// Reads every event of `data` under `budget` with `options`.
+/// Reads every event of `data` under `budget` with `options`. Every event kept in the
+/// returned vector is charged to the allocation budget ([`XmlEvent::retained_bytes`]).
 pub fn read_slice_with(data: &[u8], budget: Budget, options: XmlOptions) -> Result<Vec<XmlEvent>, XmlError> {
     let mut reader = XmlReader::with_options(BoundedSource::new(data, budget), options);
     let mut out = Vec::new();
     while let Some(ev) = reader.next_event()? {
+        reader.charge_retained(&ev)?;
         out.push(ev);
     }
     Ok(out)

@@ -56,6 +56,10 @@ pub enum XmlLimit {
     TextLength,
     /// Bytes in one markup token (a start tag with its attributes, for example).
     TokenLength,
+    /// Bytes in one namespace name (URI).
+    UriLength,
+    /// Namespace bindings in scope at one element (and so declarations on one tag).
+    Namespaces,
 }
 
 impl XmlLimit {
@@ -67,6 +71,8 @@ impl XmlLimit {
             XmlLimit::NameLength => "name_length",
             XmlLimit::TextLength => "text_length",
             XmlLimit::TokenLength => "token_length",
+            XmlLimit::UriLength => "uri_length",
+            XmlLimit::Namespaces => "namespaces",
         }
     }
 }

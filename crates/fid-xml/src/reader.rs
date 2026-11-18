@@ -26,6 +26,13 @@ pub const MAX_NAME_LEN: usize = 1024;
 /// Text node length limit in bytes (64 MiB) [unverified: tune on corpus]. It also bounds
 /// CDATA sections, comments, PI data and every single markup token.
 pub const MAX_TEXT_LEN: usize = 64 * 1024 * 1024;
+/// Namespace name (URI) length limit in bytes. Namespace names are shared, not copied,
+/// between the scope and the names that use them; the cap bounds what one declaration
+/// can pin [unverified: tune on corpus; QIF and XSD namespace names are under 100 bytes].
+pub const MAX_URI_LEN: usize = 8 * 1024;
+/// Limit on namespace bindings in scope at one element, and so on declarations per tag
+/// [unverified: tune on corpus; QIF documents use a handful].
+pub const MAX_NAMESPACES: usize = 256;
 /// The XML declaration may not be longer than this.
 const MAX_DECL_LEN: usize = 1024;
 
@@ -45,9 +52,10 @@ const BANG: &[(&[u8], Option<Construct>)] = &[
 pub struct NsBinding {
     /// The prefix, or `None` for the default namespace.
     pub prefix: Option<String>,
-    /// The namespace name. Empty only in [`Element::ns_declared`], where it records an
-    /// undeclaration of the default namespace (`xmlns=""`).
-    pub uri: String,
+    /// The namespace name, shared with every name in that namespace. Empty only in
+    /// [`Element::ns_declared`], where it records an undeclaration of the default
+    /// namespace (`xmlns=""`).
+    pub uri: Arc<str>,
 }
 
 /// The namespace bindings in scope at an element, sorted by prefix (default first),
@@ -61,8 +69,14 @@ pub struct QName {
     pub prefix: Option<String>,
     /// The local part.
     pub local: String,
-    /// The namespace name, if the name is in a namespace.
-    pub ns: Option<String>,
+    /// The namespace name, if the name is in a namespace (shared with the scope).
+    pub ns: Option<Arc<str>>,
+}
+
+impl QName {
+    fn heap_bytes(&self) -> u64 {
+        (self.prefix.as_ref().map_or(0, String::len) + self.local.len()) as u64
+    }
 }
 
 /// One attribute (namespace declarations are not attributes; see
@@ -130,6 +144,34 @@ pub struct XmlEvent {
     pub pos: Position,
 }
 
+impl XmlEvent {
+    /// An estimate of the memory this event holds (its own size plus the strings it owns;
+    /// namespace names and scopes are shared and charged once, when declared).
+    /// [`crate::read_slice`] charges it to the allocation budget for every event it keeps.
+    pub fn retained_bytes(&self) -> u64 {
+        let own = std::mem::size_of::<XmlEvent>() as u64;
+        let heap = match &self.kind {
+            EventKind::Start(e) => {
+                let attrs: u64 = e
+                    .attrs
+                    .iter()
+                    .map(|a| std::mem::size_of::<Attr>() as u64 + a.name.heap_bytes() + a.value.len() as u64)
+                    .sum();
+                let decls: u64 = e
+                    .ns_declared
+                    .iter()
+                    .map(|d| (std::mem::size_of::<NsBinding>() + d.prefix.as_ref().map_or(0, String::len)) as u64)
+                    .sum();
+                e.name.heap_bytes() + attrs + decls
+            }
+            EventKind::End { name, .. } => name.heap_bytes(),
+            EventKind::Text(t) | EventKind::CData(t) | EventKind::Comment(t) => t.len() as u64,
+            EventKind::Pi { target, data } => (target.len() + data.len()) as u64,
+        };
+        own + heap
+    }
+}
+
 /// Reader limits and the inherited namespace scope. Limits can only be lowered from
 /// the defaults ([`MAX_DEPTH`], [`MAX_ATTRIBUTES`], [`MAX_NAME_LEN`], [`MAX_TEXT_LEN`]);
 /// the depth limit is further lowered to the budget's depth limit.
@@ -139,6 +181,8 @@ pub struct XmlOptions {
     max_attributes: usize,
     max_name_len: usize,
     max_text_len: usize,
+    max_uri_len: usize,
+    max_namespaces: usize,
     inherited: Vec<NsBinding>,
     read_chunk: usize,
 }
@@ -150,6 +194,8 @@ impl Default for XmlOptions {
             max_attributes: MAX_ATTRIBUTES,
             max_name_len: MAX_NAME_LEN,
             max_text_len: MAX_TEXT_LEN,
+            max_uri_len: MAX_URI_LEN,
+            max_namespaces: MAX_NAMESPACES,
             inherited: Vec::new(),
             read_chunk: CHUNK,
         }
@@ -176,6 +222,24 @@ impl XmlOptions {
     pub fn with_max_text_len(mut self, v: usize) -> Self {
         self.max_text_len = v.min(MAX_TEXT_LEN);
         self
+    }
+    /// Lowers the namespace name length limit.
+    pub fn with_max_uri_len(mut self, v: usize) -> Self {
+        self.max_uri_len = v.min(MAX_URI_LEN);
+        self
+    }
+    /// Lowers the in-scope namespace bindings limit.
+    pub fn with_max_namespaces(mut self, v: usize) -> Self {
+        self.max_namespaces = v.min(MAX_NAMESPACES);
+        self
+    }
+    /// The namespace name length limit.
+    pub fn max_uri_len(&self) -> usize {
+        self.max_uri_len
+    }
+    /// The in-scope namespace bindings limit.
+    pub fn max_namespaces(&self) -> usize {
+        self.max_namespaces
     }
     /// Reads the document as if inside an element with these bindings in scope, for
     /// re-reading a subtree copied out of a larger document.
@@ -257,6 +321,7 @@ pub struct XmlReader<R> {
     max_depth: u32,
     stack: Vec<Frame>,
     root_scope: NsScope,
+    xml_ns: Arc<str>,
     state: State,
     seen_root: bool,
     ready: Option<XmlEvent>,
@@ -283,12 +348,14 @@ impl<R: Read> XmlReader<R> {
             scope.push(b.clone());
         }
         scope.sort();
+        scope.truncate(opts.max_namespaces);
         XmlReader {
             input: Input::new(source, opts.read_chunk),
             opts,
             max_depth,
             stack: Vec::new(),
             root_scope: Arc::from(scope),
+            xml_ns: Arc::from(XML_NS),
             state: State::Init,
             seen_root: false,
             ready: None,
@@ -321,6 +388,12 @@ impl<R: Read> XmlReader<R> {
     /// The budget the reader charges.
     pub fn budget(&self) -> &Budget {
         self.input.budget()
+    }
+
+    /// Charges an event the caller keeps to the allocation budget.
+    pub(crate) fn charge_retained(&mut self, ev: &XmlEvent) -> Result<(), XmlError> {
+        self.input.budget_mut().charge_alloc(ev.retained_bytes(), ev.pos)?;
+        Ok(())
     }
 
     /// Gives the source back.
@@ -546,6 +619,10 @@ impl<R: Read> XmlReader<R> {
         if target.eq_ignore_ascii_case(b"xml") {
             return Err(self.malformed("reserved_pi_target", 0));
         }
+        // Namespaces in XML: PI targets contain no colon.
+        if let Some(k) = target.iter().position(|&b| b == b':') {
+            return Err(self.malformed("colon_in_pi_target", 2 + k));
+        }
         let data_start = if end == name_end {
             end
         } else if w.get(name_end).is_some_and(|&b| is_ws(b)) {
@@ -699,11 +776,18 @@ impl<R: Read> XmlReader<R> {
             }
             let value = decode(slice(a.value), Mode::Attr).map_err(|e| self.decode_err(a.value.0, e))?;
             let (prefix, local) = split_qname(&name).ok_or_else(|| self.malformed("bad_qname", at))?;
+            let is_decl = (prefix.is_none() && local == "xmlns") || prefix == Some("xmlns");
+            if is_decl && value.len() > self.opts.max_uri_len {
+                return Err(self.limit(XmlLimit::UriLength, self.opts.max_uri_len as u64, a.value.0));
+            }
+            if is_decl && decls.len() >= self.opts.max_namespaces {
+                return Err(self.limit(XmlLimit::Namespaces, self.opts.max_namespaces as u64, at));
+            }
             if prefix.is_none() && local == "xmlns" {
                 if value == XML_NS || value == XMLNS_NS {
                     return Err(self.malformed("bad_namespace_declaration", at));
                 }
-                decls.push(NsBinding { prefix: None, uri: value });
+                decls.push(NsBinding { prefix: None, uri: Arc::from(value) });
             } else if prefix == Some("xmlns") {
                 let bad = local == "xmlns"
                     || value.is_empty()
@@ -712,7 +796,7 @@ impl<R: Read> XmlReader<R> {
                 if bad {
                     return Err(self.malformed("bad_namespace_declaration", at));
                 }
-                decls.push(NsBinding { prefix: Some(local.to_owned()), uri: value });
+                decls.push(NsBinding { prefix: Some(local.to_owned()), uri: Arc::from(value) });
             } else {
                 others.push((prefix.map(str::to_owned), local.to_owned(), at, value));
             }
@@ -724,20 +808,30 @@ impl<R: Read> XmlReader<R> {
         let scope: NsScope = if decls.is_empty() {
             parent
         } else {
+            let declared: BTreeSet<Option<&str>> = decls.iter().map(|d| d.prefix.as_deref()).collect();
             let mut v: Vec<NsBinding> =
-                parent.iter().filter(|b| !decls.iter().any(|d| d.prefix == b.prefix)).cloned().collect();
+                parent.iter().filter(|b| !declared.contains(&b.prefix.as_deref())).cloned().collect();
             v.extend(decls.iter().filter(|d| !d.uri.is_empty() && d.prefix.as_deref() != Some("xml")).cloned());
+            if v.len() > self.opts.max_namespaces {
+                return Err(self.limit(XmlLimit::Namespaces, self.opts.max_namespaces as u64, 0));
+            }
             v.sort();
-            scope_bytes = v.iter().map(|b| (b.uri.len() + b.prefix.as_ref().map_or(0, String::len) + 64) as u64).sum();
+            // The new scope array plus the declared names (shared from here on).
+            scope_bytes = (v.len() * std::mem::size_of::<NsBinding>()) as u64
+                + decls.iter().map(|d| (d.uri.len() + d.prefix.as_ref().map_or(0, String::len)) as u64).sum::<u64>();
             Arc::from(v)
         };
-        let resolve = |prefix: Option<&str>, attr: bool| -> Option<Option<String>> {
+        // The scope is sorted by prefix, so lookups are binary searches.
+        let lookup = |p: Option<&str>| {
+            scope.binary_search_by(|b| b.prefix.as_deref().cmp(&p)).ok().and_then(|i| scope.get(i)).map(|b| b.uri.clone())
+        };
+        let resolve = |prefix: Option<&str>, attr: bool| -> Option<Option<Arc<str>>> {
             match prefix {
                 None if attr => Some(None),
-                None => Some(scope.iter().find(|b| b.prefix.is_none()).map(|b| b.uri.clone())),
-                Some("xml") => Some(Some(XML_NS.to_owned())),
+                None => Some(lookup(None)),
+                Some("xml") => Some(Some(self.xml_ns.clone())),
                 Some("xmlns") => None,
-                Some(p) => scope.iter().find(|b| b.prefix.as_deref() == Some(p)).map(|b| Some(b.uri.clone())),
+                Some(p) => lookup(Some(p)).map(Some),
             }
         };
 

@@ -7,11 +7,13 @@
 use fid_io_reg::{BoundedSource, Budget, LimitKind, LimitRequest, Position, Principal};
 use fid_xml::{
     fuzz_budget, read_slice, read_slice_with, Construct, EventKind, NsBinding, XmlError, XmlEvent, XmlLimit,
-    XmlOptions, XmlReader, MAX_ATTRIBUTES, MAX_DEPTH, MAX_NAME_LEN, MAX_TEXT_LEN, XML_NS,
+    XmlOptions, XmlReader, MAX_ATTRIBUTES, MAX_DEPTH, MAX_NAMESPACES, MAX_NAME_LEN, MAX_TEXT_LEN, MAX_URI_LEN, XML_NS,
 };
 use std::collections::BTreeMap;
 use std::io::{self, Read};
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Instant;
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/io/qif/xml/parse").join(name)
@@ -94,8 +96,8 @@ fn esc(s: &str) -> String {
     out
 }
 
-fn opt(s: &Option<String>) -> String {
-    esc(s.as_deref().unwrap_or(""))
+fn opt<S: AsRef<str>>(s: &Option<S>) -> String {
+    esc(s.as_ref().map_or("", |v| v.as_ref()))
 }
 
 /// The event line format of make_fixtures.py.
@@ -495,7 +497,7 @@ fn req006_namespace_scope() {
         .unwrap();
     // xmlns="" removes the default binding from the scope.
     assert!(part.ns_scope.iter().all(|b| b.prefix.is_some()));
-    assert_eq!(part.ns_declared, [NsBinding { prefix: None, uri: String::new() }]);
+    assert_eq!(part.ns_declared, [NsBinding { prefix: None, uri: "".into() }]);
 }
 
 // ------------------------------------------------------------------ REQ-003, REQ-005
@@ -665,4 +667,117 @@ fn ac5_mutated_inputs_never_panic() {
     for code in ["ok", "malformed", "truncated_file", "xml_forbidden_construct"] {
         assert!(outcomes.contains_key(code), "{code} not reached: {outcomes:?}");
     }
+}
+
+// ------------------------------------------------------------------ namespace resource bounds
+
+/// Namespace names longer than 8 KiB fail `limit_exceeded{uri_length}`; 8 KiB is fine.
+#[test]
+fn req002_namespace_name_length() {
+    let ok = format!("<r xmlns:p='{}'/>", "u".repeat(MAX_URI_LEN));
+    assert_eq!(read(ok.as_bytes()).unwrap().len(), 2);
+    let long = format!("<r xmlns='{}'/>", "u".repeat(MAX_URI_LEN + 1));
+    assert_eq!(
+        read(long.as_bytes()).unwrap_err(),
+        XmlError::LimitExceeded { limit: XmlLimit::UriLength, value: 8192, at: Position::line_col(10, 1, 11) }
+    );
+    let lowered = read_slice_with(b"<r xmlns:p='urn:12345'/>", budget(), XmlOptions::default().with_max_uri_len(8));
+    assert!(matches!(lowered.unwrap_err(), XmlError::LimitExceeded { limit: XmlLimit::UriLength, value: 8, .. }));
+}
+
+/// One 8 KiB namespace name used by 100,000 elements is shared, not copied: streaming
+/// stays within a small allocation, and every name points at the declared string.
+#[test]
+fn req002_namespace_names_are_shared() {
+    let uri = "u".repeat(MAX_URI_LEN);
+    let mut doc = format!("<p:r xmlns:p='{uri}'>").into_bytes();
+    for _ in 0..100_000 {
+        doc.extend_from_slice(b"<p:a p:x='1'/>");
+    }
+    doc.extend_from_slice(b"</p:r>");
+    let mut r = XmlReader::new(BoundedSource::new(&doc[..], budget()));
+    let mut declared: Option<Arc<str>> = None;
+    let mut starts = 0u64;
+    while let Some(ev) = r.next_event().unwrap() {
+        if let EventKind::Start(e) = ev.kind {
+            let ns = e.name.ns.unwrap();
+            let first = declared.get_or_insert_with(|| ns.clone());
+            assert!(Arc::ptr_eq(first, &ns));
+            if let Some(a) = e.attrs.first() {
+                assert!(Arc::ptr_eq(first, a.name.ns.as_ref().unwrap()));
+            }
+            starts += 1;
+        }
+    }
+    assert_eq!(starts, 100_001);
+    assert!(r.budget().alloc_used() < 128 * 1024, "{}", r.budget().alloc_used());
+}
+
+/// `read_slice` charges every event it keeps: a million tiny elements cannot pile up
+/// past the allocation budget.
+#[test]
+fn req002_read_slice_charges_retained_events() {
+    let mut doc = b"<r>".to_vec();
+    for _ in 0..50_000 {
+        doc.extend_from_slice(b"<a/>");
+    }
+    doc.extend_from_slice(b"</r>");
+    let small = Budget::new(Principal::Script, &LimitRequest::default().alloc(1 << 20)).unwrap();
+    let err = read_slice(&doc, small).unwrap_err();
+    assert!(
+        matches!(err, XmlError::Harness(fid_io_reg::IoError::LimitExceeded { limit: LimitKind::Alloc, .. })),
+        "{err:?}"
+    );
+    let events = read(&doc).unwrap();
+    let kept: u64 = events.iter().map(XmlEvent::retained_bytes).sum();
+    assert!(kept > 1 << 20);
+}
+
+/// At most 256 namespace bindings are in scope, however they are spread over tags; a
+/// lowered limit also caps declarations on one tag.
+#[test]
+fn req002_namespace_bindings_are_capped() {
+    let decls = |from: usize, to: usize| (from..to).map(|i| format!(" xmlns:p{i}='urn:{i}'")).collect::<String>();
+    let ok = format!("<r{}><a{}/></r>", decls(0, 200), decls(100, 156));
+    assert!(read(ok.as_bytes()).is_ok());
+    let over = format!("<r{}><a{}/></r>", decls(0, 200), decls(200, 257));
+    let err = read(over.as_bytes()).unwrap_err();
+    assert!(matches!(err, XmlError::LimitExceeded { limit: XmlLimit::Namespaces, value: 256, .. }), "{err:?}");
+    assert_eq!(MAX_NAMESPACES, 256);
+    let tag = format!("<r{}/>", decls(0, 5));
+    let err = read_slice_with(tag.as_bytes(), budget(), XmlOptions::default().with_max_namespaces(4)).unwrap_err();
+    assert!(matches!(err, XmlError::LimitExceeded { limit: XmlLimit::Namespaces, value: 4, .. }), "{err:?}");
+}
+
+/// CPU amplification: with 256 bindings in scope, 100,000 elements that each resolve
+/// three prefixes are read quickly (prefix lookup is a binary search, not a scan).
+#[test]
+fn req002_many_bindings_resolve_fast() {
+    let decls: String = (0..256).map(|i| format!(" xmlns:p{i}='urn:{i}'")).collect();
+    let mut doc = format!("<p0:r{decls}>").into_bytes();
+    for _ in 0..100_000 {
+        doc.extend_from_slice(b"<p255:a p1:x='1' p128:y='2'/>");
+    }
+    doc.extend_from_slice(b"</p0:r>");
+    let started = Instant::now();
+    let mut r = XmlReader::new(BoundedSource::new(&doc[..], budget()));
+    let mut last = None;
+    while let Some(ev) = r.next_event().unwrap() {
+        if let EventKind::Start(e) = ev.kind {
+            last = e.attrs.last().and_then(|a| a.name.ns.clone());
+        }
+    }
+    assert_eq!(last.as_deref(), Some("urn:128"));
+    // Generous for unoptimised test builds on shared runners.
+    assert!(started.elapsed().as_secs() < 30, "{:?}", started.elapsed());
+}
+
+/// Namespaces in XML: a PI target may not contain a colon.
+#[test]
+fn pi_target_without_colon() {
+    assert_eq!(
+        read(b"<r><?a:b x?></r>").unwrap_err(),
+        XmlError::Malformed { reason: "colon_in_pi_target", at: Position::line_col(6, 1, 7) }
+    );
+    assert!(read(b"<r><?a-b x?></r>").is_ok());
 }

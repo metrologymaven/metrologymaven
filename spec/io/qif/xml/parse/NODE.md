@@ -80,6 +80,7 @@ Hand-written hostile XML under `fixtures/io/qif/xml/parse/` (CC-BY-4.0); hostile
 ## Open questions
 
 - Numeric character references (`&#...;`) are allowed in text and attribute values; only entity references outside the five predefined ones are rejected.
+- AC-5 / REQ-IO.QIF.XML.PARSE-005 are only partly met by the first build (PR #149): CI compiles the cargo-fuzz target `xml_reader` on stable but does not run it (that needs nightly), and IO.CORP holds no XML yet; every PR runs a deterministic in-tree mutation test instead. Follow-up: a CI fuzz job that runs the target for the CI time budget, seeded with the IO.CORP hostile corpus.
 
 ## Children
 
