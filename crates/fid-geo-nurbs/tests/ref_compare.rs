@@ -624,7 +624,8 @@ fn inversion_records_are_consistent() {
 fn named_surfaces_regularity_and_curvature() {
     let ents = entities("ref_set_v1.json");
     let sphere = ents.iter().find(|e| e.get("id").str() == "sphere").unwrap();
-    let poles: Vec<&J> = sphere.get("eval").arr().iter().filter(|r| r.has("tag") && r.get("tag").str() == "pole").collect();
+    let poles: Vec<&J> =
+        sphere.get("eval").arr().iter().filter(|r| r.has("tag") && r.get("tag").str() == "pole").collect();
     assert!(!poles.is_empty());
     for r in poles {
         assert_eq!(r.get("regularity").str(), "degenerate");
