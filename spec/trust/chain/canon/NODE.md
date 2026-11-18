@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-trust-canon]
+built_pr: 78
 satisfies: [REQ-TRUST.CHAIN-007]
 covers: []
 depends_on: []
