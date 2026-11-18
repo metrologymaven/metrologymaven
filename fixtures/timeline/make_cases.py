@@ -283,8 +283,19 @@ CONFIGS = {
                   '"bots": ["mm-ci[bot]"]}\n',
 }
 
-# case, events, config (None = no --config), now (day offset or RFC 3339 string)
+
+def utc(seconds):
+    return datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# exact.json: the second blocked interval starts at E3; the clock reaches 14 days when
+# it has run 14 days minus the first interval (E1..E2).
+EXACT_14D = epoch_seconds(EXACT_E3) + 14 * DAY - (epoch_seconds(EXACT_E2) - epoch_seconds(EXACT_E1))
+
+# case, events, config (None = no --config), now (RFC 3339 string)
 CASES = [
+    ("exact-14d-minus-1s", "exact.json", "config.toml", utc(EXACT_14D - 1)),
+    ("exact-14d", "exact.json", "config.toml", utc(EXACT_14D)),
     ("ac1", "active.json", None, iso(12)),
     ("ac1-config", "active.json", "config.toml", iso(12)),
     ("ac2-day15", "stalled.json", None, iso(15)),
