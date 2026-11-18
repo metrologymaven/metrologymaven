@@ -71,7 +71,8 @@ impl TaskSpec {
         let path = string(get(start, "path", file)?, "start_state.path", file)?;
         check_rel(path).map_err(|why| bad(file, format!("`start_state.path`: {why}")))?;
         let digest = string(get(start, "digest", file)?, "start_state.digest", file)?;
-        let start_digest = Digest::parse(digest).map_err(|_| bad(file, "`start_state.digest` is not a sha256: digest"))?;
+        let start_digest =
+            Digest::parse(digest).map_err(|_| bad(file, "`start_state.digest` is not a sha256: digest"))?;
         let roots = obj(get(top, "roots", file)?, "roots", file)?;
         let read_roots = strings(get(roots, "read", file)?, "roots.read", file)?;
         let write_roots = strings(get(roots, "write", file)?, "roots.write", file)?;

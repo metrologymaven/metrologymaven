@@ -356,7 +356,11 @@ fn make_dir_link(link: &Path, target: &Path) {
     std::os::unix::fs::symlink(target, link).unwrap();
     #[cfg(windows)]
     {
-        let st = Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(link).arg(target).output().unwrap();
+        // cmd reads `/x` inside a path as a switch, so pass backslash-only paths.
+        let native = |p: &Path| p.to_string_lossy().replace('/', "\\");
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/C", "mklink", "/J"]).arg(native(link)).arg(native(target));
+        let st = cmd.output().unwrap();
         assert!(st.status.success(), "mklink /J failed: {}", String::from_utf8_lossy(&st.stderr));
     }
 }

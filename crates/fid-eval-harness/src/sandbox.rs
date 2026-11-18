@@ -192,7 +192,8 @@ impl Sandbox {
         if !work.is_absolute() {
             return Err(err(ErrorCode::InvalidWorkDir, format!("{}: not an absolute path", work.display())));
         }
-        let wm = std::fs::metadata(work).map_err(|e| err(ErrorCode::InvalidWorkDir, format!("{}: {e}", work.display())))?;
+        let wm =
+            std::fs::metadata(work).map_err(|e| err(ErrorCode::InvalidWorkDir, format!("{}: {e}", work.display())))?;
         if !wm.is_dir() {
             return Err(err(ErrorCode::InvalidWorkDir, format!("{}: not a directory", work.display())));
         }
@@ -308,12 +309,17 @@ impl Sandbox {
 
     /// The folder of the read root named `root` exactly as in the task.
     pub fn read_root(&self, root: &str) -> Option<PathBuf> {
-        self.read.iter().find(|d| d.root == root).map(|d| self.dir.join(&d.dir))
+        self.read.iter().find(|d| d.root == root).map(|d| self.native(&d.dir))
     }
 
     /// The folder of the write root named `root` exactly as in the task.
     pub fn write_root(&self, root: &str) -> Option<PathBuf> {
-        self.write.iter().find(|d| d.root == root).map(|d| self.dir.join(&d.dir))
+        self.write.iter().find(|d| d.root == root).map(|d| self.native(&d.dir))
+    }
+
+    /// A run-relative `/`-separated path as a native path (one component per segment).
+    fn native(&self, rel: &str) -> PathBuf {
+        rel.split('/').fold(self.dir.clone(), |p, seg| p.join(seg))
     }
 
     /// The complete child-process environment, sorted by name.
