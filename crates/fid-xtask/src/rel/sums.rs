@@ -115,6 +115,11 @@ pub fn is_valid_name(name: &str) -> bool {
         && name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'+' | b'-'))
 }
 
+/// Whether `name` is the release manifest or one of its signatures (`release-manifest.json.*`).
+fn is_manifest_name(name: &str) -> bool {
+    name == MANIFEST_FILE || name.strip_prefix(MANIFEST_FILE).is_some_and(|r| r.starts_with('.'))
+}
+
 /// Whether `name` is by its name never summed: the checksum file and its signatures, the
 /// checksum statement and its envelopes, and SPDX SBOMs.
 pub fn is_unsummed_name(name: &str) -> bool {
@@ -122,8 +127,15 @@ pub fn is_unsummed_name(name: &str) -> bool {
     family(SUMS_FILE) || family(STATEMENT_FILE) || name.ends_with(".spdx.json")
 }
 
+/// The manifest fields the tool reads.
+struct Manifest {
+    release: String,
+    /// Artefact names, each with its `kind` where present.
+    artefacts: Vec<(String, Option<String>)>,
+}
+
 /// The manifest's release version and its artefact names (`kind` read where present).
-fn read_manifest(path: &Path) -> Result<(String, Vec<(String, Option<String>)>), SumsError> {
+fn read_manifest(path: &Path) -> Result<Manifest, SumsError> {
     let io = |e: std::io::Error| SumsError::Io(format!("{}: {e}", path.display()));
     let file = File::open(path).map_err(io)?;
     let mut bytes = Vec::new();
@@ -131,8 +143,8 @@ fn read_manifest(path: &Path) -> Result<(String, Vec<(String, Option<String>)>),
     if bytes.len() as u64 > MAX_MANIFEST_BYTES {
         return Err(SumsError::Parse(format!("{} is larger than {MAX_MANIFEST_BYTES} bytes", path.display())));
     }
-    let value = parse_with_limits(&bytes, bytes.len(), 16)
-        .map_err(|e| SumsError::Parse(format!("{}: {e}", path.display())))?;
+    let value =
+        parse_with_limits(&bytes, bytes.len(), 16).map_err(|e| SumsError::Parse(format!("{}: {e}", path.display())))?;
     let CValue::Obj(top) = value else {
         return Err(SumsError::Parse("manifest: not an object".into()));
     };
@@ -158,7 +170,7 @@ fn read_manifest(path: &Path) -> Result<(String, Vec<(String, Option<String>)>),
         };
         out.push((name.clone(), kind));
     }
-    Ok((release, out))
+    Ok(Manifest { release, artefacts: out })
 }
 
 /// SHA-256 and length of a file, read in [`BUFFER_BYTES`] chunks.
@@ -186,7 +198,7 @@ pub fn hash_file(path: &Path) -> Result<(Digest, u64), SumsError> {
 /// Errors come back all at once, in a fixed order: name errors first (and alone, since a bad
 /// name makes the comparison meaningless), then missing and unlisted files, each sorted.
 pub fn compute(manifest: &Path, dir: &Path) -> Result<Sums, Vec<SumsError>> {
-    let (release, listed) = read_manifest(manifest).map_err(|e| vec![e])?;
+    let Manifest { release, artefacts: listed } = read_manifest(manifest).map_err(|e| vec![e])?;
 
     // Names never summed: by name, or by their manifest kind.
     let mut unsummed: BTreeSet<String> = BTreeSet::new();
@@ -214,8 +226,7 @@ pub fn compute(manifest: &Path, dir: &Path) -> Result<Sums, Vec<SumsError>> {
             errors.insert(raw.to_string_lossy().into_owned());
             continue;
         };
-        let manifest_family = name == MANIFEST_FILE || name.strip_prefix(MANIFEST_FILE).is_some_and(|r| r.starts_with('.'));
-        if unsummed.contains(&name) || is_unsummed_name(&name) || manifest_family {
+        if unsummed.contains(&name) || is_unsummed_name(&name) || is_manifest_name(&name) {
             continue;
         }
         if !is_valid_name(&name) {
@@ -232,9 +243,8 @@ pub fn compute(manifest: &Path, dir: &Path) -> Result<Sums, Vec<SumsError>> {
 
     let mut out: Vec<SumsError> = Vec::new();
     out.extend(names.iter().filter(|n| !present.contains_key(*n)).cloned().map(SumsError::Missing));
-    out.extend(
-        present.iter().filter(|(n, is_file)| !names.contains(*n) || !**is_file).map(|(n, _)| SumsError::Unlisted(n.clone())),
-    );
+    let unlisted = present.iter().filter(|(n, is_file)| !names.contains(*n) || !**is_file);
+    out.extend(unlisted.map(|(n, _)| SumsError::Unlisted(n.clone())));
     if !out.is_empty() {
         return Err(out);
     }
