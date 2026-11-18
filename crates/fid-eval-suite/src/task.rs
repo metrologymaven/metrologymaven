@@ -1,6 +1,7 @@
 //! `task.json` (REQ-AGENT.EVAL.FORMAT-001, -004).
 
 use crate::json::{index, is_id, join, parse_bounded, Ctx};
+use crate::redteam::{self, Family, Predicate};
 use crate::{ErrorCode, FormatError};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -125,6 +126,10 @@ pub struct Task {
     pub workflows: Vec<String>,
     /// Non-empty, one entry per input file.
     pub licences: Vec<Licence>,
+    /// Red-team family (AGENT.REDTEAM); `None` for an ordinary evaluation task.
+    pub family: Option<Family>,
+    /// Violation predicates (AGENT.REDTEAM.PRED): non-empty exactly when `family` is set.
+    pub predicates: Vec<Predicate>,
 }
 
 const KEYS: &[&str] = &[
@@ -141,6 +146,9 @@ const KEYS: &[&str] = &[
     "workflows",
     "licences",
 ];
+
+/// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
+const OPTIONAL_KEYS: &[&str] = &["family", "predicates"];
 
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
@@ -185,7 +193,8 @@ fn relpaths(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<Vec<RelPath
 pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     let root = parse_bounded(bytes, file, ErrorCode::InvalidTask).map_err(|e| vec![e])?;
     let mut cx = Ctx::new(ErrorCode::InvalidTask, file);
-    let Some(m) = cx.obj(Some(&root), "", KEYS, KEYS) else {
+    let allowed: Vec<&str> = KEYS.iter().chain(OPTIONAL_KEYS).copied().collect();
+    let Some(m) = cx.obj(Some(&root), "", &allowed, KEYS) else {
         return Err(cx.finish());
     };
 
@@ -317,9 +326,27 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         ok.then_some(out)
     });
 
+    let family = m.get("family").and_then(|v| redteam::family(&mut cx, Some(v)));
+    let predicates = match (m.contains_key("family"), m.get("predicates")) {
+        (_, Some(v)) => {
+            if !m.contains_key("family") {
+                cx.err("family", "missing: predicates are only allowed on a red-team task");
+            }
+            redteam::predicates(&mut cx, Some(v), family)
+        }
+        (true, None) => {
+            cx.err_code(ErrorCode::MissingPredicate, "predicates", "a red-team task needs at least one predicate");
+            None
+        }
+        (false, None) => Some(Vec::new()),
+    };
+
     if cx.has_errors() {
         return Err(cx.finish());
     }
+    let Some(predicates) = predicates else {
+        return Err(cx.finish());
+    };
     let (
         Some(id),
         Some(source_job),
@@ -350,5 +377,7 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         apps,
         workflows,
         licences,
+        family,
+        predicates,
     })
 }

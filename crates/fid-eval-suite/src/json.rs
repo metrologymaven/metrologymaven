@@ -50,6 +50,11 @@ impl<'a> Ctx<'a> {
         self.errors.push(FormatError::new(self.code, self.file, field, detail));
     }
 
+    /// An error with a code other than the file's default (e.g. `unknown_predicate`).
+    pub(crate) fn err_code(&mut self, code: ErrorCode, field: &str, detail: impl Into<String>) {
+        self.errors.push(FormatError::new(code, self.file, field, detail));
+    }
+
     pub(crate) fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }
