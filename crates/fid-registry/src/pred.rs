@@ -1019,8 +1019,11 @@ pub fn compile_command(def: &CommandDef, ctx: &ContextTypes) -> Result<Vec<Predi
         .iter()
         .enumerate()
         .map(|(index, decl)| {
-            Predicate::from_decl(decl, &params, ctx)
-                .map_err(|error| BuildError { command: format!("{}@{}", def.id, def.major), index, error })
+            Predicate::from_decl(decl, &params, ctx).map_err(|error| BuildError {
+                command: format!("{}@{}", def.id, def.major),
+                index,
+                error,
+            })
         })
         .collect()
 }
@@ -1057,7 +1060,12 @@ enum Task<'a> {
     Visit(&'a Expr),
     Not(usize),
     /// Next operand of an n-ary `&&` (`is_and`) or `||`.
-    Chain { is_and: bool, items: &'a [Expr], idx: usize, pos: usize },
+    Chain {
+        is_and: bool,
+        items: &'a [Expr],
+        idx: usize,
+        pos: usize,
+    },
     Cmp(CmpOp, usize),
     In(usize),
     Cond(&'a Expr, &'a Expr, usize),
@@ -1066,7 +1074,13 @@ enum Task<'a> {
     Field(&'a Expr, &'a str, usize),
     HasField(&'a str, usize),
     MakeList(usize),
-    QuantList { is_all: bool, var: &'a str, list: &'a Expr, body: &'a Expr, pos: usize },
+    QuantList {
+        is_all: bool,
+        var: &'a str,
+        list: &'a Expr,
+        body: &'a Expr,
+        pos: usize,
+    },
     QuantNext(Quant<'a>),
     QuantAfter(Quant<'a>),
 }

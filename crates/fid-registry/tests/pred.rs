@@ -4,7 +4,7 @@
 use fid_canon::{parse, CValue};
 use fid_registry::pred::{self, MAX_BOUND};
 use fid_registry::{
-    compile_command, evaluate, CommandDef, ContextTypes, FieldPath, ParamSchema, PredContext, PredError, Precondition,
+    compile_command, evaluate, CommandDef, ContextTypes, FieldPath, ParamSchema, Precondition, PredContext, PredError,
     Predicate, Type, Value, Verdict,
 };
 use std::collections::BTreeMap;
@@ -248,10 +248,12 @@ fn missing_field_names_full_path() {
     let item = |n: Option<i64>| Value::Map(n.map(|n| ("n".to_string(), Value::Int(n))).into_iter().collect());
     let items = Value::List(vec![item(Some(1)), item(None)]);
     let ctx = MapCtx(Value::Map(
-        [("params".to_string(), Value::Map([("items".to_string(), items)].into_iter().collect()))].into_iter().collect(),
+        [("params".to_string(), Value::Map([("items".to_string(), items)].into_iter().collect()))]
+            .into_iter()
+            .collect(),
     ));
-    let pred = Predicate::compile("all(it in params.items, it.n > 0)", MAX_BOUND, "k", &params, &ContextTypes::new())
-        .unwrap();
+    let pred =
+        Predicate::compile("all(it in params.items, it.n > 0)", MAX_BOUND, "k", &params, &ContextTypes::new()).unwrap();
     assert_eq!(evaluate(&pred, &ctx).result, Err(PredError::MissingField { path: "params.items[1].n".to_string() }));
     let pred = Predicate::compile("params.items.n > 0", MAX_BOUND, "k", &params, &ContextTypes::new());
     assert_eq!(pred.unwrap_err().code, "fpl_type");
