@@ -66,7 +66,7 @@ Resolves `root://<root-id>/<relative path>` handles against the configured impor
 - **Errors:** `raw_path_forbidden`, `path_outside_root`, `root_not_found`.
 - **Determinism:** D1 (file-system semantics differ per platform; outcomes are bit-exact per platform).
 - **Performance budget:** < 1 ms per resolution for paths of ≤ 16 components [unverified until measured].
-- **Crate:** `fid-io-reg`. CONSTITUTION §8 forbids `unsafe`; use a vetted safe wrapper (e.g. `cap-std` [unverified: licence on the D-001 allowlist]) or record a named exception.
+- **Crate:** `fid-io-reg`. CONSTITUTION §8 forbids `unsafe`; the opens go through `cap-std` `3.4`, whose `unsafe` is a named dependency exception recorded in [D-041](../../../../decisions/D-041-cap-std-root-confinement.md) (licences checked by `cargo deny`).
 
 ## Test fixtures
 
@@ -79,6 +79,8 @@ Created per test in a temp directory: nested folders, POSIX symlinks, Windows ju
 ## Open questions
 
 - Hard links inside a root that point to files outside it cannot be detected by path; this leaf warns when the target's link count is > 1 but does not fail.
+- On Windows the hard-link count is not reported: std exposes it only through an unstable API, and the crate has no `unsafe`. Open: report it once std stabilises it, or through the D-041 dependency.
+- `IO.REG.WRITE` must enforce create-new versus overwrite, atomic rename and file permissions through the export folder handle this leaf returns; this leaf offers only create-new (`target_exists` if the name exists).
 
 ## Children
 

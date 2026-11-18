@@ -6,7 +6,7 @@
 
 use fid_io_reg::{IoError, Principal, RelPath, RootAccess, RootHandle, RootId, RootSet};
 use std::fs;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 const PART: &[u8] = b"solid part\nendsolid part\n";
@@ -80,28 +80,37 @@ fn code(r: Result<Vec<u8>, IoError>) -> &'static str {
     }
 }
 
-/// Creates a directory symbolic link; false if the platform refuses (Windows without the
-/// symlink privilege).
-fn symlink_dir(target: &Path, link: &Path) -> bool {
-    #[cfg(unix)]
-    {
-        std::os::unix::fs::symlink(target, link).is_ok()
-    }
-    #[cfg(windows)]
-    {
-        std::os::windows::fs::symlink_dir(target, link).is_ok()
+/// Outside CI a link the platform refuses (Windows without the symlink privilege) skips
+/// the case; on CI (the `CI` variable is set, as GitHub Actions does) it fails the test.
+fn link_made(r: std::io::Result<()>, link: &Path) -> bool {
+    match r {
+        Ok(()) => true,
+        Err(e) if std::env::var_os("CI").is_some() => panic!("cannot create link {}: {e}", link.display()),
+        Err(_) => false,
     }
 }
 
-/// Creates a file symbolic link; false if the platform refuses.
-fn symlink_file(target: &Path, link: &Path) -> bool {
+/// Creates a directory symbolic link; false if the platform refuses outside CI.
+fn symlink_dir(target: &Path, link: &Path) -> bool {
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(target, link).is_ok()
+        link_made(std::os::unix::fs::symlink(target, link), link)
     }
     #[cfg(windows)]
     {
-        std::os::windows::fs::symlink_file(target, link).is_ok()
+        link_made(std::os::windows::fs::symlink_dir(target, link), link)
+    }
+}
+
+/// Creates a file symbolic link; false if the platform refuses outside CI.
+fn symlink_file(target: &Path, link: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        link_made(std::os::unix::fs::symlink(target, link), link)
+    }
+    #[cfg(windows)]
+    {
+        link_made(std::os::windows::fs::symlink_file(target, link), link)
     }
 }
 
@@ -309,8 +318,8 @@ fn ac5_links_inside_the_root_resolve() {
         assert_eq!(f.path, Path::new("a").join("part.stl"), "{h}");
         assert_eq!(read_all(&s, Principal::Agent, h).unwrap(), PART, "{h}");
         let e = s.resolve_export(Principal::Agent, h).unwrap();
-        assert_eq!(e.path, Path::new("a").join("part.stl"), "{h}");
-        assert_eq!(e.name, "part.stl");
+        assert_eq!(e.path(), Path::new("a").join("part.stl"), "{h}");
+        assert_eq!(e.name(), "part.stl");
     }
 }
 
@@ -337,17 +346,18 @@ fn ac6_wrong_direction_or_unknown_root_is_not_found() {
     assert_eq!(s.resolve_import(Principal::Agent, "root://nope/a/part.stl").unwrap_err(), IoError::RootNotFound);
     assert_eq!(s.fs_calls(), 0);
     let e = s.resolve_export(Principal::Agent, "root://exp/a/x.stl").unwrap();
-    assert_eq!(e.name, "x.stl");
-    assert_eq!(e.path, Path::new("a").join("x.stl"));
-    assert_eq!(e.root.as_ref().map(RootId::as_str), Some("exp"));
-    // The returned folder handle is the checked one: the file can be created through it.
-    e.dir.write(&e.name, b"out").unwrap();
+    assert_eq!(e.name(), "x.stl");
+    assert_eq!(e.path(), Path::new("a").join("x.stl"));
+    assert_eq!(e.root().map(RootId::as_str), Some("exp"));
+    // The returned folder handle is the checked one: the file is created through it, once.
+    e.create_new().unwrap().write_all(b"out").unwrap();
     assert_eq!(fs::read(t.root().join("a").join("x.stl")).unwrap(), b"out");
     assert_eq!(read_all(&s, Principal::Agent, "root://imp/a/x.stl").unwrap(), b"out");
+    assert_eq!(e.create_new().unwrap_err(), IoError::TargetExists);
     // The root itself is not an export target; a missing folder is an I/O error.
     assert_eq!(s.resolve_export(Principal::Agent, "root://exp").unwrap_err().code(), "io");
     assert_eq!(s.resolve_export(Principal::Agent, "root://exp/none/x.stl").unwrap_err().code(), "io");
-    assert_eq!(s.resolve_export(Principal::Agent, "root://exp/top.stl").unwrap().name, "top.stl");
+    assert_eq!(s.resolve_export(Principal::Agent, "root://exp/top.stl").unwrap().name(), "top.stl");
 }
 
 // ------------------------------------------------------------------ AC-7
@@ -363,9 +373,9 @@ fn ac7_human_raw_paths_are_allowed() {
     assert_eq!(read_all(&s, Principal::Human, &part.to_string_lossy()).unwrap(), PART);
     let out = t.root().join("a").join("out.stl");
     let e = s.resolve_export(Principal::Human, &out.to_string_lossy()).unwrap();
-    assert_eq!(e.name, "out.stl");
-    assert!(e.root.is_none());
-    e.dir.write(&e.name, b"x").unwrap();
+    assert_eq!(e.name(), "out.stl");
+    assert!(e.root().is_none());
+    e.create_new().unwrap().write_all(b"x").unwrap();
     assert_eq!(fs::read(&out).unwrap(), b"x");
 }
 
@@ -380,4 +390,92 @@ fn hard_links_are_reported_not_refused() {
     let f = s.resolve_import(Principal::Agent, "root://imp/a/part.stl").unwrap();
     assert_eq!(f.warnings, [fid_io_reg::RootWarning::HardLinked { links: 2 }]);
     assert_eq!(f.warnings[0].code(), "hard_linked");
+}
+
+// ------------------------------------------------------------------ REQ-005 (no check-then-open race)
+
+/// Resolves `root://imp/a/...` while a hook, run between the link walk and the open, swaps
+/// the checked folder `R/a` for a link to a folder outside the root that holds a file of
+/// the same name. The open goes through the root handle, so it must fail
+/// `path_outside_root` instead of reaching the outside file.
+fn swapped_after_check(name: &str, export: bool) -> Result<(), IoError> {
+    let t = Tmp::with_part(name);
+    let outside = t.raw.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("part.stl"), b"secret").unwrap();
+    let mut s = set(&t, "imp", RootAccess::ImportExport);
+    let (a, old, target) = (t.root().join("a"), t.root().join("a-old"), plain(&t.canon.join("outside")));
+    s.set_race_hook(move || {
+        if !old.exists() {
+            fs::rename(&a, &old).unwrap();
+            #[cfg(unix)]
+            assert!(symlink_dir(&target, &a));
+            #[cfg(windows)]
+            junction(&target, &a);
+        }
+    });
+    let r = if export {
+        s.resolve_export(Principal::Agent, "root://imp/a/new.stl").map(|_| ())
+    } else {
+        s.resolve_import(Principal::Agent, "root://imp/a/part.stl").map(|_| ())
+    };
+    assert!(!outside.join("new.stl").exists());
+    r
+}
+
+#[test]
+fn req005_import_swapped_after_check_fails_outside_root() {
+    assert_eq!(swapped_after_check("race-imp", false).unwrap_err(), IoError::PathOutsideRoot);
+}
+
+#[test]
+fn req005_export_swapped_after_check_fails_outside_root() {
+    assert_eq!(swapped_after_check("race-exp", true).unwrap_err(), IoError::PathOutsideRoot);
+}
+
+/// The same swap to a Windows directory symbolic link (the junction case runs above).
+#[cfg(windows)]
+#[test]
+fn req005_windows_symlink_swapped_after_check_fails_outside_root() {
+    let t = Tmp::with_part("race-sym");
+    let outside = t.raw.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("part.stl"), b"secret").unwrap();
+    let mut s = set(&t, "imp", RootAccess::Import);
+    let (a, old, target) = (t.root().join("a"), t.root().join("a-old"), plain(&t.canon.join("outside")));
+    let made = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let made2 = made.clone();
+    s.set_race_hook(move || {
+        if !old.exists() {
+            fs::rename(&a, &old).unwrap();
+            made2.store(symlink_dir(&target, &a), std::sync::atomic::Ordering::SeqCst);
+        }
+    });
+    let r = s.resolve_import(Principal::Agent, "root://imp/a/part.stl");
+    if made.load(std::sync::atomic::Ordering::SeqCst) {
+        assert_eq!(r.unwrap_err(), IoError::PathOutsideRoot);
+    }
+}
+
+// ------------------------------------------------------------------ special files
+
+/// A FIFO inside a root is refused without opening it (an open would block forever).
+#[cfg(unix)]
+#[test]
+fn fifo_is_refused_without_blocking() {
+    let t = Tmp::with_part("fifo");
+    let fifo = t.root().join("a").join("pipe.stl");
+    let st = std::process::Command::new("mkfifo").arg(&fifo).status().unwrap();
+    assert!(st.success());
+    let s = set(&t, "imp", RootAccess::Import);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let human = fifo.to_string_lossy().into_owned();
+    std::thread::spawn(move || {
+        let a = s.resolve_import(Principal::Agent, "root://imp/a/pipe.stl").map(|_| ());
+        let h = s.resolve_import(Principal::Human, &human).map(|_| ());
+        let _ = tx.send((a, h));
+    });
+    let (a, h) = rx.recv_timeout(std::time::Duration::from_secs(20)).expect("resolution blocked on a FIFO");
+    assert_eq!(a.unwrap_err().code(), "io");
+    assert_eq!(h.unwrap_err().code(), "io");
 }

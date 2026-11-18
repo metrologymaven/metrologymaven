@@ -187,8 +187,14 @@ fn windows_device(c: &str) -> bool {
     match stem.as_str() {
         "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$" => true,
         s => {
-            let b = s.as_bytes();
-            b.len() == 4 && (s.starts_with("COM") || s.starts_with("LPT")) && b[3].is_ascii_digit()
+            // COM0-9, LPT0-9 and the superscript forms COM¹-³, LPT¹-³ (U+00B9, U+00B2, U+00B3).
+            let tail = s.strip_prefix("COM").or_else(|| s.strip_prefix("LPT"));
+            match tail {
+                Some(t) => {
+                    (t.len() == 1 && t.as_bytes()[0].is_ascii_digit()) || ["\u{b9}", "\u{b2}", "\u{b3}"].contains(&t)
+                }
+                None => false,
+            }
         }
     }
 }
@@ -257,19 +263,46 @@ pub struct ImportFile {
     pub warnings: Vec<RootWarning>,
 }
 
-/// Where an export may be written: an open handle to the target's folder and the file name
-/// inside it. Writing is `IO.REG.WRITE`'s job; it must create the file through [`Self::dir`]
-/// so the write stays relative to the checked folder.
+/// Where an export may be written: the target's folder, held open as a capability, and the
+/// file name inside it. The folder handle is not exposed; the only write operation offered
+/// here is [`ExportTarget::create_new`]. Overwrite, atomic rename and permissions are
+/// `IO.REG.WRITE`'s job and must go through this folder handle.
 #[derive(Debug)]
 pub struct ExportTarget {
-    /// The target's folder, opened as a capability.
-    pub dir: Dir,
-    /// The file name inside `dir`.
-    pub name: OsString,
+    dir: Dir,
+    name: OsString,
+    root: Option<RootId>,
+    path: PathBuf,
+}
+
+impl ExportTarget {
+    /// The file name inside the target folder.
+    pub fn name(&self) -> &OsStr {
+        &self.name
+    }
+
     /// The root it belongs to; `None` for a human's raw path.
-    pub root: Option<RootId>,
+    pub fn root(&self) -> Option<&RootId> {
+        self.root.as_ref()
+    }
+
     /// The link-free path relative to the root, or the raw path as given.
-    pub path: PathBuf,
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Creates the target file for writing through the held folder handle. It must not
+    /// exist yet (`target_exists` otherwise, also for a link of that name, which is never
+    /// followed).
+    pub fn create_new(&self) -> Result<File, IoError> {
+        let mut opts = cap_std::fs::OpenOptions::new();
+        opts.write(true).create_new(true);
+        match self.dir.open_with(&self.name, &opts) {
+            Ok(f) => Ok(f.into_std()),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Err(IoError::TargetExists),
+            Err(e) => Err(io_err(e)),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -278,12 +311,26 @@ struct RootEntry {
     path: PathBuf,
 }
 
+/// A test hook run between the link walk and the open.
+type RaceHook = Box<dyn Fn() + Send + Sync>;
+
 /// The configured roots (read-only here: configuration belongs to CORE settings) and the
 /// resolver.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct RootSet {
     roots: BTreeMap<RootId, RootEntry>,
     fs_calls: AtomicU64,
+    race_hook: Option<RaceHook>,
+}
+
+impl fmt::Debug for RootSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RootSet")
+            .field("roots", &self.roots)
+            .field("fs_calls", &self.fs_calls)
+            .field("race_hook", &self.race_hook.is_some())
+            .finish()
+    }
 }
 
 impl RootSet {
@@ -307,6 +354,32 @@ impl RootSet {
         self.fs_calls.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Test seam for REQ-IO.REG.ROOTS-005: `hook` runs after the link walk and before the
+    /// open, so a test can swap a checked component for an escaping link in between.
+    #[doc(hidden)]
+    pub fn set_race_hook(&mut self, hook: impl Fn() + Send + Sync + 'static) {
+        self.race_hook = Some(Box::new(hook));
+    }
+
+    fn before_open(&self) {
+        if let Some(h) = &self.race_hook {
+            h();
+        }
+    }
+
+    /// Maps a failed open through the root handle. `cap-std` refuses an escape with its
+    /// own error; that error, or a fresh walk that now finds an escaping link (the path was
+    /// swapped after the first walk), gives `path_outside_root`.
+    fn open_failed(&self, e: io::Error, canon: &Path, rel: &[String]) -> IoError {
+        if is_escape(&e) {
+            return IoError::PathOutsideRoot;
+        }
+        match self.walk(canon, rel) {
+            Err(IoError::PathOutsideRoot) => IoError::PathOutsideRoot,
+            _ => io_err(e),
+        }
+    }
+
     /// Classifies the input: `Some(handle)`, `None` for a raw path a human may use, or
     /// `raw_path_forbidden`.
     fn classify(principal: Principal, input: &str) -> Result<Option<RootHandle>, IoError> {
@@ -325,19 +398,52 @@ impl RootSet {
         let handle = match RootSet::classify(principal, input)? {
             Some(h) => h,
             None => {
+                // A human's raw path follows links, but must still name a regular file:
+                // checked before the open and again on the handle.
                 self.tick();
-                let file = File::open(input).map_err(io_err)?;
+                if !std::fs::metadata(input).map_err(io_err)?.is_file() {
+                    return Err(not_a_file());
+                }
+                let mut opts = std::fs::OpenOptions::new();
+                opts.read(true);
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    opts.custom_flags(NO_BLOCK_FLAGS);
+                }
+                self.tick();
+                let file = opts.open(input).map_err(io_err)?;
                 let warnings = self.check_file(&file)?;
                 return Ok(ImportFile { file, root: None, path: PathBuf::from(input), warnings });
             }
         };
-        let (dir, comps) = self.resolve(Direction::Import, &handle)?;
+        let (dir, canon, comps) = self.resolve(Direction::Import, &handle)?;
         if comps.is_empty() {
             return Err(not_a_file());
         }
         let rel: PathBuf = comps.iter().collect();
+        self.before_open();
+        // Only a regular file is opened: a FIFO or device would block or have side effects.
         self.tick();
-        let file = dir.open(&rel).map_err(io_err)?.into_std();
+        match dir.symlink_metadata(&rel) {
+            Ok(m) if m.is_file() => {}
+            Ok(_) => return Err(not_a_file()),
+            Err(e) => return Err(self.open_failed(e, &canon, handle.rel.components())),
+        }
+        let mut opts = cap_std::fs::OpenOptions::new();
+        opts.read(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            // Never block on a FIFO swapped in after the check; never take a controlling
+            // terminal.
+            opts.custom_flags(NO_BLOCK_FLAGS);
+        }
+        self.tick();
+        let file = match dir.open_with(&rel, &opts) {
+            Ok(f) => f.into_std(),
+            Err(e) => return Err(self.open_failed(e, &canon, handle.rel.components())),
+        };
         let warnings = self.check_file(&file)?;
         Ok(ImportFile { file, root: Some(handle.root), path: rel, warnings })
     }
@@ -359,14 +465,18 @@ impl RootSet {
                 return Ok(ExportTarget { dir, name, root: None, path: p.to_path_buf() });
             }
         };
-        let (root_dir, mut comps) = self.resolve(Direction::Export, &handle)?;
+        let (root_dir, canon, mut comps) = self.resolve(Direction::Export, &handle)?;
         let name = comps.pop().ok_or_else(not_a_file)?;
         let parent: PathBuf = comps.iter().collect();
+        self.before_open();
         let dir = if comps.is_empty() {
             root_dir
         } else {
             self.tick();
-            root_dir.open_dir(&parent).map_err(io_err)?
+            match root_dir.open_dir(&parent) {
+                Ok(d) => d,
+                Err(e) => return Err(self.open_failed(e, &canon, handle.rel.components())),
+            }
         };
         let path = parent.join(&name);
         Ok(ExportTarget { dir, name, root: Some(handle.root), path })
@@ -374,14 +484,14 @@ impl RootSet {
 
     /// Looks up the root, opens it, and walks the handle's path to a link-free path below
     /// it.
-    fn resolve(&self, dir: Direction, handle: &RootHandle) -> Result<(Dir, Vec<OsString>), IoError> {
+    fn resolve(&self, dir: Direction, handle: &RootHandle) -> Result<(Dir, PathBuf, Vec<OsString>), IoError> {
         let entry = self.roots.get(&handle.root).filter(|e| e.access.allows(dir)).ok_or(IoError::RootNotFound)?;
         self.tick();
         let canon = std::fs::canonicalize(&entry.path).map_err(io_err)?;
         self.tick();
         let root_dir = Dir::open_ambient_dir(&canon, cap_std::ambient_authority()).map_err(io_err)?;
         let comps = self.walk(&canon, handle.rel.components())?;
-        Ok((root_dir, comps))
+        Ok((root_dir, canon, comps))
     }
 
     /// Walks `rel` below `root` (canonical) without following links, expanding each link in
@@ -472,6 +582,26 @@ fn link_count(_meta: &std::fs::Metadata) -> Option<u64> {
     None
 }
 
+/// `O_NONBLOCK | O_NOCTTY`: an open that cannot hang on a FIFO or adopt a terminal.
+#[cfg(unix)]
+const NO_BLOCK_FLAGS: i32 = libc::O_NONBLOCK | libc::O_NOCTTY;
+
+/// True for `cap-std`'s refusal of a path that would leave the directory it was opened
+/// through (`PermissionDenied`, "a path led outside of the filesystem"), and for Linux's
+/// `EXDEV` from `openat2(RESOLVE_BENEATH)`.
+fn is_escape(e: &io::Error) -> bool {
+    if e.kind() == io::ErrorKind::PermissionDenied && e.to_string().contains("outside of the filesystem") {
+        return true;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        if e.raw_os_error() == Some(libc::EXDEV) {
+            return true;
+        }
+    }
+    false
+}
+
 fn io_err(e: io::Error) -> IoError {
     IoError::Io { kind: e.kind(), at: Position::default() }
 }
@@ -523,15 +653,17 @@ fn path_key(p: &Path) -> Option<Vec<KeyPart>> {
     Some(parts)
 }
 
-/// Name equality as the platform's default file systems see it: ASCII case-insensitive
-/// on Windows, exact elsewhere (a case-insensitive macOS volume can only make an in-root
-/// target look outside, which fails closed).
+/// Name equality for the containment check: on Windows, ASCII letters compare without
+/// case and every other code point must match exactly; elsewhere names must match
+/// exactly. Any fold the file system does beyond that (Unicode case, a case-insensitive
+/// macOS volume, 8.3 short names) can only make an in-root target look outside, which
+/// fails closed; it never makes an outside target look inside.
 fn same_part(a: &KeyPart, b: &KeyPart) -> bool {
     match (a, b) {
         (KeyPart::Head(x), KeyPart::Head(y)) => x.eq_ignore_ascii_case(y),
         (KeyPart::Name(x), KeyPart::Name(y)) => {
             if cfg!(windows) {
-                x.to_string_lossy().to_lowercase() == y.to_string_lossy().to_lowercase()
+                x.as_encoded_bytes().eq_ignore_ascii_case(y.as_encoded_bytes())
             } else {
                 x == y
             }
@@ -585,6 +717,27 @@ mod tests {
         for c in ["console", "com", "lpt10", "nullx", "a"] {
             assert!(!windows_device(c), "{c}");
         }
+    }
+
+    #[test]
+    fn superscript_device_names() {
+        for c in ["COM\u{b9}", "lpt\u{b2}.txt", "Com\u{b3}"] {
+            assert!(windows_device(c), "{c}");
+            assert!(!plain_name(c), "{c}");
+        }
+        assert!(!windows_device("COM\u{b4}"));
+    }
+
+    #[test]
+    fn names_fold_ascii_only() {
+        let n = |s: &str| KeyPart::Name(OsString::from(s));
+        // KELVIN SIGN folds to `k` under Unicode lower-casing; it must not match here.
+        assert!(!same_part(&n("\u{212a}"), &n("k")));
+        assert!(!same_part(&n("\u{212a}"), &n("K")));
+        assert!(!same_part(&n("\u{c4}"), &n("\u{e4}")));
+        assert!(same_part(&n("\u{c4}"), &n("\u{c4}")));
+        assert_eq!(same_part(&n("ABC"), &n("abc")), cfg!(windows));
+        assert!(same_part(&n("abc"), &n("abc")));
     }
 
     #[test]

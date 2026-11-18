@@ -24,8 +24,6 @@ pub mod toy;
 mod untrusted;
 
 pub use budget::{Budget, Clock, DepthGuard, MonotonicClock, WALL_CHECK_EVERY};
-// Re-exported so users of `ExportTarget::dir` share this crate's `cap-std` version.
-pub use cap_std;
 pub use error::{IoError, Position, CODES};
 pub use limits::{
     LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
