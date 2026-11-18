@@ -109,9 +109,7 @@ fn is_command_id(s: &str) -> bool {
     let end_ok = |c: u8| c.is_ascii_lowercase() || c.is_ascii_digit();
     let b = s.as_bytes();
     match (b.first(), b.last()) {
-        (Some(f), Some(l)) => {
-            end_ok(*f) && end_ok(*l) && b.iter().all(|c| end_ok(*c) || *c == b'_' || *c == b'.')
-        }
+        (Some(f), Some(l)) => end_ok(*f) && end_ok(*l) && b.iter().all(|c| end_ok(*c) || *c == b'_' || *c == b'.'),
         _ => false,
     }
 }
@@ -189,7 +187,9 @@ fn algorithms(o: &Obj, at: &str) -> Result<Vec<AlgorithmId>, EntryError> {
     let mut out = Vec::new();
     for (i, v) in array(o, "algorithms", at)?.iter().enumerate() {
         let here = format!("{at}.algorithms[{i}]");
-        out.push(AlgorithmId::parse(as_str(v, &here)?).map_err(|_| err(&here, "expected module.feature.method@x.y.z"))?);
+        out.push(
+            AlgorithmId::parse(as_str(v, &here)?).map_err(|_| err(&here, "expected module.feature.method@x.y.z"))?,
+        );
     }
     Ok(out)
 }
@@ -226,7 +226,11 @@ fn time(o: &Obj, at: &str) -> Result<EntryTime, EntryError> {
     let here = format!("{at}.time");
     let t = obj(get(o, "time", at)?, &here)?;
     fields(t, &here, &["utc", "mono_ns", "sync"], &[])?;
-    Ok(EntryTime { utc: utc(t, "utc", &here)?, mono_ns: u64_field(t, "mono_ns", &here)?, sync: text(t, "sync", &here)? })
+    Ok(EntryTime {
+        utc: utc(t, "utc", &here)?,
+        mono_ns: u64_field(t, "mono_ns", &here)?,
+        sync: text(t, "sync", &here)?,
+    })
 }
 
 fn manifests(o: &Obj, at: &str) -> Result<Manifests, EntryError> {
@@ -399,7 +403,8 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
     let o = obj(v, at)?;
     let kind = EntryKind::parse(string(o, "kind", at)?)?;
     let key = body_key(kind);
-    let required = ["kind", "stream", "branch", "logical_parent", "time", "principal", "ai_assistance", "manifests", key];
+    let required =
+        ["kind", "stream", "branch", "logical_parent", "time", "principal", "ai_assistance", "manifests", key];
     fields(o, at, &required, &["reason", "human_assertion", "signatures"])?;
 
     let pat = "draft.principal";

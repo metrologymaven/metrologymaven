@@ -60,7 +60,8 @@ fn recorded_salts(vec: &Obj) -> RecordedSalts {
 
 /// Rebuilds a fixture entry from its draft and recorded salts.
 fn rebuild(vec: &Obj) -> Entry {
-    let draft = EntryDraft::from_value(vec.get("draft").unwrap()).unwrap_or_else(|e| panic!("{}: {e}", st(vec, "name")));
+    let draft =
+        EntryDraft::from_value(vec.get("draft").unwrap()).unwrap_or_else(|e| panic!("{}: {e}", st(vec, "name")));
     let seq: u64 = st(vec, "seq").parse().unwrap();
     let prev = match vec.get("prev") {
         Some(CValue::Null) => None,

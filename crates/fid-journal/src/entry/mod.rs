@@ -551,10 +551,9 @@ impl EntryHeader {
         }
         let (key, body) = match &self.body {
             HeaderBody::Command(c) => ("command", command_value(c)),
-            HeaderBody::SessionHeader(si) => (
-                "session",
-                obj([("session_id", s(&si.session_id)), ("app_version", s(&si.app_version))]),
-            ),
+            HeaderBody::SessionHeader(si) => {
+                ("session", obj([("session_id", s(&si.session_id)), ("app_version", s(&si.app_version))]))
+            }
             HeaderBody::PrincipalUpgrade(u) => (
                 "upgrade",
                 obj([
@@ -618,11 +617,7 @@ impl EntryHeader {
 }
 
 fn command_value(c: &CommandHeader) -> BTreeMap<String, CValue> {
-    let inputs = c
-        .inputs
-        .iter()
-        .map(|t| CValue::Obj(obj([("tag", s(&t.tag)), ("digest", dg(&t.digest))])))
-        .collect();
+    let inputs = c.inputs.iter().map(|t| CValue::Obj(obj([("tag", s(&t.tag)), ("digest", dg(&t.digest))]))).collect();
     let outputs = c
         .outputs
         .iter()
