@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-registry]
+built_pr: 157
 satisfies: [REQ-CORE.REG.DEF-010]
 covers: []
 depends_on: [CORE.REG.DEF.FIELD]
