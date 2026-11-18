@@ -68,11 +68,8 @@ pub(crate) fn exp(x: f64) -> f64 {
     }
     let (k, hi, lo, xr) = if hx > 0x3FD6_2E42 {
         // |x| > 0.5 ln2
-        let k = if hx >= 0x3FF0_A2B2 {
-            (LOG2_E * x + if sign == 1 { -0.5 } else { 0.5 }) as i32
-        } else {
-            1 - sign - sign
-        };
+        let k =
+            if hx >= 0x3FF0_A2B2 { (LOG2_E * x + if sign == 1 { -0.5 } else { 0.5 }) as i32 } else { 1 - sign - sign };
         let hi = x - f64::from(k) * LN2HI; // exact
         let lo = f64::from(k) * LN2LO;
         (k, hi, lo, hi - lo)
