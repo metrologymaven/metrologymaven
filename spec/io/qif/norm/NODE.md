@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-qif]
 satisfies: [REQ-IO.QIF-006, REQ-IO.QIF-007]
 covers: []
 depends_on: [IO.REG.LIMITS]

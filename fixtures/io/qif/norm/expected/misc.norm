@@ -1,0 +1,3 @@
+<?fixture-before root?>
+<q:QIFDocument xmlns:n1="urn:example:alpha" xmlns:n2="urn:example:zeta" xmlns:q="http://qifstandards.org/xsd/qif3" xml:lang="en" n1:flag="also" n2:flag="yes"><q:Note>a &amp; b &lt; c &gt; de &lt;raw&gt; &amp; f&#xD;g</q:Note><q:Mixed>  <?inner data here?>  </q:Mixed><n2:Ext nl="p&#xA;q" quote="say &quot;hi&quot;" tab="x&#x9;y" n1:x="1"></n2:Ext><q:Value></q:Value><q:Count></q:Count><q:Nominal xmlns:n3="urn:example:kappa" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="9" xsi:type="n3:Special"> text <q:Inner></q:Inner></q:Nominal><plain attr="noNamespace">éü</plain><n4:Other xmlns:n4="urn:example:zeta2"></n4:Other></q:QIFDocument>
+<?fixture-after root?>
