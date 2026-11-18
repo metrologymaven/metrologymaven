@@ -1,0 +1,17 @@
+[package]
+name = "fid-replay"
+description = "Metrology Maven replay: outcome classification and decision invariance (spec node CORE.RPL.CLASS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+# Test-only: reads the JSON case fixture. fid-canon sits below fid-replay in layers.toml.
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

@@ -1,0 +1,1175 @@
+{
+ "tolerances": {
+  "length_mm": {
+   "abs": 1e-05,
+   "rel": 0.0
+  },
+  "angle_deg": {
+   "abs": 1e-07,
+   "rel": 1e-09
+  }
+ },
+ "cases": [
+  {
+   "name": "identical D0",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 12.5,
+     "replayed": 12.5,
+     "recorded_digest": "f64:0x1.9000000000000p+3",
+     "replayed_digest": "f64:0x1.9000000000000p+3"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "identical D1",
+   "class": "D1",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 13.5,
+     "replayed": 13.5,
+     "recorded_digest": "f64:0x1.b000000000000p+3",
+     "replayed_digest": "f64:0x1.b000000000000p+3"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "identical D2",
+   "class": "D2",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 14.5,
+     "replayed": 14.5,
+     "recorded_digest": "f64:0x1.d000000000000p+3",
+     "replayed_digest": "f64:0x1.d000000000000p+3"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "identical D3",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 15.5,
+     "replayed": 15.5,
+     "recorded_digest": "f64:0x1.f000000000000p+3",
+     "replayed_digest": "f64:0x1.f000000000000p+3"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "identical N",
+   "class": "N",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 16.5,
+     "replayed": 16.5,
+     "recorded_digest": "f64:0x1.0800000000000p+4",
+     "replayed_digest": "f64:0x1.0800000000000p+4"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "decision flip D0",
+   "class": "D0",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "decision flip D1",
+   "class": "D1",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "decision flip D2",
+   "class": "D2",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "decision flip D3",
+   "class": "D3",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "decision flip N",
+   "class": "N",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "identical digests but decision flipped",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.0,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.8000000000000p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "status flip among several",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.000001,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.800008637bd06p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "CONFORMS"
+    },
+    {
+     "recorded": "MEASURED",
+     "replayed": "NOT_MEASURED"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D0 same kernel+platform",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D0 other kernel",
+   "class": "D0",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D0 other platform",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": false,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D1 same kernel+platform",
+   "class": "D1",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D1 other kernel",
+   "class": "D1",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D1 other platform",
+   "class": "D1",
+   "same_kernel": true,
+   "same_platform_class": false,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D2 same kernel+platform",
+   "class": "D2",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D2 other kernel",
+   "class": "D2",
+   "same_kernel": false,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D2 other platform",
+   "class": "D2",
+   "same_kernel": true,
+   "same_platform_class": false,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit D3 same kernel+platform",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "last bit N same kernel+platform",
+   "class": "N",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.250000000000001,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d000000000001p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D2 other platform beyond tolerance",
+   "class": "D2",
+   "same_kernel": true,
+   "same_platform_class": false,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 7.25,
+     "replayed": 7.26,
+     "recorded_digest": "f64:0x1.d000000000000p+2",
+     "replayed_digest": "f64:0x1.d0a3d70a3d70ap+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 within absolute",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 10.0,
+     "replayed": 10.000004,
+     "recorded_digest": "f64:0x1.4000000000000p+3",
+     "replayed_digest": "f64:0x1.400008637bd06p+3"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 beyond absolute",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 10.0,
+     "replayed": 10.0001,
+     "recorded_digest": "f64:0x1.4000000000000p+3",
+     "replayed_digest": "f64:0x1.4000d1b71758ep+3"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 angle within relative",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "angle_deg",
+     "recorded": 1000.0,
+     "replayed": 1000.0000005,
+     "recorded_digest": "f64:0x1.f400000000000p+9",
+     "replayed_digest": "f64:0x1.f400000431bdfp+9"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 angle beyond relative",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "angle_deg",
+     "recorded": 1000.0,
+     "replayed": 1000.00001,
+     "recorded_digest": "f64:0x1.f400000000000p+9",
+     "replayed_digest": "f64:0x1.f4000053e2d62p+9"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 negative within",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": -4.0,
+     "replayed": -4.000002,
+     "recorded_digest": "f64:-0x1.0000000000000p+2",
+     "replayed_digest": "f64:-0x1.000008637bd06p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "D3 negative beyond",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": -4.0,
+     "replayed": -4.1,
+     "recorded_digest": "f64:-0x1.0000000000000p+2",
+     "replayed_digest": "f64:-0x1.0666666666666p+2"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "two outputs both within",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 1.000001,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.000010c6f7a0bp+0"
+    },
+    {
+     "kind": "angle_deg",
+     "recorded": 45.0,
+     "replayed": 45.00000001,
+     "recorded_digest": "f64:0x1.6800000000000p+5",
+     "replayed_digest": "f64:0x1.680000015798fp+5"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "two outputs one beyond",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 1.000001,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.000010c6f7a0bp+0"
+    },
+    {
+     "kind": "angle_deg",
+     "recorded": 45.0,
+     "replayed": 45.1,
+     "recorded_digest": "f64:0x1.6800000000000p+5",
+     "replayed_digest": "f64:0x1.68ccccccccccdp+5"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "one identical one within",
+   "class": "N",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 2.0,
+     "replayed": 2.0,
+     "recorded_digest": "f64:0x1.0000000000000p+1",
+     "replayed_digest": "f64:0x1.0000000000000p+1"
+    },
+    {
+     "kind": "angle_deg",
+     "recorded": 30.0,
+     "replayed": 30.00000001,
+     "recorded_digest": "f64:0x1.e000000000000p+4",
+     "replayed_digest": "f64:0x1.e0000002af31ep+4"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "tolerance missing D3",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "roughness_um",
+     "recorded": 0.8,
+     "replayed": 0.8001,
+     "recorded_digest": "f64:0x1.999999999999ap-1",
+     "replayed_digest": "f64:0x1.99a6b50b0f27cp-1"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": [
+     "TOLERANCE_MISSING:roughness_um"
+    ]
+   }
+  },
+  {
+   "name": "tolerance missing among known",
+   "class": "N",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 1.000001,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.000010c6f7a0bp+0"
+    },
+    {
+     "kind": "temp_c",
+     "recorded": 20.0,
+     "replayed": 20.01,
+     "recorded_digest": "f64:0x1.4000000000000p+4",
+     "replayed_digest": "f64:0x1.4028f5c28f5c3p+4"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": [
+     "TOLERANCE_MISSING:temp_c"
+    ]
+   }
+  },
+  {
+   "name": "unknown kind but identical",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "roughness_um",
+     "recorded": 0.8,
+     "replayed": 0.8,
+     "recorded_digest": "f64:0x1.999999999999ap-1",
+     "replayed_digest": "f64:0x1.999999999999ap-1"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "missing input with differences",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 2.0,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.0000000000000p+1"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": "scan:part-7",
+   "expect": {
+    "outcome": "NOT_REPLAYABLE",
+    "annotations": []
+   }
+  },
+  {
+   "name": "missing input with decision flip",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 1.0,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.0000000000000p+0"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": "probe-file",
+   "expect": {
+    "outcome": "NOT_REPLAYABLE",
+    "annotations": []
+   }
+  },
+  {
+   "name": "missing input identical",
+   "class": "D1",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 1.0,
+     "replayed": 1.0,
+     "recorded_digest": "f64:0x1.0000000000000p+0",
+     "replayed_digest": "f64:0x1.0000000000000p+0"
+    }
+   ],
+   "decisions": [],
+   "limits": [],
+   "missing": "cad",
+   "expect": {
+    "outcome": "NOT_REPLAYABLE",
+    "annotations": []
+   }
+  },
+  {
+   "name": "AC-3 1 nm flips decision at limit",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.0499995,
+     "replayed": 0.0500005,
+     "recorded_digest": "f64:0x1.99988d2a1f8e4p-5",
+     "replayed_digest": "f64:0x1.999aa60913a50p-5"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [
+    {
+     "kind": "length_mm",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": [
+     "MARGINAL"
+    ]
+   }
+  },
+  {
+   "name": "equivalent near limit",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.049999,
+     "replayed": 0.0499995,
+     "recorded_digest": "f64:0x1.999780baa582ep-5",
+     "replayed_digest": "f64:0x1.99988d2a1f8e4p-5"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "length_mm",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": [
+     "MARGINAL"
+    ]
+   }
+  },
+  {
+   "name": "identical near limit",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.049999,
+     "replayed": 0.049999,
+     "recorded_digest": "f64:0x1.999780baa582ep-5",
+     "replayed_digest": "f64:0x1.999780baa582ep-5"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "length_mm",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": [
+     "MARGINAL"
+    ]
+   }
+  },
+  {
+   "name": "equivalent far from limit",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.04,
+     "replayed": 0.0400004,
+     "recorded_digest": "f64:0x1.47ae147ae147bp-5",
+     "replayed_digest": "f64:0x1.47aeeb3a761d9p-5"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "length_mm",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "limit kind without tolerance",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "roughness_um",
+     "recorded": 0.8,
+     "replayed": 0.8,
+     "recorded_digest": "f64:0x1.999999999999ap-1",
+     "replayed_digest": "f64:0x1.999999999999ap-1"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "roughness_um",
+     "value": 0.8
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "IDENTICAL",
+    "annotations": []
+   }
+  },
+  {
+   "name": "limit on other kind",
+   "class": "D3",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.05,
+     "replayed": 0.050001,
+     "recorded_digest": "f64:0x1.999999999999ap-5",
+     "replayed_digest": "f64:0x1.999bb2788db05p-5"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "angle_deg",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "EQUIVALENT",
+    "annotations": []
+   }
+  },
+  {
+   "name": "divergent bit identity near limit",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 0.05,
+     "replayed": 0.05000000000000001,
+     "recorded_digest": "f64:0x1.999999999999ap-5",
+     "replayed_digest": "f64:0x1.999999999999bp-5"
+    }
+   ],
+   "decisions": [],
+   "limits": [
+    {
+     "kind": "length_mm",
+     "value": 0.05
+    }
+   ],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": [
+     "MARGINAL"
+    ]
+   }
+  }
+ ]
+}

@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # CORE.RPL.CLASS: Replay outcome classification and decision invariance
@@ -55,7 +55,7 @@ A pure function that turns a comparison of recorded and replayed outputs into on
 
 - **Registry command(s):** none; library used by every replay command.
 - **Data structures:** `StepComparison { class: Determinism, same_kernel: bool, same_platform_class: bool, outputs: Vec<(QuantityKind, recorded: f64, replayed: f64, recorded_digest, replayed_digest)>, decisions: Vec<(recorded, replayed)>, limits: Vec<(QuantityKind, f64)>, missing: Option<MissingItem> }`; `Outcome`; `Annotation { Marginal, ToleranceMissing(kind) }`; `trait ToleranceTable { fn tolerance(&self, kind) -> Option<Tolerance> }` with absolute and relative parts.
-- **Algorithm:** apply rules in order: missing -> NOT_REPLAYABLE; digests all equal -> IDENTICAL; decision or status change -> DIVERGENT; bit-identity required and not met -> DIVERGENT; any kind without tolerance -> DIVERGENT; all within tolerance -> EQUIVALENT; else DIVERGENT. `MARGINAL` is computed independently of the outcome.
+- **Algorithm:** apply rules in order: missing -> NOT_REPLAYABLE; decision or status change -> DIVERGENT; digests all equal -> IDENTICAL; bit-identity required and not met -> DIVERGENT; any kind without tolerance -> DIVERGENT; all within tolerance -> EQUIVALENT; else DIVERGENT. `MARGINAL` is computed independently of the outcome.
 - **Errors:** none at run time; invalid inputs are a typed `comparison_invalid` (mismatched output counts).
 - **Determinism:** D0; comparisons only, total-order float comparisons, no NaN accepted.
 - **Performance budget:** 1 million steps classified in < 1 s [unverified until measured].
@@ -67,7 +67,7 @@ A pure function that turns a comparison of recorded and replayed outputs into on
 
 ## Build prompt
 
-> In crate `fid-replay`, add module `classify` with `classify_step(&StepComparison, &dyn ToleranceTable) -> (Outcome, Vec<Annotation>)` and `aggregate(&[Outcome]) -> Outcome`. Rule order: missing input -> NOT_REPLAYABLE; all output digests equal -> IDENTICAL; any decision or status change -> DIVERGENT; class D0/D1/D2 with same kernel digest and same platform class but not bit-identical -> DIVERGENT; a differing output whose quantity kind has no tolerance -> DIVERGENT plus `tolerance_missing`; all differing outputs within tolerance -> EQUIVALENT; otherwise DIVERGENT. Add `MARGINAL` when a replayed value is within tolerance of a decision limit, without changing the outcome. Aggregate: DIVERGENT > NOT_REPLAYABLE > EQUIVALENT > IDENTICAL. The tolerance table comes through the `ToleranceTable` trait; the normative REP-1 data is supplied elsewhere. Tests: AC-1..AC-6 with fixtures in `fixtures/core/rpl/classify/`. Constraints: CONSTITUTION §4 (outcomes, any decision change is DIVERGENT), §8 (no panic, no unsafe, deny unwrap/expect), NaN is an error.
+> In crate `fid-replay`, add module `classify` with `classify_step(&StepComparison, &dyn ToleranceTable) -> (Outcome, Vec<Annotation>)` and `aggregate(&[Outcome]) -> Outcome`. Rule order: missing input -> NOT_REPLAYABLE; any decision or status change -> DIVERGENT; all output digests equal -> IDENTICAL; class D0/D1/D2 with same kernel digest and same platform class but not bit-identical -> DIVERGENT; a differing output whose quantity kind has no tolerance -> DIVERGENT plus `tolerance_missing`; all differing outputs within tolerance -> EQUIVALENT; otherwise DIVERGENT. Add `MARGINAL` when a replayed value is within tolerance of a decision limit, without changing the outcome. Aggregate: DIVERGENT > NOT_REPLAYABLE > EQUIVALENT > IDENTICAL. The tolerance table comes through the `ToleranceTable` trait; the normative REP-1 data is supplied elsewhere. Tests: AC-1..AC-6 with fixtures in `fixtures/core/rpl/classify/`. Constraints: CONSTITUTION §4 (outcomes, any decision change is DIVERGENT), §8 (no panic, no unsafe, deny unwrap/expect), NaN is an error.
 
 ## Open questions
 
