@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+exclude = ["vendor", "crates/fid-k/ext-win"]
+
+[workspace.package]
+version = "0.4.0"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+ext-ws = { path = "vendor/ext-ws" }

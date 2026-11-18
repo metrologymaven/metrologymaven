@@ -267,3 +267,72 @@ fn findings_are_sorted() {
         f.validate().unwrap();
     }
 }
+
+#[test]
+fn wide_renames_inheritance_targets_git_registry_and_two_versions() {
+    let r = run(&fix("wide/knp1-lint.toml")).unwrap();
+    let bytes = r.closure.to_canonical_bytes().unwrap();
+    assert_eq!(String::from_utf8(bytes).unwrap(), String::from_utf8(read("wide/expected-closure.json")).unwrap());
+    assert_eq!(lines(&r.findings), expected_lines("wide/expected-findings.txt"));
+    // fid-k's file list skips the nested closure crate ext-win.
+    let fid_k = r.closure.crates.iter().find(|c| c.name == "fid-k").unwrap();
+    assert_eq!(fid_k.files, ["src/lib.rs"]);
+}
+
+#[test]
+fn non_member_cannot_inherit_version() {
+    let err = run(&fix("inherit-version/knp1-lint.toml")).unwrap_err();
+    assert_eq!(err.code, GraphErrorCode::Unresolved);
+    assert!(err.message.contains("not a member"), "{err}");
+}
+
+#[test]
+fn nested_package_reached_by_path_attribute_is_scanned() {
+    let r = run(&fix("ok/knp1-lint.toml")).unwrap();
+    let ext_a = r.closure.crates.iter().find(|c| c.name == "ext-a").unwrap();
+    assert!(ext_a.files.iter().any(|f| f == "src/nested/helper.rs"), "{:?}", ext_a.files);
+}
+
+#[test]
+fn spdx_slash_only_in_plain_lists() {
+    let lic = set(&["MIT", "Apache-2.0"]);
+    let exc = set(&["LLVM-exception"]);
+    let ev = |e: &str| spdx::evaluate(e, &lic, &exc);
+    assert_eq!(ev("MIT/Apache-2.0"), Ok(true));
+    assert_eq!(ev("GPL-3.0-only/MIT"), Ok(true));
+    assert_eq!(ev("GPL-3.0-only/LGPL-2.1-only/MIT"), Ok(true));
+    assert_eq!(ev("GPL-3.0-only/AGPL-3.0-only"), Ok(false));
+    for bad in [
+        "MIT/Apache-2.0 AND GPL-3.0-only",
+        "GPL-3.0-only AND MIT/Apache-2.0",
+        "MIT OR Apache-2.0/GPL-3.0-only",
+        "Apache-2.0 WITH LLVM-exception/MIT",
+        "(MIT/Apache-2.0)",
+        "MIT/",
+        "/MIT",
+        "MIT//Apache-2.0",
+    ] {
+        assert!(ev(bad).is_err(), "{bad:?}");
+    }
+}
+
+/// The real workspace's kernel (layers `num` and `kernel` in layers.toml) is all first-party today.
+#[test]
+fn real_workspace_kernel_closure_is_first_party() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let layers = std::fs::read_to_string(repo.join("layers.toml")).unwrap();
+    let roots: Vec<String> = layers
+        .lines()
+        .filter(|l| l.ends_with("= \"num\"") || l.ends_with("= \"kernel\""))
+        .filter_map(|l| l.split('"').nth(1).map(str::to_string))
+        .collect();
+    assert!(roots.iter().any(|r| r == "fid-num"), "{roots:?}");
+    let list: Vec<String> = roots.iter().map(|r| format!("{r:?}")).collect();
+    let cfg = parse_config(&format!("[graph]\nroots = [{}]\n", list.join(", ")), &repo).unwrap();
+    let closure = compute_closure(&cfg).unwrap();
+    assert!(closure.crates.iter().all(|c| c.source_kind == SourceKind::Workspace), "{closure:?}");
+    let got: BTreeSet<&str> = closure.crates.iter().map(|c| c.name.as_str()).collect();
+    let want: BTreeSet<&str> = roots.iter().map(String::as_str).collect();
+    assert_eq!(got, want);
+    assert!(check(&closure, &[], &SpdxAllowlist::default()).is_empty());
+}

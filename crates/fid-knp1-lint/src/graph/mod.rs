@@ -411,8 +411,8 @@ struct Workspace {
     version: Option<String>,
     licence: Option<String>,
     deps: toml::Table,
-    /// Member directories (normalised).
-    members: BTreeSet<PathBuf>,
+    /// Member directories (normalised), each with its package (name, version), read once.
+    members: BTreeMap<PathBuf, (String, String)>,
 }
 
 fn expand_member(dir: &Path, pattern: &str, out: &mut BTreeSet<PathBuf>) -> Result<(), GraphError> {
@@ -444,8 +444,9 @@ fn expand_member(dir: &Path, pattern: &str, out: &mut BTreeSet<PathBuf>) -> Resu
 fn load_workspace(dir: &Path) -> Result<Workspace, GraphError> {
     let t = read_toml(&dir.join("Cargo.toml")).map_err(unresolved)?;
     let mut ws = Workspace { dir: dir.to_path_buf(), ..Workspace::default() };
+    let mut member_dirs: BTreeSet<PathBuf> = BTreeSet::new();
     if t.contains_key("package") {
-        ws.members.insert(norm(dir));
+        member_dirs.insert(norm(dir));
     }
     if let Some(toml::Value::Table(w)) = t.get("workspace") {
         let list = |k: &str| match w.get(k) {
@@ -457,7 +458,7 @@ fn load_workspace(dir: &Path) -> Result<Workspace, GraphError> {
             expand_member(dir, &m, &mut members)?;
         }
         let excluded: Vec<PathBuf> = list("exclude")?.iter().map(|e| norm(&dir.join(e))).collect();
-        ws.members.extend(members.into_iter().filter(|m| !excluded.iter().any(|e| m.starts_with(e))));
+        member_dirs.extend(members.into_iter().filter(|m| !excluded.iter().any(|e| m.starts_with(e))));
         if let Some(toml::Value::Table(p)) = w.get("package") {
             ws.version = p.get("version").and_then(toml::Value::as_str).map(str::to_string);
             ws.licence = p.get("license").and_then(toml::Value::as_str).map(str::to_string);
@@ -466,30 +467,55 @@ fn load_workspace(dir: &Path) -> Result<Workspace, GraphError> {
             ws.deps = d.clone();
         }
     }
+    for m in member_dirs {
+        let path = m.join("Cargo.toml");
+        let mt = read_toml(&path).map_err(unresolved)?;
+        let id = package_id(&mt, &path, &ws, true)?;
+        ws.members.insert(m, id);
+    }
     Ok(ws)
 }
 
-fn inherit(v: Option<&toml::Value>, from_ws: Option<&String>) -> Result<Option<String>, ()> {
+fn is_workspace_true(v: &toml::Value) -> bool {
+    matches!(v, toml::Value::Table(t) if t.get("workspace").and_then(toml::Value::as_bool) == Some(true))
+}
+
+/// A string field, or `{ workspace = true }` inherited from the workspace only by a member.
+fn inherit(v: Option<&toml::Value>, from_ws: Option<&String>, member: bool) -> Result<Option<String>, &'static str> {
     match v {
         None => Ok(None),
         Some(toml::Value::String(s)) => Ok(Some(s.clone())),
-        Some(toml::Value::Table(t)) if t.get("workspace").and_then(toml::Value::as_bool) == Some(true) => {
-            Ok(from_ws.cloned())
-        }
-        Some(_) => Err(()),
+        Some(w) if is_workspace_true(w) => match (member, from_ws) {
+            (true, Some(s)) => Ok(Some(s.clone())),
+            (true, None) => Err("is inherited but the workspace does not set it"),
+            (false, _) => Err("is inherited from a workspace the crate is not a member of"),
+        },
+        Some(_) => Err("is neither a string nor { workspace = true }"),
     }
+}
+
+/// Package name and version. A non-member inheriting its version is unresolved (fail closed).
+fn package_id(t: &toml::Table, path: &Path, ws: &Workspace, member: bool) -> Result<(String, String), GraphError> {
+    let bad = |what: &str| unresolved(format!("{}: {what}", path.display()));
+    let Some(toml::Value::Table(p)) = t.get("package") else { return Err(bad("no [package] table")) };
+    let name = p.get("name").and_then(toml::Value::as_str).ok_or_else(|| bad("no package name"))?.to_string();
+    let version = inherit(p.get("version"), ws.version.as_ref(), member)
+        .map_err(|e| bad(&format!("package version {e}")))?
+        .unwrap_or_else(|| "0.0.0".to_string());
+    Ok((name, version))
 }
 
 fn read_manifest(dir: &Path, ws: &Workspace) -> Result<Manifest, GraphError> {
     let path = dir.join("Cargo.toml");
     let t = read_toml(&path).map_err(unresolved)?;
+    let member = ws.members.contains_key(&norm(dir));
     let bad = |what: &str| unresolved(format!("{}: {what}", path.display()));
-    let Some(toml::Value::Table(p)) = t.get("package") else { return Err(bad("no [package] table")) };
-    let name = p.get("name").and_then(toml::Value::as_str).ok_or_else(|| bad("no package name"))?.to_string();
-    let version = inherit(p.get("version"), ws.version.as_ref())
-        .map_err(|()| bad("bad package version"))?
-        .unwrap_or_else(|| "0.0.0".to_string());
-    let licence = inherit(p.get("license"), ws.licence.as_ref()).unwrap_or(None);
+    let (name, version) = package_id(&t, &path, ws, member)?;
+    // A non-member's inherited (or malformed) licence counts as missing: fail closed.
+    let licence = match t.get("package") {
+        Some(toml::Value::Table(p)) => inherit(p.get("license"), ws.licence.as_ref(), member).unwrap_or(None),
+        _ => None,
+    };
     let mut deps: BTreeMap<String, DepDecl> = BTreeMap::new();
     let mut sections: Vec<&toml::Table> = vec![&t];
     if let Some(toml::Value::Table(targets)) = t.get("target") {
@@ -510,7 +536,7 @@ fn read_manifest(dir: &Path, ws: &Workspace) -> Result<Manifest, GraphError> {
             let Some(v) = sec.get(key) else { continue };
             let toml::Value::Table(list) = v else { return Err(bad(&format!("`{key}` is not a table"))) };
             for (dep_key, spec) in list {
-                let target = dep_target(dep_key, spec, dir, ws);
+                let target = dep_target(dep_key, spec, dir, ws, member);
                 let (pkg, path) = target.ok_or_else(|| bad(&format!("bad dependency {dep_key:?}")))?;
                 let d = deps.entry(pkg).or_default();
                 if dev {
@@ -528,10 +554,20 @@ fn read_manifest(dir: &Path, ws: &Workspace) -> Result<Manifest, GraphError> {
 }
 
 /// The package name and optional resolved `path` of one dependency declaration.
-fn dep_target(key: &str, spec: &toml::Value, dir: &Path, ws: &Workspace) -> Option<(String, Option<PathBuf>)> {
+/// `{ workspace = true }` is honoured only for workspace members (`None` otherwise: fail closed).
+fn dep_target(
+    key: &str,
+    spec: &toml::Value,
+    dir: &Path,
+    ws: &Workspace,
+    member: bool,
+) -> Option<(String, Option<PathBuf>)> {
     match spec {
         toml::Value::String(_) => Some((key.to_string(), None)),
-        toml::Value::Table(t) if t.get("workspace").and_then(toml::Value::as_bool) == Some(true) => {
+        w if is_workspace_true(w) => {
+            if !member {
+                return None;
+            }
             match ws.deps.get(key) {
                 Some(toml::Value::String(_)) => Some((key.to_string(), None)),
                 Some(toml::Value::Table(w)) => {
@@ -634,16 +670,23 @@ impl Closure {
     }
 }
 
-/// Checks that `dir` holds the manifest of `pkg` (same name and version).
-fn manifest_matches(dir: &Path, pkg: &LockPkg, ws: &Workspace) -> bool {
-    dir.join("Cargo.toml").is_file()
-        && read_manifest(dir, ws).is_ok_and(|m| m.name == pkg.name && m.version == pkg.version)
+/// Checks that `dir` holds the manifest of `pkg` (same name and version). Members come from the
+/// cache; any other manifest that exists but cannot be read fails the run.
+fn manifest_matches(dir: &Path, pkg: &LockPkg, ws: &Workspace) -> Result<bool, GraphError> {
+    if let Some((n, v)) = ws.members.get(dir) {
+        return Ok(*n == pkg.name && *v == pkg.version);
+    }
+    if !dir.join("Cargo.toml").is_file() {
+        return Ok(false);
+    }
+    let m = read_manifest(dir, ws)?;
+    Ok(m.name == pkg.name && m.version == pkg.version)
 }
 
 /// Finds the local source directory of `pkg`; `hints` are `path =` locations from the dependent.
 fn locate(pkg: &LockPkg, hints: &[PathBuf], cfg: &Config, ws: &Workspace) -> Result<(PathBuf, SourceKind), GraphError> {
     let kind_of = |dir: &Path| {
-        if ws.members.contains(dir) {
+        if ws.members.contains_key(dir) {
             SourceKind::Workspace
         } else if cfg.third_party_dir.as_ref().is_some_and(|tp| dir.starts_with(tp)) {
             cfg.third_party_kind
@@ -654,14 +697,14 @@ fn locate(pkg: &LockPkg, hints: &[PathBuf], cfg: &Config, ws: &Workspace) -> Res
     let mut candidates: Vec<PathBuf> = Vec::new();
     if pkg.source.is_none() {
         candidates.extend(hints.iter().cloned());
-        candidates.extend(ws.members.iter().cloned());
+        candidates.extend(ws.members.keys().cloned());
     } else if let Some(tp) = &cfg.third_party_dir {
         candidates.push(tp.join(format!("{}-{}", pkg.name, pkg.version)));
         candidates.push(tp.join(&pkg.name));
     }
     for c in candidates {
         let c = norm(&c);
-        if manifest_matches(&c, pkg, ws) {
+        if manifest_matches(&c, pkg, ws)? {
             let k = kind_of(&c);
             return Ok((c, k));
         }
@@ -670,7 +713,14 @@ fn locate(pkg: &LockPkg, hints: &[PathBuf], cfg: &Config, ws: &Workspace) -> Res
     Err(unresolved(format!("{} {} ({src}) has no local source", pkg.name, pkg.version)))
 }
 
-fn walk(dir: &Path, rel: &str, depth: usize, exclude: &[String], out: &mut Vec<String>) -> Result<(), GraphError> {
+fn walk(
+    dir: &Path,
+    rel: &str,
+    depth: usize,
+    exclude: &[String],
+    skip: &BTreeSet<PathBuf>,
+    out: &mut Vec<String>,
+) -> Result<(), GraphError> {
     if depth > MAX_WALK_DEPTH {
         return Err(unresolved(format!("{}: deeper than {MAX_WALK_DEPTH} directories", dir.display())));
     }
@@ -687,11 +737,12 @@ fn walk(dir: &Path, rel: &str, depth: usize, exclude: &[String], out: &mut Vec<S
         let path = dir.join(&name);
         let r = if rel.is_empty() { name.clone() } else { format!("{rel}/{name}") };
         if path.is_dir() {
-            // The crate's own build output and nested packages are not part of this crate.
-            if (rel.is_empty() && name == "target") || path.join("Cargo.toml").is_file() {
+            // Only known package roots (workspace members, closure crates) are someone else's
+            // files; every other directory, nested `Cargo.toml` or `target/` included, is scanned.
+            if skip.contains(&norm(&path)) {
                 continue;
             }
-            walk(&path, &r, depth + 1, exclude, out)?;
+            walk(&path, &r, depth + 1, exclude, skip, out)?;
         } else if name.ends_with(".rs") && path.is_file() && !exclude.iter().any(|g| glob::matches(g, &r)) {
             out.push(r);
             if out.len() > MAX_FILES_PER_CRATE {
@@ -703,9 +754,10 @@ fn walk(dir: &Path, rel: &str, depth: usize, exclude: &[String], out: &mut Vec<S
 }
 
 /// Lists every `.rs` file under `root` (including `build.rs`) not matched by `exclude`, sorted.
-pub fn enumerate_files(root: &Path, exclude: &[String]) -> Result<Vec<String>, GraphError> {
+/// Subdirectories in `skip` (other known package roots, normalised) are not entered.
+pub fn enumerate_files(root: &Path, exclude: &[String], skip: &BTreeSet<PathBuf>) -> Result<Vec<String>, GraphError> {
     let mut out = Vec::new();
-    walk(root, "", 0, exclude, &mut out)?;
+    walk(&norm(root), "", 0, exclude, skip, &mut out)?;
     out.sort();
     Ok(out)
 }
@@ -719,6 +771,11 @@ struct Visit {
 /// Computes the kernel closure offline from `Cargo.lock` and the manifests (REQ-001, REQ-002).
 /// Fails with `KNP1-GRAPH-UNRESOLVED` and no partial result if any package lacks local source.
 pub fn compute_closure(cfg: &Config) -> Result<Closure, GraphError> {
+    closure_and_lock(cfg).map(|(c, _)| c)
+}
+
+/// [`compute_closure`] plus the exact `Cargo.lock` bytes it parsed.
+fn closure_and_lock(cfg: &Config) -> Result<(Closure, Vec<u8>), GraphError> {
     let lock_bytes = read_bounded(&cfg.workspace.join("Cargo.lock")).map_err(unresolved)?;
     let lock_text = std::str::from_utf8(&lock_bytes).map_err(|_| unresolved("Cargo.lock: not UTF-8"))?;
     let pkgs = parse_lock(lock_text)?;
@@ -776,6 +833,8 @@ pub fn compute_closure(cfg: &Config) -> Result<Closure, GraphError> {
         manifests.insert(i, m);
     }
 
+    let mut skip: BTreeSet<PathBuf> = ws.members.keys().cloned().collect();
+    skip.extend(visits.values().map(|v| v.dir.clone()));
     let mut crates = Vec::new();
     for (i, v) in &visits {
         let pkg = pkgs.get(*i).ok_or_else(|| unresolved("lockfile index"))?;
@@ -792,13 +851,13 @@ pub fn compute_closure(cfg: &Config) -> Result<Closure, GraphError> {
             source_kind: v.kind,
             root: v.dir.clone(),
             root_label,
-            files: enumerate_files(&v.dir, &cfg.exclude)?,
+            files: enumerate_files(&v.dir, &cfg.exclude, &skip)?,
             licence: m.licence.clone(),
             path_from_root: v.path.clone(),
         });
     }
     crates.sort_by_cached_key(|c| (c.name.clone(), c.version.clone(), c.root_label.clone()));
-    Ok(Closure { crates })
+    Ok((Closure { crates }, lock_bytes))
 }
 
 // ------------------------------------------------------------------ checks
@@ -874,8 +933,7 @@ pub fn run(config_path: &Path) -> Result<GraphRun, GraphError> {
     };
     let allow = parse_allowlist(&text(&config.allowlist)?)?;
     let spdx = parse_spdx_allowlist(&text(&config.spdx_allowlist)?)?;
-    let closure = compute_closure(&config)?;
-    let lock = read_bounded(&config.workspace.join("Cargo.lock")).map_err(unresolved)?;
+    let (closure, lock) = closure_and_lock(&config)?;
     let findings = check(&closure, &allow, &spdx);
     Ok(GraphRun { config, closure, findings, lockfile_digest: input_digest(&lock) })
 }

@@ -9,7 +9,8 @@
 //! atom = id | "(" or ")"
 //! ```
 //!
-//! The legacy crates.io separator `/` is read as `OR`. Identifiers (including `+` suffixes and
+//! The legacy crates.io separator `/` is read as `OR`, but only in a plain `a/b[/c]` list; mixed with
+//! `AND`, `OR`, `WITH` or parentheses it is rejected. Identifiers (including `+` suffixes and
 //! `LicenseRef-…`) are compared literally against the allowlist, so anything unknown is denied.
 
 use std::collections::BTreeSet;
@@ -26,6 +27,8 @@ enum Tok {
     Id(String),
     And,
     Or,
+    /// Legacy crates.io separator, accepted only in a plain `a/b[/c]` list.
+    Slash,
     With,
     Open,
     Close,
@@ -68,7 +71,7 @@ fn lex(text: &str) -> Result<Vec<Tok>, String> {
             }
             b'/' => {
                 i += 1;
-                Tok::Or
+                Tok::Slash
             }
             _ if is_id_byte(c) => {
                 let start = i;
@@ -165,9 +168,22 @@ impl Parser {
 
 /// Parses an SPDX expression. Errors name the problem; they never panic.
 pub fn parse(text: &str) -> Result<Expr, String> {
-    let toks = lex(text)?;
+    let mut toks = lex(text)?;
     if toks.is_empty() {
         return Err("empty expression".to_string());
+    }
+    if toks.contains(&Tok::Slash) {
+        // Only `id/id[/id…]`: identifiers at even positions, `/` at odd ones, nothing else.
+        let at = |k: usize, t: &Tok| if k % 2 == 0 { matches!(t, Tok::Id(_)) } else { *t == Tok::Slash };
+        let plain = toks.len() % 2 == 1 && toks.iter().enumerate().all(|(k, t)| at(k, t));
+        if !plain {
+            return Err("`/` is only accepted in a plain list such as `MIT/Apache-2.0`".to_string());
+        }
+        for t in toks.iter_mut() {
+            if *t == Tok::Slash {
+                *t = Tok::Or;
+            }
+        }
     }
     let mut p = Parser { toks, pos: 0 };
     let e = p.or(0)?;
