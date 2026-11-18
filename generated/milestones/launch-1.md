@@ -20,20 +20,20 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**54** of **1336** leaves built in code ([B]).
+**57** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 48 built)
+### Wave 1 (125 leaves, 51 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
 - [B] [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
 - [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
 - [AGENT.LOCAL.REF](../../spec/agent/local/ref/NODE.md) Reference local agent configuration (S, P1a)
-- [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
+- [B] [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
 - [B] [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [B] [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
 - [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
@@ -65,7 +65,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.SIGN.GUIDE](../../spec/eco/rel/sign/guide/NODE.md) Public keys, key transitions and offline verification guide (S, P1a)
 - [ECO.REL.SIGN.OSSIGN](../../spec/eco/rel/sign/ossign/NODE.md) OS code signing, notarisation and Linux package signing (M, P1a)
 - [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
-- [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
+- [B] [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [B] [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
 - [B] [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
@@ -81,7 +81,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [B] [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
 - [B] [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
-- [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
+- [B] [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
 - [B] [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
 - [B] [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
 - [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)

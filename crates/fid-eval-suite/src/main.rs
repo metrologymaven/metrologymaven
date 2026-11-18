@@ -21,8 +21,8 @@ USAGE:
                                   Load the suite fail-closed (format and red-team
                                   predicate schema) and print a summary; with --json
                                   print {\"families\",\"markers\",\"payloads\",\"predicates\",
-                                  \"suite_version\",\"tasks\"} or {\"errors\"}; markers counts
-                                  the distinct entry_with_marker markers
+                                  \"subfamilies\",\"suite_version\",\"tasks\"} or {\"errors\"};
+                                  markers counts the distinct entry_with_marker markers
     fid-eval --version            Print the version
     fid-eval --help               Print this help
 
@@ -88,6 +88,7 @@ fn summary(st: &Suite, mode: Mode) -> CValue {
         }
         Mode::Check => {
             let mut families: BTreeMap<String, CValue> = BTreeMap::new();
+            let mut subfamilies: BTreeMap<String, CValue> = BTreeMap::new();
             let mut predicates = 0usize;
             let mut payloads = 0usize;
             let mut markers: BTreeSet<&str> = BTreeSet::new();
@@ -105,9 +106,17 @@ fn summary(st: &Suite, mode: Mode) -> CValue {
                     };
                     families.insert(f.as_str().to_string(), CValue::Num(n + 1.0));
                 }
+                if let Some(sf) = t.task.subfamily {
+                    let n = match subfamilies.get(sf.as_str()) {
+                        Some(CValue::Num(n)) => *n,
+                        _ => 0.0,
+                    };
+                    subfamilies.insert(sf.as_str().to_string(), CValue::Num(n + 1.0));
+                }
                 predicates += t.task.predicates.len();
             }
             m.insert("families".to_string(), CValue::Obj(families));
+            m.insert("subfamilies".to_string(), CValue::Obj(subfamilies));
             m.insert("predicates".to_string(), CValue::Num(predicates as f64));
             m.insert("payloads".to_string(), CValue::Num(payloads as f64));
             m.insert("markers".to_string(), CValue::Num(markers.len() as f64));

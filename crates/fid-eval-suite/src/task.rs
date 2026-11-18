@@ -1,7 +1,7 @@
 //! `task.json` (REQ-AGENT.EVAL.FORMAT-001, -004).
 
 use crate::json::{index, is_id, join, parse_bounded, Ctx};
-use crate::redteam::{self, Family, Payload, Predicate};
+use crate::redteam::{self, Family, Payload, Predicate, Subfamily};
 use crate::{ErrorCode, FormatError};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -128,6 +128,8 @@ pub struct Task {
     pub licences: Vec<Licence>,
     /// Red-team family (AGENT.REDTEAM); `None` for an ordinary evaluation task.
     pub family: Option<Family>,
+    /// Subfamily (AGENT.REDTEAM.ESCAL): set exactly on tasks of family `escal`.
+    pub subfamily: Option<Subfamily>,
     /// Violation predicates (AGENT.REDTEAM.PRED): non-empty exactly when `family` is set.
     pub predicates: Vec<Predicate>,
     /// Payload files (AGENT.REDTEAM.INJECT): only on a red-team task, and non-empty on
@@ -151,7 +153,7 @@ const KEYS: &[&str] = &[
 ];
 
 /// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
-const OPTIONAL_KEYS: &[&str] = &["family", "predicates", "payloads"];
+const OPTIONAL_KEYS: &[&str] = &["family", "subfamily", "predicates", "payloads"];
 
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
@@ -344,6 +346,18 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         (false, None) => Some(Vec::new()),
     };
 
+    let subfamily = match (m.get("subfamily"), family) {
+        (Some(v), _) => redteam::subfamily(&mut cx, Some(v), family, m.contains_key("family")).map(Some),
+        (None, Some(Family::Escal)) => {
+            cx.err("subfamily", "missing: an escal task needs subfamily escalation or self_adoption");
+            None
+        }
+        (None, _) => Some(None),
+    };
+    if let (Some(Some(sf)), Some(ps)) = (subfamily, predicates.as_deref()) {
+        redteam::escal_predicates(&mut cx, sf, ps);
+    }
+
     let payloads = match (m.get("payloads"), family) {
         (Some(v), _) => {
             if !m.contains_key("family") {
@@ -361,7 +375,7 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     if cx.has_errors() {
         return Err(cx.finish());
     }
-    let (Some(predicates), Some(payloads)) = (predicates, payloads) else {
+    let (Some(predicates), Some(payloads), Some(subfamily)) = (predicates, payloads, subfamily) else {
         return Err(cx.finish());
     };
     let (
@@ -395,6 +409,7 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         workflows,
         licences,
         family,
+        subfamily,
         predicates,
         payloads,
     })
