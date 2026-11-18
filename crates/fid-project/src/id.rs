@@ -13,7 +13,12 @@
 //! creates IDs (REQ-CORE.PRJ.CONT.ID-005).
 //!
 //! UUIDv7 bit convention: one 74-bit value `R` is drawn; `rand_a` is its top 12 bits
-//! (`R >> 62`) and `rand_b` its low 62 bits (RFC 9562 §5.7 layout).
+//! (`R >> 62`) and `rand_b` its low 62 bits (RFC 9562 §5.7 layout). No sub-millisecond
+//! counter is used, so IDs created in the same millisecond, or after the clock steps back,
+//! are not ordered by creation (RFC 9562 and the leaf allow this).
+//!
+//! A UUIDv7 draws its two observations as one unit ([`ObservationSource::draw_v7`]): if
+//! either fails, nothing is recorded, so a retry leaves a clean `now_ms, random_bits` log.
 
 use fid_canon::{to_canonical_bytes, CValue, CanonError};
 use sha1::{Digest as _, Sha1};
@@ -246,6 +251,51 @@ impl Observation {
         }
         CValue::Obj(m)
     }
+
+    /// Inverse of [`Observation::to_cvalue`], for replay reading the journal. Accepts the
+    /// 64-bit fields as [`CValue::U64`] or, as parsed from JSON text, as decimal strings.
+    /// Fails closed with `bad_observation` on any other shape, extra key or non-canonical spelling.
+    pub fn from_cvalue(v: &CValue) -> Result<Observation, IdError> {
+        let m = match v {
+            CValue::Obj(m) => m,
+            _ => return Err(IdError::BadObservation),
+        };
+        match m.get("kind") {
+            Some(CValue::Str(k)) if k == "now_ms" && m.len() == 2 => {
+                Ok(Observation::NowMs(u64_field(m.get("value"))?))
+            }
+            Some(CValue::Str(k)) if k == "random_bits" && m.len() == 3 => {
+                let width = u32::try_from(u64_field(m.get("width"))?).map_err(|_| IdError::BadObservation)?;
+                let hex = match m.get("value") {
+                    Some(CValue::Str(s)) => s.strip_prefix("0x").ok_or(IdError::BadObservation)?,
+                    _ => return Err(IdError::BadObservation),
+                };
+                let canonical = !hex.is_empty()
+                    && hex.len() <= 32
+                    && hex.bytes().all(|c| matches!(c, b'0'..=b'9' | b'a'..=b'f'))
+                    && (hex == "0" || !hex.starts_with('0'));
+                if !canonical {
+                    return Err(IdError::BadObservation);
+                }
+                let value = u128::from_str_radix(hex, 16).map_err(|_| IdError::BadObservation)?;
+                Ok(Observation::RandomBits(Bits::new(width, value)?))
+            }
+            _ => Err(IdError::BadObservation),
+        }
+    }
+}
+
+/// A 64-bit field: `U64`, or a canonical decimal string (no sign, no leading zeros).
+fn u64_field(v: Option<&CValue>) -> Result<u64, IdError> {
+    match v {
+        Some(CValue::U64(n)) => Ok(*n),
+        Some(CValue::Str(s))
+            if !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()) && (s == "0" || !s.starts_with('0')) =>
+        {
+            s.parse().map_err(|_| IdError::BadObservation)
+        }
+        _ => Err(IdError::BadObservation),
+    }
 }
 
 /// Where the time and randomness of a UUIDv7 come from.
@@ -254,6 +304,14 @@ pub trait ObservationSource {
     fn now_ms(&mut self) -> Result<u64, IdError>;
     /// `n` (at most 128) random bits.
     fn random_bits(&mut self, n: u32) -> Result<Bits, IdError>;
+
+    /// The observations of one UUIDv7: `now_ms` then `random_bits(74)`, as one unit.
+    /// [`Recording`] and [`ReplaySource`] override it so a failure records or consumes nothing.
+    fn draw_v7(&mut self) -> Result<(u64, Bits), IdError> {
+        let ms = self.now_ms()?;
+        let bits = self.random_bits(V7_RANDOM_BITS)?;
+        Ok((ms, bits))
+    }
 }
 
 /// The system clock and the operating-system CSPRNG. Records nothing by itself;
@@ -320,6 +378,18 @@ impl<S: ObservationSource> ObservationSource for Recording<S> {
         self.log.push(Observation::RandomBits(b));
         Ok(b)
     }
+
+    /// Draws both values from the inner source first and records them only if both succeed.
+    fn draw_v7(&mut self) -> Result<(u64, Bits), IdError> {
+        let ms = self.inner.now_ms()?;
+        let b = self.inner.random_bits(V7_RANDOM_BITS)?;
+        if b.width() != V7_RANDOM_BITS {
+            return Err(IdError::BadObservation);
+        }
+        self.log.push(Observation::NowMs(ms));
+        self.log.push(Observation::RandomBits(b));
+        Ok((ms, b))
+    }
 }
 
 /// The live source: system clock and CSPRNG, each value recorded.
@@ -367,6 +437,16 @@ impl ObservationSource for ReplaySource {
             Some(_) => Err(IdError::ReplayMismatch),
         }
     }
+
+    /// Consumes the pair only if both recorded values fit.
+    fn draw_v7(&mut self) -> Result<(u64, Bits), IdError> {
+        let start = self.next;
+        let pair = self.now_ms().and_then(|ms| self.random_bits(V7_RANDOM_BITS).map(|b| (ms, b)));
+        if pair.is_err() {
+            self.next = start;
+        }
+        pair
+    }
 }
 
 // ------------------------------------------------------------------ service
@@ -405,10 +485,9 @@ impl<'a> IdService<'a> {
         self.namespace
     }
 
-    /// A fresh UUIDv7: draws `now_ms` then `random_bits(74)` from the source.
+    /// A fresh UUIDv7: draws `now_ms` then `random_bits(74)` from the source as one unit.
     pub fn new_v7(&mut self) -> Result<Uuid, IdError> {
-        let ms = self.source.now_ms()?;
-        let r = self.source.random_bits(V7_RANDOM_BITS)?;
+        let (ms, r) = self.source.draw_v7()?;
         uuid_v7(ms, &r)
     }
 

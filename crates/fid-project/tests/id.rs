@@ -259,3 +259,87 @@ fn uuid_text_round_trip_and_constants() {
     assert_eq!(Uuid::from_bytes(*id.as_bytes()), id);
     assert_eq!(Uuid::NIL.to_string(), "00000000-0000-0000-0000-000000000000");
 }
+
+/// Clock that works, CSPRNG that fails on its first call only.
+struct FlakyRng {
+    rng_calls: usize,
+}
+
+impl ObservationSource for FlakyRng {
+    fn now_ms(&mut self) -> Result<u64, IdError> {
+        Ok(1645557742000)
+    }
+    fn random_bits(&mut self, n: u32) -> Result<Bits, IdError> {
+        self.rng_calls += 1;
+        if self.rng_calls == 1 {
+            return Err(IdError::ObservationUnavailable);
+        }
+        Bits::new(n, (0xCC3u128 << 62) | 0x18C4DC0C0C07398F)
+    }
+}
+
+#[test]
+fn failed_draw_records_nothing_and_retry_replays() {
+    let mut src = Recording::new(FlakyRng { rng_calls: 0 });
+    let existing = BTreeSet::new();
+    let id = {
+        let mut svc = IdService::new(ns(), &mut src, &existing);
+        assert_eq!(svc.new_v7(), Err(IdError::ObservationUnavailable));
+        svc.new_v7().unwrap()
+    };
+    assert_eq!(id.to_string(), "017f22e2-79b0-7cc3-98c4-dc0c0c07398f");
+    let obs = src.observations().to_vec();
+    assert_eq!(obs.len(), 2);
+    assert!(matches!(obs[0], Observation::NowMs(1645557742000)));
+    assert!(matches!(obs[1], Observation::RandomBits(_)));
+    let mut replay = ReplaySource::new(obs);
+    let mut svc = IdService::new(ns(), &mut replay, &existing);
+    assert_eq!(svc.new_v7(), Ok(id));
+}
+
+#[test]
+fn failed_replay_draw_consumes_nothing() {
+    let mut replay = ReplaySource::new(vec![Observation::NowMs(1)]);
+    assert_eq!(replay.draw_v7(), Err(IdError::ReplayExhausted));
+    assert_eq!(replay.remaining(), 1);
+    assert_eq!(replay.now_ms(), Ok(1));
+}
+
+#[test]
+fn observation_journal_form_round_trips() {
+    let (obs, _, _, _) = run_ac1();
+    for o in &obs {
+        let v = o.to_cvalue();
+        assert_eq!(Observation::from_cvalue(&v), Ok(*o));
+        // Through journal text: 64-bit integers come back as decimal strings.
+        let text = to_canonical_bytes(&v).unwrap();
+        assert_eq!(Observation::from_cvalue(&parse(&text).unwrap()), Ok(*o), "{o:?}");
+    }
+}
+
+#[test]
+fn observation_from_cvalue_fails_closed() {
+    for bad in [
+        r#"[]"#,
+        r#"{"kind":"now_ms"}"#,
+        r#"{"kind":"now_ms","value":"-1"}"#,
+        r#"{"kind":"now_ms","value":"01"}"#,
+        r#"{"kind":"now_ms","value":""}"#,
+        r#"{"kind":"now_ms","value":"18446744073709551616"}"#,
+        r#"{"kind":"now_ms","value":5}"#,
+        r#"{"kind":"now_ms","value":"5","extra":1}"#,
+        r#"{"kind":"clock","value":"5"}"#,
+        r#"{"kind":"random_bits","value":"0x1","width":"129"}"#,
+        r#"{"kind":"random_bits","value":"0x4","width":"2"}"#,
+        r#"{"kind":"random_bits","value":"0xA","width":"74"}"#,
+        r#"{"kind":"random_bits","value":"0x01","width":"74"}"#,
+        r#"{"kind":"random_bits","value":"0x","width":"74"}"#,
+        r#"{"kind":"random_bits","value":"1","width":"74"}"#,
+        r#"{"kind":"random_bits","value":"0x1","width":"74","x":null}"#,
+    ] {
+        let v = parse(bad.as_bytes()).unwrap();
+        assert_eq!(Observation::from_cvalue(&v), Err(IdError::BadObservation), "{bad}");
+    }
+    let ok = parse(br#"{"kind":"random_bits","value":"0x0","width":"74"}"#).unwrap();
+    assert_eq!(Observation::from_cvalue(&ok), Ok(Observation::RandomBits(Bits::new(74, 0).unwrap())));
+}
