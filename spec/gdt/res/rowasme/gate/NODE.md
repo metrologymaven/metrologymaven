@@ -67,6 +67,7 @@ Synthetic tables, inventories, ORS statistics, adoption records and rosters (inv
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** DMT row sign-off is gate H4 (once per row); agents propose rows with evidence.
 - The ORS per-suite statistics JSON shape is published by `UNC.ORS.RUN` (REQ-UNC.ORS.RUN-005); its schema version must be named in that node's Interfaces before this leaf is implemented.
 
 ## Children

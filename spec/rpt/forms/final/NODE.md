@@ -56,6 +56,7 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2 (batched release-and-adoption queue, AGENT.GATEPREP).
 - Is a `NONCONFORMS` row a blocker for finalisation, or is a failed FAI still a valid final record? Assumed valid: an FAI may document a failure, but every row must have a result.
 
 - **Applied at split (2026-11-17, D-034):** `TRUST.PROFILE` was removed from `depends_on` because TRUST is a later L2 domain than RPT (CONSTITUTION §2.1). Profile ceremony reaches finalisation through the bus precondition hook owned by `TRUST.PROFILE.GATE`, so no code edge is needed.

@@ -6,9 +6,9 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 | | Count |
 |---|---:|
-| Nodes in scope | 1818 |
+| Nodes in scope | 1820 |
 | Buildable leaves | 1336 |
-| Open nodes still to expand | 73 |
+| Open nodes still to expand | 75 |
 | Nodes blocked on decisions | 0 |
 | Build waves | 39 |
 
@@ -1477,6 +1477,8 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 
 ## Still to expand (open)
 
+- AGENT.GATEPREP Gate preparation: previews, batched queues, evidence packs
+- AGENT.REVIEW Independent agent reviewer
 - GDT.DIM.SIZEASME.LOCAL ASME two-point local size under a DMT pairing rule
 - GDT.DIM.SIZEISO.CALC ISO calculated sizes (circumference, area, volume)
 - GDT.DIM.SIZEISO.LOCAL ISO local sizes (two-point and spherical)

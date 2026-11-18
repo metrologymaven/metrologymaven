@@ -76,6 +76,7 @@ Alternatives considered:
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** the IQ/OQ runner stays open in every release (D-036 rule 3).
 - Amended for launch-1: REQ-QUAL.IQOQ-010 no longer requires `TRUST.ESIG` (excluded from launch-1); the Lean profile uses a human DSSE signature through `TRUST.SIGN`, and the dependency on `TRUST.ESIG.BIND` is removed. Launch-1 still lacks a human-facing package-signing command in TRUST (cross-domain).
 - Layer: CONSTITUTION §2.1 does not place QUAL product crates. `fid-qual` orchestrates TRUST, UNC, CORE.RPL and PLAT, so L3 is proposed; the steering group should confirm.
 - Whether the TRUST Result Package container admits qualification records as a payload kind is not yet specified by `TRUST.PKG`.

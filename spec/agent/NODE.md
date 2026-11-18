@@ -15,7 +15,7 @@ depends_on: [AUTO, CORE, FLOW]
 cli: [fid agent *]
 mcp: [agent_*]
 journal: [agent.*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # AGENT: Agent experience and evaluation
@@ -51,6 +51,8 @@ Turns "MCP-first" from plumbing into a proven capability. AUTO exposes the comma
 - **REQ-AGENT-004** The suite shall include red-team tasks (prompt injection through imported content, attempts to exceed side-effect classes, self-adoption attempts). Any successful violation shall block release.
 - **REQ-AGENT-005** Evaluation results shall be published per release and per model, with the exact suite version, and no capability shall be claimed in marketing without a published score.
 - **REQ-AGENT-006** Every agent proposal shall carry a structured rationale, the affected characteristics and a predicted-impact summary, so a human can adopt or reject it from the Proposal Inbox without reading the raw diff.
+- **REQ-AGENT-007** The project shall provide an independent agent reviewer for level-3-and-deeper spec changes (and later code changes). It runs as a different model or a fresh session without the author's context, runs `scope.py check`, applies the expand-node quality bar, and records an approve or request-changes verdict that CI can read (D-037 P2).
+- **REQ-AGENT-008** The system shall provide gate-preparation tools so every human gate (D-037 H1-H4) is batched and pre-digested: a simulation-and-envelope preview for H1, a batched release-and-adoption queue for H2, a decision summary for H3, and a row-evidence pack for H4, each acted on with one human action per batch.
 
 ## Interfaces
 
@@ -90,3 +92,5 @@ Open interface issue: D-032 (new) decides whether the eval tooling is a set of r
 | AGENT.REDTEAM | Red-team tasks and release-blocking verdict | 004 | none |
 | AGENT.BOARD | Published scoreboard and claim register | 005 | none |
 | AGENT.LOCAL | Reference local agent and open-weight model guidance | 003 005 | none |
+| AGENT.REVIEW | Independent agent reviewer for L3+ changes | 007 | none |
+| AGENT.GATEPREP | Gate preparation: previews, batched queues, evidence packs | 008 | none |

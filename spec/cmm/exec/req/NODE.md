@@ -60,6 +60,7 @@ RUNREQ (run request record and queue), HOLDREQ (hold request), PULL (station pul
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** agents may file run requests for a program approved under H1, within its approved envelope and unchanged tuple; refuse anything else. Update the MCP projection of `cmm.request_run@1` accordingly.
 - The side-effect class of `cmm.request_hold@1` is not in CONSTITUTION §3.1. It writes a request record (W1-like) but is reachable by agents under `run:hold`; the leaf should confirm the class, possibly through a D-007 follow-up decision.
 - Rate-limit defaults are placeholders.
 

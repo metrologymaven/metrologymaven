@@ -81,6 +81,7 @@ Implements CONSTITUTION C5 for alignments: an alignment created or changed by an
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - Classing adoption as W3 is this leaf's reading of CONSTITUTION §3 (adoption gates release of controlled records). The parent listed adopt without an MCP pattern; the W3 projection keeps it out of agents' reach while still letting an agent ask a human. Reviewers should confirm.
 - This leaf takes the principal kind (human or agent) as CORE.BUS supplies it. How a human at the CLI or a Python script is classed is open in D-012; this leaf does not depend on the outcome, but its test principals must follow whatever D-012 decides.
 

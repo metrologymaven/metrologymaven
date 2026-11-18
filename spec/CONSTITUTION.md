@@ -12,7 +12,7 @@ Sources: condensed from Design Baseline v3.1 (`../docs/concept/00-design-baselin
 | C2 | **The GPU is for display only.** No value of record comes from the GPU. Picks and lassos are resolved on the CPU into index sets or semantic queries before they are journaled. GPU output is tested against a CPU reference. |
 | C3 | **One command registry, no side doors.** Every change to document, record or configuration state is a registry command. GUI menus, CLI, MCP tools, Python bindings, the control channel and documentation are **generated** from the registry manifest. |
 | C4 | **Record everything.** Every command is written to a semantic journal that can be replayed, diffed and turned into a program. Screenshots and video capture are commands too. |
-| C5 | **Humans adopt agent work.** Agent-authored plans, filters, alignments and decision-rule choices are provenance-tagged. A human must adopt them before results produced under them are released. |
+| C5 | **Agent-first, closed human gates (D-037).** Agents do everything by default. Agent-authored plans, filters, alignments and decision-rule choices are provenance-tagged. A human acts only at the closed list of gates in §3.2, and adopts agent-authored choices at release (H2), in one batched act. |
 | C6 | **Untrusted text is data.** Every string that comes from content is typed as untrusted and never treated as instructions. |
 | C7 | **Local first.** Everything runs offline, with no account. Telemetry is off unless the user opts in. |
 | C8 | **Verification is free.** Result formats and the verifier are open and free under every licensing outcome. |
@@ -74,9 +74,9 @@ Every command declares one class. The class decides how it is projected to MCP.
 | S1 | signing | human only, out of band |
 | A0 | admin and safety configuration | **never on MCP** |
 
-Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agents never pass raw file paths; they get handles to approved import and export roots and cannot widen those roots.
+Agents never perform M1, S1, W3 or A0, and never adopt their own proposals; a human adopts them at the H2 gate (§3.2). Agents never pass raw file paths; they get handles to approved import and export roots and cannot widen those roots.
 
-**Human-only commands (D-031).** A registry command may declare `human_only: true`. The bus then refuses agent and script principals whatever the command's class, and MCP projects it as request-only. All adoption commands (`*.adopt_*`) and manual readings use it. Such a command stays W2 unless it releases a controlled record (W3).
+**Human-only commands (D-031).** A registry command may declare `human_only: true`. The bus then refuses agent and script principals whatever the command's class, and MCP projects it as request-only. Adoption commands (`*.adopt_*`) and manual readings use it. Such a command stays W2 unless it releases a controlled record (W3). Under D-037, adoption commands are invoked as items of the H2 release batch, not as separate stops.
 
 **Principals (D-012, D-030).**
 - CLI and Python callers are `script` by default.
@@ -87,10 +87,27 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agen
 - **Lean human assertion (D-035).** In the Lean profile, the human assertion that W3 release and protected-branch promotion need is CORE.BUS.PRIN's `HumanPresence` confirmation, which is OS user verification. TRUST.ESIG is the Regulated path. Signatures stay optional in Lean.
 - **Registry visibility (D-035).** Registry list and describe queries filter by the caller's projection. MCP callers never see `never`-projected commands.
 
-**Motion (D-008):**
-- Agents may not file run requests over MCP. Their only motion-related tools are `run:hold` and read-only status.
-- A program that an agent authored, in whole or in part, needs release by a human other than the requester. The Regulated profile requires this for every program.
-- Otherwise the same person may release and approve, as two distinct acts, with mandatory simulation and a setup run.
+**Motion (D-008 as amended by D-037):**
+- A human approves a program **once** (gate H1), after it has been simulated and collision-checked, together with its motion envelope and its program, machine, fixture and probe tuple.
+- Agents may then file run requests for that program within its envelope and unchanged tuple, without a new approval. Any change requires a new H1 approval.
+- Safety interlocks never become approvals and are never removed:
+  - the first run of a tuple is a reduced-speed setup run with an operator present;
+  - each batch cycle starts only from a physical controller or pendant input, a paired hardware button, or a verified presence tap;
+  - each cycle begins with a reduced-speed placement check.
+- Agents still never issue motion themselves. The Motion Executive does, under a verified ticket. `run:hold` stays available to agents.
+
+### 3.2 Human gates (D-037, closed list)
+
+A human acts only at these gates. Adding a gate needs a decision record. Every gate is batched, pre-digested by an agent (simulation, diff or evidence summary), one action per batch, and journaled.
+
+| Gate | Human act | Agents do everything else, for example |
+|---|---|---|
+| **H1 Motion envelope** | Approve a program plus its envelope once | Author, simulate, optimise; re-run within the envelope |
+| **H2 Record release** | Release (and, where required, sign) controlled records in batches, adopting the agent-authored choices they depend on in the same act | Measure, evaluate, draft and check; release non-controlled results |
+| **H3 Conformance authority** | Accept or reject parts only where the customer's quality system requires a named person | Decide everywhere else under typed decision rules |
+| **H4 Interpretation authority** | Sign off DMT rows once per row (D-009) | Apply signed rows; propose new rows with evidence |
+| **P1 Irreversible project decisions** | Licensing, naming, publishing, money, secrets, constitution and decision records | Everything else |
+| **P2 Structural review** | Approve level 1–2 splits and `frozen` transitions | Level 3+ splits and leaves are approved by an independent agent reviewer (different model or fresh session) |
 
 ### 3.1 Class assignments for common operations (D-007)
 

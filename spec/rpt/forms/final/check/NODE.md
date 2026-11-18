@@ -89,6 +89,7 @@ Says, before anyone tries to finalise, everything that stands between an FAI or 
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2: present all records and the agent-authored choices they depend on as one batch; release and adoption are a single human act.
 - Disposition of `NONCONFORMS` and `NOT_DECIDABLE` rows (material review) is not owned by any RPT node. This leaf treats both as notes, following the parent's assumption that an FAI may document a failure. The parent's Scope line about "`NOT_DECIDABLE` outcomes without disposition" is therefore not a blocker here; confirm with a quality-domain maintainer.
 - The rule "a later human `*.adopt_*` entry lists the adopted entry hashes" assumes every adoption command journals the hashes it adopts. Verify against `GDT` and `ALN` adoption leaves; if they journal object IDs instead, map IDs to entries here.
 

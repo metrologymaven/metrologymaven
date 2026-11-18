@@ -61,6 +61,7 @@ TUPLE (tuple state and reset), CAP (setup cap policy), PRESENCE (heartbeat requi
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** unchanged by D-037: per-cycle physical start, placement check and setup runs remain mandatory safety interlocks.
 - The 30 % setup cap comes from the Design Baseline §8 and is a policy choice, not a measured safety figure.
 - Placement-check point selection (which two or three safe points) needs a rule; the leaf may take them from the program's alignment features.
 

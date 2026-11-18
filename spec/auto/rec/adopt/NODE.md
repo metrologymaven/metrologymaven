@@ -83,6 +83,7 @@ Implements C5 for programs and scripts: a human must adopt every agent-authored 
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - The target's question (which class makes a command human-only) is answered by D-031: `human_only: true` on a W2 command. A shared CORE adoption mechanism is not needed.
 - `script.adopt_version@1` is new; `AUTO.REC`'s `cli`/`mcp`/`journal` lists name only `program.adopt_steps`.
 - `AUTO.REC.CONV` (leaf) must call `record_authorship` for drafts it creates under an agent principal; it does not say so yet.

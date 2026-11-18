@@ -74,6 +74,7 @@ Alternatives considered:
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** templates stay open in every release; the paid offering is the certified build with a completed dossier and support (D-036 rule 3 clarification).
 - Template licence: CC-BY-4.0 follows D-001's documentation licence; CC0 remains a maintainer option.
 - Which intended uses the P1a pack covers: the catalogue starts with transcription reports, the prismatic GD&T subset and scan inspection, matching launch-1.
 - The concept places VAP v1 in P1b; this node keeps P1a because REQ-QUAL-001 applies to every release. A phase move needs a decision.

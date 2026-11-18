@@ -61,6 +61,7 @@ SCHEMA (ticket body and canonical form), RELEASE (release and released-by-other 
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** a ticket may be issued for an agent-filed request when the program carries a valid H1 approval for the same envelope and tuple; any digest change invalidates it.
 - The released-by-other question raised at level 2 is settled by D-008 (option B): released-by-other for agent-authored programs and the Regulated profile; same person otherwise as two distinct acts with mandatory simulation and a setup run. Counsel review is still recommended before the first live-machine release.
 - The 15-minute default comes from the HAL concept doc and is a policy choice [unverified].
 

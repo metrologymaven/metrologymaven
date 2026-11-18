@@ -73,6 +73,7 @@ Implements CONSTITUTION C5 for form maps. A form map drafted or changed by an ag
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - None.
 
 ## Children

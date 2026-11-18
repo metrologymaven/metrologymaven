@@ -77,6 +77,7 @@ The MCP emitter and the invocation rule behind every MCP tool. It turns each pro
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** project `cmm.request_run@1` to agents as a named tool that the bus accepts only for H1-approved programs within envelope (D-008 as amended by D-037).
 - The run-ticket effect names depend on `CMM.EXEC` declarations; the allowlist is keyed on declared effects so it follows whatever CMM declares.
 
 ## Children

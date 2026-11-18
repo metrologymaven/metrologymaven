@@ -67,6 +67,7 @@ Synthetic proposal sets (CC0, in-repo); principal fixtures for human and agent f
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - The request-and-confirm projection for W2 adoption follows the C5 pattern; if `CORE.BUS` standardises a generic "agent requests human confirmation" mechanism, this leaf should use it.
 
 ## Children

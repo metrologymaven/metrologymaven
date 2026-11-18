@@ -81,6 +81,7 @@ Connects a validated Uncertainty Model version to the characteristics of a plan,
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - Whether adoption should instead be a generic CORE.JRN promotion of the agent branch that contains the model is for CORE to confirm; this leaf keeps an explicit digest-level adoption so the release gate has one fact to check.
 
 ## Children

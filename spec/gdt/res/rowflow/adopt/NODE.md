@@ -68,6 +68,7 @@ Synthetic base tables and signed-off revisions (CC0, in-repo).
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** DMT row sign-off is gate H4: once per row, pre-digested by AGENT.GATEPREP evidence packs.
 - Class W3 rests on the released table being a controlled record (parent open question).
 
 ## Children

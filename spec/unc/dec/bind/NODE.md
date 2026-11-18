@@ -81,6 +81,7 @@ The write path for decision rules. Binding a rule to characteristics or a plan i
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - Classing `decide.set_default_rule@1` as A0 (admin configuration) follows CONSTITUTION §3; if the steering group prefers W3, only the class changes.
 
 ## Children

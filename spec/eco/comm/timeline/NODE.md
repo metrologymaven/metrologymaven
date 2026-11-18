@@ -74,6 +74,7 @@ Hand-written event JSON files with relative day offsets resolved from a fixed ep
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an independent agent reviewer's approval counts as the one approving review for L3+ (D-037 P2).
 - The 7-day first-response target for maintainers (research/artcraft-design-lessons.md item 22) is not in REQ-ECO.COMM-005; a maintainer-side report could be added later under ECO.COMM.
 
 ## Children

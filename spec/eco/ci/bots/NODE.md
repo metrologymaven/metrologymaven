@@ -61,6 +61,7 @@ Three tools with different inputs: REG checks the register and every bot's exclu
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** add a required check that reads the AGENT.REVIEW verdict for level-3-and-deeper spec changes (D-037 P2).
 - Hosted third-party bots are optional: REQ-001 is met by the self-hosted reviewer (ECO.CI.BOTS.REVIEW), so no service has to be chosen now. Admitting a hosted bot is a register entry approved by a maintainer in a PR; if a hosted bot ever needs repository write access, a decision record is advisable [unverified that hosted bots honour path exclusions].
 
 ## Children

@@ -72,6 +72,7 @@ Alternatives considered:
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** the Inbox is the UI for the H2 batched release-and-adoption queue and the H1 preview; one action per batch.
 - The result-diff computation is assumed to be a CORE/kernel service; if it is not, it needs an owner.
 
 ## Children

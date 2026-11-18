@@ -67,7 +67,7 @@ See `seeds/out-of-scope.md`.
 - **REQ-FID-018** Any exported result shall be independently verifiable with a free, open-source verifier.
 - **REQ-FID-019** Alignments (best-fit, local, 3-2-1, RPS, datum-based, constrained, chained) shall be first-class, journaled and re-runnable objects.
 - **REQ-FID-020** The geometry model shall hold points, meshes, point clouds and exact CAD (B-rep and NURBS) together, with consistent units and coordinate frames.
-- **REQ-FID-021** Agents shall act through the same commands as humans, scoped by side-effect class, and shall never perform motion, signing or controlled-record release.
+- **REQ-FID-021** Agents shall act through the same commands as humans. Motion, controlled-record release, and named-person conformance decisions shall require the corresponding human gate (D-037 H1–H3).
 - **REQ-FID-022** The project shall have a public website, a docs portal and an adoption plan whose claims are generated from, or checked against, the spec tree and parity reports.
 - **REQ-FID-023** The project shall publish and test a support matrix of operating systems, architectures, GPU backends and hardware profiles, including offline shop-floor deployment.
 - **REQ-FID-024** The system shall support a published catalog of instruments and data sources (see `seeds/devices.md`), each through a named integration path and phase.

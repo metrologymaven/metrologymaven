@@ -80,6 +80,7 @@ Applies the crediting rule to probe results and writes one `DifferenceAttributio
 
 ## Open questions
 
+- **Revise for D-036/D-037 (accepted 2026-11-17):** an adoption command is now an item of the H2 batched release-and-adoption queue (AGENT.GATEPREP), not a separate stop; keep it `human_only`.
 - The lead-factor rule interprets REQ-MIG.EXPLAIN-002's "previously credited factor"; see the parent's Open questions.
 
 ## Children

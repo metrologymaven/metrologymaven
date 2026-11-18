@@ -38,6 +38,7 @@ Any agent works; `AGENTS.md` is tool-neutral. To expand a whole level, use `tool
 
 ## Review rules
 
-- **Level 1–2 splits, constitution changes and `frozen` transitions:** approval from a domain maintainer (the founder until maintainers exist).
-- **Level 3 and deeper:** lazy consensus. Merge after 72 h with one approving review and no objection.
+- **Level 1–2 splits, constitution changes, decision records and `frozen` transitions:** approval from a domain maintainer (the founder until maintainers exist).
+- **Level 3 and deeper:** one approving review from a human **or an independent agent reviewer** (a different model or a fresh session without the author's context, per D-037 P2), then merge after 72 h with no objection.
+- **Provenance (D-036):** if a PR contains agent-generated content, its description names the agent tool. Only contribute material you have the right to license under D-001.
 - **Seeds and typos:** one approving review.

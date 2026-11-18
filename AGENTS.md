@@ -33,12 +33,15 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 5. **Never paste standards text.** ISO, ASME and VDA text is copyrighted. Cite designators and clause numbers only, and paraphrase in your own words. Don't send standards text to any external service.
 6. **Mark uncertainty.** Claims about competitor behaviour, standards details or performance numbers you haven't verified get a trailing `[unverified]`.
 7. **No invented decisions.** If a choice belongs to the maintainers (licensing, naming, phase moves, dropping a competitor feature), open `decisions/D-NNN-*.md` and set the node to `status: decision`.
-8. **Agents never adopt their own proposals.** Splits at levels 1 and 2 and every `frozen` transition need human review in a PR.
+8. **Review gates (D-037 P2).** Splits at levels 1 and 2, every `frozen` transition, the constitution and decision records need human review in a PR. Level 3 and deeper may be approved by an **independent agent reviewer**: a different model or a fresh session without the author's context, which must run `scope.py check`. An agent never reviews its own work.
 9. **Keep files small and regular.** Use the templates in [templates/](templates/). Frontmatter lists are single-line `[a, b, c]`, and list items must not contain commas.
 
+10. **Research-risk nodes (D-036 rule 4).** Nodes under KRN.MAN.VAL, UNC.PROP, UNC.MODEL.SUBST, UNC.ORS, TRUST.REPLAY and AGENT.REDTEAM state acceptance criteria as **measurable hypotheses against public reference data**: "H-n: method X achieves ≤ Y against reference set Z, measured by W".
+11. **Paid-service boundary (D-036 rule 3).** Never move a capability the open apps need behind a paid service. Nodes that define a paid service say `service` in their Purpose.
+12. **Optional private context.** If `../docs/funding-strategy.md` exists, read it for context before expanding ECO, TRUST, QUAL, OUTR, KRN, GDT, UNC or AGENT nodes. Never copy its contents into this repository. Public contributors won't have it, and that's fine.
 ## Working rules (adapted from the Craft family's house rules)
 
-1. **A person is accountable** for everything an agent opens or comments. Agents don't add attribution to PRs.
+1. **A person is accountable** for everything an agent opens or comments. The PR description names the agent tool that generated content (D-036 rule 2), and every commit is DCO signed-off.
 2. **Check, then claim.** Before expanding a node, search open PRs and issues for its ID, and check `claimed_by:`. Claim it before writing, and release the claim if you stop.
 3. **Verify before you cite.** Open a node, seed or decision before referring to it. Treat notes in Open questions as hypotheses.
 4. **Report only what ran.** Say whether `scope.py check` passed. Never claim a check you didn't run.
