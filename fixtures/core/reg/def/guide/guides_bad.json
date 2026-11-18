@@ -1,0 +1,1111 @@
+[
+ {
+  "name": "ghost command",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load."
+     },
+     {
+      "command": "demo.ghost_cmd@1",
+      "purpose": "Nothing."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_unknown_command"
+  ]
+ },
+ {
+  "name": "undeclared major",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@2",
+      "purpose": "Load with a major that does not exist."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_unknown_command"
+  ]
+ },
+ {
+  "name": "removed major",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.old_import@1",
+      "purpose": "A major the manifest no longer lists."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_unknown_command"
+  ]
+ },
+ {
+  "name": "M1 step",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load."
+     },
+     {
+      "command": "demo.move_axis@1",
+      "purpose": "Move an axis."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_forbidden_step"
+  ]
+ },
+ {
+  "name": "S1 step",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.sign_report@1",
+      "purpose": "Sign the report."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_forbidden_step"
+  ]
+ },
+ {
+  "name": "A0 step",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.set_safety_limits@1",
+      "purpose": "Change the safety limits."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_forbidden_step"
+  ]
+ },
+ {
+  "name": "unknown then forbidden, in step order",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.move_axis@1",
+      "purpose": "Move."
+     },
+     {
+      "command": "demo.ghost_cmd@1",
+      "purpose": "Ghost."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_forbidden_step",
+   "guide_unknown_command"
+  ]
+ },
+ {
+  "name": "31 steps",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     },
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load again."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_too_large"
+  ]
+ },
+ {
+  "name": "201-character purpose",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Long étape Lon"
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_too_large"
+  ]
+ },
+ {
+  "name": "81-character title",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Title étape Title étape Title étape Title étape Title étape Title étape Title éta",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_too_large"
+  ]
+ },
+ {
+  "name": "501-character summary",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary éta",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_too_large"
+  ]
+ },
+ {
+  "name": "bad guide id 0: Demo.align_scan",
+  "guides": [
+   {
+    "id": "Demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 1: demo",
+  "guides": [
+   {
+    "id": "demo",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 2: demo.align-scan",
+  "guides": [
+   {
+    "id": "demo.align-scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 3: 1demo.align",
+  "guides": [
+   {
+    "id": "1demo.align",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 4: demo.align.scan",
+  "guides": [
+   {
+    "id": "demo.align.scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 5: demo._align",
+  "guides": [
+   {
+    "id": "demo._align",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 6: de_mo.align",
+  "guides": [
+   {
+    "id": "de_mo.align",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad guide id 7: demo.aaaaaaaaaaaaaaa",
+  "guides": [
+   {
+    "id": "demo.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad profile Core",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "Core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad profile c",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "c",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad profile core-app",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core-app",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad profile pxxxxxxxxxxx",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "pxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "bad profile _core",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "_core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_id"
+  ]
+ },
+ {
+  "name": "empty title",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_empty"
+  ]
+ },
+ {
+  "name": "empty summary",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_empty"
+  ]
+ },
+ {
+  "name": "no steps",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": []
+   }
+  ],
+  "expect": [
+   "guide_empty"
+  ]
+ },
+ {
+  "name": "empty purpose",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": ""
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_empty"
+  ]
+ },
+ {
+  "name": "unknown top-level field (a value)",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ],
+    "values": [
+     1.0
+    ]
+   }
+  ],
+  "expect": [
+   "unknown_field"
+  ]
+ },
+ {
+  "name": "unknown step field",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load.",
+      "params": {}
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "unknown_field"
+  ]
+ },
+ {
+  "name": "missing summary",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "missing_field"
+  ]
+ },
+ {
+  "name": "missing purpose",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1"
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "missing_field"
+  ]
+ },
+ {
+  "name": "major with leading zero",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@01",
+      "purpose": "Load."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
+  "name": "command without major",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan",
+      "purpose": "Load."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
+  "name": "title not a string",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": 7,
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
+  "name": "steps not an array",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": {
+     "command": "demo.load_scan@1"
+    }
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
+  "name": "step not an object",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     "demo.load_scan@1"
+    ]
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
+  "name": "duplicate guide id",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   },
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.load_scan@1",
+      "purpose": "Load the point cloud to align."
+     },
+     {
+      "command": "demo.fit_alignment@1",
+      "purpose": "Fit the scan to the CAD model and review the residuals."
+     },
+     {
+      "command": "demo.apply_alignment@1",
+      "purpose": "Apply the accepted alignment to the working document."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_duplicate"
+  ]
+ },
+ {
+  "name": "errors in two guides",
+  "guides": [
+   {
+    "id": "demo.first",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.ghost_cmd@1",
+      "purpose": "Ghost."
+     }
+    ]
+   },
+   {
+    "id": "demo.second",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.sign_report@1",
+      "purpose": "Sign."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_unknown_command",
+   "guide_forbidden_step"
+  ]
+ }
+]

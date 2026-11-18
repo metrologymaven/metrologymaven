@@ -1,0 +1,150 @@
+[
+ {
+  "id": "demo.align_scan",
+  "title": "Align a scan to CAD",
+  "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+  "profile": "core",
+  "steps": [
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Load the point cloud to align."
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Fit the scan to the CAD model and review the residuals."
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Apply the accepted alignment to the working document."
+   }
+  ]
+ },
+ {
+  "id": "demo.bounds_check",
+  "title": "Title étape Title étape Title étape Title étape Title étape Title étape Title ét",
+  "summary": "Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary étape Summary ét",
+  "profile": "pxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "steps": [
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step 0 étape Step "
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step 1 étape Step "
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step 2 étape Step "
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step 3 étape Step "
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step 4 étape Step "
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step 5 étape Step "
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step 6 étape Step "
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step 7 étape Step "
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step 8 étape Step "
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step 9 étape Step "
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step 10 étape Step"
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step 11 étape Step"
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step 12 étape Step"
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step 13 étape Step"
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step 14 étape Step"
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step 15 étape Step"
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step 16 étape Step"
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step 17 étape Step"
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step 18 étape Step"
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step 19 étape Step"
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step 20 étape Step"
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step 21 étape Step"
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step 22 étape Step"
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step 23 étape Step"
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step 24 étape Step"
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step 25 étape Step"
+   },
+   {
+    "command": "demo.apply_alignment@1",
+    "purpose": "Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step 26 étape Step"
+   },
+   {
+    "command": "demo.export_report@1",
+    "purpose": "Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step 27 étape Step"
+   },
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step 28 étape Step"
+   },
+   {
+    "command": "demo.fit_alignment@1",
+    "purpose": "Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step"
+   }
+  ]
+ }
+]

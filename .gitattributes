@@ -20,3 +20,5 @@ fixtures/knp1/graph/** -text
 # Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
 # part of the test data, and make_fixtures.py --check compares bytes.
 fixtures/io/qif/xml/parse/** -text
+# CORE.REG.DEF.GUIDE fixtures: hand-labelled by make_fixtures.py, which --check compares byte for byte.
+fixtures/core/reg/def/guide/** -text
