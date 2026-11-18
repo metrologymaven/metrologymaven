@@ -9,8 +9,8 @@ use fid_outreach::copy_guard::{
     check_rules, declares_incumbent_text, is_refset_name, parse_policy, parse_record, scan_reference_sets, Code,
     Policy, Record, Revisit,
 };
-use std::path::Path;
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
