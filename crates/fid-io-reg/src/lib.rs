@@ -1,0 +1,32 @@
+//! The safe-read framework of Metrology Maven (spec node `IO.REG`). This crate grows one
+//! leaf at a time; today it holds `IO.REG.LIMITS`: the harness every format reader runs
+//! inside.
+//!
+//! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
+//!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
+//! - [`Budget`]: per-invocation counters for bytes, elements, nesting depth (through the
+//!   [`DepthGuard`] scope token), tracked allocation and wall time;
+//! - [`BoundedSource`]: a [`std::io::Read`] wrapper that charges every byte;
+//! - [`IoError`]: the closed error taxonomy shared by all readers, with a [`Position`]
+//!   (byte offset, optional 1-based line and column) on every malformed-input variant;
+//! - [`UntrustedText`]: every string taken from file content (CONSTITUTION C6).
+//!
+//! The harness never relies on unwinding: every outcome is a returned `Result`.
+//! [`toy`] is a small recursive-descent reader built on the harness, used by the tests
+//! and the `limits_toy_reader` fuzz target.
+
+mod budget;
+mod error;
+mod limits;
+mod source;
+pub mod toy;
+mod untrusted;
+
+pub use budget::{Budget, Clock, DepthGuard, MonotonicClock, WALL_CHECK_EVERY};
+pub use error::{IoError, Position, CODES};
+pub use limits::{
+    LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
+    DEFAULT_WALL_MS,
+};
+pub use source::BoundedSource;
+pub use untrusted::{UntrustedDisplay, UntrustedText};
