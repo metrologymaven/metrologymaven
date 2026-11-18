@@ -1,0 +1,20 @@
+[package]
+name = "fid-qif-gen"
+description = "Build-time QIF 3.0 generator: pinned XSD manifest and digest check (spec node IO.QIF.GEN.PIN)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Shared `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+# SHA-256 of the pinned files; same crate and version as fid-canon and fid-testkit.
+sha2 = "0.10"
+# Reads qif-xsd.manifest.toml as an untyped table (no serde derive), as fid-knp1-lint does.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true
