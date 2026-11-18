@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-ECO.CI.BOTS-003, REQ-ECO.CI.BOTS-004]
 covers: []
 depends_on: []

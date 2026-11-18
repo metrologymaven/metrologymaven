@@ -6,6 +6,10 @@
 //! special layer usable only as a dev-dependency. The check reads Cargo's resolved
 //! graph and fails when a crate reaches a higher layer, directly or through other
 //! crates, depends on a `tool` crate, or uses `test-support` outside dev-dependencies.
+//!
+//! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`).
+
+pub mod bots;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};

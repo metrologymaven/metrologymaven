@@ -1,0 +1,23 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# AC-3 boundary with --today 2028-06-01 (2028 is a leap year): 2027-06-01 is 366 days
+# before it (stale), 2027-06-02 is 365 days before it (not stale).
+
+[[bot]]
+id = "edge-old"
+kind = "self-hosted"
+account = "edge-old[bot]"
+terms = "MIT"
+data_handling = "Sends nothing out."
+reviewed_on = 2027-06-01
+approved_by = "maintainer-a"
+sends_content = false
+
+[[bot]]
+id = "edge-new"
+kind = "self-hosted"
+account = "edge-new[bot]"
+terms = "Apache-2.0"
+data_handling = "Sends nothing out."
+reviewed_on = 2027-06-02
+approved_by = "maintainer-a"
+sends_content = false

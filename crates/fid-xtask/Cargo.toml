@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (spec node ECO.REPO.LAYERS)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask bots-check` (ECO.CI.BOTS.REG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,7 +13,10 @@ name = "fid-xtask"
 path = "src/main.rs"
 
 [dependencies]
+# Bounded JSON parsing for bot configs and the review export.
 fid-canon = { path = "../fid-canon" }
+# Reads bots.toml and TOML bot configs as untyped tables (no serde derive); already used by fid-knp1-lint.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]
 workspace = true
