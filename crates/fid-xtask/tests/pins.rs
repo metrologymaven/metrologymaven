@@ -65,6 +65,26 @@ fn rev_short_and_mixed_workspace() {
     check_fixture("mixed");
 }
 
+/// Unsupported member patterns, a matched folder without `Cargo.toml`, a missing
+/// literal member and an unreadable pattern base are reported, never skipped.
+#[test]
+fn member_problems_are_findings() {
+    check_fixture("members-bad");
+}
+
+/// Path dependencies inside the workspace root are checked (recursively); excluded
+/// folders and paths outside the root are not.
+#[test]
+fn path_dependencies_are_auto_members() {
+    check_fixture("auto-member");
+}
+
+/// REQ-ECO.REPO.TOPO-004: default ports and github.com path case are normalised.
+#[test]
+fn url_ports_and_case() {
+    check_fixture("url-ports-case");
+}
+
 /// `PIN-REPOS`: a bad repository map fails the run.
 #[test]
 fn bad_repository_map() {

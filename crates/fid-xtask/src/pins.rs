@@ -2,24 +2,25 @@
 //! `ECO.REPO.TOPO`, REQ-ECO.REPO-005).
 //!
 //! `repos.toml` lists the first-party repositories (`[[repo]] id, url, purpose,
-//! protected_tags`, optional `status`). The check reads the workspace root `Cargo.toml`
-//! and every workspace member manifest with a bounded TOML reader (no network, no
-//! `cargo metadata`), and for each `git` dependency whose normalised URL is a
-//! first-party repository requires an immutable selector: a full 40-hex `rev`, or a
-//! `tag` on a repository whose tags are protected.
+//! protected_tags`, optional `status`). The check reads the workspace root `Cargo.toml`,
+//! every workspace member, and every path dependency inside the workspace root (Cargo's
+//! automatic members), without network access or `cargo metadata`. For each `git`
+//! dependency whose normalised URL is a first-party repository it requires an immutable
+//! selector: a full 40-hex `rev`, or a `tag` on a repository whose tags are protected.
+//! A manifest or member pattern that cannot be checked is a `PIN-MANIFEST` finding,
+//! never a silent skip.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use toml::{Table, Value};
 
 const USAGE: &str = "usage: cargo xtask pins [--workspace <dir>] [--repos <repos.toml>]";
 
-/// Largest file the reader accepts.
+/// Largest file the check reads.
 const MAX_FILE_BYTES: u64 = 1 << 20;
 /// Most manifests one run reads.
 const MAX_MANIFESTS: usize = 10_000;
-/// Deepest nesting of arrays and inline tables.
-const MAX_DEPTH: usize = 32;
 
 /// Dependency tables of a manifest (and of `target.<cfg>`), including Cargo's legacy spellings.
 const DEP_TABLES: [&str; 5] =
@@ -27,6 +28,10 @@ const DEP_TABLES: [&str; 5] =
 
 /// Keys a `[[repo]]` entry may have.
 const REPO_KEYS: [&str; 5] = ["id", "url", "purpose", "protected_tags", "status"];
+
+/// Hosts whose owner/repository paths are case-insensitive. On every other host the
+/// path is compared case-sensitively.
+const CASE_INSENSITIVE_HOSTS: [&str; 2] = ["github.com", "www.github.com"];
 
 /// Entry point for `cargo xtask pins ...` (arguments after `pins`).
 pub fn cli(args: &[String]) -> ExitCode {
@@ -63,18 +68,53 @@ pub fn cli(args: &[String]) -> ExitCode {
 }
 
 /// Loads the repository map, then checks every workspace manifest. Returns sorted
-/// findings; `Err` is a bad repository map (`PIN-REPOS`) or an unreadable workspace.
-fn run(workspace: &Path, repos_file: &Path) -> Result<Vec<String>, String> {
+/// findings; `Err` is a bad repository map (`PIN-REPOS`) or an unreadable root manifest.
+fn run(ws: &Path, repos_file: &Path) -> Result<Vec<String>, String> {
     let text = read_bounded(repos_file).map_err(|e| format!("PIN-REPOS {}: {e}", repos_file.display()))?;
     let repos = parse_repos(&text).map_err(|e| format!("PIN-REPOS {}: {e}", repos_file.display()))?;
+    let root_file = ws.join("Cargo.toml");
+    let root = read_bounded(&root_file)
+        .map_err(|e| format!("PIN-IO {}: {e}", root_file.display()))
+        .and_then(|t| parse_toml(&t).map_err(|e| format!("PIN-MANIFEST Cargo.toml {e}")))?;
     let mut findings = BTreeSet::new();
-    for rel in manifests(workspace)? {
+    let (member_dirs, exclude) = members(ws, &root, &mut findings);
+    let excluded = |rel: &str| exclude.iter().any(|x| rel == x || rel.starts_with(&format!("{x}/")));
+    let mut queue: Vec<String> = member_dirs.into_iter().filter(|m| !excluded(m)).collect();
+    queue.push(String::new());
+    let mut seen = BTreeSet::new();
+    while let Some(rel) = queue.pop() {
+        if !seen.insert(rel.clone()) {
+            continue;
+        }
+        if seen.len() > MAX_MANIFESTS {
+            return Err(format!("PIN-IO more than {MAX_MANIFESTS} manifests"));
+        }
         let shown = if rel.is_empty() { "Cargo.toml".to_string() } else { format!("{rel}/Cargo.toml") };
-        let doc = read_bounded(&workspace.join(&rel).join("Cargo.toml")).and_then(|t| parse_toml(&t));
-        match doc {
-            Ok(doc) => check_manifest(&doc, &shown, &repos, &mut findings),
-            Err(e) => {
-                findings.insert(format!("PIN-MANIFEST {shown} {e}"));
+        let doc = if rel.is_empty() {
+            root.clone()
+        } else {
+            let file = ws.join(&rel).join("Cargo.toml");
+            if !file.is_file() {
+                findings.insert(format!("PIN-MANIFEST {shown} missing"));
+                continue;
+            }
+            match read_bounded(&file).and_then(|t| parse_toml(&t)) {
+                Ok(doc) => doc,
+                Err(e) => {
+                    findings.insert(format!("PIN-MANIFEST {shown} {e}"));
+                    continue;
+                }
+            }
+        };
+        check_manifest(&doc, &shown, &repos, &mut findings);
+        // Path dependencies inside the workspace root are workspace members too.
+        for (_, spec) in dependency_specs(&doc, false) {
+            if let Some(Value::String(p)) = spec.get("path") {
+                if let Some(dep) = resolve(&rel, p) {
+                    if !dep.is_empty() && !excluded(&dep) && !seen.contains(&dep) {
+                        queue.push(dep);
+                    }
+                }
             }
         }
     }
@@ -89,6 +129,10 @@ fn read_bounded(path: &Path) -> Result<String, String> {
     std::fs::read_to_string(path).map_err(|e| e.to_string())
 }
 
+fn parse_toml(text: &str) -> Result<Table, String> {
+    text.parse::<Table>().map_err(|e: toml::de::Error| e.to_string().trim_end().replace('\n', " "))
+}
+
 // ---------------------------------------------------------------------------------------
 // Repository map
 // ---------------------------------------------------------------------------------------
@@ -101,40 +145,38 @@ fn parse_repos(text: &str) -> Result<Repos, String> {
     if let Some(k) = doc.keys().find(|k| k.as_str() != "repo") {
         return Err(format!("unknown top-level key {k}"));
     }
-    let Some(Val::Arr(list)) = doc.get("repo") else {
+    let Some(Value::Array(list)) = doc.get("repo") else {
         return Err("expected [[repo]] entries".into());
     };
     let mut ids = BTreeSet::new();
     let mut repos = Repos::new();
     for (i, entry) in list.iter().enumerate() {
         let n = i + 1;
-        let Val::Table(t) = entry else {
+        let Value::Table(t) = entry else {
             return Err(format!("repo {n}: expected a table"));
         };
         if let Some(k) = t.keys().find(|k| !REPO_KEYS.contains(&k.as_str())) {
             return Err(format!("repo {n}: unknown key {k}"));
         }
         let text_field = |k: &str| match t.get(k) {
-            Some(Val::Str(s)) if !s.trim().is_empty() => Ok(s.clone()),
+            Some(Value::String(s)) if !s.trim().is_empty() => Ok(s.clone()),
             _ => Err(format!("repo {n}: {k} must be a non-empty string")),
         };
         let id = text_field("id")?;
         let url = text_field("url")?;
         text_field("purpose")?;
-        let protected = match t.get("protected_tags") {
-            Some(Val::Atom(a)) if a == "true" => true,
-            Some(Val::Atom(a)) if a == "false" => false,
-            _ => return Err(format!("repo {n}: protected_tags must be true or false")),
+        let Some(Value::Boolean(protected)) = t.get("protected_tags") else {
+            return Err(format!("repo {n}: protected_tags must be true or false"));
         };
         match t.get("status") {
             None => {}
-            Some(Val::Str(s)) if ["active", "archived", "planned"].contains(&s.as_str()) => {}
+            Some(Value::String(s)) if ["active", "archived", "planned"].contains(&s.as_str()) => {}
             _ => return Err(format!("repo {n}: status must be \"active\", \"archived\" or \"planned\"")),
         }
         if !ids.insert(id.clone()) {
             return Err(format!("repo {n}: duplicate id {id}"));
         }
-        if repos.insert(normalise_url(&url), protected).is_some() {
+        if repos.insert(normalise_url(&url), *protected).is_some() {
             return Err(format!("repo {n}: duplicate url {url}"));
         }
     }
@@ -144,29 +186,43 @@ fn parse_repos(text: &str) -> Result<Repos, String> {
     Ok(repos)
 }
 
-/// Normalises a git URL for comparison: drops the scheme and any user name, lower-cases
-/// the host, turns `user@host:path` into `host/path`, drops a query or fragment, and
-/// strips trailing `/` and `.git`. The path keeps its case.
+/// Normalises a git URL for comparison:
+/// - drops the scheme and any user name, and reads `user@host:path` as `host/path`;
+/// - lower-cases the host and drops the scheme's default port (443 https, 80 http,
+///   22 ssh, 9418 git);
+/// - drops a query or fragment, and strips trailing `/` and `.git`;
+/// - lower-cases the owner/repository path on case-insensitive hosts (github.com);
+///   elsewhere the path keeps its case.
 fn normalise_url(url: &str) -> String {
     let u = url.trim();
-    let (rest, had_scheme) = match u.find("://") {
+    let (scheme, rest) = match u.find("://") {
         Some(i) if i > 0 && u[..i].bytes().all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b)) => {
-            (&u[i + 3..], true)
+            (u[..i].to_ascii_lowercase(), &u[i + 3..])
         }
-        _ => (u, false),
+        _ => (String::new(), u),
     };
     let rest = rest.split(['?', '#']).next().unwrap_or("");
     let (mut authority, mut path) = match rest.find('/') {
         Some(i) => (rest[..i].to_string(), rest[i..].to_string()),
         None => (rest.to_string(), String::new()),
     };
-    if !had_scheme {
+    if scheme.is_empty() {
         if let Some(i) = authority.find(':') {
             path = format!("/{}{path}", &authority[i + 1..]);
             authority.truncate(i);
         }
     }
-    let host = authority.rsplit('@').next().unwrap_or("").to_ascii_lowercase();
+    let mut host = authority.rsplit('@').next().unwrap_or("").to_ascii_lowercase();
+    let default_port = match scheme.as_str() {
+        "https" | "git+https" => ":443",
+        "http" | "git+http" => ":80",
+        "ssh" | "git+ssh" => ":22",
+        "git" => ":9418",
+        _ => "",
+    };
+    if !default_port.is_empty() && host.ends_with(default_port) {
+        host.truncate(host.len() - default_port.len());
+    }
     loop {
         let before = path.len();
         while path.ends_with('/') {
@@ -179,6 +235,9 @@ fn normalise_url(url: &str) -> String {
             break;
         }
     }
+    if CASE_INSENSITIVE_HOSTS.contains(&host.as_str()) {
+        path = path.to_ascii_lowercase();
+    }
     format!("{host}{path}")
 }
 
@@ -186,41 +245,38 @@ fn normalise_url(url: &str) -> String {
 // Workspace manifests
 // ---------------------------------------------------------------------------------------
 
-/// Relative directories (`""` for the root) of the root manifest and every workspace member.
-fn manifests(ws: &Path) -> Result<Vec<String>, String> {
-    let root = ws.join("Cargo.toml");
-    let text = read_bounded(&root).map_err(|e| format!("PIN-IO {}: {e}", root.display()))?;
-    let doc = parse_toml(&text).map_err(|e| format!("PIN-MANIFEST Cargo.toml {e}"))?;
-    let mut out = BTreeSet::from([String::new()]);
-    let Some(Val::Table(w)) = doc.get("workspace") else {
-        return Ok(out.into_iter().collect());
+/// The member folders listed by `workspace.members` (patterns expanded) and the
+/// `workspace.exclude` folders, relative to the root. Problems become findings.
+fn members(ws: &Path, root: &Table, findings: &mut BTreeSet<String>) -> (Vec<String>, Vec<String>) {
+    let Some(Value::Table(w)) = root.get("workspace") else {
+        return (Vec::new(), Vec::new());
     };
-    let strings = |k: &str| -> Result<Vec<String>, String> {
+    let mut strings = |k: &str| -> Vec<String> {
         match w.get(k) {
-            None => Ok(Vec::new()),
-            Some(Val::Arr(a)) => a
+            None => Vec::new(),
+            Some(Value::Array(a)) => a
                 .iter()
-                .map(|v| match v {
-                    Val::Str(s) => Ok(clean_rel(s)),
-                    _ => Err(format!("PIN-MANIFEST Cargo.toml workspace.{k} must list strings")),
+                .filter_map(|v| match v {
+                    Value::String(s) => Some(clean_rel(s)),
+                    _ => {
+                        findings.insert(format!("PIN-MANIFEST Cargo.toml workspace.{k} must list strings"));
+                        None
+                    }
                 })
                 .collect(),
-            Some(_) => Err(format!("PIN-MANIFEST Cargo.toml workspace.{k} must be an array")),
+            Some(_) => {
+                findings.insert(format!("PIN-MANIFEST Cargo.toml workspace.{k} must be an array"));
+                Vec::new()
+            }
         }
     };
-    let exclude = strings("exclude")?;
-    for pattern in strings("members")? {
-        for rel in expand(ws, &pattern) {
-            let excluded = exclude.iter().any(|x| rel == *x || rel.starts_with(&format!("{x}/")));
-            if !excluded && ws.join(&rel).join("Cargo.toml").is_file() {
-                out.insert(rel);
-            }
-            if out.len() > MAX_MANIFESTS {
-                return Err(format!("PIN-IO more than {MAX_MANIFESTS} manifests"));
-            }
-        }
+    let exclude = strings("exclude");
+    let patterns = strings("members");
+    let mut out = BTreeSet::new();
+    for pattern in patterns {
+        out.extend(expand(ws, &pattern, findings));
     }
-    Ok(out.into_iter().collect())
+    (out.into_iter().collect(), exclude)
 }
 
 /// `./a//b/` -> `a/b`, with `\` read as `/`.
@@ -228,22 +284,56 @@ fn clean_rel(s: &str) -> String {
     s.replace('\\', "/").split('/').filter(|x| !x.is_empty() && *x != ".").collect::<Vec<_>>().join("/")
 }
 
-/// Expands a member pattern; `*` and `?` match within one path segment.
-fn expand(ws: &Path, pattern: &str) -> Vec<String> {
+/// Joins a relative `path` dependency onto the folder `base` of its manifest, resolving
+/// `.` and `..`. `None` when it is absolute or leaves the workspace root.
+fn resolve(base: &str, path: &str) -> Option<String> {
+    let p = path.replace('\\', "/");
+    if p.starts_with('/') || Path::new(path).is_absolute() || p.get(1..2) == Some(":") {
+        return None;
+    }
+    let mut parts: Vec<&str> = base.split('/').filter(|x| !x.is_empty()).collect();
+    for seg in p.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            s => parts.push(s),
+        }
+    }
+    Some(parts.join("/"))
+}
+
+/// Expands a member pattern; `*` and `?` match within one path segment (dot folders
+/// included, as Cargo's glob does). Other glob syntax (`**`, `[...]`, `{...}`) is
+/// reported, not guessed. Non-folder matches are not crates and are left out.
+fn expand(ws: &Path, pattern: &str, findings: &mut BTreeSet<String>) -> Vec<String> {
+    if pattern.contains("**") || pattern.contains(['[', ']', '{', '}', '!']) {
+        findings.insert(format!("PIN-MANIFEST Cargo.toml unsupported member pattern {pattern}"));
+        return Vec::new();
+    }
     let mut cur = vec![String::new()];
     for seg in pattern.split('/').filter(|s| !s.is_empty()) {
         let mut next = BTreeSet::new();
         for base in &cur {
-            if seg.contains(['*', '?']) {
-                let Ok(rd) = std::fs::read_dir(ws.join(base)) else { continue };
-                for e in rd.flatten() {
-                    let name = e.file_name().to_string_lossy().into_owned();
-                    if !name.starts_with('.') && e.path().is_dir() && wildcard(seg.as_bytes(), name.as_bytes()) {
-                        next.insert(join_rel(base, &name));
-                    }
-                }
-            } else {
+            if !seg.contains(['*', '?']) {
                 next.insert(join_rel(base, seg));
+                continue;
+            }
+            let Ok(rd) = std::fs::read_dir(ws.join(base)) else {
+                let shown = if base.is_empty() { "." } else { base.as_str() };
+                findings.insert(format!("PIN-MANIFEST {shown} cannot read folder for member pattern {pattern}"));
+                continue;
+            };
+            for e in rd {
+                let Ok(e) = e else {
+                    findings.insert(format!("PIN-MANIFEST {base} cannot read folder entry"));
+                    continue;
+                };
+                let name = e.file_name().to_string_lossy().into_owned();
+                if e.path().is_dir() && wildcard(seg.as_bytes(), name.as_bytes()) {
+                    next.insert(join_rel(base, &name));
+                }
             }
         }
         cur = next.into_iter().collect();
@@ -283,42 +373,9 @@ fn wildcard(p: &[u8], s: &[u8]) -> bool {
     pi == p.len()
 }
 
-/// Every `(name, spec table)` in the dependency tables of one manifest: the plain and
-/// target-specific tables, `workspace.dependencies`, `patch.<source>` and `replace`.
-fn dependency_specs(doc: &Table) -> Vec<(&str, &Table)> {
-    let mut tables: Vec<&Table> = Vec::new();
-    push_dep_tables(doc, &mut tables);
-    if let Some(w) = sub(doc, "workspace") {
-        tables.extend(sub(w, "dependencies"));
-    }
-    for k in ["target", "patch"] {
-        if let Some(all) = sub(doc, k) {
-            for v in all.values() {
-                if let Val::Table(t) = v {
-                    if k == "target" {
-                        push_dep_tables(t, &mut tables);
-                    } else {
-                        tables.push(t);
-                    }
-                }
-            }
-        }
-    }
-    tables.extend(sub(doc, "replace"));
-    let mut specs = Vec::new();
-    for t in tables {
-        for (name, v) in t {
-            if let Val::Table(spec) = v {
-                specs.push((name.as_str(), spec));
-            }
-        }
-    }
-    specs
-}
-
 fn sub<'t>(t: &'t Table, k: &str) -> Option<&'t Table> {
     match t.get(k) {
-        Some(Val::Table(m)) => Some(m),
+        Some(Value::Table(m)) => Some(m),
         _ => None,
     }
 }
@@ -331,14 +388,51 @@ fn push_dep_tables<'t>(t: &'t Table, out: &mut Vec<&'t Table>) {
     }
 }
 
+/// Every `(name, spec table)` in the dependency tables of one manifest: the plain and
+/// target-specific tables and `workspace.dependencies`; with `overrides`, also
+/// `patch.<source>` and `replace`.
+fn dependency_specs(doc: &Table, overrides: bool) -> Vec<(&str, &Table)> {
+    let mut tables: Vec<&Table> = Vec::new();
+    push_dep_tables(doc, &mut tables);
+    if let Some(w) = sub(doc, "workspace") {
+        tables.extend(sub(w, "dependencies"));
+    }
+    if let Some(targets) = sub(doc, "target") {
+        for v in targets.values() {
+            if let Value::Table(t) = v {
+                push_dep_tables(t, &mut tables);
+            }
+        }
+    }
+    if overrides {
+        if let Some(patches) = sub(doc, "patch") {
+            for v in patches.values() {
+                if let Value::Table(t) = v {
+                    tables.push(t);
+                }
+            }
+        }
+        tables.extend(sub(doc, "replace"));
+    }
+    let mut specs = Vec::new();
+    for t in tables {
+        for (name, v) in t {
+            if let Value::Table(spec) = v {
+                specs.push((name.as_str(), spec));
+            }
+        }
+    }
+    specs
+}
+
 fn check_manifest(doc: &Table, file: &str, repos: &Repos, findings: &mut BTreeSet<String>) {
-    for (name, spec) in dependency_specs(doc) {
-        let Some(Val::Str(git)) = spec.get("git") else { continue };
+    for (name, spec) in dependency_specs(doc, true) {
+        let Some(Value::String(git)) = spec.get("git") else { continue };
         let Some(&protected_tags) = repos.get(&normalise_url(git)) else { continue };
         let code = if spec.contains_key("branch") {
             Some("PIN-MOVING")
         } else if let Some(rev) = spec.get("rev") {
-            let full = matches!(rev, Val::Str(r) if r.len() == 40 && r.bytes().all(|b| b.is_ascii_hexdigit()));
+            let full = matches!(rev, Value::String(r) if r.len() == 40 && r.bytes().all(|b| b.is_ascii_hexdigit()));
             (!full).then_some("PIN-REV-SHORT")
         } else if spec.contains_key("tag") {
             (!protected_tags).then_some("PIN-TAG-UNPROTECTED")
@@ -351,438 +445,27 @@ fn check_manifest(doc: &Table, file: &str, repos: &Repos, findings: &mut BTreeSe
     }
 }
 
-// ---------------------------------------------------------------------------------------
-// Bounded TOML reader (the subset Cargo manifests and repos.toml use)
-// ---------------------------------------------------------------------------------------
-
-type Table = BTreeMap<String, Val>;
-
-#[derive(Debug, Clone, PartialEq)]
-enum Val {
-    Str(String),
-    Arr(Vec<Val>),
-    Table(Table),
-    /// A number, boolean or date, as written.
-    Atom(String),
-}
-
-/// Parses a TOML document into nested tables. Supports tables, arrays of tables, dotted
-/// keys, all four string forms, arrays and inline tables (both may span lines);
-/// numbers, booleans and dates are kept as text. Duplicate keys are an error.
-fn parse_toml(text: &str) -> Result<Table, String> {
-    let mut p = Parser { s: text.as_bytes(), pos: 0, line: 1 };
-    p.document().map_err(|e| format!("line {}: {e}", p.line))
-}
-
-struct Parser<'a> {
-    s: &'a [u8],
-    pos: usize,
-    line: usize,
-}
-
-fn table_at<'m>(mut t: &'m mut Table, path: &[String]) -> Result<&'m mut Table, String> {
-    for seg in path {
-        let v = t.entry(seg.clone()).or_insert_with(|| Val::Table(Table::new()));
-        t = match v {
-            Val::Table(m) => m,
-            Val::Arr(a) => match a.last_mut() {
-                Some(Val::Table(m)) => m,
-                _ => return Err(format!("key {seg} is not a table")),
-            },
-            _ => return Err(format!("key {seg} is not a table")),
-        };
-    }
-    Ok(t)
-}
-
-fn insert(t: &mut Table, current: &[String], key: &[String], v: Val) -> Result<(), String> {
-    let Some((last, parents)) = key.split_last() else {
-        return Err("empty key".into());
-    };
-    let path: Vec<String> = current.iter().chain(parents).cloned().collect();
-    let t = table_at(t, &path)?;
-    if t.contains_key(last) {
-        return Err(format!("duplicate key {last}"));
-    }
-    t.insert(last.clone(), v);
-    Ok(())
-}
-
-impl Parser<'_> {
-    fn peek(&self) -> Option<u8> {
-        self.s.get(self.pos).copied()
-    }
-
-    fn starts(&self, lit: &[u8]) -> bool {
-        self.s.get(self.pos..).is_some_and(|r| r.starts_with(lit))
-    }
-
-    fn bump(&mut self) -> Option<u8> {
-        let b = self.peek()?;
-        self.pos += 1;
-        if b == b'\n' {
-            self.line += 1;
-        }
-        Some(b)
-    }
-
-    fn expect(&mut self, b: u8) -> Result<(), String> {
-        if self.bump() == Some(b) {
-            Ok(())
-        } else {
-            Err(format!("expected '{}'", b as char))
-        }
-    }
-
-    fn skip_ws(&mut self) {
-        while matches!(self.peek(), Some(b' ' | b'\t')) {
-            self.pos += 1;
-        }
-    }
-
-    fn skip_comment(&mut self) {
-        if self.peek() == Some(b'#') {
-            while !matches!(self.peek(), None | Some(b'\n')) {
-                self.pos += 1;
-            }
-        }
-    }
-
-    /// Whitespace, comments and newlines.
-    fn skip_blank(&mut self) {
-        loop {
-            self.skip_ws();
-            self.skip_comment();
-            match self.peek() {
-                Some(b'\n' | b'\r') => {
-                    self.bump();
-                }
-                _ => return,
-            }
-        }
-    }
-
-    fn end_of_line(&mut self) -> Result<(), String> {
-        self.skip_ws();
-        self.skip_comment();
-        if self.starts(b"\r\n") {
-            self.pos += 1;
-        }
-        match self.peek() {
-            None => Ok(()),
-            Some(b'\n') => {
-                self.bump();
-                Ok(())
-            }
-            Some(_) => Err("expected end of line".into()),
-        }
-    }
-
-    fn document(&mut self) -> Result<Table, String> {
-        let mut root = Table::new();
-        let mut current: Vec<String> = Vec::new();
-        loop {
-            self.skip_blank();
-            match self.peek() {
-                None => return Ok(root),
-                Some(b'[') => {
-                    let array = self.starts(b"[[");
-                    self.pos += if array { 2 } else { 1 };
-                    self.skip_ws();
-                    let key = self.key()?;
-                    self.skip_ws();
-                    self.expect(b']')?;
-                    if array {
-                        self.expect(b']')?;
-                        let Some((last, parents)) = key.split_last() else {
-                            return Err("empty key".into());
-                        };
-                        let parent = table_at(&mut root, parents)?;
-                        match parent.entry(last.clone()).or_insert_with(|| Val::Arr(Vec::new())) {
-                            Val::Arr(a) => a.push(Val::Table(Table::new())),
-                            _ => return Err(format!("key {last} is not an array of tables")),
-                        }
-                    } else {
-                        table_at(&mut root, &key)?;
-                    }
-                    current = key;
-                }
-                Some(_) => {
-                    let key = self.key()?;
-                    self.skip_ws();
-                    self.expect(b'=')?;
-                    self.skip_ws();
-                    let v = self.value(0)?;
-                    insert(&mut root, &current, &key, v)?;
-                }
-            }
-            self.end_of_line()?;
-        }
-    }
-
-    /// A dotted key.
-    fn key(&mut self) -> Result<Vec<String>, String> {
-        let mut parts = vec![self.simple_key()?];
-        loop {
-            self.skip_ws();
-            if self.peek() != Some(b'.') {
-                return Ok(parts);
-            }
-            self.pos += 1;
-            self.skip_ws();
-            parts.push(self.simple_key()?);
-        }
-    }
-
-    fn simple_key(&mut self) -> Result<String, String> {
-        match self.peek() {
-            Some(b'"') => {
-                self.pos += 1;
-                self.basic_string(false)
-            }
-            Some(b'\'') => {
-                self.pos += 1;
-                self.literal_string(false)
-            }
-            _ => {
-                let start = self.pos;
-                while self.peek().is_some_and(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
-                    self.pos += 1;
-                }
-                if self.pos == start {
-                    return Err("expected a key".into());
-                }
-                Ok(String::from_utf8_lossy(&self.s[start..self.pos]).into_owned())
-            }
-        }
-    }
-
-    fn value(&mut self, depth: usize) -> Result<Val, String> {
-        if depth > MAX_DEPTH {
-            return Err("nested too deeply".into());
-        }
-        match self.peek() {
-            Some(b'"') if self.starts(b"\"\"\"") => {
-                self.pos += 3;
-                self.skip_first_newline();
-                self.basic_string(true).map(Val::Str)
-            }
-            Some(b'"') => {
-                self.pos += 1;
-                self.basic_string(false).map(Val::Str)
-            }
-            Some(b'\'') if self.starts(b"'''") => {
-                self.pos += 3;
-                self.skip_first_newline();
-                self.literal_string(true).map(Val::Str)
-            }
-            Some(b'\'') => {
-                self.pos += 1;
-                self.literal_string(false).map(Val::Str)
-            }
-            Some(b'[') => {
-                self.pos += 1;
-                let mut items = Vec::new();
-                loop {
-                    self.skip_blank();
-                    if self.peek() == Some(b']') {
-                        self.pos += 1;
-                        return Ok(Val::Arr(items));
-                    }
-                    items.push(self.value(depth + 1)?);
-                    self.skip_blank();
-                    match self.bump() {
-                        Some(b',') => {}
-                        Some(b']') => return Ok(Val::Arr(items)),
-                        _ => return Err("expected ',' or ']' in array".into()),
-                    }
-                }
-            }
-            Some(b'{') => {
-                self.pos += 1;
-                let mut t = Table::new();
-                self.skip_blank();
-                if self.peek() == Some(b'}') {
-                    self.pos += 1;
-                    return Ok(Val::Table(t));
-                }
-                loop {
-                    self.skip_blank();
-                    let key = self.key()?;
-                    self.skip_ws();
-                    self.expect(b'=')?;
-                    self.skip_ws();
-                    let v = self.value(depth + 1)?;
-                    insert(&mut t, &[], &key, v)?;
-                    self.skip_blank();
-                    match self.bump() {
-                        Some(b',') => {}
-                        Some(b'}') => return Ok(Val::Table(t)),
-                        _ => return Err("expected ',' or '}' in inline table".into()),
-                    }
-                }
-            }
-            _ => {
-                let start = self.pos;
-                while !matches!(self.peek(), None | Some(b' ' | b'\t' | b'\r' | b'\n' | b',' | b']' | b'}' | b'#')) {
-                    self.pos += 1;
-                }
-                if self.pos == start {
-                    return Err("expected a value".into());
-                }
-                Ok(Val::Atom(String::from_utf8_lossy(&self.s[start..self.pos]).into_owned()))
-            }
-        }
-    }
-
-    fn skip_first_newline(&mut self) {
-        if self.starts(b"\r\n") {
-            self.pos += 1;
-        }
-        if self.peek() == Some(b'\n') {
-            self.bump();
-        }
-    }
-
-    /// The closing delimiter of a multi-line string may carry up to two extra quotes.
-    fn close_multi(&mut self, q: u8, out: &mut Vec<u8>) -> bool {
-        let triple = [q, q, q];
-        if !self.starts(&triple) {
-            return false;
-        }
-        let mut n = 3;
-        while n < 5 && self.s.get(self.pos + n) == Some(&q) {
-            n += 1;
-        }
-        for _ in 3..n {
-            out.push(q);
-        }
-        self.pos += n;
-        true
-    }
-
-    /// The rest of a basic string, after its opening quote(s).
-    fn basic_string(&mut self, multi: bool) -> Result<String, String> {
-        let mut out = Vec::new();
-        loop {
-            if multi && self.close_multi(b'"', &mut out) {
-                break;
-            }
-            match self.bump() {
-                None => return Err("unterminated string".into()),
-                Some(b'"') if !multi => break,
-                Some(b'\n') if !multi => return Err("newline in string".into()),
-                Some(b'\\') => {
-                    let esc = self.bump().ok_or("unterminated string")?;
-                    let c = match esc {
-                        b'"' => '"',
-                        b'\\' => '\\',
-                        b'n' => '\n',
-                        b't' => '\t',
-                        b'r' => '\r',
-                        b'b' => '\u{8}',
-                        b'f' => '\u{c}',
-                        b'e' => '\u{1b}',
-                        b'u' | b'U' => {
-                            let n = if esc == b'u' { 4 } else { 8 };
-                            let hex = self.s.get(self.pos..self.pos + n).ok_or("short unicode escape")?;
-                            let hex = std::str::from_utf8(hex).map_err(|_| "bad unicode escape")?;
-                            let code = u32::from_str_radix(hex, 16).map_err(|_| "bad unicode escape")?;
-                            self.pos += n;
-                            char::from_u32(code).ok_or("bad unicode escape")?
-                        }
-                        b' ' | b'\t' | b'\r' | b'\n' if multi => {
-                            // Line-ending backslash: drop the newline and leading whitespace.
-                            while matches!(self.peek(), Some(b' ' | b'\t' | b'\r' | b'\n')) {
-                                self.bump();
-                            }
-                            continue;
-                        }
-                        _ => return Err("bad escape".into()),
-                    };
-                    let mut buf = [0u8; 4];
-                    out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
-                }
-                Some(b) => out.push(b),
-            }
-        }
-        String::from_utf8(out).map_err(|_| "string is not UTF-8".into())
-    }
-
-    /// The rest of a literal string, after its opening quote(s).
-    fn literal_string(&mut self, multi: bool) -> Result<String, String> {
-        let mut out = Vec::new();
-        loop {
-            if multi && self.close_multi(b'\'', &mut out) {
-                break;
-            }
-            match self.bump() {
-                None => return Err("unterminated string".into()),
-                Some(b'\'') if !multi => break,
-                Some(b'\n') if !multi => return Err("newline in string".into()),
-                Some(b) => out.push(b),
-            }
-        }
-        String::from_utf8(out).map_err(|_| "string is not UTF-8".into())
-    }
-}
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
 
-    fn s(x: &str) -> Val {
-        Val::Str(x.into())
-    }
-
     #[test]
-    fn reader_handles_manifest_shapes() {
+    fn dependency_tables_are_found() {
         let doc = parse_toml(concat!(
-            "# comment\n",
-            "[package]\n",
-            "name = \"a\" # trailing\n",
-            "version.workspace = true\n",
-            "\n",
             "[dependencies]\n",
-            "x = { git = 'https://h/x', rev = \"0123\", features = [\n  \"f1\", # c\n  \"f2\",\n] }\n",
-            "\n",
+            "x = { git = 'https://h/x', rev = \"0123\" }\n",
             "[target.'cfg(windows)'.dependencies.y]\n",
-            "git = \"\"\"\nhttps://h/y\"\"\"\n",
-            "branch = '''main'''\n",
-            "\n",
-            "[[bin]]\n",
-            "name = \"one\"\n",
-            "[[bin]]\n",
-            "name = \"t\\u00e9st\"\n",
+            "git = \"https://h/y\"\n",
+            "[workspace.dependencies]\n",
+            "w = { path = \"w\" }\n",
+            "[patch.crates-io]\n",
+            "p = { git = \"https://h/p\" }\n",
         ))
         .unwrap();
-        let Some(Val::Table(pkg)) = doc.get("package") else { panic!() };
-        assert_eq!(pkg.get("name"), Some(&s("a")));
-        assert_eq!(
-            pkg.get("version"),
-            Some(&Val::Table(Table::from([("workspace".into(), Val::Atom("true".into()))])))
-        );
-        let Some(Val::Table(deps)) = doc.get("dependencies") else { panic!() };
-        let Some(Val::Table(x)) = deps.get("x") else { panic!() };
-        assert_eq!(x.get("git"), Some(&s("https://h/x")));
-        assert_eq!(x.get("features"), Some(&Val::Arr(vec![s("f1"), s("f2")])));
-        let specs = dependency_specs(&doc);
-        let names: Vec<&str> = specs.iter().map(|(n, _)| *n).collect();
-        assert_eq!(names, ["x", "y"]);
-        assert_eq!(specs[1].1.get("git"), Some(&s("https://h/y")));
-        let Some(Val::Arr(bins)) = doc.get("bin") else { panic!() };
-        assert_eq!(bins.len(), 2);
-        assert_eq!(bins[1], Val::Table(Table::from([("name".into(), s("t\u{e9}st"))])));
-    }
-
-    #[test]
-    fn reader_rejects_bad_input() {
-        for bad in ["a = 1\na = 2\n", "a = \"open\n", "[x\n", "a = [1 2]\n", "a = 1 b = 2\n", "= 1\n"] {
-            assert!(parse_toml(bad).is_err(), "{bad:?}");
-        }
-        let deep = format!("a = {}{}\n", "[".repeat(40), "]".repeat(40));
-        assert!(parse_toml(&deep).is_err());
+        let names = |o| dependency_specs(&doc, o).iter().map(|(n, _)| n.to_string()).collect::<Vec<_>>();
+        assert_eq!(names(false), ["x", "w", "y"]);
+        assert_eq!(names(true), ["x", "w", "y", "p"]);
     }
 
     /// REQ-ECO.REPO.TOPO-004, hand-labelled.
@@ -793,15 +476,31 @@ mod tests {
             "https://example.org/fid/libs.git",
             "HTTPS://Example.org/fid/libs",
             "https://example.org/fid/libs/",
-            "http://EXAMPLE.ORG/fid/libs.git/",
+            "https://example.org:443/fid/libs",
+            "http://EXAMPLE.ORG:80/fid/libs.git/",
             "ssh://git@example.org/fid/libs.git",
+            "ssh://git@example.org:22/fid/libs.git",
             "git@example.org:fid/libs.git",
             "git+https://example.org/fid/libs?x=1",
         ] {
             assert_eq!(normalise_url(u), base, "{u}");
         }
-        assert_ne!(normalise_url("https://example.org/fid/Libs"), base);
-        assert_ne!(normalise_url("https://example.org/fid/libs2"), base);
+        for u in ["https://example.org/fid/Libs", "https://example.org/fid/libs2", "https://example.org:8443/fid/libs"]
+        {
+            assert_ne!(normalise_url(u), base, "{u}");
+        }
+        assert_eq!(normalise_url("https://GitHub.com/Org/Repo.git"), "github.com/org/repo");
+        assert_eq!(normalise_url("git@github.com:ORG/repo"), "github.com/org/repo");
+    }
+
+    #[test]
+    fn paths_resolve_inside_the_root_only() {
+        assert_eq!(resolve("app", "../libs/util"), Some("libs/util".into()));
+        assert_eq!(resolve("", "./a/./b/"), Some("a/b".into()));
+        assert_eq!(resolve("a\\b", "..\\c"), Some("a/c".into()));
+        assert_eq!(resolve("app", "../.."), None);
+        assert_eq!(resolve("app", "/abs/x"), None);
+        assert_eq!(resolve("app", "C:/x"), None);
     }
 
     #[test]
@@ -817,6 +516,8 @@ mod tests {
     fn bad_repo_maps_are_refused() {
         let ok = "[[repo]]\nid = \"a\"\nurl = \"https://h/a\"\npurpose = \"p\"\nprotected_tags = false\n";
         assert!(parse_repos(ok).is_ok());
+        let second = ok.replace("id = \"a\"", "id = \"b\"").replace("https://h/a", "HTTPS://H/a.git");
+        let dup_url = format!("{ok}{second}");
         for (text, why) in [
             ("", "empty"),
             ("[repo]\nid = \"a\"\n", "not an array of tables"),
@@ -824,12 +525,10 @@ mod tests {
             (&ok.replace("purpose = \"p\"\n", "")[..], "missing purpose"),
             (&ok.replace("id = \"a\"", "id = \"a\"\nowner = \"x\"")[..], "unknown key"),
             (&format!("{ok}status = \"gone\"\n")[..], "bad status"),
-            (
-                &format!("{ok}{}", ok.replace("id = \"a\"", "id = \"b\"").replace("https://h/a", "HTTPS://H/a.git"))[..],
-                "dup url",
-            ),
+            (&dup_url[..], "dup url"),
             (&format!("{ok}{}", ok.replace("https://h/a", "https://h/b"))[..], "dup id"),
             (&format!("x = 1\n{ok}")[..], "unknown top-level key"),
+            ("a = [\n", "syntax"),
         ] {
             assert!(parse_repos(text).is_err(), "{why}");
         }

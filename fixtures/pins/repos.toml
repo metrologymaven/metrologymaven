@@ -11,3 +11,9 @@ url = "https://example.org/fid/apps"
 purpose = "Fixture application repository without tag protection"
 protected_tags = false
 status = "active"
+
+[[repo]]
+id = "fid-gh"
+url = "https://github.com/fid-org/Core"
+purpose = "Fixture repository on a host with case-insensitive paths"
+protected_tags = false
