@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-ECO.APPS-002, REQ-ECO.APPS-003]
 covers: []
 depends_on: []

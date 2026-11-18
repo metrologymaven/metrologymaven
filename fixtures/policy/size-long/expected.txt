@@ -1,0 +1,1 @@
+POLICY-SIZE fid-app-a src/main.rs: 61 lines, limit 60

@@ -1,0 +1,20 @@
+{
+  "app": "b",
+  "commands": [
+    {
+      "definition_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "id": "x.do_thing@1",
+      "side_effect": "R0"
+    },
+    {
+      "definition_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "id": "y.only_a@1",
+      "side_effect": "R0"
+    },
+    {
+      "definition_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "id": "z.same@1",
+      "side_effect": "W2"
+    }
+  ]
+}

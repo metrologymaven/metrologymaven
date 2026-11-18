@@ -1,0 +1,2 @@
+POLICY-LEAK fid-x src/lib.rs:12: uses app-identity token current_app
+POLICY-LEAK fid-y Cargo.toml: depends on app crate fid-app-a

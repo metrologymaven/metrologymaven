@@ -18,7 +18,11 @@
 //!
 //! `rel sums`: the release checksum file and checksum statement (spec node
 //! `ECO.REL.SIGN.SUMS`), in [`rel::sums`].
+//!
+//! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
+//! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 
+pub mod apps_policy;
 pub mod crate_graph;
 pub mod plat_matrix_tiers;
 pub mod rel;
@@ -115,6 +119,8 @@ pub struct Graph {
     names: BTreeMap<String, String>,
     /// Package ID to its dependency edges.
     edges: BTreeMap<String, Vec<Edge>>,
+    /// Package ID to its `Cargo.toml` path, when `cargo metadata` gives one.
+    manifest_paths: BTreeMap<String, String>,
 }
 
 fn field<'a>(o: &'a BTreeMap<String, CValue>, k: &str) -> Result<&'a CValue, String> {
@@ -150,7 +156,11 @@ impl Graph {
         let mut g = Graph::default();
         for p in as_arr(field(root, "packages")?)? {
             let p = as_obj(p)?;
-            g.names.insert(as_str(field(p, "id")?)?.to_string(), as_str(field(p, "name")?)?.to_string());
+            let id = as_str(field(p, "id")?)?.to_string();
+            if let Some(CValue::Str(m)) = p.get("manifest_path") {
+                g.manifest_paths.insert(id.clone(), m.clone());
+            }
+            g.names.insert(id, as_str(field(p, "name")?)?.to_string());
         }
         let known = |g: &Graph, id: &str| {
             if g.names.contains_key(id) {
