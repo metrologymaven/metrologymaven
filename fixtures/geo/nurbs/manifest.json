@@ -1,0 +1,55 @@
+{
+ "format": "fid-nurbs-ref/1",
+ "oracle_version": "nurbs_oracle 1.0.0",
+ "seed": 40,
+ "license": "CC-BY-4.0",
+ "generator": "tools/fixtures/nurbs_oracle.py",
+ "files": [
+  {
+   "path": "analytic_set.json",
+   "sha256": "sha256:b94dcdc4d3727451959e2fbe7ad8936ee6a83fe40002d7b6b10384a901ee0ea6",
+   "seed": 42,
+   "oracle_version": "nurbs_oracle 1.0.0",
+   "counts": {
+    "entities": 24,
+    "evals": 480,
+    "inversions": 733
+   }
+  },
+  {
+   "path": "multi_minima.json",
+   "sha256": "sha256:776ce5ac83973b58699f218fc4b2f05be2292e80200a1d042df1c4232112ecfe",
+   "seed": 43,
+   "oracle_version": "nurbs_oracle 1.0.0",
+   "counts": {
+    "entities": 2,
+    "inversions": 260
+   }
+  },
+  {
+   "path": "ref_set_v1.json",
+   "sha256": "sha256:00756df103d13d7a70b49243991fe216567d0cdb5f0694232cedb77bb58f7bd1",
+   "seed": 40,
+   "oracle_version": "nurbs_oracle 1.0.0",
+   "counts": {
+    "entities": 62,
+    "evals": 1983,
+    "inversions": 5000
+   }
+  },
+  {
+   "path": "valid_set.json",
+   "sha256": "sha256:e6cd4cc287eccc6f408118d2ce36691de2966eda6d272cd5e1ffb447e4ccde69",
+   "seed": 41,
+   "oracle_version": "fixtures/geo/nurbs/make_data_fixtures.py (GEO.NURBS.DATA)",
+   "adopted": true
+  },
+  {
+   "path": "invalid_set.json",
+   "sha256": "sha256:616e444993523b6fb7b0c56f2149b7fb4827e49ba59b519649769256846fb517",
+   "seed": 41,
+   "oracle_version": "fixtures/geo/nurbs/make_data_fixtures.py (GEO.NURBS.DATA)",
+   "adopted": true
+  }
+ ]
+}
