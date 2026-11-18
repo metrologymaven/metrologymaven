@@ -378,6 +378,8 @@ fn when(outcome: &str, field: &str, forbid_otherwise: bool) -> CValue {
 /// JSON Schema (2020-12) for envelope v1; checked in as `schema/envelope-v1.json`.
 pub fn envelope_schema() -> CValue {
     let outcomes: Vec<&str> = Outcome::KNOWN.iter().map(Outcome::as_str).collect();
+    let mut codes: Vec<&str> = ErrorCode::KNOWN.iter().map(ErrorCode::as_str).collect();
+    codes.sort_unstable();
     obj([
         ("$schema", s("https://json-schema.org/draft/2020-12/schema")),
         ("$id", s("https://metrologymaven.io/schema/envelope-v1.json")),
@@ -391,7 +393,7 @@ pub fn envelope_schema() -> CValue {
                 ("envelope_version", obj([("const", CValue::Num(f64::from(ENVELOPE_VERSION)))])),
                 (
                     "command_id",
-                    obj([("type", s("string")), ("pattern", s("^[a-z0-9][a-z0-9_.]*[a-z0-9]@[0-9]{1,5}$"))]),
+                    obj([("type", s("string")), ("pattern", s("^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$"))]),
                 ),
                 ("outcome", obj([("enum", strs(&outcomes))])),
                 (
@@ -403,7 +405,7 @@ pub fn envelope_schema() -> CValue {
                         (
                             "properties",
                             obj([
-                                ("code", obj([("type", s("string"))])),
+                                ("code", obj([("enum", strs(&codes))])),
                                 ("message", obj([("type", s("string"))])),
                                 ("details", obj([])),
                             ]),

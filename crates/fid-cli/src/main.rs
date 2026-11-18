@@ -15,6 +15,7 @@ USAGE:
                                   with --digest print only its sha256 digest
     fid canon [FILE] --json       Print a result envelope (schema/envelope-v1.json)
                                   with the canonical value and its digest
+                                  (usage and file errors still print plain text)
     fid --version                 Print the version
     fid --help                    Print this help
 

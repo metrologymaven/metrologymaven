@@ -67,12 +67,13 @@ pub fn check_finite_slice(op: &'static str, xs: &[f64]) -> Result<(), NumError> 
 pub fn probe_fp_env() -> Result<(), NumError> {
     // FTZ: halving the smallest normal must give a non-zero subnormal.
     let t = black_box(f64::MIN_POSITIVE);
-    if black_box(t * black_box(0.5)) == 0.0 {
+    if black_box(t * black_box(0.5)).to_bits() == 0 {
         return Err(NumError::FpEnvironment { probe: "flush_to_zero" });
     }
-    // DAZ: subnormal inputs must not be read as zero.
+    // DAZ: subnormal inputs must not be read as zero. Bits are compared, not values,
+    // because DAZ also zeroes comparison operands.
     let s = black_box(f64::from_bits(1));
-    if black_box(s + s) != f64::from_bits(2) {
+    if black_box(s + s).to_bits() != 2 {
         return Err(NumError::FpEnvironment { probe: "denormals_are_zero" });
     }
     // Rounding: ties go to even, and values just above a tie round away from 1.
