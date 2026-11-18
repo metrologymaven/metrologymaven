@@ -3,7 +3,7 @@
 mod pins;
 
 use fid_xtask::plat_matrix_tiers;
-use fid_xtask::rel::version;
+use fid_xtask::rel::{sums, version};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -18,7 +18,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
-                     cargo xtask rel version-compare <a> <b>";
+                     cargo xtask rel version-compare <a> <b>\n       \
+                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -35,6 +36,7 @@ fn main() -> ExitCode {
         Some("personas-check") => personas_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -201,6 +203,43 @@ fn version_check(args: &[String]) -> ExitCode {
                 }
             }
             ExitCode::from(1)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.SUMS: `rel sums --manifest <file> --dir <dir> --out <dir>` writes `SHA256SUMS`
+/// and `sums-statement.json` into the output directory. Exit 0: written; 1: findings
+/// (SUMS-MISSING, SUMS-UNLISTED, SUMS-NAME, SUMS-IO), one per line, nothing written;
+/// 2: bad usage or an unparseable manifest (INPUT-PARSE). Offline; signs nothing.
+fn rel_sums(args: &[String]) -> ExitCode {
+    let (mut manifest, mut dir, mut out): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--dir", Some(v)) => dir = Some(PathBuf::from(v)),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(dir), Some(out)) = (manifest, dir, out) else {
+        eprintln!("rel sums: --manifest, --dir and --out are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match sums::run(&manifest, &dir, &out) {
+        Ok(s) => {
+            println!("sums: ok {} artefacts ({})", s.entries.len(), s.release);
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            let code = findings.iter().map(sums::SumsError::exit_code).max().unwrap_or(1);
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(code)
         }
     }
 }
