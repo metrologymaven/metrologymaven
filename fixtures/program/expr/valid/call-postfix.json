@@ -1,0 +1,41 @@
+{
+ "base": {
+  "base": {
+   "args": [
+    {
+     "k": "ident",
+     "name": "x",
+     "span": [
+      2,
+      3
+     ]
+    }
+   ],
+   "k": "call",
+   "name": "f",
+   "span": [
+    0,
+    4
+   ]
+  },
+  "k": "field",
+  "name": "y",
+  "span": [
+   0,
+   6
+  ]
+ },
+ "index": {
+  "k": "int",
+  "span": [
+   7,
+   8
+  ],
+  "v": "0"
+ },
+ "k": "index",
+ "span": [
+  0,
+  9
+ ]
+}

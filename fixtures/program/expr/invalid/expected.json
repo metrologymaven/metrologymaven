@@ -1,0 +1,130 @@
+{
+ "assign": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "bang": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "call-on-field": {
+  "error": "expr_syntax",
+  "offset": 3
+ },
+ "command-name": {
+  "error": "expr_syntax",
+  "offset": 3
+ },
+ "cond-as-operand": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "empty": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "field-keyword": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "field-number": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "for-loop": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "increment": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "int-overflow": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "juxtaposed": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "let-declaration": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "missing-else": {
+  "error": "expr_syntax",
+  "offset": 11
+ },
+ "missing-operand": {
+  "error": "expr_syntax",
+  "offset": 3
+ },
+ "name-too-long": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "non-ascii-operator": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "qty-bad-unit-char": {
+  "error": "expr_syntax",
+  "offset": 1
+ },
+ "qty-empty-unit": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "qty-unclosed": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "stray-close-bracket": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "string-bad-escape": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "string-raw-tab": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "string-unclosed": {
+  "error": "expr_syntax",
+  "offset": 0
+ },
+ "trailing-comma": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "unbalanced-call": {
+  "error": "expr_syntax",
+  "offset": 6
+ },
+ "unbalanced-close-paren": {
+  "error": "expr_syntax",
+  "offset": 5
+ },
+ "unbalanced-index": {
+  "error": "expr_syntax",
+  "offset": 3
+ },
+ "unbalanced-nested": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
+ "unbalanced-open-paren": {
+  "error": "expr_syntax",
+  "offset": 6
+ },
+ "unknown-char": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "walrus": {
+  "error": "expr_syntax",
+  "offset": 2
+ }
+}

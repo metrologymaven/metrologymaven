@@ -1,0 +1,24 @@
+{
+ "k": "binary",
+ "lhs": {
+  "k": "ident",
+  "name": "iffy",
+  "span": [
+   0,
+   4
+  ]
+ },
+ "op": "or",
+ "rhs": {
+  "k": "ident",
+  "name": "notable",
+  "span": [
+   8,
+   15
+  ]
+ },
+ "span": [
+  0,
+  15
+ ]
+}

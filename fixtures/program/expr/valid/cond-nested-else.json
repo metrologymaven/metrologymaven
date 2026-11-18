@@ -1,0 +1,54 @@
+{
+ "else": {
+  "else": {
+   "k": "ident",
+   "name": "e",
+   "span": [
+    34,
+    35
+   ]
+  },
+  "if": {
+   "k": "ident",
+   "name": "c",
+   "span": [
+    20,
+    21
+   ]
+  },
+  "k": "cond",
+  "span": [
+   17,
+   35
+  ],
+  "then": {
+   "k": "ident",
+   "name": "d",
+   "span": [
+    27,
+    28
+   ]
+  }
+ },
+ "if": {
+  "k": "ident",
+  "name": "a",
+  "span": [
+   3,
+   4
+  ]
+ },
+ "k": "cond",
+ "span": [
+  0,
+  35
+ ],
+ "then": {
+  "k": "ident",
+  "name": "b",
+  "span": [
+   10,
+   11
+  ]
+ }
+}

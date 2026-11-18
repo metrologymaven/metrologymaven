@@ -1,0 +1,32 @@
+{
+ "base": {
+  "base": {
+   "base": {
+    "k": "ident",
+    "name": "r",
+    "span": [
+     0,
+     1
+    ]
+   },
+   "k": "field",
+   "name": "circle",
+   "span": [
+    0,
+    8
+   ]
+  },
+  "k": "field",
+  "name": "center",
+  "span": [
+   0,
+   15
+  ]
+ },
+ "k": "field",
+ "name": "x",
+ "span": [
+  0,
+  17
+ ]
+}
