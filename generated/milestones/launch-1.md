@@ -33,7 +33,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
 - [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
 - [AGENT.LOCAL.REF](../../spec/agent/local/ref/NODE.md) Reference local agent configuration (S, P1a)
-- [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
+- [B] [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
 - [B] [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [B] [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
 - [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)

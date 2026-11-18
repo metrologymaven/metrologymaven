@@ -1,0 +1,121 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.ESCAL fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares command classes, human-only and promotion commands. See ref_predicates.py; manifest.json names the spec node of each command ID or marks it a placeholder.",
+  "commands": {
+    "inspect.import_points@1": {
+      "class": "W2",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "inspect.fit_circle@1": {
+      "class": "W2",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "report.write_brief@1": {
+      "class": "W2",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "export.write_file@1": {
+      "class": "W1",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "request.file_request@1": {
+      "class": "W1",
+      "promotion": false,
+      "named_in": "CORE.BUS.POL.PROJ"
+    },
+    "request.withdraw_request@1": {
+      "class": "W1",
+      "promotion": false,
+      "named_in": "CORE.BUS.POL.PROJ"
+    },
+    "journal.request_promote_branch@1": {
+      "class": "W1",
+      "promotion": false,
+      "named_in": "CORE.JRN.BR"
+    },
+    "journal.promote_branch@1": {
+      "class": "W2",
+      "promotion": true,
+      "named_in": "CORE.JRN.BR"
+    },
+    "journal.promote_protected_branch@1": {
+      "class": "W3",
+      "promotion": true,
+      "named_in": "CORE.JRN.BR"
+    },
+    "decide.bind_rule@1": {
+      "class": "W2",
+      "promotion": false,
+      "named_in": "UNC.DEC.BIND"
+    },
+    "decide.adopt_rule@1": {
+      "class": "W2",
+      "promotion": true,
+      "named_in": "UNC.DEC.BIND"
+    },
+    "report.adopt_fai@1": {
+      "class": "W2",
+      "promotion": true,
+      "named_in": "RPT.FORMS.FINAL.CHECK"
+    },
+    "report.finalize_fai@1": {
+      "class": "W3",
+      "promotion": false,
+      "named_in": "RPT.FORMS.FINAL.FREEZE"
+    },
+    "program.release@1": {
+      "class": "W3",
+      "promotion": false,
+      "named_in": "AUTO.REC.LIFE"
+    },
+    "sign.sign_record@1": {
+      "class": "S1",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "egress.send@1": {
+      "class": "X1",
+      "promotion": false,
+      "named_in": "CORE.BUS.POL.EGRESS"
+    },
+    "device.open_session@1": {
+      "class": "D1",
+      "promotion": false,
+      "named_in": "HAL.ACQ.SESS.LIFE"
+    },
+    "device.start_acquisition@1": {
+      "class": "D1",
+      "promotion": false,
+      "named_in": "HAL.ACQ.INGEST.CMDS"
+    },
+    "cmm.request_run@1": {
+      "class": "M1",
+      "promotion": false,
+      "named_in": "CMM.EXEC",
+      "envelope_request": true
+    },
+    "cmm.approve_ticket@1": {
+      "class": "M1",
+      "promotion": true,
+      "named_in": "CMM.EXEC.AUTHN"
+    },
+    "cmm.request_hold@1": {
+      "class": "W1",
+      "promotion": false,
+      "named_in": "CMM.EXEC"
+    },
+    "cmm.jog_axis@1": {
+      "class": "M1",
+      "promotion": false,
+      "named_in": "placeholder"
+    },
+    "settings.set_admin_value@1": {
+      "class": "A0",
+      "promotion": false,
+      "named_in": "CORE.STO.SET"
+    }
+  }
+}
