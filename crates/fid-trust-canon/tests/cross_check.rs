@@ -20,7 +20,8 @@ fn fixtures() -> PathBuf {
 // TODO: remove this allowance (KNOWN_TIE_VECTORS, `tie_differences` and the
 // tie branch in `compare`) once the fid-canon tie-to-even fix PR merges; from then
 // on every golden vector and fuzz case must match fid-canon byte for byte.
-const KNOWN_TIE_VECTORS: [&str; 1] = ["numbers_exact_ties"];
+// numbers_every_power_of_two is listed because 2^-25 is such a tie (even: ...312).
+const KNOWN_TIE_VECTORS: [&str; 2] = ["numbers_exact_ties", "numbers_every_power_of_two"];
 
 fn collect_numbers(v: &Value, out: &mut Vec<f64>) {
     match v {
