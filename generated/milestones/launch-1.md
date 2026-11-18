@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**40** of **1336** leaves built in code ([B]).
+**46** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 34 built)
+### Wave 1 (125 leaves, 40 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -34,7 +34,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
 - [AGENT.LOCAL.REF](../../spec/agent/local/ref/NODE.md) Reference local agent configuration (S, P1a)
 - [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
-- [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
+- [B] [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
 - [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
 - [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
@@ -68,12 +68,12 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [B] [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
-- [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
+- [B] [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
 - [B] [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
 - [B] [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
 - [B] [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
 - [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
-- [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
+- [B] [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
 - [B] [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
 - [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
@@ -105,7 +105,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
 - [B] [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
 - [OUTR.SITE.GEN.IMPORT](../../spec/outr/site/gen/import/NODE.md) Generated-input lock file, fetch, digest check and build manifest (M, P0)
-- [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
+- [B] [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
 - [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
 - [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
@@ -115,7 +115,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
 - [PLAT.GPU.FALLBK.RDP](../../spec/plat/gpu/fallbk/rdp/NODE.md) Windows remote desktop start test (S, P1a)
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
-- [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
+- [B] [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
 - [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
 - [B] [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
 - [B] [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
@@ -145,7 +145,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [UNC.RDL.BLIND.CUST](../../spec/unc/rdl/blind/cust/NODE.md) Custody model, repository guard and sealed CI job (M, P1b)
 - [UNC.RDL.TRACIM.PUBLIC](../../spec/unc/rdl/tracim/public/NODE.md) Nightly public-test job (S, P0)
 - [UX.RESEARCH.PROTO](../../spec/ux/research/proto/NODE.md) Research plan, protocol, consent and data handling (M, P0)
-- [UX.SYSTEM.PKG](../../spec/ux/system/pkg/NODE.md) Design-system package format, versioning, changelog and deprecation (M, P0)
+- [B] [UX.SYSTEM.PKG](../../spec/ux/system/pkg/NODE.md) Design-system package format, versioning, changelog and deprecation (M, P0)
 - [VIZ.CAPTURE.VIDEO.ENCODE](../../spec/viz/capture/video/encode/NODE.md) AV1 encoder and WebM segment muxer (M, P1b)
 - [VIZ.OVERLAY.GDTGLYPH.ATLAS](../../spec/viz/overlay/gdtglyph/atlas/NODE.md) GD&T symbol MSDF atlas from the original drawings (S, P1a)
 - [VIZ.RENDER.FRAME.SHLINT](../../spec/viz/render/frame/shlint/NODE.md) Shader manifest, readback lint and toolkit-free check (S, P1a)

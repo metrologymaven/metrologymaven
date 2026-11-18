@@ -1,0 +1,13 @@
+{
+  "format": "fid-design-names@1",
+  "names": [
+    {
+      "name": "status.ok",
+      "kind": "icon"
+    },
+    {
+      "name": "status.ok",
+      "kind": "token"
+    }
+  ]
+}

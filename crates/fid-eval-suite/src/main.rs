@@ -1,9 +1,10 @@
 //! `fid-eval`: evaluation tooling of Metrology Maven (D-032; outside the registry, never on MCP).
 //!
-//! First slice: `fid-eval suite digest` (spec node AGENT.EVAL.FORMAT).
+//! First slice: `fid-eval suite digest` (spec node AGENT.EVAL.FORMAT) and `fid-eval suite
+//! check` (fail-closed load including the red-team predicate schema, AGENT.REDTEAM.PRED).
 
 use fid_canon::CValue;
-use fid_eval_suite::{load_suite, FormatError};
+use fid_eval_suite::{load_suite, FormatError, Suite};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::ExitCode;
@@ -16,6 +17,11 @@ USAGE:
                                   Load the suite fail-closed and print its version
                                   (sha256 over the sorted file digests); with --json
                                   print {\"files\",\"suite_version\",\"tasks\"} or {\"errors\"}
+    fid-eval suite check --suite <DIR> [--json]
+                                  Load the suite fail-closed (format and red-team
+                                  predicate schema) and print a summary; with --json
+                                  print {\"families\",\"predicates\",\"suite_version\",\"tasks\"}
+                                  or {\"errors\"}
     fid-eval --version            Print the version
     fid-eval --help               Print this help
 
@@ -33,7 +39,8 @@ fn main() -> ExitCode {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
-        ["suite", "digest", rest @ ..] => digest(rest),
+        ["suite", "digest", rest @ ..] => run(rest, Mode::Digest),
+        ["suite", "check", rest @ ..] => run(rest, Mode::Check),
         _ => usage_error("unknown command"),
     }
 }
@@ -63,7 +70,42 @@ fn error_json(e: &FormatError) -> CValue {
     ]))
 }
 
-fn digest(args: &[&str]) -> ExitCode {
+#[derive(Clone, Copy)]
+enum Mode {
+    Digest,
+    Check,
+}
+
+fn summary(st: &Suite, mode: Mode) -> CValue {
+    let mut m = BTreeMap::from([
+        ("suite_version".to_string(), s(st.version.as_str())),
+        ("tasks".to_string(), CValue::Num(st.tasks.len() as f64)),
+    ]);
+    match mode {
+        Mode::Digest => {
+            m.insert("files".to_string(), CValue::Num(st.files.len() as f64));
+        }
+        Mode::Check => {
+            let mut families: BTreeMap<String, CValue> = BTreeMap::new();
+            let mut predicates = 0usize;
+            for t in &st.tasks {
+                if let Some(f) = t.task.family {
+                    let n = match families.get(f.as_str()) {
+                        Some(CValue::Num(n)) => *n,
+                        _ => 0.0,
+                    };
+                    families.insert(f.as_str().to_string(), CValue::Num(n + 1.0));
+                }
+                predicates += t.task.predicates.len();
+            }
+            m.insert("families".to_string(), CValue::Obj(families));
+            m.insert("predicates".to_string(), CValue::Num(predicates as f64));
+        }
+    }
+    CValue::Obj(m)
+}
+
+fn run(args: &[&str], mode: Mode) -> ExitCode {
     let mut suite = None;
     let mut json = false;
     let mut it = args.iter();
@@ -83,14 +125,10 @@ fn digest(args: &[&str]) -> ExitCode {
     };
     match load_suite(Path::new(dir)) {
         Ok(st) => {
-            if json {
-                print_json(&CValue::Obj(BTreeMap::from([
-                    ("files".to_string(), CValue::Num(st.files.len() as f64)),
-                    ("suite_version".to_string(), s(st.version.as_str())),
-                    ("tasks".to_string(), CValue::Num(st.tasks.len() as f64)),
-                ])));
-            } else {
-                println!("{}", st.version);
+            match (json, mode) {
+                (true, _) => print_json(&summary(&st, mode)),
+                (false, Mode::Digest) => println!("{}", st.version),
+                (false, Mode::Check) => println!("ok: {} tasks, suite version {}", st.tasks.len(), st.version),
             }
             ExitCode::SUCCESS
         }

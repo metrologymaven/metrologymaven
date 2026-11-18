@@ -1,0 +1,22 @@
+[package]
+name = "fid-design"
+description = "Design-system tooling commands; first module: pkg-check and pkg-diff (spec node UX.SYSTEM.PKG)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-design"
+path = "src/main.rs"
+
+[dependencies]
+# The package reader (same layer).
+fid-design-pkg = { path = "../fid-design-pkg" }
+# RFC 8785 canonical JSON for the --json reports.
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

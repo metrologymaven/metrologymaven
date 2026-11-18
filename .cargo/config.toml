@@ -4,6 +4,8 @@
 # cargo xtask datasets-check --catalogue <toml> --domains <file>  (ECO.DATA.CAT)
 # cargo xtask plat-matrix validate <file>  (PLAT.MATRIX.FILE)
 # cargo xtask plat-matrix lint-tiers [<file>]  (PLAT.MATRIX.POLICY.DEFS)
+# cargo xtask plat-hw validate [--file <path>]  (PLAT.HW.PROFILE)
+# cargo xtask personas-check [--personas <json>] [--apps <toml>]  (FLOW.PERSONA.PERS)
 xtask = "run -q -p fid-xtask --"
 
 # Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.81).

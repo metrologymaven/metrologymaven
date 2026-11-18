@@ -1,0 +1,4 @@
+format = "fid-design-package@1"
+version = "1.0.0"
+token_format = "dtcg-second-editors-draft-2022-06-14"
+product_name = "{{FAMILY_NAME}}"
