@@ -43,7 +43,9 @@ pub use check::{
 pub use oracle::{parse_oracle, Basis, Forbidden, Oracle, OracleItem, Outcome, Quantity, DEFAULT_TOL, SI_UNITS};
 pub use redteam::{is_marker, Family, Payload, Predicate, PredicateKind, Subfamily, Vector, PREDICATE_KINDS};
 pub use shell::{check_variants, VariantCoverage};
-pub use suite::{load_suite, load_suite_lenient, read_oracle, read_task, suite_version, Suite, SuiteTask, SUITE_FORMAT};
+pub use suite::{
+    load_suite, load_suite_lenient, read_oracle, read_task, suite_version, Suite, SuiteTask, SUITE_FORMAT,
+};
 pub use task::{parse_task, App, Budget, Licence, RelPath, Roots, StartState, Task, Tier};
 
 use fid_types::Digest;
