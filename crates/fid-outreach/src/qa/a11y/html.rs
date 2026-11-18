@@ -446,7 +446,14 @@ pub fn parse(src: &str) -> Result<Doc, String> {
         }
         let next = b.get(i + 1).copied().unwrap_or(0);
         if b.get(i..i + 4) == Some(b"<!--".as_slice()) {
-            i = find(b, i + 4, b"-->").map_or(n, |p| p + 3);
+            // `<!-->` and `<!--->` are complete (empty) comments.
+            i = if b.get(i + 4) == Some(&b'>') {
+                i + 5
+            } else if b.get(i + 4..i + 6) == Some(b"->".as_slice()) {
+                i + 6
+            } else {
+                find(b, i + 4, b"-->").map_or(n, |p| p + 3)
+            };
         } else if next == b'!' || next == b'?' {
             i = find(b, i + 2, b">").map_or(n, |p| p + 1);
         } else if next == b'/' {
@@ -510,5 +517,12 @@ mod tests {
         let ul = d.elements().find(|(_, e)| e.name == "ul").unwrap().0;
         assert_eq!(d.element(ul).unwrap().children.len(), 2);
         assert!(d.elements().all(|(_, e)| e.name != "b"));
+    }
+
+    #[test]
+    fn abrupt_empty_comments_close() {
+        let d = parse("<!--><p>a</p><!---><i>b</i>").unwrap();
+        let names: Vec<_> = d.elements().map(|(_, e)| e.name.clone()).collect();
+        assert_eq!(names, vec!["p".to_string(), "i".to_string()]);
     }
 }

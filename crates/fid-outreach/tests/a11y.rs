@@ -215,3 +215,60 @@ fn suppression_without_reason_is_rejected() {
         fid_outreach::qa::a11y::load_config(br#"{"suppressions":[{"page":"a.html","rule":"A99","reason":"x"}]}"#);
     assert!(unknown.is_err());
 }
+
+const LIGHT_TOKENS: &str = r##"{"themes":{"light":{"surface.base":"#ffffff","text.body":"#1b2027","accent":"#1b2027"}}}"##;
+
+/// Writes a small case (token file plus root files) to a fresh temporary directory.
+fn tmp_case(name: &str, tokens: &str, files: &[(&str, &str)]) -> Options {
+    let dir = std::env::temp_dir().join(format!("fid-outreach-a11y-{}-{name}", std::process::id()));
+    let root = dir.join("root");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(dir.join("tokens.json"), tokens).unwrap();
+    for (rel, text) in files {
+        std::fs::write(root.join(rel), text).unwrap();
+    }
+    Options { root, tokens: dir.join("tokens.json"), config: None }
+}
+
+fn rule_ids(r: &Report) -> Vec<(String, String)> {
+    r.violations.iter().map(|v| (v.rule.clone(), v.element.clone())).collect()
+}
+
+#[test]
+fn token_property_must_equal_token_value() {
+    let bad = tmp_case("mirror-bad", LIGHT_TOKENS, &[("s.css", ":root{--text-body:#000000}")]);
+    let r = run(&bad).unwrap();
+    assert_eq!(rule_ids(&r), vec![("A13".to_string(), ":root".to_string())]);
+    let good = tmp_case("mirror-good", LIGHT_TOKENS, &[("s.css", ":root{--text-body:#1B2027}")]);
+    assert!(run(&good).unwrap().violations.is_empty());
+}
+
+#[test]
+fn unresolved_var_is_a13() {
+    let o = tmp_case("unresolved", LIGHT_TOKENS, &[("s.css", "p{color:var(--nope)}\nq{font-family:var(--sans)}")]);
+    let r = run(&o).unwrap();
+    assert_eq!(rule_ids(&r), vec![("A13".to_string(), "p".to_string())]);
+    assert!(r.violations[0].detail.contains("var(--nope)"));
+}
+
+#[test]
+fn background_only_rule_uses_inherited_text_colour() {
+    let css = "body{background:var(--surface-base);color:var(--text-body)}\n.chip{background:var(--accent)}";
+    let r = run(&tmp_case("bg-only", LIGHT_TOKENS, &[("s.css", css)])).unwrap();
+    assert_eq!(rule_ids(&r), vec![("A12".to_string(), ".chip".to_string())]);
+    assert!(r.violations[0].detail.contains("contrast 1.00:1"), "{}", r.violations[0].detail);
+}
+
+#[test]
+fn fail_closed_inputs_exit_2() {
+    let nested = r##"{"themes":{"light":{"text":{"body":{"$value":"#000000"}}}}}"##;
+    let e = run(&tmp_case("nested-tokens", nested, &[])).unwrap_err();
+    assert!(e.file().ends_with("tokens.json") && e.code() == "A11Y-PARSE", "{e}");
+    let dark = "@media (prefers-color-scheme: dark){p{color:var(--text-body)}}";
+    let e = run(&tmp_case("no-dark", LIGHT_TOKENS, &[("s.css", dark)])).unwrap_err();
+    assert!(e.to_string().contains("dark"), "{e}");
+    let e = run(&tmp_case("css-nesting", LIGHT_TOKENS, &[("s.css", ".a{color:var(--text-body); .b{color:red}}")]))
+        .unwrap_err();
+    assert_eq!(e.code(), "A11Y-PARSE");
+}

@@ -265,6 +265,11 @@ pub fn load_tokens(bytes: &[u8]) -> Result<Tokens, String> {
                 m.insert(prop, c);
             }
         }
+        if m.is_empty() {
+            return Err(format!(
+                "theme \"{theme}\" has no colour values (only flat \"name\": \"#rrggbb\" or {{\"$value\": ...}} entries are read)"
+            ));
+        }
         out.themes.insert(theme.clone(), m);
     }
     Ok(out)
@@ -376,41 +381,86 @@ fn root_rank(selector: &str) -> u8 {
 }
 
 type Sheets = Vec<(String, Vec<StyleRule>)>;
+type Aliases = BTreeMap<String, BTreeMap<String, String>>;
 
-/// Rule A12 for one theme.
-fn contrast_theme(theme: &str, tokens: &BTreeMap<String, Rgba>, sheets: &Sheets, out: &mut Vec<Violation>) {
-    let mut aliases: BTreeMap<String, String> = BTreeMap::new();
-    for (_, rules) in sheets {
-        for r in rules.iter().filter(|r| applies(r, theme) && root_rank(&r.selector) > 0) {
-            for d in r.decls.iter().filter(|d| d.name.starts_with("--")) {
-                aliases.insert(d.name.clone(), d.value.clone());
+const BLACK: Rgba = Rgba { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };
+
+/// Custom properties declared on `:root`, `html` or `body` per theme (`--a: var(--b)` aliases).
+fn aliases_by_theme(tokens: &Tokens, sheets: &Sheets) -> Aliases {
+    let mut out = Aliases::new();
+    for theme in tokens.themes.keys() {
+        let mut aliases: BTreeMap<String, String> = BTreeMap::new();
+        for (_, rules) in sheets {
+            for r in rules.iter().filter(|r| applies(r, theme) && root_rank(&r.selector) > 0) {
+                for d in r.decls.iter().filter(|d| d.name.starts_with("--")) {
+                    aliases.insert(d.name.clone(), d.value.clone());
+                }
             }
         }
+        out.insert(theme.clone(), aliases);
     }
-    let scope = Scope { tokens, aliases: &aliases };
-    let mut page: Option<(u8, Rgba)> = None;
+    out
+}
+
+/// Last root-level colour by selector rank (`body` over `html` over `:root`).
+fn root_colour(sheets: &Sheets, theme: &str, pick: impl Fn(&[css::Decl]) -> Option<Rgba>) -> Option<Rgba> {
+    let mut best: Option<(u8, Rgba)> = None;
     for (_, rules) in sheets {
         for r in rules.iter().filter(|r| r.contrast && applies(r, theme)) {
             let rank = root_rank(&r.selector);
             if rank == 0 {
                 continue;
             }
-            if let Some(c) = scope.background(&r.decls) {
-                let better = match page {
+            if let Some(c) = pick(&r.decls) {
+                let better = match best {
                     None => true,
                     Some((k, _)) => rank >= k,
                 };
                 if better {
-                    page = Some((rank, c));
+                    best = Some((rank, c));
                 }
             }
         }
     }
-    let page = css::over(page.map_or(WHITE, |(_, c)| c), WHITE);
+    best.map(|(_, c)| c)
+}
+
+/// Rule A12 for one theme. Rules that set only a background are checked against the
+/// inherited page text colour (black when no root rule sets one).
+fn contrast_theme(
+    theme: &str,
+    tokens: &BTreeMap<String, Rgba>,
+    aliases: &BTreeMap<String, String>,
+    sheets: &Sheets,
+    out: &mut Vec<Violation>,
+) {
+    let scope = Scope { tokens, aliases };
+    let page = css::over(root_colour(sheets, theme, |d| scope.background(d)).unwrap_or(WHITE), WHITE);
+    let root_sets_colour = sheets.iter().any(|(_, rules)| {
+        rules.iter().any(|r| applies(r, theme) && root_rank(&r.selector) > 0 && r.decls.iter().any(|d| d.name == "color"))
+    });
+    let page_fg = match root_colour(sheets, theme, |d| scope.foreground(d)) {
+        Some(c) => Some(c),
+        None if root_sets_colour => None,
+        None => Some(BLACK),
+    };
     for (path, rules) in sheets {
         for r in rules.iter().filter(|r| r.contrast && applies(r, theme)) {
-            let Some(fg) = scope.foreground(&r.decls) else { continue };
-            let bg = css::over(scope.background(&r.decls).unwrap_or(page), page);
+            let own_bg = scope.background(&r.decls);
+            let (fg, inherited) = match scope.foreground(&r.decls) {
+                Some(c) => (c, false),
+                None => {
+                    // An own `color` that does not resolve is reported by A13.
+                    if r.decls.iter().any(|d| d.name == "color") || own_bg.is_none() {
+                        continue;
+                    }
+                    match page_fg {
+                        Some(c) => (c, true),
+                        None => continue,
+                    }
+                }
+            };
+            let bg = css::over(own_bg.unwrap_or(page), page);
             let ratio = css::contrast(css::over(fg, bg), bg);
             let large = css::large_text(&r.decls);
             let need = if large { 3.0 } else { 4.5 };
@@ -421,10 +471,11 @@ fn contrast_theme(theme: &str, tokens: &BTreeMap<String, Rgba>, sheets: &Sheets,
                     rule: "A12".to_string(),
                     element: r.selector.clone(),
                     detail: format!(
-                        "theme {theme}: contrast {}:1 below {}:1{}",
+                        "theme {theme}: contrast {}:1 below {}:1{}{}",
                         css::round2(ratio),
                         if large { "3" } else { "4.5" },
-                        if large { " (large text)" } else { "" }
+                        if large { " (large text)" } else { "" },
+                        if inherited { " (background with inherited text colour)" } else { "" }
                     ),
                 });
             }
@@ -432,18 +483,75 @@ fn contrast_theme(theme: &str, tokens: &BTreeMap<String, Rgba>, sheets: &Sheets,
     }
 }
 
-fn literal_findings(page: &str, element: &str, decl: &css::Decl, tokens: &Tokens, out: &mut Vec<Violation>) {
-    if decl.name.starts_with("--") && tokens.props.contains(&decl.name) {
-        return;
+fn same_colour(a: Rgba, b: Rgba) -> bool {
+    let close = |x: f64, y: f64| (x - y).abs() < 1e-9;
+    close(a.r, b.r) && close(a.g, b.g) && close(a.b, b.b) && close(a.a, b.a)
+}
+
+/// Themes a declaration outside any colour-scheme block must agree with: `light` when the
+/// token file has it, else every theme.
+fn base_themes(tokens: &Tokens) -> Vec<String> {
+    if tokens.themes.contains_key("light") {
+        vec!["light".to_string()]
+    } else {
+        tokens.themes.keys().cloned().collect()
     }
-    for lit in css::literal_colours(&decl.name, &decl.value) {
-        out.push(Violation {
-            page: page.to_string(),
-            line: decl.line,
-            rule: "A13".to_string(),
-            element: element.to_string(),
-            detail: format!("literal colour {lit} in {}: not resolved through a token custom property", decl.name),
-        });
+}
+
+struct ColourCtx<'a> {
+    tokens: &'a Tokens,
+    aliases: &'a Aliases,
+}
+
+impl ColourCtx<'_> {
+    /// Rule A13 for one declaration: literal colours, token custom properties whose value
+    /// differs from the token file, and `var()` references in colour properties that do not
+    /// resolve to a token colour.
+    fn check(&self, page: &str, element: &str, scheme: Option<&str>, decl: &css::Decl, out: &mut Vec<Violation>) {
+        let mut push = |detail: String| {
+            out.push(Violation {
+                page: page.to_string(),
+                line: decl.line,
+                rule: "A13".to_string(),
+                element: element.to_string(),
+                detail,
+            });
+        };
+        if decl.name.starts_with("--") && self.tokens.props.contains(&decl.name) {
+            let themes = match scheme {
+                Some(t) => vec![t.to_string()],
+                None => base_themes(self.tokens),
+            };
+            let value = css::parse_colour(&decl.value);
+            for t in themes {
+                let want = self.tokens.themes.get(&t).and_then(|m| m.get(&decl.name)).copied();
+                let ok = matches!((value, want), (Some(a), Some(b)) if same_colour(a, b));
+                if !ok {
+                    push(format!(
+                        "token custom property {} = {} does not equal the token file value in theme {t}",
+                        decl.name, decl.value
+                    ));
+                }
+            }
+            return;
+        }
+        for lit in css::literal_colours(&decl.name, &decl.value) {
+            push(format!("literal colour {lit} in {}: not resolved through a token custom property", decl.name));
+        }
+        if css::is_colour_property(&decl.name) {
+            for v in css::var_refs(&decl.value) {
+                for (t, map) in &self.tokens.themes {
+                    if scheme.is_some_and(|s| s != t.as_str()) {
+                        continue;
+                    }
+                    let empty = BTreeMap::new();
+                    let aliases = self.aliases.get(t).unwrap_or(&empty);
+                    if (Scope { tokens: map, aliases }).resolve(&v).is_none() {
+                        push(format!("{v} in {} does not resolve to a token colour in theme {t}", decl.name));
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -467,6 +575,7 @@ pub fn run(opts: &Options) -> Result<Report, A11yError> {
         sheets.push((rel.clone(), rules));
     }
     let mut titles: BTreeMap<String, Vec<(String, u32)>> = BTreeMap::new();
+    let mut inline: Vec<(String, String, Vec<css::Decl>)> = Vec::new();
     for rel in &files.html {
         let text = read_text(&opts.root.join(rel), rel)?;
         let doc = html::parse(&text).map_err(|m| parse_err(rel, m))?;
@@ -488,9 +597,7 @@ pub fn run(opts: &Options) -> Result<Report, A11yError> {
             sheets.push((rel.clone(), rules));
         }
         for (style, line, element) in facts.style_attrs {
-            for d in css::parse_inline(&style, line) {
-                literal_findings(rel, &element, &d, &tokens, &mut found);
-            }
+            inline.push((rel.clone(), element, css::parse_inline(&style, line)));
         }
     }
 
@@ -511,18 +618,43 @@ pub fn run(opts: &Options) -> Result<Report, A11yError> {
         }
     }
 
-    // A13: literal colours in stylesheets.
+    // A colour-scheme block needs a theme of that name in the token file (fail closed).
+    for (page, rules) in &sheets {
+        for r in rules {
+            if let Some(t) = r.scheme.as_deref() {
+                if !tokens.themes.contains_key(t) {
+                    return Err(parse_err(
+                        page,
+                        format!(
+                            "prefers-color-scheme: {t} rule at line {} but token file {tokens_label} has no \"{t}\" theme",
+                            r.line
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    let aliases = aliases_by_theme(&tokens, &sheets);
+    let cc = ColourCtx { tokens: &tokens, aliases: &aliases };
+
+    // A13: literal or unresolved colours in stylesheets and style attributes.
     for (page, rules) in &sheets {
         for r in rules {
             for d in &r.decls {
-                literal_findings(page, &r.selector, d, &tokens, &mut found);
+                cc.check(page, &r.selector, r.scheme.as_deref(), d, &mut found);
             }
+        }
+    }
+    for (page, element, decls) in &inline {
+        for d in decls {
+            cc.check(page, element, None, d, &mut found);
         }
     }
 
     // A12: contrast per theme.
     for (theme, values) in &tokens.themes {
-        contrast_theme(theme, values, &sheets, &mut found);
+        let empty = BTreeMap::new();
+        contrast_theme(theme, values, aliases.get(theme).unwrap_or(&empty), &sheets, &mut found);
     }
 
     found.sort();

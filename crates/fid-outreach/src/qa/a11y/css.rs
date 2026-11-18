@@ -204,27 +204,10 @@ impl Parser<'_> {
         }
     }
 
-    fn skip_block(&mut self, depth: usize) -> Result<(), String> {
+    fn decl_block(&mut self, depth: usize) -> Result<Vec<Decl>, String> {
         if depth > MAX_DEPTH {
             return Err(format!("block nesting deeper than {MAX_DEPTH} at line {}", self.line(self.i)));
         }
-        loop {
-            self.scan_until(b"{}");
-            match self.peek() {
-                None => return Ok(()),
-                Some(b'{') => {
-                    self.i += 1;
-                    self.skip_block(depth + 1)?;
-                }
-                Some(_) => {
-                    self.i += 1;
-                    return Ok(());
-                }
-            }
-        }
-    }
-
-    fn decl_block(&mut self, depth: usize) -> Result<Vec<Decl>, String> {
         let mut decls = Vec::new();
         loop {
             self.skip_ws();
@@ -243,10 +226,8 @@ impl Parser<'_> {
             let start = self.i;
             let end = self.scan_until(b";{}");
             if self.peek() == Some(b'{') {
-                // Nested rule (CSS nesting): not evaluated.
-                self.i += 1;
-                self.skip_block(depth + 1)?;
-                continue;
+                // Nested rules (CSS nesting) are not evaluated, so the gate fails closed.
+                return Err(format!("nested rule at line {} is not supported", self.line(start)));
             }
             if let Some(d) = make_decl(&self.slice(start, end), self.line(start)) {
                 decls.push(d);
@@ -350,6 +331,52 @@ fn close_paren(b: &[u8], from: usize) -> usize {
         i += 1;
     }
     b.len()
+}
+
+/// Outermost `var(...)` expressions in a value (fallbacks stay inside their expression).
+pub fn var_refs(value: &str) -> Vec<String> {
+    let b = value.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while let Some(&c) = b.get(i) {
+        if c == b'"' || c == b'\'' {
+            i += 1;
+            while let Some(&d) = b.get(i) {
+                i += 1;
+                if d == b'\\' {
+                    i += 1;
+                } else if d == c {
+                    break;
+                }
+            }
+        } else if ident_byte(c) {
+            let s = i;
+            while b.get(i).is_some_and(|d| ident_byte(*d)) {
+                i += 1;
+            }
+            let word = value.get(s..i).unwrap_or("").to_ascii_lowercase();
+            if b.get(i) == Some(&b'(') {
+                if word == "var" {
+                    let end = close_paren(b, i + 1);
+                    out.push(value.get(s..end).unwrap_or("").to_string());
+                    i = end;
+                } else if word == "url" {
+                    i = close_paren(b, i + 1);
+                } else {
+                    i += 1;
+                }
+            }
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// True for properties whose value is (or contains) a colour, so their `var()` references
+/// must resolve to token colours.
+pub fn is_colour_property(prop: &str) -> bool {
+    !prop.starts_with("--") && colour_property(prop)
 }
 
 /// Literal colours in a declaration value: hex colours and colour functions anywhere, named

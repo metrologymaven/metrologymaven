@@ -1,6 +1,6 @@
 [package]
 name = "fid-outreach"
-description = "Metrology Maven outreach tooling: static accessibility gate for built site pages (spec node OUTR.SITE.QA.A11Y)"
+description = "Metrology Maven outreach tooling (domain OUTR): site and docs quality gates and related subcommands"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

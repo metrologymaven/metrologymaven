@@ -3,7 +3,7 @@
 
 use super::html::{Doc, Element, Node, NodeId};
 use super::vocab::{valid_bcp47, ARIA_ATTRS, ARIA_ROLES};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// One rule finding on a page.
 #[derive(Debug, Clone)]
@@ -77,29 +77,43 @@ impl Ctx<'_> {
         })
     }
 
+    /// Names of the elements an `aria-labelledby` refers to. Each referenced element is
+    /// visited once, and `aria-labelledby` is not followed again inside a referenced subtree
+    /// (as in the W3C accessible-name algorithm), so self and cyclic references terminate.
     fn labelledby(&self, el: &Element) -> String {
         let Some(refs) = el.attr("aria-labelledby") else { return String::new() };
-        let parts: Vec<String> = refs
-            .split_whitespace()
-            .filter_map(|r| self.ids.get(r))
-            .map(|n| collapse(&self.content_name(*n)))
-            .filter(|t| !t.is_empty())
-            .collect();
+        let mut visited: BTreeSet<NodeId> = BTreeSet::new();
+        let mut parts: Vec<String> = Vec::new();
+        for r in refs.split_whitespace() {
+            let Some(n) = self.ids.get(r).copied() else { continue };
+            if !visited.insert(n) {
+                continue;
+            }
+            let label = self.el(n).map(|e| collapse(e.attr("aria-label").unwrap_or(""))).unwrap_or_default();
+            let text = if label.is_empty() { self.content_name(n, true) } else { label };
+            if !text.is_empty() {
+                parts.push(text);
+            }
+        }
         parts.join(" ")
     }
 
-    /// `aria-labelledby` then `aria-label`, collapsed; empty when neither gives a name.
-    fn aria_name(&self, el: &Element) -> String {
-        let by = self.labelledby(el);
-        if !by.is_empty() {
-            return by;
+    /// `aria-labelledby` (unless already inside a labelledby traversal) then `aria-label`,
+    /// collapsed; empty when neither gives a name.
+    fn aria_name(&self, el: &Element, in_ref: bool) -> String {
+        if !in_ref {
+            let by = self.labelledby(el);
+            if !by.is_empty() {
+                return by;
+            }
         }
         collapse(el.attr("aria-label").unwrap_or(""))
     }
 
     /// Name from content: text, `alt` of images, names of SVGs and labelled descendants;
-    /// hidden subtrees and scripts are skipped.
-    fn content_name(&self, id: NodeId) -> String {
+    /// hidden subtrees and scripts are skipped. `in_ref` is true inside an
+    /// `aria-labelledby` traversal.
+    fn content_name(&self, id: NodeId, in_ref: bool) -> String {
         let mut out = String::new();
         let mut stack: Vec<NodeId> = match self.el(id) {
             Some(e) => e.children.iter().rev().copied().collect(),
@@ -115,7 +129,7 @@ impl Ctx<'_> {
                     if e.attr("aria-hidden").is_some_and(|v| v.trim().eq_ignore_ascii_case("true")) {
                         continue;
                     }
-                    let own = self.aria_name(e);
+                    let own = self.aria_name(e, in_ref);
                     if !own.is_empty() {
                         out.push(' ');
                         out.push_str(&own);
@@ -154,11 +168,11 @@ impl Ctx<'_> {
     /// Simplified accessible name: aria-labelledby, aria-label, content, title.
     fn accessible_name(&self, id: NodeId) -> String {
         let Some(el) = self.el(id) else { return String::new() };
-        let aria = self.aria_name(el);
+        let aria = self.aria_name(el, false);
         if !aria.is_empty() {
             return aria;
         }
-        let content = self.content_name(id);
+        let content = self.content_name(id, false);
         if !content.is_empty() {
             return content;
         }
@@ -166,21 +180,21 @@ impl Ctx<'_> {
     }
 
     fn label_text(&self, el: &Element, id: NodeId) -> bool {
-        if !self.aria_name(el).is_empty() || !collapse(el.attr("title").unwrap_or("")).is_empty() {
+        if !self.aria_name(el, false).is_empty() || !collapse(el.attr("title").unwrap_or("")).is_empty() {
             return true;
         }
         let ancestor_label = self
             .doc
             .ancestors(id)
             .into_iter()
-            .any(|a| self.el(a).is_some_and(|e| e.name == "label") && !self.content_name(a).is_empty());
+            .any(|a| self.el(a).is_some_and(|e| e.name == "label") && !self.content_name(a, false).is_empty());
         if ancestor_label {
             return true;
         }
         let Some(own) = el.attr("id").filter(|v| !v.is_empty()) else { return false };
         self.doc
             .elements()
-            .any(|(lid, l)| l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid).is_empty())
+            .any(|(lid, l)| l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid, false).is_empty())
     }
 }
 
@@ -190,8 +204,13 @@ fn push(out: &mut Vec<Finding>, line: u32, rule: &'static str, element: String, 
 
 /// Runs rules A01 to A11 and the per-page part of A05 on one page.
 pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
+    // Content of <template> elements is inert and is not checked.
+    let live: Vec<(NodeId, &Element)> = doc
+        .elements()
+        .filter(|(id, _)| !doc.ancestors(*id).iter().any(|a| doc.element(*a).is_some_and(|p| p.name == "template")))
+        .collect();
     let mut ids: BTreeMap<String, NodeId> = BTreeMap::new();
-    for (id, el) in doc.elements() {
+    for (id, el) in live.iter().copied() {
         if let Some(v) = el.attr("id") {
             ids.entry(v.to_string()).or_insert(id);
         }
@@ -200,9 +219,9 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
     let mut out: Vec<Finding> = Vec::new();
     let mut facts = PageFacts::default();
 
-    let html = doc.elements().find(|(_, e)| e.name == "html");
+    let html = live.iter().copied().find(|(_, e)| e.name == "html");
     let html_line = html.map_or(1, |(_, e)| e.line);
-    let body_line = doc.elements().find(|(_, e)| e.name == "body").map_or(html_line, |(_, e)| e.line);
+    let body_line = live.iter().copied().find(|(_, e)| e.name == "body").map_or(html_line, |(_, e)| e.line);
 
     // A07: lang on html.
     match html.map(|(_, e)| e) {
@@ -217,12 +236,12 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
     }
 
     // A05 (per page): missing or empty title. SVG titles do not count.
-    let title = doc.elements().find(|(id, e)| {
+    let title = live.iter().copied().find(|(id, e)| {
         e.name == "title" && !doc.ancestors(*id).iter().any(|a| doc.element(*a).is_some_and(|p| p.name == "svg"))
     });
     match title {
         None => {
-            let line = doc.elements().find(|(_, e)| e.name == "head").map_or(html_line, |(_, e)| e.line);
+            let line = live.iter().copied().find(|(_, e)| e.name == "head").map_or(html_line, |(_, e)| e.line);
             push(&mut out, line, "A05", "<title>".to_string(), "missing title");
         }
         Some((id, e)) => {
@@ -239,7 +258,7 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
     let mut h1 = 0u32;
     let mut prev = 0u32;
     let mut first_heading_line = None;
-    for (_, e) in doc.elements() {
+    for (_, e) in live.iter().copied() {
         let level = match e.name.as_str() {
             "h1" => 1,
             "h2" => 2,
@@ -268,13 +287,13 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
     }
 
     // A09: main landmark and a skip link to it.
-    let main = doc.elements().find(|(_, e)| e.name == "main" || has_role(e, &["main"]));
+    let main = live.iter().copied().find(|(_, e)| e.name == "main" || has_role(e, &["main"]));
     match main {
         None => push(&mut out, body_line, "A09", "<body>".to_string(), "no main landmark"),
         Some((_, m)) => {
             let target = m.attr("id").filter(|v| !v.is_empty()).map(|v| format!("#{v}"));
             let linked = target.as_deref().is_some_and(|t| {
-                doc.elements().any(|(_, a)| a.name == "a" && a.attr("href").map(str::trim) == Some(t))
+                live.iter().copied().any(|(_, a)| a.name == "a" && a.attr("href").map(str::trim) == Some(t))
             });
             if !linked {
                 push(&mut out, m.line, "A09", describe(m), "no skip link to the main landmark");
@@ -283,19 +302,19 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
     }
 
     let mut seen_ids: BTreeMap<&str, u32> = BTreeMap::new();
-    for (id, e) in doc.elements() {
+    for (id, e) in live.iter().copied() {
         let name = e.name.as_str();
         let decorative = cx.hidden(id) || has_role(e, &["presentation", "none"]);
 
         // A01: text alternatives.
-        if name == "img" && !decorative && e.attr("alt").is_none() && cx.aria_name(e).is_empty() {
+        if name == "img" && !decorative && e.attr("alt").is_none() && cx.aria_name(e, false).is_empty() {
             push(&mut out, e.line, "A01", describe(e), "img without alt");
         }
         if name == "input"
             && e.attr("type").is_some_and(|t| t.trim().eq_ignore_ascii_case("image"))
             && !decorative
             && collapse(e.attr("alt").unwrap_or("")).is_empty()
-            && cx.aria_name(e).is_empty()
+            && cx.aria_name(e, false).is_empty()
             && collapse(e.attr("title").unwrap_or("")).is_empty()
         {
             push(&mut out, e.line, "A01", describe(e), "image input without text alternative");
@@ -303,7 +322,7 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
         if name == "svg"
             && !decorative
             && !doc.ancestors(id).iter().any(|a| doc.element(*a).is_some_and(|p| p.name == "svg"))
-            && cx.aria_name(e).is_empty()
+            && cx.aria_name(e, false).is_empty()
             && cx.svg_title(id).is_empty()
         {
             push(&mut out, e.line, "A01", describe(e), "svg without accessible name or aria-hidden");
@@ -417,4 +436,46 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
         }
     }
     (out, facts)
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use super::*;
+    use crate::qa::a11y::html::parse;
+
+    const HEAD: &str = "<!doctype html><html lang=en><head><title>T</title></head><body>\
+        <a href=\"#m\">Skip</a><main id=m><h1>H</h1>";
+
+    fn rules_of(body: &str) -> Vec<&'static str> {
+        let doc = parse(&format!("{HEAD}{body}</main></body></html>")).unwrap();
+        check_page(&doc).0.iter().map(|f| f.rule).collect()
+    }
+
+    #[test]
+    fn labelledby_self_reference_terminates() {
+        assert_eq!(rules_of("<button id=b><span aria-labelledby=\"b\"></span></button>"), vec!["A06"]);
+        assert!(rules_of("<button id=b aria-labelledby=\"b c\">Go</button><span id=c>now</span>").is_empty());
+    }
+
+    #[test]
+    fn labelledby_repeated_ids_stay_bounded() {
+        let ids: Vec<String> = (0..60).map(|k| format!("s{k}")).collect();
+        let all = ids.join(" ");
+        let mut body = String::from("<button>");
+        for id in &ids {
+            body.push_str(&format!("<span id={id} aria-labelledby=\"{all} {all}\">"));
+        }
+        body.push('x');
+        for _ in &ids {
+            body.push_str("</span>");
+        }
+        body.push_str("</button>");
+        assert!(rules_of(&body).is_empty());
+    }
+
+    #[test]
+    fn template_content_is_not_checked() {
+        assert!(rules_of("<template><h1>Second</h1><main></main><img src=a.png></template>").is_empty());
+    }
 }
