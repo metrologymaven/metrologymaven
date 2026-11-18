@@ -1,0 +1,13 @@
+{"id":"u01","file":"b.md","line":3,"col":1,"text":"The software is certified for GD&T evaluation."}
+{"id":"u02","file":"b.md","line":5,"col":1,"text":"Recertified parts are stocked."}
+{"id":"u03","file":"b.md","line":6,"col":1,"text":"CERTIFIED parts"}
+{"id":"u04","file":"a.md","line":10,"col":4,"text":"Validated per ISO 10360-2:2009 for length measurement."}
+{"id":"u05","file":"a.md","line":2,"col":1,"text":"Our ISO 9001:2015 audit passed. The probe module is certified."}
+{"id":"u06","file":"a.md","line":20,"col":1,"text":"This is \"Certified Measurement Report\" as titled by the customer.","suppress":[{"rule":"VC001","reason":"quotes a customer document title"}]}
+{"id":"ui.help.3","file":"c.md","line":1,"col":1,"text":"Works like PolyWorks, only open."}
+{"id":"import.pcdmis.label","file":"c.md","line":2,"col":1,"text":"PC-DMIS program (*.prg)"}
+{"id":"ui.import.4","file":"c.md","line":3,"col":1,"text":"Import from GOM Inspect projects."}
+{"id":"web.claim.1","file":"d.html","line":7,"col":5,"text":"Faster than PolyWorks for best-fit alignment.","links":["https://example.org/blog"]}
+{"id":"web.claim.2","file":"d.html","line":9,"col":5,"text":"Faster than PolyWorks for best-fit alignment.","links":["https://metrologymaven.org/bench/align-1"]}
+{"id":"ui.menu.2","file":"c.md","line":4,"col":1,"text":"Edit the dialect map."}
+{"id":"u14","file":"a.md","line":2,"col":30,"text":"Not compliant yet."}

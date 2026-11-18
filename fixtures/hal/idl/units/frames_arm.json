@@ -1,0 +1,66 @@
+{
+ "graph": {
+  "edges": [
+   {
+    "child": "a72d9497-85da-5595-a602-8880faa65a58",
+    "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "time_varying": false,
+    "transform": "xfm:sensor-in-mount"
+   },
+   {
+    "child": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "parent": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+    "time_varying": false,
+    "transform": "xfm:mount-in-device"
+   },
+   {
+    "child": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+    "parent": "10bd3f5b-3a0a-516e-afe7-c79cb5e97b81",
+    "pose": "pose:arm-joint-stream",
+    "time_varying": true,
+    "transform": "xfm:device-in-machine"
+   },
+   {
+    "child": "10bd3f5b-3a0a-516e-afe7-c79cb5e97b81",
+    "parent": "e62a0447-1ad8-5905-ad9e-2113ae47c783",
+    "pose": "pose:alignment-1",
+    "time_varying": false,
+    "transform": "xfm:machine-in-part"
+   }
+  ],
+  "frames": [
+   {
+    "id": "a72d9497-85da-5595-a602-8880faa65a58",
+    "kind": "sensor"
+   },
+   {
+    "id": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "kind": "mount"
+   },
+   {
+    "id": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+    "kind": "device"
+   },
+   {
+    "id": "10bd3f5b-3a0a-516e-afe7-c79cb5e97b81",
+    "kind": "machine"
+   },
+   {
+    "id": "e62a0447-1ad8-5905-ad9e-2113ae47c783",
+    "kind": "part"
+   }
+  ]
+ },
+ "names": {
+  "a": "5754e100-9118-5e34-833b-a41a2635dc7a",
+  "b": "634b9066-df1c-5b31-89ff-5142cb1a18b4",
+  "c": "34aa3958-c977-52e9-af81-a5d9292f4b4b",
+  "device": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+  "machine": "10bd3f5b-3a0a-516e-afe7-c79cb5e97b81",
+  "mount": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+  "part": "e62a0447-1ad8-5905-ad9e-2113ae47c783",
+  "sensor": "a72d9497-85da-5595-a602-8880faa65a58",
+  "sensor2": "13f5ec76-fbb1-5031-b14e-85c7bcac7bb6"
+ },
+ "session_namespace": "6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7"
+}
