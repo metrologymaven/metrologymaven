@@ -193,7 +193,10 @@ pub fn parse_doc(text: &str) -> Result<Vec<KeyRow>, Vec<KeysError>> {
         };
         let before = errs.len();
         if !is_key_file_name(&row.file) {
-            errs.push(KeysError::Doc(format!("line {n}: file {:?} is not a [A-Za-z0-9._-] name ending .pem", row.file)));
+            errs.push(KeysError::Doc(format!(
+                "line {n}: file {:?} is not a [A-Za-z0-9._-] name ending .pem",
+                row.file
+            )));
         } else if !seen.insert(row.file.clone()) {
             errs.push(KeysError::Doc(format!("line {n}: {} is listed twice", row.file)));
         }
@@ -369,8 +372,7 @@ pub fn check(keys_dir: &Path, doc: &Path, date: &str) -> Result<usize, Vec<KeysE
         if !listed.contains(name.as_str()) {
             findings.push((name.clone(), KeysError::Unlisted(name.clone())));
         } else if !regular {
-            findings
-                .push((name.clone(), KeysError::Pem { file: name.clone(), reason: "not a regular file".into() }));
+            findings.push((name.clone(), KeysError::Pem { file: name.clone(), reason: "not a regular file".into() }));
         }
     }
     for row in &rows {
