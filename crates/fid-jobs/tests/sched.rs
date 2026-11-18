@@ -53,8 +53,9 @@ impl ActivityLog {
     }
 }
 
-/// Capturing Record Journal stub (AC-4). The scheduler has no handle on it; it stays empty
-/// unless something other than the lifecycle sink were to write job events.
+/// Capturing Record Journal stub (AC-4). It is never wired into the scheduler, which has no
+/// Record Journal handle at all, so its emptiness check is vacuous: the real guarantee is
+/// structural (only `LifecycleSink` receives events). See the leaf's Open questions.
 #[derive(Default)]
 struct RecordJournal {
     writes: Mutex<Vec<String>>,
@@ -337,7 +338,8 @@ fn ac2_timeout_fails_job_and_hands_nothing_to_committer() {
     let log = Arc::new(ActivityLog::default());
     let journal = RecordJournal::default();
     let committer = Committer::default();
-    let cfg = JobsConfig { max_running: 1, queue_cap: 10, clock: clock.clone(), timer_poll: None };
+    let cfg =
+        JobsConfig { max_running: 1, queue_cap: 10, clock: clock.clone(), timer_poll: None, ..JobsConfig::default() };
     let jobs: Jobs<String> = Jobs::new(cfg, log.clone()).unwrap();
 
     // Test sleep handler on the manual clock: 2 s unless cancelled.
@@ -398,7 +400,8 @@ fn ac2_late_result_after_timeout_is_discarded() {
     let clock = Arc::new(ManualClock::new());
     let log = Arc::new(ActivityLog::default());
     let committer = Committer::default();
-    let cfg = JobsConfig { max_running: 1, queue_cap: 10, clock: clock.clone(), timer_poll: None };
+    let cfg =
+        JobsConfig { max_running: 1, queue_cap: 10, clock: clock.clone(), timer_poll: None, ..JobsConfig::default() };
     let jobs: Jobs<String> = Jobs::new(cfg, log.clone()).unwrap();
 
     let c = clock.clone();
@@ -429,20 +432,17 @@ fn ac2_late_result_after_timeout_is_discarded() {
     assert_transitions_allowed(&log.all());
 }
 
-/// The same timeout on real time, with the background timeout thread, and generous bounds.
+/// The same timeout on real time, with the background timeout thread. The handler returns only
+/// on cancellation, so a slow runner cannot let it finish before the timeout fires.
 #[test]
 fn ac2_timeout_real_time_smoke() {
     let log = Arc::new(ActivityLog::default());
     let jobs: Jobs<String> = Jobs::new(config(1), log.clone()).unwrap();
-    let handler = |_: &ProgressSink, token: &CancelToken| {
-        let start = Instant::now();
-        while start.elapsed() < Duration::from_secs(2) {
-            if token.is_cancelled() {
-                return Err(HandlerError::Cancelled);
-            }
+    let handler = |_: &ProgressSink, token: &CancelToken| -> Result<String, HandlerError> {
+        while !token.is_cancelled() {
             std::thread::sleep(STEP);
         }
-        Ok("slept 2 s".to_string())
+        Err(HandlerError::Cancelled)
     };
     let timeout = Some(Duration::from_millis(200));
     let id = jobs.submit(Execution::new(cmd(), handler), JobOpts { timeout, ..opts(JobClass::Batch) }).unwrap();
@@ -717,4 +717,101 @@ fn wire_names() {
     assert_eq!(codes, ["timeout", "cancelled", "handler_failed", "not_found", "queue_full"]);
     // SystemClock is the default time source.
     let _ = SystemClock::new().now();
+}
+
+// ------------------------------------------------------------------ review fixes
+
+fn manual(max_running: usize, clock: &Arc<ManualClock>) -> JobsConfig {
+    JobsConfig { max_running, clock: clock.clone(), timer_poll: None, ..JobsConfig::default() }
+}
+
+#[test]
+fn panicking_handler_fails_and_frees_its_slot() {
+    let log = Arc::new(ActivityLog::default());
+    let jobs: Jobs<String> = Jobs::new(config(1), log.clone()).unwrap();
+    let panics = Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| panic!("test handler panics"));
+    let boom = jobs.submit(panics, opts(JobClass::Batch)).unwrap();
+    let fine = Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("next".to_string()));
+    let next = jobs.submit(fine, opts(JobClass::Batch)).unwrap();
+    let rec = jobs.wait(boom, LONG).unwrap();
+    assert_eq!((rec.state, rec.error), (JobState::Failed, Some(JobErrorCode::HandlerFailed)));
+    assert_eq!(rec.error_detail.as_deref(), Some("handler panicked"));
+    assert_eq!(jobs.wait(next, LONG).unwrap().state, JobState::Succeeded, "the slot was not freed");
+    assert_eq!(jobs.take_result(next).as_deref(), Some("next"));
+    assert_transitions_allowed(&log.all());
+}
+
+#[test]
+fn ended_records_are_capped() {
+    let cfg = JobsConfig { max_running: 1, retain_ended: 2, ..JobsConfig::default() };
+    let jobs: Jobs<String> = Jobs::new(cfg, Arc::new(NullLifecycleSink)).unwrap();
+    let mut ids = Vec::new();
+    for i in 0..3 {
+        let exec = Execution::new(cmd(), move |_: &ProgressSink, _: &CancelToken| Ok(i.to_string()));
+        let id = jobs.submit(exec, opts(JobClass::Batch)).unwrap();
+        assert_eq!(jobs.wait(id, LONG).unwrap().state, JobState::Succeeded);
+        ids.push(id);
+    }
+    assert_eq!(jobs.status(ids[0]), Err(JobErrorCode::NotFound), "oldest-ended record is dropped");
+    assert_eq!(jobs.list().len(), 2);
+    assert_eq!(jobs.take_result(ids[2]).as_deref(), Some("2"));
+    // A forgotten record frees its place in the cap.
+    assert!(jobs.forget(ids[1]));
+    assert_eq!(jobs.list().len(), 1);
+    assert_eq!(JobsConfig::default().retain_ended, fid_jobs::DEFAULT_RETAIN_ENDED);
+}
+
+#[test]
+fn cancel_requested_job_past_timeout_ends_cancelled() {
+    let clock = Arc::new(ManualClock::new());
+    let log = Arc::new(ActivityLog::default());
+    let jobs: Jobs<String> = Jobs::new(manual(1, &clock), log.clone()).unwrap();
+    let release = Gate::new();
+    let rel = release.clone();
+    let handler = move |_: &ProgressSink, _: &CancelToken| -> Result<String, HandlerError> {
+        let mut open = rel.open.lock().unwrap();
+        while !*open {
+            open = rel.cv.wait_timeout(open, STEP).unwrap().0;
+        }
+        Err(HandlerError::Cancelled)
+    };
+    let timeout = Some(Duration::from_millis(200));
+    let id = jobs.submit(Execution::new(cmd(), handler), JobOpts { timeout, ..opts(JobClass::Batch) }).unwrap();
+    assert_eq!(jobs.cancel(id), Ok(JobState::Running));
+    clock.set(Duration::from_secs(1));
+    assert_eq!(jobs.check_timeouts(), 0);
+    release.open();
+    let rec = jobs.wait(id, LONG).unwrap();
+    assert_eq!((rec.state, rec.error), (JobState::Cancelled, Some(JobErrorCode::Cancelled)));
+    assert_transitions_allowed(&log.all());
+}
+
+#[test]
+fn record_timestamps_equal_event_times() {
+    let clock = Arc::new(ManualClock::new());
+    let log = Arc::new(ActivityLog::default());
+    let jobs: Jobs<String> = Jobs::new(manual(1, &clock), log.clone()).unwrap();
+    clock.set(Duration::from_millis(7));
+    let id = jobs
+        .submit(Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("t".to_string())), opts(JobClass::Batch))
+        .unwrap();
+    let rec = jobs.wait(id, LONG).unwrap();
+    assert_eq!(rec.state, JobState::Succeeded);
+    let at = |to: JobState| log.of(id).iter().find(|e| e.to == to).map(|e| e.at);
+    assert_eq!(Some(rec.submitted_at), at(JobState::Queued));
+    assert_eq!(rec.started_at, at(JobState::Running));
+    assert_eq!(rec.ended_at, at(JobState::Succeeded));
+}
+
+#[test]
+fn queue_cap_zero_still_runs_when_a_slot_is_free() {
+    let cfg = JobsConfig { max_running: 1, queue_cap: 0, ..JobsConfig::default() };
+    let jobs: Jobs<String> = Jobs::new(cfg, Arc::new(NullLifecycleSink)).unwrap();
+    let gate = Gate::new();
+    let first = Execution::new(cmd(), sleep_handler("a".into(), 1, gate.clone(), Arc::default()));
+    let a = jobs.submit(first, opts(JobClass::Batch)).unwrap();
+    let extra = Execution::new(cmd(), sleep_handler("b".into(), 1, gate.clone(), Arc::default()));
+    assert_eq!(jobs.submit(extra, opts(JobClass::Batch)), Err(JobErrorCode::QueueFull));
+    gate.open();
+    assert_eq!(jobs.wait(a, LONG).unwrap().state, JobState::Succeeded);
 }

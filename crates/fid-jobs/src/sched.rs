@@ -31,6 +31,7 @@ use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt;
 use std::hash::{BuildHasher, Hasher};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
@@ -38,6 +39,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Default cap on queued (not yet running) jobs; one more submission gets `queue_full`.
 pub const DEFAULT_QUEUE_CAP: usize = 10_000;
+/// Default number of ended jobs whose records (and untaken results) are kept; older ones are
+/// dropped first.
+pub const DEFAULT_RETAIN_ENDED: usize = 10_000;
 /// Default polling interval of the timeout thread.
 pub const DEFAULT_TIMER_POLL: Duration = Duration::from_millis(5);
 /// Longest handler failure message kept in a record, in characters.
@@ -260,8 +264,12 @@ impl Default for JobOpts {
 pub struct JobsConfig {
     /// Most jobs running at once (at least 1 is used).
     pub max_running: usize,
-    /// Most jobs queued at once; more submissions get `queue_full`.
+    /// Most jobs waiting for a slot; a submission that would wait beyond this gets
+    /// `queue_full`. A submission that finds a free slot is never refused.
     pub queue_cap: usize,
+    /// Most ended jobs kept (at least 1 is used). When more have ended, the oldest-ended
+    /// record and any untaken result are dropped, as by [`Jobs::forget`].
+    pub retain_ended: usize,
     /// Time source for timestamps and timeouts.
     pub clock: Arc<dyn Clock>,
     /// Polling interval of the background timeout thread (at least 1 ms); `None` starts no
@@ -274,6 +282,7 @@ impl Default for JobsConfig {
         JobsConfig {
             max_running: default_max_running(),
             queue_cap: DEFAULT_QUEUE_CAP,
+            retain_ended: DEFAULT_RETAIN_ENDED,
             clock: Arc::new(SystemClock::new()),
             timer_poll: Some(DEFAULT_TIMER_POLL),
         }
@@ -285,6 +294,7 @@ impl fmt::Debug for JobsConfig {
         f.debug_struct("JobsConfig")
             .field("max_running", &self.max_running)
             .field("queue_cap", &self.queue_cap)
+            .field("retain_ended", &self.retain_ended)
             .field("timer_poll", &self.timer_poll)
             .finish_non_exhaustive()
     }
@@ -373,6 +383,8 @@ struct State<T> {
     running: BTreeSet<JobId>,
     /// Worker threads whose handler has not returned yet.
     occupied: usize,
+    /// Ended jobs, oldest first, for the retention cap (may hold forgotten IDs).
+    ended: VecDeque<JobId>,
 }
 
 impl<T> State<T> {
@@ -388,11 +400,12 @@ struct Inner<T> {
     clock: Arc<dyn Clock>,
     max_running: usize,
     queue_cap: usize,
+    retain_ended: usize,
     id_seq: AtomicU64,
 }
 
 impl<T: Send + 'static> Inner<T> {
-    fn emit(&self, record: &JobRecord, from: Option<JobState>) {
+    fn emit(&self, record: &JobRecord, from: Option<JobState>, at: Duration) {
         self.sink.emit(&LifecycleEvent {
             job: record.id,
             command: record.command.clone(),
@@ -400,12 +413,20 @@ impl<T: Send + 'static> Inner<T> {
             from,
             to: record.state,
             error: record.error,
-            at: self.clock.now(),
+            at,
         });
     }
 
-    /// Moves `entry` to `to` (with `error`), stamps the time and emits the event.
-    fn transition(&self, entry: &mut Entry<T>, to: JobState, error: Option<JobErrorCode>) {
+    /// Moves `entry` to `to` (with `error`), stamps the time and emits the event; the record's
+    /// timestamp and the event's `at` are the same clock reading. An ended job is noted in
+    /// `ended` for the retention cap.
+    fn transition(
+        &self,
+        ended: &mut VecDeque<JobId>,
+        entry: &mut Entry<T>,
+        to: JobState,
+        error: Option<JobErrorCode>,
+    ) {
         let from = entry.record.state;
         let now = self.clock.now();
         entry.record.state = to;
@@ -415,8 +436,18 @@ impl<T: Send + 'static> Inner<T> {
         }
         if to.is_terminal() {
             entry.record.ended_at = Some(now);
+            ended.push_back(entry.record.id);
         }
-        self.emit(&entry.record, Some(from));
+        self.emit(&entry.record, Some(from), now);
+    }
+
+    /// Drops the oldest-ended records beyond the retention cap.
+    fn prune(&self, st: &mut State<T>) {
+        while st.ended.len() > self.retain_ended {
+            if let Some(old) = st.ended.pop_front() {
+                st.jobs.remove(&old);
+            }
+        }
     }
 
     /// A fresh UUIDv7 not already used by a job of this scheduler.
@@ -453,12 +484,14 @@ impl<T: Send + 'static> Inner<T> {
             let Some(handler) = entry.handler.take() else {
                 continue;
             };
-            self.transition(entry, JobState::Running, None);
+            self.transition(&mut st.ended, entry, JobState::Running, None);
             let sink = entry.progress.sink();
             let token = entry.progress.cancel_token();
             let inner = Arc::clone(self);
             let spawned = std::thread::Builder::new().name("fid-jobs-worker".to_string()).spawn(move || {
-                let outcome = handler(&sink, &token);
+                // A panicking handler must still free its slot and end its job.
+                let outcome = catch_unwind(AssertUnwindSafe(|| handler(&sink, &token)))
+                    .unwrap_or_else(|_| Err(HandlerError::Failed("handler panicked".to_string())));
                 inner.finish(id, outcome);
             });
             match spawned {
@@ -468,15 +501,17 @@ impl<T: Send + 'static> Inner<T> {
                 }
                 Err(e) => {
                     entry.record.error_detail = Some(cut(&format!("worker thread could not start: {e}")));
-                    self.transition(entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
+                    self.transition(&mut st.ended, entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
                 }
             }
         }
+        self.prune(st);
     }
 
     /// Called by a worker when its handler returns.
     fn finish(self: &Arc<Self>, id: JobId, outcome: Result<T, HandlerError>) {
-        let mut st = lock(&self.state);
+        let mut guard = lock(&self.state);
+        let st = &mut *guard;
         st.occupied = st.occupied.saturating_sub(1);
         st.running.remove(&id);
         if let Some(entry) = st.jobs.get_mut(&id) {
@@ -484,28 +519,28 @@ impl<T: Send + 'static> Inner<T> {
             if entry.record.state == JobState::Running {
                 if entry.progress.is_cancel_requested() {
                     // Cancellation wins over a late result: nothing partial reaches the committer.
-                    self.transition(entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
+                    self.transition(&mut st.ended, entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
                 } else {
                     match outcome {
                         Ok(value) => {
                             entry.result = Some(value);
-                            self.transition(entry, JobState::Succeeded, None);
+                            self.transition(&mut st.ended, entry, JobState::Succeeded, None);
                         }
                         Err(HandlerError::Failed(message)) => {
                             entry.record.error_detail = Some(cut(&message));
-                            self.transition(entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
+                            self.transition(&mut st.ended, entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
                         }
                         Err(HandlerError::Cancelled) => {
                             entry.record.error_detail =
                                 Some("handler reported cancellation without a request".to_string());
-                            self.transition(entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
+                            self.transition(&mut st.ended, entry, JobState::Failed, Some(JobErrorCode::HandlerFailed));
                         }
                     }
                 }
             }
         }
-        self.dispatch(&mut st);
-        drop(st);
+        self.dispatch(st);
+        drop(guard);
         self.changed.notify_all();
     }
 
@@ -518,7 +553,8 @@ impl<T: Send + 'static> Inner<T> {
             let Some(entry) = st.jobs.get_mut(id) else {
                 continue;
             };
-            if entry.record.state != JobState::Running {
+            // A job already asked to cancel ends `cancelled` when its handler returns.
+            if entry.record.state != JobState::Running || entry.progress.is_cancel_requested() {
                 continue;
             }
             let (Some(timeout), Some(started)) = (entry.timeout, entry.record.started_at) else {
@@ -526,10 +562,11 @@ impl<T: Send + 'static> Inner<T> {
             };
             if now.saturating_sub(started) > timeout {
                 entry.progress.cancel();
-                self.transition(entry, JobState::Failed, Some(JobErrorCode::Timeout));
+                self.transition(&mut st.ended, entry, JobState::Failed, Some(JobErrorCode::Timeout));
                 fired += 1;
             }
         }
+        self.prune(st);
         if fired > 0 {
             self.changed.notify_all();
         }
@@ -579,12 +616,14 @@ impl<T: Send + 'static> Jobs<T> {
                 batch: VecDeque::new(),
                 running: BTreeSet::new(),
                 occupied: 0,
+                ended: VecDeque::new(),
             }),
             changed: Condvar::new(),
             sink,
             clock: config.clock,
             max_running: config.max_running.max(1),
             queue_cap: config.queue_cap,
+            retain_ended: config.retain_ended.max(1),
             id_seq: AtomicU64::new(0),
         });
         let timer_stop = Arc::new((Mutex::new(false), Condvar::new()));
@@ -619,14 +658,17 @@ impl<T: Send + 'static> Jobs<T> {
     }
 
     /// Submits `exec` and returns its job ID at once; the job starts when a slot is free.
-    /// Refused with `queue_full` (and no job created) when the queue is at its cap.
+    /// Refused with `queue_full` (and no job created) when no slot is free and the queue is
+    /// at its cap.
     pub fn submit(&self, exec: Execution<T>, opts: JobOpts) -> Result<JobId, JobErrorCode> {
         let mut st = lock(&self.inner.state);
-        if st.queued() >= self.inner.queue_cap {
+        let would_wait = st.occupied >= self.inner.max_running || st.queued() > 0;
+        if would_wait && st.queued() >= self.inner.queue_cap {
             return Err(JobErrorCode::QueueFull);
         }
         let id = self.inner.fresh_id(&st.jobs);
         let progress = Arc::new(Progress::new(Arc::clone(&self.inner.clock)));
+        let now = self.inner.clock.now();
         let record = JobRecord {
             id,
             command: exec.command,
@@ -634,13 +676,13 @@ impl<T: Send + 'static> Jobs<T> {
             class: opts.class,
             state: JobState::Queued,
             progress: progress.latest(),
-            submitted_at: self.inner.clock.now(),
+            submitted_at: now,
             started_at: None,
             ended_at: None,
             error: None,
             error_detail: None,
         };
-        self.inner.emit(&record, None);
+        self.inner.emit(&record, None, now);
         st.jobs
             .insert(id, Entry { record, progress, timeout: opts.timeout, handler: Some(exec.handler), result: None });
         match opts.class {
@@ -681,11 +723,12 @@ impl<T: Send + 'static> Jobs<T> {
             JobState::Queued => {
                 entry.progress.cancel();
                 entry.handler = None;
-                self.inner.transition(entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
+                self.inner.transition(&mut st.ended, entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
                 match entry.record.class {
                     JobClass::Interactive => st.interactive.retain(|j| *j != id),
                     JobClass::Batch => st.batch.retain(|j| *j != id),
                 }
+                self.inner.prune(st);
                 self.inner.changed.notify_all();
                 Ok(JobState::Cancelled)
             }
@@ -740,6 +783,7 @@ impl<T: Send + 'static> Jobs<T> {
         let ended = st.jobs.get(&id).is_some_and(|e| e.record.state.is_terminal());
         if ended {
             st.jobs.remove(&id);
+            st.ended.retain(|j| *j != id);
         }
         ended
     }
@@ -766,7 +810,7 @@ impl<T: Send + 'static> Drop for Jobs<T> {
                 if entry.record.state == JobState::Queued {
                     entry.progress.cancel();
                     entry.handler = None;
-                    self.inner.transition(entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
+                    self.inner.transition(&mut st.ended, entry, JobState::Cancelled, Some(JobErrorCode::Cancelled));
                 }
             }
         }

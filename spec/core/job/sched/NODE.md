@@ -73,6 +73,7 @@ Runs submitted executions as jobs: assigns an ID immediately, queues them by pri
 ## Open questions
 
 - Whether a long-running interactive job should be able to pre-empt a running batch job; this leaf does not pre-empt.
+- AC-4's Record Journal check is structural in the build (PR 124): `fid-jobs` has no Record Journal handle, so the capturing stub in `crates/fid-jobs/tests/sched.rs` is never wired and its emptiness check is vacuous. A wired check (journal and committer together) belongs to the `CORE.BUS.PIPE` integration tests.
 
 ## Children
 

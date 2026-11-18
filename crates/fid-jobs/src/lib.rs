@@ -14,5 +14,5 @@ pub use progress::{
 pub use sched::{
     default_max_running, Execution, Handler, HandlerError, JobClass, JobErrorCode, JobId, JobOpts, JobRecord, JobState,
     Jobs, JobsConfig, LifecycleEvent, LifecycleSink, NullLifecycleSink, PrincipalKind, DEFAULT_QUEUE_CAP,
-    DEFAULT_TIMER_POLL, MAX_ERROR_DETAIL_CHARS,
+    DEFAULT_RETAIN_ENDED, DEFAULT_TIMER_POLL, MAX_ERROR_DETAIL_CHARS,
 };
