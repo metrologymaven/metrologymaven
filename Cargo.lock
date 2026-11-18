@@ -71,6 +71,9 @@ dependencies = [
 [[package]]
 name = "fid-kci"
 version = "0.0.1"
+dependencies = [
+ "fid-types",
+]
 
 [[package]]
 name = "fid-num"
@@ -85,6 +88,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-kci",
+ "fid-types",
 ]
 
 [[package]]
@@ -92,6 +96,7 @@ name = "fid-replay"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
 ]
 
 [[package]]
@@ -99,6 +104,7 @@ name = "fid-surface"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
 ]
 
 [[package]]
@@ -107,6 +113,10 @@ version = "0.0.1"
 dependencies = [
  "sha2",
 ]
+
+[[package]]
+name = "fid-types"
+version = "0.0.1"
 
 [[package]]
 name = "fid-xtask"

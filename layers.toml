@@ -4,6 +4,7 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 
 [crates]
 "fid-num" = "num"
+"fid-types" = "num"
 "fid-kci" = "kernel"
 "fid-canon" = "model"
 "fid-registry" = "model"
