@@ -1,6 +1,6 @@
 [package]
 name = "fid-platform"
-description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE)"
+description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE); the hardware profile file and validator (PLAT.HW.PROFILE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
