@@ -1,24 +1,40 @@
-//! Windows: `\\?\` verbatim paths (no 260-character limit) and a share-mode write lock.
+//! Windows: `\\?\` verbatim paths (no 260-character limit), a share-mode write lock and
+//! handle-based link refusal.
 //!
 //! The write lock is the `lock` file held open for writing with share mode `FILE_SHARE_READ`:
-//! while the handle is open the OS refuses every other open that asks for write access
-//! (`ERROR_SHARING_VIOLATION`), in this or any other process, but still lets others read the
-//! holder record. Closing the handle, including at process exit, releases it.
+//! while the handle is open the OS refuses every other open that asks for write or delete
+//! access (`ERROR_SHARING_VIOLATION`), in this or any other process. Renaming another file
+//! over `lock`, or deleting it, needs delete access to it, so the held file cannot be replaced
+//! while held. Others can still read the holder record. Closing the handle, including at
+//! process exit, releases it.
+//!
+//! Links: every entry below the project root is opened with `FILE_FLAG_OPEN_REPARSE_POINT`, so
+//! the handle refers to the entry itself and never to a link target, and the reparse-point
+//! attribute is checked on that handle (no check-then-use window). Directory handles are kept
+//! open without `FILE_SHARE_DELETE` for as long as the `Dir` lives, so a directory being used
+//! cannot be renamed away and replaced by a junction. Remaining window: `entries()` lists by
+//! path, which only affects the listing, not where data is written.
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 const FILE_SHARE_READ: u32 = 0x1;
+const FILE_SHARE_WRITE: u32 = 0x2;
 const FILE_SHARE_ALL: u32 = 0x1 | 0x2 | 0x4;
+const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 const ERROR_SHARING_VIOLATION: i32 = 32;
 const ERROR_LOCK_VIOLATION: i32 = 33;
-const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 
 #[derive(Debug)]
 pub(super) struct Dir {
     path: PathBuf,
+    /// Handles of this directory and every directory above it up to the project root.
+    held: Vec<Arc<File>>,
 }
 
 pub(super) enum TryLock {
@@ -40,47 +56,66 @@ fn read_bounded(f: &mut File, limit: u64) -> io::Result<Vec<u8>> {
     Ok(buf)
 }
 
-/// Refuses an existing entry below the project root that is a symbolic link, junction or other
-/// reparse point, so nothing the store writes or reads can be redirected out of the project.
-fn refuse_reparse(path: &Path) -> io::Result<()> {
-    match fs::symlink_metadata(path) {
-        Ok(m) if m.file_type().is_symlink() || m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 => {
-            Err(super::link_refused())
-        }
-        _ => Ok(()),
+/// Opens a directory handle (read access, no delete sharing). With `entry` the handle is the
+/// entry itself even if it is a link, and links are refused.
+fn open_dir_handle(path: &Path, entry: bool) -> io::Result<File> {
+    let flags =
+        if entry { FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT } else { FILE_FLAG_BACKUP_SEMANTICS };
+    let f =
+        OpenOptions::new().read(true).share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE).custom_flags(flags).open(path)?;
+    let m = f.metadata()?;
+    if entry && m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(super::link_refused());
     }
+    if !m.is_dir() {
+        return Err(io::Error::other("not a directory"));
+    }
+    Ok(f)
 }
 
-fn ensure_dir(path: &Path, create: bool) -> io::Result<()> {
-    if create {
-        fs::create_dir_all(path)?;
+/// Checks a just-opened entry handle: no reparse point, a regular file.
+fn check_file(f: &File) -> io::Result<()> {
+    let m = f.metadata()?;
+    if m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(super::link_refused());
     }
-    if fs::metadata(path)?.is_dir() {
-        Ok(())
-    } else {
-        Err(io::Error::other("not a directory"))
+    if !m.is_file() {
+        return Err(super::not_regular());
     }
+    Ok(())
 }
 
 impl Dir {
+    /// Opens the project root; links on the user's path to it are followed.
     pub(super) fn open(path: &Path, create: bool) -> io::Result<Dir> {
         let verbatim = match path.to_str() {
             Some(s) => PathBuf::from(super::windows_verbatim(s)),
             None => path.to_path_buf(),
         };
-        ensure_dir(&verbatim, create)?;
-        Ok(Dir { path: verbatim })
+        if create {
+            fs::create_dir_all(&verbatim)?;
+        }
+        let handle = open_dir_handle(&verbatim, false)?;
+        Ok(Dir { path: verbatim, held: vec![Arc::new(handle)] })
     }
 
     pub(super) fn sub(&self, name: &str, create: bool) -> io::Result<Dir> {
         let path = self.path.join(name);
-        refuse_reparse(&path)?;
-        ensure_dir(&path, create)?;
-        Ok(Dir { path })
+        if create {
+            match fs::create_dir(&path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(e) => return Err(e),
+            }
+        }
+        let handle = open_dir_handle(&path, true)?;
+        let mut held = self.held.clone();
+        held.push(Arc::new(handle));
+        Ok(Dir { path, held })
     }
 
     pub(super) fn try_clone(&self) -> io::Result<Dir> {
-        Ok(Dir { path: self.path.clone() })
+        Ok(Dir { path: self.path.clone(), held: self.held.clone() })
     }
 
     pub(super) fn entries(&self) -> io::Result<Vec<(String, bool)>> {
@@ -94,16 +129,25 @@ impl Dir {
     }
 
     pub(super) fn read_file(&self, name: &str, limit: u64) -> io::Result<Vec<u8>> {
-        let path = self.path.join(name);
-        refuse_reparse(&path)?;
-        let mut f = OpenOptions::new().read(true).share_mode(FILE_SHARE_ALL).open(path)?;
+        let mut f = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_ALL)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(self.path.join(name))?;
+        check_file(&f)?;
         read_bounded(&mut f, limit)
     }
 
     pub(super) fn write_file(&self, name: &str, bytes: &[u8]) -> io::Result<()> {
-        let path = self.path.join(name);
-        refuse_reparse(&path)?;
-        let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(path)?;
+        // Opened without truncation so a link is refused before anything is changed.
+        let mut f = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(self.path.join(name))?;
+        check_file(&f)?;
+        f.set_len(0)?;
         f.write_all(bytes)?;
         f.sync_all()
     }
@@ -114,18 +158,21 @@ impl Dir {
     }
 
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
-        let path = self.path.join(name);
-        refuse_reparse(&path)?;
-        // No FILE_SHARE_DELETE either, so the held file cannot be renamed or replaced.
+        // No write or delete sharing: the held file can be neither opened for writing nor
+        // renamed, replaced or deleted by anyone else.
         let opened = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .truncate(false)
             .share_mode(FILE_SHARE_READ)
-            .open(path);
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(self.path.join(name));
         match opened {
-            Ok(file) => Ok(TryLock::Acquired(LockHandle { file })),
+            Ok(file) => {
+                check_file(&file)?;
+                Ok(TryLock::Acquired(LockHandle { file }))
+            }
             Err(e) if matches!(e.raw_os_error(), Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)) => {
                 Ok(TryLock::Busy)
             }
@@ -145,6 +192,12 @@ impl LockHandle {
         self.file.seek(SeekFrom::Start(0))?;
         self.file.write_all(bytes)?;
         self.file.sync_data()
+    }
+
+    /// True while the held file is still the one at `dir/name`. Always true on Windows: the
+    /// share mode denies the delete access a rename over or delete of the held file needs.
+    pub(super) fn is_current(&self, _dir: &Dir, _name: &str) -> io::Result<bool> {
+        Ok(true)
     }
 
     pub(super) fn release(self) {

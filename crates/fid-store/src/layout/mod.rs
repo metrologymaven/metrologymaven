@@ -184,6 +184,12 @@ pub enum StoreError {
     SymlinkRefused,
     /// `force_unlock` was confirmed with a holder record that is not the one in the lock file.
     LockMismatch(Option<LockInfo>),
+    /// An entry below the project root that must be a regular file is something else (a FIFO,
+    /// device or socket); it is refused rather than opened.
+    NotRegularFile,
+    /// The held lock file is no longer the file at `lock` (replaced by rename or deleted), so
+    /// the lock no longer excludes other writers; writes stop.
+    LockLost,
     Io(io::Error),
 }
 
@@ -201,6 +207,8 @@ impl StoreError {
             StoreError::LockFileInvalid => "lock_file_invalid",
             StoreError::SymlinkRefused => "symlink_refused",
             StoreError::LockMismatch(_) => "lock_mismatch",
+            StoreError::NotRegularFile => "not_regular_file",
+            StoreError::LockLost => "lock_lost",
             StoreError::Io(_) => "io",
         }
     }
@@ -224,6 +232,8 @@ impl fmt::Display for StoreError {
             StoreError::LockFileInvalid => write!(f, "lock_file_invalid: lock file is not readable"),
             StoreError::SymlinkRefused => write!(f, "symlink_refused: links are not followed inside a project"),
             StoreError::LockMismatch(_) => write!(f, "lock_mismatch: the lock file names a different holder"),
+            StoreError::NotRegularFile => write!(f, "not_regular_file: expected a regular file"),
+            StoreError::LockLost => write!(f, "lock_lost: the lock file was replaced or removed"),
             StoreError::Io(e) => write!(f, "io: {e}"),
         }
     }
@@ -240,28 +250,38 @@ impl std::error::Error for StoreError {
 
 impl From<io::Error> for StoreError {
     fn from(e: io::Error) -> Self {
-        if e.get_ref().is_some_and(|inner| inner.is::<LinkRefused>()) {
-            StoreError::SymlinkRefused
-        } else {
-            StoreError::Io(e)
+        match e.get_ref().and_then(|inner| inner.downcast_ref::<Refusal>()) {
+            Some(Refusal::Link) => StoreError::SymlinkRefused,
+            Some(Refusal::NotRegular) => StoreError::NotRegularFile,
+            None => StoreError::Io(e),
         }
     }
 }
 
-/// Marker carried inside an `io::Error` by the platform layer when it refuses a link.
+/// Marker carried inside an `io::Error` by the platform layer when it refuses an entry.
 #[derive(Debug)]
-struct LinkRefused;
+enum Refusal {
+    Link,
+    NotRegular,
+}
 
-impl fmt::Display for LinkRefused {
+impl fmt::Display for Refusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "link inside the project refused")
+        match self {
+            Refusal::Link => write!(f, "link inside the project refused"),
+            Refusal::NotRegular => write!(f, "not a regular file"),
+        }
     }
 }
 
-impl std::error::Error for LinkRefused {}
+impl std::error::Error for Refusal {}
 
 fn link_refused() -> io::Error {
-    io::Error::other(LinkRefused)
+    io::Error::other(Refusal::Link)
+}
+
+fn not_regular() -> io::Error {
+    io::Error::other(Refusal::NotRegular)
 }
 
 /// An opened project folder.
@@ -347,6 +367,16 @@ impl ProjectLocation {
     pub fn force_unlock(path: &Path, confirm: Option<&LockInfo>) -> Result<(), StoreError> {
         let root = absolute_checked(path)?;
         let dir = sys::Dir::open(&root, false)?;
+        // Only ever touch the lock of something that is a project.
+        match dir.read_file(FORMAT_FILE, SMALL_FILE_LIMIT) {
+            Ok(text) => {
+                parse_format(&text)?;
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                return Err(StoreError::NotAProject(format!("no {FORMAT_FILE} file")))
+            }
+            Err(e) => return Err(StoreError::from(e)),
+        }
         let mut handle = match dir.try_lock(LOCK_FILE)? {
             sys::TryLock::Acquired(h) => h,
             sys::TryLock::Busy => {
@@ -425,6 +455,18 @@ impl Locked {
         &self.info
     }
 
+    /// Checks that the lock still excludes other writers: the held lock file must still be the
+    /// file at `lock` (on Unix a sync tool or user could rename another file over it, after
+    /// which a second process could lock that one). Every mutating call runs this first.
+    pub fn verify(&self) -> Result<(), StoreError> {
+        let Some(h) = self.handle.as_ref() else { return Err(StoreError::LockLost) };
+        if h.is_current(&self.dir, LOCK_FILE)? {
+            Ok(())
+        } else {
+            Err(StoreError::LockLost)
+        }
+    }
+
     /// Warnings raised while taking the lock.
     pub fn warnings(&self) -> &[StoreWarning] {
         &self.warnings
@@ -433,6 +475,7 @@ impl Locked {
     /// Writes `<area>/<subdirs...>/<name>` (creating the subdirectories), replacing any
     /// previous content, and flushes it. Crash-safe commits are `CORE.STO.SQL`'s job.
     pub fn write_file(&self, area: Area, subdirs: &[HexName], name: &HexName, bytes: &[u8]) -> Result<(), StoreError> {
+        self.verify()?;
         let d = descend(&self.dir, area, subdirs, true)?;
         Ok(d.write_file(name.as_str(), bytes)?)
     }

@@ -1,6 +1,6 @@
 //! Linux and macOS: directory handles with the `openat` family, `flock`, `fstatfs`, `uname`.
 
-use rustix::fs::{self as rfs, AtFlags, FlockOperation, Mode, OFlags};
+use rustix::fs::{self as rfs, AtFlags, FileType, FlockOperation, Mode, OFlags};
 use rustix::io::Errno;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -26,7 +26,7 @@ pub(super) struct LockHandle {
 }
 
 fn dir_flags() -> OFlags {
-    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC
+    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NONBLOCK
 }
 
 fn dir_mode() -> Mode {
@@ -63,6 +63,31 @@ fn step(cur: &OwnedFd, name: &OsStr, create: bool, follow: bool) -> io::Result<O
     }
     let flags = if follow { dir_flags() } else { dir_flags() | OFlags::NOFOLLOW };
     open_at(cur, name, flags, Mode::empty())
+}
+
+/// Opens a file below the project that must be a regular file. `NONBLOCK` keeps a FIFO or
+/// device planted in the project from hanging the open; anything but a regular file is refused
+/// with the typed `not_regular_file` error.
+fn open_regular(cur: &OwnedFd, name: &str, flags: OFlags, mode: Mode) -> io::Result<File> {
+    let flags = flags | OFlags::NONBLOCK | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+    let fd = match open_at(cur, OsStr::new(name), flags, mode) {
+        Err(e) if e.raw_os_error() == Some(Errno::NXIO.raw_os_error()) => return Err(super::not_regular()),
+        other => other?,
+    };
+    if FileType::from_raw_mode(rfs::fstat(&fd)?.st_mode) != FileType::RegularFile {
+        return Err(super::not_regular());
+    }
+    Ok(File::from(fd))
+}
+
+/// True if `file` is still the file at `cur/name` (same device and inode, link not followed).
+fn same_file(cur: &OwnedFd, name: &str, file: &File) -> io::Result<bool> {
+    let held = rfs::fstat(file)?;
+    match rfs::statat(cur, name, AtFlags::SYMLINK_NOFOLLOW) {
+        Ok(now) => Ok(now.st_dev == held.st_dev && now.st_ino == held.st_ino),
+        Err(e) if e == Errno::NOENT => Ok(false),
+        Err(e) => Err(e.into()),
+    }
 }
 
 pub(super) fn read_bounded(f: &mut File, limit: u64) -> io::Result<Vec<u8>> {
@@ -117,14 +142,14 @@ impl Dir {
     }
 
     pub(super) fn read_file(&self, name: &str, limit: u64) -> io::Result<Vec<u8>> {
-        let flags = OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
-        let fd = open_at(&self.fd, OsStr::new(name), flags, Mode::empty())?;
-        read_bounded(&mut File::from(fd), limit)
+        let mut f = open_regular(&self.fd, name, OFlags::RDONLY, Mode::empty())?;
+        read_bounded(&mut f, limit)
     }
 
     pub(super) fn write_file(&self, name: &str, bytes: &[u8]) -> io::Result<()> {
-        let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::TRUNC | OFlags::CLOEXEC | OFlags::NOFOLLOW;
-        let mut f = File::from(open_at(&self.fd, OsStr::new(name), flags, file_mode())?);
+        // Truncated only after the regular-file check.
+        let mut f = open_regular(&self.fd, name, OFlags::WRONLY | OFlags::CREATE, file_mode())?;
+        f.set_len(0)?;
         f.write_all(bytes)?;
         f.sync_all()
     }
@@ -139,22 +164,15 @@ impl Dir {
     /// replaced the file by rename would otherwise leave two processes "holding" two files.
     /// A replaced file is retried a few times, then reported as busy.
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
-        let flags = OFlags::RDWR | OFlags::CREATE | OFlags::CLOEXEC | OFlags::NOFOLLOW;
         for _ in 0..LOCK_ATTEMPTS {
-            let file = File::from(open_at(&self.fd, OsStr::new(name), flags, file_mode())?);
+            let file = open_regular(&self.fd, name, OFlags::RDWR | OFlags::CREATE, file_mode())?;
             match rfs::flock(&file, FlockOperation::NonBlockingLockExclusive) {
                 Ok(()) => {}
                 Err(e) if e == Errno::WOULDBLOCK || e == Errno::AGAIN => return Ok(TryLock::Busy),
                 Err(e) => return Err(e.into()),
             }
-            let held = rfs::fstat(&file)?;
-            match rfs::statat(&self.fd, name, AtFlags::SYMLINK_NOFOLLOW) {
-                Ok(now) if now.st_dev == held.st_dev && now.st_ino == held.st_ino => {
-                    return Ok(TryLock::Acquired(LockHandle { file }));
-                }
-                Ok(_) => {}
-                Err(e) if e == Errno::NOENT => {}
-                Err(e) => return Err(e.into()),
+            if same_file(&self.fd, name, &file)? {
+                return Ok(TryLock::Acquired(LockHandle { file }));
             }
             let _ = rfs::flock(&file, FlockOperation::Unlock);
         }
@@ -190,6 +208,12 @@ impl LockHandle {
         self.file.seek(SeekFrom::Start(0))?;
         self.file.write_all(bytes)?;
         self.file.sync_data()
+    }
+
+    /// True while the held file is still the one at `dir/name`; false once another file was
+    /// renamed over it or it was deleted (the lock then protects nothing).
+    pub(super) fn is_current(&self, dir: &Dir, name: &str) -> io::Result<bool> {
+        same_file(&dir.fd, name, &self.file)
     }
 
     pub(super) fn release(self) {

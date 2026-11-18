@@ -607,3 +607,125 @@ fn force_unlock_clears_a_garbled_record_only_when_confirmed_as_garbled() {
     ProjectLocation::force_unlock(&root, None).unwrap();
     assert!(ProjectLocation::open(&root, OpenMode::Write).unwrap().1.is_some());
 }
+
+#[test]
+fn force_unlock_only_touches_projects() {
+    let t = TempDir::new("force3");
+    std::fs::write(t.0.join("lock"), fixture_lock("lock_other_host")).unwrap();
+    let err = ProjectLocation::force_unlock(&t.0, None).unwrap_err();
+    assert_eq!(err.code(), "not_a_project");
+    assert_eq!(std::fs::read_to_string(t.0.join("lock")).unwrap(), fixture_lock("lock_other_host"));
+}
+
+// ---------------------------------------------------------------- lock file replaced while held
+
+#[cfg(unix)]
+#[test]
+fn lock_file_renamed_over_while_held_stops_writes() {
+    let (t, root) = new_project("lost");
+    let (_loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    lock.verify().unwrap();
+    lock.write_file(Area::Tmp, &[], &hex("01"), b"before").unwrap();
+    let fresh = t.0.join("fresh");
+    std::fs::write(&fresh, b"").unwrap();
+    std::fs::rename(&fresh, root.join("lock")).unwrap();
+    assert_eq!(lock.verify().unwrap_err().code(), "lock_lost");
+    let err = lock.write_file(Area::Tmp, &[], &hex("02"), b"after").unwrap_err();
+    assert_eq!(err.code(), "lock_lost");
+    // A second writer can now lock the new file; the first one has stopped writing.
+    let (_b, second) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    assert!(second.is_some());
+    assert!(!root.join("tmp").join("02").exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn held_lock_file_cannot_be_replaced_or_deleted() {
+    let (t, root) = new_project("lostw");
+    let (_loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    let fresh = t.0.join("fresh");
+    std::fs::write(&fresh, b"").unwrap();
+    assert!(std::fs::rename(&fresh, root.join("lock")).is_err());
+    assert!(std::fs::remove_file(root.join("lock")).is_err());
+    lock.verify().unwrap();
+    lock.write_file(Area::Tmp, &[], &hex("01"), b"ok").unwrap();
+}
+
+// ---------------------------------------------------------------- special files
+
+#[cfg(unix)]
+fn mkfifo(p: &Path) {
+    let ok = Command::new("mkfifo").arg(p).status().unwrap().success();
+    assert!(ok, "mkfifo failed");
+}
+
+#[cfg(unix)]
+#[test]
+fn fifo_in_the_project_is_refused_without_hanging() {
+    let (_t, root) = new_project("fifo");
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    mkfifo(&root.join("tmp").join("abcd"));
+    let err = loc.read_file(Area::Tmp, &[], &hex("abcd"), 16).unwrap_err();
+    assert_eq!(err.code(), "not_regular_file", "{err:?}");
+    let err = lock.write_file(Area::Tmp, &[], &hex("abcd"), b"x").unwrap_err();
+    assert_eq!(err.code(), "not_regular_file", "{err:?}");
+    drop(lock);
+    std::fs::remove_file(root.join("lock")).unwrap();
+    mkfifo(&root.join("lock"));
+    let err = ProjectLocation::open(&root, OpenMode::Write).unwrap_err();
+    assert_eq!(err.code(), "not_regular_file", "{err:?}");
+}
+
+// ---------------------------------------------------------------- Windows junctions
+
+#[cfg(windows)]
+fn junction(link: &Path, target: &Path) {
+    let ok = Command::new("cmd")
+        .arg("/c")
+        .arg("mklink")
+        .arg("/J")
+        .arg(link)
+        .arg(target)
+        .stdout(Stdio::null())
+        .status()
+        .unwrap()
+        .success();
+    assert!(ok, "mklink /J failed");
+}
+
+#[cfg(windows)]
+#[test]
+fn junctioned_area_is_refused() {
+    let (t, root) = new_project("junction");
+    let outside = t.0.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(outside.join("ab"), b"outside").unwrap();
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    std::fs::remove_dir(root.join("blobs")).unwrap();
+    junction(&root.join("blobs"), &outside);
+    let err = lock.write_file(Area::Blobs, &[], &hex("cd"), b"x").unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+    let err = loc.read_file(Area::Blobs, &[], &hex("ab"), 16).unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+    drop(lock);
+    drop(loc);
+    let err = ProjectLocation::open(&root, OpenMode::Write).unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+    let names: Vec<_> = std::fs::read_dir(&outside).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(names, vec![std::ffi::OsString::from("ab")]);
+    std::fs::remove_dir(root.join("blobs")).unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn junction_in_the_path_to_the_root_is_followed() {
+    let (t, root) = new_project("junctionroot");
+    let alias = t.0.join("alias");
+    junction(&alias, &root);
+    let (_loc, lock) = ProjectLocation::open(&alias, OpenMode::Write).unwrap();
+    assert!(lock.unwrap().warnings().is_empty());
+}
