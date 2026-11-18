@@ -1,0 +1,13 @@
+{
+  "description": "CORE.JOB.SCHED AC-1: limit 2; five batch jobs then two interactive jobs, each a test sleep handler. Submitted in this order before any handler may proceed. CC-BY-4.0.",
+  "limit": 2,
+  "jobs": [
+    { "name": "b1", "class": "batch", "sleep_ms": 60 },
+    { "name": "b2", "class": "batch", "sleep_ms": 30 },
+    { "name": "b3", "class": "batch", "sleep_ms": 20 },
+    { "name": "b4", "class": "batch", "sleep_ms": 40 },
+    { "name": "b5", "class": "batch", "sleep_ms": 10 },
+    { "name": "i1", "class": "interactive", "sleep_ms": 20 },
+    { "name": "i2", "class": "interactive", "sleep_ms": 30 }
+  ]
+}
