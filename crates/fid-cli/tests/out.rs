@@ -164,8 +164,9 @@ fn ac3_exit_code_per_outcome() {
         assert_eq!(r.stdout.lines().count(), c.stdout_lines, "{}: stdout {:?}", c.name, r.stdout);
         if c.stdout_lines == 1 {
             assert_eq!(one_envelope_line(&r.stdout), c.reply, "{}", c.name);
+            // For encodable envelopes the table mapping alone gives the code.
+            assert_eq!(ExitCode::from_envelope(&c.reply).code(), c.exit, "{}: from_envelope", c.name);
         }
-        assert_eq!(ExitCode::from_envelope(&c.reply).code(), c.exit, "{}: from_envelope", c.name);
 
         let h = run(c, &["demo", "show-thing"]);
         assert_eq!(h.exit.code(), c.exit, "{}: human exit code", c.name);
