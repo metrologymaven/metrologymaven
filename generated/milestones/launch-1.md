@@ -210,7 +210,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [IO.CLOUD.E57.PHYS](../../spec/io/cloud/e57/phys/NODE.md) E57 file header, paged physical layer and page checksums (S, P1b)
 - [IO.CLOUD.LAS.HDR](../../spec/io/cloud/las/hdr/NODE.md) LAS headers, VLRs and point data record formats 0 to 10 (M, P1b)
 - [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
-- [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
+- [B] [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
 - [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
 - [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
 - [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)

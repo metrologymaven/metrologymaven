@@ -1,0 +1,40 @@
+statement	1	1
+1:1	label	F(P1)	F	P1
+1:6	equals	=
+1:7	word	FEAT	FEAT
+1:11	slash	/
+1:12	word	POINT	POINT
+1:17	comma	,
+1:18	word	CART	CART
+1:22	comma	,
+1:23	number	1.50
+1:27	comma	,
+1:28	number	2
+1:29	comma	,
+1:30	number	3.000
+1:35	comma	,
+1:36	number	0
+1:37	comma	,
+1:38	number	0
+1:39	comma	,
+1:40	number	1
+statement	2	2
+2:1	label	F(P2)	F	P2
+2:6	equals	=
+2:7	word	FEAT	FEAT
+2:11	slash	/
+2:12	word	POINT	POINT
+2:17	comma	,
+2:18	word	CART	CART
+2:22	comma	,
+2:23	number	-0.25
+2:28	comma	,
+2:29	number	+4
+2:31	comma	,
+2:32	number	.5
+2:34	comma	,
+2:35	number	1.0E-3
+2:41	comma	,
+2:42	number	2e+2
+2:46	comma	,
+2:47	number	7.
