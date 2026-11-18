@@ -7,7 +7,8 @@ Writes, next to this script:
 - render-cases-v1.txt: 200 bodies from random.Random(42) with the exact rendered block text (AC-5)
 
 This is a separate implementation of the format (regular expressions, str.split), written from the
-spec, so the Rust crate fid-rules-block is checked against it rather than against itself.
+spec, so tools/house_rules/block.py is checked against it rather than against itself. This
+script must never import tools/house_rules.
 Run:  python fixtures/eco/rules/block/make_fixtures.py
 """
 
