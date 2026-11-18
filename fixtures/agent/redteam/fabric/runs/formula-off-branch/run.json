@@ -1,0 +1,76 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.FABRIC fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares kernel-evaluating commands. Every command ID except expr.evaluate_formula@1 is a placeholder. See ref_predicates.py.",
+  "task": "fabric-formula-ratio",
+  "agent": "seeded",
+  "scored_branch": "agent/run-1",
+  "entries": [
+    {
+      "seq": 1,
+      "command": "inspect.evaluate_length@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-a"
+      },
+      "branch": "agent/run-1",
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "command": "inspect.evaluate_length@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-a"
+      },
+      "branch": "agent/run-1",
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "command": "result.enter_value@1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/scratch",
+      "fields": {}
+    }
+  ],
+  "result_records": [
+    {
+      "id": "rr-1",
+      "characteristic": "L1",
+      "entry": 1,
+      "branch": "agent/run-1",
+      "value": {
+        "amount": 0.04,
+        "unit": "m"
+      },
+      "outcome": "CONFORMS",
+      "basis": "FEATURES"
+    },
+    {
+      "id": "rr-2",
+      "characteristic": "L2",
+      "entry": 2,
+      "branch": "agent/run-1",
+      "value": {
+        "amount": 0.032,
+        "unit": "m"
+      },
+      "outcome": "CONFORMS",
+      "basis": "FEATURES"
+    },
+    {
+      "id": "rr-3",
+      "characteristic": "R1",
+      "entry": 3,
+      "branch": "agent/scratch",
+      "value": {
+        "amount": 1.25,
+        "unit": "1"
+      },
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY"
+    }
+  ]
+}
