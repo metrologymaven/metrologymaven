@@ -1,0 +1,59 @@
+statement	1	1
+1:1	word	UNITS	UNITS
+1:6	slash	/
+1:7	word	MM	MM
+1:9	comma	,
+1:10	word	ANGDEC	ANGDEC
+statement	4	4
+4:1	label	fa(p1)	FA	p1
+4:7	equals	=
+4:8	word	feat	FEAT
+4:12	slash	/
+4:13	word	point	POINT
+4:18	comma	,
+4:19	word	cart	CART
+4:23	comma	,
+4:24	number	0
+4:25	comma	,
+4:26	number	0
+4:27	comma	,
+4:28	number	0
+4:29	comma	,
+4:30	number	0
+4:31	comma	,
+4:32	number	0
+4:33	comma	,
+4:34	number	1
+statement	5	8
+5:2	label	T(DIAM_1)	T	DIAM_1
+5:11	equals	=
+5:12	word	TOL	TOL
+5:15	slash	/
+5:16	word	DIAM	DIAM
+5:20	comma	,
+5:21	number	-0.01
+5:26	comma	,
+5:27	number	0.01
+5:32	comma	,
+7:3	comment	$$ a comment inside the chain	 a comment inside the chain
+8:3	word	MMC	MMC
+statement	9	9
+9:1	word	TEXT	TEXT
+9:5	slash	/
+9:6	word	OPER	OPER
+9:10	comma	,
+9:11	raw_text	Clamp the part, then press start $ now
+statement	10	10
+10:1	word	TEXT	TEXT
+10:5	slash	/
+10:6	word	OUTFIL	OUTFIL
+10:12	comma	,
+10:13	string	'report ''one'''	report 'one'
+statement	11	11
+11:1	word	OUTPUT	OUTPUT
+11:7	slash	/
+11:8	label	FA(p1)	FA	p1
+11:14	comma	,
+11:15	label	TA(DIAM_1)	TA	DIAM_1
+statement	12	12
+12:1	word	ENDFIL	ENDFIL

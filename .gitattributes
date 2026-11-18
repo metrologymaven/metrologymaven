@@ -6,3 +6,5 @@ fixtures/hal/idl/stamp/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
+# DMIS lexer fixtures (IO.DMIS.PARSE.LEX): CRLF, tabs and non-UTF-8 bytes are part of the test.
+fixtures/io/dmis/parse/lex/** -text

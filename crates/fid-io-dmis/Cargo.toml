@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-dmis"
-description = "Metrology Maven DMIS 5.3 support: generated conformance table (spec node IO.DMIS.CONF)"
+description = "Metrology Maven DMIS 5.3 support: generated conformance table (spec node IO.DMIS.CONF) and bounded lexer (IO.DMIS.PARSE.LEX)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,8 @@ name = "dmis-conformance"
 path = "src/bin/dmis-conformance.rs"
 
 [dependencies]
+# Reader harness (IO.REG.LIMITS): bounded source, budget, error taxonomy, untrusted text.
+fid-io-reg = { path = "../fid-io-reg" }
 # RFC 8785 canonical JSON writer for dmis-conformance.json (the project's canonical-JSON crate).
 fid-canon = { path = "../fid-canon" }
 # Reads the support-declaration file as an untyped table, like fid-accept, fid-vocab and fid-xtask.
