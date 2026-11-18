@@ -1,0 +1,1 @@
+KNP1-ALLOW-UNLISTED ext-b 0.3.1 ext-b via fid-num -> ext-a -> ext-b

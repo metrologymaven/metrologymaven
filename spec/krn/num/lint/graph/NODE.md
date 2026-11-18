@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
+built_pr: 150
 satisfies: [REQ-KRN.NUM.LINT-001, REQ-KRN.NUM.LINT-004]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND]
@@ -78,6 +80,7 @@ Decides what "the kernel" is for the lint: the full dependency closure of the co
 ## Open questions
 
 - `ECO.REPO.ALLOW` already runs a kernel-closure allowlist check (`cargo xtask kernel-allow`). This leaf repeats membership because REQ-KRN.NUM.LINT-004 requires it in the lint; maintainers may prefer that one tool calls the other. Both read the same file, so results cannot disagree on content, only on closure rules (ECO.REPO.ALLOW counts normal and build edges; this leaf adds proc-macro edges).
+- **Licence allowlist until ECO.RULES.SPDX lands (maintainer decision, review of PR #150):** `house-rules/spdx-allowlist.toml` does not exist yet and this leaf does not seed it. Until it lands, the effective licence allowlist used for the kernel must be no wider than `deny.toml`'s `[licenses] allow` list, so `0BSD`, `MIT-0` and `BSL-1.0` from the ECO.RULES.SPDX proposal stay out. `kernel-allowlist.toml` is owned by `ECO.REPO.ALLOW` and is not seeded here either; today's kernel closure is all first-party (checked by a test on the real workspace).
 
 ## Children
 

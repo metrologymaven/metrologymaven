@@ -1,0 +1,6 @@
+# AC-4: ext-r comes from the registry but is not in vendor/.
+[graph]
+roots = ["fid-num"]
+third_party_dir = "vendor"
+allowlist = "../ok/kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"

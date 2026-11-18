@@ -1,0 +1,36 @@
+[[allow]]
+name = "ext-dup"
+version = "^1"
+reason = "fixture"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-git"
+version = "0.9"
+reason = "fixture"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-reg"
+version = "1"
+reason = "fixture"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-ren"
+version = "^0.2"
+reason = "fixture"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-win"
+version = "0.1"
+reason = "fixture"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-ws"
+version = "~0.5"
+reason = "fixture"
+reviewer = "fixture"
+

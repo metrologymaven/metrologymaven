@@ -3,8 +3,10 @@
 //! not part of the kernel. Modules land one spec leaf at a time; see `spec/krn/num/lint/`.
 //!
 //! - [`findings`] (alias [`find`]): rule catalogue, findings, report and waivers (`KRN.NUM.LINT.FIND`).
+//! - [`graph`]: kernel dependency closure, allowlist and licence check (`KRN.NUM.LINT.GRAPH`).
 
 pub mod findings;
+pub mod graph;
 
 /// Short alias of [`findings`] (the leaf `KRN.NUM.LINT.FIND`).
 pub use findings as find;

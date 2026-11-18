@@ -1,0 +1,8 @@
+# REQ-003 version path: the ok/ workspace with ext-a allowed only as ^2.
+[graph]
+workspace = "../ok"
+roots = ["fid-num"]
+third_party_dir = "../ok/vendor"
+exclude = ["tests/**", "benches/**", "examples/**", "src/bin/**"]
+allowlist = "kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"

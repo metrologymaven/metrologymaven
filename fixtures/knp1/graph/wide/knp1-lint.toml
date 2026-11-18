@@ -1,0 +1,9 @@
+# Renamed package, workspace-inherited dependency, [target.*] dependency, git source,
+# registry name-version layout and two versions of one crate.
+[graph]
+roots = ["fid-k"]
+third_party_dir = "vendor"
+third_party_kind = "vendored"
+exclude = ["tests/**"]
+allowlist = "kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"
