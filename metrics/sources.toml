@@ -1,0 +1,45 @@
+# Sources the adoption-metric collector may read (spec node OUTR.COMM.METRIC.DEF).
+#
+# Every source is public: readable by anyone without an account, a token or a cookie, and
+# `public_basis` says why. The guard (`fid-outreach metric-def check`) refuses any source not
+# marked public, and any source whose URL or ID matches the product-data deny-list compiled into
+# the crate (telemetry, crash reports, support bundles, update checks, licence or activation
+# servers, diagnostics). Data collected by the product is never a source.
+#
+# Only sources that exist today are listed. They follow the project's current public
+# repository host; when ECO.REPO and ECO.REL choose final hosts, change the URLs here in a PR.
+
+[[source]]
+id = "github-repo-api"
+url = "https://api.github.com/repos/metrologymaven/metrologymaven"
+public = true
+public_basis = "Public repository metadata served by the repository host's REST API to unauthenticated requests; the same counts are shown on the public repository page."
+
+[[source]]
+id = "github-latest-release-api"
+url = "https://api.github.com/repos/metrologymaven/metrologymaven/releases/latest"
+public = true
+public_basis = "Public release metadata, including per-asset download counts, served by the repository host's REST API to unauthenticated requests."
+
+[[source]]
+id = "github-repo-git"
+url = "https://github.com/metrologymaven/metrologymaven.git"
+public = true
+public_basis = "The public Git history of the open-source repository, which anyone can clone without an account."
+
+[[source]]
+id = "github-discussions"
+url = "https://github.com/metrologymaven/metrologymaven/discussions"
+public = true
+public_basis = "The project's public discussion forum on the repository host, readable without an account."
+
+# No public chat channel exists yet (OUTR.COMM.CHAN), so no chat archive is listed and the chat
+# metric cannot be collected. Each channel's public archive must be added here as its own
+# [[source]], reviewed like any other, and the chat metric pointed at it before anything is
+# counted. Until then the chat metric names the contributing guide below only so that it refers
+# to an existing public page; nothing is read from it.
+[[source]]
+id = "contributing-guide"
+url = "https://github.com/metrologymaven/metrologymaven/blob/main/CONTRIBUTING.md"
+public = true
+public_basis = "The project's public contributing guide, readable without an account. It names no chat channel today and no value is read from it."

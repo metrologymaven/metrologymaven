@@ -1,0 +1,12 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# AC-2: a definition without biases; pairs with sources.toml. Expected: exit 1, field_missing biases.
+
+[[metric]]
+id = "repo_stars"
+title = "Repository stars"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"

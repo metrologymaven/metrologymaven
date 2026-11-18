@@ -1,0 +1,21 @@
+# Canonical house-rules manifest (spec node ECO.RULES.SRC).
+# manifest.json is the same data for Python < 3.11; the test keeps them equal.
+
+[budgets]
+core_bytes = 3072
+agents_md_bytes = 10240
+
+[[block]]
+id = "core"
+file = "core.md"
+repos = ["metrologymaven"]
+
+[[block]]
+id = "rust"
+file = "rust.md"
+repos = ["metrologymaven"]
+
+[[block]]
+id = "python"
+file = "python.md"
+repos = ["metrologymaven"]
