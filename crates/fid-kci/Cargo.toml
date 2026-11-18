@@ -7,8 +7,9 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate: no dependencies (KNP-1).
+# Kernel crate (KNP-1): only fid-types, the zero-dependency num-layer vocabulary crate.
 [dependencies]
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true
