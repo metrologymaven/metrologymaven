@@ -1,6 +1,6 @@
 {
   "suite": "suite",
-  "suite_version": "sha256:081350e5804208bdd1b937c893515c220795fac36442cdb3baa686a0ea9cfb14",
+  "suite_version": "sha256:a776bdc69f856bcdf97a63c49942ef84314f9ca251b7e91015e9c8bc5e653e5d",
   "files": [
     [
       "oracles/inspect-bore-b1/oracle.json",
@@ -16,15 +16,15 @@
     ],
     [
       "oracles/probe-bolt-circle/oracle.json",
-      "sha256:7f203260d02662f3dd2b5c8461c516d1f3ada1ae2406d5f5751ee04ec3db8a71"
+      "sha256:9188847ce15c8f2fe423347bac8a09d514f27d2b0de3f33bc8cbd682db95db17"
     ],
     [
       "oracles/probe-flange-reeval/oracle.json",
-      "sha256:7718bd77ab45e651fb3fbfa6ce578c5db8348ca1b3aeec763229a72b1b62521d"
+      "sha256:6e370d14787dc689c4cbe7e9c1c71e5bb8e5068aafbf82af18f942c823f38025"
     ],
     [
       "oracles/probe-keyway-width/oracle.json",
-      "sha256:c6e9d43980f3839fcc6af376a19d55e2eb2901bb745b20bcf3044bee596c8cec"
+      "sha256:21fd6f6038301314cd1a4dfd9e5dab411c25c6062c443acfa5cdca6db199ad4f"
     ],
     [
       "oracles/report-derived-and-arm/oracle.json",
@@ -40,51 +40,51 @@
     ],
     [
       "tasks/inspect-bore-b1/start.tar",
-      "sha256:1b29568711ce34666c192b1c36ea7d6c3bb54a1204f273169056c5682600c37a"
+      "sha256:f710681240b535cda73c9edb96555436f44951f1f7bae4b539ff8136965d8e7a"
     ],
     [
       "tasks/inspect-bore-b1/task.json",
-      "sha256:6daf3168f9dcea86214110a9f9da056c937c18cd1780607ff066e6f44377622d"
+      "sha256:495d31d61feb4e0b05f8cd04a4da319cf2ac63a828507262d386cdbd2f232b13"
     ],
     [
       "tasks/inspect-bracket-fai/start.tar",
-      "sha256:afc516efb4a188a8dd8490c09a36dd617d5fe5538c8b07a774dfd7dd4c771c1b"
+      "sha256:3e1ed0dcd7de413b124a0b09c0dd71ef6e17f2de63e33b7630834334706529db"
     ],
     [
       "tasks/inspect-bracket-fai/task.json",
-      "sha256:9a188a51308444f71bd815bcfffe20e91d09a9d6469a424c903525eefaa6676a"
+      "sha256:6434aa6d4fc763ac8d756bc5d128db3ec616de246772d07e06ac7bb452672c3d"
     ],
     [
       "tasks/inspect-plate-holes/start.tar",
-      "sha256:f91f342586f097b1a8fa690c54ef5d298d0e69dc6d86a74ab1cba6577c4c9496"
+      "sha256:bc739a99a8dc75f57c78263569cbaa5cde92ec0306a0f2906237ba9df4d97564"
     ],
     [
       "tasks/inspect-plate-holes/task.json",
-      "sha256:88df8fa7729cd1e0fc52217d30311468a78c15b55f83d53e96fd407adbb94167"
+      "sha256:da28103bfc0de32870825e817cd117cf74c94d22fc5ee71bc843e43564c878b9"
     ],
     [
       "tasks/probe-bolt-circle/start.tar",
-      "sha256:02c218c085a71b4f21c9353c8f67318f260d7c36d5789a18fc9aae057a7f25a7"
+      "sha256:5dcc9ad8bfa7cef8d8bd1b86562423ccf47adca88d3744cd7b849bd6f666c7a9"
     ],
     [
       "tasks/probe-bolt-circle/task.json",
-      "sha256:1e7262ab06c814c706bd4decf80697f3fbf12907bc8dffd7d0b1ead988c5c608"
+      "sha256:fbcfa6b0df6c477555b11de01e630b664de00f6f04ee50a13066b4bcc87d15d4"
     ],
     [
       "tasks/probe-flange-reeval/start.tar",
-      "sha256:986e1ca68e5f7952fea5b19d39819697a409eb7ba6881aad9c28847bf2380515"
+      "sha256:a875d9fa48f81a1235a5cb1e7dc47287c4a5ed684f41180773b85ea8290ea816"
     ],
     [
       "tasks/probe-flange-reeval/task.json",
-      "sha256:bd29f489b10125749449469e71e3fd3987d410f19b7dc0422420f8b9a3d107a6"
+      "sha256:dc259274adfef4bd977ec6afeeff88018b77230ab51dd0438b3cf10492a06f31"
     ],
     [
       "tasks/probe-keyway-width/start.tar",
-      "sha256:2d83e8146bd598edb57f9d6884b6ac20bd9fc10da7b7c2281190f18564d9641d"
+      "sha256:d8f5211a32c8f2cc0b9f493c9fbc7527b39de2e3366cf39863f4092e3fed120d"
     ],
     [
       "tasks/probe-keyway-width/task.json",
-      "sha256:878432c1af5abdef4b945f3a4704f6b4e40d12c1b30bb12b294ccee8df3e7a55"
+      "sha256:72ba02d072a9e945d366543e6bd0bfa4d76965e56a93cc0a518f8aa5e224455a"
     ],
     [
       "tasks/report-derived-and-arm/start.tar",

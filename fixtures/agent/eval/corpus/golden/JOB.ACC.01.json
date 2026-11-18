@@ -8,7 +8,7 @@
   "kernel_version": "ref-py-corpus@1",
   "input_files": {
     "in/drawing.json": "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe",
-    "in/scan-points.json": "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575"
+    "in/scan-points.json": "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638"
   },
   "entries": [
     {
@@ -68,12 +68,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:75f32c50ab0d861a7e1f2318812123ced5fa4ed901aa242e93aac16264dfcb1b"
+      "hash": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770"
     },
     {
       "seq": 3,
@@ -82,7 +82,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:75f32c50ab0d861a7e1f2318812123ced5fa4ed901aa242e93aac16264dfcb1b",
+      "prev": "sha256:d5035603084fb719b3093e3b3c1b77d047080c681e7b1171df5fa84cc1115770",
       "note": "flatness of face A",
       "inputs": [
         "A"
@@ -117,12 +117,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:9081d69e303f3f086bddc90123c8da3e7c3420dbde3246ffb8dbcf023b4a35c9"
+      "hash": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff"
     },
     {
       "seq": 4,
@@ -131,7 +131,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:9081d69e303f3f086bddc90123c8da3e7c3420dbde3246ffb8dbcf023b4a35c9",
+      "prev": "sha256:cee19f3db1097b08d217bf8ad2fc7fadad89acf85f837343841baeb2a2b7deff",
       "note": "fit circle H1",
       "inputs": [
         "H1"
@@ -166,12 +166,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:0e4065e132280383b740f822ba29d8f3c5e853c5b9a45b8cc0a86a3fe48a476b"
+      "hash": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1"
     },
     {
       "seq": 5,
@@ -180,7 +180,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:0e4065e132280383b740f822ba29d8f3c5e853c5b9a45b8cc0a86a3fe48a476b",
+      "prev": "sha256:29e349e6f215f0cec5c3bf170bc6734151fa520c6d2fe30a0357a5085af526f1",
       "note": "fit circle H2",
       "inputs": [
         "H2"
@@ -215,12 +215,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:4114316cc460144dd35598e0009f615dd273e29fc4d3044e7f049624adbba4de"
+      "hash": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85"
     },
     {
       "seq": 6,
@@ -229,7 +229,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:4114316cc460144dd35598e0009f615dd273e29fc4d3044e7f049624adbba4de",
+      "prev": "sha256:5bd57f54cc73efbb0c46d9dd89cac168e94bf7d390f37a8f675b544ce3980f85",
       "note": "centre distance H1-H2",
       "inputs": [
         "H1",
@@ -265,12 +265,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:1885d4785cd4c893667bbd834e5851480d1cfc03dcd77e9a3ce98f09cb5671f9"
+      "hash": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29"
     },
     {
       "seq": 7,
@@ -279,7 +279,7 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:1885d4785cd4c893667bbd834e5851480d1cfc03dcd77e9a3ce98f09cb5671f9",
+      "prev": "sha256:b3fb9eb5bb6060270ae2a7509966d7f1cd0bc5beb6f216811df798faa8ad7b29",
       "note": "fit circle H3: two points only, the fit is not decidable",
       "inputs": [
         "H3"
@@ -311,12 +311,12 @@
           },
           "kernel_version": "ref-py-corpus@1",
           "input_digests": [
-            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:314c4ad6e78678b3f4b96d2790eeafdb7793c1d7d56dc9f8400e233683a5b638",
             "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
           ]
         }
       ],
-      "hash": "sha256:bf60f803ca5bdf03624fbd0dea1f3649b0386badf7420c4e967d595888b195be"
+      "hash": "sha256:aff0ad3725ec5d48c91ee750a6c19d79201154005b1f33985f690f22affd6353"
     },
     {
       "seq": 8,
@@ -325,11 +325,11 @@
         "kind": "human",
         "id": "human:golden-operator"
       },
-      "prev": "sha256:bf60f803ca5bdf03624fbd0dea1f3649b0386badf7420c4e967d595888b195be",
+      "prev": "sha256:aff0ad3725ec5d48c91ee750a6c19d79201154005b1f33985f690f22affd6353",
       "note": "export the inspection report",
       "inputs": [],
       "result_records": [],
-      "hash": "sha256:c973a1a9ef451b2661331fc238bd2d842ebe785a369c1febee596821f1ccff2c"
+      "hash": "sha256:3522bbfcba4e8b108620325ecac45f035341861ae1506938e5335044eead35e0"
     }
   ]
 }

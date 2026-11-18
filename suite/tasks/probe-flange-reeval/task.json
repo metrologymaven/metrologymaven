@@ -1,10 +1,10 @@
 {
   "id": "probe-flange-reeval",
   "source_job": "JOB.ACC.04",
-  "golden_digest": "sha256:1ad541f8a71237439703d11cc96803bb899390d5d21a6442964cccb1f3472069",
+  "golden_digest": "sha256:cffeae4304c3418634f3599d0275061911dbd4415f9bfd0e29ed99dd4a4b538b",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:986e1ca68e5f7952fea5b19d39819697a409eb7ba6881aad9c28847bf2380515"
+    "digest": "sha256:a875d9fa48f81a1235a5cb1e7dc47287c4a5ed684f41180773b85ea8290ea816"
   },
   "prompt": "Re-evaluate flange FL-480 (synthetic) from the CMM point export in/cmm-points.json: bring the points into the project, evaluate every characteristic on the drawing in/drawing.json, record a result and decision for each, and export the report into out/.",
   "profile": "probe-r1",

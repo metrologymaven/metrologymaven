@@ -70,7 +70,7 @@
       "outcome": "CONFORMS",
       "basis": "FEATURES",
       "value": {
-        "amount": "0x3eee4f17f067986a",
+        "amount": "0x3eee4f17f0679cfa",
         "unit": "m"
       },
       "tol": {
@@ -83,7 +83,7 @@
       "outcome": "CONFORMS",
       "basis": "FEATURES",
       "value": {
-        "amount": "0x3efdd7ee6bcdce46",
+        "amount": "0x3efdd7ee6bcdd49d",
         "unit": "m"
       },
       "tol": {
@@ -96,7 +96,7 @@
       "outcome": "NONCONFORMS",
       "basis": "FEATURES",
       "value": {
-        "amount": "0x3f125c555c48abbd",
+        "amount": "0x3f125c555c48a877",
         "unit": "m"
       },
       "tol": {
@@ -109,7 +109,7 @@
       "outcome": "CONFORMS",
       "basis": "FEATURES",
       "value": {
-        "amount": "0x3ef0def02ae19787",
+        "amount": "0x3ef0def02ae1a9d2",
         "unit": "m"
       },
       "tol": {

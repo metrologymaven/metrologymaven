@@ -5,9 +5,22 @@ golden journals in make_corpus.py. Nothing here calls or mirrors the Rust kernel
 "second implementation" the corpus oracles are computed by.
 
 All functions take and return millimetres (the unit of the synthetic input files).
+
+Bit-reproducible across platforms and Python versions: only +, -, *, / and math.sqrt (all
+correctly rounded in IEEE 754) are used on the data, sums run left to right (not the builtin
+sum, whose float algorithm changed in Python 3.12), and no libm function (sin, cos, atan2,
+hypot) touches a value that reaches a golden journal.
 """
 
 import math
+
+
+def _sum(values):
+    """Plain left-to-right float sum."""
+    s = 0.0
+    for v in values:
+        s += v
+    return s
 
 
 def _solve(a, b):
@@ -25,7 +38,7 @@ def _solve(a, b):
                 m[r][c] -= f * m[col][c]
     x = [0.0] * n
     for r in range(n - 1, -1, -1):
-        s = m[r][n] - sum(m[r][c] * x[c] for c in range(r + 1, n))
+        s = m[r][n] - _sum(m[r][c] * x[c] for c in range(r + 1, n))
         x[r] = s / m[r][r]
     return x
 
@@ -39,8 +52,8 @@ def circle_fit(points):
     n = len(points)
     if n < 3:
         raise ValueError("a circle needs at least 3 points")
-    mx = sum(p[0] for p in points) / n
-    my = sum(p[1] for p in points) / n
+    mx = _sum(p[0] for p in points) / n
+    my = _sum(p[1] for p in points) / n
     # Kasa on centred coordinates: u^2 + v^2 = 2 a u + 2 b v + c.
     suu = svv = suv = 0.0
     suz = svz = sz = 0.0
@@ -61,7 +74,7 @@ def circle_fit(points):
         jtr = [0.0] * 3
         for x, y in points:
             dx, dy = x - cx, y - cy
-            d = math.hypot(dx, dy)
+            d = math.sqrt(dx * dx + dy * dy)
             res = d - r
             j = [-dx / d, -dy / d, -1.0]
             for i in range(3):
@@ -82,7 +95,7 @@ def _jacobi_eigen(s):
     a = [row[:] for row in s]
     v = [[1.0 if i == j else 0.0 for j in range(3)] for i in range(3)]
     for _ in range(100):
-        off = sum(a[i][j] ** 2 for i in range(3) for j in range(3) if i != j)
+        off = _sum(a[i][j] * a[i][j] for i in range(3) for j in range(3) if i != j)
         if off < 1e-30:
             break
         for p in range(3):
@@ -110,8 +123,8 @@ def plane_fit(points):
     n = len(points)
     if n < 3:
         raise ValueError("a plane needs at least 3 points")
-    c = [sum(p[i] for p in points) / n for i in range(3)]
-    s = [[sum((p[i] - c[i]) * (p[j] - c[j]) for p in points) for j in range(3)] for i in range(3)]
+    c = [_sum(p[i] for p in points) / n for i in range(3)]
+    s = [[_sum((p[i] - c[i]) * (p[j] - c[j]) for p in points) for j in range(3)] for i in range(3)]
     vals, vecs = _jacobi_eigen(s)
     k = min(range(3), key=lambda i: vals[i])
     nrm = [vecs[i][k] for i in range(3)]
@@ -123,7 +136,7 @@ def plane_fit(points):
 def flatness_lsq(points):
     """Peak-to-valley of orthogonal residuals from the least-squares plane."""
     c, nrm = plane_fit(points)
-    res = [sum((p[i] - c[i]) * nrm[i] for i in range(3)) for p in points]
+    res = [_sum((p[i] - c[i]) * nrm[i] for i in range(3)) for p in points]
     return max(res) - min(res)
 
 
@@ -132,13 +145,20 @@ def line_fit(points):
     n = len(points)
     if n < 2:
         raise ValueError("a line needs at least 2 points")
-    mx = sum(p[0] for p in points) / n
-    my = sum(p[1] for p in points) / n
-    sxx = sum((p[0] - mx) ** 2 for p in points)
-    syy = sum((p[1] - my) ** 2 for p in points)
-    sxy = sum((p[0] - mx) * (p[1] - my) for p in points)
-    theta = 0.5 * math.atan2(2 * sxy, sxx - syy)  # direction of largest spread
-    return (mx, my), (-math.sin(theta), math.cos(theta))
+    mx = _sum(p[0] for p in points) / n
+    my = _sum(p[1] for p in points) / n
+    sxx = _sum((p[0] - mx) * (p[0] - mx) for p in points)
+    syy = _sum((p[1] - my) * (p[1] - my) for p in points)
+    sxy = _sum((p[0] - mx) * (p[1] - my) for p in points)
+    # Normal = eigenvector of the smallest eigenvalue of [[sxx, sxy], [sxy, syy]].
+    lam = 0.5 * (sxx + syy) - math.sqrt(0.25 * (sxx - syy) * (sxx - syy) + sxy * sxy)
+    u = (sxy, lam - sxx)
+    w = (lam - syy, sxy)
+    nx, ny = u if u[0] * u[0] + u[1] * u[1] >= w[0] * w[0] + w[1] * w[1] else w
+    ln = math.sqrt(nx * nx + ny * ny)
+    if ln == 0.0:
+        raise ValueError("degenerate line")
+    return (mx, my), (nx / ln, ny / ln)
 
 
 def slot_width(side_a, side_b):
@@ -149,6 +169,6 @@ def slot_width(side_a, side_b):
     if na[0] * nb[0] + na[1] * nb[1] < 0:
         nb = (-nb[0], -nb[1])
     nx, ny = na[0] + nb[0], na[1] + nb[1]
-    ln = math.hypot(nx, ny)
+    ln = math.sqrt(nx * nx + ny * ny)
     nx, ny = nx / ln, ny / ln
     return abs((cb[0] - ca[0]) * nx + (cb[1] - ca[1]) * ny)

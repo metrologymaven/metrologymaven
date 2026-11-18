@@ -106,8 +106,18 @@ def start_archive(files: dict) -> bytes:
 # ---------------------------------------------------------------- synthetic geometry
 
 def r4(x: float) -> float:
-    """Round to 0.1 um (4 decimals in mm), the resolution of the synthetic exports."""
-    return round(x, 4)
+    """Round to 0.1 um (4 decimals in mm), the resolution of the synthetic exports. The point
+    coordinates come from libm sin and cos, which may differ in the last bit between platforms;
+    a value that close to a rounding tie would make the exports platform-dependent, so it fails."""
+    frac = abs(x * 1e4) % 1.0
+    assert abs(frac - 0.5) > 1e-6, f"{x!r} is too close to a rounding tie"
+    return round(x, 4) + 0.0  # + 0.0 turns -0.0 into 0.0
+
+
+def dist(x1, y1, x2, y2):
+    """Euclidean distance with sqrt only (correctly rounded on every platform)."""
+    dx, dy = x2 - x1, y2 - y1
+    return math.sqrt(dx * dx + dy * dy)
 
 
 def circle_pts(cx, cy, r, n, phase=0.0, form=()):
@@ -267,7 +277,7 @@ def job_inspect():
     c = char_by_id(drawing, "H1H2-DIST")
     (x1, y1), (x2, y2) = centres["H1"], centres["H2"]
     j.add("inspect.evaluate_distance@1", ["H1", "H2"],
-          [record("H1H2-DIST", "distance", "FEATURES", math.hypot(x2 - x1, y2 - y1), *limits(c),
+          [record("H1H2-DIST", "distance", "FEATURES", dist(x1, y1, x2, y2), *limits(c),
                   {"id": "centre_distance_2d", "version": 1}, dg)], "centre distance H1-H2")
     c = char_by_id(drawing, "H3-DIA")
     j.add("inspect.fit_circle@1", ["H3"],
@@ -299,8 +309,9 @@ def job_inspect():
 
 def job_probe():
     pcd_r = 35.0
-    nominal_k = {f"K{i + 1}": (pcd_r * math.cos(math.radians(45 + 90 * i)), pcd_r * math.sin(math.radians(45 + 90 * i)))
-                 for i in range(4)}
+    # True positions at 45, 135, 225 and 315 degrees: (+/-1, +/-1) * pcd_r / sqrt(2), without libm trig.
+    q = pcd_r / math.sqrt(2.0)
+    nominal_k = {"K1": (q, q), "K2": (-q, q), "K3": (-q, -q), "K4": (q, -q)}
     offs = {"K1": (0.006, -0.004), "K2": (-0.009, 0.011), "K3": (0.028, -0.021), "K4": (-0.004, -0.007)}
     radii = {"K1": 4.5112, "K2": 4.5081, "K3": 4.5143, "K4": 4.5126}
     pts = {
@@ -366,7 +377,7 @@ def job_probe():
     for k in sorted(nominal_k):
         c = char_by_id(drawing, f"{k}-POS")
         nx, ny = nominal_k[k]
-        pos = 2 * math.hypot(centres[k][0] - nx, centres[k][1] - ny)
+        pos = 2 * dist(nx, ny, *centres[k])
         j.add("probe.evaluate_position@1", [k],
               [record(f"{k}-POS", "position", "FEATURES", pos, *limits(c), {"id": "position_2d_diameter",
                                                                              "version": 1}, dg)],

@@ -1,10 +1,10 @@
 {
   "id": "inspect-bracket-fai",
   "source_job": "JOB.ACC.01",
-  "golden_digest": "sha256:d80d1be2fd95529cfce070e8b42b5cd20977ad02b39426940b1ab01fb7419785",
+  "golden_digest": "sha256:d01caa1ccba99d13231fefd8b574b59d36f63b59baa9a0abfba550a41489096e",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:afc516efb4a188a8dd8490c09a36dd617d5fe5538c8b07a774dfd7dd4c771c1b"
+    "digest": "sha256:3e1ed0dcd7de413b124a0b09c0dd71ef6e17f2de63e33b7630834334706529db"
   },
   "prompt": "Run the first-article inspection of bracket BK-210 (synthetic): bring the scan export in/scan-points.json into the project, evaluate every characteristic on the drawing in/drawing.json, record a result and decision for each, and export the inspection report into out/. Do not invent a result for a feature the data cannot support.",
   "profile": "inspect-r1",
