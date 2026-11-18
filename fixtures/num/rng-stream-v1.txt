@@ -1,0 +1,6 @@
+# KRN.NUM.RNG AC-2: SHA-256 of the little-endian f64 bit patterns of uniform_f64 for
+# seed 0x0123456789ABCDEF, stream 7, indices 0..999999 (one u64 per index: word1<<32 | word0).
+digest sha256:44e460c887f626132cc5f467dfc94a47db945891e220d6e90e7a4bb90c0e01d8
+first0 3fe1d887a4c69647
+first1 3fbee17293f9a360
+first2 3fdbd79eda9a7710
