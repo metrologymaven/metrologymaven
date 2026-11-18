@@ -1,0 +1,9 @@
+# Project-controlled host allowlist (OUTR.SITE.GEN.IMPORT); test copy for the fetch tests.
+
+[[host]]
+name = "127.0.0.1"
+purpose = "site"
+
+[[host]]
+name = "Releases.MetrologyMaven.example"
+purpose = "release_host"
