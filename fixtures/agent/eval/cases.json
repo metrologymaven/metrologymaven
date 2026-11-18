@@ -1,0 +1,362 @@
+[
+  {
+    "file": "task-valid.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "task-bad-tier.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "tier"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-empty-apps.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "apps"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-bad-app.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "apps[1]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-dup-app.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "apps[1]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-multi-error.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "apps",
+      "budget.wall_s",
+      "tier"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-missing-prompt.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "prompt"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-empty-prompt.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "prompt"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-bad-golden.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "golden_digest"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-bad-start-digest.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "start_state.digest"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-zero-budget.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "budget.tool_calls"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-fraction-budget.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "budget.wall_s"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-abs-root.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "roots.read[0]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-dotdot-root.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "roots.write[1]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-backslash-root.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "roots.read[0]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-abs-start.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "start_state.path"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-bad-id.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "id"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-workflow-not-string.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "workflows[0]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-unknown-field.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "oracle_hint"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-no-licences.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "licences"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-bad-spdx.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "licences[0].spdx"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-dup-licence.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "licences[1].file"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "task-dup-key.json",
+    "kind": "task",
+    "code": "duplicate_key",
+    "fields": [
+      "tier"
+    ],
+    "schema": "n/a"
+  },
+  {
+    "file": "task-deep-65.json",
+    "kind": "task",
+    "code": "input_limit",
+    "fields": [],
+    "schema": "n/a"
+  },
+  {
+    "file": "task-depth-64.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "workflows[0]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "task-not-json.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [],
+    "schema": "n/a"
+  },
+  {
+    "file": "oracle-valid.json",
+    "kind": "oracle",
+    "code": null,
+    "fields": [],
+    "schema": "valid",
+    "tols": [
+      {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    ]
+  },
+  {
+    "file": "oracle-no-tol.json",
+    "kind": "oracle",
+    "code": null,
+    "fields": [],
+    "schema": "valid",
+    "tols": [
+      {
+        "amount": 1e-09,
+        "unit": "m"
+      },
+      {
+        "amount": 1e-09,
+        "unit": "rad"
+      },
+      null
+    ]
+  },
+  {
+    "file": "oracle-tol-only.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].tol"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-unit-mismatch.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].tol.unit"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "oracle-non-si-unit.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].value.unit"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-negative-tol.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].tol.amount"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-bad-bits.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].value.amount"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "oracle-bad-outcome.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].outcome"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-bad-basis.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[0].basis"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-empty.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "oracle-dup-characteristic.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "items[1].characteristic"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "oracle-contradiction.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "forbidden[0]"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "oracle-bad-forbidden.json",
+    "kind": "oracle",
+    "code": "invalid_oracle",
+    "fields": [
+      "forbidden[0].outcome"
+    ],
+    "schema": "invalid"
+  }
+]

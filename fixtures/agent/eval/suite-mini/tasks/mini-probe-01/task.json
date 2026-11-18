@@ -1,0 +1,36 @@
+{
+  "id": "mini-probe-01",
+  "source_job": "JOB.ACC.02",
+  "golden_digest": "sha256:59869df3e491c015d9825cce601a9f567f59d07b76e0be80249ad429d51d18f9",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:5f1d1aa5ef8212aa16aac162abde3f1a8edf9a651b83809cc26c9adc256fd211"
+  },
+  "prompt": "Run the probing program, then report hole H1 diameter and position decisions.",
+  "profile": "probe-r1",
+  "budget": {
+    "wall_s": 1800,
+    "tool_calls": 120
+  },
+  "roots": {
+    "read": [
+      "in",
+      "ref/data"
+    ],
+    "write": [
+      "out/report"
+    ]
+  },
+  "tier": "multi_step",
+  "apps": [
+    "probe",
+    "report"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "in/program.txt",
+      "spdx": "project-authored"
+    }
+  ]
+}
