@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**7** of **1336** leaves built in code ([B]).
+**9** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 7 built)
+### Wave 1 (125 leaves, 8 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -41,7 +41,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
 - [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
-- [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
+- [B] [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
 - [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
 - [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 0 built)
+### Wave 2 (121 leaves, 1 built)
 
 - [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -221,7 +221,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
 - [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
 - [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
-- [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)
+- [B] [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)
 - [MIG.LADDER.DEF](../../spec/mig/ladder/def/NODE.md) Ladder data file and stage-independence check (S, P1a)
 - [OUTR.BENCH.ACC.FMT](../../spec/outr/bench/acc/fmt/NODE.md) Accuracy recipe section and result table (S, P1a)
 - [OUTR.BENCH.CASE](../../spec/outr/bench/case/NODE.md) User case studies (M, P1b)
