@@ -83,15 +83,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "fid-geo-nurbs"
-version = "0.0.1"
-
-[[package]]
-name = "fid-hal-idl"
+name = "fid-geo-types"
 version = "0.0.1"
 dependencies = [
- "fid-canon",
- "fid-uuid",
+ "fid-num",
+ "fid-types",
 ]
 
 [[package]]
@@ -99,6 +95,16 @@ name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+]
+
+[[package]]
+name = "fid-journal"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
+ "fid-types",
+ "getrandom",
 ]
 
 [[package]]
@@ -130,8 +136,8 @@ name = "fid-project"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
- "fid-uuid",
  "getrandom",
+ "sha1",
 ]
 
 [[package]]
@@ -169,13 +175,6 @@ dependencies = [
 [[package]]
 name = "fid-types"
 version = "0.0.1"
-
-[[package]]
-name = "fid-uuid"
-version = "0.0.1"
-dependencies = [
- "sha1",
-]
 
 [[package]]
 name = "fid-xtask"

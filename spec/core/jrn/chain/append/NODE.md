@@ -69,7 +69,7 @@ The single write path into the chained streams (Record Journal, and in P1b the A
 
 ## Open questions
 
-- None.
+- From `CORE.JRN.ENTRY` (PR #54): the entry schema accepts any digest as `prev`, so append must refuse a zero `prev` at sequence > 1 and a non-zero `prev` at sequence 1.
 
 ## Children
 
