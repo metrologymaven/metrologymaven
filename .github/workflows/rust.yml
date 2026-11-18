@@ -93,6 +93,8 @@ jobs:
           cargo xtask rel keys-check --keys fixtures/rel/guide/keys --doc fixtures/rel/guide/docs/KEYS.md
       - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
         run: cargo xtask plat-matrix lint-tiers
+      - name: Study task list and protocol check via cargo xtask (FLOW.STUDY.PROTO AC-1, AC-3)
+        run: cargo xtask study-tasks-check
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -125,6 +127,7 @@ jobs:
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
+          python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v

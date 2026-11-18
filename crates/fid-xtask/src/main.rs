@@ -16,6 +16,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-hw validate-suite [--file <path>]\n       \
                      cargo xtask plat-hw result-schema\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
+                     cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
+                     [--protocol <md>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
                      cargo xtask rel version-compare <a> <b>\n       \
@@ -39,6 +41,7 @@ fn main() -> ExitCode {
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("study-tasks-check") => study_tasks_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
@@ -116,6 +119,39 @@ fn personas_check(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         println!("personas-check: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// FLOW.STUDY.PROTO: checks the study task list against the journey maps and the persona
+/// file, and the protocol document's citations. Exit 0: clean; 1: findings; 2: usage error.
+fn study_tasks_check(args: &[String]) -> ExitCode {
+    let mut tasks = PathBuf::from("acceptance/study/tasks.json");
+    let mut maps = PathBuf::from("acceptance/journeys/persona");
+    let mut personas = PathBuf::from("acceptance/personas/personas.json");
+    let mut protocol = PathBuf::from("docs/study/protocol.md");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--tasks", Some(v)) => tasks = PathBuf::from(v),
+            ("--maps", Some(v)) => maps = PathBuf::from(v),
+            ("--personas", Some(v)) => personas = PathBuf::from(v),
+            ("--protocol", Some(v)) => protocol = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let report = fid_accept::study::check_files(&tasks, &maps, &personas, Some(&protocol));
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("study-tasks-check: {} tasks", report.tasks.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("study-tasks-check: {} findings", report.findings.len());
         ExitCode::from(1)
     }
 }
