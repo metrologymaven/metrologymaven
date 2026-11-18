@@ -583,10 +583,8 @@ fn fetch_all() {
     let printed: Vec<String> = stdout(&out).lines().map(String::from).collect();
     let tiny = ("tiny", TINY_SHA, "tiny.bin");
     let installed = [tiny, ("mirrored", MIRRORED_SHA, "mirrored.bin"), ("local", TINY_SHA, "tiny.bin")];
-    let want: Vec<String> = installed
-        .iter()
-        .map(|(id, sha, name)| cache.join(id).join(sha).join(name).display().to_string())
-        .collect();
+    let want: Vec<String> =
+        installed.iter().map(|(id, sha, name)| cache.join(id).join(sha).join(name).display().to_string()).collect();
     assert_eq!(printed, want);
     let requested = ["/tiny.bin", "/corrupt.bin", "/missing/mirrored.bin", "/mirrored.bin", "/oversize.bin"];
     assert_eq!(server.requests(), [&requested[..], &["/redirect/tiny.bin"][..]].concat());

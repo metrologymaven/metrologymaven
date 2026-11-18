@@ -773,8 +773,7 @@ pub struct CatalogueEntry {
 /// or, when `allow_file`, `file://` with a non-empty rest (tests and local mirrors).
 fn is_fetch_url(s: &str, allow_file: bool) -> bool {
     is_url(s)
-        || (allow_file
-            && s.strip_prefix("file://").is_some_and(|r| !r.is_empty() && !r.chars().any(char::is_control)))
+        || (allow_file && s.strip_prefix("file://").is_some_and(|r| !r.is_empty() && !r.chars().any(char::is_control)))
 }
 
 /// Reads the entries of catalogue text for fetching. Unlike [`check`] this neither needs
