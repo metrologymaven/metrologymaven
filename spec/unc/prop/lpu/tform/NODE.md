@@ -53,6 +53,8 @@ Lets LPU propagate uncertainty through user formulas evaluated by `expr.evaluate
 - **AC-3** Given `max(A, B)` with A - B = 1e-9 m and margin 1e-6 m, then a kink hint is returned for that node.
 - **AC-4** (error path) Given `sqrt(A - A)`, then `no_derivative{operator: "expr.evaluate_formula.ir@1.0.0", node: 1}`.
 - **AC-5** Given a formula result whose two inputs are UEC-2 and no bound model, when the class input is built and assigned, then the class is UEC-0 with reason `model_missing`.
+- **AC-H1** Hypothesis: formula-IR tangents reproduce the published sensitivity coefficients of the JCGM 100:2008 Annex H examples (end-gauge calibration H.1, simultaneous resistance and reactance H.2 [unverified: annex numbering]), encoded from their published inputs when each measurement function is written as a user formula, with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured by comparing the provider's Jacobian at the published estimates with the published coefficients; falsified if any coefficient disagrees beyond that.
+- **AC-H2** Hypothesis: the `abs`, `min` and `max` kink hints flag every case where LPU through a formula is invalid: on formulas `abs(A - B)` and `max(A, B)` with |A - B| / u(A - B) swept from 0 to 10 [unverified], the hint is returned whenever `UNC.PROP.VALID` rejects the LPU interval against MCM, measured by tabulating both over the sweep; falsified if any rejected point has no hint.
 
 ## Design
 

@@ -48,6 +48,9 @@ Runs an ORS-UNC case: for N seeded repetitions it simulates one measurement of a
 - **AC-3** Given the AC-2 case run with 1 and with 4 shards, then the coverage counts are identical.
 - **AC-4** (error path) Given N = 500, then `case_incomplete`.
 - **AC-5** Given a `nightly` case in a per-merge run, then it is reported `not_run` and not counted as passed.
+- **AC-H1** Hypothesis: the harness achieves a false-failure rate of ≤ 1.5 % (about 0.7 % expected for N = 1000 by our calculation [unverified]) on the test-only aim `test.interval_stub` at true coverage 0.95, over 2000 independent base seeds listed in `fixtures/ors/unc/`, measured by running the 1000-repetition case once per base seed and counting failures; falsified if more than 30 of the 2000 runs fail.
+- **AC-H2** Hypothesis: the harness discriminates miscalibrated intervals, detecting true coverage 0.90 in ≥ 99 % and true coverage 0.92 in ≥ 80 % of 500 independent base seeds each (about 99.9 % and 89 % expected by our calculation [unverified]), on `test.interval_stub` with N = 1000, measured by counting failing runs per true-coverage level; falsified if either detection fraction is below its threshold.
+- **AC-H3** Hypothesis: the band limits agree exactly with an independent public implementation of the binomial quantile (R `qbinom` and SciPy `scipy.stats.binom`, versions recorded with the fixture [unverified: versions]) for N ∈ {1000, 2000, 5000, 10000} at the 0.005 tails, measured by a committed comparison script; falsified if any limit differs by one or more counts.
 
 ## Design
 

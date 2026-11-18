@@ -42,6 +42,8 @@ Generates projection cases on face sets (bodies) where the nearest point is on a
 - **AC-1** Given seed `0x50524A33`, then two runs give identical files and the suite check reports zero findings.
 - **AC-2** Given every margin case, the 50-digit reference confirms the nearest face wins by ≥ 1 µm.
 - **AC-3** Given the suite, it contains the counts in REQ-001 and every tie case carries `tie_rule`.
+- **AC-H1** Hypothesis: `ors_proj::edge` achieves 100 % agreement of expected face IDs, and foot-point agreement of at most 1e-14 m [unverified], with the independent oracle (`fiducial-oracles`, Python and mpmath route) applying the lowest-face-ID tie rule, on suite `ors-proj` at generator version 1.0.0 with seed `0x50524A33`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any face ID differs or a foot point exceeds the bound.
+- **AC-H2** Hypothesis: the edge cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant per fault class (highest-ID tie rule, first-found face order, untrimmed surfaces used for trimmed faces, `on_boundary` never set, face margin ignored), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
 
 ## Design
 

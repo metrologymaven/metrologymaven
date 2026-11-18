@@ -52,6 +52,9 @@ Propagates vector-valued quantities by the Jacobian sandwich (JCGM 102:2011): th
 - **AC-2** Given the ORS-UNC position case (artifact from `UNC.ORS.UNC`) and its MCM reference, then AC criterion of REQ-003 holds.
 - **AC-3** Given dim = 2 and p = 0.95, then the quantile equals 5.991464547 to 1e-9.
 - **AC-4** Given AC-1 on three targets, then results are byte-identical.
+- **AC-H1** Hypothesis: on the ORS-UNC known-truth case `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), the multivariate LPU standard uncertainty of the position deviation agrees with the `UNC.PROP.MVAR.VMCM` reference within 5 % [unverified] while the independence assumption deviates by more than 5 %, measured on the same seed and model digest; falsified if either part fails.
+- **AC-H2** Hypothesis: the Jacobian sandwich reproduces the published output covariance and correlation coefficients of the JCGM 102:2011 worked examples with vector outputs (bivariate additive model, resistance and reactance [unverified: clause numbering]), encoded from their published inputs, with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured by comparing the joint covariance with the published values; falsified if any entry disagrees beyond that.
+- **AC-H3** Hypothesis: the ellipsoidal 95 % coverage region achieves coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions on the ORS-UNC known-truth case `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), measured by the harness rule for multivariate cases; falsified if the count lies outside the band.
 
 ## Design
 

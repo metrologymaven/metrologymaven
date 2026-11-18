@@ -38,6 +38,12 @@ Cases for resampling scan data onto grids or onto nominal sample positions, on a
 - **REQ-UNC.ORS.FLT.RESAMPLE-001** Each resampling method offered by the resampling command shall have at least one case on an analytic surface with closed-form expected values and tolerance.
 - **REQ-UNC.ORS.FLT.RESAMPLE-002** Every case shall cite the clause it exercises, or carry `citations: none` with basis `closed_form_math` when the method is project-defined.
 
+## Research hypotheses
+
+- **H-1 (bound validity)** On 100 % of cases the deviation of the 50-digit reference resampling from the analytic surface stays within the stated interpolation error bound, and the bound is within a factor of 2 of the observed maximum [unverified]; falsified otherwise.
+- **H-2 (discrimination)** Cases detect at least 95 % [unverified] of seeded single faults (nearest-neighbour instead of the declared interpolation, off-by-one grid origin, transposed grid axes), measured by mutation runs; falsified if fewer.
+- **Reference-set gap:** no public reference set for scan resampling was found [unverified]; the generated cases (CC-BY-4.0) are the public reference.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-flt` in `ors-case/v1` format.

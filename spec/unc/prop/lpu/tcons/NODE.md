@@ -42,6 +42,13 @@ Closed-form Jacobians, registered in the `UNC.PROP.LPU.TAN` table, for every P1a
 - **REQ-UNC.PROP.LPU.TCONS-002** When a construction input is within 10 times its tangency or parallelism threshold [unverified], the provider shall return a kink hint with the measured margin.
 - **REQ-UNC.PROP.LPU.TCONS-003** When the coverage report runs on the P1a manifest, it shall list no construction or kernel evaluation operator as missing.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** Construction and evaluation-operator Jacobians agree with a 50-digit oracle (the `fiducial-oracles` mpmath route) to the `UNC.PROP.LPU.TAN` harness tolerance at points derived from the RDL tier G fitted features; no public or tier G construction family exists yet [gap], so the leaves must name or add one.
+- **H-2** A kink hint at 10 times the tangency or parallelism threshold [unverified] precedes every branch change that MCM observes in more than 5 % [unverified] of trials, measured by sweeping construction inputs towards tangency and near-parallel configurations.
+
 ## Interfaces
 
 - **Offers:** tangent providers registered in `TangentTable`.

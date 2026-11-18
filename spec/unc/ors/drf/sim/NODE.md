@@ -41,6 +41,15 @@ Cases where datum features have form error (rocking planes, tapered or lobed cyl
 - **REQ-UNC.ORS.DRF.SIM-002** Every case shall state the dialect, the expected frame with tolerance, and the expected contact points, and cite the clause and DMT row it exercises.
 - **REQ-UNC.ORS.DRF.SIM-003** Rocking cases shall state the expected handling (for example the stabilisation rule applied) per dialect, or be marked `not_decidable` with the DMT row that says so.
 
+## Research hypotheses
+
+Expected frames and rocking handling are expert content (D-009); the hypotheses below concern construction, coverage and discrimination only.
+
+- **H-1 (unique contact by construction)** For 100 % of non-rocking cases, the independent oracle (`fiducial-oracles`, Python and mpmath route) confirms that the simulator contact set is unique and equals the constructed one, measured by an exhaustive 50-digit search over candidate contact sets; falsified if any case has a second contact set.
+- **H-2 (coverage)** Cases exist for 100 % of (feature type, precedence) pairs required by REQ-UNC.ORS.DRF.SIM-001 and for each dialect the pinned DMT supports, measured by joining the suite with the DMT; falsified if any pair is missing.
+- **H-3 (discrimination)** At least 90 % [unverified] of cases fail an implementation that replaces simulator contact with least-squares datum features, measured by running the cases against that substitute through `UNC.ORS.RUN`; falsified if fewer fail.
+- **Reference-set gap:** no public datum-simulator reference data was found [unverified].
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-drf` in `ors-case/v1` format.

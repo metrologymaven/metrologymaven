@@ -58,6 +58,9 @@ Compares each recomputed result with its packaged ResultRecord and classifies it
 - **AC-3** (error path) Given a D3 value within tolerance but decision `CONFORMS` changed to `INDETERMINATE`, then `DIVERGENT`.
 - **AC-4** (error path) Given a D0 value differing in the last bit, then `DIVERGENT`; given a quantity kind missing from the table, then `DIVERGENT` with `NO_TOLERANCE`.
 - **AC-5** Given outcome lists `[IDENTICAL, EQUIVALENT]`, `[EQUIVALENT, NOT_REPLAYABLE]`, `[NOT_REPLAYABLE, DIVERGENT]` and `[]`, then the package outcomes are `EQUIVALENT`, `NOT_REPLAYABLE`, `DIVERGENT`, `NOT_REPLAYABLE`.
+- **AC-H1** Hypothesis: the comparator achieves 100 % agreement with the expected outcome and first differing field, with false-`DIVERGENT` rate 0 and false-acceptance rate 0, on `fixtures/replay/compare/cases.json` plus every result of the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, measured by running the comparator against the labels in `cases.json` and each package's `expect.json` with REP-1 table `rep-1@1.0.0`; falsified if any result is misclassified.
+- **AC-H2** Hypothesis: the comparator's field outcomes agree with the `fid-rep` classifier (UNC.RDL.REP, algorithm `rdl.rep.classify@1.0.0`) on 100 % of rows of `fixtures/rdl/rep/cases.csv` at the version pinned with `rep-1@1.0.0`, measured by a differential test feeding each row to both; falsified if any row's outcome or `MARGINAL` annotation differs.
+- **AC-H3** Hypothesis: comparator output (outcomes, reasons and recorded REP-1 digest) is byte-identical on the six CI host targets (Windows, Linux, macOS × x86-64, arm64) and wasm32 for the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, measured by comparing the canonical JSON digests from each target; falsified if any digest differs.
 
 ## Design
 

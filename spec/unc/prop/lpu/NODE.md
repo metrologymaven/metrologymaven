@@ -46,6 +46,15 @@ First-order law of propagation of uncertainty (JCGM 100:2008) over an Uncertaint
 - **REQ-UNC.PROP.LPU-004** If the model contains a non-smooth operator at the evaluation point (for example an active-set change within the input uncertainty), then the engine shall flag `lpu_not_applicable` in its output.
 - **REQ-UNC.PROP.LPU-005** The engine shall be deterministic class D0 for the same model digest and inputs.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** Fit sensitivities by implicit differentiation agree with 50-digit references on RDL tier G least-squares families, reported per family and coverage angle (`UNC.PROP.LPU.IMPL`); active-set sensitivities do the same on minimum-zone constructions (`UNC.PROP.LPU.ASET`, blocked on `UNC.RDL.GEN.MZEQ` [gap]).
+- **H-2** The combination reproduces JCGM 100:2008 Annex H budgets, including correlations and Welch-Satterthwaite degrees of freedom, and its intervals cover at the nominal rate on ORS-UNC `lin-gauss` (`UNC.PROP.LPU.COMB`, `UNC.PROP.LPU.CMD`).
+- **H-3** Kink hints from active sets, constructions and formulas flag every case where LPU fails validation against MCM (`UNC.PROP.LPU.ASET`, `UNC.PROP.LPU.TCONS`, `UNC.PROP.LPU.TFORM`, `UNC.PROP.LPU.COMB`).
+- **H-4** The tangent harness tolerance separates correct providers from faulty ones (`UNC.PROP.LPU.TAN`).
+
 ## Interfaces
 
 - **Offers:** `propagate_lpu(model, inputs) -> LpuResult { y, u_c, sensitivities, covariance_used, flags }`; command `unc.propagate_lpu@1`.

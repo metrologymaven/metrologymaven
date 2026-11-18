@@ -40,6 +40,14 @@ Coverage cases for quantities that cannot be negative (form deviations, radial p
 - **REQ-UNC.ORS.UNC.NZERO-002** Every case shall state the pass convention it is judged by and the estimator policy's disclosed bias.
 - **REQ-UNC.ORS.UNC.NZERO-003** The pass convention shall be reviewed and recorded by an uncertainty expert before the case is released [unverified: convention].
 
+## Research hypotheses
+
+D-036 rule 4. Children state these as `AC-H` criteria. They measure bias and coverage only; the pass convention stays with the uncertainty expert (REQ-003).
+
+- **H-1 (bias disclosure)** For flatness, roundness and radial position at true value zero, the bias disclosed by `UNC.PROP.SELECT`'s estimator policy agrees with the simulated mean bias within 10 % [unverified: threshold] over N ≥ 1000 repetitions, measured by `UNC.ORS.UNC.HARNESS` with each case's base seed; falsified if the relative difference exceeds the threshold for any case.
+- **H-2 (hard-case discrimination)** At true value zero, the naive symmetric 95 % interval undercovers outside the binomial band, so that the case actually tests the biased regime, measured by the harness on the same seeds; falsified if the naive interval covers within the band (the case is then not hard enough and needs new geometry or noise).
+- **H-3 (transition)** Observed coverage under the expert-recorded convention moves into the binomial band as the true value grows to 3σ of the noise [unverified: 3σ], measured at true values 0, 1σ and 3σ; falsified if coverage at 3σ lies outside the band.
+
 ## Interfaces
 
 - **Offers:** near-zero cases for suite `ors-unc`.

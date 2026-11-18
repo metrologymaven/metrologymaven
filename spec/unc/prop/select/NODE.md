@@ -17,7 +17,7 @@ determinism: D2
 cli: [fid unc propagate-auto, fid unc propagate-commit, fid unc compare-methods]
 mcp: [unc_propagate_auto, unc_propagate_commit, unc_compare_methods]
 journal: [unc.propagate_auto@1, unc.propagate_commit@1, unc.compare_methods@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.SELECT: Method selection, estimator policy and statement commit
@@ -57,6 +57,9 @@ The user-facing propagation commands. `unc.propagate_auto@1` picks LPU or MCM by
 - **AC-5** (error path) Given AC-4's scratch statement after the result's input points changed, when committed, then it fails with `stale_statement` and the journal head is unchanged.
 - **AC-6** (UEC-0) Given a result `C-3` with no model, when propagated, then a UEC-0 statement with reason `model_missing` is returned.
 - **AC-7** (replay) Given the journal from AC-1..4, when replayed in exact mode on the same platform class, then the outcome is `IDENTICAL`.
+- **AC-H1** Hypothesis: statements from `unc.propagate_auto@1` achieve coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions on each of the ORS-UNC known-truth cases `lin-gauss`, `nonlin-rect`, `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), measured by the harness coverage count per case; falsified if any case lies outside its band.
+- **AC-H2** Hypothesis: `unc-select@1` never selects LPU where LPU fails validation: on the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, on the `UNC.RDL.GEN.MZEQ` cases and on the ORS-UNC cases, no case for which `unc.compare_methods@1` returns `lpu_validated_by_mc = false` is selected as LPU, measured by running both commands on each case; falsified by any such case.
+- **AC-H3** Hypothesis: for non-negative quantities with true value near zero, the disclosed `mean_minus_fx` estimates the observed estimator bias within ±20 % [unverified] on the ORS-UNC non-negative cases (`UNC.ORS.UNC.NZERO`), measured as the harness mean of (reported value − true value) against the mean disclosed bias; falsified if outside. Blocked until `UNC.ORS.UNC.NZERO` defines its cases [gap].
 
 ## Design
 

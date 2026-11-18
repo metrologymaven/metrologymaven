@@ -51,6 +51,7 @@ Turns a set of Monte Carlo output values into the summary JCGM 101:2008 describe
 - **AC-2** Given `fixtures/unc/mcm/intvl/skewed.json` (an exponential sample with seed 3), then the shortest interval is shorter than the symmetric one and both match the expected file.
 - **AC-3** Given values with mean 1.5 and f(x) = 1.0, then `mean_minus_fx = 0.5`.
 - **AC-4** (error path) Given 10 values and p = 0.95, then `too_few_trials`.
+- **AC-H1** Hypothesis: the symmetric and shortest intervals at p = 0.95 from M = 10^6 values converge to the analytic endpoints of output distributions known in closed form (the rectangular-input additive model of JCGM 101:2008 [unverified: clause 9.2 variant] and an exponential distribution) with absolute error at most 3 times the asymptotic order-statistic standard error [unverified] for at least 99 of 100 seeds, measured per endpoint; falsified if fewer seeds pass.
 
 ## Design
 

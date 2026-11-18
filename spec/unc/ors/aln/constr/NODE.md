@@ -42,6 +42,8 @@ Generates ORS-ALN cases for best-fit with locked degrees of freedom and per-regi
 - **AC-1** Given seed `0x414C4E33`, then two runs are identical and the suite check passes.
 - **AC-2** Given each case, then the reduced-space gradient at the expected transform is below 1e-20 at 50 digits, and the unconstrained gradient is not (the constraint is active).
 - **AC-3** Given the suite, then all five patterns are present.
+- **AC-H1** Hypothesis: `ors_aln::constr` achieves agreement between each expected transform and the independent oracle (`fiducial-oracles`, Python and mpmath route) of at most 1e-10 m and 1e-10 rad [unverified], with locked components equal exactly, on suite `ors-aln` at generator version 1.0.0 with seed `0x414C4E33`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case exceeds a bound or any locked component differs.
+- **AC-H2** Hypothesis: the constrained cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant per fault class (lock ignored, lock applied by projecting the unconstrained optimum afterwards, weights applied without square root, weights ignored, lock on the wrong axis), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
 
 ## Design
 

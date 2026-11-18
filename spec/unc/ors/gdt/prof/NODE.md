@@ -40,6 +40,14 @@ Cases for `check.eval_line_profile@1` and `check.eval_surface_profile@1`: nomina
 - **REQ-UNC.ORS.GDT.PROF-002** Every case shall state the expected deviation, the expected zone disposition and whether the zone is located by datums or floats.
 - **REQ-UNC.ORS.GDT.PROF-003** Every case shall cite the clause and DMT row it exercises and state its dialect.
 
+## Research hypotheses
+
+D-036 rule 4. Children state these as `AC-H` criteria; zone placement and disposition for a callout stay expert content (D-009).
+
+- **H-1 (coverage)** 100 % of profile DMT keys marked `supported` have at least one case, measured by the REQ-GDT.RES-006 link check; falsified if any key lacks a case.
+- **H-2 (projection soundness)** The constructed signed normal deviations agree with the `UNC.ORS.PROJ` expectations for the same nominal surfaces within 1e-12 m on analytic faces and 1e-10 m on NURBS faces, measured by projecting each case's points with the 50-digit reference script; falsified on any disagreement, so that a profile failure can be attributed to zone handling rather than projection.
+- **H-3 (discrimination)** The suite detects 100 % of four seeded structural faults (bilateral zone treated as unequally disposed and the reverse, a located zone allowed to float, a floating zone held to datums), measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if any fault passes every case.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-gdt` in `ors-case/v1` format.

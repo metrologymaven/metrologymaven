@@ -56,6 +56,8 @@ Decides, for each result in a package, whether the verifier can recompute it, an
 - **AC-3** (error path) Given `fixtures/replay/select/missing-points.zip` (one point set removed and manifest re-signed with test keys), then that result is `POINTS_MISSING` and the others are replayable.
 - **AC-4** Given `fixtures/replay/select/constructed.zip` (a distance between two fitted circles), then the plan contains both fits before the distance, each once.
 - **AC-5** Given `fixtures/replay/select/unknown-algo.zip`, then `ALGORITHM_UNKNOWN`.
+- **AC-H1** Hypothesis: the selector achieves 100 % agreement with the hand-labelled replayability and `NOT_REPLAYABLE` reason of every result in the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, with false-replayable rate 0, measured by comparing selector output to each package's `expect.json`; falsified if any result is misclassified or a result is marked replayable whose closure lacks an input.
+- **AC-H2** Hypothesis: the selector marks at least 95 % [unverified] of points-tier results replayable on the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, excluding cases built to be `NOT_REPLAYABLE`, measured by counting replayable results over eligible results; falsified if the share is below the threshold.
 
 ## Design
 

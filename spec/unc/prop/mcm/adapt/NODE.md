@@ -52,6 +52,8 @@ The pure decision, after each completed block, whether Monte Carlo has converged
 - **AC-2** Given `fixtures/unc/mcm/adapt/summaries_slow.json` with cap 30 000 and M = 10 000, then it returns `cap_reached` after block 3 with the achieved values.
 - **AC-3** Given u(y) = 0.0123456 and n_dig = 2, then delta = 0.0005.
 - **AC-4** Given p = 0.99, then M = 10 000; given p = 0.9999, then M = 1 000 000.
+- **AC-H1** Hypothesis: the `mcm-adapt@1` stop rule delivers its promised accuracy: with n_dig = 2, the stopped interval endpoints and u(y) lie within delta of a reference (analytic where the guide gives one, otherwise a 10^8-trial run [unverified]) in at least 95 % [unverified] of 100 independent seeds on each of the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, measured by counting seeds within delta; falsified if any example falls below 95 %.
+- **AC-H2** Hypothesis: the trial count at stop is within a factor of 2 [unverified] of the trial count the guide reports for its adaptive runs on the same JCGM 101:2008 examples, measured by the median over 100 seeds; falsified if any example's median lies outside that factor.
 
 ## Design
 

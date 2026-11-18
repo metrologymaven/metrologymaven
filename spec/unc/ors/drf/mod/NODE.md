@@ -41,6 +41,15 @@ Cases for datum references with material boundary modifiers (MMB, LMB) where the
 - **REQ-UNC.ORS.DRF.MOD-002** Every case shall state the expected simulator size, the expected permitted shift (translation in m, rotation in rad) and the dialect, with tolerances.
 - **REQ-UNC.ORS.DRF.MOD-003** Every case shall cite the clause and DMT row it exercises.
 
+## Research hypotheses
+
+Expected simulator sizes and permitted shifts are expert content (D-009); the hypotheses below concern only the construction and discrimination power of the cases, so the expert content can be tested once authored.
+
+- **H-1 (construction)** For 100 % of cases, the constructed clearance between datum feature and simulator agrees with the independent oracle (`fiducial-oracles`, Python and mpmath route) within 1e-12 m, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case disagrees.
+- **H-2 (coverage)** Cases exist for 100 % of material boundary modifiers on datum references in the supported subset of the pinned DMT, in each dialect the DMT supports, measured by joining the suite with the DMT; falsified if any is missing.
+- **H-3 (discrimination)** At least 90 % [unverified] of cases fail an implementation that treats every datum reference as RMB (no permitted shift), measured by running the cases against that substitute through `UNC.ORS.RUN`; falsified if fewer fail.
+- **Reference-set gap:** no public reference data for datum shift was found [unverified].
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-drf` in `ors-case/v1` format.

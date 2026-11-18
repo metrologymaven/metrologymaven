@@ -40,6 +40,14 @@ The kernel computation of the substitution method: each uncertainty component (c
 - **REQ-UNC.MODEL.SUBST.EVAL-002** The evaluation shall report the systematic deviation between the mean of the repeated runs and the calibrated value and state whether it was corrected or included in U.
 - **REQ-UNC.MODEL.SUBST.EVAL-003** The evaluation shall be a pure kernel function with determinism class D0 and shall agree with a 50-digit reference within 1e-12 relative on the fixture set.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** The combined expanded uncertainty covers the known true value at the nominal 95 % rate within the exact binomial band of `UNC.ORS.UNC.HARNESS` on a public seeded calibrated-workpiece generator [gap: not yet defined in RDL or ORS-UNC].
+- **H-2** Each bias treatment (corrected, or included in U) is tested separately on that generator with a known machine systematic error swept from 0 to 3 times the repeatability standard deviation [unverified]; the hypothesis is that both cover within the band, falsified for a treatment whose coverage leaves the band at any swept value.
+- **H-3** The combination equals `UNC.PROP.LPU.COMB` applied to the same linear component model to relative 1e-12 [unverified], measured on the fixture set and the generator cases.
+
 ## Interfaces
 
 - **Offers:** `evaluate(CheckedInput, options) -> SubstitutionResult` in `fid-kunc`.

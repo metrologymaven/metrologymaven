@@ -43,6 +43,8 @@ Generates the ORS-ALN cases whose alignment has an exact solution: classic 3-2-1
 - **AC-1** Given seed `0x414C4E31`, when the generator runs twice, then the case files are byte-identical and `fid rdl check-suite --suite ors-aln --json` reports zero findings.
 - **AC-2** Given the generated suite, then it contains ≥ 3 cases per aim and every 3-2-1 and point-pair case is tagged `xfm_reference`.
 - **AC-3** Given each case, when its measured points are transformed by the expected transform with the 50-digit reference script, then they coincide with the nominal points within 1e-12 m.
+- **AC-H1** Hypothesis: `ors_aln::exact` achieves agreement between each expected transform and the independent oracle (`fiducial-oracles`, Python and mpmath route) of at most 1e-12 m and 1e-12 rad on suite `ors-aln` generated at generator version 1.0.0 with seed `0x414C4E31`, measured by the `UNC.RDL.GEN.XCHECK` record of every case; falsified if any case exceeds either bound or has cross-check `pending`.
+- **AC-H2** Hypothesis: the exact cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant of the 50-digit reference script per aim and fault class (rotation-vector sign flip, transposed rotation matrix, wrong 3-2-1 datum order, swapped point-pair correspondence, degree and radian mix-up, ignored RPS direction lock), measured by running the suite through `UNC.ORS.RUN` against each mutant; falsified if fewer than 95 % of (aim, fault) mutants fail at least one case.
 
 ## Design
 

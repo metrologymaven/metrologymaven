@@ -52,6 +52,7 @@ Evaluates one fixed-size block of Monte Carlo trials. Each trial's inputs are dr
 - **AC-2** Given the same, then the sample of X1 at trial 12 345 equals `fid-num` normal draw at address (7, 0, 12 345) bit for bit.
 - **AC-3** Given `fixtures/unc/mcm/block/fail_fit.json` (a circle fit that fails when a sampled radius is negative), then failed trial indices are listed, values exclude them, and the block completes.
 - **AC-4** Given a model whose operator calls are counted by a test kernel table, then each trial calls every operator exactly once.
+- **AC-H1** Hypothesis: block-sampled trials reproduce the input-to-output distribution: on the JCGM 101:2008 additive-model example with rectangular inputs (whose output density is known in closed form [unverified: clause 9.2 variant]), the Kolmogorov-Smirnov test of 10^6 trials against the analytic distribution at alpha = 0.01 rejects for a number of 100 independent seeds within the exact two-sided 99 % binomial band for Binomial(100, 0.01), measured by computing blocks in shuffled order; falsified if the rejection count is above the band.
 
 ## Design
 

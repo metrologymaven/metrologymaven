@@ -43,6 +43,16 @@ Cases that check datum reference frame establishment: primary, secondary and ter
 - **REQ-UNC.ORS.DRF-002** Every case shall state the expected frame with a tolerance of at most 1e-9 m on origin and 1e-9 rad on axes unless the case documents why a looser tolerance is needed.
 - **REQ-UNC.ORS.DRF-003** Every case shall cite the clause and DMT row of the DRF rule it exercises.
 
+## Research hypotheses
+
+DRF content mixes closed-form geometry (GEOM) and expert interpretation (SIM, MOD). These hypotheses concern structure, coverage and discrimination only; no hypothesis asserts what a datum rule means (D-009).
+
+- **H-1 (coverage of the supported subset)** ORS-DRF has at least one case for 100 % of DRF schemes and datum-order permutations whose DMT key exists in the pinned DMT, and `gaps.json` lists every other scheme, measured by joining the suite with the DMT key list; falsified if a keyed scheme has no case.
+- **H-2 (coverage of public models)** The schemes in ORS-DRF cover at least 80 % [unverified] of the datum reference frames, classified only by datum feature type and precedence, that appear in the NIST MBE PMI validation and conformance test models (CTC and FTC STEP AP242 files; release to be pinned by digest [unverified]), measured by a person tabulating each model's DRFs by feature type (`human_only`); falsified if coverage is lower.
+- **H-3 (discrimination of geometry faults)** Form-perfect cases detect at least 95 % [unverified] of seeded single faults in frame construction (wrong precedence, missing orthogonalisation order, axis treated as point, handedness flip), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer.
+- **H-4 (discrimination beyond form-perfect)** At least 90 % [unverified] of SIM and MOD cases fail an implementation that substitutes least-squares datum features and ignores material boundary modifiers, measured by running those cases against that substitute; falsified if fewer fail, which would show the cases add little over GEOM.
+- **Reference-set gap:** no public NMI data with reference DRFs was found [unverified]; the NIST PMI models supply callouts and geometry but no expected frames.
+
 ## Interfaces
 
 - **Offers:** suite `ors-drf@<semver>` in `ors-case/v1` format.

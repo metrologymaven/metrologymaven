@@ -51,6 +51,8 @@ Minimum-zone, minimum-circumscribed, maximum-inscribed and tangential fits are d
 - **AC-2** Given `fixtures/unc/lpu/aset/near_switch.json` where an inactive point lies 2e-9 m inside the zone, then the kink hint names that point with gap 2e-9 m.
 - **AC-3** (error path) Given a certificate flagged `local_optimum_only`, then `no_derivative{reason: "local_optimum_only"}`.
 - **AC-4** Given AC-1 on x86-64, ARM64 and wasm32, then outputs are byte-identical.
+- **AC-H1** Hypothesis: active-set sensitivities of minimum-zone, minimum-circumscribed and maximum-inscribed fits achieve maximum relative entry error ≤ 1e-10 [unverified] against the closed-form derivative of the constructed solution on the RDL tier G minimum-zone family `UNC.RDL.GEN.MZEQ` in the frozen `rdl-release-<semver>` (cases whose smallest active multiplier and smallest inactive gap exceed the kink thresholds), measured by the maximum relative error over all Jacobian entries per case; falsified if any such case exceeds the threshold. Until `UNC.RDL.GEN.MZEQ` is frozen, only `mz_circle_4pt.json` exercises this [gap].
+- **AC-H2** Hypothesis: the kink hint predicts where LPU is invalid: on the same `UNC.RDL.GEN.MZEQ` cases with input uncertainty u, a kink margin below `kink_factor` · u coincides with an active-set change in more than 5 % [unverified] of MCM trials (`UNC.PROP.MCM`) for at least 95 % [unverified] of cases, measured by cross-tabulating the hint against the trial-level active-set change count; falsified if the agreement is below 95 % or any case with a margin above 10 · `kink_factor` · u [unverified] shows such a change rate.
 
 ## Design
 

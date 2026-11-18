@@ -53,6 +53,8 @@ Sensitivities of least-squares fit parameters to the input point coordinates, ob
 - **AC-3** (error path) Given a cylinder fit whose result reports `IterationLimit`, then `not_at_optimum`.
 - **AC-4** (error path) Given a 3-point circle on a 1e-9 rad arc, then `ill_conditioned_sensitivity`.
 - **AC-5** Given the same fit result twice on x86-64, ARM64 and wasm32, then the sensitivity bytes are identical.
+- **AC-H1** Hypothesis: implicit sensitivities of least-squares fit parameters achieve maximum relative entry error ≤ 1e-8 [unverified] (absolute floor 1e-12 times the largest entry [unverified]) against the 50-digit reference sensitivities on the RDL tier G least-squares families `UNC.RDL.GEN.LSNULL`, `UNC.RDL.GEN.GEOM` (partial arcs and caps, extreme aspect ratios) and `UNC.RDL.GEN.STRESS` in the frozen release `rdl-release-<semver>` whose `suite_digest` is recorded with the run, measured per case and reported per family and per coverage angle; falsified if any case exceeds the threshold.
+- **AC-H2** Hypothesis: the residual-weighted second-derivative terms are necessary: on `UNC.RDL.GEN.STRESS` cases with residual RMS at least 1 % of feature size [unverified], the Gauss-Newton-only ablation exceeds the AC-H1 threshold on at least one case per primitive while the exact derivative meets it, measured by running both against the same references; falsified if the ablation meets AC-H1 on every case (the terms are then not shown necessary).
 
 ## Design
 

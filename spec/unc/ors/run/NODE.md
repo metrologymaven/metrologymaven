@@ -17,7 +17,7 @@ determinism: D1
 cli: [fid rdl run-suite]
 mcp: [rdl_run_suite]
 journal: [rdl.run_suite@1]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS.RUN: Suite execution in CI and published pass statistics
@@ -57,6 +57,9 @@ Runs ORS suites: each case is evaluated through the registry command its aim nam
 - **AC-4** (shards) Given AC-1 run with 1 and with 3 shards, then the merged records are identical except for timing fields.
 - **AC-5** (budget) Given a synthetic slow aim that makes the run exceed a 2-second test budget, then the CI wrapper exits non-zero with `budget_exceeded`.
 - **AC-6** (replay) Given the journal from AC-1, when replayed in exact mode on the same platform class, then the outcome is `IDENTICAL`.
+- **AC-H1** Hypothesis: `rdl.run_suite@1` achieves a median wall time under 10 minutes [unverified] for the full ORS v1 release on 4 shards of a standard hosted CI runner (runner image recorded in the run record), measured as the median of 10 consecutive CI runs; falsified if the median exceeds 10 minutes.
+- **AC-H2** Hypothesis: the runner adds no false failures, that is 100 % of cases in every released `ors-*` v1 suite pass when their aims are served by a test-only command returning the independent oracle (`fiducial-oracles`, Python and mpmath route)'s values, measured by one full run; falsified if any case fails or errors.
+- **AC-H3** Hypothesis: the runner reports every seeded fault that a suite detects, that is for every mutant of a reference script the set of failing cases reported by the runner equals the set found by direct 50-digit comparison, on the mutation sets named by the suite leaves, measured by comparing both sets; falsified if they differ.
 
 ## Design
 

@@ -54,6 +54,8 @@ The only networked part of verifier replay, and it is not in `fid-verify`: the `
 - **AC-2** (error path) Given the server returning altered bytes, then `verify.fetch_mismatch`, no cache file, and an event with outcome `failed`.
 - **AC-3** (error path) Given a request carrying a URL parameter, then `verify.bad_destination` and no connection is opened (socket audit).
 - **AC-4** Given an MCP agent call, then a pending request is created and nothing is fetched until a human approves.
+- **AC-H1** Hypothesis: fetch writes a cache file whose bytes differ from the requested digest at rate 0 over at least 1,000 [unverified] corrupted or oversized responses from a local test archive server, measured by a seeded fault-injection run checking the cache directory and journal after each request; falsified if any non-matching file is written.
+- **AC-H2** Hypothesis: replay with an artifact fetched from the release archive, and with one rebuilt by a third party using the KRN.MAN.REPRO rebuild script, achieves outcomes identical to replay with the bundled artifact on 100 % of the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, measured by running `fid verify replay` three times with `--kernel-cache` pointed at each source and diffing reports; falsified if any artifact hash or result outcome differs.
 
 ## Design
 

@@ -42,6 +42,15 @@ Cases for projecting measured points onto nominal geometry: analytic faces, trim
 - **REQ-UNC.ORS.PROJ-002** Cases near seams and trim boundaries shall state the expected face assignment.
 - **REQ-UNC.ORS.PROJ-003** Cases shall state tolerances on distance (m) and foot-point parameters.
 
+## Research hypotheses
+
+Projection is mathematics plus the project's tie rule, so all hypotheses are testable by leaves.
+
+- **H-1 (independent agreement)** Expected foot points and signed distances agree with the independent oracle (`fiducial-oracles`, Python and mpmath route) within one hundredth of each case's tolerance [unverified], measured by `UNC.RDL.GEN.XCHECK`; falsified if any case disagrees.
+- **H-2 (coverage of public CAD)** The surface types in ANALYTIC and NURBS scope account for at least 99 % [unverified] of faces in the NIST MBE PMI validation and conformance test models (CTC and FTC STEP AP242 files; release to be pinned by digest [unverified]), measured by a script counting surface entity types per face; falsified if lower.
+- **H-3 (discrimination)** ORS-PROJ detects at least 95 % [unverified] of seeded single faults in projection (unsigned distance, normal flip, ignored trims, wrong tie rule, local instead of global minimum), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer.
+- **Reference-set gap:** no public NMI reference set of point-to-CAD projections was found [unverified].
+
 ## Interfaces
 
 - **Offers:** suite `ors-proj@<semver>` in `ors-case/v1` format.

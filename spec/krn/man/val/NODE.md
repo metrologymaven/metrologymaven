@@ -47,6 +47,17 @@ Turns reference datasets into published evidence. For every release, the harness
 - **REQ-KRN.MAN.VAL-004** When an algorithm has a spec card, the harness shall write its validation evidence (reference set, version, pass counts, report digest) into the card's evidence field for the release.
 - **REQ-KRN.MAN.VAL-005** Out-of-kernel cross-check solvers shall run only in CI, and a disagreement beyond the set's tolerance shall fail CI with the case identifier.
 
+## Research hypotheses
+
+These are targets, not results. The children must make each one testable against public reference data; thresholds marked [unverified] come from the parent's requirements or `UNC.RDL.AST` and are not yet checked against PTB's published test conditions.
+
+- **H-1** (least squares, external data) The kernel least-squares fits for line, plane, circle, sphere, cylinder and cone pass the internal MPE table `rdl-mpe@1` (0.01 µm position and radius, 0.01 µrad orientation, 0.001 µm form [unverified]) on every NIST Algorithm Testing System least-squares case (`UNC.RDL.EXT.NIST`) and every PTB softgauge case (`UNC.RDL.EXT.PTBSG`) in the frozen RDL release named in the kernel manifest (`rdl-release-<semver>`, identified by its `rdl_suite_digest`). Made testable by `KRN.MAN.VAL.RUN` (AC-H2).
+- **H-2** (least squares, generated data) The same fits pass `rdl-mpe@1` on every case of the project null-space generator families `ls.*`, including the partial-coverage and aspect-ratio families (`UNC.RDL.GEN.GEOM`) and the large-residual family (`UNC.RDL.GEN.STRESS`), at the generator versions recorded in the frozen release. Made testable by `KRN.MAN.VAL.RUN` (AC-H1, AC-H3).
+- **H-3** (minimum zone) The kernel minimum-zone fits for plane, circle, cylinder and sphere reproduce the constructed zone width within the `rdl-mpe@1` form limit [unverified] on every `mz.*` case (`UNC.RDL.GEN.MZEQ`) in the frozen release. Made testable by `KRN.MAN.VAL.RUN` (AC-H4).
+- **H-4** (harness sensitivity) The harness flags every case whose reference output has been shifted by twice the applicable MPE and no unshifted case, so a pass reported by H-1 to H-3 is not vacuous. Made testable by `KRN.MAN.VAL.RUN` (AC-H5).
+- **H-5** (independent agreement) An independent, out-of-kernel solver stack agrees with the kernel within the per-problem tolerance on every cross-checked case of the frozen release. Made testable by `KRN.MAN.VAL.CROSS` (AC-H1 to AC-H3).
+- **H-6** (third-party reproducibility) Anyone holding the public parts of the frozen release, the published WASM artifact and the criteria files regenerates the validation report with the published digest. Made testable by `KRN.MAN.VAL.RPT` (AC-H1 to AC-H3).
+
 ## Interfaces
 
 - **Offers:** the validation report and digest (to `KRN.MAN.MANI`, `ECO`, `OUTR`); validation evidence for spec cards (`KRN.MAN.CARD`).

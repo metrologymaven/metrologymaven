@@ -54,6 +54,8 @@ The registry command that runs adaptive Monte Carlo on the model bound to a resu
 - **AC-3** (error path) Given `fixtures/unc/mcm/cmd/fail_often.json` (about 1 % failing trials), then `trial_failures` with the lowest index.
 - **AC-4** Given a cancel after the first block, then `cancelled` and the blob store holds no new sample set.
 - **AC-5** Given a cap of 20 000 on a slowly converging model, then the result has flag `not_converged`.
+- **AC-H1** Hypothesis: `unc.propagate_mcm@1` reproduces the published Monte Carlo estimate, standard uncertainty and coverage-interval endpoints of the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured by comparing the command's JSON output (seed recorded) with the published values; falsified if any example disagrees beyond that.
+- **AC-H2** Hypothesis: Monte Carlo intervals from this command achieve coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions on the ORS-UNC known-truth case `nonlin-rect` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), measured by the harness coverage count; falsified if the count lies outside the band.
 
 ## Design
 

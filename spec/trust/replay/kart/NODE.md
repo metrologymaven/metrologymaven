@@ -42,6 +42,14 @@ Finds the exact WASM reference kernel artifact named by a package's kernel manif
 - **REQ-TRUST.REPLAY.KART-002** The source shall perform no network access unless the user passed an explicit opt-in flag for that run, and any such access shall be class X1.
 - **REQ-TRUST.REPLAY.KART-003** The lookup order and the permitted sources shall follow D-020.
 
+## Research hypotheses
+
+Children must make these testable (parent TRUST.REPLAY H-4); thresholds marked [unverified] are targets, not results.
+
+- **H-1 (offline availability).** With only the verifier's bundled set and in-package members, the lookup chain returns a digest-matching artifact for 100 % of current-major kernel versions referenced by the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, with no network access. Testable in TRUST.REPLAY.KART.LOOKUP.
+- **H-2 (no wrong artifact accepted).** Under fault injection (flipped bytes, truncation, wrong-name files) in every source, the rate of accepting an artifact whose SHA-256 differs from the manifest is 0. Testable in TRUST.REPLAY.KART.LOOKUP, TRUST.REPLAY.KART.FETCH.
+- **H-3 (source-independent outcome).** Replay with an artifact obtained from the release archive (opt-in fetch) or from a third-party rebuild per KRN.MAN.REPRO gives outcomes identical to replay with the bundled artifact on 100 % of corpus results. Testable in TRUST.REPLAY.KART.FETCH.
+
 ## Interfaces
 
 - **Offers:** `ArtifactSource::get(kernel_manifest_digest) -> Result<(Vec<u8>, Origin), Unavailable>`.

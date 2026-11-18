@@ -42,6 +42,16 @@ Cases for size characteristics: the ASME envelope requirement and, from P1b, the
 - **REQ-UNC.ORS.SIZE-002** Every case shall state its dialect, since the same callout can mean different sizes under ASME and ISO GPS.
 - **REQ-UNC.ORS.SIZE-003** Every case shall cite the clause and DMT row it exercises.
 
+## Research hypotheses
+
+D-036 rule 4 (AGENTS.md rule 10). Children turn these into `AC-H` criteria. Which size definition a callout means under a dialect stays expert content (D-009).
+
+- **H-1 (closed-form agreement)** Every constructed size value agrees with an independent 50-digit oracle within 1e-12 m on the `ors-size` suite at each released version, measured by `UNC.RDL.GEN.XCHECK`; falsified on any disagreement.
+- **H-2 (association discrimination)** The suite detects 100 % [unverified] of the ordered substitutions among the supported association methods (two-point, least squares, minimum circumscribed, maximum inscribed, and supported ISO modifiers), measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if any substitution passes every case.
+- **H-3 (dialect discrimination)** For each size callout whose meaning differs between ASME and ISO GPS defaults [unverified: which callouts], at least one geometry gives expected values that differ by ≥ 1e-6 m between the paired ASME and ISO cases, measured by pairing cases by geometry digest; falsified if a dialect-sensitive callout has no differing pair.
+- **H-4 (public convention anchor)** An evaluator configuration that passes the public least-squares circle and cylinder references (PTB TraCIM public test, NIST ATS) [unverified: versions and availability] also passes every least-squares size case, measured on one kernel manifest; falsified if it passes one and fails the other.
+- **Gap:** no public reference set with expected values for ISO 14405-1 size modifiers or the ASME envelope requirement was found [unverified]; H-2 and H-3 rest on this project's generators.
+
 ## Interfaces
 
 - **Offers:** suite `ors-size@<semver>` in `ors-case/v1` format.

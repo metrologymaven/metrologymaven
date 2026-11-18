@@ -43,6 +43,9 @@ Generates ORS-FLT cases for every outlier policy offered by `fit.reject_outliers
 - **AC-1** Given seed `0x464C5431`, then two runs give identical files and the suite check reports zero findings.
 - **AC-2** Given the suite, every policy listed in Scope has the three case kinds.
 - **AC-3** Given each near-threshold case, the 50-digit reference evaluation of the policy statistic places the planted point on the stated side of the threshold.
+- **AC-H1** Hypothesis: `ors_flt::outlier` achieves 100 % agreement of expected excluded index sets with the independent oracle (`fiducial-oracles`, Python and mpmath route), and refit agreement within 1e-12 m [unverified], on suite `ors-flt` at generator version 1.0.0 with seed `0x464C5431`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any set differs or any refit exceeds the bound.
+- **AC-H2** Hypothesis: the outlier cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant per policy and fault class (strict and non-strict threshold comparison swapped, sample instead of population scale or the reverse, robust scale without its consistency factor, single pass instead of iterated rejection, RANSAC seed ignored, radius unit mix-up), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
+- **AC-H3** Hypothesis: every near-threshold case is decided with margin, that is the 50-digit policy statistic is at least 1e-7 relative [unverified] from the threshold on the stated side, on the same suite; falsified if any case is closer.
 
 ## Design
 

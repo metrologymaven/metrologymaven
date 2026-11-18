@@ -15,7 +15,7 @@ depends_on: [UNC.RDL, GDT.RES, UNC.PROP]
 cli: [fid rdl *-suite]
 mcp: [rdl_*_suite]
 journal: [rdl.run_suite]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.ORS: Open reference suites
@@ -47,6 +47,17 @@ Authors and maintains the **open reference suites** (RDL tier O): cases with clo
 - **REQ-UNC.ORS-005** ORS-UNC shall contain known-truth cases for which the empirical coverage of reported 95 % intervals over at least 1000 seeded repetitions is checked against 95 % within a stated binomial tolerance.
 - **REQ-UNC.ORS-006** The suites shall be published under an open licence under every licensing outcome (CONSTITUTION C8).
 - **REQ-UNC.ORS-007** When a case's expected result changes, the system shall require a new suite version and record the reason.
+
+## Research hypotheses
+
+UNC.ORS carries the "open GD&T and datum reference suites" research risk (D-036 rule 4). The question: can open suites whose expected values are closed form or independently computed check datum, alignment, filter, projection, GD&T, size and uncertainty evaluations as tightly as the public NMI data that exists today, which covers mainly least-squares and minimum-zone fits [unverified]? Children turn the hypotheses below into `AC-H` criteria. They concern structure, coverage and discrimination power only; interpretation content and expected values that depend on reading a standard stay expert work (D-009).
+
+- **H-1 (coverage)** The released suites contain at least one eligible case for 100 % of the characteristic types the pinned DMT marks supported and for 100 % of the registry aims they name, measured by joining suite manifests with the pinned DMT and the registry manifest; falsified if any supported row or aim has no case. Made testable by `UNC.ORS.TRACE` and each suite child.
+- **H-2 (independent agreement)** Every closed-form expected value agrees with the independent oracle (`fiducial-oracles`, Python and mpmath route) within the agreement bound its suite states (1e-12 to 1e-10 of the unit, per child [unverified]), measured by the cross-check records of `UNC.RDL.GEN.XCHECK`; falsified if any released case disagrees or is still `pending`.
+- **H-3 (consistency with public NMI data)** For every aim that overlaps a public NMI reference set (NIST Algorithm Testing System least-squares datasets, PTB TraCIM Gaussian and Chebyshev tests, public surface-texture filter reference software and softgauges; versions pinned by `UNC.RDL.EXT` [unverified]), an evaluation that passes the ORS cases for that aim also passes the NMI set within its published MPE; falsified if any evaluation passes ORS for an aim but fails the overlapping NMI set, which would show the ORS cases are weaker than public data.
+- **H-4 (discrimination)** Each suite detects at least 95 % [unverified] of seeded single faults in a reference implementation of each aim, measured by running the suite through `UNC.ORS.RUN` against mutants of the 50-digit reference scripts, one mutant per fault class listed in the child; falsified if any suite detects fewer.
+- **H-5 (calibration of uncertainty coverage)** ORS-UNC empirical coverage of 95 % intervals stays within its binomial tolerance (REQ-UNC.ORS-005); framed in `UNC.ORS.UNC`.
+- **H-6 (cost)** The full release runs in CI within the REQ-UNC.ORS-004 budget; framed in `UNC.ORS.RUN`.
 
 ## Interfaces
 

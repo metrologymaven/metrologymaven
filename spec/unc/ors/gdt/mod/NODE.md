@@ -41,6 +41,14 @@ Cases for position (and other characteristics where the supported subset allows)
 - **REQ-UNC.ORS.GDT.MOD-002** Every case shall state the expected bonus tolerance, the expected datum shift (where applicable) and the expected deviation as separate values with tolerances.
 - **REQ-UNC.ORS.GDT.MOD-003** Every case shall cite the clause and DMT row it exercises and state its dialect.
 
+## Research hypotheses
+
+D-036 rule 4. Children state these as `AC-H` criteria; expected bonus and shift values remain expert content (D-009), and the hypotheses below test only the case structure.
+
+- **H-1 (coverage)** 100 % of material-modifier DMT keys marked `supported` in the pinned DMT have at least one case, measured by the REQ-GDT.RES-006 link check; falsified if any key lacks a case.
+- **H-2 (separation and discrimination)** Every case's geometry makes the expected bonus, the expected datum shift (where applicable) and the expected deviation each differ from zero and from one another by at least 10 times the case tolerance [unverified: factor], so that the suite detects 100 % of three seeded faults (bonus omitted, datum shift omitted, bonus applied at RFS), measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if any of the three passes every case.
+- **H-3 (constructed sizes)** The constructed actual mating and actual minimum material sizes agree with an independent 50-digit oracle within 1e-12 m, measured by `UNC.RDL.GEN.XCHECK`; falsified on any disagreement.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-gdt` in `ors-case/v1` format.

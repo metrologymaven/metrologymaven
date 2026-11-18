@@ -48,6 +48,15 @@ Propagation of distributions by Monte Carlo (JCGM 101:2008): each trial draws ev
 - **REQ-UNC.PROP.MCM-005** If a trial's kernel evaluation fails (for example a fit does not converge), then the engine shall count it, exclude it, and fail with `trial_failures` if failures exceed 0.1 % of trials [unverified], naming the first failing trial index.
 - **REQ-UNC.PROP.MCM-006** The output shall include the MC mean and the difference between the MC mean and the kernel value at the measured inputs, for use by the estimator policy.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** End-to-end Monte Carlo reproduces the published results of the JCGM 101:2008 worked examples to the published digits (`UNC.PROP.MCM.CMD`).
+- **H-2** The adaptive stop rule achieves its stated numerical tolerance against analytic or long-run references in at least 95 % [unverified] of seeds (`UNC.PROP.MCM.ADAPT`).
+- **H-3** Counter-based block sampling and interval extraction reproduce known output distributions within statistical tolerance (`UNC.PROP.MCM.BLOCK`, `UNC.PROP.MCM.INTVL`).
+- **H-4** Monte Carlo intervals cover at the nominal rate on ORS-UNC `nonlin-rect`, and retained sample sets are complete enough for downstream conformance probability (`UNC.PROP.MCM.CMD`, `UNC.PROP.MCM.SAMP`).
+
 ## Interfaces
 
 - **Offers:** `propagate_mcm(model, inputs, seed, profile) -> McmResult { trials, interval, u, mc_mean, mean_minus_fx, samples_ref, flags }`; command `unc.propagate_mcm@1`; sample sets by digest.

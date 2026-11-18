@@ -50,6 +50,7 @@ Defines the canonical byte format `mcm-samples@1` in which Monte Carlo output sa
 - **AC-2** Given a cap of 1 KiB and 10 000 trials, then `samples_not_retained` with the would-be size.
 - **AC-3** (error path) Given an encoding truncated by 8 bytes, then decoding fails `samples_invalid`.
 - **AC-4** Given AC-1 encoded and decoded, then the round trip is lossless.
+- **AC-H1** Hypothesis: the default retention cap keeps the complete `mcm-samples@1` set for at least 95 % [unverified] of runs on the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values and the ORS-UNC known-truth cases `nonlin-rect`, `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record) at the trial counts `UNC.PROP.MCM.ADAPT` reaches, and a conformance probability recomputed from the decoded set equals the in-memory value bit for bit, measured by recording `samples_not_retained` outcomes and comparing probabilities; falsified if retention falls below 95 % or any recomputed value differs.
 
 ## Design
 

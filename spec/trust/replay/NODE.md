@@ -55,6 +55,17 @@ When a Result Package includes input points, re-run the recorded computations th
 - **REQ-TRUST.REPLAY-008** A replay of a D0 algorithm shall give `IDENTICAL` on Windows, Linux and macOS x86-64 and arm64 for every package in the replay conformance corpus.
 - **REQ-TRUST.REPLAY-009** The replayer shall verify the WASM kernel artifact's SHA-256 against the kernel manifest before executing it, and shall refuse to run a mismatched artifact.
 
+## Research hypotheses
+
+Research risk (D-036 rule 4): a third party holding only a Result Package and the verifier can recompute its results bit-exactly. Children must make these testable; thresholds marked [unverified] are planning targets, not results.
+
+- **H-1 (portable bit-exact replay).** Verifier replay of every D0 result gives `IDENTICAL` on 100 % of D0 results in the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, including packages built from the frozen PTB TraCIM and NIST reference point sets at the versions pinned by KRN.MAN.VAL, on the six CI host targets (Windows, Linux, macOS × x86-64, arm64). Falsified by any non-`IDENTICAL` D0 result on any target. Testable in TRUST.REPLAY.CORPUS, TRUST.REPLAY.SANDBOX.
+- **H-2 (classification is sound).** False-`DIVERGENT` rate 0 on corpus cases planned `IDENTICAL` or `EQUIVALENT`, and false-acceptance rate (a planned `DIVERGENT` or tampered case reported other than `DIVERGENT`) 0, against the corpus `expect.json` labels and the REP-1 table `rep-1@1.0.0`. Testable in TRUST.REPLAY.COMPARE, TRUST.REPLAY.CORPUS.
+- **H-3 (independence of the verifier).** The standalone verifier, linking no KRN, UNC or CORE crate, reaches the same outcome as `CORE.RPL.EXEC.VERIFY` on 100 % of corpus results. Testable in TRUST.REPLAY.CORPUS, TRUST.REPLAY.RUN.
+- **H-4 (third-party kernel provenance).** For 100 % of kernel versions in the corpus, the verifier finds offline, or a third party fetches or rebuilds (KRN.MAN.REPRO), an artifact whose SHA-256 equals the package's kernel manifest entry, and replay with it gives the same outcomes as with the bundled artifact. Testable in TRUST.REPLAY.KART.LOOKUP, TRUST.REPLAY.KART.FETCH.
+- **H-5 (replayable share).** At least 95 % [unverified] of points-tier results in the corpus, excluding cases built to be `NOT_REPLAYABLE`, are selected as replayable, and every `NOT_REPLAYABLE` result carries its planned reason. Testable in TRUST.REPLAY.SELECT.
+- **H-6 (containment).** Running untrusted kernel bytes causes 0 host-resource accesses and 0 verifier-process aborts on the project's hostile-module set, with every resource exhaustion reported within the caller's budget. Testable in TRUST.REPLAY.SANDBOX.
+
 ## Interfaces
 
 - **Offers:** `verify.replay` (R1) returning per-result and package outcomes with reasons; a library used by `TRUST.VERIFY`.

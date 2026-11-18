@@ -44,6 +44,15 @@ The calibrated-workpiece (substitution) method for task-specific CMM uncertainty
 - **REQ-UNC.MODEL.SUBST-004** The system shall report the systematic deviation between the mean of the repeated runs and the calibrated value, and state whether it was corrected or included in U.
 - **REQ-UNC.MODEL.SUBST-005** If the production measurement conditions (feature, strategy digest, machine) differ from those of the calibrated-workpiece runs, then the system shall refuse UEC-3 and return `conditions_mismatch`.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** The substitution U covers the known true value at the nominal 95 % rate within the exact binomial band on a public seeded calibrated-workpiece generator (`UNC.MODEL.SUBST.EVAL`, `UNC.MODEL.SUBST.CMD`). No public calibrated-workpiece data set or generator exists in RDL or ORS-UNC yet [gap]; the ISO 15530-3 examples are not public.
+- **H-2** The component combination equals JCGM 100:2008 LPU of the same linear component model to relative 1e-12 [unverified] (`UNC.MODEL.SUBST.EVAL`).
+- **H-3** Transferring U across different measurement strategies on the same feature (heterogeneous point data) under-covers, which justifies the `conditions_mismatch` refusal (`UNC.MODEL.SUBST.INPUT`, `UNC.MODEL.SUBST.CMD`).
+- **H-4** The profile minimum run count is sufficient for nominal coverage and its reduction measurably degrades coverage (`UNC.MODEL.SUBST.INPUT`).
+
 ## Interfaces
 
 - **Offers:** `SubstitutionInput`, `SubstitutionResult` with component breakdown and a validation record reference for UEC-3; command `unc.run_substitution@1`.

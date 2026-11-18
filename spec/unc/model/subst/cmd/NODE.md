@@ -44,6 +44,8 @@ updated: 2026-11-17
 - **AC-2** (error path) Given an unresolvable run reference, then `result_not_found` and no result.
 - **AC-3** Given the conditions-mismatch fixture, then the command fails with `conditions_mismatch` and no validation record is produced.
 - **AC-4** (replay) Given an Activity Log of AC-1 in a recording session, when replayed in exact mode, then the result digest is identical.
+- **AC-H1** Hypothesis: the expanded uncertainty returned by `unc.run_substitution@1` achieves coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions of the known true value on a seeded calibrated-workpiece generator (simulated repeated runs on a workpiece with known true value, known calibration U, known machine systematic error and repeatability, production runs under matching or varied strategy) to be published as a public ORS-UNC or RDL tier G case set [gap: no such public set exists yet], with matching conditions, measured by the harness coverage count; falsified if the count lies outside the band.
+- **AC-H2** Hypothesis: the `conditions_mismatch` refusal is needed for heterogeneous point data: on the same generator, transferring the calibrated-workpiece U to production runs with a different strategy (point count, angular coverage or point distribution on the same feature) under-covers, with the coverage count below the band for at least one strategy variant, measured by the harness per variant; falsified if every variant covers within the band (the refusal is then over-conservative and should be revisited).
 
 ## Design
 

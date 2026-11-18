@@ -40,6 +40,14 @@ Cases for the ISO 16610 series filters in the supported subset: analytic input s
 - **REQ-UNC.ORS.FLT.FILTER-002** Every case shall cite the designator, edition and clause of the filter it exercises without reproducing the standard.
 - **REQ-UNC.ORS.FLT.FILTER-003** Every case shall state the end-effect handling assumed and exclude affected samples from comparison.
 
+## Research hypotheses
+
+Transmission formulas must be checked against the purchased standard by a filtration expert (D-016); the hypotheses below concern agreement with public reference data and discrimination, not the reading of the standard.
+
+- **H-1 (agreement with public references)** For each filter in the supported subset, case expected outputs agree with the output of public reference software or softgauge data on the same input (NIST surface metrology reference software, PTB and NPL type F1 and F2 softgauges; versions pinned by `UNC.RDL.EXT` [unverified]) within 1 nm or 0.1 % of amplitude, whichever is larger [unverified], outside the end-effect region; falsified if any filter disagrees.
+- **H-2 (discrimination)** Cases detect at least 95 % [unverified] of seeded single faults (cutoff misread as frequency, wrong weighting-function constant, missing end-effect exclusion, wrong sampling interval), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer.
+- **H-3 (coverage)** Cases exist for 100 % of filters in the supported subset, each at three or more wavelengths spanning at least one decade around the cutoff; falsified if any is missing.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-flt` in `ors-case/v1` format.

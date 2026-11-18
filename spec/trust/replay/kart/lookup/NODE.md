@@ -54,6 +54,8 @@ The verifier's `ArtifactSource`: given the kernel manifest from a package, it fi
 - **AC-2** Given `fixtures/pkg/golden/points.fidpkg` (no kernel member) and the bundled set containing the digest, then origin is `bundled`; with only the cache holding it, origin is `cache`.
 - **AC-3** Given a cache file with the right name but one flipped byte and no other source, then the result is `KERNEL_UNAVAILABLE` with a `candidate_mismatch` note for `cache`.
 - **AC-4** (error path) Given a manifest for kernel `9.9.9` held nowhere, then `KERNEL_UNAVAILABLE` names `9.9.9`, the digest and both hints; and under a socket-denying sandbox AC-1..AC-4 pass unchanged.
+- **AC-H1** Hypothesis: the offline lookup chain returns a digest-matching artifact for 100 % of kernel versions referenced by the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version that are in the bundled set or carried in-package, with 0 network connections, measured by running `get` for each referenced digest under a socket-denying sandbox; falsified if any such version is `KERNEL_UNAVAILABLE` or any connection is attempted.
+- **AC-H2** Hypothesis: the lookup chain accepts a mismatched artifact at rate 0 over a fault-injection set of at least 1,000 [unverified] corrupted candidates (flipped bytes, truncation, wrong-name files) spread across package, bundled and cache sources, measured by a seeded injection run counting accepted candidates whose SHA-256 differs from the manifest; falsified if any is accepted.
 
 ## Design
 

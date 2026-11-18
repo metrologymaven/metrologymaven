@@ -44,6 +44,7 @@ The input structure of the ISO 15530-3 calibrated-workpiece method and the check
 - **AC-2** (error path) Given 5 runs where the profile requires 20, then `insufficient_runs{required: 20, supplied: 5}`.
 - **AC-3** (error path) Given production measurements with a different strategy digest, then `conditions_mismatch{strategy_digest}`.
 - **AC-4** (error path) Given a missing coverage factor, then `input_missing{k}`.
+- **AC-H1** Hypothesis: the default procedure-profile minimum run count (20 runs of 3 repetitions [unverified: default minimums]) is sufficient and close to necessary: on a seeded calibrated-workpiece generator (simulated repeated runs on a workpiece with known true value, known calibration U, known machine systematic error and repeatability, production runs under matching or varied strategy) to be published as a public ORS-UNC or RDL tier G case set [gap: no such public set exists yet], the substitution U achieves coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions at the default minimum and falls below the band at one quarter of it, measured by the harness with run counts swept from 5 to 30; falsified if coverage fails at the default or still passes at 5 runs.
 
 ## Design
 

@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.VALID: Validation of LPU against Monte Carlo
@@ -51,6 +51,8 @@ The kernel function that compares an LPU coverage interval with a Monte Carlo co
 - **AC-3** Given `fixtures/unc/valid/delta_cases.csv` (u(y) values such as 0.0123, 1.0e-6, 9.96e-7 with `n_dig` 1, 2, 3 and expected δ), when δ is computed, then it equals the expected value exactly.
 - **AC-4** (error path) Given p = 0.95 for LPU and p = 0.99 for MCM, then the call fails with `incomparable`.
 - **AC-5** (portability) Given AC-1..3, when run on wasm32, x86-64 and ARM64, then outputs are bit-identical.
+- **AC-H1** Hypothesis: the validation outcome reproduces the validation conclusions published for the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values (validated or not at the stated number of significant digits), measured by running this function on the published LPU and MCM results; falsified if any conclusion differs.
+- **AC-H2** Hypothesis: `validated = true` implies an honest LPU interval: for every case of the ORS-UNC known-truth cases `lin-gauss`, `nonlin-rect`, `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record) where the function returns `validated = true`, the LPU interval's coverage lies within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions, measured by running the harness with LPU forced; falsified by any validated case outside its band.
 
 ## Design
 

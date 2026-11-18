@@ -51,6 +51,7 @@ The `FeatureCovariance` value: a fitted feature's parameter vector in a paramete
 - **AC-2** (error path) Given `fixtures/unc/mvar/param/not_psd.json`, then `invalid_covariance` with the smallest eigenvalue.
 - **AC-3** (error path) Given a torus, then `parameterisation_missing`.
 - **AC-4** Given a cylinder whose axis is along z, then the covariance of the axis is 2 x 2 and full rank.
+- **AC-H1** Hypothesis: the tangent-plane parameterisation keeps feature covariance full rank with condition number ≤ 1e8 [unverified] for every well-determined fit in the `UNC.RDL.GEN.LSNULL` family, and down to 30 degrees [unverified] of angular coverage in the `UNC.RDL.GEN.GEOM` partial-arc and partial-cap cases, in the frozen `rdl-release-<semver>`, measured by the eigenvalue ratio of the LPU covariance per case, reported against coverage angle; falsified if any such case is rank deficient or exceeds the bound.
 
 ## Design
 

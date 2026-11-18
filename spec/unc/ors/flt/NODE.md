@@ -42,6 +42,13 @@ Cases for scan-data filtering (ISO 16610 series filters in the supported subset)
 - **REQ-UNC.ORS.FLT-002** Each outlier policy shall have a case whose expected excluded index set is stated exactly.
 - **REQ-UNC.ORS.FLT-003** Every case shall cite the clause it exercises without reproducing the standard.
 
+## Research hypotheses
+
+- **H-1 (agreement with public filter references)** For each linear profile and areal filter in the supported subset, ORS-FLT expected outputs on analytic inputs agree with public reference software or softgauge results (NIST surface metrology reference software, PTB and NPL type F1 and F2 softgauges; versions pinned by `UNC.RDL.EXT` [unverified]) within 1 nm [unverified], measured by evaluating the same inputs in both; falsified if any filter disagrees. Made testable by `UNC.ORS.FLT.FILTER`.
+- **H-2 (discrimination of outlier faults)** Outlier cases detect at least 95 % [unverified] of seeded single faults in policy implementations, measured by mutation runs; falsified if fewer. Made testable by `UNC.ORS.FLT.OUTLIER`.
+- **H-3 (resampling bound)** Stated interpolation error bounds hold on 100 % of resampling cases and are tight within a factor of 2 [unverified], measured at 50 digits; falsified otherwise. Made testable by `UNC.ORS.FLT.RESAMPLE`.
+- **Reference-set gap:** no public NMI reference set for outlier rejection or scan resampling was found [unverified].
+
 ## Interfaces
 
 - **Offers:** suite `ors-flt@<semver>` in `ors-case/v1` format.

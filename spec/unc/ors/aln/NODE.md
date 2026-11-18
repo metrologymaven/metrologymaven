@@ -42,6 +42,15 @@ Cases for alignments that are not GD&T characteristics but feed them: 3-2-1, RPS
 - **REQ-UNC.ORS.ALN-002** Every case shall state the expected transform in a declared parameterisation with tolerances on translation (m) and rotation (rad).
 - **REQ-UNC.ORS.ALN-003** Cases used for `UNC.XFM` agreement checks shall be tagged `xfm_reference`.
 
+## Research hypotheses
+
+Alignment cases rest on mathematics, so all three hypotheses are testable by leaves without expert input (D-009 does not apply to `closed_form_math` cases).
+
+- **H-1 (independent agreement)** Every ORS-ALN expected transform agrees with the independent oracle (`fiducial-oracles`, Python and mpmath route) within 1e-12 m and 1e-12 rad for exact cases and 1e-10 m and 1e-10 rad for best-fit and constrained cases [unverified], measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case exceeds its bound.
+- **H-2 (discrimination)** ORS-ALN detects at least 95 % [unverified] of seeded single faults in alignment mathematics (rotation sign or transpose errors, wrong datum order, wrong weighting, ignored locks, point-to-point instead of point-to-surface distance), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer are detected.
+- **H-3 (scale)** Cases with at least 10^5 points stay decidable at their stated tolerance, that is the 50-digit optimum moves by less than one tenth of the tolerance when coordinates are re-rounded to 16 digits with a different rounding seed; falsified if any large case moves more.
+- **Reference-set gap:** no public NMI reference set for 3-2-1, RPS or constrained best-fit alignment was found [unverified]; ORS-ALN's own generated suites (CC-BY-4.0) are the public reference.
+
 ## Interfaces
 
 - **Offers:** suite `ors-aln@<semver>` in `ors-case/v1` format.

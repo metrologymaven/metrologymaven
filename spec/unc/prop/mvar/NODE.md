@@ -45,6 +45,15 @@ Propagates vector-valued quantities with their full covariance (JCGM 102:2011): 
 - **REQ-UNC.PROP.MVAR-003** On the ORS-UNC position case with a correlated datum, the multivariate LPU standard uncertainty shall agree with MCM within 5 % [unverified], while the independence assumption shall show a larger deviation.
 - **REQ-UNC.PROP.MVAR-004** If a declared covariance matrix is not symmetric positive semi-definite within tolerance, then the engine shall fail with `invalid_covariance`.
 
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** On ORS-UNC `mvar-datum`, multivariate LPU agrees with multivariate MCM within 5 % [unverified] and the independence assumption does not (`UNC.PROP.MVAR.VLPU`, `UNC.PROP.MVAR.VMCM`).
+- **H-2** Both forms reproduce the published covariances and correlations of the JCGM 102:2011 worked examples (`UNC.PROP.MVAR.VLPU`, `UNC.PROP.MVAR.VMCM`).
+- **H-3** Ellipsoidal and Mahalanobis coverage regions cover at the nominal rate within the exact binomial band (`UNC.PROP.MVAR.VLPU`, `UNC.PROP.MVAR.VMCM`).
+- **H-4** The feature parameterisation stays full rank and well conditioned on tier G partial-coverage geometry down to a stated coverage angle (`UNC.PROP.MVAR.PARAM`).
+
 ## Interfaces
 
 - **Offers:** `FeatureCovariance`; `propagate_vector_lpu`, `propagate_vector_mcm`; joint covariance for characteristic groups.

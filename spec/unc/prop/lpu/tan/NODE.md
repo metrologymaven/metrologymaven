@@ -58,6 +58,7 @@ The single contract through which LPU obtains derivatives of kernel operators. E
 - **AC-3** (error path) Given a provider returning a 2x3 matrix for a 3x3 operator, then `tangent_shape_mismatch`.
 - **AC-4** Given manifest fixture `fixtures/unc/lpu/tan/manifest_min.json` (5 operators, 3 with providers, 1 orphan provider), when the coverage report runs, then it lists the 2 missing and 1 orphan in ID order.
 - **AC-5** Given the harness and a provider with a deliberately wrong sign in one entry, then the harness rejects it naming the entry.
+- **AC-H1** Hypothesis: the central-difference harness with relative tolerance 1e-6 [unverified] accepts every correct provider and rejects every seeded single-entry fault (sign flip, factor of 2, transposed entries, dropped term) when evaluated at the registered sample points plus the nominal coordinates of the `UNC.RDL.GEN.LSNULL` cases in the frozen `rdl-release-<semver>`, measured by mutation testing over all registered providers; falsified if any mutant passes or any correct provider is rejected.
 
 ## Design
 

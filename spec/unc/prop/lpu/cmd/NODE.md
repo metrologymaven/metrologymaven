@@ -48,6 +48,7 @@ The registry command that runs LPU on the model bound to a result and returns th
 - **AC-2** (error path) Given result `C-3` with no model, then the command fails with `model_missing`.
 - **AC-3** Given AC-1, then the Record Journal head is unchanged.
 - **AC-4** (replay) Given a Command Program step calling AC-1, when replayed in exact mode, then the result bytes are `IDENTICAL`.
+- **AC-H1** Hypothesis: `unc.propagate_lpu@1`, run end to end on the JCGM 100:2008 Annex H examples (end-gauge calibration H.1, simultaneous resistance and reactance H.2 [unverified: annex numbering]), encoded from their published inputs, reproduces the published combined standard uncertainty and expanded uncertainty with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured by comparing `u_c` and `U` from the command's JSON output with the published values; falsified if any example disagrees beyond that.
 
 ## Design
 

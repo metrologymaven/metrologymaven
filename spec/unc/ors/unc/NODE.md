@@ -45,6 +45,17 @@ Tests whether the reported uncertainty intervals are honest. For simulated parts
 - **REQ-UNC.ORS.UNC-004** The harness shall be deterministic class D2: the same seeds shall give the same coverage count on the same platform class.
 - **REQ-UNC.ORS.UNC-005** If a case fails because the reported intervals undercover, then the run record shall state the observed coverage and the band so that the miscalibrated model can be identified.
 
+## Research hypotheses
+
+D-036 rule 4 (AGENTS.md rule 10): the task-specific uncertainty research risk. Children turn these into `AC-H` criteria. Thresholds marked [unverified] are proposals, not results.
+
+- **H-1 (calibration)** On cases whose bound model matches the simulation exactly, `unc.propagate_auto@1` gives coverage of reported 95 % intervals within the exact two-sided 99 % binomial band for N ≥ 1000, for LPU, MCM and multivariate propagation, measured by `UNC.ORS.UNC.HARNESS` on `ors-unc` at each released version; falsified if any such case falls outside its band.
+- **H-2 (fault discrimination)** The suite detects each of four seeded model faults (correlation dropped, standard uncertainty halved, rectangular input treated as normal with the same half-width, coverage factor 1 instead of the reported k) in ≥ 95 % [unverified] of 20 independent base seeds by at least one case, measured by running the suite against the faulted bound models; falsified if any fault is detected less often.
+- **H-3 (public anchor)** `unc.propagate_auto@1` reproduces the worked-example results of JCGM 101:2008 (BIPM, freely published) [unverified: examples chosen] within that document's stated numerical tolerance, measured by encoding the examples as cited `ors-unc` cases; falsified if any reported value lies outside.
+- **H-4 (harness calibration)** The harness false-failure rate on a calibrated stub is ≤ 1.5 % and its detection of true coverage 0.90 is ≥ 99 % at N = 1000 [unverified], measured with `test.interval_stub` over independent base seeds; falsified if either bound fails.
+- **H-5 (near-zero disclosure)** For non-negative quantities at true value zero, the simulated mean bias of the estimator agrees with the bias that `UNC.PROP.SELECT`'s estimator policy discloses, within 10 % [unverified], measured by the harness over N ≥ 1000 repetitions; falsified if any near-zero case differs by more. The pass convention itself is expert work.
+- **Gap:** no public dataset of known-truth GD&T measurements with uncertainty statements was found [unverified]; only the JCGM 101:2008 examples are public reference values, and they do not cover GD&T quantities or near-zero form.
+
 ## Interfaces
 
 - **Offers:** suite `ors-unc@<semver>`; coverage statistics per case for the dashboard.

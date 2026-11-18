@@ -40,6 +40,14 @@ Cases for the ISO 14405-1 size specification modifiers in the supported subset (
 - **REQ-UNC.ORS.SIZE.ISO-002** Every case shall state dialect `ISO_GPS`, the expected value and tolerance.
 - **REQ-UNC.ORS.SIZE.ISO-003** Every case shall cite the clause and DMT row it exercises.
 
+## Research hypotheses
+
+D-036 rule 4. Children or the content task state these as `AC-H` criteria; mapping modifiers to definitions stays expert content (D-009).
+
+- **H-1 (coverage)** 100 % of ISO size-modifier DMT keys marked `supported` have at least one case, measured by the REQ-GDT.RES-006 link check; falsified if any key lacks a case.
+- **H-2 (modifier discrimination)** The suite detects 100 % of ordered substitutions between supported modifiers, measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if any substitution passes every case, which marks a geometry gap for `UNC.ORS.SIZE.GEOM`.
+- **H-3 (dialect pairing)** Every ISO case has a paired ASME case on the same geometry digest, and for each supported modifier at least one pair has expected values differing by ≥ 1e-6 m [unverified: achievable for every modifier], measured by pairing cases by geometry digest; falsified if a modifier has no differing pair.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-size` in `ors-case/v1` format.

@@ -45,6 +45,9 @@ Turns the harness results into the published evidence: a canonical JSON report p
 - **AC-2** Given a committed report with one count edited by hand, then the CI check fails naming the report.
 - **AC-3** Given a toy card set with one algorithm lacking cases, then its evidence file contains `no_reference_cases`.
 - **AC-4** Given redaction on, then the report contains no numeric deviation fields (checked by schema).
+- **AC-H1** Hypothesis: the per-release validation report is reproducible by a third party: regenerating it on clean Windows, Linux and macOS runners from the public parts of the frozen RDL release named in the kernel manifest (`rdl-release-<semver>`, identified by its `rdl_suite_digest`), the published WASM reference artifact and the published criteria files gives a SHA-256 digest equal to the published report digest in 100% of attempts, measured by comparing digests; falsified if any regeneration differs.
+- **AC-H2** Hypothesis: the evidence is complete: for the frozen release, 100% of algorithms with a spec card carry either an evidence entry naming the reference set, set version and pass counts, or an explicit `no_reference_cases` entry, measured by joining the card registry with the generated evidence files; falsified if any card has neither.
+- **AC-H3** Hypothesis: the redacted report leaks no reference data: with redaction on, a search of the report and page for every reference output decimal string of the TraCIM-sourced and other non-redistributable cases in the frozen release finds 0 matches, measured by exact string search; falsified if any match is found.
 
 ## Design
 

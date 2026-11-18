@@ -57,6 +57,7 @@ Decides whether a first-order LPU result can be trusted for a given model and op
 - **AC-4** Given a model with 100 inputs, then evidence shows 32 probed pairs and `cross_terms_truncated = true`.
 - **AC-5** Given a statement built from AC-1, then its `nonlinearity` field carries `nlin@1`, the outcome and V1, V2.
 - **AC-6** Given AC-3 on x86-64, ARM64 and wasm32, then the outcome bytes are identical.
+- **AC-H1** Hypothesis: `nlin@1` never declares a non-linear case adequate: across the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, the ORS-UNC known-truth cases `lin-gauss`, `nonlin-rect` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record) and the cosine-error and product families of this node's fixtures, no case with outcome `linear_adequate` has `validated = false` from `UNC.PROP.VALID`, and at most 20 % [unverified] of cases with outcome other than `linear_adequate` have `validated = true`, measured by tabulating both outcomes; falsified if any false `linear_adequate` occurs or the over-conservative rate exceeds 20 %.
 
 ## Design
 

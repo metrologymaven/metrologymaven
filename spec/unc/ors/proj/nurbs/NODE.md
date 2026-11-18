@@ -42,6 +42,9 @@ Generates projection cases on NURBS faces whose geometry is known exactly: ratio
 - **AC-1** Given seed `0x50524A32`, then two runs give identical files and the suite check reports zero findings.
 - **AC-2** Given every freeform case, a 50-digit global search on a 10^4-sample grid plus local refinement finds no nearer point on the face.
 - **AC-3** Given the exact-cylinder NURBS cases, the expected distances equal the analytic cylinder distance within 1e-14 m.
+- **AC-H1** Hypothesis: `ors_proj::nurbs` achieves 100 % confirmation by the independent oracle (`fiducial-oracles`, Python and mpmath route) that each expected foot point is the global nearest point on the trimmed face, with distance agreement of at most 1e-12 m [unverified], on suite `ors-proj` at generator version 1.0.0 with seed `0x50524A32`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case fails or exceeds the bound.
+- **AC-H2** Hypothesis: the NURBS cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant per fault class (weights dropped so the rational surface is evaluated as polynomial, knot-span off by one, a single Newton start at the parameter-domain centre, trims ignored), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
+- **AC-H3** Hypothesis: degrees 2 and 3 cover at least 90 % [unverified] of the B-spline surface faces in the NIST MBE PMI validation and conformance test models (CTC and FTC STEP AP242 files; release to be pinned by digest [unverified]), measured by a script reading the surface degrees; falsified if lower, which would show the degree scope is too narrow.
 
 ## Design
 

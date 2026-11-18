@@ -42,6 +42,9 @@ Generates projection cases on untrimmed or simply trimmed analytic faces (plane,
 - **AC-1** Given seed `0x50524A31`, then two runs give identical files and the suite check reports zero findings.
 - **AC-2** Given every case, the 50-digit reference script confirms that the foot point lies on the face and the offset vector is parallel to the normal within 1e-30.
 - **AC-3** Given the torus cases, none lies within 1 % of the inner-equator curvature limit.
+- **AC-H1** Hypothesis: `ors_proj::analytic` achieves agreement of foot points and signed distances with the independent oracle (`fiducial-oracles`, Python and mpmath route) of at most 1e-14 m and parameters within 1e-14 [unverified] on suite `ors-proj` at generator version 1.0.0 with seed `0x50524A31`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case exceeds a bound.
+- **AC-H2** Hypothesis: the analytic cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant per face type and fault class (unsigned distance, inward normal, cone half-angle taken as full angle, torus radii swapped, parameter range wrapped differently), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
+- **AC-H3** Hypothesis: the five face types cover at least 95 % [unverified] of the non-B-spline faces in the NIST MBE PMI validation and conformance test models (CTC and FTC STEP AP242 files; release to be pinned by digest [unverified]), measured by a script counting surface entity types per face; falsified if lower.
 
 ## Design
 

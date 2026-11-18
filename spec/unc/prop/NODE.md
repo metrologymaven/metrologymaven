@@ -15,7 +15,7 @@ depends_on: [UNC.MODEL, UNC.UEC, KRN]
 cli: [fid unc propagate-*, fid unc compare-methods]
 mcp: [unc_propagate_*, unc_compare_methods]
 journal: [unc.propagate_*]
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP: Propagation engine
@@ -53,6 +53,18 @@ Evaluates an Uncertainty Model to produce the uncertainty of each output: first-
 - **REQ-UNC.PROP-007** The method-selection rule shall choose MCM for non-smooth quantities (minimum zone, max/min-based values, position with bonus) and may choose LPU for smooth pipelines, and the rule version shall be recorded in each result.
 - **REQ-UNC.PROP-008** The reported value shall be the kernel value at the measured inputs and never the Monte Carlo mean, and for non-negative quantities near zero the statement shall disclose or correct the bias by a declared method.
 - **REQ-UNC.PROP-009** The system shall report, for every evaluated model, its contributors ranked by contribution to the output variance.
+
+## Research hypotheses
+
+Measurable hypotheses against public reference data (D-036 rule 4). Thresholds marked [unverified] are targets, not results. The children named in each item must state it as `AC-H` acceptance criteria.
+
+- **H-1** Analytic and implicit sensitivities through kernel operators and fits agree with high-precision references on public tier G data, including partial-coverage and high-residual point sets (`UNC.PROP.LPU`).
+- **H-2** Uncertainty statements from `unc.propagate_auto@1` cover the known true value at the nominal 95 % rate within the exact binomial band on the ORS-UNC known-truth cases (`UNC.PROP.SELECT`, `UNC.PROP.LPU`, `UNC.PROP.MCM`, `UNC.PROP.MVAR`).
+- **H-3** The adaptive Monte Carlo engine reproduces the published results of the JCGM 101:2008 worked examples to the published digits, and its stop rule delivers the accuracy it promises (`UNC.PROP.MCM`).
+- **H-4** The LPU-versus-MCM validation and the nonlinearity probe never pass a case whose LPU interval is dishonest on public examples or known-truth cases (`UNC.PROP.VALID`, `UNC.PROP.NLIN`).
+- **H-5** Carrying full feature covariance changes the answer measurably where datums are shared, and the multivariate LPU and MCM forms agree with each other and with JCGM 102:2011 examples (`UNC.PROP.MVAR`).
+- **H-6** Contributor ranking reproduces published uncertainty budgets (`UNC.PROP.RANK`).
+- **H-7** The estimator policy discloses the bias of non-negative quantities near zero accurately enough to be useful; blocked on the open `UNC.ORS.UNC.NZERO` case set [gap].
 
 ## Interfaces
 

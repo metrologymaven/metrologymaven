@@ -51,6 +51,8 @@ The `verify.replay@1` command: builds the plan (SELECT), obtains the kernel (KAR
 - **AC-3** (error path) Given a plan whose second call traps, then dependent results are `NOT_REPLAYABLE` with `SANDBOX_trap` and the others keep their outcomes.
 - **AC-4** Given `--time-budget 0s`, then every result is `NOT_REPLAYABLE` with `BUDGET` and the command exits normally.
 - **AC-5** (MCP) Given AC-1 inputs as handles, when `verify_replay` is called, then the result equals the CLI JSON.
+- **AC-H1** Hypothesis: `fid verify replay` achieves a package outcome equal to `expect.json` on 100 % of packages in the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version across the six CI host targets (Windows, Linux, macOS × x86-64, arm64), with the per-result report (excluding timing fields) byte-identical between targets, measured by running the command with `--json` on each target and comparing canonical digests; falsified if any outcome mismatches or any report digest differs.
+- **AC-H2** Hypothesis: a third party who installs only the released `fid-verify` binary on a clean host with no network achieves the same package outcomes as CI on 100 % of the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, measured by a scripted clean-room run (fresh VM, no project checkout, network disabled) diffing its JSON reports against CI's; falsified if any outcome differs or the run needs a network or project file.
 
 ## Design
 

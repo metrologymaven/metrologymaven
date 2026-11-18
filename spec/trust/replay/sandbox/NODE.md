@@ -58,6 +58,8 @@ Runs the WASM reference kernel inside the verifier with nothing but the kernel c
 - **AC-3** (error path) Given `fixtures/replay/sandbox/imports-fd.wasm` importing a WASI file function, then `sandbox.forbidden_import`.
 - **AC-4** (error path) Given `fixtures/replay/sandbox/loop.wasm` (infinite loop) and `grow.wasm` (unbounded memory growth), then `sandbox.budget_exhausted` and `sandbox.memory_limit` respectively, within 10 s, with the process still alive.
 - **AC-5** Given AC-1 run twice and on Windows, Linux and macOS CI, then all result digests are equal.
+- **AC-H1** Hypothesis: the sandboxed WASM kernel achieves byte-identical result envelopes on 100 % of kernel calls generated from the frozen PTB TraCIM and NIST reference point sets at the versions pinned by KRN.MAN.VAL, across the six CI host targets (Windows, Linux, macOS × x86-64, arm64), measured by running every KRN.MAN.VAL call through the sandbox on each target and comparing envelope digests with the pinned digests of the KRN.MAN.VAL report for the same kernel version; falsified if any envelope digest differs on any target.
+- **AC-H2** Hypothesis: the sandbox achieves 0 host-resource accesses (file, socket, clock, randomness, environment) and 0 verifier-process aborts on the hostile-module set `fixtures/replay/sandbox/*.wasm` (version pinned with the corpus), with every budget or memory exhaustion reported within 10 s, measured by running each module under a syscall audit on the six CI host targets (Windows, Linux, macOS × x86-64, arm64); falsified if any access is observed, the process dies, or a limit error arrives late.
 
 ## Design
 

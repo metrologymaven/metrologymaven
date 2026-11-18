@@ -50,6 +50,8 @@ The Monte Carlo form of multivariate propagation (JCGM 102:2011): all outputs of
 - **AC-1** Given `fixtures/unc/mvar/vmcm/bivariate.json` (a linear model with known covariance, seed 11, 10^6 trials), then the sample covariance is within 1 % of the known values.
 - **AC-2** Given a group where one output fails in trial 5, then trial 5 is excluded for both outputs.
 - **AC-3** Given the same seed twice, then the region and covariance bytes are identical.
+- **AC-H1** Hypothesis: the joint sample covariance and correlation coefficients from 10^6 trials reproduce the published Monte Carlo results of the JCGM 102:2011 worked examples with vector outputs (bivariate additive model, resistance and reactance [unverified: clause numbering]), encoded from their published inputs, with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured with the seed recorded; falsified if any entry disagrees beyond that.
+- **AC-H2** Hypothesis: the Mahalanobis coverage region achieves coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions on the ORS-UNC known-truth case `mvar-datum` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), measured by the harness; falsified if the count lies outside the band.
 
 ## Design
 

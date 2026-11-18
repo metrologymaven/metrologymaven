@@ -41,6 +41,14 @@ Cases for size under ASME Y14.5-2018 (P1a dialect): the envelope requirement at 
 - **REQ-UNC.ORS.SIZE.ASME-002** Every case shall state dialect `ASME`, the expected value or outcome and its tolerance.
 - **REQ-UNC.ORS.SIZE.ASME-003** Every case shall cite the clause and DMT row it exercises.
 
+## Research hypotheses
+
+D-036 rule 4. Children or the content task state these as `AC-H` criteria; expected values and verdicts stay expert content (D-009).
+
+- **H-1 (coverage)** 100 % of ASME size DMT keys marked `supported` have at least one case on `UNC.ORS.SIZE.GEOM` geometry, measured by the REQ-GDT.RES-006 link check; falsified if any key lacks a case.
+- **H-2 (discrimination)** The case set includes geometry where local sizes are within limits but form exceeds the MMC envelope, and the converse, so that it detects 100 % of two seeded faults (envelope check omitted; local-size check omitted), measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if either fault passes every case.
+- **H-3 (geometry agreement)** Every geometric quantity the cases rest on agrees with the `UNC.ORS.SIZE.GEOM` oracle-checked values within 1e-12 m, measured by digest-linking each case to its generated geometry; falsified on any mismatch.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-size` in `ors-case/v1` format.

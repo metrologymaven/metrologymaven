@@ -40,6 +40,15 @@ Cases for composite position and composite profile (pattern-locating and feature
 - **REQ-UNC.ORS.GDT.COMP-002** Every case shall state the expected result per segment or per group with tolerances.
 - **REQ-UNC.ORS.GDT.COMP-003** Every case shall cite the clause and DMT row it exercises and state its dialect.
 
+## Research hypotheses
+
+D-036 rule 4. Children state these as `AC-H` criteria; pattern and simultaneity rules stay expert content (D-009).
+
+- **H-1 (coverage)** 100 % of composite and simultaneous-requirement DMT keys marked `supported` have at least one case, measured by the REQ-GDT.RES-006 link check; falsified if any key lacks a case.
+- **H-2 (discrimination)** The suite detects 100 % of three seeded structural faults (feature-relating segment evaluated with the pattern-locating segment's datum constraints, a simultaneous group evaluated as separate requirements, separate requirements merged into one group), measured by one `rdl.run_suite@1` per test-only mutant aim; falsified if any fault passes every case.
+- **H-3 (dialect sensitivity)** For each simultaneous-requirement key whose default differs between ASME and ISO GPS [unverified: which keys], at least one paired case on the same geometry has a different expected outcome per dialect, measured by pairing cases by geometry digest; falsified if a dialect-sensitive key has no differing pair.
+- **H-4 (constructed offsets)** The constructed per-feature offsets and pattern rotation agree with an independent 50-digit oracle within 1e-12 m and 1e-12 rad, measured by `UNC.RDL.GEN.XCHECK`; falsified on any disagreement.
+
 ## Interfaces
 
 - **Offers:** cases for suite `ors-gdt` in `ors-case/v1` format.

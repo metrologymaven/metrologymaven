@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # UNC.PROP.RANK: Contributor ranking
@@ -51,6 +51,8 @@ Ranks the input quantities of an evaluated model by how much each contributes to
 - **AC-3** Given `fixtures/unc/rank/mcm_samples.bin` (10^5 trials of Y = X1 + 3·X2 with seed `0x52414E4B`), when ranked by samples, then X2 ranks first and `method = approximate_src2`.
 - **AC-4** (degenerate) Given all sensitivities zero, then shares are absent and `degenerate` is set.
 - **AC-5** (portability) Given AC-1..3, outputs are bit-identical on wasm32, x86-64 and ARM64.
+- **AC-H1** Hypothesis: LPU contributor ranking reproduces the order and magnitudes of the published uncertainty budget of the JCGM 100:2008 end-gauge example (H.1 [unverified: annex numbering]), with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit) for each |c_i| u(x_i), measured by comparing the ranked list with the published budget; falsified if the order or any magnitude disagrees.
+- **AC-H2** Hypothesis: the `approximate_src2` ranking agrees with the LPU ranking with Kendall tau ≥ 0.9 [unverified] on every case of the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values where `UNC.PROP.VALID` returns `validated = true`, measured from 10^6-trial sample sets; falsified if any such case is below 0.9. Cases with `validated = false` are reported but not scored.
 
 ## Design
 

@@ -43,6 +43,9 @@ Generates ORS-ALN cases for surface and feature best-fit (`align.run_bestfit@1`,
 - **AC-1** Given seed `0x414C4E32`, then two runs produce identical files and the suite check reports zero findings.
 - **AC-2** Given each case, when the 50-digit reference script evaluates the gradient of the sum of squared residuals at the expected transform, then its norm is below 1e-20 (in m² per unit parameter).
 - **AC-3** Given the suite, then each aim has ≥ 4 cases, one with ≥ 10^5 points, and two `xfm_reference` cases.
+- **AC-H1** Hypothesis: `ors_aln::best` achieves agreement between each expected transform and the independent oracle (`fiducial-oracles`, Python and mpmath route) of at most 1e-10 m and 1e-10 rad [unverified], including the 10^5-point cases, on suite `ors-aln` at generator version 1.0.0 with seed `0x414C4E32`, measured by `UNC.RDL.GEN.XCHECK` records; falsified if any case exceeds either bound.
+- **AC-H2** Hypothesis: the best-fit cases achieve discrimination of at least 95 % [unverified] of seeded faults on the same suite, where the faults are one mutant of the reference script per aim and fault class (single linearised step instead of converged optimum, point-to-point instead of point-to-surface distance, one feature dropped from a feature fit, centroid-only alignment, rotation applied about the wrong centre), measured by mutation runs through `UNC.ORS.RUN`; falsified if fewer than 95 % of mutants fail at least one case.
+- **AC-H3** Hypothesis: every case with at least 10^5 points is decidable at its tolerance, that is re-rounding its coordinates to 16 digits with a second rounding seed moves the 50-digit optimum by less than one tenth of the tolerance, on the same suite, measured by the reference script; falsified if any such case moves more.
 
 ## Design
 
