@@ -1,0 +1,16 @@
+[
+  {
+    "reference": "fid.results.long@1",
+    "id": "fid.results.long",
+    "version": "1.0.0",
+    "sha256": "sha256:90f3b764750274021a6b6a83ab4a4de9a74f6cb5296288d2316cf35c5b1f69e3",
+    "lossy": []
+  },
+  {
+    "reference": "fid.results.wide@1",
+    "id": "fid.results.wide",
+    "version": "1.0.0",
+    "sha256": "sha256:2345b211fd346c01b4a40b823d3a73769fc6b69e296aa1ee445c48a76fe2cf99",
+    "lossy": []
+  }
+]
