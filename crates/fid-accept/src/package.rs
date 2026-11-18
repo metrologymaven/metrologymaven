@@ -171,7 +171,11 @@ const NO_POINTER: &[ParamSpec] = &[req("steps", ParamType::Ranges)];
 /// Parameter objects are closed: a name not listed here is `PKG-CHECK`.
 pub fn param_specs(kind: &str) -> Option<&'static [ParamSpec]> {
     Some(match kind {
-        "replay_outcome" | "all_characteristics_resolved" | "basis_present" | "no_manual_entry" | "basis_label"
+        "replay_outcome"
+        | "all_characteristics_resolved"
+        | "basis_present"
+        | "no_manual_entry"
+        | "basis_label"
         | "committed_survive_kill" => NO_PARAMS,
         "value_within_u" => VALUE_WITHIN_U,
         "decision_equals" | "operator_decision_equals" | "thickness_extrema" => TRUTH,
@@ -764,7 +768,11 @@ impl Draft {
                     ok = false;
                 }
                 Some(want) if *want != sha => {
-                    self.push(Code::Dataset, format!("{at}.sha256"), format!("differs from the catalogue digest {want}"));
+                    self.push(
+                        Code::Dataset,
+                        format!("{at}.sha256"),
+                        format!("differs from the catalogue digest {want}"),
+                    );
                     ok = false;
                 }
                 Some(_) => {}
@@ -806,7 +814,11 @@ impl Draft {
                     }
                 }
                 Some(_) => {
-                    self.push(Code::Schema, format!("{at}.id"), "must be a check ID (lowercase letters, digits, hyphens)");
+                    self.push(
+                        Code::Schema,
+                        format!("{at}.id"),
+                        "must be a check ID (lowercase letters, digits, hyphens)",
+                    );
                     None
                 }
             };
@@ -926,7 +938,9 @@ impl Draft {
                 let mut top = 0;
                 for (i, r) in a.iter().enumerate() {
                     let bounds = match r {
-                        CValue::Obj(o) if o.len() == 2 => (o.get("from").and_then(as_count), o.get("to").and_then(as_count)),
+                        CValue::Obj(o) if o.len() == 2 => {
+                            (o.get("from").and_then(as_count), o.get("to").and_then(as_count))
+                        }
                         _ => (None, None),
                     };
                     match bounds {
@@ -967,7 +981,11 @@ impl Draft {
                         _ => None,
                     };
                     match metric {
-                        None => self.push(Code::Target, format!("{at}.metric"), "must be `machine_s`, `task_s` or `operator_s`"),
+                        None => self.push(
+                            Code::Target,
+                            format!("{at}.metric"),
+                            "must be `machine_s`, `task_s` or `operator_s`",
+                        ),
                         Some(mt) if !metrics.insert(mt) => {
                             self.push(Code::Target, format!("{at}.metric"), "duplicate metric");
                         }
@@ -1116,7 +1134,8 @@ fn check_value(value: &CValue, catalogue: &Catalogue) -> Draft {
     d.gating = d.enum_field(m, "gating", &[("gating", Gating::Gating), ("tracked", Gating::Tracked)]);
     d.assistance =
         d.enum_field(m, "assistance", &[("unassisted", Assistance::Unassisted), ("assisted", Assistance::Assisted)]);
-    d.input_mode = d.enum_field(m, "input_mode", &[("any", InputMode::Any), ("keyboard_only", InputMode::KeyboardOnly)]);
+    d.input_mode =
+        d.enum_field(m, "input_mode", &[("any", InputMode::Any), ("keyboard_only", InputMode::KeyboardOnly)]);
     d.journal(m);
     d.datasets(m, catalogue);
     d.checks(m);
@@ -1333,7 +1352,8 @@ pub fn validate_dir_with(dir: &Path, catalogue: &Catalogue, limits: &Limits) -> 
             d.push(Code::Check, subject, format!("reaches entry {top}; the journal holds {n}"));
         }
     }
-    let refs: Vec<(String, String, Code)> = d.files.iter().map(|f| (f.subject.clone(), f.path.clone(), f.code)).collect();
+    let refs: Vec<(String, String, Code)> =
+        d.files.iter().map(|f| (f.subject.clone(), f.path.clone(), f.code)).collect();
     for (subject, path, code) in refs {
         if let Err(why) = locate(dir, &path, false, max_entries) {
             d.push(code, subject, why);
@@ -1399,7 +1419,11 @@ pub fn parse_suite(input: &[u8]) -> (Option<SuiteIndex>, Vec<Finding>) {
     let arr = match m.get("packages") {
         Some(CValue::Arr(a)) if a.len() <= MAX_SUITE_PACKAGES => a,
         _ => {
-            f.push(Finding::new(Code::Schema, "suite.packages", format!("must be a list of at most {MAX_SUITE_PACKAGES} entries")));
+            f.push(Finding::new(
+                Code::Schema,
+                "suite.packages",
+                format!("must be a list of at most {MAX_SUITE_PACKAGES} entries"),
+            ));
             f.sort();
             return (None, f);
         }

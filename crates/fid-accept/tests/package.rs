@@ -8,8 +8,8 @@
 
 use fid_accept::package::{
     check_manifest, check_path, package_digest, param_specs, parse_suite, validate_dir, validate_dir_with,
-    validate_suite, Catalogue, Code, Gating, Limits, Metric, Report, CHECK_KINDS, FORMAT, MANIFEST,
-    MAX_MANIFEST_BYTES, OPTIONAL_FIELDS, REQUIRED_FIELDS,
+    validate_suite, Catalogue, Code, Gating, Limits, Metric, Report, CHECK_KINDS, FORMAT, MANIFEST, MAX_MANIFEST_BYTES,
+    OPTIONAL_FIELDS, REQUIRED_FIELDS,
 };
 use fid_canon::CValue;
 use std::path::{Path, PathBuf};
@@ -151,7 +151,9 @@ fn ac5_changing_gating_changes_the_digest() {
 fn digest_covers_milestones_and_time_targets() {
     let base = std::fs::read_to_string(fixtures().join("valid").join(MANIFEST)).unwrap();
     let d0 = package_digest(base.as_bytes()).unwrap();
-    for (from, to) in [("\"launch-1\"", "\"launch-2\""), ("1200", "1300"), ("\"verified\": false", "\"verified\": true")] {
+    for (from, to) in
+        [("\"launch-1\"", "\"launch-2\""), ("1200", "1300"), ("\"verified\": false", "\"verified\": true")]
+    {
         let changed = base.replacen(from, to, 1);
         assert_ne!(changed, base);
         assert_ne!(package_digest(changed.as_bytes()).unwrap(), d0, "{from}");
@@ -270,8 +272,16 @@ fn parameters_are_checked_per_kind() {
         ("verify_verdict", r#"{"expected": "a\nb"}"#, "PKG-CHECK checks[1].params.expected"),
         ("records_equal", r#"{"against": "J2"}"#, "PKG-CHECK checks[1].params.against"),
         ("file_digest", r#"{"artefact": "r.pdf", "sha256": "sha256:ABC"}"#, "PKG-CHECK checks[1].params.sha256"),
-        ("no_edit_reachable", r#"{"allowed_commands": ["not a command"]}"#, "PKG-CHECK checks[1].params.allowed_commands"),
-        ("no_edit_reachable", r#"{"allowed_commands": ["a.b@1", "a.b@1"]}"#, "PKG-CHECK checks[1].params.allowed_commands"),
+        (
+            "no_edit_reachable",
+            r#"{"allowed_commands": ["not a command"]}"#,
+            "PKG-CHECK checks[1].params.allowed_commands",
+        ),
+        (
+            "no_edit_reachable",
+            r#"{"allowed_commands": ["a.b@1", "a.b@1"]}"#,
+            "PKG-CHECK checks[1].params.allowed_commands",
+        ),
         ("no_pointer_events", r#"{"steps": []}"#, "PKG-CHECK checks[1].params.steps"),
         ("no_pointer_events", r#"{"steps": [{"from": 0, "to": 2}]}"#, "PKG-CHECK checks[1].params.steps"),
         ("no_pointer_events", r#"{"steps": [{"from": 3, "to": 2}]}"#, "PKG-CHECK checks[1].params.steps"),
@@ -552,7 +562,9 @@ fn suite_index_hostile_entries() {
 #[test]
 fn suite_entry_that_is_not_a_package_folder() {
     let d = digest_file("valid.digest");
-    let index = format!(r#"{{"format": "acceptance-suite@1", "packages": [{{"path": "valid.digest", "digest": "{d}"}}, {{"path": "nowhere", "digest": "{d}"}}]}}"#);
+    let index = format!(
+        r#"{{"format": "acceptance-suite@1", "packages": [{{"path": "valid.digest", "digest": "{d}"}}, {{"path": "nowhere", "digest": "{d}"}}]}}"#
+    );
     let r = validate_suite(&fixtures(), index.as_bytes(), &catalogue());
     assert_eq!(short(&r.findings), vec!["PKG-SCHEMA packages[0].path", "PKG-SCHEMA packages[1].path"]);
 }
@@ -602,7 +614,10 @@ fn published_schema_matches_the_validator() {
     let mut fields: Vec<String> = REQUIRED_FIELDS.iter().chain(OPTIONAL_FIELDS.iter()).map(|f| f.to_string()).collect();
     fields.sort();
     assert_eq!(keys(obj(&s, "properties")), fields);
-    assert_eq!(obj(obj(&s, "properties"), "format"), &CValue::Obj([("const".to_string(), CValue::Str(FORMAT.into()))].into()));
+    assert_eq!(
+        obj(obj(&s, "properties"), "format"),
+        &CValue::Obj([("const".to_string(), CValue::Str(FORMAT.into()))].into())
+    );
     let defs = obj(&s, "$defs");
     let check = obj(defs, "check");
     let kinds = strings(obj(obj(obj(check, "properties"), "kind"), "enum"));
