@@ -72,7 +72,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
 - [B] [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
 - [B] [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
-- [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
+- [B] [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
 - [B] [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
 - [B] [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)

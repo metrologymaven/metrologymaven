@@ -1,0 +1,178 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-04",
+  "subject": "JOB.PER.04",
+  "kind": "persona",
+  "revision": 1,
+  "app": "probe",
+  "phase": "P2",
+  "personas": ["JOB.PER.04", "JOB.PER.05"],
+  "exercised_by": ["JOB.ACC.04", "JOB.ACC.10"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "project.open_project@1",
+      "owner": "CORE.PRJ.CONT.LIFE",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "import.cloud_ascii@1",
+      "owner": "IO.CLOUD.ASCII",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "gdt.build_drf@1",
+      "owner": "GDT.DRF.BUILD",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "check.eval_position@1",
+      "owner": "GDT.LOC.POS.CMD",
+      "handoff": 5,
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "check.eval_flatness@1",
+      "owner": "GDT.FORM.FLAT",
+      "handoff": 6,
+      "human_only": false
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "check.eval_perpendicularity@1",
+      "owner": "GDT.LOC.ORIENT.CMDS",
+      "handoff": 7,
+      "human_only": false
+    },
+    {
+      "n": 7,
+      "actor": "human",
+      "command": "unc.propagate_auto@1",
+      "owner": "UNC.PROP.SELECT",
+      "handoff": 8,
+      "human_only": false
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "decide.evaluate_rule@1",
+      "owner": "UNC.DEC.DEFAULT",
+      "decision": "When no decision rule is bound: bind one, or leave the rule-dependent results not decidable",
+      "handoff": 9,
+      "human_only": false
+    },
+    {
+      "n": 9,
+      "actor": "human",
+      "command": "report.export_pdf@1",
+      "owner": "RPT.OUTPUT.PDF.WRITE",
+      "handoff": "Re-evaluation report done; JOB.PER.05 releases it where the customer requires a release",
+      "human_only": false
+    },
+    {
+      "n": 10,
+      "actor": "human",
+      "command": "cmm.define_machine@1",
+      "owner": "CMM.COLL.MACH",
+      "handoff": 11,
+      "human_only": false
+    },
+    {
+      "n": 11,
+      "actor": "human",
+      "command": "cmm.define_probe@1",
+      "owner": "CMM.PROBE.MODEL",
+      "handoff": 12,
+      "human_only": false
+    },
+    {
+      "n": 12,
+      "actor": "human",
+      "command": "cmm.generate_program_from_pmi@1",
+      "owner": "CMM.GEN.PMI",
+      "phase": "P3",
+      "handoff": 13,
+      "human_only": true
+    },
+    {
+      "n": 13,
+      "actor": "human",
+      "command": "cmm.simulate_program@1",
+      "owner": "CMM.SIM.RUN",
+      "decision": "Whether the simulation report is clean enough to ask for approval",
+      "handoff": 14,
+      "human_only": true
+    },
+    {
+      "n": 14,
+      "actor": "human",
+      "command": "cmm.request_run@1",
+      "owner": "CMM.EXEC.REQ",
+      "handoff": 15,
+      "human_only": true
+    },
+    {
+      "n": 15,
+      "actor": "human",
+      "command": "cmm.approve_ticket@1",
+      "owner": "CMM.EXEC.AUTHN",
+      "decision": "Approve the program with its motion envelope at the approval station, or send it back",
+      "handoff": 16,
+      "human_only": true
+    },
+    {
+      "n": 16,
+      "actor": "human",
+      "command": "device.connect_cmm@1",
+      "owner": "HAL.IPP.SESS",
+      "handoff": 17,
+      "human_only": true
+    },
+    {
+      "n": 17,
+      "actor": "operator",
+      "command": "cmm.confirm_setup_run@1",
+      "owner": "CMM.EXEC.SCOPE",
+      "decision": "Whether the reduced-speed setup run went as simulated",
+      "handoff": 18,
+      "human_only": true
+    },
+    {
+      "n": 18,
+      "actor": "human",
+      "command": "cmm.arm_run@1",
+      "owner": "CMM.EXEC.DRIVE",
+      "handoff": 19,
+      "human_only": true
+    },
+    {
+      "n": 19,
+      "actor": "system",
+      "command": "cmm.record_run@1",
+      "owner": "CMM.EXEC.RECORD",
+      "handoff": 20,
+      "human_only": true
+    },
+    {
+      "n": 20,
+      "actor": "human",
+      "command": "report.export_pdf@1",
+      "owner": "RPT.OUTPUT.PDF.WRITE",
+      "handoff": "Run report done; JOB.PER.05 releases it where the customer requires a release",
+      "human_only": false
+    }
+  ]
+}
