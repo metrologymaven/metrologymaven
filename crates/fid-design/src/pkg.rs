@@ -191,7 +191,9 @@ fn classify(old: &Package, new: &Package) -> BTreeMap<String, Change> {
                     Change::ValueChanged
                 } else {
                     match (old.deprecations.get(name), new.deprecations.get(name)) {
-                        (None, Some(d)) => Change::Deprecated { replacement: d.replacement.clone().unwrap_or_default() },
+                        (None, Some(d)) => {
+                            Change::Deprecated { replacement: d.replacement.clone().unwrap_or_default() }
+                        }
                         _ => Change::Unchanged,
                     }
                 }
@@ -230,7 +232,10 @@ fn check_breaking(
             f.push(Finding::new(
                 Code::DeprecationEarly,
                 name,
-                format!("deprecated since {} but removed by {to}; no released version listed it as deprecated", d.since),
+                format!(
+                    "deprecated since {} but removed by {to}; no released version listed it as deprecated",
+                    d.since
+                ),
             ));
         } else if to.line() <= d.since.line() {
             f.push(Finding::new(
@@ -251,7 +256,13 @@ fn check_breaking(
     }
 }
 
-fn check_changelog(changes: &BTreeMap<String, Change>, from: Version, to: Version, new: &Package, f: &mut Vec<Finding>) {
+fn check_changelog(
+    changes: &BTreeMap<String, Change>,
+    from: Version,
+    to: Version,
+    new: &Package,
+    f: &mut Vec<Finding>,
+) {
     // Entries of every release after `from` up to and including `to`, read from the new
     // package's changelog (it carries the history).
     let mut entries: BTreeMap<&str, Vec<(Version, Class, usize)>> = BTreeMap::new();

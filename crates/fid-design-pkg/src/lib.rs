@@ -1,5 +1,7 @@
 //! `fid-design-pkg`: read-only reader of a design-system package directory (spec node
-//! `UX.SYSTEM.PKG`). Tooling layer. It reads nothing outside the given root and writes nothing.
+//! `UX.SYSTEM.PKG`). Layer `model`, so that consumers (VIZ, RPT, OUTR, I18N) can link it; the
+//! commands live in the tool crate `fid-design`. It reads nothing outside the given root and
+//! writes nothing.
 //!
 //! Layout: `package.toml` (manifest, [`FORMAT_ID`]), `CHANGELOG.md` ([`changelog`]),
 //! `deprecations.json`, `names.json` (generated name index, [`NAMES_FORMAT_ID`]), token files
@@ -161,7 +163,9 @@ pub fn is_valid_name(s: &str) -> bool {
     let head_ok = fb.next().is_some_and(|b| b.is_ascii_lowercase());
     head_ok
         && fb.all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-        && segs.all(|seg| !seg.is_empty() && seg.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-'))
+        && segs.all(|seg| {
+            !seg.is_empty() && seg.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        })
 }
 
 /// `package.toml`.
@@ -393,11 +397,19 @@ impl Package {
         }
         for (n, ks) in &kinds {
             if !is_valid_name(n) {
-                f.push(Finding::new(Code::NameSyntax, *n, "names.json: name does not match ^[a-z][a-z0-9]*(\\.[a-z0-9-]+)*$"));
+                f.push(Finding::new(
+                    Code::NameSyntax,
+                    *n,
+                    "names.json: name does not match ^[a-z][a-z0-9]*(\\.[a-z0-9-]+)*$",
+                ));
             }
             if ks.len() > 1 {
                 let list: Vec<&str> = ks.iter().map(|k| k.as_str()).collect();
-                f.push(Finding::new(Code::NameDuplicate, *n, format!("listed {} times: {}", ks.len(), list.join(", "))));
+                f.push(Finding::new(
+                    Code::NameDuplicate,
+                    *n,
+                    format!("listed {} times: {}", ks.len(), list.join(", ")),
+                ));
             }
             if ks.contains(&Kind::Token) && !self.tokens.contains_key(*n) {
                 f.push(Finding::new(Code::Schema, *n, "names.json lists a token that no token file defines"));
@@ -444,12 +456,19 @@ impl Package {
                 f.push(Finding::new(
                     Code::DeprecationEarly,
                     &d.name,
-                    format!("remove_after {} is not at least one minor version after since {}", d.remove_after, d.since),
+                    format!(
+                        "remove_after {} is not at least one minor version after since {}",
+                        d.remove_after, d.since
+                    ),
                 ));
             }
             if let Some(v) = self.version() {
                 if d.since > v {
-                    f.push(Finding::new(Code::Schema, &d.name, format!("since {} is later than the package {v}", d.since)));
+                    f.push(Finding::new(
+                        Code::Schema,
+                        &d.name,
+                        format!("since {} is later than the package {v}", d.since),
+                    ));
                 }
             }
         }
@@ -514,11 +533,19 @@ fn parse_manifest(text: &str, f: &mut Vec<Finding>) -> Option<Manifest> {
         ok = false;
     }
     if token_format != TOKEN_FORMAT_ID {
-        f.push(Finding::new(Code::Schema, file, format!("unsupported token_format; this reader parses {TOKEN_FORMAT_ID:?}")));
+        f.push(Finding::new(
+            Code::Schema,
+            file,
+            format!("unsupported token_format; this reader parses {TOKEN_FORMAT_ID:?}"),
+        ));
         ok = false;
     }
     if product_name != PRODUCT_PLACEHOLDER {
-        f.push(Finding::new(Code::Schema, file, format!("product_name must be the placeholder {PRODUCT_PLACEHOLDER:?}")));
+        f.push(Finding::new(
+            Code::Schema,
+            file,
+            format!("product_name must be the placeholder {PRODUCT_PLACEHOLDER:?}"),
+        ));
     }
     let Some(version) = Version::parse(&version) else {
         f.push(Finding::new(Code::Schema, file, "version must be MAJOR.MINOR.PATCH"));

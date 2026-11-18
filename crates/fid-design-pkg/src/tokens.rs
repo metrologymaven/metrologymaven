@@ -89,7 +89,11 @@ pub fn collect(file: &str, root: &CValue, out: &mut Vec<Token>, findings: &mut V
         if let Some(value) = obj.get("$value") {
             for k in obj.keys() {
                 if !TOKEN_KEYS.contains(&k.as_str()) {
-                    findings.push(Finding::new(Code::Schema, &subject, format!("{file}: unexpected key {k:?} in a token")));
+                    findings.push(Finding::new(
+                        Code::Schema,
+                        &subject,
+                        format!("{file}: unexpected key {k:?} in a token"),
+                    ));
                 }
             }
             let mut nested = Vec::new();
@@ -101,7 +105,11 @@ pub fn collect(file: &str, root: &CValue, out: &mut Vec<Token>, findings: &mut V
         for (k, child) in obj.iter().rev() {
             if k.starts_with('$') {
                 if !GROUP_KEYS.contains(&k.as_str()) {
-                    findings.push(Finding::new(Code::Schema, &subject, format!("{file}: unexpected key {k:?} in a group")));
+                    findings.push(Finding::new(
+                        Code::Schema,
+                        &subject,
+                        format!("{file}: unexpected key {k:?} in a group"),
+                    ));
                 }
                 continue;
             }
@@ -221,7 +229,9 @@ mod tests {
 
     #[test]
     fn groups_inherit_type_and_names_join() {
-        let (t, f) = run(r##"{"a":{"$type":"color","b":{"$value":"#00ff00"},"c":{"$value":"{a.b}"}},"d":{"$type":"duration","$value":"0ms"}}"##);
+        let (t, f) = run(
+            r##"{"a":{"$type":"color","b":{"$value":"#00ff00"},"c":{"$value":"{a.b}"}},"d":{"$type":"duration","$value":"0ms"}}"##,
+        );
         assert!(f.is_empty(), "{f:?}");
         let names: Vec<_> = t.iter().map(|x| x.name.as_str()).collect();
         assert_eq!(names, ["a.b", "a.c", "d"]);
