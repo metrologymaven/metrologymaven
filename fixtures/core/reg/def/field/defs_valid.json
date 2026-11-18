@@ -31,7 +31,8 @@
    "python"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "available"
  },
@@ -71,7 +72,8 @@
    "mcp"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "partial",
   "web_note": "Needs local instrument or file access.",
@@ -110,7 +112,8 @@
    "python"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "unavailable",
   "web_note": "Needs local instrument or file access.",
@@ -154,7 +157,8 @@
    "gui"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "available",
   "network": "none",
@@ -192,7 +196,8 @@
    "mcp"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "partial",
   "web_note": "Needs local instrument or file access.",
@@ -234,7 +239,8 @@
    "python"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "unavailable",
   "web_note": "Needs local instrument or file access.",
@@ -270,7 +276,8 @@
    "mcp"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "available",
   "network": "none"
@@ -311,7 +318,8 @@
    "python"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "partial",
   "web_note": "Needs local instrument or file access.",
@@ -347,7 +355,8 @@
    "gui"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "unavailable",
   "web_note": "Needs local instrument or file access.",
@@ -389,7 +398,8 @@
    "mcp"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "available",
   "human_only": true,
@@ -425,7 +435,8 @@
    "python"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "partial",
   "web_note": "Needs local instrument or file access."
