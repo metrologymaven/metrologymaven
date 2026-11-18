@@ -1,0 +1,13 @@
+# ECO.RULES.VOCAB.ENGINE AC-5: an unsupported format; the engine must exit 2 naming it. CC-BY-4.0.
+format = "fid-vocab-rules/2"
+version = "engine-fixture-format-2"
+
+[[rule]]
+id = "VC001"
+kind = "claim"
+severity = "error"
+message = "Certification wording needs a standard designator."
+words = ["certified"]
+qualifiers = ["designator"]
+examples.pass = ["Assessed per ISO 10360-2:2009 and certified by the lab."]
+examples.fail = ["Certified accuracy."]
