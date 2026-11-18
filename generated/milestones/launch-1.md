@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 6 built)
+### Wave 2 (121 leaves, 7 built)
 
 - [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -168,12 +168,12 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
 - [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
 - [B] [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
-- [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
+- [B] [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
 - [B] [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
 - [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
 - [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
-- [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
+- [B] [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
 - [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
 - [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
 - [CORE.STO.SQL.SCHEMA](../../spec/core/sto/sql/schema/NODE.md) Database schema, append-only triggers and forward migrations (M, P0)

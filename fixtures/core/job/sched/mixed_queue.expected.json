@@ -1,0 +1,12 @@
+{
+  "description": "Start order for mixed_queue.json, from make_expected.py. CC-BY-4.0.",
+  "start_order": [
+    "b1",
+    "b2",
+    "i1",
+    "i2",
+    "b3",
+    "b4",
+    "b5"
+  ]
+}
