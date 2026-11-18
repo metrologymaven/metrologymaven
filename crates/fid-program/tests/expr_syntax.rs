@@ -171,18 +171,28 @@ fn ac3_bounds() {
     // The token bound wins over a later syntax error.
     assert_eq!(parse_expr(&format!("{} )", call(520))), Err(ParseError::TooLarge(Limit::Tokens)));
 
-    // Every construct counts towards depth.
-    let chain = |n: usize| vec!["a"; n].join("+");
-    assert!(parse_expr(&chain(MAX_DEPTH + 1)).is_ok());
-    assert_eq!(parse_expr(&chain(MAX_DEPTH + 2)), Err(ParseError::TooLarge(Limit::Depth)));
+    // Flat chains add no depth (maintainer decision on PR #129): only the token and byte
+    // bounds limit them.
+    let chain = |n: usize, op: &str| vec!["a"; n].join(op);
+    for op in ["+", "*", "==", " and ", " or "] {
+        let e = parse_expr(&chain(500, op)).unwrap_or_else(|err| panic!("{op}: {err}"));
+        check_round_trip(&e, &chain(500, op));
+    }
+    assert!(parse_expr(&chain(512, "+")).is_ok());
+    assert_eq!(parse_expr(&chain(513, "+")), Err(ParseError::TooLarge(Limit::Tokens)));
+    let mixed = vec!["a*b"; 200].join("+");
+    assert!(parse_expr(&mixed).is_ok());
+    let fields = |n: usize| format!("x{}", ".f".repeat(n));
+    assert!(parse_expr(&fields(500)).is_ok());
+    let nots_in_and = vec!["not a"; 300].join(" and ");
+    assert!(parse_expr(&nots_in_and).is_ok());
+    // Nesting counts.
     let neg = |n: usize| format!("{}x", "-".repeat(n));
     assert!(parse_expr(&neg(MAX_DEPTH)).is_ok());
     assert_eq!(parse_expr(&neg(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
     let nots = |n: usize| format!("{}x", "not ".repeat(n));
+    assert!(parse_expr(&nots(MAX_DEPTH)).is_ok());
     assert_eq!(parse_expr(&nots(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
-    let fields = |n: usize| format!("x{}", ".f".repeat(n));
-    assert!(parse_expr(&fields(MAX_DEPTH)).is_ok());
-    assert_eq!(parse_expr(&fields(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
     let index = |n: usize| format!("{}0{}", "a[".repeat(n), "]".repeat(n));
     assert!(parse_expr(&index(MAX_DEPTH)).is_ok());
     assert_eq!(parse_expr(&index(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
@@ -194,8 +204,8 @@ fn ac3_bounds() {
     assert_eq!(parse_expr(&conds(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
     // Right-nested by parentheses inside a binary operator: a+(a+(a+...)).
     let right = |n: usize| format!("{}a{}", "a+(".repeat(n), ")".repeat(n));
-    assert!(parse_expr(&right(MAX_DEPTH / 2)).is_ok());
-    assert_eq!(parse_expr(&right(MAX_DEPTH / 2 + 1)), Err(ParseError::TooLarge(Limit::Depth)));
+    assert!(parse_expr(&right(MAX_DEPTH)).is_ok());
+    assert_eq!(parse_expr(&right(MAX_DEPTH + 1)), Err(ParseError::TooLarge(Limit::Depth)));
 
     // Hostile depth far beyond the bound fails cleanly (no stack overflow).
     let deep = "(".repeat(1000);
@@ -244,6 +254,24 @@ fn req001_lexical_details() {
         assert_eq!(e.kind, ExprKind::Str(c.to_string()));
         assert_eq!(print_expr(&e), escaped);
     }
+    // `not` binds looser than comparisons (maintainer decision on PR #129); the printer keeps
+    // the parentheses that make the other reading.
+    for (src, printed) in [
+        ("not a == b", "not a==b"),
+        ("(not a) == b", "(not a)==b"),
+        ("not (a and b)", "not(a and b)"),
+        ("not a and b", "not a and b"),
+        ("a == (not b)", "a==(not b)"),
+        ("-(not x)", "-(not x)"),
+        ("(not x).y", "(not x).y"),
+        ("not not x", "not not x"),
+    ] {
+        let e = ok(src);
+        assert_eq!(print_expr(&e), printed, "{src}");
+        assert!(ok(printed).same_tree(&e), "{src}");
+    }
+    let ExprKind::Unary(UnaryOp::Not, arg) = ok("not a == b").kind else { panic!("not a == b") };
+    assert!(matches!(arg.kind, ExprKind::Binary(BinaryOp::Eq, ..)));
     // Other non-ASCII format characters are not refused (closed list).
     assert!(parse_expr("\"a\u{200d}b\"").is_ok());
 }

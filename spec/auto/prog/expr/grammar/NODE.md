@@ -66,7 +66,8 @@ The surface syntax of Command Program expressions and the parser that turns the 
 - **Errors:** `expr_syntax { offset }`, `expr_too_large`.
 - **Determinism:** D0.
 - **Performance budget:** 4 KiB expression parsed in < 50 µs [unverified until measured].
-- **Depth definition (build note, PR #129):** "nesting depth" counts every AST edge and every pair of parentheses (`x` = 0, `(x)` = 1). So 64 nested parentheses are accepted and 65 refused (AC-3), and a flat left-associative chain of 66 or more operands (`a+b+...`) is also refused with `expr_too_large`. This goes beyond a pure bracket-nesting reading; it was chosen so every later recursive pass (TYPES, EVAL, FORMULA) stays within 64 levels.
+- **Depth definition (maintainer decision, PR #129):** "nesting depth" counts nesting only: each pair of parentheses, index, call argument list, unary operator (`-`, `not`) and conditional part adds one level. 64 nested parentheses are accepted and 65 refused (AC-3). Binary operators and `.field` chains add no depth: a flat chain such as `a+b+...+z` is bounded only by the token and byte limits, and the parser builds it in a loop with no recursion growth. The tree of such a chain can be about 512 levels deep, so later passes (TYPES, EVAL, FORMULA) must not recurse unboundedly over it.
+- **Precedence of `not` (maintainer decision, PR #129):** `not` binds looser than comparisons and tighter than `and`, as in Python and SQL: `not a == b` is `not (a == b)`. This amends the order in REQ-001, which listed `not` with unary `-`; `-`, `* / %`, `+ -`, comparisons, `not`, `and`, `or` is the order.
 - **Crate:** `fid-program` (module `expr::syntax`).
 
 ## Test fixtures
@@ -79,8 +80,8 @@ Project-authored corpora `fixtures/program/expr/valid/` and `fixtures/program/ex
 
 ## Open questions
 
-- **Precedence of `not` (for the spec owner to confirm):** REQ-001 lists unary `-` and `not` above the binary operators, so `not a == b` parses as `(not a) == b`. Python and SQL bind `not` below comparisons (`not (a == b)`). The build follows REQ-001 as written; the owner should confirm or change this before programs depend on it.
-- **Flat chains and depth:** confirm the depth definition in Design (a flat chain of 66+ operands is `expr_too_large`), or relax it to bracket nesting only and bound tree depth elsewhere.
+- **Decided (PR #129):** `not` binds looser than comparisons (`not a == b` is `not (a == b)`); see Design.
+- **Decided (PR #129):** depth counts nesting only; flat left-associative chains are bounded by the token and byte limits, not by depth; see Design.
 
 - Unit symbols accepted inside `[...]` are those of the unit catalogue (`GEO.FRAME.UNITS`); the parser accepts any symbol token and `AUTO.PROG.EXPR.TYPES` resolves it.
 

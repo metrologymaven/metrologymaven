@@ -30,7 +30,7 @@ fn worst_case_sources_stay_under_64_mib() {
         ("most quantities", fill("1[mm]", "f(", ")", (MAX_TOKENS - 2) / 2)),
         ("long names", fill(&name, "f(", ")", usize::MAX)),
         ("deepest parens", format!("{}x{}", "(".repeat(64), ")".repeat(64))),
-        ("longest chain", vec!["a"; 65].join("+")),
+        ("longest chain", vec!["a"; 512].join("+")),
         ("nested calls", format!("{}0{}", "f(".repeat(64), ")".repeat(64))),
         ("too many tokens", fill("a", "f(", ")", MAX_TOKENS)),
         ("too deep", "(".repeat(MAX_SOURCE_BYTES / 4)),

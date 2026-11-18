@@ -9,16 +9,17 @@
 //! more tokens and never nests deeper than any source of the same tree; print-then-parse
 //! therefore stays within the parse bounds. Uses an explicit stack, so any depth is safe.
 
-use super::{is_hidden_char, Expr, ExprKind};
+use super::{is_hidden_char, Expr, ExprKind, UnaryOp, NOT_PRECEDENCE};
 
-/// Precedence of the node's top level: 0 conditional, 1 to 5 binary (see
-/// [`super::BinaryOp::precedence`]), 6 unary, 7 postfix and primary.
+/// Precedence of the node's top level: 0 conditional, 1, 2 and 4 to 6 binary (see
+/// [`super::BinaryOp::precedence`]), 3 `not`, 7 unary minus, 8 postfix and primary.
 fn prec(e: &Expr) -> u8 {
     match &e.kind {
         ExprKind::Cond(..) => 0,
         ExprKind::Binary(op, ..) => op.precedence(),
-        ExprKind::Unary(..) => 6,
-        _ => 7,
+        ExprKind::Unary(UnaryOp::Not, _) => NOT_PRECEDENCE,
+        ExprKind::Unary(UnaryOp::Neg, _) => 7,
+        _ => 8,
     }
 }
 
@@ -113,16 +114,18 @@ pub fn print_expr(expr: &Expr) -> String {
             ExprKind::Ident(n) => stack.push(W::S(n.as_str().to_string())),
             ExprKind::Field(base, name) => {
                 stack.push(W::S(format!(".{}", name.as_str())));
-                operand(&mut stack, base, prec(base) < 7);
+                operand(&mut stack, base, prec(base) < 8);
             }
             ExprKind::Index(base, ix) => {
                 stack.push(W::T("]"));
                 stack.push(W::E(ix));
                 stack.push(W::T("["));
-                operand(&mut stack, base, prec(base) < 7);
+                operand(&mut stack, base, prec(base) < 8);
             }
             ExprKind::Unary(op, arg) => {
-                operand(&mut stack, arg, prec(arg) < 6);
+                // `-` takes a unary operand; `not` an operand at its own level or tighter.
+                let level = if *op == UnaryOp::Neg { 7 } else { NOT_PRECEDENCE };
+                operand(&mut stack, arg, prec(arg) < level);
                 stack.push(W::T(op.as_str()));
             }
             ExprKind::Binary(op, l, r) => {

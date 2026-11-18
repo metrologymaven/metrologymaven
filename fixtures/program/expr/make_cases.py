@@ -169,7 +169,10 @@ def lex_into(chars, offs, toks):
 
 
 # -------------------------------------------------------------------- parser
-# One function per level: expr > or > and > cmp > add > mul > unary > postfix > primary.
+# One function per level: expr > or > and > not > cmp > add > mul > unary minus > postfix >
+# primary. `not` sits between `and` and the comparisons (maintainer decision on PR #129):
+# it may start an operand of `and`/`or` (or of another `not`), and its operand is a
+# comparison-level expression, so `not a == b` is `not (a == b)`.
 
 
 class Parser:
@@ -216,9 +219,16 @@ class Parser:
         [("op", "*"), ("op", "/"), ("op", "%")],
     ]
 
+    NOT_LEVEL = 2  # index of the comparison level in LEVELS
+
     def level(self, n):
         if n == len(self.LEVELS):
             return self.unary()
+        if n == self.NOT_LEVEL and self.is_("kw", "not"):
+            tok = self.t[self.p]
+            self.p += 1
+            arg = self.level(n)
+            return {"k": "unary", "op": "not", "arg": arg, "span": [tok[2], arg["span"][1]]}
         lhs = self.level(n + 1)
         while True:
             tok = self.peek()
@@ -229,7 +239,7 @@ class Parser:
             lhs = {"k": "binary", "op": tok[1], "lhs": lhs, "rhs": rhs, "span": [lhs["span"][0], rhs["span"][1]]}
 
     def unary(self):
-        if self.is_("op", "-") or self.is_("kw", "not"):
+        if self.is_("op", "-"):
             tok = self.t[self.p]
             self.p += 1
             arg = self.unary()
@@ -338,7 +348,12 @@ VALID = {
     "unary-neg": "-x",
     "unary-not": "not done",
     "unary-nested": "- -x",
-    "unary-binds-tighter": "not a == b",
+    "not-binds-looser": "not a == b",
+    "not-paren-cmp": "(not a) == b",
+    "not-and": "not a and b",
+    "not-not": "not not x",
+    "not-in-or": "a or not b < c",
+    "flat-chain": "a + b - c + d - e + f - g + h - i + j - k + l - m + n - o + p",
     "mul-div-rem": "a * b / c % d",
     "add-sub": "a + b - c",
     "cmp-lt": "a < b",
@@ -398,6 +413,9 @@ INVALID = {
     "unknown-char": ("a # b", 2),
     "non-ascii-operator": ("a × b", 2),
     "empty": ("", 0),
+    "not-as-cmp-operand": ("a == not b", 5),
+    "neg-not": ("-not x", 1),
+    "add-not": ("a + not b", 4),
 }
 
 

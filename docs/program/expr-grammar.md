@@ -39,11 +39,12 @@ Tokens are formed longest-first (`<=` before `<`). A number followed directly by
 expr     = cond | or-expr ;
 cond     = "if" , expr , "then" , expr , "else" , expr ;
 or-expr  = and-expr , { "or" , and-expr } ;
-and-expr = cmp-expr , { "and" , cmp-expr } ;
+and-expr = not-expr , { "and" , not-expr } ;
+not-expr = "not" , not-expr | cmp-expr ;
 cmp-expr = add-expr , { ( "<" | "<=" | ">" | ">=" | "==" | "!=" ) , add-expr } ;
 add-expr = mul-expr , { ( "+" | "-" ) , mul-expr } ;
 mul-expr = unary , { ( "*" | "/" | "%" ) , unary } ;
-unary    = ( "-" | "not" ) , unary | postfix ;
+unary    = "-" , unary | postfix ;
 postfix  = primary , { "." , name | "[" , expr , "]" } ;
 primary  = int | decimal | quantity | string | "true" | "false"
          | name , "(" , [ expr , { "," , expr } ] , ")"
@@ -51,22 +52,23 @@ primary  = int | decimal | quantity | string | "true" | "false"
          | "(" , expr , ")" ;
 ```
 
-A conditional is not an operand: `1 + if a then 2 else 3` is a syntax error; write `1 + (if a then 2 else 3)`. Its `else` branch extends as far right as possible.
+`not` may start an operand of `and` or `or` (or follow another `not`), but not an operand of a comparison or arithmetic operator: `a == not b`, `a + not b` and `-not x` are syntax errors; write `a == (not b)`. A conditional is not an operand either: `1 + if a then 2 else 3` is a syntax error; write `1 + (if a then 2 else 3)`. Its `else` branch extends as far right as possible.
 
 ## Precedence and associativity
 
 | Level | Operators | Associativity |
 |---|---|---|
-| 7 (tightest) | `.name`, `[index]`, `name(args)` | left (postfix) |
-| 6 | unary `-`, `not` | right (prefix) |
-| 5 | `*` `/` `%` | left |
-| 4 | `+` `-` | left |
-| 3 | `<` `<=` `>` `>=` `==` `!=` | left |
+| 8 (tightest) | `.name`, `[index]`, `name(args)` | left (postfix) |
+| 7 | unary `-` | right (prefix) |
+| 6 | `*` `/` `%` | left |
+| 5 | `+` `-` | left |
+| 4 | `<` `<=` `>` `>=` `==` `!=` | left |
+| 3 | `not` | right (prefix) |
 | 2 | `and` | left |
 | 1 | `or` | left |
 | 0 (loosest) | `if ... then ... else ...` | not an operand |
 
-So `not a == b` is `(not a) == b`, `a < b < c` is `(a < b) < c` (the type checker decides whether that is meaningful), and `-a * b` is `(-a) * b`. Integer literals are never negative: `-5` is unary minus applied to 5.
+`not` binds looser than comparisons, as in Python and SQL (maintainer decision on PR #129): `not a == b` is `not (a == b)` and `not a and b` is `(not a) and b`. Further, `a < b < c` is `(a < b) < c` (the type checker decides whether that is meaningful), and `-a * b` is `(-a) * b`. Integer literals are never negative: `-5` is unary minus applied to 5.
 
 ## Syntax tree and spans
 
@@ -78,9 +80,9 @@ All input is treated as hostile. Parsing fails with `expr_too_large` and no tree
 
 - the source is longer than 4 096 bytes (checked first); or
 - a 1 025th token begins (checked while lexing, which stops at the first lexical error: the token bound wins over every syntax error, but a lexical error met before the 1 025th token is reported as `expr_syntax`); or
-- the nesting depth exceeds 64. Depth counts every edge of the syntax tree and every pair of parentheses: `x` has depth 0, `(x)` and `-x` depth 1, `f(a)` depth 1, `a + b + c` depth 2. Sixty-four nested parentheses around a name are accepted; sixty-five are not. Long left-associative chains count too (`a + a + ... ` with 66 operands is too deep), which keeps every later recursive pass over the tree within 64 levels.
+- the nesting depth exceeds 64. Only nesting counts (maintainer decision on PR #129): each pair of parentheses, each index `[...]`, each call's argument list, each unary operator (`-`, `not`) and each part of a conditional adds one level. Binary operators and `.field` chains add none: `x`, `a + b + c` and `a.b.c` have depth 0; `(x)`, `-x`, `f(a)` and `a[i]`'s index have depth 1. Sixty-four nested parentheses around a name are accepted; sixty-five are not. A flat chain such as `a + b + ... + z` of any length is bounded only by the token and byte limits.
 
-The parser carries an explicit depth counter and refuses to descend past the bound, so its recursion is bounded by a small constant times 64.
+The parser carries an explicit depth counter and refuses to go past the bound. Left-associative operators and `.field` chains are built in a loop, and the right operand of a binary operator recurses only into the tighter-binding levels, so flat chains cause no recursion growth and the parser's recursion is bounded by a small constant times 64. The tree of a flat chain can still be up to about 512 levels deep (the token bound), so later passes over the tree should not assume a depth of 64.
 
 ## Errors
 
@@ -99,4 +101,4 @@ Every other failure is `expr_syntax` with `offset`, the byte offset of the first
 
 ## Printing
 
-`print_expr` writes the shortest source for a tree: parentheses only where precedence or left-associativity needs them, a space only where two tokens would merge (a name or keyword before a word character, or a number before a digit or an index `[`), integers without leading zeros, strings with the shortest escapes. For every tree `parse_expr` returns, parsing the printed text gives an equal tree (spans aside), and the printed text is never longer, never has more tokens and never nests deeper than the source it came from. The output favours shortness over looks: `( a+b ) *  -c` prints as `(a+b)*-c`, and `x > 1 and not y` as `x>1and not y` (a number followed by a letter is two tokens).
+`print_expr` writes the shortest source for a tree: parentheses only where precedence or left-associativity needs them, a space only where two tokens would merge (a name or keyword before a word character, or a number before a digit or an index `[`), integers without leading zeros, strings with the shortest escapes. For every tree `parse_expr` returns, parsing the printed text gives an equal tree (spans aside), and the printed text is never longer, never has more tokens and never nests deeper than the source it came from. The output favours shortness over looks: `( a+b ) *  -c` prints as `(a+b)*-c`, and `x > 1 and not y` as `x>1and not y`; `(not a) == b` keeps its parentheses as `(not a)==b` (a number followed by a letter is two tokens).

@@ -1,20 +1,25 @@
 //! Pratt parser with an explicit depth counter.
 //!
-//! Depth is measured as in [`MAX_DEPTH`]: every AST edge and every pair of parentheses is
-//! one level. Each parsing function receives `depth`, the number of levels above the
-//! position it fills, and refuses to descend past `MAX_DEPTH`, so recursion is bounded by a
-//! small constant times `MAX_DEPTH`. Each function also returns the height of what it
-//! built; a node whose `depth + height` exceeds the bound (a long left-associative chain,
-//! for example) is refused as soon as it is built.
+//! Depth is measured as in [`MAX_DEPTH`]: only nesting counts (a pair of parentheses, an
+//! index, a call's arguments, a unary operator, a conditional's parts). Each parsing
+//! function receives `depth`, the nesting level of the position it fills, and refuses to
+//! go past `MAX_DEPTH`. Left-associative binary operators and `.field` chains are built in
+//! a loop, so a flat chain such as `a+b+...+z` adds no depth and no recursion; the
+//! right-hand operand of a binary operator recurses only into tighter-binding levels, of
+//! which there are at most five. Recursion is therefore bounded by a small constant times
+//! `MAX_DEPTH`.
 
 use super::lex::{Kw, Tok, Token, P};
-use super::{syntax, BinaryOp, DecText, Expr, ExprKind, Limit, Name, ParseError, Span, UnaryOp, UnitSym, MAX_DEPTH};
+use super::{
+    syntax, BinaryOp, DecText, Expr, ExprKind, Limit, Name, ParseError, Span, UnaryOp, UnitSym, MAX_DEPTH,
+    NOT_PRECEDENCE,
+};
 
-type Built = Result<(Expr, usize), ParseError>;
+type Built = Result<Expr, ParseError>;
 
 pub(super) fn parse(tokens: &[Token], src_len: usize) -> Result<Expr, ParseError> {
     let mut p = Parser { toks: tokens, pos: 0, eof: src_len };
-    let (e, _) = p.expr(0)?;
+    let e = p.expr(0)?;
     match p.peek() {
         None => Ok(e),
         Some(t) => Err(syntax(t.start)),
@@ -27,16 +32,12 @@ struct Parser<'a> {
     eof: usize,
 }
 
-fn too_deep() -> ParseError {
-    ParseError::TooLarge(Limit::Depth)
-}
-
-/// Refuse a node at `depth` whose subtree has height `h`.
-fn bounded(depth: usize, h: usize) -> Result<usize, ParseError> {
-    if depth.saturating_add(h) > MAX_DEPTH {
-        Err(too_deep())
+/// Refuse to fill a position nested `depth` levels deep.
+fn enter(depth: usize) -> Result<(), ParseError> {
+    if depth > MAX_DEPTH {
+        Err(ParseError::TooLarge(Limit::Depth))
     } else {
-        Ok(h)
+        Ok(())
     }
 }
 
@@ -98,9 +99,7 @@ impl<'a> Parser<'a> {
 
     /// expr = cond | or-expr
     fn expr(&mut self, depth: usize) -> Built {
-        if depth > MAX_DEPTH {
-            return Err(too_deep());
-        }
+        enter(depth)?;
         if self.peek_tok() == Some(&Tok::Kw(Kw::If)) {
             self.cond(depth)
         } else {
@@ -112,54 +111,58 @@ impl<'a> Parser<'a> {
     fn cond(&mut self, depth: usize) -> Built {
         let start = self.here();
         self.pos += 1;
-        let (c, hc) = self.expr(depth + 1)?;
+        let c = self.expr(depth + 1)?;
         self.expect(&Tok::Kw(Kw::Then))?;
-        let (a, ha) = self.expr(depth + 1)?;
+        let a = self.expr(depth + 1)?;
         self.expect(&Tok::Kw(Kw::Else))?;
-        let (b, hb) = self.expr(depth + 1)?;
-        let h = bounded(depth, 1 + hc.max(ha).max(hb))?;
+        let b = self.expr(depth + 1)?;
         let span = Span::new(start, b.span.end);
-        Ok((Expr::new(ExprKind::Cond(boxed(c), boxed(a), boxed(b)), span), h))
+        Ok(Expr::new(ExprKind::Cond(boxed(c), boxed(a), boxed(b)), span))
     }
 
-    /// Operators binding tighter than `min`, left-associative (Pratt loop).
+    /// Operators binding tighter than `min`, left-associative (Pratt loop). A `not` prefix
+    /// is allowed where `min` is below the comparison level: at the top, after `and` or
+    /// `or`, and after another `not`.
     fn binary(&mut self, min: u8, depth: usize) -> Built {
-        let (mut lhs, mut lh) = self.unary(depth)?;
+        let mut lhs = if self.peek_tok() == Some(&Tok::Kw(Kw::Not)) && min <= NOT_PRECEDENCE {
+            enter(depth + 1)?;
+            let start = self.here();
+            self.pos += 1;
+            let arg = self.binary(NOT_PRECEDENCE, depth + 1)?;
+            let span = Span::new(start, arg.span.end);
+            Expr::new(ExprKind::Unary(UnaryOp::Not, boxed(arg)), span)
+        } else {
+            self.unary(depth)?
+        };
         while let Some(op) = self.peek_tok().and_then(binary_op) {
             let bp = op.precedence();
             if bp <= min {
                 break;
             }
             self.pos += 1;
-            let (rhs, rh) = self.binary(bp, depth + 1)?;
-            lh = bounded(depth, 1 + lh.max(rh))?;
+            let rhs = self.binary(bp, depth)?;
             let span = Span::new(lhs.span.start, rhs.span.end);
             lhs = Expr::new(ExprKind::Binary(op, boxed(lhs), boxed(rhs)), span);
         }
-        Ok((lhs, lh))
+        Ok(lhs)
     }
 
-    /// unary = ("-" | "not") unary | postfix
+    /// unary = "-" unary | postfix
     fn unary(&mut self, depth: usize) -> Built {
-        if depth > MAX_DEPTH {
-            return Err(too_deep());
+        enter(depth)?;
+        if self.peek_tok() != Some(&Tok::P(P::Minus)) {
+            return self.postfix(depth);
         }
-        let op = match self.peek_tok() {
-            Some(Tok::P(P::Minus)) => UnaryOp::Neg,
-            Some(Tok::Kw(Kw::Not)) => UnaryOp::Not,
-            _ => return self.postfix(depth),
-        };
         let start = self.here();
         self.pos += 1;
-        let (arg, h) = self.unary(depth + 1)?;
-        let h = bounded(depth, h + 1)?;
+        let arg = self.unary(depth + 1)?;
         let span = Span::new(start, arg.span.end);
-        Ok((Expr::new(ExprKind::Unary(op, boxed(arg)), span), h))
+        Ok(Expr::new(ExprKind::Unary(UnaryOp::Neg, boxed(arg)), span))
     }
 
     /// postfix = primary { "." name | "[" expr "]" }
     fn postfix(&mut self, depth: usize) -> Built {
-        let (mut e, mut h) = self.primary(depth)?;
+        let mut e = self.primary(depth)?;
         loop {
             match self.peek_tok() {
                 Some(Tok::P(P::Dot)) => {
@@ -173,19 +176,17 @@ impl<'a> Parser<'a> {
                         return Err(syntax(self.here()));
                     };
                     self.pos += 1;
-                    h = bounded(depth, h + 1)?;
                     let span = Span::new(e.span.start, t.end);
                     e = Expr::new(ExprKind::Field(boxed(e), name), span);
                 }
                 Some(Tok::P(P::LBracket)) => {
                     self.pos += 1;
-                    let (ix, ih) = self.expr(depth + 1)?;
+                    let ix = self.expr(depth + 1)?;
                     let end = self.expect(&Tok::P(P::RBracket))?;
-                    h = bounded(depth, 1 + h.max(ih))?;
                     let span = Span::new(e.span.start, end);
                     e = Expr::new(ExprKind::Index(boxed(e), boxed(ix)), span);
                 }
-                _ => return Ok((e, h)),
+                _ => return Ok(e),
             }
         }
     }
@@ -197,7 +198,7 @@ impl<'a> Parser<'a> {
             return Err(syntax(at));
         };
         let span = Span::new(t.start, t.end);
-        let leaf = |kind: ExprKind| -> Built { Ok((Expr::new(kind, span), 0)) };
+        let leaf = |kind: ExprKind| -> Built { Ok(Expr::new(kind, span)) };
         match &t.tok {
             Tok::Int(v) => leaf(ExprKind::Int(*v)),
             Tok::Dec(d) => match DecText::new(d) {
@@ -223,11 +224,10 @@ impl<'a> Parser<'a> {
                 }
             }
             Tok::P(P::LParen) => {
-                let (mut e, h) = self.expr(depth + 1)?;
+                let mut e = self.expr(depth + 1)?;
                 let end = self.expect(&Tok::P(P::RParen))?;
-                let h = bounded(depth, h + 1)?;
                 e.span = Span::new(at, end);
-                Ok((e, h))
+                Ok(e)
             }
             _ => Err(syntax(at)),
         }
@@ -236,21 +236,17 @@ impl<'a> Parser<'a> {
     /// Arguments after `name(`: `[ expr { "," expr } ] ")"`.
     fn call_rest(&mut self, name: Name, start: usize, depth: usize) -> Built {
         let mut args = Vec::new();
-        let mut h = 0usize;
         if let Some(end) = self.eat_rparen() {
-            return Ok((Expr::new(ExprKind::Call(name, args), Span::new(start, end)), 0));
+            return Ok(Expr::new(ExprKind::Call(name, args), Span::new(start, end)));
         }
         loop {
-            let (a, ah) = self.expr(depth + 1)?;
-            h = h.max(ah + 1);
-            args.push(a);
+            args.push(self.expr(depth + 1)?);
             if self.peek_tok() == Some(&Tok::P(P::Comma)) {
                 self.pos += 1;
                 continue;
             }
             let end = self.expect(&Tok::P(P::RParen))?;
-            let h = bounded(depth, h)?;
-            return Ok((Expr::new(ExprKind::Call(name, args), Span::new(start, end)), h));
+            return Ok(Expr::new(ExprKind::Call(name, args), Span::new(start, end)));
         }
     }
 

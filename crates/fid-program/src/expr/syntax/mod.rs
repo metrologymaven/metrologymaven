@@ -2,8 +2,9 @@
 //!
 //! The language is closed and small (EBNF in `docs/program/expr-grammar.md`): literals
 //! (integer, decimal, quantity `12.700[mm]`, string, boolean), identifiers, `.field` and
-//! `[index]` access, unary `-` and `not`, the binary operators `* / %`, `+ -`,
-//! `< <= > >= == !=`, `and`, `or` (in falling precedence, all left-associative),
+//! `[index]` access, and in falling precedence unary `-`, the binary `* / %`, `+ -`,
+//! `< <= > >= == !=`, prefix `not`, then `and` and `or` (binary operators all
+//! left-associative; `not` binds looser than comparisons, as in Python and SQL),
 //! `if c then a else b`, and calls `name(args)`. There is no assignment, declaration,
 //! loop, I/O or way to name a registry command, so an expression cannot change state.
 //!
@@ -23,9 +24,15 @@ pub use print::print_expr;
 pub const MAX_SOURCE_BYTES: usize = 4 * 1024;
 /// Most tokens in one source (REQ-AUTO.PROG.EXPR.GRAMMAR-002).
 pub const MAX_TOKENS: usize = 1024;
-/// Deepest accepted nesting (REQ-AUTO.PROG.EXPR.GRAMMAR-002). Every AST edge and every pair
-/// of parentheses is one level, so `x` has depth 0, `(x)` and `-x` depth 1, and `a+b+c` depth 2.
+/// Deepest accepted nesting (REQ-AUTO.PROG.EXPR.GRAMMAR-002). Only nesting counts: each pair
+/// of parentheses, index `[...]`, call argument list, unary operator (`-`, `not`) and
+/// conditional part adds one level. Binary operators and `.field` chains add none, so
+/// `x`, `a+b+c` and `a.b.c` have depth 0, `(x)`, `-x` and `f(x)` depth 1; a flat chain is
+/// bounded only by [`MAX_TOKENS`] and [`MAX_SOURCE_BYTES`].
 pub const MAX_DEPTH: usize = 64;
+/// Binding power of prefix `not`: below comparisons, above `and` (maintainer decision on
+/// PR #129), so `not a == b` is `not (a == b)` and `not a and b` is `(not a) and b`.
+pub const NOT_PRECEDENCE: u8 = 3;
 /// Longest identifier, in bytes; the same limit as program identifiers in `AUTO.PROG.FMT`.
 pub const MAX_NAME_BYTES: usize = 64;
 
@@ -176,13 +183,14 @@ impl BinaryOp {
         }
     }
 
-    /// Binding power: 5 for `* / %`, 4 for `+ -`, 3 for comparisons, 2 for `and`, 1 for `or`.
-    /// Higher binds tighter; every level is left-associative.
+    /// Binding power: 6 for `* / %`, 5 for `+ -`, 4 for comparisons, 2 for `and`, 1 for `or`
+    /// (3 is prefix `not`, [`NOT_PRECEDENCE`]). Higher binds tighter; every level is
+    /// left-associative.
     pub fn precedence(self) -> u8 {
         match self {
-            BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => 5,
-            BinaryOp::Add | BinaryOp::Sub => 4,
-            BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge | BinaryOp::Eq | BinaryOp::Ne => 3,
+            BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => 6,
+            BinaryOp::Add | BinaryOp::Sub => 5,
+            BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge | BinaryOp::Eq | BinaryOp::Ne => 4,
             BinaryOp::And => 2,
             BinaryOp::Or => 1,
         }

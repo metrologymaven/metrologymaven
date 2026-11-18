@@ -1,4 +1,8 @@
 {
+ "add-not": {
+  "error": "expr_syntax",
+  "offset": 4
+ },
  "assign": {
   "error": "expr_syntax",
   "offset": 2
@@ -63,9 +67,17 @@
   "error": "expr_syntax",
   "offset": 0
  },
+ "neg-not": {
+  "error": "expr_syntax",
+  "offset": 1
+ },
  "non-ascii-operator": {
   "error": "expr_syntax",
   "offset": 2
+ },
+ "not-as-cmp-operand": {
+  "error": "expr_syntax",
+  "offset": 5
  },
  "qty-bad-unit-char": {
   "error": "expr_syntax",
