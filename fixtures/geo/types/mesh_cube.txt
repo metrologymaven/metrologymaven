@@ -1,0 +1,25 @@
+# GEO.TYPES.ENV AC-2 / AC-4 fixture (CC-BY-4.0). Hand-written closed unit-cube mesh, metres.
+# 8 vertices (v x y z, in index order) and 12 triangles (t a b c, outward-facing,
+# counter-clockwise seen from outside). Expected results are this file itself:
+# vertices_to_point_set must return these 8 coordinates in this order, in this frame.
+frame 0f1e2d3c4b5a69788796a5b4c3d2e1f0
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v 0 1 0
+v 0 0 1
+v 1 0 1
+v 1 1 1
+v 0 1 1
+t 0 2 1
+t 0 3 2
+t 4 5 6
+t 4 6 7
+t 0 1 5
+t 0 5 4
+t 3 7 6
+t 3 6 2
+t 0 4 7
+t 0 7 3
+t 1 2 6
+t 1 6 5
