@@ -4,8 +4,8 @@
 
 use core::num::NonZeroUsize;
 use fid_geo_types::{
-    Aabb, AttributeSet, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh, PointBlock, PointBuffer,
-    PointCloud, PointSet, PointSource,
+    Aabb, AttributeSet, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh, PointBlock,
+    PointBuffer, PointCloud, PointSet, PointSource,
 };
 use fid_types::Digest;
 
