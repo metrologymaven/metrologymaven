@@ -590,16 +590,13 @@ const NO_BLOCK_FLAGS: i32 = libc::O_NONBLOCK | libc::O_NOCTTY;
 /// through (`PermissionDenied`, "a path led outside of the filesystem"), and for Linux's
 /// `EXDEV` from `openat2(RESOLVE_BENEATH)`.
 fn is_escape(e: &io::Error) -> bool {
-    if e.kind() == io::ErrorKind::PermissionDenied && e.to_string().contains("outside of the filesystem") {
-        return true;
-    }
+    let cap_std_escape =
+        e.kind() == io::ErrorKind::PermissionDenied && e.to_string().contains("outside of the filesystem");
     #[cfg(target_os = "linux")]
-    {
-        if e.raw_os_error() == Some(libc::EXDEV) {
-            return true;
-        }
-    }
-    false
+    let exdev = e.raw_os_error() == Some(libc::EXDEV);
+    #[cfg(not(target_os = "linux"))]
+    let exdev = false;
+    cap_std_escape || exdev
 }
 
 fn io_err(e: io::Error) -> IoError {
