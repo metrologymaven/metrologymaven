@@ -1,0 +1,18 @@
+# Metrology Maven known-bad GPU driver list (spec node PLAT.GPU.POLICY; schema in
+# crates/fid-platform, module gpu_policy). Validate with:  cargo xtask plat-gpu validate
+#
+# Intentionally empty: no entry has yet been researched and referenced. Contributors add
+# entries through reviewed PRs; every entry needs a `reason` and a `reference` https:// URL to
+# a public bug report or vendor note that supports it. Entry format:
+#
+#   [[entry]]
+#   id = "short-unique-id"                       # A-Z a-z 0-9 . _ -, at most 64 bytes
+#   os = "windows"                               # windows | linux | macos
+#   backend = "vulkan"                           # vulkan | metal | dx12 | software
+#   vendor_id = 0x1234                           # exact u32 (PCI or Khronos vendor ID)
+#   device_ids = "any"                           # or { min = 0x0100, max = 0x01FF }, inclusive
+#   driver = { min = "1.2", max = "1.4" }        # half-open [min, max); either bound optional; or "any"
+#   action = "avoid_backend"                     # avoid_backend | force_software | workaround:<name>
+#   reason = "What goes wrong, in one sentence."
+#   reference = "https://..."
+schema_version = 1

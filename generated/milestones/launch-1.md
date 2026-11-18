@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**97** of **1336** leaves built in code ([B]).
+**98** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 27 built)
+### Wave 2 (121 leaves, 28 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -246,7 +246,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
 - [PLAT.DEPLOY.UPDATE.KEYROT](../../spec/plat/deploy/update/keyrot/NODE.md) Trusted-key set from key-transition statements (S, P1a)
 - [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)
-- [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
+- [B] [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
 - [PLAT.HW.SUITE.DATA](../../spec/plat/hw/suite/data/NODE.md) Suite manifest content, pinned datasets and time budget (S, P1a)
 - [PLAT.MATRIX.PAGE](../../spec/plat/matrix/page/NODE.md) Generated support matrix page and consistency check (S, P0)
 - [PLAT.MATRIX.POLICY.EOL](../../spec/plat/matrix/policy/eol/NODE.md) End-of-support list, warning and demotion check (S, P0)

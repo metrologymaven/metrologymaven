@@ -2,8 +2,11 @@
 //! `fid-platform plat-hw validate [--file <path>]` (spec node `PLAT.HW.PROFILE`),
 //! `fid-platform plat-hw validate-suite [--file <path>]` and
 //! `fid-platform plat-hw result-schema` (spec node `PLAT.HW.SCHEMA`) and
-//! `fid-platform plat-kiosk display [--file <path>]` (spec node `PLAT.DEPLOY.KIOSK.DISPLAY`).
-//! `cargo xtask plat-matrix ...` and `cargo xtask plat-hw ...` run this binary.
+//! `fid-platform plat-kiosk display [--file <path>]` (spec node `PLAT.DEPLOY.KIOSK.DISPLAY`) and
+//! `fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>]
+//! [--phase <P>]` (spec node `PLAT.GPU.POLICY`).
+//! `cargo xtask plat-matrix ...`, `cargo xtask plat-hw ...` and `cargo xtask plat-gpu validate`
+//! run this binary.
 //!
 //! `plat-matrix validate` prints one diagnostic per line and then `<rows> rows, <errors> errors`.
 //! `plat-hw validate` prints the profile names, one per line, when the file is valid, and
@@ -14,8 +17,13 @@
 //! `plat-kiosk display` prints `px_per_mm = <value to 3 decimals>` when the reference kiosk
 //! display file is valid (exit 0) and one diagnostic per line otherwise (exit 1); 2 on bad
 //! usage or an unreadable file.
+//! `plat-gpu validate` checks the policy file (including the support-matrix cross-check at the
+//! given phase, default P1a) and the known-bad list. It prints any support-matrix diagnostics
+//! prefixed `matrix: `, then the policy diagnostics and `policy: <rows> rows, <errors> errors`,
+//! then the known-bad diagnostics and `known-bad: <entries> entries, <errors> errors`. Exit 0
+//! when there are no errors, 1 when there are, 2 on bad usage or an unreadable file.
 
-use fid_platform::{bench_schema, hw_profile, kiosk_display, matrix};
+use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix};
 use std::io::Read;
 use std::process::ExitCode;
 
@@ -23,7 +31,9 @@ const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-hw validate [--file <path>]\n       \
                      fid-platform plat-hw validate-suite [--file <path>]\n       \
                      fid-platform plat-hw result-schema\n       \
-                     fid-platform plat-kiosk display [--file <path>]";
+                     fid-platform plat-kiosk display [--file <path>]\n       \
+                     fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
+                     [--phase <P>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -40,6 +50,7 @@ fn main() -> ExitCode {
         [group, cmd] if group == "plat-hw" && cmd == "result-schema" => result_schema(),
         [group, cmd] if group == "plat-kiosk" && cmd == "display" => kiosk(kiosk_display::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-kiosk" && cmd == "display" && flag == "--file" => kiosk(file),
+        [group, cmd, rest @ ..] if group == "plat-gpu" && cmd == "validate" => gpu_validate(rest),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)
@@ -145,5 +156,70 @@ fn result_schema() -> ExitCode {
             eprintln!("plat-hw result-schema: cannot write {path}: {e}");
             ExitCode::from(2)
         }
+    }
+}
+
+/// `plat-gpu validate`: see the module documentation for the output and exit codes.
+fn gpu_validate(args: &[String]) -> ExitCode {
+    let mut policy = gpu_policy::POLICY_PATH.to_string();
+    let mut known_bad = gpu_policy::KNOWN_BAD_PATH.to_string();
+    let mut matrix_path = gpu_policy::MATRIX_PATH.to_string();
+    let mut phase = gpu_policy::DEFAULT_PHASE;
+    let mut seen: Vec<&str> = Vec::new();
+    for pair in args.chunks(2) {
+        let [flag, value] = pair else {
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        };
+        if seen.contains(&flag.as_str()) {
+            eprintln!("plat-gpu validate: {flag} given twice\n{USAGE}");
+            return ExitCode::from(2);
+        }
+        seen.push(flag.as_str());
+        match flag.as_str() {
+            "--policy" => policy.clone_from(value),
+            "--known-bad" => known_bad.clone_from(value),
+            "--matrix" => matrix_path.clone_from(value),
+            "--phase" => match matrix::Phase::from_name(value) {
+                Some(p) => phase = p,
+                None => {
+                    eprintln!("plat-gpu validate: {value} is not a phase code (P0, P1a, P1b, P2, P3, P4, later)");
+                    return ExitCode::from(2);
+                }
+            },
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let cmd = "plat-gpu validate";
+    let (Some(policy_bytes), Some(bad_bytes), Some(matrix_bytes)) = (
+        read_capped(&policy, gpu_policy::MAX_BYTES, cmd),
+        read_capped(&known_bad, gpu_policy::MAX_BYTES, cmd),
+        read_capped(&matrix_path, matrix::MAX_BYTES, cmd),
+    ) else {
+        return ExitCode::from(2);
+    };
+
+    let m = matrix::validate(&matrix_bytes);
+    for e in &m.errors {
+        println!("matrix: {e}");
+    }
+    let mut p = gpu_policy::validate_policy(&policy_bytes);
+    if let (Some(pol), Some(mat)) = (&p.value, &m.matrix) {
+        let missing = gpu_policy::check_coverage(pol, mat, phase);
+        if !missing.is_empty() {
+            p.errors.extend(missing);
+            p.value = None;
+        }
+    }
+    print!("{}", p.render("policy", "rows"));
+    let k = gpu_policy::validate_known_bad(&bad_bytes);
+    print!("{}", k.render("known-bad", "entries"));
+    if m.errors.is_empty() && p.errors.is_empty() && k.errors.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
     }
 }

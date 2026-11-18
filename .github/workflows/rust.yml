@@ -87,6 +87,21 @@ jobs:
             test "$code" = 1
           done
           cargo xtask plat-hw validate
+      - name: GPU policy and known-bad list validate via cargo xtask (PLAT.GPU.POLICY AC-1 to AC-6)
+        shell: bash
+        run: |
+          g=fixtures/plat/gpu
+          m="--matrix fixtures/plat/matrix/valid.toml --phase P1a"
+          cargo xtask plat-gpu validate --policy $g/policy-valid.toml $m --known-bad $g/known-bad-valid.toml
+          set +e; out=$(cargo xtask plat-gpu validate --policy $g/policy-win-no-vulkan.toml $m); code=$?; set -e
+          test "$code" = 1 && grep -q '^MissingMandatoryBackend { os: windows, backend: vulkan }' <<< "$out"
+          set +e; out=$(cargo xtask plat-gpu validate --policy $g/policy-missing-row.toml $m); code=$?; set -e
+          test "$code" = 1 && grep -qx 'NoPolicyRow { os: macos, arch: aarch64 }' <<< "$out"
+          set +e; out=$(cargo xtask plat-gpu validate --policy $g/policy-no-software.toml $m); code=$?; set -e
+          test "$code" = 1 && grep -q '^NoSoftwareFallback' <<< "$out"
+          set +e; out=$(cargo xtask plat-gpu validate --known-bad $g/known-bad-noref.toml); code=$?; set -e
+          test "$code" = 1 && grep -qx 'MissingReference { id: fixture-noref }' <<< "$out"
+          cargo xtask plat-gpu validate
       - name: Benchmark suite manifest validates via cargo xtask (PLAT.HW.SCHEMA AC-1 to AC-3)
         shell: bash
         run: |

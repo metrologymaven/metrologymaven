@@ -1,0 +1,22 @@
+# PLAT.GPU.POLICY AC-2 (hand-written): row 1 (windows x86_64) omits vulkan; every other rule
+# holds. Expected: exit 1 with exactly one diagnostic,
+# MissingMandatoryBackend { os: windows, backend: vulkan } (row 1).
+schema_version = 1
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "software"]
+min.dx12 = { api = "11.0" }
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" }
+
+[[row]]
+os = "macos"
+arch = "aarch64"
+backends = ["metal", "software"]
+min.metal = { api = "2" }
