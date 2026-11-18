@@ -62,7 +62,8 @@ fn child_holder() {
     println!("{READY}");
     std::io::stdout().flush().unwrap();
     let mut s = String::new();
-    let _ = std::io::stdin().read_line(&mut s);
+    let r = std::io::stdin().read_line(&mut s);
+    eprintln!("DIAG child {} stdin returned {r:?} {s:?}; releasing lock cleanly", std::process::id());
     drop(lock);
 }
 
@@ -104,9 +105,11 @@ impl Holder {
     }
 
     /// Kills the child while it holds the lock.
-    fn kill(mut self) {
+    fn kill(mut self) -> String {
+        let pre = self.child.try_wait();
         self.child.kill().unwrap();
-        let _ = self.child.wait();
+        let st = self.child.wait();
+        format!("try_wait before kill={pre:?}, wait after kill={st:?}")
     }
 }
 
@@ -268,7 +271,10 @@ fn ac3_killed_holder_lock_is_taken_over() {
     let (_t, root) = new_project("ac3d");
     let holder = Holder::spawn(&root);
     let pid = holder.pid();
-    holder.kill();
+    let before = std::fs::read(root.join("lock")).unwrap();
+    let diag = holder.kill();
+    let after = std::fs::read(root.join("lock")).unwrap();
+    let diag = format!("{diag}; lock before kill={:?}; after={:?}", String::from_utf8_lossy(&before), String::from_utf8_lossy(&after));
     // The OS releases a dead process's lock when it tears the process down; allow it a moment.
     let mut result = ProjectLocation::open(&root, OpenMode::Write);
     for _ in 0..50 {
@@ -284,7 +290,41 @@ fn ac3_killed_holder_lock_is_taken_over() {
             assert_eq!(prev.pid, pid);
             assert_eq!(prev.host, host_name());
         }
-        other => panic!("expected one stale_lock_taken, got {other:?}"),
+        other => panic!("expected one stale_lock_taken, got {other:?}; {diag}"),
+    }
+}
+
+#[test]
+fn diag_stress_killed_holder() {
+    for _ in 0..40 {
+        let (_t, root) = new_project("diag");
+        let holder = Holder::spawn(&root);
+        let pid = holder.pid();
+        let diag = holder.kill();
+        let after = std::fs::read(root.join("lock")).unwrap();
+        let mut result = ProjectLocation::open(&root, OpenMode::Write);
+        for _ in 0..50 {
+            if !matches!(result, Err(StoreError::Locked(_))) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+            result = ProjectLocation::open(&root, OpenMode::Write);
+        }
+        let lock = result.unwrap().1.unwrap();
+        assert!(
+            matches!(lock.warnings(), [StoreWarning::StaleLockTaken(p)] if p.pid == pid),
+            "pid {pid}: {:?}; {diag}; after={:?}",
+            lock.warnings(),
+            String::from_utf8_lossy(&after)
+        );
+    }
+}
+
+#[test]
+fn diag_stress_finishing_holders() {
+    for _ in 0..40 {
+        let (_t, root) = new_project("diag2");
+        Holder::spawn(&root).finish();
     }
 }
 
