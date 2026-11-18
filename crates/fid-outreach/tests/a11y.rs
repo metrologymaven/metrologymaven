@@ -266,6 +266,9 @@ fn fail_closed_inputs_exit_2() {
     let nested = r##"{"themes":{"light":{"text":{"body":{"$value":"#000000"}}}}}"##;
     let e = run(&tmp_case("nested-tokens", nested, &[])).unwrap_err();
     assert!(e.file().ends_with("tokens.json") && e.code() == "A11Y-PARSE", "{e}");
+    let mixed = r##"{"themes":{"light":{"text.body":"#000000","text":{"muted":{"$value":"#555555"}}}}}"##;
+    let e = run(&tmp_case("mixed-tokens", mixed, &[])).unwrap_err();
+    assert!(e.file().ends_with("tokens.json") && e.code() == "A11Y-PARSE", "{e}");
     let dark = "@media (prefers-color-scheme: dark){p{color:var(--text-body)}}";
     let e = run(&tmp_case("no-dark", LIGHT_TOKENS, &[("s.css", dark)])).unwrap_err();
     assert!(e.to_string().contains("dark"), "{e}");

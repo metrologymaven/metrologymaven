@@ -459,6 +459,13 @@ mod tests {
     }
 
     #[test]
+    fn labelledby_mutual_reference_terminates() {
+        let body = "<button aria-labelledby=\"a\"><span id=a aria-labelledby=\"b\">x</span>            <span id=b aria-labelledby=\"a\">y</span></button>";
+        assert!(rules_of(body).is_empty());
+        assert_eq!(rules_of("<button><i id=a aria-labelledby=\"b\"></i><i id=b aria-labelledby=\"a\"></i></button>"), vec!["A06"]);
+    }
+
+    #[test]
     fn labelledby_repeated_ids_stay_bounded() {
         let ids: Vec<String> = (0..60).map(|k| format!("s{k}")).collect();
         let all = ids.join(" ");

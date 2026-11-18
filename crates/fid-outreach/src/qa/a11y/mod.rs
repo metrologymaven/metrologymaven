@@ -255,7 +255,11 @@ pub fn load_tokens(bytes: &[u8]) -> Result<Tokens, String> {
                 CValue::Str(t) => Some(t.as_str()),
                 CValue::Obj(o) => match o.get("$value") {
                     Some(CValue::Str(t)) => Some(t.as_str()),
-                    _ => None,
+                    _ => {
+                        return Err(format!(
+                            "theme \"{theme}\": token \"{name}\" is a nested group; only flat entries are read"
+                        ))
+                    }
                 },
                 _ => None,
             };
