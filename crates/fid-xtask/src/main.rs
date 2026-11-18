@@ -1,5 +1,7 @@
 //! `cargo xtask <task>` (alias in `.cargo/config.toml`).
 
+mod pins;
+
 use fid_xtask::plat_matrix_tiers;
 use std::io::Read;
 use std::path::PathBuf;
@@ -20,6 +22,7 @@ fn main() -> ExitCode {
         Some("datasets-check") => datasets_check(&args),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => plat_matrix(&args),
+        Some("pins") => pins::cli(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");

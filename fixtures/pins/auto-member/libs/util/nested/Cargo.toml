@@ -1,0 +1,8 @@
+[package]
+name = "nested"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-app = { git = "https://example.org/fid/apps", tag = "v1" }

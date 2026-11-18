@@ -14,6 +14,8 @@ path = "src/main.rs"
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# Parses Cargo.toml and repos.toml for `pins` (same feature set as fid-knp1-lint).
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]
 workspace = true
