@@ -1,0 +1,11 @@
+[package]
+name = "util"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-geo = { git = "https://example.org/fid/libs.git", branch = "main" }
+
+[dev-dependencies]
+nested = { path = "nested" }
