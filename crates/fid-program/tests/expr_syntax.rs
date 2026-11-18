@@ -301,18 +301,15 @@ fn gen(rng: &mut Rng, depth: usize, budget: &mut usize) -> Expr {
     let leaf = depth == 0 || *budget == 0 || rng.below(4) == 0;
     *budget = budget.saturating_sub(1);
     let span = Span::default();
-    let name = |rng: &mut Rng| Name::new(rng.pick(&NAMES)).unwrap();
+    let name = |rng: &mut Rng| Name::new(*rng.pick(&NAMES[..])).unwrap();
     let kind = if leaf {
         match rng.below(7) {
             0 => ExprKind::Int(if rng.below(4) == 0 { (rng.next() >> 1) as i64 } else { rng.below(1000) as i64 }),
             1 => ExprKind::Dec(DecText::new(&format!("{}.{}", digits(rng, 4), digits(rng, 4))).unwrap()),
             2 => {
-                let text = if rng.below(2) == 0 {
-                    digits(rng, 3)
-                } else {
-                    format!("{}.{}", digits(rng, 2), digits(rng, 3))
-                };
-                ExprKind::Qty(DecText::new(&text).unwrap(), UnitSym::new(rng.pick(&UNITS)).unwrap())
+                let text =
+                    if rng.below(2) == 0 { digits(rng, 3) } else { format!("{}.{}", digits(rng, 2), digits(rng, 3)) };
+                ExprKind::Qty(DecText::new(&text).unwrap(), UnitSym::new(*rng.pick(&UNITS[..])).unwrap())
             }
             3 => {
                 let chars: Vec<char> = CHARS.chars().collect();
@@ -360,17 +357,16 @@ fn ac4_print_then_parse_identity() {
 /// stand-in, run on every CI build, for the AC-5 fuzz target `expr_parse`.
 #[test]
 fn hostile_fragments_never_panic() {
-    let fragments: &[&str] = &[
-        "a", "x1", "if", "then", "else", "and", "or", "not", "true", "false", "(", ")", "[", "]", ".", ",", "+", "-",
-        "*", "/", "%", "<", "<=", ">", ">=", "==", "!=", "=", "!", "0", "007", "12.5", "2[mm]", "3[", "\"s\"",
-        "\"\\n\"", "\"\\u{41}\"", "\"", "\\", " ", "\t", "\n", "f(", "\u{e9}", "\u{00b5}", "9999999999999999999",
-        "[\u{00b0}C]", "e5", "_", "@", "#", "\u{1}",
-    ];
+    // `|`-separated so the list stays compact; `|` itself is not a fragment.
+    const FRAGMENTS: &str = "a|x1|if|then|else|and|or|not|true|false|(|)|[|]|.|,|+|-|*|/|%|<|<=|>|>=|==|!=|=|!|0|007|\
+                             12.5|2[mm]|3[|\"s\"|\"\\n\"|\"\\u{41}\"|\"|\\| |\t|\n|f(|\u{e9}|\u{00b5}|\
+                             9999999999999999999|[\u{00b0}C]|e5|_|@|#|\u{1}";
+    let fragments: Vec<&str> = FRAGMENTS.split('|').collect();
     let mut rng = Rng(7);
     let mut parsed = 0usize;
     for _ in 0..50_000 {
         let n = rng.below(24);
-        let src: String = (0..n).map(|_| *rng.pick(fragments)).collect();
+        let src: String = (0..n).map(|_| *rng.pick(&fragments)).collect();
         match parse_expr(&src) {
             Ok(e) => {
                 parsed += 1;

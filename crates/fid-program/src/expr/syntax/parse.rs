@@ -8,9 +8,7 @@
 //! for example) is refused as soon as it is built.
 
 use super::lex::{Kw, Tok, Token, P};
-use super::{
-    syntax, BinaryOp, DecText, Expr, ExprKind, Limit, Name, ParseError, Span, UnaryOp, UnitSym, MAX_DEPTH,
-};
+use super::{syntax, BinaryOp, DecText, Expr, ExprKind, Limit, Name, ParseError, Span, UnaryOp, UnitSym, MAX_DEPTH};
 
 type Built = Result<(Expr, usize), ParseError>;
 
