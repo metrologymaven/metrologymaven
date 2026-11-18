@@ -21,7 +21,7 @@ import struct
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CASES = ["ok", "missing", "nc", "remote-font", "orphan", "incomplete", "html-remote", "evasion"]
+CASES = ["ok", "missing", "nc", "remote-font", "orphan", "incomplete", "html-remote", "evasion", "comments"]
 
 
 def png_1px(rgb):
@@ -79,7 +79,7 @@ FILES = {
             '  src: url(../fonts/examplo-sans.woff2) format("woff2"),\n'
             '       url("https://example.org:443/fonts/examplo-sans.woff2") format("woff2");\n'
             "}\n"
-            "/* @import url(https://fonts.example.net/commented-out.css); */\n"
+            "/* @import url(/css/old.css); a same-origin URL in a comment. */\n"
             'body { font-family: "Examplo Sans", sans-serif; }\n'
         ),
         "index.html": (
@@ -89,7 +89,7 @@ FILES = {
             '<link rel="stylesheet" href="/css/site.css">\n'
             '<link rel="preload" href="https://EXAMPLE.org/fonts/examplo-sans.woff2" as="font" crossorigin>\n'
             '<link rel="icon" href="img/originals/mark.svg">\n'
-            '<!-- <link rel="stylesheet" href="https://fonts.example.net/css"> -->\n'
+            "<!-- A comment; comments are scanned like any other text. -->\n"
             "<style>@font-face { font-family: X; src: url(data:font/woff2;base64,AAAA); }</style>\n"
             "</head>\n"
             "<body><p>Synthetic fixture page.</p></body>\n"
@@ -205,6 +205,36 @@ FILES["evasion"] = {
     "img/logo.svg": EVASION_SVG,
 }
 
+# Comment tricks (re-review of PR #115): comments are not stripped, so every one is reported.
+COMMENTS_CSS = "".join(
+    [
+        "/* Synthetic fixture: comment tricks. */\n",  # 1
+        "@font-face { src: url(/f/*.woff2) }\n",  # 2: same origin; its /* opens no comment for the scan
+        "@font-face { src: url(https://fonts.example.net/o.woff2) } /* */\n",  # 3
+        "/* @import url(https://fonts.example.net/p.css); */\n",  # 4: inside a comment, still reported
+        "/* it's */ @import url(https://fonts.example.net/q.css);\n",  # 5: quote inside a comment
+    ]
+)
+
+COMMENTS_HTML = "".join(
+    [
+        "<!doctype html>\n",  # 1
+        '<!--><link rel=stylesheet href="https://fonts.example.net/r.css">\n',  # 2: <!--> is an empty comment
+        '<!---><link rel=stylesheet href="https://fonts.example.net/s.css">\n',  # 3: <!---> too
+        '<!-- x --!><link rel=stylesheet href="https://fonts.example.net/t.css">\n',  # 4: --!> ends a comment
+        '<link rel=stylesheet title="<!--" href="https://fonts.example.net/u.css">\n',  # 5: <!-- in a value
+        '<p title="-->">text</p>\n',  # 6
+        "<style>/* <!-- */ @import url(https://fonts.example.net/v.css); /* --> */</style>\n",  # 7
+        "<style>a{} </stylex> @import url(https://fonts.example.net/w.css);</style>\n",  # 8: </stylex> ends nothing
+    ]
+)
+
+FILES["comments"] = {
+    "ATTRIBUTION.md": HEAD + TABLE,
+    "css/c.css": COMMENTS_CSS,
+    "index.html": COMMENTS_HTML,
+}
+
 # Hand-labelled from the spec's rules (REQ-002 .. REQ-006, Design) with --origin
 # https://example.org. Text-mode finding lines, in report order; exit code.
 EXPECTED = {
@@ -248,6 +278,20 @@ EXPECTED = {
             "FONT-REMOTE index.html:8 https://fonts.example.net/e.css",
             "FONT-REMOTE index.html:9 https://fonts.example.net/f.css",
             "FONT-REMOTE index.html:10 //fonts.example.net/g.css",
+        ],
+    ),
+    "comments": (
+        1,
+        [
+            "FONT-REMOTE css/c.css:3 https://fonts.example.net/o.woff2",
+            "FONT-REMOTE css/c.css:4 https://fonts.example.net/p.css",
+            "FONT-REMOTE css/c.css:5 https://fonts.example.net/q.css",
+            "FONT-REMOTE index.html:2 https://fonts.example.net/r.css",
+            "FONT-REMOTE index.html:3 https://fonts.example.net/s.css",
+            "FONT-REMOTE index.html:4 https://fonts.example.net/t.css",
+            "FONT-REMOTE index.html:5 https://fonts.example.net/u.css",
+            "FONT-REMOTE index.html:7 https://fonts.example.net/v.css",
+            "FONT-REMOTE index.html:8 https://fonts.example.net/w.css",
         ],
     ),
 }

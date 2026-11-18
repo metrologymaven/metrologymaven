@@ -269,9 +269,16 @@ fn css_scan_scope() {
                @font-face{src:local(X),URL( 'https://x.example.net/b.woff' )}\n\
                @IMPORT url(https://x.example.net/d.css) screen;\n";
     let found: Vec<String> = scan_css("s.css", css, 1, &site).iter().map(|f| f.to_string()).collect();
+    // No string or comment state: every remote url() and @import target is reported.
     assert_eq!(
         found,
-        ["FONT-REMOTE s.css:4 https://x.example.net/b.woff", "FONT-REMOTE s.css:5 https://x.example.net/d.css"]
+        [
+            "FONT-REMOTE s.css:1 https://cdn.example.net/bg.png",
+            "FONT-REMOTE s.css:2 https://x.example.net/a.css",
+            "FONT-REMOTE s.css:3 https://x.example.net/c.woff",
+            "FONT-REMOTE s.css:4 https://x.example.net/b.woff",
+            "FONT-REMOTE s.css:5 https://x.example.net/d.css",
+        ]
     );
 }
 
@@ -388,4 +395,23 @@ fn symlinks_are_reported() {
     let _ = std::fs::remove_dir_all(&d);
     assert_eq!(o.status.code(), Some(1), "{}", show(&o));
     assert_eq!(lines(&o), ["ATTR-SYMLINK img/link.svg", "ATTR-SYMLINK up"], "{}", show(&o));
+}
+
+#[test]
+fn comment_tricks_are_reported() {
+    expect(
+        "comments",
+        1,
+        &[
+            "FONT-REMOTE css/c.css:3 https://fonts.example.net/o.woff2",
+            "FONT-REMOTE css/c.css:4 https://fonts.example.net/p.css",
+            "FONT-REMOTE css/c.css:5 https://fonts.example.net/q.css",
+            "FONT-REMOTE index.html:2 https://fonts.example.net/r.css",
+            "FONT-REMOTE index.html:3 https://fonts.example.net/s.css",
+            "FONT-REMOTE index.html:4 https://fonts.example.net/t.css",
+            "FONT-REMOTE index.html:5 https://fonts.example.net/u.css",
+            "FONT-REMOTE index.html:7 https://fonts.example.net/v.css",
+            "FONT-REMOTE index.html:8 https://fonts.example.net/w.css",
+        ],
+    );
 }

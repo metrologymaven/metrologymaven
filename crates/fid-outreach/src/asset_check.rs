@@ -21,11 +21,15 @@
 //!   the allowlist, or an `original` row not licensed `CC-BY-4.0` (REQ-003, REQ-001);
 //! - `ATTR-INCOMPLETE <path> <what>`: a third-party row without source or author, or an
 //!   `original` row whose author is not `project contributors` (REQ-004, REQ-001);
-//! - `FONT-REMOTE <file>:<line> <url>`: a CSS `@font-face` `url()`, a CSS `@import`, or an HTML
-//!   `<link rel="stylesheet">` / `<link rel="preload">` `href` with an absolute URL whose origin
-//!   is not `--origin` (REQ-005); also a remote `<base href>` or `<?xml-stylesheet href?>`.
-//!   `.css` files are scanned, and `.html`, `.htm` and `.svg` files for those elements and the
-//!   CSS in their `<style>` elements. Before deciding, CSS escapes and HTML character references
+//! - `FONT-REMOTE <file>:<line> <url>`: a CSS `url()` / `src()` function or `@import` target, or
+//!   an HTML `<link rel="stylesheet">` / `<link rel="preload">` `href`, with an absolute URL
+//!   whose origin is not `--origin` (REQ-005); also a remote `<base href>` or
+//!   `<?xml-stylesheet href?>`. `.css` files are scanned, and `.html`, `.htm` and `.svg` files
+//!   for those elements and the CSS in their `<style>` elements. Comments are not stripped and
+//!   CSS is scanned without string state, so a remote URL anywhere in CSS (also in a comment or
+//!   a non-font rule) and a remote link inside an HTML comment are reported: a deliberate,
+//!   fail-closed superset of the `@font-face` sources the spec names, so no comment or string
+//!   trick can hide a rule. Before deciding, CSS escapes and HTML character references
 //!   are decoded and URLs are normalised as a browser does (tab, CR and LF removed, `\` read as
 //!   `/`); a URL starting `//`, any non-http(s) scheme other than `data:`, and anything that
 //!   cannot be decoded count as remote (fail closed);
@@ -430,7 +434,9 @@ fn match_segments(p: &[Vec<char>], s: &[Vec<char>]) -> bool {
 /// Whether the `/`-separated `path` matches `pattern`: `*` matches any run of characters and
 /// `?` one character within a segment; a `**` segment matches zero or more whole segments
 /// (consecutive `**` segments count as one).
-/// Matching is case-sensitive.
+/// Matching is case-sensitive. Patterns come from the repository's own `ATTRIBUTION.md` and
+/// `--exclude` (trusted input); backtracking is bounded by collapsing `**` runs, and a pattern
+/// with many separate `**` segments costs time polynomial in the path length.
 pub fn glob_match(pattern: &str, path: &str) -> bool {
     let split = |t: &str| -> Vec<Vec<char>> { t.split('/').map(|s| s.chars().collect()).collect() };
     let mut pat = split(pattern);
@@ -647,54 +653,6 @@ fn starts_with_ci(b: &[u8], at: usize, word: &[u8]) -> bool {
     b.get(at..at + word.len()).is_some_and(|s| s.eq_ignore_ascii_case(word))
 }
 
-/// `text` with CSS comments replaced by spaces (line breaks kept); strings are left alone.
-fn strip_css_comments(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-    let mut quote: Option<char> = None;
-    while let Some(c) = chars.next() {
-        match quote {
-            Some(q) => {
-                out.push(c);
-                if c == '\\' {
-                    if let Some(n) = chars.next() {
-                        out.push(n);
-                    }
-                } else if c == q || c == '\n' {
-                    quote = None;
-                }
-            }
-            None if c == '\\' => {
-                // An escape outside a string: keep it with the escaped character, so `\/*` does
-                // not open a comment.
-                out.push(c);
-                if let Some(n) = chars.next() {
-                    out.push(n);
-                }
-            }
-            None if c == '/' && chars.peek() == Some(&'*') => {
-                chars.next();
-                out.push_str("  ");
-                let mut prev = ' ';
-                for d in chars.by_ref() {
-                    out.push(if d == '\n' { '\n' } else { ' ' });
-                    if prev == '*' && d == '/' {
-                        break;
-                    }
-                    prev = d;
-                }
-            }
-            None => {
-                if c == '"' || c == '\'' {
-                    quote = Some(c);
-                }
-                out.push(c);
-            }
-        }
-    }
-    out
-}
-
 fn is_css_ws(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n')
 }
@@ -709,6 +667,13 @@ fn skip_css_ws(t: &[char], mut i: usize) -> usize {
     }
     i
 }
+
+/// Most input characters read for one identifier by the CSS scan: enough for `url`, `src` or
+/// `import` with every character escaped, and it keeps the scan linear.
+const MAX_IDENT_INPUT: usize = 64;
+/// Most characters kept of one URL or string value. The origin of a URL is decided by its
+/// start, so a cut value is decided the same way (a cut `http(s)` host counts as remote).
+const MAX_VALUE_CHARS: usize = 4096;
 
 /// Decodes the CSS escape whose backslash is at `i` (CSS Syntax 4.3.7): up to six hex digits
 /// and one optional whitespace, or the next character. `None` is an escaped line break (a line
@@ -738,10 +703,15 @@ fn css_escape(t: &[char], i: usize) -> (Option<char>, usize) {
     }
 }
 
-/// An identifier starting at `i`, escapes decoded; returns it and the index after it.
-fn read_ident(t: &[char], mut i: usize) -> (String, usize) {
+/// An identifier starting at `i`, escapes decoded, reading at most [`MAX_IDENT_INPUT`] input
+/// characters; returns it and the index after it.
+fn read_ident(t: &[char], start: usize) -> (String, usize) {
     let mut out = String::new();
+    let mut i = start;
     while let Some(&c) = t.get(i) {
+        if i - start >= MAX_IDENT_INPUT {
+            break;
+        }
         if c == '\\' {
             if t.get(i + 1) == Some(&'\n') {
                 break;
@@ -759,154 +729,92 @@ fn read_ident(t: &[char], mut i: usize) -> (String, usize) {
     (out, i)
 }
 
-/// A string whose quote is at `i`, escapes decoded: its value, the index of its first character
-/// and the index after it.
-fn read_css_string(t: &[char], i: usize) -> (String, usize, usize) {
+/// A string whose quote is at `i`, escapes decoded (at most [`MAX_VALUE_CHARS`] kept): its
+/// value and the index of its first character.
+fn read_css_string(t: &[char], i: usize) -> (String, usize) {
     let q = t.get(i).copied().unwrap_or('"');
     let start = i + 1;
     let mut j = start;
     let mut out = String::new();
     while let Some(&c) = t.get(j) {
+        if out.len() >= MAX_VALUE_CHARS || c == q || c == '\n' {
+            break;
+        }
         if c == '\\' {
             let (ch, next) = css_escape(t, j);
             out.extend(ch);
             j = next;
-        } else if c == q {
-            return (out, start, j + 1);
-        } else if c == '\n' {
-            return (out, start, j);
         } else {
             out.push(c);
             j += 1;
         }
     }
-    (out, start, j)
+    (out, start)
 }
 
-/// The argument of a `url(` whose `(` is just before `i`: value, start index, index after `)`.
-fn read_url_arg(t: &[char], i: usize) -> (String, usize, usize) {
+/// The argument of a function whose `(` is just before `i`: its value and start index.
+fn read_url_arg(t: &[char], i: usize) -> (String, usize) {
     let i = skip_css_ws(t, i);
     if matches!(t.get(i), Some('"' | '\'')) {
-        let (v, at, next) = read_css_string(t, i);
-        let close = (next..t.len()).find(|&k| t.get(k) == Some(&')')).map_or(t.len(), |k| k + 1);
-        return (v, at, close);
+        return read_css_string(t, i);
     }
     let mut out = String::new();
     let mut j = i;
     while let Some(&c) = t.get(j) {
-        match c {
-            ')' => return (out, i, j + 1),
-            '\\' => {
-                let (ch, next) = css_escape(t, j);
-                out.extend(ch);
-                j = next;
-            }
-            c if is_css_ws(c) => {
-                let k = skip_css_ws(t, j);
-                return (out, i, if t.get(k) == Some(&')') { k + 1 } else { k });
-            }
-            c => {
-                out.push(c);
-                j += 1;
-            }
+        if out.len() >= MAX_VALUE_CHARS || c == ')' || is_css_ws(c) {
+            break;
+        }
+        if c == '\\' {
+            let (ch, next) = css_escape(t, j);
+            out.extend(ch);
+            j = next;
+        } else {
+            out.push(c);
+            j += 1;
         }
     }
-    (out, i, j)
+    (out, i)
 }
 
-/// The index after the block of the at-rule whose prelude starts at `i`: after the `}` that
-/// closes its first `{` (strings skipped, nested braces counted), or after a `;` that ends the
-/// rule first.
-fn at_rule_end(t: &[char], mut i: usize) -> usize {
-    let mut depth = 0usize;
-    while let Some(&c) = t.get(i) {
-        match c {
-            '"' | '\'' => {
-                i = read_css_string(t, i).2;
-                continue;
-            }
-            '\\' => {
-                i = css_escape(t, i).1;
-                continue;
-            }
-            '{' => depth += 1,
-            '}' if depth <= 1 => return i + 1,
-            '}' => depth -= 1,
-            ';' if depth == 0 => return i + 1,
-            _ => {}
-        }
-        i += 1;
-    }
-    t.len()
-}
-
-/// `url()` values in `t[from..to]`, with function names matched after escape decoding.
-fn urls_in(t: &[char], from: usize, to: usize, urls: &mut Vec<(String, usize)>) {
-    let mut k = from;
-    while k < to {
-        match t.get(k) {
-            Some('"' | '\'') => k = read_css_string(t, k).2.max(k + 1),
-            Some(&c) if c == '\\' || is_ident_char(c) => {
-                let (name, next) = read_ident(t, k);
-                if name.eq_ignore_ascii_case("url") && t.get(next) == Some(&'(') {
-                    let (v, at, after) = read_url_arg(t, next + 1);
-                    urls.push((v, at));
-                    k = after.max(next + 1);
-                } else {
-                    k = next.max(k + 1);
-                }
-            }
-            _ => k += 1,
-        }
-    }
-}
-
-/// `FONT-REMOTE` findings for CSS text: `@import` targets and `url()` values inside
-/// `@font-face` blocks, after CSS escapes are decoded (so `@\66ont-face`, `u\72l(` and
-/// `https\3a //` are seen as written by a browser). An `@import` whose target is neither a
-/// string nor `url()` is reported (fail closed). `first_line` is the line number of the first
-/// line of `text`.
+/// `FONT-REMOTE` findings for CSS text. The scan keeps no string or comment state, so nothing
+/// can hide a rule from it (fail closed): every `url(` or `src(` function and every `@import`
+/// target anywhere in the text, including inside comments, strings and non-font rules, is
+/// checked, with CSS escapes decoded (so `@\69mport`, `u\72l(` and `https\3a //` are seen as a
+/// browser sees them). An `@import` followed by anything but a string or `url(` is reported as
+/// `unrecognised @import target`. `first_line` is the line number of the first line of `text`.
+/// Findings are sorted by line.
 pub fn scan_css(file: &str, text: &str, first_line: usize, site: &UrlOrigin) -> Vec<Finding> {
     let pre = text.replace("\r\n", "\n").replace(['\r', '\u{c}'], "\n");
-    let t: Vec<char> = strip_css_comments(&pre).chars().collect();
-    let mut urls: Vec<(String, usize)> = Vec::new();
+    let t: Vec<char> = pre.chars().collect();
+    let mut urls: BTreeMap<usize, String> = BTreeMap::new();
     let mut opaque: Vec<usize> = Vec::new();
-    let mut i = 0usize;
-    while let Some(&c) = t.get(i) {
+    for (i, &c) in t.iter().enumerate() {
         match c {
-            '"' | '\'' => i = read_css_string(&t, i).2.max(i + 1),
-            '\\' => i = css_escape(&t, i).1,
             '@' => {
                 let (name, j) = read_ident(&t, i + 1);
-                if name.eq_ignore_ascii_case("import") {
-                    let k = skip_css_ws(&t, j);
-                    match t.get(k) {
-                        Some('"' | '\'') => {
-                            let (v, at, next) = read_css_string(&t, k);
-                            urls.push((v, at));
-                            i = next;
-                        }
-                        _ => {
-                            let (f, after) = read_ident(&t, k);
-                            if f.eq_ignore_ascii_case("url") && t.get(after) == Some(&'(') {
-                                let (v, at, next) = read_url_arg(&t, after + 1);
-                                urls.push((v, at));
-                                i = next;
-                            } else {
-                                opaque.push(k);
-                                i = after.max(k + 1);
-                            }
-                        }
-                    }
-                } else if name.eq_ignore_ascii_case("font-face") {
-                    let end = at_rule_end(&t, j);
-                    urls_in(&t, j, end, &mut urls);
-                    i = end.max(j + 1);
-                } else {
-                    i = j.max(i + 1);
+                if !name.eq_ignore_ascii_case("import") {
+                    continue;
+                }
+                let k = skip_css_ws(&t, j);
+                if matches!(t.get(k), Some('"' | '\'')) {
+                    let (v, at) = read_css_string(&t, k);
+                    urls.insert(at, v);
+                    continue;
+                }
+                let (f, after) = read_ident(&t, k);
+                if !(f.eq_ignore_ascii_case("url") && t.get(after) == Some(&'(')) {
+                    opaque.push(k);
+                }
+                // A `url(` target is found by the function scan below at its own position.
+            }
+            'u' | 'U' | 's' | 'S' | '\\' => {
+                let (name, j) = read_ident(&t, i);
+                if (name.eq_ignore_ascii_case("url") || name.eq_ignore_ascii_case("src")) && t.get(j) == Some(&'(') {
+                    let (v, at) = read_url_arg(&t, j + 1);
+                    urls.insert(at, v);
                 }
             }
-            _ => i += 1,
+            _ => {}
         }
     }
     let finding = |at: usize, detail: String| Finding {
@@ -916,24 +824,9 @@ pub fn scan_css(file: &str, text: &str, first_line: usize, site: &UrlOrigin) -> 
         detail,
     };
     let mut out: Vec<Finding> =
-        urls.into_iter().filter(|(u, _)| is_remote(u, site)).map(|(u, at)| finding(at, normalise_url(&u))).collect();
+        urls.into_iter().filter(|(_, u)| is_remote(u, site)).map(|(at, u)| finding(at, normalise_url(&u))).collect();
     out.extend(opaque.into_iter().map(|at| finding(at, "unrecognised @import target".to_string())));
-    out
-}
-
-/// `text` with HTML comments replaced by spaces (line breaks kept).
-fn strip_html_comments(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(start) = rest.find("<!--") {
-        out.push_str(rest.get(..start).unwrap_or(""));
-        let after = rest.get(start..).unwrap_or("");
-        let end = after.get(4..).and_then(|a| a.find("-->")).map_or(after.len(), |p| p + 7);
-        let comment = after.get(..end).unwrap_or(after);
-        out.extend(comment.chars().map(|c| if c == '\n' { '\n' } else { ' ' }));
-        rest = after.get(end..).unwrap_or("");
-    }
-    out.push_str(rest);
+    out.sort();
     out
 }
 
@@ -942,10 +835,6 @@ fn skip_ws(b: &[u8], mut i: usize) -> usize {
         i += 1;
     }
     i
-}
-
-fn find_ci(b: &[u8], from: usize, word: &[u8]) -> Option<usize> {
-    (from..b.len()).find(|&i| starts_with_ci(b, i, word))
 }
 
 /// One attribute value: entity-decoded text, whether every reference was understood, and the
@@ -1006,13 +895,26 @@ fn read_attributes(b: &[u8], mut i: usize) -> (BTreeMap<String, AttrValue>, usiz
     }
 }
 
+/// The offset of the `</style` that ends a `<style>` element's text started at `from`: the
+/// first one followed by whitespace, `/`, `>` or the end of the text (as in a browser).
+fn style_end(b: &[u8], from: usize) -> usize {
+    (from..b.len())
+        .find(|&k| {
+            starts_with_ci(b, k, b"</style")
+                && b.get(k + 7).map_or(true, |&c| c.is_ascii_whitespace() || c == b'/' || c == b'>')
+        })
+        .unwrap_or(b.len())
+}
+
 /// `FONT-REMOTE` findings for HTML, XHTML or SVG text: `<link>` elements whose `rel` includes
 /// `stylesheet` or `preload`, `<base href>`, `<?xml-stylesheet href?>`, and the CSS inside
-/// `<style>` elements. Attribute values are entity-decoded first; a value with a reference that
-/// cannot be decoded here counts as remote.
+/// `<style>` elements (scanned with [`scan_css`]). Comments are not recognised and every `<` is
+/// examined, also inside comments, attribute values and element text, so a comment-like or
+/// attribute trick cannot hide an element (fail closed; a remote link in a comment is reported).
+/// Attribute values are entity-decoded first; a value with a reference that cannot be decoded
+/// here counts as remote.
 pub fn scan_html(file: &str, text: &str, site: &UrlOrigin) -> Vec<Finding> {
-    let clean = strip_html_comments(text);
-    let b = clean.as_bytes();
+    let b = text.as_bytes();
     let mut out = Vec::new();
     let flag = |href: Option<&AttrValue>, out: &mut Vec<Finding>| {
         if let Some(v) = href {
@@ -1026,35 +928,28 @@ pub fn scan_html(file: &str, text: &str, site: &UrlOrigin) -> Vec<Finding> {
             }
         }
     };
-    let mut i = 0usize;
-    while let Some(lt) = (i..b.len()).find(|&k| b.get(k) == Some(&b'<')) {
+    for lt in (0..b.len()).filter(|&k| b.get(k) == Some(&b'<')) {
         let tag_end_ok =
             |n: usize| b.get(lt + n).map_or(true, |&c| c.is_ascii_whitespace() || c == b'>' || c == b'/' || c == b'?');
         if starts_with_ci(b, lt + 1, b"link") && tag_end_ok(5) {
-            let (attrs, next) = read_attributes(b, lt + 5);
+            let (attrs, _) = read_attributes(b, lt + 5);
             let rel = attrs.get("rel").map(|v| v.text.to_ascii_lowercase()).unwrap_or_default();
             if rel.split_ascii_whitespace().any(|r| r == "stylesheet" || r == "preload") {
                 flag(attrs.get("href"), &mut out);
             }
-            i = next.max(lt + 1);
         } else if starts_with_ci(b, lt + 1, b"base") && tag_end_ok(5) {
-            let (attrs, next) = read_attributes(b, lt + 5);
-            flag(attrs.get("href"), &mut out);
-            i = next.max(lt + 1);
+            flag(read_attributes(b, lt + 5).0.get("href"), &mut out);
         } else if starts_with_ci(b, lt + 1, b"?xml-stylesheet") && tag_end_ok(16) {
-            let (attrs, next) = read_attributes(b, lt + 16);
-            flag(attrs.get("href"), &mut out);
-            i = next.max(lt + 1);
+            flag(read_attributes(b, lt + 16).0.get("href"), &mut out);
         } else if starts_with_ci(b, lt + 1, b"style") && tag_end_ok(6) {
             let (_, content_start) = read_attributes(b, lt + 6);
-            let content_end = find_ci(b, content_start, b"</style").unwrap_or(b.len());
+            let content_end = style_end(b, content_start);
             let css = String::from_utf8_lossy(b.get(content_start..content_end).unwrap_or(&[])).into_owned();
             out.extend(scan_css(file, &css, line_at(b, content_start), site));
-            i = content_end.max(lt + 1);
-        } else {
-            i = lt + 1;
         }
     }
+    out.sort();
+    out.dedup();
     out
 }
 

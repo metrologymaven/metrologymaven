@@ -6,5 +6,5 @@
   src: url(../fonts/examplo-sans.woff2) format("woff2"),
        url("https://example.org:443/fonts/examplo-sans.woff2") format("woff2");
 }
-/* @import url(https://fonts.example.net/commented-out.css); */
+/* @import url(/css/old.css); a same-origin URL in a comment. */
 body { font-family: "Examplo Sans", sans-serif; }
