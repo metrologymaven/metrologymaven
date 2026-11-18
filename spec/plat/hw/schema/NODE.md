@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-platform]
+built_pr: 104
 satisfies: [REQ-PLAT.HW-004]
 covers: []
 depends_on: []
