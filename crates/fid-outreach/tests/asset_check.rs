@@ -25,8 +25,15 @@ fn s(p: &Path) -> String {
 }
 
 fn check(root: &Path, allow: &Path, origin: &str, extra: &[&str]) -> Output {
-    let mut a: Vec<String> =
-        vec!["asset-check".into(), "--root".into(), s(root), "--allow".into(), s(allow), "--origin".into(), origin.into()];
+    let mut a: Vec<String> = vec![
+        "asset-check".into(),
+        "--root".into(),
+        s(root),
+        "--allow".into(),
+        s(allow),
+        "--origin".into(),
+        origin.into(),
+    ];
     a.extend(extra.iter().map(|x| x.to_string()));
     Command::new(env!("CARGO_BIN_EXE_fid-outreach")).args(&a).output().unwrap()
 }
@@ -263,8 +270,11 @@ fn table_parsing() {
     assert!(parse_attribution("| path | origin | source | author | licence |\n| x |\n", "A.md").is_err());
     assert!(parse_attribution(&format!("{head}| a.png | borrowed | s | A | MIT |\n"), "A.md").is_err());
     assert!(parse_attribution(&format!("{head}| a.png | original | s |\n"), "A.md").is_err());
-    assert!(parse_attribution(&format!("{head}| ../a.png | original | | project contributors | CC-BY-4.0 |\n"), "A.md")
-        .is_err());
+    assert!(parse_attribution(
+        &format!("{head}| ../a.png | original | | project contributors | CC-BY-4.0 |\n"),
+        "A.md"
+    )
+    .is_err());
     assert!(parse_attribution(&format!("{head}| /a.png | original | | project contributors | CC-BY-4.0 |\n"), "A.md")
         .is_err());
     assert_eq!(parse_attribution(head, "A.md").unwrap(), vec![]);

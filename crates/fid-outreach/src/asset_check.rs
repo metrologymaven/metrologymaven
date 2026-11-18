@@ -45,8 +45,8 @@ pub const ORIGINAL_LICENCE: &str = "CC-BY-4.0";
 pub const ORIGINAL_AUTHOR: &str = "project contributors";
 /// Asset file extensions (compared case-insensitively).
 pub const ASSET_EXTENSIONS: [&str; 18] = [
-    "svg", "png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "woff", "woff2", "ttf", "otf", "mp3", "ogg", "wav", "mp4",
-    "webm", "mov",
+    "svg", "png", "jpg", "jpeg", "gif", "webp", "avif", "ico", "woff", "woff2", "ttf", "otf", "mp3", "ogg", "wav",
+    "mp4", "webm", "mov",
 ];
 /// Directory names never entered.
 pub const SKIPPED_DIRS: [&str; 2] = [".git", "node_modules"];
@@ -313,7 +313,10 @@ pub fn parse_attribution(text: &str, label: &str) -> Result<Vec<Row>, AttrError>
         let line = idx + 1;
         let Some(cells) = split_row(raw) else { break };
         let [path, origin, source, author, licence] = cells.as_slice() else {
-            return Err(parse_err(label, format!("line {line}: expected {} cells, found {}", HEADERS.len(), cells.len())));
+            return Err(parse_err(
+                label,
+                format!("line {line}: expected {} cells, found {}", HEADERS.len(), cells.len()),
+            ));
         };
         let origin = match origin.to_ascii_lowercase().as_str() {
             "original" => Origin::Original,
@@ -622,7 +625,9 @@ pub fn scan_css(file: &str, text: &str, first_line: usize, site: &UrlOrigin) -> 
                 i = j.max(i + 1);
                 continue;
             }
-            Some(b'@') if starts_with_ci(b, i + 1, b"font-face") && !b.get(i + 10).is_some_and(|&c| is_ident_byte(c)) => {
+            Some(b'@')
+                if starts_with_ci(b, i + 1, b"font-face") && !b.get(i + 10).is_some_and(|&c| is_ident_byte(c)) =>
+            {
                 let open = b.get(i..).and_then(|s| s.iter().position(|&c| c == b'{')).map(|p| i + p);
                 let Some(open) = open else { break };
                 let close = b.get(open..).and_then(|s| s.iter().position(|&c| c == b'}')).map_or(b.len(), |p| open + p);
@@ -909,7 +914,12 @@ pub fn run(opts: &Options) -> Result<Report, AttrError> {
         let name = rel.rsplit('/').next().unwrap_or(rel.as_str());
         if is_asset(name) {
             if !rows.iter().any(|r| glob_match(&r.path, rel)) {
-                findings.push(Finding { code: Code::AttrMissing, subject: rel.clone(), line: 0, detail: String::new() });
+                findings.push(Finding {
+                    code: Code::AttrMissing,
+                    subject: rel.clone(),
+                    line: 0,
+                    detail: String::new(),
+                });
             }
             assets.push(rel.clone());
         } else if is_page_or_style(name) {
@@ -924,7 +934,12 @@ pub fn run(opts: &Options) -> Result<Report, AttrError> {
     }
     for row in &rows {
         if !files.iter().any(|(rel, _)| glob_match(&row.path, rel)) {
-            findings.push(Finding { code: Code::AttrOrphan, subject: row.path.clone(), line: 0, detail: String::new() });
+            findings.push(Finding {
+                code: Code::AttrOrphan,
+                subject: row.path.clone(),
+                line: 0,
+                detail: String::new(),
+            });
         }
         findings.extend(check_row(row, &allow));
     }

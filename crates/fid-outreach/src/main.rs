@@ -471,7 +471,8 @@ fn asset_check_cmd(args: &[String]) -> ExitCode {
             _ => return usage(),
         }
     }
-    let (Some(root), Some(allow), Some(origin)) = (opts.get("--root"), opts.get("--allow"), opts.get("--origin")) else {
+    let (Some(root), Some(allow), Some(origin)) = (opts.get("--root"), opts.get("--allow"), opts.get("--origin"))
+    else {
         return usage();
     };
     let options = asset_check::Options {
