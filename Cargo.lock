@@ -146,6 +146,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-hal-runtime"
+version = "0.0.1"
+dependencies = [
+ "fid-hal-idl",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
