@@ -189,8 +189,15 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             if m.get("status") not in ("leaf", "frozen"):
                 rep.err(w, "built_in is only allowed on a leaf (or frozen) node")
             for c in built:
-                if not (CRATES / c / "Cargo.toml").exists():
-                    rep.err(w, f"built_in names crate '{c}', which does not exist under crates/")
+                if "/" in c:
+                    # A non-crate implementation (e.g. a stdlib Python package under tools/):
+                    # a repo-relative directory that must exist and stay inside the repo.
+                    p = (ROOT / c).resolve()
+                    if c.startswith("/") or ".." in c.split("/") or ROOT.resolve() not in p.parents or not p.is_dir():
+                        rep.err(w, f"built_in path '{c}' is not an existing directory inside the repository")
+                elif not (CRATES / c / "Cargo.toml").exists():
+                    rep.err(w, f"built_in names crate '{c}', which does not exist under crates/ "
+                               "(use a repo path such as tools/<package> for non-crate code)")
         if m.get("built_pr") and not str(m["built_pr"]).isdigit():
             rep.err(w, "built_pr must be a pull-request number")
         if m.get("built_pr") and not built:
