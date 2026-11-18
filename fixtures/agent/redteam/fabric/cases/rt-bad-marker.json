@@ -38,5 +38,11 @@
       "kind": "entry_with_marker",
       "marker": "FIDRT-0123456789ABCDEFGHIJKLMNOP"
     }
+  ],
+  "payloads": [
+    {
+      "file": "README.txt",
+      "vector": "element_name"
+    }
   ]
 }
