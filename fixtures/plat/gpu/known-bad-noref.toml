@@ -1,0 +1,25 @@
+# PLAT.GPU.POLICY AC-5 error path (hand-written). INVENTED TEST DATA, NOT REAL DRIVER CLAIMS.
+# Entry "fixture-noref" has no reference; every other rule holds.
+# Expected: exit 1 with exactly one diagnostic, MissingReference { id: fixture-noref }.
+schema_version = 1
+
+[[entry]]
+id = "fixture-ok"
+os = "windows"
+backend = "dx12"
+vendor_id = 0x7E570004
+device_ids = "any"
+driver = { min = "3" }
+action = "avoid_backend"
+reason = "Fixture: invented entry with a reference."
+reference = "https://example.invalid/gpu-known-bad/fixture-ok"
+
+[[entry]]
+id = "fixture-noref"
+os = "windows"
+backend = "vulkan"
+vendor_id = 0x7E570005
+device_ids = "any"
+driver = "any"
+action = "force_software"
+reason = "Fixture: invented entry without a reference."

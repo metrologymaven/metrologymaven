@@ -1,0 +1,39 @@
+# Metrology Maven GPU backend policy (spec node PLAT.GPU.POLICY; schema in crates/fid-platform,
+# module gpu_policy). Validate with:  cargo xtask plat-gpu validate
+#
+# One row per OS ("windows", "linux" for every Linux family of the support matrix, "macos")
+# and architecture. `backends` are tried first to last and must end with "software"; Windows
+# rows must list dx12 and vulkan, Linux rows vulkan, macOS rows metal (REQ-PLAT.GPU-002).
+# `min.<backend>` gives the minimum API version (for dx12 the feature level, 11_0 written
+# "11.0") and an optional minimum `driver` version; "software" needs no minimum.
+#
+# PROVISIONAL: these are the proposal rows of the PLAT.GPU.POLICY spec. Every minimum is
+# [unverified] until PLAT.GPU.CI measures it on the minimum hardware profile, and the Windows
+# order (dx12 before vulkan) is a proposal to be confirmed by PLAT.GPU.CI results. This data
+# never changes a value of record (CONSTITUTION C2).
+schema_version = 1
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "vulkan", "software"]
+min.dx12 = { api = "11.0" } # feature level 11_0 [unverified]
+min.vulkan = { api = "1.1" } # [unverified]
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" } # [unverified]
+
+[[row]]
+os = "linux"
+arch = "aarch64"
+backends = ["vulkan", "software"]
+min.vulkan = { api = "1.1" } # [unverified]
+
+[[row]]
+os = "macos"
+arch = "aarch64"
+backends = ["metal", "software"]
+min.metal = { api = "2" } # Metal 2 [unverified]
