@@ -217,8 +217,9 @@ fn malformed_templates() {
     bad("{home}/Applications", r#"["{home}/Library/{tmp}"]"#);
     bad("{home}/Applications", r#"["{home}/Library\\Caches"]"#);
     bad("{home}/Applications", r#"["{home}/Library:x"]"#);
-    bad("{home}/Applications", r#"["{home}"]"#); // the whole profile is not a data directory
-                                                 // macOS {home} write entries must be below ~/Library/{Application Support,Caches,Preferences}.
+    // The whole profile is not a data directory.
+    bad("{home}/Applications", r#"["{home}"]"#);
+    // macOS {home} write entries must be below ~/Library/{Application Support,Caches,Preferences}.
     bad("{home}/Applications", r#"["{home}/.ssh"]"#);
     bad("{home}/Applications", r#"["{home}/Documents/Fiducial"]"#);
     bad("{home}/Applications", r#"["{home}/Library/Caches"]"#);
