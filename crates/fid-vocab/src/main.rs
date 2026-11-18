@@ -96,8 +96,7 @@ fn run_lint(args: &Args) -> ExitCode {
         report.to_text().into_bytes()
     };
     if args.json {
-        body.push(b'
-');
+        body.push(b'\n');
     }
     match emit(&body) {
         Ok(()) => ExitCode::from(report.exit_code()),
@@ -114,16 +113,13 @@ fn run_test_rules(args: &Args) -> ExitCode {
         Err(e) => return fail(e),
     };
     let problems = test_rules(&rules);
-    let mut out = format!("fid-vocab: rules version {}
-", rules.version);
+    let mut out = format!("fid-vocab: rules version {}\n", rules.version);
     for p in &problems {
         out.push_str(p);
-        out.push('
-');
+        out.push('\n');
     }
     if problems.is_empty() {
-        out.push_str(&format!("{} rule(s): all examples behave
-", rules.rules.len()));
+        out.push_str(&format!("{} rule(s): all examples behave\n", rules.rules.len()));
     }
     match emit(out.as_bytes()) {
         Ok(()) if problems.is_empty() => ExitCode::SUCCESS,

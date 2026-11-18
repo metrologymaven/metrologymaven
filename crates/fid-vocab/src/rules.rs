@@ -1,11 +1,11 @@
 //! Rule file format `fid-vocab-rules/1` (REQ-ECO.RULES.VOCAB.ENGINE-001).
 
-use crate::text::Matcher;
 use crate::text::nfc;
+use crate::text::Matcher;
 use crate::{read_limited, VocabError, MAX_RULES, MAX_RULES_BYTES, RULES_FORMAT};
 use regex::{Regex, RegexBuilder};
-use std::path::Component;
 use std::collections::BTreeSet;
+use std::path::Component;
 use std::path::Path;
 
 /// Default designator pattern: an organisation prefix (ISO, ASME, VDA, IEC, DIN or EN, possibly

@@ -11,7 +11,8 @@ pub mod text;
 pub mod units;
 
 pub use rules::{
-    Example, Kind, Qualifier, Rule, RuleSet, Scope, Severity, DEFAULT_DESIGNATOR_PATTERN, MAX_REGEX_BYTES, MAX_REGEX_NEST,
+    Example, Kind, Qualifier, Rule, RuleSet, Scope, Severity, DEFAULT_DESIGNATOR_PATTERN, MAX_REGEX_BYTES,
+    MAX_REGEX_NEST,
 };
 pub use units::{parse_units, Suppression, Unit};
 

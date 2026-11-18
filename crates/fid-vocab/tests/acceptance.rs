@@ -337,11 +337,11 @@ fn names_file_must_stay_below_the_rule_directory() {
 fn designator_pattern_limits_and_nfc() {
     let deep = format!("designator_pattern = '{}ISO{}'\n", "(".repeat(40), ")".repeat(40));
     assert_eq!(RuleSet::parse(&claim_rules(&deep), None).unwrap_err().code(), "rules_parse");
-    let huge = "designator_pattern = '\w{2000}\w{2000}'\n";
+    let huge = "designator_pattern = '\\w{2000}\\w{2000}'\n";
     assert_eq!(RuleSet::parse(&claim_rules(huge), None).unwrap_err().code(), "rules_parse");
 
     // A decomposed pattern still matches precomposed text: both are NFC-normalised.
-    let decomposed = "designator_pattern = \"NORME\u{301} \\d+\"\n";
+    let decomposed = "designator_pattern = 'NORME\u{301} \\d+'\n";
     let rules = RuleSet::parse(&claim_rules(decomposed), None).unwrap();
     assert!(lint(&rules, &[Unit::new("a", "Approved per NORM\u{c9} 12.")]).findings.is_empty());
     assert_eq!(lint(&rules, &[Unit::new("b", "Approved per NORM 12.")]).findings.len(), 1);
