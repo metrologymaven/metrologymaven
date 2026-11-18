@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-data]
 satisfies: [REQ-ECO.DATA-002, REQ-ECO.DATA-003]
 covers: []
 depends_on: [ECO.DATA.CAT]

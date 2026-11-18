@@ -1,6 +1,6 @@
 [package]
 name = "fid-data"
-description = "Metrology Maven dataset tooling: catalogue and admission check (spec node ECO.DATA.CAT)"
+description = "Metrology Maven dataset tooling: catalogue and admission check (ECO.DATA.CAT), fetch, cache and verify (ECO.DATA.FETCH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,8 +13,12 @@ name = "fid-data"
 path = "src/main.rs"
 
 # The catalogue reader is a bounded TOML subset parser (no TOML crate). fid-types: digest syntax.
+# sha2: streaming SHA-256 of fetched and cached files; already in the graph through fid-canon,
+# fid-io-corp and fid-xtask. HTTP(S) goes through the `curl` program (as in fid-io-corp), so
+# no HTTP or TLS crate is added.
 [dependencies]
 fid-types = { path = "../fid-types" }
+sha2 = "0.10"
 
 # Test-only: checks the SHA-256 digests in the repository catalogue (layer test-support).
 [dev-dependencies]
