@@ -148,8 +148,10 @@ fn rule_file_validation() {
 
 #[test]
 fn req004_numeric_lexical_forms_are_kept() {
-    let out = normalise(b"<a xmlns='http://qifstandards.org/xsd/qif3'><Value> 1.50 </Value><Values>1.0E+00  -0.0</Values></a>")
-        .unwrap();
+    let out = normalise(
+        b"<a xmlns='http://qifstandards.org/xsd/qif3'><Value> 1.50 </Value><Values>1.0E+00  -0.0</Values></a>",
+    )
+    .unwrap();
     assert_eq!(
         String::from_utf8(out).unwrap(),
         "<q:a xmlns:q=\"http://qifstandards.org/xsd/qif3\"><q:Value>1.50</q:Value><q:Values>1.0E+00 -0.0</q:Values></q:a>"

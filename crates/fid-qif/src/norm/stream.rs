@@ -220,7 +220,8 @@ impl<'a, R: Read> Stream<'a, R> {
             if !uri.is_empty() {
                 used.insert(uri.to_string());
             }
-            let resolved = (uri == XSI_NS && a.name.local == "type").then(|| resolve_qname(el, a.value.raw())).flatten();
+            let resolved =
+                (uri == XSI_NS && a.name.local == "type").then(|| resolve_qname(el, a.value.raw())).flatten();
             if let Some((u, _)) = &resolved {
                 if !u.is_empty() {
                     used.insert(u.clone());
@@ -283,7 +284,11 @@ impl<'a, R: Read> Stream<'a, R> {
             String::new()
         };
         let simple = self.rules.is_simple_element(&elem_uri, &el.name.local);
-        self.queue.push_back(Item { kind: ItemKind::Start { name: name.clone(), decls, attrs }, path: path.clone(), line });
+        self.queue.push_back(Item {
+            kind: ItemKind::Start { name: name.clone(), decls, attrs },
+            path: path.clone(),
+            line,
+        });
         self.stack.push(Frame {
             name,
             path,

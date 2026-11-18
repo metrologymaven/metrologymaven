@@ -55,7 +55,8 @@ impl NormRules {
             }
             prefixes.insert(uri.clone(), prefix.to_string());
         }
-        let simple = table.get("simple_content").and_then(toml::Value::as_table).ok_or(bad("missing [simple_content]"))?;
+        let simple =
+            table.get("simple_content").and_then(toml::Value::as_table).ok_or(bad("missing [simple_content]"))?;
         for key in simple.keys() {
             if !matches!(key.as_str(), "elements" | "attributes") {
                 return Err(bad("unknown key in [simple_content]"));
@@ -107,9 +108,7 @@ impl NormRules {
 fn contains(set: &BTreeSet<(String, String)>, uri: &str, local: &str) -> bool {
     // A borrowed lookup without allocating would need a custom Borrow impl; the sets are
     // small, so a range scan over the namespace is enough.
-    set.range((uri.to_string(), String::new())..)
-        .take_while(|(u, _)| u == uri)
-        .any(|(_, l)| l == local)
+    set.range((uri.to_string(), String::new())..).take_while(|(u, _)| u == uri).any(|(_, l)| l == local)
 }
 
 /// `qif-norm@<n>` with `n` a positive decimal integer without leading zeros.

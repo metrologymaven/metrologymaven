@@ -106,7 +106,12 @@ impl Report {
         let mut s = String::new();
         s.push_str("{\"norm\":");
         json_str(&mut s, &self.norm);
-        s.push_str(&format!(",\"total\":{},\"equal\":{},\"passed\":{}", self.rows.len(), self.equal_count(), self.passed()));
+        s.push_str(&format!(
+            ",\"total\":{},\"equal\":{},\"passed\":{}",
+            self.rows.len(),
+            self.equal_count(),
+            self.passed()
+        ));
         s.push_str(",\"rows\":[");
         for (i, row) in self.rows.iter().enumerate() {
             if i > 0 {
