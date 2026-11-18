@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**14** of **1336** leaves built in code ([B]).
+**18** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 10 built)
+### Wave 1 (125 leaves, 13 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -136,7 +136,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [QUAL.VAP.TPL](../../spec/qual/vap/tpl/NODE.md) Template format, URS, risk assessment and PQ guidance templates (M, P1a)
 - [QUAL.VULN.POLICY](../../spec/qual/vuln/policy/NODE.md) SECURITY.md, reporting channel and policy check (S, P1a)
 - [QUAL.VULN.TRIAGE](../../spec/qual/vuln/triage/NODE.md) Vulnerability records, triage timers and embargo checks (M, P1a)
-- [TRUST.CHAIN.CANON](../../spec/trust/chain/canon/NODE.md) Independent RFC 8785 canonicaliser and golden vectors (M, P0)
+- [B] [TRUST.CHAIN.CANON](../../spec/trust/chain/canon/NODE.md) Independent RFC 8785 canonicaliser and golden vectors (M, P0)
 - [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
 - [TRUST.PROFILE.DEFS](../../spec/trust/profile/defs/NODE.md) Built-in profile definitions, schema and digest (M, P1a)
 - [TRUST.PROFILE.GATE.INVAR](../../spec/trust/profile/gate/invar/NODE.md) Registry-invariance CI test across profiles (S, P1a)

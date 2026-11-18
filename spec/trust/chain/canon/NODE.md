@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-trust-canon]
 satisfies: [REQ-TRUST.CHAIN-007]
 covers: []
 depends_on: []
