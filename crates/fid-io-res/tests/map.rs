@@ -242,7 +242,11 @@ fn top_level_rules() {
         "reserved_id"
     );
     for bad in ["1", "1.0", "1.0.0.0", "01.0.0", "1.0.0-rc1", "1.a.0", "1..0", "1234567890.0.0", " 1.0.0"] {
-        assert_eq!(reason(load_user_map_bytes(&map_json("acme.t", bad, "long", DIALECT, COLS))), "bad_version", "{bad}");
+        assert_eq!(
+            reason(load_user_map_bytes(&map_json("acme.t", bad, "long", DIALECT, COLS))),
+            "bad_version",
+            "{bad}"
+        );
     }
     let v = load_user_map_bytes(&map_json("acme.t", "10.0.123", "long", DIALECT, COLS)).unwrap();
     assert_eq!(v.version().to_string(), "10.0.123");
@@ -269,7 +273,9 @@ fn dialect_rules() {
         assert_eq!(reason(load_user_map_bytes(&with_dialect(&dialect))), want, "{dialect}");
     }
     for (delim, mark) in [("semicolon", ","), ("tab", ","), ("semicolon", "."), ("tab", ".")] {
-        let dialect = d.replace(r#""comma""#, &format!("\"{delim}\"")).replace(r#""decimal_mark":".""#, &format!("\"decimal_mark\":\"{mark}\""));
+        let dialect = d
+            .replace(r#""comma""#, &format!("\"{delim}\""))
+            .replace(r#""decimal_mark":".""#, &format!("\"decimal_mark\":\"{mark}\""));
         assert!(load_user_map_bytes(&with_dialect(&dialect)).is_ok(), "{dialect}");
     }
 }
@@ -310,7 +316,8 @@ fn column_rules() {
     let m = load_user_map_bytes(&with_cols(&ok)).unwrap();
     assert_eq!(m.column(Field::Actual).unwrap().index, Some(65_535));
     // Too many columns.
-    let many: Vec<String> = (0..1025).map(|i| format!("{{\"field\":\"comment\",\"index\":{i},\"required\":false}}")).collect();
+    let many: Vec<String> =
+        (0..1025).map(|i| format!("{{\"field\":\"comment\",\"index\":{i},\"required\":false}}")).collect();
     assert_eq!(reason(load_user_map_bytes(&with_cols(&format!("[{}]", many.join(","))))), "too_many_columns");
 }
 
@@ -319,7 +326,8 @@ fn header_needs_a_header_row() {
     let dialect = DIALECT.replace(r#""header":true"#, r#""header":false"#);
     let err = load_user_map_bytes(&with_dialect(&dialect)).unwrap_err();
     assert_eq!(err, ColMapError::Invalid { reason: "header_without_header_row", column: Some(0) });
-    let by_index = map_json("acme.t", "1.0.0", "long", &dialect, r#"[{"field":"characteristic_id","index":0,"required":true}]"#);
+    let by_index =
+        map_json("acme.t", "1.0.0", "long", &dialect, r#"[{"field":"characteristic_id","index":0,"required":true}]"#);
     assert!(load_user_map_bytes(&by_index).is_ok());
 }
 
@@ -331,10 +339,26 @@ fn wide_layout_rules() {
     assert_eq!(m.layout(), Layout::Wide);
     let no_header = DIALECT.replace(r#""header":true"#, r#""header":false"#);
     let cases = [
-        (DIALECT.to_owned(), format!(r#"[{part},{{"field":"characteristic_id","header":"C","required":true}}]"#), "wide_characteristic_id_column"),
-        (DIALECT.to_owned(), format!(r#"[{part},{{"field":"actual","index":1,"required":true}}]"#), "wide_group_needs_header"),
-        (DIALECT.to_owned(), format!(r#"[{part},{{"field":"actual","header":"A","index":1,"required":true}}]"#), "wide_group_needs_header"),
-        (DIALECT.to_owned(), format!(r#"[{part},{{"field":"actual","header":"x:A","required":true}}]"#), "wide_header_separator"),
+        (
+            DIALECT.to_owned(),
+            format!(r#"[{part},{{"field":"characteristic_id","header":"C","required":true}}]"#),
+            "wide_characteristic_id_column",
+        ),
+        (
+            DIALECT.to_owned(),
+            format!(r#"[{part},{{"field":"actual","index":1,"required":true}}]"#),
+            "wide_group_needs_header",
+        ),
+        (
+            DIALECT.to_owned(),
+            format!(r#"[{part},{{"field":"actual","header":"A","index":1,"required":true}}]"#),
+            "wide_group_needs_header",
+        ),
+        (
+            DIALECT.to_owned(),
+            format!(r#"[{part},{{"field":"actual","header":"x:A","required":true}}]"#),
+            "wide_header_separator",
+        ),
         (no_header, format!(r#"[{part}]"#), "wide_needs_header_row"),
     ];
     for (dialect, cols, want) in cases {
@@ -353,7 +377,9 @@ fn size_and_depth_limits() {
     over.push(b' ');
     for err in [load_user_map_bytes(&over).unwrap_err(), load_user_map(over.as_slice()).unwrap_err()] {
         assert_eq!(err.code(), "limit_exceeded");
-        assert!(matches!(err, ColMapError::Io(IoError::LimitExceeded { limit: LimitKind::Bytes, value, .. }) if value == MAX_MAP_BYTES));
+        assert!(
+            matches!(err, ColMapError::Io(IoError::LimitExceeded { limit: LimitKind::Bytes, value, .. }) if value == MAX_MAP_BYTES)
+        );
     }
     // Nesting deeper than a map needs.
     let deep = with_cols(r#"[{"field":"characteristic_id","header":[[["x"]]],"required":true}]"#);
@@ -395,7 +421,10 @@ fn dialect_line_endings_and_names() {
     assert_eq!(lf.encode_record(&["a", "b"]), "a\tb\n");
     assert_eq!(crlf.encode_record(&["a", "b"]), "a;b\r\n");
     assert_eq!(crlf.encode_record(&[]), "\r\n");
-    assert_eq!(Dialect::new(Delimiter::Comma, DecimalMark::Comma, true, LineEnding::Lf), Err("decimal_comma_with_comma_delimiter"));
+    assert_eq!(
+        Dialect::new(Delimiter::Comma, DecimalMark::Comma, true, LineEnding::Lf),
+        Err("decimal_comma_with_comma_delimiter")
+    );
     assert_eq!(
         crlf.to_string(),
         "delimiter=semicolon decimal_mark=. header=true quote=rfc4180 encoding=utf-8 line_ending=crlf"
@@ -436,7 +465,9 @@ fn decimal_conversion_is_exact_and_locale_free() {
     let comma = Dialect::new(Delimiter::Semicolon, DecimalMark::Comma, true, LineEnding::Lf).unwrap();
     let point = dialect("comma");
     // Hand-labelled from the grammar in the spec's dialect rules.
-    for (text, want) in [("0,0100", "0.0100"), ("-0,012", "-0.012"), ("+12", "+12"), ("1,5e-3", "1.5e-3"), ("7E+2", "7E+2")] {
+    for (text, want) in
+        [("0,0100", "0.0100"), ("-0,012", "-0.012"), ("+12", "+12"), ("1,5e-3", "1.5e-3"), ("7E+2", "7E+2")]
+    {
         assert_eq!(comma.to_point_decimal(text).unwrap(), want);
         assert_eq!(comma.from_point_decimal(want).unwrap(), text);
     }

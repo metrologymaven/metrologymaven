@@ -379,17 +379,18 @@ pub fn builtins() -> Result<Vec<ColumnMap>, ColMapError> {
 
 fn from_json(bytes: &[u8], origin: Origin) -> Result<ColumnMap, ColMapError> {
     let body = strip_bom(bytes);
-    let value = fid_canon::parse_with_limits(body, MAX_MAP_BYTES as usize, MAX_DEPTH as usize).map_err(|e| match e {
-        // Bytes are checked before parsing, so the parser's limit here is the nesting cap.
-        CanonError::InputLimit => ColMapError::Io(IoError::LimitExceeded {
-            limit: LimitKind::Depth,
-            value: u64::from(MAX_DEPTH),
-            at: Position::byte(0),
-        }),
-        CanonError::DuplicateKey(_) => invalid("duplicate_key"),
-        CanonError::InvalidUtf8 => invalid("invalid_utf8"),
-        CanonError::Syntax(_) | CanonError::NonFiniteNumber => invalid("json_syntax"),
-    })?;
+    let value =
+        fid_canon::parse_with_limits(body, MAX_MAP_BYTES as usize, MAX_DEPTH as usize).map_err(|e| match e {
+            // Bytes are checked before parsing, so the parser's limit here is the nesting cap.
+            CanonError::InputLimit => ColMapError::Io(IoError::LimitExceeded {
+                limit: LimitKind::Depth,
+                value: u64::from(MAX_DEPTH),
+                at: Position::byte(0),
+            }),
+            CanonError::DuplicateKey(_) => invalid("duplicate_key"),
+            CanonError::InvalidUtf8 => invalid("invalid_utf8"),
+            CanonError::Syntax(_) | CanonError::NonFiniteNumber => invalid("json_syntax"),
+        })?;
     let canonical = fid_canon::to_canonical_bytes(&value).map_err(|_| invalid("json_syntax"))?;
     let digest = fid_types::Digest::from_bytes(fid_canon::digest_bytes(&canonical).0);
 
@@ -424,7 +425,8 @@ fn from_json(bytes: &[u8], origin: Origin) -> Result<ColumnMap, ColMapError> {
 fn parse_dialect(v: &CValue) -> Result<Dialect, ColMapError> {
     let o = as_obj(v, None)?;
     check_keys(o, &["decimal_mark", "delimiter", "encoding", "header", "line_ending", "quote"], &[], None)?;
-    let delimiter = Delimiter::parse(as_str(get(o, "delimiter", None)?, None)?).ok_or_else(|| invalid("bad_delimiter"))?;
+    let delimiter =
+        Delimiter::parse(as_str(get(o, "delimiter", None)?, None)?).ok_or_else(|| invalid("bad_delimiter"))?;
     let decimal_mark =
         DecimalMark::parse(as_str(get(o, "decimal_mark", None)?, None)?).ok_or_else(|| invalid("bad_decimal_mark"))?;
     let header = as_bool(get(o, "header", None)?, None)?;
@@ -506,7 +508,8 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
         }
         out.push(Column { header: header.map(UntrustedText::new), index, field, required });
     }
-    if layout == Layout::Long && !out.iter().any(|c| matches!(c.field, Field::CharacteristicId | Field::CharacteristicName))
+    if layout == Layout::Long
+        && !out.iter().any(|c| matches!(c.field, Field::CharacteristicId | Field::CharacteristicName))
     {
         return Err(invalid("no_characteristic_key"));
     }
