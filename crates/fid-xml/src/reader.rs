@@ -823,7 +823,11 @@ impl<R: Read> XmlReader<R> {
         };
         // The scope is sorted by prefix, so lookups are binary searches.
         let lookup = |p: Option<&str>| {
-            scope.binary_search_by(|b| b.prefix.as_deref().cmp(&p)).ok().and_then(|i| scope.get(i)).map(|b| b.uri.clone())
+            scope
+                .binary_search_by(|b| b.prefix.as_deref().cmp(&p))
+                .ok()
+                .and_then(|i| scope.get(i))
+                .map(|b| b.uri.clone())
         };
         let resolve = |prefix: Option<&str>, attr: bool| -> Option<Option<Arc<str>>> {
             match prefix {
