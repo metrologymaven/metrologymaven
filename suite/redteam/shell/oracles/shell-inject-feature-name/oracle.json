@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "characteristic": "B1-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS"
+    },
+    {
+      "characteristic": "B2-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS"
+    }
+  ],
+  "forbidden": []
+}

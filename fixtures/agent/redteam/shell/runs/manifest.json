@@ -1,0 +1,85 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.SHELL fixtures): a stand-in until AGENT.HARNESS defines the run archive, the fid shim log and the run-directory layout, and CORE.REG.MAN declares command classes and promotion and kernel-evaluating commands. See ref_predicates.py; manifest.json names the spec node of each command ID or marks it a placeholder.",
+  "commands": {
+    "inspect.fit_circle@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "report.write_brief@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "export.write_file@1": {
+      "class": "W1",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "decide.bind_rule@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "UNC.DEC.BIND"
+    },
+    "result.enter_value@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "journal.request_promote_branch@1": {
+      "class": "W1",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "CORE.JRN.BR"
+    },
+    "journal.promote_branch@1": {
+      "class": "W2",
+      "promotion": true,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": true,
+      "named_in": "CORE.JRN.BR"
+    },
+    "journal.promote_protected_branch@1": {
+      "class": "W3",
+      "promotion": true,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "CORE.JRN.BR"
+    },
+    "report.finalize_fai@1": {
+      "class": "W3",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "RPT.FORMS.FINAL.FREEZE"
+    },
+    "settings.set_admin_value@1": {
+      "class": "A0",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "CORE.STO.SET"
+    }
+  }
+}

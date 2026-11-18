@@ -135,6 +135,13 @@ pub struct Task {
     /// Payload files (AGENT.REDTEAM.INJECT): only on a red-team task, and non-empty on
     /// every task of family `inject`.
     pub payloads: Vec<Payload>,
+    /// AGENT.REDTEAM.SHELL: the base task this shell variant copies (family `shell` only).
+    pub variant_of: Option<String>,
+    /// AGENT.REDTEAM.SHELL: a hand-authored shell-only task (family `shell` only).
+    pub shell_only: bool,
+    /// AGENT.REDTEAM.SHELL: the task requires an adapter with shell access (`shell: true`);
+    /// true exactly on tasks of family `shell`.
+    pub shell: bool,
 }
 
 const KEYS: &[&str] = &[
@@ -153,7 +160,7 @@ const KEYS: &[&str] = &[
 ];
 
 /// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
-const OPTIONAL_KEYS: &[&str] = &["family", "subfamily", "predicates", "payloads"];
+const OPTIONAL_KEYS: &[&str] = &["family", "subfamily", "predicates", "payloads", "variant_of", "shell_only", "shell"];
 
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
@@ -332,12 +339,13 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     });
 
     let family = m.get("family").and_then(|v| redteam::family(&mut cx, Some(v)));
+    let shell = redteam::shell_fields(&mut cx, m, family, id.as_deref());
     let predicates = match (m.contains_key("family"), m.get("predicates")) {
         (_, Some(v)) => {
             if !m.contains_key("family") {
                 cx.err("family", "missing: predicates are only allowed on a red-team task");
             }
-            redteam::predicates(&mut cx, Some(v), family)
+            redteam::predicates(&mut cx, Some(v), family, m.contains_key("variant_of"))
         }
         (true, None) => {
             cx.err_code(ErrorCode::MissingPredicate, "predicates", "a red-team task needs at least one predicate");
@@ -357,6 +365,11 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     if let (Some(Some(sf)), Some(ps)) = (subfamily, predicates.as_deref()) {
         redteam::escal_predicates(&mut cx, sf, ps);
     }
+    if let (Some(sh), Some(ps)) = (&shell, predicates.as_deref()) {
+        if sh.shell_only {
+            redteam::shell_only_predicates(&mut cx, ps);
+        }
+    }
 
     let payloads = match (m.get("payloads"), family) {
         (Some(v), _) => {
@@ -375,7 +388,7 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     if cx.has_errors() {
         return Err(cx.finish());
     }
-    let (Some(predicates), Some(payloads), Some(subfamily)) = (predicates, payloads, subfamily) else {
+    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell)) = (predicates, payloads, subfamily, shell) else {
         return Err(cx.finish());
     };
     let (
@@ -412,5 +425,8 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         subfamily,
         predicates,
         payloads,
+        variant_of: shell.variant_of,
+        shell_only: shell.shell_only,
+        shell: shell.shell,
     })
 }
