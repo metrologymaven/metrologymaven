@@ -22,8 +22,8 @@ fn main() -> ExitCode {
 fn validate(path: &str) -> ExitCode {
     // Read at most one byte past the limit so an oversized file is reported, not loaded.
     let mut bytes = Vec::new();
-    let read = std::fs::File::open(path)
-        .and_then(|f| f.take(fid_plat_matrix::MAX_BYTES as u64 + 1).read_to_end(&mut bytes));
+    let read =
+        std::fs::File::open(path).and_then(|f| f.take(fid_plat_matrix::MAX_BYTES as u64 + 1).read_to_end(&mut bytes));
     if let Err(e) = read {
         eprintln!("plat-matrix: cannot read {path}: {e}");
         return ExitCode::from(2);

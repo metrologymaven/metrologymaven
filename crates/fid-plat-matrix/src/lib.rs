@@ -210,25 +210,63 @@ pub enum Problem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatrixError {
     /// Fatal: the file exceeds [`MAX_BYTES`] or [`MAX_ROWS`].
-    TooLarge { limit: Limit, found: usize, max: usize },
+    TooLarge {
+        limit: Limit,
+        found: usize,
+        max: usize,
+    },
     /// Fatal: `schema_version` is above [`SUPPORTED_SCHEMA`].
-    UnsupportedSchema { found: u64 },
+    UnsupportedSchema {
+        found: u64,
+    },
     /// Fatal: not UTF-8 or not TOML. `line` is 1-based when the parser reports a position.
-    Parse { line: Option<usize>, msg: String },
+    Parse {
+        line: Option<usize>,
+        msg: String,
+    },
     /// A structural problem: an unknown key, a wrong type or a missing required field
     /// that has no more specific error. `row` is `None` for top-level keys.
-    BadField { row: Option<usize>, field: String, msg: &'static str },
-    BadPhase { row: usize, problem: Problem },
-    UnknownOs { row: usize, problem: Problem },
-    UnknownArch { row: usize, problem: Problem },
-    BadTier { row: usize, problem: Problem },
-    BadVersion { row: usize, field: &'static str, problem: Problem },
+    BadField {
+        row: Option<usize>,
+        field: String,
+        msg: &'static str,
+    },
+    BadPhase {
+        row: usize,
+        problem: Problem,
+    },
+    UnknownOs {
+        row: usize,
+        problem: Problem,
+    },
+    UnknownArch {
+        row: usize,
+        problem: Problem,
+    },
+    BadTier {
+        row: usize,
+        problem: Problem,
+    },
+    BadVersion {
+        row: usize,
+        field: &'static str,
+        problem: Problem,
+    },
     /// `version_max` is not above `version_min`.
-    EmptyRange { row: usize },
+    EmptyRange {
+        row: usize,
+    },
     /// Rows `a` < `b` share os and arch and their version ranges overlap.
-    OverlappingRange { a: usize, b: usize, os: OsFamily, arch: Arch },
+    OverlappingRange {
+        a: usize,
+        b: usize,
+        os: OsFamily,
+        arch: Arch,
+    },
     /// Validation stopped after [`MAX_ERRORS`] diagnostics.
-    TooManyErrors { limit: usize },
+    TooManyErrors {
+        limit: usize,
+    },
 }
 
 fn what(problem: Problem, expected: &str) -> String {
@@ -367,11 +405,7 @@ pub fn validate(bytes: &[u8]) -> Validation {
 
     let mut errors = Vec::new();
     match table.get("schema_version") {
-        None => errors.push(MatrixError::BadField {
-            row: None,
-            field: "schema_version".into(),
-            msg: "is missing",
-        }),
+        None => errors.push(MatrixError::BadField { row: None, field: "schema_version".into(), msg: "is missing" }),
         Some(toml::Value::Integer(n)) if *n >= 1 => {
             let n = n.unsigned_abs();
             if n > u64::from(SUPPORTED_SCHEMA) {
@@ -418,7 +452,7 @@ pub fn validate(bytes: &[u8]) -> Validation {
     // Overlaps: stable sort by (os, arch, version_min); each row is compared with the later
     // rows of its group whose start lies before its end, so non-adjacent overlaps are found.
     let mut sorted: Vec<&(usize, Row)> = good.iter().collect();
-    sorted.sort_by(|x, y| (x.1.os, x.1.arch, x.1.version_min).cmp(&(y.1.os, y.1.arch, y.1.version_min)));
+    sorted.sort_by_key(|x| (x.1.os, x.1.arch, x.1.version_min));
     let mut overlaps: Vec<(usize, usize, OsFamily, Arch)> = Vec::new();
     'outer: for (i, (na, ra)) in sorted.iter().map(|p| (p.0, &p.1)).enumerate() {
         for (nb, rb) in sorted[i + 1..].iter().map(|p| (p.0, &p.1)) {

@@ -56,10 +56,7 @@ fn ac2_overlap_names_rows_2_and_3() {
     assert_eq!(code, 1);
     assert_eq!(out, "OverlappingRange: rows 2 and 3: ubuntu x86_64 version ranges overlap\n3 rows, 1 errors\n");
     let v = validate(&read("overlap.toml"));
-    assert_eq!(
-        v.errors,
-        vec![MatrixError::OverlappingRange { a: 2, b: 3, os: OsFamily::Ubuntu, arch: Arch::X86_64 }]
-    );
+    assert_eq!(v.errors, vec![MatrixError::OverlappingRange { a: 2, b: 3, os: OsFamily::Ubuntu, arch: Arch::X86_64 }]);
     assert!(v.matrix.is_none());
 }
 
@@ -235,7 +232,8 @@ fn hostile_input_fails_closed() {
 
 #[test]
 fn many_overlaps_are_capped() {
-    let row = "[[row]]\nos=\"ubuntu\"\nversion_min=\"1\"\narch=\"x86_64\"\ntier=\"tier1\"\nsince_phase=\"P0\"\nnotes=\"\"\n";
+    let row =
+        "[[row]]\nos=\"ubuntu\"\nversion_min=\"1\"\narch=\"x86_64\"\ntier=\"tier1\"\nsince_phase=\"P0\"\nnotes=\"\"\n";
     let text = "schema_version = 1\n".to_string() + &row.repeat(100);
     let v = validate(text.as_bytes());
     assert_eq!(v.errors.len(), fid_plat_matrix::MAX_ERRORS + 1);
