@@ -1,0 +1,137 @@
+# Test fixture for PLAT.MATRIX.FILE: one or more errors of every row-level kind, and a
+# non-adjacent overlap (row 13 [1, 10) overlaps rows 14 and 15, which do not overlap each other).
+schema_version = 1
+extra = "unknown top-level key"
+
+[[row]]
+os = "freebsd"
+version_min = "14"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "row 1: unknown os"
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+arch = "riscv64"
+tier = "tier4"
+since_phase = "P1"
+notes = "row 2: unknown arch, bad tier, bad phase"
+
+[[row]]
+os = "ubuntu"
+version_min = "1.2.3.4.5"
+version_max = "1..2"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "row 3: too many components, empty component"
+
+[[row]]
+os = "debian"
+version_min = ""
+version_max = "4294967296"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P2"
+notes = "row 4: empty version, component above u32"
+
+[[row]]
+os = "fedora"
+version_min = "-1"
+version_max = "40 "
+arch = "x86_64"
+tier = "tier3"
+since_phase = "later"
+notes = "row 5: sign, trailing space"
+
+[[row]]
+os = "rhel"
+version_min = "9.4"
+version_max = "9.4.0"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P1b"
+notes = "row 6: empty range (9.4.0 equals 9.4)"
+
+[[row]]
+os = "rhel"
+version_min = "9.4"
+version_max = "9.2"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P1b"
+notes = "row 7: reversed range"
+
+[[row]]
+version_min = "1"
+arch = "x86_64"
+tier = "tier1"
+notes = "row 8: os and since_phase missing"
+
+[[row]]
+os = "macos"
+arch = "aarch64"
+notes = 7
+colour = "blue"
+
+[[row]]
+os = "macos"
+version_min = 15
+arch = "aarch64"
+tier = "Tier1"
+since_phase = "p0"
+notes = "row 10: wrong types and wrong case"
+
+[[row]]
+os = "windows"
+version_min = "10.0.19041"
+version_max = "10.0.22000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "row 11: valid"
+
+[[row]]
+os = "windows"
+version_min = "10.0.19045"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P1a"
+notes = "row 12: overlaps row 11"
+
+[[row]]
+os = "debian"
+version_min = "1"
+version_max = "10"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P3"
+notes = "row 13"
+
+[[row]]
+os = "debian"
+version_min = "2"
+version_max = "3"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P3"
+notes = "row 14"
+
+[[row]]
+os = "debian"
+version_min = "4"
+version_max = "5"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P4"
+notes = "row 15"
+
+[[row]]
+os = "debian"
+version_min = "10"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P4"
+notes = "row 16: starts where row 13 ends, no overlap"

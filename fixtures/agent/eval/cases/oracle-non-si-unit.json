@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 2.0,
+        "unit": "mm"
+      }
+    }
+  ],
+  "forbidden": []
+}
