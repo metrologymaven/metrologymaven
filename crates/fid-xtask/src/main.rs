@@ -201,8 +201,9 @@ fn version_check(args: &[String]) -> ExitCode {
 }
 
 /// ECO.REL.PROC.VERSION: `rel version-compare <a> <b>` prints `lt`, `eq` or `gt` (SemVer
-/// 2.0.0 precedence of a against b). Either may carry the tag's `v`. Exit 1 on an invalid
-/// version, 2 on bad usage.
+/// 2.0.0 precedence of a against b). Either may carry the tag's `v`. Only the tag grammar is
+/// accepted: build metadata (`+...`) is rejected with VERSION-TAG-FORMAT. Exit 1 on an
+/// invalid version, 2 on bad usage.
 fn version_compare(args: &[String]) -> ExitCode {
     let [a, b] = args else {
         eprintln!("{USAGE}");

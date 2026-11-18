@@ -312,7 +312,9 @@ pub fn parse_tag(tag: &str) -> Result<Version, VersionError> {
         .map_err(|e| to_error(e, tag))
 }
 
-/// Parses either form, for `version-compare`.
+/// Parses either form, for `version-compare`. Only the release-tag grammar is accepted, so
+/// SemVer build metadata (`+...`) and other pre-release labels (`-rc.1`) are rejected with
+/// `VERSION-TAG-FORMAT`, as the spec's tag format allows neither.
 pub fn parse_any(s: &str) -> Result<Version, VersionError> {
     if s.starts_with('v') {
         parse_tag(s)
@@ -385,7 +387,8 @@ pub fn list_binaries(dir: &Path) -> Result<Vec<(String, PathBuf)>, String> {
 }
 
 /// Runs `<path> --version --json` and returns the `version` string it prints. Errors are
-/// the reason for `VERSION-BINARY-FAILED`.
+/// the reason for `VERSION-BINARY-FAILED`. `timeout` bounds the whole call: the process
+/// exiting and its stdout reaching end of file.
 pub fn binary_version(path: &Path, timeout: Duration) -> Result<String, String> {
     let mut child = Command::new(path)
         .args(["--version", "--json"])
@@ -399,9 +402,12 @@ pub fn binary_version(path: &Path, timeout: Duration) -> Result<String, String> 
         let _ = child.wait();
         return Err("no stdout".into());
     };
-    let reader = std::thread::spawn(move || {
+    // The reader sends its result over a channel so that waiting for it stays inside the
+    // deadline: a binary may exit while a process it started still holds stdout open.
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
         let mut buf = Vec::new();
-        stdout.take(MAX_OUTPUT_BYTES as u64 + 1).read_to_end(&mut buf).map(|_| buf)
+        let _ = tx.send(stdout.take(MAX_OUTPUT_BYTES as u64 + 1).read_to_end(&mut buf).map(|_| buf));
     });
     let start = Instant::now();
     let status = loop {
@@ -423,10 +429,15 @@ pub fn binary_version(path: &Path, timeout: Duration) -> Result<String, String> 
     if !status.success() {
         return Err(format!("--version --json failed ({status})"));
     }
-    let buf = match reader.join() {
+    let remaining = timeout.saturating_sub(start.elapsed());
+    let buf = match rx.recv_timeout(remaining) {
         Ok(Ok(b)) => b,
         Ok(Err(e)) => return Err(format!("cannot read output: {e}")),
-        Err(_) => return Err("cannot read output".into()),
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+            let secs = timeout.as_secs();
+            return Err(format!("exited, but its stdout stayed open past {secs} s (held by a background process?)"));
+        }
+        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return Err("cannot read output".into()),
     };
     if buf.len() > MAX_OUTPUT_BYTES {
         return Err(format!("output is larger than {MAX_OUTPUT_BYTES} bytes"));

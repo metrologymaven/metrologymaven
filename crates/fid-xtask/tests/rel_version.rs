@@ -210,3 +210,23 @@ fn usage_errors_exit_2() {
     assert_eq!(cli(&["version-check", "--tag", "v1.4.0", "--channel", "rc"]).0, 2);
     assert_eq!(cli(&["version-compare", "1.4.0"]).0, 2);
 }
+
+/// Build metadata is not part of the tag grammar, so `version-compare` rejects it.
+#[test]
+fn compare_rejects_build_metadata() {
+    let (code, out) = cli(&["version-compare", "1.4.0+build.1", "1.4.0"]);
+    assert_eq!(code, 1);
+    assert!(out.starts_with("VERSION-TAG-FORMAT: "), "{out}");
+}
+
+/// A binary that exits but leaves a background process holding stdout must not hang the
+/// check: the read is bounded by the same deadline.
+#[cfg(unix)]
+#[test]
+fn background_holder_of_stdout_times_out() {
+    let start = std::time::Instant::now();
+    let path = fixture("hang/bin/fid");
+    let e = fid_xtask::rel::version::binary_version(&path, std::time::Duration::from_secs(2)).unwrap_err();
+    assert!(start.elapsed() < std::time::Duration::from_secs(10), "took {:?}", start.elapsed());
+    assert!(e.contains("stdout stayed open"), "{e}");
+}
