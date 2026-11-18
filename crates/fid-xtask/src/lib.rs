@@ -9,8 +9,12 @@
 //!
 //! `lint-crate-graph`: the no-side-doors check (spec node `CORE.BUS.LINT`), in
 //! [`crate_graph`]; it reuses the resolved graph built here.
+//!
+//! `plat-matrix lint-tiers`: the tier definitions lint (spec node
+//! `PLAT.MATRIX.POLICY.DEFS`), in [`plat_matrix_tiers`].
 
 pub mod crate_graph;
+pub mod plat_matrix_tiers;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
