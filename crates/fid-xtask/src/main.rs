@@ -2,9 +2,8 @@
 
 mod pins;
 
-use fid_xtask::plat_gpu_invar;
-use fid_xtask::plat_matrix_tiers;
-use fid_xtask::rel::{runbook, sbom, sums, version};
+use fid_xtask::rel::{keys, runbook, sbom, sums, version};
+use fid_xtask::{apps_policy, plat_gpu_invar, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -29,7 +28,10 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
        \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
        \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
-                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]";
+                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
+       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
+const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
+                                 --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -45,6 +47,7 @@ fn main() -> ExitCode {
         Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
@@ -52,12 +55,46 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
+            eprintln!("{APPS_POLICY_USAGE}");
             ExitCode::from(2)
         }
     }
+}
+
+/// ECO.APPS.POLICY: `apps-policy`. Prints findings sorted by code, crate and location. Exit
+/// 0: no findings; 1: findings (including POLICY-INPUT); 2: bad usage. Offline; reads only.
+fn apps_policy_check(args: &[String]) -> ExitCode {
+    let (mut workspace, mut manifests, mut status, mut config) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = Some(PathBuf::from(v)),
+            ("--registry-manifests", Some(v)) => manifests = Some(PathBuf::from(v)),
+            ("--apps-status", Some(v)) => status = Some(PathBuf::from(v)),
+            ("--config", Some(v)) => config = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{APPS_POLICY_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(workspace), Some(registry_manifests), Some(apps_status)) = (workspace, manifests, status) else {
+        eprintln!("apps-policy: --workspace, --registry-manifests and --apps-status are required\n{APPS_POLICY_USAGE}");
+        return ExitCode::from(2);
+    };
+    let findings = apps_policy::run(&apps_policy::Inputs { workspace, registry_manifests, apps_status, config });
+    if findings.is_empty() {
+        println!("apps-policy: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
 
 /// ECO.DATA.CAT: runs the `fid-data` binary. `fid-data` is a `tool` crate, and the layer
@@ -420,6 +457,45 @@ fn rel_sbom(args: &[String]) -> ExitCode {
                 println!("{f}");
             }
             ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.GUIDE: `rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]`
+/// checks that every key file in the keys directory (default `keys`) is listed in `KEYS.md`
+/// (default `KEYS.md`) with its SPKI SHA-256 fingerprint and that no active key is past its
+/// validity on the check date (default: today, UTC). Exit 0: consistent; 1: findings, one per
+/// line; 2: bad usage, unreadable inputs or a malformed key table. Reads files only.
+fn keys_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("keys");
+    let mut doc = PathBuf::from("KEYS.md");
+    let mut date: Option<String> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--keys", Some(v)) => dir = PathBuf::from(v),
+            ("--doc", Some(v)) => doc = PathBuf::from(v),
+            ("--date", Some(v)) => date = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(date) = date.or_else(keys::today_utc) else {
+        eprintln!("rel keys-check: the system clock is before 1970; pass --date");
+        return ExitCode::from(2);
+    };
+    match keys::check(&dir, &doc, &date) {
+        Ok(n) => {
+            println!("keys-check: ok {n} keys ({date})");
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(keys::exit_code(&findings))
         }
     }
 }

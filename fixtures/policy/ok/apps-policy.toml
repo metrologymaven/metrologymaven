@@ -1,0 +1,5 @@
+# ECO.APPS.POLICY fixture config. The declaration-macro crate and markers are stand-ins
+# until CORE.REG.DEF names the real ones.
+macro_crates = ["fid-registry-macros"]
+declaration_markers = ["#[fid_command", "fid_command!"]
+identity_tokens = ["AppId::from", "AppId::new", "current_app", "FID_APP"]

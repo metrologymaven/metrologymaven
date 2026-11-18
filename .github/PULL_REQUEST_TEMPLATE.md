@@ -10,3 +10,4 @@
 - [ ] No standards or vendor text pasted; unverified claims marked `[unverified]`
 - [ ] Level 1–2 split: a domain maintainer is requested as reviewer
 - [ ] I report only what I actually ran
+- [ ] App-crate change: reviewed against the [app-crate checklist](https://github.com/metrologymaven/metrologymaven/blob/main/docs/review/app-crate-checklist.md) (`docs/review/app-crate-checklist.md`)
