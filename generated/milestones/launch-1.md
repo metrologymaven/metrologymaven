@@ -108,7 +108,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
 - [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
-- [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
+- [B] [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
 - [PLAT.DEPLOY.OFFLINE.NOEGRESS](../../spec/plat/deploy/offline/noegress/NODE.md) Reference workflow and sandboxed no-egress CI job (M, P1a)
 - [PLAT.DEPLOY.SILENT.UNIX](../../spec/plat/deploy/silent/unix/NODE.md) Unattended Linux and macOS install contract, guide and test (M, P1a)
 - [PLAT.DEPLOY.SILENT.WIN](../../spec/plat/deploy/silent/win/NODE.md) Silent-install contract file and Windows MSI install, upgrade and uninstall test (M, P1a)
