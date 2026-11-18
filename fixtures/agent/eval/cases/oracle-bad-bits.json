@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x7ff0000000000000",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": []
+}

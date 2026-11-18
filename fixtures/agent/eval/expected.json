@@ -1,0 +1,31 @@
+{
+  "suite": "suite-mini",
+  "suite_version": "sha256:b44bd644345d7ab34ea240b493c92d457e971458db8b3c3a38b9741bc4d1b911",
+  "tasks": 2,
+  "files": [
+    [
+      "oracles/mini-inspect-01/oracle.json",
+      "sha256:4503af1950fd403aac53c5b56f36f17ed6625ac3f9e211eb5529b04e37a5cf18"
+    ],
+    [
+      "oracles/mini-probe-01/oracle.json",
+      "sha256:3fb2aa04aec154de6e3e9bdb6fd9e6cfec89bda8bce5043736ca2323430a32a0"
+    ],
+    [
+      "tasks/mini-inspect-01/start.tar",
+      "sha256:8c6cf128b7b72f9bdbeaf7b3367ade8e003c51887c33499de7d4f5dd69c50b8f"
+    ],
+    [
+      "tasks/mini-inspect-01/task.json",
+      "sha256:bc84ad1e032664713b9e101226263a3d28a206cc3a7a12abae85724b8b8d0cd8"
+    ],
+    [
+      "tasks/mini-probe-01/start.tar",
+      "sha256:5f1d1aa5ef8212aa16aac162abde3f1a8edf9a651b83809cc26c9adc256fd211"
+    ],
+    [
+      "tasks/mini-probe-01/task.json",
+      "sha256:6e6e019232709e0f64e3644438a73b2dda1b12b4506eb056fc4b76a4102e3bfb"
+    ]
+  ]
+}
