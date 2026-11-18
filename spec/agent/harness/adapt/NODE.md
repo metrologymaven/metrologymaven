@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-eval-harness]
+built_pr: 158
 satisfies: [REQ-AGENT.HARNESS-001]
 covers: []
 depends_on: [AGENT.EVAL.FORMAT]
