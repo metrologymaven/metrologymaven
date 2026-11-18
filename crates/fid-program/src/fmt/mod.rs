@@ -276,10 +276,6 @@ impl Program {
         }
         out
     }
-
-    fn encode_bytes(&self) -> Result<Vec<u8>, ProgramError> {
-        to_canonical_bytes(&self.encode()?).map_err(|e| ProgramError::InvalidJson(e.code()))
-    }
 }
 
 /// Counts structural tokens, objects and nesting outside strings, so hostile input cannot
@@ -859,7 +855,11 @@ impl Encoder {
         Ok(())
     }
 
-    fn array<T>(&mut self, items: &[T], mut each: impl FnMut(&mut Self, &T) -> Result<(), ProgramError>) -> Result<(), ProgramError> {
+    fn array<T>(
+        &mut self,
+        items: &[T],
+        mut each: impl FnMut(&mut Self, &T) -> Result<(), ProgramError>,
+    ) -> Result<(), ProgramError> {
         self.out.push(b'[');
         for (i, item) in items.iter().enumerate() {
             if i > 0 {
@@ -879,11 +879,15 @@ impl Encoder {
             Val::Json(j) => self.json(j)?,
             Val::Obj(m) => self.opaque(m)?,
             Val::Objs(items) => self.array(items, |e, m| e.opaque(m))?,
-            Val::Vars(items) => self.array(items, |e, v| {
-                e.object(vec![("name", Val::Str(&v.name)), ("type", Val::Str(&v.ty))], depth)
-            })?,
+            Val::Vars(items) => {
+                self.array(items, |e, v| e.object(vec![("name", Val::Str(&v.name)), ("type", Val::Str(&v.ty))], depth))?
+            }
             Val::Subs(items) => self.array(items, |e, sub| {
-                let mut f = vec![("name", Val::Str(&sub.name)), ("params", Val::Vars(&sub.params)), ("body", Val::Steps(&sub.body))];
+                let mut f = vec![
+                    ("name", Val::Str(&sub.name)),
+                    ("params", Val::Vars(&sub.params)),
+                    ("body", Val::Steps(&sub.body)),
+                ];
                 if let Some(r) = &sub.returns {
                     f.push(("returns", Val::Str(r)));
                 }

@@ -4,8 +4,8 @@
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_program::{
-    program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES, MAX_MAJOR, MAX_OBJECTS,
-    MAX_STEPS, MAX_TOKENS, STEP_KINDS,
+    program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES, MAX_MAJOR,
+    MAX_OBJECTS, MAX_STEPS, MAX_TOKENS, STEP_KINDS,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
