@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-reg"
-description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles (spec nodes IO.REG.LIMITS, IO.REG.ROOTS)"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,8 @@ test-hooks = []
 
 [dependencies]
 fid-types = { path = "../fid-types" }
+# RFC 8785 canonical JSON for report digests (IO.REG.ENV.REPORT REQ-003).
+fid-canon = { path = "../fid-canon" }
 # Capability-based directory handles: opens relative to an opened root that cannot
 # escape it, without `unsafe` here (IO.REG.ROOTS REQ-005, CONSTITUTION §8, decision D-041).
 cap-std = "3.4"
