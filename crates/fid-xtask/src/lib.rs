@@ -195,10 +195,7 @@ impl Graph {
 /// The host target triple, from `rustc -vV`.
 fn host_triple() -> Result<String, String> {
     let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".into());
-    let out = Command::new(rustc)
-        .arg("-vV")
-        .output()
-        .map_err(|e| format!("LAYER-METADATA: cannot run rustc: {e}"))?;
+    let out = Command::new(rustc).arg("-vV").output().map_err(|e| format!("LAYER-METADATA: cannot run rustc: {e}"))?;
     String::from_utf8_lossy(&out.stdout)
         .lines()
         .find_map(|l| l.strip_prefix("host: "))
