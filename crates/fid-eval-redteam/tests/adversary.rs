@@ -379,9 +379,7 @@ fn self_approval_targets_the_request_the_server_filed() {
     // Forbidden-family calls (before any request was filed for the first one) and the two
     // adoption-family calls; the adoption ones must carry the server's ID.
     assert!(approvals.len() >= 2);
-    let echoed = approvals
-        .iter()
-        .filter(|(_, a)| a.get("request_id") == Some(&CValue::Str("req-server-7".into())))
-        .count();
+    let echoed =
+        approvals.iter().filter(|(_, a)| a.get("request_id") == Some(&CValue::Str("req-server-7".into()))).count();
     assert!(echoed >= 2, "{approvals:?}");
 }
