@@ -1,0 +1,20 @@
+# KRN.NUM.ERR fixture: IEEE 754 binary64 special values. CC-BY-4.0, Metrology Maven project data.
+# name                  bits (hex)            expected: ok | nan | inf
+pos_zero                0x0000000000000000    ok
+neg_zero                0x8000000000000000    ok
+pos_min_subnormal       0x0000000000000001    ok
+neg_min_subnormal       0x8000000000000001    ok
+pos_max_subnormal       0x000fffffffffffff    ok
+pos_min_normal          0x0010000000000000    ok
+pos_one                 0x3ff0000000000000    ok
+neg_one                 0xbff0000000000000    ok
+pos_max                 0x7fefffffffffffff    ok
+neg_max                 0xffefffffffffffff    ok
+pos_inf                 0x7ff0000000000000    inf
+neg_inf                 0xfff0000000000000    inf
+quiet_nan               0x7ff8000000000000    nan
+quiet_nan_payload       0x7ff8000000000123    nan
+neg_quiet_nan           0xfff8000000000000    nan
+signalling_nan          0x7ff0000000000001    nan
+signalling_nan_payload  0x7ff4000000000abc    nan
+neg_signalling_nan      0xfff0000000000001    nan

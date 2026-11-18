@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+fid-surface = { path = "../fid-surface" }
 
 [lints]
 workspace = true
