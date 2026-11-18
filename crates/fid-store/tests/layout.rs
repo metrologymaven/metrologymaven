@@ -103,10 +103,18 @@ impl Holder {
         assert!(self.child.wait().unwrap().success(), "child failed: {rest}");
     }
 
-    /// Kills the child while it holds the lock.
-    fn kill(mut self) {
+    /// Kills the child while it holds the lock and reaps it.
+    ///
+    /// The child's stdin stays open until the child has been reaped. `Child::wait` would
+    /// otherwise close it first, and on macOS SIGKILL does not stop every thread of a
+    /// multi-threaded process at once: the helper thread could see end-of-file and run its
+    /// clean release (which clears the lock record) before the kill takes effect.
+    fn kill(mut self) -> std::process::ExitStatus {
+        let stdin = self.child.stdin.take();
         self.child.kill().unwrap();
-        let _ = self.child.wait();
+        let status = self.child.wait().unwrap();
+        drop(stdin);
+        status
     }
 }
 
@@ -268,24 +276,32 @@ fn ac3_killed_holder_lock_is_taken_over() {
     let (_t, root) = new_project("ac3d");
     let holder = Holder::spawn(&root);
     let pid = holder.pid();
-    holder.kill();
-    // The OS releases a dead process's lock when it tears the process down; allow it a moment.
-    let mut result = ProjectLocation::open(&root, OpenMode::Write);
-    for _ in 0..50 {
-        if !matches!(result, Err(StoreError::Locked(_))) {
-            break;
+    // The live holder's record names it.
+    let held = parse_lock_info(&std::fs::read(root.join("lock")).unwrap()).unwrap();
+    assert_eq!((held.pid, held.host.as_str()), (pid, host_name().as_str()));
+    let status = holder.kill();
+    // The holder died from the kill and did not release the lock itself.
+    assert!(!status.success(), "holder exited normally: {status:?}");
+    #[cfg(unix)]
+    assert_eq!(std::os::unix::process::ExitStatusExt::signal(&status), Some(9), "{status:?}");
+    assert_eq!(std::fs::read(root.join("lock")).unwrap(), lock_text(&held).into_bytes(), "record changed by the kill");
+    // The holder is reaped, so the OS has released its lock; poll briefly with a deadline in
+    // case a platform finishes closing the handle a little after the wait returns.
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let result = loop {
+        let r = ProjectLocation::open(&root, OpenMode::Write);
+        if !matches!(r, Err(StoreError::Locked(_))) || std::time::Instant::now() >= deadline {
+            break r;
         }
-        std::thread::sleep(Duration::from_millis(100));
-        result = ProjectLocation::open(&root, OpenMode::Write);
-    }
+        std::thread::sleep(Duration::from_millis(20));
+    };
     let lock = result.unwrap().1.unwrap();
     match lock.warnings() {
-        [StoreWarning::StaleLockTaken(prev)] => {
-            assert_eq!(prev.pid, pid);
-            assert_eq!(prev.host, host_name());
-        }
+        [StoreWarning::StaleLockTaken(prev)] => assert_eq!(*prev, held),
         other => panic!("expected one stale_lock_taken, got {other:?}"),
     }
+    // The record now names this process.
+    assert_eq!(parse_lock_info(&std::fs::read(root.join("lock")).unwrap()).unwrap().pid, std::process::id());
 }
 
 // ---------------------------------------------------------------- AC-4 (REQ-006)
