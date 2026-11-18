@@ -1,0 +1,20 @@
+{
+  "format": "fid.agent-catalog",
+  "version": 1,
+  "workflows": [
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.measure_bore",
+      "title": "Measure a bore",
+      "guide_id": "demo.measure_bore",
+      "recipes": []
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.plan_bore",
+      "title": "Plan a bore check",
+      "guide_id": "demo.plan_bore",
+      "recipes": []
+    }
+  ]
+}

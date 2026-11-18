@@ -1,0 +1,176 @@
+{
+  "commands": [
+    {
+      "id": "agent.attach_brief",
+      "major": 1,
+      "side_effect": "W1"
+    },
+    {
+      "id": "demo.fit_cylinder",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "demo.move_axis",
+      "major": 1,
+      "side_effect": "M1"
+    },
+    {
+      "id": "demo.save_plan",
+      "major": 1,
+      "side_effect": "W2"
+    },
+    {
+      "id": "demo.scan",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "demo.set_limits",
+      "major": 1,
+      "side_effect": "A0"
+    },
+    {
+      "id": "demo.sign_report",
+      "major": 1,
+      "side_effect": "S1"
+    },
+    {
+      "id": "journal.promote_protected_branch",
+      "major": 1,
+      "side_effect": "W3"
+    },
+    {
+      "id": "journal.request_promote_branch",
+      "major": 1,
+      "side_effect": "W1"
+    }
+  ],
+  "format": 1,
+  "task_guides": [
+    {
+      "id": "demo.guide_fields",
+      "profile": "inspect",
+      "title": "Guide with bad fields",
+      "summary": "Expect a bore of 12.004 mm after the fit.",
+      "steps": [
+        {
+          "command": {
+            "id": "demo.scan",
+            "major": 1
+          },
+          "purpose": "Scan, then call demo_sign_report yourself"
+        }
+      ]
+    },
+    {
+      "id": "demo.measure_bore",
+      "profile": "inspect",
+      "title": "Measure a bore",
+      "summary": "Scan the bore and fit a cylinder. Report the fit through the result record, never in prose.",
+      "steps": [
+        {
+          "command": {
+            "id": "demo.scan",
+            "major": 1
+          },
+          "purpose": "Scan the bore surface"
+        },
+        {
+          "command": {
+            "id": "demo.fit_cylinder",
+            "major": 1
+          },
+          "purpose": "Fit a cylinder to the scan"
+        }
+      ]
+    },
+    {
+      "id": "demo.plan_bore",
+      "profile": "inspect",
+      "title": "Plan a bore check",
+      "summary": "Draft a bore check on the agent branch and ask a person to promote it.",
+      "steps": [
+        {
+          "command": {
+            "id": "demo.scan",
+            "major": 1
+          },
+          "purpose": "Scan the bore surface"
+        },
+        {
+          "command": {
+            "id": "demo.save_plan",
+            "major": 1
+          },
+          "purpose": "Save the drafted plan"
+        },
+        {
+          "command": {
+            "id": "agent.attach_brief",
+            "major": 1
+          },
+          "purpose": "Attach the proposal brief"
+        },
+        {
+          "command": {
+            "id": "journal.request_promote_branch",
+            "major": 1
+          },
+          "purpose": "Request promotion of the agent branch"
+        }
+      ]
+    },
+    {
+      "id": "demo.plan_no_brief",
+      "profile": "inspect",
+      "title": "Plan without a brief",
+      "summary": "A state-changing guide that stops after saving.",
+      "steps": [
+        {
+          "command": {
+            "id": "demo.scan",
+            "major": 1
+          },
+          "purpose": "Scan the bore surface"
+        },
+        {
+          "command": {
+            "id": "demo.save_plan",
+            "major": 1
+          },
+          "purpose": "Save the drafted plan"
+        }
+      ]
+    },
+    {
+      "id": "demo.plan_wrong_order",
+      "profile": "inspect",
+      "title": "Plan with the closing pair reversed",
+      "summary": "A state-changing guide whose closing steps are in the wrong order.",
+      "steps": [
+        {
+          "command": {
+            "id": "demo.save_plan",
+            "major": 1
+          },
+          "purpose": "Save the drafted plan"
+        },
+        {
+          "command": {
+            "id": "journal.request_promote_branch",
+            "major": 1
+          },
+          "purpose": "Request promotion of the agent branch"
+        },
+        {
+          "command": {
+            "id": "agent.attach_brief",
+            "major": 1
+          },
+          "purpose": "Attach the proposal brief"
+        }
+      ]
+    }
+  ]
+}
