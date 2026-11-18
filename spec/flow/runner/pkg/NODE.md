@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-accept]
 satisfies: [REQ-FLOW.RUNNER-001, REQ-FLOW.RUNNER-011]
 covers: []
 depends_on: [CORE.JRN.CANON]

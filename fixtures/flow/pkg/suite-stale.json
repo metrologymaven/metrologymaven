@@ -1,0 +1,9 @@
+{
+  "format": "acceptance-suite@1",
+  "packages": [
+    {
+      "path": "valid",
+      "digest": "sha256:dd049652623f548d2b320b619d1fdab49d0c6f109ed1b5af16b47df26dbc332b"
+    }
+  ]
+}

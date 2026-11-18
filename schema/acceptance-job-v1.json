@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/acceptance-job-v1.json",
+  "title": "acceptance-job@1",
+  "description": "Acceptance-job package manifest `package.json` (spec node FLOW.RUNNER.PKG). The schema is closed, so no field can override gating, milestones or time targets (REQ-006). Rules that need the package folder or the dataset catalogue (journal digest and entry count, kill_after inside the journal, referenced files present with exact letter case and no links, file references differing only by case, dataset IDs and digests in the catalogue, a gating package needing a task_s target, a kill_after package needing a committed_survive_kill check) are checked by the fid-accept `package` validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "job_id", "variant_id", "app", "milestones", "gating", "assistance", "input_mode", "journal", "datasets", "checks", "time_targets"],
+  "properties": {
+    "format": { "const": "acceptance-job@1" },
+    "job_id": { "type": "string", "pattern": "^JOB\\.[A-Z]{1,8}\\.[0-9]{2}$" },
+    "variant_id": { "$ref": "#/$defs/ident" },
+    "app": { "$ref": "#/$defs/ident" },
+    "milestones": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/ident" } },
+    "gating": { "enum": ["gating", "tracked"] },
+    "assistance": { "enum": ["unassisted", "assisted"] },
+    "input_mode": { "enum": ["any", "keyboard_only"] },
+    "journal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sha256"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$" },
+          "sha256": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "checks": { "type": "array", "minItems": 1, "maxItems": 256, "items": { "$ref": "#/$defs/check" } },
+    "time_targets": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "seconds", "verified"],
+        "properties": {
+          "metric": { "enum": ["machine_s", "task_s", "operator_s"] },
+          "seconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 604800 },
+          "verified": { "type": "boolean" }
+        }
+      }
+    },
+    "kill_after": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "journey_map": { "$ref": "#/$defs/ident" }
+  },
+  "$defs": {
+    "ident": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": {
+      "description": "Relative path inside the package: `/`-separated components of ASCII letters, digits, `.`, `_`, `-`; no `.` or `..` component, no component ending in `.`, no reserved Windows device name (checked by the validator).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^(?!.*(^|/)\\.{1,2}(/|$))[A-Za-z0-9._-]{1,100}(/[A-Za-z0-9._-]{1,100}){0,7}$"
+    },
+    "text": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "ranges": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "integer", "minimum": 1 },
+          "to": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "params"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ident" },
+        "kind": {
+          "enum": [
+            "replay_outcome",
+            "all_characteristics_resolved",
+            "value_within_u",
+            "decision_equals",
+            "result_count",
+            "operator_decision_equals",
+            "ors_case",
+            "thickness_extrema",
+            "lexical_identical",
+            "basis_present",
+            "lint_findings_equal",
+            "no_manual_entry",
+            "requirements_equal",
+            "sheet_cells_equal",
+            "index_equals",
+            "verify_verdict",
+            "records_equal",
+            "file_digest",
+            "no_edit_reachable",
+            "no_pointer_events",
+            "basis_label",
+            "committed_survive_kill"
+          ]
+        },
+        "params": { "type": "object" }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "enum": ["replay_outcome", "all_characteristics_resolved", "basis_present", "no_manual_entry", "basis_label", "committed_survive_kill"] } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/none" } } } },
+        { "if": { "properties": { "kind": { "const": "value_within_u" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/value_within_u" } } } },
+        { "if": { "properties": { "kind": { "enum": ["decision_equals", "operator_decision_equals", "thickness_extrema"] } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/truth" } } } },
+        { "if": { "properties": { "kind": { "const": "result_count" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/result_count" } } } },
+        { "if": { "properties": { "kind": { "const": "ors_case" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/ors_case" } } } },
+        { "if": { "properties": { "kind": { "const": "lexical_identical" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/lexical_identical" } } } },
+        { "if": { "properties": { "kind": { "enum": ["lint_findings_equal", "requirements_equal", "index_equals"] } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/expected" } } } },
+        { "if": { "properties": { "kind": { "const": "sheet_cells_equal" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/artefact" } } } },
+        { "if": { "properties": { "kind": { "const": "verify_verdict" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/verify_verdict" } } } },
+        { "if": { "properties": { "kind": { "const": "records_equal" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/records_equal" } } } },
+        { "if": { "properties": { "kind": { "const": "file_digest" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/file_digest" } } } },
+        { "if": { "properties": { "kind": { "const": "no_edit_reachable" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/no_edit_reachable" } } } },
+        { "if": { "properties": { "kind": { "const": "no_pointer_events" } } },
+          "then": { "properties": { "params": { "$ref": "#/$defs/params/no_pointer_events" } } } }
+      ]
+    },
+    "params": {
+      "none": { "type": "object", "additionalProperties": false, "required": [], "properties": {} },
+      "truth": {
+        "type": "object", "additionalProperties": false, "required": ["truth"],
+        "properties": { "truth": { "$ref": "#/$defs/path" } }
+      },
+      "expected": {
+        "type": "object", "additionalProperties": false, "required": ["expected"],
+        "properties": { "expected": { "$ref": "#/$defs/path" } }
+      },
+      "value_within_u": {
+        "type": "object", "additionalProperties": false, "required": ["truth"],
+        "properties": {
+          "truth": { "$ref": "#/$defs/path" },
+          "items": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/text" } }
+        }
+      },
+      "result_count": {
+        "type": "object", "additionalProperties": false, "required": ["count"],
+        "properties": { "count": { "$ref": "#/$defs/count" } }
+      },
+      "ors_case": {
+        "type": "object", "additionalProperties": false, "required": ["cases"],
+        "properties": {
+          "cases": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/text" } }
+        }
+      },
+      "lexical_identical": {
+        "type": "object", "additionalProperties": false, "required": ["artefact", "expected"],
+        "properties": { "artefact": { "$ref": "#/$defs/text" }, "expected": { "$ref": "#/$defs/path" } }
+      },
+      "artefact": {
+        "type": "object", "additionalProperties": false, "required": ["artefact"],
+        "properties": { "artefact": { "$ref": "#/$defs/text" } }
+      },
+      "verify_verdict": {
+        "type": "object", "additionalProperties": false, "required": ["expected"],
+        "properties": { "expected": { "$ref": "#/$defs/text" } }
+      },
+      "records_equal": {
+        "type": "object", "additionalProperties": false, "required": ["against"],
+        "properties": { "against": { "$ref": "#/$defs/ident" } }
+      },
+      "file_digest": {
+        "type": "object", "additionalProperties": false, "required": ["artefact"],
+        "properties": { "artefact": { "$ref": "#/$defs/text" }, "sha256": { "$ref": "#/$defs/digest" } }
+      },
+      "no_edit_reachable": {
+        "type": "object", "additionalProperties": false, "required": ["allowed_commands"],
+        "properties": {
+          "allowed_commands": {
+            "type": "array", "maxItems": 256, "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$" }
+          },
+          "steps": { "$ref": "#/$defs/ranges" }
+        }
+      },
+      "no_pointer_events": {
+        "type": "object", "additionalProperties": false, "required": ["steps"],
+        "properties": { "steps": { "$ref": "#/$defs/ranges" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+# Expected findings per package folder or suite index, labelled by hand from
+# REQ-FLOW.RUNNER.PKG-001..006 and the hostile-input rules in the module docs.
+# Format: <fixture>\t<CODE> <subject>, in the validator's output order (code, then subject).
+# `ok` means no findings. Packages are checked against catalogue.toml.
+valid	ok
+no-gating	PKG-SCHEMA gating
+bad-check	PKG-CHECK checks[1].kind
+kill-no-check	PKG-KILL kill_after
+kill-out-of-range	PKG-KILL kill_after
+survive-no-kill	PKG-KILL kill_after
+gating-no-task	PKG-TARGET time_targets
+bad-journal-digest	PKG-DIGEST journal.sha256
+unknown-dataset	PKG-DATASET datasets[0].id
+dataset-digest	PKG-DATASET datasets[0].sha256
+traversal	PKG-SCHEMA journal.file
+absolute-param	PKG-CHECK checks[1].params.truth
+dup-check-id	PKG-SCHEMA checks[1].id
+case-collision	PKG-SCHEMA checks[1].params.truth
+wrong-case	PKG-DIGEST journal.file
+extra-field	PKG-SCHEMA gating_override
+bad-params	PKG-CHECK checks[1].params.tolerance
+bad-params	PKG-CHECK checks[1].params.truth
+missing-journal	PKG-DIGEST journal.file
+no-checks	PKG-SCHEMA checks
+device-name	PKG-CHECK checks[1].params.truth
+names-manifest	PKG-SCHEMA checks[1].params.truth
+dup-key	PKG-SCHEMA package.json
+suite.json	ok
+suite-stale.json	PKG-DIGEST packages[0].digest
+suite-bad.json	PKG-SCHEMA packages[1].path
+suite-bad.json	PKG-SCHEMA packages[2].path
+suite-bad.json	PKG-SCHEMA packages[3].path
+suite-bad.json	PKG-SCHEMA packages[4].path
+suite-bad.json	PKG-SCHEMA packages[5].digest
