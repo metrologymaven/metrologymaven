@@ -1,6 +1,6 @@
 [package]
 name = "fid-store"
-description = "Metrology Maven local storage: project directory layout and write lock (spec node CORE.STO.LAYOUT)"
+description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,11 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# Canonical fid-chunks@1 manifests (RFC 8785) and the shared sha256: digest type.
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+# Incremental SHA-256 while verifying chunks; already in the tree through fid-canon.
+sha2 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 # Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),

@@ -1,0 +1,165 @@
+{
+  "cases": [
+    {
+      "name": "ac1-mini",
+      "suite": "suite-mini",
+      "catalog": "catalog-index-mini.json",
+      "jobs": "jobs",
+      "exit": 0,
+      "findings": []
+    },
+    {
+      "name": "ac2-leak",
+      "suite": "suite-leak",
+      "catalog": "catalog-index-mini.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "oracle_leak",
+          "task": "leak-01",
+          "file": "in/notes.json",
+          "subject": null
+        }
+      ]
+    },
+    {
+      "name": "ac3-uncovered",
+      "suite": "suite-mini",
+      "catalog": "catalog-index-uncovered.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "uncovered_workflow",
+          "task": null,
+          "file": null,
+          "subject": "probe.measure_hole"
+        }
+      ]
+    },
+    {
+      "name": "ac4-prompt",
+      "suite": "suite-prompt",
+      "catalog": "catalog-index-mini.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "oracle_in_prompt",
+          "task": "prompt-01",
+          "file": "tasks/prompt-01/task.json",
+          "subject": "PL1-FLAT"
+        }
+      ]
+    },
+    {
+      "name": "ac5-faults",
+      "suite": "suite-faults",
+      "catalog": "catalog-index-faults.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "uncovered_workflow",
+          "task": null,
+          "file": null,
+          "subject": "report.export_pdf"
+        },
+        {
+          "rule": "parse_error",
+          "task": "fa-abs",
+          "file": "tasks/fa-abs/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "fa-dotdot",
+          "file": "tasks/fa-dotdot/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "digest_mismatch",
+          "task": "fa-golden",
+          "file": "tasks/fa-golden/task.json",
+          "subject": "golden_digest"
+        },
+        {
+          "rule": "oracle_leak",
+          "task": "fa-golden-copy",
+          "file": "in/history.txt",
+          "subject": null
+        },
+        {
+          "rule": "oracle_leak",
+          "task": "fa-leak",
+          "file": "out/previous.json",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "fa-link",
+          "file": "tasks/fa-link/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "unknown_job",
+          "task": "fa-nojob",
+          "file": "tasks/fa-nojob/task.json",
+          "subject": "JOB.ACC.99"
+        },
+        {
+          "rule": "oracle_in_prompt",
+          "task": "fa-value",
+          "file": "tasks/fa-value/task.json",
+          "subject": "PL1-FLAT"
+        }
+      ]
+    },
+    {
+      "name": "hand-hostile",
+      "suite": "suite-hostile",
+      "catalog": "catalog-index-mini.json",
+      "jobs": "jobs",
+      "exit": 1,
+      "findings": [
+        {
+          "rule": "oracle_leak",
+          "task": "h-case",
+          "file": "IN/oracle.json",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "h-collide",
+          "file": "tasks/h-collide/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "oracle_leak",
+          "task": "h-dot",
+          "file": "in./copy.txt",
+          "subject": null
+        },
+        {
+          "rule": "parse_error",
+          "task": "h-dup",
+          "file": "tasks/h-dup/start.tar",
+          "subject": null
+        },
+        {
+          "rule": "oracle_in_prompt",
+          "task": "h-given-other",
+          "file": "tasks/h-given-other/task.json",
+          "subject": "PL1-FLAT"
+        },
+        {
+          "rule": "oracle_in_prompt",
+          "task": "h-lower",
+          "file": "tasks/h-lower/task.json",
+          "subject": "PL1-FLAT"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# The register points at review.paths.ignore, but this file names it review.paths.skip.
+review:
+  paths:
+    skip:
+      - standards/**
+      - customers/**
