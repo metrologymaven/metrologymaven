@@ -6,6 +6,8 @@ fixtures/hal/idl/stamp/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
+# FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
+fixtures/flow/pkg/** -text
 # Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
 # part of the test data, and make_fixtures.py --check compares bytes.
 fixtures/io/qif/xml/parse/** -text

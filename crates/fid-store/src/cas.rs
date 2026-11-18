@@ -756,7 +756,7 @@ fn read_some(r: &mut impl Read, buf: &mut [u8]) -> io::Result<usize> {
 }
 
 /// A fresh random temporary file name (32 lowercase hex digits).
-fn temp_name() -> String {
+pub(crate) fn temp_name() -> String {
     use std::hash::BuildHasher;
     static N: AtomicU64 = AtomicU64::new(0);
     let n = N.fetch_add(1, Ordering::SeqCst);

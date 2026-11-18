@@ -12,6 +12,10 @@ use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
+                     cargo xtask data fetch (<id>... | --all | --owner <DOMAIN>) [--cache <dir>] [--offline] \
+                     [--catalogue <toml>]\n       \
+                     cargo xtask data path <id> [--cache <dir>] [--offline] [--catalogue <toml>]\n       \
+                     cargo xtask data verify [--cache <dir>]\n       \
                      cargo xtask bots-check --register <toml> --restricted <txt> --today <YYYY-MM-DD> \
                      [--review-export <json>]\n       \
                      cargo xtask plat-matrix validate <file>\n       \
@@ -46,7 +50,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
-        Some("datasets-check") => datasets_check(&args),
+        Some("datasets-check" | "data") => datasets_check(&args),
         Some("bots-check") => bots_check(&args[1..]),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
@@ -105,7 +109,8 @@ fn apps_policy_check(args: &[String]) -> ExitCode {
     ExitCode::from(1)
 }
 
-/// ECO.DATA.CAT: runs the `fid-data` binary. `fid-data` is a `tool` crate, and the layer
+/// ECO.DATA.CAT (`datasets-check`) and ECO.DATA.FETCH (`data fetch|path|verify`): runs the
+/// `fid-data` binary. `fid-data` is a `tool` crate, and the layer
 /// rule forbids depending on one, so the wrapper starts it through Cargo instead.
 fn datasets_check(args: &[String]) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());

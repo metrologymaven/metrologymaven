@@ -1,0 +1,35 @@
+# File-reference verdicts, labelled by hand from the path rules of FLOW.RUNNER.PKG
+# (relative, ASCII letters/digits/._- components, no . or .., no trailing dot, no
+# reserved Windows device names, at most 255 bytes and 8 components).
+# Format: ok|bad<TAB>path
+ok	journal.jsonl
+ok	truth/values.json
+ok	a/b/c/d/e/f/g/h
+ok	.hidden
+ok	console.json
+ok	com0.txt
+ok	data_v1-2.csv
+bad	
+bad	../journal.jsonl
+bad	a/../b
+bad	./journal.jsonl
+bad	/etc/passwd
+bad	C:/journal.jsonl
+bad	C:journal.jsonl
+bad	a\b
+bad	journal.jsonl/
+bad	a//b
+bad	a/b/c/d/e/f/g/h/i
+bad	journal.
+bad	con
+bad	CON.json
+bad	nul.txt
+bad	aux
+bad	prn.tar.gz
+bad	com1
+bad	LPT9.log
+bad	journal jsonl
+bad	journ*l
+bad	journal.jsonl:stream
+bad	jörnal.jsonl
+bad	~/journal

@@ -755,3 +755,63 @@ pub fn check_files(catalogue: &Path, domains: &Path) -> Vec<Finding> {
         Err(e) => file_finding(DATA_IO, e),
     }
 }
+
+// ------------------------------------------------------------------ entries for the fetch tool
+
+/// The fields of one catalogue entry the fetch tool needs (spec node `ECO.DATA.FETCH`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogueEntry {
+    pub id: String,
+    pub owner: String,
+    pub size_bytes: u64,
+    pub sha256: Digest,
+    /// In catalogue order: the fetch tool tries them one after the other.
+    pub urls: Vec<String>,
+}
+
+/// A URL the fetch tool may read: `http://` or `https://` as the admission check accepts,
+/// or, when `allow_file`, `file://` with a non-empty rest (tests and local mirrors).
+fn is_fetch_url(s: &str, allow_file: bool) -> bool {
+    is_url(s)
+        || (allow_file && s.strip_prefix("file://").is_some_and(|r| !r.is_empty() && !r.chars().any(char::is_control)))
+}
+
+/// Reads the entries of catalogue text for fetching. Unlike [`check`] this neither needs
+/// the domain list nor judges licences: it only requires a well-formed ID, owner,
+/// `size_bytes`, `sha256` and a non-empty `urls` list in every entry, and unique IDs.
+/// `file://` URLs are accepted only with `allow_file`, which callers set only for a
+/// catalogue the user named explicitly, never for the repository's default `datasets.toml`.
+pub fn entries(catalogue: &str, allow_file: bool) -> Result<Vec<CatalogueEntry>, String> {
+    if catalogue.len() as u64 > MAX_INPUT_BYTES {
+        return Err(format!("catalogue is larger than {MAX_INPUT_BYTES} bytes"));
+    }
+    let doc = parse_doc(catalogue)?;
+    let mut out: Vec<CatalogueEntry> = Vec::with_capacity(doc.datasets.len());
+    for t in &doc.datasets {
+        let bad = |what: &str| format!("line {}: missing or invalid {what}", t.line);
+        let id = nonempty_str(t, "id").filter(|s| is_entry_id(s)).ok_or_else(|| bad("id"))?;
+        let owner = nonempty_str(t, "owner").ok_or_else(|| bad("owner"))?;
+        let size_bytes = match t.keys.get("size_bytes") {
+            Some(Value::Int(n)) => u64::try_from(*n).map_err(|_| bad("size_bytes"))?,
+            _ => return Err(bad("size_bytes")),
+        };
+        let sha256 = nonempty_str(t, "sha256")
+            .and_then(|s| Digest::parse(&format!("sha256:{s}")).ok())
+            .ok_or_else(|| bad("sha256"))?;
+        let urls: Vec<String> = match t.keys.get("urls") {
+            Some(Value::Arr(items)) if !items.is_empty() => items
+                .iter()
+                .map(|v| match v {
+                    Value::Str(s) if is_fetch_url(s, allow_file) => Ok(s.clone()),
+                    _ => Err(bad("urls")),
+                })
+                .collect::<Result<_, _>>()?,
+            _ => return Err(bad("urls")),
+        };
+        if out.iter().any(|e| e.id == id) {
+            return Err(format!("line {}: id {id} used twice", t.line));
+        }
+        out.push(CatalogueEntry { id: id.to_string(), owner: owner.to_string(), size_bytes, sha256, urls });
+    }
+    Ok(out)
+}
