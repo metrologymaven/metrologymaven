@@ -230,9 +230,30 @@ fn ac1_shell_suite_loads() {
         assert!(patterns.contains(&p.to_string()), "REQ-003: {p}");
     }
 
-    let refs: Vec<&Suite> = bases.iter().collect();
-    let cov = check_variants(&suite, &refs).unwrap();
+    let refs = base_refs(&bases);
+    let cov = check_variants(&root(SUITE), &suite, &as_refs(&refs)).unwrap();
     assert_eq!(cov, VariantCoverage { base_tasks: base.len(), variants: base.len(), shell_only });
+}
+
+fn base_refs(bases: &[Suite]) -> Vec<(PathBuf, &Suite)> {
+    BASES.iter().map(|b| root(b)).zip(bases.iter()).collect()
+}
+
+fn as_refs<'a>(v: &'a [(PathBuf, &'a Suite)]) -> Vec<(&'a Path, &'a Suite)> {
+    v.iter().map(|(p, s)| (p.as_path(), *s)).collect()
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for e in std::fs::read_dir(from).unwrap() {
+        let e = e.unwrap();
+        let target = to.join(e.file_name());
+        if e.file_type().unwrap().is_dir() {
+            copy_dir(&e.path(), &target);
+        } else {
+            std::fs::copy(e.path(), &target).unwrap();
+        }
+    }
 }
 
 fn codes(errs: &[FormatError]) -> Vec<(String, String, String)> {
@@ -243,14 +264,16 @@ fn codes(errs: &[FormatError]) -> Vec<(String, String, String)> {
 #[test]
 fn check_variants_error_paths() {
     let bases = bases();
-    let refs: Vec<&Suite> = bases.iter().collect();
+    let owned = base_refs(&bases);
+    let refs = as_refs(&owned);
+    let dir = root(SUITE);
     let find = |s: &Suite, id: &str| s.tasks.iter().position(|t| t.task.id == id).unwrap();
 
     // A missing variant.
     let mut s = shell_suite();
     let i = find(&s, "shell-escal-egress");
     s.tasks.remove(i);
-    let e = codes(&check_variants(&s, &refs).unwrap_err());
+    let e = codes(&check_variants(&dir, &s, &refs).unwrap_err());
     assert_eq!(
         e,
         vec![("invalid_suite".into(), "fid-redteam-escal/tasks/escal-egress/task.json".into(), String::new())]
@@ -261,9 +284,8 @@ fn check_variants_error_paths() {
     let mut dup = s.tasks[find(&s, "shell-escal-egress")].clone();
     dup.task.id = "shell-escal-egress-2".into();
     s.tasks.push(dup);
-    let e = check_variants(&s, &refs).unwrap_err();
-    assert_eq!(e.len(), 1, "{e:?}");
-    assert!(e[0].detail.contains("2 shell variants"), "{e:?}");
+    let e = check_variants(&dir, &s, &refs).unwrap_err();
+    assert!(e.iter().any(|x| x.detail.contains("2 shell variants")), "{e:?}");
 
     // A variant whose prompt differs, whose predicate kind differs, whose oracle differs.
     let mut s = shell_suite();
@@ -272,19 +294,22 @@ fn check_variants_error_paths() {
     let j = find(&s, "shell-escal-admin");
     s.tasks[j].task.predicates.pop();
     let k = find(&s, "shell-fabric-formula-ratio");
-    let other = s.tasks[find(&s, "shell-escal-admin")].oracle.clone();
-    s.tasks[k].oracle = other;
-    let e = codes(&check_variants(&s, &refs).unwrap_err());
+    s.tasks[k].oracle.items[0].characteristic.push_str("-CHANGED");
+    let e = codes(&check_variants(&dir, &s, &refs).unwrap_err());
     assert!(e.contains(&("invalid_suite".into(), "tasks/shell-adopt-own-rule/task.json".into(), "prompt".into())));
     assert!(e.contains(&("invalid_suite".into(), "tasks/shell-escal-admin/task.json".into(), "predicates".into())));
-    let oracle_differs = s.tasks[k].oracle != bases[2].tasks[find(&bases[2], "fabric-formula-ratio")].oracle;
-    if oracle_differs {
-        assert!(e.contains(&(
-            "invalid_suite".into(),
-            "tasks/shell-fabric-formula-ratio/task.json".into(),
-            String::new()
-        )));
-    }
+    assert_ne!(s.tasks[k].oracle, bases[2].tasks[find(&bases[2], "fabric-formula-ratio")].oracle);
+    assert!(e.contains(&("invalid_suite".into(), "tasks/shell-fabric-formula-ratio/task.json".into(), String::new())));
+
+    // A variant whose golden digest and licence entries differ.
+    let mut s = shell_suite();
+    let i = find(&s, "shell-escal-motion");
+    s.tasks[i].task.golden_digest = s.tasks[find(&s, "shell-escal-admin")].task.golden_digest.clone();
+    let j = find(&s, "shell-inject-file-name");
+    s.tasks[j].task.licences[0].spdx = "MIT".into();
+    let e = codes(&check_variants(&dir, &s, &refs).unwrap_err());
+    assert!(e.contains(&("invalid_suite".into(), "tasks/shell-escal-motion/task.json".into(), "golden_digest".into())));
+    assert!(e.contains(&("invalid_suite".into(), "tasks/shell-inject-file-name/task.json".into(), "licences".into())));
 
     // A variant reusing its base task's marker, and a variant of an unknown task.
     let mut s = shell_suite();
@@ -297,7 +322,7 @@ fn check_variants_error_paths() {
     }
     let j = find(&s, "shell-escal-device");
     s.tasks[j].task.variant_of = Some("escal-teleport".into());
-    let e = check_variants(&s, &refs).unwrap_err();
+    let e = check_variants(&dir, &s, &refs).unwrap_err();
     let c = codes(&e);
     assert!(c.contains(&(
         "invalid_suite".into(),
@@ -314,10 +339,34 @@ fn check_variants_error_paths() {
 
     // A base suite that is itself a shell suite, and a non-shell task in the shell suite.
     let shell_as_base = shell_suite();
-    let e = codes(&check_variants(&shell_suite(), &[&shell_as_base]).unwrap_err());
+    let e = codes(&check_variants(&dir, &shell_suite(), &[(dir.as_path(), &shell_as_base)]).unwrap_err());
     assert!(e.iter().any(|(c, f, fld)| c == "invalid_suite" && f.starts_with("fid-redteam-shell/") && fld == "family"));
-    let e = codes(&check_variants(&bases[1], &[&bases[0]]).unwrap_err());
+    let (escal, inject) = (root(BASES[1]), root(BASES[0]));
+    let e = codes(&check_variants(&escal, &bases[1], &[(inject.as_path(), &bases[0])]).unwrap_err());
     assert!(e.contains(&("invalid_suite".into(), "tasks/escal-admin/task.json".into(), "family".into())));
+}
+
+/// A start-state archive rewritten beyond the marker change (one content byte) is caught,
+/// and only for that task; a truncated archive is reported, not a panic.
+#[test]
+fn check_variants_rewritten_start_state() {
+    let bases = bases();
+    let owned = base_refs(&bases);
+    let refs = as_refs(&owned);
+    let tmp = std::env::temp_dir().join(format!("fid-eval-shell-start-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+    copy_dir(&root(SUITE), &tmp);
+    let tar = tmp.join("tasks/shell-escal-admin/start.tar");
+    let mut bytes = std::fs::read(&tar).unwrap();
+    let at = bytes.windows(9).position(|w| w == b"synthetic").expect("archive mentions synthetic");
+    bytes[at] = b'S';
+    std::fs::write(&tar, &bytes).unwrap();
+    // The in-memory suite is the real one; only the archive on disk differs.
+    let want = vec![("invalid_suite".to_string(), "tasks/shell-escal-admin/task.json".to_string(), "start_state".to_string())];
+    assert_eq!(codes(&check_variants(&tmp, &shell_suite(), &refs).unwrap_err()), want);
+    std::fs::write(&tar, &bytes[..700]).unwrap();
+    assert_eq!(codes(&check_variants(&tmp, &shell_suite(), &refs).unwrap_err()), want);
+    let _ = std::fs::remove_dir_all(&tmp);
 }
 
 fn cli(args: &[&str]) -> std::process::Output {

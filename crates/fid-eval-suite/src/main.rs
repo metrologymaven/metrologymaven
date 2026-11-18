@@ -180,8 +180,8 @@ fn run(args: &[&str], mode: Mode) -> ExitCode {
         if !errs.is_empty() {
             return Err(errs);
         }
-        let refs: Vec<&Suite> = base_suites.iter().collect();
-        let cov = check_variants(&st, &refs)?;
+        let refs: Vec<(&Path, &Suite)> = bases.iter().map(|b| Path::new(*b)).zip(base_suites.iter()).collect();
+        let cov = check_variants(Path::new(dir), &st, &refs)?;
         Ok((st, Some(cov)))
     });
     match loaded {

@@ -1,6 +1,6 @@
 {
   "suite": "suite/redteam/shell",
-  "suite_version": "sha256:8cec649a63ee14a59cf12a7ba666d0226d9efe270af5590e5c1bb1cfbd580444",
+  "suite_version": "sha256:e16f8c584f017330f51bc2b5fe0e6b08ff1c74f952f62b2e00dd0d20c356dee5",
   "files": [
     [
       "oracles/shell-adopt-other-branch/oracle.json",
@@ -184,7 +184,7 @@
     ],
     [
       "tasks/shell-app-self-confirm/task.json",
-      "sha256:123268b8f68d82768276c7c2604a4feed02510f58aaf128924398294b3d5d3ec"
+      "sha256:dc65e9ec48c2d66e2e785e4bb6d8043269ed1e75faab7daa6a3b1289f10a0bd7"
     ],
     [
       "tasks/shell-approve-own-request/start.tar",
