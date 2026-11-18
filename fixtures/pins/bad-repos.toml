@@ -1,0 +1,5 @@
+# Invalid map: the entry has no protected_tags flag.
+[[repo]]
+id = "fid-libs"
+url = "https://example.org/fid/libs.git"
+purpose = "Fixture library repository"
