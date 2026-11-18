@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-timeline]
+built_pr: 77
 satisfies: [REQ-ECO.COMM-005]
 covers: []
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # ECO.COMM.TIMELINE: PR-timeline evaluator
@@ -44,11 +46,11 @@ Implements the Craft-style PR timeline: a reminder after 14 days and a proposed 
 - **REQ-ECO.COMM.TIMELINE-002** Events by accounts in the bot list shall not change the blocker state.
 - **REQ-ECO.COMM.TIMELINE-003** The author-blocked clock shall be the sum of all intervals in which the author was the blocker, up to `--now`.
 - **REQ-ECO.COMM.TIMELINE-004** When the clock reaches 14 days and no reminder has been posted since the author last stopped being the blocker, the evaluator shall return `remind`; when it reaches 30 days and no closure proposal exists, it shall return `propose-close`; otherwise `none`.
-- **REQ-ECO.COMM.TIMELINE-005** The thresholds (14 and 30 days) shall be read from a config file, and the evaluator shall use only the Python standard library.
+- **REQ-ECO.COMM.TIMELINE-005** The thresholds (14 and 30 days) shall be read from a config file, and the evaluator shall have no dependencies outside the project workspace.
 
 ## Acceptance criteria
 
-- **AC-1** Given `fixtures/timeline/active.json` (changes requested on day 0, author push on day 5, changes requested on day 6), when `python tools/timeline.py --events fixtures/timeline/active.json --now <day 12> --json` runs, then it returns `{"clock_days": 11, "action": "none"}`.
+- **AC-1** Given `fixtures/timeline/active.json` (changes requested on day 0, author push on day 5, changes requested on day 6), when `fid-timeline --events fixtures/timeline/active.json --now <day 12> --json` runs, then it returns `{"clock_days": 11, "action": "none"}`.
 - **AC-2** Given `fixtures/timeline/stalled.json` (changes requested on day 0, nothing after), when run at day 15, then the action is `remind`; given the same with a posted reminder at day 14, at day 20 the action is `none`; at day 31 it is `propose-close`.
 - **AC-3** Given `fixtures/timeline/bots.json` (as stalled, plus bot comments on days 3 and 10 by an account in `fixtures/timeline/bots.toml`), when run at day 15, then the action is `remind`.
 - **AC-4** Given `fixtures/timeline/maintainer-blocked.json` (review requested, no maintainer response for 40 days), when run at day 40, then the clock is 0 and the action is `none`.
@@ -56,21 +58,23 @@ Implements the Craft-style PR timeline: a reminder after 14 days and a proposed 
 
 ## Design
 
-- **Registry command(s):** none; repository tool `python tools/timeline.py --events <json> --now <ISO8601> [--config <toml-or-json>] [--json]`.
-- **Data structures:** events `[{at, actor, kind}]` with kinds `opened`, `review_changes_requested`, `review_approved`, `review_commented`, `label_added`, `label_removed`, `commit_pushed`, `comment`, `review_requested`, `bot_reminder_posted`, `bot_close_proposed`; config `remind_days`, `close_days`, `maintainers[]`, `bots[]`, `author`. Config parsed as JSON (stdlib) or TOML via `tomllib` where available (Python 3.11+).
+- **Registry command(s):** none; repository tool `fid-timeline --events <json> --now <RFC3339> [--config <toml-or-json>] [--json]`.
+- **Data structures:** events `[{at, actor, kind}]` (plus `label` on label events) with kinds `opened`, `review_changes_requested`, `review_approved`, `review_commented`, `label_added`, `label_removed`, `commit_pushed`, `comment`, `review_requested`, `bot_reminder_posted`, `bot_close_proposed`; config `remind_days`, `close_days`, `maintainers[]`, `bots[]`, `author`. Config parsed as JSON or a bounded TOML subset; a missing `maintainers` key means every non-author, non-bot actor counts as a maintainer, with a warning on stderr.
 - **Algorithm:** sort events by (time, original index); state machine over blocker ∈ {author, maintainers}; accumulate author-blocked seconds; apply thresholds and idempotence markers.
 - **Errors:** `TIMELINE-INPUT`, `TIMELINE-CONFIG`.
 - **Determinism:** D0 given `--now`.
 - **Performance budget:** under 100 ms per PR with 1 000 events [unverified].
-- **Crate:** not Rust; `tools/timeline.py`, standard library only.
+- **Crate:** `fid-timeline` (layer `tool`), depending only on workspace crates (`fid-canon` for JSON). Time is integer UTC seconds from RFC 3339 timestamps with an offset; the clock is elapsed calendar time (no business-hours or holiday rules).
 
 ## Test fixtures
 
-Hand-written event JSON files with relative day offsets resolved from a fixed epoch, under `tools/tests/fixtures/timeline/`.
+Event JSON files written from relative day offsets on a fixed epoch, with expected clocks and actions, by the independent Python reference `fixtures/timeline/make_cases.py`, under `fixtures/timeline/`.
 
 ## Build prompt
 
-> In the spec repository (the tool is shared with code repositories later), write `tools/timeline.py`, Python 3.9+ stdlib only. Input: an events JSON list (`at` ISO8601, `actor`, `kind` as listed in spec node ECO.COMM.TIMELINE), a config (JSON; TOML only if `tomllib` exists) with `author`, `maintainers`, `bots`, `remind_days` (14), `close_days` (30), and `--now`. The author becomes blocker on a maintainer's changes-requested review or `waiting-on-author` label; stops on author push, author comment, review re-request or label removal; bot events are ignored. Sum author-blocked time; return `remind` at ≥ remind_days unless a reminder was posted since the author last stopped being blocker, `propose-close` at ≥ close_days unless already proposed, else `none`. Output `{"clock_days": <int floor>, "action": ...}`. Exit 1 with `TIMELINE-INPUT` on malformed input. Write `unittest` tests for AC-1..AC-5.
+> Write the Rust crate `fid-timeline` (layer `tool`, no dependencies outside the workspace) with a binary `fid-timeline --events <json> --now <RFC3339> [--config <toml-or-json>] [--json]`. Input: an events JSON list (`at` RFC 3339 with offset, `actor`, `kind` as listed in spec node ECO.COMM.TIMELINE, `label` on label events), a config (JSON or a bounded TOML subset) with `author`, `maintainers`, `bots`, `remind_days` (14), `close_days` (30), and `--now`. The author becomes blocker on a maintainer's changes-requested review or `waiting-on-author` label; stops on author push, author comment, review re-request or label removal; bot events are ignored. Sum author-blocked time in integer seconds; return `remind` at ≥ remind_days unless a reminder was posted since the author last stopped being blocker, `propose-close` at ≥ close_days unless already proposed, else `none`. Output `{"clock_days": <int floor>, "action": ...}`. Exit 1 with `TIMELINE-INPUT` on malformed input. Test AC-1..AC-5 against fixtures whose expected values come from an independent Python reference.
+
+Decision: REQ-005 implementation language changed from a Python-stdlib tool to the Rust crate `fid-timeline` (PR #77). Approved by maintainer 2026-11-18.
 
 ## Open questions
 

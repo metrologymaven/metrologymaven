@@ -1,0 +1,26 @@
+# cargo-fuzz harness (AUTO.CTRL.WIRE AC-4). Not a workspace member; needs nightly:
+#   cd crates/fid-ctrl/fuzz
+#   cargo +nightly fuzz run ctrl_frame ../../../fixtures/ctrl/frames \
+#     -- -max_total_time=600 -timeout=1 -rss_limit_mb=64 -malloc_limit_mb=64
+[package]
+name = "fid-ctrl-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-ctrl = { path = ".." }
+
+[[bin]]
+name = "ctrl_frame"
+path = "fuzz_targets/ctrl_frame.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this harness out of the repository workspace.
+[workspace]
