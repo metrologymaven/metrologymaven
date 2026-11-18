@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-geo-types]
 satisfies: [REQ-GEO.TYPES-001, REQ-GEO.TYPES-002]
 covers: []
 depends_on: []
