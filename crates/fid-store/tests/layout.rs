@@ -2,9 +2,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_store::layout::{
-    format_text, host_name, is_network_fs_magic, is_network_fs_name, is_network_windows_path, is_store_name,
-    is_uuid, lock_text, parse_format, parse_lock_info, parse_storage_writers, path_chars, user_cache_dir,
-    windows_verbatim, CREATED_ENTRIES, MAX_PATH_CHARS,
+    format_text, host_name, is_network_fs_magic, is_network_fs_name, is_network_windows_path, is_store_name, is_uuid,
+    lock_text, parse_format, parse_lock_info, parse_storage_writers, path_chars, user_cache_dir, windows_verbatim,
+    CREATED_ENTRIES, MAX_PATH_CHARS,
 };
 use fid_store::{Area, HexName, LockInfo, OpenMode, ProjectLocation, StoreError, StoreWarning};
 use std::io::{BufRead, BufReader, Write};
@@ -166,10 +166,7 @@ fn req002_cache_dir_is_per_user_and_outside_the_project() {
     fn env(pairs: &'static [(&'static str, &'static str)]) -> impl Fn(&str) -> Option<std::ffi::OsString> {
         move |k: &str| pairs.iter().find(|(n, _)| *n == k).map(|(_, v)| std::ffi::OsString::from(*v))
     }
-    assert_eq!(
-        user_cache_dir("linux", env(&[("HOME", "/home/u")])),
-        Some(Path::new("/home/u").join(".cache"))
-    );
+    assert_eq!(user_cache_dir("linux", env(&[("HOME", "/home/u")])), Some(Path::new("/home/u").join(".cache")));
     assert_eq!(
         user_cache_dir("linux", env(&[("HOME", "/home/u"), ("XDG_CACHE_HOME", "/xdg")])),
         Some(PathBuf::from("/xdg"))
@@ -299,7 +296,15 @@ fn path_of_len(base: &Path, total: usize) -> PathBuf {
     let mut rem = total - s.chars().count();
     assert!(rem >= 2);
     while rem > 0 {
-        let take = if rem > 101 { if rem - 101 >= 2 { 100 } else { 98 } } else { rem - 1 };
+        let take = if rem > 101 {
+            if rem - 101 >= 2 {
+                100
+            } else {
+                98
+            }
+        } else {
+            rem - 1
+        };
         s.push(std::path::MAIN_SEPARATOR);
         s.push_str(&"d".repeat(take));
         rem -= take + 1;
@@ -384,8 +389,10 @@ fn ac5_session_100_creates_only_safe_names() {
                     other => panic!("area {other}"),
                 };
                 let subs: Vec<HexName> = if *sub == "-" { vec![] } else { vec![hex(sub)] };
-                let bytes: Vec<u8> =
-                    (0..content.len()).step_by(2).map(|i| u8::from_str_radix(&content[i..i + 2], 16).unwrap()).collect();
+                let bytes: Vec<u8> = (0..content.len())
+                    .step_by(2)
+                    .map(|i| u8::from_str_radix(&content[i..i + 2], 16).unwrap())
+                    .collect();
                 lock.as_ref().unwrap().write_file(area, &subs, &hex(name), &bytes).unwrap();
                 written.push((area, subs, hex(name), bytes));
                 puts += 1;
@@ -400,7 +407,9 @@ fn ac5_session_100_creates_only_safe_names() {
     let mut folded = std::collections::BTreeSet::new();
     for path in &listing {
         for part in path.split('/') {
-            assert!(!part.is_empty() && part.bytes().all(|b| matches!(b, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-')));
+            assert!(
+                !part.is_empty() && part.bytes().all(|b| matches!(b, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-'))
+            );
             assert!(is_store_name(part), "{part}");
         }
         // All names are ASCII (checked above), so NFC is the identity; fold case.
@@ -413,7 +422,8 @@ fn ac5_session_100_creates_only_safe_names() {
 
 #[test]
 fn req007_user_text_never_becomes_a_name() {
-    for bad in ["", "a", "AB", "ab/cd", "..", "../ab", "ab.cd", "\u{e9}a", "Ab", "lock", "g0", "a".repeat(129).as_str()] {
+    for bad in ["", "a", "AB", "ab/cd", "..", "../ab", "ab.cd", "\u{e9}a", "Ab", "lock", "g0", "a".repeat(129).as_str()]
+    {
         let err = HexName::new(bad).unwrap_err();
         assert_eq!(err.code(), "invalid_name", "{bad:?}");
     }

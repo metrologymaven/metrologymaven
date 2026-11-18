@@ -50,7 +50,7 @@ fn step(cur: &OwnedFd, name: &OsStr, create: bool) -> io::Result<OwnedFd> {
 
 pub(super) fn read_bounded(f: &mut File, limit: u64) -> io::Result<Vec<u8>> {
     let mut buf = Vec::new();
-    f.by_ref().take(limit.saturating_add(1)).read_to_end(&mut buf)?;
+    Read::by_ref(f).take(limit.saturating_add(1)).read_to_end(&mut buf)?;
     if buf.len() as u64 > limit {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "file larger than allowed"));
     }

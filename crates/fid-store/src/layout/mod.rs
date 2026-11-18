@@ -155,9 +155,14 @@ pub enum StoreError {
     /// The project folder is on a network file system; write opens are refused.
     NetworkFsUnsupported,
     /// `format` names a newer layout than this build supports.
-    LayoutTooNew { found: u32, supported: u32 },
+    LayoutTooNew {
+        found: u32,
+        supported: u32,
+    },
     /// The absolute project path is longer than [`MAX_PATH_CHARS`].
-    PathTooLong { chars: usize },
+    PathTooLong {
+        chars: usize,
+    },
     /// The folder is not a project (missing or malformed `format`, missing areas).
     NotAProject(String),
     /// `create` was given a folder that is not empty.
@@ -322,7 +327,13 @@ impl ProjectLocation {
     }
 
     /// Reads `<area>/<subdirs...>/<name>`, failing if it is larger than `limit` bytes.
-    pub fn read_file(&self, area: Area, subdirs: &[HexName], name: &HexName, limit: u64) -> Result<Vec<u8>, StoreError> {
+    pub fn read_file(
+        &self,
+        area: Area,
+        subdirs: &[HexName],
+        name: &HexName,
+        limit: u64,
+    ) -> Result<Vec<u8>, StoreError> {
         let d = descend(&self.dir, area, subdirs, false)?;
         Ok(d.read_file(name.as_str(), limit)?)
     }
@@ -635,7 +646,8 @@ pub fn parse_storage_writers(text: &str) -> Result<Vec<String>, String> {
             continue;
         }
         if let Some(s) = line.strip_prefix('[') {
-            section = Some(s.strip_suffix(']').ok_or_else(|| format!("line {}: bad section", i + 1))?.trim().to_string());
+            section =
+                Some(s.strip_suffix(']').ok_or_else(|| format!("line {}: bad section", i + 1))?.trim().to_string());
             continue;
         }
         let (k, v) = line.split_once('=').ok_or_else(|| format!("line {}: expected key = value", i + 1))?;
