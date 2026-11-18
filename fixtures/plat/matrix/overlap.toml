@@ -1,0 +1,28 @@
+# Test fixture for PLAT.MATRIX.FILE AC-2 and AC-7: rows 2 and 3 overlap on [24.04, 24.10).
+schema_version = 1
+
+[[row]]
+os = "windows"
+version_min = "10.0.19041"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "fixture"
+
+[[row]]
+os = "ubuntu"
+version_min = "22.04"
+version_max = "24.10"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "fixture"
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "26.04"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P0"
+notes = "fixture"
