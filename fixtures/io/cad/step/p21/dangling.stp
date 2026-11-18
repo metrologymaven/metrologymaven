@@ -1,0 +1,13 @@
+ISO-10303-21;
+HEADER;
+/* Hand-written fixture for spec node IO.CAD.STEP.P21, CC-BY-4.0: #5 refers to the undefined #99. */
+FILE_DESCRIPTION(('dangling reference'),'2;1');
+FILE_NAME('dangling.stp','2026-11-18T00:00:00',(''),(''),'','','');
+FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('a',(0.,0.,0.));
+#5=VERTEX_POINT('v',#99);
+#6=EDGE_CURVE('e',#5,#5,#1,.T.);
+ENDSEC;
+END-ISO-10303-21;

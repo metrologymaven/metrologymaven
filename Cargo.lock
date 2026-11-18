@@ -154,6 +154,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-step"
+version = "0.0.1"
+dependencies = [
+ "fid-io-reg",
+]
+
+[[package]]
 name = "fid-jobs"
 version = "0.0.1"
 dependencies = [

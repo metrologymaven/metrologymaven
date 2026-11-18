@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**90** of **1336** leaves built in code ([B]).
+**91** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 20 built)
+### Wave 2 (121 leaves, 21 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -205,7 +205,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
 - [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
 - [B] [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
-- [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)
+- [B] [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)
 - [IO.CAD.WORKER.PROTO](../../spec/io/cad/worker/proto/NODE.md) CAD worker protocol, framing and message validation (M, P1b)
 - [IO.CLOUD.E57.PHYS](../../spec/io/cloud/e57/phys/NODE.md) E57 file header, paged physical layer and page checksums (S, P1b)
 - [IO.CLOUD.LAS.HDR](../../spec/io/cloud/las/hdr/NODE.md) LAS headers, VLRs and point data record formats 0 to 10 (M, P1b)
