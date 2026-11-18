@@ -193,10 +193,10 @@ fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, family: Option<Famil
                 }
             })
         }
-        "entry_class" => string_list(cx, m.get("classes"), &join(f, "classes"), "side-effect class", |s| {
-            SideEffect::parse(s).ok()
-        })
-        .map(|classes| PredicateKind::EntryClass { classes }),
+        "entry_class" => {
+            string_list(cx, m.get("classes"), &join(f, "classes"), "side-effect class", |s| SideEffect::parse(s).ok())
+                .map(|classes| PredicateKind::EntryClass { classes })
+        }
         "file_change" => {
             let pf = join(f, "pattern");
             cx.string(m.get("pattern"), &pf).and_then(|s| {
