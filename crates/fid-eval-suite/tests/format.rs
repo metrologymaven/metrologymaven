@@ -186,6 +186,7 @@ fn labelled_cases() {
                     Err(e) => (Some(e[0].code), e.iter().map(|x| x.field.clone()).collect(), None),
                 },
             };
+        fields.retain(|f| !f.is_empty()); // whole-file errors name no field
         fields.sort();
         let want_code = match &c["code"] {
             CValue::Null => None,
