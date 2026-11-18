@@ -70,9 +70,9 @@ fn ac1_stock_tools_accept() {
         let script = format!(
             "$ErrorActionPreference = 'Stop'; $bad = 0; \
              foreach ($line in [IO.File]::ReadAllLines('{sums_s}')) {{ \
-               if ($line -cnotmatch '^([0-9a-f]{{64}})  ([A-Za-z0-9._+-]+)$') {{ $bad++; continue }}; \
+               if ($line -cnotmatch '^([0-9a-f]{{64}})  ([A-Za-z0-9._+-]+)$') {{ ('bad line: ' + $line); $bad++; continue }}; \
                $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $Matches[2]).Hash.ToLowerInvariant(); \
-               if ($h -cne $Matches[1]) {{ $bad++ }} }}; \
+               if ($h -cne $Matches[1]) {{ ('mismatch: ' + $line + ' ' + $h); $bad++ }} }}; \
              exit $bad"
         );
         let mut c = Command::new("powershell");
@@ -81,8 +81,16 @@ fn ac1_stock_tools_accept() {
     } else {
         return;
     };
-    let status = cmd.current_dir(fixture("ok")).status().unwrap();
-    assert!(status.success(), "stock checksum tool rejected {sums_s}");
+    let o = cmd.current_dir(fixture("ok")).output().unwrap();
+    assert!(
+        o.status.success(),
+        "stock checksum tool rejected {sums_s}: {:?}
+stdout: {}
+stderr: {}",
+        o.status,
+        String::from_utf8_lossy(&o.stdout),
+        String::from_utf8_lossy(&o.stderr)
+    );
 }
 
 /// AC-2: a file not in the manifest exits 1 with SUMS-UNLISTED; a listed file that is absent
