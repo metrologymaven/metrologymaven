@@ -529,3 +529,81 @@ fn ac7_storage_writers_file_parses_and_names_workspace_crates() {
         assert!(parse_storage_writers(bad).is_err(), "{bad:?}");
     }
 }
+
+// ---------------------------------------------------------------- links inside a project
+
+#[cfg(unix)]
+#[test]
+fn symlinked_area_is_refused() {
+    let (t, root) = new_project("link");
+    let outside = t.0.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    // A writer that already holds the lock must not follow a link swapped in later.
+    let (_loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    std::fs::remove_dir(root.join("blobs")).unwrap();
+    std::os::unix::fs::symlink(&outside, root.join("blobs")).unwrap();
+    let err = lock.write_file(Area::Blobs, &[], &hex("ab"), b"x").unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+    drop(lock);
+    let err = ProjectLocation::open(&root, OpenMode::Write).unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+    assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinked_lock_file_is_refused() {
+    let (t, root) = new_project("linklock");
+    let target = t.0.join("elsewhere");
+    std::fs::write(&target, b"").unwrap();
+    std::fs::remove_file(root.join("lock")).unwrap();
+    std::os::unix::fs::symlink(&target, root.join("lock")).unwrap();
+    let err = ProjectLocation::open(&root, OpenMode::Write).unwrap_err();
+    assert_eq!(err.code(), "symlink_refused", "{err:?}");
+}
+
+#[cfg(unix)]
+#[test]
+fn symlink_in_the_path_to_the_root_is_followed() {
+    let (t, root) = new_project("linkroot");
+    let alias = t.0.join("alias");
+    std::os::unix::fs::symlink(&root, &alias).unwrap();
+    let (_loc, lock) = ProjectLocation::open(&alias, OpenMode::Write).unwrap();
+    assert!(lock.unwrap().warnings().is_empty());
+}
+
+// ---------------------------------------------------------------- manual recovery
+
+#[test]
+fn force_unlock_needs_the_exact_holder_and_a_free_os_lock() {
+    let (_t, root) = new_project("force");
+    let text = fixture_lock("lock_other_host");
+    std::fs::write(root.join("lock"), &text).unwrap();
+    let holder = match ProjectLocation::open(&root, OpenMode::Write) {
+        Err(StoreError::Locked(Some(i))) => i,
+        other => panic!("expected locked, got {other:?}"),
+    };
+    let wrong = LockInfo { pid: holder.pid + 4, ..holder.clone() };
+    let err = ProjectLocation::force_unlock(&root, Some(&wrong)).unwrap_err();
+    assert_eq!(err.code(), "lock_mismatch");
+    assert_eq!(ProjectLocation::force_unlock(&root, None).unwrap_err().code(), "lock_mismatch");
+    assert_eq!(std::fs::read_to_string(root.join("lock")).unwrap(), text);
+    ProjectLocation::force_unlock(&root, Some(&holder)).unwrap();
+    let (_loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    assert!(lock.warnings().is_empty());
+    // While a process holds the OS lock, force_unlock refuses.
+    let mine = lock.info().clone();
+    let err = ProjectLocation::force_unlock(&root, Some(&mine)).unwrap_err();
+    assert_eq!(err.code(), "locked");
+}
+
+#[test]
+fn force_unlock_clears_a_garbled_record_only_when_confirmed_as_garbled() {
+    let (_t, root) = new_project("force2");
+    std::fs::write(root.join("lock"), b"fid-lock@1\npid=12\n").unwrap();
+    assert_eq!(ProjectLocation::open(&root, OpenMode::Write).unwrap_err().code(), "lock_file_invalid");
+    ProjectLocation::force_unlock(&root, None).unwrap();
+    assert!(ProjectLocation::open(&root, OpenMode::Write).unwrap().1.is_some());
+}

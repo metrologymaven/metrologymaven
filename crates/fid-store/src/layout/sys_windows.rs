@@ -7,13 +7,14 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::os::windows::fs::OpenOptionsExt;
+use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
 const FILE_SHARE_READ: u32 = 0x1;
 const FILE_SHARE_ALL: u32 = 0x1 | 0x2 | 0x4;
 const ERROR_SHARING_VIOLATION: i32 = 32;
 const ERROR_LOCK_VIOLATION: i32 = 33;
+const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 
 #[derive(Debug)]
 pub(super) struct Dir {
@@ -39,6 +40,17 @@ fn read_bounded(f: &mut File, limit: u64) -> io::Result<Vec<u8>> {
     Ok(buf)
 }
 
+/// Refuses an existing entry below the project root that is a symbolic link, junction or other
+/// reparse point, so nothing the store writes or reads can be redirected out of the project.
+fn refuse_reparse(path: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Ok(m) if m.file_type().is_symlink() || m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 => {
+            Err(super::link_refused())
+        }
+        _ => Ok(()),
+    }
+}
+
 fn ensure_dir(path: &Path, create: bool) -> io::Result<()> {
     if create {
         fs::create_dir_all(path)?;
@@ -62,6 +74,7 @@ impl Dir {
 
     pub(super) fn sub(&self, name: &str, create: bool) -> io::Result<Dir> {
         let path = self.path.join(name);
+        refuse_reparse(&path)?;
         ensure_dir(&path, create)?;
         Ok(Dir { path })
     }
@@ -81,12 +94,16 @@ impl Dir {
     }
 
     pub(super) fn read_file(&self, name: &str, limit: u64) -> io::Result<Vec<u8>> {
-        let mut f = OpenOptions::new().read(true).share_mode(FILE_SHARE_ALL).open(self.path.join(name))?;
+        let path = self.path.join(name);
+        refuse_reparse(&path)?;
+        let mut f = OpenOptions::new().read(true).share_mode(FILE_SHARE_ALL).open(path)?;
         read_bounded(&mut f, limit)
     }
 
     pub(super) fn write_file(&self, name: &str, bytes: &[u8]) -> io::Result<()> {
-        let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(self.path.join(name))?;
+        let path = self.path.join(name);
+        refuse_reparse(&path)?;
+        let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(path)?;
         f.write_all(bytes)?;
         f.sync_all()
     }
@@ -97,13 +114,16 @@ impl Dir {
     }
 
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
+        let path = self.path.join(name);
+        refuse_reparse(&path)?;
+        // No FILE_SHARE_DELETE either, so the held file cannot be renamed or replaced.
         let opened = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .truncate(false)
             .share_mode(FILE_SHARE_READ)
-            .open(self.path.join(name));
+            .open(path);
         match opened {
             Ok(file) => Ok(TryLock::Acquired(LockHandle { file })),
             Err(e) if matches!(e.raw_os_error(), Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)) => {

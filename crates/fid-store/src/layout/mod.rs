@@ -22,9 +22,17 @@
 //! syscalls stop at 1,023 bytes.
 //!
 //! Locking: on Linux and macOS an exclusive `flock` on `lock`; on Windows the `lock` file is
-//! held open with a share mode that denies other writers (read sharing stays allowed so a
-//! second process can read the holder's PID and host). Both are released by the OS when the
-//! holder exits, however it exits.
+//! held open with a share mode that denies other writers and renames (read sharing stays
+//! allowed so a second process can read the holder's PID and host). Both are released by the
+//! OS when the holder exits, however it exits. On Unix a lock only counts if the locked file is
+//! still the one at `lock` (device and inode), so a file replaced by rename is not trusted.
+//!
+//! Links: the user's path to the project root may contain symbolic links; below the root the
+//! store never follows a symbolic link (or, on Windows, a junction or reparse point) and fails
+//! with `symlink_refused` instead.
+//!
+//! Recovery: a lock record from another host, or a garbled one, is never taken over
+//! automatically; [`ProjectLocation::force_unlock`] clears it after a human confirms the holder.
 
 use std::fmt;
 use std::io;
@@ -171,6 +179,11 @@ pub enum StoreError {
     InvalidName(String),
     /// The lock file exists but cannot be parsed, so its holder's host is unknown.
     LockFileInvalid,
+    /// An entry below the project root is a symbolic link (or, on Windows, a junction or other
+    /// reparse point); the store never follows those inside a project.
+    SymlinkRefused,
+    /// `force_unlock` was confirmed with a holder record that is not the one in the lock file.
+    LockMismatch(Option<LockInfo>),
     Io(io::Error),
 }
 
@@ -186,6 +199,8 @@ impl StoreError {
             StoreError::NotEmpty => "not_empty",
             StoreError::InvalidName(_) => "invalid_name",
             StoreError::LockFileInvalid => "lock_file_invalid",
+            StoreError::SymlinkRefused => "symlink_refused",
+            StoreError::LockMismatch(_) => "lock_mismatch",
             StoreError::Io(_) => "io",
         }
     }
@@ -207,6 +222,8 @@ impl fmt::Display for StoreError {
             StoreError::NotEmpty => write!(f, "not_empty: a project is created in an empty folder"),
             StoreError::InvalidName(n) => write!(f, "invalid_name: {n:?}"),
             StoreError::LockFileInvalid => write!(f, "lock_file_invalid: lock file is not readable"),
+            StoreError::SymlinkRefused => write!(f, "symlink_refused: links are not followed inside a project"),
+            StoreError::LockMismatch(_) => write!(f, "lock_mismatch: the lock file names a different holder"),
             StoreError::Io(e) => write!(f, "io: {e}"),
         }
     }
@@ -223,8 +240,28 @@ impl std::error::Error for StoreError {
 
 impl From<io::Error> for StoreError {
     fn from(e: io::Error) -> Self {
-        StoreError::Io(e)
+        if e.get_ref().is_some_and(|inner| inner.is::<LinkRefused>()) {
+            StoreError::SymlinkRefused
+        } else {
+            StoreError::Io(e)
+        }
     }
+}
+
+/// Marker carried inside an `io::Error` by the platform layer when it refuses a link.
+#[derive(Debug)]
+struct LinkRefused;
+
+impl fmt::Display for LinkRefused {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "link inside the project refused")
+    }
+}
+
+impl std::error::Error for LinkRefused {}
+
+fn link_refused() -> io::Error {
+    io::Error::other(LinkRefused)
 }
 
 /// An opened project folder.
@@ -278,12 +315,14 @@ impl ProjectLocation {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
                 return Err(StoreError::NotAProject(format!("no {FORMAT_FILE} file")))
             }
-            Err(e) => return Err(StoreError::Io(e)),
+            Err(e) => return Err(StoreError::from(e)),
         };
         let (layout_version, uuid) = parse_format(&text)?;
         for d in [BLOBS_DIR, KERNELS_DIR, TMP_DIR] {
-            if dir.sub(d, false).is_err() {
-                return Err(StoreError::NotAProject(format!("missing {d}/")));
+            match dir.sub(d, false).map_err(StoreError::from) {
+                Ok(_) => {}
+                Err(StoreError::SymlinkRefused) => return Err(StoreError::SymlinkRefused),
+                Err(_) => return Err(StoreError::NotAProject(format!("missing {d}/"))),
             }
         }
         let loc = ProjectLocation { root, uuid, layout_version, dir };
@@ -297,6 +336,38 @@ impl ProjectLocation {
                 Ok((loc, Some(locked)))
             }
         }
+    }
+
+    /// Manual recovery for a lock the store will not take over by itself: a record from another
+    /// host (for example after the machine was renamed, or a project folder copied between
+    /// machines) or a garbled record. A human reads the holder from the `locked` error, makes
+    /// sure that process is really gone, and confirms by passing that same record back
+    /// (`None` for a garbled record). Fails with `locked` while any process holds the OS lock,
+    /// and with `lock_mismatch` if the record changed. Never called automatically.
+    pub fn force_unlock(path: &Path, confirm: Option<&LockInfo>) -> Result<(), StoreError> {
+        let root = absolute_checked(path)?;
+        let dir = sys::Dir::open(&root, false)?;
+        let mut handle = match dir.try_lock(LOCK_FILE)? {
+            sys::TryLock::Acquired(h) => h,
+            sys::TryLock::Busy => {
+                let info = dir.read_file(LOCK_FILE, SMALL_FILE_LIMIT).ok().and_then(|b| parse_lock_info(&b).ok());
+                return Err(StoreError::Locked(info));
+            }
+        };
+        let current = handle.read_all(SMALL_FILE_LIMIT)?;
+        let recorded = parse_lock_info(&current).ok();
+        let empty = current.iter().all(u8::is_ascii_whitespace);
+        let matches = match confirm {
+            Some(c) => recorded.as_ref() == Some(c),
+            None => recorded.is_none() && !empty,
+        };
+        if !matches {
+            handle.release();
+            return Err(StoreError::LockMismatch(recorded));
+        }
+        let cleared = handle.replace(b"");
+        handle.release();
+        cleared.map_err(StoreError::from)
     }
 
     /// Absolute project root as opened.

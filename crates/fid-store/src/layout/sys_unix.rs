@@ -1,6 +1,6 @@
 //! Linux and macOS: directory handles with the `openat` family, `flock`, `fstatfs`, `uname`.
 
-use rustix::fs::{self as rfs, FlockOperation, Mode, OFlags};
+use rustix::fs::{self as rfs, AtFlags, FlockOperation, Mode, OFlags};
 use rustix::io::Errno;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -37,7 +37,23 @@ fn file_mode() -> Mode {
     Mode::RUSR | Mode::WUSR | Mode::RGRP | Mode::WGRP | Mode::ROTH | Mode::WOTH
 }
 
-fn step(cur: &OwnedFd, name: &OsStr, create: bool) -> io::Result<OwnedFd> {
+/// How often `try_lock` retries when the locked file is no longer the one at the lock path.
+const LOCK_ATTEMPTS: u32 = 3;
+
+/// `openat`; with `NOFOLLOW`, a failure on a symbolic link becomes the typed link refusal.
+fn open_at(cur: &OwnedFd, name: &OsStr, flags: OFlags, mode: Mode) -> io::Result<OwnedFd> {
+    match rfs::openat(cur, name, flags, mode) {
+        Ok(fd) => Ok(fd),
+        Err(_) if flags.contains(OFlags::NOFOLLOW) && rfs::readlinkat(cur, name, Vec::new()).is_ok() => {
+            Err(super::link_refused())
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Opens (creating if asked) the directory `name` below `cur`. `follow` is true only while
+/// walking the user's path to the project root; below the root links are refused.
+fn step(cur: &OwnedFd, name: &OsStr, create: bool, follow: bool) -> io::Result<OwnedFd> {
     if create {
         match rfs::mkdirat(cur, name, dir_mode()) {
             Ok(()) => {}
@@ -45,7 +61,8 @@ fn step(cur: &OwnedFd, name: &OsStr, create: bool) -> io::Result<OwnedFd> {
             Err(e) => return Err(e.into()),
         }
     }
-    Ok(rfs::openat(cur, name, dir_flags(), Mode::empty())?)
+    let flags = if follow { dir_flags() } else { dir_flags() | OFlags::NOFOLLOW };
+    open_at(cur, name, flags, Mode::empty())
 }
 
 pub(super) fn read_bounded(f: &mut File, limit: u64) -> io::Result<Vec<u8>> {
@@ -66,8 +83,8 @@ impl Dir {
             cur = Some(match (c, cur.as_ref()) {
                 (Component::RootDir, _) => rfs::open("/", dir_flags(), Mode::empty())?,
                 (Component::CurDir, Some(fd)) => fd.try_clone()?,
-                (Component::ParentDir, Some(fd)) => step(fd, OsStr::new(".."), false)?,
-                (Component::Normal(n), Some(fd)) => step(fd, n, create)?,
+                (Component::ParentDir, Some(fd)) => step(fd, OsStr::new(".."), false, true)?,
+                (Component::Normal(n), Some(fd)) => step(fd, n, create, true)?,
                 _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "project path must be absolute")),
             });
         }
@@ -75,7 +92,7 @@ impl Dir {
     }
 
     pub(super) fn sub(&self, name: &str, create: bool) -> io::Result<Dir> {
-        Ok(Dir { fd: step(&self.fd, OsStr::new(name), create)? })
+        Ok(Dir { fd: step(&self.fd, OsStr::new(name), create, false)? })
     }
 
     pub(super) fn try_clone(&self) -> io::Result<Dir> {
@@ -100,13 +117,14 @@ impl Dir {
     }
 
     pub(super) fn read_file(&self, name: &str, limit: u64) -> io::Result<Vec<u8>> {
-        let fd = rfs::openat(&self.fd, name, OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW, Mode::empty())?;
+        let flags = OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+        let fd = open_at(&self.fd, OsStr::new(name), flags, Mode::empty())?;
         read_bounded(&mut File::from(fd), limit)
     }
 
     pub(super) fn write_file(&self, name: &str, bytes: &[u8]) -> io::Result<()> {
         let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::TRUNC | OFlags::CLOEXEC | OFlags::NOFOLLOW;
-        let mut f = File::from(rfs::openat(&self.fd, name, flags, file_mode())?);
+        let mut f = File::from(open_at(&self.fd, OsStr::new(name), flags, file_mode())?);
         f.write_all(bytes)?;
         f.sync_all()
     }
@@ -116,14 +134,31 @@ impl Dir {
         Ok(statfs_is_network(&st))
     }
 
+    /// Takes an exclusive `flock` on `name`. The lock only counts if the locked file is still
+    /// the one at `name` afterwards (same device and inode): a sync tool or editor that
+    /// replaced the file by rename would otherwise leave two processes "holding" two files.
+    /// A replaced file is retried a few times, then reported as busy.
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
         let flags = OFlags::RDWR | OFlags::CREATE | OFlags::CLOEXEC | OFlags::NOFOLLOW;
-        let file = File::from(rfs::openat(&self.fd, name, flags, file_mode())?);
-        match rfs::flock(&file, FlockOperation::NonBlockingLockExclusive) {
-            Ok(()) => Ok(TryLock::Acquired(LockHandle { file })),
-            Err(e) if e == Errno::WOULDBLOCK || e == Errno::AGAIN => Ok(TryLock::Busy),
-            Err(e) => Err(e.into()),
+        for _ in 0..LOCK_ATTEMPTS {
+            let file = File::from(open_at(&self.fd, OsStr::new(name), flags, file_mode())?);
+            match rfs::flock(&file, FlockOperation::NonBlockingLockExclusive) {
+                Ok(()) => {}
+                Err(e) if e == Errno::WOULDBLOCK || e == Errno::AGAIN => return Ok(TryLock::Busy),
+                Err(e) => return Err(e.into()),
+            }
+            let held = rfs::fstat(&file)?;
+            match rfs::statat(&self.fd, name, AtFlags::SYMLINK_NOFOLLOW) {
+                Ok(now) if now.st_dev == held.st_dev && now.st_ino == held.st_ino => {
+                    return Ok(TryLock::Acquired(LockHandle { file }));
+                }
+                Ok(_) => {}
+                Err(e) if e == Errno::NOENT => {}
+                Err(e) => return Err(e.into()),
+            }
+            let _ = rfs::flock(&file, FlockOperation::Unlock);
         }
+        Ok(TryLock::Busy)
     }
 }
 
