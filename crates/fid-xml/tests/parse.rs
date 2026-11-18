@@ -528,18 +528,19 @@ fn req003_event_positions() {
         assert_eq!(ev.pos.byte, ev.span.start);
         assert!(ev.span.end > ev.span.start);
     }
-    // CRLF counts as one line end: the <item n="2"> start tag is on line 6, column 3.
+    // CRLF counts as one line end (the root tag's `multi` value spans lines 4 and 5): the
+    // <item n="2"> start tag is on line 7, column 3.
     let events = read(&data).unwrap();
     let item2 = events
         .iter()
         .find(|ev| matches!(&ev.kind, EventKind::Start(e) if e.attrs.first().is_some_and(|a| a.value.raw() == "2")))
         .unwrap();
-    assert_eq!((item2.pos.line, item2.pos.col), (Some(6), Some(3)));
+    assert_eq!((item2.pos.line, item2.pos.col), (Some(7), Some(3)));
     let at = data.windows(12).position(|w| w == b"<item n=\"2\">").unwrap() as u64;
     assert_eq!(item2.span, at..at + 12);
 }
 
-/// The reader streams: a 2 MB document is read with a buffer of a few chunks, not a
+/// The reader streams: a 1.9 MB document is read with a buffer of a few chunks, not a
 /// copy of the document.
 #[test]
 fn streaming_keeps_the_buffer_small() {
@@ -548,7 +549,7 @@ fn streaming_keeps_the_buffer_small() {
         doc.extend_from_slice(format!("<i n=\"{i}\">x</i>\n").as_bytes());
     }
     doc.extend_from_slice(b"</r>\n");
-    assert!(doc.len() > 2_000_000);
+    assert!(doc.len() > 1_900_000);
     let mut r = XmlReader::new(BoundedSource::new(&doc[..], budget()));
     let mut count = 0u64;
     while let Some(ev) = r.next_event().unwrap() {

@@ -215,6 +215,8 @@ impl<R: Read> Input<R> {
     /// Returns whether any became available. Fails with `malformed` when the next byte
     /// is invalid.
     pub(crate) fn fill(&mut self, want: usize) -> Result<bool, XmlError> {
+        // Compact first: `before` and `target` must be indices in the compacted buffer.
+        self.compact();
         let before = self.avail;
         let target = self.avail.saturating_add(want.max(1));
         while self.avail < target && self.bad.is_none() && !self.eof {
@@ -231,7 +233,6 @@ impl<R: Read> Input<R> {
     }
 
     fn read_chunk(&mut self) -> Result<(), XmlError> {
-        self.compact();
         let mut chunk = [0u8; CHUNK];
         let n = match chunk.get_mut(..self.chunk) {
             Some(window) => self.read_raw(window)?,
