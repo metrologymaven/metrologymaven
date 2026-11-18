@@ -13,3 +13,11 @@ The routine shall be repeated for each feature until the deviation. That is elev
 A short quotation is fine: "word word word word word word word word word word word word word word word word word word word word word word word word word".
 
 > A short blockquote is fine too.
+
+Hold the room at 20 °C or 68°F, keep 20 degrees Celsius, and lock 3 degrees of freedom.
+
+Every probe shall be qualified before use
+```text
+fid demo scan
+```
+and after each change of the stylus, the run goes on.

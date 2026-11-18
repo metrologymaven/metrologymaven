@@ -9,7 +9,7 @@
 //!
 //! - `result_like_number`: a number with a length unit, angle unit or `%` outside a fenced block;
 //! - `forbidden_instruction`: naming an M1, S1, A0 or W3 command (ID, ID with major, or MCP tool
-//!   name) anywhere, unless the phrase [`HUMAN_REQUEST_PHRASE`] comes earlier on the same line;
+//!   name) anywhere, except the first such name after the phrase [`HUMAN_REQUEST_PHRASE`] on the same line;
 //! - `missing_proposal_step`: a curated guide with a W1 or W2 step that does not end with
 //!   [`BRIEF_STEP`] then [`PROMOTE_STEP`];
 //! - `over_budget`: a curated Skill body over [`WORD_BUDGET`] whitespace-separated words;
@@ -42,6 +42,10 @@ pub const PROMOTE_STEP: (&str, u32) = ("journal.request_promote_branch", 1);
 pub const HUMAN_REQUEST_PHRASE: &str = "request for a human";
 /// Deepest JSON nesting accepted.
 const MAX_DEPTH: usize = 64;
+/// UTF-8 byte order mark, stripped before front-matter and fence detection.
+const CHAR_BOM: char = '\u{feff}';
+/// Deepest folder nesting searched for Markdown under a `--prose` folder.
+pub const MAX_DIR_DEPTH: usize = 32;
 
 /// Unit symbols that make a number look like a result: length, angle and percent. Symbols made
 /// of letters must end at a word boundary.
@@ -225,7 +229,9 @@ fn read_file(path: &Path, max: usize) -> Result<Option<Vec<u8>>, String> {
 fn read_text(path: &Path, max: usize) -> Result<Option<String>, String> {
     match read_file(path, max)? {
         None => Ok(None),
-        Some(b) => String::from_utf8(b).map(Some).map_err(|_| "not UTF-8".to_string()),
+        Some(b) => String::from_utf8(b)
+            .map(|t| Some(t.strip_prefix(CHAR_BOM).map(str::to_string).unwrap_or(t)))
+            .map_err(|_| "not UTF-8".to_string()),
     }
 }
 
@@ -461,6 +467,10 @@ pub fn result_like_numbers(line: &str) -> Vec<(String, &'static str)> {
             if alpha && after.is_some_and(|a| a.is_alphanumeric() || *a == '_') {
                 continue;
             }
+            let rest: String = chars[j + s.len()..].iter().collect::<String>().to_lowercase();
+            if not_an_angle(sym, &rest) {
+                continue;
+            }
             let token: String = chars[start..j + s.len()].iter().collect();
             out.push((token, *kind));
             i = j + s.len();
@@ -468,6 +478,25 @@ pub fn result_like_numbers(line: &str) -> Vec<(String, &'static str)> {
         }
     }
     out
+}
+
+/// True when a degree symbol or word is a temperature (`°C`, `°F`, `°K`, `degrees Celsius`)
+/// or part of "degrees of freedom", not an angle. `rest` is the lower-cased text after the unit.
+fn not_an_angle(sym: &str, rest: &str) -> bool {
+    let word_is = |text: &str, w: &str| {
+        text.strip_prefix(w).is_some_and(|after| !after.chars().next().is_some_and(char::is_alphanumeric))
+    };
+    match sym {
+        "°" => {
+            let r = rest.strip_prefix(' ').unwrap_or(rest);
+            ["c", "f", "k"].iter().any(|t| word_is(r, *t))
+        }
+        "deg" | "degree" | "degrees" => {
+            let r = rest.trim_start();
+            ["of freedom", "celsius", "fahrenheit", "kelvin", "c", "f"].iter().any(|t| word_is(r, *t))
+        }
+        _ => false,
+    }
 }
 
 fn is_ident_char(c: char) -> bool {
@@ -513,11 +542,19 @@ fn lint_prose(file: &str, text: &str, first_line: usize, ctx: &Ctx, out: &mut Ve
             }
         }
         // REQ-002: forbidden commands, fenced or not, unless after the human-request phrase.
+        // Each occurrence of the phrase excuses only the first forbidden name after it.
         let lower = line.to_ascii_lowercase();
-        let phrase_at = lower.find(HUMAN_REQUEST_PHRASE);
+        let phrases: Vec<usize> = lower.match_indices(HUMAN_REQUEST_PHRASE).map(|(i, _)| i).collect();
+        let mut next_phrase = 0;
+        let mut excuse = false;
         for (at, tok) in ident_tokens(line) {
+            while next_phrase < phrases.len() && phrases[next_phrase] < at {
+                excuse = true;
+                next_phrase += 1;
+            }
             if let Some(fb) = ctx.forbidden.get(tok) {
-                if phrase_at.is_some_and(|p| p < at) {
+                if excuse {
+                    excuse = false;
                     continue;
                 }
                 out.push(LintFinding::new(
@@ -531,17 +568,25 @@ fn lint_prose(file: &str, text: &str, first_line: usize, ctx: &Ctx, out: &mut Ve
     }
 
     // REQ-005a: deny-list runs over prose words outside fences.
-    let words: Vec<(usize, String)> = lines
-        .iter()
-        .filter(|(_, _, fenced)| !fenced)
-        .flat_map(|(n, l, _)| l.split_whitespace().map(move |w| (*n, norm_word(w))))
-        .filter(|(_, w)| !w.is_empty())
-        .collect();
+    // A fenced block ends a segment, so runs never join across it.
+    let mut segments: Vec<Vec<(usize, String)>> = vec![Vec::new()];
+    for &(n, l, fenced) in &lines {
+        if fenced {
+            if segments.last().is_some_and(|s| !s.is_empty()) {
+                segments.push(Vec::new());
+            }
+            continue;
+        }
+        if let Some(seg) = segments.last_mut() {
+            seg.extend(l.split_whitespace().map(|w| (n, norm_word(w))).filter(|(_, w)| !w.is_empty()));
+        }
+    }
     for (entry_line, stems) in &ctx.deny {
-        if let Some(start) = first_deny_run(&words, stems) {
+        let hit = segments.iter().find_map(|seg| first_deny_run(seg, stems).map(|start| seg[start].0));
+        if let Some(line) = hit {
             out.push(LintFinding::new(
                 file,
-                words[start].0,
+                line,
                 Rule::PossibleStandardsText,
                 format!("{MIN_DENY_RUN} or more consecutive words match deny-list entry on line {entry_line}"),
             ));
@@ -656,16 +701,30 @@ fn body_start(text: &str) -> usize {
 
 // ------------------------------------------------------------------ driver
 
+/// Collects `*.md` files under `p`. The path given on the command line may be a symlink; inside
+/// a folder, symlinks are skipped (never followed), and nesting deeper than [`MAX_DIR_DEPTH`]
+/// is an error, so a link loop cannot recurse without end.
 fn collect_md(p: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
+    collect_md_at(p, 0, out)
+}
+
+fn collect_md_at(p: &Path, depth: usize, out: &mut Vec<PathBuf>) -> Result<(), String> {
     if p.is_dir() {
+        if depth > MAX_DIR_DEPTH {
+            return Err(format!("folders nested deeper than {MAX_DIR_DEPTH}"));
+        }
         let mut entries: Vec<PathBuf> = std::fs::read_dir(p)
             .map_err(|e| format!("{}: {e}", label(p)))?
             .filter_map(|e| e.ok().map(|e| e.path()))
             .collect();
         entries.sort();
         for e in entries {
-            if e.is_dir() || e.extension().is_some_and(|x| x == "md") {
-                collect_md(&e, out)?;
+            let Ok(meta) = std::fs::symlink_metadata(&e) else { continue };
+            if meta.file_type().is_symlink() {
+                continue;
+            }
+            if meta.is_dir() || e.extension().is_some_and(|x| x == "md") {
+                collect_md_at(&e, depth + 1, out)?;
             }
         }
     } else {
@@ -710,7 +769,10 @@ pub fn lint(inputs: &StyleInputs) -> LintReport {
 
     let allow = match &inputs.allow {
         None => Vec::new(),
-        Some(p) => match read_text(p, MAX_FILE_BYTES).and_then(|t| parse_allow(&t.unwrap_or_default())) {
+        Some(p) => match read_text(p, MAX_FILE_BYTES)
+            .and_then(|t| t.ok_or_else(|| "not found".to_string()))
+            .and_then(|t| parse_allow(&t))
+        {
             Ok(a) => a,
             Err(e) => {
                 out.push(LintFinding::new(&label(p), 0, Rule::BadInput, e));
@@ -875,6 +937,44 @@ mod tests {
         assert_eq!(toks("step 2 in the guide, v2.1, sha256, W2, 3 mmol, 4 models"), Vec::<String>::new());
         assert_eq!(toks("12,5 mm"), ["12,5 mm"]);
         assert_eq!(toks("10 m."), ["10 m"]);
+        // Temperatures and degrees of freedom are not angles.
+        let none = Vec::<String>::new();
+        assert_eq!(toks("scale 0.01 °C as K, 20 °C, 68°F, 300 °K"), none);
+        assert_eq!(toks("lock 3 degrees of freedom, keep 20 degrees Celsius, 5 deg C"), none);
+        assert_eq!(toks("turn 90 degrees, 45° tilt, 30 °Cx"), ["90 degrees", "45°", "30 °"]);
+    }
+
+    fn ctx_with(names: &[&str]) -> Ctx {
+        let forbidden =
+            names.iter().map(|n| (n.to_string(), Forbidden { label: format!("{n} (W3, tool {n})") })).collect();
+        Ctx { forbidden, deny: Vec::new() }
+    }
+
+    #[test]
+    fn human_request_excuses_only_the_next_name() {
+        let ctx = ctx_with(&["a_x", "b_y"]);
+        let run = |text: &str| {
+            let mut out = Vec::new();
+            lint_prose("f.md", text, 1, &ctx, &mut out);
+            out.len()
+        };
+        assert_eq!(run("File a request for a human to run `a_x`."), 0);
+        assert_eq!(run("File a request for a human to run `a_x`, then call `b_y` yourself."), 1);
+        assert_eq!(run("Call `b_y`, then file a request for a human to run `a_x`."), 1);
+        assert_eq!(run("A request for a human for `a_x`; another request for a human for `b_y`."), 0);
+    }
+
+    #[test]
+    fn deny_runs_stop_at_fences() {
+        let stems: Vec<String> = "a b c d e f g h i j k l m".split(' ').map(String::from).collect();
+        let ctx = Ctx { forbidden: BTreeMap::new(), deny: vec![(1, stems)] };
+        let run = |text: &str| {
+            let mut out = Vec::new();
+            lint_prose("f.md", text, 1, &ctx, &mut out);
+            out.len()
+        };
+        assert_eq!(run("ax bx cx dx ex fx\ngx hx ix jx kx lx"), 1);
+        assert_eq!(run("ax bx cx dx ex fx\n```\ncode\n```\ngx hx ix jx kx lx"), 0);
     }
 
     #[test]

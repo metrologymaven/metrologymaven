@@ -1,6 +1,6 @@
 # Content standard for task guides, Skills and recipes
 
-Spec node: `AGENT.SKILLS.STYLE`. Checked in CI by `cargo run -p fid-agent --bin agent-style-lint`.
+Spec node: `AGENT.SKILLS.STYLE`. Checked by `cargo run -p fid-agent --bin agent-style-lint`. The linter is not yet run by CI: the repository has no registry manifest or generated Skills to lint yet, so wiring it into the workflow is a follow-up (ECO.CI).
 
 This standard covers the prose agents are taught from: the title, summary and step purposes of every curated task guide (the guides `agent/catalog.json` names), the rendered Skill of each curated guide, and the title, prompt and commentary of each curated recipe. All examples below are written by the project for this page. This page itself is not linted, because it shows the non-compliant examples on purpose.
 
@@ -8,7 +8,7 @@ The linter reports `file:line: rule: detail`. Prose read from a JSON field is re
 
 ## Rule 1: no numbers dressed as results (`result_like_number`)
 
-Prose never states a measured or computed value. Values of record live in result records, with their unit, uncertainty and provenance. In prose, a number followed by a length unit (such as nm, µm, mm, m, inch), an angle unit (such as deg, °, rad, arcmin) or `%` is flagged, unless it sits inside a fenced command example. Step numbers, version numbers and counts without a unit are fine.
+Prose never states a measured or computed value. Values of record live in result records, with their unit, uncertainty and provenance. In prose, a number followed by a length unit (such as nm, µm, mm, m, inch), an angle unit (such as deg, °, rad, arcmin) or `%` is flagged, unless it sits inside a fenced command example. Step numbers, version numbers and counts without a unit are fine, and so are temperatures (`°C`, `°F`, `degrees Celsius`) and "degrees of freedom".
 
 - Compliant: "Fit a cylinder to the scan and read its diameter from the result record."
 - Compliant: a fenced command example such as `fid demo fit-cylinder --max-gap 0.2 mm`.
@@ -18,7 +18,7 @@ This is a heuristic [unverified]. A maintainer can allow one finding by adding `
 
 ## Rule 2: never instruct a forbidden class (`forbidden_instruction`)
 
-Agents never perform M1 (motion), S1 (signing), A0 (admin and safety configuration) or W3 (controlled record release) commands (CONSTITUTION §3). Prose must not name such a command, by command ID, by ID with major, or by MCP tool name, anywhere, including fenced examples. The one exception: the name may follow the phrase "request for a human" earlier on the same line, because filing a request is what an agent may do.
+Agents never perform M1 (motion), S1 (signing), A0 (admin and safety configuration) or W3 (controlled record release) commands (CONSTITUTION §3). Prose must not name such a command, by command ID, by ID with major, or by MCP tool name, anywhere, including fenced examples. The one exception: the first such name after the phrase "request for a human" on the same line, because filing a request is what an agent may do. Any further name on that line is flagged.
 
 - Compliant: "File a request for a human to run `journal.promote_protected_branch@1` after review."
 - Non-compliant: "Now call `journal_promote_protected_branch` to finish."

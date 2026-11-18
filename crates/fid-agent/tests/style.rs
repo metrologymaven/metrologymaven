@@ -190,3 +190,108 @@ fn binary_exit_codes() {
     let usage = std::process::Command::new(exe).arg("--nope").output().unwrap();
     assert_eq!(usage.status.code(), Some(2));
 }
+
+fn scratch(name: &str) -> PathBuf {
+    let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fid-agent-style").join(name);
+    if d.exists() {
+        std::fs::remove_dir_all(&d).unwrap();
+    }
+    std::fs::create_dir_all(&d).unwrap();
+    d
+}
+
+/// The clean case with extra Markdown files written to a scratch folder.
+fn with_prose(name: &str, files: &[(&str, &[u8])]) -> (StyleInputs, PathBuf) {
+    let d = scratch(name);
+    for (f, bytes) in files {
+        std::fs::write(d.join(f), bytes).unwrap();
+    }
+    let mut i = inputs("clean");
+    i.prose = vec![d.clone()];
+    (i, d)
+}
+
+fn rules(i: &StyleInputs) -> Vec<(Rule, usize)> {
+    lint(i).findings.iter().map(|f| (f.rule, f.line)).collect()
+}
+
+/// A UTF-8 byte order mark does not hide front matter or a fence.
+#[test]
+fn bom_is_stripped() {
+    let (i, _) = with_prose("bom", &[("a.md", "\u{feff}```\nmeasures 12.004 mm\n```\n".as_bytes())]);
+    assert!(rules(&i).is_empty(), "{:?}", rules(&i));
+    let d = scratch("bom-skill");
+    let skill = d.join("demo-measure-bore");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(skill.join("SKILL.md"), "\u{feff}---\ndescription: a 12.004 mm bore\n---\n# Body\n").unwrap();
+    let mut i = inputs("clean");
+    i.skills = d;
+    assert!(rules(&i).is_empty(), "{:?}", rules(&i));
+}
+
+/// CRLF line endings give the same lines and findings as LF.
+#[test]
+fn crlf_lines() {
+    let text = b"# T\r\n\r\nmeasures 12.004 mm\r\n\r\n```\r\n5 mm\r\n```\r\n";
+    let (i, _) = with_prose("crlf", &[("a.md", &text[..])]);
+    assert_eq!(rules(&i), [(Rule::ResultLikeNumber, 3)]);
+}
+
+/// Invalid UTF-8, an oversize file and malformed JSON are `bad_input`, never a panic.
+#[test]
+fn unreadable_inputs_are_bad_input() {
+    let (i, _) = with_prose("utf8", &[("a.md", &[0x66u8, 0xff, 0xfe, 0x0a][..])]);
+    assert_eq!(rules(&i), [(Rule::BadInput, 0)]);
+
+    let big = vec![b'a'; fid_agent::catalog::MAX_FILE_BYTES + 1];
+    let (i, _) = with_prose("big", &[("a.md", &big[..])]);
+    let r = lint(&i);
+    assert_eq!(r.findings.len(), 1);
+    assert_eq!(r.findings[0].rule, Rule::BadInput);
+    assert!(r.findings[0].detail.contains("larger than"), "{}", r.findings[0].detail);
+
+    let d = scratch("json");
+    std::fs::write(d.join("manifest.json"), b"{\"commands\": [").unwrap();
+    let mut i = inputs("clean");
+    i.manifest = d.join("manifest.json");
+    assert!(rules(&i).contains(&(Rule::BadInput, 0)));
+
+    let recipes = d.join("recipes");
+    std::fs::create_dir_all(&recipes).unwrap();
+    std::fs::write(recipes.join("demo.bore_basic.json"), b"{\"title\": ").unwrap();
+    let mut i = inputs("clean");
+    i.recipes = recipes;
+    assert_eq!(rules(&i), [(Rule::BadInput, 0)]);
+}
+
+/// A named allow list that does not exist is `bad_input`, not an empty list.
+#[test]
+fn missing_allow_file_is_bad_input() {
+    let mut i = inputs("clean");
+    i.allow = Some(fx().join("no-such-allow.txt"));
+    assert_eq!(rules(&i), [(Rule::BadInput, 0)]);
+}
+
+/// A symlink loop under a prose folder is not followed.
+#[cfg(unix)]
+#[test]
+fn symlink_loop_is_not_followed() {
+    let (i, d) = with_prose("loop", &[("a.md", &b"# Fine\n"[..])]);
+    std::os::unix::fs::symlink(&d, d.join("loop")).unwrap();
+    std::os::unix::fs::symlink(d.join("a.md"), d.join("link.md")).unwrap();
+    let r = lint(&i);
+    assert!(r.findings.is_empty(), "{:#?}", r.findings);
+    assert_eq!(r.units, 4 + 6 + 2 + 4 + 1);
+}
+
+/// Folders nested deeper than the limit are `bad_input`.
+#[test]
+fn deep_folders_are_bad_input() {
+    let (i, d) = with_prose("deep", &[]);
+    let mut p = d;
+    for _ in 0..=fid_agent::style::MAX_DIR_DEPTH {
+        p = p.join("d");
+    }
+    std::fs::create_dir_all(&p).unwrap();
+    assert_eq!(rules(&i), [(Rule::BadInput, 0)]);
+}

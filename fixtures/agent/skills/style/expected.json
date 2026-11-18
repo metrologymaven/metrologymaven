@@ -20,6 +20,11 @@
       "result_like_number",
       "prose/numbers.md",
       7
+    ],
+    [
+      "result_like_number",
+      "prose/numbers.md",
+      11
     ]
   ],
   "numbers-fenced": [],
@@ -50,7 +55,12 @@
     [
       "forbidden_instruction",
       "prose/forbidden.md",
-      10
+      9
+    ],
+    [
+      "forbidden_instruction",
+      "prose/forbidden.md",
+      12
     ],
     [
       "forbidden_instruction",

@@ -122,6 +122,14 @@ The routine shall be repeated for each feature until the deviation. That is elev
 A short quotation is fine: "{QUOTE_25}".
 
 > A short blockquote is fine too.
+
+Hold the room at 20 °C or 68°F, keep 20 degrees Celsius, and lock 3 degrees of freedom.
+
+Every probe shall be qualified before use
+```text
+fid demo scan
+```
+and after each change of the stylus, the run goes on.
 """
 
 NUMBERS = """\
@@ -134,6 +142,8 @@ Tilt is 0.5° and the share is 3 %.
 Runout was 5um on the last part.
 
 Repeat step 2 in the next run and pick v2.1 of the guide.
+
+Rotate the part by 90 degrees before the scan.
 """
 
 NUMBERS_FENCED = """\
@@ -150,6 +160,8 @@ FORBIDDEN = """\
 Now call `journal_promote_protected_branch` to finish.
 
 File a request for a human to run `journal.promote_protected_branch@1` after review.
+
+File a request for a human to run `journal.promote_protected_branch@1`, then call `demo_set_limits` yourself.
 
 Run demo.move_axis@1 to home the probe.
 
@@ -241,6 +253,7 @@ def main():
         ["result_like_number", "prose/numbers.md", line_of(NUMBERS, "0.5°")],
         ["result_like_number", "prose/numbers.md", line_of(NUMBERS, "0.5°")],
         ["result_like_number", "prose/numbers.md", line_of(NUMBERS, "5um")],
+        ["result_like_number", "prose/numbers.md", line_of(NUMBERS, "90 degrees")],
     ]
     make_case("numbers-fenced", ["demo.measure_bore"], prose={"numbers.md": NUMBERS_FENCED})
     expected["numbers-fenced"] = []
@@ -269,7 +282,8 @@ def main():
     expected["forbidden"] = [
         ["forbidden_instruction", "prose/forbidden.md", line_of(FORBIDDEN, "Now call")],
         ["forbidden_instruction", "prose/forbidden.md", line_of(FORBIDDEN, "demo.move_axis@1")],
-        ["forbidden_instruction", "prose/forbidden.md", line_of(FORBIDDEN, "demo_set_limits")],
+        ["forbidden_instruction", "prose/forbidden.md", line_of(FORBIDDEN, "then call")],
+        ["forbidden_instruction", "prose/forbidden.md", line_of(FORBIDDEN, "fid call demo_set_limits")],
         ["forbidden_instruction", "recipes/demo.bore_basic.json#commentary/0", 1],
     ]
 
