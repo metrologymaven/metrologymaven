@@ -373,11 +373,8 @@ fn every_case_handle_must_be_on_the_roster() {
 fn channels_match_rules_md() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../community/moderation/RULES.md");
     let text = std::fs::read_to_string(&path).unwrap();
-    let mut ids: Vec<&str> = text
-        .lines()
-        .filter_map(|l| l.strip_prefix("## `"))
-        .filter_map(|l| l.split('`').next())
-        .collect();
+    let mut ids: Vec<&str> =
+        text.lines().filter_map(|l| l.strip_prefix("## `")).filter_map(|l| l.split('`').next()).collect();
     ids.sort_unstable();
     assert_eq!(ids, fid_outreach::moderation::CHANNELS.to_vec());
 }
