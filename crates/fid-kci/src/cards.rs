@@ -400,20 +400,25 @@ pub fn check(table_ids: &[AlgorithmId], card_ids: &[AlgorithmId]) -> CheckReport
     CheckReport { missing_cards: missing, orphan_cards: orphans }
 }
 
+/// Member keys of [`SpecCard::canonical_bytes`], in UTF-16 order (unit-tested in `kci::json`).
+pub(crate) const CARD_KEYS: [&str; 8] =
+    ["applicability", "determinism", "failure_modes", "id", "method", "references", "title", "validation"];
+
 impl SpecCard {
     /// Canonical card bytes (REQ-KRN.MAN.CARD-005): kernel canonical JSON of every field,
     /// keys in UTF-16 order, list items in card order, the ID in its display form.
     pub fn canonical_bytes(&self) -> Vec<u8> {
         let id = self.id.to_string();
+        let [k_app, k_det, k_fail, k_id, k_method, k_refs, k_title, k_val] = CARD_KEYS;
         crate::kci::json::fixed_object(&[
-            ("applicability", Flat::Str(&self.applicability)),
-            ("determinism", Flat::Str(&self.determinism)),
-            ("failure_modes", Flat::List(&self.failure_modes)),
-            ("id", Flat::Str(&id)),
-            ("method", Flat::Str(&self.method)),
-            ("references", Flat::List(&self.references)),
-            ("title", Flat::Str(&self.title)),
-            ("validation", Flat::Str(&self.validation)),
+            (k_app, Flat::Str(&self.applicability)),
+            (k_det, Flat::Str(&self.determinism)),
+            (k_fail, Flat::List(&self.failure_modes)),
+            (k_id, Flat::Str(&id)),
+            (k_method, Flat::Str(&self.method)),
+            (k_refs, Flat::List(&self.references)),
+            (k_title, Flat::Str(&self.title)),
+            (k_val, Flat::Str(&self.validation)),
         ])
     }
 }

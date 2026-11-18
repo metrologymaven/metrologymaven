@@ -71,6 +71,8 @@ The kernel's single, pure entry point, `evaluate(call) -> result`. A call names 
 
 ## Open questions
 
+- **SHA-256 test vectors (AC-1, REQ-KRN.MAN.KCI-007):** `fixtures/man/sha256-cavp-v1` currently holds CAVP-layout vectors with pseudo-random messages whose digests come from Python `hashlib`, plus the FIPS 180-4 example messages and a few NIST CAVP sample vectors checked against `hashlib`. The real NIST `SHA256ShortMsg.rsp` and `SHA256LongMsg.rsp` files are pending the D-038 third-party data decision; the test reader (`check_rsp` in `crates/fid-kci/tests/kci.rs`) already parses that format, so adding them needs no code change.
+
 - The `KernelResult` here carries only kernel-owned digest fields; the full ResultRecord envelope (uncertainty, decision, spec context) is assembled by `CORE`, `UNC` and `GDT` around it.
 
 ## Children

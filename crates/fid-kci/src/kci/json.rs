@@ -16,11 +16,16 @@ pub enum Json {
     Obj(Vec<(String, Json)>),
 }
 
+/// Deepest accepted nesting of arrays and objects (same limit as fid-canon's `MAX_DEPTH`).
+pub const MAX_DEPTH: usize = 128;
+
 /// Canonical JSON writer errors.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsonError {
     /// An object has two members with the same key.
     DuplicateKey(String),
+    /// Arrays and objects are nested deeper than [`MAX_DEPTH`].
+    TooDeep,
 }
 
 impl JsonError {
@@ -28,6 +33,7 @@ impl JsonError {
     pub fn code(&self) -> &'static str {
         match self {
             JsonError::DuplicateKey(_) => "duplicate_key",
+            JsonError::TooDeep => "too_deep",
         }
     }
 }
@@ -36,6 +42,7 @@ impl fmt::Display for JsonError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             JsonError::DuplicateKey(k) => write!(f, "duplicate_key: {k:?}"),
+            JsonError::TooDeep => write!(f, "too_deep: nesting exceeds {MAX_DEPTH}"),
         }
     }
 }
@@ -50,14 +57,13 @@ pub fn cmp_utf16(a: &str, b: &str) -> Ordering {
 /// Writes `v` as canonical JSON (UTF-8 bytes).
 pub fn to_canonical(v: &Json) -> Result<Vec<u8>, JsonError> {
     let mut out = String::new();
-    write_value(&mut out, v)?;
+    write_value(&mut out, v, 0)?;
     Ok(out.into_bytes())
 }
 
 /// Writes an object whose keys are fixed by the caller, already unique and in UTF-16 order
 /// (kernel-owned schemas), so writing cannot fail.
 pub(crate) fn fixed_object(members: &[(&str, Flat<'_>)]) -> Vec<u8> {
-    debug_assert!(members.windows(2).all(|p| cmp_utf16(p[0].0, p[1].0) == Ordering::Less));
     let mut out = String::from("{");
     for (i, (k, v)) in members.iter().enumerate() {
         if i > 0 {
@@ -89,7 +95,11 @@ pub(crate) enum Flat<'a> {
     List(&'a [String]),
 }
 
-fn write_value(out: &mut String, v: &Json) -> Result<(), JsonError> {
+/// `depth` counts the arrays and objects enclosing `v`; recursion is bounded by [`MAX_DEPTH`].
+fn write_value(out: &mut String, v: &Json, depth: usize) -> Result<(), JsonError> {
+    if !matches!(v, Json::Str(_)) && depth >= MAX_DEPTH {
+        return Err(JsonError::TooDeep);
+    }
     match v {
         Json::Str(s) => write_string(out, s),
         Json::Arr(items) => {
@@ -98,7 +108,7 @@ fn write_value(out: &mut String, v: &Json) -> Result<(), JsonError> {
                 if i > 0 {
                     out.push(',');
                 }
-                write_value(out, x)?;
+                write_value(out, x, depth + 1)?;
             }
             out.push(']');
         }
@@ -117,7 +127,7 @@ fn write_value(out: &mut String, v: &Json) -> Result<(), JsonError> {
                 }
                 write_string(out, k);
                 out.push(':');
-                write_value(out, x)?;
+                write_value(out, x, depth + 1)?;
             }
             out.push('}');
         }
@@ -147,4 +157,26 @@ fn write_string(out: &mut String, s: &str) {
         }
     }
     out.push('"');
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn strictly_utf16_sorted(keys: &[&str]) -> bool {
+        keys.windows(2).all(|p| cmp_utf16(p[0], p[1]) == Ordering::Less)
+    }
+
+    /// Both fixed kernel schemas list their keys unique and in UTF-16 order, so
+    /// `fixed_object` writes canonical JSON for them.
+    #[test]
+    fn fixed_schemas_are_in_canonical_key_order() {
+        assert!(strictly_utf16_sorted(&crate::kci::RESULT_KEYS));
+        assert!(strictly_utf16_sorted(&crate::cards::CARD_KEYS));
+        for keys in [&crate::kci::RESULT_KEYS[..], &crate::cards::CARD_KEYS[..]] {
+            let members: Vec<(&str, Flat<'_>)> = keys.iter().map(|k| (*k, Flat::Str("v"))).collect();
+            let generic = Json::Obj(keys.iter().rev().map(|k| (k.to_string(), Json::Str("v".into()))).collect());
+            assert_eq!(Ok(fixed_object(&members)), to_canonical(&generic));
+        }
+    }
 }

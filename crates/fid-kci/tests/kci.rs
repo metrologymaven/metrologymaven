@@ -388,11 +388,67 @@ fn card_canonical_bytes_and_digests() {
     assert_eq!(ids, sorted);
 }
 
+/// An algorithm returning a kernel-owned error variant cannot impersonate a kernel check:
+/// the error comes back as `Algorithm(IMPERSONATION_CODE)`.
+struct Impostor {
+    in_validate: bool,
+}
+
+impl KernelAlgorithm for Impostor {
+    fn id(&self) -> AlgorithmId {
+        AlgorithmId::parse(ECHO).unwrap()
+    }
+    fn validate(&self, _: &[u8]) -> Result<(), KernelError> {
+        if self.in_validate {
+            Err(KernelError::DigestMismatch { input_index: 0 })
+        } else {
+            Ok(())
+        }
+    }
+    fn run(&self, _: &[u8], _: Option<u64>, _: &[&[u8]]) -> Result<Vec<u8>, KernelError> {
+        Err(KernelError::MissingSpecCard(AlgorithmId::parse(ECHO).unwrap()))
+    }
+}
+
+#[test]
+fn algorithms_cannot_impersonate_kernel_errors() {
+    let confined = KernelError::Algorithm(AlgorithmFailure { code: fid_kci::kci::IMPERSONATION_CODE });
+    for in_validate in [true, false] {
+        let cards = CardRegistry::new(vec![parse_card(&echo_card()).unwrap()]).unwrap();
+        let t = AlgorithmTable::new(vec![Box::new(Impostor { in_validate })], cards).unwrap();
+        assert_eq!(evaluate(&t, &call(ECHO, b"", None, &[b"x"])), Err(confined.clone()), "validate={in_validate}");
+    }
+    // The permitted variants pass through unchanged (see also ac4_invalid_params_compute_nothing).
+    let (t, _, _) = table();
+    assert_eq!(
+        evaluate(&t, &call(ECHO, b"fail", None, &[])),
+        Err(KernelError::Algorithm(AlgorithmFailure { code: "asked_to_fail" }))
+    );
+}
+
+#[test]
+fn canonical_json_depth_limit() {
+    use fid_kci::kci::json::MAX_DEPTH;
+    let nest = |n: usize| (0..n).fold(Json::Str("x".into()), |v, _| Json::Arr(vec![v]));
+    let ok = to_canonical(&nest(MAX_DEPTH)).unwrap();
+    assert_eq!(ok.len(), 2 * MAX_DEPTH + 3);
+    assert_eq!(to_canonical(&nest(MAX_DEPTH + 1)), Err(JsonError::TooDeep));
+    let obj = (0..MAX_DEPTH + 1).fold(Json::Str("x".into()), |v, _| Json::Obj(vec![("k".into(), v)]));
+    assert_eq!(to_canonical(&obj).map_err(|e| e.code()), Err("too_deep"));
+}
+
 // ------------------------------------------------------------------ AC-5: KNP-1 source scan
 
 /// AC-5: the crate source uses no I/O, clock, environment, global state, `unsafe`, hash maps,
-/// FMA or float min/max. (A workspace KNP-1 lint does not exist on main yet; this scan applies
-/// its rules to this crate, and `unsafe_code = "forbid"` is set workspace-wide.)
+/// FMA or float min/max. `unsafe_code = "forbid"` is also set workspace-wide.
+///
+/// Interim check: `fid-knp1-lint` (KRN.NUM.LINT) has only its findings model on main, no
+/// detectors yet. When its detectors land, this test should be replaced by running that lint
+/// on the kernel closure.
+///
+/// Float `min`/`max`: a text scan cannot tell a float receiver from an integer one, so every
+/// `.min(` / `.max(` / `.clamp(` method call is banned in this crate (it uses no floats at all;
+/// integer code writes the comparison out). `f64::min` / `f64::max` paths are banned too.
 #[test]
 fn ac5_knp1_source_scan() {
     let banned = [
@@ -429,11 +485,22 @@ fn ac5_knp1_source_scan() {
         "core::arch",
         "std::arch",
         "extern ",
+        ".min(",
+        ".max(",
+        ".clamp(",
     ];
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut files = vec![src.join("lib.rs"), src.join("cards.rs")];
-    for e in std::fs::read_dir(src.join("kci")).unwrap() {
-        files.push(e.unwrap().path());
+    let mut files = Vec::new();
+    let mut dirs = vec![src];
+    while let Some(d) = dirs.pop() {
+        for e in std::fs::read_dir(&d).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                files.push(p);
+            }
+        }
     }
     assert!(files.len() >= 5);
     for f in files {

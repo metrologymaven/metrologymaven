@@ -45,7 +45,8 @@ impl Sha256 {
     pub fn update(&mut self, mut data: &[u8]) {
         self.len = self.len.wrapping_add(data.len() as u64);
         if self.filled > 0 {
-            let take = (64 - self.filled).min(data.len());
+            let room = 64 - self.filled;
+            let take = if data.len() < room { data.len() } else { room };
             self.block[self.filled..self.filled + take].copy_from_slice(&data[..take]);
             self.filled += take;
             data = &data[take..];

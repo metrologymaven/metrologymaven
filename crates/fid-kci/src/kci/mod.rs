@@ -30,6 +30,10 @@ pub struct KernelCall {
     pub inputs: Vec<(Vec<u8>, Digest)>,
 }
 
+/// Member keys of [`KernelResult::canonical_json`], in UTF-16 order (unit-tested in `json`).
+pub(crate) const RESULT_KEYS: [&str; 6] =
+    ["algorithm", "input_digests", "output", "output_digest", "params_digest", "seed"];
+
 /// The kernel-owned result envelope (REQ-KRN.MAN.KCI-005). Only [`evaluate`] builds one,
 /// so every field is computed inside the kernel.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,15 +80,16 @@ impl KernelResult {
         let inputs: Vec<String> = self.input_digests.iter().map(|d| d.as_str().to_string()).collect();
         let output = to_hex(&self.output);
         let seed = self.seed.map(|s| s.to_string());
+        let [k_alg, k_inputs, k_out, k_out_digest, k_params_digest, k_seed] = RESULT_KEYS;
         let mut members = vec![
-            ("algorithm", Flat::Str(&algorithm)),
-            ("input_digests", Flat::List(&inputs)),
-            ("output", Flat::Str(&output)),
-            ("output_digest", Flat::Str(self.output_digest.as_str())),
-            ("params_digest", Flat::Str(self.params_digest.as_str())),
+            (k_alg, Flat::Str(&algorithm)),
+            (k_inputs, Flat::List(&inputs)),
+            (k_out, Flat::Str(&output)),
+            (k_out_digest, Flat::Str(self.output_digest.as_str())),
+            (k_params_digest, Flat::Str(self.params_digest.as_str())),
         ];
         if let Some(s) = &seed {
-            members.push(("seed", Flat::Str(s)));
+            members.push((k_seed, Flat::Str(s)));
         }
         fixed_object(&members)
     }
@@ -214,9 +219,9 @@ pub fn evaluate(table: &AlgorithmTable, call: &KernelCall) -> Result<KernelResul
         }
         input_digests.push(d);
     }
-    alg.validate(&call.params)?;
+    alg.validate(&call.params).map_err(confine)?;
     let inputs: Vec<&[u8]> = call.inputs.iter().map(|(b, _)| b.as_slice()).collect();
-    let output = alg.run(&call.params, call.seed, &inputs)?;
+    let output = alg.run(&call.params, call.seed, &inputs).map_err(confine)?;
     Ok(KernelResult {
         algorithm: call.algorithm.clone(),
         params_digest: sha256_digest(&call.params),
@@ -225,4 +230,17 @@ pub fn evaluate(table: &AlgorithmTable, call: &KernelCall) -> Result<KernelResul
         output_digest: sha256_digest(&output),
         output,
     })
+}
+
+/// Code given to an algorithm error that tried to look like a kernel check.
+pub const IMPERSONATION_CODE: &str = "algorithm_returned_kernel_error";
+
+/// Algorithms may only report `InvalidParams` or `Algorithm(..)`; any other variant
+/// (digest, lookup, card, FP or table errors belong to the kernel) becomes
+/// `Algorithm(IMPERSONATION_CODE)`, so an algorithm cannot impersonate a kernel check.
+fn confine(e: KernelError) -> KernelError {
+    match e {
+        KernelError::InvalidParams { .. } | KernelError::Algorithm(_) => e,
+        _ => KernelError::Algorithm(AlgorithmFailure { code: IMPERSONATION_CODE }),
+    }
 }
