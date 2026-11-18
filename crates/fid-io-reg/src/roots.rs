@@ -311,7 +311,8 @@ struct RootEntry {
     path: PathBuf,
 }
 
-/// A test hook run between the link walk and the open.
+/// A test hook run between the link walk and the open (feature `test-hooks` only).
+#[cfg(any(test, feature = "test-hooks"))]
 type RaceHook = Box<dyn Fn() + Send + Sync>;
 
 /// The configured roots (read-only here: configuration belongs to CORE settings) and the
@@ -320,16 +321,19 @@ type RaceHook = Box<dyn Fn() + Send + Sync>;
 pub struct RootSet {
     roots: BTreeMap<RootId, RootEntry>,
     fs_calls: AtomicU64,
+    #[cfg(any(test, feature = "test-hooks"))]
     race_hook: Option<RaceHook>,
 }
 
 impl fmt::Debug for RootSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RootSet")
-            .field("roots", &self.roots)
-            .field("fs_calls", &self.fs_calls)
-            .field("race_hook", &self.race_hook.is_some())
-            .finish()
+        let mut d = f.debug_struct("RootSet");
+        d.field("roots", &self.roots).field("fs_calls", &self.fs_calls);
+        #[cfg(any(test, feature = "test-hooks"))]
+        {
+            d.field("race_hook", &self.race_hook.is_some());
+        }
+        d.finish()
     }
 }
 
@@ -356,14 +360,20 @@ impl RootSet {
 
     /// Test seam for REQ-IO.REG.ROOTS-005: `hook` runs after the link walk and before the
     /// open, so a test can swap a checked component for an escaping link in between.
+    /// Exists only with the `test-hooks` feature, which is off by default and enabled only
+    /// by this crate's own dev-dependency on itself.
+    #[cfg(any(test, feature = "test-hooks"))]
     #[doc(hidden)]
     pub fn set_race_hook(&mut self, hook: impl Fn() + Send + Sync + 'static) {
         self.race_hook = Some(Box::new(hook));
     }
 
     fn before_open(&self) {
-        if let Some(h) = &self.race_hook {
-            h();
+        #[cfg(any(test, feature = "test-hooks"))]
+        {
+            if let Some(h) = &self.race_hook {
+                h();
+            }
         }
     }
 

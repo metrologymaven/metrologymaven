@@ -508,6 +508,7 @@ name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
  "cap-std",
+ "fid-io-reg",
  "fid-types",
  "libc",
 ]

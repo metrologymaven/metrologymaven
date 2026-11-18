@@ -7,6 +7,11 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# Test seam `RootSet::set_race_hook` (IO.REG.ROOTS REQ-005 race tests). Off by default;
+# enabled only through the dev-dependency below, never in shipped builds.
+test-hooks = []
+
 [dependencies]
 fid-types = { path = "../fid-types" }
 # Capability-based directory handles: opens relative to an opened root that cannot
@@ -16,6 +21,10 @@ cap-std = "3.4"
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only.
 libc = "0.2"
+
+[dev-dependencies]
+# Integration tests use the race hook.
+fid-io-reg = { path = ".", features = ["test-hooks"] }
 
 [lints]
 workspace = true
