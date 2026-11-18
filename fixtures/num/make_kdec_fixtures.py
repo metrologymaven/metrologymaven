@@ -217,7 +217,8 @@ lines = []
 
 # ---------------------------------------------------------------- AC-1: cmp boundary cases
 limits = []
-while len(limits) < 2500:
+seen = set()
+while len(limits) < 5000:  # 5 000 distinct authored limits (distinct values)
     s = mm_limit()
     r = ref_parse(s)
     if r[0] != "ok" or r[2] == 0:
@@ -225,13 +226,14 @@ while len(limits) < 2500:
     if norm(r[1], r[2], r[3] - 3)[0] != "ok":
         continue
     v = value(r)
-    if abs(v) >= Fraction(2) ** 1023 or abs(v) < Fraction(10) ** -320:
+    if abs(v) >= Fraction(2) ** 1023 or abs(v) < Fraction(10) ** -320 or v in seen:
         continue
+    seen.add(v)
     limits.append(s)
 
 n_cmp = 0
-for s in limits:
-    for shift in (0, -3):  # as authored in mm, and the same limit in metres
+for i, s in enumerate(limits):
+    for shift in (-3 if i % 2 == 0 else 0,):  # even: authored in mm, shifted to metres; odd: authored in metres
         d = val(s) * Fraction(10) ** shift
         x0 = float(d)  # CPython: correctly rounded nearest
         assert bits_of(x0) == round_exact(d)
@@ -265,6 +267,12 @@ edge = [
     ("1e-400", 400, [1.0, up(1.0), down(1.0)]),
     ("1e400", -400, [1.0]),
     ("12345678901234567890123456789012345678e-400", 0, [MIN_SUB, 0.0]),
+    # Worst cases of the big-integer bound (largest coefficient and exponents against the subnormal range).
+    ("1e400", 0, [MIN_SUB, -MIN_SUB, MAX]),
+    ("340282366920938463463374607431768211455e400", 0, [MIN_SUB, MAX, -MAX]),
+    ("-340282366920938463463374607431768211455e400", 0, [-MIN_SUB, -MAX]),
+    ("340282366920938463463374607431768211455e-400", 0, [MIN_SUB, MAX, 0.0]),
+    ("1e-400", 0, [up(MIN_SUB)]),
 ]
 for s, shift, xs in edge:
     d = val(s) * Fraction(10) ** shift
@@ -273,7 +281,7 @@ for s, shift, xs in edge:
         n_cmp += 1
 
 # ---------------------------------------------------------------- AC-3: correctly rounded to_f64
-f64_strings = list(limits)
+f64_strings = list(limits[:2500])
 f64_strings += [s + "e-3" if "e" not in s.lower() else None for s in limits[:1000]]
 f64_strings = [s for s in f64_strings if s is not None]
 while len(f64_strings) < 6000:

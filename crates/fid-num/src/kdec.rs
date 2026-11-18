@@ -32,6 +32,10 @@ pub enum KdecError {
     ExponentRange,
     /// The normalised coefficient does not fit in `u128`.
     CoefficientOverflow,
+    /// The internal big integer of [`cmp`] ran out of limbs. Unreachable for any
+    /// [`Decimal`] (the capacity is derived from the limits, see `LIMBS`); kept so that an
+    /// impossible case is reported as an error and never as a wrong ordering.
+    Capacity,
 }
 
 impl KdecError {
@@ -42,15 +46,26 @@ impl KdecError {
             KdecError::TooManyDigits => "too_many_digits",
             KdecError::ExponentRange => "exponent_range",
             KdecError::CoefficientOverflow => "coefficient_overflow",
+            KdecError::Capacity => "big_integer_capacity",
         }
     }
 
-    /// Recovers the kind from a [`NumError`] produced by this module.
+    /// Recovers the kind from a [`NumError`] produced by this module (an `op` starting
+    /// with `kdec.`); `None` for any other error.
     pub fn of(e: &NumError) -> Option<KdecError> {
-        let NumError::Domain { detail, .. } = e else { return None };
-        [KdecError::Syntax, KdecError::TooManyDigits, KdecError::ExponentRange, KdecError::CoefficientOverflow]
-            .into_iter()
-            .find(|k| k.detail() == *detail)
+        let NumError::Domain { op, detail } = e else { return None };
+        if !op.starts_with("kdec.") {
+            return None;
+        }
+        [
+            KdecError::Syntax,
+            KdecError::TooManyDigits,
+            KdecError::ExponentRange,
+            KdecError::CoefficientOverflow,
+            KdecError::Capacity,
+        ]
+        .into_iter()
+        .find(|k| k.detail() == *detail)
     }
 
     fn at(self, op: &'static str) -> NumError {
@@ -63,6 +78,11 @@ impl KdecError {
 /// Always normalised: `coeff` has no trailing zeros, zero is `(false, 0, 0)` (the sign of
 /// zero is dropped), and `exp10` lies in [`EXP_MIN`]..=[`EXP_MAX`]. Structural equality is
 /// therefore numeric equality.
+///
+/// Zero has no exponent: [`Decimal::new`], [`Decimal::shift10`] and [`Decimal::mul`] map
+/// any zero to [`Decimal::ZERO`] whatever the exponent. Only [`Decimal::parse`] checks the
+/// *written* exponent of every input, zero included, as an input-size rule (`0e401` is
+/// rejected as text, while `Decimal::new(false, 0, 401)` is zero).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Decimal {
     neg: bool,
@@ -215,8 +235,28 @@ impl Decimal {
     /// round to a signed zero.
     pub fn to_f64(&self) -> Result<f64, NumError> {
         const OP: &str = "kdec.to_f64";
-        let x: f64 = self.to_string().parse().map_err(|_| KdecError::Syntax.at(OP))?;
+        // Canonical form fits in 1 + 39 + 2 + 3 = 45 bytes; formatted on the stack.
+        let mut buf = StackBuf { bytes: [0; 64], len: 0 };
+        fmt::write(&mut buf, format_args!("{self}")).map_err(|_| KdecError::Capacity.at(OP))?;
+        let text = buf.bytes.get(..buf.len).and_then(|b| core::str::from_utf8(b).ok());
+        let x: f64 = text.and_then(|t| t.parse().ok()).ok_or_else(|| KdecError::Syntax.at(OP))?;
         check_finite(OP, x)
+    }
+}
+
+/// Fixed-size text buffer for [`Decimal::to_f64`]; fails instead of growing.
+struct StackBuf {
+    bytes: [u8; 64],
+    len: usize,
+}
+
+impl fmt::Write for StackBuf {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let end = self.len + s.len();
+        let dst = self.bytes.get_mut(self.len..end).ok_or(fmt::Error)?;
+        dst.copy_from_slice(s.as_bytes());
+        self.len = end;
+        Ok(())
     }
 }
 
@@ -299,7 +339,8 @@ fn signum(zero: bool, neg: bool) -> i8 {
 /// Exact ordering of the real numbers `x` and `d` (REQ-KRN.NUM.KDEC-002, -003).
 ///
 /// `Equal` only when both denote the same real number. `-0.0` equals zero. Non-finite `x`
-/// gives [`NumError::NotANumber`] or [`NumError::Infinite`].
+/// gives [`NumError::NotANumber`] or [`NumError::Infinite`]. [`KdecError::Capacity`] is
+/// documented for completeness and cannot occur for a valid [`Decimal`].
 pub fn cmp(x: f64, d: &Decimal) -> Result<Ordering, NumError> {
     const OP: &str = "kdec.cmp";
     let x = check_finite(OP, x)?;
@@ -324,8 +365,8 @@ pub fn cmp(x: f64, d: &Decimal) -> Result<Ordering, NumError> {
     right.mul_pow10(k.max(0).unsigned_abs());
     right.shl((-e).max(0).unsigned_abs());
     if left.overflow || right.overflow {
-        // Unreachable within the parse limits (see `LIMBS`); reported, never wrong.
-        return Err(NumError::Domain { op: OP, detail: "big_integer_capacity" });
+        // Unreachable for any `Decimal` (see `LIMBS`); reported, never wrong.
+        return Err(KdecError::Capacity.at(OP));
     }
     let mag = left.cmp_mag(&right);
     Ok(if xs < 0 { mag.reverse() } else { mag })

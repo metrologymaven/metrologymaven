@@ -164,6 +164,12 @@ fn ac4_parse_errors() {
         assert_eq!(KdecError::of(&e), Some(k));
     }
     assert_eq!(KdecError::of(&NumError::EmptyInput { op: "x" }), None);
+    // A Domain error from another module with the same detail is not a kdec error.
+    assert_eq!(KdecError::of(&NumError::Domain { op: "card.parse", detail: "syntax" }), None);
+    assert_eq!(
+        KdecError::of(&NumError::Domain { op: "kdec.cmp", detail: "big_integer_capacity" }),
+        Some(KdecError::Capacity)
+    );
 }
 
 /// REQ-001: the parser rules, case by case from the fixture.
@@ -217,7 +223,10 @@ fn display_is_canonical_and_round_trips() {
     assert_eq!(dec("-0").to_string(), "0e0");
     assert_eq!("2.5".parse::<Decimal>(), Decimal::new(false, 25, -1));
     assert_eq!(Decimal::new(true, 2500, -3).map(|d| (d.coeff(), d.exp10())), Ok((25, -1)));
+    // Zero has no exponent for value operations; parse checks the written exponent.
     assert_eq!(Decimal::new(true, 0, 9999), Ok(Decimal::ZERO));
+    assert_eq!(Decimal::ZERO.shift10(9999), Ok(Decimal::ZERO));
+    assert!(Decimal::parse("0e401").is_err());
 }
 
 /// AC-5: one digest over all fixture outputs. Every output already equals the offline
