@@ -156,6 +156,23 @@ fn ac5_malformed_json_exits_1_with_timeline_input_and_no_action() {
 }
 
 #[test]
+fn cli_warns_when_maintainers_are_not_configured() {
+    let run = |config: Option<&str>| {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_fid-timeline"));
+        cmd.arg("--events").arg(fixtures().join("stalled.json")).arg("--now").arg("2026-03-17T00:00:00Z");
+        if let Some(c) = config {
+            cmd.arg("--config").arg(fixtures().join(c));
+        }
+        let out = cmd.output().unwrap();
+        assert_eq!(out.status.code(), Some(0));
+        String::from_utf8(out.stderr).unwrap()
+    };
+    assert!(run(None).starts_with("warning: no `maintainers`"));
+    assert!(run(Some("bots-only.toml")).starts_with("warning: no `maintainers`"));
+    assert!(run(Some("config.toml")).is_empty());
+}
+
+#[test]
 fn cli_usage_errors_exit_2() {
     let out = Command::new(env!("CARGO_BIN_EXE_fid-timeline")).arg("--events").output().unwrap();
     assert_eq!(out.status.code(), Some(2));

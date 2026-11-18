@@ -65,7 +65,7 @@ SCOPE (spec-tree validator and reports), GROW (tree-growth driver), CLAIM (claim
 
 ## Split rationale
 
-The split is **one child per tool**, each a small, standard-library-only program with one job: SCOPE validates the tree and lists open work, GROW drives agents over open nodes, CLAIM keeps claims fresh and code PRs traced, TIMELINE runs the PR clock, RFC runs comment periods, LADDER computes eligibility. Every bot is a pure evaluator over exported forge data plus a `--now` input, so it is deterministic and testable offline; posting comments and labels is a thin workflow in ECO.CI.WF. This keeps ECO.COMM free of forge credentials and lets each tool be a leaf now.
+The split is **one child per tool**, each a small program with one job (standard-library-only, except ECO.COMM.TIMELINE, a Rust tool crate with workspace-only dependencies): SCOPE validates the tree and lists open work, GROW drives agents over open nodes, CLAIM keeps claims fresh and code PRs traced, TIMELINE runs the PR clock, RFC runs comment periods, LADDER computes eligibility. Every bot is a pure evaluator over exported forge data plus a `--now` input, so it is deterministic and testable offline; posting comments and labels is a thin workflow in ECO.CI.WF. This keeps ECO.COMM free of forge credentials and lets each tool be a leaf now.
 
 Alternatives considered:
 - **Separate spec-tree tooling from contributor tooling into two level-3 groups** (as the ECO rationale anticipated). Rejected: with each tool already leaf-sized, an intermediate level would add nodes without dividing any work.

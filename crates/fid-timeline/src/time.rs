@@ -1,7 +1,8 @@
 //! Exact RFC 3339 timestamp parsing to integer UTC seconds.
 //!
 //! Accepted form: `YYYY-MM-DDTHH:MM:SS` followed by `Z` or a `+HH:MM` / `-HH:MM` offset,
-//! years 0001..=9999. No fractional seconds, no leap second (`:60`), no local (offset-less)
+//! years 0001..=9999. `T` and `Z` may be lowercase (RFC 3339 section 5.6 allows it).
+//! No fractional seconds, no leap second (`:60`), no local (offset-less)
 //! times: each of those is ambiguous for an integer-second clock and is rejected.
 
 use crate::TimelineError;
@@ -57,7 +58,9 @@ fn parse_inner(b: &[u8]) -> Option<i64> {
     let month = digits(b, 5, 2)?;
     sep(b, 7, b'-')?;
     let day = digits(b, 8, 2)?;
-    sep(b, 10, b'T')?;
+    if !matches!(b.get(10), Some(b'T' | b't')) {
+        return None;
+    }
     let hour = digits(b, 11, 2)?;
     sep(b, 13, b':')?;
     let minute = digits(b, 14, 2)?;
@@ -70,7 +73,7 @@ fn parse_inner(b: &[u8]) -> Option<i64> {
         return None;
     }
     let offset = match b.get(19..)? {
-        b"Z" => 0,
+        b"Z" | b"z" => 0,
         [sign @ (b'+' | b'-'), ..] if b.len() == 25 => {
             let oh = digits(b, 20, 2)?;
             sep(b, 22, b':')?;

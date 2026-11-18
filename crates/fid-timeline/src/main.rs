@@ -4,9 +4,13 @@
 //! Prints the action due and the author-blocked clock and exits 0. On malformed input
 //! it prints `TIMELINE-INPUT: ...` or `TIMELINE-CONFIG: ...` to stderr (and, with
 //! `--json`, `{"error":"<code>"}` to stdout, with no action) and exits 1. Bad usage exits 2.
-//! Reads only the named files: no network, no clock, no environment.
+//! When the config has no `maintainers` key (or there is no config) it prints a warning to
+//! stderr; the result is unchanged. Reads only the named files: no network, no clock, no
+//! environment.
 
-use fid_timeline::{evaluate_inputs, TimelineError, MAX_CONFIG_BYTES, MAX_INPUT_BYTES};
+use fid_timeline::{
+    evaluate, parse_config, parse_events, parse_timestamp, Config, TimelineError, MAX_CONFIG_BYTES, MAX_INPUT_BYTES,
+};
 use std::io::Read;
 use std::process::ExitCode;
 
@@ -30,15 +34,20 @@ fn read_bounded(path: &str, limit: usize) -> std::io::Result<Vec<u8>> {
 fn run(events: &str, now: &str, config: Option<&str>) -> Result<fid_timeline::Evaluation, TimelineError> {
     let ev = read_bounded(events, MAX_INPUT_BYTES)
         .map_err(|e| TimelineError::input(format!("cannot read event file {events:?}: {e}")))?;
+    let events = parse_events(&ev)?;
     let cfg = match config {
         Some(p) => {
             let bytes = read_bounded(p, MAX_CONFIG_BYTES)
                 .map_err(|e| TimelineError::config(format!("cannot read config {p:?}: {e}")))?;
-            Some(String::from_utf8(bytes).map_err(|_| TimelineError::config("config is not UTF-8"))?)
+            parse_config(&String::from_utf8(bytes).map_err(|_| TimelineError::config("config is not UTF-8"))?)?
         }
-        None => None,
+        None => Config::default(),
     };
-    evaluate_inputs(&ev, cfg.as_deref(), now)
+    let now = parse_timestamp(now).map_err(|e| TimelineError::input(format!("--now: {}", e.message)))?;
+    if cfg.maintainers.is_none() {
+        eprintln!("warning: no `maintainers` in the config; every non-author, non-bot actor counts as a maintainer");
+    }
+    evaluate(&events, &cfg, now)
 }
 
 fn main() -> ExitCode {
