@@ -188,7 +188,8 @@ pub fn parse_events(input: &[u8]) -> Result<Vec<Event>, TimelineError> {
             return Err(TimelineError::input(format!("event {i}: empty actor")));
         }
         let kind_s = field(obj, i, "kind")?;
-        let kind = Kind::parse(kind_s).ok_or_else(|| TimelineError::input(format!("event {i}: unknown kind {kind_s:?}")))?;
+        let kind =
+            Kind::parse(kind_s).ok_or_else(|| TimelineError::input(format!("event {i}: unknown kind {kind_s:?}")))?;
         let label = if kind.has_label() {
             Some(field(obj, i, "label")?.to_string())
         } else if obj.contains_key("label") {
@@ -282,8 +283,8 @@ pub fn evaluate(events: &[Event], config: &Config, now: i64) -> Result<Evaluatio
         let by_author = config::same_login(&e.actor, &author);
         let by_maintainer = !by_author && config.is_maintainer(&e.actor);
         let waiting_label = e.label.as_deref() == Some(WAITING_LABEL);
-        let blocks = by_maintainer
-            && (e.kind == Kind::ReviewChangesRequested || (e.kind == Kind::LabelAdded && waiting_label));
+        let blocks =
+            by_maintainer && (e.kind == Kind::ReviewChangesRequested || (e.kind == Kind::LabelAdded && waiting_label));
         let unblocks = (by_author && matches!(e.kind, Kind::CommitPushed | Kind::Comment | Kind::ReviewRequested))
             || (e.kind == Kind::LabelRemoved && waiting_label);
         if blocks {

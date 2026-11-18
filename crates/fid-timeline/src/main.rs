@@ -10,7 +10,8 @@ use fid_timeline::{evaluate_inputs, TimelineError, MAX_CONFIG_BYTES, MAX_INPUT_B
 use std::io::Read;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: fid-timeline --events <json> --now <YYYY-MM-DDTHH:MM:SSZ> [--config <toml-or-json>] [--json]";
+const USAGE: &str =
+    "usage: fid-timeline --events <json> --now <YYYY-MM-DDTHH:MM:SSZ> [--config <toml-or-json>] [--json]";
 
 fn usage() -> ExitCode {
     eprintln!("{USAGE}");

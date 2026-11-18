@@ -159,10 +159,8 @@ fn ac5_malformed_json_exits_1_with_timeline_input_and_no_action() {
 fn cli_usage_errors_exit_2() {
     let out = Command::new(env!("CARGO_BIN_EXE_fid-timeline")).arg("--events").output().unwrap();
     assert_eq!(out.status.code(), Some(2));
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-timeline"))
-        .args(["--events", "x.json", "--bogus"])
-        .output()
-        .unwrap();
+    let out =
+        Command::new(env!("CARGO_BIN_EXE_fid-timeline")).args(["--events", "x.json", "--bogus"]).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
 

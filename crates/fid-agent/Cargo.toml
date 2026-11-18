@@ -1,0 +1,22 @@
+[package]
+name = "fid-agent"
+description = "Metrology Maven agent-experience CI checks: workflow catalog per MCP server profile (spec node AGENT.SKILLS.CATALOG)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "agent-catalog-check"
+path = "src/bin/agent-catalog-check.rs"
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (catalog versions, manifest digest).
+fid-canon = { path = "../fid-canon" }
+# Shared `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
