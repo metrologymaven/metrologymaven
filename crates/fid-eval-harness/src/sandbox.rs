@@ -46,6 +46,20 @@ fn io_err(p: &Path, e: std::io::Error) -> SandboxError {
     err(ErrorCode::Io, format!("{}: {e}", p.display()))
 }
 
+/// Creates one directory readable only by its owner (mode 0o700) on Unix; elsewhere a plain
+/// directory (on Windows it inherits the work folder's access control list).
+fn create_private_dir(p: &Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        std::fs::DirBuilder::new().mode(0o700).create(p)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::create_dir(p)
+    }
+}
+
 /// A fresh UUIDv7 (RFC 9562 §5.7): 48-bit Unix milliseconds and 74 random bits from the
 /// operating system's CSPRNG.
 pub fn new_run_id() -> Result<Uuid, SandboxError> {
@@ -113,17 +127,26 @@ fn check_entries(entries: &[tar::Entry<'_>]) -> Result<BTreeMap<String, Kind>, S
     Ok(seen)
 }
 
-/// The child-process environment: private home and configuration folders, plus only the
-/// variables needed to start programs (`PATH`; on Windows also the system folder variables).
+/// The child-process environment: private home and configuration folders (user and, through
+/// `XDG_CONFIG_DIRS` / `XDG_DATA_DIRS`, the XDG system search paths), plus only the variables
+/// needed to start programs (`PATH`; on Windows also the system folder variables).
+///
+/// This isolates a program only if it finds its configuration through these variables. `fid`
+/// must therefore resolve its folders from the environment: on Windows the known-folder API
+/// (`SHGetKnownFolderPath`) ignores `APPDATA`, and machine-wide configuration (for example
+/// under `ProgramData` or `/etc` when `XDG_CONFIG_DIRS` is ignored) is not hidden by an
+/// environment at all; see the leaf's open questions.
 fn build_env(home: &Path) -> Result<Vec<(String, String)>, SandboxError> {
     let mut env: BTreeMap<String, String> = BTreeMap::new();
-    let dirs: [(&str, &[&str]); 11] = [
+    let dirs: [(&str, &[&str]); 13] = [
         ("HOME", &[]),
         ("USERPROFILE", &[]),
         ("XDG_CONFIG_HOME", &[".config"]),
         ("XDG_DATA_HOME", &[".local", "share"]),
         ("XDG_STATE_HOME", &[".local", "state"]),
         ("XDG_CACHE_HOME", &[".cache"]),
+        ("XDG_CONFIG_DIRS", &["etc", "xdg"]),
+        ("XDG_DATA_DIRS", &["usr", "share"]),
         ("APPDATA", &["AppData", "Roaming"]),
         ("LOCALAPPDATA", &["AppData", "Local"]),
         ("TMPDIR", &["tmp"]),
@@ -208,7 +231,7 @@ impl Sandbox {
             return Err(err(ErrorCode::InvalidWorkDir, format!("{}: not a real directory", runs.display())));
         }
         let dir = runs.join(run_id.to_string());
-        match std::fs::create_dir(&dir) {
+        match create_private_dir(&dir) {
             Ok(()) => {}
             Err(e) if e.kind() == ErrorKind::AlreadyExists => {
                 return Err(err(ErrorCode::RunDirExists, format!("{} exists", dir.display())));
@@ -263,7 +286,8 @@ impl Sandbox {
             write.push(RootDecl { root: w.clone(), dir: rel });
         }
         create_file(dir, "roots.json", roots_json(&read, &write).as_bytes())?;
-        let home = create_dirs(dir, "home")?;
+        let home = dir.join("home");
+        create_private_dir(&home).map_err(|e| io_err(&home, e))?;
         let artifacts = create_dirs(dir, "artifacts")?;
         let env = build_env(&home)?;
         Ok(Sandbox { run_id, dir: dir.to_path_buf(), project, home, artifacts, start_digest, read, write, env })
@@ -338,6 +362,11 @@ impl Sandbox {
     /// Resolves a run-directory-relative path without leaving the run directory: `..`,
     /// absolute paths, backslashes and symbolic links or junctions on the way are refused
     /// with `path_escape`.
+    ///
+    /// This is check-then-use: the components are checked when it is called, and a process
+    /// that can write in the run directory can swap a component for a link before the path
+    /// is used. It is therefore not safe while an agent (or a leftover agent process) is
+    /// running; root enforcement at run time belongs to AUTO.SURF.ROOTS.
     pub fn resolve(&self, rel: &str) -> Result<PathBuf, SandboxError> {
         confine(&self.dir, rel)
     }

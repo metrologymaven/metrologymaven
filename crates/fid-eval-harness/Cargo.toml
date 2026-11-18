@@ -21,5 +21,9 @@ getrandom = "0.2"
 # Streaming SHA-256 for snapshots of large files (the sha2 0.10 fid-canon already uses).
 sha2 = "0.10"
 
+# O_NOFOLLOW and O_NONBLOCK for opening snapshot files (already in the graph via getrandom).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [lints]
 workspace = true

@@ -11,6 +11,7 @@
     "duplicate": "bad_archive",
     "file-then-dir": "bad_archive",
     "hardlink": "bad_archive",
+    "ok": "ok",
     "parent": "bad_archive",
     "pax": "bad_archive",
     "reserved-name": "bad_archive",
@@ -24,6 +25,42 @@
     "trailing-dot": "bad_archive",
     "trailing-garbage": "bad_archive",
     "truncated": "bad_archive"
+  },
+  "ok_files": [
+    [
+      "README.txt",
+      "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22"
+    ],
+    [
+      "in/sub/a.txt",
+      "sha256:87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7"
+    ]
+  ],
+  "reasons": {
+    "absolute": "empty segment",
+    "altered": "task names",
+    "backslash": "character outside",
+    "bad-checksum": "header checksum mismatch",
+    "case-collision": "collides with another entry",
+    "case-dir-file": "lies below a file",
+    "dotdot": "`.` or `..` segment",
+    "drive": "character outside",
+    "duplicate": "collides with another entry",
+    "file-then-dir": "lies below a file",
+    "hardlink": "is not a regular file or directory",
+    "parent": "`.` or `..` segment",
+    "pax": "is not a regular file or directory",
+    "reserved-name": "Windows device name",
+    "roots-absolute": "empty segment",
+    "roots-case": "equal or nested",
+    "roots-dotdot": "`.` or `..` segment",
+    "roots-file": "is a file in the start state",
+    "roots-nested": "equal or nested",
+    "roots-reserved": "Windows device name",
+    "symlink": "is not a regular file or directory",
+    "trailing-dot": "segment ends with a dot",
+    "trailing-garbage": "data after the end-of-archive block",
+    "truncated": "truncated data"
   },
   "tasks": {
     "mini-inspect-01": {

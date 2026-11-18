@@ -166,13 +166,75 @@ fn ac2_and_fail_closed_cases_create_no_run_directory() {
     let cases = obj(&obj(&exp)["cases"]);
     assert!(cases.len() >= 20);
     assert_eq!(st(&cases["altered"]), "start_state_mismatch");
+    let reasons = obj(&obj(&exp)["reasons"]);
+    let mut ok_seen = false;
     for (name, code) in cases {
         let work = TempWork::new("case");
         let task = TaskSpec::read(&case_dir(name)).unwrap();
+        if st(code) == "ok" {
+            // The positive case (type-5 directory entries, one of them empty) must build.
+            let sb = Sandbox::build(work.path(), &task).unwrap();
+            let files = file_list(&FsSnapshot::take(sb.project()).unwrap());
+            assert_eq!(files, pairs(&obj(&exp)["ok_files"]), "{name}");
+            assert!(sb.project().join("in").join("empty").is_dir());
+            assert!(sb.read_root("in").unwrap().join("sub").join("a.txt").is_file());
+            ok_seen = true;
+            continue;
+        }
         let e = Sandbox::build(work.path(), &task).expect_err(name);
         assert_eq!(e.code.as_str(), st(code), "{name}: {e}");
+        let reason = st(&reasons[name.as_str()]);
+        assert!(e.detail.contains(reason), "{name}: {e} lacks {reason:?}");
         assert!(work.run_dirs().is_empty(), "{name}: run directory left behind");
     }
+    assert!(ok_seen);
+}
+
+#[cfg(unix)]
+#[test]
+fn run_dir_and_home_are_private_on_unix() {
+    use std::os::unix::fs::PermissionsExt;
+    let work = TempWork::new("mode");
+    let task = TaskSpec::read(&suite_task("mini-inspect-01")).unwrap();
+    let sb = Sandbox::build(work.path(), &task).unwrap();
+    for d in [sb.dir(), sb.home()] {
+        assert_eq!(std::fs::metadata(d).unwrap().permissions().mode() & 0o777, 0o700, "{}", d.display());
+    }
+}
+
+/// A file the walk saw as regular but that a leftover process swapped for a link or FIFO is
+/// classified through its handle: never followed, never blocked on.
+#[cfg(unix)]
+#[test]
+fn swapped_files_are_not_followed_or_blocked_on() {
+    let work = TempWork::new("swap");
+    let big = work.path().join("big.bin");
+    std::fs::write(&big, b"outside").unwrap();
+    let link = work.path().join("was-a-file");
+    std::os::unix::fs::symlink(big.as_path(), &link).unwrap();
+    match FsSnapshot::file_entry(&link).unwrap() {
+        EntryKind::Link(t) => assert!(t.ends_with("big.bin"), "{t}"),
+        other => panic!("symlink classified as {other:?}"),
+    }
+    let fifo = work.path().join("fifo");
+    let st = Command::new("mkfifo").arg(&fifo).status().unwrap();
+    assert!(st.success());
+    assert_eq!(FsSnapshot::file_entry(&fifo).unwrap(), EntryKind::Other);
+    let snap = FsSnapshot::take(work.path()).unwrap();
+    let kinds: Vec<(&str, &EntryKind)> = snap.entries.iter().map(|e| (e.path.as_str(), &e.kind)).collect();
+    assert_eq!(kinds.len(), 3);
+    assert_eq!(kinds[1], ("fifo", &EntryKind::Other));
+}
+
+#[cfg(unix)]
+#[test]
+fn non_utf8_names_stay_distinct() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    assert_eq!(escape_name(OsStr::from_bytes(b"a\xffb")), "a\\xffb");
+    assert_eq!(escape_name(OsStr::from_bytes(b"a\xfeb")), "a\\xfeb");
+    assert_eq!(escape_name(OsStr::from_bytes(b"a\\xffb")), "a\\\\xffb");
+    assert_eq!(escape_name(OsStr::new("plain.txt")), "plain.txt");
 }
 
 #[test]
@@ -299,7 +361,9 @@ fn env_is_exactly_private_folders_and_start_variables() {
         "TMPDIR",
         "USERPROFILE",
         "XDG_CACHE_HOME",
+        "XDG_CONFIG_DIRS",
         "XDG_CONFIG_HOME",
+        "XDG_DATA_DIRS",
         "XDG_DATA_HOME",
         "XDG_STATE_HOME",
     ];
@@ -378,8 +442,22 @@ fn links_are_recorded_never_followed_and_never_resolved_through() {
     let link: Vec<&SnapEntry> = snap.entries.iter().filter(|e| e.path.starts_with("roots/write/out/")).collect();
     assert_eq!(link.len(), 1);
     assert_eq!(link[0].path, "roots/write/out/escape");
-    assert_eq!(link[0].kind, EntryKind::Link);
+    assert!(matches!(link[0].kind, EntryKind::Link(_)), "{:?}", link[0].kind);
     assert!(snap.entries.iter().all(|e| !e.path.contains("secret")));
+
+    // Retargeting the link shows in the diff.
+    let other = TempWork::new("outside-2");
+    let escape = sb.write_root("out").unwrap().join("escape");
+    #[cfg(unix)]
+    std::fs::remove_file(&escape).unwrap();
+    #[cfg(windows)]
+    std::fs::remove_dir(&escape).unwrap();
+    make_dir_link(&escape, other.path());
+    let retargeted = sb.snapshot().unwrap();
+    assert_eq!(
+        snap.diff(&retargeted),
+        vec![Change { path: "roots/write/out/escape".to_string(), kind: ChangeKind::Modified }]
+    );
 
     let e = sb.resolve("roots/write/out/escape/secret.txt").unwrap_err();
     assert_eq!(e.code, ErrorCode::PathEscape);
@@ -484,4 +562,17 @@ fn req6_no_network_and_no_process_launch_in_the_library() {
         .map(|l| l.split('=').next().unwrap().trim())
         .collect();
     assert_eq!(deps, ["fid-canon", "fid-types", "fid-uuid", "getrandom", "sha2"]);
+    let unix_deps: Vec<&str> = manifest
+        .split("[target.'cfg(unix)'.dependencies]")
+        .nth(1)
+        .unwrap()
+        .split("\n[")
+        .next()
+        .unwrap()
+        .lines()
+        .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'))
+        .map(|l| l.split('=').next().unwrap().trim())
+        .collect();
+    assert_eq!(unix_deps, ["libc"]);
+    assert_eq!(manifest.matches("dependencies]").count(), 2, "no other dependency sections");
 }

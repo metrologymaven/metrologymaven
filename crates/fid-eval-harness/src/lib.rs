@@ -22,8 +22,12 @@
 //! a file. Files are created with `create_new`, directories one segment at a time, and an
 //! existing symbolic link or junction is never followed.
 //!
+//! The run directory and `home/` are created with mode 0o700 on Unix.
+//!
 //! [`FsSnapshot`] records the path and SHA-256 of every file in the run directory, without
-//! following symbolic links or junctions (they are recorded as links).
+//! following symbolic links or junctions (they are recorded as links with their targets).
+//! Each file is re-checked through its opened handle (no-follow, non-blocking), so a leftover
+//! process that swaps in a link or FIFO cannot redirect or hang the snapshot.
 //!
 //! The crate makes no network connection and calls no `fid` command; it reads the fields of
 //! `task.json` it needs ([`TaskSpec`]) itself, because the layer rules forbid linking the
@@ -37,7 +41,7 @@ mod task;
 
 pub use path::check_rel;
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
-pub use snapshot::{Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};
+pub use snapshot::{escape_name, Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};
 pub use task::TaskSpec;
 
 use std::fmt;

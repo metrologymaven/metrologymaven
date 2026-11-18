@@ -64,7 +64,9 @@ def base_files():
 
 
 def make_cases():
-    """name -> (archive bytes, read roots, write roots, expected code, recorded digest or None)."""
+    """name -> (archive bytes, read roots, write roots, expected code, recorded digest or None).
+
+    Code `ok` means the build must succeed; the expected files are listed in expected.json."""
     ok = archive(base_files())
     original = (SUITE / "tasks" / "mini-inspect-01" / "start.tar").read_bytes()
     # One altered byte inside the content of README.txt (header 512 bytes, data next).
@@ -73,6 +75,9 @@ def make_cases():
     bad_sum = bytearray(ok)
     bad_sum[148:156] = b"0000000\x00"
     cases = {
+        # Positive case with type-5 directory entries (one empty) and a nested file.
+        "ok": (archive([("in", None), ("in/sub", None), ("in/empty", None), ("README.txt", b"ok\n"),
+                        ("in/sub/a.txt", b"a\n")]), ["in"], ["out"], "ok", None),
         # AC-2: the task names the original digest; the archive has one byte changed.
         "altered": (bytes(altered), ["in"], ["out"], "start_state_mismatch", sha(original)),
         "dotdot": (archive([("in/../../evil.txt", b"x\n")]), ["in"], ["out"], "bad_archive", None),
@@ -107,6 +112,35 @@ def make_cases():
         "roots-file": (ok, ["README.txt"], ["out"], "invalid_roots", None),
     }
     return cases
+
+
+# Hand-labelled part of each failure's detail, from the rule that refuses it (see the PR).
+REASONS = {
+    "altered": "task names",
+    "dotdot": "`.` or `..` segment",
+    "parent": "`.` or `..` segment",
+    "absolute": "empty segment",
+    "drive": "character outside",
+    "backslash": "character outside",
+    "symlink": "is not a regular file or directory",
+    "hardlink": "is not a regular file or directory",
+    "pax": "is not a regular file or directory",
+    "case-collision": "collides with another entry",
+    "case-dir-file": "lies below a file",
+    "duplicate": "collides with another entry",
+    "file-then-dir": "lies below a file",
+    "reserved-name": "Windows device name",
+    "trailing-dot": "segment ends with a dot",
+    "bad-checksum": "header checksum mismatch",
+    "truncated": "truncated data",
+    "trailing-garbage": "data after the end-of-archive block",
+    "roots-case": "equal or nested",
+    "roots-nested": "equal or nested",
+    "roots-dotdot": "`.` or `..` segment",
+    "roots-absolute": "empty segment",
+    "roots-reserved": "Windows device name",
+    "roots-file": "is a file in the start state",
+}
 
 
 def task_json(template: dict, digest: str, read, write) -> bytes:
@@ -148,11 +182,17 @@ def build():
     out["tasks"] = tasks
     case_files = {}
     codes = {}
+    reasons = {}
     for name, (data, read, write, code, digest) in sorted(make_cases().items()):
         case_files[f"cases/{name}/start.tar"] = data
         case_files[f"cases/{name}/task.json"] = task_json(template, digest or sha(data), read, write)
         codes[name] = code
+        if code == "ok":
+            out["ok_files"] = unpacked(data)
+        else:
+            reasons[name] = REASONS[name]
     out["cases"] = codes
+    out["reasons"] = reasons
     case_files["expected.json"] = (json.dumps(out, indent=2, sort_keys=True) + "\n").encode("utf-8")
     return case_files
 

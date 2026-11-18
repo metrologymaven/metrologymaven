@@ -78,6 +78,7 @@ Builds a fresh, isolated project for every run from the task's start state, chec
 ## Open questions
 
 - Roots are configuration, and only a human may change them (REQ-AUTO.SURF.ROOTS-006). The sandbox therefore needs the start state to carry its roots as project-relative declarations that CORE storage accepts at open time. No CORE node states this yet; it needs a CORE.STO requirement (AGENT cannot add it).
+- The private home hides user configuration only from programs that locate it through environment variables (`HOME`, `XDG_*`, `APPDATA`). On Windows the known-folder API ignores `APPDATA`, and machine-wide configuration (`ProgramData`, `/etc/xdg` when `XDG_CONFIG_DIRS` is ignored, the registry) is not hidden by an environment at all. Either `fid` must resolve every configuration folder from the environment (a CORE or AUTO requirement), or the run needs OS-level isolation (a separate user or container) on Windows. Not decided here.
 
 ## Children
 
