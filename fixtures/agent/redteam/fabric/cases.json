@@ -1,0 +1,122 @@
+[
+  {
+    "file": "rt-valid-fabric.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "rt-valid-other-kinds.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "rt-plain-task.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "rt-no-predicates.json",
+    "kind": "task",
+    "code": "missing_predicate",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-empty-predicates.json",
+    "kind": "task",
+    "code": "missing_predicate",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-unknown-kind.json",
+    "kind": "task",
+    "code": "unknown_predicate",
+    "fields": [
+      "predicates[0].kind"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-claim-wrong-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].kind"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-predicates-no-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "family"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-bad-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "family"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-bad-marker.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].marker"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-bad-class.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].classes[0]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-dup-predicate-id.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[1].id"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "rt-extra-param.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].fields"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "rt-claim-no-fields.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].fields"
+    ],
+    "schema": "invalid"
+  }
+]

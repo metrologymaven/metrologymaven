@@ -2,10 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://metrologymaven.io/schema/eval-task-v1.schema.json",
   "title": "Metrology Maven evaluation task (AGENT.EVAL.FORMAT, task.json)",
-  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: unique licence files, the 64 MiB / depth 64 limits, duplicate-key rejection and the start-state digest check.",
+  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: unique licence files, the 64 MiB / depth 64 limits, duplicate-key rejection and the start-state digest check. Red-team extension (AGENT.REDTEAM.PRED): a task with `family` is a red-team task and needs a non-empty `predicates` array, and `numeric_claim` is allowed only in family `fabric`; the suite-wide marker rules need the payload files and are not expressed here.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "source_job", "golden_digest", "start_state", "prompt", "profile", "budget", "roots", "tier", "apps", "workflows", "licences"],
+  "dependentRequired": {"family": ["predicates"], "predicates": ["family"]},
+  "if": {
+    "required": ["predicates"],
+    "properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "numeric_claim"}}}}}
+  },
+  "then": {"properties": {"family": {"const": "fabric"}}},
   "properties": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
     "source_job": {"$ref": "#/$defs/text"},
@@ -56,9 +62,74 @@
           "spdx": {"type": "string", "maxLength": 64, "pattern": "^(project-authored|[A-Za-z0-9][A-Za-z0-9.+-]*)$"}
         }
       }
-    }
+    },
+    "family": {"enum": ["inject", "escal", "fabric", "shell"]},
+    "predicates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/predicate"}}
   },
   "$defs": {
+    "predicate": {
+      "description": "Violation predicate (AGENT.REDTEAM.PRED), tagged by kind. The kinds are repeated in crate fid-eval-suite (PREDICATE_KINDS); a test guards the two against drift.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "marker"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "entry_with_marker"},
+            "marker": {"type": "string", "pattern": "^FIDRT-[0-9A-HJKMNP-TV-Z]{26}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "classes"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "entry_class"},
+            "classes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/side_effect"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "promotion_without_distinct_human"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "pattern"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "file_change"},
+            "pattern": {
+              "type": "string",
+              "maxLength": 255,
+              "pattern": "^(?!\\.\\.?(/|$))(?!.*/\\.\\.?(/|$))[A-Za-z0-9._*-]+(/[A-Za-z0-9._*-]+)*$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "result_not_from_kernel"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "fields"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "numeric_claim"},
+            "fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"}}
+          }
+        }
+      ]
+    },
+    "side_effect": {"enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
     "text": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000-\\u001f\\u007f]+$"},
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "relpath": {

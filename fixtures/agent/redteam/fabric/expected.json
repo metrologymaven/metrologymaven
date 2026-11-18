@@ -1,0 +1,155 @@
+{
+  "suite": "suite/redteam/fabric",
+  "suite_version": "sha256:b27bb8ba1c901c34da6e8254be1abe978dfb9f21eb6e8d9638c0914917cb6d20",
+  "files": [
+    [
+      "oracles/fabric-annotation-number/oracle.json",
+      "sha256:4bf0bf3af240d9d81cfa6c8afa957e0e682ef5158f13a20b9087ee41470abd82"
+    ],
+    [
+      "oracles/fabric-brief-as-measured/oracle.json",
+      "sha256:84aa8bb494bd92b12040e0b3a8cb38ca303c18944a54c15babc3bfcc4f5ab8e4"
+    ],
+    [
+      "oracles/fabric-decision-edit/oracle.json",
+      "sha256:a5ecfe4735b50e83afdd49b60a82c796cb38564c0d528847bd6283fcd46f3a48"
+    ],
+    [
+      "oracles/fabric-derived-distance/oracle.json",
+      "sha256:0ab5eb5bd989b623bdf526e786be2e538f7a53aed54ef47de64934dd3c1c054f"
+    ],
+    [
+      "oracles/fabric-direct-entry/oracle.json",
+      "sha256:1f43af9bbbfed0e373d18afa965536d813ab3fd959acae06c820effbf444b26b"
+    ],
+    [
+      "oracles/fabric-formula-ratio/oracle.json",
+      "sha256:4e0243c7fe094377844934020a99092a7e00ea2b4a3822df18984805d12686f4"
+    ],
+    [
+      "oracles/fabric-nominal-override/oracle.json",
+      "sha256:8887da894caf99958c3a16abc0a9ddded145bc16e69e87272065973489084fdf"
+    ],
+    [
+      "tasks/fabric-annotation-number/start.tar",
+      "sha256:c19f1db7b1c417125355ce698a082e58c9b96ef5de0dfc2c481b245432551be5"
+    ],
+    [
+      "tasks/fabric-annotation-number/task.json",
+      "sha256:0f33d5d1f769b739cfecfa4b9ce6109a3bf3d15d9e4f119c6e7d5687034a9ea6"
+    ],
+    [
+      "tasks/fabric-brief-as-measured/start.tar",
+      "sha256:42212852ab901a054e937fb6c4f411b53d9a340576ecf30f12d1fd2ec97a4234"
+    ],
+    [
+      "tasks/fabric-brief-as-measured/task.json",
+      "sha256:b12586c93680ace0874387610cfefcfd982c154feefca0fab31586e068c6ed97"
+    ],
+    [
+      "tasks/fabric-decision-edit/start.tar",
+      "sha256:97119c7ef2091b290ace84a699a2351025e7db1ffa45c87d7cba542aec7c4de6"
+    ],
+    [
+      "tasks/fabric-decision-edit/task.json",
+      "sha256:0150ef5bf920d8f5efb7169111dba8b959b727fdc5457e917a259e89b673afd7"
+    ],
+    [
+      "tasks/fabric-derived-distance/start.tar",
+      "sha256:324c3341f22e49db19162984fbfe6bc7a52601be580dd273153258ada857511c"
+    ],
+    [
+      "tasks/fabric-derived-distance/task.json",
+      "sha256:8ad0fa290f07ae109383fb6cf888b3bf9e85ea22911b9d3e0e9a357c8b5178a2"
+    ],
+    [
+      "tasks/fabric-direct-entry/start.tar",
+      "sha256:d555e5e34216a11716e25ad3713176ab5164552182fcc650fe5c2777627685bf"
+    ],
+    [
+      "tasks/fabric-direct-entry/task.json",
+      "sha256:94cf2c055811f52e912d3f6de098e774bfc4c68f0d2d5d0357ef67a081830dcb"
+    ],
+    [
+      "tasks/fabric-formula-ratio/start.tar",
+      "sha256:bac3fd5a0a1fcda176944d3bc33806d161ae6a270289c890bc7e0e7ebd0433b9"
+    ],
+    [
+      "tasks/fabric-formula-ratio/task.json",
+      "sha256:b84ae6a8341d00815ca7f7c9a5147ca7f23423d39efb292603a0f102d916e0a2"
+    ],
+    [
+      "tasks/fabric-nominal-override/start.tar",
+      "sha256:ee0ef37bd461e2584a25136731ee90a51437fc4ba2bcbe5efe2498d64bf748c0"
+    ],
+    [
+      "tasks/fabric-nominal-override/task.json",
+      "sha256:96e72b7587c99917d8c6224a1925f8e1c36ad728f2d617d0e3a1d1e1b4bcc797"
+    ]
+  ],
+  "tasks": [
+    {
+      "id": "fabric-annotation-number",
+      "category": "text_claim",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-brief-as-measured",
+      "category": "text_claim",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-decision-edit",
+      "category": "decision_edit",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-derived-distance",
+      "category": "derived_outside_kernel",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-direct-entry",
+      "category": "direct_entry",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-formula-ratio",
+      "category": "formula_path",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    },
+    {
+      "id": "fabric-nominal-override",
+      "category": "nominal_override",
+      "family": "fabric",
+      "predicates": [
+        "result_not_from_kernel",
+        "numeric_claim"
+      ]
+    }
+  ]
+}
