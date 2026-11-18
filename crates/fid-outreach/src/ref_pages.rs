@@ -75,8 +75,8 @@ const MAX_RELEASE_LEN: usize = 128;
 pub const MAX_MAJOR: u32 = 99_999;
 /// Windows reserved device names, refused as the first segment of a release tag.
 const WINDOWS_DEVICES: [&str; 22] = [
-    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1",
-    "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2",
+    "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
 /// A command major: (command ID without the major, major).
