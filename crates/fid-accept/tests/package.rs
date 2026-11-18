@@ -285,7 +285,11 @@ fn parameters_are_checked_per_kind() {
         ("decision_equals", r#"{"truth": 7}"#, "PKG-CHECK checks[1].params.truth"),
         ("decision_equals", r#"{"truth": "truth.json"}"#, "PKG-CHECK checks[1].params.truth"),
         ("decision_equals", r#"{"truth": {"file": "truth.json"}}"#, "PKG-CHECK checks[1].params.truth"),
-        ("decision_equals", r#"{"truth": {"file": "t.json", "sha256": "sha256:00"}}"#, "PKG-CHECK checks[1].params.truth"),
+        (
+            "decision_equals",
+            r#"{"truth": {"file": "t.json", "sha256": "sha256:00"}}"#,
+            "PKG-CHECK checks[1].params.truth",
+        ),
         ("decision_equals", r#"{"truth": {"file": "t.json", "sha": "x"}}"#, "PKG-CHECK checks[1].params.truth"),
         ("result_count", r#"{"count": -1}"#, "PKG-CHECK checks[1].params.count"),
         ("result_count", r#"{"count": 1.5}"#, "PKG-CHECK checks[1].params.count"),
