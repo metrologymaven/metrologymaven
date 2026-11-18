@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**13** of **1336** leaves built in code ([B]).
+**14** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 9 built)
+### Wave 1 (125 leaves, 10 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -44,7 +44,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
 - [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
-- [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
+- [B] [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
 - [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
