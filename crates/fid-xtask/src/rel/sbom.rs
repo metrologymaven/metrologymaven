@@ -1155,6 +1155,7 @@ pub fn run(opts: &Options<'_>, out: &Path) -> Result<(String, Vec<Sbom>), Vec<Sb
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
 
@@ -1324,8 +1325,7 @@ mod tests {
     #[test]
     fn metadata_edges_and_scopes() {
         let g = parse_metadata(METADATA.as_bytes()).unwrap();
-        let app: Vec<(&str, bool, bool)> =
-            g.edges["app"].iter().map(|e| (e.to.as_str(), e.normal, e.build)).collect();
+        let app: Vec<(&str, bool, bool)> = g.edges["app"].iter().map(|e| (e.to.as_str(), e.normal, e.build)).collect();
         // The dev-only edge to `d` is dropped; `b` is a build edge; `w` (target-specific) is normal.
         assert_eq!(
             app,
@@ -1395,6 +1395,9 @@ mod tests {
             Scope::Contained,
             Some("MIT/Apache-2.0"),
         );
-        assert_eq!(c.comment.as_deref(), Some("Cargo licence field \"MIT/Apache-2.0\": the legacy `/` separator is read as OR"));
+        assert_eq!(
+            c.comment.as_deref(),
+            Some("Cargo licence field \"MIT/Apache-2.0\": the legacy `/` separator is read as OR")
+        );
     }
 }
