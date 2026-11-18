@@ -78,7 +78,7 @@ fn bits(s: &str) -> Option<f64> {
     u64::from_str_radix(hex, 16).ok().map(f64::from_bits)
 }
 
-fn quantity(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<Quantity> {
+pub(crate) fn quantity(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<Quantity> {
     let q = cx.obj(v, field, &["amount", "unit"], &["amount", "unit"])?;
     let af = join(field, "amount");
     let amount = match q.get("amount") {

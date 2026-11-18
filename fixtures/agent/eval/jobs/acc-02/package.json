@@ -1,0 +1,29 @@
+{
+  "format": "acceptance-job@1",
+  "job_id": "JOB.ACC.02",
+  "variant_id": "acc-02-unassisted",
+  "app": "probe",
+  "milestones": [],
+  "gating": "tracked",
+  "assistance": "unassisted",
+  "input_mode": "any",
+  "journal": {
+    "file": "golden-journal.txt",
+    "digest": "sha256:59869df3e491c015d9825cce601a9f567f59d07b76e0be80249ad429d51d18f9"
+  },
+  "datasets": [],
+  "checks": [
+    {
+      "id": "replay",
+      "kind": "replay_outcome",
+      "params": {}
+    }
+  ],
+  "time_targets": [
+    {
+      "metric": "task_s",
+      "seconds": 600,
+      "verified": false
+    }
+  ]
+}

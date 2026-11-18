@@ -1,0 +1,4 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+[review]
+exclude = ["standards/**", "Customers/**"]
+max_files = 100

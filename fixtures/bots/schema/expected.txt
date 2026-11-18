@@ -1,0 +1,13 @@
+BOTS-SCHEMA bad-date reviewed_on must be an ISO date
+BOTS-SCHEMA bad-date sends_content must be a boolean
+BOTS-SCHEMA bot[3] data_handling must be one non-empty line
+BOTS-SCHEMA bot[3] missing id
+BOTS-SCHEMA dup duplicate id
+BOTS-SCHEMA dup-account duplicate account dup[bot]
+BOTS-SCHEMA escape config must be a relative path without ..
+BOTS-SCHEMA escape exclude_key must be a dotted key path
+BOTS-SCHEMA escape terms must be an SPDX expression or a URL
+BOTS-SCHEMA no-account kind must be self-hosted or hosted
+BOTS-SCHEMA no-account missing account
+BOTS-SCHEMA no-config sends_content = true requires config and exclude_key
+BOTS-SCHEMA no-config unknown field colour

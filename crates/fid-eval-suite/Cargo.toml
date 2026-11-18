@@ -1,6 +1,6 @@
 [package]
 name = "fid-eval-suite"
-description = "Metrology Maven evaluation suite format: task and oracle files, fail-closed parser, suite version digest (spec node AGENT.EVAL.FORMAT)"
+description = "Metrology Maven evaluation suite format: task and oracle files, fail-closed parser, suite version digest and the suite consistency, coverage and oracle isolation check (spec nodes AGENT.EVAL.FORMAT, AGENT.EVAL.CHECK)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
