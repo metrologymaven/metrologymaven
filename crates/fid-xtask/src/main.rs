@@ -1,5 +1,7 @@
 //! `cargo xtask <task>` (alias in `.cargo/config.toml`).
 
+mod pins;
+
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
@@ -16,6 +18,7 @@ fn main() -> ExitCode {
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
         Some("plat-matrix") => plat_matrix(&args),
+        Some("pins") => pins::cli(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");

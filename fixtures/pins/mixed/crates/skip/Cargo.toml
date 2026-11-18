@@ -1,0 +1,9 @@
+[package]
+name = "skip"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Excluded from the workspace, so not checked.
+[dependencies]
+fid-geo = { git = "https://example.org/fid/libs", branch = "main" }

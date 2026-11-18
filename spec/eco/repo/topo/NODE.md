@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 75
 satisfies: [REQ-ECO.REPO-005]
 covers: []
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # ECO.REPO.TOPO: Repository map and cross-repository pin check
@@ -42,7 +44,7 @@ Records which repositories exist and what each holds (`repos.toml`), and checks 
 - **REQ-ECO.REPO.TOPO-001** `repos.toml` shall list each first-party repository with an ID, canonical URL, one-line purpose and a `protected_tags` flag.
 - **REQ-ECO.REPO.TOPO-002** If a git dependency on a first-party repository uses `branch` or no revision selector, then the pin check shall fail and name the manifest file and dependency.
 - **REQ-ECO.REPO.TOPO-003** If a git dependency on a first-party repository uses `tag` and that repository's `protected_tags` is false, then the pin check shall fail; a full 40-character `rev` shall always pass.
-- **REQ-ECO.REPO.TOPO-004** Git URLs shall be compared after normalisation (scheme, trailing `.git`, case of host), so a differently spelled URL of a first-party repository is still checked.
+- **REQ-ECO.REPO.TOPO-004** Git URLs shall be compared after normalisation (scheme and user name dropped, `user@host:path` read as `host/path`, host lower-cased, the scheme's default port dropped, trailing `/` and `.git` stripped, and the owner/repository path compared case-insensitively on hosts whose paths are case-insensitive, such as `github.com`; elsewhere the path keeps its case), so a differently spelled URL of a first-party repository is still checked.
 
 ## Acceptance criteria
 
@@ -56,8 +58,8 @@ Records which repositories exist and what each holds (`repos.toml`), and checks 
 
 - **Registry command(s):** none; repository tool `cargo xtask pins [--workspace <dir>] [--repos <file>]`.
 - **Data structures:** `[[repo]] id, url, purpose, protected_tags`; initial entries: the spec repository and the code monorepo.
-- **Algorithm:** parse every workspace `Cargo.toml` (members and root) with a bounded TOML reader; for `dependencies`, `dev-dependencies`, `build-dependencies` and target-specific tables, inspect `git`, `rev`, `tag`, `branch`; normalise URLs; apply rules.
-- **Errors:** `PIN-MOVING`, `PIN-TAG-UNPROTECTED`, `PIN-REV-SHORT` (rev not 40 hex), `PIN-REPOS` (bad map).
+- **Algorithm:** parse every workspace `Cargo.toml` (root, members, and path dependencies inside the workspace root, which Cargo makes members; a member pattern or manifest that cannot be read is a `PIN-MANIFEST` finding, never skipped) with a bounded TOML reader; for `dependencies`, `dev-dependencies`, `build-dependencies` and target-specific tables, inspect `git`, `rev`, `tag`, `branch`; normalise URLs; apply rules.
+- **Errors:** `PIN-MOVING`, `PIN-TAG-UNPROTECTED`, `PIN-REV-SHORT` (rev not 40 hex), `PIN-REPOS` (bad map), `PIN-MANIFEST` (member pattern or manifest that cannot be checked).
 - **Determinism:** D0.
 - **Performance budget:** under 1 s for 200 manifests [unverified].
 - **Crate:** `fid-xtask`.
