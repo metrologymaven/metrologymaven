@@ -1,0 +1,15 @@
+# Metrology Maven reference kiosk display (spec node PLAT.DEPLOY.KIOSK.DISPLAY; schema in
+# crates/fid-platform, module kiosk_display). VIZ.KIOSK's size rules (touch-target size,
+# minimum font size) are designed and tested against this display.
+# Check and print the derived pixel density with:  fid-platform plat-kiosk display
+#
+# PROVISIONAL [unverified]: these values are the proposal from the spec
+# (REQ-PLAT.DEPLOY.KIOSK.DISPLAY-004), not a measured or confirmed panel. A maintainer is to
+# confirm them against a typical shop-floor model; changing them is a reviewed PR. No brand or
+# model is named on purpose.
+schema_version = 1
+diagonal_in = 21.5
+resolution = [1920, 1080]
+touch = "projected_capacitive"
+glove_touch = true
+description = "Generic 21.5-inch 16:9 Full HD projected-capacitive touch panel with a glove touch mode, for a shop-floor measuring station [unverified proposal]"

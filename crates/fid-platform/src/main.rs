@@ -1,7 +1,8 @@
 //! `fid-platform plat-matrix validate <file>` (spec node `PLAT.MATRIX.FILE`) and
 //! `fid-platform plat-hw validate [--file <path>]` (spec node `PLAT.HW.PROFILE`),
 //! `fid-platform plat-hw validate-suite [--file <path>]` and
-//! `fid-platform plat-hw result-schema` (spec node `PLAT.HW.SCHEMA`).
+//! `fid-platform plat-hw result-schema` (spec node `PLAT.HW.SCHEMA`) and
+//! `fid-platform plat-kiosk display [--file <path>]` (spec node `PLAT.DEPLOY.KIOSK.DISPLAY`).
 //! `cargo xtask plat-matrix ...` and `cargo xtask plat-hw ...` run this binary.
 //!
 //! `plat-matrix validate` prints one diagnostic per line and then `<rows> rows, <errors> errors`.
@@ -10,15 +11,19 @@
 //! suite manifest, printing workload IDs. All three exit 0 when there are no errors, 1 when
 //! there are, and 2 on bad usage or an unreadable file. `plat-hw result-schema` writes the
 //! result JSON Schema to `platform/bench-result.schema.json` (exit 0, or 2 if it cannot).
+//! `plat-kiosk display` prints `px_per_mm = <value to 3 decimals>` when the reference kiosk
+//! display file is valid (exit 0) and one diagnostic per line otherwise (exit 1); 2 on bad
+//! usage or an unreadable file.
 
-use fid_platform::{bench_schema, hw_profile, matrix};
+use fid_platform::{bench_schema, hw_profile, kiosk_display, matrix};
 use std::io::Read;
 use std::process::ExitCode;
 
 const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-hw validate [--file <path>]\n       \
                      fid-platform plat-hw validate-suite [--file <path>]\n       \
-                     fid-platform plat-hw result-schema";
+                     fid-platform plat-hw result-schema\n       \
+                     fid-platform plat-kiosk display [--file <path>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -33,6 +38,8 @@ fn main() -> ExitCode {
             validate_suite(file)
         }
         [group, cmd] if group == "plat-hw" && cmd == "result-schema" => result_schema(),
+        [group, cmd] if group == "plat-kiosk" && cmd == "display" => kiosk(kiosk_display::DEFAULT_PATH),
+        [group, cmd, flag, file] if group == "plat-kiosk" && cmd == "display" && flag == "--file" => kiosk(file),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)
@@ -95,6 +102,24 @@ fn validate_suite(path: &str) -> ExitCode {
             for w in &suite.workloads {
                 println!("{}", w.id);
             }
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                println!("{e}");
+            }
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn kiosk(path: &str) -> ExitCode {
+    let Some(bytes) = read_capped(path, kiosk_display::MAX_BYTES, "plat-kiosk display") else {
+        return ExitCode::from(2);
+    };
+    match kiosk_display::validate(&bytes) {
+        Ok(d) => {
+            println!("px_per_mm = {}", d.px_per_mm_text());
             ExitCode::SUCCESS
         }
         Err(errors) => {

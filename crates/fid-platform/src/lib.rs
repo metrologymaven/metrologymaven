@@ -4,7 +4,10 @@
 //! - [`hw_profile`]: the hardware profile file schema and validator (`PLAT.HW.PROFILE`).
 //! - [`bench_schema`]: the benchmark suite manifest and result document schemas, their
 //!   validators and the result JSON Schema export (`PLAT.HW.SCHEMA`).
+//! - [`kiosk_display`]: the reference kiosk display file, its validator and derived pixel
+//!   density (`PLAT.DEPLOY.KIOSK.DISPLAY`).
 
 pub mod bench_schema;
 pub mod hw_profile;
+pub mod kiosk_display;
 pub mod matrix;
