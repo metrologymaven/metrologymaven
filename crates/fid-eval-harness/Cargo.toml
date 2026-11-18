@@ -1,0 +1,25 @@
+[package]
+name = "fid-eval-harness"
+description = "Metrology Maven evaluation harness: per-run sandbox project, task-scoped roots, file-system snapshots (spec node AGENT.HARNESS.SANDBOX)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Tooling layer (D-034): reads files only. It may not link another tool crate (layers check),
+# so it reads the fields of task.json it needs itself instead of using fid-eval-suite.
+[dependencies]
+# Pure L0 libraries (D-035): bounded JSON parsing and SHA-256 of whole files; `sha256:` digests.
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+# UUID value type for the UUIDv7 run ID.
+fid-uuid = { path = "../fid-uuid" }
+# Operating-system CSPRNG for the random bits of the UUIDv7 run ID (same version as fid-project).
+getrandom = "0.2"
+# Streaming SHA-256 for snapshots of large files (the sha2 0.10 fid-canon already uses).
+sha2 = "0.10"
+
+[lints]
+workspace = true
