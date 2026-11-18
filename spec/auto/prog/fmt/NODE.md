@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-program]
+built_pr: 61
 satisfies: [REQ-AUTO.PROG-001, REQ-AUTO.PROG-002, REQ-AUTO.PROG-003]
 covers: [SA.MP.01]
 depends_on: []
