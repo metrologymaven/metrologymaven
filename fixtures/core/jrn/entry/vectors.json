@@ -1,8 +1,8 @@
 [
  {
   "name": "00_session_header",
-  "seq": "0",
-  "prev": null,
+  "seq": "1",
+  "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "draft": {
    "kind": "session_header",
    "stream": "record",
@@ -37,8 +37,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "record",
-   "seq": "0",
-   "prev": null,
+   "seq": "1",
+   "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
    "branch": "main",
    "logical_parent": null,
    "time": {
@@ -55,12 +55,11 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "session": {
     "session_id": "sess-000",
     "app_version": "0.0.0"
    },
-   "hash": "sha256:a3fa25a3708fcb15b61f401e0b09406244c6d81f136600bf8c7eb9a044d840f6"
+   "hash": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb"
   },
   "payload": {
    "identity": {
@@ -71,16 +70,16 @@
     "identity": "51d45aafaa5c30857c8d1b9140ea304e"
    }
   },
-  "hash": "sha256:a3fa25a3708fcb15b61f401e0b09406244c6d81f136600bf8c7eb9a044d840f6",
+  "hash": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
   "commitments": {
    "identity": "sha256:7beee46b1e8a322b1b796b3e5512d2327d16cd980ca0fa4e3e256c36e50bc165"
   },
-  "assertion_preimage": "sha256:a3fa25a3708fcb15b61f401e0b09406244c6d81f136600bf8c7eb9a044d840f6"
+  "assertion_preimage": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb"
  },
  {
   "name": "01_command",
-  "seq": "1",
-  "prev": "sha256:a3fa25a3708fcb15b61f401e0b09406244c6d81f136600bf8c7eb9a044d840f6",
+  "seq": "2",
+  "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -162,8 +161,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "1",
-   "prev": "sha256:a3fa25a3708fcb15b61f401e0b09406244c6d81f136600bf8c7eb9a044d840f6",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
    "time": {
@@ -180,7 +179,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "command": {
     "id": "feature.fit_circle",
     "major": 2,
@@ -213,7 +211,7 @@
      "feature.fit.circle_mz@0.3.1"
     ]
    },
-   "hash": "sha256:ace507c407c28dac8f7dfbad3b159fdeaae12423336637bc5ad644a50f512542"
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
   },
   "payload": {
    "identity": {
@@ -245,18 +243,18 @@
     "events": "9817faf98b01d1e1301664e7e123d465"
    }
   },
-  "hash": "sha256:ace507c407c28dac8f7dfbad3b159fdeaae12423336637bc5ad644a50f512542",
+  "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440",
   "commitments": {
    "identity": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15",
    "args": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
    "events": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554"
   },
-  "assertion_preimage": "sha256:ace507c407c28dac8f7dfbad3b159fdeaae12423336637bc5ad644a50f512542"
+  "assertion_preimage": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
  },
  {
   "name": "02_command",
-  "seq": "2",
-  "prev": "sha256:ace507c407c28dac8f7dfbad3b159fdeaae12423336637bc5ad644a50f512542",
+  "seq": "3",
+  "prev": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -345,8 +343,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "2",
-   "prev": "sha256:ace507c407c28dac8f7dfbad3b159fdeaae12423336637bc5ad644a50f512542",
+   "seq": "3",
+   "prev": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:046977fe25d893edf85927c4a038248b161c4b13431d0b5b9489e8bf179d89ae",
    "time": {
@@ -364,7 +362,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "command": {
     "id": "report.release",
     "major": 3,
@@ -406,7 +403,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:c7dcd3c34b74473b53e7e37214e9e38e749871a3980eec888f06b2e66f492bd0"
+   "hash": "sha256:2f9234bdca558e765eab7aebf3206946ba63f70cee98834b1c556aa35bcce04e"
   },
   "payload": {
    "identity": {
@@ -443,19 +440,19 @@
     "events": "4c906ecbf134abb3a6ef9ead48ea894c"
    }
   },
-  "hash": "sha256:c7dcd3c34b74473b53e7e37214e9e38e749871a3980eec888f06b2e66f492bd0",
+  "hash": "sha256:2f9234bdca558e765eab7aebf3206946ba63f70cee98834b1c556aa35bcce04e",
   "commitments": {
    "identity": "sha256:6df8f7695cf6f60563ed1e3850b4eb7784b73b0fc4b791de45f2bd4fd2d72e5e",
    "on_behalf_of": "sha256:1a33433cc62e842be7dc992c21140464d12eef227a836d96bf1e5bd0516fbc72",
    "args": "sha256:691ac208151221115c213973697300868816d232a404f3f47cc327edb22d2a67",
    "events": "sha256:f574f16ec98dd86325cff895c716caebb7175b8ff956f117d0f9522480218dd0"
   },
-  "assertion_preimage": "sha256:c7dcd3c34b74473b53e7e37214e9e38e749871a3980eec888f06b2e66f492bd0"
+  "assertion_preimage": "sha256:2f9234bdca558e765eab7aebf3206946ba63f70cee98834b1c556aa35bcce04e"
  },
  {
   "name": "03_command",
-  "seq": "3",
-  "prev": "sha256:c7dcd3c34b74473b53e7e37214e9e38e749871a3980eec888f06b2e66f492bd0",
+  "seq": "4",
+  "prev": "sha256:2f9234bdca558e765eab7aebf3206946ba63f70cee98834b1c556aa35bcce04e",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -532,8 +529,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "3",
-   "prev": "sha256:c7dcd3c34b74473b53e7e37214e9e38e749871a3980eec888f06b2e66f492bd0",
+   "seq": "4",
+   "prev": "sha256:2f9234bdca558e765eab7aebf3206946ba63f70cee98834b1c556aa35bcce04e",
    "branch": "main",
    "logical_parent": "sha256:4cefe3f00029ec94bf7071c7ce0fbe939bebdd387c3ff4c80b3dcecee5bd0f0f",
    "time": {
@@ -550,7 +547,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "reason_commit": "sha256:21cddbce1ff98dcf8d8c3ededa02057650b2074c5e7ea73f7510840dccb8bd5e",
    "command": {
     "id": "probe.calibrate",
@@ -583,7 +579,7 @@
      "probe.cal.sphere_ls@2.0.0"
     ]
    },
-   "hash": "sha256:bbae074fa97b8ce5eec9b962cc8fc1295206ecbeca16c1f11946df14239d87db"
+   "hash": "sha256:0e65e1d513cc9c036be0f461adf8f3eaca991d06d019b18175a4a53faa3451b1"
   },
   "payload": {
    "identity": {
@@ -611,19 +607,19 @@
     "events": "6803b386e2930ab6595451cfad301dce"
    }
   },
-  "hash": "sha256:bbae074fa97b8ce5eec9b962cc8fc1295206ecbeca16c1f11946df14239d87db",
+  "hash": "sha256:0e65e1d513cc9c036be0f461adf8f3eaca991d06d019b18175a4a53faa3451b1",
   "commitments": {
    "identity": "sha256:9e549f6b067f6eb1ef4719f5b3483e4d52b4b053356a56a9d59078affdffed6c",
    "reason": "sha256:21cddbce1ff98dcf8d8c3ededa02057650b2074c5e7ea73f7510840dccb8bd5e",
    "args": "sha256:22a6a69547bb5d9f2f5afee6ccca95c9ee8f43092c6bf9d1ad94f00e2efe66d5",
    "events": "sha256:c95fa2875ba22d3cc8bd92b68f5118f7c0c47bd91df8f902d971437437e192a7"
   },
-  "assertion_preimage": "sha256:bbae074fa97b8ce5eec9b962cc8fc1295206ecbeca16c1f11946df14239d87db"
+  "assertion_preimage": "sha256:0e65e1d513cc9c036be0f461adf8f3eaca991d06d019b18175a4a53faa3451b1"
  },
  {
   "name": "04_command",
-  "seq": "4",
-  "prev": "sha256:bbae074fa97b8ce5eec9b962cc8fc1295206ecbeca16c1f11946df14239d87db",
+  "seq": "5",
+  "prev": "sha256:0e65e1d513cc9c036be0f461adf8f3eaca991d06d019b18175a4a53faa3451b1",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -698,8 +694,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "4",
-   "prev": "sha256:bbae074fa97b8ce5eec9b962cc8fc1295206ecbeca16c1f11946df14239d87db",
+   "seq": "5",
+   "prev": "sha256:0e65e1d513cc9c036be0f461adf8f3eaca991d06d019b18175a4a53faa3451b1",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:3e8ceaf68a161f9dabda59e03b5ab8ec86aa5af0f4c2c92a5e633d2a379a6297",
    "time": {
@@ -716,7 +712,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "command": {
     "id": "data.import_points",
     "major": 2,
@@ -742,7 +737,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:2d160520ea39032b6157565f9981e8adeabc127481b4c7de85f8ab32592fc449"
+   "hash": "sha256:1812aefbfcd622d12dcfd61e809ab0f5669173bae5d52c70d5ecbda2a5dc6a05"
   },
   "payload": {
    "identity": {
@@ -774,18 +769,18 @@
     "events": "83d314b8d38fd1da4f56f6efa3c4da4c"
    }
   },
-  "hash": "sha256:2d160520ea39032b6157565f9981e8adeabc127481b4c7de85f8ab32592fc449",
+  "hash": "sha256:1812aefbfcd622d12dcfd61e809ab0f5669173bae5d52c70d5ecbda2a5dc6a05",
   "commitments": {
    "identity": "sha256:a6be7f217ed3c02dbd14319206d9da93b04439ae66e330b797f8eb80fc570e87",
    "args": "sha256:772873c4b53e3847e49b82c6cb2858167e0ab0f0b741e50797c9c79e18d816fb",
    "events": "sha256:efddc93798abd8052539ba187ea6b26031960b9444746e34d81e61d60de9c36d"
   },
-  "assertion_preimage": "sha256:2d160520ea39032b6157565f9981e8adeabc127481b4c7de85f8ab32592fc449"
+  "assertion_preimage": "sha256:1812aefbfcd622d12dcfd61e809ab0f5669173bae5d52c70d5ecbda2a5dc6a05"
  },
  {
   "name": "05_command",
-  "seq": "5",
-  "prev": "sha256:2d160520ea39032b6157565f9981e8adeabc127481b4c7de85f8ab32592fc449",
+  "seq": "6",
+  "prev": "sha256:1812aefbfcd622d12dcfd61e809ab0f5669173bae5d52c70d5ecbda2a5dc6a05",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -808,9 +803,6 @@
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
    "human_assertion": "ed25519:b4be4500809c882f87d309c2e2fdbb17a8db7c78d8b4c5e7fbbceeac6f1e43ed",
-   "signatures": [
-    "ed25519:8f2116b6950db29c5ee1ffbb6e3a06d6eaed27ded90cfd70ecf73eb507ad9760"
-   ],
    "command": {
     "id": "results.view",
     "major": 3,
@@ -867,8 +859,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "5",
-   "prev": "sha256:2d160520ea39032b6157565f9981e8adeabc127481b4c7de85f8ab32592fc449",
+   "seq": "6",
+   "prev": "sha256:1812aefbfcd622d12dcfd61e809ab0f5669173bae5d52c70d5ecbda2a5dc6a05",
    "branch": "feature/bore-check",
    "logical_parent": null,
    "time": {
@@ -885,9 +877,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:8f2116b6950db29c5ee1ffbb6e3a06d6eaed27ded90cfd70ecf73eb507ad9760"
-   ],
    "human_assertion": "ed25519:b4be4500809c882f87d309c2e2fdbb17a8db7c78d8b4c5e7fbbceeac6f1e43ed",
    "command": {
     "id": "results.view",
@@ -918,7 +907,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:c958fda2319e1acb7d165ad9477053b74641e5ad0b75bb403961bf9f1efa54d8"
+   "hash": "sha256:30fc7885bcf01ddb719b34f639a7131bc397208f3a245f1e34814ec1ba965e2b"
   },
   "payload": {
    "identity": {
@@ -949,18 +938,18 @@
     "events": "e9b378b2e2477c67a34d5da86640cc34"
    }
   },
-  "hash": "sha256:c958fda2319e1acb7d165ad9477053b74641e5ad0b75bb403961bf9f1efa54d8",
+  "hash": "sha256:30fc7885bcf01ddb719b34f639a7131bc397208f3a245f1e34814ec1ba965e2b",
   "commitments": {
    "identity": "sha256:1a94905c55926727f4e51c89e43bdcea8276098a65df38487f2dee8ece871a47",
    "args": "sha256:b3febf398e731a177c5d2b4e5e325b953933e0caed16e96143b83449d7f0b5fa",
    "events": "sha256:b947f5caaf2cafc9780eebdca2249f369b2e9ae3fba40d7a7082dafc35751cc0"
   },
-  "assertion_preimage": "sha256:320d9ca7a72e29037dee1bc826f0a486d8e26f6922a7bd73cbcd26332699b166"
+  "assertion_preimage": "sha256:f4835623e473594f516d42f1d376b2e31aacc2a6eeb4c6737e937036d4ff5bb0"
  },
  {
   "name": "06_command",
-  "seq": "6",
-  "prev": "sha256:c958fda2319e1acb7d165ad9477053b74641e5ad0b75bb403961bf9f1efa54d8",
+  "seq": "1",
+  "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "draft": {
    "kind": "command",
    "stream": "activity",
@@ -1030,8 +1019,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "activity",
-   "seq": "6",
-   "prev": "sha256:c958fda2319e1acb7d165ad9477053b74641e5ad0b75bb403961bf9f1efa54d8",
+   "seq": "1",
+   "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
    "branch": "main",
    "logical_parent": "sha256:b296f1848231d6b356a5573b66ecc087debbe3e09313d04d838ebaa69e49bbbc",
    "time": {
@@ -1048,7 +1037,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "command": {
     "id": "trust.sign_checkpoint",
     "major": 1,
@@ -1074,7 +1062,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:1f0f8836ab9aaec29b9fb3cba60cd275f4a2f49637123c5d10f8f742bdffe2de"
+   "hash": "sha256:cb30a5edc14c9f82020363fd1b329f3588642b33204b396e029c7af63a2385c9"
   },
   "payload": {
    "identity": {
@@ -1101,18 +1089,18 @@
     "events": "f10c61780155a35a26092b25f1e822f2"
    }
   },
-  "hash": "sha256:1f0f8836ab9aaec29b9fb3cba60cd275f4a2f49637123c5d10f8f742bdffe2de",
+  "hash": "sha256:cb30a5edc14c9f82020363fd1b329f3588642b33204b396e029c7af63a2385c9",
   "commitments": {
    "identity": "sha256:038e57e6fbcc0b521977388a16fd7a5a5a39d597e8a8de079f91b2a6750c9623",
    "args": "sha256:cfd0b8c83d9147f906bbeff0de6b7f815be1b632c0590190c955667c2f714ec9",
    "events": "sha256:f84d9d0135e7fbd2b5345b958077bef36a1f043edad2826d9693f712645ec129"
   },
-  "assertion_preimage": "sha256:1f0f8836ab9aaec29b9fb3cba60cd275f4a2f49637123c5d10f8f742bdffe2de"
+  "assertion_preimage": "sha256:cb30a5edc14c9f82020363fd1b329f3588642b33204b396e029c7af63a2385c9"
  },
  {
   "name": "07_command",
   "seq": "7",
-  "prev": "sha256:1f0f8836ab9aaec29b9fb3cba60cd275f4a2f49637123c5d10f8f742bdffe2de",
+  "prev": "sha256:30fc7885bcf01ddb719b34f639a7131bc397208f3a245f1e34814ec1ba965e2b",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -1198,7 +1186,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "7",
-   "prev": "sha256:1f0f8836ab9aaec29b9fb3cba60cd275f4a2f49637123c5d10f8f742bdffe2de",
+   "prev": "sha256:30fc7885bcf01ddb719b34f639a7131bc397208f3a245f1e34814ec1ba965e2b",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:da75842848e6bef4dda5d1529a354b17b08480fd82a00efef127e09630115b26",
    "time": {
@@ -1215,7 +1203,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "reason_commit": "sha256:ce00e4b16ec2eb59a7dc1c1a00470a5a6bd31962734a42497ad1357bfc6bdaeb",
    "command": {
     "id": "plan.delete_feature",
@@ -1250,7 +1237,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:27420d7665d4ebd5aba25508a2b8d8081cdc01cd3f5279ca1d1b4e9739491d0f"
+   "hash": "sha256:482f54ea8be1e67edee90b09b14602d848a680c9d71a877eea8cfe86efdd05ec"
   },
   "payload": {
    "identity": {
@@ -1284,19 +1271,19 @@
     "events": "40735822093b94eb8e3c415033456bf3"
    }
   },
-  "hash": "sha256:27420d7665d4ebd5aba25508a2b8d8081cdc01cd3f5279ca1d1b4e9739491d0f",
+  "hash": "sha256:482f54ea8be1e67edee90b09b14602d848a680c9d71a877eea8cfe86efdd05ec",
   "commitments": {
    "identity": "sha256:1ef5697f25c235ec7fbc0762cea55144b5225aaee14d2b1d61e3e2b349bd2e61",
    "reason": "sha256:ce00e4b16ec2eb59a7dc1c1a00470a5a6bd31962734a42497ad1357bfc6bdaeb",
    "args": "sha256:96195902fd2e42dcfa0b246b0279b44935bf65e2abc6007a248bca532ad6790b",
    "events": "sha256:916354a9388fd4257dffc84b0b2b0e289cb78c4cf2d09fb9ff8faaaf404d1b22"
   },
-  "assertion_preimage": "sha256:27420d7665d4ebd5aba25508a2b8d8081cdc01cd3f5279ca1d1b4e9739491d0f"
+  "assertion_preimage": "sha256:482f54ea8be1e67edee90b09b14602d848a680c9d71a877eea8cfe86efdd05ec"
  },
  {
   "name": "08_command",
   "seq": "8",
-  "prev": "sha256:27420d7665d4ebd5aba25508a2b8d8081cdc01cd3f5279ca1d1b4e9739491d0f",
+  "prev": "sha256:482f54ea8be1e67edee90b09b14602d848a680c9d71a877eea8cfe86efdd05ec",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -1384,7 +1371,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "8",
-   "prev": "sha256:27420d7665d4ebd5aba25508a2b8d8081cdc01cd3f5279ca1d1b4e9739491d0f",
+   "prev": "sha256:482f54ea8be1e67edee90b09b14602d848a680c9d71a877eea8cfe86efdd05ec",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:01b526edf5416eaa377ee7aabbf1c6907378fa11bcd1c555ac6f713427e08109",
    "time": {
@@ -1402,7 +1389,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "command": {
     "id": "align.run_321",
     "major": 3,
@@ -1442,7 +1428,7 @@
      "align.fit.rps_321@1.0.0"
     ]
    },
-   "hash": "sha256:6d60c4f471145fef49c8291d95c33fb1d3491dc15683c93d4f64c3ab37974bd1"
+   "hash": "sha256:d23b0562a2b7ffb71d753b95ad3ddfab4419c4836aaebb9b1ba2c3081c3962e8"
   },
   "payload": {
    "identity": {
@@ -1479,19 +1465,19 @@
     "events": "0631f9821104c677060aafed71413dd8"
    }
   },
-  "hash": "sha256:6d60c4f471145fef49c8291d95c33fb1d3491dc15683c93d4f64c3ab37974bd1",
+  "hash": "sha256:d23b0562a2b7ffb71d753b95ad3ddfab4419c4836aaebb9b1ba2c3081c3962e8",
   "commitments": {
    "identity": "sha256:c4fe4a130d99c017f09829eb9e9eb3f5e561defa94ab89a30482a7894bc9bd5b",
    "on_behalf_of": "sha256:e21fa830c8545912fb1f28a38b3348868b84bd4b93ea9b19dba52c2638f94f76",
    "args": "sha256:2d81e5564705a1aa042cf7960d2d697d09ef31975937b6694307e23a0ff91698",
    "events": "sha256:87f4da92bd8574bfa6bf2731663615e52d92884c605fe79e80bbfd68bcbe577d"
   },
-  "assertion_preimage": "sha256:6d60c4f471145fef49c8291d95c33fb1d3491dc15683c93d4f64c3ab37974bd1"
+  "assertion_preimage": "sha256:d23b0562a2b7ffb71d753b95ad3ddfab4419c4836aaebb9b1ba2c3081c3962e8"
  },
  {
   "name": "09_command",
   "seq": "9",
-  "prev": "sha256:6d60c4f471145fef49c8291d95c33fb1d3491dc15683c93d4f64c3ab37974bd1",
+  "prev": "sha256:d23b0562a2b7ffb71d753b95ad3ddfab4419c4836aaebb9b1ba2c3081c3962e8",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -1568,7 +1554,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "9",
-   "prev": "sha256:6d60c4f471145fef49c8291d95c33fb1d3491dc15683c93d4f64c3ab37974bd1",
+   "prev": "sha256:d23b0562a2b7ffb71d753b95ad3ddfab4419c4836aaebb9b1ba2c3081c3962e8",
    "branch": "main",
    "logical_parent": "sha256:2bac621255205680ee306ed9866d9f8244a53944062394eb846d74b90578b64c",
    "time": {
@@ -1585,7 +1571,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "command": {
     "id": "feature.fit_circle",
     "major": 1,
@@ -1618,7 +1603,7 @@
      "feature.fit.circle_mz@0.3.1"
     ]
    },
-   "hash": "sha256:2feaa0366d90d651899e1a4862799cc50769834e2a2f7d06c4efbcccf2e5b20b"
+   "hash": "sha256:69a7db7beaf73ee8be89053ab0c96cb72cebea24c9335e215155e412ba12e3a6"
   },
   "payload": {
    "identity": {
@@ -1644,18 +1629,18 @@
     "events": "bf7401771323265e9e194eb0789e97c5"
    }
   },
-  "hash": "sha256:2feaa0366d90d651899e1a4862799cc50769834e2a2f7d06c4efbcccf2e5b20b",
+  "hash": "sha256:69a7db7beaf73ee8be89053ab0c96cb72cebea24c9335e215155e412ba12e3a6",
   "commitments": {
    "identity": "sha256:73d45360b81da91373fc10572ccdc5327dccf04355619be01df834895f93aa0f",
    "args": "sha256:5c9e6db31d78c0e12fb22840d2ecf6a882f783d189c950628841baad3cfe4869",
    "events": "sha256:58dbab11d567fcf8e60d739b8e49b4741145fc2134f14fe0b401b12ac9032bad"
   },
-  "assertion_preimage": "sha256:2feaa0366d90d651899e1a4862799cc50769834e2a2f7d06c4efbcccf2e5b20b"
+  "assertion_preimage": "sha256:69a7db7beaf73ee8be89053ab0c96cb72cebea24c9335e215155e412ba12e3a6"
  },
  {
   "name": "10_command",
   "seq": "10",
-  "prev": "sha256:2feaa0366d90d651899e1a4862799cc50769834e2a2f7d06c4efbcccf2e5b20b",
+  "prev": "sha256:69a7db7beaf73ee8be89053ab0c96cb72cebea24c9335e215155e412ba12e3a6",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -1735,7 +1720,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "10",
-   "prev": "sha256:2feaa0366d90d651899e1a4862799cc50769834e2a2f7d06c4efbcccf2e5b20b",
+   "prev": "sha256:69a7db7beaf73ee8be89053ab0c96cb72cebea24c9335e215155e412ba12e3a6",
    "branch": "agent/claude-code/3",
    "logical_parent": null,
    "time": {
@@ -1752,7 +1737,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "command": {
     "id": "report.release",
     "major": 2,
@@ -1786,7 +1770,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:422dc74d7242ca3be0190087cf46f59d79eae00f849dc12d66093b9c003faa51"
+   "hash": "sha256:96ce28fc3257e287664b15b3560eb0ec6f80582982fcfc1d3187432d0e7a5e4b"
   },
   "payload": {
    "identity": {
@@ -1818,18 +1802,18 @@
     "events": "51a7fee666ae9e78ef6eb4d0eacee6ae"
    }
   },
-  "hash": "sha256:422dc74d7242ca3be0190087cf46f59d79eae00f849dc12d66093b9c003faa51",
+  "hash": "sha256:96ce28fc3257e287664b15b3560eb0ec6f80582982fcfc1d3187432d0e7a5e4b",
   "commitments": {
    "identity": "sha256:3d8843d1687248b4782b5bd5086c2ef9c5876c2e982421bc053759cd78a5d93d",
    "args": "sha256:9e9f7b4753996f6a776e4c178a2d3e337a1be726d5df6249b7d2e2b4543abaa8",
    "events": "sha256:e33e15b8b30f3ec9223ea6adb40e15259fd6d1b8916a3204fa4918f5cd3f0330"
   },
-  "assertion_preimage": "sha256:422dc74d7242ca3be0190087cf46f59d79eae00f849dc12d66093b9c003faa51"
+  "assertion_preimage": "sha256:96ce28fc3257e287664b15b3560eb0ec6f80582982fcfc1d3187432d0e7a5e4b"
  },
  {
   "name": "11_command",
   "seq": "11",
-  "prev": "sha256:422dc74d7242ca3be0190087cf46f59d79eae00f849dc12d66093b9c003faa51",
+  "prev": "sha256:96ce28fc3257e287664b15b3560eb0ec6f80582982fcfc1d3187432d0e7a5e4b",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -1853,9 +1837,6 @@
    },
    "reason": "Ø 12 H7 bore recheck — µm drift",
    "human_assertion": "ed25519:53155911533ec2638f10d4341dc71442c8ac8a51160b1088a4df9b8358663e74",
-   "signatures": [
-    "ed25519:dcd8bf58a695435c902ff1d2d7501a0fd0c6008265d70491ba139dc8a5cf8c85"
-   ],
    "command": {
     "id": "probe.calibrate",
     "major": 3,
@@ -1916,7 +1897,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "11",
-   "prev": "sha256:422dc74d7242ca3be0190087cf46f59d79eae00f849dc12d66093b9c003faa51",
+   "prev": "sha256:96ce28fc3257e287664b15b3560eb0ec6f80582982fcfc1d3187432d0e7a5e4b",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:431c1f143d0be4553f6d1ef192a2396fbf2dac5191cbd4ec760dd194f65d698b",
    "time": {
@@ -1933,9 +1914,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:dcd8bf58a695435c902ff1d2d7501a0fd0c6008265d70491ba139dc8a5cf8c85"
-   ],
    "reason_commit": "sha256:bccb899ae222285700b84a68641bc56f941e6c217c8f631be96e848ef08d9c90",
    "human_assertion": "ed25519:53155911533ec2638f10d4341dc71442c8ac8a51160b1088a4df9b8358663e74",
    "command": {
@@ -1969,7 +1947,7 @@
      "probe.cal.sphere_ls@2.0.0"
     ]
    },
-   "hash": "sha256:4c1a6275fa0c45305ccaec80743881e66dc3765f35fdd827ccc78dc421b1eab2"
+   "hash": "sha256:fb5f6c08ceab229f22bb09cac8e9b23793eb8884898e0e5fc26a734b3f774112"
   },
   "payload": {
    "identity": {
@@ -2002,19 +1980,19 @@
     "events": "7f2b28fe144cdb7909d885cd8755e17f"
    }
   },
-  "hash": "sha256:4c1a6275fa0c45305ccaec80743881e66dc3765f35fdd827ccc78dc421b1eab2",
+  "hash": "sha256:fb5f6c08ceab229f22bb09cac8e9b23793eb8884898e0e5fc26a734b3f774112",
   "commitments": {
    "identity": "sha256:a85ecdec9e6a25f67611c642f4d028a4183484aaac14248a2feb44d35635fe52",
    "reason": "sha256:bccb899ae222285700b84a68641bc56f941e6c217c8f631be96e848ef08d9c90",
    "args": "sha256:6e5f0fdfe94cdfb11a61a372cc666f70c1b4677db9d4c036f18d573d61300a6d",
    "events": "sha256:d041c776d1300b826d54a799865d2b37466cf69b79d8d6d023131c3d1065fe60"
   },
-  "assertion_preimage": "sha256:aa73e397815c346b6d9450682ae4280ba171103860aed3f66beeeb4c2370adc1"
+  "assertion_preimage": "sha256:d72d7bd96628cba2041e0357133a7f927c9156264d71676b5fe17dac141c7f18"
  },
  {
   "name": "12_command",
   "seq": "12",
-  "prev": "sha256:4c1a6275fa0c45305ccaec80743881e66dc3765f35fdd827ccc78dc421b1eab2",
+  "prev": "sha256:fb5f6c08ceab229f22bb09cac8e9b23793eb8884898e0e5fc26a734b3f774112",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -2089,7 +2067,7 @@
    "kind": "command",
    "stream": "record",
    "seq": "12",
-   "prev": "sha256:4c1a6275fa0c45305ccaec80743881e66dc3765f35fdd827ccc78dc421b1eab2",
+   "prev": "sha256:fb5f6c08ceab229f22bb09cac8e9b23793eb8884898e0e5fc26a734b3f774112",
    "branch": "main",
    "logical_parent": "sha256:fc4ea7daaf3355905f1567f55962d200fc65de04968f6808b3d8d7089761822d",
    "time": {
@@ -2106,7 +2084,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "command": {
     "id": "data.import_points",
     "major": 1,
@@ -2136,7 +2113,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:b3cf6ca22cad56e2989e456ea7c9e32735db49386af0b184a5d7fda1cc92d139"
+   "hash": "sha256:403bf2e5772a33096c1938effcaafa4a8b7cf5248d7a6936a179cbc6f0f1d669"
   },
   "payload": {
    "identity": {
@@ -2163,18 +2140,18 @@
     "events": "394304ab1d5f0cfc8d1b0c24ff7f2d4b"
    }
   },
-  "hash": "sha256:b3cf6ca22cad56e2989e456ea7c9e32735db49386af0b184a5d7fda1cc92d139",
+  "hash": "sha256:403bf2e5772a33096c1938effcaafa4a8b7cf5248d7a6936a179cbc6f0f1d669",
   "commitments": {
    "identity": "sha256:b624516b6903723a993cbace07318f0cd388683d6dea13b02c9c33c6336648a5",
    "args": "sha256:555ba6bc882717caa952f731aa7e360df95c119532b103fc476fc54a17a1ddfa",
    "events": "sha256:e70555d2d9c060b0315c9e7914eaf77b2f10cd48b4050929be4f84c725489965"
   },
-  "assertion_preimage": "sha256:b3cf6ca22cad56e2989e456ea7c9e32735db49386af0b184a5d7fda1cc92d139"
+  "assertion_preimage": "sha256:403bf2e5772a33096c1938effcaafa4a8b7cf5248d7a6936a179cbc6f0f1d669"
  },
  {
   "name": "13_command",
-  "seq": "13",
-  "prev": "sha256:b3cf6ca22cad56e2989e456ea7c9e32735db49386af0b184a5d7fda1cc92d139",
+  "seq": "2",
+  "prev": "sha256:cb30a5edc14c9f82020363fd1b329f3588642b33204b396e029c7af63a2385c9",
   "draft": {
    "kind": "command",
    "stream": "activity",
@@ -2253,8 +2230,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "activity",
-   "seq": "13",
-   "prev": "sha256:b3cf6ca22cad56e2989e456ea7c9e32735db49386af0b184a5d7fda1cc92d139",
+   "seq": "2",
+   "prev": "sha256:cb30a5edc14c9f82020363fd1b329f3588642b33204b396e029c7af63a2385c9",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:f19df44d8fb5e0686d5a8cd6ec8886143172920a127426c3c1186b1ab97717ac",
    "time": {
@@ -2271,7 +2248,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "command": {
     "id": "results.view",
     "major": 2,
@@ -2301,7 +2277,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:db9dad226dcc90545302564b89dda6a0f7b2b386bdff352743d356bd07620ead"
+   "hash": "sha256:80c04cae4fad3275b823d90a05a14f54980dd7876d4aff21373d6d19dbe338bc"
   },
   "payload": {
    "identity": {
@@ -2333,18 +2309,18 @@
     "events": "0cd30527b521935fe043aecc37baf1bd"
    }
   },
-  "hash": "sha256:db9dad226dcc90545302564b89dda6a0f7b2b386bdff352743d356bd07620ead",
+  "hash": "sha256:80c04cae4fad3275b823d90a05a14f54980dd7876d4aff21373d6d19dbe338bc",
   "commitments": {
    "identity": "sha256:7d5ee9d8961ce07d88edb7cd698e19113d4df549122b524516de9d21427f493b",
    "args": "sha256:1d1d822a72df226885e5e8b9537649daf5136dd387044cce4033e65bcfe70712",
    "events": "sha256:602edaf2dc28b970cddb7cb4df22d6d2027b62c8bf5bc57fb80236cc659cbc4a"
   },
-  "assertion_preimage": "sha256:db9dad226dcc90545302564b89dda6a0f7b2b386bdff352743d356bd07620ead"
+  "assertion_preimage": "sha256:80c04cae4fad3275b823d90a05a14f54980dd7876d4aff21373d6d19dbe338bc"
  },
  {
   "name": "14_command",
-  "seq": "14",
-  "prev": "sha256:db9dad226dcc90545302564b89dda6a0f7b2b386bdff352743d356bd07620ead",
+  "seq": "13",
+  "prev": "sha256:403bf2e5772a33096c1938effcaafa4a8b7cf5248d7a6936a179cbc6f0f1d669",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -2424,8 +2400,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "14",
-   "prev": "sha256:db9dad226dcc90545302564b89dda6a0f7b2b386bdff352743d356bd07620ead",
+   "seq": "13",
+   "prev": "sha256:403bf2e5772a33096c1938effcaafa4a8b7cf5248d7a6936a179cbc6f0f1d669",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:f083145e62cc6a323cf1cd7996c67e6fef8f019cbbc84e5fac21baa5eb396644",
    "time": {
@@ -2443,7 +2419,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "command": {
     "id": "trust.sign_checkpoint",
     "major": 3,
@@ -2469,7 +2444,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:085a688c9ebe5525e50c1347121d9798e5f31cc9ac30eb0cbb323bf895959e14"
+   "hash": "sha256:662fd79beb9f9b24dbe2a6ad818e5a250421d13b7a9f6c754c7f18b4063877e3"
   },
   "payload": {
    "identity": {
@@ -2506,19 +2481,19 @@
     "events": "7cebc4e1a7668b5391c42848468011b4"
    }
   },
-  "hash": "sha256:085a688c9ebe5525e50c1347121d9798e5f31cc9ac30eb0cbb323bf895959e14",
+  "hash": "sha256:662fd79beb9f9b24dbe2a6ad818e5a250421d13b7a9f6c754c7f18b4063877e3",
   "commitments": {
    "identity": "sha256:d8d5743902f0ed70006b7de46465122e9d5c857b709bbe5e4021ace806ce617c",
    "on_behalf_of": "sha256:7a8288c4f24d8c08aabb2859af2cf2d4010cef52e60bb4b878ddf8d6f85021f6",
    "args": "sha256:cf1374be7ab897d845da2c370b05dc927e67d84da65b52093f0e55789e3f85c6",
    "events": "sha256:416f9ba648244084336fe175fc86353f1eb0193a9079f10038d1afa3273457ff"
   },
-  "assertion_preimage": "sha256:085a688c9ebe5525e50c1347121d9798e5f31cc9ac30eb0cbb323bf895959e14"
+  "assertion_preimage": "sha256:662fd79beb9f9b24dbe2a6ad818e5a250421d13b7a9f6c754c7f18b4063877e3"
  },
  {
   "name": "15_command",
-  "seq": "15",
-  "prev": "sha256:085a688c9ebe5525e50c1347121d9798e5f31cc9ac30eb0cbb323bf895959e14",
+  "seq": "14",
+  "prev": "sha256:662fd79beb9f9b24dbe2a6ad818e5a250421d13b7a9f6c754c7f18b4063877e3",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -2597,8 +2572,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "15",
-   "prev": "sha256:085a688c9ebe5525e50c1347121d9798e5f31cc9ac30eb0cbb323bf895959e14",
+   "seq": "14",
+   "prev": "sha256:662fd79beb9f9b24dbe2a6ad818e5a250421d13b7a9f6c754c7f18b4063877e3",
    "branch": "main",
    "logical_parent": null,
    "time": {
@@ -2615,7 +2590,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "reason_commit": "sha256:67e7d362f80ca963cb7f4622f1357e5570119f33236c0310574ababe8e17e9cb",
    "command": {
     "id": "plan.delete_feature",
@@ -2650,7 +2624,7 @@
     ],
     "algorithms": []
    },
-   "hash": "sha256:7349c20fb63369257d60dff4f4376c9ed7369fb17eb6c65d81501387eb3d8739"
+   "hash": "sha256:e79e88801bf864a241ebaf432e3b0f52cae2291e2339a660ca7f5f5889e1f53d"
   },
   "payload": {
    "identity": {
@@ -2678,19 +2652,19 @@
     "events": "ccb845227fdb2907a109bbfefbc9ad09"
    }
   },
-  "hash": "sha256:7349c20fb63369257d60dff4f4376c9ed7369fb17eb6c65d81501387eb3d8739",
+  "hash": "sha256:e79e88801bf864a241ebaf432e3b0f52cae2291e2339a660ca7f5f5889e1f53d",
   "commitments": {
    "identity": "sha256:f24b20e107ea88121b43417802ca8bb2c875bc1c1d72eb330797aa851c90b39b",
    "reason": "sha256:67e7d362f80ca963cb7f4622f1357e5570119f33236c0310574ababe8e17e9cb",
    "args": "sha256:a3a80067d3f1f1b62b82d9487aad2cea97b8c1551b28420177bc63dc3300aa7b",
    "events": "sha256:ec68dbe3408497b88ea7fe785b4249c0420f202e785f6b6133913116bf04ddde"
   },
-  "assertion_preimage": "sha256:7349c20fb63369257d60dff4f4376c9ed7369fb17eb6c65d81501387eb3d8739"
+  "assertion_preimage": "sha256:e79e88801bf864a241ebaf432e3b0f52cae2291e2339a660ca7f5f5889e1f53d"
  },
  {
   "name": "16_command",
-  "seq": "16",
-  "prev": "sha256:7349c20fb63369257d60dff4f4376c9ed7369fb17eb6c65d81501387eb3d8739",
+  "seq": "15",
+  "prev": "sha256:e79e88801bf864a241ebaf432e3b0f52cae2291e2339a660ca7f5f5889e1f53d",
   "draft": {
    "kind": "command",
    "stream": "record",
@@ -2771,8 +2745,8 @@
    "schema_version": 1,
    "kind": "command",
    "stream": "record",
-   "seq": "16",
-   "prev": "sha256:7349c20fb63369257d60dff4f4376c9ed7369fb17eb6c65d81501387eb3d8739",
+   "seq": "15",
+   "prev": "sha256:e79e88801bf864a241ebaf432e3b0f52cae2291e2339a660ca7f5f5889e1f53d",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:4122e9f192853a5902f942088c5cdae7345f8cbb9dcff421f7157264e0891e14",
    "time": {
@@ -2789,7 +2763,6 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "command": {
     "id": "align.run_321",
     "major": 2,
@@ -2825,7 +2798,7 @@
      "align.fit.rps_321@1.0.0"
     ]
    },
-   "hash": "sha256:5f255958449f3dbb27974dc9ecd3a25d62d8d50a1c650e087a36af9bc65242dc"
+   "hash": "sha256:43a36206de0ba9dcc166592df5ddec7e39bc4a7147997bf693a3237f57f67aae"
   },
   "payload": {
    "identity": {
@@ -2857,18 +2830,18 @@
     "events": "af8d1c800568156e053d3c053a49dd27"
    }
   },
-  "hash": "sha256:5f255958449f3dbb27974dc9ecd3a25d62d8d50a1c650e087a36af9bc65242dc",
+  "hash": "sha256:43a36206de0ba9dcc166592df5ddec7e39bc4a7147997bf693a3237f57f67aae",
   "commitments": {
    "identity": "sha256:a79440f034b412b82d94f76a4049a7b972d60a48230f256707ce186abd2e2d45",
    "args": "sha256:60e2af3d6fd8bc06b50f83269e6979e7bcde7ca4e013f58bde43ef9ea54ce9ab",
    "events": "sha256:01fe7d8e778874c66ffaf6a8b4486ec78add66e094f9f75666501dd5704c2d47"
   },
-  "assertion_preimage": "sha256:5f255958449f3dbb27974dc9ecd3a25d62d8d50a1c650e087a36af9bc65242dc"
+  "assertion_preimage": "sha256:43a36206de0ba9dcc166592df5ddec7e39bc4a7147997bf693a3237f57f67aae"
  },
  {
   "name": "17_session_header",
-  "seq": "17",
-  "prev": "sha256:5f255958449f3dbb27974dc9ecd3a25d62d8d50a1c650e087a36af9bc65242dc",
+  "seq": "16",
+  "prev": "sha256:43a36206de0ba9dcc166592df5ddec7e39bc4a7147997bf693a3237f57f67aae",
   "draft": {
    "kind": "session_header",
    "stream": "record",
@@ -2891,9 +2864,6 @@
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
    "human_assertion": "ed25519:76cf273046ad7dcb6d9233a62cd2ed213885e281b2928539327656311d02ace0",
-   "signatures": [
-    "ed25519:519144d88e30ffee0e42dcc91a2dac1a4b956c24d0aad697f58751f9fd94a2b8"
-   ],
    "session": {
     "session_id": "sess-017",
     "app_version": "0.17.0"
@@ -2906,8 +2876,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "record",
-   "seq": "17",
-   "prev": "sha256:5f255958449f3dbb27974dc9ecd3a25d62d8d50a1c650e087a36af9bc65242dc",
+   "seq": "16",
+   "prev": "sha256:43a36206de0ba9dcc166592df5ddec7e39bc4a7147997bf693a3237f57f67aae",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:9a41f2b594e9af6c8fd01dee3815d5beed0352ebb82c1986b8de6f7326478a68",
    "time": {
@@ -2924,15 +2894,12 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:519144d88e30ffee0e42dcc91a2dac1a4b956c24d0aad697f58751f9fd94a2b8"
-   ],
    "human_assertion": "ed25519:76cf273046ad7dcb6d9233a62cd2ed213885e281b2928539327656311d02ace0",
    "session": {
     "session_id": "sess-017",
     "app_version": "0.17.0"
    },
-   "hash": "sha256:b28aed39a20a0e0a094ceb0ec504fe49f222e108dbd605e6c74062aed5ae9158"
+   "hash": "sha256:b41066e5564b0619e62bfea853f994355c4fdecb7e13441e651c681f5ec46a8f"
   },
   "payload": {
    "identity": {
@@ -2942,16 +2909,16 @@
     "identity": "9e1a8a5137f1f80453e6bd6112596fa8"
    }
   },
-  "hash": "sha256:b28aed39a20a0e0a094ceb0ec504fe49f222e108dbd605e6c74062aed5ae9158",
+  "hash": "sha256:b41066e5564b0619e62bfea853f994355c4fdecb7e13441e651c681f5ec46a8f",
   "commitments": {
    "identity": "sha256:38c6fdd521e866b235abfbf18202ba2b47229c90e51136f65f1abf98f950acf6"
   },
-  "assertion_preimage": "sha256:2453a77292ba885fa15be26a7e6e01ccae7d24fa8134967c25d4b7bf57f26aef"
+  "assertion_preimage": "sha256:c42461530c2ed4c2c1228230ecf04bb5d41dafca37cbd7159f8dcb0c484427c4"
  },
  {
   "name": "18_session_header",
-  "seq": "18",
-  "prev": "sha256:b28aed39a20a0e0a094ceb0ec504fe49f222e108dbd605e6c74062aed5ae9158",
+  "seq": "17",
+  "prev": "sha256:b41066e5564b0619e62bfea853f994355c4fdecb7e13441e651c681f5ec46a8f",
   "draft": {
    "kind": "session_header",
    "stream": "record",
@@ -2986,8 +2953,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "record",
-   "seq": "18",
-   "prev": "sha256:b28aed39a20a0e0a094ceb0ec504fe49f222e108dbd605e6c74062aed5ae9158",
+   "seq": "17",
+   "prev": "sha256:b41066e5564b0619e62bfea853f994355c4fdecb7e13441e651c681f5ec46a8f",
    "branch": "main",
    "logical_parent": "sha256:bf7c42c25f36f16958b8f86eec005976b6e0b5cdfa1bb2d7105ef256ae910ada",
    "time": {
@@ -3004,12 +2971,11 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "session": {
     "session_id": "sess-018",
     "app_version": "0.18.0"
    },
-   "hash": "sha256:36c567e9a59a89b66b0bf7285430729f9332bcd3a25dc217fd0103e4ccbe22c8"
+   "hash": "sha256:8eb7e2d0a9d798ded1f8fcc9637a737fa35aaab9f010e8b7a5b961017dc9a10d"
   },
   "payload": {
    "identity": {
@@ -3020,16 +2986,16 @@
     "identity": "80e4f8a20fa7d5994f9a315ee5367ecd"
    }
   },
-  "hash": "sha256:36c567e9a59a89b66b0bf7285430729f9332bcd3a25dc217fd0103e4ccbe22c8",
+  "hash": "sha256:8eb7e2d0a9d798ded1f8fcc9637a737fa35aaab9f010e8b7a5b961017dc9a10d",
   "commitments": {
    "identity": "sha256:3f0e1cb3d1284f9c0a4c1edc163507f7d72dfab3daf2b913c7e2c249a9661361"
   },
-  "assertion_preimage": "sha256:36c567e9a59a89b66b0bf7285430729f9332bcd3a25dc217fd0103e4ccbe22c8"
+  "assertion_preimage": "sha256:8eb7e2d0a9d798ded1f8fcc9637a737fa35aaab9f010e8b7a5b961017dc9a10d"
  },
  {
   "name": "19_session_header",
-  "seq": "19",
-  "prev": "sha256:36c567e9a59a89b66b0bf7285430729f9332bcd3a25dc217fd0103e4ccbe22c8",
+  "seq": "18",
+  "prev": "sha256:8eb7e2d0a9d798ded1f8fcc9637a737fa35aaab9f010e8b7a5b961017dc9a10d",
   "draft": {
    "kind": "session_header",
    "stream": "record",
@@ -3066,8 +3032,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "record",
-   "seq": "19",
-   "prev": "sha256:36c567e9a59a89b66b0bf7285430729f9332bcd3a25dc217fd0103e4ccbe22c8",
+   "seq": "18",
+   "prev": "sha256:8eb7e2d0a9d798ded1f8fcc9637a737fa35aaab9f010e8b7a5b961017dc9a10d",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:d4e253aed5ad963d7f106ad9d4f487595a0d6be80229d15a7db82cd93286d414",
    "time": {
@@ -3084,13 +3050,12 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "reason_commit": "sha256:04895c7ecd4ab0f0a200fa471b93af7642b3d1369ee81fc52ef2c27d2af83803",
    "session": {
     "session_id": "sess-019",
     "app_version": "0.19.0"
    },
-   "hash": "sha256:0eeef17a84be209563476813443a7e5eb08d66d64c1054c337a9628f5f4712b8"
+   "hash": "sha256:a6353c61924913f3d77ab3e9a2e85412fafdcbf4b9dcbc56de280bc8f731b422"
   },
   "payload": {
    "identity": {
@@ -3103,17 +3068,17 @@
     "reason": "1bc2263c91b21e3f44e9e12cb251e7da"
    }
   },
-  "hash": "sha256:0eeef17a84be209563476813443a7e5eb08d66d64c1054c337a9628f5f4712b8",
+  "hash": "sha256:a6353c61924913f3d77ab3e9a2e85412fafdcbf4b9dcbc56de280bc8f731b422",
   "commitments": {
    "identity": "sha256:b6609333907e78c998937975da3586a01680ee35a39b0b38b477e6ad96ee4b10",
    "reason": "sha256:04895c7ecd4ab0f0a200fa471b93af7642b3d1369ee81fc52ef2c27d2af83803"
   },
-  "assertion_preimage": "sha256:0eeef17a84be209563476813443a7e5eb08d66d64c1054c337a9628f5f4712b8"
+  "assertion_preimage": "sha256:a6353c61924913f3d77ab3e9a2e85412fafdcbf4b9dcbc56de280bc8f731b422"
  },
  {
   "name": "20_session_header",
-  "seq": "20",
-  "prev": "sha256:0eeef17a84be209563476813443a7e5eb08d66d64c1054c337a9628f5f4712b8",
+  "seq": "3",
+  "prev": "sha256:80c04cae4fad3275b823d90a05a14f54980dd7876d4aff21373d6d19dbe338bc",
   "draft": {
    "kind": "session_header",
    "stream": "activity",
@@ -3153,8 +3118,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "activity",
-   "seq": "20",
-   "prev": "sha256:0eeef17a84be209563476813443a7e5eb08d66d64c1054c337a9628f5f4712b8",
+   "seq": "3",
+   "prev": "sha256:80c04cae4fad3275b823d90a05a14f54980dd7876d4aff21373d6d19dbe338bc",
    "branch": "feature/bore-check",
    "logical_parent": null,
    "time": {
@@ -3172,12 +3137,11 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "session": {
     "session_id": "sess-020",
     "app_version": "0.20.0"
    },
-   "hash": "sha256:c9ee17c5d7ad5adaf03395d0dc8006a629fdc2d0fda134e027331c1944013394"
+   "hash": "sha256:9e9f4c17d48f4e311e679ab7ca06c63242a7375d46ed37f1152b7f5e0dcabc5a"
   },
   "payload": {
    "identity": {
@@ -3193,17 +3157,17 @@
     "on_behalf_of": "d78be5b1f7b8220055a006b488460d93"
    }
   },
-  "hash": "sha256:c9ee17c5d7ad5adaf03395d0dc8006a629fdc2d0fda134e027331c1944013394",
+  "hash": "sha256:9e9f4c17d48f4e311e679ab7ca06c63242a7375d46ed37f1152b7f5e0dcabc5a",
   "commitments": {
    "identity": "sha256:63a8dc2fb55aa136c0a98956fac3e544e76878e55b9fc5b995e8df2f0daebc91",
    "on_behalf_of": "sha256:b5f3db0cd21a9a63676fb833db46a4c8bbc146c61e21df020caaed8d18b513e7"
   },
-  "assertion_preimage": "sha256:c9ee17c5d7ad5adaf03395d0dc8006a629fdc2d0fda134e027331c1944013394"
+  "assertion_preimage": "sha256:9e9f4c17d48f4e311e679ab7ca06c63242a7375d46ed37f1152b7f5e0dcabc5a"
  },
  {
   "name": "21_session_header",
-  "seq": "21",
-  "prev": "sha256:c9ee17c5d7ad5adaf03395d0dc8006a629fdc2d0fda134e027331c1944013394",
+  "seq": "19",
+  "prev": "sha256:a6353c61924913f3d77ab3e9a2e85412fafdcbf4b9dcbc56de280bc8f731b422",
   "draft": {
    "kind": "session_header",
    "stream": "record",
@@ -3237,8 +3201,8 @@
    "schema_version": 1,
    "kind": "session_header",
    "stream": "record",
-   "seq": "21",
-   "prev": "sha256:c9ee17c5d7ad5adaf03395d0dc8006a629fdc2d0fda134e027331c1944013394",
+   "seq": "19",
+   "prev": "sha256:a6353c61924913f3d77ab3e9a2e85412fafdcbf4b9dcbc56de280bc8f731b422",
    "branch": "main",
    "logical_parent": "sha256:30a9329af653facc3a9da85cc305de867ac4403484224fff67c1c53a0c3db752",
    "time": {
@@ -3255,12 +3219,11 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "session": {
     "session_id": "sess-021",
     "app_version": "0.21.0"
    },
-   "hash": "sha256:b59f94aa30e947d88ea2b0ec6d756517abf1f0650b1217ced3728e6570290b64"
+   "hash": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85"
   },
   "payload": {
    "identity": {
@@ -3270,16 +3233,16 @@
     "identity": "8dc46dba129b60f92444aa886b9e2da2"
    }
   },
-  "hash": "sha256:b59f94aa30e947d88ea2b0ec6d756517abf1f0650b1217ced3728e6570290b64",
+  "hash": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
   "commitments": {
    "identity": "sha256:2314d0415667ab905403eaf699a4ca2e2725a6e6e718462d56e386eb4af2e9f6"
   },
-  "assertion_preimage": "sha256:b59f94aa30e947d88ea2b0ec6d756517abf1f0650b1217ced3728e6570290b64"
+  "assertion_preimage": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85"
  },
  {
   "name": "22_principal_upgrade",
-  "seq": "22",
-  "prev": "sha256:b59f94aa30e947d88ea2b0ec6d756517abf1f0650b1217ced3728e6570290b64",
+  "seq": "20",
+  "prev": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3320,8 +3283,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "22",
-   "prev": "sha256:b59f94aa30e947d88ea2b0ec6d756517abf1f0650b1217ced3728e6570290b64",
+   "seq": "20",
+   "prev": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:ba1084d00f639d2fabd845318e14ec2b259dad8c255a932280fa034ad63b48a8",
    "time": {
@@ -3338,14 +3301,13 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "upgrade": {
     "session_id": "sess-022",
     "method": "gui_prompt",
     "identity_commit": "sha256:86e40e9763007a22ffc291db3106824ac4d052aaac61f398b1b3c30baa455272",
     "confirmed_at": "2026-11-17T09:22:00Z"
    },
-   "hash": "sha256:aa49a554e5eb3892bbbd2dd744b4bec04b9bb0ec68c7565bf34b7521374295a9"
+   "hash": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde"
   },
   "payload": {
    "identity": {
@@ -3361,17 +3323,17 @@
     "upgrade_identity": "4ffa31e16b6a2ba66e9d0bee16fa6075"
    }
   },
-  "hash": "sha256:aa49a554e5eb3892bbbd2dd744b4bec04b9bb0ec68c7565bf34b7521374295a9",
+  "hash": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde",
   "commitments": {
    "identity": "sha256:4a5722aa80fa5f48c12812fc3041816d2def0d42242f564e80af3274c86bea6d",
    "upgrade_identity": "sha256:86e40e9763007a22ffc291db3106824ac4d052aaac61f398b1b3c30baa455272"
   },
-  "assertion_preimage": "sha256:aa49a554e5eb3892bbbd2dd744b4bec04b9bb0ec68c7565bf34b7521374295a9"
+  "assertion_preimage": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde"
  },
  {
   "name": "23_principal_upgrade",
-  "seq": "23",
-  "prev": "sha256:aa49a554e5eb3892bbbd2dd744b4bec04b9bb0ec68c7565bf34b7521374295a9",
+  "seq": "21",
+  "prev": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3395,9 +3357,6 @@
    },
    "reason": "Ø 12 H7 bore recheck — µm drift",
    "human_assertion": "ed25519:1ff999ddebbf68846e3e0dbd9a3c5d93b8ed71056a654807dd12c6b6fcaf763d",
-   "signatures": [
-    "ed25519:e9e39fca7a3813af18185c437a943357ebe6d8f243251edd6a6707232059d5df"
-   ],
    "upgrade": {
     "session_id": "sess-023",
     "method": "os_presence",
@@ -3417,8 +3376,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "23",
-   "prev": "sha256:aa49a554e5eb3892bbbd2dd744b4bec04b9bb0ec68c7565bf34b7521374295a9",
+   "seq": "21",
+   "prev": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:18007ba6d654f11851d359db70a78359ea104b85f88a5d2a160a2d00bc325195",
    "time": {
@@ -3435,9 +3394,6 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:e9e39fca7a3813af18185c437a943357ebe6d8f243251edd6a6707232059d5df"
-   ],
    "reason_commit": "sha256:c6d642140a426fca3612abd089d8af32e9df3de860dbbf2d75be804d35ffdd62",
    "human_assertion": "ed25519:1ff999ddebbf68846e3e0dbd9a3c5d93b8ed71056a654807dd12c6b6fcaf763d",
    "upgrade": {
@@ -3446,7 +3402,7 @@
     "identity_commit": "sha256:45f9ac8a8e52d2547b301013f68ba3dff9594659c5d72c2098c80abfcd7d8023",
     "confirmed_at": "2026-11-17T09:23:00Z"
    },
-   "hash": "sha256:c14b54b6e5c1a054ff35fc549b099d12a9c06b44e6584bc45af9b21e36f9e2e2"
+   "hash": "sha256:f76c7843111297be0888e10fe4dc17d5ce56e8f7f8eec12122ba6d848586c367"
   },
   "payload": {
    "identity": {
@@ -3463,18 +3419,18 @@
     "upgrade_identity": "5613275f1773a407298fde0f80e9e63f"
    }
   },
-  "hash": "sha256:c14b54b6e5c1a054ff35fc549b099d12a9c06b44e6584bc45af9b21e36f9e2e2",
+  "hash": "sha256:f76c7843111297be0888e10fe4dc17d5ce56e8f7f8eec12122ba6d848586c367",
   "commitments": {
    "identity": "sha256:efc8aa33603dc725c880ec4080ab1dd79b312d35baca552a38dfca215e8efabd",
    "reason": "sha256:c6d642140a426fca3612abd089d8af32e9df3de860dbbf2d75be804d35ffdd62",
    "upgrade_identity": "sha256:45f9ac8a8e52d2547b301013f68ba3dff9594659c5d72c2098c80abfcd7d8023"
   },
-  "assertion_preimage": "sha256:b30cda0d55a6485f70dddbda2a116fdefd6d0cf2885d777d95c8d26b4eabc589"
+  "assertion_preimage": "sha256:fd84586278be4d1f088142d2769ef2bcc1c4ad17e838910d8c19ebb9c3d16631"
  },
  {
   "name": "24_principal_upgrade",
-  "seq": "24",
-  "prev": "sha256:c14b54b6e5c1a054ff35fc549b099d12a9c06b44e6584bc45af9b21e36f9e2e2",
+  "seq": "22",
+  "prev": "sha256:f76c7843111297be0888e10fe4dc17d5ce56e8f7f8eec12122ba6d848586c367",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3515,8 +3471,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "24",
-   "prev": "sha256:c14b54b6e5c1a054ff35fc549b099d12a9c06b44e6584bc45af9b21e36f9e2e2",
+   "seq": "22",
+   "prev": "sha256:f76c7843111297be0888e10fe4dc17d5ce56e8f7f8eec12122ba6d848586c367",
    "branch": "main",
    "logical_parent": "sha256:f2c5bdb6501e3fb5867c4d6d620e96f54ad9ab321a035c04742a29dd6279da4d",
    "time": {
@@ -3533,14 +3489,13 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "upgrade": {
     "session_id": "sess-024",
     "method": "gui_prompt",
     "identity_commit": "sha256:36dcf244f7f3004d5cd1aa626f2c1833d7d9d3339f31c64496c83f86cfb3e9a6",
     "confirmed_at": "2026-11-17T09:24:00Z"
    },
-   "hash": "sha256:ad4a701401305044c4a730609b0d6ece1df2431ffc5773f61874bc8cc24db4e1"
+   "hash": "sha256:c108fd68f14d1638db7ae613adf682158f712036567faf3cb330470799f29e87"
   },
   "payload": {
    "identity": {
@@ -3556,17 +3511,17 @@
     "upgrade_identity": "0a9d0ac6c7b30d57e0951f71698d44eb"
    }
   },
-  "hash": "sha256:ad4a701401305044c4a730609b0d6ece1df2431ffc5773f61874bc8cc24db4e1",
+  "hash": "sha256:c108fd68f14d1638db7ae613adf682158f712036567faf3cb330470799f29e87",
   "commitments": {
    "identity": "sha256:145a5dd731537430b24cea61013bb7089dd49d8f99cad70e80d14bddf73bc348",
    "upgrade_identity": "sha256:36dcf244f7f3004d5cd1aa626f2c1833d7d9d3339f31c64496c83f86cfb3e9a6"
   },
-  "assertion_preimage": "sha256:ad4a701401305044c4a730609b0d6ece1df2431ffc5773f61874bc8cc24db4e1"
+  "assertion_preimage": "sha256:c108fd68f14d1638db7ae613adf682158f712036567faf3cb330470799f29e87"
  },
  {
   "name": "25_principal_upgrade",
-  "seq": "25",
-  "prev": "sha256:ad4a701401305044c4a730609b0d6ece1df2431ffc5773f61874bc8cc24db4e1",
+  "seq": "23",
+  "prev": "sha256:c108fd68f14d1638db7ae613adf682158f712036567faf3cb330470799f29e87",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3607,8 +3562,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "25",
-   "prev": "sha256:ad4a701401305044c4a730609b0d6ece1df2431ffc5773f61874bc8cc24db4e1",
+   "seq": "23",
+   "prev": "sha256:c108fd68f14d1638db7ae613adf682158f712036567faf3cb330470799f29e87",
    "branch": "agent/claude-code/3",
    "logical_parent": null,
    "time": {
@@ -3625,14 +3580,13 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "upgrade": {
     "session_id": "sess-025",
     "method": "os_presence",
     "identity_commit": "sha256:56502df834ea35293410ea41d1f728e66691da4195ca839154e905897b7ff2a0",
     "confirmed_at": "2026-11-17T09:25:00Z"
    },
-   "hash": "sha256:f3170cff29a2ca56b1fc475816ea22de3cf2658df5d3f8717b8133d7a28e9734"
+   "hash": "sha256:de494ca625eeee0cab528c5acf945fb4c260935101dd9d89ce1a2cbb07f1df19"
   },
   "payload": {
    "identity": {
@@ -3648,17 +3602,17 @@
     "upgrade_identity": "ce812b948ae58e453b06dd6dc78adffd"
    }
   },
-  "hash": "sha256:f3170cff29a2ca56b1fc475816ea22de3cf2658df5d3f8717b8133d7a28e9734",
+  "hash": "sha256:de494ca625eeee0cab528c5acf945fb4c260935101dd9d89ce1a2cbb07f1df19",
   "commitments": {
    "identity": "sha256:10bc2af5b5488e9e599f3cfb139effdf9cb05fcec18ab7a2dd050ca12ab2bca4",
    "upgrade_identity": "sha256:56502df834ea35293410ea41d1f728e66691da4195ca839154e905897b7ff2a0"
   },
-  "assertion_preimage": "sha256:f3170cff29a2ca56b1fc475816ea22de3cf2658df5d3f8717b8133d7a28e9734"
+  "assertion_preimage": "sha256:de494ca625eeee0cab528c5acf945fb4c260935101dd9d89ce1a2cbb07f1df19"
  },
  {
   "name": "26_principal_upgrade",
-  "seq": "26",
-  "prev": "sha256:f3170cff29a2ca56b1fc475816ea22de3cf2658df5d3f8717b8133d7a28e9734",
+  "seq": "24",
+  "prev": "sha256:de494ca625eeee0cab528c5acf945fb4c260935101dd9d89ce1a2cbb07f1df19",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3704,8 +3658,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "26",
-   "prev": "sha256:f3170cff29a2ca56b1fc475816ea22de3cf2658df5d3f8717b8133d7a28e9734",
+   "seq": "24",
+   "prev": "sha256:de494ca625eeee0cab528c5acf945fb4c260935101dd9d89ce1a2cbb07f1df19",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:8bea21620177e2ed984c9c32014f453989b4e02cbb9e9105ed261280401e98b7",
    "time": {
@@ -3723,14 +3677,13 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "upgrade": {
     "session_id": "sess-026",
     "method": "gui_prompt",
     "identity_commit": "sha256:7eb55b301f81990541a3c8ca4d08713a1a6a87c2a74098999c0752dd1048ec72",
     "confirmed_at": "2026-11-17T09:26:00Z"
    },
-   "hash": "sha256:2b6b1fbe0c26809e6ea7bb1cc3124ce9deb69121b81690f48a29384f98943c91"
+   "hash": "sha256:b07f1f0023d4e3b06a0a0e2f943c3a88d7f5fcd6079cabab9870ee3732482269"
   },
   "payload": {
    "identity": {
@@ -3751,18 +3704,18 @@
     "upgrade_identity": "24a539ea2c01d79ff48174d4900fb10b"
    }
   },
-  "hash": "sha256:2b6b1fbe0c26809e6ea7bb1cc3124ce9deb69121b81690f48a29384f98943c91",
+  "hash": "sha256:b07f1f0023d4e3b06a0a0e2f943c3a88d7f5fcd6079cabab9870ee3732482269",
   "commitments": {
    "identity": "sha256:351434a1b60c39ce77e66742f94287420932e8f73606f62ec142193a3c1a7442",
    "on_behalf_of": "sha256:84916c3e9cb08d5674d08415644222dafbb4e9bf60ac524ddfb66d77ee14bf62",
    "upgrade_identity": "sha256:7eb55b301f81990541a3c8ca4d08713a1a6a87c2a74098999c0752dd1048ec72"
   },
-  "assertion_preimage": "sha256:2b6b1fbe0c26809e6ea7bb1cc3124ce9deb69121b81690f48a29384f98943c91"
+  "assertion_preimage": "sha256:b07f1f0023d4e3b06a0a0e2f943c3a88d7f5fcd6079cabab9870ee3732482269"
  },
  {
   "name": "27_principal_upgrade",
-  "seq": "27",
-  "prev": "sha256:2b6b1fbe0c26809e6ea7bb1cc3124ce9deb69121b81690f48a29384f98943c91",
+  "seq": "4",
+  "prev": "sha256:9e9f4c17d48f4e311e679ab7ca06c63242a7375d46ed37f1152b7f5e0dcabc5a",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "activity",
@@ -3804,8 +3757,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "activity",
-   "seq": "27",
-   "prev": "sha256:2b6b1fbe0c26809e6ea7bb1cc3124ce9deb69121b81690f48a29384f98943c91",
+   "seq": "4",
+   "prev": "sha256:9e9f4c17d48f4e311e679ab7ca06c63242a7375d46ed37f1152b7f5e0dcabc5a",
    "branch": "main",
    "logical_parent": "sha256:41dde22819e8a29508ea053aa18371e4d52a40bd4a05ccf0224e852679a480f0",
    "time": {
@@ -3822,7 +3775,6 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "reason_commit": "sha256:bf756dac3034aa93ad2e8be3809ceee2146a1d3b3c564adc5bdb7364a47c44d2",
    "upgrade": {
     "session_id": "sess-027",
@@ -3830,7 +3782,7 @@
     "identity_commit": "sha256:46952ef3454aaa712e44adeccbbf4d59c0e79859b5b1e62bc466cd3f33d410d4",
     "confirmed_at": "2026-11-17T09:27:00Z"
    },
-   "hash": "sha256:d9cb7fd9bffb52f6fbac81057f5aed6841596a6630a0737e8b300f53e5b3b273"
+   "hash": "sha256:6da7b3e386af908ab04707b8e12f99498f55e14a34e908d0c760ede7fba65edb"
   },
   "payload": {
    "identity": {
@@ -3847,18 +3799,18 @@
     "upgrade_identity": "237529c0892b6ba6656df3d1ea6a67f5"
    }
   },
-  "hash": "sha256:d9cb7fd9bffb52f6fbac81057f5aed6841596a6630a0737e8b300f53e5b3b273",
+  "hash": "sha256:6da7b3e386af908ab04707b8e12f99498f55e14a34e908d0c760ede7fba65edb",
   "commitments": {
    "identity": "sha256:cfaefeb6ca749234a289a2d584456fe3fc4feaab23a029a2dfb368043dd455c0",
    "reason": "sha256:bf756dac3034aa93ad2e8be3809ceee2146a1d3b3c564adc5bdb7364a47c44d2",
    "upgrade_identity": "sha256:46952ef3454aaa712e44adeccbbf4d59c0e79859b5b1e62bc466cd3f33d410d4"
   },
-  "assertion_preimage": "sha256:d9cb7fd9bffb52f6fbac81057f5aed6841596a6630a0737e8b300f53e5b3b273"
+  "assertion_preimage": "sha256:6da7b3e386af908ab04707b8e12f99498f55e14a34e908d0c760ede7fba65edb"
  },
  {
   "name": "28_principal_upgrade",
-  "seq": "28",
-  "prev": "sha256:d9cb7fd9bffb52f6fbac81057f5aed6841596a6630a0737e8b300f53e5b3b273",
+  "seq": "25",
+  "prev": "sha256:b07f1f0023d4e3b06a0a0e2f943c3a88d7f5fcd6079cabab9870ee3732482269",
   "draft": {
    "kind": "principal_upgrade",
    "stream": "record",
@@ -3899,8 +3851,8 @@
    "schema_version": 1,
    "kind": "principal_upgrade",
    "stream": "record",
-   "seq": "28",
-   "prev": "sha256:d9cb7fd9bffb52f6fbac81057f5aed6841596a6630a0737e8b300f53e5b3b273",
+   "seq": "25",
+   "prev": "sha256:b07f1f0023d4e3b06a0a0e2f943c3a88d7f5fcd6079cabab9870ee3732482269",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:cd0adb170697257e2aee80266f5bccfbd71e74998c72efe0c57e27d90656e322",
    "time": {
@@ -3917,14 +3869,13 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "upgrade": {
     "session_id": "sess-028",
     "method": "gui_prompt",
     "identity_commit": "sha256:7cac5e09c3ee10829b2ffc38007de759b732e9f4b877d4e13d0b2ea027b774b4",
     "confirmed_at": "2026-11-17T09:28:00Z"
    },
-   "hash": "sha256:47c624bd3a9613523df52076d1a08dea99e3490f961bb35557c7d0623df32959"
+   "hash": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406"
   },
   "payload": {
    "identity": {
@@ -3940,17 +3891,17 @@
     "upgrade_identity": "fbe17d15aad966c79efc25450a135af4"
    }
   },
-  "hash": "sha256:47c624bd3a9613523df52076d1a08dea99e3490f961bb35557c7d0623df32959",
+  "hash": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
   "commitments": {
    "identity": "sha256:5020eb85d10f603284e973c94adaa4f4c2b456c465557e28ad5f9a0587f4dcb6",
    "upgrade_identity": "sha256:7cac5e09c3ee10829b2ffc38007de759b732e9f4b877d4e13d0b2ea027b774b4"
   },
-  "assertion_preimage": "sha256:47c624bd3a9613523df52076d1a08dea99e3490f961bb35557c7d0623df32959"
+  "assertion_preimage": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406"
  },
  {
   "name": "29_head_move",
-  "seq": "29",
-  "prev": "sha256:47c624bd3a9613523df52076d1a08dea99e3490f961bb35557c7d0623df32959",
+  "seq": "26",
+  "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -3973,9 +3924,6 @@
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
    "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
-   "signatures": [
-    "ed25519:89b5abca6847682c86a3bbe4003fcbc909847c0df69d2fca2fbfa119e2bb1fbd"
-   ],
    "head_move": {
     "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
     "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
@@ -3988,8 +3936,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "29",
-   "prev": "sha256:47c624bd3a9613523df52076d1a08dea99e3490f961bb35557c7d0623df32959",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
    "time": {
@@ -4006,15 +3954,12 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:89b5abca6847682c86a3bbe4003fcbc909847c0df69d2fca2fbfa119e2bb1fbd"
-   ],
    "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
    "head_move": {
     "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
     "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
    },
-   "hash": "sha256:e8f31ec0102ac60a570e94dcac28638219b52c747290eb26c5941e3917052a68"
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
   },
   "payload": {
    "identity": {
@@ -4024,16 +3969,16 @@
     "identity": "be31152e03e75e14daa97a9a425c6c7e"
    }
   },
-  "hash": "sha256:e8f31ec0102ac60a570e94dcac28638219b52c747290eb26c5941e3917052a68",
+  "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b",
   "commitments": {
    "identity": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
   },
-  "assertion_preimage": "sha256:6c47987b9b7bd8a88bc1bd972293bec4b6da5acaf0b6bd1268c68fdec85394cc"
+  "assertion_preimage": "sha256:91f8039f966b41587f1995bd0d561f5199e2e03c840af1ca03c9cd1c1fe67e59"
  },
  {
   "name": "30_head_move",
-  "seq": "30",
-  "prev": "sha256:e8f31ec0102ac60a570e94dcac28638219b52c747290eb26c5941e3917052a68",
+  "seq": "27",
+  "prev": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -4068,8 +4013,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "30",
-   "prev": "sha256:e8f31ec0102ac60a570e94dcac28638219b52c747290eb26c5941e3917052a68",
+   "seq": "27",
+   "prev": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b",
    "branch": "main",
    "logical_parent": null,
    "time": {
@@ -4086,12 +4031,11 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "head_move": {
     "from": "sha256:1b80f86e6f4d28b6f2871382faa91d03c95830ab7b4409753f78b9aca538a501",
     "to": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5"
    },
-   "hash": "sha256:efdb4feace48168f20aab2465020f66963ab0a913eb9225afb941d165fbde3cb"
+   "hash": "sha256:3a48f7ffbcf935b6ea0908d376695c931ee2aa9c645e7d9afb093d6dc0f1ad43"
   },
   "payload": {
    "identity": {
@@ -4102,16 +4046,16 @@
     "identity": "2af69efe149e5e690d3bbf1832e6c32e"
    }
   },
-  "hash": "sha256:efdb4feace48168f20aab2465020f66963ab0a913eb9225afb941d165fbde3cb",
+  "hash": "sha256:3a48f7ffbcf935b6ea0908d376695c931ee2aa9c645e7d9afb093d6dc0f1ad43",
   "commitments": {
    "identity": "sha256:829659dd35c4461bd57bdcfbab45fdeed488385b49c4b514219185ea5cadb8c9"
   },
-  "assertion_preimage": "sha256:efdb4feace48168f20aab2465020f66963ab0a913eb9225afb941d165fbde3cb"
+  "assertion_preimage": "sha256:3a48f7ffbcf935b6ea0908d376695c931ee2aa9c645e7d9afb093d6dc0f1ad43"
  },
  {
   "name": "31_head_move",
-  "seq": "31",
-  "prev": "sha256:efdb4feace48168f20aab2465020f66963ab0a913eb9225afb941d165fbde3cb",
+  "seq": "28",
+  "prev": "sha256:3a48f7ffbcf935b6ea0908d376695c931ee2aa9c645e7d9afb093d6dc0f1ad43",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -4148,8 +4092,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "31",
-   "prev": "sha256:efdb4feace48168f20aab2465020f66963ab0a913eb9225afb941d165fbde3cb",
+   "seq": "28",
+   "prev": "sha256:3a48f7ffbcf935b6ea0908d376695c931ee2aa9c645e7d9afb093d6dc0f1ad43",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:fb531922f0cfc7c850c8730ffa206a5258c378ab047c848dc5f94fb0a07bd4f6",
    "time": {
@@ -4166,13 +4110,12 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "reason_commit": "sha256:97f6b94fa53f682b45edade3c1bdf2014be4d2a621934c7cc5a54414dffae242",
    "head_move": {
     "from": "sha256:3bc8e7c4df78f584c57ee27867e9880604565dd00e8acbf040bedc22869e1772",
     "to": "sha256:1b80f86e6f4d28b6f2871382faa91d03c95830ab7b4409753f78b9aca538a501"
    },
-   "hash": "sha256:f60192d494daeb215fc71e18478703aa196c7e6fc1dddb2830caa843e25d5fe5"
+   "hash": "sha256:45328cd630f2cf7a2f85de5926aad31438d618042443132871673b6852d6e268"
   },
   "payload": {
    "identity": {
@@ -4185,17 +4128,17 @@
     "reason": "c226cec2800b12910dd11a6b1d9cfa97"
    }
   },
-  "hash": "sha256:f60192d494daeb215fc71e18478703aa196c7e6fc1dddb2830caa843e25d5fe5",
+  "hash": "sha256:45328cd630f2cf7a2f85de5926aad31438d618042443132871673b6852d6e268",
   "commitments": {
    "identity": "sha256:b866461c6013b9172dfd07c5f9f5bed278dfd85334c854250b6090526c1b5dcb",
    "reason": "sha256:97f6b94fa53f682b45edade3c1bdf2014be4d2a621934c7cc5a54414dffae242"
   },
-  "assertion_preimage": "sha256:f60192d494daeb215fc71e18478703aa196c7e6fc1dddb2830caa843e25d5fe5"
+  "assertion_preimage": "sha256:45328cd630f2cf7a2f85de5926aad31438d618042443132871673b6852d6e268"
  },
  {
   "name": "32_head_move",
-  "seq": "32",
-  "prev": "sha256:f60192d494daeb215fc71e18478703aa196c7e6fc1dddb2830caa843e25d5fe5",
+  "seq": "29",
+  "prev": "sha256:45328cd630f2cf7a2f85de5926aad31438d618042443132871673b6852d6e268",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -4235,8 +4178,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "32",
-   "prev": "sha256:f60192d494daeb215fc71e18478703aa196c7e6fc1dddb2830caa843e25d5fe5",
+   "seq": "29",
+   "prev": "sha256:45328cd630f2cf7a2f85de5926aad31438d618042443132871673b6852d6e268",
    "branch": "feature/bore-check",
    "logical_parent": "sha256:cf83d19966c36216c54cb681d0e54dc9d44b1e84277e9f070366752f3f95d9c1",
    "time": {
@@ -4254,12 +4197,11 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [],
    "head_move": {
     "from": "sha256:b0a0fcfa0d969f6198977d035befb87505ff207f19022ea48b4d6b8bf32d1382",
     "to": "sha256:3bc8e7c4df78f584c57ee27867e9880604565dd00e8acbf040bedc22869e1772"
    },
-   "hash": "sha256:d6e78b7e44bf88da00871cd68761e142c95d5d95513e1f758431f731b5d05428"
+   "hash": "sha256:2b0f6fd12709806d0ae5e4c8fb4c3c744eefb6f27c8b9ca99df0cf1922459ccc"
   },
   "payload": {
    "identity": {
@@ -4275,17 +4217,17 @@
     "on_behalf_of": "59e48062cfc026375bfc96159634dec2"
    }
   },
-  "hash": "sha256:d6e78b7e44bf88da00871cd68761e142c95d5d95513e1f758431f731b5d05428",
+  "hash": "sha256:2b0f6fd12709806d0ae5e4c8fb4c3c744eefb6f27c8b9ca99df0cf1922459ccc",
   "commitments": {
    "identity": "sha256:d122364ac067aa53ec8f123ca8b0e6ba1fcf2ba402edad312e26cbd72e5b4902",
    "on_behalf_of": "sha256:3f8d43d127ca13ffcd700721ca0807d68527c9e9da24b177def72c2d53de1b31"
   },
-  "assertion_preimage": "sha256:d6e78b7e44bf88da00871cd68761e142c95d5d95513e1f758431f731b5d05428"
+  "assertion_preimage": "sha256:2b0f6fd12709806d0ae5e4c8fb4c3c744eefb6f27c8b9ca99df0cf1922459ccc"
  },
  {
   "name": "33_head_move",
-  "seq": "33",
-  "prev": "sha256:d6e78b7e44bf88da00871cd68761e142c95d5d95513e1f758431f731b5d05428",
+  "seq": "30",
+  "prev": "sha256:2b0f6fd12709806d0ae5e4c8fb4c3c744eefb6f27c8b9ca99df0cf1922459ccc",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -4319,8 +4261,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "33",
-   "prev": "sha256:d6e78b7e44bf88da00871cd68761e142c95d5d95513e1f758431f731b5d05428",
+   "seq": "30",
+   "prev": "sha256:2b0f6fd12709806d0ae5e4c8fb4c3c744eefb6f27c8b9ca99df0cf1922459ccc",
    "branch": "main",
    "logical_parent": "sha256:b14f795f8188afa2e5f995f5f6feffa0d6c97058565c31045b355ca29d363b38",
    "time": {
@@ -4337,12 +4279,11 @@
     "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
     "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
    },
-   "signatures": [],
    "head_move": {
     "from": "sha256:3938221ac071a4b289f6147449d691b547711631dcec9b58f6ce73e6c1c29a73",
     "to": "sha256:b0a0fcfa0d969f6198977d035befb87505ff207f19022ea48b4d6b8bf32d1382"
    },
-   "hash": "sha256:242e1baf906e6fb77b8e6d86d96d6e75ef5bf4d0a7550c031f9d90a7fb303698"
+   "hash": "sha256:4b070760ec4a681819c8ce0331877b1e9f6832e17fc448ee7149e39e8cbe1b30"
   },
   "payload": {
    "identity": {
@@ -4352,16 +4293,16 @@
     "identity": "74dea7b64f07e682635e0969857cb704"
    }
   },
-  "hash": "sha256:242e1baf906e6fb77b8e6d86d96d6e75ef5bf4d0a7550c031f9d90a7fb303698",
+  "hash": "sha256:4b070760ec4a681819c8ce0331877b1e9f6832e17fc448ee7149e39e8cbe1b30",
   "commitments": {
    "identity": "sha256:a11322f46ed948fddd3ae25fe6b5c7cf787cda223298bfd4fbc769a7be75e542"
   },
-  "assertion_preimage": "sha256:242e1baf906e6fb77b8e6d86d96d6e75ef5bf4d0a7550c031f9d90a7fb303698"
+  "assertion_preimage": "sha256:4b070760ec4a681819c8ce0331877b1e9f6832e17fc448ee7149e39e8cbe1b30"
  },
  {
   "name": "34_head_move",
-  "seq": "34",
-  "prev": "sha256:242e1baf906e6fb77b8e6d86d96d6e75ef5bf4d0a7550c031f9d90a7fb303698",
+  "seq": "5",
+  "prev": "sha256:6da7b3e386af908ab04707b8e12f99498f55e14a34e908d0c760ede7fba65edb",
   "draft": {
    "kind": "head_move",
    "stream": "activity",
@@ -4396,8 +4337,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "activity",
-   "seq": "34",
-   "prev": "sha256:242e1baf906e6fb77b8e6d86d96d6e75ef5bf4d0a7550c031f9d90a7fb303698",
+   "seq": "5",
+   "prev": "sha256:6da7b3e386af908ab04707b8e12f99498f55e14a34e908d0c760ede7fba65edb",
    "branch": "agent/claude-code/3",
    "logical_parent": "sha256:d2bd4f429e948052eaea863ee68a9f671b4010221deb339d7d50f3717e641e60",
    "time": {
@@ -4414,12 +4355,11 @@
     "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
     "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
    },
-   "signatures": [],
    "head_move": {
     "from": "sha256:316df09af08ea8e65ff1de64abfdec41f05c4d78d22f1b68da9a4dfefa292ca3",
     "to": "sha256:3938221ac071a4b289f6147449d691b547711631dcec9b58f6ce73e6c1c29a73"
    },
-   "hash": "sha256:72bd29ddcfaff37b8082ff8a7868c0b011cad7536e3baf3af248e04c850be893"
+   "hash": "sha256:d4d89f62cfabbc287dc48bf731e98b1bbed5be4dbee6a2d4699a1082d2ccd3c9"
   },
   "payload": {
    "identity": {
@@ -4430,16 +4370,16 @@
     "identity": "60a6e0ce31ee561701c98f34b4eaf75e"
    }
   },
-  "hash": "sha256:72bd29ddcfaff37b8082ff8a7868c0b011cad7536e3baf3af248e04c850be893",
+  "hash": "sha256:d4d89f62cfabbc287dc48bf731e98b1bbed5be4dbee6a2d4699a1082d2ccd3c9",
   "commitments": {
    "identity": "sha256:c9880b8e9ce5f9749c27dd88ed9650f5dad16d8c9a6fa500cb7ff5ee8458c28f"
   },
-  "assertion_preimage": "sha256:72bd29ddcfaff37b8082ff8a7868c0b011cad7536e3baf3af248e04c850be893"
+  "assertion_preimage": "sha256:d4d89f62cfabbc287dc48bf731e98b1bbed5be4dbee6a2d4699a1082d2ccd3c9"
  },
  {
   "name": "35_head_move",
-  "seq": "35",
-  "prev": "sha256:72bd29ddcfaff37b8082ff8a7868c0b011cad7536e3baf3af248e04c850be893",
+  "seq": "31",
+  "prev": "sha256:4b070760ec4a681819c8ce0331877b1e9f6832e17fc448ee7149e39e8cbe1b30",
   "draft": {
    "kind": "head_move",
    "stream": "record",
@@ -4463,9 +4403,6 @@
    },
    "reason": "Ø 12 H7 bore recheck — µm drift",
    "human_assertion": "ed25519:4ac37c6a1e660d27b4360ea83af75a220bcaafdfb9268f4d5c8fc614c2e9e684",
-   "signatures": [
-    "ed25519:820d46a2917c9277274facad3ceb99e069329d1ad7f45c49b0682331284e6e71"
-   ],
    "head_move": {
     "from": "sha256:80513179f5cff44a720823c24e17a017f5762fd2ffae5379ccd339c2b9d60b95",
     "to": "sha256:316df09af08ea8e65ff1de64abfdec41f05c4d78d22f1b68da9a4dfefa292ca3"
@@ -4479,8 +4416,8 @@
    "schema_version": 1,
    "kind": "head_move",
    "stream": "record",
-   "seq": "35",
-   "prev": "sha256:72bd29ddcfaff37b8082ff8a7868c0b011cad7536e3baf3af248e04c850be893",
+   "seq": "31",
+   "prev": "sha256:4b070760ec4a681819c8ce0331877b1e9f6832e17fc448ee7149e39e8cbe1b30",
    "branch": "feature/bore-check",
    "logical_parent": null,
    "time": {
@@ -4497,16 +4434,13 @@
     "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
     "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
    },
-   "signatures": [
-    "ed25519:820d46a2917c9277274facad3ceb99e069329d1ad7f45c49b0682331284e6e71"
-   ],
    "reason_commit": "sha256:e07873d574362d3290593669cadc027afefc448630e444081c4b71f624bc9ce4",
    "human_assertion": "ed25519:4ac37c6a1e660d27b4360ea83af75a220bcaafdfb9268f4d5c8fc614c2e9e684",
    "head_move": {
     "from": "sha256:80513179f5cff44a720823c24e17a017f5762fd2ffae5379ccd339c2b9d60b95",
     "to": "sha256:316df09af08ea8e65ff1de64abfdec41f05c4d78d22f1b68da9a4dfefa292ca3"
    },
-   "hash": "sha256:982bab91c3db32bc1578f41d113638aca1f35e89e097e8cd3c3359ec39f0fa5d"
+   "hash": "sha256:58d1e45076dfb08208609f2f68d5872a14bc47d3950ba8752705b76b1d179688"
   },
   "payload": {
    "identity": {
@@ -4518,11 +4452,11 @@
     "reason": "814fa0df2b0bc4a97d9d5c8099f662ea"
    }
   },
-  "hash": "sha256:982bab91c3db32bc1578f41d113638aca1f35e89e097e8cd3c3359ec39f0fa5d",
+  "hash": "sha256:58d1e45076dfb08208609f2f68d5872a14bc47d3950ba8752705b76b1d179688",
   "commitments": {
    "identity": "sha256:53d1609d151dfa8ddec101679d6956020686c79027ac127ccc1578fef3ed3ffe",
    "reason": "sha256:e07873d574362d3290593669cadc027afefc448630e444081c4b71f624bc9ce4"
   },
-  "assertion_preimage": "sha256:19ce50405eb0200e061e2510f4a03fce20dbeeb1585b9034beb74fa7237b9bc4"
+  "assertion_preimage": "sha256:a29f7dd4e6ec2be9c04f903916b9be2f1b3f8a3038e3c378939df05af284d22f"
  }
 ]

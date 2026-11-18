@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal]
+built_pr: 54
 satisfies: [REQ-CORE.JRN-002, REQ-CORE.JRN-005, REQ-CORE.JRN-014]
 covers: []
 depends_on: [CORE.JRN.CANON]

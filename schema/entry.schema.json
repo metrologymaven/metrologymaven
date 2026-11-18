@@ -2,69 +2,210 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://metrologymaven.io/schema/entry.schema.json",
   "title": "Metrology Maven journal entry header (schema version 1, spec node CORE.JRN.ENTRY)",
-  "description": "The hashed header of one journal entry. Detachable fields (arguments, event bodies, reason, identities) appear only as salted SHA-256 commitments; their salts and values live in the detachable payload. The entry hash is SHA-256 over the RFC 8785 form of this object with `hash` omitted.",
+  "description": "The hashed header of one journal entry. Detachable fields (arguments, event bodies, reason, identities) appear only as salted SHA-256 commitments; their salts and values live in the detachable payload. The entry hash is SHA-256 over the RFC 8785 form of this object with `hash` omitted. The human-assertion pre-image is the same hash computed with `human_assertion` also omitted. Sequences start at 1 per stream and the first entry's `prev` is `sha256:` followed by 64 zeros. Signatures are detached and are not part of the header.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "kind", "stream", "seq", "prev", "branch", "logical_parent", "time", "principal",
-    "ai_assistance", "manifests", "signatures", "hash"],
+  "required": [
+    "schema_version",
+    "kind",
+    "stream",
+    "seq",
+    "prev",
+    "branch",
+    "logical_parent",
+    "time",
+    "principal",
+    "ai_assistance",
+    "manifests",
+    "hash"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
-    "kind": {"enum": ["command", "session_header", "principal_upgrade", "head_move"]},
-    "stream": {"$ref": "#/$defs/ident"},
-    "seq": {"$ref": "#/$defs/u64"},
-    "prev": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
-    "branch": {"$ref": "#/$defs/branch"},
-    "logical_parent": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "enum": [
+        "command",
+        "session_header",
+        "principal_upgrade",
+        "head_move"
+      ]
+    },
+    "stream": {
+      "$ref": "#/$defs/ident"
+    },
+    "seq": {
+      "$ref": "#/$defs/seq"
+    },
+    "prev": {
+      "$ref": "#/$defs/digest"
+    },
+    "branch": {
+      "$ref": "#/$defs/branch"
+    },
+    "logical_parent": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest",
+          "not": {
+            "const": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      ]
+    },
     "time": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["utc", "mono_ns", "sync"],
+      "required": [
+        "utc",
+        "mono_ns",
+        "sync"
+      ],
       "properties": {
-        "utc": {"$ref": "#/$defs/utc"},
-        "mono_ns": {"$ref": "#/$defs/u64"},
-        "sync": {"$ref": "#/$defs/text"}
+        "utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "mono_ns": {
+          "$ref": "#/$defs/u64"
+        },
+        "sync": {
+          "$ref": "#/$defs/text"
+        }
       }
     },
     "principal": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "commit"],
+      "required": [
+        "kind",
+        "commit"
+      ],
       "properties": {
-        "kind": {"enum": ["human", "agent", "script", "service", "device", "system"]},
-        "commit": {"$ref": "#/$defs/digest"},
-        "on_behalf_of_commit": {"$ref": "#/$defs/digest"}
+        "kind": {
+          "enum": [
+            "human",
+            "agent",
+            "script",
+            "service",
+            "device",
+            "system"
+          ]
+        },
+        "commit": {
+          "$ref": "#/$defs/digest"
+        },
+        "on_behalf_of_commit": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
-    "ai_assistance": {"enum": ["none", "suggested", "authored", "executed"]},
+    "ai_assistance": {
+      "enum": [
+        "none",
+        "suggested",
+        "authored",
+        "executed"
+      ]
+    },
     "manifests": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["registry", "kernel"],
-      "properties": {"registry": {"$ref": "#/$defs/digest"}, "kernel": {"$ref": "#/$defs/digest"}}
+      "required": [
+        "registry",
+        "kernel"
+      ],
+      "properties": {
+        "registry": {
+          "$ref": "#/$defs/digest"
+        },
+        "kernel": {
+          "$ref": "#/$defs/digest"
+        }
+      }
     },
-    "reason_commit": {"$ref": "#/$defs/digest"},
-    "human_assertion": {"$ref": "#/$defs/text"},
-    "signatures": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+    "reason_commit": {
+      "$ref": "#/$defs/digest"
+    },
+    "human_assertion": {
+      "$ref": "#/$defs/text"
+    },
     "command": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "major", "class", "determinism", "seed", "args_commit", "events_commit", "inputs", "outputs",
-        "algorithms"],
+      "required": [
+        "id",
+        "major",
+        "class",
+        "determinism",
+        "seed",
+        "args_commit",
+        "events_commit",
+        "inputs",
+        "outputs",
+        "algorithms"
+      ],
       "properties": {
-        "id": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$"},
-        "major": {"type": "integer", "minimum": 0, "maximum": 4294967295},
-        "class": {"enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]},
-        "determinism": {"enum": ["D0", "D1", "D2", "D3", "N"]},
-        "seed": {"$ref": "#/$defs/u64"},
-        "args_commit": {"$ref": "#/$defs/digest"},
-        "events_commit": {"$ref": "#/$defs/digest"},
+        "id": {
+          "$ref": "#/$defs/command_id"
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "class": {
+          "enum": [
+            "R0",
+            "R1",
+            "W1",
+            "W2",
+            "W3",
+            "X1",
+            "I1",
+            "D1",
+            "M1",
+            "S1",
+            "A0"
+          ]
+        },
+        "determinism": {
+          "enum": [
+            "D0",
+            "D1",
+            "D2",
+            "D3",
+            "N"
+          ]
+        },
+        "seed": {
+          "$ref": "#/$defs/u64"
+        },
+        "args_commit": {
+          "$ref": "#/$defs/digest"
+        },
+        "events_commit": {
+          "$ref": "#/$defs/digest"
+        },
         "inputs": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["tag", "digest"],
-            "properties": {"tag": {"$ref": "#/$defs/ident"}, "digest": {"$ref": "#/$defs/digest"}}
+            "required": [
+              "tag",
+              "digest"
+            ],
+            "properties": {
+              "tag": {
+                "$ref": "#/$defs/ident"
+              },
+              "digest": {
+                "$ref": "#/$defs/digest"
+              }
+            }
           }
         },
         "outputs": {
@@ -72,15 +213,39 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["digest"],
-            "properties": {"entity": {"$ref": "#/$defs/text"}, "digest": {"$ref": "#/$defs/digest"}}
+            "required": [
+              "digest"
+            ],
+            "properties": {
+              "entity": {
+                "$ref": "#/$defs/text"
+              },
+              "digest": {
+                "$ref": "#/$defs/digest"
+              }
+            },
+            "if": {
+              "not": {
+                "required": [
+                  "entity"
+                ]
+              }
+            },
+            "then": {
+              "properties": {
+                "digest": {
+                  "not": {
+                    "const": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                }
+              }
+            }
           }
         },
         "algorithms": {
           "type": "array",
           "items": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+            "$ref": "#/$defs/algorithm"
           }
         }
       }
@@ -88,52 +253,180 @@
     "session": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["session_id", "app_version"],
-      "properties": {"session_id": {"$ref": "#/$defs/text"}, "app_version": {"$ref": "#/$defs/text"}}
+      "required": [
+        "session_id",
+        "app_version"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "#/$defs/text"
+        },
+        "app_version": {
+          "$ref": "#/$defs/text"
+        }
+      }
     },
     "upgrade": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["session_id", "method", "identity_commit", "confirmed_at"],
+      "required": [
+        "session_id",
+        "method",
+        "identity_commit",
+        "confirmed_at"
+      ],
       "properties": {
-        "session_id": {"$ref": "#/$defs/text"},
-        "method": {"enum": ["gui_prompt", "os_presence"]},
-        "identity_commit": {"$ref": "#/$defs/digest"},
-        "confirmed_at": {"$ref": "#/$defs/utc"}
+        "session_id": {
+          "$ref": "#/$defs/text"
+        },
+        "method": {
+          "enum": [
+            "gui_prompt",
+            "os_presence"
+          ]
+        },
+        "identity_commit": {
+          "$ref": "#/$defs/digest"
+        },
+        "confirmed_at": {
+          "$ref": "#/$defs/utc"
+        }
       }
     },
     "head_move": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["from", "to"],
-      "properties": {"from": {"$ref": "#/$defs/digest"}, "to": {"$ref": "#/$defs/digest"}}
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/digest"
+        },
+        "to": {
+          "$ref": "#/$defs/digest"
+        }
+      }
     },
-    "hash": {"$ref": "#/$defs/digest"}
+    "hash": {
+      "$ref": "#/$defs/digest"
+    }
   },
   "allOf": [
     {
-      "if": {"properties": {"kind": {"const": "command"}}},
-      "then": {"required": ["command"], "properties": {"session": false, "upgrade": false, "head_move": false}}
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "command"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "session": false,
+          "upgrade": false,
+          "head_move": false
+        }
+      }
     },
     {
-      "if": {"properties": {"kind": {"const": "session_header"}}},
-      "then": {"required": ["session"], "properties": {"command": false, "upgrade": false, "head_move": false}}
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "session_header"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "session"
+        ],
+        "properties": {
+          "command": false,
+          "upgrade": false,
+          "head_move": false
+        }
+      }
     },
     {
-      "if": {"properties": {"kind": {"const": "principal_upgrade"}}},
-      "then": {"required": ["upgrade"], "properties": {"command": false, "session": false, "head_move": false}}
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "principal_upgrade"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "upgrade"
+        ],
+        "properties": {
+          "command": false,
+          "session": false,
+          "head_move": false
+        }
+      }
     },
     {
-      "if": {"properties": {"kind": {"const": "head_move"}}},
-      "then": {"required": ["head_move"], "properties": {"command": false, "session": false, "upgrade": false}}
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "head_move"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "head_move"
+        ],
+        "properties": {
+          "command": false,
+          "session": false,
+          "upgrade": false
+        }
+      }
     }
   ],
   "$defs": {
-    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "u64": {"type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$", "maxLength": 20},
-    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
-    "text": {"type": "string", "minLength": 1},
-    "branch": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"},
-    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"}
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "u64": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$"
+    },
+    "ident": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "branch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    },
+    "seq": {
+      "type": "string",
+      "pattern": "^([1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$"
+    },
+    "command_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$"
+    },
+    "algorithm": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)$"
+    }
   }
 }

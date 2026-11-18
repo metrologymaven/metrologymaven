@@ -5,7 +5,7 @@
 use super::{
     parse_digest, AiAssistance, CommandDraft, ConfirmMethod, DraftBody, EntryDraft, EntryError, EntryKind, EntryTime,
     HeadMove, Manifests, OutputDigest, PrincipalDraft, PrincipalKind, SessionInfo, TaggedDigest, UpgradeDraft,
-    SCHEMA_VERSION, TOMBSTONE,
+    R1_RESULT_TAG, SCHEMA_VERSION, TOMBSTONE,
 };
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, Digest};
 use fid_kci::AlgorithmId;
@@ -254,12 +254,20 @@ fn session(o: &Obj, at: &str) -> Result<SessionInfo, EntryError> {
     Ok(SessionInfo { session_id: text(s, "session_id", &here)?, app_version: text(s, "app_version", &here)? })
 }
 
-fn signatures(o: &Obj, at: &str) -> Result<Vec<String>, EntryError> {
-    let mut out = Vec::new();
-    for (i, v) in array(o, "signatures", at)?.iter().enumerate() {
-        out.push(text_value(v, &format!("{at}.signatures[{i}]"))?);
+/// `logical_parent`: a digest or `null`, never the zero digest (one encoding for "none").
+fn logical_parent(o: &Obj, at: &str) -> Result<Option<Digest>, EntryError> {
+    match digest_or_null(o, "logical_parent", at)? {
+        Some(d) if d == TOMBSTONE => Err(err(&format!("{at}.logical_parent"), "use null, not the zero digest")),
+        other => Ok(other),
     }
-    Ok(out)
+}
+
+/// `seq`: a 64-bit decimal string starting at 1.
+fn seq(o: &Obj, at: &str) -> Result<u64, EntryError> {
+    match u64_field(o, "seq", at)? {
+        0 => Err(err(&format!("{at}.seq"), "sequences start at 1")),
+        n => Ok(n),
+    }
 }
 
 /// The key that holds the kind-specific part.
@@ -272,9 +280,29 @@ fn body_key(kind: EntryKind) -> &'static str {
     }
 }
 
-// ------------------------------------------------------------------ headers
+// ------------------------------------------------------------------ schema constants
+//
+// `schema/entry.schema.json` must agree with these; a test checks it.
 
-const HEADER_REQUIRED: [&str; 13] = [
+/// `$defs/digest`.
+pub const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
+/// `$defs/u64`: a decimal string from 0 to 18446744073709551615 without leading zeros.
+pub const U64_PATTERN: &str = "^(0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$";
+/// `$defs/seq`: as `$defs/u64` but starting at 1.
+pub const SEQ_PATTERN: &str = "^([1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$";
+/// `$defs/ident`.
+pub const IDENT_PATTERN: &str = "^[a-z][a-z0-9_]*$";
+/// `$defs/branch`.
+pub const BRANCH_PATTERN: &str = "^[A-Za-z0-9][A-Za-z0-9._/-]*$";
+/// `$defs/utc`.
+pub const UTC_PATTERN: &str = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$";
+/// `$defs/command_id`, the registry's command-ID pattern.
+pub const COMMAND_ID_PATTERN: &str = "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$";
+/// `$defs/algorithm`: `module.feature.method@x.y.z`, each version part a u32.
+pub const ALGORITHM_PATTERN: &str = "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)$";
+
+/// Top-level keys every header has (plus exactly one kind body).
+pub const HEADER_REQUIRED: [&str; 12] = [
     "schema_version",
     "kind",
     "stream",
@@ -286,9 +314,16 @@ const HEADER_REQUIRED: [&str; 13] = [
     "principal",
     "ai_assistance",
     "manifests",
-    "signatures",
     "hash",
 ];
+/// Optional top-level keys.
+pub const HEADER_OPTIONAL: [&str; 2] = ["reason_commit", "human_assertion"];
+/// Keys of the `command` body.
+pub const COMMAND_REQUIRED: [&str; 10] =
+    ["id", "major", "class", "determinism", "seed", "args_commit", "events_commit", "inputs", "outputs", "algorithms"];
+
+// ------------------------------------------------------------------ headers
+
 
 /// Checks a header value against the rules of `schema/entry.schema.json`; any
 /// violation is a `schema` error (REQ-011).
@@ -299,19 +334,19 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     let body = body_key(kind);
     let mut required = HEADER_REQUIRED.to_vec();
     required.push(body);
-    fields(o, at, &required, &["reason_commit", "human_assertion"])?;
+    fields(o, at, &required, &HEADER_OPTIONAL)?;
     match get(o, "schema_version", at)? {
         CValue::Num(f) if *f == f64::from(SCHEMA_VERSION) => {}
         _ => return Err(err(at, "schema_version must be 1")),
     }
     ident(o, "stream", at)?;
-    u64_field(o, "seq", at)?;
-    digest_or_null(o, "prev", at)?;
+    seq(o, at)?;
+    digest(o, "prev", at)?;
     let branch = string(o, "branch", at)?;
     if !is_branch(branch) {
         return Err(err("header.branch", "expected a branch name"));
     }
-    digest_or_null(o, "logical_parent", at)?;
+    logical_parent(o, at)?;
     time(o, at)?;
     let p = obj(get(o, "principal", at)?, "header.principal")?;
     fields(p, "header.principal", &["kind", "commit"], &["on_behalf_of_commit"])?;
@@ -322,29 +357,12 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     manifests(o, at)?;
     opt_digest(o, "reason_commit", at)?;
     opt_text(o, "human_assertion", at)?;
-    signatures(o, at)?;
     digest(o, "hash", at)?;
     let here = format!("{at}.{body}");
     match kind {
         EntryKind::Command => {
             let c = obj(get(o, body, at)?, &here)?;
-            fields(
-                c,
-                &here,
-                &[
-                    "id",
-                    "major",
-                    "class",
-                    "determinism",
-                    "seed",
-                    "args_commit",
-                    "events_commit",
-                    "inputs",
-                    "outputs",
-                    "algorithms",
-                ],
-                &[],
-            )?;
+            fields(c, &here, &COMMAND_REQUIRED, &[])?;
             command_id(c, &here)?;
             u32_field(c, "major", &here)?;
             class(c, &here)?;
@@ -357,8 +375,10 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
                 let oat = format!("{here}.outputs[{i}]");
                 let out = obj(v, &oat)?;
                 fields(out, &oat, &["digest"], &["entity"])?;
-                digest(out, "digest", &oat)?;
-                opt_text(out, "entity", &oat)?;
+                let d = digest(out, "digest", &oat)?;
+                if opt_text(out, "entity", &oat)?.is_none() && d == TOMBSTONE {
+                    return Err(err(&oat, "the tombstone digest needs an entity"));
+                }
             }
             algorithms(c, &here)?;
         }
@@ -405,7 +425,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
     let key = body_key(kind);
     let required =
         ["kind", "stream", "branch", "logical_parent", "time", "principal", "ai_assistance", "manifests", key];
-    fields(o, at, &required, &["reason", "human_assertion", "signatures"])?;
+    fields(o, at, &required, &["reason", "human_assertion"])?;
 
     let pat = "draft.principal";
     let p = obj(get(o, "principal", at)?, pat)?;
@@ -426,6 +446,10 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
                 &["id", "major", "class", "determinism", "seed", "args", "events", "inputs", "outputs", "algorithms"],
                 &["consumed_r1"],
             )?;
+            let inputs = tagged_inputs(c, &here)?;
+            if inputs.iter().any(|t| t.tag == R1_RESULT_TAG) {
+                return Err(err(&format!("{here}.inputs"), "tag r1_result comes only from consumed_r1"));
+            }
             let consumed_r1 = match c.get("consumed_r1") {
                 None => Vec::new(),
                 Some(_) => array(c, "consumed_r1", &here)?
@@ -460,7 +484,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
                 seed: u64_field(c, "seed", &here)?,
                 args: get(c, "args", &here)?.clone(),
                 events: array(c, "events", &here)?.to_vec(),
-                inputs: tagged_inputs(c, &here)?,
+                inputs,
                 consumed_r1,
                 outputs,
                 algorithms: algorithms(c, &here)?,
@@ -484,17 +508,13 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
     Ok(EntryDraft {
         stream: string(o, "stream", at)?.to_string(),
         branch,
-        logical_parent: digest_or_null(o, "logical_parent", at)?,
+        logical_parent: logical_parent(o, at)?,
         time: time(o, at)?,
         principal,
         ai_assistance: AiAssistance::parse(string(o, "ai_assistance", at)?)?,
         manifests: manifests(o, at)?,
         reason: o.get("reason").map(|r| as_str(r, "draft.reason").map(str::to_string)).transpose()?,
         human_assertion: opt_text(o, "human_assertion", at)?,
-        signatures: match o.get("signatures") {
-            Some(_) => signatures(o, at)?,
-            None => Vec::new(),
-        },
         body,
     })
 }

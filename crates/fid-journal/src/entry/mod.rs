@@ -19,12 +19,22 @@ use std::fmt;
 
 mod json;
 
-pub use json::{validate_header_value, verify_header_value};
+pub use json::{
+    validate_header_value, verify_header_value, ALGORITHM_PATTERN, BRANCH_PATTERN, COMMAND_ID_PATTERN,
+    COMMAND_REQUIRED, DIGEST_PATTERN, HEADER_OPTIONAL, HEADER_REQUIRED, IDENT_PATTERN, SEQ_PATTERN, U64_PATTERN,
+    UTC_PATTERN,
+};
 
 /// Header schema version written by this module.
 pub const SCHEMA_VERSION: u32 = 1;
 /// Reserved output digest of a deleted entity: `sha256:` followed by 64 zeros (REQ-012).
+/// Only an output that names its entity may carry it.
 pub const TOMBSTONE: Digest = Digest([0; 32]);
+/// `prev` of sequence 1, the first entry of a stream: also `sha256:` followed by 64 zeros
+/// (`CORE.JRN.CHAIN.APPEND` REQ-002). `prev` is always a digest, never null.
+pub const GENESIS_PREV: Digest = Digest([0; 32]);
+/// The first sequence number of a stream.
+pub const FIRST_SEQ: u64 = 1;
 /// Input-digest tag of a consumed R1 result (REQ-008, D-031).
 pub const R1_RESULT_TAG: &str = "r1_result";
 /// Salt length in bytes (128 bits, REQ-003).
@@ -377,7 +387,6 @@ pub struct EntryDraft {
     pub manifests: Manifests,
     pub reason: Option<String>,
     pub human_assertion: Option<String>,
-    pub signatures: Vec<String>,
     pub body: DraftBody,
 }
 
@@ -419,7 +428,6 @@ pub fn session_start(
         manifests,
         reason: None,
         human_assertion: None,
-        signatures: Vec::new(),
         body: DraftBody::SessionHeader(session),
     }
 }
@@ -472,7 +480,8 @@ pub enum HeaderBody {
 pub struct EntryHeader {
     pub stream: String,
     pub seq: u64,
-    pub prev: Option<Digest>,
+    /// Hash of the previous entry of the stream; [`GENESIS_PREV`] for sequence 1.
+    pub prev: Digest,
     pub branch: String,
     pub logical_parent: Option<Digest>,
     pub time: EntryTime,
@@ -481,7 +490,6 @@ pub struct EntryHeader {
     pub manifests: Manifests,
     pub reason_commit: Option<Digest>,
     pub human_assertion: Option<String>,
-    pub signatures: Vec<String>,
     pub body: HeaderBody,
     pub hash: Digest,
 }
@@ -524,7 +532,7 @@ impl EntryHeader {
             ("kind", s(self.kind().as_str())),
             ("stream", s(&self.stream)),
             ("seq", CValue::U64(self.seq)),
-            ("prev", opt_dg(self.prev)),
+            ("prev", dg(&self.prev)),
             ("branch", s(&self.branch)),
             ("logical_parent", opt_dg(self.logical_parent)),
             (
@@ -541,7 +549,6 @@ impl EntryHeader {
                 "manifests",
                 CValue::Obj(obj([("registry", dg(&self.manifests.registry)), ("kernel", dg(&self.manifests.kernel))])),
             ),
-            ("signatures", CValue::Arr(self.signatures.iter().map(|x| CValue::Str(x.clone())).collect())),
         ]);
         if let Some(c) = &self.reason_commit {
             o.insert("reason_commit".into(), dg(c));
@@ -595,7 +602,8 @@ impl EntryHeader {
     }
 
     /// The digest a human assertion signs: the entry hash of this header with the
-    /// `human_assertion` field empty (REQ-009).
+    /// `human_assertion` field omitted (REQ-009). It covers `seq` and `prev`, so an
+    /// assertion can only be made once the entry's place in the chain is fixed.
     pub fn assertion_preimage(&self) -> Result<Digest, EntryError> {
         let mut bare = self.clone();
         bare.human_assertion = None;
@@ -674,11 +682,12 @@ pub struct Entry {
 }
 
 /// Builds an entry from a draft: commits every detachable field with a salt from
-/// `salts`, checks the header against the schema rules and hashes it.
+/// `salts`, checks the header against the schema rules and hashes it. `seq` starts at
+/// [`FIRST_SEQ`] and `prev` of the first entry of a stream is [`GENESIS_PREV`].
 pub fn build(
     draft: &EntryDraft,
     seq: u64,
-    prev: Option<Digest>,
+    prev: Digest,
     salts: &mut dyn SaltSource,
 ) -> Result<Entry, EntryError> {
     let mut payload = EntryPayload::default();
@@ -703,6 +712,11 @@ pub fn build(
     };
     let body = match &draft.body {
         DraftBody::Command(c) => {
+            if c.inputs.iter().any(|t| t.tag == R1_RESULT_TAG) {
+                return Err(EntryError::Schema(format!(
+                    "draft.command.inputs: tag {R1_RESULT_TAG} comes only from consumed_r1"
+                )));
+            }
             let mut inputs = c.inputs.clone();
             inputs.extend(c.consumed_r1.iter().map(|d| TaggedDigest { tag: R1_RESULT_TAG.to_string(), digest: *d }));
             HeaderBody::Command(CommandHeader {
@@ -739,7 +753,6 @@ pub fn build(
         manifests: draft.manifests,
         reason_commit,
         human_assertion: draft.human_assertion.clone(),
-        signatures: draft.signatures.clone(),
         body,
         hash: TOMBSTONE,
     };

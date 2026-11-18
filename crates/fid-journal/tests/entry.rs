@@ -4,10 +4,12 @@
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::{
     build, commitment, parse_digest, session_start, validate_header_value, verify_commitment, verify_header_value,
-    AiAssistance, CommitError, DraftBody, Entry, EntryDraft, EntryKind, EntryTime, Field, HeaderBody, Manifests,
-    OsSalts, OutputDigest, PrincipalDraft, PrincipalKind, RecordedSalts, Salt, SessionInfo, TaggedDigest,
-    R1_RESULT_TAG, TOMBSTONE,
+    AiAssistance, CommitError, ConfirmMethod, DraftBody, Entry, EntryDraft, EntryKind, EntryTime, Field, HeaderBody,
+    Manifests, OsSalts, OutputDigest, PrincipalDraft, PrincipalKind, RecordedSalts, Salt, SessionInfo, TaggedDigest,
+    ALGORITHM_PATTERN, BRANCH_PATTERN, COMMAND_ID_PATTERN, COMMAND_REQUIRED, DIGEST_PATTERN, FIRST_SEQ, GENESIS_PREV,
+    HEADER_OPTIONAL, HEADER_REQUIRED, IDENT_PATTERN, R1_RESULT_TAG, SEQ_PATTERN, TOMBSTONE, U64_PATTERN, UTC_PATTERN,
 };
+use fid_registry::{Determinism, SideEffect};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -63,11 +65,7 @@ fn rebuild(vec: &Obj) -> Entry {
     let draft =
         EntryDraft::from_value(vec.get("draft").unwrap()).unwrap_or_else(|e| panic!("{}: {e}", st(vec, "name")));
     let seq: u64 = st(vec, "seq").parse().unwrap();
-    let prev = match vec.get("prev") {
-        Some(CValue::Null) => None,
-        Some(CValue::Str(s)) => Some(parse_digest(s).unwrap()),
-        other => panic!("prev is {other:?}"),
-    };
+    let prev = parse_digest(st(vec, "prev")).unwrap();
     build(&draft, seq, prev, &mut recorded_salts(vec)).unwrap_or_else(|e| panic!("{}: {e}", st(vec, "name")))
 }
 
@@ -156,11 +154,37 @@ fn ac3_schema_errors() {
     // A typed draft whose header breaks the schema fails to build.
     let mut bad = EntryDraft::from_value(vectors[1].get("draft").unwrap()).unwrap();
     bad.stream = "Record Journal".into();
-    assert_eq!(build(&bad, 1, None, &mut OsSalts).unwrap_err().code(), "schema");
+    assert_eq!(build(&bad, 1, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "schema");
     // A non-finite committed value fails with the canon error.
     let mut nan = EntryDraft::from_value(vectors[1].get("draft").unwrap()).unwrap();
     nan.principal.identity = CValue::Num(f64::NAN);
-    assert_eq!(build(&nan, 1, None, &mut OsSalts).unwrap_err().code(), "non_finite_number");
+    assert_eq!(build(&nan, 1, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "non_finite_number");
+
+    let base = EntryDraft::from_value(vectors[1].get("draft").unwrap()).unwrap();
+    // Sequences start at 1.
+    assert_eq!(build(&base, 0, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "schema");
+    // `logical_parent` has one encoding for "none": null, never the zero digest.
+    let mut zero_parent = base.clone();
+    zero_parent.logical_parent = Some(GENESIS_PREV);
+    assert_eq!(build(&zero_parent, 1, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "schema");
+    // The tombstone needs an entity.
+    let mut anon_tomb = base.clone();
+    let DraftBody::Command(c) = &mut anon_tomb.body else { panic!() };
+    c.outputs.push(OutputDigest { entity: None, digest: TOMBSTONE });
+    assert_eq!(build(&anon_tomb, 1, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "schema");
+    // `r1_result` comes only from consumed_r1, in typed and JSON drafts.
+    let mut r1_input = base.clone();
+    let DraftBody::Command(c) = &mut r1_input.body else { panic!() };
+    c.inputs.push(TaggedDigest { tag: R1_RESULT_TAG.into(), digest: TOMBSTONE });
+    assert_eq!(build(&r1_input, 1, GENESIS_PREV, &mut OsSalts).unwrap_err().code(), "schema");
+    let CValue::Obj(mut json) = vectors[1].get("draft").unwrap().clone() else { panic!() };
+    let Some(CValue::Obj(cmd)) = json.get_mut("command") else { panic!() };
+    let Some(CValue::Arr(inputs)) = cmd.get_mut("inputs") else { panic!() };
+    let mut tagged = BTreeMap::new();
+    tagged.insert("tag".to_string(), CValue::Str(R1_RESULT_TAG.into()));
+    tagged.insert("digest".to_string(), CValue::Str(TOMBSTONE.to_string()));
+    inputs.push(CValue::Obj(tagged));
+    assert_eq!(EntryDraft::from_value(&CValue::Obj(json)).unwrap_err().code(), "schema");
 }
 
 /// AC-4: the assertion pre-image is the hash of the same header with `human_assertion` empty.
@@ -198,10 +222,10 @@ fn ac5_session_header_first() {
         manifests,
         SessionInfo { session_id: "s-1".into(), app_version: "0.0.1".into() },
     );
-    let first = build(&draft, 0, None, &mut OsSalts).unwrap();
+    let first = build(&draft, FIRST_SEQ, GENESIS_PREV, &mut OsSalts).unwrap();
     assert_eq!(first.header.kind(), EntryKind::SessionHeader);
-    assert_eq!(first.header.seq, 0);
-    assert_eq!(first.header.prev, None);
+    assert_eq!(first.header.seq, 1);
+    assert_eq!(first.header.prev.to_string(), format!("sha256:{}", "0".repeat(64)));
     assert_eq!(first.header.manifests, manifests);
     let HeaderBody::SessionHeader(info) = &first.header.body else { panic!("session body expected") };
     assert_eq!(info.app_version, "0.0.1");
@@ -211,6 +235,8 @@ fn ac5_session_header_first() {
     // The fixture's chain also starts with one.
     let vectors = load("vectors.json");
     assert_eq!(st(ob(&vectors[0], "header"), "kind"), "session_header");
+    assert_eq!(st(ob(&vectors[0], "header"), "seq"), "1");
+    assert_eq!(st(ob(&vectors[0], "header"), "prev"), GENESIS_PREV.to_string());
 }
 
 /// AC-6: consumed R1 result digests appear among the inputs tagged `r1_result`; deletions use the tombstone.
@@ -221,7 +247,7 @@ fn ac6_consumed_r1_and_tombstone() {
     for vec in &vectors {
         let d = EntryDraft::from_value(vec.get("draft").unwrap()).unwrap();
         if let DraftBody::Command(c) = &d.body {
-            if c.class == fid_registry::SideEffect::W2 && !c.consumed_r1.is_empty() {
+            if c.class == SideEffect::W2 && !c.consumed_r1.is_empty() {
                 draft = Some(d);
                 break;
             }
@@ -232,7 +258,7 @@ fn ac6_consumed_r1_and_tombstone() {
     let DraftBody::Command(c) = &mut draft.body else { panic!() };
     c.consumed_r1 = vec![r1];
     c.outputs.push(OutputDigest::deleted("F-9999"));
-    let entry = build(&draft, 7, None, &mut OsSalts).unwrap();
+    let entry = build(&draft, 7, GENESIS_PREV, &mut OsSalts).unwrap();
     let HeaderBody::Command(h) = &entry.header.body else { panic!() };
     assert!(h.inputs.contains(&TaggedDigest { tag: R1_RESULT_TAG.into(), digest: r1 }));
     assert!(h.outputs.contains(&OutputDigest { entity: Some("F-9999".into()), digest: TOMBSTONE }));
@@ -245,16 +271,104 @@ fn ac7_replay_with_recorded_salts() {
     let vectors = load("vectors.json");
     for vec in &vectors {
         let draft = EntryDraft::from_value(vec.get("draft").unwrap()).unwrap();
-        let recorded = build(&draft, 3, None, &mut OsSalts).unwrap();
-        let replayed = build(&draft, 3, None, &mut recorded.payload.recorded_salts()).unwrap();
+        let recorded = build(&draft, 3, GENESIS_PREV, &mut OsSalts).unwrap();
+        let replayed = build(&draft, 3, GENESIS_PREV, &mut recorded.payload.recorded_salts()).unwrap();
         assert_eq!(replayed.header.hash, recorded.header.hash, "{}", st(vec, "name"));
         assert_eq!(replayed, recorded);
         // Fresh salts give a different commitment, so salts are really drawn.
-        let fresh = build(&draft, 3, None, &mut OsSalts).unwrap();
+        let fresh = build(&draft, 3, GENESIS_PREV, &mut OsSalts).unwrap();
         assert_ne!(fresh.header.principal.commit, recorded.header.principal.commit);
         // Replay without the recorded salts is refused, not silently re-salted.
-        assert_eq!(build(&draft, 3, None, &mut RecordedSalts::default()).unwrap_err().code(), "missing_salt");
+        assert_eq!(build(&draft, 3, GENESIS_PREV, &mut RecordedSalts::default()).unwrap_err().code(), "missing_salt");
     }
+}
+
+fn schema_path<'a>(v: &'a CValue, path: &[&str]) -> &'a CValue {
+    let mut cur = v;
+    for k in path {
+        let CValue::Obj(o) = cur else { panic!("{path:?}: object expected at {k}") };
+        cur = o.get(*k).unwrap_or_else(|| panic!("{path:?}: missing {k}"));
+    }
+    cur
+}
+
+fn strings(v: &CValue) -> Vec<String> {
+    let CValue::Arr(a) = v else { panic!("array expected, got {v:?}") };
+    a.iter()
+        .map(|x| match x {
+            CValue::Str(s) => s.clone(),
+            other => panic!("string expected, got {other:?}"),
+        })
+        .collect()
+}
+
+fn names<T: std::fmt::Display>(all: &[T]) -> Vec<String> {
+    all.iter().map(|x| x.to_string()).collect()
+}
+
+/// REQ-011: the published schema agrees with the Rust checker's keys, enums and patterns.
+#[test]
+fn schema_matches_rust_constants() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schema/entry.schema.json");
+    let schema = parse(&std::fs::read(path).unwrap()).unwrap();
+    assert_eq!(strings(schema_path(&schema, &["required"])), names(&HEADER_REQUIRED));
+    let CValue::Obj(props) = schema_path(&schema, &["properties"]) else { panic!() };
+    let mut keys: Vec<String> = props.keys().cloned().collect();
+    let mut want = names(&HEADER_REQUIRED);
+    want.extend(names(&HEADER_OPTIONAL));
+    want.extend(["command", "session", "upgrade", "head_move"].map(String::from));
+    keys.sort();
+    want.sort();
+    assert_eq!(keys, want, "top-level properties");
+    assert_eq!(strings(schema_path(&schema, &["properties", "command", "required"])), names(&COMMAND_REQUIRED));
+    let enums: [(Vec<&str>, Vec<String>); 7] = [
+        (vec!["properties", "kind", "enum"], names(EntryKind::ALL)),
+        (vec!["properties", "ai_assistance", "enum"], names(AiAssistance::ALL)),
+        (vec!["properties", "principal", "properties", "kind", "enum"], names(PrincipalKind::ALL)),
+        (vec!["properties", "upgrade", "properties", "method", "enum"], names(ConfirmMethod::ALL)),
+        (vec!["properties", "command", "properties", "class", "enum"], names(SideEffect::ALL)),
+        (vec!["properties", "command", "properties", "determinism", "enum"], names(Determinism::ALL)),
+        (vec!["properties", "principal", "required"], names(&["kind", "commit"])),
+    ];
+    for (p, want) in enums {
+        assert_eq!(strings(schema_path(&schema, &p)), want, "{p:?}");
+    }
+    let patterns = [
+        ("digest", DIGEST_PATTERN),
+        ("u64", U64_PATTERN),
+        ("seq", SEQ_PATTERN),
+        ("ident", IDENT_PATTERN),
+        ("branch", BRANCH_PATTERN),
+        ("utc", UTC_PATTERN),
+        ("command_id", COMMAND_ID_PATTERN),
+        ("algorithm", ALGORITHM_PATTERN),
+    ];
+    for (def, want) in patterns {
+        let CValue::Str(got) = schema_path(&schema, &["$defs", def, "pattern"]) else { panic!("{def}") };
+        assert_eq!(got, want, "$defs/{def}");
+    }
+
+    // Boundary values the patterns encode, checked against the Rust checker.
+    let CValue::Obj(header) = load("vectors.json")[1].get("header").unwrap().clone() else { panic!() };
+    let with = |k: &str, v: &str| {
+        let mut h = header.clone();
+        h.insert(k.to_string(), CValue::Str(v.to_string()));
+        validate_header_value(&CValue::Obj(h))
+    };
+    assert_eq!(with("seq", "18446744073709551615"), Ok(()));
+    assert_eq!(with("seq", "1"), Ok(()));
+    for bad in ["0", "18446744073709551616", "99999999999999999999", "01", ""] {
+        assert!(with("seq", bad).is_err(), "seq {bad}");
+    }
+    let alg = |a: &str| {
+        let mut h = header.clone();
+        let Some(CValue::Obj(c)) = h.get_mut("command") else { panic!() };
+        c.insert("algorithms".into(), CValue::Arr(vec![CValue::Str(a.into())]));
+        validate_header_value(&CValue::Obj(h))
+    };
+    assert_eq!(alg("a.b.c@4294967295.0.0"), Ok(()));
+    assert!(alg("a.b.c@4294967296.0.0").is_err());
+    assert!(alg("a.b.c@01.0.0").is_err());
 }
 
 /// The commitment is SHA-256 over the 16 salt bytes then the canonical bytes (REQ-003).

@@ -10,6 +10,11 @@ Rules implemented here (from spec/core/jrn/entry/NODE.md):
 - commitment = "sha256:" + SHA-256(16 salt bytes || RFC 8785 bytes of the value);
 - entry hash = SHA-256 of the RFC 8785 header with `hash` omitted;
 - 64-bit integers (seq, mono_ns, seed) are decimal strings;
+- each stream is its own chain (CORE.JRN.CHAIN.APPEND REQ-002): sequences start at 1 and
+  the first entry's `prev` is `sha256:` + 64 zeros; `prev` is never null;
+- `logical_parent` is null when there is none, never the zero digest;
+- signatures are detached and not part of the header;
+- the human-assertion pre-image is the entry hash with `human_assertion` also omitted;
 - consumed R1 result digests are appended to the inputs tagged `r1_result`;
 - a deleted entity's output digest is the tombstone `sha256:` + 64 zeros.
 
@@ -26,6 +31,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TOMBSTONE = "sha256:" + "0" * 64
+ZERO = TOMBSTONE  # also the `prev` of sequence 1
 
 
 def canon(v):
@@ -75,7 +81,6 @@ def build(name, draft, seq, prev):
         "principal": principal,
         "ai_assistance": draft["ai_assistance"],
         "manifests": dict(draft["manifests"]),
-        "signatures": list(draft.get("signatures", [])),
     }
     if "reason" in draft:
         h["reason_commit"] = c("reason", draft["reason"])
@@ -152,7 +157,6 @@ def base(i, kind):
         dr["reason"] = ["undo misprobe", "re-run after recalibration", "Ø 12 H7 bore recheck — µm drift"][i % 3]
     if i % 6 == 5:
         dr["human_assertion"] = "ed25519:" + hashlib.sha256(f"assert-{i}".encode()).hexdigest()
-        dr["signatures"] = ["ed25519:" + hashlib.sha256(f"sig-{i}".encode()).hexdigest()]
     return dr
 
 
@@ -209,21 +213,22 @@ def head_move_draft(i):
 
 def main():
     vectors = []
-    prev = None
-    seq = 0
+    # One chain per stream: (next seq, prev hash).
+    chains = {}
     plan = [("session_header", session_draft)] + [("command", command_draft)] * 16 + \
         [("session_header", session_draft)] * 5 + [("principal_upgrade", upgrade_draft)] * 7 + \
         [("head_move", head_move_draft)] * 7
     for i, (kind, mk) in enumerate(plan):
         name = f"{i:02d}_{kind}"
         draft = mk(i)
+        seq, prev = chains.get(draft["stream"], (1, ZERO))
         h, payload, commitments, pre = build(name, draft, seq, prev)
         vectors.append({"name": name, "seq": str(seq), "prev": prev, "draft": draft, "salts": payload["salts"],
                         "header": h, "payload": payload, "hash": h["hash"], "commitments": commitments,
                         "assertion_preimage": pre})
-        prev = h["hash"]
-        seq += 1
-    (HERE / "vectors.json").write_text(json.dumps(vectors, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        chains[draft["stream"]] = (seq + 1, h["hash"])
+    (HERE / "vectors.json").write_text(json.dumps(vectors, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
+                                       newline="\n")
 
     # Invalid headers: each a single hand-labelled mutation of a valid header.
     by_kind = {}
@@ -261,7 +266,17 @@ def main():
     mut("empty_human_assertion", ses, lambda h: h.__setitem__("human_assertion", ""))
     mut("input_tag_uppercase", cmd, lambda h: h["command"]["inputs"][0].__setitem__("tag", "Param"))
     mut("session_app_version_missing", ses, lambda h: h["session"].pop("app_version"))
-    (HERE / "invalid_headers.json").write_text(json.dumps(bad, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    mut("seq_overflow_u64", cmd, lambda h: h.__setitem__("seq", "99999999999999999999"))
+    mut("seq_u64_max_plus_one", cmd, lambda h: h.__setitem__("seq", "18446744073709551616"))
+    mut("seq_zero", ses, lambda h: h.__setitem__("seq", "0"))
+    mut("mono_ns_overflow_u64", hm, lambda h: h["time"].__setitem__("mono_ns", "18446744073709551616"))
+    mut("algorithm_version_over_u32", cmd, lambda h: h["command"].__setitem__("algorithms", ["a.b.c@4294967296.0.0"]))
+    mut("prev_null", ses, lambda h: h.__setitem__("prev", None))
+    mut("logical_parent_zero", cmd, lambda h: h.__setitem__("logical_parent", ZERO))
+    mut("tombstone_without_entity", cmd, lambda h: h["command"]["outputs"][1].__setitem__("digest", ZERO))
+    mut("signatures_in_header", ses, lambda h: h.__setitem__("signatures", []))
+    (HERE / "invalid_headers.json").write_text(json.dumps(bad, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
+                                               newline="\n")
     kinds = sorted({v["header"]["kind"] for v in vectors})
     print(f"wrote {len(vectors)} vectors ({', '.join(kinds)}) and {len(bad)} invalid headers")
 
