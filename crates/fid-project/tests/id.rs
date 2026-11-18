@@ -76,11 +76,8 @@ fn ns() -> Uuid {
 fn run_ac1() -> (Vec<Observation>, Vec<Uuid>, usize, usize) {
     let steps = v7_steps();
     assert!(steps.len() >= 8);
-    let mut src = Recording::new(Fake {
-        steps: steps.iter().map(|(t, r, _)| (*t, *r)).collect(),
-        clock_calls: 0,
-        rng_calls: 0,
-    });
+    let mut src =
+        Recording::new(Fake { steps: steps.iter().map(|(t, r, _)| (*t, *r)).collect(), clock_calls: 0, rng_calls: 0 });
     let existing = BTreeSet::new();
     let mut ids = Vec::new();
     {
