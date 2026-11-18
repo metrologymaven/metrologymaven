@@ -18,3 +18,6 @@ fixtures/knp1/graph/** -text
 
 # IO.REG.ENV.REPORT golden canonical JSON: compared byte for byte (no trailing newline).
 fixtures/io/reg/env/report/** -text
+# Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
+# part of the test data, and make_fixtures.py --check compares bytes.
+fixtures/io/qif/xml/parse/** -text
