@@ -41,8 +41,8 @@ const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-hw result-schema\n       \
                      fid-platform plat-kiosk display [--file <path>]\n       \
                      fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
-                     [--phase <P>]
-                            fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]";
+                     [--phase <P>]\n       \
+                     fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -247,10 +247,7 @@ fn layout_validate(args: &[String]) -> ExitCode {
             return ExitCode::from(2);
         };
         if seen.contains(&flag.as_str()) {
-            eprintln!(
-                "{cmd}: {flag} given twice
-{USAGE}"
-            );
+            eprintln!("{cmd}: {flag} given twice\n{USAGE}");
             return ExitCode::from(2);
         }
         seen.push(flag.as_str());

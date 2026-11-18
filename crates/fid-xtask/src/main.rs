@@ -30,6 +30,7 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-gpu invariance --recorded <dir>\n       \
                      cargo xtask plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
                      [--phase <P>]\n       \
+                     cargo xtask plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
                      [--protocol <md>]\n       \
