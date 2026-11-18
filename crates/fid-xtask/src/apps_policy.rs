@@ -381,7 +381,9 @@ pub fn token_lines(code: &str, token: &str) -> Vec<usize> {
 fn read_text(path: &Path) -> Result<String, String> {
     let file = std::fs::File::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut bytes = Vec::new();
-    file.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    file.take(MAX_FILE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     if bytes.len() as u64 > MAX_FILE_BYTES {
         return Err(format!("{} is larger than {MAX_FILE_BYTES} bytes", path.display()));
     }
@@ -417,8 +419,7 @@ fn rust_files(dir: &Path) -> Result<Vec<String>, String> {
 /// outside any `tests` directory and not named `tests.rs`.
 fn is_non_test_source(rel: &str) -> bool {
     let parts: Vec<&str> = rel.split('/').collect();
-    (rel == "build.rs" || parts.first() == Some(&"src"))
-        && !parts.iter().any(|p| *p == "tests" || *p == "tests.rs")
+    (rel == "build.rs" || parts.first() == Some(&"src")) && !parts.iter().any(|p| *p == "tests" || *p == "tests.rs")
 }
 
 // ---------------------------------------------------------------------------------------

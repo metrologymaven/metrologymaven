@@ -2,8 +2,8 @@
 
 mod pins;
 
-use fid_xtask::{apps_policy, plat_matrix_tiers};
 use fid_xtask::rel::{runbook, sums, version};
+use fid_xtask::{apps_policy, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};

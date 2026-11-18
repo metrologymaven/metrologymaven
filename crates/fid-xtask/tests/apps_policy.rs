@@ -151,12 +151,8 @@ fn usage_error_exits_2() {
     let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).args(["apps-policy", "--workspace"]).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
     let ws = fixture("ok");
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
-        .arg("apps-policy")
-        .arg("--workspace")
-        .arg(&ws)
-        .output()
-        .unwrap();
+    let out =
+        Command::new(env!("CARGO_BIN_EXE_fid-xtask")).arg("apps-policy").arg("--workspace").arg(&ws).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
 
