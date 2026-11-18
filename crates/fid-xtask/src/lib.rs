@@ -13,10 +13,14 @@
 //! `plat-matrix lint-tiers`: the tier definitions lint (spec node
 //! `PLAT.MATRIX.POLICY.DEFS`), in [`plat_matrix_tiers`].
 //!
+//! `plat-deploy netlist`: the network-feature list generated from the registry manifest
+//! (spec node `PLAT.DEPLOY.OFFLINE.NETLIST`), in [`plat_deploy_netlist`].
+//!
 //! `rel version-check` and `rel version-compare`: the product version scheme and tag check
 //! (spec node `ECO.REL.PROC.VERSION`), in [`rel::version`].
 
 pub mod crate_graph;
+pub mod plat_deploy_netlist;
 pub mod plat_matrix_tiers;
 pub mod rel;
 

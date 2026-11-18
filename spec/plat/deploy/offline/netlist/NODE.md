@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-PLAT.DEPLOY.OFFLINE-005]
 covers: []
 depends_on: []

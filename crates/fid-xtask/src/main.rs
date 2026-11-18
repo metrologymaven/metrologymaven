@@ -2,6 +2,7 @@
 
 mod pins;
 
+use fid_xtask::plat_deploy_netlist as netlist;
 use fid_xtask::plat_matrix_tiers;
 use fid_xtask::rel::version;
 use std::io::Read;
@@ -15,6 +16,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-hw validate [--file <path>]\n       \
                      cargo xtask plat-hw validate-suite [--file <path>]\n       \
                      cargo xtask plat-hw result-schema\n       \
+                     cargo xtask plat-deploy netlist --manifest <registry manifest json> \
+                     --settings <settings-manifest.json> [--json <out>] [--md <out>] [--check]\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
@@ -31,6 +34,7 @@ fn main() -> ExitCode {
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
+        Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
@@ -76,6 +80,52 @@ fn fid_platform(args: &[String], group: &str) -> ExitCode {
         Err(e) => {
             eprintln!("{group}: cannot run cargo: {e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.DEPLOY.OFFLINE.NETLIST: `plat-deploy netlist`. Writes `network-features.json` and
+/// `network-features.md` (default under `docs/deploy/`), or with `--check` compares them with a
+/// fresh generation. Exit 0: ok; 1: X1 findings, unreadable manifest or drift (one per line);
+/// 2: bad usage.
+fn plat_deploy_netlist(args: &[String]) -> ExitCode {
+    let mut manifest: Option<PathBuf> = None;
+    let mut settings: Option<PathBuf> = None;
+    let mut json = PathBuf::from(netlist::DEFAULT_JSON);
+    let mut md = PathBuf::from(netlist::DEFAULT_MD);
+    let mut check = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--check" {
+            check = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--settings", Some(v)) => settings = Some(PathBuf::from(v)),
+            ("--json", Some(v)) => json = PathBuf::from(v),
+            ("--md", Some(v)) => md = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(settings)) = (manifest, settings) else {
+        eprintln!("plat-deploy netlist: --manifest and --settings are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match netlist::run(&manifest, &settings, &json, &md, check) {
+        Ok(n) => {
+            let verb = if check { "up to date" } else { "written" };
+            println!("netlist: {n} commands, {verb}");
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                println!("{e:?}");
+            }
+            ExitCode::from(1)
         }
     }
 }
