@@ -177,7 +177,8 @@ pub fn parse_checklist(table: &toml::Table, path: &str) -> Result<Checklist, Gat
         Some(v) if v >= 1 => v,
         _ => return Err(parse_err(path, "no integer `version` of at least 1")),
     };
-    let items = table.get("items").and_then(toml::Value::as_array).ok_or_else(|| parse_err(path, "no `items` array"))?;
+    let items =
+        table.get("items").and_then(toml::Value::as_array).ok_or_else(|| parse_err(path, "no `items` array"))?;
     if items.is_empty() {
         return Err(parse_err(path, "`items` is empty"));
     }

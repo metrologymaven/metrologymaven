@@ -190,7 +190,8 @@ fn findings(reviewer: &str, author: &str, answers: &str) -> Vec<String> {
     check(&c, &record_with(reviewer, answers), author, &roster()).findings.iter().map(|f| f.to_string()).collect()
 }
 
-const ALL_PASS: &str = "colours = { result = \"pass\" }\nlayout = { result = \"pass\" }\nscreenshots = { result = \"pass\" }";
+const ALL_PASS: &str =
+    "colours = { result = \"pass\" }\nlayout = { result = \"pass\" }\nscreenshots = { result = \"pass\" }";
 
 #[test]
 fn all_findings_are_reported_sorted_by_item() {
@@ -198,7 +199,13 @@ fn all_findings_are_reported_sorted_by_item() {
     let got = findings("Mallory", "mallory", "screenshots = { result = \"fail\" }\nextra = { result = \"fail\" }");
     assert_eq!(
         got,
-        ["unknown_reviewer", "self_review", "missing_answer:colours", "missing_answer:layout", "failed_item:screenshots"]
+        [
+            "unknown_reviewer",
+            "self_review",
+            "missing_answer:colours",
+            "missing_answer:layout",
+            "failed_item:screenshots"
+        ]
     );
 }
 
@@ -221,7 +228,9 @@ fn roster_match_is_case_insensitive() {
 
 #[test]
 fn only_exact_pass_passes() {
-    let a = |r: &str| format!("colours = {{ result = {r} }}\nlayout = {{ result = \"pass\" }}\nscreenshots = {{ result = \"pass\" }}");
+    let a = |r: &str| {
+        format!("colours = {{ result = {r} }}\nlayout = {{ result = \"pass\" }}\nscreenshots = {{ result = \"pass\" }}")
+    };
     for r in ["\"Pass\"", "\"PASS\"", "\"fail\"", "\"\"", "\"skipped\"", "\" pass\""] {
         assert_eq!(findings("bob", "alice", &a(r)), ["failed_item:colours"], "{r}");
     }
@@ -329,7 +338,10 @@ fn unparsable_record_and_empty_author_exit_2() {
     let d = tmp_case("garbled", "release = \"r\n");
     assert_eq!(run_case(&d, "alice").unwrap_err().code(), "parse_error");
     let _ = std::fs::remove_dir_all(&d);
-    let d = tmp_case("empty-author", &format!("release = \"r\"\nreviewer = \"bob\"\ndate = \"2027-01-20\"\n[answers]\n{ALL_PASS}\n"));
+    let d = tmp_case(
+        "empty-author",
+        &format!("release = \"r\"\nreviewer = \"bob\"\ndate = \"2027-01-20\"\n[answers]\n{ALL_PASS}\n"),
+    );
     assert_eq!(run_case(&d, "  ").unwrap_err().code(), "parse_error");
     let rep = run_case(&d, "alice").unwrap();
     assert!(rep.findings.is_empty());
