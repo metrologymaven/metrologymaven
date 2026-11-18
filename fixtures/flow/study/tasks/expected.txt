@@ -1,0 +1,22 @@
+# Expected findings per fixture, labelled by hand from REQ-FLOW.STUDY.PROTO-002 and -005
+# and the check rules in crates/fid-accept/src/study.rs (not produced by running the check).
+# Format: <fixture>\t<CODE> <subject>, in the check's output order (code, subject, detail).
+# `ok` means no findings. Checked against the shipped journey maps
+# (acceptance/journeys/persona/) and persona file (acceptance/personas/personas.json).
+valid.json	ok
+# AC-2: no map exercises JOB.ACC.99; the named map per-01 does not list it either, so
+# persona JOB.PER.01 is not a persona of any usable named map.
+no-map.json	TASK-NO-MAP JOB.ACC.99
+no-map.json	TASK-REF JOB.ACC.99
+no-map.json	TASK-REF JOB.ACC.99
+# Start command without `@N`.
+bad-command.json	TASK-SCHEMA JOB.ACC.02
+unknown-persona.json	TASK-REF JOB.ACC.01
+# Map per-99 does not exist, so JOB.PER.01 is not a persona of any usable named map.
+unknown-map.json	TASK-REF JOB.ACC.03
+unknown-map.json	TASK-REF JOB.ACC.03
+# In per-01 the export comes after the DMIS import, not before.
+wrong-order.json	TASK-REF JOB.ACC.02
+extra-field.json	TASK-SCHEMA JOB.ACC.02
+missing-j3.json	TASK-SCHEMA JOB.ACC.03
+wrong-format.json	TASK-SCHEMA -
