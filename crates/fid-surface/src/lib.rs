@@ -6,6 +6,7 @@
 //! model instead so that encoding is canonical by construction.
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
+use fid_types::{CommandId, Digest};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -335,20 +336,14 @@ fn take_str(o: &mut BTreeMap<String, CValue>, k: &str) -> Result<Option<String>,
     }
 }
 
-/// `name@major`, name in `[a-z0-9_.]`, starting and ending with an alphanumeric.
+/// `name@major`, name in `[a-z0-9_.]`, starting and ending with an alphanumeric
+/// (the rule of [`fid_types::CommandId`]).
 pub fn valid_command_id(s: &str) -> bool {
-    let Some((name, major)) = s.rsplit_once('@') else { return false };
-    let name_ok = !name.is_empty()
-        && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'.')
-        && name.bytes().next().is_some_and(|b| b.is_ascii_alphanumeric())
-        && name.bytes().last().is_some_and(|b| b.is_ascii_alphanumeric());
-    let major_ok = !major.is_empty() && major.len() <= 5 && major.bytes().all(|b| b.is_ascii_digit());
-    name_ok && major_ok
+    CommandId::is_valid(s)
 }
 
 fn valid_hash(s: &str) -> bool {
-    s.strip_prefix("sha256:")
-        .is_some_and(|h| h.len() == 64 && h.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+    Digest::is_valid(s)
 }
 
 // ------------------------------------------------------------------ schemas
@@ -391,10 +386,7 @@ pub fn envelope_schema() -> CValue {
             "properties",
             obj([
                 ("envelope_version", obj([("const", CValue::Num(f64::from(ENVELOPE_VERSION)))])),
-                (
-                    "command_id",
-                    obj([("type", s("string")), ("pattern", s("^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$"))]),
-                ),
+                ("command_id", obj([("type", s("string")), ("pattern", s(CommandId::PATTERN))])),
                 ("outcome", obj([("enum", strs(&outcomes))])),
                 (
                     "error",
@@ -412,7 +404,7 @@ pub fn envelope_schema() -> CValue {
                         ),
                     ]),
                 ),
-                ("journal_entry_hash", obj([("type", s("string")), ("pattern", s("^sha256:[0-9a-f]{64}$"))])),
+                ("journal_entry_hash", obj([("type", s("string")), ("pattern", s(Digest::PATTERN))])),
                 ("job_id", obj([("type", s("string")), ("minLength", CValue::Num(1.0))])),
                 ("request_id", obj([("type", s("string")), ("minLength", CValue::Num(1.0))])),
                 ("result", obj([])),

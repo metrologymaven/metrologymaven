@@ -40,6 +40,7 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 11. **Paid-service boundary (D-036 rule 3).** Never move a capability the open apps need behind a paid service. Nodes that define a paid service say `service` in their Purpose.
 12. **Optional private context.** If `../docs/funding-strategy.md` exists, read it for context before expanding ECO, TRUST, QUAL, OUTR, KRN, GDT, UNC or AGENT nodes. Never copy its contents into this repository. Public contributors won't have it, and that's fine.
 13. **Expert nodes (D-039 pipeline).** Never expand a node that has `needs_expert:` set; `scope.py open` already skips them. You may draft a PR from an expert's written review on its issue, naming the expert as reviewer. Add `needs_expert: <area>` (areas in `tools/scope.py`) to an open node only when getting it wrong would make measurements wrong and no public reference settles it.
+14. **Shared types (code).** Crates use `fid-types` for determinism classes, side-effect classes, `sha256:` digests and command IDs (`name@major`) and never redefine them. Add a concept there only when two or more crates need it. Known exception: `fid-canon`'s `Digest` until it converts.
 
 ## Working rules (adapted from the Craft family's house rules)
 
@@ -54,6 +55,7 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 ## Dependencies (CONSTITUTION §2.1, D-034)
 
 - Depend on specific nodes (level 2 or 3), not whole domains, and only on the same or lower layers.
+- When a leaf is implemented, its PR adds `built_in: [crate]` (and `built_pr: N`) to the leaf's frontmatter and commits the regenerated `generated/` files, including `scope.py milestone milestones/launch-1.md`.
 - If you only read a file or format another node publishes (a test suite, manifest, report, token file), use `uses_artifacts: [NODE.ID]` instead of `depends_on`. Never leave a dependency as a prose "interface note".
 - Mark adoption commands and manual readings `human_only: true` in their Design (D-031).
 

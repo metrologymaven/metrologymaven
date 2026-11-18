@@ -1,0 +1,9 @@
+{
+  "canonical_output": "{\"n\":\"10000000\",\"sum\":\"49999995000000\"}",
+  "checkpoint_every": 10000,
+  "digest": "sha256:69738a23f10e92db547a4af1ef4c0887a08ec55f0016ca53c7017867db4e846f",
+  "handler": "slow_sum",
+  "n": 10000000,
+  "report_every": 100000,
+  "sum": "49999995000000"
+}
