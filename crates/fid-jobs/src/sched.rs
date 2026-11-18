@@ -420,13 +420,7 @@ impl<T: Send + 'static> Inner<T> {
     /// Moves `entry` to `to` (with `error`), stamps the time and emits the event; the record's
     /// timestamp and the event's `at` are the same clock reading. An ended job is noted in
     /// `ended` for the retention cap.
-    fn transition(
-        &self,
-        ended: &mut VecDeque<JobId>,
-        entry: &mut Entry<T>,
-        to: JobState,
-        error: Option<JobErrorCode>,
-    ) {
+    fn transition(&self, ended: &mut VecDeque<JobId>, entry: &mut Entry<T>, to: JobState, error: Option<JobErrorCode>) {
         let from = entry.record.state;
         let now = self.clock.now();
         entry.record.state = to;
