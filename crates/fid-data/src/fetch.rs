@@ -551,10 +551,7 @@ pub fn load_catalogue(path: &Path) -> Result<Vec<CatalogueEntry>, DataError> {
 
 /// The entry with ID `id`, or `FETCH-UNKNOWN-ID`.
 pub fn find<'a>(entries: &'a [CatalogueEntry], id: &str) -> Result<&'a CatalogueEntry, DataError> {
-    entries
-        .iter()
-        .find(|e| e.id == id)
-        .ok_or_else(|| DataError::new(FETCH_UNKNOWN_ID, id, "not in the catalogue"))
+    entries.iter().find(|e| e.id == id).ok_or_else(|| DataError::new(FETCH_UNKNOWN_ID, id, "not in the catalogue"))
 }
 
 /// Path of a verified dataset for tests, benchmarks and examples: reads the default
