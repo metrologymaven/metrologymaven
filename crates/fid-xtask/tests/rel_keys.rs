@@ -87,7 +87,10 @@ fn expired_in_use() {
         run("KEYS-expired.md"),
         (1, format!("KEYS-EXPIRED-IN-USE release-old-test.pem (valid until 2021-12-31, checked {DATE})\n"))
     );
-    assert_eq!(check(&fixture("keys"), &fixture("docs/KEYS-expired.md"), "2021-12-31"), Ok(4));
+    // On its last valid day the old key is not expired (the other keys are not yet valid then).
+    let errs = check(&fixture("keys"), &fixture("docs/KEYS-expired.md"), "2021-12-31").unwrap_err();
+    assert!(errs.iter().all(|e| e.code() == "KEYS-NOT-YET-VALID"), "{errs:?}");
+    assert!(!errs.iter().any(|e| e.to_string().contains("release-old-test.pem")), "{errs:?}");
 }
 
 /// An active key checked before its validity starts is KEYS-NOT-YET-VALID (hand-labelled:
