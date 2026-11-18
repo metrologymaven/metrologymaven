@@ -283,8 +283,10 @@ impl Report {
                 o
             })
             .collect();
-        let sources =
-            self.sources.iter().map(|x| obj(vec![("id", s(&x.id)), ("url", s(&x.url)), ("public", CValue::Bool(true))]));
+        let sources = self
+            .sources
+            .iter()
+            .map(|x| obj(vec![("id", s(&x.id)), ("url", s(&x.url)), ("public", CValue::Bool(true))]));
         let findings = self.findings.iter().map(|f| {
             let mut o = obj(vec![
                 ("code", s(f.code.as_str())),
@@ -393,7 +395,12 @@ pub fn check(defs: &str, defs_name: &str, sources: &str, sources_name: &str) -> 
 
 /// The `[[key]]` tables of a file with their 1-based positions; non-table items become
 /// `field_invalid` findings and are skipped.
-fn entries<'a>(t: &'a toml::Table, key: &str, kind: Kind, findings: &mut Vec<Finding>) -> Vec<(usize, &'a toml::Table)> {
+fn entries<'a>(
+    t: &'a toml::Table,
+    key: &str,
+    kind: Kind,
+    findings: &mut Vec<Finding>,
+) -> Vec<(usize, &'a toml::Table)> {
     let file_finding = |code| Finding { code, kind, index: 0, id: None, subject: Some(key.to_string()) };
     let items = match t.get(key) {
         None => {
@@ -415,7 +422,13 @@ fn entries<'a>(t: &'a toml::Table, key: &str, kind: Kind, findings: &mut Vec<Fin
     for (n, v) in items.iter().enumerate() {
         match v {
             toml::Value::Table(e) => out.push((n + 1, e)),
-            _ => findings.push(Finding { code: Code::FieldInvalid, kind: entry_kind, index: n + 1, id: None, subject: None }),
+            _ => findings.push(Finding {
+                code: Code::FieldInvalid,
+                kind: entry_kind,
+                index: n + 1,
+                id: None,
+                subject: None,
+            }),
         }
     }
     out
@@ -497,7 +510,8 @@ fn check_source(index: usize, t: &toml::Table, seen: &BTreeSet<String>, report: 
         cx.push(Code::SourceNotPublic, None);
     }
     // REQ-003: whatever the public flag says.
-    let pattern = raw_id.as_deref().and_then(product_data_pattern).or_else(|| url.as_deref().ok().and_then(product_data_pattern));
+    let pattern =
+        raw_id.as_deref().and_then(product_data_pattern).or_else(|| url.as_deref().ok().and_then(product_data_pattern));
     if let Some(p) = pattern {
         cx.push(Code::ProductDataSource, Some(p));
     }

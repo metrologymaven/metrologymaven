@@ -89,7 +89,10 @@ fn ac3_private_source_not_public() {
     let (code, out) = cli(&fixture("definitions.toml"), &fixture("private-source.toml"), false);
     assert_eq!(code, 1, "{out}");
     assert!(out.contains("source_not_public"), "{out}");
-    assert_eq!(finding_lines("definitions.toml", "private-source.toml"), ["source_not_public (source #1 \"repo-api\")"]);
+    assert_eq!(
+        finding_lines("definitions.toml", "private-source.toml"),
+        ["source_not_public (source #1 \"repo-api\")"]
+    );
 }
 
 #[test]
@@ -182,7 +185,10 @@ fn deny_list_matches_id_or_url_case_insensitively() {
     }
     for p in spec {
         let up = p.to_ascii_uppercase();
-        for (id, url) in [(format!("x-{p}"), "https://example.org/a".to_string()), ("x".to_string(), format!("https://example.org/{up}/a"))] {
+        for (id, url) in [
+            (format!("x-{p}"), "https://example.org/a".to_string()),
+            ("x".to_string(), format!("https://example.org/{up}/a")),
+        ] {
             let src = format!(
                 "[[source]]\nid = \"{id}\"\nurl = \"{url}\"\npublic = true\npublic_basis = \"Claimed public.\"\n"
             );
