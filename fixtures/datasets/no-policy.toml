@@ -1,0 +1,12 @@
+# ECO.DATA.CAT fixture (no-policy.toml). Synthetic entries only. MIT OR Apache-2.0.
+
+[[dataset]]
+id = "lonely"
+title = "Synthetic dataset lonely"
+source = "https://example.org/datasets/lonely"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/lonely.zip"]

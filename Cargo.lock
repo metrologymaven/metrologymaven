@@ -81,6 +81,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-data"
+version = "0.0.1"
+dependencies = [
+ "fid-testkit",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
@@ -91,6 +99,8 @@ dependencies = [
 name = "fid-kci"
 version = "0.0.1"
 dependencies = [
+ "fid-num",
+ "fid-testkit",
  "fid-types",
 ]
 

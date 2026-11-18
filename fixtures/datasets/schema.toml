@@ -1,0 +1,157 @@
+# ECO.DATA.CAT fixture (schema.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "Bad_ID"
+title = "Synthetic dataset Bad_ID"
+source = "https://example.org/datasets/Bad_ID"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/Bad_ID.zip"]
+
+[[dataset]]
+title = "Synthetic dataset None"
+source = "https://example.org/datasets/None"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/None.zip"]
+
+[[dataset]]
+id = "no-urls"
+title = "Synthetic dataset no-urls"
+source = "https://example.org/datasets/no-urls"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+
+[[dataset]]
+id = "empty-urls"
+title = "Synthetic dataset empty-urls"
+source = "https://example.org/datasets/empty-urls"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = []
+
+[[dataset]]
+id = "ref-no-terms"
+title = "Synthetic dataset ref-no-terms"
+source = "https://example.org/datasets/ref-no-terms"
+licence = "LicenseRef-Custom"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "fetch-only"
+urls = ["https://example.org/files/ref-no-terms.zip"]
+
+[[dataset]]
+id = "bad-redist"
+title = "Synthetic dataset bad-redist"
+source = "https://example.org/datasets/bad-redist"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "copy"
+urls = ["https://example.org/files/bad-redist.zip"]
+
+[[dataset]]
+id = "unknown-field"
+title = "Synthetic dataset unknown-field"
+source = "https://example.org/datasets/unknown-field"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/unknown-field.zip"]
+colour = "blue"
+
+[[dataset]]
+id = "negative-size"
+title = "Synthetic dataset negative-size"
+source = "https://example.org/datasets/negative-size"
+licence = "CC-BY-4.0"
+size_bytes = -1
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/negative-size.zip"]
+
+[[dataset]]
+id = "bad-expression"
+title = "Synthetic dataset bad-expression"
+source = "https://example.org/datasets/bad-expression"
+licence = "MIT OR"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/bad-expression.zip"]
+
+[[dataset]]
+id = "upper-digest"
+title = "Synthetic dataset upper-digest"
+source = "https://example.org/datasets/upper-digest"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/upper-digest.zip"]
+
+[[dataset]]
+id = "bad-url"
+title = "Synthetic dataset bad-url"
+source = "https://example.org/datasets/bad-url"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["ftp://example.org/x"]
+
+[[dataset]]
+id = "with-ref-no-terms"
+title = "Synthetic dataset with-ref-no-terms"
+source = "https://example.org/datasets/with-ref-no-terms"
+licence = "MIT WITH LicenseRef-Custom-exception"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "fetch-only"
+urls = ["https://example.org/files/with-ref-no-terms.zip"]
+
+[[dataset]]
+id = "too-many-terms"
+title = "Synthetic dataset too-many-terms"
+source = "https://example.org/datasets/too-many-terms"
+licence = "MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT AND MIT"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/too-many-terms.zip"]
+
+[[dataset]]
+id = "max-terms-ok"
+title = "Synthetic dataset max-terms-ok"
+source = "https://example.org/datasets/max-terms-ok"
+licence = "MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT OR MIT"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/max-terms-ok.zip"]
