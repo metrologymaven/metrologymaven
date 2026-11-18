@@ -54,11 +54,12 @@ fn every_header_field_is_hashed() {
             assert_eq!(entry_hash_value(&Value::Object(changed)).unwrap(), base);
             continue;
         }
-        *value = match value {
+        let replacement = match &*value {
             // Appending a digit keeps decimal-string fields valid.
             Value::String(s) => Value::String(format!("{s}0")),
             other => Value::Array(vec![other.clone()]),
         };
+        *value = replacement;
         assert_ne!(entry_hash_value(&Value::Object(changed)).unwrap(), base, "{name}");
     }
 }
