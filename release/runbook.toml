@@ -1,0 +1,289 @@
+# Release runbook: the machine-readable step list (spec node ECO.REL.PROC.RUNBOOK).
+#
+# RUNBOOK.md is rendered from this file and RUNBOOK.preamble.md:
+#   cargo xtask rel runbook-render --dir release --out release/RUNBOOK.md
+# and checked (offline, read-only) by:
+#   cargo xtask rel runbook-check --dir release
+#
+# Fields per [[step]]:
+#   id         unique, lowercase letters, digits and `-`
+#   title      one line
+#   performer  "ci", or "role:<name>" for the one step a person performs (sign-approval)
+#   job        the release workflow job that runs the step (required for "ci" steps)
+#   gates      gate IDs from gates.toml that the step evaluates
+#   channels   any of nightly, beta, stable, lts
+#   status     "available" when the tool named in `tool` exists in this repository today,
+#              "planned" when the step is specified but its tool is not built yet
+#   tool       the command that performs the step (optional)
+#   notes      free text (optional)
+#
+# Order matters: steps run top to bottom, and every step before sign-approval runs
+# without manual intervention (REQ-ECO.REL.PROC-002).
+
+[[step]]
+id = "tag-validate"
+title = "Validate the release tag against the channel and the product version"
+performer = "ci"
+job = "tag-validate"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "available"
+tool = "cargo xtask rel version-check --tag <tag> --channel <channel> [--binaries <dir>]"
+notes = """
+Spec node ECO.REL.PROC.VERSION. Reads the tag from its argument and the version from the
+workspace Cargo.toml; it never creates, moves or pushes tags and needs no network.
+"""
+
+[[step]]
+id = "build-packages"
+title = "Build the desktop installers"
+performer = "ci"
+job = "build-packages"
+gates = ["pkg-plan", "os-sign"]
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: ECO.REL.PKG (package plan and builds) is not built yet. The package-build gate
+`pkg-plan` and the OS-signing readiness gate `os-sign` (ECO.REL.SIGN.OSSIGN) are evaluated
+from the files this step and its producers write.
+"""
+
+[[step]]
+id = "build-web"
+title = "Build the web bundle"
+performer = "ci"
+job = "build-web"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.WEB is not built yet."
+
+[[step]]
+id = "sbom"
+title = "Generate the SBOMs for every artefact"
+performer = "ci"
+job = "sbom"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.SIGN.SBOM is not built yet."
+
+[[step]]
+id = "vuln-gate"
+title = "Vulnerability gate over the SBOMs"
+performer = "ci"
+job = "vuln-gate"
+gates = ["qual-sbom"]
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: the gate file is produced by QUAL.SBOM, which is not built yet."
+
+[[step]]
+id = "platform-gate"
+title = "Platform matrix gate"
+performer = "ci"
+job = "platform-gate"
+gates = ["plat-matrix"]
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: the gate file is produced by PLAT.MATRIX.CI, which is not built yet."
+
+[[step]]
+id = "evidence-complete"
+title = "Evidence bundle is complete"
+performer = "ci"
+job = "evidence-complete"
+gates = ["qual-evid"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: the completeness file is produced by QUAL.EVID, which is not built yet."
+
+[[step]]
+id = "threat-review-minor"
+title = "Threat-model review exists for this MAJOR.MINOR"
+performer = "ci"
+job = "threat-review-minor"
+gates = ["qual-threat"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: the review record comes from QUAL.THREAT, which is not built yet. The gate only
+applies to the first release of a MAJOR.MINOR; it can be met before tagging with the
+gate tool's pre-tag mode (ECO.REL.PROC.GATES).
+"""
+
+[[step]]
+id = "eu-venue-gate"
+title = "EU distribution counsel gate"
+performer = "ci"
+job = "eu-venue-gate"
+gates = ["qual-cra"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: the status file comes from QUAL.CRA, which is not built yet. A failing gate
+disables the venues flagged for EU distribution; it does not stop the release elsewhere.
+"""
+
+[[step]]
+id = "redteam-verdict"
+title = "Red-team verdict for this release candidate"
+performer = "ci"
+job = "redteam-verdict"
+gates = ["agent-redteam"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: the verdict file comes from AGENT.REDTEAM, which is not built yet."
+
+[[step]]
+id = "ga-gate"
+title = "Acceptance gate for every app labelled GA"
+performer = "ci"
+job = "ga-gate"
+gates = []
+channels = ["stable", "lts"]
+status = "planned"
+notes = """
+Planned: per-app gate files come from FLOW.RUNNER, which is not built yet. No app is
+labelled GA today, so gates.toml has no `flow-ga-<app>` gate; when one is added, list it
+in this step's `gates`.
+"""
+
+[[step]]
+id = "i18n-gate"
+title = "Translation gate"
+performer = "ci"
+job = "i18n-gate"
+gates = ["i18n"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: the gate file comes from I18N.XLATE, which is not built yet."
+
+[[step]]
+id = "kernel-patch-gate"
+title = "Kernel bit-identity gate for patch releases"
+performer = "ci"
+job = "kernel-patch-gate"
+gates = ["krn-xart"]
+channels = ["stable", "lts"]
+status = "planned"
+notes = "Planned: the report comes from KRN.MAN.XART, which is not built yet. Patch releases only."
+
+[[step]]
+id = "lts-gate"
+title = "LTS gate"
+performer = "ci"
+job = "lts-gate"
+gates = ["lts"]
+channels = ["lts"]
+status = "planned"
+notes = "Planned: the gate file comes from ECO.REL.LTS, which is not built yet."
+
+[[step]]
+id = "gates-summary"
+title = "Aggregate every gate into one release verdict"
+performer = "ci"
+job = "gates-summary"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: `cargo xtask rel gate` (ECO.REL.PROC.GATES) is not built yet. It reads every gate
+in gates.toml and writes release-gates.json; nobody is asked to approve signing unless the
+verdict is `pass`.
+"""
+
+[[step]]
+id = "notes"
+title = "Generate the release notes"
+performer = "ci"
+job = "notes"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.PROC.NOTES is not built yet."
+
+[[step]]
+id = "sign-approval"
+title = "Approve signing of the exact pre-sign digest"
+performer = "role:release-approver"
+gates = []
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = """
+The only step a person performs. Who may hold the release-approver role is set by
+GOVERNANCE.md (D-003); this runbook names the role, not people. The approval mechanism
+(a protected signing environment that only accepts an approval naming the pre-sign digest)
+is planned in ECO.REL.PROC.FLOW and ECO.REL.SIGN.CUSTODY and does not exist yet. Nightly
+builds need no approval: they are signed with a separate nightly key.
+"""
+
+[[step]]
+id = "os-sign"
+title = "OS code signing and notarisation of the installers"
+performer = "ci"
+job = "os-sign"
+gates = []
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.SIGN.OSSIGN is not built yet. Nothing in this repository signs or notarises today."
+
+[[step]]
+id = "sums"
+title = "Write SHA256SUMS and the checksum statement"
+performer = "ci"
+job = "sums"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "available"
+tool = "cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>"
+notes = """
+Spec node ECO.REL.SIGN.SUMS. Offline; it writes the two files and signs nothing (signing is
+the next step).
+"""
+
+[[step]]
+id = "sign-statements"
+title = "Sign SHA256SUMS and the release statements"
+performer = "ci"
+job = "sign-statements"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: signing (ECO.REL.SIGN) is not built yet. Releases are signed with the release key
+after sign-approval; nightly builds with the separate nightly key.
+"""
+
+[[step]]
+id = "publish"
+title = "Publish the artefacts to the enabled venues"
+performer = "ci"
+job = "publish"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = """
+Planned: ECO.REL.PROC.FLOW is not built yet. Publishes only to the venues the gate verdict
+enables.
+"""
+
+[[step]]
+id = "feeds"
+title = "Update and sign the channel feeds"
+performer = "ci"
+job = "feeds"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.PROC.CHANNEL is not built yet."
+
+[[step]]
+id = "rebuild-compare"
+title = "Rebuild independently and compare the artefacts"
+performer = "ci"
+job = "rebuild-compare"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+notes = "Planned: ECO.REL.REPRO is not built yet."

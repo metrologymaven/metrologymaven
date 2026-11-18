@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS), `cargo xtask rel runbook-check|runbook-render` (ECO.REL.PROC.RUNBOOK)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

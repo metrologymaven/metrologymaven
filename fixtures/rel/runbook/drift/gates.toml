@@ -1,0 +1,9 @@
+# Hand-written fixture for ECO.REL.PROC.RUNBOOK (CC-BY-4.0).
+
+[[gate]]
+id = "qual-sbom"
+producer = "FIXTURE"
+
+[[gate]]
+id = "agent-redteam"
+producer = "FIXTURE"

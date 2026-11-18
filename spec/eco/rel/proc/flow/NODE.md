@@ -83,6 +83,7 @@ The CI workflow that a release tag starts. It runs every runbook step in order, 
 
 - The CI host and its protected-environment feature are chosen in `ECO.CI.WF`; the design assumes a host offering environment-scoped secrets with required human reviewers [unverified for the final host].
 - SDK crate publication to a package registry is a separate step that needs a registry account; it is left out until `ECO.SDK.API` names the registry (maintainer call).
+- Until this leaf is built, `release/release-workflow.yml` is a job-ID skeleton (never run) that `cargo xtask rel runbook-check` (ECO.REL.PROC.RUNBOOK) uses as its default `--workflow`. When the real workflow lands, delete the skeleton and change the `--workflow` default (`DEFAULT_WORKFLOW` in `crates/fid-xtask/src/rel/runbook.rs`, and the RUNBOOK preamble) to the real workflow file.
 
 ## Children
 

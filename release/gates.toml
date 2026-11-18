@@ -1,0 +1,65 @@
+# Release gates (owned by spec node ECO.REL.PROC.GATES).
+#
+# Initial gate IDs, producers and input paths (relative to the gate tool's --inputs) as
+# named in the ECO.REL.PROC.GATES Design. The gate tool (`cargo xtask rel gate`) is not
+# built yet; it will add `applies`, `missing_blocks` and `adapter` to each entry. Today this
+# file is read only by `cargo xtask rel runbook-check` (ECO.REL.PROC.RUNBOOK), which uses the
+# `id` of each [[gate]] and ignores the other fields.
+#
+# Per-app GA gates (`flow-ga-<app>`, FLOW.RUNNER) are added when an app is labelled GA, and
+# listed in the `ga-gate` step of runbook.toml at the same time.
+
+[[gate]]
+id = "qual-evid"
+producer = "QUAL.EVID"
+path = "evidence/completeness.json"
+
+[[gate]]
+id = "qual-threat"
+producer = "QUAL.THREAT"
+path = "threat/reviews/<MAJOR.MINOR>.toml"
+
+[[gate]]
+id = "qual-cra"
+producer = "QUAL.CRA"
+path = "cra/status.json"
+
+[[gate]]
+id = "agent-redteam"
+producer = "AGENT.REDTEAM"
+path = "redteam/verdict.json"
+
+[[gate]]
+id = "qual-sbom"
+producer = "QUAL.SBOM"
+path = "sbom/vuln-gate.json"
+
+[[gate]]
+id = "plat-matrix"
+producer = "PLAT.MATRIX.CI"
+path = "platform/gate.json"
+
+[[gate]]
+id = "pkg-plan"
+producer = "ECO.REL.PKG.PLAN"
+path = "packages/gate.json"
+
+[[gate]]
+id = "os-sign"
+producer = "ECO.REL.SIGN.OSSIGN"
+path = "signing/os-readiness.json"
+
+[[gate]]
+id = "i18n"
+producer = "I18N.XLATE"
+path = "i18n/gate.json"
+
+[[gate]]
+id = "krn-xart"
+producer = "KRN.MAN.XART"
+path = "kernel/xart-report.json"
+
+[[gate]]
+id = "lts"
+producer = "ECO.REL.LTS"
+path = "lts/gate.json"

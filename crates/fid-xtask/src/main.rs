@@ -3,7 +3,7 @@
 mod pins;
 
 use fid_xtask::plat_matrix_tiers;
-use fid_xtask::rel::{sums, version};
+use fid_xtask::rel::{runbook, sums, version};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -19,7 +19,9 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
                      cargo xtask rel version-compare <a> <b>\n       \
-                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>";
+                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>
+       \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
+       \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -37,6 +39,8 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -241,6 +245,90 @@ fn rel_sums(args: &[String]) -> ExitCode {
             }
             ExitCode::from(code)
         }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-check [--dir <dir>] [--workflow <file>] [--json]`.
+/// Exit 0: consistent (`{"ok":true,"steps":<n>}` with `--json`); 1: findings, one per line
+/// (or one JSON report); 2: bad usage or RUNBOOK-PARSE. Reads files only: it never writes,
+/// never touches git or the network, and never creates tags, releases or signatures.
+fn runbook_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut workflow: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--json" {
+            json = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--workflow", Some(v)) => workflow = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = runbook::check(&dir, workflow.as_deref());
+    if json {
+        println!("{}", runbook::report_json(&result));
+    }
+    match result {
+        Ok(n) => {
+            if !json {
+                println!("runbook-check: ok {n} steps");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            if !json {
+                for f in &findings {
+                    println!("{f}");
+                }
+            }
+            ExitCode::from(runbook::exit_code(&findings))
+        }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-render [--dir <dir>] [--out <file>]` renders
+/// `RUNBOOK.md` from `<dir>/runbook.toml` and `<dir>/RUNBOOK.preamble.md` to stdout, or to
+/// `--out` (LF line endings on every OS). Exit 2 on bad usage or RUNBOOK-PARSE.
+fn runbook_render(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut out: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let text = match runbook::render_dir(&dir) {
+        Ok((_, text)) => text,
+        Err(f) => {
+            println!("{f}");
+            return ExitCode::from(2);
+        }
+    };
+    match out {
+        None => {
+            print!("{text}");
+            ExitCode::SUCCESS
+        }
+        Some(path) => match std::fs::write(&path, text.as_bytes()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                println!("RUNBOOK-PARSE {}: cannot write: {e}", path.display());
+                ExitCode::from(2)
+            }
+        },
     }
 }
 
