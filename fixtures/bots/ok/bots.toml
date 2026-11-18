@@ -1,0 +1,26 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# AC-1: the self-hosted reviewer and one hosted bot whose YAML config excludes both
+# restricted patterns, with a canary date. Both date forms (TOML date, string) are used.
+
+[[bot]]
+id = "self-review"
+kind = "self-hosted"
+account = "fid-review[bot]"
+terms = "MIT OR Apache-2.0"
+data_handling = "Runs on the project's CI runners; sends nothing to an external service."
+reviewed_on = 2026-11-17
+approved_by = "maintainer-a"
+sends_content = false
+
+[[bot]]
+id = "hosted-x"
+kind = "hosted"
+account = "hosted-x[bot]"
+terms = "https://hosted-x.example.invalid/terms"
+data_handling = "Receives PR diffs outside the excluded paths and keeps them for 30 days."
+reviewed_on = "2027-01-05"
+approved_by = "maintainer-b"
+sends_content = true
+config = "hosted-x.yml"
+exclude_key = "reviews.path_filters.exclude"
+canary_verified_on = 2027-01-06

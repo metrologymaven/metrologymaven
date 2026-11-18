@@ -5,12 +5,15 @@ mod pins;
 use fid_xtask::plat_deploy_netlist as netlist;
 use fid_xtask::rel::{keys, runbook, sbom, sums, version};
 use fid_xtask::{apps_policy, plat_gpu_invar, plat_matrix_tiers};
+use std::collections::BTreeMap;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
+                     cargo xtask bots-check --register <toml> --restricted <txt> --today <YYYY-MM-DD> \
+                     [--review-export <json>]\n       \
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
                      cargo xtask plat-hw validate [--file <path>]\n       \
@@ -44,6 +47,7 @@ fn main() -> ExitCode {
         Some("layers") => layers(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
+        Some("bots-check") => bots_check(&args[1..]),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
@@ -115,6 +119,47 @@ fn datasets_check(args: &[String]) -> ExitCode {
         Err(e) => {
             println!("DATA-IO -: cannot run cargo: {e}");
             ExitCode::from(1)
+        }
+    }
+}
+
+/// ECO.CI.BOTS.REG: exit 0 when the register passes, 1 on any finding, 2 on a usage error.
+fn bots_check(args: &[String]) -> ExitCode {
+    let mut opts: BTreeMap<&str, &str> = BTreeMap::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let known = matches!(a.as_str(), "--register" | "--restricted" | "--today" | "--review-export");
+        match it.next() {
+            Some(v) if known && !opts.contains_key(a.as_str()) => {
+                opts.insert(a.as_str(), v.as_str());
+            }
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(register), Some(restricted), Some(today)) =
+        (opts.get("--register"), opts.get("--restricted"), opts.get("--today"))
+    else {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    };
+    let export = opts.get("--review-export").map(Path::new);
+    match fid_xtask::bots::check(Path::new(register), Path::new(restricted), today, export) {
+        Ok(findings) if findings.is_empty() => {
+            println!("bots-check: ok");
+            ExitCode::SUCCESS
+        }
+        Ok(findings) => {
+            for f in findings {
+                println!("{f}");
+            }
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            ExitCode::from(2)
         }
     }
 }
