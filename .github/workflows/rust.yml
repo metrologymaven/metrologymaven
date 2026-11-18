@@ -36,3 +36,8 @@ jobs:
         run: |
           out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q -p fid-cli -- canon)
           test "$out" = '{"a":[1e+21,0.1],"b":1}'
+          env=$(echo '{"b":1}' | cargo run -q -p fid-cli -- canon --json)
+          echo "$env"
+          echo "$env" | grep -q '"outcome":"computed"'
+          if echo '{"a":1,"a":2}' | cargo run -q -p fid-cli -- canon --json > bad.json; then exit 1; fi
+          grep -q '"canon_error":"duplicate_key"' bad.json

@@ -1,0 +1,1 @@
+{"envelope_version":1,"error_codes":["cancelled","conflict","dry_run_unsupported","internal_error","not_found","policy_refused","precondition_failed","raw_path_refused","root_escape","timeout","unit_error","usage_error","validation_error","version_mismatch"]}

@@ -1,0 +1,1 @@
+{"command_id":"align.run_321@1","envelope_version":1,"error":{"code":"validation_error","details":{"field":"tolerance_mm","value":-0.5},"message":"tolerance_mm must be positive"},"outcome":"failed"}

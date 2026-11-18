@@ -1,0 +1,14 @@
+[package]
+name = "fid-surface"
+description = "Metrology Maven shared result envelope and error codes for CLI and MCP (spec node AUTO.SURF.ENV)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

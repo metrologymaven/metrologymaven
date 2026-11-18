@@ -247,7 +247,14 @@ enum Frame {
 /// Parses JSON text into a [`CValue`]. Numbers become [`CValue::Num`].
 /// Rejects duplicate keys, inputs over [`MAX_INPUT_BYTES`] and nesting over [`MAX_DEPTH`].
 pub fn parse(input: &[u8]) -> Result<CValue, CanonError> {
-    if input.len() > MAX_INPUT_BYTES {
+    parse_with_limits(input, MAX_INPUT_BYTES, MAX_DEPTH)
+}
+
+/// [`parse`] with caller-chosen limits, for surfaces with tighter budgets.
+/// The limits are clamped to [`MAX_INPUT_BYTES`] and [`MAX_DEPTH`].
+pub fn parse_with_limits(input: &[u8], max_bytes: usize, max_depth: usize) -> Result<CValue, CanonError> {
+    let max_depth = max_depth.min(MAX_DEPTH);
+    if input.len() > max_bytes.min(MAX_INPUT_BYTES) {
         return Err(CanonError::InputLimit);
     }
     let text = std::str::from_utf8(input).map_err(|_| CanonError::InvalidUtf8)?;
@@ -259,7 +266,7 @@ pub fn parse(input: &[u8]) -> Result<CValue, CanonError> {
         let mut v = match p.peek() {
             Some(b'{') => {
                 p.pos += 1;
-                if stack.len() >= MAX_DEPTH {
+                if stack.len() >= max_depth {
                     return Err(CanonError::InputLimit);
                 }
                 p.ws();
@@ -275,7 +282,7 @@ pub fn parse(input: &[u8]) -> Result<CValue, CanonError> {
             }
             Some(b'[') => {
                 p.pos += 1;
-                if stack.len() >= MAX_DEPTH {
+                if stack.len() >= max_depth {
                     return Err(CanonError::InputLimit);
                 }
                 p.ws();

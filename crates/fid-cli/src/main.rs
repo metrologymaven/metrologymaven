@@ -13,6 +13,8 @@ fid: Metrology Maven command line (pre-alpha)
 USAGE:
     fid canon [FILE] [--digest]   Print RFC 8785 canonical JSON of FILE (or stdin);
                                   with --digest print only its sha256 digest
+    fid canon [FILE] --json       Print a result envelope (schema/envelope-v1.json)
+                                  with the canonical value and its digest
     fid --version                 Print the version
     fid --help                    Print this help
 
@@ -40,9 +42,11 @@ fn main() -> ExitCode {
 fn canon(args: &[String]) -> ExitCode {
     let mut file = None;
     let mut want_digest = false;
+    let mut want_json = false;
     for a in args {
         match a.as_str() {
             "--digest" => want_digest = true,
+            "--json" => want_json = true,
             s if s.starts_with('-') && s != "-" => {
                 eprintln!("error: unknown option `{s}`");
                 return ExitCode::from(2);
@@ -73,6 +77,9 @@ fn canon(args: &[String]) -> ExitCode {
             }
         },
     };
+    if want_json {
+        return canon_json(&input);
+    }
     match fid_canon::canonicalize(&input) {
         Ok(bytes) => {
             let mut out = std::io::stdout().lock();
@@ -91,6 +98,43 @@ fn canon(args: &[String]) -> ExitCode {
         }
         Err(e) => {
             eprintln!("error[{}]: {e}", e.code());
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// `fid canon --json`: the same work, reported as a result envelope (AUTO.SURF.ENV).
+fn canon_json(input: &[u8]) -> ExitCode {
+    use fid_canon::CValue;
+    use fid_surface::{Envelope, ErrorCode};
+    use std::collections::BTreeMap;
+
+    const COMMAND: &str = "canon.canonicalize@1";
+    let (env, code) = match fid_canon::parse(input).and_then(|v| fid_canon::digest(&v).map(|d| (v, d))) {
+        Ok((value, digest)) => {
+            let mut result = BTreeMap::new();
+            result.insert("canonical".to_string(), value);
+            result.insert("digest".to_string(), CValue::Str(digest.to_string()));
+            (Envelope::computed(COMMAND, CValue::Obj(result)), ExitCode::SUCCESS)
+        }
+        Err(e) => {
+            let details = CValue::Obj(BTreeMap::from([("canon_error".to_string(), CValue::Str(e.code().into()))]));
+            (Envelope::failed(COMMAND, ErrorCode::ValidationError, &e.to_string(), Some(details)), ExitCode::from(1))
+        }
+    };
+    match env.encode() {
+        Ok(bytes) => {
+            let mut out = std::io::stdout().lock();
+            match out.write_all(&bytes).and_then(|()| writeln!(out)) {
+                Ok(()) => code,
+                Err(e) => {
+                    eprintln!("error: writing output: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("error[internal_error]: envelope: {e}");
             ExitCode::from(1)
         }
     }
