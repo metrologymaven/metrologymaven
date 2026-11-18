@@ -1,0 +1,23 @@
+[package]
+name = "fid-eval-redteam"
+description = "Metrology Maven scripted red-team adversary: a deterministic MCP client with no LLM that attempts every forbidden action by every route (spec node AGENT.REDTEAM.SCRIPT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# The `fid-eval adversary` words (D-032). Until the `fid-eval` dispatcher in fid-eval-suite
+# forwards `adversary ...`, this crate ships its own binary taking the same words.
+[[bin]]
+name = "fid-eval-redteam"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-eval-suite = { path = "../fid-eval-suite" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
