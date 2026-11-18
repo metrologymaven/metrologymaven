@@ -112,7 +112,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.DEPLOY.OFFLINE.NOEGRESS](../../spec/plat/deploy/offline/noegress/NODE.md) Reference workflow and sandboxed no-egress CI job (M, P1a)
 - [PLAT.DEPLOY.SILENT.UNIX](../../spec/plat/deploy/silent/unix/NODE.md) Unattended Linux and macOS install contract, guide and test (M, P1a)
 - [PLAT.DEPLOY.SILENT.WIN](../../spec/plat/deploy/silent/win/NODE.md) Silent-install contract file and Windows MSI install, upgrade and uninstall test (M, P1a)
-- [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
+- [B] [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
 - [PLAT.GPU.FALLBK.RDP](../../spec/plat/gpu/fallbk/rdp/NODE.md) Windows remote desktop start test (S, P1a)
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
 - [B] [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
