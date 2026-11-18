@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-agent]
+built_pr: 65
 satisfies: [REQ-AGENT.SKILLS-001, REQ-AGENT.SKILLS-002, REQ-AGENT.SKILLS-003]
 covers: []
 depends_on: []
