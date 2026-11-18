@@ -13,9 +13,9 @@
 #
 # Facts about CI that the schema has no row for (schema 1 has no wasm or toolchain fields):
 # - wasm32-wasip1: the `wasm32` job runs `cargo test --target wasm32-wasip1` for fid-num,
-#   fid-canon, fid-kci, fid-replay, fid-surface and fid-types under wasmtime v49.0.6, on
+#   fid-canon, fid-kci, fid-replay, fid-surface, fid-types and fid-sign-core under wasmtime v49.0.6, on
 #   ubuntu-latest. Browser rows belong to PLAT.WEB.BROWSERS through a schema bump.
-# - MSRV: the `msrv` job runs `cargo check --workspace --all-targets` with Rust 1.81 on
+# - MSRV: the `msrv` job runs `cargo check --workspace --all-targets` with Rust 1.87 on
 #   ubuntu-latest (x86_64-unknown-linux-gnu). The `test` jobs use the stable toolchain.
 schema_version = 1
 
@@ -26,7 +26,7 @@ version_max = "26.05"
 arch = "x86_64"
 tier = "tier1"
 since_phase = "P1a"
-notes = "CI runner ubuntu-latest (image ubuntu-26.04, Ubuntu 26.04.1 LTS, host x86_64-unknown-linux-gnu): rustfmt, clippy -D warnings and cargo test --workspace on every pull request and push to main; also the MSRV 1.81 check, cargo-deny and the wasm32-wasip1 job. Planned tier [unverified] pending PLAT.MATRIX.POLICY."
+notes = "CI runner ubuntu-latest (image ubuntu-26.04, Ubuntu 26.04.1 LTS, host x86_64-unknown-linux-gnu): rustfmt, clippy -D warnings and cargo test --workspace on every pull request and push to main; also the MSRV 1.87 check, cargo-deny and the wasm32-wasip1 job. Planned tier [unverified] pending PLAT.MATRIX.POLICY."
 
 [[row]]
 os = "windows"

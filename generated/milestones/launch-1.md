@@ -26,7 +26,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 69 built)
+### Wave 1 (125 leaves, 70 built)
 
 - [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [B] [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -141,7 +141,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [TRUST.PROFILE.DEFS](../../spec/trust/profile/defs/NODE.md) Built-in profile definitions, schema and digest (M, P1a)
 - [TRUST.PROFILE.GATE.INVAR](../../spec/trust/profile/gate/invar/NODE.md) Registry-invariance CI test across profiles (S, P1a)
 - [TRUST.REPLAY.SANDBOX](../../spec/trust/replay/sandbox/NODE.md) WASM kernel sandbox with digest check and limits (M, P1a)
-- [TRUST.SIGN.DSSE](../../spec/trust/sign/dsse/NODE.md) DSSE envelope encoding, algorithms and key fingerprints (M, P1a)
+- [B] [TRUST.SIGN.DSSE](../../spec/trust/sign/dsse/NODE.md) DSSE envelope encoding, algorithms and key fingerprints (M, P1a)
 - [UNC.RDL.BLIND.CUST](../../spec/unc/rdl/blind/cust/NODE.md) Custody model, repository guard and sealed CI job (M, P1b)
 - [UNC.RDL.TRACIM.PUBLIC](../../spec/unc/rdl/tracim/public/NODE.md) Nightly public-test job (S, P0)
 - [UX.RESEARCH.PROTO](../../spec/ux/research/proto/NODE.md) Research plan, protocol, consent and data handling (M, P0)
@@ -159,7 +159,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
 - [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
-- [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
+- [B] [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
 - [B] [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
 - [B] [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
@@ -172,7 +172,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
 - [B] [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
 - [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
-- [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
+- [B] [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
 - [B] [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
 - [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
 - [B] [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
