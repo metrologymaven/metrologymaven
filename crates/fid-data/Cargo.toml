@@ -1,0 +1,24 @@
+[package]
+name = "fid-data"
+description = "Metrology Maven dataset tooling: catalogue and admission check (spec node ECO.DATA.CAT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-data"
+path = "src/main.rs"
+
+# The catalogue reader is a bounded TOML subset parser (no TOML crate). fid-types: digest syntax.
+[dependencies]
+fid-types = { path = "../fid-types" }
+
+# Test-only: checks the SHA-256 digests in the repository catalogue (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

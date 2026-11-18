@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-registry]
+built_pr: 56
 satisfies: [REQ-CORE.REG.DEF-005]
 covers: []
 depends_on: []
@@ -39,21 +41,21 @@ Settles the precondition language question left open by `CORE.REG` (CEL or restr
 - **REQ-CORE.REG.DEF.PRED-004** The evaluator shall count one step per AST node visited and per list element visited by `all` or `exists`, so the count for a given expression and input is the same on every platform.
 - **REQ-CORE.REG.DEF.PRED-005** Evaluation shall return `true`, `false` with the precondition's declared message key, or a typed error, and shall never panic.
 - **REQ-CORE.REG.DEF.PRED-006** The evaluator shall read state only through the `PredContext` trait and shall not depend on any CORE.BUS or document type.
-- **REQ-CORE.REG.DEF.PRED-007** Numbers in FPL shall compare as exact integers or as f64 under total order, and a NaN operand shall be a typed `nan_operand` error.
+- **REQ-CORE.REG.DEF.PRED-007** Numbers in FPL shall compare as exact integers or as f64 under total order, with `-0.0` normalised to `+0.0` when a value enters evaluation, and a NaN operand shall be a typed `nan_operand` error.
 
 ## Acceptance criteria
 
 - **AC-1** Given fixture `fixtures/core/reg/def/pred/cases.json` (at least 60 cases: expression, context, parameters, expected result or error, expected step count), when each is evaluated, then result and step count match.
 - **AC-2** (error path) Given `fixtures/core/reg/def/pred/bad_syntax.json` (a loop keyword, a user function, an unknown field, a type mismatch), when the registry build parses them, then each fails with its position.
-- **AC-3** (error path) Given `all(x in params.ids, all(y in params.ids, x != y))` with 200 IDs and a bound of 10,000, when evaluated, then the result is `precondition_budget` after exactly 10,000 steps.
+- **AC-3** (error path) Given `all(x in params.ids, exists(y in params.ids, y == x))` with 1,000 distinct IDs and a bound of 10,000, when evaluated with short-circuiting `all` and `exists`, then the result is `precondition_budget` after exactly 10,000 steps.
 - **AC-4** Given AC-1 run on x86-64, ARM64 and wasm32, then every result and step count is identical.
 
 ## Design
 
 - **Registry command(s):** none; library used by the registry build and by `CORE.BUS.PIPE`.
-- **Data structures:** `Expr` AST; `Type { Bool, Int, Float, String, EntityRef, List(Box<Type>), Map }`; `Predicate { src, ast, bound: u16, message_key }`; `trait PredContext { fn get(&self, path: &FieldPath) -> Result<Value, PredError>; }`; `PredError { budget, nan_operand, missing_field, type_error }`.
-- **Algorithm:** hand-written recursive-descent parser with a depth limit of 64; static type checker; tree-walking evaluator with an explicit work stack and a step counter checked before each node. Short-circuit order of `&&` and `||` is left to right and fixed.
-- **Errors:** as in REQ-003, -005, -007; parse errors `fpl_syntax`, `fpl_type`.
+- **Data structures:** `Expr` AST (`&&` and `||` chains are flat n-ary nodes); `Type { Bool, Int, Float, String, EntityRef, List(Box<Type>), Map }`; `Predicate { src, ast, bound: u32, message_key }`, compiled from the structured `CommandDef.preconditions` entry `Precondition { expr, bound, message_key }` (JSON `{"expr", "bound", "message_key"}`, defined in `CORE.REG.DEF.FIELD`; a declared bound above 10,000 fails the build with `fpl_bound`); `trait PredContext { fn get(&self, path: &FieldPath) -> Result<Value, PredError>; }`; `PredError { budget, nan_operand, missing_field, type_error }`.
+- **Algorithm:** hand-written recursive-descent parser with a depth limit of 64; static type checker; tree-walking evaluator with an explicit work stack and a step counter checked before each node. Short-circuit order of `&&` and `||` is left to right and fixed; `all` stops at the first false element and `exists` at the first true one. Forbidden words (loop and definition keywords) are refused only where an identifier starts an expression or names a variable; after `.` they are field names.
+- **Errors:** as in REQ-003, -005, -007; parse errors `fpl_syntax`, `fpl_type`, `fpl_bound`.
 - **Determinism:** D0; no hash maps, fixed evaluation order.
 - **Performance budget:** a 50-node predicate evaluates in < 10 µs [unverified until measured].
 - **Crate:** `fid-registry` (module `pred`).
