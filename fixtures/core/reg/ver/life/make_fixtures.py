@@ -6,6 +6,8 @@ Expected outcomes are stated from the leaf's rules, not computed by the Rust cod
 - "at least 12 months" is checked with Python's own calendar: the release date must be on
   or after the same month and day one year later (REQ-003). No case uses 29 February as
   a `since` date, so that comparison never needs clamping.
+- `hidden -> removed` must not happen before a promised `remove_after` date
+  (`removal_too_early`, a code this build adds; see the PR).
 CC-BY-4.0 project data.
 Run:  python fixtures/core/reg/ver/life/make_fixtures.py
 """
@@ -23,24 +25,29 @@ def twelve_months_after(since):
     return since.replace(year=since.year + 1)
 
 
-def expect(old, new, since, release):
+def expect(old, new, since, release, remove_after):
     if (old, new) not in LEGAL:
         return "illegal_transition"
     if (old, new) == ("deprecated", "hidden") and release < twelve_months_after(since):
         return "deprecation_too_short"
+    if (old, new) == ("hidden", "removed") and remove_after is not None and release < remove_after:
+        return "removal_too_early"
     return "ok"
 
 
 cases = []
 
 
-def case(name, old, since, new, release):
+def case(name, old, since, new, release, remove_after=None):
+    frm = {"state": old, "since": since.isoformat()}
+    if remove_after is not None:
+        frm["remove_after"] = remove_after.isoformat()
     cases.append({
         "name": name,
-        "from": {"state": old, "since": since.isoformat()},
+        "from": frm,
         "to": new,
         "release": release.isoformat(),
-        "expect": expect(old, new, since, release),
+        "expect": expect(old, new, since, release, remove_after),
     })
 
 
@@ -66,6 +73,11 @@ boundary = [
 ]
 for name, since, release in boundary:
     case(f"deprecated -> hidden, {name}", "deprecated", since, "hidden", release)
+
+# C. hidden -> removed against a promised remove_after date.
+for name, release in [("one day before remove_after", date(2027, 5, 31)), ("on remove_after", date(2027, 6, 1)),
+                      ("after remove_after", date(2027, 6, 2)), ("well before remove_after", date(2026, 7, 1))]:
+    case(f"hidden -> removed, {name}", "hidden", date(2026, 6, 1), "removed", release, date(2027, 6, 1))
 
 ok = sum(1 for c in cases[:16] if c["expect"] == "ok")
 assert ok == 4, ok
@@ -101,9 +113,10 @@ registry = [
                                "remove_after": "2027-06-01"}),
     definition("demo.cmd", 2, {"state": "active", "since": "2025-01-01"}),
     definition("demo.old", 1, {"state": "removed", "since": "2026-01-01"}),
+    definition("demo.old", 2, {"state": "active", "since": "2024-01-01"}),
 ]
 (HERE / "registry.json").write_text(
-    json.dumps({"definitions": registry, "expect_retained": ["demo.cmd@1", "demo.cmd@2"]}, indent=1) + "\n",
+    json.dumps({"definitions": registry, "expect_retained": ["demo.cmd@1", "demo.cmd@2", "demo.old@2"]}, indent=1) + "\n",
     encoding="utf-8")
 
 # AC-3: migrator sets checked against the registry above, each labelled by hand.
@@ -115,10 +128,15 @@ migrators = [
         {"algorithm": ALG, "command": "demo.cmd", "from_major": 3, "to_major": 2}], "expect": "migrator_invalid"},
     {"name": "target equals source", "migrators": [
         {"algorithm": ALG, "command": "demo.cmd", "from_major": 2, "to_major": 2}], "expect": "migrator_invalid"},
-    {"name": "source removed", "migrators": [
+    {"name": "source removed (target demo.old@2 active)", "migrators": [
         {"algorithm": ALG, "command": "demo.old", "from_major": 1, "to_major": 2}], "expect": "migrator_invalid"},
-    {"name": "source not declared", "migrators": [
+    {"name": "source not declared (target demo.cmd@2 declared)", "migrators": [
+        {"algorithm": ALG, "command": "demo.cmd", "from_major": 0, "to_major": 2}], "expect": "migrator_invalid"},
+    {"name": "target not declared (source demo.cmd@1 declared)", "migrators": [
+        {"algorithm": ALG, "command": "demo.cmd", "from_major": 1, "to_major": 3}], "expect": "migrator_invalid"},
+    {"name": "command not declared at all", "migrators": [
         {"algorithm": ALG, "command": "demo.none", "from_major": 1, "to_major": 2}], "expect": "migrator_invalid"},
+    {"name": "no migrators", "migrators": [], "expect": "ok"},
     {"name": "duplicate source and target", "migrators": [
         {"algorithm": ALG, "command": "demo.cmd", "from_major": 1, "to_major": 2},
         {"algorithm": "demo.cmd.migrate@1.1.0", "command": "demo.cmd", "from_major": 1, "to_major": 2}],

@@ -48,7 +48,7 @@ fn registry() -> Vec<LifecycleDecl> {
 fn ac1_transitions() {
     let f = fixture("transitions.json");
     let cases = arr(&f["cases"]);
-    assert_eq!(cases.len(), 26);
+    assert_eq!(cases.len(), 30);
     let mut legal = Vec::new();
     for (i, c) in cases.iter().enumerate() {
         let c = obj(c);
@@ -104,6 +104,37 @@ fn retained_refuses_duplicates() {
     let mut decls = registry();
     decls.push(decls[0].clone());
     assert_eq!(retained(&decls).map(|_| ()).map_err(|e| e.code()), Err("bad_lifecycle"));
+}
+
+/// Duplicate (ID, major) declarations are refused by the migrator check too.
+#[test]
+fn check_migrators_refuses_duplicate_decls() {
+    let mut decls = registry();
+    let mut dup = decls[0].clone();
+    dup.lifecycle = Lifecycle { state: State::Removed, ..dup.lifecycle };
+    decls.push(dup);
+    let m = MigratorRecord::from_value(
+        &parse(br#"{"algorithm":"demo.cmd.migrate@1.0.0","command":"demo.cmd","from_major":1,"to_major":2}"#)
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(check_migrators(&decls, &[m]).map_err(|e| e.code()), Err("bad_lifecycle"));
+}
+
+/// `replaced_by` under the same name must point to a higher major; a rename is fine.
+#[test]
+fn replaced_by_points_up() {
+    let decl = |replaced_by: &str| {
+        let mut v = arr(&fixture("registry.json")["definitions"])[0].clone();
+        let CValue::Obj(o) = &mut v else { panic!() };
+        let CValue::Obj(life) = o.get_mut("lifecycle").unwrap() else { panic!() };
+        life.insert("replaced_by".into(), CValue::Str(replaced_by.into()));
+        LifecycleDecl::from_def(&CommandDef::from_value(v).unwrap()).map(|_| ()).map_err(|e| e.code())
+    };
+    assert_eq!(decl("demo.cmd@2"), Ok(()));
+    assert_eq!(decl("demo.renamed@1"), Ok(()));
+    assert_eq!(decl("demo.cmd@1"), Err("bad_lifecycle"));
+    assert_eq!(decl("demo.cmd@0"), Err("bad_lifecycle"));
 }
 
 /// AC-3: migrator sets, each failing or passing as labelled.

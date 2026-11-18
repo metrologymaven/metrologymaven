@@ -201,12 +201,17 @@ impl Lifecycle {
 /// Checks a lifecycle transition of one major against the date of the release that
 /// makes it (REQ-002, REQ-003). Allowed: `active → deprecated`, `deprecated → hidden`
 /// (only once [`DEPRECATION_MIN_MONTHS`] have passed since `old.since`), `hidden → removed`
+/// (only on or after `old.remove_after` when that date is set, else `removal_too_early`)
 /// and `deprecated → active`. Everything else, including staying in the same state, is
 /// `illegal_transition`.
 pub fn check_transition(old: &Lifecycle, new: State, release_date: Date) -> Result<(), LifeError> {
     use State::{Active, Deprecated, Hidden, Removed};
     match (old.state, new) {
-        (Active, Deprecated) | (Hidden, Removed) | (Deprecated, Active) => Ok(()),
+        (Active, Deprecated) | (Deprecated, Active) => Ok(()),
+        (Hidden, Removed) => match old.remove_after {
+            Some(after) if release_date < after => Err(LifeError::RemovalTooEarly { after, release: release_date }),
+            _ => Ok(()),
+        },
         (Deprecated, Hidden) => {
             if old.since.months_until_at_least(release_date, DEPRECATION_MIN_MONTHS) {
                 Ok(())
@@ -233,7 +238,22 @@ impl LifecycleDecl {
             .map_err(|e| LifeError::BadLifecycle(format!("bad command ID: {}", e.code())))?;
         let lifecycle = Lifecycle::from_map(&def.lifecycle)
             .map_err(|e| LifeError::BadLifecycle(format!("{command}: {}", e.detail())))?;
-        Ok(LifecycleDecl { command, lifecycle })
+        let decl = LifecycleDecl { command, lifecycle };
+        decl.validate()?;
+        Ok(decl)
+    }
+
+    /// Checks the lifecycle metadata and that a `replaced_by` under the same name points
+    /// to a higher major. A different name (a rename) is allowed.
+    pub fn validate(&self) -> Result<(), LifeError> {
+        self.lifecycle.validate()?;
+        if let Some(r) = &self.lifecycle.replaced_by {
+            if r.name() == self.command.name() && r.major() <= self.command.major() {
+                let me = &self.command;
+                return Err(LifeError::BadLifecycle(format!("{me}: replaced_by {r} must be a higher major")));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -241,16 +261,22 @@ fn key(id: &CommandId) -> (&str, u32) {
     (id.name(), id.major())
 }
 
+/// The state of each declared (ID, major); a pair declared twice is `bad_lifecycle`.
+fn states(decls: &[LifecycleDecl]) -> Result<BTreeMap<(&str, u32), State>, LifeError> {
+    let mut out = BTreeMap::new();
+    for d in decls {
+        if out.insert(key(&d.command), d.lifecycle.state).is_some() {
+            return Err(LifeError::BadLifecycle(format!("{} is declared more than once", d.command)));
+        }
+    }
+    Ok(out)
+}
+
 /// The (ID, major) pairs the manifest lists (REQ-004): every declaration whose state is
 /// not `removed`, `hidden` included, ordered by name then major. A pair declared twice is
 /// refused, since each (ID, major) carries exactly one state.
 pub fn retained(decls: &[LifecycleDecl]) -> Result<Vec<&LifecycleDecl>, LifeError> {
-    let mut seen = BTreeSet::new();
-    for d in decls {
-        if !seen.insert(key(&d.command)) {
-            return Err(LifeError::BadLifecycle(format!("{} is declared more than once", d.command)));
-        }
-    }
+    states(decls)?;
     let mut out: Vec<&LifecycleDecl> = decls.iter().filter(|d| d.lifecycle.state != State::Removed).collect();
     out.sort_by(|a, b| key(&a.command).cmp(&key(&b.command)));
     Ok(out)
@@ -302,9 +328,10 @@ impl MigratorRecord {
 /// Checks migrator records against the declarations (REQ-005, REQ-006). Fails with
 /// `migrator_invalid` when the target major is not greater than the source, the source or
 /// target (ID, major) is not declared or is `removed`, or two records share a command,
-/// source and target.
+/// source and target. A pair declared twice in `decls` is `bad_lifecycle`, as in [`retained`].
+/// A `hidden` target is accepted: the spec only excludes removed or undeclared majors.
 pub fn check_migrators(decls: &[LifecycleDecl], migrators: &[MigratorRecord]) -> Result<(), LifeError> {
-    let states: BTreeMap<(&str, u32), State> = decls.iter().map(|d| (key(&d.command), d.lifecycle.state)).collect();
+    let states = states(decls)?;
     let mut seen = BTreeSet::new();
     for m in migrators {
         let name = m.command.as_str();
@@ -337,6 +364,11 @@ pub enum LifeError {
         since: Date,
         release: Date,
     },
+    /// `hidden → removed` before the promised `remove_after` date.
+    RemovalTooEarly {
+        after: Date,
+        release: Date,
+    },
     MigratorInvalid(String),
     /// A lifecycle object, date or declaration list is malformed.
     BadLifecycle(String),
@@ -348,6 +380,7 @@ impl LifeError {
         match self {
             LifeError::IllegalTransition { .. } => "illegal_transition",
             LifeError::DeprecationTooShort { .. } => "deprecation_too_short",
+            LifeError::RemovalTooEarly { .. } => "removal_too_early",
             LifeError::MigratorInvalid(_) => "migrator_invalid",
             LifeError::BadLifecycle(_) => "bad_lifecycle",
         }
@@ -358,6 +391,9 @@ impl LifeError {
             LifeError::IllegalTransition { from, to } => format!("{from} -> {to} is not allowed"),
             LifeError::DeprecationTooShort { since, release } => {
                 format!("deprecated since {since}; hidden needs {DEPRECATION_MIN_MONTHS} months, release is {release}")
+            }
+            LifeError::RemovalTooEarly { after, release } => {
+                format!("removal promised not before {after}, release is {release}")
             }
             LifeError::MigratorInvalid(s) | LifeError::BadLifecycle(s) => s.clone(),
         }

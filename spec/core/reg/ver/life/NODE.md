@@ -69,6 +69,9 @@ The lifecycle of one (ID, major): its state, the dates and pointers that go with
 ## Open questions
 
 - The 12-month figure is the parent's [unverified] choice; it is one constant here and easy to change by decision.
+- Cross-leaf conflict with `CORE.REG.DEF.FIELD`: its fixtures (`fixtures/core/reg/def/field/defs_valid.json`) use lifecycle state `experimental`, which is not one of this leaf's four states, so `LifecycleDecl::from_def` refuses them. DEF.FIELD treats `lifecycle` as opaque; one of the two leaves should change (drop `experimental` from those fixtures, or add the state here by decision).
+- The spec does not say whether a migrator may target a `hidden` major. The build accepts it (only removed or undeclared majors are refused); a hidden target is useless for new calls but harmless for replay.
+- `hidden → removed` before a set `remove_after` date is refused with `removal_too_early`, a fourth code not listed under Errors (added in PR #130 review); `bad_lifecycle` likewise covers malformed lifecycle input. Both should be added to Errors if accepted.
 
 ## Children
 

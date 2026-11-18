@@ -259,6 +259,50 @@
    "to": "hidden",
    "release": "2025-12-30",
    "expect": "deprecation_too_short"
+  },
+  {
+   "name": "hidden -> removed, one day before remove_after",
+   "from": {
+    "state": "hidden",
+    "since": "2026-06-01",
+    "remove_after": "2027-06-01"
+   },
+   "to": "removed",
+   "release": "2027-05-31",
+   "expect": "removal_too_early"
+  },
+  {
+   "name": "hidden -> removed, on remove_after",
+   "from": {
+    "state": "hidden",
+    "since": "2026-06-01",
+    "remove_after": "2027-06-01"
+   },
+   "to": "removed",
+   "release": "2027-06-01",
+   "expect": "ok"
+  },
+  {
+   "name": "hidden -> removed, after remove_after",
+   "from": {
+    "state": "hidden",
+    "since": "2026-06-01",
+    "remove_after": "2027-06-01"
+   },
+   "to": "removed",
+   "release": "2027-06-02",
+   "expect": "ok"
+  },
+  {
+   "name": "hidden -> removed, well before remove_after",
+   "from": {
+    "state": "hidden",
+    "since": "2026-06-01",
+    "remove_after": "2027-06-01"
+   },
+   "to": "removed",
+   "release": "2026-07-01",
+   "expect": "removal_too_early"
   }
  ]
 }
