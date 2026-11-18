@@ -57,7 +57,10 @@ fn version_of<'a>(ix: &'a CatalogIndex, wf: &str) -> &'a str {
 fn ac1_ok_matches_golden() {
     let golden = std::fs::read(fx().join("catalog-index.json")).unwrap();
     let ix = check(&inputs("catalog-ok.json", "skills-ok")).unwrap();
-    assert_eq!(String::from_utf8(ix.to_canonical_bytes().unwrap()).unwrap(), String::from_utf8(golden.clone()).unwrap());
+    assert_eq!(
+        String::from_utf8(ix.to_canonical_bytes().unwrap()).unwrap(),
+        String::from_utf8(golden.clone()).unwrap()
+    );
     // D0: a second run gives the same bytes.
     assert_eq!(check(&inputs("catalog-ok.json", "skills-ok")).unwrap(), ix);
 

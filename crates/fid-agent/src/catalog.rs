@@ -393,7 +393,8 @@ pub fn check(inputs: &Inputs) -> Result<CatalogIndex, Vec<Finding>> {
     let manifest = parse_json(&manifest_bytes, fid_canon::MAX_INPUT_BYTES, "manifest").map_err(one)?;
     let guides = manifest_guides(&manifest).map_err(one)?;
     let profiles_bytes = read_input(&inputs.profiles, MAX_FILE_BYTES, "profiles").map_err(one)?;
-    let profiles = profile_names(&parse_json(&profiles_bytes, MAX_FILE_BYTES, "profiles").map_err(one)?).map_err(one)?;
+    let profiles =
+        profile_names(&parse_json(&profiles_bytes, MAX_FILE_BYTES, "profiles").map_err(one)?).map_err(one)?;
     let catalog_bytes = read_input(&inputs.catalog, MAX_FILE_BYTES, "catalog").map_err(one)?;
     let rows = parse_catalog(&catalog_bytes).map_err(one)?;
 
@@ -406,7 +407,11 @@ pub fn check(inputs: &Inputs) -> Result<CatalogIndex, Vec<Finding>> {
     }
     for (id, n) in &counts {
         if *n > 1 {
-            findings.push(Finding::new(Code::DuplicateWorkflow, id, format!("{n} catalog rows share this workflow ID")));
+            findings.push(Finding::new(
+                Code::DuplicateWorkflow,
+                id,
+                format!("{n} catalog rows share this workflow ID"),
+            ));
         }
     }
     let catalog_profiles: BTreeSet<&str> = rows.iter().map(|r| r.profile.as_str()).collect();
@@ -422,14 +427,21 @@ pub fn check(inputs: &Inputs) -> Result<CatalogIndex, Vec<Finding>> {
         let before = findings.len();
         let wf = row.workflow_id.as_str();
         let Some((guide_profile, guide)) = guides.get(&row.guide_id) else {
-            findings.push(Finding::new(Code::MissingGuide, wf, format!("guide {:?} is not in the manifest", row.guide_id)));
+            findings.push(Finding::new(
+                Code::MissingGuide,
+                wf,
+                format!("guide {:?} is not in the manifest", row.guide_id),
+            ));
             continue;
         };
         if *guide_profile != row.profile {
             findings.push(Finding::new(
                 Code::ProfileMismatch,
                 wf,
-                format!("guide {:?} belongs to profile {guide_profile:?}, the row names {:?}", row.guide_id, row.profile),
+                format!(
+                    "guide {:?} belongs to profile {guide_profile:?}, the row names {:?}",
+                    row.guide_id, row.profile
+                ),
             ));
         }
         let skill = inputs.skills.join(skill_dir_name(&row.guide_id)).join("SKILL.md");
@@ -461,9 +473,11 @@ pub fn check(inputs: &Inputs) -> Result<CatalogIndex, Vec<Finding>> {
             let path = inputs.recipes.join(format!("{id}.json"));
             match read_bounded(&path, MAX_FILE_BYTES) {
                 Ok(bytes) => recipes.push((id.clone(), Digest::from_bytes(fid_canon::digest_bytes(&bytes).0))),
-                Err(ReadErr::NotFound) => {
-                    findings.push(Finding::new(Code::MissingRecipe, wf, format!("recipe file {} not found", path.display())))
-                }
+                Err(ReadErr::NotFound) => findings.push(Finding::new(
+                    Code::MissingRecipe,
+                    wf,
+                    format!("recipe file {} not found", path.display()),
+                )),
                 Err(ReadErr::Other(e)) => findings.push(Finding::new(Code::BadInput, wf, e)),
             }
         }
