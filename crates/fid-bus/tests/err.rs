@@ -3,8 +3,8 @@
 
 use fid_bus::error::{
     bus_error_schema, bus_errors_digest, bus_errors_json, catalog_value, check_compatible, current_catalog,
-    parse_catalog, BusError, Code, ConflictReason, Detail, Removal, Untrusted, ValidationReason,
-    MAX_DETAIL_CHARS, TRUNCATION_MARKER,
+    parse_catalog, BusError, Code, ConflictReason, Detail, Removal, Untrusted, ValidationReason, MAX_DETAIL_CHARS,
+    TRUNCATION_MARKER,
 };
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use std::path::{Path, PathBuf};
