@@ -1,0 +1,14 @@
+[package]
+name = "fid-program"
+description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (spec node AUTO.PROG.FMT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true
