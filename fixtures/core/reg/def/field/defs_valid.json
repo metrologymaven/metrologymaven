@@ -1,0 +1,413 @@
+[
+ {
+  "id": "gdt.evaluate_flatness",
+  "major": 1,
+  "title": "Example command 0",
+  "description": "Fixture definition for side-effect class R0.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [
+   "gdt.flatness.mz@0.1.0"
+  ],
+  "exposure": [
+   "cli",
+   "python"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "available"
+ },
+ {
+  "id": "project.list_features",
+  "major": 2,
+  "title": "Example command 1",
+  "description": "Fixture definition for side-effect class R1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R1",
+  "mcp_projection": "request_only",
+  "determinism": "D1",
+  "idempotency": "keyed",
+  "fs_effect": "read_root",
+  "undo": "not_undoable",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "gui",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "partial",
+  "web_note": "Needs local instrument or file access.",
+  "human_only": true,
+  "network": "egress"
+ },
+ {
+  "id": "report.set_title",
+  "major": 3,
+  "title": "Example command 2",
+  "description": "Fixture definition for side-effect class W1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "W1",
+  "mcp_projection": "never",
+  "determinism": "D2",
+  "idempotency": "none",
+  "fs_effect": "write_root",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [
+   "report.set_title@1"
+  ],
+  "algorithms": [],
+  "exposure": [
+   "control",
+   "python"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "unavailable",
+  "web_note": "Needs local instrument or file access.",
+  "network": "device"
+ },
+ {
+  "id": "align.run_321",
+  "major": 1,
+  "title": "Example command 3",
+  "description": "Fixture definition for side-effect class W2.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "W2",
+  "mcp_projection": "exposed",
+  "determinism": "D3",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [
+   "align.run_321@1"
+  ],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "gui"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "available",
+  "network": "none",
+  "cli_bare": true
+ },
+ {
+  "id": "record.release_fai",
+  "major": 2,
+  "title": "Example command 4",
+  "description": "Fixture definition for side-effect class W3.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "W3",
+  "mcp_projection": "request_only",
+  "determinism": "N",
+  "idempotency": "keyed",
+  "fs_effect": "read_root",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [
+   "record.release_fai@1"
+  ],
+  "algorithms": [],
+  "exposure": [
+   "control",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "partial",
+  "web_note": "Needs local instrument or file access.",
+  "network": "egress"
+ },
+ {
+  "id": "egress.send",
+  "major": 3,
+  "title": "Example command 5",
+  "description": "Fixture definition for side-effect class X1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "X1",
+  "mcp_projection": "never",
+  "determinism": "D0",
+  "idempotency": "none",
+  "fs_effect": "write_root",
+  "undo": "not_undoable",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "python"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "unavailable",
+  "web_note": "Needs local instrument or file access.",
+  "human_only": true
+ },
+ {
+  "id": "hal.read_probe",
+  "major": 1,
+  "title": "Example command 6",
+  "description": "Fixture definition for side-effect class I1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "I1",
+  "mcp_projection": "exposed",
+  "determinism": "D1",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "gui",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "available",
+  "network": "none"
+ },
+ {
+  "id": "hal.connect_device",
+  "major": 2,
+  "title": "Example command 7",
+  "description": "Fixture definition for side-effect class D1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "D1",
+  "mcp_projection": "request_only",
+  "determinism": "D2",
+  "idempotency": "keyed",
+  "fs_effect": "read_root",
+  "undo": "not_undoable",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "control",
+   "python"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "partial",
+  "web_note": "Needs local instrument or file access.",
+  "network": "egress"
+ },
+ {
+  "id": "cmm.move_to",
+  "major": 3,
+  "title": "Example command 8",
+  "description": "Fixture definition for side-effect class M1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "M1",
+  "mcp_projection": "never",
+  "determinism": "D3",
+  "idempotency": "none",
+  "fs_effect": "write_root",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "gui"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "unavailable",
+  "web_note": "Needs local instrument or file access.",
+  "network": "device"
+ },
+ {
+  "id": "trust.sign_record",
+  "major": 1,
+  "title": "Example command 9",
+  "description": "Fixture definition for side-effect class S1.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "S1",
+  "mcp_projection": "exposed",
+  "determinism": "N",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "control",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "available",
+  "human_only": true,
+  "network": "none"
+ },
+ {
+  "id": "settings.set_admin_value",
+  "major": 2,
+  "title": "Example command 10",
+  "description": "Fixture definition for side-effect class A0.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "A0",
+  "mcp_projection": "request_only",
+  "determinism": "D0",
+  "idempotency": "keyed",
+  "fs_effect": "read_root",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "python"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "partial",
+  "web_note": "Needs local instrument or file access."
+ }
+]
