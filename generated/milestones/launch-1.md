@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**32** of **1336** leaves built in code ([B]).
+**34** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 26 built)
+### Wave 1 (125 leaves, 28 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -75,7 +75,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
 - [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
-- [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
+- [B] [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
 - [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
 - [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
 - [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
@@ -137,7 +137,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [QUAL.VULN.POLICY](../../spec/qual/vuln/policy/NODE.md) SECURITY.md, reporting channel and policy check (S, P1a)
 - [QUAL.VULN.TRIAGE](../../spec/qual/vuln/triage/NODE.md) Vulnerability records, triage timers and embargo checks (M, P1a)
 - [TRUST.CHAIN.CANON](../../spec/trust/chain/canon/NODE.md) Independent RFC 8785 canonicaliser and golden vectors (M, P0)
-- [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
+- [B] [TRUST.PKG.MANIFEST](../../spec/trust/pkg/manifest/NODE.md) Package container layout, manifest and in-toto statement (M, P0)
 - [TRUST.PROFILE.DEFS](../../spec/trust/profile/defs/NODE.md) Built-in profile definitions, schema and digest (M, P1a)
 - [TRUST.PROFILE.GATE.INVAR](../../spec/trust/profile/gate/invar/NODE.md) Registry-invariance CI test across profiles (S, P1a)
 - [TRUST.REPLAY.SANDBOX](../../spec/trust/replay/sandbox/NODE.md) WASM kernel sandbox with digest check and limits (M, P1a)
