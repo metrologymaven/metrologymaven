@@ -1,0 +1,24 @@
+[package]
+name = "fid-io-corp"
+description = "Metrology Maven format corpora: manifests, licence checks and fetching (spec node IO.CORP.MANIF)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "corpus-check"
+path = "src/bin/corpus-check.rs"
+
+[dependencies]
+fid-types = { path = "../fid-types" }
+# Reads the registry listing (`import.list_formats@1` JSON) with the project's bounded JSON parser.
+fid-canon = { path = "../fid-canon" }
+# Reads corpus manifests as an untyped table (no serde derive), as fid-knp1-lint does.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+# Streaming SHA-256 of corpus files and fetched bytes; already in the graph through fid-canon.
+sha2 = "0.10"
+
+[lints]
+workspace = true

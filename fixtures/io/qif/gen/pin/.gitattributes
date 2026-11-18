@@ -1,0 +1,2 @@
+# Pinned bytes: never convert line endings, or the SHA-256 digests stop matching.
+* -text
