@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-eval-suite]
+built_pr: 71
 satisfies: [REQ-AGENT.EVAL-001, REQ-AGENT.EVAL-002, REQ-AGENT.EVAL-004, REQ-AGENT.EVAL-006, REQ-AGENT.EVAL-007]
 covers: []
 depends_on: []
