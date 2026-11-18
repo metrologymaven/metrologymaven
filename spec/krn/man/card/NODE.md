@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kci]
+built_pr: 45
 satisfies: [REQ-KRN.MAN-003]
 covers: []
 depends_on: []

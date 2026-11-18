@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 47
 satisfies: [REQ-KRN.NUM-001, REQ-KRN.NUM-006]
 covers: []
 depends_on: [KRN.NUM.ERR]

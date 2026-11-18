@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 46
 satisfies: [REQ-ECO.REPO-001, REQ-ECO.REPO-002, REQ-ECO.REPO-004, REQ-ECO.REPO-007]
 covers: []
 depends_on: []
