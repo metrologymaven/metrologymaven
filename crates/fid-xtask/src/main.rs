@@ -7,7 +7,8 @@ use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
-                     cargo xtask plat-matrix validate <file>";
+                     cargo xtask plat-matrix validate <file>\n       \
+                     cargo xtask personas-check [--personas <json>] [--apps <toml>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -19,6 +20,7 @@ fn main() -> ExitCode {
         Some("datasets-check") => datasets_check(&args),
         Some("plat-matrix") => plat_matrix(&args),
         Some("pins") => pins::cli(&args[1..]),
+        Some("personas-check") => personas_check(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -60,6 +62,35 @@ fn plat_matrix(args: &[String]) -> ExitCode {
             eprintln!("plat-matrix: cannot run cargo: {e}");
             ExitCode::from(2)
         }
+    }
+}
+
+/// FLOW.PERSONA.PERS: checks the persona definitions file against the app list and the
+/// built-in governance profile names. Exit 0: clean; 1: findings; 2: usage error.
+fn personas_check(args: &[String]) -> ExitCode {
+    let mut personas = PathBuf::from("acceptance/personas/personas.json");
+    let mut apps = PathBuf::from("apps.toml");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--personas", Some(v)) => personas = PathBuf::from(v),
+            ("--apps", Some(v)) => apps = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let report = fid_accept::persona::check_files(&personas, &apps);
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("personas-check: {} personas", report.set.personas.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("personas-check: {} findings", report.findings.len());
+        ExitCode::from(1)
     }
 }
 
