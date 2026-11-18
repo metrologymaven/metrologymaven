@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-e57]
 satisfies: [REQ-IO.CLOUD.E57-004]
 covers: []
 depends_on: [IO.REG.LIMITS]
