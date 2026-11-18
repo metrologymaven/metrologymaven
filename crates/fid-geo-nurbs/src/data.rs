@@ -86,11 +86,9 @@ impl fmt::Display for NurbsError {
             NurbsError::BadDegree { dir, degree } => {
                 write!(f, "{}: degree {degree} outside 1..={MAX_DEGREE}", dir.as_str())
             }
-            NurbsError::CountMismatch { dir, knots, ctrl, degree } => write!(
-                f,
-                "{}: {knots} knots do not fit {ctrl} control points of degree {degree}",
-                dir.as_str()
-            ),
+            NurbsError::CountMismatch { dir, knots, ctrl, degree } => {
+                write!(f, "{}: {knots} knots do not fit {ctrl} control points of degree {degree}", dir.as_str())
+            }
             NurbsError::BadKnots { dir, index } => write!(f, "{}: bad knot at index {index}", dir.as_str()),
             NurbsError::NetShape { ctrl, n_u, n_v } => {
                 write!(f, "control net has {ctrl} points, expected {n_u} x {n_v}")
@@ -359,18 +357,8 @@ pub struct NurbsSurface {
 impl NurbsSurface {
     /// Validates and stores `parts` unchanged; the first failure is returned.
     pub fn new(parts: NurbsSurfaceParts) -> Result<Self, NurbsError> {
-        let NurbsSurfaceParts {
-            degree_u,
-            degree_v,
-            knots_u,
-            knots_v,
-            n_u,
-            n_v,
-            ctrl,
-            weights,
-            periodic_u,
-            periodic_v,
-        } = parts;
+        let NurbsSurfaceParts { degree_u, degree_v, knots_u, knots_v, n_u, n_v, ctrl, weights, periodic_u, periodic_v } =
+            parts;
         check_degree(Dir::U, degree_u)?;
         check_degree(Dir::V, degree_v)?;
         check_count(Dir::U, knots_u.len(), n_u, degree_u)?;

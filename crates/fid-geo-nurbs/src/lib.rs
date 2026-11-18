@@ -7,6 +7,4 @@
 
 pub mod data;
 
-pub use data::{
-    Dir, KnotVector, NurbsCurve, NurbsCurveParts, NurbsError, NurbsSurface, NurbsSurfaceParts, MAX_DEGREE,
-};
+pub use data::{Dir, KnotVector, NurbsCurve, NurbsCurveParts, NurbsError, NurbsSurface, NurbsSurfaceParts, MAX_DEGREE};

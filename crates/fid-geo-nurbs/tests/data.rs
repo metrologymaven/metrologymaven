@@ -404,7 +404,10 @@ fn knot_vector_standalone() {
         KnotVector::new(vec![0.0, 1.0], 1),
         Err(NurbsError::CountMismatch { dir: Dir::Curve, knots: 2, ctrl: 0, degree: 1 })
     );
-    assert_eq!(KnotVector::new(vec![], 3), Err(NurbsError::CountMismatch { dir: Dir::Curve, knots: 0, ctrl: 0, degree: 3 }));
+    assert_eq!(
+        KnotVector::new(vec![], 3),
+        Err(NurbsError::CountMismatch { dir: Dir::Curve, knots: 0, ctrl: 0, degree: 3 })
+    );
     assert_eq!(KnotVector::new(vec![0.0; 4], 0), Err(NurbsError::BadDegree { dir: Dir::Curve, degree: 0 }));
     assert_eq!(KnotVector::new(vec![0.0, 0.0, 1.0, 1.0], 1).unwrap().degree(), 1);
     assert_eq!(KnotVector::new(vec![0.0, 0.0, 0.0, 0.0], 1), Err(NurbsError::BadKnots { dir: Dir::Curve, index: 2 }));
