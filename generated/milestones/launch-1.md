@@ -54,7 +54,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
 - [ECO.COMM.SCOPE](../../spec/eco/comm/scope/NODE.md) Spec-tree validator, open-node listing and generated reports (M, P0)
 - [ECO.COMM.TIMELINE](../../spec/eco/comm/timeline/NODE.md) PR-timeline evaluator (author-blocked clock) (M, P0)
-- [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
+- [B] [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
 - [ECO.REL.PKG.PLAN](../../spec/eco/rel/pkg/plan/NODE.md) Package plan, Tier 1 build gate and placeholder-name gate (M, P1a)
 - [ECO.REL.PKG.REG](../../spec/eco/rel/pkg/reg/NODE.md) Installed-app registration and file association (S, P1a)
 - [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)

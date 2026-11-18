@@ -1,0 +1,16 @@
+# ECO.DATA.CAT fixture (mirror-noredist.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "vendor-eula-scan"
+title = "Synthetic dataset vendor-eula-scan"
+source = "https://example.org/datasets/vendor-eula-scan"
+licence = "LicenseRef-Vendor-EULA"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/vendor-eula-scan.zip"]
