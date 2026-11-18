@@ -1,5 +1,10 @@
 //! `fid-outreach <command> ...`: Metrology Maven outreach tooling (domain OUTR).
 //!
+//! `copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]` (spec node
+//! `OUTR.BRAND.COPY`, D-013 option C): prints one line per finding (`<code> [<subject>]`), or the
+//! canonical JSON report with `--json`. Exits 0 with no findings, 1 with any, and 2 when an input
+//! cannot be read or parsed, or on bad usage.
+//!
 //! `metric-def check --defs <file> --sources <file> [--json]` (spec node `OUTR.COMM.METRIC.DEF`):
 //! text mode prints one line per finding, then one `metric <id>` line per valid metric and a
 //! summary; `--json` prints the canonical JSON report instead. Exits 0 with no findings, 1 with
@@ -15,6 +20,7 @@
 //! violation, and exits 0 when there is none, 1 when there is any, and 2 on unreadable or
 //! unparsable input or bad usage.
 
+use fid_outreach::copy_guard;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::qa::a11y::{self, Options};
@@ -25,6 +31,7 @@ use std::process::ExitCode;
 
 const USAGE: &str = "usage: fid-outreach <command> [args]
 commands:
+  copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]";
@@ -32,6 +39,7 @@ commands:
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match (args.first().map(String::as_str), args.get(1).map(String::as_str)) {
+        (Some("copy-guard"), _) => copy_guard_cmd(args.get(1..).unwrap_or(&[])),
         (Some("metric-def"), Some("check")) => metric_def_check(args.get(2..).unwrap_or(&[])),
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
@@ -48,6 +56,55 @@ fn emit(bytes: &[u8]) {
     let mut out = std::io::stdout().lock();
     // A closed stdout is not worth a different exit code; the exit status carries the result.
     let _ = out.write_all(bytes).and_then(|()| out.write_all(b"\n"));
+}
+
+fn copy_guard_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            flag @ ("--policy" | "--checklist" | "--records" | "--root") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(policy), Some(checklist), Some(records), Some(root)) =
+        (opts.get("--policy"), opts.get("--checklist"), opts.get("--records"), opts.get("--root"))
+    else {
+        return usage();
+    };
+    let inputs = copy_guard::Inputs {
+        policy: Path::new(policy),
+        checklist: Path::new(checklist),
+        records: Path::new(records),
+        root: Path::new(root),
+    };
+    match copy_guard::run(&inputs) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                for f in &report.findings {
+                    println!("{f}");
+                }
+                println!("copy-guard: {} finding(s)", report.findings.len());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("copy-guard: {e}");
+            ExitCode::from(2)
+        }
+    }
 }
 
 fn metric_def_check(args: &[String]) -> ExitCode {

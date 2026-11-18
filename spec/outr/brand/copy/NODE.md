@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-outreach]
 satisfies: [REQ-OUTR.BRAND-005]
 covers: []
 depends_on: []

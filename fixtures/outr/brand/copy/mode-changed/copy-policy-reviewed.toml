@@ -1,0 +1,4 @@
+# Mode moved after a counsel review (synthetic fixture).
+mode = "hashed_shingles"
+decision = "D-013"
+counsel_review = { date = "2027-05-02", reviewer_ref = "counsel-memo-0001" }
