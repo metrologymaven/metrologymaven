@@ -15,6 +15,7 @@
 //! checks a list of guides against the command definitions of the same registry build.
 
 use crate::def::CommandDef;
+use crate::lifecycle::{LifecycleDecl, State};
 use fid_canon::{parse, CValue};
 use fid_types::{CommandId, CommandName, SideEffect};
 use std::collections::BTreeMap;
@@ -30,13 +31,16 @@ pub const MAX_PURPOSE: usize = 200;
 pub const MAX_STEPS: usize = 30;
 /// Largest guide ID, in bytes. The pattern of REQ-001 sets no length; this build bounds it.
 pub const MAX_GUIDE_ID: usize = 64;
+/// Largest command name in a step reference, in bytes (before `@major`). `fid-types` sets no
+/// length on command names; this build bounds what a guide may carry.
+pub const MAX_COMMAND_NAME: usize = 128;
 /// JSON Schema pattern of a guide ID (REQ-001).
 pub const GUIDE_ID_PATTERN: &str = "^[a-z][a-z0-9]*\\.[a-z][a-z0-9_]*$";
 /// JSON Schema pattern of an MCP profile name (`AUTO.MCP.SRV` REQ-001).
 pub const PROFILE_PATTERN: &str = "^[a-z][a-z0-9_]{1,31}$";
 /// JSON Schema pattern of a step's command reference: a command ID whose major is written
 /// without leading zeros, so the text names exactly one (ID, major).
-pub const STEP_COMMAND_PATTERN: &str = "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@(0|[1-9][0-9]{0,4})$";
+pub const STEP_COMMAND_PATTERN: &str = "^[a-z0-9]([a-z0-9_.]{0,126}[a-z0-9])?@(0|[1-9][0-9]{0,4})$";
 /// Side-effect classes a guide step may never name (REQ-003).
 pub const FORBIDDEN_STEP_CLASSES: [SideEffect; 3] = [SideEffect::M1, SideEffect::S1, SideEffect::A0];
 
@@ -75,6 +79,20 @@ pub enum GuideError {
         guide: String,
         step: usize,
         command: String,
+    },
+    /// A step names a major whose lifecycle is `hidden`: still served for old callers but
+    /// not offered to new work (`CORE.REG.VER.LIFE`), so a guide must not teach it.
+    HiddenCommand {
+        guide: String,
+        step: usize,
+        command: String,
+    },
+    /// A step names a command whose lifecycle record cannot be read.
+    BadLifecycle {
+        guide: String,
+        step: usize,
+        command: String,
+        detail: String,
     },
     /// A step names an M1, S1 or A0 command.
     ForbiddenStep {
@@ -117,6 +135,8 @@ impl GuideError {
     pub fn code(&self) -> &'static str {
         match self {
             GuideError::UnknownCommand { .. } => "guide_unknown_command",
+            GuideError::HiddenCommand { .. } => "guide_hidden_command",
+            GuideError::BadLifecycle { .. } => "guide_bad_lifecycle",
             GuideError::ForbiddenStep { .. } => "guide_forbidden_step",
             GuideError::TooLarge { .. } => "guide_too_large",
             GuideError::BadId { .. } => "guide_bad_id",
@@ -136,6 +156,12 @@ impl fmt::Display for GuideError {
         match self {
             GuideError::UnknownCommand { guide, step, command } => {
                 write!(f, "{code}: guide {guide} step {step} names {command}")
+            }
+            GuideError::HiddenCommand { guide, step, command } => {
+                write!(f, "{code}: guide {guide} step {step} names hidden {command}")
+            }
+            GuideError::BadLifecycle { guide, step, command, detail } => {
+                write!(f, "{code}: guide {guide} step {step} names {command}: {detail}")
             }
             GuideError::ForbiddenStep { guide, step, command, class } => {
                 write!(f, "{code}: guide {guide} step {step} names {command} of class {class}")
@@ -178,6 +204,9 @@ pub fn is_profile_name(s: &str) -> bool {
 /// Parses a step's command reference: a command ID whose major has no leading zeros.
 fn parse_command_ref(s: &str) -> Option<CommandId> {
     let id = CommandId::parse(s).ok()?;
+    if id.name().len() > MAX_COMMAND_NAME {
+        return None;
+    }
     let name = CommandName::parse(id.name()).ok()?;
     let canonical = CommandId::new(&name, id.major()).ok()?;
     (canonical.as_str() == s).then_some(canonical)
@@ -347,22 +376,25 @@ pub fn guides_to_value(guides: &[TaskGuide]) -> CValue {
     CValue::Arr(sorted.into_iter().map(TaskGuide::to_value).collect())
 }
 
-/// Whether a definition's lifecycle says `removed`; such a major is not in the build's
-/// manifest (`CORE.REG.VER.LIFE` REQ-004), so a guide cannot name it.
-fn is_removed(def: &CommandDef) -> bool {
-    matches!(def.lifecycle.get("state"), Some(CValue::Str(s)) if s == "removed")
-}
-
 /// Checks the guides of one registry build against its command definitions
 /// (REQ-001..REQ-003). For each guide in the given order: its own shape
 /// ([`TaskGuide::validate`]; a guide that fails it is not looked up further), then each step
-/// in order, `guide_unknown_command` or `guide_forbidden_step`. Last, one
-/// `guide_duplicate` per guide ID declared more than once, in ID order. Empty means the
-/// guides pass. The definitions are looked up by (ID, major) in a sorted index.
+/// in order. The definitions are looked up by (ID, major) in a sorted index and their
+/// lifecycle is read with [`LifecycleDecl::from_def`]:
+/// - not declared, or declared `removed` (not in the manifest, `CORE.REG.VER.LIFE`
+///   REQ-004): `guide_unknown_command`;
+/// - lifecycle record unreadable: `guide_bad_lifecycle`;
+/// - `hidden`: `guide_hidden_command`;
+/// - side-effect class M1, S1 or A0: `guide_forbidden_step`.
+///
+/// `active` and `deprecated` majors pass (the leaf defines no warning for `deprecated`).
+/// Last, one `guide_duplicate` per guide ID declared more than once, in ID order. Empty
+/// means the guides pass.
 pub fn check_guides(guides: &[TaskGuide], defs: &[CommandDef]) -> Vec<GuideError> {
-    let mut index: BTreeMap<(&str, u32), &CommandDef> = BTreeMap::new();
-    for d in defs.iter().filter(|d| !is_removed(d)) {
-        index.entry((d.id.as_str(), d.major)).or_insert(d);
+    let mut index: BTreeMap<(&str, u32), (&CommandDef, Result<State, String>)> = BTreeMap::new();
+    for d in defs {
+        let state = LifecycleDecl::from_def(d).map(|l| l.lifecycle.state).map_err(|e| e.to_string());
+        index.entry((d.id.as_str(), d.major)).or_insert((d, state));
     }
     let mut errors = Vec::new();
     for g in guides {
@@ -372,16 +404,19 @@ pub fn check_guides(guides: &[TaskGuide], defs: &[CommandDef]) -> Vec<GuideError
         }
         for (i, step) in g.steps.iter().enumerate() {
             let command = step.command.as_str().to_string();
-            match index.get(&(step.command.name(), step.command.major())) {
-                None => errors.push(GuideError::UnknownCommand { guide: g.id.clone(), step: i, command }),
-                Some(d) if FORBIDDEN_STEP_CLASSES.contains(&d.side_effect) => errors.push(GuideError::ForbiddenStep {
-                    guide: g.id.clone(),
-                    step: i,
-                    command,
-                    class: d.side_effect,
-                }),
-                Some(_) => {}
-            }
+            let guide = g.id.clone();
+            let error = match index.get(&(step.command.name(), step.command.major())) {
+                None | Some((_, Ok(State::Removed))) => Some(GuideError::UnknownCommand { guide, step: i, command }),
+                Some((_, Err(detail))) => {
+                    Some(GuideError::BadLifecycle { guide, step: i, command, detail: detail.clone() })
+                }
+                Some((_, Ok(State::Hidden))) => Some(GuideError::HiddenCommand { guide, step: i, command }),
+                Some((d, Ok(_))) if FORBIDDEN_STEP_CLASSES.contains(&d.side_effect) => {
+                    Some(GuideError::ForbiddenStep { guide, step: i, command, class: d.side_effect })
+                }
+                Some(_) => None,
+            };
+            errors.extend(error);
         }
     }
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();

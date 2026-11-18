@@ -64,6 +64,106 @@
   ]
  },
  {
+  "name": "hidden major",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.retired_export@1",
+      "purpose": "A hidden major."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_hidden_command"
+  ]
+ },
+ {
+  "name": "impossible lifecycle date",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.broken_life@1",
+      "purpose": "Lifecycle since 2026-02-30."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_lifecycle"
+  ]
+ },
+ {
+  "name": "unknown lifecycle state",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "demo.odd_state@1",
+      "purpose": "Lifecycle state paused."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_bad_lifecycle"
+  ]
+ },
+ {
+  "name": "128-byte command name, undeclared",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "d.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1",
+      "purpose": "Long name."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "guide_unknown_command"
+  ]
+ },
+ {
+  "name": "129-byte command name",
+  "guides": [
+   {
+    "id": "demo.align_scan",
+    "title": "Align a scan to CAD",
+    "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+    "profile": "core",
+    "steps": [
+     {
+      "command": "d.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1",
+      "purpose": "Too long a name."
+     }
+    ]
+   }
+  ],
+  "expect": [
+   "bad_type"
+  ]
+ },
+ {
   "name": "M1 step",
   "guides": [
    {

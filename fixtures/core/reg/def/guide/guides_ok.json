@@ -146,5 +146,21 @@
     "purpose": "Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step 29 étape Step"
    }
   ]
+ },
+ {
+  "id": "demo.legacy_path",
+  "title": "Align a scan to CAD",
+  "summary": "Load a point cloud, fit it to the nominal CAD model and apply the alignment to the working document.",
+  "profile": "core",
+  "steps": [
+   {
+    "command": "demo.load_scan@1",
+    "purpose": "Load the point cloud."
+   },
+   {
+    "command": "demo.legacy_fit@1",
+    "purpose": "Fit with the deprecated major; still allowed."
+   }
+  ]
  }
 ]

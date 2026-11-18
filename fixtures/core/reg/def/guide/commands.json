@@ -238,5 +238,125 @@
    "since": "2026-01-01"
   },
   "web": "available"
+ },
+ {
+  "id": "demo.legacy_fit",
+  "major": 1,
+  "title": "Fixture command demo.legacy_fit",
+  "description": "Fixture definition of class R1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R1",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "deprecated",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.retired_export",
+  "major": 1,
+  "title": "Fixture command demo.retired_export",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "hidden",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.broken_life",
+  "major": 1,
+  "title": "Fixture command demo.broken_life",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-02-30"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.odd_state",
+  "major": 1,
+  "title": "Fixture command demo.odd_state",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "paused",
+   "since": "2026-01-01"
+  },
+  "web": "available"
  }
 ]
