@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-brand-lint]
 satisfies: [REQ-OUTR.BRAND-003, REQ-OUTR.BRAND-004, REQ-OUTR.BRAND-006, REQ-OUTR.BRAND-007]
 covers: []
 depends_on: []
