@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::fmt;
 
 use crate::kci::json::Flat;
-use crate::kci::{sha256, Digest};
+use crate::kci::{sha256_digest, Digest};
 
 /// Longest allowed free-text field, in characters (REQ-KRN.MAN.CARD-004).
 pub const MAX_FIELD_CHARS: usize = 2000;
@@ -318,7 +318,7 @@ pub fn parse_card(text: &str) -> Result<SpecCard, CardError> {
         failure_modes: get_list("failure_modes")?,
         validation: get_str("validation")?,
     };
-    if !matches!(card.determinism.as_str(), "D0" | "D1" | "D2" | "D3" | "N") {
+    if fid_types::Determinism::parse(&card.determinism).is_err() {
         return Err(CardError::BadDeterminism(card.determinism));
     }
     check_text(&card)?;
@@ -425,7 +425,7 @@ impl CardRegistry {
             .into_iter()
             .map(|c| {
                 let bytes = c.canonical_bytes();
-                let digest = sha256(&bytes);
+                let digest = sha256_digest(&bytes);
                 (c, bytes, digest)
             })
             .collect();

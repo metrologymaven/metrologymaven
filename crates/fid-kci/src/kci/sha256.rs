@@ -1,8 +1,7 @@
 //! SHA-256 per FIPS 180-4, in portable `u32` code (no intrinsics, no runtime dispatch).
 //! Spec node `KRN.MAN.KCI` (REQ-KRN.MAN.KCI-007).
 
-/// A SHA-256 digest.
-pub type Digest = [u8; 32];
+use fid_types::Digest;
 
 /// FIPS 180-4 §4.2.2: the first 32 bits of the fractional parts of the cube roots of the
 /// first 64 primes.
@@ -69,7 +68,7 @@ impl Sha256 {
     }
 
     /// Pads (FIPS 180-4 §5.1.1) and returns the digest.
-    pub fn finish(mut self) -> Digest {
+    pub fn finish(mut self) -> [u8; 32] {
         let bit_len = self.len.wrapping_mul(8);
         let mut block = self.block;
         block[self.filled] = 0x80;
@@ -122,7 +121,7 @@ fn compress(state: &mut [u32; 8], block: &[u8; 64]) {
 }
 
 /// SHA-256 of a byte string.
-pub fn sha256(data: &[u8]) -> Digest {
+pub fn sha256(data: &[u8]) -> [u8; 32] {
     let mut h = Sha256::new();
     h.update(data);
     h.finish()
@@ -139,7 +138,7 @@ pub fn to_hex(bytes: &[u8]) -> String {
     s
 }
 
-/// The digest as `sha256:<64 lowercase hex>` (CONSTITUTION digest notation).
-pub fn digest_string(d: &Digest) -> String {
-    format!("sha256:{}", to_hex(d))
+/// SHA-256 of a byte string in the shared wire form `sha256:<64 lowercase hex>`.
+pub fn sha256_digest(data: &[u8]) -> Digest {
+    Digest::from_bytes(sha256(data))
 }

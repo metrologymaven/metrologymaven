@@ -1,0 +1,14 @@
+[package]
+name = "fid-types"
+description = "Metrology Maven shared vocabulary: determinism and side-effect classes, sha256 digests, command IDs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Lowest layer (num): no dependencies, so every crate, kernel included, may use it.
+[dependencies]
+
+[lints]
+workspace = true

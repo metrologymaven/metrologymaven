@@ -10,8 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: stable
           components: rustfmt
       - run: cargo fmt --all --check
   test:
@@ -22,9 +23,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: stable
           components: clippy
+      - name: Cargo.lock up to date (informational)
+        # Non-blocking: builder PRs may add crates without refreshing Cargo.lock
+        # (refresh via the lockfile workflow). Runs before any build touches the lock.
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: cargo metadata --locked --format-version 1 > /dev/null
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
@@ -53,3 +61,41 @@ jobs:
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
           python tools/check_command_defs.py
+  msrv:
+    # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
+    # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: "1.81"
+      - name: Check on MSRV 1.81
+        run: cargo check --workspace --all-targets
+  deny:
+    # Licences, advisories, bans, sources (deny.toml).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2
+        with:
+          command: check all
+  wasm32:
+    # CONSTITUTION §4: bit-identity on wasm32 (KRN.NUM.ERR AC-2, KRN.NUM.RNG AC-2).
+    # Test binaries run under wasmtime; the workspace is mapped at its own absolute
+    # path so fixture paths built from CARGO_MANIFEST_DIR resolve inside the guest.
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime run --dir ${{ github.workspace }}::${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1
+      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
+        with:
+          version: "v49.0.6"
+      - run: wasmtime --version
+      - name: Test kernel and core crates on wasm32-wasip1
+        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types

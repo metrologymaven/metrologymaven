@@ -14,7 +14,8 @@ use std::fmt;
 use crate::cards::{AlgorithmId, CardRegistry};
 use fid_num::err::{probe_fp_env, NumError};
 use json::{fixed_object, Flat};
-pub use sha256::{digest_string, sha256, to_hex, Digest, Sha256};
+pub use fid_types::Digest;
+pub use sha256::{sha256, sha256_digest, to_hex, Sha256};
 
 /// One kernel call (REQ-KRN.MAN.KCI-002).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,7 +26,7 @@ pub struct KernelCall {
     pub params: Vec<u8>,
     /// Optional seed.
     pub seed: Option<u64>,
-    /// Input blobs, each with its claimed SHA-256 digest.
+    /// Input blobs, each with its claimed SHA-256 digest (shared `fid_types::Digest`).
     pub inputs: Vec<(Vec<u8>, Digest)>,
 }
 
@@ -72,17 +73,15 @@ impl KernelResult {
     /// the seed as a decimal string (the member is omitted when there is no seed).
     pub fn canonical_json(&self) -> Vec<u8> {
         let algorithm = self.algorithm.to_string();
-        let inputs: Vec<String> = self.input_digests.iter().map(digest_string).collect();
+        let inputs: Vec<String> = self.input_digests.iter().map(|d| d.as_str().to_string()).collect();
         let output = to_hex(&self.output);
-        let output_digest = digest_string(&self.output_digest);
-        let params_digest = digest_string(&self.params_digest);
         let seed = self.seed.map(|s| s.to_string());
         let mut members = vec![
             ("algorithm", Flat::Str(&algorithm)),
             ("input_digests", Flat::List(&inputs)),
             ("output", Flat::Str(&output)),
-            ("output_digest", Flat::Str(&output_digest)),
-            ("params_digest", Flat::Str(&params_digest)),
+            ("output_digest", Flat::Str(self.output_digest.as_str())),
+            ("params_digest", Flat::Str(self.params_digest.as_str())),
         ];
         if let Some(s) = &seed {
             members.push(("seed", Flat::Str(s)));
@@ -209,7 +208,7 @@ pub fn evaluate(table: &AlgorithmTable, call: &KernelCall) -> Result<KernelResul
     }
     let mut input_digests = Vec::with_capacity(call.inputs.len());
     for (input_index, (bytes, claimed)) in call.inputs.iter().enumerate() {
-        let d = sha256(bytes);
+        let d = sha256_digest(bytes);
         if &d != claimed {
             return Err(KernelError::DigestMismatch { input_index });
         }
@@ -220,10 +219,10 @@ pub fn evaluate(table: &AlgorithmTable, call: &KernelCall) -> Result<KernelResul
     let output = alg.run(&call.params, call.seed, &inputs)?;
     Ok(KernelResult {
         algorithm: call.algorithm.clone(),
-        params_digest: sha256(&call.params),
+        params_digest: sha256_digest(&call.params),
         input_digests,
         seed: call.seed,
-        output_digest: sha256(&output),
+        output_digest: sha256_digest(&output),
         output,
     })
 }

@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_kci::kci::json::{to_canonical, Json, JsonError};
-use fid_kci::kci::{digest_string, sha256, Sha256};
+use fid_kci::kci::{sha256, sha256_digest, Digest, Sha256};
 use fid_kci::{
     evaluate, parse_card, AlgorithmFailure, AlgorithmId, AlgorithmTable, CardRegistry, KernelAlgorithm, KernelCall,
     KernelError,
@@ -101,7 +101,7 @@ fn ac1_fips180_examples() {
 fn sha256_matches_independent_implementation() {
     let data: Vec<u8> = (0..1000u32).map(|i| (i.wrapping_mul(2654435761) >> 13) as u8).collect();
     for n in 0..=300 {
-        assert_eq!(digest_string(&sha256(&data[..n])), fid_testkit::sha256_hex(&data[..n]), "len {n}");
+        assert_eq!(sha256_digest(&data[..n]).as_str(), fid_testkit::sha256_hex(&data[..n]), "len {n}");
     }
     let m = &data[..200];
     let want = sha256(m);
@@ -237,7 +237,7 @@ fn call(alg: &str, params: &[u8], seed: Option<u64>, inputs: &[&[u8]]) -> Kernel
         algorithm: AlgorithmId::parse(alg).unwrap(),
         params: params.to_vec(),
         seed,
-        inputs: inputs.iter().map(|x| (x.to_vec(), sha256(x))).collect(),
+        inputs: inputs.iter().map(|x| (x.to_vec(), sha256_digest(x))).collect(),
     }
 }
 
@@ -260,14 +260,14 @@ fn ac2_golden_calls() {
         let c = call(ECHO, &params, seed, &refs);
         // The claimed digests also agree with the independent sha2 crate.
         for (x, d) in &c.inputs {
-            assert_eq!(digest_string(d), fid_testkit::sha256_hex(x));
+            assert_eq!(d.as_str(), fid_testkit::sha256_hex(x));
         }
         let r = evaluate(&t, &c).unwrap_or_else(|e| panic!("{}: {e}", f[0]));
         assert_eq!(String::from_utf8(r.canonical_json()).unwrap(), f[4], "{}", f[0]);
         assert_eq!(r.seed(), seed);
         assert_eq!(r.algorithm().to_string(), ECHO);
-        assert_eq!(digest_string(r.output_digest()), fid_testkit::sha256_hex(r.output()));
-        assert_eq!(digest_string(r.params_digest()), fid_testkit::sha256_hex(&params));
+        assert_eq!(r.output_digest().as_str(), fid_testkit::sha256_hex(r.output()));
+        assert_eq!(r.params_digest().as_str(), fid_testkit::sha256_hex(&params));
         assert_eq!(r.input_digests().len(), inputs.len());
         // Same call, same bytes.
         assert_eq!(evaluate(&t, &c).unwrap(), r);
@@ -279,22 +279,28 @@ fn ac2_golden_calls() {
 
 // --------------------------------------------------------------- AC-3: digest mismatch
 
+fn flip(d: Digest, byte: usize, mask: u8) -> Digest {
+    let mut b = d.to_bytes();
+    b[byte] ^= mask;
+    Digest::from_bytes(b)
+}
+
 #[test]
 fn ac3_flipped_bit_in_second_input() {
     let (t, counter, _) = table();
     let mut c = call(ECHO, b"p", Some(1), &[b"first", b"second", b"third"]);
-    c.inputs[1].1[0] ^= 0x01;
+    c.inputs[1].1 = flip(c.inputs[1].1, 0, 0x01);
     let err = evaluate(&t, &c).unwrap_err();
     assert_eq!(err, KernelError::DigestMismatch { input_index: 1 });
     assert_eq!(err.code(), "digest_mismatch");
     assert_eq!(counter.get(), 0, "no algorithm code may run");
     // The last bit of the first input, with invalid params as well: still a mismatch, still no call.
     let mut c = call(ECHO, b"\x00bad", None, &[b"a", b"b"]);
-    c.inputs[0].1[31] ^= 0x80;
+    c.inputs[0].1 = flip(c.inputs[0].1, 31, 0x80);
     assert_eq!(evaluate(&t, &c), Err(KernelError::DigestMismatch { input_index: 0 }));
     // An empty input claiming the digest of a non-empty one.
     let mut c = call(ECHO, b"p", None, &[b""]);
-    c.inputs[0].1 = sha256(b"x");
+    c.inputs[0].1 = sha256_digest(b"x");
     assert_eq!(evaluate(&t, &c), Err(KernelError::DigestMismatch { input_index: 0 }));
     assert_eq!(counter.get(), 0);
 }
@@ -373,7 +379,7 @@ fn card_canonical_bytes_and_digests() {
     let reg = CardRegistry::new(cards).unwrap();
     for (id, json, digest) in expected {
         assert_eq!(reg.canonical_bytes(&id).unwrap(), json.as_bytes());
-        assert_eq!(hex(reg.digest(&id).unwrap()), digest);
+        assert_eq!(reg.digest(&id).unwrap().hex(), digest);
         assert_eq!(reg.get(&id).unwrap().id, id);
     }
     let mut ids = reg.ids();
