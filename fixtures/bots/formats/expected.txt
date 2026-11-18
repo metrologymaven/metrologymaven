@@ -1,0 +1,3 @@
+BOTS-EXCLUDE toml-bot customers/**
+BOTS-EXCLUDE yaml-bot customers/**
+BOTS-EXCLUDE yaml-bot standards/**

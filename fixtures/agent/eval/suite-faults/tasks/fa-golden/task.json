@@ -1,0 +1,36 @@
+{
+  "id": "fa-golden",
+  "source_job": "JOB.ACC.01",
+  "golden_digest": "sha256:c792d8de190bf1144718cdb1634728eb575a1fefa15a7236626293de8660c9fb",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:ed39edfa497522c073a0c8325feb05b4e93d52fa5bd5e34fa382b085e3ceb590"
+  },
+  "prompt": "Evaluate the flatness of plane PL1 against its tolerance and report the decision.",
+  "profile": "inspect-r1",
+  "budget": {
+    "wall_s": 600,
+    "tool_calls": 40
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "single_command",
+  "apps": [
+    "inspect"
+  ],
+  "workflows": [
+    "inspect.evaluate_flatness"
+  ],
+  "licences": [
+    {
+      "file": "in/part.qif",
+      "spdx": "project-authored"
+    }
+  ]
+}

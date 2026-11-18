@@ -1,0 +1,20 @@
+# Bot register (spec node ECO.CI.BOTS.REG): every automated account that acts on this
+# repository, checked by `cargo xtask bots-check`. Adding or changing an entry is a
+# reviewed PR; `approved_by` is the maintainer who approved it. The `account` values also
+# tell the PR-timeline tool (ECO.COMM.TIMELINE) which actors are bots.
+#
+# Today the only automation is GitHub Actions running this repository's own workflows
+# (.github/workflows), acting as github-actions[bot]: claim.yml assigns, labels and
+# comments on issues; expert-queue.yml creates, labels and closes expert-queue issues
+# (with a closing comment); the other workflows only run checks or build the site. No review bot is installed yet;
+# the self-hosted reviewer (ECO.CI.BOTS.REVIEW) gets its entry when it is built.
+
+[[bot]]
+id = "github-actions"
+kind = "hosted"
+account = "github-actions[bot]"
+terms = "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service"
+data_handling = "Runs this repository's own workflows on GitHub-hosted runners; sends no repository content to any service outside GitHub."
+reviewed_on = 2026-11-17
+approved_by = "metrologymaven"
+sends_content = false

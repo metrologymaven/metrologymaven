@@ -1,0 +1,5 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.REG (MIT OR Apache-2.0).
+# Complete exclusions in flow style; only the canary date is missing (AC-4).
+reviews:
+  path_filters:
+    exclude: ["standards/**", "customers/**"]

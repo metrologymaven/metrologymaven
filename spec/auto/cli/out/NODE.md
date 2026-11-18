@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-cli]
+built_pr: 128
 satisfies: [REQ-AUTO.CLI-002, REQ-AUTO.CLI-005]
 covers: []
 depends_on: [AUTO.SURF.ENV]
@@ -72,7 +74,7 @@ Fake bus scripted per outcome; fixture manifest `fixtures/manifest/min-classes.j
 
 ## Open questions
 
-- None.
+- For maintainer decision: envelopes the CLI writes before any command is resolved (usage errors such as an unknown command, and internal errors with no valid command ID) need a `command_id`. The first build (PR #128) uses the placeholder `cli.invoke@1`, which is not a registered command. Should it be registered, renamed, or should the envelope allow such errors without a command ID?
 
 ## Children
 
