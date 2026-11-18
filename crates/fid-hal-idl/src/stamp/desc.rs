@@ -39,7 +39,11 @@ pub(crate) enum Ty {
     Tag(&'static str),
     Nullable(&'static Ty),
     /// A list of at most `max` items; `sorted` lists hold strings in strictly ascending order.
-    Arr { item: &'static Ty, max: usize, sorted: bool },
+    Arr {
+        item: &'static Ty,
+        max: usize,
+        sorted: bool,
+    },
     /// A sequence range `[first, last]` of two decimal `u64` strings, `last >= first`.
     Seq,
     Obj(&'static [Field]),
@@ -136,8 +140,7 @@ pub(crate) const SI_UNITS: &[&str] = &["m", "rad", "s", "K", "Pa", "1"];
 
 // ------------------------------------------------------------------ tables
 
-const GAP: &[Field] =
-    &[f("from", Ty::U64), f("reason", Ty::Enum(GapReason::WIRE)), f("to", Ty::U64)];
+const GAP: &[Field] = &[f("from", Ty::U64), f("reason", Ty::Enum(GapReason::WIRE)), f("to", Ty::U64)];
 
 const CAPABILITY: &[Field] = &[
     f("features", Ty::Arr { item: &Ty::Pat(&IDENT), max: MAX_LIST, sorted: true }),
@@ -253,7 +256,8 @@ pub(crate) fn record_kind(v: &CValue) -> Result<RecordKind, StampError> {
     let tag = o.get("schema").ok_or_else(|| err(K::FieldMissing, "/schema"))?;
     let CValue::Str(s) = tag else { return Err(err(K::ValueInvalid, "/schema")) };
     let (kind, _) = split_tag(s).ok_or_else(|| err(K::ValueInvalid, "/schema"))?;
-    let kind = RecordKind::ALL.into_iter().find(|k| k.as_str() == kind).ok_or_else(|| err(K::EnumInvalid, "/schema"))?;
+    let kind =
+        RecordKind::ALL.into_iter().find(|k| k.as_str() == kind).ok_or_else(|| err(K::EnumInvalid, "/schema"))?;
     check_tag(kind.as_str(), tag, "/schema")?;
     Ok(kind)
 }
@@ -485,7 +489,8 @@ mod tests {
 
     #[test]
     fn tables_are_sorted() {
-        for t in [GAP, CAPABILITY, DRIVER, DEVICE, CALIBRATION, UTC_ANCHOR, TIME, STAMP, BATCH, QUANTITY, BATCH_REF, CLAIM]
+        for t in
+            [GAP, CAPABILITY, DRIVER, DEVICE, CALIBRATION, UTC_ANCHOR, TIME, STAMP, BATCH, QUANTITY, BATCH_REF, CLAIM]
         {
             assert!(t.windows(2).all(|w| w[0].name < w[1].name));
         }

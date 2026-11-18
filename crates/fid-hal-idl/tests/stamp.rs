@@ -186,8 +186,13 @@ fn typed_records_are_checked_before_digesting() {
 /// Malformed input is a typed error, never a panic.
 #[test]
 fn malformed_json_is_typed() {
-    let cases: [&[u8]; 5] =
-        [b"", b"{", b"{\"schema\":\"stamp/0\",\"schema\":\"stamp/0\"}", b"\xff", b"[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]"];
+    let cases: [&[u8]; 5] = [
+        b"",
+        b"{",
+        b"{\"schema\":\"stamp/0\",\"schema\":\"stamp/0\"}",
+        b"\xff",
+        b"[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]",
+    ];
     for bad in cases {
         let e = validate(bad).unwrap_err();
         assert_eq!((e.kind, e.pointer.as_str()), (StampErrorKind::JsonInvalid, ""));

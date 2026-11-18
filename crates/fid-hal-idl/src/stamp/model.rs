@@ -469,10 +469,7 @@ fn gaps_value(gaps: &[Gap]) -> CValue {
 fn check_gaps(seq: SeqRange, gaps: &[Gap], ptr: &str) -> Result<(), StampError> {
     let mut prev_to: Option<u64> = None;
     for (i, g) in gaps.iter().enumerate() {
-        let ok = g.from <= g.to
-            && g.from >= seq.first
-            && g.to <= seq.last
-            && prev_to.map_or(true, |t| g.from > t);
+        let ok = g.from <= g.to && g.from >= seq.first && g.to <= seq.last && prev_to.map_or(true, |t| g.from > t);
         if !ok {
             return Err(StampError::new(K::SeqInvalid, &child(&child(ptr, "gaps"), &i.to_string())));
         }
@@ -570,7 +567,10 @@ impl ProvenanceStamp {
         let dg = |x: &Digest| st(x.as_str());
         obj([
             ("batch_id", dec(self.batch_id)),
-            ("calibration", obj([("refs", strs(&self.calibration.refs)), ("status", st(self.calibration.status.as_str()))])),
+            (
+                "calibration",
+                obj([("refs", strs(&self.calibration.refs)), ("status", st(self.calibration.status.as_str()))]),
+            ),
             (
                 "capability",
                 obj([
@@ -732,9 +732,7 @@ impl ExternalClaim {
         let mut q = r.obj("value")?;
         let unit = q.wire("unit", |s| SiUnit::parse(s).ok())?;
         let bits = q.string("value")?;
-        let value = f64_hex(&bits)
-            .and_then(|x| Quantity::new(x, unit).ok())
-            .ok_or_else(|| invalid(&q.p("value")))?;
+        let value = f64_hex(&bits).and_then(|x| Quantity::new(x, unit).ok()).ok_or_else(|| invalid(&q.p("value")))?;
         let mut b = r.obj("batch")?;
         Ok(ExternalClaim {
             quantity: r.string("quantity")?,
