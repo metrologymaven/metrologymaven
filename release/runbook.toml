@@ -65,8 +65,17 @@ performer = "ci"
 job = "sbom"
 gates = []
 channels = ["nightly", "beta", "stable", "lts"]
-status = "planned"
-notes = "Planned: ECO.REL.SIGN.SBOM is not built yet."
+status = "available"
+tool = "cargo xtask rel sbom --plan <package-plan.json> --workspace . --native release/native-components.toml --out <dir>"
+notes = """
+Spec node ECO.REL.SIGN.SBOM. Writes one SPDX 2.3 JSON document `<artefact>.spdx.json` per
+planned artefact from `cargo metadata --locked --offline` and Cargo.lock; no network. Add
+`--artefacts <dir>` to take each artefact's SHA-256 from the built file, and
+`--commit-time <YYYY-MM-DDThh:mm:ssZ>` (the release commit's UTC commit time) when the plan does
+not carry `commit_time`. The documents are release artefacts of kind `sbom`, left out of
+SHA256SUMS by `rel sums`. ECO.REL.PKG.PLAN does not yet emit the `target` and `contents` fields
+this tool reads per artefact, so until it does the plan entries must be completed by hand.
+"""
 
 [[step]]
 id = "vuln-gate"

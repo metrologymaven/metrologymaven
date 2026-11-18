@@ -45,7 +45,7 @@ nightly key; `beta`, `stable` and `lts` releases stop at sign-approval.
 | 1 | `tag-validate` | Validate the release tag against the channel and the product version | `ci` | `tag-validate` | - | nightly, beta, stable, lts | available |
 | 2 | `build-packages` | Build the desktop installers | `ci` | `build-packages` | `pkg-plan`, `os-sign` | nightly, beta, stable, lts | planned |
 | 3 | `build-web` | Build the web bundle | `ci` | `build-web` | - | nightly, beta, stable, lts | planned |
-| 4 | `sbom` | Generate the SBOMs for every artefact | `ci` | `sbom` | - | nightly, beta, stable, lts | planned |
+| 4 | `sbom` | Generate the SBOMs for every artefact | `ci` | `sbom` | - | nightly, beta, stable, lts | available |
 | 5 | `vuln-gate` | Vulnerability gate over the SBOMs | `ci` | `vuln-gate` | `qual-sbom` | nightly, beta, stable, lts | planned |
 | 6 | `platform-gate` | Platform matrix gate | `ci` | `platform-gate` | `plat-matrix` | nightly, beta, stable, lts | planned |
 | 7 | `evidence-complete` | Evidence bundle is complete | `ci` | `evidence-complete` | `qual-evid` | beta, stable, lts | planned |
@@ -108,9 +108,16 @@ Planned: ECO.REL.WEB is not built yet.
 - Workflow job: `sbom`
 - Gates: -
 - Channels: nightly, beta, stable, lts
-- Status: planned
+- Status: available
+- Tool: `cargo xtask rel sbom --plan <package-plan.json> --workspace . --native release/native-components.toml --out <dir>`
 
-Planned: ECO.REL.SIGN.SBOM is not built yet.
+Spec node ECO.REL.SIGN.SBOM. Writes one SPDX 2.3 JSON document `<artefact>.spdx.json` per
+planned artefact from `cargo metadata --locked --offline` and Cargo.lock; no network. Add
+`--artefacts <dir>` to take each artefact's SHA-256 from the built file, and
+`--commit-time <YYYY-MM-DDThh:mm:ssZ>` (the release commit's UTC commit time) when the plan does
+not carry `commit_time`. The documents are release artefacts of kind `sbom`, left out of
+SHA256SUMS by `rel sums`. ECO.REL.PKG.PLAN does not yet emit the `target` and `contents` fields
+this tool reads per artefact, so until it does the plan entries must be completed by hand.
 
 ### 5. `vuln-gate`: Vulnerability gate over the SBOMs
 

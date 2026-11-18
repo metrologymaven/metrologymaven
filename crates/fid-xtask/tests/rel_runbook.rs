@@ -104,7 +104,7 @@ fn ac6_real_release_dir() {
     }
     // Only steps whose tool exists today are `available`; flipping a planned step fails here.
     let available: Vec<&str> = steps.iter().filter(|s| s.status == Status::Available).map(|s| s.id.as_str()).collect();
-    assert_eq!(available, ["tag-validate", "sums"]);
+    assert_eq!(available, ["tag-validate", "sbom", "sums"]);
     // The spec's initial order (pinned here, not by runbook-check, so fixtures may differ).
     let ids: Vec<&str> = steps.iter().map(|s| s.id.as_str()).collect();
     assert_eq!(
