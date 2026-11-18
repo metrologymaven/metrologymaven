@@ -8,7 +8,7 @@
 //! format = "mesh.stl"
 //!
 //! [[entry]]
-//! path = "files/tetra.stl"          # or: url = "https://..."
+//! path = "files/tetra.stl"          # or: url = "https://..." (http:// or https:// only)
 //! source = "synthetic, make_fixtures.py"
 //! licence = "CC-BY-4.0"             # SPDX ID or `unknown`
 //! sha256 = "sha256:<64 hex>"
@@ -31,6 +31,6 @@ pub use check::{
 };
 pub use error::CorpError;
 pub use fetch::{
-    cache_path, fetch_to_cache, file_url_to_path, hash_file, hash_reader, FetchError, Fetcher, SystemFetcher,
+    cache_path, fetch_to_cache, hash_file, hash_reader, is_fetchable_url, FetchError, Fetcher, SystemFetcher,
 };
 pub use manifest::{parse_format_listing, Entry, Expect, FormatId, Location, Manifest};

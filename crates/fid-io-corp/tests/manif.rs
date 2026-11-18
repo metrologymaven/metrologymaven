@@ -55,15 +55,6 @@ fn copy_dir(from: &Path, to: &Path) {
     }
 }
 
-fn file_url(p: &Path) -> String {
-    let s = p.to_str().unwrap().replace('\\', "/").replace('%', "%25").replace(' ', "%20");
-    if s.starts_with('/') {
-        format!("file://{s}")
-    } else {
-        format!("file:///{s}")
-    }
-}
-
 fn files_in(dir: &Path) -> Vec<String> {
     match fs::read_dir(dir) {
         Ok(r) => r.map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect(),
@@ -136,8 +127,16 @@ fn local_http(body: Vec<u8>) -> String {
     format!("http://127.0.0.1:{port}/truncated_binary.stl")
 }
 
+/// Whether `curl` can run. Off CI a missing curl skips the HTTP tests; on CI (`CI` set) it fails them.
 fn curl_available() -> bool {
-    Command::new("curl").arg("--version").output().map(|o| o.status.success()).unwrap_or(false)
+    let ok = Command::new("curl").arg("--version").output().map(|o| o.status.success()).unwrap_or(false);
+    if !ok && std::env::var_os("CI").is_some() {
+        panic!("curl is required for the HTTP tests on CI");
+    }
+    if !ok {
+        eprintln!("skipped: curl not on PATH");
+    }
+    ok
 }
 
 #[test]
@@ -161,7 +160,11 @@ fn ac1_ok_corpus_passes_with_url_served_by_test_server() {
 
 #[test]
 fn ac1_corpus_check_binary_exits_0() {
-    let dir = ok_copy_with_url("ac1-bin", &file_url(&fix("remote/truncated_binary.stl")));
+    if !curl_available() {
+        return;
+    }
+    let body = fs::read(fix("remote/truncated_binary.stl")).unwrap();
+    let dir = ok_copy_with_url("ac1-bin", &local_http(body));
     let out = Command::new(env!("CARGO_BIN_EXE_corpus-check"))
         .arg("--corpus")
         .arg(dir.join("corpus"))
@@ -180,7 +183,6 @@ fn ac1_corpus_check_binary_exits_0() {
 #[test]
 fn ac1_url_entry_over_local_http_server() {
     if !curl_available() {
-        eprintln!("skipped: curl not on PATH");
         return;
     }
     let body = fs::read(fix("remote/truncated_binary.stl")).unwrap();
@@ -241,19 +243,52 @@ fn ac4_altered_bytes_fail_and_leave_no_cache_file() {
 }
 
 #[test]
-fn ac4_system_fetcher_file_url_with_wrong_bytes() {
-    let dir = scratch("ac4-file");
-    let cache = dir.join("cache");
-    let url = file_url(&fix("ok/files/tetra.stl"));
-    let got = fetch_to_cache(&SystemFetcher { max_bytes: 1 << 20 }, &url, &digest(REMOTE_SHA), &cache, 1 << 20);
-    assert_eq!(got, Err(FetchError::DigestMismatch(digest(TETRA_SHA))));
+fn manifest_urls_other_than_http_are_refused() {
+    for url in ["file:///etc/passwd", "file:////host/share/x", "https://x.invalid/[1-9]", "https://x.invalid/a b"] {
+        let dir = ok_copy_with_url("bad-url", url);
+        let cache = dir.join("cache");
+        let fetcher = SystemFetcher { max_bytes: 1 << 20 };
+        let r = check(&dir.join("corpus"), "registry_ok.json", Some(Fetching { cache: &cache, fetcher: &fetcher }));
+        assert_eq!(codes(&r), ["malformed"], "{url}: {:?}", r.errors);
+        assert_eq!(files_in(&cache), Vec::<String>::new());
+    }
+    // The system fetcher refuses them too, even when called directly.
+    let cache = scratch("bad-url-direct");
+    let sys = SystemFetcher { max_bytes: 1 << 20 };
+    let got = fetch_to_cache(&sys, "file:///etc/passwd", &digest(TETRA_SHA), &cache, 1 << 20);
+    assert!(matches!(got, Err(FetchError::Failed(_))), "{got:?}");
     assert_eq!(files_in(&cache), Vec::<String>::new());
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinks_are_refused() {
+    let dir = scratch("symlink");
+    copy_dir(&fix("ok"), &dir);
+    // Same bytes, so only the symlink rule can fail it.
+    fs::remove_file(dir.join("files/tri.ply")).unwrap();
+    std::os::unix::fs::symlink(fix("ok/files/tri.ply"), dir.join("files/tri.ply")).unwrap();
+    let r = check(&dir, "registry_ok.json", None);
+    assert_eq!(codes(&r), ["io"], "{:?}", r.errors);
+    // A symlinked directory on the way is refused as well.
+    let dir = scratch("symlink-dir");
+    copy_dir(&fix("ok"), &dir);
+    fs::remove_dir_all(dir.join("files")).unwrap();
+    std::os::unix::fs::symlink(fix("ok/files"), dir.join("files")).unwrap();
+    let r = check(&dir, "registry_ok.json", None);
+    assert_eq!(codes(&r), ["io", "io"], "{:?}", r.errors);
+    // A symlinked manifest is malformed.
+    let dir = scratch("symlink-manifest");
+    copy_dir(&fix("ok"), &dir);
+    fs::remove_file(dir.join("mesh.ply.toml")).unwrap();
+    std::os::unix::fs::symlink(fix("ok/mesh.ply.toml"), dir.join("mesh.ply.toml")).unwrap();
+    let r = check(&dir, "registry_ok.json", None);
+    assert_eq!(codes(&r), ["malformed"], "{:?}", r.errors);
 }
 
 #[test]
 fn ac4_local_http_server_with_altered_bytes() {
     if !curl_available() {
-        eprintln!("skipped: curl not on PATH");
         return;
     }
     let mut body = fs::read(fix("remote/truncated_binary.stl")).unwrap();

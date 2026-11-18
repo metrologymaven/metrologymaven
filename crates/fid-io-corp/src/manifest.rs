@@ -42,7 +42,7 @@ impl fmt::Display for FormatId {
 pub enum Location {
     /// Stored in the repository, relative to the corpus directory (`/`-separated).
     Path(String),
-    /// Referenced by URL and fetched in CI (`https://`, `http://` or `file://`).
+    /// Referenced by URL and fetched in CI (`https://` or `http://` only).
     Url(String),
 }
 
@@ -99,10 +99,6 @@ fn is_safe_path(s: &str) -> bool {
         && s.split('/').all(|seg| !seg.is_empty() && seg != "." && seg != "..")
 }
 
-fn is_url(s: &str) -> bool {
-    let rest = ["https://", "http://", "file://"].iter().find_map(|p| s.strip_prefix(p));
-    rest.is_some_and(|r| !r.is_empty()) && s.len() <= 2048 && !s.bytes().any(|c| c.is_ascii_control() || c == b' ')
-}
 
 type Table = toml::Table;
 
@@ -175,7 +171,7 @@ fn parse_entry(t: &Table, at: &str) -> Result<Entry, CorpError> {
         }
         (false, true) => {
             let u = string(t, "url", at)?;
-            if !is_url(u) {
+            if !crate::fetch::is_fetchable_url(u) {
                 return Err(CorpError::malformed(at, format!("bad url {u:?}")));
             }
             Location::Url(u.to_string())
@@ -331,6 +327,9 @@ mod tests {
             format!("path = \"C:/a\"\n{base}"),
             format!("path = \"a\\\\b\"\n{base}"),
             format!("url = \"ftp://x/a\"\n{base}"),
+            format!("url = \"file:///etc/passwd\"\n{base}"),
+            format!("url = \"file:////host/share/x\"\n{base}"),
+            format!("url = \"https://x/[1-2]\"\n{base}"),
             format!("path = \"a\"\n{base}\nextra = 1"),
             format!("path = \"a\"\n{}", base.replace("MIT", "MIT OR Apache-2.0")),
             format!("path = \"a\"\n{}", base.replace(D, "sha256:ABC")),

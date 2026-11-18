@@ -6,6 +6,8 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Source of the bytes behind a `url` entry. Tests inject their own; [`SystemFetcher`] is the default.
 pub trait Fetcher {
@@ -14,33 +16,46 @@ pub trait Fetcher {
     fn fetch(&self, url: &str, sink: &mut dyn Write) -> Result<(), String>;
 }
 
-/// The default fetcher: `file://` URLs are read directly; `http://` and `https://` URLs are
-/// downloaded by the `curl` program (present on every CI runner), so this crate links no TLS stack.
+/// The default fetcher: `https://` and `http://` URLs are downloaded by the `curl` program
+/// (present on every CI runner), so this crate links no TLS stack. No other scheme is accepted:
+/// a manifest can never make the tool read a local or UNC path.
 #[derive(Debug, Clone, Copy)]
 pub struct SystemFetcher {
-    /// Passed to `curl --max-filesize`; the sink enforces the same cap on every scheme.
+    /// Passed to `curl --max-filesize`; the sink enforces the same cap.
     pub max_bytes: u64,
 }
 
 impl Fetcher for SystemFetcher {
     fn fetch(&self, url: &str, sink: &mut dyn Write) -> Result<(), String> {
-        if url.starts_with("file://") {
-            let path = file_url_to_path(url)?;
-            let mut f = fs::File::open(&path).map_err(|e| format!("cannot open {}: {e}", path.display()))?;
-            io::copy(&mut f, sink).map(|_| ()).map_err(|e| e.to_string())
-        } else if url.starts_with("https://") || url.starts_with("http://") {
+        if is_fetchable_url(url) {
             curl(url, self.max_bytes, sink)
         } else {
-            Err(format!("unsupported URL scheme in {url:?}"))
+            Err(format!("refused URL {url:?}: only plain http:// and https:// URLs are fetched"))
         }
     }
 }
 
+/// Whether `url` may be fetched: `https://` or `http://` with a non-empty rest, at most 2,048
+/// bytes, and no whitespace, control characters or curl glob characters (`[]{}`).
+pub fn is_fetchable_url(url: &str) -> bool {
+    let rest = url.strip_prefix("https://").or_else(|| url.strip_prefix("http://"));
+    rest.is_some_and(|r| !r.is_empty())
+        && url.len() <= 2048
+        && !url.chars().any(|c| c.is_whitespace() || c.is_control() || matches!(c, '[' | ']' | '{' | '}'))
+}
+
+/// Seconds allowed to connect, and for a whole transfer.
+const CONNECT_TIMEOUT_S: &str = "30";
+const MAX_TIME_S: &str = "600";
+
 fn curl(url: &str, max_bytes: u64, sink: &mut dyn Write) -> Result<(), String> {
     let max = max_bytes.to_string();
+    // `-q` must come first: it makes curl ignore any ~/.curlrc.
     let mut child = Command::new("curl")
-        .args(["--fail", "--silent", "--show-error", "--location", "--proto", "=https,http"])
-        .args(["--proto-redir", "=https,http", "--max-filesize", &max, url])
+        .args(["-q", "--globoff", "--fail", "--silent", "--show-error", "--location", "--max-redirs", "5"])
+        .args(["--proto", "=http,https", "--proto-redir", "=http,https"])
+        .args(["--connect-timeout", CONNECT_TIMEOUT_S, "--max-time", MAX_TIME_S, "--max-filesize", &max])
+        .args(["--", url])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -60,44 +75,6 @@ fn curl(url: &str, max_bytes: u64, sink: &mut dyn Write) -> Result<(), String> {
     } else {
         Err(format!("curl failed ({}): {}", out.status, String::from_utf8_lossy(&out.stderr).trim()))
     }
-}
-
-/// Decodes `%XX` escapes; fails on a bad escape or non-UTF-8 result.
-fn percent_decode(s: &str) -> Result<String, String> {
-    let b = s.as_bytes();
-    let mut out = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        if b[i] == b'%' {
-            let hex = s.get(i + 1..i + 3).and_then(|h| u8::from_str_radix(h, 16).ok());
-            let Some(v) = hex else {
-                return Err(format!("bad percent escape in {s:?}"));
-            };
-            out.push(v);
-            i += 3;
-        } else {
-            out.push(b[i]);
-            i += 1;
-        }
-    }
-    String::from_utf8(out).map_err(|_| format!("non-UTF-8 path in {s:?}"))
-}
-
-/// The local path of a `file://` URL (empty host or `localhost` only). On Windows,
-/// `file:///C:/dir/f` becomes `C:/dir/f`.
-pub fn file_url_to_path(url: &str) -> Result<PathBuf, String> {
-    let rest = url.strip_prefix("file://").ok_or_else(|| format!("not a file URL: {url:?}"))?;
-    let rest = rest.strip_prefix("localhost").unwrap_or(rest);
-    if !rest.starts_with('/') {
-        return Err(format!("file URL with a remote host: {url:?}"));
-    }
-    let path = percent_decode(rest)?;
-    let b = path.as_bytes();
-    let drive = b.len() >= 3 && b[1].is_ascii_alphabetic() && b[2] == b':';
-    if cfg!(windows) && drive {
-        return Ok(PathBuf::from(&path[1..]));
-    }
-    Ok(PathBuf::from(path))
 }
 
 /// A writer that hashes and counts what passes through and fails past `max` bytes.
@@ -185,7 +162,7 @@ pub fn fetch_to_cache(
         fs::remove_file(&target).map_err(|e| FetchError::Failed(format!("cannot replace corrupt cache file: {e}")))?;
     }
     fs::create_dir_all(cache).map_err(|e| FetchError::Failed(format!("cannot create cache: {e}")))?;
-    let part = cache.join(format!("{}.part", expected.hex()));
+    let part = cache.join(part_name(expected));
     let result = fetch_part(fetcher, url, &part, max_bytes);
     let outcome = match result {
         Ok(actual) if actual == *expected => {
@@ -200,8 +177,21 @@ pub fn fetch_to_cache(
     outcome
 }
 
+/// A temporary name no other process or call uses: `<hex>.<pid>.<nanos>.<counter>.part`.
+fn part_name(expected: &Digest) -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0);
+    format!("{}.{}.{nanos}.{n}.part", expected.hex(), std::process::id())
+}
+
 fn fetch_part(fetcher: &dyn Fetcher, url: &str, part: &Path, max_bytes: u64) -> Result<Digest, String> {
-    let file = fs::File::create(part).map_err(|e| format!("cannot write cache: {e}"))?;
+    // create_new: never write through an existing file or symlink at this name.
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(part)
+        .map_err(|e| format!("cannot write cache: {e}"))?;
     let mut sink = HashSink::new(io::BufWriter::new(file), max_bytes);
     let fetched = fetcher.fetch(url, &mut sink);
     if sink.over_cap {
@@ -218,20 +208,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn percent_and_file_urls() {
-        assert_eq!(percent_decode("a%20b%2Fc").unwrap(), "a b/c");
-        assert!(percent_decode("a%2").is_err());
-        assert!(percent_decode("a%zz").is_err());
-        assert!(percent_decode("%ff").is_err());
-        assert!(file_url_to_path("file://host/x").is_err());
-        assert!(file_url_to_path("https://x/y").is_err());
-        assert_eq!(file_url_to_path("file://localhost/tmp/a%20b").unwrap(), PathBuf::from("/tmp/a b"));
-        let drive = file_url_to_path("file:///C:/x/y").unwrap();
-        if cfg!(windows) {
-            assert_eq!(drive, PathBuf::from("C:/x/y"));
-        } else {
-            assert_eq!(drive, PathBuf::from("/C:/x/y"));
+    fn fetchable_urls() {
+        assert!(is_fetchable_url("https://example.invalid/a/b.stl?x=1"));
+        assert!(is_fetchable_url("http://127.0.0.1:8080/a"));
+        for bad in [
+            "file:///etc/passwd",
+            "file:////host/share/x",
+            "ftp://x/a",
+            "https://",
+            "https://x/a b",
+            "https://x/a\tb",
+            "https://x/a\n",
+            "https://x/[1-9]",
+            "https://x/{a,b}",
+            "-o/tmp/x",
+            "HTTPS://x/a",
+        ] {
+            assert!(!is_fetchable_url(bad), "{bad:?}");
         }
+        let refused = SystemFetcher { max_bytes: 10 }.fetch("file:///etc/passwd", &mut io::sink());
+        assert!(refused.is_err());
+    }
+
+    #[test]
+    fn part_names_are_unique() {
+        let d = Digest::TOMBSTONE;
+        assert_ne!(part_name(&d), part_name(&d));
+        assert!(part_name(&d).ends_with(".part"));
     }
 
     #[test]

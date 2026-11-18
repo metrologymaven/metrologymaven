@@ -7,7 +7,7 @@ use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// SPDX IDs whose files may be stored in the repository (REQ-IO.CORP.MANIF-002). Starting list
 /// from the leaf's Test fixtures section [unverified: to align with ECO.RULES under D-001].
@@ -79,7 +79,26 @@ fn read_capped(path: &Path, max: u64) -> Result<Vec<u8>, String> {
     Ok(buf)
 }
 
-/// Reads every `<format-id>.toml` in `dir`, sorted by name. Other files are ignored.
+/// `dir/rel` if it is a regular file and neither it nor any directory between `dir` and it is a
+/// symlink, so a manifest path can never lead out of the corpus directory.
+fn regular_file_in(dir: &Path, rel: &str) -> Result<PathBuf, String> {
+    let mut p = dir.to_path_buf();
+    for seg in rel.split('/') {
+        p.push(seg);
+        let meta = fs::symlink_metadata(&p).map_err(|e| format!("cannot stat {rel}: {e}"))?;
+        if meta.file_type().is_symlink() {
+            return Err(format!("{rel}: symlinks are refused"));
+        }
+    }
+    if fs::symlink_metadata(&p).map(|m| m.is_file()).unwrap_or(false) {
+        Ok(p)
+    } else {
+        Err(format!("{rel} is not a regular file"))
+    }
+}
+
+/// Reads every `<format-id>.toml` in `dir`, sorted by name. Other files are ignored; a manifest
+/// that is a symlink or not a regular file is `malformed`.
 pub fn load_manifests(dir: &Path) -> (BTreeMap<FormatId, Manifest>, Vec<CorpError>) {
     let mut manifests = BTreeMap::new();
     let mut errors = Vec::new();
@@ -96,6 +115,10 @@ pub fn load_manifests(dir: &Path) -> (BTreeMap<FormatId, Manifest>, Vec<CorpErro
         let name = item.file_name();
         let Some(name) = name.to_str() else { continue };
         if let Some(stem) = name.strip_suffix(".toml") {
+            if !item.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                errors.push(CorpError::malformed(name, "manifest is a symlink or not a regular file"));
+                continue;
+            }
             files.insert(stem.to_string(), item.path());
         }
     }
@@ -167,7 +190,7 @@ pub fn check_corpus(dir: &Path, formats: &[FormatId], opts: &CheckOptions<'_>) -
                         });
                     }
                     report.files_checked += 1;
-                    match hash_file(&dir.join(rel), opts.max_bytes) {
+                    match regular_file_in(dir, rel).and_then(|p| hash_file(&p, opts.max_bytes)) {
                         Ok(actual) if actual == e.sha256 => {}
                         Ok(actual) => errors.push(CorpError::DigestMismatch {
                             format,
