@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-sign-core]
+built_pr: 126
 satisfies: [REQ-TRUST.SIGN-001, REQ-TRUST.SIGN-003, REQ-TRUST.SIGN-008, REQ-TRUST.SIGN-009]
 covers: []
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # TRUST.SIGN.DSSE: DSSE envelope encoding, algorithms and key fingerprints
@@ -69,6 +71,7 @@ The pure cryptographic core shared by signer and verifier: DSSE v1.0 pre-authent
 - **Determinism:** D0 for encoding and verification. ECDSA signing output is not deterministic unless the keystore uses RFC 6979; tests use Ed25519 for byte-exact goldens.
 - **Performance budget:** verify one signature over a 1 MiB payload in under 5 ms [unverified until measured].
 - **Crate:** `fid-sign-core` (no OS dependencies; builds for wasm32).
+- **MSRV note:** MSRV raised to 1.87 to take the fixed p256/crypto-bigint (p256 0.14; RUSTSEC-2026-0387 is fixed in crypto-bigint 0.7.6+); approved by maintainer 2026-11-18.
 
 ## Test fixtures
 

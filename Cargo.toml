@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.81"
+rust-version = "1.87"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/metrologymaven/metrologymaven"
 
@@ -17,3 +17,8 @@ unsafe_code = "forbid"
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+# Style lints that only start firing because the MSRV moved from 1.81 to 1.87
+# (`is_multiple_of` and `Option::is_none_or` became usable). Allowed so the MSRV bump does
+# not rewrite unrelated crates; a follow-up PR may adopt the newer APIs and drop these.
+manual_is_multiple_of = "allow"
+unnecessary_map_or = "allow"
