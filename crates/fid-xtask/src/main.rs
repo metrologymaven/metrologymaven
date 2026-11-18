@@ -5,14 +5,18 @@ use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>";
+const LINT_USAGE: &str =
+    "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
+        Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
         _ => {
             eprintln!("{USAGE}");
+            eprintln!("{LINT_USAGE}");
             ExitCode::from(2)
         }
     }
@@ -65,6 +69,47 @@ fn layers(args: &[String]) -> ExitCode {
         Err(e) => {
             println!("{e}");
             ExitCode::from(1)
+        }
+    }
+}
+
+/// `lint-crate-graph` (CORE.BUS.LINT). Exit 0: clean; 1: findings; 2: usage, allowlist or
+/// metadata error.
+fn lint_crate_graph(args: &[String]) -> ExitCode {
+    let mut workspace = PathBuf::from(".");
+    let mut allowlist: Option<PathBuf> = None;
+    let mut writers: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--allowlist", Some(v)) => allowlist = Some(PathBuf::from(v)),
+            ("--writers", Some(v)) => writers = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{LINT_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let allowlist = allowlist.unwrap_or_else(|| workspace.join(fid_xtask::crate_graph::ALLOWLIST_FILE));
+    let writers = writers.unwrap_or_else(|| workspace.join(fid_xtask::crate_graph::WRITERS_FILE));
+    match fid_xtask::crate_graph::run_with_warnings(&workspace, &allowlist, &writers) {
+        Ok((findings, warnings)) => {
+            for w in warnings {
+                eprintln!("{w}");
+            }
+            if findings.is_empty() {
+                println!("lint-crate-graph: ok");
+                return ExitCode::SUCCESS;
+            }
+            for f in findings {
+                println!("{f}");
+            }
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(2)
         }
     }
 }
