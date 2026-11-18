@@ -93,6 +93,53 @@ fn req3_no_table() {
     assert_eq!(lint("# Tiers\n\n| Tier |\n|---|\n| Tier 1 |\n"), vec![TierError::NoTable]);
 }
 
+/// Review follow-up: tables and headings inside fenced code blocks are ignored.
+#[test]
+fn fenced_blocks_are_ignored() {
+    assert_eq!(lint_file(&fixture("tiers-fenced.md")), vec![TierError::MissingTier { tier: Tier::Tier3 }]);
+}
+
+/// Review follow-up: a second row for the same tier fails.
+#[test]
+fn duplicate_tier_row() {
+    assert_eq!(lint_file(&fixture("tiers-duplicate.md")), vec![TierError::DuplicateTier { tier: Tier::Tier2 }]);
+    let (code, out) = cli(Some(&fixture("tiers-duplicate.md")));
+    assert_eq!((code, out.as_str()), (1, "DuplicateTier: tier2\n"));
+}
+
+/// Review follow-up: cells holding only `-`, `**`, a dash or code/emphasis marks are unfilled.
+#[test]
+fn placeholder_cells_are_unfilled() {
+    assert_eq!(
+        lint_file(&fixture("tiers-placeholder-cells.md")),
+        vec![
+            TierError::EmptyCell { tier: Tier::Tier1, column: Column::CiObligation },
+            TierError::EmptyCell { tier: Tier::Tier2, column: Column::ReleaseBlocking },
+            TierError::EmptyCell { tier: Tier::Tier3, column: Column::SupportResponse },
+            TierError::EmptyCell { tier: Tier::Tier3, column: Column::PromotionDemotion },
+        ]
+    );
+}
+
+/// Review follow-up: setext headings (`---` and `===` underlines) end the section.
+#[test]
+fn setext_heading_ends_section() {
+    assert_eq!(lint_file(&fixture("tiers-setext.md")), vec![TierError::NoTable]);
+    let text = "## Tiers\n\nOther\n=====\n\n| Tier |\n|---|\n| Tier 1 |\n";
+    assert_eq!(lint(text), vec![TierError::NoTable]);
+}
+
+/// Review follow-up: the local `Tier` names must match `fid_platform::matrix::Tier`
+/// (`fid-xtask` cannot depend on that `tool` crate, so the source is read instead).
+#[test]
+fn tier_names_match_fid_platform() {
+    let src = std::fs::read_to_string(root().join("crates/fid-platform/src/matrix.rs")).unwrap();
+    let line = src.lines().map(str::trim).find(|l| l.starts_with("Tier {")).expect("Tier enum in matrix.rs");
+    let names: Vec<&str> = line.split('"').skip(1).step_by(2).collect();
+    let ours: Vec<&str> = Tier::ALL.iter().map(|t| t.name()).collect();
+    assert_eq!(names, ours, "{line}");
+}
+
 /// Without a Tier column no row can be matched: only the missing columns are reported.
 #[test]
 fn no_tier_column() {

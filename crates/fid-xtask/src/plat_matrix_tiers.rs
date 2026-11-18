@@ -2,10 +2,11 @@
 //! `PLAT.MATRIX.POLICY.DEFS`).
 //!
 //! Finds the first Markdown table in the `## Tiers` section of `docs/platform/tiers.md` and
-//! checks that it has the columns [`Column::ALL`], one row each for Tier 1, Tier 2 and
-//! Tier 3, and no empty cell in those rows. The check is a pure function of the text (D0):
-//! findings come in a fixed order (missing columns in column order, then per tier in tier
-//! order: missing tier, or empty cells in column order).
+//! checks that it has the columns [`Column::ALL`], exactly one row each for Tier 1, Tier 2
+//! and Tier 3, and no unfilled cell in those rows. Fenced code blocks are ignored, and the
+//! section ends at the next level 1 or 2 heading (ATX or setext). The check is a pure
+//! function of the text (D0): findings come in a fixed order (missing columns in column order, then per tier in tier
+//! order: missing tier, or duplicate tier then unfilled cells in column order).
 
 use std::fmt;
 
@@ -96,9 +97,11 @@ pub enum TierError {
     NoTable,
     /// The table has no row for this tier.
     MissingTier { tier: Tier },
+    /// The table has more than one row for this tier (the first one is checked).
+    DuplicateTier { tier: Tier },
     /// The table header has no such column.
     MissingColumn { column: Column },
-    /// The tier's row has an empty (or absent) cell in this column.
+    /// The tier's row has an empty, absent or placeholder-only (`-`, `**`) cell in this column.
     EmptyCell { tier: Tier, column: Column },
 }
 
@@ -107,6 +110,7 @@ impl fmt::Display for TierError {
         match self {
             TierError::NoTable => write!(f, "NoTable: no Markdown table under `{SECTION}`"),
             TierError::MissingTier { tier } => write!(f, "MissingTier: {tier}"),
+            TierError::DuplicateTier { tier } => write!(f, "DuplicateTier: {tier}"),
             TierError::MissingColumn { column } => write!(f, "MissingColumn: {column}"),
             TierError::EmptyCell { tier, column } => write!(f, "EmptyCell: {tier}, column {column}"),
         }
@@ -156,22 +160,81 @@ fn is_table_line(line: &str) -> bool {
     line.trim_start().starts_with('|')
 }
 
-/// Header and body rows of the first table in the `## Tiers` section.
+/// The fence marker (```` ``` ```` or `~~~`) a line opens or closes, if any.
+fn fence_marker(line: &str) -> Option<char> {
+    let t = line.trim_start();
+    if t.starts_with("```") {
+        Some('`')
+    } else if t.starts_with("~~~") {
+        Some('~')
+    } else {
+        None
+    }
+}
+
+/// The document's lines with a flag per line: true when the line is outside fenced code
+/// blocks (fence lines themselves count as inside). An unclosed fence runs to the end.
+fn outside_fences(text: &str) -> Vec<(&str, bool)> {
+    let mut open: Option<char> = None;
+    text.lines()
+        .map(|line| match (open, fence_marker(line)) {
+            (None, Some(m)) => {
+                open = Some(m);
+                (line, false)
+            }
+            (Some(o), Some(m)) if o == m => {
+                open = None;
+                (line, false)
+            }
+            (o, _) => (line, o.is_none()),
+        })
+        .collect()
+}
+
+/// An ATX heading of level 1 or 2 (`# x`, `## x`, or a bare `#` / `##`).
+fn is_atx_h1_h2(line: &str) -> bool {
+    let t = line.trim_end();
+    let indent = t.len() - t.trim_start().len();
+    let t = t.trim_start();
+    indent <= 3 && (t == "#" || t == "##" || t.starts_with("# ") || t.starts_with("## "))
+}
+
+/// A setext underline (`===` for level 1, `---` for level 2).
+fn is_setext_underline(line: &str) -> bool {
+    let t = line.trim();
+    !t.is_empty() && (t.chars().all(|c| c == '=') || t.chars().all(|c| c == '-'))
+}
+
+/// Header and body rows of the first table in the `## Tiers` section. Lines inside fenced
+/// code blocks are ignored. The section ends at the next level 1 or 2 heading, ATX or
+/// setext.
 fn find_table(text: &str) -> Option<(Vec<String>, Vec<Vec<String>>)> {
-    let lines: Vec<&str> = text.lines().collect();
-    let start = lines.iter().position(|l| l.trim_end() == SECTION)? + 1;
-    for (i, line) in lines.iter().enumerate().skip(start) {
-        // The section ends at the next heading of the same or a higher level.
-        if line.starts_with("# ") || line.starts_with("## ") {
+    let lines = outside_fences(text);
+    let start = lines.iter().position(|(l, out)| *out && l.trim_end() == SECTION)? + 1;
+    let live = |i: usize| lines.get(i).filter(|(_, out)| *out).map(|(l, _)| *l);
+    for (i, &(line, out)) in lines.iter().enumerate().skip(start) {
+        if !out {
+            continue;
+        }
+        let next = live(i + 1);
+        if is_atx_h1_h2(line) {
             return None;
         }
-        if is_table_line(line) && lines.get(i + 1).is_some_and(|d| is_table_line(d) && is_delimiter(d)) {
-            let rest = lines.get(i + 2..).unwrap_or(&[]);
-            let body = rest.iter().take_while(|l| is_table_line(l)).map(|l| cells(l)).collect();
+        if is_table_line(line) && next.is_some_and(|d| is_table_line(d) && is_delimiter(d)) {
+            let body = (i + 2..).map_while(live).take_while(|l| is_table_line(l)).map(cells).collect();
             return Some((cells(line), body));
+        }
+        // A paragraph line followed by `===` or `---` is a setext heading.
+        if !line.trim().is_empty() && next.is_some_and(is_setext_underline) {
+            return None;
         }
     }
     None
+}
+
+/// A cell with no content: empty, or only dashes, emphasis marks, backticks and spaces.
+fn is_unfilled(cell: &str) -> bool {
+    cell.chars().all(|c| c.is_whitespace() || matches!(c, '-' | '*' | '_' | '`' | '\u{2013}' | '\u{2014}'))
 }
 
 /// Lints a tier definitions document. An empty result means the table is complete.
@@ -189,14 +252,18 @@ pub fn lint(text: &str) -> Vec<TierError> {
         return errors;
     };
     for tier in Tier::ALL {
-        let row = body.iter().find(|r| r.get(tier_col).and_then(|c| Tier::from_cell(c)) == Some(tier));
-        let Some(row) = row else {
+        let rows: Vec<&Vec<String>> =
+            body.iter().filter(|r| r.get(tier_col).and_then(|c| Tier::from_cell(c)) == Some(tier)).collect();
+        let Some(row) = rows.first() else {
             errors.push(TierError::MissingTier { tier });
             continue;
         };
+        if rows.len() > 1 {
+            errors.push(TierError::DuplicateTier { tier });
+        }
         for column in Column::ALL {
             if let Some(j) = index(column) {
-                if !row.get(j).is_some_and(|c| !c.is_empty()) {
+                if !row.get(j).is_some_and(|c| !is_unfilled(c)) {
                     errors.push(TierError::EmptyCell { tier, column });
                 }
             }
