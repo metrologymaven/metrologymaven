@@ -1,0 +1,22 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Further error paths; pairs with mixed-sources.toml. Expected findings are listed in the test.
+
+[[metric]]
+id = "repo_stars"
+title = "Repository stars"
+source = "repo-api"
+method = "scrape_html"
+selector = "stargazers_count"
+unit = "stars"
+aggregation = "average"
+biases = ["Bots are not excluded."]
+
+[[metric]]
+id = "repo_stars"
+title = "Repository stars again"
+source = "repo-api"
+method = "manual_public_count"
+unit = "stars"
+aggregation = "max"
+biases = [""]

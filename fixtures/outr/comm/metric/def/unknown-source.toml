@@ -1,0 +1,14 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# AC-5: a definition naming a source ID not in the source list; pairs with sources.toml.
+# Expected: exit 1, source_unknown.
+
+[[metric]]
+id = "repo_forks"
+title = "Repository forks"
+source = "no-such-source"
+method = "http_json"
+selector = "/forks_count"
+unit = "forks"
+aggregation = "last"
+biases = ["Forks made only to open one pull request are counted."]

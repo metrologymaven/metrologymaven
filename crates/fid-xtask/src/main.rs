@@ -2,12 +2,15 @@
 
 mod pins;
 
+use fid_xtask::plat_matrix_tiers;
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
-                     cargo xtask plat-matrix validate <file>";
+                     cargo xtask plat-matrix validate <file>\n       \
+                     cargo xtask plat-matrix lint-tiers [<file>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -17,6 +20,7 @@ fn main() -> ExitCode {
         Some("layers") => layers(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
+        Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => plat_matrix(&args),
         Some("pins") => pins::cli(&args[1..]),
         _ => {
@@ -61,6 +65,44 @@ fn plat_matrix(args: &[String]) -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+/// PLAT.MATRIX.POLICY.DEFS: `plat-matrix lint-tiers [<file>]` (default
+/// `docs/platform/tiers.md`). Prints one finding per line; exits 0 when the tier table is
+/// complete, 1 on findings and 2 on bad usage or an unreadable file.
+fn lint_tiers(args: &[String]) -> ExitCode {
+    let path = match args {
+        [] => plat_matrix_tiers::DEFAULT_PATH,
+        [file] => file.as_str(),
+        _ => {
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    // Read at most one byte past the limit so an oversized file is refused, not loaded.
+    let mut bytes = Vec::new();
+    let read = std::fs::File::open(path).and_then(|f| f.take(plat_matrix_tiers::MAX_BYTES + 1).read_to_end(&mut bytes));
+    if let Err(e) = read {
+        eprintln!("plat-matrix lint-tiers: cannot read {path}: {e}");
+        return ExitCode::from(2);
+    }
+    if bytes.len() as u64 > plat_matrix_tiers::MAX_BYTES {
+        eprintln!("plat-matrix lint-tiers: {path} is larger than {} bytes", plat_matrix_tiers::MAX_BYTES);
+        return ExitCode::from(2);
+    }
+    let Ok(text) = String::from_utf8(bytes) else {
+        eprintln!("plat-matrix lint-tiers: {path} is not UTF-8");
+        return ExitCode::from(2);
+    };
+    let findings = plat_matrix_tiers::lint(&text);
+    if findings.is_empty() {
+        println!("lint-tiers: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
 
 fn layers(args: &[String]) -> ExitCode {
