@@ -30,7 +30,10 @@ cargo xtask rel runbook-check --dir release
 The check is offline and read-only. It fails if a step other than sign-approval is
 performed by a person, if a `ci` step names a job the release workflow lacks or a workflow
 job has no step, if a step names a gate that `gates.toml` lacks or a gate is used by no
-step, or if this file differs from the rendering.
+step, if a step marked `available` names a tool that is not an existing `cargo xtask rel`
+subcommand, or if this file differs from the rendering. The step IDs and their order, and
+the set of `available` steps, are pinned by the AC-6 test in
+`crates/fid-xtask/tests/rel_runbook.rs`: changing them means changing that test too.
 
 Channels: `nightly` builds run the CI steps without approval and are signed with a separate
 nightly key; `beta`, `stable` and `lts` releases stop at sign-approval.

@@ -86,6 +86,7 @@ pub struct Step {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Code {
     HumanStep,
+    UnknownTool,
     UnknownJob,
     OrphanJob,
     UnknownGate,
@@ -98,6 +99,7 @@ impl Code {
     pub fn name(self) -> &'static str {
         match self {
             Code::HumanStep => "RUNBOOK-HUMAN-STEP",
+            Code::UnknownTool => "RUNBOOK-UNKNOWN-TOOL",
             Code::UnknownJob => "RUNBOOK-UNKNOWN-JOB",
             Code::OrphanJob => "RUNBOOK-ORPHAN-JOB",
             Code::UnknownGate => "RUNBOOK-UNKNOWN-GATE",
@@ -499,7 +501,24 @@ pub fn render_dir(dir: &Path) -> Result<(Vec<Step>, String), Finding> {
     Ok((steps, text))
 }
 
-/// The consistency checks over parsed inputs, in a fixed order: people, jobs, gates.
+/// Why an `available` step's tool is not an existing `cargo xtask rel` subcommand, if it is not.
+fn tool_problem(tool: Option<&str>) -> Option<String> {
+    let Some(tool) = tool else {
+        return Some("status is available but no `tool` is named".to_string());
+    };
+    let mut words = tool.split_whitespace();
+    let prefix_ok = words.next() == Some("cargo") && words.next() == Some("xtask") && words.next() == Some("rel");
+    match words.next() {
+        Some(sub) if prefix_ok && super::SUBCOMMANDS.contains(&sub) => None,
+        _ => Some(format!(
+            "status is available but tool {} is not an existing `cargo xtask rel` subcommand ({}); mark the step planned",
+            shown(tool),
+            super::SUBCOMMANDS.join(", ")
+        )),
+    }
+}
+
+/// The consistency checks over parsed inputs, in a fixed order: people, tools, jobs, gates.
 pub fn check_consistency(steps: &[Step], jobs: &[String], gate_ids: &[String]) -> Vec<Finding> {
     let mut findings = Vec::new();
     // REQ-002: exactly one step is performed by a person, and it is sign-approval.
@@ -520,6 +539,14 @@ pub fn check_consistency(steps: &[Step], jobs: &[String], gate_ids: &[String]) -
             "must be performed by a person (`role:<name>`), not ci",
         )),
         None => findings.push(Finding::new(Code::HumanStep, SIGN_APPROVAL, "the runbook has no sign-approval step")),
+    }
+    // An `available` step must name an existing `cargo xtask rel` subcommand as its tool.
+    for s in steps {
+        if s.status == Status::Available {
+            if let Some(msg) = tool_problem(s.tool.as_deref()) {
+                findings.push(Finding::new(Code::UnknownTool, &s.id, msg));
+            }
+        }
     }
     // REQ-003: every named job exists, every job is named.
     let job_set: BTreeSet<&str> = jobs.iter().map(String::as_str).collect();
@@ -712,6 +739,23 @@ mod tests {
         let f = check_consistency(&steps, &["sign-approval".into()], &["g1".into(), "g2".into()]);
         let got: Vec<_> = f.iter().map(|f| (f.code, f.subject.as_str())).collect();
         assert_eq!(got, vec![(Code::UnknownJob, "b"), (Code::UnusedGate, "g2")]);
+    }
+
+    #[test]
+    fn available_steps_need_an_existing_tool() {
+        let base = format!("{}{}", step("sign-approval", "role:x"), step("b", "ci"));
+        let jobs = ["sign-approval".to_string(), "b".to_string()];
+        let codes = |extra: &str| {
+            let mut steps = parse_runbook(&base).unwrap();
+            steps[1].status = Status::Available;
+            steps[1].tool = (!extra.is_empty()).then(|| extra.to_string());
+            check_consistency(&steps, &jobs, &[]).into_iter().map(|f| (f.code, f.subject)).collect::<Vec<_>>()
+        };
+        assert!(codes("cargo xtask rel sums --out x").is_empty());
+        assert!(codes("cargo xtask rel runbook-check").is_empty());
+        for bad in ["", "cargo xtask rel sign", "cargo xtask rel", "cargo run rel sums", "sums"] {
+            assert_eq!(codes(bad), vec![(Code::UnknownTool, "b".to_string())], "{bad:?}");
+        }
     }
 
     #[test]

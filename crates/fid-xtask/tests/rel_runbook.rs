@@ -4,7 +4,8 @@
 //! independent Python reference, so these tests also check the Rust renderer against it.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_xtask::rel::runbook::{check, parse_runbook, render_dir, Code, Performer, SIGN_APPROVAL};
+use fid_xtask::rel::runbook::{check, parse_runbook, render_dir, Code, Performer, Status, SIGN_APPROVAL};
+use fid_xtask::rel::SUBCOMMANDS;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -101,7 +102,10 @@ fn ac6_real_release_dir() {
             assert!(s.channels.iter().any(|x| x == c), "{id} lacks {c}");
         }
     }
-    // The spec's initial order.
+    // Only steps whose tool exists today are `available`; flipping a planned step fails here.
+    let available: Vec<&str> = steps.iter().filter(|s| s.status == Status::Available).map(|s| s.id.as_str()).collect();
+    assert_eq!(available, ["tag-validate", "sums"]);
+    // The spec's initial order (pinned here, not by runbook-check, so fixtures may differ).
     let ids: Vec<&str> = steps.iter().map(|s| s.id.as_str()).collect();
     assert_eq!(
         ids,
@@ -147,6 +151,16 @@ fn render_matches_python_reference() {
     let expected = std::fs::read_to_string(root().join("release/RUNBOOK.md")).unwrap().replace("\r\n", "\n");
     assert_eq!(out, expected);
     assert_eq!(cli(&["runbook-render", "--dir", "release"]).1, out);
+}
+
+/// Every subcommand runbook-check accepts as a tool is one the binary really dispatches.
+#[test]
+fn subcommands_match_usage() {
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).output().unwrap();
+    let usage = String::from_utf8(out.stderr).unwrap();
+    for sub in SUBCOMMANDS {
+        assert!(usage.contains(&format!("cargo xtask rel {sub}")), "{sub} missing from usage");
+    }
 }
 
 /// The check reads files only: running it leaves the release directory unchanged.
