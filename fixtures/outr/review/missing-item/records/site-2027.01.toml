@@ -1,0 +1,12 @@
+# Review record (synthetic fixture).
+release = "site-2027.01"
+reviewer = "bob"
+date = "2027-01-20"
+checklist_version = 1
+
+[answers]
+colours = { result = "pass", note = "Checked every page." }
+icon_style = { result = "pass", note = "Checked every page." }
+layout = { result = "pass", note = "Checked every page." }
+typography = { result = "pass", note = "Checked every page." }
+copied_text = { result = "pass", note = "Checked every page." }

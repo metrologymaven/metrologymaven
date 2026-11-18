@@ -1,0 +1,5 @@
+Synthetic test fixtures for spec node OUTR.BRAND.REVIEW (CC-BY-4.0).
+Every file is project-authored: handles (alice, bob, mallory are fictional), releases, checklist
+questions and notes are made up for the tests. No file contains any third party's trade dress,
+text, logos or images. make_fixtures.py writes the files; its EXPECTED table and
+crates/fid-outreach/tests/review_gate.rs hold the hand-labelled results.
