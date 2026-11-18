@@ -72,7 +72,8 @@ impl Cursor {
         Cursor { addr, index }
     }
 
-    /// The u64 at the current index; advances by one.
+    /// The u64 at the current index; advances by one. After index `u64::MAX` the index
+    /// wraps to 0 and the stream repeats; a stream has 2^64 draws.
     pub fn next_u64(&mut self) -> u64 {
         let w = block(self.addr.seed, self.addr.stream, self.index);
         self.index = self.index.wrapping_add(1);

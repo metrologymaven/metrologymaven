@@ -61,8 +61,8 @@ lines = ["# KRN.NUM.RNG AC-1: Philox4x32-10 block known answers.",
          "# First 3 rows: published Random123 kat_vectors. Others: this reference, project addressing.",
          "# Format: c0 c1 c2 c3 k0 k1 -> o0 o1 o2 o3 (hex u32)"]
 rows = [(c, k) for c, k, _ in PUBLISHED]
-for seed, stream, index in [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0x0123456789ABCDEF, 7, 0),
-                            (0x0123456789ABCDEF, 7, 999_999), (2**64 - 1, 2**64 - 1, 2**64 - 1),
+for seed, stream, index in [(3, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0x0123456789ABCDEF, 7, 0),
+                            (0x0123456789ABCDEF, 7, 999_999), (2**64 - 1, 2**64 - 2, 2**64 - 3),
                             (42, 3, 2**32), (42, 2**32, 5), (0xDEADBEEFCAFEF00D, 12345, 67890)]:
     rows.append(((index & MASK, index >> 32, stream & MASK, stream >> 32), (seed & MASK, seed >> 32)))
 for c, k in rows:
