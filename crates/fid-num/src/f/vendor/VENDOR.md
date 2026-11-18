@@ -30,15 +30,48 @@ each bit pattern against the decimal value published in the fdlibm sources. The 
 
 ## Licence notices
 
-The fdlibm-derived algorithms carry this notice, preserved as it requires:
+Status: **pending maintainer decision D-040** (vendored SunPro/MIT ports in `fid-num`).
+Every `.rs` file in this directory carries both notices below in its header; the root
+`ATTRIBUTION.md` lists them too.
 
+### Sun fdlibm (SPDX `SunPro`): sin, cos, tan, rem_pio2 (medium path), asin, acos, atan, atan2, exp, log, cbrt
+
+> ====================================================
 > Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+>
 > Developed at SunPro, a Sun Microsystems, Inc. business.
-> Permission to use, copy, modify, and distribute this software is freely granted,
-> provided that this notice is preserved.
+> Permission to use, copy, modify, and distribute this
+> software is freely granted, provided that this notice
+> is preserved.
+> ====================================================
 
-musl is MIT-licensed (Copyright © 2005-2020 Rich Felker, et al.). The `hypot` algorithm is
-musl's own. This port is distributed under the workspace licence (MIT OR Apache-2.0).
+`cbrt` comes through FreeBSD msun `s_cbrt.c` ("Optimized by Bruce D. Evans.", same notice).
+
+### musl libc (SPDX `MIT`): all files (musl's versions of the above; `hypot` is musl's own)
+
+> Copyright © 2005-2020 Rich Felker, et al.
+>
+> Permission is hereby granted, free of charge, to any person obtaining
+> a copy of this software and associated documentation files (the
+> "Software"), to deal in the Software without restriction, including
+> without limitation the rights to use, copy, modify, merge, publish,
+> distribute, sublicense, and/or sell copies of the Software, and to
+> permit persons to whom the Software is furnished to do so, subject to
+> the following conditions:
+>
+> The above copyright notice and this permission notice shall be
+> included in all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+> IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+> CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+> TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+> SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+The project's own changes (below, and the integer large-argument reduction) are under the
+workspace licence (MIT OR Apache-2.0).
 
 ## Project changes (all outputs are pinned by the golden digests)
 
