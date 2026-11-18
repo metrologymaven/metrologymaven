@@ -232,15 +232,16 @@ struct Accum {
 
 impl Accum {
     fn push(&mut self, d: u8) {
-        if self.err.is_some() {
-            return;
-        }
         if self.sig == 0 && d == 0 {
             return; // leading zero
         }
-        self.sig += 1;
+        // Too many digits wins over an earlier coefficient overflow.
+        self.sig = self.sig.saturating_add(1);
         if self.sig > MAX_DIGITS {
             self.err = Some(KdecError::TooManyDigits);
+            return;
+        }
+        if self.err.is_some() {
             return;
         }
         if d == 0 {
