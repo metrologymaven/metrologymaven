@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 118
 satisfies: [REQ-ECO.REL.SIGN-006]
 covers: []
 depends_on: []

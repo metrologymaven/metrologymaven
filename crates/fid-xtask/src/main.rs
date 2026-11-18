@@ -2,7 +2,7 @@
 
 mod pins;
 
-use fid_xtask::rel::{runbook, sbom, sums, version};
+use fid_xtask::rel::{keys, runbook, sbom, sums, version};
 use fid_xtask::{apps_policy, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
@@ -25,7 +25,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
        \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
        \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
-                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]";
+                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
+       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
@@ -50,6 +51,7 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -374,6 +376,45 @@ fn rel_sbom(args: &[String]) -> ExitCode {
                 println!("{f}");
             }
             ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.GUIDE: `rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]`
+/// checks that every key file in the keys directory (default `keys`) is listed in `KEYS.md`
+/// (default `KEYS.md`) with its SPKI SHA-256 fingerprint and that no active key is past its
+/// validity on the check date (default: today, UTC). Exit 0: consistent; 1: findings, one per
+/// line; 2: bad usage, unreadable inputs or a malformed key table. Reads files only.
+fn keys_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("keys");
+    let mut doc = PathBuf::from("KEYS.md");
+    let mut date: Option<String> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--keys", Some(v)) => dir = PathBuf::from(v),
+            ("--doc", Some(v)) => doc = PathBuf::from(v),
+            ("--date", Some(v)) => date = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(date) = date.or_else(keys::today_utc) else {
+        eprintln!("rel keys-check: the system clock is before 1970; pass --date");
+        return ExitCode::from(2);
+    };
+    match keys::check(&dir, &doc, &date) {
+        Ok(n) => {
+            println!("keys-check: ok {n} keys ({date})");
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(keys::exit_code(&findings))
         }
     }
 }

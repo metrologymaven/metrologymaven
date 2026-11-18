@@ -87,6 +87,10 @@ jobs:
           test "$code" = 1 && test "$out" = "MissingDigest { workload: no-digest.load }"
           set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-bad-unit.toml); code=$?; set -e
           test "$code" = 1 && grep -q '^BadUnit { workload: bad-unit.load' <<< "$out"
+      - name: Published keys agree with KEYS.md (ECO.REL.SIGN.GUIDE AC-1)
+        run: |
+          cargo xtask rel keys-check
+          cargo xtask rel keys-check --keys fixtures/rel/guide/keys --doc fixtures/rel/guide/docs/KEYS.md
       - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
         run: cargo xtask plat-matrix lint-tiers
       - name: Study task list and protocol check via cargo xtask (FLOW.STUDY.PROTO AC-1, AC-3)
@@ -115,6 +119,7 @@ jobs:
           python fixtures/plat/bench/make_expected.py --check
           python fixtures/rel/runbook/make_fixtures.py --check
           python fixtures/rel/sbom/make_fixtures.py --check
+          python fixtures/rel/guide/make_fixtures.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python tools/check_entries.py
@@ -153,6 +158,43 @@ jobs:
           grep -q '^"starter" = ' layers.toml
           cargo +stable clippy --workspace --all-targets -- -D warnings
           cargo +stable test --workspace
+  verify-guide:
+    # ECO.REL.SIGN.GUIDE AC-3: the command blocks of VERIFY.md run verbatim on each Tier 1 OS
+    # family against fixtures/rel/guide/release/; a copy with one changed byte must fail. The
+    # network is cut where a hosted runner allows it: Linux runs in a new network namespace,
+    # macOS under a sandbox profile that denies network access; Windows has no such switch.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            tag: verify-linux
+          - os: windows-latest
+            tag: verify-windows
+          - os: macos-latest
+            tag: verify-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Follow VERIFY.md (${{ matrix.tag }})
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)
+              offline() { sudo unshare --net -- "$@"; }
+              py=python3 ;;
+            macOS)
+              offline() { sandbox-exec -p '(version 1)(allow default)(deny network*)' "$@"; }
+              py=python3 ;;
+            *)
+              offline() { "$@"; }
+              py=python ;;
+          esac
+          if [ "$RUNNER_OS" != Windows ]; then
+            # The isolation really cuts the network.
+            if offline curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
+          fi
+          offline "$py" tools/verify_guide.py --tag "${{ matrix.tag }}"
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
