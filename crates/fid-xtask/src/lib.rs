@@ -30,8 +30,11 @@
 //!
 //! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
 //! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
+//!
+//! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`).
 
 pub mod apps_policy;
+pub mod bots;
 pub mod crate_graph;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;

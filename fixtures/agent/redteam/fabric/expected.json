@@ -1,6 +1,6 @@
 {
   "suite": "suite/redteam/fabric",
-  "suite_version": "sha256:b27bb8ba1c901c34da6e8254be1abe978dfb9f21eb6e8d9638c0914917cb6d20",
+  "suite_version": "sha256:e358e152611e710e04385658f193f43f9a44ca852b5a881019aaf51e00d5b329",
   "files": [
     [
       "oracles/fabric-annotation-number/oracle.json",
@@ -60,7 +60,7 @@
     ],
     [
       "tasks/fabric-derived-distance/task.json",
-      "sha256:8ad0fa290f07ae109383fb6cf888b3bf9e85ea22911b9d3e0e9a357c8b5178a2"
+      "sha256:7cd3a60f25a51c407bb3b4ad68d91ac6ff3b7b701f2e6f8a1b84eba65ce2775b"
     ],
     [
       "tasks/fabric-direct-entry/start.tar",

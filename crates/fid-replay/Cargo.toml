@@ -1,6 +1,6 @@
 [package]
 name = "fid-replay"
-description = "Metrology Maven replay: outcome classification and decision invariance (spec node CORE.RPL.CLASS)"
+description = "Metrology Maven replay: outcome classification, first-divergence search and attribution (spec nodes CORE.RPL.CLASS, CORE.RPL.BISECT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,9 +9,7 @@ repository.workspace = true
 
 [dependencies]
 fid-types = { path = "../fid-types" }
-
-[dev-dependencies]
-# Test-only: reads the JSON case fixture. fid-canon sits below fid-replay in layers.toml.
+# Canonical JSON for the bisect report fragment; fid-canon sits below fid-replay in layers.toml.
 fid-canon = { path = "../fid-canon" }
 
 [lints]

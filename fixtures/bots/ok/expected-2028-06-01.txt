@@ -1,0 +1,2 @@
+BOTS-STALE hosted-x
+BOTS-STALE self-review
