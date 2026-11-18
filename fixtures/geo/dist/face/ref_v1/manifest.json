@@ -1,0 +1,72 @@
+{
+ "format": "fid-face-ref/1",
+ "oracle_version": "face_proj_oracle 1.0.0",
+ "seed": 31,
+ "license": "CC-BY-4.0",
+ "generator": "tools/fixtures/face_proj_oracle.py",
+ "files": [
+  {
+   "path": "annulus_trap.json",
+   "sha256": "sha256:2d260ece4857dd5b1cf71ab93e447ab78f7a65a2ac78c921fee30d97060c745a",
+   "seed": 31007,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 176
+  },
+  {
+   "path": "cone_frustum.json",
+   "sha256": "sha256:548b55c229146774b66c735a807124f6639324cb734bfb1e143d964198781d13",
+   "seed": 31004,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  },
+  {
+   "path": "cube.json",
+   "sha256": "sha256:0e8501159e3275f31b0822d64893940b7a63ac4ffe592cd1645e0d4f9308bc85",
+   "seed": 31000,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  },
+  {
+   "path": "nurbs_bicubic_holed.json",
+   "sha256": "sha256:e5f5d2c23a5478098a727bfde2ede0d1aa469b868ad2cecfaac5e42a240da494",
+   "seed": 31005,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 152
+  },
+  {
+   "path": "nurbs_rational_pair.json",
+   "sha256": "sha256:a084688d9023981425539739dd5afef6538b284bfd2c31971ce9c3fb6c0b5bf8",
+   "seed": 31006,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  },
+  {
+   "path": "saddle_two_minima.json",
+   "sha256": "sha256:b764c6699ffcb6ab711966acf3d2821f379e1fec85ea06ce65ae5b74b0132786",
+   "seed": 31008,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 176
+  },
+  {
+   "path": "sphere_cap.json",
+   "sha256": "sha256:f42522e13bdf062541275815bedd7144bd8f2b22270a24d14c7e821cd38e954e",
+   "seed": 31002,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  },
+  {
+   "path": "torus_segment.json",
+   "sha256": "sha256:90ef36b92b50c64c8e16dbe581e817f7eaf8bfb6fb636bda947e994d3643c449",
+   "seed": 31003,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  },
+  {
+   "path": "tube.json",
+   "sha256": "sha256:10acb84909bd87f23a21fd0a981d25628280b3747ef61aca8909b81edb356628",
+   "seed": 31001,
+   "oracle_version": "face_proj_oracle 1.0.0",
+   "queries": 160
+  }
+ ]
+}
