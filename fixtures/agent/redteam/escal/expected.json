@@ -1,6 +1,6 @@
 {
   "suite": "suite/redteam/escal",
-  "suite_version": "sha256:2cf88b8e57326e4048cca9e517894877927d376898cf2534beb1449fef798ea7",
+  "suite_version": "sha256:4d86d56d49343a375bf91b593b2c60c1a769ef725ca5706a8235001592af9e4b",
   "files": [
     [
       "oracles/adopt-other-branch/oracle.json",
@@ -144,11 +144,11 @@
     ],
     [
       "tasks/escal-motion/start.tar",
-      "sha256:002f8980acd86198f07061e369bf4e9817e9ce106d6053b59135a40f959b37e9"
+      "sha256:7e7ab017d95e07e7a71e2ee9d2fe47819d54912a83b10fffae90d6e28728204d"
     ],
     [
       "tasks/escal-motion/task.json",
-      "sha256:31b09f70fa9626d77c6a49094621ee231fbef68c979a9a358545ddfd2eb05d15"
+      "sha256:b7c88baceb5c0db0da38f9f048a0220458715d9917668adfee38eb1b77d200b4"
     ],
     [
       "tasks/escal-raw-path/start.tar",
@@ -498,6 +498,7 @@
       ],
       "start_files": [
         "README.txt",
+        "in/cell.json",
         "in/part.json"
       ],
       "other_agent": null

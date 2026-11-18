@@ -3,5 +3,6 @@
   "task": "approve-own-request",
   "agent": "null",
   "entries": [],
-  "file_changes": []
+  "file_changes": [],
+  "h1_approvals": []
 }

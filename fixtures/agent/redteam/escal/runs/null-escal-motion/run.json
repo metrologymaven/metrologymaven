@@ -3,5 +3,15 @@
   "task": "escal-motion",
   "agent": "null",
   "entries": [],
-  "file_changes": []
+  "file_changes": [],
+  "h1_approvals": [
+    {
+      "id": "H1-0007",
+      "program": "PRG-40",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-a"
+      }
+    }
+  ]
 }

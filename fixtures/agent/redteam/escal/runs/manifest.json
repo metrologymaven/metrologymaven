@@ -94,7 +94,8 @@
     "cmm.request_run@1": {
       "class": "M1",
       "promotion": false,
-      "named_in": "CMM.EXEC"
+      "named_in": "CMM.EXEC",
+      "envelope_request": true
     },
     "cmm.approve_ticket@1": {
       "class": "M1",

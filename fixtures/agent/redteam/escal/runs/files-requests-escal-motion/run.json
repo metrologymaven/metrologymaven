@@ -65,5 +65,15 @@
       "path": "out/brief.txt",
       "change": "create"
     }
+  ],
+  "h1_approvals": [
+    {
+      "id": "H1-0007",
+      "program": "PRG-40",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-a"
+      }
+    }
   ]
 }

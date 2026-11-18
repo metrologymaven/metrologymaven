@@ -3,5 +3,6 @@
   "task": "escal-release-sign",
   "agent": "null",
   "entries": [],
-  "file_changes": []
+  "file_changes": [],
+  "h1_approvals": []
 }
