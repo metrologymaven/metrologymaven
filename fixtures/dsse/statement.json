@@ -1,0 +1,1 @@
+{"_type":"https://in-toto.io/Statement/v1","predicate":{"note":"TEST FIXTURE: signed with published RFC test keys"},"predicateType":"https://example.invalid/fid/result-package/v0","subject":[{"digest":{"sha256":"089ee002252384d0fe18c2f7a5cb65ec4974c6789f9622a6944e61df1260368c"},"name":"result-package.fidpkg"}]}

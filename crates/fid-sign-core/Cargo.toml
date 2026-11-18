@@ -1,0 +1,30 @@
+[package]
+name = "fid-sign-core"
+description = "DSSE v1.0 envelopes, ECDSA P-256 and Ed25519 verification and key fingerprints (spec node TRUST.SIGN.DSSE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Software signer holding a private key in memory. Tests only (REQ-TRUST.SIGN-004):
+# shipped builds sign through an opaque keystore handle implementing `Signer`.
+test-signer = []
+
+# No OS or network dependencies; builds for wasm32.
+[dependencies]
+# Bounded JSON parser and RFC 8785 serialiser (same layer) for envelope (de)serialisation.
+fid-trust-canon = { path = "../fid-trust-canon" }
+sha2 = { version = "0.10", default-features = false }
+# RustCrypto ECDSA P-256 / SHA-256.
+p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
+# Ed25519 with verify_strict (rejects small-order keys and non-canonical encodings).
+ed25519-dalek = { version = "2", default-features = false, features = ["fast", "zeroize"] }
+
+[dev-dependencies]
+# Integration tests use the software test signer.
+fid-sign-core = { path = ".", features = ["test-signer"] }
+
+[lints]
+workspace = true

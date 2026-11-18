@@ -135,6 +135,7 @@ jobs:
           python fixtures/rel/runbook/make_fixtures.py --check
           python fixtures/rel/sbom/make_fixtures.py --check
           python fixtures/rel/guide/make_fixtures.py --check
+          python fixtures/dsse/make_fixtures.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python tools/check_entries.py
@@ -247,4 +248,4 @@ jobs:
           version: "v49.0.6"
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
-        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types
+        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core

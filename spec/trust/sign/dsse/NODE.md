@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-sign-core]
 satisfies: [REQ-TRUST.SIGN-001, REQ-TRUST.SIGN-003, REQ-TRUST.SIGN-008, REQ-TRUST.SIGN-009]
 covers: []
 depends_on: []
