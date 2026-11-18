@@ -383,7 +383,9 @@ fn denylist_defaults_and_register() {
     for h in ["github-actions", "dependabot", "renovate"] {
         assert!(d.contains(h), "{h}");
     }
-    let reg = table("[[bot]]\nid = \"a\"\naccount = \"Review-Helper[bot]\"\n\n[[bot]]\nid = \"b\"\naccount = \"app/scanner\"\n");
+    let reg = table(
+        "[[bot]]\nid = \"a\"\naccount = \"Review-Helper[bot]\"\n\n[[bot]]\nid = \"b\"\naccount = \"app/scanner\"\n",
+    );
     let d = denylist(Some(&reg), "bots.toml").unwrap();
     assert!(d.contains("review-helper") && d.contains("scanner"));
     for bad in ["bot = 1", "[[bot]]\nid = \"a\"", "[[bot]]\naccount = 3"] {
