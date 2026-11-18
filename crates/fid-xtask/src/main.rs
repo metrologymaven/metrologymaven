@@ -2,6 +2,7 @@
 
 mod pins;
 
+use fid_xtask::plat_gpu_invar;
 use fid_xtask::plat_matrix_tiers;
 use fid_xtask::rel::{runbook, sbom, sums, version};
 use std::io::Read;
@@ -15,6 +16,9 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-hw validate [--file <path>]\n       \
                      cargo xtask plat-hw validate-suite [--file <path>]\n       \
                      cargo xtask plat-hw result-schema\n       \
+                     cargo xtask plat-gpu invariance --backends <a,b,...> [--sequence <toml>] \
+                     [--examples <dir>] [--work <dir>] [--fid <path>]\n       \
+                     cargo xtask plat-gpu invariance --recorded <dir>\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
@@ -36,6 +40,7 @@ fn main() -> ExitCode {
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
+        Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
@@ -85,6 +90,71 @@ fn fid_platform(args: &[String], group: &str) -> ExitCode {
         Err(e) => {
             eprintln!("{group}: cannot run cargo: {e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.GPU.FALLBK.INVAR: `plat-gpu invariance`. With `--backends`, runs the invariance
+/// sequence once per backend through `fid --gpu-backend` and compares the digest lists; with
+/// `--recorded <dir>`, compares recorded lists only. Prints the report (or the error). Exit 0:
+/// all lists equal; 1: Diverged, BackendUnavailable or SequenceFailed; 2: bad usage or input.
+fn plat_gpu_invariance(args: &[String]) -> ExitCode {
+    let mut backends: Option<&str> = None;
+    let mut recorded: Option<PathBuf> = None;
+    let mut sequence = PathBuf::from(plat_gpu_invar::DEFAULT_SEQUENCE);
+    let mut examples = PathBuf::from(plat_gpu_invar::DEFAULT_EXAMPLES);
+    let mut work: Option<PathBuf> = None;
+    let mut fid = PathBuf::from("fid");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--backends", Some(v)) => backends = Some(v),
+            ("--recorded", Some(v)) => recorded = Some(PathBuf::from(v)),
+            ("--sequence", Some(v)) => sequence = PathBuf::from(v),
+            ("--examples", Some(v)) => examples = PathBuf::from(v),
+            ("--work", Some(v)) => work = Some(PathBuf::from(v)),
+            ("--fid", Some(v)) => fid = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = match (backends, recorded) {
+        (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| plat_gpu_invar::compare(&lists)),
+        (Some(list), None) => match plat_gpu_invar::parse_backends(list) {
+            Ok(backends) => {
+                let work = work.unwrap_or_else(|| {
+                    std::env::temp_dir().join(format!("fid-plat-gpu-invariance-{}", std::process::id()))
+                });
+                let opts = plat_gpu_invar::RunOptions {
+                    sequence: &sequence,
+                    examples: &examples,
+                    work: &work,
+                    backends: &backends,
+                    host_os: std::env::consts::OS,
+                };
+                plat_gpu_invar::run(&opts, &mut plat_gpu_invar::FidDriver { fid })
+            }
+            Err(e) => Err(e),
+        },
+        _ => {
+            eprintln!("plat-gpu invariance: give exactly one of --backends and --recorded\n{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    match result {
+        Ok(report) => {
+            print!("{}", report.render());
+            if report.equal {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        Err(e) => {
+            println!("{e}");
+            ExitCode::from(e.exit_code())
         }
     }
 }

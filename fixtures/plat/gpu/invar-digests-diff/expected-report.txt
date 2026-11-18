@@ -1,0 +1,8 @@
+plat-gpu invariance: DIVERGED
+backends: dx12 software vulkan
+entries: dx12=6 software=6 vulkan=6
+first difference: entry 4 command fit.ls_cylinder@1
+differing backends: software
+  dx12: 4 fit.ls_cylinder@1 sha256:8385c3371acad4b68a9aedb43d9eff0f2aec91f6103699f6d7d4b6e93d122759
+  software: 4 fit.ls_cylinder@1 sha256:43e854239d2979986b293fc1fbb15bb6f649016681877fd6a8ca2a6f8040bd57
+  vulkan: 4 fit.ls_cylinder@1 sha256:8385c3371acad4b68a9aedb43d9eff0f2aec91f6103699f6d7d4b6e93d122759

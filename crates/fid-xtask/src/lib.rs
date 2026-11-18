@@ -21,8 +21,12 @@
 //!
 //! `rel sbom`: one SPDX 2.3 JSON SBOM per planned artefact (spec node `ECO.REL.SIGN.SBOM`), in
 //! [`rel::sbom`].
+//!
+//! `plat-gpu invariance`: the cross-backend value-of-record invariance harness (spec node
+//! `PLAT.GPU.FALLBK.INVAR`), in [`plat_gpu_invar`].
 
 pub mod crate_graph;
+pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
 pub mod rel;
 

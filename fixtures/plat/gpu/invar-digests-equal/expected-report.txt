@@ -1,0 +1,3 @@
+plat-gpu invariance: EQUAL
+backends: dx12 software vulkan
+entries: dx12=6 software=6 vulkan=6
