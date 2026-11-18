@@ -473,6 +473,7 @@ fn req004_closed_taxonomy_with_positions() {
         IoError::FormatDuplicate,
         IoError::RawPathForbidden,
         IoError::PathOutsideRoot,
+        IoError::RootNotFound,
         IoError::TargetExists,
         IoError::LimitRaiseForbidden { limit: LimitKind::Depth, requested: 2, default: 1 },
         IoError::ReaderCrashed,
