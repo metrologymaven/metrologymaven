@@ -103,13 +103,17 @@ impl CheckReport {
 pub enum Change {
     Added,
     Removed,
-    Renamed { replacement: String },
+    Renamed {
+        replacement: String,
+    },
     ValueChanged,
     /// A token's `$type` differs (breaking only).
     TypeChanged,
     /// The name's kind differs, e.g. token -> icon (breaking only).
     KindChanged,
-    Deprecated { replacement: String },
+    Deprecated {
+        replacement: String,
+    },
     Unchanged,
 }
 
@@ -131,9 +135,7 @@ impl Change {
     pub fn allowed_classes(&self) -> &'static [Class] {
         match self {
             Change::Added | Change::Deprecated { .. } => &[Class::Additive],
-            Change::Removed | Change::Renamed { .. } | Change::TypeChanged | Change::KindChanged => {
-                &[Class::Breaking]
-            }
+            Change::Removed | Change::Renamed { .. } | Change::TypeChanged | Change::KindChanged => &[Class::Breaking],
             Change::ValueChanged => &[Class::Fix, Class::Breaking],
             Change::Unchanged => &[],
         }
@@ -227,13 +229,7 @@ fn classify(old: &Package, new: &Package) -> BTreeMap<String, Change> {
     out
 }
 
-fn check_breaking(
-    changes: &BTreeMap<String, Change>,
-    from: Version,
-    to: Version,
-    old: &Package,
-    f: &mut Vec<Finding>,
-) {
+fn check_breaking(changes: &BTreeMap<String, Change>, from: Version, to: Version, old: &Package, f: &mut Vec<Finding>) {
     for (name, c) in changes {
         if !c.is_breaking() {
             continue;
