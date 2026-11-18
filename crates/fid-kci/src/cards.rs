@@ -12,6 +12,9 @@
 use std::cmp::Ordering;
 use std::fmt;
 
+use crate::kci::json::Flat;
+use crate::kci::{sha256, Digest};
+
 /// Longest allowed free-text field, in characters (REQ-KRN.MAN.CARD-004).
 pub const MAX_FIELD_CHARS: usize = 2000;
 /// A quoted passage longer than this many words, in a card that cites a standard,
@@ -107,6 +110,8 @@ pub enum CardError {
     Syntax { line: usize, why: &'static str },
     TooLong { field: String },
     StandardsTextSuspected { field: String },
+    /// Two cards in one registry share an ID.
+    DuplicateCard(String),
 }
 
 impl CardError {
@@ -120,6 +125,7 @@ impl CardError {
             CardError::Syntax { .. } => "syntax",
             CardError::TooLong { .. } => "too_long",
             CardError::StandardsTextSuspected { .. } => "standards_text_suspected",
+            CardError::DuplicateCard(_) => "duplicate_card",
         }
     }
 }
@@ -136,6 +142,7 @@ impl fmt::Display for CardError {
             CardError::StandardsTextSuspected { field } => {
                 write!(f, "standards_text_suspected: {field} quotes more than {MAX_QUOTE_WORDS} words")
             }
+            CardError::DuplicateCard(id) => write!(f, "duplicate_card: {id}"),
         }
     }
 }
@@ -384,4 +391,74 @@ pub fn check(table_ids: &[AlgorithmId], card_ids: &[AlgorithmId]) -> CheckReport
     orphans.sort();
     orphans.dedup();
     CheckReport { missing_cards: missing, orphan_cards: orphans }
+}
+
+impl SpecCard {
+    /// Canonical card bytes (REQ-KRN.MAN.CARD-005): kernel canonical JSON of every field,
+    /// keys in UTF-16 order, list items in card order, the ID in its display form.
+    pub fn canonical_bytes(&self) -> Vec<u8> {
+        let id = self.id.to_string();
+        crate::kci::json::fixed_object(&[
+            ("applicability", Flat::Str(&self.applicability)),
+            ("determinism", Flat::Str(&self.determinism)),
+            ("failure_modes", Flat::List(&self.failure_modes)),
+            ("id", Flat::Str(&id)),
+            ("method", Flat::Str(&self.method)),
+            ("references", Flat::List(&self.references)),
+            ("title", Flat::Str(&self.title)),
+            ("validation", Flat::Str(&self.validation)),
+        ])
+    }
+}
+
+/// Spec cards sorted by ID, each with its canonical bytes and their SHA-256 digest computed
+/// by the kernel's own SHA-256 (REQ-KRN.MAN.CARD-005). Searched by binary search.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CardRegistry {
+    cards: Vec<(SpecCard, Vec<u8>, Digest)>,
+}
+
+impl CardRegistry {
+    /// Builds a registry; fails on two cards with the same ID.
+    pub fn new(cards: Vec<SpecCard>) -> Result<Self, CardError> {
+        let mut cards: Vec<(SpecCard, Vec<u8>, Digest)> = cards
+            .into_iter()
+            .map(|c| {
+                let bytes = c.canonical_bytes();
+                let digest = sha256(&bytes);
+                (c, bytes, digest)
+            })
+            .collect();
+        cards.sort_by(|a, b| a.0.id.cmp(&b.0.id));
+        for pair in cards.windows(2) {
+            if pair[0].0.id == pair[1].0.id {
+                return Err(CardError::DuplicateCard(pair[0].0.id.to_string()));
+            }
+        }
+        Ok(CardRegistry { cards })
+    }
+
+    fn find(&self, id: &AlgorithmId) -> Option<&(SpecCard, Vec<u8>, Digest)> {
+        self.cards.binary_search_by(|(c, _, _)| c.id.cmp(id)).ok().map(|i| &self.cards[i])
+    }
+
+    /// The card for `id`.
+    pub fn get(&self, id: &AlgorithmId) -> Option<&SpecCard> {
+        self.find(id).map(|e| &e.0)
+    }
+
+    /// The card's canonical bytes.
+    pub fn canonical_bytes(&self, id: &AlgorithmId) -> Option<&[u8]> {
+        self.find(id).map(|e| e.1.as_slice())
+    }
+
+    /// SHA-256 of the card's canonical bytes.
+    pub fn digest(&self, id: &AlgorithmId) -> Option<&Digest> {
+        self.find(id).map(|e| &e.2)
+    }
+
+    /// Card IDs, sorted (input to [`check`]).
+    pub fn ids(&self) -> Vec<AlgorithmId> {
+        self.cards.iter().map(|(c, _, _)| c.id.clone()).collect()
+    }
 }
