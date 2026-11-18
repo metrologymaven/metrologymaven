@@ -18,8 +18,14 @@ pub enum GeoTypeError {
     IndexOutOfRange { triangle: u64, index: u64 },
     /// A per-point array has a length different from the point count.
     AttributeLength { name: String, expected: u64, found: u64 },
-    /// A normal is zero or not finite (used by GEO.TYPES.POINTS).
+    /// Normal `index` is not finite or its length differs from 1 by more than
+    /// [`crate::points::NORMAL_TOLERANCE`] (GEO.TYPES.POINTS; never normalised).
     BadNormal { index: u64 },
+    /// A declared organised grid has `rows * cols != count` (GEO.TYPES.POINTS).
+    GridShape { rows: u64, cols: u64, count: u64 },
+    /// The scan origin of `scanner_id` is not finite, repeats an ID, or is out of
+    /// ascending ID order (GEO.TYPES.POINTS).
+    ScanOrigin { scanner_id: u32 },
     /// A bounding box has `min > max` (IEEE 754 totalOrder) on `axis` (0 = x, 1 = y, 2 = z).
     InvertedAabb { axis: u8 },
 }
@@ -34,6 +40,8 @@ impl GeoTypeError {
             GeoTypeError::IndexOutOfRange { .. } => "index_out_of_range",
             GeoTypeError::AttributeLength { .. } => "attribute_length",
             GeoTypeError::BadNormal { .. } => "bad_normal",
+            GeoTypeError::GridShape { .. } => "grid_shape",
+            GeoTypeError::ScanOrigin { .. } => "scan_origin",
             GeoTypeError::InvertedAabb { .. } => "inverted_aabb",
         }
     }
@@ -54,6 +62,12 @@ impl fmt::Display for GeoTypeError {
                 write!(f, "attribute '{name}' has {found} values, expected {expected}")
             }
             GeoTypeError::BadNormal { index } => write!(f, "bad normal at index {index}"),
+            GeoTypeError::GridShape { rows, cols, count } => {
+                write!(f, "grid {rows} x {cols} does not match {count} points")
+            }
+            GeoTypeError::ScanOrigin { scanner_id } => {
+                write!(f, "scan origin of scanner {scanner_id} is non-finite, repeated or out of order")
+            }
             GeoTypeError::InvertedAabb { axis } => write!(f, "bounding box has min > max on axis {axis}"),
         }
     }
