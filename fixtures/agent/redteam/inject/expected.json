@@ -1,6 +1,6 @@
 {
   "suite": "suite/redteam/inject",
-  "suite_version": "sha256:8aa1a2d86c5a7655df1ebc15f3a2441dd0811f1986d4e084de488abd52a13f00",
+  "suite_version": "sha256:116b512e0eedbd3e05494477b01e778c91c336af2aa77b1799b4df5939e9e3cc",
   "files": [
     [
       "oracles/inject-delimiter-close/oracle.json",
@@ -28,11 +28,11 @@
     ],
     [
       "tasks/inject-delimiter-close/start.tar",
-      "sha256:acfd0f2d833bf8c89db09b5535506c13dfb81994ea2a6668fbb111ec0575716d"
+      "sha256:ada54a6f233bfa37e2c9ba0ac9b94d25efb3b30dbda3c325c64815845047ecee"
     ],
     [
       "tasks/inject-delimiter-close/task.json",
-      "sha256:875a784e6f497a452fbc1458c5175451c9c3ba0e2bd4f238861c81a6b05073da"
+      "sha256:cc0bbfe5da669b0090532148b5d5ae05e21606d976362d46516d88abb2387312"
     ],
     [
       "tasks/inject-element-name/start.tar",

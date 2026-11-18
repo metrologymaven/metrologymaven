@@ -53,27 +53,41 @@ fn expected() -> CValue {
 type Files = Vec<(String, Vec<u8>)>;
 
 /// Minimal ustar reader for the start-state archives: (path, bytes) of every regular file.
-fn untar(bytes: &[u8]) -> Files {
-    let field = |h: &[u8]| String::from_utf8(h.iter().take_while(|b| **b != 0).copied().collect()).unwrap();
+/// A malformed or truncated archive is an `Err` naming the problem and the offset.
+fn try_untar(bytes: &[u8]) -> Result<Files, String> {
+    let field = |h: &[u8], at: usize| {
+        String::from_utf8(h.iter().take_while(|b| **b != 0).copied().collect())
+            .map_err(|_| format!("header field at offset {at} is not UTF-8"))
+    };
     let mut out = Vec::new();
     let mut pos = 0;
-    while pos + 512 <= bytes.len() {
-        let h = &bytes[pos..pos + 512];
+    loop {
+        let Some(h) = bytes.get(pos..pos + 512) else {
+            return Err(format!("truncated archive: no complete header or end marker at offset {pos}"));
+        };
         if h.iter().all(|b| *b == 0) {
-            break;
+            return Ok(out);
         }
-        assert_eq!(&h[257..262], b"ustar", "not a ustar header");
-        let name = field(&h[0..100]);
-        let prefix = field(&h[345..500]);
+        if &h[257..262] != b"ustar" {
+            return Err(format!("not a ustar header at offset {pos}"));
+        }
+        let name = field(&h[0..100], pos)?;
+        let prefix = field(&h[345..500], pos)?;
         let path = if prefix.is_empty() { name } else { format!("{prefix}/{name}") };
-        let size = usize::from_str_radix(field(&h[124..136]).trim(), 8).unwrap();
-        let data = bytes[pos + 512..pos + 512 + size].to_vec();
+        let raw = field(&h[124..136], pos)?;
+        let size = usize::from_str_radix(raw.trim(), 8).map_err(|_| format!("bad size {raw:?} of {path}"))?;
+        let Some(data) = bytes.get(pos + 512..pos + 512 + size) else {
+            return Err(format!("truncated archive: {path} needs {size} bytes at offset {}", pos + 512));
+        };
         if h[156] == b'0' || h[156] == 0 {
-            out.push((path, data));
+            out.push((path, data.to_vec()));
         }
         pos += 512 + size.div_ceil(512) * 512;
     }
-    out
+}
+
+fn untar(bytes: &[u8]) -> Files {
+    try_untar(bytes).unwrap_or_else(|e| panic!("start-state archive: {e}"))
 }
 
 fn count(hay: &[u8], needle: &str) -> usize {
@@ -89,9 +103,12 @@ fn hits(files: &[(String, Vec<u8>)], needle: &str) -> BTreeMap<String, usize> {
     files.iter().map(|(p, b)| (p.clone(), count(p.as_bytes(), needle) + count(b, needle))).collect()
 }
 
+fn archive_bytes(t: &SuiteTask) -> Vec<u8> {
+    std::fs::read(root(SUITE).join("tasks").join(&t.task.id).join(t.task.start_state.path.as_str())).unwrap()
+}
+
 fn start_files(t: &SuiteTask) -> Files {
-    let p = root(SUITE).join("tasks").join(&t.task.id).join(t.task.start_state.path.as_str());
-    untar(&std::fs::read(p).unwrap())
+    untar(&archive_bytes(t))
 }
 
 fn marker_of(t: &Task) -> &str {
@@ -227,6 +244,22 @@ fn markers_only_in_payloads() {
             }
         }
     }
+}
+
+/// The tar reader reports truncated or malformed archives as errors instead of panicking.
+#[test]
+fn untar_rejects_truncated_archives() {
+    let suite = load_suite(&root(SUITE)).unwrap();
+    let t = &suite.tasks[0];
+    let bytes = archive_bytes(t);
+    assert!(try_untar(&bytes).is_ok());
+    for cut in [0, 100, 512 + 10, 1024 + 100] {
+        let e = try_untar(&bytes[..cut]).unwrap_err();
+        assert!(e.contains("truncated"), "{cut}: {e}");
+    }
+    let mut bad = bytes.clone();
+    bad[257] = b'X';
+    assert!(try_untar(&bad).unwrap_err().contains("not a ustar header"));
 }
 
 /// AC-4, REQ-004: exactly one task carries the closing untrusted delimiter, exactly once, in

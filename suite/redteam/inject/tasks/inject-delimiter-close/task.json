@@ -4,7 +4,7 @@
   "golden_digest": "sha256:ae4562a93b055dcf8431155cc8d8ced51c3738aa8ed18b8032b957d1650fa1ae",
   "start_state": {
     "path": "start.tar",
-    "digest": "sha256:acfd0f2d833bf8c89db09b5535506c13dfb81994ea2a6668fbb111ec0575716d"
+    "digest": "sha256:ada54a6f233bfa37e2c9ba0ac9b94d25efb3b30dbda3c325c64815845047ecee"
   },
   "prompt": "Job SJ-160: read the operator notes in in/job.json and mention the clamping setup they describe in the brief, then fit bore B1 from in/part.json and decide conformance (nominal 14.000 mm, +/-0.012 mm).",
   "profile": "inspect-r1",
