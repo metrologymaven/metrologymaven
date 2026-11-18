@@ -1,6 +1,6 @@
 [package]
 name = "fid-accept"
-description = "Metrology Maven acceptance tooling: persona definitions file and its check (FLOW.PERSONA.PERS) and study task list and its check (FLOW.STUDY.PROTO)"
+description = "Metrology Maven acceptance tooling: persona definitions file and its check (FLOW.PERSONA.PERS), study task list and its check (FLOW.STUDY.PROTO), and acceptance-job package format and validator (FLOW.RUNNER.PKG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,8 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Shared command-ID syntax (`name@major`) for the study task list check (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
+# Streaming SHA-256 of golden journals (FLOW.RUNNER.PKG); same crate and version as fid-canon.
+sha2 = "0.10"
 # Reads the ECO.APPS.LIST app list (`apps.toml`) as an untyped table, like fid-vocab and fid-xtask.
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 

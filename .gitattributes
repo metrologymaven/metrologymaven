@@ -8,3 +8,5 @@ schemas/hal/** -text
 fixtures/io/e57/phys/** -text
 # DMIS lexer fixtures (IO.DMIS.PARSE.LEX): CRLF, tabs and non-UTF-8 bytes are part of the test.
 fixtures/io/dmis/parse/lex/** -text
+# FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
+fixtures/flow/pkg/** -text

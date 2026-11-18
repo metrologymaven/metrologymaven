@@ -1,0 +1,29 @@
+{
+  "format": "acceptance-suite@1",
+  "packages": [
+    {
+      "path": "valid",
+      "digest": "sha256:8cc185c9d6d2f49d44ddeef554ab1e595f05a1819d978bc33b03bf014b9a0d45"
+    },
+    {
+      "path": "valid",
+      "digest": "sha256:8cc185c9d6d2f49d44ddeef554ab1e595f05a1819d978bc33b03bf014b9a0d45"
+    },
+    {
+      "path": "VALID",
+      "digest": "sha256:8cc185c9d6d2f49d44ddeef554ab1e595f05a1819d978bc33b03bf014b9a0d45"
+    },
+    {
+      "path": "valid/inner",
+      "digest": "sha256:8cc185c9d6d2f49d44ddeef554ab1e595f05a1819d978bc33b03bf014b9a0d45"
+    },
+    {
+      "path": "../valid",
+      "digest": "sha256:8cc185c9d6d2f49d44ddeef554ab1e595f05a1819d978bc33b03bf014b9a0d45"
+    },
+    {
+      "path": "bad-check",
+      "digest": "sha256:XYZ"
+    }
+  ]
+}

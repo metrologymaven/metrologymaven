@@ -1,6 +1,6 @@
 [package]
 name = "fid-store"
-description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS)"
+description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store, evictable cache (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS, CORE.STO.CACHE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
