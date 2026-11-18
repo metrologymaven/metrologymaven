@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
 satisfies: [REQ-KRN.NUM.LINT-001, REQ-KRN.NUM.LINT-004]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND]

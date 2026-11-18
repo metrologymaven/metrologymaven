@@ -1,0 +1,11 @@
+[[allow]]
+name = "ext-a"
+version = "^1.2"
+reason = "fixture stand-in for a vendored solver"
+reviewer = "fixture"
+
+[[allow]]
+name = "ext-m"
+version = "0.1"
+reason = "fixture proc-macro of ext-a"
+reviewer = "fixture"
