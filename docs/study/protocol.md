@@ -56,7 +56,7 @@ Rules:
 1. The partner times **its own licensed tool** on **the same task and the same data** it uses with Metrology Maven, in the same session or one close to it.
 2. The partner runs the incumbent tool. The observer only reads the stopwatch; the project never operates, installs or receives the incumbent tool, its files or its output.
 3. Start and end follow the same meaning as section 5: opening the first source file to exporting the finished report.
-4. The baseline time goes into the record's optional `incumbent_s` field and nowhere else. Under D-021, incumbent baselines are **internal study records only**: they are not published, not compared in public, and not named against a product, until a later decision allows it.
+4. The baseline time goes into the record's optional `incumbent_s` field and nowhere else. Records are imported into the project's acceptance store, which is **not public**: it is not part of the public repository, not published, and readable only by maintainers running the study. Under D-021, incumbent baselines are **internal study records only**: they are not published, not compared in public, and not named against a product, until a later decision allows it.
 5. Order: half of the partners do the incumbent run first and half do it second, so learning the part does not favour one tool.
 
 ## 7. Usability measures
@@ -93,7 +93,9 @@ The observer sheet has exactly the fields of a `study-record@1` record, one shee
 | Assisted | `assisted` | Yes if the observer helped at all. |
 | Incumbent time | `incumbent_s` (optional) | The partner's own tool on the same task and data (section 6). |
 
-Free-text notes, if any, stay on site with the study lead's raw notes (section 9) and are never imported.
+Free-text notes, if any, are written on the observer's own copy of the sheet and kept in the **study's private store**: storage held by the study lead outside the public repository and outside the project's acceptance store (the same place as the consent records and the token key, section 9). They are never imported and never committed.
+
+Guidance for notes: write no names of people or companies, no part numbers, drawing numbers or job numbers, and no customer or programme details; refer to people only by participant code and to the partner only by token. If any of these is written by mistake, the observer redacts it (strikes it out unreadably, or deletes it from a digital note) before the notes leave the session.
 
 ## 9. Consent, data minimisation and anonymisation
 
@@ -102,9 +104,11 @@ These rules follow the research rules of UX.RESEARCH.PROTO (consent form, partic
 ### 9.1 Informed consent
 
 1. No session starts until each participant has given informed consent, signed or recorded, and the partner organisation has agreed to the study in writing.
-2. The consent covers: the purpose (measuring task time and usability of the product), what is recorded (the fields of section 8 and nothing else; no audio, video or screen recording unless the participant separately opts in), how long raw notes are kept, who sees raw data (the study lead and observer only), and the right to stop or withdraw at any time without giving a reason.
-3. Withdrawal means the participant's records are not imported, or are deleted from the project's acceptance store if already imported, and their raw notes are destroyed.
-4. Consent records are referenced only by participant code `P-<study>-<NN>` and are held by the study lead outside the public repository.
+2. The consent covers: the purpose (measuring task time and usability of the product), what is recorded (the fields of section 8 and nothing else; no audio, video or screen recording unless the participant separately opts in), how long raw notes, recordings, consent records and imported records are kept (section 9.4), who sees raw data (the study lead and observer only), and the right to stop or withdraw at any time without giving a reason.
+3. Withdrawal means the participant's records are not imported, or are deleted from the project's acceptance store if already imported, and their raw notes and any recordings are destroyed. To make this possible, the study lead's key (9.3) maps each participant code to the (partner token, session, job) of every record that participant produced.
+4. Participants are told before they consent that aggregates already published (FLOW.STUDY.CLAIM) cannot be withdrawn: a withdrawal removes their records from every later aggregate, but a published summary is not recalled. Published aggregates never identify a participant.
+5. **Recordings.** Audio, video or screen recording happens only if the participant opted in to it separately. Recordings are kept in the study's private store (section 8), never in the public repository or the acceptance store, and are deleted with the raw notes (9.4). A recording, or any part of it, is published only if the participant also gave the separate opt-in for publishing recordings that UX.RESEARCH.PROTO-002 requires, and never if it shows part data, drawings or the partner's identity.
+6. Consent records are referenced only by participant code `P-<study>-<NN>` and are held by the study lead outside the public repository.
 
 ### 9.2 What leaves the partner site
 
@@ -115,9 +119,15 @@ These rules follow the research rules of UX.RESEARCH.PROTO (consent form, partic
 ### 9.3 Anonymisation
 
 1. Each partner gets a **partner token**: 128 random bits written as hex, generated by the study lead for this study. It carries no information about the partner.
-2. The key that links tokens and participant codes to real organisations and people is kept only by the study lead, outside the public repository and outside the project's acceptance store.
+2. The key that links tokens and participant codes to real organisations and people, and each participant code to the (partner token, session, job) of that participant's records, is kept only by the study lead in the study's private store, outside the public repository and outside the project's acceptance store.
 3. Nothing in this repository names a partner, a participant, a part or a customer. Published summaries (FLOW.STUDY.CLAIM) show aggregates only, never single records or tokens.
-4. Raw notes and the token key are deleted at the end of the period stated in the consent. The default period is set by the maintainers before the first round [unverified: not yet decided].
+
+### 9.4 Retention
+
+1. **No session may start until the retention periods below have been decided by the maintainers and written into the consent form** the participant signs. None is decided yet [unverified: to be set before the first session].
+2. Raw notes, recordings and the token key are deleted at the end of the period stated in the consent.
+3. Imported records in the project's acceptance store are kept for the period stated in the consent and then deleted; aggregates already published stay published (9.1).
+4. Consent records are kept for the period stated in the consent (long enough to show that each imported record had consent), then deleted.
 
 ## 10. Agents
 
