@@ -83,6 +83,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-nurbs"
+version = "0.0.1"
+
+[[package]]
 name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
