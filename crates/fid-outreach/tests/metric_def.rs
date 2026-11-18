@@ -195,8 +195,10 @@ fn deny_list_matches_id_or_url_case_insensitively() {
             let r = check("[[metric]]\n", "d", &src, "s").unwrap();
             assert!(
                 // `support_bundle` normalises to the same text as `support-bundle`, listed first.
-                r.findings.iter().any(|f| f.code == Code::ProductDataSource
-                    && f.subject.as_deref().map(normalise) == Some(normalise(p))),
+                r.findings
+                    .iter()
+                    .any(|f| f.code == Code::ProductDataSource
+                        && f.subject.as_deref().map(normalise) == Some(normalise(p))),
                 "{p}: {:?}",
                 r.findings
             );
