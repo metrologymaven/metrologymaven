@@ -13,6 +13,9 @@
 //! `plat-matrix lint-tiers`: the tier definitions lint (spec node
 //! `PLAT.MATRIX.POLICY.DEFS`), in [`plat_matrix_tiers`].
 //!
+//! `plat-deploy netlist`: the network-feature list generated from the registry manifest
+//! (spec node `PLAT.DEPLOY.OFFLINE.NETLIST`), in [`plat_deploy_netlist`].
+//!
 //! `rel version-check` and `rel version-compare`: the product version scheme and tag check
 //! (spec node `ECO.REL.PROC.VERSION`), in [`rel::version`].
 //!
@@ -22,11 +25,16 @@
 //! `rel sbom`: one SPDX 2.3 JSON SBOM per planned artefact (spec node `ECO.REL.SIGN.SBOM`), in
 //! [`rel::sbom`].
 //!
+//! `plat-gpu invariance`: the cross-backend value-of-record invariance harness (spec node
+//! `PLAT.GPU.FALLBK.INVAR`), in [`plat_gpu_invar`].
+//!
 //! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
 //! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 
 pub mod apps_policy;
 pub mod crate_graph;
+pub mod plat_deploy_netlist;
+pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
 pub mod rel;
 

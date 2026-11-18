@@ -15,6 +15,8 @@
 //!   the revision it documents (spec node `OUTR.DOCS.CONTRIB`).
 //! - [`guide_check`]: brand-guideline family-name token check and publish guard (spec node
 //!   `OUTR.BRAND.GUIDE.NAME`).
+//! - [`moderation`]: private moderation log check and quarterly counts (spec node
+//!   `OUTR.COMM.MOD`).
 
 pub mod asset_check;
 pub mod copy_guard;
@@ -22,5 +24,6 @@ pub mod doc_run;
 pub mod guide_check;
 pub mod launch_plan;
 pub mod metrics;
+pub mod moderation;
 pub mod qa;
 pub mod review_gate;

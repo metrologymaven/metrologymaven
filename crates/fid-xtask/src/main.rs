@@ -2,8 +2,9 @@
 
 mod pins;
 
+use fid_xtask::plat_deploy_netlist as netlist;
 use fid_xtask::rel::{keys, runbook, sbom, sums, version};
-use fid_xtask::{apps_policy, plat_matrix_tiers};
+use fid_xtask::{apps_policy, plat_gpu_invar, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -15,6 +16,11 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-hw validate [--file <path>]\n       \
                      cargo xtask plat-hw validate-suite [--file <path>]\n       \
                      cargo xtask plat-hw result-schema\n       \
+                     cargo xtask plat-deploy netlist --manifest <registry manifest json> \
+                     --settings <settings-manifest.json> [--json <out>] [--md <out>] [--check]\n       \
+                     cargo xtask plat-gpu invariance --backends <a,b,...> [--sequence <toml>] \
+                     [--examples <dir>] [--work <dir>] [--fid <path>]\n       \
+                     cargo xtask plat-gpu invariance --recorded <dir>\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
                      [--protocol <md>]\n       \
@@ -41,6 +47,8 @@ fn main() -> ExitCode {
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
+        Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
+        Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
@@ -126,6 +134,83 @@ fn fid_platform(args: &[String], group: &str) -> ExitCode {
         Err(e) => {
             eprintln!("{group}: cannot run cargo: {e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.GPU.FALLBK.INVAR: `plat-gpu invariance`. With `--backends`, runs the invariance
+/// sequence once per backend through `fid --gpu-backend` and compares the digest lists; with
+/// `--recorded <dir>`, compares recorded lists only. Prints the report (or the error). Exit 0:
+/// all lists equal; 1: Diverged, BackendUnavailable or SequenceFailed; 2: bad usage or input.
+fn plat_gpu_invariance(args: &[String]) -> ExitCode {
+    let mut backends: Option<&str> = None;
+    let mut recorded: Option<PathBuf> = None;
+    let mut sequence = PathBuf::from(plat_gpu_invar::DEFAULT_SEQUENCE);
+    let mut examples = PathBuf::from(plat_gpu_invar::DEFAULT_EXAMPLES);
+    let mut work: Option<PathBuf> = None;
+    let mut fid = PathBuf::from("fid");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--backends", Some(v)) => backends = Some(v),
+            ("--recorded", Some(v)) => recorded = Some(PathBuf::from(v)),
+            ("--sequence", Some(v)) => sequence = PathBuf::from(v),
+            ("--examples", Some(v)) => examples = PathBuf::from(v),
+            ("--work", Some(v)) => work = Some(PathBuf::from(v)),
+            ("--fid", Some(v)) => fid = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = match (backends, recorded) {
+        (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| {
+            let mut report = plat_gpu_invar::compare(&lists);
+            report.recorded = true;
+            report
+        }),
+        (Some(list), None) => match plat_gpu_invar::parse_backends(list) {
+            Ok(backends) => {
+                // A default work folder is ours alone (named by process ID) and removed on exit,
+                // whatever the outcome; a `--work` folder given by the caller is left in place.
+                let temporary = work.is_none();
+                let default_work = format!("fid-plat-gpu-invariance-{}", std::process::id());
+                let work = work.unwrap_or_else(|| std::env::temp_dir().join(default_work));
+                let opts = plat_gpu_invar::RunOptions {
+                    sequence: &sequence,
+                    examples: &examples,
+                    work: &work,
+                    backends: &backends,
+                    host_os: std::env::consts::OS,
+                };
+                let result = plat_gpu_invar::run(&opts, &mut plat_gpu_invar::FidDriver::new(fid));
+                if temporary && work.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(&work) {
+                        eprintln!("plat-gpu invariance: cannot remove {}: {e}", work.display());
+                    }
+                }
+                result
+            }
+            Err(e) => Err(e),
+        },
+        _ => {
+            eprintln!("plat-gpu invariance: give exactly one of --backends and --recorded\n{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    match result {
+        Ok(report) => {
+            print!("{}", report.render());
+            if report.equal {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        Err(e) => {
+            println!("{e}");
+            ExitCode::from(e.exit_code())
         }
     }
 }
@@ -594,6 +679,52 @@ fn lint_crate_graph(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("{e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.DEPLOY.OFFLINE.NETLIST: `plat-deploy netlist`. Writes `network-features.json` and
+/// `network-features.md` (default under `docs/deploy/`), or with `--check` compares them with a
+/// fresh generation. Exit 0: ok; 1: X1 findings, unreadable manifest or drift (one per line);
+/// 2: bad usage.
+fn plat_deploy_netlist(args: &[String]) -> ExitCode {
+    let mut manifest: Option<PathBuf> = None;
+    let mut settings: Option<PathBuf> = None;
+    let mut json = PathBuf::from(netlist::DEFAULT_JSON);
+    let mut md = PathBuf::from(netlist::DEFAULT_MD);
+    let mut check = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--check" {
+            check = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--settings", Some(v)) => settings = Some(PathBuf::from(v)),
+            ("--json", Some(v)) => json = PathBuf::from(v),
+            ("--md", Some(v)) => md = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(settings)) = (manifest, settings) else {
+        eprintln!("plat-deploy netlist: --manifest and --settings are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match netlist::run(&manifest, &settings, &json, &md, check) {
+        Ok(n) => {
+            let verb = if check { "up to date" } else { "written" };
+            println!("netlist: {n} commands, {verb}");
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                println!("{e:?}");
+            }
+            ExitCode::from(1)
         }
     }
 }

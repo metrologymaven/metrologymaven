@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**67** of **1336** leaves built in code ([B]).
+**70** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 61 built)
+### Wave 1 (125 leaves, 64 built)
 
 - [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [B] [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -96,7 +96,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
 - [B] [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
 - [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
-- [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
+- [B] [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
 - [OUTR.CONTENT.MIG.MAP](../../spec/outr/content/mig/map/NODE.md) Migration mapping table generator and drift check (M, P1a)
 - [OUTR.CONTENT.VIDEO.REC](../../spec/outr/content/video/rec/NODE.md) Recording procedure and edit-list check (S, P1b)
@@ -108,11 +108,11 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
 - [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
-- [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
+- [B] [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)
 - [PLAT.DEPLOY.OFFLINE.NOEGRESS](../../spec/plat/deploy/offline/noegress/NODE.md) Reference workflow and sandboxed no-egress CI job (M, P1a)
 - [PLAT.DEPLOY.SILENT.UNIX](../../spec/plat/deploy/silent/unix/NODE.md) Unattended Linux and macOS install contract, guide and test (M, P1a)
 - [PLAT.DEPLOY.SILENT.WIN](../../spec/plat/deploy/silent/win/NODE.md) Silent-install contract file and Windows MSI install, upgrade and uninstall test (M, P1a)
-- [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
+- [B] [PLAT.GPU.FALLBK.INVAR](../../spec/plat/gpu/fallbk/invar/NODE.md) Cross-backend value-of-record invariance harness (M, P1a)
 - [PLAT.GPU.FALLBK.RDP](../../spec/plat/gpu/fallbk/rdp/NODE.md) Windows remote desktop start test (S, P1a)
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
 - [B] [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
