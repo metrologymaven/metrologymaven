@@ -1,0 +1,181 @@
+[
+  {
+    "file": "sh-valid-variant.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-valid-shell-only.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-valid-variant-numeric-claim.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-valid-unaccounted-other-family.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-valid-shell-false-other-family.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-no-shell.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-false.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-not-bool.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-neither.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "variant_of"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-both.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell_only"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-only-false.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell_only"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-variant-of-self.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "variant_of"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "sh-variant-of-bad-id.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "variant_of"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-variant-of-not-string.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "variant_of"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-variant-other-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "variant_of"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-only-other-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell_only"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-true-other-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-no-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "shell"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-shell-only-no-unaccounted.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-numeric-claim-shell-only.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[1].kind"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "sh-unaccounted-not-bool.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates[0].unaccounted"
+    ],
+    "schema": "invalid"
+  }
+]
