@@ -1,8 +1,8 @@
 {
   "budgets": {"core_bytes": 3072, "agents_md_bytes": 10240},
   "block": [
-    {"id": "core", "file": "core.md", "repos": ["spec", "code"]},
-    {"id": "rust", "file": "rust.md", "repos": ["code"]},
-    {"id": "python", "file": "python.md", "repos": ["spec"]}
+    {"id": "core", "file": "core.md", "repos": ["metrologymaven"]},
+    {"id": "rust", "file": "rust.md", "repos": ["metrologymaven"]},
+    {"id": "python", "file": "python.md", "repos": ["metrologymaven"]}
   ]
 }

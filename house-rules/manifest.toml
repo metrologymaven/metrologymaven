@@ -8,14 +8,14 @@ agents_md_bytes = 10240
 [[block]]
 id = "core"
 file = "core.md"
-repos = ["spec", "code"]
+repos = ["metrologymaven"]
 
 [[block]]
 id = "rust"
 file = "rust.md"
-repos = ["code"]
+repos = ["metrologymaven"]
 
 [[block]]
 id = "python"
 file = "python.md"
-repos = ["spec"]
+repos = ["metrologymaven"]

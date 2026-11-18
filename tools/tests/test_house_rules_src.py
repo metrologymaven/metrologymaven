@@ -61,13 +61,16 @@ def load_manifest():
 
 
 def repo_ids():
-    path = ROOT / "repos.toml"
-    if not path.exists():
-        path = HR / "repos.fixture.toml"
+    """Repositories in the map (repos.toml, ECO.REPO.TOPO) that can carry blocks.
+
+    Archived repositories are read-only, so no sync can write a block into them; they are
+    left out. Planned repositories are not listed in the map until they exist.
+    """
     if tomllib is None:
         raise unittest.SkipTest("reading the repository map needs tomllib (Python >= 3.11)")
-    with open(path, "rb") as f:
-        return [r["id"] for r in tomllib.load(f)["repo"]]
+    with open(ROOT / "repos.toml", "rb") as f:
+        repos = tomllib.load(f)["repo"]
+    return [r["id"] for r in repos if r.get("status", "active") != "archived"]
 
 
 def headings(text):

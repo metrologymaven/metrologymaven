@@ -12,7 +12,8 @@ This directory is the **one canonical source** of the contributor and agent rule
 | `rust.md` | Rules for repositories with Rust code |
 | `python.md` | Rules for the spec repository's Python tooling |
 | `restricted-paths.txt` | Path patterns (one per line, glob style) whose content must never be sent to an external service; read by ECO.CI.BOTS |
-| `repos.fixture.toml` | Stand-in repository map until `repos.toml` from ECO.REPO.TOPO exists |
+
+Repository IDs in the manifest are the IDs of the repository map `repos.toml` (ECO.REPO.TOPO). Every repository in the map that is not archived receives the `core` block; an archived repository is read-only and gets no block.
 
 Sizes are measured in UTF-8 bytes after normalising line endings to LF. The test is `tools/tests/test_house_rules_src.py`.
 
