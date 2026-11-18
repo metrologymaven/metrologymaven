@@ -73,6 +73,7 @@ Fixture manifests under `fixtures/plat/deploy/`. Licensed with the code.
 ## Open questions
 
 - The registry definition needs a field linking an X1 command to its opt-in setting (cross-domain with `CORE.REG.DEF.FIELD`); until then the fixture names it `opt_in_setting`.
+- `docs/deploy/network-features.md` and `network-features.json` are not committed yet, and CI runs `--check` only against the fixture outputs in `fixtures/plat/deploy/`, not against the real page: neither the registry manifest export (`CORE.REG.MAN`) nor `settings-manifest.json` (`CORE.STO.SET`) exists. REQ-004 is therefore only partly met until both land and the real page and its CI check are added.
 
 ## Children
 
