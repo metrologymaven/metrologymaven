@@ -11,6 +11,6 @@ pub use findings as find;
 
 pub use findings::{
     apply_waivers, catalogue, input_digest, lines_digest, load_waivers, parse_waivers, sort_findings, Applied,
-    CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule, SourceTree, Waiver, Warning,
-    REPORT_SCHEMA, TOOL_NAME, WAIVER_UNUSED,
+    CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule, SourceTree, Waiver, Warning, REPORT_SCHEMA,
+    TOOL_NAME, WAIVER_UNUSED,
 };

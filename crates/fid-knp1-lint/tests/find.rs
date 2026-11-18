@@ -86,7 +86,10 @@ fn ac1_report_matches_expected_bytes() {
     let tool_version = st(o, "tool_version");
 
     let r = Report::new(&tool_version, inputs.clone(), Applied::without_waivers(fs.clone())).unwrap();
-    assert_eq!(String::from_utf8(r.to_canonical_bytes().unwrap()).unwrap(), String::from_utf8(expected.clone()).unwrap());
+    assert_eq!(
+        String::from_utf8(r.to_canonical_bytes().unwrap()).unwrap(),
+        String::from_utf8(expected.clone()).unwrap()
+    );
     assert_eq!(r.unwaived_count(), 12);
     assert!(!r.passed());
 
@@ -114,7 +117,8 @@ fn report_write_and_write_failure() {
 #[test]
 fn invalid_findings_are_rejected() {
     let good = findings("waive-v1/findings.json").remove(0);
-    let cases: Vec<(&str, Box<dyn Fn(&mut Finding)>)> = vec![
+    type Mutate = Box<dyn Fn(&mut Finding)>;
+    let cases: Vec<(&str, Mutate)> = vec![
         ("absolute path", Box::new(|f| f.file = "/home/ci/src/solver.rs".into())),
         ("drive path", Box::new(|f| f.file = "C:/src/solver.rs".into())),
         ("backslash", Box::new(|f| f.file = "src\\solver.rs".into())),
@@ -222,8 +226,7 @@ fn malformed_waivers_fail_schema() {
     let valid = String::from_utf8(read("waivers/valid.toml")).unwrap();
     let without = |key: &str| {
         let prefix = format!("{key} =");
-        valid.lines().filter(|l| !l.starts_with(&prefix)).collect::<Vec<_>>().join("
-")
+        valid.lines().filter(|l| !l.starts_with(&prefix)).collect::<Vec<_>>().join("\n")
     };
     let cases: Vec<(&str, String)> = vec![
         ("no crate", without("crate")),
@@ -302,8 +305,17 @@ fn rule_ids_are_stable() {
     assert_eq!(Rule::parse("KNP1-FLAG-TARGET-CPU"), Some(Rule::Flag("TARGET-CPU".into())));
     assert_eq!(Rule::parse("KNP1-ALLOW-LICENCE").map(|r| r.id()).as_deref(), Some("KNP1-ALLOW-LICENCE"));
     assert_eq!(Rule::parse("KNP1-DATA-CONST2"), Some(Rule::Data("CONST2".into())));
-    for bad in ["", "KNP1-", "KNP1-FLAG-", "KNP1-flag-x", "KNP1-FLAG-x", "KNP1-POWX", "KNP1-DATA-A--B", "KNP1-DATA-A-", "knp1-pow"]
-    {
+    for bad in [
+        "",
+        "KNP1-",
+        "KNP1-FLAG-",
+        "KNP1-flag-x",
+        "KNP1-FLAG-x",
+        "KNP1-POWX",
+        "KNP1-DATA-A--B",
+        "KNP1-DATA-A-",
+        "knp1-pow",
+    ] {
         assert_eq!(Rule::parse(bad), None, "{bad}");
     }
     let cat = catalogue();

@@ -107,7 +107,9 @@ impl Rule {
             Rule::Flag(s) => format!("{}{s}", FAMILIES[0].0),
             Rule::Allow(s) => format!("{}{s}", FAMILIES[1].0),
             Rule::Data(s) => format!("{}{s}", FAMILIES[2].0),
-            fixed => fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(id, _)| (*id).to_string()).unwrap_or_default(),
+            fixed => {
+                fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(id, _)| (*id).to_string()).unwrap_or_default()
+            }
         }
     }
 
@@ -722,9 +724,12 @@ impl Report {
         if !valid_name(tool_version) {
             return Err(FindError::new(ErrorCode::InvalidFinding, "bad tool version"));
         }
-        for (name, d) in
-            [("config", &inputs.config), ("lockfile", &inputs.lockfile), ("waivers", &inputs.waivers), ("denylist", &inputs.denylist)]
-        {
+        for (name, d) in [
+            ("config", &inputs.config),
+            ("lockfile", &inputs.lockfile),
+            ("waivers", &inputs.waivers),
+            ("denylist", &inputs.denylist),
+        ] {
             if !valid_digest(d) {
                 return Err(FindError::new(ErrorCode::InvalidFinding, format!("bad {name} digest")));
             }
