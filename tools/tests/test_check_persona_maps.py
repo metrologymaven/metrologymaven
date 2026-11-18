@@ -24,6 +24,7 @@ import check_persona_maps as cpm  # noqa: E402
 MAPS = ROOT / "acceptance" / "journeys" / "persona"
 PERSONAS = ROOT / "acceptance" / "personas" / "personas.json"
 SPEC = ROOT / "spec"
+OVERRIDES = MAPS / "class-overrides.toml"
 
 # From the build prompt of FLOW.PERSONA.MAPS.
 EXERCISED = {
@@ -59,8 +60,13 @@ class Variant:
         fn(m)
         self.write(name, m)
 
-    def check(self):
-        return cpm.check(self.dir, PERSONAS, SPEC)
+    def check(self, overrides=None):
+        return cpm.check(self.dir, PERSONAS, SPEC, overrides)
+
+    def overrides(self, text):
+        path = self.dir / "overrides.toml"
+        path.write_text(text, encoding="utf-8")
+        return path
 
     def close(self):
         shutil.rmtree(self.dir, ignore_errors=True)
@@ -137,7 +143,7 @@ class ShippedMaps(unittest.TestCase):
                 if ".adopt_" in cmd or cmd in {"report.finalize_fai@1", "program.release@1",
                                                "program.register@1", "sign.sign_package@1",
                                                "sign.set_profile@1", "view.enter_kiosk@1",
-                                               "cmm.approve_ticket@1"}:
+                                               "cmm.approve_ticket@1", "cmm.request_run@1"}:
                     self.assertTrue(s["human_only"], (f.name, s["n"], cmd))
 
 
@@ -289,6 +295,73 @@ class ErrorPaths(unittest.TestCase):
                 m["steps"].append(s)
         self.v.edit("per-06.json", f)
         self.assert_finding("MAP-SIZE JOB.PER.06 501 steps > 500")
+
+    def test_unknown_top_level_key(self):
+        self.v.edit("per-07.json", lambda m: m.update(owner_team="quality"))
+        _, findings = self.v.check()
+        self.assertEqual(lines(findings), ["MAP-SCHEMA JOB.PER.07 unknown field owner_team"])
+
+    def test_unknown_step_key(self):
+        self.v.edit("per-07.json", lambda m: m["steps"][1].update(duration_s=30))
+        _, findings = self.v.check()
+        self.assertEqual(lines(findings), ["MAP-SCHEMA JOB.PER.07 step 2: unknown field duration_s"])
+
+    def test_request_run_is_m1_and_human_only(self):
+        # Review finding on PR #100: CMM.EXEC.REQ states cmm.request_run@1 is M1.
+        self.v.edit("per-04.json", lambda m: m["steps"][13].update(human_only=False))
+        _, findings = self.v.check()
+        self.assertIn("MAP-HUMANONLY-MISSING JOB.PER.04 step 14: cmm.request_run@1 (M1)", lines(findings))
+
+    def test_class_unknown_without_override(self):
+        # With an empty override file, every command whose owner declares no class is reported.
+        empty = self.v.overrides("")
+        _, findings = self.v.check(empty)
+        unknown = [x for x in lines(findings) if x.startswith("MAP-CLASS-UNKNOWN")]
+        self.assertEqual(len(unknown), 21)
+        self.assertIn("MAP-CLASS-UNKNOWN JOB.PER.09 step 13: build.confirm_set@1 has no class in "
+                      "LVM.GUIDE.SESSION and no reviewed override", unknown)
+        self.assertEqual(len(findings), 21)
+
+    def test_override_human_only_mismatch(self):
+        self.v.edit("per-09.json", lambda m: m["steps"][12].update(human_only=False))
+        self.assert_finding("MAP-CLASS-OVERRIDE JOB.PER.09 step 13: human_only differs from the "
+                            "override of build.confirm_set@1")
+
+    def test_override_unused(self):
+        extra = OVERRIDES.read_text(encoding="utf-8") + (
+            '\n[[override]]\ncommand = "net.set_datum@1"\nowner = "LVM.ADJ.DATUM"\nclass = "W2"\n'
+            'human_only = true\nreason = "test"\n')
+        _, findings = self.v.check(self.v.overrides(extra))
+        self.assertEqual(lines(findings),
+                         ["MAP-CLASS-OVERRIDE net.set_datum@1 not used by any map step that needs it"])
+
+    def test_override_stale_when_owner_declares_class(self):
+        extra = OVERRIDES.read_text(encoding="utf-8") + (
+            '\n[[override]]\ncommand = "verify.package@1"\nowner = "TRUST.VERIFY.CLI"\nclass = "R1"\n'
+            'human_only = false\nreason = "test"\n')
+        _, findings = self.v.check(self.v.overrides(extra))
+        self.assertEqual(lines(findings), ["MAP-CLASS-OVERRIDE verify.package@1 stale: TRUST.VERIFY.CLI "
+                                           "declares class R1"])
+
+    def test_override_human_class_needs_human_only(self):
+        text = OVERRIDES.read_text(encoding="utf-8").replace(
+            'class = "M1"\nhuman_only = true\nreason = "Body states M1',
+            'class = "M1"\nhuman_only = false\nreason = "Body states M1', 1)
+        _, findings = self.v.check(self.v.overrides(text))
+        self.assertIn("MAP-CLASS-OVERRIDE cmm.request_run@1 class M1 needs human_only = true", lines(findings))
+
+
+class OverrideFile(unittest.TestCase):
+    def test_lists_exactly_the_21_unclassed_commands(self):
+        import tomllib
+        entries = tomllib.loads(OVERRIDES.read_text(encoding="utf-8"))["override"]
+        self.assertEqual(len(entries), 21)
+        for e in entries:
+            self.assertTrue(e["human_only"], e["command"])
+            self.assertTrue(e["reason"].strip())
+        confirm = [e for e in entries if e["command"] == "build.confirm_set@1"][0]
+        self.assertIn("QUESTION", confirm["reason"])
+        self.assertIn("LVM.GUIDE.SESSION", confirm["reason"])
 
 
 if __name__ == "__main__":

@@ -13,9 +13,14 @@ It applies the same rules where those nodes define them and uses their finding c
   persona maps (FLOW.PERSONA.MAPS)  MAP-MISSING, MAP-DUPLICATE, MAP-EXTRA, MAP-UNEXERCISED,
                                     MAP-HANDOFF, MAP-AUDITOR, MAP-HUMANONLY-MISSING
   spec tree (FLOW.PERSONA.CHECK)    MAP-OWNER-UNKNOWN, MAP-COMMAND-UNKNOWN, MAP-SCREEN-UNKNOWN,
-                                    MAP-PHASE
+                                    MAP-PHASE, MAP-CLASS-UNKNOWN, MAP-CLASS-OVERRIDE
 
-Usage: python tools/check_persona_maps.py [--maps DIR] [--personas FILE] [--spec DIR] [--json]
+A command whose owner node declares no `side_effect:` class must be listed in the reviewed file
+`acceptance/journeys/persona/class-overrides.toml` (command, owner, assumed class, human_only,
+reason); otherwise the check reports MAP-CLASS-UNKNOWN instead of failing open.
+
+Usage: python tools/check_persona_maps.py [--maps DIR] [--personas FILE] [--spec DIR]
+                                          [--overrides FILE] [--json]
 Exit 0 and `persona-maps-check: N maps` when there is no finding; 1 with findings; 2 on usage errors.
 """
 
@@ -23,10 +28,13 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_OVERRIDES = ROOT / "acceptance" / "journeys" / "persona" / "class-overrides.toml"
+CLASSES = {"R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"}
 
 MAX_BYTES = 1024 * 1024
 MAX_DEPTH = 32
@@ -340,9 +348,46 @@ def load_personas(path: Path) -> list[str]:
     return [p["id"] for p in data["personas"]]
 
 
-def check(maps_dir: Path, personas_file: Path, spec_dir: Path):
+def load_overrides(path: Path):
+    """Returns ({command: entry}, findings)."""
+    out: dict[str, dict] = {}
+    f: list[Finding] = []
+    if not path.is_file():
+        return out, f
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as e:
+        return out, [Finding("MAP-CLASS-OVERRIDE", "-", f"cannot read {path.name}: {e}")]
+    entries = data.get("override", [])
+    if set(data) - {"override"} or not isinstance(entries, list):
+        return out, [Finding("MAP-CLASS-OVERRIDE", "-", f"{path.name}: only [[override]] tables allowed")]
+    keys = {"command", "owner", "class", "human_only", "reason"}
+    for i, e in enumerate(entries, start=1):
+        cmd = e.get("command") if isinstance(e, dict) else None
+        where = cmd if isinstance(cmd, str) else f"entry {i}"
+        if not isinstance(e, dict) or set(e) != keys:
+            f.append(Finding("MAP-CLASS-OVERRIDE", where, "needs exactly " + ", ".join(sorted(keys))))
+            continue
+        ok = (isinstance(cmd, str) and COMMAND_RE.match(cmd) and isinstance(e["owner"], str)
+              and NODE_RE.match(e["owner"]) and e["class"] in CLASSES
+              and isinstance(e["human_only"], bool) and isinstance(e["reason"], str) and e["reason"].strip())
+        if not ok:
+            f.append(Finding("MAP-CLASS-OVERRIDE", where, "bad field value"))
+        elif cmd in out:
+            f.append(Finding("MAP-CLASS-OVERRIDE", where, "listed twice"))
+        elif e["class"] in HUMAN_CLASSES and not e["human_only"]:
+            f.append(Finding("MAP-CLASS-OVERRIDE", where, f"class {e['class']} needs human_only = true"))
+        else:
+            out[cmd] = e
+    return out, f
+
+
+def check(maps_dir: Path, personas_file: Path, spec_dir: Path, overrides_file: Path | None = None):
     """Returns (number of maps read, sorted findings)."""
     findings: list[Finding] = []
+    overrides, ofind = load_overrides(DEFAULT_OVERRIDES if overrides_file is None else overrides_file)
+    findings.extend(ofind)
+    used: set[str] = set()
     try:
         persona_ids = load_personas(personas_file)
     except (OSError, ValueError, KeyError, TypeError) as e:
@@ -388,8 +433,10 @@ def check(maps_dir: Path, personas_file: Path, spec_dir: Path):
                 findings.append(Finding("MAP-HANDOFF", subj, f"personas names unknown {p}"))
         if not m["exercised_by"] and subj not in UNEXERCISED_OK:
             findings.append(Finding("MAP-UNEXERCISED", subj, ""))
-        findings.extend(_check_steps(m, spec, known))
+        findings.extend(_check_steps(m, spec, known, overrides, used))
 
+    for cmd in sorted(set(overrides) - used):
+        findings.append(Finding("MAP-CLASS-OVERRIDE", cmd, "not used by any map step that needs it"))
     for pid in persona_ids:
         if pid not in by_subject:
             findings.append(Finding("MAP-MISSING", pid, ""))
@@ -397,7 +444,8 @@ def check(maps_dir: Path, personas_file: Path, spec_dir: Path):
     return count, findings
 
 
-def _check_steps(m, spec: dict[str, SpecNode], known: set[str]) -> list[Finding]:
+def _check_steps(m, spec: dict[str, SpecNode], known: set[str], overrides: dict[str, dict],
+                 used: set[str]) -> list[Finding]:
     f: list[Finding] = []
     subj = m["subject"]
     order = {p: i for i, p in enumerate(PHASES)}
@@ -420,6 +468,22 @@ def _check_steps(m, spec: dict[str, SpecNode], known: set[str]) -> list[Finding]
             found, cls = command_in_node(owner, cmd)
             if not found:
                 f.append(Finding("MAP-COMMAND-UNKNOWN", subj, f"{at}: {cmd} is not a command of {owner.id}"))
+            elif cls is None:
+                o = overrides.get(cmd)
+                if o is None:
+                    f.append(Finding("MAP-CLASS-UNKNOWN", subj,
+                                     f"{at}: {cmd} has no class in {owner.id} and no reviewed override"))
+                else:
+                    used.add(cmd)
+                    cls = o["class"]
+                    if o["owner"] != owner.id:
+                        f.append(Finding("MAP-CLASS-OVERRIDE", subj, f"{at}: override of {cmd} names owner {o['owner']}"))
+                    if s["human_only"] != o["human_only"]:
+                        f.append(Finding("MAP-CLASS-OVERRIDE", subj,
+                                         f"{at}: human_only differs from the override of {cmd}"))
+            elif cmd in overrides:
+                used.add(cmd)
+                f.append(Finding("MAP-CLASS-OVERRIDE", cmd, f"stale: {owner.id} declares class {cls}"))
             human = cls in HUMAN_CLASSES or ".adopt_" in cmd
             if human and not s["human_only"]:
                 f.append(Finding("MAP-HUMANONLY-MISSING", subj, f"{at}: {cmd} ({cls or 'adoption'})"))
@@ -443,6 +507,7 @@ def main(argv: list[str]) -> int:
     maps_dir = ROOT / "acceptance" / "journeys" / "persona"
     personas = ROOT / "acceptance" / "personas" / "personas.json"
     spec_dir = ROOT / "spec"
+    overrides = DEFAULT_OVERRIDES
     as_json = False
     i = 0
     while i < len(argv):
@@ -450,20 +515,23 @@ def main(argv: list[str]) -> int:
         if a == "--json":
             as_json = True
             i += 1
-        elif a in ("--maps", "--personas", "--spec") and i + 1 < len(argv):
+        elif a in ("--maps", "--personas", "--spec", "--overrides") and i + 1 < len(argv):
             p = Path(argv[i + 1])
             if a == "--maps":
                 maps_dir = p
             elif a == "--personas":
                 personas = p
+            elif a == "--overrides":
+                overrides = p
             else:
                 spec_dir = p
             i += 2
         else:
-            print("usage: check_persona_maps.py [--maps DIR] [--personas FILE] [--spec DIR] [--json]",
+            print("usage: check_persona_maps.py [--maps DIR] [--personas FILE] [--spec DIR] "
+                  "[--overrides FILE] [--json]",
                   file=sys.stderr)
             return 2
-    count, findings = check(maps_dir, personas, spec_dir)
+    count, findings = check(maps_dir, personas, spec_dir, overrides)
     if as_json:
         print(json.dumps({"maps": count, "findings": [
             {"code": x.code, "subject": x.subject, "detail": x.detail} for x in findings]}, indent=2))

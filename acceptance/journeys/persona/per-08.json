@@ -40,7 +40,7 @@
       "command": "device.start_sim@1",
       "owner": "HAL.SIM.IPPSIM",
       "handoff": 5,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 5,
@@ -65,7 +65,7 @@
       "owner": "HAL.SIM.CONF",
       "decision": "Fix the driver and run again, or ship it once every conformance check passes",
       "handoff": 8,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 8,
@@ -73,7 +73,7 @@
       "command": "device.show_conformance@1",
       "owner": "HAL.SIM.CONF",
       "handoff": "The driver ships as its own package with its conformance result; the core software is unchanged",
-      "human_only": false
+      "human_only": true
     }
   ]
 }

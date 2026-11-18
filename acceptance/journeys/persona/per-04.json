@@ -105,7 +105,7 @@
       "owner": "CMM.GEN.PMI",
       "phase": "P3",
       "handoff": 13,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 13,
@@ -114,7 +114,7 @@
       "owner": "CMM.SIM.RUN",
       "decision": "Whether the simulation report is clean enough to ask for approval",
       "handoff": 14,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 14,
@@ -122,7 +122,7 @@
       "command": "cmm.request_run@1",
       "owner": "CMM.EXEC.REQ",
       "handoff": 15,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 15,
@@ -139,7 +139,7 @@
       "command": "device.connect_cmm@1",
       "owner": "HAL.IPP.SESS",
       "handoff": 17,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 17,
@@ -164,7 +164,7 @@
       "command": "cmm.record_run@1",
       "owner": "CMM.EXEC.RECORD",
       "handoff": 20,
-      "human_only": false
+      "human_only": true
     },
     {
       "n": 20,
