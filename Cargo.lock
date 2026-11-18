@@ -140,6 +140,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-rules-block"
+version = "0.0.1"
+dependencies = [
+ "fid-types",
+ "sha2",
+]
+
+[[package]]
 name = "fid-surface"
 version = "0.0.1"
 dependencies = [

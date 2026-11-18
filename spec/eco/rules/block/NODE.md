@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-rules-block]
 satisfies: [REQ-ECO.RULES-002]
 covers: []
 depends_on: []
