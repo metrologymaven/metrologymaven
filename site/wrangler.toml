@@ -3,6 +3,9 @@
 # dashboard stay attached. Build first:  python site/build.py
 # Deploy:  cd site && npx wrangler@4 deploy
 name = "metrologymaven-site"
+# The Cloudflare account that owns metrologymaven.io (not secret). Pinned so a
+# login to another account can never deploy a stray copy.
+account_id = "4a32f08b7717354bc88faae8f95f425c"
 main = "worker.js"
 compatibility_date = "2026-11-01"
 workers_dev = false
