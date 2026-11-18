@@ -161,7 +161,8 @@ pub fn parse_app_ids(text: &str) -> Result<BTreeSet<String>, String> {
     if text.len() > MAX_APP_LIST_BYTES {
         return Err(format!("app list exceeds {} KiB", MAX_APP_LIST_BYTES / 1024));
     }
-    let table: toml::Table = text.parse().map_err(|e: toml::de::Error| format!("app list is not TOML: {}", e.message()))?;
+    let table: toml::Table =
+        text.parse().map_err(|e: toml::de::Error| format!("app list is not TOML: {}", e.message()))?;
     let mut ids = BTreeSet::new();
     match table.get("app") {
         None => {}
@@ -271,7 +272,11 @@ fn check_record(rec: &CValue, at: &str, app_ids: &BTreeSet<String>, out: &mut Ve
     if let Some(role) = &role {
         let n = role.chars().count();
         if role.trim().is_empty() || n > ROLE_MAX_CHARS {
-            out.push(Finding::new(Code::Schema, who, format!("`role` must be 1 to {ROLE_MAX_CHARS} characters, has {n}")));
+            out.push(Finding::new(
+                Code::Schema,
+                who,
+                format!("`role` must be 1 to {ROLE_MAX_CHARS} characters, has {n}"),
+            ));
         }
     }
 
@@ -308,7 +313,11 @@ fn check_record(rec: &CValue, at: &str, app_ids: &BTreeSet<String>, out: &mut Ve
             out.push(Finding::new(Code::Schema, who, format!("unknown environment `{env}`")));
         } else if auditor && !AUDITOR_ENVIRONMENTS.contains(&env.as_str()) {
             // REQ-003.
-            out.push(Finding::new(Code::Schema, who, format!("the auditor's environment must be `office` or `lab`, is `{env}`")));
+            out.push(Finding::new(
+                Code::Schema,
+                who,
+                format!("the auditor's environment must be `office` or `lab`, is `{env}`"),
+            ));
         }
     }
 
@@ -317,7 +326,11 @@ fn check_record(rec: &CValue, at: &str, app_ids: &BTreeSet<String>, out: &mut Ve
         if auditor {
             // REQ-003 (and REQ-FLOW.PERSONA-007: the auditor maps onto the verifier only).
             if app != "verifier" {
-                out.push(Finding::new(Code::App, who, format!("the auditor's primary_app must be `verifier`, is `{app}`")));
+                out.push(Finding::new(
+                    Code::App,
+                    who,
+                    format!("the auditor's primary_app must be `verifier`, is `{app}`"),
+                ));
             }
         } else if !NON_APP_TARGETS.contains(&app.as_str()) && !app_ids.contains(app) {
             // REQ-004.
@@ -336,7 +349,11 @@ fn check_record(rec: &CValue, at: &str, app_ids: &BTreeSet<String>, out: &mut Ve
     if let Some(profile) = &governance_profile {
         if !BUILTIN_PROFILES.contains(&profile.as_str()) {
             // REQ-004.
-            out.push(Finding::new(Code::Profile, who, format!("governance_profile `{profile}` is not a built-in profile")));
+            out.push(Finding::new(
+                Code::Profile,
+                who,
+                format!("governance_profile `{profile}` is not a built-in profile"),
+            ));
         }
     }
 
@@ -378,7 +395,11 @@ pub fn check_files(personas: &Path, apps: &Path) -> Report {
             Err(_) => return Report::failed(Finding::new(Code::App, "-", "app list is not UTF-8")),
         },
         Err(e) => {
-            return Report::failed(Finding::new(Code::App, "-", format!("cannot read app list {}: {e}", apps.display())))
+            return Report::failed(Finding::new(
+                Code::App,
+                "-",
+                format!("cannot read app list {}: {e}", apps.display()),
+            ))
         }
     };
     match read_bounded(personas, MAX_INPUT_BYTES) {

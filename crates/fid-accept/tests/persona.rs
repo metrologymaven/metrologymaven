@@ -185,7 +185,11 @@ fn record_rules() {
         ("\"entry_phase\": \"P0\"", "\"entry_phase\": \"later\"", ""),
         ("\"primary_app\": \"verifier\"", "\"primary_app\": \"sdk\"", "PERS-APP"),
         ("\"entry_phase\": \"P0\",", "", "PERS-SCHEMA"),
-        ("\"environment\": \"office\",\n      \"primary_app\": \"verifier\"", "\"environment\": \"lab\",\n      \"primary_app\": \"verifier\"", ""),
+        (
+            "\"environment\": \"office\",\n      \"primary_app\": \"verifier\"",
+            "\"environment\": \"lab\",\n      \"primary_app\": \"verifier\"",
+            "",
+        ),
     ];
     for (from, to, code) in cases {
         // Each `from` is matched in the auditor record (the only `verifier`/`P0` record);
