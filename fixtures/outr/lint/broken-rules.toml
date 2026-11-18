@@ -1,0 +1,5 @@
+format = "fid-vocab-rules/1"
+version = "broken-1"
+
+[[rule]
+id = "CL001"
