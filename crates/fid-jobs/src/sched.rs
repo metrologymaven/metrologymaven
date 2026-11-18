@@ -547,16 +547,23 @@ impl<T: Send + 'static> Inner<T> {
             let Some(entry) = st.jobs.get_mut(id) else {
                 continue;
             };
-            // A job already asked to cancel ends `cancelled` when its handler returns.
-            if entry.record.state != JobState::Running || entry.progress.is_cancel_requested() {
+            if entry.record.state != JobState::Running {
                 continue;
             }
             let (Some(timeout), Some(started)) = (entry.timeout, entry.record.started_at) else {
                 continue;
             };
             if now.saturating_sub(started) > timeout {
+                // A job already asked to cancel ends `cancelled` (cancellation was first); any
+                // other ends `failed`/`timeout`. Either way it stops being `running` here, even if
+                // its handler ignores the token; the slot frees when the handler returns.
+                let (to, code) = if entry.progress.is_cancel_requested() {
+                    (JobState::Cancelled, JobErrorCode::Cancelled)
+                } else {
+                    (JobState::Failed, JobErrorCode::Timeout)
+                };
                 entry.progress.cancel();
-                self.transition(&mut st.ended, entry, JobState::Failed, Some(JobErrorCode::Timeout));
+                self.transition(&mut st.ended, entry, to, Some(code));
                 fired += 1;
             }
         }
@@ -764,8 +771,9 @@ impl<T: Send + 'static> Jobs<T> {
         }
     }
 
-    /// Fails every running job past its timeout with `timeout`, at the clock's current time;
-    /// returns how many. The timeout thread calls this; tests with a manual clock call it
+    /// Ends every running job past its timeout, at the clock's current time: `failed` with
+    /// `timeout`, or `cancelled` if cancellation was already requested. Returns how many.
+    /// The timeout thread calls this; tests with a manual clock call it
     /// themselves.
     pub fn check_timeouts(&self) -> usize {
         self.inner.check_timeouts()

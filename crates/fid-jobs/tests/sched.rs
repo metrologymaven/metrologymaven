@@ -779,7 +779,9 @@ fn cancel_requested_job_past_timeout_ends_cancelled() {
     let id = jobs.submit(Execution::new(cmd(), handler), JobOpts { timeout, ..opts(JobClass::Batch) }).unwrap();
     assert_eq!(jobs.cancel(id), Ok(JobState::Running));
     clock.set(Duration::from_secs(1));
-    assert_eq!(jobs.check_timeouts(), 0);
+    // Past the timeout, cancellation (requested first) wins over `timeout`.
+    assert_eq!(jobs.check_timeouts(), 1);
+    assert_eq!(jobs.status(id).unwrap().state, JobState::Cancelled);
     release.open();
     let rec = jobs.wait(id, LONG).unwrap();
     assert_eq!((rec.state, rec.error), (JobState::Cancelled, Some(JobErrorCode::Cancelled)));
@@ -814,4 +816,46 @@ fn queue_cap_zero_still_runs_when_a_slot_is_free() {
     assert_eq!(jobs.submit(extra, opts(JobClass::Batch)), Err(JobErrorCode::QueueFull));
     gate.open();
     assert_eq!(jobs.wait(a, LONG).unwrap().state, JobState::Succeeded);
+}
+
+#[test]
+fn cancel_requested_job_ignoring_its_token_ends_cancelled_at_timeout() {
+    let clock = Arc::new(ManualClock::new());
+    let log = Arc::new(ActivityLog::default());
+    let jobs: Jobs<String> = Jobs::new(manual(1, &clock), log.clone()).unwrap();
+    let release = Gate::new();
+    let rel = release.clone();
+    // Ignores its cancel token entirely and returns a value once released.
+    let deaf = move |_: &ProgressSink, _: &CancelToken| -> Result<String, HandlerError> {
+        let mut open = rel.open.lock().unwrap();
+        while !*open {
+            open = rel.cv.wait_timeout(open, STEP).unwrap().0;
+        }
+        Ok("late".to_string())
+    };
+    let timeout = Some(Duration::from_millis(200));
+    let id = jobs.submit(Execution::new(cmd(), deaf), JobOpts { timeout, ..opts(JobClass::Batch) }).unwrap();
+    let queued = Execution::new(cmd(), |_: &ProgressSink, _: &CancelToken| Ok("next".to_string()));
+    let next = jobs.submit(queued, opts(JobClass::Batch)).unwrap();
+    assert_eq!(jobs.cancel(id), Ok(JobState::Running));
+
+    clock.set(Duration::from_millis(200));
+    assert_eq!(jobs.check_timeouts(), 0);
+    assert_eq!(jobs.status(id).unwrap().state, JobState::Running);
+    clock.set(Duration::from_millis(201));
+    assert_eq!(jobs.check_timeouts(), 1);
+    let rec = jobs.status(id).unwrap();
+    assert_eq!((rec.state, rec.error), (JobState::Cancelled, Some(JobErrorCode::Cancelled)));
+    assert_eq!(rec.ended_at, Some(Duration::from_millis(201)));
+    assert_eq!(jobs.check_timeouts(), 0, "fires once");
+
+    // The slot frees when the handler returns; its value is dropped.
+    assert_eq!(jobs.status(next).unwrap().state, JobState::Queued);
+    release.open();
+    assert_eq!(jobs.wait(next, LONG).unwrap().state, JobState::Succeeded);
+    assert_eq!(jobs.status(id).unwrap().state, JobState::Cancelled);
+    assert_eq!(jobs.take_result(id), None);
+    let states: Vec<JobState> = log.of(id).iter().map(|e| e.to).collect();
+    assert_eq!(states, vec![JobState::Queued, JobState::Running, JobState::Cancelled]);
+    assert_transitions_allowed(&log.all());
 }
