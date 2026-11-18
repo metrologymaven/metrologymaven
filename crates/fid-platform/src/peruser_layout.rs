@@ -32,7 +32,8 @@
 //! - `install_dir` must start with `{local_app_data}` on Windows and `{home}` elsewhere, and name
 //!   a subdirectory (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-001); another variable is `OutsideProfile`.
 //! - `allowed_writes` entries must start with a per-user data, cache or configuration directory
-//!   (Windows `{local_app_data}`, `{app_data}`; macOS `{home}`, for `~/Library/...`; Linux the
+//!   (Windows `{local_app_data}`, `{app_data}`; macOS `{home}`, only as
+//!   `{home}/Library/{Application Support|Caches|Preferences}/<entry>`; Linux the
 //!   three `{xdg_*}`), each followed by an application subdirectory, or with `{tmp}`,
 //!   `{project_roots}` or `{export_roots}` (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-002).
 //! - Variables are allowed only as the first segment; segments must be non-empty, not `.`, and
@@ -47,12 +48,23 @@
 //! [`NormPath`] parses paths for one [`PathFlavor`] independently of the host OS, so Windows
 //! rules are testable on Linux and the reverse. Normalisation turns `\` into `/` (Windows only),
 //! drops empty and `.` segments and rejects `..` segments (never resolves them). Windows paths
-//! must be drive-absolute (`C:\...`) or UNC (`\\server\share\...`); drive-relative (`C:x`),
-//! verbatim (`\\?\`, `\\.\`) paths, segments with `:` (alternate data streams) and segments that
-//! end in `.` or a space (which Windows silently strips) are rejected. POSIX paths must start
-//! with `/`. Comparison is segment-wise, case-insensitive (Unicode lower case) on Windows and
-//! macOS and case-sensitive on Linux (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-005). macOS Unicode
-//! normalisation (NFD) is not applied.
+//! must be drive-absolute (`C:\...`) or UNC (`\\server\share\...`); verbatim paths are rewritten
+//! to that form (`\\?\C:\x` to `C:\x`, `\\?\UNC\server\share\x` to `\\server\share\x`, as
+//! `std::fs::canonicalize` and `fid-store` produce them). Drive-relative (`C:x`) and device
+//! (`\\.\`) paths, segments with `:` (alternate data streams) and segments that end in `.` or a
+//! space (which Windows silently strips) are rejected. POSIX paths must start with `/`.
+//! Comparison is segment-wise, case-insensitive on Windows and macOS and case-sensitive on Linux
+//! (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-005).
+//!
+//! **The check is lexical.** It never touches the file system: symbolic links, junctions, mount
+//! points and 8.3 short names are not resolved, so callers must canonicalise a path (resolve
+//! links) before asking [`is_allowed_write`], or the answer is about the spelling only.
+//! Case folding uses Rust's `str::to_lowercase` (full Unicode lower case), which is not the
+//! file system's own case table: NTFS upper-cases with its `$UpCase` table and APFS folds
+//! differently, so characters such as the Kelvin sign (U+212A, lower case `k`) or the dotted
+//! capital I can compare differently from the file system. macOS Unicode normalisation (NFD) is
+//! not applied either. Such paths can only be wrongly accepted when two spellings fold together
+//! here but name different directories on disk.
 //!
 //! # Environment
 //!
@@ -62,6 +74,7 @@
 
 use crate::matrix::{Matrix, OsFamily, Phase, Tier};
 use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsString;
 use std::fmt;
 
 /// The only `schema_version` this reader supports.
@@ -76,7 +89,10 @@ pub const MATRIX_PATH: &str = "platform/support-matrix.toml";
 pub const DEFAULT_PHASE: Phase = Phase::P1a;
 
 const TOP_KEYS: [&str; 2] = ["os", "schema_version"];
-const OS_KEYS: [&str; 4] = ["allowed_writes", "forbidden_registrations", "install_dir", "provisional"];
+/// The `~/Library` subdirectories a macOS `{home}` write template may use (each needs an app
+/// entry below it).
+const MACOS_LIBRARY_DIRS: [&str; 3] = ["Application Support", "Caches", "Preferences"];
+const OS_KEYS: [&str; 4] =["allowed_writes", "forbidden_registrations", "install_dir", "provisional"];
 
 /// How paths are written and compared on an OS family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -609,6 +625,17 @@ fn parse_template(text: &str, flavor: PathFlavor, entry: Entry) -> Result<Templa
                     "{{{var}}} is not a per-user data, cache or configuration directory, tmp or a configured root here"
                 )));
             }
+            // macOS: {home} only for the per-user Library directories, with an app entry below.
+            if flavor == PathFlavor::Macos && var == Var::Home {
+                let ok = segments.len() >= 3
+                    && segments[0] == "Library"
+                    && MACOS_LIBRARY_DIRS.contains(&segments[1].as_str());
+                if !ok {
+                    return Err(TplProblem::Bad(
+                        "{home} entries must be below {home}/Library/Application Support, Caches or Preferences".into(),
+                    ));
+                }
+            }
         }
     }
     if segments.is_empty() && (entry == Entry::InstallDir || var.needs_subdir()) {
@@ -647,10 +674,12 @@ pub enum PathProblem {
     /// NUL, a `:` outside the drive designator (Windows), or a segment ending in `.` or space
     /// (Windows).
     BadChar,
-    /// A Windows verbatim or device path (`\\?\`, `\\.\`).
+    /// A Windows device path (`\\.\`). Verbatim paths (`\\?\`) are rewritten to plain form.
     Verbatim,
     /// A file-system or drive root where a directory below it is required.
     RootOnly,
+    /// An environment value that is not valid Unicode.
+    NotUnicode,
 }
 
 impl fmt::Display for PathProblem {
@@ -662,6 +691,7 @@ impl fmt::Display for PathProblem {
             PathProblem::BadChar => "bad_char",
             PathProblem::Verbatim => "verbatim",
             PathProblem::RootOnly => "root_only",
+            PathProblem::NotUnicode => "not_unicode",
         })
     }
 }
@@ -685,10 +715,18 @@ impl NormPath {
             return Err(PathProblem::BadChar);
         }
         let windows = flavor == PathFlavor::Windows;
-        let s = if windows { text.replace('\\', "/") } else { text.to_string() };
+        let mut s = if windows { text.replace('\\', "/") } else { text.to_string() };
         let (prefix, rest) = if windows {
-            if s.starts_with("//?/") || s.starts_with("//./") {
+            if s.starts_with("//./") {
                 return Err(PathProblem::Verbatim);
+            }
+            // Verbatim paths (as std::fs::canonicalize and fid-store produce them) are rewritten
+            // to the plain form: `\\?\C:\x` -> `C:\x`, `\\?\UNC\server\share\x` -> `\\server\share\x`.
+            if let Some(v) = s.strip_prefix("//?/") {
+                s = match v.get(..4) {
+                    Some(unc) if unc.eq_ignore_ascii_case("UNC/") => format!("//{}", &v[4..]),
+                    _ => v.to_string(),
+                };
             }
             if let Some(r) = s.strip_prefix("//") {
                 let mut it = r.splitn(3, '/');
@@ -696,6 +734,9 @@ impl NormPath {
                 let share = it.next().unwrap_or("");
                 if server.is_empty() || share.is_empty() {
                     return Err(PathProblem::Relative);
+                }
+                if server == "?" || server == "." {
+                    return Err(PathProblem::Verbatim);
                 }
                 if server.contains(':') || share.contains(':') {
                     return Err(PathProblem::BadChar);
@@ -849,7 +890,8 @@ impl std::error::Error for ExpandError {}
 ///
 /// - Windows: `home` = `USERPROFILE` (required); `local_app_data` = `LOCALAPPDATA`, else
 ///   `{home}\AppData\Local`; `app_data` = `APPDATA`, else `{home}\AppData\Roaming`; `tmp` =
-///   `TEMP`, else `TMP`, else `{local_app_data}\Temp`. A relative value is an error. Callers that
+///   `TMP`, else `TEMP`, else `{home}` (the order of the Win32 `GetTempPath`). A relative value
+///   is an error. Callers that
 ///   read the known folders (`FOLDERID_LocalAppData`, `FOLDERID_RoamingAppData`) through the OS
 ///   API should build a [`MapEnv`] themselves.
 /// - macOS: `home` = `HOME` (required); `tmp` = `TMPDIR`, else `/tmp`. A relative value is an
@@ -860,16 +902,25 @@ impl std::error::Error for ExpandError {}
 ///   specification, a relative `XDG_*` value is ignored (the fallback applies); any other
 ///   relative value is an error.
 ///
-/// Values with `..` segments are errors everywhere. `home` and `tmp` must not be a file-system
-/// root. Project and export roots are passed through; [`PeruserLayout::expand`] validates them.
+/// Values with `..` segments are errors everywhere, and so are values that are not valid
+/// Unicode (`BadValue` with `not_unicode`; they are never silently replaced by a fallback).
+/// `home` and `tmp` must not be a file-system root. Project and export roots are passed
+/// through; [`PeruserLayout::expand`] validates them.
 pub fn resolve_env(
     os: OsFamily,
-    get: &dyn Fn(&str) -> Option<String>,
+    get: &dyn Fn(&str) -> Option<OsString>,
     project_roots: Vec<String>,
     export_roots: Vec<String>,
 ) -> Result<MapEnv, ExpandError> {
     let flavor = PathFlavor::of(os);
-    let read = |name: &str| get(name).filter(|v| !v.is_empty());
+    // `Ok(None)` when unset or empty; non-Unicode values are errors, never a reason to fall back.
+    let read = |var: Var, name: &str| -> Result<Option<String>, ExpandError> {
+        match get(name).map(OsString::into_string) {
+            None => Ok(None),
+            Some(Ok(v)) => Ok(Some(v).filter(|v| !v.is_empty())),
+            Some(Err(_)) => Err(ExpandError::BadValue { var, source: name.into(), problem: PathProblem::NotUnicode }),
+        }
+    };
     // Checks a value and returns it unchanged.
     let check = |var: Var, name: &str, value: String| -> Result<String, ExpandError> {
         check_single(&value, flavor).map_err(|problem| ExpandError::BadValue { var, source: name.into(), problem })?;
@@ -885,32 +936,32 @@ pub fn resolve_env(
         s
     };
     let home_name = if flavor == PathFlavor::Windows { "USERPROFILE" } else { "HOME" };
-    let home = match read(home_name) {
+    let home = match read(Var::Home, home_name)? {
         Some(v) => check(Var::Home, home_name, v)?,
         None => return Err(ExpandError::Unset { var: Var::Home, source: home_name.into() }),
     };
     let mut env = MapEnv { paths: BTreeMap::new(), project_roots, export_roots };
     match flavor {
         PathFlavor::Windows => {
-            let local = match read("LOCALAPPDATA") {
+            let local = match read(Var::LocalAppData, "LOCALAPPDATA")? {
                 Some(v) => check(Var::LocalAppData, "LOCALAPPDATA", v)?,
                 None => below(&home, &["AppData", "Local"]),
             };
-            let roaming = match read("APPDATA") {
+            let roaming = match read(Var::AppData, "APPDATA")? {
                 Some(v) => check(Var::AppData, "APPDATA", v)?,
                 None => below(&home, &["AppData", "Roaming"]),
             };
-            let tmp = match (read("TEMP"), read("TMP")) {
-                (Some(v), _) => check(Var::Tmp, "TEMP", v)?,
-                (None, Some(v)) => check(Var::Tmp, "TMP", v)?,
-                (None, None) => below(&local, &["Temp"]),
+            let tmp = match (read(Var::Tmp, "TMP")?, read(Var::Tmp, "TEMP")?) {
+                (Some(v), _) => check(Var::Tmp, "TMP", v)?,
+                (None, Some(v)) => check(Var::Tmp, "TEMP", v)?,
+                (None, None) => home.clone(),
             };
             env.paths.insert(Var::LocalAppData, local);
             env.paths.insert(Var::AppData, roaming);
             env.paths.insert(Var::Tmp, tmp);
         }
         PathFlavor::Macos | PathFlavor::Linux => {
-            let tmp = match read("TMPDIR") {
+            let tmp = match read(Var::Tmp, "TMPDIR")? {
                 Some(v) => check(Var::Tmp, "TMPDIR", v)?,
                 None => "/tmp".to_string(),
             };
@@ -922,7 +973,7 @@ pub fn resolve_env(
                     (Var::XdgConfig, "XDG_CONFIG_HOME", &[".config"][..]),
                 ];
                 for (var, name, fallback) in xdg {
-                    let value = match read(name) {
+                    let value = match read(var, name)? {
                         Some(v) if NormPath::parse(&v, flavor) == Err(PathProblem::Relative) => below(&home, fallback),
                         Some(v) => check(var, name, v)?,
                         None => below(&home, fallback),
@@ -939,7 +990,7 @@ pub fn resolve_env(
 /// [`resolve_env`] over the real process environment. Reads environment variables only; never
 /// touches the file system.
 pub fn process_env(os: OsFamily, project_roots: Vec<String>, export_roots: Vec<String>) -> Result<MapEnv, ExpandError> {
-    resolve_env(os, &|name| std::env::var(name).ok(), project_roots, export_roots)
+    resolve_env(os, &|name| std::env::var_os(name), project_roots, export_roots)
 }
 
 fn check_single(value: &str, flavor: PathFlavor) -> Result<NormPath, PathProblem> {
@@ -982,9 +1033,9 @@ pub fn is_allowed_write(path: &str, expanded: &ExpandedLayout) -> bool {
 
 impl PeruserLayout {
     /// Expands the layout of `os` with values from `env`. Fails when `os` has no layout, a needed
-    /// value is missing or invalid (empty, relative, `..`, or a file-system root for `home`,
-    /// `tmp` and the per-user directories), or an expanded entry lies outside `{home}`, `{tmp}`,
-    /// the project roots and the export roots (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-004). `home` is
+    /// value is missing or invalid (empty, relative, `..`, or a file-system or drive root,
+    /// including project and export roots: `/` or `C:\` cannot be configured as a root), or an
+    /// expanded entry lies outside `{home}`, `{tmp}`, the project roots and the export roots (REQ-PLAT.DEPLOY.NOADMIN.LAYOUT-004). `home` is
     /// always required; other variables only when a template uses them.
     pub fn expand(&self, os: OsFamily, env: &dyn Env) -> Result<ExpandedLayout, ExpandError> {
         let Some(l) = self.os.get(&os) else {
@@ -998,7 +1049,7 @@ impl PeruserLayout {
             }
             let bad = |problem| ExpandError::BadValue { var, source: var.as_str().into(), problem };
             let v = if var.is_list() {
-                env.roots(var).iter().map(|r| NormPath::parse(r, flavor).map_err(bad)).collect::<Result<Vec<_>, _>>()?
+                env.roots(var).iter().map(|r| check_single(r, flavor).map_err(bad)).collect::<Result<Vec<_>, _>>()?
             } else {
                 match env.path(var) {
                     Some(s) => vec![check_single(&s, flavor).map_err(bad)?],

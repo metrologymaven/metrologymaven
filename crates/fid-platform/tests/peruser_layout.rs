@@ -12,6 +12,7 @@ use fid_platform::peruser_layout::{
     MAX_BYTES,
 };
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -58,8 +59,8 @@ fn windows() -> ExpandedLayout {
     shipped().expand(OsFamily::Windows, &windows_env()).unwrap()
 }
 
-fn lookup(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> {
-    let map: BTreeMap<String, String> = pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+fn lookup(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<OsString> {
+    let map: BTreeMap<String, OsString> = pairs.iter().map(|(k, v)| (k.to_string(), OsString::from(v))).collect();
     move |name| map.get(name).cloned()
 }
 
@@ -217,6 +218,19 @@ fn malformed_templates() {
     bad("{home}/Applications", r#"["{home}/Library\\Caches"]"#);
     bad("{home}/Applications", r#"["{home}/Library:x"]"#);
     bad("{home}/Applications", r#"["{home}"]"#); // the whole profile is not a data directory
+    // macOS {home} write entries must be below ~/Library/{Application Support,Caches,Preferences}.
+    bad("{home}/Applications", r#"["{home}/.ssh"]"#);
+    bad("{home}/Applications", r#"["{home}/Documents/Fiducial"]"#);
+    bad("{home}/Applications", r#"["{home}/Library/Caches"]"#);
+    bad("{home}/Applications", r#"["{home}/Library/Keychains/Fiducial"]"#);
+    bad("{home}/Applications", r#"["{home}/Library/LaunchAgents/fiducial.plist"]"#);
+    bad("{home}/Applications", r#"["{home}/library/caches/Fiducial"]"#);
+    assert!(errors(&one(
+        "macos",
+        "{home}/Applications",
+        r#"["{home}/Library/Application Support/F", "{home}/Library/Caches/F", "{home}/Library/Preferences/F.plist"]"#
+    ))
+    .is_empty());
                                                  // {tmp} and the configured roots may stand alone.
     assert!(
         errors(&one("macos", "{home}/Applications", r#"["{tmp}", "{project_roots}", "{export_roots}"]"#)).is_empty()
@@ -418,7 +432,24 @@ fn resolve_env_windows_fallbacks() {
     let env = resolve_env(OsFamily::Windows, &lookup(&[("USERPROFILE", r"C:\Users\op\")]), vec![], vec![]).unwrap();
     assert_eq!(env.paths[&Var::LocalAppData], r"C:\Users\op\AppData\Local");
     assert_eq!(env.paths[&Var::AppData], r"C:\Users\op\AppData\Roaming");
-    assert_eq!(env.paths[&Var::Tmp], r"C:\Users\op\AppData\Local\Temp");
+    // GetTempPath order: TMP, then TEMP, then USERPROFILE.
+    assert_eq!(env.paths[&Var::Tmp], r"C:\Users\op\");
+    let env = resolve_env(
+        OsFamily::Windows,
+        &lookup(&[("USERPROFILE", r"C:\Users\op"), ("TEMP", r"C:\Users\op\TEMP"), ("TMP", r"C:\Users\op\TMP")]),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    assert_eq!(env.paths[&Var::Tmp], r"C:\Users\op\TMP");
+    let env = resolve_env(
+        OsFamily::Windows,
+        &lookup(&[("USERPROFILE", r"C:\Users\op"), ("TEMP", r"C:\Users\op\TEMP")]),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    assert_eq!(env.paths[&Var::Tmp], r"C:\Users\op\TEMP");
     let env = resolve_env(
         OsFamily::Windows,
         &lookup(&[("USERPROFILE", r"C:\Users\op"), ("TEMP", ""), ("TMP", r"C:\Users\op\T")]),
@@ -482,8 +513,16 @@ fn windows_path_rules() {
     assert_eq!(w(r"\a\b"), Err(PathProblem::Relative));
     assert_eq!(w(r"a\b"), Err(PathProblem::Relative));
     assert_eq!(w(r"\\nas"), Err(PathProblem::Relative));
-    assert_eq!(w(r"\\?\C:\a"), Err(PathProblem::Verbatim));
+    // Verbatim paths are rewritten to plain form; device paths stay rejected.
+    assert_eq!(w(r"\\?\C:\a\b").unwrap().to_string(), r"C:\a\b");
+    assert_eq!(w(r"\\?\c:\a"), w(r"C:\a"));
+    assert_eq!(w(r"\\?\UNC\nas\qa\x").unwrap().to_string(), r"\\nas\qa\x");
+    assert_eq!(w(r"\\?\unc\nas\qa\x"), w(r"\\nas\qa\x"));
+    assert_eq!(w(r"\\?\C:\a\..\b"), Err(PathProblem::DotDot));
+    assert_eq!(w(r"\\?\a\b"), Err(PathProblem::Relative));
+    assert_eq!(w(r"\\?\UNC\?\x\y"), Err(PathProblem::Verbatim));
     assert_eq!(w(r"\\.\PhysicalDrive0"), Err(PathProblem::Verbatim));
+    assert_eq!(w(r"\\.\C:\a"), Err(PathProblem::Verbatim));
     assert_eq!(w(r"C:\a\file.txt:stream"), Err(PathProblem::BadChar));
     assert_eq!(w(r"C:\a\dir.\x"), Err(PathProblem::BadChar));
     assert_eq!(w(r"C:\a\dir \x"), Err(PathProblem::BadChar));
@@ -494,7 +533,87 @@ fn windows_path_rules() {
     let e = shipped().expand(OsFamily::Windows, &env).unwrap();
     assert!(e.is_allowed_write(r"\\NAS\qa\OUT\r.pdf"));
     assert!(!e.is_allowed_write(r"\\nas\qa\other\r.pdf"));
-    assert!(!e.is_allowed_write(r"\\?\D:\QA\out\r.pdf"));
+    assert!(e.is_allowed_write(r"\\?\UNC\nas\QA\out\r.pdf"));
+    assert!(!e.is_allowed_write(r"\\.\UNC\nas\QA\out\r.pdf"));
+    // Store-style verbatim paths (as fid-store and std::fs::canonicalize produce them).
+    let e = windows();
+    assert!(e.is_allowed_write(r"\\?\C:\Users\op\AppData\Local\Fiducial\store\objects\ab\cdef"));
+    assert!(e.is_allowed_write(r"\\?\D:\QA\out\r.pdf"));
+    assert!(!e.is_allowed_write(r"\\?\C:\Users\op\AppData\Local\Programs\Fiducial\app.exe"));
+    assert!(!e.is_allowed_write(r"\\?\C:\Windows\System32\x"));
+}
+
+#[test]
+fn filesystem_roots_cannot_be_configured_as_roots() {
+    let env = MapEnv { project_roots: vec!["/".into()], ..MapEnv::default() }
+        .with(Var::Home, "/home/op")
+        .with(Var::XdgData, "/home/op/.local/share")
+        .with(Var::XdgCache, "/home/op/.cache")
+        .with(Var::XdgConfig, "/home/op/.config")
+        .with(Var::Tmp, "/tmp");
+    assert_eq!(
+        shipped().expand(OsFamily::Ubuntu, &env),
+        Err(ExpandError::BadValue {
+            var: Var::ProjectRoots,
+            source: "project_roots".into(),
+            problem: PathProblem::RootOnly
+        })
+    );
+    let env = MapEnv { project_roots: vec!["/srv/projects".into()], ..env };
+    let e = shipped().expand(OsFamily::Ubuntu, &env).unwrap();
+    assert!(!e.is_allowed_write("/etc/passwd"));
+    assert!(e.is_allowed_write("/srv/projects/p/x"));
+    for root in [r"C:\", "C:/", r"\\?\C:\"] {
+        let env = MapEnv { export_roots: vec![root.into()], ..windows_env() };
+        assert_eq!(
+            shipped().expand(OsFamily::Windows, &env),
+            Err(ExpandError::BadValue {
+                var: Var::ExportRoots,
+                source: "export_roots".into(),
+                problem: PathProblem::RootOnly
+            }),
+            "{root}"
+        );
+    }
+    let e = windows();
+    assert!(!e.is_allowed_write(r"C:\Windows\System32\drivers\etc\hosts"));
+}
+
+#[cfg(unix)]
+fn not_unicode() -> OsString {
+    use std::os::unix::ffi::OsStringExt;
+    OsString::from_vec(vec![b'/', b'h', 0xff])
+}
+
+#[cfg(windows)]
+fn not_unicode() -> OsString {
+    use std::os::windows::ffi::OsStringExt;
+    OsString::from_wide(&[u16::from(b'C'), u16::from(b':'), u16::from(b'\\'), 0xD800])
+}
+
+#[test]
+fn non_unicode_environment_values_are_errors_not_fallbacks() {
+    let bad = |os, name: &'static str, base: &[(&str, &str)]| {
+        let map = lookup(base);
+        resolve_env(os, &move |n: &str| if n == name { Some(not_unicode()) } else { map(n) }, vec![], vec![])
+    };
+    assert_eq!(
+        bad(OsFamily::Ubuntu, "HOME", &[]),
+        Err(ExpandError::BadValue { var: Var::Home, source: "HOME".into(), problem: PathProblem::NotUnicode })
+    );
+    // An XDG value that is not Unicode is an error, not a silent fallback.
+    assert_eq!(
+        bad(OsFamily::Ubuntu, "XDG_DATA_HOME", &[("HOME", "/home/op")]),
+        Err(ExpandError::BadValue {
+            var: Var::XdgData,
+            source: "XDG_DATA_HOME".into(),
+            problem: PathProblem::NotUnicode
+        })
+    );
+    assert_eq!(
+        bad(OsFamily::Windows, "TMP", &[("USERPROFILE", r"C:\Users\op"), ("TEMP", r"C:\Users\op\T")]),
+        Err(ExpandError::BadValue { var: Var::Tmp, source: "TMP".into(), problem: PathProblem::NotUnicode })
+    );
 }
 
 #[test]
