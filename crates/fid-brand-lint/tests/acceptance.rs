@@ -242,7 +242,7 @@ fn every_rule_has_pass_and_fail_fixture() {
 fn extraction_details() {
     // Hand-labelled extraction cases.
     let md = "Intro text. [Second](https://a.example/x) sentence here.\n\n| a | b |\n|---|---|\n| one | two |\n";
-    let ex = extract(md, Format::Markdown);
+    let ex = extract(md, Format::Markdown).unwrap();
     let texts: Vec<String> = ex.sentences.iter().map(|s| s.text()).collect();
     assert_eq!(texts, vec!["Intro text.", "Second sentence here.", "a", "b", "one", "two"]);
     assert!(ex.sentences[0].links.is_empty());
@@ -250,13 +250,128 @@ fn extraction_details() {
     assert_eq!((ex.sentences[1].line, ex.sentences[1].col), (1, 14));
 
     let html = "<p>A &amp; B <a href=\"https://b.example/?a=1&amp;b=2\">link</a>.</p><style>p{}</style><p>Next</p>";
-    let ex = extract(html, Format::Html);
+    let ex = extract(html, Format::Html).unwrap();
     let texts: Vec<String> = ex.sentences.iter().map(|s| s.text()).collect();
     assert_eq!(texts, vec!["A & B link.", "Next"]);
     assert_eq!(ex.sentences[0].links, vec!["https://b.example/?a=1&b=2".to_string()]);
 
     let crlf = "First line\r\ncontinues here.\r\n";
-    let ex = extract(crlf, Format::Markdown);
+    let ex = extract(crlf, Format::Markdown).unwrap();
     assert_eq!(ex.sentences.len(), 1);
     assert_eq!(ex.sentences[0].text(), "First line continues here.");
+}
+
+fn sentences(text: &str, format: Format) -> Vec<String> {
+    extract(text, format).unwrap().sentences.iter().map(|s| s.text()).collect()
+}
+
+#[test]
+fn long_link_text_near_the_scan_limit_does_not_panic() {
+    // Review regression: `]` at the last scannable index followed by `(`.
+    for k in 4090..4100 {
+        let s = format!("[{}](x)", "a".repeat(k));
+        assert!(extract(&s, Format::Markdown).is_ok(), "k = {k}");
+        let s = format!("[{}](", "a".repeat(k));
+        assert!(extract(&s, Format::Markdown).is_ok(), "k = {k}");
+    }
+}
+
+#[test]
+fn unclosed_openers_fail_closed() {
+    for (text, format) in [
+        ("Fine.\n<!-- never closed\nThe software is certified.\n", Format::Markdown),
+        ("<p>Fine.</p><!-- never closed <p>certified</p>", Format::Html),
+        ("<p>Fine <code>x</p><p>The software is certified.</p>", Format::Html),
+        ("<p>Fine.</p><script>var a;<p>The software is certified.</p>", Format::Html),
+        ("<p>Fine.</p><style>p {}<p>The software is certified.</p>", Format::Html),
+        ("<p>Fine.</p><pre>x\n<p>The software is certified.</p>", Format::Html),
+        ("Use the <code> element.\n\nThe software is certified.\n", Format::Markdown),
+    ] {
+        let e = extract(text, format).expect_err(text);
+        assert!(e.reason.contains("unclosed"), "{e:?}");
+    }
+    let out = lint(&[], &["unclosed-comment.md"]);
+    assert_eq!(out.code, 2);
+    let e = obj(report(&out).get("error").unwrap()).clone();
+    assert_eq!(st(&e, "code"), "input_parse");
+    assert!(st(&e, "message").contains(":3:"), "{}", st(&e, "message"));
+}
+
+#[test]
+fn invisible_characters_and_entities() {
+    // Hand-labelled: soft hyphen, zero-width joiners and numeric references must not split or
+    // hide a word.
+    for text in [
+        "The report is certi&shy;fied.",
+        "The report is certi&zwj;fied.",
+        "The report is certi&zwnj;fied.",
+        "The report is certi\u{ad}fied.",
+        "The report is certi\u{200b}fied.",
+        "The report is certi&#173;fied.",
+        "The report is &#99;ertified.",
+        "The report is &#x0000000063;ertified.",
+        "The report is &#X63;ertified.",
+    ] {
+        assert_eq!(sentences(text, Format::Markdown), vec!["The report is certified."], "{text}");
+        assert_eq!(sentences(&format!("<p>{text}</p>"), Format::Html), vec!["The report is certified."], "{text}");
+    }
+    assert_eq!(sentences("A &#0; B &#x110000; C", Format::Html), vec!["A \u{fffd} B \u{fffd} C"]);
+}
+
+#[test]
+fn prose_after_a_bracketed_word_is_not_a_reference_definition() {
+    let s = sentences("[Note]: the routine is certified.\n", Format::Markdown);
+    assert_eq!(s, vec!["[Note]: the routine is certified."]);
+    let s = sentences("[Note]: TODO: check.\n", Format::Markdown);
+    assert_eq!(s, vec!["[Note]: TODO: check."]);
+    // Real definitions still work and are not text.
+    let ex = extract("See the [report][ev].\n\n[ev]: https://e.example/r \"Title\"\n", Format::Markdown).unwrap();
+    assert_eq!(ex.sentences.len(), 1);
+    assert_eq!(ex.sentences[0].links, vec!["https://e.example/r".to_string()]);
+}
+
+/// Review item 3: 5 MB adversarial inputs must be read in linear time (the spec budget is
+/// 20 MB in 5 s on a release build; this debug-build test only guards against quadratic scans).
+#[test]
+fn adversarial_inputs_stay_linear() {
+    const N: usize = 5 * 1024 * 1024;
+    fn rep(unit: &str) -> String {
+        unit.repeat(N / unit.len())
+    }
+    let mut ticks = String::new();
+    let mut k = 1;
+    while ticks.len() < N {
+        ticks.push_str(&"`".repeat(k));
+        ticks.push('x');
+        k += 1;
+    }
+    let mut nested = String::from("[x]: https://e.example/\n\n");
+    while nested.len() < N {
+        nested.push_str(&"[".repeat(1000));
+        nested.push_str(&"]".repeat(1000));
+    }
+    let cases = [
+        ("tag openers md", rep("<a "), Format::Markdown),
+        ("tag openers html", rep("<a "), Format::Html),
+        ("unclosed quotes", rep("<a b='"), Format::Html),
+        ("declarations", rep("<!x"), Format::Html),
+        ("open brackets", rep("["), Format::Markdown),
+        ("link openers", rep("[a]("), Format::Markdown),
+        ("titles", rep("[a](x '"), Format::Markdown),
+        ("reference openers", rep("[a]["), Format::Markdown),
+        ("autolink openers", rep("<ab:"), Format::Markdown),
+        ("entities", rep("&#"), Format::Html),
+        ("backtick runs", ticks, Format::Markdown),
+        ("nested labels", nested, Format::Markdown),
+        ("long url", format!("http://e.example/{}", "a".repeat(N)), Format::Markdown),
+        ("long url parens", format!("http://e.example/{}", ")".repeat(N)), Format::Markdown),
+        ("short urls", rep("http://e.example/a) "), Format::Markdown),
+    ];
+    for (name, text, format) in cases {
+        let t = std::time::Instant::now();
+        let r = extract(&text, format);
+        let secs = t.elapsed().as_secs_f64();
+        assert!(r.is_ok(), "{name}: {r:?}");
+        assert!(secs < 30.0, "{name}: {secs:.1} s");
+    }
 }

@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 /// Longest HTML tag (from `<` to `>`) the scanners accept, in characters.
 pub const MAX_TAG_CHARS: usize = 8192;
-/// Longest Markdown link construct (`[text](dest "title")`) the scanner accepts, in characters.
+/// Longest Markdown link text or destination the scanner accepts, in characters.
 pub const MAX_LINK_CHARS: usize = 4096;
 
 /// Source format, chosen from the file extension.
@@ -60,8 +60,16 @@ pub struct Extracted {
     pub comments: Vec<Comment>,
 }
 
+/// Why a file could not be read as prose: an opener whose end is missing would hide the rest
+/// of the file, so the lint fails closed instead of skipping it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtractError {
+    pub line: u32,
+    pub reason: String,
+}
+
 /// Extract sentences and comments from a file's text.
-pub fn extract(text: &str, format: Format) -> Extracted {
+pub fn extract(text: &str, format: Format) -> Result<Extracted, ExtractError> {
     let mut src = Src::new(text);
     let fm = front_matter_lines(&src);
     for l in 0..fm {
@@ -71,11 +79,26 @@ pub fn extract(text: &str, format: Format) -> Extracted {
         Format::Markdown => classify(&mut src, fm),
         Format::Html => (Vec::new(), BTreeMap::new()),
     };
-    let mut eng =
-        Engine { s: &src, md: format == Format::Markdown, kinds, refs, toks: Vec::new(), comments: Vec::new() };
+    let md = format == Format::Markdown;
+    let brackets = if md { match_brackets(&src, &kinds) } else { Vec::new() };
+    let mut eng = Engine {
+        s: &src,
+        md,
+        kinds,
+        refs,
+        brackets,
+        gt: None,
+        runs: None,
+        toks: Vec::new(),
+        comments: Vec::new(),
+        error: None,
+    };
     eng.run();
-    let Engine { toks, comments, .. } = eng;
-    Extracted { sentences: split_sentences(toks), comments }
+    let Engine { toks, comments, error, .. } = eng;
+    if let Some(e) = error {
+        return Err(e);
+    }
+    Ok(Extracted { sentences: split_sentences(toks), comments })
 }
 
 // ------------------------------------------------------------------ source
@@ -298,12 +321,34 @@ fn ref_def(t: &[char]) -> Option<(String, String)> {
     }
     let label = norm_label(&t[ind + 1..close]);
     let rest: String = t[close + 2..].iter().collect();
-    let dest = rest.split_whitespace().next()?;
-    let dest = dest.strip_prefix('<').and_then(|d| d.strip_suffix('>')).unwrap_or(dest);
-    if label.is_empty() {
+    let mut words = rest.split_whitespace();
+    let raw = words.next()?;
+    let title_ok = words.next().map_or(true, |w| w.starts_with(|x: char| matches!(x, '"' | '\'' | '(')));
+    let (dest, angled) = match raw.strip_prefix('<').and_then(|d| d.strip_suffix('>')) {
+        Some(d) => (d, true),
+        None => (raw, false),
+    };
+    if label.is_empty() || !title_ok || !(angled || url_like(dest)) {
         return None;
     }
     Some((label, dest.to_string()))
+}
+
+/// A reference-definition destination that looks like a URL or path, so that prose such as
+/// `[Note]: read this first.` stays text.
+fn url_like(d: &str) -> bool {
+    let scheme_len = d.chars().take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-')).count();
+    let has_scheme = d.starts_with(|c: char| c.is_ascii_alphabetic())
+        && (2..=32).contains(&scheme_len)
+        && d[scheme_len..].starts_with(':')
+        && d.len() > scheme_len + 1;
+    has_scheme
+        || d.starts_with('/')
+        || d.starts_with('#')
+        || d.starts_with("./")
+        || d.starts_with("../")
+        || d.contains('/')
+        || d.trim_end_matches('.').contains('.')
 }
 
 /// Classify Markdown lines and blank the excluded ones. Returns line kinds and link references.
@@ -354,12 +399,23 @@ fn classify(s: &mut Src, fm: usize) -> (Vec<Kind>, BTreeMap<String, String>) {
 }
 
 // ------------------------------------------------------------------ inline scanner
+//
+// Every lookahead is bounded and amortised linear, so adversarial input cannot make the scan
+// quadratic: brackets are matched once up front; the next `>` is cached; backtick runs are
+// indexed once per line; link-destination and title scans stop at `[` or `]`, so two scans
+// never cover the same characters; reference labels are only normalised when bracket-free.
 
 enum Tok {
     Ch(SChar),
     Link(String),
     Break,
 }
+
+/// Longest bare URL recorded as a link; a longer run of URL characters is read as text.
+pub const MAX_URL_CHARS: usize = 8192;
+/// Longest link label (CommonMark's limit).
+const MAX_LABEL_CHARS: usize = 999;
+const NO_MATCH: u32 = u32::MAX;
 
 const RAW_ELEMENTS: [&str; 4] = ["code", "pre", "script", "style"];
 const BLOCK_ELEMENTS: [&str; 44] = [
@@ -409,6 +465,11 @@ const BLOCK_ELEMENTS: [&str; 44] = [
     "button",
 ];
 
+/// Characters that are invisible in rendered text and would split a word: dropped.
+fn is_invisible(c: char) -> bool {
+    matches!(c, '\u{ad}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}' | '\u{feff}')
+}
+
 struct Tag {
     name: String,
     closing: bool,
@@ -418,13 +479,23 @@ struct Tag {
     end: usize,
 }
 
+/// A backtick run of one line: (start, length, index of the next run of the same length or `usize::MAX`).
+type Run = (usize, usize, usize);
+
 struct Engine<'a> {
     s: &'a Src,
     md: bool,
     kinds: Vec<Kind>,
     refs: BTreeMap<String, String>,
+    /// Markdown: for each `[`, the index of its matching `]` (or [`NO_MATCH`]).
+    brackets: Vec<u32>,
+    /// Cache of the last `>` search: (searched from, first `>` at or after it).
+    gt: Option<(usize, Option<usize>)>,
+    /// Backtick runs of the line last asked about.
+    runs: Option<(usize, Vec<Run>)>,
     toks: Vec<Tok>,
     comments: Vec<Comment>,
+    error: Option<ExtractError>,
 }
 
 fn starts_with_at(c: &[char], i: usize, pat: &str) -> bool {
@@ -453,6 +524,139 @@ fn find_from(c: &[char], from: usize, pat: &str) -> Option<usize> {
     (from..c.len()).find(|&j| starts_with_at(c, j, pat))
 }
 
+/// Match `[` and `]` once for the whole file (stack; escapes skipped; reset at block ends).
+fn match_brackets(s: &Src, kinds: &[Kind]) -> Vec<u32> {
+    let c = &s.c;
+    let mut out = vec![NO_MATCH; c.len()];
+    let mut stack: Vec<usize> = Vec::new();
+    let mut j = 0;
+    while j < c.len() {
+        match c[j] {
+            '\\' => {
+                j += 2;
+                continue;
+            }
+            '[' => stack.push(j),
+            ']' => {
+                if let Some(o) = stack.pop() {
+                    if j - o <= MAX_LINK_CHARS {
+                        out[o] = u32::try_from(j).unwrap_or(NO_MATCH);
+                    }
+                }
+            }
+            '\n' => {
+                if kinds.get(s.line_of(j) + 1).copied().unwrap_or(Kind::Blank) != Kind::Para {
+                    stack.clear();
+                }
+            }
+            _ => {}
+        }
+        j += 1;
+    }
+    out
+}
+
+/// Backtick runs of line `line`, each linked to the next run of the same length.
+fn line_runs(s: &Src, line: usize) -> Vec<Run> {
+    let (a, b) = s.range(line);
+    let c = &s.c;
+    let mut runs: Vec<Run> = Vec::new();
+    let mut j = a;
+    while j < b {
+        if c[j] == '`' {
+            let start = j;
+            while j < b && c[j] == '`' {
+                j += 1;
+            }
+            runs.push((start, j - start, usize::MAX));
+        } else {
+            j += 1;
+        }
+    }
+    let mut last: BTreeMap<usize, usize> = BTreeMap::new();
+    for (k, r) in runs.iter_mut().enumerate().rev() {
+        if let Some(&nx) = last.get(&r.1) {
+            r.2 = nx;
+        }
+        last.insert(r.1, k);
+    }
+    runs
+}
+
+/// True when `t` holds no `[` or `]` (stops at the first one, so callers stay linear).
+fn bracket_free(t: &[char]) -> bool {
+    !t.iter().any(|x| matches!(x, '[' | ']'))
+}
+
+/// Inline link tail `(dest "title")` starting just after `(` at `p0`:
+/// (index after `)`, destination). Scans stop at `[` and `]`.
+fn link_dest(c: &[char], p0: usize) -> Option<(usize, String)> {
+    let lim = p0.saturating_add(MAX_LINK_CHARS).min(c.len());
+    let stop = |x: char| matches!(x, '[' | ']');
+    let mut p = p0.min(lim);
+    while p < lim && c[p].is_whitespace() {
+        p += 1;
+    }
+    let dest: String = if p < lim && c[p] == '<' {
+        let start = p + 1;
+        let mut e = start;
+        while e < lim && !matches!(c[e], '>' | '<' | '\n') && !stop(c[e]) {
+            e += 1;
+        }
+        if e >= lim || c[e] != '>' {
+            return None;
+        }
+        p = e + 1;
+        c[start..e].iter().collect()
+    } else {
+        let start = p;
+        let mut depth = 0usize;
+        while p < lim {
+            let x = c[p];
+            if x.is_whitespace() || stop(x) {
+                break;
+            }
+            if x == '\\' {
+                p += 2;
+                continue;
+            }
+            if x == '(' {
+                depth += 1;
+            } else if x == ')' {
+                if depth == 0 {
+                    break;
+                }
+                depth -= 1;
+            }
+            p += 1;
+        }
+        p = p.min(lim);
+        c[start..p].iter().collect()
+    };
+    while p < lim && c[p].is_whitespace() {
+        p += 1;
+    }
+    if p < lim && matches!(c[p], '"' | '\'' | '(') {
+        let closer = if c[p] == '(' { ')' } else { c[p] };
+        let mut e = p + 1;
+        while e < lim && c[e] != closer && !stop(c[e]) {
+            e += 1;
+        }
+        if e >= lim || c[e] != closer {
+            return None;
+        }
+        p = e + 1;
+        while p < lim && c[p].is_whitespace() {
+            p += 1;
+        }
+    }
+    if p < lim && c[p] == ')' {
+        Some((p + 1, dest))
+    } else {
+        None
+    }
+}
+
 impl<'a> Engine<'a> {
     fn emit(&mut self, ch: char, i: usize) {
         let sc = self.s.sc(ch, i);
@@ -463,6 +667,26 @@ impl<'a> Engine<'a> {
         self.kinds.get(line).copied().unwrap_or(Kind::Blank)
     }
 
+    fn fail(&mut self, i: usize, reason: String) {
+        if self.error.is_none() {
+            self.error = Some(ExtractError { line: self.s.sc(' ', i).line, reason });
+        }
+    }
+
+    /// First `>` at or after `i` (cached; the scan position only moves forward).
+    fn next_gt(&mut self, i: usize) -> Option<usize> {
+        if let Some((from, at)) = self.gt {
+            if from <= i && at.map_or(true, |a| a >= i) {
+                return at;
+            }
+        }
+        let src: &'a Src = self.s;
+        let c = &src.c;
+        let at = (i..c.len()).find(|&j| c[j] == '>');
+        self.gt = Some((i, at));
+        at
+    }
+
     fn run(&mut self) {
         let src: &'a Src = self.s;
         let c = &src.c;
@@ -470,7 +694,7 @@ impl<'a> Engine<'a> {
         let mut i = 0usize;
         // Markdown link constructs: (index of the closing `]`, index to resume at).
         let mut jumps: Vec<(usize, usize)> = Vec::new();
-        while i < n {
+        while i < n && self.error.is_none() {
             if let Some(&(close, resume)) = jumps.last() {
                 if i >= close {
                     jumps.pop();
@@ -483,7 +707,7 @@ impl<'a> Engine<'a> {
             match ch {
                 '\n' => {
                     if self.md {
-                        let l = self.s.line_of(i);
+                        let l = src.line_of(i);
                         let joins = matches!(self.kind(l), Kind::Para | Kind::Start) && self.kind(l + 1) == Kind::Para;
                         if joins {
                             self.emit(' ', i);
@@ -526,7 +750,7 @@ impl<'a> Engine<'a> {
                     }
                     i += 1;
                 }
-                '|' if self.md && self.kind(self.s.line_of(i)) == Kind::Table => {
+                '|' if self.md && self.kind(src.line_of(i)) == Kind::Table => {
                     self.toks.push(Tok::Break);
                     i += 1;
                 }
@@ -536,29 +760,30 @@ impl<'a> Engine<'a> {
                     i += 1;
                 }
                 other => {
-                    self.emit(other, i);
+                    if !is_invisible(other) {
+                        self.emit(other, i);
+                    }
                     i += 1;
                 }
             }
         }
     }
 
-    /// Inline code span: skipped when a closing run of the same length is on the same line.
+    /// Inline code span: skipped when a run of the same length follows on the same line.
     fn code_span(&mut self, i: usize) -> usize {
         let src: &'a Src = self.s;
         let c = &src.c;
+        let line = src.line_of(i);
+        if self.runs.as_ref().map_or(true, |(l, _)| *l != line) {
+            self.runs = Some((line, line_runs(src, line)));
+        }
         let run = c[i..].iter().take_while(|x| **x == '`').count();
-        let mut j = i + run;
-        while j < c.len() && c[j] != '\n' {
-            if c[j] == '`' {
-                let r = c[j..].iter().take_while(|x| **x == '`').count();
-                if r == run {
-                    return j + r;
-                }
-                j += r;
-            } else {
-                j += 1;
-            }
+        let after = self.runs.as_ref().and_then(|(_, runs)| {
+            let k = runs.binary_search_by_key(&i, |r| r.0).ok()?;
+            runs.get(runs[k].2).map(|r| r.0 + r.1)
+        });
+        if let Some(after) = after {
+            return after;
         }
         for k in i..i + run {
             self.emit('`', k);
@@ -566,131 +791,51 @@ impl<'a> Engine<'a> {
         i + run
     }
 
-    /// Index of the `]` matching the `[` at `open`, staying inside one paragraph.
-    fn close_bracket(&self, open: usize) -> Option<usize> {
-        let src: &'a Src = self.s;
-        let c = &src.c;
-        let mut depth = 0usize;
-        let mut j = open;
-        let lim = (open + MAX_LINK_CHARS).min(c.len());
-        while j < lim {
-            match c[j] {
-                '\\' => j += 2,
-                '`' => {
-                    let run = c[j..].iter().take_while(|x| **x == '`').count();
-                    j += run;
-                }
-                '[' => {
-                    depth += 1;
-                    j += 1;
-                }
-                ']' => {
-                    depth = depth.saturating_sub(1);
-                    if depth == 0 {
-                        return Some(j);
-                    }
-                    j += 1;
-                }
-                '\n' => {
-                    if self.kind(self.s.line_of(j) + 1) != Kind::Para {
-                        return None;
-                    }
-                    j += 1;
-                }
-                _ => j += 1,
-            }
-        }
-        None
-    }
-
     /// A Markdown inline or reference link starting with `[` at `open`:
     /// (index of the closing `]`, index after the whole construct, destination).
-    fn md_link(&self, open: usize) -> Option<(usize, usize, String)> {
+    fn md_link(&mut self, open: usize) -> Option<(usize, usize, String)> {
         let src: &'a Src = self.s;
         let c = &src.c;
-        let close = self.close_bracket(open)?;
-        let lim = (open + MAX_LINK_CHARS).min(c.len());
-        match c.get(close + 1) {
-            Some('(') => {
-                let mut p = close + 2;
-                while p < lim && c[p].is_whitespace() {
-                    p += 1;
-                }
-                let dest: String = if c.get(p) == Some(&'<') {
-                    let start = p + 1;
-                    let end = start + c.get(start..lim)?.iter().position(|x| *x == '>' || *x == '\n' || *x == '<')?;
-                    if c[end] != '>' {
-                        return None;
-                    }
-                    p = end + 1;
-                    c[start..end].iter().collect()
-                } else {
-                    let start = p;
-                    let mut depth = 0usize;
-                    while p < lim {
-                        let x = c[p];
-                        if x.is_whitespace() {
-                            break;
-                        }
-                        if x == '\\' {
-                            p += 2;
-                            continue;
-                        }
-                        if x == '(' {
-                            depth += 1;
-                        } else if x == ')' {
-                            if depth == 0 {
-                                break;
-                            }
-                            depth -= 1;
-                        }
-                        p += 1;
-                    }
-                    let p_end = p.min(lim);
-                    p = p_end;
-                    c[start..p_end].iter().collect()
-                };
-                while p < lim && c[p].is_whitespace() {
-                    p += 1;
-                }
-                if let Some(&q) = c.get(p) {
-                    if q == '"' || q == '\'' || q == '(' {
-                        let closer = if q == '(' { ')' } else { q };
-                        let rel = c.get(p + 1..lim)?.iter().position(|x| *x == closer)?;
-                        p = p + 1 + rel + 1;
-                        while p < lim && c[p].is_whitespace() {
-                            p += 1;
-                        }
-                    }
-                }
-                if p < lim && c[p] == ')' {
-                    Some((close, p + 1, dest))
-                } else {
-                    None
-                }
+        let close = *self.brackets.get(open)?;
+        if close == NO_MATCH {
+            return None;
+        }
+        let close = close as usize;
+        let text_label = || {
+            let t = &c[open + 1..close];
+            if t.len() <= MAX_LABEL_CHARS && bracket_free(t) {
+                Some(norm_label(t))
+            } else {
+                None
             }
+        };
+        match c.get(close + 1) {
+            Some('(') => link_dest(c, close + 2).map(|(resume, dest)| (close, resume, dest)),
             Some('[') => {
                 let start = close + 2;
-                let end = start + c.get(start..lim)?.iter().position(|x| *x == ']' || *x == '[')?;
-                if c[end] != ']' {
+                let lim = start.saturating_add(MAX_LABEL_CHARS).min(c.len());
+                let mut e = start;
+                while e < lim && !matches!(c[e], '[' | ']') {
+                    e += 1;
+                }
+                if e >= lim || c[e] != ']' {
                     return None;
                 }
-                let label = if end == start { norm_label(&c[open + 1..close]) } else { norm_label(&c[start..end]) };
-                self.refs.get(&label).map(|d| (close, end + 1, d.clone()))
+                let label = if e == start { text_label()? } else { norm_label(&c[start..e]) };
+                self.refs.get(&label).map(|d| (close, e + 1, d.clone()))
             }
             _ => {
-                if c.get(open + 1) == Some(&'^') {
+                if self.refs.is_empty() || c.get(open + 1) == Some(&'^') {
                     return None;
                 }
-                let label = norm_label(&c[open + 1..close]);
+                let label = text_label()?;
                 self.refs.get(&label).map(|d| (close, close + 1, d.clone()))
             }
         }
     }
 
     fn bare_url_start(&self, i: usize) -> bool {
-        let src: &'a Src = self.s;
-        let c = &src.c;
+        let c = &self.s.c;
         let boundary = i == 0 || {
             let p = c[i - 1];
             !(p.is_alphanumeric() || matches!(p, '/' | ':' | '@' | '.' | '-' | '_'))
@@ -699,6 +844,7 @@ impl<'a> Engine<'a> {
     }
 
     /// A bare `http(s)://` URL (GFM autolink): recorded as a link, not emitted as text.
+    /// A run longer than [`MAX_URL_CHARS`] is read as text instead.
     fn bare_url(&mut self, i: usize) -> usize {
         let src: &'a Src = self.s;
         let c = &src.c;
@@ -706,14 +852,23 @@ impl<'a> Engine<'a> {
         while j < c.len() && !c[j].is_whitespace() && !matches!(c[j], '<' | '>' | ']' | '[') {
             j += 1;
         }
+        if j - i > MAX_URL_CHARS {
+            for (k, &ch) in c.iter().enumerate().take(j).skip(i) {
+                if !is_invisible(ch) {
+                    self.emit(ch, k);
+                }
+            }
+            return j;
+        }
+        let opens = c[i..j].iter().filter(|x| **x == '(').count();
+        let mut closes = c[i..j].iter().filter(|x| **x == ')').count();
         let mut end = j;
         while end > i {
             let last = c[end - 1];
-            let opens = c[i..end].iter().filter(|x| **x == '(').count();
-            let closes = c[i..end].iter().filter(|x| **x == ')').count();
-            if matches!(last, '.' | ',' | ';' | ':' | '!' | '?' | '\'' | '"' | '*' | '_' | '~')
-                || (last == ')' && closes > opens)
-            {
+            if matches!(last, '.' | ',' | ';' | ':' | '!' | '?' | '\'' | '"' | '*' | '_' | '~') {
+                end -= 1;
+            } else if last == ')' && closes > opens {
+                closes -= 1;
                 end -= 1;
             } else {
                 break;
@@ -730,10 +885,14 @@ impl<'a> Engine<'a> {
         let lim = (i + 34).min(c.len());
         if let Some(rel) = c[i + 1..lim].iter().position(|x| *x == ';') {
             let name: String = c[i + 1..i + 1 + rel].iter().collect();
-            if let Some(ch) = decode_entity(&name) {
-                let ch = if ch.is_whitespace() { ' ' } else { ch };
-                self.emit(ch, i);
-                return i + rel + 2;
+            match decode_entity(&name) {
+                Some(Some(ch)) => {
+                    let ch = if ch.is_whitespace() { ' ' } else { ch };
+                    self.emit(ch, i);
+                    return i + rel + 2;
+                }
+                Some(None) => return i + rel + 2,
+                None => {}
             }
         }
         self.emit('&', i);
@@ -746,18 +905,19 @@ impl<'a> Engine<'a> {
         let c = &src.c;
         let n = c.len();
         if starts_with_at(c, i, "<!--") {
-            let (end, after) = match find_from(c, i + 4, "-->") {
-                Some(e) => (e, e + 3),
-                None => (n, n),
+            let Some(end) = find_from(c, i + 4, "-->") else {
+                self.fail(i, "unclosed HTML comment `<!--`: the rest of the file would be hidden".to_string());
+                return n;
             };
             let text: String = c[i + 4..end].iter().collect();
-            self.comments.push(Comment { line: self.s.sc('<', i).line, text });
-            return after;
+            self.comments.push(Comment { line: src.sc('<', i).line, text });
+            return end + 3;
         }
         if matches!(c.get(i + 1), Some('!' | '?')) {
-            let lim = (i + MAX_TAG_CHARS).min(n);
-            if let Some(rel) = c[i..lim].iter().position(|x| *x == '>') {
-                return i + rel + 1;
+            if let Some(g) = self.next_gt(i) {
+                if g - i <= MAX_TAG_CHARS {
+                    return g + 1;
+                }
             }
             self.emit('<', i);
             return i + 1;
@@ -768,7 +928,11 @@ impl<'a> Engine<'a> {
                 return after;
             }
         }
-        let Some(tag) = parse_tag(c, i) else {
+        let tag = match self.next_gt(i) {
+            Some(g) if g - i <= MAX_TAG_CHARS => parse_tag(c, i, g),
+            _ => None,
+        };
+        let Some(tag) = tag else {
             self.emit('<', i);
             return i + 1;
         };
@@ -784,21 +948,21 @@ impl<'a> Engine<'a> {
             }
             let close_pat = format!("</{}", tag.name);
             let mut j = tag.end;
-            let after = loop {
-                if j >= n {
-                    break n;
-                }
+            let mut after = None;
+            while j < n {
                 if starts_with_ci(c, j, &close_pat) {
                     let k = j + close_pat.chars().count();
                     if c.get(k).map_or(true, |x| *x == '>' || x.is_whitespace()) {
                         let lim = (k + MAX_TAG_CHARS).min(n);
-                        break match c[k..lim].iter().position(|x| *x == '>') {
-                            Some(rel) => k + rel + 1,
-                            None => n,
-                        };
+                        after = c[k..lim].iter().position(|x| *x == '>').map(|rel| k + rel + 1);
+                        break;
                     }
                 }
                 j += 1;
+            }
+            let Some(after) = after else {
+                self.fail(i, format!("unclosed <{}> element: the rest of the file would be hidden", tag.name));
+                return n;
             };
             if block {
                 self.toks.push(Tok::Break);
@@ -833,9 +997,9 @@ fn autolink(c: &[char], i: usize) -> Option<(String, usize)> {
     Some((c[start..end].iter().collect(), end + 1))
 }
 
-/// Bounded HTML tag parser for `<name attr="v">`, `</name>` and `<name/>`.
-fn parse_tag(c: &[char], i: usize) -> Option<Tag> {
-    let lim = (i + MAX_TAG_CHARS).min(c.len());
+/// HTML tag from `<` at `i` to the first `>` at `gt` (a `>` inside a quoted attribute value
+/// also ends the tag). The caller bounds `gt - i`.
+fn parse_tag(c: &[char], i: usize, gt: usize) -> Option<Tag> {
     let mut j = i + 1;
     let closing = c.get(j) == Some(&'/');
     if closing {
@@ -845,7 +1009,7 @@ fn parse_tag(c: &[char], i: usize) -> Option<Tag> {
         return None;
     }
     let ns = j;
-    while j < lim && (c[j].is_ascii_alphanumeric() || c[j] == '-') {
+    while j < gt && (c[j].is_ascii_alphanumeric() || c[j] == '-') {
         j += 1;
     }
     let name: String = c[ns..j].iter().map(|x| x.to_ascii_lowercase()).collect();
@@ -855,28 +1019,21 @@ fn parse_tag(c: &[char], i: usize) -> Option<Tag> {
     }
     let mut attrs = BTreeMap::new();
     let mut self_closing = false;
-    loop {
-        while j < lim && c[j].is_whitespace() {
+    while j < gt {
+        let x = c[j];
+        if x.is_whitespace() {
             j += 1;
+            continue;
         }
-        if j >= lim {
-            return None;
-        }
-        if c[j] == '>' {
-            j += 1;
-            break;
-        }
-        if c[j] == '/' {
-            if c.get(j + 1) == Some(&'>') {
+        if x == '/' {
+            if j + 1 == gt {
                 self_closing = true;
-                j += 2;
-                break;
             }
             j += 1;
             continue;
         }
         let an = j;
-        while j < lim && !c[j].is_whitespace() && !matches!(c[j], '/' | '>' | '=') {
+        while j < gt && !c[j].is_whitespace() && !matches!(c[j], '/' | '=') {
             j += 1;
         }
         if j == an {
@@ -884,23 +1041,24 @@ fn parse_tag(c: &[char], i: usize) -> Option<Tag> {
             continue;
         }
         let aname: String = c[an..j].iter().map(|x| x.to_ascii_lowercase()).collect();
-        while j < lim && c[j].is_whitespace() {
+        while j < gt && c[j].is_whitespace() {
             j += 1;
         }
         let mut value = String::new();
-        if j < lim && c[j] == '=' {
+        if j < gt && c[j] == '=' {
             j += 1;
-            while j < lim && c[j].is_whitespace() {
+            while j < gt && c[j].is_whitespace() {
                 j += 1;
             }
-            if j < lim && (c[j] == '"' || c[j] == '\'') {
+            if j < gt && (c[j] == '"' || c[j] == '\'') {
                 let q = c[j];
-                let rel = c[j + 1..lim].iter().position(|x| *x == q)?;
-                value = c[j + 1..j + 1 + rel].iter().collect();
-                j = j + 1 + rel + 1;
+                let vs = j + 1;
+                let ve = c[vs..gt].iter().position(|x| *x == q).map_or(gt, |r| vs + r);
+                value = c[vs..ve].iter().collect();
+                j = if ve < gt { ve + 1 } else { gt };
             } else {
                 let vs = j;
-                while j < lim && !c[j].is_whitespace() && c[j] != '>' {
+                while j < gt && !c[j].is_whitespace() {
                     j += 1;
                 }
                 value = c[vs..j].iter().collect();
@@ -908,26 +1066,32 @@ fn parse_tag(c: &[char], i: usize) -> Option<Tag> {
         }
         attrs.entry(aname).or_insert(value);
     }
-    Some(Tag { name, closing, self_closing, attrs, end: j })
+    Some(Tag { name, closing, self_closing, attrs, end: gt + 1 })
 }
 
-/// Decode one character reference name (without `&` and `;`).
-fn decode_entity(name: &str) -> Option<char> {
+/// Decode one character reference name (without `&` and `;`). `Some(None)` means the
+/// reference stands for an invisible character and is dropped; `None` means it is unknown.
+fn decode_entity(name: &str) -> Option<Option<char>> {
     if let Some(num) = name.strip_prefix('#') {
-        let v = if let Some(hex) = num.strip_prefix('x').or_else(|| num.strip_prefix('X')) {
-            if hex.is_empty() || hex.len() > 6 {
-                return None;
-            }
-            u32::from_str_radix(hex, 16).ok()?
-        } else {
-            if num.is_empty() || num.len() > 7 || !num.chars().all(|c| c.is_ascii_digit()) {
-                return None;
-            }
-            num.parse::<u32>().ok()?
+        let (digits, radix) = match num.strip_prefix(|x: char| x == 'x' || x == 'X') {
+            Some(h) => (h, 16),
+            None => (num, 10),
         };
-        return Some(char::from_u32(v).filter(|c| *c != '\0').unwrap_or('\u{fffd}'));
+        if digits.is_empty() || !digits.chars().all(|d| d.is_digit(radix)) {
+            return None;
+        }
+        let sig = digits.trim_start_matches('0');
+        let v = if sig.is_empty() {
+            Some(0)
+        } else if sig.len() > 8 {
+            None
+        } else {
+            u32::from_str_radix(sig, radix).ok()
+        };
+        let ch = v.and_then(char::from_u32).filter(|x| *x != '\0').unwrap_or('\u{fffd}');
+        return Some(if is_invisible(ch) { None } else { Some(ch) });
     }
-    Some(match name {
+    let ch = match name {
         "amp" => '&',
         "lt" => '<',
         "gt" => '>',
@@ -944,8 +1108,10 @@ fn decode_entity(name: &str) -> Option<char> {
         "copy" => '\u{a9}',
         "reg" => '\u{ae}',
         "trade" => '\u{2122}',
+        "shy" | "zwj" | "zwnj" => return Some(None),
         _ => return None,
-    })
+    };
+    Some(Some(ch))
 }
 
 /// Decode character references in an attribute value.
@@ -958,8 +1124,10 @@ fn decode_entities(s: &str) -> String {
             let lim = (i + 34).min(c.len());
             if let Some(rel) = c[i + 1..lim].iter().position(|x| *x == ';') {
                 let name: String = c[i + 1..i + 1 + rel].iter().collect();
-                if let Some(ch) = decode_entity(&name) {
-                    out.push(ch);
+                if let Some(d) = decode_entity(&name) {
+                    if let Some(ch) = d {
+                        out.push(ch);
+                    }
                     i += rel + 2;
                     continue;
                 }

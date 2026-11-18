@@ -14,7 +14,7 @@
 
 pub mod extract;
 
-pub use extract::{extract, Comment, Format, SChar, Sentence};
+pub use extract::{extract, Comment, ExtractError, Format, SChar, Sentence};
 
 use fid_canon::CValue;
 use fid_vocab::{lint, Kind, Report, RuleSet, Suppression, Unit};
@@ -47,6 +47,8 @@ pub enum LintError {
     InputTooLarge { path: String },
     /// A `claim-lint:` comment is not a well-formed marker, or names an unknown rule.
     BadMarker { path: String, line: u32, reason: String },
+    /// An input cannot be read as prose (for example an unclosed `<!--` or `<code>`).
+    InputParse { path: String, line: u32, reason: String },
     /// Wrong command-line usage.
     Usage(String),
 }
@@ -59,6 +61,7 @@ impl LintError {
             LintError::InputUnreadable { .. } => "input_unreadable",
             LintError::InputTooLarge { .. } => "input_too_large",
             LintError::BadMarker { .. } => "bad_marker",
+            LintError::InputParse { .. } => "input_parse",
             LintError::Usage(_) => "usage",
         }
     }
@@ -69,7 +72,8 @@ impl LintError {
             LintError::RulesParse { path, .. }
             | LintError::InputUnreadable { path, .. }
             | LintError::InputTooLarge { path }
-            | LintError::BadMarker { path, .. } => Some(path),
+            | LintError::BadMarker { path, .. }
+            | LintError::InputParse { path, .. } => Some(path),
             LintError::Usage(_) => None,
         }
     }
@@ -82,6 +86,7 @@ impl fmt::Display for LintError {
             LintError::InputUnreadable { path, reason } => write!(f, "cannot read {path}: {reason}"),
             LintError::InputTooLarge { path } => write!(f, "{path} is larger than {MAX_INPUT_BYTES} bytes"),
             LintError::BadMarker { path, line, reason } => write!(f, "{path}:{line}: bad claim-lint marker: {reason}"),
+            LintError::InputParse { path, line, reason } => write!(f, "{path}:{line}: cannot read as prose: {reason}"),
             LintError::Usage(m) => write!(f, "{m}\n{USAGE}"),
         }
     }
@@ -153,7 +158,8 @@ pub fn units_for_text(
     format: Format,
     rules: &BTreeSet<String>,
 ) -> Result<Vec<Unit>, LintError> {
-    let ex = extract(text, format);
+    let ex = extract(text, format)
+        .map_err(|e| LintError::InputParse { path: file.to_string(), line: e.line, reason: e.reason })?;
     let mut markers = Vec::new();
     for c in &ex.comments {
         match parse_marker(&c.text) {
