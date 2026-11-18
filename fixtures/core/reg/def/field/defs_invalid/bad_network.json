@@ -38,7 +38,8 @@
    "gui"
   ],
   "lifecycle": {
-   "state": "experimental"
+   "state": "active",
+   "since": "2026-01-01"
   },
   "web": "available",
   "network": "internet",
