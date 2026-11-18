@@ -7,8 +7,11 @@
 //!   `plan-check` rules (spec node `OUTR.LAUNCH.PLAN.FMT`). The gate and review checks reuse the
 //!   parsed types.
 //! - [`qa::a11y`]: static accessibility gate for built pages (spec node `OUTR.SITE.QA.A11Y`).
+//! - [`doc_run`]: runs the `sh run` blocks of the contributor guide against a temporary copy of
+//!   the revision it documents (spec node `OUTR.DOCS.CONTRIB`).
 
 pub mod copy_guard;
+pub mod doc_run;
 pub mod launch_plan;
 pub mod metrics;
 pub mod qa;

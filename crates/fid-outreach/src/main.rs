@@ -19,8 +19,14 @@
 //! `OUTR.SITE.QA.A11Y`): writes the report to `--out`, prints one line per unsuppressed
 //! violation, and exits 0 when there is none, 1 when there is any, and 2 on unreadable or
 //! unparsable input or bad usage.
+//!
+//! `doc-run --guide <file> --repo <dir> [--json]` (spec node `OUTR.DOCS.CONTRIB`): runs every
+//! `sh run` block of the guide in a temporary copy of the revision it states. Exits 0 when all
+//! blocks pass, 1 on `revision_mismatch` or any failing block, and 2 on an unreadable or
+//! invalid guide, an unreadable repository, or bad usage.
 
 use fid_outreach::copy_guard;
+use fid_outreach::doc_run;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::qa::a11y::{self, Options};
@@ -34,7 +40,8 @@ commands:
   copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
-  qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]";
+  qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
+  doc-run --guide <file> --repo <dir> [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -43,6 +50,7 @@ fn main() -> ExitCode {
         (Some("metric-def"), Some("check")) => metric_def_check(args.get(2..).unwrap_or(&[])),
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
+        (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -258,6 +266,46 @@ fn qa_a11y(args: &[String]) -> ExitCode {
             if let Err(w) = std::fs::write(&out, a11y::error_json(&e)) {
                 eprintln!("A11Y-IO({}): {w}", out.display());
             }
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn doc_run_cmd(args: &[String]) -> ExitCode {
+    let mut guide: Option<PathBuf> = None;
+    let mut repo: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--guide" | "--repo" => {
+                let Some(v) = it.next() else { return usage() };
+                let slot = if a == "--guide" { &mut guide } else { &mut repo };
+                if slot.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(guide), Some(repo)) = (guide, repo) else {
+        return usage();
+    };
+    match doc_run::run(&doc_run::Options { guide, repo, timeout: doc_run::DEFAULT_TIMEOUT }) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&doc_run::error_json(&e));
+            }
+            eprintln!("doc-run: {e}");
             ExitCode::from(2)
         }
     }
