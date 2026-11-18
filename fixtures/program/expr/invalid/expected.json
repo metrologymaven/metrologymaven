@@ -87,6 +87,14 @@
   "error": "expr_syntax",
   "offset": 2
  },
+ "string-raw-bidi-isolate": {
+  "error": "expr_syntax",
+  "offset": 2
+ },
+ "string-raw-bidi-override": {
+  "error": "expr_syntax",
+  "offset": 3
+ },
  "string-raw-tab": {
   "error": "expr_syntax",
   "offset": 2

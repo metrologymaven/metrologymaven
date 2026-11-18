@@ -235,6 +235,17 @@ fn req001_lexical_details() {
     assert_eq!(parse_expr("(a = 1"), Err(ParseError::Syntax { offset: 3 }));
     // Non-ASCII outside strings points at the character's first byte.
     assert_eq!(parse_expr("x + \u{00e9}"), Err(ParseError::Syntax { offset: 4 }));
+    // Bidirectional formatting characters are refused raw in strings, accepted escaped, and
+    // printed escaped.
+    for c in ['\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202e}', '\u{2066}', '\u{2069}'] {
+        assert_eq!(parse_expr(&format!("\"a{c}\"")), Err(ParseError::Syntax { offset: 2 }), "{c:?}");
+        let escaped = format!("\"\\u{{{:x}}}\"", c as u32);
+        let e = ok(&escaped);
+        assert_eq!(e.kind, ExprKind::Str(c.to_string()));
+        assert_eq!(print_expr(&e), escaped);
+    }
+    // Other non-ASCII format characters are not refused (closed list).
+    assert!(parse_expr("\"a\u{200d}b\"").is_ok());
 }
 
 /// REQ-005: no construct assigns, declares, loops, performs I/O or names a command.

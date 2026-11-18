@@ -32,6 +32,8 @@ HERE = Path(__file__).resolve().parent
 KEYWORDS = {"and", "else", "false", "if", "not", "or", "then", "true"}
 UNIT_EXTRA = set("_./^*-%") | {"µ", "μ", "°", "Ω"}
 I64_MAX = 2**63 - 1
+# Bidirectional formatting characters refused raw in strings (allowed as \u{...}).
+BIDI = {chr(c) for c in [0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x206A)]}
 
 
 class SyntaxErr(Exception):
@@ -148,7 +150,7 @@ def lex_into(chars, offs, toks):
                                 i = j + 1
                                 continue
                     raise SyntaxErr(offs[e])
-                if ord(ch) < 0x20 or ord(ch) == 0x7F:
+                if ord(ch) < 0x20 or ord(ch) == 0x7F or ch in BIDI:
                     raise SyntaxErr(offs[i])
                 buf.append(ch)
                 i += 1
@@ -324,6 +326,7 @@ VALID = {
     "str": '"probe \\"A\\"\\n"',
     "str-unicode-escape": '"\\u{41}\\u{3bc}"',
     "str-utf8": '"Ø 12"',
+    "str-bidi-escaped": '"\\u{202e}"',
     "bool-true": "true",
     "bool-false": "false",
     "ident": "nominal_d1",
@@ -388,6 +391,8 @@ INVALID = {
     "string-unclosed": ('"abc', 0),
     "string-bad-escape": ('"a\\q"', 2),
     "string-raw-tab": ('"a\tb"', 2),
+    "string-raw-bidi-override": ('"ab\u202ecd"', 3),
+    "string-raw-bidi-isolate": ('"x\u2067"', 2),
     "int-overflow": ("9223372036854775808", 0),
     "name-too-long": ("a" * 65, 0),
     "unknown-char": ("a # b", 2),
@@ -397,7 +402,7 @@ INVALID = {
 
 
 def dump(obj):
-    return json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=1) + "\n"
+    return json.dumps(obj, ensure_ascii=True, sort_keys=True, indent=1) + "\n"
 
 
 def build():

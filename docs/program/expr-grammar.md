@@ -19,7 +19,9 @@ quantity   = ( decimal | int ) , "[" , unit-char , { unit-char } , "]" ;   (* no
 unit-char  = letter | digit | "_" | "." | "/" | "^" | "*" | "-" | "%"
            | "µ" (* U+00B5 *) | "μ" (* U+03BC *) | "°" (* U+00B0 *) | "Ω" (* U+03A9 *) ;
 string     = '"' , { string-char | escape } , '"' ;
-string-char = ? any Unicode scalar value except '"', "\", U+0000 to U+001F and U+007F ? ;
+string-char = ? any Unicode scalar value except '"', "\", U+0000 to U+001F, U+007F and the
+                bidirectional formatting characters U+061C, U+200E, U+200F, U+202A to U+202E,
+                U+2066 to U+2069 (write those as \u{...}) ? ;
 escape     = "\" , ( '"' | "\" | "n" | "r" | "t" | "u{" , hex , [ hex ] , [ hex ] , [ hex ] , [ hex ] , [ hex ] , "}" ) ;
                                                         (* \u{...} must name a Unicode scalar value *)
 word       = ( letter | "_" ) , { letter | digit | "_" } ;   (* at most 64 bytes *)
@@ -75,7 +77,7 @@ So `not a == b` is `(not a) == b`, `a < b < c` is `(a < b) < c` (the type checke
 All input is treated as hostile. Parsing fails with `expr_too_large` and no tree when:
 
 - the source is longer than 4 096 bytes (checked first); or
-- a 1 025th token begins (checked while lexing; wins over syntax errors); or
+- a 1 025th token begins (checked while lexing, which stops at the first lexical error: the token bound wins over every syntax error, but a lexical error met before the 1 025th token is reported as `expr_syntax`); or
 - the nesting depth exceeds 64. Depth counts every edge of the syntax tree and every pair of parentheses: `x` has depth 0, `(x)` and `-x` depth 1, `f(a)` depth 1, `a + b + c` depth 2. Sixty-four nested parentheses around a name are accepted; sixty-five are not. Long left-associative chains count too (`a + a + ... ` with 66 operands is too deep), which keeps every later recursive pass over the tree within 64 levels.
 
 The parser carries an explicit depth counter and refuses to descend past the bound, so its recursion is bounded by a small constant times 64.
@@ -93,7 +95,7 @@ Every other failure is `expr_syntax` with `offset`, the byte offset of the first
 | quantity unit empty, unclosed or with a character outside `unit-char` | the `[` |
 | unclosed string | the opening `"` |
 | invalid escape | its `\` |
-| raw control character in a string | that character |
+| raw control or bidirectional formatting character in a string | that character |
 
 ## Printing
 

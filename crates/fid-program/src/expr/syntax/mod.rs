@@ -37,7 +37,8 @@ pub fn parse_expr(src: &str) -> Result<Expr, ParseError> {
     if src.len() > MAX_SOURCE_BYTES {
         return Err(ParseError::TooLarge(Limit::Bytes));
     }
-    // The byte and token bounds win over any syntax error. Otherwise errors are reported in
+    // The byte bound wins over everything. Lexing stops at the first lexical error, so the
+    // token bound wins only if it is met before that error. Otherwise errors are reported in
     // source order: the tokens before a lexical error are parsed first, with the error's
     // position as their end, and the lexical error wins unless the parser fails earlier.
     let (tokens, lex_err) = lex::lex(src);
@@ -238,6 +239,15 @@ impl DecText {
 /// and the four non-ASCII symbols `µ` (U+00B5), `μ` (U+03BC), `°` (U+00B0), `Ω` (U+03A9).
 pub fn is_unit_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '/' | '^' | '*' | '-' | '%' | 'µ' | 'μ' | '°' | 'Ω')
+}
+
+/// Characters a string literal may not contain raw (only as a `\u{...}` escape): the C0
+/// controls U+0000 to U+001F, DEL U+007F, and the bidirectional formatting characters
+/// U+061C, U+200E, U+200F, U+202A to U+202E and U+2066 to U+2069, which can make source
+/// text display differently from how it parses.
+pub fn is_hidden_char(c: char) -> bool {
+    matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}' | '\u{61c}' | '\u{200e}' | '\u{200f}')
+        || matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
 }
 
 /// A unit symbol as written inside `[...]`; resolved against the unit catalogue by

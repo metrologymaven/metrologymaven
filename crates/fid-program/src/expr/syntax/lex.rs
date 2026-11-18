@@ -1,7 +1,7 @@
 //! Hand-written lexer. Works on byte offsets; every slice goes through `str::get`, so a
 //! hostile source cannot make it index out of bounds or split a character.
 
-use super::{is_unit_char, syntax, Limit, ParseError, KEYWORDS, MAX_NAME_BYTES, MAX_TOKENS};
+use super::{is_hidden_char, is_unit_char, syntax, Limit, ParseError, MAX_NAME_BYTES, MAX_TOKENS};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Kw {
@@ -85,7 +85,6 @@ pub(super) fn lex(src: &str) -> (Vec<Token>, Option<ParseError>) {
 }
 
 fn lex_into(src: &str, out: &mut Vec<Token>) -> Result<(), ParseError> {
-    debug_assert!(KEYWORDS.iter().all(|k| keyword(k).is_some()));
     let b = src.as_bytes();
     let mut i = 0usize;
     while let Some(&c) = b.get(i) {
@@ -202,7 +201,8 @@ fn number(src: &str, start: usize) -> Result<(Tok, usize), ParseError> {
 }
 
 /// String literal starting at `start` (a `"`). Unclosed: offset of the opening quote; bad
-/// escape: offset of its backslash; raw control character: its own offset.
+/// escape: offset of its backslash; raw control or bidirectional formatting character
+/// ([`is_hidden_char`]): its own offset. Such characters may be written as `\u{...}`.
 fn string(src: &str, start: usize) -> Result<(String, usize), ParseError> {
     let mut out = String::new();
     let mut i = start + 1;
@@ -227,7 +227,7 @@ fn string(src: &str, start: usize) -> Result<(String, usize), ParseError> {
                 out.push(c);
                 i += len;
             }
-            c if (c as u32) < 0x20 || c == '\u{7f}' => return Err(syntax(i)),
+            c if is_hidden_char(c) => return Err(syntax(i)),
             c => {
                 out.push(c);
                 i += c.len_utf8();
@@ -259,4 +259,16 @@ fn unicode_escape(src: &str, i: usize) -> Option<(char, usize)> {
     let c = char::from_u32(v)?;
     // From the `u` (at i - 1) to the `}` (at j) inclusive.
     Some((c, j + 2 - i))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keyword;
+    use crate::expr::syntax::KEYWORDS;
+
+    #[test]
+    fn every_keyword_lexes_as_a_keyword() {
+        assert!(KEYWORDS.iter().all(|k| keyword(k).is_some()));
+        assert!(keyword("iffy").is_none());
+    }
 }

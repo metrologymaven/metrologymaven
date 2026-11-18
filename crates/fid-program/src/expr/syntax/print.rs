@@ -9,7 +9,7 @@
 //! more tokens and never nests deeper than any source of the same tree; print-then-parse
 //! therefore stays within the parse bounds. Uses an explicit stack, so any depth is safe.
 
-use super::{Expr, ExprKind};
+use super::{is_hidden_char, Expr, ExprKind};
 
 /// Precedence of the node's top level: 0 conditional, 1 to 5 binary (see
 /// [`super::BinaryOp::precedence`]), 6 unary, 7 postfix and primary.
@@ -41,7 +41,7 @@ fn operand<'e>(stack: &mut Vec<W<'e>>, e: &'e Expr, paren: bool) {
 }
 
 /// String literal with the shortest escapes: `\"`, `\\`, `\n`, `\r`, `\t`, and `\u{h}` for
-/// the other control characters.
+/// the other characters [`is_hidden_char`] refuses raw.
 fn quote(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     out.push('"');
@@ -52,7 +52,7 @@ fn quote(s: &str) -> String {
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 || c == '\u{7f}' => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
+            c if is_hidden_char(c) => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
             c => out.push(c),
         }
     }
