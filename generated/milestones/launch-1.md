@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**20** of **1336** leaves built in code ([B]).
+**21** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 15 built)
+### Wave 1 (125 leaves, 16 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -83,7 +83,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
 - [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
 - [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
-- [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
+- [B] [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
 - [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)
 - [B] [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
 - [B] [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
