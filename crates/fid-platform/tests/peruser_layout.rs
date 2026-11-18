@@ -155,10 +155,7 @@ fn ac4_missing_macos() {
     // With the shipped matrix (macOS Tier 1 from P1a) too.
     let (code, out) = cli(&["--file", file]);
     assert_eq!((code, out.as_str()), (1, "MissingOs { os: macos }\nlayout: 2 os, 1 errors\n"));
-    assert_eq!(
-        l.expand(OsFamily::Macos, &MapEnv::default()),
-        Err(ExpandError::MissingOs { os: OsFamily::Macos })
-    );
+    assert_eq!(l.expand(OsFamily::Macos, &MapEnv::default()), Err(ExpandError::MissingOs { os: OsFamily::Macos }));
 }
 
 // ---------------------------------------------------------------- validation rules (REQ-001..004)
@@ -220,9 +217,10 @@ fn malformed_templates() {
     bad("{home}/Applications", r#"["{home}/Library\\Caches"]"#);
     bad("{home}/Applications", r#"["{home}/Library:x"]"#);
     bad("{home}/Applications", r#"["{home}"]"#); // the whole profile is not a data directory
-    // {tmp} and the configured roots may stand alone.
-    assert!(errors(&one("macos", "{home}/Applications", r#"["{tmp}", "{project_roots}", "{export_roots}"]"#))
-        .is_empty());
+                                                 // {tmp} and the configured roots may stand alone.
+    assert!(
+        errors(&one("macos", "{home}/Applications", r#"["{tmp}", "{project_roots}", "{export_roots}"]"#)).is_empty()
+    );
 }
 
 #[test]
@@ -230,12 +228,20 @@ fn variables_are_per_os() {
     let e = errors(&one("windows", "{local_app_data}/P", r#"["{xdg_config}/f"]"#));
     assert_eq!(
         e,
-        [LayoutError::UnknownVariable { os: OsFamily::Windows, entry: Entry::AllowedWrite(0), name: "xdg_config".into() }]
+        [LayoutError::UnknownVariable {
+            os: OsFamily::Windows,
+            entry: Entry::AllowedWrite(0),
+            name: "xdg_config".into()
+        }]
     );
     let e = errors(&one("ubuntu", "{local_app_data}/P", r#"["{tmp}"]"#));
     assert_eq!(
         e,
-        [LayoutError::UnknownVariable { os: OsFamily::Ubuntu, entry: Entry::InstallDir, name: "local_app_data".into() }]
+        [LayoutError::UnknownVariable {
+            os: OsFamily::Ubuntu,
+            entry: Entry::InstallDir,
+            name: "local_app_data".into()
+        }]
     );
     let e = errors(&one("ubuntu", "{home}/app", r#"["{HOME}/x"]"#));
     assert_eq!(
@@ -268,10 +274,7 @@ fn structural_errors() {
 
 #[test]
 fn fatal_errors() {
-    assert_eq!(
-        errors("schema_version = 2\n"),
-        [LayoutError::UnsupportedSchema { found: 2 }]
-    );
+    assert_eq!(errors("schema_version = 2\n"), [LayoutError::UnsupportedSchema { found: 2 }]);
     assert!(matches!(errors("schema_version = \n")[..], [LayoutError::Parse { line: Some(_), .. }]));
     assert!(matches!(validate(&[0xff, 0xfe]).errors[..], [LayoutError::Parse { line: None, .. }]));
     let mut big = read(SHIPPED);
@@ -343,9 +346,13 @@ fn xdg_outside_home_fails_expansion() {
 
 #[test]
 fn macos_library_and_case_insensitivity() {
-    let env =
-        resolve_env(OsFamily::Macos, &lookup(&[("HOME", "/Users/op"), ("TMPDIR", "/var/folders/ab/T/")]), vec![], vec![])
-            .unwrap();
+    let env = resolve_env(
+        OsFamily::Macos,
+        &lookup(&[("HOME", "/Users/op"), ("TMPDIR", "/var/folders/ab/T/")]),
+        vec![],
+        vec![],
+    )
+    .unwrap();
     let e = shipped().expand(OsFamily::Macos, &env).unwrap();
     assert_eq!(e.install_dir.to_string(), "/Users/op/Applications");
     assert_eq!(
@@ -366,10 +373,7 @@ fn macos_library_and_case_insensitivity() {
 #[test]
 fn resolve_env_rejects_relative_and_empty_required_values() {
     let r = |os, pairs: &[(&str, &str)]| resolve_env(os, &lookup(pairs), vec![], vec![]);
-    assert_eq!(
-        r(OsFamily::Ubuntu, &[("HOME", "")]),
-        Err(ExpandError::Unset { var: Var::Home, source: "HOME".into() })
-    );
+    assert_eq!(r(OsFamily::Ubuntu, &[("HOME", "")]), Err(ExpandError::Unset { var: Var::Home, source: "HOME".into() }));
     assert_eq!(r(OsFamily::Ubuntu, &[]), Err(ExpandError::Unset { var: Var::Home, source: "HOME".into() }));
     assert_eq!(
         r(OsFamily::Ubuntu, &[("HOME", "home/op")]),
@@ -385,7 +389,11 @@ fn resolve_env_rejects_relative_and_empty_required_values() {
     );
     assert_eq!(
         r(OsFamily::Ubuntu, &[("HOME", "/home/op"), ("XDG_CACHE_HOME", "/home/op/../x")]),
-        Err(ExpandError::BadValue { var: Var::XdgCache, source: "XDG_CACHE_HOME".into(), problem: PathProblem::DotDot })
+        Err(ExpandError::BadValue {
+            var: Var::XdgCache,
+            source: "XDG_CACHE_HOME".into(),
+            problem: PathProblem::DotDot
+        })
     );
     assert_eq!(
         r(OsFamily::Windows, &[("USERPROFILE", "")]),
@@ -435,7 +443,11 @@ fn expand_validates_injected_values() {
     let e = l.expand(OsFamily::Windows, &windows_env().with(Var::LocalAppData, ""));
     assert_eq!(
         e,
-        Err(ExpandError::BadValue { var: Var::LocalAppData, source: "local_app_data".into(), problem: PathProblem::Empty })
+        Err(ExpandError::BadValue {
+            var: Var::LocalAppData,
+            source: "local_app_data".into(),
+            problem: PathProblem::Empty
+        })
     );
     let mut env = windows_env();
     env.paths.remove(&Var::AppData);
@@ -446,7 +458,11 @@ fn expand_validates_injected_values() {
     let env = MapEnv { export_roots: vec!["out".into()], ..windows_env() };
     assert_eq!(
         l.expand(OsFamily::Windows, &env),
-        Err(ExpandError::BadValue { var: Var::ExportRoots, source: "export_roots".into(), problem: PathProblem::Relative })
+        Err(ExpandError::BadValue {
+            var: Var::ExportRoots,
+            source: "export_roots".into(),
+            problem: PathProblem::Relative
+        })
     );
     // No configured roots: those templates expand to nothing.
     let env = MapEnv { export_roots: vec![], ..windows_env() };

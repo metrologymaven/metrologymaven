@@ -459,9 +459,7 @@ fn check_os(os: OsFamily, t: &toml::Table, field: &str, errors: &mut Vec<LayoutE
             errors.push(bad(format!("{field}.install_dir"), "is missing"));
             None
         }
-        Some(toml::Value::String(s)) => {
-            push_err(template(s, os, Entry::InstallDir), errors)
-        }
+        Some(toml::Value::String(s)) => push_err(template(s, os, Entry::InstallDir), errors),
         Some(_) => {
             errors.push(bad(format!("{field}.install_dir"), "is not a string"));
             None
@@ -940,11 +938,7 @@ pub fn resolve_env(
 
 /// [`resolve_env`] over the real process environment. Reads environment variables only; never
 /// touches the file system.
-pub fn process_env(
-    os: OsFamily,
-    project_roots: Vec<String>,
-    export_roots: Vec<String>,
-) -> Result<MapEnv, ExpandError> {
+pub fn process_env(os: OsFamily, project_roots: Vec<String>, export_roots: Vec<String>) -> Result<MapEnv, ExpandError> {
     resolve_env(os, &|name| std::env::var(name).ok(), project_roots, export_roots)
 }
 

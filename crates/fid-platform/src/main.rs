@@ -247,8 +247,10 @@ fn layout_validate(args: &[String]) -> ExitCode {
             return ExitCode::from(2);
         };
         if seen.contains(&flag.as_str()) {
-            eprintln!("{cmd}: {flag} given twice
-{USAGE}");
+            eprintln!(
+                "{cmd}: {flag} given twice
+{USAGE}"
+            );
             return ExitCode::from(2);
         }
         seen.push(flag.as_str());
@@ -268,10 +270,9 @@ fn layout_validate(args: &[String]) -> ExitCode {
             }
         }
     }
-    let (Some(layout_bytes), Some(matrix_bytes)) = (
-        read_capped(&file, peruser_layout::MAX_BYTES, cmd),
-        read_capped(&matrix_path, matrix::MAX_BYTES, cmd),
-    ) else {
+    let (Some(layout_bytes), Some(matrix_bytes)) =
+        (read_capped(&file, peruser_layout::MAX_BYTES, cmd), read_capped(&matrix_path, matrix::MAX_BYTES, cmd))
+    else {
         return ExitCode::from(2);
     };
     let m = matrix::validate(&matrix_bytes);
