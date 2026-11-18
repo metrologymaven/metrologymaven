@@ -17,3 +17,6 @@ fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text
+# Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
+# part of the test data, and make_fixtures.py --check compares bytes.
+fixtures/io/qif/xml/parse/** -text
