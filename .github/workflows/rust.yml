@@ -37,6 +37,15 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Site import verify runs with the network cut (OUTR.SITE.GEN.IMPORT AC-7)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo build -q -p fid-outreach
+          if sudo unshare --net -- curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
+          stage="$RUNNER_TEMP/site-import-stage"
+          sudo unshare --net -- ./target/debug/fid-outreach site import verify --site fixtures/outr/site/import/ok             --stage "$stage" --revision abc123 --revision-date 2026-11-17
+          cmp "$stage/build-manifest.json" fixtures/outr/site/import/expected/build-manifest.json
       - name: DMIS conformance table is fresh (IO.DMIS.CONF AC-4)
         # Regenerates docs/dmis/ from the declarations and the real test inventory; fails if stale.
         if: runner.os == 'Linux'
@@ -143,6 +152,7 @@ jobs:
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
           python fixtures/flow/study/tasks/make_fixtures.py --check
+          python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
