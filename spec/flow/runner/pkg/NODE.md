@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-accept]
+built_pr: 146
 satisfies: [REQ-FLOW.RUNNER-001, REQ-FLOW.RUNNER-011]
 covers: []
 depends_on: [CORE.JRN.CANON]
