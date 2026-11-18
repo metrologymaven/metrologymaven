@@ -159,7 +159,12 @@ impl Config {
             match key.as_str() {
                 "macro_crates" => c.macro_crates = string_list(v, key)?,
                 "declaration_markers" => c.declaration_markers = string_list(v, key)?,
-                "identity_tokens" => c.identity_tokens = string_list(v, key)?,
+                "identity_tokens" => {
+                    c.identity_tokens = string_list(v, key)?;
+                    if c.identity_tokens.is_empty() {
+                        return Err("identity_tokens must not be empty (omit it to use the defaults)".into());
+                    }
+                }
                 "exception" => {
                     let Value::Array(items) = v else {
                         return Err("exception must be an array of tables ([[exception]])".into());
@@ -352,27 +357,176 @@ pub fn without_cfg_test(code: &str) -> String {
     out.into_iter().collect()
 }
 
-/// Occurrences of `token` in `code` as (1-based line). A token that starts or ends with an
+/// Matches `tok` in `s` at `i`, returning the end index. Whitespace in `tok` is ignored, and
+/// whitespace in `s` may separate two characters of `tok` unless both are identifier
+/// characters, so `#[ fid_command` matches `#[fid_command` and `AppId :: from` matches
+/// `AppId::from`.
+fn match_at(s: &[char], i: usize, tok: &[char]) -> Option<usize> {
+    let mut j = i;
+    let mut prev: Option<char> = None;
+    for &t in tok.iter().filter(|c| !c.is_whitespace()) {
+        if let Some(p) = prev {
+            if !(is_ident(p) && is_ident(t)) {
+                while s.get(j).is_some_and(|c| c.is_whitespace()) {
+                    j += 1;
+                }
+            }
+        }
+        if s.get(j) != Some(&t) {
+            return None;
+        }
+        j += 1;
+        prev = Some(t);
+    }
+    prev.map(|_| j)
+}
+
+/// Start and end indices of `token` in `s[from..to]`. A token that starts or ends with an
 /// identifier character must not touch another identifier character there.
-pub fn token_lines(code: &str, token: &str) -> Vec<usize> {
-    let tok: Vec<char> = token.chars().collect();
+fn find_token(s: &[char], from: usize, to: usize, token: &str) -> Vec<(usize, usize)> {
+    let tok: Vec<char> = token.chars().filter(|c| !c.is_whitespace()).collect();
     let (Some(&first), Some(&last)) = (tok.first(), tok.last()) else {
         return Vec::new();
     };
-    let mut lines = Vec::new();
-    for (k, line) in code.lines().enumerate() {
-        let l: Vec<char> = line.chars().collect();
-        let hit = (0..l.len().saturating_sub(tok.len() - 1)).any(|i| {
-            i + tok.len() <= l.len()
-                && l[i..i + tok.len()] == tok[..]
-                && !(is_ident(first) && i > 0 && is_ident(l[i - 1]))
-                && !(is_ident(last) && l.get(i + tok.len()).is_some_and(|c| is_ident(*c)))
-        });
-        if hit {
-            lines.push(k + 1);
+    let to = to.min(s.len());
+    let mut hits = Vec::new();
+    for (i, &ch) in s.iter().enumerate().take(to).skip(from) {
+        if ch != first || (is_ident(first) && i > 0 && is_ident(s[i - 1])) {
+            continue;
+        }
+        let Some(end) = match_at(&s[..to], i, &tok) else { continue };
+        if is_ident(last) && s.get(end).is_some_and(|c| is_ident(*c)) {
+            continue;
+        }
+        hits.push((i, end));
+    }
+    hits
+}
+
+fn line_of(s: &[char], i: usize) -> usize {
+    1 + s[..i.min(s.len())].iter().filter(|c| **c == '\n').count()
+}
+
+/// Lines (1-based, sorted, de-duplicated) on which `token` occurs in `code`.
+pub fn token_lines(code: &str, token: &str) -> Vec<usize> {
+    let s: Vec<char> = code.chars().collect();
+    let lines: BTreeSet<usize> = find_token(&s, 0, s.len(), token).into_iter().map(|(i, _)| line_of(&s, i)).collect();
+    lines.into_iter().collect()
+}
+
+/// The index of the first non-whitespace character at or after `i`.
+fn skip_ws(s: &[char], mut i: usize) -> usize {
+    while s.get(i).is_some_and(|c| c.is_whitespace()) {
+        i += 1;
+    }
+    i
+}
+
+/// Macros and functions whose string arguments name environment variables.
+const ENV_CALLS: [&str; 4] = ["env!", "option_env!", "env::var", "env::var_os"];
+
+/// Lines on which `token` occurs inside the arguments of `env!`, `option_env!`,
+/// `env::var` or `env::var_os`, string literals included (`std::env::var("FID_APP")`).
+/// `src` is the original text and `code` the same text after [`code_only`] (and possibly
+/// [`without_cfg_test`]); both have the same characters at the same indices.
+pub fn env_arg_token_lines(src: &str, code: &str, token: &str) -> Vec<usize> {
+    let s: Vec<char> = src.chars().collect();
+    let c: Vec<char> = code.chars().collect();
+    if s.len() != c.len() {
+        return Vec::new();
+    }
+    let mut lines = BTreeSet::new();
+    for call in ENV_CALLS {
+        for (_, end) in find_token(&c, 0, c.len(), call) {
+            let open = skip_ws(&c, end);
+            if c.get(open) != Some(&'(') {
+                continue;
+            }
+            let mut depth = 0usize;
+            let mut close = open;
+            while close < c.len() {
+                match c[close] {
+                    '(' => depth += 1,
+                    ')' => {
+                        depth = depth.saturating_sub(1);
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                close += 1;
+            }
+            for (i, _) in find_token(&s, open + 1, close, token) {
+                lines.insert(line_of(&s, i));
+            }
         }
     }
-    lines
+    lines.into_iter().collect()
+}
+
+/// `#[path = "..."]` attributes and `include!("...")` calls with a plain string literal, as
+/// (line, path). `src` and `code` are as for [`env_arg_token_lines`].
+pub fn source_includes(src: &str, code: &str) -> Vec<(usize, String)> {
+    let s: Vec<char> = src.chars().collect();
+    let c: Vec<char> = code.chars().collect();
+    if s.len() != c.len() {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    for (pattern, opener) in [("#[path", '='), ("include!", '(')] {
+        for (start, end) in find_token(&c, 0, c.len(), pattern) {
+            let k = skip_ws(&c, end);
+            if c.get(k) != Some(&opener) {
+                continue;
+            }
+            let q = skip_ws(&s, k + 1);
+            if s.get(q) != Some(&'"') {
+                continue;
+            }
+            let mut lit = String::new();
+            let mut j = q + 1;
+            while let Some(&ch) = s.get(j) {
+                if ch == '"' {
+                    break;
+                }
+                if ch == '\\' {
+                    j += 1;
+                    if let Some(&e) = s.get(j) {
+                        lit.push(e);
+                    }
+                } else {
+                    lit.push(ch);
+                }
+                j += 1;
+            }
+            out.push((line_of(&s, start), lit));
+        }
+    }
+    out.sort();
+    out
+}
+
+/// True when `path`, taken relative to the directory of the crate file `file` (both
+/// `/`-separated, `file` relative to the crate), resolves outside the crate's `src/`.
+pub fn escapes_src(file: &str, path: &str) -> bool {
+    if path.starts_with('/') || path.starts_with('\\') || path.contains(':') {
+        return true;
+    }
+    let mut parts: Vec<&str> = file.split('/').collect();
+    parts.pop();
+    for p in path.split(['/', '\\']) {
+        match p {
+            "" | "." => {}
+            ".." => {
+                if parts.pop().is_none() {
+                    return true;
+                }
+            }
+            other => parts.push(other),
+        }
+    }
+    !(parts.len() >= 2 && parts[0] == "src")
 }
 
 // ---------------------------------------------------------------------------------------
@@ -508,6 +662,12 @@ pub fn check_crates(map: &LayerMap, g: &Graph, cfg: &Config) -> Vec<Finding> {
                         out.insert(Finding::new(Code::Defn, &k.name, &rel, line, format!("declaration marker {m}")));
                     }
                 }
+                for (line, path) in source_includes(&text, &code) {
+                    if escapes_src(&rel, &path) {
+                        let msg = format!("includes source outside src/: {path}");
+                        out.insert(Finding::new(Code::Size, &k.name, &rel, line, msg));
+                    }
+                }
                 if rel != "src/main.rs" {
                     if !cfg.excepted(&k.name, &rel) {
                         let msg = "Rust source file other than src/main.rs".to_string();
@@ -532,17 +692,22 @@ pub fn check_crates(map: &LayerMap, g: &Graph, cfg: &Config) -> Vec<Finding> {
                 out.insert(Finding::new(Code::Leak, &k.name, "Cargo.toml", 0, msg));
             }
         }
-        if cfg.identity_tokens.is_empty() {
-            continue;
-        }
         for (rel, text) in scan(k, &mut out) {
             if !is_non_test_source(&rel) {
                 continue;
             }
             let code = without_cfg_test(&code_only(&text));
             for t in &cfg.identity_tokens {
-                for line in token_lines(&code, t) {
+                let mut lines = token_lines(&code, t);
+                lines.extend(env_arg_token_lines(&text, &code, t));
+                for line in lines {
                     out.insert(Finding::new(Code::Leak, &k.name, &rel, line, format!("uses app-identity token {t}")));
+                }
+            }
+            for (line, path) in source_includes(&text, &code) {
+                if escapes_src(&rel, &path) {
+                    let msg = format!("includes source outside src/, which the scan does not read: {path}");
+                    out.insert(Finding::new(Code::Leak, &k.name, &rel, line, msg));
                 }
             }
         }

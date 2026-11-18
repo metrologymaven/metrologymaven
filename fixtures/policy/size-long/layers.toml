@@ -6,3 +6,4 @@ order = ["model", "services", "app", "tool"]
 "fid-x" = "services"
 "fid-app-a" = "app"
 "fid-app-b" = "app"
+"fid-app-c" = "app"

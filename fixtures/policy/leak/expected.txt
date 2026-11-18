@@ -1,2 +1,5 @@
 POLICY-LEAK fid-x src/lib.rs:12: uses app-identity token current_app
+POLICY-LEAK fid-x src/lib.rs:32: uses app-identity token FID_APP
+POLICY-LEAK fid-x src/lib.rs:33: uses app-identity token FID_APP
+POLICY-LEAK fid-x src/lib.rs:37: includes source outside src/, which the scan does not read: ../../outside/extra.rs
 POLICY-LEAK fid-y Cargo.toml: depends on app crate fid-app-a

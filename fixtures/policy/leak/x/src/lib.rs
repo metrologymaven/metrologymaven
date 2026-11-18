@@ -27,3 +27,12 @@ mod tests {
         let _ = super::AppId::from("a");
     }
 }
+
+pub fn configured() -> bool {
+    let from_env = std::env::var("FID_APP").is_ok();
+    let at_build = option_env!( "FID_APP" ).is_some();
+    from_env && at_build && HELP.is_empty()
+}
+
+#[path = "../../outside/extra.rs"]
+mod extra;

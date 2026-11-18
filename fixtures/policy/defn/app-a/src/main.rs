@@ -12,3 +12,6 @@ fn main() {
     let _ = NOTE;
     local();
 }
+
+#[ fid_command(id = "a.spaced@1") ]
+fn spaced() {}

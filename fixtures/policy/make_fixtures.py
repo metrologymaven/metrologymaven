@@ -231,16 +231,21 @@ fn main() {
     let _ = NOTE;
     local();
 }
+
+#[ fid_command(id = "a.spaced@1") ]
+fn spaced() {}
 """
 
 
 def defn():
     assert_line(DEFN_MAIN, 8, "#[fid_command(")
+    assert_line(DEFN_MAIN, 16, "#[ fid_command(")
     app = ("app-a", (package("fid-app-a", [("fid-registry-macros", "macros"), ("fid-x", "x")]),
                      {"src/main.rs": DEFN_MAIN}))
     workspace("defn", dict([MACROS, X, app]), APP_LAYER_A, [
         "POLICY-DEFN fid-app-a Cargo.toml: depends on declaration-macro crate fid-registry-macros",
         "POLICY-DEFN fid-app-a src/main.rs:8: declaration marker #[fid_command",
+        "POLICY-DEFN fid-app-a src/main.rs:16: declaration marker #[fid_command",
     ])
 
 
@@ -274,6 +279,15 @@ mod tests {
         let _ = super::AppId::from("a");
     }
 }
+
+pub fn configured() -> bool {
+    let from_env = std::env::var("FID_APP").is_ok();
+    let at_build = option_env!( "FID_APP" ).is_some();
+    from_env && at_build && HELP.is_empty()
+}
+
+#[path = "../../outside/extra.rs"]
+mod extra;
 """
 
 LEAK_TEST = """\
@@ -294,6 +308,9 @@ fn main() {
 
 def leak():
     assert_line(LEAK_LIB, 12, "current_app()")
+    assert_line(LEAK_LIB, 32, 'env::var("FID_APP")')
+    assert_line(LEAK_LIB, 33, 'option_env!( "FID_APP" )')
+    assert_line(LEAK_LIB, 37, '#[path = "../../outside/extra.rs"]')
     x = ("x", (package("fid-x", [("fid-registry-macros", "macros")]),
                {"src/lib.rs": LEAK_LIB, "tests/host.rs": LEAK_TEST}))
     y = ("y", (package("fid-y", [("fid-app-a", "app-a")]), {"src/lib.rs": "//! Depends on an app crate.\n"}))
@@ -303,6 +320,10 @@ def leak():
     extra = APP_LAYER_A + '"fid-y" = "services"\n"fid-z" = "services"\n"fid-tool" = "tool"\n'
     workspace("leak", dict([MACROS, x, APP_A, y, z, tool]), extra, [
         "POLICY-LEAK fid-x src/lib.rs:12: uses app-identity token current_app",
+        "POLICY-LEAK fid-x src/lib.rs:32: uses app-identity token FID_APP",
+        "POLICY-LEAK fid-x src/lib.rs:33: uses app-identity token FID_APP",
+        "POLICY-LEAK fid-x src/lib.rs:37: includes source outside src/, which the scan does not read: "
+        "../../outside/extra.rs",
         "POLICY-LEAK fid-y Cargo.toml: depends on app crate fid-app-a",
     ])
 
@@ -338,11 +359,25 @@ def size():
     ], extra_files={"apps-policy-excepted.toml": CONFIG_EXCEPTED})
 
 
+APP_C_MAIN = """\
+//! fid-app-c pulls code in from outside src/: hidden from the SIZE file listing.
+
+include!("../../x/src/lib.rs");
+// include!("../../x/src/lib.rs") in a comment does not count.
+
+fn main() {}
+"""
+
+
 def size_long():
+    assert_line(APP_C_MAIN, 3, "include!(")
     a = ("app-a", (package("fid-app-a", [("fid-x", "x")]), {"src/main.rs": main_lines(61, "fid-app-a")}))
     b = ("app-b", (package("fid-app-b", [("fid-x", "x")]), {"src/main.rs": main_lines(60, "fid-app-b")}))
-    workspace("size-long", dict([MACROS, X, a, b]), APP_LAYER_A + '"fid-app-b" = "app"\n', [
+    c = ("app-c", (package("fid-app-c", [("fid-x", "x")]), {"src/main.rs": APP_C_MAIN}))
+    extra = APP_LAYER_A + '"fid-app-b" = "app"\n"fid-app-c" = "app"\n'
+    workspace("size-long", dict([MACROS, X, a, b, c]), extra, [
         "POLICY-SIZE fid-app-a src/main.rs: 61 lines, limit 60",
+        "POLICY-SIZE fid-app-c src/main.rs:3: includes source outside src/: ../../x/src/lib.rs",
     ])
 
 

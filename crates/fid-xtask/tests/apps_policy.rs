@@ -4,8 +4,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_xtask::apps_policy::{
-    code_only, parse_apps_status, parse_registry_manifest, token_lines, without_cfg_test, Config,
-    DEFAULT_IDENTITY_TOKENS,
+    code_only, env_arg_token_lines, escapes_src, parse_apps_status, parse_registry_manifest, source_includes,
+    token_lines, without_cfg_test, Config, DEFAULT_IDENTITY_TOKENS,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -89,8 +89,15 @@ fn ac3_leaks_name_file_line_and_dependency() {
     let l = lines(&out);
     assert!(l.iter().any(|x| x.starts_with("POLICY-LEAK fid-x src/lib.rs:12")), "{l:?}");
     assert!(l.iter().any(|x| x.starts_with("POLICY-LEAK fid-y ") && x.ends_with("fid-app-a")), "{l:?}");
-    // Comments, strings, cfg(test) items, test files, dev-dependencies and tool crates do not count.
-    assert_eq!(l.len(), 2, "{l:?}");
+    // Identity tokens inside env!/option_env!/env::var arguments count, string literals included.
+    assert!(l.iter().any(|x| x.starts_with("POLICY-LEAK fid-x src/lib.rs:32: uses app-identity token FID_APP")));
+    assert!(l.iter().any(|x| x.starts_with("POLICY-LEAK fid-x src/lib.rs:33: uses app-identity token FID_APP")));
+    // `#[path]` pointing outside src/ is flagged.
+    assert!(l.iter().any(|x| x.starts_with("POLICY-LEAK fid-x src/lib.rs:37: includes source outside src/")));
+    // Other comments and strings, cfg(test) items, test files, dev-dependencies and tool crates
+    // do not count.
+    assert_eq!(l, expected("leak"));
+    assert_eq!(l.len(), 5, "{l:?}");
 }
 
 /// AC-4
@@ -123,7 +130,12 @@ fn ac5_extra_file_and_its_exception() {
 fn ac5_main_rs_line_limit() {
     let (code, out) = cli("size-long");
     assert_eq!(code, 1);
-    assert_eq!(lines(&out), ["POLICY-SIZE fid-app-a src/main.rs: 61 lines, limit 60"]);
+    let l = lines(&out);
+    assert!(l.contains(&"POLICY-SIZE fid-app-a src/main.rs: 61 lines, limit 60".to_string()), "{l:?}");
+    assert!(!l.iter().any(|x| x.contains("fid-app-b")), "{l:?}");
+    // include! of a file outside src/ is flagged too.
+    assert!(l.iter().any(|x| x.starts_with("POLICY-SIZE fid-app-c src/main.rs:3: includes source outside src/")));
+    assert_eq!(l, expected("size-long"));
 }
 
 /// AC-6
@@ -219,6 +231,8 @@ fn config_defaults_and_validation() {
     assert!(Config::parse("bogus = 1\n").is_err());
     assert!(Config::parse("[[exception]]\ncrate = \"a\"\nfile = \"src/x.rs\"\nreason = \"r\"\n").is_err());
     assert!(Config::parse("identity_tokens = [\"\"]\n").is_err());
+    // An empty token list would switch the leak scan off: refused.
+    assert!(Config::parse("identity_tokens = []\n").is_err());
 }
 
 #[test]
@@ -236,4 +250,49 @@ fn manifests_use_shared_types() {
     let status = r#"{"apps":[{"id":"a","manifest":true,"commands":[{"id":"x.y@1"}]},{"id":"b","manifest":false}]}"#;
     let eff = parse_apps_status(status).unwrap();
     assert_eq!(eff.keys().collect::<Vec<_>>(), ["a"]);
+}
+
+#[test]
+fn markers_and_tokens_tolerate_whitespace() {
+    let code = "#[ fid_command(id = \"a@1\") ]\n# [fid_command]\nAppId :: from(x)\n#[fid_commandx]\n";
+    assert_eq!(token_lines(code, "#[fid_command"), [1, 2]);
+    assert_eq!(token_lines(code, "AppId::from"), [3]);
+}
+
+#[test]
+fn env_arguments_are_scanned_inside_strings() {
+    let src = concat!(
+        "let a = std::env::var(\"FID_APP\");\n",
+        "let b = env!(\"FID_APP\");\n",
+        "let c = option_env!(\n    \"FID_APP\",\n);\n",
+        "let d = \"FID_APP is a help text\";\n",
+        "let e = std::env::var_os(\"OTHER\");\n",
+        "let f = env::var(\"FID_APPS\");\n",
+    );
+    let code = code_only(src);
+    assert_eq!(token_lines(&code, "FID_APP"), Vec::<usize>::new());
+    assert_eq!(env_arg_token_lines(src, &code, "FID_APP"), [1, 2, 4]);
+}
+
+#[test]
+fn includes_outside_src_are_found() {
+    let src = concat!(
+        "#[path = \"../gen/x.rs\"]\nmod x;\n",
+        "#[path=\"inner/y.rs\"] mod y;\n",
+        "include!(\"../../other/z.rs\");\n",
+        "include!(concat!(env!(\"OUT_DIR\"), \"/g.rs\"));\n",
+        "// include!(\"/abs.rs\");\n",
+        "let s = include_str!(\"../data.txt\");\n",
+    );
+    let code = code_only(src);
+    let found = source_includes(src, &code);
+    let want: Vec<(usize, String)> =
+        vec![(1, "../gen/x.rs".into()), (3, "inner/y.rs".into()), (4, "../../other/z.rs".into())];
+    assert_eq!(found, want);
+    assert!(escapes_src("src/lib.rs", "../gen/x.rs"));
+    assert!(!escapes_src("src/lib.rs", "inner/y.rs"));
+    assert!(!escapes_src("src/a/mod.rs", "../b.rs"));
+    assert!(escapes_src("src/main.rs", "../../other/z.rs"));
+    assert!(escapes_src("src/main.rs", "/abs.rs"));
+    assert!(escapes_src("src/main.rs", "C:\\x.rs"));
 }
