@@ -77,7 +77,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
 - [B] [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
 - [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
-- [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
+- [B] [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
 - [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [B] [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
 - [B] [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
