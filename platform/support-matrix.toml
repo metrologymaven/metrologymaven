@@ -1,0 +1,45 @@
+# Metrology Maven support matrix (spec node PLAT.MATRIX.FILE; schema in crates/fid-plat-matrix).
+# Validate with:  cargo run -q -p fid-plat-matrix -- validate platform/support-matrix.toml
+#
+# Scope of this first version: every row states only what the repository's CI
+# (.github/workflows/rust.yml) runs today, read from the runner logs of the main-branch
+# run of 2026-11-18. GitHub's "-latest" runner labels move to new images over time, so
+# each range covers only the OS version CI ran then. Which rows exist and which tier
+# each gets is PLAT.MATRIX.POLICY's call; the tiers below are [unverified] until that
+# leaf and decision D-010 settle them. No row is claimed for Linux ARM64, Windows ARM64,
+# macOS x86-64 or desktop Windows 10/11: CI does not run them.
+#
+# Facts about CI that the schema has no row for (schema 1 has no wasm or toolchain fields):
+# - wasm32-wasip1: the `wasm32` job runs `cargo test --target wasm32-wasip1` for fid-num,
+#   fid-canon, fid-kci, fid-replay, fid-surface and fid-types under wasmtime v49.0.6, on
+#   ubuntu-latest. Browser rows belong to PLAT.WEB.BROWSERS through a schema bump.
+# - MSRV: the `msrv` job runs `cargo check --workspace --all-targets` with Rust 1.81 on
+#   ubuntu-latest (x86_64-unknown-linux-gnu). The `test` jobs use the stable toolchain.
+schema_version = 1
+
+[[row]]
+os = "ubuntu"
+version_min = "26.04"
+version_max = "26.05"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "CI runner ubuntu-latest (image ubuntu-26.04, Ubuntu 26.04.1 LTS, host x86_64-unknown-linux-gnu): rustfmt, clippy -D warnings and cargo test --workspace on every pull request and push to main; also the MSRV 1.81 check, cargo-deny and the wasm32-wasip1 job. Tier [unverified] pending PLAT.MATRIX.POLICY."
+
+[[row]]
+os = "windows"
+version_min = "10.0.26100"
+version_max = "10.0.26101"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "CI runner windows-latest (image windows-2025-vs2026, Windows Server 2025 Datacenter build 10.0.26100, host x86_64-pc-windows-msvc): clippy -D warnings and cargo test --workspace on every pull request and push to main. Desktop Windows editions are not run in CI. Tier [unverified] pending PLAT.MATRIX.POLICY."
+
+[[row]]
+os = "macos"
+version_min = "26.7"
+version_max = "26.8"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P0"
+notes = "CI runner macos-latest (image macos-26-arm64, macOS 26.7.2, host aarch64-apple-darwin): clippy -D warnings and cargo test --workspace on every pull request and push to main. Tier [unverified] pending PLAT.MATRIX.POLICY."
