@@ -1,5 +1,7 @@
 //! Metrology Maven outreach tooling (domain OUTR).
 //!
+//! - [`asset_check`]: outreach attribution and font-origin check (spec node
+//!   `OUTR.BRAND.ASSET.ATTR`).
 //! - [`metrics::def`]: adoption metric definitions, source list and no-telemetry guard (spec node
 //!   `OUTR.COMM.METRIC.DEF`).
 //! - [`copy_guard`]: copied-text policy guard, D-013 option C (spec node `OUTR.BRAND.COPY`).
@@ -14,6 +16,7 @@
 //! - [`guide_check`]: brand-guideline family-name token check and publish guard (spec node
 //!   `OUTR.BRAND.GUIDE.NAME`).
 
+pub mod asset_check;
 pub mod copy_guard;
 pub mod doc_run;
 pub mod guide_check;
