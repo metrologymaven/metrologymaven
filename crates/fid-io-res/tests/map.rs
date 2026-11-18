@@ -311,8 +311,8 @@ fn column_rules() {
         let err = load_user_map_bytes(&with_cols(&cols)).unwrap_err();
         assert_eq!(err, ColMapError::Invalid { reason: want, column: col }, "{cols}");
     }
-    // Headers differing only in case are different columns; index 65535 is the cap.
-    let ok = format!("[{id},{{\"field\":\"actual\",\"header\":\"id\",\"index\":65535,\"required\":true}}]");
+    // Index 65535 is the cap.
+    let ok = format!("[{id},{{\"field\":\"actual\",\"header\":\"Actual\",\"index\":65535,\"required\":true}}]");
     let m = load_user_map_bytes(&with_cols(&ok)).unwrap();
     assert_eq!(m.column(Field::Actual).unwrap().index, Some(65_535));
     // Too many columns.
@@ -408,7 +408,7 @@ fn dialect_matches_python_csv_oracle() {
         let fields = strs(arr(c, "fields"));
         let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
         let record = s(c, "record");
-        let encoded = d.encode_record(&refs);
+        let encoded = d.encode_record(&refs).unwrap();
         assert_eq!(encoded.strip_suffix('\n').unwrap(), record, "encode {fields:?}");
         assert_eq!(d.decode_record(record).unwrap(), fields, "decode {record:?}");
     }
@@ -418,9 +418,14 @@ fn dialect_matches_python_csv_oracle() {
 fn dialect_line_endings_and_names() {
     let lf = Dialect::new(Delimiter::Tab, DecimalMark::Comma, false, LineEnding::Lf).unwrap();
     let crlf = Dialect::new(Delimiter::Semicolon, DecimalMark::Point, true, LineEnding::Crlf).unwrap();
-    assert_eq!(lf.encode_record(&["a", "b"]), "a\tb\n");
-    assert_eq!(crlf.encode_record(&["a", "b"]), "a;b\r\n");
-    assert_eq!(crlf.encode_record(&[]), "\r\n");
+    assert_eq!(lf.encode_record(&["a", "b"]).unwrap(), "a\tb\n");
+    assert_eq!(crlf.encode_record(&["a", "b"]).unwrap(), "a;b\r\n");
+    assert_eq!(crlf.encode_record(&[""]).unwrap(), "\"\"\r\n");
+    // No fields: an error, like decoding the empty line it would give.
+    for d in [&lf, &crlf] {
+        assert!(matches!(d.encode_record(&[]), Err(IoError::Malformed { reason: "empty_record", .. })));
+        assert!(matches!(d.decode_record(""), Err(IoError::Malformed { reason: "empty_record", .. })));
+    }
     assert_eq!(
         Dialect::new(Delimiter::Comma, DecimalMark::Comma, true, LineEnding::Lf),
         Err("decimal_comma_with_comma_delimiter")
@@ -552,5 +557,66 @@ fn hostile_inputs_never_panic() {
             let _ = d.decode_record(text);
             let _ = d.to_point_decimal(text);
         }
+    }
+}
+
+// ------------------------------------------------------------------ review fixes
+
+#[test]
+fn headers_with_padding_or_bom_are_rejected() {
+    for h in [" ID2", "ID2 ", "\u{a0}ID2", "ID2\u{3000}", "\u{feff}ID2", "I\u{feff}D2"] {
+        let cols = format!(
+            "[{{\"field\":\"characteristic_id\",\"header\":\"ID\",\"required\":true}},{{\"field\":\"actual\",\"header\":\"{h}\",\"required\":true}}]"
+        );
+        let err = load_user_map_bytes(&with_cols(&cols)).unwrap_err();
+        assert_eq!(err, ColMapError::Invalid { reason: "bad_header", column: Some(1) }, "{h:?}");
+    }
+    // Inner spaces are fine.
+    let ok = r#"[{"field":"characteristic_id","header":"Char ID","required":true}]"#;
+    assert!(load_user_map_bytes(&with_cols(ok)).is_ok());
+}
+
+#[test]
+fn headers_equal_ignoring_ascii_case_are_duplicates() {
+    for (a, b) in [("Value", "value"), ("VALUE", "vAlUe"), ("Ist", "IST")] {
+        let cols = format!(
+            "[{{\"field\":\"characteristic_id\",\"header\":\"{a}\",\"required\":true}},{{\"field\":\"actual\",\"header\":\"{b}\",\"required\":true}}]"
+        );
+        let err = load_user_map_bytes(&with_cols(&cols)).unwrap_err();
+        assert_eq!(err, ColMapError::Invalid { reason: "duplicate_column", column: Some(1) }, "{a} {b}");
+    }
+    // Only ASCII is folded: these differ.
+    let cols = "[{\"field\":\"characteristic_id\",\"header\":\"Ma\u{df}\",\"required\":true},{\"field\":\"actual\",\"header\":\"MASS\",\"required\":true}]";
+    assert!(load_user_map_bytes(&with_cols(cols)).is_ok());
+}
+
+#[test]
+fn wide_part_scope_headers_reject_the_separator() {
+    let cols = r#"[{"field":"part_id","header":"Part:No","required":true},{"field":"actual","header":"Actual","required":true}]"#;
+    let err = load_user_map_bytes(&map_json("acme.w", "1.0.0", "wide", DIALECT, cols)).unwrap_err();
+    assert_eq!(err, ColMapError::Invalid { reason: "wide_header_separator", column: Some(0) });
+    // In the long layout ':' is an ordinary header character.
+    let long = r#"[{"field":"characteristic_id","header":"Part:No","required":true}]"#;
+    assert!(load_user_map_bytes(&with_cols(long)).is_ok());
+}
+
+#[test]
+fn header_and_index_must_agree_at_read_time() {
+    let cols = r#"[{"field":"characteristic_id","header":"ID","index":0,"required":true},{"field":"actual","header":"Value","required":true},{"field":"unit","index":2,"required":true}]"#;
+    let map = load_user_map_bytes(&with_cols(cols)).unwrap();
+    let id = map.column(Field::CharacteristicId).unwrap();
+    let actual = map.column(Field::Actual).unwrap();
+    let unit = map.column(Field::Unit).unwrap();
+    // Agreeing row.
+    assert_eq!(id.locate(&["ID", "Value", "mm"], 0).unwrap(), Some(0));
+    assert_eq!(actual.locate(&["ID", "x", "Value"], 1).unwrap(), Some(2));
+    assert_eq!(unit.locate(&["ID", "Value", "U"], 2).unwrap(), Some(2));
+    // Not present: header missing, row too short.
+    assert_eq!(actual.locate(&["ID"], 1).unwrap(), None);
+    assert_eq!(unit.locate(&["ID", "Value"], 2).unwrap(), None);
+    // Header and index disagree: header elsewhere, different case, or row too short.
+    for row in [&["Value", "ID"][..], &["id", "Value"][..], &[][..]] {
+        let err = id.locate(row, 0).unwrap_err();
+        assert_eq!(err, ColMapError::Invalid { reason: "header_index_mismatch", column: Some(0) }, "{row:?}");
     }
 }

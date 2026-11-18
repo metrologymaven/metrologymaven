@@ -201,15 +201,19 @@ impl Dialect {
     }
 
     /// One record: encoded fields joined by the delimiter, plus the line ending. A record
-    /// of a single empty field is written `""`, so it is not an empty line.
-    pub fn encode_record(&self, fields: &[&str]) -> String {
+    /// of a single empty field is written `""`, so it is not an empty line. A record of no
+    /// fields fails `malformed{empty_record}`, as [`Dialect::decode_record`] fails on the
+    /// empty line it would give, so encoding and decoding stay inverse.
+    pub fn encode_record(&self, fields: &[&str]) -> Result<String, IoError> {
         let mut out = String::new();
-        if let [only] = fields {
-            if only.is_empty() {
+        match fields {
+            [] => return Err(malformed(0, "empty_record")),
+            [only] if only.is_empty() => {
                 out.push_str("\"\"");
                 out.push_str(self.line_ending.terminator());
-                return out;
+                return Ok(out);
             }
+            _ => {}
         }
         for (i, f) in fields.iter().enumerate() {
             if i > 0 {
@@ -218,7 +222,7 @@ impl Dialect {
             out.push_str(&self.encode_field(f));
         }
         out.push_str(self.line_ending.terminator());
-        out
+        Ok(out)
     }
 
     /// Splits one record (without its terminator; quoted fields may hold CR and LF) into

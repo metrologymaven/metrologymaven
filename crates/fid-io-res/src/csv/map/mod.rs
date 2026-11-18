@@ -37,19 +37,20 @@
 //!   decimal comma with comma delimiter fails (`decimal_comma_with_comma_delimiter`);
 //! - `columns` holds 1 to [`MAX_COLUMNS`] columns (`no_columns`, `too_many_columns`);
 //! - `field` is a vocabulary name (`unknown_field`) mapped at most once
-//!   (`duplicate_field`); two columns with the same header or index fail
-//!   (`duplicate_column`);
-//! - `header` is 1 to [`MAX_HEADER_BYTES`] bytes without control characters
-//!   (`bad_header`) and needs `dialect.header: true` (`header_without_header_row`);
+//!   (`duplicate_field`); two columns with the same index, or with headers equal
+//!   ignoring ASCII case, fail (`duplicate_column`);
+//! - `header` is 1 to [`MAX_HEADER_BYTES`] bytes without control characters, without
+//!   leading or trailing white space and without U+FEFF (`bad_header`) and needs `dialect.header: true` (`header_without_header_row`);
 //!   `index` is an integer 0 to [`MAX_INDEX`] (`bad_index`); a column needs one of them
-//!   (`no_locator`);
+//!   (`no_locator`); with both, the header row must hold that header at that index when
+//!   the table is read ([`Column::locate`], `header_index_mismatch`);
 //! - a long map maps `characteristic_id` or `characteristic_name`
 //!   (`no_characteristic_key`);
 //! - a wide map needs a header row (`wide_needs_header_row`), does not map
 //!   `characteristic_id` (the group header carries it: `wide_characteristic_id_column`),
 //!   and locates every characteristic-scope column by header only
-//!   (`wide_group_needs_header`), a header without [`WIDE_SEPARATOR`]
-//!   (`wide_header_separator`). The group column of field header `h` for characteristic
+//!   (`wide_group_needs_header`); no header of a wide map, part or group scope, holds
+//!   [`WIDE_SEPARATOR`] (`wide_header_separator`). The group column of field header `h` for characteristic
 //!   `c` is headed `c` + [`WIDE_SEPARATOR`] + `h`.
 //!
 //! Wrong JSON types fail with `wrong_type`, missing keys with `missing_key`, and the
@@ -239,6 +240,33 @@ pub struct Column {
     pub field: Field,
     /// Whether every row must hold a value in it.
     pub required: bool,
+}
+
+impl Column {
+    /// Finds this column in a table's header row (long layout, and part-scope columns of
+    /// the wide layout; wide group columns are located by the importer). Headers match
+    /// exactly.
+    ///
+    /// - index only: `Some(index)` if the row is that wide, else `None`;
+    /// - header only: the position of the first cell equal to the header, else `None`;
+    /// - header and index: `Some(index)` when the cell at `index` equals the header,
+    ///   otherwise `colmap_invalid{header_index_mismatch}` naming map column `position`.
+    ///
+    /// `None` means not present; whether that is an error (`required`) is the importer's
+    /// rule (`IO.RES.CSV.IN`).
+    pub fn locate(&self, header_row: &[&str], position: usize) -> Result<Option<usize>, ColMapError> {
+        let is_header = |cell: &str| self.header.as_ref().is_some_and(|h| *h == UntrustedText::new(cell));
+        let index = self.index.and_then(|i| usize::try_from(i).ok());
+        match (&self.header, index) {
+            (None, None) => Ok(None),
+            (None, Some(i)) => Ok(Some(i).filter(|i| *i < header_row.len())),
+            (Some(_), None) => Ok(header_row.iter().position(|c| is_header(c))),
+            (Some(_), Some(i)) => match header_row.get(i) {
+                Some(c) if is_header(c) => Ok(Some(i)),
+                _ => Err(invalid_at("header_index_mismatch", position)),
+            },
+        }
+    }
 }
 
 /// What commands journal about a map (REQ-IO.RES.CSV.MAP-001).
@@ -456,6 +484,8 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
         return Err(invalid("wide_needs_header_row"));
     }
     let mut out: Vec<Column> = Vec::with_capacity(items.len());
+    // ASCII-lowercased headers of `out`, for the case-insensitive duplicate check.
+    let mut folded: Vec<Option<String>> = Vec::with_capacity(items.len());
     for (n, item) in items.iter().enumerate() {
         let at = Some(n);
         let o = as_obj(item, at)?;
@@ -466,7 +496,8 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
             None => None,
             Some(h) => {
                 let h = as_str(h, at)?;
-                if h.is_empty() || h.len() > MAX_HEADER_BYTES || h.chars().any(char::is_control) {
+                let padded = h.trim() != h || h.contains('\u{feff}');
+                if h.is_empty() || h.len() > MAX_HEADER_BYTES || h.chars().any(char::is_control) || padded {
                     return Err(invalid_at("bad_header", n));
                 }
                 Some(h)
@@ -487,26 +518,27 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
             if field == Field::CharacteristicId {
                 return Err(invalid_at("wide_characteristic_id_column", n));
             }
-            if field.wide_scope() == Scope::Characteristic {
-                if header.is_none() || index.is_some() {
-                    return Err(invalid_at("wide_group_needs_header", n));
-                }
-                if header.is_some_and(|h| h.contains(WIDE_SEPARATOR)) {
-                    return Err(invalid_at("wide_header_separator", n));
-                }
+            if field.wide_scope() == Scope::Characteristic && (header.is_none() || index.is_some()) {
+                return Err(invalid_at("wide_group_needs_header", n));
+            }
+            // Part-scope headers too, so no header of a wide table looks like a group header.
+            if header.is_some_and(|h| h.contains(WIDE_SEPARATOR)) {
+                return Err(invalid_at("wide_header_separator", n));
             }
         }
-        for prev in &out {
+        let fold = header.map(str::to_ascii_lowercase);
+        for (prev, prev_fold) in out.iter().zip(&folded) {
             if prev.field == field {
                 return Err(invalid_at("duplicate_field", n));
             }
-            let same_header = matches!((&prev.header, header), (Some(a), Some(b)) if *a == UntrustedText::new(b));
+            let same_header = matches!((prev_fold, &fold), (Some(a), Some(b)) if a == b);
             let same_index = matches!((prev.index, index), (Some(a), Some(b)) if a == b);
             if same_header || same_index {
                 return Err(invalid_at("duplicate_column", n));
             }
         }
         out.push(Column { header: header.map(UntrustedText::new), index, field, required });
+        folded.push(fold);
     }
     if layout == Layout::Long
         && !out.iter().any(|c| matches!(c.field, Field::CharacteristicId | Field::CharacteristicName))
