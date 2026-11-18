@@ -253,7 +253,10 @@ dependencies = [
 name = "fid-store"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
+ "fid-types",
  "rustix",
+ "sha2",
 ]
 
 [[package]]
