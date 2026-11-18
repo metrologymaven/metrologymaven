@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**50** of **1336** leaves built in code ([B]).
+**51** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 44 built)
+### Wave 1 (125 leaves, 45 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -100,7 +100,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
 - [OUTR.CONTENT.MIG.MAP](../../spec/outr/content/mig/map/NODE.md) Migration mapping table generator and drift check (M, P1a)
 - [OUTR.CONTENT.VIDEO.REC](../../spec/outr/content/video/rec/NODE.md) Recording procedure and edit-list check (S, P1b)
-- [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
+- [B] [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
 - [OUTR.DOCS.FRAME.NAV](../../spec/outr/docs/frame/nav/NODE.md) Edition build, page frame and navigation (M, P0)
 - [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
 - [B] [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
