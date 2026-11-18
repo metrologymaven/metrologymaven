@@ -245,3 +245,92 @@ fn cli_writes_the_same_corpus() {
     let usage = Command::new(env!("CARGO_BIN_EXE_corpus-hostile")).args(["--corpus", FIX]).status().unwrap();
     assert_eq!(usage.code(), Some(2));
 }
+
+#[test]
+fn output_must_be_disjoint_from_the_corpus() {
+    let c = corpus();
+    for out in [c.join("plan").join("out"), c.clone(), c.join(".."), c.join("new").join("deeper")] {
+        let e = run_hostile(&c, &plans(), &out, &HostileOptions::new(42)).unwrap_err();
+        assert_eq!(e.code(), "malformed", "{}", out.display());
+    }
+    assert!(!c.join("plan").join("out").exists() && !c.join("new").exists());
+}
+
+#[test]
+fn manifests_count_toward_the_cap_before_any_write() {
+    let (_, full) = run("cap-full", 42);
+    let variants: u64 = full.formats.values().flatten().map(|e| e.bytes).sum();
+    assert!(full.bytes_written > variants);
+    let out = out_dir("cap-manifests");
+    let opts = HostileOptions { max_total_bytes: variants, ..HostileOptions::new(42) };
+    assert_eq!(run_hostile(&corpus(), &plans(), &out, &opts).unwrap_err().code(), "limit_exceeded");
+    assert!(!out.exists());
+    let opts = HostileOptions { max_total_bytes: full.bytes_written, ..HostileOptions::new(42) };
+    assert!(run_hostile(&corpus(), &plans(), &out, &opts).is_ok());
+}
+
+#[test]
+fn rerun_replaces_files() {
+    let out = out_dir("rerun");
+    let a = run_hostile(&corpus(), &plans(), &out, &HostileOptions::new(1)).unwrap();
+    let b = run_hostile(&corpus(), &plans(), &out, &HostileOptions::new(1)).unwrap();
+    assert_eq!(a, b);
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinks_and_hard_links_are_never_written_through() {
+    // A symlinked output folder is refused and its target stays empty.
+    let victim = out_dir("victim");
+    fs::create_dir_all(&victim).unwrap();
+    let out = out_dir("symlinked");
+    fs::create_dir_all(&out).unwrap();
+    std::os::unix::fs::symlink(&victim, out.join("mesh.stl")).unwrap();
+    let e = run_hostile(&corpus(), &plans(), &out, &HostileOptions::new(42)).unwrap_err();
+    assert_eq!(e.code(), "malformed");
+    assert_eq!(fs::read_dir(&victim).unwrap().count(), 0);
+    let linked_out = out_dir("symlinked-root");
+    std::os::unix::fs::symlink(&victim, &linked_out).unwrap();
+    assert!(run_hostile(&corpus(), &plans(), &linked_out, &HostileOptions::new(42)).is_err());
+    assert_eq!(fs::read_dir(&victim).unwrap().count(), 0);
+    // A hard link to a generated file keeps its bytes when the file is regenerated.
+    let (out, r) = run("hardlink", 42);
+    let flip = r.formats.values().flatten().find(|e| e.mutator == Mutator::BitFlip).unwrap();
+    let keep = victim.join("kept");
+    fs::hard_link(out.join(&flip.path), &keep).unwrap();
+    let before = fs::read(&keep).unwrap();
+    run_hostile(&corpus(), &plans(), &out, &HostileOptions::new(7)).unwrap();
+    assert_eq!(fs::read(&keep).unwrap(), before);
+    assert_ne!(fs::read(out.join(&flip.path)).unwrap(), before);
+}
+
+#[test]
+fn e57_reader_returns_the_labelled_errors() {
+    let (out, r) = run("e57-reader", 42);
+    let es = entries(&r, "cloud.e57");
+    assert!(!es.is_empty());
+    for e in es {
+        let bytes = fs::read(out.join(&e.path)).unwrap();
+        let got = fid_io_e57::LogicalReader::open(std::io::Cursor::new(bytes)).and_then(|mut rd| rd.verify_all());
+        assert_eq!(got.map_err(|x| x.code()), Err(e.error.as_str()), "{}", e.path);
+    }
+}
+
+#[test]
+fn xml_reader_returns_the_labelled_errors() {
+    // The syntax-level mutators; inflate_count needs the QIF reader (count rules), not fid-xml.
+    let (out, r) = run("xml-reader", 42);
+    let mut checked = 0;
+    for e in entries(&r, "qif.xml").iter().filter(|e| e.mutator != Mutator::InflateCount) {
+        let bytes = fs::read(out.join(&e.path)).unwrap();
+        let budget =
+            fid_io_reg::Budget::new(fid_io_reg::Principal::Human, &fid_io_reg::LimitRequest::default()).unwrap();
+        let got = fid_xml::read_slice(&bytes, budget).map(|_| ());
+        assert_eq!(got.map_err(|x| x.code()), Err(e.error.as_str()), "{}", e.path);
+        checked += 1;
+    }
+    assert_eq!(checked, 8);
+    // The unmutated input is accepted.
+    let budget = fid_io_reg::Budget::new(fid_io_reg::Principal::Human, &fid_io_reg::LimitRequest::default()).unwrap();
+    assert!(fid_xml::read_slice(&fs::read(corpus().join("min.qif")).unwrap(), budget).is_ok());
+}

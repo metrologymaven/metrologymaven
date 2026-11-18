@@ -38,7 +38,8 @@ use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::fs;
-use std::path::Path;
+use std::io::Write as _;
+use std::path::{Component, Path, PathBuf};
 
 /// Bit-flip variants per input file.
 pub const BITFLIPS: u32 = 3;
@@ -55,6 +56,8 @@ pub const DEFAULT_MAX_INPUT_BYTES: u64 = 16 * 1024 * 1024;
 const BOMB_RUNS: usize = 40_000;
 const BOMB_ENTRIES: usize = 7_000;
 const BIG_DECIMAL: &[u8] = b"18446744073709551615";
+/// Inflated ZIP entry count: the largest 16-bit value that is not the ZIP64 marker.
+const ZIP_ENTRIES_INFLATED: u16 = 0xFFFE;
 
 /// A hostile mutation. Declaration order is the order variants are generated in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -486,7 +489,11 @@ fn inflate_count(plan: &MutatorPlan, data: &[u8]) -> Result<Vec<u8>, CorpError> 
                 .rev()
                 .find(|&p| data[p..].starts_with(b"PK\x05\x06"))
                 .ok_or_else(|| bad(at, "no ZIP end-of-central-directory"))?;
-            out[p + 8..p + 12].fill(0xff);
+            // 0xFFFE, not 0xFFFF: 0xFFFF is the ZIP64 marker and would send a reader to look for a
+            // ZIP64 record instead of reading a too-large count.
+            for q in [p + 8, p + 10] {
+                out[q..q + 2].copy_from_slice(&ZIP_ENTRIES_INFLATED.to_le_bytes());
+            }
         }
         CountField::After(pat) => {
             let p = find_from(data, pat.as_bytes(), 0).ok_or_else(|| bad(at, "count text not found"))?;
@@ -792,22 +799,66 @@ pub fn render_manifest(format: &FormatId, entries: &[HostileEntry], seed: u64) -
     out
 }
 
-fn limit(detail: String) -> CorpError {
-    CorpError::LimitExceeded { detail }
+fn over_cap(cap: u64, at: &str) -> CorpError {
+    CorpError::LimitExceeded { detail: format!("output would exceed {cap} bytes at {at}") }
 }
 
-/// Writes `bytes` to `dir/name`, refusing a symlink at the target and charging the cap.
-fn write_capped(dir: &Path, name: &str, bytes: &[u8], written: &mut u64, cap: u64) -> Result<(), CorpError> {
-    let n = bytes.len() as u64;
-    if written.saturating_add(n) > cap {
-        return Err(limit(format!("output would exceed {cap} bytes at {name}")));
-    }
+/// Writes `bytes` to a new file `dir/name`. An existing regular file of that name is unlinked
+/// first (never written through, so a hard link elsewhere is left untouched); anything else
+/// there (symlink, directory) is refused. The file is then opened with `create_new`, so a
+/// symlink planted between the two steps makes the open fail instead of being followed.
+fn write_new(dir: &Path, name: &str, bytes: &[u8], written: &mut u64) -> Result<(), CorpError> {
     let path = dir.join(name);
-    if fs::symlink_metadata(&path).is_ok_and(|m| !m.is_file()) {
-        return Err(CorpError::malformed(name, "output target exists and is not a file"));
+    let fail = |what: &str, e: std::io::Error| CorpError::malformed(name, format!("cannot {what}: {e}"));
+    match fs::symlink_metadata(&path) {
+        Ok(m) if m.file_type().is_file() => fs::remove_file(&path).map_err(|e| fail("replace", e))?,
+        Ok(_) => return Err(CorpError::malformed(name, "output target exists and is not a regular file")),
+        Err(_) => {}
     }
-    fs::write(&path, bytes).map_err(|e| CorpError::malformed(name, format!("cannot write: {e}")))?;
-    *written += n;
+    let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&path).map_err(|e| fail("create", e))?;
+    f.write_all(bytes).map_err(|e| fail("write", e))?;
+    *written += bytes.len() as u64;
+    Ok(())
+}
+
+/// The absolute, symlink-resolved form of `p`, which need not exist yet: its nearest existing
+/// ancestor is canonicalised and the remaining plain components are appended.
+fn resolve(p: &Path) -> Result<PathBuf, CorpError> {
+    let at = p.display().to_string();
+    let abs = if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        std::env::current_dir().map_err(|e| CorpError::malformed(&at, format!("no current directory: {e}")))?.join(p)
+    };
+    let mut rest = Vec::new();
+    let mut cur = abs.as_path();
+    loop {
+        if let Ok(c) = fs::canonicalize(cur) {
+            let mut out = c;
+            for seg in rest.iter().rev() {
+                out.push(seg);
+            }
+            return Ok(out);
+        }
+        match (cur.components().next_back(), cur.parent()) {
+            (Some(Component::Normal(seg)), Some(parent)) => {
+                rest.push(seg.to_os_string());
+                cur = parent;
+            }
+            _ => return Err(CorpError::malformed(at, "cannot resolve the path")),
+        }
+    }
+}
+
+/// Refuses an output directory that is, or lies inside, the corpus directory, or contains it.
+fn check_disjoint(corpus: &Path, out: &Path) -> Result<(), CorpError> {
+    let (c, o) = (resolve(corpus)?, resolve(out)?);
+    if o.starts_with(&c) || c.starts_with(&o) {
+        return Err(CorpError::malformed(
+            out.display().to_string(),
+            "the output directory must not be, contain or lie inside the corpus directory",
+        ));
+    }
     Ok(())
 }
 
@@ -826,14 +877,16 @@ fn ensure_dir(path: &Path) -> Result<(), CorpError> {
 /// tagged `hostile`. Every manifest's format needs a plan (`malformed` otherwise). Variants
 /// whose digest was already produced are skipped, so the output never repeats a digest.
 /// Writes only `out/<format-id>.toml` and files in `out/<format-id>/`, where `out` and those
-/// directories must not be symlinks; stops with `limit_exceeded` before the total would pass
-/// `max_total_bytes`.
+/// directories must not be symlinks, and `out` must be disjoint from `corpus` (`malformed`).
+/// Variants and manifests are all built in memory first; if their total passes
+/// `max_total_bytes` the run stops with `limit_exceeded` before anything is written.
 pub fn run_hostile(
     corpus: &Path,
     plans: &BTreeMap<FormatId, MutatorPlan>,
     out: &Path,
     opts: &HostileOptions,
 ) -> Result<HostileReport, CorpError> {
+    check_disjoint(corpus, out)?;
     let (manifests, errors) = load_manifests(corpus);
     if let Some(e) = errors.into_iter().next() {
         return Err(e);
@@ -871,7 +924,7 @@ pub fn run_hostile(
                 }
                 planned = planned.saturating_add(v.bytes.len() as u64);
                 if planned > opts.max_total_bytes {
-                    return Err(limit(format!("output would exceed {} bytes at {at}", opts.max_total_bytes)));
+                    return Err(over_cap(opts.max_total_bytes, &at));
                 }
                 let (error, reason) = plan.expected(v.mutator);
                 let name = format!("{}-{}-{}.{ext}", &digest.hex()[..16], v.mutator.as_str(), v.index);
@@ -890,19 +943,27 @@ pub fn run_hostile(
             }
         }
     }
+    // Render every manifest and charge it too, so the cap holds before the first write.
+    let mut rendered = Vec::with_capacity(generated.len());
+    for (format, list) in generated {
+        let (entries, blobs): (Vec<HostileEntry>, Vec<Vec<u8>>) = list.into_iter().unzip();
+        let text = render_manifest(&format, &entries, opts.seed);
+        planned = planned.saturating_add(text.len() as u64);
+        if planned > opts.max_total_bytes {
+            return Err(over_cap(opts.max_total_bytes, &format!("{format}.toml")));
+        }
+        rendered.push((format, entries, blobs, text));
+    }
     // Everything is generated and within the cap: now write.
     ensure_dir(out)?;
-    for (format, list) in generated {
+    for (format, entries, blobs, text) in rendered {
         let dir = out.join(format.as_str());
         ensure_dir(&dir)?;
-        let mut entries = Vec::with_capacity(list.len());
-        for (entry, bytes) in list {
-            let name = entry.path.rsplit('/').next().unwrap_or_default().to_string();
-            write_capped(&dir, &name, &bytes, &mut report.bytes_written, opts.max_total_bytes)?;
-            entries.push(entry);
+        for (entry, bytes) in entries.iter().zip(&blobs) {
+            let name = entry.path.rsplit('/').next().unwrap_or_default();
+            write_new(&dir, name, bytes, &mut report.bytes_written)?;
         }
-        let text = render_manifest(&format, &entries, opts.seed);
-        write_capped(out, &format!("{format}.toml"), text.as_bytes(), &mut report.bytes_written, opts.max_total_bytes)?;
+        write_new(out, &format!("{format}.toml"), text.as_bytes(), &mut report.bytes_written)?;
         report.formats.insert(format, entries);
     }
     Ok(report)

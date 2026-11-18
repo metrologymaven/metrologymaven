@@ -73,7 +73,7 @@ Small valid files under `fixtures/io/corp/hostile/` (CC-BY-4.0).
 
 ## Open questions
 
-- None.
+- STL count expectations (for the IO.MESH.STL spec owner): the generator labels a flipped or maximal facet count `truncated_file`, following REQ-IO.MESH.STL-001/002 (size consistency decides binary versus ASCII, then a short file is `truncated_file`). Should a declared count whose 84 + 50·n exceeds the byte limit be `limit_exceeded` instead? [unverified] until an STL reader exists; see `fixtures/io/corp/hostile/plan/hostile.toml`.
 
 ## Children
 

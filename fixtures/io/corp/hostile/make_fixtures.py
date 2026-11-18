@@ -238,7 +238,7 @@ def inflate_count(data, plan):
         while p >= lo and data[p:p + 4] != b"PK\x05\x06":
             p -= 1
         assert p >= lo
-        out[p + 8:p + 12] = b"\xff\xff\xff\xff"
+        out[p + 8:p + 12] = b"\xfe\xff\xfe\xff"  # 0xFFFE twice; 0xFFFF is the ZIP64 marker
     else:
         pat = count["after"].encode()
         p = data.find(pat)

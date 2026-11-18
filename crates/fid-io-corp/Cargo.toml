@@ -26,5 +26,12 @@ toml = { version = "0.8", default-features = false, features = ["parse"] }
 # Streaming SHA-256 of corpus files and fetched bytes; already in the graph through fid-canon.
 sha2 = "0.10"
 
+[dev-dependencies]
+# Test-only: the merged readers check the hand-labelled expected errors of their variants
+# (E57 physical layer and the hardened XML reader, with the IO.REG.LIMITS budget it takes).
+fid-io-e57 = { path = "../fid-io-e57" }
+fid-xml = { path = "../fid-xml" }
+fid-io-reg = { path = "../fid-io-reg" }
+
 [lints]
 workspace = true
