@@ -362,7 +362,8 @@ pub fn run(
         if let Some(dir) = p.parent().filter(|d| !d.as_os_str().is_empty()) {
             std::fs::create_dir_all(dir).map_err(|e| vec![parse_err(&dir.display().to_string(), e.to_string())])?;
         }
-        std::fs::write(p, bytes).map_err(|e| vec![parse_err(&p.display().to_string(), format!("cannot write: {e}"))])?;
+        std::fs::write(p, bytes)
+            .map_err(|e| vec![parse_err(&p.display().to_string(), format!("cannot write: {e}"))])?;
     }
     Ok(count)
 }
