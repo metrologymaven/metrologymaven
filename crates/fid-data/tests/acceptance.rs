@@ -4,7 +4,7 @@
 //! Python checker in `fixtures/datasets/make_fixtures.py`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_data::cat::{check, check_files, parse_domains, parse_licence, Finding, MAX_INPUT_BYTES};
+use fid_data::cat::{check, check_files, parse_domains, parse_licence, Finding, MAX_INPUT_BYTES, MAX_LICENCE_TERMS};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -127,6 +127,8 @@ fn req1_schema_rules() {
         ("bad-expression", "licence"),
         ("upper-digest", "sha256"),
         ("bad-url", "urls"),
+        ("with-ref-no-terms", "terms_url"),
+        ("too-many-terms", "licence"),
     ] {
         assert!(detail(subject).contains(field), "{subject}: {}", detail(subject));
     }
@@ -159,6 +161,34 @@ fn req2_licence_expressions() {
     assert!(parse_licence(&deep).is_none());
     let ok_depth = format!("{}MIT{}", "(".repeat(32), ")".repeat(32));
     assert!(parse_licence(&ok_depth).is_some());
+    // Bounded length: long AND / OR chains are refused (more than MAX_LICENCE_TERMS), never a stack overflow.
+    let chain = |op: &str, n: usize| vec!["MIT"; n].join(op);
+    assert!(parse_licence(&chain(" AND ", MAX_LICENCE_TERMS)).unwrap().satisfiable(&allowed));
+    assert!(parse_licence(&chain(" OR ", MAX_LICENCE_TERMS)).unwrap().satisfiable(&allowed));
+    assert!(parse_licence(&chain(" AND ", MAX_LICENCE_TERMS + 1)).is_none());
+    for op in [" AND ", " OR "] {
+        let long = chain(op, 100_000);
+        assert!(parse_licence(&long).is_none(), "{op} chain");
+        let cat = format!(
+            "[policy]
+redistributable = [\"MIT\"]
+[[dataset]]
+id = \"long-chain\"
+title = \"t\"
+             source = \"https://example.org/x\"
+licence = \"{long}\"
+size_bytes = 1
+sha256 = \"{}\"
+             owner = \"KRN\"
+redistribution = \"mirror\"
+urls = [\"https://example.org/x\"]
+",
+            "0".repeat(64)
+        );
+        let got = check(&cat, &domains());
+        assert_eq!(short(&got), ["DATA-SCHEMA long-chain"], "{op} chain");
+        assert!(got[0].detail.contains("licence"), "{}", got[0].detail);
+    }
 }
 
 /// REQ-003 (second half): customer data needs a release_ref.

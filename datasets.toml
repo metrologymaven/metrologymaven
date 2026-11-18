@@ -75,7 +75,7 @@ sha256 = "31d12586658fd823a32cfc27198bd3113f71ad4ee83a385aecaab1ba18483140"
 owner = "CORE"
 redistribution = "mirror"
 urls = ["https://raw.githubusercontent.com/metrologymaven/metrologymaven/main/fixtures/core/jrn/canon/vectors.json"]
-notes = "Written for this project and cross-checked by the Rust crate and runner.mjs; CC-BY-4.0 per spec/core/jrn/canon/NODE.md."
+notes = "Written for this project and cross-checked by the Rust crate and runner.mjs; CC-BY-4.0 per spec/core/jrn/canon/NODE.md. One vector (\"rfc8785 sample\") reproduces the example input of RFC 8785 (IETF Trust material); whether that example carries IETF Trust licence terms is [unverified]."
 
 [[dataset]]
 id = "core-rpl-classify-cases"

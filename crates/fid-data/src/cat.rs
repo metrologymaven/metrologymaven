@@ -23,6 +23,8 @@ use std::path::Path;
 pub const MAX_INPUT_BYTES: u64 = 1 << 20;
 /// Deepest parenthesis nesting accepted in a licence expression.
 pub const MAX_LICENCE_DEPTH: usize = 32;
+/// Most terms (licence IDs, `A WITH B` counting once) accepted in a licence expression.
+pub const MAX_LICENCE_TERMS: usize = 256;
 
 pub const DATA_SCHEMA: &str = "DATA-SCHEMA";
 pub const DATA_DUP: &str = "DATA-DUP";
@@ -386,11 +388,13 @@ fn parse_doc(text: &str) -> Result<Doc, String> {
 // ------------------------------------------------------------------ licence expressions
 
 /// A parsed SPDX licence expression. `A WITH B` is kept as one term named `A WITH B`.
+/// `And`/`Or` are n-ary (a chain `A AND B AND C` is one node with three operands), so the
+/// tree depth is bounded by [`MAX_LICENCE_DEPTH`] and not by the length of the expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Licence {
     Term(String),
-    And(Box<Licence>, Box<Licence>),
-    Or(Box<Licence>, Box<Licence>),
+    And(Vec<Licence>),
+    Or(Vec<Licence>),
 }
 
 impl Licence {
@@ -399,8 +403,8 @@ impl Licence {
     pub fn satisfiable(&self, allowed: &BTreeSet<String>) -> bool {
         match self {
             Licence::Term(t) => allowed.contains(t),
-            Licence::And(a, b) => a.satisfiable(allowed) && b.satisfiable(allowed),
-            Licence::Or(a, b) => a.satisfiable(allowed) || b.satisfiable(allowed),
+            Licence::And(v) => v.iter().all(|e| e.satisfiable(allowed)),
+            Licence::Or(v) => v.iter().any(|e| e.satisfiable(allowed)),
         }
     }
 
@@ -411,10 +415,7 @@ impl Licence {
         while let Some(e) = stack.pop() {
             match e {
                 Licence::Term(t) => out.push(t.as_str()),
-                Licence::And(a, b) | Licence::Or(a, b) => {
-                    stack.push(b);
-                    stack.push(a);
-                }
+                Licence::And(v) | Licence::Or(v) => stack.extend(v.iter().rev()),
             }
         }
         out
@@ -430,6 +431,7 @@ const OPERATORS: [&str; 3] = ["AND", "OR", "WITH"];
 struct LicParser<'a> {
     toks: Vec<&'a str>,
     pos: usize,
+    terms: usize,
 }
 
 impl<'a> LicParser<'a> {
@@ -460,6 +462,10 @@ impl<'a> LicParser<'a> {
             return Some(e);
         }
         let name = self.id()?;
+        self.terms += 1;
+        if self.terms > MAX_LICENCE_TERMS {
+            return None;
+        }
         if self.peek() == Some("WITH") {
             self.pos += 1;
             let ex = self.id()?;
@@ -469,26 +475,27 @@ impl<'a> LicParser<'a> {
     }
 
     fn conjunction(&mut self, depth: usize) -> Option<Licence> {
-        let mut e = self.atom(depth)?;
+        let mut v = vec![self.atom(depth)?];
         while self.peek() == Some("AND") {
             self.pos += 1;
-            e = Licence::And(Box::new(e), Box::new(self.atom(depth)?));
+            v.push(self.atom(depth)?);
         }
-        Some(e)
+        Some(if v.len() == 1 { v.swap_remove(0) } else { Licence::And(v) })
     }
 
     fn disjunction(&mut self, depth: usize) -> Option<Licence> {
-        let mut e = self.conjunction(depth)?;
+        let mut v = vec![self.conjunction(depth)?];
         while self.peek() == Some("OR") {
             self.pos += 1;
-            e = Licence::Or(Box::new(e), Box::new(self.conjunction(depth)?));
+            v.push(self.conjunction(depth)?);
         }
-        Some(e)
+        Some(if v.len() == 1 { v.swap_remove(0) } else { Licence::Or(v) })
     }
 }
 
 /// Parses an SPDX licence expression (`AND` binds tighter than `OR`; parentheses; `WITH`).
-/// Operators must be upper case. Returns `None` if the expression is malformed.
+/// Operators must be upper case. Returns `None` if the expression is malformed, nests
+/// parentheses deeper than [`MAX_LICENCE_DEPTH`] or has more than [`MAX_LICENCE_TERMS`] terms.
 pub fn parse_licence(text: &str) -> Option<Licence> {
     let mut toks = Vec::new();
     let mut start: Option<usize> = None;
@@ -507,7 +514,7 @@ pub fn parse_licence(text: &str) -> Option<Licence> {
     if let Some(s) = start {
         toks.push(&text[s..]);
     }
-    let mut p = LicParser { toks, pos: 0 };
+    let mut p = LicParser { toks, pos: 0, terms: 0 };
     let e = p.disjunction(0)?;
     if p.pos == p.toks.len() {
         Some(e)
@@ -626,7 +633,8 @@ fn check_entry(t: &Table, subject: &str, allowed: &BTreeSet<String>, domains: &B
         bad.push("licence");
     }
     if let Some(l) = &licence {
-        let has_ref = l.terms().iter().any(|x| x.starts_with("LicenseRef-"));
+        // A LicenseRef- may name the licence or, after WITH, the exception.
+        let has_ref = l.terms().iter().any(|x| x.split(" WITH ").any(|p| p.starts_with("LicenseRef-")));
         if has_ref && !nonempty_str(t, "terms_url").is_some_and(is_url) {
             bad.push("terms_url");
         }

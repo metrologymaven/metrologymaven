@@ -99,7 +99,10 @@ FIXTURES = {
     + entry("negative-size", size="-1")
     + entry("bad-expression", "MIT OR")
     + entry("upper-digest", sha=D1.upper())
-    + entry("bad-url", urls='["ftp://example.org/x"]'),
+    + entry("bad-url", urls='["ftp://example.org/x"]')
+    + entry("with-ref-no-terms", "MIT WITH LicenseRef-Custom-exception", "fetch-only")
+    + entry("too-many-terms", " AND ".join(["MIT"] * 257))
+    + entry("max-terms-ok", " OR ".join(["MIT"] * 256)),
     # REQ-005: several findings, entries out of order; printed by subject, then code.
     "multi.toml": POLICY
     + entry("zz-last", "LicenseRef-Vendor-EULA", owner="NOPE", terms=TERMS,
@@ -124,7 +127,8 @@ EXPECT = {
     "schema.toml": ["DATA-SCHEMA Bad_ID", "DATA-SCHEMA bad-expression", "DATA-SCHEMA bad-redist",
                     "DATA-SCHEMA bad-url", "DATA-SCHEMA dataset#2", "DATA-SCHEMA empty-urls",
                     "DATA-SCHEMA negative-size", "DATA-SCHEMA no-urls", "DATA-SCHEMA ref-no-terms",
-                    "DATA-SCHEMA unknown-field", "DATA-SCHEMA upper-digest"],
+                    "DATA-SCHEMA too-many-terms", "DATA-SCHEMA unknown-field", "DATA-SCHEMA upper-digest",
+                    "DATA-SCHEMA with-ref-no-terms"],
     "multi.toml": ["DATA-OWNER aa-first", "DATA-REDIST aa-first", "DATA-CUSTOMER zz-last", "DATA-OWNER zz-last",
                    "DATA-REDIST zz-last", "DATA-STANDARDS zz-last"],
     "syntax.toml": ["DATA-SCHEMA -"],
@@ -141,9 +145,16 @@ FIELDS = {"id", "title", "source", "licence", "terms_url", "size_bytes", "sha256
           "urls", "notes", "contains_standards_text", "contains_customer_data", "release_ref"}
 
 
+MAX_TERMS = 256  # spec choice for this leaf: longer expressions are malformed (DATA-SCHEMA)
+
+
 def spdx(text):
-    """Parse to nested tuples ('or'|'and', a, b) or ('lic', name); None if malformed."""
+    """Parse to nested tuples ('or'|'and', a, b) or ('lic', name); None if malformed
+    or if it has more than MAX_TERMS terms (`A WITH B` counts once)."""
     toks = re.findall(r"\(|\)|[^\s()]+", text)
+    if sum(1 for i, t in enumerate(toks) if LIC_RE.fullmatch(t) and t not in ("AND", "OR", "WITH")
+           and (i == 0 or toks[i - 1] != "WITH")) > MAX_TERMS:
+        return None
     pos = 0
 
     def peek():
@@ -243,7 +254,8 @@ def check(text, domains):
         expr = spdx(d["licence"]) if s("licence") else None
         if s("licence") and expr is None:
             bad.add("licence")
-        if expr is not None and any(x.startswith("LicenseRef-") for x in names(expr)):
+        # LicenseRef- as the licence or as the exception after WITH needs terms_url.
+        if expr is not None and any(p.startswith("LicenseRef-") for x in names(expr) for p in x.split(" WITH ")):
             if not (s("terms_url") and URL_RE.fullmatch(d["terms_url"])):
                 bad.add("terms_url")
         if bad:

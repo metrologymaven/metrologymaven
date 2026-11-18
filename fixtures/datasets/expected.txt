@@ -19,8 +19,10 @@ schema.toml	DATA-SCHEMA empty-urls
 schema.toml	DATA-SCHEMA negative-size
 schema.toml	DATA-SCHEMA no-urls
 schema.toml	DATA-SCHEMA ref-no-terms
+schema.toml	DATA-SCHEMA too-many-terms
 schema.toml	DATA-SCHEMA unknown-field
 schema.toml	DATA-SCHEMA upper-digest
+schema.toml	DATA-SCHEMA with-ref-no-terms
 multi.toml	DATA-OWNER aa-first
 multi.toml	DATA-REDIST aa-first
 multi.toml	DATA-CUSTOMER zz-last
