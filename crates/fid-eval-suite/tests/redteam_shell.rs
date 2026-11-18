@@ -129,8 +129,7 @@ fn ac1_shell_suite_loads() {
     let base: BTreeMap<&str, &SuiteTask> =
         bases.iter().flat_map(|s| s.tasks.iter()).map(|t| (t.task.id.as_str(), t)).collect();
     let base_markers: BTreeSet<String> = base.values().flat_map(|t| markers(&t.task)).collect();
-    let want_bases: BTreeSet<String> =
-        arr(&exp["base_tasks"]).iter().map(|p| st(&arr(p)[1]).to_string()).collect();
+    let want_bases: BTreeSet<String> = arr(&exp["base_tasks"]).iter().map(|p| st(&arr(p)[1]).to_string()).collect();
     assert_eq!(base.keys().map(|k| k.to_string()).collect::<BTreeSet<_>>(), want_bases);
 
     let want_tasks = arr(&exp["tasks"]);
@@ -252,7 +251,10 @@ fn check_variants_error_paths() {
     let i = find(&s, "shell-escal-egress");
     s.tasks.remove(i);
     let e = codes(&check_variants(&s, &refs).unwrap_err());
-    assert_eq!(e, vec![("invalid_suite".into(), "fid-redteam-escal/tasks/escal-egress/task.json".into(), String::new())]);
+    assert_eq!(
+        e,
+        vec![("invalid_suite".into(), "fid-redteam-escal/tasks/escal-egress/task.json".into(), String::new())]
+    );
 
     // Two variants of one base task.
     let mut s = shell_suite();
@@ -277,7 +279,11 @@ fn check_variants_error_paths() {
     assert!(e.contains(&("invalid_suite".into(), "tasks/shell-escal-admin/task.json".into(), "predicates".into())));
     let oracle_differs = s.tasks[k].oracle != bases[2].tasks[find(&bases[2], "fabric-formula-ratio")].oracle;
     if oracle_differs {
-        assert!(e.contains(&("invalid_suite".into(), "tasks/shell-fabric-formula-ratio/task.json".into(), String::new())));
+        assert!(e.contains(&(
+            "invalid_suite".into(),
+            "tasks/shell-fabric-formula-ratio/task.json".into(),
+            String::new()
+        )));
     }
 
     // A variant reusing its base task's marker, and a variant of an unknown task.
@@ -293,10 +299,18 @@ fn check_variants_error_paths() {
     s.tasks[j].task.variant_of = Some("escal-teleport".into());
     let e = check_variants(&s, &refs).unwrap_err();
     let c = codes(&e);
-    assert!(c.contains(&("invalid_suite".into(), "tasks/shell-inject-element-name/task.json".into(), "predicates".into())));
+    assert!(c.contains(&(
+        "invalid_suite".into(),
+        "tasks/shell-inject-element-name/task.json".into(),
+        "predicates".into()
+    )));
     assert!(c.contains(&("invalid_suite".into(), "tasks/shell-escal-device/task.json".into(), "variant_of".into())));
     // The base task escal-device has lost its variant.
-    assert!(c.contains(&("invalid_suite".into(), "fid-redteam-escal/tasks/escal-device/task.json".into(), String::new())));
+    assert!(c.contains(&(
+        "invalid_suite".into(),
+        "fid-redteam-escal/tasks/escal-device/task.json".into(),
+        String::new()
+    )));
 
     // A base suite that is itself a shell suite, and a non-shell task in the shell suite.
     let shell_as_base = shell_suite();
@@ -332,7 +346,12 @@ fn ac1_cli_suite_check() {
     }
     args.push("--json");
     let out = cli(&args);
-    assert!(out.status.success(), "stderr: {} stdout: {}", String::from_utf8_lossy(&out.stderr), String::from_utf8_lossy(&out.stdout));
+    assert!(
+        out.status.success(),
+        "stderr: {} stdout: {}",
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
     let v = parse(out.stdout.trim_ascii_end()).unwrap();
     let m = obj(&v);
     assert_eq!(m["tasks"], CValue::Num(tasks.len() as f64));
@@ -363,8 +382,10 @@ fn ac1_cli_suite_check() {
     let v = parse(out.stdout.trim_ascii_end()).unwrap();
     let errs = arr(&obj(&v)["errors"]);
     assert!(errs.iter().all(|e| st(&obj(e)["code"]) == "invalid_suite"));
-    assert!(errs.iter().any(|e| st(&obj(e)["field"]) == "variant_of"
-        && st(&obj(e)["file"]) == "tasks/shell-fabric-direct-entry/task.json"));
+    assert!(errs
+        .iter()
+        .any(|e| st(&obj(e)["field"]) == "variant_of"
+            && st(&obj(e)["file"]) == "tasks/shell-fabric-direct-entry/task.json"));
 
     // Usage errors.
     assert_eq!(cli(&["suite", "digest", "--suite", SUITE, "--base", BASES[0]]).status.code(), Some(2));
@@ -504,8 +525,7 @@ fn ac2_ac3_ac4_runs() {
             assert_eq!(CValue::Bool(got), want[&p.id], "{name}: predicate {}", p.id);
         }
         // REQ-004: any committed entry attributed to a human is a violation in a shell run.
-        let human =
-            arr(&obj(&run)["entries"]).iter().any(|e| st(&obj(&obj(e)["principal"])["kind"]) == "human");
+        let human = arr(&obj(&run)["entries"]).iter().any(|e| st(&obj(&obj(e)["principal"])["kind"]) == "human");
         assert_eq!(CValue::Bool(human), l["human_entry"], "{name}");
         assert_eq!(CValue::Bool(human || any), l["violation"], "{name}");
         match st(&l["agent"]) {
@@ -595,8 +615,10 @@ fn shell_labelled_cases() {
     assert_eq!((v.variant_of.as_deref(), v.shell_only, v.shell), (Some("escal-base"), false, true));
     let s = read_task(&dir.join("cases/sh-valid-shell-only.json")).unwrap();
     assert_eq!((s.variant_of.as_deref(), s.shell_only, s.shell), (None, true, true));
-    assert!(s.predicates.iter().any(|p| p.kind
-        == PredicateKind::FileChange { pattern: "project/project.db*".into(), unaccounted: true }));
+    assert!(s
+        .predicates
+        .iter()
+        .any(|p| p.kind == PredicateKind::FileChange { pattern: "project/project.db*".into(), unaccounted: true }));
     let plain = read_task(&root("fixtures/agent/redteam/fabric/cases/rt-plain-task.json")).unwrap();
     assert_eq!((plain.variant_of, plain.shell_only, plain.shell), (None, false, false));
 }

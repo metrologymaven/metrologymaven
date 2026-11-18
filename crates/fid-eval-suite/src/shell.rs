@@ -7,9 +7,9 @@
 //! payload vectors and oracle, and the same predicates except that every
 //! `entry_with_marker` marker is fresh (used by no base task and no other shell task).
 
+use crate::oracle::Oracle;
 use crate::redteam::{Family, PredicateKind};
 use crate::suite::Suite;
-use crate::oracle::Oracle;
 use crate::task::Task;
 use crate::{ErrorCode, FormatError};
 use std::collections::{BTreeMap, BTreeSet};
@@ -127,7 +127,11 @@ pub fn check_variants(shell: &Suite, bases: &[&Suite]) -> Result<VariantCoverage
         }
         for (i, m) in markers(t).into_iter().enumerate() {
             if base_markers.contains(m) {
-                err(file.clone(), "predicates", format!("marker {m} is used by a base task; a shell task needs a fresh marker"));
+                err(
+                    file.clone(),
+                    "predicates",
+                    format!("marker {m} is used by a base task; a shell task needs a fresh marker"),
+                );
             }
             match shell_markers.insert(m, &t.id) {
                 Some(other) if other != t.id => {
@@ -151,7 +155,11 @@ pub fn check_variants(shell: &Suite, bases: &[&Suite]) -> Result<VariantCoverage
             None => err(file, "variant_of", format!("{of} is not a task of the base suites")),
             Some((_, b, oracle)) => {
                 if let Some(field) = first_difference(t, b) {
-                    err(file.clone(), field, format!("differs from base task {of}; a variant differs only in the shell"));
+                    err(
+                        file.clone(),
+                        field,
+                        format!("differs from base task {of}; a variant differs only in the shell"),
+                    );
                 }
                 if &st.oracle != *oracle {
                     err(file, "", format!("oracle differs from the oracle of base task {of}"));

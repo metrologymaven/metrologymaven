@@ -388,7 +388,8 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     if cx.has_errors() {
         return Err(cx.finish());
     }
-    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell)) = (predicates, payloads, subfamily, shell) else {
+    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell)) = (predicates, payloads, subfamily, shell)
+    else {
         return Err(cx.finish());
     };
     let (
