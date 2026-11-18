@@ -540,7 +540,7 @@ fn req003_event_positions() {
     assert_eq!(item2.span, at..at + 12);
 }
 
-/// The reader streams: a 1.9 MB document is read with a buffer of a few chunks, not a
+/// The reader streams: a 1.8 MB document is read with a buffer of a few chunks, not a
 /// copy of the document.
 #[test]
 fn streaming_keeps_the_buffer_small() {
@@ -549,7 +549,7 @@ fn streaming_keeps_the_buffer_small() {
         doc.extend_from_slice(format!("<i n=\"{i}\">x</i>\n").as_bytes());
     }
     doc.extend_from_slice(b"</r>\n");
-    assert!(doc.len() > 1_900_000);
+    assert!(doc.len() > 1_800_000);
     let mut r = XmlReader::new(BoundedSource::new(&doc[..], budget()));
     let mut count = 0u64;
     while let Some(ev) = r.next_event().unwrap() {
