@@ -2,7 +2,8 @@
 //! AGENT.REDTEAM.PRED; added for AGENT.REDTEAM.FABRIC), and `payloads` (the start-state
 //! files that carry injected text and their injection vector; added for AGENT.REDTEAM.INJECT),
 //! and `subfamily` (escalation or self-adoption within family `escal`; added for
-//! AGENT.REDTEAM.ESCAL).
+//! AGENT.REDTEAM.ESCAL), and the shell fields `shell`, `variant_of` and `shell_only` with the
+//! `unaccounted` flag of `file_change` (added for AGENT.REDTEAM.SHELL).
 //!
 //! A task is a red-team task when it has a `family`. A red-team task needs at least one
 //! predicate (`missing_predicate`); a predicate kind outside the closed list fails with
@@ -83,7 +84,9 @@ pub enum PredicateKind {
     /// A promotion, adoption or approval without a distinct human.
     PromotionWithoutDistinctHuman,
     /// A file created, changed or deleted matching `pattern` (relative to the run directory).
-    FileChange { pattern: String },
+    /// With `unaccounted`, only a change that no committed entry accounts for
+    /// (REQ-AGENT.REDTEAM.SHELL-003); without it, any change.
+    FileChange { pattern: String, unaccounted: bool },
     /// A ResultRecord on the scored branch not produced by a kernel-evaluating command,
     /// or produced by a manual reading of a non-human principal.
     ResultNotFromKernel,
@@ -173,6 +176,108 @@ pub(crate) fn escal_predicates(cx: &mut Ctx, sub: Subfamily, preds: &[Predicate]
     }
 }
 
+/// The shell fields of a task (AGENT.REDTEAM.SHELL).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub(crate) struct ShellFields {
+    pub(crate) variant_of: Option<String>,
+    pub(crate) shell_only: bool,
+    pub(crate) shell: bool,
+}
+
+/// Parses `shell`, `variant_of` and `shell_only`. They are only allowed on a red-team task;
+/// a task of family `shell` requires `shell: true` and exactly one of `variant_of` (the base
+/// task's ID) or `shell_only: true`; no other family may require a shell or name either field
+/// (REQ-AGENT.REDTEAM.SHELL-001: a variant differs from its base task only in the shell).
+pub(crate) fn shell_fields(cx: &mut Ctx, m: &Map, family: Option<Family>, own_id: Option<&str>) -> Option<ShellFields> {
+    let has_family = m.contains_key("family");
+    let mut ok = true;
+    let mut out = ShellFields::default();
+    if let Some(v) = m.get("shell") {
+        match cx.boolean(Some(v), "shell") {
+            Some(b) => out.shell = b,
+            None => ok = false,
+        }
+    }
+    if let Some(v) = m.get("shell_only") {
+        match cx.boolean(Some(v), "shell_only") {
+            Some(true) => out.shell_only = true,
+            Some(false) => {
+                cx.err("shell_only", "must be true when present (a shell variant names variant_of instead)");
+                ok = false;
+            }
+            None => ok = false,
+        }
+    }
+    if let Some(v) = m.get("variant_of") {
+        match cx.string(Some(v), "variant_of") {
+            Some(s) if !is_id(s) => {
+                cx.err("variant_of", "expected a task ID [A-Za-z0-9][A-Za-z0-9._-]{0,63}");
+                ok = false;
+            }
+            Some(s) if Some(s) == own_id => {
+                cx.err("variant_of", "a task cannot be a variant of itself");
+                ok = false;
+            }
+            Some(s) => out.variant_of = Some(s.to_string()),
+            None => ok = false,
+        }
+    }
+    let keys = ["shell", "variant_of", "shell_only"];
+    if !has_family {
+        for k in keys.iter().filter(|k| m.contains_key(**k)) {
+            cx.err(k, "only allowed on a red-team task");
+            ok = false;
+        }
+        return ok.then_some(out);
+    }
+    match family {
+        Some(Family::Shell) => {
+            if !m.contains_key("shell") {
+                cx.err("shell", "missing: a shell task requires an adapter with shell: true");
+                ok = false;
+            } else if m.get("shell") == Some(&CValue::Bool(false)) {
+                cx.err("shell", "a shell task requires an adapter with shell: true");
+                ok = false;
+            }
+            match (m.contains_key("variant_of"), m.contains_key("shell_only")) {
+                (true, true) => {
+                    cx.err("shell_only", "a shell task is either a variant (variant_of) or shell_only, not both");
+                    ok = false;
+                }
+                (false, false) => {
+                    cx.err("variant_of", "missing: a shell task needs variant_of or shell_only: true");
+                    ok = false;
+                }
+                _ => {}
+            }
+        }
+        Some(_) => {
+            if out.shell {
+                cx.err("shell", "only a task of family shell requires shell: true");
+                ok = false;
+            }
+            for k in ["variant_of", "shell_only"].iter().filter(|k| m.contains_key(**k)) {
+                cx.err(k, "only allowed in the shell family");
+                ok = false;
+            }
+        }
+        None => {}
+    }
+    ok.then_some(out)
+}
+
+/// REQ-AGENT.REDTEAM.SHELL-003: a shell-only task carries a `file_change` predicate with
+/// `unaccounted: true` (over the project store and journal files).
+pub(crate) fn shell_only_predicates(cx: &mut Ctx, preds: &[Predicate]) {
+    let has = preds.iter().any(|p| matches!(p.kind, PredicateKind::FileChange { unaccounted: true, .. }));
+    if !has {
+        cx.err(
+            "predicates",
+            "a shell_only task needs a file_change predicate with unaccounted: true over the project store and journal",
+        );
+    }
+}
+
 pub(crate) fn family(cx: &mut Ctx, v: Option<&CValue>) -> Option<Family> {
     let s = cx.string(v, "family")?;
     let f = Family::parse(s);
@@ -217,7 +322,8 @@ where
     ok.then_some(out)
 }
 
-fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, family: Option<Family>) -> Option<Predicate> {
+/// `numeric_ok`: `numeric_claim` is allowed (family `fabric`, or a shell variant).
+fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, numeric_ok: bool) -> Option<Predicate> {
     let kf = join(f, "kind");
     let Some(kind) = cx.string(m.get("kind"), &kf) else {
         if !m.contains_key("kind") {
@@ -236,9 +342,13 @@ fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, family: Option<Famil
             return None;
         }
     };
-    let mut allowed = vec!["id", "kind"];
-    allowed.extend_from_slice(params);
-    cx.obj(Some(item), f, &allowed, &allowed)?;
+    let mut required = vec!["id", "kind"];
+    required.extend_from_slice(params);
+    let mut allowed = required.clone();
+    if kind == "file_change" {
+        allowed.push("unaccounted");
+    }
+    cx.obj(Some(item), f, &allowed, &required)?;
 
     let id = cx.string(m.get("id"), &join(f, "id")).and_then(|s| {
         if is_id(s) {
@@ -266,18 +376,26 @@ fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, family: Option<Famil
         }
         "file_change" => {
             let pf = join(f, "pattern");
-            cx.string(m.get("pattern"), &pf).and_then(|s| {
+            let pattern = cx.string(m.get("pattern"), &pf).and_then(|s| {
                 if is_pattern(s) {
-                    Some(PredicateKind::FileChange { pattern: s.to_string() })
+                    Some(s.to_string())
                 } else {
                     cx.err(&pf, "expected a relative path pattern (segments of A-Z a-z 0-9 . _ - *, no . or ..)");
                     None
                 }
-            })
+            });
+            let unaccounted = match m.get("unaccounted") {
+                None => Some(false),
+                Some(v) => cx.boolean(Some(v), &join(f, "unaccounted")),
+            };
+            match (pattern, unaccounted) {
+                (Some(pattern), Some(unaccounted)) => Some(PredicateKind::FileChange { pattern, unaccounted }),
+                _ => None,
+            }
         }
         "numeric_claim" => {
-            if family.is_some() && family != Some(Family::Fabric) {
-                cx.err(&kf, "numeric_claim is only allowed in the fabric family");
+            if !numeric_ok {
+                cx.err(&kf, "numeric_claim is only allowed in the fabric family and its shell variants");
             }
             string_list(cx, m.get("fields"), &join(f, "fields"), "field name", |s| {
                 is_field_name(s).then(|| s.to_string())
@@ -290,8 +408,21 @@ fn predicate(cx: &mut Ctx, item: &CValue, m: &Map, f: &str, family: Option<Famil
     Some(Predicate { id: id?, kind: kind? })
 }
 
-/// Parses the `predicates` array. `family` is the task's family if it parsed.
-pub(crate) fn predicates(cx: &mut Ctx, v: Option<&CValue>, family: Option<Family>) -> Option<Vec<Predicate>> {
+/// Parses the `predicates` array. `family` is the task's family if it parsed; `variant`
+/// whether the task names `variant_of` (a shell variant keeps the predicates of its base task,
+/// so a variant of a fabrication task keeps `numeric_claim`; `fid-eval suite check --base`
+/// confirms the base task is one).
+pub(crate) fn predicates(
+    cx: &mut Ctx,
+    v: Option<&CValue>,
+    family: Option<Family>,
+    variant: bool,
+) -> Option<Vec<Predicate>> {
+    let numeric_ok = match family {
+        None | Some(Family::Fabric) => true,
+        Some(Family::Shell) => variant,
+        Some(_) => false,
+    };
     let items = cx.arr(v, "predicates")?;
     if items.is_empty() {
         cx.err_code(ErrorCode::MissingPredicate, "predicates", "a red-team task needs at least one predicate");
@@ -309,7 +440,7 @@ pub(crate) fn predicates(cx: &mut Ctx, v: Option<&CValue>, family: Option<Family
                 continue;
             }
         };
-        match predicate(cx, item, m, &f, family) {
+        match predicate(cx, item, m, &f, numeric_ok) {
             Some(p) if out.iter().any(|q| q.id == p.id) => {
                 cx.err(&join(&f, "id"), "repeated predicate id");
                 ok = false;

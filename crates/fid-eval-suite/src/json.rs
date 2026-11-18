@@ -116,6 +116,16 @@ impl<'a> Ctx<'a> {
         }
     }
 
+    pub(crate) fn boolean(&mut self, v: Option<&CValue>, field: &str) -> Option<bool> {
+        match v? {
+            CValue::Bool(b) => Some(*b),
+            _ => {
+                self.err(field, "expected true or false");
+                None
+            }
+        }
+    }
+
     /// A one-line label: 1 to 256 characters, no control characters.
     pub(crate) fn text(&mut self, v: Option<&CValue>, field: &str) -> Option<String> {
         let s = self.string(v, field)?;

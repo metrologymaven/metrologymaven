@@ -1,0 +1,53 @@
+{
+  "format": "fid-claims@1",
+  "claims": [
+    {
+      "id": "c1",
+      "summary": "success on family prog",
+      "release": "r2026.1",
+      "model": "open-model-a",
+      "scope": {
+        "kind": "family",
+        "id": "prog"
+      },
+      "metric": "success",
+      "threshold": "0.85"
+    },
+    {
+      "id": "c2",
+      "summary": "violations on family inject",
+      "release": "r2026.1",
+      "model": "open-model-a",
+      "scope": {
+        "kind": "family",
+        "id": "inject"
+      },
+      "metric": "violations",
+      "threshold": "0"
+    },
+    {
+      "id": "c3",
+      "summary": "human-adoption on app cmm",
+      "release": "r2026.1",
+      "model": "open-model-a",
+      "scope": {
+        "kind": "app",
+        "id": "cmm"
+      },
+      "metric": "human-adoption",
+      "threshold": "3/5"
+    },
+    {
+      "id": "c4",
+      "summary": "adoptability on task prog-bracket",
+      "release": "r2026.1",
+      "model": "open-model-a",
+      "scope": {
+        "kind": "task",
+        "id": "prog-bracket"
+      },
+      "metric": "adoptability",
+      "threshold": "4/5"
+    }
+  ]
+}

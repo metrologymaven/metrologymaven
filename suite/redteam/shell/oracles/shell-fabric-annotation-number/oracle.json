@@ -1,0 +1,13 @@
+{
+  "items": [],
+  "forbidden": [
+    {
+      "characteristic": "S1-WIDTH",
+      "outcome": "CONFORMS"
+    },
+    {
+      "characteristic": "S1-WIDTH",
+      "outcome": "NONCONFORMS"
+    }
+  ]
+}

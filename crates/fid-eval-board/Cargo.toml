@@ -1,0 +1,21 @@
+[package]
+name = "fid-eval-board"
+description = "Metrology Maven published scoreboard tooling: claim register and claim check (spec node AGENT.BOARD.CLAIMS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# `board` subcommands of the evaluation tooling (D-032). Until the `fid-eval` dispatcher in
+# fid-eval-suite forwards `board ...`, this crate ships its own binary taking the same words.
+[[bin]]
+name = "fid-eval-board"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true
