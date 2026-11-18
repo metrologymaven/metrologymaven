@@ -21,6 +21,7 @@ TOOLS = ROOT / "tools"
 sys.path.insert(0, str(TOOLS))
 
 from house_rules import find_blocks  # noqa: E402
+from repo_template import new as tpl_new  # noqa: E402
 
 FIX = ROOT / "fixtures" / "repo" / "tpl"
 RULES = FIX / "rules"
@@ -33,9 +34,11 @@ COMMON = {
 }
 
 
-def run(*args, rules=RULES, rules_rev=REV_A, ci_rev=REV_B, repo_id="fid-demo", variant="code", out):
+def run(*args, rules=RULES, rules_rev=REV_A, ci_rev=REV_B, repo_id="fid-demo", variant="code", year="2026", out):
     cmd = [sys.executable, "-m", "repo_template", "new", "--id", repo_id, "--variant", variant,
            "--rules-source", str(rules), "--rules-rev", rules_rev, "--ci-rev", ci_rev, "--out", str(out), *args]
+    if year is not None:
+        cmd += ["--year", year]
     env = {**os.environ, "PYTHONPATH": str(TOOLS)}
     return subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=ROOT, timeout=60)
 
@@ -85,7 +88,7 @@ class AC1CodeVariant(Base):
         for u in uses:
             self.assertTrue(u.endswith("@" + REV_B), u)
         # Placeholders filled; nothing staged is left behind.
-        self.assertIn("Copyright (c) The fid-demo contributors", (out / "LICENSE-MIT").read_text(encoding="utf-8"))
+        self.assertIn("Copyright (c) 2026 The fid-demo contributors", (out / "LICENSE-MIT").read_text(encoding="utf-8"))
         self.assertFalse((out / ".repo-template.partial").exists())
         for name, data in tree(out).items():
             self.assertNotRegex(data.decode("utf-8"), r"\{\{[A-Za-z_][A-Za-z0-9_]*\}\}", name)
@@ -115,7 +118,7 @@ class AC1CodeVariant(Base):
         rev = subprocess.run(g + ["rev-parse", "HEAD"], check=True, env=env, capture_output=True, text=True).stdout.strip()
         if len(rev) != 40:
             self.skipTest("repository uses a non-SHA-1 object format")
-        out = self.ok(rules=src, rules_rev=rev)
+        out = self.ok(rules=src, rules_rev=rev, year=None)
         self.assertIn("Copyright (c) 2031 The fid-demo contributors",
                       (out / "LICENSE-MIT").read_text(encoding="utf-8"))
         core = {b.id: b for b in find_blocks((out / "AGENTS.md").read_text(encoding="utf-8"))}["core"]
@@ -138,6 +141,59 @@ class AC2Placeholder(Base):
         self.assertEqual(r.returncode, 1)
         self.assertIn("TPL-SYNC-FAILED", r.stderr)
         self.assertFalse(out.exists())
+
+    def test_year_unknown_without_flag_fails(self):
+        out = self.tmp / "out"
+        r = run(year=None, out=out)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("TPL-YEAR", r.stderr)
+        self.assertIn("--year", r.stderr)
+        self.assertFalse(out.exists())
+
+    def test_placeholder_in_file_name_fails(self):
+        tpl = self.tmp / "tpl"
+        shutil.copytree(FIX / "bad-placeholder", tpl)
+        (tpl / "common" / "NOTICE.md").unlink()
+        (tpl / "common" / "{{owner}}.md").write_text("clean contents.", encoding="utf-8")
+        out = self.tmp / "out"
+        r = run("--templates", str(tpl), out=out)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("TPL-PLACEHOLDER", r.stderr)
+        self.assertIn("{{owner}}.md: {{owner}}", r.stderr)
+        self.assertFalse(out.exists())
+
+    def test_manifest_repos_must_be_a_list(self):
+        rules = self.tmp / "rules"
+        shutil.copytree(RULES, rules)
+        toml = (rules / "manifest.toml").read_text(encoding="utf-8")
+        (rules / "manifest.toml").write_text(toml.replace('repos = ["fid-demo"]', 'repos = "fid-demo"'), encoding="utf-8")
+        out = self.tmp / "out"
+        r = run(rules=rules, out=out)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("TPL-SYNC-FAILED", r.stderr)
+        self.assertIn("repos must be a list", r.stderr)
+        self.assertFalse(out.exists())
+
+    def test_failed_move_leaves_existing_empty_out_empty(self):
+        out = self.tmp / "empty"
+        out.mkdir()
+        real_replace = os.replace
+        calls = []
+
+        def flaky_replace(src, dst):
+            calls.append(src)
+            if len(calls) == 3:
+                raise OSError("simulated failure while moving into place")
+            return real_replace(src, dst)
+
+        tpl_new.os.replace = flaky_replace
+        try:
+            with self.assertRaises(OSError):
+                tpl_new.instantiate("fid-demo", "code", RULES, REV_A, REV_B, out, year="2026")
+        finally:
+            tpl_new.os.replace = real_replace
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(list(out.iterdir()), [])
 
     def test_bad_revision_refused(self):
         out = self.tmp / "out"

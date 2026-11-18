@@ -14,16 +14,17 @@ Steps, in order:
    equivalent built-in step that only handles a block-free ``AGENTS.md`` (always the case for a
    fresh template) renders the blocks with :func:`house_rules.render`. Any failure is
    ``TPL-SYNC-FAILED``.
-5. Scan every output file for a leftover ``{{name}}`` token (``TPL-PLACEHOLDER``).
+5. Scan every output path name and file for a leftover ``{{name}}`` token (``TPL-PLACEHOLDER``).
 6. Move the staged files into the output folder.
 
 On any failure after step 1 the partial output is deleted: the output folder is removed if this
-run created it, or left empty if it existed empty before.
+run created it, or left empty if it existed empty before (entries already moved out of staging
+are removed again).
 
 ``{{year}}`` is the year of the rules revision's commit date (committer time zone), read with
 ``git`` from the rules source folder; never the clock. If the rules source is not a git checkout
-that contains the revision, the year is left out (``{{year}}`` and one following space are
-removed) and a note is printed. Output is therefore D0: the same inputs give the same bytes.
+that contains the revision, instantiation fails with ``TPL-YEAR`` unless ``--year YYYY`` is given
+(which also overrides the git date). Output is therefore D0: the same inputs give the same bytes.
 
 Exit codes: 0 created, 1 refused or failed (``TPL-*`` on stderr), 2 bad command line.
 """
@@ -141,17 +142,14 @@ def _template_files(templates: Path, include: list[str]) -> list[tuple[str, Path
     return files
 
 
-def _substitute(text: str, values: dict[str, str | None]) -> str:
+def _substitute(text: str, values: dict[str, str]) -> str:
     for name, value in values.items():
         token = "{{" + name + "}}"
-        if value is None:
-            text = text.replace(token + " ", "").replace(token, "")
-        else:
-            text = text.replace(token, value)
+        text = text.replace(token, value)
     return text
 
 
-def copy_variant(templates: Path, include: list[str], dest: Path, values: dict[str, str | None]) -> None:
+def copy_variant(templates: Path, include: list[str], dest: Path, values: dict[str, str]) -> None:
     for rel, src in _template_files(templates, include):
         try:
             text = src.read_bytes().decode("utf-8")
@@ -182,7 +180,13 @@ def builtin_sync(source: Path, rev: str, repo_id: str, target: Path) -> None:
     """
     manifest = _load_manifest(source)
     source_repo = manifest.get("source_repo", DEFAULT_SOURCE_REPO)
-    assigned = [b for b in manifest.get("block", []) if repo_id in b.get("repos", [])]
+    blocks = manifest.get("block", [])
+    if not isinstance(blocks, list) or not all(isinstance(b, dict) for b in blocks):
+        raise TemplateError("TPL-SYNC-FAILED", "SYNC-SOURCE: the manifest's block entries must be a list of tables")
+    for b in blocks:
+        if not isinstance(b.get("repos"), list) or not all(isinstance(r, str) for r in b["repos"]):
+            raise TemplateError("TPL-SYNC-FAILED", f"SYNC-SOURCE: block {b.get('id')!r}: repos must be a list of repository IDs")
+    assigned = [b for b in blocks if repo_id in b["repos"]]
     if not assigned:
         raise TemplateError("TPL-SYNC-FAILED", f"SYNC-REPO: repository {repo_id!r} has no blocks in the manifest")
     rendered = []
@@ -241,12 +245,15 @@ def run_sync(source: Path, rev: str, repo_id: str, target: Path) -> None:
 
 
 def leftover_placeholders(root: Path) -> list[tuple[str, str]]:
-    """Every (relative POSIX path, token) still containing ``{{name}}``, sorted."""
+    """Every (relative POSIX path, token) with ``{{name}}`` left in its name or contents, sorted."""
     found = []
-    for p in sorted(p for p in root.rglob("*") if p.is_file()):
-        text = p.read_bytes().decode("utf-8", errors="replace")
-        for token in sorted(set(PLACEHOLDER.findall(text))):
-            found.append((p.relative_to(root).as_posix(), token))
+    for p in sorted(root.rglob("*")):
+        rel = p.relative_to(root).as_posix()
+        tokens = set(PLACEHOLDER.findall(p.name))
+        if p.is_file():
+            tokens |= set(PLACEHOLDER.findall(p.read_bytes().decode("utf-8", errors="replace")))
+        for token in sorted(tokens):
+            found.append((rel, token))
     return found
 
 
@@ -255,13 +262,15 @@ def leftover_placeholders(root: Path) -> list[tuple[str, str]]:
 
 
 def instantiate(repo_id: str, variant: str, rules_source: Path, rules_rev: str, ci_rev: str, out: Path,
-                templates: Path = DEFAULT_TEMPLATES) -> list[str]:
+                templates: Path = DEFAULT_TEMPLATES, year: str | None = None) -> list[str]:
     """Create the repository in ``out``; return the relative paths written. Raises TemplateError."""
     if not is_valid_repo_id(repo_id):
         raise TemplateError("TPL-ARGS", f"--id {repo_id!r} is not a valid repository ID")
     for flag, rev in (("--rules-rev", rules_rev), ("--ci-rev", ci_rev)):
         if not is_valid_rev(rev):
             raise TemplateError("TPL-ARGS", f"{flag} must be a full 40-character lowercase hex commit hash")
+    if year is not None and not re.fullmatch(r"[0-9]{4}", year):
+        raise TemplateError("TPL-ARGS", "--year must be four digits")
     if out.exists() or out.is_symlink():
         if not out.is_dir() or out.is_symlink() or any(out.iterdir()):
             raise TemplateError("TPL-OUT-NOT-EMPTY", f"{out} exists and is not an empty folder")
@@ -274,14 +283,20 @@ def instantiate(repo_id: str, variant: str, rules_source: Path, rules_rev: str, 
     if variant not in variants:
         raise TemplateError("TPL-VARIANT", f"unknown variant {variant!r} (known: {', '.join(sorted(variants))})")
 
-    year = rules_year(rules_source, rules_rev)
     if year is None:
-        print(f"note: no commit date for {rules_rev} in {rules_source}; the licence year is left out", file=sys.stderr)
+        year = rules_year(rules_source, rules_rev)
+    if year is None:
+        raise TemplateError(
+            "TPL-YEAR",
+            f"no commit {rules_rev} found with git in {rules_source}, so the licence year is unknown; "
+            "check out the rules source at that revision or pass --year YYYY",
+        )
     values = {"repo_id": repo_id, "ci_rev": ci_rev, "year": year}
 
     if created:
         out.mkdir()
     staging = out / STAGING
+    moved: list[str] = []
     try:
         staging.mkdir()
         copy_variant(templates, variants[variant], staging, values)
@@ -292,14 +307,30 @@ def instantiate(repo_id: str, variant: str, rules_source: Path, rules_rev: str, 
         written = [p.relative_to(staging).as_posix() for p in sorted(staging.rglob("*")) if p.is_file()]
         for entry in sorted(staging.iterdir()):
             os.replace(entry, out / entry.name)
+            moved.append(entry.name)
         staging.rmdir()
         return written
     except BaseException:
         if created:
             shutil.rmtree(out, ignore_errors=True)
         else:
-            shutil.rmtree(staging, ignore_errors=True)
+            # Leave the pre-existing folder empty again: undo the moves, then drop staging.
+            for name in moved:
+                _remove(out / name)
+            _remove(staging)
         raise
+
+
+def _remove(path: Path) -> None:
+    try:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -312,11 +343,12 @@ def main(argv: list[str] | None = None) -> int:
     new.add_argument("--rules-rev", required=True, help="40-hex revision of the house-rules source")
     new.add_argument("--ci-rev", required=True, help="40-hex revision of the shared CI workflows")
     new.add_argument("--out", required=True, type=Path, help="new folder to create (must not exist, or be empty)")
+    new.add_argument("--year", help="licence year (YYYY); needed when the rules source has no git commit for --rules-rev")
     new.add_argument("--templates", type=Path, default=DEFAULT_TEMPLATES, help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
     try:
         written = instantiate(args.id, args.variant, args.rules_source, args.rules_rev, args.ci_rev, args.out,
-                              args.templates)
+                              args.templates, args.year)
     except TemplateError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

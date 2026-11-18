@@ -94,7 +94,7 @@ jobs:
           PYTHONPATH=tools python -m repo_template new --id fid-demo --variant code \
             --rules-source fixtures/repo/tpl/rules \
             --rules-rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
-            --ci-rev bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --out "$out"
+            --ci-rev bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --year 2026 --out "$out"
           cd "$out"
           grep -q '^"starter" = ' layers.toml
           cargo +stable clippy --workspace --all-targets -- -D warnings
