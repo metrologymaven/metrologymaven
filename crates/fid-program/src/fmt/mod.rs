@@ -562,7 +562,12 @@ impl Decoder {
             }
             "loop" => {
                 let mode = if counted {
-                    LoopMode::Counted { var: f.text("var")?, from: f.text("from")?, to: f.text("to")?, step: f.text("step")? }
+                    LoopMode::Counted {
+                        var: f.text("var")?,
+                        from: f.text("from")?,
+                        to: f.text("to")?,
+                        step: f.text("step")?,
+                    }
                 } else {
                     LoopMode::While { cond: f.text("cond")? }
                 };
@@ -601,7 +606,8 @@ fn args(map: Opaque, at: &At<'_>) -> Result<BTreeMap<String, Arg>, ProgramError>
             _ => return Err(invalid(&at_n, "an argument must be {\"literal\": <JSON>} or {\"expr\": \"<source>\"}")),
         };
         let mut f = open(v, shape, &at_n)?;
-        let arg = if f.map.contains_key("literal") { Arg::Literal(f.take("literal")?) } else { Arg::Expr(f.text("expr")?) };
+        let arg =
+            if f.map.contains_key("literal") { Arg::Literal(f.take("literal")?) } else { Arg::Expr(f.text("expr")?) };
         out.insert(name, arg);
     }
     Ok(out)

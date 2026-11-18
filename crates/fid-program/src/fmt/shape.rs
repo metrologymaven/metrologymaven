@@ -24,7 +24,9 @@ pub(crate) enum Ty {
     /// Exactly this integer.
     IntConst(u32),
     /// An integer in `min..=u32::MAX`.
-    U32 { min: u32 },
+    U32 {
+        min: u32,
+    },
     Uuid7,
     Ident,
     CommandId,
@@ -80,8 +82,7 @@ pub(crate) const PROGRAM: Shape = Shape {
     ],
 };
 
-pub(crate) const VAR_DECL: Shape =
-    Shape { def: "var_decl", fields: &[req("name", Ty::Ident), req("type", Ty::Text)] };
+pub(crate) const VAR_DECL: Shape = Shape { def: "var_decl", fields: &[req("name", Ty::Ident), req("type", Ty::Text)] };
 
 pub(crate) const SUBROUTINE: Shape = Shape {
     def: "subroutine",
@@ -117,7 +118,12 @@ pub(crate) const STEP_ASSIGN: Shape = Shape {
 
 pub(crate) const STEP_IF: Shape = Shape {
     def: "step_if",
-    fields: &[STEP_ID, req("kind", Ty::Const("if")), req("branches", Ty::ArrayOf("branch", 1)), req("else_body", STEPS)],
+    fields: &[
+        STEP_ID,
+        req("kind", Ty::Const("if")),
+        req("branches", Ty::ArrayOf("branch", 1)),
+        req("else_body", STEPS),
+    ],
 };
 
 pub(crate) const STEP_LOOP_COUNTED: Shape = Shape {

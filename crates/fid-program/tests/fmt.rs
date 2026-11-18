@@ -75,7 +75,10 @@ fn ac1_all_kinds_covers_every_kind() {
         for s in steps {
             let mut k = s.kind.as_str().to_string();
             if let StepKind::Loop { mode, .. } = &s.kind {
-                k = format!("loop/{}", if matches!(mode, fid_program::LoopMode::Counted { .. }) { "counted" } else { "while" });
+                k = format!(
+                    "loop/{}",
+                    if matches!(mode, fid_program::LoopMode::Counted { .. }) { "counted" } else { "while" }
+                );
                 seen.push("loop".into());
             }
             seen.push(k);
