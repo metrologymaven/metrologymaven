@@ -116,7 +116,8 @@ planned artefact from `cargo metadata --locked --offline` and Cargo.lock; no net
 `--artefacts <dir>` to take each artefact's SHA-256 from the built file, and
 `--commit-time <YYYY-MM-DDThh:mm:ssZ>` (the release commit's UTC commit time) when the plan does
 not carry `commit_time`. The documents are release artefacts of kind `sbom`, left out of
-SHA256SUMS by `rel sums`.
+SHA256SUMS by `rel sums`. ECO.REL.PKG.PLAN does not yet emit the `target` and `contents` fields
+this tool reads per artefact, so until it does the plan entries must be completed by hand.
 
 ### 5. `vuln-gate`: Vulnerability gate over the SBOMs
 

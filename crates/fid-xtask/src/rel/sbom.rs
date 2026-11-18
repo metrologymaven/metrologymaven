@@ -17,12 +17,20 @@
 //!
 //! For each artefact the crates are those reachable from the workspace members that provide its
 //! `contents`, over normal and build dependency edges of the graph resolved for its target and
-//! features (dev-only edges are not followed). The artefact's own SHA-256 comes from the file in
-//! `--artefacts <dir>` when given, else from the plan entry's `sha256`.
+//! features (dev-only edges are not followed). A crate reached from the members through normal
+//! edges only, and not a proc-macro crate, is compiled into the artefact (`CONTAINS`); a build
+//! dependency, a proc-macro crate and everything reached only through them run at build time and
+//! are recorded as `<crate> BUILD_DEPENDENCY_OF SPDXRef-Artefact`. The artefact's own SHA-256
+//! comes from the file in `--artefacts <dir>` when given, else from the plan entry's `sha256`.
+//!
+//! A legacy Cargo licence with `/` separators (`MIT/Apache-2.0`) is read as `OR` (Cargo's
+//! documented meaning): `licenseDeclared` holds the normalised expression and the package
+//! `comment` keeps the original string. Path crates (no Cargo source) get the package URL
+//! qualifier `repository_url=<this repository>`.
 //!
 //! Each document `<artefact>.spdx.json` has the artefact as root package `SPDXRef-Artefact`
-//! (described by the document), one package per crate and per assigned native component, each
-//! contained by the root, and is written as JSON with sorted keys and no insignificant
+//! (described by the document), one package per crate and per assigned native component, and is
+//! written as JSON with sorted keys and no insignificant
 //! whitespace (RFC 8785 through `fid-canon`). The namespace is a UUIDv5 of the release version
 //! and the artefact name; the creation time is the commit time. Output is a pure function of the
 //! plan, the lockfile, the resolved graph and the native-component file (D0). The document
@@ -517,6 +525,21 @@ pub fn parse_native(text: &str) -> Result<Vec<Native>, Vec<SbomError>> {
     }
 }
 
+/// Cargo's legacy `/` licence separator read as `OR`: `MIT/Apache-2.0` becomes
+/// `MIT OR Apache-2.0`, and a part holding spaces is parenthesised. Returns the expression and,
+/// when it was rewritten, the original string.
+pub fn normalise_cargo_licence(licence: &str) -> (String, Option<String>) {
+    if !licence.contains('/') {
+        return (licence.to_string(), None);
+    }
+    let parts: Vec<String> = licence
+        .split('/')
+        .map(str::trim)
+        .map(|p| if p.contains(char::is_whitespace) { format!("({p})") } else { p.to_string() })
+        .collect();
+    (parts.join(" OR "), Some(licence.to_string()))
+}
+
 fn licence_check(licence: &str) -> Result<(), String> {
     if licence.trim().is_empty() {
         return Err("no licence expression".to_string());
@@ -562,7 +585,20 @@ pub struct MetaPackage {
     pub license: Option<String>,
     /// Names of its `bin` targets.
     pub bins: Vec<String>,
+    /// Whether it has a `proc-macro` target (it runs in the compiler, not in the artefact).
+    pub proc_macro: bool,
     pub member: bool,
+}
+
+/// A dependency edge that is not dev-only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Edge {
+    /// Package ID depended on.
+    pub to: String,
+    /// A normal dependency (kind null) for this target.
+    pub normal: bool,
+    /// A build dependency (kind `build`) for this target.
+    pub build: bool,
 }
 
 /// The graph resolved for one target and feature set.
@@ -570,8 +606,18 @@ pub struct MetaPackage {
 pub struct Resolved {
     /// Package ID to package.
     pub packages: BTreeMap<String, MetaPackage>,
-    /// Package ID to the IDs it depends on through a normal or build edge.
-    pub edges: BTreeMap<String, Vec<String>>,
+    /// Package ID to its normal and build edges, sorted by target ID (dev-only edges dropped).
+    pub edges: BTreeMap<String, Vec<Edge>>,
+}
+
+/// How a component relates to the artefact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Scope {
+    /// Compiled into the artefact: `SPDXRef-Artefact CONTAINS <component>`.
+    Contained,
+    /// Used only to build it (build dependency, proc-macro, or reached only through those):
+    /// `<component> BUILD_DEPENDENCY_OF SPDXRef-Artefact`.
+    Build,
 }
 
 fn md(m: &str) -> SbomError {
@@ -620,12 +666,15 @@ pub fn parse_metadata(json: &[u8]) -> Result<Resolved, SbomError> {
         let p = obj(Some(p), "a package")?;
         let id = string(p.get("id"), "package id")?;
         let mut bins = Vec::new();
+        let mut proc_macro = false;
         for t in arr(p.get("targets"), "targets")? {
             let t = obj(Some(t), "a target")?;
-            let is_bin = arr(t.get("kind"), "target kind")?.iter().any(|k| matches!(k, CValue::Str(s) if s == "bin"));
-            if is_bin {
+            let kinds = arr(t.get("kind"), "target kind")?;
+            let has = |want: &str| kinds.iter().any(|k| matches!(k, CValue::Str(s) if s == want));
+            if has("bin") {
                 bins.push(string(t.get("name"), "target name")?);
             }
+            proc_macro |= has("proc-macro");
         }
         let pkg = MetaPackage {
             name: string(p.get("name"), "package name")?,
@@ -633,6 +682,7 @@ pub fn parse_metadata(json: &[u8]) -> Result<Resolved, SbomError> {
             source: nullable(p.get("source"), "package source")?,
             license: nullable(p.get("license"), "package license")?,
             bins,
+            proc_macro,
             member: members.contains(&id),
         };
         g.packages.insert(id, pkg);
@@ -641,26 +691,31 @@ pub fn parse_metadata(json: &[u8]) -> Result<Resolved, SbomError> {
     for n in arr(resolve.get("nodes"), "resolve.nodes")? {
         let n = obj(Some(n), "a resolve node")?;
         let id = string(n.get("id"), "node id")?;
-        let mut to = Vec::new();
+        let mut to: Vec<Edge> = Vec::new();
         for d in arr(n.get("deps"), "node deps")? {
             let d = obj(Some(d), "a node dep")?;
             let kinds = arr(d.get("dep_kinds"), "dep_kinds")?;
-            // Kind null is a normal dependency; dev-only edges are not compiled into the artefact.
-            let ships = kinds.is_empty()
-                || kinds.iter().any(|k| match k {
-                    CValue::Obj(k) => !matches!(k.get("kind"), Some(CValue::Str(s)) if s == "dev"),
-                    _ => false,
-                });
-            if ships {
-                to.push(string(d.get("pkg"), "dep pkg")?);
+            // Kind null is a normal dependency, "build" a build dependency; dev-only edges are
+            // neither compiled into nor used to build the artefact. No kinds (old Cargo): normal.
+            let (mut normal, mut build) = (kinds.is_empty(), false);
+            for k in kinds {
+                match obj(Some(k), "a dep kind")?.get("kind") {
+                    None | Some(CValue::Null) => normal = true,
+                    Some(CValue::Str(s)) if s == "build" => build = true,
+                    Some(CValue::Str(s)) if s == "dev" => {}
+                    Some(other) => return Err(md(&format!("cargo metadata: unknown dep kind {other:?}"))),
+                }
+            }
+            if normal || build {
+                to.push(Edge { to: string(d.get("pkg"), "dep pkg")?, normal, build });
             }
         }
-        to.sort();
-        to.dedup();
+        to.sort_by(|a, b| a.to.cmp(&b.to));
         g.edges.insert(id, to);
     }
     for (from, tos) in &g.edges {
-        if let Some(bad) = std::iter::once(from).chain(tos).find(|id| !g.packages.contains_key(*id)) {
+        let mut ids = std::iter::once(from).chain(tos.iter().map(|e| &e.to));
+        if let Some(bad) = ids.find(|id| !g.packages.contains_key(*id)) {
             return Err(md(&format!("cargo metadata: unknown package {bad}")));
         }
     }
@@ -699,9 +754,15 @@ pub fn run_metadata(workspace: &Path, target: &str, features: &[String]) -> Resu
     parse_metadata(&out.stdout)
 }
 
-/// The packages compiled into an artefact: everything reachable from the members whose binary
-/// targets are named in `contents`.
-pub fn artefact_crates<'g>(g: &'g Resolved, artefact: &PlanArtefact) -> Result<Vec<&'g MetaPackage>, SbomError> {
+/// The packages of an artefact: everything reachable from the members whose binary targets are
+/// named in `contents`, each with its [`Scope`]. A package reached from those members through
+/// normal edges, without passing a proc-macro crate, is [`Scope::Contained`]; everything else
+/// reached (build dependencies, proc-macro crates, and their own dependencies) is
+/// [`Scope::Build`]. Sorted by package ID.
+pub fn artefact_crates<'g>(
+    g: &'g Resolved,
+    artefact: &PlanArtefact,
+) -> Result<Vec<(&'g MetaPackage, Scope)>, SbomError> {
     let mut queue: VecDeque<&str> = VecDeque::new();
     for bin in &artefact.contents {
         let owners: Vec<&'g str> = g
@@ -726,16 +787,42 @@ pub fn artefact_crates<'g>(g: &'g Resolved, artefact: &PlanArtefact) -> Result<V
             }
         }
     }
-    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let roots: BTreeSet<&str> = queue.iter().copied().collect();
+    // Pass 1: compiled into the artefact.
+    let mut contained: BTreeSet<&str> = BTreeSet::new();
+    let mut build_seeds: VecDeque<&str> = VecDeque::new();
     while let Some(id) = queue.pop_front() {
-        if !seen.insert(id) {
+        if contained.contains(id) {
             continue;
         }
-        if let Some(tos) = g.edges.get(id) {
-            queue.extend(tos.iter().map(String::as_str));
+        if !roots.contains(id) && g.packages.get(id).is_some_and(|p| p.proc_macro) {
+            build_seeds.push_back(id);
+            continue;
+        }
+        contained.insert(id);
+        for e in g.edges.get(id).map(Vec::as_slice).unwrap_or_default() {
+            if e.normal {
+                queue.push_back(&e.to);
+            }
+            if e.build {
+                build_seeds.push_back(&e.to);
+            }
         }
     }
-    Ok(seen.into_iter().filter_map(|id| g.packages.get(id)).collect())
+    // Pass 2: used to build it; everything reached from a build-time seed.
+    let mut build: BTreeSet<&str> = BTreeSet::new();
+    while let Some(id) = build_seeds.pop_front() {
+        if contained.contains(id) || !build.insert(id) {
+            continue;
+        }
+        for e in g.edges.get(id).map(Vec::as_slice).unwrap_or_default() {
+            build_seeds.push_back(&e.to);
+        }
+    }
+    let mut out: Vec<(&'g str, Scope)> = contained.into_iter().map(|id| (id, Scope::Contained)).collect();
+    out.extend(build.into_iter().map(|id| (id, Scope::Build)));
+    out.sort();
+    Ok(out.into_iter().filter_map(|(id, s)| g.packages.get(id).map(|p| (p, s))).collect())
 }
 
 // ------------------------------------------------------------------------------------------
@@ -754,19 +841,37 @@ pub struct Component {
     pub download: String,
     /// SHA-256, 64 lowercase hex, when known.
     pub checksum: Option<String>,
+    pub scope: Scope,
+    /// SPDX package `comment` (the original Cargo licence string when it was normalised).
+    pub comment: Option<String>,
 }
 
 impl Component {
-    /// A crate from the resolved graph, with its lockfile checksum if there is one.
-    pub fn from_crate(p: &MetaPackage, licence: &str, checksum: Option<String>) -> Component {
+    /// A crate from the resolved graph, with its (normalised) licence expression, lockfile
+    /// checksum if there is one, scope and the original licence string if it was normalised.
+    pub fn from_crate(
+        p: &MetaPackage,
+        licence: &str,
+        checksum: Option<String>,
+        scope: Scope,
+        original_licence: Option<&str>,
+    ) -> Component {
+        let mut purl = format!("pkg:cargo/{}@{}", pct_encode(&p.name), pct_encode(&p.version));
+        if p.source.is_none() {
+            purl.push_str("?repository_url=");
+            purl.push_str(REPO);
+        }
         Component {
             id_prefix: "SPDXRef-Crate-",
             name: p.name.clone(),
             version: p.version.clone(),
             licence: licence.to_string(),
-            purl: format!("pkg:cargo/{}@{}", pct_encode(&p.name), pct_encode(&p.version)),
+            purl,
             download: download_location(p.source.as_deref(), &p.name, &p.version),
             checksum,
+            scope,
+            comment: original_licence
+                .map(|o| format!("Cargo licence field {o:?}: the legacy `/` separator is read as OR")),
         }
     }
 
@@ -780,6 +885,8 @@ impl Component {
             purl: format!("pkg:generic/{}@{}", pct_encode(&n.name), pct_encode(&n.version)),
             download: n.source.clone(),
             checksum: Some(n.sha256.clone()),
+            scope: Scope::Contained,
+            comment: None,
         }
     }
 
@@ -863,12 +970,22 @@ pub fn document(
         if let Some(sum) = &c.checksum {
             p.insert("checksums".into(), sha256_list(sum));
         }
+        if let Some(comment) = &c.comment {
+            p.insert("comment".into(), s(comment));
+        }
         packages.push(CValue::Obj(p));
-        relationships.push(object([
-            ("spdxElementId", s(ROOT_ID)),
-            ("relationshipType", s("CONTAINS")),
-            ("relatedSpdxElement", s(&id)),
-        ]));
+        relationships.push(match c.scope {
+            Scope::Contained => object([
+                ("spdxElementId", s(ROOT_ID)),
+                ("relationshipType", s("CONTAINS")),
+                ("relatedSpdxElement", s(&id)),
+            ]),
+            Scope::Build => object([
+                ("spdxElementId", s(&id)),
+                ("relationshipType", s("BUILD_DEPENDENCY_OF")),
+                ("relatedSpdxElement", s(ROOT_ID)),
+            ]),
+        });
     }
     let doc = object([
         ("spdxVersion", s("SPDX-2.3")),
@@ -972,8 +1089,8 @@ pub fn generate(opts: &Options<'_>) -> Result<(String, Vec<Sbom>), Vec<SbomError
             return Err(one(md("internal: graph cache")));
         };
         let mut comps = Vec::new();
-        for p in artefact_crates(g, a).map_err(one)? {
-            let licence = p.license.clone().unwrap_or_default();
+        for (p, scope) in artefact_crates(g, a).map_err(one)? {
+            let (licence, original) = normalise_cargo_licence(p.license.as_deref().unwrap_or_default());
             if let Err(reason) = licence_check(&licence) {
                 findings.insert(SbomError::Licence { component: format!("{}@{}", p.name, p.version), reason });
                 continue;
@@ -984,7 +1101,7 @@ pub fn generate(opts: &Options<'_>) -> Result<(String, Vec<Sbom>), Vec<SbomError
                 .and_then(|src| checksums.get(&(p.name.clone(), p.version.clone(), src.clone())))
                 .filter(|c| is_hex64(c))
                 .cloned();
-            comps.push(Component::from_crate(p, &licence, sum));
+            comps.push(Component::from_crate(p, &licence, sum, scope, original.as_deref()));
         }
         comps.extend(natives.iter().filter(|n| assigned(n, a)).map(Component::from_native));
         planned.push((a, digest, comps));
@@ -1004,7 +1121,8 @@ pub fn generate(opts: &Options<'_>) -> Result<(String, Vec<Sbom>), Vec<SbomError
 
 /// `rel sbom`: generates every document, then writes them into `out` (created if absent).
 /// Nothing is written unless every artefact succeeds; each document is written to a temporary
-/// file in `out` first and renamed into place once all are written.
+/// file in `out` first and renamed into place once all are written. If a rename fails, the
+/// documents already renamed are removed again, so a failed run leaves no partial set.
 pub fn run(opts: &Options<'_>, out: &Path) -> Result<(String, Vec<Sbom>), Vec<SbomError>> {
     let (release, docs) = generate(opts)?;
     let io = |p: &Path, e: std::io::Error| vec![SbomError::Io(format!("{}: {e}", p.display()))];
@@ -1021,12 +1139,17 @@ pub fn run(opts: &Options<'_>, out: &Path) -> Result<(String, Vec<Sbom>), Vec<Sb
             return Err(io(&tmp(d), e));
         }
     }
+    let mut renamed: Vec<std::path::PathBuf> = Vec::with_capacity(docs.len());
     for d in &docs {
         let dest = out.join(&d.file_name);
         if let Err(e) = std::fs::rename(tmp(d), &dest) {
+            for r in &renamed {
+                let _ = std::fs::remove_file(r);
+            }
             cleanup();
             return Err(io(&dest, e));
         }
+        renamed.push(dest);
     }
     Ok((release, docs))
 }
@@ -1142,5 +1265,136 @@ mod tests {
         assert!(matches!(parse_plan(twice), Err(SbomError::PlanParse(_))));
         let bad_name = br#"{"version":"1","artefacts":[{"file_name":"a b","target":"t","contents":["x"]}]}"#;
         assert!(matches!(parse_plan(bad_name), Err(SbomError::PlanParse(_))));
+    }
+
+    /// Hand-written `cargo metadata` output (labelled by hand): `app` (workspace member, binary)
+    /// depends on `n` (normal), `d` (dev only), `b` (build), `pm` (proc-macro), `w` (normal, only
+    /// for `cfg(windows)`: present because the graph was filtered for a Windows target) and `g`
+    /// (git). `b` depends on `bn` and on `n`; `pm` depends on `pmd`.
+    const METADATA: &str = r#"{
+      "workspace_members": ["app"],
+      "packages": [
+        {"id":"app","name":"app","version":"0.1.0","source":null,"license":"MIT",
+         "targets":[{"kind":["bin"],"name":"app"}]},
+        {"id":"n","name":"n","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT/Apache-2.0","targets":[{"kind":["lib"],"name":"n"}]},
+        {"id":"d","name":"d","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["lib"],"name":"d"}]},
+        {"id":"b","name":"b","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["lib"],"name":"b"}]},
+        {"id":"bn","name":"bn","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["lib"],"name":"bn"}]},
+        {"id":"pm","name":"pm","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["proc-macro"],"name":"pm"}]},
+        {"id":"pmd","name":"pmd","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["lib"],"name":"pmd"}]},
+        {"id":"w","name":"w","version":"1.0.0","source":"registry+https://github.com/rust-lang/crates.io-index",
+         "license":"MIT","targets":[{"kind":["lib"],"name":"w"}]},
+        {"id":"g","name":"g","version":"0.3.0","source":"git+https://github.com/o/r?rev=abc#0123abcd",
+         "license":"Apache-2.0","targets":[{"kind":["lib"],"name":"g"}]}
+      ],
+      "resolve": {"nodes": [
+        {"id":"app","deps":[
+          {"pkg":"n","dep_kinds":[{"kind":null,"target":null}]},
+          {"pkg":"d","dep_kinds":[{"kind":"dev","target":null}]},
+          {"pkg":"b","dep_kinds":[{"kind":"build","target":null}]},
+          {"pkg":"pm","dep_kinds":[{"kind":null,"target":null}]},
+          {"pkg":"w","dep_kinds":[{"kind":null,"target":"cfg(windows)"}]},
+          {"pkg":"g","dep_kinds":[{"kind":null,"target":null}]}]},
+        {"id":"b","deps":[
+          {"pkg":"bn","dep_kinds":[{"kind":null,"target":null}]},
+          {"pkg":"n","dep_kinds":[{"kind":null,"target":null}]}]},
+        {"id":"pm","deps":[{"pkg":"pmd","dep_kinds":[{"kind":null,"target":null}]}]},
+        {"id":"n","deps":[]}, {"id":"d","deps":[]}, {"id":"bn","deps":[]},
+        {"id":"pmd","deps":[]}, {"id":"w","deps":[]}, {"id":"g","deps":[]}
+      ]}
+    }"#;
+
+    fn app_artefact() -> PlanArtefact {
+        PlanArtefact {
+            file_name: "app.zip".into(),
+            package: None,
+            target: "x86_64-pc-windows-msvc".into(),
+            contents: vec!["app".into()],
+            features: Vec::new(),
+            sha256: None,
+        }
+    }
+
+    #[test]
+    fn metadata_edges_and_scopes() {
+        let g = parse_metadata(METADATA.as_bytes()).unwrap();
+        let app: Vec<(&str, bool, bool)> =
+            g.edges["app"].iter().map(|e| (e.to.as_str(), e.normal, e.build)).collect();
+        // The dev-only edge to `d` is dropped; `b` is a build edge; `w` (target-specific) is normal.
+        assert_eq!(
+            app,
+            [("b", false, true), ("g", true, false), ("n", true, false), ("pm", true, false), ("w", true, false)]
+        );
+        assert!(g.packages["pm"].proc_macro && !g.packages["n"].proc_macro);
+        let scopes: Vec<(String, Scope)> =
+            artefact_crates(&g, &app_artefact()).unwrap().into_iter().map(|(p, s)| (p.name.clone(), s)).collect();
+        let want = [
+            ("app", Scope::Contained),
+            ("b", Scope::Build),
+            ("bn", Scope::Build),
+            ("g", Scope::Contained),
+            ("n", Scope::Contained),
+            ("pm", Scope::Build),
+            ("pmd", Scope::Build),
+            ("w", Scope::Contained),
+        ];
+        assert_eq!(scopes, want.map(|(n, s)| (n.to_string(), s)));
+    }
+
+    #[test]
+    fn metadata_component_fields() {
+        let g = parse_metadata(METADATA.as_bytes()).unwrap();
+        let git = Component::from_crate(&g.packages["g"], "Apache-2.0", None, Scope::Contained, None);
+        assert_eq!(git.download, "git+https://github.com/o/r@0123abcd");
+        assert_eq!(git.purl, "pkg:cargo/g@0.3.0");
+        let app = Component::from_crate(&g.packages["app"], "MIT", None, Scope::Contained, None);
+        assert_eq!(app.purl, format!("pkg:cargo/app@0.1.0?repository_url={REPO}"));
+        assert_eq!(app.download, NOASSERTION);
+        let bad = METADATA.replace(r#""kind":"dev""#, r#""kind":"weird""#);
+        assert!(matches!(parse_metadata(bad.as_bytes()), Err(SbomError::Metadata(_))));
+        let unknown = METADATA.replace(r#"{"pkg":"g","#, r#"{"pkg":"zz","#);
+        assert!(matches!(parse_metadata(unknown.as_bytes()), Err(SbomError::Metadata(_))));
+    }
+
+    #[test]
+    fn build_dependency_relationship() {
+        let g = parse_metadata(METADATA.as_bytes()).unwrap();
+        let comps: Vec<Component> = artefact_crates(&g, &app_artefact())
+            .unwrap()
+            .into_iter()
+            .map(|(p, s)| Component::from_crate(p, "MIT", None, s, None))
+            .collect();
+        let doc = document("app.zip", "1.0.0", "2026-11-17T09:30:00Z", &"0".repeat(64), comps).unwrap();
+        let text = String::from_utf8(doc).unwrap();
+        assert!(text.contains(r#"{"relatedSpdxElement":"SPDXRef-Artefact","relationshipType":"BUILD_DEPENDENCY_OF","spdxElementId":"SPDXRef-Crate-pm-1.0.0"}"#));
+        assert!(text.contains(r#"{"relatedSpdxElement":"SPDXRef-Crate-n-1.0.0","relationshipType":"CONTAINS","spdxElementId":"SPDXRef-Artefact"}"#));
+        assert!(!text.contains("SPDXRef-Crate-d-"));
+    }
+
+    #[test]
+    fn legacy_slash_licences() {
+        assert_eq!(normalise_cargo_licence("MIT"), ("MIT".to_string(), None));
+        assert_eq!(
+            normalise_cargo_licence("MIT/Apache-2.0"),
+            ("MIT OR Apache-2.0".to_string(), Some("MIT/Apache-2.0".to_string()))
+        );
+        let (n, _) = normalise_cargo_licence("MIT / Apache-2.0 WITH LLVM-exception");
+        assert_eq!(n, "MIT OR (Apache-2.0 WITH LLVM-exception)");
+        assert_eq!(check_licence_expression(&n), Ok(()));
+        assert!(check_licence_expression(&normalise_cargo_licence("MIT/").0).is_err());
+        let c = Component::from_crate(
+            &parse_metadata(METADATA.as_bytes()).unwrap().packages["n"],
+            "MIT OR Apache-2.0",
+            None,
+            Scope::Contained,
+            Some("MIT/Apache-2.0"),
+        );
+        assert_eq!(c.comment.as_deref(), Some("Cargo licence field \"MIT/Apache-2.0\": the legacy `/` separator is read as OR"));
     }
 }

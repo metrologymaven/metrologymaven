@@ -32,11 +32,14 @@ Document rules (shared with crates/fid-xtask/src/rel/sbom.rs):
   filesAnalyzed false, licenseConcluded and copyrightText NOASSERTION, licenseDeclared = the
   licence expression; one purl externalRef (pkg:cargo/<name>@<version> for crates,
   pkg:generic/<name>@<version> for native components, characters outside [A-Za-z0-9._~-]
-  percent-encoded with uppercase hex); checksums = [SHA256] from Cargo.lock or the native file,
+  percent-encoded with uppercase hex; a path crate's purl ends in ?repository_url=REPO);
+  checksums = [SHA256] from Cargo.lock or the native file,
   omitted when there is none; downloadLocation: crates.io download URL for a crates.io source,
   NOASSERTION for a path crate, the `source` URL for a native component;
 - relationships: DOCUMENT DESCRIBES SPDXRef-Artefact, then SPDXRef-Artefact CONTAINS each
-  component in package order.
+  component in package order (this fixture has no build dependency or proc-macro crate; the
+  BUILD_DEPENDENCY_OF rule and the legacy `/` licence rule are covered by hand-labelled unit tests
+  in sbom.rs).
 
 Run:  python fixtures/rel/sbom/make_fixtures.py          (write)
       python fixtures/rel/sbom/make_fixtures.py --check  (verify, write nothing)
@@ -248,10 +251,13 @@ def document(artefact, target, digest, version):
     for n in resolved(target):
         if n in CRATES:
             licence, ver, dl, cs = CRATES[n][0], "0.1.0", "NOASSERTION", None
+            qualifier = f"?repository_url={REPO}"
         else:
             licence, ver, cs = DEP["license"], DEP["version"], DEP_CHECKSUM
             dl = f"https://crates.io/api/v1/crates/{n}/{ver}/download"
-        comps.append(component("SPDXRef-Crate-", n, ver, licence, f"pkg:cargo/{pct(n)}@{pct(ver)}", dl, cs))
+            qualifier = ""
+        comps.append(component("SPDXRef-Crate-", n, ver, licence, f"pkg:cargo/{pct(n)}@{pct(ver)}{qualifier}",
+                               dl, cs))
     if "fid" in FONT["artefacts"]:
         f = FONT
         comps.append(component("SPDXRef-Native-", f["name"], f["version"], f["license"],
@@ -337,7 +343,7 @@ def check_spdx(doc):
                     or not r.get("referenceLocator", "").startswith("pkg:"):
                 errs.append(f"{p.get('SPDXID')}: bad externalRef")
     for r in doc.get("relationships", []):
-        if r.get("relationshipType") not in ("DESCRIBES", "CONTAINS"):
+        if r.get("relationshipType") not in ("DESCRIBES", "CONTAINS", "BUILD_DEPENDENCY_OF"):
             errs.append("unexpected relationship type")
         for k in ("spdxElementId", "relatedSpdxElement"):
             if r.get(k) not in ids | {"SPDXRef-DOCUMENT"}:

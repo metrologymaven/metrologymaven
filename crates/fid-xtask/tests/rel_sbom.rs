@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
-use fid_xtask::rel::sbom::{run, Options, SbomError, SBOM_SUFFIX};
+use fid_xtask::rel::sbom::{check_licence_expression, run, Options, SbomError, SBOM_SUFFIX};
 use fid_xtask::rel::sums::{unsummed_kind, KIND_SBOM};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -262,6 +262,80 @@ fn ac5_policy_fields_present() {
                 assert!(p.contains_key("checksums"), "{name}: {pname} lacks checksums");
             }
         }
+    }
+}
+
+/// A rename that fails partway (the second document's name is taken by a directory) removes
+/// the document already renamed and every temporary file: no partial set is left.
+#[test]
+fn failed_rename_leaves_no_partial_set() {
+    let out = out_dir("rename-fail");
+    std::fs::create_dir_all(out.join(WINDOWS).join("blocker")).unwrap();
+    let opts = Options {
+        plan: &fixture("plan.json"),
+        workspace: &fixture("ws"),
+        native: &fixture("native-components.toml"),
+        artefacts: None,
+        commit_time: None,
+    };
+    let err = run(&opts, &out).unwrap_err();
+    assert!(matches!(err.as_slice(), [SbomError::Io(_)]), "{err:?}");
+    let mut left: Vec<String> =
+        std::fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+    left.sort();
+    assert_eq!(left, [WINDOWS], "only the blocking directory may remain");
+}
+
+/// The host target triple, from `rustc -vV`.
+fn host_triple() -> String {
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".into());
+    let out = Command::new(rustc).arg("-vV").output().unwrap();
+    let text = String::from_utf8(out.stdout).unwrap();
+    text.lines().find_map(|l| l.strip_prefix("host: ")).unwrap().trim().to_string()
+}
+
+/// Smoke test on this repository's own workspace: the `fid` CLI artefact for the host target,
+/// with release/native-components.toml. It must succeed (legacy `/` licences of build-time
+/// crates are normalised, not refused), keep fid-cli as a contained crate, and give every
+/// crate a valid declared licence.
+#[test]
+fn real_workspace_fid_artefact() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = out_dir("real-workspace");
+    std::fs::create_dir_all(&dir).unwrap();
+    let plan = dir.join("plan.json");
+    let target = host_triple();
+    let text = format!(
+        r#"{{"version":"0.0.1","commit_time":"2026-11-17T09:30:00Z","artefacts":[{{"package":"fid","file_name":"fid-host.tar.gz","target":"{target}","contents":["fid"],"sha256":"{}"}}]}}"#,
+        "0".repeat(64)
+    );
+    std::fs::write(&plan, text).unwrap();
+    let opts = Options {
+        plan: &plan,
+        workspace: &root,
+        native: &root.join("release/native-components.toml"),
+        artefacts: None,
+        commit_time: None,
+    };
+    let out = dir.join("out");
+    let (_, docs) = run(&opts, &out).unwrap_or_else(|e| panic!("rel sbom on the workspace failed: {e:?}"));
+    assert_eq!(docs.len(), 1);
+    let doc = read_doc(&out, "fid-host.tar.gz.spdx.json");
+    let pk = packages(&doc);
+    let cli_id = st(&pk["fid-cli"]["SPDXID"]).to_string();
+    let contained = arr(&obj(&doc)["relationships"]).iter().map(obj).any(|r| {
+        st(&r["relationshipType"]) == "CONTAINS"
+            && st(&r["spdxElementId"]) == "SPDXRef-Artefact"
+            && st(&r["relatedSpdxElement"]) == cli_id
+    });
+    assert!(contained, "fid-cli is not contained in the artefact");
+    for (name, p) in &pk {
+        if st(&p["SPDXID"]) == "SPDXRef-Artefact" {
+            continue;
+        }
+        let licence = st(&p["licenseDeclared"]);
+        assert!(check_licence_expression(licence).is_ok(), "{name}: {licence}");
+        assert!(!licence.contains('/'), "{name}: {licence}");
     }
 }
 

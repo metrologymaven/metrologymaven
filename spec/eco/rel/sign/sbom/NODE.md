@@ -20,7 +20,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # ECO.REL.SIGN.SBOM: Per-artefact SPDX SBOM generation
@@ -65,6 +65,9 @@ Generates one SPDX 2.3 JSON document per shipped artefact, listing every Rust cr
 - **Registry command(s):** none; repository tool `cargo xtask rel sbom --plan <package-plan.json> --workspace <dir> --native <toml> --out <dir>` (W1).
 - **Data structures:** SPDX 2.3 document fields used: `spdxVersion`, `dataLicense` (CC0-1.0 as SPDX requires [unverified]), `SPDXID`, `name`, `documentNamespace`, `creationInfo.created`, `creationInfo.creators` (`Tool: fid-xtask-<version>`), `packages[]`, `relationships[]`.
 - **Algorithm:** for each planned artefact, resolve the dependency graph from `cargo metadata --locked --filter-platform <triple>` with the artefact's features; map each crate to a package; add native components; sort packages by (name, version); emit sorted-key JSON.
+- **Build-time crates (maintainer ruling, review of PR #113):** build dependencies, proc-macro crates and every crate reached only through them are not contained in the artefact. They are listed as packages related by `<crate> BUILD_DEPENDENCY_OF SPDXRef-Artefact`; only crates reached from the artefact's binaries through normal dependency edges (not through a proc-macro crate) get `SPDXRef-Artefact CONTAINS <crate>`. Dev-only dependencies are left out.
+- **Legacy licences (maintainer ruling, review of PR #113):** a Cargo `license` using the legacy `/` separator (e.g. `MIT/Apache-2.0`) is normalised to ` OR ` (Cargo's documented meaning; a part holding spaces is parenthesised) before validation; `licenseDeclared` holds the normalised expression and the package `comment` keeps the original string. Any other invalid or missing expression still fails with `SBOM-LICENCE`.
+- **Package URLs of path crates:** a crate with no Cargo source (workspace member or path dependency) keeps the purl `pkg:cargo/<name>@<version>` with the qualifier `?repository_url=https://github.com/metrologymaven/metrologymaven`, so it is not mistaken for the crates.io crate of the same name; registry and git crates carry no qualifier.
 - **Errors:** `SBOM-LICENCE(crate)`, `SBOM-NATIVE-DIGEST(component)`, `SBOM-PLAN-PARSE`.
 - **Determinism:** D0.
 - **Performance budget:** under 30 s for 20 artefacts and 600 crates [unverified].
@@ -82,6 +85,10 @@ Generates one SPDX 2.3 JSON document per shipped artefact, listing every Rust cr
 
 - **Format choice (joint with QUAL.SBOM):** SPDX 2.3 JSON, because the project's licence policy already uses SPDX licence expressions and identifiers (D-001, ECO.RULES.SPDX), SPDX has an ISO/IEC 5962 edition [unverified edition mapping], and one format halves the tooling. CycloneDX was proposed in the concept doc; if QUAL.SBOM finds a scanner or VEX tool that needs it, a converter can be added without changing this node's outputs. SPDX 3.0 can be revisited when tool support is mature [unverified].
 - VEX format is owned by QUAL.SBOM; OpenVEX or CSAF are candidates [unverified].
+- **Resolved (review of PR #113):** build-time crates use `BUILD_DEPENDENCY_OF`, not `CONTAINS` (our reading of the SPDX 2.3 relationship types; `BUILD_TOOL_OF` was the alternative and may suit proc-macros better if QUAL.SBOM prefers). QUAL.SBOM.COMPLETE should treat both relationship types as "in the SBOM" for completeness.
+- **Resolved (review of PR #113):** legacy `/` licences are normalised to `OR` with the original kept in the package `comment`, rather than refused, so real dependency graphs (e.g. `version_check` 0.9.5) do not block a release.
+- **Resolved (review of PR #113):** path crates carry the purl qualifier `repository_url` (this repository) instead of omitting the purl, because QUAL.SBOM.COMPLETE requires a purl on every component.
+- ECO.REL.PKG.PLAN's `PlanEntry` does not yet carry the target triple or feature set this tool reads; until it does, plan entries need `target` (and `features` where used) added.
 
 ## Children
 
