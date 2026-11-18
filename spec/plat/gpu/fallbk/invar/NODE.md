@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-xtask]
+built_pr: 117
 satisfies: [REQ-PLAT.GPU.FALLBK-005]
 covers: []
 depends_on: []
