@@ -218,7 +218,7 @@ fn malformed_templates() {
     bad("{home}/Applications", r#"["{home}/Library\\Caches"]"#);
     bad("{home}/Applications", r#"["{home}/Library:x"]"#);
     bad("{home}/Applications", r#"["{home}"]"#); // the whole profile is not a data directory
-    // macOS {home} write entries must be below ~/Library/{Application Support,Caches,Preferences}.
+                                                 // macOS {home} write entries must be below ~/Library/{Application Support,Caches,Preferences}.
     bad("{home}/Applications", r#"["{home}/.ssh"]"#);
     bad("{home}/Applications", r#"["{home}/Documents/Fiducial"]"#);
     bad("{home}/Applications", r#"["{home}/Library/Caches"]"#);
@@ -231,7 +231,7 @@ fn malformed_templates() {
         r#"["{home}/Library/Application Support/F", "{home}/Library/Caches/F", "{home}/Library/Preferences/F.plist"]"#
     ))
     .is_empty());
-                                                 // {tmp} and the configured roots may stand alone.
+    // {tmp} and the configured roots may stand alone.
     assert!(
         errors(&one("macos", "{home}/Applications", r#"["{tmp}", "{project_roots}", "{export_roots}"]"#)).is_empty()
     );

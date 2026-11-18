@@ -92,7 +92,7 @@ const TOP_KEYS: [&str; 2] = ["os", "schema_version"];
 /// The `~/Library` subdirectories a macOS `{home}` write template may use (each needs an app
 /// entry below it).
 const MACOS_LIBRARY_DIRS: [&str; 3] = ["Application Support", "Caches", "Preferences"];
-const OS_KEYS: [&str; 4] =["allowed_writes", "forbidden_registrations", "install_dir", "provisional"];
+const OS_KEYS: [&str; 4] = ["allowed_writes", "forbidden_registrations", "install_dir", "provisional"];
 
 /// How paths are written and compared on an OS family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
