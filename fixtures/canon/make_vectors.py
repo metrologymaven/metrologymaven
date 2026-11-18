@@ -25,6 +25,7 @@ Run:  python fixtures/canon/make_vectors.py
 
 import hashlib
 import json
+import math
 import random
 import struct
 from decimal import Decimal
@@ -287,6 +288,11 @@ def tie_vectors():
 
 
 tie_vectors()
+
+# Every power of two, 2^-1074 .. 2^1023. Their rounding interval is asymmetric, so
+# the nearest decimal of a given length is not always the one that round-trips.
+good("numbers_every_power_of_two",
+     "[" + ",\n".join(repr(math.ldexp(1.0, e)) for e in range(-1074, 1024)) + "]\n")
 
 # Hand-labelled invalid inputs: every one must fail with canon.invalid.
 BAD = {

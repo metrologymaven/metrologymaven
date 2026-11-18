@@ -67,7 +67,7 @@ A verifier-side implementation of JSON canonicalisation (RFC 8785, JCS) and of t
 - **Errors:** `canon.invalid`, `canon.convention`.
 - **Determinism:** D0.
 - **Performance budget:** at least 100 MB/s canonicalisation on reference hardware [unverified until measured].
-- **Crate:** `fid-chain` (module `canon`); no dependency on `fid-core*`.
+- **Crate:** `fid-trust-canon` (layer `model`); no dependency on any CORE crate (`fid-canon`, `fid-journal`) outside dev-dependencies.
 
 ## Test fixtures
 

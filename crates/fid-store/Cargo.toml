@@ -1,0 +1,18 @@
+[package]
+name = "fid-store"
+description = "Metrology Maven local storage: project directory layout and write lock (spec node CORE.STO.LAYOUT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[target.'cfg(unix)'.dependencies]
+# Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),
+# fstatfs(2) (network file-system check) and uname(2) (host name). Keeps the crate free of `unsafe`.
+rustix = { version = "1", features = ["fs", "system"] }
+
+[lints]
+workspace = true

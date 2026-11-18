@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**24** of **1336** leaves built in code ([B]).
+**26** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 18 built)
+### Wave 1 (125 leaves, 20 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -46,7 +46,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
 - [B] [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
-- [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
+- [B] [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
 - [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
 - [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
@@ -117,7 +117,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
 - [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
 - [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
-- [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
+- [B] [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
 - [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
 - [QUAL.CRA.CLASS](../../spec/qual/cra/class/NODE.md) CRA classification record and distribution-gate status (S, P1a)
 - [QUAL.CRA.EXPORT](../../spec/qual/cra/export/NODE.md) Export-control notes and data-tag vocabulary (S, P1a)

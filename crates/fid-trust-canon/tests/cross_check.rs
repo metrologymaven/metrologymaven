@@ -17,6 +17,9 @@ fn fixtures() -> PathBuf {
 /// reference pick the even one (`277575414244990.125` gives `...990.12`, not
 /// `...990.13`). Vectors named here are compared number by number with only that
 /// difference allowed. Once `fid-canon` is fixed they match byte for byte again.
+// TODO: remove this allowance (KNOWN_TIE_VECTORS, `tie_differences` and the
+// tie branch in `compare`) once the fid-canon tie-to-even fix PR merges; from then
+// on every golden vector and fuzz case must match fid-canon byte for byte.
 const KNOWN_TIE_VECTORS: [&str; 1] = ["numbers_exact_ties"];
 
 fn collect_numbers(v: &Value, out: &mut Vec<f64>) {

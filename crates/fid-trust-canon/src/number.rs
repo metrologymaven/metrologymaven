@@ -58,23 +58,47 @@ fn push_zeros(out: &mut String, count: i32) {
 /// exponent `n` with `a = 0.d * 10^n` that parses back to `a`, choosing the
 /// nearest such string. `a` is finite and positive.
 ///
-/// A correctly rounded p-digit rendering is the nearest p-digit decimal, so if any
-/// p-digit decimal round-trips, it does; and round-tripping at p digits implies it
-/// at p + 1. The smallest such p is found by binary search over 1..=17
-/// (17 significant digits always round-trip a double).
+/// Whether some p-digit decimal round-trips is monotonic in p (a p-digit decimal
+/// is also a (p + 1)-digit one), so the smallest p is found by binary search over
+/// 1..=17 (17 significant digits always round-trip a double).
 fn shortest_digits(a: f64) -> (String, i32) {
-    let render = |p: usize| format!("{:.*e}", p - 1, a);
-    let round_trips = |s: &str| matches!(s.parse::<f64>(), Ok(b) if b == a);
     let (mut lo, mut hi) = (1usize, 17usize);
     while lo < hi {
         let mid = (lo + hi) / 2;
-        if round_trips(&render(mid)) {
+        if candidate(a, mid).is_some() {
             hi = mid;
         } else {
             lo = mid + 1;
         }
     }
-    split_scientific(&render(lo))
+    candidate(a, lo).unwrap_or_else(|| split_scientific(&format!("{a:.16e}")))
+}
+
+/// The p-significant-digit decimal that parses back to `a`, if one exists, as
+/// trimmed digits and `n` (`a = 0.d * 10^n`).
+///
+/// The correctly rounded rendering is the nearest p-digit decimal and is taken
+/// when it round-trips. At a power of two the rounding interval of `a` is twice as
+/// wide above as below, so the nearest decimal can lie just below the interval
+/// while the next p-digit decimal above lies inside it; that one is then the only
+/// p-digit decimal that round-trips, hence the closest. (The decimal below the
+/// nearest one can never round-trip when the nearest does not.)
+fn candidate(a: f64, p: usize) -> Option<(String, i32)> {
+    let rendered = format!("{:.*e}", p - 1, a);
+    let (mantissa, exp) = rendered.split_once('e')?;
+    let exp: i32 = exp.parse().ok()?;
+    let m: u64 = mantissa.chars().filter(char::is_ascii_digit).collect::<String>().parse().ok()?;
+    // The value is m * 10^scale.
+    let scale = exp - (p as i32 - 1);
+    for m in [m, m + 1] {
+        if matches!(format!("{m}e{scale}").parse::<f64>(), Ok(b) if b == a) {
+            let digits = m.to_string();
+            let n = digits.len() as i32 + scale;
+            let trimmed = digits.trim_end_matches('0');
+            return Some((if trimmed.is_empty() { "0" } else { trimmed }.to_string(), n));
+        }
+    }
+    None
 }
 
 /// Splits Rust's `d.ddde[-]x` rendering into trimmed digits and `n` (point position).
@@ -94,7 +118,12 @@ mod tests {
 
     #[test]
     fn hand_labelled_forms() {
-        let cases: [(f64, &str); 12] = [
+        let cases: [(f64, &str); 16] = [
+            // Powers of two whose nearest 16-digit decimal does not round-trip.
+            (2f64.powi(-24), "5.960464477539063e-8"),
+            (2f64.powi(-44), "5.684341886080802e-14"),
+            (2f64.powi(-77), "6.617444900424222e-24"),
+            (2f64.powi(89), "6.189700196426902e+26"),
             (1.0, "1"),
             (-2.5, "-2.5"),
             (1e21, "1e+21"),
