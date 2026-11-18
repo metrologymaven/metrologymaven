@@ -156,6 +156,8 @@ fn errors_are_typed() {
     let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
         .args(["lint-crate-graph", "--workspace"])
         .arg(fixture("no-such-workspace"))
+        .arg("--allowlist")
+        .arg(ws.join("lint-allowlist.toml"))
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
