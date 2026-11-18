@@ -1,0 +1,15 @@
+{
+  "schema": "colmap@1",
+  "id": "acme.export.short",
+  "version": "2.0.1",
+  "layout": "long",
+  "dialect": { "delimiter": "comma", "decimal_mark": ".", "header": true, "quote": "rfc4180", "encoding": "utf-8", "line_ending": "lf" },
+  "columns": [
+    { "field": "characteristic_id", "header": "Characteristic", "required": true },
+    { "field": "actual", "header": "Actual", "required": true },
+    { "field": "unit", "header": "Unit", "required": true },
+    { "field": "evaluation_basis", "header": "Basis", "required": false },
+    { "field": "uec", "header": "UEC", "required": false },
+    { "field": "source_software", "header": "Source", "required": false }
+  ]
+}

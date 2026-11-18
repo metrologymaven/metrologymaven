@@ -1,0 +1,6 @@
+{
+  "export_lossy.json": [
+    "decision_rule",
+    "record_status"
+  ]
+}
