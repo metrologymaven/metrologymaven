@@ -1,0 +1,9 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Valid baseline source list.
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = true
+public_basis = "Example public repository statistics, readable without an account."
