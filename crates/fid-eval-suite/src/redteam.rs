@@ -1,6 +1,8 @@
 //! Red-team extension of `task.json`: `family` and `predicates` (spec nodes AGENT.REDTEAM,
 //! AGENT.REDTEAM.PRED; added for AGENT.REDTEAM.FABRIC), and `payloads` (the start-state
-//! files that carry injected text and their injection vector; added for AGENT.REDTEAM.INJECT).
+//! files that carry injected text and their injection vector; added for AGENT.REDTEAM.INJECT),
+//! and `subfamily` (escalation or self-adoption within family `escal`; added for
+//! AGENT.REDTEAM.ESCAL).
 //!
 //! A task is a red-team task when it has a `family`. A red-team task needs at least one
 //! predicate (`missing_predicate`); a predicate kind outside the closed list fails with
@@ -21,6 +23,12 @@ use std::fmt;
 wire_enum! {
     /// Red-team task family (REQ-AGENT.REDTEAM-001).
     Family { Inject = "inject", Escal = "escal", Fabric = "fabric", Shell = "shell" }
+}
+
+wire_enum! {
+    /// Subfamily of family `escal` (AGENT.REDTEAM.ESCAL): side-effect escalation, or
+    /// self-adoption (promoting, adopting or approving its own or another agent's work).
+    Subfamily { Escalation = "escalation", SelfAdoption = "self_adoption" }
 }
 
 wire_enum! {
@@ -127,6 +135,42 @@ fn is_field_name(s: &str) -> bool {
         && b.len() <= 64
         && b[0].is_ascii_lowercase()
         && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'_')
+}
+
+/// Parses `subfamily`; it is only allowed in family `escal` (`family` is the task's family
+/// if it parsed, `has_family` whether the key is present at all).
+pub(crate) fn subfamily(
+    cx: &mut Ctx,
+    v: Option<&CValue>,
+    family: Option<Family>,
+    has_family: bool,
+) -> Option<Subfamily> {
+    let s = cx.string(v, "subfamily")?;
+    let sf = Subfamily::parse(s);
+    if sf.is_none() {
+        cx.err("subfamily", format!("{s:?} is not one of escalation, self_adoption"));
+        return None;
+    }
+    if !has_family {
+        cx.err("subfamily", "only allowed on a red-team task");
+        return None;
+    }
+    if family.is_some() && family != Some(Family::Escal) {
+        cx.err("subfamily", "only allowed in the escal family");
+        return None;
+    }
+    sf
+}
+
+/// REQ-AGENT.REDTEAM.ESCAL-003: every `escal` task has an `entry_class` predicate, and every
+/// self-adoption task also a `promotion_without_distinct_human` predicate.
+pub(crate) fn escal_predicates(cx: &mut Ctx, sub: Subfamily, preds: &[Predicate]) {
+    let has = |k: &str| preds.iter().any(|p| p.kind.as_str() == k);
+    if !has("entry_class") {
+        cx.err("predicates", "an escal task needs an entry_class predicate for its targeted classes");
+    } else if sub == Subfamily::SelfAdoption && !has("promotion_without_distinct_human") {
+        cx.err("predicates", "a self_adoption task needs a promotion_without_distinct_human predicate");
+    }
 }
 
 pub(crate) fn family(cx: &mut Ctx, v: Option<&CValue>) -> Option<Family> {
