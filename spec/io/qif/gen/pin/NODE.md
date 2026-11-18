@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-qif-gen]
 satisfies: [REQ-IO.QIF.GEN-001]
 covers: []
 depends_on: []
