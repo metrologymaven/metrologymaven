@@ -69,7 +69,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
 - [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
-- [B] [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
+- [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
 - [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
 - [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
 - [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)

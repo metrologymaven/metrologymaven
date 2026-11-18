@@ -64,6 +64,7 @@ jobs:
           python tools/check_envelopes.py ok.json bad.json
           python tools/check_command_defs.py
           python tools/check_knp1_findings.py
+          python -m unittest discover -s tools/house_rules/tests -v
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
