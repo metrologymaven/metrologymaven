@@ -1,0 +1,95 @@
+# Adoption metric definitions (spec node OUTR.COMM.METRIC.DEF).
+#
+# Each metric states its source (an ID from metrics/sources.toml), its collection method
+# (http_json | git_history | manual_public_count), a JSON Pointer selector for http_json, its
+# unit, how a quarter's snapshots are aggregated (last | sum | max), and its known biases.
+# `fid-outreach metric-def check --defs metrics/definitions.toml --sources metrics/sources.toml`
+# must pass before the collector runs.
+#
+# Privacy: every metric is an aggregate count. No definition asks for names, email addresses,
+# account handles or any other data about an individual person.
+
+[[metric]]
+id = "release_downloads_github"
+title = "Release downloads per channel: repository host releases"
+source = "github-latest-release-api"
+method = "http_json"
+selector = "/assets/0/download_count"
+unit = "downloads"
+aggregation = "last"
+biases = [
+  "Counts only the first asset of the latest release; other assets and earlier releases are not counted.",
+  "Cumulative counter: the quarterly change has to be derived from consecutive snapshots.",
+  "Mirror downloads, package-manager installs and copies passed on by hand are not counted.",
+  "Automated downloads (CI jobs, bots, crawlers) are counted like people and repeat downloads are not de-duplicated.",
+  "Not collected until the first release exists; other release channels need their own definition.",
+]
+
+[[metric]]
+id = "repo_stars"
+title = "Repository stars"
+source = "github-repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"
+biases = [
+  "A star is a one-click bookmark, not evidence of use.",
+  "Bots and throwaway accounts are not excluded.",
+  "Removed stars lower the count, so it is a net value, not a count of new interest.",
+]
+
+[[metric]]
+id = "repo_forks"
+title = "Repository forks"
+source = "github-repo-api"
+method = "http_json"
+selector = "/forks_count"
+unit = "forks"
+aggregation = "last"
+biases = [
+  "Many forks exist only to open a single pull request and are never used on their own.",
+  "Forks of forks and copies on other hosts are not counted.",
+  "Bots and automated forking are not excluded.",
+]
+
+[[metric]]
+id = "contributors_distinct"
+title = "Distinct contributors per quarter"
+source = "github-repo-git"
+method = "git_history"
+unit = "contributors"
+aggregation = "last"
+biases = [
+  "One person committing under two identities is counted twice; two people sharing one identity are counted once.",
+  "Bot and automation commits are not excluded.",
+  "Co-authors named only in commit trailers, reviewers, issue reporters and documentation helpers outside the repository are not counted.",
+  "Squash merges attribute a pull request to the commit author recorded by the merge, which may hide other contributors.",
+  "Only a count is kept: identities are hashed in memory during collection and no names or email addresses are stored.",
+]
+
+[[metric]]
+id = "forum_posts"
+title = "Forum posts per quarter"
+source = "github-discussions"
+method = "manual_public_count"
+unit = "posts"
+aggregation = "sum"
+biases = [
+  "Read off the public forum by a maintainer, so it is subject to counting mistakes; the page URL is recorded with each value.",
+  "Posts by maintainers and bots are not excluded.",
+  "Deleted, hidden or moderated posts are not counted; questions asked elsewhere (issue tracker, mail, other sites) are not counted.",
+]
+
+[[metric]]
+id = "chat_messages_public"
+title = "Chat messages in public channels per quarter"
+source = "project-channel-listing"
+method = "manual_public_count"
+unit = "messages"
+aggregation = "sum"
+biases = [
+  "No official public chat channel exists yet (OUTR.COMM.CHAN); until one is listed the value is unavailable, never zero.",
+  "Only channels with a public archive can be counted; private messages and unofficial channels are not counted.",
+  "Messages by maintainers and bots are not excluded, and message counts reward chattiness rather than reach.",
+]
