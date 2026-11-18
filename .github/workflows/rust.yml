@@ -84,6 +84,21 @@ jobs:
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
+          python -m unittest discover -s tools/repo_template/tests -v
+      - name: Repository template code variant passes clippy (ECO.REPO.TPL.FILES AC-4)
+        # +stable overrides the template's rust-toolchain.toml pin so no extra toolchain is installed.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          out="$RUNNER_TEMP/tpl-code"
+          PYTHONPATH=tools python -m repo_template new --id fid-demo --variant code \
+            --rules-source fixtures/repo/tpl/rules \
+            --rules-rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            --ci-rev bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --year 2026 --out "$out"
+          cd "$out"
+          grep -q '^"starter" = ' layers.toml
+          cargo +stable clippy --workspace --all-targets -- -D warnings
+          cargo +stable test --workspace
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
