@@ -1,0 +1,116 @@
+{
+  "cases": {
+    "absolute": "bad_archive",
+    "altered": "start_state_mismatch",
+    "backslash": "bad_archive",
+    "bad-checksum": "bad_archive",
+    "case-collision": "bad_archive",
+    "case-dir-file": "bad_archive",
+    "dotdot": "bad_archive",
+    "drive": "bad_archive",
+    "duplicate": "bad_archive",
+    "file-then-dir": "bad_archive",
+    "hardlink": "bad_archive",
+    "ok": "ok",
+    "parent": "bad_archive",
+    "pax": "bad_archive",
+    "reserved-name": "bad_archive",
+    "roots-absolute": "invalid_roots",
+    "roots-case": "invalid_roots",
+    "roots-dotdot": "invalid_roots",
+    "roots-file": "invalid_roots",
+    "roots-nested": "invalid_roots",
+    "roots-reserved": "invalid_roots",
+    "symlink": "bad_archive",
+    "trailing-dot": "bad_archive",
+    "trailing-garbage": "bad_archive",
+    "truncated": "bad_archive"
+  },
+  "ok_files": [
+    [
+      "README.txt",
+      "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22"
+    ],
+    [
+      "in/sub/a.txt",
+      "sha256:87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7"
+    ]
+  ],
+  "reasons": {
+    "absolute": "empty segment",
+    "altered": "task names",
+    "backslash": "character outside",
+    "bad-checksum": "header checksum mismatch",
+    "case-collision": "collides with another entry",
+    "case-dir-file": "lies below a file",
+    "dotdot": "`.` or `..` segment",
+    "drive": "character outside",
+    "duplicate": "collides with another entry",
+    "file-then-dir": "lies below a file",
+    "hardlink": "is not a regular file or directory",
+    "parent": "`.` or `..` segment",
+    "pax": "is not a regular file or directory",
+    "reserved-name": "Windows device name",
+    "roots-absolute": "empty segment",
+    "roots-case": "equal or nested",
+    "roots-dotdot": "`.` or `..` segment",
+    "roots-file": "is a file in the start state",
+    "roots-nested": "equal or nested",
+    "roots-reserved": "Windows device name",
+    "symlink": "is not a regular file or directory",
+    "trailing-dot": "segment ends with a dot",
+    "trailing-garbage": "data after the end-of-archive block",
+    "truncated": "truncated data"
+  },
+  "tasks": {
+    "mini-inspect-01": {
+      "files": [
+        [
+          "README.txt",
+          "sha256:4d9140d150f8162cda2c7f858405d43e4f71ade378405e7bffd69f892ed09dfd"
+        ],
+        [
+          "in/part.qif",
+          "sha256:282445b4ef656d7b6184570c122ba34f8624fae6d627d5350cf816cad291add3"
+        ]
+      ],
+      "read": [
+        "in"
+      ],
+      "read_root_files": [
+        [
+          "roots/read/in/part.qif",
+          "sha256:282445b4ef656d7b6184570c122ba34f8624fae6d627d5350cf816cad291add3"
+        ]
+      ],
+      "start_digest": "sha256:8c6cf128b7b72f9bdbeaf7b3367ade8e003c51887c33499de7d4f5dd69c50b8f",
+      "task_digest": "sha256:8c6cf128b7b72f9bdbeaf7b3367ade8e003c51887c33499de7d4f5dd69c50b8f",
+      "write": [
+        "out"
+      ]
+    },
+    "mini-probe-01": {
+      "files": [
+        [
+          "in/program.txt",
+          "sha256:18d288d58b6f327cd911982ad9d2c4af8a2e723224affbb9755b7f001aacf7b4"
+        ]
+      ],
+      "read": [
+        "in",
+        "ref/data"
+      ],
+      "read_root_files": [
+        [
+          "roots/read/in/program.txt",
+          "sha256:18d288d58b6f327cd911982ad9d2c4af8a2e723224affbb9755b7f001aacf7b4"
+        ]
+      ],
+      "start_digest": "sha256:5f1d1aa5ef8212aa16aac162abde3f1a8edf9a651b83809cc26c9adc256fd211",
+      "task_digest": "sha256:5f1d1aa5ef8212aa16aac162abde3f1a8edf9a651b83809cc26c9adc256fd211",
+      "write": [
+        "out/report"
+      ]
+    }
+  }
+}
