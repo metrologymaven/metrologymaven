@@ -41,8 +41,8 @@ pub fn compare_with(
     budget_b: Budget,
     rules: &NormRules,
 ) -> Result<Equality, NormError> {
-    let mut sa = Stream::new(BoundedSource::new(a, budget_a), rules, true);
-    let mut sb = Stream::new(BoundedSource::new(b, budget_b), rules, true);
+    let mut sa = Stream::new(BoundedSource::new(a, budget_a), a.len() as u64, rules, true);
+    let mut sb = Stream::new(BoundedSource::new(b, budget_b), b.len() as u64, rules, true);
     let mut found: Option<Diff> = None;
     loop {
         let ia = sa.next_item()?;

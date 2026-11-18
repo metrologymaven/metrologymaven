@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Self-written: the default namespace is undeclared with xmlns="" inside a QIF-like
+     document; names and an unprefixed xsi:type below it are in no namespace. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Extension xmlns="">
+    <Local xsi:type="LocalType" id=" 5 ">kept</Local>
+    <Inner xmlns="http://qifstandards.org/xsd/qif3"><Value> 2.0 </Value></Inner>
+  </Extension>
+  <Value>1.0</Value>
+</QIFDocument>

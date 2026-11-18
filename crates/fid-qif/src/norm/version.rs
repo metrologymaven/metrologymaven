@@ -11,9 +11,14 @@
 //! 3. the digest of the rule file equals the digest on that line
 //!    (`norm_version_not_bumped`: the rules changed but the version did not).
 //!
-//! The test `rule_file_matches_lock` runs it on the shipped files in CI. Editing an
-//! existing lock line to match changed rules defeats it; reviewers treat lock lines as
-//! append-only.
+//! The test `ac5_shipped_rule_file_matches_lock` runs it on the shipped files in CI.
+//! Editing an existing lock line to match changed rules defeats it; reviewers treat lock
+//! lines as append-only.
+//!
+//! Follow-up (open question in the IO.QIF.NORM node): a CI step should also compare the
+//! rule file and lock against the PR's base branch, failing `norm_version_not_bumped`
+//! when the rule file changed and no lock line was appended, and when an existing lock
+//! line was edited. That needs a workflow change, which goes in its own PR.
 
 use super::rules::parse_version;
 use super::{NormError, NormRules};

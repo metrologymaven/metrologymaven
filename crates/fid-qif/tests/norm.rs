@@ -27,7 +27,7 @@ fn accepted() -> Vec<String> {
         .filter(|n| n.ends_with(".qif") && !n.starts_with("forbidden"))
         .collect();
     names.sort();
-    assert!(names.len() >= 9, "fixtures missing: {names:?}");
+    assert!(names.len() >= 11, "fixtures missing: {names:?}");
     names
 }
 
@@ -195,6 +195,26 @@ fn forbidden_and_malformed_input_are_errors() {
     let truncated = b"<r xmlns=\"urn:x\"><a>1</a>";
     assert_eq!(normalise(truncated).unwrap_err().code(), "truncated_file");
     assert_eq!(compare(b"<r><a>2</a></r>", b"<r><a>1</a><b></r>").unwrap_err().code(), "malformed");
+}
+
+#[test]
+fn output_amplification_is_bounded_in_normalise_and_compare() {
+    // A long namespace name declared on the root but used only by many siblings is
+    // re-declared on each of them in the canonical form.
+    let uri = format!("urn:example:{}", "u".repeat(1000));
+    let doc = format!("<r xmlns:p=\"{uri}\">{}</r>", "<p:a/>".repeat(200));
+    let input = doc.len() as u64;
+    assert!(input < 4000);
+    let e = normalise(doc.as_bytes()).unwrap_err();
+    assert_eq!(e.code(), "limit_exceeded");
+    assert_eq!(compare(doc.as_bytes(), doc.as_bytes()).unwrap_err().code(), "limit_exceeded");
+    // Two siblings stay within 4 x input + 4096 and normalise.
+    let small = format!("<r xmlns:p=\"{uri}\">{}</r>", "<p:a/>".repeat(2));
+    let out = normalise(small.as_bytes()).unwrap();
+    assert!(out.len() as u64 <= fid_qif::norm::output_cap(small.len() as u64, u64::MAX));
+    assert_eq!(compare(small.as_bytes(), &out).unwrap(), Equality::Equal);
+    assert_eq!(fid_qif::norm::output_cap(input, u64::MAX), 4 * input + 4096);
+    assert_eq!(fid_qif::norm::output_cap(input, 100), 100);
 }
 
 #[test]

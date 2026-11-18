@@ -83,6 +83,43 @@ fn ac6_fail_closed_entries() {
 }
 
 #[test]
+fn ac6_digests_are_verified() {
+    let report = run_manifest(&corpus("digest.toml"), &StubProjection).unwrap();
+    let statuses: Vec<_> = report.rows.iter().map(|r| r.status.clone()).collect();
+    assert_eq!(statuses, vec![RowStatus::Error("digest_mismatch"), RowStatus::Error("digest_mismatch")]);
+    assert_eq!(report.exit_code(), 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn ac6_symlinks_are_not_followed() {
+    let dir = std::env::temp_dir().join(format!("fid-qif-symlink-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("files")).unwrap();
+    let target = corpus("files/ws_a.qif");
+    std::os::unix::fs::symlink(&target, dir.join("files/link.qif")).unwrap();
+    std::os::unix::fs::symlink(corpus("files"), dir.join("linkdir")).unwrap();
+    let digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    let manifest = format!(
+        "[[entry]]
+path = \"files/link.qif\"
+sha256 = \"{digest}\"
+tags = [\"p0-subset\"]
+
+         [[entry]]
+path = \"linkdir/ws_a.qif\"
+sha256 = \"{digest}\"
+tags = [\"p0-subset\"]
+"
+    );
+    std::fs::write(dir.join("m.toml"), manifest).unwrap();
+    let report = run_manifest(&dir.join("m.toml"), &StubProjection).unwrap();
+    let statuses: Vec<_> = report.rows.iter().map(|r| r.status.clone()).collect();
+    assert_eq!(statuses, vec![RowStatus::Error("symlink_forbidden"), RowStatus::Error("symlink_forbidden")]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn ac6_missing_manifest_is_an_error() {
     let e = run_manifest(&corpus("no_such_manifest.toml"), &StubProjection).unwrap_err();
     assert_eq!(e.code(), "manifest_missing");

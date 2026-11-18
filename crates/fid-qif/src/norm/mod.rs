@@ -48,8 +48,11 @@
 //!
 //! The rules are deterministic (D0: no floating point, no hash maps, no locale),
 //! idempotent (`normalise(normalise(x)) == normalise(x)`) and bounded: the reader
-//! budget bounds input, depth and time; held-back content and output are bounded by the
-//! budget's allocation limit (`limit_exceeded`).
+//! budget bounds input, depth and time; held-back content is bounded by the budget's
+//! allocation limit; the canonical output of one document is bounded by
+//! [`output_cap`] = `min(alloc limit, 4 × input bytes + 4096)` in both [`normalise`] and
+//! [`compare`] (re-declared namespaces can amplify output), and [`normalise`] charges
+//! the output it returns to the budget. Exceeding any bound is `limit_exceeded`.
 //!
 //! Known limits of version 1: which elements are simple-typed comes from an interim,
 //! hand-written table until `IO.QIF.GEN` generates one; QName-valued content other than
@@ -64,10 +67,11 @@ mod version;
 pub use compare::{compare_with, Diff, Equality};
 pub use error::NormError;
 pub use rules::{NormRules, LOCK_FILE, RULE_FILE, RULE_IDS};
+pub use stream::{output_cap, OUTPUT_FACTOR, OUTPUT_SLACK};
 pub use version::{check_version, rule_file_digest};
 
-use fid_io_reg::{BoundedSource, Budget, IoError, LimitKind, LimitRequest, Position, Principal};
-use stream::{Stream, Writer};
+use fid_io_reg::{BoundedSource, Budget, LimitRequest, Position, Principal};
+use stream::Stream;
 
 /// The default budget: the harness defaults, as a script principal (limits can only be
 /// lowered from the defaults).
@@ -82,17 +86,15 @@ pub fn normalise(xml: &[u8]) -> Result<Vec<u8>, NormError> {
 
 /// Normalises `xml` under `rules`, reading under `budget`.
 pub fn normalise_with(xml: &[u8], budget: Budget, rules: &NormRules) -> Result<Vec<u8>, NormError> {
-    let mut stream = Stream::new(BoundedSource::new(xml, budget), rules, false);
-    let cap = stream.cap();
-    let mut writer = Writer::default();
-    while let Some(item) = stream.next_item()? {
-        writer.write(&item.kind);
-        if writer.out.len() as u64 > cap {
-            let at = Position::byte(xml.len() as u64);
-            return Err(NormError::Harness(IoError::LimitExceeded { limit: LimitKind::Alloc, value: cap, at }));
-        }
+    let mut stream = Stream::new(BoundedSource::new(xml, budget), xml.len() as u64, rules, false);
+    let mut out = Vec::new();
+    while stream.next_item()?.is_some() {
+        out.extend_from_slice(stream.last_bytes());
     }
-    Ok(writer.out)
+    // The output is kept, so it is charged to the budget (already bounded by the stream).
+    let mut budget = stream.into_budget();
+    budget.charge_alloc(out.len() as u64, Position::byte(xml.len() as u64))?;
+    Ok(out)
 }
 
 /// Compares two documents under the shipped rules, each with the default budget.

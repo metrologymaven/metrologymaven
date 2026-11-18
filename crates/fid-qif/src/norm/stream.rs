@@ -9,7 +9,7 @@
 
 use super::rules::NormRules;
 use super::NormError;
-use fid_io_reg::{BoundedSource, IoError, LimitKind, Position};
+use fid_io_reg::{BoundedSource, Budget, IoError, LimitKind, Position};
 use fid_xml::{Element, EventKind, XmlReader, XML_NS};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io::Read;
@@ -75,13 +75,29 @@ pub(crate) struct Stream<'a, R> {
     text_line: Option<u32>,
     pending_bytes: u64,
     cap: u64,
+    out_cap: u64,
+    emitted: u64,
+    writer: Writer,
     paths: bool,
     done: bool,
 }
 
+/// The normalised output may be at most this many times the input size ...
+pub const OUTPUT_FACTOR: u64 = 4;
+/// ... plus this many bytes. Exceeding it is `limit_exceeded` (alloc).
+pub const OUTPUT_SLACK: u64 = 4096;
+
+/// The output bound for an input of `input_len` bytes under an allocation limit `alloc`:
+/// `min(alloc, OUTPUT_FACTOR * input_len + OUTPUT_SLACK)`.
+pub fn output_cap(input_len: u64, alloc: u64) -> u64 {
+    input_len.saturating_mul(OUTPUT_FACTOR).saturating_add(OUTPUT_SLACK).min(alloc)
+}
+
 impl<'a, R: Read> Stream<'a, R> {
-    pub(crate) fn new(source: BoundedSource<R>, rules: &'a NormRules, paths: bool) -> Self {
+    /// A stream over `source`, which holds `input_len` bytes (for the output bound).
+    pub(crate) fn new(source: BoundedSource<R>, input_len: u64, rules: &'a NormRules, paths: bool) -> Self {
         let cap = source.budget().limits().alloc();
+        let out_cap = output_cap(input_len, cap);
         Stream {
             reader: XmlReader::new(source),
             rules,
@@ -93,20 +109,38 @@ impl<'a, R: Read> Stream<'a, R> {
             text_line: None,
             pending_bytes: 0,
             cap,
+            out_cap,
+            emitted: 0,
+            writer: Writer::default(),
             paths,
             done: false,
         }
     }
 
-    /// The allocation limit that also bounds held-back content and the output.
-    pub(crate) fn cap(&self) -> u64 {
-        self.cap
+    /// The canonical bytes of the item last returned by [`Stream::next_item`].
+    pub(crate) fn last_bytes(&self) -> &[u8] {
+        &self.writer.out
+    }
+
+    /// Ends the stream and gives the budget back, so the caller can charge what it keeps.
+    pub(crate) fn into_budget(self) -> Budget {
+        self.reader.into_source().into_parts().1
     }
 
     /// The next canonical item, or `None` after the document ends.
     pub(crate) fn next_item(&mut self) -> Result<Option<Item>, NormError> {
         loop {
             if let Some(item) = self.queue.pop_front() {
+                // Every item is serialised and counted, so normalise and compare apply the
+                // same output bound.
+                self.writer.out.clear();
+                self.writer.write(&item.kind);
+                self.emitted = self.emitted.saturating_add(self.writer.out.len() as u64);
+                if self.emitted > self.out_cap {
+                    let at = Position { byte: 0, line: item.line, col: None };
+                    let e = IoError::LimitExceeded { limit: LimitKind::Alloc, value: self.out_cap, at };
+                    return Err(NormError::Harness(e));
+                }
                 return Ok(Some(item));
             }
             if self.done {
