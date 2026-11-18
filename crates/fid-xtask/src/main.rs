@@ -82,6 +82,11 @@ fn bots_check(args: &[String]) -> ExitCode {
         }
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
+            ExitCode::from(2)
+        }
+    }
+}
+
 /// PLAT.MATRIX.FILE: runs `fid-platform plat-matrix ...` through Cargo, for the same layer
 /// reason as `datasets-check` (`fid-platform` is a `tool` crate).
 fn plat_matrix(args: &[String]) -> ExitCode {
