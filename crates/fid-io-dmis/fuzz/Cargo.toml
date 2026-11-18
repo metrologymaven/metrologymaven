@@ -1,6 +1,9 @@
 # cargo-fuzz harness for the DMIS lexer (IO.DMIS.PARSE.LEX AC-5). Not a workspace member:
-# it needs nightly and libFuzzer. Run from crates/fid-io-dmis/fuzz:
-#   cargo +nightly fuzz run dmis_lex ../../../fixtures/io/dmis/parse/lex -- -max_total_time=300
+# it needs nightly and libFuzzer. Run from crates/fid-io-dmis/fuzz, with a scratch corpus
+# directory first (libFuzzer writes new inputs into the first directory only, so the
+# fixtures stay read-only seeds):
+#   mkdir -p corpus/dmis_lex
+#   cargo +nightly fuzz run dmis_lex corpus/dmis_lex ../../../fixtures/io/dmis/parse/lex -- -max_total_time=300
 [package]
 name = "fid-io-dmis-fuzz"
 version = "0.0.0"

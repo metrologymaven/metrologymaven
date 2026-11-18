@@ -200,6 +200,10 @@ fn hand_labelled_error_paths() {
     assert_eq!(strict(b"A\rB\n"), m(1, 2, Reason::UnexpectedByte));
     // A `$` inside a string is content, so the line is not continued.
     assert_eq!(strict(b"A/'x,$\nB'"), m(1, 3, Reason::UnterminatedString));
+    // Positions on continued lines are physical: line and column of the bad byte's line.
+    assert_eq!(strict(b"A/$\n  B,1.2.3"), m(2, 5, Reason::BadNumber));
+    assert_eq!(strict(b"A/$\n$$ note\n  B,'open"), m(3, 5, Reason::UnterminatedString));
+    assert_eq!(strict(b"A/$\n  $$ note\n\n B,C $ x"), m(4, 6, Reason::UnexpectedByte));
     // Codes.
     assert_eq!(strict(b"'").unwrap_err().code(), "malformed");
     let long = vec![b'A'; MAX_LINE_BYTES + 1];
@@ -242,6 +246,21 @@ fn edge_inputs() {
     assert_eq!(raw.pos, Pos { line: 3, col: 8 });
     assert_eq!(raw.text.as_bytes(), b"go now  ");
     assert_eq!(raw.ascii(), None);
+}
+
+#[test]
+fn a_leading_utf8_bom_is_skipped_once() {
+    let st = strict(b"\xef\xbb\xbfUNITS/MM\nENDFIL").unwrap();
+    assert_eq!(st.len(), 2);
+    assert_eq!(st[0].tokens[0].pos, Pos { line: 1, col: 1 });
+    assert_eq!(st[0].tokens[0].ascii(), Some("UNITS"));
+    // Only at the very start, and only once.
+    assert_eq!(
+        strict(b"\xef\xbb\xbf\xef\xbb\xbfA"),
+        Err(LexError::Malformed { line: 1, col: 1, reason: Reason::NonAscii })
+    );
+    assert_eq!(strict(b"A\n\xef\xbb\xbfB"), Err(LexError::Malformed { line: 2, col: 1, reason: Reason::NonAscii }));
+    assert_eq!(strict(b"\xef\xbb\xbf").unwrap(), vec![]);
 }
 
 #[test]

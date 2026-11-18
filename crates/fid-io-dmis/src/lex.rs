@@ -3,6 +3,8 @@
 //! Turns DMIS bytes into tokens grouped by logical statement. The rules below are the
 //! project's own reading of the leaf spec, not text from the DMIS standard:
 //!
+//! - **Encoding**: one UTF-8 byte-order mark (EF BB BF) at the very start of the input is
+//!   skipped; line 1 columns count from the byte after it.
 //! - **Physical lines** end at LF; one CR right before the LF (or at the end of input) is
 //!   dropped. A line longer than [`MAX_LINE_BYTES`] fails with
 //!   `limit_exceeded{line_length}`. Blank lines outside a statement are skipped.
@@ -45,6 +47,9 @@ pub const MAX_LINE_BYTES: usize = 64 * 1024;
 pub const MAX_CHAIN_LINES: u32 = 10_000;
 /// Most tokens in one logical statement [unverified: bound].
 pub const MAX_STATEMENT_TOKENS: usize = 100_000;
+
+/// The UTF-8 byte-order mark, skipped once at the start of the input.
+const UTF8_BOM: &[u8] = b"\xef\xbb\xbf";
 
 /// 1-based physical line and byte column of a token's first byte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -322,7 +327,8 @@ impl std::error::Error for LexError {}
 pub fn lex<R: Read>(source: &mut BoundedSource<R>, options: &LexOptions) -> Result<Vec<LogicalStatement>, LexError> {
     let mut bytes = Vec::new();
     source.read_to_end_bounded(&mut bytes).map_err(LexError::Io)?;
-    let mut lexer = Lexer { src: &bytes, pos: 0, line_no: 0, options, budget: source.budget_mut() };
+    let start = if bytes.starts_with(UTF8_BOM) { UTF8_BOM.len() } else { 0 };
+    let mut lexer = Lexer { src: &bytes, pos: start, line_no: 0, options, budget: source.budget_mut() };
     let mut out = Vec::new();
     while let Some(stmt) = lexer.next_statement()? {
         out.push(stmt);
@@ -493,8 +499,11 @@ impl Lexer<'_, '_> {
         }
         let at = Position::line_col(byte as u64, pos.line, pos.col);
         self.budget.charge_elements(1, at).map_err(LexError::Io)?;
+        // Owned copies held besides the lexeme.
         let value_len = match &kind {
             TokenKind::Str { value } => value.len(),
+            TokenKind::Word { upper } => upper.len(),
+            TokenKind::Label { prefix, name } => prefix.len().saturating_add(name.len()),
             _ => 0,
         };
         let kept = text.len().saturating_add(value_len).saturating_add(std::mem::size_of::<Token>());

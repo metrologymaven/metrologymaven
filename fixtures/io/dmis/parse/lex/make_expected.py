@@ -141,6 +141,8 @@ def lex_line(raw, n, st):
 
 
 def lex(data):
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
     lines = data.split(b"\n")
     if lines and lines[-1] == b"":
         lines.pop()
