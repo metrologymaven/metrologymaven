@@ -76,7 +76,8 @@ def render(lists):
         differ = [names[i] for i in range(len(row)) if i not in best[1]]
         first = (ref, differ, row)
         break
-    lines.append("plat-gpu invariance: " + ("EQUAL" if first is None else "DIVERGED"))
+    # Fixtures are recorded lists, so the report carries the "(recorded)" label.
+    lines.append("plat-gpu invariance (recorded): " + ("EQUAL" if first is None else "DIVERGED"))
     lines.append("backends: " + " ".join(names))
     lines.append("entries: " + " ".join(f"{b}={len(e)}" for b, e in lists))
     if first is not None:

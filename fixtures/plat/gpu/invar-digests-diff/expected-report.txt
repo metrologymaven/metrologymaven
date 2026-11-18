@@ -1,4 +1,4 @@
-plat-gpu invariance: DIVERGED
+plat-gpu invariance (recorded): DIVERGED
 backends: dx12 software vulkan
 entries: dx12=6 software=6 vulkan=6
 first difference: entry 4 command fit.ls_cylinder@1

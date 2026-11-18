@@ -124,12 +124,18 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
         }
     }
     let result = match (backends, recorded) {
-        (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| plat_gpu_invar::compare(&lists)),
+        (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| {
+            let mut report = plat_gpu_invar::compare(&lists);
+            report.recorded = true;
+            report
+        }),
         (Some(list), None) => match plat_gpu_invar::parse_backends(list) {
             Ok(backends) => {
-                let work = work.unwrap_or_else(|| {
-                    std::env::temp_dir().join(format!("fid-plat-gpu-invariance-{}", std::process::id()))
-                });
+                // A default work folder is ours alone (named by process ID) and removed on exit,
+                // whatever the outcome; a `--work` folder given by the caller is left in place.
+                let temporary = work.is_none();
+                let default_work = format!("fid-plat-gpu-invariance-{}", std::process::id());
+                let work = work.unwrap_or_else(|| std::env::temp_dir().join(default_work));
                 let opts = plat_gpu_invar::RunOptions {
                     sequence: &sequence,
                     examples: &examples,
@@ -137,7 +143,13 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
                     backends: &backends,
                     host_os: std::env::consts::OS,
                 };
-                plat_gpu_invar::run(&opts, &mut plat_gpu_invar::FidDriver { fid })
+                let result = plat_gpu_invar::run(&opts, &mut plat_gpu_invar::FidDriver::new(fid));
+                if temporary && work.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(&work) {
+                        eprintln!("plat-gpu invariance: cannot remove {}: {e}", work.display());
+                    }
+                }
+                result
             }
             Err(e) => Err(e),
         },

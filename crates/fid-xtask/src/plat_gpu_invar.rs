@@ -14,9 +14,12 @@
 //! than the one requested is refused too. A run needs at least two backends and every
 //! sequence step must appear in every list, so the harness cannot pass vacuously.
 //!
-//! # Driver contract
+//! # Driver contract [provisional]
 //!
-//! The harness never links product crates; it drives the `fid` binary ([`FidDriver`]):
+//! This contract is provisional: no spec node defines it yet. Its owners are `PLAT.GPU.SMOKE`
+//! and the CLI (see the leaf's Open questions), and it may change when `fid` implements
+//! `--gpu-backend`. The harness never links product crates; it drives the `fid` binary
+//! ([`FidDriver`]), with a timeout and a cap of [`MAX_BYTES`] on what it reads from stdout:
 //!
 //! ```text
 //! <fid> --gpu-backend <backend> invariance-run --project <copy> --sequence <file> --json
@@ -37,7 +40,7 @@
 //! all others, in list order. The report text, LF line endings:
 //!
 //! ```text
-//! plat-gpu invariance: EQUAL | DIVERGED
+//! plat-gpu invariance[ (recorded)]: EQUAL | DIVERGED   ("(recorded)" for recorded lists)
 //! backends: <b1> <b2> ...
 //! entries: <b1>=<n1> <b2>=<n2> ...
 //! first difference: entry <index> command <command>     (DIVERGED only, from the reference)
@@ -51,8 +54,12 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 use toml::{Table, Value};
+
+/// How long one backend run through `fid` may take by default.
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 /// The shipped sequence, relative to the workspace root.
 pub const DEFAULT_SEQUENCE: &str = "platform/invariance-sequence.toml";
@@ -391,6 +398,8 @@ pub struct InvarReport {
     /// Backend and entry count, in list order.
     pub lists: Vec<(String, usize)>,
     pub first_diff: Option<FirstDiff>,
+    /// The lists were read from recorded files (`--recorded`), not produced by a run.
+    pub recorded: bool,
 }
 
 /// Compares digest lists (REQ-003, REQ-005): a pure function of its input.
@@ -426,16 +435,17 @@ pub fn compare(lists: &[DigestList]) -> InvarReport {
                 .collect(),
             rows: summary.iter().zip(&row).map(|(s, e)| (s.0.clone(), e.cloned())).collect(),
         };
-        return InvarReport { equal: false, lists: summary, first_diff: Some(first) };
+        return InvarReport { equal: false, lists: summary, first_diff: Some(first), recorded: false };
     }
-    InvarReport { equal: true, lists: summary, first_diff: None }
+    InvarReport { equal: true, lists: summary, first_diff: None, recorded: false }
 }
 
 impl InvarReport {
     /// The report text (see the module docs), byte-stable.
     pub fn render(&self) -> String {
         let mut out = String::new();
-        out.push_str(if self.equal { "plat-gpu invariance: EQUAL\n" } else { "plat-gpu invariance: DIVERGED\n" });
+        out.push_str(if self.recorded { "plat-gpu invariance (recorded): " } else { "plat-gpu invariance: " });
+        out.push_str(if self.equal { "EQUAL\n" } else { "DIVERGED\n" });
         let names: Vec<&str> = self.lists.iter().map(|l| l.0.as_str()).collect();
         out.push_str(&format!("backends: {}\n", names.join(" ")));
         let counts: Vec<String> = self.lists.iter().map(|(b, n)| format!("{b}={n}")).collect();
@@ -511,6 +521,32 @@ pub trait Driver {
 #[derive(Debug, Clone)]
 pub struct FidDriver {
     pub fid: PathBuf,
+    /// How long one backend run may take before `fid` is killed (SequenceFailed).
+    pub timeout: Duration,
+}
+
+impl FidDriver {
+    /// A driver with [`DEFAULT_TIMEOUT`].
+    pub fn new(fid: PathBuf) -> FidDriver {
+        FidDriver { fid, timeout: DEFAULT_TIMEOUT }
+    }
+}
+
+/// Reads at most `MAX_BYTES + 1` bytes of a pipe and drains the rest, so the child never blocks.
+fn read_capped<R: Read + Send + 'static>(pipe: Option<R>) -> Option<std::thread::JoinHandle<Vec<u8>>> {
+    pipe.map(|p| {
+        std::thread::spawn(move || {
+            let mut p = p;
+            let mut buf = Vec::new();
+            let _ = (&mut p).take(MAX_BYTES + 1).read_to_end(&mut buf);
+            let _ = std::io::copy(&mut p, &mut std::io::sink());
+            buf
+        })
+    })
+}
+
+fn join(h: Option<std::thread::JoinHandle<Vec<u8>>>) -> Vec<u8> {
+    h.and_then(|h| h.join().ok()).unwrap_or_default()
 }
 
 fn first_line(bytes: &[u8]) -> String {
@@ -520,7 +556,8 @@ fn first_line(bytes: &[u8]) -> String {
 
 impl Driver for FidDriver {
     fn run(&mut self, backend: Backend, project: &Path, sequence: &Path) -> Result<DigestList, InvarError> {
-        let out = Command::new(&self.fid)
+        let failed = |reason: String| InvarError::SequenceFailed { backend: Some(backend.name().into()), reason };
+        let mut child = Command::new(&self.fid)
             .arg("--gpu-backend")
             .arg(backend.name())
             .arg("invariance-run")
@@ -529,11 +566,37 @@ impl Driver for FidDriver {
             .arg("--sequence")
             .arg(sequence)
             .arg("--json")
-            .output()
-            .map_err(|e| InvarError::SequenceFailed {
-                backend: Some(backend.name().into()),
-                reason: format!("cannot start {}: {e}", self.fid.display()),
-            })?;
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| failed(format!("cannot start {}: {e}", self.fid.display())))?;
+        let out_h = read_capped(child.stdout.take());
+        let err_h = read_capped(child.stderr.take());
+        let deadline = Instant::now() + self.timeout;
+        let status = loop {
+            match child.try_wait() {
+                Ok(Some(s)) => break Ok(s),
+                Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
+                Ok(None) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break Err(failed(format!("fid did not finish within {} s", self.timeout.as_secs())));
+                }
+                Err(e) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break Err(failed(format!("cannot wait for fid: {e}")));
+                }
+            }
+        };
+        let stdout = join(out_h);
+        let stderr = join(err_h);
+        let status = status?;
+        if stdout.len() as u64 > MAX_BYTES {
+            return Err(failed(format!("fid printed more than {MAX_BYTES} bytes")));
+        }
+        let out = std::process::Output { status, stdout, stderr };
         match out.status.code() {
             Some(0) => parse_digest_list(&out.stdout).map_err(|e| InvarError::SequenceFailed {
                 backend: Some(backend.name().into()),
