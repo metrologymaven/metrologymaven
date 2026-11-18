@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 58
 satisfies: [REQ-KRN.NUM-001, REQ-KRN.NUM-007, REQ-KRN.NUM-011]
 covers: []
 depends_on: [KRN.NUM.ERR]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # KRN.NUM.KDEC: Exact decimal type and comparator (kdec)
@@ -33,7 +35,7 @@ Limits on drawings are decimals (10.050 mm), while kernel values are binary64. C
 
 ## Requirements
 
-- **REQ-KRN.NUM.KDEC-001** `Decimal::parse` shall accept an optional sign, digits, an optional fraction and an optional exponent, at most 40 significant digits and exponents within plus or minus 400, and shall return a typed error for any other input without allocating more than a fixed bound.
+- **REQ-KRN.NUM.KDEC-001** `Decimal::parse` shall accept an optional sign, digits, an optional fraction and an optional exponent, with at most 40 significant digits, a coefficient (trailing zeros moved to the exponent) that fits in an unsigned 128-bit integer (so every value of up to 38 significant digits, and 39 or 40 digits only when the coefficient fits), and a written and a normalised exponent both within plus or minus 400, and shall return a typed error for any other input without allocating more than a fixed bound.
 - **REQ-KRN.NUM.KDEC-002** `kdec::cmp(x: f64, d: &Decimal)` shall return the exact ordering of the real number x and the real number d, and shall return `NumError::NotANumber` or `Infinite` for non-finite x.
 - **REQ-KRN.NUM.KDEC-003** `cmp` shall return `Equal` only when x and d denote exactly the same real number (for example 0.5 and 0.50, never 0.1 and the nearest f64 to 0.1).
 - **REQ-KRN.NUM.KDEC-004** `Decimal::shift10(k)` and `Decimal::mul(&Decimal)` shall be exact, so a limit authored in mm or inch converts to metres with no rounding.
@@ -53,7 +55,7 @@ Limits on drawings are decimals (10.050 mm), while kernel values are binary64. C
 - **Registry command(s):** none; module `fid_num::kdec`.
 - **Data structures:** `pub struct Decimal { neg: bool, coeff: u128, exp10: i16 }` normalised (no trailing zeros in `coeff` unless zero); internal `struct Big { limbs: [u32; N] , len: usize }` with N fixed (sized for 2^1100 times 10^440 [unverified bound, derive exactly in the implementation]).
 - **Algorithm:** decompose x into (sign, mantissa m, binary exponent e) from its bits. Compare m * 2^e with c * 10^k by moving all factors to non-negative exponents on both sides (multiply by 2^max(0,-e) and 10^max(0,-k)) and comparing the two big integers. Signs and zero are handled first. `to_f64` uses `core::str::parse::<f64>` on the canonical string (correctly rounded in core [unverified since which Rust version; pin the toolchain]), cross-checked in tests by an exact big-integer rounding.
-- **Errors:** `KdecError::{Syntax, TooManyDigits, ExponentRange}` wrapped in `NumError::Domain`; non-finite inputs as `NumError`.
+- **Errors:** `KdecError::{Syntax, TooManyDigits, ExponentRange, CoefficientOverflow, Capacity}` carried as the `detail` of `NumError::Domain` with an `op` starting `kdec.`; `Capacity` (big-integer limbs exhausted) is unreachable for valid decimals and is reported, never answered wrongly; non-finite inputs as `NumError`. Zero has no exponent for value operations; the parser checks the written exponent of every input.
 - **Determinism:** D0; integer arithmetic only.
 - **Performance budget:** one `cmp` < 2 microseconds worst case [unverified until measured].
 - **Crate:** `fid-num` (module `kdec`).
