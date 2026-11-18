@@ -1,0 +1,5 @@
+[package]
+name = "fid-bus-api"
+version = "0.0.0"
+edition = "2021"
+publish = false

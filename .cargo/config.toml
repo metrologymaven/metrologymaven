@@ -1,5 +1,6 @@
 [alias]
 # cargo xtask layers  (ECO.REPO.LAYERS)
+# cargo xtask lint-crate-graph  (CORE.BUS.LINT)
 # cargo xtask datasets-check --catalogue <toml> --domains <file>  (ECO.DATA.CAT)
 # cargo xtask bots-check --register <toml> --restricted <txt> --today <date> [--review-export <json>]  (ECO.CI.BOTS.REG)
 xtask = "run -q -p fid-xtask --"
