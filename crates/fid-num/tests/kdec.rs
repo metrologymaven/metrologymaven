@@ -128,7 +128,7 @@ fn non_finite_is_an_error() {
 #[test]
 fn ac3_to_f64_correctly_rounded() {
     let rows = records("f64");
-    assert!(rows.len() >= 9_900, "fixture too small: {}", rows.len());
+    assert!(rows.len() >= 10_000, "fixture too small: {}", rows.len());
     for f in &rows {
         let want = bits(&f[2]);
         let got = dec(&f[1]).to_f64().unwrap().to_bits();

@@ -283,7 +283,7 @@ impl Ord for Decimal {
 
 impl PartialOrd for Decimal {
     fn partial_cmp(&self, other: &Decimal) -> Option<Ordering> {
-        Some(cmp_dec(self, other))
+        Some(self.cmp(other))
     }
 }
 

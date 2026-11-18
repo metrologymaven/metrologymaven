@@ -278,7 +278,8 @@ f64_strings += [s + "e-3" if "e" not in s.lower() else None for s in limits[:100
 f64_strings = [s for s in f64_strings if s is not None]
 while len(f64_strings) < 6000:
     s = sci_string()
-    if ref_parse(s)[0] == "ok":
+    r = ref_parse(s)
+    if r[0] == "ok" and round_exact(value(r)) is not None:  # finite results only
         f64_strings.append(s)
 while len(f64_strings) < 8500:  # one unit below or above a halfway point in the last of 20-38 digits
     a = random_double()
