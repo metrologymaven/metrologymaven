@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-dist]
+built_pr: 80
 satisfies: [REQ-GEO.DIST.FACE-002, REQ-GEO.DIST.FACE-005]
 covers: []
 depends_on: []
