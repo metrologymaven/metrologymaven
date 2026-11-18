@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/entry.schema.json",
+  "title": "Metrology Maven journal entry header (schema version 1, spec node CORE.JRN.ENTRY)",
+  "description": "The hashed header of one journal entry. Detachable fields (arguments, event bodies, reason, identities) appear only as salted SHA-256 commitments; their salts and values live in the detachable payload. The entry hash is SHA-256 over the RFC 8785 form of this object with `hash` omitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "stream", "seq", "prev", "branch", "logical_parent", "time", "principal",
+    "ai_assistance", "manifests", "signatures", "hash"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"enum": ["command", "session_header", "principal_upgrade", "head_move"]},
+    "stream": {"$ref": "#/$defs/ident"},
+    "seq": {"$ref": "#/$defs/u64"},
+    "prev": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "branch": {"$ref": "#/$defs/branch"},
+    "logical_parent": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["utc", "mono_ns", "sync"],
+      "properties": {
+        "utc": {"$ref": "#/$defs/utc"},
+        "mono_ns": {"$ref": "#/$defs/u64"},
+        "sync": {"$ref": "#/$defs/text"}
+      }
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "commit"],
+      "properties": {
+        "kind": {"enum": ["human", "agent", "script", "service", "device", "system"]},
+        "commit": {"$ref": "#/$defs/digest"},
+        "on_behalf_of_commit": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "ai_assistance": {"enum": ["none", "suggested", "authored", "executed"]},
+    "manifests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry", "kernel"],
+      "properties": {"registry": {"$ref": "#/$defs/digest"}, "kernel": {"$ref": "#/$defs/digest"}}
+    },
+    "reason_commit": {"$ref": "#/$defs/digest"},
+    "human_assertion": {"$ref": "#/$defs/text"},
+    "signatures": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "major", "class", "determinism", "seed", "args_commit", "events_commit", "inputs", "outputs",
+        "algorithms"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$"},
+        "major": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+        "class": {"enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]},
+        "determinism": {"enum": ["D0", "D1", "D2", "D3", "N"]},
+        "seed": {"$ref": "#/$defs/u64"},
+        "args_commit": {"$ref": "#/$defs/digest"},
+        "events_commit": {"$ref": "#/$defs/digest"},
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tag", "digest"],
+            "properties": {"tag": {"$ref": "#/$defs/ident"}, "digest": {"$ref": "#/$defs/digest"}}
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["digest"],
+            "properties": {"entity": {"$ref": "#/$defs/text"}, "digest": {"$ref": "#/$defs/digest"}}
+          }
+        },
+        "algorithms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+          }
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "app_version"],
+      "properties": {"session_id": {"$ref": "#/$defs/text"}, "app_version": {"$ref": "#/$defs/text"}}
+    },
+    "upgrade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "method", "identity_commit", "confirmed_at"],
+      "properties": {
+        "session_id": {"$ref": "#/$defs/text"},
+        "method": {"enum": ["gui_prompt", "os_presence"]},
+        "identity_commit": {"$ref": "#/$defs/digest"},
+        "confirmed_at": {"$ref": "#/$defs/utc"}
+      }
+    },
+    "head_move": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {"from": {"$ref": "#/$defs/digest"}, "to": {"$ref": "#/$defs/digest"}}
+    },
+    "hash": {"$ref": "#/$defs/digest"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"const": "command"}}},
+      "then": {"required": ["command"], "properties": {"session": false, "upgrade": false, "head_move": false}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "session_header"}}},
+      "then": {"required": ["session"], "properties": {"command": false, "upgrade": false, "head_move": false}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "principal_upgrade"}}},
+      "then": {"required": ["upgrade"], "properties": {"command": false, "session": false, "head_move": false}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "head_move"}}},
+      "then": {"required": ["head_move"], "properties": {"command": false, "session": false, "upgrade": false}}
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "u64": {"type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$", "maxLength": 20},
+    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "text": {"type": "string", "minLength": 1},
+    "branch": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"},
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"}
+  }
+}
