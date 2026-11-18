@@ -49,8 +49,11 @@ fn expected() -> CValue {
     load_json(&root(&format!("{FIX}/expected.json")))
 }
 
+/// The regular files of a start state: (path, bytes).
+type Files = Vec<(String, Vec<u8>)>;
+
 /// Minimal ustar reader for the start-state archives: (path, bytes) of every regular file.
-fn untar(bytes: &[u8]) -> Vec<(String, Vec<u8>)> {
+fn untar(bytes: &[u8]) -> Files {
     let field = |h: &[u8]| String::from_utf8(h.iter().take_while(|b| **b != 0).copied().collect()).unwrap();
     let mut out = Vec::new();
     let mut pos = 0;
@@ -86,7 +89,7 @@ fn hits(files: &[(String, Vec<u8>)], needle: &str) -> BTreeMap<String, usize> {
     files.iter().map(|(p, b)| (p.clone(), count(p.as_bytes(), needle) + count(b, needle))).collect()
 }
 
-fn start_files(t: &SuiteTask) -> Vec<(String, Vec<u8>)> {
+fn start_files(t: &SuiteTask) -> Files {
     let p = root(SUITE).join("tasks").join(&t.task.id).join(t.task.start_state.path.as_str());
     untar(&std::fs::read(p).unwrap())
 }
@@ -201,8 +204,7 @@ fn ac1_cli_suite_check() {
 #[test]
 fn markers_only_in_payloads() {
     let suite = load_suite(&root(SUITE)).unwrap();
-    let all: Vec<(String, Vec<(String, Vec<u8>)>)> =
-        suite.tasks.iter().map(|t| (t.task.id.clone(), start_files(t))).collect();
+    let all: Vec<(String, Files)> = suite.tasks.iter().map(|t| (t.task.id.clone(), start_files(t))).collect();
     for (t, (_, files)) in suite.tasks.iter().zip(&all) {
         let t = &t.task;
         let m = marker_of(t);
@@ -318,7 +320,11 @@ fn payload_labelled_cases() {
     let t = read_task(&dir.join("cases/inj-valid-pmi-two.json")).unwrap();
     assert_eq!(
         t.payloads.iter().map(|p| (p.file.as_str(), p.vector)).collect::<Vec<_>>(),
-        vec![("in/part.json", Vector::ElementName), ("in/part.json", Vector::PmiNote), ("README.txt", Vector::FileName)]
+        vec![
+            ("in/part.json", Vector::ElementName),
+            ("in/part.json", Vector::PmiNote),
+            ("README.txt", Vector::FileName)
+        ]
     );
     // An ordinary task has no payloads.
     let plain = read_task(&root("fixtures/agent/redteam/fabric/cases/rt-plain-task.json")).unwrap();
