@@ -10,32 +10,32 @@ keyword = "STMTE"
 import = "full"
 export = "full"
 modules = [{ module = "B", level = 1 }, { module = "A", level = 1 }]
-tests = ["t_e_export", "t_e"]
+tests = ["fid-demo::acceptance::t_e_export", "fid-demo::acceptance::t_e"]
 
 [[statement]]
 keyword = "STMTA"
 import = "full"
 export = "none"
 modules = [{ module = "A", level = 1 }]
-tests = ["t_a"]
+tests = ["fid-demo::acceptance::t_a"]
 
 [[statement]]
 keyword = "STMTB"
 import = "full"
 export = "none"
 modules = [{ module = "A", level = 1 }]
-tests = ["t_b"]
+tests = ["fid-demo::acceptance::t_b"]
 
 [[statement]]
 keyword = "STMTC"
 import = "full"
 export = "none"
 modules = [{ module = "B", level = 1 }]
-tests = ["t_c"]
+tests = ["fid-demo::acceptance::t_c"]
 
 [[statement]]
 keyword = "STMTD"
 import = "partial"
 export = "none"
 modules = [{ module = "B", level = 1 }]
-tests = ["t_d"]
+tests = ["fid-demo::acceptance::t_d"]

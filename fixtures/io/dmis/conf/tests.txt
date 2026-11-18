@@ -1,10 +1,10 @@
-t_a: test
-t_b: test
-t_c: test
-t_d: test
-t_e: test
-t_e_export: test
-unrelated::other: test
+fid-demo::acceptance::t_a: test
+fid-demo::acceptance::t_b: test
+fid-demo::acceptance::t_c: test
+fid-demo::acceptance::t_d: test
+fid-demo::acceptance::t_e: test
+fid-demo::acceptance::t_e_export: test
+fid-demo::acceptance::unrelated::other: test
 bench_x: benchmark
 
 7 tests, 1 benchmarks

@@ -149,8 +149,21 @@ fn valid_module(s: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '-')
 }
 
+fn valid_package(p: &str) -> bool {
+    !p.is_empty() && p.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
+}
+
+/// A declared test ID is qualified as `<package>::<test target>::<test name>` (the form the
+/// `inventory` subcommand writes), so a short name cannot match a same-named test elsewhere.
 fn valid_test_id(s: &str) -> bool {
-    !s.is_empty() && s.len() <= MAX_TEST_ID_LEN && !s.chars().any(|c| c.is_whitespace() || c == '|' || c == '`')
+    let mut parts = s.split("::");
+    let package_ok = parts.next().is_some_and(valid_package);
+    let rest: Vec<&str> = parts.collect();
+    package_ok
+        && rest.len() >= 2
+        && rest.iter().all(|p| !p.is_empty())
+        && s.len() <= MAX_TEST_ID_LEN
+        && !s.chars().any(|c| c.is_whitespace() || c == '|' || c == '`')
 }
 
 fn get_str<'a>(t: &'a toml::Table, key: &str, ctx: &str) -> Result<&'a str, ConfError> {
@@ -226,7 +239,7 @@ fn parse_statement(v: &toml::Value, index: usize) -> Result<SupportDecl, ConfErr
             return Err(malformed(format!("{ctx}: test IDs must be strings")));
         };
         if !valid_test_id(id) {
-            return Err(malformed(format!("{ctx}: invalid test ID {id:?}")));
+            return Err(malformed(format!("{ctx}: invalid test ID {id:?} (want <package>::<target>::<test>)")));
         }
         if !tests.insert(id.clone()) {
             return Err(malformed(format!("{ctx}: duplicate test ID {id:?}")));

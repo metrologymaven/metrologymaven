@@ -1,5 +1,10 @@
 //! `dmis-conformance --decl <toml> --tests <inventory> (--out-dir <dir> | --check <dir>)`
+//! `dmis-conformance inventory --cargo-json <file> --out <file>`
 //! (spec node `IO.DMIS.CONF`).
+//!
+//! `inventory` reads `cargo test --workspace --no-run --message-format=json` output, runs each
+//! test executable with `--list` and `--list --ignored`, and writes the non-ignored tests as
+//! `<package>::<target>::<test>: test` lines.
 //!
 //! `--out-dir` writes `dmis-conformance.json` and `dmis-conformance.md` into the directory.
 //! `--check` regenerates in memory and fails if the committed files in the directory differ
@@ -9,10 +14,12 @@
 //! stale files; 2 bad usage.
 
 use fid_io_dmis::conf::{generate_files, stale_files, write_outputs};
+use fid_io_dmis::inventory::build_inventory;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: dmis-conformance --decl <toml> --tests <inventory> (--out-dir <dir> | --check <dir>)";
+const USAGE: &str = "usage: dmis-conformance --decl <toml> --tests <inventory> (--out-dir <dir> | --check <dir>)
+                            dmis-conformance inventory --cargo-json <file> --out <file>";
 
 enum Mode {
     Write(PathBuf),
@@ -24,8 +31,32 @@ fn usage() -> ExitCode {
     ExitCode::from(2)
 }
 
+fn inventory(args: &[String]) -> ExitCode {
+    let (cargo_json, out) = match args {
+        [a, j, b, o] if a == "--cargo-json" && b == "--out" => (PathBuf::from(j), PathBuf::from(o)),
+        _ => return usage(),
+    };
+    let result = std::fs::read_to_string(&cargo_json)
+        .map_err(|e| format!("io: {}: {e}", cargo_json.display()))
+        .and_then(|text| build_inventory(&text).map_err(|e| e.to_string()))
+        .and_then(|inv| std::fs::write(&out, inv).map_err(|e| format!("io: {}: {e}", out.display())));
+    match result {
+        Ok(()) => {
+            println!("dmis-conformance: wrote {}", out.display());
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("dmis-conformance: {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("inventory") {
+        return inventory(&args[1..]);
+    }
     let mut decl: Option<PathBuf> = None;
     let mut tests: Option<PathBuf> = None;
     let mut mode: Option<Mode> = None;

@@ -8,11 +8,11 @@ keyword = "STMTA"
 import = "full"
 export = "none"
 modules = [{ module = "A", level = 1 }]
-tests = ["t_a"]
+tests = ["fid-demo::acceptance::t_a"]
 
 [[statement]]
 keyword = "STMTB"
 import = "full"
 export = "none"
 modules = [{ module = "A", level = 1 }]
-tests = ["t_missing"]
+tests = ["fid-demo::acceptance::t_missing"]

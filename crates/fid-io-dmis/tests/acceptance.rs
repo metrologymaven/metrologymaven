@@ -8,6 +8,7 @@ use fid_io_dmis::conf::{
     generate, generate_files, parse_declarations, parse_inventory, stale_files, write_outputs, ConfError, Support,
     JSON_FILE, MD_FILE,
 };
+use fid_io_dmis::inventory::{inventory_text, qualified_ids, test_binaries, TestBinary};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -168,10 +169,10 @@ fn ac4_committed_table_matches_declarations() {
 #[test]
 fn module_level_is_minimum_over_statements() {
     let decl = "schema = \"fid.dmis-support\"\nversion = 1\n\
-        [[statement]]\nkeyword = \"P\"\nimport = \"full\"\nexport = \"partial\"\nmodules = [{ module = \"M\", level = 2 }]\ntests = [\"t\"]\n\
-        [[statement]]\nkeyword = \"Q\"\nimport = \"none\"\nexport = \"full\"\nmodules = [{ module = \"M\", level = 2 }]\ntests = [\"t\"]\n";
+        [[statement]]\nkeyword = \"P\"\nimport = \"full\"\nexport = \"partial\"\nmodules = [{ module = \"M\", level = 2 }]\ntests = [\"p::t::t\"]\n\
+        [[statement]]\nkeyword = \"Q\"\nimport = \"none\"\nexport = \"full\"\nmodules = [{ module = \"M\", level = 2 }]\ntests = [\"p::t::t\"]\n";
     let decls = parse_declarations(decl).unwrap();
-    let inv = parse_inventory("t: test\n");
+    let inv = parse_inventory("p::t::t: test\n");
     let table = fid_io_dmis::conf::build(decls, &inv).unwrap();
     let l = table.module_levels.values().next().unwrap();
     assert_eq!((l.import, l.export), (Support::None, Support::Partial));
@@ -202,7 +203,10 @@ fn malformed_declarations_are_rejected() {
         stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\nmodules = [{ module = \"a|b\", level = 1 }]"),
         stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\nmodules = [{ module = \"M\", level = 1 }, { module = \"M\", level = 1 }]"),
         stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"a b\"]"),
-        stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"t\", \"t\"]"),
+        stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"p::t::t\", \"p::t::t\"]"),
+        stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"t_a\"]"),
+        stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"acceptance::t_a\"]"),
+        stmt("keyword = \"K\"\nimport = \"none\"\nexport = \"none\"\ntests = [\"Pkg::acceptance::t_a\"]"),
         format!("{head}[[statement]]\nkeyword = \"K\"\nimport = \"none\"\nexport = \"none\"\n[[statement]]\nkeyword = \"K\"\nimport = \"none\"\nexport = \"none\"\n"),
     ];
     for c in &cases {
@@ -216,3 +220,55 @@ fn bad_usage_exits_2() {
     let out = bin().args(["--decl", "x.toml"]).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
+
+const ONE_CLAIM: &str = "schema = \"fid.dmis-support\"\nversion = 1\n\
+    [[statement]]\nkeyword = \"K\"\nimport = \"full\"\nexport = \"none\"\ntests = [\"fid-demo::acceptance::slow\"]\n";
+
+#[test]
+fn ignored_tests_cannot_back_a_claim() {
+    let list = "fast: test\nslow: test\n\n2 tests, 0 benchmarks\n";
+    let ignored = "slow: test\n\n1 tests, 0 benchmarks\n";
+    let ids = qualified_ids("fid-demo", "acceptance", list, ignored);
+    let got: Vec<&str> = ids.iter().map(String::as_str).collect();
+    assert_eq!(got, vec!["fid-demo::acceptance::fast"]);
+    assert_eq!(
+        generate(ONE_CLAIM, &inventory_text(&ids)).unwrap_err(),
+        ConfError::ConformanceUnproven { statement: "K".to_string() }
+    );
+    // The same test, not ignored, proves the claim.
+    let ids = qualified_ids("fid-demo", "acceptance", list, "");
+    assert!(generate(ONE_CLAIM, &inventory_text(&ids)).is_ok());
+}
+
+#[test]
+fn same_named_test_in_another_package_does_not_match() {
+    let ids = qualified_ids("fid-other", "acceptance", "slow: test\n", "");
+    assert_eq!(inventory_text(&ids), "fid-other::acceptance::slow: test\n");
+    assert_eq!(
+        generate(ONE_CLAIM, &inventory_text(&ids)).unwrap_err(),
+        ConfError::ConformanceUnproven { statement: "K".to_string() }
+    );
+    // An unqualified short name is rejected outright.
+    let short = ONE_CLAIM.replace("fid-demo::acceptance::slow", "slow");
+    assert_eq!(generate(&short, "slow: test\n").unwrap_err().code(), "malformed");
+}
+
+#[test]
+fn test_binaries_come_from_cargo_json() {
+    let text = std::fs::read_to_string(fixtures().join("cargo-no-run.json")).unwrap();
+    assert_eq!(
+        test_binaries(&text).unwrap(),
+        vec![TestBinary {
+            manifest_path: PathBuf::from("/w/crates/fid-demo/Cargo.toml"),
+            target: "acceptance".to_string(),
+            executable: PathBuf::from("/w/target/debug/deps/acceptance-3c4d"),
+        }]
+    );
+    assert_eq!(test_binaries("not json").unwrap_err().code(), "malformed");
+}
+
+/// Never runs by default. CI checks that the real inventory leaves this test out
+/// (ignored tests cannot back a claim) while it lists the other tests of this binary.
+#[test]
+#[ignore = "probe for the CI inventory check"]
+fn ignored_inventory_probe() {}

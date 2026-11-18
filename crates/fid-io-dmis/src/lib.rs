@@ -6,3 +6,4 @@
 //! support declarations, and every `partial` or `full` declaration must name a test that exists.
 
 pub mod conf;
+pub mod inventory;

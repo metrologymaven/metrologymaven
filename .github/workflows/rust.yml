@@ -41,8 +41,14 @@ jobs:
         # Regenerates docs/dmis/ from the declarations and the real test inventory; fails if stale.
         if: runner.os == 'Linux'
         shell: bash
+        # The inventory is `--list` minus `--list --ignored`, with IDs qualified as
+        # <package>::<target>::<test>; the probe test checks both properties end to end.
         run: |
-          cargo test --workspace -q -- --list > "$RUNNER_TEMP/test-inventory.txt"
+          cargo test --workspace --no-run --message-format=json > "$RUNNER_TEMP/cargo-tests.json"
+          cargo run -q -p fid-io-dmis --bin dmis-conformance -- inventory \
+            --cargo-json "$RUNNER_TEMP/cargo-tests.json" --out "$RUNNER_TEMP/test-inventory.txt"
+          grep -qx 'fid-io-dmis::acceptance::ac3_same_inputs_give_identical_bytes: test' "$RUNNER_TEMP/test-inventory.txt"
+          if grep -q 'ignored_inventory_probe' "$RUNNER_TEMP/test-inventory.txt"; then exit 1; fi
           cargo run -q -p fid-io-dmis --bin dmis-conformance -- \
             --decl crates/fid-io-dmis/conformance/declarations.toml \
             --tests "$RUNNER_TEMP/test-inventory.txt" --check docs/dmis

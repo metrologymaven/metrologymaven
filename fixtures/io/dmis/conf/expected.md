@@ -14,8 +14,8 @@ Support is `none`, `partial` or `full` per direction. A module level is `full` o
 
 | Statement | Import | Export | Module levels | Tests |
 | --- | --- | --- | --- | --- |
-| STMTA | full | none | A level 1 | `t_a` |
-| STMTB | full | none | A level 1 | `t_b` |
-| STMTC | full | none | B level 1 | `t_c` |
-| STMTD | partial | none | B level 1 | `t_d` |
-| STMTE | full | full | A level 1, B level 1 | `t_e`, `t_e_export` |
+| STMTA | full | none | A level 1 | `fid-demo::acceptance::t_a` |
+| STMTB | full | none | A level 1 | `fid-demo::acceptance::t_b` |
+| STMTC | full | none | B level 1 | `fid-demo::acceptance::t_c` |
+| STMTD | partial | none | B level 1 | `fid-demo::acceptance::t_d` |
+| STMTE | full | full | A level 1, B level 1 | `fid-demo::acceptance::t_e`, `fid-demo::acceptance::t_e_export` |
