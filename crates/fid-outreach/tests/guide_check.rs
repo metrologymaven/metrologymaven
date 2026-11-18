@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_outreach::guide_check::{code_spans, parse_name_state, scan_literal_names, scan_tokens, Code};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 fn repo(rel: &str) -> PathBuf {
@@ -15,7 +15,7 @@ fn fix(case: &str) -> PathBuf {
     repo("fixtures/outr/brand/guide").join(case)
 }
 
-fn s(p: &PathBuf) -> String {
+fn s(p: &Path) -> String {
     p.to_string_lossy().into_owned()
 }
 
@@ -23,7 +23,7 @@ fn bin(args: &[String]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_fid-outreach")).args(args).output().unwrap()
 }
 
-fn check(root: &PathBuf, name: &PathBuf, extra: &[String]) -> Output {
+fn check(root: &Path, name: &Path, extra: &[String]) -> Output {
     let mut a = vec!["guide-check".to_string(), "--root".into(), s(root), "--name".into(), s(name)];
     a.extend_from_slice(extra);
     bin(&a)
@@ -40,7 +40,7 @@ fn out_dir(tag: &str) -> PathBuf {
     d
 }
 
-fn publish_args(out: &PathBuf) -> Vec<String> {
+fn publish_args(out: &Path) -> Vec<String> {
     vec!["--publish".into(), "--out".into(), s(out)]
 }
 
@@ -52,7 +52,7 @@ fn lines(o: &Output) -> Vec<String> {
     String::from_utf8_lossy(&o.stdout).lines().filter(|l| !l.starts_with("guide-check:")).map(str::to_string).collect()
 }
 
-fn is_empty_or_absent(d: &PathBuf) -> bool {
+fn is_empty_or_absent(d: &Path) -> bool {
     match std::fs::read_dir(d) {
         Ok(mut it) => it.next().is_none(),
         Err(_) => true,
@@ -162,12 +162,8 @@ fn literal_scan_rules() {
     let text = "a `fid` b\nfid-outreach\nFiducials\n``x `Fiducial` y``\nunclosed `Fiducial\nsay Examplo Two.\n~~~\nfid\n~~~\nfid\n";
     let got: Vec<(usize, String)> =
         scan_literal_names("f.md", text, &names).into_iter().map(|f| (f.line, f.detail)).collect();
-    let want: Vec<(usize, String)> = vec![
-        (2, "fid".into()),
-        (5, "Fiducial".into()),
-        (6, "Examplo Two".into()),
-        (10, "fid".into()),
-    ];
+    let want: Vec<(usize, String)> =
+        vec![(2, "fid".into()), (5, "Fiducial".into()), (6, "Examplo Two".into()), (10, "fid".into())];
     assert_eq!(got, want);
     assert!(scan_literal_names("f.md", "x", &names).iter().all(|f| f.code == Code::LiteralName));
 }

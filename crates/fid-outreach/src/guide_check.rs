@@ -268,7 +268,9 @@ fn prose_lines(text: &str) -> Vec<(usize, &str, bool)> {
                 fence = Some((m, run));
                 out.push((idx + 1, line, false));
             }
-            (Some((fm, fr)), Some(m)) if is_fence && m == fm && run >= fr && body.get(run..).is_some_and(|t| t.trim().is_empty()) => {
+            (Some((fm, fr)), Some(m))
+                if is_fence && m == fm && run >= fr && body.get(run..).is_some_and(|t| t.trim().is_empty()) =>
+            {
                 fence = None;
                 out.push((idx + 1, line, false));
             }
@@ -293,12 +295,18 @@ pub fn scan_literal_names(file: &str, text: &str, names: &[&str]) -> Vec<Finding
             let hit = line.match_indices(name).any(|(start, m)| {
                 let end = start + m.len();
                 let in_code = spans.iter().any(|&(s, e)| start < e && end > s);
-                let before_ok = line.get(..start).and_then(|p| p.chars().next_back()).map_or(true, |c| !is_word_char(c));
+                let before_ok =
+                    line.get(..start).and_then(|p| p.chars().next_back()).map_or(true, |c| !is_word_char(c));
                 let after_ok = line.get(end..).and_then(|p| p.chars().next()).map_or(true, |c| !is_word_char(c));
                 !in_code && before_ok && after_ok
             });
             if hit {
-                found.push(Finding { code: Code::LiteralName, file: file.to_string(), line: lineno, detail: name.to_string() });
+                found.push(Finding {
+                    code: Code::LiteralName,
+                    file: file.to_string(),
+                    line: lineno,
+                    detail: name.to_string(),
+                });
             }
         }
     }
@@ -449,7 +457,9 @@ pub fn run(opts: &Options) -> Result<Report, GuideError> {
     };
     if let Some(out) = &opts.publish_to {
         match state.accepted_name() {
-            None => findings.push(Finding { code: Code::NameNotAccepted, file: name_path, line: 0, detail: String::new() }),
+            None => {
+                findings.push(Finding { code: Code::NameNotAccepted, file: name_path, line: 0, detail: String::new() })
+            }
             Some(chosen) => {
                 let copies: Vec<(String, String)> =
                     texts.iter().map(|(rel, t)| (rel.clone(), t.replace(FAMILY_TOKEN, chosen))).collect();
