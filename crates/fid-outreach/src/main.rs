@@ -37,7 +37,14 @@
 //! as `{{FAMILY_NAME}}`; with `--publish`, writes copies with the accepted name substituted.
 //! Exits 0 with no findings, 1 with any (nothing written), and 2 on unreadable input, an
 //! unparsable name file, or bad usage.
+//!
+//! `asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]` (spec
+//! node `OUTR.BRAND.ASSET.ATTR`): checks that every image, font and media file is original or
+//! attributed under an allowlisted licence, and that no CSS or HTML loads a font or stylesheet
+//! from another origin. Exits 0 with no findings, 1 with any, and 2 on unreadable or unparsable
+//! input or bad usage.
 
+use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
 use fid_outreach::guide_check;
@@ -58,7 +65,8 @@ commands:
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
-  guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]";
+  guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
+  asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -70,6 +78,7 @@ fn main() -> ExitCode {
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -436,6 +445,64 @@ fn guide_check_cmd(args: &[String]) -> ExitCode {
                 }
             }
             eprintln!("guide-check: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn asset_check_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut excludes: Vec<String> = Vec::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--exclude" => {
+                let Some(v) = it.next() else { return usage() };
+                excludes.push(v.clone());
+            }
+            flag @ ("--root" | "--allow" | "--origin") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(root), Some(allow), Some(origin)) = (opts.get("--root"), opts.get("--allow"), opts.get("--origin")) else {
+        return usage();
+    };
+    let options = asset_check::Options {
+        root: PathBuf::from(root),
+        allow: PathBuf::from(allow),
+        origin: origin.to_string(),
+        excludes,
+    };
+    match asset_check::run(&options) {
+        Ok(report) => {
+            if json {
+                match report.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => {
+                        eprintln!("asset-check: report serialisation failed: {m}");
+                        return ExitCode::from(2);
+                    }
+                }
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                match e.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => eprintln!("asset-check: error serialisation failed: {m}"),
+                }
+            }
+            eprintln!("asset-check: {e}");
             ExitCode::from(2)
         }
     }

@@ -1,0 +1,3 @@
+/* Synthetic fixture: a font loaded from another origin. */
+
+@font-face { src: url(https://fonts.example.net/a.woff2) }
