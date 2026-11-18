@@ -1,0 +1,23 @@
+{
+  "command_id": "import.list_formats@1",
+  "envelope_version": 1,
+  "outcome": "computed",
+  "result": [
+    {
+      "id": "mesh.obj",
+      "origin": "first_party"
+    },
+    {
+      "id": "mesh.ply",
+      "origin": "first_party"
+    },
+    {
+      "id": "mesh.stl",
+      "origin": "first_party"
+    },
+    {
+      "id": "vendor.jt",
+      "origin": "plugin"
+    }
+  ]
+}

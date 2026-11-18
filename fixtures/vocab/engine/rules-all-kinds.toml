@@ -1,0 +1,56 @@
+# Synthetic rule file for spec node ECO.RULES.VOCAB.ENGINE (AC-1 .. AC-4, AC-7): one rule of each
+# kind. CC-BY-4.0 project data. Not the product rule set (that is ECO.RULES.VOCAB.RULESET).
+format = "fid-vocab-rules/1"
+version = "engine-fixture-1"
+
+[[rule]]
+id = "VC001"
+kind = "claim"
+severity = "error"
+message = "Certification or conformance wording needs a standard designator in the same sentence."
+words = ["certified", "compliant", "conformant", "validated"]
+qualifiers = ["designator"]
+scope = "sentence"
+examples.pass = [
+    "Probing error assessed per ISO 10360-5:2020 and validated against the reference set.",
+    "Recertified parts",
+]
+examples.fail = ["Our software is certified.", "CERTIFIED parts"]
+
+[[rule]]
+id = "VC002"
+kind = "name"
+severity = "error"
+message = "Name other products only to identify a file format or importer."
+names_file = "incumbents.txt"
+allow_id_prefixes = ["import."]
+allow_phrases = ["import from", "export to"]
+examples.pass = [
+    "Import from PolyWorks project files.",
+    { id = "import.polyworks.title", text = "PolyWorks project (*.psr)" },
+]
+examples.fail = ["Works like PolyWorks, only open."]
+
+[[rule]]
+id = "VC003"
+kind = "cooccur"
+severity = "error"
+message = "A comparison with another product needs a link to a published benchmark result."
+names_file = "incumbents.txt"
+comparison_words = ["faster", "better", "more accurate", "drop-in replacement"]
+link_prefixes = ["https://metrologymaven.org/bench/"]
+examples.pass = [
+    { text = "Faster than PolyWorks on the published alignment set.", links = ["https://metrologymaven.org/bench/align-1"] },
+    "PolyWorks files open. The new solver is faster.",
+]
+examples.fail = ["Faster than PolyWorks for best-fit alignment."]
+
+[[rule]]
+id = "VC004"
+kind = "preferred"
+severity = "warn"
+message = "Use the project's term."
+phrases = ["dialect map", "translation table"]
+preferred = "Dialect Mapping Table"
+examples.pass = ["Open the Dialect Mapping Table."]
+examples.fail = ["Edit the dialect map.", "Open the translation table."]

@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**27** of **1336** leaves built in code ([B]).
+**29** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 21 built)
+### Wave 1 (125 leaves, 23 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -71,7 +71,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
 - [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
 - [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
-- [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
+- [B] [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
 - [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
 - [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
@@ -80,7 +80,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
 - [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
-- [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
+- [B] [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
 - [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
 - [B] [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
 - [B] [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
