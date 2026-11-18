@@ -1,0 +1,170 @@
+[
+ {
+  "decimal": 0.001,
+  "negative": false,
+  "quantity": {
+   "unit": "m",
+   "value": "0x3f50624dd2f1a9fc"
+  }
+ },
+ {
+  "decimal": 0.0254,
+  "negative": true,
+  "quantity": {
+   "unit": "m",
+   "value": "0xbf9a027525460aa6"
+  }
+ },
+ {
+  "decimal": 1e-09,
+  "negative": false,
+  "quantity": {
+   "unit": "m",
+   "value": "0x3e112e0be826d695"
+  }
+ },
+ {
+  "decimal": 12.5,
+  "negative": false,
+  "quantity": {
+   "unit": "m",
+   "value": "0x4029000000000000"
+  }
+ },
+ {
+  "decimal": 0.0,
+  "negative": false,
+  "quantity": {
+   "unit": "m",
+   "value": "0x0000000000000000"
+  }
+ },
+ {
+  "decimal": 0.0,
+  "negative": true,
+  "quantity": {
+   "unit": "m",
+   "value": "0x8000000000000000"
+  }
+ },
+ {
+  "decimal": 3.141592653589793,
+  "negative": false,
+  "quantity": {
+   "unit": "rad",
+   "value": "0x400921fb54442d18"
+  }
+ },
+ {
+  "decimal": 1.5707963267948966,
+  "negative": true,
+  "quantity": {
+   "unit": "rad",
+   "value": "0xbff921fb54442d18"
+  }
+ },
+ {
+  "decimal": 1.5e-06,
+  "negative": false,
+  "quantity": {
+   "unit": "rad",
+   "value": "0x3eb92a737110e454"
+  }
+ },
+ {
+  "decimal": 0.5,
+  "negative": false,
+  "quantity": {
+   "unit": "s",
+   "value": "0x3fe0000000000000"
+  }
+ },
+ {
+  "decimal": 86400.0,
+  "negative": false,
+  "quantity": {
+   "unit": "s",
+   "value": "0x40f5180000000000"
+  }
+ },
+ {
+  "decimal": 5e-324,
+  "negative": false,
+  "quantity": {
+   "unit": "s",
+   "value": "0x0000000000000001"
+  }
+ },
+ {
+  "decimal": 293.15,
+  "negative": false,
+  "quantity": {
+   "unit": "K",
+   "value": "0x4072526666666666"
+  }
+ },
+ {
+  "decimal": 0.001,
+  "negative": false,
+  "quantity": {
+   "unit": "K",
+   "value": "0x3f50624dd2f1a9fc"
+  }
+ },
+ {
+  "decimal": 1.7976931348623157e+308,
+  "negative": false,
+  "quantity": {
+   "unit": "K",
+   "value": "0x7fefffffffffffff"
+  }
+ },
+ {
+  "decimal": 101325.0,
+  "negative": false,
+  "quantity": {
+   "unit": "Pa",
+   "value": "0x40f8bcd000000000"
+  }
+ },
+ {
+  "decimal": 0.0025,
+  "negative": true,
+  "quantity": {
+   "unit": "Pa",
+   "value": "0xbf647ae147ae147b"
+  }
+ },
+ {
+  "decimal": 0.45,
+  "negative": false,
+  "quantity": {
+   "unit": "1",
+   "value": "0x3fdccccccccccccd"
+  }
+ },
+ {
+  "decimal": 1.0,
+  "negative": false,
+  "quantity": {
+   "unit": "1",
+   "value": "0x3ff0000000000000"
+  }
+ },
+ {
+  "decimal": 1.0,
+  "negative": true,
+  "quantity": {
+   "unit": "1",
+   "value": "0xbff0000000000000"
+  }
+ },
+ {
+  "decimal": 2.2250738585072014e-308,
+  "negative": false,
+  "quantity": {
+   "unit": "1",
+   "value": "0x0010000000000000"
+  }
+ }
+]
