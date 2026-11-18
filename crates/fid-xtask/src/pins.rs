@@ -759,7 +759,10 @@ mod tests {
         .unwrap();
         let Some(Val::Table(pkg)) = doc.get("package") else { panic!() };
         assert_eq!(pkg.get("name"), Some(&s("a")));
-        assert_eq!(pkg.get("version"), Some(&Val::Table(Table::from([("workspace".into(), Val::Atom("true".into()))]))));
+        assert_eq!(
+            pkg.get("version"),
+            Some(&Val::Table(Table::from([("workspace".into(), Val::Atom("true".into()))])))
+        );
         let Some(Val::Table(deps)) = doc.get("dependencies") else { panic!() };
         let Some(Val::Table(x)) = deps.get("x") else { panic!() };
         assert_eq!(x.get("git"), Some(&s("https://h/x")));
@@ -821,7 +824,10 @@ mod tests {
             (&ok.replace("purpose = \"p\"\n", "")[..], "missing purpose"),
             (&ok.replace("id = \"a\"", "id = \"a\"\nowner = \"x\"")[..], "unknown key"),
             (&format!("{ok}status = \"gone\"\n")[..], "bad status"),
-            (&format!("{ok}{}", ok.replace("id = \"a\"", "id = \"b\"").replace("https://h/a", "HTTPS://H/a.git"))[..], "dup url"),
+            (
+                &format!("{ok}{}", ok.replace("id = \"a\"", "id = \"b\"").replace("https://h/a", "HTTPS://H/a.git"))[..],
+                "dup url",
+            ),
             (&format!("{ok}{}", ok.replace("https://h/a", "https://h/b"))[..], "dup id"),
             (&format!("x = 1\n{ok}")[..], "unknown top-level key"),
         ] {

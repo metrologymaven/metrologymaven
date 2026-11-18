@@ -11,7 +11,8 @@ fn repo_root() -> PathBuf {
 
 /// Runs `fid-xtask pins <args>` from the repository root; returns (exit code, stdout).
 fn pins(args: &[&str]) -> (i32, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).current_dir(repo_root()).arg("pins").args(args).output().unwrap();
+    let out =
+        Command::new(env!("CARGO_BIN_EXE_fid-xtask")).current_dir(repo_root()).arg("pins").args(args).output().unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap().replace("\r\n", "\n"))
 }
 
