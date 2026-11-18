@@ -1,5 +1,6 @@
 [alias]
 # cargo xtask layers  (ECO.REPO.LAYERS)
+# cargo xtask lint-crate-graph  (CORE.BUS.LINT)
 xtask = "run -q -p fid-xtask --"
 
 # Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.81).

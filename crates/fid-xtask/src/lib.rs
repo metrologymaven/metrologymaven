@@ -6,6 +6,11 @@
 //! special layer usable only as a dev-dependency. The check reads Cargo's resolved
 //! graph and fails when a crate reaches a higher layer, directly or through other
 //! crates, depends on a `tool` crate, or uses `test-support` outside dev-dependencies.
+//!
+//! `lint-crate-graph`: the no-side-doors check (spec node `CORE.BUS.LINT`), in
+//! [`crate_graph`]; it reuses the resolved graph built here.
+
+pub mod crate_graph;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
