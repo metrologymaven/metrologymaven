@@ -1,0 +1,9 @@
+[package]
+name = "fid-store"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-state = { path = "../state" }
+rusqlite = { path = "../../_vendor/rusqlite" }

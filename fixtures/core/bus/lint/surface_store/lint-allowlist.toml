@@ -1,0 +1,14 @@
+# Fixture allowlist for CORE.BUS.LINT.
+[mutable_state]
+crate = "fid-state"
+allowed = ["fid-bus", "fid-store"]
+
+[sqlite]
+drivers = ["libsqlite3-sys", "rusqlite"]
+
+[surfaces]
+crates = ["cli", "fid-viewer"]
+bus_api = "fid-bus-api"
+
+[core]
+crates = ["fid-bus", "fid-bus-api", "fid-state", "fid-store"]
