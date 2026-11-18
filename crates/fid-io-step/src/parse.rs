@@ -11,10 +11,9 @@ use std::sync::Arc;
 const PARAM_SIZE: u64 = std::mem::size_of::<Param>() as u64;
 /// Tracked allocation charged per instance: the `Instance` itself, one `parts` entry and
 /// an estimate of one map node.
-const INSTANCE_SIZE: u64 = (std::mem::size_of::<Instance>()
-    + std::mem::size_of::<(Ident, Vec<Param>)>()
-    + std::mem::size_of::<u64>()
-    + 32) as u64;
+const INSTANCE_SIZE: u64 =
+    (std::mem::size_of::<Instance>() + std::mem::size_of::<(Ident, Vec<Param>)>() + std::mem::size_of::<u64>() + 32)
+        as u64;
 
 fn pos(at: usize) -> Position {
     Position::byte(u64::try_from(at).unwrap_or(u64::MAX))
