@@ -17,7 +17,7 @@
 
 use crate::error::PkgError;
 use crate::path::PkgPath;
-use crate::version::{check_compatible, SemVer, FORMAT_VERSION};
+use crate::version::{check_compatible, SemVer};
 use fid_canon::CValue;
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
