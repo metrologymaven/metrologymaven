@@ -13,10 +13,11 @@ fn read(name: &str) -> Vec<u8> {
 }
 
 fn golden(name: &str) -> String {
-    String::from_utf8(read(name)).unwrap().trim().to_string()
+    format!("sha256:{}", String::from_utf8(read(name)).unwrap().trim())
 }
 
-/// SHA-256 of the valid values, f64 little-endian, in index order (masked samples skipped).
+/// SHA-256 of the valid values, f64 little-endian, in index order (masked samples skipped),
+/// as `sha256:<hex>` (the fixture files hold the bare hex).
 fn digest(d: &Decoded) -> String {
     let mut h = Sha256Hasher::new();
     for (_, v) in d.valid() {
@@ -48,8 +49,10 @@ fn ac1_i32_profile_golden_digest() {
 /// AC-2: masked NaN and infinity entries are skipped and the result matches the golden digest.
 #[test]
 fn ac2_f32_mixed_masked_nans_skipped() {
-    let raw: Vec<f32> =
-        read("f32_mixed.bin").chunks_exact(4).map(|c| f32::from_bits(u32::from_le_bytes([c[0], c[1], c[2], c[3]]))).collect();
+    let raw: Vec<f32> = read("f32_mixed.bin")
+        .chunks_exact(4)
+        .map(|c| f32::from_bits(u32::from_le_bytes([c[0], c[1], c[2], c[3]])))
+        .collect();
     let bits: Vec<bool> = read("f32_mixed.mask").iter().map(|b| *b == 1).collect();
     assert_eq!(raw.len(), 2000);
     assert_eq!(bits.len(), 2000);
@@ -89,7 +92,11 @@ fn ac4_unmasked_f32_infinity_is_not_finite() {
     assert_eq!(e, ConvError::ValueNotFinite { index: 1 });
     assert_eq!(e.code(), "encoding_value_not_finite");
     // The same value masked is skipped.
-    let ok = decode(RawArray::F32(&raw), &desc(NumericType::F32, 1e-3, 0.0), &ValidityMask::from_bools(&[true, false, true]));
+    let ok = decode(
+        RawArray::F32(&raw),
+        &desc(NumericType::F32, 1e-3, 0.0),
+        &ValidityMask::from_bools(&[true, false, true]),
+    );
     assert!(ok.is_ok());
 }
 
@@ -97,7 +104,8 @@ fn ac4_unmasked_f32_infinity_is_not_finite() {
 #[test]
 fn ac5_length_mismatch() {
     let raw = vec![7i32; 2000];
-    let e = decode(RawArray::I32(&raw), &desc(NumericType::I32, 1e-6, 0.0), &ValidityMask::all_valid(1999)).unwrap_err();
+    let e =
+        decode(RawArray::I32(&raw), &desc(NumericType::I32, 1e-6, 0.0), &ValidityMask::all_valid(1999)).unwrap_err();
     assert_eq!(e, ConvError::LengthMismatch { raw: 2000, mask: 1999 });
     assert_eq!(e.code(), "encoding_length_mismatch");
 }
@@ -146,7 +154,9 @@ fn run_case(kind: &str, d: &EncodingDescriptor, raws: &[&str], mask: &ValidityMa
         "u16" => decode(RawArray::U16(&raws.iter().map(|r| r.parse().unwrap()).collect::<Vec<_>>()), d, mask),
         "u32" => decode(RawArray::U32(&raws.iter().map(|r| r.parse().unwrap()).collect::<Vec<_>>()), d, mask),
         "f32" => decode(
-            RawArray::F32(&raws.iter().map(|r| f32::from_bits(u32::from_str_radix(r, 16).unwrap())).collect::<Vec<_>>()),
+            RawArray::F32(
+                &raws.iter().map(|r| f32::from_bits(u32::from_str_radix(r, 16).unwrap())).collect::<Vec<_>>(),
+            ),
             d,
             mask,
         ),
@@ -220,7 +230,11 @@ fn agrees_with_hal_idl_reference_decode() {
 #[test]
 fn masked_precision_loss_is_skipped() {
     let raw = [i64::MIN, 5, i64::MAX];
-    let d = decode(RawArray::I64(&raw), &desc(NumericType::I64, 2.0, 1.0), &ValidityMask::from_bools(&[false, true, false]))
-        .unwrap();
+    let d = decode(
+        RawArray::I64(&raw),
+        &desc(NumericType::I64, 2.0, 1.0),
+        &ValidityMask::from_bools(&[false, true, false]),
+    )
+    .unwrap();
     assert_eq!(d.valid().collect::<Vec<_>>(), vec![(1, 11.0)]);
 }
