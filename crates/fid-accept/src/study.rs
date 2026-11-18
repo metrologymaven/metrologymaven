@@ -252,7 +252,12 @@ fn string_set(v: Option<&CValue>) -> Option<BTreeSet<String>> {
 
 /// Checks a task list against the given maps (by `map_id`), persona IDs and, when given, the
 /// protocol document text.
-pub fn check(input: &[u8], maps: &BTreeMap<String, MapInfo>, personas: &BTreeSet<String>, protocol: Option<&str>) -> Report {
+pub fn check(
+    input: &[u8],
+    maps: &BTreeMap<String, MapInfo>,
+    personas: &BTreeSet<String>,
+    protocol: Option<&str>,
+) -> Report {
     if input.len() > MAX_INPUT_BYTES {
         return Report::failed(Finding::new(Code::Schema, "-", format!("file exceeds {} KiB", MAX_INPUT_BYTES / 1024)));
     }
@@ -276,7 +281,11 @@ pub fn check(input: &[u8], maps: &BTreeMap<String, MapInfo>, personas: &BTreeSet
     }
     match top.get("record_format") {
         Some(CValue::Str(s)) if s == RECORD_FORMAT => {}
-        _ => findings.push(Finding::new(Code::Schema, "-", format!("`record_format` must be the string `{RECORD_FORMAT}`"))),
+        _ => findings.push(Finding::new(
+            Code::Schema,
+            "-",
+            format!("`record_format` must be the string `{RECORD_FORMAT}`"),
+        )),
     }
     let records: &[CValue] = match top.get("tasks") {
         Some(CValue::Arr(a)) if !a.is_empty() => a.as_slice(),
@@ -425,18 +434,16 @@ fn check_refs(t: &StudyTask, maps: &BTreeMap<String, MapInfo>, personas: &BTreeS
     }
     if !t.start_command.is_empty() && !t.end_command.is_empty() && !named.is_empty() {
         let in_order = named.iter().any(|m| {
-            m.commands.iter().position(|c| *c == t.start_command).is_some_and(|i| {
-                m.commands.iter().skip(i + 1).any(|c| *c == t.end_command)
-            })
+            m.commands
+                .iter()
+                .position(|c| *c == t.start_command)
+                .is_some_and(|i| m.commands.iter().skip(i + 1).any(|c| *c == t.end_command))
         });
         if !in_order {
             out.push(Finding::new(
                 Code::Ref,
                 who,
-                format!(
-                    "no named map has step `{}` followed later by step `{}`",
-                    t.start_command, t.end_command
-                ),
+                format!("no named map has step `{}` followed later by step `{}`", t.start_command, t.end_command),
             ));
         }
     }
