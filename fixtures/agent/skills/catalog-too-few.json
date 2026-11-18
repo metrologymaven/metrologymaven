@@ -1,0 +1,43 @@
+{
+  "format": "fid.agent-catalog",
+  "version": 1,
+  "workflows": [
+    {
+      "profile": "core",
+      "workflow_id": "core.canon_text",
+      "title": "Canonicalise JSON",
+      "guide_id": "core.canon_text"
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "inspect.align_scan",
+      "title": "Align and scan",
+      "guide_id": "demo.align_scan",
+      "recipes": [
+        "demo.align_scan_basic"
+      ]
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "inspect.measure_bore",
+      "title": "Measure a bore",
+      "guide_id": "demo.measure_bore",
+      "recipes": [
+        "demo.measure_bore_basic",
+        "demo.measure_bore_deep"
+      ]
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "inspect.compare_nominal",
+      "title": "Compare with nominal",
+      "guide_id": "demo.compare_nominal"
+    },
+    {
+      "profile": "inspect",
+      "workflow_id": "inspect.export_report",
+      "title": "Export a report",
+      "guide_id": "demo.export_report"
+    }
+  ]
+}
