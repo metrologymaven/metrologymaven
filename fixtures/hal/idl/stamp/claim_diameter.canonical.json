@@ -1,0 +1,1 @@
+{"algorithm_source":"device","batch":{"batch_digest":"sha256:2f574a0899f1c11e91b70e29c0270d1e06a2eff420826d86ef6c1699b881abf1","batch_id":"019a89f6-2000-70a5-9d2c-3b4a59687706"},"method":"least-squares circle fit,\tfirmware édition 3 (device-supplied)","quantity":"diameter","schema":"external-claim/0","value":{"unit":"m","value":"0x3f8999999999999a"}}
