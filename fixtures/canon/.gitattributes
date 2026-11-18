@@ -1,0 +1,3 @@
+# Golden inputs are byte-exact (some hold CR LF or invalid UTF-8): no EOL conversion.
+vectors/** -text
+bad/** -text
