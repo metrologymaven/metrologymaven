@@ -87,14 +87,18 @@ impl<E: fmt::Debug + fmt::Display> std::error::Error for BisectError<E> {}
 ///
 /// Algorithm: a lower-bound binary search over `[0, n-1)` that assumes entry `n-1` diverges
 /// (at most `ceil(log2 n)` evaluations), then one spot check evaluating entry `n-1`
-/// (total at most `ceil(log2 n) + 1`). Every evaluation is kept; if any is inconsistent with
-/// the found boundary (a true before it or a false at or after it) the predicate is not
-/// monotone, `non_monotone` is set and a linear scan from entry 0 gives the answer, reusing
-/// the values already known. If every evaluation is false, no entry diverges.
+/// (total at most `ceil(log2 n) + 1`). If every evaluation is false, no entry diverges.
 ///
-/// The spot check sees a violation only when an evaluated point contradicts the boundary;
-/// a non-monotone predicate that agrees with a monotone one on every evaluated point is
-/// not detected (no `O(log n)` search can do better).
+/// Detection is limited. The midpoints the search evaluates are consistent with the boundary
+/// it returns by construction, so with this search order **the only detectable violation is
+/// `pred(n-1) == false` after some midpoint was true**. In that case `non_monotone` is set and
+/// a linear scan from entry 0 gives the lowest true entry, reusing the values already known.
+/// Any other non-monotone predicate (e.g. true at `{2}` and on `500..1000` of a span of 1000)
+/// is not detected and the search returns its boundary (500) without the flag; no `O(log n)`
+/// search can rule such cases out.
+///
+/// The result is an index into the span (`0..n`), not a journal sequence number; callers add
+/// the span's first sequence number.
 pub fn bisect<E>(n: u64, mut pred: impl FnMut(u64) -> Result<bool, E>) -> Result<BisectResult, BisectError<E>> {
     if n == 0 {
         return Err(BisectError::EmptySpan);
@@ -121,15 +125,22 @@ pub fn bisect<E>(n: u64, mut pred: impl FnMut(u64) -> Result<bool, E>) -> Result
     if m.seen.iter().all(|(&j, &v)| v == (j >= k)) {
         return Ok(BisectResult { first: Some(k), evaluations: m.evaluations, non_monotone: false });
     }
-    // REQ-006: not monotone; fall back to a linear scan.
-    let mut found = None;
-    for j in 0..n {
-        if m.eval(j, &mut pred)? {
-            found = Some(j);
-            break;
+    // REQ-006: not monotone; fall back to a linear scan. The lowest known true index is an
+    // upper bound on the answer; scanned values are not stored, so memory stays O(log n).
+    let bound = m.seen.iter().find(|e| *e.1).map_or(last, |(&j, _)| j);
+    for j in 0..bound {
+        let v = match m.seen.get(&j) {
+            Some(v) => *v,
+            None => {
+                m.evaluations += 1;
+                pred(j).map_err(BisectError::Predicate)?
+            }
+        };
+        if v {
+            return Ok(BisectResult { first: Some(j), evaluations: m.evaluations, non_monotone: true });
         }
     }
-    Ok(BisectResult { first: found, evaluations: m.evaluations, non_monotone: true })
+    Ok(BisectResult { first: Some(bound), evaluations: m.evaluations, non_monotone: true })
 }
 
 /// Predicate values already known, so no entry is evaluated twice.
@@ -188,14 +199,24 @@ impl fmt::Display for Cause {
     }
 }
 
+/// An input digest with its role tag (e.g. `param`, `entity`, `r1_result`), as in the
+/// journal entry header (`CORE.JRN.ENTRY`). Mirrors `fid_journal::TaggedDigest` without
+/// depending on the journal crate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaggedDigest {
+    pub tag: String,
+    pub digest: Digest,
+}
+
 /// What the journal records (or the replay produced) for one entry, as compared by
 /// [`attribute`] (REQ-003).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EntryFacts {
-    /// Journal sequence number of the entry.
+    /// Journal sequence number of the entry. Only the recorded side's is reported; the
+    /// replayed side's is not compared.
     pub seq: u64,
-    /// Input digests, in the entry's order.
-    pub inputs: Vec<Digest>,
+    /// Tagged input digests, in the entry's order. A change of tag alone is an `input` cause.
+    pub inputs: Vec<TaggedDigest>,
     /// Argument commitments, in the entry's order.
     pub arguments: Vec<Digest>,
     /// Defaults-profile digest.
@@ -214,6 +235,7 @@ pub const NO_INPUT_DIFFERENCE: &str = "no_input_difference";
 /// Why the first divergent entry diverged.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attribution {
+    /// Journal sequence number of the entry (`recorded.seq`), not a [`bisect`] span index.
     pub entry_seq: u64,
     pub primary: Cause,
     /// Every other matching cause, in precedence order.
@@ -228,7 +250,8 @@ pub struct Attribution {
 /// defaults-profile digest (`defaults_profile`), command ID or migrator
 /// (`command_migration`) and kernel manifest digest (`kernel`). The first differing item
 /// in that order is primary, the others are secondary. When nothing differs the primary
-/// cause is `kernel` with note `no_input_difference`. `entry_seq` is the recorded entry's.
+/// cause is `kernel` with note `no_input_difference`. `entry_seq` is `recorded.seq`;
+/// `replayed.seq` is ignored, since the replayed copy describes the same journal entry.
 pub fn attribute(recorded: &EntryFacts, replayed: &EntryFacts) -> Attribution {
     let differs = |c: Cause| match c {
         Cause::Input => recorded.inputs != replayed.inputs,

@@ -67,11 +67,16 @@ write("span_1000.json", {
 
 # ---------------------------------------------------------------------------
 # AC-4: non_monotone.json. Predicates given as their set of true positions
-# (half-open intervals). Expected entry = lowest true position (linear scan).
-# `non_monotone` is expected when the leaf's search (lower bound over [0, n-1)
-# assuming the last entry diverges, then the spot check evaluating entry n-1)
-# sees a true value followed by a false one. A small reference simulation of
-# that search below states whether the spot check can see the violation.
+# (half-open intervals). Expected entry = lowest true position (linear scan):
+# that value is spec-derived and independent of any search.
+#
+# The `non_monotone` flags are DESIGN-DERIVED, not independent: whether a
+# violation is visible depends on which points a search evaluates, so they come
+# from reference_search() below, a Python transcription of the search stated in
+# the Rust doc comment (lower bound over [0, n-1) assuming the last entry
+# diverges, then a spot check of entry n-1). Each fixture case records this in
+# `non_monotone_source`. The flagged cases all share the hand-checkable property
+# that the true island ends before n-1, so pred(n-1) is false.
 # ---------------------------------------------------------------------------
 def truth(intervals, k):
     return any(a <= k < b for a, b in intervals)
@@ -105,8 +110,20 @@ for name, n, intervals in [
     first = min(a for a, _ in intervals)
     k, violated = reference_search(n, intervals)
     assert violated, name  # every case here must be one the spot check detects
+    assert not truth(intervals, n - 1), name
     nm_cases.append({"name": name, "n": n, "true_intervals": [list(iv) for iv in intervals],
-                     "expect": {"first_divergent": first, "non_monotone": True}})
+                     "expect": {"first_divergent": first, "non_monotone": True},
+                     "non_monotone_source": "design-derived"})
+
+# Undetectable by design: agrees with a monotone predicate on every evaluated point.
+intervals = [(2, 3), (500, 1000)]
+k, violated = reference_search(1000, intervals)
+assert k == 500 and not violated
+nm_cases.append({"name": "undetected: true at 2 and 500..1000 in 1000", "n": 1000,
+                 "true_intervals": [list(iv) for iv in intervals],
+                 "expect": {"first_divergent": 500, "non_monotone": False, "max_evaluations": 11,
+                            "lowest_true": 2},
+                 "non_monotone_source": "design-derived"})
 
 # Monotone controls: no flag, plain bisection answer, budget respected.
 for name, n, d in [("monotone 637 in 1000", 1000, 637), ("monotone 0 in 7", 7, 0),
@@ -116,7 +133,8 @@ for name, n, d in [("monotone 637 in 1000", 1000, 637), ("monotone 0 in 7", 7, 0
     assert not violated and k == d, name
     nm_cases.append({"name": name, "n": n, "true_intervals": [list(iv) for iv in intervals],
                      "expect": {"first_divergent": d, "non_monotone": False,
-                                "max_evaluations": math.ceil(math.log2(n)) + 1}})
+                                "max_evaluations": math.ceil(math.log2(n)) + 1},
+                     "non_monotone_source": "monotone by construction"})
 write("non_monotone.json", {"license": "CC-BY-4.0", "cases": nm_cases})
 
 
@@ -135,7 +153,7 @@ def d():
 
 base = {
     "seq": 637,
-    "inputs": [d(), d()],
+    "inputs": [{"tag": "entity", "digest": d()}, {"tag": "param", "digest": d()}],
     "arguments": [d(), d(), d()],
     "defaults_profile": d(),
     "command": "geo.fit.circle@2",
@@ -148,7 +166,7 @@ def perturb(fields):
     r = json.loads(json.dumps(base))
     for f in fields:
         if f == "input":
-            r["inputs"][1] = d()
+            r["inputs"][1]["digest"] = d()
         elif f == "parameter":
             r["arguments"][0] = d()
         elif f == "defaults_profile":
@@ -160,7 +178,9 @@ def perturb(fields):
         elif f == "kernel":
             r["kernel_manifest"] = d()
         elif f == "input_count":
-            r["inputs"].append(d())
+            r["inputs"].append({"tag": "r1_result", "digest": d()})
+        elif f == "input_tag":
+            r["inputs"][0]["tag"] = "r1_result"
         else:
             raise ValueError(f)
     return r
@@ -185,6 +205,7 @@ acase("kernel manifest differs", "AC-2", ["kernel"], "kernel", [])
 acase("input and kernel differ", "AC-3", ["input", "kernel"], "input", ["kernel"])
 # REQ-004 / REQ-005 extras
 acase("migrator differs only", "REQ-004", ["migrator"], "command_migration", [])
+acase("input tag changed only", "REQ-004", ["input_tag"], "input", [])
 acase("extra input entry", "REQ-004", ["input_count"], "input", [])
 acase("everything but input differs", "REQ-004",
       ["kernel", "migrator", "defaults_profile", "parameter"], "parameter",

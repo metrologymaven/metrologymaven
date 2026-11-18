@@ -4,7 +4,7 @@
 use fid_canon::{parse, CValue};
 use fid_replay::{
     attribute, bisect, first_divergent, first_divergent_by_seq, report_fragment, Attribution, BisectError,
-    BisectResult, Cause, EntryFacts, ReplayOutcome,
+    BisectResult, Cause, EntryFacts, ReplayOutcome, TaggedDigest,
 };
 use fid_types::{CommandId, Digest};
 use std::collections::BTreeMap;
@@ -173,6 +173,44 @@ fn ac4_non_monotone_reported_and_linear_fallback_correct() {
 }
 
 #[test]
+fn undetected_non_monotone_returns_boundary_without_flag() {
+    // Documented limit: true at {2} and on 500..1000 agrees with a monotone predicate on every
+    // point the search evaluates, so it returns 500 without `non_monotone`.
+    let ivs = [(2u64, 3u64), (500, 1000)];
+    let p = interval_pred(&ivs);
+    let mut calls = 0u64;
+    let res = bisect(1000, |k| -> Result<bool, ()> {
+        calls += 1;
+        Ok(p(k))
+    })
+    .unwrap();
+    assert_eq!(res.first, Some(500));
+    assert!(!res.non_monotone);
+    assert!(calls <= 11);
+}
+
+#[test]
+fn linear_fallback_never_scans_past_known_true() {
+    // Island 637..800 in 1000: flagged; the scan stops at the lowest known true index.
+    let ivs = [(637u64, 800u64)];
+    let p = interval_pred(&ivs);
+    let mut asked = Vec::new();
+    let res = bisect(1000, |k| -> Result<bool, ()> {
+        asked.push(k);
+        Ok(p(k))
+    })
+    .unwrap();
+    assert_eq!(res.first, Some(637));
+    assert!(res.non_monotone);
+    assert_eq!(res.evaluations, asked.len() as u64);
+    let mut sorted = asked.clone();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(sorted.len(), asked.len(), "an entry was evaluated twice");
+    assert!(asked.iter().filter(|&&k| k != 999).all(|&k| k <= 749));
+}
+
+#[test]
 fn bisect_errors() {
     let r = bisect(0, |_| -> Result<bool, ()> { Ok(true) });
     assert_eq!(r.as_ref().map_err(BisectError::code), Err("empty_span"));
@@ -204,7 +242,13 @@ fn facts(v: &CValue) -> EntryFacts {
     let digests = |k: &str| arr(&o[k]).iter().map(|d| Digest::parse(s(d)).unwrap()).collect::<Vec<_>>();
     EntryFacts {
         seq: n(&o["seq"]),
-        inputs: digests("inputs"),
+        inputs: arr(&o["inputs"])
+            .iter()
+            .map(|t| {
+                let t = obj(t);
+                TaggedDigest { tag: s(&t["tag"]).to_string(), digest: Digest::parse(s(&t["digest"])).unwrap() }
+            })
+            .collect(),
         arguments: digests("arguments"),
         defaults_profile: Digest::parse(s(&o["defaults_profile"])).unwrap(),
         command: CommandId::parse(s(&o["command"])).unwrap(),
