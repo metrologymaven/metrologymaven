@@ -323,7 +323,7 @@ fn ref_def(t: &[char]) -> Option<(String, String)> {
     let rest: String = t[close + 2..].iter().collect();
     let mut words = rest.split_whitespace();
     let raw = words.next()?;
-    let title_ok = words.next().map_or(true, |w| w.starts_with(|x: char| matches!(x, '"' | '\'' | '(')));
+    let title_ok = words.next().map_or(true, |w| w.starts_with(['"', '\'', '(']));
     let (dest, angled) = match raw.strip_prefix('<').and_then(|d| d.strip_suffix('>')) {
         Some(d) => (d, true),
         None => (raw, false),
@@ -544,11 +544,7 @@ fn match_brackets(s: &Src, kinds: &[Kind]) -> Vec<u32> {
                     }
                 }
             }
-            '\n' => {
-                if kinds.get(s.line_of(j) + 1).copied().unwrap_or(Kind::Blank) != Kind::Para {
-                    stack.clear();
-                }
-            }
+            '\n' if kinds.get(s.line_of(j) + 1).copied().unwrap_or(Kind::Blank) != Kind::Para => stack.clear(),
             _ => {}
         }
         j += 1;

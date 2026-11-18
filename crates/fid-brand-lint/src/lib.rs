@@ -158,8 +158,11 @@ pub fn units_for_text(
     format: Format,
     rules: &BTreeSet<String>,
 ) -> Result<Vec<Unit>, LintError> {
-    let ex = extract(text, format)
-        .map_err(|e| LintError::InputParse { path: file.to_string(), line: e.line, reason: e.reason })?;
+    let ex = extract(text, format).map_err(|e| LintError::InputParse {
+        path: file.to_string(),
+        line: e.line,
+        reason: e.reason,
+    })?;
     let mut markers = Vec::new();
     for c in &ex.comments {
         match parse_marker(&c.text) {
