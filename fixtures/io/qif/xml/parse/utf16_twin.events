@@ -1,0 +1,11 @@
+S		{}messung	:{}einheit=mm
+T	\n  
+S		{}wert	:{}typ=Länge
+T	12.5 µm ± 0.1
+E	{}wert
+T	\n  
+S		{}notiz
+T	𝄞 Größe ≤ 3
+E	{}notiz
+T	\n
+E	{}messung

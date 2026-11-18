@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- leading comment -->
+<?app-hint mode="fast" ?>
+<root id="r1" note="tab	here&#9;kept" multi="line one
+line two">
+  <item n='1'>alpha &amp; beta &lt;gamma&gt; &quot;delta&quot; &apos;eps&apos;</item>
+  <item n="2">&#65;&#x42;&#x1F600; café µm</item>
+  <empty/>
+  <code><![CDATA[if (a < b && c > d) { x = "]]"; }]]></code>
+  <!-- inner comment -->
+  <mixed>one<b>two</b>threefour<![CDATA[]]></mixed>
+  <?proc   data with  spaces ?>
+  <e2 ></e2  >
+</root>
+<!-- trailing comment -->
