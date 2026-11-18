@@ -1,0 +1,111 @@
+{
+  "entry-missing": [
+    {
+      "claim": "c5",
+      "code": "entry_missing",
+      "file": "claims.json",
+      "line": 53
+    },
+    {
+      "claim": "c6",
+      "code": "entry_missing",
+      "file": "claims.json",
+      "line": 65
+    },
+    {
+      "claim": "c7",
+      "code": "entry_missing",
+      "file": "claims.json",
+      "line": 77
+    },
+    {
+      "claim": "c8",
+      "code": "entry_missing",
+      "file": "claims.json",
+      "line": 89
+    }
+  ],
+  "ok": [],
+  "threshold": [
+    {
+      "claim": "c1",
+      "code": "threshold_not_met",
+      "file": "docs/index.md",
+      "line": 5
+    }
+  ],
+  "unknown-tag": [
+    {
+      "claim": "c9",
+      "code": "unknown_claim",
+      "file": "docs/news.md",
+      "line": 3
+    }
+  ],
+  "untagged": [
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/blog.md",
+      "line": 3
+    },
+    {
+      "claim": null,
+      "code": "untagged_claim",
+      "file": "docs/blog.md",
+      "line": 5
+    }
+  ],
+  "verdict-block": [
+    {
+      "claim": "c1",
+      "code": "claim_on_blocked_release",
+      "file": "docs/index.md",
+      "line": 5
+    },
+    {
+      "claim": "c2",
+      "code": "claim_on_blocked_release",
+      "file": "docs/index.md",
+      "line": 9
+    },
+    {
+      "claim": "c3",
+      "code": "claim_on_blocked_release",
+      "file": "docs/site/index.html",
+      "line": 4
+    },
+    {
+      "claim": "c4",
+      "code": "claim_on_blocked_release",
+      "file": "docs/site/index.html",
+      "line": 6
+    }
+  ],
+  "verdict-incomplete": [
+    {
+      "claim": "c1",
+      "code": "claim_on_blocked_release",
+      "file": "docs/index.md",
+      "line": 5
+    },
+    {
+      "claim": "c2",
+      "code": "claim_on_blocked_release",
+      "file": "docs/index.md",
+      "line": 9
+    },
+    {
+      "claim": "c3",
+      "code": "claim_on_blocked_release",
+      "file": "docs/site/index.html",
+      "line": 4
+    },
+    {
+      "claim": "c4",
+      "code": "claim_on_blocked_release",
+      "file": "docs/site/index.html",
+      "line": 6
+    }
+  ]
+}

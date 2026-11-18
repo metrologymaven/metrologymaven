@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-eval-board]
 satisfies: [REQ-AGENT.BOARD-005]
 covers: []
 depends_on: []
