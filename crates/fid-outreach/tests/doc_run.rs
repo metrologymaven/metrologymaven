@@ -244,21 +244,40 @@ fn expect_fail_and_timeout() {
     if !python_available("outcomes") {
         return;
     }
-    // Hand-written guide; block lines are counted from the text below. The scripts are
+    // Hand-written guides; block lines are counted from the texts below. The scripts are
     // fixtures of this repository, so they exist in the exported revision.
+    //
+    // The outcomes must not depend on how fast the machine is. Blocks that finish on their own
+    // get a generous time limit (it only bounds a hung test), and the timeout outcome uses
+    // `hang.py`, which never exits by itself, so any time limit ends it by a kill.
     let text = "---\nrevision: R\n---\n\n\
 ```sh run expect-fail\npython fixtures/outr/contrib/scripts/env_probe.py\n```\n\n\
-```sh run\npython fixtures/outr/contrib/scripts/sleep.py\n```\n\n\
 ```sh run\n# a comment line is skipped\npython fixtures/outr/contrib/scripts/env_probe.py\n\
 python fixtures/outr/contrib/scripts/env_probe.py\n```\n";
     let guide = guide_with_revision("outcomes", text, &head());
-    let opts = Options { guide, repo: root(), timeout: Duration::from_secs(3) };
+    let opts = Options { guide, repo: root(), timeout: Duration::from_secs(300) };
     let r = run(&opts).unwrap();
     let got: Vec<(u32, Status, u32)> = r.blocks.iter().map(|b| (b.line, b.status, b.command_line)).collect();
-    assert_eq!(got, vec![(5, Status::Failed, 6), (9, Status::TimedOut, 10), (13, Status::Passed, 16)]);
+    assert_eq!(got, vec![(5, Status::Failed, 6), (9, Status::Passed, 12)]);
+    assert_eq!((r.blocks[0].exit_code, r.blocks[1].exit_code), (Some(0), Some(0)));
     assert_eq!(r.exit_code(), 1);
     assert!(r.workdir_removed);
     assert!(r.render().contains("expected a non-zero exit"));
+
+    // Two blocks that never finish: each is killed at its own limit, and the checker goes on
+    // to the next block after a kill.
+    let text = "---\nrevision: R\n---\n\n\
+```sh run\npython fixtures/outr/contrib/scripts/hang.py\n```\n\n\
+```sh run\npython fixtures/outr/contrib/scripts/hang.py\n```\n";
+    let guide = guide_with_revision("timeout", text, &head());
+    let opts = Options { guide, repo: root(), timeout: Duration::from_secs(2) };
+    let r = run(&opts).unwrap();
+    let got: Vec<(u32, Status, u32)> = r.blocks.iter().map(|b| (b.line, b.status, b.command_line)).collect();
+    assert_eq!(got, vec![(5, Status::TimedOut, 6), (9, Status::TimedOut, 10)]);
+    assert!(r.blocks.iter().all(|b| b.exit_code.is_none()), "{:?}", r.blocks);
+    assert_eq!(r.exit_code(), 1);
+    assert!(r.workdir_removed);
+    assert!(r.render().contains(":5: timeout (line 6:"), "{}", r.render());
 }
 
 #[test]

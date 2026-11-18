@@ -14,4 +14,4 @@ placeholder replaced by `git rev-parse HEAD` before it runs the checker. Run dir
 checker rejects the placeholder as an invalid revision (exit 2).
 
 `scripts/env_probe.py` (exit 3 if `DOC_RUN_SENTINEL` is visible, 4 if `PATH` is missing, else 0)
-and `scripts/sleep.py` (sleeps 30 s) are helper scripts for the environment and timeout tests.
+and `scripts/hang.py` (blocks until killed) are helper scripts for the environment and timeout tests.
