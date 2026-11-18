@@ -2,5 +2,9 @@
 //! see `spec/krn/man/`.
 
 pub mod cards;
+pub mod kci;
 
-pub use cards::{check, parse_card, AlgorithmId, CardError, CheckReport, SpecCard};
+pub use cards::{check, parse_card, AlgorithmId, CardError, CardRegistry, CheckReport, SpecCard};
+pub use kci::{
+    evaluate, AlgorithmFailure, AlgorithmTable, Digest, KernelAlgorithm, KernelCall, KernelError, KernelResult,
+};

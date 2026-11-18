@@ -1,0 +1,84 @@
+# ECO.DATA.CAT fixture (expressions.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "or-licenseref"
+title = "Synthetic dataset or-licenseref"
+source = "https://example.org/datasets/or-licenseref"
+licence = "MIT OR LicenseRef-Custom"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/or-licenseref.zip"]
+
+[[dataset]]
+id = "and-licenseref"
+title = "Synthetic dataset and-licenseref"
+source = "https://example.org/datasets/and-licenseref"
+licence = "MIT AND LicenseRef-Custom"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/and-licenseref.zip"]
+
+[[dataset]]
+id = "nested-ok"
+title = "Synthetic dataset nested-ok"
+source = "https://example.org/datasets/nested-ok"
+licence = "(CC-BY-4.0 OR GPL-3.0-only) AND CC0-1.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/nested-ok.zip"]
+
+[[dataset]]
+id = "nested-bad"
+title = "Synthetic dataset nested-bad"
+source = "https://example.org/datasets/nested-bad"
+licence = "(CC-BY-4.0 AND GPL-3.0-only) OR LicenseRef-Custom"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/nested-bad.zip"]
+
+[[dataset]]
+id = "gpl-fetch-only"
+title = "Synthetic dataset gpl-fetch-only"
+source = "https://example.org/datasets/gpl-fetch-only"
+licence = "GPL-3.0-only"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "fetch-only"
+urls = ["https://example.org/files/gpl-fetch-only.zip"]
+
+[[dataset]]
+id = "gpl-mirror"
+title = "Synthetic dataset gpl-mirror"
+source = "https://example.org/datasets/gpl-mirror"
+licence = "GPL-3.0-only"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/gpl-mirror.zip"]
+
+[[dataset]]
+id = "with-exception"
+title = "Synthetic dataset with-exception"
+source = "https://example.org/datasets/with-exception"
+licence = "Apache-2.0 WITH LLVM-exception"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/with-exception.zip"]
