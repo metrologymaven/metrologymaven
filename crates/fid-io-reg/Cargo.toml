@@ -1,0 +1,14 @@
+[package]
+name = "fid-io-reg"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text (spec node IO.REG.LIMITS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
