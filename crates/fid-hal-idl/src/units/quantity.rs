@@ -20,7 +20,8 @@ pub enum SiUnit {
 
 impl SiUnit {
     /// Every unit, in declaration order.
-    pub const ALL: [SiUnit; 6] = [SiUnit::Metre, SiUnit::Radian, SiUnit::Second, SiUnit::Kelvin, SiUnit::Pascal, SiUnit::One];
+    pub const ALL: [SiUnit; 6] =
+        [SiUnit::Metre, SiUnit::Radian, SiUnit::Second, SiUnit::Kelvin, SiUnit::Pascal, SiUnit::One];
 
     /// The wire symbol: `m`, `rad`, `s`, `K`, `Pa` or `1`.
     pub fn as_str(self) -> &'static str {

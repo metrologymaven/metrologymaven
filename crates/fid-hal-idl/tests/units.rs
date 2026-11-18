@@ -292,7 +292,8 @@ fn timestamps_round_trip() {
     assert_eq!(canon(&t.to_value()), canon(&a));
     let b = parse_json(br#"{"t_host":"0"}"#).unwrap();
     assert_eq!(Timestamp::from_value(b).unwrap().t_dev, None);
-    let bads: [&[u8]; 4] = [br#"{"t_host":0}"#, br#"{"t_host":"007"}"#, br#"{"t_dev":"1"}"#, br#"{"t_host":"1","t":"2"}"#];
+    let bads: [&[u8]; 4] =
+        [br#"{"t_host":0}"#, br#"{"t_host":"007"}"#, br#"{"t_dev":"1"}"#, br#"{"t_host":"1","t":"2"}"#];
     for bad in bads {
         assert!(Timestamp::from_value(parse_json(bad).unwrap()).is_err());
     }

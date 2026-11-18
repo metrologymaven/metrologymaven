@@ -180,7 +180,10 @@ impl EncodingDescriptor {
         let offset = f64_bits("offset", take(&mut o, "offset")?)?;
         let unit_text = string("unit", take(&mut o, "unit")?)?;
         let unit = SiUnit::parse(&unit_text).map_err(|_| {
-            UnitsError::EncodingInvalid(format!("target unit {:?} is not an SI unit of the quantity set", kept(&unit_text)))
+            UnitsError::EncodingInvalid(format!(
+                "target unit {:?} is not an SI unit of the quantity set",
+                kept(&unit_text)
+            ))
         })?;
         EncodingDescriptor::new(numeric, scale, offset, unit)
     }
@@ -194,7 +197,9 @@ mod tests {
     #[test]
     fn invalid_descriptors() {
         let m = SiUnit::Metre;
-        for (s, o) in [(0.0, 0.0), (-0.0, 0.0), (f64::NAN, 0.0), (f64::INFINITY, 0.0), (1.0, f64::NAN), (1.0, f64::NEG_INFINITY)] {
+        for (s, o) in
+            [(0.0, 0.0), (-0.0, 0.0), (f64::NAN, 0.0), (f64::INFINITY, 0.0), (1.0, f64::NAN), (1.0, f64::NEG_INFINITY)]
+        {
             let e = EncodingDescriptor::new(NumericType::I32, s, o, m).map_err(|e| e.code());
             assert_eq!(e, Err("encoding_invalid"), "scale {s} offset {o}");
         }
