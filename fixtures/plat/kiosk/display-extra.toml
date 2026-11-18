@@ -1,0 +1,10 @@
+# PLAT.DEPLOY.KIOSK.DISPLAY AC-3 (hand-written): an otherwise valid file with a field the
+# schema does not define.
+# Expected: exit 1 with the single diagnostic UnknownField { field: brightness }.
+schema_version = 1
+diagonal_in = 21.5
+resolution = [1920, 1080]
+touch = "projected_capacitive"
+glove_touch = true
+description = "Reference panel plus an undefined field"
+brightness = 300

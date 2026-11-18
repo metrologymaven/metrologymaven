@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-platform]
+built_pr: 121
 satisfies: [REQ-PLAT.DEPLOY.KIOSK-003]
 covers: []
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # PLAT.DEPLOY.KIOSK.DISPLAY: Reference kiosk display
@@ -39,13 +41,13 @@ Names the display that kiosk layouts are designed and tested against, as one sma
 ## Requirements
 
 - **REQ-PLAT.DEPLOY.KIOSK.DISPLAY-001** The file shall state `diagonal_in`, `resolution = [w, h]`, `touch` (`projected_capacitive`, `resistive` or `none`), `glove_touch` (bool) and `description`, with `schema_version` 1.
-- **REQ-PLAT.DEPLOY.KIOSK.DISPLAY-002** The crate shall derive `px_per_mm` from diagonal and resolution assuming square pixels, rounded to 3 decimals.
+- **REQ-PLAT.DEPLOY.KIOSK.DISPLAY-002** The crate shall derive `px_per_mm` from diagonal and resolution assuming square pixels, rounded to 3 decimals (how an exact rounding tie is broken is unspecified).
 - **REQ-PLAT.DEPLOY.KIOSK.DISPLAY-003** If `diagonal_in` is outside 10–43, a resolution side is outside 800–7680, or a field is unknown, then validation shall fail naming the field.
 - **REQ-PLAT.DEPLOY.KIOSK.DISPLAY-004** The shipped file shall describe a 21.5-inch 1920×1080 projected-capacitive glove-capable panel [unverified: proposal until a maintainer confirms a typical shop-floor model].
 
 ## Acceptance criteria
 
-- **AC-1** Given the shipped file, when `cargo xtask plat-kiosk display` runs, then it exits 0 and prints `px_per_mm = 4.040` [unverified arithmetic to be confirmed by the test].
+- **AC-1** Given the shipped file, when `cargo xtask plat-kiosk display` runs, then it exits 0 and prints `px_per_mm = 4.034` (hypot(1920, 1080) / (21.5 × 25.4) = 2202.907 / 546.1 = 4.03389).
 - **AC-2** (error path) Given `fixtures/plat/kiosk/display-tiny.toml` with `diagonal_in = 5`, when validated, then it exits 1 with `OutOfRange { field: diagonal_in }`.
 - **AC-3** (error path) Given `fixtures/plat/kiosk/display-extra.toml` with field `brightness`, then `UnknownField`.
 
@@ -69,6 +71,7 @@ Hand-written TOML under `fixtures/plat/kiosk/`; licensed with the code.
 ## Open questions
 
 - The concrete panel is a maintainer choice; the values are a proposal.
+- The `cargo xtask plat-kiosk display` wrapper is a follow-up: PR #121 ships the command as `fid-platform plat-kiosk display [--file <path>]` and leaves `fid-xtask` untouched.
 
 ## Children
 

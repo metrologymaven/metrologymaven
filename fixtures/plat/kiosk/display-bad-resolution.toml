@@ -1,0 +1,8 @@
+# PLAT.DEPLOY.KIOSK.DISPLAY REQ-003 (hand-written): the width 640 is below the 800-pixel minimum.
+# Expected: exit 1 with the single diagnostic OutOfRange { field: resolution }.
+schema_version = 1
+diagonal_in = 15.6
+resolution = [640, 1080]
+touch = "resistive"
+glove_touch = false
+description = "Low-resolution panel"
