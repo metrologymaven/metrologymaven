@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-geo-types]
+built_pr: 64
 satisfies: [REQ-GEO.TYPES-001, REQ-GEO.TYPES-002]
 covers: []
 depends_on: []
