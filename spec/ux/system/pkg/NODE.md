@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design-pkg, fid-design]
+built_pr: 93
 satisfies: [REQ-UX.SYSTEM-002, REQ-UX.SYSTEM-003, REQ-UX.SYSTEM-004]
 covers: []
 depends_on: []
@@ -86,6 +88,8 @@ The container every other UX node publishes into and every consumer (VIZ, RPT, O
 
 - The DTCG format's stability is [unverified]; pinning one draft ID in the manifest isolates consumers from upstream changes.
 - Publishing the package as a release artifact is ECO.REL's job; consumers then declare `uses_artifacts` on the UX node that owns the part they read.
+- Patch releases may add names: `pkg-diff` accepts an `additive` change in a patch release (only breaking changes need a major release). Semantic versioning would ask for a minor increment; tighten if maintainers agree (raised in the review of PR #93).
+- `remove_after` is read inclusively: a name may be removed in the release equal to `remove_after` (the earliest release allowed to remove it). If it means "removed only after this release", `pkg-diff` needs a strict comparison (raised in the review of PR #93).
 
 ## Children
 
