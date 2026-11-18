@@ -2,10 +2,13 @@
 //!
 //! First slice: `fid-eval suite digest` (spec node AGENT.EVAL.FORMAT) and `fid-eval suite
 //! check` (fail-closed load including the red-team predicate schema, AGENT.REDTEAM.PRED, and,
-//! with `--base`, shell-variant coverage, AGENT.REDTEAM.SHELL).
+//! with `--base`, shell-variant coverage, AGENT.REDTEAM.SHELL; with `--catalog` and `--jobs`,
+//! the consistency, coverage and oracle isolation rules of AGENT.EVAL.CHECK).
 
 use fid_canon::CValue;
-use fid_eval_suite::{check_variants, load_suite, FormatError, PredicateKind, Suite, VariantCoverage};
+use fid_eval_suite::{
+    check_suite, check_variants, load_suite, CheckFinding, FormatError, PredicateKind, Suite, VariantCoverage,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::ExitCode;
@@ -28,6 +31,16 @@ USAGE:
                                   also check that every base-suite task has exactly one
                                   shell variant in the suite (AGENT.REDTEAM.SHELL) and
                                   add \"base_tasks\" to the summary
+    fid-eval suite check --suite <DIR> --catalog <catalog-index.json> --jobs <DIR> [--json]
+                                  Also apply the AGENT.EVAL.CHECK rules: start-state and
+                                  golden-journal digests against the FLOW job packages
+                                  in <DIR>/<name>/package.json (digest_mismatch,
+                                  unknown_job), catalog coverage (uncovered_workflow),
+                                  granted-root isolation of the unpacked start states
+                                  (oracle_leak) and oracle answers in prompts
+                                  (oracle_in_prompt); every finding is reported. With
+                                  --json print the summary plus \"findings\": [] or
+                                  {\"findings\": [{\"detail\",\"file\",\"rule\",\"task\"}]}
     fid-eval --version            Print the version
     fid-eval --help               Print this help
 
@@ -142,6 +155,7 @@ fn run(args: &[&str], mode: Mode) -> ExitCode {
     let mut suite = None;
     let mut bases: Vec<&str> = Vec::new();
     let mut json = false;
+    let (mut catalog, mut jobs) = (None, None);
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match *a {
@@ -151,6 +165,15 @@ fn run(args: &[&str], mode: Mode) -> ExitCode {
                 (Mode::Check, None) => return usage_error("--base needs a directory"),
                 (Mode::Digest, _) => return usage_error("--base is only allowed with suite check"),
             },
+            "--catalog" | "--jobs" => {
+                let slot = if *a == "--catalog" { &mut catalog } else { &mut jobs };
+                match (mode, it.next()) {
+                    (Mode::Check, Some(v)) if slot.is_none() => *slot = Some(*v),
+                    (Mode::Check, Some(_)) => return usage_error(&format!("{a} given twice")),
+                    (Mode::Check, None) => return usage_error(&format!("{a} needs a path")),
+                    (Mode::Digest, _) => return usage_error(&format!("{a} is only allowed with suite check")),
+                }
+            }
             "--suite" => match it.next() {
                 Some(d) if suite.is_none() => suite = Some(*d),
                 Some(_) => return usage_error("--suite given twice"),
@@ -162,6 +185,12 @@ fn run(args: &[&str], mode: Mode) -> ExitCode {
     let Some(dir) = suite else {
         return usage_error("--suite <DIR> is required");
     };
+    match (catalog, jobs) {
+        (Some(c), Some(j)) if bases.is_empty() => return run_rules(dir, c, j, json),
+        (Some(_), Some(_)) => return usage_error("--base cannot be combined with --catalog and --jobs"),
+        (Some(_), None) | (None, Some(_)) => return usage_error("--catalog and --jobs must be given together"),
+        (None, None) => {}
+    }
     let loaded = load_suite(Path::new(dir)).and_then(|st| {
         if bases.is_empty() {
             return Ok((st, None));
@@ -201,6 +230,48 @@ fn run(args: &[&str], mode: Mode) -> ExitCode {
                 for e in &errs {
                     eprintln!("error: {e}");
                 }
+            }
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn finding_json(f: &CheckFinding) -> CValue {
+    let opt = |v: &Option<String>| v.as_deref().map_or(CValue::Null, s);
+    CValue::Obj(BTreeMap::from([
+        ("detail".to_string(), s(&f.detail)),
+        ("file".to_string(), opt(&f.file)),
+        ("rule".to_string(), s(f.rule.as_str())),
+        ("task".to_string(), opt(&f.task)),
+    ]))
+}
+
+/// `suite check` with `--catalog` and `--jobs` (AGENT.EVAL.CHECK): exit 0 only when no
+/// rule fails, and report every finding.
+fn run_rules(dir: &str, catalog: &str, jobs: &str, json: bool) -> ExitCode {
+    let report = check_suite(Path::new(dir), Path::new(catalog), Path::new(jobs));
+    let findings = CValue::Arr(report.findings.iter().map(finding_json).collect());
+    match (&report.suite, report.findings.is_empty()) {
+        (Some(st), true) => {
+            if json {
+                let mut v = summary(st, Mode::Check, None);
+                if let CValue::Obj(m) = &mut v {
+                    m.insert("findings".to_string(), findings);
+                }
+                print_json(&v);
+            } else {
+                println!("ok: {} tasks, suite version {}, no findings", st.tasks.len(), st.version);
+            }
+            ExitCode::SUCCESS
+        }
+        _ => {
+            if json {
+                print_json(&CValue::Obj(BTreeMap::from([("findings".to_string(), findings)])));
+            } else {
+                for f in &report.findings {
+                    eprintln!("error: {f}");
+                }
+                eprintln!("{} finding(s)", report.findings.len());
             }
             ExitCode::from(1)
         }
