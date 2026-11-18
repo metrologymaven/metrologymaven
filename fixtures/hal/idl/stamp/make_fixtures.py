@@ -21,13 +21,14 @@ and the wire rules documented in crates/fid-hal-idl/src/stamp/mod.rs:
   u64 / i64 as canonical decimal strings; the claim's f64 as "0x" + 16 hex digits of its bits;
   reference lists strictly ascending; the first offending field is the `schema` tag, then
   fields in sorted key order, depth first; cross-field rules (gaps, envelope vs stamp,
-  compatibility status vs report digest) after that.
+  compatibility status vs report digest, driver tier vs host digest) after that.
 
 Fixture files are written with ensure_ascii=True and a two-space indent, so they are not
 canonical and their non-ASCII text arrives as \\u escapes: the canonical form must re-encode
 it as raw UTF-8.
 
-Run:  python fixtures/hal/idl/stamp/make_fixtures.py
+Run:    python fixtures/hal/idl/stamp/make_fixtures.py
+Check:  python fixtures/hal/idl/stamp/make_fixtures.py --check   (CI; exits 1 if any file differs)
 """
 
 import copy
@@ -35,6 +36,7 @@ import hashlib
 import json
 import os
 import struct
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -259,6 +261,11 @@ def invalid_cases(batch_digest):
          "/driver/compat_report_digest"),
         ("compat_pass_without_report", with_(s, ["driver", "compat_report_digest"], None), "stamp_value_invalid",
          "/driver/compat_report_digest"),
+        # Tier 1 runs in-process, so a driver has a host digest exactly when it is not Tier 1.
+        ("tier1_with_host_digest", with_(s, ["driver", "tier"], "TIER1"), "stamp_value_invalid",
+         "/driver/host_digest"),
+        ("tier2_without_host_digest", with_(s, ["driver", "host_digest"], None), "stamp_value_invalid",
+         "/driver/host_digest"),
         ("batch_stamp_missing", without(b, "stamp"), "stamp_field_missing", "/stamp"),
         ("batch_nested_missing_simulated", with_(b, ["stamp"], without(s, "simulated")), "stamp_field_missing",
          "/stamp/simulated"),
@@ -293,18 +300,41 @@ def invalid_cases(batch_digest):
 
 # ------------------------------------------------------------------ writing
 
+OUTPUTS = {}
+
+
 def write_json(name, value):
-    with open(os.path.join(HERE, name), "w", encoding="ascii", newline="\n") as fh:
-        fh.write(json.dumps(value, indent=2, ensure_ascii=True))
-        fh.write("\n")
+    write_bytes(name, (json.dumps(value, indent=2, ensure_ascii=True) + "\n").encode("ascii"))
 
 
 def write_bytes(name, data):
-    with open(os.path.join(HERE, name), "wb") as fh:
-        fh.write(data)
+    OUTPUTS[name] = data
+
+
+def flush(check):
+    """Writes every output, or with check=True compares them with the committed files."""
+    stale = []
+    for name, data in sorted(OUTPUTS.items()):
+        path = os.path.join(HERE, name)
+        if check:
+            try:
+                with open(path, "rb") as fh:
+                    same = fh.read() == data
+            except FileNotFoundError:
+                same = False
+            if not same:
+                stale.append(name)
+        else:
+            with open(path, "wb") as fh:
+                fh.write(data)
+    if stale:
+        print("stale fixtures (re-run make_fixtures.py): " + ", ".join(stale), file=sys.stderr)
+        return 1
+    return 0
 
 
 def main():
+    check = "--check" in sys.argv[1:]
     b = batch()
     b_canon = canonical(b)
     b_digest = digest(b_canon)
@@ -327,8 +357,11 @@ def main():
     cases = invalid_cases(b_digest)
     lines = ",\n".join("  " + json.dumps(case, ensure_ascii=True) for case in cases)
     write_bytes("invalid_cases.json", ("[\n" + lines + "\n]\n").encode("ascii"))
-    print("valid_linescan digest:", b_digest)
+    status = flush(check)
+    if status == 0:
+        print("valid_linescan digest:", b_digest, "(checked)" if check else "(written)")
+    return status
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -21,16 +21,17 @@
 //! Errors carry a stable code and the RFC 6901 JSON pointer of the first offending field.
 //! "First" means: the `schema` field of an object, then the object's fields (declared and
 //! unknown alike) in canonical (sorted) key order, depth first; cross-field rules (gap
-//! ranges, envelope and stamp agreement) run after the whole record is structurally valid.
+//! ranges, envelope and stamp agreement, compatibility status and report digest, driver tier
+//! and host digest) run after the whole record is structurally valid.
 
 mod desc;
 mod model;
 mod text;
 
 pub use model::{
-    AcquisitionBatchEnvelope, AlgorithmSource, BatchRef, Calibration, CalibrationStatus, Capability, CompatStatus,
-    DeviceIdentity, DriverIdentity, DriverTier, ExternalClaim, Gap, GapReason, ProvenanceStamp, Record, RecordKind,
-    SeqRange, SourceKind, TimeInfo, Trust, UtcAnchor, WarmupState,
+    AcquisitionBatchEnvelope, AlgorithmSource, BatchRef, Calibration, CalibrationStatus, Capability, ClaimedQuantity,
+    CompatStatus, DeviceIdentity, DriverIdentity, DriverTier, ExternalClaim, Gap, GapReason, ProvenanceStamp, Record,
+    RecordKind, SeqRange, SourceKind, TimeInfo, Trust, UtcAnchor, WarmupState,
 };
 pub use text::UntrustedText;
 

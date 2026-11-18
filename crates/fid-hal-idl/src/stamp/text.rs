@@ -10,6 +10,10 @@ use std::fmt::Write as _;
 /// `Display`, no conversion into `String`. The only views are [`UntrustedText::as_display`],
 /// which escapes `\` and control, bidirectional, zero-width and line-separator characters,
 /// and [`UntrustedText::len`]. The wire form is the plain JSON string.
+///
+/// The text is kept exactly as the device sent it: it is not Unicode-normalised, trimmed or
+/// case-folded, so two spellings that look the same (for example a precomposed `é` and `e`
+/// plus a combining accent) are different values with different digests.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct UntrustedText(Box<str>);
 

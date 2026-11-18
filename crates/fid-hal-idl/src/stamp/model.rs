@@ -1,6 +1,6 @@
 //! Typed v0 records and their closed enums.
 
-use super::desc::{self, f64_hex, i64_dec, u64_dec, Field, Ty};
+use super::desc::{self, i64_dec, u64_dec, Field, Ty};
 use super::text::UntrustedText;
 use super::{child, StampError, StampErrorKind as K};
 use crate::units::{Quantity, SiUnit, TimeSource};
@@ -132,7 +132,8 @@ pub struct DriverIdentity {
     pub digest: Digest,
     /// Signing key reference; `None` for an unsigned driver.
     pub signer: Option<String>,
-    /// Digest of the driver host binary; `None` for Tier 1.
+    /// Digest of the driver host binary: `None` exactly for Tier 1 (in-process, no host);
+    /// enforced by validation.
     pub host_digest: Option<Digest>,
     pub compat_report_digest: Option<Digest>,
     pub compat_status: CompatStatus,
@@ -215,13 +216,45 @@ pub struct BatchRef {
     pub batch_digest: Digest,
 }
 
+/// The value of an external claim: an SI quantity a device computed itself.
+///
+/// Deliberately distinct from [`Quantity`] so a device claim can never pass as a measured
+/// value: there is no `From`, `Into`, `AsRef`, `Deref` or other conversion into
+/// [`Quantity`], only the read-only accessors [`ClaimedQuantity::value`] and
+/// [`ClaimedQuantity::unit`].
+///
+/// ```compile_fail,E0277
+/// use fid_hal_idl::{stamp::ClaimedQuantity, Quantity, SiUnit};
+/// let c = ClaimedQuantity::new(0.0125, SiUnit::Metre).unwrap();
+/// let q: Quantity = c.into(); // no conversion into a measured quantity
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ClaimedQuantity(Quantity);
+
+impl ClaimedQuantity {
+    /// A claimed value; NaN and infinities are refused as for [`Quantity::new`].
+    pub fn new(value: f64, unit: SiUnit) -> Result<ClaimedQuantity, crate::units::UnitsError> {
+        Quantity::new(value, unit).map(ClaimedQuantity)
+    }
+
+    /// The claimed number, in [`ClaimedQuantity::unit`].
+    pub fn value(&self) -> f64 {
+        self.0.value()
+    }
+
+    /// The SI unit of the claimed number.
+    pub fn unit(&self) -> SiUnit {
+        self.0.unit()
+    }
+}
+
 /// A quantity a device computed itself, `external-claim/0` (REQ-HAL.IDL.STAMP-006). It has
 /// no value-of-record flag and none can be added: unknown fields are refused.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalClaim {
     /// Quantity name, e.g. `diameter`.
     pub quantity: String,
-    pub value: Quantity,
+    pub value: ClaimedQuantity,
     pub algorithm_source: AlgorithmSource,
     pub method: UntrustedText,
     pub batch: BatchRef,
@@ -636,6 +669,9 @@ impl ProvenanceStamp {
         if (d.compat_status == CompatStatus::NotRun) != d.compat_report_digest.is_none() {
             return Err(invalid(&child(&child(ptr, "driver"), "compat_report_digest")));
         }
+        if (d.tier == DriverTier::Tier1) != d.host_digest.is_none() {
+            return Err(invalid(&child(&child(ptr, "driver"), "host_digest")));
+        }
         Ok(())
     }
 
@@ -729,14 +765,12 @@ impl ExternalClaim {
 
     pub(crate) fn read(value: CValue, ptr: &str) -> Result<ExternalClaim, StampError> {
         let mut r = Rd::new(value, ptr)?;
-        let mut q = r.obj("value")?;
-        let unit = q.wire("unit", |s| SiUnit::parse(s).ok())?;
-        let bits = q.string("value")?;
-        let value = f64_hex(&bits).and_then(|x| Quantity::new(x, unit).ok()).ok_or_else(|| invalid(&q.p("value")))?;
+        let value_ptr = r.p("value");
+        let value = Quantity::from_value(r.take("value")?).map_err(|_| invalid(&value_ptr))?;
         let mut b = r.obj("batch")?;
         Ok(ExternalClaim {
             quantity: r.string("quantity")?,
-            value,
+            value: ClaimedQuantity(value),
             algorithm_source: r.wire("algorithm_source", AlgorithmSource::parse)?,
             method: r.text("method")?,
             batch: BatchRef { batch_id: b.uuid("batch_id")?, batch_digest: b.digest("batch_digest")? },
@@ -745,7 +779,6 @@ impl ExternalClaim {
 
     /// The wire value (not validated; see [`ExternalClaim::canonical_bytes`]).
     pub fn to_value(&self) -> CValue {
-        let bits = format!("0x{:016x}", self.value.value().to_bits());
         obj([
             ("algorithm_source", st(self.algorithm_source.as_str())),
             (
@@ -755,7 +788,7 @@ impl ExternalClaim {
             ("method", st(self.method.raw())),
             ("quantity", st(&self.quantity)),
             ("schema", st("external-claim/0")),
-            ("value", obj([("unit", st(self.value.unit().as_str())), ("value", CValue::Str(bits))])),
+            ("value", self.value.0.to_value()),
         ])
     }
 

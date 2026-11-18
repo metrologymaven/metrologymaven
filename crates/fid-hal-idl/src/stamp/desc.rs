@@ -1,7 +1,22 @@
 //! Field descriptors. One table per record type drives both the structural validator and
-//! the generated JSON Schemas, so the committed schemas describe exactly what is accepted
-//! (except the numeric range of decimal strings, which JSON Schema cannot state; see
-//! [`Ty::U64`]).
+//! the generated JSON Schemas, so field names, types, patterns, enums, required fields and
+//! list and length bounds agree between the two.
+//!
+//! The schemas do **not** express everything the validator enforces. These rules are
+//! enforced by the code only:
+//!
+//! - decimal strings within the `u64` / `i64` range (the patterns only bound the digits);
+//! - a finite claim value (the pattern also admits the bits of NaN and infinity);
+//! - reference and feature lists in strictly ascending order (the schema says only
+//!   `uniqueItems`);
+//! - a sequence range whose last number is not below its first;
+//! - gaps with `from <= to`, inside the sequence range, ascending and not overlapping;
+//! - `compat_status` is `NOT_RUN` exactly when `compat_report_digest` is null;
+//! - `tier` is `TIER1` exactly when `host_digest` is null;
+//! - an envelope's batch ID, payload schema and digest, sequence range and gaps equal its
+//!   stamp's;
+//! - the input limits of 1 MiB and 16 levels of nesting;
+//! - the error codes and the "first offending field" order.
 
 use super::model::{
     AlgorithmSource, CalibrationStatus, CompatStatus, DriverTier, GapReason, RecordKind, SourceKind, Trust, WarmupState,
@@ -298,6 +313,10 @@ pub(crate) fn check(ty: &Ty, v: &CValue, ptr: &str) -> Result<(), StampError> {
         Ty::I64 => i64_dec(string(v, ptr)?).map(|_| ()).ok_or_else(bad),
         Ty::Digest => fid_types::Digest::is_valid(string(v, ptr)?).then_some(()).ok_or_else(bad),
         Ty::Uuid7 => is_uuid7(string(v, ptr)?).then_some(()).ok_or_else(bad),
+        // The in-memory form `units::Quantity::to_value` writes is accepted too.
+        Ty::F64 if matches!(v, CValue::F64Bits(_)) => {
+            matches!(v, CValue::F64Bits(x) if x.is_finite()).then_some(()).ok_or_else(bad)
+        }
         Ty::F64 => f64_hex(string(v, ptr)?).filter(|x| x.is_finite()).map(|_| ()).ok_or_else(bad),
         Ty::Pat(p) => (p.check)(string(v, ptr)?).then_some(()).ok_or_else(bad),
         Ty::Text(max) => {
