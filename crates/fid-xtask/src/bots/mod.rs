@@ -510,7 +510,14 @@ pub fn check(
     let today = parse_date(today).ok_or_else(|| format!("--today {today} is not an ISO date (YYYY-MM-DD)"))?;
     let mut findings = BTreeSet::new();
     let patterns = match read_bounded(restricted, MAX_RESTRICTED_BYTES) {
-        Ok(text) => Some(parse_restricted(&text)),
+        Ok(text) => {
+            let p = parse_restricted(&text);
+            if p.is_empty() {
+                // An empty list would let every bot pass the exclusion check: fail closed.
+                findings.insert(finding(IO, "restricted", "no patterns"));
+            }
+            Some(p)
+        }
         Err(e) => {
             findings.insert(finding(IO, "restricted", e));
             None

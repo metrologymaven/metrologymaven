@@ -4,8 +4,9 @@
 # tell the PR-timeline tool (ECO.COMM.TIMELINE) which actors are bots.
 #
 # Today the only automation is GitHub Actions running this repository's own workflows
-# (.github/workflows): claim.yml and expert-queue.yml comment on and label issues as
-# github-actions[bot]; the other workflows only run checks. No review bot is installed yet;
+# (.github/workflows), acting as github-actions[bot]: claim.yml assigns, labels and
+# comments on issues; expert-queue.yml creates, labels and closes expert-queue issues
+# (with a closing comment); the other workflows only run checks or build the site. No review bot is installed yet;
 # the self-hosted reviewer (ECO.CI.BOTS.REVIEW) gets its entry when it is built.
 
 [[bot]]

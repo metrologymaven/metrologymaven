@@ -17,6 +17,7 @@ struct Line {
 /// Parses `src`; `max_depth` bounds the nesting of block collections.
 pub fn parse(src: &str, max_depth: usize) -> Result<Node, String> {
     let src = src.strip_prefix('\u{feff}').unwrap_or(src);
+    check_breaks(src)?;
     let mut lines = Vec::new();
     for (i, raw) in src.lines().enumerate() {
         let no = i + 1;
@@ -50,6 +51,27 @@ pub fn parse(src: &str, max_depth: usize) -> Result<Node, String> {
         return Err(format!("line {}: unexpected indentation or structure", l.no));
     }
     Ok(node)
+}
+
+/// Line breaks are LF or CRLF only. YAML parsers also break lines on a lone CR (and YAML 1.1
+/// parsers on U+0085, U+2028 and U+2029), so a file containing one could be read differently
+/// by the bot than by this check; such files, and any other control character except tab,
+/// are refused.
+fn check_breaks(src: &str) -> Result<(), String> {
+    let mut line = 1usize;
+    let mut chars = src.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\n' => line += 1,
+            '\t' => {}
+            '\r' if chars.peek() == Some(&'\n') => {}
+            '\r' => return Err(format!("line {line}: carriage return without line feed")),
+            '\u{2028}' | '\u{2029}' => return Err(format!("line {line}: Unicode line or paragraph separator")),
+            c if c.is_control() => return Err(format!("line {line}: control character U+{:04X}", u32::from(c))),
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Cuts a `#` comment that starts the line or follows whitespace, outside quotes.
@@ -358,6 +380,12 @@ mod tests {
     }
 
     #[test]
+    fn crlf_and_tabs_in_text_are_accepted() {
+        assert_eq!(parse("a: 1\r\nb: [x]\r\n", 64).unwrap(), m(vec![("a", s("1")), ("b", Node::Seq(vec![s("x")]))]));
+        assert_eq!(parse("a: x\ty\n", 64).unwrap(), m(vec![("a", s("x\ty"))]));
+    }
+
+    #[test]
     fn refused() {
         for src in [
             "a: &x 1\n",
@@ -379,6 +407,15 @@ mod tests {
             "- a\nb: 1\n",
             "a: \"\\q\"\n",
             "just a scalar line\nb: 1\n",
+            // Line breaks other parsers honour but `str::lines` does not (review of PR #81).
+            "paths: #\r  exclude: []\r  other:\n    exclude: [\"standards/**\"]\n",
+            "a: 1\rb: 2\n",
+            "a: 1\u{85}b: 2\n",
+            "a: 1\u{2028}b: 2\n",
+            "a: 1\u{2029}b: 2\n",
+            "a: x\u{0}y\n",
+            "a: x\u{1b}y\n",
+            "a: x\u{7f}y\n",
         ] {
             assert!(parse(src, 64).is_err(), "{src:?} should be refused");
         }

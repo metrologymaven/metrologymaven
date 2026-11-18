@@ -133,11 +133,37 @@ fn missing_inputs_and_usage() {
     assert_eq!(out.status.code(), Some(2));
 }
 
-/// The repository's own register passes (its only entry sends no content, so the
-/// restricted list does not matter until `house-rules/restricted-paths.txt` exists).
+/// An empty restricted list must not let every bot pass.
+#[test]
+fn empty_restricted_list_fails() {
+    assert_eq!(findings("ok", "empty-restricted", "2027-01-10", None), ["BOTS-IO restricted no patterns"]);
+}
+
+/// Today's UTC date as `YYYY-MM-DD` (civil-from-days, proleptic Gregorian calendar).
+fn utc_today() -> String {
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let days = i64::try_from(secs / 86_400).unwrap();
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    let s = format!("{y:04}-{m:02}-{d:02}");
+    assert_eq!(fid_xtask::bots::parse_date(&s), Some(days), "{s}");
+    s
+}
+
+/// The repository's own register passes on the real current date, so this test starts
+/// failing once an entry's review is more than 365 days old (the tool itself never reads
+/// the clock). Its only entry sends no content, so the restricted list does not matter
+/// until `house-rules/restricted-paths.txt` exists.
 #[test]
 fn repository_register_is_valid() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let got = check(&root.join("bots.toml"), &fx("ok/restricted-paths.txt"), "2026-11-17", None).unwrap();
+    let got = check(&root.join("bots.toml"), &fx("ok/restricted-paths.txt"), &utc_today(), None).unwrap();
     assert!(got.is_empty(), "{got:?}");
 }
