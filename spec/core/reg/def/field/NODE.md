@@ -35,7 +35,7 @@ The Rust types and the JSON shape of one command definition: every field a domai
 
 ## Requirements
 
-- **REQ-CORE.REG.DEF.FIELD-001** The `CommandDef` type shall hold the fields `id`, `major`, `title`, `description`, `params_schema`, `result_schema`, `side_effect`, `mcp_projection`, `determinism`, `idempotency`, `fs_effect`, `undo`, `preconditions`, `effects`, `algorithms`, `exposure`, `lifecycle`, `human_only`, `network`, `web`, `web_note` and `cli_bare`.
+- **REQ-CORE.REG.DEF.FIELD-001** The `CommandDef` type shall hold the fields `id`, `major`, `title`, `description`, `params_schema`, `result_schema`, `side_effect`, `mcp_projection`, `determinism`, `idempotency`, `fs_effect`, `undo`, `preconditions` (each an object `{expr, bound, message_key}`: an FPL expression, a step bound 1..=1,000,000 and a message key), `effects`, `algorithms`, `exposure`, `lifecycle`, `human_only`, `network`, `web`, `web_note` and `cli_bare`.
 - **REQ-CORE.REG.DEF.FIELD-002** `side_effect` shall take exactly one of R0, R1, W1, W2, W3, X1, I1, D1, M1, S1 or A0; `mcp_projection` one of `exposed`, `request_only` or `never`; `determinism` one of D0, D1, D2, D3 or N.
 - **REQ-CORE.REG.DEF.FIELD-003** `fs_effect` shall take exactly one of `none`, `read_root` or `write_root`, and `undo` exactly one of `head_move` or `not_undoable`.
 - **REQ-CORE.REG.DEF.FIELD-004** `idempotency` shall take exactly one of `natural` (repeating the call has no further effect), `keyed` (the caller supplies an idempotency key) or `none`.
@@ -57,9 +57,9 @@ The Rust types and the JSON shape of one command definition: every field a domai
 ## Design
 
 - **Registry command(s):** none; library types.
-- **Data structures:** `CommandDef { id: CommandId, major: u32, title: String, description: String, params_schema: SchemaDoc, result_schema: SchemaDoc, side_effect: SideEffect, mcp_projection: Projection, determinism: Determinism, idempotency: Idempotency, fs_effect: FsEffect, undo: Undo, preconditions: Vec<PredicateSrc>, effects: Vec<EventType>, algorithms: Vec<AlgorithmId>, exposure: BTreeSet<Surface>, lifecycle: LifecycleRef, human_only: bool, network: Network, web: Web, web_note: Option<String>, cli_bare: bool }`. `Surface { Cli, Mcp, Python, Gui, Control }`. `SchemaDoc` and `PredicateSrc` are opaque here and checked by SCHEMA and PRED. `LifecycleRef` holds state and metadata whose rules live in `CORE.REG.VER.LIFE`.
+- **Data structures:** `CommandDef { id: CommandId, major: u32, title: String, description: String, params_schema: SchemaDoc, result_schema: SchemaDoc, side_effect: SideEffect, mcp_projection: Projection, determinism: Determinism, idempotency: Idempotency, fs_effect: FsEffect, undo: Undo, preconditions: Vec<Precondition>, effects: Vec<EventType>, algorithms: Vec<AlgorithmId>, exposure: BTreeSet<Surface>, lifecycle: LifecycleRef, human_only: bool, network: Network, web: Web, web_note: Option<String>, cli_bare: bool }`. `Surface { Cli, Mcp, Python, Gui, Control }`. `Precondition { expr: String, bound: u32, message_key: String }` (JSON `{"expr": ..., "bound": N, "message_key": "..."}`, all required; bound 1..=1,000,000; message key shaped like a command ID; a malformed entry is `bad_precondition`). `SchemaDoc` and the precondition expression are opaque here and checked by SCHEMA and PRED. `LifecycleRef` holds state and metadata whose rules live in `CORE.REG.VER.LIFE`.
 - **Algorithm:** serde-style derive with `deny_unknown_fields`; enums serialise as fixed strings; `effective_projection()` = min(declared, `request_only`) when `human_only`, ordering `exposed` > `request_only` > `never`.
-- **Errors:** `unknown_field`, `bad_enum{field,value}`, `web_missing`, `web_note_missing`.
+- **Errors:** `unknown_field`, `bad_enum{field,value}`, `bad_precondition`, `web_missing`, `web_note_missing`.
 - **Determinism:** D0; `BTreeSet`/`Vec` only, no hash maps.
 - **Performance budget:** parse 5,000 definitions in < 200 ms [unverified until measured].
 - **Crate:** `fid-registry` (module `def`).

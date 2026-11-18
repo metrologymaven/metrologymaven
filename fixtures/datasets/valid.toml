@@ -1,0 +1,46 @@
+# ECO.DATA.CAT fixture (valid.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "probe-sphere-scans"
+title = "Synthetic dataset probe-sphere-scans"
+source = "https://example.org/datasets/probe-sphere-scans"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "SCAN"
+redistribution = "mirror"
+urls = [
+  "https://example.org/files/a.zip",  # primary
+  "https://mirror.example.org/a.zip",
+]
+notes = "Hand-written \"valid\" entry. Tab:\t end"
+
+[[dataset]]
+id = "nist-like-fit-reference"
+title = "Synthetic dataset nist-like-fit-reference"
+source = "https://example.org/datasets/nist-like-fit-reference"
+licence = "LicenseRef-NIST-Terms"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+owner = "KRN"
+redistribution = "fetch-only"
+urls = ["https://example.org/files/nist-like-fit-reference.zip"]
+contains_standards_text = false
+contains_customer_data = false
+
+[[dataset]]
+id = "cc0-point-clouds.v1"
+title = "Synthetic dataset cc0-point-clouds.v1"
+source = "https://example.org/datasets/cc0-point-clouds.v1"
+licence = "CC0-1.0"
+size_bytes = 1_000_000
+sha256 = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+owner = "IO"
+redistribution = "mirror"
+urls = ["https://example.org/files/cc0-point-clouds.v1.zip"]
+contains_customer_data = true
+release_ref = 'decisions/D-999-example-release.md'

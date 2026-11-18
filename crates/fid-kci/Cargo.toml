@@ -1,15 +1,20 @@
 [package]
 name = "fid-kci"
-description = "Metrology Maven kernel call interface: algorithm IDs and spec cards (spec node KRN.MAN.CARD)"
+description = "Metrology Maven kernel call interface: evaluate, SHA-256, canonical JSON, algorithm IDs and spec cards (spec nodes KRN.MAN.KCI, KRN.MAN.CARD)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate (KNP-1): only fid-types, the zero-dependency num-layer vocabulary crate.
+# Kernel crate (KNP-1): no third-party dependencies; only fid-types and fid-num (layer num).
 [dependencies]
+fid-num = { path = "../fid-num" }
 fid-types = { path = "../fid-types" }
+
+# Test-only: an independent SHA-256 (sha2) for cross-checks (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
 
 [lints]
 workspace = true

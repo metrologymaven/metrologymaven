@@ -35,7 +35,7 @@ fn ac2_invalid_cases() {
     let dir = root().join("fixtures/core/reg/def/field/defs_invalid");
     let mut names: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().path()).collect();
     names.sort();
-    assert_eq!(names.len(), 8);
+    assert_eq!(names.len(), 9);
     for p in names {
         let CValue::Obj(mut o) = parse(&std::fs::read(&p).unwrap()).unwrap() else { panic!() };
         let Some(CValue::Str(expect)) = o.remove("expect") else { panic!("{p:?}: no expect") };

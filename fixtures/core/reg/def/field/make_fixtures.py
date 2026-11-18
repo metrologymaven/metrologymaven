@@ -39,7 +39,8 @@ for i, side in enumerate(SIDE):
         "idempotency": IDEM[i % 3],
         "fs_effect": FS[i % 3],
         "undo": UNDO[i % 2],
-        "preconditions": ["project.open"] if i % 2 else [],
+        "preconditions": [{"expr": "params.tolerance_mm > 0.0", "bound": 100,
+                           "message_key": "fixture.tolerance_positive"}] if i % 2 else [],
         "effects": [f"{NAMES[i]}@1"] if side.startswith("W") else [],
         "algorithms": ["gdt.flatness.mz@0.1.0"] if i == 0 else [],
         "exposure": sorted({SURF[i % 5], SURF[(i + 2) % 5]}),
@@ -78,6 +79,8 @@ def bad(name, expect, change):
 
 bad("bad_side_effect", "bad_enum", lambda d: d.update(side_effect="W9"))
 bad("bad_fs_effect", "bad_enum", lambda d: d.update(fs_effect="write_anywhere"))
+bad("bad_precondition", "bad_precondition",
+    lambda d: d.update(preconditions=[{"expr": "true", "bound": 0, "message_key": "fixture.zero_bound"}]))
 bad("bad_undo", "bad_enum", lambda d: d.update(undo="maybe"))
 bad("bad_network", "bad_enum", lambda d: d.update(network="internet"))
 bad("web_missing", "web_missing", lambda d: d.pop("web"))
