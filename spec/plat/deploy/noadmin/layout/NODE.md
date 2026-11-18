@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-platform]
+built_pr: 155
 satisfies: [REQ-PLAT.DEPLOY.NOADMIN-001, REQ-PLAT.DEPLOY.NOADMIN-002, REQ-PLAT.DEPLOY.NOADMIN-003]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]
