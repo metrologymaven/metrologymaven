@@ -28,8 +28,8 @@ expected = "34.691"
 
 [[case]]
 diagonal_in = 15.6
-resolution = [1366, 768]
-expected = "3.955"
+resolution = [1600, 900]
+expected = "4.633"
 
 [[case]]
 diagonal_in = 24.0
