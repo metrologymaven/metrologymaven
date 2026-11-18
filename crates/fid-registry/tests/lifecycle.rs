@@ -114,8 +114,7 @@ fn check_migrators_refuses_duplicate_decls() {
     dup.lifecycle = Lifecycle { state: State::Removed, ..dup.lifecycle };
     decls.push(dup);
     let m = MigratorRecord::from_value(
-        &parse(br#"{"algorithm":"demo.cmd.migrate@1.0.0","command":"demo.cmd","from_major":1,"to_major":2}"#)
-            .unwrap(),
+        &parse(br#"{"algorithm":"demo.cmd.migrate@1.0.0","command":"demo.cmd","from_major":1,"to_major":2}"#).unwrap(),
     )
     .unwrap();
     assert_eq!(check_migrators(&decls, &[m]).map_err(|e| e.code()), Err("bad_lifecycle"));
