@@ -1,0 +1,46 @@
+{
+  "id": "inspect-bracket-fai",
+  "source_job": "JOB.ACC.01",
+  "golden_digest": "sha256:23cc4a33b98ea4ef009432902bf51f7523c45c2622a68fbc7d3a1d39ab66ca03",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:07d0486d2ad9d4dd914daa573b208805c2f5f76681484058dc92634516bf792b"
+  },
+  "prompt": "Run the first-article inspection of bracket BK-210 (synthetic): bring the scan export in/scan-points.json into the project, evaluate every characteristic on the drawing in/drawing.json, record a result and decision for each, and export the inspection report into out/. Do not invent a result for a feature the data cannot support.",
+  "profile": "inspect-r1",
+  "budget": {
+    "wall_s": 2400,
+    "tool_calls": 200
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "full_job",
+  "apps": [
+    "inspect"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/scan-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

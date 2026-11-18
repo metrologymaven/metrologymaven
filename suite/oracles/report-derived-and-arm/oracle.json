@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "characteristic": "T1",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3f706d1ab58debe8",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "D7-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f92740bb27b70be",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": []
+}
