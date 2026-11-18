@@ -57,8 +57,7 @@ jobs:
         shell: bash
         run: |
           out=$(cargo xtask plat-hw validate --file fixtures/plat/hw/profiles-valid.toml)
-          test "$out" = "$(printf 'minimum
-recommended')"
+          test "$out" = "$(printf 'minimum\nrecommended')"
           for f in inverted no-minimum extra-field; do
             set +e; cargo xtask plat-hw validate --file fixtures/plat/hw/profiles-$f.toml; code=$?; set -e
             test "$code" = 1

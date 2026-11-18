@@ -235,10 +235,7 @@ fn req001_bad_values() {
 
 #[test]
 fn req005_unknown_top_level_key() {
-    let text = rec(REC_OK).replacen("schema_version = 1
-", "schema_version = 1
-notes = \"x\"
-", 1);
+    let text = rec(REC_OK).replacen("schema_version = 1\n", "schema_version = 1\nnotes = \"x\"\n", 1);
     assert_eq!(errs(&text), [HwError::UnknownField { field: "notes".into(), at: String::new() }]);
 }
 

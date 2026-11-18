@@ -10,8 +10,8 @@ use std::process::{Command, ExitCode};
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
-                     cargo xtask plat-matrix lint-tiers [<file>]
-                            cargo xtask plat-hw validate [--file <path>]";
+                     cargo xtask plat-matrix lint-tiers [<file>]\n       \
+                     cargo xtask plat-hw validate [--file <path>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
