@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-canon]
 satisfies: [REQ-CORE.JRN-002, REQ-CORE.JRN-003, REQ-CORE.JRN-004]
 covers: []
 depends_on: []
