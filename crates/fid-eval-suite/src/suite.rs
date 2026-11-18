@@ -247,7 +247,12 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
         let reached = if present.iter().any(|p| p == spath) {
             read_bounded(&tdir.join(spath), &sfile)
         } else {
-            Err(FormatError::new(ErrorCode::MissingFile, &sfile, "", "start-state archive not found in the task directory"))
+            Err(FormatError::new(
+                ErrorCode::MissingFile,
+                &sfile,
+                "",
+                "start-state archive not found in the task directory",
+            ))
         };
         match reached {
             Ok(b) => {
