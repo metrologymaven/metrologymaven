@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/manifest-1.json",
+  "title": "Metrology Maven Result Package manifest, format major version 1",
+  "description": "manifest.json of a Result Package (spec node TRUST.PKG.MANIFEST). Minor versions of format 1 may add optional properties, so unknown properties are allowed and ignored by 1.x readers. Path rules that JSON Schema cannot express (Unicode NFC, no '.' or '..' segment, at most 4096 UTF-8 bytes, sorted unique paths) are enforced by the reader.",
+  "type": "object",
+  "required": ["format", "format_version", "created_by", "evidence_tier", "profile_digest", "kernel_manifest_digest", "members"],
+  "properties": {
+    "format": { "const": "metrologymaven-result-package" },
+    "format_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "created_by": { "type": "string", "minLength": 1 },
+    "evidence_tier": { "enum": ["results", "features", "points"] },
+    "profile_digest": { "$ref": "#/$defs/digest" },
+    "kernel_manifest_digest": { "$ref": "#/$defs/digest" },
+    "members": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/member" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "member": {
+      "type": "object",
+      "required": ["path", "media_type", "length", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(journal|kernel|points|profile|results)/[^\\\\\\u0000]+$",
+          "not": {
+            "anyOf": [
+              { "pattern": "(^|/)\\.{1,2}(/|$)" },
+              { "pattern": "//" },
+              { "pattern": "/$" }
+            ]
+          }
+        },
+        "media_type": {
+          "type": "string",
+          "maxLength": 255,
+          "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+        },
+        "length": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}
