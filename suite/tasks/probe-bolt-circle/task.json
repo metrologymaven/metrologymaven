@@ -1,0 +1,46 @@
+{
+  "id": "probe-bolt-circle",
+  "source_job": "JOB.ACC.04",
+  "golden_digest": "sha256:71f5973c7f1da47839e7813b711b3c89dbc677b7769f7cf20dc70af83bbfa248",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:2509ef60ed4ff427d6518ee1c295841dc905c06193256cae2a95e19de354378c"
+  },
+  "prompt": "Flange FL-480 (synthetic): the bore and face are already evaluated. Re-evaluate the four bolt holes K1 to K4 from the CMM point export in/cmm-points.json against the drawing in/drawing.json: each hole's diameter, the pitch circle diameter, and each hole's position. Record a result and a conformance decision for each.",
+  "profile": "probe-r1",
+  "budget": {
+    "wall_s": 1200,
+    "tool_calls": 80
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "multi_step",
+  "apps": [
+    "probe"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

@@ -1,0 +1,389 @@
+{
+  "format": "fid.eval-corpus-trace@0",
+  "provisional": "Links each oracle item to the golden-journal entry whose ResultRecord it copies (REQ-AGENT.EVAL.CORPUS-002). Checked by tools/check_eval_corpus.py.",
+  "golden": [
+    {
+      "job": "JOB.ACC.01",
+      "app": "inspect",
+      "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.01.json",
+      "digest": "sha256:23cc4a33b98ea4ef009432902bf51f7523c45c2622a68fbc7d3a1d39ab66ca03"
+    },
+    {
+      "job": "JOB.ACC.04",
+      "app": "probe",
+      "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.04.json",
+      "digest": "sha256:71f5973c7f1da47839e7813b711b3c89dbc677b7769f7cf20dc70af83bbfa248"
+    },
+    {
+      "job": "JOB.ACC.03",
+      "app": "report",
+      "path": "fixtures/agent/eval/corpus/golden/JOB.ACC.03.json",
+      "digest": "sha256:9bbc5e93e27c0c60f727c6483af1f2b13835bf20cc5586645792c76bd0a05ce5"
+    }
+  ],
+  "tasks": [
+    {
+      "task": "inspect-bore-b1",
+      "job": "JOB.ACC.01",
+      "first_seq": 2,
+      "last_seq": 2,
+      "workflow_hint": "measure bore",
+      "items": [
+        {
+          "characteristic": "B1-DIA",
+          "entry_seq": 2,
+          "entry_hash": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "inspect-bracket-fai",
+      "job": "JOB.ACC.01",
+      "first_seq": 1,
+      "last_seq": 8,
+      "workflow_hint": "first article",
+      "items": [
+        {
+          "characteristic": "B1-DIA",
+          "entry_seq": 2,
+          "entry_hash": "sha256:daff41d8f0e709a640027676ecde3e58180fa4139b35a62bfd9e0276d08d5c33",
+          "formula": false
+        },
+        {
+          "characteristic": "A-FLAT",
+          "entry_seq": 3,
+          "entry_hash": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4",
+          "formula": false
+        },
+        {
+          "characteristic": "H1-DIA",
+          "entry_seq": 4,
+          "entry_hash": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268",
+          "formula": false
+        },
+        {
+          "characteristic": "H2-DIA",
+          "entry_seq": 5,
+          "entry_hash": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791",
+          "formula": false
+        },
+        {
+          "characteristic": "H1H2-DIST",
+          "entry_seq": 6,
+          "entry_hash": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8",
+          "formula": false
+        },
+        {
+          "characteristic": "H3-DIA",
+          "entry_seq": 7,
+          "entry_hash": "sha256:4a1cacda08fe928b74061e373339c382d4cb50f9532a7f2cedf8f6fd9bfe9e08",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "inspect-plate-holes",
+      "job": "JOB.ACC.01",
+      "first_seq": 3,
+      "last_seq": 6,
+      "workflow_hint": "compare nominal",
+      "items": [
+        {
+          "characteristic": "A-FLAT",
+          "entry_seq": 3,
+          "entry_hash": "sha256:8f5b1ac4e8afdb93975774b42a2679e153ebcd3556db686866c3622852c03ed4",
+          "formula": false
+        },
+        {
+          "characteristic": "H1-DIA",
+          "entry_seq": 4,
+          "entry_hash": "sha256:7a53f85aa4deb67ecd1fe022d46ff3652cbe252a9a5f9edcf6c0f40e881ee268",
+          "formula": false
+        },
+        {
+          "characteristic": "H2-DIA",
+          "entry_seq": 5,
+          "entry_hash": "sha256:6aabbf1682071afef98889d3d8c5ae5d6719d0ac398822ef459e2a91c29a0791",
+          "formula": false
+        },
+        {
+          "characteristic": "H1H2-DIST",
+          "entry_seq": 6,
+          "entry_hash": "sha256:79e2e83a2cc13765f7b4b4b287a7f58a1dd2f701795a4a55c841a46d2553f2d8",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "probe-bolt-circle",
+      "job": "JOB.ACC.04",
+      "first_seq": 4,
+      "last_seq": 12,
+      "workflow_hint": "bolt circle",
+      "items": [
+        {
+          "characteristic": "K1-DIA",
+          "entry_seq": 4,
+          "entry_hash": "sha256:09b531c727c0ff7fa3072b07499e9e7613d798d376d7e3c0f4dbe97449f4d483",
+          "formula": false
+        },
+        {
+          "characteristic": "K2-DIA",
+          "entry_seq": 5,
+          "entry_hash": "sha256:fd74faa55d3678ccbf6fb77f3395fd11a54cd46e7b5acfb6d5c4d937c4dbc1b4",
+          "formula": false
+        },
+        {
+          "characteristic": "K3-DIA",
+          "entry_seq": 6,
+          "entry_hash": "sha256:1d4cadb203ec5b75e8657c725015c948b8a96e7beead9a4db333288d2b4bd283",
+          "formula": false
+        },
+        {
+          "characteristic": "K4-DIA",
+          "entry_seq": 7,
+          "entry_hash": "sha256:5b6ba05a583cd1fe9d845f4f9e338ee88a6627b0318440731d826ef98cefed28",
+          "formula": false
+        },
+        {
+          "characteristic": "PCD",
+          "entry_seq": 8,
+          "entry_hash": "sha256:75944c640b159b7aaf4a54bf130a5ad7f92f724f4e38246c81e51e555188f63c",
+          "formula": false
+        },
+        {
+          "characteristic": "K1-POS",
+          "entry_seq": 9,
+          "entry_hash": "sha256:ca51dbf00cb81172f7f702b8ea5549d82870f57578666baaca220f4718da21c5",
+          "formula": false
+        },
+        {
+          "characteristic": "K2-POS",
+          "entry_seq": 10,
+          "entry_hash": "sha256:1613260bf0095a403bd90e72d50969e0c27dd195e2bdd503cd5822f9901aa33d",
+          "formula": false
+        },
+        {
+          "characteristic": "K3-POS",
+          "entry_seq": 11,
+          "entry_hash": "sha256:6a55069284dfeff13352727bbf06fe193200932ac84454a03716236e24a74870",
+          "formula": false
+        },
+        {
+          "characteristic": "K4-POS",
+          "entry_seq": 12,
+          "entry_hash": "sha256:88bf330328ddba5f2afe57f5d90d6c0e21b99498fa1bb302ad32d977ed9c4075",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "probe-flange-reeval",
+      "job": "JOB.ACC.04",
+      "first_seq": 1,
+      "last_seq": 14,
+      "workflow_hint": "re-evaluation",
+      "items": [
+        {
+          "characteristic": "BORE-DIA",
+          "entry_seq": 2,
+          "entry_hash": "sha256:0801738273901cebb526c0b65d714ff2c11ca33b89ddf799051adfebc5a1373e",
+          "formula": false
+        },
+        {
+          "characteristic": "F-FLAT",
+          "entry_seq": 3,
+          "entry_hash": "sha256:9a7c3ce7b4c074a541f3bc662d4121e93177c87832279548aac3a20a862a8646",
+          "formula": false
+        },
+        {
+          "characteristic": "K1-DIA",
+          "entry_seq": 4,
+          "entry_hash": "sha256:09b531c727c0ff7fa3072b07499e9e7613d798d376d7e3c0f4dbe97449f4d483",
+          "formula": false
+        },
+        {
+          "characteristic": "K2-DIA",
+          "entry_seq": 5,
+          "entry_hash": "sha256:fd74faa55d3678ccbf6fb77f3395fd11a54cd46e7b5acfb6d5c4d937c4dbc1b4",
+          "formula": false
+        },
+        {
+          "characteristic": "K3-DIA",
+          "entry_seq": 6,
+          "entry_hash": "sha256:1d4cadb203ec5b75e8657c725015c948b8a96e7beead9a4db333288d2b4bd283",
+          "formula": false
+        },
+        {
+          "characteristic": "K4-DIA",
+          "entry_seq": 7,
+          "entry_hash": "sha256:5b6ba05a583cd1fe9d845f4f9e338ee88a6627b0318440731d826ef98cefed28",
+          "formula": false
+        },
+        {
+          "characteristic": "PCD",
+          "entry_seq": 8,
+          "entry_hash": "sha256:75944c640b159b7aaf4a54bf130a5ad7f92f724f4e38246c81e51e555188f63c",
+          "formula": false
+        },
+        {
+          "characteristic": "K1-POS",
+          "entry_seq": 9,
+          "entry_hash": "sha256:ca51dbf00cb81172f7f702b8ea5549d82870f57578666baaca220f4718da21c5",
+          "formula": false
+        },
+        {
+          "characteristic": "K2-POS",
+          "entry_seq": 10,
+          "entry_hash": "sha256:1613260bf0095a403bd90e72d50969e0c27dd195e2bdd503cd5822f9901aa33d",
+          "formula": false
+        },
+        {
+          "characteristic": "K3-POS",
+          "entry_seq": 11,
+          "entry_hash": "sha256:6a55069284dfeff13352727bbf06fe193200932ac84454a03716236e24a74870",
+          "formula": false
+        },
+        {
+          "characteristic": "K4-POS",
+          "entry_seq": 12,
+          "entry_hash": "sha256:88bf330328ddba5f2afe57f5d90d6c0e21b99498fa1bb302ad32d977ed9c4075",
+          "formula": false
+        },
+        {
+          "characteristic": "S1-WIDTH",
+          "entry_seq": 13,
+          "entry_hash": "sha256:dc3665925464fd42b5cbdaf66726793b4b57d81f3dc506031b65216389c95442",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "probe-keyway-width",
+      "job": "JOB.ACC.04",
+      "first_seq": 13,
+      "last_seq": 13,
+      "workflow_hint": "slot width",
+      "items": [
+        {
+          "characteristic": "S1-WIDTH",
+          "entry_seq": 13,
+          "entry_hash": "sha256:dc3665925464fd42b5cbdaf66726793b4b57d81f3dc506031b65216389c95442",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "report-derived-and-arm",
+      "job": "JOB.ACC.03",
+      "first_seq": 2,
+      "last_seq": 3,
+      "workflow_hint": "derived",
+      "items": [
+        {
+          "characteristic": "T1",
+          "entry_seq": 2,
+          "entry_hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
+          "formula": true
+        },
+        {
+          "characteristic": "D7-DIA",
+          "entry_seq": 3,
+          "entry_hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "report-housing-fai",
+      "job": "JOB.ACC.03",
+      "first_seq": 1,
+      "last_seq": 4,
+      "workflow_hint": "first article",
+      "items": [
+        {
+          "characteristic": "C1",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C2",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C3",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C4",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C5",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "T1",
+          "entry_seq": 2,
+          "entry_hash": "sha256:c75dc61bcf8f0311bb24c5f46a4a46961291800e4ade099896c063a9a52206d2",
+          "formula": true
+        },
+        {
+          "characteristic": "D7-DIA",
+          "entry_seq": 3,
+          "entry_hash": "sha256:0679322c7be3f2fdef994aa08a0a172c17e9e182cda541dad6cc2a0e61cd8bf1",
+          "formula": false
+        }
+      ]
+    },
+    {
+      "task": "report-import-cmm",
+      "job": "JOB.ACC.03",
+      "first_seq": 1,
+      "last_seq": 1,
+      "workflow_hint": "transcribe",
+      "items": [
+        {
+          "characteristic": "C1",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C2",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C3",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C4",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        },
+        {
+          "characteristic": "C5",
+          "entry_seq": 1,
+          "entry_hash": "sha256:9451613d75790d18be8be2ea814b4bc2a752d4c1622708a7f00d6b1e456ab116",
+          "formula": false
+        }
+      ]
+    }
+  ]
+}

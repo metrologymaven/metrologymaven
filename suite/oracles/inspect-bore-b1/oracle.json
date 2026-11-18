@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "characteristic": "B1-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f8898465f512a83",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": []
+}
