@@ -1,0 +1,11 @@
+{
+  "schema": "colmap@1",
+  "id": "acme.unknown",
+  "version": "1.0.0",
+  "layout": "long",
+  "dialect": { "delimiter": "tab", "decimal_mark": ".", "header": true, "quote": "rfc4180", "encoding": "utf-8", "line_ending": "lf" },
+  "columns": [
+    { "field": "characteristic_id", "header": "ID", "required": true },
+    { "field": "actual_value", "header": "Value", "required": true }
+  ]
+}

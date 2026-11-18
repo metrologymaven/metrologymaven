@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-res]
+built_pr: 152
 satisfies: [REQ-IO.RES.CSV-001, REQ-IO.RES.CSV-003]
 covers: []
 depends_on: [CORE.JRN.CANON, IO.REG.LIMITS]
