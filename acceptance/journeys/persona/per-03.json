@@ -1,0 +1,65 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-03",
+  "subject": "JOB.PER.03",
+  "kind": "persona",
+  "revision": 1,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": ["JOB.PER.03", "JOB.PER.02"],
+  "exercised_by": ["JOB.ACC.05"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "admin",
+      "command": "view.enter_kiosk@1",
+      "owner": "VIZ.KIOSK.SESSION",
+      "handoff": "The kiosk is ready; JOB.PER.03 takes over at the kiosk screen",
+      "human_only": true
+    },
+    {
+      "n": 2,
+      "actor": "operator",
+      "screen": "SCR.KIOSK.LOGIN",
+      "owner": "UX.SCREENS.FLOOR",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "operator",
+      "command": "program.list_operator_programs@1",
+      "owner": "AUTO.RUN.PLAY.SELECT",
+      "decision": "Which released program and which serial to run",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "operator",
+      "command": "program.start_operator_run@1",
+      "owner": "AUTO.RUN.PLAY.SESSION",
+      "decision": "When the scan file is wrong or missing: skip the serial with a recorded reason, or wait for the right file",
+      "handoff": 5,
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "operator",
+      "command": "program.answer_step@1",
+      "owner": "AUTO.RUN.PLAY.ANSWER",
+      "decision": "Re-measure when the kiosk warns that a hand-gauge reading is out of tolerance",
+      "handoff": 6,
+      "human_only": true
+    },
+    {
+      "n": 6,
+      "actor": "operator",
+      "screen": "SCR.KIOSK.RESULT",
+      "owner": "UX.SCREENS.FLOOR",
+      "decision": "Pass: take the next part. Not passed: set the part aside",
+      "handoff": "Next serial starts again at step 3; a part that did not pass is set aside for review by JOB.PER.02",
+      "human_only": false
+    }
+  ]
+}
