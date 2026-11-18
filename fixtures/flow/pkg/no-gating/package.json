@@ -28,7 +28,10 @@
       "id": "values",
       "kind": "value_within_u",
       "params": {
-        "truth": "truth.json"
+        "truth": {
+          "file": "truth.json",
+          "sha256": "sha256:144d946174ff46dc6109b16db03a11ac13be3d9ebb9abe3d3e6a6a5c69ecee5c"
+        }
       }
     }
   ],

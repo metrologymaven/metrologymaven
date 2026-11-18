@@ -79,7 +79,7 @@ Hand-written packages under `fixtures/flow/pkg/` (project-authored).
 
 ## Open questions
 
-- None.
+- Known limits of the `fid-accept` validator (review of PR #146): (1) a file is resolved (exact-case listing, no symbolic link) and then opened in a separate step, so a package folder changed between the two (time-of-check to time-of-use) is not detected; validate packages in a checkout no other process writes to. (2) Hard links are not detected: a hard-linked file inside the package is read like any other file (its digest is still checked). (3) Windows junctions are expected to be refused as links (Rust reports them as symbolic links), but no CI test creates one, so that behaviour is untested.
 
 ## Children
 

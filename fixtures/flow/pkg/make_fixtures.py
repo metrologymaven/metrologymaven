@@ -83,7 +83,7 @@ BASE = {
     "datasets": [{"id": "flow-pkg-demo-part", "sha256": "sha256:" + DATASET_SHA}],
     "checks": [
         {"id": "replay", "kind": "replay_outcome", "params": {}},
-        {"id": "values", "kind": "value_within_u", "params": {"truth": "truth.json"}},
+        {"id": "values", "kind": "value_within_u", "params": {"truth": {"file": "truth.json", "sha256": sha(TRUTH)}}},
     ],
     "time_targets": [
         {"metric": "task_s", "seconds": 1200, "verified": False},
@@ -94,14 +94,20 @@ BASE = {
 KILL_CHECK = {"id": "survive", "kind": "committed_survive_kill", "params": {}}
 
 
-def package(name, change=None, raw=None):
+def package(name, change=None, raw=None, extra=()):
     doc = copy.deepcopy(BASE)
     if change:
         change(doc)
     emit(f"{name}/package.json", raw if raw is not None else pretty(doc))
     emit(f"{name}/journal.jsonl", JOURNAL)
     emit(f"{name}/truth.json", TRUTH)
+    for rel, data in extra:
+        emit(f"{name}/{rel}", data)
     return doc
+
+
+def truth_file(path):
+    return lambda d: d["checks"][1]["params"]["truth"].update(file=path)
 
 
 def drop(key):
@@ -132,16 +138,30 @@ package("bad-journal-digest", lambda d: d["journal"].update(sha256=sha(b"not the
 package("unknown-dataset", lambda d: d["datasets"][0].update(id="flow-pkg-missing"))
 package("dataset-digest", lambda d: d["datasets"][0].update(sha256=sha(b"other data\n")))
 package("traversal", lambda d: d["journal"].update(file="../valid/journal.jsonl"))
-package("absolute-param", lambda d: d["checks"][1]["params"].update(truth="/etc/passwd"))
+package("absolute-param", truth_file("/etc/passwd"))
 package("dup-check-id", lambda d: d["checks"][1].update(id="replay"))
-package("case-collision", lambda d: d["checks"][1]["params"].update(truth="Journal.jsonl"))
+package("case-collision", truth_file("Journal.jsonl"))
 package("wrong-case", lambda d: d["journal"].update(file="JOURNAL.jsonl"))
 package("extra-field", lambda d: d.update(gating_override="tracked"))
 package("bad-params", lambda d: d["checks"][1].update(params={"tolerance": 1}))
 package("missing-journal", lambda d: d["journal"].update(file="missing.jsonl"))
 package("no-checks", lambda d: d.update(checks=[]))
-package("device-name", lambda d: d["checks"][1]["params"].update(truth="con.json"))
-package("names-manifest", lambda d: d["checks"][1]["params"].update(truth="PACKAGE.json"))
+package("device-name", truth_file("con.json"))
+package("names-manifest", truth_file("PACKAGE.json"))
+package("truth-digest", lambda d: d["checks"][1]["params"]["truth"].update(sha256=sha(b"other truth\n")))
+package("truth-no-digest", lambda d: d["checks"][1]["params"].update(truth="truth.json"))
+
+
+def prefix_collision(d):
+    d["journal"]["file"] = "logs/journal.jsonl"
+    d["checks"][1]["params"]["truth"]["file"] = "LOGS/truth.json"
+
+
+package(
+    "prefix-collision",
+    prefix_collision,
+    extra=[("logs/journal.jsonl", JOURNAL), ("logs/truth.json", TRUTH)],
+)
 
 # Duplicate key: written as raw text, since a dict cannot hold one.
 dup_text = pretty(BASE).decode("utf-8").replace(

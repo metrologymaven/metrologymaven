@@ -224,11 +224,30 @@ fn every_kind_has_a_parameter_schema_and_nothing_else_does() {
     }
 }
 
+/// Expands `FILE(path)` into a file reference `{"file": path, "sha256": ...}`.
+fn expand(params: &str) -> String {
+    let mut out = String::new();
+    let mut rest = params;
+    while let Some(i) = rest.find("FILE(") {
+        out.push_str(&rest[..i]);
+        let tail = &rest[i + 5..];
+        let j = tail.find(')').unwrap();
+        out.push_str(&format!(r#"{{"file": "{}", "sha256": "sha256:{}"}}"#, &tail[..j], "0".repeat(64)));
+        rest = &tail[j + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The `valid` manifest with check 1 replaced by one of `kind` with `params`.
 fn manifest_with_check(kind: &str, params: &str) -> String {
-    let base = std::fs::read_to_string(fixtures().join("valid").join(MANIFEST)).unwrap();
-    let old = "\"kind\": \"value_within_u\",\n      \"params\": {\n        \"truth\": \"truth.json\"\n      }";
-    assert!(base.contains(old));
-    base.replace(old, &format!("\"kind\": \"{kind}\",\n      \"params\": {params}"))
+    let base = std::fs::read(fixtures().join("valid").join(MANIFEST)).unwrap();
+    let CValue::Obj(mut m) = fid_canon::parse(&base).unwrap() else { panic!() };
+    let Some(CValue::Arr(checks)) = m.get_mut("checks") else { panic!() };
+    let CValue::Obj(check) = &mut checks[1] else { panic!() };
+    check.insert("kind".into(), CValue::Str(kind.into()));
+    check.insert("params".into(), fid_canon::parse(expand(params).as_bytes()).unwrap());
+    String::from_utf8(fid_canon::to_canonical_bytes(&CValue::Obj(m)).unwrap()).unwrap()
 }
 
 fn manifest_findings(text: &str) -> Vec<String> {
@@ -239,12 +258,12 @@ fn manifest_findings(text: &str) -> Vec<String> {
 fn parameters_are_checked_per_kind() {
     let ok: &[(&str, &str)] = &[
         ("all_characteristics_resolved", "{}"),
-        ("value_within_u", r#"{"truth": "truth.json", "items": ["c1", "c2"]}"#),
-        ("decision_equals", r#"{"truth": "t/d.json"}"#),
+        ("value_within_u", r#"{"truth": FILE(truth.json), "items": ["c1", "c2"]}"#),
+        ("decision_equals", r#"{"truth": FILE(t/d.json)}"#),
         ("result_count", r#"{"count": 80}"#),
         ("ors_case", r#"{"cases": ["ors-01"]}"#),
-        ("lexical_identical", r#"{"artefact": "report.pdf", "expected": "expected/report.pdf"}"#),
-        ("lint_findings_equal", r#"{"expected": "lint.json"}"#),
+        ("lexical_identical", r#"{"artefact": "report.pdf", "expected": FILE(expected/report.pdf)}"#),
+        ("lint_findings_equal", r#"{"expected": FILE(lint.json)}"#),
         ("sheet_cells_equal", r#"{"artefact": "results.xlsx"}"#),
         ("verify_verdict", r#"{"expected": "valid"}"#),
         ("records_equal", r#"{"against": "j2-unassisted"}"#),
@@ -260,15 +279,21 @@ fn parameters_are_checked_per_kind() {
     }
     let bad: &[(&str, &str, &str)] = &[
         ("replay_outcome", r#"{"accept": ["identical"]}"#, "PKG-CHECK checks[1].params.accept"),
-        ("value_within_u", r#"{"truth": "truth.json", "items": []}"#, "PKG-CHECK checks[1].params.items"),
-        ("value_within_u", r#"{"truth": "truth.json", "items": ["c1", "c1"]}"#, "PKG-CHECK checks[1].params.items"),
-        ("decision_equals", r#"{"truth": "..\\t.json"}"#, "PKG-CHECK checks[1].params.truth"),
+        ("value_within_u", r#"{"truth": FILE(truth.json), "items": []}"#, "PKG-CHECK checks[1].params.items"),
+        ("value_within_u", r#"{"truth": FILE(truth.json), "items": ["c1", "c1"]}"#, "PKG-CHECK checks[1].params.items"),
+        ("decision_equals", r#"{"truth": FILE(..\\t.json)}"#, "PKG-CHECK checks[1].params.truth"),
         ("decision_equals", r#"{"truth": 7}"#, "PKG-CHECK checks[1].params.truth"),
+        ("decision_equals", r#"{"truth": "truth.json"}"#, "PKG-CHECK checks[1].params.truth"),
+        ("decision_equals", r#"{"truth": {"file": "truth.json"}}"#, "PKG-CHECK checks[1].params.truth"),
+        ("decision_equals", r#"{"truth": {"file": "t.json", "sha256": "sha256:00"}}"#, "PKG-CHECK checks[1].params.truth"),
+        ("decision_equals", r#"{"truth": {"file": "t.json", "sha": "x"}}"#, "PKG-CHECK checks[1].params.truth"),
         ("result_count", r#"{"count": -1}"#, "PKG-CHECK checks[1].params.count"),
         ("result_count", r#"{"count": 1.5}"#, "PKG-CHECK checks[1].params.count"),
         ("result_count", r#"{"count": "80"}"#, "PKG-CHECK checks[1].params.count"),
         ("ors_case", r#"{"cases": "ors-01"}"#, "PKG-CHECK checks[1].params.cases"),
-        ("lexical_identical", r#"{"artefact": "", "expected": "e.pdf"}"#, "PKG-CHECK checks[1].params.artefact"),
+        ("lexical_identical", r#"{"artefact": "", "expected": FILE(e.pdf)}"#, "PKG-CHECK checks[1].params.artefact"),
+        ("sheet_cells_equal", r#"{"artefact": "../out.xlsx"}"#, "PKG-CHECK checks[1].params.artefact"),
+        ("file_digest", r#"{"artefact": "C:/report.pdf"}"#, "PKG-CHECK checks[1].params.artefact"),
         ("verify_verdict", r#"{"expected": "a\nb"}"#, "PKG-CHECK checks[1].params.expected"),
         ("records_equal", r#"{"against": "J2"}"#, "PKG-CHECK checks[1].params.against"),
         ("file_digest", r#"{"artefact": "r.pdf", "sha256": "sha256:ABC"}"#, "PKG-CHECK checks[1].params.sha256"),
@@ -427,9 +452,40 @@ fn oversized_journal_is_refused_while_streaming() {
 fn crowded_folder_is_refused() {
     let dir = fixtures().join("valid");
     let tight = Limits { dir_entries: 1, ..Limits::default() };
+    // The whole listing is read before the lookup, so the outcome does not depend on the
+    // order the operating system lists the folder in.
     let r = validate_dir_with(&dir, &catalogue(), &tight);
-    assert!(!r.is_ok());
-    assert!(r.findings.iter().all(|f| f.detail.contains("more than 1 entries")), "{:#?}", r.findings);
+    assert_eq!(short(&r.findings), vec!["PKG-SCHEMA package.json"]);
+    assert_eq!(r.findings[0].detail, "its folder has more than 1 entries");
+    let three = Limits { dir_entries: 3, ..Limits::default() };
+    assert!(validate_dir_with(&dir, &catalogue(), &three).is_ok());
+}
+
+#[test]
+fn case_collisions_in_folder_prefixes_are_refused() {
+    let base = std::fs::read(fixtures().join("valid").join(MANIFEST)).unwrap();
+    let CValue::Obj(mut m) = fid_canon::parse(&base).unwrap() else { panic!() };
+    let Some(CValue::Obj(journal)) = m.get_mut("journal") else { panic!() };
+    journal.insert("file".into(), CValue::Str("a/j.jsonl".into()));
+    let text = String::from_utf8(fid_canon::to_canonical_bytes(&CValue::Obj(m)).unwrap()).unwrap();
+    let with = |truth: &str| text.replace("\"file\":\"truth.json\"", &format!("\"file\":\"{truth}\""));
+    assert_eq!(manifest_findings(&with("A/t.json")), vec!["PKG-SCHEMA checks[1].params.truth"]);
+    assert_eq!(manifest_findings(&with("a/J.jsonl")), vec!["PKG-SCHEMA checks[1].params.truth"]);
+    assert!(manifest_findings(&with("a/t.json")).is_empty());
+    assert!(manifest_findings(&with("b/t.json")).is_empty());
+    assert!(manifest_findings(&with("a/j.jsonl")).is_empty());
+}
+
+#[test]
+fn check_file_digest_is_verified() {
+    let r = validate_dir(&fixtures().join("truth-digest"), &catalogue());
+    assert_eq!(r.findings[0].code, Code::Digest);
+    assert!(r.findings[0].detail.starts_with("the file's digest is sha256:"));
+    // The file bound applies to check files too: the truth file is 46 bytes.
+    let small = Limits { journal_bytes: 40, ..Limits::default() };
+    let r = validate_dir_with(&fixtures().join("valid"), &catalogue(), &small);
+    assert_eq!(short(&r.findings), vec!["PKG-CHECK checks[1].params.truth", "PKG-DIGEST journal.file"]);
+    assert_eq!(r.findings[0].detail, "exceeds 40 bytes");
 }
 
 #[test]

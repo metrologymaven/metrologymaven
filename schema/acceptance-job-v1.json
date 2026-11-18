@@ -65,6 +65,13 @@
       "maxLength": 255,
       "pattern": "^(?!.*(^|/)\\.{1,2}(/|$))[A-Za-z0-9._-]{1,100}(/[A-Za-z0-9._-]{1,100}){0,7}$"
     },
+    "fileref": {
+      "description": "A file in the package and its SHA-256, like `journal`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": { "file": { "$ref": "#/$defs/path" }, "sha256": { "$ref": "#/$defs/digest" } }
+    },
     "text": { "type": "string", "minLength": 1, "maxLength": 256 },
     "count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
     "ranges": {
@@ -148,16 +155,16 @@
       "none": { "type": "object", "additionalProperties": false, "required": [], "properties": {} },
       "truth": {
         "type": "object", "additionalProperties": false, "required": ["truth"],
-        "properties": { "truth": { "$ref": "#/$defs/path" } }
+        "properties": { "truth": { "$ref": "#/$defs/fileref" } }
       },
       "expected": {
         "type": "object", "additionalProperties": false, "required": ["expected"],
-        "properties": { "expected": { "$ref": "#/$defs/path" } }
+        "properties": { "expected": { "$ref": "#/$defs/fileref" } }
       },
       "value_within_u": {
         "type": "object", "additionalProperties": false, "required": ["truth"],
         "properties": {
-          "truth": { "$ref": "#/$defs/path" },
+          "truth": { "$ref": "#/$defs/fileref" },
           "items": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/text" } }
         }
       },
@@ -173,11 +180,11 @@
       },
       "lexical_identical": {
         "type": "object", "additionalProperties": false, "required": ["artefact", "expected"],
-        "properties": { "artefact": { "$ref": "#/$defs/text" }, "expected": { "$ref": "#/$defs/path" } }
+        "properties": { "artefact": { "$ref": "#/$defs/path" }, "expected": { "$ref": "#/$defs/fileref" } }
       },
       "artefact": {
         "type": "object", "additionalProperties": false, "required": ["artefact"],
-        "properties": { "artefact": { "$ref": "#/$defs/text" } }
+        "properties": { "artefact": { "$ref": "#/$defs/path" } }
       },
       "verify_verdict": {
         "type": "object", "additionalProperties": false, "required": ["expected"],
@@ -189,7 +196,7 @@
       },
       "file_digest": {
         "type": "object", "additionalProperties": false, "required": ["artefact"],
-        "properties": { "artefact": { "$ref": "#/$defs/text" }, "sha256": { "$ref": "#/$defs/digest" } }
+        "properties": { "artefact": { "$ref": "#/$defs/path" }, "sha256": { "$ref": "#/$defs/digest" } }
       },
       "no_edit_reachable": {
         "type": "object", "additionalProperties": false, "required": ["allowed_commands"],

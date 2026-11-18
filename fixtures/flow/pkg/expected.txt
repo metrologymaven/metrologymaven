@@ -25,6 +25,9 @@ no-checks	PKG-SCHEMA checks
 device-name	PKG-CHECK checks[1].params.truth
 names-manifest	PKG-SCHEMA checks[1].params.truth
 dup-key	PKG-SCHEMA package.json
+truth-digest	PKG-DIGEST checks[1].params.truth
+truth-no-digest	PKG-CHECK checks[1].params.truth
+prefix-collision	PKG-SCHEMA checks[1].params.truth
 suite.json	ok
 suite-stale.json	PKG-DIGEST packages[0].digest
 suite-bad.json	PKG-SCHEMA packages[1].path

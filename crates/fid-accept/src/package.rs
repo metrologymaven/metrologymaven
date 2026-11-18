@@ -119,8 +119,12 @@ pub const KILL_CHECK: &str = "committed_survive_kill";
 /// Type of one check parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParamType {
-    /// A file reference inside the package (same rules as `journal.file`); the file must exist.
+    /// A file in the package with its digest, `{file, sha256}`, like `journal`: the file must
+    /// exist (same path rules as `journal.file`) and its SHA-256 must match.
     Path,
+    /// The name of an output artefact of the run (an export file name, not a package file):
+    /// the same path syntax as a file reference, not looked up.
+    Artefact,
     /// Free text: 1 to [`MAX_TEXT_BYTES`] bytes, no control characters.
     Text,
     /// A variant ID of another package (lowercase letters, digits, inner hyphens).
@@ -159,11 +163,11 @@ const EXPECTED: &[ParamSpec] = &[req("expected", ParamType::Path)];
 const VALUE_WITHIN_U: &[ParamSpec] = &[req("truth", ParamType::Path), opt("items", ParamType::TextList)];
 const RESULT_COUNT: &[ParamSpec] = &[req("count", ParamType::Count)];
 const ORS_CASE: &[ParamSpec] = &[req("cases", ParamType::TextList)];
-const LEXICAL: &[ParamSpec] = &[req("artefact", ParamType::Text), req("expected", ParamType::Path)];
-const ARTEFACT: &[ParamSpec] = &[req("artefact", ParamType::Text)];
+const LEXICAL: &[ParamSpec] = &[req("artefact", ParamType::Artefact), req("expected", ParamType::Path)];
+const ARTEFACT: &[ParamSpec] = &[req("artefact", ParamType::Artefact)];
 const VERIFY: &[ParamSpec] = &[req("expected", ParamType::Text)];
 const RECORDS: &[ParamSpec] = &[req("against", ParamType::Variant)];
-const FILE_DIGEST: &[ParamSpec] = &[req("artefact", ParamType::Text), opt("sha256", ParamType::Digest)];
+const FILE_DIGEST: &[ParamSpec] = &[req("artefact", ParamType::Artefact), opt("sha256", ParamType::Digest)];
 const NO_EDIT: &[ParamSpec] = &[req("allowed_commands", ParamType::CommandList), opt("steps", ParamType::Ranges)];
 const NO_POINTER: &[ParamSpec] = &[req("steps", ParamType::Ranges)];
 
@@ -204,8 +208,9 @@ pub enum Code {
     Check,
     /// A dataset ID is not in the catalogue, or its digest differs from the catalogue's.
     Dataset,
-    /// The journal cannot be found or digested, or its digest differs; or a suite entry's
-    /// digest differs from the package digest.
+    /// The journal cannot be found or digested, or its digest differs; a check file's digest
+    /// differs from its declared `sha256`; or a suite entry's digest differs from the package
+    /// digest.
     Digest,
     /// `kill_after` without a `committed_survive_kill` check, or not inside the journal (REQ-005).
     Kill,
@@ -379,6 +384,7 @@ impl Report {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
     pub manifest_bytes: usize,
+    /// Largest journal or check file, each streamed through SHA-256.
     pub journal_bytes: u64,
     pub dir_entries: usize,
 }
@@ -570,7 +576,7 @@ type Obj = BTreeMap<String, CValue>;
 struct FileRef {
     subject: String,
     path: String,
-    code: Code,
+    sha256: Digest,
 }
 
 #[derive(Default)]
@@ -890,12 +896,25 @@ impl Draft {
 
     fn param(&mut self, ty: ParamType, v: &CValue, sub: &str) -> Result<(), String> {
         match (ty, v) {
-            (ParamType::Path, CValue::Str(s)) => {
-                check_path(s).map_err(String::from)?;
-                self.files.push(FileRef { subject: sub.to_string(), path: s.clone(), code: Code::Check });
+            (ParamType::Path, CValue::Obj(o)) if o.len() == 2 => {
+                let file = match o.get("file") {
+                    Some(CValue::Str(s)) => s,
+                    _ => return Err("must be an object {file, sha256} naming a file in the package".into()),
+                };
+                check_path(file).map_err(|why| format!("file {why}"))?;
+                let sha256 = match o.get("sha256") {
+                    Some(CValue::Str(s)) => Digest::parse(s).ok(),
+                    _ => None,
+                };
+                let Some(sha256) = sha256 else {
+                    return Err("sha256 must be `sha256:` and 64 lowercase hex digits".into());
+                };
+                self.files.push(FileRef { subject: sub.to_string(), path: file.clone(), sha256 });
                 Ok(())
             }
-            (ParamType::Path, _) => Err("must be a relative file path in the package".into()),
+            (ParamType::Path, _) => Err("must be an object {file, sha256} naming a file in the package".into()),
+            (ParamType::Artefact, CValue::Str(s)) => check_path(s).map_err(|why| format!("artefact name {why}")),
+            (ParamType::Artefact, _) => Err("must be an artefact file name".into()),
             (ParamType::Text, CValue::Str(s)) if is_text(s) => Ok(()),
             (ParamType::Text, _) => Err(format!("must be text of 1 to {MAX_TEXT_BYTES} bytes")),
             (ParamType::Variant, CValue::Str(s)) if is_ident(s) => Ok(()),
@@ -1058,32 +1077,43 @@ impl Draft {
         }
     }
 
-    /// File references that differ only by letter case would name one file on Windows and
-    /// macOS and two on Linux; they and references to the manifest are refused.
+    /// File references that differ only by letter case, in the whole path or in any folder
+    /// prefix (`a/j.jsonl` and `A/t.json`), would name one folder or file on Windows and macOS
+    /// and two on Linux; they and references to the manifest are refused.
     fn collisions(&mut self) {
         let mut all: Vec<(String, String)> = Vec::new();
         if let Some(f) = &self.journal_file {
             all.push(("journal.file".to_string(), f.clone()));
         }
         all.extend(self.files.iter().map(|f| (f.subject.clone(), f.path.clone())));
+        // Folded prefix -> the first exact spelling seen.
         let mut seen: BTreeMap<String, String> = BTreeMap::new();
         let mut bad: BTreeSet<String> = BTreeSet::new();
         for (subject, path) in all {
-            let folded = path.to_ascii_lowercase();
-            if folded == MANIFEST {
+            if path.to_ascii_lowercase() == MANIFEST {
                 self.push(Code::Schema, subject.clone(), "must not name the manifest");
                 bad.insert(subject);
                 continue;
             }
-            match seen.get(&folded) {
-                Some(prev) if *prev != path => {
-                    self.push(Code::Schema, subject.clone(), format!("differs from {prev:?} only by letter case"));
-                    bad.insert(subject);
-                }
-                Some(_) => {}
-                None => {
-                    seen.insert(folded, path);
-                }
+            let mut prefixes: Vec<String> = Vec::new();
+            for part in path.split('/') {
+                let next = match prefixes.last() {
+                    Some(p) => format!("{p}/{part}"),
+                    None => part.to_string(),
+                };
+                prefixes.push(next);
+            }
+            let clash = prefixes.iter().find_map(|p| match seen.get(&p.to_ascii_lowercase()) {
+                Some(prev) if prev != p => Some((p.clone(), prev.clone())),
+                _ => None,
+            });
+            if let Some((mine, prev)) = clash {
+                self.push(Code::Schema, subject.clone(), format!("{mine:?} differs from {prev:?} only by letter case"));
+                bad.insert(subject);
+                continue;
+            }
+            for p in prefixes {
+                seen.entry(p.to_ascii_lowercase()).or_insert(p);
             }
         }
         if bad.contains("journal.file") {
@@ -1188,18 +1218,22 @@ pub fn check_manifest(input: &[u8], catalogue: &Catalogue) -> Report {
 
 // ------------------------------------------------------------------ file system
 
+/// Whether `dir` lists `name` with exactly that spelling. The whole listing is read (up to
+/// `max_entries`) before answering, so a crowded folder fails the same way whatever order
+/// the operating system lists it in.
 fn has_entry(dir: &Path, name: &str, max_entries: usize) -> Result<bool, String> {
     let listing = fs::read_dir(dir).map_err(|_| "cannot list its folder".to_string())?;
+    let mut found = false;
     for (n, entry) in listing.enumerate() {
         if n >= max_entries {
             return Err(format!("its folder has more than {max_entries} entries"));
         }
         let entry = entry.map_err(|_| "cannot list its folder".to_string())?;
         if entry.file_name().as_os_str() == OsStr::new(name) {
-            return Ok(true);
+            found = true;
         }
     }
-    Ok(false)
+    Ok(found)
 }
 
 /// Resolves `rel` (already accepted by [`check_path`]) under `base`, component by component:
@@ -1240,6 +1274,29 @@ fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
         return Err(format!("exceeds {limit} bytes"));
     }
     Ok(bytes)
+}
+
+/// Streams a referenced file of at most `limit` bytes through SHA-256.
+fn digest_file(path: &Path, limit: u64) -> Result<Digest, String> {
+    let file = fs::File::open(path).map_err(|_| "cannot be read".to_string())?;
+    let mut reader = file.take(limit.saturating_add(1));
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 64 * 1024];
+    let mut total = 0u64;
+    loop {
+        let n = match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(_) => return Err("cannot be read".to_string()),
+        };
+        total += n as u64;
+        if total > limit {
+            return Err(format!("exceeds {limit} bytes"));
+        }
+        hasher.update(buf.get(..n).unwrap_or(&[]));
+    }
+    Ok(Digest::from_bytes(hasher.finalize().into()))
 }
 
 /// What streaming a journal found: its digest, entry count and any structural problem.
@@ -1352,11 +1409,15 @@ pub fn validate_dir_with(dir: &Path, catalogue: &Catalogue, limits: &Limits) -> 
             d.push(Code::Check, subject, format!("reaches entry {top}; the journal holds {n}"));
         }
     }
-    let refs: Vec<(String, String, Code)> =
-        d.files.iter().map(|f| (f.subject.clone(), f.path.clone(), f.code)).collect();
-    for (subject, path, code) in refs {
-        if let Err(why) = locate(dir, &path, false, max_entries) {
-            d.push(code, subject, why);
+    let refs: Vec<(String, String, Digest)> =
+        d.files.iter().map(|f| (f.subject.clone(), f.path.clone(), f.sha256)).collect();
+    for (subject, path, want) in refs {
+        match locate(dir, &path, false, max_entries)
+            .and_then(|p| digest_file(&p, limits.journal_bytes.min(MAX_JOURNAL_BYTES)))
+        {
+            Err(why) => d.push(Code::Check, subject, why),
+            Ok(got) if got != want => d.push(Code::Digest, subject, format!("the file's digest is {got}")),
+            Ok(_) => {}
         }
     }
     finish(d, Some(digest), entries)
