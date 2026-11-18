@@ -1,0 +1,58 @@
+# Hand-written fixture for ECO.REL.PROC.RUNBOOK (CC-BY-4.0).
+
+[[step]]
+id = "tag-validate"
+title = "Validate the tag"
+performer = "ci"
+job = "tag-validate"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "available"
+tool = "cargo xtask rel version-check"
+notes = "Reads the tag from its argument.\nNever creates tags.\n"
+
+[[step]]
+id = "vuln-gate"
+title = "Vulnerability gate"
+performer = "ci"
+job = "vuln-gate"
+gates = ["qual-sbom"]
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
+
+[[step]]
+id = "redteam-verdict"
+title = "Red-team verdict"
+performer = "ci"
+job = "redteam-verdict"
+gates = ["agent-redteam"]
+channels = ["beta", "stable", "lts"]
+status = "planned"
+notes = "  Planned: AGENT.REDTEAM.  "
+
+[[step]]
+id = "sign-approval"
+title = "Approve signing"
+performer = "role:release-approver"
+gates = []
+channels = ["beta", "stable", "lts"]
+status = "planned"
+
+[[step]]
+id = "sums"
+title = "Write SHA256SUMS"
+performer = "ci"
+job = "sums"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "available"
+tool = "cargo xtask rel sums"
+
+[[step]]
+id = "publish"
+title = "Publish"
+performer = "ci"
+job = "publish"
+gates = []
+channels = ["nightly", "beta", "stable", "lts"]
+status = "planned"
