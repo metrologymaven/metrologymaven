@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-vocab]
 satisfies: [REQ-ECO.RULES.VOCAB-001, REQ-ECO.RULES.VOCAB-005]
 covers: []
 depends_on: []
