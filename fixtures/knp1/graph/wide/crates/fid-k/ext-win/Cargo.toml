@@ -1,0 +1,7 @@
+# Nested inside fid-k but a closure crate of its own (not a member): fid-k's file list skips
+# it, and its licence inherits from a workspace it is not a member of, so it counts as missing.
+[package]
+name = "ext-win"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true

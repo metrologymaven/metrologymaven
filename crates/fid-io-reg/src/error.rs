@@ -52,6 +52,7 @@ pub const CODES: &[&str] = &[
     "format_duplicate",
     "raw_path_forbidden",
     "path_outside_root",
+    "root_not_found",
     "target_exists",
     "limit_raise_forbidden",
     "reader_crashed",
@@ -100,6 +101,8 @@ pub enum IoError {
     RawPathForbidden,
     /// A path resolved from a root handle leaves the root.
     PathOutsideRoot,
+    /// A root handle names a root that is not configured for the requested direction.
+    RootNotFound,
     /// The export target exists and `overwrite` is not set.
     TargetExists,
     /// An agent or script asked to raise a limit above its default.
@@ -136,6 +139,7 @@ impl IoError {
             IoError::FormatDuplicate => "format_duplicate",
             IoError::RawPathForbidden => "raw_path_forbidden",
             IoError::PathOutsideRoot => "path_outside_root",
+            IoError::RootNotFound => "root_not_found",
             IoError::TargetExists => "target_exists",
             IoError::LimitRaiseForbidden { .. } => "limit_raise_forbidden",
             IoError::ReaderCrashed => "reader_crashed",

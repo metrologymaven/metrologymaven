@@ -1,0 +1,7 @@
+# A nested package that is not in the closure: ext-a pulls its file in with #[path], so the
+# lint must scan it rather than skip the directory.
+[package]
+name = "ext-nested"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"

@@ -1,0 +1,8 @@
+# AC-5: excluding a src/ path other than src/bin/ is rejected.
+[graph]
+workspace = "../ok"
+roots = ["fid-num"]
+third_party_dir = "../ok/vendor"
+exclude = ["tests/**", "src/solver.rs"]
+allowlist = "../ok/kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"
