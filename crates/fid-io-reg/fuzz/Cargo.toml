@@ -1,0 +1,27 @@
+# cargo-fuzz harness for fid-io-reg (IO.REG.LIMITS AC-5). Not a workspace member: it
+# needs nightly and libFuzzer. Run from crates/fid-io-reg:
+#   cargo +nightly fuzz run limits_toy_reader -- -max_total_time=300
+[package]
+name = "fid-io-reg-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-io-reg = { path = ".." }
+
+[[bin]]
+name = "limits_toy_reader"
+path = "fuzz_targets/limits_toy_reader.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this crate out of the parent workspace.
+[workspace]
+members = ["."]

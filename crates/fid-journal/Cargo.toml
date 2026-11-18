@@ -1,0 +1,17 @@
+[package]
+name = "fid-journal"
+description = "Metrology Maven semantic journal: entry model and salted commitments (spec node CORE.JRN.ENTRY)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
+getrandom = "0.2"
+
+[lints]
+workspace = true
