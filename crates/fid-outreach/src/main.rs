@@ -31,9 +31,16 @@
 //! `sh run` block of the guide in a temporary copy of the revision it states. Exits 0 when all
 //! blocks pass, 1 on `revision_mismatch` or any failing block, and 2 on an unreadable or
 //! invalid guide, an unreadable repository, or bad usage.
+//!
+//! `guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]` (spec node
+//! `OUTR.BRAND.GUIDE.NAME`): checks that the guideline Markdown files write the family name only
+//! as `{{FAMILY_NAME}}`; with `--publish`, writes copies with the accepted name substituted.
+//! Exits 0 with no findings, 1 with any (nothing written), and 2 on unreadable input, an
+//! unparsable name file, or bad usage.
 
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
+use fid_outreach::guide_check;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::qa::a11y::{self, Options};
@@ -50,7 +57,8 @@ commands:
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
-  doc-run --guide <file> --repo <dir> [--json]";
+  doc-run --guide <file> --repo <dir> [--json]
+  guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -61,6 +69,7 @@ fn main() -> ExitCode {
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -372,6 +381,61 @@ fn doc_run_cmd(args: &[String]) -> ExitCode {
                 emit(&doc_run::error_json(&e));
             }
             eprintln!("doc-run: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn guide_check_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut publish = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--publish" => publish = true,
+            flag @ ("--root" | "--name" | "--out") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(root), Some(name)) = (opts.get("--root"), opts.get("--name")) else {
+        return usage();
+    };
+    let publish_to = match (publish, opts.get("--out")) {
+        (true, Some(out)) => Some(PathBuf::from(out)),
+        (false, None) => None,
+        _ => return usage(),
+    };
+    let options = guide_check::Options { root: PathBuf::from(root), name_file: PathBuf::from(name), publish_to };
+    match guide_check::run(&options) {
+        Ok(report) => {
+            if json {
+                match report.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => {
+                        eprintln!("guide-check: report serialisation failed: {m}");
+                        return ExitCode::from(2);
+                    }
+                }
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                match e.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => eprintln!("guide-check: error serialisation failed: {m}"),
+                }
+            }
+            eprintln!("guide-check: {e}");
             ExitCode::from(2)
         }
     }
