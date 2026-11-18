@@ -52,6 +52,14 @@ impl UntrustedText {
         self.0.len()
     }
 
+    /// The raw text, for this crate's machine-readable serialisers (canonical JSON) only.
+    /// Never used for human-readable output, which goes through [`as_display`].
+    ///
+    /// [`as_display`]: UntrustedText::as_display
+    pub(crate) fn raw(&self) -> &str {
+        &self.0
+    }
+
     /// A display view for showing the text to a person. `\` is written as `\\`, and
     /// every character of general category Cc (control), Cf (format, which includes the
     /// bidirectional overrides, zero-width characters and the BOM), Zl or Zp is written

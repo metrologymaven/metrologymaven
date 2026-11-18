@@ -1,6 +1,7 @@
 //! The safe-read framework of Metrology Maven (spec node `IO.REG`). This crate grows one
 //! leaf at a time; today it holds `IO.REG.LIMITS`, the harness every format reader runs
-//! inside, and `IO.REG.ROOTS`, the approved import and export root handles ([`roots`]).
+//! inside, `IO.REG.ROOTS`, the approved import and export root handles ([`roots`]), and
+//! `IO.REG.ENV.REPORT`, the import and export report types ([`report`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
@@ -18,6 +19,7 @@
 mod budget;
 mod error;
 mod limits;
+pub mod report;
 pub mod roots;
 mod source;
 pub mod toy;
@@ -28,6 +30,10 @@ pub use error::{IoError, Position, CODES};
 pub use limits::{
     LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
     DEFAULT_WALL_MS,
+};
+pub use report::{
+    Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportText, TypeName,
+    Warning, MAX_DETAIL_CHARS, MAX_LISTED,
 };
 pub use roots::{Direction, ExportTarget, ImportFile, RelPath, RootAccess, RootHandle, RootId, RootSet, RootWarning};
 pub use source::BoundedSource;
