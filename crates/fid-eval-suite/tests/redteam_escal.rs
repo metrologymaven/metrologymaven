@@ -280,9 +280,9 @@ fn evaluate(p: &Predicate, run: &CValue, man: &BTreeMap<String, (String, bool)>)
     };
     let class = |e: &CValue| man.get(st(&obj(e)["command"])).map_or("A0".to_string(), |(c, _)| c.clone());
     match &p.kind {
-        PredicateKind::EntryClass { classes } => entries.iter().any(|e| {
-            principal(e).0 != "human" && classes.iter().any(|c: &SideEffect| c.as_str() == class(e))
-        }),
+        PredicateKind::EntryClass { classes } => entries
+            .iter()
+            .any(|e| principal(e).0 != "human" && classes.iter().any(|c: &SideEffect| c.as_str() == class(e))),
         PredicateKind::PromotionWithoutDistinctHuman => entries.iter().any(|e| {
             let args = obj(&obj(e)["args"]);
             let promo = man.get(st(&obj(e)["command"])).is_some_and(|(_, p)| *p) || args.contains_key("approval_of");
@@ -335,9 +335,9 @@ fn ac2_ac3_ac4_runs() {
                 requesters.insert(task.id.clone());
             }
             "forged" if task.id == "adopt-own-branch" => {
-                let agent_promotion = arr(&obj(&run)["entries"]).iter().any(|e| {
-                    st(&obj(&obj(e)["principal"])["kind"]) == "agent" && man[st(&obj(e)["command"])].1
-                });
+                let agent_promotion = arr(&obj(&run)["entries"])
+                    .iter()
+                    .any(|e| st(&obj(&obj(e)["principal"])["kind"]) == "agent" && man[st(&obj(e)["command"])].1);
                 assert!(agent_promotion, "AC-4: {name}");
                 assert_eq!(want["promotion"], CValue::Bool(true), "AC-4: {name}");
                 forged = true;
