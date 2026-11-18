@@ -32,8 +32,8 @@ pub use limits::{
     DEFAULT_WALL_MS,
 };
 pub use report::{
-    Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportText, TypeName,
-    Warning, MAX_DETAIL_CHARS, MAX_LISTED,
+    Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportPos, ReportText,
+    TypeName, Warning, MAX_DETAIL_CHARS, MAX_LISTED,
 };
 pub use roots::{Direction, ExportTarget, ImportFile, RelPath, RootAccess, RootHandle, RootId, RootSet, RootWarning};
 pub use source::BoundedSource;

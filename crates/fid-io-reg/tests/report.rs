@@ -6,8 +6,8 @@
 
 use fid_io_reg::report::{ENTITY_TYPES_CAPPED, LOSSY_CAPPED, MAX_ENTITY_TYPES, MAX_LOSSY};
 use fid_io_reg::{
-    Code, ExportReport, FormatId, ImportReport, Location, Position, ReportBuilder, RootHandle, TypeName, UntrustedText,
-    MAX_LISTED,
+    Code, ExportReport, FormatId, ImportReport, Location, Position, ReportBuilder, ReportPos, RootHandle, TypeName,
+    UntrustedText, MAX_LISTED,
 };
 use fid_types::Digest;
 
@@ -30,6 +30,10 @@ fn fmt_id() -> FormatId {
     FormatId::new("fid-test-points").unwrap()
 }
 
+fn lc(byte: u64, line: u32, col: u32) -> ReportPos {
+    ReportPos::new(Position::line_col(byte, line, col)).unwrap()
+}
+
 fn none() -> UntrustedText {
     UntrustedText::new("")
 }
@@ -41,17 +45,17 @@ fn basic_import() -> ImportReport {
         b.count(&ty(t), 1);
     }
     b.warn(&code("unit_assumed"), None, &none());
-    b.warn(&code("nan_coordinate"), Some(Position::line_col(120, 4, 7)), &UntrustedText::new("x=NaN"));
+    b.warn(&code("nan_coordinate"), Some(lc(120, 4, 7)), &UntrustedText::new("x=NaN"));
     b.warn(
         &code("unknown_header"),
-        Some(Position::byte(8)),
+        Some(ReportPos::byte(8)),
         &UntrustedText::new("evil\u{202e}txt.exe\nnext\tline \"q\" \\ \u{1}\u{7f}"),
     );
     let long = format!("{}{}", "\u{20ac}".repeat(200), "\u{1F600}".repeat(100));
-    b.warn(&code("long_comment"), Some(Position::line_col(300, 9, 1)), &UntrustedText::new(&long));
+    b.warn(&code("long_comment"), Some(lc(300, 9, 1)), &UntrustedText::new(&long));
     b.drop_item(
         &ty("polyline"),
-        Position::line_col(512, 20, 3),
+        lc(512, 20, 3),
         &code("unsupported_entity"),
         &UntrustedText::new("POLYLINE 7 vertices"),
     );
@@ -64,7 +68,7 @@ fn basic_export() -> ExportReport {
     b.lossy(&ty("mesh.normals"));
     b.lossy(&ty("color"));
     b.lossy(&ty("color"));
-    b.drop_item(&ty("polyline"), Position::byte(0), &code("not_representable"), &none());
+    b.drop_item(&ty("polyline"), ReportPos::byte(0), &code("not_representable"), &none());
     b.warn(&code("precision_reduced"), None, &none());
     let sha = Digest::parse(&format!("sha256:{}", "ab".repeat(32))).unwrap();
     b.finish_export(fmt_id(), loc("root://out/a.ftp"), sha, 1234, true)
@@ -99,8 +103,8 @@ fn ac2_dropped_items_are_capped_with_exact_total() {
     let mut b = ReportBuilder::new();
     let (k, why) = (ty("point"), code("nan_coordinate"));
     for i in 0..25_000u64 {
-        b.drop_item(&k, Position::byte(i), &why, &none());
-        b.warn(&why, Some(Position::byte(i)), &none());
+        b.drop_item(&k, ReportPos::byte(i), &why, &none());
+        b.warn(&why, Some(ReportPos::byte(i)), &none());
     }
     let r = b.finish_import(fmt_id(), loc("root://in/big.ftp"), false);
     assert_eq!(r.dropped_total(), 25_000);
@@ -109,10 +113,10 @@ fn ac2_dropped_items_are_capped_with_exact_total() {
     assert_eq!(r.warnings().len(), MAX_LISTED);
     // The first 10,000, in source order.
     for (i, d) in r.dropped().iter().enumerate() {
-        assert_eq!(d.pos.byte, i as u64);
+        assert_eq!(d.pos.position().byte, i as u64);
     }
     for (i, w) in r.warnings().iter().enumerate() {
-        assert_eq!(w.pos.unwrap().byte, i as u64);
+        assert_eq!(w.pos.unwrap().position().byte, i as u64);
     }
     let json = r.canonical_bytes().unwrap();
     let text = std::str::from_utf8(&json).unwrap();
@@ -167,7 +171,8 @@ fn entity_types_and_lossy_names_are_bounded() {
         b.count(&ty(&format!("t{i}")), 1);
         b.lossy(&ty(&format!("f{i}")));
     }
-    assert_eq!(b.warnings_total(), 2);
+    // The entity-type cap warns while building; the lossy cap warns at finish_export.
+    assert_eq!(b.warnings_total(), 1);
     let e = b.clone().finish_export(fmt_id(), loc("root://out/a.ftp"), Digest::TOMBSTONE, 0, false);
     assert_eq!(e.lossy().len(), MAX_LOSSY);
     assert_eq!(e.warnings()[1].code.as_str(), LOSSY_CAPPED);
@@ -265,9 +270,10 @@ fn display_escapes_untrusted_text_and_keeps_items_on_one_line() {
     let r = basic_import();
     let shown = r.to_string();
     // Hand-labelled: the bidi override, newline, tab, control and DEL are escaped, the
-    // backslash doubled; the raw characters never appear.
-    assert!(shown
-        .contains("  unknown_header at byte 8: \"evil\\u{202e}txt.exe\\u{a}next\\u{9}line \"q\" \\\\ \\u{1}\\u{7f}\""));
+    // backslash doubled and `"` written as `\"`; the raw characters never appear.
+    assert!(shown.contains(
+        "  unknown_header at byte 8: \"evil\\u{202e}txt.exe\\u{a}next\\u{9}line \\\"q\\\" \\\\ \\u{1}\\u{7f}\""
+    ));
     for c in ['\u{202e}', '\t', '\u{1}', '\u{7f}'] {
         assert!(!shown.contains(c), "{c:?}");
     }
@@ -294,4 +300,66 @@ fn equal_reports_have_equal_digests_and_dry_run_is_part_of_it() {
     let dry = b.clone().finish_import(fmt_id(), loc("root://in/a.ftp"), true);
     let wet = b.finish_import(fmt_id(), loc("root://in/a.ftp"), false);
     assert_ne!(dry.digest().unwrap(), wet.digest().unwrap());
+}
+
+#[test]
+fn dropped_kind_past_the_listing_cap_is_still_lossy() {
+    let mut b = ReportBuilder::new();
+    let why = code("not_representable");
+    for i in 0..MAX_LISTED as u64 {
+        b.drop_item(&ty("point"), ReportPos::byte(i), &why, &none());
+    }
+    // Item 10,001: a new kind, not listed but still named lossy.
+    b.drop_item(&ty("nurbs_surface"), ReportPos::byte(99_999), &why, &none());
+    assert_eq!(b.dropped_total(), MAX_LISTED as u64 + 1);
+    let e = b.finish_export(fmt_id(), loc("root://out/a.ftp"), Digest::TOMBSTONE, 0, false);
+    let lossy: Vec<&str> = e.lossy().iter().map(TypeName::as_str).collect();
+    assert_eq!(lossy, ["nurbs_surface", "point"]);
+    assert!(e.warnings().is_empty());
+}
+
+#[test]
+fn quotes_in_untrusted_text_cannot_fake_display_fields() {
+    let mut b = ReportBuilder::new();
+    let fake = UntrustedText::new("x\" (truncated)\n  other_code at byte 1: \"y");
+    b.drop_item(&ty("polyline"), ReportPos::byte(4), &code("unsupported_entity"), &fake);
+    let shown = b.finish_import(fmt_id(), loc("root://in/a.ftp"), false).to_string();
+    // Hand-labelled: quotes written as \", the newline as \u{a}, so one line, no flag.
+    let want = "  polyline at byte 4: unsupported_entity: \"x\\\" (truncated)\\u{a}  other_code at byte 1: \\\"y\"\n";
+    assert!(shown.contains(want), "{shown}");
+    assert!(!shown.contains("\" (truncated)\n"));
+    assert_eq!(shown.lines().count(), 5);
+}
+
+#[test]
+fn line_and_column_zero_are_refused_when_built() {
+    assert!(ReportPos::new(Position::line_col(0, 0, 1)).is_err());
+    assert!(ReportPos::new(Position::line_col(0, 1, 0)).is_err());
+    assert!(ReportPos::new(Position { byte: 0, line: None, col: Some(0) }).is_err());
+    assert!(ReportPos::new(Position::line_col(0, 1, 1)).is_ok());
+    assert!(ReportPos::new(Position::byte(0)).is_ok());
+    // Read side: still refused.
+    let src = std::str::from_utf8(BASIC).unwrap();
+    let bad = src.replacen("\"line\":20", "\"line\":0", 1);
+    assert_ne!(bad, src);
+    assert!(ImportReport::from_json(bad.as_bytes()).is_err());
+}
+
+#[test]
+fn json_errors_carry_no_input_text() {
+    let src = std::str::from_utf8(BASIC).unwrap();
+    let bad = src.replacen("\"dry_run\":false,", "\"dry_run\":false,\"dry_run\":true,", 1);
+    let err = ImportReport::from_json(bad.as_bytes()).unwrap_err();
+    assert_eq!(err, fid_io_reg::ReportError::Json("duplicate_key"));
+    assert_eq!(err.to_string(), "report_json: duplicate_key");
+}
+
+#[test]
+fn location_accessors() {
+    let h = loc("root://in/ok.ftp");
+    assert_eq!(h.as_handle().unwrap().to_string(), "root://in/ok.ftp");
+    assert!(h.as_human_path().is_none());
+    let p = Location::human_path("C:\\data\\a.ftp").unwrap();
+    assert!(p.as_handle().is_none());
+    assert_eq!(p.as_human_path().unwrap(), &UntrustedText::new("C:\\data\\a.ftp"));
 }

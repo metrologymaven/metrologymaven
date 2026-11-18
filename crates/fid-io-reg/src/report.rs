@@ -18,7 +18,11 @@
 //!   strictly: unknown or missing fields, oversized lists and inconsistent totals fail.
 //! - The human-readable form (`Display`) shows untrusted text and paths only through
 //!   [`UntrustedText::as_display`], so control, format and bidirectional characters are
-//!   escaped and every listed item stays on one line.
+//!   escaped, `"` is written as `\"` so text cannot close its quotes, and every listed
+//!   item stays on one line.
+//! - Canonical JSON is machine output and keeps source text as RFC 8785 requires: only
+//!   `"`, `\` and C0 controls are escaped, so bidirectional overrides, DEL, U+2028 and
+//!   U+2029 stay raw. Anything that prints `--json` output to a terminal must escape them.
 
 use crate::error::Position;
 use crate::roots::RootHandle;
@@ -54,8 +58,9 @@ const MAX_JSON_DEPTH: usize = 8;
 /// strings; text from the input never appears in an error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReportError {
-    /// The JSON text itself was refused by `fid-canon`.
-    Json(CanonError),
+    /// The JSON text itself was refused by `fid-canon`; holds only the stable
+    /// `fid-canon` error code, never input text.
+    Json(&'static str),
     /// A value breaks the report schema.
     Invalid {
         /// The field (schema path) at fault.
@@ -79,13 +84,17 @@ impl fmt::Display for ReportError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // Only the code: a duplicate-key error carries text from the input.
-            ReportError::Json(e) => write!(f, "report_json: {}", e.code()),
+            ReportError::Json(code) => write!(f, "report_json: {code}"),
             ReportError::Invalid { field, reason } => write!(f, "report_invalid: {field}: {reason}"),
         }
     }
 }
 
 impl std::error::Error for ReportError {}
+
+fn json_err(e: CanonError) -> ReportError {
+    ReportError::Json(e.code())
+}
 
 fn invalid(field: &'static str, reason: &'static str) -> ReportError {
     ReportError::Invalid { field, reason }
@@ -198,9 +207,13 @@ impl ReportText {
 }
 
 /// Where a report's source was read from or its output written to: a root handle, or a
-/// path a human typed.
+/// path a human typed. Opaque: built only through [`Location::handle`] and
+/// [`Location::human_path`], which validate.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Location {
+pub struct Location(Loc);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Loc {
     /// A `root://` handle.
     Handle(RootHandle),
     /// A raw path given by a human (agents and scripts use handles only).
@@ -208,9 +221,25 @@ pub enum Location {
 }
 
 impl Location {
+    /// The root handle, if this location is one.
+    pub fn as_handle(&self) -> Option<&RootHandle> {
+        match &self.0 {
+            Loc::Handle(h) => Some(h),
+            Loc::HumanPath(_) => None,
+        }
+    }
+
+    /// The raw path a human gave, if this location is one.
+    pub fn as_human_path(&self) -> Option<&UntrustedText> {
+        match &self.0 {
+            Loc::Handle(_) => None,
+            Loc::HumanPath(p) => Some(p),
+        }
+    }
+
     /// A root handle location; its wire form is at most [`MAX_LOCATION_BYTES`] bytes.
     pub fn handle(handle: RootHandle) -> Result<Location, ReportError> {
-        let loc = Location::Handle(handle);
+        let loc = Location(Loc::Handle(handle));
         if loc.wire().len() > MAX_LOCATION_BYTES {
             return Err(invalid("location", "too long"));
         }
@@ -223,13 +252,13 @@ impl Location {
         if path.is_empty() || path.len() > MAX_LOCATION_BYTES || path.starts_with("root://") {
             return Err(invalid("location", "invalid human path"));
         }
-        Ok(Location::HumanPath(UntrustedText::new(path)))
+        Ok(Location(Loc::HumanPath(UntrustedText::new(path))))
     }
 
     fn wire(&self) -> String {
-        match self {
-            Location::Handle(h) => h.to_string(),
-            Location::HumanPath(p) => p.raw().to_string(),
+        match &self.0 {
+            Loc::Handle(h) => h.to_string(),
+            Loc::HumanPath(p) => p.raw().to_string(),
         }
     }
 
@@ -253,13 +282,47 @@ impl fmt::Display for Location {
     }
 }
 
+/// A source position in a report: a [`Position`] whose line and column, when present,
+/// are 1-based. Line or column 0 is refused when the value is built.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ReportPos(Position);
+
+impl ReportPos {
+    /// Checks a position: `line` and `col`, if set, must be at least 1.
+    pub fn new(pos: Position) -> Result<ReportPos, ReportError> {
+        if pos.line == Some(0) {
+            return Err(invalid("pos.line", "line is 1-based"));
+        }
+        if pos.col == Some(0) {
+            return Err(invalid("pos.col", "column is 1-based"));
+        }
+        Ok(ReportPos(pos))
+    }
+
+    /// A position known only by byte offset.
+    pub const fn byte(byte: u64) -> ReportPos {
+        ReportPos(Position::byte(byte))
+    }
+
+    /// The position.
+    pub fn position(&self) -> Position {
+        self.0
+    }
+}
+
+impl fmt::Display for ReportPos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// A warning: a stable code, where in the source (if known), and source text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Warning {
     /// Stable snake_case code.
     pub code: Code,
     /// Source position, if known.
-    pub pos: Option<Position>,
+    pub pos: Option<ReportPos>,
     /// Source text, possibly empty.
     pub detail: ReportText,
 }
@@ -270,7 +333,7 @@ pub struct Dropped {
     /// What was dropped (an entity type or source item kind).
     pub kind: TypeName,
     /// Where in the source.
-    pub pos: Position,
+    pub pos: ReportPos,
     /// Stable snake_case reason code.
     pub reason: Code,
     /// Source text, possibly empty.
@@ -337,22 +400,25 @@ impl ReportBuilder {
     }
 
     /// Adds a warning. Past [`MAX_LISTED`] warnings only the total grows.
-    pub fn warn(&mut self, code: &Code, pos: Option<Position>, detail: &UntrustedText) {
+    pub fn warn(&mut self, code: &Code, pos: Option<ReportPos>, detail: &UntrustedText) {
         self.warnings_total = self.warnings_total.saturating_add(1);
         if self.warnings.len() < MAX_LISTED {
             self.warnings.push(Warning { code: code.clone(), pos, detail: ReportText::new(detail) });
         }
     }
 
-    fn push_warning(&mut self, code: Code, pos: Option<Position>, detail: ReportText) {
+    fn push_warning(&mut self, code: Code, pos: Option<ReportPos>, detail: ReportText) {
         self.warnings_total = self.warnings_total.saturating_add(1);
         if self.warnings.len() < MAX_LISTED {
             self.warnings.push(Warning { code, pos, detail });
         }
     }
 
-    /// Records a dropped item. Past [`MAX_LISTED`] items only the total grows.
-    pub fn drop_item(&mut self, kind: &TypeName, pos: Position, reason: &Code, detail: &UntrustedText) {
+    /// Records a dropped item. Its kind is always added to the `lossy` names (an export
+    /// target could not represent it), even past the listing cap. Past [`MAX_LISTED`]
+    /// items only the total grows.
+    pub fn drop_item(&mut self, kind: &TypeName, pos: ReportPos, reason: &Code, detail: &UntrustedText) {
+        self.lossy(kind);
         self.dropped_total = self.dropped_total.saturating_add(1);
         if self.dropped.len() < MAX_LISTED {
             self.dropped.push(Dropped {
@@ -365,17 +431,16 @@ impl ReportBuilder {
     }
 
     /// Names a field or entity kind the export target cannot represent (REQ-005). A name
-    /// first seen after [`MAX_LOSSY`] names is not listed; the first such call adds a
-    /// [`LOSSY_CAPPED`] warning.
+    /// first seen after [`MAX_LOSSY`] names is not listed, and [`ReportBuilder::finish_export`]
+    /// then adds one [`LOSSY_CAPPED`] warning.
     pub fn lossy(&mut self, name: &TypeName) {
         if self.lossy.contains(name) {
             return;
         }
         if self.lossy.len() < MAX_LOSSY {
             self.lossy.insert(name.clone());
-        } else if !self.lossy_capped {
+        } else {
             self.lossy_capped = true;
-            self.push_warning(Code(LOSSY_CAPPED.to_string()), None, ReportText::default());
         }
     }
 
@@ -403,8 +468,8 @@ impl ReportBuilder {
         }
     }
 
-    /// Finishes an export report. Entity counts are not kept; the kind of every listed
-    /// dropped item is added to `lossy`, since the target could not represent it.
+    /// Finishes an export report. Entity counts and the dropped-item list are not kept
+    /// (every dropped kind is already in `lossy`).
     pub fn finish_export(
         mut self,
         format: FormatId,
@@ -413,9 +478,8 @@ impl ReportBuilder {
         bytes: u64,
         dry_run: bool,
     ) -> ExportReport {
-        let kinds: Vec<TypeName> = self.dropped.iter().map(|d| d.kind.clone()).collect();
-        for k in &kinds {
-            self.lossy(k);
+        if self.lossy_capped {
+            self.push_warning(Code(LOSSY_CAPPED.to_string()), None, ReportText::default());
         }
         ExportReport {
             format,
@@ -445,7 +509,8 @@ fn opt_u32(v: Option<u32>) -> CValue {
     v.map_or(CValue::Null, |n| CValue::Num(f64::from(n)))
 }
 
-fn pos_value(p: &Position) -> CValue {
+fn pos_value(p: &ReportPos) -> CValue {
+    let p = &p.0;
     obj([("byte", CValue::U64(p.byte)), ("col", opt_u32(p.col)), ("line", opt_u32(p.line))])
 }
 
@@ -468,7 +533,7 @@ fn warnings_value(ws: &[Warning]) -> CValue {
 }
 
 fn finish(v: &CValue) -> Result<Vec<u8>, ReportError> {
-    fid_canon::to_canonical_bytes(v).map_err(ReportError::Json)
+    fid_canon::to_canonical_bytes(v).map_err(json_err)
 }
 
 fn digest_of(v: &CValue) -> Result<Digest, ReportError> {
@@ -688,7 +753,7 @@ const EXPORT_KEYS: [&str; 8] =
     ["bytes", "dry_run", "format", "lossy", "sha256", "target", "warnings", "warnings_total"];
 
 fn parse_json(json: &[u8]) -> Result<CValue, ReportError> {
-    fid_canon::parse_with_limits(json, MAX_REPORT_JSON_BYTES, MAX_JSON_DEPTH).map_err(ReportError::Json)
+    fid_canon::parse_with_limits(json, MAX_REPORT_JSON_BYTES, MAX_JSON_DEPTH).map_err(json_err)
 }
 
 /// The object `v` with exactly the keys `keys`.
@@ -742,9 +807,9 @@ fn line_col_of(v: &CValue, field: &'static str) -> Result<Option<u32>, ReportErr
     }
 }
 
-fn pos_of(v: &CValue) -> Result<Position, ReportError> {
+fn pos_of(v: &CValue) -> Result<ReportPos, ReportError> {
     let m = fields(v, "pos", &["byte", "col", "line"])?;
-    Ok(Position {
+    ReportPos::new(Position {
         byte: u64_of(get(m, "byte")?, "pos.byte")?,
         line: line_col_of(get(m, "line")?, "pos.line")?,
         col: line_col_of(get(m, "col")?, "pos.col")?,
@@ -796,9 +861,9 @@ fn warnings_of(v: &CValue, total: u64) -> Result<Vec<Warning>, ReportError> {
 }
 
 // ---------------------------------------------------------------------------------------
-// Human-readable form: untrusted text only through `as_display`.
+// Human-readable form: untrusted text only through `as_display`, with `"` escaped.
 
-fn write_pos(f: &mut fmt::Formatter<'_>, pos: Option<&Position>) -> fmt::Result {
+fn write_pos(f: &mut fmt::Formatter<'_>, pos: Option<&ReportPos>) -> fmt::Result {
     match pos {
         Some(p) => write!(f, "{p}"),
         None => f.write_str("unknown position"),
@@ -806,7 +871,9 @@ fn write_pos(f: &mut fmt::Formatter<'_>, pos: Option<&Position>) -> fmt::Result 
 }
 
 fn write_detail(f: &mut fmt::Formatter<'_>, d: &ReportText) -> fmt::Result {
-    write!(f, "\"{}\"", d.text.as_display())?;
+    // `as_display` already doubles `\`, so `\"` is unambiguous.
+    let shown = d.text.as_display().to_string().replace('"', "\\\"");
+    write!(f, "\"{shown}\"")?;
     if d.truncated {
         f.write_str(" (truncated)")?;
     }
