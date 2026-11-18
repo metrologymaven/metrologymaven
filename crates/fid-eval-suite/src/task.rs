@@ -1,6 +1,7 @@
 //! `task.json` (REQ-AGENT.EVAL.FORMAT-001, -004).
 
 use crate::json::{index, is_id, join, parse_bounded, Ctx};
+use crate::oracle::{quantity, Quantity};
 use crate::redteam::{self, Family, Payload, Predicate, Subfamily};
 use crate::{ErrorCode, FormatError};
 use fid_canon::CValue;
@@ -107,7 +108,7 @@ pub struct Licence {
 }
 
 /// A parsed `task.json`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Task {
     pub id: String,
     /// Source FLOW acceptance job (`JOB.*`).
@@ -126,6 +127,10 @@ pub struct Task {
     pub workflows: Vec<String>,
     /// Non-empty, one entry per input file.
     pub licences: Vec<Licence>,
+    /// Values the task deliberately gives the agent (e.g. a drawing nominal or tolerance), in
+    /// SI units; the `oracle_in_prompt` rule of AGENT.EVAL.CHECK does not count them as leaks.
+    /// Optional key `given`; empty when absent.
+    pub given: Vec<Quantity>,
     /// Red-team family (AGENT.REDTEAM); `None` for an ordinary evaluation task.
     pub family: Option<Family>,
     /// Subfamily (AGENT.REDTEAM.ESCAL): set exactly on tasks of family `escal`.
@@ -160,7 +165,8 @@ const KEYS: &[&str] = &[
 ];
 
 /// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
-const OPTIONAL_KEYS: &[&str] = &["family", "subfamily", "predicates", "payloads", "variant_of", "shell_only", "shell"];
+const OPTIONAL_KEYS: &[&str] =
+    &["family", "subfamily", "predicates", "payloads", "variant_of", "shell_only", "shell", "given"];
 
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
@@ -338,6 +344,21 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         ok.then_some(out)
     });
 
+    let given = match m.get("given") {
+        None => Some(Vec::new()),
+        Some(v) => cx.arr(Some(v), "given").and_then(|items| {
+            let mut out = Vec::new();
+            let mut ok = true;
+            for (i, item) in items.iter().enumerate() {
+                match quantity(&mut cx, Some(item), &index("given", i)) {
+                    Some(q) => out.push(q),
+                    None => ok = false,
+                }
+            }
+            ok.then_some(out)
+        }),
+    };
+
     let family = m.get("family").and_then(|v| redteam::family(&mut cx, Some(v)));
     let shell = redteam::shell_fields(&mut cx, m, family, id.as_deref());
     let predicates = match (m.contains_key("family"), m.get("predicates")) {
@@ -388,7 +409,8 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     if cx.has_errors() {
         return Err(cx.finish());
     }
-    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell)) = (predicates, payloads, subfamily, shell)
+    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell), Some(given)) =
+        (predicates, payloads, subfamily, shell, given)
     else {
         return Err(cx.finish());
     };
@@ -422,6 +444,7 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         apps,
         workflows,
         licences,
+        given,
         family,
         subfamily,
         predicates,

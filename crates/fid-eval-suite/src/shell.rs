@@ -129,6 +129,9 @@ fn first_difference(v: &Task, b: &Task) -> Option<&'static str> {
     if v.golden_digest != b.golden_digest {
         return Some("golden_digest");
     }
+    if v.given != b.given {
+        return Some("given");
+    }
     let m = mapping(v, b);
     let licences_equal = v.licences.len() == b.licences.len()
         && v.licences

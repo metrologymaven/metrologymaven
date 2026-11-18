@@ -30,7 +30,7 @@ pub struct Suite {
 }
 
 /// Reads a file of at most [`MAX_FILE_BYTES`]; `name` is used in errors.
-fn read_bounded(path: &Path, name: &str) -> Result<Vec<u8>, FormatError> {
+pub(crate) fn read_bounded(path: &Path, name: &str) -> Result<Vec<u8>, FormatError> {
     let missing = |d: String| FormatError::new(ErrorCode::MissingFile, name, "", d);
     let meta = std::fs::symlink_metadata(path).map_err(|e| missing(format!("cannot read: {e}")))?;
     if !meta.is_file() {
@@ -78,13 +78,13 @@ pub fn suite_version(files: &[(String, Digest)]) -> Result<Digest, FormatError> 
 
 /// Sorted entry names of a directory; non-UTF-8 names are layout errors.
 /// Whether `path` is a real directory, not a symbolic link or junction.
-fn is_real_dir(path: &Path) -> bool {
+pub(crate) fn is_real_dir(path: &Path) -> bool {
     std::fs::symlink_metadata(path).map(|m| m.is_dir() && !m.file_type().is_symlink()).unwrap_or(false)
 }
 
 /// The directory itself must be a real directory: a symbolic link or junction (which
 /// could point outside the suite) is a layout error, checked before it is listed.
-fn list_dir(path: &Path, name: &str, errs: &mut Vec<FormatError>) -> Option<Vec<String>> {
+pub(crate) fn list_dir(path: &Path, name: &str, errs: &mut Vec<FormatError>) -> Option<Vec<String>> {
     match std::fs::symlink_metadata(path) {
         Ok(m) if m.is_dir() && !m.file_type().is_symlink() => {}
         Ok(_) => {
@@ -207,7 +207,21 @@ fn read_header(dir: &Path, errs: &mut Vec<FormatError>) -> Option<String> {
 /// Loads a suite directory fail-closed and computes its version. All errors found in
 /// the layout and in every file are returned together.
 pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
+    load(dir, false).map(|(st, _)| st)
+}
+
+/// Like [`load_suite`], but a start-state archive whose digest differs from the one its
+/// task records does not stop the load when it is the only kind of error: the suite is
+/// returned (its version covers the archives as read) together with those mismatches
+/// (`invalid_task` on field `start_state.digest`). Used by the consistency check
+/// (AGENT.EVAL.CHECK), which reports them and keeps applying its other rules.
+pub fn load_suite_lenient(dir: &Path) -> Result<(Suite, Vec<FormatError>), Vec<FormatError>> {
+    load(dir, true)
+}
+
+fn load(dir: &Path, lenient: bool) -> Result<(Suite, Vec<FormatError>), Vec<FormatError>> {
     let mut errs = Vec::new();
+    let mut soft = 0usize;
     let name = read_header(dir, &mut errs);
     let mut files: Vec<(String, Digest)> = Vec::new();
     let mut tasks: BTreeMap<String, Task> = BTreeMap::new();
@@ -258,6 +272,7 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
             Ok(b) => {
                 let d = file_digest(&b);
                 if d != task.start_state.digest {
+                    soft += 1;
                     errs.push(FormatError::new(
                         ErrorCode::InvalidTask,
                         &tfile,
@@ -337,6 +352,8 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
             None
         }
     };
+    let tolerated = lenient && errs.len() == soft;
+    let mismatches = if tolerated { std::mem::take(&mut errs) } else { Vec::new() };
     let (Some(name), Some(version), true) = (name, version, errs.is_empty()) else {
         if errs.is_empty() {
             errs.push(FormatError::new(ErrorCode::InvalidSuite, "", "", "incomplete suite"));
@@ -353,5 +370,5 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
             }
         }
     }
-    Ok(Suite { name, tasks: out, files, version })
+    Ok((Suite { name, tasks: out, files, version }, mismatches))
 }
