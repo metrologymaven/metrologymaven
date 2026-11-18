@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
+built_pr: 142
 satisfies: [REQ-HAL.IDL-001, REQ-HAL.IDL-004]
 covers: []
 depends_on: [HAL.IDL.UNITS]
@@ -84,6 +86,7 @@ Hand-written JSON fixtures under `fixtures/hal/idl/stamp/` (CC-BY-4.0, project-a
 
 - `source_kind` is added here to carry the `entered` provenance named by `HAL.ACQ` and `HAL.DRV`; the parent REQ-HAL.IDL-004 field list does not name it. It is additive and does not conflict.
 - Whether v1 of the stamp may relax `deny_unknown_fields` for forward-compatible minor additions is left to the first v1 change.
+- The v0 `encoding_ref` is a bounded reference string. It does not bind the encoding that `HAL.ACQ.CONV` actually decodes the payload with, so a stamp could name one encoding while the payload is decoded with another. A later version could carry the digest of the canonical `units::EncodingDescriptor` instead (or as well), so the stamp commits to the exact scale, offset and numeric type.
 
 ## Children
 

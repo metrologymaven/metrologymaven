@@ -143,6 +143,7 @@ name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
  "fid-uuid",
 ]
 

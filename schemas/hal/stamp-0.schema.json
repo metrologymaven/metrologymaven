@@ -1,0 +1,386 @@
+{
+  "$id": "https://metrologymaven.io/schemas/hal/stamp-0.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Provenance stamp v0 (spec node HAL.IDL.STAMP).",
+  "properties": {
+    "batch_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "calibration": {
+      "additionalProperties": false,
+      "properties": {
+        "refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "status": {
+          "enum": [
+            "VALID",
+            "EXPIRED",
+            "UNKNOWN"
+          ]
+        }
+      },
+      "required": [
+        "refs",
+        "status"
+      ],
+      "type": "object"
+    },
+    "capability": {
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "name": {
+          "pattern": "^[A-Z][A-Za-z0-9]{0,63}$",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "features",
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "config_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "device": {
+      "additionalProperties": false,
+      "properties": {
+        "firmware": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "firmware_in_tested_range": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "make": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "model": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "serial": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "firmware",
+        "firmware_in_tested_range",
+        "make",
+        "model",
+        "serial"
+      ],
+      "type": "object"
+    },
+    "driver": {
+      "additionalProperties": false,
+      "properties": {
+        "compat_report_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compat_status": {
+          "enum": [
+            "PASS",
+            "PARTIAL",
+            "FAIL",
+            "NOT_RUN"
+          ]
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "host_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+          "type": "string"
+        },
+        "signer": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tier": {
+          "enum": [
+            "TIER1",
+            "TIER2",
+            "TIER3"
+          ]
+        },
+        "version": {
+          "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "compat_report_digest",
+        "compat_status",
+        "digest",
+        "host_digest",
+        "id",
+        "signer",
+        "tier",
+        "version"
+      ],
+      "type": "object"
+    },
+    "encoding_ref": {
+      "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+      "type": "string"
+    },
+    "environment": {
+      "items": {
+        "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+        "type": "string"
+      },
+      "maxItems": 64,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "gaps": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "pattern": "^(0|[1-9][0-9]{0,19})$",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "CREDIT_EXHAUSTED",
+              "DEVICE_DROP",
+              "COMM_LOST",
+              "DRIVER_RESTART",
+              "REJECTED"
+            ]
+          },
+          "to": {
+            "pattern": "^(0|[1-9][0-9]{0,19})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "reason",
+          "to"
+        ],
+        "type": "object"
+      },
+      "maxItems": 1024,
+      "type": "array"
+    },
+    "payload_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "payload_schema": {
+      "pattern": "^[a-z][a-z0-9-]{0,62}/(0|[1-9][0-9]{0,8})$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "stamp/0"
+    },
+    "sensor_model": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9._:/@+-]{1,256}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "seq": {
+      "items": {
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": "array"
+    },
+    "simulated": {
+      "type": "boolean"
+    },
+    "source_kind": {
+      "enum": [
+        "device",
+        "file",
+        "entered"
+      ]
+    },
+    "time": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "enum": [
+            "HW_TRIGGER",
+            "PTP",
+            "DEVICE_CLOCK",
+            "NTP",
+            "HOST_RECEIVE"
+          ]
+        },
+        "sync_sigma_ns": {
+          "pattern": "^(0|[1-9][0-9]{0,19})$",
+          "type": "string"
+        },
+        "utc_anchor": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "t_host": {
+                  "pattern": "^(0|-?[1-9][0-9]{0,18})$",
+                  "type": "string"
+                },
+                "utc_ns": {
+                  "pattern": "^(0|-?[1-9][0-9]{0,18})$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "t_host",
+                "utc_ns"
+              ],
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "sync_sigma_ns",
+        "utc_anchor"
+      ],
+      "type": "object"
+    },
+    "transcript_digest": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trust": {
+      "enum": [
+        "attested",
+        "declared",
+        "unknown"
+      ]
+    },
+    "warmup": {
+      "enum": [
+        "WARMING_UP",
+        "READY"
+      ]
+    }
+  },
+  "required": [
+    "batch_id",
+    "calibration",
+    "capability",
+    "config_digest",
+    "device",
+    "driver",
+    "encoding_ref",
+    "environment",
+    "gaps",
+    "payload_digest",
+    "payload_schema",
+    "schema",
+    "sensor_model",
+    "seq",
+    "simulated",
+    "source_kind",
+    "time",
+    "transcript_digest",
+    "trust",
+    "warmup"
+  ],
+  "title": "stamp/0",
+  "type": "object"
+}
