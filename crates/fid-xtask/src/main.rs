@@ -28,6 +28,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-gpu invariance --backends <a,b,...> [--sequence <toml>] \
                      [--examples <dir>] [--work <dir>] [--fid <path>]\n       \
                      cargo xtask plat-gpu invariance --recorded <dir>\n       \
+                     cargo xtask plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
+                     [--phase <P>]\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
                      [--protocol <md>]\n       \
@@ -57,6 +59,7 @@ fn main() -> ExitCode {
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
         Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
         Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
+        Some("plat-gpu") if args.get(1).map(String::as_str) == Some("validate") => fid_platform(&args, "plat-gpu"),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
@@ -169,8 +172,8 @@ fn bots_check(args: &[String]) -> ExitCode {
     }
 }
 
-/// PLAT.MATRIX.FILE and PLAT.HW.PROFILE: runs `fid-platform plat-matrix ...` or
-/// `fid-platform plat-hw ...` through Cargo, for the same layer reason as `datasets-check`
+/// PLAT.MATRIX.FILE, PLAT.HW.PROFILE and PLAT.GPU.POLICY: runs `fid-platform plat-matrix ...`,
+/// `fid-platform plat-hw ...` or `fid-platform plat-gpu validate ...` through Cargo, for the same layer reason as `datasets-check`
 /// (`fid-platform` is a `tool` crate).
 fn fid_platform(args: &[String], group: &str) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
