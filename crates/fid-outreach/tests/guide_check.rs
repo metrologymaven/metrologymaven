@@ -3,7 +3,7 @@
 //! `fixtures/outr/brand/guide/make_fixtures.py`), not produced by this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_outreach::guide_check::{code_spans, parse_name_state, scan_literal_names, scan_tokens, Code};
+use fid_outreach::guide_check::{code_spans, parse_name_state, publish_files, scan_literal_names, scan_tokens, Code};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -175,4 +175,54 @@ fn code_spans_and_tokens() {
     assert!(code_spans("a ` b").is_empty());
     let t: Vec<String> = scan_tokens("f", "{{A}} {B} {{ x }}\n{{\n}}").into_iter().map(|f| f.detail).collect();
     assert_eq!(t, vec!["{{A}}".to_string(), "{{ x }}".to_string()]);
+}
+
+#[test]
+fn publish_refuses_non_empty_out_and_leaves_it_unchanged() {
+    let out = out_dir("nonempty");
+    std::fs::create_dir_all(&out).unwrap();
+    std::fs::write(out.join("old.md"), "old").unwrap();
+    let o = case_check("accepted", &publish_args(&out));
+    assert_eq!(o.status.code(), Some(2), "{}", show(&o));
+    assert!(show(&o).contains("out_not_empty"), "{}", show(&o));
+    let names: Vec<_> = std::fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(names, vec![std::ffi::OsString::from("old.md")]);
+    let _ = std::fs::remove_dir_all(&out);
+}
+
+#[test]
+fn publish_into_existing_empty_out() {
+    let out = out_dir("empty");
+    std::fs::create_dir_all(&out).unwrap();
+    let o = case_check("accepted", &publish_args(&out));
+    assert_eq!(o.status.code(), Some(0), "{}", show(&o));
+    assert!(out.join("usage.md").is_file());
+    let _ = std::fs::remove_dir_all(&out);
+}
+
+/// A write that fails partway (a file and a folder with the same name) leaves no output and no
+/// temporary folder behind.
+#[test]
+fn failed_publish_leaves_no_partial_output() {
+    let out = out_dir("partial");
+    let copies = vec![("a".to_string(), "first".to_string()), ("a/b.md".to_string(), "second".to_string())];
+    let e = publish_files(&out, &copies).unwrap_err();
+    assert_eq!(e.code(), "input_unreadable");
+    assert!(!out.exists());
+    let parent = out.parent().unwrap();
+    let base = out.file_name().unwrap().to_string_lossy().into_owned();
+    let leftovers: Vec<String> = std::fs::read_dir(parent)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.contains(&base))
+        .collect();
+    assert!(leftovers.is_empty(), "{leftovers:?}");
+}
+
+#[test]
+fn json_report_serialises() {
+    let o = case_check("literal", &["--json".into()]);
+    assert_eq!(o.status.code(), Some(1), "{}", show(&o));
+    assert!(String::from_utf8_lossy(&o.stdout).contains("\"code\":\"literal_name\""));
 }

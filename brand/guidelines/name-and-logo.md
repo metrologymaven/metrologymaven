@@ -1,6 +1,6 @@
 # {{FAMILY_NAME}}: name, logo and third-party usage guidelines
 
-Status: draft guidelines (spec node `OUTR.BRAND.GUIDE.NAME`). This file writes the family name only as the token `{{FAMILY_NAME}}`; `fid-outreach guide-check --publish` substitutes the accepted name from `brand/name.toml`. Nothing in this document is legal advice. Statements about what the law permits are the project's understanding, marked [unverified], and are pending review by counsel (decisions D-001 and D-002).
+Status: draft guidelines (spec node `OUTR.BRAND.GUIDE.NAME`). This file writes the family name only as the token `{{FAMILY_NAME}}`; `fid-outreach guide-check --publish` substitutes the accepted name from `brand/name.toml`. Nothing in this document is legal advice. Statements about what the law permits are the project's understanding, marked [unverified], and are pending review by counsel (decisions D-001 and D-002; the name itself was chosen under D-039, which superseded D-002 on the name).
 
 ## 1. Why these rules exist
 
@@ -105,5 +105,5 @@ Ask in the project repository's issue tracker. If you see a use that seems to su
 
 ## 9. Open points
 
-- Trademark wording (registration marks, a licence of the mark) waits for counsel under D-001 and D-002 and is not drafted here.
+- Trademark wording (registration marks, a licence of the mark) waits for counsel under D-001, D-002 and D-039 (which records the chosen name and recommends a counsel knockout search and filing) and is not drafted here.
 - The minimum sizes in section 6.2 are proposals to be checked against the final logo files.

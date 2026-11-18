@@ -78,6 +78,8 @@ pub enum GuideError {
     Unreadable { path: String, reason: String },
     /// The name state file does not parse or has a field of the wrong shape.
     NameFileParse { path: String, reason: String },
+    /// `--out` exists and is not an empty directory; publishing refuses to mix with old files.
+    OutNotEmpty { path: String },
 }
 
 impl GuideError {
@@ -85,17 +87,21 @@ impl GuideError {
         match self {
             GuideError::Unreadable { .. } => "input_unreadable",
             GuideError::NameFileParse { .. } => "name_file_parse",
+            GuideError::OutNotEmpty { .. } => "out_not_empty",
         }
     }
 
     fn parts(&self) -> (&str, &str) {
         match self {
-            GuideError::Unreadable { path, reason } | GuideError::NameFileParse { path, reason } => (path, reason),
+            GuideError::Unreadable { path, reason } | GuideError::NameFileParse { path, reason } => {
+                (path.as_str(), reason.as_str())
+            }
+            GuideError::OutNotEmpty { path } => (path.as_str(), "exists and is not an empty directory"),
         }
     }
 
-    /// Canonical JSON for `--json` on exit 2.
-    pub fn to_json(&self) -> Vec<u8> {
+    /// Canonical JSON for `--json` on exit 2; `Err` carries a serialisation failure.
+    pub fn to_json(&self) -> Result<Vec<u8>, String> {
         let (path, reason) = self.parts();
         let mut e = BTreeMap::new();
         e.insert("code".to_string(), CValue::Str(self.code().to_string()));
@@ -104,7 +110,7 @@ impl GuideError {
         let mut o = BTreeMap::new();
         o.insert("error".to_string(), CValue::Obj(e));
         o.insert("ok".to_string(), CValue::Bool(false));
-        fid_canon::to_canonical_bytes(&CValue::Obj(o)).unwrap_or_default()
+        fid_canon::to_canonical_bytes(&CValue::Obj(o)).map_err(|e| format!("{e:?}"))
     }
 }
 
@@ -372,7 +378,8 @@ impl Report {
         s
     }
 
-    pub fn to_json(&self) -> Vec<u8> {
+    /// Canonical JSON report; `Err` carries a serialisation failure (exit 2).
+    pub fn to_json(&self) -> Result<Vec<u8>, String> {
         let strs = |v: &[String]| CValue::Arr(v.iter().map(|s| CValue::Str(s.clone())).collect());
         let findings = self
             .findings
@@ -392,7 +399,7 @@ impl Report {
         o.insert("files".to_string(), strs(&self.files));
         o.insert("findings".to_string(), CValue::Arr(findings));
         o.insert("written".to_string(), strs(&self.written));
-        fid_canon::to_canonical_bytes(&CValue::Obj(o)).unwrap_or_default()
+        fid_canon::to_canonical_bytes(&CValue::Obj(o)).map_err(|e| format!("{e:?}"))
     }
 }
 
@@ -467,14 +474,8 @@ pub fn run(opts: &Options) -> Result<Report, GuideError> {
                     findings.extend(scan_tokens(rel, t));
                 }
                 if findings.is_empty() {
-                    for (rel, t) in &copies {
-                        let dest = rel.split('/').fold(out.clone(), |p, part| p.join(part));
-                        if let Some(parent) = dest.parent() {
-                            std::fs::create_dir_all(parent).map_err(|e| unreadable(parent, e.to_string()))?;
-                        }
-                        std::fs::write(&dest, t).map_err(|e| unreadable(&dest, e.to_string()))?;
-                        report.written.push(rel.clone());
-                    }
+                    publish_files(out, &copies)?;
+                    report.written = copies.into_iter().map(|(rel, _)| rel).collect();
                 }
             }
         }
@@ -483,4 +484,50 @@ pub fn run(opts: &Options) -> Result<Report, GuideError> {
     findings.dedup();
     report.findings = findings;
     Ok(report)
+}
+
+fn is_empty_dir(dir: &Path) -> Result<bool, GuideError> {
+    let mut it = std::fs::read_dir(dir).map_err(|e| unreadable(dir, e.to_string()))?;
+    Ok(it.next().is_none())
+}
+
+/// Writes `copies` (root-relative path with `/`, text) into `out` all at once: they go to a
+/// temporary sibling folder first, which is renamed onto `out` only after every file is written.
+/// `out` must not exist or be an empty directory; a non-empty `out` is refused. On any error the
+/// temporary folder is removed and `out` is left as it was, so no partial output remains.
+pub fn publish_files(out: &Path, copies: &[(String, String)]) -> Result<(), GuideError> {
+    let out_exists = out.exists();
+    if out_exists && !(out.is_dir() && is_empty_dir(out)?) {
+        return Err(GuideError::OutNotEmpty { path: out.display().to_string() });
+    }
+    let Some(base) = out.file_name().map(|n| n.to_string_lossy().into_owned()) else {
+        return Err(unreadable(out, "output path has no final component"));
+    };
+    let tmp = out.with_file_name(format!(".{base}.guide-check-{}.tmp", std::process::id()));
+    if tmp.exists() {
+        std::fs::remove_dir_all(&tmp).map_err(|e| unreadable(&tmp, e.to_string()))?;
+    }
+    let staged = stage(&tmp, copies).and_then(|()| {
+        if out_exists {
+            std::fs::remove_dir(out).map_err(|e| unreadable(out, e.to_string()))?;
+        }
+        std::fs::rename(&tmp, out).map_err(|e| unreadable(out, e.to_string()))
+    });
+    if staged.is_err() {
+        // Best effort: the error being returned matters more than a failed cleanup.
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+    staged
+}
+
+fn stage(tmp: &Path, copies: &[(String, String)]) -> Result<(), GuideError> {
+    std::fs::create_dir_all(tmp).map_err(|e| unreadable(tmp, e.to_string()))?;
+    for (rel, text) in copies {
+        let dest = rel.split('/').fold(tmp.to_path_buf(), |p, part| p.join(part));
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| unreadable(parent, e.to_string()))?;
+        }
+        std::fs::write(&dest, text).map_err(|e| unreadable(&dest, e.to_string()))?;
+    }
+    Ok(())
 }

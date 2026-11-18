@@ -416,7 +416,13 @@ fn guide_check_cmd(args: &[String]) -> ExitCode {
     match guide_check::run(&options) {
         Ok(report) => {
             if json {
-                emit(&report.to_json());
+                match report.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => {
+                        eprintln!("guide-check: report serialisation failed: {m}");
+                        return ExitCode::from(2);
+                    }
+                }
             } else {
                 print!("{}", report.render());
             }
@@ -424,7 +430,10 @@ fn guide_check_cmd(args: &[String]) -> ExitCode {
         }
         Err(e) => {
             if json {
-                emit(&e.to_json());
+                match e.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => eprintln!("guide-check: error serialisation failed: {m}"),
+                }
             }
             eprintln!("guide-check: {e}");
             ExitCode::from(2)
