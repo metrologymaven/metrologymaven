@@ -37,6 +37,23 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: TEMP probe, reverted in the next commit - a11y gate on the current site build
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        shell: bash
+        run: |
+          python site/build.py > /dev/null
+          python - <<'EOF'
+          import json, re
+          css = open("site/dist/style.css", encoding="utf-8").read()
+          pat = r"--([a-z0-9-]+):(#[0-9a-fA-F]{3,8})"
+          light = dict(re.findall(pat, css.split("@media")[0]))
+          dark = dict(re.findall(pat, css.split("@media (prefers-color-scheme:dark)")[1]))
+          json.dump({"themes": {"light": light, "dark": dark}}, open("site-tokens.json", "w"), indent=1)
+          EOF
+          cat site-tokens.json
+          cargo run -q -p fid-outreach -- qa a11y --root site/dist --tokens site-tokens.json --out a11y.json; echo "exit=$?"
+          cargo run -q -p fid-outreach -- qa a11y --root site/dist --tokens no-such-file.json --out a11y2.json; echo "exit=$?"
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
       - name: No side doors (CORE.BUS.LINT)
