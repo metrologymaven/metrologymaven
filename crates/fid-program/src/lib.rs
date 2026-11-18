@@ -1,5 +1,6 @@
 //! Command Programs for Metrology Maven. Modules land one spec leaf at a time; see `spec/auto/prog/`.
 
+pub mod expr;
 pub mod fmt;
 
 pub use fmt::{
@@ -7,3 +8,5 @@ pub use fmt::{
     StepKind, Subroutine, Uuid7, VarDecl, FORMAT, FORMAT_VERSION, MAX_BYTES, MAX_COST, MAX_DEPTH, MAX_MAJOR, MAX_STEPS,
     STEP_KINDS,
 };
+
+pub use expr::syntax::{parse_expr, print_expr, Expr, ExprKind, ParseError, Span};

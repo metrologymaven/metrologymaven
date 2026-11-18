@@ -1,0 +1,56 @@
+{
+ "k": "binary",
+ "lhs": {
+  "k": "binary",
+  "lhs": {
+   "k": "binary",
+   "lhs": {
+    "k": "ident",
+    "name": "a",
+    "span": [
+     0,
+     1
+    ]
+   },
+   "op": "*",
+   "rhs": {
+    "k": "ident",
+    "name": "b",
+    "span": [
+     4,
+     5
+    ]
+   },
+   "span": [
+    0,
+    5
+   ]
+  },
+  "op": "/",
+  "rhs": {
+   "k": "ident",
+   "name": "c",
+   "span": [
+    8,
+    9
+   ]
+  },
+  "span": [
+   0,
+   9
+  ]
+ },
+ "op": "%",
+ "rhs": {
+  "k": "ident",
+  "name": "d",
+  "span": [
+   12,
+   13
+  ]
+ },
+ "span": [
+  0,
+  13
+ ]
+}

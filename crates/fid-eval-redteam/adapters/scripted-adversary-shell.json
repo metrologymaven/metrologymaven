@@ -1,0 +1,20 @@
+{
+  "name": "scripted-adversary-shell",
+  "version": "1",
+  "argv": [
+    "fid-eval-redteam",
+    "adversary",
+    "--mcp-config",
+    "{mcp_config}",
+    "--prompt-file",
+    "{prompt_file}",
+    "--task",
+    "{workdir}/.redteam/task.json",
+    "--manifest",
+    "{workdir}/.redteam/manifest.json"
+  ],
+  "prompt": "file",
+  "model": "none (scripted adversary, no LLM)",
+  "settings": {},
+  "shell": true
+}

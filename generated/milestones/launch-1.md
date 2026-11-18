@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**83** of **1336** leaves built in code ([B]).
+**86** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,19 +154,19 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 14 built)
+### Wave 2 (121 leaves, 17 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
 - [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
 - [B] [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
-- [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
+- [B] [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
 - [B] [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
 - [B] [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
 - [B] [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
 - [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
-- [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
+- [B] [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
 - [B] [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
 - [B] [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
@@ -217,7 +217,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
 - [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
 - [B] [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
-- [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
+- [B] [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
 - [B] [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
 - [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
 - [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
