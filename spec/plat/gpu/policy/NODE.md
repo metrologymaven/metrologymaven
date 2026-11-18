@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-platform]
+built_pr: 151
 satisfies: [REQ-PLAT.GPU-001, REQ-PLAT.GPU-002, REQ-PLAT.GPU-006]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]
