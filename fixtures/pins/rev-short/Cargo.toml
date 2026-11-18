@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "rev-short"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-geo = { git = "https://example.org/fid/libs.git", rev = "4b825dc" }

@@ -1,0 +1,13 @@
+# Repository map for the ECO.REPO.TOPO pin-check fixtures (example.org is reserved, RFC 2606).
+[[repo]]
+id = "fid-libs"
+url = "https://example.org/fid/libs.git"
+purpose = "Fixture library repository with protected tags"
+protected_tags = true
+
+[[repo]]
+id = "fid-apps"
+url = "https://example.org/fid/apps"
+purpose = "Fixture application repository without tag protection"
+protected_tags = false
+status = "active"

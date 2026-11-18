@@ -1,5 +1,7 @@
 //! `cargo xtask <task>` (alias in `.cargo/config.toml`).
 
+mod pins;
+
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
@@ -11,6 +13,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
+        Some("pins") => pins::cli(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)

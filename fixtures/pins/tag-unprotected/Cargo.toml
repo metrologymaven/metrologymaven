@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "tag-unprotected"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-app-core = { git = "https://example.org/fid/apps", tag = "v0.3.0" }
