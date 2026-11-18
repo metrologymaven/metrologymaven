@@ -1,0 +1,148 @@
+{
+  "edit": {
+    "append_comment": {
+      "step_id": "018f000f-4240-7c97-97ad-e1972063f5d1",
+      "text": "Added by an edit."
+    },
+    "base": "all-kinds",
+    "remove_main_index": 0,
+    "result": "edited"
+  },
+  "invalid": {
+    "arg-bad-name": {
+      "code": "schema_invalid",
+      "path": "/main/1/args"
+    },
+    "arg-both": {
+      "code": "unknown_field",
+      "field": "expr",
+      "path": "/main/1/args/tol"
+    },
+    "bad-mode": {
+      "code": "schema_invalid",
+      "path": "/main/5"
+    },
+    "bad-utf8": {
+      "code": "invalid_json",
+      "detail": "invalid_utf8"
+    },
+    "bind-newline": {
+      "code": "schema_invalid",
+      "path": "/main/1/bind"
+    },
+    "command-with-major": {
+      "code": "schema_invalid",
+      "path": "/main/1/command"
+    },
+    "deep": {
+      "bound": "depth",
+      "code": "program_too_large"
+    },
+    "dup-key": {
+      "code": "invalid_json",
+      "detail": "duplicate_key"
+    },
+    "dup-step": {
+      "code": "duplicate_step_id",
+      "id": "018f0000-07d0-79f3-9379-5df7bd0019cd"
+    },
+    "dup-step-sub": {
+      "code": "duplicate_step_id",
+      "id": "018f0000-07d0-79f3-9379-5df7bd0019cd"
+    },
+    "escaped": {
+      "code": "non_canonical"
+    },
+    "extra-field": {
+      "code": "unknown_field",
+      "field": "command",
+      "path": "/main/2"
+    },
+    "format-wrong": {
+      "code": "schema_invalid",
+      "path": "/format"
+    },
+    "if-no-branch": {
+      "code": "schema_invalid",
+      "path": "/main/3/branches"
+    },
+    "invoke-effect": {
+      "code": "unknown_field",
+      "field": "effect",
+      "path": "/main/1"
+    },
+    "key-order": {
+      "code": "non_canonical"
+    },
+    "loop-zero": {
+      "code": "schema_invalid",
+      "path": "/main/4/max_iterations"
+    },
+    "major-fraction": {
+      "code": "schema_invalid",
+      "path": "/main/1/major"
+    },
+    "major-too-big": {
+      "code": "schema_invalid",
+      "path": "/main/1/major"
+    },
+    "missing-main": {
+      "code": "schema_invalid",
+      "path": ""
+    },
+    "missing-major": {
+      "code": "schema_invalid",
+      "path": "/main/1"
+    },
+    "nested-extra": {
+      "code": "unknown_field",
+      "field": "command",
+      "path": "/main/3/branches/0/body/0"
+    },
+    "not-json": {
+      "code": "invalid_json",
+      "detail": "syntax"
+    },
+    "null-bind": {
+      "code": "schema_invalid",
+      "path": "/main/1/bind"
+    },
+    "trailing-newline": {
+      "code": "non_canonical"
+    },
+    "unknown-kind": {
+      "code": "schema_invalid",
+      "path": "/main/0"
+    },
+    "unknown-top": {
+      "code": "unknown_field",
+      "field": "extensions",
+      "path": ""
+    },
+    "uuid-upper": {
+      "code": "schema_invalid",
+      "path": "/main/0/step_id"
+    },
+    "uuid-v4": {
+      "code": "schema_invalid",
+      "path": "/program_id"
+    },
+    "version-2": {
+      "code": "format_version_unsupported",
+      "value": "2"
+    },
+    "version-string": {
+      "code": "schema_invalid",
+      "path": "/format_version"
+    },
+    "whitespace": {
+      "code": "non_canonical"
+    }
+  },
+  "valid": {
+    "all-kinds": "sha256:ee7630e2217fcca1c3b8ce23f8f808acf5b39f89d3048eceff1984878fff7804",
+    "edited": "sha256:b009fd8e6d853b9dbbf4fda2df1b27c01e4b8304cca68b68014c72d83f09482a",
+    "minimal": "sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27",
+    "numbers": "sha256:977b379b308ffd9cf64a0bfa390b1dd6b2e092c934a44aa42dd611f33c5278a8"
+  }
+}
