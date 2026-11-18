@@ -431,7 +431,8 @@ struct Krate {
     name: String,
     layer: Option<String>,
     dir: Option<PathBuf>,
-    /// Names of direct dependencies, (name, dev-only).
+    /// Names of direct dependencies, (name, dev-only): resolved edges plus declared
+    /// dependencies (Cargo drops dependencies on binary-only crates from the resolve graph).
     deps: BTreeSet<(String, bool)>,
 }
 
@@ -445,7 +446,14 @@ fn crates_of(map: &LayerMap, g: &Graph) -> Vec<Krate> {
             Krate {
                 layer: map.crates.get(&n).cloned(),
                 dir: g.manifest_paths.get(id).and_then(|m| Path::new(m).parent().map(Path::to_path_buf)),
-                deps: g.edges.get(id).into_iter().flatten().map(|e| (name(&e.to), e.dev_only)).collect(),
+                deps: g
+                    .edges
+                    .get(id)
+                    .into_iter()
+                    .flatten()
+                    .map(|e| (name(&e.to), e.dev_only))
+                    .chain(g.declared.get(id).into_iter().flatten().cloned())
+                    .collect(),
                 name: n,
             }
         })

@@ -121,6 +121,10 @@ pub struct Graph {
     edges: BTreeMap<String, Vec<Edge>>,
     /// Package ID to its `Cargo.toml` path, when `cargo metadata` gives one.
     manifest_paths: BTreeMap<String, String>,
+    /// Package ID to its declared dependencies as (package name, dev-only), from
+    /// `packages[].dependencies`. Unlike the resolved edges, these include dependencies on
+    /// binary-only packages, which Cargo leaves out of `resolve`.
+    declared: BTreeMap<String, BTreeSet<(String, bool)>>,
 }
 
 fn field<'a>(o: &'a BTreeMap<String, CValue>, k: &str) -> Result<&'a CValue, String> {
@@ -159,6 +163,16 @@ impl Graph {
             let id = as_str(field(p, "id")?)?.to_string();
             if let Some(CValue::Str(m)) = p.get("manifest_path") {
                 g.manifest_paths.insert(id.clone(), m.clone());
+            }
+            if let Some(CValue::Arr(deps)) = p.get("dependencies") {
+                let mut set = BTreeSet::new();
+                for d in deps {
+                    let CValue::Obj(d) = d else { continue };
+                    let Some(CValue::Str(n)) = d.get("name") else { continue };
+                    let dev = matches!(d.get("kind"), Some(CValue::Str(k)) if k == "dev");
+                    set.insert((n.clone(), dev));
+                }
+                g.declared.insert(id.clone(), set);
             }
             g.names.insert(id, as_str(field(p, "name")?)?.to_string());
         }
