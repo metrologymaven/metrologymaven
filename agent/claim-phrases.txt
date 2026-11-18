@@ -1,0 +1,21 @@
+# Agent-capability phrases for `fid-eval board check-claims` (spec node AGENT.BOARD.CLAIMS).
+# Project-authored. One phrase per line; matched case-insensitively on whole words, with any
+# whitespace (including a line break) matching one space. A paragraph in docs, website or
+# release notes that contains one of these needs a `<!-- fid-claim: <id> -->` tag naming an
+# entry in agent/claims.json. This is a heuristic list [unverified]; extend it as wording appears.
+our agent
+our agents
+the agent can
+agents can
+agent programs
+agent can program
+programs a part
+program a part
+writes the inspection program
+autonomously
+adoptable program
+adopted without changes
+reviewers adopted
+success rate
+adoptability rate
+human-adoption rate
