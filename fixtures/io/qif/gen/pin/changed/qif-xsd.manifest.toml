@@ -1,0 +1,26 @@
+# Synthetic test manifest (IO.QIF.GEN.PIN fixtures); written by make_fixtures.py.
+manifest_version = 1
+licence_path = "LICENSE.txt"
+licence_sha256 = "sha256:ab03213680f511dccfdd08d47735222fc1c09b6860c3b8901cfbb746ec9639d3"
+
+[source]
+url = "https://example.org/fid-test/pin-fixtures.git"
+rev = "0123456789abcdef0123456789abcdef01234567"
+
+[[file]]
+path = "a.xsd"
+bytes = 273
+sha256 = "sha256:145e53d963eaae931accdcef1627d7b82b9d42be53966bd42285193f803dbd35"
+role = "xsd"
+
+[[file]]
+path = "b.xsd"
+bytes = 287
+sha256 = "sha256:ea6141f2422961edf1f73999df4557a4f8b90d191de7a765eadd5f60713f2f2e"
+role = "xsd"
+
+[[file]]
+path = "lib/units.xsd"
+bytes = 237
+sha256 = "sha256:4664867252a3df9c4a89a758b2ff4d689dd4bd46d76c559c7f6b2985ebe82693"
+role = "xsd"

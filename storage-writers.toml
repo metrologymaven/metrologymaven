@@ -1,0 +1,4 @@
+# Crates allowed to write project files (spec node CORE.STO.LAYOUT, REQ-CORE.STO.LAYOUT-010).
+# Read by the crate-graph check of CORE.BUS.LINT. One-line array of crate names.
+[storage_writers]
+allowed = ["fid-store"]
