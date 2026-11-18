@@ -1,6 +1,6 @@
 [package]
 name = "fid-platform"
-description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE); the hardware profile file and validator (PLAT.HW.PROFILE)"
+description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE); the hardware profile file and validator (PLAT.HW.PROFILE); the benchmark suite manifest and result schema (PLAT.HW.SCHEMA)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,11 @@ path = "src/main.rs"
 # Reads the matrix as an untyped table (no serde derive); same pinned dependency as fid-knp1-lint,
 # already in Cargo.lock. Duplicate keys and malformed TOML are rejected by the parser.
 toml = { version = "0.8", default-features = false, features = ["parse"] }
+# PLAT.HW.SCHEMA: workspace crates only. fid-canon reads result JSON strictly (duplicate keys,
+# depth and size limits) and writes it as RFC 8785 canonical JSON (byte-identical output);
+# fid-types supplies the shared `sha256:` digest type (AGENTS.md rule 14).
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

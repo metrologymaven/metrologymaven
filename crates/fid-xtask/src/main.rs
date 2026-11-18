@@ -13,6 +13,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
                      cargo xtask plat-hw validate [--file <path>]\n       \
+                     cargo xtask plat-hw validate-suite [--file <path>]\n       \
+                     cargo xtask plat-hw result-schema\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
