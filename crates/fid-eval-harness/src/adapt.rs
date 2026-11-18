@@ -21,20 +21,20 @@
 //! with the remaining arguments, and an adapter whose program is itself a shell (or a Windows
 //! batch file, which the standard library runs through `cmd.exe`) is refused unless it
 //! declares `"shell": true`. The child environment is cleared and refilled from an allowlist
-//! ([`ENV_ALLOWLIST`]); [`LaunchPlan::run`] enforces a wall-time limit and caps captured
-//! output. Process-tree termination, the MCP tap and tool-call budgets belong to
-//! AGENT.HARNESS.RUN.
+//! ([`ENV_ALLOWLIST`]); each plan carries its wall-time limit and output cap ([`Limits`]).
+//! Like `Sandbox::command`, the library only prepares the command and never starts a process
+//! itself: supervision (enforcing the limits, process-tree termination, the MCP tap and
+//! tool-call budgets) belongs to AGENT.HARNESS.RUN.
 
 use crate::path::{check_rel, is_same_or_ancestor};
 use crate::{read_bounded, ErrorCode, SandboxError};
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// The only placeholders an argv element may contain.
 pub const PLACEHOLDERS: [&str; 3] = ["prompt_file", "mcp_config", "workdir"];
@@ -50,7 +50,7 @@ pub const MAX_TEXT_BYTES: usize = 256;
 pub const MAX_SETTINGS: usize = 64;
 /// Largest token report read, in bytes.
 pub const MAX_TOKEN_REPORT_BYTES: u64 = 64 * 1024;
-/// Default cap on each of stdout and stderr captured by [`LaunchPlan::run`].
+/// Default cap on each of stdout and stderr kept from one launch (enforced by AGENT.HARNESS.RUN).
 pub const DEFAULT_OUTPUT_CAP: usize = 1024 * 1024;
 /// The name of the single MCP server in the generated client configuration.
 pub const MCP_SERVER_NAME: &str = "fid";
@@ -81,7 +81,20 @@ pub const ENV_ALLOWLIST: [&str; 19] = [
 
 /// Programs that are command interpreters: launching one is shell access.
 const SHELLS: [&str; 15] = [
-    "ash", "bash", "busybox", "cmd", "csh", "dash", "env", "fish", "ksh", "powershell", "pwsh", "sh", "tcsh", "wsl",
+    "ash",
+    "bash",
+    "busybox",
+    "cmd",
+    "csh",
+    "dash",
+    "env",
+    "fish",
+    "ksh",
+    "powershell",
+    "pwsh",
+    "sh",
+    "tcsh",
+    "wsl",
     "zsh",
 ];
 
@@ -613,7 +626,7 @@ pub fn scrub_env(env: &[(String, String)]) -> Vec<(String, String)> {
     out
 }
 
-/// Wall-time limit and output cap of one launch.
+/// Wall-time limit and output cap of one launch, enforced by the supervisor (AGENT.HARNESS.RUN).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
     pub wall_time: Duration,
@@ -648,42 +661,6 @@ pub struct LaunchPlan {
     pub limits: Limits,
 }
 
-/// The result of [`LaunchPlan::run`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunOutcome {
-    /// The exit code, if the process exited normally.
-    pub exit_code: Option<i32>,
-    /// The wall-time limit was reached and the process was killed.
-    pub timed_out: bool,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
-    pub stdout_truncated: bool,
-    pub stderr_truncated: bool,
-}
-
-fn spawn_reader<R: Read + Send + 'static>(which: u8, mut r: R, cap: usize, tx: mpsc::Sender<(u8, Vec<u8>, bool)>) {
-    std::thread::spawn(move || {
-        let mut buf = Vec::new();
-        let mut truncated = false;
-        let mut chunk = [0u8; 8192];
-        loop {
-            match r.read(&mut chunk) {
-                Ok(0) => break,
-                Ok(n) => {
-                    let room = cap.saturating_sub(buf.len());
-                    let data = chunk.get(..n).unwrap_or(&[]);
-                    let keep = data.get(..room.min(n)).unwrap_or(&[]);
-                    buf.extend_from_slice(keep);
-                    truncated |= keep.len() < n;
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
-        }
-        let _ = tx.send((which, buf, truncated));
-    });
-}
-
 impl LaunchPlan {
     /// The command: `program` run directly with `args` (no shell), the environment cleared and
     /// set to exactly [`LaunchPlan::env`], in [`LaunchPlan::cwd`], with piped stdout and stderr.
@@ -697,62 +674,6 @@ impl LaunchPlan {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         c
-    }
-
-    /// Runs the plan: writes the stdin prompt, captures at most `output_cap` bytes of each
-    /// output stream, and kills the process when the wall time is reached. Only the direct
-    /// child is killed; process-tree termination belongs to AGENT.HARNESS.RUN.
-    pub fn run(&self) -> Result<RunOutcome, SandboxError> {
-        let io = |e: std::io::Error| SandboxError::new(ErrorCode::Io, format!("{}: {e}", self.program));
-        let mut child = self.command().spawn().map_err(io)?;
-        let (tx, rx) = mpsc::channel();
-        if let Some(out) = child.stdout.take() {
-            spawn_reader(0, out, self.limits.output_cap, tx.clone());
-        }
-        if let Some(err) = child.stderr.take() {
-            spawn_reader(1, err, self.limits.output_cap, tx.clone());
-        }
-        drop(tx);
-        if let (Some(mut sin), Some(data)) = (child.stdin.take(), self.stdin.clone()) {
-            std::thread::spawn(move || {
-                let _ = sin.write_all(&data);
-            });
-        }
-        let deadline = Instant::now() + self.limits.wall_time;
-        let (status, timed_out) = loop {
-            if let Some(s) = child.try_wait().map_err(io)? {
-                break (Some(s), false);
-            }
-            if Instant::now() >= deadline {
-                let _ = child.kill();
-                break (child.wait().ok(), true);
-            }
-            std::thread::sleep(Duration::from_millis(5));
-        };
-        let mut out = RunOutcome {
-            exit_code: if timed_out { None } else { status.and_then(|s| s.code()) },
-            timed_out,
-            stdout: Vec::new(),
-            stderr: Vec::new(),
-            stdout_truncated: false,
-            stderr_truncated: false,
-        };
-        // A leftover grandchild can hold the pipes open: wait for the readers only briefly.
-        let grace = Instant::now() + Duration::from_secs(2);
-        for _ in 0..2 {
-            match rx.recv_timeout(grace.saturating_duration_since(Instant::now())) {
-                Ok((0, b, t)) => {
-                    out.stdout = b;
-                    out.stdout_truncated = t;
-                }
-                Ok((_, b, t)) => {
-                    out.stderr = b;
-                    out.stderr_truncated = t;
-                }
-                Err(_) => break,
-            }
-        }
-        Ok(out)
     }
 }
 
@@ -822,9 +743,7 @@ impl Tokens {
             Tokens::Reported { tokens_in, tokens_out } => {
                 (CValue::Num(*tokens_in as f64), CValue::Num(*tokens_out as f64))
             }
-            Tokens::NotReported => {
-                (CValue::Str("not_reported".to_string()), CValue::Str("not_reported".to_string()))
-            }
+            Tokens::NotReported => (CValue::Str("not_reported".to_string()), CValue::Str("not_reported".to_string())),
         };
         let mut m = BTreeMap::new();
         m.insert("tokens_in".to_string(), i);

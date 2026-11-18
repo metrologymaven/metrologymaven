@@ -3,14 +3,14 @@
 //! MCP configuration and token-report verdicts are hand-labelled in fixtures/agent/harness/
 //! (adapters/expected.json, mcp-config.golden.json, tokens/expected.json); nothing expected is
 //! computed by this crate. No test starts a real agent or contacts any service: the only
-//! programs launched are this crate's own `null-agent` and this test binary.
+//! programs launched are this crate's own binary (`adapter check` and `null-agent`).
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_eval_harness::*;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 const BIN: &str = env!("CARGO_BIN_EXE_fid-eval-harness");
 
@@ -216,7 +216,8 @@ fn resolved_paths_never_point_at_oracles_or_into_the_suite() {
 
 #[test]
 fn placeholders_are_substituted_without_a_shell() {
-    let json = adapter_json(&["agent", "--mcp-config={mcp_config}", "$(rm -rf ~); echo {workdir}", "'{prompt_file}'"], "arg");
+    let json =
+        adapter_json(&["agent", "--mcp-config={mcp_config}", "$(rm -rf ~); echo {workdir}", "'{prompt_file}'"], "arg");
     let a = Adapter::parse(&json, None).unwrap();
     let argv = a.resolve_argv(&paths(), "Evaluate PL1; rm -rf /", None).unwrap();
     assert_eq!(
@@ -287,12 +288,13 @@ fn environment_is_scrubbed_to_the_allowlist() {
     let suite_abs = std::path::absolute(suite_dir()).unwrap();
     let env = vec![("HOME".to_string(), suite_abs.to_str().unwrap().to_string())];
     let cwd = tmp("env");
+    let suite = suite_dir();
     let input = LaunchInput {
         paths: paths(),
         prompt: "go",
         cwd: &cwd,
         env: &env,
-        suite_dir: Some(&suite_dir()),
+        suite_dir: Some(&suite),
         limits: Limits { wall_time: Duration::from_secs(1), output_cap: 16 },
     };
     assert_eq!(a.plan(&input).unwrap_err().code(), ErrorCode::InvalidAdapter);
@@ -344,87 +346,39 @@ fn null_adapter_exits_at_once_without_output() {
     // The MCP config does not exist: the null agent never opens it, so it makes no tool call.
     let p = AgentPaths::new(&d.join("prompt.txt"), &d.join("missing-mcp-config.json"), &d).unwrap();
     let env = host_env();
+    let suite = suite_dir();
     let input = LaunchInput {
         paths: p,
         prompt: "Evaluate PL1.",
         cwd: &d,
         env: &env,
-        suite_dir: Some(&suite_dir()),
+        suite_dir: Some(&suite),
         limits: Limits { wall_time: Duration::from_secs(60), output_cap: DEFAULT_OUTPUT_CAP },
     };
     let mut plan = a.plan(&input).unwrap();
     assert_eq!(plan.program, "fid-eval-harness");
     plan.program = BIN.to_string();
-    let out = plan.run().unwrap();
-    assert_eq!(out.exit_code, Some(0));
-    assert!(!out.timed_out);
+    assert_eq!(plan.limits.wall_time, Duration::from_secs(60));
+    assert_eq!(plan.stdin, None, "prompt delivery is `file`");
+    // The library never starts a process (AGENT.HARNESS.SANDBOX REQ-006): the test does.
+    let out = plan.command().output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
     assert!(out.stdout.is_empty() && out.stderr.is_empty());
     assert_eq!(std::fs::read_dir(&d).unwrap().count(), 0, "the null agent wrote nothing");
 }
 
-/// A plan that runs one ignored helper test of this binary.
-fn helper_plan(helper: &str, prompt: Option<&str>, limits: Limits) -> LaunchPlan {
-    LaunchPlan {
-        program: std::env::current_exe().unwrap().to_str().unwrap().to_string(),
-        args: ["--exact", helper, "--ignored", "--nocapture", "--test-threads=1"].map(String::from).to_vec(),
-        stdin: prompt.map(|p| p.as_bytes().to_vec()),
-        cwd: tmp(helper),
-        env: host_env(),
-        limits,
-    }
-}
-
 #[test]
-fn wall_time_limit_kills_the_agent() {
-    let plan = helper_plan("helper_sleeper", None, Limits { wall_time: Duration::from_millis(500), output_cap: 1024 });
-    let t = Instant::now();
-    let out = plan.run().unwrap();
-    assert!(out.timed_out);
-    assert_eq!(out.exit_code, None);
-    assert!(t.elapsed() < Duration::from_secs(15), "{:?}", t.elapsed());
-}
-
-#[test]
-fn output_is_capped() {
-    let plan = helper_plan("helper_chatter", None, Limits { wall_time: Duration::from_secs(60), output_cap: 1000 });
-    let out = plan.run().unwrap();
-    assert!(!out.timed_out);
-    assert_eq!(out.stdout.len(), 1000);
-    assert!(out.stdout_truncated);
-}
-
-#[test]
-fn stdin_prompt_is_delivered() {
-    let plan = helper_plan(
-        "helper_echo_stdin",
-        Some("Evaluate the flatness of PL1."),
-        Limits { wall_time: Duration::from_secs(60), output_cap: DEFAULT_OUTPUT_CAP },
-    );
-    let out = plan.run().unwrap();
-    assert_eq!(out.exit_code, Some(0), "{}", String::from_utf8_lossy(&out.stderr));
-    assert!(String::from_utf8_lossy(&out.stdout).contains("prompt=[Evaluate the flatness of PL1.]"));
-}
-
-#[test]
-#[ignore = "helper launched by wall_time_limit_kills_the_agent"]
-fn helper_sleeper() {
-    std::thread::sleep(Duration::from_secs(20));
-}
-
-#[test]
-#[ignore = "helper launched by output_is_capped"]
-fn helper_chatter() {
-    let line = "x".repeat(1023);
-    for _ in 0..512 {
-        println!("{line}");
-    }
-}
-
-#[test]
-#[ignore = "helper launched by stdin_prompt_is_delivered"]
-fn helper_echo_stdin() {
-    use std::io::Read;
-    let mut s = String::new();
-    std::io::stdin().read_to_string(&mut s).unwrap();
-    println!("prompt=[{s}]");
+fn stdin_delivery_and_limits_are_carried_in_the_plan() {
+    let a = Adapter::parse(&adapter_json(&["agent", "--mcp-config", "{mcp_config}"], "stdin"), None).unwrap();
+    let env = host_env();
+    let cwd = tmp("stdin");
+    let limits = Limits { wall_time: Duration::from_millis(1500), output_cap: 4096 };
+    let input = LaunchInput { paths: paths(), prompt: "Evaluate PL1.", cwd: &cwd, env: &env, suite_dir: None, limits };
+    let plan = a.plan(&input).unwrap();
+    assert_eq!(plan.stdin.as_deref(), Some("Evaluate PL1.".as_bytes()));
+    assert_eq!(plan.limits, limits);
+    assert_eq!(plan.args, ["--mcp-config", "/run/agent/mcp-config.json"]);
+    let cmd = plan.command();
+    let envs: Vec<_> = cmd.get_envs().map(|(k, _)| k.to_str().unwrap().to_string()).collect();
+    assert!(envs.iter().all(|k| ENV_ALLOWLIST.iter().any(|a| a.eq_ignore_ascii_case(k))), "{envs:?}");
 }

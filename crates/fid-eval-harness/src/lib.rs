@@ -43,9 +43,9 @@ mod task;
 
 pub use adapt::{
     check_profile, mcp_config, parse_token_report, read_token_report, scrub_env, suite_dir_of, Adapter, AdapterError,
-    AgentPaths, LaunchInput, LaunchPlan, Limits, McpCommand, PromptMode, RunOutcome, Tokens, DEFAULT_OUTPUT_CAP,
-    ENV_ALLOWLIST, MAX_ADAPTER_BYTES, MAX_ARGV, MAX_ARG_BYTES, MAX_SETTINGS, MAX_TEXT_BYTES, MAX_TOKEN_REPORT_BYTES,
-    MCP_SERVER_NAME, PLACEHOLDERS,
+    AgentPaths, LaunchInput, LaunchPlan, Limits, McpCommand, PromptMode, Tokens, DEFAULT_OUTPUT_CAP, ENV_ALLOWLIST,
+    MAX_ADAPTER_BYTES, MAX_ARGV, MAX_ARG_BYTES, MAX_SETTINGS, MAX_TEXT_BYTES, MAX_TOKEN_REPORT_BYTES, MCP_SERVER_NAME,
+    PLACEHOLDERS,
 };
 pub use path::check_rel;
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
