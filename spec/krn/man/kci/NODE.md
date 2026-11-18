@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kci]
+built_pr: 59
 satisfies: [REQ-KRN.MAN-001, REQ-KRN.MAN-002]
 covers: []
 depends_on: [KRN.NUM.ERR, KRN.MAN.CARD]
