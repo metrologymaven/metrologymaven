@@ -1,0 +1,33 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+# Base revision: report-alpha is announced.
+version = 1
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+announced = { date = "2099-01-20", release = "v0.1.0-alpha" }
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "node_status"
+node = "RPT.TPL"
+in = ["leaf"]
+note = "old note"
+
+[[milestone.criterion]]
+id = "RPT-A-02"
+kind = "parity"
+app = "report"
+min_pct = 60
+
+[[milestone]]
+id = "report-beta"
+app = "report"
+level = "beta"
+scope_label = "offline transcription reports"
+
+[[milestone.criterion]]
+id = "RPT-B-01"
+kind = "signoff"
+role = "release-manager"

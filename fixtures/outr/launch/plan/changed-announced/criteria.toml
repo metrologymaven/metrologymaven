@@ -1,0 +1,36 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+# New revision: RPT-A-02 changed (min_pct 60 -> 70); RPT-A-01 only changed its note, which is not
+# evaluated; report-beta (not announced) changed freely.
+# Expected with --base and reviews-none/: announced_criteria_changed RPT-A-02 only.
+# Expected with --base and reviews/: no findings.
+version = 1
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+announced = { date = "2099-01-20", release = "v0.1.0-alpha" }
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "node_status"
+node = "RPT.TPL"
+in = ["leaf"]
+note = "new note"
+
+[[milestone.criterion]]
+id = "RPT-A-02"
+kind = "parity"
+app = "report"
+min_pct = 70
+
+[[milestone]]
+id = "report-beta"
+app = "report"
+level = "beta"
+scope_label = "offline transcription reports"
+
+[[milestone.criterion]]
+id = "RPT-B-01"
+kind = "signoff"
+role = "quality-lead"
