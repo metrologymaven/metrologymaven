@@ -1,0 +1,9 @@
+{
+  "id": "demo.bore_basic",
+  "title": "Basic bore",
+  "prompt": "Measure the bore of the fixture part and report through the result record.",
+  "commentary": [
+    "The agent scans the bore first.",
+    "It fits a cylinder; the size is in the result record, not in this text."
+  ]
+}
