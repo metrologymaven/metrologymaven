@@ -9,7 +9,9 @@ use fid_canon::to_canonical_bytes;
 use fid_surface::{valid_command_id, Envelope, ErrorCode};
 use std::io::Write;
 
-/// Command ID used for envelopes the CLI writes itself when no registered command applies.
+/// Command ID used for envelopes the CLI writes itself when no registered command applies
+/// (usage errors before a command is resolved, internal errors with no valid command ID).
+/// Not a registered command; the leaf's Open questions asks maintainers to settle it.
 pub const CLI_COMMAND_ID: &str = "cli.invoke@1";
 
 /// Output sink for one invocation.
@@ -53,8 +55,8 @@ impl<'a> Output<'a> {
     /// Writes the final envelope and returns the exit code (REQ-AUTO.CLI.OUT-001, -002, -004).
     ///
     /// With `--json`, stdout receives exactly one line of RFC 8785 JSON. If the envelope
-    /// cannot be encoded, stdout stays empty, an `internal_error` envelope (or, without
-    /// `--json`, an error line) goes to stderr and the exit code is 1.
+    /// cannot be encoded, stdout stays empty, an `internal_error` envelope goes to stderr
+    /// (preceded, without `--json`, by an `error[internal_error]:` line) and the exit code is 1.
     pub fn finish(self, env: &Envelope) -> ExitCode {
         let Output { json, stdout, stderr } = self;
         let bytes = match env.encode() {
@@ -78,14 +80,19 @@ impl<'a> Output<'a> {
 fn internal(json: bool, stderr: &mut dyn Write, command_id: &str, msg: &str) -> ExitCode {
     let id = if valid_command_id(command_id) { command_id } else { CLI_COMMAND_ID };
     let env = Envelope::failed(id, ErrorCode::InternalError, msg, None);
+    // Human mode gets a readable line first; both modes get the envelope (Design, Errors).
+    if !json {
+        let _ = writeln!(stderr, "error[internal_error]: {}", sanitize(msg));
+    }
     match env.encode() {
-        Ok(mut b) if json => {
+        Ok(mut b) => {
             b.push(b'\n');
             let _ = stderr.write_all(&b);
         }
-        _ => {
+        Err(_) if json => {
             let _ = writeln!(stderr, "error[internal_error]: {}", sanitize(msg));
         }
+        Err(_) => {}
     }
     let _ = stderr.flush();
     ExitCode::Internal

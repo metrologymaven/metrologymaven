@@ -56,7 +56,13 @@ case("raw path refused", failed("raw_path_refused", "raw path"), 3, human=["raw_
 case("command failed", failed("precondition_failed", "no alignment"), 4,
      human=["precondition_failed", "no alignment"], emit=NOISE)
 case("validation error", failed("validation_error", "bad value"), 4, human=["validation_error"])
+case("timeout error", failed("timeout", "probe did not answer"), 4, human=["timeout", "probe did not answer"])
+case("root escape", failed("root_escape", "path leaves the project"), 4, human=["root_escape"])
 case("cancelled", env("cancelled"), 5, human=["cancelled"])
+case("failed with cancelled", failed("cancelled", "operator stopped it"), 5, human=["cancelled", "operator stopped it"])
+# Judgement call stated in the PR: the CLI waits for a final state (AUTO.CLI.JOB), so
+# ending on `accepted` is an internal error, never success (REQ-AUTO.CLI-006).
+case("accepted", env("accepted", job_id="job-7"), 1, human=["accepted", "job-7"])
 case("not_run timeout", env("not_run"), 6, human=["not_run"])
 case("no_reply timeout", env("no_reply"), 7, human=["no_reply"])
 case("request filed", env("request_filed", request_id="req-42"), 8, human=["request_filed", "req-42"])

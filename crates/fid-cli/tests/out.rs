@@ -240,7 +240,31 @@ fn unencodable_envelope_is_internal_error_on_stderr() {
     let h = run(&case("unencodable envelope"), &["demo", "show-thing"]);
     assert_eq!(h.exit, ExitCode::Internal);
     assert_eq!(h.stdout, "");
-    assert!(h.stderr.starts_with("error[internal_error]: "), "{:?}", h.stderr);
+    let (first, rest) = h.stderr.split_once('\n').unwrap();
+    assert!(first.starts_with("error[internal_error]: "), "{:?}", h.stderr);
+    assert_eq!(one_envelope_line(rest).error.unwrap().code, ErrorCode::InternalError);
+}
+
+/// A panicking command is exit 1 (internal), never 101, with one envelope under `--json`.
+#[test]
+fn panic_in_bus_is_internal_error() {
+    struct PanicBus;
+    impl Bus for PanicBus {
+        fn resolve(&self, _: &str, _: &str) -> Option<String> {
+            Some("demo.show_thing@1".to_string())
+        }
+        fn call(&mut self, _: &str, out: &mut Output<'_>) -> Envelope {
+            out.warn("about to fail");
+            panic!("scripted panic");
+        }
+    }
+    let args: Vec<String> = ["demo", "show-thing", "--json"].iter().map(|s| s.to_string()).collect();
+    let (mut so, mut se) = (Vec::new(), Vec::new());
+    let exit = invoke(&args, &mut PanicBus, &mut so, &mut se);
+    assert_eq!(exit, ExitCode::Internal);
+    let env = one_envelope_line(&String::from_utf8(so).unwrap());
+    assert_eq!(env.error.unwrap().code, ErrorCode::InternalError);
+    assert!(String::from_utf8(se).unwrap().contains("about to fail"));
 }
 
 /// Usage errors are exit 2 and still one envelope under `--json`.

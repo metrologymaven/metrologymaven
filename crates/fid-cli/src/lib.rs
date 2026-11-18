@@ -44,7 +44,12 @@ pub fn invoke(args: &[String], bus: &mut dyn Bus, stdout: &mut dyn Write, stderr
     let Some(id) = bus.resolve(domain, verb) else {
         return out.finish(&usage(&format!("unknown command `{domain} {verb}`")));
     };
-    let env = bus.call(&id, &mut out);
+    // A panic in the bus would exit 101, outside the table: report it as internal (exit 1).
+    let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bus.call(&id, &mut out)));
+    let env = match called {
+        Ok(env) => env,
+        Err(_) => Envelope::failed(&id, ErrorCode::InternalError, "the command panicked", None),
+    };
     out.finish(&env)
 }
 

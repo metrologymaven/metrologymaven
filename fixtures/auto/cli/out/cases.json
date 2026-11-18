@@ -265,6 +265,47 @@
   {
    "emit": [],
    "expect": {
+    "exit": 4,
+    "human": [
+     "timeout",
+     "probe did not answer"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "timeout error",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "timeout",
+     "message": "probe did not answer"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 4,
+    "human": [
+     "root_escape"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "root escape",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "root_escape",
+     "message": "path leaves the project"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
     "exit": 5,
     "human": [
      "cancelled"
@@ -276,6 +317,45 @@
     "command_id": "demo.show_thing@1",
     "envelope_version": 1,
     "outcome": "cancelled"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 5,
+    "human": [
+     "cancelled",
+     "operator stopped it"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "failed with cancelled",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "error": {
+     "code": "cancelled",
+     "message": "operator stopped it"
+    },
+    "outcome": "failed"
+   }
+  },
+  {
+   "emit": [],
+   "expect": {
+    "exit": 1,
+    "human": [
+     "accepted",
+     "job-7"
+    ],
+    "stdout_lines": 1
+   },
+   "name": "accepted",
+   "reply": {
+    "command_id": "demo.show_thing@1",
+    "envelope_version": 1,
+    "job_id": "job-7",
+    "outcome": "accepted"
    }
   },
   {
