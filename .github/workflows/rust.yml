@@ -53,6 +53,8 @@ jobs:
           out=$(cargo xtask plat-matrix validate fixtures/plat/matrix/valid.toml)
           test "$out" = "6 rows, 0 errors"
           cargo xtask plat-matrix validate platform/support-matrix.toml
+      - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
+        run: cargo xtask plat-matrix lint-tiers
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
