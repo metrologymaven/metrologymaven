@@ -6,14 +6,23 @@
 //! fills in or amends a record, and it never decides an item itself. The gate refuses
 //! publication (exit 1) when
 //!
-//! - the reviewer is not on the roster (`unknown_reviewer`);
-//! - the reviewer is the release author, compared case-insensitively (`self_review`);
+//! - the reviewer is not on the roster (`unknown_reviewer`), or is an automation account
+//!   (`bot_reviewer`);
+//! - the reviewer is one of the release's authors, compared case-insensitively (`self_review`);
+//! - the record is for another release (`release_mismatch`) or another checklist version
+//!   (`checklist_version_mismatch`);
 //! - a checklist item has no answer (`missing_answer:<item>`);
 //! - a checklist item is answered with anything other than exactly `"pass"`
-//!   (`failed_item:<item>`).
+//!   (`failed_item:<item>`);
+//! - the record answers an item that is not on the checklist (`unknown_item:<item>`).
+//!
+//! Every handle (roster, reviewer, author) must follow the GitHub login grammar, and the roster
+//! may not list a denied automation account ([`DENIED_HANDLES`] and the optional bots register).
+//! This does not authenticate the record: whoever can commit a record can name any reviewer; the
+//! repository's pull-request review is what ties a record to a person.
 //!
 //! A missing record, or an input that cannot be read or parsed, stops the gate (exit 2).
-//! Determinism D0: a pure function of the three input files; findings are sorted.
+//! Determinism D0: a pure function of the input files and arguments; findings are sorted.
 //!
 //! The checklist and record parsers here are shared with [`crate::copy_guard`].
 
@@ -29,9 +38,6 @@ pub const MAX_FILE_BYTES: usize = 64 * 1024;
 pub const MAX_ROSTER_HANDLES: usize = 10_000;
 /// The only answer that passes an item.
 pub const PASS: &str = "pass";
-/// Suffix of automation accounts (GitHub app and bot handles). A roster may not list one: only
-/// people may pass a review.
-pub const BOT_SUFFIX: &str = "[bot]";
 
 // ------------------------------------------------------------------ errors
 
@@ -201,6 +207,69 @@ pub fn read_checklist(path: &Path) -> Result<Checklist, GateError> {
     parse_checklist(&read_toml(path)?, &path.display().to_string())
 }
 
+// ------------------------------------------------------------------ handles
+
+/// True when `s` follows the GitHub login grammar: ASCII letters and digits, single hyphens
+/// between them, 1 to 39 letters or digits (`^[A-Za-z0-9](-?[A-Za-z0-9]){0,38}$`). This rejects
+/// `[bot]` app accounts, `agent:*` style identities and Unicode lookalikes.
+pub fn is_valid_handle(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.is_empty() || b.len() > 77 {
+        return false;
+    }
+    let mut groups = 0usize;
+    let mut prev_hyphen = true; // a leading hyphen is invalid
+    for &c in b {
+        if c == b'-' {
+            if prev_hyphen {
+                return false;
+            }
+            prev_hyphen = true;
+        } else if c.is_ascii_alphanumeric() {
+            groups += 1;
+            prev_hyphen = false;
+        } else {
+            return false;
+        }
+    }
+    // `(-?[A-Za-z0-9]){0,38}` after the first character: at most 39 alphanumerics in all.
+    !prev_hyphen && groups <= 39
+}
+
+/// Case-insensitive form of a handle (GitHub logins are ASCII and case-insensitive).
+pub fn fold(handle: &str) -> String {
+    handle.trim().to_ascii_lowercase()
+}
+
+/// Automation accounts that may never review, whatever a roster says.
+pub const DENIED_HANDLES: [&str; 3] = ["github-actions", "dependabot", "renovate"];
+
+/// The folded denylist: [`DENIED_HANDLES`] plus the `account` of every `[[bot]]` entry of a
+/// bots register (`bots.toml`, spec node ECO.CI.BOTS.REG) when one is given. A register account
+/// such as `renovate[bot]` or `app/renovate` is denied under its bare login.
+pub fn denylist(bots: Option<&toml::Table>, path: &str) -> Result<BTreeSet<String>, GateError> {
+    let mut out: BTreeSet<String> = DENIED_HANDLES.iter().map(|h| (*h).to_string()).collect();
+    let Some(t) = bots else { return Ok(out) };
+    let Some(v) = t.get("bot") else { return Ok(out) };
+    let arr = v.as_array().ok_or_else(|| parse_err(path, "`bot` is not an array of tables"))?;
+    for entry in arr {
+        let e = entry.as_table().ok_or_else(|| parse_err(path, "`[[bot]]` entry is not a table"))?;
+        let account = req_str(e, "account", path)?;
+        let bare = account.strip_prefix("app/").unwrap_or(account);
+        let bare = bare.strip_suffix("[bot]").unwrap_or(bare);
+        out.insert(fold(bare));
+    }
+    Ok(out)
+}
+
+/// Reads a bots register and returns the folded denylist ([`denylist`]).
+pub fn read_denylist(path: Option<&Path>) -> Result<BTreeSet<String>, GateError> {
+    match path {
+        None => denylist(None, ""),
+        Some(p) => denylist(Some(&read_toml(p)?), &p.display().to_string()),
+    }
+}
+
 // ------------------------------------------------------------------ record
 
 /// One answer, as the reviewer wrote it.
@@ -218,26 +287,48 @@ impl Answer {
     }
 }
 
-/// A review record (`release`, `reviewer`, `date`, `answers.<item> = { result, note }`).
+/// A review record (`release`, `reviewer`, `date`, `checklist_version`,
+/// `answers.<item> = { result, note }`).
 ///
 /// [`parse_record`] requires only `release`, so that other checks (the copy guard) can read
-/// records in part; the gate additionally requires `reviewer` and `date` ([`require_complete`]).
+/// records in part; the gate additionally requires `reviewer`, `date` and `checklist_version`
+/// ([`require_complete`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
     pub release: String,
+    /// A GitHub login ([`is_valid_handle`]).
     pub reviewer: Option<String>,
-    /// `YYYY-MM-DD`, written as a string or a TOML local date.
+    /// A real calendar date `YYYY-MM-DD`, written as a string or a TOML local date.
     pub date: Option<String>,
+    /// The `version` of the checklist the reviewer answered.
+    pub checklist_version: Option<i64>,
     /// Keyed by item ID.
     pub answers: BTreeMap<String, Answer>,
 }
 
-fn is_iso_date(s: &str) -> bool {
+/// True when `s` is `YYYY-MM-DD` naming a real day of the proleptic Gregorian calendar.
+pub fn is_calendar_date(s: &str) -> bool {
     let b = s.as_bytes();
-    b.len() == 10
-        && b[4] == b'-'
-        && b[7] == b'-'
-        && b.iter().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+    let digits = |r: std::ops::Range<usize>| -> Option<u32> {
+        let part = b.get(r)?;
+        if !part.iter().all(u8::is_ascii_digit) {
+            return None;
+        }
+        Some(part.iter().fold(0u32, |n, c| n * 10 + u32::from(c - b'0')))
+    };
+    if b.len() != 10 || b.get(4) != Some(&b'-') || b.get(7) != Some(&b'-') {
+        return false;
+    }
+    let (Some(y), Some(m), Some(d)) = (digits(0..4), digits(5..7), digits(8..10)) else { return false };
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let days = match m {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return false,
+    };
+    (1..=days).contains(&d)
 }
 
 fn parse_date(t: &toml::Table, path: &str) -> Result<Option<String>, GateError> {
@@ -247,25 +338,29 @@ fn parse_date(t: &toml::Table, path: &str) -> Result<Option<String>, GateError> 
         Some(toml::Value::Datetime(d)) if d.time.is_none() && d.offset.is_none() => d.to_string(),
         Some(_) => return Err(parse_err(path, "`date` is not a YYYY-MM-DD date")),
     };
-    if is_iso_date(&text) {
+    if is_calendar_date(&text) {
         Ok(Some(text))
     } else {
-        Err(parse_err(path, "`date` is not a YYYY-MM-DD date"))
+        Err(parse_err(path, format!("`date` {text:?} is not a real YYYY-MM-DD date")))
     }
 }
 
-/// Parses a record table (REQ-OUTR.BRAND.REVIEW-002). `release` is required; `reviewer` and
-/// `date` are read when present and must then be well-formed. `answers`, when present, must be a
-/// table of tables; within an answer, `result` is kept only when it is a string and `note` must
-/// be a string when present.
+/// Parses a record table (REQ-OUTR.BRAND.REVIEW-002). `release` is required; `reviewer`, `date`
+/// and `checklist_version` are read when present and must then be well-formed (`reviewer` a
+/// GitHub login). `answers`, when present, must be a table of tables; within an answer, `result`
+/// is kept only when it is a string and `note` must be a string when present.
 pub fn parse_record(table: &toml::Table, path: &str) -> Result<Record, GateError> {
     let release = req_str(table, "release", path)?.to_string();
     let reviewer = match opt_str(table, "reviewer", path)?.map(str::trim) {
         None => None,
-        Some("") => return Err(parse_err(path, "`reviewer` is empty")),
-        Some(r) => Some(r.to_string()),
+        Some(r) if is_valid_handle(r) => Some(r.to_string()),
+        Some(r) => return Err(parse_err(path, format!("`reviewer` {r:?} is not a GitHub login"))),
     };
     let date = parse_date(table, path)?;
+    let checklist_version = match table.get("checklist_version") {
+        None => None,
+        Some(v) => Some(v.as_integer().ok_or_else(|| parse_err(path, "`checklist_version` is not an integer"))?),
+    };
     let mut answers = BTreeMap::new();
     if let Some(v) = table.get("answers") {
         let a = v.as_table().ok_or_else(|| parse_err(path, "`answers` is not a table"))?;
@@ -276,16 +371,20 @@ pub fn parse_record(table: &toml::Table, path: &str) -> Result<Record, GateError
             answers.insert(item.clone(), Answer { result, note });
         }
     }
-    Ok(Record { release, reviewer, date, answers })
+    Ok(Record { release, reviewer, date, checklist_version, answers })
 }
 
-/// The gate needs a reviewer and a date in every record (REQ-OUTR.BRAND.REVIEW-002).
+/// The gate needs a reviewer, a date and a checklist version in every record
+/// (REQ-OUTR.BRAND.REVIEW-002).
 pub fn require_complete(record: &Record, path: &str) -> Result<(), GateError> {
     if record.reviewer.is_none() {
         return Err(parse_err(path, "no `reviewer`"));
     }
     if record.date.is_none() {
         return Err(parse_err(path, "no `date`"));
+    }
+    if record.checklist_version.is_none() {
+        return Err(parse_err(path, "no `checklist_version`"));
     }
     Ok(())
 }
@@ -300,26 +399,21 @@ pub fn read_record(path: &Path) -> Result<Record, GateError> {
 
 // ------------------------------------------------------------------ roster
 
-/// Case-insensitive form of a handle, used for every comparison.
-pub fn fold(handle: &str) -> String {
-    handle.trim().to_lowercase()
-}
-
 /// Parses a roster: one handle per line. Blank lines and lines starting with `#` are skipped.
-/// A handle may not contain whitespace and may not be an automation account (ends with
-/// [`BOT_SUFFIX`]). Returns the folded handles.
-pub fn parse_roster(text: &str, path: &str) -> Result<BTreeSet<String>, GateError> {
+/// Every handle must be a GitHub login ([`is_valid_handle`]) and not on `denied`. Returns the
+/// folded handles.
+pub fn parse_roster(text: &str, path: &str, denied: &BTreeSet<String>) -> Result<BTreeSet<String>, GateError> {
     let mut out = BTreeSet::new();
     for (n, line) in text.lines().enumerate() {
         let h = line.trim();
         if h.is_empty() || h.starts_with('#') {
             continue;
         }
-        if h.chars().any(char::is_whitespace) {
-            return Err(parse_err(path, format!("line {}: a handle may not contain whitespace", n + 1)));
+        if !is_valid_handle(h) {
+            return Err(parse_err(path, format!("line {}: {h:?} is not a GitHub login", n + 1)));
         }
         let folded = fold(h);
-        if folded.ends_with(BOT_SUFFIX) {
+        if denied.contains(&folded) {
             return Err(parse_err(path, format!("line {}: `{h}` is an automation account, not a person", n + 1)));
         }
         out.insert(folded);
@@ -334,35 +428,44 @@ pub fn parse_roster(text: &str, path: &str) -> Result<BTreeSet<String>, GateErro
 }
 
 /// Reads and parses a roster file.
-pub fn read_roster(path: &Path) -> Result<BTreeSet<String>, GateError> {
-    parse_roster(&read_text(path, MAX_FILE_BYTES, not_found)?, &path.display().to_string())
+pub fn read_roster(path: &Path, denied: &BTreeSet<String>) -> Result<BTreeSet<String>, GateError> {
+    parse_roster(&read_text(path, MAX_FILE_BYTES, not_found)?, &path.display().to_string(), denied)
 }
 
 // ------------------------------------------------------------------ gate
 
-/// Finding kinds (Design: Errors). Order is the report order for findings without an item.
+/// Finding kinds (Design: Errors, plus the record/release consistency checks). Order is the
+/// report order among findings with the same item (reviewer and record findings have none).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Code {
     UnknownReviewer,
+    BotReviewer,
     SelfReview,
+    ReleaseMismatch,
+    ChecklistVersionMismatch,
     MissingAnswer,
     FailedItem,
+    UnknownItem,
 }
 
 impl Code {
     pub fn as_str(self) -> &'static str {
         match self {
             Code::UnknownReviewer => "unknown_reviewer",
+            Code::BotReviewer => "bot_reviewer",
             Code::SelfReview => "self_review",
+            Code::ReleaseMismatch => "release_mismatch",
+            Code::ChecklistVersionMismatch => "checklist_version_mismatch",
             Code::MissingAnswer => "missing_answer",
             Code::FailedItem => "failed_item",
+            Code::UnknownItem => "unknown_item",
         }
     }
 }
 
-/// One finding. `item` is the checklist item for `missing_answer` and `failed_item`, else empty.
-/// Field order gives the report order: reviewer findings first, then item findings sorted by item
-/// ID.
+/// One finding. `item` is the item ID for `missing_answer`, `failed_item` and `unknown_item`,
+/// else empty. Field order gives the report order: findings without an item first, then item
+/// findings sorted by item ID.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Finding {
     pub item: String,
@@ -382,6 +485,7 @@ impl fmt::Display for Finding {
 /// The gate's result for one release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Report {
+    /// The release given to the gate (`--release`).
     pub release: String,
     pub reviewer: String,
     /// Sorted, without duplicates.
@@ -430,48 +534,86 @@ impl Report {
     }
 }
 
-/// Applies the gate rules (REQ-OUTR.BRAND.REVIEW-003..005) to parsed inputs. `roster` holds
-/// folded handles ([`parse_roster`]). Answers to items not on the checklist are ignored.
-pub fn check(checklist: &Checklist, record: &Record, author: &str, roster: &BTreeSet<String>) -> Report {
+/// What the record is checked against, besides the checklist.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Expect<'a> {
+    /// The release being published (`--release`).
+    pub release: &'a str,
+    /// The release's authors and co-authors (`--author`, repeatable); none may review it.
+    pub authors: &'a [String],
+    /// Folded roster handles ([`parse_roster`]).
+    pub roster: &'a BTreeSet<String>,
+    /// Folded automation accounts ([`denylist`]).
+    pub denied: &'a BTreeSet<String>,
+}
+
+/// Applies the gate rules (REQ-OUTR.BRAND.REVIEW-003..005) to parsed inputs.
+pub fn check(checklist: &Checklist, record: &Record, expect: &Expect<'_>) -> Report {
     let reviewer = record.reviewer.clone().unwrap_or_default();
     let folded = fold(&reviewer);
     let mut findings = BTreeSet::new();
-    if folded.is_empty() || !roster.contains(&folded) {
-        findings.insert(Finding { item: String::new(), code: Code::UnknownReviewer });
+    let mut add = |item: &str, code: Code| {
+        findings.insert(Finding { item: item.to_string(), code });
+    };
+    if folded.is_empty() || !expect.roster.contains(&folded) {
+        add("", Code::UnknownReviewer);
     }
-    if !folded.is_empty() && folded == fold(author) {
-        findings.insert(Finding { item: String::new(), code: Code::SelfReview });
+    if expect.denied.contains(&folded) {
+        add("", Code::BotReviewer);
+    }
+    if !folded.is_empty() && expect.authors.iter().any(|a| fold(a) == folded) {
+        add("", Code::SelfReview);
+    }
+    if record.release != expect.release {
+        add("", Code::ReleaseMismatch);
+    }
+    if record.checklist_version != Some(checklist.version) {
+        add("", Code::ChecklistVersionMismatch);
     }
     for item in &checklist.items {
-        let code = match record.answers.get(&item.id) {
-            None | Some(Answer { result: None, .. }) => Code::MissingAnswer,
-            Some(a) if a.passed() => continue,
-            Some(_) => Code::FailedItem,
-        };
-        findings.insert(Finding { item: item.id.clone(), code });
+        match record.answers.get(&item.id) {
+            None | Some(Answer { result: None, .. }) => add(&item.id, Code::MissingAnswer),
+            Some(a) if a.passed() => {}
+            Some(_) => add(&item.id, Code::FailedItem),
+        }
     }
-    Report { release: record.release.clone(), reviewer, findings: findings.into_iter().collect() }
+    let known = checklist.ids();
+    for id in record.answers.keys().filter(|id| !known.contains(*id)) {
+        add(id, Code::UnknownItem);
+    }
+    Report { release: expect.release.to_string(), reviewer, findings: findings.into_iter().collect() }
 }
 
-/// Paths and author given to [`run`].
+/// Paths and identities given to [`run`].
 #[derive(Debug, Clone)]
 pub struct Inputs<'a> {
     pub record: &'a Path,
-    pub author: &'a str,
+    pub release: &'a str,
+    pub authors: &'a [String],
     pub roster: &'a Path,
     pub checklist: &'a Path,
+    /// Optional bots register (`bots.toml`) whose accounts join the denylist.
+    pub bots: Option<&'a Path>,
 }
 
 /// Reads the inputs and runs the gate. The record is read first, so a missing record is reported
-/// before anything else (AC-6). An empty author is a usage error reported as a parse error of
-/// `--author`.
+/// before anything else (AC-6). An empty `--release`, no `--author`, or an author that is not a
+/// GitHub login is reported as a parse error of that option.
 pub fn run(inputs: &Inputs<'_>) -> Result<Report, GateError> {
     let record = read_record(inputs.record)?;
     require_complete(&record, &inputs.record.display().to_string())?;
-    let roster = read_roster(inputs.roster)?;
+    let denied = read_denylist(inputs.bots)?;
+    let roster = read_roster(inputs.roster, &denied)?;
     let checklist = read_checklist(inputs.checklist)?;
-    if inputs.author.trim().is_empty() {
-        return Err(parse_err("--author", "empty author"));
+    if inputs.release.trim().is_empty() {
+        return Err(parse_err("--release", "empty release"));
     }
-    Ok(check(&checklist, &record, inputs.author, &roster))
+    if inputs.authors.is_empty() {
+        return Err(parse_err("--author", "no author given"));
+    }
+    if let Some(a) = inputs.authors.iter().find(|a| !is_valid_handle(a.trim())) {
+        return Err(parse_err("--author", format!("{a:?} is not a GitHub login")));
+    }
+    let expect = Expect { release: inputs.release.trim(), authors: inputs.authors, roster: &roster, denied: &denied };
+    Ok(check(&checklist, &record, &expect))
 }

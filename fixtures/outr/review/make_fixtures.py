@@ -43,6 +43,7 @@ def record(reviewer, results):
         'release = "site-2027.01"',
         f'reviewer = "{reviewer}"',
         'date = "2027-01-20"',
+        "checklist_version = 1",
         "",
         "[answers]",
     ]
@@ -64,7 +65,8 @@ FIXTURES = {
     "not-on-roster": record("mallory", ALL_PASS),
 }
 
-# Hand-labelled expectations: (exit code, finding lines in text mode). Author is always alice.
+# Hand-labelled expectations: (exit code, finding lines in text mode). Author is always alice,
+# release is always site-2027.01.
 EXPECTED = {
     "ok": (0, []),
     "missing-item": (1, ["site-2027.01 missing_answer:screenshots"]),

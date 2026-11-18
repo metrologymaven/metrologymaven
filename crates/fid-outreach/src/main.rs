@@ -5,11 +5,12 @@
 //! canonical JSON report with `--json`. Exits 0 with no findings, 1 with any, and 2 when an input
 //! cannot be read or parsed, or on bad usage.
 //!
-//! `review-gate --record <file> --author <id> --roster <file> --checklist <file> [--json]` (spec
-//! node `OUTR.BRAND.REVIEW`): checks one human trade-dress review record. Prints one
-//! `<release> <finding>` line per finding and a summary, or the canonical JSON report with
-//! `--json`. Exits 0 when the review passes, 1 on any finding, and 2 when a file is missing or
-//! does not parse, or on bad usage.
+//! `review-gate --record <file> --release <id> --author <id> [--author <id>...] --roster <file>
+//! --checklist <file> [--bots <file>] [--json]` (spec node `OUTR.BRAND.REVIEW`): checks one human
+//! trade-dress review record. `--author` repeats for co-authors; `--bots` adds a bots register's
+//! accounts to the denylist. Prints one `<release> <finding>` line per finding and a summary, or
+//! the canonical JSON report with `--json`. Exits 0 when the review passes, 1 on any finding,
+//! and 2 when a file is missing or does not parse, or on bad usage.
 //!
 //! `metric-def check --defs <file> --sources <file> [--json]` (spec node `OUTR.COMM.METRIC.DEF`):
 //! text mode prints one line per finding, then one `metric <id>` line per valid metric and a
@@ -45,7 +46,7 @@ use std::process::ExitCode;
 const USAGE: &str = "usage: fid-outreach <command> [args]
 commands:
   copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]
-  review-gate --record <file> --author <id> --roster <file> --checklist <file> [--json]
+  review-gate --record <file> --release <id> --author <id>... --roster <file> --checklist <file> [--bots <file>] [--json]
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
@@ -126,12 +127,17 @@ fn copy_guard_cmd(args: &[String]) -> ExitCode {
 
 fn review_gate_cmd(args: &[String]) -> ExitCode {
     let mut opts = BTreeMap::<&str, &str>::new();
+    let mut authors: Vec<String> = Vec::new();
     let mut json = false;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--json" => json = true,
-            flag @ ("--record" | "--author" | "--roster" | "--checklist") => {
+            "--author" => {
+                let Some(v) = it.next() else { return usage() };
+                authors.push(v.clone());
+            }
+            flag @ ("--record" | "--release" | "--roster" | "--checklist" | "--bots") => {
                 let Some(v) = it.next() else { return usage() };
                 if opts.insert(flag, v.as_str()).is_some() {
                     return usage();
@@ -140,16 +146,21 @@ fn review_gate_cmd(args: &[String]) -> ExitCode {
             _ => return usage(),
         }
     }
-    let (Some(record), Some(author), Some(roster), Some(checklist)) =
-        (opts.get("--record"), opts.get("--author"), opts.get("--roster"), opts.get("--checklist"))
+    let (Some(record), Some(release), Some(roster), Some(checklist)) =
+        (opts.get("--record"), opts.get("--release"), opts.get("--roster"), opts.get("--checklist"))
     else {
         return usage();
     };
+    if authors.is_empty() {
+        return usage();
+    }
     let inputs = review_gate::Inputs {
         record: Path::new(record),
-        author,
+        release,
+        authors: &authors,
         roster: Path::new(roster),
         checklist: Path::new(checklist),
+        bots: opts.get("--bots").map(Path::new),
     };
     match review_gate::run(&inputs) {
         Ok(report) => {

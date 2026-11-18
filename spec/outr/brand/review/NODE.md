@@ -77,6 +77,7 @@ Synthetic TOML and text fixtures under `fixtures/outr/review/` (`ok`, `missing-i
 
 ## Open questions
 
+- Review records are not authenticated: the gate trusts the `reviewer` named in the committed record. It should eventually verify that the commit or pull request adding the record was approved by that reviewer (forge review data, signed commits), so that nobody can name another person as reviewer. Until then the pull-request review that adds a record is the control.
 - Which publications count as an "outreach release" (each site deploy, or only tagged site releases) is for maintainers to fix in the site and launch pipelines; the gate works per record either way.
 
 ## Children

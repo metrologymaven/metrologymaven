@@ -2,6 +2,7 @@
 release = "site-2027.01"
 reviewer = "mallory"
 date = "2027-01-20"
+checklist_version = 1
 
 [answers]
 colours = { result = "pass", note = "Checked every page." }
