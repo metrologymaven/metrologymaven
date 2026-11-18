@@ -584,7 +584,7 @@ fn force_unlock_needs_the_exact_holder_and_a_free_os_lock() {
         Err(StoreError::Locked(Some(i))) => i,
         other => panic!("expected locked, got {other:?}"),
     };
-    let wrong = LockInfo { pid: holder.pid + 4, ..holder.clone() };
+    let wrong = LockInfo { pid: 7, ..holder.clone() };
     let err = ProjectLocation::force_unlock(&root, Some(&wrong)).unwrap_err();
     assert_eq!(err.code(), "lock_mismatch");
     assert_eq!(ProjectLocation::force_unlock(&root, None).unwrap_err().code(), "lock_mismatch");
