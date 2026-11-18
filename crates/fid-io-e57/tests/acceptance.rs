@@ -215,6 +215,22 @@ fn ac2_flipped_byte_in_page_7_fails_with_its_offset() {
     assert_eq!(r.read_at(7 * 1020, &mut buf[..1]).unwrap_err(), err);
 }
 
+/// A failing read leaves the caller's buffer untouched, even when the bad page is not the
+/// first page of the range (every page is verified before any byte is copied).
+#[test]
+fn failed_read_leaves_buffer_untouched() {
+    let (_, mut file) = ac1_file();
+    file[7 * DEFAULT_PAGE_SIZE as usize + 5] ^= 0x01;
+    for budget in [DEFAULT_CACHE_BUDGET, 0] {
+        let opts = ReaderOptions { cache_budget_bytes: budget, ..ReaderOptions::default() };
+        let mut r = LogicalReader::open_with(Cursor::new(&file), opts).unwrap();
+        let mut buf = vec![0xAAu8; 4000];
+        let err = r.read_at(5 * 1020, &mut buf).unwrap_err();
+        assert_eq!(err, PhysError::ChecksumMismatch { offset: 7 * DEFAULT_PAGE_SIZE });
+        assert!(buf.iter().all(|&b| b == 0xAA), "budget {budget}");
+    }
+}
+
 // ---- AC-3 and REQ-002 on in-memory files -------------------------------------------------------
 
 #[test]

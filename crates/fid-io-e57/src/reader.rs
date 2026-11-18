@@ -121,12 +121,33 @@ impl<R: Read + Seek> LogicalReader<R> {
     /// Fills `buf` with the logical bytes starting at `offset`. Fails `truncated_file` if the
     /// range ends past the logical length, `checksum_mismatch{offset}` naming the physical
     /// offset of the first page in the range whose checksum is wrong.
+    ///
+    /// Every page in the range is verified before any byte is copied, so on `Err` `buf` is
+    /// left unchanged; if a page fails while copying (the file changed between the passes, or
+    /// an evicted page could not be read again), `buf` is zeroed before the error returns.
     pub fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<(), PhysError> {
         let file_end = self.layout.physical_length();
         let end = offset.checked_add(buf.len() as u64).ok_or(PhysError::TruncatedFile { at: file_end })?;
         if end > self.layout.logical_length() {
             return Err(PhysError::TruncatedFile { at: file_end });
         }
+        if buf.is_empty() {
+            return Ok(());
+        }
+        let payload = self.layout.payload();
+        for index in offset / payload..=(end - 1) / payload {
+            self.ensure_page(index)?;
+        }
+        let copied = self.copy_verified(offset, buf);
+        if copied.is_err() {
+            buf.fill(0);
+        }
+        copied
+    }
+
+    /// The copy pass of [`LogicalReader::read_at`]; the range is already bounds-checked.
+    fn copy_verified(&mut self, offset: u64, buf: &mut [u8]) -> Result<(), PhysError> {
+        let file_end = self.layout.physical_length();
         let payload = self.layout.payload();
         let mut done = 0usize;
         let mut logical = offset;

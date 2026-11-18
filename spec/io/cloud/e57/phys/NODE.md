@@ -60,6 +60,7 @@ The bottom layer of the E57 reader and writer: the fixed file header and the pag
 - **Data structures:** `E57Header`; `LogicalReader<R: Read + Seek>`; `LogicalWriter<W: Write + Seek>`; `PageCache { budget_bytes }` keyed by page index in a `BTreeMap` with an access counter for eviction.
 - **Algorithm:** logical offset l → physical p = (l / payload) × page_size + l mod payload, payload = page_size − 4; CRC-32C over each page payload.
 - **Errors:** `checksum_mismatch{offset}`, `malformed{field}`, `truncated_file`, `limit_exceeded`.
+- **Header rules (as built, REQ-002):** checked in this order before any page is read, each failure `malformed{field}`: signature; major version 1 (`major_version`); page size at least 52 B so page 0 holds the whole header (`page_size`; above 1 MiB is `limit_exceeded{alloc}`); file length equal to the actual length and a whole number of pages (`file_length`); XML offset inside the file and not inside the header or a page checksum (`xml_offset`); XML section ending within the logical length (`xml_length`). A failed `read_at` leaves the caller's buffer unchanged (all pages in the range are verified before copying).
 - **Determinism:** D0.
 - **Performance budget:** ≥ 1 GB/s checksum verification [unverified until measured].
 - **Crate:** `fid-io-e57` (first-party pure Rust; the C++ libE57Format is not used because CONSTITUTION §8 forbids `unsafe` FFI without a named exception).
@@ -75,6 +76,8 @@ Seeded round-trip data; public E57 sample files listed in `corpus/e57.toml` [unv
 ## Open questions
 
 - Header field layout and checksum algorithm to confirm against ASTM E2807 [unverified].
+- Stored page checksum byte order: implemented big-endian [unverified]; to be confirmed by the AC-4 corpus run.
+- AC-4 deferred: `corpus/e57.toml` does not exist yet; the synthetic reference files share the byte-order assumption, so they cannot confirm it.
 
 ## Children
 
