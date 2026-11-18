@@ -1,4 +1,5 @@
 {
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.FABRIC fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares kernel-evaluating commands. Every command ID except expr.evaluate_formula@1 is a placeholder. See ref_predicates.py.",
   "task": "fabric-derived-distance",
   "agent": "seeded",
   "scored_branch": "agent/run-1",

@@ -1,57 +1,60 @@
 {
-  "inspect.evaluate_flatness@1": {
-    "kernel_evaluating": true,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "inspect.fit_circle@1": {
-    "kernel_evaluating": true,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "inspect.fit_cylinder@1": {
-    "kernel_evaluating": true,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "inspect.evaluate_length@1": {
-    "kernel_evaluating": true,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "expr.evaluate_formula@1": {
-    "kernel_evaluating": true,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "inspect.record_manual_reading@1": {
-    "kernel_evaluating": false,
-    "manual_reading": true,
-    "human_only": true
-  },
-  "result.enter_value@1": {
-    "kernel_evaluating": false,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "result.set_outcome@1": {
-    "kernel_evaluating": false,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "doc.annotate@1": {
-    "kernel_evaluating": false,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "report.write_brief@1": {
-    "kernel_evaluating": false,
-    "manual_reading": false,
-    "human_only": false
-  },
-  "request.manual_reading@1": {
-    "kernel_evaluating": false,
-    "manual_reading": false,
-    "human_only": false
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.FABRIC fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares kernel-evaluating commands. Every command ID except expr.evaluate_formula@1 is a placeholder. See ref_predicates.py.",
+  "commands": {
+    "inspect.evaluate_flatness@1": {
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "inspect.fit_circle@1": {
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "inspect.fit_cylinder@1": {
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "inspect.evaluate_length@1": {
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "expr.evaluate_formula@1": {
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "inspect.record_manual_reading@1": {
+      "kernel_evaluating": false,
+      "manual_reading": true,
+      "human_only": true
+    },
+    "result.enter_value@1": {
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "result.set_outcome@1": {
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "doc.annotate@1": {
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "report.write_brief@1": {
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false
+    },
+    "request.manual_reading@1": {
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false
+    }
   }
 }
