@@ -1,0 +1,36 @@
+{
+  "rules_version": "engine-fixture-1",
+  "findings": [
+    {"unit": "u05", "file": "a.md", "line": 2, "col": 1, "offset": 52, "rule": "VC001", "severity": "error",
+     "message": "Certification or conformance wording needs a standard designator in the same sentence.",
+     "matched": ["certified"]},
+    {"unit": "u14", "file": "a.md", "line": 2, "col": 30, "offset": 4, "rule": "VC001", "severity": "error",
+     "message": "Certification or conformance wording needs a standard designator in the same sentence.",
+     "matched": ["compliant"]},
+    {"unit": "u01", "file": "b.md", "line": 3, "col": 1, "offset": 16, "rule": "VC001", "severity": "error",
+     "message": "Certification or conformance wording needs a standard designator in the same sentence.",
+     "matched": ["certified"]},
+    {"unit": "u03", "file": "b.md", "line": 6, "col": 1, "offset": 0, "rule": "VC001", "severity": "error",
+     "message": "Certification or conformance wording needs a standard designator in the same sentence.",
+     "matched": ["CERTIFIED"]},
+    {"unit": "ui.help.3", "file": "c.md", "line": 1, "col": 1, "offset": 11, "rule": "VC002", "severity": "error",
+     "message": "Name other products only to identify a file format or importer.",
+     "matched": ["PolyWorks"]},
+    {"unit": "ui.menu.2", "file": "c.md", "line": 4, "col": 1, "offset": 9, "rule": "VC004", "severity": "warn",
+     "message": "Use the project's term. (preferred term: Dialect Mapping Table)",
+     "matched": ["dialect map"], "preferred": "Dialect Mapping Table"},
+    {"unit": "web.claim.1", "file": "d.html", "line": 7, "col": 5, "offset": 12, "rule": "VC002", "severity": "error",
+     "message": "Name other products only to identify a file format or importer.",
+     "matched": ["PolyWorks"]},
+    {"unit": "web.claim.1", "file": "d.html", "line": 7, "col": 5, "offset": 0, "rule": "VC003", "severity": "error",
+     "message": "A comparison with another product needs a link to a published benchmark result.",
+     "matched": ["Faster", "PolyWorks"]},
+    {"unit": "web.claim.2", "file": "d.html", "line": 9, "col": 5, "offset": 12, "rule": "VC002", "severity": "error",
+     "message": "Name other products only to identify a file format or importer.",
+     "matched": ["PolyWorks"]}
+  ],
+  "suppressions": [
+    {"unit": "u06", "file": "a.md", "line": 20, "col": 1, "rule": "VC001",
+     "reason": "quotes a customer document title", "suppressed": 1}
+  ]
+}
