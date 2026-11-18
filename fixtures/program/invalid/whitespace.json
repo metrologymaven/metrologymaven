@@ -1,0 +1,206 @@
+{
+  "format": "fid-program",
+  "format_version": 1,
+  "program_id": "018f0000-4e20-773e-ac51-08c386f5f841",
+  "meta": {
+    "title": "All step kinds",
+    "author": "fixture"
+  },
+  "params": [
+    {
+      "name": "nominal",
+      "type": "length",
+      "unit": "mm",
+      "required": true
+    }
+  ],
+  "variables": [
+    {
+      "name": "d",
+      "type": "length[mm]"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "ok",
+      "type": "bool"
+    },
+    {
+      "name": "bore",
+      "type": "cylinder"
+    },
+    {
+      "name": "tol_mm",
+      "type": "real"
+    }
+  ],
+  "subroutines": [
+    {
+      "name": "check_bore",
+      "params": [
+        {
+          "name": "nominal",
+          "type": "length[mm]"
+        }
+      ],
+      "returns": "bool",
+      "body": [
+        {
+          "step_id": "018f0000-4650-79d6-85df-d5638c1f6685",
+          "kind": "assign",
+          "var": "d",
+          "expr": "bore.diameter"
+        },
+        {
+          "step_id": "018f0000-4a38-784d-b67e-56e601ecba6d",
+          "kind": "return",
+          "expr": "abs(d - nominal) <= 0.02 mm"
+        }
+      ]
+    }
+  ],
+  "main": [
+    {
+      "step_id": "018f0000-03e8-7ec0-bdd1-4ac0d78fb9e8",
+      "kind": "comment",
+      "text": "Measure the bore and report it."
+    },
+    {
+      "step_id": "018f0000-07d0-79f3-9379-5df7bd0019cd",
+      "kind": "invoke",
+      "command": "feature.fit_cylinder",
+      "major": 1,
+      "args": {
+        "points": {
+          "literal": "pc-17"
+        },
+        "max_iter": {
+          "literal": 50
+        },
+        "tol": {
+          "expr": "tol_mm * 1 mm"
+        }
+      },
+      "bind": "bore"
+    },
+    {
+      "step_id": "018f0000-0bb8-7f2e-a267-cc588a266b1a",
+      "kind": "assign",
+      "var": "d",
+      "expr": "bore.diameter"
+    },
+    {
+      "step_id": "018f0000-1b58-7f10-8fa2-39ecb72e295e",
+      "kind": "if",
+      "branches": [
+        {
+          "cond": "d > nominal + 0.02 mm",
+          "body": [
+            {
+              "step_id": "018f0000-0fa0-77d5-9041-c874767e026f",
+              "kind": "assign",
+              "var": "ok",
+              "expr": "false"
+            }
+          ]
+        },
+        {
+          "cond": "d < nominal - 0.02 mm",
+          "body": [
+            {
+              "step_id": "018f0000-1388-730c-9b6e-c03a53502491",
+              "kind": "comment",
+              "text": "undersize"
+            }
+          ]
+        }
+      ],
+      "else_body": [
+        {
+          "step_id": "018f0000-1770-7eaa-99ba-6388c56561b0",
+          "kind": "assign",
+          "var": "ok",
+          "expr": "true"
+        }
+      ]
+    },
+    {
+      "step_id": "018f0000-2328-72ce-987d-ef345fecf1d6",
+      "kind": "loop",
+      "mode": "counted",
+      "var": "i",
+      "from": "1",
+      "to": "3",
+      "step": "1",
+      "max_iterations": 3,
+      "body": [
+        {
+          "step_id": "018f0000-1f40-7ead-bcd7-af305bc37fa5",
+          "kind": "invoke",
+          "command": "probe.touch_point",
+          "major": 2,
+          "args": {
+            "index": {
+              "expr": "i"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "step_id": "018f0000-2ee0-7e7d-8f8a-88ce6da04a17",
+      "kind": "loop",
+      "mode": "while",
+      "cond": "not ok",
+      "max_iterations": 5,
+      "body": [
+        {
+          "step_id": "018f0000-2710-71a8-9e4d-c36574debbc1",
+          "kind": "label",
+          "name": "retry"
+        },
+        {
+          "step_id": "018f0000-2af8-74f9-ba96-c5737b6a50e2",
+          "kind": "jump",
+          "label": "retry",
+          "cond": "false"
+        }
+      ]
+    },
+    {
+      "step_id": "018f0000-32c8-7309-8967-09aaea844335",
+      "kind": "call",
+      "subroutine": "check_bore",
+      "args": {
+        "nominal": {
+          "expr": "nominal"
+        }
+      },
+      "bind": "ok"
+    },
+    {
+      "step_id": "018f0000-36b0-79ec-a2a4-38fb87af93b6",
+      "kind": "operator",
+      "descriptor": {
+        "prompt": "Confirm the part is clamped",
+        "response": "bool"
+      }
+    },
+    {
+      "step_id": "018f0000-3a98-7cb1-95c2-b187f018b20f",
+      "kind": "jump",
+      "label": "end"
+    },
+    {
+      "step_id": "018f0000-3e80-71c8-9ac2-2969fa051416",
+      "kind": "label",
+      "name": "end"
+    },
+    {
+      "step_id": "018f0000-4268-721d-a720-7ee40f273030",
+      "kind": "return"
+    }
+  ]
+}

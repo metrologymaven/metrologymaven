@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-program]
+built_pr: 61
 satisfies: [REQ-AUTO.PROG-001, REQ-AUTO.PROG-002, REQ-AUTO.PROG-003]
 covers: [SA.MP.01]
 depends_on: []
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # AUTO.PROG.FMT: Program document format, canonical serialisation and step IDs
@@ -48,7 +50,7 @@ Defines what a Command Program is on disk and in memory: a versioned JSON docume
 - **REQ-AUTO.PROG.FMT-003** Every step shall carry a `step_id` that is a UUIDv7, and if two steps share an ID, then parsing shall fail with `duplicate_step_id`.
 - **REQ-AUTO.PROG.FMT-004** The only step kind that names a state-changing action shall be `invoke`, holding a command ID, a major version, arguments (each either a canonical JSON literal or an expression source string) and an optional result variable; the schema shall admit no other field through which a step can change state.
 - **REQ-AUTO.PROG.FMT-005** The program digest shall be the SHA-256 of the canonical bytes.
-- **REQ-AUTO.PROG.FMT-006** Parsing shall be bounded (16 MiB, nesting depth 64, 100,000 steps [unverified]) and fail closed with `program_too_large` beyond those bounds.
+- **REQ-AUTO.PROG.FMT-006** Parsing shall be bounded (16 MiB, nesting depth 64, 100,000 steps, and a memory-cost budget of 160 MiB [unverified]) and fail closed with `program_too_large` beyond any of those bounds. The memory cost is computed from a scan of the raw bytes before any tree is built, from per-item weights that are at least the real heap use (860 bytes per object, 360 per array, 160 per further element or member, 16 per string plus 2 per string byte, 2 per input byte), so that parsing and storing any admitted document stays under 200 MiB of requested heap (AC-6's limit is 256 MiB). Effective step limits that follow from the budget: about 100,000 `return` or `label` steps, about 84,000 `comment` steps, about 28,000 `invoke` steps with two arguments and about 22,000 with three; opaque metadata, descriptors and literals use the same budget.
 - **REQ-AUTO.PROG.FMT-007** The JSON Schema `schema/program-v1.json` shall be generated from the Rust types, and a test shall fail if the checked-in schema differs.
 
 ## Acceptance criteria
