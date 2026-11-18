@@ -10,3 +10,5 @@ node_modules/
 .wrangler/
 fixtures/layers/**/Cargo.lock
 fixtures/layers/**/target/
+fixtures/core/bus/lint/**/Cargo.lock
+fixtures/core/bus/lint/**/target/

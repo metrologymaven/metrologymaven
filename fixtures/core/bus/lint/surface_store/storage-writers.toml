@@ -1,0 +1,3 @@
+# Crates allowed to write project files (shape published by CORE.STO.LAYOUT).
+[storage_writers]
+allowed = ["fid-store"]
