@@ -1,0 +1,26 @@
+[package]
+name = "fid-vocab"
+description = "Shared vocabulary and claim lint engine: rule files, matcher, suppressions and reports (spec node ECO.RULES.VOCAB.ENGINE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-vocab"
+path = "src/main.rs"
+
+[dependencies]
+# RFC 8785 canonical JSON for reports and the JSON Lines unit parser (duplicate keys rejected).
+fid-canon = { path = "../fid-canon" }
+# Reads the rule file as an untyped table (no serde derive), like fid-knp1-lint.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+# Unicode NFC normalisation before matching (REQ-ECO.RULES.VOCAB.ENGINE-002).
+unicode-normalization = "0.1"
+# Designator patterns: finite-automaton regex engine with linear-time matching (no backtracking).
+regex = { version = "1", default-features = false, features = ["std", "unicode"] }
+
+[lints]
+workspace = true
