@@ -216,7 +216,8 @@ fn suppression_without_reason_is_rejected() {
     assert!(unknown.is_err());
 }
 
-const LIGHT_TOKENS: &str = r##"{"themes":{"light":{"surface.base":"#ffffff","text.body":"#1b2027","accent":"#1b2027"}}}"##;
+const LIGHT_TOKENS: &str =
+    r##"{"themes":{"light":{"surface.base":"#ffffff","text.body":"#1b2027","accent":"#1b2027"}}}"##;
 
 /// Writes a small case (token file plus root files) to a fresh temporary directory.
 fn tmp_case(name: &str, tokens: &str, files: &[(&str, &str)]) -> Options {

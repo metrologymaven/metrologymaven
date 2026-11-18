@@ -437,7 +437,9 @@ fn contrast_theme(
     let scope = Scope { tokens, aliases };
     let page = css::over(root_colour(sheets, theme, |d| scope.background(d)).unwrap_or(WHITE), WHITE);
     let root_sets_colour = sheets.iter().any(|(_, rules)| {
-        rules.iter().any(|r| applies(r, theme) && root_rank(&r.selector) > 0 && r.decls.iter().any(|d| d.name == "color"))
+        rules
+            .iter()
+            .any(|r| applies(r, theme) && root_rank(&r.selector) > 0 && r.decls.iter().any(|d| d.name == "color"))
     });
     let page_fg = match root_colour(sheets, theme, |d| scope.foreground(d)) {
         Some(c) => Some(c),

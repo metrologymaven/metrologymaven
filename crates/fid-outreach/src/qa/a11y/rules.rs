@@ -192,9 +192,9 @@ impl Ctx<'_> {
             return true;
         }
         let Some(own) = el.attr("id").filter(|v| !v.is_empty()) else { return false };
-        self.doc
-            .elements()
-            .any(|(lid, l)| l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid, false).is_empty())
+        self.doc.elements().any(|(lid, l)| {
+            l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid, false).is_empty()
+        })
     }
 }
 
