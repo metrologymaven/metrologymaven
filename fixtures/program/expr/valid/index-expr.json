@@ -1,0 +1,47 @@
+{
+ "base": {
+  "base": {
+   "k": "ident",
+   "name": "pts",
+   "span": [
+    0,
+    3
+   ]
+  },
+  "index": {
+   "k": "binary",
+   "lhs": {
+    "k": "ident",
+    "name": "i",
+    "span": [
+     4,
+     5
+    ]
+   },
+   "op": "+",
+   "rhs": {
+    "k": "int",
+    "span": [
+     8,
+     9
+    ],
+    "v": "1"
+   },
+   "span": [
+    4,
+    9
+   ]
+  },
+  "k": "index",
+  "span": [
+   0,
+   10
+  ]
+ },
+ "k": "field",
+ "name": "x",
+ "span": [
+  0,
+  12
+ ]
+}

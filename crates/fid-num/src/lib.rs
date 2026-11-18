@@ -4,6 +4,7 @@
 //! Modules land one spec leaf at a time; see `spec/krn/num/`.
 
 pub mod err;
+pub mod f;
 pub mod kdec;
 pub mod rng;
 

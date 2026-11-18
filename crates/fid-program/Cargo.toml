@@ -1,6 +1,6 @@
 [package]
 name = "fid-program"
-description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (spec node AUTO.PROG.FMT)"
+description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (AUTO.PROG.FMT); expression grammar and parser (AUTO.PROG.EXPR.GRAMMAR)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

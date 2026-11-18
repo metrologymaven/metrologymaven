@@ -1,0 +1,24 @@
+{
+ "arg": {
+  "arg": {
+   "k": "ident",
+   "name": "x",
+   "span": [
+    8,
+    9
+   ]
+  },
+  "k": "unary",
+  "op": "not",
+  "span": [
+   4,
+   9
+  ]
+ },
+ "k": "unary",
+ "op": "not",
+ "span": [
+  0,
+  9
+ ]
+}

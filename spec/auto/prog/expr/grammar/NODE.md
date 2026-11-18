@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-program]
+built_pr: 129
 satisfies: [REQ-AUTO.PROG.EXPR-005]
 covers: [SA.MP.01]
 depends_on: [AUTO.PROG.FMT]
@@ -41,8 +43,8 @@ The surface syntax of Command Program expressions and the parser that turns the 
 
 ## Requirements
 
-- **REQ-AUTO.PROG.EXPR.GRAMMAR-001** The parser shall accept exactly the language of the published EBNF: integer, decimal, quantity (`<decimal>[<unit symbol>]`), string and boolean literals; identifiers; `.field` and `[index]` access; unary `-` and `not`; binary `* / %`, `+ -`, `< <= > >= == !=`, `and`, `or` in that precedence order, left-associative; `if <e> then <e> else <e>`; and calls `name(args)`.
-- **REQ-AUTO.PROG.EXPR.GRAMMAR-002** If the source exceeds 4 KiB, 1 024 tokens or nesting depth 64, then parsing shall fail with `expr_too_large` and no AST.
+- **REQ-AUTO.PROG.EXPR.GRAMMAR-001** The parser shall accept exactly the language of the published EBNF: integer, decimal, quantity (`<decimal>[<unit symbol>]`), string and boolean literals; identifiers; `.field` and `[index]` access; in precedence order, tightest first: unary `-`, binary `* / %`, `+ -`, `< <= > >= == !=`, prefix `not`, binary `and`, `or` (binary operators left-associative); `if <e> then <e> else <e>`; and calls `name(args)`.
+- **REQ-AUTO.PROG.EXPR.GRAMMAR-002** If the source exceeds 4 KiB, 1 024 tokens or nesting depth 64 (nesting only: parentheses, index, call arguments, unary operators and conditional parts; flat operator and `.field` chains add no depth), then parsing shall fail with `expr_too_large` and no AST.
 - **REQ-AUTO.PROG.EXPR.GRAMMAR-003** If the source does not parse, then the parser shall return `expr_syntax` with the byte offset of the first offending token.
 - **REQ-AUTO.PROG.EXPR.GRAMMAR-004** Every AST node shall carry its byte span in the source, so diagnostics can point at the step ID and span.
 - **REQ-AUTO.PROG.EXPR.GRAMMAR-005** The grammar shall contain no construct that assigns, declares, loops, performs I/O or names a registry command.
@@ -54,7 +56,7 @@ The surface syntax of Command Program expressions and the parser that turns the 
 - **AC-2** (error path) Given `fixtures/program/expr/invalid/*.txt` (unbalanced brackets, `12.7[`, `a = 1`, `x++`), then each fails with `expr_syntax` at the expected offset.
 - **AC-3** (error path) Given a 5 KiB source and one with 65 nested parentheses, then both fail with `expr_too_large`.
 - **AC-4** (property) Given 10 000 generated ASTs (seed 7), print-then-parse yields an equal AST each time.
-- **AC-5** (fuzz) Given the fuzz target `expr_parse` for 10 minutes, then no crash and no allocation above 64 MiB.
+- **AC-5** (fuzz) Given the fuzz target `expr_parse` for 10 minutes, then no crash and no allocation above 64 MiB. [unverified: the 10-minute nightly fuzz run has not been performed; CI only compiles the target, and `tests/expr_alloc.rs` plus a 50 000-case hostile-input test stand in until it is run]
 
 ## Design
 
@@ -64,6 +66,8 @@ The surface syntax of Command Program expressions and the parser that turns the 
 - **Errors:** `expr_syntax { offset }`, `expr_too_large`.
 - **Determinism:** D0.
 - **Performance budget:** 4 KiB expression parsed in < 50 µs [unverified until measured].
+- **Depth definition (maintainer decision, PR #129):** "nesting depth" counts nesting only: each pair of parentheses, index, call argument list, unary operator (`-`, `not`) and conditional part adds one level. 64 nested parentheses are accepted and 65 refused (AC-3). Binary operators and `.field` chains add no depth: a flat chain such as `a+b+...+z` is bounded only by the token and byte limits, and the parser builds it in a loop with no recursion growth. The tree of such a chain can be about 512 levels deep, so later passes (TYPES, EVAL, FORMULA) must not recurse unboundedly over it.
+- **Precedence of `not` (maintainer decision, PR #129):** `not` binds looser than comparisons and tighter than `and`, as in Python and SQL: `not a == b` is `not (a == b)`. This amends the order in REQ-001, which listed `not` with unary `-`; `-`, `* / %`, `+ -`, comparisons, `not`, `and`, `or` is the order.
 - **Crate:** `fid-program` (module `expr::syntax`).
 
 ## Test fixtures
@@ -72,9 +76,12 @@ Project-authored corpora `fixtures/program/expr/valid/` and `fixtures/program/ex
 
 ## Build prompt
 
-> In crate `fid-program`, add module `expr::syntax`: a lexer and Pratt parser for the Command Program expression language. Literals: integer, decimal (keep text verbatim), quantity `<decimal>[<unit symbol>]`, string, `true`/`false`; identifiers; `.field`, `[index]`; unary `-`, `not`; binary `* / %` > `+ -` > comparisons > `and` > `or`, left-associative; `if c then a else b`; calls `name(args)`. No assignment, declaration, loop, I/O or command naming. Every node carries a byte span. Bounds: 4 KiB source, 1 024 tokens, depth 64 → `expr_too_large`; syntax errors → `expr_syntax` with byte offset. Provide `print_expr` with print-then-parse identity. Publish the EBNF in `docs/program/expr-grammar.md`. Acceptance: AC-1..AC-5 (corpora, bounds, property test with seed 7, fuzz target `expr_parse`). Constraints: no panic, no `unsafe`, deny `unwrap`/`expect`/`panic`/`todo`/`unimplemented`/`unreachable`; explicit depth counter, no unbounded recursion; all input hostile.
+> In crate `fid-program`, add module `expr::syntax`: a lexer and Pratt parser for the Command Program expression language. Literals: integer, decimal (keep text verbatim), quantity `<decimal>[<unit symbol>]`, string, `true`/`false`; identifiers; `.field`, `[index]`; precedence, tightest first: unary `-` > `* / %` > `+ -` > comparisons > prefix `not` > `and` > `or`, binary operators left-associative; `if c then a else b`; calls `name(args)`. No assignment, declaration, loop, I/O or command naming. Every node carries a byte span. Bounds: 4 KiB source, 1 024 tokens, nesting depth 64 (parentheses, index, call arguments, unary operators, conditional parts; flat operator chains add no depth and are parsed in a loop) → `expr_too_large`; syntax errors → `expr_syntax` with byte offset. Provide `print_expr` with print-then-parse identity. Publish the EBNF in `docs/program/expr-grammar.md`. Acceptance: AC-1..AC-5 (corpora, bounds, property test with seed 7, fuzz target `expr_parse`). Constraints: no panic, no `unsafe`, deny `unwrap`/`expect`/`panic`/`todo`/`unimplemented`/`unreachable`; explicit depth counter, no unbounded recursion; all input hostile.
 
 ## Open questions
+
+- **Decided (PR #129):** `not` binds looser than comparisons (`not a == b` is `not (a == b)`); see Design.
+- **Decided (PR #129):** depth counts nesting only; flat left-associative chains are bounded by the token and byte limits, not by depth; see Design.
 
 - Unit symbols accepted inside `[...]` are those of the unit catalogue (`GEO.FRAME.UNITS`); the parser accepts any symbol token and `AUTO.PROG.EXPR.TYPES` resolves it.
 

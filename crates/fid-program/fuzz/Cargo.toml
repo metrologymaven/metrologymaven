@@ -22,5 +22,15 @@ test = false
 doc = false
 bench = false
 
+# AUTO.PROG.EXPR.GRAMMAR AC-5:
+#   cargo +nightly fuzz run expr_parse ../../../fixtures/program/expr/valid ../../../fixtures/program/expr/invalid \
+#     -- -max_total_time=600 -rss_limit_mb=256 -malloc_limit_mb=64
+[[bin]]
+name = "expr_parse"
+path = "fuzz_targets/expr_parse.rs"
+test = false
+doc = false
+bench = false
+
 # Keep this harness out of the repository workspace.
 [workspace]

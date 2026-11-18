@@ -1,0 +1,94 @@
+{
+  "tools": [
+    {
+      "name": "device_read_temperature",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "doc_rename_feature",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "egress_send",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "export_write_csv",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "inspect_fit_circle",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "inspect_show_part",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "journal_promote_branch",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "journal_request_promote_branch",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "report_adopt_brief",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "report_release_report",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "report_write_brief",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "request_approve_request",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "settings_add_import_root",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "sim_step_clock",
+      "inputSchema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "tools_invoke_readonly",
+      "inputSchema": {
+        "type": "object"
+      }
+    }
+  ]
+}

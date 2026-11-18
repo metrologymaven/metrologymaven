@@ -1,0 +1,16 @@
+{
+ "base": {
+  "k": "ident",
+  "name": "r",
+  "span": [
+   0,
+   1
+  ]
+ },
+ "k": "field",
+ "name": "diameter",
+ "span": [
+  0,
+  10
+ ]
+}

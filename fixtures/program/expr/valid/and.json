@@ -1,0 +1,40 @@
+{
+ "k": "binary",
+ "lhs": {
+  "k": "binary",
+  "lhs": {
+   "k": "ident",
+   "name": "a",
+   "span": [
+    0,
+    1
+   ]
+  },
+  "op": "and",
+  "rhs": {
+   "k": "ident",
+   "name": "b",
+   "span": [
+    6,
+    7
+   ]
+  },
+  "span": [
+   0,
+   7
+  ]
+ },
+ "op": "and",
+ "rhs": {
+  "k": "ident",
+  "name": "c",
+  "span": [
+   12,
+   13
+  ]
+ },
+ "span": [
+  0,
+  13
+ ]
+}
