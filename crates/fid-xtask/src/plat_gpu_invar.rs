@@ -240,7 +240,8 @@ pub struct Sequence {
 fn valid_project_id(s: &str) -> bool {
     // ECO.DATA.EX: ^ex-[a-z0-9-]{3,40}$
     s.strip_prefix("ex-").is_some_and(|rest| {
-        (3..=40).contains(&rest.len()) && rest.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        (3..=40).contains(&rest.len())
+            && rest.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
     })
 }
 
@@ -333,7 +334,9 @@ pub fn parse_digest_list(bytes: &[u8]) -> Result<DigestList, InvarError> {
     };
     obj_keys(&top, &["backend", "entries"], "digest list")?;
     let backend = match top.get("backend") {
-        Some(CValue::Str(s)) => Backend::parse(s).ok_or_else(|| input(format!("digest list: unknown backend {s:?}")))?,
+        Some(CValue::Str(s)) => {
+            Backend::parse(s).ok_or_else(|| input(format!("digest list: unknown backend {s:?}")))?
+        }
         _ => return Err(input("digest list: backend missing")),
     };
     let Some(CValue::Arr(raw)) = top.get("entries") else {
@@ -565,10 +568,8 @@ fn copy_tree(src: &Path, dst: &Path) -> Result<(), InvarError> {
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf())];
     while let Some((s, d)) = stack.pop() {
         std::fs::create_dir_all(&d).map_err(|e| io(&d, e))?;
-        let mut children: Vec<_> = std::fs::read_dir(&s)
-            .map_err(|e| io(&s, e))?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| io(&s, e))?;
+        let mut children: Vec<_> =
+            std::fs::read_dir(&s).map_err(|e| io(&s, e))?.collect::<Result<Vec<_>, _>>().map_err(|e| io(&s, e))?;
         children.sort_by_key(std::fs::DirEntry::file_name);
         for c in children {
             let meta = std::fs::symlink_metadata(c.path()).map_err(|e| io(&c.path(), e))?;
@@ -672,7 +673,7 @@ mod tests {
         let a = DigestList { backend: Backend::Dx12, entries: vec![entry(1, "a.b@1", 1), entry(2, "a.c@1", 2)] };
         let b = DigestList { backend: Backend::Software, entries: vec![entry(1, "a.b@1", 1)] };
         let r = compare(&[a, b]);
-        let d = r.first_diff.unwrap();
+        let d = r.first_diff.clone().unwrap();
         // Tie of one against one: the first group (dx12) is the reference.
         assert_eq!((d.index, d.command.as_str(), d.backends), (2, "a.c@1", vec!["software".to_string()]));
         assert!(r.render().contains("  software: missing\n"));
