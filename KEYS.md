@@ -37,7 +37,7 @@ This file and the [`keys/`](keys/) directory are specified by `ECO.REL.SIGN.GUID
 `cargo xtask rel keys-check` (run in CI) fails if a file in `keys/` is not in this table
 (`KEYS-UNLISTED`), if a listed fingerprint does not match the file (`KEYS-FINGERPRINT`), if a
 listed file is missing (`KEYS-MISSING`), or if an `active` key is past its validity
-(`KEYS-EXPIRED-IN-USE`).
+(`KEYS-EXPIRED-IN-USE`) or not yet valid (`KEYS-NOT-YET-VALID`).
 
 ## Key transitions
 

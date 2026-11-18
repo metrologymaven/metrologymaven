@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**64** of **1336** leaves built in code ([B]).
+**66** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 58 built)
+### Wave 1 (125 leaves, 60 built)
 
 - [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -48,7 +48,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
 - [B] [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
-- [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
+- [B] [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
 - [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
 - [ECO.CI.BOTS.REG](../../spec/eco/ci/bots/reg/NODE.md) Bot register and restricted-path exclusion check (S, P0)
 - [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
@@ -90,7 +90,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
 - [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
 - [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
-- [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
+- [B] [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
 - [B] [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
 - [B] [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)

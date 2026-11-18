@@ -11,7 +11,7 @@
 //! Every regular file in the keys directory except `README.md` and `allowed_signers` is a key
 //! and must be listed; every listed key must exist, hold exactly one
 //! `-----BEGIN PUBLIC KEY-----` block (explanatory text around it is allowed, RFC 7468) and
-//! fingerprint to the listed value; an `active` key must not be past its `Valid until` date.
+//! fingerprint to the listed value; an `active` key must be within its validity dates.
 //! The OpenSSH `allowed_signers` file is not cross-checked against the PEM files.
 //!
 //! The check reads files only and never touches keys' private halves (none exist in the
@@ -44,6 +44,9 @@ pub enum KeysError {
     /// `KEYS-EXPIRED-IN-USE <file> (valid until <date>, checked <date>)`: an `active` key
     /// past its validity.
     ExpiredInUse { file: String, until: String, date: String },
+    /// `KEYS-NOT-YET-VALID <file> (valid from <date>, checked <date>)`: an `active` key whose
+    /// validity has not started.
+    NotYetValid { file: String, from: String, date: String },
     /// `KEYS-MISSING <file>`: listed in `KEYS.md`, absent from the keys directory.
     Missing(String),
     /// `KEYS-PEM <file>: <reason>`: a listed key that is not one PEM public key.
@@ -61,6 +64,7 @@ impl KeysError {
             KeysError::Unlisted(_) => "KEYS-UNLISTED",
             KeysError::Fingerprint { .. } => "KEYS-FINGERPRINT",
             KeysError::ExpiredInUse { .. } => "KEYS-EXPIRED-IN-USE",
+            KeysError::NotYetValid { .. } => "KEYS-NOT-YET-VALID",
             KeysError::Missing(_) => "KEYS-MISSING",
             KeysError::Pem { .. } => "KEYS-PEM",
             KeysError::Doc(_) => "KEYS-DOC",
@@ -86,6 +90,9 @@ impl fmt::Display for KeysError {
             }
             KeysError::ExpiredInUse { file, until, date } => {
                 write!(f, "{} {file} (valid until {until}, checked {date})", self.code())
+            }
+            KeysError::NotYetValid { file, from, date } => {
+                write!(f, "{} {file} (valid from {from}, checked {date})", self.code())
             }
             KeysError::Pem { file, reason } => write!(f, "{} {file}: {reason}", self.code()),
             KeysError::Doc(m) | KeysError::Io(m) => write!(f, "{}: {m}", self.code()),
@@ -278,9 +285,9 @@ fn der_total_len(der: &[u8]) -> Option<usize> {
     }
     let mut len = 0usize;
     for i in 0..n {
-        len = (len << 8) | usize::from(*der.get(2 + i)?);
+        len = len.checked_mul(256)?.checked_add(usize::from(*der.get(2 + i)?))?;
     }
-    Some(2 + n + len)
+    len.checked_add(2 + n)
 }
 
 /// The SubjectPublicKeyInfo DER inside a PEM `PUBLIC KEY` file.
@@ -397,6 +404,12 @@ pub fn check(keys_dir: &Path, doc: &Path, date: &str) -> Result<usize, Vec<KeysE
             findings.push((
                 file.clone(),
                 KeysError::ExpiredInUse { file: file.clone(), until: row.valid_until.clone(), date: date.to_string() },
+            ));
+        }
+        if row.status == "active" && date < row.valid_from.as_str() {
+            findings.push((
+                file.clone(),
+                KeysError::NotYetValid { file: file.clone(), from: row.valid_from.clone(), date: date.to_string() },
             ));
         }
     }

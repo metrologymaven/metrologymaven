@@ -1,0 +1,1 @@
+POLICY-SIZE fid-app-a src/fit.rs: Rust source file other than src/main.rs

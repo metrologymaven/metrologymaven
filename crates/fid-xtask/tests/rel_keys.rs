@@ -90,6 +90,22 @@ fn expired_in_use() {
     assert_eq!(check(&fixture("keys"), &fixture("docs/KEYS-expired.md"), "2021-12-31"), Ok(4));
 }
 
+/// An active key checked before its validity starts is KEYS-NOT-YET-VALID (hand-labelled:
+/// the three active fixture keys are valid from 2026-01-01).
+#[test]
+fn not_yet_valid() {
+    let errs = check(&fixture("keys"), &fixture("docs/KEYS.md"), "2025-12-31").unwrap_err();
+    let lines: Vec<String> = errs.iter().map(ToString::to_string).collect();
+    assert_eq!(
+        lines,
+        [
+            "KEYS-NOT-YET-VALID nightly-test.pem (valid from 2026-01-01, checked 2025-12-31)",
+            "KEYS-NOT-YET-VALID packaging-test.pem (valid from 2026-01-01, checked 2025-12-31)",
+            "KEYS-NOT-YET-VALID release-test.pem (valid from 2026-01-01, checked 2025-12-31)",
+        ]
+    );
+}
+
 /// The fingerprint is the SHA-256 of the SPKI DER (value from make_fixtures.py).
 #[test]
 fn fingerprint_of_fixture_key() {

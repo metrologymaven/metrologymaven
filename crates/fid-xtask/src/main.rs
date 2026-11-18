@@ -2,8 +2,8 @@
 
 mod pins;
 
-use fid_xtask::plat_matrix_tiers;
 use fid_xtask::rel::{keys, runbook, sbom, sums, version};
+use fid_xtask::{apps_policy, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -27,6 +27,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
                      --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
        \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
+const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
+                                 --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -41,6 +43,7 @@ fn main() -> ExitCode {
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
@@ -52,9 +55,42 @@ fn main() -> ExitCode {
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
+            eprintln!("{APPS_POLICY_USAGE}");
             ExitCode::from(2)
         }
     }
+}
+
+/// ECO.APPS.POLICY: `apps-policy`. Prints findings sorted by code, crate and location. Exit
+/// 0: no findings; 1: findings (including POLICY-INPUT); 2: bad usage. Offline; reads only.
+fn apps_policy_check(args: &[String]) -> ExitCode {
+    let (mut workspace, mut manifests, mut status, mut config) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = Some(PathBuf::from(v)),
+            ("--registry-manifests", Some(v)) => manifests = Some(PathBuf::from(v)),
+            ("--apps-status", Some(v)) => status = Some(PathBuf::from(v)),
+            ("--config", Some(v)) => config = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{APPS_POLICY_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(workspace), Some(registry_manifests), Some(apps_status)) = (workspace, manifests, status) else {
+        eprintln!("apps-policy: --workspace, --registry-manifests and --apps-status are required\n{APPS_POLICY_USAGE}");
+        return ExitCode::from(2);
+    };
+    let findings = apps_policy::run(&apps_policy::Inputs { workspace, registry_manifests, apps_status, config });
+    if findings.is_empty() {
+        println!("apps-policy: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
 
 /// ECO.DATA.CAT: runs the `fid-data` binary. `fid-data` is a `tool` crate, and the layer
