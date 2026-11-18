@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-project]
+built_pr: 50
 satisfies: [REQ-CORE.PRJ.CONT-003, REQ-CORE.PRJ.CONT-004, REQ-CORE.PRJ.CONT-005, REQ-CORE.PRJ.CONT-006]
 covers: []
 depends_on: [CORE.JRN.CANON]

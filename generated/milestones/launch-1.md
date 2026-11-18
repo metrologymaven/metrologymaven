@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**10** of **1336** leaves built in code ([B]).
+**18** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 8 built)
+### Wave 1 (125 leaves, 12 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -44,7 +44,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
 - [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
-- [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
+- [B] [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
 - [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
@@ -54,7 +54,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
 - [ECO.COMM.SCOPE](../../spec/eco/comm/scope/NODE.md) Spec-tree validator, open-node listing and generated reports (M, P0)
 - [ECO.COMM.TIMELINE](../../spec/eco/comm/timeline/NODE.md) PR-timeline evaluator (author-blocked clock) (M, P0)
-- [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
+- [B] [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
 - [ECO.REL.PKG.PLAN](../../spec/eco/rel/pkg/plan/NODE.md) Package plan, Tier 1 build gate and placeholder-name gate (M, P1a)
 - [ECO.REL.PKG.REG](../../spec/eco/rel/pkg/reg/NODE.md) Installed-app registration and file association (S, P1a)
 - [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)
@@ -76,7 +76,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
 - [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
 - [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
-- [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
+- [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
 - [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
 - [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
@@ -87,7 +87,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)
 - [B] [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
 - [B] [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
-- [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
+- [B] [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
 - [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
 - [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
 - [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 2 built)
+### Wave 2 (121 leaves, 6 built)
 
 - [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -167,10 +167,10 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
 - [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
 - [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
-- [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
+- [B] [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
 - [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
 - [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
-- [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
+- [B] [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
 - [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
 - [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
 - [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
@@ -216,9 +216,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)
 - [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
 - [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)
-- [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
+- [B] [KRN.MAN.KCI](../../spec/krn/man/kci/NODE.md) Kernel call interface and digests (M, P0)
 - [B] [KRN.NUM.FN](../../spec/krn/num/fn/NODE.md) Transcendentals and total-order operations (M, P0)
-- [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
+- [B] [KRN.NUM.KDEC](../../spec/krn/num/kdec/NODE.md) Exact decimal type and comparator (kdec) (M, P0)
 - [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
 - [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
 - [B] [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)

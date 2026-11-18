@@ -1,0 +1,27 @@
+# Level-1 domain IDs of the spec tree (ECO.DATA.CAT fixture). MIT OR Apache-2.0.
+AGENT
+ALN
+AUTO
+CMM
+CORE
+ECO
+ENT
+FLOW
+GDT
+GEO
+HAL
+I18N
+IND
+IO
+KRN
+LVM
+MIG
+OUTR
+PLAT
+QUAL
+RPT
+SCAN
+TRUST
+UNC
+UX
+VIZ

@@ -1,0 +1,18 @@
+[package]
+name = "fid-knp1-lint"
+description = "KNP-1 lint for the kernel dependency closure: findings model, report and waivers (spec node KRN.NUM.LINT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Canonical JSON (RFC 8785) report and SHA-256 digests; same layer rules as the journal.
+fid-canon = { path = "../fid-canon" }
+# Reads knp1-waivers.toml as an untyped table (no serde derive); duplicate keys are rejected by the parser.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true
