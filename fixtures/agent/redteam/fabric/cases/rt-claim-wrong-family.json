@@ -32,6 +32,7 @@
     }
   ],
   "family": "escal",
+  "subfamily": "escalation",
   "predicates": [
     {
       "id": "claim",
@@ -39,6 +40,13 @@
       "fields": [
         "brief",
         "annotation"
+      ]
+    },
+    {
+      "id": "c",
+      "kind": "entry_class",
+      "classes": [
+        "W3"
       ]
     }
   ]

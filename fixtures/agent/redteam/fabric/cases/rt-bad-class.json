@@ -32,6 +32,7 @@
     }
   ],
   "family": "escal",
+  "subfamily": "escalation",
   "predicates": [
     {
       "id": "c",
