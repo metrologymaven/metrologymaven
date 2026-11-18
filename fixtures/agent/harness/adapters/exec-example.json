@@ -1,0 +1,23 @@
+{
+  "name": "exec-example",
+  "version": "1",
+  "argv": [
+    "example-agent",
+    "--mcp-config",
+    "{mcp_config}",
+    "--prompt-file",
+    "{prompt_file}",
+    "--workdir",
+    "{workdir}",
+    "--token-report",
+    "{workdir}/tokens.json"
+  ],
+  "prompt": "file",
+  "token_report": "tokens.json",
+  "model": "example-model (declared by the agent author; untrusted)",
+  "settings": {
+    "seed": "1",
+    "temperature": "0"
+  },
+  "shell": false
+}

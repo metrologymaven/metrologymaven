@@ -1,5 +1,6 @@
-//! Evaluation harness of Metrology Maven (`fid-eval`, D-032). Spec node
-//! `AGENT.HARNESS.SANDBOX`: the per-run sandbox project and task-scoped roots.
+//! Evaluation harness of Metrology Maven (`fid-eval`, D-032). Spec nodes
+//! `AGENT.HARNESS.SANDBOX` (the per-run sandbox project and task-scoped roots) and
+//! `AGENT.HARNESS.ADAPT` (the agent adapter contract, see [`Adapter`] and the `adapt` module).
 //!
 //! [`Sandbox::build`] makes a fresh, isolated run directory for one run of one task:
 //!
@@ -33,16 +34,23 @@
 //! `task.json` it needs ([`TaskSpec`]) itself, because the layer rules forbid linking the
 //! format crate `fid-eval-suite` (another tool crate).
 
+mod adapt;
 mod path;
 mod sandbox;
 mod snapshot;
 mod tar;
 mod task;
 
+pub use adapt::{
+    check_profile, mcp_config, parse_token_report, read_token_report, scrub_env, suite_dir_of, Adapter, AdapterError,
+    AgentPaths, LaunchInput, LaunchPlan, Limits, McpCommand, PromptMode, RunOutcome, Tokens, DEFAULT_OUTPUT_CAP,
+    ENV_ALLOWLIST, MAX_ADAPTER_BYTES, MAX_ARGV, MAX_ARG_BYTES, MAX_SETTINGS, MAX_TEXT_BYTES, MAX_TOKEN_REPORT_BYTES,
+    MCP_SERVER_NAME, PLACEHOLDERS,
+};
 pub use path::check_rel;
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
 pub use snapshot::{escape_name, Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};
-pub use task::TaskSpec;
+pub use task::{AgentTask, TaskSpec};
 
 use std::fmt;
 
@@ -72,6 +80,10 @@ pub enum ErrorCode {
     RunIdUnavailable,
     /// Any other file-system failure.
     Io,
+    /// An adapter file is malformed or unsafe (AGENT.HARNESS.ADAPT REQ-003).
+    InvalidAdapter,
+    /// An adapter's argv lacks a placeholder the agent needs (AGENT.HARNESS.ADAPT).
+    MissingPlaceholder,
 }
 
 impl ErrorCode {
@@ -88,6 +100,8 @@ impl ErrorCode {
             ErrorCode::SnapshotLimit => "snapshot_limit",
             ErrorCode::RunIdUnavailable => "run_id_unavailable",
             ErrorCode::Io => "io_error",
+            ErrorCode::InvalidAdapter => "invalid_adapter",
+            ErrorCode::MissingPlaceholder => "missing_placeholder",
         }
     }
 }
