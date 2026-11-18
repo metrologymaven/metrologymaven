@@ -1,0 +1,19 @@
+[package]
+name = "fid-hal-runtime"
+description = "Metrology Maven device runtime and acquisition manager: deterministic encoding conversion (spec node HAL.ACQ)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# EncodingDescriptor, NumericType and SiUnit (spec node HAL.IDL.UNITS).
+fid-hal-idl = { path = "../fid-hal-idl" }
+
+# Test-only: golden SHA-256 digests (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

@@ -1,0 +1,4 @@
+# Byte-exact fixtures: never convert line endings (make_fixtures.py --check compares bytes).
+* -text
+*.bin binary
+*.mask binary
