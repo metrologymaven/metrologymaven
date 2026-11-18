@@ -103,7 +103,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
 - [OUTR.DOCS.FRAME.NAV](../../spec/outr/docs/frame/nav/NODE.md) Edition build, page frame and navigation (M, P0)
 - [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
-- [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
+- [B] [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
 - [OUTR.SITE.GEN.IMPORT](../../spec/outr/site/gen/import/NODE.md) Generated-input lock file, fetch, digest check and build manifest (M, P0)
 - [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
