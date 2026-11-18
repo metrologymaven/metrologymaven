@@ -69,7 +69,7 @@ fn step(cur: &OwnedFd, name: &OsStr, create: bool, follow: bool) -> io::Result<O
 /// device planted in the project from hanging the open; anything but a regular file is refused
 /// with the typed `not_regular_file` error.
 fn open_regular(cur: &OwnedFd, name: &str, flags: OFlags, mode: Mode) -> io::Result<File> {
-    let flags = flags | OFlags::NONBLOCK | OFlags::CLOEXEC | OFlags::NOFOLLOW;
+    let flags = flags | OFlags::NONBLOCK | OFlags::NOCTTY | OFlags::CLOEXEC | OFlags::NOFOLLOW;
     let fd = match open_at(cur, OsStr::new(name), flags, mode) {
         Err(e) if e.raw_os_error() == Some(Errno::NXIO.raw_os_error()) => return Err(super::not_regular()),
         other => other?,

@@ -73,7 +73,8 @@ fn open_dir_handle(path: &Path, entry: bool) -> io::Result<File> {
     Ok(f)
 }
 
-/// Checks a just-opened entry handle: no reparse point, a regular file.
+/// Checks a just-opened entry handle: no reparse point, a regular file. File opens pass
+/// `FILE_FLAG_BACKUP_SEMANTICS` so that a directory opens and is refused as `not_regular_file`.
 fn check_file(f: &File) -> io::Result<()> {
     let m = f.metadata()?;
     if m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
@@ -132,7 +133,7 @@ impl Dir {
         let mut f = OpenOptions::new()
             .read(true)
             .share_mode(FILE_SHARE_ALL)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
             .open(self.path.join(name))?;
         check_file(&f)?;
         read_bounded(&mut f, limit)
@@ -144,7 +145,7 @@ impl Dir {
             .write(true)
             .create(true)
             .truncate(false)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
             .open(self.path.join(name))?;
         check_file(&f)?;
         f.set_len(0)?;
@@ -166,7 +167,7 @@ impl Dir {
             .create(true)
             .truncate(false)
             .share_mode(FILE_SHARE_READ)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
             .open(self.path.join(name));
         match opened {
             Ok(file) => {
