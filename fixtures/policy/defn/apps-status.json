@@ -1,0 +1,48 @@
+{
+  "apps": [
+    {
+      "branding_placeholder": true,
+      "commands": [
+        {
+          "definition_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "id": "x.do_thing@1",
+          "side_effect": "R0"
+        }
+      ],
+      "id": "a",
+      "known_gaps": [],
+      "manifest": true,
+      "namespaces": [
+        "x"
+      ],
+      "status": "alpha",
+      "status_scope": "fixture"
+    },
+    {
+      "branding_placeholder": true,
+      "commands": [
+        {
+          "definition_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "id": "x.do_thing@1",
+          "side_effect": "R0"
+        }
+      ],
+      "id": "b",
+      "known_gaps": [],
+      "manifest": true,
+      "namespaces": [
+        "x"
+      ],
+      "status": "alpha",
+      "status_scope": "fixture"
+    },
+    {
+      "id": "c",
+      "manifest": false
+    }
+  ],
+  "header": {
+    "generator": "make_fixtures.py",
+    "version": "0"
+  }
+}

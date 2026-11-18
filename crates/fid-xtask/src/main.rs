@@ -1,6 +1,12 @@
 //! `cargo xtask <task>` (alias in `.cargo/config.toml`).
 
+mod pins;
+
+use fid_xtask::plat_deploy_netlist as netlist;
+use fid_xtask::rel::{keys, runbook, sbom, sums, version};
+use fid_xtask::{apps_policy, plat_gpu_invar, plat_matrix_tiers};
 use std::collections::BTreeMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -8,7 +14,30 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
                      cargo xtask bots-check --register <toml> --restricted <txt> --today <YYYY-MM-DD> \
                      [--review-export <json>]\n       \
-                     cargo xtask plat-matrix validate <file>";
+                     cargo xtask plat-matrix validate <file>\n       \
+                     cargo xtask plat-matrix lint-tiers [<file>]\n       \
+                     cargo xtask plat-hw validate [--file <path>]\n       \
+                     cargo xtask plat-hw validate-suite [--file <path>]\n       \
+                     cargo xtask plat-hw result-schema\n       \
+                     cargo xtask plat-deploy netlist --manifest <registry manifest json> \
+                     --settings <settings-manifest.json> [--json <out>] [--md <out>] [--check]\n       \
+                     cargo xtask plat-gpu invariance --backends <a,b,...> [--sequence <toml>] \
+                     [--examples <dir>] [--work <dir>] [--fid <path>]\n       \
+                     cargo xtask plat-gpu invariance --recorded <dir>\n       \
+                     cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
+                     cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
+                     [--protocol <md>]\n       \
+                     cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
+                     [--workspace <dir>] [--binaries <dir>] [--json]\n       \
+                     cargo xtask rel version-compare <a> <b>\n       \
+                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>
+       \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
+       \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
+       \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
+                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
+       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
+const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
+                                 --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -19,13 +48,61 @@ fn main() -> ExitCode {
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
         Some("bots-check") => bots_check(&args[1..]),
-        Some("plat-matrix") => plat_matrix(&args),
+        Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
+        Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
+        Some("plat-hw") => fid_platform(&args, "plat-hw"),
+        Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
+        Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
+        Some("pins") => pins::cli(&args[1..]),
+        Some("personas-check") => personas_check(&args[1..]),
+        Some("apps-policy") => apps_policy_check(&args[1..]),
+        Some("study-tasks-check") => study_tasks_check(&args[1..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
+            eprintln!("{APPS_POLICY_USAGE}");
             ExitCode::from(2)
         }
     }
+}
+
+/// ECO.APPS.POLICY: `apps-policy`. Prints findings sorted by code, crate and location. Exit
+/// 0: no findings; 1: findings (including POLICY-INPUT); 2: bad usage. Offline; reads only.
+fn apps_policy_check(args: &[String]) -> ExitCode {
+    let (mut workspace, mut manifests, mut status, mut config) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = Some(PathBuf::from(v)),
+            ("--registry-manifests", Some(v)) => manifests = Some(PathBuf::from(v)),
+            ("--apps-status", Some(v)) => status = Some(PathBuf::from(v)),
+            ("--config", Some(v)) => config = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{APPS_POLICY_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(workspace), Some(registry_manifests), Some(apps_status)) = (workspace, manifests, status) else {
+        eprintln!("apps-policy: --workspace, --registry-manifests and --apps-status are required\n{APPS_POLICY_USAGE}");
+        return ExitCode::from(2);
+    };
+    let findings = apps_policy::run(&apps_policy::Inputs { workspace, registry_manifests, apps_status, config });
+    if findings.is_empty() {
+        println!("apps-policy: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
 
 /// ECO.DATA.CAT: runs the `fid-data` binary. `fid-data` is a `tool` crate, and the layer
@@ -87,9 +164,10 @@ fn bots_check(args: &[String]) -> ExitCode {
     }
 }
 
-/// PLAT.MATRIX.FILE: runs `fid-platform plat-matrix ...` through Cargo, for the same layer
-/// reason as `datasets-check` (`fid-platform` is a `tool` crate).
-fn plat_matrix(args: &[String]) -> ExitCode {
+/// PLAT.MATRIX.FILE and PLAT.HW.PROFILE: runs `fid-platform plat-matrix ...` or
+/// `fid-platform plat-hw ...` through Cargo, for the same layer reason as `datasets-check`
+/// (`fid-platform` is a `tool` crate).
+fn fid_platform(args: &[String], group: &str) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
     let status = Command::new(cargo)
@@ -99,8 +177,479 @@ fn plat_matrix(args: &[String]) -> ExitCode {
     match status {
         Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
         Err(e) => {
-            eprintln!("plat-matrix: cannot run cargo: {e}");
+            eprintln!("{group}: cannot run cargo: {e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.GPU.FALLBK.INVAR: `plat-gpu invariance`. With `--backends`, runs the invariance
+/// sequence once per backend through `fid --gpu-backend` and compares the digest lists; with
+/// `--recorded <dir>`, compares recorded lists only. Prints the report (or the error). Exit 0:
+/// all lists equal; 1: Diverged, BackendUnavailable or SequenceFailed; 2: bad usage or input.
+fn plat_gpu_invariance(args: &[String]) -> ExitCode {
+    let mut backends: Option<&str> = None;
+    let mut recorded: Option<PathBuf> = None;
+    let mut sequence = PathBuf::from(plat_gpu_invar::DEFAULT_SEQUENCE);
+    let mut examples = PathBuf::from(plat_gpu_invar::DEFAULT_EXAMPLES);
+    let mut work: Option<PathBuf> = None;
+    let mut fid = PathBuf::from("fid");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--backends", Some(v)) => backends = Some(v),
+            ("--recorded", Some(v)) => recorded = Some(PathBuf::from(v)),
+            ("--sequence", Some(v)) => sequence = PathBuf::from(v),
+            ("--examples", Some(v)) => examples = PathBuf::from(v),
+            ("--work", Some(v)) => work = Some(PathBuf::from(v)),
+            ("--fid", Some(v)) => fid = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = match (backends, recorded) {
+        (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| {
+            let mut report = plat_gpu_invar::compare(&lists);
+            report.recorded = true;
+            report
+        }),
+        (Some(list), None) => match plat_gpu_invar::parse_backends(list) {
+            Ok(backends) => {
+                // A default work folder is ours alone (named by process ID) and removed on exit,
+                // whatever the outcome; a `--work` folder given by the caller is left in place.
+                let temporary = work.is_none();
+                let default_work = format!("fid-plat-gpu-invariance-{}", std::process::id());
+                let work = work.unwrap_or_else(|| std::env::temp_dir().join(default_work));
+                let opts = plat_gpu_invar::RunOptions {
+                    sequence: &sequence,
+                    examples: &examples,
+                    work: &work,
+                    backends: &backends,
+                    host_os: std::env::consts::OS,
+                };
+                let result = plat_gpu_invar::run(&opts, &mut plat_gpu_invar::FidDriver::new(fid));
+                if temporary && work.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(&work) {
+                        eprintln!("plat-gpu invariance: cannot remove {}: {e}", work.display());
+                    }
+                }
+                result
+            }
+            Err(e) => Err(e),
+        },
+        _ => {
+            eprintln!("plat-gpu invariance: give exactly one of --backends and --recorded\n{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    match result {
+        Ok(report) => {
+            print!("{}", report.render());
+            if report.equal {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        Err(e) => {
+            println!("{e}");
+            ExitCode::from(e.exit_code())
+        }
+    }
+}
+
+/// FLOW.PERSONA.PERS: checks the persona definitions file against the app list and the
+/// built-in governance profile names. Exit 0: clean; 1: findings; 2: usage error.
+fn personas_check(args: &[String]) -> ExitCode {
+    let mut personas = PathBuf::from("acceptance/personas/personas.json");
+    let mut apps = PathBuf::from("apps.toml");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--personas", Some(v)) => personas = PathBuf::from(v),
+            ("--apps", Some(v)) => apps = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let report = fid_accept::persona::check_files(&personas, &apps);
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("personas-check: {} personas", report.set.personas.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("personas-check: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// FLOW.STUDY.PROTO: checks the study task list against the journey maps and the persona
+/// file, and the protocol document's citations. Exit 0: clean; 1: findings; 2: usage error.
+fn study_tasks_check(args: &[String]) -> ExitCode {
+    let mut tasks = PathBuf::from("acceptance/study/tasks.json");
+    let mut maps = PathBuf::from("acceptance/journeys/persona");
+    let mut personas = PathBuf::from("acceptance/personas/personas.json");
+    let mut protocol = PathBuf::from("docs/study/protocol.md");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--tasks", Some(v)) => tasks = PathBuf::from(v),
+            ("--maps", Some(v)) => maps = PathBuf::from(v),
+            ("--personas", Some(v)) => personas = PathBuf::from(v),
+            ("--protocol", Some(v)) => protocol = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let report = fid_accept::study::check_files(&tasks, &maps, &personas, Some(&protocol));
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("study-tasks-check: {} tasks", report.tasks.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("study-tasks-check: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// PLAT.MATRIX.POLICY.DEFS: `plat-matrix lint-tiers [<file>]` (default
+/// `docs/platform/tiers.md`). Prints one finding per line; exits 0 when the tier table is
+/// complete, 1 on findings and 2 on bad usage or an unreadable file.
+fn lint_tiers(args: &[String]) -> ExitCode {
+    let path = match args {
+        [] => plat_matrix_tiers::DEFAULT_PATH,
+        [file] => file.as_str(),
+        _ => {
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    // Read at most one byte past the limit so an oversized file is refused, not loaded.
+    let mut bytes = Vec::new();
+    let read = std::fs::File::open(path).and_then(|f| f.take(plat_matrix_tiers::MAX_BYTES + 1).read_to_end(&mut bytes));
+    if let Err(e) = read {
+        eprintln!("plat-matrix lint-tiers: cannot read {path}: {e}");
+        return ExitCode::from(2);
+    }
+    if bytes.len() as u64 > plat_matrix_tiers::MAX_BYTES {
+        eprintln!("plat-matrix lint-tiers: {path} is larger than {} bytes", plat_matrix_tiers::MAX_BYTES);
+        return ExitCode::from(2);
+    }
+    let Ok(text) = String::from_utf8(bytes) else {
+        eprintln!("plat-matrix lint-tiers: {path} is not UTF-8");
+        return ExitCode::from(2);
+    };
+    let findings = plat_matrix_tiers::lint(&text);
+    if findings.is_empty() {
+        println!("lint-tiers: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
+}
+
+/// ECO.REL.PROC.VERSION: `rel version-check`. Exit 0: the tag, workspace and binaries agree;
+/// 1: findings (one per line, or one JSON report with `--json`); 2: bad usage. Offline: the
+/// tag comes from `--tag`, never from git or the network, and nothing is written.
+fn version_check(args: &[String]) -> ExitCode {
+    let mut tag: Option<&str> = None;
+    let mut channel: Option<version::Channel> = None;
+    let mut workspace = PathBuf::from(".");
+    let mut binaries: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--json" {
+            json = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--tag", Some(v)) => tag = Some(v),
+            ("--channel", Some(v)) => match version::Channel::parse(v) {
+                Some(c) => channel = Some(c),
+                None => {
+                    eprintln!("rel version-check: unknown channel {v:?}\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            },
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--binaries", Some(v)) => binaries = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(tag), Some(channel)) = (tag, channel) else {
+        eprintln!("rel version-check: --tag and --channel are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let result = version::version_check(tag, channel, &workspace, binaries.as_deref());
+    if json {
+        println!("{}", version::report_json(tag, channel, &result));
+    }
+    match result {
+        Ok(v) => {
+            if !json {
+                println!("version-check: ok {v} ({})", channel.name());
+            }
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            if !json {
+                for f in findings {
+                    println!("{f}");
+                }
+            }
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.SUMS: `rel sums --manifest <file> --dir <dir> --out <dir>` writes `SHA256SUMS`
+/// and `sums-statement.json` into the output directory. Exit 0: written; 1: findings
+/// (SUMS-MISSING, SUMS-UNLISTED, SUMS-NAME, SUMS-IO), one per line, nothing written;
+/// 2: bad usage or an unparseable manifest (INPUT-PARSE). Offline; signs nothing.
+fn rel_sums(args: &[String]) -> ExitCode {
+    let (mut manifest, mut dir, mut out): (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) = (None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--dir", Some(v)) => dir = Some(PathBuf::from(v)),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(dir), Some(out)) = (manifest, dir, out) else {
+        eprintln!("rel sums: --manifest, --dir and --out are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match sums::run(&manifest, &dir, &out) {
+        Ok(s) => {
+            println!("sums: ok {} artefacts ({})", s.entries.len(), s.release);
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            let code = findings.iter().map(sums::SumsError::exit_code).max().unwrap_or(1);
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.SBOM: `rel sbom --plan <file> [--workspace <dir>] --native <toml> --out <dir>
+/// [--artefacts <dir>] [--commit-time <t>]` writes `<artefact>.spdx.json` per planned artefact.
+/// Exit 0: written; 1: findings (SBOM-LICENCE, SBOM-NATIVE-DIGEST, SBOM-IO), one per line,
+/// nothing written; 2: bad usage or an unusable input (SBOM-PLAN-PARSE, SBOM-NATIVE-PARSE,
+/// SBOM-METADATA). Offline: `cargo metadata` runs with `--locked --offline`.
+fn rel_sbom(args: &[String]) -> ExitCode {
+    let (mut plan, mut native, mut out, mut artefacts): (
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+    ) = (None, None, None, None);
+    let mut commit_time: Option<String> = None;
+    let mut workspace = PathBuf::from(".");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--plan", Some(v)) => plan = Some(PathBuf::from(v)),
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--native", Some(v)) => native = Some(PathBuf::from(v)),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            ("--artefacts", Some(v)) => artefacts = Some(PathBuf::from(v)),
+            ("--commit-time", Some(v)) => commit_time = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(plan), Some(native), Some(out)) = (plan, native, out) else {
+        eprintln!("rel sbom: --plan, --native and --out are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let opts = sbom::Options {
+        plan: &plan,
+        workspace: &workspace,
+        native: &native,
+        artefacts: artefacts.as_deref(),
+        commit_time: commit_time.as_deref(),
+    };
+    match sbom::run(&opts, &out) {
+        Ok((release, docs)) => {
+            println!("sbom: ok {} documents ({release})", docs.len());
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            let code = findings.iter().map(sbom::SbomError::exit_code).max().unwrap_or(1);
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.GUIDE: `rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]`
+/// checks that every key file in the keys directory (default `keys`) is listed in `KEYS.md`
+/// (default `KEYS.md`) with its SPKI SHA-256 fingerprint and that no active key is past its
+/// validity on the check date (default: today, UTC). Exit 0: consistent; 1: findings, one per
+/// line; 2: bad usage, unreadable inputs or a malformed key table. Reads files only.
+fn keys_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("keys");
+    let mut doc = PathBuf::from("KEYS.md");
+    let mut date: Option<String> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--keys", Some(v)) => dir = PathBuf::from(v),
+            ("--doc", Some(v)) => doc = PathBuf::from(v),
+            ("--date", Some(v)) => date = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(date) = date.or_else(keys::today_utc) else {
+        eprintln!("rel keys-check: the system clock is before 1970; pass --date");
+        return ExitCode::from(2);
+    };
+    match keys::check(&dir, &doc, &date) {
+        Ok(n) => {
+            println!("keys-check: ok {n} keys ({date})");
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(keys::exit_code(&findings))
+        }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-check [--dir <dir>] [--workflow <file>] [--json]`.
+/// Exit 0: consistent (`{"ok":true,"steps":<n>}` with `--json`); 1: findings, one per line
+/// (or one JSON report); 2: bad usage or RUNBOOK-PARSE. Reads files only: it never writes,
+/// never touches git or the network, and never creates tags, releases or signatures.
+fn runbook_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut workflow: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--json" {
+            json = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--workflow", Some(v)) => workflow = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = runbook::check(&dir, workflow.as_deref());
+    if json {
+        println!("{}", runbook::report_json(&result));
+    }
+    match result {
+        Ok(n) => {
+            if !json {
+                println!("runbook-check: ok {n} steps");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            if !json {
+                for f in &findings {
+                    println!("{f}");
+                }
+            }
+            ExitCode::from(runbook::exit_code(&findings))
+        }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-render [--dir <dir>] [--out <file>]` renders
+/// `RUNBOOK.md` from `<dir>/runbook.toml` and `<dir>/RUNBOOK.preamble.md` to stdout, or to
+/// `--out` (LF line endings on every OS). Exit 2 on bad usage or RUNBOOK-PARSE.
+fn runbook_render(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut out: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let text = match runbook::render_dir(&dir) {
+        Ok((_, text)) => text,
+        Err(f) => {
+            println!("{f}");
+            return ExitCode::from(2);
+        }
+    };
+    match out {
+        None => {
+            print!("{text}");
+            ExitCode::SUCCESS
+        }
+        Some(path) => match std::fs::write(&path, text.as_bytes()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                println!("RUNBOOK-PARSE {}: cannot write: {e}", path.display());
+                ExitCode::from(2)
+            }
+        },
+    }
+}
+
+/// ECO.REL.PROC.VERSION: `rel version-compare <a> <b>` prints `lt`, `eq` or `gt` (SemVer
+/// 2.0.0 precedence of a against b). Either may carry the tag's `v`. Only the tag grammar is
+/// accepted: build metadata (`+...`) is rejected with VERSION-TAG-FORMAT. Exit 1 on an
+/// invalid version, 2 on bad usage.
+fn version_compare(args: &[String]) -> ExitCode {
+    let [a, b] = args else {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    };
+    match (version::parse_any(a), version::parse_any(b)) {
+        (Ok(a), Ok(b)) => {
+            println!("{}", version::ordering_word(a.precedence(&b)));
+            ExitCode::SUCCESS
+        }
+        (Err(e), _) | (_, Err(e)) => {
+            println!("{e}");
+            ExitCode::from(1)
         }
     }
 }
@@ -175,6 +724,52 @@ fn lint_crate_graph(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("{e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.DEPLOY.OFFLINE.NETLIST: `plat-deploy netlist`. Writes `network-features.json` and
+/// `network-features.md` (default under `docs/deploy/`), or with `--check` compares them with a
+/// fresh generation. Exit 0: ok; 1: X1 findings, unreadable manifest or drift (one per line);
+/// 2: bad usage.
+fn plat_deploy_netlist(args: &[String]) -> ExitCode {
+    let mut manifest: Option<PathBuf> = None;
+    let mut settings: Option<PathBuf> = None;
+    let mut json = PathBuf::from(netlist::DEFAULT_JSON);
+    let mut md = PathBuf::from(netlist::DEFAULT_MD);
+    let mut check = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--check" {
+            check = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--settings", Some(v)) => settings = Some(PathBuf::from(v)),
+            ("--json", Some(v)) => json = PathBuf::from(v),
+            ("--md", Some(v)) => md = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(settings)) = (manifest, settings) else {
+        eprintln!("plat-deploy netlist: --manifest and --settings are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match netlist::run(&manifest, &settings, &json, &md, check) {
+        Ok(n) => {
+            let verb = if check { "up to date" } else { "written" };
+            println!("netlist: {n} commands, {verb}");
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                println!("{e:?}");
+            }
+            ExitCode::from(1)
         }
     }
 }

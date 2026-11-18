@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 102
 satisfies: [REQ-OUTR.BRAND-005]
 covers: []
 depends_on: []
@@ -78,6 +80,7 @@ Hand-written policy, checklist and record files under `fixtures/outr/brand/copy/
 
 - **D-013 condition:** the counsel review must happen before this node's output is published or released; under option C no third-party text is handled, and REQ-001 makes any move to option B wait for that review. A move to option B also needs a new decision.
 - REQ-OUTR.BRAND-005 (in the parent) still asks for automatic detection of 15 or more copied words. D-013 option C replaces it with the review-based control specified here; the parent node said the steering group would change REQ-OUTR.BRAND-005 in that case. Until it does, this leaf satisfies it only in substitute form. Cross-node issue for OUTR.BRAND.
+- Moving off `review_only` needs a new decision and a parser change, not only a policy edit: the built guard (`fid-outreach copy-guard`) accepts only `decision = "D-013"` and treats any other `decision` value as `policy_parse`.
 - The rule ID CL003 proposed earlier is not used; whether OUTR.BRAND.LINT's rule file should reserve it is for that node.
 
 ## Children

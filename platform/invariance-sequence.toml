@@ -1,0 +1,52 @@
+# Cross-backend value-of-record invariance sequence (spec node PLAT.GPU.FALLBK.INVAR,
+# CONSTITUTION C2). `cargo xtask plat-gpu invariance --backends <list>` runs these steps
+# once per backend override, each in a fresh copy of the example project, and compares
+# the command ID and result digest of every journal entry across backends.
+#
+# `project` is an ECO.DATA.EX example ID (folder `examples/<id>/`). The example and the
+# commands below are not implemented yet; until they are, the harness fails closed
+# (SequenceFailed or BackendUnavailable) and never reports a vacuous pass.
+#
+# `kind` is one of pick, lasso, fit, evaluation, report; every kind must appear at least
+# once (REQ-PLAT.GPU.FALLBK.INVAR-001). `args` are passed to the command unchanged; their
+# shape follows each command's parameter schema in its spec node [unverified until the
+# commands land].
+
+schema_version = 1
+project = "ex-inspect-scan-to-cad"
+
+# A single point pick, resolved on the CPU from the f64 camera (VIZ.PICK.RESOLVE).
+[[step]]
+kind = "pick"
+command = "view.pick_point@1"
+args = { view = "iso-front", x = 640.0, y = 360.0 }
+
+# A rectangle lasso through the cloud (VIZ.PICK.LASSO), previewed ...
+[[step]]
+kind = "lasso"
+command = "view.resolve_lasso@1"
+args = { view = "iso-front", shape = { rect = { x0 = 400.0, y0 = 200.0, x1 = 880.0, y1 = 520.0 } }, mode = "through" }
+
+# ... and committed with the same camera and polygon, so the journal holds the query.
+[[step]]
+kind = "lasso"
+command = "geo.resolve_selection@1"
+args = { view = "iso-front", shape = { rect = { x0 = 400.0, y0 = 200.0, x1 = 880.0, y1 = 520.0 } }, mode = "through" }
+
+# A least-squares cylinder fit on the committed selection.
+[[step]]
+kind = "fit"
+command = "fit.ls_cylinder@1"
+args = { points = "selection:last" }
+
+# A size characteristic evaluated on the fitted feature.
+[[step]]
+kind = "evaluation"
+command = "check.eval_size@1"
+args = { char = "bore-diameter", points = "selection:last" }
+
+# The report built from the results.
+[[step]]
+kind = "report"
+command = "report.generate_report@1"
+args = { template = "default" }

@@ -1,0 +1,53 @@
+# Outreach claim rules (spec node OUTR.BRAND.LINT), read by `fid-brand-lint claim-lint` through
+# the shared engine fid-vocab (format fid-vocab-rules/1). Bump `version` on every rule change so
+# the change is visible in review and in every report. Each rule also has a passing and a
+# failing fixture under fixtures/outr/lint/ (<id>-pass.md, <id>-fail.md); a test enforces it.
+# All wording is the project's own. The only comparison sentence naming a product is the one
+# the spec's acceptance criterion AC-3 prescribes; product names are used nominatively only.
+# CC-BY-4.0.
+format = "fid-vocab-rules/1"
+version = "outr-claim-rules-1"
+
+# REQ-OUTR.BRAND.LINT-001. The designator pattern makes the edition year mandatory: an
+# organisation prefix (stackable, e.g. "DIN EN ISO" or "ISO/IEC"), a number with optional
+# parts, then ":" or "-" and the year. The link qualifier needs any link in the sentence.
+[[rule]]
+id = "CL001"
+kind = "claim"
+severity = "error"
+message = "Conformance or certification wording needs a standard designator with its edition and a link to the evidence in the same sentence."
+words = ["certify", "certifies", "certified", "certifying", "compliant", "conformant", "validate", "validates", "validated", "traceable"]
+qualifiers = ["designator", "link"]
+designator_pattern = '\b(?:ISO|ASME|VDA|IEC|DIN|EN)(?:[ /][A-Z]{1,4})*\s?[A-Z]?\d+(?:[.\-]\d+)*[:\-](?:19|20)\d{2}\b'
+scope = "sentence"
+examples.pass = [
+    { text = "The sphere fit was validated against ISO 10360-6:2001 as described in the test record.", links = ["https://example.org/evidence/sphere-fit"] },
+    "The release notes describe what changed in this version.",
+]
+examples.fail = [
+    "Every report is traceable.",
+    { text = "The flatness routine is validated against ISO 10360-6 on our test page.", links = ["https://example.org/evidence/flatness"] },
+    "The probing routine is certified to ASME B89.4.10360.2-2008.",
+]
+
+# REQ-OUTR.BRAND.LINT-002. Names come from incumbents.txt; a sentence that pairs one with a
+# comparison word or phrase needs a link under a published benchmark-results prefix. The
+# prefix below is provisional until OUTR.BENCH fixes the results URL; more can be added with
+# --bench-prefix.
+[[rule]]
+id = "CL002"
+kind = "cooccur"
+severity = "error"
+message = "A comparison with an incumbent product needs a link to a published benchmark result in the same sentence."
+names_file = "incumbents.txt"
+comparison_words = ["better", "faster", "fastest", "more accurate", "more precise", "superior", "outperforms", "outperform", "beats", "equivalent to", "as good as", "on par with", "drop-in replacement"]
+link_prefixes = ["https://metrologymaven.io/bench/results/"]
+scope = "sentence"
+examples.pass = [
+    { text = "Faster than PolyWorks for best-fit alignment.", links = ["https://metrologymaven.io/bench/results/best-fit-1"] },
+    "Our new release is faster than the previous one.",
+]
+examples.fail = [
+    "Faster than PolyWorks for best-fit alignment.",
+    { text = "Faster than PolyWorks for best-fit alignment.", links = ["https://example.org/notes/alignment"] },
+]

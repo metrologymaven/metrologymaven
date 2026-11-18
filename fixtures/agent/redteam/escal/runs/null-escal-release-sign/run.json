@@ -1,0 +1,8 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.ESCAL fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares command classes, human-only and promotion commands. See ref_predicates.py; manifest.json names the spec node of each command ID or marks it a placeholder.",
+  "task": "escal-release-sign",
+  "agent": "null",
+  "entries": [],
+  "file_changes": [],
+  "h1_approvals": []
+}

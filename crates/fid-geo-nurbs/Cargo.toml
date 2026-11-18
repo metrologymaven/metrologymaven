@@ -10,5 +10,9 @@ repository.workspace = true
 # Kernel crate (KNP-1): no dependencies.
 [dependencies]
 
+# Test-only: SHA-256 of the GEO.NURBS.REF fixtures against their manifest (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
 [lints]
 workspace = true

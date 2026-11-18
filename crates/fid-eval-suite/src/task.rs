@@ -1,6 +1,7 @@
 //! `task.json` (REQ-AGENT.EVAL.FORMAT-001, -004).
 
 use crate::json::{index, is_id, join, parse_bounded, Ctx};
+use crate::redteam::{self, Family, Payload, Predicate, Subfamily};
 use crate::{ErrorCode, FormatError};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -125,6 +126,22 @@ pub struct Task {
     pub workflows: Vec<String>,
     /// Non-empty, one entry per input file.
     pub licences: Vec<Licence>,
+    /// Red-team family (AGENT.REDTEAM); `None` for an ordinary evaluation task.
+    pub family: Option<Family>,
+    /// Subfamily (AGENT.REDTEAM.ESCAL): set exactly on tasks of family `escal`.
+    pub subfamily: Option<Subfamily>,
+    /// Violation predicates (AGENT.REDTEAM.PRED): non-empty exactly when `family` is set.
+    pub predicates: Vec<Predicate>,
+    /// Payload files (AGENT.REDTEAM.INJECT): only on a red-team task, and non-empty on
+    /// every task of family `inject`.
+    pub payloads: Vec<Payload>,
+    /// AGENT.REDTEAM.SHELL: the base task this shell variant copies (family `shell` only).
+    pub variant_of: Option<String>,
+    /// AGENT.REDTEAM.SHELL: a hand-authored shell-only task (family `shell` only).
+    pub shell_only: bool,
+    /// AGENT.REDTEAM.SHELL: the task requires an adapter with shell access (`shell: true`);
+    /// true exactly on tasks of family `shell`.
+    pub shell: bool,
 }
 
 const KEYS: &[&str] = &[
@@ -142,6 +159,9 @@ const KEYS: &[&str] = &[
     "licences",
 ];
 
+/// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
+const OPTIONAL_KEYS: &[&str] = &["family", "subfamily", "predicates", "payloads", "variant_of", "shell_only", "shell"];
+
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
     if s == "project-authored" {
@@ -154,7 +174,7 @@ fn is_spdx(s: &str) -> bool {
         && b.iter().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'+' | b'-'))
 }
 
-fn relpath(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<RelPath> {
+pub(crate) fn relpath(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<RelPath> {
     let s = cx.string(v, field)?;
     let p = RelPath::parse(s);
     if p.is_none() {
@@ -185,7 +205,8 @@ fn relpaths(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<Vec<RelPath
 pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     let root = parse_bounded(bytes, file, ErrorCode::InvalidTask).map_err(|e| vec![e])?;
     let mut cx = Ctx::new(ErrorCode::InvalidTask, file);
-    let Some(m) = cx.obj(Some(&root), "", KEYS, KEYS) else {
+    let allowed: Vec<&str> = KEYS.iter().chain(OPTIONAL_KEYS).copied().collect();
+    let Some(m) = cx.obj(Some(&root), "", &allowed, KEYS) else {
         return Err(cx.finish());
     };
 
@@ -317,9 +338,60 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         ok.then_some(out)
     });
 
+    let family = m.get("family").and_then(|v| redteam::family(&mut cx, Some(v)));
+    let shell = redteam::shell_fields(&mut cx, m, family, id.as_deref());
+    let predicates = match (m.contains_key("family"), m.get("predicates")) {
+        (_, Some(v)) => {
+            if !m.contains_key("family") {
+                cx.err("family", "missing: predicates are only allowed on a red-team task");
+            }
+            redteam::predicates(&mut cx, Some(v), family, m.contains_key("variant_of"))
+        }
+        (true, None) => {
+            cx.err_code(ErrorCode::MissingPredicate, "predicates", "a red-team task needs at least one predicate");
+            None
+        }
+        (false, None) => Some(Vec::new()),
+    };
+
+    let subfamily = match (m.get("subfamily"), family) {
+        (Some(v), _) => redteam::subfamily(&mut cx, Some(v), family, m.contains_key("family")).map(Some),
+        (None, Some(Family::Escal)) => {
+            cx.err("subfamily", "missing: an escal task needs subfamily escalation or self_adoption");
+            None
+        }
+        (None, _) => Some(None),
+    };
+    if let (Some(Some(sf)), Some(ps)) = (subfamily, predicates.as_deref()) {
+        redteam::escal_predicates(&mut cx, sf, ps);
+    }
+    if let (Some(sh), Some(ps)) = (&shell, predicates.as_deref()) {
+        if sh.shell_only {
+            redteam::shell_only_predicates(&mut cx, ps);
+        }
+    }
+
+    let payloads = match (m.get("payloads"), family) {
+        (Some(v), _) => {
+            if !m.contains_key("family") {
+                cx.err("payloads", "only allowed on a red-team task");
+            }
+            redteam::payloads(&mut cx, Some(v), licences.as_deref())
+        }
+        (None, Some(Family::Inject)) => {
+            cx.err("payloads", "missing: an injection task needs at least one payload file");
+            None
+        }
+        (None, _) => Some(Vec::new()),
+    };
+
     if cx.has_errors() {
         return Err(cx.finish());
     }
+    let (Some(predicates), Some(payloads), Some(subfamily), Some(shell)) = (predicates, payloads, subfamily, shell)
+    else {
+        return Err(cx.finish());
+    };
     let (
         Some(id),
         Some(source_job),
@@ -350,5 +422,12 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         apps,
         workflows,
         licences,
+        family,
+        subfamily,
+        predicates,
+        payloads,
+        variant_of: shell.variant_of,
+        shell_only: shell.shell_only,
+        shell: shell.shell,
     })
 }

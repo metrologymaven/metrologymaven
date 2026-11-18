@@ -69,6 +69,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-agent"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
@@ -99,14 +107,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-design"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-design-pkg",
+]
+
+[[package]]
+name = "fid-design-pkg"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "toml",
+]
+
+[[package]]
 name = "fid-geo-nurbs"
 version = "0.0.1"
+dependencies = [
+ "fid-testkit",
+]
 
 [[package]]
 name = "fid-geo-types"
 version = "0.0.1"
 dependencies = [
  "fid-num",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-hal-idl"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-uuid",
+]
+
+[[package]]
+name = "fid-io-reg"
+version = "0.0.1"
+dependencies = [
  "fid-types",
 ]
 
@@ -152,9 +194,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-outreach"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+ "sha2",
+ "toml",
+]
+
+[[package]]
 name = "fid-platform"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
+ "fid-types",
  "toml",
 ]
 
@@ -163,8 +217,17 @@ name = "fid-project"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-uuid",
  "getrandom",
- "sha1",
+]
+
+[[package]]
+name = "fid-qif-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-types",
+ "sha2",
+ "toml",
 ]
 
 [[package]]
@@ -209,6 +272,13 @@ dependencies = [
 [[package]]
 name = "fid-types"
 version = "0.0.1"
+
+[[package]]
+name = "fid-uuid"
+version = "0.0.1"
+dependencies = [
+ "sha1",
+]
 
 [[package]]
 name = "fid-xtask"

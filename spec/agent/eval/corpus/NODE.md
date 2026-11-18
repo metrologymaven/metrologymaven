@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [suite/tasks, fixtures/agent/eval/corpus]
+built_pr: 120
 satisfies: [REQ-AGENT.EVAL-002, REQ-AGENT.EVAL-006, REQ-AGENT.EVAL-008]
 covers: []
 depends_on: []

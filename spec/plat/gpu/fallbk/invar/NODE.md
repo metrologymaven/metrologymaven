@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 117
 satisfies: [REQ-PLAT.GPU.FALLBK-005]
 covers: []
 depends_on: []
@@ -71,7 +73,8 @@ Recorded digest lists under `fixtures/plat/gpu/`; the example project from ECO.D
 
 ## Open questions
 
-- None.
+- The driver contract `fid --gpu-backend <backend> invariance-run --project <dir> --sequence <file> --json` (prints the digest list; exit 3 when the backend cannot be initialised) is provisional: it was chosen by the first implementation (PR #117) and no node defines it yet. Owners: `PLAT.GPU.FALLBK.SMOKE` (the `--gpu-backend` override) and the `fid` CLI. Until `fid` implements it, the harness fails closed with `BackendUnavailable`.
+- AC-1 (a real dx12, vulkan and software run on a Windows GPU runner) waits on `PLAT.GPU.CI`; until then it is covered only by a recorded-list driver in the tests.
 
 ## Children
 

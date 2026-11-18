@@ -9,6 +9,12 @@
 //! suite/oracles/<id>/oracle.json    the oracle (schema/eval-oracle-v1.schema.json)
 //! ```
 //!
+//! A task may carry the red-team extension (`family`, `predicates`; AGENT.REDTEAM.PRED) and,
+//! for injection tasks, `payloads` (AGENT.REDTEAM.INJECT); tasks of family `escal` carry a
+//! `subfamily` (AGENT.REDTEAM.ESCAL); tasks of family `shell` require `shell: true` and are
+//! either a variant (`variant_of`) or `shell_only` (AGENT.REDTEAM.SHELL), and
+//! [`check_variants`] checks that a shell suite has exactly one variant per base task.
+//!
 //! Every file is read fail-closed: at most [`MAX_FILE_BYTES`], JSON nesting at most
 //! [`MAX_DEPTH`], duplicate keys and unknown fields rejected, and all field errors of a
 //! file collected before failing. The suite version ([`suite_version`]) is `sha256:` over
@@ -19,10 +25,14 @@
 
 mod json;
 mod oracle;
+mod redteam;
+mod shell;
 mod suite;
 mod task;
 
 pub use oracle::{parse_oracle, Basis, Forbidden, Oracle, OracleItem, Outcome, Quantity, DEFAULT_TOL, SI_UNITS};
+pub use redteam::{is_marker, Family, Payload, Predicate, PredicateKind, Subfamily, Vector, PREDICATE_KINDS};
+pub use shell::{check_variants, VariantCoverage};
 pub use suite::{load_suite, read_oracle, read_task, suite_version, Suite, SuiteTask, SUITE_FORMAT};
 pub use task::{parse_task, App, Budget, Licence, RelPath, Roots, StartState, Task, Tier};
 
@@ -44,6 +54,10 @@ pub enum ErrorCode {
     InputLimit,
     DuplicateKey,
     MissingFile,
+    /// A red-team task without predicates (AGENT.REDTEAM.PRED).
+    MissingPredicate,
+    /// A predicate kind outside the closed list (AGENT.REDTEAM.PRED).
+    UnknownPredicate,
 }
 
 impl ErrorCode {
@@ -56,6 +70,8 @@ impl ErrorCode {
             ErrorCode::InputLimit => "input_limit",
             ErrorCode::DuplicateKey => "duplicate_key",
             ErrorCode::MissingFile => "missing_file",
+            ErrorCode::MissingPredicate => "missing_predicate",
+            ErrorCode::UnknownPredicate => "unknown_predicate",
         }
     }
 }

@@ -1,0 +1,23 @@
+# PLAT.HW.SCHEMA AC-3 (hand-written, synthetic): metric `distance` of workload
+# `bad-unit.load` uses unit `furlongs`, which is not in the allowed set; everything else is
+# valid.
+# Expected: exit 1 with exactly one diagnostic, starting
+# `BadUnit { workload: bad-unit.load, metric: distance, unit: furlongs }`.
+schema_version = 1
+suite_version = "0.0.0-fixture"
+
+[[workloads]]
+id = "bad-unit.load"
+dataset = { id = "synthetic.cloud-a", sha256 = "sha256:1111111111111111111111111111111111111111111111111111111111111111" }
+repetitions = 5
+timeout_s = 120
+
+[[workloads.metrics]]
+name = "load_time"
+unit = "s"
+better = "lower"
+
+[[workloads.metrics]]
+name = "distance"
+unit = "furlongs"
+better = "higher"

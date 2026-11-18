@@ -1,0 +1,4 @@
+# Synthetic, deliberately malformed TOML (CC-BY-4.0). Expected: exit 2, InputParse.
+version = 1
+[[milestone]
+id = "report-alpha"

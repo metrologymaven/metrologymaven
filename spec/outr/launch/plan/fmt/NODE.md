@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 88
 satisfies: [REQ-OUTR.LAUNCH.PLAN-002, REQ-OUTR.LAUNCH.PLAN-003, REQ-OUTR.LAUNCH.PLAN-004, REQ-OUTR.LAUNCH.PLAN-005]
 covers: []
 depends_on: []
@@ -57,6 +59,7 @@ Defines `launch/criteria.toml`, the machine-readable file that holds every miles
 
 - **Command:** `fid-outreach plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]`. Project tooling; nearest class R0.
 - **Schema:** `version = 1`; milestones and criteria as in REQ-001 and REQ-002; every criterion may carry `note` (free text, not evaluated). Dates are `YYYY-MM-DD`.
+- **Milestone IDs:** the 1.0 level is written `-1-0` in milestone IDs (e.g. `report-1-0`), because the ID pattern has no `.`.
 - **Rule table:** a constant in the module, `report = P1b`, `inspect = P1b`, `probe = P2`, `network = P3`, with a comment citing CONSTITUTION §7 and D-017; a new app needs a code change and a decision.
 - **Review entries:** Markdown files with front matter `milestone`, `announced`, `changes` (list of criterion IDs); only the front matter is read here.
 - **Errors:** findings `unknown_kind`, `bad_field`, `duplicate_id`, `bad_id`, `unknown_app`, `core_phase_missing`, `scope_label_missing`, `stray_date`, `announced_criteria_changed`; fatal `InputUnreadable`, `InputParse`.
@@ -83,6 +86,7 @@ Synthetic criteria files, app lists, plan documents and review entries under `fi
 
 - REQ-OUTR.LAUNCH.PLAN-005 also allows a change through a pull request approved by another maintainer; that half is enforced by repository branch protection (ECO), not by this check.
 - The roadmap check in OUTR.SITE.STATUS reads `target_date` and `announced.date` from this file.
+- Review entries must write `changes` as a single-line list (`changes: [A, B]`), as in spec frontmatter; the check reads only that form. The review entry template in OUTR.LAUNCH.REVIEW must match. A review entry clears only changes under the announcement it names (`announced` equal to the base file's `announced.date`).
 
 ## Children
 

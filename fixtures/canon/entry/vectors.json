@@ -1,0 +1,152 @@
+[
+ {
+  "name": "base",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "hash": "sha256:aea1c2bf061a4e713586976958b6db937e63bf3b4ecb18dd04affd34beb7135b"
+  }
+ },
+ {
+  "name": "base_pretty_reordered",
+  "header": "{\n   \"signatures\": [],\n   \"radius_mm\": \"0x3fe0000000000000\",\n   \"manifests\": {\n      \"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\",\n      \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"\n   },\n   \"command\": {\n      \"id\": \"msr.probe.touch\",\n      \"major\": 2,\n      \"class\": \"W1\",\n      \"determinism\": \"D1\",\n      \"seed\": \"9007199254740993\",\n      \"inputs\": [\n         {\n            \"tag\": \"r1_result\",\n            \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"\n         }\n      ],\n      \"outputs\": [\n         {\n            \"entity\": \"ent-01\",\n            \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"\n         }\n      ],\n      \"algorithms\": [\n         \"probe-comp@3\"\n      ]\n   },\n   \"ai_assistance\": \"executed\",\n   \"principal\": {\n      \"kind\": \"agent\",\n      \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"\n   },\n   \"time\": {\n      \"utc\": \"2026-11-17T10:00:00.000Z\",\n      \"mono_ns\": \"18446744073709551615\",\n      \"sync\": \"ptp\"\n   },\n   \"logical_parent\": null,\n   \"branch\": \"main\",\n   \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\",\n   \"seq\": \"7\",\n   \"stream\": \"main\",\n   \"kind\": \"command\",\n   \"schema_version\": 1\n}",
+  "expect": {
+   "hash": "sha256:aea1c2bf061a4e713586976958b6db937e63bf3b4ecb18dd04affd34beb7135b"
+  }
+ },
+ {
+  "name": "with_hash_field_ignored",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"hash\": \"sha256:abababababababababababababababababababababababababababababababab\"}",
+  "expect": {
+   "hash": "sha256:aea1c2bf061a4e713586976958b6db937e63bf3b4ecb18dd04affd34beb7135b"
+  }
+ },
+ {
+  "name": "with_hash_null_ignored",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"hash\": null}",
+  "expect": {
+   "hash": "sha256:aea1c2bf061a4e713586976958b6db937e63bf3b4ecb18dd04affd34beb7135b"
+  }
+ },
+ {
+  "name": "session_header",
+  "header": "{\"schema_version\": 1, \"kind\": \"session_header\", \"stream\": \"main\", \"seq\": \"0\", \"prev\": null, \"app_version\": \"0.0.1\", \"ai_assistance\": \"none\", \"time\": {\"utc\": \"2026-11-17T08:00:00Z\", \"mono_ns\": \"0\", \"sync\": \"none\"}, \"manifests\": {\"registry\": \"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"kernel\": \"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}}",
+  "expect": {
+   "hash": "sha256:f2124edbd586e7c1fa37a418adbc517b2e9c84c18352ea7e5e3d0042ff368a2e"
+  }
+ },
+ {
+  "name": "unicode_reason",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"m\u00e9\u00df-\ud83d\udccf\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"reason_commit\": \"sha256:6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a\"}",
+  "expect": {
+   "hash": "sha256:5c92303cedbddb1ca68fc73f87e0adfd335c02970b7b5ad9288ac94f86af8c9e"
+  }
+ },
+ {
+  "name": "max_safe_integer_number",
+  "header": "{\"schema_version\": 9007199254740991, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "hash": "sha256:58a6d50ade93776e01d699358feef3c223c57c5c4c565cc320c2f920e1a3d032"
+  }
+ },
+ {
+  "name": "negative_small_integer",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": -3, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "hash": "sha256:ea8e9b72c8b200adcd9506d13b7892267a85e27df5c0b35dfc1a0ba43306cfe1"
+  }
+ },
+ {
+  "name": "seq_as_number",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": 7, \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/seq"
+  }
+ },
+ {
+  "name": "mono_ns_as_raw_u64",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": 18446744073709551615, \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/time/mono_ns"
+  }
+ },
+ {
+  "name": "seed_as_number",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": 5, \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/command/seed"
+  }
+ },
+ {
+  "name": "seq_leading_zero_string",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"007\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/seq"
+  }
+ },
+ {
+  "name": "seq_overflow_string",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"18446744073709551616\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/seq"
+  }
+ },
+ {
+  "name": "seq_negative_string",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"-1\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/seq"
+  }
+ },
+ {
+  "name": "unsafe_integer_elsewhere",
+  "header": "{\"schema_version\": 9007199254740992, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/schema_version"
+  }
+ },
+ {
+  "name": "raw_float_in_array",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"e\", \"digest\": \"d\", \"w\": 0.5}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": []}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/command/outputs/0/w"
+  }
+ },
+ {
+  "name": "raw_float_odd_key",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"a/b~c\": 1.25}",
+  "expect": {
+   "error": "canon.convention",
+   "path": "/a~1b~0c"
+  }
+ },
+ {
+  "name": "header_not_object",
+  "header": "[1, 2]",
+  "expect": {
+   "error": "canon.convention",
+   "path": ""
+  }
+ },
+ {
+  "name": "header_duplicate_key",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"seq\": \"8\"}",
+  "expect": {
+   "error": "canon.invalid"
+  }
+ },
+ {
+  "name": "header_1e400",
+  "header": "{\"schema_version\": 1, \"kind\": \"command\", \"stream\": \"main\", \"seq\": \"7\", \"prev\": \"sha256:1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f\", \"branch\": \"main\", \"logical_parent\": null, \"time\": {\"utc\": \"2026-11-17T10:00:00.000Z\", \"mono_ns\": \"18446744073709551615\", \"sync\": \"ptp\"}, \"principal\": {\"kind\": \"agent\", \"commit\": \"sha256:2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e\"}, \"ai_assistance\": \"executed\", \"command\": {\"id\": \"msr.probe.touch\", \"major\": 2, \"class\": \"W1\", \"determinism\": \"D1\", \"seed\": \"9007199254740993\", \"inputs\": [{\"tag\": \"r1_result\", \"digest\": \"sha256:3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d\"}], \"outputs\": [{\"entity\": \"ent-01\", \"digest\": \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"}], \"algorithms\": [\"probe-comp@3\"]}, \"manifests\": {\"registry\": \"sha256:4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c\", \"kernel\": \"sha256:5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b\"}, \"radius_mm\": \"0x3fe0000000000000\", \"signatures\": [], \"x\": 1e400}",
+  "expect": {
+   "error": "canon.invalid"
+  }
+ }
+]

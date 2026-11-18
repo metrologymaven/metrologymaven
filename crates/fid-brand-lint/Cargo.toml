@@ -1,0 +1,23 @@
+[package]
+name = "fid-brand-lint"
+description = "Outreach claim and vocabulary lint for Markdown and HTML sources (spec node OUTR.BRAND.LINT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-brand-lint"
+path = "src/main.rs"
+
+[dependencies]
+# The shared vocabulary and claim lint engine (ECO.RULES.VOCAB.ENGINE): rule file, matcher,
+# suppressions and report. This crate only turns Markdown and HTML into its text units.
+fid-vocab = { path = "../fid-vocab" }
+# Canonical JSON (RFC 8785) for the --json error object.
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

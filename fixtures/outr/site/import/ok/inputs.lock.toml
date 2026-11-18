@@ -1,0 +1,107 @@
+# Generated-input lock file (spec node OUTR.SITE.GEN.IMPORT); entries sorted by path.
+# Written by `fid-outreach site import fetch`; review every change in its pull request.
+
+[[input]]
+name = "apps.toml"
+kind = "app_list"
+source_rev = "3333333333333333333333333333333333333333"
+date = "2026-11-02"
+path = "inputs/apps/apps.toml"
+sha256 = "sha256:32886e045ab879b1613027bebf9f3b7707574342a10314a75dbe9fe86aaff873"
+
+[[input]]
+name = "tokens.json"
+kind = "tokens"
+source_rev = "4444444444444444444444444444444444444444"
+date = "2026-11-03"
+path = "inputs/tokens/tokens.json"
+sha256 = "sha256:8ab81bee9ba0d5460e69028fb1c318e304c60d51acf3745c11a4a9d7f8ed3bdc"
+
+[[input]]
+name = "parity.json"
+kind = "release_asset"
+release = "v0.1.0"
+date = "2026-10-01"
+path = "inputs/v0.1.0/parity.json"
+sha256 = "sha256:8a38f46fa99adf87a47eb25b6fffc95abc5837dc3eadac326961a2078baae065"
+
+[[input]]
+name = "parity.md"
+kind = "release_asset"
+release = "v0.1.0"
+date = "2026-10-01"
+path = "inputs/v0.1.0/parity.md"
+sha256 = "sha256:449a88fdc9d036835516abe16dd278d3973557eef6b2ec3a32a4b17b79e57393"
+
+[[input]]
+name = "release-manifest.json"
+kind = "release_manifest"
+release = "v0.1.0"
+date = "2026-10-01"
+path = "inputs/v0.1.0/release-manifest.json"
+sha256 = "sha256:98c04e99bba83594166aefe9f0806780411678eac5e66aea924a7f83ad8305d6"
+
+[[input]]
+name = "status.json"
+kind = "release_asset"
+release = "v0.1.0"
+date = "2026-10-01"
+path = "inputs/v0.1.0/status.json"
+sha256 = "sha256:67c9ec38207db61a70d2117e93d9aaa7952a1d817e96c61f7e2319f989914338"
+
+[[input]]
+name = "status.md"
+kind = "release_asset"
+release = "v0.1.0"
+date = "2026-10-01"
+path = "inputs/v0.1.0/status.md"
+sha256 = "sha256:4ed886d377d297eae5e202ae3596ad69527f165136ffffe40f962f421f49f197"
+
+[[input]]
+name = "COVERAGE.md"
+kind = "spec_report"
+release = "v0.1.1"
+source_rev = "2222222222222222222222222222222222222222"
+date = "2026-10-20"
+path = "inputs/v0.1.1/COVERAGE.md"
+sha256 = "sha256:0f50bbe4d37090a49487a6395eef40b6b6f7c5f2b07e8cf2868baa0e7b648f88"
+
+[[input]]
+name = "parity.json"
+kind = "release_asset"
+release = "v0.1.1"
+date = "2026-10-20"
+path = "inputs/v0.1.1/parity.json"
+sha256 = "sha256:80529279cb2cde16cd568d7cbe05d39fbe9baa77ea0454d6ad5f0f843e62a78c"
+
+[[input]]
+name = "parity.md"
+kind = "release_asset"
+release = "v0.1.1"
+date = "2026-10-20"
+path = "inputs/v0.1.1/parity.md"
+sha256 = "sha256:658d3461d4ceda707b96df3f434328c222fcb85494f70adc8ca3b073c54c6b62"
+
+[[input]]
+name = "release-manifest.json"
+kind = "release_manifest"
+release = "v0.1.1"
+date = "2026-10-20"
+path = "inputs/v0.1.1/release-manifest.json"
+sha256 = "sha256:eac534ef0bb97120871039a6737ec488a188801759ce25983ce5674169ca278f"
+
+[[input]]
+name = "status.json"
+kind = "release_asset"
+release = "v0.1.1"
+date = "2026-10-20"
+path = "inputs/v0.1.1/status.json"
+sha256 = "sha256:fb7a125fbf1122beba2391075a274550dcd07a8ced0a80722142eeb81f369d7e"
+
+[[input]]
+name = "status.md"
+kind = "release_asset"
+release = "v0.1.1"
+date = "2026-10-20"
+path = "inputs/v0.1.1/status.md"
+sha256 = "sha256:9025cc3c1321d753d50599733b860db271300c3eb46af683c0604ea5d9bccbc6"

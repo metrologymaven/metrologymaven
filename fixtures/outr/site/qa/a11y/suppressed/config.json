@@ -1,0 +1,14 @@
+{
+  "suppressions": [
+    {
+      "page": "layout.html",
+      "reason": "Legacy layout grid kept until the page is rebuilt.",
+      "rule": "A04"
+    },
+    {
+      "page": "gone.html",
+      "reason": "Page was removed; entry is stale.",
+      "rule": "A01"
+    }
+  ]
+}

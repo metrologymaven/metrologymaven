@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "characteristic": "R1",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": 1.25,
+        "unit": "1"
+      }
+    }
+  ],
+  "forbidden": []
+}

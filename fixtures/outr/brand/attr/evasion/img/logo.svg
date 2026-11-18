@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/css" href="https://fonts.example.net/n.css"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8">
+<style><![CDATA[
+@import url(https://fonts.example.net/m.css);
+]]></style>
+<rect width="8" height="8" fill="#336699"/></svg>

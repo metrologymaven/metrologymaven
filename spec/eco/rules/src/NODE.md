@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [house-rules/]
+built_pr: 85
 satisfies: [REQ-ECO.RULES-001, REQ-ECO.RULES-006]
 covers: []
 depends_on: []

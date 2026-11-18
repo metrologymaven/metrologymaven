@@ -1,0 +1,22 @@
+[package]
+name = "fid-io-dmis"
+description = "Metrology Maven DMIS 5.3 support: generated conformance table (spec node IO.DMIS.CONF)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "dmis-conformance"
+path = "src/bin/dmis-conformance.rs"
+
+[dependencies]
+# RFC 8785 canonical JSON writer for dmis-conformance.json (the project's canonical-JSON crate).
+fid-canon = { path = "../fid-canon" }
+# Reads the support-declaration file as an untyped table, like fid-accept, fid-vocab and fid-xtask.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

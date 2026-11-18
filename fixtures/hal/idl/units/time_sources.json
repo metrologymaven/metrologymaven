@@ -1,0 +1,132 @@
+[
+ {
+  "shuffled": [
+   "HOST_RECEIVE",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HW_TRIGGER",
+   "PTP"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "NTP",
+   "HW_TRIGGER",
+   "HOST_RECEIVE",
+   "DEVICE_CLOCK",
+   "PTP"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "PTP",
+   "HOST_RECEIVE",
+   "HW_TRIGGER",
+   "NTP",
+   "DEVICE_CLOCK"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "HW_TRIGGER",
+   "NTP",
+   "PTP",
+   "HOST_RECEIVE",
+   "DEVICE_CLOCK"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "DEVICE_CLOCK",
+   "HOST_RECEIVE",
+   "PTP",
+   "NTP",
+   "HW_TRIGGER"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "HOST_RECEIVE",
+   "HW_TRIGGER",
+   "NTP",
+   "DEVICE_CLOCK",
+   "PTP"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "HOST_RECEIVE",
+   "NTP",
+   "DEVICE_CLOCK",
+   "PTP",
+   "HW_TRIGGER"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "DEVICE_CLOCK",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ },
+ {
+  "shuffled": [
+   "NTP",
+   "PTP",
+   "NTP",
+   "HOST_RECEIVE",
+   "HW_TRIGGER",
+   "PTP"
+  ],
+  "sorted": [
+   "HW_TRIGGER",
+   "PTP",
+   "PTP",
+   "NTP",
+   "NTP",
+   "HOST_RECEIVE"
+  ]
+ }
+]

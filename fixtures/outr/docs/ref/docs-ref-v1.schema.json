@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/provisional/docs-ref-v1.json",
+  "title": "PROVISIONAL docs-ref-v1 reference record (OUTR.DOCS.REF stand-in)",
+  "description": "Provisional schema written by OUTR.DOCS.REF for its stand-in fixtures, from the RefRecord shape in spec node AUTO.SURF.DOCS (Design: Data structures). It is not the published schema: AUTO.SURF.DOCS owns docs-ref-v1 and generates schema/docs-ref-v1.json from its Rust types. Until then, help (DocText) is assumed to be a string, ty (TypeRef) is assumed to be its string form and result (TypeRef) a string or an object. Unknown properties are allowed.",
+  "type": "object",
+  "required": ["schema", "manifest_digest", "command_digest", "command_id", "major", "summary", "help", "params", "result", "side_effect", "determinism", "human_only", "surfaces"],
+  "properties": {
+    "schema": { "const": "docs-ref-v1" },
+    "manifest_digest": { "$ref": "#/$defs/digest" },
+    "command_digest": { "$ref": "#/$defs/digest" },
+    "command_id": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$" },
+    "major": { "type": "integer", "minimum": 0, "maximum": 99999 },
+    "summary": { "type": "string" },
+    "help": { "type": "string", "minLength": 1 },
+    "params": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "ty"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "ty": { "type": "string" },
+          "quantity_kind": { "type": ["string", "null"] },
+          "unit": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "result": { "type": ["string", "object"] },
+    "side_effect": { "enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"] },
+    "determinism": { "enum": ["D0", "D1", "D2", "D3", "N"] },
+    "human_only": { "type": "boolean" },
+    "long_running": { "type": "boolean" },
+    "dry_run": { "type": "boolean" },
+    "surfaces": {
+      "type": "object",
+      "required": ["cli", "mcp", "python"],
+      "properties": {
+        "cli": { "$ref": "#/$defs/surface" },
+        "mcp": { "$ref": "#/$defs/surface" },
+        "python": { "$ref": "#/$defs/surface" }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "surface": {
+      "type": "object",
+      "required": ["available"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "name": { "type": "string", "minLength": 1 },
+        "projection": { "enum": ["exposed", "named", "request_only", "none"] },
+        "reason": { "enum": ["class_never_on_mcp", "request_only", "human_only"] }
+      }
+    }
+  }
+}

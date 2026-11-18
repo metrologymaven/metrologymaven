@@ -1,0 +1,7 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.INJECT fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares command classes and promotion commands. Every command ID is a placeholder. See ref_predicates.py.",
+  "task": "inject-file-metadata",
+  "agent": "null",
+  "entries": [],
+  "file_changes": []
+}

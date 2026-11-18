@@ -1,0 +1,10 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# REQ-001: every missing field is named. Pairs with sources.toml. Expected, in order:
+# field_missing title, field_missing selector (http_json needs one), field_missing unit,
+# field_missing aggregation, field_missing biases.
+
+[[metric]]
+id = "repo_stars"
+source = "repo-api"
+method = "http_json"

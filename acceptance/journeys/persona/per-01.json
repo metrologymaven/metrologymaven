@@ -1,0 +1,113 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-01",
+  "subject": "JOB.PER.01",
+  "kind": "persona",
+  "revision": 1,
+  "app": "report",
+  "phase": "P1a",
+  "personas": ["JOB.PER.01", "JOB.PER.05"],
+  "exercised_by": ["JOB.ACC.02", "JOB.ACC.03"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "screen": "SCR.SHELL.START",
+      "owner": "UX.SCREENS.COMMON",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "project.create_project@1",
+      "owner": "CORE.PRJ.CONT.LIFE",
+      "decision": "Start a new project for the part, or reuse the project of an earlier serial",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "report.add_drawing_balloon@1",
+      "owner": "RPT.BALLOON.SHEET.IMPORT",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "import.results_dmis@1",
+      "owner": "IO.RES.TRANS.DMIS",
+      "decision": "Which CMM output file holds the serial to report",
+      "handoff": 5,
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "import.results_csv@1",
+      "owner": "IO.RES.CSV.IN",
+      "decision": "How the CSV columns of the CMM or arm export map to characteristics",
+      "handoff": 6,
+      "human_only": false
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "report.enter_reading@1",
+      "owner": "RPT.BALLOON.ENTRY.RECORD",
+      "handoff": 7,
+      "human_only": true
+    },
+    {
+      "n": 7,
+      "actor": "human",
+      "command": "report.create_fai@1",
+      "owner": "RPT.FORMS.HDR",
+      "handoff": 8,
+      "human_only": false
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "report.generate_fai@1",
+      "owner": "RPT.FORMS.ROWS",
+      "handoff": 9,
+      "human_only": false
+    },
+    {
+      "n": 9,
+      "actor": "human",
+      "command": "report.check_fai@1",
+      "owner": "RPT.FORMS.FINAL.CHECK",
+      "decision": "Fix each finding where the drawing requirement and the transcribed value disagree, or record why it stands",
+      "handoff": 10,
+      "human_only": false
+    },
+    {
+      "n": 10,
+      "actor": "human",
+      "command": "report.adopt_fai@1",
+      "owner": "RPT.FORMS.FINAL.CHECK",
+      "handoff": "JOB.PER.05 reviews and releases the adopted form",
+      "human_only": true
+    },
+    {
+      "n": 11,
+      "actor": "human",
+      "command": "report.export_pdf@1",
+      "owner": "RPT.OUTPUT.PDF.WRITE",
+      "handoff": 12,
+      "human_only": false
+    },
+    {
+      "n": 12,
+      "actor": "human",
+      "command": "report.export_spreadsheet@1",
+      "owner": "RPT.OUTPUT.SHEET.XLSX",
+      "handoff": "Report goes to the customer; the next serial starts again at step 4",
+      "human_only": false
+    }
+  ]
+}

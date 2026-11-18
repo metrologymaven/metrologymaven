@@ -1,0 +1,128 @@
+[
+ {
+  "expect": "ok",
+  "name": "x_axis",
+  "vector": [
+   "0x3ff0000000000000",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "ok",
+  "name": "neg_z",
+  "vector": [
+   "0x0000000000000000",
+   "0x0000000000000000",
+   "0xbff0000000000000"
+  ]
+ },
+ {
+  "expect": "ok",
+  "name": "three_four_five",
+  "vector": [
+   "0x3fe3333333333333",
+   "0x3fe999999999999a",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "ok",
+  "name": "diagonal",
+  "vector": [
+   "0x3fe279a74590331d",
+   "0x3fe279a74590331d",
+   "0x3fe279a74590331d"
+  ]
+ },
+ {
+  "expect": "ok",
+  "name": "ac6_leaf_example",
+  "vector": [
+   "0x3ff0000000000000",
+   "0x0000000000000000",
+   "0x3eb0c6f7a0b5ed8d"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "tilted_1e-4",
+  "vector": [
+   "0x3ff0000000000000",
+   "0x0000000000000000",
+   "0x3f1a36e2eb1c432d"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "long_by_2e-9",
+  "vector": [
+   "0x3ff000000089705f",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "ok",
+  "name": "long_by_5e-10",
+  "vector": [
+   "0x3ff0000000225c18",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "short_by_2e-9",
+  "vector": [
+   "0x0000000000000000",
+   "0x3feffffffeed1f41",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "zero",
+  "vector": [
+   "0x0000000000000000",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "two_x",
+  "vector": [
+   "0x4000000000000000",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "huge",
+  "vector": [
+   "0x6974e718d7d7625a",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "nan",
+  "vector": [
+   "0x7ff8000000000000",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ },
+ {
+  "expect": "direction_not_unit",
+  "name": "inf",
+  "vector": [
+   "0x7ff0000000000000",
+   "0x0000000000000000",
+   "0x0000000000000000"
+  ]
+ }
+]

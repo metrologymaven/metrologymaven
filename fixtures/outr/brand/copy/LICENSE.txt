@@ -1,0 +1,8 @@
+Synthetic test fixtures for spec node OUTR.BRAND.COPY (CC-BY-4.0).
+Every file is project-authored: handles, releases, checklist questions and notes are made up
+for the tests, and no file contains text from any third party's material (D-013 option C,
+REQ-OUTR.BRAND.COPY-005). The reference-set fixtures (refset/, kind-key/) are declarations
+only and hold no passages. make_fixtures.py writes the files; its EXPECTED table and
+crates/fid-outreach/tests/copy_guard.rs hold the hand-labelled results.
+Note: refset/ and kind-key/ deliberately trip reference_set_present, so a guard run with
+--root at the repository root reports them; point --root at the outreach content instead.

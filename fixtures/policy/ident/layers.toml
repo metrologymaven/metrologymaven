@@ -1,0 +1,7 @@
+# Fixture layer map (ECO.REPO.LAYERS shape).
+order = ["model", "services", "app", "tool"]
+
+[crates]
+"fid-registry-macros" = "model"
+"fid-x" = "services"
+"fid-app-a" = "app"

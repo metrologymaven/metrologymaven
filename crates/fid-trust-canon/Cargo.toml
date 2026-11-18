@@ -1,0 +1,22 @@
+[package]
+name = "fid-trust-canon"
+description = "Verifier-side, independent RFC 8785 canonicaliser and journal entry hash (spec node TRUST.CHAIN.CANON)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# REQ-TRUST.CHAIN.CANON-004: no CORE crate (fid-canon, fid-journal, ...) in [dependencies].
+# tests/independence.rs fails the build if one appears there.
+[dependencies]
+fid-types = { path = "../fid-types" }
+sha2 = "0.10"
+
+[dev-dependencies]
+# Cross-check only (REQ-TRUST.CHAIN.CANON-005): CORE's canonicaliser is compared, never linked.
+fid-canon = { path = "../fid-canon" }
+fid-journal = { path = "../fid-journal" }
+
+[lints]
+workspace = true

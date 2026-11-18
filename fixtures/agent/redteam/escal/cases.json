@@ -1,0 +1,88 @@
+[
+  {
+    "file": "esc-valid-escalation.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "esc-valid-self-adoption.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "esc-no-subfamily.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "subfamily"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-bad-subfamily.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "subfamily"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-subfamily-not-string.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "subfamily"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-subfamily-other-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "subfamily"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-subfamily-no-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "subfamily"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-escalation-no-entry-class.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-self-adoption-no-promotion.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "esc-self-adoption-no-entry-class.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "predicates"
+    ],
+    "schema": "invalid"
+  }
+]
