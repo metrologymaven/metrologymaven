@@ -35,6 +35,7 @@
       }
     },
     "warnings": {
+      "description": "Non-fatal warnings, in waiver-file order (not sorted).",
       "type": "array",
       "items": {
         "type": "object",

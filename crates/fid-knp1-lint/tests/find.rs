@@ -63,7 +63,7 @@ fn inputs_with(waivers: &[u8]) -> InputDigests {
 }
 fn roots(dir: &str) -> CrateRoots {
     let mut r = CrateRoots::new();
-    r.insert("fid-clarabel", fix(dir).join("fid-clarabel"));
+    r.insert("fid-clarabel", "0.1.0", fix(dir).join("fid-clarabel"));
     r
 }
 
@@ -127,6 +127,9 @@ fn invalid_findings_are_rejected() {
         ("column 0", Box::new(|f| f.column = 0)),
         ("bad digest", Box::new(|f| f.excerpt_digest = "sha256:XYZ".into())),
         ("empty crate", Box::new(|f| f.crate_name = String::new())),
+        ("rule suffix with space", Box::new(|f| f.rule = Rule::Flag("bad x".into()))),
+        ("empty rule suffix", Box::new(|f| f.rule = Rule::Data(String::new()))),
+        ("lowercase rule suffix", Box::new(|f| f.rule = Rule::Allow("licence".into()))),
     ];
     for (name, mutate) in cases {
         let mut f = good.clone();
@@ -137,6 +140,35 @@ fn invalid_findings_are_rejected() {
     let mut bad_inputs = inputs_with(b"");
     bad_inputs.lockfile = "md5:00".into();
     assert_eq!(Report::new("0.0.1", bad_inputs, Applied::default()).unwrap_err().code, ErrorCode::InvalidFinding);
+    // tool_version is limited to 64 bytes, as in the schema.
+    assert!(Report::new(&"9".repeat(64), inputs_with(b""), Applied::default()).is_ok());
+    let long = Report::new(&"9".repeat(65), inputs_with(b""), Applied::default()).unwrap_err();
+    assert_eq!(long.code, ErrorCode::InvalidFinding);
+}
+
+/// A waiver carries no version, so a crate present in two versions is ambiguous and fails closed.
+#[test]
+fn waiver_for_crate_in_two_versions_fails_schema() {
+    let waivers = load_waivers(&read("waivers/valid.toml")).unwrap();
+    // Two versions in the source tree, both with the waived text: still ambiguous.
+    let mut two = roots("src");
+    two.insert("fid-clarabel", "0.2.0", fix("src").join("fid-clarabel"));
+    let errs = apply_waivers(findings("waive-v1/findings.json"), &waivers, &two).unwrap_err();
+    assert_eq!(errs.len(), 1);
+    assert_eq!(errs[0].code, ErrorCode::WaiverSchema);
+    assert!(errs[0].message.contains("0.1.0, 0.2.0"), "{}", errs[0]);
+    // One version on disk, but a finding from another version of the same crate: ambiguous too.
+    let mut other = findings("waive-v1/findings.json").remove(0);
+    other.crate_version = "0.0.9".into();
+    let mut fs = findings("waive-v1/findings.json");
+    fs.push(other);
+    let errs = apply_waivers(fs, &waivers, &roots("src")).unwrap_err();
+    assert_eq!(errs[0].code, ErrorCode::WaiverSchema);
+    // A different crate name in two versions does not affect the waiver.
+    let mut unrelated = roots("src");
+    unrelated.insert("fid-other", "1.0.0", fix("src"));
+    unrelated.insert("fid-other", "2.0.0", fix("src"));
+    assert_eq!(apply_waivers(findings("waive-v1/findings.json"), &waivers, &unrelated).unwrap().waived.len(), 1);
 }
 
 // ------------------------------------------------------------------ AC-2
@@ -205,8 +237,8 @@ fn line_digest_is_lf_normalised() {
     assert_eq!(lines_digest(lf.strip_suffix(b"\n").unwrap(), 10, 12), lines_digest(&lf, 10, 12));
     assert_eq!(lines_digest(&lf, 0, 1), None);
     assert_eq!(lines_digest(&lf, 3, 2), None);
-    let mut mem: BTreeMap<(String, String), Vec<u8>> = BTreeMap::new();
-    mem.insert(("fid-clarabel".into(), "src/solver.rs".into()), crlf);
+    let mut mem: BTreeMap<(String, String, String), Vec<u8>> = BTreeMap::new();
+    mem.insert(("fid-clarabel".into(), "0.1.0".into(), "src/solver.rs".into()), crlf);
     let applied = apply_waivers(findings("waive-v1/findings.json"), &waivers, &mem).unwrap();
     assert_eq!(applied.waived.len(), 1);
 }
@@ -260,6 +292,22 @@ fn malformed_waivers_fail_schema() {
     let bare = parse_waivers(&valid.replace("date = \"2026-11-17\"", "date = 2026-11-17")).unwrap();
     assert_eq!(bare[0].date, "2026-11-17");
     assert!(parse_waivers("").unwrap().is_empty());
+}
+
+/// Calendar dates, hand-labelled in `waivers/dates/expected.json` by make_fixtures.py.
+#[test]
+fn waiver_dates_must_exist_on_the_calendar() {
+    let labels = parse(&read("waivers/dates/expected.json")).unwrap();
+    let labels = obj(&labels);
+    assert_eq!(labels.len(), 7);
+    for (name, ok) in labels {
+        let got = load_waivers(&read(&format!("waivers/dates/{name}.toml")));
+        match ok {
+            CValue::Bool(true) => assert!(got.is_ok(), "{name}: {got:?}"),
+            CValue::Bool(false) => assert_eq!(got.unwrap_err().code, ErrorCode::WaiverSchema, "{name}"),
+            other => panic!("{name}: label {other:?}"),
+        }
+    }
 }
 
 // ------------------------------------------------------------------ AC-5

@@ -205,4 +205,30 @@ NEG = {
 for name, fn in NEG.items():
     write(f"schema-invalid/{name}.json", mutated(fn))
 
+# Malformed waiver objects inside `waived` and `warnings` (base: the AC-5 report, which has both).
+BASE_UNUSED = report(inputs_unused, [], waived=[(POW_FINDING, POW_WAIVER)], warnings=[warning])
+NEG_WAIVER = {
+    "waived-waiver-no-reviewer": lambda r: r["waived"][0]["waiver"].pop("reviewer"),
+    "waived-waiver-blank-justification": lambda r: r["waived"][0]["waiver"].__setitem__("justification", "  "),
+    "warning-waiver-line-zero": lambda r: r["warnings"][0]["waiver"].__setitem__("lines", [0, 18]),
+    "warning-waiver-three-lines": lambda r: r["warnings"][0]["waiver"].__setitem__("lines", [17, 18, 19]),
+    "warning-unknown-code": lambda r: r["warnings"][0].__setitem__("code", "KNP1-WAIVER-STALE"),
+}
+for name, fn in NEG_WAIVER.items():
+    r = json.loads(jcs(BASE_UNUSED))
+    fn(r)
+    write(f"schema-invalid/{name}.json", jcs(r))
+
+# Waiver dates: impossible calendar dates fail KNP1-WAIVER-SCHEMA; a real leap day loads.
+# Hand-labelled from the Gregorian calendar (2026 is not a leap year, 2028 is, 2100 is not, 2000 is).
+DATES = {"bad-date-feb31": ("2026-02-31", False), "bad-date-feb29-2026": ("2026-02-29", False),
+         "bad-date-apr31": ("2026-04-31", False), "bad-date-feb29-2100": ("2100-02-29", False),
+         "bad-date-month13": ("2026-13-01", False), "date-leap-2028": ("2028-02-29", True),
+         "date-leap-2000": ("2000-02-29", True)}
+labels = {}
+for name, (date, ok) in DATES.items():
+    write(f"waivers/dates/{name}.toml", (HEADER + toml_waiver(dict(POW_WAIVER, date=date))).encode())
+    labels[name] = ok
+write("waivers/dates/expected.json", jcs(labels))
+
 print("wrote fixtures under", HERE)

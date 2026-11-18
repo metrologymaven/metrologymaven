@@ -12,7 +12,7 @@
 //! `sha256:` + 64 lowercase hex digits.
 
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
@@ -29,6 +29,7 @@ pub const MAX_WAIVERS: usize = 10_000;
 pub const MAX_SOURCE_BYTES: u64 = 64 * 1024 * 1024;
 
 const MAX_NAME: usize = 128;
+const MAX_TOOL_VERSION: usize = 64;
 const MAX_PATH: usize = 4096;
 const MAX_TEXT: usize = 4096;
 const MAX_RULE_SUFFIX: usize = 48;
@@ -238,6 +239,9 @@ impl Finding {
     /// Checks the fields against the report schema.
     pub fn validate(&self) -> Result<(), FindError> {
         let bad = |what: &str| Err(FindError::new(ErrorCode::InvalidFinding, format!("{what} in {}", self.label())));
+        if Rule::parse(&self.rule.id()).as_ref() != Some(&self.rule) {
+            return bad("rule id does not round-trip");
+        }
         if !valid_name(&self.crate_name) {
             return bad("bad crate name");
         }
@@ -519,30 +523,47 @@ fn valid_date(s: &str) -> bool {
         Some(part.iter().fold(0u32, |acc, d| acc * 10 + u32::from(d - b'0')))
     };
     match (digits(0..4), digits(5..7), digits(8..10)) {
-        (Some(_), Some(m), Some(d)) => (1..=12).contains(&m) && (1..=31).contains(&d),
+        (Some(y), Some(m), Some(d)) => {
+            let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+            let days = match m {
+                1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+                4 | 6 | 9 | 11 => 30,
+                2 if leap => 29,
+                2 => 28,
+                _ => return false,
+            };
+            (1..=days).contains(&d)
+        }
         _ => false,
     }
 }
 
 // ------------------------------------------------------------------ source access and line digests
 
-/// Read access to the current source of the crates the lint scanned.
+/// Read access to the current source of the crates the lint scanned, keyed by crate name and version.
 pub trait SourceTree {
-    /// Raw bytes of `file` (relative to the root of `crate_name`), or `None` if unavailable.
-    fn read(&self, crate_name: &str, file: &str) -> Option<Vec<u8>>;
+    /// Every version of `crate_name` present in the scanned closure.
+    fn versions(&self, crate_name: &str) -> Vec<String>;
+    /// Raw bytes of `file` (relative to the root of `crate_name` `version`), or `None` if unavailable.
+    fn read(&self, crate_name: &str, version: &str, file: &str) -> Option<Vec<u8>>;
 }
 
-/// In-memory sources keyed by `(crate, file)`.
-impl SourceTree for BTreeMap<(String, String), Vec<u8>> {
-    fn read(&self, crate_name: &str, file: &str) -> Option<Vec<u8>> {
-        self.get(&(crate_name.to_string(), file.to_string())).cloned()
+/// In-memory sources keyed by `(crate, version, file)`.
+impl SourceTree for BTreeMap<(String, String, String), Vec<u8>> {
+    fn versions(&self, crate_name: &str) -> Vec<String> {
+        let set: BTreeSet<String> = self.keys().filter(|k| k.0 == crate_name).map(|k| k.1.clone()).collect();
+        set.into_iter().collect()
+    }
+
+    fn read(&self, crate_name: &str, version: &str, file: &str) -> Option<Vec<u8>> {
+        self.get(&(crate_name.to_string(), version.to_string(), file.to_string())).cloned()
     }
 }
 
-/// Sources on disk: one root directory per crate name. Reads are bounded by [`MAX_SOURCE_BYTES`].
+/// Sources on disk: one root directory per crate name and version. Reads are bounded by [`MAX_SOURCE_BYTES`].
 #[derive(Debug, Clone, Default)]
 pub struct CrateRoots {
-    roots: BTreeMap<String, PathBuf>,
+    roots: BTreeMap<(String, String), PathBuf>,
 }
 
 impl CrateRoots {
@@ -550,18 +571,22 @@ impl CrateRoots {
         CrateRoots::default()
     }
 
-    /// Registers the root directory of `crate_name`.
-    pub fn insert(&mut self, crate_name: impl Into<String>, root: impl Into<PathBuf>) {
-        self.roots.insert(crate_name.into(), root.into());
+    /// Registers the root directory of `crate_name` at `version`.
+    pub fn insert(&mut self, crate_name: impl Into<String>, version: impl Into<String>, root: impl Into<PathBuf>) {
+        self.roots.insert((crate_name.into(), version.into()), root.into());
     }
 }
 
 impl SourceTree for CrateRoots {
-    fn read(&self, crate_name: &str, file: &str) -> Option<Vec<u8>> {
+    fn versions(&self, crate_name: &str) -> Vec<String> {
+        self.roots.keys().filter(|k| k.0 == crate_name).map(|k| k.1.clone()).collect()
+    }
+
+    fn read(&self, crate_name: &str, version: &str, file: &str) -> Option<Vec<u8>> {
         if !valid_relpath(file) {
             return None;
         }
-        let path = self.roots.get(crate_name)?.join(file);
+        let path = self.roots.get(&(crate_name.to_string(), version.to_string()))?.join(file);
         let f = std::fs::File::open(path).ok()?;
         let mut buf = Vec::new();
         f.take(MAX_SOURCE_BYTES + 1).read_to_end(&mut buf).ok()?;
@@ -634,7 +659,8 @@ impl Applied {
 /// Checks every waiver against the current source, then waives matching findings.
 ///
 /// Fails with every stale waiver (`KNP1-WAIVER-STALE`, REQ-005) whether or not a finding still
-/// occurs there. Otherwise a finding is waived by the first waiver (file order) with the same
+/// occurs there, and with `KNP1-WAIVER-SCHEMA` for a waiver whose crate occurs in more than one
+/// version (in the source tree or among the findings), since waivers carry no version. Otherwise a finding is waived by the first waiver (file order) with the same
 /// crate, file and rule whose range contains its line (REQ-004), and every waiver that waived
 /// nothing yields a `KNP1-WAIVER-UNUSED` warning (REQ-006).
 pub fn apply_waivers(
@@ -644,7 +670,27 @@ pub fn apply_waivers(
 ) -> Result<Applied, Vec<FindError>> {
     let mut stale = Vec::new();
     for (i, w) in waivers.iter().enumerate() {
-        let current = sources.read(&w.crate_name, &w.file).and_then(|src| lines_digest(&src, w.lines.0, w.lines.1));
+        // Waivers carry no crate version, so a crate present in more than one version is ambiguous:
+        // fail closed rather than waive one version's finding on the other version's digest.
+        let mut versions: BTreeSet<String> = sources.versions(&w.crate_name).into_iter().collect();
+        versions.extend(findings.iter().filter(|f| f.crate_name == w.crate_name).map(|f| f.crate_version.clone()));
+        if versions.len() > 1 {
+            let list: Vec<String> = versions.into_iter().collect();
+            stale.push(FindError::new(
+                ErrorCode::WaiverSchema,
+                format!(
+                    "{}: crate occurs in versions {}; waivers carry no version, so the waiver is ambiguous",
+                    w.label(i),
+                    list.join(", ")
+                ),
+            ));
+            continue;
+        }
+        let current = versions
+            .iter()
+            .next()
+            .and_then(|v| sources.read(&w.crate_name, v, &w.file))
+            .and_then(|src| lines_digest(&src, w.lines.0, w.lines.1));
         if current.as_deref() != Some(w.lines_sha256.as_str()) {
             let now = current.unwrap_or_else(|| "unavailable (file missing or range past end of file)".to_string());
             stale.push(FindError::new(
@@ -721,7 +767,7 @@ pub struct Report {
 impl Report {
     /// Validates and sorts. Fails with `invalid_finding` if a finding or digest breaks the schema.
     pub fn new(tool_version: &str, inputs: InputDigests, applied: Applied) -> Result<Report, FindError> {
-        if !valid_name(tool_version) {
+        if !valid_name(tool_version) || tool_version.len() > MAX_TOOL_VERSION {
             return Err(FindError::new(ErrorCode::InvalidFinding, "bad tool version"));
         }
         for (name, d) in [
