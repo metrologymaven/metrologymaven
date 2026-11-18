@@ -71,20 +71,43 @@ pub struct TaskGuide {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GuideError {
     /// A step names an (ID, major) that the build does not declare, or declares as `removed`.
-    UnknownCommand { guide: String, step: usize, command: String },
+    UnknownCommand {
+        guide: String,
+        step: usize,
+        command: String,
+    },
     /// A step names an M1, S1 or A0 command.
-    ForbiddenStep { guide: String, step: usize, command: String, class: SideEffect },
+    ForbiddenStep {
+        guide: String,
+        step: usize,
+        command: String,
+        class: SideEffect,
+    },
     /// More than [`MAX_STEPS`] steps or a text over its limit; `field` names which.
-    TooLarge { guide: String, field: String, limit: usize, actual: usize },
+    TooLarge {
+        guide: String,
+        field: String,
+        limit: usize,
+        actual: usize,
+    },
     /// The guide ID or profile name does not match its pattern.
-    BadId { field: &'static str, value: String },
+    BadId {
+        field: &'static str,
+        value: String,
+    },
     /// An empty title, summary or purpose, or no steps.
-    Empty { guide: String, field: String },
+    Empty {
+        guide: String,
+        field: String,
+    },
     /// Two guides of one build share an ID.
     Duplicate(String),
     UnknownField(String),
     MissingField(String),
-    BadType { field: String, expected: &'static str },
+    BadType {
+        field: String,
+        expected: &'static str,
+    },
     /// The JSON could not be parsed (`fid-canon` error code).
     Json(&'static str),
 }
@@ -211,7 +234,13 @@ fn check_text(guide: &str, field: &str, text: &str, limit: usize) -> Result<(), 
 
 impl TaskGuide {
     /// Builds and checks a guide from `(command, purpose)` pairs; used by [`crate::fid_guides!`].
-    pub fn new(id: &str, title: &str, summary: &str, profile: &str, steps: &[(&str, &str)]) -> Result<TaskGuide, GuideError> {
+    pub fn new(
+        id: &str,
+        title: &str,
+        summary: &str,
+        profile: &str,
+        steps: &[(&str, &str)],
+    ) -> Result<TaskGuide, GuideError> {
         let steps = steps
             .iter()
             .enumerate()
@@ -345,9 +374,12 @@ pub fn check_guides(guides: &[TaskGuide], defs: &[CommandDef]) -> Vec<GuideError
             let command = step.command.as_str().to_string();
             match index.get(&(step.command.name(), step.command.major())) {
                 None => errors.push(GuideError::UnknownCommand { guide: g.id.clone(), step: i, command }),
-                Some(d) if FORBIDDEN_STEP_CLASSES.contains(&d.side_effect) => {
-                    errors.push(GuideError::ForbiddenStep { guide: g.id.clone(), step: i, command, class: d.side_effect })
-                }
+                Some(d) if FORBIDDEN_STEP_CLASSES.contains(&d.side_effect) => errors.push(GuideError::ForbiddenStep {
+                    guide: g.id.clone(),
+                    step: i,
+                    command,
+                    class: d.side_effect,
+                }),
                 Some(_) => {}
             }
         }
@@ -413,7 +445,10 @@ pub fn task_guide_schema() -> CValue {
                 ("title", text(MAX_TITLE)),
                 ("summary", text(MAX_SUMMARY)),
                 ("profile", obj([("type", s("string")), ("pattern", s(PROFILE_PATTERN))])),
-                ("steps", obj([("type", s("array")), ("minItems", num(1)), ("maxItems", num(MAX_STEPS)), ("items", step)])),
+                (
+                    "steps",
+                    obj([("type", s("array")), ("minItems", num(1)), ("maxItems", num(MAX_STEPS)), ("items", step)]),
+                ),
             ]),
         ),
     ])
