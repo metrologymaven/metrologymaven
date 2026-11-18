@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal]
+built_pr: 54
 satisfies: [REQ-CORE.JRN-002, REQ-CORE.JRN-005, REQ-CORE.JRN-014]
 covers: []
 depends_on: [CORE.JRN.CANON]
@@ -59,7 +61,7 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 ## Design
 
 - **Registry command(s):** none; library types.
-- **Data structures:** `EntryHeader { schema_version, kind, stream, seq: U64, prev, branch, logical_parent, time: { utc, mono_ns: U64, sync }, principal: { kind, commit, on_behalf_of_commit? }, ai_assistance, command?: { id, major, class, determinism, seed, inputs: [TaggedDigest], outputs: [{ entity?: EntityId, digest }], algorithms: [AlgorithmId] }, manifests: { registry, kernel }, reason_commit?, human_assertion?, signatures: [] , hash }`; `EntryPayload { salts, args, events, reason, identity }`; `EntryDraft` (what the bus supplies, without seq, prev and hash); `Commitment::new(value, rng) -> (commit, salt)`.
+- **Data structures:** `EntryHeader { schema_version, kind, stream, seq: U64, prev, branch, logical_parent, time: { utc, mono_ns: U64, sync }, principal: { kind, commit, on_behalf_of_commit? }, ai_assistance, command?: { id, major, class, determinism, seed, inputs: [TaggedDigest], outputs: [{ entity?: EntityId, digest }], algorithms: [AlgorithmId] }, manifests: { registry, kernel }, reason_commit?, human_assertion?, hash }` (signatures are detached and not part of the hashed header; they belong to `TRUST`); `EntryPayload { salts, args, events, reason, identity }`; `EntryDraft` (what the bus supplies, without seq, prev and hash); `Commitment::new(value, rng) -> (commit, salt)`.
 - **Algorithm:** build the header from the draft, compute commitments with a CSPRNG salt, validate against the schema, hash with `fid-canon`. Replay passes recorded salts instead of drawing new ones.
 - **Errors:** `schema`, `non_finite_number` (from canon).
 - **Determinism:** D0 given salts; salt generation is class N and the salts are recorded in the payload.
