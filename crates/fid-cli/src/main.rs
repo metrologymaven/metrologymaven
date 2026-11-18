@@ -81,7 +81,8 @@ fn canon_error(json: bool, code: ErrorCode, msg: &str) -> ExitCode {
 }
 
 fn read_error(json: bool, what: &str, e: &std::io::Error) -> ExitCode {
-    let code = if e.kind() == std::io::ErrorKind::NotFound { ErrorCode::NotFound } else { ErrorCode::PreconditionFailed };
+    let code =
+        if e.kind() == std::io::ErrorKind::NotFound { ErrorCode::NotFound } else { ErrorCode::PreconditionFailed };
     canon_error(json, code, &format!("reading {what}: {e}"))
 }
 
