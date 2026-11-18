@@ -1,0 +1,26 @@
+# cargo-fuzz harness (AUTO.PROG.FMT AC-6). Not a workspace member; needs nightly:
+#   cd crates/fid-program/fuzz
+#   cargo +nightly fuzz run program_parse ../../../fixtures/program/valid ../../../fixtures/program/invalid \
+#     -- -max_total_time=600 -rss_limit_mb=256 -malloc_limit_mb=256
+[package]
+name = "fid-program-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-program = { path = ".." }
+
+[[bin]]
+name = "program_parse"
+path = "fuzz_targets/program_parse.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this harness out of the repository workspace.
+[workspace]

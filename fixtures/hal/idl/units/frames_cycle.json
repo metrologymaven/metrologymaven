@@ -1,0 +1,28 @@
+{
+ "graph": {
+  "edges": [
+   {
+    "child": "a72d9497-85da-5595-a602-8880faa65a58",
+    "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "time_varying": false,
+    "transform": "xfm:sensor-in-mount"
+   },
+   {
+    "child": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "parent": "a72d9497-85da-5595-a602-8880faa65a58",
+    "time_varying": false,
+    "transform": "xfm:mount-in-sensor"
+   }
+  ],
+  "frames": [
+   {
+    "id": "a72d9497-85da-5595-a602-8880faa65a58",
+    "kind": "sensor"
+   },
+   {
+    "id": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+    "kind": "mount"
+   }
+  ]
+ }
+}

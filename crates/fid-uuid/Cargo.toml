@@ -1,0 +1,15 @@
+[package]
+name = "fid-uuid"
+description = "Metrology Maven UUID value type and RFC 9562 UUIDv5 derivation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# SHA-1 for UUIDv5, as RFC 9562 requires (identity only, not security). Same RustCrypto family as sha2.
+sha1 = "0.10"
+
+[lints]
+workspace = true
