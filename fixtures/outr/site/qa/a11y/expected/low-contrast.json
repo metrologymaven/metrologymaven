@@ -1,0 +1,14 @@
+{
+  "exit": 1,
+  "light_ratio": "5.85",
+  "violations": [
+    {
+      "element": ".note",
+      "line": 2,
+      "page": "style.css",
+      "ratio": "3.90",
+      "rule": "A12",
+      "theme": "dark"
+    }
+  ]
+}

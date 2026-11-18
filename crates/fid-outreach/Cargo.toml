@@ -1,0 +1,21 @@
+[package]
+name = "fid-outreach"
+description = "Metrology Maven outreach tooling: static accessibility gate for built site pages (spec node OUTR.SITE.QA.A11Y)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-outreach"
+path = "src/main.rs"
+
+# HTML and CSS are read by bounded in-house parsers (no parser crates). fid-canon: reads the
+# token and configuration JSON and writes the report as canonical JSON.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true
