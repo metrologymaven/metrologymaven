@@ -1,0 +1,41 @@
+# AC-1 fixture for IO.DMIS.CONF (CC-BY-4.0 project data). Keywords and module designators
+# are placeholders, not DMIS statements or DMIS 5.3 conformance modules.
+# 5 statements over 2 module levels (A level 1, B level 1); one statement is `partial`.
+# Statements are written out of keyword order on purpose: the generator sorts them.
+schema = "fid.dmis-support"
+version = 1
+
+[[statement]]
+keyword = "STMTE"
+import = "full"
+export = "full"
+modules = [{ module = "B", level = 1 }, { module = "A", level = 1 }]
+tests = ["fid-demo::acceptance::t_e_export", "fid-demo::acceptance::t_e"]
+
+[[statement]]
+keyword = "STMTA"
+import = "full"
+export = "none"
+modules = [{ module = "A", level = 1 }]
+tests = ["fid-demo::acceptance::t_a"]
+
+[[statement]]
+keyword = "STMTB"
+import = "full"
+export = "none"
+modules = [{ module = "A", level = 1 }]
+tests = ["fid-demo::acceptance::t_b"]
+
+[[statement]]
+keyword = "STMTC"
+import = "full"
+export = "none"
+modules = [{ module = "B", level = 1 }]
+tests = ["fid-demo::acceptance::t_c"]
+
+[[statement]]
+keyword = "STMTD"
+import = "partial"
+export = "none"
+modules = [{ module = "B", level = 1 }]
+tests = ["fid-demo::acceptance::t_d"]
