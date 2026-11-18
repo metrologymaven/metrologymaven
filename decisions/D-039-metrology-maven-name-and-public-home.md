@@ -5,7 +5,7 @@ status: accepted
 raised_by: founder
 blocks: []
 decide_by: before first public push
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # D-039: Metrology Maven name, public monorepo and website
@@ -29,6 +29,7 @@ D-002 left the public name open. What is the name, where does the project live p
 3. **One public monorepo** at `github.com/metrologymaven/metrologymaven` holds the spec tree (`spec/`, `seeds/`, `decisions/`, `tools/`), the code (`crates/`, Cargo workspace) and the website (`site/`). The earlier private repository `metrologymaven-site` is renamed `metrologymaven-site-legacy` and archived, not deleted.
 4. **Website.** `metrologymaven.io` becomes the project website (OUTR.SITE), replacing the consultancy site. It is built statically by `site/build.py` from the spec tree and served by the existing Cloudflare Worker `metrologymaven-site` as static assets, so the domain routes stay attached. Old consultancy URLs redirect to the home page.
 5. **Disclosure hold (D-036 rule 5).** The founder decides when the repository and website go public. Going public is a public disclosure of everything in this tree. That ends the option of patents in most countries outside the US and starts the one-year US grace period. Publishing therefore also acts as a defensive publication (B4, D-001).
+6. **Launched 2026-11-18 at the founder's direction:** the repository went public and metrologymaven.io now serves the project site. The disclosure hold is lifted from that date.
 
 ## Consequences
 
