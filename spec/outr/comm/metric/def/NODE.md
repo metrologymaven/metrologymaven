@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-outreach]
+built_pr: 87
 satisfies: [REQ-OUTR.COMM.METRIC-001, REQ-OUTR.COMM.METRIC-002, REQ-OUTR.COMM.METRIC-003]
 covers: []
 depends_on: []
