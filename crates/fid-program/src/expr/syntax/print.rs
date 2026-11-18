@@ -72,11 +72,8 @@ struct Out {
 impl Out {
     fn piece(&mut self, s: &str, numeric: bool) {
         if let (Some(prev), Some(next)) = (self.text.chars().next_back(), s.chars().next()) {
-            let merge = if self.last_numeric {
-                next.is_ascii_digit() || next == '['
-            } else {
-                is_word(prev) && is_word(next)
-            };
+            let merge =
+                if self.last_numeric { next.is_ascii_digit() || next == '[' } else { is_word(prev) && is_word(next) };
             if merge {
                 self.text.push(' ');
             }
