@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-corp"
-description = "Metrology Maven format corpora: manifests, licence checks and fetching (spec node IO.CORP.MANIF)"
+description = "Metrology Maven format corpora: manifests, licence checks and fetching and the hostile corpus generator (spec nodes IO.CORP.MANIF, IO.CORP.HOSTILE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,8 +11,14 @@ repository.workspace = true
 name = "corpus-check"
 path = "src/bin/corpus-check.rs"
 
+[[bin]]
+name = "corpus-hostile"
+path = "src/bin/corpus-hostile.rs"
+
 [dependencies]
 fid-types = { path = "../fid-types" }
+# Counter-based Philox RNG (KRN.NUM.RNG) for seeded bit flips (IO.CORP.HOSTILE); zero dependencies.
+fid-num = { path = "../fid-num" }
 # Reads the registry listing (`import.list_formats@1` JSON) with the project's bounded JSON parser.
 fid-canon = { path = "../fid-canon" }
 # Reads corpus manifests as an untyped table (no serde derive), as fid-knp1-lint does.
