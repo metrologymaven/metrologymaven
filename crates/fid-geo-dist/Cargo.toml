@@ -1,0 +1,18 @@
+[package]
+name = "fid-geo-dist"
+description = "Metrology Maven point-to-geometry distance (GEO.DIST): projection onto trimmed faces and bodies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate: no dependencies (KNP-1).
+[dependencies]
+
+# Test-only: SHA-256 of the reference fixtures against their manifest (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true
