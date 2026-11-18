@@ -70,25 +70,22 @@ fn ac1_stock_tools_accept() {
         let script = format!(
             "$ErrorActionPreference = 'Stop'; $bad = 0; \
              foreach ($line in [IO.File]::ReadAllLines('{sums_s}')) {{ \
-               if ($line -cnotmatch '^([0-9a-f]{{64}})  ([A-Za-z0-9._+-]+)$') {{ ('bad line: ' + $line); $bad++; continue }}; \
+               if ($line -cnotmatch '^([0-9a-f]{{64}})  ([A-Za-z0-9._+-]+)$') {{ $bad++; continue }}; \
                $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $Matches[2]).Hash.ToLowerInvariant(); \
-               if ($h -cne $Matches[1]) {{ ('mismatch: ' + $line + ' ' + $h); $bad++ }} }}; \
+               if ($h -cne $Matches[1]) {{ $bad++ }} }}; \
              exit $bad"
         );
+        // Windows PowerShell 5.1 with its default module path: a PSModulePath inherited from
+        // PowerShell 7 (as on CI runners) stops Get-FileHash from autoloading.
         let mut c = Command::new("powershell");
-        c.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
+        c.env_remove("PSModulePath");
+        c.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", &script]);
         c
     } else {
         return;
     };
-    let o = cmd.current_dir(fixture("ok")).output().unwrap();
-    assert!(
-        o.status.success(),
-        "stock checksum tool rejected {sums_s}: {:?}\nstdout: {}\nstderr: {}",
-        o.status,
-        String::from_utf8_lossy(&o.stdout),
-        String::from_utf8_lossy(&o.stderr)
-    );
+    let status = cmd.current_dir(fixture("ok")).status().unwrap();
+    assert!(status.success(), "stock checksum tool rejected {sums_s}");
 }
 
 /// AC-2: a file not in the manifest exits 1 with SUMS-UNLISTED; a listed file that is absent
