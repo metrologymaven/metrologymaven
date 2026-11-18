@@ -336,7 +336,8 @@ pub fn valid_bcp47(tag: &str) -> bool {
         i += 1;
     }
     while i < len
-        && ((5..=8).contains(&part(i).len()) || (part(i).len() == 4 && part(i).bytes().next().is_some_and(|c| c.is_ascii_digit())))
+        && ((5..=8).contains(&part(i).len())
+            || (part(i).len() == 4 && part(i).bytes().next().is_some_and(|c| c.is_ascii_digit())))
     {
         i += 1;
     }

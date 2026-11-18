@@ -72,9 +72,9 @@ impl Ctx<'_> {
 
     /// True when the element or an ancestor has `aria-hidden="true"`.
     fn hidden(&self, id: NodeId) -> bool {
-        std::iter::once(id)
-            .chain(self.doc.ancestors(id))
-            .any(|n| self.el(n).and_then(|e| e.attr("aria-hidden")).is_some_and(|v| v.trim().eq_ignore_ascii_case("true")))
+        std::iter::once(id).chain(self.doc.ancestors(id)).any(|n| {
+            self.el(n).and_then(|e| e.attr("aria-hidden")).is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+        })
     }
 
     fn labelledby(&self, el: &Element) -> String {
@@ -178,7 +178,9 @@ impl Ctx<'_> {
             return true;
         }
         let Some(own) = el.attr("id").filter(|v| !v.is_empty()) else { return false };
-        self.doc.elements().any(|(lid, l)| l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid).is_empty())
+        self.doc
+            .elements()
+            .any(|(lid, l)| l.name == "label" && l.attr("for") == Some(own) && !self.content_name(lid).is_empty())
     }
 }
 
@@ -322,9 +324,10 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
 
         // A04: data tables need header cells.
         if name == "table" && !has_role(e, &["presentation", "none"]) {
-            let headers = doc.descendants(id).into_iter().any(|d| {
-                doc.element(d).is_some_and(|c| c.name == "th" || has_role(c, &["columnheader", "rowheader"]))
-            });
+            let headers = doc
+                .descendants(id)
+                .into_iter()
+                .any(|d| doc.element(d).is_some_and(|c| c.name == "th" || has_role(c, &["columnheader", "rowheader"])));
             if !headers {
                 push(&mut out, e.line, "A04", describe(e), "table without header cells");
             }
@@ -333,7 +336,10 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
         // A06: links and buttons need a name.
         let is_link = name == "a" && e.has("href");
         let is_button = name == "button";
-        if (is_link || is_button || has_role(e, &["link", "button"])) && !cx.hidden(id) && cx.accessible_name(id).is_empty() {
+        if (is_link || is_button || has_role(e, &["link", "button"]))
+            && !cx.hidden(id)
+            && cx.accessible_name(id).is_empty()
+        {
             let what = if is_button || has_role(e, &["button"]) { "button" } else { "link" };
             push(&mut out, e.line, "A06", describe(e), &format!("{what} without accessible name"));
         }
@@ -341,7 +347,13 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
         // A08: duplicate ids, ARIA attributes and roles outside WAI-ARIA 1.2.
         if let Some(v) = e.attr("id") {
             if let Some(first) = seen_ids.get(v) {
-                push(&mut out, e.line, "A08", describe(e), &format!("duplicate id \"{}\" (first on line {first})", clip(v)));
+                push(
+                    &mut out,
+                    e.line,
+                    "A08",
+                    describe(e),
+                    &format!("duplicate id \"{}\" (first on line {first})", clip(v)),
+                );
             } else {
                 seen_ids.insert(v, e.line);
             }
@@ -353,7 +365,13 @@ pub fn check_page(doc: &Doc) -> (Vec<Finding>, PageFacts) {
         }
         for r in roles(e) {
             if !ARIA_ROLES.contains(&r.as_str()) {
-                push(&mut out, e.line, "A08", describe(e), &format!("role \"{}\" is not defined by WAI-ARIA 1.2", clip(&r)));
+                push(
+                    &mut out,
+                    e.line,
+                    "A08",
+                    describe(e),
+                    &format!("role \"{}\" is not defined by WAI-ARIA 1.2", clip(&r)),
+                );
             }
         }
 

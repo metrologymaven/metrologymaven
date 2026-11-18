@@ -59,10 +59,8 @@ fn strip_comments(src: &str) -> Result<String, String> {
             continue;
         }
         if c == b'/' && b.get(i + 1) == Some(&b'*') {
-            let end = b
-                .get(i + 2..)
-                .and_then(|h| h.windows(2).position(|w| w == b"*/"))
-                .map_or(b.len(), |p| i + 2 + p + 2);
+            let end =
+                b.get(i + 2..).and_then(|h| h.windows(2).position(|w| w == b"*/")).map_or(b.len(), |p| i + 2 + p + 2);
             for d in b.get(i..end).unwrap_or(&[]) {
                 out.push(if *d == b'\n' { b'\n' } else { b' ' });
             }
@@ -471,7 +469,12 @@ pub fn parse_colour(s: &str) -> Option<Rgba> {
         Some(p) => alpha(p)?,
         None => 1.0,
     };
-    Some(Rgba { r: chan(parts.first().copied()?)?, g: chan(parts.get(1).copied()?)?, b: chan(parts.get(2).copied()?)?, a })
+    Some(Rgba {
+        r: chan(parts.first().copied()?)?,
+        g: chan(parts.get(1).copied()?)?,
+        b: chan(parts.get(2).copied()?)?,
+        a,
+    })
 }
 
 /// Splits at the first comma outside parentheses.

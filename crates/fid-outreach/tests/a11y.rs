@@ -97,7 +97,8 @@ fn ac2_one_violation_per_rule() {
         .map(|v| (st(obj(v), "page"), int(obj(v), "line"), st(obj(v), "rule")))
         .collect();
     want.sort();
-    let got: Vec<(String, u32, String)> = r.violations.iter().map(|v| (v.page.clone(), v.line, v.rule.clone())).collect();
+    let got: Vec<(String, u32, String)> =
+        r.violations.iter().map(|v| (v.page.clone(), v.line, v.rule.clone())).collect();
     assert_eq!(got, want, "{:#?}", r.violations);
     assert_eq!(r.violations.len(), 11);
     let rules: Vec<&str> = r.violations.iter().map(|v| v.rule.as_str()).collect();
@@ -154,7 +155,10 @@ fn ac5_suppression_used_and_unmatched() {
     let u0 = obj(&arr(obj(&exp).get("used").unwrap())[0]).clone();
     let n0 = obj(&arr(obj(&exp).get("unmatched").unwrap())[0]).clone();
     assert_eq!(r.used.len(), 1);
-    assert_eq!((r.used[0].0.page.clone(), r.used[0].0.rule.clone(), r.used[0].1), (st(&u0, "page"), st(&u0, "rule"), 1));
+    assert_eq!(
+        (r.used[0].0.page.clone(), r.used[0].0.rule.clone(), r.used[0].1),
+        (st(&u0, "page"), st(&u0, "rule"), 1)
+    );
     assert_eq!(r.unmatched.len(), 1);
     assert_eq!((r.unmatched[0].page.clone(), r.unmatched[0].rule.clone()), (st(&n0, "page"), st(&n0, "rule")));
     let (code, report, _) = cli("suppressed", Some("config.json"), "ac5");
@@ -207,6 +211,7 @@ fn missing_root_is_io_error_and_bad_usage_exits_2() {
 fn suppression_without_reason_is_rejected() {
     let bad = fid_outreach::qa::a11y::load_config(br#"{"suppressions":[{"page":"a.html","rule":"A04","reason":" "}]}"#);
     assert!(bad.is_err());
-    let unknown = fid_outreach::qa::a11y::load_config(br#"{"suppressions":[{"page":"a.html","rule":"A99","reason":"x"}]}"#);
+    let unknown =
+        fid_outreach::qa::a11y::load_config(br#"{"suppressions":[{"page":"a.html","rule":"A99","reason":"x"}]}"#);
     assert!(unknown.is_err());
 }

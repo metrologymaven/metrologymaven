@@ -182,7 +182,8 @@ struct Builder {
 
 impl Builder {
     fn new() -> Self {
-        let root = Element { name: "#document".to_string(), attrs: Vec::new(), line: 1, children: Vec::new(), parent: 0 };
+        let root =
+            Element { name: "#document".to_string(), attrs: Vec::new(), line: 1, children: Vec::new(), parent: 0 };
         Builder { nodes: vec![Node::Element(root)], stack: vec![0] }
     }
 
@@ -231,7 +232,13 @@ impl Builder {
         (1..self.stack.len()).any(|p| matches!(self.name_at(p), "svg" | "math"))
     }
 
-    fn start(&mut self, name: String, attrs: Vec<(String, String)>, line: u32, self_closing: bool) -> Result<(), String> {
+    fn start(
+        &mut self,
+        name: String,
+        attrs: Vec<(String, String)>,
+        line: u32,
+        self_closing: bool,
+    ) -> Result<(), String> {
         match name.as_str() {
             "li" => self.close_in_scope(&["li"], &["ul", "ol", "menu"]),
             "dt" | "dd" => self.close_in_scope(&["dt", "dd"], &["dl"]),
