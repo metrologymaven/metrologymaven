@@ -1,0 +1,16 @@
+# PLAT.HW.SCHEMA AC-2 (hand-written, synthetic): workload `no-digest.load` names its dataset
+# but gives no sha256; everything else is valid.
+# Expected: exit 1 with exactly one diagnostic, `MissingDigest { workload: no-digest.load }`.
+schema_version = 1
+suite_version = "0.0.0-fixture"
+
+[[workloads]]
+id = "no-digest.load"
+dataset = { id = "synthetic.cloud-a" }
+repetitions = 5
+timeout_s = 120
+
+[[workloads.metrics]]
+name = "load_time"
+unit = "s"
+better = "lower"
