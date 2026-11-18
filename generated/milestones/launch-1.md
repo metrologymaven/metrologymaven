@@ -116,7 +116,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.GPU.FALLBK.RDP](../../spec/plat/gpu/fallbk/rdp/NODE.md) Windows remote desktop start test (S, P1a)
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
 - [B] [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
-- [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
+- [B] [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
 - [B] [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
 - [B] [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
 - [QUAL.CRA.CLASS](../../spec/qual/cra/class/NODE.md) CRA classification record and distribution-gate status (S, P1a)
