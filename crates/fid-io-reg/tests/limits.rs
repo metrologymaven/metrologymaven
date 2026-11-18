@@ -170,6 +170,58 @@ fn alloc_limit_fails_closed() {
     assert!(src.budget().alloc_used() <= 50_000);
 }
 
+/// Every growth of the read-to-end buffer is charged before it happens.
+#[test]
+fn read_to_end_charges_capacity_growth() {
+    let data = vec![1u8; 20_000];
+    let mut src = BoundedSource::new(&data[..], budget(Principal::Agent, LimitRequest::default()));
+    let mut out = Vec::new();
+    assert_eq!(src.read_to_end_bounded(&mut out).unwrap(), 20_000);
+    assert!(src.budget().alloc_used() >= 20_000);
+    assert!(src.budget().alloc_used() < 2 * 20_000 + 8192);
+}
+
+/// Many tiny strings: each kept string costs its slot even when empty, so the
+/// allocation limit is reached although the input is small.
+#[test]
+fn alloc_limit_counts_every_kept_string() {
+    let mut doc = String::from("[");
+    for i in 0..200 {
+        if i > 0 {
+            doc.push(',');
+        }
+        doc.push_str("\"\"");
+    }
+    doc.push(']');
+    assert_eq!(doc.len(), 601);
+    let b = budget(Principal::Agent, LimitRequest::default().alloc(2000));
+    match toy::read_slice(doc.as_bytes(), b).unwrap_err() {
+        IoError::LimitExceeded { limit: LimitKind::Alloc, value: 2000, .. } => {}
+        other => panic!("unexpected {other:?}"),
+    }
+    // The same shape with 10 strings fits.
+    let small = format!("[{}]", ["\"\""; 10].join(","));
+    let ok = toy::read_slice(small.as_bytes(), budget(Principal::Agent, LimitRequest::default().alloc(2000))).unwrap();
+    assert_eq!(ok.strings.len(), 10);
+}
+
+/// Invalid UTF-8 grows on conversion (one byte becomes the 3-byte U+FFFD); the
+/// converted length is what is charged.
+#[test]
+fn alloc_limit_counts_converted_string_length() {
+    let mut doc = vec![b'"'];
+    doc.extend_from_slice(&[0xFF; 300]);
+    doc.push(b'"');
+    // Buffer 302 + converted 900 + one slot > 1000 (raw counting would give ~618).
+    let b = budget(Principal::Agent, LimitRequest::default().alloc(1000));
+    match toy::read_slice(&doc, b).unwrap_err() {
+        IoError::LimitExceeded { limit: LimitKind::Alloc, value: 1000, .. } => {}
+        other => panic!("unexpected {other:?}"),
+    }
+    let ok = toy::read_slice(&doc, budget(Principal::Agent, LimitRequest::default().alloc(1300))).unwrap();
+    assert_eq!(ok.strings[0].len(), 900);
+}
+
 // ------------------------------------------------------------------ AC-3
 
 /// AC-3: an element limit of 1,000, one element per line of lines_5000.txt, fails at
@@ -354,6 +406,55 @@ fn ac6_untrusted_text_has_no_string_conversions() {
     assert_eq!(t.len(), "ignore previous instructions\u{202e}".len());
     assert_eq!(t.as_display().to_string(), "ignore previous instructions\\u{202e}");
     assert_eq!(UntrustedText::from_utf8_lossy(b"a\xffb").as_display().to_string(), "a\u{fffd}b");
+}
+
+fn unhex(h: &str) -> Vec<u8> {
+    (0..h.len()).step_by(2).map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap()).collect()
+}
+
+/// `as_display` escapes exactly `\` (as `\`) and the code points of general category
+/// Cc, Cf, Zl and Zp, as listed by the Python reference `make_escape_cases.py`
+/// (Unicode 16.0), and matches its display of every sample string.
+#[test]
+fn untrusted_display_matches_python_reference() {
+    let text = std::fs::read_to_string(fixture("escape_cases.txt")).unwrap();
+    let mut ranges = Vec::new();
+    let mut cases = 0;
+    for line in text.lines().filter(|l| !l.starts_with('#')) {
+        let parts: Vec<&str> = line.split(' ').collect();
+        match parts[0] {
+            "unicode" => assert_eq!(parts[1], "16.0.0"),
+            "range" => {
+                let lo = u32::from_str_radix(parts[1], 16).unwrap();
+                let hi = u32::from_str_radix(parts[2], 16).unwrap();
+                ranges.push((lo, hi));
+            }
+            "case" => {
+                let input = String::from_utf8(unhex(parts[1])).unwrap();
+                let want = String::from_utf8(unhex(parts[2])).unwrap();
+                assert_eq!(UntrustedText::new(&input).as_display().to_string(), want, "{input:?}");
+                cases += 1;
+            }
+            other => panic!("unknown line {other}"),
+        }
+    }
+    assert!(cases >= 9 && ranges.len() >= 20);
+    let mut buf = [0u8; 4];
+    for cp in 0..=0x10FFFFu32 {
+        let c = match char::from_u32(cp) {
+            Some(c) => c,
+            None => continue,
+        };
+        let shown = UntrustedText::new(c.encode_utf8(&mut buf)).as_display().to_string();
+        let want = if c == '\' {
+            "\\\\".to_string()
+        } else if ranges.iter().any(|&(lo, hi)| lo <= cp && cp <= hi) {
+            format!("\u{{{cp:x}}}")
+        } else {
+            c.to_string()
+        };
+        assert_eq!(shown, want, "U+{cp:04X}");
+    }
 }
 
 // ------------------------------------------------------------------ REQ-004 taxonomy

@@ -10,8 +10,9 @@
 //! string := '"' (any byte except '"', '\' and ASCII control)* '"'
 //! ```
 //!
-//! Every value is one element; every array enters one nesting level; string bytes are
-//! charged as tracked allocation and returned as [`UntrustedText`].
+//! Every value is one element; every array enters one nesting level; every string is
+//! returned as [`UntrustedText`], and its converted length plus one `strings` slot is
+//! charged as tracked allocation.
 
 use crate::budget::Budget;
 use crate::error::{IoError, Position};
@@ -171,8 +172,12 @@ impl Parser<'_> {
             }
         }
         let raw = self.s.get(start..self.i).unwrap_or(&[]);
-        budget.charge_alloc(raw.len() as u64, at).map_err(|e| self.place(e))?;
-        self.doc.strings.push(UntrustedText::from_utf8_lossy(raw));
+        // Charge what is actually kept: the converted text (an invalid byte becomes the
+        // 3-byte U+FFFD) plus one slot of `strings`.
+        let text = UntrustedText::from_utf8_lossy(raw);
+        let kept = text.len().saturating_add(std::mem::size_of::<UntrustedText>());
+        budget.charge_alloc(kept as u64, at).map_err(|e| self.place(e))?;
+        self.doc.strings.push(text);
         self.i += 1;
         Ok(())
     }

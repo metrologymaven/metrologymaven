@@ -176,7 +176,7 @@ impl Limits {
             match kind {
                 LimitKind::Bytes => out.bytes = requested,
                 LimitKind::Elements => out.elements = requested,
-                LimitKind::Depth => out.depth = request.depth.unwrap_or(out.depth),
+                LimitKind::Depth => out.depth = u32::try_from(requested).unwrap_or(u32::MAX),
                 LimitKind::Alloc => out.alloc = requested,
                 LimitKind::Wall => out.wall_ms = requested,
             }

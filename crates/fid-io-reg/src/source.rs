@@ -88,8 +88,10 @@ impl<R: Read> BoundedSource<R> {
         Ok(n)
     }
 
-    /// Reads the rest of the input into `out`, charging the bytes read and the buffer
-    /// growth (as tracked allocation). Returns the number of bytes appended.
+    /// Reads the rest of the input into `out`, charging the bytes read and every growth
+    /// of `out`'s capacity (as tracked allocation, charged before the growth happens).
+    /// Capacity at least doubles on each growth, so the total charged stays below twice
+    /// the bytes kept. Returns the number of bytes appended.
     pub fn read_to_end_bounded(&mut self, out: &mut Vec<u8>) -> Result<usize, IoError> {
         let mut chunk = [0u8; CHUNK];
         let mut total = 0usize;
@@ -99,7 +101,14 @@ impl<R: Read> BoundedSource<R> {
                 return Ok(total);
             }
             let at = Position::byte(self.offset());
-            self.budget.charge_alloc(n as u64, at)?;
+            let needed = out.len().saturating_add(n);
+            let cap = out.capacity();
+            if needed > cap {
+                let new_cap = needed.max(cap.saturating_mul(2));
+                self.budget.charge_alloc((new_cap - cap) as u64, at)?;
+                out.try_reserve_exact(new_cap - out.len())
+                    .map_err(|_| IoError::Io { kind: io::ErrorKind::OutOfMemory, at })?;
+            }
             out.extend_from_slice(chunk.get(..n).unwrap_or(&[]));
             total = total.saturating_add(n);
         }
