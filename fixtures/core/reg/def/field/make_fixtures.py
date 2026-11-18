@@ -44,7 +44,7 @@ for i, side in enumerate(SIDE):
         "effects": [f"{NAMES[i]}@1"] if side.startswith("W") else [],
         "algorithms": ["gdt.flatness.mz@0.1.0"] if i == 0 else [],
         "exposure": sorted({SURF[i % 5], SURF[(i + 2) % 5]}),
-        "lifecycle": {"state": "experimental"},
+        "lifecycle": {"state": "active", "since": "2026-01-01"},
         "web": WEB[i % 3],
     }
     if d["web"] != "available":

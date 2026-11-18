@@ -30,7 +30,7 @@
     "gui"
    ],
    "lifecycle": {
-    "state": "experimental",
+    "state": "active",
     "phase": "P1a"
    },
    "network": "egress",

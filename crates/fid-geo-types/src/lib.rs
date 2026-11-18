@@ -1,11 +1,12 @@
 //! Geometry element types of Metrology Maven (spec node `GEO.TYPES`). Pure Rust, `f64`
 //! metres, no I/O, no `unsafe`; kernel graph, KNP-1 (no third-party dependencies).
 //!
-//! This version implements leaf `GEO.TYPES.ENV`: the [`GeometryElement`] envelope, the
-//! closed [`ElementKind`] set, [`FrameRef`], [`Aabb`], [`CadBodyRef`], the shared
-//! [`GeoTypeError`], the two sanctioned kind conversions and the [`PointSource`] trait.
-//! [`PointSet`], [`PointCloud`] and [`Mesh`] hold only the minimal fields the envelope
-//! needs; `GEO.TYPES.POINTS` and `GEO.TYPES.MESH` extend them.
+//! Implemented leaves: `GEO.TYPES.ENV` (the [`GeometryElement`] envelope, the closed
+//! [`ElementKind`] set, [`FrameRef`], [`Aabb`], [`CadBodyRef`], the shared
+//! [`GeoTypeError`], the two sanctioned kind conversions and the [`PointSource`] trait)
+//! and `GEO.TYPES.POINTS` ([`PointBuffer`], [`AttributeSet`] and the validated
+//! [`PointSet`] and [`PointCloud`], see [`points`]). [`Mesh`] holds only the minimal
+//! fields the envelope needs; `GEO.TYPES.MESH` extends it.
 //!
 //! # Compile-time guarantees (AC-5)
 //!
@@ -81,8 +82,9 @@
 //! Every element is built with a frame:
 //!
 //! ```
-//! use fid_geo_types::{FrameRef, PointSet};
-//! let p = PointSet::new(FrameRef::from_bytes([0; 16]), vec![], vec![], vec![]).unwrap();
+//! use fid_geo_types::{AttributeSet, FrameRef, PointBuffer, PointSet};
+//! let frame = FrameRef::from_bytes([0; 16]);
+//! let p = PointSet::new(frame, PointBuffer::default(), AttributeSet::default()).unwrap();
 //! assert!(p.is_empty());
 //! ```
 //!
@@ -122,5 +124,5 @@ pub mod source;
 pub use envelope::{Aabb, CadBodyRef, ElementKind, FrameRef, GeometryElement};
 pub use error::GeoTypeError;
 pub use mesh::Mesh;
-pub use points::{PointCloud, PointSet};
+pub use points::{is_unit_normal, AttributeSet, PointBuffer, PointCloud, PointSet, NORMAL_TOLERANCE};
 pub use source::{Channel, InMemorySource, PointBlock, PointSource};
