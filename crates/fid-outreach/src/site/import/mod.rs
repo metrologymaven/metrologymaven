@@ -285,12 +285,18 @@ pub fn parse_lock(text: &str, shown: &str) -> Result<(Vec<LockEntry>, Vec<Findin
                 .ok_or_else(|| parse_err(shown, format!("{at}: `date` missing or not YYYY-MM-DD")))?;
             let release = match t.get("release") {
                 None => None,
-                Some(_) => Some(s("release").filter(|r| is_tag(r)).ok_or_else(|| parse_err(shown, format!("{at}: bad `release`")))?),
+                Some(_) => Some(
+                    s("release")
+                        .filter(|r| is_tag(r))
+                        .ok_or_else(|| parse_err(shown, format!("{at}: bad `release`")))?,
+                ),
             };
             let source_rev = match t.get("source_rev") {
                 None => None,
                 Some(_) => Some(
-                    s("source_rev").filter(|r| is_rev(r)).ok_or_else(|| parse_err(shown, format!("{at}: bad `source_rev`")))?,
+                    s("source_rev")
+                        .filter(|r| is_rev(r))
+                        .ok_or_else(|| parse_err(shown, format!("{at}: bad `source_rev`")))?,
                 ),
             };
             if release.is_none() && source_rev.is_none() {

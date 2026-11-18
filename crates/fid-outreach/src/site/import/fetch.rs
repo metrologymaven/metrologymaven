@@ -13,8 +13,8 @@
 //! folder is removed, nothing is written under `inputs/` and the lock file is left unchanged.
 
 use super::{
-    hash_bytes, is_tag, parse_err, parse_lock, parse_release_manifest, read_bounded, render_lock, tag_matches,
-    Finding, ImportError, LockEntry, HOSTS_FILE, LOCK_FILE, MAX_HOSTS_BYTES, MAX_LOCK_BYTES, MAX_MANIFEST_BYTES,
+    hash_bytes, is_tag, parse_err, parse_lock, parse_release_manifest, read_bounded, render_lock, tag_matches, Finding,
+    ImportError, LockEntry, HOSTS_FILE, LOCK_FILE, MAX_HOSTS_BYTES, MAX_LOCK_BYTES, MAX_MANIFEST_BYTES,
     MAX_REPORT_BYTES, RELEASE_MANIFEST,
 };
 use std::collections::BTreeSet;
@@ -51,11 +51,8 @@ pub struct BaseUrl {
 /// Parses `http://` or `https://` URLs with a host, an optional port and a path; user info,
 /// queries, fragments, whitespace and curl glob characters are refused.
 pub fn parse_base_url(url: &str) -> Option<BaseUrl> {
-    let (https, rest) = if let Some(r) = url.strip_prefix("https://") {
-        (true, r)
-    } else {
-        (false, url.strip_prefix("http://")?)
-    };
+    let (https, rest) =
+        if let Some(r) = url.strip_prefix("https://") { (true, r) } else { (false, url.strip_prefix("http://")?) };
     if url.len() > 2048
         || url.chars().any(|c| c.is_whitespace() || c.is_control() || matches!(c, '{' | '}' | '?' | '#' | '@' | '\\'))
     {
@@ -107,7 +104,9 @@ pub fn read_hosts(path: &Path) -> Result<BTreeSet<String>, ImportError> {
         }
         let toml::Value::Array(items) = value else { return Err(parse_err(&shown, "`host` is not [[host]]")) };
         for (i, item) in items.iter().enumerate() {
-            let toml::Value::Table(t) = item else { return Err(parse_err(&shown, format!("host #{} is not a table", i + 1))) };
+            let toml::Value::Table(t) = item else {
+                return Err(parse_err(&shown, format!("host #{} is not a table", i + 1)));
+            };
             if let Some(k) = t.keys().find(|k| !matches!(k.as_str(), "name" | "purpose")) {
                 return Err(parse_err(&shown, format!("host #{}: unknown key `{k}`", i + 1)));
             }
@@ -122,9 +121,10 @@ pub fn read_hosts(path: &Path) -> Result<BTreeSet<String>, ImportError> {
     Ok(hosts)
 }
 
-/// Downloads `url` into `dst` with `curl`, refusing more than `cap` bytes; returns the bytes.
-fn download(url: &str, https: bool, cap: u64, dst: &Path) -> Result<Vec<u8>, Finding> {
-    let fail = |status: &str| Finding::Fetch { url: url.into(), status: status.into() };
+/// Downloads `url` into `dst` with `curl`, refusing more than `cap` bytes; returns the bytes,
+/// or the HTTP status or short reason for an `IMPORT-FETCH` finding.
+fn download(url: &str, https: bool, cap: u64, dst: &Path) -> Result<Vec<u8>, String> {
+    let fail = |status: &str| status.to_string();
     let proto = if https { "=https" } else { "=http" };
     let max = cap.to_string();
     // `-q` must come first: it makes curl ignore any ~/.curlrc.
@@ -174,7 +174,8 @@ pub fn fetch(args: &FetchArgs<'_>) -> Result<Result<Fetched, Vec<Finding>>, Impo
     let lock_path = args.site.join(LOCK_FILE);
     let (old, kind_findings) = if lock_path.exists() {
         let shown = lock_path.display().to_string();
-        let text = String::from_utf8(read_bounded(&lock_path, MAX_LOCK_BYTES)?).map_err(|_| parse_err(&shown, "not UTF-8"))?;
+        let text =
+            String::from_utf8(read_bounded(&lock_path, MAX_LOCK_BYTES)?).map_err(|_| parse_err(&shown, "not UTF-8"))?;
         parse_lock(&text, &shown)?
     } else {
         (Vec::new(), Vec::new())
@@ -212,7 +213,7 @@ fn download_all(tag: &str, base: &BaseUrl, scratch: &Path) -> Result<Result<Stag
     let mpath = scratch.join(RELEASE_MANIFEST);
     let bytes = match download(&url, base.https, MAX_MANIFEST_BYTES, &mpath) {
         Ok(b) => b,
-        Err(f) => return Ok(Err(vec![f])),
+        Err(status) => return Ok(Err(vec![Finding::Fetch { url, status }])),
     };
     let rm = parse_release_manifest(&bytes, &url)?;
     if !tag_matches(tag, &rm.version) {
@@ -245,7 +246,7 @@ fn download_all(tag: &str, base: &BaseUrl, scratch: &Path) -> Result<Result<Stag
                     findings.push(Finding::Digest { name: name.into(), expected: *expected, actual: e.sha256 });
                 }
             }
-            Err(f) => findings.push(f),
+            Err(status) => findings.push(Finding::Fetch { url, status }),
         }
     }
     if findings.is_empty() {
@@ -258,7 +259,13 @@ fn download_all(tag: &str, base: &BaseUrl, scratch: &Path) -> Result<Result<Stag
 
 /// Writes the new lock file to a temporary file, moves the files into `inputs/<tag>/`, then
 /// replaces the lock file.
-fn commit(site: &Path, tag: &str, scratch: &Path, old: &[LockEntry], staged: Staged) -> Result<Vec<LockEntry>, ImportError> {
+fn commit(
+    site: &Path,
+    tag: &str,
+    scratch: &Path,
+    old: &[LockEntry],
+    staged: Staged,
+) -> Result<Vec<LockEntry>, ImportError> {
     let new_paths: BTreeSet<&str> = staged.iter().map(|(_, _, e)| e.path.as_str()).collect();
     let mut merged: Vec<LockEntry> = old.iter().filter(|e| !new_paths.contains(e.path.as_str())).cloned().collect();
     merged.extend(staged.iter().map(|(_, _, e)| e.clone()));

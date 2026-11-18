@@ -50,7 +50,19 @@ fn run(args: &[&str]) -> Output {
 
 fn verify(site: &Path, stage: &Path) -> Output {
     let (site, stage) = (site.to_str().unwrap(), stage.to_str().unwrap());
-    run(&["site", "import", "verify", "--site", site, "--stage", stage, "--revision", "abc123", "--revision-date", "2026-11-17"])
+    run(&[
+        "site",
+        "import",
+        "verify",
+        "--site",
+        site,
+        "--stage",
+        stage,
+        "--revision",
+        "abc123",
+        "--revision-date",
+        "2026-11-17",
+    ])
 }
 
 fn fetch(site: &Path, base: &str) -> Output {
@@ -86,8 +98,9 @@ fn serve() -> u16 {
             let resp = match file.filter(|f| !path.contains("..") && f.is_file()) {
                 Some(f) => {
                     let body = std::fs::read(f).unwrap();
-                    let mut r = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len())
-                        .into_bytes();
+                    let mut r =
+                        format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len())
+                            .into_bytes();
                     r.extend(body);
                     r
                 }
@@ -223,7 +236,8 @@ fn plain_http_is_refused_for_a_non_loopback_host() {
 fn ac7_verify_has_no_network_code_and_runs_in_process() {
     // The verify module holds no network or process code (fetch lives in its own file); CI also
     // runs verify on fixture `ok` with the network cut (rust.yml, Linux).
-    let src = String::from_utf8(read(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/site/import/mod.rs"))).unwrap();
+    let src =
+        String::from_utf8(read(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/site/import/mod.rs"))).unwrap();
     for banned in ["std::net", "TcpStream", "UdpSocket", "Command", "curl"] {
         assert!(!src.contains(banned), "verify module mentions {banned}");
     }
@@ -287,8 +301,17 @@ fn bad_usage_exits_2() {
     assert_eq!(run(&["site", "import", "nope"]).status.code(), Some(2));
     let stage = tmp("baddate");
     let o = run(&[
-        "site", "import", "verify", "--site", fix("ok").to_str().unwrap(), "--stage", stage.to_str().unwrap(),
-        "--revision", "abc123", "--revision-date", "2026-02-30",
+        "site",
+        "import",
+        "verify",
+        "--site",
+        fix("ok").to_str().unwrap(),
+        "--stage",
+        stage.to_str().unwrap(),
+        "--revision",
+        "abc123",
+        "--revision-date",
+        "2026-02-30",
     ]);
     assert_eq!(o.status.code(), Some(2));
 }
@@ -301,7 +324,15 @@ fn base_url_and_date_rules() {
     assert_eq!(u.prefix, "https://Releases.Example.org/v0.2.0/");
     assert_eq!(parse_base_url("http://127.0.0.1:8080/x/").unwrap().host, "127.0.0.1");
     assert_eq!(parse_base_url("http://[::1]:8080/x/").unwrap().host, "::1");
-    for bad in ["ftp://h/x", "https://user@h/x", "https://h/x?y", "https://h:99999/", "https:///x", "https://h/[x]", "file:///c"] {
+    for bad in [
+        "ftp://h/x",
+        "https://user@h/x",
+        "https://h/x?y",
+        "https://h:99999/",
+        "https:///x",
+        "https://h/[x]",
+        "file:///c",
+    ] {
         assert!(parse_base_url(bad).is_none(), "{bad}");
     }
     assert!(is_date("2028-02-29") && !is_date("2027-02-29") && !is_date("2026-13-01") && !is_date("2026-1-01"));
