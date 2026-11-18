@@ -3,7 +3,7 @@
 //! or are hand-labelled from the spec's rules.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_xtask::rel::sums::{is_unsummed_name, is_valid_name, run, SumsError};
+use fid_xtask::rel::sums::{is_valid_name, run, unsummed_kind, SumsError};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -138,26 +138,155 @@ fn name_rule() {
     }
 }
 
-/// REQ-005: the checksum file, its signatures, the statement and SBOMs are never summed.
+/// REQ-005 name families, hand-labelled: only exact `SHA256SUMS` / `sums-statement.json`,
+/// `*.sig`, `*.dsse.json` and `*.spdx.json` imply a never-summed kind.
 #[test]
 fn unsummed_names() {
-    for n in ["SHA256SUMS", "SHA256SUMS.sig", "SHA256SUMS.dsse.json", "sums-statement.json", "x.msi.spdx.json"] {
-        assert!(is_unsummed_name(n), "{n}");
-    }
-    for n in ["SHA256SUMSX", "fid.msi", "spdx.json.msi"] {
-        assert!(!is_unsummed_name(n), "{n}");
+    let cases = [
+        ("SHA256SUMS", Some("checksums")),
+        ("sums-statement.json", Some("checksums")),
+        ("SHA256SUMS.sig", Some("signature")),
+        ("SHA256SUMS.dsse.json", Some("signature")),
+        ("fid.msi.sig", Some("signature")),
+        ("x.msi.spdx.json", Some("sbom")),
+        ("SHA256SUMS.exe", None),
+        ("sums-statement.json.bin", None),
+        ("SHA256SUMSX", None),
+        ("fid.msi", None),
+        ("spdx.json.msi", None),
+    ];
+    for (n, k) in cases {
+        assert_eq!(unsummed_kind(n), k, "{n}");
     }
 }
 
 /// The `ok` manifest lists SHA256SUMS, its envelope and an SBOM (which also sits in the
-/// directory); none of them reaches the outputs.
+/// directory), each with the matching kind; none of them reaches the outputs.
 #[test]
 fn req5_unsummed_entries_excluded() {
     let out = out_dir("req5");
     let sums = run(&fixture("ok/release-manifest.json"), &fixture("ok"), &out).unwrap();
-    assert!(sums.entries.iter().all(|e| !is_unsummed_name(&e.name)));
+    assert!(sums.entries.iter().all(|e| unsummed_kind(&e.name).is_none()));
     let text = std::fs::read_to_string(out.join("SHA256SUMS")).unwrap();
     assert!(!text.contains("spdx") && !text.contains("SHA256SUMS"));
+    // Only the two outputs, no temporary files left behind.
+    let mut names: Vec<String> =
+        std::fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+    names.sort();
+    assert_eq!(names, ["SHA256SUMS", "sums-statement.json"]);
+}
+
+/// A scratch artefact directory holding `files` (each a few bytes) and a manifest listing
+/// `entries` as (name, kind).
+fn scratch_case(tag: &str, files: &[&str], entries: &[(&str, Option<&str>)]) -> PathBuf {
+    let d = out_dir(&format!("case-{tag}"));
+    std::fs::create_dir_all(&d).unwrap();
+    for f in files {
+        std::fs::write(d.join(f), f.as_bytes()).unwrap();
+    }
+    let arts: Vec<String> = entries
+        .iter()
+        .map(|(n, k)| match k {
+            Some(k) => format!("{{\"name\":\"{n}\",\"kind\":\"{k}\"}}"),
+            None => format!("{{\"name\":\"{n}\"}}"),
+        })
+        .collect();
+    let manifest = format!("{{\"version\":\"1.4.0\",\"artefacts\":[{}]}}", arts.join(","));
+    std::fs::write(d.join("release-manifest.json"), manifest).unwrap();
+    d
+}
+
+/// Runs the binary on a scratch case; returns (exit code, stdout).
+fn cli_case(d: &Path, out: &Path) -> (i32, String) {
+    let o = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
+        .args(["rel", "sums", "--manifest"])
+        .arg(d.join("release-manifest.json"))
+        .arg("--dir")
+        .arg(d)
+        .arg("--out")
+        .arg(out)
+        .output()
+        .unwrap();
+    (o.status.code().unwrap(), String::from_utf8(o.stdout).unwrap())
+}
+
+/// Name family and kind must agree; a disagreement is SUMS-KIND-MISMATCH (exit 1), never a
+/// silent skip, and nothing is written.
+#[test]
+fn kind_mismatch_is_a_finding() {
+    let cases: [(&str, Option<&str>, Option<&str>); 8] = [
+        ("fid.msi", Some("signature"), None),
+        ("SHA256SUMS.exe", Some("checksums"), None),
+        ("sums-statement.json.bin", Some("checksums"), None),
+        ("x.exe.spdx.json", Some("installer"), Some("sbom")),
+        ("x.exe.spdx.json", None, Some("sbom")),
+        ("SHA256SUMS", Some("installer"), Some("checksums")),
+        ("SHA256SUMS.sig", Some("sbom"), Some("signature")),
+        ("fid.msi.dsse.json", Some("checksums"), Some("signature")),
+    ];
+    for (i, (name, kind, implied)) in cases.into_iter().enumerate() {
+        let d = scratch_case(&format!("mismatch-{i}"), &["a.msi", name], &[("a.msi", Some("installer")), (name, kind)]);
+        let out = out_dir(&format!("mismatch-{i}-out"));
+        let errs = run(&d.join("release-manifest.json"), &d, &out).unwrap_err();
+        let want = SumsError::KindMismatch {
+            name: name.to_string(),
+            kind: kind.map(str::to_string),
+            implied,
+        };
+        assert_eq!(errs, [want], "{name} {kind:?}");
+        assert!(!out.exists(), "{name}");
+    }
+    let d = scratch_case("mismatch-cli", &["fid.msi"], &[("fid.msi", Some("signature"))]);
+    let out = out_dir("mismatch-cli-out");
+    assert_eq!(
+        cli_case(&d, &out),
+        (1, "SUMS-KIND-MISMATCH fid.msi (kind signature, name implies an artefact)
+".to_string())
+    );
+}
+
+/// Names that only look like a never-summed family are ordinary artefacts and are summed.
+#[test]
+fn lookalike_names_are_summed() {
+    let files = ["SHA256SUMS.exe", "sums-statement.json.bin"];
+    let d = scratch_case("lookalike", &files, &[(files[0], Some("installer")), (files[1], Some("source"))]);
+    let out = out_dir("lookalike-out");
+    let sums = run(&d.join("release-manifest.json"), &d, &out).unwrap();
+    let names: Vec<&str> = sums.entries.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(names, files);
+}
+
+/// A never-summed name in the directory is skipped only when the manifest lists it with the
+/// matching kind; otherwise it is an unlisted file.
+#[test]
+fn unlisted_checksum_file_in_dir_is_a_finding() {
+    let d = scratch_case("stray-sums", &["a.msi", "SHA256SUMS"], &[("a.msi", None)]);
+    let out = out_dir("stray-sums-out");
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED SHA256SUMS
+".to_string()));
+}
+
+/// Only regular files are artefacts: a listed directory is SUMS-UNLISTED (not a regular file).
+#[test]
+fn directory_entry_is_not_an_artefact() {
+    let d = scratch_case("subdir", &["a.msi"], &[("a.msi", None), ("sub.msi", None)]);
+    std::fs::create_dir(d.join("sub.msi")).unwrap();
+    let out = out_dir("subdir-out");
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED sub.msi (not a regular file)
+".to_string()));
+    assert!(!out.exists());
+}
+
+/// A symbolic link is never followed, even to a regular file in the same directory.
+#[cfg(unix)]
+#[test]
+fn symlink_is_not_an_artefact() {
+    let d = scratch_case("symlink", &["a.msi"], &[("a.msi", None), ("link.msi", None)]);
+    std::os::unix::fs::symlink("a.msi", d.join("link.msi")).unwrap();
+    let out = out_dir("symlink-out");
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED link.msi (not a regular file)
+".to_string()));
+    assert!(!out.exists());
 }
 
 /// A missing manifest is SUMS-IO; a manifest without `version` is INPUT-PARSE (exit 2).

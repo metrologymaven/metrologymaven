@@ -13,12 +13,21 @@
 //!   64-bit integers and is a decimal string.
 //!
 //! The checksum file itself, its signatures, the statement and the SBOMs are release
-//! artefacts but are never summed (REQ-ECO.REL.SIGN.SUMS-005). They are recognised by name
-//! ([`is_unsummed_name`]) or by a manifest `kind` in [`UNSUMMED_KINDS`], and skipped on both
-//! sides; the manifest file and its signatures are skipped in the directory too.
+//! artefacts but are never summed (REQ-ECO.REL.SIGN.SUMS-005). A manifest entry is left out
+//! only when its name family ([`unsummed_kind`]) and its `kind` agree: `SHA256SUMS` and
+//! `sums-statement.json` with kind `checksums`, `*.sig` and `*.dsse.json` with `signature`,
+//! `*.spdx.json` with `sbom`. A disagreement either way is a `SUMS-KIND-MISMATCH` finding, never
+//! a silent skip. Directory files are left out only when the manifest lists them as such an
+//! entry, or when they are the manifest itself (`release-manifest.json` and its `.sig` and
+//! `.dsse.json`).
 //!
-//! Nothing is signed, nothing touches the network, and outputs are written only after every
-//! check passes. The outputs are a pure function of the manifest and the artefact bytes (D0).
+//! Only regular files count: a symbolic link, directory or device in the artefact directory is
+//! never hashed or followed and is reported as `SUMS-UNLISTED`.
+//!
+//! Nothing is signed and nothing touches the network. Outputs are written only after every
+//! check passes, first to temporary files in the output directory and then renamed, so a
+//! failure cannot leave `SHA256SUMS` and the statement out of step. The outputs are a pure
+//! function of the manifest and the artefact bytes (D0).
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_types::Digest;
@@ -40,15 +49,27 @@ pub const MAX_MANIFEST_BYTES: u64 = 16 << 20;
 /// Hashing read buffer.
 pub const BUFFER_BYTES: usize = 64 * 1024;
 /// Manifest `kind` values that are never summed.
-pub const UNSUMMED_KINDS: [&str; 3] = ["checksums", "signature", "sbom"];
+pub const UNSUMMED_KINDS: [&str; 3] = [KIND_CHECKSUMS, KIND_SIGNATURE, KIND_SBOM];
+/// `kind` of `SHA256SUMS` and `sums-statement.json`.
+pub const KIND_CHECKSUMS: &str = "checksums";
+/// `kind` of a detached signature or DSSE envelope (`*.sig`, `*.dsse.json`).
+pub const KIND_SIGNATURE: &str = "signature";
+/// `kind` of an SPDX SBOM (`*.spdx.json`).
+pub const KIND_SBOM: &str = "sbom";
 
 /// A failure of `rel sums`. [`fmt::Display`] gives the line the tool prints.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SumsError {
     /// `SUMS-MISSING <name>`: listed in the manifest, absent from the directory.
     Missing(String),
-    /// `SUMS-UNLISTED <name>`: in the directory (or not a regular file), absent from the manifest.
+    /// `SUMS-UNLISTED <name>`: in the directory, absent from the manifest.
     Unlisted(String),
+    /// `SUMS-UNLISTED <name> (not a regular file)`: a symbolic link, directory or other
+    /// non-regular entry in the artefact directory.
+    NotFile(String),
+    /// `SUMS-KIND-MISMATCH <name> (kind <k>, name implies <k>)`: a manifest entry whose name
+    /// family and `kind` disagree about whether it is summed.
+    KindMismatch { name: String, kind: Option<String>, implied: Option<&'static str> },
     /// `SUMS-NAME <name>`: a name outside `[A-Za-z0-9._+-]`, empty, `.` or `..`.
     Name(String),
     /// `SUMS-IO <path>: <reason>`: a file or directory could not be read or written.
@@ -62,7 +83,8 @@ impl SumsError {
     pub fn code(&self) -> &'static str {
         match self {
             SumsError::Missing(_) => "SUMS-MISSING",
-            SumsError::Unlisted(_) => "SUMS-UNLISTED",
+            SumsError::Unlisted(_) | SumsError::NotFile(_) => "SUMS-UNLISTED",
+            SumsError::KindMismatch { .. } => "SUMS-KIND-MISMATCH",
             SumsError::Name(_) => "SUMS-NAME",
             SumsError::Io(_) => "SUMS-IO",
             SumsError::Parse(_) => "INPUT-PARSE",
@@ -82,6 +104,14 @@ impl fmt::Display for SumsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SumsError::Missing(n) | SumsError::Unlisted(n) => write!(f, "{} {n}", self.code()),
+            SumsError::NotFile(n) => write!(f, "{} {n} (not a regular file)", self.code()),
+            SumsError::KindMismatch { name, kind, implied } => write!(
+                f,
+                "{} {name} (kind {}, name implies {})",
+                self.code(),
+                kind.as_deref().unwrap_or("none"),
+                implied.unwrap_or("an artefact")
+            ),
             // Debug quoting: a refused name may hold spaces, newlines or control characters.
             SumsError::Name(n) => write!(f, "{} {n:?}", self.code()),
             SumsError::Io(m) | SumsError::Parse(m) => write!(f, "{}: {m}", self.code()),
@@ -115,16 +145,24 @@ pub fn is_valid_name(name: &str) -> bool {
         && name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'+' | b'-'))
 }
 
-/// Whether `name` is the release manifest or one of its signatures (`release-manifest.json.*`).
+/// Whether `name` is the release manifest or one of its signatures.
 fn is_manifest_name(name: &str) -> bool {
-    name == MANIFEST_FILE || name.strip_prefix(MANIFEST_FILE).is_some_and(|r| r.starts_with('.'))
+    name.strip_prefix(MANIFEST_FILE).is_some_and(|r| matches!(r, "" | ".sig" | ".dsse.json"))
 }
 
-/// Whether `name` is by its name never summed: the checksum file and its signatures, the
-/// checksum statement and its envelopes, and SPDX SBOMs.
-pub fn is_unsummed_name(name: &str) -> bool {
-    let family = |base: &str| name == base || name.strip_prefix(base).is_some_and(|r| r.starts_with('.'));
-    family(SUMS_FILE) || family(STATEMENT_FILE) || name.ends_with(".spdx.json")
+/// The `kind` a never-summed file must carry, judged by its name alone: [`KIND_CHECKSUMS`] for
+/// exactly `SHA256SUMS` or `sums-statement.json`, [`KIND_SIGNATURE`] for `*.sig` and
+/// `*.dsse.json`, [`KIND_SBOM`] for `*.spdx.json`; `None` for a name that is summed.
+pub fn unsummed_kind(name: &str) -> Option<&'static str> {
+    if name == SUMS_FILE || name == STATEMENT_FILE {
+        Some(KIND_CHECKSUMS)
+    } else if name.ends_with(".sig") || name.ends_with(".dsse.json") {
+        Some(KIND_SIGNATURE)
+    } else if name.ends_with(".spdx.json") {
+        Some(KIND_SBOM)
+    } else {
+        None
+    }
 }
 
 /// The manifest fields the tool reads.
@@ -195,24 +233,35 @@ pub fn hash_file(path: &Path) -> Result<(Digest, u64), SumsError> {
 
 /// Checks the manifest against the directory and hashes every summed artefact.
 ///
-/// Errors come back all at once, in a fixed order: name errors first (and alone, since a bad
-/// name makes the comparison meaningless), then missing and unlisted files, each sorted.
+/// Errors come back all at once, in a fixed order: name errors first, then kind mismatches
+/// (each alone, since they make the comparison meaningless), then missing and unlisted files,
+/// each sorted.
 pub fn compute(manifest: &Path, dir: &Path) -> Result<Sums, Vec<SumsError>> {
     let Manifest { release, artefacts: listed } = read_manifest(manifest).map_err(|e| vec![e])?;
 
-    // Names never summed: by name, or by their manifest kind.
+    // Summed names, and names left out because name family and kind agree.
     let mut unsummed: BTreeSet<String> = BTreeSet::new();
     let mut names: BTreeSet<String> = BTreeSet::new();
     let mut errors: BTreeSet<String> = BTreeSet::new();
+    let mut mismatches: Vec<SumsError> = Vec::new();
     for (name, kind) in &listed {
-        if kind.as_deref().is_some_and(|k| UNSUMMED_KINDS.contains(&k)) || is_unsummed_name(name) {
-            unsummed.insert(name.clone());
-            continue;
-        }
         if !is_valid_name(name) {
             errors.insert(name.clone());
-        } else if !names.insert(name.clone()) {
+            continue;
+        }
+        if unsummed.contains(name) || names.contains(name) {
             return Err(vec![SumsError::Parse(format!("manifest: artefact {name} is listed twice"))]);
+        }
+        let implied = unsummed_kind(name);
+        let kind_unsummed = kind.as_deref().filter(|k| UNSUMMED_KINDS.contains(k));
+        match (implied, kind_unsummed) {
+            (None, None) => {
+                names.insert(name.clone());
+            }
+            (Some(i), Some(k)) if i == k => {
+                unsummed.insert(name.clone());
+            }
+            _ => mismatches.push(SumsError::KindMismatch { name: name.clone(), kind: kind.clone(), implied }),
         }
     }
 
@@ -226,25 +275,34 @@ pub fn compute(manifest: &Path, dir: &Path) -> Result<Sums, Vec<SumsError>> {
             errors.insert(raw.to_string_lossy().into_owned());
             continue;
         };
-        if unsummed.contains(&name) || is_unsummed_name(&name) || is_manifest_name(&name) {
+        if unsummed.contains(&name) || is_manifest_name(&name) {
             continue;
         }
         if !is_valid_name(&name) {
             errors.insert(name);
             continue;
         }
-        // Follows symbolic links: a link to a regular file counts as that file.
-        let is_file = std::fs::metadata(entry.path()).map_err(io)?.is_file();
+        // Does not follow symbolic links: only a regular file is an artefact.
+        let is_file = std::fs::symlink_metadata(entry.path()).map_err(io)?.file_type().is_file();
         present.insert(name, is_file);
     }
     if !errors.is_empty() {
         return Err(errors.into_iter().map(SumsError::Name).collect());
     }
+    if !mismatches.is_empty() {
+        mismatches.sort_by_key(ToString::to_string);
+        return Err(mismatches);
+    }
 
     let mut out: Vec<SumsError> = Vec::new();
     out.extend(names.iter().filter(|n| !present.contains_key(*n)).cloned().map(SumsError::Missing));
-    let unlisted = present.iter().filter(|(n, is_file)| !names.contains(*n) || !**is_file);
-    out.extend(unlisted.map(|(n, _)| SumsError::Unlisted(n.clone())));
+    for (n, is_file) in &present {
+        if !is_file {
+            out.push(SumsError::NotFile(n.clone()));
+        } else if !names.contains(n) {
+            out.push(SumsError::Unlisted(n.clone()));
+        }
+    }
     if !out.is_empty() {
         return Err(out);
     }
@@ -290,16 +348,38 @@ pub fn statement(sums: &Sums) -> Result<Vec<u8>, SumsError> {
 }
 
 /// `rel sums`: checks, hashes and writes `SHA256SUMS` and `sums-statement.json` into `out`
-/// (created if absent). Nothing is written unless every check passes.
+/// (created if absent). Nothing is written unless every check passes. Both files are first
+/// written in full to temporary files in `out` and then renamed into place; if the second
+/// rename fails, the first is undone, so the two never disagree.
 pub fn run(manifest: &Path, dir: &Path, out: &Path) -> Result<Sums, Vec<SumsError>> {
     let sums = compute(manifest, dir)?;
     let file = sums_file(&sums);
     let stmt = statement(&sums).map_err(|e| vec![e])?;
     let io = |p: &Path, e: std::io::Error| vec![SumsError::Io(format!("{}: {e}", p.display()))];
     std::fs::create_dir_all(out).map_err(|e| io(out, e))?;
-    let p = out.join(SUMS_FILE);
-    std::fs::write(&p, file).map_err(|e| io(&p, e))?;
-    let p = out.join(STATEMENT_FILE);
-    std::fs::write(&p, stmt).map_err(|e| io(&p, e))?;
+    let (sums_tmp, stmt_tmp) = (out.join(".SHA256SUMS.tmp"), out.join(".sums-statement.json.tmp"));
+    let (sums_path, stmt_path) = (out.join(SUMS_FILE), out.join(STATEMENT_FILE));
+    let cleanup = || {
+        let _ = std::fs::remove_file(&sums_tmp);
+        let _ = std::fs::remove_file(&stmt_tmp);
+    };
+    let written = std::fs::write(&sums_tmp, file)
+        .map_err(|e| io(&sums_tmp, e))
+        .and_then(|()| std::fs::write(&stmt_tmp, stmt).map_err(|e| io(&stmt_tmp, e)));
+    if let Err(e) = written {
+        cleanup();
+        return Err(e);
+    }
+    if let Err(e) = std::fs::rename(&sums_tmp, &sums_path) {
+        cleanup();
+        return Err(io(&sums_path, e));
+    }
+    if let Err(e) = std::fs::rename(&stmt_tmp, &stmt_path) {
+        // Leave neither file rather than a new SHA256SUMS beside an old statement.
+        let _ = std::fs::remove_file(&sums_path);
+        let _ = std::fs::remove_file(&stmt_path);
+        cleanup();
+        return Err(io(&stmt_path, e));
+    }
     Ok(sums)
 }
