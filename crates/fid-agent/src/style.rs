@@ -489,11 +489,11 @@ fn not_an_angle(sym: &str, rest: &str) -> bool {
     match sym {
         "°" => {
             let r = rest.strip_prefix(' ').unwrap_or(rest);
-            ["c", "f", "k"].iter().any(|t| word_is(r, *t))
+            ["c", "f", "k"].iter().any(|t| word_is(r, t))
         }
         "deg" | "degree" | "degrees" => {
             let r = rest.trim_start();
-            ["of freedom", "celsius", "fahrenheit", "kelvin", "c", "f"].iter().any(|t| word_is(r, *t))
+            ["of freedom", "celsius", "fahrenheit", "kelvin", "c", "f"].iter().any(|t| word_is(r, t))
         }
         _ => false,
     }
