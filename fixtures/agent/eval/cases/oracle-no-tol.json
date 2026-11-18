@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 0.002,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "C2",
+      "outcome": "NONCONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3f50624dd2f1a9fc",
+        "unit": "rad"
+      }
+    },
+    {
+      "characteristic": "C3",
+      "outcome": "INDETERMINATE",
+      "basis": "RESULTS_ONLY"
+    }
+  ],
+  "forbidden": []
+}

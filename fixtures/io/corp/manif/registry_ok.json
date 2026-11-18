@@ -1,0 +1,14 @@
+[
+  {
+    "id": "mesh.ply",
+    "origin": "first_party"
+  },
+  {
+    "id": "mesh.stl",
+    "origin": "first_party"
+  },
+  {
+    "id": "vendor.jt",
+    "origin": "plugin"
+  }
+]
