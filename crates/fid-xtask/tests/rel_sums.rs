@@ -84,9 +84,7 @@ fn ac1_stock_tools_accept() {
     let o = cmd.current_dir(fixture("ok")).output().unwrap();
     assert!(
         o.status.success(),
-        "stock checksum tool rejected {sums_s}: {:?}
-stdout: {}
-stderr: {}",
+        "stock checksum tool rejected {sums_s}: {:?}\nstdout: {}\nstderr: {}",
         o.status,
         String::from_utf8_lossy(&o.stdout),
         String::from_utf8_lossy(&o.stderr)
