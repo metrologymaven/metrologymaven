@@ -1,0 +1,14 @@
+{
+  "schema": "external-claim/0",
+  "quantity": "diameter",
+  "value": {
+    "unit": "m",
+    "value": "0x3f8999999999999a"
+  },
+  "algorithm_source": "device",
+  "method": "least-squares circle fit,\tfirmware \u00e9dition 3 (device-supplied)",
+  "batch": {
+    "batch_id": "019a89f6-2000-70a5-9d2c-3b4a59687706",
+    "batch_digest": "sha256:2f574a0899f1c11e91b70e29c0270d1e06a2eff420826d86ef6c1699b881abf1"
+  }
+}

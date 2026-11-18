@@ -1,5 +1,9 @@
 * text=auto eol=lf
 *.ps1 text eol=crlf
+# Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
+# compare bytes, so no end-of-line conversion.
+fixtures/hal/idl/stamp/** -text
+schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
