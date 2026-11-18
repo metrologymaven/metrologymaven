@@ -87,6 +87,7 @@ Help text has one source: the projection's `help: DocText` field (`AUTO.SURF.PRO
 - The projection (`AUTO.SURF.PROJ`, leaf) does not yet carry `human_only` (D-031), registry-declared examples or the command definition digest. This leaf assumes `SurfaceProjection` gains `human_only: bool`, `command_digest: Sha256` and `DocText.examples`. Recorded for whoever next revises `AUTO.SURF.PROJ` (not edited from this node). Until then the emitter treats `human_only` as false and emits no examples, which keeps it buildable.
 - `OUTR.DOCS.REF` should declare `uses_artifacts: [AUTO.SURF.DOCS]` and render `docs-ref-v1` records deterministically; its CLI, MCP and Python pages are three renderings of one record. Cross-domain note for OUTR; not edited from here.
 - The earlier note "page format depends on `OUTR.DOCS`" is resolved by emitting structured records: `OUTR.DOCS.REF` left that choice to AUTO.
+- `OUTR.DOCS.REF` (built in `fid-outreach`) tests against a provisional `docs-ref-v1` schema, `fixtures/outr/docs/ref/docs-ref-v1.schema.json`. It assumes `help` (`DocText`) serialises as a string, `params[].ty` (`TypeRef`) as a string, and `result` (`TypeRef`) as a string or an object. It also assumes a `human_only` command's `mcp` entry has `available: true` with the tool name and `reason: human_only`. This leaf should confirm these shapes, or say which differ, when it publishes `schema/docs-ref-v1.json`.
 
 ## Children
 

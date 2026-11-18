@@ -1,0 +1,2 @@
+# Synthetic fixture: the release also ships Python bindings.
+surfaces = ["cli", "mcp", "python"]
