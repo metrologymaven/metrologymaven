@@ -1,0 +1,102 @@
+{
+  "clean": [],
+  "numbers": [
+    [
+      "result_like_number",
+      "prose/numbers.md",
+      3
+    ],
+    [
+      "result_like_number",
+      "prose/numbers.md",
+      5
+    ],
+    [
+      "result_like_number",
+      "prose/numbers.md",
+      5
+    ],
+    [
+      "result_like_number",
+      "prose/numbers.md",
+      7
+    ]
+  ],
+  "numbers-fenced": [],
+  "allow": [],
+  "proposal": [
+    [
+      "missing_proposal_step",
+      "manifest.json#task_guides/demo.plan_no_brief",
+      2
+    ],
+    [
+      "missing_proposal_step",
+      "manifest.json#task_guides/demo.plan_wrong_order",
+      3
+    ]
+  ],
+  "forbidden": [
+    [
+      "forbidden_instruction",
+      "prose/forbidden.md",
+      3
+    ],
+    [
+      "forbidden_instruction",
+      "prose/forbidden.md",
+      7
+    ],
+    [
+      "forbidden_instruction",
+      "prose/forbidden.md",
+      10
+    ],
+    [
+      "forbidden_instruction",
+      "recipes/demo.bore_basic.json#commentary/0",
+      1
+    ]
+  ],
+  "guide-fields": [
+    [
+      "forbidden_instruction",
+      "manifest.json#task_guides/demo.guide_fields/steps/0/purpose",
+      1
+    ],
+    [
+      "result_like_number",
+      "manifest.json#task_guides/demo.guide_fields/summary",
+      1
+    ]
+  ],
+  "budget": [
+    [
+      "over_budget",
+      "skills/demo-measure-bore/SKILL.md",
+      6
+    ]
+  ],
+  "standards": [
+    [
+      "possible_standards_text",
+      "prose/standards.md",
+      3
+    ],
+    [
+      "possible_standards_text",
+      "prose/standards.md",
+      5
+    ],
+    [
+      "possible_standards_text",
+      "prose/standards.md",
+      7
+    ],
+    [
+      "possible_standards_text",
+      "prose/standards.md",
+      10
+    ]
+  ]
+}
