@@ -1,0 +1,85 @@
+{
+  "check": {
+    "v1.0.0": {
+      "exit": 0,
+      "counts": {
+        "component": 1,
+        "gdt": 1,
+        "icon": 1,
+        "palette": 1,
+        "pattern": 1,
+        "screen": 1,
+        "token": 8
+      },
+      "findings": []
+    },
+    "v1.1.0": {
+      "exit": 0,
+      "findings": []
+    },
+    "v2.0.0": {
+      "exit": 0,
+      "findings": []
+    },
+    "dup-name": {
+      "exit": 1,
+      "findings": [
+        "PKG-NAME-DUPLICATE status.ok"
+      ]
+    }
+  },
+  "diff": {
+    "v1.0.0..v1.1.0": {
+      "exit": 0,
+      "changed": {
+        "sem.focus.outline": "added",
+        "sem.focus.ring": "deprecated"
+      },
+      "findings": []
+    },
+    "v1.0.0..v1.1.0-removed": {
+      "exit": 1,
+      "changed": {
+        "space.2": "removed"
+      },
+      "findings": [
+        "PKG-BREAKING-MINOR space.2",
+        "PKG-DEPRECATION-EARLY space.2"
+      ]
+    },
+    "v1.1.0..v1.2.0-nolog": {
+      "exit": 1,
+      "changed": {
+        "motion.fast": "value-changed"
+      },
+      "findings": [
+        "PKG-CHANGELOG-MISSING motion.fast"
+      ]
+    },
+    "v1.1.0..v2.0.0": {
+      "exit": 0,
+      "changed": {
+        "sem.focus.ring": "renamed"
+      },
+      "findings": []
+    }
+  },
+  "resolve": {
+    "v1.1.0": {
+      "sem.focus.ring": {
+        "value": "#174a94",
+        "warnings": [
+          [
+            "deprecated_name",
+            "sem.focus.ring",
+            "sem.focus.outline"
+          ]
+        ]
+      },
+      "sem.text.muted": {
+        "value": "#4a4f55",
+        "warnings": []
+      }
+    }
+  }
+}

@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design-pkg, fid-design]
 satisfies: [REQ-UX.SYSTEM-002, REQ-UX.SYSTEM-003, REQ-UX.SYSTEM-004]
 covers: []
 depends_on: []
