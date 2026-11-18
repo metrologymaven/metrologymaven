@@ -325,7 +325,7 @@ fn differential_fuzz_against_fid_canon() {
             1 => {
                 doc.remove(at);
             }
-            _ => doc.insert(at, b"{}[]\",:0-e.\\u"[r.below(14) as usize]),
+            _ => doc.insert(at, b"{}[]\",:0-e.\\u"[r.below(13) as usize]),
         }
         compare(&doc);
     }
