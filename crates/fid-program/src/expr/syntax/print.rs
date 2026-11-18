@@ -1,8 +1,10 @@
 //! Printer: the shortest source for a tree that parses back to the same tree.
 //!
 //! Parentheses appear only where precedence or associativity needs them, and a space only
-//! where two tokens would otherwise merge (two word characters in a row, or a number
-//! literal followed by `[`, which would lex as a quantity). Integers print without leading
+//! where two tokens would otherwise merge: a name or keyword followed by a word character,
+//! or a number literal followed by a digit or by `[` (which would lex as a quantity). A
+//! number followed by a letter needs no space (`1and x` lexes as `1`, `and`, `x`), so the
+//! output favours shortness over looks. Integers print without leading
 //! zeros and strings use the shortest escapes, so the output is never longer, never has
 //! more tokens and never nests deeper than any source of the same tree; print-then-parse
 //! therefore stays within the parse bounds. Uses an explicit stack, so any depth is safe.
@@ -70,7 +72,12 @@ struct Out {
 impl Out {
     fn piece(&mut self, s: &str, numeric: bool) {
         if let (Some(prev), Some(next)) = (self.text.chars().next_back(), s.chars().next()) {
-            if (is_word(prev) && is_word(next)) || (self.last_numeric && next == '[') {
+            let merge = if self.last_numeric {
+                next.is_ascii_digit() || next == '['
+            } else {
+                is_word(prev) && is_word(next)
+            };
+            if merge {
                 self.text.push(' ');
             }
         }
