@@ -17,6 +17,8 @@
 //!   `OUTR.BRAND.GUIDE.NAME`).
 //! - [`moderation`]: private moderation log check and quarterly counts (spec node
 //!   `OUTR.COMM.MOD`).
+//! - [`ref_pages`]: generated CLI, MCP and Python reference pages and their drift check (spec
+//!   node `OUTR.DOCS.REF`).
 //! - [`site::import`]: generated-input lock file, fetch, digest check and build manifest of the
 //!   website (spec node `OUTR.SITE.GEN.IMPORT`).
 
@@ -28,5 +30,6 @@ pub mod launch_plan;
 pub mod metrics;
 pub mod moderation;
 pub mod qa;
+pub mod ref_pages;
 pub mod review_gate;
 pub mod site;
