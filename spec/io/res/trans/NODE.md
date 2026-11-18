@@ -57,6 +57,7 @@ MODEL (record types), MAP (value and outcome mapping), VIEW (display rule helper
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** use the L0 ResultRecord schema crate for transcription records.
 - Where ResultRecord lives was unsettled (carried from IO.RES). Found: `GDT.CHAR.RECORD` owns the ResultRecord builder, and GDT is a later L2 domain than IO (CONSTITUTION §2.1), so IO cannot depend on it. Resolved for this node: `IO.RES.TRANS.MODEL` defines the transcribed variant (schema `transcribed-result@1`) with the CONSTITUTION §5 fields and reads GDT's canonical JSON only through `uses_artifacts`. **Cross-domain:** a shared ResultRecord schema in CORE (L1) would remove the duplication; GDT should at least publish its record schema as a versioned file.
 - DMIS results import is the single command `import.results_dmis@1`, in `IO.RES.TRANS.DMIS`.
 

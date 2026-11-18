@@ -6,9 +6,9 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 | | Count |
 |---|---:|
-| Nodes in scope | 1817 |
+| Nodes in scope | 1818 |
 | Buildable leaves | 1336 |
-| Open nodes still to expand | 72 |
+| Open nodes still to expand | 73 |
 | Nodes blocked on decisions | 0 |
 | Build waves | 39 |
 
@@ -1512,6 +1512,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - I18N.LOCALE Locale data, display formatting and locale-aware input parsing
 - I18N.UNITS Display-unit preferences and display-unit input
 - KRN.CONS.DERIV.SECT Section curves of nominal surfaces
+- KRN.NUM.PRED Exact geometric predicates
 - MIG.EXPLAIN.VARIANT Single-factor re-evaluation variants per factor
 - OUTR.CONTENT.MIG.PCD Migration guide for PC-DMIS users
 - OUTR.CONTENT.MIG.SA Migration guide for SpatialAnalyzer users

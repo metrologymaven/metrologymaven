@@ -73,6 +73,7 @@ Alternative considered: merging SANDBOX into RUN; rejected because the sandbox's
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** tooling may now link pure L0 libraries (e.g. canonical JSON) instead of carrying its own copy.
 - Resolved by D-032 (accepted): the harness is the separate `fid-eval` binary (Tooling layer, D-034).
 - D-012: if an agent under test also has shell access, the `fid` CLI it calls runs as `script` (or `human` under option B). Resolved by D-012 (accepted, option C): CLI calls stay `script` unless a person confirms, and the `fid` shim of `AGENT.HARNESS.RUN` attributes them to the run.
 - Run-to-run variance of LLM agents is determinism class `N`; the minimum repetition count needs a measured variance study.

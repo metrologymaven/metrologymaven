@@ -67,6 +67,7 @@ DATA (CLDR import, pinned release, locale list), RENDER (number render and the i
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** the locale render transform is an L0 pure library so that RPT (L2) can call it directly instead of re-implementing it.
 - `KRN.NUM.FMT` lists "locale-specific separators and typography" as owned by RPT and VIZ, while the parent I18N says I18N supplies locale rules. This node assumes: I18N.LOCALE supplies the rules and transforms; RPT and VIZ apply them. The KRN.NUM.FMT Out line should name `I18N.LOCALE`.
 - Whether to group digits in the fractional part (some style guides group by three after the decimal point) [unverified]. Default: no fractional grouping.
 

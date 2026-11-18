@@ -71,6 +71,7 @@ Synthetic JSON inputs and a UNC decision-rule stub defined in the test module; C
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** the ResultRecord **types** move to an L0 schema crate that every layer may use; this node keeps assembly and validation logic.
 - The exact sealed-type mechanism depends on how `UNC.DEC` exposes decisions; if it exposes a plain struct, this leaf needs a constructor token from UNC instead.
 
 ## Children

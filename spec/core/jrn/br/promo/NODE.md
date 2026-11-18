@@ -73,6 +73,7 @@ Moves work from a source branch onto a target branch. A fast-forward moves the t
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** in the Lean profile, the `AssertionCheck` for protected-branch promotion is satisfied by CORE.BUS.PRIN's `HumanPresence` confirmation; TRUST.ESIG is the Regulated path.
 - `CORE.RPL.RETGT` (REQ-CORE.RPL.RETGT-005) implements `Rebaser`, and `TRUST` implements `AssertionCheck`; both are wired by the app at start-up. A `depends_on` would create a cycle (`CORE.RPL` depends on `CORE.JRN`; `TRUST` is a higher layer), so none is declared.
 - `journal.request_promote_branch@1` overlaps with the generic pending request filed when an agent calls the `human_only` `journal.promote_branch@1` over MCP; both are kept because REQ-CORE.JRN-012 names the explicit request. `VIZ.INBOX` should show both kinds.
 

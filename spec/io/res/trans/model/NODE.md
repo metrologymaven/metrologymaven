@@ -78,6 +78,7 @@ The one definition of how a third-party result becomes a platform record. A `Tra
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** use the L0 ResultRecord schema crate instead of defining a local transcribed variant.
 - **Cross-domain:** the ResultRecord type is owned by `GDT.CHAR.RECORD`, a later L2 domain than IO, so IO may not depend on it. This leaf defines the transcribed variant in IO and only reads GDT's published canonical JSON as an artifact. A shared ResultRecord schema in CORE (L1) would remove the duplication; GDT should publish `result-record` as a versioned schema file.
 
 ## Children

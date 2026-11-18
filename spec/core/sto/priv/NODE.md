@@ -72,6 +72,7 @@ Makes CONSTITUTION C7 testable: the core creates, opens, edits and saves project
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** a user's own telemetry or update consent is W2 (journaled, default off); site-wide policy is A0 (CONSTITUTION §3.1).
 - Telemetry consent is classed W3 because the concept docs list consent among controlled-record changes; CONSTITUTION §3.1 does not name it. If maintainers prefer A0, change the class before the leaf is built.
 
 ## Children

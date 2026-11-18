@@ -61,6 +61,7 @@ PLANE (plane cut and half-space and box clip), CURVE (closed-curve and selection
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** use KRN.NUM.PRED for all orientation tests.
 - Robust exact predicates for triangle splitting near the cut plane must stay within KNP-1 (no FMA); confirm with KRN.NUM whether adaptive-precision predicates are available.
 - **At split (2026-11-17):** children assume exact-sign predicates without FMA from `KRN.NUM` (`fid_num::pred`). `KRN.NUM` has no predicates child yet (the only implementation is inside `KRN.MZ.VOR`); this cross-domain gap is shared with `SCAN.MESHOP.REPAIR` and `SCAN.POLY.SURF`.
 

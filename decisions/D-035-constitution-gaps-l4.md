@@ -1,7 +1,7 @@
 ---
 id: D-035
 title: Constitution gaps found at level 4 (injected input, egress responses, foundation crates)
-status: proposed
+status: accepted
 raised_by: launch-1 review
 blocks: []
 decide_by: before the next expansion
@@ -32,4 +32,4 @@ Accept all seven. #1 is the most important: without it, an agent driving the UI 
 
 ## Decision
 
-_Open._
+**Accepted (all seven proposals), 2026-11-17, founder.** CONSTITUTION §2.1 (L0, L3 and Tooling rows; GEO.OOC at L2), §3 (injected input, Lean human assertion, registry visibility) and §3.1 (bounded egress responses, host-handshake permit) are amended. KRN.NUM.PRED is added. Affected nodes carry a revision note. This is compatible with D-037 (proposed): the injected-input rule is what keeps D-037's human gates H1-H4 from being bypassed by an agent driving the UI.

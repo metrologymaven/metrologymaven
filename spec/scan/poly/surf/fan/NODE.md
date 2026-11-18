@@ -69,6 +69,7 @@ The first half of the chosen reconstruction (localized tangent-plane Delaunay, a
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** use KRN.NUM.PRED for all in-circle and orientation tests.
 - Exact predicates are assumed from `KRN.NUM`, which has no predicates child yet (shared gap with `SCAN.MESHOP.CUT`); `KRN.MZ.VOR` holds the only current implementation.
 
 ## Children

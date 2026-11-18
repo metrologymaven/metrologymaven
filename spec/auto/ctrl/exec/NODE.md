@@ -78,6 +78,7 @@ In-process test app with `fixtures/manifest/min-classes.json`, fake bus, fake jo
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** commands triggered through the control channel (including injected UI input) carry the channel's principal; see CONSTITUTION §3 injected-input rule.
 - Binding control-channel clients as `agent` means their W2 commits go to an agent branch (REQ-CORE.BUS-006). That is the parent's intent (same limits as MCP agents) but may surprise SDK users scripting a running app; humans who want working-branch commits use the CLI or Python (see D-012).
 
 ## Children

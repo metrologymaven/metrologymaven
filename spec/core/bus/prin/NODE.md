@@ -78,6 +78,7 @@ Defines who is acting. A principal is derived only from the authenticated channe
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** add the injected-input rule (GUI input is `human` only from local OS input devices; the UI host passes an origin token; injected input carries the channel's principal), and expose `HumanPresence` as the Lean-profile human assertion for W3 release and protected-branch promotion.
 - **Applied (2026-11-17):** D-012 option C (script by default, per-session human confirmation) and D-030 option B (server callers are `script` with `on_behalf_of`, service credentials `service`). REQ-003 was narrowed to non-upgraded sessions; REQ-009..013 are new.
 - D-030 option B reads "every server caller except a service credential is `script`". This leaf maps the server's MCP channel to `agent`, as for local MCP, because `agent` is the stricter kind and keeps the CONSTITUTION §3 agent bans; confirm with `ENT.IAM`.
 - Whether a GUI call driven by an accessibility automation tool should count as `human`; this leaf treats every GUI-widget call in an interactive session as `human`.

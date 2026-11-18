@@ -73,6 +73,7 @@ The read-only commands through which people, scripts and agents discover what th
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** filter `registry.list_commands@1` and `describe_command@1` by the caller's projection; MCP callers never see `never`-projected (M1, S1, A0) commands.
 - None.
 
 ## Children

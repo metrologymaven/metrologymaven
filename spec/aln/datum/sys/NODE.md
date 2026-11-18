@@ -60,6 +60,7 @@ GATE (dialect gate and resolver calls), BUILD (frame build via GDT.DRF or level 
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** ALN may depend on `fid-gps` (now L0), so the dependency on GDT.RES/GDT.DRF pure functions is layer-legal.
 - **Resolved: overlap with GDT.DRF.** BUILD calls GDT.DRF's pure construction (the R1 path of `gdt.build_drf@1`, GDT.DRF.BUILD) and simulators (GDT.DRF.SIM); GDT.DRF owns the single DoF table, so this node no longer uses `ALN.DATUM.DOF` or `ALN.DATUM.ELEM` (removed from depends_on). The unconstrained policy (`keep_parent` / `reject`) keeps the same names and error code as ALN.DATUM.DOF.
 - **Unresolved: layer order.** CONSTITUTION §2.1 puts ALN before GDT in L2, so ALN may not depend on GDT. GATE and BUILD depend on GDT.RES.RESOLVE, GDT.DRF.SIM and GDT.DRF.BUILD, which are pure kernel code in `fid-gps`. This is layer-legal only if `fid-gps` (resolver, DMT schema, DRF construction, simulators) is classed L0; otherwise datum-system alignment must move to GDT. Needs a ruling at review (possibly an amendment to D-034's L0 list); not opened as a decision because the caller fixed this boundary.
 - The GDT/ALN dependency cycle risk noted in the parent remains: GDT.DRF depends on ALN.MODEL and ALN.BFIT, and this node depends on GDT.DRF. That is acyclic only while ALN.MODEL and ALN.BFIT never depend on ALN.DATUM.

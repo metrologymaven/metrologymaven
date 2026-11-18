@@ -68,6 +68,7 @@ A second, independent path for the minimum-zone 2D circle. The optimal centre li
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** move the predicate code into KRN.NUM.PRED and depend on it.
 - None.
 
 ## Children

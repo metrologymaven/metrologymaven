@@ -68,6 +68,7 @@ The shell's implementation of the `UiHost` trait defined by `AUTO.CTRL.UIOPS` (a
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** pass an origin token for every injected input event, so commands triggered by automation carry the control channel's principal, never `human`.
 - Cross-domain (unresolved): `CORE.BUS.PRIN` REQ-005 assigns `human` to any GUI-widget call in an interactive session. This leaf needs the bus to accept an injected-input origin token from the control channel and map it to the channel's principal; `CORE.BUS.PRIN` must add that before this leaf can pass AC-2 and AC-3.
 
 ## Children

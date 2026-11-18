@@ -68,6 +68,7 @@ The only way data leaves the machine (CONSTITUTION §3.1, D-031). `egress.send@1
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** `egress.send@1` returns a bounded, size-capped response body (fetch = empty payload; response is untrusted data), and grant a scoped read-only socket permit for the R0 driver-host handshake (D-023).
 - A lint that bans socket crates outside `fid-net` fits `CORE.BUS.LINT`, which is a leaf owned elsewhere; this leaf relies on the type requirement until that check is extended.
 - Socket-denial mechanisms on Windows and macOS for AC-4 need a platform review [unverified].
 

@@ -70,6 +70,7 @@ Finds every defect that breaks downstream operations and says where it is: self-
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** use KRN.NUM.PRED for all orientation and intersection sign tests.
 - Exact predicates are assumed from `KRN.NUM`, which has no predicates child yet (see `SCAN.MESHOP.CUT`).
 
 ## Children

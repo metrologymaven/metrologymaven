@@ -55,6 +55,7 @@ SELECT (gate selection), REASON, TWOPERS, ESIGUI, STEPCONF.
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** Lean gates use CORE.BUS.PRIN's `HumanPresence` confirmation as the human assertion; REG (Regulated) keeps TRUST.ESIG.
 - Launch-1 excludes TRUST.ESIG, so the Lean profile must work without it: `VIZ.INBOX.GATES.PLAN` defines a `CeremonyProvider` trait that is optional, and `VIZ.INBOX.GATES.LEAN` needs no signing. Only `VIZ.INBOX.GATES.REG` (open, P1b) depends on TRUST.ESIG; the launch-1 milestone should exclude it.
 - Without a ceremony, promotion into a protected branch (`main` after the first release) is unavailable in launch-1; TRUST must say how Lean obtains the human assertion that `CORE.JRN.BR.PROMO` requires [cross-domain gap].
 - The dependency on `VIZ.INBOX.ACTIONS` was removed: GATES offers the plan, ACTIONS consumes it.

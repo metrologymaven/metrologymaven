@@ -99,6 +99,7 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** call the L0 I18N locale render transform directly instead of re-applying I18N's rules.
 - **Applied (KRN.NUM.FMT.LEN note):** the parent requirement REQ-RPT.MODEL.FMT-003 described RPT requesting one digit at a time. The kernel formatter already does this when given limits, so this leaf passes the limits and consumes `digits_added` and `tie_at_max_precision` instead of looping; the parent's intent is unchanged.
 - **Confirmed for RPT (KRN.NUM.FMT.LEN open question):** a conforming value that rounds to its limit may print as the limit; REQ-RPT-007 forbids only the nonconforming case. `UNC.DEC` should still confirm before `fmt.length@1` is frozen.
 - Guard-banded rules: this leaf assumes the decision record carries the acceptance limits it used [unverified against `UNC.DEC.EVAL`]; if not, UNC must add them or RPT can only pass spec limits.

@@ -15,7 +15,7 @@ depends_on: []
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # KRN.NUM: fid-num numerics facade and KNP-1 enforcement
@@ -57,6 +57,7 @@ The bottom of the kernel graph. `fid-num` is the only place where the kernel tou
 - **REQ-KRN.NUM-010** The facade shall ship a self-test of at least 10 000 [unverified] fixed inputs per function whose output digest is identical on x86-64, ARM64 and wasm32.
 - **REQ-KRN.NUM-011** The facade shall provide an exact decimal comparator (`kdec`) that orders any finite f64 against any decimal limit by exact rational comparison, without converting the limit to f64.
 - **REQ-KRN.NUM-012** The facade shall provide versioned number formatters `fmt.<kind>@<major>` that turn an SI f64 value into a decimal string in a requested unit, and that never print a value lying on the nonconforming side of a limit as equal to that limit.
+- **REQ-KRN.NUM-013** The kernel shall provide exact-sign geometric predicates (orientation and in-circle/in-sphere on f64 inputs, with exact fallback and no fused multiply-add) as one shared module, so that mesh cutting, repair, meshing and Voronoi-based fits do not each implement their own (D-035).
 
 ## Interfaces
 
@@ -96,3 +97,4 @@ Alternatives considered:
 | KRN.NUM.LINT | KNP-1 lint and kernel dependency allowlist check | 001 008 009 | none |
 | KRN.NUM.KDEC | Exact decimal type and comparator (kdec) | 001 007 011 | none |
 | KRN.NUM.FMT | Versioned kernel number formatters (fmt.*) | 001 007 012 | none |
+| KRN.NUM.PRED | Exact geometric predicates | 013 | none |

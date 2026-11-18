@@ -83,6 +83,7 @@ The UI-level operations of the channel: read the UI tree (widgets, roles, labels
 
 ## Open questions
 
+- **Revise for D-035 (accepted 2026-11-17):** injected UI input must carry the control channel's principal via the UI host's origin token; it can never satisfy a human-only gate.
 - Cross-domain: `VIZ.SHELL.A11Y` implements `UiHost` and must guarantee REQ-004 (commands triggered by injected input carry the channel principal, not `human` as `CORE.BUS.PRIN` REQ-005 would assign to a GUI widget). Without that, an agent could click an adoption button and act as a human. `CORE.BUS.PRIN` needs an injected-input origin; neither node states it yet.
 - Stable widget IDs under egui's immediate mode (D-005) are the host's convention (`VIZ.SHELL.A11Y`); this node treats them as opaque strings.
 - `VIZ.SHELL.A11Y` declares `depends_on: [AUTO.CTRL]`, so this node defines the `UiHost` trait instead of depending on VIZ (avoids a dependency cycle).

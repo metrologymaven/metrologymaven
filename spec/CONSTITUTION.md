@@ -37,11 +37,13 @@ Each crate belongs to one layer and may depend only on its own layer or lower on
 
 | Layer | Contents | May not depend on |
 |---|---|---|
-| L0 Foundation | Pure libraries: KRN.*, GEO geometry libraries (everything except `*.CMD` and storage), UNC math (MODEL, PROP, XFM), the unit catalogue (GEO.FRAME.UNITS), canonical JSON (CORE.JRN.CANON), HAL.IDL types | CORE or anything above |
+| L0 Foundation | Pure libraries: KRN.* (including the exact geometric predicates, KRN.NUM.PRED); GEO geometry libraries (everything except `*.CMD` and storage); UNC math (MODEL, PROP, XFM) and the instrument-model kernel (`fid-kunc`); the GD&T evaluation library (`fid-gps`); the ResultRecord schema crate (types only); the unit catalogue (GEO.FRAME.UNITS); canonical JSON (CORE.JRN.CANON); the I18N locale render transform; HAL.IDL types (D-035) | CORE or anything above |
 | L1 Core | CORE.* | L2, L3 |
 | L2 Domain services | Command crates, in this order: IO < ALN < GDT < UNC commands < SCAN < RPT < TRUST < HAL < CMM < LVM < IND < MIG < ENT | A later L2 domain, or L3 |
-| L3 Surfaces and apps | AUTO, VIZ, ECO.APPS, FLOW runners, AGENT, I18N runtime, UX token consumers | — |
-| Tooling | ECO CI/REL/RULES/PARITY, OUTR, PLAT checks, QUAL evidence, UNC.RDL/ORS suites, test harnesses | Product crates: tooling reads **artifacts** only |
+| L3 Surfaces and apps | AUTO, VIZ, ECO.APPS, FLOW runners, AGENT, I18N runtime, UX token consumers; also the QUAL product crate, the SCAN GPU-preview crate and the RPT designer UI (D-035) | — |
+| Tooling | ECO CI/REL/RULES/PARITY, OUTR, PLAT checks, QUAL evidence, UNC.RDL/ORS suites, test harnesses | Product crates above L0: tooling reads **artifacts**, but may link pure L0 libraries (D-035) |
+
+GEO out-of-core storage (GEO.OOC) is L2, because it uses CORE.STO (D-035).
 
 **Artifact dependencies.** A node that reads a file or format another node publishes declares `uses_artifacts: [NODE.ID]`, not `depends_on`. The publisher's Interfaces section names the file and its schema version. Artifact dependencies are validated but are not code edges, and they are excluded from cycle checks.
 
@@ -81,6 +83,9 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agen
 - A person can upgrade a CLI session or script run to `human` for its lifetime by confirming in the running app, or with an OS user-presence check when headless. The session records the human as the principal from then on.
 - Raw file paths stay refused for `script`.
 - On the self-hosted server, every caller except a service credential is `script`, with the user recorded as `on_behalf_of`. Releases and signatures on server-held records are made in a desktop app and pushed.
+- **Injected input (D-035).** A GUI action counts as `human` only when its input comes from local OS input devices. Input injected through the control channel, accessibility automation or any agent surface carries **that channel's principal**. The UI host passes an origin token to the bus. An agent driving the UI therefore cannot pass a `human_only`, W3, S1, A0 or M1 gate.
+- **Lean human assertion (D-035).** In the Lean profile, the human assertion that W3 release and protected-branch promotion need is CORE.BUS.PRIN's `HumanPresence` confirmation, which is OS user verification. TRUST.ESIG is the Regulated path. Signatures stay optional in Lean.
+- **Registry visibility (D-035).** Registry list and describe queries filter by the caller's projection. MCP callers never see `never`-projected commands.
 
 **Motion (D-008):**
 - Agents may not file run requests over MCP. Their only motion-related tools are `run:hold` and read-only status.
@@ -102,7 +107,8 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals. Agen
 | Site-wide update-check or telemetry policy (D-031) | A0 |
 | A user's own update-check or telemetry consent (D-031) | W2, journaled. It never defaults to on. |
 | Data leaving the machine (D-031) | Only through the CORE.BUS primitive `egress.send@1` (X1, request-only for agents), which takes a staged artifact and a declared destination. Other domains stage artifacts and call it. |
-| Connecting to a driver host on another machine (D-023) | As decided in D-023 |
+| Responses from `egress.send@1` (D-035) | It returns a bounded, size-capped response body. A pure fetch is the same X1 primitive with an empty payload. Responses are untrusted data (C6). |
+| Connecting to a driver host on another machine (D-023) | As decided in D-023. The R0 read-only host handshake gets a scoped socket permit in CORE.BUS.POL.EGRESS (D-035). |
 | A leaf with several commands | `side_effect:` may be a list, one class per command in cli/mcp order |
 
 ## 4. Numerics, determinism and replay
