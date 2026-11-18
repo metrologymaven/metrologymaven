@@ -1,0 +1,18 @@
+[package]
+name = "fid-project"
+description = "Metrology Maven project model: entity ID service (spec node CORE.PRJ.CONT.ID)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+# SHA-1 for UUIDv5, as RFC 9562 requires (identity only, not security). Same RustCrypto family as sha2.
+sha1 = "0.10"
+# Operating-system CSPRNG for the random bits of live UUIDv7s.
+getrandom = "0.2"
+
+[lints]
+workspace = true

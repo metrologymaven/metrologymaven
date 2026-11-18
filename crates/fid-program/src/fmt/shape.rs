@@ -7,12 +7,13 @@
 
 use super::uuid::Uuid7;
 use fid_canon::CValue;
+use fid_types::CommandName;
 use std::collections::BTreeMap;
 
 /// Variable, label, subroutine and argument names.
 pub const IDENT_PATTERN: &str = "^[A-Za-z_][A-Za-z0-9_]{0,63}$";
-/// Registry command ID without the major (same rule as `fid-registry` definitions).
-pub const COMMAND_PATTERN: &str = "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$";
+/// Registry command name without the major (`fid_types::CommandName`).
+pub const COMMAND_PATTERN: &str = CommandName::PATTERN;
 /// Canonical UUIDv7 text.
 pub const UUID7_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$";
 
@@ -226,13 +227,6 @@ pub(crate) fn is_ident(s: &str) -> bool {
         && b.iter().all(|c| c.is_ascii_alphanumeric() || *c == b'_')
 }
 
-pub(crate) fn is_command_id(s: &str) -> bool {
-    !s.is_empty()
-        && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'.')
-        && s.bytes().next().is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-        && s.bytes().last().is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-}
-
 pub(crate) fn as_u32(v: &CValue) -> Option<u32> {
     match v {
         CValue::Num(n) if n.fract() == 0.0 && *n >= 0.0 && *n <= f64::from(u32::MAX) => Some(*n as u32),
@@ -249,7 +243,7 @@ impl Ty {
             Ty::U32 { min } => as_u32(v).is_some_and(|x| x >= min),
             Ty::Uuid7 => matches!(v, CValue::Str(s) if Uuid7::parse(s).is_some()),
             Ty::Ident => matches!(v, CValue::Str(s) if is_ident(s)),
-            Ty::CommandId => matches!(v, CValue::Str(s) if is_command_id(s)),
+            Ty::CommandId => matches!(v, CValue::Str(s) if CommandName::is_valid(s)),
             Ty::Text => matches!(v, CValue::Str(_)),
             Ty::Json => true,
             Ty::Object => matches!(v, CValue::Obj(_)),

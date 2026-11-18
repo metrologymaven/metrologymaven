@@ -14,7 +14,8 @@ mod uuid;
 pub use shape::{program_schema, COMMAND_PATTERN, IDENT_PATTERN, UUID7_PATTERN};
 pub use uuid::Uuid7;
 
-use fid_canon::{digest_bytes, format_number, parse_with_limits, to_canonical_bytes, CValue, CanonError, Digest};
+use fid_canon::{digest_bytes, format_number, parse_with_limits, to_canonical_bytes, CValue, CanonError};
+use fid_types::Digest;
 use shape::{Shape, Ty};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -241,9 +242,9 @@ impl Program {
         Ok(bytes)
     }
 
-    /// SHA-256 of the canonical bytes (REQ-AUTO.PROG.FMT-005).
+    /// SHA-256 of the canonical bytes, as `sha256:<hex>` (REQ-AUTO.PROG.FMT-005).
     pub fn digest(&self) -> Result<Digest, ProgramError> {
-        self.to_canonical().map(|b| digest_bytes(&b))
+        self.to_canonical().map(|b| Digest::from_bytes(digest_bytes(&b).0))
     }
 
     /// Every step ID in document order (main, then subroutines; depth first).
