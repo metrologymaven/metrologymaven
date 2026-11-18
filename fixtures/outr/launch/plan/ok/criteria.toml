@@ -1,0 +1,95 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+version = 1
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+target_date = "2099-01-15"
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "node_status"
+node = "RPT.TPL"
+in = ["leaf", "frozen"]
+
+[[milestone.criterion]]
+id = "RPT-A-02"
+kind = "signoff"
+role = "release-manager"
+note = "free text, not evaluated"
+
+[[milestone]]
+id = "report-beta"
+app = "report"
+level = "beta"
+scope_label = "offline transcription reports"
+target_date = 2099-04-01
+
+[[milestone.criterion]]
+id = "RPT-B-01"
+kind = "phase_done"
+phase = "P1a"
+scope = ["RPT", "FLOW.REPORT"]
+
+[[milestone.criterion]]
+id = "RPT-B-02"
+kind = "parity"
+seeds = ["SEED-RPT-001", "SEED-RPT-002"]
+
+[[milestone]]
+id = "report-1-0"
+app = "report"
+level = "1.0"
+
+[[milestone.criterion]]
+id = "RPT-1-01"
+kind = "phase_done"
+phase = "P1b"
+scope = ["RPT"]
+
+[[milestone.criterion]]
+id = "RPT-1-02"
+kind = "parity"
+app = "report"
+min_pct = 80
+
+[[milestone]]
+id = "inspect-alpha"
+app = "inspect"
+level = "alpha"
+announced = { date = "2099-02-01", release = "v0.1.0-alpha" }
+
+[[milestone.criterion]]
+id = "INS-A-01"
+kind = "node_status"
+node = "SCAN"
+in = ["split"]
+
+[[milestone.criterion]]
+id = "INS-A-02"
+kind = "parity"
+app = "inspect"
+min_pct = 50.5
+
+[[milestone]]
+id = "inspect-beta"
+app = "inspect"
+level = "beta"
+scope_label = "offline scan comparison"
+
+[[milestone.criterion]]
+id = "INS-B-01"
+kind = "signoff"
+role = "metrology-reviewer"
+
+[[milestone]]
+id = "inspect-1-0"
+app = "inspect"
+level = "1.0"
+
+[[milestone.criterion]]
+id = "INS-1-01"
+kind = "phase_done"
+phase = "P2"
+scope = ["SCAN", "GDT"]

@@ -1,0 +1,27 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Sources for person-data.toml.
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = true
+public_basis = "Example public repository statistics, readable without an account."
+
+[[source]]
+id = "contributors-api"
+url = "https://api.example.org/repos/demo/contributors"
+public = true
+public_basis = "Example per-person contributor list."
+
+[[source]]
+id = "encoded-api"
+url = "https://api.example.org/repos/demo/%63ommitters"
+public = true
+public_basis = "Example per-person list, percent-encoded path."
+
+[[source]]
+id = "search-api"
+url = "https://api.example.org/search/commits?q=author%3Ademo"
+public = true
+public_basis = "Example search targeting one person."

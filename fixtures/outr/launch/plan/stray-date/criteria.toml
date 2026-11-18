@@ -1,0 +1,13 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+version = 1
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+target_date = "2099-01-15"
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "signoff"
+role = "release-manager"

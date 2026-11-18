@@ -53,6 +53,8 @@ jobs:
           out=$(cargo xtask plat-matrix validate fixtures/plat/matrix/valid.toml)
           test "$out" = "6 rows, 0 errors"
           cargo xtask plat-matrix validate platform/support-matrix.toml
+      - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
+        run: cargo xtask plat-matrix lint-tiers
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -78,7 +80,10 @@ jobs:
           python tools/check_entries.py
           python tools/check_knp1_findings.py
           python tools/check_eval_suite.py
+          python fixtures/pkg/make_fixtures.py --check
+          python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
+          python -m unittest discover -s tools/tests -v
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
