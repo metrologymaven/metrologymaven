@@ -40,6 +40,7 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 11. **Paid-service boundary (D-036 rule 3).** Never move a capability the open apps need behind a paid service. Nodes that define a paid service say `service` in their Purpose.
 12. **Optional private context.** If `../docs/funding-strategy.md` exists, read it for context before expanding ECO, TRUST, QUAL, OUTR, KRN, GDT, UNC or AGENT nodes. Never copy its contents into this repository. Public contributors won't have it, and that's fine.
 13. **Expert nodes (D-039 pipeline).** Never expand a node that has `needs_expert:` set; `scope.py open` already skips them. You may draft a PR from an expert's written review on its issue, naming the expert as reviewer. Add `needs_expert: <area>` (areas in `tools/scope.py`) to an open node only when getting it wrong would make measurements wrong and no public reference settles it.
+14. **Shared types (code).** Crates use `fid-types` for determinism classes, side-effect classes, `sha256:` digests and command IDs (`name@major`) and never redefine them. Add a concept there only when two or more crates need it. Known exception: `fid-canon`'s `Digest` until it converts.
 
 ## Working rules (adapted from the Craft family's house rules)
 

@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

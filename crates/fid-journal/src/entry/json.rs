@@ -9,7 +9,7 @@ use super::{
 };
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, Digest};
 use fid_kci::AlgorithmId;
-use fid_registry::{Determinism, SideEffect};
+use fid_types::{CommandName, Determinism, SideEffect};
 use std::collections::BTreeMap;
 
 type Obj = BTreeMap<String, CValue>;
@@ -104,15 +104,6 @@ fn is_branch(s: &str) -> bool {
         && b.all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'/' | b'-'))
 }
 
-/// `^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$`, the registry's command-ID pattern.
-fn is_command_id(s: &str) -> bool {
-    let end_ok = |c: u8| c.is_ascii_lowercase() || c.is_ascii_digit();
-    let b = s.as_bytes();
-    match (b.first(), b.last()) {
-        (Some(f), Some(l)) => end_ok(*f) && end_ok(*l) && b.iter().all(|c| end_ok(*c) || *c == b'_' || *c == b'.'),
-        _ => false,
-    }
-}
 
 /// RFC 3339 UTC instant: `YYYY-MM-DDTHH:MM:SS[.fraction]Z`, 1 to 9 fraction digits (`$defs/utc`).
 fn is_utc(s: &str) -> bool {
@@ -196,7 +187,7 @@ fn algorithms(o: &Obj, at: &str) -> Result<Vec<AlgorithmId>, EntryError> {
 
 fn command_id(o: &Obj, at: &str) -> Result<String, EntryError> {
     let id = string(o, "id", at)?;
-    if !is_command_id(id) {
+    if !CommandName::is_valid(id) {
         return Err(err(&format!("{at}.id"), "expected a dotted lowercase command ID"));
     }
     Ok(id.to_string())
@@ -297,7 +288,7 @@ pub const BRANCH_PATTERN: &str = "^[A-Za-z0-9][A-Za-z0-9._/-]*$";
 /// `$defs/utc`.
 pub const UTC_PATTERN: &str = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$";
 /// `$defs/command_id`, the registry's command-ID pattern.
-pub const COMMAND_ID_PATTERN: &str = "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?$";
+pub const COMMAND_ID_PATTERN: &str = CommandName::PATTERN;
 /// `$defs/algorithm`: `module.feature.method@x.y.z`, each version part a u32.
 pub const ALGORITHM_PATTERN: &str = "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)$";
 

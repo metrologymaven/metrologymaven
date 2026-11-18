@@ -311,7 +311,7 @@ pub fn parse_card(text: &str) -> Result<SpecCard, CardError> {
         failure_modes: get_list("failure_modes")?,
         validation: get_str("validation")?,
     };
-    if !matches!(card.determinism.as_str(), "D0" | "D1" | "D2" | "D3" | "N") {
+    if fid_types::Determinism::parse(&card.determinism).is_err() {
         return Err(CardError::BadDeterminism(card.determinism));
     }
     check_text(&card)?;

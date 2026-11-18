@@ -13,7 +13,7 @@
 
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, CanonError, Digest};
 use fid_kci::AlgorithmId;
-use fid_registry::{Determinism, SideEffect};
+use fid_types::{Determinism, SideEffect};
 use std::collections::BTreeMap;
 use std::fmt;
 

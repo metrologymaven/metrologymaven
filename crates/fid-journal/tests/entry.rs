@@ -9,7 +9,7 @@ use fid_journal::{
     ALGORITHM_PATTERN, BRANCH_PATTERN, COMMAND_ID_PATTERN, COMMAND_REQUIRED, DIGEST_PATTERN, FIRST_SEQ, GENESIS_PREV,
     HEADER_OPTIONAL, HEADER_REQUIRED, IDENT_PATTERN, R1_RESULT_TAG, SEQ_PATTERN, TOMBSTONE, U64_PATTERN, UTC_PATTERN,
 };
-use fid_registry::{Determinism, SideEffect};
+use fid_types::{Determinism, SideEffect};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 

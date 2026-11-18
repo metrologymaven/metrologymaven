@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-kci = { path = "../fid-kci" }
-fid-registry = { path = "../fid-registry" }
+fid-types = { path = "../fid-types" }
 getrandom = "0.2"
 
 [lints]
