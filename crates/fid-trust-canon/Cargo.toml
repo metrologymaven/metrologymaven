@@ -16,6 +16,7 @@ sha2 = "0.10"
 [dev-dependencies]
 # Cross-check only (REQ-TRUST.CHAIN.CANON-005): CORE's canonicaliser is compared, never linked.
 fid-canon = { path = "../fid-canon" }
+fid-journal = { path = "../fid-journal" }
 
 [lints]
 workspace = true
