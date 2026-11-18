@@ -9,7 +9,8 @@
 //! suite/oracles/<id>/oracle.json    the oracle (schema/eval-oracle-v1.schema.json)
 //! ```
 //!
-//! A task may carry the red-team extension (`family`, `predicates`; AGENT.REDTEAM.PRED).
+//! A task may carry the red-team extension (`family`, `predicates`; AGENT.REDTEAM.PRED) and,
+//! for injection tasks, `payloads` (AGENT.REDTEAM.INJECT).
 //!
 //! Every file is read fail-closed: at most [`MAX_FILE_BYTES`], JSON nesting at most
 //! [`MAX_DEPTH`], duplicate keys and unknown fields rejected, and all field errors of a
@@ -26,7 +27,7 @@ mod suite;
 mod task;
 
 pub use oracle::{parse_oracle, Basis, Forbidden, Oracle, OracleItem, Outcome, Quantity, DEFAULT_TOL, SI_UNITS};
-pub use redteam::{is_marker, Family, Predicate, PredicateKind, PREDICATE_KINDS};
+pub use redteam::{is_marker, Family, Payload, Predicate, PredicateKind, Vector, PREDICATE_KINDS};
 pub use suite::{load_suite, read_oracle, read_task, suite_version, Suite, SuiteTask, SUITE_FORMAT};
 pub use task::{parse_task, App, Budget, Licence, RelPath, Roots, StartState, Task, Tier};
 
