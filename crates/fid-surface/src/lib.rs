@@ -149,7 +149,7 @@ impl EnvelopeError {
             EnvelopeError::BadJournalEntryHash => "bad_journal_entry_hash",
             EnvelopeError::SchemaVersionUnsupported(_) => "schema_version_unsupported",
             EnvelopeError::Shape(_) => "bad_shape",
-            EnvelopeError::Json(c) => *c,
+            EnvelopeError::Json(c) => c,
         }
     }
 }
@@ -389,7 +389,10 @@ pub fn envelope_schema() -> CValue {
             "properties",
             obj([
                 ("envelope_version", obj([("const", CValue::Num(f64::from(ENVELOPE_VERSION)))])),
-                ("command_id", obj([("type", s("string")), ("pattern", s("^[a-z0-9][a-z0-9_.]*[a-z0-9]@[0-9]{1,5}$"))])),
+                (
+                    "command_id",
+                    obj([("type", s("string")), ("pattern", s("^[a-z0-9][a-z0-9_.]*[a-z0-9]@[0-9]{1,5}$"))]),
+                ),
                 ("outcome", obj([("enum", strs(&outcomes))])),
                 (
                     "error",

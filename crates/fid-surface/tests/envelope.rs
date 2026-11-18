@@ -76,11 +76,7 @@ fn check_generated(rel: &str, value: &CValue) {
     want.push(b'\n');
     let path = root().join(rel);
     let have = std::fs::read(&path).unwrap_or_default();
-    assert!(
-        have == want,
-        "{rel} is out of date. Replace its contents with:\n{}",
-        String::from_utf8_lossy(&want)
-    );
+    assert!(have == want, "{rel} is out of date. Replace its contents with:\n{}", String::from_utf8_lossy(&want));
 }
 
 /// REQ-005 / AC-1: the checked-in schema is generated from the Rust types.
@@ -113,7 +109,11 @@ fn decode_rejects_bad_shapes_and_limits() {
     for (bytes, code) in cases {
         assert_eq!(Envelope::decode(bytes).unwrap_err().code(), code, "{}", String::from_utf8_lossy(bytes));
     }
-    let deep = format!(r#"{{"command_id":"x@1","envelope_version":1,"outcome":"computed","result":{}{}}}"#, "[".repeat(70), "]".repeat(70));
+    let deep = format!(
+        r#"{{"command_id":"x@1","envelope_version":1,"outcome":"computed","result":{}{}}}"#,
+        "[".repeat(70),
+        "]".repeat(70)
+    );
     assert_eq!(Envelope::decode(deep.as_bytes()).unwrap_err().code(), "input_limit");
 }
 
