@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-outreach]
+built_pr: 106
 satisfies: [REQ-OUTR.BRAND-008]
 covers: []
 depends_on: []
