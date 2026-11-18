@@ -15,10 +15,9 @@ fn fix(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/outr/launch/plan").join(rel)
 }
 
-/// `name/file` if the fixture has it, else the shared `ok/file`.
+/// `name/file` if the fixture has it, else the shared `common/file`, else `ok/file`.
 fn pick(name: &str, file: &str) -> String {
-    let p = fix(name).join(file);
-    let p = if p.exists() { p } else { fix("ok").join(file) };
+    let p = [name, "common", "ok"].iter().map(|d| fix(d).join(file)).find(|p| p.exists()).unwrap();
     p.to_string_lossy().into_owned()
 }
 
@@ -70,7 +69,13 @@ fn one(code: &str, id: &str) -> Vec<(String, String, Option<u32>)> {
 #[test]
 fn ac1_ok_fixture_exits_0_with_canonical_json() {
     let o = run("ok", &[]);
-    assert_eq!(o.status.code(), Some(0), "{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+    assert_eq!(
+        o.status.code(),
+        Some(0),
+        "{}{}",
+        String::from_utf8_lossy(&o.stdout),
+        String::from_utf8_lossy(&o.stderr)
+    );
     assert_eq!(String::from_utf8(o.stdout).unwrap(), "{\"findings\":[],\"ok\":true}\n");
 }
 
@@ -150,8 +155,9 @@ fn ac6_added_and_removed_criteria_count_as_changes() {
     assert_eq!(ids, ["NEW-01", "OLD-01"]);
     assert!(f.iter().all(|f| f.code == Code::AnnouncedCriteriaChanged));
     // A review entry for another milestone does not count.
-    let other = parse_review("---\nmilestone: other-ms\nannounced: 2099-01-20\nchanges: [NEW-01, OLD-01]\n---\n", "r.md")
-        .unwrap();
+    let other =
+        parse_review("---\nmilestone: other-ms\nannounced: 2099-01-20\nchanges: [NEW-01, OLD-01]\n---\n", "r.md")
+            .unwrap();
     assert_eq!(fid_outreach::launch_plan::check_announced(&base, &new, &[other]).len(), 2);
 }
 
@@ -179,7 +185,8 @@ fn exit_2_on_parse_error_and_missing_input() {
 
 fn check_str(text: &str) -> BTreeSet<(Code, String)> {
     let (c, mut f) = parse_criteria(&text.parse().unwrap());
-    let apps: BTreeSet<String> = ["report", "inspect", "probe", "network", "extra"].iter().map(|s| s.to_string()).collect();
+    let apps: BTreeSet<String> =
+        ["report", "inspect", "probe", "network", "extra"].iter().map(|s| s.to_string()).collect();
     f.extend(check_rules(&c, &apps));
     f.into_iter().map(|f| (f.code, f.id)).collect()
 }
@@ -244,8 +251,8 @@ level = "1.0"
         (Code::BadId, "x1"),
         (Code::CorePhaseMissing, "net-1-0"), // network needs P3; x1 is P2
         (Code::UnknownApp, "NET-02"),
-        (Code::BadField, "NET-03"), // min_pct out of range
-        (Code::BadField, "NET-04"), // status `done` and field `colour`
+        (Code::BadField, "NET-03"),            // min_pct out of range
+        (Code::BadField, "NET-04"),            // status `done` and field `colour`
         (Code::CorePhaseMissing, "extra-1-0"), // no rule-table entry
     ]);
     assert_eq!(got, want);

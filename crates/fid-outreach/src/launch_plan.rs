@@ -289,7 +289,8 @@ pub fn parse_apps(text: &str, path: &str) -> Result<BTreeSet<String>, PlanError>
     let apps = t.get("app").and_then(|v| v.as_array()).ok_or_else(|| bad("no [[app]] array"))?;
     let mut ids = BTreeSet::new();
     for a in apps {
-        let id = a.as_table().and_then(|t| t.get("id")).and_then(|v| v.as_str()).ok_or_else(|| bad("app without id"))?;
+        let id =
+            a.as_table().and_then(|t| t.get("id")).and_then(|v| v.as_str()).ok_or_else(|| bad("app without id"))?;
         ids.insert(id.to_string());
     }
     Ok(ids)
@@ -460,15 +461,17 @@ fn parse_criterion(cx: &mut Ctx, ms: &str, idx: usize, v: &toml::Value) -> Optio
     let (allowed, parsed): (&[&str], Option<CriterionKind>) = match kind {
         "node_status" => {
             let node = nonempty_str(t.get("node")).filter(|n| is_node_id(n));
-            let statuses =
-                str_list(t.get("in")).filter(|l| l.iter().all(|s| NODE_STATUSES.contains(&s.as_str())));
+            let statuses = str_list(t.get("in")).filter(|l| l.iter().all(|s| NODE_STATUSES.contains(&s.as_str())));
             if node.is_none() {
                 cx.bad(&id, "node_status needs `node`: a spec node ID");
             }
             if statuses.is_none() {
                 cx.bad(&id, format!("node_status needs `in`: a non-empty list of {NODE_STATUSES:?}"));
             }
-            (&["node", "in"][..], node.zip(statuses).map(|(node, statuses)| CriterionKind::NodeStatus { node, statuses }))
+            (
+                &["node", "in"][..],
+                node.zip(statuses).map(|(node, statuses)| CriterionKind::NodeStatus { node, statuses }),
+            )
         }
         "phase_done" => {
             let phase = t.get("phase").and_then(|v| v.as_str()).and_then(Phase::parse);
@@ -817,9 +820,8 @@ pub fn check(inp: &Inputs<'_>) -> Result<Report, PlanError> {
     if let Some(base) = &base {
         findings.extend(check_announced(base, &table, &reviews));
     }
-    findings.sort_by(|a, b| {
-        (a.code.as_str(), &a.id, a.line, &a.detail).cmp(&(b.code.as_str(), &b.id, b.line, &b.detail))
-    });
+    findings
+        .sort_by(|a, b| (a.code.as_str(), &a.id, a.line, &a.detail).cmp(&(b.code.as_str(), &b.id, b.line, &b.detail)));
     findings.dedup();
     Ok(Report { findings })
 }
