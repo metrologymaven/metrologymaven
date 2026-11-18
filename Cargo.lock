@@ -155,6 +155,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-timeline"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+]
+
+[[package]]
 name = "fid-types"
 version = "0.0.1"
 

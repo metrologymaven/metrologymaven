@@ -1,0 +1,8 @@
+# Bot accounts whose events never move the clock (AC-3).
+bots = [
+  "mm-ci[bot]",  # CI
+  "dependabot[bot]",
+]
+maintainers = ["bob", "carol"]
+remind_days = 14
+close_days = 30

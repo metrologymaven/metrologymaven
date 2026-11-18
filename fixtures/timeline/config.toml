@@ -1,0 +1,6 @@
+# Fixture config for fid-timeline tests.
+author = "alice"
+maintainers = ["bob", "Carol"]
+bots = ["mm-ci[bot]"]
+remind_days = 14
+close_days = 30

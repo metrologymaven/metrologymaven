@@ -1,0 +1,12 @@
+[
+ {
+  "at": "2028-02-28T12:00:00Z",
+  "actor": "alice",
+  "kind": "opened"
+ },
+ {
+  "at": "2028-02-28T12:00:00Z",
+  "actor": "bob",
+  "kind": "review_changes_requested"
+ }
+]

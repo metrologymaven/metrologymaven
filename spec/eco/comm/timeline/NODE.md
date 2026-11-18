@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-timeline]
 satisfies: [REQ-ECO.COMM-005]
 covers: []
 depends_on: []
