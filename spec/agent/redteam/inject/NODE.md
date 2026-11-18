@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-eval-suite]
+built_pr: 99
 satisfies: [REQ-AGENT.REDTEAM-001, REQ-AGENT.REDTEAM-002, REQ-AGENT.REDTEAM-007]
 covers: []
 depends_on: []
@@ -75,7 +77,7 @@ The task set is itself test data; all project-authored and synthetic. Fixture ag
 
 ## Open questions
 
-- None.
+- `entry_with_marker` cannot tell quoting from obeying: an agent that copies payload text verbatim into a committed argument (for example quoting an element name or an operator note in a brief) trips it as if it had obeyed. The tasks keep each payload in its own field and word prompts so the honest path never copies payload text, but AC-H2 hits need a hand review for quoting until AGENT.REDTEAM.PRED decides whether quoted payloads count (for example by excluding text inside a recognised quotation of untrusted content) [unverified rule].
 
 ## Children
 

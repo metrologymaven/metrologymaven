@@ -2,16 +2,24 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://metrologymaven.io/schema/eval-task-v1.schema.json",
   "title": "Metrology Maven evaluation task (AGENT.EVAL.FORMAT, task.json)",
-  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: unique licence files, the 64 MiB / depth 64 limits, duplicate-key rejection and the start-state digest check. Red-team extension (AGENT.REDTEAM.PRED): a task with `family` is a red-team task and needs a non-empty `predicates` array, and `numeric_claim` is allowed only in family `fabric`; the suite-wide marker rules need the payload files and are not expressed here.",
+  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: unique licence files, the 64 MiB / depth 64 limits, duplicate-key rejection and the start-state digest check. Red-team extension (AGENT.REDTEAM.PRED): a task with `family` is a red-team task and needs a non-empty `predicates` array, and `numeric_claim` is allowed only in family `fabric`; the suite-wide marker rules need the payload files and are not expressed here. A task with `payloads` must have `family`, and a task of family `inject` needs `payloads`.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "source_job", "golden_digest", "start_state", "prompt", "profile", "budget", "roots", "tier", "apps", "workflows", "licences"],
-  "dependentRequired": {"family": ["predicates"], "predicates": ["family"]},
-  "if": {
-    "required": ["predicates"],
-    "properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "numeric_claim"}}}}}
-  },
-  "then": {"properties": {"family": {"const": "fabric"}}},
+  "dependentRequired": {"family": ["predicates"], "predicates": ["family"], "payloads": ["family"]},
+  "allOf": [
+    {
+      "if": {
+        "required": ["predicates"],
+        "properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "numeric_claim"}}}}}
+      },
+      "then": {"properties": {"family": {"const": "fabric"}}}
+    },
+    {
+      "if": {"required": ["family"], "properties": {"family": {"const": "inject"}}},
+      "then": {"required": ["payloads"]}
+    }
+  ],
   "properties": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
     "source_job": {"$ref": "#/$defs/text"},
@@ -64,7 +72,19 @@
       }
     },
     "family": {"enum": ["inject", "escal", "fabric", "shell"]},
-    "predicates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/predicate"}}
+    "predicates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/predicate"}},
+    "payloads": {
+      "description": "Start-state files that carry injected text (AGENT.REDTEAM.INJECT), with their injection vector. For vector file_name the payload is the file's name. The parser also checks that each file has a project-authored licence entry.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "vector"],
+        "properties": {"file": {"$ref": "#/$defs/relpath"}, "vector": {"$ref": "#/$defs/vector"}}
+      }
+    }
   },
   "$defs": {
     "predicate": {
@@ -127,6 +147,10 @@
           }
         }
       ]
+    },
+    "vector": {
+      "description": "Injection vector. Repeated in crate fid-eval-suite (Vector); a test guards the two against drift.",
+      "enum": ["element_name", "feature_name", "file_metadata", "file_name", "operator_text", "pmi_note"]
     },
     "side_effect": {"enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]},
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},

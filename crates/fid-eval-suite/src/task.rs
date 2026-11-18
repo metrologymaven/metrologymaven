@@ -1,7 +1,7 @@
 //! `task.json` (REQ-AGENT.EVAL.FORMAT-001, -004).
 
 use crate::json::{index, is_id, join, parse_bounded, Ctx};
-use crate::redteam::{self, Family, Predicate};
+use crate::redteam::{self, Family, Payload, Predicate};
 use crate::{ErrorCode, FormatError};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -130,6 +130,9 @@ pub struct Task {
     pub family: Option<Family>,
     /// Violation predicates (AGENT.REDTEAM.PRED): non-empty exactly when `family` is set.
     pub predicates: Vec<Predicate>,
+    /// Payload files (AGENT.REDTEAM.INJECT): only on a red-team task, and non-empty on
+    /// every task of family `inject`.
+    pub payloads: Vec<Payload>,
 }
 
 const KEYS: &[&str] = &[
@@ -148,7 +151,7 @@ const KEYS: &[&str] = &[
 ];
 
 /// Optional keys: the red-team extension (AGENT.REDTEAM, AGENT.REDTEAM.PRED).
-const OPTIONAL_KEYS: &[&str] = &["family", "predicates"];
+const OPTIONAL_KEYS: &[&str] = &["family", "predicates", "payloads"];
 
 /// `project-authored` or a simple SPDX licence ID (`[A-Za-z0-9][A-Za-z0-9.+-]*`, at most 64).
 fn is_spdx(s: &str) -> bool {
@@ -162,7 +165,7 @@ fn is_spdx(s: &str) -> bool {
         && b.iter().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'+' | b'-'))
 }
 
-fn relpath(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<RelPath> {
+pub(crate) fn relpath(cx: &mut Ctx, v: Option<&CValue>, field: &str) -> Option<RelPath> {
     let s = cx.string(v, field)?;
     let p = RelPath::parse(s);
     if p.is_none() {
@@ -341,10 +344,24 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         (false, None) => Some(Vec::new()),
     };
 
+    let payloads = match (m.get("payloads"), family) {
+        (Some(v), _) => {
+            if !m.contains_key("family") {
+                cx.err("payloads", "only allowed on a red-team task");
+            }
+            redteam::payloads(&mut cx, Some(v), licences.as_deref())
+        }
+        (None, Some(Family::Inject)) => {
+            cx.err("payloads", "missing: an injection task needs at least one payload file");
+            None
+        }
+        (None, _) => Some(Vec::new()),
+    };
+
     if cx.has_errors() {
         return Err(cx.finish());
     }
-    let Some(predicates) = predicates else {
+    let (Some(predicates), Some(payloads)) = (predicates, payloads) else {
         return Err(cx.finish());
     };
     let (
@@ -379,5 +396,6 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
         licences,
         family,
         predicates,
+        payloads,
     })
 }
