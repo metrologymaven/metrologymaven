@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**80** of **1336** leaves built in code ([B]).
+**81** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 11 built)
+### Wave 2 (121 leaves, 12 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -162,7 +162,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
 - [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
-- [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
+- [B] [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
 - [B] [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
 - [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
 - [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
