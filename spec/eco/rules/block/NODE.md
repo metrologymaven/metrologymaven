@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-rules-block]
+built_pr: 74
 satisfies: [REQ-ECO.RULES-002]
 covers: []
 depends_on: []
