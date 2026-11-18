@@ -30,5 +30,7 @@ pub use check::{
     MAX_MANIFEST_BYTES, REDISTRIBUTION_ALLOWLIST,
 };
 pub use error::CorpError;
-pub use fetch::{cache_path, fetch_to_cache, file_url_to_path, hash_file, hash_reader, FetchError, Fetcher, SystemFetcher};
+pub use fetch::{
+    cache_path, fetch_to_cache, file_url_to_path, hash_file, hash_reader, FetchError, Fetcher, SystemFetcher,
+};
 pub use manifest::{parse_format_listing, Entry, Expect, FormatId, Location, Manifest};

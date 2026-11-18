@@ -194,9 +194,10 @@ fn ac1_url_entry_over_local_http_server() {
 
 #[test]
 fn ac2_registered_format_without_manifest() {
-    assert_eq!(registry("registry_obj.json").iter().map(FormatId::as_str).collect::<Vec<_>>(), [
-        "mesh.obj", "mesh.ply", "mesh.stl"
-    ]);
+    assert_eq!(
+        registry("registry_obj.json").iter().map(FormatId::as_str).collect::<Vec<_>>(),
+        ["mesh.obj", "mesh.ply", "mesh.stl"]
+    );
     let r = check(&fix("ok"), "registry_obj.json", None);
     assert_eq!(r.errors, [CorpError::ManifestMissing { format: "mesh.obj".into() }]);
     assert_eq!(r.errors[0].to_string().split(':').next(), Some("manifest_missing{mesh.obj}"));
@@ -205,18 +206,21 @@ fn ac2_registered_format_without_manifest() {
 #[test]
 fn ac3_in_repo_file_with_unredistributable_licence() {
     let r = check(&fix("bad_licence"), "registry_ok.json", None);
-    assert_eq!(r.errors, [
-        CorpError::LicenceNotRedistributable {
-            format: "mesh.stl".into(),
-            entry: "files/tetra.stl".into(),
-            licence: "unknown".into()
-        },
-        CorpError::LicenceNotRedistributable {
-            format: "mesh.stl".into(),
-            entry: "files/other.stl".into(),
-            licence: "GPL-3.0-only".into()
-        },
-    ]);
+    assert_eq!(
+        r.errors,
+        [
+            CorpError::LicenceNotRedistributable {
+                format: "mesh.stl".into(),
+                entry: "files/tetra.stl".into(),
+                licence: "unknown".into()
+            },
+            CorpError::LicenceNotRedistributable {
+                format: "mesh.stl".into(),
+                entry: "files/other.stl".into(),
+                licence: "GPL-3.0-only".into()
+            },
+        ]
+    );
 }
 
 #[test]
@@ -228,7 +232,7 @@ fn ac4_altered_bytes_fail_and_leave_no_cache_file() {
     match &r.errors[0] {
         CorpError::DigestMismatch { format, entry, expected, actual } => {
             assert_eq!((format.as_str(), entry.as_str()), ("mesh.stl", REMOTE_URL));
-            assert_eq!(*expected, digest(REMOTE_SHA));
+            assert_eq!(**expected, digest(REMOTE_SHA));
             assert_ne!(actual, expected);
         }
         other => panic!("{other:?}"),
@@ -296,7 +300,7 @@ fn ac5_committed_file_edited_after_digest_was_recorded() {
     match &r.errors[0] {
         CorpError::DigestMismatch { format, entry, expected, .. } => {
             assert_eq!((format.as_str(), entry.as_str()), ("mesh.stl", "files/tetra.stl"));
-            assert_eq!(*expected, digest(TETRA_SHA));
+            assert_eq!(**expected, digest(TETRA_SHA));
         }
         other => panic!("{other:?}"),
     }

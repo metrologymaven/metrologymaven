@@ -213,6 +213,7 @@ fn fetch_part(fetcher: &dyn Fetcher, url: &str, part: &Path, max_bytes: u64) -> 
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

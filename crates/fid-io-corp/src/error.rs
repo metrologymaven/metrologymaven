@@ -13,7 +13,7 @@ pub enum CorpError {
     LicenceNotRedistributable { format: String, entry: String, licence: String },
     /// A committed or fetched file's SHA-256 differs from its manifest entry
     /// (REQ-IO.CORP.MANIF-003, REQ-IO.CORP.MANIF-004).
-    DigestMismatch { format: String, entry: String, expected: Digest, actual: Digest },
+    DigestMismatch { format: String, entry: String, expected: Box<Digest>, actual: Box<Digest> },
     /// A manifest or registry listing breaks the schema. `at` names the file (and entry).
     Malformed { at: String, detail: String },
     /// A committed file could not be read, or exceeded the size cap.
@@ -46,7 +46,10 @@ impl fmt::Display for CorpError {
         match self {
             CorpError::ManifestMissing { format } => write!(f, "{code}{{{format}}}: no manifest corpus/{format}.toml"),
             CorpError::LicenceNotRedistributable { format, entry, licence } => {
-                write!(f, "{code}{{{format}: {entry}}}: licence {licence:?} does not allow storing it in the repository")
+                write!(
+                    f,
+                    "{code}{{{format}: {entry}}}: licence {licence:?} does not allow storing it in the repository"
+                )
             }
             CorpError::DigestMismatch { format, entry, expected, actual } => {
                 write!(f, "{code}{{{format}: {entry}}}: expected {expected}, got {actual}")

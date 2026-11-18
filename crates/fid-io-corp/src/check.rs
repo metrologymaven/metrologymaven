@@ -11,7 +11,8 @@ use std::path::Path;
 
 /// SPDX IDs whose files may be stored in the repository (REQ-IO.CORP.MANIF-002). Starting list
 /// from the leaf's Test fixtures section [unverified: to align with ECO.RULES under D-001].
-pub const REDISTRIBUTION_ALLOWLIST: [&str; 6] = ["CC0-1.0", "CC-BY-4.0", "MIT", "Apache-2.0", "BSL-1.0", "BSD-3-Clause"];
+pub const REDISTRIBUTION_ALLOWLIST: [&str; 6] =
+    ["CC0-1.0", "CC-BY-4.0", "MIT", "Apache-2.0", "BSL-1.0", "BSD-3-Clause"];
 
 /// Default size cap per corpus file: the `IO.REG.LIMITS` default byte limit, 64 GiB.
 pub const DEFAULT_MAX_BYTES: u64 = 64 * 1024 * 1024 * 1024;
@@ -169,7 +170,12 @@ pub fn check_corpus(dir: &Path, formats: &[FormatId], opts: &CheckOptions<'_>) -
                     match hash_file(&dir.join(rel), opts.max_bytes) {
                         Ok(actual) if actual == e.sha256 => {}
                         Ok(actual) => {
-                            errors.push(CorpError::DigestMismatch { format, entry, expected: e.sha256, actual })
+                            errors.push(CorpError::DigestMismatch {
+                                format,
+                                entry,
+                                expected: Box::new(e.sha256),
+                                actual: Box::new(actual),
+                            })
                         }
                         Err(detail) => errors.push(CorpError::Io { format, entry, detail }),
                     }
@@ -180,9 +186,16 @@ pub fn check_corpus(dir: &Path, formats: &[FormatId], opts: &CheckOptions<'_>) -
                         Ok((_, true)) => report.fetched += 1,
                         Ok((_, false)) => report.cached += 1,
                         Err(FetchError::DigestMismatch(actual)) => {
-                            errors.push(CorpError::DigestMismatch { format, entry, expected: e.sha256, actual })
+                            errors.push(CorpError::DigestMismatch {
+                                format,
+                                entry,
+                                expected: Box::new(e.sha256),
+                                actual: Box::new(actual),
+                            })
                         }
-                        Err(FetchError::Failed(detail)) => errors.push(CorpError::FetchFailed { format, entry, detail }),
+                        Err(FetchError::Failed(detail)) => {
+                            errors.push(CorpError::FetchFailed { format, entry, detail })
+                        }
                     },
                 },
             }

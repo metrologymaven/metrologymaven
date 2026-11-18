@@ -193,8 +193,8 @@ fn parse_entry(t: &Table, at: &str) -> Result<Entry, CorpError> {
         return Err(CorpError::malformed(at, format!("licence {licence:?} is neither an SPDX ID nor `unknown`")));
     }
     let sha256 = string(t, "sha256", at)?;
-    let sha256 =
-        Digest::parse(sha256).map_err(|_| CorpError::malformed(at, format!("sha256 {sha256:?} is not sha256:<hex>")))?;
+    let sha256 = Digest::parse(sha256)
+        .map_err(|_| CorpError::malformed(at, format!("sha256 {sha256:?} is not sha256:<hex>")))?;
     let expect = parse_expect(t.get("expect").ok_or_else(|| CorpError::malformed(at, "missing expect"))?, at)?;
     let mut tags = Vec::new();
     match t.get("tags") {
@@ -219,9 +219,9 @@ impl Manifest {
         let root: Table = text.parse().map_err(|e: toml::de::Error| CorpError::malformed(&at, e.message()))?;
         only_keys(&root, &["format", "entry"], &at)?;
         let format = string(&root, "format", &at)?;
-        let format = FormatId::parse(format)
-            .filter(|f| f.as_str() == file_stem)
-            .ok_or_else(|| CorpError::malformed(&at, format!("format {format:?} must be a format ID equal to the file stem")))?;
+        let format = FormatId::parse(format).filter(|f| f.as_str() == file_stem).ok_or_else(|| {
+            CorpError::malformed(&at, format!("format {format:?} must be a format ID equal to the file stem"))
+        })?;
         let mut entries = Vec::new();
         match root.get("entry") {
             None => {}
@@ -278,6 +278,7 @@ pub fn parse_format_listing(json: &[u8]) -> Result<Vec<FormatId>, CorpError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -320,7 +321,8 @@ mod tests {
 
     #[test]
     fn malformed_entries() {
-        let base = format!("source = \"s\"\nlicence = \"MIT\"\nsha256 = \"{D}\"\nexpect = {{ reject = {{ error = \"x\" }} }}");
+        let base =
+            format!("source = \"s\"\nlicence = \"MIT\"\nsha256 = \"{D}\"\nexpect = {{ reject = {{ error = \"x\" }} }}");
         for bad in [
             base.clone(),
             format!("path = \"a\"\nurl = \"https://x/a\"\n{base}"),
@@ -341,19 +343,25 @@ mod tests {
         }
         assert_eq!(Manifest::parse("format = \"mesh.ply\"", "mesh.stl").map_err(|e| e.code()), Err("malformed"));
         assert_eq!(Manifest::parse("format = ", "mesh.stl").map_err(|e| e.code()), Err("malformed"));
-        assert_eq!(Manifest::parse("format = \"mesh.stl\"\nentry = 1", "mesh.stl").map_err(|e| e.code()), Err("malformed"));
+        assert_eq!(
+            Manifest::parse("format = \"mesh.stl\"\nentry = 1", "mesh.stl").map_err(|e| e.code()),
+            Err("malformed")
+        );
     }
 
     #[test]
     fn listings() {
-        let ids = |s: &str| parse_format_listing(s.as_bytes()).map(|v| v.iter().map(|f| f.to_string()).collect::<Vec<_>>());
+        let ids =
+            |s: &str| parse_format_listing(s.as_bytes()).map(|v| v.iter().map(|f| f.to_string()).collect::<Vec<_>>());
         assert_eq!(ids(r#"["b","a","a"]"#).unwrap(), ["a", "b"]);
         assert_eq!(
             ids(r#"{"result":[{"id":"x","origin":"plugin"},{"id":"y","origin":"first_party"},{"id":"z"}]}"#).unwrap(),
             ["y", "z"]
         );
         assert_eq!(ids(r#"{"formats":["m"]}"#).unwrap(), ["m"]);
-        for bad in [r#"{}"#, r#"1"#, r#"[1]"#, r#"[{"origin":"first_party"}]"#, r#"["A"]"#, r#"[{"id":"a","origin":1}]"#, "["] {
+        for bad in
+            [r#"{}"#, r#"1"#, r#"[1]"#, r#"[{"origin":"first_party"}]"#, r#"["A"]"#, r#"[{"id":"a","origin":1}]"#, "["]
+        {
             assert_eq!(ids(bad).map_err(|e| e.code()), Err("malformed"), "{bad}");
         }
     }
