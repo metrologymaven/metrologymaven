@@ -246,7 +246,8 @@ pub fn parse_declarations(text: &str) -> Result<Vec<SupportDecl>, ConfError> {
     if text.len() > MAX_INPUT_BYTES {
         return Err(malformed("declaration file is too large"));
     }
-    let root: toml::Table = text.parse().map_err(|e: toml::de::Error| malformed(format!("not TOML: {}", e.message())))?;
+    let root: toml::Table =
+        text.parse().map_err(|e: toml::de::Error| malformed(format!("not TOML: {}", e.message())))?;
     for k in root.keys() {
         if !matches!(k.as_str(), "schema" | "version" | "statement") {
             return Err(malformed(format!("unknown top-level key `{k}`")));

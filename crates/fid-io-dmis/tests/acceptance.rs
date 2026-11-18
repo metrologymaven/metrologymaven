@@ -53,10 +53,8 @@ fn ac1_small_declarations_give_a_full_and_b_partial() {
     let out = small();
     let json = parse(&out.json).unwrap();
     let CValue::Arr(levels) = field(&json, "module_levels") else { panic!("module_levels") };
-    let got: Vec<(&str, &str, &str)> = levels
-        .iter()
-        .map(|l| (text(field(l, "module")), text(field(l, "import")), text(field(l, "export"))))
-        .collect();
+    let got: Vec<(&str, &str, &str)> =
+        levels.iter().map(|l| (text(field(l, "module")), text(field(l, "import")), text(field(l, "export")))).collect();
     assert_eq!(got, vec![("A", "full", "none"), ("B", "partial", "none")]);
     let expected_md = std::fs::read_to_string(fixtures().join("expected.md")).unwrap();
     assert_eq!(out.markdown, expected_md);
