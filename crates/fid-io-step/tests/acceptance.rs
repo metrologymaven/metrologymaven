@@ -193,6 +193,17 @@ fn instance_budget_file_size_and_tokens_are_bounded() {
 }
 
 #[test]
+fn many_tiny_instances_are_charged_to_the_allocation_budget() {
+    let tiny = |n: u64| wrap(&(1..=n).map(|i| format!("#{i}=A();")).collect::<Vec<_>>().join("\n"));
+    let budget = || Budget::new(Principal::Script, &LimitRequest::default().alloc(20_000)).unwrap();
+    // A few instances fit in 20 kB of tracked allocation.
+    assert!(parse_with(tiny(10).as_bytes(), &mut budget(), &ParseOptions::default()).is_ok());
+    // Ten thousand parameterless instances do not: each one is charged its overhead.
+    let err = parse_with(tiny(10_000).as_bytes(), &mut budget(), &ParseOptions::default()).unwrap_err();
+    assert!(matches!(err, StepError::LimitExceeded { bound: Bound::Alloc, value: 20_000, .. }), "{err:?}");
+}
+
+#[test]
 fn ac5_parse_print_parse_is_identical_for_every_accepted_fixture() {
     for stem in ACCEPT {
         let file = parse(&read(&format!("{stem}.stp"))).unwrap();

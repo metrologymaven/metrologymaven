@@ -3,9 +3,11 @@
 //! Decoding: `''` is a quote, `\\` a backslash, `\S\c` the upper-half Latin-1 character
 //! `c + 0x80`, `\X\hh` the Latin-1 character `hh`, `\X2\hhhh...\X0\` UTF-16 code units
 //! (surrogate pairs combined), `\X4\hhhhhhhh...\X0\` code points, `\PA\` selects the
-//! Latin-1 code page (the only one supported). Line breaks inside a string are ignored.
-//! Raw bytes 0x80 and above are accepted when they form valid UTF-8. Any other control
-//! byte is malformed.
+//! Latin-1 code page (the only one supported). Line breaks inside a string are ignored,
+//! including between the hex digits of a `\X2\` or `\X4\` group. Raw bytes 0x80 and above
+//! are accepted only when they form valid UTF-8; other raw bytes (for example Latin-1
+//! from legacy exporters) are malformed, never guessed. Any other control byte is
+//! malformed.
 //!
 //! Encoding (printer): printable ASCII stays as is (`'` doubled, `\` doubled); every
 //! maximal run of other characters becomes one `\X2\...\X0\` group, or one
@@ -52,6 +54,26 @@ fn hex_at(src: &[u8], pos: usize, n: usize) -> Result<u32, TextError> {
     Ok(v)
 }
 
+/// The offset of the first byte at or after `pos` that is not a line break.
+fn skip_breaks(src: &[u8], mut pos: usize) -> usize {
+    while matches!(src.get(pos), Some(b'\r' | b'\n')) {
+        pos += 1;
+    }
+    pos
+}
+
+/// Reads `n` hex digits starting at `pos`, skipping line breaks between them. Returns the
+/// value and the offset after the last digit.
+fn hex_group(src: &[u8], mut pos: usize, n: usize) -> Result<(u32, usize), TextError> {
+    let mut v: u32 = 0;
+    for _ in 0..n {
+        pos = skip_breaks(src, pos);
+        v = (v << 4) | hex_at(src, pos, 1)?;
+        pos += 1;
+    }
+    Ok((v, pos))
+}
+
 /// Expects `\` at `pos`.
 fn backslash(src: &[u8], pos: usize) -> Result<(), TextError> {
     match src.get(pos) {
@@ -91,6 +113,13 @@ pub(crate) fn decode(src: &[u8], mut pos: usize, max: usize) -> Result<(String, 
                     0xf0..=0xf4 => 4,
                     _ => return Err(TextError::Malformed("invalid_utf8", pos)),
                 };
+                for k in 1..len {
+                    match src.get(pos + k) {
+                        None => return Err(TextError::Truncated),
+                        Some(0x80..=0xbf) => {}
+                        Some(_) => return Err(TextError::Malformed("invalid_utf8", pos)),
+                    }
+                }
                 let bytes = src.get(pos..pos + len).ok_or(TextError::Truncated)?;
                 let s = std::str::from_utf8(bytes).map_err(|_| TextError::Malformed("invalid_utf8", pos))?;
                 for c in s.chars() {
@@ -141,15 +170,15 @@ fn escape(src: &[u8], pos: usize, out: &mut String, max: usize) -> Result<usize,
             }
             Some(b'2') => {
                 backslash(src, pos + 3)?;
-                let mut p = pos + 4;
+                let mut p = skip_breaks(src, pos + 4);
                 let mut units: Vec<u16> = Vec::new();
                 while src.get(p..p + 4) != Some(END_GROUP) {
-                    let v = hex_at(src, p, 4)?;
+                    let (v, next) = hex_group(src, p, 4)?;
                     if units.len() >= max {
                         return Err(TextError::TooLong(p));
                     }
                     units.push(u16::try_from(v).map_err(|_| TextError::Malformed("bad_hex", p))?);
-                    p += 4;
+                    p = skip_breaks(src, next);
                 }
                 for r in char::decode_utf16(units.iter().copied()) {
                     let ch = r.map_err(|_| TextError::Malformed("bad_code_point", pos))?;
@@ -159,12 +188,12 @@ fn escape(src: &[u8], pos: usize, out: &mut String, max: usize) -> Result<usize,
             }
             Some(b'4') => {
                 backslash(src, pos + 3)?;
-                let mut p = pos + 4;
+                let mut p = skip_breaks(src, pos + 4);
                 while src.get(p..p + 4) != Some(END_GROUP) {
-                    let v = hex_at(src, p, 8)?;
+                    let (v, next) = hex_group(src, p, 8)?;
                     let ch = char::from_u32(v).ok_or(TextError::Malformed("bad_code_point", p))?;
                     push(out, ch, max, p)?;
-                    p += 8;
+                    p = skip_breaks(src, next);
                 }
                 Ok(p + 4)
             }
@@ -240,6 +269,12 @@ mod tests {
         assert_eq!(dec("\\X4\\0001F600\\X0\\'").unwrap(), "\u{1f600}");
         assert_eq!(dec("\\PA\\x'").unwrap(), "x");
         assert_eq!(dec("a\r\nb'").unwrap(), "ab");
+        // Line breaks between and inside the hex digits of \X2\ and \X4\ groups.
+        assert_eq!(dec("\\X2\\03B1\r\n03B2\\X0\\'").unwrap(), "\u{3b1}\u{3b2}");
+        assert_eq!(dec("\\X2\\\n03\nB1\n\\X0\\'").unwrap(), "\u{3b1}");
+        assert_eq!(dec("\\X4\\0001\r\nF600\\X0\\'").unwrap(), "\u{1f600}");
+        // Raw Latin-1 (not UTF-8) is rejected, not guessed.
+        assert_eq!(decode(b"caf\xe9'", 0, 1 << 20), Err(TextError::Malformed("invalid_utf8", 3)));
         assert_eq!(dec("\\PB\\x'"), Err(TextError::Unsupported("code_page", 0)));
         assert_eq!(dec("\\Q'"), Err(TextError::Malformed("bad_string_escape", 0)));
         assert_eq!(dec("\\X2\\D83D\\X0\\'"), Err(TextError::Malformed("bad_code_point", 0)));

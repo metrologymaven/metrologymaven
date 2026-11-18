@@ -83,7 +83,7 @@ Hand-written Part 21 files under `fixtures/io/cad/step/p21/` (CC-BY-4.0); the ST
 
 ## Open questions
 
-- None.
+- Legacy exporters may write raw Latin-1 (non-UTF-8) bytes inside strings instead of `\S\`/`\X\` escapes [unverified: frequency in real files]. The parser rejects them as `malformed{reason: invalid_utf8}` and does not guess an encoding (maintainer decision in PR #140 review). Should a later, explicit caller option decode them as Latin-1?
 
 ## Children
 

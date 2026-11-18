@@ -9,6 +9,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 const PARAM_SIZE: u64 = std::mem::size_of::<Param>() as u64;
+/// Tracked allocation charged per instance: the `Instance` itself, one `parts` entry and
+/// an estimate of one map node.
+const INSTANCE_SIZE: u64 = (std::mem::size_of::<Instance>()
+    + std::mem::size_of::<(Ident, Vec<Param>)>()
+    + std::mem::size_of::<u64>()
+    + 32) as u64;
 
 fn pos(at: usize) -> Position {
     Position::byte(u64::try_from(at).unwrap_or(u64::MAX))
@@ -182,6 +188,7 @@ impl<'s, 'b> Parser<'s, 'b> {
         }
         self.instances += 1;
         self.budget.charge_elements(1, pos(at))?;
+        self.budget.charge_alloc(INSTANCE_SIZE, pos(at))?;
         Ok(())
     }
 

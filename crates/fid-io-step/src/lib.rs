@@ -113,7 +113,9 @@ pub(crate) fn valid_ident(s: &str) -> bool {
 }
 
 /// The authored spelling of a real parameter, e.g. `1.0E+02`. Always matches
-/// `[+-]?[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?` and is at most [`DEFAULT_MAX_TOKEN_BYTES`] long.
+/// `[+-]?[0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?`. A parsed lexeme is at most
+/// [`ParseOptions::max_token_bytes`] long; [`Lexeme::new`] accepts at most
+/// [`DEFAULT_MAX_TOKEN_BYTES`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Lexeme(Box<str>);
 
