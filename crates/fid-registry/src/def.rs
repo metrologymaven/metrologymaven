@@ -124,8 +124,14 @@ pub struct CommandDef {
 pub enum DefError {
     UnknownField(String),
     MissingField(&'static str),
-    BadType { field: String, expected: &'static str },
-    BadEnum { field: &'static str, value: String },
+    BadType {
+        field: String,
+        expected: &'static str,
+    },
+    BadEnum {
+        field: &'static str,
+        value: String,
+    },
     BadId(String),
     BadAlgorithm(String),
     WebMissing,

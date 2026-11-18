@@ -60,8 +60,12 @@ pub fn parse_layer_map(text: &str) -> Result<LayerMap, String> {
                 .strip_prefix('[')
                 .and_then(|x| x.strip_suffix(']'))
                 .ok_or_else(|| format!("LAYER-MAP line {}: order must be a one-line array", i + 1))?;
-            let items: Option<Vec<String>> =
-                inner.split(',').map(str::trim).filter(|x| !x.is_empty()).map(|x| unquote(x).map(String::from)).collect();
+            let items: Option<Vec<String>> = inner
+                .split(',')
+                .map(str::trim)
+                .filter(|x| !x.is_empty())
+                .map(|x| unquote(x).map(String::from))
+                .collect();
             order = Some(items.ok_or_else(|| format!("LAYER-MAP line {}: order items must be strings", i + 1))?);
         } else {
             return Err(format!("LAYER-MAP line {}: unknown key {}", i + 1, k.trim()));
@@ -142,7 +146,10 @@ impl Graph {
                 let kinds = as_arr(field(d, "dep_kinds")?)?;
                 let dev_only = !kinds.is_empty()
                     && kinds.iter().all(|k| {
-                        as_obj(k).ok().and_then(|k| k.get("kind")).is_some_and(|k| matches!(k, CValue::Str(s) if s == "dev"))
+                        as_obj(k)
+                            .ok()
+                            .and_then(|k| k.get("kind"))
+                            .is_some_and(|k| matches!(k, CValue::Str(s) if s == "dev"))
                     });
                 edges.push(Edge { to, dev_only });
             }
@@ -161,7 +168,10 @@ impl Graph {
             .output()
             .map_err(|e| format!("LAYER-METADATA: cannot run cargo: {e}"))?;
         if !out.status.success() {
-            return Err(format!("LAYER-METADATA: cargo metadata failed: {}", String::from_utf8_lossy(&out.stderr).trim()));
+            return Err(format!(
+                "LAYER-METADATA: cargo metadata failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ));
         }
         Graph::from_metadata(&out.stdout)
     }
@@ -205,21 +215,19 @@ pub fn check(map: &LayerMap, g: &Graph) -> Vec<String> {
             if g.members.contains(&node) {
                 let layer = map.crates.get(&node).map(String::as_str);
                 let direct = parent.get(&node) == Some(root);
+                let root_may_reach_up = root_layer == TEST_SUPPORT || root_layer == "tool";
                 match layer {
                     Some("tool") => {
                         findings.insert(format!("LAYER-TOOL {}", path()));
                     }
-                    Some(TEST_SUPPORT) => {
-                        if !(direct && via_dev) {
-                            findings.insert(format!("LAYER-TEST-SUPPORT {}", path()));
-                        }
+                    Some(TEST_SUPPORT) if !(direct && via_dev) => {
+                        findings.insert(format!("LAYER-TEST-SUPPORT {}", path()));
                     }
-                    Some(l) => {
-                        if root_layer != TEST_SUPPORT && root_layer != "tool" && rank(l) > rank(root_layer) {
-                            findings.insert(format!("LAYER-UPWARD {}", path()));
-                        }
+                    Some(TEST_SUPPORT) => {}
+                    Some(l) if !root_may_reach_up && rank(l) > rank(root_layer) => {
+                        findings.insert(format!("LAYER-UPWARD {}", path()));
                     }
-                    None => {}
+                    _ => {}
                 }
                 // A first-party crate is checked from its own root; stop here.
                 continue;
