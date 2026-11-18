@@ -526,17 +526,23 @@ pub fn parse_native(text: &str) -> Result<Vec<Native>, Vec<SbomError>> {
 }
 
 /// Cargo's legacy `/` licence separator read as `OR`: `MIT/Apache-2.0` becomes
-/// `MIT OR Apache-2.0`, and a part holding spaces is parenthesised. Returns the expression and,
-/// when it was rewritten, the original string.
+/// `MIT OR Apache-2.0`. The rewrite applies only when the whole string is `term/term/...`: no
+/// whitespace, no `LicenseRef-` or `DocumentRef-` (a `/` there is ambiguous), and every part a
+/// single licence term that is not an operator. Anything else is returned unchanged, so it
+/// fails validation. Returns the expression and, when it was rewritten, the original string.
 pub fn normalise_cargo_licence(licence: &str) -> (String, Option<String>) {
-    if !licence.contains('/') {
-        return (licence.to_string(), None);
+    let unchanged = (licence.to_string(), None);
+    if !licence.contains('/')
+        || licence.contains(char::is_whitespace)
+        || licence.contains("LicenseRef-")
+        || licence.contains("DocumentRef-")
+    {
+        return unchanged;
     }
-    let parts: Vec<String> = licence
-        .split('/')
-        .map(str::trim)
-        .map(|p| if p.contains(char::is_whitespace) { format!("({p})") } else { p.to_string() })
-        .collect();
+    let parts: Vec<&str> = licence.split('/').collect();
+    if parts.iter().any(|p| OPERATORS.contains(p) || !is_licence_term(p)) {
+        return unchanged;
+    }
     (parts.join(" OR "), Some(licence.to_string()))
 }
 
@@ -1384,10 +1390,21 @@ mod tests {
             normalise_cargo_licence("MIT/Apache-2.0"),
             ("MIT OR Apache-2.0".to_string(), Some("MIT/Apache-2.0".to_string()))
         );
-        let (n, _) = normalise_cargo_licence("MIT / Apache-2.0 WITH LLVM-exception");
-        assert_eq!(n, "MIT OR (Apache-2.0 WITH LLVM-exception)");
-        assert_eq!(check_licence_expression(&n), Ok(()));
-        assert!(check_licence_expression(&normalise_cargo_licence("MIT/").0).is_err());
+        assert_eq!(normalise_cargo_licence("MIT/Apache-2.0/Zlib").0, "MIT OR Apache-2.0 OR Zlib");
+        // Not a plain `term/term` list: left unchanged, so validation refuses it.
+        for bad in [
+            "LicenseRef-a/b",
+            "GPL-2.0 WITH A/B",
+            "MIT / Apache-2.0",
+            "MIT/",
+            "/MIT",
+            "MIT/AND",
+            "MIT/(Apache-2.0)",
+            "DocumentRef-x:LicenseRef-a/b",
+        ] {
+            assert_eq!(normalise_cargo_licence(bad), (bad.to_string(), None), "{bad}");
+            assert!(licence_check(&normalise_cargo_licence(bad).0).is_err(), "{bad} accepted");
+        }
         let c = Component::from_crate(
             &parse_metadata(METADATA.as_bytes()).unwrap().packages["n"],
             "MIT OR Apache-2.0",
