@@ -99,7 +99,6 @@ fn is_safe_path(s: &str) -> bool {
         && s.split('/').all(|seg| !seg.is_empty() && seg != "." && seg != "..")
 }
 
-
 type Table = toml::Table;
 
 fn only_keys(t: &Table, allowed: &[&str], at: &str) -> Result<(), CorpError> {
