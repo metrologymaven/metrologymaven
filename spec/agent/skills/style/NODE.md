@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-agent]
+built_pr: 132
 satisfies: [REQ-AGENT.SKILLS-005, REQ-AGENT.SKILLS-006, REQ-AGENT.SKILLS-007]
 covers: []
 depends_on: [AGENT.SKILLS.CATALOG]

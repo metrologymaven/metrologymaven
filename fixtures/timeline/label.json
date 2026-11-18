@@ -1,0 +1,31 @@
+[
+ {
+  "at": "2026-03-02T00:00:00Z",
+  "actor": "alice",
+  "kind": "opened"
+ },
+ {
+  "at": "2026-03-02T06:00:00Z",
+  "actor": "bob",
+  "kind": "label_added",
+  "label": "waiting-on-author"
+ },
+ {
+  "at": "2026-03-03T00:00:00Z",
+  "actor": "bob",
+  "kind": "label_added",
+  "label": "needs-ci"
+ },
+ {
+  "at": "2026-03-05T06:00:00Z",
+  "actor": "carol",
+  "kind": "label_removed",
+  "label": "waiting-on-author"
+ },
+ {
+  "at": "2026-03-06T00:00:00Z",
+  "actor": "dave",
+  "kind": "label_added",
+  "label": "waiting-on-author"
+ }
+]
