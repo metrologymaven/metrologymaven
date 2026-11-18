@@ -43,7 +43,7 @@ def sha(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
-def entry(id_: str, data: bytes, urls: list[str], size: int | None = None) -> str:
+def entry(id_: str, data: bytes, urls: list[str], size: int | None = None, owner: str = "ECO") -> str:
     size = len(data) if size is None else size
     url_list = ", ".join(f'"{u}"' for u in urls)
     return (
@@ -54,7 +54,7 @@ def entry(id_: str, data: bytes, urls: list[str], size: int | None = None) -> st
         'licence = "CC0-1.0"\n'
         f"size_bytes = {size}\n"
         f'sha256 = "{sha(data[:size])}"\n'
-        'owner = "ECO"\n'
+        f'owner = "{owner}"\n'
         'redistribution = "mirror"\n'
         f"urls = [{url_list}]\n"
     )
@@ -73,8 +73,8 @@ CATALOGUE = (
     + entry("oversize", OVERSIZE, ["@BASE@/oversize.bin"], size=OVERSIZE_LIMIT)
     # The server answers 302 to /tiny.bin; redirects are refused.
     + entry("redirect", TINY, ["@BASE@/redirect/tiny.bin"])
-    # Local mirror through file://.
-    + entry("local", TINY, ["@FILEBASE@/tiny.bin"])
+    # Local mirror through file://; the only entry owned by KRN (for --owner).
+    + entry("local", TINY, ["@FILEBASE@/tiny.bin"], owner="KRN")
 )
 
 OUTPUTS = {**FILES, "catalogue.toml": CATALOGUE.encode()}

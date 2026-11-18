@@ -157,6 +157,7 @@ jobs:
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
           python fixtures/auto/cli/out/make_cases.py --check
+          python fixtures/fetch/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v

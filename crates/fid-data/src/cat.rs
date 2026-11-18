@@ -770,15 +770,19 @@ pub struct CatalogueEntry {
 }
 
 /// A URL the fetch tool may read: `http://` or `https://` as the admission check accepts,
-/// or `file://` with a non-empty rest (tests and local mirrors).
-fn is_fetch_url(s: &str) -> bool {
-    is_url(s) || s.strip_prefix("file://").is_some_and(|r| !r.is_empty() && !r.chars().any(char::is_control))
+/// or, when `allow_file`, `file://` with a non-empty rest (tests and local mirrors).
+fn is_fetch_url(s: &str, allow_file: bool) -> bool {
+    is_url(s)
+        || (allow_file
+            && s.strip_prefix("file://").is_some_and(|r| !r.is_empty() && !r.chars().any(char::is_control)))
 }
 
 /// Reads the entries of catalogue text for fetching. Unlike [`check`] this neither needs
 /// the domain list nor judges licences: it only requires a well-formed ID, owner,
 /// `size_bytes`, `sha256` and a non-empty `urls` list in every entry, and unique IDs.
-pub fn entries(catalogue: &str) -> Result<Vec<CatalogueEntry>, String> {
+/// `file://` URLs are accepted only with `allow_file`, which callers set only for a
+/// catalogue the user named explicitly, never for the repository's default `datasets.toml`.
+pub fn entries(catalogue: &str, allow_file: bool) -> Result<Vec<CatalogueEntry>, String> {
     if catalogue.len() as u64 > MAX_INPUT_BYTES {
         return Err(format!("catalogue is larger than {MAX_INPUT_BYTES} bytes"));
     }
@@ -799,7 +803,7 @@ pub fn entries(catalogue: &str) -> Result<Vec<CatalogueEntry>, String> {
             Some(Value::Arr(items)) if !items.is_empty() => items
                 .iter()
                 .map(|v| match v {
-                    Value::Str(s) if is_fetch_url(s) => Ok(s.clone()),
+                    Value::Str(s) if is_fetch_url(s, allow_file) => Ok(s.clone()),
                     _ => Err(bad("urls")),
                 })
                 .collect::<Result<_, _>>()?,

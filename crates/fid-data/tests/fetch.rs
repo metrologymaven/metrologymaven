@@ -7,8 +7,8 @@
 
 use fid_data::cat::{entries, CatalogueEntry};
 use fid_data::fetch::{
-    fetch_entry, installed_path, verify_cache, Body, Failure, Transport, FETCH_ALL_URLS_FAILED, FETCH_IO,
-    FETCH_OFFLINE, FETCH_SIZE, TMP_DIR,
+    fetch_entry, installed_path, remove_stale_parts, verify_cache, Body, Failure, Transport, FETCH_ALL_URLS_FAILED,
+    FETCH_IO, FETCH_OFFLINE, FETCH_SIZE, STALE_PART_AGE, TMP_DIR,
 };
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
@@ -332,7 +332,7 @@ impl Transport for EndlessTransport {
 fn fixture_entry(id: &str) -> CatalogueEntry {
     let text = std::fs::read_to_string(fixtures().join("catalogue.toml")).unwrap();
     let text = text.replace("@BASE@", "http://127.0.0.1:9").replace("@FILEBASE@", "file:///nonexistent");
-    entries(&text).unwrap().into_iter().find(|e| e.id == id).unwrap()
+    entries(&text, true).unwrap().into_iter().find(|e| e.id == id).unwrap()
 }
 
 /// AC-6: the reader stops after at most size_bytes + 1 bytes.
@@ -521,7 +521,124 @@ fn offline_never_opens() {
 #[test]
 fn repository_catalogue_loads() {
     let text = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../datasets.toml")).unwrap();
-    let all = entries(&text).unwrap();
+    let all = entries(&text, false).unwrap();
     assert!(!all.is_empty());
     assert!(all.iter().all(|e| e.urls.iter().all(|u| u.starts_with("https://"))));
+}
+
+/// `file://` URLs are accepted only from a catalogue named explicitly, never by default.
+#[test]
+fn file_urls_need_an_explicit_catalogue() {
+    let tmp = TempDir::new("explicit");
+    let cat = catalogue(&tmp.0, "http://127.0.0.1:9");
+    let text = std::fs::read_to_string(&cat).unwrap();
+    assert!(entries(&text, true).is_ok());
+    let err = entries(&text, false).unwrap_err();
+    assert!(err.contains("urls"), "{err}");
+
+    // FID_DATA_CATALOGUE counts as explicit, like --catalogue (file_url_mirror).
+    let cache = tmp.0.join("cache");
+    let env = [("FID_DATA_CATALOGUE", cat.to_str().unwrap()), ("FID_DATA_CACHE", cache.to_str().unwrap())];
+    let out = run(&["fetch", "local"], &env);
+    assert_eq!(code(&out), 0, "{}", stderr(&out));
+    assert!(cache.join("local").join(TINY_SHA).join("tiny.bin").is_file());
+}
+
+/// Proxy variables are ignored: curl connects to the catalogue host only.
+#[test]
+fn proxy_variables_are_ignored() {
+    let server = Server::start();
+    let proxy = Server::start();
+    let tmp = TempDir::new("proxy");
+    let cache = tmp.0.join("cache");
+    let cat = catalogue(&tmp.0, &server.base);
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_fid-data"));
+    cmd.args(["data", "fetch", "tiny", "--catalogue", cat.to_str().unwrap(), "--cache", cache.to_str().unwrap()]);
+    for k in ["NO_PROXY", "no_proxy", "FID_DATA_OFFLINE", "FID_DATA_CACHE", "FID_DATA_CATALOGUE"] {
+        cmd.env_remove(k);
+    }
+    for k in ["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"] {
+        cmd.env(k, &proxy.base);
+    }
+    let out = cmd.output().unwrap();
+    assert_eq!(code(&out), 0, "{}", stderr(&out));
+    assert_eq!(proxy.requests(), Vec::<String>::new());
+    assert_eq!(server.requests(), vec!["/tiny.bin"]);
+}
+
+/// `--all` fetches every entry in catalogue order and reports each failure.
+#[test]
+fn fetch_all() {
+    let server = Server::start();
+    let tmp = TempDir::new("all");
+    let cache = tmp.0.join("cache");
+    let cat = catalogue(&tmp.0, &server.base);
+    let args = ["fetch", "--all", "--catalogue", cat.to_str().unwrap(), "--cache", cache.to_str().unwrap()];
+    let out = run(&args, &[]);
+    assert_eq!(code(&out), 1, "{}", stderr(&out));
+    let err = stderr(&out);
+    for want in ["FETCH-DIGEST corrupt", "FETCH-SIZE oversize", "FETCH-ALL-URLS-FAILED redirect"] {
+        assert!(err.contains(want), "{want}: {err}");
+    }
+    let printed: Vec<String> = stdout(&out).lines().map(String::from).collect();
+    let tiny = ("tiny", TINY_SHA, "tiny.bin");
+    let installed = [tiny, ("mirrored", MIRRORED_SHA, "mirrored.bin"), ("local", TINY_SHA, "tiny.bin")];
+    let want: Vec<String> = installed
+        .iter()
+        .map(|(id, sha, name)| cache.join(id).join(sha).join(name).display().to_string())
+        .collect();
+    assert_eq!(printed, want);
+    let requested = ["/tiny.bin", "/corrupt.bin", "/missing/mirrored.bin", "/mirrored.bin", "/oversize.bin"];
+    assert_eq!(server.requests(), [&requested[..], &["/redirect/tiny.bin"][..]].concat());
+    for id in ["corrupt", "oversize", "redirect"] {
+        assert!(!cache.join(id).exists(), "{id}");
+    }
+    assert_tmp_empty(&cache);
+}
+
+/// `--owner` fetches only the entries of that domain; an unmatched owner fetches nothing.
+#[test]
+fn fetch_owner() {
+    let server = Server::start();
+    let tmp = TempDir::new("owner");
+    let cache = tmp.0.join("cache");
+    let cat = catalogue(&tmp.0, &server.base);
+    let base = ["fetch", "--catalogue", cat.to_str().unwrap(), "--cache", cache.to_str().unwrap(), "--owner"];
+    let krn = run(&[&base[..], &["KRN"][..]].concat(), &[]);
+    assert_eq!(code(&krn), 0, "{}", stderr(&krn));
+    assert_eq!(stdout(&krn).trim(), cache.join("local").join(TINY_SHA).join("tiny.bin").display().to_string());
+    assert_eq!(files_under(&cache), vec![format!("local/{TINY_SHA}/tiny.bin")]);
+    let none = run(&[&base[..], &["UNC"][..]].concat(), &[]);
+    assert_eq!(code(&none), 0, "{}", stderr(&none));
+    assert_eq!(stdout(&none), "");
+    assert_eq!(server.requests(), Vec::<String>::new());
+}
+
+/// Stale `.part` files in `.tmp/` are removed at the start of a fetch; fresh ones stay.
+#[test]
+fn stale_parts_are_removed() {
+    let tmp = TempDir::new("stale");
+    let tmp_dir = tmp.0.join(TMP_DIR);
+    std::fs::create_dir_all(&tmp_dir).unwrap();
+    let stale = tmp_dir.join("old.1.2.3.part");
+    let fresh = tmp_dir.join("new.1.2.3.part");
+    let other = tmp_dir.join("keep.txt");
+    for p in [&stale, &fresh, &other] {
+        std::fs::write(p, b"x").unwrap();
+    }
+    let old = std::time::SystemTime::now() - STALE_PART_AGE - Duration::from_secs(3600);
+    for p in [&stale, &other] {
+        std::fs::OpenOptions::new().write(true).open(p).unwrap().set_modified(old).unwrap();
+    }
+    assert_eq!(remove_stale_parts(&tmp_dir, STALE_PART_AGE), 1);
+    assert!(!stale.exists() && fresh.exists() && other.exists());
+
+    // fetch_entry runs the same cleanup before downloading.
+    std::fs::write(&stale, b"x").unwrap();
+    std::fs::OpenOptions::new().write(true).open(&stale).unwrap().set_modified(old).unwrap();
+    let mut tiny_entry = fixture_entry("local");
+    tiny_entry.urls = vec!["mem://whole".into()];
+    let flaky = Flaky { tiny: std::fs::read(fixtures().join("tiny.bin")).unwrap() };
+    fetch_entry(&tiny_entry, &tmp.0, false, &flaky, &mut io::sink()).unwrap();
+    assert!(!stale.exists() && fresh.exists());
 }

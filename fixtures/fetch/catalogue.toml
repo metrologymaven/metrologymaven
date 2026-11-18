@@ -66,6 +66,6 @@ source = "https://github.com/metrologymaven/metrologymaven/tree/main/fixtures/fe
 licence = "CC0-1.0"
 size_bytes = 1024
 sha256 = "2bebb9539f557a177967a2563c170629380904ad42b316e874b55d46db5a2321"
-owner = "ECO"
+owner = "KRN"
 redistribution = "mirror"
 urls = ["@FILEBASE@/tiny.bin"]

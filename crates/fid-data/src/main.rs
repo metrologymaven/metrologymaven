@@ -135,8 +135,11 @@ fn run(cmd: Cmd, o: Opts) -> Result<(), Vec<DataError>> {
         return Ok(());
     }
     let offline = o.offline || fetch::env_offline();
-    let catalogue = o.catalogue.unwrap_or_else(fetch::default_catalogue);
-    let entries = fetch::load_catalogue(&catalogue).map_err(|e| vec![e])?;
+    let (catalogue, explicit) = match o.catalogue {
+        Some(c) => (c, true),
+        None => fetch::default_catalogue(),
+    };
+    let entries = fetch::load_catalogue(&catalogue, explicit).map_err(|e| vec![e])?;
     let mut selected = Vec::new();
     let mut errors = Vec::new();
     if o.all || o.owner.is_some() {

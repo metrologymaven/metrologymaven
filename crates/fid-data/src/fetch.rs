@@ -9,7 +9,9 @@
 //!
 //! URLs come only from the catalogue. `http://` and `https://` are fetched by the
 //! `curl` program (as `fid-io-corp` does), so this crate links no HTTP or TLS stack; curl
-//! is told to refuse every redirect, so no host outside the catalogue is ever contacted.
+//! is told to refuse every redirect and to ignore proxy settings, so no host outside the
+//! catalogue is ever contacted. `file://` URLs are accepted only from a catalogue named
+//! explicitly (`--catalogue` or `FID_DATA_CATALOGUE`), never from the default one.
 //! `file://` URLs (tests, local mirrors) are read directly.
 
 use crate::cat::{self, CatalogueEntry};
@@ -21,7 +23,7 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStderr, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub const FETCH_DIGEST: &str = "FETCH-DIGEST";
 pub const FETCH_SIZE: &str = "FETCH-SIZE";
@@ -186,10 +188,11 @@ impl CurlBody {
     fn spawn(url: &str, max_bytes: u64) -> Result<CurlBody, Failure> {
         let max = max_bytes.to_string();
         // `-q` must come first: it makes curl ignore any ~/.curlrc. `--location` with
-        // `--max-redirs 0` turns every redirect into an error, so only catalogue hosts are read.
+        // `--max-redirs 0` turns every redirect into an error, and `--noproxy *` ignores every
+        // proxy variable, so curl connects only to the hosts written in the catalogue.
         let mut child = Command::new("curl")
             .args(["-q", "--globoff", "--fail", "--silent", "--show-error", "--location", "--max-redirs", "0"])
-            .args(["--proto", "=http,https", "--proto-redir", "=http,https"])
+            .args(["--noproxy", "*", "--proto", "=http,https", "--proto-redir", "=http,https"])
             .args(["--connect-timeout", CONNECT_TIMEOUT_S, "--max-time", MAX_TIME_S, "--max-filesize", &max])
             .args(["--", url])
             .stdin(Stdio::null())
@@ -349,6 +352,7 @@ pub fn fetch_entry(
     let tmp_dir = root.join(TMP_DIR);
     fs::create_dir_all(&tmp_dir)
         .map_err(|e| DataError::new(FETCH_IO, id, format!("cannot create {}: {e}", tmp_dir.display())))?;
+    remove_stale_parts(&tmp_dir, STALE_PART_AGE);
     let mut failures: Vec<(&'static str, String)> = Vec::new();
     for url in &entry.urls {
         let _ = writeln!(log, "data fetch {id}: trying {url}");
@@ -368,6 +372,27 @@ pub fn fetch_entry(
     let code = if failures.iter().all(|f| f.0 == first) { first } else { FETCH_ALL_URLS_FAILED };
     let detail: Vec<String> = failures.into_iter().map(|f| f.1).collect();
     Err(DataError::new(code, id, detail.join("; ")))
+}
+
+/// Temporary files older than this are left over from a killed fetch.
+pub const STALE_PART_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// Deletes `*.part` regular files in `tmp_dir` last modified more than `age` ago. Files of
+/// fetches still running are younger and stay. Errors are ignored: this is housekeeping.
+/// Returns how many files were removed.
+pub fn remove_stale_parts(tmp_dir: &Path, age: Duration) -> usize {
+    let Ok(dir) = fs::read_dir(tmp_dir) else { return 0 };
+    let now = SystemTime::now();
+    let mut removed = 0;
+    for e in dir.flatten() {
+        let is_part = e.file_name().to_string_lossy().ends_with(".part");
+        let Ok(meta) = e.metadata() else { continue };
+        let old = meta.modified().ok().and_then(|m| now.duration_since(m).ok()).is_some_and(|d| d > age);
+        if is_part && meta.file_type().is_file() && old && fs::remove_file(e.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
 }
 
 type Attempt<T> = Result<T, (&'static str, String)>;
@@ -515,11 +540,12 @@ pub fn env_offline() -> bool {
     std::env::var(ENV_OFFLINE).is_ok_and(|v| v == "1")
 }
 
-/// `FID_DATA_CATALOGUE`, else the repository's `datasets.toml`.
-pub fn default_catalogue() -> PathBuf {
+/// The catalogue to read when `--catalogue` is not given: `FID_DATA_CATALOGUE` (explicit,
+/// `true`), else the repository's `datasets.toml` (default, `false`).
+pub fn default_catalogue() -> (PathBuf, bool) {
     match std::env::var_os(ENV_CATALOGUE) {
-        Some(p) if !p.is_empty() => PathBuf::from(p),
-        _ => PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../../datasets.toml")),
+        Some(p) if !p.is_empty() => (PathBuf::from(p), true),
+        _ => (PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../../datasets.toml")), false),
     }
 }
 
@@ -542,10 +568,11 @@ pub fn default_cache() -> Result<PathBuf, DataError> {
         .ok_or_else(|| DataError::new(FETCH_IO, NO_DATASET, format!("no per-user cache directory; set {ENV_CACHE}")))
 }
 
-/// Reads the fetchable entries of a catalogue file.
-pub fn load_catalogue(path: &Path) -> Result<Vec<CatalogueEntry>, DataError> {
+/// Reads the fetchable entries of a catalogue file. `explicit` says the user named the
+/// file (`--catalogue` or `FID_DATA_CATALOGUE`); only then are `file://` URLs accepted.
+pub fn load_catalogue(path: &Path, explicit: bool) -> Result<Vec<CatalogueEntry>, DataError> {
     cat::read_bounded(path)
-        .and_then(|text| cat::entries(&text).map_err(|e| format!("{}: {e}", path.display())))
+        .and_then(|text| cat::entries(&text, explicit).map_err(|e| format!("{}: {e}", path.display())))
         .map_err(|e| DataError::new(FETCH_IO, NO_DATASET, e))
 }
 
@@ -558,7 +585,8 @@ pub fn find<'a>(entries: &'a [CatalogueEntry], id: &str) -> Result<&'a Catalogue
 /// catalogue and cache, fetches the dataset if it is not cached, and never touches the
 /// network while `FID_DATA_OFFLINE=1`.
 pub fn dataset_path(id: &str) -> Result<PathBuf, DataError> {
-    let entries = load_catalogue(&default_catalogue())?;
+    let (catalogue, explicit) = default_catalogue();
+    let entries = load_catalogue(&catalogue, explicit)?;
     let entry = find(&entries, id)?;
     fetch_entry(entry, &default_cache()?, env_offline(), &SystemTransport, &mut io::sink())
 }
