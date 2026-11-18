@@ -305,7 +305,9 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
     for (id, task) in tasks {
         match oracles.remove(&id) {
             Some(oracle) => out.push(SuiteTask { task, oracle }),
-            None => return Err(vec![FormatError::new(ErrorCode::MissingFile, &format!("oracles/{id}"), "", "no oracle")]),
+            None => {
+                return Err(vec![FormatError::new(ErrorCode::MissingFile, &format!("oracles/{id}"), "", "no oracle")])
+            }
         }
     }
     Ok(Suite { name, tasks: out, files, version })

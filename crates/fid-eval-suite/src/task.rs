@@ -201,13 +201,12 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     let source_job = cx.text(m.get("source_job"), "source_job");
     let golden_digest = cx.digest(m.get("golden_digest"), "golden_digest");
 
-    let start_state = cx.obj(m.get("start_state"), "start_state", &["path", "digest"], &["path", "digest"]).and_then(
-        |s| {
+    let start_state =
+        cx.obj(m.get("start_state"), "start_state", &["path", "digest"], &["path", "digest"]).and_then(|s| {
             let path = relpath(&mut cx, s.get("path"), "start_state.path");
             let digest = cx.digest(s.get("digest"), "start_state.digest");
             Some(StartState { path: path?, digest: digest? })
-        },
-    );
+        });
 
     let prompt = match cx.string(m.get("prompt"), "prompt") {
         Some("") => {
@@ -218,11 +217,12 @@ pub fn parse_task(bytes: &[u8], file: &str) -> Result<Task, Vec<FormatError>> {
     };
     let profile = cx.text(m.get("profile"), "profile");
 
-    let budget = cx.obj(m.get("budget"), "budget", &["wall_s", "tool_calls"], &["wall_s", "tool_calls"]).and_then(|b| {
-        let wall_s = cx.pos_u32(b.get("wall_s"), "budget.wall_s");
-        let tool_calls = cx.pos_u32(b.get("tool_calls"), "budget.tool_calls");
-        Some(Budget { wall_s: wall_s?, tool_calls: tool_calls? })
-    });
+    let budget =
+        cx.obj(m.get("budget"), "budget", &["wall_s", "tool_calls"], &["wall_s", "tool_calls"]).and_then(|b| {
+            let wall_s = cx.pos_u32(b.get("wall_s"), "budget.wall_s");
+            let tool_calls = cx.pos_u32(b.get("tool_calls"), "budget.tool_calls");
+            Some(Budget { wall_s: wall_s?, tool_calls: tool_calls? })
+        });
 
     let roots = cx.obj(m.get("roots"), "roots", &["read", "write"], &["read", "write"]).and_then(|r| {
         let read = relpaths(&mut cx, r.get("read"), "roots.read");

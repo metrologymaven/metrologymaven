@@ -100,10 +100,8 @@ fn ac1_library_files_and_version() {
     assert_eq!(suite.name, "suite-mini");
     assert_eq!(suite.version.as_str(), expected_version());
     let exp = load_json(&fix("expected.json"));
-    let want: Vec<(String, String)> = arr(&obj(&exp)["files"])
-        .iter()
-        .map(|p| (st(&arr(p)[0]).to_string(), st(&arr(p)[1]).to_string()))
-        .collect();
+    let want: Vec<(String, String)> =
+        arr(&obj(&exp)["files"]).iter().map(|p| (st(&arr(p)[0]).to_string(), st(&arr(p)[1]).to_string())).collect();
     let got: Vec<(String, String)> = suite.files.iter().map(|(p, d)| (p.clone(), d.as_str().to_string())).collect();
     assert_eq!(got, want);
     assert_eq!(suite_version(&suite.files).unwrap(), suite.version);
@@ -244,10 +242,7 @@ fn suite_layout_errors() {
     let d = copy_suite("no-oracle");
     std::fs::remove_dir_all(d.join("oracles").join("mini-probe-01")).unwrap();
     let errs = load_suite(&d).unwrap_err();
-    assert_eq!(
-        codes(&errs),
-        vec![("missing_file", "oracles/mini-probe-01/oracle.json".to_string(), String::new())]
-    );
+    assert_eq!(codes(&errs), vec![("missing_file", "oracles/mini-probe-01/oracle.json".to_string(), String::new())]);
     let _ = std::fs::remove_dir_all(d);
 
     let d = copy_suite("tamper");

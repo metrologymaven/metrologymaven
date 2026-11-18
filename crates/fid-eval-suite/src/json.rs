@@ -137,7 +137,9 @@ impl<'a> Ctx<'a> {
     pub(crate) fn pos_u32(&mut self, v: Option<&CValue>, field: &str) -> Option<u32> {
         match v? {
             // In range, and an integer: the truncated value round-trips bit for bit.
-            CValue::Num(f) if *f >= 1.0 && *f <= f64::from(u32::MAX) && f64::from(*f as u32).to_bits() == f.to_bits() => {
+            CValue::Num(f)
+                if *f >= 1.0 && *f <= f64::from(u32::MAX) && f64::from(*f as u32).to_bits() == f.to_bits() =>
+            {
                 Some(*f as u32)
             }
             _ => {
