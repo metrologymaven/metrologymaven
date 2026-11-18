@@ -1,0 +1,31 @@
+# ECO.DATA.CAT expected findings, labelled by hand from the spec rules. <file>\t<CODE subject>|ok
+valid.toml	ok
+mirror-noredist.toml	DATA-REDIST vendor-eula-scan
+standards.toml	DATA-STANDARDS quoted-standard
+bad-digest.toml	DATA-SCHEMA short-digest
+dup.toml	DATA-DUP same-id
+bad-owner.toml	DATA-OWNER unknown-owner
+customer.toml	DATA-CUSTOMER customer-no-release
+expressions.toml	DATA-REDIST and-licenseref
+expressions.toml	DATA-REDIST gpl-mirror
+expressions.toml	DATA-REDIST nested-bad
+expressions.toml	DATA-REDIST with-exception
+schema.toml	DATA-SCHEMA Bad_ID
+schema.toml	DATA-SCHEMA bad-expression
+schema.toml	DATA-SCHEMA bad-redist
+schema.toml	DATA-SCHEMA bad-url
+schema.toml	DATA-SCHEMA dataset#2
+schema.toml	DATA-SCHEMA empty-urls
+schema.toml	DATA-SCHEMA negative-size
+schema.toml	DATA-SCHEMA no-urls
+schema.toml	DATA-SCHEMA ref-no-terms
+schema.toml	DATA-SCHEMA unknown-field
+schema.toml	DATA-SCHEMA upper-digest
+multi.toml	DATA-OWNER aa-first
+multi.toml	DATA-REDIST aa-first
+multi.toml	DATA-CUSTOMER zz-last
+multi.toml	DATA-OWNER zz-last
+multi.toml	DATA-REDIST zz-last
+multi.toml	DATA-STANDARDS zz-last
+syntax.toml	DATA-SCHEMA -
+no-policy.toml	DATA-SCHEMA -
