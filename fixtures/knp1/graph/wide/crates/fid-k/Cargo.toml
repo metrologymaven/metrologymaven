@@ -1,0 +1,15 @@
+[package]
+name = "fid-k"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+
+[dependencies]
+alias = { package = "ext-ren", path = "../../vendor/ext-ren" }
+ext-ws = { workspace = true }
+ext-reg = "1"
+ext-git = { git = "https://example.invalid/ext-git.git" }
+ext-dup = "1"
+
+[target.'cfg(windows)'.dependencies]
+ext-win = { path = "ext-win" }

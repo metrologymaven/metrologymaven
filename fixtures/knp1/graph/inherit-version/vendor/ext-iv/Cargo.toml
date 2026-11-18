@@ -1,0 +1,6 @@
+# Not a workspace member, yet inherits its version: unresolvable, so the run fails closed.
+[package]
+name = "ext-iv"
+version.workspace = true
+edition = "2021"
+license = "MIT"

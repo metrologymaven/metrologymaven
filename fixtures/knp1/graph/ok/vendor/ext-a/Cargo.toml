@@ -1,0 +1,11 @@
+[package]
+name = "ext-a"
+version = "1.2.0"
+edition = "2021"
+license = "MIT OR GPL-3.0-only"
+
+[dependencies]
+ext-m = { path = "../ext-m" }
+
+[build-dependencies]
+ext-b = { path = "../ext-b" }

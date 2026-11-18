@@ -1,0 +1,6 @@
+# A vendored crate inheriting version.workspace = true without being a member: KNP1-GRAPH-UNRESOLVED.
+[graph]
+roots = ["fid-num"]
+third_party_dir = "vendor"
+allowlist = "../ok/kernel-allowlist.toml"
+spdx_allowlist = "../ok/spdx-allowlist.toml"

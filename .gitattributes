@@ -10,3 +10,5 @@ fixtures/io/e57/phys/** -text
 fixtures/io/dmis/parse/lex/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
 fixtures/flow/pkg/** -text
+# KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
+fixtures/knp1/graph/** -text
