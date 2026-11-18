@@ -36,6 +36,12 @@
 //! </article>
 //! ```
 //!
+//! Escaping replaces `& < > " '` with entities and also writes every line feed as `&#10;` and
+//! carriage return as `&#13;`, so a value never puts a raw line break, and in particular never a
+//! blank line, inside the page. A CommonMark processor would end an HTML block at a blank line
+//! (for example inside `<pre class="help">`). The page is still meant to be inserted as raw HTML:
+//! the frame (`OUTR.DOCS.FRAME`) must not run the fragments through a Markdown processor.
+//!
 //! Reason words: `class_never_on_mcp` "never on MCP for this class", `request_only`
 //! "request-only", `human_only` "human-only". A table cell or result that is not a string is
 //! written as its RFC 8785 JSON text; `null` or an absent field is an empty cell. No other text is
@@ -65,6 +71,13 @@ pub const MAX_ENTRIES: usize = 100_000;
 const MAX_RECORD_DEPTH: usize = 64;
 /// Longest release tag.
 const MAX_RELEASE_LEN: usize = 128;
+/// Largest command major, as for `fid_types::CommandId` (1 to 5 decimal digits).
+pub const MAX_MAJOR: u32 = 99_999;
+/// Windows reserved device names, refused as the first segment of a release tag.
+const WINDOWS_DEVICES: [&str; 22] = [
+    "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1",
+    "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
 
 /// A command major: (command ID without the major, major).
 pub type Key = (String, u32);
@@ -314,7 +327,7 @@ fn read_bounded(path: &Path, max: usize) -> Result<Vec<u8>, String> {
 
 fn major_of(v: Option<&CValue>) -> Option<u32> {
     match v {
-        Some(CValue::Num(n)) if n.fract() == 0.0 && (0.0..=f64::from(u32::MAX)).contains(n) => Some(*n as u32),
+        Some(CValue::Num(n)) if n.fract() == 0.0 && (0.0..=f64::from(MAX_MAJOR)).contains(n) => Some(*n as u32),
         _ => None,
     }
 }
@@ -337,7 +350,7 @@ pub fn parse_manifest(bytes: &[u8], path: &str) -> Result<Manifest, RefError> {
             _ => return Err(err(format!("commands[{i}].id is not a command name"))),
         };
         let Some(major) = major_of(o.get("major")) else {
-            return Err(err(format!("commands[{i}].major is not an integer 0..2^32")));
+            return Err(err(format!("commands[{i}].major is not an integer 0..=99999")));
         };
         if !commands.insert((id.clone(), major)) {
             return Err(err(format!("duplicate command {id}@{major}")));
@@ -426,7 +439,7 @@ pub fn parse_record(bytes: &[u8], file: &str) -> Result<Record, RefError> {
     if !CommandName::is_valid(&command_id) {
         return Err(err("`command_id` is not a command name".into()));
     }
-    let major = major_of(o.get("major")).ok_or_else(|| err("`major` is not an integer 0..2^32".into()))?;
+    let major = major_of(o.get("major")).ok_or_else(|| err("`major` is not an integer 0..=99999".into()))?;
     if file != format!("{command_id}@{major}.json") {
         return Err(err(format!("file name does not match {command_id}@{major}.json")));
     }
@@ -471,7 +484,7 @@ pub fn parse_record(bytes: &[u8], file: &str) -> Result<Record, RefError> {
     })
 }
 
-/// HTML-escapes `& < > " '`.
+/// HTML-escapes `& < > " '`, and writes line feeds as `&#10;` and carriage returns as `&#13;`.
 pub fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
@@ -481,6 +494,8 @@ pub fn escape(s: &str) -> String {
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&#39;"),
+            '\n' => out.push_str("&#10;"),
+            '\r' => out.push_str("&#13;"),
             c => out.push(c),
         }
     }
@@ -566,11 +581,16 @@ pub fn page_path(surface: Surface, key: &Key) -> String {
     format!("{}/{}.html", surface.as_str(), key_text(key))
 }
 
-/// Whether `tag` is a usable release tag: 1 to 128 of `[A-Za-z0-9._+-]`, not starting with `.`.
+/// Whether `tag` is a usable release tag: 1 to 128 of `[A-Za-z0-9._+-]`, not starting or ending
+/// with `.`, and whose first `.`-separated segment is not a Windows device name (`con`, `nul`,
+/// `aux`, `prn`, `com1`..`com9`, `lpt1`..`lpt9`, any case).
 pub fn valid_release(tag: &str) -> bool {
+    let first = tag.split('.').next().unwrap_or("").to_ascii_lowercase();
     !tag.is_empty()
         && tag.len() <= MAX_RELEASE_LEN
         && !tag.starts_with('.')
+        && !tag.ends_with('.')
+        && !WINDOWS_DEVICES.contains(&first.as_str())
         && tag.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'+' | b'-'))
 }
 

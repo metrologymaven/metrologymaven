@@ -302,7 +302,9 @@ fn ac8_reruns_are_byte_identical() {
 fn bad_usage_and_release_tags() {
     assert!(valid_release("v0.1.0"));
     assert!(valid_release("2026.11-rc1"));
-    for bad in ["", ".", "..", "../x", "a/b", "a\\b", "v 1"] {
+    assert!(valid_release("console"));
+    assert!(valid_release("com10"));
+    for bad in ["", ".", "..", "../x", "a/b", "a\\b", "v 1", "v1.", "con", "NUL", "aux.1", "Com1.0", "lpt9", "prn"] {
         assert!(!valid_release(bad), "{bad:?}");
     }
     let o = bin(&["ref-render".into(), "--release".into(), "v1".into()]);
@@ -342,6 +344,10 @@ fn record_parse_errors() {
     // Unknown side-effect class.
     let bad = ok.replace(r#""side_effect":"R0""#, r#""side_effect":"Z9""#);
     assert!(matches!(parse_record(bad.as_bytes(), "demo.read_item@1.json"), Err(RefError::RecordParse { .. })));
+    // Major beyond 5 digits, as for CommandId.
+    let bad = ok.replace(r#""major":1"#, r#""major":100000"#);
+    assert_ne!(bad, ok);
+    assert!(matches!(parse_record(bad.as_bytes(), "demo.read_item@100000.json"), Err(RefError::RecordParse { .. })));
     // Over the 1 MB bound.
     let big = format!("{}{}", " ".repeat(MAX_RECORD_BYTES), ok);
     assert!(matches!(parse_record(big.as_bytes(), "demo.read_item@1.json"), Err(RefError::RecordParse { .. })));
@@ -350,8 +356,18 @@ fn record_parse_errors() {
 #[test]
 fn help_text_is_escaped_verbatim() {
     assert_eq!(escape(r#"a < b & c > d "q" 's'"#), "a &lt; b &amp; c &gt; d &quot;q&quot; &#39;s&#39;");
+    assert_eq!(escape("a\n\nb\r\n"), "a&#10;&#10;b&#13;&#10;");
     let out = tmp("esc");
     assert_eq!(render_min(&out).status.code(), Some(0));
     let p = page(&out, "cli", "demo.read_item@1");
     assert!(p.contains("Compare a &lt; b &amp; c &gt; d, &quot;quoted&quot; and &#39;single&#39;.</pre>"));
+    // The help has blank lines; the page must not, so a CommonMark processor cannot end the HTML
+    // block inside <pre> (and each value stays on one line).
+    assert!(p.contains("read item.&#10;&#10;Usage notes"));
+    for (path, bytes) in tree(&out) {
+        let text = String::from_utf8(bytes).unwrap();
+        assert!(!text.contains("\n\n") && !text.contains('\r'), "{path} has a blank line or CR");
+        let pre = text.lines().find(|l| l.starts_with("<pre class=\"help\">")).unwrap();
+        assert!(pre.ends_with("</pre>"), "{path}: help spans lines");
+    }
 }

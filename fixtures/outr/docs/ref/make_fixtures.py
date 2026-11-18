@@ -14,7 +14,12 @@ crates/fid-outreach/src/ref_pages.rs. They are a second, independent implementat
 layout; crates/fid-outreach/tests/ref_pages.rs asserts that the Rust renderer produces the same
 bytes. Nothing here was produced by running the Rust code.
 
+Every record written is validated against the provisional schema `docs-ref-v1.schema.json`
+next to this script (a stdlib validator for the keywords that schema uses). The schema is a
+stand-in written by OUTR.DOCS.REF; AUTO.SURF.DOCS owns docs-ref-v1 and must confirm or replace it.
+
 Layout:
+  docs-ref-v1.schema.json          provisional docs-ref-v1 schema (hand-written, not generated)
   min/min-classes.json             manifest (12 command majors)
   min/surfaces.toml                release ships cli and mcp
   min/surfaces-python.toml         release ships cli, mcp and python
@@ -33,6 +38,7 @@ Run from the repository root:
 import hashlib
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -56,6 +62,9 @@ COMMANDS = [
     ("demo.compute_sum", 2, "R1", "D0", False, "exposed", True, None),
     ("demo.edit_draft", 1, "W1", "D0", False, "named", True, None),
     ("demo.edit_doc", 1, "W2", "D0", False, "named", True, None),
+    # human_only W2: MCP projects it as request-only (CONSTITUTION section 3). Whether the record
+    # then says available true (with the tool name) or false is a GUESS pending AUTO.SURF.DOCS;
+    # this fixture states it explicitly as available true with reason human_only.
     ("demo.adopt_doc", 1, "W2", "D0", True, "request_only", True, "human_only"),
     ("demo.release_record", 1, "W3", "D0", False, "request_only", True, "request_only"),
     ("demo.export_report", 1, "X1", "N", False, "request_only", True, "request_only"),
@@ -157,6 +166,8 @@ def esc(s):
         .replace(">", "&gt;")
         .replace('"', "&quot;")
         .replace("'", "&#39;")
+        .replace("\n", "&#10;")
+        .replace("\r", "&#13;")
     )
 
 
@@ -212,6 +223,71 @@ def page(rec, surface, ships_python):
     return out.encode("utf-8")
 
 
+# ------------------------------------------------------------------ provisional schema check
+
+TYPES = {
+    "object": lambda v: isinstance(v, dict),
+    "array": lambda v: isinstance(v, list),
+    "string": lambda v: isinstance(v, str),
+    "boolean": lambda v: isinstance(v, bool),
+    "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
+    "null": lambda v: v is None,
+}
+SUPPORTED = {"$schema", "$id", "title", "description", "$defs", "$ref", "type", "required", "properties",
+             "items", "const", "enum", "pattern", "minimum", "maximum", "minLength"}
+
+
+def validate(value, schema, root, at="$"):
+    # Returns a list of error strings; supports only the keywords in SUPPORTED.
+    unknown = set(schema) - SUPPORTED
+    if unknown:
+        raise ValueError("schema keyword not supported by this checker: %s" % sorted(unknown))
+    if "$ref" in schema:
+        target = root
+        for part in schema["$ref"].lstrip("#/").split("/"):
+            target = target[part]
+        return validate(value, target, root, at)
+    errs = []
+    if "type" in schema:
+        kinds = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        if not any(TYPES[k](value) for k in kinds):
+            return [at + ": not " + "/".join(kinds)]
+    if "const" in schema and value != schema["const"]:
+        errs.append(at + ": not the constant")
+    if "enum" in schema and value not in schema["enum"]:
+        errs.append(at + ": not in enum")
+    if "pattern" in schema and isinstance(value, str) and not re.search(schema["pattern"], value):
+        errs.append(at + ": does not match pattern")
+    if "minLength" in schema and isinstance(value, str) and len(value) < schema["minLength"]:
+        errs.append(at + ": too short")
+    if "minimum" in schema and value < schema["minimum"]:
+        errs.append(at + ": below minimum")
+    if "maximum" in schema and value > schema["maximum"]:
+        errs.append(at + ": above maximum")
+    if isinstance(value, dict):
+        for k in schema.get("required", []):
+            if k not in value:
+                errs.append(at + ": missing " + k)
+        for k, sub in schema.get("properties", {}).items():
+            if k in value:
+                errs.extend(validate(value[k], sub, root, at + "." + k))
+    if isinstance(value, list) and "items" in schema:
+        for i, item in enumerate(value):
+            errs.extend(validate(item, schema["items"], root, "%s[%d]" % (at, i)))
+    return errs
+
+
+def check_schema(files):
+    with open(os.path.join(HERE, "docs-ref-v1.schema.json"), "rb") as f:
+        schema = json.load(f)
+    bad = []
+    for rel, data in sorted(files.items()):
+        if "/records/" in rel:
+            for e in validate(json.loads(data), schema, schema):
+                bad.append(rel + " " + e)
+    return bad
+
+
 # ------------------------------------------------------------------ assembly
 
 def build():
@@ -260,6 +336,11 @@ def on_disk():
 
 def main():
     files = build()
+    invalid = check_schema(files)
+    for e in invalid:
+        print("schema: " + e)
+    if invalid:
+        return 1
     if "--check" in sys.argv[1:]:
         disk = on_disk()
         bad = sorted(set(files) ^ set(disk)) + sorted(k for k in files if k in disk and files[k] != disk[k])
