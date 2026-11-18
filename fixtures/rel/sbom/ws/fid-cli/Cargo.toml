@@ -1,0 +1,13 @@
+[package]
+name = "fid-cli"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+fid-core = { path = "../fid-core" }
+fid-sbom-fixture-dep = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+fid-winio = { path = "../fid-winio" }
