@@ -256,7 +256,12 @@ fn expect_fail_spawn_failure_and_timeout() {
     let got: Vec<(u32, Status, u32)> = r.blocks.iter().map(|b| (b.line, b.status, b.command_line)).collect();
     assert_eq!(
         got,
-        vec![(5, Status::Failed, 6), (9, Status::SpawnFailed, 10), (13, Status::TimedOut, 14), (17, Status::Passed, 20)]
+        vec![
+            (5, Status::Failed, 6),
+            (9, Status::SpawnFailed, 10),
+            (13, Status::TimedOut, 14),
+            (17, Status::Passed, 20)
+        ]
     );
     assert_eq!(r.exit_code(), 1);
     assert!(r.workdir_removed);

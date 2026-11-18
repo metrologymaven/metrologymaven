@@ -230,9 +230,7 @@ fn runnable(info: &str) -> Result<Option<bool>, String> {
     match words.as_slice() {
         ["sh", "run"] => Ok(Some(false)),
         ["sh", "run", "expect-fail"] => Ok(Some(true)),
-        ["sh", "run", ..] => {
-            Err(format!("unknown runnable block `{info}`; expected `sh run` or `sh run expect-fail`"))
-        }
+        ["sh", "run", ..] => Err(format!("unknown runnable block `{info}`; expected `sh run` or `sh run expect-fail`")),
         _ => Ok(None),
     }
 }
@@ -380,10 +378,7 @@ impl Report {
                 let mut o = BTreeMap::new();
                 o.insert("command".to_string(), CValue::Str(b.command.clone()));
                 o.insert("command_line".to_string(), num(b.command_line));
-                o.insert(
-                    "exit_code".to_string(),
-                    b.exit_code.map_or(CValue::Null, |c| CValue::Num(f64::from(c))),
-                );
+                o.insert("exit_code".to_string(), b.exit_code.map_or(CValue::Null, |c| CValue::Num(f64::from(c))));
                 o.insert("expect_fail".to_string(), CValue::Bool(b.expect_fail));
                 o.insert("line".to_string(), num(b.line));
                 o.insert("status".to_string(), CValue::Str(b.status.as_str().to_string()));
@@ -442,8 +437,11 @@ impl Report {
 pub fn run(opts: &Options) -> Result<Report, DocRunError> {
     let guide_name = opts.guide.display().to_string();
     let text = read_guide(&opts.guide)?;
-    let guide = parse_guide(&text)
-        .map_err(|(line, reason)| DocRunError::GuideInvalid { path: guide_name.clone(), line, reason })?;
+    let guide = parse_guide(&text).map_err(|(line, reason)| DocRunError::GuideInvalid {
+        path: guide_name.clone(),
+        line,
+        reason,
+    })?;
     let repo_name = opts.repo.display().to_string();
     let repo_err = |reason: String| DocRunError::RepoUnreadable { path: repo_name.clone(), reason };
     let head = git(&opts.repo, &["rev-parse", "HEAD"], None).map_err(repo_err)?;
