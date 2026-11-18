@@ -286,7 +286,8 @@ mod tests {
 
     #[test]
     fn code_is_skipped() {
-        let text = "```md\n<!-- fid-claim: c1 -->\nour agent\n```\n\nUse `<!-- fid-claim: <id> -->` and ``our agent``.\n";
+        let text =
+            "```md\n<!-- fid-claim: c1 -->\nour agent\n```\n\nUse `<!-- fid-claim: <id> -->` and ``our agent``.\n";
         let (tags, f) = scan_text(text, "a.md", &phrases());
         assert!(tags.is_empty());
         assert!(f.is_empty(), "{f:?}");

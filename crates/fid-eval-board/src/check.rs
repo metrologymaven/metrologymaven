@@ -139,8 +139,11 @@ fn evaluate(c: &Claim, register: &Register, board: &Board, tags: &[Tag], out: &m
                     Err(why) => problems.push((Code::EntryMissing, format!("{what}: {why}"))),
                     Ok(f) => {
                         let ord = f.cmp_exact(c.threshold);
-                        let (met, op) =
-                            if c.metric.is_rate() { (ord != Ordering::Less, ">=") } else { (ord != Ordering::Greater, "<=") };
+                        let (met, op) = if c.metric.is_rate() {
+                            (ord != Ordering::Less, ">=")
+                        } else {
+                            (ord != Ordering::Greater, "<=")
+                        };
                         if !met {
                             problems.push((
                                 Code::ThresholdNotMet,

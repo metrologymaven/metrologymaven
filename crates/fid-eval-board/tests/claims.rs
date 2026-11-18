@@ -121,7 +121,12 @@ fn invalid_inputs_fail_closed() {
     // The phrase list defaults to the register's folder; there is none next to this one.
     let register = dir.join("claims.json");
     let no_phrases = dir.join("docs").join("none.txt");
-    let r = check_claims(&Inputs { register: &register, board: &board, phrases: Some(no_phrases.as_path()), sources: &sources });
+    let r = check_claims(&Inputs {
+        register: &register,
+        board: &board,
+        phrases: Some(no_phrases.as_path()),
+        sources: &sources,
+    });
     assert_eq!(r.findings.len(), 1);
     assert_eq!(r.findings[0].code, Code::InvalidPhrases);
     let bad_src = vec![dir.join("no-such-docs")];

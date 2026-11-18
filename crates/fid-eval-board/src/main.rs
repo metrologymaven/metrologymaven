@@ -95,8 +95,12 @@ fn check(args: &[&str]) -> ExitCode {
     if sources.is_empty() {
         return usage_error("--sources <PATH>... is required");
     }
-    let inputs =
-        Inputs { register: Path::new(register), board: Path::new(board), phrases: phrases.map(Path::new), sources: &sources };
+    let inputs = Inputs {
+        register: Path::new(register),
+        board: Path::new(board),
+        phrases: phrases.map(Path::new),
+        sources: &sources,
+    };
     let report = check_claims(&inputs);
     if json {
         print_json(&report);
