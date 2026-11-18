@@ -1,0 +1,10 @@
+{
+  "app": "a",
+  "commands": [
+    {
+      "definition_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "id": "x.do_thing@1",
+      "side_effect": "R0"
+    }
+  ]
+}

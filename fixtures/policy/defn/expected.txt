@@ -1,0 +1,3 @@
+POLICY-DEFN fid-app-a Cargo.toml: depends on declaration-macro crate fid-registry-macros
+POLICY-DEFN fid-app-a src/main.rs:8: declaration marker #[fid_command
+POLICY-DEFN fid-app-a src/main.rs:16: declaration marker #[fid_command

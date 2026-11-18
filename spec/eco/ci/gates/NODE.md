@@ -74,6 +74,7 @@ Hand-written config and changed-file lists under `fixtures/gates/` (MIT OR Apach
 ## Open questions
 
 - Gates for parity drift (ECO.PARITY.DRIFT) and later checks are added to `ci-gates.toml` by their own leaves.
+- Follow-up from ECO.APPS.POLICY (PR #116): add an `apps-policy` gate running `cargo xtask apps-policy --workspace . --registry-manifests <dir> --apps-status <json>` once app crates, per-app registry manifests (`fid --app <id> registry show-manifest --full`) and `apps-status.json` (ECO.APPS.MANIFEST.EXPORT) exist; globs `layers.toml`, `apps.toml`, `apps-policy.toml`, `crates/**`. Until then the check is not run on main.
 
 ## Children
 
