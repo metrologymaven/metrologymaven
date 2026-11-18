@@ -4,8 +4,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_outreach::asset_check::{
-    glob_match, is_remote, is_spdx_id, parse_allowlist, parse_attribution, parse_site_origin, scan_css, split_row,
-    Origin,
+    decode_entities, glob_match, is_remote, is_spdx_id, parse_allowlist, parse_attribution, parse_site_origin,
+    scan_css, scan_html, split_row, Origin,
 };
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -69,7 +69,12 @@ fn ac1_ok_tree_exits_0() {
         ),
         "{out}"
     );
-    assert!(out.contains("\"styles\":[\"css/site.css\",\"index.html\"]"), "{out}");
+    assert!(
+        out.contains(
+            "\"styles\":[\"css/site.css\",\"img/originals/mark-dark.svg\",\"img/originals/mark.svg\",\"index.html\"]"
+        ),
+        "{out}"
+    );
 }
 
 #[test]
@@ -235,7 +240,24 @@ fn origins() {
     ] {
         assert!(is_remote(remote, &site), "{remote}");
     }
-    assert!(!is_remote("//example.org/a", &site));
+    // Fail closed: protocol-relative URLs, also via backslashes, tabs, entities and odd forms.
+    for remote in [
+        "//example.org/a",
+        "\\\\example.net/a",
+        "/\\example.net/a",
+        "\\/example.net/a",
+        "ht\ttps://example.net/a",
+        " https://example.net/a",
+        "https://example.net\\@example.org/a",
+        "https:example.org/a",
+        "https://exa%6dple.org/a",
+        "https://example.org:99999/a",
+        "javascript:alert(1)",
+    ] {
+        assert!(is_remote(remote, &site), "{remote:?}");
+    }
+    assert!(!is_remote("https:///example.org/a", &site));
+    assert!(!is_remote("https://user@example.org/a", &site));
 }
 
 #[test]
@@ -279,4 +301,91 @@ fn table_parsing() {
         .is_err());
     assert_eq!(parse_attribution(head, "A.md").unwrap(), vec![]);
     assert_eq!(split_row("not a row"), None);
+}
+
+#[test]
+fn evasion_cases_are_remote() {
+    expect(
+        "evasion",
+        1,
+        &[
+            "FONT-REMOTE css/x.css:2 https://fonts.example.net/i.css",
+            "FONT-REMOTE css/x.css:3 https://fonts.example.net/j.woff2",
+            "FONT-REMOTE css/x.css:4 https://fonts.example.net/k.woff2",
+            "FONT-REMOTE css/x.css:5 https://fonts.example.net/l.css",
+            "FONT-REMOTE img/logo.svg:2 https://fonts.example.net/n.css",
+            "FONT-REMOTE img/logo.svg:5 https://fonts.example.net/m.css",
+            "FONT-REMOTE index.html:3 https://cdn.example.net/",
+            "FONT-REMOTE index.html:4 //fonts.example.net/a.css",
+            "FONT-REMOTE index.html:5 //fonts.example.net/b.css",
+            "FONT-REMOTE index.html:6 https://fonts.example.net/c.css",
+            "FONT-REMOTE index.html:7 https://fonts.example.net/@example.org/d.css",
+            "FONT-REMOTE index.html:8 https://fonts.example.net/e.css",
+            "FONT-REMOTE index.html:9 https://fonts.example.net/f.css",
+            "FONT-REMOTE index.html:10 //fonts.example.net/g.css",
+        ],
+    );
+}
+
+#[test]
+fn entity_decoding() {
+    assert_eq!(decode_entities("https&#58;//a"), ("https://a".to_string(), true));
+    assert_eq!(decode_entities("https&#x3A//a"), ("https://a".to_string(), true));
+    assert_eq!(decode_entities("https&colon;&sol;&sol;a"), ("https://a".to_string(), true));
+    assert_eq!(decode_entities("a?x=1&b=2&amp;c"), ("a?x=1&b=2&c".to_string(), true));
+    assert_eq!(decode_entities("&amp x"), ("& x".to_string(), true));
+    assert_eq!(decode_entities("&colon//a"), ("&colon//a".to_string(), true));
+    assert!(!decode_entities("https&unknownthing;//a").1);
+    let site = parse_site_origin(ORIGIN).unwrap();
+    let html = "<link rel=stylesheet href=\"https&unknownthing;//x.example.net/a.css\">\n\
+                <link rel=preload href='/f.woff2?a=1&b=2'>\n";
+    let found: Vec<String> = scan_html("p.html", html, &site).iter().map(|f| f.to_string()).collect();
+    assert_eq!(found, ["FONT-REMOTE p.html:1 https&unknownthing;//x.example.net/a.css"]);
+}
+
+#[test]
+fn css_escapes_and_braces() {
+    let site = parse_site_origin(ORIGIN).unwrap();
+    let css = "@font-face { font-family: '}\\'}'; /* } */ src: url( \"https://x.example.net/a.woff\" ) }\n\
+               @font-face{src:url(https\\:\\/\\/x.example.net/b.woff)}\n\
+               @import \\75 rl(https://x.example.net/c.css);\n\
+               @import foo(https://x.example.net/d.css);\n\
+               @font-face { src: url(/ok.woff2) }\n";
+    let found: Vec<String> = scan_css("e.css", css, 1, &site).iter().map(|f| f.to_string()).collect();
+    assert_eq!(
+        found,
+        [
+            "FONT-REMOTE e.css:1 https://x.example.net/a.woff",
+            "FONT-REMOTE e.css:2 https://x.example.net/b.woff",
+            "FONT-REMOTE e.css:3 https://x.example.net/c.css",
+            "FONT-REMOTE e.css:4 unrecognised @import target",
+        ]
+    );
+}
+
+#[test]
+fn collapsed_double_star() {
+    assert!(glob_match("a/**/**/**/b.svg", "a/b.svg"));
+    assert!(glob_match("a/**/**/b.svg", "a/x/y/b.svg"));
+    assert!(!glob_match("a/**/**/b.svg", "c/b.svg"));
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinks_are_reported() {
+    let d = std::env::temp_dir().join(format!("fid-asset-check-link-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(d.join("img")).unwrap();
+    std::fs::write(d.join("img/a.svg"), b"<svg/>").unwrap();
+    std::os::unix::fs::symlink("a.svg", d.join("img/link.svg")).unwrap();
+    std::os::unix::fs::symlink("/", d.join("up")).unwrap();
+    std::fs::write(
+        d.join("ATTRIBUTION.md"),
+        "| path | origin | source | author | licence |\n|---|---|---|---|---|\n| img/*.svg | original | | project contributors | CC-BY-4.0 |\n",
+    )
+    .unwrap();
+    let o = check(&d, &fix("allow.toml"), ORIGIN, &[]);
+    let _ = std::fs::remove_dir_all(&d);
+    assert_eq!(o.status.code(), Some(1), "{}", show(&o));
+    assert_eq!(lines(&o), ["ATTR-SYMLINK img/link.svg", "ATTR-SYMLINK up"], "{}", show(&o));
 }

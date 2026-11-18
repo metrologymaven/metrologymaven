@@ -21,7 +21,7 @@ import struct
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CASES = ["ok", "missing", "nc", "remote-font", "orphan", "incomplete", "html-remote"]
+CASES = ["ok", "missing", "nc", "remote-font", "orphan", "incomplete", "html-remote", "evasion"]
 
 
 def png_1px(rgb):
@@ -156,6 +156,55 @@ FILES = {
     },
 }
 
+# Obfuscated remote sources (review of PR #115). Each line is listed with its 1-based number in
+# the comment; "\t" in EVASION_HTML line 6 is a real tab character.
+EVASION_HTML = "".join(
+    [
+        "<!doctype html>\n",  # 1
+        "<html><head>\n",  # 2
+        '<base href="https://cdn.example.net/">\n',  # 3: remote base
+        '<link rel=stylesheet href="' + "\\\\" + 'fonts.example.net/a.css">\n',  # 4: \\host
+        '<link rel=stylesheet href="/' + "\\" + 'fonts.example.net/b.css">\n',  # 5: /\host
+        '<link rel=stylesheet href="ht\ttps://fonts.example.net/c.css">\n',  # 6: tab in scheme
+        '<link rel=stylesheet href="https://fonts.example.net' + "\\" + '@example.org/d.css">\n',  # 7: \@
+        '<link rel=stylesheet href="https&#58;//fonts.example.net/e.css">\n',  # 8: numeric reference
+        '<link rel=stylesheet href="https&colon;//fonts.example.net/f.css">\n',  # 9: named reference
+        '<link rel="style&#115;heet" href="//fonts.example.net/g.css">\n',  # 10: encoded rel
+        '<link rel=stylesheet href="/ok.css">\n',  # 11: same origin, no finding
+        "</head><body></body></html>\n",  # 12
+    ]
+)
+
+EVASION_CSS = "".join(
+    [
+        "/* Synthetic fixture: escaped and obfuscated remote sources. */\n",  # 1
+        '@import "' + "\\" + '68 ttps://fonts.example.net/i.css";\n',  # 2: \68 = h
+        "@" + "\\" + "66ont-face { src: u" + "\\" + "72l(https://fonts.example.net/j.woff2) }\n",  # 3
+        '@font-face { font-family: "}"; src: url(https://fonts.example.net/k.woff2) }\n',  # 4
+        "@import url(https" + "\\" + "3a //fonts.example.net/l.css);\n",  # 5: \3a = :
+        '@font-face { src: url("/fonts/local.woff2") }\n',  # 6: same origin, no finding
+    ]
+)
+
+EVASION_SVG = "".join(
+    [
+        '<?xml version="1.0"?>\n',  # 1
+        '<?xml-stylesheet type="text/css" href="https://fonts.example.net/n.css"?>\n',  # 2
+        '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8">\n',  # 3
+        "<style><![CDATA[\n",  # 4
+        "@import url(https://fonts.example.net/m.css);\n",  # 5
+        "]]></style>\n",  # 6
+        '<rect width="8" height="8" fill="#336699"/></svg>\n',  # 7
+    ]
+)
+
+FILES["evasion"] = {
+    "ATTRIBUTION.md": HEAD + TABLE + "| img/*.svg | original | - | project contributors | CC-BY-4.0 |\n",
+    "index.html": EVASION_HTML,
+    "css/x.css": EVASION_CSS,
+    "img/logo.svg": EVASION_SVG,
+}
+
 # Hand-labelled from the spec's rules (REQ-002 .. REQ-006, Design) with --origin
 # https://example.org. Text-mode finding lines, in report order; exit code.
 EXPECTED = {
@@ -179,6 +228,26 @@ EXPECTED = {
             "FONT-REMOTE index.html:4 https://fonts.example.net/css2?family=Examplo",
             "FONT-REMOTE index.html:5 //cdn.example.net/f.woff2",
             "FONT-REMOTE index.html:7 http://example.org/insecure.css",
+        ],
+    ),
+    # Details are the URL after decoding and browser normalisation (tab removed, \ read as /).
+    "evasion": (
+        1,
+        [
+            "FONT-REMOTE css/x.css:2 https://fonts.example.net/i.css",
+            "FONT-REMOTE css/x.css:3 https://fonts.example.net/j.woff2",
+            "FONT-REMOTE css/x.css:4 https://fonts.example.net/k.woff2",
+            "FONT-REMOTE css/x.css:5 https://fonts.example.net/l.css",
+            "FONT-REMOTE img/logo.svg:2 https://fonts.example.net/n.css",
+            "FONT-REMOTE img/logo.svg:5 https://fonts.example.net/m.css",
+            "FONT-REMOTE index.html:3 https://cdn.example.net/",
+            "FONT-REMOTE index.html:4 //fonts.example.net/a.css",
+            "FONT-REMOTE index.html:5 //fonts.example.net/b.css",
+            "FONT-REMOTE index.html:6 https://fonts.example.net/c.css",
+            "FONT-REMOTE index.html:7 https://fonts.example.net/@example.org/d.css",
+            "FONT-REMOTE index.html:8 https://fonts.example.net/e.css",
+            "FONT-REMOTE index.html:9 https://fonts.example.net/f.css",
+            "FONT-REMOTE index.html:10 //fonts.example.net/g.css",
         ],
     ),
 }
