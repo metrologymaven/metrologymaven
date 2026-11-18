@@ -261,9 +261,7 @@ impl Observation {
             _ => return Err(IdError::BadObservation),
         };
         match m.get("kind") {
-            Some(CValue::Str(k)) if k == "now_ms" && m.len() == 2 => {
-                Ok(Observation::NowMs(u64_field(m.get("value"))?))
-            }
+            Some(CValue::Str(k)) if k == "now_ms" && m.len() == 2 => Ok(Observation::NowMs(u64_field(m.get("value"))?)),
             Some(CValue::Str(k)) if k == "random_bits" && m.len() == 3 => {
                 let width = u32::try_from(u64_field(m.get("width"))?).map_err(|_| IdError::BadObservation)?;
                 let hex = match m.get("value") {
