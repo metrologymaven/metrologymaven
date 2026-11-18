@@ -24,6 +24,21 @@
 //! Turning a vendor's own driver string into this form is the caller's job (`PLAT.GPU.DETECT`).
 //! [`KnownBad::matching`] returns every matching entry in file order, so the result is the same
 //! on every platform and run.
+//!
+//! # Precedence when entries overlap (maintainer decision, PR #151 review)
+//!
+//! When several entries match one probe, the strongest action wins:
+//! `force_software` > `avoid_backend` > `workaround:<name>`; ties go to the entry that comes
+//! first in the file. [`KnownBad::winning`] returns that entry ([`BadAction::precedence`] gives
+//! the rank).
+//!
+//! # Safe defaults (maintainer decision, PR #151 review)
+//!
+//! - A missing or invalid policy file means software rendering only: [`backends_or_software`]
+//!   returns `[software]` when no validated policy (or no row for the platform) is available.
+//! - An invalid known-bad file is treated as an empty list plus a warning diagnostic:
+//!   [`known_bad_or_empty`] returns an empty [`KnownBad`] and the file's diagnostics, which the
+//!   caller reports as warnings.
 
 use crate::matrix::{Arch, Matrix, OsFamily, Phase, Tier, Version};
 use std::collections::btree_map::Entry;
@@ -121,6 +136,11 @@ impl GpuOs {
 
 /// Minimum API version of a backend (for DX12 the feature level, `11_0` written `11.0`) and an
 /// optional minimum driver version.
+///
+/// `driver` cannot be vendor-agnostic: driver version numbering differs per vendor (and per OS),
+/// so one number per backend does not mean the same thing on every adapter. The shipped
+/// `platform/gpu-policy.toml` leaves it unset; how to express per-vendor driver minimums is an
+/// open question in `PLAT.GPU.POLICY`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Minimum {
     pub api: Version,
@@ -216,6 +236,18 @@ impl BadAction {
     }
 }
 
+impl BadAction {
+    /// Rank when entries overlap; lower wins: `force_software` 0, `avoid_backend` 1,
+    /// `workaround:<name>` 2.
+    pub fn precedence(&self) -> u8 {
+        match self {
+            BadAction::ForceSoftware => 0,
+            BadAction::AvoidBackend => 1,
+            BadAction::Workaround(_) => 2,
+        }
+    }
+}
+
 impl fmt::Display for BadAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -275,6 +307,36 @@ impl KnownBad {
     /// Every entry that applies to `p`, in file order.
     pub fn matching(&self, p: &Probe) -> Vec<&BadEntry> {
         self.entries.iter().filter(|e| e.matches(p)).collect()
+    }
+
+    /// The entry whose action wins for `p` (see the module documentation on precedence): the
+    /// lowest [`BadAction::precedence`], ties in file order. `None` when nothing matches.
+    pub fn winning(&self, p: &Probe) -> Option<&BadEntry> {
+        let mut best: Option<&BadEntry> = None;
+        for e in self.entries.iter().filter(|e| e.matches(p)) {
+            if best.is_none_or(|b| e.action.precedence() < b.action.precedence()) {
+                best = Some(e);
+            }
+        }
+        best
+    }
+}
+
+/// Backends to try for `os` on `arch` (safe default, see the module documentation): the
+/// policy row's list when a validated policy has a row, otherwise `[software]` only.
+pub fn backends_or_software(policy: Option<&GpuPolicy>, os: GpuOs, arch: Arch) -> Vec<Backend> {
+    match policy.and_then(|p| p.row(os, arch)) {
+        Some(r) => r.backends.clone(),
+        None => vec![Backend::Software],
+    }
+}
+
+/// The known-bad list to apply (safe default, see the module documentation): the validated
+/// list, or an empty list plus the file's diagnostics, to be reported as warnings.
+pub fn known_bad_or_empty(v: Validation<KnownBad>) -> (KnownBad, Vec<GpuPolicyError>) {
+    match v.value {
+        Some(k) if v.errors.is_empty() => (k, Vec::new()),
+        _ => (KnownBad { schema_version: SUPPORTED_SCHEMA, entries: Vec::new() }, v.errors),
     }
 }
 
@@ -367,6 +429,11 @@ impl fmt::Display for GpuPolicyError {
 impl std::error::Error for GpuPolicyError {}
 
 /// The result of validating one file.
+///
+/// Safe defaults for consumers (maintainer decision, PR #151 review): when the policy file is
+/// missing or its validation has errors, render with `software` only ([`backends_or_software`]
+/// with `None`); when the known-bad file has errors, apply an empty list and report the errors
+/// as warnings ([`known_bad_or_empty`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation<T> {
     /// Number of `[[row]]` or `[[entry]]` items (0 when a fatal error stopped parsing).

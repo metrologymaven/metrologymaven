@@ -89,6 +89,14 @@ Hand-written TOML under `fixtures/plat/gpu/`; reuse `fixtures/plat/matrix/valid.
 ## Open questions
 
 - Minimum API versions are placeholders until `PLAT.GPU.CI` measures them on the minimum hardware profile.
+- Where researched, referenced real known-bad entries come from (public bug trackers or vendor release notes, contributed through reviewed PRs). The shipped list is empty and the fixtures use invented IDs only.
+- How vendor driver strings and the packed Vulkan `driverVersion` map to the dotted numeric `Version` used for matching; owned by `PLAT.GPU.DETECT`.
+- `Minimum.driver` cannot be vendor-agnostic (driver numbering differs per vendor and OS); the shipped policy leaves it unset until a per-vendor form is decided.
+
+## Decisions recorded at review (PR #151)
+
+- **Precedence:** when several known-bad entries match, `force_software` > `avoid_backend` > `workaround:<name>`; ties go to the first entry in the file.
+- **Safe defaults:** a missing or invalid policy file means software rendering only; an invalid known-bad file is treated as empty, with its diagnostics reported as a warning.
 
 ## Children
 

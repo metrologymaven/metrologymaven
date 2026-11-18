@@ -5,8 +5,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_platform::gpu_policy::{
-    check_coverage, parse_known_bad, parse_policy, validate_known_bad, validate_policy, Backend, BadAction, GpuOs,
-    GpuPolicyError, IdRange, Limit, Probe, VersionRange, MAX_BYTES, MAX_ENTRIES,
+    backends_or_software, check_coverage, known_bad_or_empty, parse_known_bad, parse_policy, validate_known_bad,
+    validate_policy, Backend, BadAction, GpuOs, GpuPolicyError, IdRange, Limit, Probe, VersionRange, MAX_BYTES,
+    MAX_ENTRIES,
 };
 use fid_platform::matrix::{self, Arch, OsFamily, Phase, Version};
 use std::path::PathBuf;
@@ -581,4 +582,57 @@ fn cli_reports_an_invalid_matrix() {
     assert_eq!(code, 1, "{out}");
     assert!(out.starts_with("matrix: "), "{out}");
     assert!(out.contains("policy: 4 rows, 0 errors\n"), "{out}");
+}
+
+// ---------------------------------------------------------------- review decisions (PR #151)
+
+/// `ENTRY` renamed to `id` with `action`, without the schema line.
+fn entry_as(id: &str, action: &str) -> String {
+    entry_with("action", &format!("action = \"{action}\"")).replace("schema_version = 1\n", "").replace("t-1", id)
+}
+
+#[test]
+fn precedence_force_software_then_avoid_then_workaround_ties_in_file_order() {
+    let p = Probe { os: GpuOs::Linux, backend: Backend::Vulkan, vendor_id: 0x7E57_0009, device_id: 7, driver: v("1") };
+    let win = |entries: &[(&str, &str)]| {
+        let mut text = String::from("schema_version = 1\n");
+        for (id, action) in entries {
+            text.push_str(&entry_as(id, action));
+        }
+        let k = parse_known_bad(text.as_bytes()).unwrap();
+        k.winning(&p).map(|e| e.id.clone())
+    };
+    assert_eq!(win(&[("w", "workaround:a"), ("a", "avoid_backend"), ("f", "force_software")]), Some("f".into()));
+    assert_eq!(win(&[("w", "workaround:a"), ("a", "avoid_backend")]), Some("a".into()));
+    assert_eq!(win(&[("w1", "workaround:a"), ("w2", "workaround:b")]), Some("w1".into()));
+    assert_eq!(win(&[("a1", "avoid_backend"), ("a2", "avoid_backend")]), Some("a1".into()));
+    assert_eq!(win(&[("f1", "force_software"), ("w", "workaround:a"), ("f2", "force_software")]), Some("f1".into()));
+    assert_eq!(win(&[]), None);
+    let other = Probe { vendor_id: 1, ..p };
+    let k = parse_known_bad(format!("schema_version = 1\n{}", entry_as("x", "force_software")).as_bytes()).unwrap();
+    assert!(k.winning(&other).is_none());
+    assert_eq!(BadAction::ForceSoftware.precedence(), 0);
+    assert_eq!(BadAction::AvoidBackend.precedence(), 1);
+    assert_eq!(BadAction::Workaround("a".into()).precedence(), 2);
+}
+
+#[test]
+fn safe_default_policy_is_software_only() {
+    assert_eq!(backends_or_software(None, GpuOs::Windows, Arch::X86_64), vec![Backend::Software]);
+    let invalid = validate_policy(&read(&gpu("policy-win-no-vulkan.toml")));
+    assert_eq!(backends_or_software(invalid.value.as_ref(), GpuOs::Linux, Arch::X86_64), vec![Backend::Software]);
+    let p = parse_policy(&read(&gpu("policy-valid.toml"))).unwrap();
+    assert_eq!(backends_or_software(Some(&p), GpuOs::Linux, Arch::X86_64), vec![Backend::Vulkan, Backend::Software]);
+    // A valid policy without a row for the platform also falls back to software only.
+    assert_eq!(backends_or_software(Some(&p), GpuOs::Macos, Arch::X86_64), vec![Backend::Software]);
+}
+
+#[test]
+fn safe_default_invalid_known_bad_is_empty_with_warnings() {
+    let (k, warnings) = known_bad_or_empty(validate_known_bad(&read(&gpu("known-bad-noref.toml"))));
+    assert!(k.entries.is_empty());
+    assert_eq!(warnings, vec![GpuPolicyError::MissingReference { id: "fixture-noref".into() }]);
+    let (k, warnings) = known_bad_or_empty(validate_known_bad(&read(&gpu("known-bad-valid.toml"))));
+    assert_eq!(k.entries.len(), 3);
+    assert!(warnings.is_empty());
 }
