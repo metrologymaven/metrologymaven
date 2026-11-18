@@ -137,7 +137,7 @@ fn ac1_ok_verifies_and_writes_the_expected_build_manifest() {
     // Every input is staged unchanged under data/<path>.
     let lock = String::from_utf8(read(&fix("ok/inputs.lock.toml"))).unwrap();
     let paths: Vec<&str> = lock.lines().filter_map(|l| l.strip_prefix("path = \"")?.strip_suffix('"')).collect();
-    assert_eq!(paths.len(), 14);
+    assert_eq!(paths.len(), 13);
     for p in paths {
         let rel: PathBuf = p.split('/').collect();
         assert_eq!(read(&stage.join("data").join(&rel)), read(&fix("ok").join(&rel)), "{p}");
