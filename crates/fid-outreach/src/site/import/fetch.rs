@@ -7,17 +7,26 @@
 //! `::1`, `localhost`), which the tests use. Downloads go through the `curl` program, as in
 //! `fid-io-corp`, so the crate links no TLS stack; redirects are not followed.
 //!
+//! Each download streams through a hashing writer that kills `curl` past the size cap, so the
+//! cap holds without a `Content-Length`; loopback fetches use `--noproxy '*'`.
+//!
 //! All files are downloaded into `<site>/.inputs-fetch.tmp/` and checked against the release
 //! manifest first; only when every check passes are they moved into `inputs/<tag>/` and the
-//! lock file rewritten (sorted by path, through a temporary file). On any failure the temporary
-//! folder is removed, nothing is written under `inputs/` and the lock file is left unchanged.
+//! lock file replaced (sorted by path, through a temporary file). A new `inputs/<tag>/` arrives
+//! in one rename of the scratch folder; an existing one is updated file by file with backups,
+//! and a failure at any step (including the lock rename) rolls every move back. A symlink at
+//! `inputs/<tag>` or at a file being replaced is refused. On any failure nothing is left under
+//! `inputs/` and the lock file is unchanged.
 
 use super::{
-    hash_bytes, is_tag, parse_err, parse_lock, parse_release_manifest, read_bounded, render_lock, tag_matches, Finding,
+    is_tag, parse_err, parse_lock, parse_release_manifest, read_bounded, render_lock, tag_matches, Finding,
     ImportError, LockEntry, HOSTS_FILE, LOCK_FILE, MAX_HOSTS_BYTES, MAX_LOCK_BYTES, MAX_MANIFEST_BYTES,
     MAX_REPORT_BYTES, RELEASE_MANIFEST,
 };
+use fid_types::Digest;
+use sha2::{Digest as _, Sha256};
 use std::collections::BTreeSet;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -121,30 +130,81 @@ pub fn read_hosts(path: &Path) -> Result<BTreeSet<String>, ImportError> {
     Ok(hosts)
 }
 
-/// Downloads `url` into `dst` with `curl`, refusing more than `cap` bytes; returns the bytes,
-/// or the HTTP status or short reason for an `IMPORT-FETCH` finding.
-fn download(url: &str, https: bool, cap: u64, dst: &Path) -> Result<Vec<u8>, String> {
-    let fail = |status: &str| status.to_string();
+/// A file writer that hashes what passes through and fails past `cap` bytes.
+struct CapSink {
+    file: std::fs::File,
+    hasher: Sha256,
+    written: u64,
+    cap: u64,
+    over_cap: bool,
+}
+
+impl Write for CapSink {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let n = u64::try_from(buf.len()).unwrap_or(u64::MAX);
+        if self.written.saturating_add(n) > self.cap {
+            self.over_cap = true;
+            return Err(io::Error::other("size cap exceeded"));
+        }
+        let n = self.file.write(buf)?;
+        self.hasher.update(buf.get(..n).unwrap_or_default());
+        self.written += n as u64;
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.file.flush()
+    }
+}
+
+/// Marker before the HTTP status curl writes to stderr.
+const STATUS_MARK: &str = "fid-http-status:";
+
+/// Streams `url` into `dst` with `curl`, hashing on the way and killing curl once more than
+/// `cap` bytes arrive (the cap does not rely on a `Content-Length`). Returns the digest of the
+/// bytes written, or the HTTP status or a short reason for an `IMPORT-FETCH` finding.
+fn download(url: &str, https: bool, cap: u64, dst: &Path) -> Result<Digest, String> {
     let proto = if https { "=https" } else { "=http" };
-    let max = cap.to_string();
+    let file = std::fs::File::create(dst).map_err(|_| "scratch-write".to_string())?;
+    let mut cmd = Command::new("curl");
     // `-q` must come first: it makes curl ignore any ~/.curlrc.
-    let out = Command::new("curl")
-        .args(["-q", "--globoff", "--silent", "--show-error", "--max-redirs", "0"])
+    cmd.args(["-q", "--globoff", "--silent", "--show-error", "--max-redirs", "0"])
         .args(["--proto", proto, "--proto-redir", proto, "--connect-timeout", "30", "--max-time", "600"])
-        .args(["--max-filesize", &max, "--write-out", "%{http_code}", "--output"])
-        .arg(dst)
+        .args(["--write-out", "%{stderr}\nfid-http-status:%{http_code}\n", "--output", "-"]);
+    if !https {
+        // Loopback only: never send it through a proxy from the environment.
+        cmd.args(["--noproxy", "*"]);
+    }
+    let mut child = cmd
         .args(["--", url])
         .stdin(Stdio::null())
-        .output()
-        .map_err(|_| fail("curl-unavailable"))?;
-    let code = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|_| "curl-unavailable".to_string())?;
+    let mut sink = CapSink { file, hasher: Sha256::new(), written: 0, cap, over_cap: false };
+    let copied = match child.stdout.take() {
+        Some(mut out) => io::copy(&mut out, &mut sink).map(|_| ()),
+        None => Err(io::Error::other("no pipe")),
+    };
+    if copied.is_err() {
+        let _ = child.kill();
+    }
+    let out = child.wait_with_output().map_err(|_| "curl-wait".to_string())?;
+    if sink.over_cap {
+        return Err("too-large".into());
+    }
+    copied.map_err(|_| "read-error".to_string())?;
+    sink.flush().map_err(|_| "scratch-write".to_string())?;
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let code = stderr.lines().rev().find_map(|l| l.strip_prefix(STATUS_MARK)).unwrap_or("").trim().to_string();
     if !out.status.success() {
-        return Err(fail(&format!("curl-exit-{}", out.status.code().unwrap_or(-1))));
+        return Err(format!("curl-exit-{}", out.status.code().unwrap_or(-1)));
     }
     if code != "200" {
-        return Err(fail(if code.is_empty() { "no-status" } else { code.as_str() }));
+        return Err(if code.is_empty() { "no-status".into() } else { code });
     }
-    read_bounded(dst, cap).map_err(|_| fail("too-large"))
+    Ok(Digest::from_bytes(sink.hasher.finalize().into()))
 }
 
 /// Outcome of [`fetch`] beyond findings: the files written, for the caller's summary.
@@ -211,35 +271,35 @@ fn download_all(tag: &str, base: &BaseUrl, scratch: &Path) -> Result<Result<Stag
     std::fs::create_dir_all(scratch).map_err(|e| super::io_err(scratch, &e))?;
     let url = format!("{}{RELEASE_MANIFEST}", base.prefix);
     let mpath = scratch.join(RELEASE_MANIFEST);
-    let bytes = match download(&url, base.https, MAX_MANIFEST_BYTES, &mpath) {
-        Ok(b) => b,
+    let mdigest = match download(&url, base.https, MAX_MANIFEST_BYTES, &mpath) {
+        Ok(d) => d,
         Err(status) => return Ok(Err(vec![Finding::Fetch { url, status }])),
     };
-    let rm = parse_release_manifest(&bytes, &url)?;
+    let rm = parse_release_manifest(&read_bounded(&mpath, MAX_MANIFEST_BYTES)?, &url)?;
     if !tag_matches(tag, &rm.version) {
         return Ok(Err(vec![Finding::Release { name: RELEASE_MANIFEST.into(), tag: tag.into() }]));
     }
     let Some(date) = rm.date.clone() else {
         return Err(parse_err(&url, "release manifest: `date` missing or not a date"));
     };
-    let entry = |name: &str, kind: &str, data: &[u8]| LockEntry {
+    let entry = |name: &str, kind: &str, sha256: Digest| LockEntry {
         name: name.into(),
         kind: kind.into(),
         release: Some(tag.into()),
         source_rev: None,
         date: date.clone(),
         path: format!("inputs/{tag}/{name}"),
-        sha256: hash_bytes(data),
+        sha256,
     };
-    let mut staged = vec![(RELEASE_MANIFEST.to_string(), mpath, entry(RELEASE_MANIFEST, "release_manifest", &bytes))];
+    let mut staged = vec![(RELEASE_MANIFEST.to_string(), mpath, entry(RELEASE_MANIFEST, "release_manifest", mdigest))];
     let mut findings = Vec::new();
     for name in REPORTS {
         let Some(expected) = rm.artefacts.get(name) else { continue };
         let url = format!("{}{name}", base.prefix);
         let path = scratch.join(name);
         match download(&url, base.https, MAX_REPORT_BYTES, &path) {
-            Ok(data) => {
-                let e = entry(name, "release_asset", &data);
+            Ok(digest) => {
+                let e = entry(name, "release_asset", digest);
                 if e.sha256 == *expected {
                     staged.push((name.to_string(), path, e));
                 } else {
@@ -257,8 +317,14 @@ fn download_all(tag: &str, base: &BaseUrl, scratch: &Path) -> Result<Result<Stag
     }
 }
 
+/// Lock file written next to the real one before it is replaced.
+const LOCK_TMP: &str = ".inputs.lock.toml.tmp";
+/// Backups of replaced files while a release folder is updated in place.
+const BACKUP: &str = ".inputs-fetch.bak";
+
 /// Writes the new lock file to a temporary file, moves the files into `inputs/<tag>/`, then
-/// replaces the lock file.
+/// replaces the lock file. A new release folder arrives in one rename of the scratch folder; an
+/// existing one is updated file by file, and every step is rolled back if a later one fails.
 fn commit(
     site: &Path,
     tag: &str,
@@ -266,20 +332,124 @@ fn commit(
     old: &[LockEntry],
     staged: Staged,
 ) -> Result<Vec<LockEntry>, ImportError> {
+    let dir = site.join("inputs").join(tag);
+    let existing = match std::fs::symlink_metadata(&dir) {
+        Ok(m) if m.file_type().is_symlink() || !m.is_dir() => {
+            return Err(ImportError::Io {
+                path: dir.display().to_string(),
+                reason: "exists and is not a plain folder (symlinks are refused)".into(),
+            });
+        }
+        Ok(_) => true,
+        Err(_) => false,
+    };
     let new_paths: BTreeSet<&str> = staged.iter().map(|(_, _, e)| e.path.as_str()).collect();
     let mut merged: Vec<LockEntry> = old.iter().filter(|e| !new_paths.contains(e.path.as_str())).cloned().collect();
     merged.extend(staged.iter().map(|(_, _, e)| e.clone()));
-    let lock_tmp = scratch.join(LOCK_FILE);
+    let lock_tmp = site.join(LOCK_TMP);
     std::fs::write(&lock_tmp, render_lock(&merged)).map_err(|e| super::io_err(&lock_tmp, &e))?;
-    let dir = site.join("inputs").join(tag);
-    std::fs::create_dir_all(&dir).map_err(|e| super::io_err(&dir, &e))?;
-    for (name, src, _) in &staged {
-        let dst = dir.join(name);
-        std::fs::rename(src, &dst).map_err(|e| super::io_err(&dst, &e))?;
-    }
     let lock = site.join(LOCK_FILE);
-    std::fs::rename(&lock_tmp, &lock).map_err(|e| super::io_err(&lock, &e))?;
+    let moved = if existing { replace_files(&dir, site, &staged) } else { move_folder(scratch, &dir) };
+    let undo = match moved {
+        Ok(undo) => undo,
+        Err(e) => {
+            let _ = std::fs::remove_file(&lock_tmp);
+            return Err(e);
+        }
+    };
+    if let Err(e) = std::fs::rename(&lock_tmp, &lock) {
+        let _ = std::fs::remove_file(&lock_tmp);
+        undo.roll_back();
+        return Err(super::io_err(&lock, &e));
+    }
+    undo.finish();
     let mut entries: Vec<LockEntry> = staged.into_iter().map(|(_, _, e)| e).collect();
     entries.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(entries)
+}
+
+/// How to undo a move into `inputs/<tag>/`.
+enum Undo {
+    /// The scratch folder became the release folder.
+    Folder { from: PathBuf, to: PathBuf },
+    /// Files moved in place: (destination, source, backup of the replaced file).
+    Files { moved: Vec<(PathBuf, PathBuf, Option<PathBuf>)>, backup: PathBuf },
+}
+
+impl Undo {
+    fn roll_back(self) {
+        match self {
+            Undo::Folder { from, to } => {
+                let _ = std::fs::rename(&to, &from);
+            }
+            Undo::Files { moved, backup } => {
+                for (dst, src, old) in moved.into_iter().rev() {
+                    let _ = std::fs::rename(&dst, &src);
+                    if let Some(old) = old {
+                        let _ = std::fs::rename(&old, &dst);
+                    }
+                }
+                let _ = std::fs::remove_dir_all(&backup);
+            }
+        }
+    }
+
+    fn finish(self) {
+        if let Undo::Files { backup, .. } = self {
+            let _ = std::fs::remove_dir_all(&backup);
+        }
+    }
+}
+
+fn move_folder(scratch: &Path, dir: &Path) -> Result<Undo, ImportError> {
+    if let Some(parent) = dir.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| super::io_err(parent, &e))?;
+    }
+    std::fs::rename(scratch, dir).map_err(|e| super::io_err(dir, &e))?;
+    Ok(Undo::Folder { from: scratch.to_path_buf(), to: dir.to_path_buf() })
+}
+
+fn replace_files(dir: &Path, site: &Path, staged: &Staged) -> Result<Undo, ImportError> {
+    let backup = site.join(BACKUP);
+    if backup.exists() {
+        std::fs::remove_dir_all(&backup).map_err(|e| super::io_err(&backup, &e))?;
+    }
+    std::fs::create_dir_all(&backup).map_err(|e| super::io_err(&backup, &e))?;
+    let mut undo = Undo::Files { moved: Vec::new(), backup: backup.clone() };
+    for (name, src, _) in staged {
+        let dst = dir.join(name);
+        let step = back_up(&dst, &backup.join(name));
+        let old = match step {
+            Ok(old) => old,
+            Err(e) => {
+                undo.roll_back();
+                return Err(e);
+            }
+        };
+        if let Err(e) = std::fs::rename(src, &dst) {
+            if let Some(b) = &old {
+                let _ = std::fs::rename(b, &dst);
+            }
+            undo.roll_back();
+            return Err(super::io_err(&dst, &e));
+        }
+        if let Undo::Files { moved, .. } = &mut undo {
+            moved.push((dst, src.clone(), old));
+        }
+    }
+    Ok(undo)
+}
+
+/// Moves an existing plain file at `dst` to `backup`; refuses anything that is not a plain file.
+fn back_up(dst: &Path, backup: &Path) -> Result<Option<PathBuf>, ImportError> {
+    match std::fs::symlink_metadata(dst) {
+        Ok(m) if !m.is_file() => {
+            Err(ImportError::Io { path: dst.display().to_string(), reason: "exists and is not a plain file".into() })
+        }
+        Ok(_) => {
+            std::fs::rename(dst, backup).map_err(|e| super::io_err(dst, &e))?;
+            Ok(Some(backup.to_path_buf()))
+        }
+        Err(_) => Ok(None),
+    }
 }

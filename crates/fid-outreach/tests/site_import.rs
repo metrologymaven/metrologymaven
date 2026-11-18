@@ -90,6 +90,18 @@ fn serve() -> u16 {
             }
             let line = String::from_utf8_lossy(&req).lines().next().unwrap_or("").to_string();
             let path = line.split(' ').nth(1).unwrap_or("/");
+            if path.starts_with("/big/") {
+                // No Content-Length: the body ends when the connection closes. 5 MiB of JSON
+                // whitespace, over the 4 MiB manifest cap.
+                let _ = s.write_all(b"HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+                let chunk = vec![b' '; 64 * 1024];
+                for _ in 0..80 {
+                    if s.write_all(&chunk).is_err() {
+                        break;
+                    }
+                }
+                continue;
+            }
             let file = if let Some(r) = path.strip_prefix("/good/") {
                 Some(fix("remote").join(r))
             } else {
@@ -198,6 +210,53 @@ fn ac5_fetch_with_a_bad_digest_writes_nothing() {
     assert_eq!(read(&work.join("inputs.lock.toml")), before);
     assert!(!work.join("inputs").join("v0.2.0").exists());
     assert!(!work.join(".inputs-fetch.tmp").exists());
+}
+
+#[test]
+fn fetch_enforces_the_size_cap_without_content_length() {
+    let port = serve();
+    let work = work_site();
+    let before = read(&work.join("inputs.lock.toml"));
+    let base = format!("http://127.0.0.1:{port}/big/v0.2.0/");
+    let o = fetch(&work, &base);
+    assert_eq!(o.status.code(), Some(1), "{}", String::from_utf8_lossy(&o.stderr));
+    assert_eq!(stdout(&o), format!("IMPORT-FETCH {base}release-manifest.json too-large\n"));
+    assert_eq!(read(&work.join("inputs.lock.toml")), before);
+    assert!(!work.join("inputs").join("v0.2.0").exists());
+    assert!(!work.join(".inputs-fetch.tmp").exists());
+}
+
+#[test]
+fn fetch_into_an_existing_release_folder_replaces_its_files() {
+    let port = serve();
+    let work = work_site();
+    let base = format!("http://127.0.0.1:{port}/good/v0.2.0/");
+    assert_eq!(fetch(&work, &base).status.code(), Some(0));
+    // Damage one file; a second fetch replaces it in place and leaves no backups behind.
+    std::fs::write(work.join("inputs/v0.2.0/parity.md"), b"stale").unwrap();
+    let o = fetch(&work, &base);
+    assert_eq!(o.status.code(), Some(0), "{}{}", stdout(&o), String::from_utf8_lossy(&o.stderr));
+    assert_eq!(read(&work.join("inputs/v0.2.0/parity.md")), read(&fix("remote/v0.2.0/parity.md")));
+    assert_eq!(read(&work.join("inputs.lock.toml")), read(&fix("expected/fetch-lock.toml")));
+    for scratch in [".inputs-fetch.tmp", ".inputs-fetch.bak", ".inputs.lock.toml.tmp"] {
+        assert!(!work.join(scratch).exists(), "{scratch}");
+    }
+    assert_eq!(verify(&work, &tmp("refetch-stage")).status.code(), Some(0));
+}
+
+#[cfg(unix)]
+#[test]
+fn fetch_refuses_a_symlinked_release_folder() {
+    let port = serve();
+    let work = work_site();
+    let before = read(&work.join("inputs.lock.toml"));
+    let elsewhere = tmp("elsewhere");
+    std::os::unix::fs::symlink(&elsewhere, work.join("inputs/v0.2.0")).unwrap();
+    let o = fetch(&work, &format!("http://127.0.0.1:{port}/good/v0.2.0/"));
+    assert_eq!(o.status.code(), Some(2));
+    assert_eq!(read(&work.join("inputs.lock.toml")), before);
+    assert_eq!(std::fs::read_dir(&elsewhere).unwrap().count(), 0);
+    assert!(!work.join(".inputs.lock.toml.tmp").exists());
 }
 
 #[test]
