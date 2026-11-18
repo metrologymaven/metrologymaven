@@ -21,7 +21,8 @@ pub const MINIMUM: &str = "minimum";
 pub const RECOMMENDED: &str = "recommended";
 
 const TOP_KEYS: [&str; 2] = ["profiles", "schema_version"];
-const PROFILE_KEYS: [&str; 7] = ["cores", "cpu_level", "display", "gpu_class", "ram_gib", "storage_free_gib", "vram_gib"];
+const PROFILE_KEYS: [&str; 7] =
+    ["cores", "cpu_level", "display", "gpu_class", "ram_gib", "storage_free_gib", "vram_gib"];
 
 /// CPU instruction-set level. Each level belongs to one architecture; within an
 /// architecture the derived order is the capability order (v2 < v3, 8.0 < 8.2).

@@ -214,7 +214,10 @@ fn req001_bad_values() {
     let e = errs(&rec(&REC_OK.replace("cores = 8", "cores = 0")));
     assert_eq!(
         e,
-        [HwError::Parse { line: None, msg: "profiles.recommended.cores is not an integer from 1 to 4294967295".into() }]
+        [HwError::Parse {
+            line: None,
+            msg: "profiles.recommended.cores is not an integer from 1 to 4294967295".into()
+        }]
     );
     let e = errs(&rec(&REC_OK.replace("ram_gib = 32", "ram_gib = -1")));
     assert_eq!(e.len(), 1);
