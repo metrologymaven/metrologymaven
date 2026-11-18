@@ -219,10 +219,8 @@ fn walk(dir: &Path, shown: &str, out: &mut Vec<(PathBuf, String)>) -> Result<(),
         let ft = fs::symlink_metadata(&path).map_err(fail)?.file_type();
         if ft.is_dir() {
             walk(&path, &child, out)?;
-        } else if ft.is_file() {
-            if SourceKind::from_path(&path).is_some() {
-                out.push((path, child));
-            }
+        } else if ft.is_file() && SourceKind::from_path(&path).is_some() {
+            out.push((path, child));
         }
     }
     Ok(())
