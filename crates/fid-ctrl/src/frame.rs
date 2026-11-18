@@ -1,7 +1,8 @@
 //! Bounded JSON-lines framing (REQ-AUTO.CTRL.WIRE-003).
 //!
 //! [`LineReader`] never holds more than `limit + 1` unconsumed bytes before it decides
-//! whether a line fits, so a peer that never sends a newline cannot grow memory.
+//! whether a line fits, so a peer that never sends a newline cannot grow memory. Each
+//! byte is scanned for a newline once, so byte-at-a-time senders cost linear time.
 
 use std::io::{self, ErrorKind, Read};
 
@@ -26,12 +27,16 @@ pub enum Frame {
 pub struct LineReader<R> {
     inner: R,
     pending: Vec<u8>,
+    /// Leading bytes of `pending` already known to hold no newline.
+    scanned: usize,
+    /// Read buffer, allocated once.
+    scratch: Vec<u8>,
 }
 
 impl<R: Read> LineReader<R> {
     /// Wraps a byte source.
     pub fn new(inner: R) -> Self {
-        LineReader { inner, pending: Vec::new() }
+        LineReader { inner, pending: Vec::new(), scanned: 0, scratch: Vec::new() }
     }
 
     /// The wrapped source.
@@ -52,15 +57,18 @@ impl<R: Read> LineReader<R> {
         let window = limit.saturating_add(1);
         loop {
             let scan = self.pending.len().min(window);
-            if let Some(i) = self.pending[..scan].iter().position(|&b| b == b'\n') {
-                let mut line: Vec<u8> = self.pending.drain(..=i).collect();
+            let from = self.scanned.min(scan);
+            if let Some(i) = self.pending[from..scan].iter().position(|&b| b == b'\n') {
+                let mut line: Vec<u8> = self.pending.drain(..=from + i).collect();
                 line.pop();
+                self.scanned = 0;
                 return Ok(Frame::Line(line));
             }
+            self.scanned = scan;
             if self.pending.len() > limit {
                 return Ok(Frame::TooLarge);
             }
-            let want = (window - self.pending.len()).min(CHUNK);
+            let want = window - self.pending.len();
             let n = self.fill(want)?;
             if n == 0 {
                 return Ok(if self.pending.is_empty() { Frame::Eof } else { Frame::PartialEof });
@@ -73,6 +81,7 @@ impl<R: Read> LineReader<R> {
     pub fn discard_line(&mut self, budget: usize) -> io::Result<bool> {
         let mut seen = 0usize;
         loop {
+            self.scanned = 0;
             if let Some(i) = self.pending.iter().position(|&b| b == b'\n') {
                 self.pending.drain(..=i);
                 return Ok(true);
@@ -82,7 +91,7 @@ impl<R: Read> LineReader<R> {
             if seen >= budget {
                 return Ok(false);
             }
-            if self.fill(CHUNK.min(budget - seen))? == 0 {
+            if self.fill(budget - seen)? == 0 {
                 return Ok(true);
             }
         }
@@ -92,8 +101,9 @@ impl<R: Read> LineReader<R> {
     pub fn drain(&mut self, budget: usize) -> io::Result<()> {
         let mut seen = self.pending.len();
         self.pending.clear();
+        self.scanned = 0;
         while seen < budget {
-            let n = self.fill(CHUNK.min(budget - seen))?;
+            let n = self.fill(budget - seen)?;
             if n == 0 {
                 break;
             }
@@ -103,20 +113,20 @@ impl<R: Read> LineReader<R> {
         Ok(())
     }
 
+    /// Reads up to `want` (at most one chunk) bytes onto the end of `pending`.
     fn fill(&mut self, want: usize) -> io::Result<usize> {
-        let start = self.pending.len();
-        self.pending.resize(start + want.max(1), 0);
-        let r = loop {
-            match self.inner.read(&mut self.pending[start..]) {
+        let want = want.clamp(1, CHUNK);
+        if self.scratch.len() < CHUNK {
+            self.scratch.resize(CHUNK, 0);
+        }
+        let n = loop {
+            match self.inner.read(&mut self.scratch[..want]) {
                 Err(e) if e.kind() == ErrorKind::Interrupted => continue,
-                other => break other,
+                other => break other?,
             }
         };
-        let n = match &r {
-            Ok(n) => *n,
-            Err(_) => 0,
-        };
-        self.pending.truncate(start + n);
-        r
+        let n = n.min(want);
+        self.pending.extend_from_slice(&self.scratch[..n]);
+        Ok(n)
     }
 }

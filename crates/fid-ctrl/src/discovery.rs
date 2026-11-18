@@ -92,7 +92,8 @@ impl Discovery {
 ///
 /// The bytes go to a fresh temporary file (created exclusively) that is renamed into
 /// place, so a reader never sees a partial file. On Unix the directory, if created
-/// here, is `0700` and the file `0600`. On Windows the file inherits the ACL of the
+/// here, is `0700` and the file `0600`; an existing directory must be a real directory
+/// owned by this user with no group or other access, or the write is refused. On Windows the file inherits the ACL of the
 /// per-user runtime directory (see the PR: no ACL API without a new dependency).
 pub fn write(dir: &Path, record: &Discovery) -> io::Result<PathBuf> {
     create_dir(dir)?;
@@ -101,6 +102,7 @@ pub fn write(dir: &Path, record: &Discovery) -> io::Result<PathBuf> {
     let tmp = dir.join(format!(".{}.tmp", Discovery::file_name(&record.instance_id)));
     let result = (|| {
         let mut f = owner_only_options().open(&tmp)?;
+        check_dir(dir, &f)?;
         f.write_all(&bytes)?;
         f.sync_all()?;
         drop(f);
@@ -110,6 +112,40 @@ pub fn write(dir: &Path, record: &Discovery) -> io::Result<PathBuf> {
         let _ = fs::remove_file(&tmp);
     }
     result.map(|()| path)
+}
+
+/// Prefix of the error message when the runtime directory is not private to this user.
+pub const UNSAFE_DIR: &str = "ctrl_unsafe_runtime_dir";
+
+/// On Unix, refuses a runtime directory that is a symlink, not a directory, not owned
+/// by this process's user, or accessible to group or others (`mode & 0o077 != 0`).
+/// The current user is the owner of `probe`, a file this process just created inside
+/// it, so no platform call is needed.
+#[cfg(unix)]
+fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
+    use std::os::unix::fs::MetadataExt;
+    let meta = fs::symlink_metadata(dir)?;
+    let me = probe.metadata()?.uid();
+    let why = if meta.file_type().is_symlink() {
+        Some("is a symlink")
+    } else if !meta.is_dir() {
+        Some("is not a directory")
+    } else if meta.uid() != me {
+        Some("is owned by another user")
+    } else if meta.mode() & 0o077 != 0 {
+        Some("is accessible to group or others")
+    } else {
+        None
+    };
+    match why {
+        Some(w) => Err(io::Error::new(io::ErrorKind::PermissionDenied, format!("{UNSAFE_DIR}: {} {w}", dir.display()))),
+        None => Ok(()),
+    }
+}
+
+#[cfg(not(unix))]
+fn check_dir(_dir: &Path, _probe: &fs::File) -> io::Result<()> {
+    Ok(())
 }
 
 #[cfg(unix)]

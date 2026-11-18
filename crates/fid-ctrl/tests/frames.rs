@@ -116,3 +116,32 @@ fn screenshot_replies_get_the_larger_bound() {
     assert_eq!(reply_limit("ui.screenshot"), 16 * 1024 * 1024);
     assert_eq!(reply_limit("ping"), 1024 * 1024);
 }
+
+/// Yields one byte per read call.
+struct Trickle<'a>(&'a [u8]);
+
+impl Read for Trickle<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match (self.0.split_first(), buf.first_mut()) {
+            (Some((b, rest)), Some(slot)) => {
+                *slot = *b;
+                self.0 = rest;
+                Ok(1)
+            }
+            _ => Ok(0),
+        }
+    }
+}
+
+#[test]
+fn byte_at_a_time_sender_is_scanned_linearly() {
+    // A quadratic rescan would touch ~5e11 bytes here and time out the test run.
+    let mut data = vec![b'z'; MAX_MESSAGE_BYTES];
+    data.push(b'\n');
+    let mut r = LineReader::new(Trickle(&data));
+    let t = std::time::Instant::now();
+    assert_eq!(r.next_line(MAX_MESSAGE_BYTES).unwrap(), Frame::Line(vec![b'z'; MAX_MESSAGE_BYTES]));
+    assert!(t.elapsed() < std::time::Duration::from_secs(30));
+    let mut r = LineReader::new(Trickle(&data[1..]));
+    assert_eq!(r.next_line(MAX_MESSAGE_BYTES - 2).unwrap(), Frame::TooLarge);
+}

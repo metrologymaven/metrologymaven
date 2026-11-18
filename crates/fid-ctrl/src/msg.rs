@@ -97,6 +97,24 @@ fn malformed(id: Option<u64>, reason: &str) -> Malformed {
     Malformed { id, reason: reason.to_string() }
 }
 
+/// Longest piece of peer-supplied text echoed into a reason, in bytes.
+pub const MAX_ECHO_BYTES: usize = 64;
+
+/// Peer-supplied text made safe to echo into a log line or reply: control characters
+/// are escaped and the result is cut at [`MAX_ECHO_BYTES`] with a visible marker.
+pub fn printable(s: &str) -> String {
+    let mut out = String::new();
+    for c in s.chars() {
+        let piece: String = if c.is_control() { c.escape_default().collect() } else { c.to_string() };
+        if out.len() + piece.len() > MAX_ECHO_BYTES {
+            out.push_str("...[truncated]");
+            return format!("{out:?}");
+        }
+        out.push_str(&piece);
+    }
+    format!("{out:?}")
+}
+
 /// A non-negative integer JSON number no larger than `max`.
 fn uint(v: &CValue, max: u64) -> Option<u64> {
     match v {
@@ -139,7 +157,7 @@ pub fn parse_request(line: &[u8]) -> Result<Request, Malformed> {
     };
     o.remove("id");
     if let Some(k) = o.keys().next() {
-        return Err(malformed(Some(id), &format!("unknown field {k}")));
+        return Err(malformed(Some(id), &format!("unknown field {}", printable(k))));
     }
     Ok(Request { v: v as u16, id, op, params })
 }
@@ -152,7 +170,7 @@ pub fn hello_versions(req: &Request) -> Result<Vec<u16>, Malformed> {
         return Err(bad("params must be an object"));
     };
     if let Some(k) = p.keys().find(|k| k.as_str() != "versions") {
-        return Err(bad(&format!("unknown hello field {k}")));
+        return Err(bad(&format!("unknown hello field {}", printable(k))));
     }
     let Some(CValue::Arr(list)) = p.get("versions") else {
         return Err(bad("hello needs params.versions, an array"));

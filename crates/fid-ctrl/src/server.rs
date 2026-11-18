@@ -23,6 +23,11 @@ pub const DEFAULT_MAX_CONNECTIONS: usize = 8;
 const ACCEPT_POLL: Duration = Duration::from_millis(5);
 /// Most bytes read while discarding input before a close.
 const DRAIN_BUDGET: usize = 32 * 1024 * 1024;
+/// Concurrent refusals of over-limit connections.
+const MAX_REFUSERS: usize = 8;
+/// Bytes and time spent discarding a refused peer's input (before and after the reply).
+const REFUSE_DRAIN_BYTES: usize = 64 * 1024;
+const REFUSE_DRAIN_TIME: Duration = Duration::from_millis(250);
 
 /// Receives the server's log events, as `(code, detail)`.
 pub trait Log: Send + Sync {
@@ -75,7 +80,11 @@ pub struct Config {
     pub discovery_dir: PathBuf,
     /// Most concurrent connections.
     pub max_connections: usize,
-    /// Longest wait for the first byte of the next line.
+    /// Longest wait for the first byte of the first request after connecting. Short, so
+    /// unauthenticated sockets cannot hold connection slots; AUTH must complete
+    /// authentication within it.
+    pub first_request_timeout: Duration,
+    /// Longest wait for the first byte of each later line.
     pub idle_timeout: Duration,
     /// Longest time from the first byte of a line to its newline (stall bound).
     pub line_timeout: Duration,
@@ -86,13 +95,14 @@ pub struct Config {
 }
 
 impl Config {
-    /// Defaults: 8 connections, 300 s idle, 10 s per line, 10 s per write, 2 s drain
-    /// (the timeouts are this crate's choice [unverified]).
+    /// Defaults: 8 connections, 10 s to the first request, 300 s idle, 10 s per line,
+    /// 10 s per write, 2 s drain (the timeouts are this crate's choice [unverified]).
     pub fn new(address: &str, discovery_dir: &Path) -> Self {
         Config {
             address: address.to_string(),
             discovery_dir: discovery_dir.to_path_buf(),
             max_connections: DEFAULT_MAX_CONNECTIONS,
+            first_request_timeout: Duration::from_secs(10),
             idle_timeout: Duration::from_secs(300),
             line_timeout: Duration::from_secs(10),
             write_timeout: Duration::from_secs(10),
@@ -124,6 +134,7 @@ struct Shared {
     log: Arc<dyn Log>,
     stop: AtomicBool,
     active: AtomicUsize,
+    refusing: AtomicUsize,
     next_conn: AtomicU64,
     conns: Mutex<BTreeMap<u64, TcpStream>>,
     workers: Mutex<Vec<JoinHandle<()>>>,
@@ -161,6 +172,7 @@ impl Server {
             log,
             stop: AtomicBool::new(false),
             active: AtomicUsize::new(0),
+            refusing: AtomicUsize::new(0),
             next_conn: AtomicU64::new(0),
             conns: Mutex::new(BTreeMap::new()),
             workers: Mutex::new(Vec::new()),
@@ -280,11 +292,20 @@ fn admit(stream: TcpStream, peer: SocketAddr, shared: &Arc<Shared>) {
     }
     if shared.active.load(Ordering::SeqCst) >= shared.config.max_connections {
         shared.log.log(WireError::TooManyConnections.code(), &peer.to_string());
-        let mut s = stream;
-        if let Ok(line) = Reply::error(None, WireError::TooManyConnections, "connection limit reached").encode() {
-            let _ = s.write_all(&line);
+        // Refuse off the accept thread, so a refused peer cannot stall accepting. At
+        // most MAX_REFUSERS refusals run at once; beyond that the socket is just dropped.
+        if shared.refusing.fetch_add(1, Ordering::SeqCst) >= MAX_REFUSERS {
+            shared.refusing.fetch_sub(1, Ordering::SeqCst);
+            return;
         }
-        let _ = s.shutdown(Shutdown::Write);
+        let s = Arc::clone(shared);
+        let spawned = thread::Builder::new().name("fid-ctrl-refuse".into()).spawn(move || {
+            refuse(stream);
+            s.refusing.fetch_sub(1, Ordering::SeqCst);
+        });
+        if spawned.is_err() {
+            shared.refusing.fetch_sub(1, Ordering::SeqCst);
+        }
         return;
     }
     let Ok(registered) = stream.try_clone() else {
@@ -302,6 +323,40 @@ fn admit(stream: TcpStream, peer: SocketAddr, shared: &Arc<Shared>) {
     if let Ok(w) = worker {
         lock(&shared.workers).push(w);
     }
+}
+
+/// Sends `too_many_connections` and closes. Bytes the peer already sent (a `hello`, say)
+/// are read and discarded first, bounded in size and time, so closing does not reset
+/// the connection and destroy the reply (Windows resets on close with unread data).
+fn refuse(mut stream: TcpStream) {
+    discard_briefly(&mut stream);
+    if let Ok(line) = Reply::error(None, WireError::TooManyConnections, "connection limit reached").encode() {
+        let _ = stream.write_all(&line);
+    }
+    let _ = stream.shutdown(Shutdown::Write);
+    discard_briefly(&mut stream);
+}
+
+/// Polls in non-blocking mode (no receive timeouts, which leave a Windows socket in an
+/// undefined state), then restores blocking mode for the write.
+fn discard_briefly(stream: &mut TcpStream) {
+    if stream.set_nonblocking(true).is_err() {
+        return;
+    }
+    let end = Instant::now() + REFUSE_DRAIN_TIME;
+    let mut buf = [0u8; 4096];
+    let mut seen = 0usize;
+    while seen < REFUSE_DRAIN_BYTES && Instant::now() < end {
+        match stream.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => seen += n,
+            Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::Interrupted => {
+                thread::sleep(ACCEPT_POLL)
+            }
+            Err(_) => break,
+        }
+    }
+    let _ = stream.set_nonblocking(false);
 }
 
 /// A socket reader with a deadline: `idle` until the first byte of a line, then `line`.
@@ -354,7 +409,7 @@ fn serve(stream: TcpStream, shared: &Arc<Shared>) {
     let mut writer = stream;
     let mut reader = LineReader::new(Deadline {
         stream: read_half,
-        idle: cfg.idle_timeout,
+        idle: cfg.first_request_timeout,
         line: cfg.line_timeout,
         deadline: Instant::now(),
         in_line: false,
@@ -367,6 +422,7 @@ fn serve(stream: TcpStream, shared: &Arc<Shared>) {
         reader.get_mut().arm(pending);
         match reader.next_line(request_limit("")) {
             Ok(Frame::Line(line)) => {
+                reader.get_mut().idle = cfg.idle_timeout;
                 if let Next::Close = on_line(&line, &mut writer, shared) {
                     close(&mut reader, &mut writer, cfg.drain_timeout);
                     return;

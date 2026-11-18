@@ -273,9 +273,15 @@ fn ninth_connection_is_refused_and_a_slot_frees_on_disconnect() {
         assert_hello_ok(&c.hello());
     }
     assert_eq!(a.server.active_connections(), 8);
+    // The refused client has already sent its hello; it still gets the typed reply
+    // (no reset from closing with unread data).
     let mut ninth = Client::connect(&a);
+    ninth.send(r#"{"v":1,"id":1,"op":"hello","params":{"versions":[1]}}"#);
     assert_eq!(error_code(&ninth.recv("hello")), "too_many_connections");
     ninth.expect_closed();
+    let mut tenth = Client::connect(&a);
+    assert_eq!(error_code(&tenth.recv("hello")), "too_many_connections");
+    tenth.expect_closed();
     assert!(a.log.contains("too_many_connections"));
     let gone = clients.pop().unwrap();
     gone.stream.shutdown(Shutdown::Both).unwrap();
@@ -311,8 +317,85 @@ fn stalled_partial_line_is_cut_off_at_the_line_deadline() {
 fn idle_connection_is_closed_at_the_idle_deadline() {
     let a = app_with("idle", |c| c.idle_timeout = Duration::from_millis(200));
     let mut c = Client::connect(&a);
+    assert_hello_ok(&c.hello());
     assert_eq!(error_code(&c.recv("ping")), "read_timeout");
     c.expect_closed();
+}
+
+#[test]
+fn silent_new_connection_is_closed_at_the_first_request_deadline() {
+    let a = app_with("first", |c| c.first_request_timeout = Duration::from_millis(200));
+    let t = Instant::now();
+    let mut c = Client::connect(&a);
+    assert_eq!(error_code(&c.recv("ping")), "read_timeout");
+    c.expect_closed();
+    // Well under the 300 s idle timeout.
+    assert!(t.elapsed() < Duration::from_secs(30));
+    assert_eq!(Config::new("127.0.0.1", &a.dir).first_request_timeout, Duration::from_secs(10));
+}
+
+/// Every logged detail and reply message stays one short line whatever the peer sent.
+fn assert_echo_is_bounded(a: &App, r: &Reply) {
+    let msg = str_field(event(r), "message");
+    assert!(msg.len() < 200 && !msg.contains('\n'), "{msg:?}");
+    for (code, detail) in a.log.entries() {
+        assert!(detail.len() < 200 && !detail.contains('\n') && !detail.contains('\r'), "{code}: {detail:?}");
+    }
+}
+
+#[test]
+fn hostile_unknown_keys_are_escaped_and_truncated() {
+    let a = app("keys");
+    let mut c = Client::connect(&a);
+    c.send(r#"{"v":1,"id":21,"op":"ping","params":{},"a\nfake_log_line\r":1}"#);
+    let r = c.recv("ping");
+    assert_eq!(error_code(&r), "malformed_message");
+    assert_eq!(r.id, Some(21));
+    assert!(str_field(event(&r), "message").contains("\\n"));
+    assert_echo_is_bounded(&a, &r);
+    let huge = "k".repeat(900 * 1024);
+    c.send(&format!(r#"{{"v":1,"id":22,"op":"ping","params":{{}},"{huge}":1}}"#));
+    let r = c.recv("ping");
+    assert_eq!(error_code(&r), "malformed_message");
+    assert_eq!(r.id, Some(22));
+    assert!(str_field(event(&r), "message").contains("[truncated]"));
+    assert_echo_is_bounded(&a, &r);
+    c.send(&format!(r#"{{"v":1,"id":23,"op":"hello","params":{{"versions":[1],"\n{huge}":1}}}}"#));
+    let r = c.recv("hello");
+    assert_eq!(error_code(&r), "malformed_message");
+    assert_eq!(r.id, Some(23));
+    assert_echo_is_bounded(&a, &r);
+    // The connection still works.
+    c.send(r#"{"v":1,"id":24,"op":"ping","params":{}}"#);
+    assert_eq!(c.recv("ping").id, Some(24));
+}
+
+#[cfg(unix)]
+#[test]
+fn shared_or_symlinked_runtime_directory_is_refused() {
+    use std::os::unix::fs::PermissionsExt;
+    let start = |dir: &std::path::Path| {
+        Server::start(Config::new("127.0.0.1", dir), Arc::new(TestOps), Arc::new(MemoryLog::default()) as Arc<dyn Log>)
+    };
+    let refused = |r: Result<Server, StartError>| match r {
+        Err(StartError::Io(e)) => assert!(e.to_string().contains("ctrl_unsafe_runtime_dir"), "{e}"),
+        Err(e) => panic!("wrong error {e}"),
+        Ok(s) => panic!("started with discovery file {}", s.discovery_path().display()),
+    };
+    let wide = temp_dir("wide");
+    std::fs::create_dir_all(&wide).unwrap();
+    std::fs::set_permissions(&wide, std::fs::Permissions::from_mode(0o755)).unwrap();
+    refused(start(&wide));
+    assert_eq!(std::fs::read_dir(&wide).unwrap().count(), 0, "nothing left behind");
+    let private = temp_dir("private");
+    std::fs::create_dir_all(&private).unwrap();
+    std::fs::set_permissions(&private, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let link = temp_dir("link");
+    std::os::unix::fs::symlink(&private, &link).unwrap();
+    refused(start(&link));
+    assert_eq!(std::fs::read_dir(&private).unwrap().count(), 0, "nothing left behind");
+    // The private directory itself is accepted.
+    start(&private).unwrap().stop().unwrap();
 }
 
 #[test]

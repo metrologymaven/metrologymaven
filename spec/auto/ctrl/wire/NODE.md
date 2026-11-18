@@ -78,6 +78,9 @@ Seed corpus `fixtures/ctrl/frames/` (valid and malformed lines, project-authored
 ## Open questions
 
 - Unix-domain sockets and Windows named pipes would avoid TCP entirely; the parent requires loopback, and the Craft protocol uses TCP loopback. Revisit if a security review prefers OS-local IPC.
+- **Windows owner-only discovery file (REQ-AUTO.CTRL.WIRE-002, open).** `fid-ctrl` sets `0600` files and refuses non-private runtime directories on Unix only. On Windows the file relies on the ACL inherited from the per-user runtime directory, because setting an explicit owner-only ACL needs a Win32 binding the crate does not yet depend on. Track until PLAT fixes the directory or the crate gains an ACL check.
+- **AC-4 fuzz run not in CI (open).** The `ctrl_frame` harness (`crates/fid-ctrl/fuzz`) and the seed corpus are committed, but no CI job compiles the harness or runs it for 10 minutes on nightly; that needs its own CI PR (CONSTITUTION §8). AC-4 stays unmet until it runs.
+- **First-request deadline and AUTH.** The listener closes a connection whose first request does not start within a short deadline (default 10 s [unverified], separate from the 300 s idle timeout), so unauthenticated sockets cannot hold the 8 connection slots. `AUTO.CTRL.AUTH` must enforce that authentication completes within that deadline.
 
 ## Children
 
