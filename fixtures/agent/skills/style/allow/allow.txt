@@ -1,0 +1,5 @@
+# rule line file
+result_like_number 3 prose/numbers.md
+result_like_number 5 prose/numbers.md
+result_like_number 7 prose/numbers.md
+result_like_number 11 prose/numbers.md
