@@ -1,0 +1,8 @@
+statement	1	1
+1:1	word	DMISMN	DMISMN
+1:7	slash	/
+1:8	string	'Halter \xc3\xbc \xff\x01'	Halter \xc3\xbc \xff\x01
+1:22	comma	,
+1:23	number	05.3
+statement	2	2
+2:1	comment	$$ caf\xc3\xa9 \xfe	 caf\xc3\xa9 \xfe

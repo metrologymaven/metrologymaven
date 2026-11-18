@@ -6,6 +6,8 @@ fixtures/hal/idl/stamp/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
+# DMIS lexer fixtures (IO.DMIS.PARSE.LEX): CRLF, tabs and non-UTF-8 bytes are part of the test.
+fixtures/io/dmis/parse/lex/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
 fixtures/flow/pkg/** -text
 # Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
