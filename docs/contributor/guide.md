@@ -1,6 +1,6 @@
 ---
 title: Contributor guide
-revision: 5afebac38e1be9f1625d587ea25a80ff06906cd3
+revision: f1aa07d0b18bf60bd3bdd04612b66262864ad6d7
 ---
 
 # Contributor guide
