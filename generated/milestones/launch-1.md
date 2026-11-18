@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**22** of **1336** leaves built in code ([B]).
+**23** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 16 built)
+### Wave 1 (125 leaves, 17 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -40,7 +40,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [B] [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
-- [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
+- [B] [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
 - [B] [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
 - [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)

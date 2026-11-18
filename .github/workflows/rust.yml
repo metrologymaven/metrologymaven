@@ -43,6 +43,8 @@ jobs:
         # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-program/fuzz/Cargo.toml
+      - name: No side doors (CORE.BUS.LINT)
+        run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
