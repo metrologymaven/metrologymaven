@@ -251,8 +251,10 @@ fn error_paths() {
     assert_eq!(parse(&rule("kind = \"preferred\"\nwords = [\"x\"]\n")), Err("rules_parse"));
     assert_eq!(parse(&rule("kind = \"cooccur\"\nwords = [\"x\"]\n")), Err("rules_parse"));
     assert_eq!(parse(&rule("kind = \"claim\"\nwords = [\"x\"]\nqualifiers = [\"designator\"]\n")), Ok(()));
-    let twice = format!("{}[[rule]]\nid = \"R\"\nkind = \"claim\"\nseverity = \"warn\"\nmessage = \"m\"\nwords = [\"y\"]\n",
-        rule("kind = \"claim\"\nwords = [\"x\"]\n"));
+    let twice = format!(
+        "{}[[rule]]\nid = \"R\"\nkind = \"claim\"\nseverity = \"warn\"\nmessage = \"m\"\nwords = [\"y\"]\n",
+        rule("kind = \"claim\"\nwords = [\"x\"]\n")
+    );
     assert_eq!(parse(&twice), Err("rules_parse"));
     assert_eq!(parse(&rule("kind = \"name\"\nnames_file = \"n.txt\"\n")), Err("rules_parse"));
 

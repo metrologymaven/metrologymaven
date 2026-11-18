@@ -353,7 +353,8 @@ pub fn lint(rules: &RuleSet, units: &[Unit]) -> Report {
     }
     findings.sort_by(|a, b| a.key().cmp(&b.key()).then_with(|| a.matched.cmp(&b.matched)));
     suppressions.sort_by(|a, b| {
-        (&a.file, a.line, a.col, &a.unit, &a.rule, &a.reason).cmp(&(&b.file, b.line, b.col, &b.unit, &b.rule, &b.reason))
+        (&a.file, a.line, a.col, &a.unit, &a.rule, &a.reason)
+            .cmp(&(&b.file, b.line, b.col, &b.unit, &b.rule, &b.reason))
     });
     Report { rules_version: rules.version.clone(), findings, suppressions }
 }

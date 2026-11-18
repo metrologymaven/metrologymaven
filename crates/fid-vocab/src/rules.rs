@@ -182,12 +182,7 @@ fn read_names(base: Option<&Path>, rel: &str, ctx: &str) -> Result<Vec<String>, 
     let path = base.join(rel);
     let bytes = read_limited(&path, MAX_RULES_BYTES, "names file")?;
     let text = String::from_utf8(bytes).map_err(|_| perr(format!("{ctx}: names file {rel} is not UTF-8")))?;
-    Ok(text
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .map(str::to_string)
-        .collect())
+    Ok(text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).map(str::to_string).collect())
 }
 
 fn parse_rule(t: &toml::Table, base: Option<&Path>, index: usize) -> Result<Rule, VocabError> {
