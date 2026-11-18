@@ -3,6 +3,6 @@
 pub mod classify;
 
 pub use classify::{
-    aggregate, classify, Annotation, ClassifyError, Decision, Determinism, Limit, Output, ReplayOutcome,
-    StepComparison, StepResult, Tolerance, ToleranceTable,
+    aggregate, classify, Annotation, ClassifyError, Decision, Determinism, DeterminismExt, Limit, Output,
+    ReplayOutcome, StepComparison, StepResult, Tolerance, ToleranceTable,
 };

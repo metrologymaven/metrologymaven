@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-bus]
+built_pr: 49
 satisfies: [REQ-CORE.BUS.PIPE-009]
 covers: []
 depends_on: [CORE.JRN.CANON]
