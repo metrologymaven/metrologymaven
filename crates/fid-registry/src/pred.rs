@@ -243,7 +243,12 @@ pub enum ExprKind {
     Size(Box<Expr>),
     Has(Box<Expr>),
     /// `all` (`is_all`) or `exists` over a list.
-    Quant { is_all: bool, var: String, list: Box<Expr>, body: Box<Expr> },
+    Quant {
+        is_all: bool,
+        var: String,
+        list: Box<Expr>,
+        body: Box<Expr>,
+    },
 }
 
 fn node(kind: ExprKind, pos: usize) -> Result<Expr, ParseError> {
@@ -712,7 +717,8 @@ fn header(src: &str) -> Result<Header, ParseError> {
             if h.bound.is_some() {
                 return Err(ParseError::syntax(at, "duplicate @bound"));
             }
-            let n = if !arg.is_empty() && arg.bytes().all(|c| c.is_ascii_digit()) { arg.parse::<u32>().ok() } else { None };
+            let n =
+                if !arg.is_empty() && arg.bytes().all(|c| c.is_ascii_digit()) { arg.parse::<u32>().ok() } else { None };
             match n {
                 Some(n) if (1..=u32::from(MAX_BOUND)).contains(&n) => h.bound = u16::try_from(n).ok(),
                 _ => return Err(ParseError::syntax(arg_start, format!("@bound must be an integer 1..={MAX_BOUND}"))),
@@ -721,7 +727,8 @@ fn header(src: &str) -> Result<Header, ParseError> {
             if h.message.is_some() {
                 return Err(ParseError::syntax(at, "duplicate @message"));
             }
-            if arg.is_empty() || !arg.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'.')
+            if arg.is_empty()
+                || !arg.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'.')
             {
                 return Err(ParseError::syntax(arg_start, "@message key must be non-empty [a-z0-9_.]"));
             }
@@ -1050,9 +1057,8 @@ pub fn compile_command(def: &CommandDef, ctx: &ContextTypes) -> Result<Vec<Predi
         .iter()
         .enumerate()
         .map(|(index, src)| {
-            Predicate::compile(src, &format!("{}.precondition_{index}", def.id), &params, ctx).map_err(|error| {
-                BuildError { command: format!("{}@{}", def.id, def.major), index, error }
-            })
+            Predicate::compile(src, &format!("{}.precondition_{index}", def.id), &params, ctx)
+                .map_err(|error| BuildError { command: format!("{}@{}", def.id, def.major), index, error })
         })
         .collect()
 }
@@ -1315,7 +1321,7 @@ impl<'a> Machine<'a> {
                 _ => return Err(type_err(a.pos, "has() takes a field".into())),
             },
             ExprKind::Quant { is_all, var, list, body } => {
-                work.push(Task::QuantList { is_all: *is_all, var: var.as_str(), body: &**body, pos: e.pos });
+                work.push(Task::QuantList { is_all: *is_all, var: var.as_str(), body, pos: e.pos });
                 work.push(Task::Visit(list));
             }
         }
@@ -1405,13 +1411,11 @@ fn order(a: &Value, b: &Value, pos: usize) -> Result<Ordering, PredError> {
 pub fn evaluate(pred: &Predicate, ctx: &dyn PredContext) -> Evaluation {
     let bound = u32::from(pred.bound.min(MAX_BOUND));
     let mut m = Machine { ctx, bound, steps: 0, vals: Vec::new(), env: Vec::new() };
-    let result = m.run(&pred.ast).map(|ok| {
-        if ok {
-            Verdict::True
-        } else {
-            Verdict::False { message_key: pred.message_key.clone() }
-        }
-    });
+    let result = match m.run(&pred.ast) {
+        Ok(true) => Ok(Verdict::True),
+        Ok(false) => Ok(Verdict::False { message_key: pred.message_key.clone() }),
+        Err(e) => Err(e),
+    };
     Evaluation { result, steps: m.steps }
 }
 

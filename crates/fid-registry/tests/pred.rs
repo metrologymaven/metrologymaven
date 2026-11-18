@@ -128,8 +128,8 @@ fn ac1_cases() {
 fn ac2_bad_syntax_fails_build() {
     let o = fixture("def/pred/bad_syntax.json");
     let (_, ctx_types) = types(&o);
-    let CValue::Arr(defs) = parse(&std::fs::read(root().join("fixtures/core/reg/def/field/defs_valid.json")).unwrap())
-        .unwrap()
+    let CValue::Arr(defs) =
+        parse(&std::fs::read(root().join("fixtures/core/reg/def/field/defs_valid.json")).unwrap()).unwrap()
     else {
         panic!()
     };
@@ -161,7 +161,8 @@ fn ids(n: usize) -> MapCtx {
 }
 
 fn ids_schema() -> ParamSchema {
-    let schema = parse(br#"{"type":"object","properties":{"ids":{"type":"array","items":{"type":"string"}}}}"#).unwrap();
+    let schema =
+        parse(br#"{"type":"object","properties":{"ids":{"type":"array","items":{"type":"string"}}}}"#).unwrap();
     ParamSchema::from_json_schema(&schema)
 }
 
@@ -202,7 +203,8 @@ fn limits_and_hostile_input() {
             Ok(Value::Float(f64::NAN))
         }
     }
-    let pred = Predicate::compile("all(x in params.ids, x == \"a\")", "k", &ids_schema(), &ContextTypes::new()).unwrap();
+    let pred =
+        Predicate::compile("all(x in params.ids, x == \"a\")", "k", &ids_schema(), &ContextTypes::new()).unwrap();
     assert_eq!(evaluate(&pred, &Liar).result.unwrap_err().code(), "type_error");
     let pred = Predicate::compile("size(params.ids) > 0", "k", &ids_schema(), &ContextTypes::new()).unwrap();
     assert_eq!(evaluate(&pred, &Liar).result.unwrap_err().code(), "type_error");
