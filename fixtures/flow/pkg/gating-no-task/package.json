@@ -1,0 +1,46 @@
+{
+  "format": "acceptance-job@1",
+  "job_id": "JOB.ACC.01",
+  "variant_id": "demo-unassisted",
+  "app": "inspect",
+  "milestones": [
+    "launch-1"
+  ],
+  "gating": "gating",
+  "assistance": "unassisted",
+  "input_mode": "any",
+  "journal": {
+    "file": "journal.jsonl",
+    "sha256": "sha256:0dbe74c7dbe206579b76065c47d09cdbafa08ab42a29737b52067b3632f95535"
+  },
+  "datasets": [
+    {
+      "id": "flow-pkg-demo-part",
+      "sha256": "sha256:8043373484b9636b6461a3baaf18362a6e1da437ca281c01a982aa64cc92eb89"
+    }
+  ],
+  "checks": [
+    {
+      "id": "replay",
+      "kind": "replay_outcome",
+      "params": {}
+    },
+    {
+      "id": "values",
+      "kind": "value_within_u",
+      "params": {
+        "truth": {
+          "file": "truth.json",
+          "sha256": "sha256:144d946174ff46dc6109b16db03a11ac13be3d9ebb9abe3d3e6a6a5c69ecee5c"
+        }
+      }
+    }
+  ],
+  "time_targets": [
+    {
+      "metric": "machine_s",
+      "seconds": 60,
+      "verified": false
+    }
+  ]
+}
