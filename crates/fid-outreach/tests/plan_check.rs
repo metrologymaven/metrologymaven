@@ -141,6 +141,12 @@ fn ac6_changed_announced_criterion_needs_a_review_entry() {
     assert_eq!(o.status.code(), Some(0), "{}", String::from_utf8_lossy(&o.stdout));
     assert!(findings(&o).is_empty());
 
+    // A review entry for another announcement of the same milestone does not clear the change.
+    let other = pick("changed-announced", "reviews-other-announcement");
+    let o = run("changed-announced", &["--base", &base, "--reviews", &other]);
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(findings(&o), one("announced_criteria_changed", "RPT-A-02"));
+
     // Without --base the announced rule does not run.
     let o = run("changed-announced", &["--reviews", &none]);
     assert_eq!(o.status.code(), Some(0));

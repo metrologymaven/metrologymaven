@@ -333,7 +333,13 @@ pub fn parse_review(text: &str, file: &str) -> Result<ReviewEntry, PlanError> {
     let raw = get("changes")?;
     let inner = raw.strip_prefix('[').and_then(|r| r.strip_suffix(']')).ok_or_else(|| bad("changes is not [..]"))?;
     let changes = inner.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-    Ok(ReviewEntry { file: file.into(), milestone: get("milestone")?, announced: get("announced")?, changes })
+    let unquote = |s: String| s.trim_matches('"').to_string();
+    Ok(ReviewEntry {
+        file: file.into(),
+        milestone: unquote(get("milestone")?),
+        announced: unquote(get("announced")?),
+        changes,
+    })
 }
 
 /// Reads every `*.md` review entry in `dir`, in file-name order.
@@ -712,9 +718,12 @@ pub fn check_plan_dates(c: &Criteria, plan_text: &str, plan_file: &str) -> Vec<F
         .collect()
 }
 
-/// Criteria of each milestone, keyed by criterion ID, without the free-text `note`. Read from
-/// the raw table so a criterion is compared even if it does not validate.
-fn raw_criteria(t: &toml::Table) -> BTreeMap<String, (bool, BTreeMap<String, toml::Table>)> {
+/// Announcement date (`Some("")` if `announced` is present without a valid date) and criteria of
+/// each milestone, keyed by criterion ID, without the free-text `note`. Read from the raw table so
+/// a criterion is compared even if it does not validate.
+type RawMilestones = BTreeMap<String, (Option<String>, BTreeMap<String, toml::Table>)>;
+
+fn raw_criteria(t: &toml::Table) -> RawMilestones {
     let mut out = BTreeMap::new();
     for m in t.get("milestone").and_then(|v| v.as_array()).into_iter().flatten().filter_map(|m| m.as_table()) {
         let Some(id) = m.get("id").and_then(|v| v.as_str()) else { continue };
@@ -729,22 +738,24 @@ fn raw_criteria(t: &toml::Table) -> BTreeMap<String, (bool, BTreeMap<String, tom
                 crits.entry(cid.to_string()).or_insert(c);
             }
         }
-        out.insert(id.to_string(), (m.contains_key("announced"), crits));
+        let announced = m
+            .get("announced")
+            .map(|a| a.as_table().and_then(|a| a.get("date")).and_then(date_value).unwrap_or_default());
+        out.insert(id.to_string(), (announced, crits));
     }
     out
 }
 
 /// The announced-criteria rule (REQ-007): criteria of a milestone announced in `base` that were
-/// added, removed or changed need a review entry for that milestone listing their IDs.
+/// added, removed or changed need a review entry for that milestone and that announcement (its
+/// `announced` equals the base file's `announced.date`) listing their IDs.
 pub fn check_announced(base: &toml::Table, new: &toml::Table, reviews: &[ReviewEntry]) -> Vec<Finding> {
     let base = raw_criteria(base);
     let new = raw_criteria(new);
     let empty = BTreeMap::new();
     let mut out = Vec::new();
     for (ms, (announced, old)) in &base {
-        if !announced {
-            continue;
-        }
+        let Some(announced) = announced else { continue };
         let cur = new.get(ms).map_or(&empty, |(_, c)| c);
         let ids: BTreeSet<&String> = old.keys().chain(cur.keys()).collect();
         for id in ids {
@@ -754,13 +765,13 @@ pub fn check_announced(base: &toml::Table, new: &toml::Table, reviews: &[ReviewE
                 (Some(_), None) => "removed",
                 _ => "added",
             };
-            let reviewed = reviews.iter().any(|r| r.milestone == *ms && r.changes.iter().any(|c| c == id));
+            let reviewed = reviews
+                .iter()
+                .any(|r| r.milestone == *ms && r.announced == *announced && r.changes.iter().any(|c| c == id));
             if !reviewed {
-                out.push(Finding::new(
-                    Code::AnnouncedCriteriaChanged,
-                    id.as_str(),
-                    format!("criterion {what} in announced milestone {ms} without a review entry listing it"),
-                ));
+                let detail =
+                    format!("criterion {what} in milestone {ms} announced {announced}; no review entry lists it");
+                out.push(Finding::new(Code::AnnouncedCriteriaChanged, id.as_str(), detail));
             }
         }
     }
