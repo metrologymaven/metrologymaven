@@ -1,0 +1,264 @@
+{
+ "cases": [
+  {
+   "name": "active -> active",
+   "from": {
+    "state": "active",
+    "since": "2024-03-10"
+   },
+   "to": "active",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "active -> deprecated",
+   "from": {
+    "state": "active",
+    "since": "2024-03-10"
+   },
+   "to": "deprecated",
+   "release": "2026-03-10",
+   "expect": "ok"
+  },
+  {
+   "name": "active -> hidden",
+   "from": {
+    "state": "active",
+    "since": "2024-03-10"
+   },
+   "to": "hidden",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "active -> removed",
+   "from": {
+    "state": "active",
+    "since": "2024-03-10"
+   },
+   "to": "removed",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "deprecated -> active",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-03-10"
+   },
+   "to": "active",
+   "release": "2026-03-10",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> deprecated",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-03-10"
+   },
+   "to": "deprecated",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "deprecated -> hidden",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-03-10"
+   },
+   "to": "hidden",
+   "release": "2026-03-10",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> removed",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-03-10"
+   },
+   "to": "removed",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "hidden -> active",
+   "from": {
+    "state": "hidden",
+    "since": "2024-03-10"
+   },
+   "to": "active",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "hidden -> deprecated",
+   "from": {
+    "state": "hidden",
+    "since": "2024-03-10"
+   },
+   "to": "deprecated",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "hidden -> hidden",
+   "from": {
+    "state": "hidden",
+    "since": "2024-03-10"
+   },
+   "to": "hidden",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "hidden -> removed",
+   "from": {
+    "state": "hidden",
+    "since": "2024-03-10"
+   },
+   "to": "removed",
+   "release": "2026-03-10",
+   "expect": "ok"
+  },
+  {
+   "name": "removed -> active",
+   "from": {
+    "state": "removed",
+    "since": "2024-03-10"
+   },
+   "to": "active",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "removed -> deprecated",
+   "from": {
+    "state": "removed",
+    "since": "2024-03-10"
+   },
+   "to": "deprecated",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "removed -> hidden",
+   "from": {
+    "state": "removed",
+    "since": "2024-03-10"
+   },
+   "to": "hidden",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "removed -> removed",
+   "from": {
+    "state": "removed",
+    "since": "2024-03-10"
+   },
+   "to": "removed",
+   "release": "2026-03-10",
+   "expect": "illegal_transition"
+  },
+  {
+   "name": "deprecated -> hidden, 11 months 30 days (January)",
+   "from": {
+    "state": "deprecated",
+    "since": "2025-01-15"
+   },
+   "to": "hidden",
+   "release": "2026-01-14",
+   "expect": "deprecation_too_short"
+  },
+  {
+   "name": "deprecated -> hidden, 12 months exactly (January)",
+   "from": {
+    "state": "deprecated",
+    "since": "2025-01-15"
+   },
+   "to": "hidden",
+   "release": "2026-01-15",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> hidden, 11 months 30 days (November)",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-11-01"
+   },
+   "to": "hidden",
+   "release": "2025-10-31",
+   "expect": "deprecation_too_short"
+  },
+  {
+   "name": "deprecated -> hidden, 12 months exactly (November)",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-11-01"
+   },
+   "to": "hidden",
+   "release": "2025-11-01",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> hidden, 12 months 1 day",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-11-01"
+   },
+   "to": "hidden",
+   "release": "2025-11-02",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> hidden, 13 months, earlier day of month",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-06-20"
+   },
+   "to": "hidden",
+   "release": "2025-07-05",
+   "expect": "ok"
+  },
+  {
+   "name": "deprecated -> hidden, 11 months, later day of month",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-06-20"
+   },
+   "to": "hidden",
+   "release": "2025-05-28",
+   "expect": "deprecation_too_short"
+  },
+  {
+   "name": "deprecated -> hidden, same day",
+   "from": {
+    "state": "deprecated",
+    "since": "2025-06-01"
+   },
+   "to": "hidden",
+   "release": "2025-06-01",
+   "expect": "deprecation_too_short"
+  },
+  {
+   "name": "deprecated -> hidden, release before since",
+   "from": {
+    "state": "deprecated",
+    "since": "2025-06-01"
+   },
+   "to": "hidden",
+   "release": "2024-12-31",
+   "expect": "deprecation_too_short"
+  },
+  {
+   "name": "deprecated -> hidden, month 31 to month 30, one year later",
+   "from": {
+    "state": "deprecated",
+    "since": "2024-12-31"
+   },
+   "to": "hidden",
+   "release": "2025-12-30",
+   "expect": "deprecation_too_short"
+  }
+ ]
+}

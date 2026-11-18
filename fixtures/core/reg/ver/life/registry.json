@@ -1,0 +1,97 @@
+{
+ "definitions": [
+  {
+   "id": "demo.cmd",
+   "major": 1,
+   "title": "Demo command demo.cmd@1",
+   "description": "Fixture definition for CORE.REG.VER.LIFE.",
+   "params_schema": {
+    "type": "object"
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2026-06-01",
+    "replaced_by": "demo.cmd@2",
+    "remove_after": "2027-06-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "demo.cmd",
+   "major": 2,
+   "title": "Demo command demo.cmd@2",
+   "description": "Fixture definition for CORE.REG.VER.LIFE.",
+   "params_schema": {
+    "type": "object"
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2025-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "demo.old",
+   "major": 1,
+   "title": "Demo command demo.old@1",
+   "description": "Fixture definition for CORE.REG.VER.LIFE.",
+   "params_schema": {
+    "type": "object"
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "removed",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ],
+ "expect_retained": [
+  "demo.cmd@1",
+  "demo.cmd@2"
+ ]
+}
