@@ -54,6 +54,7 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 ## Dependencies (CONSTITUTION §2.1, D-034)
 
 - Depend on specific nodes (level 2 or 3), not whole domains, and only on the same or lower layers.
+- When a leaf is implemented, its PR adds `built_in: [crate]` (and `built_pr: N`) to the leaf's frontmatter and commits the regenerated `generated/` files, including `scope.py milestone milestones/launch-1.md`.
 - If you only read a file or format another node publishes (a test suite, manifest, report, token file), use `uses_artifacts: [NODE.ID]` instead of `depends_on`. Never leave a dependency as a prose "interface note".
 - Mark adoption commands and manual readings `human_only: true` in their Design (D-031).
 - **Shared types (code).** Use crate `fid-types` for determinism classes, side-effect classes, `sha256:` digests and command IDs (`name@major`); never redefine them in another crate. Add a concept there only when two or more crates need it.

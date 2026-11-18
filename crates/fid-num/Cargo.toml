@@ -10,5 +10,9 @@ repository.workspace = true
 # Kernel crate: no dependencies (KNP-1).
 [dependencies]
 
+# Test-only: golden SHA-256 digests (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
 [lints]
 workspace = true
