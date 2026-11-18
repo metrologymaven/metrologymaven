@@ -30,7 +30,7 @@ pub struct Suite {
 }
 
 /// Reads a file of at most [`MAX_FILE_BYTES`]; `name` is used in errors.
-fn read_bounded(path: &Path, name: &str) -> Result<Vec<u8>, FormatError> {
+pub(crate) fn read_bounded(path: &Path, name: &str) -> Result<Vec<u8>, FormatError> {
     let missing = |d: String| FormatError::new(ErrorCode::MissingFile, name, "", d);
     let meta = std::fs::symlink_metadata(path).map_err(|e| missing(format!("cannot read: {e}")))?;
     if !meta.is_file() {
@@ -78,13 +78,13 @@ pub fn suite_version(files: &[(String, Digest)]) -> Result<Digest, FormatError> 
 
 /// Sorted entry names of a directory; non-UTF-8 names are layout errors.
 /// Whether `path` is a real directory, not a symbolic link or junction.
-fn is_real_dir(path: &Path) -> bool {
+pub(crate) fn is_real_dir(path: &Path) -> bool {
     std::fs::symlink_metadata(path).map(|m| m.is_dir() && !m.file_type().is_symlink()).unwrap_or(false)
 }
 
 /// The directory itself must be a real directory: a symbolic link or junction (which
 /// could point outside the suite) is a layout error, checked before it is listed.
-fn list_dir(path: &Path, name: &str, errs: &mut Vec<FormatError>) -> Option<Vec<String>> {
+pub(crate) fn list_dir(path: &Path, name: &str, errs: &mut Vec<FormatError>) -> Option<Vec<String>> {
     match std::fs::symlink_metadata(path) {
         Ok(m) if m.is_dir() && !m.file_type().is_symlink() => {}
         Ok(_) => {

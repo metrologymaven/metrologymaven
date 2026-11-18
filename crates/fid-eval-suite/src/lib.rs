@@ -20,16 +20,26 @@
 //! file collected before failing. The suite version ([`suite_version`]) is `sha256:` over
 //! the RFC 8785 canonical JSON of the sorted `[relative path, file digest]` pairs.
 //!
+//! [`check_suite`] is the suite consistency, coverage and oracle isolation check
+//! (AGENT.EVAL.CHECK): digests against FLOW job packages, catalog coverage, granted-root
+//! isolation of the unpacked start states and oracle values in prompts.
+//!
 //! This is the shared format library of the `fid-eval` binary (D-032). It canonicalises
 //! and hashes through `fid-canon` and uses `fid-types` digests.
 
+mod check;
 mod json;
 mod oracle;
 mod redteam;
 mod shell;
 mod suite;
+mod tar;
 mod task;
 
+pub use check::{
+    check_loaded, check_suite, has_token, load_catalog, load_jobs, value_in_prompt, CheckFinding, CheckReport, JobPackage,
+    Rule,
+};
 pub use oracle::{parse_oracle, Basis, Forbidden, Oracle, OracleItem, Outcome, Quantity, DEFAULT_TOL, SI_UNITS};
 pub use redteam::{is_marker, Family, Payload, Predicate, PredicateKind, Subfamily, Vector, PREDICATE_KINDS};
 pub use shell::{check_variants, VariantCoverage};

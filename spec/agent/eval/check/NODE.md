@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-eval-suite]
 satisfies: [REQ-AGENT.EVAL-003, REQ-AGENT.EVAL-005]
 covers: []
 depends_on: [AGENT.EVAL.FORMAT]
