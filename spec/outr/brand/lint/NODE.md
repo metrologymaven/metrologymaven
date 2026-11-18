@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-brand-lint]
+built_pr: 79
 satisfies: [REQ-OUTR.BRAND-003, REQ-OUTR.BRAND-004, REQ-OUTR.BRAND-006, REQ-OUTR.BRAND-007]
 covers: []
 depends_on: []
