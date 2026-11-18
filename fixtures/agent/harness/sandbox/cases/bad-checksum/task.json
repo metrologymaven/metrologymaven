@@ -1,0 +1,40 @@
+{
+  "id": "mini-inspect-01",
+  "source_job": "JOB.ACC.01",
+  "golden_digest": "sha256:45794dee423cd97a6bdc7ec8ff214b3110dc6089c9177040a7823cb3a7421966",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:be4e1d36099309658170e8b67f54ed32d41d7e7c1a637463bc27655acd02dbd3"
+  },
+  "prompt": "Evaluate the flatness of plane PL1 against its tolerance and report the decision.",
+  "profile": "inspect-r1",
+  "budget": {
+    "wall_s": 600,
+    "tool_calls": 40
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "single_command",
+  "apps": [
+    "inspect"
+  ],
+  "workflows": [
+    "inspect.evaluate_flatness"
+  ],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/part.qif",
+      "spdx": "project-authored"
+    }
+  ]
+}
