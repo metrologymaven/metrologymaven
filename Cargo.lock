@@ -175,6 +175,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-platform"
+version = "0.0.1"
+dependencies = [
+ "toml",
+]
+
+[[package]]
 name = "fid-project"
 version = "0.0.1"
 dependencies = [

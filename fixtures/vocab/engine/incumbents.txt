@@ -1,0 +1,7 @@
+# Incumbent product names for the fid-vocab engine fixtures (CC-BY-4.0).
+# Names are used nominatively only: to identify products and file formats.
+PolyWorks
+PC-DMIS
+GOM Inspect
+ZEISS INSPECT
+SpatialAnalyzer

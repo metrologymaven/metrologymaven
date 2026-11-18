@@ -39,10 +39,20 @@ jobs:
         run: cargo test --workspace
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: Fuzz harness compiles on stable (AUTO.PROG.FMT AC-6)
+        # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-program/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
+      - name: Support matrix validates via cargo xtask (PLAT.MATRIX.FILE AC-1)
+        shell: bash
+        run: |
+          out=$(cargo xtask plat-matrix validate fixtures/plat/matrix/valid.toml)
+          test "$out" = "6 rows, 0 errors"
+          cargo xtask plat-matrix validate platform/support-matrix.toml
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -67,6 +77,8 @@ jobs:
           python tools/check_command_defs.py
           python tools/check_entries.py
           python tools/check_knp1_findings.py
+          python tools/check_eval_suite.py
+          python -m unittest discover -s tools/house_rules/tests -v
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.
