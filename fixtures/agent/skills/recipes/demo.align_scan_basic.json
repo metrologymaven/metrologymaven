@@ -1,0 +1,5 @@
+{
+  "id": "demo.align_scan_basic",
+  "title": "Basic align and scan",
+  "prompt": "Align the fixture part and scan its top face."
+}

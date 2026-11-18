@@ -83,6 +83,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-types"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
