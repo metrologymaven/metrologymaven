@@ -12,3 +12,6 @@ Hand-written; the expected results are hand-labelled from the spec's rules in
 the ID of the commit that adds it, so the test copies the guide to a temporary file with the
 placeholder replaced by `git rev-parse HEAD` before it runs the checker. Run directly, the
 checker rejects the placeholder as an invalid revision (exit 2).
+
+`scripts/env_probe.py` (exit 3 if `DOC_RUN_SENTINEL` is visible, 4 if `PATH` is missing, else 0)
+and `scripts/sleep.py` (sleeps 30 s) are helper scripts for the environment and timeout tests.

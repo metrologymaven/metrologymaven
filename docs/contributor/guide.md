@@ -98,4 +98,4 @@ The guide is checked by `fid-outreach doc-run`, which needs Git and a Rust toolc
 cargo run -q -p fid-outreach -- doc-run --guide docs/contributor/guide.md --repo .
 ```
 
-It refuses to run (error `revision_mismatch`) unless the `revision:` above is the commit checked out in `--repo`. It then copies that commit into a temporary folder, runs each `sh run` block there in order, and deletes the folder, so your working copy is never changed.
+It refuses to run (error `revision_mismatch`) unless the `revision:` above is the commit checked out in `--repo`. It then copies that commit into a temporary folder, runs each `sh run` block there in order, and deletes the folder, so your working copy is never changed. Runnable lines are run without a shell, may start only `python` (with a script file from the repository), `git` or `cargo`, and see only a few environment variables such as `PATH`.

@@ -23,6 +23,14 @@
 //! a line exits non-zero (the remaining lines are skipped). A program that cannot be started
 //! fails its block, also in an `expect-fail` block.
 //!
+//! Hardening: the first word must be exactly one of [`ALLOWED_PROGRAMS`] (`python`, `git`,
+//! `cargo`; never a path), and `python` must be given a relative script path inside the
+//! repository as its first argument (no `-c`, `-m` or other options), so all code that runs
+//! comes from files of the documented revision. Commands start with an empty environment plus
+//! only the variables in [`ENV_PASSTHROUGH`]. On timeout only the direct child process is
+//! killed; a grandchild it started may outlive the run (the checker stops waiting for its
+//! output after 2 s and still deletes the temporary folder as far as it can).
+//!
 //! Exit codes: 0 all blocks pass; 1 revision mismatch or any failing block; 2 unreadable or
 //! invalid guide, unreadable repository, or no temporary folder.
 
@@ -43,6 +51,11 @@ pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 pub const TAIL_BYTES: usize = 2048;
 /// Characters that only a shell would interpret; rejected outside quotes.
 const SHELL_CHARS: [char; 14] = ['|', '&', ';', '<', '>', '$', '`', '(', ')', '*', '?', '\\', '~', '#'];
+/// The only programs a runnable line may start (exact first word).
+pub const ALLOWED_PROGRAMS: [&str; 3] = ["python", "git", "cargo"];
+/// Environment variables passed through to block commands; every other one is removed.
+pub const ENV_PASSTHROUGH: [&str; 9] =
+    ["PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "TEMP", "TMP", "LANG", "CARGO_HOME", "RUSTUP_HOME"];
 const POLL: Duration = Duration::from_millis(20);
 /// How long to wait for a killed process's output pipes to close.
 const DRAIN_WAIT: Duration = Duration::from_secs(2);
@@ -272,12 +285,43 @@ pub fn split_command(s: &str) -> Result<Vec<String>, String> {
     if in_word {
         argv.push(cur);
     }
-    match argv.first() {
-        None => Err("empty command".to_string()),
-        Some(p) if p.contains('=') => Err("environment assignments need a shell".to_string()),
-        Some(p) if p == "cd" => Err("`cd` needs a shell; every line runs in the repository root".to_string()),
-        Some(_) => Ok(argv),
+    let Some(prog) = argv.first() else {
+        return Err("empty command".to_string());
+    };
+    if prog.contains('=') {
+        return Err("environment assignments need a shell".to_string());
     }
+    if prog.contains('/') || prog.contains('\\') {
+        return Err(format!("program `{prog}` is a path; name one of {} instead", ALLOWED_PROGRAMS.join(", ")));
+    }
+    if !ALLOWED_PROGRAMS.contains(&prog.as_str()) {
+        return Err(format!(
+            "program `{prog}` is not allowed; runnable lines may run only {}",
+            ALLOWED_PROGRAMS.join(", ")
+        ));
+    }
+    if prog == "python" {
+        check_python_script(argv.get(1))?;
+    }
+    Ok(argv)
+}
+
+/// `python` must run a script file of the repository: its first argument is a relative path
+/// with no `..` component (so no `-c` code, `-m` module or other interpreter option).
+fn check_python_script(script: Option<&String>) -> Result<(), String> {
+    let Some(s) = script else {
+        return Err("`python` needs a script file of the repository as its first argument".to_string());
+    };
+    if s.starts_with('-') {
+        return Err(format!(
+            "`python {s}` is not allowed; code must come from a script file in the repository (no `-c`, `-m` or options)"
+        ));
+    }
+    let absolute = s.starts_with('/') || s.starts_with('\\') || s.contains(':');
+    if absolute || s.split(['/', '\\']).any(|part| part == "..") {
+        return Err(format!("`python {s}`: the script must be a path inside the repository"));
+    }
+    Ok(())
 }
 
 /// Checker inputs.
@@ -619,7 +663,14 @@ fn run_line(cmd: &RunLine, dir: &Path, deadline: Instant) -> LineResult {
     let Some((prog, args)) = cmd.argv.split_first() else {
         return fail("empty command".to_string());
     };
-    let spawned = Command::new(prog)
+    let mut command = Command::new(prog);
+    command.env_clear();
+    for key in ENV_PASSTHROUGH {
+        if let Some(v) = std::env::var_os(key) {
+            command.env(key, v);
+        }
+    }
+    let spawned = command
         .args(args)
         .current_dir(dir)
         .stdin(Stdio::null())

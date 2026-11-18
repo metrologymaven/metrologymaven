@@ -240,32 +240,46 @@ fn ac5_guide_has_find_claim_expand_validate_naming_their_sources() {
 // ------------------------------------------------------------------ other outcomes
 
 #[test]
-fn expect_fail_spawn_failure_and_timeout() {
+fn expect_fail_and_timeout() {
     if !python_available("outcomes") {
         return;
     }
-    // Hand-written guide; block lines are counted from the text below.
+    // Hand-written guide; block lines are counted from the text below. The scripts are
+    // fixtures of this repository, so they exist in the exported revision.
     let text = "---\nrevision: R\n---\n\n\
-```sh run expect-fail\npython --version\n```\n\n\
-```sh run\nno-such-program-for-doc-run-tests --x\n```\n\n\
-```sh run\npython -c \"import time; time.sleep(30)\"\n```\n\n\
-```sh run\n# a comment line is skipped\npython --version\npython --version\n```\n";
+```sh run expect-fail\npython fixtures/outr/contrib/scripts/env_probe.py\n```\n\n\
+```sh run\npython fixtures/outr/contrib/scripts/sleep.py\n```\n\n\
+```sh run\n# a comment line is skipped\npython fixtures/outr/contrib/scripts/env_probe.py\n\
+python fixtures/outr/contrib/scripts/env_probe.py\n```\n";
     let guide = guide_with_revision("outcomes", text, &head());
     let opts = Options { guide, repo: root(), timeout: Duration::from_secs(3) };
     let r = run(&opts).unwrap();
     let got: Vec<(u32, Status, u32)> = r.blocks.iter().map(|b| (b.line, b.status, b.command_line)).collect();
-    assert_eq!(
-        got,
-        vec![
-            (5, Status::Failed, 6),
-            (9, Status::SpawnFailed, 10),
-            (13, Status::TimedOut, 14),
-            (17, Status::Passed, 20)
-        ]
-    );
+    assert_eq!(got, vec![(5, Status::Failed, 6), (9, Status::TimedOut, 10), (13, Status::Passed, 16)]);
     assert_eq!(r.exit_code(), 1);
     assert!(r.workdir_removed);
     assert!(r.render().contains("expected a non-zero exit"));
+}
+
+#[test]
+fn block_commands_do_not_see_other_environment_variables() {
+    if !python_available("env") {
+        return;
+    }
+    let probe = root().join("fixtures/outr/contrib/scripts/env_probe.py");
+    // Control: the probe does detect the sentinel when it is passed on (exit 3).
+    let direct = Command::new("python").arg(&probe).env("DOC_RUN_SENTINEL", "leak").status().unwrap();
+    assert_eq!(direct.code(), Some(3));
+    let text = "---\nrevision: R\n---\n\n```sh run\npython fixtures/outr/contrib/scripts/env_probe.py\n```\n";
+    let guide = guide_with_revision("env", text, &head());
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-outreach"))
+        .args(["doc-run", "--guide", &s(&guide), "--repo", &s(&root())])
+        .env("DOC_RUN_SENTINEL", "leak")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(out.status.code(), Some(0), "{stdout}");
+    assert!(stdout.contains(":5: passed"), "{stdout}");
 }
 
 #[test]
@@ -311,7 +325,7 @@ fn parser_finds_runnable_blocks_only() {
 ```sh\nnot run\n```\n\
 ~~~sh run\npython 'a b' \"c|d\" e\n\n~~~\n\
 ````text\n```sh run\ninside a longer fence: not a block\n````\n\
-```sh run expect-fail\nx\n```\n\
+```sh run expect-fail\ngit status\n```\n\
 \x20\x20\x20\x20```sh run\nindented four spaces: not a fence\n"
     );
     let g = parse_guide(&text).unwrap();
@@ -338,7 +352,41 @@ fn parser_rejects_bad_guides() {
     for bad in ["a > b", "a && b", "a $HOME", "a *.md", "FOO=1 a", "cd spec", "a 'open", "a b\\c", "a # c"] {
         assert!(split_command(bad).is_err(), "{bad}");
     }
-    assert_eq!(split_command("a  '' \"x y\"").unwrap(), vec!["a", "", "x y"]);
+    assert_eq!(split_command("python t.py  '' \"x y\"").unwrap(), vec!["python", "t.py", "", "x y"]);
+}
+
+#[test]
+fn only_allowlisted_programs_and_python_script_files_run() {
+    for ok in ["python tools/scope.py open", "git status", "cargo test -p fid-outreach", "python 'a b.py'"] {
+        assert!(split_command(ok).is_ok(), "{ok}");
+    }
+    let rejected = [
+        // Not on the allowlist (exact first word).
+        "bash x.sh",
+        "rm -rf spec",
+        "python3 tools/scope.py",
+        "Python tools/scope.py",
+        "pythonw tools/scope.py",
+        // Program words with a path separator.
+        "./python tools/scope.py",
+        "/usr/bin/python tools/scope.py",
+        "'C:\\Python\\python' tools/scope.py",
+        "'bin/git' status",
+        // Python code that does not come from a repository file.
+        "python -c 'print(1)'",
+        "python -m http.server",
+        "python -Ic pass",
+        "python --version",
+        "python",
+        "python ../outside.py",
+        "python /etc/x.py",
+        "python 'C:\\x.py'",
+    ];
+    for bad in rejected {
+        assert!(split_command(bad).is_err(), "{bad} must be rejected");
+    }
+    // A rejected line makes the guide invalid at that line.
+    assert_eq!(parse_err("```sh run\ngit status\npython -c 'print(1)'\n```\n").0, 6);
 }
 
 #[test]
