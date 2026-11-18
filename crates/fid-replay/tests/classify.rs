@@ -137,6 +137,30 @@ fn ac5_aggregate() {
 }
 
 #[test]
+fn bad_tolerance_is_rejected() {
+    let mut tol: BTreeMap<String, Tolerance> = BTreeMap::new();
+    tol.insert("length_mm".into(), Tolerance { abs: -1e-5, rel: 0.0 });
+    let step = StepComparison {
+        class: Determinism::D3,
+        same_kernel: false,
+        same_platform_class: false,
+        outputs: vec![Output {
+            kind: "length_mm".into(),
+            recorded: 1.0,
+            replayed: 1.000001,
+            recorded_digest: "a".into(),
+            replayed_digest: "b".into(),
+        }],
+        decisions: vec![],
+        limits: vec![],
+        missing: None,
+    };
+    assert_eq!(classify(&step, &tol).unwrap_err().code(), "comparison_invalid");
+    tol.insert("length_mm".into(), Tolerance { abs: f64::NAN, rel: 0.0 });
+    assert_eq!(classify(&step, &tol).unwrap_err().code(), "comparison_invalid");
+}
+
+#[test]
 fn non_finite_input_is_rejected() {
     let tol: BTreeMap<String, Tolerance> = BTreeMap::new();
     let step = StepComparison {

@@ -281,6 +281,33 @@
    }
   },
   {
+   "name": "identical digests but decision flipped",
+   "class": "D0",
+   "same_kernel": true,
+   "same_platform_class": true,
+   "outputs": [
+    {
+     "kind": "length_mm",
+     "recorded": 3.0,
+     "replayed": 3.0,
+     "recorded_digest": "f64:0x1.8000000000000p+1",
+     "replayed_digest": "f64:0x1.8000000000000p+1"
+    }
+   ],
+   "decisions": [
+    {
+     "recorded": "CONFORMS",
+     "replayed": "NONCONFORMS"
+    }
+   ],
+   "limits": [],
+   "missing": null,
+   "expect": {
+    "outcome": "DIVERGENT",
+    "annotations": []
+   }
+  },
+  {
    "name": "status flip among several",
    "class": "D3",
    "same_kernel": true,

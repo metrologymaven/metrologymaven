@@ -2,8 +2,8 @@
 //!
 //! Rules, applied in order for one step (REQ-001..006):
 //! 1. a missing input gives `NotReplayable`;
-//! 2. every output digest equal gives `Identical`;
-//! 3. any changed conformance decision or characteristic status gives `Divergent`;
+//! 2. any changed conformance decision or characteristic status gives `Divergent`;
+//! 3. every output digest equal gives `Identical`;
 //! 4. a D0/D1/D2 step on the same kernel digest and platform class that is not
 //!    bit-identical gives `Divergent`;
 //! 5. a differing output whose quantity kind has no tolerance gives `Divergent`
@@ -199,13 +199,19 @@ pub fn classify(step: &StepComparison, table: &dyn ToleranceTable) -> Result<Ste
     for l in &step.limits {
         finite(&format!("limit {}", l.kind), l.value)?;
     }
+    // Every tolerance the step can use must be finite and non-negative.
+    for kind in step.outputs.iter().map(|o| &o.kind).chain(step.limits.iter().map(|l| &l.kind)) {
+        if let Some(t) = table.tolerance(kind) {
+            if !(t.abs.is_finite() && t.rel.is_finite() && t.abs >= 0.0 && t.rel >= 0.0) {
+                return Err(ClassifyError::ComparisonInvalid(format!("tolerance {kind} is not finite and >= 0")));
+            }
+        }
+    }
 
     let mut annotations = Vec::new();
     // REQ-008: Marginal, independent of the outcome.
     'limits: for l in &step.limits {
         let Some(tol) = table.tolerance(&l.kind) else { continue };
-        finite(&format!("tolerance {}", l.kind), tol.abs)?;
-        finite(&format!("tolerance {}", l.kind), tol.rel)?;
         for o in step.outputs.iter().filter(|o| o.kind == l.kind) {
             if tol.within(o.replayed, l.value) {
                 annotations.push(Annotation::Marginal);
@@ -224,12 +230,14 @@ fn outcome_of(step: &StepComparison, table: &dyn ToleranceTable, notes: &mut Vec
     if step.missing.is_some() {
         return ReplayOutcome::NotReplayable;
     }
+    // A changed decision or status is DIVERGENT regardless of the numbers (REQ-002,
+    // CONSTITUTION §4), so it is checked before the identical-digest rule.
+    if step.decisions.iter().any(|d| d.recorded != d.replayed) {
+        return ReplayOutcome::Divergent;
+    }
     let differing: Vec<&Output> = step.outputs.iter().filter(|o| o.recorded_digest != o.replayed_digest).collect();
     if differing.is_empty() {
         return ReplayOutcome::Identical;
-    }
-    if step.decisions.iter().any(|d| d.recorded != d.replayed) {
-        return ReplayOutcome::Divergent;
     }
     if step.class.requires_bit_identity() && step.same_kernel && step.same_platform_class {
         return ReplayOutcome::Divergent;

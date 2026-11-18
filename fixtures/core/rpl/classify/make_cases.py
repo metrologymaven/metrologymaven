@@ -39,6 +39,8 @@ for i, c in enumerate(CLASSES):
 for c in CLASSES:
     case(f"decision flip {c}", c, [out("length_mm", 3.0, 3.000001)], "DIVERGENT",
          decisions=[("CONFORMS", "NONCONFORMS")], same_kernel=False)
+case("identical digests but decision flipped", "D0", [out("length_mm", 3.0, 3.0)], "DIVERGENT",
+     decisions=[("CONFORMS", "NONCONFORMS")])
 case("status flip among several", "D3", [out("length_mm", 3.0, 3.000001)], "DIVERGENT",
      decisions=[("CONFORMS", "CONFORMS"), ("MEASURED", "NOT_MEASURED")])
 

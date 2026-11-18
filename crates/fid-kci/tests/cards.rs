@@ -97,6 +97,23 @@ fn card_syntax_errors() {
 }
 
 #[test]
+fn other_quote_styles_are_caught() {
+    let dir = fixtures().join("cards-v1");
+    let base = std::fs::read_to_string(dir.join("valid-gdt-flatness-mz.toml")).unwrap();
+    let words = ["word"; 20].join(" ");
+    for (open, close) in [("\u{2018}", "\u{2019}"), ("\u{ab}", "\u{bb}"), ("\u{201e}", "\u{201c}")] {
+        let text = base.replace("Exact minimum zone", &format!("Exact {open}{words}{close} minimum zone"));
+        assert_eq!(parse_card(&text).unwrap_err().code(), "standards_text_suspected", "{open}{close}");
+    }
+}
+
+#[test]
+fn array_items_need_commas_across_comments() {
+    let text = "references = [\"a\" # note\n\"b\"]\n";
+    assert_eq!(parse_card(text).unwrap_err().code(), "syntax");
+}
+
+#[test]
 fn too_long_field() {
     let dir = fixtures().join("cards-v1");
     let base = std::fs::read_to_string(dir.join("valid-gdt-flatness-mz.toml")).unwrap();

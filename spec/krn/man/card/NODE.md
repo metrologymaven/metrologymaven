@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # KRN.MAN.CARD: Algorithm IDs and spec-card registry
@@ -33,7 +33,7 @@ Every kernel algorithm has an ID `<module>.<feature>.<method>@<semver>` and a sp
 
 ## Requirements
 
-- **REQ-KRN.MAN.CARD-001** The ID parser shall accept exactly `<module>.<feature>.<method>@<major>.<minor>.<patch>` with lowercase segments matching `[a-z][a-z0-9_]*` and decimal version numbers without leading zeros, and reject anything else with a typed error.
+- **REQ-KRN.MAN.CARD-001** The ID parser shall accept exactly `<module>.<feature>.<method>@<major>.<minor>.<patch>` with lowercase segments matching `[a-z][a-z0-9_]*` and decimal version numbers without leading zeros that each fit in an unsigned 32-bit integer, and reject anything else with a typed error.
 - **REQ-KRN.MAN.CARD-002** A card shall have the fields id, title, method summary, applicability limits, references (each a designator, edition and clause or a bibliographic citation), determinism class, known failure modes and validation evidence, and the parser shall reject a card missing any field.
 - **REQ-KRN.MAN.CARD-003** `check(table_ids, registry)` shall return every algorithm ID without a card and every card without an algorithm, and CI shall fail if either list is non-empty.
 - **REQ-KRN.MAN.CARD-004** The card checker shall fail on any free-text field longer than 2 000 characters or containing a quoted passage longer than 15 words attributed to a standard, to keep standards text out of cards.

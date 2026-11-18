@@ -220,6 +220,8 @@ fn parse_toml_subset(text: &str) -> Result<Vec<(String, Val, usize)>, CardError>
 fn scan_array(text: &str, line: usize) -> Result<Option<(Vec<String>, String)>, CardError> {
     let mut items = Vec::new();
     let mut s = text;
+    // After an item, only `,` or `]` may follow (comments and whitespace aside).
+    let mut need_separator = false;
     loop {
         s = s.trim_start();
         if s.is_empty() {
@@ -237,20 +239,36 @@ fn scan_array(text: &str, line: usize) -> Result<Option<(Vec<String>, String)>, 
         if let Some(after) = s.strip_prefix(']') {
             return Ok(Some((items, after.to_string())));
         }
+        if need_separator {
+            match s.strip_prefix(',') {
+                Some(after) => {
+                    s = after;
+                    need_separator = false;
+                    continue;
+                }
+                None => return Err(CardError::Syntax { line, why: "expected , or ] after array item" }),
+            }
+        }
         if !s.starts_with('"') {
             return Err(CardError::Syntax { line, why: "array items must be strings" });
         }
         let (v, tail) = read_string(s, line)?;
         items.push(v);
-        s = tail.trim_start();
-        if let Some(after) = s.strip_prefix(',') {
-            s = after;
-        } else if !(s.is_empty() || s.starts_with(']') || s.starts_with('#')) {
-            return Err(CardError::Syntax { line, why: "expected , or ] after array item" });
-        }
+        s = tail;
+        need_separator = true;
     }
 }
 
+/// Quotation mark pairs searched for quoted passages: ASCII double quotes, curly double
+/// and single quotes, low-high double quotes and guillemets (REQ-KRN.MAN.CARD-004).
+const QUOTE_PAIRS: [(char, char); 6] = [
+    ('"', '"'),
+    ('\u{201c}', '\u{201d}'),
+    ('\u{2018}', '\u{2019}'),
+    ('\u{201e}', '\u{201c}'),
+    ('\u{ab}', '\u{bb}'),
+    ('\u{bb}', '\u{ab}'),
+];
 const FIELDS: [&str; 8] =
     ["id", "title", "method", "applicability", "references", "determinism", "failure_modes", "validation"];
 const STANDARD_MARKERS: [&str; 10] = ["ISO", "ASME", "VDA", "VDI", "DIN", "JCGM", "IEC", "ANSI", "BS EN", "NIST"];
@@ -302,7 +320,8 @@ pub fn parse_card(text: &str) -> Result<SpecCard, CardError> {
 
 fn quoted_passages(s: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for (open, close) in [('"', '"'), ('\u{201c}', '\u{201d}')] {
+    // ASCII single quotes are left out: apostrophes would pair up across ordinary prose.
+    for (open, close) in QUOTE_PAIRS {
         let mut rest = s;
         while let Some(a) = rest.find(open) {
             let after = &rest[a + open.len_utf8()..];
