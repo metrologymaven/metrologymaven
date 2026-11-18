@@ -357,10 +357,7 @@ pub type Catalog = BTreeMap<String, BTreeSet<String>>;
 
 /// The catalog this build defines.
 pub fn current_catalog() -> Catalog {
-    Code::ALL
-        .iter()
-        .map(|c| (c.as_str().to_string(), c.reasons().into_iter().map(str::to_string).collect()))
-        .collect()
+    Code::ALL.iter().map(|c| (c.as_str().to_string(), c.reasons().into_iter().map(str::to_string).collect())).collect()
 }
 
 /// `{"codes": {code: [reasons, sorted]}, "schema_version": 1}` for a catalog.
@@ -405,7 +402,7 @@ impl CatalogError {
     /// Stable machine-readable code.
     pub fn code(&self) -> &'static str {
         match self {
-            CatalogError::Json(c) => *c,
+            CatalogError::Json(c) => c,
             CatalogError::SchemaVersionUnsupported => "schema_version_unsupported",
             CatalogError::Shape(_) => "bad_shape",
         }
@@ -482,11 +479,8 @@ pub fn check_compatible(previous: &Catalog, current: &Catalog) -> Result<(), Vec
     for (code, reasons) in previous {
         match current.get(code) {
             None => removed.push(Removal::Code(code.clone())),
-            Some(now) => removed.extend(
-                reasons
-                    .difference(now)
-                    .map(|r| Removal::Reason { code: code.clone(), reason: r.clone() }),
-            ),
+            Some(now) => removed
+                .extend(reasons.difference(now).map(|r| Removal::Reason { code: code.clone(), reason: r.clone() })),
         }
     }
     removed.sort();
@@ -539,10 +533,7 @@ pub fn bus_error_schema() -> CValue {
             obj([
                 ("code", obj([("enum", strs(catalog.keys().map(String::as_str)))])),
                 ("reason", obj([("type", s("string"))])),
-                (
-                    "detail",
-                    obj([("type", s("string")), ("maxLength", CValue::Num(MAX_DETAIL_CHARS as f64))]),
-                ),
+                ("detail", obj([("type", s("string")), ("maxLength", CValue::Num(MAX_DETAIL_CHARS as f64))])),
             ]),
         ),
         ("oneOf", CValue::Arr(per_code)),
