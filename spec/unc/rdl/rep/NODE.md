@@ -83,6 +83,7 @@ Owns the normative Replay Equivalence Policy: a versioned table of tolerances pe
 
 ## Open questions
 
+- **Gap from research hypotheses (2026-11-17):** the rep-1 tolerance values need ratification by an uncertainty expert before the replay hypotheses can be evaluated against them.
 - The table values come from concept doc 05 §2.9 and have not been ratified in the constitution; CONSTITUTION §4 names the outcomes but not the bounds. Reviewers should confirm whether a decision record is wanted to adopt `rep-1@1.0.0` as normative.
 - `TRUST.REPLAY` currently expects tolerances keyed by determinism class and says KRN publishes them; this leaf keys bounds by quantity kind and applies determinism class as a context rule. TRUST.REPLAY should reference this node.
 

@@ -66,6 +66,7 @@ Least-squares null-space cases whose sampling geometry stresses the fits: partia
 
 ## Open questions
 
+- **Gap from research hypotheses (2026-11-17):** add a construction family (intersections, projections, offsets with known exact results) for Jacobian tests in UNC.PROP.LPU.TCONS.
 - Grid values are initial choices for review [unverified].
 
 ## Children

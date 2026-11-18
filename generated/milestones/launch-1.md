@@ -6,9 +6,9 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 | | Count |
 |---|---:|
-| Nodes in scope | 1820 |
+| Nodes in scope | 1825 |
 | Buildable leaves | 1336 |
-| Open nodes still to expand | 75 |
+| Open nodes still to expand | 80 |
 | Nodes blocked on decisions | 0 |
 | Build waves | 39 |
 
@@ -1478,6 +1478,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 ## Still to expand (open)
 
 - AGENT.GATEPREP Gate preparation: previews, batched queues, evidence packs
+- AGENT.REDTEAM.GATES Red-team of human gates H3/H4 and injected UI input
 - AGENT.REVIEW Independent agent reviewer
 - GDT.DIM.SIZEASME.LOCAL ASME two-point local size under a DMT pairing rule
 - GDT.DIM.SIZEISO.CALC ISO calculated sizes (circumference, area, volume)
@@ -1542,9 +1543,13 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - UNC.ORS.SIZE.ISO ISO 14405-1 size modifier cases
 - UNC.ORS.UNC.NZERO Non-negative quantities with true value zero
 - UNC.PROP.LPU.TCONS Tangents for kernel constructions and evaluation operators
+- UNC.RDL.EXT.FILT Filter softgauge importer
+- UNC.RDL.EXT.JCGM JCGM worked-example fixtures
 - UNC.RDL.EXT.NIST NIST Algorithm Testing System importer
 - UNC.RDL.EXT.PTBSG PTB softgauge set importer
+- UNC.RDL.GEN.MUT Seeded-fault (mutant) catalogue
 - UNC.RDL.GEN.MZEQ Minimum-zone equioscillation generators
+- UNC.RDL.GEN.SUBST Substitution-method workpiece generator
 - UNC.RDL.TRACIM.PROTO TraCIM protocol and XML mapping
 - UX.SCREENS.COMMON Shared shell, Shop Setup and first-run screens
 - UX.SCREENS.FLOOR Kiosk and Approval Station screens

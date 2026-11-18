@@ -44,3 +44,19 @@ The project's own openly licensed generators, independent oracle and reference s
 | Who pays for agent red-team model runs at the required volume | People decision (same as AGENT.BOARD) |
 
 Publication of the project-authored suites is held until D-001's counsel conditions and D-002's name clear (D-036 rule 5).
+
+## Update 2026-11-17: gap nodes added
+
+- **New nodes:**
+  - UNC.RDL.GEN.MUT: seeded-fault catalogue
+  - UNC.RDL.GEN.SUBST: substitution-method workpiece generator
+  - UNC.RDL.EXT.FILT: filter softgauge importer
+  - UNC.RDL.EXT.JCGM: JCGM worked-example fixtures
+  - AGENT.REDTEAM.GATES: H3/H4 gates and injected UI input, tested end to end
+- **New requirement:** `mz.line` (2D line minimum-zone) on UNC.RDL.GEN.MZEQ.
+- **Notes added:**
+  - TRUST.REPLAY.CORPUS: pin to the first released kernel
+  - TRUST.REPLAY.SANDBOX: define the hostile-module set
+  - UNC.RDL.REP: rep-1 ratification by an expert
+  - UNC.RDL.GEN.GEOM: construction family for Jacobian tests
+- **People decisions:** data licences, TraCIM terms and the evaluation budget are in **D-038** (open).

@@ -42,6 +42,8 @@ Imports reference datasets published by national metrology institutes (the NIST 
 - **REQ-UNC.RDL.EXT-002** Until a licence permitting redistribution is recorded with evidence, imported records shall have visibility `reference_only`.
 - **REQ-UNC.RDL.EXT-003** Source values given in mm shall be stored as their original decimal strings with the conversion to SI declared, never as pre-multiplied f64.
 - **REQ-UNC.RDL.EXT-004** If a source file is malformed or exceeds the importer's bounds, then the import shall fail with a typed error and store nothing.
+- **REQ-UNC.RDL.EXT-005** The RDL shall import public filter reference data (for example NIST surface-metrology reference software outputs and type F1/F2 softgauges [unverified availability]) with licence evidence, so ISO 16610-family filter hypotheses have a public reference.
+- **REQ-UNC.RDL.EXT-006** The RDL shall encode the published inputs of JCGM 100, 101 and 102 worked examples (designators and example numbers only, no copied text) as fixtures with a licence-evidence record, so uncertainty propagation can be checked against them.
 
 ## Interfaces
 
@@ -66,3 +68,5 @@ NIST (ATS file format importer), PTBSG (PTB softgauge set importer), LIC (licenc
 | UNC.RDL.EXT.LIC | Licence evidence records and visibility gating (leaf) | 002 | none |
 | UNC.RDL.EXT.NIST | NIST Algorithm Testing System importer | 001 003 004 | none |
 | UNC.RDL.EXT.PTBSG | PTB softgauge set importer | 001 003 004 | none |
+| UNC.RDL.EXT.FILT | Filter softgauge importer | 005 | none |
+| UNC.RDL.EXT.JCGM | JCGM worked-example fixtures | 006 | none |

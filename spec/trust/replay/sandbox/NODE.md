@@ -81,6 +81,7 @@ Runs the WASM reference kernel inside the verifier with nothing but the kernel c
 
 ## Open questions
 
+- **Gap from research hypotheses (2026-11-17):** define the contents of the hostile-module set (`fixtures/replay/sandbox/*.wasm`): each module's attack class and expected containment result.
 - The runtime and its version must match KRN.MAN's "pinned runtime configuration"; if KRN pins a different engine, follow KRN.
 
 ## Children

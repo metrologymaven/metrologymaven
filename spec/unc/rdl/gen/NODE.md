@@ -44,6 +44,8 @@ Generates reference datasets whose answers are known by construction: least-squa
 - **REQ-UNC.RDL.GEN-002** Each generator shall round input coordinates to 16 significant decimal digits and compute reference outputs for the rounded coordinates to at least 50 significant digits.
 - **REQ-UNC.RDL.GEN-003** Each generated reference shall be cross-checked by at least one oracle independent of the generator, and the dataset shall record the oracle ID, version and agreement, failing generation if they disagree beyond the declared test uncertainty.
 - **REQ-UNC.RDL.GEN-004** Least-squares generators shall use the null-space construction, and minimum-zone generators shall construct sets whose extremal points provably satisfy the optimality conditions for the chosen solution.
+- **REQ-UNC.RDL.GEN-005** The RDL shall publish a versioned catalogue of seeded faults (mutant fits, constructions, evaluations and uncertainty models) with fault classes and expected detection, so every discrimination hypothesis in KRN.MAN.VAL, UNC.ORS and UNC.PROP is measured against the same faults.
+- **REQ-UNC.RDL.GEN-006** The RDL shall provide a seeded generator of calibrated-workpiece cases for the substitution method (ISO 15530-3 designator only), including heterogeneous measuring strategies, so UNC.MODEL.SUBST can be validated without proprietary workpiece data.
 
 ## Interfaces
 
@@ -71,3 +73,5 @@ One leaf per family: LSNULL (least-squares null-space), MZEQ (minimum-zone equio
 | UNC.RDL.GEN.STRESS | Noise-level and outlier stress families (leaf) | 004 | none |
 | UNC.RDL.GEN.XCHECK | Oracle cross-check recording and gating (leaf) | 003 | none |
 | UNC.RDL.GEN.CMD | The rdl.generate_dataset@1 command and family registry (leaf) | 001 | none |
+| UNC.RDL.GEN.MUT | Seeded-fault (mutant) catalogue | 005 | none |
+| UNC.RDL.GEN.SUBST | Substitution-method workpiece generator | 006 | none |

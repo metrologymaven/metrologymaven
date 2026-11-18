@@ -40,6 +40,7 @@ Builds minimum-zone (Chebyshev) test cases whose solution is known by constructi
 - **REQ-UNC.RDL.GEN.MZEQ-001** Each family shall construct an active set whose optimality conditions hold for the chosen solution, with every multiplier positive by at least a recorded margin.
 - **REQ-UNC.RDL.GEN.MZEQ-002** Every inactive point shall lie inside the zone by at least 1e-6 times the zone width [unverified], so the active set is unchanged by rounding to 16 digits.
 - **REQ-UNC.RDL.GEN.MZEQ-003** After rounding, the family shall re-solve on the active set in `Hp`, verify KKT conditions, and fail with `active_set_changed` if verification fails.
+- **REQ-UNC.RDL.GEN.MZEQ-004** The generators shall include a 2D line (straightness) minimum-zone family, `mz.line`, so KRN.MAN.VAL.CROSS can test line minimum-zone fits beyond its toy fixture.
 
 ## Interfaces
 

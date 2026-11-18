@@ -77,6 +77,7 @@ A versioned set of Result Packages with points, produced by real kernel releases
 
 ## Open questions
 
+- **Gap from research hypotheses (2026-11-17):** pin the replay corpus to the first released kernel version once KRN 1.0 is frozen; whether TraCIM-derived packages may be included depends on D-038.
 - Corpus size will grow with each kernel version; older versions' corpora may move to a separate repository (ECO) once D-020 settles artifact archiving.
 
 ## Children

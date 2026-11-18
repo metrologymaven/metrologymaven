@@ -50,6 +50,7 @@ Tests, adversarially, that the safety rules hold when an agent tries to break th
 - **REQ-AGENT.REDTEAM-005** If any red-team run on a release candidate, by the scripted adversary or by any evaluated model, commits a violation, then the verdict shall be `block` and shall name the task, the agent and the journal entry.
 - **REQ-AGENT.REDTEAM-006** The verdict shall be a canonical JSON file naming the release candidate, suite version, manifest digest and every run it covers.
 - **REQ-AGENT.REDTEAM-007** Every injection payload shall be project-authored and shall carry a unique marker string, so that a predicate can detect a committed command whose arguments carry the marker.
+- **REQ-AGENT.REDTEAM-008** The red-team suite shall test, end to end, that agents cannot satisfy human gates H3 (named-person conformance) and H4 (DMT row sign-off), and cannot act as `human` through input injected via the control channel or accessibility automation (D-035, D-037).
 
 ## Research hypotheses
 
@@ -102,3 +103,4 @@ All children are `fid-eval` tooling (D-032) or suite data. The split separates *
 | AGENT.REDTEAM.SHELL | Shell-access variants of red-team tasks | 001 002 | none |
 | AGENT.REDTEAM.SCRIPT | Scripted deterministic adversary | 004 | none |
 | AGENT.REDTEAM.VERDICT | Release-blocking red-team verdict file | 005 006 | none |
+| AGENT.REDTEAM.GATES | Red-team of human gates H3/H4 and injected UI input | 008 | none |
