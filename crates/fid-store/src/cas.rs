@@ -36,6 +36,14 @@ pub const MANIFEST_FORMAT: &str = "fid-chunks@1";
 pub const MAX_MANIFEST_BYTES: u64 = 16 * 1024 * 1024;
 /// Most chunks a manifest may list (REQ-CORE.STO.CAS-009).
 pub const MAX_CHUNKS: usize = 1 << 20;
+/// Most chunks of an object this store writes or reads: 2^15 chunks, 256 GiB. Caps the chunk
+/// list (71 B per chunk) and the manifest (about 74 B per chunk) at about 2.3 MiB each, so the
+/// buffer bound of REQ-CORE.STO.CAS-005 (two chunks plus 1 MiB) holds for every object it
+/// accepts while covering the 50 GB of REQ-CORE.STO.CAS-004. Manifests up to [`MAX_CHUNKS`]
+/// still parse ([`ChunkManifest::parse`]); the store refuses them as `manifest_invalid`.
+pub const MAX_OBJECT_CHUNKS: usize = 1 << 15;
+/// Largest manifest file the store reads for an object (bounds [`MAX_OBJECT_CHUNKS`]).
+const MAX_OBJECT_MANIFEST_BYTES: u64 = MAX_OBJECT_CHUNKS as u64 * 80 + 1024;
 /// Directory below the blob directory that holds the addressed blobs.
 pub const SHA256_DIR: &str = "sha256";
 /// Directory below the blob directory that holds files being written.
@@ -374,8 +382,8 @@ impl BlobStore {
         let mut list_charge = Charge::new(&self.counters, 0);
         let mut size: u64 = 0;
         loop {
-            if chunks.len() >= MAX_CHUNKS {
-                return Err(invalid(format!("object needs more than {MAX_CHUNKS} chunks")));
+            if chunks.len() >= MAX_OBJECT_CHUNKS {
+                return Err(invalid(format!("object needs more than {MAX_OBJECT_CHUNKS} chunks")));
             }
             let blob = self.write_blob(&buf[..filled], opts)?;
             chunks.push(blob.digest);
@@ -529,13 +537,17 @@ impl BlobStore {
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(CasError::NotFound(o.manifest_digest)),
             Err(e) => return Err(e.into()),
         };
-        // Bounded before anything is read (REQ-CORE.STO.CAS-009).
+        // Bounded before anything is read (REQ-CORE.STO.CAS-009, and the object cap that keeps
+        // REQ-CORE.STO.CAS-005's memory bound).
         if len > MAX_MANIFEST_BYTES {
             return Err(invalid(format!("manifest of {len} bytes exceeds {MAX_MANIFEST_BYTES}")));
         }
+        if len > MAX_OBJECT_MANIFEST_BYTES {
+            return Err(invalid(format!("manifest of {len} bytes lists more than {MAX_OBJECT_CHUNKS} chunks")));
+        }
         let bytes = self.read_blob(&o.manifest_digest, MAX_MANIFEST_BYTES)?;
         let _charge = Charge::new(&self.counters, bytes.len() as u64);
-        let manifest = ChunkManifest::parse(&bytes)?;
+        let manifest = ChunkManifest::parse_with_limits(&bytes, MAX_OBJECT_MANIFEST_BYTES, MAX_OBJECT_CHUNKS)?;
         if manifest.size != o.size {
             return Err(invalid(format!("manifest size {} but the reference says {}", manifest.size, o.size)));
         }
@@ -547,19 +559,15 @@ impl BlobStore {
     /// Reads and verifies one blob of at most `limit` bytes.
     fn read_blob(&self, digest: &Digest, limit: u64) -> Result<Vec<u8>, CasError> {
         let mut f = self.open_blob(digest)?;
-        let mut hasher = Sha256::new();
         let mut buf = Vec::new();
         Read::by_ref(&mut f).take(limit).read_to_end(&mut buf)?;
-        hasher.update(&buf);
-        let extra = hash_rest(&mut f, &mut hasher)?;
-        if Digest::from_bytes(hasher.finalize().into()) != *digest {
+        // A file longer than any blob this store writes cannot be the content of its address;
+        // it is refused at once, without reading the rest.
+        if read_byte(&mut f)?.is_some() {
             return Err(CasError::Integrity(*digest));
         }
-        if extra > 0 {
-            return Err(CasError::Io(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("blob {digest} is larger than {limit} bytes, which this store never writes"),
-            )));
+        if Digest::from_bytes(Sha256::digest(&buf).into()) != *digest {
+            return Err(CasError::Integrity(*digest));
         }
         Ok(buf)
     }
@@ -570,17 +578,49 @@ impl BlobStore {
         let target = buf.get_mut(..n).ok_or_else(|| invalid("chunk longer than chunk_size"))?;
         let mut f = self.open_blob(digest)?;
         let got = fill(&mut f, target)?;
-        let mut hasher = Sha256::new();
-        hasher.update(&target[..got]);
-        let extra = hash_rest(&mut f, &mut hasher)?;
         self.counters.chunks_verified.fetch_add(1, Ordering::SeqCst);
-        if Digest::from_bytes(hasher.finalize().into()) != *digest {
+        // Longer than listed: stop reading at once (a planted oversize file is never hashed).
+        if got == n && read_byte(&mut f)?.is_some() {
+            return Err(invalid(format!("chunk {digest} is longer than the manifest lists")));
+        }
+        if Digest::from_bytes(Sha256::digest(&target[..got]).into()) != *digest {
             return Err(CasError::Integrity(*digest));
         }
-        if got != n || extra > 0 {
-            return Err(invalid(format!("chunk {digest} has a different length than the manifest lists")));
+        if got != n {
+            return Err(invalid(format!("chunk {digest} is shorter than the manifest lists")));
         }
         Ok(n)
+    }
+
+    /// True if a regular file of `len` bytes is stored under `digest` and, with `verify`, hashes
+    /// to it. Reads at most `len + 1` bytes.
+    fn existing_matches(&self, digest: &Digest, len: u64, verify: bool) -> Result<bool, CasError> {
+        match fs::symlink_metadata(self.path_of(digest)) {
+            Ok(m) if m.is_file() && m.len() == len => {}
+            Ok(m) if m.is_file() => return Ok(false),
+            Ok(_) => return Err(not_regular()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(e) => return Err(e.into()),
+        }
+        if !verify {
+            return Ok(true);
+        }
+        let mut f = self.open_blob(digest)?;
+        let mut hasher = Sha256::new();
+        let mut scratch = [0u8; 8192];
+        let mut total = 0u64;
+        loop {
+            let k = read_some(&mut f, &mut scratch)?;
+            if k == 0 {
+                break;
+            }
+            total = total.saturating_add(k as u64);
+            if total > len {
+                return Ok(false);
+            }
+            hasher.update(&scratch[..k]);
+        }
+        Ok(total == len && Digest::from_bytes(hasher.finalize().into()) == *digest)
     }
 
     fn open_blob(&self, digest: &Digest) -> Result<File, CasError> {
@@ -602,8 +642,10 @@ impl BlobStore {
         let hex = digest.hex();
         let d1 = self.root.join(SHA256_DIR).join(&hex[0..2]);
         let d2 = d1.join(&hex[2..4]);
-        if self.has_blob(&digest)? {
-            // Deduplicated. A durable put still makes sure the earlier copy is durable.
+        // Deduplicated only if the earlier copy is sound: an earlier non-durable put that was
+        // cut short by a crash can leave a short or garbled file. Its length is always checked,
+        // its content too when durable; anything else is rewritten below by temp file + rename.
+        if self.existing_matches(&digest, bytes.len() as u64, opts.durable)? {
             if opts.durable {
                 // Write access: `FlushFileBuffers` refuses a read-only handle on Windows.
                 OpenOptions::new().write(true).open(&target)?.sync_all()?;
@@ -621,7 +663,7 @@ impl BlobStore {
         if let Err(e) = fs::rename(&tmp, &target) {
             let _ = fs::remove_file(&tmp);
             // A concurrent put of the same content won the race; the address is stored.
-            if !self.has_blob(&digest)? {
+            if !self.existing_matches(&digest, bytes.len() as u64, true)? {
                 return Err(e.into());
             }
         }
@@ -713,20 +755,6 @@ fn read_some(r: &mut impl Read, buf: &mut [u8]) -> io::Result<usize> {
     }
 }
 
-/// Hashes whatever is left in `r` without keeping it; returns its length.
-fn hash_rest(r: &mut impl Read, hasher: &mut Sha256) -> io::Result<u64> {
-    let mut scratch = [0u8; 8192];
-    let mut total = 0u64;
-    loop {
-        let k = read_some(r, &mut scratch)?;
-        if k == 0 {
-            return Ok(total);
-        }
-        hasher.update(&scratch[..k]);
-        total = total.saturating_add(k as u64);
-    }
-}
-
 /// A fresh random temporary file name (32 lowercase hex digits).
 fn temp_name() -> String {
     use std::hash::BuildHasher;
@@ -756,13 +784,9 @@ fn sync_dir(path: &Path) -> io::Result<()> {
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
     const ERROR_ACCESS_DENIED: i32 = 5;
     const ERROR_INVALID_FUNCTION: i32 = 1;
-    let flushed = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
-        .open(path)
-        .and_then(|f| f.sync_all());
-    match flushed {
+    // Failing to open the directory is an error; only the flush call's refusal is tolerated.
+    let dir = OpenOptions::new().read(true).write(true).custom_flags(FILE_FLAG_BACKUP_SEMANTICS).open(path)?;
+    match dir.sync_all() {
         Err(e) if matches!(e.raw_os_error(), Some(ERROR_ACCESS_DENIED | ERROR_INVALID_FUNCTION)) => Ok(()),
         other => other,
     }

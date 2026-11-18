@@ -5,7 +5,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_store::cas::{CHUNK_SIZE, MAX_CHUNKS, MAX_MANIFEST_BYTES};
+use fid_store::cas::{CHUNK_SIZE, MAX_CHUNKS, MAX_MANIFEST_BYTES, MAX_OBJECT_CHUNKS};
 use fid_store::{Address, BlobStore, CasError, ChunkManifest, ObjectRef, PutOpts};
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
@@ -397,7 +397,94 @@ fn fake_digest(i: u64) -> String {
     format!("sha256:{i:064x}")
 }
 
+/// Writes `bytes` straight to the path of their digest, bypassing `put`.
+fn plant(store: &BlobStore, bytes: &[u8]) -> Digest {
+    let digest = Digest::from_bytes(Sha256::digest(bytes).into());
+    let path = store.path_of(&digest);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, bytes).unwrap();
+    digest
+}
+
+/// REQ-005: the store refuses objects above `MAX_OBJECT_CHUNKS` chunks (a manifest that the
+/// spec-level parser still accepts), so the chunk list never breaks the buffer bound.
+#[test]
+fn object_cap_keeps_memory_bound() {
+    let n = MAX_OBJECT_CHUNKS as u64 + 1;
+    let chunks: Vec<String> = (0..n).map(fake_digest).collect();
+    let text = manifest_text(n * CHUNK_SIZE, CHUNK_SIZE, &chunks);
+    assert!(text.len() as u64 <= MAX_MANIFEST_BYTES);
+    assert!(ChunkManifest::parse(&text).is_ok());
+    let t = TempDir::new("cap");
+    let store = t.store();
+    let digest = plant(&store, &text);
+    let addr = Address::Object(ObjectRef { manifest_digest: digest, size: n * CHUNK_SIZE });
+    assert_eq!(store.stream(&addr, &mut Vec::new()).unwrap_err().code(), "manifest_invalid");
+    assert_eq!(store.read_range(&addr, 0..1).unwrap_err().code(), "manifest_invalid");
+}
+
+/// Dedupe never trusts a damaged earlier copy: a truncated file (any put) or a same-length
+/// garbled file (durable put) at the address is rewritten, and the content reads back.
+#[test]
+fn dedupe_repairs_damaged_existing_file() {
+    let t = TempDir::new("dedupe");
+    let store = t.store();
+    let content = bytes(11, MIB);
+    let a = store.put_bytes(&content, PutOpts::default()).unwrap();
+    let path = store.path_of(&a.digest());
+
+    // Truncated, as after a crash following a non-durable put: even a non-durable put repairs it.
+    std::fs::write(&path, &content[..1000]).unwrap();
+    assert_eq!(store.get(&a).unwrap_err().code(), "integrity");
+    assert_eq!(store.put_bytes(&content, PutOpts::default()).unwrap(), a);
+    assert_eq!(store.get(&a).unwrap(), content);
+
+    // Empty file at the address.
+    std::fs::write(&path, b"").unwrap();
+    assert_eq!(store.put_bytes(&content, PutOpts { durable: true }).unwrap(), a);
+    assert_eq!(store.get(&a).unwrap(), content);
+
+    // Same length, one byte garbled: a durable put re-hashes and repairs it.
+    flip_byte(&path, 500);
+    assert_eq!(store.get(&a).unwrap_err().code(), "integrity");
+    assert_eq!(store.put_bytes(&content, PutOpts { durable: true }).unwrap(), a);
+    assert_eq!(store.get(&a).unwrap(), content);
+
+    // A chunk of an object, garbled, is repaired by a durable put of the object.
+    let obj = store.put(Stream::new(12, CHUNK_SIZE + 9), PutOpts::default()).unwrap();
+    let Address::Object(o) = obj else { panic!("object") };
+    let first = store.manifest(&o).unwrap().chunks[0];
+    flip_byte(&store.path_of(&first), 3);
+    assert_eq!(store.get(&obj).unwrap_err().code(), "integrity");
+    assert_eq!(store.put(Stream::new(12, CHUNK_SIZE + 9), PutOpts { durable: true }).unwrap(), obj);
+    assert_eq!(store.get(&obj).unwrap(), bytes(12, CHUNK_SIZE + 9));
+    assert!(files_under(&store.root().join("tmp")).is_empty());
+}
+
+/// Planted oversize files are refused without being read to the end.
+#[test]
+fn oversize_planted_files_are_refused() {
+    let t = TempDir::new("oversize");
+    let store = t.store();
+    // A blob address holding more than any blob this store writes (16 MiB + 1).
+    let big = vec![0u8; (MAX_MANIFEST_BYTES + 1) as usize];
+    let d = plant(&store, &big);
+    let blob = Address::Blob(fid_store::BlobRef { digest: d, size: MAX_MANIFEST_BYTES + 1 });
+    assert_eq!(store.get(&blob).unwrap_err().code(), "integrity");
+    // A chunk longer than its manifest lists.
+    let long = plant(&store, &[1u8; 30]);
+    let text = manifest_text(20, 10, &[long.as_str().to_string(), long.as_str().to_string()]);
+    let m = store.put_bytes(&text, PutOpts::default()).unwrap();
+    let obj = Address::Object(ObjectRef { manifest_digest: m.digest(), size: 20 });
+    assert_eq!(store.get(&obj).unwrap_err().code(), "manifest_invalid");
+}
+
 /// AC-7: a stored manifest listing 2^20 + 1 chunks fails with `manifest_invalid`.
+///
+/// With 71-byte digests such a manifest (about 76 MB) is far above the 16 MiB byte limit, so
+/// this test trips the byte limit first. The chunk-count limit on its own is covered by
+/// `req9_malformed_manifests_are_refused_without_panic` through `parse_with_limits`, and the
+/// store's tighter object cap by `object_cap_keeps_memory_bound`.
 #[test]
 fn ac7_too_many_chunks_is_manifest_invalid() {
     let n = MAX_CHUNKS as u64 + 1;
