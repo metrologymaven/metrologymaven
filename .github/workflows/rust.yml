@@ -53,3 +53,4 @@ jobs:
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
           python tools/check_command_defs.py
+          python tools/check_knp1_findings.py
