@@ -1,0 +1,4 @@
+Synthetic test fixtures for spec node OUTR.BRAND.ASSET.ATTR (CC-BY-4.0).
+All files are project-made by make_fixtures.py: 1x1 PNGs, a one-rectangle SVG and font stub
+files with made-up metadata. No third-party image, font or logo is included; names such as
+"Examplo Sans" and "Synthetic Foundry" are invented.

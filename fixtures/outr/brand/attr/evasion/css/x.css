@@ -1,0 +1,6 @@
+/* Synthetic fixture: escaped and obfuscated remote sources. */
+@import "\68 ttps://fonts.example.net/i.css";
+@\66ont-face { src: u\72l(https://fonts.example.net/j.woff2) }
+@font-face { font-family: "}"; src: url(https://fonts.example.net/k.woff2) }
+@import url(https\3a //fonts.example.net/l.css);
+@font-face { src: url("/fonts/local.woff2") }
