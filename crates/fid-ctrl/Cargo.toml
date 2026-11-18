@@ -1,0 +1,17 @@
+[package]
+name = "fid-ctrl"
+description = "Metrology Maven control-channel transport: loopback listener, discovery file, bounded JSON-lines framing (spec node AUTO.CTRL.WIRE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Only workspace crates: canonical JSON (fid-canon) and the shared envelope (fid-surface).
+# Networking and threads are std only.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-surface = { path = "../fid-surface" }
+
+[lints]
+workspace = true
