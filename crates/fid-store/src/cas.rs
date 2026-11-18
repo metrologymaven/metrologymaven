@@ -102,7 +102,11 @@ pub enum CasError {
     /// A chunk manifest is malformed, too large or disagrees with its chunks.
     ManifestInvalid(String),
     /// A range read past the end of the content.
-    OutOfRange { start: u64, end: u64, size: u64 },
+    OutOfRange {
+        start: u64,
+        end: u64,
+        size: u64,
+    },
     Io(io::Error),
 }
 
@@ -507,7 +511,8 @@ impl BlobStore {
                     let chunk_start = i * cs;
                     let lo = start.max(chunk_start) - chunk_start;
                     let hi = end.min(chunk_start + n) - chunk_start;
-                    let piece = buf.get(lo as usize..hi as usize).ok_or_else(|| invalid("chunk shorter than listed"))?;
+                    let piece =
+                        buf.get(lo as usize..hi as usize).ok_or_else(|| invalid("chunk shorter than listed"))?;
                     out.extend_from_slice(piece);
                 }
                 Ok(out)
@@ -659,16 +664,14 @@ fn refuse_link(path: &Path, must_be_dir: bool) -> Result<(), CasError> {
 fn make_dir(path: &Path) -> Result<bool, CasError> {
     match fs::create_dir(path) {
         Ok(()) => Ok(true),
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            match fs::symlink_metadata(path) {
-                Ok(m) if m.is_dir() && !m.file_type().is_symlink() => Ok(false),
-                Ok(_) => Err(CasError::Io(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "blob store directory is a link or a file",
-                ))),
-                Err(e) => Err(e.into()),
-            }
-        }
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => match fs::symlink_metadata(path) {
+            Ok(m) if m.is_dir() && !m.file_type().is_symlink() => Ok(false),
+            Ok(_) => Err(CasError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "blob store directory is a link or a file",
+            ))),
+            Err(e) => Err(e.into()),
+        },
         Err(e) => Err(e.into()),
     }
 }
