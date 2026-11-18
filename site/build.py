@@ -93,6 +93,8 @@ def load():
             per[dom(n)][n.status] += 1
             if n.meta.get("needs_expert") and n.status == "open":
                 per[dom(n)]["expert"] += 1
+            if n.lst("built_in"):
+                per[dom(n)]["built"] += 1
     phase_leaves = Counter(n.meta.get("phase") for n in nodes if n.status == "leaf")
     oos_patterns = [p for p, _ in oos]
     seed_rows = defaultdict(lambda: Counter())
@@ -112,6 +114,7 @@ def load():
     return {"nodes": nodes, "by_id": by_id, "domains": domains, "per": per, "phase_leaves": phase_leaves,
             "seeds": seeds, "seed_rows": seed_rows, "decisions": decisions, "queue": queue,
             "leaves": sum(1 for n in nodes if n.status == "leaf"),
+            "built": sum(1 for n in nodes if n.lst("built_in")),
             "open": sum(1 for n in nodes if n.status == "open"),
             "rev": git_rev(), "date": dt.date.today().isoformat()}
 
@@ -207,6 +210,7 @@ def home(d):
 <div class="stat"><b>{len(s['domains'])}</b><small>capability domains</small></div>
 <div class="stat"><b>{len(s['nodes']):,}</b><small>spec nodes</small></div>
 <div class="stat"><b>{s['leaves']:,}</b><small>ready-to-build work orders</small></div>
+<div class="stat"><b>{s['built']:,}</b><small>work orders built in code</small></div>
 <div class="stat"><b>{len(s['seeds'])}</b><small>competitor features tracked</small></div>
 <div class="stat"><b>{sum(len(v) for v in s['queue'].values())}</b><small>tasks waiting for experts</small></div>
 </div>
@@ -233,7 +237,7 @@ def app_page(a, d):
         n = d["by_id"].get(dom)
         c = per[dom]
         rows.append(f'<tr><td><span class="mono">{dom}</span> {e(n.meta.get("title", "") if n else "")}</td>'
-                    f'<td class="n">{c["leaf"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td></tr>')
+                    f'<td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td></tr>')
         gaps += [x for x in d["nodes"] if x.id.split(".")[0] == dom and x.status == "open"]
     seeds = ""
     if a["seeds"]:
@@ -260,7 +264,7 @@ def app_page(a, d):
 <section class="sheet">{fcf("S", "STATUS", "GENERATED")}
 <h2>Where it stands</h2>
 <p class="muted">Generated from the spec tree at <span class="mono">{d['rev']}</span>. "Ready" means a work order is written and can be built; it does not mean the feature exists yet.</p>
-<div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Still open</th><th>Needs expert</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
+<div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Built</th><th>Still open</th><th>Needs expert</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
 {seeds}
 <h3>Known gaps</h3>
 <details><summary>{len(gaps)} open spec nodes in this app's domains</summary><ul class="clean">{gap_list}{more}</ul></details>
@@ -308,7 +312,7 @@ def status(d):
     for x in d["domains"]:
         c = d["per"][x.id]
         rows.append(f'<tr><td><span class="mono">{x.id}</span></td><td>{e(x.meta.get("title", ""))}</td><td class="n">{x.meta.get("phase", "")}</td>'
-                    f'<td class="n">{c["nodes"]}</td><td class="n">{c["leaf"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td>'
+                    f'<td class="n">{c["nodes"]}</td><td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td>'
                     f'<td><div class="bar"><i style="width:{100 * c["leaf"] / mx:.0f}%"></i></div></td></tr>')
     srows = "".join(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td><td class="n">{c["uncovered"]}</td></tr>'
                     for f, c in sorted(d["seed_rows"].items()))
@@ -320,8 +324,8 @@ def status(d):
 <h1>Project status</h1>
 <p class="lead">Generated from the repository at commit <a class="mono" href="{REPO}/commit/{d['rev']}">{d['rev']}</a> on {d['date']}. Nothing on this page is written by hand.</p>{NOTICE}</section>
 <section class="sheet">{fcf("1", "SPEC TREE BY DOMAIN")}
-<div class="stats"><div class="stat"><b>{len(d['nodes']):,}</b><small>nodes</small></div><div class="stat"><b>{d['leaves']:,}</b><small>leaves (ready to build)</small></div><div class="stat"><b>{d['open']}</b><small>open nodes</small></div><div class="stat"><b>{acc}/{len(d['decisions'])}</b><small>decisions accepted</small></div></div>
-<div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Open</th><th>Expert</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
+<div class="stats"><div class="stat"><b>{len(d['nodes']):,}</b><small>nodes</small></div><div class="stat"><b>{d['leaves']:,}</b><small>leaves (ready to build)</small></div><div class="stat"><b>{d['built']:,}</b><small>leaves built in code</small></div><div class="stat"><b>{d['open']}</b><small>open nodes</small></div><div class="stat"><b>{acc}/{len(d['decisions'])}</b><small>decisions accepted</small></div></div>
+<div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Built</th><th>Open</th><th>Expert</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
 <p class="muted">Full tree: <a href="{REPO}/blob/main/generated/INDEX.md">generated/INDEX.md</a>.</p>
 </section>
 <section class="sheet">{fcf("2", "COMPETITOR COVERAGE")}
