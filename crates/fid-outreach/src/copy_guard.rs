@@ -300,11 +300,10 @@ pub fn parse_checklist(table: &toml::Table, path: &str) -> Result<BTreeSet<Strin
 pub fn parse_record(table: &toml::Table, path: &str) -> Result<Record, GuardError> {
     let bad = |reason: &str| input_err(path.to_string(), reason.to_string());
     let release = non_empty_str(table, "release").ok_or_else(|| bad("no `release`"))?.to_string();
-    let copied_text = table
-        .get("answers")
-        .and_then(toml::Value::as_table)
-        .and_then(|a| a.get(COPIED_TEXT))
-        .map(|v| v.as_table().and_then(|t| t.get("result")).and_then(toml::Value::as_str).unwrap_or("").to_string());
+    let copied_text =
+        table.get("answers").and_then(toml::Value::as_table).and_then(|a| a.get(COPIED_TEXT)).map(|v| {
+            v.as_table().and_then(|t| t.get("result")).and_then(toml::Value::as_str).unwrap_or("").to_string()
+        });
     Ok(Record { release, copied_text })
 }
 
@@ -403,8 +402,8 @@ pub fn scan_reference_sets(root: &Path) -> Result<Vec<String>, GuardError> {
         for (name, path, ft) in entries {
             let rel = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
             if ft.is_dir() {
-                let skipped = SKIPPED_DIRS.contains(&name.as_str())
-                    || (depth == 0 && SKIPPED_ROOT_DIRS.contains(&name.as_str()));
+                let skipped =
+                    SKIPPED_DIRS.contains(&name.as_str()) || (depth == 0 && SKIPPED_ROOT_DIRS.contains(&name.as_str()));
                 if skipped {
                     continue;
                 }

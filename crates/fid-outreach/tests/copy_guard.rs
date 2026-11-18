@@ -253,20 +253,22 @@ fn build_dirs_are_skipped_only_at_the_scan_root() {
 #[test]
 fn escaped_kind_declarations_are_parsed() {
     let p = Path::new("x");
-    // `_` is `_`: the value spells incumbent_text without containing it literally.
-    assert!(declares_incumbent_text(br#"{"kind":"incumbent_text"}"#, "json", p).unwrap());
+    // `~` stands for a backslash, so the escapes below stay plain ASCII in this source file.
+    let esc = |s: &str| s.replace('~', "\\").into_bytes();
+    // `~u005f` is `_`: the value spells incumbent_text without containing it literally.
+    assert!(declares_incumbent_text(&esc(r#"{"kind":"incumbent~u005ftext"}"#), "json", p).unwrap());
     // Key and value both escaped: neither `kind` nor `incumbent_text` appears literally.
-    assert!(declares_incumbent_text(br#"{"kind":"incumbent_text"}"#, "json", p).unwrap());
-    assert!(declares_incumbent_text(br#"kind = "incumbent_text""#, "toml", p).unwrap());
-    assert!(declares_incumbent_text(br#""kind" = "\U00000069ncumbent_text""#, "toml", p).unwrap());
+    assert!(declares_incumbent_text(&esc(r#"{"~u006bind":"~u0069ncumbent_text"}"#), "json", p).unwrap());
+    assert!(declares_incumbent_text(&esc(r#"kind = "incumbent~u005Ftext""#), "toml", p).unwrap());
+    assert!(declares_incumbent_text(&esc(r#""~u006bind" = "~U00000069ncumbent_text""#), "toml", p).unwrap());
     // Escapes spelling something else are not a declaration.
-    assert!(!declares_incumbent_text(br#"{"kind":"café"}"#, "json", p).unwrap());
+    assert!(!declares_incumbent_text(&esc(r#"{"kind":"caf~u00e9"}"#), "json", p).unwrap());
     // Unparsable with `kind` and an escape fails closed; with an escape only it is ignored.
-    assert_eq!(declares_incumbent_text(br#"{"kind":"i"#, "json", p).unwrap_err().code(), "input_parse");
-    assert!(!declares_incumbent_text(br#"{"a":"\u00"#, "json", p).unwrap());
+    assert_eq!(declares_incumbent_text(&esc(r#"{"kind":"~u0069"#), "json", p).unwrap_err().code(), "input_parse");
+    assert!(!declares_incumbent_text(&esc(r#"{"a":"~u00"#), "json", p).unwrap());
     // Through the scan as well.
     let base = scratch("escaped");
-    std::fs::write(base.join("e.json"), br#"{"kind":"incumbent_text"}"#).unwrap();
+    std::fs::write(base.join("e.json"), esc(r#"{"kind":"incumbent~u005ftext"}"#)).unwrap();
     assert_eq!(scan_reference_sets(&base).unwrap(), ["e.json"]);
     let _ = std::fs::remove_dir_all(&base);
 }
