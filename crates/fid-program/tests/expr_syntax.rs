@@ -301,7 +301,7 @@ fn gen(rng: &mut Rng, depth: usize, budget: &mut usize) -> Expr {
     let leaf = depth == 0 || *budget == 0 || rng.below(4) == 0;
     *budget = budget.saturating_sub(1);
     let span = Span::default();
-    let name = |rng: &mut Rng| Name::new(*rng.pick(&NAMES[..])).unwrap();
+    let name = |rng: &mut Rng| Name::new(NAMES[rng.below(NAMES.len())]).unwrap();
     let kind = if leaf {
         match rng.below(7) {
             0 => ExprKind::Int(if rng.below(4) == 0 { (rng.next() >> 1) as i64 } else { rng.below(1000) as i64 }),
@@ -309,7 +309,7 @@ fn gen(rng: &mut Rng, depth: usize, budget: &mut usize) -> Expr {
             2 => {
                 let text =
                     if rng.below(2) == 0 { digits(rng, 3) } else { format!("{}.{}", digits(rng, 2), digits(rng, 3)) };
-                ExprKind::Qty(DecText::new(&text).unwrap(), UnitSym::new(*rng.pick(&UNITS[..])).unwrap())
+                ExprKind::Qty(DecText::new(&text).unwrap(), UnitSym::new(UNITS[rng.below(UNITS.len())]).unwrap())
             }
             3 => {
                 let chars: Vec<char> = CHARS.chars().collect();
