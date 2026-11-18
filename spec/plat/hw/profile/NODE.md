@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-platform]
 satisfies: [REQ-PLAT.HW-001]
 covers: []
 depends_on: []

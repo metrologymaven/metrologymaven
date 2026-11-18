@@ -1,0 +1,23 @@
+# PLAT.HW.PROFILE AC-4 (hand-written): the minimum profile spells its RAM field `ram_gb`
+# instead of `ram_gib`.
+# Expected: exit 1; the first diagnostic is UnknownField { field: ram_gb } in profiles.minimum,
+# followed by the now-missing ram_gib (Parse: profiles.minimum.ram_gib is missing).
+schema_version = 1
+
+[profiles.minimum]
+cores = 4
+ram_gb = 16
+gpu_class = "integrated"
+vram_gib = 2
+storage_free_gib = 20
+display = [1920, 1080]
+cpu_level = { x86_64 = "x86-64-v2" }
+
+[profiles.recommended]
+cores = 8
+ram_gib = 32
+gpu_class = "discrete_mid"
+vram_gib = 8
+storage_free_gib = 100
+display = [2560, 1440]
+cpu_level = { x86_64 = "x86-64-v3" }

@@ -10,7 +10,8 @@ use std::process::{Command, ExitCode};
 const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layers.toml>]\n       \
                      cargo xtask datasets-check --catalogue <toml> --domains <file>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
-                     cargo xtask plat-matrix lint-tiers [<file>]";
+                     cargo xtask plat-matrix lint-tiers [<file>]
+                            cargo xtask plat-hw validate [--file <path>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -21,7 +22,8 @@ fn main() -> ExitCode {
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check") => datasets_check(&args),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
-        Some("plat-matrix") => plat_matrix(&args),
+        Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
+        Some("plat-hw") => fid_platform(&args, "plat-hw"),
         Some("pins") => pins::cli(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
@@ -49,9 +51,10 @@ fn datasets_check(args: &[String]) -> ExitCode {
     }
 }
 
-/// PLAT.MATRIX.FILE: runs `fid-platform plat-matrix ...` through Cargo, for the same layer
-/// reason as `datasets-check` (`fid-platform` is a `tool` crate).
-fn plat_matrix(args: &[String]) -> ExitCode {
+/// PLAT.MATRIX.FILE and PLAT.HW.PROFILE: runs `fid-platform plat-matrix ...` or
+/// `fid-platform plat-hw ...` through Cargo, for the same layer reason as `datasets-check`
+/// (`fid-platform` is a `tool` crate).
+fn fid_platform(args: &[String], group: &str) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
     let status = Command::new(cargo)
@@ -61,7 +64,7 @@ fn plat_matrix(args: &[String]) -> ExitCode {
     match status {
         Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
         Err(e) => {
-            eprintln!("plat-matrix: cannot run cargo: {e}");
+            eprintln!("{group}: cannot run cargo: {e}");
             ExitCode::from(2)
         }
     }
