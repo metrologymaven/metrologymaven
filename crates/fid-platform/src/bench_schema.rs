@@ -808,10 +808,19 @@ impl BenchResult {
         ])
     }
 
-    /// RFC 8785 canonical JSON bytes: the same value always gives the same bytes. Fails only
-    /// on a non-finite statistic.
-    pub fn to_json(&self) -> Result<Vec<u8>, CanonError> {
-        fid_canon::to_canonical_bytes(&self.to_value())
+    /// RFC 8785 canonical JSON bytes: the same value always gives the same bytes.
+    ///
+    /// The bytes are checked with [`validate_result`] before they are returned, so a tool
+    /// can never emit a document the reader (or the exported JSON Schema) rejects
+    /// (REQ-PLAT.HW.SCHEMA-005): a non-finite or negative statistic, status `ok` without
+    /// `min <= median <= max`, statistics on a non-`ok` metric, a bad name, an empty context
+    /// field, a duplicate workload or metric, or an unsupported `schema_version` gives the
+    /// same error the reader gives.
+    pub fn to_json(&self) -> Result<Vec<u8>, SchemaError> {
+        let bytes = fid_canon::to_canonical_bytes(&self.to_value())
+            .map_err(|e| parse_err(format!("cannot serialise: {}", e.code())))?;
+        validate_result(&bytes)?;
+        Ok(bytes)
     }
 }
 

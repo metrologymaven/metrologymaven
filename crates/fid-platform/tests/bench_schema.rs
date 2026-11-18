@@ -365,7 +365,52 @@ fn ac5_serialisation_is_byte_identical_with_fixed_key_order() {
     assert_eq!(validate_result(&a).unwrap(), r);
     let mut nan = r;
     nan.workloads[0].metrics[0].median = Some(f64::NAN);
-    assert!(nan.to_json().is_err());
+    assert!(matches!(nan.to_json(), Err(SchemaError::Parse { msg, .. }) if msg.contains("non_finite_number")));
+}
+
+/// REQ-PLAT.HW.SCHEMA-005: the writer refuses every document its own reader would reject.
+#[test]
+fn to_json_refuses_documents_the_reader_rejects() {
+    let parse_err = |f: &dyn Fn(&mut BenchResult), needle: &str| {
+        let mut r = built();
+        f(&mut r);
+        let e = r.to_json().unwrap_err();
+        assert!(matches!(&e, SchemaError::Parse { msg, .. } if msg.contains(needle)), "{needle}: {e}");
+    };
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].median = None, "status ok needs");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].max = None, "status ok needs");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].median = Some(0.9), "min <= median <= max");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].min = Some(0.6), "min <= median <= max");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].min = Some(-0.5), "non-negative");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].max = Some(f64::INFINITY), "non_finite_number");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[1].median = Some(1.0), "to be null");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[1].status = Status::Ok, "status ok needs");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[1].name = "t".into(), "duplicate metric name");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics[0].name = "Bad Name".into(), "does not match");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].id = String::new(), "does not match");
+    parse_err(&|r: &mut BenchResult| r.workloads[0].metrics.clear(), "is empty");
+    parse_err(&|r: &mut BenchResult| r.workloads.clear(), "workloads is empty");
+    parse_err(&|r: &mut BenchResult| r.context.gpu_driver_version = String::new(), "gpu_driver_version");
+
+    let mut r = built();
+    r.workloads[0].metrics[0].repetitions = 0;
+    assert_eq!(r.to_json().unwrap_err(), SchemaError::BadRepetitions { workload: "w".into(), found: 0 });
+    let mut r = built();
+    r.workloads[0].metrics[1].repetitions = 101;
+    assert_eq!(r.to_json().unwrap_err(), SchemaError::BadRepetitions { workload: "w".into(), found: 101 });
+    let mut r = built();
+    r.schema_version = 2;
+    assert_eq!(r.to_json().unwrap_err(), SchemaError::UnsupportedSchema { found: 2 });
+    let mut r = built();
+    let w = r.workloads[0].clone();
+    r.workloads.push(w);
+    assert_eq!(r.to_json().unwrap_err(), SchemaError::DuplicateWorkload { id: "w".into() });
+
+    // The boundaries the reader accepts are written: min == median == max, all zero.
+    let mut r = built();
+    let m = &mut r.workloads[0].metrics[0];
+    (m.median, m.min, m.max, m.repetitions) = (Some(0.0), Some(0.0), Some(0.0), 100);
+    assert_eq!(validate_result(&r.to_json().unwrap()).unwrap(), r);
 }
 
 #[test]
