@@ -21,6 +21,10 @@
       "exit": 0,
       "findings": []
     },
+    "v2.0.0-backdated": {
+      "exit": 0,
+      "findings": []
+    },
     "dup-name": {
       "exit": 1,
       "findings": [
@@ -62,6 +66,44 @@
         "sem.focus.ring": "renamed"
       },
       "findings": []
+    },
+    "v1.0.0..v2.0.0-backdated": {
+      "exit": 1,
+      "changed": {
+        "space.2": "renamed",
+        "space.3": "added"
+      },
+      "findings": [
+        "PKG-DEPRECATION-EARLY space.2"
+      ]
+    },
+    "v1.0.0..v1.1.0-breaking-log": {
+      "exit": 1,
+      "changed": {
+        "motion.fast": "value-changed"
+      },
+      "findings": [
+        "PKG-BREAKING-MINOR motion.fast"
+      ]
+    },
+    "v1.0.0..v1.1.0-type": {
+      "exit": 1,
+      "changed": {
+        "space.2": "type-changed"
+      },
+      "findings": [
+        "PKG-BREAKING-MINOR space.2",
+        "PKG-CHANGELOG-CLASS space.2"
+      ]
+    },
+    "v1.0.0..v1.1.0-kind": {
+      "exit": 1,
+      "changed": {
+        "icon.check": "kind-changed"
+      },
+      "findings": [
+        "PKG-BREAKING-MINOR icon.check"
+      ]
     }
   },
   "resolve": {

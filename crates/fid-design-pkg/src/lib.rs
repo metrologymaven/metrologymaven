@@ -43,6 +43,9 @@ pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_JSON_DEPTH: usize = 32;
 /// Most alias and deprecation hops followed when resolving one name.
 pub const MAX_ALIAS_DEPTH: usize = 16;
+/// Most bytes of parsed files (manifest, index, changelog, deprecations, token files) kept
+/// in memory for one package.
+pub const MAX_RETAINED_BYTES: usize = 64 * 1024 * 1024;
 /// Most files in one package.
 pub const MAX_FILES: usize = 20_000;
 /// Deepest directory nesting below the root.
@@ -269,7 +272,7 @@ impl Package {
     /// Reads the package at `root`. Returns `Err` only when the root or a file cannot be
     /// read or exceeds a limit; every content problem becomes a finding.
     pub fn load(root: &Path) -> Result<Package, LoadError> {
-        let files = walk(root)?;
+        let files = walk(root, MAX_RETAINED_BYTES)?;
         let mut pkg = Package::default();
         let mut f = Vec::new();
 
@@ -658,6 +661,10 @@ fn parse_deprecations(text: &str, f: &mut Vec<Finding>) -> BTreeMap<String, Depr
 struct Files {
     /// Text files the reader parses, by package-relative path with `/` separators.
     text: BTreeMap<String, String>,
+    /// Total bytes in `text`.
+    retained: usize,
+    /// Limit on `retained` ([`MAX_RETAINED_BYTES`]).
+    budget: usize,
     findings: Vec<Finding>,
 }
 
@@ -686,12 +693,12 @@ const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 
 /// Sorted walk of `root`; checks REQ-UX.SYSTEM.PKG-001 (only UTF-8 text files and PNG) and
 /// keeps the text of the files the reader parses. Symbolic links are refused, not followed.
-fn walk(root: &Path) -> Result<Files, LoadError> {
+fn walk(root: &Path, budget: usize) -> Result<Files, LoadError> {
     let meta = std::fs::metadata(root).map_err(|e| io_err(root, e))?;
     if !meta.is_dir() {
         return Err(LoadError::Io { path: root.display().to_string(), reason: "not a directory".to_string() });
     }
-    let mut out = Files { text: BTreeMap::new(), findings: Vec::new() };
+    let mut out = Files { text: BTreeMap::new(), retained: 0, budget, findings: Vec::new() };
     let mut count = 0usize;
     let mut stack: Vec<(PathBuf, String, usize)> = vec![(root.to_path_buf(), String::new(), 0)];
     while let Some((dir, rel, depth)) = stack.pop() {
@@ -735,6 +742,13 @@ fn check_file(path: &Path, rel: &str, out: &mut Files) -> Result<(), LoadError> 
             let bytes = read_limited(path)?;
             match String::from_utf8(bytes) {
                 Ok(text) if is_parsed(rel) => {
+                    out.retained = out.retained.saturating_add(text.len());
+                    if out.retained > out.budget {
+                        return Err(LoadError::Limit(format!(
+                            "parsed package files exceed {} bytes in total (at {rel})",
+                            out.budget
+                        )));
+                    }
                     out.text.insert(rel.to_string(), text);
                 }
                 Ok(_) => {}
@@ -768,6 +782,22 @@ mod tests {
         for bad in ["", "A", "1a", "a-b", "a..b", "a.", ".a", "a.B", "a_b", "a.b c", "é"] {
             assert!(!is_valid_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn retained_bytes_are_budgeted() {
+        let dir = std::env::temp_dir().join(format!("fid-design-pkg-budget-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let tokens = dir.join("tokens");
+        std::fs::create_dir_all(&tokens).unwrap_or_default();
+        let body = "{\"a\": {\"$type\": \"duration\", \"$value\": \"1ms\"}}";
+        std::fs::write(tokens.join("a.tokens.json"), body).unwrap_or_default();
+        std::fs::write(tokens.join("b.tokens.json"), body).unwrap_or_default();
+        let small = walk(&dir, body.len() + 1);
+        let enough = walk(&dir, 2 * body.len());
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(matches!(small, Err(LoadError::Limit(_))), "{:?}", small.err());
+        assert!(enough.is_ok());
     }
 
     #[test]

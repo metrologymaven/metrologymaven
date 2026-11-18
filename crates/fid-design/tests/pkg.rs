@@ -183,6 +183,27 @@ fn ac6_duplicate_name_across_kinds_fails() {
 }
 
 #[test]
+fn backdated_deprecation_in_new_package_does_not_justify_removal() {
+    check_case("v2.0.0-backdated");
+    diff_case("v1.0.0..v2.0.0-backdated");
+}
+
+#[test]
+fn breaking_changelog_entry_in_minor_release_fails() {
+    diff_case("v1.0.0..v1.1.0-breaking-log");
+}
+
+#[test]
+fn type_change_is_breaking_only() {
+    diff_case("v1.0.0..v1.1.0-type");
+}
+
+#[test]
+fn kind_change_is_breaking_only() {
+    diff_case("v1.0.0..v1.1.0-kind");
+}
+
+#[test]
 fn reports_are_byte_identical_across_runs() {
     let a = run(&["pkg-diff", "--from", &p("v1.0.0"), "--to", &p("v1.1.0-removed"), "--json"]);
     let b = run(&["pkg-diff", "--from", &p("v1.0.0"), "--to", &p("v1.1.0-removed"), "--json"]);

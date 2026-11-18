@@ -151,6 +151,36 @@ def build():
     log200 = "## 2.0.0\n\n- breaking: sem.focus.ring - removed; use sem.focus.outline\n\n"
     pk["v2.0.0"] = package("2.0.0", PRIMITIVE, sem200, SPACE_MOTION, dep110, log200 + LOG_110 + LOG_100)
 
+    # v2.0.0-backdated: from v1.0.0 (no deprecations), space.2 is removed in a major release and
+    # the new package adds a deprecation entry backdated to 1.0.0. Only the released package's
+    # entries count, so the removal is refused (PKG-DEPRECATION-EARLY); the backdated entry still
+    # names the replacement space.3, so the diff classifies space.2 as renamed.
+    space_bd = copy.deepcopy(SPACE_MOTION)
+    space_bd["space"]["3"] = space_bd["space"].pop("2")
+    dep_bd = [{"name": "space.2", "replacement": "space.3", "since": "1.0.0", "remove_after": "1.1.0"}]
+    log_bd = "## 2.0.0\n\n- additive: space.3 - replaces space.2\n- breaking: space.2 - removed; use space.3\n\n"
+    pk["v2.0.0-backdated"] = package("2.0.0", PRIMITIVE, SEMANTIC, space_bd, dep_bd, log_bd + LOG_100)
+
+    # v1.1.0-breaking-log: from v1.0.0, motion.fast 120ms -> 100ms logged as `breaking` in a
+    # minor release: PKG-BREAKING-MINOR.
+    space_bl = copy.deepcopy(SPACE_MOTION)
+    space_bl["motion"]["fast"]["$value"] = "100ms"
+    log_bl = "## 1.1.0\n\n- breaking: motion.fast - slower\n\n"
+    pk["v1.1.0-breaking-log"] = package("1.1.0", PRIMITIVE, SEMANTIC, space_bl, [], log_bl + LOG_100)
+
+    # v1.1.0-type: from v1.0.0, space.2 changes $type dimension -> number in a minor release,
+    # logged as `fix`: PKG-BREAKING-MINOR (type change) and PKG-CHANGELOG-CLASS (fix, not breaking).
+    space_ty = copy.deepcopy(SPACE_MOTION)
+    space_ty["space"]["2"] = {"$type": "number", "$value": 8}
+    log_ty = "## 1.1.0\n\n- fix: space.2 - now a plain number\n\n"
+    pk["v1.1.0-type"] = package("1.1.0", PRIMITIVE, SEMANTIC, space_ty, [], log_ty + LOG_100)
+
+    # v1.1.0-kind: from v1.0.0, icon.check is re-listed as a component in a minor release,
+    # logged as `breaking`: PKG-BREAKING-MINOR once.
+    others_kind = [(n, "component" if n == "icon.check" else k) for n, k in OTHER_NAMES]
+    log_kind = "## 1.1.0\n\n- breaking: icon.check - now a component\n\n"
+    pk["v1.1.0-kind"] = package("1.1.0", PRIMITIVE, SEMANTIC, SPACE_MOTION, [], log_kind + LOG_100, others=others_kind)
+
     # dup-name: an icon and a token both named status.ok.
     status = {"status": {"ok": {"$type": "color", "$value": "#2e8540"}}}
     dup = package("1.0.0", {}, {}, status, [], LOG_100, others=[("status.ok", "icon")])
@@ -172,6 +202,7 @@ EXPECTED = {
         },
         "v1.1.0": {"exit": 0, "findings": []},
         "v2.0.0": {"exit": 0, "findings": []},
+        "v2.0.0-backdated": {"exit": 0, "findings": []},
         "dup-name": {"exit": 1, "findings": ["PKG-NAME-DUPLICATE status.ok"]},
     },
     "diff": {
@@ -191,6 +222,26 @@ EXPECTED = {
             "findings": ["PKG-CHANGELOG-MISSING motion.fast"],
         },
         "v1.1.0..v2.0.0": {"exit": 0, "changed": {"sem.focus.ring": "renamed"}, "findings": []},
+        "v1.0.0..v2.0.0-backdated": {
+            "exit": 1,
+            "changed": {"space.2": "renamed", "space.3": "added"},
+            "findings": ["PKG-DEPRECATION-EARLY space.2"],
+        },
+        "v1.0.0..v1.1.0-breaking-log": {
+            "exit": 1,
+            "changed": {"motion.fast": "value-changed"},
+            "findings": ["PKG-BREAKING-MINOR motion.fast"],
+        },
+        "v1.0.0..v1.1.0-type": {
+            "exit": 1,
+            "changed": {"space.2": "type-changed"},
+            "findings": ["PKG-BREAKING-MINOR space.2", "PKG-CHANGELOG-CLASS space.2"],
+        },
+        "v1.0.0..v1.1.0-kind": {
+            "exit": 1,
+            "changed": {"icon.check": "kind-changed"},
+            "findings": ["PKG-BREAKING-MINOR icon.check"],
+        },
     },
     "resolve": {
         "v1.1.0": {
