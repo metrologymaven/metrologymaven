@@ -104,10 +104,7 @@ fn ac1_continued_statement_comment_and_doubled_quote() {
         k => panic!("{k:?}"),
     }
     assert_eq!(st.tokens[2].text.as_bytes(), b"'Bracket ''B'' check'");
-    assert_eq!(
-        format!("{}", st.tokens[2].untrusted_text().unwrap().as_display()),
-        "Bracket 'B' check"
-    );
+    assert_eq!(format!("{}", st.tokens[2].untrusted_text().unwrap().as_display()), "Bracket 'B' check");
     assert_eq!(
         format!("{}", st.tokens[4].untrusted_text().unwrap().as_display()),
         " the version number is on the next line"
@@ -181,7 +178,7 @@ fn statement_token_bound() {
         data.extend_from_slice(b"$\n");
     }
     data.extend_from_slice(b"X\n");
-    assert!(MAX_STATEMENT_TOKENS < 120_000);
+    const _: () = assert!(MAX_STATEMENT_TOKENS < 120_000);
     assert_eq!(strict(&data), Err(LexError::LimitExceeded { bound: Bound::StatementTokens, line: 2 }));
 }
 
@@ -258,10 +255,7 @@ fn relaxations_apply_only_when_enabled() {
     assert_eq!((c.kind.name(), c.pos), ("comment", Pos { line: 1, col: 7 }));
     assert_eq!(format!("{}", c.untrusted_text().unwrap().as_display()), " trailing note");
     // InlineComment does not make a bare CR a line end.
-    assert_eq!(
-        lex_bytes(b"A\rB", &opts),
-        Err(LexError::Malformed { line: 1, col: 2, reason: Reason::UnexpectedByte })
-    );
+    assert_eq!(lex_bytes(b"A\rB", &opts), Err(LexError::Malformed { line: 1, col: 2, reason: Reason::UnexpectedByte }));
 
     let cr = LexOptions::strict().with(Relaxation::BareCrLineEnd);
     let st = lex_bytes(b"A\rB\r\nC", &cr).unwrap();
@@ -308,8 +302,10 @@ impl Rng {
 #[test]
 fn ac5_fuzz_smoke_never_panics() {
     const ALPHABET: &[u8] = b"$$$''',,//==()AZaz09.+-eE_ \t\n\n\r\xc3\xbc\xff\x00";
-    let seeds: Vec<Vec<u8>> =
-        ["continued.dmi", "open_string.dmi", "numbers.dmi", "mixed.dmi", "bytes.dmi"].into_iter().map(fixture).collect();
+    let seeds: Vec<Vec<u8>> = ["continued.dmi", "open_string.dmi", "numbers.dmi", "mixed.dmi", "bytes.dmi"]
+        .into_iter()
+        .map(fixture)
+        .collect();
     let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
     let options = [
         LexOptions::strict(),
