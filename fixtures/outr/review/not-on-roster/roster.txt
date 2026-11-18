@@ -1,0 +1,3 @@
+# Reviewer roster (synthetic fixture): one handle per line.
+alice
+bob

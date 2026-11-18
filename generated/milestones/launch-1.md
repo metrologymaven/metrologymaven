@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**56** of **1336** leaves built in code ([B]).
+**57** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 50 built)
+### Wave 1 (125 leaves, 51 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -94,7 +94,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
 - [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
-- [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
+- [B] [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
 - [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
 - [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
