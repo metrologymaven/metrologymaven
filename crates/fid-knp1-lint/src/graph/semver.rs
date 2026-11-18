@@ -206,11 +206,8 @@ impl VersionReq {
         if t.is_empty() {
             return None;
         }
-        let comparators = if t == "*" {
-            Vec::new()
-        } else {
-            t.split(',').map(Comparator::parse).collect::<Option<Vec<_>>>()?
-        };
+        let comparators =
+            if t == "*" { Vec::new() } else { t.split(',').map(Comparator::parse).collect::<Option<Vec<_>>>()? };
         Some(VersionReq { text: t.to_string(), comparators })
     }
 
