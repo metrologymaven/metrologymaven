@@ -67,6 +67,9 @@ jobs:
         # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-program/fuzz/Cargo.toml
+      - name: XML reader fuzz harness compiles on stable (IO.QIF.XML.PARSE AC-5)
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-xml/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
@@ -156,6 +159,7 @@ jobs:
           python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
+          python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict

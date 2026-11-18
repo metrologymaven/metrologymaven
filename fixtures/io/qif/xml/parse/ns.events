@@ -1,0 +1,33 @@
+N	q	urn:example:q
+N		urn:example:default
+S	q	{urn:example:q}doc	xml:{http://www.w3.org/XML/1998/namespace}lang=en
+T	\n  
+S	q	{urn:example:q}head	q:{urn:example:q}kind=main	:{}plain=1
+T	\n    
+S		{urn:example:default}title
+T	Probe
+E	{urn:example:default}title
+T	\n  
+E	{urn:example:q}head
+T	\n  
+N	ext	urn:example:ext
+S		{urn:example:default}body
+T	\n    
+S	ext	{urn:example:ext}block	ext:{urn:example:ext}id=b1	q:{urn:example:q}ref=h
+T	\n      
+N		
+S	ext	{urn:example:ext}part
+T	no default here
+E	{urn:example:ext}part
+T	\n      
+N	q	urn:example:q2
+S	q	{urn:example:q2}leaf	q:{urn:example:q2}x=1
+E	{urn:example:q2}leaf
+T	\n      
+M	 kept 
+T	\n    
+E	{urn:example:ext}block
+T	\n  
+E	{urn:example:default}body
+T	\n
+E	{urn:example:q}doc

@@ -1,0 +1,15 @@
+[package]
+name = "fid-xml"
+description = "Metrology Maven hardened streaming XML pull reader: no DTDs, no entities, bounded, namespace-aware (spec node IO.QIF.XML.PARSE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Limit harness, bounded source, positions and untrusted text (IO.REG.LIMITS).
+fid-io-reg = { path = "../fid-io-reg" }
+
+[lints]
+workspace = true
