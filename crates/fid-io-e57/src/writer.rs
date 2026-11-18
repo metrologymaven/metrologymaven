@@ -31,8 +31,11 @@ impl<W: Write + Seek> LogicalWriter<W> {
     /// `malformed{page_size}` or `limit_exceeded{alloc}` for page sizes the reader rejects.
     pub fn new(mut inner: W, page_size: u64) -> Result<Self, PhysError> {
         let layout = PageLayout::new(page_size, 0)?;
-        let payload = usize::try_from(layout.payload())
-            .map_err(|_| PhysError::LimitExceeded { limit: LimitKind::Alloc, value: page_size, at: 0 })?;
+        let payload = usize::try_from(layout.payload()).map_err(|_| PhysError::LimitExceeded {
+            limit: LimitKind::Alloc,
+            value: page_size,
+            at: 0,
+        })?;
         inner.seek(SeekFrom::Start(0)).map_err(|e| PhysError::from_io(&e, 0))?;
         let mut current = Vec::with_capacity(payload);
         current.resize(HEADER_LEN, 0);
@@ -71,10 +74,11 @@ impl<W: Write + Seek> LogicalWriter<W> {
     }
 
     fn flush_page(&mut self) -> Result<(), PhysError> {
-        let at = self
-            .pages_written
-            .checked_mul(self.layout.page_size())
-            .ok_or(PhysError::LimitExceeded { limit: LimitKind::Bytes, value: u64::MAX, at: u64::MAX })?;
+        let at = self.pages_written.checked_mul(self.layout.page_size()).ok_or(PhysError::LimitExceeded {
+            limit: LimitKind::Bytes,
+            value: u64::MAX,
+            at: u64::MAX,
+        })?;
         let crc = crc32c(&self.current).to_be_bytes();
         self.inner.write_all(&self.current).map_err(|e| PhysError::from_io(&e, at))?;
         self.inner.write_all(&crc).map_err(|e| PhysError::from_io(&e, at))?;
@@ -95,10 +99,11 @@ impl<W: Write + Seek> LogicalWriter<W> {
             self.current.resize(self.payload, 0);
             self.flush_page()?;
         }
-        let file_length = self
-            .pages_written
-            .checked_mul(self.layout.page_size())
-            .ok_or(PhysError::LimitExceeded { limit: LimitKind::Bytes, value: u64::MAX, at: u64::MAX })?;
+        let file_length = self.pages_written.checked_mul(self.layout.page_size()).ok_or(PhysError::LimitExceeded {
+            limit: LimitKind::Bytes,
+            value: u64::MAX,
+            at: u64::MAX,
+        })?;
         let header = E57Header {
             major_version: MAJOR_VERSION,
             minor_version: MINOR_VERSION,

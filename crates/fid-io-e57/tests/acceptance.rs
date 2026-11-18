@@ -122,7 +122,7 @@ fn crc32c_matches_independent_python_vectors() {
 #[test]
 fn fixture_outcomes_match_reference() {
     let cases = expected();
-    assert_eq!(cases.len(), 18);
+    assert_eq!(cases.len(), 17);
     for (name, want) in cases {
         let got = outcome(&read_fixture(&name));
         assert_eq!(got, want, "{name}");

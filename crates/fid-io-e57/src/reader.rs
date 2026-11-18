@@ -71,8 +71,11 @@ impl<R: Read + Seek> LogicalReader<R> {
         let header = E57Header::parse(&raw)?;
         let layout = validate(&header, actual)?;
         // page_size <= MAX_PAGE_SIZE (1 MiB), so this fits usize on every target.
-        let page_len = usize::try_from(layout.page_size())
-            .map_err(|_| PhysError::LimitExceeded { limit: LimitKind::Alloc, value: layout.page_size(), at: 0 })?;
+        let page_len = usize::try_from(layout.page_size()).map_err(|_| PhysError::LimitExceeded {
+            limit: LimitKind::Alloc,
+            value: layout.page_size(),
+            at: 0,
+        })?;
         let mut reader = LogicalReader {
             inner,
             header,
