@@ -1,0 +1,21 @@
+# Trade-dress review checklist (spec node OUTR.BRAND.REVIEW, REQ-OUTR.BRAND-008).
+#
+# Before a site, docs or launch-material release is published, a person who is not its author
+# answers every item below in a review record (`release`, `reviewer`, `date`,
+# `answers.<item> = { result = "pass" | "fail", note = "..." }`) and commits it through a
+# reviewed pull request. `fid-outreach review-gate` refuses publication when the record is
+# missing, incomplete, answers any item with anything but "pass", is signed by the release
+# author, or names a reviewer who is not on the reviewer roster.
+#
+# The gate only reads human answers: no AI agent, bot or other tool may write or change a
+# result. The rules the reviewer applies are in the brand guidelines (OUTR.BRAND.GUIDE).
+# Changes to this file go through a reviewed pull request; bump `version` when items change.
+version = 1
+items = [
+  { id = "colours", question = "Is the palette our own, with nothing a reader would link to another vendor's product colours?" },
+  { id = "icon_style", question = "Are the icons and illustrations drawn in our own style, not modelled on another vendor's set?" },
+  { id = "layout", question = "Are the page and screen arrangements our own, not a recreation of another vendor's software or site?" },
+  { id = "screenshots", question = "Does every screenshot show only our own software, with no other vendor's interface in view?" },
+  { id = "typography", question = "Are the typefaces and their pairing our own choice, not the signature lettering of another vendor?" },
+  { id = "copied_text", question = "Is every sentence written by us, with nothing lifted from other vendors' material?" },
+]
