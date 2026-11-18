@@ -1,6 +1,6 @@
 [package]
 name = "fid-jobs"
-description = "Metrology Maven jobs: progress sink, cancellation token and progress publisher (spec node CORE.JOB.PROG)"
+description = "Metrology Maven jobs: progress and cancellation (CORE.JOB.PROG), job scheduler with queue, priorities, limits and timeouts (CORE.JOB.SCHED)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# Shared command IDs (AGENTS.md rule 14). Layer num, below fid-jobs (engine).
+fid-types = { path = "../fid-types" }
+# UUID value type for job IDs (UUIDv7 built here). Layer model, below fid-jobs.
+fid-uuid = { path = "../fid-uuid" }
 
 [dev-dependencies]
 # Test-only: output digests (AC-2) and the expected-digest fixture. fid-canon sits below fid-jobs in layers.toml.

@@ -151,6 +151,17 @@ pub struct ProgressUpdate {
     pub at: Duration,
 }
 
+/// The latest accepted report, read without publishing (for job status queries).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProgressSnapshot {
+    /// Fraction complete, finite and in [0, 1]; 0 before the handler's first report.
+    pub fraction: f64,
+    /// Stage label, at most [`MAX_STAGE_CHARS`] characters.
+    pub stage: String,
+    /// Number of accepted reports so far.
+    pub report_seq: u64,
+}
+
 #[derive(Debug)]
 struct Last {
     fraction: f64,
@@ -314,6 +325,13 @@ impl Progress {
     /// Number of listeners still attached (as of the last publication).
     pub fn listener_count(&self) -> usize {
         lock(&self.publisher).listeners.len()
+    }
+
+    /// The latest accepted report. Reading it publishes nothing and does not affect
+    /// [`Progress::tick`].
+    pub fn latest(&self) -> ProgressSnapshot {
+        let last = lock(&self.shared.last);
+        ProgressSnapshot { fraction: last.fraction, stage: last.stage.clone(), report_seq: last.seq }
     }
 
     /// Ignored reports kept so far (at most [`MAX_RECORDED_WARNINGS`]).

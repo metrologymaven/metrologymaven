@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-jobs]
 satisfies: [REQ-CORE.JOB-001, REQ-CORE.JOB-004, REQ-CORE.JOB-005, REQ-CORE.JOB-006, REQ-CORE.JOB-007, REQ-CORE.JOB-009]
 covers: []
 depends_on: [CORE.JOB.PROG]
