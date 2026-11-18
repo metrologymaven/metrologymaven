@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-types]
+built_pr: 138
 satisfies: [REQ-GEO.TYPES-001, REQ-GEO.TYPES-003, REQ-GEO.TYPES-004, REQ-GEO.TYPES-006]
 covers: []
 depends_on: [GEO.TYPES.ENV]
