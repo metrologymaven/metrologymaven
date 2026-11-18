@@ -565,7 +565,11 @@ fn first_deny_run(words: &[(usize, String)], stems: &[String]) -> Option<usize> 
     let mut cur = vec![0usize; stems.len()];
     for (i, (_, w)) in words.iter().enumerate() {
         for (j, s) in stems.iter().enumerate() {
-            cur[j] = if w.starts_with(s.as_str()) { if j > 0 { prev[j - 1] + 1 } else { 1 } } else { 0 };
+            cur[j] = match (w.starts_with(s.as_str()), j) {
+                (false, _) => 0,
+                (true, 0) => 1,
+                (true, _) => prev[j - 1] + 1,
+            };
             if cur[j] >= MIN_DENY_RUN {
                 return Some(i + 1 - cur[j]);
             }

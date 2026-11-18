@@ -27,10 +27,10 @@ fn inputs(case: &str) -> StyleInputs {
 }
 
 /// Findings as (rule, file relative to the case folder, line), sorted.
-fn run(case: &str) -> (Vec<(String, String, usize)>, Vec<LintFinding>) {
+fn run(case: &str) -> (Vec<Row>, Vec<LintFinding>) {
     let prefix = format!("{}/", fx().join(case).display().to_string().replace('\\', "/"));
     let report = lint(&inputs(case));
-    let mut got: Vec<(String, String, usize)> = report
+    let mut got: Vec<Row> = report
         .findings
         .iter()
         .map(|f| {
@@ -42,7 +42,10 @@ fn run(case: &str) -> (Vec<(String, String, usize)>, Vec<LintFinding>) {
     (got, report.findings)
 }
 
-fn expected() -> Vec<(String, Vec<(String, String, usize)>)> {
+/// (rule, file relative to the case folder, line).
+type Row = (String, String, usize);
+
+fn expected() -> Vec<(String, Vec<Row>)> {
     let bytes = std::fs::read(fx().join("expected.json")).unwrap();
     let CValue::Obj(cases) = fid_canon::parse_with_limits(&bytes, 1 << 20, 16).unwrap() else { panic!("object") };
     cases
