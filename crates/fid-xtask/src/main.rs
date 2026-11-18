@@ -3,8 +3,8 @@
 mod pins;
 
 use fid_xtask::plat_deploy_netlist as netlist;
-use fid_xtask::plat_matrix_tiers;
-use fid_xtask::rel::{sums, version};
+use fid_xtask::rel::{keys, runbook, sbom, sums, version};
+use fid_xtask::{apps_policy, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, ExitCode};
@@ -19,10 +19,19 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-deploy netlist --manifest <registry manifest json> \
                      --settings <settings-manifest.json> [--json <out>] [--md <out>] [--check]\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
+                     cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
+                     [--protocol <md>]\n       \
                      cargo xtask rel version-check --tag <tag> --channel nightly|beta|stable|lts \
                      [--workspace <dir>] [--binaries <dir>] [--json]\n       \
                      cargo xtask rel version-compare <a> <b>\n       \
-                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>";
+                     cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>
+       \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
+       \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
+       \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
+                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
+       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
+const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
+                                 --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -38,15 +47,54 @@ fn main() -> ExitCode {
         Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("apps-policy") => apps_policy_check(&args[1..]),
+        Some("study-tasks-check") => study_tasks_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-compare") => version_compare(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
+            eprintln!("{APPS_POLICY_USAGE}");
             ExitCode::from(2)
         }
     }
+}
+
+/// ECO.APPS.POLICY: `apps-policy`. Prints findings sorted by code, crate and location. Exit
+/// 0: no findings; 1: findings (including POLICY-INPUT); 2: bad usage. Offline; reads only.
+fn apps_policy_check(args: &[String]) -> ExitCode {
+    let (mut workspace, mut manifests, mut status, mut config) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = Some(PathBuf::from(v)),
+            ("--registry-manifests", Some(v)) => manifests = Some(PathBuf::from(v)),
+            ("--apps-status", Some(v)) => status = Some(PathBuf::from(v)),
+            ("--config", Some(v)) => config = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{APPS_POLICY_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(workspace), Some(registry_manifests), Some(apps_status)) = (workspace, manifests, status) else {
+        eprintln!("apps-policy: --workspace, --registry-manifests and --apps-status are required\n{APPS_POLICY_USAGE}");
+        return ExitCode::from(2);
+    };
+    let findings = apps_policy::run(&apps_policy::Inputs { workspace, registry_manifests, apps_status, config });
+    if findings.is_empty() {
+        println!("apps-policy: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
 
 /// ECO.DATA.CAT: runs the `fid-data` binary. `fid-data` is a `tool` crate, and the layer
@@ -157,6 +205,39 @@ fn personas_check(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         println!("personas-check: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// FLOW.STUDY.PROTO: checks the study task list against the journey maps and the persona
+/// file, and the protocol document's citations. Exit 0: clean; 1: findings; 2: usage error.
+fn study_tasks_check(args: &[String]) -> ExitCode {
+    let mut tasks = PathBuf::from("acceptance/study/tasks.json");
+    let mut maps = PathBuf::from("acceptance/journeys/persona");
+    let mut personas = PathBuf::from("acceptance/personas/personas.json");
+    let mut protocol = PathBuf::from("docs/study/protocol.md");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--tasks", Some(v)) => tasks = PathBuf::from(v),
+            ("--maps", Some(v)) => maps = PathBuf::from(v),
+            ("--personas", Some(v)) => personas = PathBuf::from(v),
+            ("--protocol", Some(v)) => protocol = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let report = fid_accept::study::check_files(&tasks, &maps, &personas, Some(&protocol));
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("study-tasks-check: {} tasks", report.tasks.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("study-tasks-check: {} findings", report.findings.len());
         ExitCode::from(1)
     }
 }
@@ -291,6 +372,184 @@ fn rel_sums(args: &[String]) -> ExitCode {
             }
             ExitCode::from(code)
         }
+    }
+}
+
+/// ECO.REL.SIGN.SBOM: `rel sbom --plan <file> [--workspace <dir>] --native <toml> --out <dir>
+/// [--artefacts <dir>] [--commit-time <t>]` writes `<artefact>.spdx.json` per planned artefact.
+/// Exit 0: written; 1: findings (SBOM-LICENCE, SBOM-NATIVE-DIGEST, SBOM-IO), one per line,
+/// nothing written; 2: bad usage or an unusable input (SBOM-PLAN-PARSE, SBOM-NATIVE-PARSE,
+/// SBOM-METADATA). Offline: `cargo metadata` runs with `--locked --offline`.
+fn rel_sbom(args: &[String]) -> ExitCode {
+    let (mut plan, mut native, mut out, mut artefacts): (
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+    ) = (None, None, None, None);
+    let mut commit_time: Option<String> = None;
+    let mut workspace = PathBuf::from(".");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--plan", Some(v)) => plan = Some(PathBuf::from(v)),
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--native", Some(v)) => native = Some(PathBuf::from(v)),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            ("--artefacts", Some(v)) => artefacts = Some(PathBuf::from(v)),
+            ("--commit-time", Some(v)) => commit_time = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(plan), Some(native), Some(out)) = (plan, native, out) else {
+        eprintln!("rel sbom: --plan, --native and --out are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let opts = sbom::Options {
+        plan: &plan,
+        workspace: &workspace,
+        native: &native,
+        artefacts: artefacts.as_deref(),
+        commit_time: commit_time.as_deref(),
+    };
+    match sbom::run(&opts, &out) {
+        Ok((release, docs)) => {
+            println!("sbom: ok {} documents ({release})", docs.len());
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            let code = findings.iter().map(sbom::SbomError::exit_code).max().unwrap_or(1);
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.GUIDE: `rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]`
+/// checks that every key file in the keys directory (default `keys`) is listed in `KEYS.md`
+/// (default `KEYS.md`) with its SPKI SHA-256 fingerprint and that no active key is past its
+/// validity on the check date (default: today, UTC). Exit 0: consistent; 1: findings, one per
+/// line; 2: bad usage, unreadable inputs or a malformed key table. Reads files only.
+fn keys_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("keys");
+    let mut doc = PathBuf::from("KEYS.md");
+    let mut date: Option<String> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--keys", Some(v)) => dir = PathBuf::from(v),
+            ("--doc", Some(v)) => doc = PathBuf::from(v),
+            ("--date", Some(v)) => date = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(date) = date.or_else(keys::today_utc) else {
+        eprintln!("rel keys-check: the system clock is before 1970; pass --date");
+        return ExitCode::from(2);
+    };
+    match keys::check(&dir, &doc, &date) {
+        Ok(n) => {
+            println!("keys-check: ok {n} keys ({date})");
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(keys::exit_code(&findings))
+        }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-check [--dir <dir>] [--workflow <file>] [--json]`.
+/// Exit 0: consistent (`{"ok":true,"steps":<n>}` with `--json`); 1: findings, one per line
+/// (or one JSON report); 2: bad usage or RUNBOOK-PARSE. Reads files only: it never writes,
+/// never touches git or the network, and never creates tags, releases or signatures.
+fn runbook_check(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut workflow: Option<PathBuf> = None;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--json" {
+            json = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--workflow", Some(v)) => workflow = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let result = runbook::check(&dir, workflow.as_deref());
+    if json {
+        println!("{}", runbook::report_json(&result));
+    }
+    match result {
+        Ok(n) => {
+            if !json {
+                println!("runbook-check: ok {n} steps");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            if !json {
+                for f in &findings {
+                    println!("{f}");
+                }
+            }
+            ExitCode::from(runbook::exit_code(&findings))
+        }
+    }
+}
+
+/// ECO.REL.PROC.RUNBOOK: `rel runbook-render [--dir <dir>] [--out <file>]` renders
+/// `RUNBOOK.md` from `<dir>/runbook.toml` and `<dir>/RUNBOOK.preamble.md` to stdout, or to
+/// `--out` (LF line endings on every OS). Exit 2 on bad usage or RUNBOOK-PARSE.
+fn runbook_render(args: &[String]) -> ExitCode {
+    let mut dir = PathBuf::from("release");
+    let mut out: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) => dir = PathBuf::from(v),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let text = match runbook::render_dir(&dir) {
+        Ok((_, text)) => text,
+        Err(f) => {
+            println!("{f}");
+            return ExitCode::from(2);
+        }
+    };
+    match out {
+        None => {
+            print!("{text}");
+            ExitCode::SUCCESS
+        }
+        Some(path) => match std::fs::write(&path, text.as_bytes()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                println!("RUNBOOK-PARSE {}: cannot write: {e}", path.display());
+                ExitCode::from(2)
+            }
+        },
     }
 }
 

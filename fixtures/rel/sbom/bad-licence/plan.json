@@ -1,0 +1,15 @@
+{
+  "version": "1.4.0",
+  "commit_time": "2026-11-17T09:30:00Z",
+  "artefacts": [
+    {
+      "package": "bad",
+      "file_name": "bad-lic-x86_64-linux.tar.gz",
+      "target": "x86_64-unknown-linux-gnu",
+      "contents": [
+        "bad-lic"
+      ],
+      "sha256": "2f05d4b689d270cafb02285f35f44866f7dc8a2d368a3f9d1124373eeab31fb1"
+    }
+  ]
+}

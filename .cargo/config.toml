@@ -8,7 +8,9 @@
 # cargo xtask plat-hw validate-suite [--file <path>]  (PLAT.HW.SCHEMA)
 # cargo xtask plat-hw result-schema  (PLAT.HW.SCHEMA)
 # cargo xtask plat-deploy netlist --manifest <json> --settings <json> [--check]  (PLAT.DEPLOY.OFFLINE.NETLIST)
+# cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> --apps-status <json> [--config <toml>]  (ECO.APPS.POLICY)
 # cargo xtask personas-check [--personas <json>] [--apps <toml>]  (FLOW.PERSONA.PERS)
+# cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] [--protocol <md>]  (FLOW.STUDY.PROTO)
 xtask = "run -q -p fid-xtask --"
 
 # Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.81).

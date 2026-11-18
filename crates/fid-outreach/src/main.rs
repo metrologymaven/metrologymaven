@@ -5,6 +5,13 @@
 //! canonical JSON report with `--json`. Exits 0 with no findings, 1 with any, and 2 when an input
 //! cannot be read or parsed, or on bad usage.
 //!
+//! `review-gate --record <file> --release <id> --author <id> [--author <id>...] --roster <file>
+//! --checklist <file> [--bots <file>] [--json]` (spec node `OUTR.BRAND.REVIEW`): checks one human
+//! trade-dress review record. `--author` repeats for co-authors; `--bots` adds a bots register's
+//! accounts to the denylist. Prints one `<release> <finding>` line per finding and a summary, or
+//! the canonical JSON report with `--json`. Exits 0 when the review passes, 1 on any finding,
+//! and 2 when a file is missing or does not parse, or on bad usage.
+//!
 //! `metric-def check --defs <file> --sources <file> [--json]` (spec node `OUTR.COMM.METRIC.DEF`):
 //! text mode prints one line per finding, then one `metric <id>` line per valid metric and a
 //! summary; `--json` prints the canonical JSON report instead. Exits 0 with no findings, 1 with
@@ -24,12 +31,27 @@
 //! `sh run` block of the guide in a temporary copy of the revision it states. Exits 0 when all
 //! blocks pass, 1 on `revision_mismatch` or any failing block, and 2 on an unreadable or
 //! invalid guide, an unreadable repository, or bad usage.
+//!
+//! `guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]` (spec node
+//! `OUTR.BRAND.GUIDE.NAME`): checks that the guideline Markdown files write the family name only
+//! as `{{FAMILY_NAME}}`; with `--publish`, writes copies with the accepted name substituted.
+//! Exits 0 with no findings, 1 with any (nothing written), and 2 on unreadable input, an
+//! unparsable name file, or bad usage.
+//!
+//! `asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]` (spec
+//! node `OUTR.BRAND.ASSET.ATTR`): checks that every image, font and media file is original or
+//! attributed under an allowlisted licence, and that no CSS or HTML loads a font or stylesheet
+//! from another origin. Exits 0 with no findings, 1 with any, and 2 on unreadable or unparsable
+//! input or bad usage.
 
+use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
+use fid_outreach::guide_check;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::qa::a11y::{self, Options};
+use fid_outreach::review_gate;
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -38,19 +60,25 @@ use std::process::ExitCode;
 const USAGE: &str = "usage: fid-outreach <command> [args]
 commands:
   copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]
+  review-gate --record <file> --release <id> --author <id>... --roster <file> --checklist <file> [--bots <file>] [--json]
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
-  doc-run --guide <file> --repo <dir> [--json]";
+  doc-run --guide <file> --repo <dir> [--json]
+  guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
+  asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match (args.first().map(String::as_str), args.get(1).map(String::as_str)) {
         (Some("copy-guard"), _) => copy_guard_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("review-gate"), _) => review_gate_cmd(args.get(1..).unwrap_or(&[])),
         (Some("metric-def"), Some("check")) => metric_def_check(args.get(2..).unwrap_or(&[])),
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -110,6 +138,62 @@ fn copy_guard_cmd(args: &[String]) -> ExitCode {
                 emit(&e.to_json());
             }
             eprintln!("copy-guard: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn review_gate_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut authors: Vec<String> = Vec::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--author" => {
+                let Some(v) = it.next() else { return usage() };
+                authors.push(v.clone());
+            }
+            flag @ ("--record" | "--release" | "--roster" | "--checklist" | "--bots") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(record), Some(release), Some(roster), Some(checklist)) =
+        (opts.get("--record"), opts.get("--release"), opts.get("--roster"), opts.get("--checklist"))
+    else {
+        return usage();
+    };
+    if authors.is_empty() {
+        return usage();
+    }
+    let inputs = review_gate::Inputs {
+        record: Path::new(record),
+        release,
+        authors: &authors,
+        roster: Path::new(roster),
+        checklist: Path::new(checklist),
+        bots: opts.get("--bots").map(Path::new),
+    };
+    match review_gate::run(&inputs) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("review-gate: {e}");
             ExitCode::from(2)
         }
     }
@@ -306,6 +390,120 @@ fn doc_run_cmd(args: &[String]) -> ExitCode {
                 emit(&doc_run::error_json(&e));
             }
             eprintln!("doc-run: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn guide_check_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut publish = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--publish" => publish = true,
+            flag @ ("--root" | "--name" | "--out") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(root), Some(name)) = (opts.get("--root"), opts.get("--name")) else {
+        return usage();
+    };
+    let publish_to = match (publish, opts.get("--out")) {
+        (true, Some(out)) => Some(PathBuf::from(out)),
+        (false, None) => None,
+        _ => return usage(),
+    };
+    let options = guide_check::Options { root: PathBuf::from(root), name_file: PathBuf::from(name), publish_to };
+    match guide_check::run(&options) {
+        Ok(report) => {
+            if json {
+                match report.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => {
+                        eprintln!("guide-check: report serialisation failed: {m}");
+                        return ExitCode::from(2);
+                    }
+                }
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                match e.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => eprintln!("guide-check: error serialisation failed: {m}"),
+                }
+            }
+            eprintln!("guide-check: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn asset_check_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut excludes: Vec<String> = Vec::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--exclude" => {
+                let Some(v) = it.next() else { return usage() };
+                excludes.push(v.clone());
+            }
+            flag @ ("--root" | "--allow" | "--origin") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(root), Some(allow), Some(origin)) = (opts.get("--root"), opts.get("--allow"), opts.get("--origin"))
+    else {
+        return usage();
+    };
+    let options = asset_check::Options {
+        root: PathBuf::from(root),
+        allow: PathBuf::from(allow),
+        origin: origin.to_string(),
+        excludes,
+    };
+    match asset_check::run(&options) {
+        Ok(report) => {
+            if json {
+                match report.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => {
+                        eprintln!("asset-check: report serialisation failed: {m}");
+                        return ExitCode::from(2);
+                    }
+                }
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                match e.to_json() {
+                    Ok(bytes) => emit(&bytes),
+                    Err(m) => eprintln!("asset-check: error serialisation failed: {m}"),
+                }
+            }
+            eprintln!("asset-check: {e}");
             ExitCode::from(2)
         }
     }

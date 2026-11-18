@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS), `cargo xtask plat-deploy netlist` (PLAT.DEPLOY.OFFLINE.NETLIST)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask apps-policy` (ECO.APPS.POLICY), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS), `cargo xtask rel runbook-check|runbook-render` (ECO.REL.PROC.RUNBOOK), `cargo xtask rel sbom` (ECO.REL.SIGN.SBOM), `cargo xtask rel keys-check` (ECO.REL.SIGN.GUIDE), `cargo xtask plat-deploy netlist` (PLAT.DEPLOY.OFFLINE.NETLIST)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,6 +20,8 @@ fid-canon = { path = "../fid-canon" }
 # side-effect class, command name and the `sha256:` digest type, and streaming SHA-256 over
 # artefacts (the same sha2 0.10 that fid-canon already uses, so no new crate in the graph).
 fid-types = { path = "../fid-types" }
+# `rel sbom` (ECO.REL.SIGN.SBOM): UUIDv5 document namespaces (first-party, model layer).
+fid-uuid = { path = "../fid-uuid" }
 sha2 = "0.10"
 # Parses Cargo.toml and repos.toml for `pins` (same feature set as fid-knp1-lint).
 toml = { version = "0.8", default-features = false, features = ["parse"] }

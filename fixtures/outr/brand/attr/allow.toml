@@ -1,0 +1,9 @@
+# Synthetic fixture allowlist with the schema of house-rules/spdx-allowlist.toml (ECO.RULES.SPDX).
+licences = ["MIT", "Apache-2.0"]
+exceptions = []
+asset_licences = ["CC0-1.0", "CC-BY-4.0", "OFL-1.1", "MIT", "Apache-2.0"]
+asset_paths = ["assets/**"]
+
+[basis]
+MIT = "project licence"
+"Apache-2.0" = "project licence"

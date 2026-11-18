@@ -1,0 +1,34 @@
+# Release workflow SKELETON: job IDs only. Not a GitHub Actions workflow and never run
+# (it is outside .github/workflows and has no trigger).
+#
+# The real release workflow is owned by spec node ECO.REL.PROC.FLOW and is not built yet.
+# Until it exists, this file stands in for it so that `cargo xtask rel runbook-check
+# --dir release` can check that every `ci` step of runbook.toml has a job and every job has
+# a step. When ECO.REL.PROC.FLOW lands, delete this file and run the check with
+# `--workflow .github/workflows/release.yml`.
+
+name: release (skeleton)
+
+jobs:
+  tag-validate: {}
+  build-packages: {}
+  build-web: {}
+  sbom: {}
+  vuln-gate: {}
+  platform-gate: {}
+  evidence-complete: {}
+  threat-review-minor: {}
+  eu-venue-gate: {}
+  redteam-verdict: {}
+  ga-gate: {}
+  i18n-gate: {}
+  kernel-patch-gate: {}
+  lts-gate: {}
+  gates-summary: {}
+  notes: {}
+  os-sign: {}
+  sums: {}
+  sign-statements: {}
+  publish: {}
+  feeds: {}
+  rebuild-compare: {}

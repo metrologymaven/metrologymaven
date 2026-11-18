@@ -1,0 +1,6 @@
+# Synthetic fixture: the made-up name Examplo is accepted.
+accepted = true
+working_names = ["Fiducial", "fid"]
+name = "Examplo"
+decision = "D-002"
+date = "2026-11-17"

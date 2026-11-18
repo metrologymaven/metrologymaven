@@ -17,6 +17,7 @@
 //! The guard never reads, stores or compares third-party text. Determinism D0: a pure function
 //! of the input files; the walk and the findings are sorted.
 
+use crate::review_gate;
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -284,27 +285,21 @@ pub fn parse_policy(table: &toml::Table, path: &str) -> Result<Policy, GuardErro
     Ok(Policy { mode, counsel_review, revisits })
 }
 
-/// The item IDs of a trade-dress checklist (`items = [{ id, question }]`).
-pub fn parse_checklist(table: &toml::Table, path: &str) -> Result<BTreeSet<String>, GuardError> {
-    let bad = |reason: &str| input_err(path.to_string(), reason.to_string());
-    let items = table.get("items").and_then(toml::Value::as_array).ok_or_else(|| bad("no `items` array"))?;
-    let mut ids = BTreeSet::new();
-    for item in items {
-        let id = item.as_table().and_then(|t| non_empty_str(t, "id")).ok_or_else(|| bad("item without `id`"))?;
-        ids.insert(id.to_string());
-    }
-    Ok(ids)
+fn from_gate(e: review_gate::GateError) -> GuardError {
+    input_err(e.path().to_string(), e.reason().to_string())
 }
 
-/// A review record (`release`, `answers.<item> = { result, note }`).
+/// The item IDs of a trade-dress checklist, parsed by [`review_gate::parse_checklist`].
+pub fn parse_checklist(table: &toml::Table, path: &str) -> Result<BTreeSet<String>, GuardError> {
+    review_gate::parse_checklist(table, path).map(|c| c.ids()).map_err(from_gate)
+}
+
+/// A review record, parsed by [`review_gate::parse_record`] and reduced to its `copied_text`
+/// answer. An answer without a string `result` reads as `""` (not a pass).
 pub fn parse_record(table: &toml::Table, path: &str) -> Result<Record, GuardError> {
-    let bad = |reason: &str| input_err(path.to_string(), reason.to_string());
-    let release = non_empty_str(table, "release").ok_or_else(|| bad("no `release`"))?.to_string();
-    let copied_text =
-        table.get("answers").and_then(toml::Value::as_table).and_then(|a| a.get(COPIED_TEXT)).map(|v| {
-            v.as_table().and_then(|t| t.get("result")).and_then(toml::Value::as_str).unwrap_or("").to_string()
-        });
-    Ok(Record { release, copied_text })
+    let r = review_gate::parse_record(table, path).map_err(from_gate)?;
+    let copied_text = r.answers.get(COPIED_TEXT).map(|a| a.result.clone().unwrap_or_default());
+    Ok(Record { release: r.release, copied_text })
 }
 
 /// Reads every `*.toml` record in `dir`, in file-name order.

@@ -20,15 +20,15 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**57** of **1336** leaves built in code ([B]).
+**67** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 51 built)
+### Wave 1 (125 leaves, 61 built)
 
-- [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
+- [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
 - [B] [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
 - [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
@@ -36,7 +36,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
 - [B] [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [B] [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
-- [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
+- [B] [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
 - [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [B] [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
@@ -48,7 +48,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
 - [B] [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
-- [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
+- [B] [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
 - [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
 - [ECO.CI.BOTS.REG](../../spec/eco/ci/bots/reg/NODE.md) Bot register and restricted-path exclusion check (S, P0)
 - [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
@@ -57,14 +57,14 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.DATA.CAT](../../spec/eco/data/cat/NODE.md) Dataset catalogue and admission check (S, P0)
 - [ECO.REL.PKG.PLAN](../../spec/eco/rel/pkg/plan/NODE.md) Package plan, Tier 1 build gate and placeholder-name gate (M, P1a)
 - [ECO.REL.PKG.REG](../../spec/eco/rel/pkg/reg/NODE.md) Installed-app registration and file association (S, P1a)
-- [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)
+- [B] [ECO.REL.PROC.RUNBOOK](../../spec/eco/rel/proc/runbook/NODE.md) Release runbook and its consistency check (S, P1a)
 - [B] [ECO.REL.PROC.VERSION](../../spec/eco/rel/proc/version/NODE.md) Version scheme and tag check (S, P1a)
 - [ECO.REL.REPRO.PIN](../../spec/eco/rel/repro/pin/NODE.md) Build-environment pinning and pin check (S, P1b)
 - [ECO.REL.REPRO.STRIP](../../spec/eco/rel/repro/strip/NODE.md) Signature stripping and per-format comparison (M, P1b)
 - [ECO.REL.SIGN.CUSTODY](../../spec/eco/rel/sign/custody/NODE.md) Release key custody, approval record and statement signing (M, P1a)
-- [ECO.REL.SIGN.GUIDE](../../spec/eco/rel/sign/guide/NODE.md) Public keys, key transitions and offline verification guide (S, P1a)
+- [B] [ECO.REL.SIGN.GUIDE](../../spec/eco/rel/sign/guide/NODE.md) Public keys, key transitions and offline verification guide (S, P1a)
 - [ECO.REL.SIGN.OSSIGN](../../spec/eco/rel/sign/ossign/NODE.md) OS code signing, notarisation and Linux package signing (M, P1a)
-- [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
+- [B] [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
 - [B] [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [B] [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
@@ -74,7 +74,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
 - [B] [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
 - [B] [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
-- [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
+- [B] [FLOW.STUDY.PROTO](../../spec/flow/study/proto/NODE.md) Timing and usability study protocol and task list (S, P1a)
 - [B] [GEO.DIST.FACE.REF](../../spec/geo/dist/face/ref/NODE.md) Reference fixtures for trimmed-face projection (M, P1b)
 - [B] [GEO.NURBS.DATA](../../spec/geo/nurbs/data/NODE.md) B-spline and NURBS data types and validation (S, P1b)
 - [B] [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
@@ -90,11 +90,11 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
 - [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
 - [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
-- [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
+- [B] [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
 - [B] [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
-- [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
+- [B] [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
-- [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
+- [B] [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
 - [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
 - [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)

@@ -176,7 +176,7 @@ fn predicate_parameters_parse() {
             PredicateKind::EntryWithMarker { marker: "FIDRT-0123456789ABCDEFGHJKMNPQRS".into() },
             PredicateKind::EntryClass { classes: vec![SideEffect::W3, SideEffect::X1] },
             PredicateKind::PromotionWithoutDistinctHuman,
-            PredicateKind::FileChange { pattern: "out/*.csv".into() },
+            PredicateKind::FileChange { pattern: "out/*.csv".into(), unaccounted: false },
         ]
     );
     let plain = read_task(&dir.join("rt-plain-task.json")).unwrap();
