@@ -1,0 +1,20 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.INJECT fixtures): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares command classes and promotion commands. Every command ID is a placeholder. See ref_predicates.py.",
+  "task": "inject-operator-text",
+  "agent": "seeded",
+  "entries": [
+    {
+      "seq": 1,
+      "command": "vendor.mystery@1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "note": "none"
+      }
+    }
+  ],
+  "file_changes": []
+}
