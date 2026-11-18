@@ -46,12 +46,13 @@ def write(path: Path, text: str):
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
-def crate(ws: Path, folder: str, name: str, deps=(), dev=()):
+def crate(ws: Path, folder: str, name: str, deps=(), dev=(), opt=()):
     d = ws / folder
     (d / "src").mkdir(parents=True, exist_ok=True)
     lines = ["[package]", f'name = "{name}"', 'version = "0.0.0"', 'edition = "2021"', "publish = false", ""]
-    if deps:
-        lines += ["[dependencies]"] + [f'{n} = {{ path = "{p}" }}' for n, p in deps] + [""]
+    if deps or opt:
+        lines += (["[dependencies]"] + [f'{n} = {{ path = "{p}" }}' for n, p in deps]
+                  + [f'{n} = {{ path = "{p}", optional = true }}' for n, p in opt] + [""])
     if dev:
         lines += ["[dev-dependencies]"] + [f'{n} = {{ path = "{p}" }}' for n, p in dev] + [""]
     write(d / "Cargo.toml", "\n".join(lines))
@@ -77,7 +78,8 @@ def base(extra_cli=()):
     ]
 
 
-def workspace(name, crates, expected):
+def workspace(name, crates, expected, optional=None):
+    """`optional`: (folder, [(dep, path)]) optional dependencies added to that crate."""
     ws = HERE / name
     if ws.exists():
         shutil.rmtree(ws)
@@ -88,7 +90,8 @@ def workspace(name, crates, expected):
     write(ws / "storage-writers.toml", WRITERS)
     write(ws / "expected.txt", "".join(f"{e}\n" for e in expected))
     for folder, cname, deps, dev in crates:
-        crate(ws, folder, cname, deps, dev)
+        opt = optional[1] if optional and optional[0] == folder else ()
+        crate(ws, folder, cname, deps, dev, opt)
 
 
 vendor = HERE / "_vendor"
@@ -100,9 +103,11 @@ crate(vendor, "rusqlite", "rusqlite")
 workspace("clean", base(), [])
 
 # AC-2: the surface reaches fid-state through an intermediate crate. helper is reported
-# too, since it is itself a crate outside the allowlist that reaches fid-state.
+# too, since it is itself a crate outside the allowlist that reaches fid-state. fid-state is
+# a CORE crate, so the surface rule (transitive, REQ-004) reports cli as well.
 workspace("side_door", base([("helper", "../helper")]) + [("helper", "helper", [("fid-state", "../state")], [])],
           ["cli: mutable_state cli -> helper -> fid-state",
+           "cli: surface_dep cli -> helper -> fid-state",
            "helper: mutable_state helper -> fid-state"])
 
 # AC-3: a viewer crate depends on the SQLite driver.
@@ -113,5 +118,14 @@ workspace("sqlite_leak",
 # REQ-004: a surface depends directly on a CORE crate other than the bus API. The path
 # cli -> fid-bus -> fid-state passes through an allowed crate, so it is not a side door.
 workspace("surface_core", base([("fid-bus", "../bus")]), ["cli: surface_dep cli -> fid-bus"])
+
+# Review of #62: a surface reaches the store through a non-CORE helper. The store is a door
+# for the state and SQLite rules, so only the (transitive) surface rule catches it.
+workspace("surface_store", base([("helper", "../helper")]) + [("helper", "helper", [("fid-store", "../store")], [])],
+          ["cli: surface_dep cli -> helper -> fid-store"])
+
+# Optional dependencies count: the check resolves with --all-features.
+workspace("optional_dep", base() + [("viewer", "fid-viewer", [("fid-bus-api", "../api")], [])],
+          ["fid-viewer: sqlite_driver fid-viewer -> rusqlite"], optional=("viewer", [RUSQLITE]))
 
 print("ok")

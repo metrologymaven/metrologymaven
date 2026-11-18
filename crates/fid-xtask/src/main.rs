@@ -73,19 +73,22 @@ fn lint_crate_graph(args: &[String]) -> ExitCode {
     }
     let allowlist = allowlist.unwrap_or_else(|| workspace.join(fid_xtask::crate_graph::ALLOWLIST_FILE));
     let writers = writers.unwrap_or_else(|| workspace.join(fid_xtask::crate_graph::WRITERS_FILE));
-    match fid_xtask::crate_graph::run(&workspace, &allowlist, &writers) {
-        Ok(findings) if findings.is_empty() => {
-            println!("lint-crate-graph: ok");
-            ExitCode::SUCCESS
-        }
-        Ok(findings) => {
+    match fid_xtask::crate_graph::run_with_warnings(&workspace, &allowlist, &writers) {
+        Ok((findings, warnings)) => {
+            for w in warnings {
+                eprintln!("{w}");
+            }
+            if findings.is_empty() {
+                println!("lint-crate-graph: ok");
+                return ExitCode::SUCCESS;
+            }
             for f in findings {
                 println!("{f}");
             }
             ExitCode::from(1)
         }
         Err(e) => {
-            println!("{e}");
+            eprintln!("{e}");
             ExitCode::from(2)
         }
     }

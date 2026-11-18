@@ -1,13 +1,13 @@
 //! Acceptance criteria of spec node CORE.BUS.LINT (AC-1 .. AC-4) and its requirements.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_xtask::crate_graph::{check, run, Allowlist};
+use fid_xtask::crate_graph::{check, run, run_with_warnings, warnings, Allowlist};
 use fid_xtask::Graph;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
-const FIXTURES: [&str; 4] = ["clean", "side_door", "sqlite_leak", "surface_core"];
+const FIXTURES: [&str; 6] = ["clean", "side_door", "sqlite_leak", "surface_core", "surface_store", "optional_dep"];
 
 fn fixture(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/bus/lint").join(name)
@@ -97,6 +97,40 @@ fn req4_surface_depends_on_core() {
     assert_eq!(stdout_lines(&out), ["cli: surface_dep cli -> fid-bus"]);
 }
 
+/// REQ-004 is transitive: a surface may not reach a CORE crate through a non-CORE helper,
+/// even when that CORE crate is a door for the state and SQLite rules.
+#[test]
+fn req4_surface_reaches_core_through_helper() {
+    let (code, out) = cli("surface_store");
+    assert_eq!(code, 1);
+    assert_eq!(stdout_lines(&out), ["cli: surface_dep cli -> helper -> fid-store"]);
+}
+
+/// Optional (feature-gated) dependencies are checked: the lint resolves with
+/// `--all-features`, while the default resolve (as `layers` uses) does not see the edge.
+#[test]
+fn optional_dependencies_are_checked() {
+    let ws = fixture("optional_dep");
+    assert_eq!(findings("optional_dep"), ["fid-viewer: sqlite_driver fid-viewer -> rusqlite"]);
+    let a = Allowlist::load(&ws.join("lint-allowlist.toml"), &ws.join("storage-writers.toml")).unwrap();
+    let default_features = Graph::load(&ws).unwrap();
+    assert!(check(&a, &default_features).is_empty());
+}
+
+/// A mutable-state crate missing from the graph is a warning on stderr, not a finding.
+#[test]
+fn missing_state_crate_is_a_warning() {
+    let ws = fixture("clean");
+    let (f, w) = run_with_warnings(&ws, &ws.join("lint-allowlist.toml"), &ws.join("storage-writers.toml")).unwrap();
+    assert!(f.is_empty() && w.is_empty(), "{f:?} {w:?}");
+    let text = std::fs::read_to_string(ws.join("lint-allowlist.toml"))
+        .unwrap()
+        .replace("crate = \"fid-state\"", "crate = \"fid-gone\"");
+    let a = Allowlist::parse(&text, None).unwrap();
+    let g = Graph::load(&ws).unwrap();
+    assert_eq!(warnings(&a, &g), ["warning: mutable-state crate fid-gone is not in the crate graph"]);
+}
+
 /// REQ-003: the storage writers come from storage-writers.toml (CORE.STO.LAYOUT); without
 /// it, the store is not a writer: it is reported, and so is the bus, which now reaches the
 /// driver through the store (the store is no longer a door for this rule).
@@ -118,8 +152,15 @@ fn errors_are_typed() {
     let e = run(&fixture("no-such-workspace"), &ws.join("lint-allowlist.toml"), &ws.join("storage-writers.toml"))
         .unwrap_err();
     assert!(e.starts_with("metadata_unavailable"), "{e}");
-    let (code, _) = cli("no-such-workspace");
-    assert_eq!(code, 2);
+    // Errors go to stderr, not stdout.
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
+        .args(["lint-crate-graph", "--workspace"])
+        .arg(fixture("no-such-workspace"))
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(out.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&out.stderr).starts_with("metadata_unavailable"));
 }
 
 const GOOD: &str = "[mutable_state]\ncrate = \"s\"\nallowed = [\"b\"]\n[sqlite]\ndrivers = [\"d\"]\n\

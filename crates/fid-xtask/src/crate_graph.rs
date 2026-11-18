@@ -8,15 +8,22 @@
 //!   mutable-state crate, directly or transitively;
 //! - `sqlite_driver`: a workspace crate outside the storage writers that reaches a SQLite
 //!   driver crate, directly or transitively;
-//! - `surface_dep`: a surface crate that depends directly on a CORE crate other than the
-//!   bus API crate.
+//! - `surface_dep`: a surface crate that reaches a CORE crate other than the bus API crate,
+//!   directly or transitively; the search never walks past the bus API crate.
 //!
 //! The storage writers are the union of `[storage_writers] allowed` in the allowlist and
 //! in `storage-writers.toml` (published by `CORE.STO.LAYOUT`), when that file exists.
 //!
-//! Only shipped edges count: dev-only dependencies are ignored. Allowed crates are the
-//! doors: a path is not followed through them, because reaching state through the bus or
-//! the store is the intended route. Each crate reports at most one path per rule: the first
+//! The graph is resolved with `--all-features`, so optional (feature-gated) dependencies
+//! count, and with `--filter-platform <host>` (shared with `layers`, so it works offline):
+//! dependencies that apply only to other targets, such as wasm32-only
+//! `[target.'cfg(...)'.dependencies]`, are not checked on that runner. CI runs it on Linux,
+//! Windows and macOS.
+//!
+//! Only shipped edges count: dev-only dependencies are ignored. For the state and SQLite
+//! rules, allowed crates are the doors: a path is not followed through them, because
+//! reaching state through the bus or the store is the intended route. Surfaces get no such
+//! door except the bus API, so `surface -> helper -> fid-store` is a `surface_dep` finding. Each crate reports at most one path per rule: the first
 //! one found by a breadth-first search that visits dependencies in name order. Findings are
 //! printed one per line, `<crate>: <rule> <a -> b -> c>`, sorted by crate name.
 
@@ -273,6 +280,8 @@ pub fn check(a: &Allowlist, g: &Graph) -> Vec<String> {
     let state = BTreeSet::from([a.mutable_state.clone()]);
     let rules: [(&str, &BTreeSet<String>, &BTreeSet<String>); 2] =
         [(RULE_STATE, &state, &a.mutable_state_allowed), (RULE_SQLITE, &a.sqlite_drivers, &a.storage_writers)];
+    let bus_api = BTreeSet::from([a.bus_api.clone()]);
+    let surface_targets: BTreeSet<String> = a.core.iter().filter(|c| **c != a.bus_api).cloned().collect();
     let mut out: BTreeSet<(String, &str, String)> = BTreeSet::new();
     for root in &g.members {
         let root = root.as_str();
@@ -286,11 +295,8 @@ pub fn check(a: &Allowlist, g: &Graph) -> Vec<String> {
             }
         }
         if a.surfaces.contains(rn) {
-            for &to in adj.get(root).into_iter().flatten() {
-                let tn = pkg_name(g, to);
-                if a.core.contains(tn) && tn != a.bus_api {
-                    out.insert((rn.to_string(), RULE_SURFACE, format!("{rn} -> {tn}")));
-                }
+            if let Some(path) = first_path(g, &adj, root, &surface_targets, &bus_api) {
+                out.insert((rn.to_string(), RULE_SURFACE, path.join(" -> ")));
             }
         }
     }
@@ -300,7 +306,26 @@ pub fn check(a: &Allowlist, g: &Graph) -> Vec<String> {
 /// Loads the allowlist (and `writers`, if present) and the workspace graph, then checks.
 /// `Err` is an `allowlist_invalid` or `metadata_unavailable` failure.
 pub fn run(workspace: &Path, allowlist: &Path, writers: &Path) -> Result<Vec<String>, String> {
+    run_with_warnings(workspace, allowlist, writers).map(|(findings, _)| findings)
+}
+
+/// Warnings that do not fail the check: the mutable-state crate is not in the graph (it may
+/// not exist yet, so the state rule cannot fire).
+pub fn warnings(a: &Allowlist, g: &Graph) -> Vec<String> {
+    let mut w = Vec::new();
+    if !g.names.values().any(|n| *n == a.mutable_state) {
+        w.push(format!("warning: mutable-state crate {} is not in the crate graph", a.mutable_state));
+    }
+    w
+}
+
+/// [`run`], also returning the [`warnings`].
+pub fn run_with_warnings(
+    workspace: &Path,
+    allowlist: &Path,
+    writers: &Path,
+) -> Result<(Vec<String>, Vec<String>), String> {
     let a = Allowlist::load(allowlist, writers)?;
-    let g = Graph::load(workspace).map_err(|e| format!("metadata_unavailable: {e}"))?;
-    Ok(check(&a, &g))
+    let g = Graph::load_with(workspace, true).map_err(|e| format!("metadata_unavailable: {e}"))?;
+    Ok((check(&a, &g), warnings(&a, &g)))
 }
