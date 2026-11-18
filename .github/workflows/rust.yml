@@ -63,6 +63,15 @@ jobs:
             test "$code" = 1
           done
           cargo xtask plat-hw validate
+      - name: Benchmark suite manifest validates via cargo xtask (PLAT.HW.SCHEMA AC-1 to AC-3)
+        shell: bash
+        run: |
+          out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/mini-suite.toml)
+          test "$out" = "$(printf 'mini.load\nmini.render')"
+          set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-no-digest.toml); code=$?; set -e
+          test "$code" = 1 && test "$out" = "MissingDigest { workload: no-digest.load }"
+          set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-bad-unit.toml); code=$?; set -e
+          test "$code" = 1 && grep -q '^BadUnit { workload: bad-unit.load' <<< "$out"
       - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
         run: cargo xtask plat-matrix lint-tiers
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
@@ -86,6 +95,8 @@ jobs:
         run: |
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
+          python fixtures/plat/bench/make_expected.py --check
+          python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python tools/check_entries.py
           python tools/check_knp1_findings.py

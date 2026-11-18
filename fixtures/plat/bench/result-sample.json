@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "context": {
+    "suite_version": "0.0.0-fixture",
+    "app_version": "0.0.1",
+    "os": "ubuntu",
+    "os_version": "24.04",
+    "arch": "x86_64",
+    "cpu_model": "synthetic fixture CPU",
+    "ram_mib": 16384,
+    "gpu_backend": "vulkan",
+    "adapter_name": "synthetic fixture adapter",
+    "gpu_driver_version": "0.0.0-fixture",
+    "machine": "local"
+  },
+  "workloads": [
+    {
+      "id": "mini.load",
+      "metrics": [
+        {
+          "name": "load_time",
+          "unit": "s",
+          "dataset_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "repetitions": 5,
+          "median": 1.25,
+          "min": 1.125,
+          "max": 1.5,
+          "status": "ok"
+        },
+        {
+          "name": "memory_peak",
+          "unit": "MiB",
+          "dataset_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "repetitions": 5,
+          "median": 512,
+          "min": 500,
+          "max": 530.5,
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "id": "mini.render",
+      "metrics": [
+        {
+          "name": "frame_rate",
+          "unit": "fps",
+          "dataset_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "repetitions": 3,
+          "median": null,
+          "min": null,
+          "max": null,
+          "status": "skipped"
+        },
+        {
+          "name": "throughput",
+          "unit": "points_per_s",
+          "dataset_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "repetitions": 3,
+          "median": null,
+          "min": null,
+          "max": null,
+          "status": "timeout"
+        }
+      ]
+    }
+  ]
+}

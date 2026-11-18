@@ -5,6 +5,8 @@
 # cargo xtask plat-matrix validate <file>  (PLAT.MATRIX.FILE)
 # cargo xtask plat-matrix lint-tiers [<file>]  (PLAT.MATRIX.POLICY.DEFS)
 # cargo xtask plat-hw validate [--file <path>]  (PLAT.HW.PROFILE)
+# cargo xtask plat-hw validate-suite [--file <path>]  (PLAT.HW.SCHEMA)
+# cargo xtask plat-hw result-schema  (PLAT.HW.SCHEMA)
 # cargo xtask personas-check [--personas <json>] [--apps <toml>]  (FLOW.PERSONA.PERS)
 xtask = "run -q -p fid-xtask --"
 
