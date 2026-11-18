@@ -1,0 +1,29 @@
+# ECO.DATA.CAT fixture (multi.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "zz-last"
+title = "Synthetic dataset zz-last"
+source = "https://example.org/datasets/zz-last"
+licence = "LicenseRef-Vendor-EULA"
+terms_url = "https://example.org/terms"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "NOPE"
+redistribution = "mirror"
+urls = ["https://example.org/files/zz-last.zip"]
+contains_standards_text = true
+contains_customer_data = true
+
+[[dataset]]
+id = "aa-first"
+title = "Synthetic dataset aa-first"
+source = "https://example.org/datasets/aa-first"
+licence = "GPL-2.0-only"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN.NUM"
+redistribution = "mirror"
+urls = ["https://example.org/files/aa-first.zip"]

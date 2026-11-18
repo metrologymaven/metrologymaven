@@ -232,8 +232,8 @@ VECTORS = [
     ("neg_z", (0.0, 0.0, -1.0)),
     ("three_four_five", (0.6, 0.8, 0.0)),
     ("diagonal", (s3, s3, s3)),
-    ("ac6_leaf_example", (1.0, 0.0, 1e-6)),  # |norm - 1| ~ 5e-13: within 1e-9 (see PR)
-    ("tilted_1e-4", (1.0, 0.0, 1e-4)),        # |norm - 1| ~ 5e-9
+    ("ac6_leaf_example", (1.0, 0.0, 1e-6)),  # |norm - 1| ~ 5e-13: passes (AC-6)
+    ("tilted_1e-4", (1.0, 0.0, 1e-4)),        # |norm - 1| ~ 5e-9: fails (AC-6)
     ("long_by_2e-9", (1.0 + 2e-9, 0.0, 0.0)),
     ("long_by_5e-10", (1.0 + 5e-10, 0.0, 0.0)),
     ("short_by_2e-9", (0.0, 1.0 - 2e-9, 0.0)),

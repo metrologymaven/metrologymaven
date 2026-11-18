@@ -2,7 +2,7 @@
 
 use super::{boolean, kept, obj, object, reference, string, take, UnitsError};
 use fid_canon::CValue;
-use fid_project::{uuid_v5, Uuid};
+use fid_uuid::{uuid_v5, Uuid};
 use std::collections::BTreeMap;
 use std::fmt;
 

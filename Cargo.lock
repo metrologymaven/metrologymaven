@@ -75,11 +75,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-data"
+version = "0.0.1"
+dependencies = [
+ "fid-testkit",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
- "fid-project",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -93,6 +101,8 @@ dependencies = [
 name = "fid-kci"
 version = "0.0.1"
 dependencies = [
+ "fid-num",
+ "fid-testkit",
  "fid-types",
 ]
 
@@ -116,8 +126,8 @@ name = "fid-project"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-uuid",
  "getrandom",
- "sha1",
 ]
 
 [[package]]
@@ -155,6 +165,13 @@ dependencies = [
 [[package]]
 name = "fid-types"
 version = "0.0.1"
+
+[[package]]
+name = "fid-uuid"
+version = "0.0.1"
+dependencies = [
+ "sha1",
+]
 
 [[package]]
 name = "fid-xtask"

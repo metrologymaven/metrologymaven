@@ -59,7 +59,7 @@ The shared value types that every capability package uses on its control and dat
 - **AC-3** Given `fixtures/hal/idl/units/encodings.json`, when each descriptor is validated, then the valid ones pass and `scale_zero` and `unit_px` fail with `encoding_invalid`.
 - **AC-4** Given `fixtures/hal/idl/units/frames_cycle.json` (sensor → mount → sensor), when the frame graph is validated, then it fails with `frame_graph_invalid`; `frames_arm.json` (sensor → mount → device → machine → part) passes.
 - **AC-5** Given the list of time sources shuffled, when sorted, then the order is `HW_TRIGGER < PTP < DEVICE_CLOCK < NTP < HOST_RECEIVE` (best first).
-- **AC-6** (error path) Given direction `(1, 0, 1e-6)`, when validated, then it fails with `direction_not_unit`.
+- **AC-6** (error path) Given direction `(1, 0, 1e-4)` (|norm − 1| ≈ 5e-9), when validated, then it fails with `direction_not_unit`; given `(1, 0, 1e-6)` (|norm − 1| ≈ 5e-13), it passes.
 
 ## Design
 
@@ -82,6 +82,7 @@ Project-authored JSON under `fixtures/hal/idl/units/` (CC-BY-4.0).
 ## Open questions
 
 - Pressure in Pa and humidity as dimensionless fraction cover the `Environment` capability; whether position quantities for indoor positioning need a geodetic frame kind is left to `HAL.IDL.SENS`.
+- Layer placement: CONSTITUTION §2.1 lists HAL.IDL types under L0 Foundation (D-035). In the crate layer map the implementing crate `fid-hal-idl` sits in `model`, the layer where the L0 crate `fid-canon` sits; it depends only on `fid-canon` and `fid-uuid` (no CORE crate).
 
 ## Children
 

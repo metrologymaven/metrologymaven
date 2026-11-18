@@ -10,8 +10,9 @@ repository.workspace = true
 [dependencies]
 # Canonical JSON value model (RFC 8785) for the wire forms.
 fid-canon = { path = "../fid-canon" }
-# Uuid and RFC 9562 UUIDv5 for FrameId (CONSTITUTION §5 derived IDs), instead of a second UUID type.
-fid-project = { path = "../fid-project" }
+# Uuid and RFC 9562 UUIDv5 for FrameId (CONSTITUTION §5 derived IDs). Not fid-project:
+# HAL.IDL types may not depend on CORE (CONSTITUTION §2.1, D-035).
+fid-uuid = { path = "../fid-uuid" }
 
 [lints]
 workspace = true

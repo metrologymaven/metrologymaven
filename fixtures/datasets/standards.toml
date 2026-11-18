@@ -1,0 +1,16 @@
+# ECO.DATA.CAT fixture (standards.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "quoted-standard"
+title = "Synthetic dataset quoted-standard"
+source = "https://example.org/datasets/quoted-standard"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/quoted-standard.zip"]
+contains_standards_text = true

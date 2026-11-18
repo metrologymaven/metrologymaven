@@ -1,0 +1,29 @@
+# ECO.DATA.CAT fixture (customer.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "customer-no-release"
+title = "Synthetic dataset customer-no-release"
+source = "https://example.org/datasets/customer-no-release"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/customer-no-release.zip"]
+contains_customer_data = true
+
+[[dataset]]
+id = "customer-released"
+title = "Synthetic dataset customer-released"
+source = "https://example.org/datasets/customer-released"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/customer-released.zip"]
+contains_customer_data = true
+release_ref = "D-998"

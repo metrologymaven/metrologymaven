@@ -9,7 +9,7 @@ use fid_hal_idl::{
     EncodingDescriptor, FrameGraph, FrameId, NumericType, Quantity, RawValue, SiUnit, TimeSource, Timestamp,
     UnitVector3, UnitsError,
 };
-use fid_project::Uuid;
+use fid_uuid::Uuid;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -262,9 +262,17 @@ fn ac5_time_source_order() {
     assert_eq!(TimeSource::parse("GPS").map_err(|e| e.code()), Err("bad_value"));
 }
 
-/// AC-6: a direction off unit length by more than 1e-9 fails with `direction_not_unit`.
-/// The leaf's example `(1, 0, 1e-6)` has |norm − 1| ≈ 5e-13, inside REQ-006's tolerance, so
-/// it passes; `(1, 0, 1e-4)` (≈ 5e-9) carries the error path (stated in the PR).
+/// `(1, 0, z)` on the wire.
+fn wire(z: f64) -> CValue {
+    CValue::Arr(vec![
+        CValue::Str("0x3ff0000000000000".into()),
+        CValue::Str("0x0000000000000000".into()),
+        CValue::F64Bits(z),
+    ])
+}
+
+/// AC-6: `(1, 0, 1e-4)` (|norm − 1| ≈ 5e-9) fails with `direction_not_unit`; `(1, 0, 1e-6)`
+/// (|norm − 1| ≈ 5e-13) passes. The fixture adds further labelled vectors.
 #[test]
 fn ac6_directions() {
     for case in arr(fixture("directions.json")) {
@@ -282,6 +290,8 @@ fn ac6_directions() {
     }
     assert_eq!(UnitVector3::new(1.0, 0.0, 1e-4), Err(UnitsError::DirectionNotUnit));
     assert!(UnitVector3::new(1.0, 0.0, 1e-6).is_ok());
+    assert_eq!(UnitVector3::from_value(wire(1e-4)).map_err(|e| e.code()), Err("direction_not_unit"));
+    assert!(UnitVector3::from_value(wire(1e-6)).is_ok());
 }
 
 #[test]
