@@ -23,7 +23,11 @@
   "fs_effect": "none",
   "undo": "not_undoable",
   "preconditions": [
-   "project.open"
+   {
+    "expr": "params.tolerance_mm > 0.0",
+    "bound": 100,
+    "message_key": "fixture.tolerance_positive"
+   }
   ],
   "effects": [
    "align.run_321@1"
