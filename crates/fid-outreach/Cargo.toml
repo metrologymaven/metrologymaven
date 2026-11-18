@@ -1,0 +1,23 @@
+[package]
+name = "fid-outreach"
+description = "Metrology Maven outreach tooling: launch milestone criteria file and plan check (spec node OUTR.LAUNCH.PLAN.FMT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-outreach"
+path = "src/main.rs"
+
+[dependencies]
+# RFC 8785 canonical JSON for the `--json` report.
+fid-canon = { path = "../fid-canon" }
+# Reads the criteria file, app list and base file as untyped tables (no serde derive); same pinned
+# dependency as fid-platform and fid-vocab, already in Cargo.lock. Duplicate keys are rejected by the parser.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

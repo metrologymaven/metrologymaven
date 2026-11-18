@@ -1,0 +1,5 @@
+Synthetic test fixtures for spec node OUTR.LAUNCH.PLAN.FMT (CC-BY-4.0).
+They are not the project's launch plan: milestone IDs, criteria, roles and the 2099 dates are
+made up for the tests. Expected findings are hand-labelled from the spec's rules in
+crates/fid-outreach/tests/plan_check.rs; nothing here was produced by running the Rust code.
+A fixture directory that lacks apps.toml, PLAN.md or reviews/ uses the one in ok/.
