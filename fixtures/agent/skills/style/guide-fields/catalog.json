@@ -1,0 +1,13 @@
+{
+  "format": "fid.agent-catalog",
+  "version": 1,
+  "workflows": [
+    {
+      "profile": "inspect",
+      "workflow_id": "demo.guide_fields",
+      "title": "Guide with bad fields",
+      "guide_id": "demo.guide_fields",
+      "recipes": []
+    }
+  ]
+}

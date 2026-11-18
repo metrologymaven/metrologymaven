@@ -1,0 +1,9 @@
+# Deny list for `agent-style-lint` (spec node AGENT.SKILLS.STYLE, rule possible_standards_text).
+# Project-authored phrase stems only; never paste standards text here. One entry per line;
+# each word is a stem, and a prose word matches when it starts with the stem (case-insensitive).
+# A run of 12 or more consecutive prose words matching one entry word by word is reported.
+# Entries shorter than 12 stems can never match. This is a heuristic [unverified]; extend it
+# with the project's own wording when reviewers spot normative-sounding boilerplate in guides.
+the measur result shall be report togeth with it uncert and the cover factor us for it
+the instrument shall be calibr at interv not exceed those stat by the manufactur of the instrument
+the datum shall be establish from the actual featur by the method given in the referenc document
