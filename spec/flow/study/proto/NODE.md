@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-accept]
 satisfies: [REQ-FLOW.STUDY-001, REQ-FLOW.STUDY-002, REQ-FLOW.STUDY-005]
 covers: [JOB.USE.02, JOB.USE.03]
 depends_on: []
