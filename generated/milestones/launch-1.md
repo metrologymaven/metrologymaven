@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**101** of **1336** leaves built in code ([B]).
+**102** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 31 built)
+### Wave 2 (121 leaves, 32 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -212,7 +212,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
 - [B] [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
 - [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
-- [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
+- [B] [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
 - [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)
 - [B] [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
 - [IO.RES.CSV.MAP](../../spec/io/res/csv/map/NODE.md) Versioned result column maps and table dialect (M, P1a)

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<q:doc xmlns:q="urn:example:q" xmlns="urn:example:default" xml:lang="en">
+  <q:head q:kind="main" plain="1">
+    <title>Probe</title>
+  </q:head>
+  <body xmlns:ext="urn:example:ext">
+    <ext:block ext:id="b1" q:ref="h">
+      <ext:part xmlns="">no default here</ext:part>
+      <q:leaf xmlns:q="urn:example:q2" q:x="1"/>
+      <!-- kept -->
+    </ext:block>
+  </body>
+</q:doc>
