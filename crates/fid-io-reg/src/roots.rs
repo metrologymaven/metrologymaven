@@ -434,7 +434,7 @@ impl RootSet {
         opts.read(true);
         #[cfg(unix)]
         {
-            use std::os::unix::fs::OpenOptionsExt;
+            use cap_std::fs::OpenOptionsExt;
             // Never block on a FIFO swapped in after the check; never take a controlling
             // terminal.
             opts.custom_flags(NO_BLOCK_FLAGS);
