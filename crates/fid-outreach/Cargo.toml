@@ -12,9 +12,9 @@ publish = false
 name = "fid-outreach"
 path = "src/main.rs"
 
-# toml: reads the definition and source files as untyped tables (no serde derive); same pinned
+# toml: reads the definition, source, criteria, app-list and base files as untyped tables (no serde derive); same pinned
 # dependency as fid-platform and fid-knp1-lint, already in Cargo.lock. Duplicate keys and
-# malformed TOML are rejected by the parser. fid-canon: writes the --json report as canonical JSON.
+# malformed TOML are rejected by the parser. fid-canon: writes the --json reports as canonical JSON.
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 toml = { version = "0.8", default-features = false, features = ["parse"] }

@@ -1,0 +1,24 @@
+# Synthetic app list (shape of ECO.APPS.LIST `apps.toml`). CC-BY-4.0.
+[[app]]
+id = "inspect"
+job = "scan-to-CAD inspection"
+phase = "P1b"
+decision = "D-004"
+
+[[app]]
+id = "probe"
+job = "CMM programming, simulation and execution"
+phase = "P2"
+decision = "D-004"
+
+[[app]]
+id = "network"
+job = "large-volume, multi-instrument networks"
+phase = "P3"
+decision = "D-004"
+
+[[app]]
+id = "report"
+job = "reporting and SPC"
+phase = "P1a"
+decision = "D-004"

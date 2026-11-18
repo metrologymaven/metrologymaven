@@ -1,0 +1,14 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+# Expected: scope_label_missing report-beta only.
+version = 1
+
+[[milestone]]
+id = "report-beta"
+app = "report"
+level = "beta"
+
+[[milestone.criterion]]
+id = "RPT-B-01"
+kind = "phase_done"
+phase = "P1a"
+scope = ["RPT"]
