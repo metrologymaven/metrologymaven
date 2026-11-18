@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-step]
 satisfies: [REQ-IO.CAD.STEP-001, REQ-IO.CAD.STEP-003]
 covers: []
 depends_on: [IO.REG.LIMITS]

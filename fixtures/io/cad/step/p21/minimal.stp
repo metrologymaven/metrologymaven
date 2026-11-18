@@ -1,0 +1,25 @@
+ISO-10303-21;
+HEADER;
+/* Hand-written fixture for spec node IO.CAD.STEP.P21 (Metrology Maven), CC-BY-4.0.
+   Twelve data instances, one of them complex, one string with a \X2\ escape. */
+FILE_DESCRIPTION(('minimal exchange structure for the P21 parser'),'2;1');
+FILE_NAME('minimal.stp','2026-11-18T00:00:00',('fixture author'),('Metrology Maven'),
+  'hand written','none','');
+FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('origin',(0.,0.,0.));
+#2=DIRECTION('axis',(0.,0.,1.));
+#3=DIRECTION('ref_direction',(1.,0.,0.));
+#4=AXIS2_PLACEMENT_3D('placement',#1,#2,#3);
+#5 = CARTESIAN_POINT ( 'probe tip' , ( 12.5 , -3.25E-2 , 1.0E+02 ) ) ;
+#6=PRODUCT('P-001','Gr\X2\00FC00DF\X0\e',$,(#7));
+#7=PRODUCT_CONTEXT('',#8,'mechanical');
+#8=APPLICATION_CONTEXT('fixture');
+/* a complex instance: three leaves in file order */
+#9=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#10=MEASURE_REPRESENTATION_ITEM('pitch',LENGTH_MEASURE(25.4),#9);
+#11=SHAPE_REPRESENTATION('shape',(#4,#5,#10),#12);
+#12=FIXTURE_FLAGS('flags',"3F",.T.,-7);
+ENDSEC;
+END-ISO-10303-21;

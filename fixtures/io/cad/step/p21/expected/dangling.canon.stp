@@ -1,0 +1,12 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('dangling reference'),'2;1');
+FILE_NAME('dangling.stp','2026-11-18T00:00:00',(''),(''),'','','');
+FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('a',(0.,0.,0.));
+#5=VERTEX_POINT('v',#99);
+#6=EDGE_CURVE('e',#5,#5,#1,.T.);
+ENDSEC;
+END-ISO-10303-21;

@@ -1,0 +1,13 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('string escapes'),'2;1');
+FILE_NAME('escapes.stp','2026-11-18T00:00:00',(''),(''),'','','');
+FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));
+ENDSEC;
+DATA;
+#1=LABELS('it''s','back\\slash','\X2\00C4\X0\','\X2\00E9\X0\','\X2\03B103B2\X0\','\X4\0001F600\X0\','caf\X2\00E9\X0\','na\X2\00EF\X0\ve','split across lines');
+#2=MIXED('a\X2\00E9\X0\b\X4\0001F600\X0\c','','/* not a comment */');
+#3=RAW('na\X2\00EF\X0\ve');
+#4=PAIR('\X4\0001F600\X0\');
+ENDSEC;
+END-ISO-10303-21;

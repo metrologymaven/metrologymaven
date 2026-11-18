@@ -1,0 +1,15 @@
+[package]
+name = "fid-io-step"
+description = "Metrology Maven bounded ISO 10303-21 (clear-text STEP) exchange-structure parser and printer (spec node IO.CAD.STEP.P21)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The reader harness: Budget, BoundedSource, IoError, UntrustedText (IO.REG.LIMITS).
+fid-io-reg = { path = "../fid-io-reg" }
+
+[lints]
+workspace = true
