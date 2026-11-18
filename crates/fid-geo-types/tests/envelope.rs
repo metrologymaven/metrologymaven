@@ -301,6 +301,11 @@ fn aabb_helpers_and_cad_body() {
     assert_eq!(Aabb::new([0.0, 0.0, f64::NAN], [1.0; 3]), Err(GeoTypeError::NonFinite { index: 2 }));
     assert_eq!(Aabb::new([0.0; 3], [1.0, 1.0, f64::INFINITY]), Err(GeoTypeError::NonFinite { index: 5 }));
     assert_eq!(Aabb::new([0.0, 2.0, 0.0], [1.0; 3]), Err(GeoTypeError::InvertedAabb { axis: 1 }));
+    // Signed zeros follow totalOrder (-0.0 < +0.0), as in of_points and union.
+    assert_eq!(Aabb::new([0.0, 0.0, 0.0], [1.0, 1.0, -0.0]), Err(GeoTypeError::InvertedAabb { axis: 2 }));
+    let z = Aabb::new([-0.0; 3], [0.0; 3]).unwrap();
+    assert_eq!(bits3(z.min()), [(-0.0f64).to_bits(); 3]);
+    assert!(Aabb::new([0.0; 3], [0.0; 3]).is_ok());
     let a = Aabb::new([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]).unwrap();
     let b = Aabb::new([-1.0, 0.5, 0.25], [0.5, 2.0, 0.75]).unwrap();
     let u = a.union(&b);

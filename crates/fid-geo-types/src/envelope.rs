@@ -86,15 +86,17 @@ pub struct Aabb {
 }
 
 impl Aabb {
-    /// A box from its corners. Fails on a non-finite value or `min > max` on any axis.
+    /// A box from its corners. Fails on a non-finite value or `min > max` in IEEE 754
+    /// totalOrder on any axis (so `-0.0 < +0.0`).
     pub fn new(min: [f64; 3], max: [f64; 3]) -> Result<Aabb, GeoTypeError> {
         for (i, v) in min.iter().chain(max.iter()).enumerate() {
             if !v.is_finite() {
                 return Err(GeoTypeError::NonFinite { index: i as u64 });
             }
         }
+        // totalOrder, like `of_points` and `union`: min = +0.0 with max = -0.0 is inverted.
         for (axis, (lo, hi)) in min.iter().zip(max.iter()).enumerate() {
-            if lo > hi {
+            if hi.total_cmp(lo) == Ordering::Less {
                 return Err(GeoTypeError::InvertedAabb { axis: axis as u8 });
             }
         }

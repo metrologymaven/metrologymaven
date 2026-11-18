@@ -11,8 +11,10 @@
 //!
 //! The kinds are distinct types with no `From`, `Into` or `Deref` between them
 //! (REQ-GEO.TYPES.ENV-001), and no element has a `Default` (REQ-GEO.TYPES.ENV-002).
-//! Each `compile_fail` block below is paired with a block that compiles, so the failure
-//! is the guarantee and not an unrelated mistake.
+//! Two compiling control blocks (the named conversions, and construction with a frame)
+//! use the same imports and shapes as the `compile_fail` blocks, so each failure is the
+//! guarantee and not an unrelated mistake; each `compile_fail` block also names its
+//! expected error code.
 //!
 //! The only conversions are the named functions:
 //!

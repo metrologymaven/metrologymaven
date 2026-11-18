@@ -20,7 +20,7 @@ pub enum GeoTypeError {
     AttributeLength { name: String, expected: u64, found: u64 },
     /// A normal is zero or not finite (used by GEO.TYPES.POINTS).
     BadNormal { index: u64 },
-    /// A bounding box has `min > max` on `axis` (0 = x, 1 = y, 2 = z).
+    /// A bounding box has `min > max` (IEEE 754 totalOrder) on `axis` (0 = x, 1 = y, 2 = z).
     InvertedAabb { axis: u8 },
 }
 

@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # GEO.TYPES.ENV: Element envelope and kind tags
@@ -54,7 +54,7 @@ The common `GeometryElement` envelope that every geometric element sits in: the 
 - **REQ-GEO.TYPES.ENV-003** When `GeometryElement::kind()` is called, the envelope shall return the `ElementKind` of the wrapped element, and an operation that requires a specific kind shall return `GeoTypeError::WrongKind { expected, found }` for any other kind.
 - **REQ-GEO.TYPES.ENV-004** The only conversions between kinds shall be the named functions `PointCloud::to_point_set` and `Mesh::vertices_to_point_set`, each returning a new element in the same frame.
 - **REQ-GEO.TYPES.ENV-005** When `aabb()` is called on an element with zero points, the envelope shall return `GeoTypeError::Empty` rather than an infinite or NaN box.
-- **REQ-GEO.TYPES.ENV-006** The crate shall define the `PointSource` trait (`next_block`, `len`, `frame`) and implement it for `PointSet` and `PointCloud`, emitting points in index order with their original indexes.
+- **REQ-GEO.TYPES.ENV-006** The crate shall define the `PointSource` trait (`next_block`, `len`, `frame`) and implement it for in-memory readers over `PointSet` and `PointCloud` (`InMemorySource`, which holds the read cursor), emitting points in index order with their original indexes.
 
 ## Acceptance criteria
 
@@ -62,13 +62,13 @@ The common `GeometryElement` envelope that every geometric element sits in: the 
 - **AC-2** (error path) Given a `GeometryElement::Mesh` passed to a function requiring `PointSet`, when the kind guard runs, then it returns `WrongKind { expected: PointSet, found: Mesh }`.
 - **AC-3** (error path) Given an empty `PointSet`, when `aabb()` runs, then it returns `GeoTypeError::Empty`.
 - **AC-4** Given fixture `fixtures/geo/types/mesh_cube` (8 vertices), when `vertices_to_point_set` runs, then the result has 8 points, the same frame and the same coordinates in vertex order.
-- **AC-5** A compile-fail test (trybuild) shows that `let p: PointSet = mesh.into();` and `PointSet::default()` do not compile.
+- **AC-5** `compile_fail` doc-tests in the crate docs (no trybuild, so the kernel crate gains no third-party dependency) show that `let p: PointSet = mesh.into();` and `PointSet::default()` do not compile.
 - **AC-6** Given `pointset_small` read through `PointSource` with block size 128, when the blocks are concatenated, then they equal the point buffer in index order with original indexes 0..999.
 
 ## Design
 
 - **Registry command(s):** none; library leaf.
-- **Data structures:** `pub struct FrameRef([u8; 16])`; `pub struct CadBodyRef { body: [u8; 16], source_digest: [u8; 32], aabb: Aabb }`; `pub struct Aabb { min: [f64; 3], max: [f64; 3] }`; `pub enum GeometryElement { PointSet(PointSet), PointCloud(PointCloud), Mesh(Mesh), CadBody(CadBodyRef) }`; `pub enum GeoTypeError { WrongKind{..}, Empty, NonFinite{index}, IndexOutOfRange{triangle, index}, AttributeLength{name, expected, found}, BadNormal{index} }`.
+- **Data structures:** `pub struct FrameRef([u8; 16])`; `pub struct CadBodyRef { frame: FrameRef, body: [u8; 16], source_digest: fid_types::Digest, aabb: Aabb }`; `pub struct Aabb { min: [f64; 3], max: [f64; 3] }`; `pub enum GeometryElement { PointSet(PointSet), PointCloud(PointCloud), Mesh(Mesh), CadBody(CadBodyRef) }`; `pub enum GeoTypeError { WrongKind{..}, Empty, NonFinite{index}, IndexOutOfRange{triangle, index}, AttributeLength{name, expected, found}, BadNormal{index} }`.
 - **Algorithm:** `aabb` is a fixed-order fold using the `fid-num` total-order min and max (KNP-1); `CadBodyRef` has no geometry, so its `aabb()` returns the box stored at import time.
 - **Errors:** as listed; every error is a value, never a panic.
 - **Determinism:** D0. Only comparisons and copies.
@@ -82,11 +82,12 @@ The common `GeometryElement` envelope that every geometric element sits in: the 
 
 ## Build prompt
 
-> In the Rust crate `fid-geo-types` (pure Rust, f64, no I/O, part of the kernel dependency graph), create the module `envelope` with: `FrameRef` (16-byte opaque ID), `CadBodyRef { body: [u8;16], source_digest: [u8;32], aabb: Aabb }`, `Aabb { min: [f64;3], max: [f64;3] }` with `union` and `contains`, `ElementKind` (`PointSet`, `PointCloud`, `Mesh`, `CadBodyRef`), and `GeometryElement` wrapping the concrete types with `kind()`, `frame()` and `aabb() -> Result<Aabb, GeoTypeError>`. Define `GeoTypeError` with variants `WrongKind { expected, found }`, `Empty`, `NonFinite { index: u64 }`, `IndexOutOfRange { triangle: u64, index: u64 }`, `AttributeLength { name, expected: u64, found: u64 }`, `BadNormal { index: u64 }`. Requirements: the four kinds are distinct types with no `From`/`Into`/`Deref` between them; every constructor takes a `FrameRef` and there is no `Default`; the only kind conversions are `PointCloud::to_point_set` and `Mesh::vertices_to_point_set`, keeping the frame; `aabb()` on zero points returns `Empty`. Acceptance: (1) fixture `pointset_small` gives the recorded AABB bit-exactly; (2) the kind guard returns `WrongKind`; (3) empty set gives `Empty`; (4) `mesh_cube` vertices convert to 8 points in order; (5) trybuild compile-fail tests for implicit conversion and `Default`. Constraints: CONSTITUTION §8 (no panic, no `unsafe`, deny `unwrap`/`expect`/`panic`/`todo`/`unimplemented`/`unreachable`), KNP-1 (min/max through `fid-num` total order, no std HashMap/HashSet, no FMA). Also define `trait PointSource { fn next_block(&mut self) -> Option<Result<PointBlock, GeoTypeError>>; fn len(&self) -> u64; fn frame(&self) -> FrameRef; }` with `PointBlock { original_index: Vec<u64>, x, y, z, channels }`, implemented for `PointSet` and `PointCloud` in index order (AC-6: blocks of 128 concatenate to the buffer). Files: `crates/fid-geo-types/src/envelope.rs`, `src/source.rs`, `src/error.rs`, `src/lib.rs`, `tests/envelope.rs`, `tests/ui/*.rs`.
+> In the Rust crate `fid-geo-types` (pure Rust, f64, no I/O, part of the kernel dependency graph), create the module `envelope` with: `FrameRef` (16-byte opaque ID), `CadBodyRef { frame: FrameRef, body: [u8;16], source_digest: fid_types::Digest, aabb: Aabb }`, `Aabb { min: [f64;3], max: [f64;3] }` with `union` and `contains`, `ElementKind` (`PointSet`, `PointCloud`, `Mesh`, `CadBodyRef`), and `GeometryElement` wrapping the concrete types with `kind()`, `frame()` and `aabb() -> Result<Aabb, GeoTypeError>`. Define `GeoTypeError` with variants `WrongKind { expected, found }`, `Empty`, `NonFinite { index: u64 }`, `IndexOutOfRange { triangle: u64, index: u64 }`, `AttributeLength { name, expected: u64, found: u64 }`, `BadNormal { index: u64 }`. Requirements: the four kinds are distinct types with no `From`/`Into`/`Deref` between them; every constructor takes a `FrameRef` and there is no `Default`; the only kind conversions are `PointCloud::to_point_set` and `Mesh::vertices_to_point_set`, keeping the frame; `aabb()` on zero points returns `Empty`. Acceptance: (1) fixture `pointset_small` gives the recorded AABB bit-exactly; (2) the kind guard returns `WrongKind`; (3) empty set gives `Empty`; (4) `mesh_cube` vertices convert to 8 points in order; (5) `compile_fail` doc-tests for implicit conversion and `Default`. Constraints: CONSTITUTION §8 (no panic, no `unsafe`, deny `unwrap`/`expect`/`panic`/`todo`/`unimplemented`/`unreachable`), KNP-1 (min/max through `fid-num` total order, no std HashMap/HashSet, no FMA). Also define `trait PointSource { fn next_block(&mut self) -> Option<Result<PointBlock, GeoTypeError>>; fn len(&self) -> u64; fn frame(&self) -> FrameRef; }` with `PointBlock { original_index: Vec<u64>, x, y, z, channels }`, implemented for `InMemorySource`, which `PointSet::source(block_size)` and `PointCloud::source(block_size)` return, in index order (AC-6: blocks of 128 concatenate to the buffer). Files: `crates/fid-geo-types/src/envelope.rs`, `src/source.rs`, `src/error.rs`, `src/lib.rs`, `tests/envelope.rs` (AC-5 as doc-tests in `src/lib.rs`).
 
 ## Open questions
 
 - Whether `CadBodyRef` should carry its AABB (convenient for indexing) or fetch it from GEO.CAD on demand; this leaf stores it at import time.
+- `aabb` uses local IEEE 754 totalOrder min/max helpers (`f64::total_cmp`) because `fid-num` has no total-order min/max yet; move them there when it does.
 
 ## Children
 
