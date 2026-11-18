@@ -1,0 +1,54 @@
+{
+  "format": "study-tasks@1",
+  "record_format": "study-record@1",
+  "tasks": [
+    {
+      "job_id": "JOB.ACC.01",
+      "start_command": "import.cad_step@1",
+      "end_command": "report.export_pdf@1",
+      "target_ref": "scan-gdt-report",
+      "maps": [
+        "per-02"
+      ],
+      "personas": [
+        "JOB.PER.02"
+      ]
+    },
+    {
+      "job_id": "JOB.ACC.02",
+      "start_command": "import.results_dmis@1",
+      "end_command": "report.export_pdf@1",
+      "target_ref": "fai-as9102-report",
+      "maps": [
+        "per-01"
+      ],
+      "personas": [
+        "JOB.PER.01"
+      ]
+    },
+    {
+      "job_id": "JOB.ACC.03",
+      "start_command": "import.results_csv@1",
+      "end_command": "report.export_pdf@1",
+      "target_ref": "fai-drawing-only-report",
+      "maps": [
+        "per-01"
+      ],
+      "personas": [
+        "JOB.PER.01"
+      ]
+    },
+    {
+      "job_id": "JOB.ACC.99",
+      "start_command": "import.results_dmis@1",
+      "end_command": "report.export_pdf@1",
+      "target_ref": "fai-as9102-report",
+      "maps": [
+        "per-01"
+      ],
+      "personas": [
+        "JOB.PER.01"
+      ]
+    }
+  ]
+}
