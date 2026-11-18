@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**41** of **1336** leaves built in code ([B]).
+**42** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 35 built)
+### Wave 1 (125 leaves, 36 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -105,7 +105,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
 - [B] [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
 - [OUTR.SITE.GEN.IMPORT](../../spec/outr/site/gen/import/NODE.md) Generated-input lock file, fetch, digest check and build manifest (M, P0)
-- [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
+- [B] [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
 - [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
 - [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)

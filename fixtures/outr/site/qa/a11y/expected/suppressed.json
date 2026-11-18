@@ -1,0 +1,22 @@
+{
+  "exit": 0,
+  "suppressed": [
+    {
+      "line": 12,
+      "page": "layout.html",
+      "rule": "A04"
+    }
+  ],
+  "unmatched": [
+    {
+      "page": "gone.html",
+      "rule": "A01"
+    }
+  ],
+  "used": [
+    {
+      "page": "layout.html",
+      "rule": "A04"
+    }
+  ]
+}
