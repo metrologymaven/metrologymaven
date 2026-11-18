@@ -1,0 +1,8 @@
+[
+  {
+    "name": "sem.focus.ring",
+    "replacement": "sem.focus.outline",
+    "since": "1.1.0",
+    "remove_after": "2.0.0"
+  }
+]

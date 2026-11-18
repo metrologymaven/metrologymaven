@@ -1,0 +1,18 @@
+[package]
+name = "fid-design-pkg"
+description = "Read-only reader of the design-system package: manifest, DTCG tokens, name index, changelog and deprecations (spec node UX.SYSTEM.PKG)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# JSON reader with duplicate-key rejection and depth/size limits; canonical bytes for value comparison.
+fid-canon = { path = "../fid-canon" }
+# Reads package.toml as an untyped table (no serde derive), like fid-knp1-lint.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true
