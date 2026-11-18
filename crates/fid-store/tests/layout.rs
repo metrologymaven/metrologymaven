@@ -745,3 +745,27 @@ fn junction_in_the_path_to_the_root_is_followed() {
     let (_loc, lock) = ProjectLocation::open(&alias, OpenMode::Write).unwrap();
     assert!(lock.unwrap().warnings().is_empty());
 }
+
+// TEMPORARY stress loop (removed before merge): same flow as AC-3 killed holder, 40x, while
+// another test spawns and finishes holders concurrently.
+#[test]
+fn tmp_stress_killed_holder() {
+    for _ in 0..40 {
+        let (_t, root) = new_project("stress");
+        let holder = Holder::spawn(&root);
+        let pid = holder.pid();
+        let status = holder.kill();
+        assert!(!status.success());
+        let (_loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+        let lock = lock.unwrap();
+        assert!(matches!(lock.warnings(), [StoreWarning::StaleLockTaken(p)] if p.pid == pid), "{:?}", lock.warnings());
+    }
+}
+
+#[test]
+fn tmp_stress_finishing_holders() {
+    for _ in 0..40 {
+        let (_t, root) = new_project("stress2");
+        Holder::spawn(&root).finish();
+    }
+}
