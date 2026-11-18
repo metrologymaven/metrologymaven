@@ -1,0 +1,19 @@
+# Test fixture for PLAT.MATRIX.FILE AC-3: row 2 has a phase code that CONSTITUTION §7 does not define.
+schema_version = 1
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.10"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "fixture"
+
+[[row]]
+os = "macos"
+version_min = "15"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P9"
+notes = "fixture"
