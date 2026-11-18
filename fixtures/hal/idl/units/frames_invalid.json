@@ -1,0 +1,171 @@
+[
+ {
+  "graph": {
+   "edges": [
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "time_varying": false,
+     "transform": "xfm:1"
+    },
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+     "time_varying": false,
+     "transform": "xfm:2"
+    }
+   ],
+   "frames": [
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    },
+    {
+     "id": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "kind": "mount"
+    },
+    {
+     "id": "9de04738-848b-5b7d-9acc-64d2f91481a9",
+     "kind": "device"
+    }
+   ]
+  },
+  "name": "two_parents"
+ },
+ {
+  "graph": {
+   "edges": [
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "time_varying": false,
+     "transform": "xfm:1"
+    },
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "time_varying": false,
+     "transform": "xfm:1"
+    }
+   ],
+   "frames": [
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    },
+    {
+     "id": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "kind": "mount"
+    }
+   ]
+  },
+  "name": "duplicate_edge"
+ },
+ {
+  "graph": {
+   "edges": [
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "a72d9497-85da-5595-a602-8880faa65a58",
+     "time_varying": false,
+     "transform": "xfm:1"
+    }
+   ],
+   "frames": [
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    }
+   ]
+  },
+  "name": "self_loop"
+ },
+ {
+  "graph": {
+   "edges": [
+    {
+     "child": "634b9066-df1c-5b31-89ff-5142cb1a18b4",
+     "parent": "5754e100-9118-5e34-833b-a41a2635dc7a",
+     "time_varying": false,
+     "transform": "xfm:1"
+    },
+    {
+     "child": "34aa3958-c977-52e9-af81-a5d9292f4b4b",
+     "parent": "634b9066-df1c-5b31-89ff-5142cb1a18b4",
+     "time_varying": false,
+     "transform": "xfm:2"
+    },
+    {
+     "child": "5754e100-9118-5e34-833b-a41a2635dc7a",
+     "parent": "34aa3958-c977-52e9-af81-a5d9292f4b4b",
+     "time_varying": false,
+     "transform": "xfm:3"
+    },
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "5754e100-9118-5e34-833b-a41a2635dc7a",
+     "time_varying": false,
+     "transform": "xfm:4"
+    }
+   ],
+   "frames": [
+    {
+     "id": "5754e100-9118-5e34-833b-a41a2635dc7a",
+     "kind": "device"
+    },
+    {
+     "id": "634b9066-df1c-5b31-89ff-5142cb1a18b4",
+     "kind": "device"
+    },
+    {
+     "id": "34aa3958-c977-52e9-af81-a5d9292f4b4b",
+     "kind": "device"
+    },
+    {
+     "id": "e62a0447-1ad8-5905-ad9e-2113ae47c783",
+     "kind": "part"
+    },
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    }
+   ]
+  },
+  "name": "three_cycle_with_tail"
+ },
+ {
+  "graph": {
+   "edges": [
+    {
+     "child": "a72d9497-85da-5595-a602-8880faa65a58",
+     "parent": "aaeafa26-92d2-57de-8c8a-735c5d6be7ae",
+     "time_varying": false,
+     "transform": "xfm:1"
+    }
+   ],
+   "frames": [
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    }
+   ]
+  },
+  "name": "undeclared_frame"
+ },
+ {
+  "graph": {
+   "edges": [],
+   "frames": [
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "sensor"
+    },
+    {
+     "id": "a72d9497-85da-5595-a602-8880faa65a58",
+     "kind": "mount"
+    }
+   ]
+  },
+  "name": "duplicate_frame"
+ }
+]

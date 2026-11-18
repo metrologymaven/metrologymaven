@@ -75,6 +75,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-hal-idl"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-project",
+]
+
+[[package]]
 name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
