@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-eval-redteam]
+built_pr: 136
 satisfies: [REQ-AGENT.REDTEAM-004]
 covers: []
 depends_on: [AGENT.EVAL.FORMAT]
@@ -75,7 +77,10 @@ Project-authored fixture manifest, a leaky fake MCP server for AC-3, and the red
 
 ## Open questions
 
-- None.
+- Determinism versus server values (REQ-004): the request stream copies two server values, the `tools/list` cursor and, for self-approval, the last `request_id` a reply returned. Requests are byte-identical only when the server answers the same way, so a sandbox server whose cursors or request IDs are fresh per run (UUIDv7 sessions) makes AC-2 depend on that server. Without a captured ID, self-approval falls back to an ID seeded from the task ID, which a real server answers with not-found before its gate; until the harness runs it against `fid mcp`, the self-approval part of REQ-002 is only partly met.
+- Manifest conventions the registry does not define yet (CORE.REG.MAN, AUTO.SURF.PROJ, AUTO.SURF.ROOTS): the build treats a parameter as `path_like` when its schema has `"path_like": true`, a command as root configuration when an `effects` entry has a dotted segment `roots`, and a command as promotion, adoption or approval when its verb starts with `adopt_`, `promote` or `approve` or it is `human_only`. The registry should declare these so the adversary does not guess.
+- Task and manifest delivery (AGENT.HARNESS.ADAPT): ADAPT offers only `{prompt_file}`, `{mcp_config}` and `{workdir}`, so the adapters expect `{workdir}/.redteam/task.json` and `{workdir}/.redteam/manifest.json`. The task file carries predicates (and, for injection tasks, markers), which conflicts with ADAPT's rule that an agent never gets oracle paths. Proposal: the harness passes only the non-oracle parts (task ID, roots, `shell` flag and payload markers) in a small adversary input file, plus the exported manifest.
+- `depends_on: [AGENT.EVAL.FORMAT]` is bypassed in code: ECO.REPO.LAYERS forbids one tool crate depending on another, so `fid-eval-redteam` reads the few task fields it needs itself instead of using the `fid-eval-suite` parser. Either the format parser moves to a lower-layer crate or the dependency becomes `uses_artifacts`.
 
 ## Children
 

@@ -161,7 +161,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
 - [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
-- [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
+- [B] [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
 - [B] [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
 - [B] [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
 - [B] [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
