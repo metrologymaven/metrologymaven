@@ -138,27 +138,6 @@ fn fid_platform(args: &[String], group: &str) -> ExitCode {
     }
 }
 
-/// PLAT.DEPLOY.OFFLINE.NETLIST: `plat-deploy netlist`. Writes `network-features.json` and
-/// `network-features.md` (default under `docs/deploy/`), or with `--check` compares them with a
-/// fresh generation. Exit 0: ok; 1: X1 findings, unreadable manifest or drift (one per line);
-/// 2: bad usage.
-fn plat_deploy_netlist(args: &[String]) -> ExitCode {
-    let mut manifest: Option<PathBuf> = None;
-    let mut settings: Option<PathBuf> = None;
-    let mut json = PathBuf::from(netlist::DEFAULT_JSON);
-    let mut md = PathBuf::from(netlist::DEFAULT_MD);
-    let mut check = false;
-    let mut it = args.iter();
-    while let Some(a) = it.next() {
-        if a == "--check" {
-            check = true;
-            continue;
-        }
-        match (a.as_str(), it.next()) {
-            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
-            ("--settings", Some(v)) => settings = Some(PathBuf::from(v)),
-            ("--json", Some(v)) => json = PathBuf::from(v),
-            ("--md", Some(v)) => md = PathBuf::from(v),
 /// PLAT.GPU.FALLBK.INVAR: `plat-gpu invariance`. With `--backends`, runs the invariance
 /// sequence once per backend through `fid --gpu-backend` and compares the digest lists; with
 /// `--recorded <dir>`, compares recorded lists only. Prints the report (or the error). Exit 0:
@@ -170,6 +149,9 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
     let mut examples = PathBuf::from(plat_gpu_invar::DEFAULT_EXAMPLES);
     let mut work: Option<PathBuf> = None;
     let mut fid = PathBuf::from("fid");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
             ("--backends", Some(v)) => backends = Some(v),
             ("--recorded", Some(v)) => recorded = Some(PathBuf::from(v)),
             ("--sequence", Some(v)) => sequence = PathBuf::from(v),
@@ -182,21 +164,6 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
             }
         }
     }
-    let (Some(manifest), Some(settings)) = (manifest, settings) else {
-        eprintln!("plat-deploy netlist: --manifest and --settings are required\n{USAGE}");
-        return ExitCode::from(2);
-    };
-    match netlist::run(&manifest, &settings, &json, &md, check) {
-        Ok(n) => {
-            let verb = if check { "up to date" } else { "written" };
-            println!("netlist: {n} commands, {verb}");
-            ExitCode::SUCCESS
-        }
-        Err(errors) => {
-            for e in errors {
-                println!("{e:?}");
-            }
-            ExitCode::from(1)
     let result = match (backends, recorded) {
         (None, Some(dir)) => plat_gpu_invar::read_recorded(&dir).map(|lists| {
             let mut report = plat_gpu_invar::compare(&lists);
@@ -224,11 +191,14 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
                     }
                 }
                 result
+            }
             Err(e) => Err(e),
         },
         _ => {
             eprintln!("plat-gpu invariance: give exactly one of --backends and --recorded\n{USAGE}");
             return ExitCode::from(2);
+        }
+    };
     match result {
         Ok(report) => {
             print!("{}", report.render());
@@ -236,6 +206,8 @@ fn plat_gpu_invariance(args: &[String]) -> ExitCode {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::from(1)
+            }
+        }
         Err(e) => {
             println!("{e}");
             ExitCode::from(e.exit_code())
@@ -707,6 +679,52 @@ fn lint_crate_graph(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("{e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// PLAT.DEPLOY.OFFLINE.NETLIST: `plat-deploy netlist`. Writes `network-features.json` and
+/// `network-features.md` (default under `docs/deploy/`), or with `--check` compares them with a
+/// fresh generation. Exit 0: ok; 1: X1 findings, unreadable manifest or drift (one per line);
+/// 2: bad usage.
+fn plat_deploy_netlist(args: &[String]) -> ExitCode {
+    let mut manifest: Option<PathBuf> = None;
+    let mut settings: Option<PathBuf> = None;
+    let mut json = PathBuf::from(netlist::DEFAULT_JSON);
+    let mut md = PathBuf::from(netlist::DEFAULT_MD);
+    let mut check = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--check" {
+            check = true;
+            continue;
+        }
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            ("--settings", Some(v)) => settings = Some(PathBuf::from(v)),
+            ("--json", Some(v)) => json = PathBuf::from(v),
+            ("--md", Some(v)) => md = PathBuf::from(v),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(settings)) = (manifest, settings) else {
+        eprintln!("plat-deploy netlist: --manifest and --settings are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    match netlist::run(&manifest, &settings, &json, &md, check) {
+        Ok(n) => {
+            let verb = if check { "up to date" } else { "written" };
+            println!("netlist: {n} commands, {verb}");
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                println!("{e:?}");
+            }
+            ExitCode::from(1)
         }
     }
 }
