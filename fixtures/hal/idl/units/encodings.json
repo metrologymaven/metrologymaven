@@ -1,0 +1,325 @@
+{
+ "decodes": [
+  {
+   "descriptor": "i32_nanometres",
+   "expect": "0x3fbf9add37396360",
+   "raw": "123456789",
+   "unit": "m"
+  },
+  {
+   "descriptor": "i32_nanometres",
+   "expect": "0xc0012e0be826d695",
+   "raw": "-2147483648",
+   "unit": "m"
+  },
+  {
+   "descriptor": "i32_nanometres",
+   "expect": "0x40012e0be8047a7d",
+   "raw": "2147483647",
+   "unit": "m"
+  },
+  {
+   "descriptor": "i16_tenth_kelvin",
+   "expect": "0xc0a7774ccccccccd",
+   "raw": "-32768",
+   "unit": "K"
+  },
+  {
+   "descriptor": "i16_tenth_kelvin",
+   "expect": "0x4072526666666666",
+   "raw": "200",
+   "unit": "K"
+  },
+  {
+   "descriptor": "i16_tenth_kelvin",
+   "expect": "0x4071173333333333",
+   "raw": "3",
+   "unit": "K"
+  },
+  {
+   "descriptor": "i64_ns_seconds",
+   "expect": "0x41612e0be826d695",
+   "raw": "9007199254740993",
+   "unit": "s"
+  },
+  {
+   "descriptor": "i64_ns_seconds",
+   "expect": "0xc2012e0be826d695",
+   "raw": "-9223372036854775808",
+   "unit": "s"
+  },
+  {
+   "descriptor": "i64_ns_seconds",
+   "expect": "0x41d954fc4007e6b8",
+   "raw": "1700000000123456789",
+   "unit": "s"
+  },
+  {
+   "descriptor": "u16_pascal",
+   "expect": "0x40fff9a000000000",
+   "raw": "65535",
+   "unit": "Pa"
+  },
+  {
+   "descriptor": "u16_pascal",
+   "expect": "0xc059000000000000",
+   "raw": "0",
+   "unit": "Pa"
+  },
+  {
+   "descriptor": "u32_encoder_rad",
+   "expect": "0x400921fb5411e922",
+   "raw": "4294967295",
+   "unit": "rad"
+  },
+  {
+   "descriptor": "u32_encoder_rad",
+   "expect": "0xbff921fb54442d18",
+   "raw": "1073741824",
+   "unit": "rad"
+  },
+  {
+   "descriptor": "f32_metres",
+   "expect": "0x3fb99999a0000000",
+   "raw": "0x3dcccccd",
+   "unit": "m"
+  },
+  {
+   "descriptor": "f32_metres",
+   "expect": "0xc7efffffe0000000",
+   "raw": "0xff7fffff",
+   "unit": "m"
+  },
+  {
+   "descriptor": "f64_millimetres",
+   "expect": "0x3f9a027525460aa6",
+   "raw": "0x4039666666666666",
+   "unit": "m"
+  },
+  {
+   "descriptor": "f64_millimetres",
+   "expect": "0x3f33a92a30553261",
+   "raw": "0x3fd3333333333333",
+   "unit": "m"
+  },
+  {
+   "descriptor": "f64_negative_scale",
+   "expect": "0x0000000000000000",
+   "raw": "0x4014000000000000",
+   "unit": "1"
+  },
+  {
+   "descriptor": "f64_huge_scale",
+   "expect": "quantity_not_finite",
+   "raw": "0x4202a05f20000000",
+   "unit": "m"
+  },
+  {
+   "descriptor": "f32_metres",
+   "expect": "quantity_not_finite",
+   "raw": "0x7fc00000",
+   "unit": "m"
+  }
+ ],
+ "descriptors": [
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x3e112e0be826d695",
+    "unit": "m"
+   },
+   "expect": "ok",
+   "name": "i32_nanometres"
+  },
+  {
+   "descriptor": {
+    "numeric": "i16",
+    "offset": "0x4071126666666666",
+    "scale": "0x3fb999999999999a",
+    "unit": "K"
+   },
+   "expect": "ok",
+   "name": "i16_tenth_kelvin"
+  },
+  {
+   "descriptor": {
+    "numeric": "i64",
+    "offset": "0x0000000000000000",
+    "scale": "0x3e112e0be826d695",
+    "unit": "s"
+   },
+   "expect": "ok",
+   "name": "i64_ns_seconds"
+  },
+  {
+   "descriptor": {
+    "numeric": "u16",
+    "offset": "0xc059000000000000",
+    "scale": "0x4000000000000000",
+    "unit": "Pa"
+   },
+   "expect": "ok",
+   "name": "u16_pascal"
+  },
+  {
+   "descriptor": {
+    "numeric": "u32",
+    "offset": "0xc00921fb54442d18",
+    "scale": "0x3e1921fb54442d18",
+    "unit": "rad"
+   },
+   "expect": "ok",
+   "name": "u32_encoder_rad"
+  },
+  {
+   "descriptor": {
+    "numeric": "f32",
+    "offset": "0x0000000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "ok",
+   "name": "f32_metres"
+  },
+  {
+   "descriptor": {
+    "numeric": "f64",
+    "offset": "0x0000000000000000",
+    "scale": "0x3f50624dd2f1a9fc",
+    "unit": "m"
+   },
+   "expect": "ok",
+   "name": "f64_millimetres"
+  },
+  {
+   "descriptor": {
+    "numeric": "f64",
+    "offset": "0x4014000000000000",
+    "scale": "0xbff0000000000000",
+    "unit": "1"
+   },
+   "expect": "ok",
+   "name": "f64_negative_scale"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x0000000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "scale_zero"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x8000000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "scale_negative_zero"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x7ff8000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "scale_nan"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x7ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "scale_inf"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x7ff8000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "offset_nan"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0xfff0000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "offset_neg_inf"
+  },
+  {
+   "descriptor": {
+    "numeric": "u16",
+    "offset": "0x0000000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "px"
+   },
+   "expect": "encoding_invalid",
+   "name": "unit_px"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "offset": "0x0000000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "mm"
+   },
+   "expect": "encoding_invalid",
+   "name": "unit_mm"
+  },
+  {
+   "descriptor": {
+    "numeric": "u64",
+    "offset": "0x0000000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "numeric_u64"
+  },
+  {
+   "descriptor": {
+    "numeric": "i8",
+    "offset": "0x0000000000000000",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "encoding_invalid",
+   "name": "numeric_i8"
+  },
+  {
+   "descriptor": {
+    "numeric": "i32",
+    "scale": "0x3ff0000000000000",
+    "unit": "m"
+   },
+   "expect": "missing_field",
+   "name": "missing_offset"
+  },
+  {
+   "descriptor": {
+    "numeric": "f64",
+    "offset": "0x0000000000000000",
+    "scale": "0x7e37e43c8800759c",
+    "unit": "m"
+   },
+   "expect": "ok",
+   "name": "f64_huge_scale"
+  }
+ ]
+}

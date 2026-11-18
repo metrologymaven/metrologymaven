@@ -9,8 +9,8 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
-# SHA-1 for UUIDv5, as RFC 9562 requires (identity only, not security). Same RustCrypto family as sha2.
-sha1 = "0.10"
+# Uuid value and UUIDv5 (moved out so HAL.IDL types need not depend on CORE; re-exported here).
+fid-uuid = { path = "../fid-uuid" }
 # Operating-system CSPRNG for the random bits of live UUIDv7s.
 getrandom = "0.2"
 
