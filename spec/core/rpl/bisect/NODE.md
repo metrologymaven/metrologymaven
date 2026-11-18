@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-replay]
 satisfies: [REQ-CORE.RPL-013]
 covers: []
 depends_on: [CORE.RPL.CLASS]

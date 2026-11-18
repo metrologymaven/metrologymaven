@@ -1,0 +1,131 @@
+{
+ "cases": [
+  {
+   "expect": {
+    "first_divergent": 637,
+    "non_monotone": true
+   },
+   "n": 1000,
+   "name": "island 637..800 in 1000",
+   "true_intervals": [
+    [
+     637,
+     800
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 300,
+    "non_monotone": true
+   },
+   "n": 1000,
+   "name": "island 300..900 in 1000",
+   "true_intervals": [
+    [
+     300,
+     900
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 7,
+    "non_monotone": true
+   },
+   "n": 16,
+   "name": "single true at 7 in 16",
+   "true_intervals": [
+    [
+     7,
+     8
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 1,
+    "non_monotone": true
+   },
+   "n": 4,
+   "name": "island 1..3 in 4",
+   "true_intervals": [
+    [
+     1,
+     3
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 637,
+    "max_evaluations": 11,
+    "non_monotone": false
+   },
+   "n": 1000,
+   "name": "monotone 637 in 1000",
+   "true_intervals": [
+    [
+     637,
+     1000
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 0,
+    "max_evaluations": 4,
+    "non_monotone": false
+   },
+   "n": 7,
+   "name": "monotone 0 in 7",
+   "true_intervals": [
+    [
+     0,
+     7
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": 8,
+    "max_evaluations": 5,
+    "non_monotone": false
+   },
+   "n": 9,
+   "name": "monotone last in 9",
+   "true_intervals": [
+    [
+     8,
+     9
+    ]
+   ]
+  },
+  {
+   "expect": {
+    "first_divergent": null,
+    "max_evaluations": 5,
+    "non_monotone": false
+   },
+   "n": 12,
+   "name": "no divergence in 12",
+   "true_intervals": []
+  },
+  {
+   "expect": {
+    "first_divergent": 0,
+    "max_evaluations": 1,
+    "non_monotone": false
+   },
+   "n": 1,
+   "name": "single entry diverges",
+   "true_intervals": [
+    [
+     0,
+     1
+    ]
+   ]
+  }
+ ],
+ "license": "CC-BY-4.0"
+}

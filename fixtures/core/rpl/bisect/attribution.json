@@ -1,0 +1,482 @@
+{
+ "cases": [
+  {
+   "ac": "AC-2",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "input",
+    "secondary": []
+   },
+   "name": "input digest differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:1005d201e583153928b56e58a25bb684758a448c17f23ad31fa331ed32b5eda3"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "AC-2",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "parameter",
+    "secondary": []
+   },
+   "name": "argument commitment differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:67aa1490a5f2268d94aebe07ad62b6be6ca7c5d5f6e18928392e8072421be02a",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "AC-2",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "defaults_profile",
+    "secondary": []
+   },
+   "name": "defaults profile differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:462e1615040a6aeb3131d314d092261561e063904a17be162058033995d6d8f3",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "AC-2",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "command_migration",
+    "secondary": []
+   },
+   "name": "command major differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@3",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "AC-2",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "kernel",
+    "secondary": []
+   },
+   "name": "kernel manifest differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:10e005429d2f3891a9f21044506ef7a2c8a5bc18e9c1c261853ca2cc2a738f54",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "AC-3",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "input",
+    "secondary": [
+     "kernel"
+    ]
+   },
+   "name": "input and kernel differ",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:c1f0e129908db03203d38d1f9b856d2c4eb4af760d917337986ceb6e696db2d5"
+    ],
+    "kernel_manifest": "sha256:c27ca1f34619d2b88f95f05321dccc12753b192d4f10ed3f63ab8282bc4a5f78",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "REQ-004",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "command_migration",
+    "secondary": []
+   },
+   "name": "migrator differs only",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": "geo.fit.circle@2->3",
+    "seq": 637
+   }
+  },
+  {
+   "ac": "REQ-004",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "input",
+    "secondary": []
+   },
+   "name": "extra input entry",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+     "sha256:d35b65b89fd1b8dfc5932851eb86ec68ac982cf0e3038459959ba4b220c1be87"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "REQ-004",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "parameter",
+    "secondary": [
+     "defaults_profile",
+     "command_migration",
+     "kernel"
+    ]
+   },
+   "name": "everything but input differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:6ba55a7b333218b7a7646334859bd7ed97030dd34567f2c91280ffa4286dcc6c",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:fa9d737523861b66697671102872efd47d398c6ad3bdc0103a1ab81784c28a88",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:19d6ba908da4db059fedaddb1cddfa52db28da2b3ef60f6f3ca184e9ab0a12cc",
+    "migrator": "geo.fit.circle@2->3",
+    "seq": 637
+   }
+  },
+  {
+   "ac": "REQ-004",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "input",
+    "secondary": [
+     "parameter",
+     "defaults_profile",
+     "command_migration",
+     "kernel"
+    ]
+   },
+   "name": "everything differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:64a0a973e322303d724d3164354c4112dc9c026aa77824b39d75666a1e23321a",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@3",
+    "defaults_profile": "sha256:deb3e49711496ee25bbaff21e2ec3816621a4a7bd97b5ca472eb56487a0cdf8b",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:0435b17450126b897ca19781fa1686e01b50fe625a9fbbe3e21bad15ccdee1b3"
+    ],
+    "kernel_manifest": "sha256:76443eea42aec87edd62633bf59776141868b314612d7475e2aa6c6eb89a8c44",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "REQ-005",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [
+     "no_input_difference"
+    ],
+    "primary": "kernel",
+    "secondary": []
+   },
+   "name": "nothing differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+     "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8"
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  }
+ ],
+ "license": "CC-BY-4.0",
+ "seed": 20261119
+}
