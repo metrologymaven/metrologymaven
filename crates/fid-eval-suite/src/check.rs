@@ -50,12 +50,7 @@ pub struct CheckFinding {
 
 impl CheckFinding {
     fn new(rule: Rule, task: Option<&str>, file: Option<&str>, detail: impl Into<String>) -> CheckFinding {
-        CheckFinding {
-            task: task.map(str::to_string),
-            rule,
-            file: file.map(str::to_string),
-            detail: detail.into(),
-        }
+        CheckFinding { task: task.map(str::to_string), rule, file: file.map(str::to_string), detail: detail.into() }
     }
 
     /// A format error as a finding: a start-state digest mismatch keeps its own rule, every
@@ -230,12 +225,7 @@ pub fn load_jobs(jobs: &Path) -> (Vec<JobPackage>, Vec<CheckFinding>) {
         }
     }
     if packages.is_empty() && findings.is_empty() && errs.is_empty() {
-        findings.push(CheckFinding::new(
-            Rule::ParseError,
-            None,
-            Some(&jname),
-            "no job packages",
-        ));
+        findings.push(CheckFinding::new(Rule::ParseError, None, Some(&jname), "no job packages"));
     }
     findings.extend(errs.iter().map(|e| CheckFinding::new(Rule::ParseError, None, Some(&e.file), e.to_string())));
     (packages, findings)
@@ -254,9 +244,8 @@ pub fn check_suite(suite_dir: &Path, catalog: &Path, jobs: &Path) -> CheckReport
     let workflows = match load_catalog(catalog) {
         Ok(w) => Some(w),
         Err(errs) => {
-            findings.extend(
-                errs.iter().map(|e| CheckFinding::new(Rule::ParseError, None, Some(&e.file), e.to_string())),
-            );
+            findings
+                .extend(errs.iter().map(|e| CheckFinding::new(Rule::ParseError, None, Some(&e.file), e.to_string())));
             None
         }
     };
@@ -306,9 +295,15 @@ pub fn check_loaded(
 
     // REQ-002: every catalog workflow is named by some task.
     if let Some(ws) = workflows {
-        let covered: BTreeSet<&str> = st.tasks.iter().flat_map(|t| t.task.workflows.iter().map(String::as_str)).collect();
+        let covered: BTreeSet<&str> =
+            st.tasks.iter().flat_map(|t| t.task.workflows.iter().map(String::as_str)).collect();
         for w in ws.iter().filter(|w| !covered.contains(w.as_str())) {
-            out.push(CheckFinding::new(Rule::UncoveredWorkflow, None, None, format!("workflow {w} is named by no task")));
+            out.push(CheckFinding::new(
+                Rule::UncoveredWorkflow,
+                None,
+                None,
+                format!("workflow {w} is named by no task"),
+            ));
         }
     }
 
@@ -358,9 +353,9 @@ pub fn check_loaded(
         let roots: Vec<&str> = t.roots.read.iter().chain(&t.roots.write).map(|r| r.as_str()).collect();
         let mut seen: BTreeSet<&str> = BTreeSet::new();
         for e in &entries {
-            let granted = roots.iter().any(|r| {
-                e.path == *r || (e.path.starts_with(r) && e.path.as_bytes().get(r.len()) == Some(&b'/'))
-            });
+            let granted = roots
+                .iter()
+                .any(|r| e.path == *r || (e.path.starts_with(r) && e.path.as_bytes().get(r.len()) == Some(&b'/')));
             if !granted || !seen.insert(e.path.as_str()) {
                 continue;
             }
@@ -427,7 +422,15 @@ pub fn has_token(text: &str, tok: &str) -> bool {
 fn unit_scales(unit: &str) -> Vec<(&str, f64)> {
     let deg = std::f64::consts::PI / 180.0;
     match unit {
-        "m" => vec![("m", 1.0), ("mm", 1e-3), ("cm", 1e-2), ("um", 1e-6), ("\u{b5}m", 1e-6), ("\u{3bc}m", 1e-6), ("nm", 1e-9)],
+        "m" => vec![
+            ("m", 1.0),
+            ("mm", 1e-3),
+            ("cm", 1e-2),
+            ("um", 1e-6),
+            ("\u{b5}m", 1e-6),
+            ("\u{3bc}m", 1e-6),
+            ("nm", 1e-9),
+        ],
         "m2" => vec![("m2", 1.0), ("mm2", 1e-6)],
         "m3" => vec![("m3", 1.0), ("mm3", 1e-9)],
         "rad" => vec![("rad", 1.0), ("mrad", 1e-3), ("deg", deg), ("\u{b0}", deg)],
@@ -485,7 +488,7 @@ pub fn value_in_prompt(prompt: &str, amount: f64, unit: &str, tol: f64) -> bool 
         let free = i == 0 || !(b[i - 1].is_ascii_alphanumeric() || matches!(b[i - 1], b'_' | b'.' | b'+' | b'-'));
         if let Some(end) = number_end(b, i).filter(|_| free) {
             if let Ok(n) = prompt[i..end].parse::<f64>() {
-                let rest = prompt[end..].trim_start_matches(|c: char| c == ' ' || c == '\t');
+                let rest = prompt[end..].trim_start_matches([' ', '\t']);
                 for &(sym, scale) in &scales {
                     let bounded = rest.starts_with(sym)
                         && !rest.as_bytes().get(sym.len()).is_some_and(|c| c.is_ascii_alphanumeric() || *c == b'_');

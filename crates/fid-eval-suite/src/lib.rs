@@ -37,8 +37,8 @@ mod tar;
 mod task;
 
 pub use check::{
-    check_loaded, check_suite, has_token, load_catalog, load_jobs, value_in_prompt, CheckFinding, CheckReport, JobPackage,
-    Rule,
+    check_loaded, check_suite, has_token, load_catalog, load_jobs, value_in_prompt, CheckFinding, CheckReport,
+    JobPackage, Rule,
 };
 pub use oracle::{parse_oracle, Basis, Forbidden, Oracle, OracleItem, Outcome, Quantity, DEFAULT_TOL, SI_UNITS};
 pub use redteam::{is_marker, Family, Payload, Predicate, PredicateKind, Subfamily, Vector, PREDICATE_KINDS};

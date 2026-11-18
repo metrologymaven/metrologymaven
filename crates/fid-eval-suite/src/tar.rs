@@ -37,7 +37,10 @@ fn octal(b: &[u8], what: &str) -> Result<u64, String> {
         if !(b'0'..=b'7').contains(&c) {
             return Err(format!("{what}: not an octal number"));
         }
-        n = n.checked_mul(8).and_then(|n| n.checked_add(u64::from(c - b'0'))).ok_or_else(|| format!("{what}: too large"))?;
+        n = n
+            .checked_mul(8)
+            .and_then(|n| n.checked_add(u64::from(c - b'0')))
+            .ok_or_else(|| format!("{what}: too large"))?;
     }
     Ok(n)
 }
@@ -94,7 +97,8 @@ pub(crate) fn list(bytes: &[u8]) -> Result<Vec<TarFile>, String> {
         let full = String::from_utf8(full).map_err(|_| "entry name is not UTF-8".to_string())?;
         let size = usize::try_from(octal(&h[124..136], "size")?).map_err(|_| "entry too large".to_string())?;
         let start = off + BLOCK;
-        let end = start.checked_add(size).filter(|e| *e <= bytes.len()).ok_or_else(|| "truncated entry data".to_string())?;
+        let end =
+            start.checked_add(size).filter(|e| *e <= bytes.len()).ok_or_else(|| "truncated entry data".to_string())?;
         let padded = end.checked_add((BLOCK - size % BLOCK) % BLOCK).ok_or_else(|| "entry too large".to_string())?;
         let typ = h[156];
         match typ {
