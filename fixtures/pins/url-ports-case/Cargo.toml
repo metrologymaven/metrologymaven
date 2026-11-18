@@ -1,0 +1,18 @@
+[workspace]
+
+[package]
+name = "url-ports-case"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Default ports are dropped: first-party.
+a = { git = "https://example.org:443/fid/libs", branch = "main" }
+b = { git = "ssh://git@example.org:22/fid/libs.git", branch = "main" }
+# github.com owner/repo paths are case-insensitive: first-party.
+c = { git = "https://GitHub.com/FID-ORG/core.git", branch = "main" }
+# A non-default port is a different URL: not first-party.
+d = { git = "https://example.org:8443/fid/libs", branch = "main" }
+# On other hosts the path keeps its case: not first-party.
+e = { git = "https://example.org/FID/libs", branch = "main" }

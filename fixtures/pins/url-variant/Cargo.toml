@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "url-variant"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-geo = { git = "HTTPS://Example.org/fid/libs", branch = "main" }

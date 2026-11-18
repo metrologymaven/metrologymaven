@@ -1,0 +1,12 @@
+[package]
+name = "a"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+fid-gen = { git = "https://example.org/fid/apps/", tag = "v1" }
+
+[target.x86_64-pc-windows-msvc.dependencies.fid-win]
+git = "https://example.org/fid/libs.git"
+branch = "dev"

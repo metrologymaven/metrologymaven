@@ -1,0 +1,4 @@
+PIN-MOVING Cargo.toml fid-geo
+PIN-MOVING crates/a/Cargo.toml fid-win
+PIN-REV-SHORT crates/b/Cargo.toml fid-geo
+PIN-TAG-UNPROTECTED crates/a/Cargo.toml fid-gen
