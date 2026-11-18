@@ -18,11 +18,15 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 mod json;
+mod shape;
 
 pub use json::{
-    validate_header_value, verify_header_value, ALGORITHM_PATTERN, BRANCH_PATTERN, COMMAND_ID_PATTERN,
-    COMMAND_REQUIRED, DIGEST_PATTERN, HEADER_OPTIONAL, HEADER_REQUIRED, IDENT_PATTERN, SEQ_PATTERN, U64_PATTERN,
-    UTC_PATTERN,
+    validate_header_value, verify_header_value, ALGORITHM_PATTERN, BODY_KEYS, BRANCH_PATTERN, COMMAND_ID_PATTERN,
+    DIGEST_PATTERN, IDENT_PATTERN, SEQ_PATTERN, U64_PATTERN, UTC_PATTERN,
+};
+pub use shape::{
+    ObjectShape, COMMAND_SHAPE, HEADER_SHAPE, HEAD_MOVE_SHAPE, INPUT_SHAPE, MANIFESTS_SHAPE, OUTPUT_SHAPE,
+    PRINCIPAL_SHAPE, SESSION_SHAPE, SHAPES, TIME_SHAPE, UPGRADE_SHAPE,
 };
 
 /// Header schema version written by this module.

@@ -12,6 +12,11 @@ use fid_kci::AlgorithmId;
 use fid_types::{CommandName, Determinism, SideEffect};
 use std::collections::BTreeMap;
 
+use super::shape::{
+    ObjectShape, COMMAND_SHAPE, HEADER_SHAPE, HEAD_MOVE_SHAPE, INPUT_SHAPE, MANIFESTS_SHAPE, OUTPUT_SHAPE,
+    PRINCIPAL_SHAPE, SESSION_SHAPE, TIME_SHAPE, UPGRADE_SHAPE,
+};
+
 type Obj = BTreeMap<String, CValue>;
 
 fn err(at: &str, msg: &str) -> EntryError {
@@ -38,6 +43,11 @@ fn fields(o: &Obj, at: &str, required: &[&str], optional: &[&str]) -> Result<(),
         }
     }
     Ok(())
+}
+
+/// [`fields`] with the key lists of a published object shape.
+fn shaped(o: &Obj, at: &str, shape: &ObjectShape) -> Result<(), EntryError> {
+    fields(o, at, shape.required, shape.optional)
 }
 
 fn get<'a>(o: &'a Obj, k: &str, at: &str) -> Result<&'a CValue, EntryError> {
@@ -206,7 +216,7 @@ fn tagged_inputs(o: &Obj, at: &str) -> Result<Vec<TaggedDigest>, EntryError> {
     for (i, v) in array(o, "inputs", at)?.iter().enumerate() {
         let here = format!("{at}.inputs[{i}]");
         let t = obj(v, &here)?;
-        fields(t, &here, &["tag", "digest"], &[])?;
+        shaped(t, &here, &INPUT_SHAPE)?;
         out.push(TaggedDigest { tag: ident(t, "tag", &here)?, digest: digest(t, "digest", &here)? });
     }
     Ok(out)
@@ -215,7 +225,7 @@ fn tagged_inputs(o: &Obj, at: &str) -> Result<Vec<TaggedDigest>, EntryError> {
 fn time(o: &Obj, at: &str) -> Result<EntryTime, EntryError> {
     let here = format!("{at}.time");
     let t = obj(get(o, "time", at)?, &here)?;
-    fields(t, &here, &["utc", "mono_ns", "sync"], &[])?;
+    shaped(t, &here, &TIME_SHAPE)?;
     Ok(EntryTime {
         utc: utc(t, "utc", &here)?,
         mono_ns: u64_field(t, "mono_ns", &here)?,
@@ -226,21 +236,21 @@ fn time(o: &Obj, at: &str) -> Result<EntryTime, EntryError> {
 fn manifests(o: &Obj, at: &str) -> Result<Manifests, EntryError> {
     let here = format!("{at}.manifests");
     let m = obj(get(o, "manifests", at)?, &here)?;
-    fields(m, &here, &["registry", "kernel"], &[])?;
+    shaped(m, &here, &MANIFESTS_SHAPE)?;
     Ok(Manifests { registry: digest(m, "registry", &here)?, kernel: digest(m, "kernel", &here)? })
 }
 
 fn head_move(o: &Obj, at: &str) -> Result<HeadMove, EntryError> {
     let here = format!("{at}.head_move");
     let h = obj(get(o, "head_move", at)?, &here)?;
-    fields(h, &here, &["from", "to"], &[])?;
+    shaped(h, &here, &HEAD_MOVE_SHAPE)?;
     Ok(HeadMove { from: digest(h, "from", &here)?, to: digest(h, "to", &here)? })
 }
 
 fn session(o: &Obj, at: &str) -> Result<SessionInfo, EntryError> {
     let here = format!("{at}.session");
     let s = obj(get(o, "session", at)?, &here)?;
-    fields(s, &here, &["session_id", "app_version"], &[])?;
+    shaped(s, &here, &SESSION_SHAPE)?;
     Ok(SessionInfo { session_id: text(s, "session_id", &here)?, app_version: text(s, "app_version", &here)? })
 }
 
@@ -291,26 +301,8 @@ pub const COMMAND_ID_PATTERN: &str = CommandName::PATTERN;
 /// `$defs/algorithm`: `module.feature.method@x.y.z`, each version part a u32.
 pub const ALGORITHM_PATTERN: &str = "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)\\.(0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[0-1][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-4]|4294967295)$";
 
-/// Top-level keys every header has (plus exactly one kind body).
-pub const HEADER_REQUIRED: [&str; 12] = [
-    "schema_version",
-    "kind",
-    "stream",
-    "seq",
-    "prev",
-    "branch",
-    "logical_parent",
-    "time",
-    "principal",
-    "ai_assistance",
-    "manifests",
-    "hash",
-];
-/// Optional top-level keys.
-pub const HEADER_OPTIONAL: [&str; 2] = ["reason_commit", "human_assertion"];
-/// Keys of the `command` body.
-pub const COMMAND_REQUIRED: [&str; 10] =
-    ["id", "major", "class", "determinism", "seed", "args_commit", "events_commit", "inputs", "outputs", "algorithms"];
+/// Keys of the kind-specific bodies; exactly one is present.
+pub const BODY_KEYS: [&str; 4] = ["command", "session", "upgrade", "head_move"];
 
 // ------------------------------------------------------------------ headers
 
@@ -321,9 +313,10 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     let o = obj(v, at)?;
     let kind = EntryKind::parse(string(o, "kind", at)?)?;
     let body = body_key(kind);
-    let mut required = HEADER_REQUIRED.to_vec();
+    let mut required = HEADER_SHAPE.required.to_vec();
     required.push(body);
-    fields(o, at, &required, &HEADER_OPTIONAL)?;
+    let optional: Vec<&str> = HEADER_SHAPE.optional.iter().copied().filter(|k| !BODY_KEYS.contains(k)).collect();
+    fields(o, at, &required, &optional)?;
     match get(o, "schema_version", at)? {
         CValue::Num(f) if *f == f64::from(SCHEMA_VERSION) => {}
         _ => return Err(err(at, "schema_version must be 1")),
@@ -338,7 +331,7 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     logical_parent(o, at)?;
     time(o, at)?;
     let p = obj(get(o, "principal", at)?, "header.principal")?;
-    fields(p, "header.principal", &["kind", "commit"], &["on_behalf_of_commit"])?;
+    shaped(p, "header.principal", &PRINCIPAL_SHAPE)?;
     PrincipalKind::parse(string(p, "kind", "header.principal")?)?;
     digest(p, "commit", "header.principal")?;
     opt_digest(p, "on_behalf_of_commit", "header.principal")?;
@@ -351,7 +344,7 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     match kind {
         EntryKind::Command => {
             let c = obj(get(o, body, at)?, &here)?;
-            fields(c, &here, &COMMAND_REQUIRED, &[])?;
+            shaped(c, &here, &COMMAND_SHAPE)?;
             command_id(c, &here)?;
             u32_field(c, "major", &here)?;
             class(c, &here)?;
@@ -363,7 +356,7 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
             for (i, v) in array(c, "outputs", &here)?.iter().enumerate() {
                 let oat = format!("{here}.outputs[{i}]");
                 let out = obj(v, &oat)?;
-                fields(out, &oat, &["digest"], &["entity"])?;
+                shaped(out, &oat, &OUTPUT_SHAPE)?;
                 let d = digest(out, "digest", &oat)?;
                 if opt_text(out, "entity", &oat)?.is_none() && d == TOMBSTONE {
                     return Err(err(&oat, "the tombstone digest needs an entity"));
@@ -376,7 +369,7 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
         }
         EntryKind::PrincipalUpgrade => {
             let u = obj(get(o, body, at)?, &here)?;
-            fields(u, &here, &["session_id", "method", "identity_commit", "confirmed_at"], &[])?;
+            shaped(u, &here, &UPGRADE_SHAPE)?;
             text(u, "session_id", &here)?;
             ConfirmMethod::parse(string(u, "method", &here)?)?;
             digest(u, "identity_commit", &here)?;

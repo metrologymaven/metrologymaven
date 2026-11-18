@@ -6,8 +6,8 @@ use fid_journal::{
     build, commitment, parse_digest, session_start, validate_header_value, verify_commitment, verify_header_value,
     AiAssistance, CommitError, ConfirmMethod, DraftBody, Entry, EntryDraft, EntryKind, EntryTime, Field, HeaderBody,
     Manifests, OsSalts, OutputDigest, PrincipalDraft, PrincipalKind, RecordedSalts, Salt, SessionInfo, TaggedDigest,
-    ALGORITHM_PATTERN, BRANCH_PATTERN, COMMAND_ID_PATTERN, COMMAND_REQUIRED, DIGEST_PATTERN, FIRST_SEQ, GENESIS_PREV,
-    HEADER_OPTIONAL, HEADER_REQUIRED, IDENT_PATTERN, R1_RESULT_TAG, SEQ_PATTERN, TOMBSTONE, U64_PATTERN, UTC_PATTERN,
+    ALGORITHM_PATTERN, BODY_KEYS, BRANCH_PATTERN, COMMAND_ID_PATTERN, DIGEST_PATTERN, FIRST_SEQ, GENESIS_PREV,
+    HEADER_SHAPE, IDENT_PATTERN, R1_RESULT_TAG, SEQ_PATTERN, SHAPES, TOMBSTONE, U64_PATTERN, UTC_PATTERN,
 };
 use fid_types::{Determinism, SideEffect};
 use std::collections::BTreeMap;
@@ -302,6 +302,35 @@ fn strings(v: &CValue) -> Vec<String> {
         .collect()
 }
 
+/// A property's schema as canonical JSON, with a nested object shown as `object`.
+fn descriptor(v: &CValue) -> String {
+    let is_obj = |v: &CValue| matches!(v, CValue::Obj(o) if o.get("type") == Some(&CValue::Str("object".into())));
+    if is_obj(v) {
+        return "object".into();
+    }
+    match v {
+        CValue::Obj(o) if o.get("items").is_some_and(is_obj) => {
+            let mut o = o.clone();
+            o.insert("items".into(), CValue::Str("object".into()));
+            canon(&CValue::Obj(o))
+        }
+        other => canon(other),
+    }
+}
+
+/// Number of object schemas reachable through `properties` and `items`.
+fn count_objects(v: &CValue) -> usize {
+    let CValue::Obj(o) = v else { return 0 };
+    let mut n = usize::from(o.get("type") == Some(&CValue::Str("object".into())));
+    if let Some(CValue::Obj(props)) = o.get("properties") {
+        n += props.values().map(count_objects).sum::<usize>();
+    }
+    if let Some(items) = o.get("items") {
+        n += count_objects(items);
+    }
+    n
+}
+
 fn names<T: std::fmt::Display>(all: &[T]) -> Vec<String> {
     all.iter().map(|x| x.to_string()).collect()
 }
@@ -311,16 +340,37 @@ fn names<T: std::fmt::Display>(all: &[T]) -> Vec<String> {
 fn schema_matches_rust_constants() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schema/entry.schema.json");
     let schema = parse(&std::fs::read(path).unwrap()).unwrap();
-    assert_eq!(strings(schema_path(&schema, &["required"])), names(&HEADER_REQUIRED));
-    let CValue::Obj(props) = schema_path(&schema, &["properties"]) else { panic!() };
-    let mut keys: Vec<String> = props.keys().cloned().collect();
-    let mut want = names(&HEADER_REQUIRED);
-    want.extend(names(&HEADER_OPTIONAL));
-    want.extend(["command", "session", "upgrade", "head_move"].map(String::from));
-    keys.sort();
-    want.sort();
-    assert_eq!(keys, want, "top-level properties");
-    assert_eq!(strings(schema_path(&schema, &["properties", "command", "required"])), names(&COMMAND_REQUIRED));
+    // Every object: type, additionalProperties false, required, property set, each property's
+    // schema (so a dropped bound or a rewired $ref is caught) and any further keywords.
+    for shape in SHAPES {
+        let at = shape.pointer;
+        let ptr: Vec<&str> = at.split('/').filter(|k| !k.is_empty()).collect();
+        let CValue::Obj(o) = schema_path(&schema, &ptr) else { panic!("{at}: object expected") };
+        assert_eq!(o.get("type"), Some(&CValue::Str("object".into())), "{at}: type");
+        assert_eq!(o.get("additionalProperties"), Some(&CValue::Bool(false)), "{at}: additionalProperties");
+        assert_eq!(strings(o.get("required").unwrap()), names(shape.required), "{at}: required");
+        let Some(CValue::Obj(props)) = o.get("properties") else { panic!("{at}: properties") };
+        let mut keys: Vec<String> = props.keys().cloned().collect();
+        let mut want = names(shape.required);
+        want.extend(names(shape.optional));
+        keys.sort();
+        want.sort();
+        assert_eq!(keys, want, "{at}: property names");
+        assert_eq!(shape.props.len(), props.len(), "{at}: property count");
+        for (k, desc) in shape.props {
+            let got = props.get(*k).unwrap_or_else(|| panic!("{at}: missing property {k}"));
+            assert_eq!(descriptor(got), *desc, "{at}/properties/{k}");
+        }
+        if !at.is_empty() {
+            let skip = ["type", "additionalProperties", "required", "properties"];
+            let rest: Obj =
+                o.iter().filter(|(k, _)| !skip.contains(&k.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect();
+            assert_eq!(canon(&CValue::Obj(rest)), shape.extra, "{at}: other keywords");
+        }
+    }
+    assert_eq!(count_objects(&schema), SHAPES.len(), "every object in the schema has a shape");
+    let bodies: Vec<&str> = HEADER_SHAPE.optional.iter().copied().filter(|k| BODY_KEYS.contains(k)).collect();
+    assert_eq!(bodies, BODY_KEYS.to_vec());
     let enums: [(Vec<&str>, Vec<String>); 7] = [
         (vec!["properties", "kind", "enum"], names(EntryKind::ALL)),
         (vec!["properties", "ai_assistance", "enum"], names(AiAssistance::ALL)),
@@ -346,6 +396,9 @@ fn schema_matches_rust_constants() {
     for (def, want) in patterns {
         let CValue::Str(got) = schema_path(&schema, &["$defs", def, "pattern"]) else { panic!("{def}") };
         assert_eq!(got, want, "$defs/{def}");
+        // `$` can match before a trailing newline in ECMA-262 and Python regexes.
+        let CValue::Str(guard) = schema_path(&schema, &["$defs", def, "not", "pattern"]) else { panic!("{def}") };
+        assert_eq!(guard, "\n", "$defs/{def} newline guard");
     }
 
     // Boundary values the patterns encode, checked against the Rust checker.

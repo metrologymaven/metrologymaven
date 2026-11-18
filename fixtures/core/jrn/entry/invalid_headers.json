@@ -1613,5 +1613,1458 @@
    "hash": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
    "signatures": []
   }
+ },
+ {
+  "name": "seq_trailing_newline",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "1\n",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "prev_trailing_newline",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb\n",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "time_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": "unknown",
+    "tz": "UTC"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "time_sync_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "time_sync_empty",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": ""
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "principal_commit_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "on_behalf_of_commit_not_digest",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15",
+    "on_behalf_of_commit": "op-17"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "manifests_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef",
+    "plugins": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "manifests_kernel_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "command_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ],
+    "trace_id": "t-1"
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "seed_not_decimal",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "seed-42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "major_over_u32",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 4294967296,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "determinism_d9",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D9",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "events_commit_not_digest",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "events",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "command_id_uppercase",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "Align.run",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "input_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2",
+      "note": "x"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "input_digest_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "output_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75",
+      "deleted": true
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "output_entity_empty",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "session_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "session_header",
+   "stream": "record",
+   "seq": "1",
+   "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+   "branch": "main",
+   "logical_parent": null,
+   "time": {
+    "utc": "2026-11-17T08:00:00Z",
+    "mono_ns": "17",
+    "sync": "synced"
+   },
+   "principal": {
+    "kind": "human",
+    "commit": "sha256:7beee46b1e8a322b1b796b3e5512d2327d16cd980ca0fa4e3e256c36e50bc165"
+   },
+   "ai_assistance": "none",
+   "manifests": {
+    "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
+    "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
+   },
+   "session": {
+    "session_id": "sess-000",
+    "app_version": "0.0.0",
+    "host": "pc-1"
+   },
+   "hash": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb"
+  }
+ },
+ {
+  "name": "session_id_empty",
+  "header": {
+   "schema_version": 1,
+   "kind": "session_header",
+   "stream": "record",
+   "seq": "1",
+   "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+   "branch": "main",
+   "logical_parent": null,
+   "time": {
+    "utc": "2026-11-17T08:00:00Z",
+    "mono_ns": "17",
+    "sync": "synced"
+   },
+   "principal": {
+    "kind": "human",
+    "commit": "sha256:7beee46b1e8a322b1b796b3e5512d2327d16cd980ca0fa4e3e256c36e50bc165"
+   },
+   "ai_assistance": "none",
+   "manifests": {
+    "registry": "sha256:fe849844c009efeb4e5bd4822981b7d6a41ab82c37dd46758934ca2f9c510f49",
+    "kernel": "sha256:1d69bd0b64e9292f775310b75b1a89d7de393be0f8f3c967bb8237a759b5485c"
+   },
+   "session": {
+    "session_id": "",
+    "app_version": "0.0.0"
+   },
+   "hash": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb"
+  }
+ },
+ {
+  "name": "upgrade_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "principal_upgrade",
+   "stream": "record",
+   "seq": "20",
+   "prev": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:ba1084d00f639d2fabd845318e14ec2b259dad8c255a932280fa034ad63b48a8",
+   "time": {
+    "utc": "2026-11-17T08:22:34Z",
+    "mono_ns": "22000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "device",
+    "commit": "sha256:4a5722aa80fa5f48c12812fc3041816d2def0d42242f564e80af3274c86bea6d"
+   },
+   "ai_assistance": "authored",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "upgrade": {
+    "session_id": "sess-022",
+    "method": "gui_prompt",
+    "identity_commit": "sha256:86e40e9763007a22ffc291db3106824ac4d052aaac61f398b1b3c30baa455272",
+    "confirmed_at": "2026-11-17T09:22:00Z",
+    "identity": {
+     "user": "op-17"
+    }
+   },
+   "hash": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde"
+  }
+ },
+ {
+  "name": "upgrade_confirmed_at_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "principal_upgrade",
+   "stream": "record",
+   "seq": "20",
+   "prev": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:ba1084d00f639d2fabd845318e14ec2b259dad8c255a932280fa034ad63b48a8",
+   "time": {
+    "utc": "2026-11-17T08:22:34Z",
+    "mono_ns": "22000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "device",
+    "commit": "sha256:4a5722aa80fa5f48c12812fc3041816d2def0d42242f564e80af3274c86bea6d"
+   },
+   "ai_assistance": "authored",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "upgrade": {
+    "session_id": "sess-022",
+    "method": "gui_prompt",
+    "identity_commit": "sha256:86e40e9763007a22ffc291db3106824ac4d052aaac61f398b1b3c30baa455272"
+   },
+   "hash": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde"
+  }
+ },
+ {
+  "name": "upgrade_identity_commit_not_digest",
+  "header": {
+   "schema_version": 1,
+   "kind": "principal_upgrade",
+   "stream": "record",
+   "seq": "20",
+   "prev": "sha256:39c7cab813d9e283f80324aedb543251ae01d96210499a46590cb7ff68191d85",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:ba1084d00f639d2fabd845318e14ec2b259dad8c255a932280fa034ad63b48a8",
+   "time": {
+    "utc": "2026-11-17T08:22:34Z",
+    "mono_ns": "22000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "device",
+    "commit": "sha256:4a5722aa80fa5f48c12812fc3041816d2def0d42242f564e80af3274c86bea6d"
+   },
+   "ai_assistance": "authored",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "upgrade": {
+    "session_id": "sess-022",
+    "method": "gui_prompt",
+    "identity_commit": "x",
+    "confirmed_at": "2026-11-17T09:22:00Z"
+   },
+   "hash": "sha256:1eb5dcd78c4ce7156b921ff7645b4d45284ea199526d329dbc7a944fec3c9dde"
+  }
+ },
+ {
+  "name": "head_move_extra_field",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": "unknown"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4",
+    "reason": "undo"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "head_move_to_missing",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": "unknown"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "head_move_to_not_digest",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": "unknown"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "state-3"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b"
+  }
+ },
+ {
+  "name": "stream_uppercase",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "Record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "agent/claude-code/3",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "branch_leading_slash",
+  "header": {
+   "schema_version": 1,
+   "kind": "command",
+   "stream": "record",
+   "seq": "2",
+   "prev": "sha256:1c500edbe92bf428a2382e4c0977fcd7909c00799824bc4b4f08df4f706e01eb",
+   "branch": "/main",
+   "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+   "time": {
+    "utc": "2026-11-17T08:01:07.123456789Z",
+    "mono_ns": "1000000017",
+    "sync": "unsynced"
+   },
+   "principal": {
+    "kind": "agent",
+    "commit": "sha256:f5f9ed73c3fcf23f087baf42db33fdc870a09db40063d9b4d5cf9296945a9b15"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:e2967a1234aab6fa5ed116d1688e4d3d48f7e6861e61aac625dbfcf8d8cc8001",
+    "kernel": "sha256:278853ee3fe2d2f7d7c58e58a097a0532a69435938f4881b9520df9a1bf431ef"
+   },
+   "command": {
+    "id": "feature.fit_circle",
+    "major": 2,
+    "class": "W1",
+    "determinism": "D1",
+    "seed": "42",
+    "args_commit": "sha256:b33634e8e843b9df9f7eaa5db05418b8ece5199ca63fe61805714136767a24ed",
+    "events_commit": "sha256:81a7c7bbb10c363c63b1863fbe62c2bedf6d198c5f68b21457f33e8e33145554",
+    "inputs": [
+     {
+      "tag": "param",
+      "digest": "sha256:16e990e6835b696fa8bacda79bc6e4575629450da90b1155f524fd552173d7e2"
+     },
+     {
+      "tag": "entity",
+      "digest": "sha256:1d3831142120e3a53237a5edee285bad9c29437798d358504465187150190d75"
+     }
+    ],
+    "outputs": [
+     {
+      "entity": "F-0001",
+      "digest": "sha256:2a1fcff7f40edb5e2cdd8e665c661cff1d1385d77d353112f0054deb72a49e75"
+     },
+     {
+      "digest": "sha256:201e33b22aa4f55a98fc6b5b14c6ab2b99bccc1b1ca0a18af0454a047f6b0672"
+     }
+    ],
+    "algorithms": [
+     "feature.fit.circle_ls@1.2.0",
+     "feature.fit.circle_mz@0.3.1"
+    ]
+   },
+   "hash": "sha256:e9e16f6ff85744247d478613e72b19a050c0ca3f0603e66bc50568e719bf6440"
+  }
+ },
+ {
+  "name": "reason_commit_not_digest",
+  "header": {
+   "schema_version": 1,
+   "kind": "head_move",
+   "stream": "record",
+   "seq": "26",
+   "prev": "sha256:0f89daab3a243250653e85d96397c4e4625b39b1f40bdb1d492346adb23ff406",
+   "branch": "feature/bore-check",
+   "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+   "time": {
+    "utc": "2026-11-17T08:29:23.123456789Z",
+    "mono_ns": "29000000017",
+    "sync": "unknown"
+   },
+   "principal": {
+    "kind": "system",
+    "commit": "sha256:7a237e70dfe01f634503dcf4dc0f00cd00c54c423b3162c8ac97f8f574757259"
+   },
+   "ai_assistance": "suggested",
+   "manifests": {
+    "registry": "sha256:1854269dd9a64865aff3665241c63e3fa0eb928cb41f6b8f002f3ee652a706b5",
+    "kernel": "sha256:f98a279a469ccd5460a5e40ba568bddf0d6c946eaaf5c782e830f4324f66802a"
+   },
+   "human_assertion": "ed25519:740679b544020d804897ec9e325e6ae4de0ab3ea5d1b87452aad9656b8ce32b4",
+   "head_move": {
+    "from": "sha256:3d7c969b623f309ae530b9902d3745f98ba77ca918c3693f16d7a590d63476d5",
+    "to": "sha256:d004fd1168c1eb4439543ed5daf6b0d807a6d0d7366b3a4d4e9c3f259579f0e4"
+   },
+   "hash": "sha256:d7c5736509e2e8a936a4baac08992968e161a64a38f00319c3cd17afa605b68b",
+   "reason_commit": "because"
+  }
  }
 ]
