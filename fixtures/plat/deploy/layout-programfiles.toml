@@ -1,0 +1,21 @@
+# PLAT.DEPLOY.NOADMIN.LAYOUT AC-2 fixture (hand-labelled).
+# Expected: validation fails with exactly one error,
+#   OutsideProfile { os: windows, entry: install_dir }
+# because the Windows install_dir is a literal machine-wide path, not below {local_app_data}.
+# Everything else matches the shipped layout.
+schema_version = 1
+
+[os.windows]
+install_dir = "C:/Program Files/Fiducial"
+allowed_writes = ["{local_app_data}/Fiducial", "{app_data}/Fiducial", "{tmp}", "{project_roots}", "{export_roots}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]
+
+[os.ubuntu]
+install_dir = "{home}/.local/share/fiducial/app"
+allowed_writes = ["{xdg_data}/fiducial", "{xdg_cache}/fiducial", "{xdg_config}/fiducial", "{tmp}", "{project_roots}", "{export_roots}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]
+
+[os.macos]
+install_dir = "{home}/Applications"
+allowed_writes = ["{home}/Library/Application Support/Fiducial", "{home}/Library/Caches/Fiducial", "{tmp}", "{project_roots}", "{export_roots}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]

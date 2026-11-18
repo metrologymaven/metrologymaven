@@ -4,9 +4,11 @@
 //! `fid-platform plat-hw result-schema` (spec node `PLAT.HW.SCHEMA`) and
 //! `fid-platform plat-kiosk display [--file <path>]` (spec node `PLAT.DEPLOY.KIOSK.DISPLAY`) and
 //! `fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>]
-//! [--phase <P>]` (spec node `PLAT.GPU.POLICY`).
-//! `cargo xtask plat-matrix ...`, `cargo xtask plat-hw ...` and `cargo xtask plat-gpu validate`
-//! run this binary.
+//! [--phase <P>]` (spec node `PLAT.GPU.POLICY`) and
+//! `fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]`
+//! (spec node `PLAT.DEPLOY.NOADMIN.LAYOUT`).
+//! `cargo xtask plat-matrix ...`, `cargo xtask plat-hw ...`, `cargo xtask plat-gpu validate` and
+//! `cargo xtask plat-deploy validate-layout` run this binary.
 //!
 //! `plat-matrix validate` prints one diagnostic per line and then `<rows> rows, <errors> errors`.
 //! `plat-hw validate` prints the profile names, one per line, when the file is valid, and
@@ -22,8 +24,14 @@
 //! prefixed `matrix: `, then the policy diagnostics and `policy: <rows> rows, <errors> errors`,
 //! then the known-bad diagnostics and `known-bad: <entries> entries, <errors> errors`. Exit 0
 //! when there are no errors, 1 when there are, 2 on bad usage or an unreadable file.
+//! `plat-deploy validate-layout` checks the per-user layout file (default
+//! `platform/peruser-layout.toml`) and that every OS family with a Tier 1 row effective at the
+//! given phase (default P1a) of the support matrix (default `platform/support-matrix.toml`) has
+//! a layout. It prints any support-matrix diagnostics prefixed `matrix: `, then the layout
+//! diagnostics and `layout: <families> os, <errors> errors`. Exit 0 when there are no errors, 1
+//! when there are, 2 on bad usage or an unreadable file.
 
-use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix};
+use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix, peruser_layout};
 use std::io::Read;
 use std::process::ExitCode;
 
@@ -33,7 +41,8 @@ const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-hw result-schema\n       \
                      fid-platform plat-kiosk display [--file <path>]\n       \
                      fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
-                     [--phase <P>]";
+                     [--phase <P>]
+                            fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -51,6 +60,7 @@ fn main() -> ExitCode {
         [group, cmd] if group == "plat-kiosk" && cmd == "display" => kiosk(kiosk_display::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-kiosk" && cmd == "display" && flag == "--file" => kiosk(file),
         [group, cmd, rest @ ..] if group == "plat-gpu" && cmd == "validate" => gpu_validate(rest),
+        [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "validate-layout" => layout_validate(rest),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)
@@ -218,6 +228,66 @@ fn gpu_validate(args: &[String]) -> ExitCode {
     let k = gpu_policy::validate_known_bad(&bad_bytes);
     print!("{}", k.render("known-bad", "entries"));
     if m.errors.is_empty() && p.errors.is_empty() && k.errors.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    }
+}
+
+/// `plat-deploy validate-layout`: see the module documentation for the output and exit codes.
+fn layout_validate(args: &[String]) -> ExitCode {
+    let cmd = "plat-deploy validate-layout";
+    let mut file = peruser_layout::DEFAULT_PATH.to_string();
+    let mut matrix_path = peruser_layout::MATRIX_PATH.to_string();
+    let mut phase = peruser_layout::DEFAULT_PHASE;
+    let mut seen: Vec<&str> = Vec::new();
+    for pair in args.chunks(2) {
+        let [flag, value] = pair else {
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        };
+        if seen.contains(&flag.as_str()) {
+            eprintln!("{cmd}: {flag} given twice
+{USAGE}");
+            return ExitCode::from(2);
+        }
+        seen.push(flag.as_str());
+        match flag.as_str() {
+            "--file" => file.clone_from(value),
+            "--matrix" => matrix_path.clone_from(value),
+            "--phase" => match matrix::Phase::from_name(value) {
+                Some(p) => phase = p,
+                None => {
+                    eprintln!("{cmd}: {value} is not a phase code (P0, P1a, P1b, P2, P3, P4, later)");
+                    return ExitCode::from(2);
+                }
+            },
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(layout_bytes), Some(matrix_bytes)) = (
+        read_capped(&file, peruser_layout::MAX_BYTES, cmd),
+        read_capped(&matrix_path, matrix::MAX_BYTES, cmd),
+    ) else {
+        return ExitCode::from(2);
+    };
+    let m = matrix::validate(&matrix_bytes);
+    for e in &m.errors {
+        println!("matrix: {e}");
+    }
+    let mut v = peruser_layout::validate(&layout_bytes);
+    if let (Some(layout), Some(mat)) = (&v.layout, &m.matrix) {
+        let missing = peruser_layout::check_coverage(layout, mat, phase);
+        if !missing.is_empty() {
+            v.errors.extend(missing);
+            v.layout = None;
+        }
+    }
+    print!("{}", v.render());
+    if m.errors.is_empty() && v.errors.is_empty() {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(1)

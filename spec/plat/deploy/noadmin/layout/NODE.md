@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-platform]
 satisfies: [REQ-PLAT.DEPLOY.NOADMIN-001, REQ-PLAT.DEPLOY.NOADMIN-002, REQ-PLAT.DEPLOY.NOADMIN-003]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]
