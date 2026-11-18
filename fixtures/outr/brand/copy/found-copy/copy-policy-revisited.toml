@@ -1,0 +1,8 @@
+# Copied-text policy (synthetic fixture). D-013 option C: review only.
+mode = "review_only"
+decision = "D-013"
+
+[[revisit]]
+release = "site-2027.03"
+date = "2027-03-25"
+note = "Copied sentence found in review; counsel review of option B scheduled per D-013."
