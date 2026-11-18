@@ -1,0 +1,43 @@
+{
+ "expect": "bad_enum",
+ "def": {
+  "id": "align.run_321",
+  "major": 1,
+  "title": "Example command 3",
+  "description": "Fixture definition for side-effect class W2.",
+  "params_schema": {
+   "type": "object",
+   "properties": {
+    "tolerance_mm": {
+     "type": "number"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "W2",
+  "mcp_projection": "exposed",
+  "determinism": "D3",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "maybe",
+  "preconditions": [
+   "project.open"
+  ],
+  "effects": [
+   "align.run_321@1"
+  ],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "gui"
+  ],
+  "lifecycle": {
+   "state": "experimental"
+  },
+  "web": "available",
+  "network": "none",
+  "cli_bare": true
+ }
+}

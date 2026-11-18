@@ -1,0 +1,15 @@
+[package]
+name = "fid-registry"
+description = "Metrology Maven command registry: definition records (spec node CORE.REG.DEF.FIELD)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-kci = { path = "../fid-kci" }
+
+[lints]
+workspace = true

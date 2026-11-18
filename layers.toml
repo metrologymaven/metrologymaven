@@ -1,11 +1,13 @@
 # Crate layer map (spec node ECO.REPO.LAYERS). A crate may depend only on crates
-# in its own or lower layers; the check lands with `cargo xtask layers`.
+# in its own or lower layers; `cargo xtask layers` checks it in CI.
 order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"]
 
 [crates]
 "fid-num" = "num"
 "fid-kci" = "kernel"
 "fid-canon" = "model"
+"fid-registry" = "model"
 "fid-replay" = "engine"
 "fid-surface" = "services"
 "fid-cli" = "app"
+"fid-xtask" = "tool"

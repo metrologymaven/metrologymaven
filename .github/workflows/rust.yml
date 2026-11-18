@@ -29,6 +29,8 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Crate layering (ECO.REPO.LAYERS)
+        run: cargo xtask layers
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -50,3 +52,4 @@ jobs:
         run: |
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
+          python tools/check_command_defs.py

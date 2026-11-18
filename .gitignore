@@ -8,3 +8,5 @@ target/
 site/dist/
 node_modules/
 .wrangler/
+fixtures/layers/**/Cargo.lock
+fixtures/layers/**/target/

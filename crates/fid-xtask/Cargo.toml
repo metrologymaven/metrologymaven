@@ -1,0 +1,19 @@
+[package]
+name = "fid-xtask"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (spec node ECO.REPO.LAYERS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-xtask"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true
