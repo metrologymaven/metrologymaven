@@ -184,8 +184,7 @@ impl PinError {
     pub fn path(&self) -> Option<&str> {
         match self {
             PinError::DigestMismatch(m) => Some(&m.path),
-            PinError::UnpinnedFile { path }
-            | PinError::DirUnreadable { path, .. } => Some(path),
+            PinError::UnpinnedFile { path } | PinError::DirUnreadable { path, .. } => Some(path),
             PinError::UnpinnedReference { location } => Some(location),
             PinError::ManifestInvalid { .. } => None,
         }
@@ -656,10 +655,7 @@ mod tests {
     #[test]
     fn sha256_known_answer() {
         // FIPS 180-2 example "abc".
-        assert_eq!(
-            sha256(b"abc").as_str(),
-            "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
+        assert_eq!(sha256(b"abc").as_str(), "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     }
 
     #[test]
@@ -678,8 +674,19 @@ mod tests {
         for ok in ["a.xsd", "lib/units.xsd", "QIFLibrary/Units-1_0.xsd", ".hidden/a.xsd"] {
             assert!(valid_rel_path(ok), "{ok}");
         }
-        let bad_paths =
-            ["", "/a.xsd", "a//b.xsd", "./a.xsd", "../a.xsd", "a/../b.xsd", "C:/a.xsd", "a\\b.xsd", "a b.xsd", "a.", "é.xsd"];
+        let bad_paths = [
+            "",
+            "/a.xsd",
+            "a//b.xsd",
+            "./a.xsd",
+            "../a.xsd",
+            "a/../b.xsd",
+            "C:/a.xsd",
+            "a\\b.xsd",
+            "a b.xsd",
+            "a.",
+            "é.xsd",
+        ];
         for bad in bad_paths {
             assert!(!valid_rel_path(bad), "{bad}");
         }
