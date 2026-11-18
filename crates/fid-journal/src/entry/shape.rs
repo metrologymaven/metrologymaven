@@ -42,7 +42,10 @@ pub const HEADER_SHAPE: ObjectShape = ObjectShape {
         ("seq", r##"{"$ref":"#/$defs/seq"}"##),
         ("prev", r##"{"$ref":"#/$defs/digest"}"##),
         ("branch", r##"{"$ref":"#/$defs/branch"}"##),
-        ("logical_parent", r##"{"anyOf":[{"type":"null"},{"$ref":"#/$defs/digest","not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}]}"##),
+        (
+            "logical_parent",
+            r##"{"anyOf":[{"type":"null"},{"$ref":"#/$defs/digest","not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}]}"##,
+        ),
         ("time", r##"object"##),
         ("principal", r##"object"##),
         ("ai_assistance", r##"{"enum":["none","suggested","authored","executed"]}"##),
@@ -89,10 +92,7 @@ pub const MANIFESTS_SHAPE: ObjectShape = ObjectShape {
     pointer: "/properties/manifests",
     required: &["registry", "kernel"],
     optional: &[],
-    props: &[
-        ("registry", r##"{"$ref":"#/$defs/digest"}"##),
-        ("kernel", r##"{"$ref":"#/$defs/digest"}"##),
-    ],
+    props: &[("registry", r##"{"$ref":"#/$defs/digest"}"##), ("kernel", r##"{"$ref":"#/$defs/digest"}"##)],
     extra: r##"{}"##,
 };
 
@@ -132,10 +132,7 @@ pub const INPUT_SHAPE: ObjectShape = ObjectShape {
     pointer: "/properties/command/properties/inputs/items",
     required: &["tag", "digest"],
     optional: &[],
-    props: &[
-        ("tag", r##"{"$ref":"#/$defs/ident"}"##),
-        ("digest", r##"{"$ref":"#/$defs/digest"}"##),
-    ],
+    props: &[("tag", r##"{"$ref":"#/$defs/ident"}"##), ("digest", r##"{"$ref":"#/$defs/digest"}"##)],
     extra: r##"{}"##,
 };
 
@@ -144,10 +141,7 @@ pub const OUTPUT_SHAPE: ObjectShape = ObjectShape {
     pointer: "/properties/command/properties/outputs/items",
     required: &["digest"],
     optional: &["entity"],
-    props: &[
-        ("entity", r##"{"$ref":"#/$defs/text"}"##),
-        ("digest", r##"{"$ref":"#/$defs/digest"}"##),
-    ],
+    props: &[("entity", r##"{"$ref":"#/$defs/text"}"##), ("digest", r##"{"$ref":"#/$defs/digest"}"##)],
     extra: r##"{"if":{"not":{"required":["entity"]}},"then":{"properties":{"digest":{"not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}}}}"##,
 };
 
@@ -156,10 +150,7 @@ pub const SESSION_SHAPE: ObjectShape = ObjectShape {
     pointer: "/properties/session",
     required: &["session_id", "app_version"],
     optional: &[],
-    props: &[
-        ("session_id", r##"{"$ref":"#/$defs/text"}"##),
-        ("app_version", r##"{"$ref":"#/$defs/text"}"##),
-    ],
+    props: &[("session_id", r##"{"$ref":"#/$defs/text"}"##), ("app_version", r##"{"$ref":"#/$defs/text"}"##)],
     extra: r##"{}"##,
 };
 
@@ -182,10 +173,7 @@ pub const HEAD_MOVE_SHAPE: ObjectShape = ObjectShape {
     pointer: "/properties/head_move",
     required: &["from", "to"],
     optional: &[],
-    props: &[
-        ("from", r##"{"$ref":"#/$defs/digest"}"##),
-        ("to", r##"{"$ref":"#/$defs/digest"}"##),
-    ],
+    props: &[("from", r##"{"$ref":"#/$defs/digest"}"##), ("to", r##"{"$ref":"#/$defs/digest"}"##)],
     extra: r##"{}"##,
 };
 
