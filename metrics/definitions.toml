@@ -9,6 +9,9 @@
 # Privacy: every metric is an aggregate count. No definition asks for names, email addresses,
 # account handles or any other data about an individual person.
 
+# Zero releases exist today, so this metric cannot be collected yet (the selector has nothing
+# to match). A JSON Pointer selects one value, so summing per-asset counts over all releases
+# would need a selector extension in a later revision of this leaf.
 [[metric]]
 id = "release_downloads_github"
 title = "Release downloads per channel: repository host releases"
@@ -18,11 +21,11 @@ selector = "/assets/0/download_count"
 unit = "downloads"
 aggregation = "last"
 biases = [
-  "Counts only the first asset of the latest release; other assets and earlier releases are not counted.",
-  "Cumulative counter: the quarterly change has to be derived from consecutive snapshots.",
+  "Reads only the first asset of the release the host marks as latest; downloads of its other assets and of every earlier release are not counted.",
+  "The host's latest release never includes pre-releases or drafts, so pre-release downloads are never counted.",
+  "Resets when a new release is published: the value is a per-release cumulative counter, so a quarter with a new release shows the new release's downloads only and quarterly changes cannot be read across releases.",
   "Mirror downloads, package-manager installs and copies passed on by hand are not counted.",
   "Automated downloads (CI jobs, bots, crawlers) are counted like people and repeat downloads are not de-duplicated.",
-  "Not collected until the first release exists; other release channels need their own definition.",
 ]
 
 [[metric]]
@@ -53,6 +56,9 @@ biases = [
   "Bots and automated forking are not excluded.",
 ]
 
+# Privacy (REQ-OUTR.COMM.METRIC-005, implemented by OUTR.COMM.METRIC.COLLECT): only the count is
+# kept; identities are hashed with a per-run salt in memory during collection, and no names or
+# email addresses are stored.
 [[metric]]
 id = "contributors_distinct"
 title = "Distinct contributors per quarter"
@@ -65,7 +71,6 @@ biases = [
   "Bot and automation commits are not excluded.",
   "Co-authors named only in commit trailers, reviewers, issue reporters and documentation helpers outside the repository are not counted.",
   "Squash merges attribute a pull request to the commit author recorded by the merge, which may hide other contributors.",
-  "Only a count is kept: identities are hashed in memory during collection and no names or email addresses are stored.",
 ]
 
 [[metric]]
@@ -81,15 +86,19 @@ biases = [
   "Deleted, hidden or moderated posts are not counted; questions asked elsewhere (issue tracker, mail, other sites) are not counted.",
 ]
 
+# Cannot be collected yet: no public chat channel exists, and no chat archive is in
+# metrics/sources.toml. Before any count, each channel's public archive must be added as its own
+# [[source]] and `source` below pointed at it. The current source is an existing public page
+# that is not read.
 [[metric]]
 id = "chat_messages_public"
 title = "Chat messages in public channels per quarter"
-source = "project-channel-listing"
+source = "contributing-guide"
 method = "manual_public_count"
 unit = "messages"
 aggregation = "sum"
 biases = [
-  "No official public chat channel exists yet (OUTR.COMM.CHAN); until one is listed the value is unavailable, never zero.",
+  "Not collectable today: no public chat channel or archive is listed as a source, so the value is unavailable, never zero.",
   "Only channels with a public archive can be counted; private messages and unofficial channels are not counted.",
   "Messages by maintainers and bots are not excluded, and message counts reward chattiness rather than reach.",
 ]

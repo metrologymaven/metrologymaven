@@ -2,8 +2,8 @@
 //!
 //! The guard is the no-telemetry boundary of adoption measurement: it refuses any metric
 //! without a complete definition, any source not marked public with a stated basis, and any
-//! source whose URL or ID looks like data collected by the product ([`DENY_LIST`]). The
-//! collector (`OUTR.COMM.METRIC.COLLECT`) calls [`check`] / [`check_files`] before it fetches
+//! source whose URL or ID looks like data collected by the product ([`DENY_LIST`]), and any
+//! metric that would read person-level data ([`PERSON_TERMS`]). The collector (`OUTR.COMM.METRIC.COLLECT`) calls [`check`] / [`check_files`] before it fetches
 //! anything.
 //!
 //! Determinism D0: pure functions over the two input texts. Findings come in a fixed order:
@@ -16,9 +16,11 @@ use std::fmt;
 use std::io::Read;
 use std::path::Path;
 
-/// Product-data source patterns (REQ-OUTR.COMM.METRIC.DEF-003), matched as case-insensitive
-/// substrings of a source's URL and ID. Compiled in on purpose: the definition files cannot
-/// change it. Maintainers may add entries through a pull request to this crate, never remove.
+/// Product-data source patterns (REQ-OUTR.COMM.METRIC.DEF-003), matched against a source's
+/// URL and ID after [`normalise`] (percent-decoded, lowercased, `-` and `_` removed), so
+/// `support-bundle`, `support_bundle`, `SupportBundle` and `support%2Dbundle` all match.
+/// Compiled in on purpose: the definition files cannot change it. Maintainers may add entries
+/// through a pull request to this crate, never remove. The first nine are the spec's list.
 pub const DENY_LIST: &[&str] = &[
     "telemetry",
     "crash",
@@ -29,7 +31,26 @@ pub const DENY_LIST: &[&str] = &[
     "licence-server",
     "license-server",
     "diagnostic",
+    "analytics",
+    "usage-stats",
+    "phone-home",
+    "heartbeat",
+    "error-report",
+    "sentry",
+    "licensing",
 ];
+
+/// Person-level data markers, matched after [`normalise`]. A metric is refused with
+/// `person_data` when
+/// - its source URL contains one (no exception: such endpoints return per-person records or
+///   target a person), or
+/// - its selector contains one, unless the selector is a top-level aggregate count field: a
+///   single reference token equal to `count` or `total_count` or ending in `_count`
+///   (e.g. `/stargazers_count`), see [`is_top_level_count`].
+pub const PERSON_TERMS: &[&str] = &["login", "email", "author", "committer", "stargazers", "contributors"];
+
+/// Rounds of percent-decoding applied before matching (catches double encoding).
+const DECODE_ROUNDS: usize = 4;
 
 /// Largest accepted input file, in bytes.
 pub const MAX_BYTES: usize = 1024 * 1024;
@@ -135,6 +156,7 @@ pub enum Code {
     ProductDataSource,
     SourceUnknown,
     DuplicateId,
+    PersonData,
 }
 
 impl Code {
@@ -147,6 +169,7 @@ impl Code {
             Code::ProductDataSource => "product_data_source",
             Code::SourceUnknown => "source_unknown",
             Code::DuplicateId => "duplicate_id",
+            Code::PersonData => "person_data",
         }
     }
 }
@@ -335,10 +358,75 @@ fn canonical(v: &CValue) -> Vec<u8> {
     to_canonical_bytes(v).unwrap_or_else(|_| b"{\"status\":\"error\"}".to_vec())
 }
 
-/// The deny-list pattern that `text` contains (case-insensitive), if any.
+fn hex(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
+/// One round of percent-decoding; malformed `%` sequences are kept as they are.
+fn percent_decode(text: &str) -> String {
+    let b = text.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        let pair = (b.get(i + 1).copied().and_then(hex), b.get(i + 2).copied().and_then(hex));
+        match (b[i], pair) {
+            (b'%', (Some(h), Some(l))) => {
+                out.push(h * 16 + l);
+                i += 3;
+            }
+            (c, _) => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Matching form of a URL, ID or selector: percent-decoded (up to a few rounds), lowercased,
+/// with `-` and `_` removed so that `a-b`, `a_b` and `ab` are equivalent.
+pub fn normalise(text: &str) -> String {
+    let mut t = text.to_string();
+    for _ in 0..DECODE_ROUNDS {
+        let d = percent_decode(&t);
+        if d == t {
+            break;
+        }
+        t = d;
+    }
+    t.to_lowercase().chars().filter(|c| *c != '-' && *c != '_').collect()
+}
+
+fn first_match(list: &[&'static str], text: &str) -> Option<&'static str> {
+    let n = normalise(text);
+    list.iter().copied().find(|p| n.contains(&normalise(p)))
+}
+
+/// The first [`DENY_LIST`] pattern that `text` contains after [`normalise`], if any.
 pub fn product_data_pattern(text: &str) -> Option<&'static str> {
-    let lower = text.to_ascii_lowercase();
-    DENY_LIST.iter().copied().find(|p| lower.contains(p))
+    first_match(DENY_LIST, text)
+}
+
+/// The first [`PERSON_TERMS`] entry that `text` contains after [`normalise`], if any.
+pub fn person_term(text: &str) -> Option<&'static str> {
+    first_match(PERSON_TERMS, text)
+}
+
+/// True when `selector` is a single JSON Pointer reference token naming an aggregate count:
+/// `count`, `total_count`, or ending in `_count` (case-insensitive).
+pub fn is_top_level_count(selector: &str) -> bool {
+    match selector.strip_prefix('/') {
+        Some(token) if !token.contains('/') => {
+            let t = token.replace("~1", "/").replace("~0", "~").to_ascii_lowercase();
+            t == "count" || t == "total_count" || t.ends_with("_count")
+        }
+        _ => false,
+    }
 }
 
 /// Reads both files (each at most [`MAX_BYTES`]) and runs [`check`].
@@ -376,11 +464,11 @@ pub fn check(defs: &str, defs_name: &str, sources: &str, sources_name: &str) -> 
     let mut report = Report::default();
 
     // Sources first: metrics refer to them.
-    let mut source_ids: BTreeSet<String> = BTreeSet::new();
+    let mut source_ids: BTreeMap<String, Option<String>> = BTreeMap::new();
     for (i, t) in entries(&sources_t, "source", Kind::SourcesFile, &mut report.findings) {
-        let id = check_source(i, t, &source_ids, &mut report);
-        if let Some(id) = id {
-            source_ids.insert(id);
+        if let Some(id) = check_source(i, t, &source_ids, &mut report) {
+            let url = t.get("url").and_then(toml::Value::as_str).map(str::to_string);
+            source_ids.insert(id, url);
         }
     }
 
@@ -485,7 +573,12 @@ impl Ctx<'_> {
 
 /// Checks one source; returns its ID when the ID itself is valid and new (so metrics may refer
 /// to it even if the source has other findings; those already fail the run).
-fn check_source(index: usize, t: &toml::Table, seen: &BTreeSet<String>, report: &mut Report) -> Option<String> {
+fn check_source(
+    index: usize,
+    t: &toml::Table,
+    seen: &BTreeMap<String, Option<String>>,
+    report: &mut Report,
+) -> Option<String> {
     let id = req_str(t, "id");
     let usable_id = id.as_ref().ok().filter(|v| valid_id(v)).cloned();
     let raw_id = id.as_ref().ok().cloned();
@@ -516,7 +609,7 @@ fn check_source(index: usize, t: &toml::Table, seen: &BTreeSet<String>, report: 
         cx.push(Code::ProductDataSource, Some(p));
     }
     let new_id = match usable_id {
-        Some(v) if seen.contains(&v) => {
+        Some(v) if seen.contains_key(&v) => {
             cx.field(Code::DuplicateId, "id");
             None
         }
@@ -535,7 +628,7 @@ fn check_metric(
     index: usize,
     t: &toml::Table,
     seen: &BTreeSet<String>,
-    sources: &BTreeSet<String>,
+    sources: &BTreeMap<String, Option<String>>,
     report: &mut Report,
 ) -> Option<String> {
     let id = req_str(t, "id");
@@ -610,9 +703,23 @@ fn check_metric(
             None
         }
     };
+    // Person-level data guard (see PERSON_TERMS).
+    if let Some(sel) = &selector {
+        if let Some(term) = person_term(sel) {
+            if !is_top_level_count(sel) {
+                cx.push(Code::PersonData, Some(&format!("selector {term}")));
+            }
+        }
+    }
     if let Some(src) = &source {
-        if !sources.contains(src) {
-            cx.push(Code::SourceUnknown, Some(src));
+        match sources.get(src) {
+            None => cx.push(Code::SourceUnknown, Some(src)),
+            Some(Some(url)) => {
+                if let Some(term) = person_term(url) {
+                    cx.push(Code::PersonData, Some(&format!("url {term}")));
+                }
+            }
+            Some(None) => {}
         }
     }
     let new_id = match usable_id {
@@ -659,5 +766,24 @@ mod tests {
         assert_eq!(product_data_pattern("https://x.example.org/TeleMetry/"), Some("telemetry"));
         assert_eq!(product_data_pattern("License-Server"), Some("license-server"));
         assert_eq!(product_data_pattern("https://api.example.org/repos/demo"), None);
+    }
+
+    #[test]
+    fn normalise_decodes_and_drops_separators() {
+        assert_eq!(normalise("Support_Bundle"), "supportbundle");
+        assert_eq!(normalise("a%2Db"), "ab");
+        assert_eq!(normalise("%2574"), "t");
+        assert_eq!(normalise("100%"), "100%");
+        assert_eq!(normalise("%zz"), "%zz");
+    }
+
+    #[test]
+    fn top_level_count() {
+        for ok in ["/stargazers_count", "/total_count", "/count", "/Forks_Count"] {
+            assert!(is_top_level_count(ok), "{ok}");
+        }
+        for bad in ["", "/", "/stargazers", "/0/login_count", "/author/total_count", "stargazers_count"] {
+            assert!(!is_top_level_count(bad), "{bad}");
+        }
     }
 }

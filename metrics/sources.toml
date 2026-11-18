@@ -33,8 +33,13 @@ url = "https://github.com/metrologymaven/metrologymaven/discussions"
 public = true
 public_basis = "The project's public discussion forum on the repository host, readable without an account."
 
+# No public chat channel exists yet (OUTR.COMM.CHAN), so no chat archive is listed and the chat
+# metric cannot be collected. Each channel's public archive must be added here as its own
+# [[source]], reviewed like any other, and the chat metric pointed at it before anything is
+# counted. Until then the chat metric names the contributing guide below only so that it refers
+# to an existing public page; nothing is read from it.
 [[source]]
-id = "project-channel-listing"
+id = "contributing-guide"
 url = "https://github.com/metrologymaven/metrologymaven/blob/main/CONTRIBUTING.md"
 public = true
-public_basis = "The project's public contributing guide, which names the official public community channels; message counts are read from the public archives of the chat channels it lists."
+public_basis = "The project's public contributing guide, readable without an account. It names no chat channel today and no value is read from it."

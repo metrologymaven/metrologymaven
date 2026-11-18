@@ -3,7 +3,7 @@
 //! finding below is hand-labelled from the spec's rules, not produced by this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_outreach::metrics::def::{check, check_files, Code, DENY_LIST};
+use fid_outreach::metrics::def::{check, check_files, normalise, Code, DENY_LIST};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -194,7 +194,9 @@ fn deny_list_matches_id_or_url_case_insensitively() {
             );
             let r = check("[[metric]]\n", "d", &src, "s").unwrap();
             assert!(
-                r.findings.iter().any(|f| f.code == Code::ProductDataSource && f.subject.as_deref() == Some(p)),
+                // `support_bundle` normalises to the same text as `support-bundle`, listed first.
+                r.findings.iter().any(|f| f.code == Code::ProductDataSource
+                    && f.subject.as_deref().map(normalise) == Some(normalise(p))),
                 "{p}: {:?}",
                 r.findings
             );
@@ -208,4 +210,69 @@ fn json_report_is_deterministic() {
     let a = check_files(&fixture("mixed.toml"), &fixture("mixed-sources.toml")).unwrap().to_json();
     let b = check_files(&fixture("mixed.toml"), &fixture("mixed-sources.toml")).unwrap().to_json();
     assert_eq!(a, b);
+}
+
+/// Every pattern of the extended deny-list, with case, separator and percent-encoding variants.
+#[test]
+fn deny_list_fixture() {
+    let expected = [
+        ("d01", "telemetry"),
+        ("d02", "crash"),
+        ("d03", "support-bundle"),
+        ("d04", "support-bundle"),
+        ("d05", "support-bundle"),
+        ("d06", "update-check"),
+        ("activation-keys", "activation"),
+        ("d08", "licence-server"),
+        ("d09", "license-server"),
+        ("d10", "diagnostic"),
+        ("d11", "analytics"),
+        ("d12", "usage-stats"),
+        ("d13", "phone-home"),
+        ("d14", "heartbeat"),
+        ("d15", "error-report"),
+        ("d16", "sentry"),
+        ("d17", "licensing"),
+        ("d18", "telemetry"),
+    ];
+    let lines = finding_lines("definitions.toml", "deny-list.toml");
+    let want: Vec<String> = expected
+        .iter()
+        .enumerate()
+        .map(|(n, (id, p))| format!("product_data_source {p} (source #{} \"{id}\")", n + 2))
+        .collect();
+    assert_eq!(lines, want);
+    for p in [
+        "analytics",
+        "usage-stats",
+        "phone-home",
+        "heartbeat",
+        "error-report",
+        "sentry",
+        "licensing",
+        "update-check",
+        "license-server",
+    ] {
+        assert!(DENY_LIST.contains(&p), "{p}");
+    }
+    let (code, _) = cli(&fixture("definitions.toml"), &fixture("deny-list.toml"), false);
+    assert_eq!(code, 1);
+}
+
+#[test]
+fn person_level_guard() {
+    let expected = [
+        "person_data selector login (metric #2 \"owner_login\")",
+        "person_data selector author (metric #3 \"author_count\")",
+        "person_data selector stargazers (metric #4 \"stargazer_list\")",
+        "person_data selector email (metric #5 \"email\")",
+        "person_data url contributors (metric #6 \"top_contributor\")",
+        "person_data url committer (metric #7 \"committers\")",
+        "person_data url author (metric #8 \"one_author_commits\")",
+    ];
+    assert_eq!(finding_lines("person-data.toml", "person-sources.toml"), expected);
+    let r = check_files(&fixture("person-data.toml"), &fixture("person-sources.toml")).unwrap();
+    assert_eq!(r.metrics.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["stars"]);
+    let (code, _) = cli(&fixture("person-data.toml"), &fixture("person-sources.toml"), false);
+    assert_eq!(code, 1);
 }

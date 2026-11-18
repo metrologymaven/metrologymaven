@@ -1,7 +1,7 @@
-//! `fid-outreach metric-def check --defs <file> --sources <file> [--json]`
-//! (spec node `OUTR.COMM.METRIC.DEF`).
+//! `fid-outreach <command> ...`: Metrology Maven outreach tooling (domain OUTR).
 //!
-//! Text mode prints one line per finding, then one `metric <id>` line per valid metric and a
+//! `metric-def check --defs <file> --sources <file> [--json]` (spec node `OUTR.COMM.METRIC.DEF`):
+//! text mode prints one line per finding, then one `metric <id>` line per valid metric and a
 //! summary; `--json` prints the canonical JSON report instead. Exits 0 with no findings, 1 with
 //! any, and 2 on unreadable or unparsable input or bad usage.
 
@@ -10,7 +10,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: fid-outreach metric-def check --defs <file> --sources <file> [--json]";
+const USAGE: &str = "usage: fid-outreach <command> [args]
+commands:
+  metric-def check --defs <file> --sources <file> [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();

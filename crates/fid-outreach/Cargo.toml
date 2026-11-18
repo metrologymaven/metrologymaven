@@ -1,6 +1,6 @@
 [package]
 name = "fid-outreach"
-description = "Metrology Maven outreach tooling: adoption metric definitions, source list and no-telemetry guard (spec node OUTR.COMM.METRIC.DEF)"
+description = "Metrology Maven outreach tooling (domain OUTR)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
