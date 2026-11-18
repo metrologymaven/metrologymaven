@@ -1,0 +1,5 @@
+[workspace]
+resolver = "2"
+# Unsupported glob syntax, a folder without Cargo.toml, a missing literal member and
+# an unreadable pattern base must each be reported, never skipped.
+members = ["crates/*", "crates/**", "crates/[ab]", "missing", "nodir/*"]
