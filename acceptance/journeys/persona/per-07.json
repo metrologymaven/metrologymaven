@@ -1,0 +1,39 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-07",
+  "subject": "JOB.PER.07",
+  "kind": "persona",
+  "revision": 1,
+  "app": "report",
+  "phase": "P1a",
+  "personas": ["JOB.PER.07", "JOB.PER.01"],
+  "exercised_by": ["JOB.ACC.08"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "verify.inspect_package@1",
+      "owner": "TRUST.PKG.READER",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "verify.package@1",
+      "owner": "TRUST.VERIFY.CLI",
+      "decision": "A package that is altered or incomplete is rejected without further review",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "screen": "SCR.RPT.INTAKE",
+      "owner": "UX.SCREENS.RPTAPP",
+      "decision": "Accept or reject the delivery, judging each result against the released drawing requirement and its evaluation basis",
+      "handoff": "Accepted results go to the incoming-quality record; a rejection with its reason goes back to the supplier's JOB.PER.01",
+      "human_only": false
+    }
+  ]
+}

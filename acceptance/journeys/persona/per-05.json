@@ -1,0 +1,129 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-05",
+  "subject": "JOB.PER.05",
+  "kind": "persona",
+  "revision": 1,
+  "app": "report",
+  "phase": "P1a",
+  "personas": ["JOB.PER.05", "JOB.PER.01", "JOB.PER.03", "JOB.PER.06", "JOB.PER.07"],
+  "exercised_by": ["JOB.ACC.02", "JOB.ACC.06"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "admin",
+      "command": "sign.set_profile@1",
+      "owner": "TRUST.PROFILE.SELECT",
+      "decision": "Which governance profile the site works under",
+      "handoff": 2,
+      "human_only": true
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "sign.list_meanings@1",
+      "owner": "TRUST.ESIG.MEANING",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "report.show_fai@1",
+      "owner": "RPT.FORMS.HDR",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "report.check_fai@1",
+      "owner": "RPT.FORMS.FINAL.CHECK",
+      "decision": "Release the form, or return it with the findings",
+      "handoff": "Step 5 when releasing; otherwise back to JOB.PER.01 with the findings",
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "report.finalize_fai@1",
+      "owner": "RPT.FORMS.FINAL.FREEZE",
+      "handoff": 6,
+      "human_only": true
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "sign.sign_package@1",
+      "owner": "TRUST.ESIG.CEREMONY",
+      "decision": "Which signature meaning applies to this release",
+      "handoff": 7,
+      "human_only": true
+    },
+    {
+      "n": 7,
+      "actor": "human",
+      "command": "sign.export_package@1",
+      "owner": "TRUST.PKG.EXPORT",
+      "handoff": "The results package goes to the customer, where JOB.PER.07 takes it in and JOB.PER.06 may verify it",
+      "human_only": false
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "program.release@1",
+      "owner": "AUTO.REC.LIFE",
+      "phase": "P1b",
+      "decision": "Release the registered inspection program, or send it back to its author",
+      "handoff": "JOB.PER.03 runs the released program at the kiosk",
+      "human_only": true
+    },
+    {
+      "n": 9,
+      "actor": "human",
+      "command": "stats.import_history@1",
+      "owner": "RPT.CATALOG.IMPORT.BATCH",
+      "phase": "P1b",
+      "handoff": 10,
+      "human_only": false
+    },
+    {
+      "n": 10,
+      "actor": "human",
+      "command": "stats.build_control_chart@1",
+      "owner": "RPT.STATS.SPC.CHART",
+      "phase": "P1b",
+      "handoff": 11,
+      "human_only": false
+    },
+    {
+      "n": 11,
+      "actor": "human",
+      "command": "stats.compute_capability@1",
+      "owner": "RPT.STATS.CAP.CMD",
+      "phase": "P1b",
+      "decision": "Whether a characteristic's capability calls for action on the process",
+      "handoff": 12,
+      "human_only": false
+    },
+    {
+      "n": 12,
+      "actor": "human",
+      "command": "stats.freeze_limits@1",
+      "owner": "RPT.STATS.SPC.FREEZE",
+      "phase": "P1b",
+      "decision": "Whether the control limits are settled enough to freeze",
+      "handoff": 13,
+      "human_only": false
+    },
+    {
+      "n": 13,
+      "actor": "human",
+      "command": "stats.save_dashboard@1",
+      "owner": "RPT.STATS.DASH.DEF",
+      "phase": "P1b",
+      "handoff": "Dashboard kept for the next review; new runs join the charts as they are imported",
+      "human_only": false
+    }
+  ]
+}

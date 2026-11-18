@@ -1,0 +1,145 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-02",
+  "subject": "JOB.PER.02",
+  "kind": "persona",
+  "revision": 1,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": ["JOB.PER.02", "JOB.PER.05"],
+  "exercised_by": ["JOB.ACC.01", "JOB.ACC.07"],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "project.create_project@1",
+      "owner": "CORE.PRJ.CONT.LIFE",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "import.cad_step@1",
+      "owner": "IO.CAD.STEP.CMD",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "import.cad_pmi@1",
+      "owner": "IO.CAD.PMI.CMD",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "import.mesh_stl@1",
+      "owner": "IO.MESH.STL",
+      "handoff": 5,
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "align.run_prealign@1",
+      "owner": "ALN.PRE.GLOBAL.CMD",
+      "handoff": 6,
+      "human_only": false
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "align.run_bestfit@1",
+      "owner": "ALN.BFIT.ICP.CMD",
+      "decision": "Whether the fit residuals are small enough to use this alignment",
+      "handoff": 7,
+      "human_only": false
+    },
+    {
+      "n": 7,
+      "actor": "agent",
+      "command": "gdt.propose_characteristics_from_pmi@1",
+      "owner": "GDT.PMI.MAP.CMD",
+      "handoff": 8,
+      "human_only": false
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "gdt.adopt_characteristics@1",
+      "owner": "GDT.PMI.REVIEW",
+      "decision": "Which proposed characteristics to adopt, edit or drop",
+      "handoff": 9,
+      "human_only": true
+    },
+    {
+      "n": 9,
+      "actor": "human",
+      "command": "compare.surface_cad@1",
+      "owner": "SCAN.CMP.DEV.SURFCAD",
+      "handoff": 10,
+      "human_only": false
+    },
+    {
+      "n": 10,
+      "actor": "human",
+      "command": "view.set_colormap@1",
+      "owner": "VIZ.OVERLAY.CMAP.SPEC",
+      "handoff": 11,
+      "human_only": false
+    },
+    {
+      "n": 11,
+      "actor": "human",
+      "command": "compare.section_create@1",
+      "owner": "SCAN.SECT.CUT",
+      "decision": "Where to cut sections on a sheet-metal or moulded part",
+      "handoff": 12,
+      "human_only": false
+    },
+    {
+      "n": 12,
+      "actor": "human",
+      "command": "compare.thickness_stats@1",
+      "owner": "SCAN.THK.TFIELD",
+      "handoff": 13,
+      "human_only": false
+    },
+    {
+      "n": 13,
+      "actor": "human",
+      "command": "report.export_pdf@1",
+      "owner": "RPT.OUTPUT.PDF.WRITE",
+      "handoff": 14,
+      "human_only": false
+    },
+    {
+      "n": 14,
+      "actor": "human",
+      "command": "program.from_journal@1",
+      "owner": "AUTO.REC.CONV",
+      "handoff": 15,
+      "human_only": false
+    },
+    {
+      "n": 15,
+      "actor": "human",
+      "command": "program.register@1",
+      "owner": "AUTO.REC.LIFE",
+      "handoff": "JOB.PER.05 releases the registered program",
+      "human_only": true
+    },
+    {
+      "n": 16,
+      "actor": "human",
+      "command": "program.run@1",
+      "owner": "AUTO.RUN.EXEC.CMD",
+      "decision": "Whether the next part's results need a closer look before the report goes out",
+      "handoff": "Next part of the batch starts again at step 16",
+      "human_only": false
+    }
+  ]
+}

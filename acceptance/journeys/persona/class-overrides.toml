@@ -1,0 +1,156 @@
+# Reviewed side-effect classes for persona-map commands whose owner node has no `side_effect:`
+# frontmatter yet (FLOW.PERSONA.MAPS). Read by tools/check_persona_maps.py: a map step whose
+# command has no declared class must appear here, or the check reports MAP-CLASS-UNKNOWN.
+#
+# `class` is the class stated in the owner node's body where it states one; otherwise it is an
+# assumption marked [unverified] in `reason`. Every entry uses the conservative choice
+# `human_only = true` until the owner node declares its class; the map step must match.
+# Remove an entry once its owner declares `side_effect:` (the check then reports it as stale).
+# Maintainer questions are marked "QUESTION:".
+
+[[override]]
+command = "cmm.generate_program_from_pmi@1"
+owner = "CMM.GEN.PMI"
+class = "W2"
+human_only = true
+reason = "Body states W2 (draft). Conservative human_only until declared; the node lets an agent propose the draft, so QUESTION: should this step allow an agent?"
+
+[[override]]
+command = "cmm.simulate_program@1"
+owner = "CMM.SIM.RUN"
+class = "I1"
+human_only = true
+reason = "Body states I1 and REQ-CMM.SIM.RUN-005 exposes it to agents over MCP. QUESTION: human_only conflicts with that projection; kept conservative until a maintainer decides."
+
+[[override]]
+command = "cmm.request_run@1"
+owner = "CMM.EXEC.REQ"
+class = "M1"
+human_only = true
+reason = "Body states M1, request only, never projected to MCP; agents never perform M1 (CONSTITUTION 3)."
+
+[[override]]
+command = "cmm.approve_ticket@1"
+owner = "CMM.EXEC.AUTHN"
+class = "M1"
+human_only = true
+reason = "REQ-CMM.EXEC.AUTHN-005: class M1, station only, never on MCP (gate H1)."
+
+[[override]]
+command = "device.connect_cmm@1"
+owner = "HAL.IPP.SESS"
+class = "D1"
+human_only = true
+reason = "Body states D1, request-only on MCP. human_only is the conservative choice; QUESTION: may an agent request the connection?"
+
+[[override]]
+command = "cmm.confirm_setup_run@1"
+owner = "CMM.EXEC.SCOPE"
+class = "W2"
+human_only = true
+reason = "Body states human only (setup-run confirmation by a human); class not stated, W2 assumed [unverified]."
+
+[[override]]
+command = "cmm.arm_run@1"
+owner = "CMM.EXEC.DRIVE"
+class = "M1"
+human_only = true
+reason = "Class not stated; arming starts machine motion, so M1 assumed [unverified]."
+
+[[override]]
+command = "cmm.record_run@1"
+owner = "CMM.EXEC.RECORD"
+class = "W2"
+human_only = true
+reason = "Class not stated; a journaled run record, W2 assumed [unverified]. The step's actor is system (the Motion Executive). QUESTION: human_only is conservative here and may be wrong for a system-written record."
+
+[[override]]
+command = "sign.sign_package@1"
+owner = "TRUST.ESIG.CEREMONY"
+class = "S1"
+human_only = true
+reason = "REQ-TRUST.ESIG.CEREMONY: class S1, no MCP projection."
+
+[[override]]
+command = "device.install_driver@1"
+owner = "HAL.HOST.PKG"
+class = "A0"
+human_only = true
+reason = "REQ-HAL.HOST.PKG-002: install, upgrade and remove are A0, administrator only, outside MCP."
+
+[[override]]
+command = "device.start_sim@1"
+owner = "HAL.SIM.IPPSIM"
+class = "I1"
+human_only = true
+reason = "Body states start and stop are I1 and exposed on MCP. QUESTION: human_only conflicts with that projection; kept conservative."
+
+[[override]]
+command = "device.run_conformance@1"
+owner = "HAL.SIM.CONF"
+class = "I1"
+human_only = true
+reason = "Body states I1 when the subject is a simulator (conformance on a real controller is M1). Conservative human_only. QUESTION: may an agent run simulator conformance?"
+
+[[override]]
+command = "device.show_conformance@1"
+owner = "HAL.SIM.CONF"
+class = "R0"
+human_only = true
+reason = "Body states R0. QUESTION: human_only is conservative and probably unnecessary for a read."
+
+[[override]]
+command = "net.import_observations@1"
+owner = "LVM.STATION.IMPORT"
+class = "W2"
+human_only = true
+reason = "Body states W2 with a dry-run mode. Conservative human_only. QUESTION: may an agent import observations?"
+
+[[override]]
+command = "net.run_adjustment@1"
+owner = "LVM.ADJ.SOLVE"
+class = "W2"
+human_only = true
+reason = "Body states W2 (determinism D3). Conservative human_only. QUESTION: may an agent run the adjustment?"
+
+[[override]]
+command = "net.report_network@1"
+owner = "LVM.RPT.EXPORT"
+class = "R1"
+human_only = true
+reason = "Body states R1. QUESTION: human_only is conservative and probably unnecessary for a compute read."
+
+[[override]]
+command = "net.export_network_report@1"
+owner = "LVM.RPT.EXPORT"
+class = "W1"
+human_only = true
+reason = "Body states W1 with fs_effect write_root. Conservative human_only."
+
+[[override]]
+command = "build.start_guide@1"
+owner = "LVM.GUIDE.SESSION"
+class = "W2"
+human_only = true
+reason = "Body offers the session commands as W2 and lists build_start_guide in mcp:. QUESTION: human_only conflicts with that MCP projection; kept conservative."
+
+[[override]]
+command = "build.step_guide@1"
+owner = "LVM.GUIDE.SESSION"
+class = "W2"
+human_only = true
+reason = "Body offers the session commands as W2 and lists build_step_guide in mcp:. QUESTION: human_only conflicts with that MCP projection; kept conservative."
+
+[[override]]
+command = "build.confirm_set@1"
+owner = "LVM.GUIDE.SESSION"
+class = "W2"
+human_only = true
+reason = "Body offers it as W2 and lists build_confirm_set in mcp:, so the node lets agents call it. QUESTION: the map treats confirming a physically set jig element as a human act (human_only), which contradicts LVM.GUIDE.SESSION; a maintainer should decide which is right."
+
+[[override]]
+command = "build.stop_guide@1"
+owner = "LVM.GUIDE.SESSION"
+class = "W2"
+human_only = true
+reason = "Body offers the session commands as W2 and lists build_stop_guide in mcp:. QUESTION: human_only conflicts with that MCP projection; kept conservative."
