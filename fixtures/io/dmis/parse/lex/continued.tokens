@@ -1,0 +1,7 @@
+statement	1	4
+1:1	word	DMISMN	DMISMN
+1:7	slash	/
+2:3	string	'Bracket ''B'' check'	Bracket 'B' check
+2:24	comma	,
+3:1	comment	$$ the version number is on the next line	 the version number is on the next line
+4:3	number	05.3

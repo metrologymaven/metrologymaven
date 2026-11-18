@@ -1,0 +1,12 @@
+UNITS/MM,ANGDEC
+
+   	
+fa(p1)=feat/point,cart,0,0,0,0,0,1
+	T(DIAM_1)=TOL/DIAM,-0.01,0.01 , $
+   
+  $$ a comment inside the chain
+  MMC
+TEXT/OPER,Clamp the part, then press start $ now
+TEXT/OUTFIL,'report ''one'''
+OUTPUT/FA(p1),TA(DIAM_1)
+ENDFIL
