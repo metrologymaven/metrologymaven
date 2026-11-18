@@ -4,8 +4,8 @@
 
 use core::num::NonZeroUsize;
 use fid_geo_types::{
-    Aabb, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh, PointBlock, PointCloud, PointSet,
-    PointSource,
+    Aabb, AttributeSet, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh, PointBlock, PointBuffer,
+    PointCloud, PointSet, PointSource,
 };
 use fid_types::Digest;
 
@@ -169,7 +169,7 @@ fn req3_kind_guard_matrix() {
 /// AC-3: an empty point set has no box.
 #[test]
 fn ac3_empty_point_set_aabb() {
-    let p = PointSet::new(FrameRef::from_bytes([0; 16]), vec![], vec![], vec![]).unwrap();
+    let p = PointSet::new(FrameRef::from_bytes([0; 16]), PointBuffer::default(), AttributeSet::default()).unwrap();
     assert!(p.is_empty());
     assert_eq!(p.aabb(), Err(GeoTypeError::Empty));
     assert_eq!(GeometryElement::PointSet(p).aabb(), Err(GeoTypeError::Empty));
@@ -195,7 +195,7 @@ fn ac4_mesh_cube_vertices_to_point_set() {
     assert_eq!(p.len(), 8);
     assert_eq!(p.frame(), frame);
     for (i, want) in v.iter().enumerate() {
-        assert_eq!(bits3(p.point(i).unwrap()), bits3(*want), "vertex {i}");
+        assert_eq!(bits3(p.point(i as u64).unwrap()), bits3(*want), "vertex {i}");
     }
     assert_eq!(p.point(8), None);
     // The source mesh is unchanged and the result is a new element.
@@ -287,7 +287,7 @@ fn constructors_reject_bad_input() {
     );
     assert_eq!(PointCloud::from_points(f, &[[f64::INFINITY, 0.0, 0.0]]), Err(GeoTypeError::NonFinite { index: 0 }));
     assert_eq!(
-        PointSet::new(f, vec![0.0, 1.0], vec![0.0], vec![0.0, 1.0]),
+        PointSet::new(f, PointBuffer::new(vec![0.0, 1.0], vec![0.0], vec![0.0, 1.0]), AttributeSet::default()),
         Err(GeoTypeError::AttributeLength { name: "y".to_string(), expected: 2, found: 1 })
     );
     let (_, v, _) = cube();

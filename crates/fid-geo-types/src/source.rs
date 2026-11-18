@@ -5,11 +5,11 @@
 
 use crate::envelope::FrameRef;
 use crate::error::GeoTypeError;
-use crate::points::Coords;
+use crate::points::PointBuffer;
 use core::num::NonZeroUsize;
 
-/// A named per-point channel carried with a block (attributes come with GEO.TYPES.POINTS;
-/// the in-memory sources of this crate emit none yet).
+/// A named per-point channel carried with a block. The in-memory sources of this crate
+/// emit coordinates only; attributes stay on the element (`attributes()`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Channel {
     pub name: String,
@@ -46,13 +46,13 @@ pub trait PointSource {
 #[derive(Debug, Clone)]
 pub struct InMemorySource<'a> {
     frame: FrameRef,
-    coords: &'a Coords,
+    coords: &'a PointBuffer,
     block_size: usize,
     pos: usize,
 }
 
 impl<'a> InMemorySource<'a> {
-    pub(crate) fn new(frame: FrameRef, coords: &'a Coords, block_size: NonZeroUsize) -> InMemorySource<'a> {
+    pub(crate) fn new(frame: FrameRef, coords: &'a PointBuffer, block_size: NonZeroUsize) -> InMemorySource<'a> {
         InMemorySource { frame, coords, block_size: block_size.get(), pos: 0 }
     }
 }
@@ -63,7 +63,7 @@ fn slice(v: &[f64], start: usize, end: usize) -> Vec<f64> {
 
 impl PointSource for InMemorySource<'_> {
     fn next_block(&mut self) -> Option<Result<PointBlock, GeoTypeError>> {
-        let n = self.coords.len();
+        let n = self.coords.x.len();
         if self.pos >= n {
             return None;
         }
@@ -80,7 +80,7 @@ impl PointSource for InMemorySource<'_> {
     }
 
     fn len(&self) -> u64 {
-        self.coords.len() as u64
+        self.coords.len()
     }
 
     fn frame(&self) -> FrameRef {
