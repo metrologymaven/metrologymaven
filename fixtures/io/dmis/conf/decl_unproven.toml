@@ -1,0 +1,18 @@
+# AC-2 fixture for IO.DMIS.CONF (CC-BY-4.0 project data): STMTB claims `full` import with
+# test `t_missing`, which is not in tests.txt, so generation fails conformance_unproven{STMTB}.
+schema = "fid.dmis-support"
+version = 1
+
+[[statement]]
+keyword = "STMTA"
+import = "full"
+export = "none"
+modules = [{ module = "A", level = 1 }]
+tests = ["t_a"]
+
+[[statement]]
+keyword = "STMTB"
+import = "full"
+export = "none"
+modules = [{ module = "A", level = 1 }]
+tests = ["t_missing"]

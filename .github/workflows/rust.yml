@@ -37,6 +37,15 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: DMIS conformance table is fresh (IO.DMIS.CONF AC-4)
+        # Regenerates docs/dmis/ from the declarations and the real test inventory; fails if stale.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo test --workspace -q -- --list > "$RUNNER_TEMP/test-inventory.txt"
+          cargo run -q -p fid-io-dmis --bin dmis-conformance -- \
+            --decl crates/fid-io-dmis/conformance/declarations.toml \
+            --tests "$RUNNER_TEMP/test-inventory.txt" --check docs/dmis
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
       - name: Fuzz harness compiles on stable (AUTO.PROG.FMT AC-6)
@@ -102,6 +111,7 @@ jobs:
           python tools/check_knp1_findings.py
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
+          python fixtures/io/dmis/conf/make_expected.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v

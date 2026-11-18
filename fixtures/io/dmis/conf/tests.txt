@@ -1,0 +1,10 @@
+t_a: test
+t_b: test
+t_c: test
+t_d: test
+t_e: test
+t_e_export: test
+unrelated::other: test
+bench_x: benchmark
+
+7 tests, 1 benchmarks

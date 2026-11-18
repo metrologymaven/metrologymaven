@@ -1,0 +1,64 @@
+# DMIS support declarations for the published conformance table (spec node IO.DMIS.CONF).
+# Schema fid.dmis-support v1. Generate with:
+#   cargo test --workspace -- --list > tests.txt
+#   cargo run -p fid-io-dmis --bin dmis-conformance -- \
+#     --decl crates/fid-io-dmis/conformance/declarations.toml --tests tests.txt --out-dir docs/dmis
+# CI regenerates and fails if docs/dmis/ is stale. Never edit docs/dmis/ by hand.
+#
+# Status: no DMIS lexer, parser, reader or writer exists yet, so every statement is declared
+# `none` for import and export. A declaration may move to `partial` or `full` only together
+# with the code and a test that proves it (the generator refuses claims without a test in
+# the inventory).
+#
+# Keywords listed: the statements the spec tree already names for the P1a grammar family
+# (IO.DMIS.PARSE.GDEF, IO.DMIS.OUT). The list is not complete [unverified: full list].
+# Conformance module tags are left empty: the DMIS 5.3 module and level designators have not
+# been entered from the standard yet [unverified: module list], so every statement is shown
+# as `unassigned` and no module level is claimed.
+schema = "fid.dmis-support"
+version = 1
+
+[[statement]]
+keyword = "DATDEF"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "DMISMD"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "DMISMN"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "ENDFIL"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "FEAT"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "FILNAM"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "TEXT"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "TOL"
+import = "none"
+export = "none"
+
+[[statement]]
+keyword = "UNITS"
+import = "none"
+export = "none"
