@@ -1,0 +1,26 @@
+# No-side-doors crate-graph check (spec node CORE.BUS.LINT, CONSTITUTION C3).
+# `cargo xtask lint-crate-graph` reads this file, storage-writers.toml (published by
+# CORE.STO.LAYOUT, when present) and `cargo metadata`, and fails when:
+#   - a crate outside [mutable_state] allowed reaches the mutable-state crate;
+#   - a crate outside the storage writers reaches a SQLite driver crate;
+#   - a [surfaces] crate depends directly on a [core] crate other than bus_api.
+# Crate names that do not exist yet are allowed; they take effect when the crate lands.
+
+[mutable_state]
+# Placeholder name until CORE.STO / CORE.JRN publish the state crate.
+crate = "fid-state"
+allowed = ["fid-bus", "fid-store"]
+
+# [storage_writers] allowed = [...] may be listed here; it is merged with storage-writers.toml.
+
+[sqlite]
+drivers = ["libsqlite3-sys", "rusqlite"]
+
+[surfaces]
+crates = ["fid-cli"]
+bus_api = "fid-bus-api"
+
+[core]
+# CORE crates on main (one-line array). fid-canon (CORE.JRN.CANON, a stateless canonical-JSON codec) is
+# left out for now: `fid-cli canon` uses it directly and there is no bus API crate yet.
+crates = ["fid-bus", "fid-bus-api", "fid-jobs", "fid-project", "fid-registry", "fid-replay", "fid-state", "fid-store"]

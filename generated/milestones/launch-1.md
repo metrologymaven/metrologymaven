@@ -20,17 +20,17 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**22** of **1336** leaves built in code ([B]).
+**28** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 16 built)
+### Wave 1 (125 leaves, 22 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
-- [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
+- [B] [AGENT.EVAL.FORMAT](../../spec/agent/eval/format/NODE.md) Task and oracle file format and suite version (M, P0)
 - [AGENT.LOCAL.GUIDE](../../spec/agent/local/guide/NODE.md) Generated open-weight model guidance page (S, P1a)
 - [AGENT.LOCAL.REF](../../spec/agent/local/ref/NODE.md) Reference local agent configuration (S, P1a)
 - [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
@@ -40,13 +40,13 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)
-- [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
+- [B] [CORE.BUS.LINT](../../spec/core/bus/lint/NODE.md) No-side-doors crate-graph check (S, P0)
 - [B] [CORE.JOB.PROG](../../spec/core/job/prog/NODE.md) Progress sink and cancellation token (S, P0)
 - [B] [CORE.JRN.CANON](../../spec/core/jrn/canon/NODE.md) Canonical JSON encoding and digests (M, P0)
 - [B] [CORE.REG.DEF.FIELD](../../spec/core/reg/def/field/NODE.md) Definition record, enums and policy fields (M, P0)
 - [B] [CORE.REG.DEF.PRED](../../spec/core/reg/def/pred/NODE.md) Precondition language and bounded evaluator (M, P0)
 - [B] [CORE.RPL.CLASS](../../spec/core/rpl/class/NODE.md) Replay outcome classification and decision invariance (M, P0)
-- [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
+- [B] [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
 - [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
 - [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
@@ -80,9 +80,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [GEO.NURBS.REF](../../spec/geo/nurbs/ref/NODE.md) NURBS reference fixtures and independent oracle (M, P1b)
 - [B] [GEO.TYPES.ENV](../../spec/geo/types/env/NODE.md) Element envelope and kind tags (S, P0)
 - [HAL.IDL.UNITS](../../spec/hal/idl/units/NODE.md) Quantities, declared encodings, frames and timestamp types (M, P0)
-- [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
+- [B] [IO.CORP.MANIF](../../spec/io/corp/manif/NODE.md) Corpus manifest format, licence checks and fetching (S, P0)
 - [IO.DMIS.CONF](../../spec/io/dmis/conf/NODE.md) Generated DMIS conformance table (S, P1a)
-- [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
+- [B] [IO.QIF.GEN.PIN](../../spec/io/qif/gen/pin/NODE.md) Pinned XSD manifest and digest check (S, P0)
 - [B] [IO.REG.LIMITS](../../spec/io/reg/limits/NODE.md) Reader limit harness, error taxonomy and untrusted strings (M, P0)
 - [IO.RES.AQDEF.KSET](../../spec/io/res/aqdef/kset/NODE.md) Published AQDEF K-field subset table (S, P1b)
 - [B] [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
@@ -117,7 +117,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.GPU.FALLBK.SMOKE](../../spec/plat/gpu/fallbk/smoke/NODE.md) No-GPU headless and forced-fallback start tests (M, P1a)
 - [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
 - [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
-- [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
+- [B] [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
 - [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
 - [QUAL.CRA.CLASS](../../spec/qual/cra/class/NODE.md) CRA classification record and distribution-gate status (S, P1a)
 - [QUAL.CRA.EXPORT](../../spec/qual/cra/export/NODE.md) Export-control notes and data-tag vocabulary (S, P1a)

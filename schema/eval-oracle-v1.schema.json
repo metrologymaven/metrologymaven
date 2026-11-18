@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/eval-oracle-v1.schema.json",
+  "title": "Metrology Maven evaluation oracle (AGENT.EVAL.FORMAT, oracle.json)",
+  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: tolerance unit equals value unit, finite bit-pattern values, unique characteristics among items, no forbidden pair equal to a required one, and the default tolerance 1e-9 in the value's unit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items", "forbidden"],
+  "anyOf": [
+    {"properties": {"items": {"minItems": 1}}},
+    {"properties": {"forbidden": {"minItems": 1}}}
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["characteristic", "outcome", "basis"],
+        "dependentRequired": {"tol": ["value"]},
+        "properties": {
+          "characteristic": {"$ref": "#/$defs/text"},
+          "outcome": {"$ref": "#/$defs/outcome"},
+          "basis": {"enum": ["POINTS", "FEATURES", "RESULTS_ONLY", "DIRECT_READING"]},
+          "value": {"$ref": "#/$defs/quantity"},
+          "tol": {
+            "allOf": [
+              {"$ref": "#/$defs/quantity"},
+              {"properties": {"amount": {"oneOf": [{"type": "number", "minimum": 0}, {"$ref": "#/$defs/bits"}]}}}
+            ]
+          }
+        }
+      }
+    },
+    "forbidden": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["characteristic", "outcome"],
+        "properties": {"characteristic": {"$ref": "#/$defs/text"}, "outcome": {"$ref": "#/$defs/outcome"}}
+      }
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000-\\u001f\\u007f]+$"},
+    "outcome": {"enum": ["CONFORMS", "NONCONFORMS", "INDETERMINATE", "NOT_DECIDABLE"]},
+    "bits": {"type": "string", "pattern": "^0x[0-9a-f]{16}$"},
+    "quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "unit"],
+      "properties": {
+        "amount": {"oneOf": [{"type": "number"}, {"$ref": "#/$defs/bits"}]},
+        "unit": {"enum": ["1", "m", "m2", "m3", "rad", "sr", "s", "kg", "K", "N", "Pa"]}
+      }
+    }
+  }
+}

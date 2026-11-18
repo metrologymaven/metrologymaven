@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (spec node ECO.REPO.LAYERS)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
