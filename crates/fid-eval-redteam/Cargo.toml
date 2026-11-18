@@ -16,7 +16,6 @@ path = "src/main.rs"
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
-fid-eval-suite = { path = "../fid-eval-suite" }
 fid-types = { path = "../fid-types" }
 
 [lints]

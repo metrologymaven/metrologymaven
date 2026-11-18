@@ -86,19 +86,13 @@ pub fn read_manifest(path: &Path) -> Result<Manifest, AdversaryError> {
     parse_manifest(&bytes)
 }
 
-/// Reads a task file with the AGENT.EVAL.FORMAT parser.
+/// Reads the fields the plan needs from a task file (see [`TaskView::from_value`]).
 pub fn read_task(path: &Path) -> Result<TaskView, AdversaryError> {
     let bytes = read_bounded(path, MAX_SMALL_FILE)
         .map_err(|e| AdversaryError::TaskUnreadable(format!("{}: {e}", path.display())))?;
-    let name = path.to_string_lossy();
-    match fid_eval_suite::parse_task(&bytes, &name) {
-        Ok(t) => Ok(TaskView::from_task(&t)),
-        Err(errs) => {
-            let detail: Vec<String> =
-                errs.iter().map(|e| format!("{} {}: {}", e.code.as_str(), e.field, e.detail)).collect();
-            Err(AdversaryError::TaskUnreadable(format!("{name}: {}", detail.join("; "))))
-        }
-    }
+    let fail = |d: String| AdversaryError::TaskUnreadable(format!("{}: {d}", path.display()));
+    let v = fid_canon::parse_with_limits(&bytes, MAX_SMALL_FILE as usize, 64).map_err(|e| fail(e.to_string()))?;
+    TaskView::from_value(&v).map_err(fail)
 }
 
 /// The server launch from an MCP client configuration (`{"mcpServers": {name: {command, args,

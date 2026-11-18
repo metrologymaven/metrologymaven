@@ -131,21 +131,71 @@ pub struct TaskView {
 }
 
 impl TaskView {
-    pub fn from_task(t: &fid_eval_suite::Task) -> TaskView {
-        let markers = t
-            .predicates
-            .iter()
-            .filter_map(|p| match &p.kind {
-                fid_eval_suite::PredicateKind::EntryWithMarker { marker } => Some(marker.clone()),
-                _ => None,
-            })
-            .collect();
-        TaskView {
-            id: t.id.clone(),
-            read_root: t.roots.read.first().map(|r| r.as_str().to_string()).unwrap_or_else(|| "in".into()),
-            shell: t.shell,
-            markers,
+    /// Reads the fields the plan needs from a parsed task file (AGENT.EVAL.FORMAT `task.json`
+    /// with the red-team extension). Tool crates may not depend on each other (ECO.REPO.LAYERS),
+    /// so this reads the few fields itself instead of using `fid-eval-suite`'s parser; full
+    /// task validation stays with `fid-eval check`. Fails closed on a missing or malformed
+    /// `id`, `roots.read`, `shell` or predicate marker.
+    pub fn from_value(v: &CValue) -> Result<TaskView, String> {
+        let CValue::Obj(m) = v else {
+            return Err("top level is not an object".into());
+        };
+        let id = match m.get("id") {
+            Some(CValue::Str(s)) if s.len() <= 64 && is_segment(s) => s.clone(),
+            _ => return Err("`id` is missing or not a task ID".into()),
+        };
+        let read_root = match m.get("roots") {
+            Some(CValue::Obj(r)) => match r.get("read") {
+                Some(CValue::Arr(a)) => match a.first() {
+                    None => "in".to_string(),
+                    Some(CValue::Str(s)) if s.split('/').all(is_segment) => s.clone(),
+                    _ => return Err("`roots.read[0]` is not a relative path".into()),
+                },
+                _ => return Err("`roots.read` is not an array".into()),
+            },
+            _ => return Err("`roots` is missing".into()),
+        };
+        let shell = match m.get("shell") {
+            None => false,
+            Some(CValue::Bool(b)) => *b,
+            Some(_) => return Err("`shell` is not a boolean".into()),
+        };
+        let mut markers = Vec::new();
+        match m.get("predicates") {
+            None => {}
+            Some(CValue::Arr(ps)) => {
+                for p in ps {
+                    let CValue::Obj(p) = p else {
+                        return Err("a predicate is not an object".into());
+                    };
+                    if p.get("kind") == Some(&CValue::Str("entry_with_marker".into())) {
+                        match p.get("marker") {
+                            Some(CValue::Str(s)) if is_marker(s) => markers.push(s.clone()),
+                            _ => return Err("an entry_with_marker predicate has no valid marker".into()),
+                        }
+                    }
+                }
+            }
+            Some(_) => return Err("`predicates` is not an array".into()),
         }
+        Ok(TaskView { id, read_root, shell, markers })
+    }
+}
+
+/// A path segment or task ID: `[A-Za-z0-9._-]+`, never `.` or `..`.
+fn is_segment(s: &str) -> bool {
+    !s.is_empty()
+        && s != "."
+        && s != ".."
+        && s.bytes().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'_' | b'-'))
+}
+
+/// `FIDRT-` plus 26 Crockford base32 characters (REQ-AGENT.REDTEAM.PRED-003).
+pub fn is_marker(s: &str) -> bool {
+    let crockford = |c: u8| c.is_ascii_digit() || (c.is_ascii_uppercase() && !matches!(c, b'I' | b'L' | b'O' | b'U'));
+    match s.strip_prefix("FIDRT-") {
+        Some(rest) => rest.len() == 26 && rest.bytes().all(crockford),
+        None => false,
     }
 }
 
