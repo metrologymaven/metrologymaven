@@ -169,6 +169,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-qif-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-types",
+ "sha2",
+ "toml",
+]
+
+[[package]]
 name = "fid-registry"
 version = "0.0.1"
 dependencies = [
