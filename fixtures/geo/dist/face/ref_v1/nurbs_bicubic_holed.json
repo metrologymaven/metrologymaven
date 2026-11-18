@@ -11,7 +11,7 @@
   "format": "fid-brep-builder/0",
   "body_id": "nurbs_bicubic_holed",
   "unit": "m",
-  "description": "Non-rational bicubic B-spline face (5 x 5, one interior knot) trimmed by a quadrilateral outer loop and a triangular inner loop (hole).",
+  "description": "Non-rational bicubic B-spline face (5 x 5, one interior knot) trimmed by a quadrilateral outer loop and a triangular inner loop (hole). No closed form: the AC-3 trim-ignoring test double for this body replays each query's recorded untrimmed (whole domain patch) answer from this oracle rather than computing one.",
   "vertices": [
    {
     "label": "V1",

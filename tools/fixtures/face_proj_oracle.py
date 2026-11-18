@@ -1449,7 +1449,8 @@ BEZ_SQ = (0.25, -0.25, 0.25)  # Bernstein coefficients of (t - 1/2)^2
 def build_annulus_trap():
     b = Builder("annulus_trap", "Paraboloid z = 2 r^2 as a non-rational biquadratic patch, trimmed to an annulus "
                                 "by two circle pcurves; points above the hole have their untrimmed minimum in "
-                                "the hole.")
+                                "the hole. Trap queries sit eps = 1e-8 to 1e-3 m off the axis: they are ill-conditioned, the foot "
+                                "moves along the inner circle with sensitivity about r/eps to changes of p.")
     x0, y0, z0, s = -0.03125, 0.0234375, 0.0078125, 0.25
     ctrl = [[(x0 + s * (i / 2 - 0.5), y0 + s * (k / 2 - 0.5), z0 + 0.125 * (BEZ_SQ[i] + BEZ_SQ[k]))
              for k in range(3)] for i in range(3)]
@@ -1765,6 +1766,10 @@ def generate(seed, log):
         cube = None
         if isinstance(built, tuple):
             built, cube = built
+        if not built.cf:
+            built.description += (" No closed form: the AC-3 trim-ignoring test double for this body replays each "
+                                  "query's recorded untrimmed (whole domain patch) answer from this oracle rather "
+                                  "than computing one.")
         bj = built.json()
         body = Body(bj, built.cf if built.cf else None, built.ucf if built.ucf else None)
         rng = random.Random(seed * 1000 + bi)

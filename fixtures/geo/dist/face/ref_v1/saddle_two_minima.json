@@ -11,7 +11,7 @@
   "format": "fid-brep-builder/0",
   "body_id": "saddle_two_minima",
   "unit": "m",
-  "description": "Saddle z = 8 (x^2 - y^2) as a non-rational biquadratic patch; points above the centre have two symmetric minima, and a hole trims one of them away for heights in about [0.08, 0.13] m.",
+  "description": "Saddle z = 8 (x^2 - y^2) as a non-rational biquadratic patch; points above the centre have two symmetric minima, and a hole trims one of them away for heights in about [0.08, 0.13] m. No closed form: the AC-3 trim-ignoring test double for this body replays each query's recorded untrimmed (whole domain patch) answer from this oracle rather than computing one.",
   "vertices": [
    {
     "label": "V1",

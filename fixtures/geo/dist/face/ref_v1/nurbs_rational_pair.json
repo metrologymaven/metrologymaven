@@ -11,7 +11,7 @@
   "format": "fid-brep-builder/0",
   "body_id": "nurbs_rational_pair",
   "unit": "m",
-  "description": "Open shell of two trimmed faces: a rational biquadratic patch with a square hole, and a non-rational biquadratic patch above it with a triangular hole.",
+  "description": "Open shell of two trimmed faces: a rational biquadratic patch with a square hole, and a non-rational biquadratic patch above it with a triangular hole. No closed form: the AC-3 trim-ignoring test double for this body replays each query's recorded untrimmed (whole domain patch) answer from this oracle rather than computing one.",
   "vertices": [
    {
     "label": "V1",

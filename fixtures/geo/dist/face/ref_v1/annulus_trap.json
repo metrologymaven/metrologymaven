@@ -11,7 +11,7 @@
   "format": "fid-brep-builder/0",
   "body_id": "annulus_trap",
   "unit": "m",
-  "description": "Paraboloid z = 2 r^2 as a non-rational biquadratic patch, trimmed to an annulus by two circle pcurves; points above the hole have their untrimmed minimum in the hole.",
+  "description": "Paraboloid z = 2 r^2 as a non-rational biquadratic patch, trimmed to an annulus by two circle pcurves; points above the hole have their untrimmed minimum in the hole. Trap queries sit eps = 1e-8 to 1e-3 m off the axis: they are ill-conditioned, the foot moves along the inner circle with sensitivity about r/eps to changes of p. No closed form: the AC-3 trim-ignoring test double for this body replays each query's recorded untrimmed (whole domain patch) answer from this oracle rather than computing one.",
   "vertices": [
    {
     "label": "V1",

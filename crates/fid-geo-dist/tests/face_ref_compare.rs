@@ -123,6 +123,43 @@ fn comparison_tolerance_is_1e9() {
     }
 }
 
+/// Feature check on edge answers: a wrong edge ID (or a vertex not on that edge) fails even
+/// with the right foot; the same edge, one of its end vertices, or Interior passes.
+#[test]
+fn wrong_edge_id_fails() {
+    let mut checked = 0;
+    for fx in all() {
+        let edges: Vec<String> = fx.body.get("edges").arr().iter().map(|e| e.get("label").str().to_string()).collect();
+        let vertices: Vec<String> =
+            fx.body.get("vertices").arr().iter().map(|v| v.get("label").str().to_string()).collect();
+        let ends = |e: &str| -> (String, String) {
+            let ej = fx.body.get("edges").arr().iter().find(|x| x.get("label").str() == e).unwrap();
+            (ej.get("start").str().to_string(), ej.get("end").str().to_string())
+        };
+        for q in fx.queries.iter().filter(|q| q.alternatives.is_empty()) {
+            let Feature::Edge(e) = &q.answer.feature else { continue };
+            let with = |f: Feature| Hit { feature: f, ..reference(&fx, q) };
+            assert!(matches(&fx, q, &with(Feature::Edge(e.clone()))), "{} {}", fx.file, q.id);
+            assert!(matches(&fx, q, &with(Feature::Interior)), "{} {}", fx.file, q.id);
+            let (s, t) = ends(e);
+            assert!(matches(&fx, q, &with(Feature::Vertex(s.clone()))), "{} {}", fx.file, q.id);
+            for other in edges.iter().filter(|o| *o != e) {
+                assert!(
+                    !matches(&fx, q, &with(Feature::Edge(other.clone()))),
+                    "{} {}: {other} accepted",
+                    fx.file,
+                    q.id
+                );
+            }
+            for v in vertices.iter().filter(|v| **v != s && **v != t) {
+                assert!(!matches(&fx, q, &with(Feature::Vertex(v.clone()))), "{} {}: {v} accepted", fx.file, q.id);
+            }
+            checked += 1;
+        }
+    }
+    assert!(checked >= 50, "only {checked} edge answers without ties");
+}
+
 /// AC-3: a projector that ignores trimming fails the comparison on every body, on every query
 /// whose untrimmed minimum lies outside the trim.
 #[test]

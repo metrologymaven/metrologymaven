@@ -7,7 +7,7 @@
  "files": [
   {
    "path": "annulus_trap.json",
-   "sha256": "sha256:2d260ece4857dd5b1cf71ab93e447ab78f7a65a2ac78c921fee30d97060c745a",
+   "sha256": "sha256:b9a92b54e2cc81b92f64ebe831319571313e21ffdb9a7ae1f7670a1e2deb5103",
    "seed": 31007,
    "oracle_version": "face_proj_oracle 1.0.0",
    "queries": 176
@@ -28,21 +28,21 @@
   },
   {
    "path": "nurbs_bicubic_holed.json",
-   "sha256": "sha256:e5f5d2c23a5478098a727bfde2ede0d1aa469b868ad2cecfaac5e42a240da494",
+   "sha256": "sha256:65f5bda716f88addaeb907a28c0090c3fedf9813a6937c45a7f8218161ebf706",
    "seed": 31005,
    "oracle_version": "face_proj_oracle 1.0.0",
    "queries": 152
   },
   {
    "path": "nurbs_rational_pair.json",
-   "sha256": "sha256:a084688d9023981425539739dd5afef6538b284bfd2c31971ce9c3fb6c0b5bf8",
+   "sha256": "sha256:4975eae82c5491528edab1afb4061bf7ab5442eeeab0479fc3a729a3366b2804",
    "seed": 31006,
    "oracle_version": "face_proj_oracle 1.0.0",
    "queries": 160
   },
   {
    "path": "saddle_two_minima.json",
-   "sha256": "sha256:b764c6699ffcb6ab711966acf3d2821f379e1fec85ea06ce65ae5b74b0132786",
+   "sha256": "sha256:ce6a1799a383edab519871135eb14aab016e845c7bf4fdee6692b9badc7810ff",
    "seed": 31008,
    "oracle_version": "face_proj_oracle 1.0.0",
    "queries": 176

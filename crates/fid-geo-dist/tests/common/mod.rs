@@ -362,22 +362,48 @@ pub struct Hit {
     pub distance: f64,
 }
 
+/// Start and end vertex labels of edge `e` in the body description.
+fn edge_ends(body: &Json, e: &str) -> Option<(String, String)> {
+    body.get("edges")
+        .arr()
+        .iter()
+        .find(|x| x.get("label").str() == e)
+        .map(|x| (x.get("start").str().to_string(), x.get("end").str().to_string()))
+}
+
+/// True when edge `e` has vertex `v` as an end.
+fn incident(body: &Json, e: &str, v: &str) -> bool {
+    edge_ends(body, e).is_some_and(|(s, t)| s == v || t == v)
+}
+
+/// Feature rule. Reference on an edge or vertex: accept the same feature, an adjacent vertex or
+/// edge (the foot is already within 1e-9 m), or Interior; reject any other edge or vertex ID.
+/// Reference interior: accept Interior, or any boundary feature when the reference foot lies
+/// within 1e-9 m of an edge (`near_edge`).
+pub fn feature_ok(body: &Json, reference: &Feature, hit: &Feature, near_edge: bool) -> bool {
+    match (reference, hit) {
+        (_, Feature::Interior) => true,
+        (Feature::Interior, _) => near_edge,
+        (Feature::Edge(a), Feature::Edge(b)) | (Feature::Vertex(a), Feature::Vertex(b)) => a == b,
+        (Feature::Edge(e), Feature::Vertex(v)) | (Feature::Vertex(v), Feature::Edge(e)) => incident(body, e, v),
+    }
+}
+
 /// True when `hit` matches the reference answer or one of its listed alternatives: same face,
-/// foot within 1e-9 m, distance within 1e-9 m, and the same feature (the feature is not
-/// compared when the reference foot lies within 1e-9 m of an edge).
-pub fn matches(q: &Query, hit: &Hit) -> bool {
-    let feature_free = q.foot_edge_distance.is_some_and(|d| d <= FACE_REF_FOOT_TOL_M);
+/// foot within 1e-9 m, distance within 1e-9 m, and a feature allowed by [`feature_ok`].
+pub fn matches(fx: &Fixture, q: &Query, hit: &Hit) -> bool {
+    let near_edge = q.foot_edge_distance.is_some_and(|d| d <= FACE_REF_FOOT_TOL_M);
     std::iter::once(&q.answer).chain(q.alternatives.iter()).any(|a| {
         a.face == hit.face
             && norm(sub(a.foot, hit.foot)) <= FACE_REF_FOOT_TOL_M
             && (a.distance - hit.distance).abs() <= FACE_REF_FOOT_TOL_M
-            && (feature_free || a.feature == hit.feature)
+            && feature_ok(&fx.body, &a.feature, &hit.feature, near_edge)
     })
 }
 
 /// IDs of the queries a projector gets wrong.
 pub fn compare(fx: &Fixture, projector: &dyn Fn(&Fixture, &Query) -> Hit) -> Vec<String> {
-    fx.queries.iter().filter(|q| !matches(q, &projector(fx, q))).map(|q| q.id.clone()).collect()
+    fx.queries.iter().filter(|q| !matches(fx, q, &projector(fx, q))).map(|q| q.id.clone()).collect()
 }
 
 // ------------------------------------------------------------------ analytic surfaces
