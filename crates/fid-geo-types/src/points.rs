@@ -41,8 +41,10 @@ pub struct PointBuffer {
     pub z: Vec<f64>,
 }
 
+/// A `usize` length or index as `u64`. Lossless on every supported target (`usize` is at
+/// most 64 bits); saturates rather than truncates if that ever stops holding.
 fn count_of(n: usize) -> u64 {
-    n as u64
+    u64::try_from(n).unwrap_or(u64::MAX)
 }
 
 impl PointBuffer {

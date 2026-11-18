@@ -243,7 +243,16 @@ fn ac4_normal_tolerance() {
     let cases = normal_cases();
     assert!(cases.len() >= 19);
     let labels: Vec<&str> = cases.iter().map(|c| c.0.as_str()).collect();
-    assert!(labels.contains(&"plus_1e-6") && labels.contains(&"plus_1e-10"));
+    for want in [
+        "plus_1e-6",
+        "plus_1e-10",
+        "upper_last_accepted",
+        "upper_first_rejected",
+        "lower_last_accepted",
+        "lower_first_rejected",
+    ] {
+        assert!(labels.contains(&want), "fixture case {want} missing");
+    }
     let f = FrameRef::from_bytes([3; 16]);
     // Point 0 has a good normal, point 1 the case under test.
     let buf = PointBuffer::from_points(&[[0.0; 3], [1.0, 2.0, 3.0]]);
