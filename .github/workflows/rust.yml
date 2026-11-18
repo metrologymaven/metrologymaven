@@ -87,6 +87,20 @@ jobs:
           test "$code" = 1 && test "$out" = "MissingDigest { workload: no-digest.load }"
           set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-bad-unit.toml); code=$?; set -e
           test "$code" = 1 && grep -q '^BadUnit { workload: bad-unit.load' <<< "$out"
+      - name: Network-feature list via cargo xtask (PLAT.DEPLOY.OFFLINE.NETLIST AC-1, AC-2, AC-4)
+        shell: bash
+        run: |
+          d=fixtures/plat/deploy
+          net="plat-deploy netlist --manifest $d/manifest-net.json"
+          out=$(cargo xtask $net --settings $d/settings-manifest.json \
+            --json $d/network-features.json --md $d/network-features.md --check)
+          test "$out" = "netlist: 3 commands, up to date"
+          set +e
+          out=$(cargo xtask $net --settings $d/settings-consent-on.json \
+            --json "$RUNNER_TEMP/nf.json" --md "$RUNNER_TEMP/nf.md")
+          code=$?
+          set -e
+          test "$code" = 1 && test "$out" = 'X1DefaultOn { command: "update.check@1" }'
       - name: Published keys agree with KEYS.md (ECO.REL.SIGN.GUIDE AC-1)
         run: |
           cargo xtask rel keys-check
@@ -117,6 +131,7 @@ jobs:
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
           python fixtures/plat/bench/make_expected.py --check
+          python fixtures/plat/deploy/make_expected.py --check
           python fixtures/rel/runbook/make_fixtures.py --check
           python fixtures/rel/sbom/make_fixtures.py --check
           python fixtures/rel/guide/make_fixtures.py --check
