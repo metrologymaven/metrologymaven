@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/manifest-1.json",
+  "title": "Metrology Maven Result Package manifest, format major version 1",
+  "description": "manifest.json of a Result Package (spec node TRUST.PKG.MANIFEST). Minor versions of format 1 may add optional properties, so unknown properties are allowed and ignored by 1.x readers. The member path pattern below already rejects empty, '.' and '..' segments, backslash and NUL; the reader also enforces the rules JSON Schema cannot express: Unicode NFC, at most 4096 UTF-8 bytes, members sorted by path bytes, and no two paths that collide after case folding or where one is a folder of another.",
+  "type": "object",
+  "required": ["format", "format_version", "created_by", "evidence_tier", "profile_digest", "kernel_manifest_digest", "members"],
+  "properties": {
+    "format": { "const": "metrologymaven-result-package" },
+    "format_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "created_by": { "type": "string", "minLength": 1 },
+    "evidence_tier": { "enum": ["results", "features", "points"] },
+    "profile_digest": { "$ref": "#/$defs/digest" },
+    "kernel_manifest_digest": { "$ref": "#/$defs/digest" },
+    "members": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/member" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "member": {
+      "type": "object",
+      "required": ["path", "media_type", "length", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(journal|kernel|points|profile|results)/[^\\\\\\u0000]+$",
+          "not": {
+            "anyOf": [
+              { "pattern": "(^|/)\\.{1,2}(/|$)" },
+              { "pattern": "//" },
+              { "pattern": "/$" }
+            ]
+          }
+        },
+        "media_type": {
+          "type": "string",
+          "maxLength": 255,
+          "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+        },
+        "length": {
+          "type": "string",
+          "$comment": "Decimal string of a u64: 0 to 18446744073709551615, no leading zeros.",
+          "pattern": "^(0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]{1}|1844674407370955161[0-4]|18446744073709551615)$"
+        },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}
