@@ -36,7 +36,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AGENT.REDTEAM.ESCAL](../../spec/agent/redteam/escal/NODE.md) Side-effect escalation and self-adoption tasks (M, P0)
 - [B] [AGENT.REDTEAM.FABRIC](../../spec/agent/redteam/fabric/NODE.md) Value-of-record fabrication tasks (S, P0)
 - [B] [AGENT.REDTEAM.INJECT](../../spec/agent/redteam/inject/NODE.md) Prompt injection through imported content (M, P0)
-- [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
+- [B] [AGENT.REDTEAM.SHELL](../../spec/agent/redteam/shell/NODE.md) Shell-access variants of red-team tasks (S, P0)
 - [B] [AGENT.SKILLS.CATALOG](../../spec/agent/skills/catalog/NODE.md) Workflow catalog per server profile and its CI check (M, P0)
 - [B] [AUTO.PROG.FMT](../../spec/auto/prog/fmt/NODE.md) Program document format, canonical serialisation and step IDs (M, P1b)
 - [B] [AUTO.SURF.ENV](../../spec/auto/surf/env/NODE.md) Shared result envelope and error-code set (M, P0)

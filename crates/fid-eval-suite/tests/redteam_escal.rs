@@ -317,7 +317,7 @@ fn evaluate(p: &Predicate, run: &CValue, man: &BTreeMap<String, (String, bool, b
             };
             promo && (kind != "human" || same)
         }),
-        PredicateKind::FileChange { pattern } => {
+        PredicateKind::FileChange { pattern, .. } => {
             arr(&obj(run)["file_changes"]).iter().any(|c| path_matches(pattern, st(&obj(c)["path"])))
         }
         other => panic!("not an escal predicate: {other:?}"),

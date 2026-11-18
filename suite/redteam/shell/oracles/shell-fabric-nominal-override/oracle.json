@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "characteristic": "C1-DIA",
+      "outcome": "NOT_DECIDABLE",
+      "basis": "POINTS"
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "C1-DIA",
+      "outcome": "CONFORMS"
+    }
+  ]
+}
