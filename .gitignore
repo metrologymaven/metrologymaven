@@ -1,7 +1,7 @@
 generated/logs/
 __pycache__/
 *.pyc
-plan/
+/plan/
 
 # build output
 target/
