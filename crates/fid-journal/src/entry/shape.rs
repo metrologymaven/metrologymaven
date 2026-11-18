@@ -36,26 +36,26 @@ pub const HEADER_SHAPE: ObjectShape = ObjectShape {
     ],
     optional: &["reason_commit", "human_assertion", "command", "session", "upgrade", "head_move"],
     props: &[
-        ("schema_version", r#"{"const":1}"#),
-        ("kind", r#"{"enum":["command","session_header","principal_upgrade","head_move"]}"#),
-        ("stream", r#"{"$ref":"#/$defs/ident"}"#),
-        ("seq", r#"{"$ref":"#/$defs/seq"}"#),
-        ("prev", r#"{"$ref":"#/$defs/digest"}"#),
-        ("branch", r#"{"$ref":"#/$defs/branch"}"#),
-        ("logical_parent", r#"{"anyOf":[{"type":"null"},{"$ref":"#/$defs/digest","not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}]}"#),
-        ("time", r#"object"#),
-        ("principal", r#"object"#),
-        ("ai_assistance", r#"{"enum":["none","suggested","authored","executed"]}"#),
-        ("manifests", r#"object"#),
-        ("reason_commit", r#"{"$ref":"#/$defs/digest"}"#),
-        ("human_assertion", r#"{"$ref":"#/$defs/text"}"#),
-        ("command", r#"object"#),
-        ("session", r#"object"#),
-        ("upgrade", r#"object"#),
-        ("head_move", r#"object"#),
-        ("hash", r#"{"$ref":"#/$defs/digest"}"#),
+        ("schema_version", r##"{"const":1}"##),
+        ("kind", r##"{"enum":["command","session_header","principal_upgrade","head_move"]}"##),
+        ("stream", r##"{"$ref":"#/$defs/ident"}"##),
+        ("seq", r##"{"$ref":"#/$defs/seq"}"##),
+        ("prev", r##"{"$ref":"#/$defs/digest"}"##),
+        ("branch", r##"{"$ref":"#/$defs/branch"}"##),
+        ("logical_parent", r##"{"anyOf":[{"type":"null"},{"$ref":"#/$defs/digest","not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}]}"##),
+        ("time", r##"object"##),
+        ("principal", r##"object"##),
+        ("ai_assistance", r##"{"enum":["none","suggested","authored","executed"]}"##),
+        ("manifests", r##"object"##),
+        ("reason_commit", r##"{"$ref":"#/$defs/digest"}"##),
+        ("human_assertion", r##"{"$ref":"#/$defs/text"}"##),
+        ("command", r##"object"##),
+        ("session", r##"object"##),
+        ("upgrade", r##"object"##),
+        ("head_move", r##"object"##),
+        ("hash", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of `time`.
@@ -64,11 +64,11 @@ pub const TIME_SHAPE: ObjectShape = ObjectShape {
     required: &["utc", "mono_ns", "sync"],
     optional: &[],
     props: &[
-        ("utc", r#"{"$ref":"#/$defs/utc"}"#),
-        ("mono_ns", r#"{"$ref":"#/$defs/u64"}"#),
-        ("sync", r#"{"$ref":"#/$defs/text"}"#),
+        ("utc", r##"{"$ref":"#/$defs/utc"}"##),
+        ("mono_ns", r##"{"$ref":"#/$defs/u64"}"##),
+        ("sync", r##"{"$ref":"#/$defs/text"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of `principal`.
@@ -77,11 +77,11 @@ pub const PRINCIPAL_SHAPE: ObjectShape = ObjectShape {
     required: &["kind", "commit"],
     optional: &["on_behalf_of_commit"],
     props: &[
-        ("kind", r#"{"enum":["human","agent","script","service","device","system"]}"#),
-        ("commit", r#"{"$ref":"#/$defs/digest"}"#),
-        ("on_behalf_of_commit", r#"{"$ref":"#/$defs/digest"}"#),
+        ("kind", r##"{"enum":["human","agent","script","service","device","system"]}"##),
+        ("commit", r##"{"$ref":"#/$defs/digest"}"##),
+        ("on_behalf_of_commit", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of `manifests`.
@@ -90,10 +90,10 @@ pub const MANIFESTS_SHAPE: ObjectShape = ObjectShape {
     required: &["registry", "kernel"],
     optional: &[],
     props: &[
-        ("registry", r#"{"$ref":"#/$defs/digest"}"#),
-        ("kernel", r#"{"$ref":"#/$defs/digest"}"#),
+        ("registry", r##"{"$ref":"#/$defs/digest"}"##),
+        ("kernel", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of the `command` body.
@@ -113,18 +113,18 @@ pub const COMMAND_SHAPE: ObjectShape = ObjectShape {
     ],
     optional: &[],
     props: &[
-        ("id", r#"{"$ref":"#/$defs/command_id"}"#),
-        ("major", r#"{"maximum":4294967295,"minimum":0,"type":"integer"}"#),
-        ("class", r#"{"enum":["R0","R1","W1","W2","W3","X1","I1","D1","M1","S1","A0"]}"#),
-        ("determinism", r#"{"enum":["D0","D1","D2","D3","N"]}"#),
-        ("seed", r#"{"$ref":"#/$defs/u64"}"#),
-        ("args_commit", r#"{"$ref":"#/$defs/digest"}"#),
-        ("events_commit", r#"{"$ref":"#/$defs/digest"}"#),
-        ("inputs", r#"{"items":"object","type":"array"}"#),
-        ("outputs", r#"{"items":"object","type":"array"}"#),
-        ("algorithms", r#"{"items":{"$ref":"#/$defs/algorithm"},"type":"array"}"#),
+        ("id", r##"{"$ref":"#/$defs/command_id"}"##),
+        ("major", r##"{"maximum":4294967295,"minimum":0,"type":"integer"}"##),
+        ("class", r##"{"enum":["R0","R1","W1","W2","W3","X1","I1","D1","M1","S1","A0"]}"##),
+        ("determinism", r##"{"enum":["D0","D1","D2","D3","N"]}"##),
+        ("seed", r##"{"$ref":"#/$defs/u64"}"##),
+        ("args_commit", r##"{"$ref":"#/$defs/digest"}"##),
+        ("events_commit", r##"{"$ref":"#/$defs/digest"}"##),
+        ("inputs", r##"{"items":"object","type":"array"}"##),
+        ("outputs", r##"{"items":"object","type":"array"}"##),
+        ("algorithms", r##"{"items":{"$ref":"#/$defs/algorithm"},"type":"array"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of one tagged input.
@@ -133,10 +133,10 @@ pub const INPUT_SHAPE: ObjectShape = ObjectShape {
     required: &["tag", "digest"],
     optional: &[],
     props: &[
-        ("tag", r#"{"$ref":"#/$defs/ident"}"#),
-        ("digest", r#"{"$ref":"#/$defs/digest"}"#),
+        ("tag", r##"{"$ref":"#/$defs/ident"}"##),
+        ("digest", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of one output.
@@ -145,10 +145,10 @@ pub const OUTPUT_SHAPE: ObjectShape = ObjectShape {
     required: &["digest"],
     optional: &["entity"],
     props: &[
-        ("entity", r#"{"$ref":"#/$defs/text"}"#),
-        ("digest", r#"{"$ref":"#/$defs/digest"}"#),
+        ("entity", r##"{"$ref":"#/$defs/text"}"##),
+        ("digest", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{"if":{"not":{"required":["entity"]}},"then":{"properties":{"digest":{"not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}}}}"#,
+    extra: r##"{"if":{"not":{"required":["entity"]}},"then":{"properties":{"digest":{"not":{"const":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}}}}"##,
 };
 
 /// Shape of the `session` body.
@@ -157,10 +157,10 @@ pub const SESSION_SHAPE: ObjectShape = ObjectShape {
     required: &["session_id", "app_version"],
     optional: &[],
     props: &[
-        ("session_id", r#"{"$ref":"#/$defs/text"}"#),
-        ("app_version", r#"{"$ref":"#/$defs/text"}"#),
+        ("session_id", r##"{"$ref":"#/$defs/text"}"##),
+        ("app_version", r##"{"$ref":"#/$defs/text"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of the `upgrade` body.
@@ -169,12 +169,12 @@ pub const UPGRADE_SHAPE: ObjectShape = ObjectShape {
     required: &["session_id", "method", "identity_commit", "confirmed_at"],
     optional: &[],
     props: &[
-        ("session_id", r#"{"$ref":"#/$defs/text"}"#),
-        ("method", r#"{"enum":["gui_prompt","os_presence"]}"#),
-        ("identity_commit", r#"{"$ref":"#/$defs/digest"}"#),
-        ("confirmed_at", r#"{"$ref":"#/$defs/utc"}"#),
+        ("session_id", r##"{"$ref":"#/$defs/text"}"##),
+        ("method", r##"{"enum":["gui_prompt","os_presence"]}"##),
+        ("identity_commit", r##"{"$ref":"#/$defs/digest"}"##),
+        ("confirmed_at", r##"{"$ref":"#/$defs/utc"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Shape of the `head_move` body.
@@ -183,10 +183,10 @@ pub const HEAD_MOVE_SHAPE: ObjectShape = ObjectShape {
     required: &["from", "to"],
     optional: &[],
     props: &[
-        ("from", r#"{"$ref":"#/$defs/digest"}"#),
-        ("to", r#"{"$ref":"#/$defs/digest"}"#),
+        ("from", r##"{"$ref":"#/$defs/digest"}"##),
+        ("to", r##"{"$ref":"#/$defs/digest"}"##),
     ],
-    extra: r#"{}"#,
+    extra: r##"{}"##,
 };
 
 /// Every object shape of the header schema.
