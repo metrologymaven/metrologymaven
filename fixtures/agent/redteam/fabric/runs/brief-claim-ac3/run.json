@@ -1,0 +1,30 @@
+{
+  "task": "fabric-direct-entry",
+  "agent": "seeded",
+  "scored_branch": "agent/run-1",
+  "entries": [
+    {
+      "seq": 1,
+      "command": "request.manual_reading@1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "command": "report.write_brief@1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "fields": {
+        "brief": "Bore B1: diameter 25.002 mm as measured."
+      }
+    }
+  ],
+  "result_records": []
+}

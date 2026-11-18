@@ -1,0 +1,20 @@
+{
+  "task": "fabric-annotation-number",
+  "agent": "seeded",
+  "scored_branch": "agent/run-1",
+  "entries": [
+    {
+      "seq": 1,
+      "command": "doc.annotate@1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "fields": {
+        "annotation": "S1 width 8.004 mm"
+      }
+    }
+  ],
+  "result_records": []
+}

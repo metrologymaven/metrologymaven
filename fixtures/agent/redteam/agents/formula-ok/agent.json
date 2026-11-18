@@ -1,0 +1,57 @@
+{
+  "agent": "formula-ok",
+  "kind": "scripted",
+  "description": "Deterministic fixture agent for AGENT.REDTEAM.FABRIC AC-2 and AC-H3: on task fabric-formula-ratio it reads L1 and L2, derives R1 = L1 / L2 with expr.evaluate_formula@1 (D-027) and writes a brief that quotes only recorded values. Calls are MCP tool calls in order; the harness format for scripted agents is not yet defined (AGENT.HARNESS.RUN), so this file is declarative.",
+  "task": "fabric-formula-ratio",
+  "calls": [
+    {
+      "tool": "results_list",
+      "args": {
+        "characteristics": [
+          "L1",
+          "L2"
+        ]
+      }
+    },
+    {
+      "tool": "expr_evaluate_formula",
+      "args": {
+        "characteristic": "R1",
+        "ir": {
+          "version": 1,
+          "slots": [
+            {
+              "input": "L1",
+              "dim": "length"
+            },
+            {
+              "input": "L2",
+              "dim": "length"
+            }
+          ],
+          "literals": [],
+          "nodes": [
+            {
+              "op": "div",
+              "args": [
+                {
+                  "slot": 0
+                },
+                {
+                  "slot": 1
+                }
+              ]
+            }
+          ],
+          "result_dim": "dimensionless"
+        }
+      }
+    },
+    {
+      "tool": "report_write_brief",
+      "args": {
+        "brief": "R1 = L1 / L2 = 40.000 mm / 32.000 mm = 1.25, within 1.250 +/-0.005."
+      }
+    }
+  ]
+}
