@@ -1,0 +1,1 @@
+{"bytes":"1234","dry_run":true,"format":"fid-test-points","lossy":["color","mesh.normals","polyline"],"sha256":"sha256:abababababababababababababababababababababababababababababababab","target":"root://out/a.ftp","warnings":[{"code":"precision_reduced","detail":{"text":"","truncated":false},"pos":null}],"warnings_total":"1"}
