@@ -3,7 +3,8 @@
 
 use fid_bus::error::{
     bus_error_schema, bus_errors_digest, bus_errors_json, catalog_value, check_compatible, current_catalog,
-    parse_catalog, BusError, Code, ConflictReason, Detail, Removal, ValidationReason, MAX_DETAIL_CHARS,
+    parse_catalog, BusError, Code, ConflictReason, Detail, Removal, Untrusted, ValidationReason,
+    MAX_DETAIL_CHARS, TRUNCATION_MARKER,
 };
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use std::path::{Path, PathBuf};
@@ -41,6 +42,10 @@ const REQ_001_CODES: [&str; 12] = [
     "internal",
 ];
 
+/// Digest of the frozen v1 baseline, pinned here so that regenerating or editing
+/// `bus-errors.v1.json` / `.digest` fails AC-1. Never change this constant.
+const V1_DIGEST: &str = "sha256:b741ab9fca53a6f299e7ea11345739c44df45284b2bc3c2fde0a68ec1edcb271";
+
 /// AC-1: the generated file lists exactly the twelve codes and its digest equals the
 /// committed `bus-errors.v1.digest` (both fixtures come from `make_bus_errors.py`).
 #[test]
@@ -51,8 +56,12 @@ fn ac1_generated_file_and_digest() {
     assert_eq!(String::from_utf8(bytes.clone()).unwrap(), String::from_utf8(fixture).unwrap());
 
     let want = String::from_utf8(read(&format!("{FIXTURE_DIR}/bus-errors.v1.digest"))).unwrap();
-    assert_eq!(bus_errors_digest().unwrap().to_string(), want.trim_end());
-    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), want.trim_end());
+    assert_eq!(want.trim_end(), V1_DIGEST, "the frozen v1 baseline was regenerated or edited");
+    assert_eq!(bus_errors_digest().unwrap().to_string(), V1_DIGEST);
+    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), V1_DIGEST);
+    let mut v1 = read(&format!("{FIXTURE_DIR}/bus-errors.v1.json"));
+    assert_eq!(v1.pop(), Some(b'\n'));
+    assert_eq!(fid_canon::digest_bytes(&v1).to_string(), V1_DIGEST, "bus-errors.v1.json was changed");
 
     let CValue::Obj(o) = parse(&bytes).unwrap() else { panic!("not an object") };
     let Some(CValue::Obj(codes)) = o.get("codes") else { panic!("no codes") };
@@ -249,11 +258,21 @@ fn ac3_every_error_validates_against_schema() {
 
 #[test]
 fn detail_is_bounded_untrusted_text() {
+    assert_eq!(TRUNCATION_MARKER, "\u{2026}[truncated]");
     let d = Detail::new(&"ab".repeat(MAX_DETAIL_CHARS));
     assert_eq!(d.as_untrusted_str().chars().count(), MAX_DETAIL_CHARS);
+    assert!(d.as_untrusted_str().ends_with(TRUNCATION_MARKER));
+    assert!(d.as_untrusted_str().starts_with("abab"));
     let d = Detail::new(&"€".repeat(MAX_DETAIL_CHARS + 1));
     assert_eq!(d.as_untrusted_str().chars().count(), MAX_DETAIL_CHARS);
+    let keep = MAX_DETAIL_CHARS - TRUNCATION_MARKER.chars().count();
+    assert_eq!(d.as_untrusted_str(), format!("{}{TRUNCATION_MARKER}", "€".repeat(keep)));
+    // Exactly at the limit: kept whole, no marker.
+    let exact = "é".repeat(MAX_DETAIL_CHARS);
+    assert_eq!(Detail::new(&exact).as_untrusted_str(), exact);
     assert_eq!(Detail::new("short").as_untrusted_str(), "short");
+    assert_eq!(Detail::new("short").as_untrusted(), &Untrusted::new("short".to_string()));
+    assert_eq!(Untrusted::new(7_u32).into_untrusted(), 7);
     assert_eq!(Detail::empty().as_untrusted_str(), "");
 
     // Detail text that looks like JSON stays an opaque string.

@@ -23,31 +23,64 @@ pub const MAX_CATALOG_DEPTH: usize = 8;
 // ------------------------------------------------------------------ untrusted detail
 
 /// A value that came from outside the trust boundary (CONSTITUTION C6). Surfaces may
-/// display it but must never parse it or act on it.
+/// display it but must never parse it or act on it. Lives in `fid-bus` for now; lower
+/// layers that need it later may move it down.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Untrusted<T>(T);
 
-/// The free-text part of a [`BusError`]: untrusted, at most [`MAX_DETAIL_CHARS`] characters.
-pub type Detail = Untrusted<String>;
+impl<T> Untrusted<T> {
+    /// Marks `value` as untrusted.
+    pub fn new(value: T) -> Self {
+        Untrusted(value)
+    }
 
-impl Untrusted<String> {
-    /// Wraps `text` as a detail, keeping at most the first [`MAX_DETAIL_CHARS`] characters.
-    /// Never fails, so building an error can never itself fail.
+    /// The untrusted value, for display or storage only.
+    pub fn as_untrusted(&self) -> &T {
+        &self.0
+    }
+
+    /// Unwraps the untrusted value.
+    pub fn into_untrusted(self) -> T {
+        self.0
+    }
+}
+
+/// Appended to a [`Detail`] that was cut short; counted within [`MAX_DETAIL_CHARS`].
+pub const TRUNCATION_MARKER: &str = "\u{2026}[truncated]";
+
+/// The free-text part of a [`BusError`]: untrusted text of at most [`MAX_DETAIL_CHARS`]
+/// characters (Unicode scalar values).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct Detail(Untrusted<String>);
+
+impl Detail {
+    /// Wraps `text` as a detail. Text longer than [`MAX_DETAIL_CHARS`] characters is cut at
+    /// a character boundary and ends with [`TRUNCATION_MARKER`], so the result is exactly
+    /// [`MAX_DETAIL_CHARS`] characters long. Never fails, so building an error never fails.
     pub fn new(text: &str) -> Self {
-        let kept = match text.char_indices().nth(MAX_DETAIL_CHARS) {
-            Some((at, _)) => text.get(..at).unwrap_or(text),
+        if text.chars().nth(MAX_DETAIL_CHARS).is_none() {
+            return Detail(Untrusted::new(text.to_string()));
+        }
+        let keep = MAX_DETAIL_CHARS.saturating_sub(TRUNCATION_MARKER.chars().count());
+        let head = match text.char_indices().nth(keep) {
+            Some((at, _)) => text.get(..at).unwrap_or(""),
             None => text,
         };
-        Untrusted(kept.to_string())
+        Detail(Untrusted::new(format!("{head}{TRUNCATION_MARKER}")))
     }
 
     /// An empty detail.
     pub fn empty() -> Self {
-        Untrusted(String::new())
+        Detail::default()
     }
 
     /// The raw untrusted text, for display only.
     pub fn as_untrusted_str(&self) -> &str {
+        self.0.as_untrusted()
+    }
+
+    /// The text as an [`Untrusted`] value.
+    pub fn as_untrusted(&self) -> &Untrusted<String> {
         &self.0
     }
 }
@@ -73,7 +106,8 @@ macro_rules! reason_enum {
                 }
             }
 
-            /// Decodes a wire string; `None` if this build does not know it.
+            /// Decodes a wire string; `None` for a reason unknown to this build (for example
+            /// one added by a later version), so callers must handle `None`.
             pub fn from_wire(s: &str) -> Option<Self> {
                 match s {
                     $($s => Some($name::$variant),)+
@@ -109,6 +143,7 @@ reason_enum!(
         UnregisteredType => "unregistered_type",
         BadToken => "bad_token",
         StaleToken => "stale_token",
+        BadRange => "bad_range",
     }
 );
 
@@ -131,7 +166,8 @@ reason_enum!(
         NoApproval => "no_approval",
         TargetProtected => "target_protected",
         NoAssertion => "no_assertion",
-        ProfileAgentWriteForbidden => "profile.agent_write_forbidden",
+        AgentWriteForbidden => "agent_write_forbidden",
+        SystemOnly => "system_only",
     }
 );
 
@@ -156,6 +192,8 @@ reason_enum!(
     ConflictReason {
         ExpectedHeadMismatch => "expected_head_mismatch",
         HeadMoved => "head_moved",
+        WriterLocked => "writer_locked",
+        ExpectedDigestMismatch => "expected_digest_mismatch",
     }
 );
 
@@ -165,11 +203,11 @@ reason_enum!(
         UnknownCommand => "unknown_command",
         UnknownMajor => "unknown_major",
         RemovedMajor => "removed_major",
-        Branch => "branch",
-        Entity => "entity",
-        Job => "job",
-        Request => "request",
-        Stream => "stream",
+        UnknownBranch => "unknown_branch",
+        UnknownEntity => "unknown_entity",
+        UnknownJob => "unknown_job",
+        UnknownRequest => "unknown_request",
+        UnknownStream => "unknown_stream",
     }
 );
 
@@ -183,15 +221,17 @@ reason_enum!(
 reason_enum!(
     /// Reasons for `undeclared_effect` (CORE.BUS.PIPE.HANDLER).
     UndeclaredEffectReason {
-        EventType => "event_type",
+        UndeclaredEventType => "undeclared_event_type",
     }
 );
 
 reason_enum!(
-    /// Reasons for `cancelled` (CORE.JOB).
+    /// Reasons for `cancelled` (CORE.JOB). `timeout`: the command's time budget ran out
+    /// and nothing was committed.
     CancelledReason {
         Requested => "requested",
         Shutdown => "shutdown",
+        Timeout => "timeout",
     }
 );
 
@@ -225,6 +265,7 @@ reason_enum!(
         HandlerFailed => "handler_failed",
         JournalUnavailable => "journal_unavailable",
         InvariantViolated => "invariant_violated",
+        Storage => "storage",
     }
 );
 
@@ -293,8 +334,9 @@ macro_rules! bus_errors {
                 }
             }
 
-            /// Rebuilds an error from its wire parts; `None` if the code or the reason is
-            /// unknown to this build or the reason does not belong to the code.
+            /// Rebuilds an error from its wire parts. Returns `None` if the code or the reason
+            /// is unknown to this build (for example added by a later version of
+            /// `bus-errors.json`) or the reason does not belong to the code.
             pub fn from_wire(code: &str, reason: &str, detail: &str) -> Option<BusError> {
                 match Code::from_wire(code)? {
                     $(Code::$variant => Some(BusError::$variant($reason::from_wire(reason)?, Detail::new(detail))),)+
