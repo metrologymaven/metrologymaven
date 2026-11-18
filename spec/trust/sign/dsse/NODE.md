@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # TRUST.SIGN.DSSE: DSSE envelope encoding, algorithms and key fingerprints
