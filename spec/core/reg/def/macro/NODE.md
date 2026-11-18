@@ -69,6 +69,7 @@ Fixture crates under `fixtures/core/reg/def/macro/` with golden schema files; co
 ## Open questions
 
 - `#[fid(dimensionless_unchecked)]` is an escape hatch for genuinely unitless floats; `CORE.REG.VAL` may want to flag its use in a report.
+- Follow-up from ECO.APPS.POLICY (PR #116): `cargo xtask apps-policy` reads the declaration-macro crate and markers from `apps-policy.toml` and is inert until they are set. When this leaf is built, add a repository-root `apps-policy.toml` with `macro_crates = ["fid-registry-macros"]` and `declaration_markers = ["#[fid_command", "fid_commands!"]` (or whatever names this leaf finally ships).
 
 ## Children
 

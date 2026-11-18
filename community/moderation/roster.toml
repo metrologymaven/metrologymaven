@@ -1,0 +1,6 @@
+# Public moderator roster (spec node OUTR.COMM.MOD; PROCEDURE.md).
+#
+# Handles only (GitHub login form): no names, e-mail addresses or other contact details.
+# `fid-outreach mod-check` reports `moderator_unknown` for any case handled by someone not listed.
+# The list is empty until the maintainers appoint moderators; add a handle in a reviewed PR.
+moderators = []

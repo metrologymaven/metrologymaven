@@ -1,0 +1,11 @@
+[package]
+name = "starter"
+description = "Starter crate of {{repo_id}}; rename or replace it, and update layers.toml."
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true

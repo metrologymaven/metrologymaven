@@ -1,0 +1,21 @@
+# PLAT.HW.PROFILE AC-3 (hand-written): no profile named minimum; the other two are valid.
+# Expected: exit 1 with exactly one diagnostic, MissingProfile { name: minimum }.
+schema_version = 1
+
+[profiles.recommended]
+cores = 8
+ram_gib = 32
+gpu_class = "discrete_mid"
+vram_gib = 8
+storage_free_gib = 100
+display = [2560, 1440]
+cpu_level = { x86_64 = "x86-64-v3" }
+
+[profiles.workstation]
+cores = 16
+ram_gib = 64
+gpu_class = "discrete_mid"
+vram_gib = 16
+storage_free_gib = 500
+display = [3840, 2160]
+cpu_level = { x86_64 = "x86-64-v3" }

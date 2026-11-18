@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-platform]
+built_pr: 76
 satisfies: [REQ-PLAT.MATRIX-001, REQ-PLAT.MATRIX-007]
 covers: []
 depends_on: []
@@ -87,6 +89,7 @@ Hand-written TOML files under `fixtures/plat/matrix/` (`valid.toml`, `overlap.to
 ## Open questions
 
 - Additional Linux distributions (Debian, Fedora, RHEL) are in the enum so rows can be listed as Tier 2 or 3; which ones are listed is `PLAT.MATRIX.POLICY`'s call.
+- Schema 1 has no edition field, so a Windows row cannot tell Windows Server from desktop Windows with the same build (10.0.26100 is both Windows Server 2025, which CI runs, and Windows 11 24H2, which it does not). Should a reviewed schema bump add an `edition` field (for example `server | desktop`) to rows?
 
 ## Children
 

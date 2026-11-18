@@ -1,0 +1,58 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-06",
+  "subject": "JOB.PER.06",
+  "kind": "persona",
+  "revision": 1,
+  "app": "verifier",
+  "phase": "P0",
+  "personas": ["JOB.PER.06", "JOB.PER.05"],
+  "exercised_by": [],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "verify.inspect_package@1",
+      "owner": "TRUST.PKG.READER",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "verify.check_chain@1",
+      "owner": "TRUST.CHAIN.LINKS",
+      "decision": "If a link does not verify, record the package as altered",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "verify.check_signature@1",
+      "owner": "TRUST.SIGN.TROOT",
+      "phase": "P1a",
+      "decision": "Which public keys the auditor accepts as trust roots",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "verify.replay@1",
+      "owner": "TRUST.REPLAY.RUN",
+      "phase": "P1a",
+      "handoff": 5,
+      "human_only": false
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "verify.package@1",
+      "owner": "TRUST.VERIFY.CLI",
+      "decision": "What the verdict means for the audit, including each section that could not be checked",
+      "handoff": "The verification report goes into the audit record; findings go back to the sender, JOB.PER.05",
+      "human_only": false
+    }
+  ]
+}

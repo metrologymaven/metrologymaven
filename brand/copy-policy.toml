@@ -1,0 +1,12 @@
+# Copied-text policy (spec node OUTR.BRAND.COPY, decision D-013).
+#
+# D-013 option C: the project keeps no reference set of other vendors' text and runs no
+# automatic copy matcher. The control is the clean-room rule (CONSTITUTION section 8) and the
+# human `copied_text` item of the trade-dress review (OUTR.BRAND.REVIEW).
+# `fid-outreach copy-guard` checks this file. Changes go through a reviewed pull request:
+# - when a review record answers `copied_text` with fail, add a [[revisit]] entry for that
+#   release (release, date, note) and start the D-013 revisit of option B after counsel review;
+# - `mode` may leave "review_only" only with counsel_review = { date, reviewer_ref } and a new
+#   decision.
+mode = "review_only"
+decision = "D-013"

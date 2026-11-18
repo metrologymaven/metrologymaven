@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [acceptance/journeys/persona]
+built_pr: 100
 satisfies: [REQ-FLOW.PERSONA-002, REQ-FLOW.PERSONA-006, REQ-FLOW.PERSONA-007]
 covers: [JOB.PER.*]
 depends_on: []

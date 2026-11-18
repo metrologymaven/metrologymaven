@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "characteristic": "H1-DIA",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": 0.01,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "H1-POS",
+      "outcome": "NONCONFORMS",
+      "basis": "FEATURES"
+    }
+  ],
+  "forbidden": []
+}

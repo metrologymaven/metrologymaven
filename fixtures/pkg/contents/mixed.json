@@ -1,0 +1,47 @@
+{
+  "created_by": "fid-pkg fixture generator 1 \u00e9\u00e8 \"quoted\"\ttab",
+  "evidence_tier": "points",
+  "profile_digest": "sha256:ec3f66121221c4e0dae4393d0f96baa31425c1ca9c86a863a41e0d3aac721751",
+  "kernel_manifest_digest": "sha256:a8f1e12ad5cb22ffbcb18c11989ad194b8eb5dce79393713a73541c86b8416a1",
+  "result_count": 1,
+  "members": [
+    {
+      "path": "results/results.qif",
+      "media_type": "application/xml",
+      "body": "<QIFDocument/>\n"
+    },
+    {
+      "path": "points/abababababababababababababababababababababababababababababababab.zst",
+      "media_type": "application/zstd",
+      "body": "(\u00b5/\u00fd not really zstd"
+    },
+    {
+      "path": "journal/segment.jsonl",
+      "media_type": "application/x-ndjson",
+      "body_repeat": [
+        "{\"seq\":\"1\",\"event\":\"synthetic\"}\n",
+        2200
+      ]
+    },
+    {
+      "path": "journal/checkpoints/0.json",
+      "media_type": "application/json",
+      "body": ""
+    },
+    {
+      "path": "results/caf\u00e9 \u00fc\u00dfer.json",
+      "media_type": "application/json",
+      "body": "{}"
+    },
+    {
+      "path": "profile/profile.json",
+      "media_type": "application/json",
+      "body": "{\"profile\":\"synthetic-test-profile\",\"rules\":[]}"
+    },
+    {
+      "path": "kernel/manifest.json",
+      "media_type": "application/json",
+      "body": "{\"kernel\":\"synthetic-test-kernel\",\"version\":\"0.0.0\"}"
+    }
+  ]
+}

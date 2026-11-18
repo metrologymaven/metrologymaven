@@ -1,0 +1,19 @@
+# Fixture house-rules manifest (ECO.REPO.TPL.FILES tests). manifest.json holds the same data.
+[budgets]
+core_bytes = 3072
+agents_md_bytes = 10240
+
+[[block]]
+id = "core"
+file = "core.md"
+repos = ["fid-demo", "fid-other"]
+
+[[block]]
+id = "rust"
+file = "rust.md"
+repos = ["fid-demo"]
+
+[[block]]
+id = "python"
+file = "python.md"
+repos = ["fid-other"]

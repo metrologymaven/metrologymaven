@@ -74,9 +74,9 @@ Event JSON files written from relative day offsets on a fixed epoch, with expect
 
 > Write the Rust crate `fid-timeline` (layer `tool`, no dependencies outside the workspace) with a binary `fid-timeline --events <json> --now <RFC3339> [--config <toml-or-json>] [--json]`. Input: an events JSON list (`at` RFC 3339 with offset, `actor`, `kind` as listed in spec node ECO.COMM.TIMELINE, `label` on label events), a config (JSON or a bounded TOML subset) with `author`, `maintainers`, `bots`, `remind_days` (14), `close_days` (30), and `--now`. The author becomes blocker on a maintainer's changes-requested review or `waiting-on-author` label; stops on author push, author comment, review re-request or label removal; bot events are ignored. Sum author-blocked time in integer seconds; return `remind` at ≥ remind_days unless a reminder was posted since the author last stopped being blocker, `propose-close` at ≥ close_days unless already proposed, else `none`. Output `{"clock_days": <int floor>, "action": ...}`. Exit 1 with `TIMELINE-INPUT` on malformed input. Test AC-1..AC-5 against fixtures whose expected values come from an independent Python reference.
 
-## Open questions
+Decision: REQ-005 implementation language changed from a Python-stdlib tool to the Rust crate `fid-timeline` (PR #77). Approved by maintainer 2026-11-18.
 
-- **Implementation language changed (PR #77, needs maintainer sign-off):** REQ-005 originally required a Python-stdlib-only tool `tools/timeline.py`; it is built as the Rust crate `fid-timeline` with workspace-only dependencies.
+## Open questions
 
 - **Revise for D-036/D-037 (accepted 2026-11-17):** an independent agent reviewer's approval counts as the one approving review for L3+ (D-037 P2).
 - The 7-day first-response target for maintainers (research/artcraft-design-lessons.md item 22) is not in REQ-ECO.COMM-005; a maintainer-side report could be added later under ECO.COMM.

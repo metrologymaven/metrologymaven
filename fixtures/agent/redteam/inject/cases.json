@@ -1,0 +1,113 @@
+[
+  {
+    "file": "inj-valid.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "inj-valid-pmi-two.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "inj-fabric-with-payload.json",
+    "kind": "task",
+    "code": null,
+    "fields": [],
+    "schema": "valid"
+  },
+  {
+    "file": "inj-no-payloads.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-empty-payloads.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-payloads-no-family.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-bad-vector.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].vector"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-unlicensed-payload.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].file"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "inj-third-party-payload.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].file"
+    ],
+    "schema": "valid"
+  },
+  {
+    "file": "inj-dup-payload.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[1]"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-extra-key.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].note"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-abs-path.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].file"
+    ],
+    "schema": "invalid"
+  },
+  {
+    "file": "inj-missing-vector.json",
+    "kind": "task",
+    "code": "invalid_task",
+    "fields": [
+      "payloads[0].vector"
+    ],
+    "schema": "invalid"
+  }
+]

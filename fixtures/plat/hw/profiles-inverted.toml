@@ -1,0 +1,22 @@
+# PLAT.HW.PROFILE AC-2 (hand-written): recommended RAM (8) is below minimum RAM (16); every
+# other field of recommended is at least the minimum.
+# Expected: exit 1 with exactly one diagnostic, RecommendedBelowMinimum { field: ram_gib }.
+schema_version = 1
+
+[profiles.minimum]
+cores = 4
+ram_gib = 16
+gpu_class = "integrated"
+vram_gib = 2
+storage_free_gib = 20
+display = [1920, 1080]
+cpu_level = { x86_64 = "x86-64-v2" }
+
+[profiles.recommended]
+cores = 8
+ram_gib = 8
+gpu_class = "discrete_mid"
+vram_gib = 8
+storage_free_gib = 100
+display = [2560, 1440]
+cpu_level = { x86_64 = "x86-64-v3" }

@@ -1,0 +1,8 @@
+[package]
+name = "fid-tool"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-app-a = { path = "../app-a" }

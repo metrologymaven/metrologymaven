@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "third-party"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# AC-5: not first-party, so a branch is this check's non-concern.
+other = { git = "https://example.com/someone/other.git", branch = "main" }
+# A lookalike of a first-party URL is not first-party either.
+lookalike = { git = "https://example.org/fid/libs-extra", branch = "main" }

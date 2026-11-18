@@ -1,0 +1,6 @@
+# Crate layer map (ECO.REPO.LAYERS). A crate may depend only on crates in its own or
+# lower layers. Every crate in the workspace must be listed.
+order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"]
+
+[crates]
+"starter" = "model"

@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "characteristic": "H1H2-DIST",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": 0.05,
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-07,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": []
+}

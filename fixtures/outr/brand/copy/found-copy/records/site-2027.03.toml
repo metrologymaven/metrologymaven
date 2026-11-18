@@ -1,0 +1,12 @@
+# Review record (synthetic fixture).
+release = "site-2027.03"
+reviewer = "quill"
+date = "2027-03-19"
+
+[answers]
+colours = { result = "pass", note = "" }
+icon_style = { result = "pass", note = "" }
+layout = { result = "pass", note = "" }
+screenshots = { result = "pass", note = "" }
+typography = { result = "pass", note = "" }
+copied_text = { result = "fail", note = "The pricing blurb repeated a sentence from another vendor's flyer; rewritten." }

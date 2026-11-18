@@ -1,0 +1,79 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-08",
+  "subject": "JOB.PER.08",
+  "kind": "persona",
+  "revision": 1,
+  "app": "sdk",
+  "phase": "P2",
+  "personas": ["JOB.PER.08"],
+  "exercised_by": [],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "device.list_capabilities@1",
+      "owner": "HAL.IDL.GEN.CMDS",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "device.describe_capability@1",
+      "owner": "HAL.IDL.GEN.CMDS",
+      "decision": "Which device interfaces the driver implements",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "admin",
+      "command": "device.install_driver@1",
+      "owner": "HAL.HOST.PKG",
+      "handoff": 4,
+      "human_only": true
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "device.start_sim@1",
+      "owner": "HAL.SIM.IPPSIM",
+      "handoff": 5,
+      "human_only": true
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "device.open_session@1",
+      "owner": "HAL.ACQ.SESS.LIFE",
+      "handoff": 6,
+      "human_only": false
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "device.play_transcript@1",
+      "owner": "HAL.XSCR.PLAY",
+      "handoff": 7,
+      "human_only": false
+    },
+    {
+      "n": 7,
+      "actor": "human",
+      "command": "device.run_conformance@1",
+      "owner": "HAL.SIM.CONF",
+      "decision": "Fix the driver and run again, or ship it once every conformance check passes",
+      "handoff": 8,
+      "human_only": true
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "device.show_conformance@1",
+      "owner": "HAL.SIM.CONF",
+      "handoff": "The driver ships as its own package with its conformance result; the core software is unchanged",
+      "human_only": true
+    }
+  ]
+}

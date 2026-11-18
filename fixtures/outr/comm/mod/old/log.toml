@@ -1,0 +1,29 @@
+# Synthetic moderation log for tests (CC-BY-4.0). Every case and handle is invented.
+
+[[case]]
+id = "MOD-2024-031"
+filed_at = "2024-12-01T10:00:00Z"
+acknowledged_at = "2024-12-02T09:00:00Z"
+channel = "chat"
+outcome = "warning"
+moderator = "mod-cedar"
+parties_conflicted = []
+
+[[case]]
+id = "MOD-2027-001"
+filed_at = "2027-01-04T09:00:00Z"
+acknowledged_at = "2027-01-04T15:30:00Z"
+channel = "forum"
+outcome = "no_action"
+moderator = "mod-ash"
+parties_conflicted = []
+
+[[anon]]
+quarter = "2024Q3"
+outcome = "removal"
+ack_within_target = true
+
+[[anon]]
+quarter = "2024Q3"
+outcome = "no_action"
+ack_within_target = false

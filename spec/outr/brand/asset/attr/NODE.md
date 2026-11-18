@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 115
 satisfies: [REQ-OUTR.BRAND.ASSET-001, REQ-OUTR.BRAND.ASSET-002, REQ-OUTR.BRAND.ASSET-003, REQ-OUTR.BRAND.ASSET-004]
 covers: []
 depends_on: []

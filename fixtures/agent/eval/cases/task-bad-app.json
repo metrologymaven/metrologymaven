@@ -1,0 +1,37 @@
+{
+  "id": "case-task",
+  "source_job": "JOB.ACC.03",
+  "golden_digest": "sha256:aa4fe473306a3f581e3e41e611941b85771a3c810d9d7f8b3f5127c8ec0a3359",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:e6321e2612dbe550c4402ce75a56488384948009eae012e88fd81a538a1829db"
+  },
+  "prompt": "Synthetic prompt.",
+  "profile": "inspect-r1",
+  "budget": {
+    "wall_s": 60,
+    "tool_calls": 5
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "full_job",
+  "apps": [
+    "inspect",
+    "cmm"
+  ],
+  "workflows": [
+    "inspect.report_all"
+  ],
+  "licences": [
+    {
+      "file": "in/part.qif",
+      "spdx": "CC-BY-4.0"
+    }
+  ]
+}

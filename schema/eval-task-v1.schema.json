@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/eval-task-v1.schema.json",
+  "title": "Metrology Maven evaluation task (AGENT.EVAL.FORMAT, task.json)",
+  "description": "Structural rules only. The parser (crate fid-eval-suite) also enforces: unique licence files, the 64 MiB / depth 64 limits, duplicate-key rejection and the start-state digest check. Red-team extension (AGENT.REDTEAM.PRED): a task with `family` is a red-team task and needs a non-empty `predicates` array, and `numeric_claim` is allowed only in family `fabric`; the suite-wide marker rules need the payload files and are not expressed here. A task with `payloads` must have `family`, and a task of family `inject` needs `payloads`. A task of family `escal` needs `subfamily` (AGENT.REDTEAM.ESCAL), which no other task may carry, and an `entry_class` predicate; a `self_adoption` task also needs a `promotion_without_distinct_human` predicate. A task of family `shell` (AGENT.REDTEAM.SHELL) requires `shell: true` and exactly one of `variant_of` (the base task it copies) or `shell_only: true`; no other task may carry `variant_of` or `shell_only` or set `shell: true`; a shell variant keeps its base task's predicates (so a variant of a fabrication task may carry `numeric_claim`); a shell-only task needs a `file_change` predicate with `unaccounted: true`. That a shell suite has exactly one variant per base task, equal to it except for the shell and fresh markers, is checked by `fid-eval suite check --base` and is not expressed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source_job", "golden_digest", "start_state", "prompt", "profile", "budget", "roots", "tier", "apps", "workflows", "licences"],
+  "dependentRequired": {"family": ["predicates"], "predicates": ["family"], "payloads": ["family"], "subfamily": ["family"], "variant_of": ["family"], "shell_only": ["family"], "shell": ["family"]},
+  "allOf": [
+    {
+      "if": {
+        "required": ["predicates"],
+        "properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "numeric_claim"}}}}}
+      },
+      "then": {"anyOf": [{"properties": {"family": {"const": "fabric"}}}, {"required": ["variant_of"]}]}
+    },
+    {
+      "if": {"required": ["family"], "properties": {"family": {"const": "inject"}}},
+      "then": {"required": ["payloads"]}
+    },
+    {
+      "if": {"required": ["family"], "properties": {"family": {"const": "escal"}}},
+      "then": {
+        "required": ["subfamily"],
+        "properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "entry_class"}}}}}
+      }
+    },
+    {
+      "if": {"required": ["subfamily"]},
+      "then": {"properties": {"family": {"const": "escal"}}}
+    },
+    {
+      "if": {"required": ["family"], "properties": {"family": {"const": "shell"}}},
+      "then": {
+        "required": ["shell"],
+        "properties": {"shell": {"const": true}},
+        "oneOf": [{"required": ["variant_of"]}, {"required": ["shell_only"]}]
+      }
+    },
+    {
+      "if": {"anyOf": [{"required": ["variant_of"]}, {"required": ["shell_only"]}, {"required": ["shell"], "properties": {"shell": {"const": true}}}]},
+      "then": {"properties": {"family": {"const": "shell"}}}
+    },
+    {
+      "if": {"required": ["shell_only"]},
+      "then": {"properties": {"predicates": {"contains": {"type": "object", "required": ["kind", "unaccounted"], "properties": {"kind": {"const": "file_change"}, "unaccounted": {"const": true}}}}}}
+    },
+    {
+      "if": {"required": ["subfamily"], "properties": {"subfamily": {"const": "self_adoption"}}},
+      "then": {"properties": {"predicates": {"contains": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "promotion_without_distinct_human"}}}}}}
+    }
+  ],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "source_job": {"$ref": "#/$defs/text"},
+    "golden_digest": {"$ref": "#/$defs/digest"},
+    "start_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest"],
+      "properties": {"path": {"$ref": "#/$defs/relpath"}, "digest": {"$ref": "#/$defs/digest"}}
+    },
+    "prompt": {"type": "string", "minLength": 1},
+    "profile": {"$ref": "#/$defs/text"},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wall_s", "tool_calls"],
+      "properties": {
+        "wall_s": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+        "tool_calls": {"type": "integer", "minimum": 1, "maximum": 4294967295}
+      }
+    },
+    "roots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read", "write"],
+      "properties": {
+        "read": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/relpath"}},
+        "write": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/relpath"}}
+      }
+    },
+    "tier": {"enum": ["single_command", "multi_step", "full_job"]},
+    "apps": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["inspect", "probe", "network", "report"]}
+    },
+    "workflows": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "licences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "spdx"],
+        "properties": {
+          "file": {"$ref": "#/$defs/relpath"},
+          "spdx": {"type": "string", "maxLength": 64, "pattern": "^(project-authored|[A-Za-z0-9][A-Za-z0-9.+-]*)$"}
+        }
+      }
+    },
+    "family": {"enum": ["inject", "escal", "fabric", "shell"]},
+    "subfamily": {"$ref": "#/$defs/subfamily"},
+    "variant_of": {"description": "AGENT.REDTEAM.SHELL: the ID of the base task this shell variant copies.", "$ref": "#/$defs/id"},
+    "shell_only": {"description": "AGENT.REDTEAM.SHELL: a hand-authored shell-only task.", "const": true},
+    "shell": {"description": "AGENT.REDTEAM.SHELL: the task requires an adapter with shell access (AGENT.HARNESS.ADAPT `shell`).", "type": "boolean"},
+    "predicates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/predicate"}},
+    "payloads": {
+      "description": "Start-state files that carry injected text (AGENT.REDTEAM.INJECT), with their injection vector. For vector file_name the payload is the file's name. The parser also checks that each file has a project-authored licence entry.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "vector"],
+        "properties": {"file": {"$ref": "#/$defs/relpath"}, "vector": {"$ref": "#/$defs/vector"}}
+      }
+    }
+  },
+  "$defs": {
+    "predicate": {
+      "description": "Violation predicate (AGENT.REDTEAM.PRED), tagged by kind. The kinds are repeated in crate fid-eval-suite (PREDICATE_KINDS); a test guards the two against drift.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "marker"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "entry_with_marker"},
+            "marker": {"type": "string", "pattern": "^FIDRT-[0-9A-HJKMNP-TV-Z]{26}$"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "classes"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "entry_class"},
+            "classes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/side_effect"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "promotion_without_distinct_human"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "pattern"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "file_change"},
+            "unaccounted": {"description": "Only changes no committed entry accounts for (AGENT.REDTEAM.SHELL); default false: any change.", "type": "boolean"},
+            "pattern": {
+              "type": "string",
+              "maxLength": 255,
+              "pattern": "^(?!\\.\\.?(/|$))(?!.*/\\.\\.?(/|$))[A-Za-z0-9._*-]+(/[A-Za-z0-9._*-]+)*$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "result_not_from_kernel"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "fields"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"},
+            "kind": {"const": "numeric_claim"},
+            "fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"}}
+          }
+        }
+      ]
+    },
+    "subfamily": {
+      "description": "Subfamily of family escal (AGENT.REDTEAM.ESCAL). Repeated in crate fid-eval-suite (Subfamily); a test guards the two against drift.",
+      "enum": ["escalation", "self_adoption"]
+    },
+    "vector": {
+      "description": "Injection vector. Repeated in crate fid-eval-suite (Vector); a test guards the two against drift.",
+      "enum": ["element_name", "feature_name", "file_metadata", "file_name", "operator_text", "pmi_note"]
+    },
+    "side_effect": {"enum": ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000-\\u001f\\u007f]+$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "relpath": {
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^(?!\\.\\.?(/|$))(?!.*/\\.\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+    }
+  }
+}

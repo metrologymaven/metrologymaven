@@ -1,0 +1,9 @@
+# Incumbent product names for rule CL002 (spec node OUTR.BRAND.LINT, REQ-OUTR.BRAND.LINT-007).
+# One name per line, matched whole-word and case-insensitively. Every product named on the
+# title line of a seeds/*.md competitor inventory must be here; tests/seed_names.rs checks it.
+# Names are used nominatively only, to identify the products. CC-BY-4.0.
+GOM Inspect
+ZEISS INSPECT
+PC-DMIS
+PolyWorks
+SpatialAnalyzer

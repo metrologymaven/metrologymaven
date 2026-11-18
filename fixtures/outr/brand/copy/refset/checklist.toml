@@ -1,0 +1,10 @@
+# Trade-dress checklist (synthetic fixture).
+version = 1
+items = [
+  { id = "colours", question = "Does the palette stay clearly our own?" },
+  { id = "icon_style", question = "Are the icons drawn in our own style?" },
+  { id = "layout", question = "Is the page layout our own arrangement?" },
+  { id = "screenshots", question = "Do screenshots show only our own software?" },
+  { id = "typography", question = "Are the typefaces and their pairing our own choice?" },
+  { id = "copied_text", question = "Is every sentence written by us, with nothing lifted from other vendors?" },
+]

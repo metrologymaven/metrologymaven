@@ -1,0 +1,196 @@
+[
+  {
+    "text": "Bore Ø25.002 mm",
+    "claims": [
+      [
+        0.025002,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Bore ⌀25.002 mm",
+    "claims": [
+      [
+        0.025002,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Corner radius R12.5 mm",
+    "claims": [
+      [
+        0.0125,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Taper 12.5 degrees",
+    "claims": [
+      [
+        0.2181661564992912,
+        "rad"
+      ]
+    ]
+  },
+  {
+    "text": "Taper 12.5°",
+    "claims": [
+      [
+        0.2181661564992912,
+        "rad"
+      ]
+    ]
+  },
+  {
+    "text": "Diameter 25.002 MM",
+    "claims": [
+      [
+        0.025002,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Width 8.004 millimetres",
+    "claims": [
+      [
+        0.008004,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Width 8.004 millimeters",
+    "claims": [
+      [
+        0.008004,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Length 2 inches",
+    "claims": [
+      [
+        0.0508,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Length 1.5 inch",
+    "claims": [
+      [
+        0.0381,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Length 1.0 in, conforms",
+    "claims": [
+      [
+        0.0254,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Offset .5 mm",
+    "claims": [
+      [
+        0.0005,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "| B1 | 25.002 | mm |",
+    "claims": [
+      [
+        0.025002,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Diameter (mm): 25.002",
+    "claims": [
+      [
+        0.025002,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Span 1,234.5 mm",
+    "claims": [
+      [
+        1.2345,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Flatness 7 um, 7 µm, 7 microns",
+    "claims": [
+      [
+        7e-06,
+        "m"
+      ],
+      [
+        7e-06,
+        "m"
+      ],
+      [
+        7e-06,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "Angle 0.5 rad and 3 mrad",
+    "claims": [
+      [
+        0.5,
+        "rad"
+      ],
+      [
+        0.003,
+        "rad"
+      ]
+    ]
+  },
+  {
+    "text": "Length 5 m",
+    "claims": [
+      [
+        5.0,
+        "m"
+      ]
+    ]
+  },
+  {
+    "text": "found 2 in tolerance",
+    "claims": []
+  },
+  {
+    "text": "H1, H2 and R1 conform",
+    "claims": []
+  },
+  {
+    "text": "ratio 1.25, within 1.250 +/-0.005",
+    "claims": []
+  },
+  {
+    "text": "see sheet 2 in the drawing set",
+    "claims": []
+  },
+  {
+    "text": "twenty-five mm",
+    "claims": []
+  }
+]

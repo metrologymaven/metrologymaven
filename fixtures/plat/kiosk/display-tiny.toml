@@ -1,0 +1,8 @@
+# PLAT.DEPLOY.KIOSK.DISPLAY AC-2 (hand-written): a 5-inch diagonal, below the 10-inch minimum.
+# Expected: exit 1 with the single diagnostic OutOfRange { field: diagonal_in }.
+schema_version = 1
+diagonal_in = 5
+resolution = [1920, 1080]
+touch = "projected_capacitive"
+glove_touch = true
+description = "Too small for a kiosk"

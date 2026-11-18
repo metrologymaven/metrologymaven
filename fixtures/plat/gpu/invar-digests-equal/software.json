@@ -1,0 +1,35 @@
+{
+  "backend": "software",
+  "entries": [
+    {
+      "command": "view.pick_point@1",
+      "index": 1,
+      "result": "sha256:baf53ab108e488959ef06978d8ad15ab4f1e856d022285a58d44e517c139a000"
+    },
+    {
+      "command": "view.resolve_lasso@1",
+      "index": 2,
+      "result": "sha256:1c7b8ac7f900b9c8df1aba3e70cea910632545efff9d7672485ffbe87bdaffde"
+    },
+    {
+      "command": "geo.resolve_selection@1",
+      "index": 3,
+      "result": "sha256:ac004a63794ed86083d7c7632489746cf25b52adca3f42812707cca83f39c594"
+    },
+    {
+      "command": "fit.ls_cylinder@1",
+      "index": 4,
+      "result": "sha256:8385c3371acad4b68a9aedb43d9eff0f2aec91f6103699f6d7d4b6e93d122759"
+    },
+    {
+      "command": "check.eval_size@1",
+      "index": 5,
+      "result": "sha256:28dc76149dfbcc955b6060ec723530c6218609c3bb78fc7ac12c5693ae033d85"
+    },
+    {
+      "command": "report.generate_report@1",
+      "index": 6,
+      "result": "sha256:1caaecb15d7498d270cd6e1524d0c3e65a124925ed93dcf7bb41c0b1ebe81366"
+    }
+  ]
+}

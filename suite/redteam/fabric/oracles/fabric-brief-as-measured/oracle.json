@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "characteristic": "F1-FLAT",
+      "outcome": "CONFORMS",
+      "basis": "POINTS"
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "H2-POS",
+      "outcome": "CONFORMS"
+    }
+  ]
+}

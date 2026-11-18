@@ -37,12 +37,87 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Site import verify runs with the network cut (OUTR.SITE.GEN.IMPORT AC-7)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo build -q -p fid-outreach
+          if sudo unshare --net -- curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
+          stage="$RUNNER_TEMP/site-import-stage"
+          sudo unshare --net -- ./target/debug/fid-outreach site import verify --site fixtures/outr/site/import/ok             --stage "$stage" --revision abc123 --revision-date 2026-11-17
+          cmp "$stage/build-manifest.json" fixtures/outr/site/import/expected/build-manifest.json
+      - name: DMIS conformance table is fresh (IO.DMIS.CONF AC-4)
+        # Regenerates docs/dmis/ from the declarations and the real test inventory; fails if stale.
+        if: runner.os == 'Linux'
+        shell: bash
+        # The inventory is `--list` minus `--list --ignored`, with IDs qualified as
+        # <package>::<target>::<test>; the probe test checks both properties end to end.
+        run: |
+          cargo test --workspace --no-run --message-format=json > "$RUNNER_TEMP/cargo-tests.json"
+          cargo run -q -p fid-io-dmis --bin dmis-conformance -- inventory \
+            --cargo-json "$RUNNER_TEMP/cargo-tests.json" --out "$RUNNER_TEMP/test-inventory.txt"
+          grep -qx 'fid-io-dmis::acceptance::ac3_same_inputs_give_identical_bytes: test' "$RUNNER_TEMP/test-inventory.txt"
+          if grep -q 'ignored_inventory_probe' "$RUNNER_TEMP/test-inventory.txt"; then exit 1; fi
+          cargo run -q -p fid-io-dmis --bin dmis-conformance -- \
+            --decl crates/fid-io-dmis/conformance/declarations.toml \
+            --tests "$RUNNER_TEMP/test-inventory.txt" --check docs/dmis
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: Fuzz harness compiles on stable (AUTO.PROG.FMT AC-6)
+        # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-program/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
+      - name: Support matrix validates via cargo xtask (PLAT.MATRIX.FILE AC-1)
+        shell: bash
+        run: |
+          out=$(cargo xtask plat-matrix validate fixtures/plat/matrix/valid.toml)
+          test "$out" = "6 rows, 0 errors"
+          cargo xtask plat-matrix validate platform/support-matrix.toml
+      - name: Hardware profiles validate via cargo xtask (PLAT.HW.PROFILE AC-1 to AC-5)
+        shell: bash
+        run: |
+          out=$(cargo xtask plat-hw validate --file fixtures/plat/hw/profiles-valid.toml)
+          test "$out" = "$(printf 'minimum\nrecommended')"
+          for f in inverted no-minimum extra-field; do
+            set +e; cargo xtask plat-hw validate --file fixtures/plat/hw/profiles-$f.toml; code=$?; set -e
+            test "$code" = 1
+          done
+          cargo xtask plat-hw validate
+      - name: Benchmark suite manifest validates via cargo xtask (PLAT.HW.SCHEMA AC-1 to AC-3)
+        shell: bash
+        run: |
+          out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/mini-suite.toml)
+          test "$out" = "$(printf 'mini.load\nmini.render')"
+          set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-no-digest.toml); code=$?; set -e
+          test "$code" = 1 && test "$out" = "MissingDigest { workload: no-digest.load }"
+          set +e; out=$(cargo xtask plat-hw validate-suite --file fixtures/plat/bench/suite-bad-unit.toml); code=$?; set -e
+          test "$code" = 1 && grep -q '^BadUnit { workload: bad-unit.load' <<< "$out"
+      - name: Network-feature list via cargo xtask (PLAT.DEPLOY.OFFLINE.NETLIST AC-1, AC-2, AC-4)
+        shell: bash
+        run: |
+          d=fixtures/plat/deploy
+          net="plat-deploy netlist --manifest $d/manifest-net.json"
+          out=$(cargo xtask $net --settings $d/settings-manifest.json \
+            --json $d/network-features.json --md $d/network-features.md --check)
+          test "$out" = "netlist: 3 commands, up to date"
+          set +e
+          out=$(cargo xtask $net --settings $d/settings-consent-on.json \
+            --json "$RUNNER_TEMP/nf.json" --md "$RUNNER_TEMP/nf.md")
+          code=$?
+          set -e
+          test "$code" = 1 && test "$out" = 'X1DefaultOn { command: "update.check@1" }'
+      - name: Published keys agree with KEYS.md (ECO.REL.SIGN.GUIDE AC-1)
+        run: |
+          cargo xtask rel keys-check
+          cargo xtask rel keys-check --keys fixtures/rel/guide/keys --doc fixtures/rel/guide/docs/KEYS.md
+      - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
+        run: cargo xtask plat-matrix lint-tiers
+      - name: Study task list and protocol check via cargo xtask (FLOW.STUDY.PROTO AC-1, AC-3)
+        run: cargo xtask study-tasks-check
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -64,9 +139,87 @@ jobs:
         run: |
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
+          python fixtures/plat/bench/make_expected.py --check
+          python fixtures/plat/deploy/make_expected.py --check
+          python fixtures/rel/runbook/make_fixtures.py --check
+          python fixtures/rel/sbom/make_fixtures.py --check
+          python fixtures/rel/guide/make_fixtures.py --check
+          python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python tools/check_entries.py
           python tools/check_knp1_findings.py
+          python tools/check_eval_suite.py
+          python fixtures/pkg/make_fixtures.py --check
+          python fixtures/io/dmis/conf/make_expected.py --check
+          python fixtures/flow/study/tasks/make_fixtures.py --check
+          python fixtures/outr/site/import/make_fixtures.py --check
+          python fixtures/pkg/check_package.py --strict
+          python -m unittest discover -s tools/house_rules/tests -v
+          python -m unittest discover -s tools/tests -v
+          python -m unittest discover -s tools/repo_template/tests -v
+      - name: Contributor guide passes claim lint and its commands run (OUTR.DOCS.CONTRIB AC-6, AC-1, AC-3)
+        # The committed guide states the main commit it was written against; a commit cannot name
+        # itself, so the guide is checked as a copy stating this checkout's HEAD.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo run -q -p fid-brand-lint -- claim-lint --rules crates/fid-brand-lint/rules/claim-rules.toml docs/contributor/guide.md
+          guide="$RUNNER_TEMP/contributor-guide.md"
+          sed "s/^revision: .*/revision: $(git rev-parse HEAD)/" docs/contributor/guide.md > "$guide"
+          before=$(git status --porcelain)
+          cargo run -q -p fid-outreach -- doc-run --guide "$guide" --repo .
+          test "$before" = "$(git status --porcelain)"
+      - name: Repository template code variant passes clippy (ECO.REPO.TPL.FILES AC-4)
+        # +stable overrides the template's rust-toolchain.toml pin so no extra toolchain is installed.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          out="$RUNNER_TEMP/tpl-code"
+          PYTHONPATH=tools python -m repo_template new --id fid-demo --variant code \
+            --rules-source fixtures/repo/tpl/rules \
+            --rules-rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            --ci-rev bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --year 2026 --out "$out"
+          cd "$out"
+          grep -q '^"starter" = ' layers.toml
+          cargo +stable clippy --workspace --all-targets -- -D warnings
+          cargo +stable test --workspace
+  verify-guide:
+    # ECO.REL.SIGN.GUIDE AC-3: the command blocks of VERIFY.md run verbatim on each Tier 1 OS
+    # family against fixtures/rel/guide/release/; a copy with one changed byte must fail. The
+    # network is cut where a hosted runner allows it: Linux runs in a new network namespace,
+    # macOS under a sandbox profile that denies network access; Windows has no such switch.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            tag: verify-linux
+          - os: windows-latest
+            tag: verify-windows
+          - os: macos-latest
+            tag: verify-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Follow VERIFY.md (${{ matrix.tag }})
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)
+              offline() { sudo unshare --net -- "$@"; }
+              py=python3 ;;
+            macOS)
+              offline() { sandbox-exec -p '(version 1)(allow default)(deny network*)' "$@"; }
+              py=python3 ;;
+            *)
+              offline() { "$@"; }
+              py=python ;;
+          esac
+          if [ "$RUNNER_OS" != Windows ]; then
+            # The isolation really cuts the network.
+            if offline curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
+          fi
+          offline "$py" tools/verify_guide.py --tag "${{ matrix.tag }}"
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.

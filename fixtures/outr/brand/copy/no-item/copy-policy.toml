@@ -1,0 +1,3 @@
+# Copied-text policy (synthetic fixture). D-013 option C: review only.
+mode = "review_only"
+decision = "D-013"

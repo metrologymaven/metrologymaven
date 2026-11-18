@@ -1,0 +1,6 @@
+body{background:var(--surface-base);color:var(--text-body);font:16px/1.5 system-ui,sans-serif}
+.lead{color:var(--text-body);font-size:20px}
+a{color:var(--text-body)}
+@media (prefers-color-scheme: dark){
+.lead{color:var(--text-body)}
+}

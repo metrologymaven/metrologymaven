@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 83
 satisfies: [REQ-OUTR.SITE.QA-003]
 covers: []
 depends_on: []
@@ -89,6 +91,7 @@ Synthetic pages and token files under `fixtures/outr/site/qa/a11y/` (`clean`, `r
 
 - The rule set covers only what is automatable on static pages; it is not a full WCAG 2.2 AA conformance claim, and pages must not claim conformance on the strength of it (OUTR.BRAND.LINT rule CL001 would flag such wording).
 - VIZ has no web-specific accessibility baseline; VIZ.SHELL.A11Y sets WCAG 2.2 AA for non-web software [unverified], which this gate applies to web pages. If VIZ publishes a web rule set, this gate should read it.
+- The token file read by the gate is a placeholder format (`{"themes": {"<theme>": {"<token.name>": "#rrggbb"}}}`, token `a.b` = custom property `--a-b`, flat entries only; nested groups are rejected). Maintainers should confirm it against the UX.TOKENS package format before the gate is wired into the site workflow (OUTR.SITE.QA.RUN).
 - A browser-side engine would cover more rules; adopting one would need its licence added to the allowlist by maintainers (ECO.RULES.SPDX leaves MPL-2.0 out).
 
 ## Children

@@ -1,0 +1,60 @@
+{
+  "exit": 1,
+  "violations": [
+    {
+      "line": 12,
+      "page": "a01.html",
+      "rule": "A01"
+    },
+    {
+      "line": 12,
+      "page": "a02.html",
+      "rule": "A02"
+    },
+    {
+      "line": 12,
+      "page": "a03.html",
+      "rule": "A03"
+    },
+    {
+      "line": 12,
+      "page": "a04.html",
+      "rule": "A04"
+    },
+    {
+      "line": 6,
+      "page": "a05.html",
+      "rule": "A05"
+    },
+    {
+      "line": 12,
+      "page": "a06.html",
+      "rule": "A06"
+    },
+    {
+      "line": 2,
+      "page": "a07.html",
+      "rule": "A07"
+    },
+    {
+      "line": 12,
+      "page": "a08.html",
+      "rule": "A08"
+    },
+    {
+      "line": 8,
+      "page": "a09.html",
+      "rule": "A09"
+    },
+    {
+      "line": 5,
+      "page": "a10.html",
+      "rule": "A10"
+    },
+    {
+      "line": 12,
+      "page": "a11.html",
+      "rule": "A11"
+    }
+  ]
+}

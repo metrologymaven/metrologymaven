@@ -1,0 +1,37 @@
+# ECO.RULES.VOCAB.ENGINE AC-6: OUTR.BRAND.LINT's rules CL001 and CL002 restated in format
+# fid-vocab-rules/1, from REQ-OUTR.BRAND.LINT-001 and -002. Wording is the project's own.
+# CL001 needs both a designator with an edition year and a link in the same sentence, so its
+# designator pattern makes the edition mandatory. CC-BY-4.0. Product names: nominative use only.
+format = "fid-vocab-rules/1"
+version = "outr-claim-rules-compat-1"
+
+[[rule]]
+id = "CL001"
+kind = "claim"
+severity = "error"
+message = "Conformance or certification wording needs a standard designator with its edition and a link to the evidence in the same sentence."
+words = ["certify", "certifies", "certified", "certifying", "compliant", "conformant", "validate", "validates", "validated", "traceable"]
+qualifiers = ["designator", "link"]
+designator_pattern = '\b(?:ISO|ASME|VDA|IEC|DIN|EN)(?:[ /][A-Z]{1,4})*\s?[A-Z]?\d+(?:[.\-]\d+)*[:\-](?:19|20)\d{2}\b'
+scope = "sentence"
+examples.pass = [
+    { text = "Probing error was validated per ISO 10360-2:2009 on the evidence page.", links = ["https://metrologymaven.org/evidence/probing"] },
+]
+examples.fail = [
+    "The software is certified for GD&T evaluation.",
+    { text = "Compliant with ISO 10360-2 in our tests.", links = ["https://metrologymaven.org/evidence/probing"] },
+]
+
+[[rule]]
+id = "CL002"
+kind = "cooccur"
+severity = "error"
+message = "A comparison with another product needs a link to a published benchmark result in the same sentence."
+names_file = "incumbents.txt"
+comparison_words = ["better", "faster", "more accurate", "superior", "outperforms", "equivalent to", "as good as", "drop-in replacement"]
+link_prefixes = ["https://metrologymaven.org/benchmarks/results/"]
+scope = "sentence"
+examples.pass = [
+    { text = "Faster than PolyWorks for best-fit alignment.", links = ["https://metrologymaven.org/benchmarks/results/align-2026"] },
+]
+examples.fail = ["Faster than PolyWorks for best-fit alignment."]

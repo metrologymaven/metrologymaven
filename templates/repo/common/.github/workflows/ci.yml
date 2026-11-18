@@ -1,0 +1,12 @@
+name: ci
+# Calls the project's shared workflows, pinned to a full 40-hex commit (ECO.CI.WF.CALL).
+# Change the pin only by a pull request that bumps it to another full commit hash.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  shared:
+    uses: metrologymaven/metrologymaven/.github/workflows/shared-ci.yml@{{ci_rev}}
