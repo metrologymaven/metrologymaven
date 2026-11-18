@@ -118,6 +118,12 @@ impl ValidityMask {
 
 /// Converted samples: `values[i]` is the SI value of raw sample `i` when `mask.get(i)`;
 /// masked samples were skipped and hold `+0.0`, which carries no meaning (never NaN).
+///
+/// # Warning
+///
+/// Masked entries are `+0.0` in [`Decoded::values`], indistinguishable from a real zero.
+/// Consumers must read samples through [`Decoded::valid`] or [`Decoded::get`] (or check
+/// [`Decoded::mask`] themselves), never by iterating `values()` alone.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Decoded {
     values: Vec<f64>,
@@ -126,7 +132,11 @@ pub struct Decoded {
 }
 
 impl Decoded {
-    /// All values, index-aligned with the raw array (masked entries are `+0.0`).
+    /// All values, index-aligned with the raw array.
+    ///
+    /// # Warning
+    ///
+    /// Masked entries are `+0.0` placeholders; use [`Decoded::valid`] or [`Decoded::get`].
     pub fn values(&self) -> &[f64] {
         &self.values
     }
@@ -282,6 +292,10 @@ fn convert<T: Copy>(
             continue;
         }
         let x = widen(r, i)?;
+        // Underflow is accepted, not an error: a non-zero raw value whose product or sum is
+        // below the smallest normal f64 yields a subnormal or a (signed) zero, as IEEE 754
+        // round-to-nearest defines. Only overflow to infinity fails (open question in the
+        // HAL.ACQ.CONV node).
         let v = affine(scale, offset, x);
         if !v.is_finite() {
             return Err(ConvError::ResultNotFinite { index: i });
