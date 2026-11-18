@@ -514,6 +514,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-res"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-io-reg",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-io-step"
 version = "0.0.1"
 dependencies = [

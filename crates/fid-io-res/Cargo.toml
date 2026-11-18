@@ -1,0 +1,20 @@
+[package]
+name = "fid-io-res"
+description = "Metrology Maven result exchange: versioned CSV column maps and table dialect (spec node IO.RES.CSV.MAP)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# RFC 8785 canonical JSON parser and writer plus SHA-256 (CORE.JRN.CANON): the map digest.
+fid-canon = { path = "../fid-canon" }
+# Reader harness (IO.REG.LIMITS): 1 MiB bounded read of user maps, IoError, UntrustedText.
+fid-io-reg = { path = "../fid-io-reg" }
+# Shared `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
