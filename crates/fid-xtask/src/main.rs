@@ -2,7 +2,7 @@
 
 mod pins;
 
-use fid_xtask::rel::{runbook, sums, version};
+use fid_xtask::rel::{runbook, sbom, sums, version};
 use fid_xtask::{apps_policy, plat_matrix_tiers};
 use std::io::Read;
 use std::path::PathBuf;
@@ -21,7 +21,9 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask rel version-compare <a> <b>\n       \
                      cargo xtask rel sums --manifest <release-manifest.json> --dir <artefacts> --out <dir>
        \n                     cargo xtask rel runbook-check [--dir <release dir>] [--workflow <file>] [--json]
-       \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]";
+       \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
+       \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
+                     --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
 const LINT_USAGE: &str =
@@ -44,6 +46,7 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("sums") => rel_sums(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-check") => runbook_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
@@ -276,6 +279,61 @@ fn rel_sums(args: &[String]) -> ExitCode {
         }
         Err(findings) => {
             let code = findings.iter().map(sums::SumsError::exit_code).max().unwrap_or(1);
+            for f in &findings {
+                println!("{f}");
+            }
+            ExitCode::from(code)
+        }
+    }
+}
+
+/// ECO.REL.SIGN.SBOM: `rel sbom --plan <file> [--workspace <dir>] --native <toml> --out <dir>
+/// [--artefacts <dir>] [--commit-time <t>]` writes `<artefact>.spdx.json` per planned artefact.
+/// Exit 0: written; 1: findings (SBOM-LICENCE, SBOM-NATIVE-DIGEST, SBOM-IO), one per line,
+/// nothing written; 2: bad usage or an unusable input (SBOM-PLAN-PARSE, SBOM-NATIVE-PARSE,
+/// SBOM-METADATA). Offline: `cargo metadata` runs with `--locked --offline`.
+fn rel_sbom(args: &[String]) -> ExitCode {
+    let (mut plan, mut native, mut out, mut artefacts): (
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+        Option<PathBuf>,
+    ) = (None, None, None, None);
+    let mut commit_time: Option<String> = None;
+    let mut workspace = PathBuf::from(".");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--plan", Some(v)) => plan = Some(PathBuf::from(v)),
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--native", Some(v)) => native = Some(PathBuf::from(v)),
+            ("--out", Some(v)) => out = Some(PathBuf::from(v)),
+            ("--artefacts", Some(v)) => artefacts = Some(PathBuf::from(v)),
+            ("--commit-time", Some(v)) => commit_time = Some(v.clone()),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(plan), Some(native), Some(out)) = (plan, native, out) else {
+        eprintln!("rel sbom: --plan, --native and --out are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let opts = sbom::Options {
+        plan: &plan,
+        workspace: &workspace,
+        native: &native,
+        artefacts: artefacts.as_deref(),
+        commit_time: commit_time.as_deref(),
+    };
+    match sbom::run(&opts, &out) {
+        Ok((release, docs)) => {
+            println!("sbom: ok {} documents ({release})", docs.len());
+            ExitCode::SUCCESS
+        }
+        Err(findings) => {
+            let code = findings.iter().map(sbom::SbomError::exit_code).max().unwrap_or(1);
             for f in &findings {
                 println!("{f}");
             }

@@ -19,6 +19,9 @@
 //! `rel sums`: the release checksum file and checksum statement (spec node
 //! `ECO.REL.SIGN.SUMS`), in [`rel::sums`].
 //!
+//! `rel sbom`: one SPDX 2.3 JSON SBOM per planned artefact (spec node `ECO.REL.SIGN.SBOM`), in
+//! [`rel::sbom`].
+//!
 //! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
 //! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 

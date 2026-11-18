@@ -112,6 +112,7 @@ jobs:
           python tools/check_envelopes.py ok.json bad.json
           python fixtures/plat/bench/make_expected.py --check
           python fixtures/rel/runbook/make_fixtures.py --check
+          python fixtures/rel/sbom/make_fixtures.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python tools/check_entries.py

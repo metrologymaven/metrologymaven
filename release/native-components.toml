@@ -1,0 +1,13 @@
+# Native (non-Rust) components bundled into release artefacts (spec node ECO.REL.SIGN.SBOM).
+# `cargo xtask rel sbom` adds each component to the SBOM of every artefact it is assigned to.
+#
+# One table per component:
+#   [[component]]
+#   name = "..."           component name
+#   version = "..."        its version
+#   source = "https://..." where it was obtained (SPDX downloadLocation)
+#   license = "..."        SPDX licence expression
+#   sha256 = "..."         SHA-256 of the bundled file, 64 lowercase hex digits
+#   artefacts = ["fid"]    package IDs of the package plan, or artefact file names
+#
+# No native components are bundled yet.
