@@ -169,14 +169,12 @@ pub fn check_corpus(dir: &Path, formats: &[FormatId], opts: &CheckOptions<'_>) -
                     report.files_checked += 1;
                     match hash_file(&dir.join(rel), opts.max_bytes) {
                         Ok(actual) if actual == e.sha256 => {}
-                        Ok(actual) => {
-                            errors.push(CorpError::DigestMismatch {
-                                format,
-                                entry,
-                                expected: Box::new(e.sha256),
-                                actual: Box::new(actual),
-                            })
-                        }
+                        Ok(actual) => errors.push(CorpError::DigestMismatch {
+                            format,
+                            entry,
+                            expected: Box::new(e.sha256),
+                            actual: Box::new(actual),
+                        }),
                         Err(detail) => errors.push(CorpError::Io { format, entry, detail }),
                     }
                 }
@@ -185,14 +183,12 @@ pub fn check_corpus(dir: &Path, formats: &[FormatId], opts: &CheckOptions<'_>) -
                     Some(f) => match fetch_to_cache(f.fetcher, url, &e.sha256, f.cache, opts.max_bytes) {
                         Ok((_, true)) => report.fetched += 1,
                         Ok((_, false)) => report.cached += 1,
-                        Err(FetchError::DigestMismatch(actual)) => {
-                            errors.push(CorpError::DigestMismatch {
-                                format,
-                                entry,
-                                expected: Box::new(e.sha256),
-                                actual: Box::new(actual),
-                            })
-                        }
+                        Err(FetchError::DigestMismatch(actual)) => errors.push(CorpError::DigestMismatch {
+                            format,
+                            entry,
+                            expected: Box::new(e.sha256),
+                            actual: Box::new(actual),
+                        }),
                         Err(FetchError::Failed(detail)) => {
                             errors.push(CorpError::FetchFailed { format, entry, detail })
                         }
