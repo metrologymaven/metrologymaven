@@ -62,12 +62,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-jobs"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+]
+
+[[package]]
 name = "fid-kci"
 version = "0.0.1"
 
 [[package]]
 name = "fid-num"
 version = "0.0.1"
+dependencies = [
+ "fid-testkit",
+]
 
 [[package]]
 name = "fid-registry"
@@ -89,6 +99,13 @@ name = "fid-surface"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+]
+
+[[package]]
+name = "fid-testkit"
+version = "0.0.1"
+dependencies = [
+ "sha2",
 ]
 
 [[package]]
