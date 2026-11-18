@@ -138,18 +138,26 @@ pub struct Manifest {
     pub files: Vec<PinnedFile>,
 }
 
+/// Details of an `xsd_digest_mismatch`: the file and both digests.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Mismatch {
+    /// The pinned file (or the licence file).
+    pub path: String,
+    /// Digest from the manifest.
+    pub expected: Digest,
+    /// Size from the manifest (`None` for the licence file, which pins only a digest).
+    pub expected_bytes: Option<u64>,
+    /// Digest found; `None` when the file is missing, not a regular file, or too large to hash.
+    pub actual: Option<Digest>,
+    /// Size found; `None` when the file is missing or not a regular file.
+    pub actual_bytes: Option<u64>,
+}
+
 /// Errors, each with a stable code.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PinError {
     /// A pinned file (or the licence file) is missing, or its size or digest differs.
-    /// `actual` is `None` when the file is missing, not a regular file, or too large to hash.
-    DigestMismatch {
-        path: String,
-        expected: Digest,
-        expected_bytes: Option<u64>,
-        actual: Option<Digest>,
-        actual_bytes: Option<u64>,
-    },
+    DigestMismatch(Box<Mismatch>),
     /// The directory holds a schema file the manifest does not list.
     UnpinnedFile { path: String },
     /// A requested schema location is not a manifest row.
@@ -175,8 +183,8 @@ impl PinError {
     /// The file or location the error names, if any.
     pub fn path(&self) -> Option<&str> {
         match self {
-            PinError::DigestMismatch { path, .. }
-            | PinError::UnpinnedFile { path }
+            PinError::DigestMismatch(m) => Some(&m.path),
+            PinError::UnpinnedFile { path }
             | PinError::DirUnreadable { path, .. } => Some(path),
             PinError::UnpinnedReference { location } => Some(location),
             PinError::ManifestInvalid { .. } => None,
@@ -187,12 +195,12 @@ impl PinError {
 impl fmt::Display for PinError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PinError::DigestMismatch { path, expected, expected_bytes, actual, actual_bytes } => {
-                write!(f, "{}: {path:?}: expected {expected}", self.code())?;
-                if let Some(n) = expected_bytes {
+            PinError::DigestMismatch(m) => {
+                write!(f, "{}: {:?}: expected {}", self.code(), m.path, m.expected)?;
+                if let Some(n) = m.expected_bytes {
                     write!(f, " ({n} bytes)")?;
                 }
-                match (actual, actual_bytes) {
+                match (m.actual, m.actual_bytes) {
                     (Some(d), Some(n)) => write!(f, ", found {d} ({n} bytes)"),
                     (Some(d), None) => write!(f, ", found {d}"),
                     (None, Some(n)) => write!(f, ", found {n} bytes (not hashed)"),
@@ -255,13 +263,15 @@ fn sha256(bytes: &[u8]) -> Digest {
 }
 
 fn string_field(t: &toml::Table, key: &str, ctx: &str) -> Result<String, PinError> {
-    match t.get(key) {
-        Some(toml::Value::String(s)) if !s.trim().is_empty() && s.len() <= MAX_TEXT && !s.chars().any(char::is_control) => {
-            Ok(s.clone())
-        }
-        Some(_) => Err(invalid(format!("{ctx}: `{key}` must be a non-empty single-line string of at most {MAX_TEXT} bytes"))),
-        None => Err(invalid(format!("{ctx}: missing `{key}`"))),
+    let s = match t.get(key) {
+        Some(toml::Value::String(s)) => s,
+        Some(_) => return Err(invalid(format!("{ctx}: `{key}` must be a string"))),
+        None => return Err(invalid(format!("{ctx}: missing `{key}`"))),
+    };
+    if s.trim().is_empty() || s.len() > MAX_TEXT || s.chars().any(char::is_control) {
+        return Err(invalid(format!("{ctx}: `{key}` must be non-empty, single-line, at most {MAX_TEXT} bytes")));
     }
+    Ok(s.clone())
 }
 
 fn digest_field(t: &toml::Table, key: &str, ctx: &str) -> Result<Digest, PinError> {
@@ -465,12 +475,14 @@ fn read_checked(
     expected: Digest,
     expected_bytes: Option<u64>,
 ) -> Result<Vec<u8>, PinError> {
-    let mismatch = |actual: Option<Digest>, actual_bytes: Option<u64>| PinError::DigestMismatch {
-        path: path.to_string(),
-        expected,
-        expected_bytes,
-        actual,
-        actual_bytes,
+    let mismatch = |actual: Option<Digest>, actual_bytes: Option<u64>| {
+        PinError::DigestMismatch(Box::new(Mismatch {
+            path: path.to_string(),
+            expected,
+            expected_bytes,
+            actual,
+            actual_bytes,
+        }))
     };
     if !listing.regular.contains(path) {
         return Err(mismatch(None, None));
@@ -666,7 +678,9 @@ mod tests {
         for ok in ["a.xsd", "lib/units.xsd", "QIFLibrary/Units-1_0.xsd", ".hidden/a.xsd"] {
             assert!(valid_rel_path(ok), "{ok}");
         }
-        for bad in ["", "/a.xsd", "a//b.xsd", "./a.xsd", "../a.xsd", "a/../b.xsd", "C:/a.xsd", "a\\b.xsd", "a b.xsd", "a.", "é.xsd"] {
+        let bad_paths =
+            ["", "/a.xsd", "a//b.xsd", "./a.xsd", "../a.xsd", "a/../b.xsd", "C:/a.xsd", "a\\b.xsd", "a b.xsd", "a.", "é.xsd"];
+        for bad in bad_paths {
             assert!(!valid_rel_path(bad), "{bad}");
         }
     }

@@ -3,7 +3,7 @@
 //! (Python hashlib), not from this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_qif_gen::pin::{Manifest, PinError, PinnedSet, Role, MANIFEST_FILE, MAX_DEPTH};
+use fid_qif_gen::pin::{Manifest, Mismatch, PinError, PinnedSet, Role, MANIFEST_FILE, MAX_DEPTH};
 use fid_types::Digest;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -104,13 +104,13 @@ fn ac2_changed_byte_fails_digest_mismatch_naming_b_with_both_digests() {
     assert_eq!(err.code(), "xsd_digest_mismatch");
     assert_eq!(err.path(), Some("b.xsd"));
     let n = exp.get("changed_b_bytes").and_then(|v| v.as_integer()).unwrap() as u64;
-    let want = PinError::DigestMismatch {
+    let want = PinError::DigestMismatch(Box::new(Mismatch {
         path: "b.xsd".into(),
         expected: d(&exp_str(&exp, "changed_b_expected")),
         expected_bytes: Some(n),
         actual: Some(d(&exp_str(&exp, "changed_b_actual"))),
         actual_bytes: Some(n),
-    };
+    }));
     assert_eq!(err, want);
     let msg = err.to_string();
     assert!(msg.contains("b.xsd"), "{msg}");
@@ -125,7 +125,7 @@ fn missing_file_fails_digest_mismatch() {
     let err = verify_err(&dir);
     assert_eq!(err.code(), "xsd_digest_mismatch");
     assert_eq!(err.path(), Some("b.xsd"));
-    assert!(matches!(err, PinError::DigestMismatch { actual: None, actual_bytes: None, .. }));
+    assert!(matches!(&err, PinError::DigestMismatch(m) if m.actual.is_none() && m.actual_bytes.is_none()));
     assert!(err.to_string().contains("no regular file"));
 }
 
@@ -138,11 +138,11 @@ fn size_change_fails_digest_mismatch() {
     bytes.push(b'\n');
     std::fs::write(&p, &bytes).unwrap();
     match verify_err(&dir) {
-        PinError::DigestMismatch { path, expected_bytes, actual_bytes, actual, .. } => {
-            assert_eq!(path, "lib/units.xsd");
-            assert_eq!(expected_bytes, Some(before));
-            assert_eq!(actual_bytes, Some(before + 1));
-            assert!(actual.is_some());
+        PinError::DigestMismatch(m) => {
+            assert_eq!(m.path, "lib/units.xsd");
+            assert_eq!(m.expected_bytes, Some(before));
+            assert_eq!(m.actual_bytes, Some(before + 1));
+            assert!(m.actual.is_some());
         }
         other => panic!("{other:?}"),
     }
@@ -288,7 +288,7 @@ fn includes_resolve_relative_to_the_referring_file_inside_the_set_only() {
 // ---------------------------------------------------------------- AC-5 (deferred)
 
 #[test]
-#[ignore = "AC-5 deferred: the real DMSC QIF 3.0 XSDs are not pinned yet (licence terms unverified); see crates/fid-qif-gen/xsd/qif3/README.md"]
+#[ignore = "AC-5 deferred: real DMSC QIF 3.0 XSDs not pinned yet (licence unverified); see xsd/qif3/README.md"]
 fn ac5_real_qif3_set_verifies() {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("xsd/qif3");
     let set = PinnedSet::verify(&dir).unwrap();
@@ -348,7 +348,7 @@ fn malformed_manifests_fail_manifest_invalid() {
         ("upper hex", manifest_text(LIC, &good_row.replace("ba7816bf", "BA7816BF"))),
         ("no prefix", manifest_text(LIC, &good_row.replace("sha256:", ""))),
         ("unknown row key", manifest_text(LIC, &good_row.replace("role = ", "note = \"x\"\nrole = "))),
-        ("missing sha", manifest_text(LIC, &format!("[[file]]\npath = \"a.xsd\"\nbytes = 3\nrole = \"xsd\"\n"))),
+        ("missing sha", manifest_text(LIC, "[[file]]\npath = \"a.xsd\"\nbytes = 3\nrole = \"xsd\"\n")),
         ("empty url", manifest_text(LIC, &good_row).replace("url = \"u\"", "url = \"\"")),
         ("control char rev", manifest_text(LIC, &good_row).replace("rev = \"r\"", "rev = \"r\\u0007\"")),
         ("too large", format!("# {}\n{}", "x".repeat(1 << 20), manifest_text(LIC, &good_row))),
@@ -410,7 +410,7 @@ fn symbolic_links_are_never_followed() {
     symlink(outside.join("b.xsd"), dir.join("b.xsd")).unwrap();
     let err = verify_err(&dir);
     assert_eq!(err.code(), "xsd_digest_mismatch");
-    assert!(matches!(err, PinError::DigestMismatch { actual: None, .. }));
+    assert!(matches!(&err, PinError::DigestMismatch(m) if m.actual.is_none()));
 
     // A linked directory is not entered, so the files behind it are missing.
     let dir = ok_copy("link-dir");
