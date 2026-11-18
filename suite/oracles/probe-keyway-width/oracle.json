@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "characteristic": "S1-WIDTH",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f8481a4963c8579",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": []
+}

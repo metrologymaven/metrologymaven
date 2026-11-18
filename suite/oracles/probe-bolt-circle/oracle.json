@@ -1,0 +1,127 @@
+{
+  "items": [
+    {
+      "characteristic": "K1-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f827a575e45cb09",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K2-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f827717a6033c6e",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K3-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f827d9a8581161f",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K4-DIA",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": "0x3f827bd306ee6f58",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 5e-07,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "PCD",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3fb1ebf06540da79",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K1-POS",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3eee4f17f067986a",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K2-POS",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3efdd7ee6bcdce46",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K3-POS",
+      "outcome": "NONCONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3f125c555c48abbd",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "K4-POS",
+      "outcome": "CONFORMS",
+      "basis": "FEATURES",
+      "value": {
+        "amount": "0x3ef0def02ae19787",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-06,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "K3-POS",
+      "outcome": "CONFORMS"
+    }
+  ]
+}

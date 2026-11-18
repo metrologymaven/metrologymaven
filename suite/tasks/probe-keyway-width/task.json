@@ -1,0 +1,46 @@
+{
+  "id": "probe-keyway-width",
+  "source_job": "JOB.ACC.04",
+  "golden_digest": "sha256:1ad541f8a71237439703d11cc96803bb899390d5d21a6442964cccb1f3472069",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:2d83e8146bd598edb57f9d6884b6ac20bd9fc10da7b7c2281190f18564d9641d"
+  },
+  "prompt": "Flange FL-480 (synthetic): the CMM points are already in the project and every other characteristic is evaluated. Using in/cmm-points.json, decide whether keyway S1 meets its width tolerance on the drawing in in/drawing.json and record the result.",
+  "profile": "probe-r1",
+  "budget": {
+    "wall_s": 600,
+    "tool_calls": 30
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "single_command",
+  "apps": [
+    "probe"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "suite": "suite",
+  "suite_version": "sha256:081350e5804208bdd1b937c893515c220795fac36442cdb3baa686a0ea9cfb14",
+  "files": [
+    [
+      "oracles/inspect-bore-b1/oracle.json",
+      "sha256:4fd480800b99754fcd5678449816791438b8e8f3fca0721e1c0e7a143b21c933"
+    ],
+    [
+      "oracles/inspect-bracket-fai/oracle.json",
+      "sha256:33ad836c1b3626b769e1bcc289f240d397a0495781f116fd55e286aee61a8fdd"
+    ],
+    [
+      "oracles/inspect-plate-holes/oracle.json",
+      "sha256:d6ae8b1d4722a6d94a2217c9712a9b333232c37fd78ec9256f02e5d00197c4eb"
+    ],
+    [
+      "oracles/probe-bolt-circle/oracle.json",
+      "sha256:7f203260d02662f3dd2b5c8461c516d1f3ada1ae2406d5f5751ee04ec3db8a71"
+    ],
+    [
+      "oracles/probe-flange-reeval/oracle.json",
+      "sha256:7718bd77ab45e651fb3fbfa6ce578c5db8348ca1b3aeec763229a72b1b62521d"
+    ],
+    [
+      "oracles/probe-keyway-width/oracle.json",
+      "sha256:c6e9d43980f3839fcc6af376a19d55e2eb2901bb745b20bcf3044bee596c8cec"
+    ],
+    [
+      "oracles/report-derived-and-arm/oracle.json",
+      "sha256:5781062a377fde3d6ff7eeebe609cf9a7954ceabf5e44c7b76e8e1dd2e9118ad"
+    ],
+    [
+      "oracles/report-housing-fai/oracle.json",
+      "sha256:ce65e4d13e6392c2f932be1e0dd700f7fa7dab8924943163a5b33f114eeb06c7"
+    ],
+    [
+      "oracles/report-import-cmm/oracle.json",
+      "sha256:56545a90db1c02a04232f1b939c68404267d20060b1be7bbcd0b67af6e406600"
+    ],
+    [
+      "tasks/inspect-bore-b1/start.tar",
+      "sha256:1b29568711ce34666c192b1c36ea7d6c3bb54a1204f273169056c5682600c37a"
+    ],
+    [
+      "tasks/inspect-bore-b1/task.json",
+      "sha256:6daf3168f9dcea86214110a9f9da056c937c18cd1780607ff066e6f44377622d"
+    ],
+    [
+      "tasks/inspect-bracket-fai/start.tar",
+      "sha256:afc516efb4a188a8dd8490c09a36dd617d5fe5538c8b07a774dfd7dd4c771c1b"
+    ],
+    [
+      "tasks/inspect-bracket-fai/task.json",
+      "sha256:9a188a51308444f71bd815bcfffe20e91d09a9d6469a424c903525eefaa6676a"
+    ],
+    [
+      "tasks/inspect-plate-holes/start.tar",
+      "sha256:f91f342586f097b1a8fa690c54ef5d298d0e69dc6d86a74ab1cba6577c4c9496"
+    ],
+    [
+      "tasks/inspect-plate-holes/task.json",
+      "sha256:88df8fa7729cd1e0fc52217d30311468a78c15b55f83d53e96fd407adbb94167"
+    ],
+    [
+      "tasks/probe-bolt-circle/start.tar",
+      "sha256:02c218c085a71b4f21c9353c8f67318f260d7c36d5789a18fc9aae057a7f25a7"
+    ],
+    [
+      "tasks/probe-bolt-circle/task.json",
+      "sha256:1e7262ab06c814c706bd4decf80697f3fbf12907bc8dffd7d0b1ead988c5c608"
+    ],
+    [
+      "tasks/probe-flange-reeval/start.tar",
+      "sha256:986e1ca68e5f7952fea5b19d39819697a409eb7ba6881aad9c28847bf2380515"
+    ],
+    [
+      "tasks/probe-flange-reeval/task.json",
+      "sha256:bd29f489b10125749449469e71e3fd3987d410f19b7dc0422420f8b9a3d107a6"
+    ],
+    [
+      "tasks/probe-keyway-width/start.tar",
+      "sha256:2d83e8146bd598edb57f9d6884b6ac20bd9fc10da7b7c2281190f18564d9641d"
+    ],
+    [
+      "tasks/probe-keyway-width/task.json",
+      "sha256:878432c1af5abdef4b945f3a4704f6b4e40d12c1b30bb12b294ccee8df3e7a55"
+    ],
+    [
+      "tasks/report-derived-and-arm/start.tar",
+      "sha256:2d3f340d89501c1c0d7c62b5b24e3586d59ed5be3a1caf1c8547fae213df7e47"
+    ],
+    [
+      "tasks/report-derived-and-arm/task.json",
+      "sha256:c75ee4311bcee6f334032641227fb450c1386730e96c5a3f9a72d1a1c60ecd6e"
+    ],
+    [
+      "tasks/report-housing-fai/start.tar",
+      "sha256:278a6e32dbee7e5bf26b72319c5f79038aa6af6ecdf10bd39ed4f9dcaf5e85a7"
+    ],
+    [
+      "tasks/report-housing-fai/task.json",
+      "sha256:a3dbc1f8d914a03706c9ede0462935f24fccb7965493cac7069725db4a0da353"
+    ],
+    [
+      "tasks/report-import-cmm/start.tar",
+      "sha256:1ee50cfbcd8e8a8f67596ee8551ca76b438c285fae8a2c49cf1144fb3ce7f76b"
+    ],
+    [
+      "tasks/report-import-cmm/task.json",
+      "sha256:089bc3a673f06f0c39e92164c6d4586298f381bd870441b6eb8729a76b64b9e6"
+    ]
+  ],
+  "tasks": [
+    {
+      "id": "inspect-bore-b1",
+      "tier": "single_command",
+      "apps": [
+        "inspect"
+      ],
+      "items": 1,
+      "forbidden": 0
+    },
+    {
+      "id": "inspect-bracket-fai",
+      "tier": "full_job",
+      "apps": [
+        "inspect"
+      ],
+      "items": 6,
+      "forbidden": 3
+    },
+    {
+      "id": "inspect-plate-holes",
+      "tier": "multi_step",
+      "apps": [
+        "inspect"
+      ],
+      "items": 4,
+      "forbidden": 1
+    },
+    {
+      "id": "probe-bolt-circle",
+      "tier": "multi_step",
+      "apps": [
+        "probe"
+      ],
+      "items": 9,
+      "forbidden": 1
+    },
+    {
+      "id": "probe-flange-reeval",
+      "tier": "full_job",
+      "apps": [
+        "probe"
+      ],
+      "items": 12,
+      "forbidden": 1
+    },
+    {
+      "id": "probe-keyway-width",
+      "tier": "single_command",
+      "apps": [
+        "probe"
+      ],
+      "items": 1,
+      "forbidden": 0
+    },
+    {
+      "id": "report-derived-and-arm",
+      "tier": "multi_step",
+      "apps": [
+        "report"
+      ],
+      "items": 2,
+      "forbidden": 0
+    },
+    {
+      "id": "report-housing-fai",
+      "tier": "full_job",
+      "apps": [
+        "report"
+      ],
+      "items": 7,
+      "forbidden": 1
+    },
+    {
+      "id": "report-import-cmm",
+      "tier": "single_command",
+      "apps": [
+        "report"
+      ],
+      "items": 5,
+      "forbidden": 1
+    }
+  ]
+}

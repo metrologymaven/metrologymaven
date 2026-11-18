@@ -1,0 +1,50 @@
+{
+  "id": "report-import-cmm",
+  "source_job": "JOB.ACC.03",
+  "golden_digest": "sha256:658188d0ff6b18073e050d85c4e48beb5b574eb1c5f86a0b7d8f8720f48e4090",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:1ee50cfbcd8e8a8f67596ee8551ca76b438c285fae8a2c49cf1144fb3ce7f76b"
+  },
+  "prompt": "Housing HS-330 (synthetic): a supplier sent its CMM results as in/cmm-results.csv. Bring those results into the project and decide each of them against the drawing in in/drawing.json.",
+  "profile": "report-r1",
+  "budget": {
+    "wall_s": 600,
+    "tool_calls": 30
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "single_command",
+  "apps": [
+    "report"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/arm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-results.csv",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

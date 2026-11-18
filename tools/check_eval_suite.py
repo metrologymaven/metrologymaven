@@ -2,9 +2,10 @@
 """Validate the AGENT.EVAL.FORMAT fixtures against schema/eval-{task,oracle,suite}-v1.schema.json:
 every suite-mini file validates, and every case in fixtures/agent/eval/cases.json gets the
 schema verdict it is labelled with ("valid", "invalid"; "n/a" cases are structural and skipped).
-Red-team extension: every red-team suite under suite/redteam/ validates, the red-team cases in
+The corpus suite/ (AGENT.EVAL.CORPUS) and every red-team suite under suite/redteam/ validate, the red-team cases in
 fixtures/agent/redteam/*/cases.json get their labelled verdicts, and generators that offer
---check (fixtures/agent/redteam/*/make_*.py) report their fixtures up to date.
+--check (fixtures/agent/redteam/*/make_*.py, fixtures/agent/eval/corpus/make_corpus.py) report
+their fixtures up to date; tools/check_eval_corpus.py checks the corpus trace and licences.
 Needs: pip install jsonschema
 """
 
@@ -30,7 +31,7 @@ def main() -> int:
          "suite": validator("eval-suite-v1.schema.json")}
     bad = 0
     suite = FIX / "suite-mini"
-    suites = [suite] + sorted(p.parent for p in (ROOT / "suite" / "redteam").glob("*/suite.json"))
+    suites = [suite, ROOT / "suite"] + sorted(p.parent for p in (ROOT / "suite" / "redteam").glob("*/suite.json"))
     files = []
     for sdir in suites:
         files += [("suite", sdir / "suite.json")]
@@ -52,11 +53,18 @@ def main() -> int:
                 bad += 1
                 print(f"FAIL {cdir.relative_to(ROOT)}/cases/{c['file']}: schema says "
                       f"{'valid' if ok else 'invalid'}, labelled {c['schema']}")
-    for gen in sorted((ROOT / "fixtures" / "agent" / "redteam").glob("*/make_*.py")):
+    gens = sorted((ROOT / "fixtures" / "agent" / "redteam").glob("*/make_*.py"))
+    gens.append(ROOT / "fixtures" / "agent" / "eval" / "corpus" / "make_corpus.py")
+    for gen in gens:
         r = subprocess.run([sys.executable, str(gen), "--check"], check=False)
         if r.returncode != 0:
             bad += 1
             print(f"FAIL {gen.relative_to(ROOT)} --check")
+    # AGENT.EVAL.CORPUS: trace, licence allowlist and tier coverage of the corpus in suite/.
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "check_eval_corpus.py")], check=False)
+    if r.returncode != 0:
+        bad += 1
+        print("FAIL tools/check_eval_corpus.py")
     print("eval suite schema check:", "failed" if bad else "ok")
     return 1 if bad else 0
 

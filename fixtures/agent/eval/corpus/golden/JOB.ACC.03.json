@@ -1,0 +1,317 @@
+{
+  "provisional": "Provisional synthetic golden journal (AGENT.EVAL.CORPUS): a stand-in until the FLOW app nodes publish real golden journals and CORE.JRN.ENTRY fixes the entry layout. Command IDs other than expr.evaluate_formula@1 are placeholders. Entry hash = sha256 of the RFC 8785 canonical JSON of the entry without its 'hash' member. Amounts are IEEE 754 binary64 bits ('0x' + 16 hex digits) in SI units, as in CORE.JRN.CANON.",
+  "format": "fid.eval-corpus-golden@0",
+  "job": "JOB.ACC.03",
+  "app": "report",
+  "part": "HS-330",
+  "synthetic": true,
+  "kernel_version": "ref-py-corpus@1",
+  "input_files": {
+    "in/arm-points.json": "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
+    "in/cmm-results.csv": "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+    "in/drawing.json": "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+  },
+  "entries": [
+    {
+      "seq": 1,
+      "command": "report.import_results@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": null,
+      "note": "import the supplier CMM report",
+      "inputs": [
+        "in/cmm-results.csv"
+      ],
+      "result_records": [
+        {
+          "characteristic": "C1",
+          "measurand": "diameter",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3fafc016dbe497c5",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3fafba8826aa8eb4",
+              "upper": "0x3fafc2656abde3fc",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "import_reported_value",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        },
+        {
+          "characteristic": "C2",
+          "measurand": "diameter",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3faba4d02e811ccb",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3faba1f4b1ee2435",
+              "upper": "0x3faba9d1f601797d",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "import_reported_value",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        },
+        {
+          "characteristic": "C3",
+          "measurand": "length",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3fbebb05242c2f33",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3fbeb1c432ca57a8",
+              "upper": "0x3fbebedfa43fe5c9",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "import_reported_value",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        },
+        {
+          "characteristic": "C4",
+          "measurand": "length",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3fa1f3ca6797bece",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "NONCONFORMS",
+            "limits": {
+              "lower": "0x3fa1e4f765fd8adb",
+              "upper": "0x3fa1f212d77318fc",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "import_reported_value",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        },
+        {
+          "characteristic": "C5",
+          "measurand": "distance",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3f9996cb88ffee62",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3f99930be0ded289",
+              "upper": "0x3f99a027525460aa",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "import_reported_value",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        }
+      ],
+      "hash": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66"
+    },
+    {
+      "seq": 2,
+      "command": "expr.evaluate_formula@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:07af75ca02f61e86d93db2ee88bb26fa6c36f3cc5b6c2f1b071c4494ffb08f66",
+      "note": "derived wall thickness T1",
+      "inputs": [
+        "C1",
+        "C2"
+      ],
+      "result_records": [
+        {
+          "characteristic": "T1",
+          "measurand": "wall_thickness",
+          "evaluation_basis": "RESULTS_ONLY",
+          "value": {
+            "amount": "0x3f706d1ab58debe8",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3f70385c67dfe32a",
+              "upper": "0x3f708c3f3e0370ce",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "expr.evaluate_formula",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:0d2e4ef0e92d309c1af3c64871176ac38ca64ad8432341133edae1518339a5b8",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ],
+          "derivation": "formula",
+          "formula": {
+            "text": "(C1 - C2) / 2",
+            "inputs": [
+              "C1",
+              "C2"
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111"
+    },
+    {
+      "seq": 3,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:e068848b3b6d4380d9e6034c2c35b557c13b04b8f27589c1b3dd4d48f1706111",
+      "note": "fit boss D7",
+      "inputs": [
+        "D7"
+      ],
+      "result_records": [
+        {
+          "characteristic": "D7-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3f92740bb27b70be",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3f92617c1bda511a",
+              "upper": "0x3f927bb2fec56d5d",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:85850ee0bf670473115bf2c4859e9392f1c0cd854d05b3e6fbfe40bacac2bdd9",
+            "sha256:def86135448ac6c7a23421e6cbb8c04f02f63a02f9694086ebcd132af3b81be1"
+          ]
+        }
+      ],
+      "hash": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603"
+    },
+    {
+      "seq": 4,
+      "command": "report.export_fai@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:a4977bcbbe50d6d0e1efd18591a673bb12beb397b69e812cdc805a4576f64603",
+      "note": "export the first-article report",
+      "inputs": [],
+      "result_records": [],
+      "hash": "sha256:16df245d84952da491adc63740bd9a9b598507c12bff20262ea2439a27b1a941"
+    }
+  ]
+}

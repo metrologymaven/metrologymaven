@@ -1,0 +1,46 @@
+{
+  "id": "inspect-bore-b1",
+  "source_job": "JOB.ACC.01",
+  "golden_digest": "sha256:d80d1be2fd95529cfce070e8b42b5cd20977ad02b39426940b1ab01fb7419785",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:1b29568711ce34666c192b1c36ea7d6c3bb54a1204f273169056c5682600c37a"
+  },
+  "prompt": "Bracket BK-210 (synthetic) has been scanned and the scan is already in the project. Find out whether bore B1 meets its diameter tolerance on the drawing in in/drawing.json, using the scan points in in/scan-points.json and a least-squares circle, and record the result.",
+  "profile": "inspect-r1",
+  "budget": {
+    "wall_s": 600,
+    "tool_calls": 30
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "single_command",
+  "apps": [
+    "inspect"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/scan-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}

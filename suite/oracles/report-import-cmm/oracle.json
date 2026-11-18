@@ -1,0 +1,75 @@
+{
+  "items": [
+    {
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3fafc016dbe497c5",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "C2",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3faba4d02e811ccb",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "C3",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3fbebb05242c2f33",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "C4",
+      "outcome": "NONCONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3fa1f3ca6797bece",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    },
+    {
+      "characteristic": "C5",
+      "outcome": "CONFORMS",
+      "basis": "RESULTS_ONLY",
+      "value": {
+        "amount": "0x3f9996cb88ffee62",
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-09,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "C4",
+      "outcome": "CONFORMS"
+    }
+  ]
+}

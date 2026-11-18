@@ -1,0 +1,335 @@
+{
+  "provisional": "Provisional synthetic golden journal (AGENT.EVAL.CORPUS): a stand-in until the FLOW app nodes publish real golden journals and CORE.JRN.ENTRY fixes the entry layout. Command IDs other than expr.evaluate_formula@1 are placeholders. Entry hash = sha256 of the RFC 8785 canonical JSON of the entry without its 'hash' member. Amounts are IEEE 754 binary64 bits ('0x' + 16 hex digits) in SI units, as in CORE.JRN.CANON.",
+  "format": "fid.eval-corpus-golden@0",
+  "job": "JOB.ACC.01",
+  "app": "inspect",
+  "part": "BK-210",
+  "synthetic": true,
+  "kernel_version": "ref-py-corpus@1",
+  "input_files": {
+    "in/drawing.json": "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe",
+    "in/scan-points.json": "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575"
+  },
+  "entries": [
+    {
+      "seq": 1,
+      "command": "project.import_points@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": null,
+      "note": "import the scan export",
+      "inputs": [
+        "in/scan-points.json"
+      ],
+      "result_records": [],
+      "hash": "sha256:7dbcc082d815b3beaea48087f199135ebbd96f0dd67d2abfd69182574af55e96"
+    },
+    {
+      "seq": 2,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:7dbcc082d815b3beaea48087f199135ebbd96f0dd67d2abfd69182574af55e96",
+      "note": "fit circle B1",
+      "inputs": [
+        "B1"
+      ],
+      "result_records": [
+        {
+          "characteristic": "B1-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3f8898465f512a83",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3f889374bc6a7efa",
+              "upper": "0x3f889ce4a7b4e550",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:75f32c50ab0d861a7e1f2318812123ced5fa4ed901aa242e93aac16264dfcb1b"
+    },
+    {
+      "seq": 3,
+      "command": "inspect.evaluate_flatness@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:75f32c50ab0d861a7e1f2318812123ced5fa4ed901aa242e93aac16264dfcb1b",
+      "note": "flatness of face A",
+      "inputs": [
+        "A"
+      ],
+      "result_records": [
+        {
+          "characteristic": "A-FLAT",
+          "measurand": "flatness",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3ef8d48d35b745f4",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x0000000000000000",
+              "upper": "0x3f0a36e2eb1c432d",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_plane_flatness",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:9081d69e303f3f086bddc90123c8da3e7c3420dbde3246ffb8dbcf023b4a35c9"
+    },
+    {
+      "seq": 4,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:9081d69e303f3f086bddc90123c8da3e7c3420dbde3246ffb8dbcf023b4a35c9",
+      "note": "fit circle H1",
+      "inputs": [
+        "H1"
+      ],
+      "result_records": [
+        {
+          "characteristic": "H1-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3f80658ef739f9e7",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3f805a708ede54b5",
+              "upper": "0x3f806a2b1704ff44",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:0e4065e132280383b740f822ba29d8f3c5e853c5b9a45b8cc0a86a3fe48a476b"
+    },
+    {
+      "seq": 5,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:0e4065e132280383b740f822ba29d8f3c5e853c5b9a45b8cc0a86a3fe48a476b",
+      "note": "fit circle H2",
+      "inputs": [
+        "H2"
+      ],
+      "result_records": [
+        {
+          "characteristic": "H2-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": {
+            "amount": "0x3f806c93d780a4dd",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "NONCONFORMS",
+            "limits": {
+              "lower": "0x3f805a708ede54b5",
+              "upper": "0x3f806a2b1704ff44",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:4114316cc460144dd35598e0009f615dd273e29fc4d3044e7f049624adbba4de"
+    },
+    {
+      "seq": 6,
+      "command": "inspect.evaluate_distance@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:4114316cc460144dd35598e0009f615dd273e29fc4d3044e7f049624adbba4de",
+      "note": "centre distance H1-H2",
+      "inputs": [
+        "H1",
+        "H2"
+      ],
+      "result_records": [
+        {
+          "characteristic": "H1H2-DIST",
+          "measurand": "distance",
+          "evaluation_basis": "FEATURES",
+          "value": {
+            "amount": "0x3fa99a6a759f1614",
+            "unit": "m"
+          },
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "CONFORMS",
+            "limits": {
+              "lower": "0x3fa996fa82e87d2c",
+              "upper": "0x3fa99c38b04ab607",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "centre_distance_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:1885d4785cd4c893667bbd834e5851480d1cfc03dcd77e9a3ce98f09cb5671f9"
+    },
+    {
+      "seq": 7,
+      "command": "inspect.fit_circle@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:1885d4785cd4c893667bbd834e5851480d1cfc03dcd77e9a3ce98f09cb5671f9",
+      "note": "fit circle H3: two points only, the fit is not decidable",
+      "inputs": [
+        "H3"
+      ],
+      "result_records": [
+        {
+          "characteristic": "H3-DIA",
+          "measurand": "diameter",
+          "evaluation_basis": "POINTS",
+          "value": null,
+          "uncertainty": {
+            "uec": "UEC-0"
+          },
+          "decision": {
+            "rule": "fid.simple_acceptance@1",
+            "outcome": "NOT_DECIDABLE",
+            "limits": {
+              "lower": "0x3f747064ece9a2c7",
+              "upper": "0x3f74855da272862f",
+              "unit": "m"
+            }
+          },
+          "spec_context": {
+            "defaults_profile": "project-synthetic"
+          },
+          "algorithm": {
+            "id": "lsq_circle_2d",
+            "version": 1
+          },
+          "kernel_version": "ref-py-corpus@1",
+          "input_digests": [
+            "sha256:8a0cc1ff05134ef544ff9b00bc32de872122e66e9abf8e01d3a33df0771a6575",
+            "sha256:853692cf8acdb04a93aae2afd1b82dd5801caf896c8064823296f3380852eabe"
+          ]
+        }
+      ],
+      "hash": "sha256:bf60f803ca5bdf03624fbd0dea1f3649b0386badf7420c4e967d595888b195be"
+    },
+    {
+      "seq": 8,
+      "command": "report.export@1",
+      "principal": {
+        "kind": "human",
+        "id": "human:golden-operator"
+      },
+      "prev": "sha256:bf60f803ca5bdf03624fbd0dea1f3649b0386badf7420c4e967d595888b195be",
+      "note": "export the inspection report",
+      "inputs": [],
+      "result_records": [],
+      "hash": "sha256:c973a1a9ef451b2661331fc238bd2d842ebe785a369c1febee596821f1ccff2c"
+    }
+  ]
+}
