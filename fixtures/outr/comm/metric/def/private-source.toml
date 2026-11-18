@@ -1,0 +1,9 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# AC-3: a source marked public = false; pairs with definitions.toml. Expected: exit 1, source_not_public.
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = false
+public_basis = "Example statistics that need a maintainer login."

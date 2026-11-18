@@ -1,0 +1,16 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# AC-4: a source URL containing /telemetry/, marked public; pairs with definitions.toml.
+# Expected: exit 1, product_data_source (public flag notwithstanding).
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = true
+public_basis = "Example public repository statistics, readable without an account."
+
+[[source]]
+id = "usage-summary"
+url = "https://example.org/telemetry/summary.json"
+public = true
+public_basis = "Claimed public, but it is data collected by the product."

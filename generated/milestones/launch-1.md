@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**35** of **1336** leaves built in code ([B]).
+**38** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 29 built)
+### Wave 1 (125 leaves, 32 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -93,9 +93,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
 - [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
 - [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
-- [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
+- [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
 - [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
-- [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
+- [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
 - [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
 - [OUTR.CONTENT.MIG.MAP](../../spec/outr/content/mig/map/NODE.md) Migration mapping table generator and drift check (M, P1a)
@@ -118,7 +118,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.HW.PROFILE](../../spec/plat/hw/profile/NODE.md) Hardware profile file and validator (S, P1a)
 - [PLAT.HW.SCHEMA](../../spec/plat/hw/schema/NODE.md) Benchmark suite manifest and result schema (S, P1a)
 - [B] [PLAT.MATRIX.FILE](../../spec/plat/matrix/file/NODE.md) Support matrix schema, data file and validator (M, P0)
-- [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
+- [B] [PLAT.MATRIX.POLICY.DEFS](../../spec/plat/matrix/policy/defs/NODE.md) Tier definitions document and its lint (S, P0)
 - [QUAL.CRA.CLASS](../../spec/qual/cra/class/NODE.md) CRA classification record and distribution-gate status (S, P1a)
 - [QUAL.CRA.EXPORT](../../spec/qual/cra/export/NODE.md) Export-control notes and data-tag vocabulary (S, P1a)
 - [QUAL.CRA.REPORT](../../spec/qual/cra/report/NODE.md) Exploited-vulnerability reporting procedure and deadline tracker (S, P1a)
