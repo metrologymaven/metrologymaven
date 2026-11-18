@@ -47,6 +47,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-bus"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+]
+
+[[package]]
 name = "fid-canon"
 version = "0.0.1"
 dependencies = [
