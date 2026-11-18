@@ -1,0 +1,122 @@
+[
+ {
+  "expect": "unit_unsupported",
+  "input": {
+   "unit": "mm",
+   "value": "0x3ff0000000000000"
+  },
+  "name": "unit_mm"
+ },
+ {
+  "expect": "unit_unsupported",
+  "input": {
+   "unit": "M",
+   "value": "0x3ff0000000000000"
+  },
+  "name": "unit_upper_M"
+ },
+ {
+  "expect": "unit_unsupported",
+  "input": {
+   "unit": "deg",
+   "value": "0x3ff0000000000000"
+  },
+  "name": "unit_deg"
+ },
+ {
+  "expect": "unit_unsupported",
+  "input": {
+   "unit": "degC",
+   "value": "0x4034000000000000"
+  },
+  "name": "unit_degC"
+ },
+ {
+  "expect": "unit_unsupported",
+  "input": {
+   "unit": "",
+   "value": "0x3ff0000000000000"
+  },
+  "name": "unit_empty"
+ },
+ {
+  "expect": "quantity_not_finite",
+  "input": {
+   "unit": "m",
+   "value": "0x7ff8000000000000"
+  },
+  "name": "value_nan"
+ },
+ {
+  "expect": "quantity_not_finite",
+  "input": {
+   "unit": "s",
+   "value": "0xfff0000000000001"
+  },
+  "name": "value_nan_payload"
+ },
+ {
+  "expect": "quantity_not_finite",
+  "input": {
+   "unit": "K",
+   "value": "0x7ff0000000000000"
+  },
+  "name": "value_pos_inf"
+ },
+ {
+  "expect": "quantity_not_finite",
+  "input": {
+   "unit": "Pa",
+   "value": "0xfff0000000000000"
+  },
+  "name": "value_neg_inf"
+ },
+ {
+  "expect": "bad_type",
+  "input": {
+   "unit": "m",
+   "value": 1.5
+  },
+  "name": "value_plain_number"
+ },
+ {
+  "expect": "bad_value",
+  "input": {
+   "unit": "m",
+   "value": "0x3FF0000000000000"
+  },
+  "name": "value_upper_hex"
+ },
+ {
+  "expect": "bad_value",
+  "input": {
+   "unit": "m",
+   "value": "0x3ff"
+  },
+  "name": "value_short_hex"
+ },
+ {
+  "expect": "missing_field",
+  "input": {
+   "value": "0x3ff0000000000000"
+  },
+  "name": "missing_unit"
+ },
+ {
+  "expect": "unknown_field",
+  "input": {
+   "display": "mm",
+   "unit": "m",
+   "value": "0x3ff0000000000000"
+  },
+  "name": "extra_field"
+ },
+ {
+  "expect": "bad_type",
+  "input": [
+   "0x3ff0000000000000",
+   "m"
+  ],
+  "name": "not_object"
+ }
+]

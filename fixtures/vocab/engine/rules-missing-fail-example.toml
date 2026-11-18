@@ -1,0 +1,23 @@
+# ECO.RULES.VOCAB.ENGINE AC-2: rule VC010 has a pass example but no fail example, so
+# `fid-vocab test-rules` must exit 1 naming VC010 (and `lint` must refuse the file). CC-BY-4.0.
+format = "fid-vocab-rules/1"
+version = "engine-fixture-missing-fail-1"
+
+[[rule]]
+id = "VC001"
+kind = "claim"
+severity = "error"
+message = "Certification wording needs a standard designator."
+words = ["certified"]
+qualifiers = ["designator"]
+examples.pass = ["Assessed per ISO 10360-2:2009 and certified by the lab."]
+examples.fail = ["Certified accuracy."]
+
+[[rule]]
+id = "VC010"
+kind = "preferred"
+severity = "warn"
+message = "Use the project's term."
+phrases = ["dialect map"]
+preferred = "Dialect Mapping Table"
+examples.pass = ["Open the Dialect Mapping Table."]

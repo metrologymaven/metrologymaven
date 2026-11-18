@@ -1,0 +1,1 @@
+PIN-TAG-UNPROTECTED Cargo.toml fid-app-core
