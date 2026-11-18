@@ -263,6 +263,31 @@ def random_number_vectors():
 
 random_number_vectors()
 
+
+def tie_vectors():
+    """Doubles exactly halfway between two shortest-length decimals.
+
+    Number::toString picks the closest shortest digit string; on an exact tie
+    ECMA-262's guideline (Note 2 of Number::toString) picks the even one, as
+    Python's repr does. Inputs are written as exact decimals.
+    """
+    rng = random.Random(1316)
+    found = [277575414244990.125]
+    while len(found) < 16:
+        x = rng.randrange(10 ** 13, 10 ** 16) + rng.choice([0.125, 0.375, 0.625, 0.875, 0.25, 0.75])
+        t = Decimal(repr(x)).as_tuple()
+        s = int("".join(map(str, t.digits)))
+        here = abs(Decimal(s).scaleb(t.exponent) - Decimal(x))
+        for nb in (s - 1, s + 1):
+            other = Decimal(nb).scaleb(t.exponent)
+            if float(other) == x and abs(other - Decimal(x)) == here:
+                found.append(x)
+                break
+    good("numbers_exact_ties", "[" + ", ".join(str(Decimal(x)) for x in found) + "]")
+
+
+tie_vectors()
+
 # Hand-labelled invalid inputs: every one must fail with canon.invalid.
 BAD = {
     "duplicate_key": b'{"a": 1, "b": 2, "a": 3}',

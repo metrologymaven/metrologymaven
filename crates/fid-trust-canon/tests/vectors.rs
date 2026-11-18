@@ -99,10 +99,7 @@ fn hostile_limits() {
 
     // Caller limits are tighter only.
     let tight = Limits { max_bytes: 4, max_depth: 2 };
-    assert!(matches!(
-        parse_with_limits(b"[1,2]", tight),
-        Err(CanonError::Invalid { kind: InvalidKind::TooLarge, .. })
-    ));
+    assert!(matches!(parse_with_limits(b"[1,2]", tight), Err(CanonError::Invalid { kind: InvalidKind::TooLarge, .. })));
     assert!(matches!(
         parse_with_limits(b"[[[]]]", Limits { max_bytes: 100, max_depth: 2 }),
         Err(CanonError::Invalid { kind: InvalidKind::TooDeep, .. })
