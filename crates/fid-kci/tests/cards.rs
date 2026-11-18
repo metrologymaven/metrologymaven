@@ -59,7 +59,7 @@ fn ac3_check() {
     assert_eq!(report.missing_cards, vec![a]);
     assert_eq!(report.orphan_cards, vec![c]);
     assert!(!report.is_clean());
-    assert!(check(&[b.clone()], &[b]).is_clean());
+    assert!(check(std::slice::from_ref(&b), std::slice::from_ref(&b)).is_clean());
 }
 
 /// AC-4: a 40-word quoted passage next to a standard reference is refused.
