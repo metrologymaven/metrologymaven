@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**87** of **1336** leaves built in code ([B]).
+**89** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,12 +154,12 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 17 built)
+### Wave 2 (121 leaves, 19 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
 - [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
-- [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
+- [B] [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
 - [B] [AGENT.REDTEAM.SCRIPT](../../spec/agent/redteam/script/NODE.md) Scripted deterministic adversary (M, P0)
 - [B] [AGENT.SKILLS.STYLE](../../spec/agent/skills/style/NODE.md) Guide and recipe content standard and linter (M, P0)
@@ -172,7 +172,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
 - [B] [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
 - [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
-- [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
+- [B] [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
 - [B] [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
 - [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
 - [B] [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
