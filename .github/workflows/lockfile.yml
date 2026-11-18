@@ -4,8 +4,6 @@ name: lockfile
 # then download the "Cargo.lock" artifact and commit it.
 on:
   workflow_dispatch:
-  push:
-    branches: [build/ci-harden]  # TEMPORARY bootstrap: dispatch needs the workflow on main
 permissions:
   contents: read
 jobs:
