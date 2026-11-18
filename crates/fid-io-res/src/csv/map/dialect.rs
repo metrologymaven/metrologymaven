@@ -208,7 +208,7 @@ impl Dialect {
         let mut out = String::new();
         match fields {
             [] => return Err(malformed(0, "empty_record")),
-            [only] if only.is_empty() => {
+            [""] => {
                 out.push_str("\"\"");
                 out.push_str(self.line_ending.terminator());
                 return Ok(out);
