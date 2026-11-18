@@ -159,11 +159,14 @@ impl Graph {
         Ok(g)
     }
 
-    /// Runs `cargo metadata` for the workspace at `dir`.
+    /// Runs `cargo metadata` for the workspace at `dir`, resolved for the host platform so
+    /// that it works offline: dependencies of other platforms (e.g. `libc` for macOS-only
+    /// code paths) need not be downloaded. CI runs the check on Linux, Windows and macOS.
     pub fn load(dir: &Path) -> Result<Graph, String> {
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+        let host = host_triple()?;
         let out = Command::new(cargo)
-            .args(["metadata", "--format-version", "1", "--offline", "--manifest-path"])
+            .args(["metadata", "--format-version", "1", "--offline", "--filter-platform", &host, "--manifest-path"])
             .arg(dir.join("Cargo.toml"))
             .output()
             .map_err(|e| format!("LAYER-METADATA: cannot run cargo: {e}"))?;
@@ -175,6 +178,20 @@ impl Graph {
         }
         Graph::from_metadata(&out.stdout)
     }
+}
+
+/// The host target triple, from `rustc -vV`.
+fn host_triple() -> Result<String, String> {
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".into());
+    let out = Command::new(rustc)
+        .arg("-vV")
+        .output()
+        .map_err(|e| format!("LAYER-METADATA: cannot run rustc: {e}"))?;
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .find_map(|l| l.strip_prefix("host: "))
+        .map(|h| h.trim().to_string())
+        .ok_or_else(|| "LAYER-METADATA: rustc -vV printed no host line".to_string())
 }
 
 /// Checks the graph against the map. Returns sorted, de-duplicated findings.
