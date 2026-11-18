@@ -1,0 +1,46 @@
+# Hand-written fixture for ECO.REL.PROC.RUNBOOK (CC-BY-4.0).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  tag-validate:
+    # a comment inside a job
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo step
+          echo done
+  vuln-gate:
+    # a comment inside a job
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo step
+          echo done
+  redteam-verdict:
+    # a comment inside a job
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo step
+          echo done
+  sums:
+    # a comment inside a job
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo step
+          echo done
+  publish:
+    # a comment inside a job
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo step
+          echo done
+
+permissions:
+  contents: read
