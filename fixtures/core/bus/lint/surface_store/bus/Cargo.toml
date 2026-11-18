@@ -1,0 +1,11 @@
+[package]
+name = "fid-bus"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-bus-api = { path = "../api" }
+fid-kernel = { path = "../kernel" }
+fid-state = { path = "../state" }
+fid-store = { path = "../store" }

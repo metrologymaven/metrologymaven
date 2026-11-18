@@ -6,6 +6,11 @@
 //! special layer usable only as a dev-dependency. The check reads Cargo's resolved
 //! graph and fails when a crate reaches a higher layer, directly or through other
 //! crates, depends on a `tool` crate, or uses `test-support` outside dev-dependencies.
+//!
+//! `lint-crate-graph`: the no-side-doors check (spec node `CORE.BUS.LINT`), in
+//! [`crate_graph`]; it reuses the resolved graph built here.
+
+pub mod crate_graph;
 
 use fid_canon::{parse, CValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -175,10 +180,21 @@ impl Graph {
     /// that it works offline: dependencies of other platforms (e.g. `libc` for macOS-only
     /// code paths) need not be downloaded. CI runs the check on Linux, Windows and macOS.
     pub fn load(dir: &Path) -> Result<Graph, String> {
+        Graph::load_with(dir, false)
+    }
+
+    /// Like [`Graph::load`]; with `all_features`, passes `--all-features` so optional
+    /// (feature-gated) dependencies are part of the resolved graph.
+    pub fn load_with(dir: &Path, all_features: bool) -> Result<Graph, String> {
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
         let host = host_triple()?;
-        let out = Command::new(cargo)
-            .args(["metadata", "--format-version", "1", "--offline", "--filter-platform", &host, "--manifest-path"])
+        let mut cmd = Command::new(cargo);
+        cmd.args(["metadata", "--format-version", "1", "--offline", "--filter-platform", &host]);
+        if all_features {
+            cmd.arg("--all-features");
+        }
+        let out = cmd
+            .arg("--manifest-path")
             .arg(dir.join("Cargo.toml"))
             .output()
             .map_err(|e| format!("LAYER-METADATA: cannot run cargo: {e}"))?;
