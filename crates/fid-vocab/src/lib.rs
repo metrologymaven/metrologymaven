@@ -274,10 +274,13 @@ fn eval_rule(rule: &Rule, id: &str, links: &[String], p: &Prepared) -> Vec<Hit> 
             continue;
         }
         let report = match rule.kind {
-            Kind::Claim => rule.qualifiers.is_empty() || rule.qualifiers.iter().any(|q| match q {
-                Qualifier::Designator => !rule.designator.as_ref().is_some_and(|re| re.is_match(&p.text[s..e])),
-                Qualifier::Link => links.is_empty(),
-            }),
+            Kind::Claim => {
+                rule.qualifiers.is_empty()
+                    || rule.qualifiers.iter().any(|q| match q {
+                        Qualifier::Designator => !rule.designator.as_ref().is_some_and(|re| re.is_match(&p.text[s..e])),
+                        Qualifier::Link => links.is_empty(),
+                    })
+            }
             Kind::Name => !nominative(),
             Kind::Cooccur => {
                 let cmp = rule.comparison.find(toks);
