@@ -12,6 +12,10 @@ use std::fmt;
 pub const DEFAULT_TOL: f64 = 1e-9;
 
 /// Closed list of accepted SI units (coherent SI; `1` is dimensionless).
+///
+/// Provisional and local to this crate: the future source is the L0 unit vocabulary of
+/// spec node GEO.FRAME.UNITS, which this list should be replaced by once it is built.
+/// `schema/eval-oracle-v1.schema.json` repeats it (a test guards the two against drift).
 pub const SI_UNITS: &[&str] = &["1", "m", "m2", "m3", "rad", "sr", "s", "kg", "K", "N", "Pa"];
 
 wire_enum! {

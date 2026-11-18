@@ -77,7 +77,30 @@ pub fn suite_version(files: &[(String, Digest)]) -> Result<Digest, FormatError> 
 }
 
 /// Sorted entry names of a directory; non-UTF-8 names are layout errors.
+/// Whether `path` is a real directory, not a symbolic link or junction.
+fn is_real_dir(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).map(|m| m.is_dir() && !m.file_type().is_symlink()).unwrap_or(false)
+}
+
+/// The directory itself must be a real directory: a symbolic link or junction (which
+/// could point outside the suite) is a layout error, checked before it is listed.
 fn list_dir(path: &Path, name: &str, errs: &mut Vec<FormatError>) -> Option<Vec<String>> {
+    match std::fs::symlink_metadata(path) {
+        Ok(m) if m.is_dir() && !m.file_type().is_symlink() => {}
+        Ok(_) => {
+            errs.push(FormatError::new(
+                ErrorCode::InvalidSuite,
+                name,
+                "",
+                "not a directory (symbolic links and junctions are not allowed)",
+            ));
+            return None;
+        }
+        Err(e) => {
+            errs.push(FormatError::new(ErrorCode::MissingFile, name, "", format!("cannot read directory: {e}")));
+            return None;
+        }
+    }
     let rd = match std::fs::read_dir(path) {
         Ok(rd) => rd,
         Err(e) => {
@@ -193,7 +216,7 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
     for id in &task_ids {
         let tdir = dir.join("tasks").join(id);
         let tname = format!("tasks/{id}");
-        if !is_id(id) || !std::fs::symlink_metadata(&tdir).map(|m| m.is_dir()).unwrap_or(false) {
+        if !is_id(id) || !is_real_dir(&tdir) {
             errs.push(FormatError::new(ErrorCode::InvalidSuite, &tname, "", "expected a task directory named by ID"));
             continue;
         }
@@ -220,7 +243,13 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
         }
         let spath = task.start_state.path.as_str();
         let sfile = format!("{tname}/{spath}");
-        match read_bounded(&tdir.join(spath), &sfile) {
+        // Read the archive only if the walk reached it through real directories.
+        let reached = if present.iter().any(|p| p == spath) {
+            read_bounded(&tdir.join(spath), &sfile)
+        } else {
+            Err(FormatError::new(ErrorCode::MissingFile, &sfile, "", "start-state archive not found in the task directory"))
+        };
+        match reached {
             Ok(b) => {
                 let d = file_digest(&b);
                 if d != task.start_state.digest {
@@ -253,6 +282,15 @@ pub fn load_suite(dir: &Path) -> Result<Suite, Vec<FormatError>> {
         let oname = format!("oracles/{id}");
         if !task_ids.contains(&id) {
             errs.push(FormatError::new(ErrorCode::InvalidSuite, &oname, "", "no task directory with this ID"));
+            continue;
+        }
+        if !is_real_dir(&odir) {
+            errs.push(FormatError::new(
+                ErrorCode::InvalidSuite,
+                &oname,
+                "",
+                "expected an oracle directory (symbolic links and junctions are not allowed)",
+            ));
             continue;
         }
         let present = walk(&odir, &oname, &mut errs);

@@ -315,3 +315,99 @@ fn cli_errors() {
     assert!(!errs.is_empty());
     assert_eq!(st(&obj(&errs[0])["code"]), "missing_file");
 }
+
+/// Creates a directory link: a symlink on Unix, a junction on Windows (no admin needed).
+fn link_dir(target: &Path, link: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        Command::new("cmd")
+            .arg("/c")
+            .arg("mklink")
+            .arg("/J")
+            .arg(link)
+            .arg(target)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (target, link);
+        false
+    }
+}
+
+/// Review fix: oracle, task, tasks/ and oracles/ directories that are links (which could
+/// point outside the suite) fail closed with invalid_suite before anything is read.
+#[test]
+fn directory_links_are_rejected() {
+    // An oracle directory replaced by a link to a copy outside the suite.
+    let d = copy_suite("link-oracle");
+    let outside = std::env::temp_dir().join(format!("fid-eval-suite-{}-outside", std::process::id()));
+    let _ = std::fs::remove_dir_all(&outside);
+    std::fs::create_dir_all(&outside).unwrap();
+    let odir = d.join("oracles").join("mini-probe-01");
+    std::fs::copy(odir.join("oracle.json"), outside.join("oracle.json")).unwrap();
+    std::fs::remove_dir_all(&odir).unwrap();
+    if !link_dir(&outside, &odir) {
+        eprintln!("skipping: cannot create a directory link here");
+        return;
+    }
+    let errs = load_suite(&d).unwrap_err();
+    let c = codes(&errs);
+    assert!(c.contains(&("invalid_suite", "oracles/mini-probe-01".to_string(), String::new())), "{c:?}");
+    assert!(!c.iter().any(|x| x.1 == "oracles/mini-probe-01/oracle.json" && x.0 != "missing_file"), "{c:?}");
+
+    // The whole tasks/ directory as a link.
+    let d2 = copy_suite("link-tasks");
+    let real = std::env::temp_dir().join(format!("fid-eval-suite-{}-realtasks", std::process::id()));
+    let _ = std::fs::remove_dir_all(&real);
+    std::fs::rename(d2.join("tasks"), &real).unwrap();
+    assert!(link_dir(&real, &d2.join("tasks")));
+    let c = codes(&load_suite(&d2).unwrap_err());
+    assert!(c.contains(&("invalid_suite", "tasks".to_string(), String::new())), "{c:?}");
+
+    // A task directory as a link.
+    let d3 = copy_suite("link-task");
+    let real3 = std::env::temp_dir().join(format!("fid-eval-suite-{}-realtask", std::process::id()));
+    let _ = std::fs::remove_dir_all(&real3);
+    std::fs::rename(d3.join("tasks").join("mini-probe-01"), &real3).unwrap();
+    assert!(link_dir(&real3, &d3.join("tasks").join("mini-probe-01")));
+    let c = codes(&load_suite(&d3).unwrap_err());
+    assert!(c.contains(&("invalid_suite", "tasks/mini-probe-01".to_string(), String::new())), "{c:?}");
+
+    for p in [d, d2, d3, outside, real, real3] {
+        let _ = std::fs::remove_dir_all(p);
+    }
+}
+
+/// Drift guard: the closed lists in the published schemas equal the Rust constants.
+#[test]
+fn schema_enums_match_rust() {
+    let schema = |n: &str| load_json(&Path::new(FIX).join("../../../schema").join(n));
+    let at = |v: &CValue, path: &[&str]| -> Vec<String> {
+        let mut cur = v.clone();
+        for k in path {
+            cur = obj(&cur)[*k].clone();
+        }
+        arr(&cur).iter().map(|x| st(x).to_string()).collect()
+    };
+    let names = |xs: Vec<&str>| xs.into_iter().map(str::to_string).collect::<Vec<_>>();
+    let task = schema("eval-task-v1.schema.json");
+    let oracle = schema("eval-oracle-v1.schema.json");
+    assert_eq!(at(&task, &["properties", "tier", "enum"]), names(Tier::ALL.iter().map(|t| t.as_str()).collect()));
+    assert_eq!(
+        at(&task, &["properties", "apps", "items", "enum"]),
+        names(App::ALL.iter().map(|a| a.as_str()).collect())
+    );
+    assert_eq!(at(&oracle, &["$defs", "outcome", "enum"]), names(Outcome::ALL.iter().map(|o| o.as_str()).collect()));
+    assert_eq!(
+        at(&oracle, &["properties", "items", "items", "properties", "basis", "enum"]),
+        names(Basis::ALL.iter().map(|b| b.as_str()).collect())
+    );
+    assert_eq!(at(&oracle, &["$defs", "quantity", "properties", "unit", "enum"]), names(SI_UNITS.to_vec()));
+}
