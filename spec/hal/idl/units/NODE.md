@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-hal-idl]
+built_pr: 69
 satisfies: [REQ-HAL.IDL-003]
 covers: []
 depends_on: []
