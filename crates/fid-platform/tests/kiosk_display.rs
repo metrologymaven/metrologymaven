@@ -183,10 +183,7 @@ fn req003_resolution_bounds_are_inclusive() {
     for shape in ["[1920]", "[1920, 1080, 1]", "[1920.0, 1080.0]", "\"1920x1080\"", "[]"] {
         let e = errs(&with("resolution", &format!("resolution = {shape}")));
         assert_eq!(e.len(), 1, "{shape}: {e:?}");
-        assert!(
-            matches!(&e[0], DisplayError::Parse { line: None, msg } if msg.starts_with("resolution ")),
-            "{shape}"
-        );
+        assert!(matches!(&e[0], DisplayError::Parse { line: None, msg } if msg.starts_with("resolution ")), "{shape}");
     }
 }
 
