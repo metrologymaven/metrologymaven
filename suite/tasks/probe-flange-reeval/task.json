@@ -1,0 +1,46 @@
+{
+  "id": "probe-flange-reeval",
+  "source_job": "JOB.ACC.04",
+  "golden_digest": "sha256:71f5973c7f1da47839e7813b711b3c89dbc677b7769f7cf20dc70af83bbfa248",
+  "start_state": {
+    "path": "start.tar",
+    "digest": "sha256:35428d0855b619cccba29a5be530769ad8a4527c28d77426a62a91213904be15"
+  },
+  "prompt": "Re-evaluate flange FL-480 (synthetic) from the CMM point export in/cmm-points.json: bring the points into the project, evaluate every characteristic on the drawing in/drawing.json, record a result and decision for each, and export the report into out/.",
+  "profile": "probe-r1",
+  "budget": {
+    "wall_s": 2400,
+    "tool_calls": 200
+  },
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "tier": "full_job",
+  "apps": [
+    "probe"
+  ],
+  "workflows": [],
+  "licences": [
+    {
+      "file": "README.txt",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/cmm-points.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "in/drawing.json",
+      "spdx": "project-authored"
+    },
+    {
+      "file": "project/journal.json",
+      "spdx": "project-authored"
+    }
+  ]
+}
