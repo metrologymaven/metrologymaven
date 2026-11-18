@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-20",
+  "release": "0.1.1",
+  "rows": [
+    {
+      "feature": "probe-calibration",
+      "state": "partial"
+    },
+    {
+      "feature": "plane-fit",
+      "state": "done"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "apps": [
+    {
+      "id": "fid-studio",
+      "status": "alpha"
+    }
+  ],
+  "artefacts": [
+    {
+      "arch": "x86_64",
+      "kind": "archive",
+      "name": "fid-0.1.1-x86_64-linux.tar.gz",
+      "os": "linux",
+      "sha256": "sha256:abababababababababababababababababababababababababababababababab",
+      "size": "1048576",
+      "tier": "1",
+      "url": "https://releases.example.invalid/v0.1.1/fid-0.1.1-x86_64-linux.tar.gz"
+    },
+    {
+      "arch": "any",
+      "kind": "report",
+      "name": "parity.json",
+      "os": "any",
+      "sha256": "80529279cb2cde16cd568d7cbe05d39fbe9baa77ea0454d6ad5f0f843e62a78c",
+      "size": "206",
+      "tier": "1",
+      "url": "https://releases.example.invalid/v0.1.1/parity.json"
+    },
+    {
+      "arch": "any",
+      "kind": "report",
+      "name": "parity.md",
+      "os": "any",
+      "sha256": "658d3461d4ceda707b96df3f434328c222fcb85494f70adc8ca3b073c54c6b62",
+      "size": "106",
+      "tier": "1",
+      "url": "https://releases.example.invalid/v0.1.1/parity.md"
+    },
+    {
+      "arch": "any",
+      "kind": "report",
+      "name": "status.json",
+      "os": "any",
+      "sha256": "fb7a125fbf1122beba2391075a274550dcd07a8ced0a80722142eeb81f369d7e",
+      "size": "104",
+      "tier": "1",
+      "url": "https://releases.example.invalid/v0.1.1/status.json"
+    },
+    {
+      "arch": "any",
+      "kind": "report",
+      "name": "status.md",
+      "os": "any",
+      "sha256": "9025cc3c1321d753d50599733b860db271300c3eb46af683c0604ea5d9bccbc6",
+      "size": "34",
+      "tier": "1",
+      "url": "https://releases.example.invalid/v0.1.1/status.md"
+    }
+  ],
+  "channel": "beta",
+  "commit": "2222222222222222222222222222222222222222",
+  "date": "2026-10-20",
+  "venues": [
+    "release-host"
+  ],
+  "version": "0.1.1"
+}
