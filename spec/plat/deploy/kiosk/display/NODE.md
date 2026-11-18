@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-platform]
+built_pr: 121
 satisfies: [REQ-PLAT.DEPLOY.KIOSK-003]
 covers: []
 depends_on: []
