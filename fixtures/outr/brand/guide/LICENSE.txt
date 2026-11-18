@@ -1,0 +1,2 @@
+Synthetic test fixtures for spec node OUTR.BRAND.GUIDE.NAME (CC-BY-4.0).
+All text is project-authored; "Examplo" is a made-up name.
