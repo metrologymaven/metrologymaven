@@ -1,0 +1,19 @@
+[package]
+name = "app"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-geo = { workspace = true }
+
+# AC-1: tag on a repository with protected_tags = true.
+[dependencies.fid-ui]
+git = "https://example.org/fid/libs"
+tag = "v1.2.0"
+
+[target.'cfg(windows)'.dev-dependencies]
+fid-win = { git = "ssh://git@example.org/fid/apps.git", rev = "4b825dc642cb6eb9a060e54bf8d69288fbee4904", features = [
+    "a",
+    "b",
+] }

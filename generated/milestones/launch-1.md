@@ -67,7 +67,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.SIGN.SBOM](../../spec/eco/rel/sign/sbom/NODE.md) Per-artefact SPDX SBOM generation (M, P1a)
 - [ECO.REL.SIGN.SUMS](../../spec/eco/rel/sign/sums/NODE.md) Checksum file and checksum statement (S, P1a)
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
-- [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
+- [B] [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
 - [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
 - [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
 - [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)

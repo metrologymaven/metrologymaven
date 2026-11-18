@@ -1,0 +1,27 @@
+# Repository map (spec node ECO.REPO.TOPO, REQ-ECO.REPO-005).
+#
+# Every first-party repository: id, canonical URL, one-line purpose, and whether its
+# tags are protected (only then may another repository pin it by `tag`; otherwise it
+# must pin a full 40-character `rev`). `status` is "active" (default), "archived" or
+# "planned". `cargo xtask pins` reads this file and checks every git dependency on
+# these URLs; it runs offline.
+#
+# Only repositories that exist are listed. The spec tree and the code live in one
+# monorepo, so "the spec repository" and "the code monorepo" (ECO.REPO.TOPO Design)
+# are a single entry. The further repositories named in ECO.REPO (libs, apps,
+# contrib, common-actions) are planned and get an entry, with their real URL, in the
+# PR that creates them (a maintainer decision).
+
+[[repo]]
+id = "metrologymaven"
+url = "https://github.com/metrologymaven/metrologymaven"
+purpose = "Specification tree, decisions and the Rust code monorepo (crates, fixtures, tools)"
+protected_tags = false
+status = "active"
+
+[[repo]]
+id = "metrologymaven-site-legacy"
+url = "https://github.com/metrologymaven/metrologymaven-site-legacy"
+purpose = "Retired consultancy website, replaced by this project (D-039); read-only"
+protected_tags = false
+status = "archived"
