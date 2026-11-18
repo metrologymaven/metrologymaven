@@ -1,0 +1,3 @@
+# Synthetic fixture: the name is not accepted yet.
+accepted = false
+working_names = ["Fiducial", "fid"]
