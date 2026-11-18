@@ -228,21 +228,13 @@ fn kind_mismatch_is_a_finding() {
         let d = scratch_case(&format!("mismatch-{i}"), &["a.msi", name], &[("a.msi", Some("installer")), (name, kind)]);
         let out = out_dir(&format!("mismatch-{i}-out"));
         let errs = run(&d.join("release-manifest.json"), &d, &out).unwrap_err();
-        let want = SumsError::KindMismatch {
-            name: name.to_string(),
-            kind: kind.map(str::to_string),
-            implied,
-        };
+        let want = SumsError::KindMismatch { name: name.to_string(), kind: kind.map(str::to_string), implied };
         assert_eq!(errs, [want], "{name} {kind:?}");
         assert!(!out.exists(), "{name}");
     }
     let d = scratch_case("mismatch-cli", &["fid.msi"], &[("fid.msi", Some("signature"))]);
     let out = out_dir("mismatch-cli-out");
-    assert_eq!(
-        cli_case(&d, &out),
-        (1, "SUMS-KIND-MISMATCH fid.msi (kind signature, name implies an artefact)
-".to_string())
-    );
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-KIND-MISMATCH fid.msi (kind signature, name implies an artefact)\n".to_string()));
 }
 
 /// Names that only look like a never-summed family are ordinary artefacts and are summed.
@@ -262,8 +254,7 @@ fn lookalike_names_are_summed() {
 fn unlisted_checksum_file_in_dir_is_a_finding() {
     let d = scratch_case("stray-sums", &["a.msi", "SHA256SUMS"], &[("a.msi", None)]);
     let out = out_dir("stray-sums-out");
-    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED SHA256SUMS
-".to_string()));
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED SHA256SUMS\n".to_string()));
 }
 
 /// Only regular files are artefacts: a listed directory is SUMS-UNLISTED (not a regular file).
@@ -272,8 +263,7 @@ fn directory_entry_is_not_an_artefact() {
     let d = scratch_case("subdir", &["a.msi"], &[("a.msi", None), ("sub.msi", None)]);
     std::fs::create_dir(d.join("sub.msi")).unwrap();
     let out = out_dir("subdir-out");
-    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED sub.msi (not a regular file)
-".to_string()));
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED sub.msi (not a regular file)\n".to_string()));
     assert!(!out.exists());
 }
 
@@ -284,8 +274,7 @@ fn symlink_is_not_an_artefact() {
     let d = scratch_case("symlink", &["a.msi"], &[("a.msi", None), ("link.msi", None)]);
     std::os::unix::fs::symlink("a.msi", d.join("link.msi")).unwrap();
     let out = out_dir("symlink-out");
-    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED link.msi (not a regular file)
-".to_string()));
+    assert_eq!(cli_case(&d, &out), (1, "SUMS-UNLISTED link.msi (not a regular file)\n".to_string()));
     assert!(!out.exists());
 }
 
