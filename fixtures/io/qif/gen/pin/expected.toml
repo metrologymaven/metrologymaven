@@ -1,0 +1,10 @@
+# Expected values for the IO.QIF.GEN.PIN tests; written by make_fixtures.py (hashlib).
+licence_sha256 = "sha256:ab03213680f511dccfdd08d47735222fc1c09b6860c3b8901cfbb746ec9639d3"
+changed_b_expected = "sha256:ea6141f2422961edf1f73999df4557a4f8b90d191de7a765eadd5f60713f2f2e"
+changed_b_actual = "sha256:0af6c72210ecb85baf79559225debf6e0c100de7dcb7cbe4fdedb25cd054888c"
+changed_b_bytes = 287
+
+[ok]
+"a.xsd" = "sha256:145e53d963eaae931accdcef1627d7b82b9d42be53966bd42285193f803dbd35"
+"b.xsd" = "sha256:ea6141f2422961edf1f73999df4557a4f8b90d191de7a765eadd5f60713f2f2e"
+"lib/units.xsd" = "sha256:4664867252a3df9c4a89a758b2ff4d689dd4bd46d76c559c7f6b2985ebe82693"
