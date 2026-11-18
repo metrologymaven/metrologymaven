@@ -14,7 +14,7 @@ mod uuid;
 pub use shape::{program_schema, COMMAND_PATTERN, IDENT_PATTERN, MAX_MAJOR, UUID7_PATTERN};
 pub use uuid::Uuid7;
 
-use fid_canon::{digest_bytes, format_number, parse_with_limits, to_canonical_bytes, CValue, CanonError};
+use fid_canon::{digest_bytes, format_number, parse_with_limits, CValue, CanonError};
 use fid_types::Digest;
 use shape::{Shape, Ty};
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,11 +29,22 @@ pub const MAX_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_DEPTH: usize = 64;
 /// Most steps in one program, counting nested and subroutine steps (REQ-AUTO.PROG.FMT-006).
 pub const MAX_STEPS: usize = 100_000;
-/// Most JSON structural tokens (`[`, `{`, `,`, `:`), checked before the tree is built so the
-/// in-memory tree stays bounded.
-pub const MAX_TOKENS: usize = 2_000_000;
-/// Most JSON objects, checked before the tree is built (objects cost the most memory).
-pub const MAX_OBJECTS: usize = 250_000;
+/// Largest accepted [`parse_cost`]: an upper estimate, in bytes, of the heap that parsing
+/// and storing the document needs. Checked by a byte scan before any tree is built, so the
+/// real peak stays well under 256 MiB (REQ-AUTO.PROG.FMT-006, AC-6).
+pub const MAX_COST: usize = 160 * 1024 * 1024;
+
+/// Cost weights of [`parse_cost`], each at least what the item really takes on the heap
+/// (64-bit): an object is a B-tree leaf node (632 bytes) plus its value cell; an array is a
+/// vector of at least four 32-byte cells; every further element or member (a comma) is a
+/// cell with growth slack or a B-tree node share; strings may carry 2x capacity; the output
+/// buffer has the input's length.
+const COST_OBJECT: usize = 860;
+const COST_ARRAY: usize = 360;
+const COST_ITEM: usize = 160;
+const COST_STRING: usize = 16;
+const COST_STRING_BYTE: usize = 2;
+const COST_INPUT_BYTE: usize = 2;
 
 /// Opaque JSON object (meta, parameter declaration, operator descriptor).
 pub type Opaque = BTreeMap<String, CValue>;
@@ -43,8 +54,8 @@ pub type Opaque = BTreeMap<String, CValue>;
 pub enum Bound {
     Bytes,
     Depth,
-    Tokens,
-    Objects,
+    /// [`parse_cost`] above [`MAX_COST`].
+    Memory,
     Steps,
 }
 
@@ -54,8 +65,7 @@ impl Bound {
         match self {
             Bound::Bytes => "bytes",
             Bound::Depth => "depth",
-            Bound::Tokens => "tokens",
-            Bound::Objects => "objects",
+            Bound::Memory => "memory",
             Bound::Steps => "steps",
         }
     }
@@ -220,16 +230,19 @@ impl Program {
             other => ProgramError::InvalidJson(other.code()),
         })?;
         check_header(&value)?;
-        let canonical = to_canonical_bytes(&value).map_err(|e| ProgramError::InvalidJson(e.code()))?;
-        if canonical.as_slice() != bytes {
+        // Canonical check: write the tree recursively (no work stack) into a buffer of
+        // exactly the input's size, and compare.
+        let mut e = Encoder { out: Vec::with_capacity(bytes.len()) };
+        e.json(&value, 0)?;
+        if e.out.as_slice() != bytes {
             return Err(ProgramError::NonCanonical);
         }
-        drop(canonical);
+        drop(e);
         let mut dec = Decoder::default();
         let program = dec.program(value)?;
         // The decoder is lossless by construction; this guards the invariant of REQ-002.
         // The encoder writes from the program itself, so no second tree is built.
-        if program.encode_bytes()?.as_slice() != bytes {
+        if program.encode_bytes(bytes.len())?.as_slice() != bytes {
             return Err(ProgramError::NonCanonical);
         }
         Ok(program)
@@ -239,10 +252,7 @@ impl Program {
     /// in-memory program first, so everything this returns parses back to an equal program.
     pub fn to_canonical(&self) -> Result<Vec<u8>, ProgramError> {
         Checker::default().program(self)?;
-        let bytes = self.encode_bytes()?;
-        if bytes.len() > MAX_BYTES {
-            return Err(ProgramError::ProgramTooLarge(Bound::Bytes));
-        }
+        let bytes = self.encode_bytes(0)?;
         prescan(&bytes)?;
         Ok(bytes)
     }
@@ -278,13 +288,20 @@ impl Program {
     }
 }
 
-/// Counts structural tokens, objects and nesting outside strings, so hostile input cannot
-/// build a huge tree (REQ-AUTO.PROG.FMT-006, AC-6). Also bounds encoded output.
-fn prescan(bytes: &[u8]) -> Result<(), ProgramError> {
-    let (mut tokens, mut objects, mut depth) = (0usize, 0usize, 0usize);
+/// Upper estimate, in bytes, of the heap needed to parse and store `bytes`, from a scan of
+/// the raw bytes (no tree is built). Compare with [`MAX_COST`].
+pub fn parse_cost(bytes: &[u8]) -> usize {
+    scan(bytes).0
+}
+
+/// One pass over the bytes: the cost estimate and the deepest nesting, outside strings.
+fn scan(bytes: &[u8]) -> (usize, usize) {
+    let mut cost = bytes.len().saturating_mul(COST_INPUT_BYTE);
+    let (mut depth, mut deepest) = (0usize, 0usize);
     let (mut in_str, mut escaped) = (false, false);
     for &c in bytes {
         if in_str {
+            cost = cost.saturating_add(COST_STRING_BYTE);
             if escaped {
                 escaped = false;
             } else if c == b'\\' {
@@ -294,31 +311,40 @@ fn prescan(bytes: &[u8]) -> Result<(), ProgramError> {
             }
             continue;
         }
-        match c {
-            b'"' => in_str = true,
+        let add = match c {
+            b'"' => {
+                in_str = true;
+                COST_STRING
+            }
             b'{' | b'[' => {
-                tokens += 1;
                 depth += 1;
-                if depth > MAX_DEPTH {
-                    return Err(ProgramError::ProgramTooLarge(Bound::Depth));
-                }
-                if c == b'{' {
-                    objects += 1;
-                    if objects > MAX_OBJECTS {
-                        return Err(ProgramError::ProgramTooLarge(Bound::Objects));
-                    }
-                }
+                deepest = deepest.max(depth);
+                COST_ITEM + if c == b'{' { COST_OBJECT } else { COST_ARRAY }
             }
             b'}' | b']' => {
                 depth = depth.saturating_sub(1);
-                continue;
+                0
             }
-            b',' | b':' => tokens += 1,
-            _ => continue,
-        }
-        if tokens > MAX_TOKENS {
-            return Err(ProgramError::ProgramTooLarge(Bound::Tokens));
-        }
+            b',' => COST_ITEM,
+            _ => 0,
+        };
+        cost = cost.saturating_add(add);
+    }
+    (cost, deepest)
+}
+
+/// Bounds a document before it is parsed, or output before it is returned
+/// (REQ-AUTO.PROG.FMT-006, AC-6).
+fn prescan(bytes: &[u8]) -> Result<(), ProgramError> {
+    if bytes.len() > MAX_BYTES {
+        return Err(ProgramError::ProgramTooLarge(Bound::Bytes));
+    }
+    let (cost, deepest) = scan(bytes);
+    if deepest > MAX_DEPTH {
+        return Err(ProgramError::ProgramTooLarge(Bound::Depth));
+    }
+    if cost > MAX_COST {
+        return Err(ProgramError::ProgramTooLarge(Bound::Memory));
     }
     Ok(())
 }
@@ -817,9 +843,32 @@ impl Encoder {
         self.out.push(b'"');
     }
 
-    fn json(&mut self, v: &CValue) -> Result<(), ProgramError> {
-        let bytes = to_canonical_bytes(v).map_err(|e| ProgramError::InvalidJson(e.code()))?;
-        self.out.extend_from_slice(&bytes);
+    /// RFC 8785 for any value (the `fid-canon` rules, including its 64-bit integer and
+    /// bit-float forms), written recursively. Recursion is bounded by `depth`.
+    fn json(&mut self, v: &CValue, depth: usize) -> Result<(), ProgramError> {
+        if depth > MAX_DEPTH {
+            return Err(ProgramError::ProgramTooLarge(Bound::Depth));
+        }
+        match v {
+            CValue::Null => self.out.extend_from_slice(b"null"),
+            CValue::Bool(true) => self.out.extend_from_slice(b"true"),
+            CValue::Bool(false) => self.out.extend_from_slice(b"false"),
+            CValue::Str(s) => self.string(s),
+            CValue::I64(i) => self.out.extend_from_slice(format!("\"{i}\"").as_bytes()),
+            CValue::U64(u) => self.out.extend_from_slice(format!("\"{u}\"").as_bytes()),
+            CValue::F64Bits(f) => {
+                if !f.is_finite() {
+                    return Err(ProgramError::InvalidJson(CanonError::NonFiniteNumber.code()));
+                }
+                self.out.extend_from_slice(format!("\"0x{:016x}\"", f.to_bits()).as_bytes());
+            }
+            CValue::Num(f) => {
+                let s = format_number(*f).map_err(|e| ProgramError::InvalidJson(e.code()))?;
+                self.out.extend_from_slice(s.as_bytes());
+            }
+            CValue::Arr(items) => self.array(items, |e, item| e.json(item, depth + 1))?,
+            CValue::Obj(m) => self.opaque(m, depth)?,
+        }
         Ok(())
     }
 
@@ -839,7 +888,7 @@ impl Encoder {
         Ok(())
     }
 
-    fn opaque(&mut self, m: &Opaque) -> Result<(), ProgramError> {
+    fn opaque(&mut self, m: &Opaque, depth: usize) -> Result<(), ProgramError> {
         let mut keys: Vec<(&String, &CValue)> = m.iter().collect();
         keys.sort_by(|a, b| utf16_cmp(a.0, b.0));
         self.out.push(b'{');
@@ -849,7 +898,7 @@ impl Encoder {
             }
             self.string(k);
             self.out.push(b':');
-            self.json(v)?;
+            self.json(v, depth + 1)?;
         }
         self.out.push(b'}');
         Ok(())
@@ -876,9 +925,9 @@ impl Encoder {
             Val::Str(s) => self.string(s),
             Val::Id(id) => self.string(&id.to_string()),
             Val::Num(n) => self.out.extend_from_slice(n.to_string().as_bytes()),
-            Val::Json(j) => self.json(j)?,
-            Val::Obj(m) => self.opaque(m)?,
-            Val::Objs(items) => self.array(items, |e, m| e.opaque(m))?,
+            Val::Json(j) => self.json(j, 0)?,
+            Val::Obj(m) => self.opaque(m, 0)?,
+            Val::Objs(items) => self.array(items, |e, m| e.opaque(m, 0))?,
             Val::Vars(items) => {
                 self.array(items, |e, v| e.object(vec![("name", Val::Str(&v.name)), ("type", Val::Str(&v.ty))], depth))?
             }
@@ -976,8 +1025,9 @@ impl Encoder {
 }
 
 impl Program {
-    fn encode_bytes(&self) -> Result<Vec<u8>, ProgramError> {
-        let mut e = Encoder { out: Vec::new() };
+    /// Canonical bytes; `capacity` is the expected length when known (parse), else 0.
+    fn encode_bytes(&self, capacity: usize) -> Result<Vec<u8>, ProgramError> {
+        let mut e = Encoder { out: Vec::with_capacity(capacity) };
         e.object(
             vec![
                 ("format", Val::Str(FORMAT)),

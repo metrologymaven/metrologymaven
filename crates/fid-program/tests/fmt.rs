@@ -4,8 +4,8 @@
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_program::{
-    program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES, MAX_MAJOR,
-    MAX_OBJECTS, MAX_STEPS, MAX_TOKENS, STEP_KINDS,
+    parse_cost, program_schema, step_fields, Arg, Bound, Program, ProgramError, Step, StepKind, Uuid7, MAX_BYTES,
+    MAX_COST, MAX_MAJOR, MAX_STEPS, STEP_KINDS,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -230,21 +230,21 @@ fn req006_bounds() {
     let big = vec![b' '; MAX_BYTES + 1];
     assert_eq!(Program::parse(&big), Err(ProgramError::ProgramTooLarge(Bound::Bytes)));
 
-    let objects = vec!["{}"; MAX_OBJECTS + 1].join(",");
-    let doc = invoke_with_literal(&format!("[{objects}]"));
-    assert_eq!(Program::parse(doc.as_bytes()), Err(ProgramError::ProgramTooLarge(Bound::Objects)));
+    // Memory budget: 200,000 empty objects or 1,100,000 numbers cost more than MAX_COST.
+    for (item, n) in [("{}", 200_000), ("0", 1_100_000)] {
+        let doc = invoke_with_literal(&format!("[{}]", vec![item; n].join(",")));
+        assert!(parse_cost(doc.as_bytes()) > MAX_COST, "{item}");
+        assert_eq!(Program::parse(doc.as_bytes()), Err(ProgramError::ProgramTooLarge(Bound::Memory)), "{item}");
+    }
 
-    let tokens = vec!["0"; MAX_TOKENS + 1].join(",");
-    let doc = invoke_with_literal(&format!("[{tokens}]"));
-    assert_eq!(Program::parse(doc.as_bytes()), Err(ProgramError::ProgramTooLarge(Bound::Tokens)));
-
-    // Structural characters inside strings are not counted.
-    let quoted = format!("\"{}\"", "{".repeat(MAX_OBJECTS + 1));
+    // Structural characters inside strings cost as string bytes only.
+    let quoted = format!("\"{}\"", "{".repeat(1_000_000));
     Program::parse(invoke_with_literal(&quoted).as_bytes()).unwrap();
 
-    // MAX_STEPS + 1 comment steps; IDs differ in their last 12 hex digits.
+    // MAX_STEPS + 1 return steps (the cheapest kind, so the step bound is reached before
+    // the memory budget); IDs differ in their last 12 hex digits.
     let steps: Vec<String> = (0..=MAX_STEPS)
-        .map(|i| format!("{{\"kind\":\"comment\",\"step_id\":\"018f0000-0000-7000-8000-{i:012x}\",\"text\":\"\"}}"))
+        .map(|i| format!("{{\"kind\":\"return\",\"step_id\":\"018f0000-0000-7000-8000-{i:012x}\"}}"))
         .collect();
     let doc = header(&steps.join(","));
     assert!(doc.len() < MAX_BYTES);
