@@ -1,0 +1,9364 @@
+{
+ "_license": "CC-BY-4.0",
+ "_generator": "make_cases.py",
+ "params_schema": {
+  "type": "object",
+  "properties": {
+   "n": {
+    "type": "integer"
+   },
+   "x": {
+    "type": "number"
+   },
+   "name": {
+    "type": "string"
+   },
+   "flag": {
+    "type": "boolean"
+   },
+   "opt": {
+    "type": "string"
+   },
+   "ids": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   },
+   "nums": {
+    "type": "array",
+    "items": {
+     "type": "integer"
+    }
+   },
+   "fs": {
+    "type": "array",
+    "items": {
+     "type": "number"
+    }
+   },
+   "feature": {
+    "type": "string",
+    "x-ref": "feature"
+   },
+   "items": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "kind": {
+       "type": "string"
+      },
+      "n": {
+       "type": "integer"
+      }
+     }
+    }
+   },
+   "tags": {
+    "type": "object"
+   },
+   "cfg": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "type": "string"
+     },
+     "limit": {
+      "type": "number"
+     }
+    }
+   }
+  }
+ },
+ "types": {
+  "doc": "map",
+  "doc.count": "int",
+  "doc.mode": "string",
+  "doc.active": "ref",
+  "doc.tol": "float",
+  "doc.points": "list<map>",
+  "doc.points[].x": "float",
+  "doc.points[].id": "ref",
+  "doc.meta": "map",
+  "doc.meta.owner": "string",
+  "doc.flags": "list<bool>",
+  "doc.grid": "list<list<int>>"
+ },
+ "cases": [
+  {
+   "name": "lit_true",
+   "expr": "true",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 1
+   }
+  },
+  {
+   "name": "lit_false",
+   "expr": "false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 1
+   }
+  },
+  {
+   "name": "not_false",
+   "expr": "!false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "int_eq",
+   "expr": "params.n == 5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "int_ne",
+   "expr": "params.n != 5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "range_and",
+   "expr": "params.n > 4 && params.n < 6",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 7
+   }
+  },
+  {
+   "name": "and_short_circuit",
+   "expr": "params.n < 4 && params.n > 0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 4
+   }
+  },
+  {
+   "name": "or_rhs",
+   "expr": "params.n < 4 || params.flag",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 5
+   }
+  },
+  {
+   "name": "or_short_circuit",
+   "expr": "params.flag || params.n < 4",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "float_ge",
+   "expr": "params.x >= 2.5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "mixed_gt",
+   "expr": "params.x > 2",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "mixed_eq",
+   "expr": "params.n == 5.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "mixed_lt",
+   "expr": "params.n < 5.5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "negative_literal",
+   "expr": "params.n > -5 && -2.5 < params.x",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 7
+   }
+  },
+  {
+   "name": "exponent_literal",
+   "expr": "params.x < 1e3",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "string_eq",
+   "expr": "params.name == \"probe\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "string_single_quote",
+   "expr": "params.name == 'probe'",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "string_escape",
+   "expr": "params.name == \"a\\\"b\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "a\"b",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "string_order",
+   "expr": "params.name < \"q\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "string_order_case",
+   "expr": "\"Probe\" < params.name",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "size_list",
+   "expr": "size(params.ids) == 3",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "size_string",
+   "expr": "size(params.name) == 5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "size_map",
+   "expr": "size(params.tags) == 2",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "size_unicode",
+   "expr": "size(\"héllo\") == 5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "size_empty",
+   "expr": "size(params.ids) == 0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "in_list_true",
+   "expr": "\"b\" in params.ids",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "in_list_false",
+   "expr": "\"z\" in params.ids",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "in_int_list",
+   "expr": "2 in params.nums",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "in_mixed",
+   "expr": "2.0 in params.nums",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "in_map_key",
+   "expr": "\"a\" in params.tags",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "in_literal_list",
+   "expr": "params.n in [1, 3, 5]",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 6
+   }
+  },
+  {
+   "name": "in_mixed_literal",
+   "expr": "params.x in [1, 2.5]",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 5
+   }
+  },
+  {
+   "name": "in_doc_mode",
+   "expr": "doc.mode in [\"edit\", \"view\"]",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 5
+   }
+  },
+  {
+   "name": "in_ref_list",
+   "expr": "doc.active in [params.feature]",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "has_absent",
+   "expr": "has(params.opt)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 2
+   }
+  },
+  {
+   "name": "has_present",
+   "expr": "has(params.name)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "has_guard",
+   "expr": "has(params.opt) ? params.opt == \"x\" : true",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "has_nested",
+   "expr": "has(params.cfg.limit)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "has_nested_absent",
+   "expr": "has(doc.meta.owner)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {},
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 2
+   }
+  },
+  {
+   "name": "cond_numeric_mix",
+   "expr": "(params.flag ? params.n : params.x) > 4",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 5
+   }
+  },
+  {
+   "name": "cond_else",
+   "expr": "(!params.flag ? params.n : params.x) > 4",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 6
+   }
+  },
+  {
+   "name": "cond_nested",
+   "expr": "params.n > 3 ? params.n > 4 ? \"big\" == \"big\" : false : false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 11
+   }
+  },
+  {
+   "name": "cond_literal",
+   "expr": "false ? 1 > 2 : !false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 4
+   }
+  },
+  {
+   "name": "precedence_or_and",
+   "expr": "true || false && false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "precedence_parens",
+   "expr": "(true || false) && false",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 4
+   }
+  },
+  {
+   "name": "not_or",
+   "expr": "!(params.n > 3) || params.name != \"x\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 8
+   }
+  },
+  {
+   "name": "nested_field",
+   "expr": "params.cfg.mode == \"fast\" && params.cfg.limit > 1",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 7
+   }
+  },
+  {
+   "name": "all_true",
+   "expr": "all(i in params.ids, size(i) == 1)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 17
+   }
+  },
+  {
+   "name": "exists_true",
+   "expr": "exists(i in params.ids, i == \"c\")",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 14
+   }
+  },
+  {
+   "name": "exists_false",
+   "expr": "exists(i in params.ids, i == \"q\")",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 14
+   }
+  },
+  {
+   "name": "all_items_field",
+   "expr": "all(it in params.items, it.n >= 1)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 12
+   }
+  },
+  {
+   "name": "exists_items_field",
+   "expr": "exists(it in params.items, it.kind == \"circle\")",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 12
+   }
+  },
+  {
+   "name": "all_points",
+   "expr": "all(p in doc.points, p.x >= 0.0)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 12
+   }
+  },
+  {
+   "name": "exists_ref",
+   "expr": "exists(p in doc.points, p.id == doc.active)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 12
+   }
+  },
+  {
+   "name": "ref_eq",
+   "expr": "doc.active == params.feature",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "nested_quant",
+   "expr": "all(r in doc.grid, all(v in r, v > 0))",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 20
+   }
+  },
+  {
+   "name": "exists_in_row",
+   "expr": "exists(r in doc.grid, 3 in r)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 10
+   }
+  },
+  {
+   "name": "exists_bool",
+   "expr": "exists(f in doc.flags, f)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 6
+   }
+  },
+  {
+   "name": "all_bool",
+   "expr": "all(f in doc.flags, f)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 6
+   }
+  },
+  {
+   "name": "all_empty",
+   "expr": "all(i in params.ids, false)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "exists_empty",
+   "expr": "exists(i in params.ids, true)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 2
+   }
+  },
+  {
+   "name": "has_var_field",
+   "expr": "all(it in params.items, has(it.n))",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle"
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 10
+   }
+  },
+  {
+   "name": "doc_guard",
+   "expr": "has(doc.meta.owner) && doc.meta.owner == \"qa\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 6
+   }
+  },
+  {
+   "name": "doc_and",
+   "expr": "doc.count >= 3 && doc.mode != \"locked\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 7
+   }
+  },
+  {
+   "name": "message_key",
+   "expr": "@message(align.needs_four) size(params.ids) >= 4",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "align.needs_four",
+    "steps": 4
+   }
+  },
+  {
+   "name": "bound_exact",
+   "expr": "@bound(5) params.n == 5 && params.flag",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 5
+   }
+  },
+  {
+   "name": "bound_one_short",
+   "expr": "@bound(4) params.n == 5 && params.flag",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "precondition_budget",
+    "steps": 4
+   }
+  },
+  {
+   "name": "bound_quant",
+   "expr": "@bound(3) all(i in params.ids, true)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "precondition_budget",
+    "steps": 3
+   }
+  },
+  {
+   "name": "bound_and_message",
+   "expr": "@bound(100) @message(doc.too_few) doc.count > 5",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "doc.too_few",
+    "steps": 3
+   }
+  },
+  {
+   "name": "nan_lt",
+   "expr": "doc.tol < 1.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "nan"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "nan_operand",
+    "steps": 3
+   }
+  },
+  {
+   "name": "nan_self_eq",
+   "expr": "doc.tol == doc.tol",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "nan"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "nan_operand",
+    "steps": 3
+   }
+  },
+  {
+   "name": "nan_mixed",
+   "expr": "params.n == doc.tol",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "nan"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "nan_operand",
+    "steps": 3
+   }
+  },
+  {
+   "name": "nan_in_list",
+   "expr": "1.0 in params.fs",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "nan"
+      },
+      {
+       "$float": "1.0"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "nan_operand",
+    "steps": 3
+   }
+  },
+  {
+   "name": "nan_unvisited",
+   "expr": "params.flag || doc.tol < 1.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "nan"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 2
+   }
+  },
+  {
+   "name": "neg_zero_total_order_eq",
+   "expr": "params.x == 0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "-0.0"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_total_order_lt",
+   "expr": "params.x < 0.0",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "-0.0"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "neg_zero_vs_int",
+   "expr": "0 == params.x",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "-0.0"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "int_max_vs_float",
+   "expr": "params.n < 9223372036854775807.0",
+   "context": {
+    "params": {
+     "n": {
+      "$int": "9223372036854775807"
+     },
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "exact_big_int_ne",
+   "expr": "params.n == 9007199254740993.0",
+   "context": {
+    "params": {
+     "n": {
+      "$int": "9007199254740993"
+     },
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "exact_big_int_gt",
+   "expr": "params.n > 9007199254740992.0",
+   "context": {
+    "params": {
+     "n": {
+      "$int": "9007199254740993"
+     },
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "missing_doc_field",
+   "expr": "doc.count > 1",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "missing_field",
+    "steps": 2
+   }
+  },
+  {
+   "name": "missing_item_field",
+   "expr": "exists(it in params.items, it.n > 2)",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle"
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "missing_field",
+    "steps": 11
+   }
+  },
+  {
+   "name": "missing_unvisited_cond",
+   "expr": "params.flag ? true : doc.count > 1",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": true,
+    "steps": 3
+   }
+  },
+  {
+   "name": "missing_unvisited_and",
+   "expr": "!params.flag && doc.count > 1",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 3
+   }
+  },
+  {
+   "name": "runtime_type_mismatch",
+   "expr": "doc.mode == \"edit\"",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": 7,
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "type_error",
+    "steps": 3
+   }
+  },
+  {
+   "name": "runtime_not_bool",
+   "expr": "!params.flag",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": "yes",
+     "ids": [
+      "a",
+      "b",
+      "c"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "type_error",
+    "steps": 2
+   }
+  },
+  {
+   "name": "uniq_small",
+   "expr": "all(x in params.ids, all(y in params.ids, x != y))",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "i0",
+      "i1",
+      "i2",
+      "i3",
+      "i4",
+      "i5",
+      "i6",
+      "i7",
+      "i8",
+      "i9"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "result": false,
+    "message_key": "test.precondition_0",
+    "steps": 432
+   }
+  },
+  {
+   "name": "ac3_budget",
+   "expr": "all(x in params.ids, all(y in params.ids, x != y))",
+   "context": {
+    "params": {
+     "n": 5,
+     "x": {
+      "$float": "2.5"
+     },
+     "name": "probe",
+     "flag": true,
+     "ids": [
+      "id000",
+      "id001",
+      "id002",
+      "id003",
+      "id004",
+      "id005",
+      "id006",
+      "id007",
+      "id008",
+      "id009",
+      "id010",
+      "id011",
+      "id012",
+      "id013",
+      "id014",
+      "id015",
+      "id016",
+      "id017",
+      "id018",
+      "id019",
+      "id020",
+      "id021",
+      "id022",
+      "id023",
+      "id024",
+      "id025",
+      "id026",
+      "id027",
+      "id028",
+      "id029",
+      "id030",
+      "id031",
+      "id032",
+      "id033",
+      "id034",
+      "id035",
+      "id036",
+      "id037",
+      "id038",
+      "id039",
+      "id040",
+      "id041",
+      "id042",
+      "id043",
+      "id044",
+      "id045",
+      "id046",
+      "id047",
+      "id048",
+      "id049",
+      "id050",
+      "id051",
+      "id052",
+      "id053",
+      "id054",
+      "id055",
+      "id056",
+      "id057",
+      "id058",
+      "id059",
+      "id060",
+      "id061",
+      "id062",
+      "id063",
+      "id064",
+      "id065",
+      "id066",
+      "id067",
+      "id068",
+      "id069",
+      "id070",
+      "id071",
+      "id072",
+      "id073",
+      "id074",
+      "id075",
+      "id076",
+      "id077",
+      "id078",
+      "id079",
+      "id080",
+      "id081",
+      "id082",
+      "id083",
+      "id084",
+      "id085",
+      "id086",
+      "id087",
+      "id088",
+      "id089",
+      "id090",
+      "id091",
+      "id092",
+      "id093",
+      "id094",
+      "id095",
+      "id096",
+      "id097",
+      "id098",
+      "id099",
+      "id100",
+      "id101",
+      "id102",
+      "id103",
+      "id104",
+      "id105",
+      "id106",
+      "id107",
+      "id108",
+      "id109",
+      "id110",
+      "id111",
+      "id112",
+      "id113",
+      "id114",
+      "id115",
+      "id116",
+      "id117",
+      "id118",
+      "id119",
+      "id120",
+      "id121",
+      "id122",
+      "id123",
+      "id124",
+      "id125",
+      "id126",
+      "id127",
+      "id128",
+      "id129",
+      "id130",
+      "id131",
+      "id132",
+      "id133",
+      "id134",
+      "id135",
+      "id136",
+      "id137",
+      "id138",
+      "id139",
+      "id140",
+      "id141",
+      "id142",
+      "id143",
+      "id144",
+      "id145",
+      "id146",
+      "id147",
+      "id148",
+      "id149",
+      "id150",
+      "id151",
+      "id152",
+      "id153",
+      "id154",
+      "id155",
+      "id156",
+      "id157",
+      "id158",
+      "id159",
+      "id160",
+      "id161",
+      "id162",
+      "id163",
+      "id164",
+      "id165",
+      "id166",
+      "id167",
+      "id168",
+      "id169",
+      "id170",
+      "id171",
+      "id172",
+      "id173",
+      "id174",
+      "id175",
+      "id176",
+      "id177",
+      "id178",
+      "id179",
+      "id180",
+      "id181",
+      "id182",
+      "id183",
+      "id184",
+      "id185",
+      "id186",
+      "id187",
+      "id188",
+      "id189",
+      "id190",
+      "id191",
+      "id192",
+      "id193",
+      "id194",
+      "id195",
+      "id196",
+      "id197",
+      "id198",
+      "id199"
+     ],
+     "nums": [
+      1,
+      2,
+      3
+     ],
+     "fs": [
+      {
+       "$float": "0.5"
+      },
+      {
+       "$float": "1.5"
+      }
+     ],
+     "feature": {
+      "$ref": "F1"
+     },
+     "items": [
+      {
+       "kind": "plane",
+       "n": 3
+      },
+      {
+       "kind": "circle",
+       "n": 1
+      }
+     ],
+     "tags": {
+      "a": "1",
+      "b": "2"
+     },
+     "cfg": {
+      "mode": "fast",
+      "limit": {
+       "$float": "2.0"
+      }
+     }
+    },
+    "doc": {
+     "count": 3,
+     "mode": "edit",
+     "active": {
+      "$ref": "F1"
+     },
+     "tol": {
+      "$float": "0.01"
+     },
+     "points": [
+      {
+       "x": {
+        "$float": "0.0"
+       },
+       "id": {
+        "$ref": "P1"
+       }
+      },
+      {
+       "x": {
+        "$float": "1.0"
+       },
+       "id": {
+        "$ref": "P2"
+       }
+      }
+     ],
+     "meta": {
+      "owner": "qa"
+     },
+     "flags": [
+      true,
+      false
+     ],
+     "grid": [
+      [
+       1,
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    }
+   },
+   "expect": {
+    "error": "precondition_budget",
+    "steps": 10000
+   }
+  }
+ ]
+}
