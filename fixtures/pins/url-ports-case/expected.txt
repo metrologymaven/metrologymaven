@@ -1,0 +1,3 @@
+PIN-MOVING Cargo.toml a
+PIN-MOVING Cargo.toml b
+PIN-MOVING Cargo.toml c

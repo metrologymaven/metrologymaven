@@ -192,7 +192,8 @@ fn write_str(out: &mut String, s: &str) {
 }
 
 /// RFC 8785 §3.2.2.3: ECMAScript Number::toString for finite doubles,
-/// built from Rust's shortest round-trip digits.
+/// built from Rust's shortest round-trip digits, with exact ties resolved to the even
+/// digit (ECMA-262 Number::toString, Note 2), as V8, CPython and other JCS writers do.
 pub fn format_number(v: f64) -> Result<String, CanonError> {
     if !v.is_finite() {
         return Err(CanonError::NonFiniteNumber);
@@ -200,10 +201,9 @@ pub fn format_number(v: f64) -> Result<String, CanonError> {
     if v == 0.0 {
         return Ok("0".to_string());
     }
-    let sci = format!("{:e}", v.abs()); // e.g. "1.2345e-7", "5e-324"
-    let (mant, exp) = sci.split_once('e').ok_or(CanonError::NonFiniteNumber)?;
-    let exp: i32 = exp.parse().map_err(|_| CanonError::NonFiniteNumber)?;
-    let digits: String = mant.chars().filter(|c| *c != '.').collect();
+    // Rust's `{:e}` gives the shortest round-trip digits, e.g. "1.2345e-7", "5e-324".
+    let (shortest, exp) = sci_digits(&format!("{:e}", v.abs())).ok_or(CanonError::NonFiniteNumber)?;
+    let digits = tie_to_even(v.abs(), &shortest, exp).unwrap_or(shortest);
     let k = digits.len() as i32;
     let n = exp + 1;
     let mut s = String::new();
@@ -235,6 +235,65 @@ pub fn format_number(v: f64) -> Result<String, CanonError> {
         s.push_str(&e.abs().to_string());
     }
     Ok(s)
+}
+
+/// Splits Rust's `{:e}` output (`"d.ddde-x"`) into its significant digits and decimal exponent.
+fn sci_digits(sci: &str) -> Option<(String, i32)> {
+    let (mant, exp) = sci.split_once('e')?;
+    let exp: i32 = exp.parse().ok()?;
+    Some((mant.chars().filter(|c| *c != '.').collect(), exp))
+}
+
+/// ECMA-262 Number::toString, Note 2: if two shortest digit strings are equally close to
+/// `a`, the even one wins. Rust's shortest formatting rounds such exact midpoints up, so
+/// when `a` lies exactly halfway between `digits` and its neighbour, this returns the even
+/// neighbour (if it also round-trips to `a`). `None` keeps `digits`.
+///
+/// Exactness is decided on Rust's exact-mode digits, which are correctly rounded and need
+/// no tie rule here: a midpoint has a finite expansion of `k + 1` digits, and every double's
+/// full expansion (at most 767 significant digits) fits in the 801 digits requested.
+fn tie_to_even(a: f64, digits: &str, exp: i32) -> Option<String> {
+    let k = digits.len();
+    let last = *digits.as_bytes().last()?;
+    if (last - b'0') % 2 == 0 {
+        return None;
+    }
+    // Cheap filter: an exact midpoint prints exactly with k + 1 significant digits.
+    let (near, near_exp) = sci_digits(&format!("{a:.k$e}"))?;
+    if near_exp != exp || !near.ends_with('5') {
+        return None;
+    }
+    let stem = near.get(..k)?;
+    let head = digits.get(..k - 1)?;
+    let candidate = if stem == digits {
+        // Midpoint above `digits`: the even neighbour is one unit up (a carry from 9 would
+        // give a shorter string, which the shortest search would already have found).
+        if last == b'9' {
+            return None;
+        }
+        format!("{head}{}", char::from(last + 1))
+    } else if stem.get(..k - 1) == Some(head) && stem.as_bytes().last() == Some(&(last - 1)) {
+        // Midpoint below `digits`: the even neighbour is one unit down.
+        stem.to_string()
+    } else {
+        return None;
+    };
+    if candidate.starts_with('0') {
+        return None;
+    }
+    // Exactness: the full expansion must be stem, '5', then only zeros.
+    let (full, full_exp) = sci_digits(&format!("{a:.800e}"))?;
+    let tail = full.get(k + 1..)?;
+    if full_exp != exp || !full.starts_with(&near) || !tail.bytes().all(|b| b == b'0') {
+        return None;
+    }
+    // The even neighbour must still round-trip (it is as close as `digits`, but the
+    // rounding interval can exclude its ends).
+    let back: f64 = format!("{candidate}e{}", i64::from(exp) - k as i64 + 1).parse().ok()?;
+    if back.to_bits() != a.to_bits() {
+        return None;
+    }
+    Some(candidate.trim_end_matches('0').to_string())
 }
 
 // ------------------------------------------------------------------ parser
