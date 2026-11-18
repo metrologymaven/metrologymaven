@@ -19,7 +19,7 @@
    "effects": ["align.run_bestfit@1"],
    "algorithms": [],
    "exposure": ["cli", "mcp", "python", "gui"],
-   "lifecycle": {"state": "experimental", "phase": "P0"},
+   "lifecycle": {"state": "active", "phase": "P0"},
    "web": "available"
   },
   {
@@ -39,7 +39,7 @@
    "effects": ["device.connect@1"],
    "algorithms": [],
    "exposure": ["cli", "mcp", "gui"],
-   "lifecycle": {"state": "experimental", "phase": "P2"},
+   "lifecycle": {"state": "active", "phase": "P2"},
    "network": "device",
    "web": "unavailable",
    "web_note": "Device I/O needs the desktop app."
@@ -61,7 +61,7 @@
    "effects": ["egress.send@1"],
    "algorithms": [],
    "exposure": ["cli", "mcp", "gui"],
-   "lifecycle": {"state": "experimental", "phase": "P0"},
+   "lifecycle": {"state": "active", "phase": "P0"},
    "network": "egress",
    "web": "unavailable",
    "web_note": "Egress runs in the desktop app.",
@@ -84,7 +84,7 @@
    "effects": ["update.check@1"],
    "algorithms": [],
    "exposure": ["cli", "mcp", "gui"],
-   "lifecycle": {"state": "experimental", "phase": "P1a"},
+   "lifecycle": {"state": "active", "phase": "P1a"},
    "network": "egress",
    "web": "unavailable",
    "web_note": "Update checks run in the desktop app.",
