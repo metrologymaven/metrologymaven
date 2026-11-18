@@ -13,6 +13,6 @@
 # cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] [--protocol <md>]  (FLOW.STUDY.PROTO)
 xtask = "run -q -p fid-xtask --"
 
-# Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.81).
+# Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.87).
 [resolver]
 incompatible-rust-versions = "fallback"

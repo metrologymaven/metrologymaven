@@ -71,6 +71,7 @@ The pure cryptographic core shared by signer and verifier: DSSE v1.0 pre-authent
 - **Determinism:** D0 for encoding and verification. ECDSA signing output is not deterministic unless the keystore uses RFC 6979; tests use Ed25519 for byte-exact goldens.
 - **Performance budget:** verify one signature over a 1 MiB payload in under 5 ms [unverified until measured].
 - **Crate:** `fid-sign-core` (no OS dependencies; builds for wasm32).
+- **MSRV note:** MSRV raised to 1.87 to take the fixed p256/crypto-bigint (p256 0.14; RUSTSEC-2026-0387 is fixed in crypto-bigint 0.7.6+); approved by maintainer 2026-11-18.
 
 ## Test fixtures
 

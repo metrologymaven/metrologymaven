@@ -18,7 +18,7 @@ test-signer = []
 fid-trust-canon = { path = "../fid-trust-canon" }
 sha2 = { version = "0.10", default-features = false }
 # RustCrypto ECDSA P-256 / SHA-256.
-p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
+p256 = { version = "0.14", default-features = false, features = ["ecdsa"] }
 # Ed25519 with verify_strict (rejects small-order keys and non-canonical encodings).
 ed25519-dalek = { version = "2", default-features = false, features = ["fast", "zeroize"] }
 

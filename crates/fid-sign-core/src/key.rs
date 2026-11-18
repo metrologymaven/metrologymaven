@@ -59,9 +59,8 @@ impl PublicKey {
 
     /// An uncompressed SEC1 P-256 point; it must lie on the curve.
     pub fn p256_from_sec1(point: &[u8]) -> Result<PublicKey, SigError> {
-        let bytes: [u8; 65] = point
-            .try_into()
-            .map_err(|_| SigError::Malformed("P-256 key is not a 65-byte uncompressed point"))?;
+        let bytes: [u8; 65] =
+            point.try_into().map_err(|_| SigError::Malformed("P-256 key is not a 65-byte uncompressed point"))?;
         if bytes[0] != 0x04 {
             return Err(SigError::Malformed("P-256 key is not a 65-byte uncompressed point"));
         }

@@ -48,7 +48,8 @@ fn field<'a>(rec: &'a [(String, Value)], name: &str) -> &'a str {
     }
 }
 
-const GOLDEN: [(&str, &str); 2] = [("golden/ed25519.dsse.json", "ed25519-test"), ("golden/p256.dsse.json", "p256-test")];
+const GOLDEN: [(&str, &str); 2] =
+    [("golden/ed25519.dsse.json", "ed25519-test"), ("golden/p256.dsse.json", "p256-test")];
 
 // AC-1 ---------------------------------------------------------------------------------
 
@@ -153,7 +154,9 @@ fn ac4_rsa_is_unsupported_algorithm() {
 #[test]
 fn ac4_high_s_and_non_canonical_der_are_invalid() {
     let pem = text("keys/p256-test.pub.pem");
-    for name in ["golden/p256-high-s.dsse.json", "golden/p256-nonminimal-int.dsse.json", "golden/p256-longform-len.dsse.json"] {
+    for name in
+        ["golden/p256-high-s.dsse.json", "golden/p256-nonminimal-int.dsse.json", "golden/p256-longform-len.dsse.json"]
+    {
         let err = verify_json(&bytes(name), &pem).unwrap_err();
         assert_eq!(err, SigError::Invalid, "{name}");
         assert_eq!(err.code(), "sig.invalid");
@@ -357,7 +360,8 @@ fn malformed_and_unsupported_keys() {
     der[last] ^= 1;
     assert!(matches!(PublicKey::from_spki_der(&der), Err(SigError::Malformed(_))));
     // id-ecPublicKey on secp384r1 (1.3.132.0.34): unsupported curve.
-    let mut p384 = b"\x30\x76\x30\x10\x06\x07\x2a\x86\x48\xce\x3d\x02\x01\x06\x05\x2b\x81\x04\x00\x22\x03\x62\x00\x04".to_vec();
+    let mut p384 =
+        b"\x30\x76\x30\x10\x06\x07\x2a\x86\x48\xce\x3d\x02\x01\x06\x05\x2b\x81\x04\x00\x22\x03\x62\x00\x04".to_vec();
     p384.extend_from_slice(&[0u8; 96]);
     assert_eq!(PublicKey::from_spki_der(&p384), Err(SigError::UnsupportedAlgorithm));
 }

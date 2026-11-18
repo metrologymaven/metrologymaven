@@ -74,6 +74,7 @@ pub use software::SoftwareSigner;
 
 #[cfg(feature = "test-signer")]
 mod software {
+    // ed25519-dalek 2 and p256 0.14 use different `signature` major versions.
     use ed25519_dalek::Signer as _;
     use p256::ecdsa::signature::Signer as _;
 
@@ -111,7 +112,7 @@ mod software {
         pub fn p256_from_scalar(scalar: &[u8]) -> Result<SoftwareSigner, SigError> {
             let key = p256::ecdsa::SigningKey::from_slice(scalar)
                 .map_err(|_| SigError::Malformed("P-256 private scalar out of range"))?;
-            let point = key.verifying_key().to_encoded_point(false);
+            let point = key.verifying_key().to_sec1_point(false);
             let public = PublicKey::p256_from_sec1(point.as_bytes())?;
             Ok(SoftwareSigner { key: Key::P256(key), public })
         }
