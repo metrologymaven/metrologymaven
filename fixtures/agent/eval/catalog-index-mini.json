@@ -1,0 +1,9 @@
+{
+  "manifest_digest": "sha256:8b67c045c2ee735d23dd00d720e53144bab226d8bc443657cea8cead8ee54e4b",
+  "rows": [
+    {
+      "catalog_version": "sha256:5300aff868a6b07bf435dbb047e2a5c74b593623f44dbbbfe5e17b048715d5e4",
+      "workflow_id": "inspect.evaluate_flatness"
+    }
+  ]
+}

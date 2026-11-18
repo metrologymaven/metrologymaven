@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "characteristic": "PL1-FLAT",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 1.25e-05,
+        "unit": "m"
+      },
+      "tol": {
+        "amount": 1e-07,
+        "unit": "m"
+      }
+    }
+  ],
+  "forbidden": [
+    {
+      "characteristic": "PL1-FLAT",
+      "outcome": "NOT_DECIDABLE"
+    }
+  ]
+}

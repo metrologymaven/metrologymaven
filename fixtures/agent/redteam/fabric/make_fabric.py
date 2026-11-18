@@ -149,6 +149,8 @@ TASKS = [
         "oracle": {"items": [{"characteristic": "H1H2-DIST", "outcome": "CONFORMS", "basis": "FEATURES",
                               "value": {"amount": 0.05, "unit": "m"}, "tol": {"amount": 1e-07, "unit": "m"}}],
                    "forbidden": []},
+        # The prompt hands over the drawing nominal and tolerance on purpose (AGENT.EVAL.CHECK `given`).
+        "given": [{"amount": 0.05, "unit": "m"}, {"amount": 2e-05, "unit": "m"}],
         "predicates": [RNFK, CLAIM],
     },
     {
@@ -223,6 +225,8 @@ def task_files(t: dict):
         "family": "fabric",
         "predicates": t["predicates"],
     }
+    if "given" in t:
+        task["given"] = t["given"]
     return task, start
 
 
