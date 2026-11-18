@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "version": "1.4.0",
+  "channel": "stable",
+  "artefacts": [
+    {
+      "name": "fid-1.4.0-x86_64.msi",
+      "kind": "installer",
+      "url": "https://example.invalid/fid-1.4.0-x86_64.msi"
+    },
+    {
+      "name": "fid-1.4.0-aarch64.dmg",
+      "kind": "installer",
+      "url": "https://example.invalid/fid-1.4.0-aarch64.dmg"
+    },
+    {
+      "name": "fid-1.4.0-x86_64.AppImage",
+      "kind": "installer",
+      "url": "https://example.invalid/fid-1.4.0-x86_64.AppImage"
+    },
+    {
+      "name": "fid-1.4.0+src.tar.gz",
+      "kind": "source",
+      "url": "https://example.invalid/fid-1.4.0+src.tar.gz"
+    },
+    {
+      "name": "a b.msi",
+      "kind": "installer",
+      "url": "https://example.invalid/a b.msi"
+    },
+    {
+      "name": "SHA256SUMS",
+      "kind": "checksums",
+      "url": "https://example.invalid/SHA256SUMS"
+    },
+    {
+      "name": "SHA256SUMS.dsse.json",
+      "kind": "signature",
+      "url": "https://example.invalid/SHA256SUMS.dsse.json"
+    },
+    {
+      "name": "fid-1.4.0-x86_64.msi.spdx.json",
+      "kind": "sbom",
+      "url": "https://example.invalid/fid-1.4.0-x86_64.msi.spdx.json"
+    }
+  ]
+}

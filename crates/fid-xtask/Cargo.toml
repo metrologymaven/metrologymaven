@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,10 @@ path = "src/main.rs"
 # `personas-check` (FLOW.PERSONA.PERS); fid-accept is an `app` crate, so a direct dependency is allowed.
 fid-accept = { path = "../fid-accept" }
 fid-canon = { path = "../fid-canon" }
+# `rel sums` (ECO.REL.SIGN.SUMS): the shared `sha256:` digest type, and streaming SHA-256 over
+# artefacts (the same sha2 0.10 that fid-canon already uses, so no new crate in the graph).
+fid-types = { path = "../fid-types" }
+sha2 = "0.10"
 # Parses Cargo.toml and repos.toml for `pins` (same feature set as fid-knp1-lint).
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 

@@ -15,6 +15,9 @@
 //!
 //! `rel version-check` and `rel version-compare`: the product version scheme and tag check
 //! (spec node `ECO.REL.PROC.VERSION`), in [`rel::version`].
+//!
+//! `rel sums`: the release checksum file and checksum statement (spec node
+//! `ECO.REL.SIGN.SUMS`), in [`rel::sums`].
 
 pub mod crate_graph;
 pub mod plat_matrix_tiers;
