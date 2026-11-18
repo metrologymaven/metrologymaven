@@ -6,13 +6,17 @@ use fid_canon::{format_number, parse, to_canonical_bytes, CValue};
 
 const VECTORS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/canon/tie_vectors.json");
 
+/// Exact midpoints, given by their bits: 277575414244990.125, 64.044097900390625 and
+/// 0.00048923492431640625 (written as decimal literals, clippy would flag their precision).
 #[test]
 fn review_examples_round_ties_to_even() {
-    assert_eq!(format_number(277575414244990.125).unwrap(), "277575414244990.12");
-    assert_eq!(format_number(-277575414244990.125).unwrap(), "-277575414244990.12");
-    assert_eq!(format_number(64.044097900390625).unwrap(), "64.04409790039062");
-    assert_eq!(format_number(0.00048923492431640625).unwrap(), "0.0004892349243164062");
+    let a = f64::from_bits(0x42ef_8e81_fedc_cfc4);
+    assert_eq!(format_number(a).unwrap(), "277575414244990.12");
+    assert_eq!(format_number(-a).unwrap(), "-277575414244990.12");
+    assert_eq!(format_number(f64::from_bits(0x4050_02d2_8000_0000)).unwrap(), "64.04409790039062");
+    assert_eq!(format_number(f64::from_bits(0x3f40_0800_0000_0000)).unwrap(), "0.0004892349243164062");
     assert_eq!(canonical("[277575414244990.125]"), "[277575414244990.12]");
+    assert_eq!(canonical("[64.044097900390625,-0.00048923492431640625]"), "[64.04409790039062,-0.0004892349243164062]");
 }
 
 #[test]
