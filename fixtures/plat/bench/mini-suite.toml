@@ -1,0 +1,38 @@
+# PLAT.HW.SCHEMA AC-1 (hand-written, synthetic): a valid suite manifest with 2 workloads.
+# The datasets and digests are dummies; the real suite belongs to PLAT.HW.SUITE.
+# Expected: `cargo xtask plat-hw validate-suite --file <this>` exits 0 and prints
+# `mini.load` and `mini.render`, one per line.
+schema_version = 1
+suite_version = "0.0.0-fixture"
+
+[[workloads]]
+id = "mini.load"
+dataset = { id = "synthetic.cloud-a", sha256 = "sha256:1111111111111111111111111111111111111111111111111111111111111111" }
+repetitions = 5
+timeout_s = 120
+
+[[workloads.metrics]]
+name = "load_time"
+unit = "s"
+better = "lower"
+
+[[workloads.metrics]]
+name = "memory_peak"
+unit = "MiB"
+better = "lower"
+
+[[workloads]]
+id = "mini.render"
+dataset = { id = "synthetic.cloud-b", sha256 = "sha256:2222222222222222222222222222222222222222222222222222222222222222" }
+repetitions = 3
+timeout_s = 300
+
+[[workloads.metrics]]
+name = "frame_rate"
+unit = "fps"
+better = "higher"
+
+[[workloads.metrics]]
+name = "throughput"
+unit = "points_per_s"
+better = "higher"
