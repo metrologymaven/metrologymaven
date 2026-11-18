@@ -39,6 +39,8 @@ jobs:
         run: cargo test --workspace
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
+        run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
       - name: CLI smoke test
@@ -61,6 +63,7 @@ jobs:
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
           python tools/check_command_defs.py
+          python tools/check_knp1_findings.py
   msrv:
     # rust-version = 1.81 (Cargo.toml). Cargo 1.81 ignores the [resolver] key in
     # .cargo/config.toml; MSRV-aware resolution happens in the stable and lockfile jobs.

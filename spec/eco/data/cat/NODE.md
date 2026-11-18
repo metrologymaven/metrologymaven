@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-data]
+built_pr: 60
 satisfies: [REQ-ECO.DATA-001, REQ-ECO.DATA-004]
 covers: []
 depends_on: []
