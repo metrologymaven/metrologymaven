@@ -121,10 +121,14 @@ pub fn parse_request(line: &[u8]) -> Result<Request, Malformed> {
     };
     let v = match o.remove("v") {
         None => return Err(malformed(Some(id), "missing field v")),
-        Some(v) => uint(&v, u64::from(u16::MAX)).ok_or_else(|| malformed(Some(id), "v must be an integer from 0 to 65535"))?,
+        Some(v) => {
+            uint(&v, u64::from(u16::MAX)).ok_or_else(|| malformed(Some(id), "v must be an integer from 0 to 65535"))?
+        }
     };
     let op = match o.remove("op") {
-        Some(CValue::Str(s)) => OpName::parse(&s).ok_or_else(|| malformed(Some(id), "op is not a valid operation name"))?,
+        Some(CValue::Str(s)) => {
+            OpName::parse(&s).ok_or_else(|| malformed(Some(id), "op is not a valid operation name"))?
+        }
         Some(_) => return Err(malformed(Some(id), "op must be a string")),
         None => return Err(malformed(Some(id), "missing field op")),
     };
@@ -157,7 +161,11 @@ pub fn hello_versions(req: &Request) -> Result<Vec<u16>, Malformed> {
         return Err(bad("too many versions in hello"));
     }
     list.iter()
-        .map(|x| uint(x, u64::from(u16::MAX)).map(|n| n as u16).ok_or_else(|| bad("versions must be integers from 0 to 65535")))
+        .map(|x| {
+            uint(x, u64::from(u16::MAX))
+                .map(|n| n as u16)
+                .ok_or_else(|| bad("versions must be integers from 0 to 65535"))
+        })
         .collect()
 }
 
@@ -169,7 +177,8 @@ pub fn negotiate(client: &[u16]) -> Option<u16> {
 /// A reply body: a command result envelope or an event.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ReplyBody {
-    Envelope(Envelope),
+    /// Boxed: an envelope is much larger than an event value.
+    Envelope(Box<Envelope>),
     /// An object with a string `kind` (`hello`, `error`, or an operation's own kind).
     Event(CValue),
 }
@@ -259,7 +268,7 @@ impl Reply {
         let body = match (o.remove("envelope"), o.remove("event")) {
             (Some(env), None) => {
                 let bytes = to_canonical_bytes(&env).map_err(|_| WireError::MalformedMessage)?;
-                ReplyBody::Envelope(Envelope::decode(&bytes).map_err(|_| WireError::MalformedMessage)?)
+                ReplyBody::Envelope(Box::new(Envelope::decode(&bytes).map_err(|_| WireError::MalformedMessage)?))
             }
             (None, Some(ev @ CValue::Obj(_))) => ReplyBody::Event(ev),
             _ => return Err(WireError::MalformedMessage),

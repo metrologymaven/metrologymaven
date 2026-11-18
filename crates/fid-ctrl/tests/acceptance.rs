@@ -20,7 +20,7 @@ struct TestOps;
 impl Handler for TestOps {
     fn handle(&self, req: &Request) -> ReplyBody {
         if req.op.as_str() == "env.test" {
-            return ReplyBody::Envelope(Envelope::computed("ctrl.ping@1", CValue::Bool(true)));
+            return ReplyBody::Envelope(Box::new(Envelope::computed("ctrl.ping@1", CValue::Bool(true))));
         }
         let mut o = BTreeMap::new();
         o.insert("kind".to_string(), CValue::Str("pong".into()));
