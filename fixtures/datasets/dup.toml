@@ -1,0 +1,37 @@
+# ECO.DATA.CAT fixture (dup.toml). Synthetic entries only. MIT OR Apache-2.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",
+                   "ODbL-1.0", "PDDL-1.0"]
+
+[[dataset]]
+id = "same-id"
+title = "Synthetic dataset same-id"
+source = "https://example.org/datasets/same-id"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/same-id.zip"]
+
+[[dataset]]
+id = "other-id"
+title = "Synthetic dataset other-id"
+source = "https://example.org/datasets/other-id"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/other-id.zip"]
+
+[[dataset]]
+id = "same-id"
+title = "Synthetic dataset same-id"
+source = "https://example.org/datasets/same-id"
+licence = "CC-BY-4.0"
+size_bytes = 1024
+sha256 = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+owner = "KRN"
+redistribution = "mirror"
+urls = ["https://example.org/files/same-id.zip"]

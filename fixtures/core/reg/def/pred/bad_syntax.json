@@ -1,0 +1,307 @@
+{
+ "_license": "CC-BY-4.0",
+ "_generator": "make_cases.py",
+ "params_schema": {
+  "type": "object",
+  "properties": {
+   "n": {
+    "type": "integer"
+   },
+   "x": {
+    "type": "number"
+   },
+   "name": {
+    "type": "string"
+   },
+   "flag": {
+    "type": "boolean"
+   },
+   "opt": {
+    "type": "string"
+   },
+   "ids": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   },
+   "nums": {
+    "type": "array",
+    "items": {
+     "type": "integer"
+    }
+   },
+   "fs": {
+    "type": "array",
+    "items": {
+     "type": "number"
+    }
+   },
+   "feature": {
+    "type": "string",
+    "x-ref": "feature"
+   },
+   "items": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "kind": {
+       "type": "string"
+      },
+      "n": {
+       "type": "integer"
+      }
+     }
+    }
+   },
+   "tags": {
+    "type": "object"
+   },
+   "cfg": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "type": "string"
+     },
+     "limit": {
+      "type": "number"
+     }
+    }
+   },
+   "load": {
+    "type": "integer"
+   },
+   "repeat": {
+    "type": "boolean"
+   }
+  }
+ },
+ "types": {
+  "doc": "map",
+  "doc.count": "int",
+  "doc.mode": "string",
+  "doc.active": "ref",
+  "doc.tol": "float",
+  "doc.points": "list<map>",
+  "doc.points[].x": "float",
+  "doc.points[].id": "ref",
+  "doc.meta": "map",
+  "doc.meta.owner": "string",
+  "doc.flags": "list<bool>",
+  "doc.grid": "list<list<int>>",
+  "doc.now": "int"
+ },
+ "cases": [
+  {
+   "name": "loop_while",
+   "expr": "while params.n > 0",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "loop_for",
+   "expr": "params.flag && for(i in params.ids, true)",
+   "code": "fpl_syntax",
+   "pos": 15
+  },
+  {
+   "name": "user_function",
+   "expr": "my_check(params.n)",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "user_function_inner",
+   "expr": "params.n > 0 && double(params.n) > 2",
+   "code": "fpl_syntax",
+   "pos": 16
+  },
+  {
+   "name": "method_call",
+   "expr": "params.ids.contains(\"a\")",
+   "code": "fpl_syntax",
+   "pos": 11
+  },
+  {
+   "name": "lambda",
+   "expr": "lambda x: x",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "assignment",
+   "expr": "params.n = 5",
+   "code": "fpl_syntax",
+   "pos": 9
+  },
+  {
+   "name": "arithmetic",
+   "expr": "params.n + 1 > 2",
+   "code": "fpl_syntax",
+   "pos": 9
+  },
+  {
+   "name": "chained_comparison",
+   "expr": "params.n > 1 > 0",
+   "code": "fpl_syntax",
+   "pos": 13
+  },
+  {
+   "name": "unterminated_string",
+   "expr": "params.name == \"abc",
+   "code": "fpl_syntax",
+   "pos": 15
+  },
+  {
+   "name": "annotation_char",
+   "expr": "@bound(5) true",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "keyword_root",
+   "expr": "now > 3",
+   "code": "fpl_syntax",
+   "pos": 0
+  },
+  {
+   "name": "keyword_variable",
+   "expr": "all(for in params.ids, true)",
+   "code": "fpl_syntax",
+   "pos": 4
+  },
+  {
+   "name": "int_overflow",
+   "expr": "params.n > 99999999999999999999",
+   "code": "fpl_syntax",
+   "pos": 11
+  },
+  {
+   "name": "has_literal",
+   "expr": "has(1)",
+   "code": "fpl_syntax",
+   "pos": 4
+  },
+  {
+   "name": "rebound_var",
+   "expr": "all(x in params.ids, all(x in params.ids, true))",
+   "code": "fpl_syntax",
+   "pos": 25
+  },
+  {
+   "name": "stray_char",
+   "expr": "params.n > 1 # c",
+   "code": "fpl_syntax",
+   "pos": 13
+  },
+  {
+   "name": "depth_not",
+   "expr": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!true",
+   "code": "fpl_syntax",
+   "pos": 63
+  },
+  {
+   "name": "depth_parens",
+   "expr": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "code": "fpl_syntax",
+   "pos": 64
+  },
+  {
+   "name": "depth_nested_and",
+   "expr": "true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true && (true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "code": "fpl_syntax",
+   "pos": 576
+  },
+  {
+   "name": "unknown_param",
+   "expr": "params.nope == 1",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "unknown_doc_field",
+   "expr": "doc.count > 0 && doc.cnt > 0",
+   "code": "fpl_type",
+   "pos": 17
+  },
+  {
+   "name": "unknown_item_field",
+   "expr": "all(it in params.items, it.colour == \"red\")",
+   "code": "fpl_type",
+   "pos": 27
+  },
+  {
+   "name": "untyped_map_field",
+   "expr": "params.tags.a == \"1\"",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "mismatch_int_string",
+   "expr": "params.n == \"5\"",
+   "code": "fpl_type",
+   "pos": 9
+  },
+  {
+   "name": "mismatch_order",
+   "expr": "params.name > 3",
+   "code": "fpl_type",
+   "pos": 12
+  },
+  {
+   "name": "mismatch_size",
+   "expr": "size(params.n) > 0",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "mismatch_and",
+   "expr": "params.n && true",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "mismatch_not",
+   "expr": "!params.name",
+   "code": "fpl_type",
+   "pos": 1
+  },
+  {
+   "name": "mismatch_branches",
+   "expr": "params.flag ? 1 : \"a\"",
+   "code": "fpl_type",
+   "pos": 12
+  },
+  {
+   "name": "mismatch_list_eq",
+   "expr": "params.ids == params.ids",
+   "code": "fpl_type",
+   "pos": 11
+  },
+  {
+   "name": "mismatch_quant",
+   "expr": "all(i in params.n, true)",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "mismatch_ref_string",
+   "expr": "params.feature == \"F1\"",
+   "code": "fpl_type",
+   "pos": 15
+  },
+  {
+   "name": "not_bool",
+   "expr": "params.n",
+   "code": "fpl_type",
+   "pos": 0
+  },
+  {
+   "name": "empty_list",
+   "expr": "params.n in []",
+   "code": "fpl_type",
+   "pos": 12
+  }
+ ]
+}
