@@ -1,6 +1,6 @@
 [package]
 name = "fid-hal-idl"
-description = "Metrology Maven device interface value types: SI quantities, declared encodings, frames, timestamps (spec node HAL.IDL.UNITS)"
+description = "Metrology Maven device interface types: SI quantities, encodings, frames, timestamps (HAL.IDL.UNITS); provenance stamp, batch envelope and external claim schemas (HAL.IDL.STAMP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,8 @@ fid-canon = { path = "../fid-canon" }
 # Uuid and RFC 9562 UUIDv5 for FrameId (CONSTITUTION §5 derived IDs). Not fid-project:
 # HAL.IDL types may not depend on CORE (CONSTITUTION §2.1, D-035).
 fid-uuid = { path = "../fid-uuid" }
+# Shared `sha256:` digest type (AGENTS.md rule 14); lowest layer, no dependencies.
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

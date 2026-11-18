@@ -1,0 +1,75 @@
+{
+  "schema": "stamp/1",
+  "batch_id": "019a89f6-2000-70a5-9d2c-3b4a59687706",
+  "seq": [
+    "100",
+    "1099"
+  ],
+  "gaps": [
+    {
+      "from": "250",
+      "to": "251",
+      "reason": "DEVICE_DROP"
+    },
+    {
+      "from": "700",
+      "to": "700",
+      "reason": "CREDIT_EXHAUSTED"
+    }
+  ],
+  "payload_digest": "sha256:5126c22da720576f12fafb004ee413dfa33ce7933f570f4a028e30d0be57cc32",
+  "payload_schema": "line-scan-profile/1",
+  "encoding_ref": "encoding:z-i32-scale-1e-7",
+  "capability": {
+    "name": "LineScan",
+    "version": "1.2",
+    "features": [
+      "exposure_control",
+      "intensity"
+    ]
+  },
+  "driver": {
+    "id": "drv.fixture.linescan",
+    "version": "0.4.1",
+    "tier": "TIER2",
+    "digest": "sha256:1428681d5b745cef4bc35913fd9788e68a877782dbc455cb9279e470ea349f78",
+    "signer": "key:fixture-signer-2026",
+    "host_digest": "sha256:a17d2c1c6a34ddd7b7357ca8ca218ab4de208cb7eecd6ff54dd94165ee0ef6e4",
+    "compat_report_digest": "sha256:afe753ce7f03985a6ab3aab451813ae41c2c8c0eebc5776fa883f9aa4baa2fe7",
+    "compat_status": "PASS"
+  },
+  "device": {
+    "make": "Fixture Optics GmbH",
+    "model": "LS-7 \u00b5Line \u03a9",
+    "serial": "SN-000123",
+    "firmware": "fw 3.1.4 (build 2026-02-01)",
+    "firmware_in_tested_range": true
+  },
+  "config_digest": "sha256:7a97cd3694db015b727f71a31489c7a8a98beef6722ce2b1788af46972ba6aef",
+  "calibration": {
+    "status": "VALID",
+    "refs": [
+      "cal:fixture/2026-01-15",
+      "cal:fixture/2026-03-02"
+    ]
+  },
+  "sensor_model": "sensor-model:fixture-ls7@1",
+  "time": {
+    "source": "PTP",
+    "sync_sigma_ns": "250",
+    "utc_anchor": {
+      "t_host": "-42",
+      "utc_ns": "1763251200000000000"
+    }
+  },
+  "environment": [
+    "env:fixture/air-temp-1",
+    "env:fixture/part-temp-1"
+  ],
+  "warmup": "READY",
+  "transcript_digest": "sha256:b1f9eab7d6413efea7b8b036a0dc8b23b59dcadd752636b28f916158468f4261",
+  "trust": "declared",
+  "source_kind": "device",
+  "simulated": false,
+  "new_in_v1": true
+}
