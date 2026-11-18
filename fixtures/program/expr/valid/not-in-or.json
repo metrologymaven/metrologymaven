@@ -1,0 +1,48 @@
+{
+ "k": "binary",
+ "lhs": {
+  "k": "ident",
+  "name": "a",
+  "span": [
+   0,
+   1
+  ]
+ },
+ "op": "or",
+ "rhs": {
+  "arg": {
+   "k": "binary",
+   "lhs": {
+    "k": "ident",
+    "name": "b",
+    "span": [
+     9,
+     10
+    ]
+   },
+   "op": "<",
+   "rhs": {
+    "k": "ident",
+    "name": "c",
+    "span": [
+     13,
+     14
+    ]
+   },
+   "span": [
+    9,
+    14
+   ]
+  },
+  "k": "unary",
+  "op": "not",
+  "span": [
+   5,
+   14
+  ]
+ },
+ "span": [
+  0,
+  14
+ ]
+}

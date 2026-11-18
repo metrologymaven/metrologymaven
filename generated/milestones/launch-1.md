@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**82** of **1336** leaves built in code ([B]).
+**83** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 13 built)
+### Wave 2 (121 leaves, 14 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -166,7 +166,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [AUTO.CLI.OUT](../../spec/auto/cli/out/NODE.md) JSON and human output with exit codes (S, P0)
 - [B] [AUTO.CTRL.WIRE](../../spec/auto/ctrl/wire/NODE.md) Loopback listener, discovery, framing and bounds (M, P1a)
 - [AUTO.PROG.DMISMAP](../../spec/auto/prog/dmismap/NODE.md) DMIS mapping contract (S, P2)
-- [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
+- [B] [AUTO.PROG.EXPR.GRAMMAR](../../spec/auto/prog/expr/grammar/NODE.md) Expression grammar and bounded parser (S, P1b)
 - [B] [CORE.BUS.PIPE.ERR](../../spec/core/bus/pipe/err/NODE.md) Closed bus error code set (S, P0)
 - [B] [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
