@@ -1,0 +1,19 @@
+# Synthetic criteria file for OUTR.LAUNCH.PLAN.FMT tests (CC-BY-4.0). Not the real launch plan.
+# Expected: core_phase_missing probe-1-0 only (probe's core phase is P2; D-017).
+version = 1
+
+[[milestone]]
+id = "probe-1-0"
+app = "probe"
+level = "1.0"
+
+[[milestone.criterion]]
+id = "PRB-1-01"
+kind = "phase_done"
+phase = "P1b"
+scope = ["PROBE"]
+
+[[milestone.criterion]]
+id = "PRB-1-02"
+kind = "signoff"
+role = "release-manager"

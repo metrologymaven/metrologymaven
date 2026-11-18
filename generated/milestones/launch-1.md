@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**37** of **1336** leaves built in code ([B]).
+**42** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 31 built)
+### Wave 1 (125 leaves, 36 built)
 
 - [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -69,8 +69,8 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.REPO.LAYERS](../../spec/eco/repo/layers/NODE.md) Crate layer map and layering check (M, P0)
 - [B] [ECO.REPO.TOPO](../../spec/eco/repo/topo/NODE.md) Repository map and cross-repository pin check (S, P0)
 - [ECO.REPO.TPL.FILES](../../spec/eco/repo/tpl/files/NODE.md) Template file set and instantiation script (M, P0)
-- [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
-- [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
+- [B] [ECO.RULES.BLOCK](../../spec/eco/rules/block/NODE.md) Generated block format and digest library (S, P0)
+- [B] [ECO.RULES.SRC](../../spec/eco/rules/src/NODE.md) Canonical house-rules source and its manifest (S, P0)
 - [B] [ECO.RULES.VOCAB.ENGINE](../../spec/eco/rules/vocab/engine/NODE.md) Shared vocabulary and claim lint engine (M, P1a)
 - [FLOW.PERSONA.MAPS](../../spec/flow/persona/maps/NODE.md) Persona journey maps (M, P0)
 - [B] [FLOW.PERSONA.PERS](../../spec/flow/persona/pers/NODE.md) Persona definitions file (S, P0)
@@ -95,7 +95,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.BRAND.GUIDE.NAME](../../spec/outr/brand/guide/name/NODE.md) Name, logo and third-party usage rules (S, P0)
 - [B] [OUTR.BRAND.LINT](../../spec/outr/brand/lint/NODE.md) Outreach claim and vocabulary lint (M, P0)
 - [OUTR.BRAND.REVIEW](../../spec/outr/brand/review/NODE.md) Human trade-dress review gate (S, P0)
-- [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
+- [B] [OUTR.COMM.METRIC.DEF](../../spec/outr/comm/metric/def/NODE.md) Metric definition file, source list and guard (S, P0)
 - [OUTR.COMM.MOD](../../spec/outr/comm/mod/NODE.md) Moderation procedure and moderation log (M, P0)
 - [OUTR.COMM.SURVEY.TOOL](../../spec/outr/comm/survey/tool/NODE.md) Survey tool criteria and tracking check (S, P1a)
 - [OUTR.CONTENT.MIG.MAP](../../spec/outr/content/mig/map/NODE.md) Migration mapping table generator and drift check (M, P1a)
@@ -103,9 +103,9 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.DOCS.CONTRIB](../../spec/outr/docs/contrib/NODE.md) Contributor guide with checked commands (M, P0)
 - [OUTR.DOCS.FRAME.NAV](../../spec/outr/docs/frame/nav/NODE.md) Edition build, page frame and navigation (M, P0)
 - [OUTR.DOCS.REF](../../spec/outr/docs/ref/NODE.md) Generated command reference pages (M, P0)
-- [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
+- [B] [OUTR.LAUNCH.PLAN.FMT](../../spec/outr/launch/plan/fmt/NODE.md) Milestone criteria file format and plan check (M, P0)
 - [OUTR.SITE.GEN.IMPORT](../../spec/outr/site/gen/import/NODE.md) Generated-input lock file, fetch, digest check and build manifest (M, P0)
-- [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
+- [B] [OUTR.SITE.QA.A11Y](../../spec/outr/site/qa/a11y/NODE.md) Static accessibility gate for built pages (M, P0)
 - [PLAT.DEPLOY.KIOSK.DISPLAY](../../spec/plat/deploy/kiosk/display/NODE.md) Reference kiosk display file (S, P1a)
 - [PLAT.DEPLOY.KIOSK.SMOKE](../../spec/plat/deploy/kiosk/smoke/NODE.md) Windows kiosk image smoke and restart test (M, P1a)
 - [PLAT.DEPLOY.OFFLINE.NETLIST](../../spec/plat/deploy/offline/netlist/NODE.md) Network-feature list generated from the registry manifest (S, P1a)

@@ -1,0 +1,15 @@
+# Repository template variants (spec node ECO.REPO.TPL.FILES).
+# Each variant copies the listed folders under templates/repo/ in order; a later
+# folder may not overwrite a file from an earlier one. Placeholders in any file:
+# {{repo_id}}, {{ci_rev}}, {{year}}. Instantiate with
+#   python -m repo_template new --id <repo-id> --variant <id> --rules-source <dir> \
+#       --rules-rev <40-hex> --ci-rev <40-hex> --out <dir>
+# (run with tools/ on the module path, e.g. PYTHONPATH=tools).
+
+[[variant]]
+id = "code"
+include = ["common", "code"]
+
+[[variant]]
+id = "spec"
+include = ["common", "spec"]

@@ -1,0 +1,26 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Further error paths for sources; pairs with mixed.toml.
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo"
+public = true
+public_basis = "Example public repository statistics, readable without an account."
+
+[[source]]
+id = "repo-api"
+url = "https://api.example.org/repos/demo2"
+public = true
+public_basis = "Duplicate ID."
+
+[[source]]
+id = "Crash-Reports"
+url = "http://example.org/reports"
+public = true
+
+[[source]]
+id = "updates"
+url = "https://example.org/Update-Check/log"
+public = "yes"
+public_basis = "Wrong type for public; also an update-check log."

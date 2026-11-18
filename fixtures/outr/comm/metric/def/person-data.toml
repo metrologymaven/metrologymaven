@@ -1,0 +1,91 @@
+# Hand-written test fixture for OUTR.COMM.METRIC.DEF; expected results are hand-labelled from
+# the spec rules in crates/fid-outreach/tests/metric_def.rs. Illustrative only. CC-BY-4.0.
+# Person-level guard: a selector naming a person-level field is refused unless it is a top-level
+# aggregate count field; a source URL naming one is always refused. Pairs with person-sources.toml.
+
+# ok: top-level aggregate count field
+[[metric]]
+id = "stars"
+title = "Stars"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"
+biases = ["Bots are not excluded."]
+
+# expected: person_data selector login
+[[metric]]
+id = "owner_login"
+title = "Owner login"
+source = "repo-api"
+method = "http_json"
+selector = "/owner/login"
+unit = "logins"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data selector author (count field, but not top-level)
+[[metric]]
+id = "author_count"
+title = "Authors"
+source = "repo-api"
+method = "http_json"
+selector = "/author/total_count"
+unit = "authors"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data selector stargazers (not a count field)
+[[metric]]
+id = "stargazer_list"
+title = "Stargazers"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers"
+unit = "stars"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data selector email
+[[metric]]
+id = "email"
+title = "Email"
+source = "repo-api"
+method = "http_json"
+selector = "/0/commit/E-Mail"
+unit = "addresses"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data url contributors
+[[metric]]
+id = "top_contributor"
+title = "Top contributor contributions"
+source = "contributors-api"
+method = "http_json"
+selector = "/0/contributions"
+unit = "commits"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data url committer (percent-encoded)
+[[metric]]
+id = "committers"
+title = "Committers"
+source = "encoded-api"
+method = "manual_public_count"
+unit = "committers"
+aggregation = "last"
+biases = ["Per-person data."]
+
+# expected: person_data url author (URL is never exempt, even with a count selector)
+[[metric]]
+id = "one_author_commits"
+title = "Commits by one author"
+source = "search-api"
+method = "http_json"
+selector = "/total_count"
+unit = "commits"
+aggregation = "last"
+biases = ["Targets one person."]
