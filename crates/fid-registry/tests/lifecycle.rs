@@ -70,7 +70,12 @@ fn ac1_transitions() {
 /// AC-1 boundary, stated directly: 11 months 30 days is too short, 12 months is enough.
 #[test]
 fn ac1_twelve_month_boundary() {
-    let old = Lifecycle { state: State::Deprecated, since: Date::new(2025, 1, 15).unwrap(), replaced_by: None, remove_after: None };
+    let old = Lifecycle {
+        state: State::Deprecated,
+        since: Date::new(2025, 1, 15).unwrap(),
+        replaced_by: None,
+        remove_after: None,
+    };
     let at = |y, m, d| check_transition(&old, State::Hidden, Date::new(y, m, d).unwrap()).map_err(|e| e.code());
     assert_eq!(at(2026, 1, 14), Err("deprecation_too_short"));
     assert_eq!(at(2026, 1, 15), Ok(()));
@@ -120,8 +125,8 @@ fn ac3_migrators() {
 
 #[test]
 fn malformed_migrator_is_invalid() {
-    let v = parse(br#"{"algorithm":"demo.cmd.migrate@1.0.0","command":"demo.cmd","from_major":1.5,"to_major":2}"#)
-        .unwrap();
+    let v =
+        parse(br#"{"algorithm":"demo.cmd.migrate@1.0.0","command":"demo.cmd","from_major":1.5,"to_major":2}"#).unwrap();
     assert_eq!(MigratorRecord::from_value(&v).map_err(|e| e.code()), Err("migrator_invalid"));
 }
 
@@ -131,7 +136,8 @@ fn lifecycle_metadata_rules() {
         let CValue::Obj(o) = parse(json.as_bytes()).unwrap() else { panic!() };
         Lifecycle::from_map(&o).map_err(|e| e.code())
     };
-    let ok = life(r#"{"state":"deprecated","since":"2026-01-01","replaced_by":"demo.cmd@2","remove_after":"2027-01-01"}"#);
+    let ok =
+        life(r#"{"state":"deprecated","since":"2026-01-01","replaced_by":"demo.cmd@2","remove_after":"2027-01-01"}"#);
     let ok = ok.unwrap();
     assert_eq!(Lifecycle::from_map(obj(&ok.to_value())).unwrap(), ok);
     for bad in [

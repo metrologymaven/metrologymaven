@@ -75,8 +75,7 @@ fn days_in_month(year: u16, month: u8) -> u8 {
 impl Date {
     /// Builds a date, refusing impossible ones (e.g. 2025-02-29).
     pub fn new(year: u16, month: u8, day: u8) -> Result<Date, LifeError> {
-        if !(1..=9999).contains(&year) || !(1..=12).contains(&month) || day == 0 || day > days_in_month(year, month)
-        {
+        if !(1..=9999).contains(&year) || !(1..=12).contains(&month) || day == 0 || day > days_in_month(year, month) {
             return Err(LifeError::BadLifecycle(format!("no such date {year:04}-{month:02}-{day:02}")));
         }
         Ok(Date { year, month, day })
@@ -148,7 +147,8 @@ impl Lifecycle {
     /// Reads a lifecycle object, refusing unknown fields and inconsistent metadata.
     pub fn from_map(map: &BTreeMap<String, CValue>) -> Result<Lifecycle, LifeError> {
         let bad = LifeError::BadLifecycle;
-        if let Some(k) = map.keys().find(|k| !matches!(k.as_str(), "state" | "since" | "replaced_by" | "remove_after")) {
+        if let Some(k) = map.keys().find(|k| !matches!(k.as_str(), "state" | "since" | "replaced_by" | "remove_after"))
+        {
             return Err(bad(format!("unknown field {k}")));
         }
         let text = |k: &str| -> Result<Option<&str>, LifeError> {
@@ -272,9 +272,7 @@ impl MigratorRecord {
     pub fn from_value(v: &CValue) -> Result<MigratorRecord, LifeError> {
         let bad = LifeError::MigratorInvalid;
         let CValue::Obj(o) = v else { return Err(bad("must be an object".into())) };
-        if let Some(k) =
-            o.keys().find(|k| !matches!(k.as_str(), "algorithm" | "command" | "from_major" | "to_major"))
-        {
+        if let Some(k) = o.keys().find(|k| !matches!(k.as_str(), "algorithm" | "command" | "from_major" | "to_major")) {
             return Err(bad(format!("unknown field {k}")));
         }
         let text = |k: &str| match o.get(k) {
@@ -331,8 +329,14 @@ pub fn check_migrators(decls: &[LifecycleDecl], migrators: &[MigratorRecord]) ->
 /// Lifecycle errors with stable codes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LifeError {
-    IllegalTransition { from: State, to: State },
-    DeprecationTooShort { since: Date, release: Date },
+    IllegalTransition {
+        from: State,
+        to: State,
+    },
+    DeprecationTooShort {
+        since: Date,
+        release: Date,
+    },
     MigratorInvalid(String),
     /// A lifecycle object, date or declaration list is malformed.
     BadLifecycle(String),
