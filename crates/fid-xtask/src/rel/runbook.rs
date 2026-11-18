@@ -675,20 +675,20 @@ mod tests {
         let ok = step("a", "ci");
         assert!(parse_runbook(&ok).is_ok());
         for bad in [
-            format!("{ok}{ok}"),                                 // duplicate id
-            ok.replace("\"ci\"", "\"bot\""),                     // performer
-            ok.replace("\"ci\"", "\"role:\""),                   // empty role
-            ok.replace("[\"beta\"]", "[\"rc\"]"),                // channel
-            ok.replace("[\"beta\"]", "[]"),                      // no channel
-            ok.replace("[\"beta\"]", "[\"beta\", \"beta\"]"),    // repeated channel
-            ok.replace("planned", "done"),                       // status
-            ok.replace("job = \"a\"\n", ""),                     // ci without job
-            ok.replace("title = \"T\"", "title = \"a | b\""),    // pipe in title
-            format!("{ok}extra = 1\n"),                          // unknown key
-            format!("other = 1\n{ok}"),                          // unknown top-level key
-            ok.replace("id = \"a\"", "id = \"A\""),              // id charset
-            "[[step]\n".to_string(),                             // TOML syntax
-            String::new(),                                       // no steps
+            format!("{ok}{ok}"),                              // duplicate id
+            ok.replace("\"ci\"", "\"bot\""),                  // performer
+            ok.replace("\"ci\"", "\"role:\""),                // empty role
+            ok.replace("[\"beta\"]", "[\"rc\"]"),             // channel
+            ok.replace("[\"beta\"]", "[]"),                   // no channel
+            ok.replace("[\"beta\"]", "[\"beta\", \"beta\"]"), // repeated channel
+            ok.replace("planned", "done"),                    // status
+            ok.replace("job = \"a\"\n", ""),                  // ci without job
+            ok.replace("title = \"T\"", "title = \"a | b\""), // pipe in title
+            format!("{ok}extra = 1\n"),                       // unknown key
+            format!("other = 1\n{ok}"),                       // unknown top-level key
+            ok.replace("id = \"a\"", "id = \"A\""),           // id charset
+            "[[step]\n".to_string(),                          // TOML syntax
+            String::new(),                                    // no steps
         ] {
             let e = parse_runbook(&bad).unwrap_err();
             assert_eq!(e.code, Code::Parse, "{bad}");
