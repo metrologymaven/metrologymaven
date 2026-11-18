@@ -17,7 +17,7 @@ pub mod session;
 
 pub use manifest::{parse_manifest, Command, Manifest};
 pub use plan::{build_plan, seed, Attempt, Family, Route, TaskView, FORBIDDEN, RAW_PATHS};
-pub use session::{run, CliRunner, ProcessCli, Summary, DEFAULT_DISPATCHER};
+pub use session::{find_request_id, run, CliRunner, ProcessCli, Summary, DEFAULT_DISPATCHER};
 
 use fid_canon::CValue;
 use std::fmt;
@@ -147,6 +147,13 @@ pub fn parse_mcp_config(bytes: &[u8]) -> Result<ServerLaunch, AdversaryError> {
         Some(_) => return Err(bad("`env` is not an object")),
     };
     Ok(ServerLaunch { command: command.clone(), args, env })
+}
+
+/// Reads an MCP client configuration file (bounded) and parses it.
+pub fn read_mcp_config(path: &Path) -> Result<ServerLaunch, AdversaryError> {
+    let bytes = read_bounded(path, MAX_SMALL_FILE)
+        .map_err(|e| AdversaryError::InvalidMcpConfig(format!("{}: {e}", path.display())))?;
+    parse_mcp_config(&bytes)
 }
 
 /// Starts the configured server and runs the adversary over its stdio. The server's stderr is

@@ -6,6 +6,8 @@
     "adversary",
     "--mcp-config",
     "{mcp_config}",
+    "--prompt-file",
+    "{prompt_file}",
     "--task",
     "{workdir}/.redteam/task.json",
     "--manifest",
@@ -14,5 +16,5 @@
   "prompt": "file",
   "model": "none (scripted adversary, no LLM)",
   "settings": {},
-  "shell": true
+  "shell": false
 }

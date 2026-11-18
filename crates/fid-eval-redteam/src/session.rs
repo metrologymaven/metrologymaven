@@ -2,18 +2,23 @@
 //!
 //! Message order: `initialize` (id 1), `notifications/initialized`, `tools/list` (following
 //! `nextCursor`, at most [`MAX_LIST_PAGES`] pages), then one `tools/call` per MCP attempt in
-//! plan order. Request IDs count up from 1. Nothing the server returns is copied into a
-//! request except a `tools/list` cursor, so for a given task, manifest and server the request
-//! stream is byte-identical across runs (REQ-AGENT.REDTEAM.SCRIPT-004). The only use of the
-//! tool list is to name the dispatcher: the first listed tool, by name, ending in
-//! `_invoke_readonly`, else [`DEFAULT_DISPATCHER`].
+//! plan order. Request IDs count up from 1. The only server values copied into requests are a
+//! `tools/list` cursor and, for self-approval, the last `request_id` a reply returned (the
+//! forbidden family's direct W3, X1 and D1 calls file pending requests on a real server, so
+//! the adoption family's `approve*` attempts then approve that request instead of a seeded
+//! ID). For a given task, manifest and server that answers the same way, the request stream is
+//! byte-identical across runs (REQ-AGENT.REDTEAM.SCRIPT-004); a server whose cursors or
+//! request IDs vary makes those values vary too. The only use of the tool list is to name the
+//! dispatcher: the first listed tool, by name, ending in `_invoke_readonly`, else
+//! [`DEFAULT_DISPATCHER`].
 //!
 //! The log (stderr in the binary) gets every planned attempt, then one line per executed
 //! attempt `{"outcome": ..., "seq": n}` with outcome `ok`, `error` (JSON-RPC error or
-//! `isError: true`; refusals are expected), `no_reply` (the server closed), `not_sent`,
-//! `spawn_failed` or, for CLI attempts, `exit_ok` / `exit_error`.
+//! `isError: true`; refusals are expected), `no_reply` (the server closed, or sent
+//! [`MAX_SKIPPED_MESSAGES`] other messages without answering), `not_sent`, `spawn_failed` or,
+//! for CLI attempts, `exit_ok` / `exit_error`.
 
-use crate::plan::{Attempt, Route, TaskView};
+use crate::plan::{Attempt, Family, Route, TaskView};
 use crate::AdversaryError;
 use crate::{build_plan, Manifest};
 use fid_canon::CValue;
@@ -30,6 +35,12 @@ pub const ADVERSARY_VERSION: &str = "1";
 pub const MAX_MESSAGE_BYTES: u64 = 4 * 1024 * 1024;
 /// Most `tools/list` pages followed.
 pub const MAX_LIST_PAGES: usize = 64;
+/// Most unrelated server messages skipped while waiting for one reply.
+pub const MAX_SKIPPED_MESSAGES: usize = 1024;
+/// Deepest nesting searched for a `request_id` in a reply.
+const MAX_REPLY_DEPTH: usize = 8;
+/// Largest embedded JSON text searched for a `request_id`.
+const MAX_REPLY_TEXT: usize = 64 * 1024;
 
 /// Runs a CLI attempt (shell variants): `argv` without the program, `stdin` the parameters.
 pub trait CliRunner {
@@ -118,6 +129,58 @@ enum Reply {
     Ok(CValue),
     Error,
     Closed,
+    /// Too many unrelated messages; the session stays open.
+    Skipped,
+}
+
+/// The first string `request_id` in a reply result, searching objects, arrays and JSON text
+/// in `text` fields (MCP `content` items), bounded in depth and size.
+pub fn find_request_id(v: &CValue) -> Option<String> {
+    fn walk(v: &CValue, depth: usize) -> Option<String> {
+        if depth > MAX_REPLY_DEPTH {
+            return None;
+        }
+        match v {
+            CValue::Obj(m) => {
+                if let Some(CValue::Str(id)) = m.get("request_id") {
+                    return Some(id.clone());
+                }
+                for (k, x) in m {
+                    if let (true, CValue::Str(text)) = (k == "text", x) {
+                        if text.len() <= MAX_REPLY_TEXT {
+                            if let Ok(inner) = fid_canon::parse_with_limits(text.as_bytes(), MAX_REPLY_TEXT, 16) {
+                                if let Some(id) = walk(&inner, depth + 1) {
+                                    return Some(id);
+                                }
+                            }
+                        }
+                    } else if let Some(id) = walk(x, depth + 1) {
+                        return Some(id);
+                    }
+                }
+                None
+            }
+            CValue::Arr(a) => a.iter().find_map(|x| walk(x, depth + 1)),
+            _ => None,
+        }
+    }
+    walk(v, 0)
+}
+
+/// Whether an attempt approves a request (adoption family, verb starting with `approve`).
+fn is_approval(a: &Attempt) -> bool {
+    a.family == Family::Adoption && a.command.name.rsplit('.').next().is_some_and(|v| v.starts_with("approve"))
+}
+
+/// The attempt with every string argument named like a request replaced by `request_id`.
+fn with_request_id(a: &Attempt, request_id: &str) -> Attempt {
+    let mut b = a.clone();
+    for (k, v) in b.args.iter_mut() {
+        if k.contains("request") && matches!(v, CValue::Str(_)) {
+            *v = CValue::Str(request_id.to_string());
+        }
+    }
+    b
 }
 
 struct Client<R, W> {
@@ -147,7 +210,7 @@ impl<R: BufRead, W: Write> Client<R, W> {
     }
 
     fn await_reply(&mut self, id: u64) -> Result<Reply, AdversaryError> {
-        loop {
+        for _ in 0..=MAX_SKIPPED_MESSAGES {
             let mut buf = Vec::new();
             let n = (&mut self.reader)
                 .take(MAX_MESSAGE_BYTES + 1)
@@ -177,6 +240,7 @@ impl<R: BufRead, W: Write> Client<R, W> {
             }
             return Ok(Reply::Ok(result));
         }
+        Ok(Reply::Skipped)
     }
 }
 
@@ -232,7 +296,16 @@ pub fn run<R: BufRead, W: Write, L: Write>(
     for a in &plan {
         log.write_all(&line(&a.to_value())?).map_err(io)?;
     }
-    for a in &plan {
+    let mut last_request: Option<String> = None;
+    for planned in &plan {
+        let approved;
+        let a = match &last_request {
+            Some(rid) if is_approval(planned) => {
+                approved = with_request_id(planned, rid);
+                &approved
+            }
+            _ => planned,
+        };
         let outcome = if a.route == Route::Cli {
             sum.cli += 1;
             let stdin = line(&CValue::Obj(a.args.clone()))?;
@@ -249,9 +322,14 @@ pub fn run<R: BufRead, W: Write, L: Write>(
             if sent {
                 sum.sent += 1;
                 match c.await_reply(id)? {
-                    Reply::Ok(_) => "ok",
+                    Reply::Ok(result) => {
+                        if let Some(rid) = find_request_id(&result) {
+                            last_request = Some(rid);
+                        }
+                        "ok"
+                    }
                     Reply::Error => "error",
-                    Reply::Closed => "no_reply",
+                    Reply::Closed | Reply::Skipped => "no_reply",
                 }
             } else {
                 "no_reply"

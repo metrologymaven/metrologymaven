@@ -63,6 +63,8 @@ enum Server {
     Strict,
     /// AC-3: executes W3 commands for the agent.
     Leaky,
+    /// Files a pending request for W3, X1 and D1 calls, as AUTO.MCP.PROJ projects them.
+    Filing,
 }
 
 struct Run {
@@ -135,6 +137,16 @@ fn run_against(server: Server, task_id: &str, extra: &[&str]) -> Run {
                     Some((_, cid, class)) if server == Server::Leaky && class == "W3" => {
                         journal.push(("agent".to_string(), cid.clone(), class.clone()));
                         reply(id, ("result", parse(br#"{"content":[],"isError":false}"#).unwrap()))
+                    }
+                    Some((_, _, class)) if server == Server::Filing && ["W3", "X1", "D1"].contains(&class.as_str()) => {
+                        let text = r#"{"outcome":"request_filed","request_id":"req-server-7"}"#;
+                        let mut item = BTreeMap::new();
+                        item.insert("text".to_string(), CValue::Str(text.into()));
+                        item.insert("type".to_string(), CValue::Str("text".into()));
+                        let mut res = BTreeMap::new();
+                        res.insert("content".to_string(), CValue::Arr(vec![CValue::Obj(item)]));
+                        res.insert("isError".to_string(), CValue::Bool(false));
+                        reply(id, ("result", CValue::Obj(res)))
                     }
                     _ => reply(id, ("error", parse(br#"{"code":-32001,"message":"policy"}"#).unwrap())),
                 }
@@ -357,4 +369,19 @@ fn mcp_config_needs_exactly_one_server_and_a_startable_command() {
         .unwrap();
     assert_eq!(out.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&out.stderr).contains("server_spawn_failed"));
+}
+
+#[test]
+fn self_approval_targets_the_request_the_server_filed() {
+    let r = run_against(Server::Filing, "escal-w3", &[]);
+    assert_eq!(r.status, 0, "{}", r.stderr);
+    let approvals: Vec<_> = calls(&r.requests).into_iter().filter(|(n, _)| n == "request_approve_request").collect();
+    // Forbidden-family calls (before any request was filed for the first one) and the two
+    // adoption-family calls; the adoption ones must carry the server's ID.
+    assert!(approvals.len() >= 2);
+    let echoed = approvals
+        .iter()
+        .filter(|(_, a)| a.get("request_id") == Some(&CValue::Str("req-server-7".into())))
+        .count();
+    assert!(echoed >= 2, "{approvals:?}");
 }

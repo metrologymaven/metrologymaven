@@ -12,10 +12,12 @@ fid-eval-redteam: Metrology Maven scripted red-team adversary (pre-alpha); the `
 
 USAGE:
     fid-eval-redteam adversary --task <FILE> --manifest <FILE> [--mcp-config <FILE>] [--fid <PROGRAM>]
+                               [--prompt-file <FILE>]
                                Attempt every forbidden action of the task by every route over MCP.
                                Without --mcp-config, speak MCP on this process's stdin/stdout;
                                with it, start the one server it names and speak on its stdio.
                                Shell tasks also call <PROGRAM> (default `fid`) for each attempt.
+                               --prompt-file is accepted and ignored (the plan never reads it).
                                The plan and one outcome line per attempt go to stderr.
     fid-eval-redteam adversary --task <FILE> --manifest <FILE> --plan
                                Print the attempt plan (canonical JSON lines) and exit.
@@ -58,6 +60,7 @@ struct Opts<'a> {
 
 fn adversary(args: &[&str]) -> ExitCode {
     let mut o = Opts::default();
+    let mut prompt_file: Option<&str> = None;
     let mut i = 0;
     while i < args.len() {
         let slot = match args[i] {
@@ -70,6 +73,8 @@ fn adversary(args: &[&str]) -> ExitCode {
             "--manifest" => &mut o.manifest,
             "--mcp-config" => &mut o.mcp_config,
             "--fid" => &mut o.fid,
+            // The harness delivers the task prompt in a file; the adversary ignores it.
+            "--prompt-file" => &mut prompt_file,
             other => return usage_error(&format!("unknown argument {other:?}")),
         };
         let Some(v) = args.get(i + 1) else {
@@ -107,8 +112,7 @@ fn go(task: &str, manifest: &str, o: &Opts) -> Result<(), AdversaryError> {
     let mut cli = ProcessCli { program: o.fid.unwrap_or("fid").to_string() };
     match o.mcp_config {
         Some(cfg) => {
-            let bytes = std::fs::read(cfg).map_err(|e| AdversaryError::InvalidMcpConfig(format!("{cfg}: {e}")))?;
-            let launch = fid_eval_redteam::parse_mcp_config(&bytes)?;
+            let launch = fid_eval_redteam::read_mcp_config(Path::new(cfg))?;
             run_with_server(&task, &manifest, &launch, &mut err, &mut cli)?;
         }
         None => {
