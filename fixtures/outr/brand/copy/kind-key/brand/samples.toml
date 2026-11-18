@@ -1,0 +1,3 @@
+# Declares itself a reference set; holds no passages.
+kind = "incumbent_text"
+passages = []
