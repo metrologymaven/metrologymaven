@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-solv]
+built_pr: 187
 satisfies: [REQ-KRN.SOLV-001, REQ-KRN.SOLV-008]
 covers: []
 depends_on: [KRN.NUM.RNG, KRN.NUM.FN]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # KRN.SOLV.MSTART: Deterministic seeded multi-start and agreement check
@@ -36,7 +38,7 @@ Non-convex fits can converge to a local optimum. This module runs a solve from a
 - **REQ-KRN.SOLV.MSTART-001** Given a primary start, a parameter perturbation box, a start count k and a seed, the module shall generate the same k starts on every target using only the `fid-num` counter-based RNG.
 - **REQ-KRN.SOLV.MSTART-002** The module shall run the caller's solve closure on each start in index order, single-threaded, and collect each outcome or typed error.
 - **REQ-KRN.SOLV.MSTART-003** The module shall select the successful outcome with the lowest objective, breaking ties by total order on the parameter vector and then by start index.
-- **REQ-KRN.SOLV.MSTART-004** The module shall set `agreement = true` only if every successful outcome's parameters agree with the selected one within the caller-supplied per-parameter tolerances (default length 1e-9 m and angle 1e-9 rad [unverified]), and shall otherwise set `local_optimum_only`.
+- **REQ-KRN.SOLV.MSTART-004** The module shall set `agreement = true` only if every successful outcome's parameters agree with the selected one within the caller-supplied per-parameter tolerances, and shall otherwise set `local_optimum_only`. The caller must supply one tolerance per parameter; an empty list is rejected with `SpecError::NoTolerances` before any solve runs, and unit-aware defaults belong to the calling solver (`KRN.SOLV.NLLS`, `KRN.SOLV.SEQ`), not to this module.
 - **REQ-KRN.SOLV.MSTART-005** If every start fails, then the module shall return a typed error listing each start's error, and no value.
 - **REQ-KRN.SOLV.MSTART-006** The output shall include the seed, the start list and the per-start outcome summary so the caller can journal them.
 
@@ -50,10 +52,10 @@ Non-convex fits can converge to a local optimum. This module runs a solve from a
 
 ## Design
 
-- **Registry command(s):** none; library API `fid_solv::mstart::{run, StartSpec, MultiStartOutcome}`.
-- **Data structures:** `StartSpec { primary: Vec<f64>, half_widths: Vec<f64>, count: u32, seed: u64, stream: u64, tolerances: Vec<f64> }`; `MultiStartOutcome<T> { best: T, best_index: u32, agreement: bool, local_optimum_only: bool, starts: Vec<Vec<f64>>, per_start: Vec<StartSummary> }`.
-- **Algorithm:** start 0 is the primary; start i >= 1 is primary + (2u - 1) * half_widths with u from `Cursor{seed, stream, index}` drawn in parameter order. Selection and agreement as in the requirements.
-- **Errors:** `MultiStartError::{AllFailed(Vec<SolverError>), InvalidSpec}`.
+- **Registry command(s):** none; library API `fid_solv::mstart::{run, run_listed, generate_starts, StartSpec, MultiStartOutcome, StartSummary, StartOrigin, StartError, MultiStartError, SpecError, MAX_STARTS}`. `run_listed(starts, tolerances, solve)` runs caller-listed starts (Scope "or caller-listed starts"); `generate_starts(spec)` returns the seeded start list alone, for journaling and replay.
+- **Data structures:** `StartSpec { primary: Vec<f64>, half_widths: Vec<f64>, count: u32, seed: u64, stream: u64, tolerances: Vec<f64> }`; `MultiStartOutcome<T, E> { best: T, best_index: u32, agreement: bool, local_optimum_only: bool, origin: StartOrigin, starts: Vec<Vec<f64>>, per_start: Vec<StartSummary<E>> }`; `StartOrigin::{Seeded { seed, stream }, Listed}` carries the seed for journaling (REQ-006). The module is generic over the solve closure's error type `E` (callers instantiate `E = SolverError`): the closure is `FnMut(&[f64]) -> Result<(T, f64, Vec<f64>), E>`. `tolerances` is required, length n: an empty list is `SpecError::NoTolerances` (fail closed; callers pass unit-aware values). Start count is `1..=MAX_STARTS` (1024).
+- **Algorithm:** start 0 is the primary; start i >= 1 is, per parameter j, `primary[j] + ((2u - 1) * half_widths[j])` (one rounded product, one rounded sum, no FMA) with u = `uniform_f64` of one `fid_num::rng::Cursor` on `(seed, stream)` at sequential Philox index `(i - 1) * n + j` (n = parameter count; starting at index 0, start-major, parameters in order). Selection: lowest objective by `total_cmp`, then lexicographic `total_cmp` on the parameter vector, then lower start index. Agreement: `|p_j - best_j| <= tol_j` for every successful outcome.
+- **Errors:** `MultiStartError<E>::{AllFailed(Vec<StartError<E>>), InvalidSpec(SpecError)}`; `StartError<E>::{Solver(E), Numeric(NumError), ParamLength}`. A NaN or infinite objective or parameter from the solve is that start's `Numeric` error and is never selected; NaN or infinity in the spec is `InvalidSpec`.
 - **Determinism:** D0.
 - **Performance budget:** overhead beyond the solves < 1 % [unverified until measured].
 - **Crate:** `fid-solv` (module `mstart`).
@@ -69,6 +71,7 @@ Non-convex fits can converge to a local optimum. This module runs a solve from a
 ## Open questions
 
 - Default agreement tolerances should come from the REP-1 table once the constitution adopts it.
+- AC-1 currently uses a hand-specified toy local solver (fixture script `fixtures/solv/make_mstart_fixtures.py`) because `KRN.SOLV.NLLS` is not built; add an AC-1 variant whose solve closure is NLLS once `KRN.SOLV.NLLS` lands.
 
 ## Children
 
