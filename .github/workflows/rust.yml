@@ -255,6 +255,7 @@ jobs:
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
+          python fixtures/core/sto/sql/schema/make_fixture.py --check
           python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/man/make_manifest_fixtures.py --check
           python fixtures/man/check_manifest_schema.py
