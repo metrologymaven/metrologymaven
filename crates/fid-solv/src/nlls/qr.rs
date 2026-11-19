@@ -1,7 +1,9 @@
 //! Column-pivoted Householder QR applied to one right-hand side (`KRN.SOLV.NLLS` Design,
 //! "Step solve"). It follows the rules pinned for `KRN.NUM.LA.QR` (reflector sign, pivot
 //! choice, norms recomputed at every step, inner products through `fid_num::red`) so that
-//! the driver can move onto `fid_num::la::qr` once that leaf is built.
+//! its results are bit-identical to `fid_num::la::qr_pivoted` (see the test below). The
+//! driver keeps this private step until `fid-num` has a workspace-based public QR without
+//! the 4096-row `Mat` cap.
 
 use fid_num::la::{cond_triangular, solve_upper, LaError, Mat};
 use fid_num::{red, NumError};

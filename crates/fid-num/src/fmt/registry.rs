@@ -10,7 +10,9 @@
 //!
 //! # Dispatch and version identity
 //!
-//! [`format`] dispatches on the exact `(kind, major)` of `spec.formatter` to `fmt::len`
+//! [`format`] first looks up the registry descriptor of `spec.formatter` ([`descriptor`]),
+//! so an ID with no registry entry fails before any implementation runs, then dispatches on
+//! the descriptor's exact `(kind, major)` to `fmt::len`
 //! (`fmt.length@1`, `fmt.scalar@1`), `fmt::ang` (`fmt.angle@1`) or [`hexbits`]
 //! (`fmt.hexbits@1`) and returns their [`Reported`] record unchanged: `value`, `side`,
 //! `digits_added`, `tie_at_max_precision` and `exact_conversion` (with `pi_enclosure`) are
@@ -148,10 +150,12 @@ pub fn descriptor(id: FormatterId) -> Result<&'static FormatterDescriptor, NumEr
     REGISTRY.iter().find(|d| d.id == id).ok_or(NumError::UnknownFormatter { id })
 }
 
-/// Formats `x` with the formatter `spec.formatter` (REQ-KRN.NUM.FMT.REG-002): dispatch on
-/// the exact `(kind, major)`; the implementation's [`Reported`] is returned unchanged.
+/// Formats `x` with the formatter `spec.formatter` (REQ-KRN.NUM.FMT.REG-002): the registry
+/// descriptor is looked up first, so an ID without a registry entry is
+/// [`NumError::UnknownFormatter`] even if a dispatch arm matched it; then dispatch on the
+/// exact `(kind, major)`; the implementation's [`Reported`] is returned unchanged.
 pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
-    let id = spec.formatter;
+    let id = descriptor(spec.formatter)?.id;
     match (id.kind, id.major) {
         ("length", 1) | ("scalar", 1) => len::format(x, spec),
         ("angle", 1) => ang::format(x, spec),

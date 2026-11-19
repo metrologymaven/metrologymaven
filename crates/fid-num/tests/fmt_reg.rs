@@ -247,6 +247,44 @@ fn ac3_unknown_formatter() {
     assert_eq!(r, Err(NumError::UnknownFormatter { id: other }));
 }
 
+/// REQ-002: `format` looks up the registry descriptor before dispatching, so every
+/// success comes from a registered ID (and a unit that entry lists); a dispatch arm with no
+/// registry entry cannot succeed. Every registered formatter succeeds at least once.
+#[test]
+fn every_format_success_has_a_registry_entry() {
+    let kinds = ["length", "scalar", "angle", "hexbits", "other", "Length", ""];
+    let majors = [0u16, 1, 2, 9, u16::MAX];
+    let precisions = [Precision::Decimals(0), Precision::Decimals(3), Precision::SigDigits(1), Precision::SigDigits(6)];
+    let mut ids: Vec<FormatterId> = registry().iter().map(|d| d.id).collect();
+    for kind in kinds {
+        for major in majors {
+            ids.push(FormatterId { kind, major });
+        }
+    }
+    let mut ok_per_entry = vec![0usize; registry().len()];
+    for id in &ids {
+        for u in ALL_UNITS {
+            for p in precisions {
+                for x in [0.0, -0.0, 0.001, -1.5, 1e300] {
+                    let r = fmt::format(x, &spec(*id, u, p));
+                    if let Ok(rep) = r {
+                        let d = descriptor(*id).unwrap_or_else(|e| panic!("{id}: success without entry: {e}"));
+                        assert_eq!(rep.formatter, *id, "{id}");
+                        assert!(d.units.contains(&u), "{id} {u:?}: unit not listed");
+                        let k = registry().iter().position(|e| e.id == *id).unwrap();
+                        ok_per_entry[k] += 1;
+                    } else if descriptor(*id).is_err() {
+                        assert_eq!(r, Err(NumError::UnknownFormatter { id: *id }), "{id}");
+                    }
+                }
+            }
+        }
+    }
+    for (d, n) in registry().iter().zip(&ok_per_entry) {
+        assert!(*n > 0, "{}: no success", d.id);
+    }
+}
+
 /// Textual lookups: exact `fmt.<kind>@<major>` only; versionless IDs are ambiguous and
 /// refused; everything else is malformed or unknown, never resolved to another entry.
 #[test]
@@ -392,8 +430,8 @@ fn ac4_hexbits() {
     // publishes no f64 entry today; the scan picks them up when it does.
     let text = read("fixtures/core/jrn/canon/vectors.json");
     let b = text.as_bytes();
-    for i in 0..b.len().saturating_sub(20) {
-        let w = &b[i..i + 20];
+    // Every 20-byte window, the last one included (`i` in `0..=len-20`).
+    for w in b.windows(20) {
         if w[0] == b'"'
             && &w[1..3] == b"0x"
             && w[19] == b'"'
