@@ -507,6 +507,152 @@ impl Big {
             a.cmp(b)
         })
     }
+
+    // The routines below were added for `KRN.NUM.FMT.LEN` (exact formatting). Like the
+    // ones above they never allocate, never recurse and report running out of limbs
+    // through `overflow` instead of wrapping.
+
+    /// True if an operation ran out of limbs (or [`Big::sub_assign`] was misused); the
+    /// value is then meaningless and the caller must report an error.
+    pub(crate) fn overflowed(&self) -> bool {
+        self.overflow
+    }
+
+    pub(crate) fn is_zero(&self) -> bool {
+        self.len == 0
+    }
+
+    pub(crate) fn is_odd(&self) -> bool {
+        self.limbs.first().is_some_and(|l| l & 1 == 1)
+    }
+
+    /// Number of significant bits (0 for zero).
+    pub(crate) fn bit_len(&self) -> u32 {
+        match self.len.checked_sub(1).and_then(|i| self.limbs.get(i)) {
+            Some(top) => (self.len as u32 - 1) * 32 + (32 - top.leading_zeros()),
+            None => 0,
+        }
+    }
+
+    fn bit(&self, i: u32) -> bool {
+        self.limbs.get((i / 32) as usize).is_some_and(|l| (l >> (i % 32)) & 1 == 1)
+    }
+
+    fn set_bit(&mut self, i: u32) {
+        let w = (i / 32) as usize;
+        match self.limbs.get_mut(w) {
+            Some(l) => {
+                *l |= 1 << (i % 32);
+                self.len = self.len.max(w + 1);
+            }
+            None => self.overflow = true,
+        }
+    }
+
+    /// `self += a`.
+    pub(crate) fn add_small(&mut self, a: u32) {
+        let mut carry = u64::from(a);
+        for limb in self.limbs.iter_mut().take(self.len) {
+            if carry == 0 {
+                break;
+            }
+            let s = u64::from(*limb) + carry;
+            *limb = s as u32;
+            carry = s >> 32;
+        }
+        if carry != 0 {
+            match self.limbs.get_mut(self.len) {
+                Some(l) => {
+                    *l = carry as u32;
+                    self.len += 1;
+                }
+                None => self.overflow = true,
+            }
+        }
+    }
+
+    /// `self -= other`; requires `self >= other` (otherwise sets `overflow`).
+    fn sub_assign(&mut self, other: &Big) {
+        if other.len > self.len {
+            self.overflow = true;
+            return;
+        }
+        let mut borrow = 0u64;
+        for (i, limb) in self.limbs.iter_mut().enumerate().take(self.len) {
+            let b = u64::from(other.limbs.get(i).copied().unwrap_or(0)) + borrow;
+            let a = u64::from(*limb);
+            if a >= b {
+                *limb = (a - b) as u32;
+                borrow = 0;
+            } else {
+                *limb = ((1u64 << 32) + a - b) as u32;
+                borrow = 1;
+            }
+        }
+        if borrow != 0 {
+            self.overflow = true;
+        }
+        self.trim();
+    }
+
+    /// `self = 2 * self + bit`.
+    fn shl1_with(&mut self, bit: bool) {
+        let mut carry = u32::from(bit);
+        for limb in self.limbs.iter_mut().take(self.len) {
+            let out = *limb >> 31;
+            *limb = (*limb << 1) | carry;
+            carry = out;
+        }
+        if carry != 0 {
+            match self.limbs.get_mut(self.len) {
+                Some(l) => {
+                    *l = carry;
+                    self.len += 1;
+                }
+                None => self.overflow = true,
+            }
+        }
+    }
+
+    /// Bounded long division: `(floor(self / d), self mod d)`, `None` if `d` is zero.
+    ///
+    /// Restoring binary division, one quotient bit per bit of `self` from the top: at most
+    /// `32 * LIMBS` iterations, each on fixed-size arrays. The quotient is at most `self`
+    /// and the remainder below `d`, so neither can exceed the capacity.
+    pub(crate) fn div_rem(&self, d: &Big) -> Option<(Big, Big)> {
+        if d.is_zero() {
+            return None;
+        }
+        let mut q = Big::from_u128(0);
+        let mut r = Big::from_u128(0);
+        q.overflow = self.overflow || d.overflow;
+        for i in (0..self.bit_len()).rev() {
+            r.shl1_with(self.bit(i));
+            if r.cmp_mag(d) != Ordering::Less {
+                r.sub_assign(d);
+                q.set_bit(i);
+            }
+        }
+        q.overflow |= r.overflow;
+        Some((q, r))
+    }
+
+    /// `self = floor(self / d)`, returning `self mod d`. `d` must be non-zero (callers
+    /// pass constants); a zero divisor sets `overflow` and returns 0.
+    pub(crate) fn div_small(&mut self, d: u32) -> u32 {
+        if d == 0 {
+            self.overflow = true;
+            return 0;
+        }
+        let mut rem = 0u64;
+        for limb in self.limbs.iter_mut().take(self.len).rev() {
+            let cur = (rem << 32) | u64::from(*limb);
+            *limb = (cur / u64::from(d)) as u32;
+            rem = cur % u64::from(d);
+        }
+        self.trim();
+        rem as u32
+    }
 }
 
 #[cfg(test)]
@@ -528,6 +674,65 @@ mod tests {
         assert!(!d.overflow, "worst case must fit");
         d.shl(32);
         assert!(d.overflow, "one limb more must report overflow");
+    }
+
+    fn to_u128(b: &Big) -> u128 {
+        b.limbs.iter().take(4).rev().fold(0u128, |acc, &l| (acc << 32) | u128::from(l))
+    }
+
+    #[test]
+    fn big_div_rem_matches_u128() {
+        let cases: [(u128, u128); 9] = [
+            (0, 1),
+            (1, 1),
+            (7, 2),
+            (u128::MAX, 1),
+            (u128::MAX, u128::MAX),
+            (u128::MAX, 3),
+            (u128::MAX - 5, 1u128 << 64),
+            (123_456_789_012_345_678_901_234_567, 98_765_432_109),
+            (1u128 << 100, (1u128 << 99) + 1),
+        ];
+        for (n, d) in cases {
+            let (q, r) = Big::from_u128(n).div_rem(&Big::from_u128(d)).unwrap();
+            assert!(!q.overflowed() && !r.overflowed());
+            assert_eq!((to_u128(&q), to_u128(&r)), (n / d, n % d), "{n} / {d}");
+        }
+        assert!(Big::from_u128(5).div_rem(&Big::from_u128(0)).is_none());
+    }
+
+    #[test]
+    fn big_div_rem_large_identity() {
+        // n = d * q0 + r0 with a 2400-bit d; division must recover q0 and r0.
+        let mut d = Big::from_u128(0xDEAD_BEEF_1234_5678_9ABC_DEF0_0F1E_2D3C);
+        d.shl(2272);
+        d.add_small(977);
+        let mut n = d;
+        n.mul_small(1_000_003);
+        n.add_small(41);
+        let (q, r) = n.div_rem(&d).unwrap();
+        assert!(!q.overflowed() && !r.overflowed());
+        assert_eq!(to_u128(&q), 1_000_003);
+        assert_eq!(to_u128(&r), 41);
+        assert_eq!(q.len, 1);
+        assert_eq!(r.len, 1);
+    }
+
+    #[test]
+    fn big_small_ops() {
+        let mut a = Big::from_u128(u128::MAX);
+        a.add_small(1);
+        assert_eq!(a.bit_len(), 129);
+        assert_eq!(a.div_small(1 << 31), 0);
+        assert_eq!(a.bit_len(), 98);
+        let mut b = Big::from_u128(1_000_000_007);
+        assert_eq!(b.div_small(1_000_000_000), 7);
+        assert_eq!(to_u128(&b), 1);
+        assert!(b.is_odd());
+        assert_eq!(Big::from_u128(0).bit_len(), 0);
+        let mut c = Big::from_u128(3);
+        c.sub_assign(&Big::from_u128(5));
+        assert!(c.overflowed(), "negative result must be reported");
     }
 
     #[test]

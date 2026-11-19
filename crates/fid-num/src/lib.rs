@@ -5,6 +5,7 @@
 
 pub mod err;
 pub mod f;
+pub mod fmt;
 pub mod kdec;
 pub mod red;
 pub mod rng;

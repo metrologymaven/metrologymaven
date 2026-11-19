@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-num]
 satisfies: [REQ-KRN.NUM.FMT-002, REQ-KRN.NUM.FMT-003, REQ-KRN.NUM.FMT-005, REQ-KRN.NUM.FMT-006]
 covers: []
 depends_on: [KRN.NUM.KDEC, KRN.NUM.ERR]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # KRN.NUM.FMT.LEN: Length and dimensionless formatters with the side-preserving rule
@@ -78,14 +79,25 @@ The formatter core that Track A transcription reports need in P0. It turns an SI
   4. Render the canonical string.
   5. With limits, compare x with each limit by `kdec::cmp`. If outside, compare the rounded output (converted back to metres exactly, as a Decimal times the unit factor) with the violated limit by `kdec::cmp_dec`, and repeat step 3 with one more digit until strictly on the violated side or 17 significant digits are reached.
   The big integer division routine is added to the KDEC internal big integer under this leaf (KDEC states that type is shared only with FMT).
-- **Errors:** `FmtError::{NonFinite, PrecisionOutOfRange, LimitsInverted, UnitNotSupported}` wrapped in `NumError::Domain`.
+- **Pinned details** (every output string depends on them; any implementation must match string for string; the oracle `fixtures/num/fmt/make_len_fixtures.py` models exactly these):
+  - **Exact value:** x = (-1)^s * m * 2^e from the bits; the display value is v = N / D with N = m * 2^max(e,0) * 10^a and D = 2^max(-e,0) * b, where (a, b) = (0, 1) for m and `1`, (3, 1) for mm, (6, 1) for um and (4, 254) for in.
+  - **Decimals(p):** q = round_half_even(|v| * 10^p), printed with exactly p digits after the point; p = 0 prints no point.
+  - **SigDigits(n):** k = floor(log10 |v|) decided exactly; p = n - 1 - k. If rounding carries into the next decade (q = 10^n), the output is 10^(n-1) at p - 1 decimals, so it keeps exactly n significant digits (9.9996 at 3 digits is `10.0`). A negative p prints q followed by -p zeros, never an exponent (1.23e6 at 3 digits is `1230000`). Zero (either sign) uses k = 0: `0` at 1 digit, `0.00` at 3.
+  - **Canonical string:** ASCII digits, at most one `.`, at least one digit before the point (`0.050`, never `.050`), no grouping or exponent; `-` only when x is negative and q is not zero, so -0.0 and negative values that round to zero print unsigned.
+  - **Violated limit:** the upper one if `kdec::cmp(x, upper)` is Greater, otherwise the lower one if `kdec::cmp(x, lower)` is Less. Neither: the requested output, `digits_added = 0`, even if it equals a limit (REQ-006).
+  - **Side loop:** at the current precision, if the output converted back exactly (q * 10^-p * f(u)) is strictly beyond the violated limit, stop. Otherwise, if at the cap, stop with `tie_at_max_precision = true`; otherwise add one digit (p + 1 decimals, or n + 1 significant digits), count it and repeat. Cap: n = 17 for significant digits; k + 1 + p >= 17 for decimals (k = 0 for zero). A request that already shows 17 or more significant digits is never extended (and is a tie if not strictly beyond). Decimals added by the rule may exceed the 20 a caller may request (AC-8 needs 9 from 3; a subnormal needs over 300).
+  - **Shortcut:** while the output is zero it stays zero for every p < -k - 1, so those steps are taken at once; the result and `digits_added` equal the one-digit-at-a-time loop.
+  - **Comparison of the output with the limit:** exact, with the same result as `kdec::cmp_dec` of the output as a Decimal (tested on every fixture case where the output fits a Decimal). It runs on the KDEC big integer because an output coefficient can exceed the u128 of `Decimal` (for example 20 decimals of 1e30 m).
+  - **`digits_added` is `u16`:** the side loop can add more than 255 digits (a subnormal value at 0 decimals against a violated limit), which a `u8` cannot count.
+  - **Error order:** `UnitNotSupported` (unknown formatter, a unit other than m/mm/um/in for `fmt.length@1`, other than `1` for `fmt.scalar@1`), then `PrecisionOutOfRange` (decimals > 20, significant digits 0 or > 17), then `LimitsInverted` (lower > upper; equal limits are allowed), then `NonFinite` (NaN or infinity). The `op` of the `NumError::Domain` is the formatter ID (`fmt.length@1`, `fmt.scalar@1`), or `fmt` for an unknown formatter.
+- **Errors:** `FmtError::{NonFinite, PrecisionOutOfRange, LimitsInverted, UnitNotSupported}` wrapped in `NumError::Domain`, plus `FmtError::Capacity` (`big_integer_capacity`) for an exhausted big integer, which cannot occur within these bounds (largest intermediate below 1400 of 2560 bits) and exists so that an impossible case is an error, never a wrong string.
 - **Determinism:** D0; integer arithmetic only.
 - **Performance budget:** one format call < 5 microseconds, including up to 17 digits of side refinement [unverified until measured].
 - **Crate:** `fid-num` (module `fmt::len`, shared types in `fmt::types`).
 
 ## Test fixtures
 
-`fixtures/num/fmt/len-golden-v1`: generated by a committed offline script using exact rational arithmetic (for example Python `fractions`), CC-BY-4.0. It also serves as the frozen corpus that `KRN.NUM.FMT.REG` diffs between versions.
+`fixtures/num/fmt/len-golden-v1.txt` (with the named AC examples in `len-ac-v1.txt`): generated by the committed offline script `fixtures/num/fmt/make_len_fixtures.py` using exact rational arithmetic (for example Python `fractions`), CC-BY-4.0. It also serves as the frozen corpus that `KRN.NUM.FMT.REG` diffs between versions.
 
 ## Build prompt
 
