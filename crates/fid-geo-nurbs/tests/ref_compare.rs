@@ -424,7 +424,8 @@ impl PositionEvaluator for DeBoorDouble {
 // ---------------------------------------------------------------- tests
 
 /// AC-1 (Rust side): every file matches the SHA-256 in the manifest, oracle outputs carry the
-/// manifest's oracle version and seed, and the adopted GEO.NURBS.DATA sets are pinned too.
+/// manifest's oracle version (frozen 1.0.0 outputs their own) and seed, and the adopted
+/// GEO.NURBS.DATA sets and the superseded ref_set_v1 are pinned too.
 #[test]
 fn ac1_manifest_matches_files() {
     let man = doc("manifest.json");
@@ -445,9 +446,11 @@ fn ac1_manifest_matches_files() {
             assert_eq!(f.get("oracle_version").str(), "nurbs_oracle 1.0.0");
             continue;
         }
-        assert_eq!(f.get("oracle_version").str(), version, "{path}");
+        // frozen oracle 1.0.0 outputs (analytic_set, multi_minima) carry their own version
+        let want = if f.has("frozen") { "nurbs_oracle 1.0.0" } else { version };
+        assert_eq!(f.get("oracle_version").str(), want, "{path}");
         let d = doc(path);
-        assert_eq!(d.get("oracle_version").str(), version, "{path}");
+        assert_eq!(d.get("oracle_version").str(), want, "{path}");
         assert_eq!(d.get("seed").num(), SEED, "{path}");
         assert_eq!(d.get("file_seed").num(), f.get("seed").num(), "{path}");
         assert_eq!(d.get("license").str(), "CC-BY-4.0");

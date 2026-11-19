@@ -6,27 +6,6 @@
  "generator": "tools/fixtures/nurbs_oracle.py",
  "files": [
   {
-   "path": "analytic_set.json",
-   "sha256": "sha256:8ba4eba476a4a39014fd11a579caa3e1f568bf72a0cf7e826ae58b4682b1983e",
-   "seed": 42,
-   "oracle_version": "nurbs_oracle 2.0.0",
-   "counts": {
-    "entities": 24,
-    "evals": 480,
-    "inversions": 733
-   }
-  },
-  {
-   "path": "multi_minima.json",
-   "sha256": "sha256:92b8f8580c6cbe136eac26c6e0b5cd6cea236e93c3ddbafb01b2bbdab4006de2",
-   "seed": 43,
-   "oracle_version": "nurbs_oracle 2.0.0",
-   "counts": {
-    "entities": 2,
-    "inversions": 260
-   }
-  },
-  {
    "path": "ref_set_v2.json",
    "sha256": "sha256:5ecf54805877bb34dcd84bdbd9ffa0f0393080150db2944e480f58a168cfb94f",
    "seed": 40,
@@ -36,6 +15,29 @@
     "evals": 1983,
     "inversions": 5000
    }
+  },
+  {
+   "path": "analytic_set.json",
+   "sha256": "sha256:b94dcdc4d3727451959e2fbe7ad8936ee6a83fe40002d7b6b10384a901ee0ea6",
+   "seed": 42,
+   "oracle_version": "nurbs_oracle 1.0.0",
+   "counts": {
+    "entities": 24,
+    "evals": 480,
+    "inversions": 733
+   },
+   "frozen": true
+  },
+  {
+   "path": "multi_minima.json",
+   "sha256": "sha256:776ce5ac83973b58699f218fc4b2f05be2292e80200a1d042df1c4232112ecfe",
+   "seed": 43,
+   "oracle_version": "nurbs_oracle 1.0.0",
+   "counts": {
+    "entities": 2,
+    "inversions": 260
+   },
+   "frozen": true
   },
   {
    "path": "valid_set.json",
