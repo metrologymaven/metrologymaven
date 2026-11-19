@@ -70,6 +70,8 @@ fixtures/flow/journey/** -text
 fixtures/outr/launch/gate/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
+# AGENT.REDTEAM.PRED fixtures: tar archives and digested suites compared byte for byte by make_pred.py --check.
+fixtures/agent/redteam/pred/** -text
 # ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
 tools/tests/fixtures/rfc/** -text
 # OUTR.BENCH.RUN.RECIPE fixtures: digested synthetic data and a byte-compared expected report.

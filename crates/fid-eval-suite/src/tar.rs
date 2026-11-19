@@ -85,6 +85,22 @@ pub(crate) fn list(bytes: &[u8]) -> Result<Vec<TarFile>, String> {
 }
 
 fn list_with_limit(bytes: &[u8], max_entries: usize) -> Result<Vec<TarFile>, String> {
+    Ok(entries(bytes, max_entries)?
+        .into_iter()
+        .map(|(path, folded, data)| TarFile { path, folded, digest: file_digest(data) })
+        .collect())
+}
+
+/// The regular files of a ustar archive as `(normalised path, bytes)`, with the same
+/// fail-closed rules as [`list`] (used by the payload marker rules, AGENT.REDTEAM.PRED).
+pub(crate) fn contents(bytes: &[u8]) -> Result<Vec<(String, &[u8])>, String> {
+    Ok(entries(bytes, MAX_ENTRIES)?.into_iter().map(|(path, _, data)| (path, data)).collect())
+}
+
+/// One regular file: normalised path, folded path and its bytes.
+type Entry<'a> = (String, String, &'a [u8]);
+
+fn entries(bytes: &[u8], max_entries: usize) -> Result<Vec<Entry<'_>>, String> {
     let mut out = Vec::new();
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
     let mut off = 0usize;
@@ -145,7 +161,7 @@ fn list_with_limit(bytes: &[u8], max_entries: usize) -> Result<Vec<TarFile>, Str
             });
         }
         if typ != b'5' {
-            out.push(TarFile { path, folded, digest: file_digest(&bytes[start..end]) });
+            out.push((path, folded, &bytes[start..end]));
         }
         off = padded.min(bytes.len());
     }
