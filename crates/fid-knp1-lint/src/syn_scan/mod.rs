@@ -1389,6 +1389,10 @@ impl<'a> Scan<'a> {
             }
             return;
         }
+        if matches!(name, "proc_macro" | "proc_macro_derive" | "proc_macro_attribute") {
+            // A proc-macro entry point, whatever the manifest says.
+            self.hit(from, &Rule::Parse, format!("`#[{name}]`: proc-macro entry point in the kernel closure"));
+        }
         if !BUILTIN_ATTRIBUTES.contains(&name) {
             self.hit(from, &Rule::Parse, format!("attribute macro `{name}`: proc-macro item input"));
             for b in in_args.iter_mut().take(to).skip(from + 1) {
@@ -1798,17 +1802,33 @@ fn proc_macro_finding(c: &graph::CrateEntry) -> Result<Option<Finding>, SynError
     let message = match parsed {
         None => format!("{} {}: Cargo.toml is not valid UTF-8 TOML", c.name, c.version),
         Some(t) => {
+            // The keys Cargo derives the library's target kind from: `proc-macro = true` or a
+            // `crate-type` list naming "proc-macro" (either spelling). A `crate-type` that is
+            // not a list of strings cannot be classified (fail closed).
             let lib = t.get("lib").and_then(toml::Value::as_table);
-            let pm = lib.is_some_and(|l| {
+            let flag = lib.is_some_and(|l| {
                 ["proc-macro", "proc_macro"].iter().any(|k| l.get(*k).and_then(toml::Value::as_bool) == Some(true))
             });
-            if !pm {
+            let mut types_bad = false;
+            let typed = lib.is_some_and(|l| {
+                ["crate-type", "crate_type"].iter().filter_map(|k| l.get(*k)).any(|v| match v.as_array() {
+                    Some(a) if a.iter().all(toml::Value::is_str) => a.iter().any(|x| x.as_str() == Some("proc-macro")),
+                    _ => {
+                        types_bad = true;
+                        false
+                    }
+                })
+            });
+            if types_bad {
+                format!("{} {}: [lib] crate-type is not a list of strings", c.name, c.version)
+            } else if flag || typed {
+                format!(
+                    "{} {} is a proc-macro crate in the kernel closure: its item input cannot be scanned",
+                    c.name, c.version
+                )
+            } else {
                 return Ok(None);
             }
-            format!(
-                "{} {} is a proc-macro crate in the kernel closure: its item input cannot be scanned",
-                c.name, c.version
-            )
         }
     };
     Ok(Some(Finding {
