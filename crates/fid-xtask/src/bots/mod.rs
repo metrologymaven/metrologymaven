@@ -10,7 +10,11 @@
 //!
 //! Determinism D0: the date is an input, never the clock; findings are sorted by code, then
 //! subject (bot ID or account), then detail. Every input is size-bounded and parsed fail-closed.
+//!
+//! [`block`]: the maintainer-marked blocking findings check `bot-blocking` (spec node
+//! `ECO.CI.BOTS.BLOCK`), which reads the same register.
 
+pub mod block;
 mod yaml;
 
 use std::collections::{BTreeMap, BTreeSet};

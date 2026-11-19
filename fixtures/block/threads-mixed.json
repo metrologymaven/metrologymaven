@@ -1,0 +1,21 @@
+[
+  {"id": "PRRT_c3", "path": "docs/guide.md", "line": null, "resolved": false, "comments": [
+    {"author": "lint-x[bot]", "at": "2026-11-17T08:00:00Z", "body": "Broken link."},
+    {"author": "boris-penn", "at": "2026-11-17T08:10:00Z", "body": "/blocking"}
+  ]},
+  {"id": "PRRT_b2", "path": "crates/fid-demo/src/io.rs", "line": 7, "resolved": false, "comments": [
+    {"author": "dmitri-ash", "at": "2026-11-17T08:00:00Z", "body": "Should this be a constant?"},
+    {"author": "ada-quill", "at": "2026-11-17T08:05:00Z", "body": "/blocking"}
+  ]},
+  {"id": "PRRT_a9", "path": "crates/fid-demo/src/lib.rs", "line": 3, "resolved": false, "comments": [
+    {"author": "fid-review[bot]", "at": "2026-11-17T08:00:00Z", "body": "Missing bounds check."},
+    {"author": "boris-penn", "at": "2026-11-17T08:20:00Z", "body": "/advisory"},
+    {"author": "ada-quill", "at": "2026-11-17T08:30:00Z", "body": "/blocking agreed with the bot"},
+    {"author": "cora-vale", "at": "2026-11-17T08:40:00Z", "body": "/advisory"},
+    {"author": "fid-review[bot]", "at": "2026-11-17T08:50:00Z", "body": "/advisory"}
+  ]},
+  {"id": "PRRT_d4", "path": "crates/fid-demo/src/main.rs", "line": 1, "resolved": false, "comments": [
+    {"author": "fid-review[bot]", "at": "2026-11-17T08:00:00Z", "body": "Consider /blocking style names."},
+    {"author": "ada-quill", "at": "2026-11-17T08:15:00Z", "body": "Not a mark: this is /blocking in the middle."}
+  ]}
+]

@@ -58,3 +58,5 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
+# ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
+fixtures/block/** -text

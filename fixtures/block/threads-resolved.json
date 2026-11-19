@@ -1,0 +1,9 @@
+[
+  {"id": "PRRT_a1", "path": "crates/fid-demo/src/lib.rs", "line": 12, "resolved": true, "comments": [
+    {"author": "fid-review[bot]", "at": "2026-11-17T09:00:00Z", "body": "Possible overflow when n is large."},
+    {"author": "ada-quill", "at": "2026-11-17T10:00:00Z", "body": "/blocking n comes from user input here."}
+  ]},
+  {"id": "PRRT_a2", "path": "crates/fid-demo/src/io.rs", "line": 40, "resolved": false, "comments": [
+    {"author": "lint-x[bot]", "at": "2026-11-17T09:01:00Z", "body": "Unused import."}
+  ]}
+]
