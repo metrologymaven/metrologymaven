@@ -215,7 +215,8 @@ impl ClockModel {
 /// Estimates offset, drift and sync uncertainty from `(t_dev, t_host)` pairs by ordinary
 /// least squares on pairs centred at the first sample, sums in index order, no FMA.
 ///
-/// Inputs must have strictly increasing device timestamps and stay within [`MAX_SPAN_NS`] of the first pair once centred. Errors are checked in this
+/// Inputs must have strictly increasing device timestamps and stay within [`MAX_SPAN_NS`]
+/// of the first pair once centred. Errors are checked in this
 /// order: count (`time_estimate_insufficient`, `time_too_many_pairs`), then each pair in index
 /// order. Host timestamps are not required to be monotonic: host-receive jitter and buffered
 /// delivery can invert neighbouring host times, and OLS absorbs that as residual (maintainer
