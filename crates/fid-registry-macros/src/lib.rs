@@ -29,14 +29,18 @@ mod util;
 /// | Attribute | Effect |
 /// |---|---|
 /// | `quantity = "length"`, `unit = "mm"` | `x-quantity`, `x-unit` |
-/// | `dimensionless_unchecked` | lets an `f64` field go without a quantity |
 /// | `description = EXPR` | `description` (any `&str` expression) |
-/// | `default = LIT` | `default`; the field is then not `required` |
+/// | `default = LIT` | `default` (checked against the field type; `-` allowed on numbers); the field is then not `required` |
 /// | `minimum = EXPR`, `maximum = EXPR` | numeric bounds |
 /// | `min_length = EXPR`, `max_length = EXPR`, `pattern = EXPR` | string limits |
 /// | `min_items = EXPR`, `max_items = EXPR` | array limits |
 /// | `untrusted = BOOL` | `x-untrusted` |
 /// | `rename = "name"` | the JSON property name |
+///
+/// An `f64` field must have a quantity (`quantity = "dimensionless"` for a pure ratio): `f64` has
+/// no `FidSchema`, only `FidNumber`, which the derive uses for a field with a quantity.
+/// A type naming itself (`Self`, or its own name as a one-segment path) is refused; mutual
+/// recursion through another type is not detected (see NODE.md).
 ///
 /// Value keywords (quantity, unit, bounds, string limits, `x-untrusted`) apply to the element
 /// schema of an array field; the others to the field's own schema. An `Option<T>` field is not

@@ -1,14 +1,14 @@
 //! `#[derive(FidSchema)]` (REQ-CORE.REG.DEF.MACRO-001, -002).
 
 use crate::util::{is_option, mentions, snake_case, Errors};
-use proc_macro2::{Literal, Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::ext::IdentExt;
 use syn::spanned::Spanned;
-use syn::{Attribute, Data, DeriveInput, Expr, Fields, Lit, LitBool, LitStr};
-
-/// Largest integer a JSON number holds exactly.
-const MAX_EXACT: u64 = 1 << 53;
+use syn::visit::Visit;
+use syn::{
+    Attribute, Data, DeriveInput, Expr, ExprLit, ExprUnary, Fields, Ident, Lit, LitBool, LitStr, Type, TypePath, UnOp,
+};
 
 pub fn expand(input: TokenStream) -> syn::Result<TokenStream> {
     let input: DeriveInput = syn::parse2(input)?;
@@ -76,8 +76,7 @@ struct FieldAttrs {
     rename: Option<LitStr>,
     quantity: Option<LitStr>,
     unit: Option<LitStr>,
-    dimensionless: Option<Span>,
-    default: Option<Lit>,
+    default: Option<Expr>,
     untrusted: Option<LitBool>,
     /// (keyword, value expression, applies to the element schema).
     keywords: Vec<(&'static str, Expr, bool)>,
@@ -111,7 +110,6 @@ fn field_attrs(attrs: &[Attribute]) -> syn::Result<FieldAttrs> {
                 "rename" => f.rename = Some(meta.value()?.parse()?),
                 "quantity" => f.quantity = Some(meta.value()?.parse()?),
                 "unit" => f.unit = Some(meta.value()?.parse()?),
-                "dimensionless_unchecked" => f.dimensionless = Some(ident.span()),
                 "default" => f.default = Some(meta.value()?.parse()?),
                 "untrusted" => f.untrusted = Some(meta.value()?.parse()?),
                 other => match EXPR_KEYWORDS.iter().find(|(name, _, _)| *name == other) {
@@ -119,7 +117,7 @@ fn field_attrs(attrs: &[Attribute]) -> syn::Result<FieldAttrs> {
                     None => {
                         return Err(meta.error(format!(
                             "unknown #[fid] field attribute `{other}`; expected one of quantity, unit, \
-                             dimensionless_unchecked, description, default, minimum, maximum, min_length, \
+                             description, default, minimum, maximum, min_length, \
                              max_length, pattern, min_items, max_items, untrusted, rename"
                         )))
                     }
@@ -131,32 +129,58 @@ fn field_attrs(attrs: &[Attribute]) -> syn::Result<FieldAttrs> {
     Ok(f)
 }
 
-/// The JSON value of a `default = LIT`, built at compile time.
-fn literal_value(lit: &Lit) -> syn::Result<TokenStream> {
+/// The value of a `default = LIT` (an optional `-` before a numeric literal), checked against
+/// the field type by the compiler through `rt::AcceptsDefault<kind>` (maintainer decision on
+/// #262): the literal is typed as the field's `Value`, so a wrong kind or an out-of-range value
+/// does not compile.
+fn default_value(ty: &Type, expr: &Expr) -> syn::Result<TokenStream> {
     let rt = quote!(::fid_registry::decl::rt);
-    match lit {
-        Lit::Bool(b) => Ok(quote! { #rt::CValue::Bool(#b) }),
-        Lit::Str(s) => Ok(quote! { #rt::CValue::Str(::std::string::String::from(#s)) }),
-        Lit::Int(i) => {
-            let v: i64 = i.base10_parse()?;
-            if v.unsigned_abs() > MAX_EXACT {
-                return Err(syn::Error::new(i.span(), "a default above 2^53 in magnitude is not exact in JSON"));
-            }
-            // Exact: |v| <= 2^53.
-            #[allow(clippy::cast_precision_loss)]
-            let f = Literal::f64_suffixed(v as f64);
-            Ok(quote! { #rt::CValue::Num(#f) })
+    let not_literal = "a default must be a boolean, integer, float or string literal";
+    let (negative, lit) = match expr {
+        Expr::Lit(ExprLit { lit, .. }) => (false, lit),
+        Expr::Unary(ExprUnary { op: UnOp::Neg(_), expr: inner, .. }) => match &**inner {
+            Expr::Lit(ExprLit { lit: lit @ (Lit::Int(_) | Lit::Float(_)), .. }) => (true, lit),
+            other => return Err(syn::Error::new(other.span(), "`-` applies only to a numeric default literal")),
+        },
+        other => return Err(syn::Error::new(other.span(), not_literal)),
+    };
+    let kind = match lit {
+        Lit::Bool(_) if !negative => quote!(BoolLit),
+        Lit::Str(_) if !negative => quote!(StrLit),
+        Lit::Int(i) if i.suffix().is_empty() => quote!(IntLit),
+        Lit::Float(f) if f.suffix().is_empty() => quote!(FloatLit),
+        Lit::Int(_) | Lit::Float(_) => {
+            return Err(syn::Error::new(lit.span(), "a default literal takes no type suffix; the field type decides"))
         }
-        Lit::Float(x) => {
-            let v: f64 = x.base10_parse()?;
-            if !v.is_finite() {
-                return Err(syn::Error::new(x.span(), "a default must be a finite number"));
-            }
-            let f = Literal::f64_suffixed(v);
-            Ok(quote! { #rt::CValue::Num(#f) })
-        }
-        other => Err(syn::Error::new(other.span(), "a default must be a boolean, integer, float or string literal")),
+        other => return Err(syn::Error::new(other.span(), not_literal)),
+    };
+    Ok(quote_spanned! { expr.span()=>
+        <#ty as #rt::AcceptsDefault<#rt::#kind>>::default_value(#expr)
+    })
+}
+
+/// Whether `ty` names the type being derived: bare `Self`, or the type's own name as a
+/// single-segment path, anywhere in `ty`. A path such as `other::Foo` is a different type and
+/// is not refused. Mutual recursion through another type cannot be seen here (NODE.md).
+fn refers_to_self(ty: &Type, own: &Ident) -> bool {
+    struct Finder<'a> {
+        own: &'a Ident,
+        found: bool,
     }
+    impl<'ast> Visit<'ast> for Finder<'_> {
+        fn visit_type_path(&mut self, p: &'ast TypePath) {
+            if p.qself.is_none() && p.path.leading_colon.is_none() && p.path.segments.len() == 1 {
+                let id = &p.path.segments[0].ident;
+                if id == "Self" || id == self.own {
+                    self.found = true;
+                }
+            }
+            syn::visit::visit_type_path(self, p);
+        }
+    }
+    let mut f = Finder { own, found: false };
+    f.visit_type(ty);
+    f.found
 }
 
 fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn::Result<TokenStream> {
@@ -181,7 +205,6 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
     let mut errors = Errors::default();
     let mut names: Vec<String> = Vec::new();
     let mut adds = Vec::new();
-    let own = name.to_string();
     for field in named {
         let Some(ident) = &field.ident else { continue };
         let attrs = match field_attrs(&field.attrs) {
@@ -201,26 +224,24 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
         }
         names.push(json_name.clone());
         let ty = &field.ty;
-        if mentions(ty, &["Self", own.as_str()]) {
+        if refers_to_self(ty, name) {
             errors.at(
                 ty.span(),
-                format!("field `{fname}` refers to `{own}` itself; recursive schemas are not supported"),
+                format!("field `{fname}` refers to `{name}` itself; recursive schemas are not supported"),
             );
             continue;
         }
-        // REQ-002: a float field needs a quantity or the explicit opt-out.
-        let float = mentions(ty, &["f64", "f32"]);
-        match (&attrs.quantity, attrs.dimensionless) {
-            (Some(q), Some(_)) => errors
-                .at(q.span(), format!("field `{fname}` has both a quantity and dimensionless_unchecked; keep one")),
-            (None, None) if float => errors.at(
+        // REQ-002: a float field needs a quantity. This check only gives a clear message for a
+        // spelled-out f64; the types enforce the rule (f64 has no FidSchema, only FidNumber),
+        // so an alias of f64 cannot slip through.
+        if attrs.quantity.is_none() && mentions(ty, &["f64", "f32"]) {
+            errors.at(
                 ident.span(),
                 format!(
                     "f64 field `{fname}` has no quantity: add #[fid(quantity = \"...\", unit = \"...\")] \
-                     or, for a genuinely unitless number, #[fid(dimensionless_unchecked)]"
+                     (quantity = \"dimensionless\" for a pure ratio)"
                 ),
-            ),
-            _ => {}
+            );
         }
         if let (Some(u), None) = (&attrs.unit, &attrs.quantity) {
             errors.at(u.span(), format!("field `{fname}` has a unit but no quantity"));
@@ -230,7 +251,7 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
                 errors.at(lit.span(), "a quantity or unit must not be empty");
             }
         }
-        let default = match attrs.default.as_ref().map(literal_value).transpose() {
+        let default = match attrs.default.as_ref().map(|d| default_value(ty, d)).transpose() {
             Ok(d) => d,
             Err(e) => {
                 errors.push(e);
@@ -259,7 +280,12 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
         if let Some(d) = default {
             sets.push(quote! { #rt::set(&mut __fid_field, "default", #d); });
         }
-        let schema = quote_spanned! { ty.span()=> #rt::schema_of::<#ty>() };
+        // A field with a quantity is a number: FidNumber, never FidSchema (REQ-002).
+        let schema = if attrs.quantity.is_some() {
+            quote_spanned! { ty.span()=> #rt::number_schema_of::<#ty>() }
+        } else {
+            quote_spanned! { ty.span()=> #rt::schema_of::<#ty>() }
+        };
         let mutability = if sets.is_empty() { quote!() } else { quote!(mut) };
         adds.push(quote! {
             {

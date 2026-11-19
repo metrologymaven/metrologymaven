@@ -190,8 +190,14 @@ struct Mapping {
     signed: i32,
     #[fid(quantity = "length", unit = "mm")]
     lengths: Vec<f64>,
-    #[fid(dimensionless_unchecked)]
+    #[fid(quantity = "dimensionless", default = -1)]
     ratio: f64,
+    #[fid(default = -3)]
+    offset: i16,
+    #[fid(default = "none")]
+    note: Option<String>,
+    #[fid(quantity = "length", unit = "mm", default = 0.5)]
+    gap: Option<f64>,
     set: BTreeSet<String>,
     #[fid(min_items = 1, untrusted = true, rename = "text")]
     texts: Vec<String>,
@@ -209,9 +215,12 @@ fn rust_types_map_to_json_types() {
         text(&p["lengths"]),
         r#"{"items":{"type":"number","x-quantity":"length","x-unit":"mm"},"type":"array"}"#
     );
-    assert_eq!(text(&p["ratio"]), r#"{"type":"number"}"#);
+    assert_eq!(text(&p["ratio"]), r#"{"default":-1,"type":"number","x-quantity":"dimensionless"}"#);
+    assert_eq!(text(&p["offset"]), r#"{"default":-3,"maximum":32767,"minimum":-32768,"type":"integer"}"#);
+    assert_eq!(text(&p["note"]), r#"{"default":"none","type":"string"}"#);
+    assert_eq!(text(&p["gap"]), r#"{"default":0.5,"type":"number","x-quantity":"length","x-unit":"mm"}"#);
     assert_eq!(text(&p["set"]), r#"{"items":{"type":"string"},"type":"array","uniqueItems":true}"#);
     assert_eq!(text(&p["text"]), r#"{"items":{"type":"string","x-untrusted":true},"minItems":1,"type":"array"}"#);
     assert_eq!(text(&p["type"]), r#"{"maximum":65535,"minimum":0,"type":"integer"}"#);
-    assert_eq!(text(&o["required"]), r#"["lengths","ratio","set","signed","small","text"]"#);
+    assert_eq!(text(&o["required"]), r#"["lengths","set","signed","small","text"]"#);
 }

@@ -7,21 +7,35 @@
 //! Messages are matched as substrings of the compiler's output, so the test does not depend
 //! on the exact layout of rustc diagnostics across toolchain versions. Cargo runs offline
 //! with a copy of the workspace `Cargo.lock`, so it uses exactly the pinned dependencies
-//! (CI fetches them first).
+//! (CI fetches them first). Each nested `cargo` is killed after [`CARGO_TIMEOUT`] and the
+//! test then fails saying so.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
-const CASES: [&str; 5] =
-    ["f64_without_quantity", "result_type_mismatch", "params_not_fidschema", "missing_side_effect", "missing_web"];
+const CASES: [&str; 8] = [
+    "f64_without_quantity",
+    "f64_alias_without_quantity",
+    "result_type_mismatch",
+    "params_not_fidschema",
+    "missing_side_effect",
+    "missing_web",
+    "default_type_mismatch",
+    "default_out_of_range",
+];
+
+/// Longest one nested `cargo check` may run before it is killed and the test fails.
+const CARGO_TIMEOUT: Duration = Duration::from_secs(300);
 
 fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
 fn cargo(dir: &Path, args: &[&str]) -> (bool, String) {
-    let out = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()))
+    let mut child = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()))
         .args(args)
         .args(["--offline", "--color", "never", "--quiet", "--target-dir"])
         .arg(dir.join("target"))
@@ -31,10 +45,34 @@ fn cargo(dir: &Path, args: &[&str]) -> (bool, String) {
         .env_remove("CARGO_ENCODED_RUSTFLAGS")
         .env_remove("RUSTC_WRAPPER")
         .env_remove("RUSTC_WORKSPACE_WRAPPER")
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("cargo runs");
-    let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
-    (out.status.success(), text)
+    // Drain both pipes on threads so a full pipe cannot stall cargo.
+    let drain = |mut r: Box<dyn Read + Send>| {
+        std::thread::spawn(move || {
+            let mut s = Vec::new();
+            let _ = r.read_to_end(&mut s);
+            String::from_utf8_lossy(&s).into_owned()
+        })
+    };
+    let out = drain(Box::new(child.stdout.take().expect("stdout")));
+    let err = drain(Box::new(child.stderr.take().expect("stderr")));
+    let start = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("wait for cargo") {
+            break status;
+        }
+        if start.elapsed() > CARGO_TIMEOUT {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("nested `cargo {}` did not finish within {} s; killed", args.join(" "), CARGO_TIMEOUT.as_secs());
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    };
+    let text = format!("{}{}", out.join().unwrap_or_default(), err.join().unwrap_or_default());
+    (status.success(), text)
 }
 
 #[test]

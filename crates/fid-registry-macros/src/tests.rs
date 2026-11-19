@@ -129,11 +129,11 @@ fn derive_errors() {
     .contains("has a unit but no quantity"));
     assert!(derive_err(quote!(
         struct P {
-            #[fid(quantity = "length", dimensionless_unchecked)]
+            #[fid(dimensionless_unchecked)]
             d: f64,
         }
     ))
-    .contains("both a quantity and dimensionless_unchecked"));
+    .contains("unknown #[fid] field attribute `dimensionless_unchecked`"));
     assert!(derive_err(quote!(
         struct P<T> {
             d: T,
@@ -171,25 +171,60 @@ fn derive_errors() {
     .contains("unknown #[fid] field attribute"));
     assert!(derive_err(quote!(
         struct P {
-            #[fid(default = 9007199254740993)]
+            #[fid(default = 5u32)]
             d: u32,
         }
     ))
-    .contains("2^53"));
+    .contains("no type suffix"));
+    assert!(derive_err(quote!(
+        struct P {
+            #[fid(default = -true)]
+            d: bool,
+        }
+    ))
+    .contains("numeric default"));
+    assert!(derive_err(quote!(
+        struct P {
+            #[fid(default = SOME_CONST)]
+            d: u32,
+        }
+    ))
+    .contains("must be a boolean, integer, float or string literal"));
+    assert!(derive_err(quote!(
+        struct P {
+            next: Box<Self>,
+        }
+    ))
+    .contains("recursive"));
     assert!(derive_err(quote!(
         struct P {
             next: Option<Vec<P>>,
         }
     ))
     .contains("recursive"));
-    // Opt-out and quantity both compile.
+    // A dimensionless quantity, a quantity on a Vec, a same-named type from another module and
+    // a negative default all expand.
     assert!(schema::expand(quote!(
         struct P {
-            #[fid(dimensionless_unchecked)]
+            #[fid(quantity = "dimensionless", default = -1)]
             r: f64,
+            other: other::P,
+            others: Vec<crate::other::P>,
         }
     ))
     .is_ok());
+    let out = schema::expand(quote!(
+        struct P {
+            #[fid(quantity = "length", default = -2.5)]
+            d: f64,
+            n: u32,
+        }
+    ))
+    .unwrap()
+    .to_string();
+    assert!(out.contains("number_schema_of :: < f64 >"), "{out}");
+    assert!(out.contains("schema_of :: < u32 >") && !out.contains("number_schema_of :: < u32 >"), "{out}");
+    assert!(out.contains("AcceptsDefault < :: fid_registry :: decl :: rt :: FloatLit >"), "{out}");
     assert!(schema::expand(quote!(
         struct P {
             #[fid(quantity = "length", unit = "mm")]

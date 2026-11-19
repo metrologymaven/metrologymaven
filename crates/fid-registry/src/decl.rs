@@ -5,9 +5,12 @@
 //!
 //! - `#[derive(FidSchema)]` on a parameter or result type generates its JSON Schema 2020-12
 //!   document ([`FidSchema::schema`]): fields in declaration order, `additionalProperties:
-//!   false`, `required` sorted, `x-quantity` / `x-unit` from `#[fid(quantity, unit)]`. An `f64`
-//!   field without a quantity does not compile unless it is marked
-//!   `#[fid(dimensionless_unchecked)]` (REQ-002).
+//!   false`, `required` sorted, `x-quantity` / `x-unit` from `#[fid(quantity, unit)]`. A field
+//!   whose type is or contains `f64` must declare a quantity (`quantity = "dimensionless"` for
+//!   a pure ratio), or it does not compile (REQ-002). This is enforced by the types, not by
+//!   reading the source text: `f64` has no [`FidSchema`] at all, only [`rt::FidNumber`], and
+//!   the derive asks for `FidNumber` only on a field that declares a quantity, so a type alias
+//!   of `f64` cannot slip through.
 //! - `#[fid_command(...)]` on a handler `fn(Ctx, P) -> Result<R, E>` generates a hidden
 //!   `__fid_command_<name>()` that returns a [`CommandDecl`]: the [`CommandDef`] built from
 //!   the attribute's policy fields, with `params_schema` from `P` and `result_schema` from
@@ -33,12 +36,14 @@ use std::fmt;
 /// A type that has a parameter or result schema. Implement it with `#[derive(FidSchema)]`;
 /// it is implemented here for the JSON scalar types and the standard containers.
 ///
-/// `u64`, `i64`, `usize`, `isize` and `f32` are deliberately not implemented: JSON numbers are
-/// exact only up to 2^53, and the registry's numbers are `f64`.
+/// `f64` is deliberately not implemented: a number field must declare its quantity, and then
+/// goes through [`rt::FidNumber`] (REQ-002). `u64`, `i64`, `usize`, `isize` and `f32` are not
+/// implemented either: JSON numbers are exact only up to 2^53, and the registry's numbers are
+/// `f64`.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` does not implement `FidSchema`",
     label = "a command parameter or result type must have a schema",
-    note = "add `#[derive(FidSchema)]` to the type (u64, i64, usize, isize and f32 have no schema)"
+    note = "add `#[derive(FidSchema)]` to the type; an f64 field needs #[fid(quantity = \"...\")]             (u64, i64, usize, isize and f32 have no schema)"
 )]
 pub trait FidSchema {
     /// The JSON Schema 2020-12 document of this type.
@@ -60,14 +65,6 @@ impl FidSchema for bool {
 impl FidSchema for String {
     fn schema() -> CValue {
         CValue::Obj(typed("string"))
-    }
-}
-
-/// Plain `number`; a field of this type needs `#[fid(quantity = ...)]` or
-/// `#[fid(dimensionless_unchecked)]` (REQ-002).
-impl FidSchema for f64 {
-    fn schema() -> CValue {
-        CValue::Obj(typed("number"))
     }
 }
 
@@ -231,6 +228,121 @@ pub mod rt {
     /// The schema of `T`.
     pub fn schema_of<T: FidSchema + ?Sized>() -> CValue {
         T::schema()
+    }
+
+    /// A type a field with `#[fid(quantity = ...)]` may have: `f64`, the integer types with a
+    /// schema, and `Option` or `Vec` of those. The derive uses this, not [`FidSchema`], for a
+    /// field that declares a quantity; `f64` has only this trait (REQ-002).
+    #[diagnostic::on_unimplemented(
+        message = "`{Self}` cannot carry a quantity",
+        label = "a field with #[fid(quantity)] must be a number, or an Option or Vec of numbers"
+    )]
+    pub trait FidNumber {
+        /// The schema of the number, before `x-quantity` and `x-unit` are added.
+        fn number_schema() -> CValue;
+    }
+
+    impl FidNumber for f64 {
+        fn number_schema() -> CValue {
+            CValue::Obj(super::typed("number"))
+        }
+    }
+
+    macro_rules! integer_number {
+        ($($t:ty),+) => { $(impl FidNumber for $t { fn number_schema() -> CValue { <$t as FidSchema>::schema() } })+ };
+    }
+    integer_number!(u8, u16, u32, i8, i16, i32);
+
+    impl<T: FidNumber> FidNumber for Option<T> {
+        fn number_schema() -> CValue {
+            T::number_schema()
+        }
+    }
+
+    impl<T: FidNumber> FidNumber for Vec<T> {
+        fn number_schema() -> CValue {
+            let mut o = super::typed("array");
+            o.insert("items".to_string(), T::number_schema());
+            CValue::Obj(o)
+        }
+    }
+
+    /// The schema of a field that declares a quantity.
+    pub fn number_schema_of<T: FidNumber + ?Sized>() -> CValue {
+        T::number_schema()
+    }
+
+    /// Literal kinds of `#[fid(default = ...)]`.
+    #[derive(Debug)]
+    pub struct BoolLit;
+    /// A string literal.
+    #[derive(Debug)]
+    pub struct StrLit;
+    /// An integer literal, possibly negative.
+    #[derive(Debug)]
+    pub struct IntLit;
+    /// A float literal, possibly negative.
+    #[derive(Debug)]
+    pub struct FloatLit;
+
+    /// Field types that accept a `default` literal of kind `L`. The literal is converted to
+    /// [`Self::Value`] by the compiler, so a value out of the type's range or of the wrong kind
+    /// (`default = "yes"` on a `bool`, `default = 300` or `-1` on a `u8`) does not compile.
+    #[diagnostic::on_unimplemented(
+        message = "this `default` literal does not fit a field of type `{Self}`",
+        label = "the default must be a literal of the field's type"
+    )]
+    pub trait AcceptsDefault<L> {
+        /// The Rust type the literal is checked as.
+        type Value;
+        /// The JSON value of the default.
+        fn default_value(v: Self::Value) -> CValue;
+    }
+
+    impl AcceptsDefault<BoolLit> for bool {
+        type Value = bool;
+        fn default_value(v: bool) -> CValue {
+            CValue::Bool(v)
+        }
+    }
+
+    impl AcceptsDefault<StrLit> for String {
+        type Value = &'static str;
+        fn default_value(v: &'static str) -> CValue {
+            CValue::Str(v.to_string())
+        }
+    }
+
+    macro_rules! integer_default {
+        ($($t:ty),+) => {
+            $(impl AcceptsDefault<IntLit> for $t {
+                type Value = $t;
+                fn default_value(v: $t) -> CValue { CValue::Num(f64::from(v)) }
+            })+
+        };
+    }
+    integer_default!(u8, u16, u32, i8, i16, i32);
+
+    /// An integer default on an `f64` field is checked as `i32`, so it is exact.
+    impl AcceptsDefault<IntLit> for f64 {
+        type Value = i32;
+        fn default_value(v: i32) -> CValue {
+            CValue::Num(f64::from(v))
+        }
+    }
+
+    impl AcceptsDefault<FloatLit> for f64 {
+        type Value = f64;
+        fn default_value(v: f64) -> CValue {
+            CValue::Num(v)
+        }
+    }
+
+    impl<L, T: AcceptsDefault<L>> AcceptsDefault<L> for Option<T> {
+        type Value = T::Value;
+        fn default_value(v: T::Value) -> CValue {
+            T::default_value(v)
+        }
     }
 
     /// Sets `key` on the schema itself (container keywords: `description`, `default`,

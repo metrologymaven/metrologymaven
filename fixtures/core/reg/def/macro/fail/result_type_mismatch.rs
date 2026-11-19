@@ -1,4 +1,4 @@
-// expect: mismatched types
+// expect: expected `Declared`
 // REQ-CORE.REG.DEF.MACRO-004: the attribute names a result type other than the handler's.
 use fid_registry::{fid_command, FidSchema};
 
