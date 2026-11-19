@@ -139,7 +139,10 @@ fn ac4_typed_validation() {
     let mut cfg = base_config();
     cfg.values.insert("acme.secret".into(), SettingValue::Int(1));
     let e = validate(&s, &cfg).unwrap_err();
-    assert_eq!((e.code, e.setting.as_str(), e.reason), (ConfigErrorCode::ConfigInvalid, "acme.secret", ConfigReason::Undeclared));
+    assert_eq!(
+        (e.code, e.setting.as_str(), e.reason),
+        (ConfigErrorCode::ConfigInvalid, "acme.secret", ConfigReason::Undeclared)
+    );
     assert_eq!(e.code(), "CONFIG_INVALID");
     // The digest refuses an invalid configuration rather than hashing it.
     assert_eq!(config_digest(&s, &cfg).unwrap_err(), e);
@@ -171,7 +174,8 @@ fn invalid_schemas() {
     assert!(all.len() >= 15);
     for case in all {
         let name = text(&case, "name");
-        let e = ConfigSchema::from_value(case["schema"].clone()).err().unwrap_or_else(|| panic!("{name} must be rejected"));
+        let e =
+            ConfigSchema::from_value(case["schema"].clone()).err().unwrap_or_else(|| panic!("{name} must be rejected"));
         assert_eq!(
             (e.code(), e.setting.as_str(), e.reason.as_str()),
             ("CONFIG_INVALID", text(&case, "setting").as_str(), text(&case, "reason").as_str()),
@@ -222,7 +226,8 @@ fn configuration_round_trip() {
 #[test]
 fn bad_json() {
     let s = schema();
-    for input in [&b"{"[..], b"{\"schema\":\"configuration/0\",\"schema\":\"configuration/0\",\"values\":{}}", b"\xff"] {
+    for input in [&b"{"[..], b"{\"schema\":\"configuration/0\",\"schema\":\"configuration/0\",\"values\":{}}", b"\xff"]
+    {
         let e = Configuration::from_json(&s, input).unwrap_err();
         assert_eq!((e.code(), e.setting.as_str(), e.reason), ("CONFIG_INVALID", "", ConfigReason::Json));
     }

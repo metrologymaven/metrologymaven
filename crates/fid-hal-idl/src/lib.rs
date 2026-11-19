@@ -24,6 +24,6 @@ pub use stamp::{
 };
 
 pub use base::config::{
-    config_digest, ConfigDigest, ConfigError, ConfigErrorCode, ConfigReason, ConfigSchema, Configuration,
-    SettingRange, SettingSchema, SettingType, SettingValue,
+    config_digest, ConfigDigest, ConfigError, ConfigErrorCode, ConfigReason, ConfigSchema, Configuration, SettingRange,
+    SettingSchema, SettingType, SettingValue,
 };
