@@ -444,8 +444,7 @@ fn principal_comes_from_the_channel_not_the_params() {
     let ch = channel(&mut table, ChannelKind::Mcp, Some("client-7"));
     let c = HandlerCtx::derive(&table, &ch, 9, CancelToken::never()).unwrap();
     // Parameters that claim a principal have no effect.
-    let p =
-        ValidParams::for_tests(parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap());
+    let p = ValidParams::for_tests(parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap());
     let seen = Arc::new(Mutex::new(Vec::new()));
     let checked = run(&def, Observer(Arc::clone(&seen)), &MemState::new(), &p, &c).unwrap();
     assert_eq!(c.principal().kind(), PrincipalKind::Agent);
@@ -582,8 +581,16 @@ fn handler_set_refusals() {
         )
     );
     // A definition whose ID is not a valid name@major (fields are public, so not checked yet).
-    assert_err(&set.register(def_named("Not An Id", 1, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
-    assert_err(&set.register(def_named("big", 123_456, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
+    assert_err(
+        &set.register(def_named("Not An Id", 1, &[]), boxed()).unwrap_err(),
+        Code::Internal,
+        "invariant_violated",
+    );
+    assert_err(
+        &set.register(def_named("big", 123_456, &[]), boxed()).unwrap_err(),
+        Code::Internal,
+        "invariant_violated",
+    );
     assert_eq!(set.len(), 1);
     assert_eq!(set.def(ID).unwrap().effects, vec!["ElementCreated".to_string()], "first definition kept");
     assert_eq!(format!("{set:?}"), "{\"test.create_element@1\"}");
@@ -613,7 +620,11 @@ fn handler_set_is_bounded() {
         d.id = format!("cmd.c{i}");
         set.register(d, boxed()).unwrap();
     }
-    assert_err(&set.register(def_named("cmd.extra", 1, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
+    assert_err(
+        &set.register(def_named("cmd.extra", 1, &[]), boxed()).unwrap_err(),
+        Code::Internal,
+        "invariant_violated",
+    );
     assert_eq!(set.len(), MAX_HANDLERS);
 }
 
