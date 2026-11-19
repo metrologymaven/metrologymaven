@@ -1,0 +1,24 @@
+[package]
+name = "fid-geo-index"
+description = "Metrology Maven spatial indexes: the deterministic triangle bounding volume hierarchy with conservative sphere, box and ray candidate queries and ordered leaf visits (spec node GEO.INDEX.BVH)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
+# fid-geo-types (the validated Mesh, FrameRef and the totalOrder Aabb) and fid-geo-frame
+# (Transform, to map a ray from another frame into the mesh frame).
+[dependencies]
+fid-geo-types = { path = "../fid-geo-types" }
+fid-geo-frame = { path = "../fid-geo-frame" }
+
+# Test-only: SHA-256 for the fixture digests (fid-kci) and the KNP-1 sqrt that regenerates
+# the pinned sphere mesh (fid-num).
+[dev-dependencies]
+fid-kci = { path = "../fid-kci" }
+fid-num = { path = "../fid-num" }
+
+[lints]
+workspace = true
