@@ -81,6 +81,7 @@ pub(crate) const PROGRAM: Shape = Shape {
         req("program_id", Ty::Uuid7),
         req("meta", Ty::Object),
         req("params", Ty::Objects),
+        opt("variants", Ty::Objects),
         req("variables", Ty::ArrayOf("var_decl", 0)),
         req("subroutines", Ty::ArrayOf("subroutine", 0)),
         req("main", STEPS),
