@@ -10,8 +10,9 @@ use fid_knp1_lint::find::{Finding, Rule};
 use fid_knp1_lint::graph;
 use fid_knp1_lint::syn_scan;
 use fid_knp1_lint::typed::{
-    check, clippy_toml, driver_version, finish, parse_config, parse_messages, run, target_findings, unresolved_allowed,
-    CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS, TYPED_TABLE, TYPED_TABLE_LEN,
+    check_run, clippy_toml, driver_version, finish, parse_config, parse_messages, run, target_findings,
+    unresolved_allowed, CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS, TYPED_TABLE,
+    TYPED_TABLE_LEN,
 };
 use std::path::{Path, PathBuf};
 
@@ -261,7 +262,18 @@ fn ac1_to_ac4_end_to_end_on_three_targets() {
     let gcfg = graph::load_config(&config).unwrap();
     let closure = graph::compute_closure(&gcfg).unwrap();
     let opts = Options { cargo: cargo(), scratch: scratch("typed-ws") };
-    let out = check(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap();
+    // The workspace's .cargo/config.toml sets a missing wrapper, a missing rustc and a bad
+    // codegen flag: the check must override them, or nothing builds.
+    let run = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap();
+    // The real clippy wording of an unresolved table path matches the detector: the x86
+    // feature-detection macro does not exist on wasm32 and is allowlisted there.
+    assert!(
+        run.unresolved_allowed
+            .contains(&("wasm32-unknown-unknown".to_string(), "std::is_x86_feature_detected".to_string())),
+        "{:?}",
+        run.unresolved_allowed
+    );
+    let out = run.outcome;
     for f in out.findings.iter().chain(&out.notes) {
         f.validate().unwrap();
     }

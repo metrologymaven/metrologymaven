@@ -37,7 +37,7 @@ const MAX_RULE_SUFFIX: usize = 48;
 // ------------------------------------------------------------------ rules
 
 /// Fixed rule IDs and their one-line descriptions, in catalogue order.
-const FIXED: [(&str, &str); 14] = [
+const FIXED: [(&str, &str); 15] = [
     ("KNP1-FMA", "fused multiply-add: `mul_add` or an FMA intrinsic"),
     ("KNP1-POW", "`powi`/`powf` and other std float powers outside the fid-num facade"),
     ("KNP1-LIBM", "std or libm transcendental function outside the fid-num facade"),
@@ -52,6 +52,7 @@ const FIXED: [(&str, &str); 14] = [
     ("KNP1-THREAD", "threads (`std::thread` and similar)"),
     ("KNP1-PARSE", "source file the syntax scan cannot lex or classify (never waivable)"),
     ("KNP1-PARSE-RESOLVE", "use tree, alias or macro metavariable the syntax scan cannot resolve"),
+    ("KNP1-CFG", "cfg predicate on `clippy` or `debug_assertions`: code hidden from the lint or profile-dependent (never waivable)"),
 ];
 
 /// Rule families with a free suffix, their prefixes and descriptions.
@@ -82,6 +83,8 @@ pub enum Rule {
     /// `KNP1-PARSE-RESOLVE`: a `use` tree, alias chain or macro metavariable the syntax scan
     /// cannot resolve; waivable, with the waiver's recorded justification (KRN.NUM.LINT.SYN).
     ParseResolve,
+    /// `KNP1-CFG`: a `clippy` or `debug_assertions` cfg predicate (KRN.NUM.LINT.SYN).
+    Cfg,
     /// `KNP1-FLAG-<suffix>`.
     Flag(String),
     /// `KNP1-ALLOW-<suffix>`.
@@ -93,7 +96,7 @@ pub enum Rule {
 }
 
 impl Rule {
-    const FIXED_RULES: [Rule; 14] = [
+    const FIXED_RULES: [Rule; 15] = [
         Rule::Fma,
         Rule::Pow,
         Rule::Libm,
@@ -108,6 +111,7 @@ impl Rule {
         Rule::Thread,
         Rule::Parse,
         Rule::ParseResolve,
+        Rule::Cfg,
     ];
 
     fn fixed_index(&self) -> Option<usize> {
@@ -144,8 +148,9 @@ impl Rule {
     /// (KRN.NUM.LINT.SYN), and a `KNP1-TYPED-*` crate was not linted for that target
     /// (KRN.NUM.LINT.TYPED).
     pub fn is_waivable(&self) -> bool {
-        !matches!(self, Rule::Flag(s) if s.starts_with("WASM"))
+        !matches!(self, Rule::Flag(s) if s.starts_with("WASM") || s == "WRAPPER")
             && *self != Rule::Parse
+            && *self != Rule::Cfg
             && !matches!(self, Rule::Typed(_))
     }
 

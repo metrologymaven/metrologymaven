@@ -1355,6 +1355,12 @@ impl<'a> Scan<'a> {
         } else {
             None
         };
+        if name == "cfg" {
+            if let Some((open, close)) = group {
+                self.check_cfg_pred(open + 1, close);
+            }
+            return;
+        }
         if name == "cfg_attr" && depth < 8 {
             let Some((open, close)) = group else { return };
             let mut starts = Vec::new();
@@ -1369,6 +1375,8 @@ impl<'a> Scan<'a> {
                 }
                 k += 1;
             }
+            // The predicate runs up to the first top-level comma.
+            self.check_cfg_pred(open + 1, starts.first().map_or(close, |s| s - 1));
             starts.push(close + 1);
             for w in starts.windows(2) {
                 if let (Some(&a), Some(&b)) = (w.first(), w.get(1)) {
@@ -1401,6 +1409,23 @@ impl<'a> Scan<'a> {
         }
     }
 
+    /// A `clippy` cfg (code the type-aware check never sees) or a `debug_assertions` cfg
+    /// (profile-dependent kernel code) in a predicate `[from, to)` is `KNP1-CFG`, never waivable.
+    /// `clippy::lint` paths (lint names in `allow`) are not predicates.
+    fn check_cfg_pred(&mut self, from: usize, to: usize) {
+        for k in from..to {
+            let Some(name) = self.ident(k) else { continue };
+            let path_seg =
+                self.is(k + 1, &Kind::PathSep) || k.checked_sub(1).is_some_and(|p| self.is(p, &Kind::PathSep));
+            if name == "clippy" && !path_seg {
+                self.hit(k, &Rule::Cfg, "`clippy` cfg predicate: code that differs under the lint driver".to_string());
+            }
+            if name == "debug_assertions" {
+                self.hit(k, &Rule::Cfg, "`debug_assertions` cfg predicate: profile-dependent kernel code".to_string());
+            }
+        }
+    }
+
     /// A module, binding or type alias named like a facade root (`mod fid_num`,
     /// `use std::primitive::f64 as fid_num`) could stand in for the facade: `KNP1-LIBM`.
     fn check_facade_shadow(&mut self, at: usize, name: &str) {
@@ -1423,6 +1448,9 @@ impl<'a> Scan<'a> {
             if self.ident(i).is_some() && self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_)))
             {
                 let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX).min(n);
+                if self.ident(i) == Some("cfg") {
+                    self.check_cfg_pred(i + 3, close);
+                }
                 for b in in_args.iter_mut().take(close).skip(i + 3) {
                     *b = true;
                 }

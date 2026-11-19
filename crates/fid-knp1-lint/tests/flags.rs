@@ -48,6 +48,13 @@ fn assert_dir(dir: &str) -> Vec<Finding> {
 }
 
 #[test]
+fn compiler_wrappers_in_the_cargo_config_are_never_waivable() {
+    let f = assert_dir("wrapper");
+    assert_eq!(f.len(), 3);
+    assert!(f.iter().all(|x| x.rule == Rule::Flag("WRAPPER".into()) && !x.rule.is_waivable()));
+}
+
+#[test]
 fn ac1_native_names_file_and_line() {
     let f = assert_dir("native");
     assert_eq!(f.len(), 1);

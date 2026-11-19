@@ -80,6 +80,7 @@ Source can be clean while the build still changes results: `target-cpu=native` o
   The structured parser only refines the rule and column. A line it does not explain is reported as `KNP1-FLAG-KEYWORD`.
 - **Opt-out marker.** A line opts out only with a same-line marker `knp1-flags: allow <RULE> <reason>`. The marker suppresses that one rule on that one line and is reported as an informational `KNP1-FLAG-OPTOUT` note, which does not fail the lint.
 - **`.cargo/config(.toml)` gates.** The free-form `[alias]`, `[env]` and `[target.*]` values (everything but the rustflags keys, which are parsed) go through the same substring scan. Having both `.cargo/config` and `.cargo/config.toml` is `KNP1-FLAG-AMBIGUOUS`.
+- **Compiler wrappers (re-review of PR #235).** A `.cargo/config(.toml)` that sets `build.rustc-wrapper`, `build.rustc-workspace-wrapper` or `build.rustc` (either spelling) wraps or replaces the pinned compiler, which would also drop the type-aware check: `KNP1-FLAG-WRAPPER` at the key, never waivable and not covered by an opt-out marker.
 - **CPU and wasm rules.** Any `target-cpu` that is not `native` and not in `allowed_target_cpus` is reported: `KNP1-FLAG-FMA` when the CPU is on the built-in FMA list below, otherwise `KNP1-FLAG-CPU`. Listing a built-in FMA CPU in `allowed_target_cpus` is a config error unless `[flags.fma_cpu_overrides] <cpu> = "<reason>"` gives a reason. `KNP1-FLAG-WASM*` findings cannot be waived.
 
 ### Built-in FMA-implying lists and their sources

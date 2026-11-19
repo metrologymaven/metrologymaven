@@ -346,6 +346,7 @@ fn rule_ids_are_stable() {
         ("KNP1-THREAD", Rule::Thread),
         ("KNP1-PARSE", Rule::Parse),
         ("KNP1-PARSE-RESOLVE", Rule::ParseResolve),
+        ("KNP1-CFG", Rule::Cfg),
     ];
     for (id, rule) in fixed {
         assert_eq!(Rule::parse(id), Some(rule.clone()));
@@ -369,7 +370,9 @@ fn rule_ids_are_stable() {
         assert_eq!(Rule::parse(bad), None, "{bad}");
     }
     let cat = catalogue();
-    assert_eq!(cat.len(), 18);
+    assert_eq!(cat.len(), 19);
+    assert!(!Rule::Cfg.is_waivable());
+    assert!(!Rule::Flag("WRAPPER".into()).is_waivable());
     assert_eq!(Rule::parse("KNP1-TYPED-BUILD"), Some(Rule::Typed("BUILD".into())));
     assert!(!Rule::Typed("BUILD".into()).is_waivable());
     for pat in ["KNP1-FLAG-*", "KNP1-ALLOW-*", "KNP1-DATA-*", "KNP1-TYPED-*"] {

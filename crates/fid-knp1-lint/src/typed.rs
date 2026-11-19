@@ -609,6 +609,8 @@ pub struct Parsed {
     pub built: BTreeSet<String>,
     /// Crates with a compile error: first error message.
     pub errors: BTreeMap<String, String>,
+    /// Table paths the driver reported as unresolved and [`unresolved_allowed`] accepted.
+    pub unresolved_allowed: BTreeSet<String>,
 }
 
 /// Artifact kinds that count as the crate being linted (a `custom-build` script does not).
@@ -721,6 +723,7 @@ pub fn parse_messages(stdout: &[u8], target: &str, ctx: &MapCtx) -> Result<Parse
                     if !unresolved_allowed(path, target) {
                         return Err(driver(format!("{target}: the driver cannot resolve a table entry: {text}")));
                     }
+                    out.unresolved_allowed.insert(path.to_string());
                     continue;
                 }
                 let Some(c) = krate else { continue };
@@ -942,22 +945,32 @@ pub struct Options {
 
 /// Environment variables removed from the driver's environment: every way to inject compiler
 /// flags or wrap the compiler besides the check's own arguments.
-pub const REMOVED_ENV: [&str; 8] = [
+pub const REMOVED_ENV: [&str; 7] = [
     "RUSTFLAGS",
     "CARGO_BUILD_RUSTFLAGS",
-    "RUSTC_WRAPPER",
-    "RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTC",
     "CARGO_BUILD_RUSTC_WRAPPER",
     "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
     "CLIPPY_ARGS",
     "CLIPPY_DISABLE_DOCS_LINKS",
 ];
 
+/// The pinned toolchain's `rustc`: the `rustc` next to the given `cargo`.
+pub fn pinned_rustc(cargo: &Path) -> Result<PathBuf, TypedError> {
+    let rustc = cargo.with_file_name(format!("rustc{}", std::env::consts::EXE_SUFFIX));
+    if rustc.is_file() {
+        Ok(rustc)
+    } else {
+        Err(driver(format!("no rustc next to {}: pass the pinned toolchain's cargo by path", cargo.display())))
+    }
+}
+
 /// Feature sets each target is linted with: the default features, and all features.
 pub const FEATURE_SETS: [(&str, bool); 2] = [("default features", false), ("all features", true)];
 
 fn driver_command(
     opts: &Options,
+    rustc: &Path,
     workspace: &Path,
     conf: &Path,
     target: &str,
@@ -976,9 +989,15 @@ fn driver_command(
             }
         }
     }
-    // An explicitly empty CARGO_ENCODED_RUSTFLAGS takes precedence over RUSTFLAGS and every
-    // `build.rustflags` / `target.<…>.rustflags` in `.cargo/config.toml`.
+    // Explicit values take precedence over `.cargo/config.toml`: an empty
+    // CARGO_ENCODED_RUSTFLAGS over RUSTFLAGS and every `build.rustflags` /
+    // `target.<…>.rustflags`, empty wrappers over `build.rustc-wrapper` /
+    // `build.rustc-workspace-wrapper` (cargo clippy then sets its own workspace wrapper), and
+    // RUSTC over `build.rustc`.
     cmd.env("CARGO_ENCODED_RUSTFLAGS", "")
+        .env("RUSTC_WRAPPER", "")
+        .env("RUSTC_WORKSPACE_WRAPPER", "")
+        .env("RUSTC", rustc)
         .env("CLIPPY_CONF_DIR", conf)
         .env("CARGO_TERM_COLOR", "never")
         .arg("clippy")
@@ -1009,14 +1028,33 @@ pub fn check(
     syn_cfg: &syn_scan::Config,
     opts: &Options,
 ) -> Result<Outcome, TypedError> {
+    check_run(closure, workspace, cfg, syn_cfg, opts).map(|r| r.outcome)
+}
+
+/// A run's outcome plus the allowlisted unresolved table paths, as `(target, path)`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CheckRun {
+    pub outcome: Outcome,
+    pub unresolved_allowed: BTreeSet<(String, String)>,
+}
+
+/// [`check`], also reporting which allowlisted table paths the driver could not resolve.
+pub fn check_run(
+    closure: &Closure,
+    workspace: &Path,
+    cfg: &Config,
+    syn_cfg: &syn_scan::Config,
+    opts: &Options,
+) -> Result<CheckRun, TypedError> {
     let version = driver_version(&opts.cargo)?;
     if version != cfg.clippy_version {
         return Err(driver(format!("clippy {version} is not the pinned {}", cfg.clippy_version)));
     }
     let members: Vec<&CrateEntry> = closure.crates.iter().filter(|c| c.source_kind == SourceKind::Workspace).collect();
     if members.is_empty() {
-        return Ok(Outcome::default());
+        return Ok(CheckRun::default());
     }
+    let rustc = pinned_rustc(&opts.cargo)?;
     let conf = opts.scratch.join("clippy-conf");
     std::fs::create_dir_all(&conf).map_err(|e| err(TypedErrorCode::Io, format!("{}: {e}", conf.display())))?;
     std::fs::write(conf.join("clippy.toml"), clippy_toml())
@@ -1029,9 +1067,10 @@ pub fn check(
             .collect(),
     };
     let mut all = Vec::new();
+    let mut unresolved = BTreeSet::new();
     for target in &cfg.targets {
         for (label, all_features) in FEATURE_SETS {
-            let cmd = driver_command(opts, workspace, &conf, target, all_features, &members);
+            let cmd = driver_command(opts, &rustc, workspace, &conf, target, all_features, &members);
             let run_name = format!("{target}, {label}");
             let out = run_bounded(cmd, Duration::from_secs(cfg.timeout_secs))
                 .map_err(|e| driver(format!("cannot run {} clippy: {e}", opts.cargo.display())))?;
@@ -1045,10 +1084,11 @@ pub fn check(
                 None
             };
             let parsed = parse_messages(&out.stdout, target, &ctx)?;
+            unresolved.extend(parsed.unresolved_allowed.iter().map(|p| (target.clone(), p.clone())));
             all.extend(target_findings(&parsed, &ctx, &run_name, failure.as_deref()));
         }
     }
-    Ok(finish(all, syn_cfg))
+    Ok(CheckRun { outcome: finish(all, syn_cfg), unresolved_allowed: unresolved })
 }
 
 /// Loads `knp1-lint.toml` at `config_path` (`[graph]`, `[syn]`, `[typed]`), computes the closure
