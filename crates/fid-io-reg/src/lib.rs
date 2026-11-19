@@ -43,9 +43,9 @@ pub use limits::{
     DEFAULT_WALL_MS,
 };
 pub use prov::{
-    principal_commit, resolve_unit, to_metres, Detection, EffectiveOptions, Evidence, FormatSelection, FrameCapture,
-    HashingSource, NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo, SourceDigest, SourceProvenance,
-    UnitResolution, UnitSource, VersionToken,
+    draw_entry_salts, principal_commit, resolve_unit, to_metres, Detection, EffectiveOptions, Evidence,
+    FormatSelection, FrameCapture, HashingSource, NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo,
+    SourceDigest, SourceProvenance, UnitResolution, UnitSource, VersionToken,
 };
 pub use report::{
     Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportPos, ReportText,

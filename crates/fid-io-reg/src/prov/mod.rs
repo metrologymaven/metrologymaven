@@ -27,7 +27,7 @@ mod unit;
 
 /// Re-exported so callers need no direct dependency for the unit, frame and principal types.
 pub use fid_geo_frame::{FrameId, LengthUnit};
-pub use fid_journal::{PrincipalCommit, PrincipalDraft, PrincipalKind};
+pub use fid_journal::{OsSalts, PrincipalCommit, PrincipalDraft, PrincipalKind, RecordedSalts, SaltSource};
 pub use hash::{HashingSource, SourceDigest};
 pub use unit::{factor_decimal, resolve_unit, to_metres, NonFiniteLength, UnitResolution, UnitSource};
 
@@ -36,7 +36,7 @@ use crate::report::{is_format_id, FormatId, MAX_NAME_LEN};
 use crate::untrusted::UntrustedText;
 use fid_canon::{CValue, CanonError};
 use fid_geo_frame::{Frame, FrameKind, Transform};
-use fid_journal::{Field, SaltSource};
+use fid_journal::Field;
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -424,6 +424,21 @@ pub fn principal_commit(draft: &PrincipalDraft, salts: &mut dyn SaltSource) -> R
         None => None,
     };
     Ok(PrincipalCommit { kind: draft.kind, commit: identity, on_behalf_of_commit })
+}
+
+/// Draws one salt for every journal field ([`Field::ALL`]: identity, `on_behalf_of`, reason,
+/// args, events, upgrade identity) from `source`, in one call. `IO.REG.ENV` draws these once
+/// (from `fid_journal::OsSalts`) and passes clones of the same [`RecordedSalts`] to
+/// [`principal_commit`] and to `fid_journal::build`, so the record's principal commitment
+/// and the entry header's are computed with the same salts. Drawing separately for each call
+/// always gives different commitments, and [`SourceProvenance::verify_principal`] fails.
+pub fn draw_entry_salts(source: &mut dyn SaltSource) -> Result<RecordedSalts, ProvError> {
+    let mut salts = BTreeMap::new();
+    for &field in Field::ALL {
+        let salt = source.salt(field).map_err(|e| ProvError::Commit { code: e.code() })?;
+        salts.insert(field, salt);
+    }
+    Ok(RecordedSalts(salts))
 }
 
 fn principal_value(p: &PrincipalCommit) -> CValue {

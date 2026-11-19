@@ -15,7 +15,7 @@ use fid_io_reg::{
     Principal, ProvError, ReaderId, ReaderInfo, Registry, Signature, SourceDigest, SourceProvenance, UnitSource,
     UntrustedText, VersionRange, VersionToken,
 };
-use fid_journal::{Field, RecordedSalts, Salt};
+use fid_journal::{Field, OsSalts, RecordedSalts, Salt, FIRST_SEQ, GENESIS_PREV};
 use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::io::Read;
@@ -652,4 +652,82 @@ fn options_deeper_than_the_parser_cap_report_the_parser_cap() {
     let nest = |n: usize| format!("{}1{}", r#"{"a":"#.repeat(n), "}".repeat(n));
     let e = EffectiveOptions::from_json(nest(5000).as_bytes()).unwrap_err();
     assert_eq!(e, ProvError::TooLarge { field: "options", limit: fid_canon::MAX_DEPTH as u64 });
+}
+
+// ------------------------------------------------------------------ re-review (#250): real entries
+
+/// A real command draft: entry 0 of the `CORE.JRN.CHAIN.APPEND` reference chain
+/// (`fixtures/core/jrn/chain/append/chain.json`), with the principal replaced.
+fn entry_draft(principal: PrincipalDraft, reason: Option<&str>) -> fid_journal::EntryDraft {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/jrn/chain/append/chain.json");
+    let v = fid_canon::parse(&std::fs::read(path).unwrap()).unwrap();
+    let CValue::Obj(top) = v else { panic!() };
+    let CValue::Arr(entries) = &top["entries"] else { panic!() };
+    let CValue::Obj(e0) = &entries[0] else { panic!() };
+    let mut d = fid_journal::EntryDraft::from_value(&e0["draft"]).unwrap();
+    d.principal = principal;
+    d.reason = reason.map(str::to_string);
+    d
+}
+
+fn agent_draft(behalf: Option<&str>) -> PrincipalDraft {
+    PrincipalDraft {
+        kind: PrincipalKind::Agent,
+        identity: CValue::Str("claude-code#7".into()),
+        on_behalf_of: behalf.map(|b| {
+            let mut m = BTreeMap::new();
+            m.insert("id".to_string(), CValue::Str(b.to_string()));
+            m.insert("kind".to_string(), CValue::Str("human".to_string()));
+            CValue::Obj(m)
+        }),
+    }
+}
+
+fn record_for(principal: PrincipalCommit) -> SourceProvenance {
+    SourceProvenance::builder(
+        digest_of(&cube()),
+        named_detection(),
+        xyz_reader(),
+        principal,
+        EffectiveOptions::empty(),
+        resolve_unit(Some(LengthUnit::Mm), None, false).unwrap(),
+    )
+    .build()
+}
+
+#[test]
+fn verify_principal_passes_for_a_real_journal_entry_with_shared_salts() {
+    for (behalf, reason) in [(None, None), (Some("alice"), Some("re-run after recalibration"))] {
+        let principal = agent_draft(behalf);
+        let draft = entry_draft(principal.clone(), reason);
+        // One draw of every field's salt, shared by both calls.
+        let s = fid_io_reg::draw_entry_salts(&mut OsSalts).unwrap();
+        for f in Field::ALL {
+            assert!(s.0.contains_key(f), "{f:?}");
+        }
+        let commit = principal_commit(&draft.principal, &mut s.clone()).unwrap();
+        let entry = fid_journal::build(&draft, FIRST_SEQ, GENESIS_PREV, &mut s.clone()).unwrap();
+        assert_eq!(entry.header.principal.on_behalf_of_commit.is_some(), behalf.is_some());
+        let rec = record_for(commit);
+        rec.verify_principal(&entry.header.principal).unwrap();
+        assert_eq!(rec.principal(), entry.header.principal);
+    }
+}
+
+#[test]
+fn verify_principal_fails_when_salts_are_drawn_separately() {
+    for behalf in [None, Some("alice")] {
+        let draft = entry_draft(agent_draft(behalf), None);
+        let commit = principal_commit(&draft.principal, &mut OsSalts).unwrap();
+        let entry = fid_journal::build(&draft, FIRST_SEQ, GENESIS_PREV, &mut OsSalts).unwrap();
+        let e = record_for(commit).verify_principal(&entry.header.principal).unwrap_err();
+        assert_eq!(e, ProvError::PrincipalMismatch);
+    }
+}
+
+#[test]
+fn draw_entry_salts_propagates_a_failing_source() {
+    // An empty RecordedSalts has no salt for any field: a typed error, not a panic.
+    let e = fid_io_reg::draw_entry_salts(&mut RecordedSalts::default()).unwrap_err();
+    assert_eq!(e.code(), "principal_commit");
 }
