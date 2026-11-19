@@ -161,7 +161,7 @@ pub enum Command {
 
 /// Benchmark schedule. Frame-driven except for the scroll phase, which lasts a wall-clock
 /// duration measured by the caller's monotonic clock (`scroll_elapsed`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Schedule {
     /// Unrecorded warm-up frames at the start.
     pub warmup_frames: usize,

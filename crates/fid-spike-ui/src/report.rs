@@ -156,7 +156,8 @@ pub fn render(r: &Results) -> String {
              the maintainers confirm or reopen D-005.\n",
         );
     } else if not_run > 0 {
-        let _ = writeln!(s, "Incomplete: {not_run} criteria not run. No recommendation until every criterion is measured.");
+        let _ =
+            writeln!(s, "Incomplete: {not_run} criteria not run. No recommendation until every criterion is measured.");
     } else {
         s.push_str(
             "Every criterion passes. This is input for the maintainers' confirmation of D-005; \

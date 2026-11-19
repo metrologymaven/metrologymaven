@@ -447,11 +447,8 @@ impl TreeView {
         let item = tree.get(r.id)?;
         let sibs = tree.siblings(r.id);
         let pos = sibs.iter().position(|&s| s == r.id).map_or(1, |p| p + 1);
-        let expanded = if tree.children(r.id).is_empty() {
-            None
-        } else {
-            Some(!self.filter.is_empty() || self.is_expanded(r.id))
-        };
+        let expanded =
+            if tree.children(r.id).is_empty() { None } else { Some(!self.filter.is_empty() || self.is_expanded(r.id)) };
         Some(A11yInfo {
             role: "treeitem",
             name: item.display().to_string(),
@@ -473,7 +470,8 @@ mod tests {
     //     3 c
     //   4 D
     // 5 E
-    const T: &str = "1\t0\tpart\tpass\tA\n2\t1\tgroup\tpass\tB\n3\t2\tplane\tpass\tc\n4\t1\tplane\tpass\tD\n5\t0\tpart\tpass\tE\n";
+    const T: &str =
+        "1\t0\tpart\tpass\tA\n2\t1\tgroup\tpass\tB\n3\t2\tplane\tpass\tc\n4\t1\tplane\tpass\tD\n5\t0\tpart\tpass\tE\n";
 
     fn ids(v: &TreeView) -> Vec<u32> {
         v.rows().iter().map(|r| r.id).collect()

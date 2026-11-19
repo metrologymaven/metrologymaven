@@ -54,13 +54,7 @@ pub fn summarise(samples: &[f64]) -> Result<Summary, StatsError> {
     v.sort_by(f64::total_cmp);
     let n = v.len();
     let at = |rank: usize| v.get(rank.saturating_sub(1)).copied().unwrap_or(0.0);
-    Ok(Summary {
-        n,
-        min: at(1),
-        median: at(n.div_ceil(2)),
-        p95: at((95 * n).div_ceil(100)),
-        max: at(n),
-    })
+    Ok(Summary { n, min: at(1), median: at(n.div_ceil(2)), p95: at((95 * n).div_ceil(100)), max: at(n) })
 }
 
 #[cfg(test)]
