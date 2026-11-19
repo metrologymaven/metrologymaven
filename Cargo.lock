@@ -408,6 +408,7 @@ dependencies = [
 name = "fid-align"
 version = "0.0.1"
 dependencies = [
+ "fid-align-solve",
  "fid-canon",
  "fid-dep",
  "fid-geo-frame",
@@ -416,6 +417,16 @@ dependencies = [
  "fid-registry",
  "fid-types",
  "fid-uuid",
+]
+
+[[package]]
+name = "fid-align-solve"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]

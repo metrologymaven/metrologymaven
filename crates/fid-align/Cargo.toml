@@ -1,6 +1,6 @@
 [package]
 name = "fid-align"
-description = "Metrology Maven alignment element: type, solver contract, content digest, dependency registration and read commands (ALN.MODEL.ELEM)"
+description = "Metrology Maven alignment element: type, solver contract, content digest, dependency registration and read commands (ALN.MODEL.ELEM, ALN.QA.REPORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# The residual report type, builder, fixed-order statistics and digest (ALN.QA.REPORT).
+# Layer kernel.
+fid-align-solve = { path = "../fid-align-solve" }
 # RFC 8785 canonical JSON and SHA-256 for the element form, the content digest and command
 # payloads (CORE.JRN.CANON). Layer model.
 fid-canon = { path = "../fid-canon" }
