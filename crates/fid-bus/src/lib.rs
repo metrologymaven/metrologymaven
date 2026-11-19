@@ -3,6 +3,7 @@
 
 pub mod error;
 pub mod principal;
+mod unicode16;
 
 /// Short alias for [`error`].
 pub use self::error as err;
@@ -13,8 +14,9 @@ pub use error::{
     TRUNCATION_MARKER,
 };
 pub use principal::{
-    Channel, ChannelKind, ClientId, ConfirmMethod, HumanPresence, IdError, Identity, JournalAppend, OsUser,
-    PresenceOutcome, Principal, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted, SessionId, SessionKey,
-    SessionTable, UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, FORMAT_RANGES, MAX_ID_BYTES,
-    MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS, PRIVATE_USE_RANGES, UPGRADE_DEADLINE,
+    Channel, ChannelKind, ClientId, ConfirmMethod, ConfirmedUpgrade, HumanPresence, IdError, Identity, JournalAppend,
+    OsUser, PendingUpgrade, PresenceOutcome, Principal, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted,
+    SessionId, SessionKey, SessionTable, UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, BLANK_CHARS,
+    DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS,
+    PRIVATE_USE_RANGES, UNASSIGNED_RANGES, UPGRADE_DEADLINE,
 };

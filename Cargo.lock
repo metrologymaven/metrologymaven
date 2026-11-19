@@ -711,6 +711,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-kunc"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-manifest-gen"
 version = "0.0.1"
 dependencies = [
@@ -810,6 +819,13 @@ dependencies = [
  "fid-canon",
  "fid-kci",
  "fid-types",
+]
+
+[[package]]
+name = "fid-render"
+version = "0.0.1"
+dependencies = [
+ "fid-uuid",
 ]
 
 [[package]]

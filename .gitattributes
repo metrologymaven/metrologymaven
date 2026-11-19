@@ -156,3 +156,5 @@ fixtures/rpt/output/text/** -text
 fixtures/core/bus/principal/** -text
 # GEO.NURBS.EVAL fixtures: digests compared byte for byte by make_eval_fixtures.py --check and the tests.
 fixtures/geo/nurbs/eval/** -text
+# UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
+fixtures/unc/stmt/** -text
