@@ -6,7 +6,9 @@
 //! [`GeoTypeError`], the two sanctioned kind conversions and the [`PointSource`] trait)
 //! and `GEO.TYPES.POINTS` ([`PointBuffer`], [`AttributeSet`] and the validated
 //! [`PointSet`] and [`PointCloud`], see [`points`]) and `GEO.TYPES.MESH` (the validated
-//! indexed triangle [`Mesh`] with its [`TopologyFacts`], see [`mesh`]).
+//! indexed triangle [`Mesh`] with its [`TopologyFacts`], see [`mesh`]) and
+//! `GEO.TYPES.DIGEST` (the canonical byte layout and the SHA-256 [`ElementDigest`] of every
+//! element, see [`digest`](mod@digest)).
 //!
 //! # Compile-time guarantees (AC-5)
 //!
@@ -130,12 +132,16 @@
 //! let f = FrameRef::default();
 //! ```
 
+pub mod digest;
 pub mod envelope;
 pub mod error;
 pub mod mesh;
 pub mod points;
 pub mod source;
 
+pub use digest::{
+    digest, digest_cad_body, digest_mesh, digest_point_cloud, digest_point_set, write_layout, ElementDigest,
+};
 pub use envelope::{Aabb, CadBodyRef, ElementKind, FrameRef, GeometryElement};
 pub use error::GeoTypeError;
 pub use mesh::{IndexWidth, Mesh, MeshOptions, TopologyFacts, TriangleAttrs};

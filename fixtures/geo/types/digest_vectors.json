@@ -1,0 +1,57 @@
+{
+  "cad_body_source_digest": "sha256:86d87c690ac1d7dfdd1aad437fe99246204d1a96f7f40f9aa3f22552d5799b37",
+  "generator": "tools/fixtures/geo_digest_vectors.py (stdlib hashlib, independent of fid-geo-types)",
+  "layout_version": 1,
+  "license": "CC-BY-4.0",
+  "spec": "GEO.TYPES.DIGEST",
+  "vectors": [
+    {
+      "kind": "point_set",
+      "layout_len": 24048,
+      "name": "pointset_small",
+      "sha256": "86b2f32590ee8757f60819780c4319a00edd6e707dccced3e85218d3b1e0be82"
+    },
+    {
+      "kind": "mesh",
+      "layout_len": 528,
+      "name": "mesh_cube",
+      "sha256": "655751031228a03476f0c421f832666af6b04af6097bc6cf6e0746962ff2d3d1"
+    },
+    {
+      "kind": "point_cloud",
+      "layout_len": 258288,
+      "name": "cloud_grid_2scans",
+      "sha256": "d059195654ee3393955c9ee6128209bd9a02e20e0d22f603c5d256a40aa5de4b"
+    },
+    {
+      "kind": "point_set",
+      "layout_len": 52085,
+      "name": "pointset_small_attrs",
+      "sha256": "e5c72b7a0236b31ab2038c77486c558d2b6075e29559542db150538f5e2c977a"
+    },
+    {
+      "kind": "point_cloud",
+      "layout_len": 24048,
+      "name": "pointset_small_cloud",
+      "sha256": "80838434f165ff46fec3adc9c487ec3918a3107642a4f70e31cdd50c38bb6fb0"
+    },
+    {
+      "kind": "point_set",
+      "layout_len": 48,
+      "name": "pointset_empty",
+      "sha256": "d7b9512476aa8018a746b88fde685e59bfb6772ccd83331896d4fe5f975b7827"
+    },
+    {
+      "kind": "mesh",
+      "layout_len": 698,
+      "name": "mesh_cube_attrs",
+      "sha256": "e7a02d02232e7a61ef766b3c852523320b7dd1a5848a13cc1075294f0d59e610"
+    },
+    {
+      "kind": "cad_body_ref",
+      "layout_len": 72,
+      "name": "cad_body",
+      "sha256": "f5f68b89a07714435b5a26150fb594f370f5d1f17b47d8cb914ccedda11aaa3f"
+    }
+  ]
+}
