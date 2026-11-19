@@ -1,0 +1,26 @@
+# GEO.TYPES.MESH fixture: mesh_cube plus a degenerate triangle (0 0 1) and a
+# duplicate of triangle 2 (4 5 6). Facts are reported, nothing is repaired.
+# CC-BY-4.0. Vertices `v x y z` (metres) and triangles `t a b c`, in index order.
+frame 0f1e2d3c4b5a69788796a5b4c3d2e1f0
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v 0 1 0
+v 0 0 1
+v 1 0 1
+v 1 1 1
+v 0 1 1
+t 0 2 1
+t 0 3 2
+t 4 5 6
+t 4 6 7
+t 0 1 5
+t 0 5 4
+t 3 7 6
+t 3 6 2
+t 0 4 7
+t 0 7 3
+t 1 2 6
+t 1 6 5
+t 0 0 1
+t 4 5 6
