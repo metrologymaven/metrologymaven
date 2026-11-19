@@ -301,6 +301,7 @@ jobs:
           python tools/fixtures/geo_units_cases.py --check
           python tools/fixtures/geo_xform_cases.py --check
           python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+          python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
@@ -442,6 +443,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-frame
       - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
+      - name: Analytic curve and surface digests on wasm32-wasip1 (GEO.NURBS.ANALYTIC AC-4)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test analytic
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)

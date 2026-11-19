@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-nurbs]
 satisfies: [REQ-GEO.NURBS-004, REQ-GEO.NURBS-006, REQ-GEO.NURBS-007]
 covers: []
 depends_on: [GEO.NURBS.EVAL, KRN.NUM]
