@@ -141,3 +141,5 @@ fixtures/viz/shlint/** -text
 fixtures/man/wasm/** -text
 crates/fid-kernel-wasm/wasm-runtime.toml -text
 crates/fid-kernel-wasm/wasm-imports.allow -text
+# CORE.BUS.PRIN fixtures: hand-labelled channel descriptors and presence outcomes; never convert line endings.
+fixtures/core/bus/principal/** -text

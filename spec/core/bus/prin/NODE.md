@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-bus]
 satisfies: [REQ-CORE.BUS-001, REQ-CORE.BUS-002]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.JRN.CHAIN]
@@ -67,10 +68,20 @@ Defines who is acting. A principal is derived only from the authenticated channe
 - **Determinism:** D0 for derivation. The presence outcome is an observed input recorded in the journal entry, so replay reads it and never prompts.
 - **Performance budget:** < 1 µs per derivation, excluding the human prompt [unverified until measured].
 - **Crate:** `fid-bus` (module `principal`).
+- **Pinned build choices (fid-bus `principal`):**
+  - `PrincipalKind` and `ConfirmMethod` are re-exported from `fid-journal` (`CORE.JRN.ENTRY`), so the bus and the journal share one type.
+  - `ChannelKind` has eleven kinds: the ten above plus `Service` (a local service credential, mapped to `service`), because AC-1 and D-030 list a `service` channel. Mapping: gui human; cli, python, control, server_session script; mcp, server_mcp agent; service, server_service service; device device; internal system. `ChannelKind::base_kind` and `derive_principal` are exhaustive matches, and the module denies `clippy::wildcard_enum_match_arm` (REQ-013).
+  - `Identity { subject, os_user?, acting_for?, client_id?, self_asserted? }` is filled only by the surface's authentication. `acting_for` is read only on `server_session` (the server user, becomes `on_behalf_of`) and `internal` (the triggering principal); there it is required, and its absence is `unauthenticated/no_identity` (fail-closed). On every other channel it is ignored. `derive_principal` takes no request parameters at all (REQ-002).
+  - Identifiers (`PrincipalId`, `ClientId`, `OsUser`, `SessionId`) are 1 to 256 bytes with no control characters, compared byte for byte. OS user names are case-sensitive on POSIX, so a confirmation by a user differing only in case is `user_mismatch` (the fail-closed reading of the case rule).
+  - `SelfAsserted { client_name?, model_name? }` is always wrapped in `Untrusted`, each name cut to 256 characters; it is carried on the principal for display and the journal and never read by derivation.
+  - `SessionTable` is in memory, keyed by `SessionId`, at most 4096 upgraded sessions (`internal/storage` when full, checked before prompting). A row grants `human` only to a call on the same channel kind (cli or python) whose identity carries the same OS user; the principal ID is then the confirming OS user. `end_session` removes the row.
+  - Upgrade order: authenticate (`unauthenticated`), channel kind (`upgrade_refused/channel`, no prompt), already upgraded (returns `Ok` without prompt or entry), session OS user present (else `user_mismatch`, no prompt), table capacity, prompt with a 120 s deadline, outcome (`declined`, `timeout`, `user_mismatch`), then the elapsed monotonic time from the injected `UpgradeClock` must be at most 120 s inclusive (later or backwards is `timeout`), then append, then insert. Any error leaves the table and the journal unchanged.
+  - The `principal_upgrade` draft: principal = the session's pre-upgrade `script` principal (identity = channel subject); `upgrade.identity` = the confirming OS user as a JSON string; `confirmed_at` and `time` from the clock after the answer; `ai_assistance: none`; stream, branch and manifests from `UpgradeContext`. It goes through the `JournalAppend` trait, which `CORE.JRN.CHAIN.APPEND` implements (not yet built); a journal error is returned as is and the session stays `script`.
+  - `Principal::to_draft` gives the journal `PrincipalDraft` with identity and `on_behalf_of` as JSON strings.
 
 ## Test fixtures
 
-`fixtures/core/bus/principal/channels.json`: synthetic channel descriptors with expected kinds; a fake `HumanPresence` with scripted outcomes; CC-BY-4.0.
+`fixtures/core/bus/principal/channels.json`: synthetic channel descriptors with expected kinds, hand-labelled from AC-1, plus channels whose `acting_for` must be ignored and channels without identity (AC-7). `fixtures/core/bus/principal/presence.json`: hand-labelled scripted outcomes of a fake `HumanPresence` (AC-4, AC-5). Both CC-BY-4.0, byte-exact (`-text`).
 
 ## Build prompt
 
