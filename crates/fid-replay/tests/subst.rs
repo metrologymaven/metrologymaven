@@ -2,7 +2,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
-use fid_journal::{commitment, Field, SaltSource};
+use fid_journal::{commitment, Field, Salt, SaltSource};
 use fid_registry::{Lifecycle, LifecycleDecl, MigratorRecord};
 use fid_replay::{
     classify, preflight, BlobSource, Cause, CommandCatalog, Determinism, MissingItem, MissingKind, ObservationKind,
@@ -106,26 +106,48 @@ fn outcome_name(o: ReplayOutcome) -> &'static str {
 
 // ------------------------------------------------------------------ test handlers
 
-/// The bus observation port as a handler sees it. When recording it calls the live clock
-/// and RNG; when replaying it serves the recording and must never touch them.
+/// The bus observation port as a handler sees it. Without a replay queue (recording) it calls
+/// the live clock and RNG; with one (replay) it serves the recording and never touches them.
 struct Port<'a> {
     live_clock: &'a dyn Fn() -> Vec<u8>,
     live_rng: &'a dyn Fn() -> Vec<u8>,
-    replay: StepObservations<'a>,
+    replay: Option<StepObservations<'a>>,
 }
 
 impl Port<'_> {
     fn clock(&mut self) -> Result<Vec<u8>, SubstError> {
-        // Replay mode only in these tests; the live closures are reachable but never called.
-        let _ = self.live_clock;
-        self.replay.observe(&ObservationKind::Clock).map(|o| o.bytes)
+        match &mut self.replay {
+            Some(r) => r.observe(&ObservationKind::Clock).map(|o| o.bytes),
+            None => Ok((self.live_clock)()),
+        }
     }
     fn salt(&mut self) -> Result<Vec<u8>, SubstError> {
-        let _ = self.live_rng;
-        self.replay.observe(&ObservationKind::Salt).map(|o| o.bytes)
+        match &mut self.replay {
+            Some(r) => r.observe(&ObservationKind::Salt).map(|o| o.bytes),
+            None => Ok((self.live_rng)()),
+        }
     }
     fn device(&mut self) -> Result<Vec<u8>, SubstError> {
-        self.replay.observe(&ObservationKind::Device).map(|o| o.bytes)
+        match &mut self.replay {
+            Some(r) => r.observe(&ObservationKind::Device).map(|o| o.bytes),
+            None => panic!("no live device in these tests"),
+        }
+    }
+    /// The commitment salt for `field`: recorded on replay (through fid-journal's SaltSource,
+    /// as `build` draws it), fresh from the live RNG when recording.
+    fn commitment_salt(&mut self, field: Field) -> Result<Salt, SubstError> {
+        match &mut self.replay {
+            Some(r) => match r.salt(field) {
+                Ok(salt) => Ok(salt),
+                Err(_) => Err(SubstError::ObservationMismatch { seq: r.seq(), detail: "salt".into() }),
+            },
+            None => {
+                let b = (self.live_rng)();
+                let mut out = [0u8; 16];
+                out.copy_from_slice(&b[..16]);
+                Ok(Salt(out))
+            }
+        }
     }
 }
 
@@ -140,11 +162,8 @@ fn sha(data: &[u8]) -> String {
 }
 
 fn args_commit(port: &mut Port<'_>, args: &CValue) -> Result<String, SubstError> {
-    // The commitment salt comes through fid-journal's SaltSource, as `build` draws it.
-    match port.replay.salt(Field::Args) {
-        Ok(salt) => Ok(commitment(&salt, args).unwrap().to_string()),
-        Err(_) => Err(SubstError::ObservationMismatch { seq: port.replay.seq(), detail: "salt".into() }),
-    }
+    let salt = port.commitment_salt(Field::Args)?;
+    Ok(commitment(&salt, args).unwrap().to_string())
 }
 
 /// probe.stamp@1: one clock read, one drawn salt; `clock_reads` > 1 models AC-5's changed handler.
@@ -185,11 +204,11 @@ fn replay_step(
         panic!("the live RNG was called during replay")
     };
     let source = ObservationSource::new(&c.span, blobs);
-    let mut port = Port { live_clock: &live_clock, live_rng: &live_rng, replay: source.step(seq).unwrap() };
+    let mut port = Port { live_clock: &live_clock, live_rng: &live_rng, replay: Some(source.step(seq).unwrap()) };
     let rec = obj(&obj(&c.doc["handler"])[&seq.to_string()]);
     let produced = run(&mut port, &rec["args"]);
-    let finished = port.replay.finish();
-    assert_eq!((clock_calls.get(), rng_calls.get()), (0, 0));
+    let finished = port.replay.take().unwrap().finish();
+    assert_eq!((clock_calls.get(), rng_calls.get()), (0, 0), "a live source was called during replay");
     let err = match (produced, finished) {
         (_, Err(e)) => e,
         (Err(e), Ok(())) => e,
@@ -214,7 +233,10 @@ fn replay_step(
                 missing: None,
             };
             let table: BTreeMap<String, Tolerance> = BTreeMap::new();
-            return (classify(&step, &table).unwrap().outcome, None, None);
+            // The source only lets the classifier's outcome through for a cleanly finished step.
+            let outcome = source.gate(seq, classify(&step, &table).unwrap().outcome);
+            assert!(!source.poisoned());
+            return (outcome, None, None);
         }
     };
     // A missing item goes through the classifier as `missing`, which gives NOT_REPLAYABLE.
@@ -250,6 +272,30 @@ fn ac1_clock_and_salt_replays_identically_without_clock_or_rng() {
         assert_eq!(outcome_name(got), want, "step {seq}: {err:?}");
         assert_eq!(cause, None);
     }
+}
+
+#[test]
+fn ac1_control_the_same_handler_calls_the_live_sources_when_recording() {
+    // Without a replay queue the port is live: the handler reads the clock once and draws two
+    // salts (the handler salt and the args commitment salt) from the RNG. This shows the
+    // zero-call assertion in AC-1 is about substitution, not about a handler that never asks.
+    let c = load("clock_and_salt");
+    let clock_calls = Cell::new(0u32);
+    let rng_calls = Cell::new(0u32);
+    let live_clock = || {
+        clock_calls.set(clock_calls.get() + 1);
+        b"live clock".to_vec()
+    };
+    let live_rng = || {
+        rng_calls.set(rng_calls.get() + 1);
+        vec![7u8; 16]
+    };
+    let mut port = Port { live_clock: &live_clock, live_rng: &live_rng, replay: None };
+    let rec = obj(&obj(&c.doc["handler"])["1"]);
+    let p = stamp(&mut port, &rec["args"], 1).unwrap();
+    assert_eq!((clock_calls.get(), rng_calls.get()), (1, 2));
+    // Live inputs differ from the recording, so the recorded output is not reproduced.
+    assert_ne!(p.output, st(&rec["output"]));
 }
 
 #[test]
@@ -431,7 +477,8 @@ fn other_kinds_have_one_representation() {
     assert_eq!(RecordedSpan::new(vec![step(fake.clone())]).unwrap_err().code(), "span_invalid");
     let span = RecordedSpan::new(vec![step(ObservationKind::Clock)]).unwrap();
     let blobs: BTreeMap<Digest, Vec<u8>> = BTreeMap::new();
-    let mut s = ObservationSource::new(&span, &blobs).step(1).unwrap();
+    let source = ObservationSource::new(&span, &blobs);
+    let mut s = source.step(1).unwrap();
     assert_eq!(s.observe(&fake).unwrap_err().code(), "observation_mismatch");
 }
 
@@ -528,4 +575,46 @@ fn preflight_is_deterministic_and_measured_over_10000_entries() {
     // debug build on a shared runner does not flake.
     println!("preflight over 10,000 entries: {elapsed:?}");
     assert!(elapsed.as_secs() < 5, "{elapsed:?}");
+}
+
+#[test]
+fn reopening_a_step_fails_closed() {
+    let c = load("clock_and_salt");
+    let source = ObservationSource::new(&c.span, &c.blobs);
+    let mut s = source.step(1).unwrap();
+    s.observe(&ObservationKind::Clock).unwrap();
+    s.observe(&ObservationKind::Salt).unwrap();
+    s.commitment_salt(Field::Args).unwrap();
+    s.finish().unwrap();
+    assert_eq!(source.gate(1, ReplayOutcome::Identical), ReplayOutcome::Identical);
+    // A second queue for the same step would serve its inputs again: refused, and the step can
+    // no longer be reported IDENTICAL.
+    let e = source.step(1).err().unwrap();
+    assert_eq!((e.code(), e.cause()), ("observation_mismatch", Some(Cause::Input)));
+    assert_eq!(source.gate(1, ReplayOutcome::Identical), ReplayOutcome::Divergent);
+    assert!(source.poisoned());
+    assert_eq!(source.gate_span(ReplayOutcome::Identical), ReplayOutcome::Divergent);
+}
+
+#[test]
+fn dropping_a_step_without_finish_poisons_the_source() {
+    let c = load("clock_and_salt");
+    let source = ObservationSource::new(&c.span, &c.blobs);
+    assert_eq!(source.gate_span(ReplayOutcome::Identical), ReplayOutcome::Identical);
+    {
+        let mut s = source.step(2).unwrap();
+        s.observe(&ObservationKind::Clock).unwrap();
+        // Dropped here without finish(): the unconsumed salt would otherwise go unnoticed.
+    }
+    assert!(source.poisoned());
+    assert_eq!(source.gate(2, ReplayOutcome::Identical), ReplayOutcome::Divergent);
+    assert_eq!(source.gate_span(ReplayOutcome::Identical), ReplayOutcome::Divergent);
+    assert_eq!(source.gate_span(ReplayOutcome::NotReplayable), ReplayOutcome::NotReplayable);
+    // A step never opened cannot be IDENTICAL either.
+    assert_eq!(source.gate(3, ReplayOutcome::Identical), ReplayOutcome::Divergent);
+    // A finish error decides the step's outcome.
+    let mut s = source.step(3).unwrap();
+    s.observe(&ObservationKind::Device).unwrap_err();
+    assert!(s.finish().is_err());
+    assert_eq!(source.gate(3, ReplayOutcome::Identical), ReplayOutcome::Divergent);
 }

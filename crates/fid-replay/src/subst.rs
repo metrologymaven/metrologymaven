@@ -26,6 +26,7 @@ use fid_canon::{digest_bytes, CValue};
 use fid_journal::{EntryError, Field, Salt, SaltSource};
 use fid_registry::{check_migrators, retained, LifecycleDecl, MigratorRecord};
 use fid_types::{CommandId, Digest};
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -499,32 +500,112 @@ pub struct Observation {
     pub bytes: Vec<u8>,
 }
 
+/// What the source knows about a step it has handed out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum StepState {
+    /// Handed out, not yet finished.
+    Open,
+    /// [`StepObservations::finish`] ran and gave this result.
+    Finished(Result<(), SubstError>),
+    /// Dropped without `finish`, or opened a second time.
+    Abandoned,
+}
+
 /// Serves each step's recorded class-N observations (REQ-001).
-#[derive(Clone, Copy)]
+///
+/// Each step can be opened once. Opening it again is `observation_mismatch` (a second queue
+/// would serve the same inputs twice), and a [`StepObservations`] dropped without
+/// [`StepObservations::finish`] poisons the source. [`ObservationSource::gate`] and
+/// [`ObservationSource::gate_span`] then refuse to let such a step, or the span, be reported
+/// `IDENTICAL` or `EQUIVALENT`.
 pub struct ObservationSource<'a> {
     span: &'a RecordedSpan,
     blobs: &'a dyn BlobSource,
+    steps: RefCell<BTreeMap<u64, StepState>>,
+    poisoned: Cell<bool>,
 }
 
 impl<'a> ObservationSource<'a> {
     pub fn new(span: &'a RecordedSpan, blobs: &'a dyn BlobSource) -> ObservationSource<'a> {
-        ObservationSource { span, blobs }
+        ObservationSource { span, blobs, steps: RefCell::new(BTreeMap::new()), poisoned: Cell::new(false) }
     }
 
-    /// The observation queue of step `seq`, positioned at its first observation.
-    pub fn step(&self, seq: u64) -> Result<StepObservations<'a>, SubstError> {
+    /// The observation queue of step `seq`, positioned at its first observation. A step can be
+    /// opened once; a second call is `observation_mismatch` and poisons the source.
+    pub fn step(&self, seq: u64) -> Result<StepObservations<'_>, SubstError> {
         let step = self.span.step(seq).ok_or(SubstError::UnknownStep(seq))?;
-        Ok(StepObservations { step, blobs: self.blobs, next: 0, salts_served: BTreeSet::new(), fault: None })
+        let Ok(mut states) = self.steps.try_borrow_mut() else {
+            self.poisoned.set(true);
+            return Err(SubstError::ObservationMismatch { seq, detail: "step state is busy".into() });
+        };
+        if states.contains_key(&seq) {
+            states.insert(seq, StepState::Abandoned);
+            self.poisoned.set(true);
+            let detail = "step opened a second time; its recorded inputs are served once".to_string();
+            return Err(SubstError::ObservationMismatch { seq, detail });
+        }
+        states.insert(seq, StepState::Open);
+        Ok(StepObservations {
+            source: self,
+            step,
+            next: 0,
+            salts_served: BTreeSet::new(),
+            fault: None,
+            done: false,
+        })
+    }
+
+    /// Records a step's new state. An abandoned or failed step never becomes clean again.
+    fn record(&self, seq: u64, state: StepState) {
+        let Ok(mut states) = self.steps.try_borrow_mut() else {
+            self.poisoned.set(true);
+            return;
+        };
+        let keep = matches!(states.get(&seq), Some(StepState::Abandoned | StepState::Finished(Err(_))));
+        if !keep {
+            states.insert(seq, state);
+        }
+    }
+
+    /// Whether any step was dropped without `finish` or opened twice.
+    pub fn poisoned(&self) -> bool {
+        self.poisoned.get()
+    }
+
+    /// The outcome a replay may report for step `seq`, given the classifier's outcome for its
+    /// outputs (`CORE.RPL.CLASS`). The classified outcome passes only when the step was opened
+    /// once and finished cleanly. A failed `finish` gives that error's outcome. A step never
+    /// opened, still open, dropped without `finish` or opened twice gives `DIVERGENT` (cause
+    /// `input`), so it can never be reported `IDENTICAL`.
+    pub fn gate(&self, seq: u64, classified: ReplayOutcome) -> ReplayOutcome {
+        let Ok(states) = self.steps.try_borrow() else { return ReplayOutcome::Divergent };
+        match states.get(&seq) {
+            Some(StepState::Finished(Ok(()))) => classified,
+            Some(StepState::Finished(Err(e))) => e.outcome().unwrap_or(ReplayOutcome::Divergent),
+            _ => ReplayOutcome::Divergent,
+        }
+    }
+
+    /// The outcome a replay may report for the whole span, given the aggregate of its gated step
+    /// outcomes: a poisoned source turns `IDENTICAL` or `EQUIVALENT` into `DIVERGENT`.
+    pub fn gate_span(&self, aggregated: ReplayOutcome) -> ReplayOutcome {
+        match aggregated {
+            ReplayOutcome::Identical | ReplayOutcome::Equivalent if self.poisoned() => ReplayOutcome::Divergent,
+            other => other,
+        }
     }
 }
 
-/// The recorded observations of one step, consumed in order.
-pub struct StepObservations<'a> {
-    step: &'a RecordedStep,
-    blobs: &'a dyn BlobSource,
+/// The recorded observations of one step, consumed in order. Call [`StepObservations::finish`]
+/// at the end of the step: dropping it unfinished poisons its [`ObservationSource`].
+#[must_use = "call finish(); a step dropped unfinished poisons the source and cannot be IDENTICAL"]
+pub struct StepObservations<'s> {
+    source: &'s ObservationSource<'s>,
+    step: &'s RecordedStep,
     next: usize,
     salts_served: BTreeSet<Field>,
     fault: Option<SubstError>,
+    done: bool,
 }
 
 impl StepObservations<'_> {
@@ -551,6 +632,8 @@ impl StepObservations<'_> {
     }
 
     /// Serves the next recorded observation, which must be of kind `kind` (REQ-001..003).
+    /// The value is re-hashed here on every read; this is where a corrupt blob or inline value
+    /// is caught ([`preflight`] checks presence only).
     pub fn observe(&mut self, kind: &ObservationKind) -> Result<Observation, SubstError> {
         if let Some(f) = &self.fault {
             return Err(f.clone());
@@ -569,7 +652,7 @@ impl StepObservations<'_> {
         self.next += 1;
         let digest = rec.digest;
         let bytes = match rec.storage {
-            Storage::Blob => match self.blobs.get(&digest) {
+            Storage::Blob => match self.source.blobs.get(&digest) {
                 Some(b) if Digest::from_bytes(digest_bytes(&b).0) == digest => b,
                 _ => return Err(self.missing(MissingKind::Blob, digest.to_string())),
             },
@@ -601,10 +684,18 @@ impl StepObservations<'_> {
     }
 
     /// Ends the step. Fails with the step's first fault, or with `observation_mismatch` when a
-    /// recorded observation or commitment salt was not consumed.
+    /// recorded observation or commitment salt was not consumed. The result is recorded in the
+    /// source for [`ObservationSource::gate`].
     pub fn finish(mut self) -> Result<(), SubstError> {
-        if let Some(f) = self.fault.take() {
-            return Err(f);
+        let result = self.verdict();
+        self.done = true;
+        self.source.record(self.step.seq, StepState::Finished(result.clone()));
+        result
+    }
+
+    fn verdict(&mut self) -> Result<(), SubstError> {
+        if let Some(f) = &self.fault {
+            return Err(f.clone());
         }
         let step = self.step;
         let n = step.observations.len();
@@ -619,6 +710,16 @@ impl StepObservations<'_> {
             }
         }
         Ok(())
+    }
+}
+
+/// A step dropped without `finish` poisons its source (fail closed).
+impl Drop for StepObservations<'_> {
+    fn drop(&mut self) {
+        if !self.done {
+            self.source.record(self.step.seq, StepState::Abandoned);
+            self.source.poisoned.set(true);
+        }
     }
 }
 
@@ -683,6 +784,10 @@ impl CommandCatalog {
 /// supply. Items are ordered by kind (`blob`, `command`, `payload`, `kernel`) then ID; each
 /// lists the steps that need it in ascending order. Each blob, command and kernel is looked
 /// up once.
+///
+/// Blobs are checked for presence only (`BlobSource::has`): a blob that is present but corrupt
+/// passes pre-flight and is caught when [`StepObservations::observe`] re-hashes it, which makes
+/// that step `NOT_REPLAYABLE`. Inline values are in memory and are hashed here.
 pub fn preflight(
     span: &RecordedSpan,
     blobs: &dyn BlobSource,
