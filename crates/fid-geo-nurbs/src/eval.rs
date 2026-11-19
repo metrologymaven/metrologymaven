@@ -46,7 +46,8 @@ pub enum EvalError {
     /// A derivative order above [`MAX_ORDER`] was requested.
     OrderTooHigh { order: usize },
     /// An intermediate or result overflowed to a non-finite value (extreme coordinates, knots
-    /// or weights); no NaN or infinity is ever returned.
+    /// or weights, including a domain width or knot window `hi - lo` that overflows); no NaN or
+    /// infinity is ever returned.
     NonFinite,
     /// The data is internally inconsistent. Unreachable for validated curves and surfaces; it
     /// is reported instead of indexing out of bounds.
@@ -234,7 +235,8 @@ fn check(values: &[f64]) -> Result<(), EvalError> {
     }
 }
 
-/// REQ-GEO.NURBS.EVAL-002: NaN is refused; within `CLAMP_REL * (hi - lo)` outside an end the
+/// REQ-GEO.NURBS.EVAL-002: NaN is refused; a domain whose width `hi - lo` overflows is
+/// `NonFinite` (no parameter can be placed in it reliably); within `CLAMP_REL * (hi - lo)` outside an end the
 /// parameter becomes that end; further out (or infinite) it is `OutsideDomain`.
 fn clamp_param(dir: Dir, t: f64, lo: f64, hi: f64) -> Result<f64, EvalError> {
     if t.is_nan() {
@@ -244,7 +246,11 @@ fn clamp_param(dir: Dir, t: f64, lo: f64, hi: f64) -> Result<f64, EvalError> {
     if t.is_infinite() {
         return Err(outside);
     }
-    let margin = CLAMP_REL * (hi - lo);
+    let width = hi - lo;
+    if !width.is_finite() {
+        return Err(EvalError::NonFinite);
+    }
+    let margin = CLAMP_REL * width;
     if t < lo {
         if lo - t <= margin {
             Ok(lo)
@@ -297,7 +303,7 @@ fn xyz(a: [f64; 4]) -> [f64; 3] {
 /// Span and basis table in one direction.
 fn span_basis(knots: &[f64], p: usize, n: usize, t: f64, order: usize) -> Result<(usize, BasisTable), EvalError> {
     let s = find_span(knots, p, n, t).ok_or(EvalError::Inconsistent)?;
-    let b = basis(knots, p, s, t, order).ok_or(EvalError::Inconsistent)?;
+    let b = basis(knots, p, s, t, order)?;
     Ok((s, b))
 }
 

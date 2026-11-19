@@ -1,0 +1,136 @@
+{
+  "formats": [
+    {
+      "id": "mesh.stl-ascii",
+      "versions": {
+        "min": "1",
+        "max": "*"
+      },
+      "signatures": [
+        {
+          "offset": 0,
+          "priority": 10,
+          "bytes": "736f6c6964"
+        }
+      ],
+      "extensions": [
+        "stl"
+      ],
+      "options_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "phase": "P0",
+      "origin": "first_party",
+      "direction": "read"
+    },
+    {
+      "id": "mesh.stl",
+      "versions": {
+        "min": "1",
+        "max": "*"
+      },
+      "signatures": [
+        {
+          "offset": 0,
+          "priority": 20,
+          "predicate": "stl_binary_size"
+        }
+      ],
+      "extensions": [
+        "stl"
+      ],
+      "options_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "phase": "P0",
+      "origin": "first_party",
+      "direction": "read"
+    },
+    {
+      "id": "mesh.ply",
+      "versions": {
+        "min": "1",
+        "max": "*"
+      },
+      "signatures": [
+        {
+          "offset": 0,
+          "priority": 10,
+          "bytes": "706c790a"
+        },
+        {
+          "offset": 0,
+          "priority": 10,
+          "bytes": "706c790d0a"
+        }
+      ],
+      "extensions": [
+        "ply"
+      ],
+      "options_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "phase": "P0",
+      "origin": "first_party",
+      "direction": "read"
+    },
+    {
+      "id": "qif.xml",
+      "versions": {
+        "min": "1",
+        "max": "*"
+      },
+      "signatures": [
+        {
+          "offset": 0,
+          "priority": 10,
+          "contains": "3c514946446f63756d656e74",
+          "window": 1024
+        }
+      ],
+      "extensions": [
+        "qif",
+        "xml"
+      ],
+      "options_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "phase": "P0",
+      "origin": "first_party",
+      "direction": "read"
+    },
+    {
+      "id": "cloud.e57",
+      "versions": {
+        "min": "1",
+        "max": "*"
+      },
+      "signatures": [
+        {
+          "offset": 0,
+          "priority": 10,
+          "bytes": "4153544d2d453537"
+        }
+      ],
+      "extensions": [
+        "e57"
+      ],
+      "options_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "phase": "P0",
+      "origin": "first_party",
+      "direction": "read"
+    }
+  ]
+}

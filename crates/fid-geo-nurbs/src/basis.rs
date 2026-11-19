@@ -7,6 +7,7 @@
 //! Everything is on fixed-size stack arrays (degree at most [`MAX_DEGREE`]); nothing allocates.
 
 use crate::data::MAX_DEGREE;
+use crate::eval::EvalError;
 
 /// Basis functions per order: at most degree + 1 are non-zero on a span.
 pub(crate) const W: usize = MAX_DEGREE + 1;
@@ -48,15 +49,21 @@ pub(crate) fn find_span(knots: &[f64], p: usize, n: usize, t: f64) -> Option<usi
 }
 
 /// Basis functions of degree `p` on span `s` and their derivatives up to `order`
-/// (`order <= MAX_ORDER`). `None` only for inconsistent input.
-pub(crate) fn basis(knots: &[f64], p: usize, s: usize, t: f64, order: usize) -> Option<BasisTable> {
+/// (`order <= MAX_ORDER`). `NonFinite` when the knot window `knots[s+p] - knots[s-p]` is not
+/// finite (every knot difference the recurrences use lies inside it, so none can overflow);
+/// `Inconsistent` only for input a validated curve or surface never gives.
+pub(crate) fn basis(knots: &[f64], p: usize, s: usize, t: f64, order: usize) -> Result<BasisTable, EvalError> {
     if p == 0 || p > MAX_DEGREE || order > MAX_ORDER {
-        return None;
+        return Err(EvalError::Inconsistent);
     }
     // The knots that matter: knots[s-p ..= s+p]. In this window the span index is `p`, so every
     // index below lies in 0 ..= 2p = window.len() - 1.
-    let window = knots.get(s.checked_sub(p)?..=s + p)?;
-    Some(basis_window(window, p, t, order))
+    let lo = s.checked_sub(p).ok_or(EvalError::Inconsistent)?;
+    let window = knots.get(lo..=s + p).ok_or(EvalError::Inconsistent)?;
+    if !(window[2 * p] - window[0]).is_finite() {
+        return Err(EvalError::NonFinite);
+    }
+    Ok(basis_window(window, p, t, order))
 }
 
 fn basis_window(u: &[f64], p: usize, t: f64, order: usize) -> BasisTable {
@@ -128,8 +135,14 @@ mod tests {
         // inconsistent input is refused, not indexed out of bounds
         assert_eq!(find_span(&u, 4, 4, 0.5), None);
         assert_eq!(find_span(&u[..3], 1, 4, 0.5), None);
-        assert!(basis(&u, 0, 1, 0.5, 0).is_none());
-        assert!(basis(&u, 1, 9, 0.5, 0).is_none());
-        assert!(basis(&u, 1, 1, 0.5, 3).is_none());
+        assert_eq!(basis(&u, 0, 1, 0.5, 0), Err(EvalError::Inconsistent));
+        assert_eq!(basis(&u, 1, 9, 0.5, 0), Err(EvalError::Inconsistent));
+        assert_eq!(basis(&u, 1, 1, 0.5, 3), Err(EvalError::Inconsistent));
+    }
+
+    #[test]
+    fn overflowing_knot_window_is_non_finite() {
+        let u = [-1e308, -1e308, 0.0, 1.0, 1e308, 1e308];
+        assert_eq!(basis(&u, 2, 2, 0.5, 0), Err(EvalError::NonFinite));
     }
 }

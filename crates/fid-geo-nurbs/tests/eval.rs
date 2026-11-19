@@ -655,6 +655,51 @@ fn overflow_is_refused_not_returned() {
     assert_eq!(r.eval(0.5, 0), Err(EvalError::NonFinite));
 }
 
+/// Very wide knot vectors: a domain width `hi - lo` that overflows, or a knot window whose
+/// difference overflows, is `NonFinite`, never a clamp or a silent (0, 0, 0) (NODE.md item 1).
+#[test]
+fn overflowing_knot_spans_are_refused() {
+    let wide = NurbsCurve::new(NurbsCurveParts {
+        degree: 1,
+        knots: vec![-1e308, -1e308, 1e308, 1e308],
+        ctrl: vec![[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]],
+        weights: None,
+        periodic: false,
+    })
+    .unwrap();
+    for t in [0.0, 1e308, -1e308, 1.7e308] {
+        assert_eq!(wide.eval(t, 0), Err(EvalError::NonFinite), "t = {t:e}");
+    }
+    assert_eq!(wide.eval(f64::NAN, 0), Err(EvalError::NotANumber { dir: Dir::Curve }));
+    // finite domain [0, 1], but the knot window of the span reaches from -1e308 to 1e308
+    let window = NurbsCurve::new(NurbsCurveParts {
+        degree: 2,
+        knots: vec![-1e308, -1e308, 0.0, 1.0, 1e308, 1e308],
+        ctrl: vec![[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [2.0, 0.0, 0.0]],
+        weights: None,
+        periodic: false,
+    })
+    .unwrap();
+    assert_eq!(Curve::domain(&window), (0.0, 1.0));
+    assert_eq!(window.eval(0.5, 0), Err(EvalError::NonFinite));
+    assert_eq!(window.eval(2.0, 0).unwrap_err().code(), "OutsideDomain");
+    let s = NurbsSurface::new(NurbsSurfaceParts {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0.0, 0.0, 1.0, 1.0],
+        knots_v: vec![-1e308, -1e308, 1e308, 1e308],
+        n_u: 2,
+        n_v: 2,
+        ctrl: vec![[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        weights: None,
+        periodic_u: false,
+        periodic_v: false,
+    })
+    .unwrap();
+    assert_eq!(s.eval(0.5, 0.0, 2), Err(EvalError::NonFinite));
+    assert_eq!(s.normal(0.5, 0.0), Err(EvalError::NonFinite));
+}
+
 /// Invalid knot vectors, degrees and weights never reach the evaluator: GEO.NURBS.DATA refuses
 /// them with a typed error at construction.
 #[test]

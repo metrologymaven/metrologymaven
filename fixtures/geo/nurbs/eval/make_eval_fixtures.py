@@ -15,7 +15,8 @@ never runs the Rust code. Two independent parts:
    derivatives by the degree-lowering recurrence, homogeneous accumulation, quotient rule,
    normal, fundamental forms, principal curvatures and directions). CPython floats are IEEE 754
    binary64 with round-to-nearest-even, never fuse a multiply-add, and math.sqrt is correctly
-   rounded, so the model's bit patterns are the Rust results on every target. The digests are
+   rounded, so the model's bit patterns are the Rust results on every target. A domain width
+   or a knot window (U[s+p] - U[s-p]) that overflows is NonFinite, as in the Rust code. The digests are
    computed from these bits.
 2. Accuracy checks of that model before anything is written, against values that do not come
    from it:
@@ -73,6 +74,10 @@ class OutsideDomain(Exception):
     pass
 
 
+class NonFinite(Exception):
+    pass
+
+
 def hx(x):
     return "%016x" % struct.unpack(">Q", struct.pack(">d", x))[0]
 
@@ -108,7 +113,10 @@ def clamp_param(t, lo, hi):
         raise ValueError("NaN")
     if t == math.inf or t == -math.inf:
         raise OutsideDomain()
-    margin = CLAMP_REL * (hi - lo)
+    width = hi - lo
+    if not math.isfinite(width):
+        raise NonFinite()
+    margin = CLAMP_REL * width
     if t < lo:
         if lo - t <= margin:
             return lo
@@ -138,6 +146,8 @@ def find_span(U, p, n, t):
 
 def basis(U, p, s, t, nd):
     """N[d][j]: d-th derivative of N_{s-p+j,p}(t), d <= nd, j <= p."""
+    if not math.isfinite(U[s + p] - U[s - p]):
+        raise NonFinite()
     levels = [[1.0]]
     for k in range(1, p + 1):
         prev = levels[k - 1]
@@ -529,6 +539,15 @@ def self_test():
         raise AssertionError("1.000001 should be outside [0, 1]")
     except OutsideDomain:
         pass
+    for wide, t in (([-1e308, -1e308, 1e308, 1e308], 0.0), ([-1e308, -1e308, 0.0, 1.0, 1e308, 1e308], 0.5)):
+        try:
+            p = len(wide) // 2 - 1
+            n = len(wide) - p - 1
+            clamp_param(t, wide[p], wide[n])
+            basis(wide, p, find_span(wide, p, n, t), t, 0)
+            raise AssertionError("a knot window that overflows should be NonFinite")
+        except NonFinite:
+            pass
 
 
 def main():
