@@ -3,7 +3,10 @@
 //! independent Python reference (`fixtures/geo/ooc/make_layout_fixtures.py` ->
 //! `cloud_5e6/expected.json`).
 //!
-//! Slow in debug builds (several minutes; the SHA-256 passes over 300 MB dominate).
+//! Plain `cargo test` runs the first 200 000 points with `max_chunk_points = 4 096` (the
+//! `small` block of the expected file, also from the Python reference). The full
+//! 5 x 10^6-point run, which takes minutes in a debug build, runs with `FID_OOC_FULL=1`;
+//! CI runs it in release on Linux.
 //!
 //! * AC-1: chunked with `max_chunk_points = 65 536` and rebuilt, the element digest equals
 //!   the original.
@@ -24,9 +27,16 @@ use fid_geo_types::{AttributeSet, PointBuffer, PointCloud};
 fn ac1_ac2_cloud_5e6() {
     let e = json("cloud_5e6/expected.json");
     let g = ScanGen::from_fixture(&e);
-    let n = int(get(&e, "n_points"));
-    let max = int(get(&e, "max_chunk_points"));
-    assert_eq!((n, max, int(get(&e, "seed"))), (5_000_000, 65_536, 61));
+    assert_eq!(
+        (int(get(&e, "n_points")), int(get(&e, "max_chunk_points")), int(get(&e, "seed"))),
+        (5_000_000, 65_536, 61)
+    );
+    let full = std::env::var("FID_OOC_FULL").is_ok_and(|v| v == "1");
+    let spec = if full { &e } else { get(&e, "small") };
+    let n = int(get(spec, "n_points"));
+    let max = int(get(spec, "max_chunk_points"));
+    // The writer's working budget is far below the cloud's records (60 bytes per point).
+    let budget = if full { 64 << 20 } else { fid_geo_ooc::writer::FIXED_OVERHEAD + (4 << 20) };
     for sample in arr(get(&e, "samples")) {
         let (p, nrm, inten) = g.point(int(get(sample, "index")));
         let want = arr(get(sample, "point"));
@@ -54,13 +64,13 @@ fn ac1_ac2_cloud_5e6() {
     let cloud = PointCloud::new(frame(get(&e, "frame")), PointBuffer::from_points(&pts), attrs).unwrap();
     drop(pts);
     let original = digest_point_cloud(&cloud);
-    assert_eq!(original.to_string(), s(get(&e, "element_digest")), "element digest of the regenerated cloud");
+    assert_eq!(original.to_string(), s(get(spec, "element_digest")), "element digest of the regenerated cloud");
 
     // AC-1: in-memory chunking and back.
     let ts = TestStore::new("5e6");
     let m = to_chunks(&cloud, ts.store(), &LayoutParams { max_chunk_points: max }).unwrap();
-    assert_eq!(m.chunks.len() as u64, int(get(&e, "n_chunks")));
-    assert_eq!(hex(&m.manifest_digest), s(get(&e, "manifest_digest")), "manifest digest (in memory)");
+    assert_eq!(m.chunks.len() as u64, int(get(spec, "n_chunks")));
+    assert_eq!(hex(&m.manifest_digest), s(get(spec, "manifest_digest")), "manifest digest (in memory)");
     assert_eq!(m.original_digest, original);
     // to_memory refuses a rebuilt cloud whose digest differs from the manifest's original
     // digest, which equals the reference value checked above.
@@ -68,7 +78,7 @@ fn ac1_ac2_cloud_5e6() {
     assert_eq!(back.len(), n, "AC-1: round trip");
     drop(back);
 
-    // AC-2: the streaming writer, with a budget far below the cloud's 300 MB of records.
+    // AC-2: the streaming writer.
     let ts2 = TestStore::new("5e6-writer");
     let header = CloudHeader {
         frame: cloud.frame(),
@@ -78,7 +88,7 @@ fn ac1_ac2_cloud_5e6() {
         grid: None,
     };
     let dir = temp_path("5e6-spill");
-    let cfg = WriterConfig { max_chunk_points: max, spill_budget: 64 << 20 };
+    let cfg = WriterConfig { max_chunk_points: max, spill_budget: budget };
     let mut w = ChunkWriter::new(ts2.store(), &dir, header, cfg).unwrap();
     let a = cloud.attributes();
     let (nrm, inten) = (a.normal.as_ref().unwrap(), a.intensity.as_ref().unwrap());
@@ -91,7 +101,7 @@ fn ac1_ac2_cloud_5e6() {
         w.push(cloud.point(i as u64).unwrap(), &pa).unwrap();
     }
     let (wm, stats) = w.finish().unwrap();
-    assert!(stats.spilled_bytes > 64 << 20);
+    assert!(stats.spilled_bytes > budget - fid_geo_ooc::writer::FIXED_OVERHEAD);
     assert_eq!(wm.manifest_digest, m.manifest_digest, "AC-2: writer and in-memory manifests");
     assert_eq!(wm, m);
 }

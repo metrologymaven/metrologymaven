@@ -125,7 +125,7 @@ pub fn to_chunks(cloud: &PointCloud, store: &dyn ChunkStore, params: &LayoutPara
 }
 
 /// Partitions `cloud` over `bounds` (which must contain every point), stores every chunk
-/// in `store`, and returns the sealed manifest. Fails on an empty cloud, a NaN intensity,
+/// in `store`, and returns the sealed manifest. Fails on an empty cloud,
 /// a point outside `bounds`, or more than [`MAX_MANIFEST_CHUNKS`] chunks.
 pub fn to_chunks_in(
     cloud: &PointCloud,
@@ -141,9 +141,6 @@ pub fn to_chunks_in(
     let grid = Grid::new(bounds)?;
     let b = cloud.buffer();
     let a = cloud.attributes();
-    if let Some(i) = a.intensity.as_deref().and_then(|v| v.iter().position(|x| x.is_nan())) {
-        return Err(OocError::NaNValue { channel: "intensity", index: i as u64 });
-    }
     let mut keys: Vec<Key> = Vec::new();
     keys.try_reserve_exact(b.x.len()).map_err(|_| OocError::AllocationFailed { needed: cloud.len() * 24 })?;
     for (i, ((&x, &y), &z)) in b.x.iter().zip(&b.y).zip(&b.z).enumerate() {

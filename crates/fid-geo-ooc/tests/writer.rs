@@ -45,12 +45,13 @@ fn point_validation_errors_keep_the_writer_usable() {
     assert_eq!(w.push([f64::NAN, 0.0, 0.0], &good), Err(OocError::Geometry(GeoTypeError::NonFinite { index: 1 })));
     let tilted = PointAttrs { normal: Some([0.0, 0.0, 1.0 + 1e-6]), ..good };
     assert_eq!(w.push([0.5; 3], &tilted), Err(OocError::Geometry(GeoTypeError::BadNormal { index: 1 })));
-    let nan = PointAttrs { intensity: Some(f32::NAN), ..good };
-    assert_eq!(w.push([0.5; 3], &nan), Err(OocError::NaNValue { channel: "intensity", index: 1 }));
     assert_eq!(w.push([1.5, 0.5, 0.5], &good), Err(OocError::OutOfBounds { index: 1 }));
     w.push([-0.0, 1.0, 0.0], &good).unwrap();
+    // A NaN intensity is accepted (stored as the canonical NaN).
+    let nan = PointAttrs { intensity: Some(f32::from_bits(0xffc0_0001)), ..good };
+    w.push([0.5; 3], &nan).unwrap();
     let (m, stats) = w.finish().unwrap();
-    assert_eq!((m.n_points, stats.points), (2, 2));
+    assert_eq!((m.n_points, stats.points), (3, 3));
     assert!(!dir.exists());
 }
 

@@ -14,8 +14,10 @@ Run:  python fixtures/geo/ooc/make_layout_fixtures.py [--check] [--jobs N]
 
 Without --check it rewrites both files (cloud_5e6 takes several minutes; the Philox draws run
 on --jobs processes, default the CPU count). With --check nothing is written: the small
-vectors and the cloud_5e6 sample points are regenerated and compared with the committed
-bytes; the cloud_5e6 digests are taken as committed (the full run is too slow for CI).
+vectors, the cloud_5e6 sample points and the digests of its first 200 000 points (the size
+plain `cargo test` uses) are regenerated and compared with the committed bytes; the full
+cloud_5e6 digests are taken as committed (the full run is too slow for CI). --small-only
+rewrites the vectors and only that 200 000-point block.
 
 Stdlib only (struct, hashlib, json, multiprocessing). It shares no code with
 crates/fid-geo-ooc. It models the pinned rules of the crate documentation directly:
@@ -27,7 +29,10 @@ crates/fid-geo-ooc. It models the pinned rules of the crate documentation direct
 * split rule: a cell with more than max_chunk_points points below depth 21 splits into its
   eight octants, empty octants are dropped, leaves are emitted depth first in octant order;
 * chunk v1 and manifest v1 byte layouts, CORE.STO.CAS addresses (fid-chunks@1 above 8 MiB);
-* the GEO.TYPES.DIGEST layout v1 of a point cloud (kind 2), with -0.0 written as +0.0.
+* chunk floats are raw bits, except that a NaN intensity is stored as the canonical f32 NaN
+  0x7fc00000 (the element digest's canonicalisation);
+* the GEO.TYPES.DIGEST layout v1 of a point cloud (kind 2), with -0.0 written as +0.0 and any
+  NaN intensity as 0x7fc00000.
 """
 
 import argparse
@@ -126,15 +131,23 @@ def f64canon(v):
     return u64(b)
 
 
+def f32chunk(b):
+    """Chunk bits of an f32 intensity: raw bits, except any NaN becomes the canonical 0x7fc00000."""
+    if b & 0x7F800000 == 0x7F800000 and b & 0x007FFFFF:
+        return 0x7FC00000
+    return b
+
+
 def f64col(col):
     """A column of f64 as canonical layout bytes: -0.0 written as +0.0 (v == 0.0 holds for both)."""
     return struct.pack("<%dd" % len(col), *[0.0 if v == 0.0 else v for v in col])
 
 
 def f32canon(b):
+    """GEO.TYPES.DIGEST f32 rule: -0.0 as +0.0, any NaN as 0x7fc00000."""
     if b == 1 << 31:
         b = 0
-    return u32(b)
+    return u32(f32chunk(b))
 
 
 def total_key(x):
@@ -253,7 +266,7 @@ def encode_chunk(c, cell, idx):
         if name == "colour":
             out.append(b"".join(bytes(col[i]) for i in idx))
         elif name == "intensity":
-            out.append(b"".join(u32(col[i]) for i in idx))
+            out.append(b"".join(u32(f32chunk(col[i])) for i in idx))
         elif name == "normal":
             for k in range(3):
                 out.append(b"".join(f64raw(col[i][k]) for i in idx))
@@ -423,6 +436,13 @@ def neg_zero(sign):
     return {"frame": frame_of("neg_zero"), "pts": pts, "ch": {}, "origins": [], "grid": None}
 
 
+def case_nan_intensity():
+    pts = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 1.0), (0.5, 0.5, 0.5)]
+    # canonical NaN, negative quiet NaN, signalling NaN with payload, +inf, 0.25
+    inten = [0x7FC00000, 0xFFC00001, 0x7F800001, 0x7F800000, f32bits(0.25)]
+    return {"frame": frame_of("nan_intensity"), "pts": pts, "ch": {"intensity": inten}, "origins": [], "grid": None}
+
+
 def cloud_json(c):
     out = {
         "frame": c["frame"].hex(),
@@ -478,6 +498,8 @@ def vectors():
     gen = {"kind": "duplicates", "n": 300000, "point": [0.0, 0.0, 0.0], "extra": [[1.0, 1.0, 1.0]]}
     add("duplicates_object", case_from_gen("duplicates_object", gen), 1000, gen=gen,
         note="a depth-21 chunk of 300 000 points, 9.6 MB, stored as a CORE.STO object (fid-chunks@1 address)")
+    add("nan_intensity", case_nan_intensity(), 2, keep=True,
+        note="NaN intensities of any payload are stored as the canonical f32 NaN 0x7fc00000; +inf keeps its bits")
     a = add("neg_zero_minus", neg_zero(True), 2, keep=True, note="as neg_zero_plus with -0.0 for some zeros")
     b = add("neg_zero_plus", neg_zero(False), 2, keep=True, note="as neg_zero_minus with +0.0")
     assert a["expected"]["original_digest"] == b["expected"]["original_digest"]
@@ -523,9 +545,13 @@ def scan_block(rng):
     return [scan_point(i) for i in range(*rng)]
 
 
-def cloud_5e6(jobs):
+N_SMALL = 200_000
+MAX_SMALL = 4096
+
+
+def cloud_5e6(jobs, n=N_5E6):
     step = 50_000
-    blocks = [(s, min(s + step, N_5E6)) for s in range(0, N_5E6, step)]
+    blocks = [(s, min(s + step, n)) for s in range(0, n, step)]
     with Pool(jobs) as pool:
         parts = pool.map(scan_block, blocks)
     rows = [r for part in parts for r in part]
@@ -570,6 +596,20 @@ def expected_5e6(jobs):
         "n_chunks": len(lay["chunks"]),
         "aabb_min": lay["aabb_min"],
         "aabb_max": lay["aabb_max"],
+        "small": expected_small(jobs),
+    }
+
+
+def expected_small(jobs):
+    """The first N_SMALL points of cloud_5e6 with max_chunk_points MAX_SMALL: the size plain
+    `cargo test` runs; the full cloud runs in a release CI step (FID_OOC_FULL=1)."""
+    lay = layout(cloud_5e6(jobs, N_SMALL), MAX_SMALL)
+    return {
+        "n_points": N_SMALL,
+        "max_chunk_points": MAX_SMALL,
+        "element_digest": lay["original_digest"],
+        "manifest_digest": lay["manifest_digest"],
+        "n_chunks": len(lay["chunks"]),
     }
 
 
@@ -581,19 +621,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 1)
+    ap.add_argument("--small-only", action="store_true",
+                    help="rewrite the vectors and only the 'small' block of cloud_5e6/expected.json")
     args = ap.parse_args()
     vec = dump(vectors())
     if args.check:
         ok = OUT_VECTORS.read_text(encoding="utf-8") == vec
         committed = json.loads(OUT_5E6.read_text(encoding="utf-8"))
         ok_samples = committed["samples"] == sample_points() and committed["frame"] == frame_of("cloud_5e6").hex()
+        ok_samples = ok_samples and committed["small"] == expected_small(args.jobs)
         if not ok:
             print("layout_vectors.json differs from the reference", file=sys.stderr)
         if not ok_samples:
-            print("cloud_5e6 samples differ from the generator", file=sys.stderr)
+            print("cloud_5e6 samples or small prefix differ from the generator", file=sys.stderr)
         sys.exit(0 if ok and ok_samples else 1)
     OUT_VECTORS.write_text(vec, encoding="utf-8", newline="\n")
     OUT_5E6.parent.mkdir(parents=True, exist_ok=True)
+    if args.small_only:
+        committed = json.loads(OUT_5E6.read_text(encoding="utf-8"))
+        committed["small"] = expected_small(args.jobs)
+        OUT_5E6.write_text(dump(committed), encoding="utf-8", newline="\n")
+        return
     OUT_5E6.write_text(dump(expected_5e6(args.jobs)), encoding="utf-8", newline="\n")
 
 

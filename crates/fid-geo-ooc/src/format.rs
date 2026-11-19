@@ -239,8 +239,21 @@ fn check_f64(column: &'static str, v: &[f64]) -> Result<(), Fault> {
     Ok(())
 }
 
-/// Checks the float content shared by encoder and decoder.
-fn check_values(c: &Chunk) -> Result<(), Fault> {
+/// The canonical f32 NaN a chunk stores for any NaN intensity (as GEO.TYPES.DIGEST).
+pub const CANONICAL_NAN_F32: u32 = 0x7fc0_0000;
+
+/// The chunk bits of an intensity: raw bits, except any NaN becomes [`CANONICAL_NAN_F32`].
+pub fn intensity_bits(v: f32) -> u32 {
+    if v.is_nan() {
+        CANONICAL_NAN_F32
+    } else {
+        v.to_bits()
+    }
+}
+
+/// Checks the float content. The encoder accepts any NaN intensity (it writes the
+/// canonical NaN); the decoder (`decoding`) accepts only the canonical NaN bit pattern.
+fn check_values(c: &Chunk, decoding: bool) -> Result<(), Fault> {
     for (w, i) in c.index.windows(2).zip(1u64..) {
         if w[1] <= w[0] {
             return Err(Fault::IndexOrder { at: i });
@@ -255,16 +268,18 @@ fn check_values(c: &Chunk) -> Result<(), Fault> {
         check_f64("normal_z", nz)?;
     }
     if let Some(v) = &c.attrs.intensity {
-        if let Some(i) = v.iter().position(|x| x.is_nan()) {
-            return Err(Fault::NaN { column: "intensity", at: i as u64 });
+        if decoding {
+            if let Some(i) = v.iter().position(|x| x.is_nan() && x.to_bits() != CANONICAL_NAN_F32) {
+                return Err(Fault::NaN { column: "intensity", at: i as u64 });
+            }
         }
     }
     Ok(())
 }
 
 /// Validates a chunk for encoding: at least one point, equal column lengths, strictly
-/// ascending original indexes, no NaN anywhere, finite coordinates and normals, no
-/// cloud-level attributes.
+/// ascending original indexes, finite coordinates and normals, no cloud-level attributes.
+/// A NaN intensity is accepted and encoded as [`CANONICAL_NAN_F32`].
 pub fn validate_chunk(c: &Chunk) -> Result<(), OocError> {
     let n = c.index.len();
     if n == 0 {
@@ -297,7 +312,7 @@ pub fn validate_chunk(c: &Chunk) -> Result<(), OocError> {
     if let Some(v) = &a.timestamp_ns {
         col_len("timestamp_ns", v.len(), n)?;
     }
-    check_values(c).map_err(chunk_fault)
+    check_values(c, false).map_err(chunk_fault)
 }
 
 /// A `Vec<u8>` of exactly `n` bytes capacity, or `AllocationFailed`.
@@ -309,7 +324,8 @@ pub(crate) fn try_bytes(n: u64) -> Result<Vec<u8>, OocError> {
 }
 
 /// The chunk bytes (format v1) of a valid chunk. Floats are written as their raw IEEE 754
-/// bits: `-0.0` stays `-0.0` (the chunk is lossless); NaN is refused.
+/// bits: `-0.0` stays `-0.0`; the one exception is a NaN intensity, written as
+/// [`CANONICAL_NAN_F32`].
 pub fn encode_chunk(c: &Chunk) -> Result<Vec<u8>, OocError> {
     validate_chunk(c)?;
     let channels = c.channels();
@@ -337,7 +353,7 @@ pub fn encode_chunk(c: &Chunk) -> Result<Vec<u8>, OocError> {
     }
     if let Some(v) = &a.intensity {
         for x in v {
-            out.extend_from_slice(&x.to_bits().to_le_bytes());
+            out.extend_from_slice(&intensity_bits(*x).to_le_bytes());
         }
     }
     if let Some([nx, ny, nz]) = &a.normal {
@@ -488,7 +504,7 @@ pub fn decode_chunk(bytes: &[u8], max_bytes: u64) -> Result<Chunk, OocError> {
     // count * record <= len, so it fits in usize.
     let n = usize::try_from(count).map_err(|_| chunk_fault(Fault::Oversized { needed, limit: max_bytes }))?;
     let c = read_columns(&mut r, n, cell, channels).map_err(chunk_fault)?;
-    check_values(&c).map_err(chunk_fault)?;
+    check_values(&c, true).map_err(chunk_fault)?;
     Ok(c)
 }
 

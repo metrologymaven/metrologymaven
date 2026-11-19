@@ -265,5 +265,12 @@
    ]
   }
  ],
- "seed": 61
+ "seed": 61,
+ "small": {
+  "element_digest": "accd2152756f41001bd4409335de0c64724eb716d50d526e6e6383300afcf30a",
+  "manifest_digest": "9a98db5bc37918aa708bf6549c92ab51bd9dc57f5cec19caf9fba96406ea7578",
+  "max_chunk_points": 4096,
+  "n_chunks": 187,
+  "n_points": 200000
+ }
 }

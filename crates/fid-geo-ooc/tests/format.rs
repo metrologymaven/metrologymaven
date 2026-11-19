@@ -8,7 +8,7 @@ mod common;
 use common::*;
 use fid_geo_ooc::{
     chunk_header_bytes, decode_chunk, encode_chunk, to_chunks, to_memory, CellCode, Channel, ChannelSet, Chunk,
-    ChunkManifest, ChunkStore, Fault, LayoutParams, MemStore, OocError, CHUNK_VERSION,
+    ChunkManifest, ChunkStore, Fault, LayoutParams, MemStore, OocError, CANONICAL_NAN_F32, CHUNK_VERSION,
 };
 use fid_geo_types::{AttributeSet, PointBuffer, PointCloud};
 
@@ -107,7 +107,7 @@ fn small_chunk() -> Chunk {
 }
 
 #[test]
-fn floats_are_raw_bits_and_nan_is_refused() {
+fn floats_are_raw_bits_and_nan_is_refused_or_canonical() {
     let c = small_chunk();
     let b = encode_chunk(&c).unwrap();
     let back = decode_chunk(&b, u64::MAX).unwrap();
@@ -127,11 +127,20 @@ fn floats_are_raw_bits_and_nan_is_refused() {
     let mut inf = b.clone();
     inf[x_at..x_at + 8].copy_from_slice(&f64::NEG_INFINITY.to_bits().to_le_bytes());
     assert_eq!(fault(decode_chunk(&inf, u64::MAX)), Fault::NonFinite { column: "x", at: 0 });
-    // NaN intensity (a signalling payload too).
+    // NaN intensity: only the canonical bit pattern is read; the encoder writes it for
+    // every NaN payload.
     let i_at = h + 3 * 8 + 3 * 24;
     let mut ni = b.clone();
     ni[i_at + 4..i_at + 8].copy_from_slice(&0x7f80_0001u32.to_le_bytes());
     assert_eq!(fault(decode_chunk(&ni, u64::MAX)), Fault::NaN { column: "intensity", at: 1 });
+    ni[i_at + 4..i_at + 8].copy_from_slice(&0xffc0_0000u32.to_le_bytes());
+    assert_eq!(fault(decode_chunk(&ni, u64::MAX)), Fault::NaN { column: "intensity", at: 1 });
+    ni[i_at + 4..i_at + 8].copy_from_slice(&CANONICAL_NAN_F32.to_le_bytes());
+    let read = decode_chunk(&ni, u64::MAX).unwrap();
+    assert_eq!(read.attrs.intensity.as_ref().unwrap()[1].to_bits(), CANONICAL_NAN_F32);
+    let mut payload = c.clone();
+    payload.attrs.intensity.as_mut().unwrap()[1] = f32::from_bits(0xff80_1234);
+    assert_eq!(encode_chunk(&payload).unwrap(), ni, "any NaN intensity is written canonical");
     // Index order.
     let mut io = b.clone();
     io[h + 8..h + 16].copy_from_slice(&3u64.to_le_bytes());
@@ -282,17 +291,18 @@ fn layout_params_and_inputs_are_checked() {
     }
     let empty = PointCloud::from_points(fid_geo_types::FrameRef::from_bytes([0; 16]), &[]).unwrap();
     assert_eq!(to_chunks(&empty, &store, &LayoutParams::default()), Err(OocError::EmptyCloud));
-    let attrs = AttributeSet { intensity: Some(vec![1.0, f32::NAN]), ..AttributeSet::default() };
+    let attrs = AttributeSet { intensity: Some(vec![1.0, f32::from_bits(0x7f80_0001)]), ..AttributeSet::default() };
     let nan = PointCloud::new(
         fid_geo_types::FrameRef::from_bytes([0; 16]),
         PointBuffer::from_points(&[[0.0; 3], [1.0; 3]]),
         attrs,
     )
     .unwrap();
-    assert_eq!(
-        to_chunks(&nan, &store, &LayoutParams::default()),
-        Err(OocError::NaNValue { channel: "intensity", index: 1 })
-    );
+    // A NaN intensity is chunked as the canonical NaN; the element digest is kept.
+    let m = to_chunks(&nan, &store, &LayoutParams::default()).unwrap();
+    let back = to_memory(&m, &store, u64::MAX).unwrap();
+    assert_eq!(back.attributes().intensity.as_ref().unwrap()[1].to_bits(), CANONICAL_NAN_F32);
+    assert_eq!(fid_geo_types::digest::digest_point_cloud(&back), m.original_digest);
     let wide = PointCloud::from_points(
         fid_geo_types::FrameRef::from_bytes([0; 16]),
         &[[-f64::MAX, 0.0, 0.0], [f64::MAX, 0.0, 0.0]],

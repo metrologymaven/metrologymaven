@@ -87,7 +87,10 @@ fn assert_same_cloud(a: &PointCloud, b: &PointCloud) {
         (None, None) => {}
         _ => panic!("normal presence differs"),
     }
-    let f32s = |v: &Option<Vec<f32>>| v.as_ref().map(|v| v.iter().map(|x| x.to_bits()).collect::<Vec<_>>());
+    // A NaN intensity comes back as the canonical NaN (pinned rule).
+    let f32s = |v: &Option<Vec<f32>>| {
+        v.as_ref().map(|v| v.iter().map(|x| fid_geo_ooc::intensity_bits(*x)).collect::<Vec<_>>())
+    };
     assert_eq!(f32s(&p.intensity), f32s(&q.intensity));
     assert_eq!(p.colour, q.colour);
     assert_eq!(p.scanner_id, q.scanner_id);

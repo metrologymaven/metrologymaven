@@ -50,8 +50,10 @@
 //! Names and type bytes are those of GEO.TYPES.DIGEST. Floats are stored as their raw IEEE
 //! 754 bits: the chunk is lossless, so `-0.0` stays `-0.0` (and makes a chunk, hence a
 //! manifest digest, different from `+0.0`, although the element digest normalises it).
-//! NaN is refused in every float field, and coordinates and normals must be finite;
-//! intensity may be infinite (as in GEO.TYPES). [`decode_chunk`] checks, in order: the
+//! Coordinates and normals must be finite (no NaN, no infinity). Intensity may be
+//! infinite or NaN, as in GEO.TYPES; any NaN intensity is stored as the canonical f32 NaN
+//! `0x7fc00000` (the element digest's canonicalisation, so the round trip keeps the element
+//! digest), and a reader refuses every other NaN bit pattern. [`decode_chunk`] checks, in order: the
 //! input against its limit (`Oversized`), the tag, the version
 //! ([`OocError::UnsupportedChunkVersion`]), the cell code, a non-zero count, the channel
 //! list, the declared size against the limit (`Oversized`) and the bytes present
@@ -89,9 +91,9 @@ pub mod writer;
 pub use cell::{CellCode, Grid, GRID_CELLS, MAX_DEPTH};
 pub use error::{Fault, OocError};
 pub use format::{
-    chunk_bytes, chunk_header_bytes, decode_chunk, encode_chunk, validate_chunk, Channel, ChannelSet, Chunk,
-    ChunkEntry, ChunkManifest, CHUNK_MAGIC, CHUNK_VERSION, ENTRY_BYTES, MANIFEST_MAGIC, MANIFEST_VERSION,
-    MAX_CHUNK_POINTS_LIMIT, MAX_MANIFEST_CHUNKS,
+    chunk_bytes, chunk_header_bytes, decode_chunk, encode_chunk, intensity_bits, validate_chunk, Channel, ChannelSet,
+    Chunk, ChunkEntry, ChunkManifest, CANONICAL_NAN_F32, CHUNK_MAGIC, CHUNK_VERSION, ENTRY_BYTES, MANIFEST_MAGIC,
+    MANIFEST_VERSION, MAX_CHUNK_POINTS_LIMIT, MAX_MANIFEST_CHUNKS,
 };
 pub use layout::{memory_needed, to_chunks, to_chunks_in, to_memory, LayoutParams, DEFAULT_MAX_CHUNK_POINTS};
 pub use store::{blob_address, ChunkStore, MemStore, STORE_CHUNK_SIZE};
