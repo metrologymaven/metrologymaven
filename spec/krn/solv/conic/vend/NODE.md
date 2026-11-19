@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-KRN.SOLV.CONIC-001, REQ-KRN.SOLV.CONIC-002, REQ-KRN.SOLV.CONIC-006]
 covers: []
 depends_on: []
@@ -66,6 +67,7 @@ Makes the vendored conic solver auditable. It fixes the repository layout (prist
 - **Determinism:** D0.
 - **Performance budget:** < 10 s for a 20 000-line upstream tree [unverified until measured].
 - **Crate:** `fid-xtask` (tooling layer).
+- **Exact forms (as built):** the tree digest hashes the lines `<content SHA-256 hex>  <path>\n` (the `sha256sum` line format), one per regular file, sorted by the `/`-separated relative path in byte order, and is written `sha256:<hex>`; symbolic links and other non-regular files fail the check. The applier takes text before each `---` header as commentary, requires `a/`/`b/` paths, accepts `/dev/null` for created and deleted files, matches every context and removed line at the header's exact line number (no fuzz and no offset), and refuses binary, rename, copy and mode changes. A `waiver_ref` is `<file>:<first line>-<last line>:<rule>`, the fields of the `knp1-waivers.toml` entry; a listed waiver that no waived finding of the crate uses is also `AUDIT-LINT`. Findings of the vendored crate are those whose `crate_name` is `crate/Cargo.toml`'s package name. Unreadable inputs map to the check that reads them. Defaults: `--dir vendor/fid-clarabel`, `--audit <dir>/AUDIT.toml`, `--report <dir>/knp1-findings.json`, `--allowlist house-rules/spdx-allowlist.toml`.
 
 ## Test fixtures
 
@@ -77,6 +79,8 @@ Makes the vendored conic solver auditable. It fixes the repository layout (prist
 
 ## Open questions
 
+- Vendoring the real upstream tree is not done yet: the check is built and tested against small hand-written synthetic trees in `fixtures/solv/vend/`. The first real `vendor/fid-clarabel/` needs the upstream licence confirmed and allowed (below), the pinned commit chosen, and the CI step extended to pass `--previous` with the record at the merge base; CI already runs `cargo xtask conic-audit` once `vendor/fid-clarabel` exists.
+- `lint_report_sha256` is checked for form only. Whether CI should also require it to equal the digest of the report it reads (which changes whenever any lint input changes) is open.
 - Clarabel's licence (Apache-2.0 [unverified]) must be on the SPDX allowlist before the first audit can pass.
 - A vendored workspace crate is not a third-party package, so `ECO.REPO.ALLOW` does not list it; this audit is its gate instead. Confirm with ECO.REPO that vendored kernel crates are covered by this record rather than the allowlist.
 

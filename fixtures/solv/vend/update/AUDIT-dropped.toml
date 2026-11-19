@@ -1,0 +1,21 @@
+# Audit record (KRN.SOLV.CONIC.VEND). Synthetic fixture written by make_fixtures.py.
+schema = 1
+lint_report_sha256 = "sha256:ad2649b29cf0df0c9c518a1676ce99f00ff605f984d1c919cf06bbed96e1865a"
+auditor = "conic-audit fixture"
+date = "2026-11-18"
+
+[upstream]
+url = "https://example.invalid/minisolv.git"
+commit = "2222222222222222222222222222222222222222"
+tree_sha256 = "sha256:983ad4f07b09cdc55374206ae0daf22c72d5c1397dc87d74975853b50132b0ca"
+licence = "MIT"
+
+[[patches]]
+id = "0001"
+file = "patches/0001-no-powi.patch"
+rules = ["KNP1-POW"]
+rationale = "powi is outside the fid-num facade; a product is exact for squares"
+
+[[dropped]]
+id = "0002"
+justification = "fixed upstream"

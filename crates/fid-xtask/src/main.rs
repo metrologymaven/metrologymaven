@@ -66,6 +66,7 @@ fn main() -> ExitCode {
             fid_platform(&args, "plat-deploy")
         }
         Some("pins") => pins::cli(&args[1..]),
+        Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -80,6 +81,7 @@ fn main() -> ExitCode {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
+            eprintln!("{}", fid_xtask::conic_audit::USAGE);
             ExitCode::from(2)
         }
     }

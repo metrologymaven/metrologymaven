@@ -58,3 +58,7 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
+# KRN.SOLV.CONIC.VEND: hand-written trees, patches and reports, digested and compared byte for byte
+# by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
+fixtures/solv/vend/** -text
+vendor/fid-clarabel/** -text

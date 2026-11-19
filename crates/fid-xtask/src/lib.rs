@@ -32,9 +32,13 @@
 //! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 //!
 //! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`).
+//!
+//! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
+//! [`conic_audit`].
 
 pub mod apps_policy;
 pub mod bots;
+pub mod conic_audit;
 pub mod crate_graph;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
