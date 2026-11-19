@@ -910,7 +910,11 @@ pub mod spdx {
     /// allowed when it is in `licences`; `L WITH E` only when the pair `(L, E)` is in `pairs`
     /// (never by combining an allowed licence with an allowed exception). `Err` carries the
     /// parse error.
-    pub fn evaluate(text: &str, licences: &BTreeSet<String>, pairs: &BTreeSet<(String, String)>) -> Result<bool, String> {
+    pub fn evaluate(
+        text: &str,
+        licences: &BTreeSet<String>,
+        pairs: &BTreeSet<(String, String)>,
+    ) -> Result<bool, String> {
         let toks = lex(text)?;
         if toks.is_empty() {
             return Err("empty expression".to_string());
@@ -1222,7 +1226,11 @@ fn check_root(dir: &Path, out: &mut BTreeSet<Finding>) -> bool {
         let name = entry.file_name().to_string_lossy().into_owned();
         match entry.file_type() {
             _ if name == GITATTRIBUTES => {
-                out.insert(Finding::new(Code::Schema, name, ".gitattributes files are not allowed in the vendored tree"));
+                out.insert(Finding::new(
+                    Code::Schema,
+                    name,
+                    ".gitattributes files are not allowed in the vendored tree",
+                ));
             }
             Ok(k) if k.is_symlink() => {
                 out.insert(Finding::new(Code::Schema, name, "symbolic links are not allowed"));
