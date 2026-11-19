@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-types"
-description = "Metrology Maven geometry element types: element envelope, kind tags, bounding boxes, point sets and clouds with attributes, point sources (spec node GEO.TYPES)"
+description = "Metrology Maven geometry element types: element envelope, kind tags, bounding boxes, point sets and clouds with attributes, point sources, indexed triangle meshes with topology facts (spec node GEO.TYPES)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

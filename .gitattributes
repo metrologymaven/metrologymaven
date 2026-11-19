@@ -86,6 +86,9 @@ fixtures/block/** -text
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
+# ECO.RULES.CHECK fixtures: hand-labelled repositories whose block digests and byte sizes are checked
+# byte for byte by tools/house_rules/tests/test_check.py; never convert line endings.
+tools/tests/fixtures/check/** -text
 # IO.CAD.WORKER.PROTO fixtures: digests compared byte for byte by make_digests.py --check and the tests.
 fixtures/io/cad/worker/proto/** -text
 # ECO.COMM.LADDER fixtures: a recorded NUL-separated git log and hand-written review exports, read byte for byte.
