@@ -341,10 +341,9 @@ fn reported_record_and_ids() {
 #[test]
 fn ac9_directed_rounding_at_cap() {
     let inch = dec("0.0254");
-    for (name, lim, want) in [
-        ("ac9_directed_at_cap", "0.506108", Ordering::Greater),
-        ("ac9_directed_lower", "-0.506108", Ordering::Less),
-    ] {
+    for (name, lim, want) in
+        [("ac9_directed_at_cap", "0.506108", Ordering::Greater), ("ac9_directed_lower", "-0.506108", Ordering::Less)]
+    {
         let (_, r) = ac(name);
         let v = r.unwrap();
         assert!(v.tie_at_max_precision, "{name}");
