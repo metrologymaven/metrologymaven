@@ -25,16 +25,18 @@
 //!   each consecutive pair sharing an edge that contains the vertex (REQ-002). Vertices
 //!   with no triangle have no fan. The endpoints of a non-manifold edge are not non-manifold
 //!   on that account (the three triangles of a fin share the edge, so form one fan).
-//! * **Boundary loops** come from a deterministic walk over the boundary edges, undirected
-//!   (so an inconsistently oriented mesh such as a Möbius strip still closes its loop). A
-//!   walk starts at the smallest vertex that still has an unused boundary edge; at every
-//!   step it takes the unused boundary edge at the current vertex whose other end is
-//!   smallest; it ends when it is back at its start vertex (a closed loop) or when the
-//!   current vertex has no unused boundary edge (an open chain, which happens only at
-//!   vertices with an odd number of boundary edges). Every walk counts as one loop. When
-//!   every boundary vertex has exactly two boundary edges, this is the number of boundary
-//!   cycles. At a non-manifold vertex with four or more boundary edges the "smallest other
-//!   end" rule decides how the cycles are split (two fans of a bow tie give two loops).
+//! * **Boundary loops** are counted on the *fan-split boundary graph*: its nodes are the
+//!   (vertex, fan) pairs at the ends of boundary edges (a boundary edge has one triangle,
+//!   so at each end it lies in one fan of that vertex) and its edges are the boundary
+//!   edges, undirected (so an inconsistently oriented mesh such as a Möbius strip still
+//!   closes its loop). Each connected component counts `max(1, k)`, where `2k` is its
+//!   number of odd-degree nodes: the fewest walks that cover its edges, each walk staying
+//!   in a fan at a vertex while that fan has an unused boundary edge there. When every fan
+//!   has zero or two boundary edges at every vertex (manifold surfaces with boundary, bow
+//!   ties of such fans) every component is a cycle and this is the number of fan-aware
+//!   boundary cycles: two fans of a bow tie give two loops. The count depends only on the
+//!   graph, never on vertex or triangle numbering (a greedy walk would not be invariant
+//!   at the odd-degree nodes of a fin: three boundary edges in one fan).
 //! * **Minimum angle** of a non-degenerate triangle: at each corner `p` in stored order
 //!   (`a`, `b`, `c`), with `u` and `v` the vectors to the next and the previous corner,
 //!   `cos = dot(u, v) / (sqrt(dot(u, u)) * sqrt(dot(v, v)))` with
@@ -56,7 +58,7 @@
 //! degenerate). A vertex index not below the vertex count is `scan.mesh.invalid_index`
 //! (GEO.TYPES already refuses such a mesh, so this only fails closed). A non-finite
 //! coordinate, area or cosine (for example coordinates near `1e200`, whose squares
-//! overflow) is `scan.mesh.non_finite`. A failed working allocation is
+//! overflow, or an infinite cosine from an underflowed edge length) is `scan.mesh.non_finite`. A failed working allocation is
 //! `scan.mesh.allocation_failed`; nothing allocates infallibly on a size from the input.
 //!
 //! # Determinism (REQ-005, D0)
@@ -316,10 +318,9 @@ pub fn mesh_quality(mesh: &Mesh, degenerate_area: f64) -> Result<MeshQualityRepo
         }
         base += group.len();
     }
+    let boundary_loops = boundary_walks(&edges, boundary_count, &inc, &mut fan_parent)?;
     drop(fan_parent);
     drop(inc);
-
-    let boundary_loops = boundary_walks(&edges, boundary_count)?;
 
     Ok(MeshQualityReport {
         triangles,
@@ -352,6 +353,16 @@ fn incidence(inc: &[[u64; 2]], v: u64, t: u64) -> Result<usize, QualityError> {
     inc.binary_search(&[v, t]).map_err(|_| QualityError::InvalidIndex { triangle: t, index: v })
 }
 
+/// A NaN or infinite intermediate in the area or angle of a triangle.
+#[derive(Debug)]
+struct NotFinite;
+
+impl From<fid_num::NumError> for NotFinite {
+    fn from(_: fid_num::NumError) -> Self {
+        NotFinite
+    }
+}
+
 fn sub(p: [f64; 3], q: [f64; 3]) -> [f64; 3] {
     [p[0] - q[0], p[1] - q[1], p[2] - q[2]]
 }
@@ -361,7 +372,7 @@ fn dot(p: [f64; 3], q: [f64; 3]) -> f64 {
 }
 
 /// `0.5 * |(b - a) × (c - a)|`, in the pinned evaluation order.
-fn area(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, fid_num::NumError> {
+fn area(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, NotFinite> {
     let u = sub(b, a);
     let v = sub(c, a);
     let cx = u[1] * v[2] - u[2] * v[1];
@@ -372,16 +383,19 @@ fn area(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, fid_num::NumError>
 }
 
 /// The interior angle at `p` between the directions to `next` and `prev`.
-fn corner_angle(p: [f64; 3], next: [f64; 3], prev: [f64; 3]) -> Result<f64, fid_num::NumError> {
+fn corner_angle(p: [f64; 3], next: [f64; 3], prev: [f64; 3]) -> Result<f64, NotFinite> {
     let u = sub(next, p);
     let v = sub(prev, p);
     let c = dot(u, v) / (fid_num::f::sqrt(dot(u, u))? * fid_num::f::sqrt(dot(v, v))?);
-    // The KNP-1 clamp: a NaN cosine is an error, not a silent value.
-    fid_num::f::acos(fid_num::f::total_clamp(c, -1.0, 1.0)?)
+    // A NaN or infinite cosine (a zero or underflowed length) is an error, never clamped.
+    if !c.is_finite() {
+        return Err(NotFinite);
+    }
+    Ok(fid_num::f::acos(fid_num::f::total_clamp(c, -1.0, 1.0)?)?)
 }
 
 /// The smallest interior angle, corners in stored order.
-fn min_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, fid_num::NumError> {
+fn min_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, NotFinite> {
     let mut m = corner_angle(a, b, c)?;
     let y = corner_angle(b, c, a)?;
     if y < m {
@@ -408,79 +422,69 @@ fn angle_stats(angles: &mut [f64]) -> Result<AngleStats, QualityError> {
     Ok(AngleStats { count: n as u64, min: angles.first().copied(), p1: at(1), p5: at(5), median: at(50) })
 }
 
-/// The number of walks over the boundary edges (runs of length 1 in the sorted edge list),
-/// as pinned in the module documentation.
-fn boundary_walks(edges: &[[u64; 3]], boundary_count: usize) -> Result<u64, QualityError> {
-    // Both directions of every boundary edge: `(from, to, edge id)`, sorted.
+/// The number of boundary loops (runs of length 1 in the sorted edge list), as pinned in
+/// the module documentation: over the fan-split boundary graph, whose nodes are
+/// (vertex, fan) pairs and whose edges are the boundary edges, each connected component
+/// counts `max(1, odd / 2)`, `odd` being its number of odd-degree nodes. A fan is named by
+/// its union-find root in the incidence list, so it is unique per vertex.
+fn boundary_walks(
+    edges: &[[u64; 3]],
+    boundary_count: usize,
+    inc: &[[u64; 2]],
+    fan_parent: &mut [usize],
+) -> Result<u64, QualityError> {
+    // Boundary edge ends as nodes `(vertex, fan, edge id)`: two per boundary edge.
     let len = boundary_count.checked_mul(2).ok_or(QualityError::AllocationFailed)?;
-    let mut adj: Vec<(u64, u64, usize)> = alloc(len)?;
+    let mut ends: Vec<(u64, usize, usize)> = alloc(len)?;
     let mut id = 0usize;
     for run in edges.chunk_by(|x, y| x[0] == y[0] && x[1] == y[1]) {
         if let [e] = run {
-            adj.push((e[0], e[1], id));
-            adj.push((e[1], e[0], id));
+            ends.push((e[0], find(fan_parent, incidence(inc, e[0], e[2])?), id));
+            ends.push((e[1], find(fan_parent, incidence(inc, e[1], e[2])?), id));
             id += 1;
         }
     }
-    adj.sort_unstable();
-    // Vertex groups: the distinct `from` vertices, where each group starts, and a cursor
-    // that only moves forward past used edges.
-    let mut verts: Vec<u64> = alloc(len)?;
-    let mut start: Vec<usize> = alloc(len.checked_add(1).ok_or(QualityError::AllocationFailed)?)?;
-    let mut base = 0usize;
-    for group in adj.chunk_by(|x, y| x.0 == y.0) {
-        if let Some(first) = group.first() {
-            verts.push(first.0);
-            start.push(base);
-        }
-        base += group.len();
-    }
-    start.push(base);
-    let mut cursor: Vec<usize> = alloc(verts.len())?;
-    cursor.extend(start.iter().take(verts.len()).copied());
-    let mut used: Vec<bool> = alloc(id)?;
-    used.resize(id, false);
-
-    let mut loops = 0u64;
-    for g in 0..verts.len() {
-        let Some(&origin) = verts.get(g) else { break };
-        while next_unused(&adj, &start, &mut cursor, &used, g).is_some() {
-            loops += 1;
-            let mut cur = g;
-            while let Some(pos) = next_unused(&adj, &start, &mut cursor, &used, cur) {
-                let Some(&(_, to, e)) = adj.get(pos) else { break };
-                if let Some(u) = used.get_mut(e) {
-                    *u = true;
-                }
-                cur = verts.binary_search(&to).map_err(|_| QualityError::InvalidIndex { triangle: 0, index: to })?;
-                if to == origin {
-                    break;
+    ends.sort_unstable();
+    // Node index of every end, and each node's degree (its group size).
+    let mut node_of_edge: Vec<[usize; 2]> = alloc(id)?;
+    node_of_edge.resize(id, [usize::MAX; 2]);
+    let mut degree: Vec<usize> = alloc(len)?;
+    for (node, group) in ends.chunk_by(|x, y| x.0 == y.0 && x.1 == y.1).enumerate() {
+        degree.push(group.len());
+        for &(_, _, e) in group {
+            if let Some(slot) = node_of_edge.get_mut(e) {
+                if slot[0] == usize::MAX {
+                    slot[0] = node;
+                } else {
+                    slot[1] = node;
                 }
             }
         }
     }
-    Ok(loops)
-}
-
-/// The position of the first unused boundary edge of vertex group `g` (smallest other end),
-/// advancing the group's cursor past used edges.
-fn next_unused(
-    adj: &[(u64, u64, usize)],
-    start: &[usize],
-    cursor: &mut [usize],
-    used: &[bool],
-    g: usize,
-) -> Option<usize> {
-    let end = *start.get(g + 1)?;
-    let c = cursor.get_mut(g)?;
-    while *c < end {
-        let (_, _, e) = *adj.get(*c)?;
-        if !*used.get(e)? {
-            return Some(*c);
-        }
-        *c += 1;
+    let mut parent: Vec<usize> = alloc(degree.len())?;
+    parent.extend(0..degree.len());
+    for &[a, b] in &node_of_edge {
+        union(&mut parent, a, b);
     }
-    None
+    // Per component (root): whether it exists, and its odd-degree node count.
+    let mut odd: Vec<u64> = alloc(degree.len())?;
+    odd.resize(degree.len(), 0);
+    for (node, &d) in degree.iter().enumerate() {
+        let r = find(&mut parent, node);
+        if d % 2 == 1 {
+            if let Some(o) = odd.get_mut(r) {
+                *o += 1;
+            }
+        }
+    }
+    let mut loops = 0u64;
+    for node in 0..degree.len() {
+        if find(&mut parent, node) == node {
+            let o = odd.get(node).copied().unwrap_or(0) / 2;
+            loops += if o > 1 { o } else { 1 };
+        }
+    }
+    Ok(loops)
 }
 
 /// The root of `x`, with path halving. A parent never exceeds its child's index.

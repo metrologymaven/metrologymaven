@@ -9,8 +9,9 @@ use fid_geo_types::{FrameRef, Mesh};
 use fid_scan_mesh::{mesh_quality, AngleStats, MeshQualityReport, QualityError, DEFAULT_DEGENERATE_AREA};
 
 /// Every case the reference writes: `<case>.quality.txt`.
-const CASES: [&str; 13] = [
+const CASES: [&str; 15] = [
     "mesh_bowtie",
+    "mesh_bowtie_renumbered",
     "mesh_closed_cube",
     "mesh_duplicate",
     "mesh_empty",
@@ -22,6 +23,7 @@ const CASES: [&str; 13] = [
     "mesh_slivers",
     "mesh_slivers_t1e-6",
     "mesh_tetra",
+    "mesh_unused_vertex",
     "mesh_zero_area",
 ];
 
@@ -29,7 +31,15 @@ fn read(name: &str) -> String {
     std::fs::read_to_string(format!("{}/fixtures/scan/{name}", fid_testkit::WORKSPACE_ROOT)).unwrap()
 }
 
+/// A mesh fixture as `(frame, vertices, triangles)`.
+type Raw = (FrameRef, Vec<[f64; 3]>, Vec<[u64; 3]>);
+
 fn load_mesh(name: &str) -> Mesh {
+    let (frame, v, t) = load_raw(name);
+    Mesh::from_points(frame, &v, &t).unwrap()
+}
+
+fn load_raw(name: &str) -> Raw {
     let text = read(&format!("{name}.txt"));
     let mut frame = None;
     let (mut v, mut t) = (Vec::new(), Vec::new());
@@ -51,7 +61,42 @@ fn load_mesh(name: &str) -> Mesh {
             other => panic!("unknown line kind {other}"),
         }
     }
-    Mesh::from_points(frame.unwrap(), &v, &t).unwrap()
+    (frame.unwrap(), v, t)
+}
+
+/// The mesh with vertex `k` moved to index `perm[k]`; triangle and corner order kept.
+fn renumbered(raw: &Raw, perm: &[usize]) -> Mesh {
+    let (frame, v, t) = raw;
+    let mut nv = vec![[0.0; 3]; v.len()];
+    for (k, p) in v.iter().enumerate() {
+        nv[perm[k]] = *p;
+    }
+    let nt: Vec<[u64; 3]> = t.iter().map(|tri| tri.map(|i| perm[i as usize] as u64)).collect();
+    Mesh::from_points(*frame, &nv, &nt).unwrap()
+}
+
+/// Every permutation of `0..n` (Heap's algorithm, iterative).
+fn permutations(n: usize) -> Vec<Vec<usize>> {
+    let mut a: Vec<usize> = (0..n).collect();
+    let mut c = vec![0usize; n];
+    let mut out = vec![a.clone()];
+    let mut i = 0;
+    while i < n {
+        if c[i] < i {
+            if i % 2 == 0 {
+                a.swap(0, i);
+            } else {
+                a.swap(c[i], i);
+            }
+            out.push(a.clone());
+            c[i] += 1;
+            i = 0;
+        } else {
+            c[i] = 0;
+            i += 1;
+        }
+    }
+    out
 }
 
 /// The reference's expected report for one case.
@@ -218,6 +263,8 @@ fn ac3_bowtie_and_fin() {
     assert_eq!((b.nonmanifold_vertices, b.nonmanifold_edges), (1, 0));
     let f = mesh_quality(&load_mesh("mesh_fin"), DEFAULT_DEGENERATE_AREA).unwrap();
     assert_eq!((f.nonmanifold_edges, f.nonmanifold_vertices), (1, 0));
+    // One fan-split component with two odd nodes (vertices 0 and 1): one loop.
+    assert_eq!(f.boundary_loops, 1);
 }
 
 /// The spec's AC-4: one zero-area triangle is degenerate and leaves the angle statistics
@@ -320,4 +367,66 @@ fn non_finite_angle_not_serialised() {
     let mut r = mesh_quality(&load_mesh("mesh_tetra"), DEFAULT_DEGENERATE_AREA).unwrap();
     r.min_angle.p5 = Some(f64::NAN);
     assert_eq!(r.canonical_json().unwrap_err().code(), "scan.mesh.non_finite");
+}
+
+/// Review of #276: the report (boundary loops included) does not depend on vertex
+/// numbering. All 5,040 renumberings of the bow tie, and 200 pseudo-random renumberings of
+/// every other fixture; the corner order of each triangle is kept, so even the angles are
+/// bit-identical.
+#[test]
+fn vertex_renumbering_invariance() {
+    let bow = load_raw("mesh_bowtie");
+    let want = mesh_quality(&load_mesh("mesh_bowtie"), DEFAULT_DEGENERATE_AREA).unwrap();
+    assert_eq!(want.boundary_loops, 2);
+    let perms = permutations(bow.1.len());
+    assert_eq!(perms.len(), 5040);
+    for p in &perms {
+        assert_eq!(mesh_quality(&renumbered(&bow, p), DEFAULT_DEGENERATE_AREA).unwrap(), want, "{p:?}");
+    }
+    let mut state: u64 = 276;
+    for case in CASES {
+        let e = load_expected(case);
+        let raw = load_raw(&e.mesh);
+        let want = mesh_quality(&load_mesh(&e.mesh), e.threshold).unwrap();
+        for _ in 0..200 {
+            let mut perm: Vec<usize> = (0..raw.1.len()).collect();
+            for i in (1..perm.len()).rev() {
+                state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                perm.swap(i, ((state >> 33) % (i as u64 + 1)) as usize);
+            }
+            assert_eq!(mesh_quality(&renumbered(&raw, &perm), e.threshold).unwrap(), want, "{case}: {perm:?}");
+        }
+    }
+}
+
+/// The renumbered bow tie from the review gives two loops and one non-manifold vertex.
+#[test]
+fn renumbered_bowtie_two_loops() {
+    let (_, _, t) = load_raw("mesh_bowtie_renumbered");
+    assert_eq!(t, vec![[1, 0, 2], [1, 2, 4], [1, 3, 5], [1, 5, 6]]);
+    let r = mesh_quality(&load_mesh("mesh_bowtie_renumbered"), DEFAULT_DEGENERATE_AREA).unwrap();
+    assert_eq!((r.boundary_loops, r.nonmanifold_vertices), (2, 1));
+}
+
+/// A vertex no triangle uses counts in `vertices` and changes nothing else.
+#[test]
+fn unused_vertex() {
+    let u = mesh_quality(&load_mesh("mesh_unused_vertex"), DEFAULT_DEGENERATE_AREA).unwrap();
+    let mut t = mesh_quality(&load_mesh("mesh_tetra"), DEFAULT_DEGENERATE_AREA).unwrap();
+    assert_eq!(u.vertices, 5);
+    t.vertices = 5;
+    assert_eq!(u, t);
+}
+
+/// A cosine that is infinite before clamping is `scan.mesh.non_finite`, not a clamped
+/// angle: at corner 0, |u|^2 = 1e-400 underflows to 0 while dot(u, v) = 1e-100, so
+/// cos = 1e-100 / 0 = +inf; the area 5e-101 is above the 1e-300 threshold.
+#[test]
+fn infinite_cosine_is_non_finite() {
+    let frame = FrameRef::from_bytes([4; 16]);
+    let v = [[0.0, 0.0, 0.0], [1e-200, 0.0, 0.0], [1e100, 1e100, 0.0]];
+    let m = Mesh::from_points(frame, &v, &[[0, 1, 2]]).unwrap();
+    assert_eq!(mesh_quality(&m, 1e-300).unwrap_err(), QualityError::NonFinite { triangle: 0 });
+    // With the default threshold the same triangle is degenerate and no angle is taken.
+    assert_eq!(mesh_quality(&m, DEFAULT_DEGENERATE_AREA).unwrap().degenerate, 1);
 }

@@ -1,0 +1,15 @@
+# SCAN.POLY.QUAL fixture mesh_bowtie_renumbered: mesh_bowtie with vertices renumbered 0<->1 and 3<->4.
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 1 0 0
+v 0 0 0
+v 1 1 0
+v -1 0 0
+v 0 1 0
+v -1 -1 0
+v 0 -1 0
+t 1 0 2
+t 1 2 4
+t 1 3 5
+t 1 5 6

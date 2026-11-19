@@ -22,11 +22,13 @@ crate's `quality` module documentation:
 * Non-manifold vertex: a vertex whose incident non-index-degenerate triangles form more
   than one class when two of them are linked if they share an edge that contains the
   vertex. Vertices without triangles have no fan and are never non-manifold.
-* Boundary loops: boundary edges are walked undirected. A walk starts at the smallest
-  vertex that still has an unused boundary edge; at each step it takes the unused boundary
-  edge at the current vertex whose other end is smallest; it ends when it is back at its
-  start vertex (a closed loop) or when the current vertex has no unused boundary edge (an
-  open chain). Every walk counts as one boundary loop.
+* Boundary loops: on the fan-split boundary graph, whose nodes are the (vertex, fan)
+  pairs at the ends of boundary edges (a boundary edge has one triangle, so at each end it
+  lies in one fan of that vertex) and whose edges are the boundary edges, undirected, each
+  connected component counts max(1, k), 2k being its number of odd-degree nodes (the
+  fewest fan-aware walks covering it). When every fan has zero or two boundary edges at
+  each vertex, every component is a cycle and this is the number of boundary cycles (two
+  for the bow tie, however numbered). The count depends only on the graph.
 * Minimum angle of a triangle: for corners A, B, C (in stored order) with u, v the edge
   vectors from that corner to the next and the previous corner (A: B-A, C-A; B: C-B, A-B;
   C: A-C, B-C), cos = dot(u, v) / (sqrt(dot(u, u)) * sqrt(dot(v, v))), dot(p, q) =
@@ -54,6 +56,7 @@ Run:  python fixtures/scan/make_mesh_quality.py [--check]
 With --check nothing is written; the script exits non-zero if a file differs.
 """
 
+import functools
 import math
 import os
 from decimal import Decimal, getcontext
@@ -145,6 +148,16 @@ ZERO_T = TETRA_T + [(4, 5, 6)]
 DUP_V = TETRA_V + [(5, 0, 0), (6, 0, 0), (5, 1, 0)]
 DUP_T = TETRA_T + [(0, 1, 2), (4, 5, 6), (4, 6, 5)]
 
+# The bow tie renumbered (old -> new: 0->1, 1->0, 3->4, 4->3): with the plain
+# smallest-neighbour walk this numbering merged the two fans into one loop.
+BOWTIE_MAP = [1, 0, 2, 4, 3, 5, 6]
+BOWTIE_R_V = [BOWTIE_V[BOWTIE_MAP.index(k)] for k in range(7)]
+BOWTIE_R_T = [tuple(BOWTIE_MAP[i] for i in t) for t in BOWTIE_T]
+
+# The tetrahedron with an extra vertex at index 2 that no triangle uses.
+UNUSED_V = TETRA_V[:2] + [(9, 9, 9)] + TETRA_V[2:]
+UNUSED_T = [tuple(i + 1 if i >= 2 else i for i in t) for t in TETRA_T]
+
 GRID_V, GRID_T = open_grid()
 JIT_V, JIT_T = jitter_grid()
 
@@ -154,6 +167,10 @@ MESHES = [
     ("mesh_open_cube", "mesh_closed_cube without the z = 0 face (triangles 0 and 1) (AC-2)",
      CUBE_V, CUBE_T[2:]),
     ("mesh_bowtie", "two two-triangle fans sharing only vertex 0 (AC-3)", BOWTIE_V, BOWTIE_T),
+    ("mesh_bowtie_renumbered", "mesh_bowtie with vertices renumbered 0<->1 and 3<->4",
+     BOWTIE_R_V, BOWTIE_R_T),
+    ("mesh_unused_vertex", "mesh_tetra plus vertex 2, which no triangle uses",
+     UNUSED_V, UNUSED_T),
     ("mesh_fin", "three triangles on the edge 0-1 (AC-3)", FIN_V, FIN_T),
     ("mesh_tetra", "regular tetrahedron", TETRA_V, TETRA_T),
     ("mesh_open_grid", "4 x 3 vertex grid, 1 m by 2 m cells", GRID_V, GRID_T),
@@ -211,6 +228,7 @@ def atan_dec(t):
     return total * (2 ** halvings)
 
 
+@functools.lru_cache(maxsize=None)
 def acos_cr(x):
     """acos of a float in [-1, 1], correctly rounded to a float (60-digit evaluation)."""
     getcontext().prec = 60
@@ -289,6 +307,7 @@ def report(verts, tris, threshold):
         for v in tris[i]:
             incident.setdefault(v, []).append(i)
     nm_vertices = 0
+    fan_of = {}  # (vertex, triangle) -> fan label (unique per vertex)
     for v, ts in incident.items():
         fan_seen, fans = set(), 0
         for t0 in ts:
@@ -297,6 +316,7 @@ def report(verts, tris, threshold):
             fans += 1
             stack = [t0]
             fan_seen.add(t0)
+            fan_of[(v, t0)] = fans
             while stack:
                 s = stack.pop()
                 for w in tris[s]:
@@ -305,38 +325,32 @@ def report(verts, tris, threshold):
                     for r in uses[frozenset((v, w))]:
                         if r not in fan_seen:
                             fan_seen.add(r)
+                            fan_of[(v, r)] = fans
                             stack.append(r)
         if fans > 1:
             nm_vertices += 1
-    # Boundary loops.
-    nbrs = {}
+    # Boundary loops on the fan-split boundary graph: BFS components, max(1, odd // 2) each.
+    gadj = {}
     for e in boundary:
         p, q = sorted(e)
-        nbrs.setdefault(p, []).append(q)
-        nbrs.setdefault(q, []).append(p)
-    for k in nbrs:
-        nbrs[k].sort()
-    used = set()
-
-    def next_edge(v):
-        for w in nbrs.get(v, []):
-            if frozenset((v, w)) not in used:
-                return w
-        return None
-
-    loops = 0
-    while len(used) < len(boundary):
-        start = min(v for v in nbrs if next_edge(v) is not None)
-        loops += 1
-        cur = start
-        while True:
-            w = next_edge(cur)
-            if w is None:
-                break
-            used.add(frozenset((cur, w)))
-            cur = w
-            if cur == start:
-                break
+        (t,) = uses[e]
+        np_, nq = (p, fan_of[(p, t)]), (q, fan_of[(q, t)])
+        gadj.setdefault(np_, []).append(nq)
+        gadj.setdefault(nq, []).append(np_)
+    loops, gseen = 0, set()
+    for n0 in gadj:
+        if n0 in gseen:
+            continue
+        gseen.add(n0)
+        queue, odd = deque([n0]), 0
+        while queue:
+            n = queue.popleft()
+            odd += len(gadj[n]) % 2
+            for m in gadj[n]:
+                if m not in gseen:
+                    gseen.add(m)
+                    queue.append(m)
+        loops += max(1, odd // 2)
     angles.sort()
     if angles:
         stats = {
@@ -453,6 +467,34 @@ def report_text(case, mesh, threshold, rep):
     return "\n".join(lines) + "\n"
 
 
+def renumbered(verts, tris, perm):
+    """Vertex k moves to index perm[k]; triangle corners keep their order."""
+    nv = [None] * len(verts)
+    for k, p in enumerate(verts):
+        nv[perm[k]] = p
+    return nv, [tuple(perm[i] for i in t) for t in tris]
+
+
+def renumbering_check(by):
+    """The report does not depend on vertex numbering: all 5040 renumberings of the bow
+    tie, and 200 pseudo-random renumberings of every other mesh."""
+    import itertools
+    v, t = by["mesh_bowtie"][2], by["mesh_bowtie"][3]
+    want = report(v, t, 1e-18)
+    for perm in itertools.permutations(range(len(v))):
+        assert report(*renumbered(v, t, perm), 1e-18) == want, perm
+    state = 7
+    for name, _, v, t in MESHES:
+        want = report(v, t, 1e-18)
+        for _ in range(200):
+            perm = list(range(len(v)))
+            for i in range(len(perm) - 1, 0, -1):
+                state = (state * 6364136223846793005 + 1442695040888963407) % (1 << 64)
+                j = (state >> 33) % (i + 1)
+                perm[i], perm[j] = perm[j], perm[i]
+            assert report(*renumbered(v, t, perm), 1e-18) == want, (name, perm)
+
+
 def self_check():
     # Hand-labelled expectations from the spec's acceptance criteria.
     by = {m[0]: m for m in MESHES}
@@ -464,8 +506,18 @@ def self_check():
     assert (r["boundary_edges"], r["boundary_loops"]) == (4, 1)
     r = report(by["mesh_bowtie"][2], by["mesh_bowtie"][3], 1e-18)
     assert (r["nonmanifold_vertices"], r["nonmanifold_edges"], r["boundary_loops"]) == (1, 0, 2)
+    r = report(by["mesh_bowtie_renumbered"][2], by["mesh_bowtie_renumbered"][3], 1e-18)
+    assert by["mesh_bowtie_renumbered"][3] == [(1, 0, 2), (1, 2, 4), (1, 3, 5), (1, 5, 6)]
+    assert (r["nonmanifold_vertices"], r["boundary_loops"]) == (1, 2)
+    r = report(by["mesh_unused_vertex"][2], by["mesh_unused_vertex"][3], 1e-18)
+    t = report(TETRA_V, TETRA_T, 1e-18)
+    assert r["vertices"] == 5 and r["nonmanifold_vertices"] == 0
+    assert {k: v for k, v in r.items() if k != "vertices"} == {k: v for k, v in t.items() if k != "vertices"}
+    renumbering_check(by)
     r = report(by["mesh_fin"][2], by["mesh_fin"][3], 1e-18)
-    assert (r["nonmanifold_edges"], r["nonmanifold_vertices"]) == (1, 0)
+    # One component; vertices 0 and 1 each have three boundary edges in one fan: one walk
+    # 0-2-1-3-0-4-1 covers all six.
+    assert (r["nonmanifold_edges"], r["nonmanifold_vertices"], r["boundary_loops"]) == (1, 0, 1)
     r = report(by["mesh_zero_area"][2], by["mesh_zero_area"][3], 1e-18)
     t = report(TETRA_V, TETRA_T, 1e-18)
     assert r["degenerate"] == 1 and r["min_angle"] == t["min_angle"]
