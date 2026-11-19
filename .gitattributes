@@ -152,3 +152,6 @@ crates/fid-kernel-wasm/wasm-imports.allow -text
 # RPT.OUTPUT.PDF.TEXT: fonts and byte-compared golden outputs (PDFs, CMap, text objects).
 crates/fid-report-pdf/assets/fonts/*.ttf binary
 fixtures/rpt/output/text/** -text
+# CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
+# which --check compares byte for byte; never convert line endings.
+fixtures/core/dep/** -text

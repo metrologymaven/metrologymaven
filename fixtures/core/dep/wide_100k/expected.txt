@@ -1,0 +1,5 @@
+# Written by make_fixtures.py from recipe.txt; do not edit.
+edges 200564
+digest wide sha256:7e8b1edbcdcaace3161bca0ad01945ee602e94d360a0969d8b4ba877a2e65624
+edges_extra 200574
+digest extra sha256:5de8f7a19f5f6c935a9ca8db1f790b4a0ea45f24886c04ffccd0c2f05fa5af2f

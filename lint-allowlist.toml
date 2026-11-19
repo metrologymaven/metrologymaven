@@ -23,4 +23,4 @@ bus_api = "fid-bus-api"
 [core]
 # CORE crates on main (one-line array). fid-canon (CORE.JRN.CANON, a stateless canonical-JSON codec) is
 # left out for now: `fid-cli canon` uses it directly and there is no bus API crate yet.
-crates = ["fid-bus", "fid-bus-api", "fid-jobs", "fid-project", "fid-registry", "fid-replay", "fid-state", "fid-store"]
+crates = ["fid-bus", "fid-bus-api", "fid-dep", "fid-jobs", "fid-project", "fid-registry", "fid-replay", "fid-state", "fid-store"]
