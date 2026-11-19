@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"profile/profile.json is in the manifest but not in the container","reason":"missing_member"}

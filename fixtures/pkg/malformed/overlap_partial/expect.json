@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"a directory entry points into the middle of another entry's data","reason":"overlap"}

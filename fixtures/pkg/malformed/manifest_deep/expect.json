@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"a manifest nested deeper than 8","reason":"manifest_budget"}

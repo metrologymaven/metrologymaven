@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"a ~100 KB package whose manifest.json inflates to 64 MiB of [0,0,...]: above 64 KiB + 4608 bytes per entry","reason":"manifest_size"}

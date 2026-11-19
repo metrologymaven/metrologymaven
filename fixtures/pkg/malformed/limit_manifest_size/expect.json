@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"manifest.json declares 268435457 bytes uncompressed (limit 256 MiB)","reason":"manifest_size"}

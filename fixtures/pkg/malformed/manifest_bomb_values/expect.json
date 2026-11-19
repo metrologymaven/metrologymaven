@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"301 entries allow a 1.4 MB manifest, but its 696,603 elements exceed 64 + 9 per entry","reason":"manifest_budget"}

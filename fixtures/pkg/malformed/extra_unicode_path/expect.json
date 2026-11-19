@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"a Unicode-path extra field naming ../evil.x","reason":"extra_field"}
