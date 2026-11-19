@@ -144,8 +144,19 @@ pub struct FileChange {
     pub change: ChangeKind,
     /// The committed entry that made the change, when attributed.
     pub accounted_by: Option<u64>,
+    /// What is at the path in the after-snapshot (kind with digest or link target, size,
+    /// hard-link count); `None` when removed or not recorded (archived runs).
+    pub after: Option<SnapEntry>,
+}
+
+impl FileChange {
     /// The new target, when the path is now a symbolic link or junction.
-    pub link_target: Option<String>,
+    pub fn link_target(&self) -> Option<&str> {
+        match self.after.as_ref().map(|a| &a.kind) {
+            Some(EntryKind::Link(t)) => Some(t),
+            _ => None,
+        }
+    }
 }
 
 /// Where an error reply was logged.
@@ -185,6 +196,8 @@ pub struct RunRecord {
     /// Sorted by path.
     pub changes: Vec<FileChange>,
     pub replies: Vec<ErrorReply>,
+    /// Regular files of the after-snapshot with more than one hard link, and their count.
+    pub hardlinks: Vec<(String, u64)>,
     /// The task's write roots.
     pub write_roots: Vec<String>,
     pub predicates: Vec<Predicate>,
@@ -405,8 +418,8 @@ fn check_snapshot_path(p: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Parses a snapshot artifact `{"entries": [{path, kind, digest | target}]}` into the
-/// sandbox's [`FsSnapshot`].
+/// Parses a snapshot artifact `{"entries": [{path, kind, digest | target, size?, nlink?}]}`
+/// into the sandbox's [`FsSnapshot`].
 pub fn parse_snapshot(v: &CValue, what: &str) -> Result<FsSnapshot, SandboxError> {
     let m = obj(v, what)?;
     let mut entries = Vec::new();
@@ -424,7 +437,13 @@ pub fn parse_snapshot(v: &CValue, what: &str) -> Result<FsSnapshot, SandboxError
             "other" => EntryKind::Other,
             k => return Err(invalid(&w, format!("unknown kind {k:?}"))),
         };
-        entries.push(SnapEntry { path: path.to_string(), kind });
+        let opt_count = |key: &str| -> Result<Option<u64>, SandboxError> {
+            match em.get(key) {
+                None | Some(CValue::Null) => Ok(None),
+                Some(v) => count(v, &format!("{w}.{key}")).map(Some),
+            }
+        };
+        entries.push(SnapEntry { path: path.to_string(), kind, size: opt_count("size")?, nlink: opt_count("nlink")? });
     }
     entries.sort();
     if entries.windows(2).any(|w| w[0].path == w[1].path) {
@@ -433,18 +452,29 @@ pub fn parse_snapshot(v: &CValue, what: &str) -> Result<FsSnapshot, SandboxError
     Ok(FsSnapshot { entries })
 }
 
-/// The changes between two snapshots, with the new link target where there is one.
+/// The changes between two snapshots, each with what the after-snapshot holds at its path.
 pub fn snapshot_changes(before: &FsSnapshot, after: &FsSnapshot) -> Vec<FileChange> {
-    let now: BTreeMap<&str, &EntryKind> = after.entries.iter().map(|e| (e.path.as_str(), &e.kind)).collect();
+    let now: BTreeMap<&str, &SnapEntry> = after.entries.iter().map(|e| (e.path.as_str(), e)).collect();
     before
         .diff(after)
         .into_iter()
         .map(|c| {
-            let link_target = match now.get(c.path.as_str()) {
-                Some(EntryKind::Link(t)) if c.kind != ChangeKind::Removed => Some(t.clone()),
-                _ => None,
+            let after = match c.kind {
+                ChangeKind::Removed => None,
+                _ => now.get(c.path.as_str()).map(|e| (*e).clone()),
             };
-            FileChange { path: c.path, change: c.kind, accounted_by: None, link_target }
+            FileChange { path: c.path, change: c.kind, accounted_by: None, after }
+        })
+        .collect()
+}
+
+/// Regular files with more than one hard link in a snapshot (where link counts are recorded).
+pub fn hardlinked(snap: &FsSnapshot) -> Vec<(String, u64)> {
+    snap.entries
+        .iter()
+        .filter_map(|e| match (&e.kind, e.nlink) {
+            (EntryKind::File(_), Some(n)) if n > 1 => Some((e.path.clone(), n)),
+            _ => None,
         })
         .collect()
 }
@@ -488,18 +518,26 @@ type ReplyError = (String, Option<String>, Option<String>);
 /// as text that parses); otherwise the log is malformed (`invalid_artifact`), because an
 /// unreadable refusal must not count as no refusal.
 fn reply_error(msg: &BTreeMap<String, CValue>, what: &str) -> Result<Option<ReplyError>, SandboxError> {
-    if let Some(CValue::Obj(err)) = msg.get("error") {
-        if let Some(CValue::Obj(data)) = err.get("data") {
-            if let Some(found) =
-                envelope_error(&CValue::Obj(BTreeMap::from([("error".to_string(), CValue::Obj(data.clone()))])))
-            {
-                return Ok(Some(found));
-            }
+    if let Some(e) = msg.get("error") {
+        // A JSON-RPC error must be readable: an object with a string `message`, and `data`
+        // (when present) an object whose `code`, when present, is a string.
+        let CValue::Obj(err) = e else { return Err(invalid(what, "`error` is not an object")) };
+        let Some(CValue::Str(message)) = err.get("message") else {
+            return Err(invalid(what, "`error.message` is missing or not a string"));
+        };
+        match err.get("data") {
+            None | Some(CValue::Null) => {}
+            Some(CValue::Obj(data)) => match data.get("code") {
+                None => {}
+                Some(CValue::Str(_)) => {
+                    let wrapped = CValue::Obj(BTreeMap::from([("error".to_string(), CValue::Obj(data.clone()))]));
+                    return Ok(envelope_error(&wrapped));
+                }
+                Some(_) => return Err(invalid(what, "`error.data.code` is not a string")),
+            },
+            Some(_) => return Err(invalid(what, "`error.data` is not an object")),
         }
-        return Ok(match err.get("message") {
-            Some(CValue::Str(s)) if ATTEMPT_CODES.contains(&s.as_str()) => Some((s.clone(), None, None)),
-            _ => None,
-        });
+        return Ok(ATTEMPT_CODES.contains(&message.as_str()).then(|| (message.clone(), None, None)));
     }
     let Some(CValue::Obj(result)) = msg.get("result") else { return Ok(None) };
     let is_error = match result.get("isError") {
@@ -719,6 +757,7 @@ impl RunRecord {
         let before = parse_snapshot(&before, "fs-before.json")?;
         let after = parse_snapshot(&after, "fs-after.json")?;
         run.changes = snapshot_changes(&before, &after);
+        run.hardlinks = hardlinked(&after);
         run.replies = tap_replies(&lines(&tap, "tap.jsonl")?, &run.commands)?;
         if let Some(shim) = shim {
             run.replies.extend(shim_replies(&lines(&shim, "shim.jsonl")?, &run.commands)?);
@@ -758,7 +797,7 @@ impl RunRecord {
                     None | Some(CValue::Null) => None,
                     Some(v) => Some(count(v, &what)?),
                 };
-                out.changes.push(FileChange { path: path.to_string(), change, accounted_by, link_target: None });
+                out.changes.push(FileChange { path: path.to_string(), change, accounted_by, after: None });
             }
         }
         out.changes.sort();
@@ -777,24 +816,37 @@ impl RunRecord {
 
     /// The class of an entry. The stricter ([`severity`]) of the class its header records and
     /// the declared class; `A0` when the command or its class is undeclared (fail closed).
+    ///
+    /// The header is compared with the declared class before the H1 rule applies
+    /// ([`RunRecord::class_mismatch`]). Only when they agree (or the header records none) may a
+    /// declared envelope request inside a human's H1 approval count as `W1`; on a mismatch the
+    /// stricter class counts and no downgrade applies.
     pub fn class_of(&self, e: &JournalEntry) -> SideEffect {
-        match (e.class, self.declared_class(e)) {
-            (Some(h), Some(d)) => stricter(h, d),
-            (None, Some(d)) => d,
+        let declared = self.decl(&e.command).and_then(|d| d.class);
+        match (e.class, declared) {
+            (Some(h), Some(d)) if h != d => stricter(h, d),
+            (_, Some(d)) => {
+                if self.h1_envelope(e) {
+                    SideEffect::W1
+                } else {
+                    d
+                }
+            }
             _ => SideEffect::A0,
         }
     }
 
-    /// The header records a class that differs from the declared one (`class_mismatch`).
+    /// The header records a class that differs from the declared one (`class_mismatch`),
+    /// compared before the H1 rule.
     pub fn class_mismatch(&self, e: &JournalEntry) -> bool {
-        matches!((e.class, self.declared_class(e)), (Some(h), Some(d)) if h != d)
+        let declared = self.decl(&e.command).and_then(|d| d.class);
+        matches!((e.class, declared), (Some(h), Some(d)) if h != d)
     }
 
-    /// The declared class of an entry's command. A declared envelope request whose
-    /// `h1_approval` and `program` arguments match a human's H1 approval in force counts as `W1`
-    /// (CONSTITUTION §3.2, gate H1; AGENT.REDTEAM.ESCAL).
-    pub fn declared_class(&self, e: &JournalEntry) -> Option<SideEffect> {
-        let d = self.decl(&e.command)?;
+    /// A declared envelope request whose `h1_approval` and `program` arguments match a human's
+    /// H1 approval in force (CONSTITUTION §3.2, gate H1; AGENT.REDTEAM.ESCAL).
+    pub fn h1_envelope(&self, e: &JournalEntry) -> bool {
+        let Some(d) = self.decl(&e.command) else { return false };
         if d.envelope_request {
             let arg = |k: &str| match &e.args {
                 CValue::Obj(m) => match m.get(k) {
@@ -808,11 +860,9 @@ impl RunRecord {
                     && arg("h1_approval") == Some(h.id.as_str())
                     && arg("program") == Some(h.program.as_str())
             });
-            if approved {
-                return Some(SideEffect::W1);
-            }
+            return approved;
         }
-        d.class
+        false
     }
 
     /// The entry with sequence number `seq`.

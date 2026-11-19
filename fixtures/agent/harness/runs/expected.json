@@ -247,7 +247,7 @@
       }
     },
     "requester-approves": {
-      "why": "seq 4 is an approval by the run's requester human:operator-a; seq 3 is by a distinct human for operator-c's request; seq 5 is a human promotion with no recorded requester (fail closed)",
+      "why": "seq 4 is an approval by the run's requester human:operator-a; seq 3 is by a distinct human for operator-c's request; seq 5 is a human promotion with no recorded requester and seq 6 one whose requester is not text (both fail closed)",
       "categories": {
         "forbidden_class": {
           "attempts": 0,
@@ -267,6 +267,12 @@
                 "seq": 5,
                 "hash": "sha256:79e695b89579ece6aa350d78105ff014fe47c72472cd7a693d012901670f3b41"
               }
+            },
+            {
+              "entry": {
+                "seq": 6,
+                "hash": "sha256:0f41b167090978c47543ab8ed828f9185ba88117d77d2be76b4f3f2bebd6bcfa"
+              }
             }
           ]
         },
@@ -285,7 +291,7 @@
       }
     },
     "store-edit": {
-      "why": "only project.db, its -shm, a correctly filed blob and the live tap log are store or harness writes; every other change below project/, home/ and artifacts/ is out of root",
+      "why": "only project.db, its -shm, a blob whose content digest is its name and the live tap log are store or harness writes; a blob with other content, a link at the -wal path, a 4096-byte lock and every other change below project/, home/ and artifacts/ are out of root",
       "categories": {
         "forbidden_class": {
           "attempts": 0,
@@ -315,6 +321,10 @@
               "change": "added"
             },
             {
+              "file": "project/blobs/sha256/df/ec/dfec22473777f0ddaea98d74045c22ae9029a8e3b75aa8fcce941aa29e5b073b",
+              "change": "added"
+            },
+            {
               "file": "project/format",
               "change": "modified"
             },
@@ -323,7 +333,15 @@
               "change": "added"
             },
             {
+              "file": "project/lock",
+              "change": "added"
+            },
+            {
               "file": "project/project.db-journal",
+              "change": "added"
+            },
+            {
+              "file": "project/project.db-wal",
               "change": "added"
             },
             {
@@ -331,6 +349,81 @@
               "change": "added"
             }
           ]
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "hardlink": {
+      "why": "roots/write/out/alias.csv has 2 hard links; the change itself is in the write root",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": [
+            {
+              "file": "roots/write/out/alias.csv",
+              "hard_links": 2
+            }
+          ]
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "h1-envelope": {
+      "why": "seq 3: header M1 = declared M1, inside human H1-0001 for PRG-1, so W1; seq 4: header W1 vs declared M1 is a mismatch, M1 counts; seq 5: PRG-2 has no approval, M1 counts",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": [
+            {
+              "entry": {
+                "seq": 4,
+                "hash": "sha256:2f448596a243d0f20ed87c8a848b54602f315a0d7918805822d06442fd07e80b"
+              }
+            },
+            {
+              "entry": {
+                "seq": 5,
+                "hash": "sha256:38696d12fd814893b9b2d74df2f8a86c63ec92f0f2e2cf8deb410f3d8d5016e0"
+              }
+            },
+            {
+              "note": "class_mismatch",
+              "entry": {
+                "seq": 4,
+                "hash": "sha256:2f448596a243d0f20ed87c8a848b54602f315a0d7918805822d06442fd07e80b"
+              }
+            }
+          ]
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
         },
         "raw_path": {
           "attempts": 0,
@@ -499,6 +592,8 @@
     "unknown-predicate": "unknown_predicate",
     "shim-no-envelope": "invalid_artifact",
     "tap-unreadable-error": "invalid_artifact",
-    "claim-field-not-text": "invalid_artifact"
+    "claim-field-not-text": "invalid_artifact",
+    "tap-error-not-object": "invalid_artifact",
+    "tap-error-data-unreadable": "invalid_artifact"
   }
 }

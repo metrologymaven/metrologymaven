@@ -32,6 +32,11 @@ pub enum EntryKind {
 pub struct SnapEntry {
     pub path: String,
     pub kind: EntryKind,
+    /// Size in bytes of a regular file, when recorded.
+    pub size: Option<u64>,
+    /// Hard-link count of a regular file, where the platform exposes it (Unix `st_nlink`;
+    /// stable Rust on Windows does not, so it is `None` there).
+    pub nlink: Option<u64>,
 }
 
 /// Every non-directory entry below a folder, sorted by path (byte order).
@@ -150,14 +155,19 @@ impl FsSnapshot {
                     stack.push((p, path, depth + 1));
                     continue;
                 } else if ft.is_file() {
-                    FsSnapshot::file_entry(&p)?
+                    let (kind, size, nlink) = FsSnapshot::file_entry_meta(&p)?;
+                    if entries.len() >= MAX_ENTRIES {
+                        return Err(limit("more than 1,000,000 entries"));
+                    }
+                    entries.push(SnapEntry { path, kind, size, nlink });
+                    continue;
                 } else {
                     EntryKind::Other
                 };
                 if entries.len() >= MAX_ENTRIES {
                     return Err(limit("more than 1,000,000 entries"));
                 }
-                entries.push(SnapEntry { path, kind });
+                entries.push(SnapEntry { path, kind, size: None, nlink: None });
             }
         }
         entries.sort();
@@ -171,21 +181,34 @@ impl FsSnapshot {
     /// to at most [`MAX_FILE_BYTES`]. A swapped-in link gives [`EntryKind::Link`]; a FIFO,
     /// socket or device gives [`EntryKind::Other`].
     pub fn file_entry(p: &Path) -> Result<EntryKind, SandboxError> {
+        FsSnapshot::file_entry_meta(p).map(|(k, _, _)| k)
+    }
+
+    /// [`FsSnapshot::file_entry`] with the size and hard-link count of a regular file, read
+    /// through the same opened handle.
+    pub fn file_entry_meta(p: &Path) -> Result<(EntryKind, Option<u64>, Option<u64>), SandboxError> {
         let f = match open_no_follow(p) {
             Ok(f) => f,
             Err(e) => {
                 // A link refuses to open this way; classify it without opening.
                 let m = std::fs::symlink_metadata(p).map_err(|_| io_err(p, e))?;
-                return if m.file_type().is_symlink() { link_kind(p) } else { Ok(EntryKind::Other) };
+                return if m.file_type().is_symlink() { Ok((link_kind(p)?, None, None)) } else { Ok((EntryKind::Other, None, None)) };
             }
         };
         let m = f.metadata().map_err(|e| io_err(p, e))?;
         if m.file_type().is_symlink() {
-            return link_kind(p);
+            return Ok((link_kind(p)?, None, None));
         }
         if !m.is_file() {
-            return Ok(EntryKind::Other);
+            return Ok((EntryKind::Other, None, None));
         }
+        #[cfg(unix)]
+        let nlink = {
+            use std::os::unix::fs::MetadataExt;
+            Some(m.nlink())
+        };
+        #[cfg(not(unix))]
+        let nlink = None;
         let mut h = Sha256::new();
         let mut buf = vec![0u8; 64 * 1024];
         let mut reader = f.take(MAX_FILE_BYTES + 1);
@@ -204,7 +227,7 @@ impl FsSnapshot {
             }
             h.update(buf.get(..n).unwrap_or_default());
         }
-        Ok(EntryKind::File(Digest::from_bytes(h.finalize().into())))
+        Ok((EntryKind::File(Digest::from_bytes(h.finalize().into())), Some(total), nlink))
     }
 
     /// The regular files and their digests, in path order.

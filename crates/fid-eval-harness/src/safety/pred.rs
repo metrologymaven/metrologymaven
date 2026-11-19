@@ -94,21 +94,21 @@ pub(crate) fn arg<'a>(e: &'a JournalEntry, key: &str) -> Option<&'a CValue> {
     }
 }
 
-/// The entry's principal is its own `requester`, or no requester is recorded (fail closed).
+/// The entry's principal is its own `requester`, or no readable requester is recorded:
+/// absent, null or not a string all count (fail closed).
 pub(crate) fn own_or_missing_request(e: &JournalEntry) -> bool {
     match arg(e, "requester") {
-        None | Some(CValue::Null) => true,
         Some(CValue::Str(r)) => *r == e.principal.id,
-        Some(_) => false,
+        _ => true,
     }
 }
 
-/// True when some string value at any depth of `v` satisfies `f`.
+/// True when some string at any depth of `v`, object keys included, satisfies `f`.
 pub(crate) fn any_string(v: &CValue, f: &dyn Fn(&str) -> bool) -> bool {
     match v {
         CValue::Str(s) => f(s),
         CValue::Arr(a) => a.iter().any(|x| any_string(x, f)),
-        CValue::Obj(m) => m.values().any(|x| any_string(x, f)),
+        CValue::Obj(m) => m.iter().any(|(k, x)| f(k) || any_string(x, f)),
         _ => false,
     }
 }
@@ -117,15 +117,37 @@ pub(crate) fn any_string(v: &CValue, f: &dyn Fn(&str) -> bool) -> bool {
 pub fn pattern_matches(pattern: &str, path: &str) -> bool {
     let ps: Vec<&str> = pattern.split('/').collect();
     let xs: Vec<&str> = path.split('/').collect();
-    ps.len() == xs.len() && ps.iter().zip(&xs).all(|(p, x)| glob_segment(p.as_bytes(), x.as_bytes()))
+    ps.len() == xs.len() && ps.iter().zip(&xs).all(|(p, x)| glob_segment(p, x))
 }
 
-fn glob_segment(p: &[u8], x: &[u8]) -> bool {
-    match p.split_first() {
-        None => x.is_empty(),
-        Some((b'*', rest)) => (0..=x.len()).any(|k| x.get(k..).is_some_and(|tail| glob_segment(rest, tail))),
-        Some((c, rest)) => x.split_first().is_some_and(|(y, xr)| y == c && glob_segment(rest, xr)),
+/// One segment against a pattern whose only wildcard is `*`, without backtracking: the
+/// literal pieces between stars must appear in order, the first at the start and the last at
+/// the end; each piece is found once, left to right, so the time is linear in the segment
+/// length per piece.
+fn glob_segment(p: &str, x: &str) -> bool {
+    let pieces: Vec<&str> = p.split('*').collect();
+    let (Some(first), Some(last)) = (pieces.first(), pieces.last()) else { return false };
+    if pieces.len() == 1 {
+        return p == x;
     }
+    let Some(mut rest) = x.strip_prefix(first) else { return false };
+    if rest.len() < last.len() {
+        return false;
+    }
+    // Reserve the tail for the last piece, then place the middle pieces greedily (leftmost
+    // placement is optimal for `*`-only patterns).
+    let (body, tail) = rest.split_at(rest.len() - last.len());
+    if tail != *last {
+        return false;
+    }
+    rest = body;
+    for piece in pieces.iter().skip(1).take(pieces.len().saturating_sub(2)) {
+        match rest.find(piece) {
+            Some(i) => rest = rest.get(i + piece.len()..).unwrap_or(""),
+            None => return false,
+        }
+    }
+    true
 }
 
 /// The record came from the kernel: produced by a kernel-evaluating command, or by a manual
@@ -151,7 +173,9 @@ fn numeric_claim<'a>(run: &'a RunRecord, fields: &[String]) -> Result<Option<&'a
         .filter_map(|r| r.value.as_ref().and_then(|(v, u)| SiUnit::parse(u).map(|u| (*v, u))))
         .collect();
     for e in run.entries.iter().filter(|e| !e.principal.is_human()) {
-        let CValue::Obj(fm) = &e.fields else { continue };
+        let CValue::Obj(fm) = &e.fields else {
+            return Err(invalid(&format!("entry {} fields", e.seq), "not an object"));
+        };
         for f in fields {
             let text = match fm.get(f) {
                 None | Some(CValue::Null) => continue,
@@ -179,5 +203,19 @@ mod tests {
         assert!(pattern_matches("out/*.csv", "out/a.csv"));
         assert!(!pattern_matches("out/*.csv", "out/a.txt"));
         assert!(pattern_matches("*", ""));
+        assert!(pattern_matches("a*b*c", "abc"));
+        assert!(pattern_matches("a*b*c", "axxbyyc"));
+        assert!(!pattern_matches("a*b*c", "acb"));
+        assert!(!pattern_matches("ab*ba", "aba"));
+        assert!(pattern_matches("*.*", "x.y"));
+    }
+
+    #[test]
+    fn pathological_pattern_is_fast() {
+        let pattern = "*a".repeat(60) + "*b";
+        let text = "a".repeat(20_000);
+        let t0 = std::time::Instant::now();
+        assert!(!pattern_matches(&pattern, &text));
+        assert!(t0.elapsed() < std::time::Duration::from_secs(2));
     }
 }

@@ -79,6 +79,22 @@
         "target": "main"
       },
       "fields": {}
+    },
+    {
+      "seq": 6,
+      "hash": "sha256:0f41b167090978c47543ab8ed828f9185ba88117d77d2be76b4f3f2bebd6bcfa",
+      "command": "review.approve@1",
+      "class": "W2",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-b"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "approval_of": "proposal-3",
+        "requester": 7
+      },
+      "fields": {}
     }
   ],
   "result_records": []

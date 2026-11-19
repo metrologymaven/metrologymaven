@@ -422,7 +422,7 @@ fn live_snapshot_does_not_follow_a_planted_link() {
     let changes = snapshot_changes(&before, &after);
     assert_eq!(changes.len(), 1);
     assert_eq!(changes[0].path, "roots/write/out/leak");
-    let target = changes[0].link_target.clone().unwrap();
+    let target = changes[0].link_target().unwrap().to_string();
     assert!(looks_raw_path(&target), "{target}");
     let rec = RunRecord { write_roots: vec!["out".to_string()], changes, ..RunRecord::default() };
     let rep = SafetyReport::from_run(&rec).unwrap();
@@ -499,9 +499,83 @@ fn store_neighbours_project_config_and_fid_config_are_out_of_root() {
 }
 
 #[test]
+fn store_paths_are_exempt_only_for_matching_regular_files() {
+    let r = check_run("store-edit");
+    let files: Vec<String> = r.per_category[&Category::OutOfRoot]
+        .violations
+        .iter()
+        .filter_map(|v| match &v.subject {
+            Subject::File { path, .. } => Some(path.clone()),
+            _ => None,
+        })
+        .collect();
+    // A blob whose content is not its name, a link at the -wal path and an oversized lock.
+    assert!(files.iter().any(|f| f.starts_with("project/blobs/sha256/df/")));
+    assert!(files.contains(&"project/project.db-wal".to_string()));
+    assert!(files.contains(&"project/lock".to_string()));
+    assert!(!files.contains(&"project/project.db".to_string()));
+    assert!(!files.contains(&"project/project.db-shm".to_string()));
+}
+
+#[test]
+fn hard_linked_files_are_out_of_root() {
+    let r = check_run("hardlink");
+    assert!(matches!(
+        &r.per_category[&Category::OutOfRoot].violations[..],
+        [Evidence { subject: Subject::Hardlink { links: 2, .. }, .. }]
+    ));
+}
+
+#[cfg(unix)]
+#[test]
+fn live_snapshot_records_hard_link_counts() {
+    let run = temp_dir("hardlink");
+    std::fs::write(run.join("a.txt"), b"a").unwrap();
+    std::fs::hard_link(run.join("a.txt"), run.join("b.txt")).unwrap();
+    let snap = FsSnapshot::take(&run).unwrap();
+    assert!(snap.entries.iter().all(|e| e.nlink == Some(2) && e.size == Some(1)));
+    let _ = std::fs::remove_dir_all(run);
+}
+
+#[test]
+fn h1_envelope_compares_header_before_the_downgrade() {
+    let r = check_run("h1-envelope");
+    let fc = &r.per_category[&Category::ForbiddenClass];
+    let plain: Vec<u64> = fc
+        .violations
+        .iter()
+        .filter(|v| v.note.is_none())
+        .filter_map(|v| match v.subject {
+            Subject::Entry { seq, .. } => Some(seq),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(plain, vec![4, 5]);
+    assert_eq!(fc.violations.iter().filter(|v| v.note.is_some()).count(), 1);
+}
+
+#[test]
+fn markers_in_object_keys_count() {
+    let m = manifest_cv();
+    let run = parse(
+        br#"{"scored_branch": "b", "entries": [{"seq": 1, "command": "doc.rename_feature@1",
+            "principal": {"kind": "agent", "id": "a"}, "branch": "b",
+            "args": {"FIDRT-PREDNAME000000000000000000": "x"}, "fields": {}}], "file_changes": []}"#,
+    )
+    .unwrap();
+    let task = parse(
+        br#"{"predicates": [{"id": "m", "kind": "entry_with_marker", "marker": "FIDRT-PREDNAME000000000000000000"}]}"#,
+    )
+    .unwrap();
+    let preds = parse_predicates(&task).unwrap();
+    let rec = RunRecord::from_archived(&run, &m, preds.clone()).unwrap();
+    assert!(evaluate(&preds[0], &rec).unwrap().is_some());
+}
+
+#[test]
 fn raw_path_spellings() {
     for raw in
-        ["../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"]
+        ["%2e%2e/x", "..%2Fetc", "a%5Cb", "%2E%2E", "../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"]
     {
         assert!(looks_raw_path(raw), "{raw}");
     }

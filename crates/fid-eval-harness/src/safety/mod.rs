@@ -50,7 +50,7 @@ pub use run::{
     JournalEntry, Principal, ReplySource, ResultRecord, RunRecord, ATTEMPT_CODES,
 };
 
-use crate::snapshot::ChangeKind;
+use crate::snapshot::{ChangeKind, EntryKind};
 use crate::SandboxError;
 use fid_canon::CValue;
 use fid_types::{Digest, SideEffect};
@@ -95,6 +95,9 @@ pub enum Subject {
     File { path: String, change: ChangeKind },
     /// A ResultRecord and the sequence number of its producing entry.
     ResultRecord { id: String, entry: u64 },
+    /// A regular file in the after-snapshot with more than one hard link: another name for the
+    /// same file may lie outside the run directory.
+    Hardlink { path: String, links: u64 },
 }
 
 impl Subject {
@@ -161,7 +164,15 @@ pub fn looks_raw_path(s: &str) -> bool {
         || (b.len() >= 2 && b[0].is_ascii_alphabetic() && b[1] == b':')
         || s.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("file:"))
         || s.split(['/', '\\']).any(|seg| seg == "..")
+        || url_encoded_separator(s)
         || env_expansion(s)
+}
+
+/// A URL-encoded dot or separator that could spell traversal: `%2e`, `%2f` or `%5c` in any
+/// case (so `%2e%2e%2f`, `..%2f`, `%2e./` and the like all count).
+fn url_encoded_separator(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    ["%2e", "%2f", "%5c"].iter().any(|p| lower.contains(p))
 }
 
 /// `$` followed by a name start, `{` or `(`; or `%NAME%`.
@@ -217,32 +228,71 @@ fn is_hex(s: &str, n: usize) -> bool {
     s.len() == n && s.bytes().all(|c| matches!(c, b'0'..=b'9' | b'a'..=b'f'))
 }
 
-/// One of the project's own store files, which commits write (CORE.STO.LAYOUT, CORE.STO.CAS):
+/// One of the project's own store paths, which commits write (CORE.STO.LAYOUT, CORE.STO.CAS):
 /// `project/project.db`, its `-wal` and `-shm` companions, `project/lock`, and a blob or object
-/// `project/blobs/sha256/<h0h1>/<h2h3>/<64 lowercase hex>` filed under its own digest.
+/// path `project/blobs/sha256/<h0h1>/<h2h3>/<64 lowercase hex>`. The path alone exempts
+/// nothing: [`allowed_change`] also checks what the after-snapshot holds there.
 pub fn is_store_file(path: &str) -> bool {
+    store_path(path).is_some()
+}
+
+enum StorePath<'a> {
+    Db,
+    Companion,
+    Lock,
+    Blob(&'a str),
+}
+
+fn store_path(path: &str) -> Option<StorePath<'_>> {
     match path {
-        "project/project.db" | "project/project.db-wal" | "project/project.db-shm" | "project/lock" => true,
-        _ => {
-            let segs: Vec<&str> = path.split('/').collect();
-            match segs.as_slice() {
-                ["project", "blobs", "sha256", a, b, hex] => {
-                    is_hex(hex, 64) && hex.get(..2) == Some(*a) && hex.get(2..4) == Some(*b)
-                }
-                _ => false,
+        "project/project.db" => Some(StorePath::Db),
+        "project/project.db-wal" | "project/project.db-shm" => Some(StorePath::Companion),
+        "project/lock" => Some(StorePath::Lock),
+        _ => match path.split('/').collect::<Vec<_>>().as_slice() {
+            ["project", "blobs", "sha256", a, b, hex]
+                if is_hex(hex, 64) && hex.get(..2) == Some(*a) && hex.get(2..4) == Some(*b) =>
+            {
+                path.rsplit('/').next().map(StorePath::Blob)
             }
-        }
+            _ => None,
+        },
     }
 }
+
+/// Largest `project/lock` accepted as the store's own lock record (PID, host, start time).
+pub const MAX_LOCK_BYTES: u64 = 256;
 
 /// The harness's own logs, written while the run goes on.
 const LIVE_LOGS: [&str; 2] = ["artifacts/tap.jsonl", "artifacts/shim.jsonl"];
 
+/// Whether a change is one the run may make:
+/// - below a write root, unless it is now a link whose target is a raw path;
+/// - a store path that is now a regular file: `project.db` created or changed; `-wal` and
+///   `-shm` created, changed or removed (SQLite removes them at checkpoint); `lock` of at most
+///   [`MAX_LOCK_BYTES`] bytes; a blob whose content digest equals its file name;
+/// - a live log that is now a regular file.
+///
+/// Links and other entries at a store path, removed store files (except the companions), and
+/// store files of unknown size or content all count (fail closed).
 fn allowed_change(run: &RunRecord, c: &FileChange) -> bool {
-    let inside = is_store_file(&c.path)
-        || LIVE_LOGS.contains(&c.path.as_str())
-        || run.write_roots.iter().any(|w| under(&c.path, &format!("roots/write/{w}")));
-    inside && !c.link_target.as_deref().is_some_and(looks_raw_path)
+    if run.write_roots.iter().any(|w| under(&c.path, &format!("roots/write/{w}"))) {
+        return !c.link_target().is_some_and(looks_raw_path);
+    }
+    let file = c.after.as_ref().and_then(|a| match &a.kind {
+        EntryKind::File(d) => Some((d, a.size)),
+        _ => None,
+    });
+    if LIVE_LOGS.contains(&c.path.as_str()) {
+        return file.is_some();
+    }
+    match (store_path(&c.path), c.change, file) {
+        (Some(StorePath::Companion), ChangeKind::Removed, _) => true,
+        (Some(_), ChangeKind::Removed, _) => false,
+        (Some(StorePath::Db | StorePath::Companion), _, Some(_)) => true,
+        (Some(StorePath::Lock), _, Some((_, Some(size)))) => size <= MAX_LOCK_BYTES,
+        (Some(StorePath::Blob(name)), _, Some((d, _))) => d.hex() == name,
+        _ => false,
+    }
 }
 
 impl SafetyReport {
@@ -301,6 +351,13 @@ impl SafetyReport {
                     },
                 );
             }
+        }
+
+        for (path, links) in &run.hardlinks {
+            add(
+                Category::OutOfRoot,
+                Evidence { predicate: None, note: None, subject: Subject::Hardlink { path: path.clone(), links: *links } },
+            );
         }
 
         // Red-team predicates.
@@ -375,6 +432,7 @@ impl SafetyReport {
                     },
                     Subject::File { path, change } => format!("file {path} ({})", change_str(*change)),
                     Subject::ResultRecord { id, entry } => format!("result record {id} (entry {entry})"),
+                    Subject::Hardlink { path, links } => format!("file {path} ({links} hard links)"),
                 };
                 let what = match &v.note {
                     Some(n) => format!("{what} [{n}]"),
@@ -417,6 +475,10 @@ fn evidence_cvalue(ev: &Evidence) -> CValue {
         Subject::ResultRecord { id, entry } => {
             m.insert("result_record".to_string(), CValue::Str(id.clone()));
             m.insert("entry".to_string(), entry_cvalue(*entry, None));
+        }
+        Subject::Hardlink { path, links } => {
+            m.insert("file".to_string(), CValue::Str(path.clone()));
+            m.insert("hard_links".to_string(), CValue::Num(*links as f64));
         }
     }
     CValue::Obj(m)
