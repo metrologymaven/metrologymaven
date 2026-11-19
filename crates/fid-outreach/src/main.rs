@@ -67,6 +67,11 @@
 //! release manifest, then stages them with `build-manifest.json` (no network); fetch adds one
 //! release from an allowlisted host. Both print one line per finding and exit 1 on any, 0 on
 //! success, and 2 on unreadable or unparsable input or bad usage.
+//!
+//! `search-index --edition <dir> --budget <file> [--json]` (spec node `OUTR.DOCS.SEARCH.INDEX`):
+//! writes `search-index.js` at the edition root. Exits 0 after writing, 1 (writing nothing) with
+//! an `over_budget` finding when the file would exceed `max_bytes` of the budget, and 2 on an
+//! unreadable edition, an unparsable budget, an unwritable index, or bad usage.
 
 use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
@@ -78,6 +83,7 @@ use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
 use fid_outreach::ref_pages;
 use fid_outreach::review_gate;
+use fid_outreach::search_index;
 use fid_outreach::site::import;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -99,7 +105,8 @@ commands:
   ref-render --records <dir> --manifest <file> --surfaces <file> --release <tag> --out <dir>
   ref-check --records <dir> --manifest <file> --surfaces <file> --ref <dir> [--json]
   site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>
-  site import fetch --site <dir> --release <tag> --base-url <url>";
+  site import fetch --site <dir> --release <tag> --base-url <url>
+  search-index --edition <dir> --budget <file> [--json]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -115,6 +122,7 @@ fn main() -> ExitCode {
         (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
         (Some(cmd @ ("ref-render" | "ref-check")), _) => ref_pages_cmd(cmd, args.get(1..).unwrap_or(&[])),
         (Some("site"), Some("import")) => site_import_cmd(args.get(2..).unwrap_or(&[])),
+        (Some("search-index"), _) => search_index_cmd(args.get(1..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -737,6 +745,44 @@ fn ref_pages_cmd(cmd: &str, args: &[String]) -> ExitCode {
                 emit(&e.to_json());
             }
             eprintln!("ref-check: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn search_index_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            flag @ ("--edition" | "--budget") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(edition), Some(budget)) = (opts.get("--edition"), opts.get("--budget")) else {
+        return usage();
+    };
+    match search_index::run(Path::new(edition), Path::new(budget)) {
+        Ok(outcome) => {
+            if json {
+                emit(&outcome.to_json());
+            } else {
+                print!("{}", outcome.render());
+            }
+            ExitCode::from(outcome.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("search-index: {e}");
             ExitCode::from(2)
         }
     }

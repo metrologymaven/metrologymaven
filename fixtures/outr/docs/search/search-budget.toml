@@ -1,0 +1,3 @@
+# Byte budget of search-index.js for one release edition (REQ-OUTR.DOCS.SEARCH-005).
+# Initial value 5 MB [unverified].
+max_bytes = 5000000

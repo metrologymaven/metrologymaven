@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**110** of **1336** leaves built in code ([B]).
+**113** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 40 built)
+### Wave 2 (121 leaves, 43 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -236,14 +236,14 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.CONTENT.VIDEO.CAP](../../spec/outr/content/video/cap/NODE.md) Captions, transcript and caption review check (S, P1b)
 - [OUTR.DOCS.FRAME.BUNDLE](../../spec/outr/docs/frame/bundle/NODE.md) Offline bundle per release (S, P0)
 - [OUTR.DOCS.FRAME.ED](../../spec/outr/docs/frame/ed/NODE.md) Release editions, version list and latest alias (S, P0)
-- [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
+- [B] [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
 - [OUTR.LAUNCH.ANN](../../spec/outr/launch/ann/NODE.md) Announcement plan and drafts (M, P0)
 - [OUTR.LAUNCH.GATE](../../spec/outr/launch/gate/NODE.md) Milestone gate check and report (M, P0)
 - [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)
 - [OUTR.LAUNCH.REVIEW](../../spec/outr/launch/review/NODE.md) Post-launch reviews (S, P0)
 - [PLAT.DEPLOY.KIOSK.GUIDE](../../spec/plat/deploy/kiosk/guide/NODE.md) Per-OS kiosk deployment guides and guide lint (M, P1a)
 - [B] [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
-- [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
+- [B] [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
 - [PLAT.DEPLOY.UPDATE.KEYROT](../../spec/plat/deploy/update/keyrot/NODE.md) Trusted-key set from key-transition statements (S, P1a)
 - [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)
 - [B] [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
