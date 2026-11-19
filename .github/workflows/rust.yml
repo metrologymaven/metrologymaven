@@ -31,11 +31,11 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Cargo.lock up to date (informational)
-        # Non-blocking: builder PRs may add crates without refreshing Cargo.lock
-        # (refresh via the lockfile workflow). Runs before any build touches the lock.
+      - name: Cargo.lock up to date
+        # Blocking: a PR that adds a crate or dependency must update Cargo.lock in the same PR
+        # (lockfile workflow, or exact hand-added entries). Main's lock went stale twice while this
+        # was informational (#197, #209). Runs before any build touches the lock.
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: cargo metadata --locked --format-version 1 > /dev/null
       - name: Working tree is the committed bytes (KRN.MAN.MANI.IMPL REQ-003)
         # Implementation digests hash git-tracked files as they are in the working tree. Before any
