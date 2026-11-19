@@ -1,6 +1,6 @@
 [package]
 name = "fid-hal-idl"
-description = "Metrology Maven device interface types: SI quantities, encodings, frames, timestamps (HAL.IDL.UNITS); provenance stamp, batch envelope and external claim schemas (HAL.IDL.STAMP)"
+description = "Metrology Maven device interface types: SI quantities, encodings, frames, timestamps (HAL.IDL.UNITS); provenance stamp, batch envelope and external claim schemas (HAL.IDL.STAMP); typed configuration and configuration digest (HAL.IDL.BASE.CFG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

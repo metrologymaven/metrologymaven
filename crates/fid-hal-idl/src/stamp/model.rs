@@ -516,7 +516,8 @@ fn canonical(fields: &'static [Field], value: &CValue) -> Result<Vec<u8>, StampE
     fid_canon::to_canonical_bytes(value).map_err(|_| StampError::new(K::JsonInvalid, ""))
 }
 
-fn digest_of(bytes: &[u8]) -> Digest {
+/// `sha256:` digest of already canonical bytes; shared with `base::config`.
+pub(crate) fn digest_of(bytes: &[u8]) -> Digest {
     Digest::from_bytes(fid_canon::digest_bytes(bytes).0)
 }
 

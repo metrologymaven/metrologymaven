@@ -1,0 +1,12 @@
+{
+  "_comment": "Hand-labelled from REQ-AGENT.HARNESS.ADAPT-004: only an object with exactly tokens_in and tokens_out as non-negative integers is a report.",
+  "array.json": "not_reported",
+  "duplicate-key.json": "not_reported",
+  "extra-field.json": "not_reported",
+  "fraction.json": "not_reported",
+  "missing-out.json": "not_reported",
+  "negative.json": "not_reported",
+  "ok.json": {"tokens_in": 1200, "tokens_out": 345},
+  "strings.json": "not_reported",
+  "syntax.json": "not_reported"
+}
