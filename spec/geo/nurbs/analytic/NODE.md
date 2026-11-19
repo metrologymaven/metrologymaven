@@ -61,6 +61,8 @@ The elementary geometry that CAD files carry in exact form: lines, circles and e
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `Placement { origin, axis, ref_dir }`; `AnalyticSurface { Plane, Cylinder { r }, Cone { r0, half_angle }, Sphere { r }, Torus { major, minor } }`; `AnalyticCurve { Line, Circle { r }, Ellipse { a, b } }`.
 - **Algorithm:** transform the query into the local placement, solve the closest point geometrically (radial projection for cylinder, sphere and torus tube circle; generator-line projection for cone; Newton-free closed forms); ellipse inversion uses a bracketed root solve of the quartic in a fixed iteration count [unverified convergence bound].
+- **Frame (pinned, maintainer decision on #247):** after the REQ-002 checks on the given axis `z` and reference direction `x`, construction orthonormalises once, in this order: `Z = z / |z|`; `x' = x - (x . Z) Z`; `X = x' / |x'|`; `Y = Z x X` (norms are `sqrt` of the pinned dot product `(a0 b0 + a1 b1) + a2 b2`, vector operations component by component). Evaluation and inversion use only the stored orthonormal frame.
+- **Ellipse aspect (pinned, #247):** `a / b` and `b / a` must not exceed 1e100; above it construction fails with `BadRadius` on the smaller axis, so `(a/b)^2` in the inversion cannot overflow.
 - **Errors:** `BadPlacement`, `BadRadius`, `BadAngle`.
 - **Determinism:** D0.
 - **Performance budget:** under 100 ns per evaluation and 300 ns per inversion [unverified].

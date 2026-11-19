@@ -94,6 +94,7 @@ SIZE_MIN = 1e-100
 SIZE_MAX = 1e100
 AXIS_REL = 1e-14
 MAX_BISECT = 2200
+ASPECT_MAX = 1e100
 TAU = 6.283185307179586
 FRAC_PI_2 = 1.5707963267948966
 EPS = 2.0 ** -52
@@ -225,7 +226,16 @@ class Placement:
             raise Err("BadPlacement", "RefDirNotUnit")
         if abs(dot(z, x)) > FRAME_TOL:
             raise Err("BadPlacement", "NotOrthogonal")
-        self.o, self.z, self.x, self.y = o, z, x, cross(z, x)
+        # pinned orthonormalisation: Z = z/|z|; x' = x - (x.Z) Z; X = x'/|x'|; Y = Z x X
+        nz = math.sqrt(dot(z, z))
+        Zn = [z[0] / nz, z[1] / nz, z[2] / nz]
+        p = dot(x, Zn)
+        xp = [x[0] - p * Zn[0], x[1] - p * Zn[1], x[2] - p * Zn[2]]
+        nx = math.sqrt(dot(xp, xp))
+        Xn = [xp[0] / nx, xp[1] / nx, xp[2] / nx]
+        if not (fin3(Zn) and fin3(Xn)):
+            raise Err("NonFinite")
+        self.o, self.z, self.x, self.y = o, Zn, Xn, cross(Zn, Xn)
 
     def world(self, l):
         o, x, y, z = self.o, self.x, self.y, self.z
@@ -280,6 +290,10 @@ class Model:
         elif typ == "ellipse":
             self.a = size("semi_axis_1", prm["semi_axis_1"])
             self.b = size("semi_axis_2", prm["semi_axis_2"])
+            if self.a / self.b > ASPECT_MAX:
+                raise Err("BadRadius", "semi_axis_2")
+            if self.b / self.a > ASPECT_MAX:
+                raise Err("BadRadius", "semi_axis_1")
         elif typ == "cone":
             r, ang = prm["radius"], prm["semi_angle"]
             check_input([r, ang])
@@ -500,7 +514,7 @@ def ellipse_quadrant(e0, e1, y0, y1, z0, z1):
             w1 = w
         else:
             break
-    f0 = r0 * y0 / (w + rm1)
+    f0 = y0 * (r0 / (w + rm1))
     f1 = y1 / w
     if not (isfin(f0) and isfin(f1)):
         raise Err("NonFinite")
@@ -651,12 +665,22 @@ class Exact:
 
     def __init__(self, typ, o, z, x, prm):
         self.type, self.prm = typ, prm
-        self.O, self.Z, self.X = [fr(c) for c in o], [fr(c) for c in z], [fr(c) for c in x]
+        # The exact orthonormalisation (60 digits) of the given frame: the shape the binary64
+        # code represents (src/analytic.rs, Placement).
+        self.O = [fr(c) for c in o]
+        zd, xd = [D(c) for c in z], [D(c) for c in x]
+        nz = dnorm(zd)
+        self.Z = [c / nz for c in zd]
+        pz = sum(a * b for a, b in zip(xd, self.Z))
+        xp = [a - pz * b for a, b in zip(xd, self.Z)]
+        nx = dnorm(xp)
+        self.X = [c / nx for c in xp]
         self.Y = frac_cross(self.Z, self.X)
         self.ref = OR.Analytic("fz", typ, o, z, x, dict(prm), False)
+        self.ref.Z, self.ref.X, self.ref.Y = self.Z, self.X, self.Y
 
     def local(self, q):
-        d = [fr(q[i]) - self.O[i] for i in range(3)]
+        d = [dec(fr(q[i]) - self.O[i]) for i in range(3)]
         return frac_dot(d, self.X), frac_dot(d, self.Y), frac_dot(d, self.Z)
 
     def world(self, a, b, c):
@@ -978,7 +1002,10 @@ def build_fuzz(seed):
             add_construct(fz, typ, O0, Z, X, {"radius": r}, code)
     add_construct(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1.0, "semi_axis_2": 0.0}, "err:BadRadius")
     add_construct(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e101, "semi_axis_2": 1.0}, "err:BadRadius")
-    add_construct(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e-100, "semi_axis_2": 1e100}, "ok")
+    add_construct(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e-100, "semi_axis_2": 1e100}, "err:BadRadius")
+    for a, b, code in ((1e100, 1.01, "ok"), (1e100, 0.99, "err:BadRadius"), (1.01, 1e100, "ok"),
+                       (0.99, 1e100, "err:BadRadius"), (1.0, 0.99e-100, "err:BadRadius")):
+        add_construct(fz, "ellipse", O0, Z, X, {"semi_axis_1": a, "semi_axis_2": b}, code)
     for r, ang, code in ((1.0, 0.0, "err:BadAngle"), (1.0, -0.1, "err:BadAngle"), (1.0, FRAC_PI_2, "err:BadAngle"),
                          (1.0, nextdown(FRAC_PI_2), "ok"), (1.0, 1.6, "err:BadAngle"), (1.0, 1e-300, "ok"),
                          (1.0, 5e-324, "ok"), (1.0, math.nan, "err:NotANumber"), (1.0, math.inf, "err:NonFinite"),
@@ -1094,8 +1121,30 @@ def build_fuzz(seed):
     # subnormal offsets from the origin
     for typ in ("sphere", "cylinder", "circle", "torus", "plane", "line"):
         add_invert(fz, typ, O0, Z, X, unit[typ], [5e-324, 1e-320, 2e-310])
-    add_invert(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e100, "semi_axis_2": 1e-100}, [1e99, 1e-101, 0.0],
-               expect_nu=True, near_singular=True, accept_nonfinite=True)
+    add_invert(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e100, "semi_axis_2": 1.01}, [1e99, 0.1, 0.0],
+               expect_nu=True, near_singular=True)
+    # off the major axis at the largest aspect ratio: no overflow
+    add_invert(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e100, "semi_axis_2": 1.01}, [3e99, 4e90, 1.0], expect_nu=False)
+    add_invert(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1e100, "semi_axis_2": 1.01}, [-2e100, -3e95, 0.0], expect_nu=False)
+    add_invert(fz, "ellipse", O0, Z, X, {"semi_axis_1": 1.01, "semi_axis_2": 1e100}, [0.2, -7e99, 0.0],
+               expect_nu=True, near_singular=True)
+
+    # -- F. frames off unit length and orthogonality by 0.9e-12 (accepted, orthonormalised)
+    skew_z = [0.0, 0.0, 1.0 + 0.9e-12]
+    skew_x = [1.0 - 0.9e-12, 0.0, 0.9e-12]
+    rz, rx = make_frame(rng)
+    rz = [c * (1.0 - 0.9e-12) for c in rz]
+    rx = [c * (1.0 + 0.9e-12) + 0.9e-12 * d for c, d in zip(rx, rz)]
+    for z_, x_ in ((skew_z, skew_x), (rz, rx), (skew_z, X)):
+        for typ in TYPES:
+            for _ in range(4):
+                o = [rng.random() - 0.5 for _ in range(3)]
+                q = [o[i] + 2.0 * (rng.random() - 0.5) for i in range(3)]
+                if typ == "cone" and not cone_ok(o, z_, x_, unit[typ], q):
+                    continue
+                if typ == "ellipse" and ellipse_factor(Exact(typ, o, z_, x_, unit[typ]), q, unit[typ]) < 1e-3:
+                    continue
+                add_invert(fz, typ, o, z_, x_, unit[typ], q)
     return fz
 
 

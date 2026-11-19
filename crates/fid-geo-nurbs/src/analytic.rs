@@ -7,11 +7,14 @@
 //!
 //! # Placement and parameterisations
 //!
-//! A [`Placement`] is an origin `O`, an axis `Z` and a reference direction `X`, with
-//! `Y = Z x X` computed once from the given values (the axis-placement convention of
-//! ISO 10303-42, `axis2_placement_3d` [unverified clause number]). The axis and the reference
-//! direction are used exactly as given (never renormalised); construction refuses them unless
-//! `| |Z| - 1 |`, `| |X| - 1 |` and `|Z . X|` are all at most [`FRAME_TOL`] (REQ-002). The
+//! A [`Placement`] is an origin `O`, an axis `Z` and a reference direction `X` (the
+//! axis-placement convention of ISO 10303-42, `axis2_placement_3d` [unverified clause number]).
+//! Construction refuses the given axis `z` and reference direction `x` unless `| |z| - 1 |`,
+//! `| |x| - 1 |` and `|z . x|` are all at most [`FRAME_TOL`] (REQ-002), then orthonormalises them
+//! once, in this pinned order: `Z = z / |z|`; `x' = x - (x . Z) Z`; `X = x' / |x'|`;
+//! `Y = Z x X` (every norm `sqrt` of the pinned dot product, every vector operation component
+//! by component). Evaluation and inversion use only this stored frame, so the projections of
+//! inversion are exact up to rounding even for a frame that was off by up to 1e-12. The
 //! parameterisations follow the ISO 10303-42 curve and surface entities [unverified clause
 //! numbers] and the GEO.NURBS.REF oracle (`tools/fixtures/nurbs_oracle.py`):
 //!
@@ -35,7 +38,8 @@
 //! # Sizes
 //!
 //! Radii and semi-axes must lie in `[SIZE_MIN, SIZE_MAX] = [1e-100, 1e100]` (the cone's `r0`
-//! may also be exactly zero, an apex at the origin); a torus needs `minor < major` (no
+//! may also be exactly zero, an apex at the origin); an ellipse's `a / b` and `b / a` must not
+//! exceed [`ASPECT_MAX`] = 1e100; a torus needs `minor < major` (no
 //! self-intersecting tori, see NODE.md Open questions); a cone's half-angle `a` must satisfy
 //! `0 < a < pi/2` (as f64: `0 < a < FRAC_PI_2`). Within these ranges every square and cube of a
 //! size stays a normal, finite binary64 number, so a valid shape can never underflow into a
@@ -110,6 +114,11 @@ pub const SIZE_MAX: f64 = 1e100;
 
 /// Relative tolerance of the axis, tube-centre, apex and ellipse-axis tests of inversion.
 pub const AXIS_REL: f64 = 1e-14;
+
+/// Largest accepted ellipse aspect ratio `max(a, b) / min(a, b)`. Within it `(a/b)^2 <= 1e200`,
+/// so the inversion's root function cannot overflow for any query within 1e100 major semi-axes
+/// of the centre; above it construction refuses the ellipse with `BadRadius` on the smaller axis.
+pub const ASPECT_MAX: f64 = 1e100;
 
 /// Upper bound on the bisection steps of the ellipse inversion.
 pub const MAX_BISECT: usize = 2200;
@@ -320,7 +329,17 @@ impl Placement {
         if dot(axis, ref_dir).abs() > FRAME_TOL {
             return Err(fault(PlacementFault::NotOrthogonal));
         }
-        Ok(Placement { origin, axis, ref_dir, y_dir: cross(axis, ref_dir) })
+        // Pinned orthonormalisation (module documentation).
+        let nz = fid_num::f::sqrt(dot(axis, axis))?;
+        let z = [axis[0] / nz, axis[1] / nz, axis[2] / nz];
+        let p = dot(ref_dir, z);
+        let xp = [ref_dir[0] - p * z[0], ref_dir[1] - p * z[1], ref_dir[2] - p * z[2]];
+        let nx = fid_num::f::sqrt(dot(xp, xp))?;
+        let x = [xp[0] / nx, xp[1] / nx, xp[2] / nx];
+        if !(finite3(z) && finite3(x)) {
+            return Err(AnalyticError::NonFinite);
+        }
+        Ok(Placement { origin, axis: z, ref_dir: x, y_dir: cross(z, x) })
     }
 
     /// The origin `O`.
@@ -328,12 +347,12 @@ impl Placement {
         self.origin
     }
 
-    /// The axis `Z`.
+    /// The orthonormalised axis `Z`.
     pub fn axis(&self) -> [f64; 3] {
         self.axis
     }
 
-    /// The reference direction `X`.
+    /// The orthonormalised reference direction `X`.
     pub fn ref_dir(&self) -> [f64; 3] {
         self.ref_dir
     }
@@ -585,7 +604,15 @@ pub struct Ellipse {
 
 impl Ellipse {
     pub fn new(pl: Placement, semi_axis_1: f64, semi_axis_2: f64) -> Result<Self, AnalyticError> {
-        Ok(Ellipse { pl, a: size("semi_axis_1", semi_axis_1)?, b: size("semi_axis_2", semi_axis_2)? })
+        let a = size("semi_axis_1", semi_axis_1)?;
+        let b = size("semi_axis_2", semi_axis_2)?;
+        if a / b > ASPECT_MAX {
+            return Err(AnalyticError::BadRadius { name: "semi_axis_2", value: b });
+        }
+        if b / a > ASPECT_MAX {
+            return Err(AnalyticError::BadRadius { name: "semi_axis_1", value: a });
+        }
+        Ok(Ellipse { pl, a, b })
     }
 
     pub fn placement(&self) -> &Placement {
@@ -665,7 +692,8 @@ fn on_major_axis(e0: f64, e1: f64, ax0: f64) -> Result<(f64, f64, bool), Analyti
 /// near the major axis, where `s + 1` would lose all its digits). Bracket `[z1, 1]` inside
 /// (`g < 0`), `[z1, hypot(r0 z0, z1)]` outside; bisection at `0.5 w0 + 0.5 w1` until the
 /// midpoint equals an end or `F` is exactly zero, at most [`MAX_BISECT`] steps. Foot
-/// `(r0 y0 / (w + rm1), y1 / w)`.
+/// `(y0 (r0 / (w + rm1)), y1 / w)` (the factor `r0 / (w + rm1)` lies in `(0, r0 / rm1]`, so the
+/// product cannot overflow where the foot itself is finite).
 fn ellipse_quadrant(e0: f64, e1: f64, y0: f64, y1: f64, z0: f64, z1: f64) -> Result<(f64, f64), AnalyticError> {
     let g = (z0 * z0 + z1 * z1) - 1.0;
     if !g.is_finite() {
@@ -703,7 +731,7 @@ fn ellipse_quadrant(e0: f64, e1: f64, y0: f64, y1: f64, z0: f64, z1: f64) -> Res
             break;
         }
     }
-    let f0 = r0 * y0 / (w + rm1);
+    let f0 = y0 * (r0 / (w + rm1));
     let f1 = y1 / w;
     if !(f0.is_finite() && f1.is_finite()) {
         return Err(AnalyticError::NonFinite);

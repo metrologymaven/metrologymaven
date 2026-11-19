@@ -668,6 +668,57 @@ fn fuzz_extreme_inputs_against_exact_reference() {
     assert!(fuzz_set().len() >= 600);
 }
 
+/// Review of #247: a frame accepted with `|Z|`, `|X|` = 1 +- 0.9e-12 and `Z . X` = 0.9e-12 is
+/// orthonormalised at construction, so the foot is the evaluated point at the returned
+/// parameters and lies within 1e-13 m of the exact closest point on the shape that frame
+/// defines (fuzz section F, 96 cases, plus the reported cylinder case by hand).
+#[test]
+fn skewed_frames_are_orthonormalised() {
+    let pl = Placement::new([0.0; 3], [0.0, 0.0, 1.0 + 0.9e-12], [1.0, 0.0, 0.0]).unwrap();
+    let n = pl.axis();
+    assert!(((n[0] * n[0] + n[1] * n[1]) + n[2] * n[2] - 1.0).abs() <= 2.3e-16);
+    let cyl = Cylinder::new(pl, 1.0).unwrap();
+    let r = cyl.invert([2.0, 0.0, 0.5]).unwrap();
+    assert_eq!(r.uniqueness, Uniqueness::Unique);
+    assert!(inf_err(r.foot, [1.0, 0.0, 0.5]) <= 1e-15, "{r:?}");
+    assert!((r.distance - 1.0).abs() <= 1e-15);
+    assert_eq!(r.foot, cyl.eval(r.u, r.v, 0).unwrap().p);
+    let mut checked = 0;
+    for c in fuzz_set() {
+        let pl = c.get("placement");
+        let z = pl.get("axis").x3();
+        let zz = (z[0] * z[0] + z[1] * z[1]) + z[2] * z[2];
+        if c.get("kind").str() != "invert" || c.get("expect").str() != "ok" || (zz - 1.0).abs() < 1e-12 {
+            continue;
+        }
+        let b = build_fuzz(c).unwrap();
+        let q = c.get("q").x3();
+        let (prm, foot, _, _) = invert(&b, q).unwrap();
+        let at = match &b {
+            Built::Curve(cv) => cv.eval(prm[0], 0).unwrap().p,
+            Built::Surface(s) => s.eval(prm[0], prm[1], 0).unwrap().p,
+        };
+        assert_eq!(foot, at);
+        let err = inf_err(foot, c.get("foot").x3());
+        assert!(err <= 1e-13, "{}: foot off by {err:e}", c.get("id").str());
+        checked += 1;
+    }
+    assert!(checked >= 60, "{checked}");
+}
+
+#[test]
+fn extreme_ellipse_aspect_is_refused() {
+    let pl = aligned([0.0; 3]);
+    assert_eq!(Ellipse::new(pl, 1e100, 0.99), Err(AnalyticError::BadRadius { name: "semi_axis_2", value: 0.99 }));
+    assert_eq!(Ellipse::new(pl, 0.99, 1e100), Err(AnalyticError::BadRadius { name: "semi_axis_1", value: 0.99 }));
+    let e = Ellipse::new(pl, 1e100, 1.01).unwrap();
+    // Off the major axis at the largest accepted aspect ratio the inversion stays finite.
+    for q in [[3e99, 4e90, 1.0], [-2e100, -3e95, 0.0], [1e99, 1e99, 1e99], [0.5, 0.5, 0.0]] {
+        let r = e.invert(q).unwrap();
+        assert!(r.distance.is_finite() && r.foot.iter().all(|v| v.is_finite()), "{q:?}");
+    }
+}
+
 // ---------------------------------------------------------------- traits, domains, errors
 
 /// REQ-001: all eight types behind the shared traits, generically.
