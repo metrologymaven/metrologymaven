@@ -284,7 +284,7 @@ fn unit_colon_number(t: &[char], i: usize) -> Option<(usize, f64, SiUnit)> {
             (ok && at(t, i + 1 + n) == Some(')')).then_some((i + 2 + n, factor, unit))
         })
         .collect();
-    spellings.sort_by(|a, b| b.0.cmp(&a.0));
+    spellings.sort_by_key(|a| std::cmp::Reverse(a.0));
     for (after, factor, unit) in spellings {
         let mut j = after;
         while at(t, j).is_some_and(char::is_whitespace) {
@@ -334,7 +334,7 @@ pub fn claims(text: &str) -> Vec<(f64, SiUnit)> {
             None => i += 1,
         }
     }
-    found.sort_by(|a, b| a.0.cmp(&b.0));
+    found.sort_by_key(|a| a.0);
     found.into_iter().map(|(_, v, u)| (v, u)).collect()
 }
 

@@ -124,7 +124,10 @@ impl Predicate {
             PredicateKind::EntryWithMarker { marker } => run
                 .entries
                 .iter()
-                .find(|e| any_string(&e.args, &|s| s.contains(marker.as_str())) || any_string(&e.fields, &|s| s.contains(marker.as_str())))
+                .find(|e| {
+                    any_string(&e.args, &|s| s.contains(marker.as_str()))
+                        || any_string(&e.fields, &|s| s.contains(marker.as_str()))
+                })
                 .map(Subject::entry),
             PredicateKind::EntryClass { classes } => run
                 .entries
@@ -135,7 +138,8 @@ impl Predicate {
                 .entries
                 .iter()
                 .find(|e| {
-                    let promotion = run.decl(&e.command).is_some_and(|d| d.promotion) || arg(e, "approval_of").is_some();
+                    let promotion =
+                        run.decl(&e.command).is_some_and(|d| d.promotion) || arg(e, "approval_of").is_some();
                     // A missing requester counts (fail closed).
                     let own_request = match arg(e, "requester") {
                         None | Some(CValue::Null) => true,

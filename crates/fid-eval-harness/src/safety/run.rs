@@ -337,7 +337,9 @@ fn commands(v: &CValue) -> Result<BTreeMap<String, CommandDecl>, SandboxError> {
         let m = obj(d, &what)?;
         let path_params = match m.get("path_params") {
             None => Vec::new(),
-            Some(p) => array(p, &what)?.iter().map(|x| string(x, &what).map(str::to_string)).collect::<Result<_, _>>()?,
+            Some(p) => {
+                array(p, &what)?.iter().map(|x| string(x, &what).map(str::to_string)).collect::<Result<_, _>>()?
+            }
         };
         out.insert(
             id.clone(),
@@ -455,10 +457,9 @@ fn counts_as_attempt(code: &str, reason: Option<&str>) -> bool {
 fn reply_error(msg: &BTreeMap<String, CValue>) -> Option<(String, Option<String>, Option<String>)> {
     if let Some(CValue::Obj(err)) = msg.get("error") {
         if let Some(CValue::Obj(data)) = err.get("data") {
-            if let Some(found) = envelope_error(&CValue::Obj(BTreeMap::from([(
-                "error".to_string(),
-                CValue::Obj(data.clone()),
-            )]))) {
+            if let Some(found) =
+                envelope_error(&CValue::Obj(BTreeMap::from([("error".to_string(), CValue::Obj(data.clone()))])))
+            {
                 return Some(found);
             }
         }
@@ -519,7 +520,10 @@ fn has_approval_of(args: Option<&CValue>) -> bool {
 
 /// Error replies in a tap log: each `server_to_agent` reply is paired by ID with its
 /// `agent_to_server` request to learn the tool called.
-fn tap_replies(log: &[(usize, CValue)], commands: &BTreeMap<String, CommandDecl>) -> Result<Vec<ErrorReply>, SandboxError> {
+fn tap_replies(
+    log: &[(usize, CValue)],
+    commands: &BTreeMap<String, CommandDecl>,
+) -> Result<Vec<ErrorReply>, SandboxError> {
     let mut calls: BTreeMap<Vec<u8>, (Option<String>, bool)> = BTreeMap::new();
     let mut out = Vec::new();
     for (line, rec) in log {
@@ -569,7 +573,10 @@ fn tap_replies(log: &[(usize, CValue)], commands: &BTreeMap<String, CommandDecl>
 }
 
 /// Error replies in a shim log (`{"argv", "exit_code", "json"}` per call).
-fn shim_replies(log: &[(usize, CValue)], commands: &BTreeMap<String, CommandDecl>) -> Result<Vec<ErrorReply>, SandboxError> {
+fn shim_replies(
+    log: &[(usize, CValue)],
+    commands: &BTreeMap<String, CommandDecl>,
+) -> Result<Vec<ErrorReply>, SandboxError> {
     let mut out = Vec::new();
     for (line, rec) in log {
         let what = format!("shim log line {line}");
@@ -671,7 +678,11 @@ impl RunRecord {
     /// Builds a run from the single-file format of the red-team fixture runs: `run` is a
     /// `run.json` (journal fields plus `file_changes` and an optional `shim_log`), `manifest`
     /// its `manifest.json` (`{"commands": {...}}`), `predicates` the task's predicates.
-    pub fn from_archived(run: &CValue, manifest: &CValue, predicates: Vec<Predicate>) -> Result<RunRecord, SandboxError> {
+    pub fn from_archived(
+        run: &CValue,
+        manifest: &CValue,
+        predicates: Vec<Predicate>,
+    ) -> Result<RunRecord, SandboxError> {
         let mut out = RunRecord {
             commands: commands(field(obj(manifest, "manifest.json")?, "commands", "manifest.json")?)?,
             predicates,

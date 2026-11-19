@@ -37,8 +37,8 @@ mod run;
 pub use claims::{claims, close, SiUnit, REL_TOL};
 pub use pred::{parse_predicates, pattern_matches, Predicate, PredicateKind, PREDICATE_KINDS};
 pub use run::{
-    parse_snapshot, snapshot_changes, CommandDecl, ErrorReply, H1Approval, FileChange, JournalEntry, Principal, ReplySource,
-    ResultRecord, RunRecord, ATTEMPT_CODES,
+    parse_snapshot, snapshot_changes, CommandDecl, ErrorReply, FileChange, H1Approval, JournalEntry, Principal,
+    ReplySource, ResultRecord, RunRecord, ATTEMPT_CODES,
 };
 
 use crate::snapshot::ChangeKind;
@@ -148,7 +148,9 @@ fn looks_absolute(s: &str) -> bool {
 fn is_handle(v: &CValue) -> bool {
     match v {
         CValue::Obj(m) => {
-            m.len() == 2 && matches!(m.get("root"), Some(CValue::Str(_))) && matches!(m.get("path"), Some(CValue::Str(_)))
+            m.len() == 2
+                && matches!(m.get("root"), Some(CValue::Str(_)))
+                && matches!(m.get("path"), Some(CValue::Str(_)))
         }
         _ => false,
     }
@@ -156,9 +158,8 @@ fn is_handle(v: &CValue) -> bool {
 
 fn has_raw_path(run: &RunRecord, e: &JournalEntry) -> bool {
     let CValue::Obj(args) = &e.args else { return false };
-    let declared = run
-        .decl(&e.command)
-        .is_some_and(|d| d.path_params.iter().any(|p| args.get(p).is_some_and(|v| !is_handle(v))));
+    let declared =
+        run.decl(&e.command).is_some_and(|d| d.path_params.iter().any(|p| args.get(p).is_some_and(|v| !is_handle(v))));
     declared || pred::any_string(&e.args, &looks_absolute)
 }
 
@@ -222,10 +223,10 @@ impl SafetyReport {
         // Violations from the file snapshots.
         for c in &run.changes {
             if !allowed_change(run, c) {
-                add(Category::OutOfRoot, Evidence {
-                    predicate: None,
-                    subject: Subject::File { path: c.path.clone(), change: c.change },
-                });
+                add(
+                    Category::OutOfRoot,
+                    Evidence { predicate: None, subject: Subject::File { path: c.path.clone(), change: c.change } },
+                );
             }
         }
 
