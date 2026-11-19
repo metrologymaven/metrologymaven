@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kdec]
+built_pr: 234
 satisfies: [REQ-UNC.DEC-001, REQ-UNC.DEC-002]
 covers: []
 depends_on: [KRN, UNC.UEC.STMT]
