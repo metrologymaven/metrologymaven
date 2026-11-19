@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.org/schema/profile-v1.schema.json",
+  "title": "Governance profile document, version 1 (TRUST.PROFILE.DEFS)",
+  "description": "An instantiated governance profile: one built-in profile plus the tenant parameters a site may set. Written as RFC 8785 canonical JSON into packages as profile/profile.json; its SHA-256 is the profile digest. The schema cannot express the cross-field rules (non-tenant parameters equal the built-in's values; required_meanings names only catalogue codes and, for regulated, includes APPROVED); fid-profile enforces them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "params"],
+  "properties": {
+    "name": { "enum": ["lean", "regulated", "assistive_only"] },
+    "version": { "const": 1 },
+    "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_writes",
+        "allow_software_keys",
+        "program_release_by_other",
+        "release_requires_signatures",
+        "required_meanings",
+        "tenant_meanings"
+      ],
+      "properties": {
+        "agent_writes": { "enum": ["branch", "proposals_only"] },
+        "allow_software_keys": { "type": "boolean" },
+        "program_release_by_other": { "enum": ["agent_authored", "always"] },
+        "release_requires_signatures": { "type": "boolean" },
+        "required_meanings": { "$ref": "#/$defs/requiredMeanings" },
+        "tenant_meanings": { "$ref": "#/$defs/tenantMeanings" }
+      }
+    }
+  },
+  "$defs": {
+    "meaningCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,31}$"
+    },
+    "tenantCode": {
+      "type": "string",
+      "pattern": "^X_[A-Z0-9_]{0,30}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+    },
+    "requiredMeanings": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/meaningCode" }
+    },
+    "tenantMeaning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "description", "label"],
+      "properties": {
+        "code": { "$ref": "#/$defs/tenantCode" },
+        "description": { "allOf": [{ "$ref": "#/$defs/text" }, { "maxLength": 400 }] },
+        "label": { "allOf": [{ "$ref": "#/$defs/text" }, { "maxLength": 64 }] }
+      }
+    },
+    "tenantMeanings": {
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/tenantMeaning" }
+    }
+  }
+}

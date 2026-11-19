@@ -18,6 +18,7 @@ fid-kdec
 fid-kunc
 fid-manifest-gen
 fid-num
+fid-profile
 fid-rdl
 fid-replay
 fid-report-pdf

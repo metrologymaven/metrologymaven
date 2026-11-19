@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-profile]
 satisfies: [REQ-TRUST.PROFILE-001, REQ-TRUST.PROFILE-006]
 covers: []
 depends_on: []

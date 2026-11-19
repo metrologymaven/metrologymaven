@@ -1,0 +1,9 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "QA_RELEASE",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    }
+  ]
+}
