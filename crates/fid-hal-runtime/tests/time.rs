@@ -292,5 +292,8 @@ fn exact_line() {
     assert_eq!(mapping.sync(1.0), m.sync());
     assert_eq!(ClockMapping::HostReceive.sync(2e6), StreamSync { source: TimeSource::HostReceive, sigma_ns: 2e6 });
     // Other errors are not swallowed by the fallback.
-    assert_eq!(ClockMapping::from_estimate(Err(TimeError::Duplicate { index: 1 })), Err(TimeError::Duplicate { index: 1 }));
+    assert_eq!(
+        ClockMapping::from_estimate(Err(TimeError::Duplicate { index: 1 })),
+        Err(TimeError::Duplicate { index: 1 })
+    );
 }

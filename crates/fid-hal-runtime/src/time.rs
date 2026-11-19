@@ -363,7 +363,9 @@ impl ClockMapping {
     pub fn sync(&self, host_receive_sigma_ns: f64) -> StreamSync {
         match self {
             ClockMapping::Model(m) => m.sync(),
-            ClockMapping::HostReceive => StreamSync { source: TimeSource::HostReceive, sigma_ns: host_receive_sigma_ns },
+            ClockMapping::HostReceive => {
+                StreamSync { source: TimeSource::HostReceive, sigma_ns: host_receive_sigma_ns }
+            }
         }
     }
 }
