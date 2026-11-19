@@ -229,7 +229,7 @@ pub fn parse_profile(bytes: &[u8], vocab: &KeyVocabulary) -> Result<ProfileDoc, 
     if bytes.len() > MAX_PROFILE_BYTES {
         return Err(malformed("too_large"));
     }
-    let v = fid_canon::parse_with_limits(bytes, MAX_PROFILE_BYTES, MAX_PROFILE_DEPTH)
-        .map_err(|e| malformed(e.code()))?;
+    let v =
+        fid_canon::parse_with_limits(bytes, MAX_PROFILE_BYTES, MAX_PROFILE_DEPTH).map_err(|e| malformed(e.code()))?;
     profile_from_value(&v, vocab)
 }

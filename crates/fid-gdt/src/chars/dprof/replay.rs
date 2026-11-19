@@ -76,12 +76,7 @@ fn step(state: &mut DprofState, recorded: &[u8], content: &dyn ProfileContent, v
 }
 
 /// Replays `events` (recorded canonical bytes, in journal order) from `start`.
-pub fn replay(
-    start: &DprofState,
-    events: &[Vec<u8>],
-    content: &dyn ProfileContent,
-    vocab: &KeyVocabulary,
-) -> Replayed {
+pub fn replay(start: &DprofState, events: &[Vec<u8>], content: &dyn ProfileContent, vocab: &KeyVocabulary) -> Replayed {
     let mut state = start.clone();
     let mut steps = Vec::with_capacity(events.len());
     for recorded in events {

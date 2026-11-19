@@ -293,8 +293,9 @@ fn agents_must_pass_handles() {
     let raw = fixtures().join(A100).to_string_lossy().into_owned();
     let err = publish_defaults_profile(&mut st, &roots(), Principal::Agent, &raw, &vocab(), false).unwrap_err();
     assert_eq!(err.code(), "raw_path_forbidden");
-    let err = publish_defaults_profile(&mut st, &roots(), Principal::Agent, "root://imports/../x.json", &vocab(), false)
-        .unwrap_err();
+    let err =
+        publish_defaults_profile(&mut st, &roots(), Principal::Agent, "root://imports/../x.json", &vocab(), false)
+            .unwrap_err();
     assert_eq!(err.code(), "path_outside_root");
     assert_eq!(st.profile_count(), 0);
 }
