@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-registry, fid-registry-build]
+built_pr: 253
 satisfies: [REQ-CORE.REG-005, REQ-CORE.REG-006, REQ-CORE.REG-007]
 covers: []
 depends_on: [CORE.REG.DEF, CORE.REG.VAL, CORE.JRN.CANON]
