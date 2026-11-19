@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set (spec node CORE.BUS.PIPE.ERR)"
+description = "Metrology Maven command bus: closed error code set and principal model (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,13 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# CORE.BUS.PRIN builds the `principal_upgrade` entry draft from the journal's entry model.
+fid-journal = { path = "../fid-journal" }
+# CORE.BUS.PRIN refuses identifiers that are not NFC; already in the lock (fid-pkg, fid-vocab).
+unicode-normalization = "0.1.24"
+
+[dev-dependencies]
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

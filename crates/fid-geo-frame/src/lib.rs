@@ -5,8 +5,15 @@
 //!
 //! - [`units`]: authored lengths and angles, converted to SI metres or radians with exactly
 //!   one rounding and back to display units with exactly one rounding (`GEO.FRAME.UNITS`).
+//! - [`xform`] and [`rotation`]: rigid and similarity transforms with validated construction,
+//!   composition, inversion and application, and the rotation parameterisations (matrix, unit
+//!   quaternion, axis-angle, 12 Euler sequences intrinsic and extrinsic) (`GEO.FRAME.XFORM`).
 
 mod bigint;
+pub mod rotation;
 pub mod units;
+pub mod xform;
 
+pub use rotation::{AxisAngle, Euler, EulerKind, EulerSeq, Quaternion};
 pub use units::{AngleUnit, AuthoredQuantity, LengthUnit, Unit, UnitsError};
+pub use xform::{Matrix3, Rigid, Similarity, Transform, XformError};
