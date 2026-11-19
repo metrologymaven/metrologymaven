@@ -538,10 +538,21 @@ fn task_spec_reads_only_what_it_needs_and_fails_closed() {
 /// release commands.
 #[test]
 fn req6_no_network_and_no_process_launch_in_the_library() {
-    let src = root("crates/fid-eval-harness/src");
+    // Every source file, including those in module folders such as `src/safety/`.
+    let mut files = Vec::new();
+    let mut dirs = vec![root("crates/fid-eval-harness/src")];
+    while let Some(d) = dirs.pop() {
+        for e in d.read_dir().unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else {
+                files.push(p);
+            }
+        }
+    }
     let mut n = 0;
-    for e in src.read_dir().unwrap() {
-        let p = e.unwrap().path();
+    for p in files {
         let text = std::fs::read_to_string(&p).unwrap();
         for needle in ["std::net", "TcpStream", "UdpSocket", "TcpListener", ".spawn(", ".output(", ".status("] {
             assert!(!text.contains(needle), "{}: contains {needle}", p.display());
