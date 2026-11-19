@@ -150,7 +150,8 @@ impl ExportEvent {
     /// `event_invalid` with reasons `json_syntax`, `wrong_type`, `bad_keys`,
     /// `wrong_command`, `bad_digest`, `bad_version` or `bad_integer`.
     pub fn from_json(bytes: &[u8]) -> Result<ExportEvent, OutError> {
-        let v = fid_canon::parse_with_limits(bytes, MAX_EVENT_BYTES, MAX_EVENT_DEPTH).map_err(|_| bad("json_syntax"))?;
+        let v =
+            fid_canon::parse_with_limits(bytes, MAX_EVENT_BYTES, MAX_EVENT_DEPTH).map_err(|_| bad("json_syntax"))?;
         let o = obj(&v)?;
         keys(
             o,

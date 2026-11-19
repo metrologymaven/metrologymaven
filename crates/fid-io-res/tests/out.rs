@@ -259,7 +259,9 @@ fn req5_output_does_not_depend_on_input_order() {
 #[test]
 fn req4_transcription_marking_kit() {
     let rows = records();
-    for (map, golden) in [(builtin(LONG_REF).unwrap(), "r.golden.csv"), (builtin(WIDE_REF).unwrap(), "r.wide.golden.csv")] {
+    for (map, golden) in
+        [(builtin(LONG_REF).unwrap(), "r.golden.csv"), (builtin(WIDE_REF).unwrap(), "r.wide.golden.csv")]
+    {
         check_marked(&read(golden), &map, &rows).unwrap();
     }
     // Hand-made defect: R-T02 (C2, P3) shown as evaluated.
@@ -273,14 +275,20 @@ fn req4_transcription_marking_kit() {
         other => panic!("{other:?}"),
     }
     // A wrong source version is unmarked too.
-    let tampered = golden.replace("transcribed,VendorX,4.2,P3,2026-11-17T14:05:00Z,'-from", "transcribed,VendorX,4.1,P3,2026-11-17T14:05:00Z,'-from");
+    let tampered = golden.replace(
+        "transcribed,VendorX,4.2,P3,2026-11-17T14:05:00Z,'-from",
+        "transcribed,VendorX,4.1,P3,2026-11-17T14:05:00Z,'-from",
+    );
     match check_marked(tampered.as_bytes(), &long, &rows).unwrap_err() {
         OutError::TranscriptionUnmarked { result } => assert_eq!(result, "R-T03"),
         other => panic!("{other:?}"),
     }
     // A map that cannot mark at all fails the kit for the first transcribed result.
     let semi = user_map("semicolon_comma.json");
-    assert_eq!(check_marked(&read("r.semicolon.golden.csv"), &semi, &rows).unwrap_err().code(), "transcription_unmarked");
+    assert_eq!(
+        check_marked(&read("r.semicolon.golden.csv"), &semi, &rows).unwrap_err().code(),
+        "transcription_unmarked"
+    );
 }
 
 #[test]
@@ -309,7 +317,10 @@ fn errors_no_results_and_bad_records() {
         (vec![base().with(Field::Actual, "1.")], "bad_decimal"),
         (vec![base().with(Field::Actual, "NaN")], "bad_decimal"),
         (vec![base().with(Field::Status, "OK")], "bad_enum"),
-        (vec![base().with(Field::RecordStatus, "transcribed").with(Field::SourceSoftware, "X")], "transcription_source_missing"),
+        (
+            vec![base().with(Field::RecordStatus, "transcribed").with(Field::SourceSoftware, "X")],
+            "transcription_source_missing",
+        ),
         (vec![base(), base()], "duplicate_result_id"),
         (vec![ResultRow::new("R1")], "missing_characteristic_id"),
         (vec![ResultRow::new("").with(Field::CharacteristicId, "C1")], "missing_result_id"),
@@ -320,19 +331,31 @@ fn errors_no_results_and_bad_records() {
     }
 
     let wide = builtin(WIDE_REF).unwrap();
-    let dup = vec![base().with(Field::PartId, "P1"), ResultRow::new("R2").with(Field::CharacteristicId, "C1").with(Field::PartId, "P1")];
+    let dup = vec![
+        base().with(Field::PartId, "P1"),
+        ResultRow::new("R2").with(Field::CharacteristicId, "C1").with(Field::PartId, "P1"),
+    ];
     assert_eq!(render(&dup, &wide).unwrap_err().reason(), Some("wide_duplicate"));
     let conflict = vec![
         base().with(Field::PartId, "P1").with(Field::TimestampText, "t1"),
-        ResultRow::new("R2").with(Field::CharacteristicId, "C2").with(Field::PartId, "P1").with(Field::TimestampText, "t2"),
+        ResultRow::new("R2")
+            .with(Field::CharacteristicId, "C2")
+            .with(Field::PartId, "P1")
+            .with(Field::TimestampText, "t2"),
     ];
     assert_eq!(render(&conflict, &wide).unwrap_err().reason(), Some("wide_part_conflict"));
     let sep = vec![ResultRow::new("R1").with(Field::CharacteristicId, "C:1")];
     assert_eq!(render(&sep, &wide).unwrap_err().reason(), Some("wide_characteristic_separator"));
 
     for (json, reason) in [
-        (r#"{"schema":"results_csv.records@1","records":[{"result_id":"R","characteristic_id":"C","bogus":"x"}]}"#, "unknown_key"),
-        (r#"{"schema":"results_csv.records@1","records":[{"result_id":"R","characteristic_id":"C","actual":0.5}]}"#, "wrong_type"),
+        (
+            r#"{"schema":"results_csv.records@1","records":[{"result_id":"R","characteristic_id":"C","bogus":"x"}]}"#,
+            "unknown_key",
+        ),
+        (
+            r#"{"schema":"results_csv.records@1","records":[{"result_id":"R","characteristic_id":"C","actual":0.5}]}"#,
+            "wrong_type",
+        ),
         (r#"{"schema":"results_csv.records@2","records":[]}"#, "unsupported_schema"),
         (r#"{"schema":"results_csv.records@1"}"#, "missing_key"),
         (r#"{"schema":"results_csv.records@1","records":[{"characteristic_id":"C"}]}"#, "missing_key"),
@@ -347,12 +370,18 @@ fn errors_no_results_and_bad_records() {
 fn target_handles_and_dry_run() {
     let map = builtin(LONG_REF).unwrap();
     let dir = root("handles");
-    assert_eq!(export_results_csv(&records(), &request(&map, "/tmp/r.csv"), &dir).unwrap_err().code(), "raw_path_forbidden");
+    assert_eq!(
+        export_results_csv(&records(), &request(&map, "/tmp/r.csv"), &dir).unwrap_err().code(),
+        "raw_path_forbidden"
+    );
     assert_eq!(
         export_results_csv(&records(), &request(&map, "root://out/../r.csv"), &dir).unwrap_err().code(),
         "path_outside_root"
     );
-    assert_eq!(export_results_csv(&records(), &request(&map, "root://out/missing/r.csv"), &dir).unwrap_err().code(), "io");
+    assert_eq!(
+        export_results_csv(&records(), &request(&map, "root://out/missing/r.csv"), &dir).unwrap_err().code(),
+        "io"
+    );
     let mut dry = request(&map, "root://out/r.csv");
     dry.dry_run = true;
     let out = export_results_csv(&records(), &dry, &dir).unwrap();

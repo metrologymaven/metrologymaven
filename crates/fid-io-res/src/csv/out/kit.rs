@@ -74,18 +74,25 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
     let table = read_table(output, map)?;
     let (header, data): (Option<&Vec<String>>, &[Vec<String>]) = match table.split_first() {
         Some((h, rest)) if map.dialect().header() => (Some(h), rest),
-        _ => (None, &table),
+        _ => (None, table.as_slice()),
     };
     let unmarked = |r: &ResultRow| OutError::TranscriptionUnmarked { result: r.result_id().to_owned() };
     match map.layout() {
         Layout::Long => {
             let positions: Vec<usize> = (0..map.columns().len()).collect();
             let s = slots(map, &positions);
-            let key = if map.has_field(Field::CharacteristicId) { Field::CharacteristicId } else { Field::CharacteristicName };
+            let key = if map.has_field(Field::CharacteristicId) {
+                Field::CharacteristicId
+            } else {
+                Field::CharacteristicName
+            };
             let (key_i, part_i) = (find(&s, map, key), find(&s, map, Field::PartId));
-            let (status_i, sw_i, ver_i) =
-                (find(&s, map, Field::RecordStatus), find(&s, map, Field::SourceSoftware), find(&s, map, Field::SourceVersion));
-            for t in &transcribed {
+            let (status_i, sw_i, ver_i) = (
+                find(&s, map, Field::RecordStatus),
+                find(&s, map, Field::SourceSoftware),
+                find(&s, map, Field::SourceVersion),
+            );
+            for &t in &transcribed {
                 let marked = status_i.is_some()
                     && sw_i.is_some()
                     && data.iter().any(|rec| {
@@ -102,11 +109,14 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
         }
         Layout::Wide => {
             let s = slots(map, &scope_positions(map, Scope::Part));
-            let (part_i, sw_i, ver_i) =
-                (find(&s, map, Field::PartId), find(&s, map, Field::SourceSoftware), find(&s, map, Field::SourceVersion));
+            let (part_i, sw_i, ver_i) = (
+                find(&s, map, Field::PartId),
+                find(&s, map, Field::SourceSoftware),
+                find(&s, map, Field::SourceVersion),
+            );
             let status_header =
                 map.columns().iter().position(|c| c.field == Field::RecordStatus).map(|p| header_of(map, p));
-            for t in &transcribed {
+            for &t in &transcribed {
                 let status_i = match (header, status_header) {
                     (Some(h), Some(sh)) => {
                         let want = format!("{}{WIDE_SEPARATOR}{sh}", t.characteristic());

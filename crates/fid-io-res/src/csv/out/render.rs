@@ -149,7 +149,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
                     slots.iter().map(|s| s.map_or(Cow::Borrowed(""), |p| neutralise(header_of(map, p)))).collect();
                 push_record(&mut out, d, &cells)?;
             }
-            for (_, row) in &order {
+            for &(_, row) in &order {
                 let mut cells = Vec::with_capacity(slots.len());
                 for s in &slots {
                     cells.push(match s.and_then(|p| cols.get(p)) {
@@ -170,9 +170,9 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
                 return Err(OutError::Records { reason: "wide_characteristic_separator", record: None });
             }
             let mut parts: BTreeMap<&str, BTreeMap<&str, &ResultRow>> = BTreeMap::new();
-            for (n, row) in &order {
+            for &(n, row) in &order {
                 if parts.entry(row.part()).or_default().insert(row.characteristic(), row).is_some() {
-                    return Err(OutError::Records { reason: "wide_duplicate", record: Some(*n) });
+                    return Err(OutError::Records { reason: "wide_duplicate", record: Some(n) });
                 }
             }
             if d.header() {
@@ -195,7 +195,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
                     });
                 }
                 for c in &chars {
-                    let row = by_char.get(c);
+                    let row = by_char.get(c).copied();
                     for p in &group {
                         cells.push(match cols.get(*p) {
                             None => Cow::Borrowed(""),
@@ -214,7 +214,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
 /// The one non-empty value of a part-scope field among a part's results.
 fn part_value<'a>(by_char: &BTreeMap<&str, &'a ResultRow>, field: Field) -> Result<Option<&'a str>, OutError> {
     let mut found: Option<&'a str> = None;
-    for row in by_char.values().copied() {
+    for &row in by_char.values() {
         match (found, row.get(field)) {
             (_, None) | (_, Some("")) => {}
             (None, Some(v)) => found = Some(v),
