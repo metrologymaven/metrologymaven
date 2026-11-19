@@ -16,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
     let limits = ProtoLimits::DEFAULT.frame_max(1 << 20).records_max(1 << 16);
     if let Some(b) = budget() {
         let mut s = HostSession::new(data, b, limits, ProtoVersion::CURRENT);
-        while let Ok(Some(_)) = s.next() {}
+        while let Ok(Some(_)) = s.next_response() {}
         assert!(s.reader().budget().alloc_used() <= 4 << 20);
     }
     if let Some(b) = budget() {

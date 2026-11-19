@@ -7,8 +7,8 @@
 mod samples;
 
 use fid_cad_proto::{
-    kind, negotiate, Cap, CrashReason, CurveKind, EncodeError, FailCode, FrameReader, HostSession, IgesOptions,
-    PmiKind, ProtoError, ProtoLimits, ProtoVersion, Record, RecordBody, RecordKind, Request, Response, SourceRef,
+    kind, negotiate, Cap, CrashReason, CurveKind, EncodeError, FailCode, FrameReader, HostSession, IgesOptions, PmiKind,
+    ProtoError, ProtoLimits, ProtoVersion, RawFrame, Record, RecordBody, RecordKind, Request, Response, SourceRef,
     StepOptions, SurfaceKind, WireText, DEFAULT_FRAME_MAX, DEFAULT_RECORDS_MAX, DEFAULT_SESSION_MAX, HEADER_LEN,
 };
 use fid_io_reg::{Budget, IoError, LimitKind, LimitRequest, Position, Principal};
@@ -35,8 +35,7 @@ fn encode(s: &Sample) -> Vec<u8> {
 }
 
 fn digests() -> Vec<(String, String)> {
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/io/cad/worker/proto/digests.txt");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/io/cad/worker/proto/digests.txt");
     std::fs::read_to_string(path)
         .unwrap()
         .lines()
@@ -76,7 +75,7 @@ fn session(stream: Vec<u8>) -> HostSession<std::io::Cursor<Vec<u8>>> {
 fn run(stream: Vec<u8>) -> Result<Vec<Response>, ProtoError> {
     let mut s = session(stream);
     let mut out = Vec::new();
-    while let Some(r) = s.next()? {
+    while let Some(r) = s.next_response()? {
         out.push(r);
     }
     Ok(out)
@@ -94,20 +93,20 @@ fn good_brep() -> Vec<Record> {
     vec![
         rec(RecordBody::Surface { kind: SurfaceKind::Plane, params: vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0] }), // 0
         rec(RecordBody::Curve { kind: CurveKind::Line, params: vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0] }),      // 1
-        rec(RecordBody::Vertex { point: [0.0, 0.0, 0.0] }),                                               // 2
-        rec(RecordBody::Vertex { point: [1.0, 0.0, 0.0] }),                                               // 3
-        rec(RecordBody::Edge { curve: 1, start: 2, end: 3 }),                                             // 4
-        rec(RecordBody::Pcurve { surface: 0, params: vec![0.5] }),                                        // 5
-        rec(RecordBody::Coedge { edge: 4, reversed: false, pcurve: Some(5) }),                            // 6
-        rec(RecordBody::Loop { coedges: vec![6] }),                                                       // 7
-        rec(RecordBody::Face { surface: 0, same_sense: true, loops: vec![7] }),                           // 8
-        rec(RecordBody::Shell { closed: false, faces: vec![8] }),                                         // 9
-        rec(RecordBody::Body { shells: vec![9] }),                                                        // 10
-        rec(RecordBody::Product { bodies: vec![10] }),                                                    // 11
-        rec(RecordBody::Product { bodies: vec![] }),                                                      // 12
-        rec(RecordBody::Instance { parent: 12, child: 11, transform: [1.0; 12] }),                        // 13
-        rec(RecordBody::PmiItem { kind: PmiKind::Datum, value: Some(0.01), targets: vec![8, 4, 2] }),     // 14
-        rec(RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Unsupported }),                      // 15
+        rec(RecordBody::Vertex { point: [0.0, 0.0, 0.0] }),                                                // 2
+        rec(RecordBody::Vertex { point: [1.0, 0.0, 0.0] }),                                                // 3
+        rec(RecordBody::Edge { curve: 1, start: 2, end: 3 }),                                              // 4
+        rec(RecordBody::Pcurve { surface: 0, params: vec![0.5] }),                                         // 5
+        rec(RecordBody::Coedge { edge: 4, reversed: false, pcurve: Some(5) }),                             // 6
+        rec(RecordBody::Loop { coedges: vec![6] }),                                                        // 7
+        rec(RecordBody::Face { surface: 0, same_sense: true, loops: vec![7] }),                            // 8
+        rec(RecordBody::Shell { closed: false, faces: vec![8] }),                                          // 9
+        rec(RecordBody::Body { shells: vec![9] }),                                                         // 10
+        rec(RecordBody::Product { bodies: vec![10] }),                                                     // 11
+        rec(RecordBody::Product { bodies: vec![] }),                                                       // 12
+        rec(RecordBody::Instance { parent: 12, child: 11, transform: [1.0; 12] }),                         // 13
+        rec(RecordBody::PmiItem { kind: PmiKind::Datum, value: Some(0.01), targets: vec![8, 4, 2] }),      // 14
+        rec(RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Unsupported }),                       // 15
     ]
 }
 
@@ -148,7 +147,7 @@ fn ac1_frame_reader_reads_back_the_concatenated_stream() {
     let stream: Vec<u8> = samples.iter().flat_map(encode).collect();
     let mut r = FrameReader::new(stream.as_slice(), budget(), ProtoLimits::DEFAULT);
     let mut n = 0u64;
-    while let Some((frame, k, payload)) = r.next_raw().unwrap() {
+    while let Some(RawFrame { frame, kind: k, payload }) = r.next_raw().unwrap() {
         assert_eq!(frame, n);
         let i = n as usize;
         let mut b = budget();
@@ -165,9 +164,8 @@ fn ac1_frame_reader_reads_back_the_concatenated_stream() {
 
 #[test]
 fn req005_write_to_matches_to_bytes() {
-    let f = Request::LoadStep { bytes: b"ISO-10303-21;".to_vec(), options: StepOptions { pmi: true } }
-        .to_frame()
-        .unwrap();
+    let f =
+        Request::LoadStep { bytes: b"ISO-10303-21;".to_vec(), options: StepOptions { pmi: true } }.to_frame().unwrap();
     let mut out = Vec::new();
     f.write_to(&mut out).unwrap();
     assert_eq!(out, f.to_bytes().unwrap());
@@ -199,7 +197,11 @@ fn req005_hand_checked_encoding() {
         [7, 0, 0, 0, 0x85, 2, 2, 0, 0, 0, 0xC3, 0xA9]
     );
     // One Skipped record from IGES DE 5: seq 3, count 1, tag 14, source 1 + u32 5, no name, reason 2.
-    let r = Record { source: SourceRef::Iges(5), name: None, body: RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Filtered } };
+    let r = Record {
+        source: SourceRef::Iges(5),
+        name: None,
+        body: RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Filtered },
+    };
     assert_eq!(
         Response::Records { seq: 3, records: vec![r] }.encode().unwrap(),
         [16, 0, 0, 0, 0x83, 3, 0, 0, 0, 1, 0, 0, 0, 14, 1, 5, 0, 0, 0, 0, 2]
@@ -350,7 +352,10 @@ fn req002_allocation_is_charged_to_the_budget() {
     let stream = records(0, vec![rec(RecordBody::Curve { kind: CurveKind::Other, params: vec![0.0; 64] })]);
     let mut r = FrameReader::new(stream.as_slice(), small, ProtoLimits::DEFAULT);
     let e = r.next_response().unwrap_err();
-    assert!(matches!(e, ProtoError::Harness(IoError::LimitExceeded { limit: LimitKind::Alloc, value: 100, .. })), "{e:?}");
+    assert!(
+        matches!(e, ProtoError::Harness(IoError::LimitExceeded { limit: LimitKind::Alloc, value: 100, .. })),
+        "{e:?}"
+    );
     assert_eq!(e.code(), "limit_exceeded");
 }
 
@@ -358,9 +363,12 @@ fn req002_allocation_is_charged_to_the_budget() {
 fn req002_record_cap_is_limit_exceeded() {
     let stream = [hello_ack(V1), records(0, good_brep())].concat();
     let mut s = HostSession::new(std::io::Cursor::new(stream), budget(), ProtoLimits::DEFAULT.records_max(3), V1);
-    assert!(s.next().unwrap().is_some());
-    let e = s.next().unwrap_err();
-    assert!(matches!(e, ProtoError::Harness(IoError::LimitExceeded { limit: LimitKind::Elements, value: 3, .. })), "{e:?}");
+    assert!(s.next_response().unwrap().is_some());
+    let e = s.next_response().unwrap_err();
+    assert!(
+        matches!(e, ProtoError::Harness(IoError::LimitExceeded { limit: LimitKind::Elements, value: 3, .. })),
+        "{e:?}"
+    );
 }
 
 // ------------------------------------------------------------------ AC-3 / REQ-003
@@ -392,7 +400,7 @@ fn ac3_valid_session_is_accepted() {
     .concat();
     let mut s = session(stream);
     let mut got = Vec::new();
-    while let Some(r) = s.next().unwrap() {
+    while let Some(r) = s.next_response().unwrap() {
         got.push(r);
     }
     assert_eq!(got.len(), 5);
@@ -408,15 +416,39 @@ fn req003_session_validation_failures_name_the_frame() {
     let cases: Vec<(Vec<u8>, u64, &str)> = vec![
         // Index to a record of the wrong kind (pcurve must point at a surface).
         (
-            [hello_ack(V1), records(0, vec![rec(RecordBody::Vertex { point: [0.0; 3] }), rec(RecordBody::Pcurve { surface: 0, params: vec![] })])].concat(),
+            [
+                hello_ack(V1),
+                records(
+                    0,
+                    vec![
+                        rec(RecordBody::Vertex { point: [0.0; 3] }),
+                        rec(RecordBody::Pcurve { surface: 0, params: vec![] }),
+                    ],
+                ),
+            ]
+            .concat(),
             1,
             "index_wrong_kind",
         ),
         // Index to itself (not earlier).
-        ([hello_ack(V1), records(0, vec![rec(RecordBody::Loop { coedges: vec![0] })])].concat(), 1, "index_out_of_range"),
+        (
+            [hello_ack(V1), records(0, vec![rec(RecordBody::Loop { coedges: vec![0] })])].concat(),
+            1,
+            "index_out_of_range",
+        ),
         // Instance of a product in itself.
         (
-            [hello_ack(V1), records(0, vec![rec(RecordBody::Product { bodies: vec![] }), rec(RecordBody::Instance { parent: 0, child: 0, transform: [0.0; 12] })])].concat(),
+            [
+                hello_ack(V1),
+                records(
+                    0,
+                    vec![
+                        rec(RecordBody::Product { bodies: vec![] }),
+                        rec(RecordBody::Instance { parent: 0, child: 0, transform: [0.0; 12] }),
+                    ],
+                ),
+            ]
+            .concat(),
             1,
             "instance_self_reference",
         ),
@@ -441,7 +473,9 @@ fn req003_session_validation_failures_name_the_frame() {
 fn req003_eof_before_the_final_message() {
     let e = run([hello_ack(V1), records(0, vec![])].concat()).unwrap_err();
     assert_eq!(e, ProtoError::UnexpectedEof { frame: 2 });
-    let ok = run([hello_ack(V1), Response::Failed { code: FailCode::Parse, detail: WireText::new("x") }.encode().unwrap()].concat());
+    let ok =
+        run([hello_ack(V1), Response::Failed { code: FailCode::Parse, detail: WireText::new("x") }.encode().unwrap()]
+            .concat());
     assert_eq!(ok.unwrap().len(), 2);
 }
 
@@ -477,7 +511,10 @@ fn req003_schema_failures_name_the_frame() {
     let mut dec = |k: u8, p: &[u8]| Response::decode(k, p, 9, Position::byte(0), &mut b).unwrap_err();
     assert_eq!(invalid(&dec(kind::FAILED, &[4, 0, 0, 0, 0])), (9, "unknown_fail_code"));
     assert_eq!(invalid(&dec(kind::FAILED, &[0, 1, 0, 0, 0, 0xFF])), (9, "bad_utf8"));
-    assert_eq!(invalid(&dec(kind::PROGRESS, &[[2u8, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]].concat())), (9, "progress_past_total"));
+    assert_eq!(
+        invalid(&dec(kind::PROGRESS, &[[2u8, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]].concat())),
+        (9, "progress_past_total")
+    );
     assert_eq!(invalid(&dec(kind::HELLO_ACK, &[1, 0])), (9, "payload_truncated"));
     let surface = |code: u8| [vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], vec![code, 0, 0, 0, 0]].concat();
     assert_eq!(invalid(&dec(kind::RECORDS, &surface(7))), (9, "unknown_surface_kind"));
@@ -517,12 +554,19 @@ fn worker_text_is_untrusted() {
     let name = WireText::new("evil\u{202e}txt.exe\n");
     let stream = [
         hello_ack(V1),
-        records(0, vec![Record { source: SourceRef::Step(9), name: Some(name.clone()), body: RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Malformed } }]),
+        records(
+            0,
+            vec![Record {
+                source: SourceRef::Step(9),
+                name: Some(name.clone()),
+                body: RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Malformed },
+            }],
+        ),
     ]
     .concat();
     let mut s = session(stream);
-    s.next().unwrap();
-    let Some(Response::Records { records, .. }) = s.next().unwrap() else { panic!("records") };
+    s.next_response().unwrap();
+    let Some(Response::Records { records, .. }) = s.next_response().unwrap() else { panic!("records") };
     let got = records[0].name.as_ref().unwrap();
     assert_eq!(got, &name);
     assert_eq!(got.to_untrusted().as_display().to_string(), "evil\\u{202e}txt.exe\\u{a}");
@@ -538,7 +582,7 @@ fn fuzz_one(data: &[u8]) -> (u64, u64) {
     let limits = ProtoLimits::DEFAULT.frame_max(1 << 20).records_max(1 << 16);
     let mut s = HostSession::new(data, small(), limits, V1);
     for _ in 0..1024 {
-        match s.next() {
+        match s.next_response() {
             Ok(Some(_)) => {}
             Ok(None) | Err(_) => break,
         }
@@ -587,6 +631,6 @@ fn ac5_mutated_streams_never_panic_or_pass_the_caps() {
     assert!(runs >= 4000);
     // The unmutated valid session is accepted.
     let mut s = HostSession::new(valid.as_slice(), budget(), ProtoLimits::DEFAULT, V1);
-    while s.next().unwrap().is_some() {}
+    while s.next_response().unwrap().is_some() {}
     assert!(s.is_done());
 }

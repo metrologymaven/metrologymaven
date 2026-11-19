@@ -52,6 +52,17 @@ impl Frame {
     }
 }
 
+/// A frame as read, borrowing the reader's payload buffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RawFrame<'a> {
+    /// Frame number (0-based position in the stream).
+    pub frame: u64,
+    /// Kind code.
+    pub kind: u8,
+    /// Payload bytes.
+    pub payload: &'a [u8],
+}
+
 /// Byte and record caps of one session. They may only be lowered from the defaults.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProtoLimits {
@@ -62,8 +73,11 @@ pub struct ProtoLimits {
 
 impl ProtoLimits {
     /// The defaults: 64 MiB per frame, 8 GiB per session, 2^26 records.
-    pub const DEFAULT: ProtoLimits =
-        ProtoLimits { frame_max: DEFAULT_FRAME_MAX, session_max: DEFAULT_SESSION_MAX, records_max: DEFAULT_RECORDS_MAX };
+    pub const DEFAULT: ProtoLimits = ProtoLimits {
+        frame_max: DEFAULT_FRAME_MAX,
+        session_max: DEFAULT_SESSION_MAX,
+        records_max: DEFAULT_RECORDS_MAX,
+    };
 
     /// Lowers the per-frame payload cap (a higher value is ignored).
     pub fn frame_max(mut self, v: u32) -> Self {
@@ -247,14 +261,13 @@ impl<R: Read> FrameReader<R> {
         out
     }
 
-    /// The next raw frame as `(frame number, kind, payload)`, or `None` at a clean end of
-    /// input between frames.
-    pub fn next_raw(&mut self) -> Result<Option<(u64, u8, &[u8])>, ProtoError> {
+    /// The next raw frame, or `None` at a clean end of input between frames.
+    pub fn next_raw(&mut self) -> Result<Option<RawFrame<'_>>, ProtoError> {
         let more = self.guarded(|r| r.read_frame())?;
         if !more {
             return Ok(None);
         }
-        Ok(Some((self.frames.saturating_sub(1), self.kind, &self.buf)))
+        Ok(Some(RawFrame { frame: self.frames.saturating_sub(1), kind: self.kind, payload: &self.buf }))
     }
 
     /// The next frame decoded as a [`Response`] (the host side), or `None` at a clean

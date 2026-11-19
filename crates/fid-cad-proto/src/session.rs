@@ -75,7 +75,7 @@ impl<R: Read> HostSession<R> {
 
     /// The next validated response, or `None` at the end of the stream after the final
     /// message. The end of the stream before the final message is `unexpected_eof`.
-    pub fn next(&mut self) -> Result<Option<Response>, ProtoError> {
+    pub fn next_response(&mut self) -> Result<Option<Response>, ProtoError> {
         let (frame, resp) = match self.reader.next_response()? {
             Some(x) => x,
             None if self.state == State::Done => return Ok(None),
