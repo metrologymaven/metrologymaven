@@ -8,6 +8,9 @@
 //! restricted identifier (`include`, `include_str`, `include_bytes`, `env`, `option_env`,
 //! `path`) used outside its exact allowed shapes, a build script or a proc macro in the closure
 //! fails this test with `MetadataInvalid`.
+//!
+//! It runs `cargo metadata` and `git ls-files`, so it is not built under WASI.
+#![cfg(not(target_os = "wasi"))]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::fs;

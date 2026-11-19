@@ -767,6 +767,7 @@ dependencies = [
  "fid-geo-types",
  "fid-kci",
  "fid-num",
+ "fid-testkit",
  "fid-types",
 ]
 

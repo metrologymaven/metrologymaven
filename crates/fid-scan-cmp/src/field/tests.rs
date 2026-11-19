@@ -12,13 +12,12 @@ use crate::dev::NoMatchReason;
 use crate::number::es_number;
 use std::collections::BTreeMap;
 
-// Relative to the package root, which Cargo makes the working directory of test binaries.
-// (Not built from the manifest-directory variable: the implementation-digest scan,
-// KRN.MAN.MANI.IMPL, refuses that macro in kernel-closure sources, test modules included.)
-const FIX: &str = "../../fixtures/scan/cmp/";
+// The workspace root comes from fid-testkit (dev-dependency): the implementation-digest scan
+// (KRN.MAN.MANI.IMPL) refuses the manifest-directory macro in kernel-closure sources.
+const FIX: &str = "/fixtures/scan/cmp/";
 
 fn read(name: &str) -> String {
-    std::fs::read_to_string(format!("{FIX}{name}")).unwrap()
+    std::fs::read_to_string(format!("{}{FIX}{name}", fid_testkit::WORKSPACE_ROOT)).unwrap()
 }
 
 fn f64_hex(s: &str) -> f64 {
