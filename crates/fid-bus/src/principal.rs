@@ -9,11 +9,13 @@
 //!
 //! Sessions are named by the bus, not by the client: [`SessionTable::open_session`] issues
 //! a [`SessionKey`] per authenticated connection, numbered by an internal monotonic `u64`
-//! that is never reused. A CLI or Python session becomes `human` only through
-//! [`SessionTable::upgrade_session`]: a person confirms through a [`HumanPresence`]
-//! provider within [`UPGRADE_DEADLINE`], the confirming OS user equals the session's OS
-//! user, and one `principal_upgrade` entry is appended through [`JournalAppend`]
-//! (REQ-009..011). The upgrade is returned as an [`UpgradeGrant`]: not `Clone`, private
+//! that is never reused. A CLI or Python session becomes `human` only through an upgrade
+//! in three steps: [`SessionTable::prepare_upgrade`] (`&self`, no person asked) returns a
+//! [`PendingUpgrade`] that borrows nothing; [`PendingUpgrade::confirm`] asks a person through
+//! a [`HumanPresence`] provider within [`UPGRADE_DEADLINE`] while the table stays free; and
+//! [`SessionTable::commit_upgrade`] (`&mut self`) re-checks the session row's generation,
+//! appends one `principal_upgrade` entry through [`JournalAppend`] (REQ-009..011) and
+//! issues the grant. The upgrade is returned as an [`UpgradeGrant`]: not `Clone`, private
 //! fields, only built inside this crate. A call derives as `human` only when its channel
 //! presents that grant together with the session key it was issued for. Dropping the
 //! grant or [`SessionTable::end_session`] revokes it. The table lives in memory only; a new
@@ -21,7 +23,9 @@
 
 #![deny(clippy::wildcard_enum_match_arm, clippy::match_wildcard_for_single_variants)]
 
-use crate::error::{BusError, Detail, InternalReason, UnauthenticatedReason, Untrusted, UpgradeRefusedReason};
+use crate::error::{
+    BusError, ConflictReason, Detail, InternalReason, UnauthenticatedReason, Untrusted, UpgradeRefusedReason,
+};
 use fid_canon::CValue;
 use fid_journal::{AiAssistance, DraftBody, EntryDraft, EntryTime, Manifests, PrincipalDraft, UpgradeDraft};
 use std::collections::BTreeMap;
@@ -59,6 +63,13 @@ pub enum IdError {
     Separator,
     /// A private-use character (Co). Surrogates (Cs) cannot occur in Rust strings.
     PrivateUse,
+    /// A Default_Ignorable_Code_Point that is not Cf: variation selectors, the combining
+    /// grapheme joiner, Hangul fillers and the reserved ignorable ranges.
+    DefaultIgnorable,
+    /// An unassigned code point (Cn, noncharacters included), Unicode 16.0.
+    Unassigned,
+    /// A blank other than U+0020 SPACE (see [`BLANK_CHARS`]).
+    BlankChar,
     /// The identifier is not in Unicode Normalization Form C.
     NotNfc,
 }
@@ -73,6 +84,9 @@ impl IdError {
             IdError::FormatChar => "format_char",
             IdError::Separator => "separator",
             IdError::PrivateUse => "private_use",
+            IdError::DefaultIgnorable => "default_ignorable",
+            IdError::Unassigned => "unassigned",
+            IdError::BlankChar => "blank_char",
             IdError::NotNfc => "not_nfc",
         }
     }
@@ -86,36 +100,38 @@ impl fmt::Display for IdError {
 
 impl std::error::Error for IdError {}
 
-/// Code points of general category Cf (format), Unicode 16.0, as inclusive ranges.
-pub const FORMAT_RANGES: &[(u32, u32)] = &[
-    (0x00AD, 0x00AD),
-    (0x0600, 0x0605),
-    (0x061C, 0x061C),
-    (0x06DD, 0x06DD),
-    (0x070F, 0x070F),
-    (0x0890, 0x0891),
-    (0x08E2, 0x08E2),
-    (0x180E, 0x180E),
-    (0x200B, 0x200F),
-    (0x202A, 0x202E),
-    (0x2060, 0x2064),
-    (0x2066, 0x206F),
-    (0xFEFF, 0xFEFF),
-    (0xFFF9, 0xFFFB),
-    (0x110BD, 0x110BD),
-    (0x110CD, 0x110CD),
-    (0x13430, 0x1343F),
-    (0x1BCA0, 0x1BCA3),
-    (0x1D173, 0x1D17A),
-    (0xE0001, 0xE0001),
-    (0xE0020, 0xE007F),
-];
+pub use crate::unicode16::{DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES, UNASSIGNED_RANGES};
 
 /// Code points of general category Co (private use), as inclusive ranges.
 pub const PRIVATE_USE_RANGES: &[(u32, u32)] = &[(0xE000, 0xF8FF), (0xF0000, 0xFFFFD), (0x10_0000, 0x10_FFFD)];
 
+/// Blanks that are not printable-distinct from U+0020 SPACE or from nothing: every Zs
+/// character except U+0020 (Unicode 16.0: no-break space, Ogham space mark, the en/em and
+/// other fixed-width spaces, narrow no-break space, medium mathematical space, ideographic
+/// space), plus U+2800 BRAILLE PATTERN BLANK (So). Hangul fillers are default-ignorable.
+pub const BLANK_CHARS: &[(u32, u32)] = &[
+    (0x00A0, 0x00A0),
+    (0x1680, 0x1680),
+    (0x2000, 0x200A),
+    (0x202F, 0x202F),
+    (0x205F, 0x205F),
+    (0x2800, 0x2800),
+    (0x3000, 0x3000),
+];
+
+/// Whether `u` lies in one of the sorted, non-overlapping inclusive `ranges`.
 fn in_ranges(ranges: &[(u32, u32)], u: u32) -> bool {
-    ranges.iter().any(|&(lo, hi)| (lo..=hi).contains(&u))
+    ranges
+        .binary_search_by(|&(lo, hi)| {
+            if hi < u {
+                std::cmp::Ordering::Less
+            } else if lo > u {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        })
+        .is_ok()
 }
 
 fn forbidden(c: char) -> Option<IdError> {
@@ -128,6 +144,12 @@ fn forbidden(c: char) -> Option<IdError> {
         Some(IdError::PrivateUse)
     } else if in_ranges(FORMAT_RANGES, u) {
         Some(IdError::FormatChar)
+    } else if in_ranges(DEFAULT_IGNORABLE_RANGES, u) {
+        Some(IdError::DefaultIgnorable)
+    } else if in_ranges(UNASSIGNED_RANGES, u) {
+        Some(IdError::Unassigned)
+    } else if in_ranges(BLANK_CHARS, u) {
+        Some(IdError::BlankChar)
     } else {
         None
     }
@@ -157,7 +179,8 @@ macro_rules! id_type {
 
         impl $name {
             /// Checks and wraps `s`: 1 to [`MAX_ID_BYTES`] bytes, NFC, and no character of
-            /// general category Cc, Cf, Zl, Zp or Co. Compared byte for byte.
+            /// general category Cc, Zl, Zp, Co, Cf or Cn, no Default_Ignorable_Code_Point and
+            /// no blank other than U+0020 (Unicode 16.0). Compared byte for byte.
             pub fn new(s: &str) -> Result<Self, IdError> {
                 check_id(s)?;
                 Ok($name(s.to_string()))
@@ -396,12 +419,15 @@ impl Identity {
 
 /// The bus's name for one authenticated connection, issued by
 /// [`SessionTable::open_session`]. Its number is an internal monotonic `u64`, never reused
-/// and never taken from the client. Not `Clone`; private fields.
+/// and never taken from the client. Not `Clone`; private fields. [`SessionTable::end_session`]
+/// consumes it.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SessionKey {
     table: u64,
     number: u64,
     label: SessionId,
+    /// The table holds a weak reference: dropping the key closes the session's row.
+    open: Arc<()>,
 }
 
 impl SessionKey {
@@ -422,7 +448,7 @@ impl SessionKey {
 }
 
 /// Proof that a person confirmed the upgrade of one session (REQ-009). Returned by
-/// [`SessionTable::upgrade_session`]; not `Clone`, private fields, and only this crate can
+/// [`SessionTable::commit_upgrade`]; not `Clone`, private fields, and only this crate can
 /// build one. The channel presents it through [`Channel::upgrade_grant`]. Dropping it, a
 /// newer grant for the same session, or [`SessionTable::end_session`] revokes it.
 #[derive(Debug)]
@@ -571,16 +597,38 @@ pub struct UpgradeContext {
 
 // ------------------------------------------------------------------ session table
 
+/// A live upgrade grant of one session row.
 #[derive(Debug, Clone)]
-struct Row {
+struct GrantRow {
     channel: ChannelKind,
     os_user: OsUser,
     alive: Weak<u64>,
 }
 
-impl Row {
+impl GrantRow {
     fn live(&self) -> bool {
         self.alive.strong_count() > 0
+    }
+}
+
+/// One open session. The row exists from [`SessionTable::open_session`] until
+/// [`SessionTable::end_session`] (or until its key is dropped and the row is pruned).
+#[derive(Debug, Clone)]
+struct Row {
+    /// Liveness of the session's key: dead once the key is dropped.
+    open: Weak<()>,
+    /// Bumped by every committed upgrade; a pending upgrade commits only if it is unchanged.
+    generation: u64,
+    grant: Option<GrantRow>,
+}
+
+impl Row {
+    fn open(&self) -> bool {
+        self.open.strong_count() > 0
+    }
+
+    fn granted(&self) -> bool {
+        self.open() && self.grant.as_ref().is_some_and(GrantRow::live)
     }
 }
 
@@ -596,8 +644,81 @@ fn invariant(detail: &str) -> BusError {
     BusError::Internal(InternalReason::InvariantViolated, Detail::new(detail))
 }
 
+fn table_full() -> BusError {
+    BusError::Internal(InternalReason::Storage, Detail::new("upgraded-session table is full"))
+}
+
 /// Process-wide table numbers, so a key or grant of one table never works in another.
 static NEXT_TABLE: AtomicU64 = AtomicU64::new(1);
+
+/// Rows are pruned of dropped keys once the table holds at least this many.
+const PRUNE_FLOOR: usize = 64;
+
+/// An upgrade that passed every check that needs no person, returned by
+/// [`SessionTable::prepare_upgrade`]. It borrows nothing, so the table stays usable while
+/// the person is asked through [`PendingUpgrade::confirm`]. Not `Clone`; private fields.
+#[derive(Debug)]
+pub struct PendingUpgrade {
+    table: u64,
+    number: u64,
+    generation: u64,
+    journal_id: String,
+    channel: ChannelKind,
+    request: UpgradeRequest,
+    before: PrincipalDraft,
+}
+
+impl PendingUpgrade {
+    /// What the person will be asked to confirm.
+    pub fn request(&self) -> &UpgradeRequest {
+        &self.request
+    }
+
+    /// Asks the person through `presence` with the [`UPGRADE_DEADLINE`]; holds no table
+    /// borrow. Refuses a decline, a timeout, an answer later than the deadline by `clock`
+    /// (or a clock running backwards) and a confirming OS user that differs from the
+    /// session's. Nothing is recorded until [`SessionTable::commit_upgrade`].
+    pub fn confirm(
+        self,
+        presence: &dyn HumanPresence,
+        clock: &mut dyn UpgradeClock,
+    ) -> Result<ConfirmedUpgrade, BusError> {
+        let start = clock.now().mono_ns;
+        let outcome = presence.confirm(&self.request, UPGRADE_DEADLINE);
+        let method = match outcome {
+            PresenceOutcome::Declined => return Err(refused(UpgradeRefusedReason::Declined, "confirmation declined")),
+            PresenceOutcome::TimedOut => return Err(refused(UpgradeRefusedReason::Timeout, "confirmation timed out")),
+            PresenceOutcome::Confirmed { os_user: who, method } => {
+                if who != self.request.os_user {
+                    return Err(refused(UpgradeRefusedReason::UserMismatch, "confirming OS user differs"));
+                }
+                method
+            }
+        };
+        let time = clock.now();
+        let in_time = time.mono_ns.checked_sub(start).is_some_and(|ns| u128::from(ns) <= UPGRADE_DEADLINE.as_nanos());
+        if !in_time {
+            return Err(refused(UpgradeRefusedReason::Timeout, "confirmation arrived after the deadline"));
+        }
+        Ok(ConfirmedUpgrade { pending: self, method, time })
+    }
+}
+
+/// A person's confirmation of a [`PendingUpgrade`], ready for
+/// [`SessionTable::commit_upgrade`]. Not `Clone`; private fields; only this crate builds one.
+#[derive(Debug)]
+pub struct ConfirmedUpgrade {
+    pending: PendingUpgrade,
+    method: ConfirmMethod,
+    time: EntryTime,
+}
+
+impl ConfirmedUpgrade {
+    /// The number of the session this confirmation is for.
+    pub fn session_number(&self) -> u64 {
+        self.pending.number
+    }
+}
 
 /// Session keys and upgrade grants, in memory only; never persisted, so a restart starts
 /// every session as `script`.
@@ -607,6 +728,8 @@ pub struct SessionTable {
     id: Option<u64>,
     next: u64,
     rows: BTreeMap<u64, Row>,
+    /// Row count at which `open_session` next prunes rows of dropped keys.
+    prune_at: usize,
 }
 
 impl Default for SessionTable {
@@ -630,7 +753,7 @@ impl SessionTable {
                 Err(actual) => current = actual,
             }
         };
-        SessionTable { id, next: 1, rows: BTreeMap::new() }
+        SessionTable { id, next: 1, rows: BTreeMap::new(), prune_at: PRUNE_FLOOR }
     }
 
     /// Issues the key of a new authenticated connection. Numbers are monotonic and never
@@ -643,13 +766,19 @@ impl SessionTable {
         let Some(next) = number.checked_add(1) else {
             return Err(invariant("session numbers exhausted"));
         };
+        if self.rows.len() >= self.prune_at {
+            self.rows.retain(|_, r| r.open());
+            self.prune_at = self.rows.len().saturating_mul(2).max(PRUNE_FLOOR);
+        }
         self.next = next;
-        Ok(SessionKey { table, number, label })
+        let open = Arc::new(());
+        self.rows.insert(number, Row { open: Arc::downgrade(&open), generation: 0, grant: None });
+        Ok(SessionKey { table, number, label, open })
     }
 
     /// Number of live upgrade grants.
     pub fn len(&self) -> usize {
-        self.rows.values().filter(|r| r.live()).count()
+        self.rows.values().filter(|r| r.granted()).count()
     }
 
     /// Whether no live upgrade grant exists.
@@ -659,17 +788,23 @@ impl SessionTable {
 
     /// Whether `session` holds a live upgrade grant.
     pub fn is_upgraded(&self, session: &SessionKey) -> bool {
-        self.owns(session) && self.rows.get(&session.number).is_some_and(Row::live)
+        self.owns(session) && self.rows.get(&session.number).is_some_and(Row::granted)
     }
 
-    /// Ends a session (its channel closed): revokes its grant. Returns whether it held a
-    /// live one.
-    pub fn end_session(&mut self, session: &SessionKey) -> bool {
-        self.owns(session) && self.rows.remove(&session.number).is_some_and(|r| r.live())
+    /// Ends a session (its channel closed): removes its row, which revokes its grant and
+    /// makes any pending upgrade of it fail. Takes the key by value, so an ended key cannot
+    /// be presented again. Returns whether the session held a live grant.
+    pub fn end_session(&mut self, session: SessionKey) -> bool {
+        self.owns(&session) && self.rows.remove(&session.number).is_some_and(|r| r.granted())
     }
 
     fn owns(&self, session: &SessionKey) -> bool {
         self.id == Some(session.table)
+    }
+
+    /// Live grants of sessions other than `number`.
+    fn other_grants(&self, number: u64) -> usize {
+        self.rows.iter().filter(|(n, r)| **n != number && r.granted()).count()
     }
 
     /// The confirmed OS user when the channel presents a live grant issued by this table
@@ -681,10 +816,11 @@ impl SessionTable {
             return None;
         }
         let row = self.rows.get(&grant.number)?;
-        let live = row.alive.upgrade()?;
+        let g = row.grant.as_ref()?;
+        let live = g.alive.upgrade()?;
         let same =
-            Arc::ptr_eq(&live, &grant.alive) && row.channel == kind && identity.os_user.as_ref() == Some(&row.os_user);
-        same.then_some(&row.os_user)
+            Arc::ptr_eq(&live, &grant.alive) && g.channel == kind && identity.os_user.as_ref() == Some(&g.os_user);
+        same.then_some(&g.os_user)
     }
 
     /// Derives the principal of a call from its channel alone (REQ-002..008, REQ-012).
@@ -729,19 +865,12 @@ impl SessionTable {
         Ok(p)
     }
 
-    /// Upgrades a CLI or Python session to `human` once a person confirms through
-    /// `presence` (REQ-009..011). On success one `principal_upgrade` entry has been appended
-    /// to `journal` and the returned grant, presented by the same channel, makes its calls
-    /// derive as `human`. Every request prompts; a confirmed re-upgrade replaces (revokes)
-    /// the session's earlier grant. On any error the table and the journal are unchanged.
-    pub fn upgrade_session(
-        &mut self,
-        channel: &dyn Channel,
-        presence: &dyn HumanPresence,
-        journal: &mut dyn JournalAppend,
-        clock: &mut dyn UpgradeClock,
-        ctx: &UpgradeContext,
-    ) -> Result<UpgradeGrant, BusError> {
+    /// First step of upgrading a CLI or Python session to `human` (REQ-009..011): every
+    /// check that needs no person, in the pinned order. Takes `&self` and returns a token
+    /// that borrows nothing, so no table borrow is held while the person is asked
+    /// ([`PendingUpgrade::confirm`], up to [`UPGRADE_DEADLINE`]). Then
+    /// [`SessionTable::commit_upgrade`] records it. Every request prompts.
+    pub fn prepare_upgrade(&self, channel: &dyn Channel) -> Result<PendingUpgrade, BusError> {
         // One identity fetch; authentication first, so an incomplete identity is
         // `unauthenticated` on every channel.
         let fetched = channel.authenticated_identity();
@@ -757,63 +886,92 @@ impl SessionTable {
         if !self.owns(session) {
             return Err(invariant("session key was issued by another session table"));
         }
+        let Some(row) = self.rows.get(&session.number).filter(|r| r.open()) else {
+            return Err(invariant("session key has no open row"));
+        };
         let Some(os_user) = identity.os_user.clone() else {
             return Err(refused(UpgradeRefusedReason::UserMismatch, "session has no OS user"));
         };
-        self.rows.retain(|_, r| r.live());
-        let others = self.rows.keys().filter(|n| **n != session.number).count();
-        if others >= MAX_UPGRADED_SESSIONS {
-            return Err(BusError::Internal(InternalReason::Storage, Detail::new("upgraded-session table is full")));
+        if self.other_grants(session.number) >= MAX_UPGRADED_SESSIONS {
+            return Err(table_full());
         }
         // The entry is written by the session's own, not-upgraded principal.
         let mut before = current;
         before.kind = kind.base_kind();
         before.id = identity.subject.clone();
         before.upgraded_session = None;
-        let req = UpgradeRequest {
-            session: session.label.clone(),
-            session_number: session.number,
+        Ok(PendingUpgrade {
+            table: session.table,
+            number: session.number,
+            generation: row.generation,
+            journal_id: session.journal_id(),
             channel: kind,
-            subject: identity.subject,
-            os_user,
-        };
-        let start = clock.now().mono_ns;
-        let outcome = presence.confirm(&req, UPGRADE_DEADLINE);
-        let method = match outcome {
-            PresenceOutcome::Declined => return Err(refused(UpgradeRefusedReason::Declined, "confirmation declined")),
-            PresenceOutcome::TimedOut => return Err(refused(UpgradeRefusedReason::Timeout, "confirmation timed out")),
-            PresenceOutcome::Confirmed { os_user: who, method } => {
-                if who != req.os_user {
-                    return Err(refused(UpgradeRefusedReason::UserMismatch, "confirming OS user differs"));
-                }
-                method
-            }
-        };
-        let time = clock.now();
-        let in_time = time.mono_ns.checked_sub(start).is_some_and(|ns| u128::from(ns) <= UPGRADE_DEADLINE.as_nanos());
-        if !in_time {
-            return Err(refused(UpgradeRefusedReason::Timeout, "confirmation arrived after the deadline"));
+            request: UpgradeRequest {
+                session: session.label.clone(),
+                session_number: session.number,
+                channel: kind,
+                subject: identity.subject,
+                os_user,
+            },
+            before: before.to_draft(),
+        })
+    }
+
+    /// Last step of an upgrade: re-checks that the session is still open and its row is
+    /// unchanged since [`SessionTable::prepare_upgrade`] (same generation; otherwise
+    /// `conflict/head_moved`, for a session ended or upgraded by a competing request while
+    /// the person was asked) and that the table has room, then appends one
+    /// `principal_upgrade` entry to `journal` and issues the grant. The grant, presented by
+    /// the same channel, makes its calls derive as `human`; it replaces (revokes) the
+    /// session's earlier grant. On any error the table and the journal are unchanged.
+    pub fn commit_upgrade(
+        &mut self,
+        confirmed: ConfirmedUpgrade,
+        journal: &mut dyn JournalAppend,
+        ctx: &UpgradeContext,
+    ) -> Result<UpgradeGrant, BusError> {
+        let ConfirmedUpgrade { pending, method, time } = confirmed;
+        if self.id != Some(pending.table) {
+            return Err(invariant("pending upgrade was prepared by another session table"));
         }
+        let unchanged = self.rows.get(&pending.number).is_some_and(|r| r.open() && r.generation == pending.generation);
+        if !unchanged {
+            return Err(BusError::Conflict(
+                ConflictReason::HeadMoved,
+                Detail::new("session ended or changed while the person was asked"),
+            ));
+        }
+        if self.other_grants(pending.number) >= MAX_UPGRADED_SESSIONS {
+            return Err(table_full());
+        }
+        let Some(generation) = pending.generation.checked_add(1) else {
+            return Err(invariant("session generation exhausted"));
+        };
         let draft = EntryDraft {
             stream: ctx.stream.clone(),
             branch: ctx.branch.clone(),
             logical_parent: None,
-            principal: before.to_draft(),
+            principal: pending.before,
             ai_assistance: AiAssistance::None,
             manifests: ctx.manifests,
             reason: None,
             human_assertion: None,
             body: DraftBody::PrincipalUpgrade(UpgradeDraft {
-                session_id: session.journal_id(),
+                session_id: pending.journal_id,
                 method,
-                identity: CValue::Str(req.os_user.as_str().to_string()),
+                identity: CValue::Str(pending.request.os_user.as_str().to_string()),
                 confirmed_at: time.utc.clone(),
             }),
             time,
         };
         journal.append(&draft)?;
-        let alive = Arc::new(session.number);
-        self.rows.insert(session.number, Row { channel: kind, os_user: req.os_user, alive: Arc::downgrade(&alive) });
-        Ok(UpgradeGrant { table: session.table, number: session.number, alive })
+        let Some(row) = self.rows.get_mut(&pending.number) else {
+            return Err(invariant("session row vanished during commit"));
+        };
+        let alive = Arc::new(pending.number);
+        row.generation = generation;
+        let os_user = pending.request.os_user;
+        row.grant = Some(GrantRow { channel: pending.channel, os_user, alive: Arc::downgrade(&alive) });
+        Ok(UpgradeGrant { table: pending.table, number: pending.number, alive })
     }
 }
