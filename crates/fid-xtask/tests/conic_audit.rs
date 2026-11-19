@@ -329,6 +329,27 @@ fn symlinks_refused() {
     assert_eq!(run(&opts_at(link)), vec!["AUDIT-SCHEMA vendored directory"]);
 }
 
+/// Windows: creating a symbolic link needs a privilege the CI runner may lack, but a directory
+/// junction (`mklink /J`) does not. Junctions are name-surrogate reparse points, which the standard
+/// library reports as symbolic links, so they are refused the same way.
+#[cfg(windows)]
+#[test]
+fn junctions_refused() {
+    fn junction(link: &Path, target: &Path) {
+        let ok = Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(link).arg(target).status().unwrap();
+        assert!(ok.success(), "mklink /J failed");
+    }
+
+    let dir = ok_copy("junction-in-upstream");
+    junction(&dir.join("upstream").join("srclink"), &dir.join("upstream").join("src"));
+    assert_eq!(run(&opts_at(dir)), vec!["AUDIT-DIGEST upstream/"]);
+
+    let dir = ok_copy("junction-root");
+    let link = dir.with_file_name("link");
+    junction(&link, &dir);
+    assert_eq!(run(&opts_at(link)), vec!["AUDIT-SCHEMA vendored directory"]);
+}
+
 /// Bad usage exits 2.
 #[test]
 fn usage() {

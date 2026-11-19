@@ -21,8 +21,9 @@
 //!   and `.gitattributes` files are refused: a `.gitattributes` could turn end-of-line conversion
 //!   back on and make the bytes depend on the platform.
 //! * `AUDIT-PATCH-DRIFT`: applying the listed patches in numeric order to a copy of `upstream/`
-//!   with a strict applier (exact line positions: no fuzz and no offset; a diff line after a
-//!   complete hunk is an error) fails, or the result differs from `crate/` in any file (named in
+//!   with a strict applier (exact line positions: no fuzz and no offset; after the first file
+//!   header, a `+`, `-`, space or `\` line outside a hunk is an error, also inside the `-- `
+//!   signature block of `git format-patch`) fails, or the result differs from `crate/` in any file (named in
 //!   the finding). `crate/` is read like `upstream/`.
 //! * `AUDIT-LICENCE`: `upstream.licence` is not an SPDX expression allowed by both
 //!   `house-rules/spdx-allowlist.toml` and `deny.toml`'s `[licenses] allow` list. A plain
@@ -630,6 +631,7 @@ pub fn apply_patch(files: &mut BTreeMap<String, Vec<u8>>, patch: &[u8]) -> Resul
         lines.pop();
     }
     let mut sections = 0;
+    let mut in_signature = false;
     let mut i = 0;
     while i < lines.len() {
         let l = lines[i];
@@ -640,9 +642,22 @@ pub fn apply_patch(files: &mut BTreeMap<String, Vec<u8>>, patch: &[u8]) -> Resul
             if l.starts_with(b"@@ ") {
                 return Err(format!("line {}: hunk outside a file section", i + 1));
             }
+            // Once the first file section has started, a diff-looking line outside a hunk is
+            // refused, so nothing that reads as an added or removed line can be silently skipped.
+            // The `-- ` line of `git format-patch` opens the signature block, which may not
+            // contain diff-looking lines either. Before the first file header, commentary (the
+            // commit message and the diffstat, whose lines start with a space) is allowed.
+            if sections > 0 && matches!(l.first(), Some(b'+' | b'-' | b' ' | b'\\')) {
+                if l == b"-- " && !in_signature {
+                    in_signature = true;
+                } else {
+                    return Err(format!("line {}: diff line outside a hunk", i + 1));
+                }
+            }
             i += 1;
             continue;
         }
+        in_signature = false;
         let old = header_path(&l[4..], "a/", i + 1)?;
         let plus = lines
             .get(i + 1)
@@ -695,17 +710,6 @@ pub fn apply_patch(files: &mut BTreeMap<String, Vec<u8>>, patch: &[u8]) -> Resul
                 }
             }
             hunks.push(Hunk { old_start, old_len, body });
-        }
-        // A hunk is complete once its header's counts are met; a further diff line (other than
-        // the next file header or the `-- ` signature of `git format-patch`) means the counts
-        // are wrong, so refuse it rather than skip it.
-        if let Some(next) = lines.get(i) {
-            let stray = matches!(next.first(), Some(b'+' | b'-' | b' ' | b'\\'))
-                && !next.starts_with(b"--- ")
-                && *next != b"-- ";
-            if stray {
-                return Err(format!("line {}: diff line after a complete hunk (wrong line counts?)", i + 1));
-            }
         }
         if hunks.is_empty() {
             return Err(format!("line {}: file section without hunks", i));
@@ -1450,6 +1454,15 @@ mod tests {
     }
 
     #[test]
+    fn commit_message_and_diffstat_before_the_first_header_are_commentary() {
+        let mut t = tree(&[("f", "a\n")]);
+        let patch = b"Subject: x\n\n- a bullet in the message\n---\n f | 2 +-\n 1 file changed\n\n\
+                      --- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n";
+        apply_patch(&mut t, patch).unwrap();
+        assert_eq!(t, tree(&[("f", "b\n")]));
+    }
+
+    #[test]
     fn insertion_hunk_with_zero_old_lines() {
         let mut t = tree(&[("f", "a\nb\n")]);
         apply_patch(&mut t, b"--- a/f\n+++ b/f\n@@ -1,0 +2 @@\n+x\n").unwrap();
@@ -1475,7 +1488,7 @@ mod tests {
     #[test]
     fn malformed_patches_are_refused() {
         let base = tree(&[("f", "a\n")]);
-        let bad: [&[u8]; 11] = [
+        let bad: [&[u8]; 15] = [
             b"",
             b"just text\n",
             b"--- a/f\n+++ b/f\n",
@@ -1488,6 +1501,11 @@ mod tests {
             // Stray diff lines after a complete hunk (wrong counts) are refused, not skipped.
             b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n+c\n",
             b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-z\n",
+            // Diff-looking lines in the signature block or after other commentary are refused.
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-- \n-x\n",
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-- \n2.43.0\n+y\n",
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\ncomment\n -x\n",
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-- \n-- \n",
         ];
         for p in bad {
             let mut t = base.clone();
