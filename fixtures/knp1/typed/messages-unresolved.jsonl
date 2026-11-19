@@ -1,0 +1,1 @@
+{"manifest_path": "@WS@/macro/Cargo.toml", "message": {"children": [], "code": null, "level": "warning", "message": "`f64::sin` does not refer to an existing function", "rendered": "`f64::sin` does not refer to an existing function", "spans": []}, "package_id": "x", "reason": "compiler-message", "target": {"kind": ["lib"]}}

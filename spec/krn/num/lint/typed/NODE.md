@@ -65,16 +65,19 @@ A syntax scan cannot know the type of a receiver or see code produced by macro e
 - **Performance budget:** dominated by compilation; < 5 min for the kernel workspace on CI [unverified until measured].
 - **Crate:** `fid-knp1-lint` (tooling layer).
 
-### Build decisions (fid-knp1-lint `typed`)
+### Build decisions (fid-knp1-lint `typed`, PR #235)
 
-- **Driver invocation.** One `cargo clippy` run per target (sorted), over every workspace member of the closure at once: `--manifest-path <workspace>/Cargo.toml --locked --keep-going --message-format=json --target <triple> --target-dir <scratch> -p <name>@<version> … -- -A clippy::all --force-warn clippy::disallowed_methods --force-warn clippy::disallowed_types --force-warn clippy::disallowed_macros`, with `CLIPPY_CONF_DIR` pointing at the generated `clippy.toml`. Deviation from the Design's `-D`: `--force-warn` cannot be lowered by `#[allow(...)]` in the source, and as warnings a hit does not stop the build of the crates that depend on it. Default targets: `aarch64-unknown-linux-gnu`, `wasm32-unknown-unknown`, `x86_64-unknown-linux-gnu`.
-- **`KNP1-TYPED-BUILD` (never waivable).** A crate is linted for a target only if cargo reports a compiled artifact for it. A compile error, or no artifact (stale lockfile, target not installed, timeout, unreadable driver output), is `KNP1-TYPED-BUILD` at the crate's `Cargo.toml` 1:1, naming crate and target. It joins the FIND catalogue as the family `KNP1-TYPED-*`.
-- **`KNP1-TYPED-DRIVER` (fatal).** `cargo clippy --version` fails or does not print the pinned `[typed] clippy_version` (required), or a disallowed-item diagnostic names no KNP-1 rule (each `reason` is the rule ID).
-- **Spans.** The finding is placed at the outermost span of the primary span's macro expansion chain that lies inside the crate root (the call site of a local macro). A diagnostic with no span inside the crate is placed at `Cargo.toml` 1:1. Findings are deduplicated across targets by (crate, version, file, line, column, rule).
+- **Driver invocation.** For every target (sorted) and each of two feature sets (default features, then `--all-features`), one `cargo clippy` run over every workspace member of the closure at once: `--manifest-path <workspace>/Cargo.toml --locked --keep-going --message-format=json --target <triple> --target-dir <scratch> [--all-features] -p <name>@<version> … -- -A clippy::all --force-warn clippy::disallowed_methods --force-warn clippy::disallowed_types --force-warn clippy::disallowed_macros`, with `CLIPPY_CONF_DIR` pointing at the generated `clippy.toml`. Deviation from the Design's `-D`: `--force-warn` cannot be lowered by `#[allow(...)]` in the source, and as warnings a hit does not stop the build of the crates that depend on it. Default targets: `aarch64-apple-darwin`, `aarch64-unknown-linux-gnu`, `wasm32-unknown-unknown`, `x86_64-pc-windows-msvc`, `x86_64-unknown-linux-gnu` (CI installs all five). Features other than the default set and the full set (single non-default features in isolation) are not linted separately.
+- **Environment.** The driver gets `CARGO_ENCODED_RUSTFLAGS` set to empty, which takes precedence over `RUSTFLAGS` and over every `build.rustflags` / `target.<…>.rustflags` of `.cargo/config.toml`. `RUSTFLAGS`, `CARGO_BUILD_RUSTFLAGS`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, `CARGO_BUILD_RUSTC_WRAPPER`, `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER`, `CLIPPY_ARGS` and every `CARGO_TARGET_*_RUSTFLAGS` / `CARGO_TARGET_*_RUNNER` are removed. Other `.cargo/config.toml` settings (for example `[build] rustc` or `[target.*] linker`) are not neutralised; `KRN.NUM.LINT.FLAGS` checks that file.
+- **`KNP1-TYPED-BUILD` (never waivable).** A crate is linted for a run only if cargo reports a compiled artifact for it whose `target.kind` is a library, binary or proc-macro kind (`lib`, `rlib`, `dylib`, `cdylib`, `staticlib`, `bin`, `proc-macro`); a build script (`custom-build`) does not count. A compile error, or no such artifact (stale lockfile, target not installed, timeout, driver failure), is `KNP1-TYPED-BUILD` at the crate's `Cargo.toml` 1:1, naming crate, target and feature set. `KNP1-TYPED-*` is a never-waivable FIND family.
+- **`KNP1-TYPED-NOSPAN` (never waivable).** A disallowed-item diagnostic with no span inside the crate is reported at the crate's `Cargo.toml` 1:1 under this rule (naming the original rule), so a waiver can never cover it.
+- **`KNP1-TYPED-DRIVER` (fatal).** `cargo clippy --version` fails or does not print the pinned `[typed] clippy_version` (required); a line of driver output is not a readable cargo message (the bounded JSON reader accepts nesting up to `MAX_EXPANSION_DEPTH * 2 + 16` = 528 levels, enough for a 256-deep expansion chain); a disallowed-item diagnostic names no KNP-1 rule (each `reason` is the rule ID); or the driver reports a table path that "does not refer to" an item, unless it is on the pinned per-target allowlist: `std::arch::is_aarch64_feature_detected` may be unresolved off `aarch64*` targets, and `std::is_x86_feature_detected` off `x86_64*`, `i686*` and `i586*` targets.
+- **`KNP1-TYPED-IO` (fatal).** The scratch directory or the generated `clippy.toml` cannot be written.
+- **Spans.** The finding is placed at the outermost span of the primary span's macro expansion chain (up to 256 levels) that lies inside the crate root, which is the call site of a local macro. Findings are deduplicated across targets and feature sets by (crate, version, file, line, column, rule).
 - **Facade.** `KNP1-LIBM` findings in the `[syn] facade_files` (crate, version, file) are notes; every other rule applies there.
 - **Scope.** Only `SourceKind::Workspace` crates of the closure are linted; vendored and registry crates are left to `KRN.NUM.LINT.SYN`.
-- **Table.** The Build prompt's list, extended with every KNP-1 item that has a resolvable std path (f32 and f64 alike); nightly-only methods (`gamma`, `ln_gamma`) are left out because their paths do not resolve on the pinned stable toolchain. `clippy.toml` lists entries in table order as `{ path = "…", reason = "<rule ID>" }`. CI installs the three targets for the test job.
-- **Accepted gaps.** A configured path that does not resolve on a target (for example `std::arch::is_aarch64_feature_detected` on x86-64) is only a clippy warning, not a finding [unverified per clippy version]; `build.rs` output and proc-macro expansion in third-party crates stay with `KRN.NUM.LINT.SYN`.
+- **Table.** The Build prompt's list, extended to f32 and f64 alike and audited against the std `env`, `fs`, `net`, `process`, `thread` and `time` modules for every function, type and macro that reads the environment, the file system, the network or a clock, or starts threads or processes. Nightly-only methods (`gamma`, `ln_gamma`) are left out because their paths do not resolve on the pinned stable toolchain. `clippy.toml` lists entries in table order as `{ path = "…", reason = "<rule ID>" }`.
+- **Fixtures** cover a float variable, a local macro, a 70-deep recursive macro, `allow` attributes, target-specific code, `fold(.., f64::max)`, a closure, `type F = f64; F::max`, an associated type, a generic trait impl, an aliased `HashMap`, the facade split, a crate that does not build for wasm32, and the driver-output failure modes.
 
 #### Pinned table
 
@@ -144,32 +147,76 @@ A syntax scan cannot know the type of a receiver or see code produced by macro e
 | `KNP1-MINMAX` | method | `f64::clamp` |
 | `KNP1-MINMAX` | method | `f64::max` |
 | `KNP1-MINMAX` | method | `f64::min` |
+| `KNP1-IO-FS` | method | `std::fs::canonicalize` |
+| `KNP1-IO-FS` | method | `std::fs::copy` |
+| `KNP1-IO-FS` | method | `std::fs::create_dir` |
+| `KNP1-IO-FS` | method | `std::fs::create_dir_all` |
+| `KNP1-IO-FS` | method | `std::fs::exists` |
+| `KNP1-IO-FS` | method | `std::fs::hard_link` |
+| `KNP1-IO-FS` | method | `std::fs::metadata` |
 | `KNP1-IO-FS` | method | `std::fs::read` |
+| `KNP1-IO-FS` | method | `std::fs::read_dir` |
+| `KNP1-IO-FS` | method | `std::fs::read_link` |
 | `KNP1-IO-FS` | method | `std::fs::read_to_string` |
+| `KNP1-IO-FS` | method | `std::fs::remove_dir` |
+| `KNP1-IO-FS` | method | `std::fs::remove_dir_all` |
+| `KNP1-IO-FS` | method | `std::fs::remove_file` |
+| `KNP1-IO-FS` | method | `std::fs::rename` |
+| `KNP1-IO-FS` | method | `std::fs::set_permissions` |
+| `KNP1-IO-FS` | method | `std::fs::symlink_metadata` |
 | `KNP1-IO-FS` | method | `std::fs::write` |
 | `KNP1-CLOCK` | method | `std::time::Instant::now` |
 | `KNP1-CLOCK` | method | `std::time::SystemTime::now` |
+| `KNP1-ENV` | method | `std::env::args` |
+| `KNP1-ENV` | method | `std::env::args_os` |
+| `KNP1-ENV` | method | `std::env::current_dir` |
+| `KNP1-ENV` | method | `std::env::current_exe` |
+| `KNP1-ENV` | method | `std::env::home_dir` |
+| `KNP1-ENV` | method | `std::env::join_paths` |
+| `KNP1-ENV` | method | `std::env::remove_var` |
+| `KNP1-ENV` | method | `std::env::set_current_dir` |
+| `KNP1-ENV` | method | `std::env::set_var` |
+| `KNP1-ENV` | method | `std::env::split_paths` |
+| `KNP1-ENV` | method | `std::env::temp_dir` |
 | `KNP1-ENV` | method | `std::env::var` |
 | `KNP1-ENV` | method | `std::env::var_os` |
 | `KNP1-ENV` | method | `std::env::vars` |
+| `KNP1-ENV` | method | `std::env::vars_os` |
 | `KNP1-THREAD` | method | `std::process::Command::new` |
+| `KNP1-THREAD` | method | `std::process::abort` |
+| `KNP1-THREAD` | method | `std::process::exit` |
+| `KNP1-THREAD` | method | `std::process::id` |
+| `KNP1-THREAD` | method | `std::thread::available_parallelism` |
+| `KNP1-THREAD` | method | `std::thread::current` |
+| `KNP1-THREAD` | method | `std::thread::park` |
+| `KNP1-THREAD` | method | `std::thread::park_timeout` |
+| `KNP1-THREAD` | method | `std::thread::scope` |
+| `KNP1-THREAD` | method | `std::thread::sleep` |
 | `KNP1-THREAD` | method | `std::thread::spawn` |
+| `KNP1-THREAD` | method | `std::thread::yield_now` |
 | `KNP1-HASH` | type | `std::collections::HashMap` |
 | `KNP1-HASH` | type | `std::collections::HashSet` |
 | `KNP1-HASH` | type | `std::collections::hash_map::DefaultHasher` |
 | `KNP1-HASH` | type | `std::collections::hash_map::RandomState` |
+| `KNP1-IO-FS` | type | `std::fs::DirBuilder` |
 | `KNP1-IO-FS` | type | `std::fs::File` |
+| `KNP1-IO-FS` | type | `std::fs::OpenOptions` |
 | `KNP1-IO-NET` | type | `std::net::TcpListener` |
 | `KNP1-IO-NET` | type | `std::net::TcpStream` |
 | `KNP1-IO-NET` | type | `std::net::UdpSocket` |
 | `KNP1-CLOCK` | type | `std::time::Instant` |
 | `KNP1-CLOCK` | type | `std::time::SystemTime` |
+| `KNP1-THREAD` | type | `std::process::Child` |
+| `KNP1-THREAD` | type | `std::process::Command` |
+| `KNP1-THREAD` | type | `std::thread::Builder` |
 | `KNP1-SIMD` | macro | `std::arch::is_aarch64_feature_detected` |
 | `KNP1-SIMD` | macro | `std::is_x86_feature_detected` |
 | `KNP1-ENV` | macro | `std::env` |
 | `KNP1-ENV` | macro | `std::option_env` |
+| `KNP1-IO-FS` | macro | `std::include` |
 | `KNP1-IO-FS` | macro | `std::include_bytes` |
 | `KNP1-IO-FS` | macro | `std::include_str` |
+| `KNP1-THREAD` | macro | `std::thread_local` |
 
 ## Test fixtures
 

@@ -7,21 +7,25 @@
 //! macros carry their KNP-1 rule ID as the `reason`, and maps the JSON diagnostics back to
 //! [`Finding`]s.
 //!
-//! Fail closed:
+//! Fail closed (the decisions are pinned in the leaf's NODE.md Design):
 //!
 //! - The three lints run with `--force-warn`, so `#[allow(clippy::disallowed_methods)]` in the
 //!   source cannot silence them, and as warnings, so a hit does not stop the build of the
-//!   crates that depend on it. Every other clippy lint is allowed.
-//! - `--keep-going` builds every crate it can; a crate is counted as linted for a target only if
-//!   cargo reports a compiled artifact for it. A crate with a compile error, or with no
-//!   artifact (lockfile out of date, target not installed, timeout, unreadable driver output),
-//!   is `KNP1-TYPED-BUILD` for that target. `KNP1-TYPED-BUILD` cannot be waived.
-//! - A missing driver, a `cargo clippy --version` that does not match the pinned version, or a
-//!   disallowed-item diagnostic that names no KNP-1 rule is fatal `KNP1-TYPED-DRIVER`.
+//!   crates that depend on it. Every other clippy lint is allowed. Each target is linted with
+//!   the default features and with `--all-features`. Compiler flags from the environment and
+//!   from `.cargo/config.toml` are neutralised (`CARGO_ENCODED_RUSTFLAGS` set empty, wrappers
+//!   and `RUSTFLAGS` variants removed).
+//! - `--keep-going` builds every crate it can; a crate counts as linted for a run only if cargo
+//!   reports a compiled library, binary or proc-macro artifact for it (not a build script). A
+//!   crate with a compile error or without such an artifact is `KNP1-TYPED-BUILD`; a finding
+//!   with no span inside the crate is `KNP1-TYPED-NOSPAN`. Neither can be waived.
+//! - A missing driver, a version that is not the pinned one, an unreadable line of driver
+//!   output, a disallowed-item diagnostic that names no KNP-1 rule, or a table path the driver
+//!   cannot resolve (outside [`UNRESOLVED_ALLOWED`]) is fatal `KNP1-TYPED-DRIVER`.
 //!
 //! Each finding is placed at the outermost span of the macro expansion chain that lies inside
 //! the crate (the macro call site for an item produced by a local macro), deduplicated across
-//! targets by (crate, version, file, line, column, rule). `KNP1-LIBM` findings in the facade
+//! runs by (crate, version, file, line, column, rule). `KNP1-LIBM` findings in the facade
 //! files listed in `[syn] facade_files` (crate, version, file) are notes, not findings.
 //!
 //! Config (`[typed]` of `knp1-lint.toml`):
@@ -29,7 +33,7 @@
 //! ```toml
 //! [typed]
 //! clippy_version = "0.1.89"   # required: second word of `cargo clippy --version`
-//! targets = ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
+//! targets = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"]   # default: DEFAULT_TARGETS
 //! timeout_secs = 1800          # per target
 //! ```
 
@@ -46,8 +50,13 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::time::{Duration, Instant};
 
 /// Kernel targets linted when the config names none, sorted.
-pub const DEFAULT_TARGETS: [&str; 3] =
-    ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"];
+pub const DEFAULT_TARGETS: [&str; 5] = [
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "wasm32-unknown-unknown",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+];
 /// Default per-target timeout, in seconds.
 pub const DEFAULT_TIMEOUT_SECS: u64 = 1800;
 /// Most bytes kept from the driver's stdout or stderr per run.
@@ -68,7 +77,7 @@ pub enum ItemKind {
 }
 
 /// Number of rows in [`TYPED_TABLE`].
-pub const TYPED_TABLE_LEN: usize = 88;
+pub const TYPED_TABLE_LEN: usize = 132;
 
 /// The pinned table: `(rule, kind, path)`. Mirrored in the leaf's NODE.md Design.
 pub static TYPED_TABLE: [(Rule, ItemKind, &str); TYPED_TABLE_LEN] = [
@@ -134,32 +143,76 @@ pub static TYPED_TABLE: [(Rule, ItemKind, &str); TYPED_TABLE_LEN] = [
     (Rule::MinMax, ItemKind::Method, "f64::clamp"),
     (Rule::MinMax, ItemKind::Method, "f64::max"),
     (Rule::MinMax, ItemKind::Method, "f64::min"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::canonicalize"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::copy"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::create_dir"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::create_dir_all"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::exists"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::hard_link"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::metadata"),
     (Rule::IoFs, ItemKind::Method, "std::fs::read"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::read_dir"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::read_link"),
     (Rule::IoFs, ItemKind::Method, "std::fs::read_to_string"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::remove_dir"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::remove_dir_all"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::remove_file"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::rename"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::set_permissions"),
+    (Rule::IoFs, ItemKind::Method, "std::fs::symlink_metadata"),
     (Rule::IoFs, ItemKind::Method, "std::fs::write"),
     (Rule::Clock, ItemKind::Method, "std::time::Instant::now"),
     (Rule::Clock, ItemKind::Method, "std::time::SystemTime::now"),
+    (Rule::Env, ItemKind::Method, "std::env::args"),
+    (Rule::Env, ItemKind::Method, "std::env::args_os"),
+    (Rule::Env, ItemKind::Method, "std::env::current_dir"),
+    (Rule::Env, ItemKind::Method, "std::env::current_exe"),
+    (Rule::Env, ItemKind::Method, "std::env::home_dir"),
+    (Rule::Env, ItemKind::Method, "std::env::join_paths"),
+    (Rule::Env, ItemKind::Method, "std::env::remove_var"),
+    (Rule::Env, ItemKind::Method, "std::env::set_current_dir"),
+    (Rule::Env, ItemKind::Method, "std::env::set_var"),
+    (Rule::Env, ItemKind::Method, "std::env::split_paths"),
+    (Rule::Env, ItemKind::Method, "std::env::temp_dir"),
     (Rule::Env, ItemKind::Method, "std::env::var"),
     (Rule::Env, ItemKind::Method, "std::env::var_os"),
     (Rule::Env, ItemKind::Method, "std::env::vars"),
+    (Rule::Env, ItemKind::Method, "std::env::vars_os"),
     (Rule::Thread, ItemKind::Method, "std::process::Command::new"),
+    (Rule::Thread, ItemKind::Method, "std::process::abort"),
+    (Rule::Thread, ItemKind::Method, "std::process::exit"),
+    (Rule::Thread, ItemKind::Method, "std::process::id"),
+    (Rule::Thread, ItemKind::Method, "std::thread::available_parallelism"),
+    (Rule::Thread, ItemKind::Method, "std::thread::current"),
+    (Rule::Thread, ItemKind::Method, "std::thread::park"),
+    (Rule::Thread, ItemKind::Method, "std::thread::park_timeout"),
+    (Rule::Thread, ItemKind::Method, "std::thread::scope"),
+    (Rule::Thread, ItemKind::Method, "std::thread::sleep"),
     (Rule::Thread, ItemKind::Method, "std::thread::spawn"),
+    (Rule::Thread, ItemKind::Method, "std::thread::yield_now"),
     (Rule::Hash, ItemKind::Type, "std::collections::HashMap"),
     (Rule::Hash, ItemKind::Type, "std::collections::HashSet"),
     (Rule::Hash, ItemKind::Type, "std::collections::hash_map::DefaultHasher"),
     (Rule::Hash, ItemKind::Type, "std::collections::hash_map::RandomState"),
+    (Rule::IoFs, ItemKind::Type, "std::fs::DirBuilder"),
     (Rule::IoFs, ItemKind::Type, "std::fs::File"),
+    (Rule::IoFs, ItemKind::Type, "std::fs::OpenOptions"),
     (Rule::IoNet, ItemKind::Type, "std::net::TcpListener"),
     (Rule::IoNet, ItemKind::Type, "std::net::TcpStream"),
     (Rule::IoNet, ItemKind::Type, "std::net::UdpSocket"),
     (Rule::Clock, ItemKind::Type, "std::time::Instant"),
     (Rule::Clock, ItemKind::Type, "std::time::SystemTime"),
+    (Rule::Thread, ItemKind::Type, "std::process::Child"),
+    (Rule::Thread, ItemKind::Type, "std::process::Command"),
+    (Rule::Thread, ItemKind::Type, "std::thread::Builder"),
     (Rule::Simd, ItemKind::Macro, "std::arch::is_aarch64_feature_detected"),
     (Rule::Simd, ItemKind::Macro, "std::is_x86_feature_detected"),
     (Rule::Env, ItemKind::Macro, "std::env"),
     (Rule::Env, ItemKind::Macro, "std::option_env"),
+    (Rule::IoFs, ItemKind::Macro, "std::include"),
     (Rule::IoFs, ItemKind::Macro, "std::include_bytes"),
     (Rule::IoFs, ItemKind::Macro, "std::include_str"),
+    (Rule::Thread, ItemKind::Macro, "std::thread_local"),
 ];
 
 /// The generated `clippy.toml`: three lists, each entry `{ path, reason }` with the rule ID as
@@ -301,7 +354,201 @@ pub fn parse_config(text: &str) -> Result<Config, TypedError> {
     Ok(Config { clippy_version, targets, timeout_secs })
 }
 
-// ------------------------------------------------------------------ JSON helpers
+// ------------------------------------------------------------------ JSON
+
+/// Deepest JSON nesting read from the driver: a diagnostic's expansion chain of
+/// [`MAX_EXPANSION_DEPTH`] spans nests two levels per span.
+pub const MAX_JSON_DEPTH: usize = MAX_EXPANSION_DEPTH * 2 + 16;
+
+enum Frame {
+    Arr(Vec<CValue>),
+    Obj(BTreeMap<String, CValue>, Option<String>),
+}
+
+fn skip_ws(s: &[u8], i: &mut usize) {
+    while s.get(*i).is_some_and(u8::is_ascii_whitespace) {
+        *i += 1;
+    }
+}
+
+fn parse_json_str(s: &[u8], i: &mut usize) -> Option<String> {
+    if s.get(*i) != Some(&b'"') {
+        return None;
+    }
+    *i += 1;
+    let mut out: Vec<u8> = Vec::new();
+    loop {
+        let b = *s.get(*i)?;
+        *i += 1;
+        match b {
+            b'"' => return String::from_utf8(out).ok(),
+            b'\\' => {
+                let e = *s.get(*i)?;
+                *i += 1;
+                let c = match e {
+                    b'"' => '"',
+                    b'\\' => '\\',
+                    b'/' => '/',
+                    b'b' => '\u{8}',
+                    b'f' => '\u{c}',
+                    b'n' => '\n',
+                    b'r' => '\r',
+                    b't' => '\t',
+                    b'u' => {
+                        let hex = |i: &mut usize| -> Option<u32> {
+                            let h = std::str::from_utf8(s.get(*i..*i + 4)?).ok()?;
+                            *i += 4;
+                            u32::from_str_radix(h, 16).ok()
+                        };
+                        let hi = hex(i)?;
+                        let code = if (0xD800..0xDC00).contains(&hi) {
+                            if s.get(*i..*i + 2) != Some(b"\\u") {
+                                return None;
+                            }
+                            *i += 2;
+                            let lo = hex(i)?;
+                            if !(0xDC00..0xE000).contains(&lo) {
+                                return None;
+                            }
+                            0x10000 + ((hi - 0xD800) << 10) + (lo - 0xDC00)
+                        } else {
+                            hi
+                        };
+                        char::from_u32(code)?
+                    }
+                    _ => return None,
+                };
+                let mut buf = [0u8; 4];
+                out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+            }
+            b if b < 0x20 => return None,
+            b => out.push(b),
+        }
+    }
+}
+
+/// A bounded, iterative JSON parser for one line of the driver's message stream. Numbers become
+/// [`CValue::Num`]; duplicate keys, nesting deeper than `max_depth`, trailing text and malformed
+/// input give `None`.
+pub fn parse_json(s: &[u8], max_depth: usize) -> Option<CValue> {
+    let mut i = 0usize;
+    let mut stack: Vec<Frame> = Vec::new();
+    loop {
+        skip_ws(s, &mut i);
+        let mut v = match *s.get(i)? {
+            b'{' => {
+                i += 1;
+                if stack.len() >= max_depth {
+                    return None;
+                }
+                skip_ws(s, &mut i);
+                if s.get(i) == Some(&b'}') {
+                    i += 1;
+                    CValue::Obj(BTreeMap::new())
+                } else {
+                    let k = parse_json_str(s, &mut i)?;
+                    skip_ws(s, &mut i);
+                    if s.get(i) != Some(&b':') {
+                        return None;
+                    }
+                    i += 1;
+                    stack.push(Frame::Obj(BTreeMap::new(), Some(k)));
+                    continue;
+                }
+            }
+            b'[' => {
+                i += 1;
+                if stack.len() >= max_depth {
+                    return None;
+                }
+                skip_ws(s, &mut i);
+                if s.get(i) == Some(&b']') {
+                    i += 1;
+                    CValue::Arr(Vec::new())
+                } else {
+                    stack.push(Frame::Arr(Vec::new()));
+                    continue;
+                }
+            }
+            b'"' => CValue::Str(parse_json_str(s, &mut i)?),
+            b't' if s.get(i..i + 4) == Some(b"true") => {
+                i += 4;
+                CValue::Bool(true)
+            }
+            b'f' if s.get(i..i + 5) == Some(b"false") => {
+                i += 5;
+                CValue::Bool(false)
+            }
+            b'n' if s.get(i..i + 4) == Some(b"null") => {
+                i += 4;
+                CValue::Null
+            }
+            _ => {
+                let start = i;
+                while s.get(i).is_some_and(|b| b.is_ascii_digit() || matches!(b, b'-' | b'+' | b'.' | b'e' | b'E')) {
+                    i += 1;
+                }
+                let n: f64 = std::str::from_utf8(s.get(start..i)?).ok()?.parse().ok()?;
+                if start == i || !n.is_finite() {
+                    return None;
+                }
+                CValue::Num(n)
+            }
+        };
+        // Attach the finished value to its parents, closing every frame that ends here.
+        loop {
+            match stack.last_mut() {
+                None => {
+                    skip_ws(s, &mut i);
+                    return (i == s.len()).then_some(v);
+                }
+                Some(Frame::Arr(a)) => {
+                    a.push(v);
+                    skip_ws(s, &mut i);
+                    match *s.get(i)? {
+                        b',' => {
+                            i += 1;
+                            break;
+                        }
+                        b']' => {
+                            i += 1;
+                            let Some(Frame::Arr(a)) = stack.pop() else { return None };
+                            v = CValue::Arr(a);
+                        }
+                        _ => return None,
+                    }
+                }
+                Some(Frame::Obj(o, key)) => {
+                    let k = key.take()?;
+                    if o.insert(k, v).is_some() {
+                        return None;
+                    }
+                    skip_ws(s, &mut i);
+                    match *s.get(i)? {
+                        b',' => {
+                            i += 1;
+                            skip_ws(s, &mut i);
+                            let k = parse_json_str(s, &mut i)?;
+                            skip_ws(s, &mut i);
+                            if s.get(i) != Some(&b':') {
+                                return None;
+                            }
+                            i += 1;
+                            *key = Some(k);
+                            break;
+                        }
+                        b'}' => {
+                            i += 1;
+                            let Some(Frame::Obj(o, _)) = stack.pop() else { return None };
+                            v = CValue::Obj(o);
+                        }
+                        _ => return None,
+                    }
+                }
+            }
+        }
+    }
+}
 
 fn get<'v>(v: &'v CValue, key: &str) -> Option<&'v CValue> {
     match v {
@@ -358,13 +605,21 @@ pub struct MapCtx {
 pub struct Parsed {
     /// Disallowed-item findings (before the facade split).
     pub findings: Vec<Finding>,
-    /// Crates with a compiled artifact.
+    /// Crates with a compiled library, binary or proc-macro artifact (not a build script).
     pub built: BTreeSet<String>,
     /// Crates with a compile error: first error message.
     pub errors: BTreeMap<String, String>,
-    /// True when some stdout line could not be read as a cargo message.
-    pub unreadable: bool,
 }
+
+/// Artifact kinds that count as the crate being linted (a `custom-build` script does not).
+pub const BUILT_KINDS: [&str; 7] = ["lib", "rlib", "dylib", "cdylib", "staticlib", "bin", "proc-macro"];
+
+/// Table paths that may legitimately not resolve on some targets: `(path, arch prefixes on
+/// which it must resolve)`. Anywhere else the "does not refer to" warning is expected.
+pub const UNRESOLVED_ALLOWED: [(&str, &[&str]); 2] = [
+    ("std::arch::is_aarch64_feature_detected", &["aarch64"]),
+    ("std::is_x86_feature_detected", &["x86_64", "i686", "i586"]),
+];
 
 fn canon(p: &Path) -> PathBuf {
     std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf())
@@ -418,46 +673,66 @@ fn rule_of(msg: &CValue) -> Option<Rule> {
     None
 }
 
+/// True when the driver may report `path` as unresolved on `target` (see [`UNRESOLVED_ALLOWED`]).
+pub fn unresolved_allowed(path: &str, target: &str) -> bool {
+    UNRESOLVED_ALLOWED.iter().any(|(p, archs)| *p == path && !archs.iter().any(|a| target.starts_with(a)))
+}
+
+/// The table path a "does not refer to …" configuration warning names, if the message is one.
+fn unresolved_path(text: &str) -> Option<&str> {
+    if !text.contains("does not refer to") {
+        return None;
+    }
+    let start = text.find('`')? + 1;
+    let len = text.get(start..)?.find('`')?;
+    text.get(start..start + len)
+}
+
 /// Parses one target's `--message-format=json` stdout. Pure (reads source lines for digests).
-/// Fails with `KNP1-TYPED-DRIVER` only for a disallowed-item diagnostic that names no rule.
+///
+/// Fails with `KNP1-TYPED-DRIVER` for a line that is not a cargo message, a disallowed-item
+/// diagnostic that names no rule, and a table path the driver cannot resolve on this target
+/// (unless [`unresolved_allowed`]).
 pub fn parse_messages(stdout: &[u8], target: &str, ctx: &MapCtx) -> Result<Parsed, TypedError> {
     let mut out = Parsed::default();
-    for line in stdout.split(|b| *b == b'\n') {
+    for (n, line) in stdout.split(|b| *b == b'\n').enumerate() {
         let line = line.strip_suffix(b"\r").unwrap_or(line);
         if line.iter().all(u8::is_ascii_whitespace) {
             continue;
         }
-        let Ok(v) = fid_canon::parse(line) else {
-            out.unreadable = true;
-            continue;
-        };
+        let v = parse_json(line, MAX_JSON_DEPTH)
+            .ok_or_else(|| driver(format!("{target}: driver output line {} is not a readable cargo message", n + 1)))?;
         let reason = get_str(&v, "reason").unwrap_or_default();
         let krate = get_str(&v, "manifest_path").and_then(|m| ctx.crate_of_manifest(m));
         match reason {
             "compiler-artifact" => {
-                if let Some(c) = krate {
+                let kinds = get(&v, "target").map(|t| get_arr(t, "kind")).unwrap_or_default();
+                let counts = kinds.iter().any(|k| matches!(k, CValue::Str(s) if BUILT_KINDS.contains(&s.as_str())));
+                if let (Some(c), true) = (krate, counts) {
                     out.built.insert(c.name.clone());
                 }
             }
             "compiler-message" => {
-                let Some(c) = krate else { continue };
                 let Some(msg) = get(&v, "message") else {
-                    out.unreadable = true;
-                    continue;
+                    return Err(driver(format!("{target}: compiler message without `message`")));
                 };
+                let text = get_str(msg, "message").unwrap_or_default();
+                if let Some(path) = unresolved_path(text) {
+                    if !unresolved_allowed(path, target) {
+                        return Err(driver(format!("{target}: the driver cannot resolve a table entry: {text}")));
+                    }
+                    continue;
+                }
+                let Some(c) = krate else { continue };
                 let code = get(msg, "code").and_then(|c| get_str(c, "code")).unwrap_or_default();
                 let level = get_str(msg, "level").unwrap_or_default();
                 if LINTS.contains(&code) {
-                    let rule = rule_of(msg).ok_or_else(|| {
-                        driver(format!(
-                            "{target}: {code} diagnostic names no KNP-1 rule: {}",
-                            get_str(msg, "message").unwrap_or_default()
-                        ))
-                    })?;
+                    let rule = rule_of(msg)
+                        .ok_or_else(|| driver(format!("{target}: {code} diagnostic names no KNP-1 rule: {text}")))?;
                     out.findings.push(finding_at(ctx, c, msg, rule, target));
                 } else if level == "error" && !out.errors.contains_key(&c.name) {
-                    let text = get_str(msg, "message").unwrap_or("compile error").to_string();
-                    out.errors.insert(c.name.clone(), text);
+                    out.errors
+                        .insert(c.name.clone(), if text.is_empty() { "compile error".into() } else { text.into() });
                 }
             }
             _ => {}
@@ -467,7 +742,8 @@ pub fn parse_messages(stdout: &[u8], target: &str, ctx: &MapCtx) -> Result<Parse
 }
 
 /// The finding of one disallowed-item diagnostic, at the outermost in-crate span of the
-/// expansion chain of its primary span.
+/// expansion chain of its primary span; with no span inside the crate it is
+/// `KNP1-TYPED-NOSPAN` (never waivable) at the crate's `Cargo.toml` 1:1.
 fn finding_at(ctx: &MapCtx, c: &CrateRef, msg: &CValue, rule: Rule, target: &str) -> Finding {
     let text = get_str(msg, "message").unwrap_or_default();
     let spans = get_arr(msg, "spans");
@@ -498,10 +774,10 @@ fn finding_at(ctx: &MapCtx, c: &CrateRef, msg: &CValue, rule: Rule, target: &str
             message,
         },
         None => {
-            let m = format!("{message}; no span inside the crate");
+            let m = format!("{} {message}; no span inside the crate, so it cannot be waived", rule.id());
             Finding {
                 excerpt_digest: input_digest(m.as_bytes()),
-                rule,
+                rule: Rule::Typed("NOSPAN".to_string()),
                 crate_name: c.name.clone(),
                 crate_version: c.version.clone(),
                 file: "Cargo.toml".to_string(),
@@ -531,20 +807,16 @@ fn build_finding(c: &CrateRef, target: &str, why: &str) -> Finding {
     }
 }
 
-/// Turns one target's run into findings: disallowed items, plus `KNP1-TYPED-BUILD` for every
-/// crate with a compile error or without an artifact.
+/// Turns one run into findings: disallowed items, plus `KNP1-TYPED-BUILD` for every crate with
+/// a compile error or without a compiled library, binary or proc-macro artifact. `target`
+/// names the run (target triple and feature set) in messages.
 pub fn target_findings(parsed: &Parsed, ctx: &MapCtx, target: &str, failure: Option<&str>) -> Vec<Finding> {
     let mut out = parsed.findings.clone();
     for c in &ctx.crates {
         if let Some(e) = parsed.errors.get(&c.name) {
             out.push(build_finding(c, target, &format!("compile error: {e}")));
         } else if !parsed.built.contains(&c.name) {
-            let why = failure.unwrap_or(if parsed.unreadable {
-                "unreadable driver output and no compiled artifact"
-            } else {
-                "no compiled artifact"
-            });
-            out.push(build_finding(c, target, why));
+            out.push(build_finding(c, target, failure.unwrap_or("no compiled library, binary or proc-macro artifact")));
         }
     }
     out
@@ -603,8 +875,26 @@ fn run_bounded(mut cmd: Command, timeout: Duration) -> std::io::Result<RunOutput
     let mut child = cmd.spawn()?;
     let out = child.stdout.take();
     let errp = child.stderr.take();
-    let h_out = std::thread::spawn(move || read_capped(out));
-    let h_err = std::thread::spawn(move || read_capped(errp));
+    let spawn = |name: &str, r: Option<std::process::ChildStdout>| {
+        std::thread::Builder::new().name(name.to_string()).spawn(move || read_capped(r))
+    };
+    let h_out = match spawn("knp1-typed-stdout", out) {
+        Ok(h) => h,
+        Err(e) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(e);
+        }
+    };
+    let h_err = match std::thread::Builder::new().name("knp1-typed-stderr".to_string()).spawn(move || read_capped(errp))
+    {
+        Ok(h) => h,
+        Err(e) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(e);
+        }
+    };
     let start = Instant::now();
     let status = loop {
         match child.try_wait()? {
@@ -650,7 +940,68 @@ pub struct Options {
     pub scratch: PathBuf,
 }
 
-/// Lints the workspace crates of the closure for every configured target.
+/// Environment variables removed from the driver's environment: every way to inject compiler
+/// flags or wrap the compiler besides the check's own arguments.
+pub const REMOVED_ENV: [&str; 8] = [
+    "RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTC_WRAPPER",
+    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+    "CLIPPY_ARGS",
+    "CLIPPY_DISABLE_DOCS_LINKS",
+];
+
+/// Feature sets each target is linted with: the default features, and all features.
+pub const FEATURE_SETS: [(&str, bool); 2] = [("default features", false), ("all features", true)];
+
+fn driver_command(
+    opts: &Options,
+    workspace: &Path,
+    conf: &Path,
+    target: &str,
+    all_features: bool,
+    members: &[&CrateEntry],
+) -> Command {
+    let mut cmd = Command::new(&opts.cargo);
+    cmd.current_dir(workspace);
+    for k in REMOVED_ENV {
+        cmd.env_remove(k);
+    }
+    for (k, _) in std::env::vars_os() {
+        if let Some(k) = k.to_str() {
+            if k.starts_with("CARGO_TARGET_") && (k.ends_with("_RUSTFLAGS") || k.ends_with("_RUNNER")) {
+                cmd.env_remove(k);
+            }
+        }
+    }
+    // An explicitly empty CARGO_ENCODED_RUSTFLAGS takes precedence over RUSTFLAGS and every
+    // `build.rustflags` / `target.<…>.rustflags` in `.cargo/config.toml`.
+    cmd.env("CARGO_ENCODED_RUSTFLAGS", "")
+        .env("CLIPPY_CONF_DIR", conf)
+        .env("CARGO_TERM_COLOR", "never")
+        .arg("clippy")
+        .arg("--manifest-path")
+        .arg(workspace.join("Cargo.toml"))
+        .args(["--locked", "--keep-going", "--message-format=json", "--target", target])
+        .arg("--target-dir")
+        .arg(opts.scratch.join("target"));
+    if all_features {
+        cmd.arg("--all-features");
+    }
+    for c in members {
+        cmd.arg("-p").arg(format!("{}@{}", c.name, c.version));
+    }
+    cmd.args(["--", "-A", "clippy::all"]);
+    for l in LINTS {
+        cmd.args(["--force-warn", l]);
+    }
+    cmd
+}
+
+/// Lints the workspace crates of the closure for every configured target, with the default
+/// features and with all features.
 pub fn check(
     closure: &Closure,
     workspace: &Path,
@@ -679,37 +1030,23 @@ pub fn check(
     };
     let mut all = Vec::new();
     for target in &cfg.targets {
-        let mut cmd = Command::new(&opts.cargo);
-        cmd.current_dir(workspace)
-            .env("CLIPPY_CONF_DIR", &conf)
-            .env("CARGO_TERM_COLOR", "never")
-            .env_remove("CLIPPY_ARGS")
-            .arg("clippy")
-            .arg("--manifest-path")
-            .arg(workspace.join("Cargo.toml"))
-            .args(["--locked", "--keep-going", "--message-format=json", "--target", target])
-            .arg("--target-dir")
-            .arg(opts.scratch.join("target"));
-        for c in &members {
-            cmd.arg("-p").arg(format!("{}@{}", c.name, c.version));
+        for (label, all_features) in FEATURE_SETS {
+            let cmd = driver_command(opts, workspace, &conf, target, all_features, &members);
+            let run_name = format!("{target}, {label}");
+            let out = run_bounded(cmd, Duration::from_secs(cfg.timeout_secs))
+                .map_err(|e| driver(format!("cannot run {} clippy: {e}", opts.cargo.display())))?;
+            let failure = if out.status.is_none() {
+                Some(format!("timed out after {} s", cfg.timeout_secs))
+            } else if out.status.is_some_and(|s| !s.success()) {
+                let tail: String =
+                    String::from_utf8_lossy(&out.stderr).lines().rev().take(5).collect::<Vec<_>>().join(" | ");
+                Some(format!("driver failed: {tail}"))
+            } else {
+                None
+            };
+            let parsed = parse_messages(&out.stdout, target, &ctx)?;
+            all.extend(target_findings(&parsed, &ctx, &run_name, failure.as_deref()));
         }
-        cmd.args(["--", "-A", "clippy::all"]);
-        for l in LINTS {
-            cmd.args(["--force-warn", l]);
-        }
-        let out = run_bounded(cmd, Duration::from_secs(cfg.timeout_secs))
-            .map_err(|e| driver(format!("cannot run {} clippy: {e}", opts.cargo.display())))?;
-        let failure = if out.status.is_none() {
-            Some(format!("timed out after {} s", cfg.timeout_secs))
-        } else if out.status.is_some_and(|s| !s.success()) {
-            let tail: String =
-                String::from_utf8_lossy(&out.stderr).lines().rev().take(5).collect::<Vec<_>>().join(" | ");
-            Some(format!("driver failed: {tail}"))
-        } else {
-            None
-        };
-        let parsed = parse_messages(&out.stdout, target, &ctx)?;
-        all.extend(target_findings(&parsed, &ctx, target, failure.as_deref()));
     }
     Ok(finish(all, syn_cfg))
 }

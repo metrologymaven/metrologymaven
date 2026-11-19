@@ -21,23 +21,27 @@ FLOAT_LIBM = [
     "exp_m1", "hypot", "ln", "ln_1p", "log", "log10", "log2", "sin", "sin_cos", "sinh", "sqrt", "tan", "tanh",
 ]
 
+FS_FNS = [
+    "canonicalize", "copy", "create_dir", "create_dir_all", "exists", "hard_link", "metadata", "read", "read_dir",
+    "read_link", "read_to_string", "remove_dir", "remove_dir_all", "remove_file", "rename", "set_permissions",
+    "symlink_metadata", "write",
+]
+ENV_FNS = [
+    "args", "args_os", "current_dir", "current_exe", "home_dir", "join_paths", "remove_var", "set_current_dir",
+    "set_var", "split_paths", "temp_dir", "var", "var_os", "vars", "vars_os",
+]
+THREAD_FNS = ["available_parallelism", "current", "park", "park_timeout", "scope", "sleep", "spawn", "yield_now"]
+
 METHODS = (
     [(f"{t}::mul_add", "KNP1-FMA") for t in ("f32", "f64")]
     + [(f"{t}::{m}", "KNP1-POW") for t in ("f32", "f64") for m in ("powf", "powi")]
     + [(f"{t}::{m}", "KNP1-LIBM") for t in ("f32", "f64") for m in FLOAT_LIBM]
     + [(f"{t}::{m}", "KNP1-MINMAX") for t in ("f32", "f64") for m in ("clamp", "max", "min")]
-    + [
-        ("std::fs::read", "KNP1-IO-FS"),
-        ("std::fs::read_to_string", "KNP1-IO-FS"),
-        ("std::fs::write", "KNP1-IO-FS"),
-        ("std::time::Instant::now", "KNP1-CLOCK"),
-        ("std::time::SystemTime::now", "KNP1-CLOCK"),
-        ("std::env::var", "KNP1-ENV"),
-        ("std::env::var_os", "KNP1-ENV"),
-        ("std::env::vars", "KNP1-ENV"),
-        ("std::process::Command::new", "KNP1-THREAD"),
-        ("std::thread::spawn", "KNP1-THREAD"),
-    ]
+    + [(f"std::fs::{f}", "KNP1-IO-FS") for f in FS_FNS]
+    + [("std::time::Instant::now", "KNP1-CLOCK"), ("std::time::SystemTime::now", "KNP1-CLOCK")]
+    + [(f"std::env::{f}", "KNP1-ENV") for f in ENV_FNS]
+    + [(f"std::process::{f}", "KNP1-THREAD") for f in ("Command::new", "abort", "exit", "id")]
+    + [(f"std::thread::{f}", "KNP1-THREAD") for f in THREAD_FNS]
 )
 
 TYPES = [
@@ -45,12 +49,17 @@ TYPES = [
     ("std::collections::HashSet", "KNP1-HASH"),
     ("std::collections::hash_map::DefaultHasher", "KNP1-HASH"),
     ("std::collections::hash_map::RandomState", "KNP1-HASH"),
+    ("std::fs::DirBuilder", "KNP1-IO-FS"),
     ("std::fs::File", "KNP1-IO-FS"),
+    ("std::fs::OpenOptions", "KNP1-IO-FS"),
     ("std::net::TcpListener", "KNP1-IO-NET"),
     ("std::net::TcpStream", "KNP1-IO-NET"),
     ("std::net::UdpSocket", "KNP1-IO-NET"),
     ("std::time::Instant", "KNP1-CLOCK"),
     ("std::time::SystemTime", "KNP1-CLOCK"),
+    ("std::process::Child", "KNP1-THREAD"),
+    ("std::process::Command", "KNP1-THREAD"),
+    ("std::thread::Builder", "KNP1-THREAD"),
 ]
 
 MACROS = [
@@ -58,8 +67,10 @@ MACROS = [
     ("std::is_x86_feature_detected", "KNP1-SIMD"),
     ("std::env", "KNP1-ENV"),
     ("std::option_env", "KNP1-ENV"),
+    ("std::include", "KNP1-IO-FS"),
     ("std::include_bytes", "KNP1-IO-FS"),
     ("std::include_str", "KNP1-IO-FS"),
+    ("std::thread_local", "KNP1-THREAD"),
 ]
 
 

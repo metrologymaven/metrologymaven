@@ -59,7 +59,7 @@ const FAMILIES: [(&str, &str); 4] = [
     ("KNP1-FLAG-", "kernel build configuration (target CPU, FMA feature, codegen units, toolchain pin)"),
     ("KNP1-ALLOW-", "dependency allowlist or SPDX licence check"),
     ("KNP1-DATA-", "reference-dataset denylist match"),
-    ("KNP1-TYPED-", "type-aware check could not lint a crate for a target (never waivable)"),
+    ("KNP1-TYPED-", "type-aware check: crate not linted for a target (BUILD) or finding without an in-crate span (NOSPAN); never waivable"),
 ];
 
 /// A KNP-1 rule with a stable string ID (`KNP1-…`).

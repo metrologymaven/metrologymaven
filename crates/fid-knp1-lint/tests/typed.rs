@@ -10,8 +10,8 @@ use fid_knp1_lint::find::{Finding, Rule};
 use fid_knp1_lint::graph;
 use fid_knp1_lint::syn_scan;
 use fid_knp1_lint::typed::{
-    check, clippy_toml, driver_version, finish, parse_config, parse_messages, run, target_findings, CrateRef, ItemKind,
-    MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS, TYPED_TABLE, TYPED_TABLE_LEN,
+    check, clippy_toml, driver_version, finish, parse_config, parse_messages, run, target_findings, unresolved_allowed,
+    CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS, TYPED_TABLE, TYPED_TABLE_LEN,
 };
 use std::path::{Path, PathBuf};
 
@@ -128,13 +128,16 @@ fn diagnostics_map_to_the_outermost_in_crate_span() {
             "KNP1-MINMAX typed-minmax-var src/lib.rs:9:37",
             // A span in std whose expansion lands in the crate.
             "KNP1-MINMAX typed-minmax-var src/lib.rs:5:15",
+            // No span inside the crate: never waivable.
+            "KNP1-TYPED-NOSPAN typed-macro Cargo.toml:1:1",
         ]
     );
+    assert!(!Rule::Typed("NOSPAN".into()).is_waivable());
     for f in &p.findings {
         f.validate().unwrap();
         assert!(f.message.contains("wasm32-unknown-unknown"), "{}", f.message);
     }
-    assert!(p.unreadable);
+    // `typed-clean` has only a build-script artifact, which does not count.
     assert_eq!(p.built.iter().cloned().collect::<Vec<_>>(), ["typed-macro", "typed-minmax-var"]);
     assert_eq!(p.errors.keys().cloned().collect::<Vec<_>>(), ["typed-nowasm"]);
 
@@ -147,6 +150,59 @@ fn diagnostics_map_to_the_outermost_in_crate_span() {
         f.validate().unwrap();
     }
     assert!(!Rule::Typed("BUILD".into()).is_waivable());
+}
+
+#[test]
+fn unreadable_lines_and_unresolved_table_paths_are_driver_errors() {
+    for (file, target) in [
+        ("messages-garbage.jsonl", "x86_64-unknown-linux-gnu"),
+        ("messages-unresolved.jsonl", "x86_64-unknown-linux-gnu"),
+    ] {
+        let e = parse_messages(&messages(file), target, &ctx(&["macro"])).unwrap_err();
+        assert_eq!(e.code, TypedErrorCode::Driver, "{file}: {e}");
+    }
+    // The aarch64 detection macro may be unresolved off aarch64, never on it.
+    assert!(unresolved_allowed("std::arch::is_aarch64_feature_detected", "x86_64-unknown-linux-gnu"));
+    assert!(!unresolved_allowed("std::arch::is_aarch64_feature_detected", "aarch64-apple-darwin"));
+    assert!(unresolved_allowed("std::is_x86_feature_detected", "wasm32-unknown-unknown"));
+    assert!(!unresolved_allowed("std::is_x86_feature_detected", "x86_64-pc-windows-msvc"));
+    assert!(!unresolved_allowed("f64::sin", "wasm32-unknown-unknown"));
+    let e = parse_messages(&messages("messages.jsonl"), "aarch64-unknown-linux-gnu", &ctx(&["macro"])).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver);
+}
+
+/// A disallowed-method diagnostic whose primary span (line 5) sits under `levels` nested
+/// expansions (line 8), the outermost at the call site (line 13).
+fn deep_message(levels: usize) -> Vec<u8> {
+    let ws = ws().to_string_lossy().replace('\\', "/");
+    let ws = ws.strip_prefix("//?/").unwrap_or(&ws).to_string();
+    let span = |line: u32, col: u32, exp: &str| {
+        format!(
+            "{{\"file_name\":\"deep/src/lib.rs\",\"line_start\":{line},\"column_start\":{col},\"is_primary\":true,\"expansion\":{exp}}}"
+        )
+    };
+    let mut exp = format!("{{\"span\":{}}}", span(13, 5, "null"));
+    for _ in 1..levels {
+        exp = format!("{{\"span\":{}}}", span(8, 9, &exp));
+    }
+    let primary = span(5, 12, &exp);
+    format!(
+        "{{\"reason\":\"compiler-message\",\"manifest_path\":\"{ws}/deep/Cargo.toml\",\"message\":{{\"message\":\"use of a disallowed method `f64::mul_add`\",\"code\":{{\"code\":\"clippy::disallowed_methods\"}},\"level\":\"warning\",\"spans\":[{primary}],\"children\":[{{\"message\":\"KNP1-FMA\"}}]}}}}\n"
+    )
+    .into_bytes()
+}
+
+#[test]
+fn deep_expansion_chains_are_read_or_fail_closed() {
+    let c = ctx(&["deep"]);
+    // 70 nested expansions: read, and placed at the outermost call site.
+    let p = parse_messages(&deep_message(70), "x86_64-unknown-linux-gnu", &c).unwrap();
+    let got: Vec<String> =
+        p.findings.iter().map(|f| format!("{} {}:{}:{}", f.rule, f.file, f.line, f.column)).collect();
+    assert_eq!(got, ["KNP1-FMA src/lib.rs:13:5"]);
+    // Deeper than the parser's limit: the whole run fails, nothing is dropped.
+    let e = parse_messages(&deep_message(400), "x86_64-unknown-linux-gnu", &c).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver);
 }
 
 #[test]
