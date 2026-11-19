@@ -43,8 +43,8 @@ pub use limits::{
     DEFAULT_WALL_MS,
 };
 pub use prov::{
-    resolve_unit, to_metres, Detection, EffectiveOptions, Evidence, FormatSelection, FrameCapture, HashingSource,
-    NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo, SourceDigest, SourceProvenance,
+    principal_commit, resolve_unit, to_metres, Detection, EffectiveOptions, Evidence, FormatSelection, FrameCapture,
+    HashingSource, NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo, SourceDigest, SourceProvenance,
     UnitResolution, UnitSource, VersionToken,
 };
 pub use report::{

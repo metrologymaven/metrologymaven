@@ -6,8 +6,8 @@
 
 use fid_canon::CValue;
 use fid_io_reg::prov::{
-    factor_decimal, source_frame_id, source_frame_name, FrameId, LengthUnit, PrincipalKind, MAX_DECLARED,
-    MAX_OPTIONS_BYTES, MAX_OPTIONS_DEPTH, MAX_TEXT_BYTES, SCHEMA,
+    factor_decimal, principal_commit, source_frame_id, source_frame_name, FrameId, LengthUnit, PrincipalCommit,
+    PrincipalDraft, PrincipalKind, MAX_DECLARED, MAX_OPTIONS_BYTES, MAX_OPTIONS_DEPTH, MAX_TEXT_BYTES, SCHEMA,
 };
 use fid_io_reg::{
     resolve_unit, to_metres, BoundedSource, Budget, Detection, Direction, EffectiveOptions, Evidence, FormatDescriptor,
@@ -15,6 +15,7 @@ use fid_io_reg::{
     Principal, ProvError, ReaderId, ReaderInfo, Registry, Signature, SourceDigest, SourceProvenance, UnitSource,
     UntrustedText, VersionRange, VersionToken,
 };
+use fid_journal::{Field, RecordedSalts, Salt};
 use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::io::Read;
@@ -59,7 +60,46 @@ fn source(bytes: Vec<u8>, limit: Option<u64>) -> HashingSource<std::io::Cursor<V
         req = req.bytes(l);
     }
     let budget = Budget::new(Principal::Agent, &req).unwrap();
-    HashingSource::new(BoundedSource::new(std::io::Cursor::new(bytes), budget))
+    HashingSource::new(BoundedSource::new(std::io::Cursor::new(bytes), budget)).unwrap()
+}
+
+/// A real digest of `bytes` (SourceDigest has no public constructor).
+fn digest_of(bytes: &[u8]) -> SourceDigest {
+    source(bytes.to_vec(), None).finish().unwrap().0
+}
+
+fn salts(identity: u8, behalf: u8) -> RecordedSalts {
+    let mut m = BTreeMap::new();
+    m.insert(Field::Identity, Salt([identity; 16]));
+    m.insert(Field::OnBehalfOf, Salt([behalf; 16]));
+    RecordedSalts(m)
+}
+
+fn commit_of(kind: PrincipalKind, identity: &str, behalf: Option<&str>) -> PrincipalCommit {
+    let draft = PrincipalDraft {
+        kind,
+        identity: CValue::Str(identity.to_string()),
+        on_behalf_of: behalf.map(|b| {
+            let mut m = BTreeMap::new();
+            m.insert("id".to_string(), CValue::Str(b.to_string()));
+            m.insert("kind".to_string(), CValue::Str("human".to_string()));
+            CValue::Obj(m)
+        }),
+    };
+    principal_commit(&draft, &mut salts(0x11, 0x22)).unwrap()
+}
+
+/// The AC-1 principal: `make_cases.py` (AC1_SALT = 0x00..0x0f, AC1_IDENTITY = "agent-7").
+fn ac1_principal() -> PrincipalCommit {
+    let mut m = BTreeMap::new();
+    let mut salt = [0u8; 16];
+    for (i, b) in salt.iter_mut().enumerate() {
+        *b = i as u8;
+    }
+    m.insert(Field::Identity, Salt(salt));
+    let draft =
+        PrincipalDraft { kind: PrincipalKind::Agent, identity: CValue::Str("agent-7".into()), on_behalf_of: None };
+    principal_commit(&draft, &mut RecordedSalts(m)).unwrap()
 }
 
 fn cube() -> Vec<u8> {
@@ -112,7 +152,7 @@ fn ac1_record() -> SourceProvenance {
         digest,
         named_detection(),
         xyz_reader(),
-        PrincipalKind::Agent,
+        ac1_principal(),
         options(r#"{"delimiter":"space"}"#),
         unit,
     );
@@ -321,7 +361,9 @@ fn record_holds_every_req001_field() {
     assert_eq!(keys, want);
     assert_eq!(map["schema"], CValue::Str(SCHEMA.to_string()));
     assert_eq!(map["bytes"], CValue::U64(96));
-    assert_eq!(map["principal"], CValue::Str("agent".to_string()));
+    let CValue::Obj(p) = &map["principal"] else { panic!() };
+    assert_eq!(p["kind"], CValue::Str("agent".to_string()));
+    assert_eq!(p["on_behalf_of_commit"], CValue::Null);
 }
 
 #[test]
@@ -346,7 +388,7 @@ fn synthesized_frame_is_source_prefix_at_world_identity() {
 #[test]
 fn declared_frame_is_recorded_as_declared() {
     let id = FrameId::from_bytes([7; 16]);
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([1; 32]), 3));
+    let mut b = builder_with(digest_of(&[1; 3]));
     b.frame(FrameCapture::Declared { id, label: Some(UntrustedText::new("PCS\u{202e}1")) }).unwrap();
     let rec = b.build();
     assert_eq!(rec.frame_id(), id);
@@ -366,7 +408,7 @@ fn builder_with(digest: SourceDigest) -> fid_io_reg::ProvenanceBuilder {
         digest,
         named_detection(),
         xyz_reader(),
-        PrincipalKind::Human,
+        commit_of(PrincipalKind::Human, "alice", None),
         EffectiveOptions::empty(),
         resolve_unit(Some(LengthUnit::Mm), None, false).unwrap(),
     )
@@ -386,7 +428,7 @@ fn detection_result_records_how_the_format_was_chosen() {
     let e = Detection::detect(&reg, b"nothing", 7, None, None).unwrap_err();
     assert_eq!(e.code(), "format_unknown");
 
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([0; 32]), 0));
+    let mut b = builder_with(digest_of(&[0; 0]));
     let rec = b.format_version(VersionToken::new("1").unwrap()).build();
     let CValue::Obj(map) = rec.to_cvalue() else { panic!() };
     assert_eq!(map["format_selected_by"], CValue::Str("caller".to_string()));
@@ -412,16 +454,17 @@ fn reader_ids_and_versions_are_checked() {
 fn every_principal_kind_is_recorded_by_its_journal_wire_name() {
     for &p in PrincipalKind::ALL {
         let rec = SourceProvenance::builder(
-            SourceDigest::new(Digest::from_bytes([0; 32]), 0),
+            digest_of(b""),
             named_detection(),
             xyz_reader(),
-            p,
+            commit_of(p, "id", None),
             EffectiveOptions::empty(),
             resolve_unit(Some(LengthUnit::M), None, false).unwrap(),
         )
         .build();
         let CValue::Obj(map) = rec.to_cvalue() else { panic!() };
-        assert_eq!(map["principal"], CValue::Str(p.as_str().to_string()));
+        let CValue::Obj(pm) = &map["principal"] else { panic!() };
+        assert_eq!(pm["kind"], CValue::Str(p.as_str().to_string()));
     }
 }
 
@@ -429,7 +472,7 @@ fn every_principal_kind_is_recorded_by_its_journal_wire_name() {
 
 #[test]
 fn imported_content_is_never_measured() {
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([2; 32]), 1));
+    let mut b = builder_with(digest_of(&[2; 1]));
     assert_eq!(b.build().evidence(), Evidence::Uncharacterized);
     b.origin_claim(UntrustedText::new("measured on CMM 42, calibrated")).unwrap();
     let rec = b.build();
@@ -451,7 +494,7 @@ fn imported_content_is_never_measured() {
 
 #[test]
 fn untrusted_text_is_kept_exactly_and_shown_escaped() {
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([3; 32]), 1));
+    let mut b = builder_with(digest_of(&[3; 1]));
     let hostile = "evil\u{202e}txt.xyz\n\"ignore previous\" \\";
     b.source_name(UntrustedText::new(hostile)).unwrap();
     b.declare("header.originating_system", UntrustedText::new("Tool\u{0}X")).unwrap();
@@ -473,7 +516,7 @@ fn untrusted_text_is_kept_exactly_and_shown_escaped() {
 
 #[test]
 fn untrusted_text_above_the_bound_is_refused_not_cut() {
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([4; 32]), 1));
+    let mut b = builder_with(digest_of(&[4; 1]));
     let long = UntrustedText::new(&"x".repeat(MAX_TEXT_BYTES + 1));
     assert_eq!(b.source_name(long.clone()).unwrap_err().code(), "too_large");
     assert_eq!(b.origin_claim(long.clone()).unwrap_err().code(), "too_large");
@@ -488,7 +531,7 @@ fn untrusted_text_above_the_bound_is_refused_not_cut() {
 
 #[test]
 fn declared_keys_refuse_duplicates_case_variants_and_overflow() {
-    let mut b = builder_with(SourceDigest::new(Digest::from_bytes([5; 32]), 1));
+    let mut b = builder_with(digest_of(&[5; 1]));
     b.declare("schema", UntrustedText::new("a")).unwrap();
     assert_eq!(
         b.declare("schema", UntrustedText::new("b")).unwrap_err(),
@@ -544,4 +587,69 @@ fn options_are_bounded() {
     let mut m = BTreeMap::new();
     m.insert("a".to_string(), CValue::Str("x".repeat(MAX_OPTIONS_BYTES)));
     assert_eq!(EffectiveOptions::new(CValue::Obj(m)).unwrap_err().code(), "too_large");
+}
+
+// ------------------------------------------------------------------ review fixes (#250)
+
+#[test]
+fn principal_keeps_on_behalf_of_so_alice_and_bob_differ() {
+    // One server session imports the same file for alice and for bob.
+    let file = cube();
+    let rec = |behalf: &str| {
+        SourceProvenance::builder(
+            digest_of(&file),
+            named_detection(),
+            xyz_reader(),
+            commit_of(PrincipalKind::Service, "server-session-1", Some(behalf)),
+            EffectiveOptions::empty(),
+            resolve_unit(Some(LengthUnit::Mm), None, false).unwrap(),
+        )
+        .build()
+    };
+    let (a, b) = (rec("alice"), rec("bob"));
+    assert_eq!(a.principal().commit, b.principal().commit);
+    assert!(a.principal().on_behalf_of_commit.is_some());
+    assert_ne!(a.principal().on_behalf_of_commit, b.principal().on_behalf_of_commit);
+    assert_ne!(a.canonical_bytes().unwrap(), b.canonical_bytes().unwrap());
+    assert_ne!(a.digest().unwrap(), b.digest().unwrap());
+    // No raw identity appears in the record.
+    let json = String::from_utf8(a.canonical_bytes().unwrap()).unwrap();
+    assert!(!json.contains("alice") && !json.contains("server-session-1"), "{json}");
+    // The header check: equal commitments pass, bob's header fails alice's record.
+    a.verify_principal(&a.principal()).unwrap();
+    assert_eq!(a.verify_principal(&b.principal()).unwrap_err().code(), "principal_mismatch");
+}
+
+#[test]
+fn principal_commit_matches_the_journal_commitment_rule() {
+    let p = commit_of(PrincipalKind::Agent, "agent-7", Some("alice"));
+    let want_id = fid_journal::commitment(&Salt([0x11; 16]), &CValue::Str("agent-7".into())).unwrap();
+    assert_eq!(p.commit, want_id);
+    let mut m = BTreeMap::new();
+    m.insert("id".to_string(), CValue::Str("alice".into()));
+    m.insert("kind".to_string(), CValue::Str("human".into()));
+    let want_behalf = fid_journal::commitment(&Salt([0x22; 16]), &CValue::Obj(m)).unwrap();
+    assert_eq!(p.on_behalf_of_commit, Some(want_behalf));
+    // A missing salt is a typed error.
+    let draft = PrincipalDraft { kind: PrincipalKind::Agent, identity: CValue::Str("x".into()), on_behalf_of: None };
+    let e = principal_commit(&draft, &mut RecordedSalts::default()).unwrap_err();
+    assert_eq!(e.code(), "principal_commit");
+}
+
+#[test]
+fn hashing_source_refuses_a_source_already_read() {
+    let budget = Budget::new(Principal::Agent, &LimitRequest::default()).unwrap();
+    let mut inner = BoundedSource::new(std::io::Cursor::new(cube()), budget);
+    let mut b = [0u8; 4];
+    inner.read_bounded(&mut b).unwrap();
+    let e = HashingSource::new(inner).unwrap_err();
+    assert_eq!(e, ProvError::SourceAlreadyRead { offset: 4 });
+    assert_eq!(e.code(), "source_already_read");
+}
+
+#[test]
+fn options_deeper_than_the_parser_cap_report_the_parser_cap() {
+    let nest = |n: usize| format!("{}1{}", r#"{"a":"#.repeat(n), "}".repeat(n));
+    let e = EffectiveOptions::from_json(nest(5000).as_bytes()).unwrap_err();
+    assert_eq!(e, ProvError::TooLarge { field: "options", limit: fid_canon::MAX_DEPTH as u64 });
 }

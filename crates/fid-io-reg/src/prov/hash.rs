@@ -2,6 +2,7 @@
 
 use crate::budget::Budget;
 use crate::error::IoError;
+use crate::prov::ProvError;
 use crate::source::BoundedSource;
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
@@ -18,9 +19,9 @@ pub struct SourceDigest {
 }
 
 impl SourceDigest {
-    /// A digest and size computed elsewhere (for example by a worker process that read the
-    /// file under the same limits).
-    pub fn new(sha256: Digest, bytes: u64) -> SourceDigest {
+    /// Crate-private: a digest only ever comes from in-process hashing
+    /// ([`HashingSource::finish`]), never from a caller's claim.
+    pub(crate) fn new(sha256: Digest, bytes: u64) -> SourceDigest {
         SourceDigest { sha256, bytes }
     }
 
@@ -46,9 +47,15 @@ pub struct HashingSource<R> {
 }
 
 impl<R: Read> HashingSource<R> {
-    /// Wraps a bounded source that has not been read yet.
-    pub fn new(inner: BoundedSource<R>) -> Self {
-        HashingSource { inner, hasher: Sha256::new(), bytes: 0 }
+    /// Wraps a bounded source that has not been read yet. A source that has already
+    /// delivered bytes is refused (`source_already_read`): the digest must cover the file
+    /// from its first byte.
+    pub fn new(inner: BoundedSource<R>) -> Result<Self, ProvError> {
+        let offset = inner.offset();
+        if offset != 0 {
+            return Err(ProvError::SourceAlreadyRead { offset });
+        }
+        Ok(HashingSource { inner, hasher: Sha256::new(), bytes: 0 })
     }
 
     /// The budget.
@@ -85,7 +92,7 @@ impl<R: Read> HashingSource<R> {
         while self.read_bounded(&mut chunk)? != 0 {}
         let sha256 = Digest::from_bytes(self.hasher.finalize().into());
         let (_, budget) = self.inner.into_parts();
-        Ok((SourceDigest { sha256, bytes: self.bytes }, budget))
+        Ok((SourceDigest::new(sha256, self.bytes), budget))
     }
 }
 

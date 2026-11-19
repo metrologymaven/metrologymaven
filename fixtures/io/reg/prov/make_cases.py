@@ -28,8 +28,9 @@ expected.txt, one record per line, fields separated by one space:
   of SHA-256(b"fid.io.reg.prov.source_frame@1" + b"\\x00" + the 32 digest bytes), name =
   `source:` + the first 12 hex digits of the digest.
 - `provenance <json>`: the RFC 8785 canonical JSON of the AC-1 provenance record (built by
-  the test with the inputs listed in `ac1_record` below). Every value is a string, a bool,
-  null or an object, so JCS equals sorted keys with no whitespace.
+  the test with the inputs listed in `ac1_record` below, the principal committed with
+  AC1_SALT and AC1_IDENTITY). Every value is a string, a bool, null or an object, so JCS
+  equals sorted keys with no whitespace.
 """
 
 import hashlib
@@ -40,6 +41,11 @@ import random
 import struct
 import sys
 from fractions import Fraction
+
+# AC-1 principal: an agent with identity "agent-7", identity salt bytes 0x00..0x0f, no
+# on_behalf_of. The test builds the same commitment through fid-journal.
+AC1_SALT = bytes(range(16))
+AC1_IDENTITY = "agent-7"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -108,7 +114,12 @@ def ac1_record(digest_hex, size, frame_id, frame_name):
         "format_selected_by": "caller",
         "reader": "fid-test-xyz",
         "reader_version": "0.1.0",
-        "principal": "agent",
+        "principal": {
+            "kind": "agent",
+            # CORE.JRN.ENTRY REQ-003: SHA-256 over the 16-byte salt then the RFC 8785 value.
+            "commit": "sha256:" + hashlib.sha256(AC1_SALT + json.dumps(AC1_IDENTITY).encode("utf-8")).hexdigest(),
+            "on_behalf_of_commit": None,
+        },
         "options": {"delimiter": "space"},
         "unit": "mm",
         "unit_factor": "0.001",

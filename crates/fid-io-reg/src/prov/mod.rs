@@ -2,8 +2,9 @@
 //!
 //! Every import builds one [`SourceProvenance`]: what was read ([`SourceDigest`] from a
 //! [`HashingSource`]), how its format was chosen ([`Detection`], from the `IO.REG.DETECT`
-//! [`Registry`]), which reader read it ([`ReaderInfo`]), who asked ([`PrincipalKind`], the
-//! journal's principal kind), the effective options ([`EffectiveOptions`]), the effective
+//! [`Registry`]), which reader read it ([`ReaderInfo`]), who asked ([`PrincipalCommit`], the
+//! journal header's principal: kind plus salted identity and `on_behalf_of` commitments,
+//! never raw identities), the effective options ([`EffectiveOptions`]), the effective
 //! length unit ([`resolve_unit`]) and the source frame ([`FrameCapture`]). The record
 //! serialises to RFC 8785 canonical JSON for the import journal event (`IO.REG.ENV`).
 //!
@@ -26,7 +27,7 @@ mod unit;
 
 /// Re-exported so callers need no direct dependency for the unit, frame and principal types.
 pub use fid_geo_frame::{FrameId, LengthUnit};
-pub use fid_journal::PrincipalKind;
+pub use fid_journal::{PrincipalCommit, PrincipalDraft, PrincipalKind};
 pub use hash::{HashingSource, SourceDigest};
 pub use unit::{factor_decimal, resolve_unit, to_metres, NonFiniteLength, UnitResolution, UnitSource};
 
@@ -35,6 +36,7 @@ use crate::report::{is_format_id, FormatId, MAX_NAME_LEN};
 use crate::untrusted::UntrustedText;
 use fid_canon::{CValue, CanonError};
 use fid_geo_frame::{Frame, FrameKind, Transform};
+use fid_journal::{Field, SaltSource};
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -81,6 +83,20 @@ pub enum ProvError {
         /// Static reason (never input text).
         reason: &'static str,
     },
+    /// The source handed to [`HashingSource::new`] was already read from, so a digest
+    /// would miss the bytes before `offset`.
+    SourceAlreadyRead {
+        /// Bytes already consumed.
+        offset: u64,
+    },
+    /// The record's principal commitment is not the journal entry header's.
+    PrincipalMismatch,
+    /// Computing a principal commitment failed (salt or canonical JSON); static journal
+    /// error code.
+    Commit {
+        /// The `fid-journal` error code.
+        code: &'static str,
+    },
     /// A bound was exceeded (size, count or depth); nothing is truncated.
     TooLarge {
         /// The field.
@@ -98,6 +114,9 @@ impl ProvError {
             ProvError::CaseDuplicateKey { .. } => "case_duplicate_key",
             ProvError::Invalid { .. } => "invalid",
             ProvError::TooLarge { .. } => "too_large",
+            ProvError::SourceAlreadyRead { .. } => "source_already_read",
+            ProvError::PrincipalMismatch => "principal_mismatch",
+            ProvError::Commit { .. } => "principal_commit",
         }
     }
 }
@@ -109,6 +128,9 @@ impl fmt::Display for ProvError {
             ProvError::DuplicateKey { field } | ProvError::CaseDuplicateKey { field } => write!(f, ": in {field}"),
             ProvError::Invalid { field, reason } => write!(f, ": {field}: {reason}"),
             ProvError::TooLarge { field, limit } => write!(f, ": {field} above {limit}"),
+            ProvError::SourceAlreadyRead { offset } => write!(f, ": {offset} bytes already read"),
+            ProvError::PrincipalMismatch => Ok(()),
+            ProvError::Commit { code } => write!(f, ": {code}"),
         }
     }
 }
@@ -273,8 +295,9 @@ impl EffectiveOptions {
         match fid_canon::parse_with_limits(json, MAX_OPTIONS_BYTES, fid_canon::MAX_DEPTH) {
             Ok(v) => EffectiveOptions::new(v),
             Err(CanonError::DuplicateKey(_)) => Err(ProvError::DuplicateKey { field: "options" }),
+            // The byte size is checked above, so the parser's limit hit is its own depth cap.
             Err(CanonError::InputLimit) => {
-                Err(ProvError::TooLarge { field: "options", limit: MAX_OPTIONS_DEPTH as u64 })
+                Err(ProvError::TooLarge { field: "options", limit: fid_canon::MAX_DEPTH as u64 })
             }
             Err(_) => Err(invalid("options", "options are not JSON")),
         }
@@ -383,6 +406,35 @@ pub fn source_frame_name(sha256: &Digest) -> String {
     format!("source:{}", hex.get(..SOURCE_FRAME_HEX).unwrap_or(hex))
 }
 
+// ------------------------------------------------------------------ principal
+
+/// The principal's header commitment, computed exactly as `fid_journal::build` computes it:
+/// the identity committed under [`Field::Identity`] and `on_behalf_of` (when present) under
+/// [`Field::OnBehalfOf`], each with the salt `salts` gives for that field. `IO.REG.ENV`
+/// passes the bus principal's draft (`to_draft()`) and the salts the entry will be built
+/// with, so the record and the header hold the same commitments.
+pub fn principal_commit(draft: &PrincipalDraft, salts: &mut dyn SaltSource) -> Result<PrincipalCommit, ProvError> {
+    let mut commit = |field: Field, value: &CValue| -> Result<fid_canon::Digest, ProvError> {
+        let salt = salts.salt(field).map_err(|e| ProvError::Commit { code: e.code() })?;
+        fid_journal::commitment(&salt, value).map_err(|e| ProvError::Commit { code: e.code() })
+    };
+    let identity = commit(Field::Identity, &draft.identity)?;
+    let on_behalf_of_commit = match &draft.on_behalf_of {
+        Some(v) => Some(commit(Field::OnBehalfOf, v)?),
+        None => None,
+    };
+    Ok(PrincipalCommit { kind: draft.kind, commit: identity, on_behalf_of_commit })
+}
+
+fn principal_value(p: &PrincipalCommit) -> CValue {
+    let fields = [
+        ("kind", CValue::Str(p.kind.as_str().to_string())),
+        ("commit", CValue::Str(p.commit.to_string())),
+        ("on_behalf_of_commit", p.on_behalf_of_commit.map_or(CValue::Null, |c| CValue::Str(c.to_string()))),
+    ];
+    CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+}
+
 // ------------------------------------------------------------------ the record
 
 /// The provenance record of one successful import. Built only through
@@ -394,7 +446,7 @@ pub struct SourceProvenance {
     detection: Detection,
     format_version: Option<VersionToken>,
     reader: ReaderInfo,
-    principal: PrincipalKind,
+    principal: PrincipalCommit,
     options: EffectiveOptions,
     unit: UnitResolution,
     frame: FrameCapture,
@@ -415,7 +467,7 @@ impl SourceProvenance {
         source: SourceDigest,
         detection: Detection,
         reader: ReaderInfo,
-        principal: PrincipalKind,
+        principal: PrincipalCommit,
         options: EffectiveOptions,
         unit: UnitResolution,
     ) -> ProvenanceBuilder {
@@ -461,9 +513,20 @@ impl SourceProvenance {
         &self.reader
     }
 
-    /// The principal kind of the import command.
-    pub fn principal(&self) -> PrincipalKind {
+    /// The principal of the import command, as the journal header commits it.
+    pub fn principal(&self) -> PrincipalCommit {
         self.principal
+    }
+
+    /// Checks that this record's principal is the journal entry header's (`IO.REG.ENV` runs
+    /// it before committing): kind, identity commitment and `on_behalf_of` commitment must
+    /// all be equal, else `principal_mismatch`.
+    pub fn verify_principal(&self, header: &PrincipalCommit) -> Result<(), ProvError> {
+        if self.principal == *header {
+            Ok(())
+        } else {
+            Err(ProvError::PrincipalMismatch)
+        }
     }
 
     /// The effective options.
@@ -544,7 +607,7 @@ impl SourceProvenance {
             ("format_selected_by", s(self.detection.selected_by.as_str())),
             ("reader", s(self.reader.id.as_str())),
             ("reader_version", s(self.reader.version.as_str())),
-            ("principal", s(self.principal.as_str())),
+            ("principal", principal_value(&self.principal)),
             ("options", self.options.0.clone()),
             ("unit", s(self.unit.unit().symbol())),
             ("unit_factor", s(self.unit.factor_decimal())),
@@ -655,7 +718,11 @@ impl fmt::Display for SourceProvenance {
         }
         writeln!(f)?;
         writeln!(f, "reader: {} {}", self.reader.id.as_str(), self.reader.version.as_str())?;
-        writeln!(f, "principal: {}", self.principal.as_str())?;
+        write!(f, "principal: {} {}", self.principal.kind.as_str(), self.principal.commit)?;
+        if let Some(c) = &self.principal.on_behalf_of_commit {
+            write!(f, " on behalf of {c}")?;
+        }
+        writeln!(f)?;
         writeln!(
             f,
             "unit: {} (factor {}, {})",
