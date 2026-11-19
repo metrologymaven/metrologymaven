@@ -309,6 +309,7 @@ jobs:
           python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
+          python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -429,6 +430,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
       - name: Uncertainty statement digests on wasm32-wasip1 (UNC.UEC.STMT AC-5)
         run: cargo test --target wasm32-wasip1 -p fid-kunc
+      - name: Decision-rule catalog digest and rule-ID cases on wasm32-wasip1 (UNC.DEC.TYPE AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-kdec
       - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-report-pdf
       - name: Implementation digests are bit-identical on wasm32-wasip1 (KRN.MAN.MANI.IMPL AC-1, build-time tool)

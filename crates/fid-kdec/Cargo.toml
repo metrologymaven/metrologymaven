@@ -1,0 +1,22 @@
+[package]
+name = "fid-kdec"
+description = "Metrology Maven kernel decision rules: the DecisionRule type, rule-ID grammar, four-valued Outcome, built-in catalog dr-catalog@1 and decisions that carry their evidence basis (spec node UNC.DEC.TYPE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only workspace crates of the num and
+# kernel layers: fid-num (exact decimals for p_min and r), fid-types (`sha256:` digests),
+# fid-kci (the shared RFC 8785 writer and the portable SHA-256) and fid-kunc (the
+# uncertainty statement whose claimed / declared-input / uncharacterized-input facts every
+# decision carries).
+[dependencies]
+fid-kci = { path = "../fid-kci" }
+fid-kunc = { path = "../fid-kunc" }
+fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
