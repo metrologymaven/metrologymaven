@@ -9,7 +9,9 @@
 //! suite/oracles/<id>/oracle.json    the oracle (schema/eval-oracle-v1.schema.json)
 //! ```
 //!
-//! A task may carry the red-team extension (`family`, `predicates`; AGENT.REDTEAM.PRED) and,
+//! A task may carry the red-team extension (`family`, `predicates`; AGENT.REDTEAM.PRED, whose
+//! suite-wide marker rules `duplicate_marker`, `marker_not_in_payload` and `marker_in_prompt`
+//! [`load_suite`] applies to the payload files in the start-state archives) and,
 //! for injection tasks, `payloads` (AGENT.REDTEAM.INJECT); tasks of family `escal` carry a
 //! `subfamily` (AGENT.REDTEAM.ESCAL); tasks of family `shell` require `shell: true` and are
 //! either a variant (`variant_of`) or `shell_only` (AGENT.REDTEAM.SHELL), and
@@ -29,6 +31,7 @@
 
 mod check;
 mod json;
+mod markers;
 mod oracle;
 mod redteam;
 mod shell;
@@ -70,6 +73,14 @@ pub enum ErrorCode {
     MissingPredicate,
     /// A predicate kind outside the closed list (AGENT.REDTEAM.PRED).
     UnknownPredicate,
+    /// Two `entry_with_marker` predicates of the suite share a marker, or a marker appears
+    /// in a payload file of another task (REQ-AGENT.REDTEAM.PRED-003).
+    DuplicateMarker,
+    /// An `entry_with_marker` marker in none of the task's payload files
+    /// (REQ-AGENT.REDTEAM.PRED-004).
+    MarkerNotInPayload,
+    /// A marker in the task prompt (REQ-AGENT.REDTEAM.PRED-005).
+    MarkerInPrompt,
 }
 
 impl ErrorCode {
@@ -84,6 +95,9 @@ impl ErrorCode {
             ErrorCode::MissingFile => "missing_file",
             ErrorCode::MissingPredicate => "missing_predicate",
             ErrorCode::UnknownPredicate => "unknown_predicate",
+            ErrorCode::DuplicateMarker => "duplicate_marker",
+            ErrorCode::MarkerNotInPayload => "marker_not_in_payload",
+            ErrorCode::MarkerInPrompt => "marker_in_prompt",
         }
     }
 }

@@ -10,9 +10,9 @@
 //! `unknown_predicate`; predicates on a task without a family, and `numeric_claim` outside
 //! the fabrication family (REQ-AGENT.REDTEAM.PRED-006), fail with `invalid_task`.
 //!
-//! Only the schema is checked here. Suite-wide marker rules (`duplicate_marker`,
-//! `marker_not_in_payload`, `marker_in_prompt`) need the payload files and belong to
-//! AGENT.REDTEAM.PRED; predicate evaluation belongs to AGENT.HARNESS.SAFETY.
+//! Only the schema is checked here. The suite-wide marker rules (`duplicate_marker`,
+//! `marker_not_in_payload`, `marker_in_prompt`) need the payload files and live in
+//! `markers.rs`; predicate evaluation belongs to AGENT.HARNESS.SAFETY.
 
 use crate::json::{index, is_id, join, Ctx, Map};
 use crate::task::{relpath, wire_enum, Licence, RelPath};

@@ -1,0 +1,61 @@
+{
+  "provisional": "Provisional synthetic format (AGENT.REDTEAM.PRED fixtures, same as the shell family's runs): a stand-in until AGENT.HARNESS defines the run archive and CORE.REG.MAN declares command classes, promotion and kernel-evaluating commands. Every command ID is a placeholder. See docs/redteam-predicates.md.",
+  "commands": {
+    "inspect.fit_circle@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "report.write_brief@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "doc.rename_feature@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "result.enter_value@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    },
+    "result.manual_reading@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": true,
+      "human_only": true,
+      "named_in": "placeholder"
+    },
+    "branch.promote@1": {
+      "class": "W3",
+      "promotion": true,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": true,
+      "named_in": "placeholder"
+    },
+    "settings.set_default_decision_rule@1": {
+      "class": "A0",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "human_only": false,
+      "named_in": "placeholder"
+    }
+  }
+}
