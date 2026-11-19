@@ -1,0 +1,134 @@
+{
+ "decls": [
+  {
+   "command": "probe.stamp@1",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  }
+ ],
+ "expect": {
+  "outcomes": {
+   "1": "IDENTICAL",
+   "2": "IDENTICAL",
+   "3": "IDENTICAL"
+  },
+  "preflight": []
+ },
+ "handler": {
+  "1": {
+   "args": {
+    "feature": "F1",
+    "probe": "T1"
+   },
+   "args_commit": "sha256:eaf7e47b52fa061c6ac2d1698d0cdb848b93a9c5ecd3f2715121b341fb4126b6",
+   "output": "sha256:da48a495c4e13bf2e09144039ebd150d45265c6037b0f5a1ded33e071e2d9d12"
+  },
+  "2": {
+   "args": {
+    "feature": "F2",
+    "probe": "T1"
+   },
+   "args_commit": "sha256:fd307a3b39cc33c3f0e136bf60fb8d9ceb90846b16aeb83eb445a0b3eae03f8c",
+   "output": "sha256:28feb289a35eff7fea5703582225f9e93cbac039a37aaa9722d0a872cd261b60"
+  },
+  "3": {
+   "args": {
+    "feature": "F3",
+    "probe": "T1"
+   },
+   "args_commit": "sha256:f91cd084d3238397f7ccf8c1eccbd73285ed35da1ed60b1e39808e1bfb716335",
+   "output": "sha256:ccec5594118fcdd2d9e564cdbfadfdf0a519998c02a7f8f087a2df09a1e039ae"
+  }
+ },
+ "kernels": [
+  "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f"
+ ],
+ "migrators": [],
+ "span": {
+  "steps": [
+   {
+    "command": "probe.stamp@1",
+    "entry": "sha256:9797fd4f965e12cca23428411105eeb608a5848c9811fb6f3ee2d44dd0050129",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:b11caa00ed5899b4afea3525171766d72dd167345194893fe1301cb40132521c",
+      "kind": "clock",
+      "storage": "inline"
+     },
+     {
+      "digest": "sha256:c1036aef50eae69f3feb5c1d39bfbe7df5c932f8baaf7b5fc8a0cd5bbeb4dff8",
+      "kind": "salt",
+      "storage": "inline"
+     }
+    ],
+    "payload": {
+     "inline": {
+      "sha256:b11caa00ed5899b4afea3525171766d72dd167345194893fe1301cb40132521c": "7b226d6f6e6f5f6e73223a2231303030303030303137222c2273796e63223a226e7470222c22757463223a22323032362d31312d31385430393a30303a30315a227d",
+      "sha256:c1036aef50eae69f3feb5c1d39bfbe7df5c932f8baaf7b5fc8a0cd5bbeb4dff8": "babd6856b705f8c1ef50f9c576fd0126"
+     },
+     "salts": {
+      "args": "c0ac3c154a17381c714ee6c51dbe6526"
+     }
+    },
+    "seq": 1
+   },
+   {
+    "command": "probe.stamp@1",
+    "entry": "sha256:56b14c6997badee6b7c73bc15c754ac6a91138d718b70e28c55f26269138df24",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:3bba456ec851f18d9099336745b0b2103ca42b42befb2eae107e94e4205020c8",
+      "kind": "clock",
+      "storage": "inline"
+     },
+     {
+      "digest": "sha256:1a9e37e3778af451f2d2bca557699c3db4b1dc105ba2bec2b016ea1acacb7ad7",
+      "kind": "salt",
+      "storage": "inline"
+     }
+    ],
+    "payload": {
+     "inline": {
+      "sha256:1a9e37e3778af451f2d2bca557699c3db4b1dc105ba2bec2b016ea1acacb7ad7": "0c0f26d20d4b299de94dac8593beff1e",
+      "sha256:3bba456ec851f18d9099336745b0b2103ca42b42befb2eae107e94e4205020c8": "7b226d6f6e6f5f6e73223a2232303030303030303137222c2273796e63223a226e7470222c22757463223a22323032362d31312d31385430393a30303a30325a227d"
+     },
+     "salts": {
+      "args": "400e5617a29c0fd1b05f69d3b4ba523d"
+     }
+    },
+    "seq": 2
+   },
+   {
+    "command": "probe.stamp@1",
+    "entry": "sha256:1f6a2ad7f36e9b05f2f1f452b6250b1405051e8641118120054da2ca9363a399",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:48ee343854be0d4d60c66d535abd04e3762feb6ad3adf4ff138fab1e264859eb",
+      "kind": "clock",
+      "storage": "inline"
+     },
+     {
+      "digest": "sha256:ba2ab0244dd7d874b79df2c6cf6feb6ca4485a6890df41f842fef7be23e82181",
+      "kind": "salt",
+      "storage": "inline"
+     }
+    ],
+    "payload": {
+     "inline": {
+      "sha256:48ee343854be0d4d60c66d535abd04e3762feb6ad3adf4ff138fab1e264859eb": "7b226d6f6e6f5f6e73223a2233303030303030303137222c2273796e63223a226e7470222c22757463223a22323032362d31312d31385430393a30303a30335a227d",
+      "sha256:ba2ab0244dd7d874b79df2c6cf6feb6ca4485a6890df41f842fef7be23e82181": "beccc13767073ee72f2e15516737b36e"
+     },
+     "salts": {
+      "args": "d880943aac086537234ec2dfa0cf7d15"
+     }
+    },
+    "seq": 3
+   }
+  ]
+ }
+}

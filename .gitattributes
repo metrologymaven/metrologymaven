@@ -8,6 +8,8 @@ fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
+# CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
+fixtures/core/job/cmd/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
 # IO.CLOUD.LAS.HDR fixtures: binary LAS files, a stored ZIP and expected output compared by --check.
@@ -113,6 +115,11 @@ fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# CORE.STO.SQL.SCHEMA fixture database and its generator: hashed and compared byte for byte.
+fixtures/core/sto/sql/schema/** -text
 # GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
 # tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
 fixtures/geo/types/** -text
+# CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
+# byte for byte by the tests and make_fixtures.py --check; never convert line endings.
+fixtures/core/rpl/exec/subst/** -text

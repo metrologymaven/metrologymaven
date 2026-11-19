@@ -1,0 +1,28 @@
+{
+  "description": "CORE.JOB.CMD: parameter documents that must be refused before any job is touched, with the expected bus error code and reason. Hand-labelled from the params schemas in the leaf's Design (unknown fields refused, job ID a lowercase hyphenated UUID, wait timeout 0..=3600 s) and the fail-closed rules (duplicate keys, nesting over 4 levels). CC-BY-4.0.",
+  "cases": [
+    { "command": "job.list_jobs@1", "params": "[]", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"state\":\"done\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"state\":\"Queued\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"state\":1}", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"state\":\"queued\",\"state\":\"running\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"limit\":5}", "code": "validation", "reason": "schema" },
+    { "command": "job.list_jobs@1", "params": "{\"state\":[[[[[\"queued\"]]]]]}", "code": "validation", "reason": "input_limit" },
+    { "command": "job.show_status@1", "params": "{}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":\"01890A5D-AC96-774B-BCCE-B302099A8057\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a805\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":\"01890a5dac96774bbcceb302099a8057\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":42}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":null}", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\"} x", "code": "validation", "reason": "schema" },
+    { "command": "job.show_status@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.cancel_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"force\":true}", "code": "validation", "reason": "schema" },
+    { "command": "job.cancel_job@1", "params": "", "code": "validation", "reason": "schema" },
+    { "command": "job.wait_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"timeout\":-0.1}", "code": "validation", "reason": "literal_out_of_range" },
+    { "command": "job.wait_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"timeout\":3600.5}", "code": "validation", "reason": "literal_out_of_range" },
+    { "command": "job.wait_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"timeout\":\"5\"}", "code": "validation", "reason": "schema" },
+    { "command": "job.wait_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"timeout\":true}", "code": "validation", "reason": "schema" },
+    { "command": "job.wait_job@1", "params": "{\"job\":\"01890a5d-ac96-774b-bcce-b302099a8057\",\"timeout\":5", "code": "validation", "reason": "schema" },
+    { "command": "job.wait_job@1", "params": "{\"timeout\":5}", "code": "validation", "reason": "schema" }
+  ]
+}
