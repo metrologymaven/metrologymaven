@@ -90,7 +90,7 @@ fn normalise(text: &str) -> Vec<Tok> {
                 b'I' | b'L' => b'1',
                 other => other,
             }),
-            _ if c.is_alphanumeric() && matches!(u32::from(c), 0x0370..=0x03FF | 0x0400..=0x052F) => Tok::Wild,
+            _ if c.is_alphanumeric() && matches!(u32::from(c), 0x0370..=0x052F) => Tok::Wild,
             _ => Tok::Other,
         };
         out.push(tok);
@@ -269,12 +269,12 @@ mod tests {
         assert!(appears_in("FIDRT0123456789ABCDEFGHJKMNPQRS", M));
         assert!(appears_in("FIDRT--0123-4567-89AB-CDEF-GHJK-MNPQ-RS", M));
         // Full-width: every character, including the hyphen.
-        let full: String =
-            M.chars().map(|c| char::from_u32(u32::from(c) + 0xFEE0).unwrap()).collect();
+        let full: String = M.chars().map(|c| char::from_u32(u32::from(c) + 0xFEE0).unwrap()).collect();
         assert!(appears_in(&format!("text {full} text"), M));
-        // Cyrillic and Greek homoglyphs next to marker-shaped text fail closed.
-        assert!(appears_in("FIDRT-0123456789\u{0410}BCDEFGHJKMNPQRS", M)); // Cyrillic A
-        assert!(appears_in("F\u{0399}DRT-0123456789ABCDEFGHJKMNPQRS", M)); // Greek Iota
+        // Cyrillic and Greek homoglyphs next to marker-shaped text fail closed: Cyrillic A,
+        // then Greek capital Iota.
+        assert!(appears_in("FIDRT-0123456789\u{0410}BCDEFGHJKMNPQRS", M));
+        assert!(appears_in("F\u{0399}DRT-0123456789ABCDEFGHJKMNPQRS", M));
         // Not the marker: one character changed, split by a space or line break, or text in
         // another script that is not Greek or Cyrillic.
         assert!(!appears_in("FIDRT-0123456789ABCDEFGHJKMNPQRT", M));
