@@ -1,0 +1,44 @@
+{
+  "schema": "rdl-dataset/v1",
+  "id": "rdl:X/fit.circle.ls/circle2d/0001",
+  "tier": "X",
+  "aim": "fit.circle.ls",
+  "inputs": [
+    {
+      "digest": "sha256:ecf606522b78e9e6ffa3a96b5aeffdcc4dccbdf3e1e0a8f2345fba8c5cd88345",
+      "unit": "mm",
+      "role": "points"
+    }
+  ],
+  "reference": {
+    "outputs": [
+      {
+        "name": "center_x",
+        "kind": "length",
+        "value_hex": "0x3f8999999999999a",
+        "test_uncertainty_hex": "0x3e112e0be826d695"
+      },
+      {
+        "name": "center_y",
+        "kind": "length",
+        "value_hex": "0xbf7eb851eb851eb8",
+        "test_uncertainty_hex": "0x3e112e0be826d695"
+      },
+      {
+        "name": "radius",
+        "kind": "length",
+        "value_hex": "0x3fa999999999999a",
+        "test_uncertainty_hex": "0x3e212e0be826d695",
+        "value_dec": "0.05"
+      }
+    ],
+    "precision_digits": 17
+  },
+  "cross_check": [],
+  "provenance": {
+    "source": "synthetic stand-in for an external NMI record",
+    "method": "hand-written"
+  },
+  "licence": "LicenseRef-Synthetic-Restricted",
+  "visibility": "reference_only"
+}
