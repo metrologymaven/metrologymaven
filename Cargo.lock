@@ -659,6 +659,7 @@ name = "fid-gps"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-geo-frame",
  "fid-num",
  "fid-types",
 ]
