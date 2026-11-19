@@ -211,7 +211,7 @@ impl RecordTable {
         if entries.len() > MAX_RECORDS {
             return Err(AssignError::InvalidInput { field: "records" });
         }
-        entries.sort_by_key(|e| e.0);
+        entries.sort_unstable_by_key(|e| e.0);
         if entries.windows(2).any(|w| matches!(w, [a, b] if a.0 == b.0)) {
             return Err(AssignError::DuplicateRecord);
         }
@@ -312,6 +312,10 @@ pub struct AssignOutput {
     claimed: bool,
     declared_input: bool,
     uncharacterized_input: bool,
+    /// Claims confirmed by their record, as (kind, digest); sorted, unique.
+    verified: Vec<(SourceKind, Digest)>,
+    /// Contributor input IDs of an evaluated basis, sorted; empty for other bases.
+    inputs: Vec<String>,
 }
 
 impl AssignOutput {
@@ -351,24 +355,45 @@ impl AssignOutput {
     pub fn algorithm(&self) -> &'static str {
         ALGORITHM_ID
     }
+    /// The sources a statement for this assignment may cite: every claim whose record
+    /// confirmed its kind and origin, as (kind, digest), sorted and unique.
+    pub fn citable_sources(&self) -> &[(SourceKind, Digest)] {
+        &self.verified
+    }
+    /// The contributor input IDs the statement must carry (sorted; empty unless the basis
+    /// is evaluated, since a claim carries no contributors).
+    pub fn contributor_ids(&self) -> &[String] {
+        &self.inputs
+    }
 
-    /// Builds the statement for this assignment from `parts`: sets `class` and
-    /// `uec0_reason`, adds [`RULE_SET`] to `provenance.rule_sets` (REQ-UNC.UEC.CLASS-006) and
-    /// validates through [`UncertaintyStatement::new`]. Refused, in order: a `method` other
-    /// than the basis's (`inconsistent_input{method}`); any statement error
+    /// Builds the statement for this assignment from `parts`; the only constructor of a
+    /// UEC-2 or UEC-3 statement. Sets `class` and `uec0_reason`, adds [`RULE_SET`] to
+    /// `provenance.rule_sets` (REQ-UNC.UEC.CLASS-006) and validates like
+    /// [`UncertaintyStatement::new`]. Refused, in order: a `method` other than the basis's
+    /// (`inconsistent_input{method}`); a source whose (kind, digest) is not one of
+    /// [`Self::citable_sources`] (`source_not_verified`); contributor input IDs other than
+    /// [`Self::contributor_ids`] (`contributor_mismatch`); any statement error
     /// (`statement_refused`); a statement whose labels are weaker than this assignment's
     /// (`label_dropped{is_claimed | rests_on_declared_input |
-    /// rests_on_uncharacterized_input}`), for example an unverified source listed as `dcc`.
+    /// rests_on_uncharacterized_input}`), for example one that leaves out an unverified input.
     pub fn statement(&self, mut parts: StatementParts) -> Result<UncertaintyStatement, AssignError> {
         if parts.method != self.basis.method() {
             return Err(AssignError::Inconsistent { field: "method" });
+        }
+        if !parts.sources.iter().all(|s| self.verified.binary_search(&(s.kind, s.digest)).is_ok()) {
+            return Err(AssignError::SourceNotVerified);
+        }
+        let mut ids: Vec<&str> = parts.contributors.iter().map(|c| c.input_id.as_str()).collect();
+        ids.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+        if !ids.iter().copied().eq(self.inputs.iter().map(String::as_str)) {
+            return Err(AssignError::ContributorMismatch);
         }
         parts.class = self.class;
         parts.uec0_reason = self.uec0_reason;
         if !parts.provenance.rule_sets.iter().any(|r| r == RULE_SET) {
             parts.provenance.rule_sets.push(RULE_SET.to_owned());
         }
-        let stmt = UncertaintyStatement::new(parts).map_err(AssignError::Statement)?;
+        let stmt = UncertaintyStatement::new_assigned(parts).map_err(AssignError::Statement)?;
         if stmt.is_claimed() != self.claimed {
             return Err(AssignError::LabelDropped { field: "is_claimed" });
         }
@@ -401,6 +426,10 @@ pub enum AssignError {
     Statement(StmtError),
     /// The statement would not carry a label the assignment sets.
     LabelDropped { field: &'static str },
+    /// The statement cites a source that is not a verified claim of the assignment.
+    SourceNotVerified,
+    /// The statement's contributors are not exactly the assigned contributors.
+    ContributorMismatch,
 }
 
 impl AssignError {
@@ -415,6 +444,8 @@ impl AssignError {
             AssignError::Inconsistent { .. } => "inconsistent_input",
             AssignError::Statement(_) => "statement_refused",
             AssignError::LabelDropped { .. } => "label_dropped",
+            AssignError::SourceNotVerified => "source_not_verified",
+            AssignError::ContributorMismatch => "contributor_mismatch",
         }
     }
 
@@ -428,7 +459,9 @@ impl AssignError {
             AssignError::EmptyModel
             | AssignError::UnknownBasis
             | AssignError::DuplicateInput
-            | AssignError::DuplicateRecord => None,
+            | AssignError::DuplicateRecord
+            | AssignError::SourceNotVerified
+            | AssignError::ContributorMismatch => None,
         }
     }
 }
@@ -456,14 +489,15 @@ enum Status {
 /// Checks one claim against its record. The record confirms or refutes the claim; it never
 /// replaces it. A claim that could never be characterized reports its own weakness whatever
 /// the record says; only a claim of a characterized kind needs the record to count.
-fn verify(claim: Option<&SourceClaim>, records: &dyn SourceRecords) -> (Status, bool) {
-    let Some(c) = claim else { return (Status::Unsourced, false) };
+fn verify(claim: Option<&SourceClaim>, records: &dyn SourceRecords) -> (Status, bool, bool) {
+    let Some(c) = claim else { return (Status::Unsourced, false, false) };
     let record = records.lookup(&c.digest);
+    let confirmed = record == Some(RecordFacts::Source { kind: c.kind, origin: c.origin });
     let declared = c.kind == SourceKind::Declared
         || matches!(record, Some(RecordFacts::Source { kind: SourceKind::Declared, .. }));
     let status = match (c.kind, c.origin) {
         (SourceKind::Dcc | SourceKind::Qualification | SourceKind::TypeA, _) => {
-            if record == Some(RecordFacts::Source { kind: c.kind, origin: c.origin }) {
+            if confirmed {
                 Status::Characterized
             } else {
                 Status::Unverified
@@ -472,7 +506,7 @@ fn verify(claim: Option<&SourceClaim>, records: &dyn SourceRecords) -> (Status, 
         (SourceKind::InstrumentModel, Some(Origin::Iemps)) => Status::Uncharacterized,
         (SourceKind::Declared | SourceKind::InstrumentModel, _) => Status::Unsourced,
     };
-    (status, declared)
+    (status, declared, confirmed)
 }
 
 fn inconsistent(field: &'static str) -> AssignError {
@@ -511,6 +545,8 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
         claimed: basis.is_claimed(),
         declared_input: false,
         uncharacterized_input: false,
+        verified: Vec::new(),
+        inputs: Vec::new(),
     };
 
     if basis == Basis::None {
@@ -552,8 +588,11 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
 
     let mut first: Option<(Status, &str)> = None;
     for c in &sorted {
-        let (status, declared) = verify(c.source.as_ref(), records);
+        let (status, declared, confirmed) = verify(c.source.as_ref(), records);
         out.declared_input |= declared;
+        if let (true, Some(s)) = (confirmed, &c.source) {
+            out.verified.push((s.kind, s.digest));
+        }
         if status != Status::Characterized {
             out.uncharacterized_input = true;
             if first.is_none() {
@@ -562,10 +601,14 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
         }
     }
 
+    out.verified.sort_unstable();
+    out.verified.dedup();
+
     if basis.is_claimed() {
         out.class = EvidenceClass::Uec1;
         return Ok(out);
     }
+    out.inputs = sorted.iter().map(|c| c.input_id.clone()).collect();
     if let Some((status, id)) = first {
         let reason = match status {
             Status::Uncharacterized => DowngradeReason::UncharacterizedContributor,

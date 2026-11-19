@@ -6,7 +6,9 @@
 
 use fid_kdec::{Decision, EvidenceBasis, NotDecidableReason, Outcome};
 use fid_kunc::uec::{assign, AssignInput, Basis, ContributorSource, RecordFacts, RecordTable, SourceClaim};
-use fid_kunc::{EvidenceClass, Expanded, Method, ModelRef, PrincipalKind, SourceKind, SourceRef, StatementParts};
+use fid_kunc::{
+    Contributor, EvidenceClass, Expanded, Method, ModelRef, PrincipalKind, SourceKind, SourceRef, StatementParts,
+};
 use fid_types::Digest;
 
 fn digest_of(label: &str) -> Digest {
@@ -42,8 +44,14 @@ fn parts(method: Method, sources: &[(&str, SourceKind)]) -> StatementParts {
     p
 }
 
-fn decision_basis(input: &AssignInput, records: &RecordTable, p: StatementParts) -> (EvidenceClass, EvidenceBasis) {
+fn decision_basis(input: &AssignInput, records: &RecordTable, mut p: StatementParts) -> (EvidenceClass, EvidenceBasis) {
     let o = assign(input, records).unwrap();
+    // The statement carries exactly the assigned contributors.
+    p.contributors = o
+        .contributor_ids()
+        .iter()
+        .map(|id| Contributor { input_id: id.clone(), sensitivity: None, u_contrib: 1.0e-7, variance_share: 0.5 })
+        .collect();
     let stmt = o.statement(p).unwrap();
     let basis = EvidenceBasis::of(&stmt).unwrap();
     assert_eq!(basis.class(), o.class());

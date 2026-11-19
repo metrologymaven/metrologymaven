@@ -13,13 +13,15 @@ Columns
                        iso15530_3, iso15530_4) or an unknown string
   model_bound          true / false
   instruments_bound    true / false
-  contributors         "-" or ";"-separated "<input_id>:<claim>:<record>", in input order
+  contributors         "-" or ";"-separated "<input_id>:<claim>:<record>[:<label>]", in input order
                          claim:  dcc qualification type_a declared im_iemps im_spec
                                  none (no source) im (instrument model without origin)
                                  dcc_iemps (dcc carrying an origin)
                          record: what the record store holds for the claim's digest:
                                  same (the claim itself), absent, or a claim word
                                  (dcc qualification type_a declared im_iemps im_spec)
+                         label:  record label (default: the input_id); contributors with the
+                                 same label cite one shared record, whose kind they must agree on
   validation           "-" (no record reference), ok (store holds a validation record),
                        absent (unknown digest), wrong (the digest is a dcc source record)
   class                UEC-0..UEC-3 or "-" on error
@@ -31,7 +33,7 @@ Columns
   error                "-" or "<code>" or "<code>:<field>"
 
 Digests (computed by the test, not stored): a contributor's claimed source is
-sha256("source:" + input_id); the validation record is sha256("validation:" + case).
+sha256("source:" + label); the validation record is sha256("validation:" + case).
 
 Usage: make_table.py [--check]   (--check compares with the file on disk, writes nothing)
 """
@@ -64,8 +66,15 @@ def parse_contributors(text):
     if text == "-":
         return []
     out = []
+    shared = {}
     for item in text.split(";"):
-        ident, claim, record = item.split(":")
+        fields = item.split(":")
+        ident, claim, record = fields[:3]
+        label = fields[3] if len(fields) == 4 else ident
+        assert len(fields) in (3, 4), item
+        if claim != "none" and record != "absent":
+            rec = claim if record == "same" else record
+            assert shared.setdefault(label, rec) == rec, ("shared record with two kinds", item)
         out.append((ident, claim, record))
     return out
 
@@ -203,6 +212,12 @@ def cases():
     for b in ("modelled_lpu", "modelled_mcm"):
         add(f"{b}_with_validation", b, True, True, "a:dcc:same", "ok")
 
+    # Two contributors citing one shared record: same kind, and one claim of another kind.
+    for b in ("modelled_lpu", "iso15530_3"):
+        v = "ok" if b in SUBST else "-"
+        add(f"{b}_shared_record_same_kind", b, True, True, "a:dcc:same:s;b:dcc:same:s", v)
+        add(f"{b}_shared_record_other_kind", b, True, True, "a:dcc:same:s;b:type_a:dcc:s", v)
+
     # Malformed or ambiguous input.
     add("unknown_basis_modelled", "modelled", True, True, "a:dcc:same", "-")
     add("unknown_basis_case", "MODELLED_MCM", True, True, "a:dcc:same", "-")
@@ -238,6 +253,9 @@ HAND = {
     "modelled_empty": "empty_model",
     "unknown_basis_modelled": "unknown_basis",
     "duplicate_input": "duplicate_input",
+    "modelled_lpu_shared_record_same_kind": ("UEC-2", "-", "-", "-"),
+    "modelled_lpu_shared_record_other_kind": ("UEC-1", "-", "unverified_source", "b"),
+    "iso15530_3_shared_record_same_kind": ("UEC-3", "-", "-", "-"),
 }
 
 

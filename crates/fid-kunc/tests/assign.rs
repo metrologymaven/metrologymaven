@@ -11,7 +11,8 @@ use fid_kunc::uec::{
     RecordRef, RecordTable, SourceClaim, SourceRecords, ALGORITHM_ID, MAX_CONTRIBUTORS, RULE_SET,
 };
 use fid_kunc::{
-    EvidenceClass, Expanded, Method, ModelRef, PrincipalKind, SourceKind, SourceRef, StatementParts, Uec0Reason,
+    Contributor, EvidenceClass, Expanded, Method, ModelRef, PrincipalKind, SourceKind, SourceRef, StatementParts,
+    StmtError, Uec0Reason, UncertaintyStatement,
 };
 use fid_types::Digest;
 
@@ -60,8 +61,13 @@ fn decode(cols: &[&str]) -> Row {
     if cols[4] != "-" {
         for item in cols[4].split(';') {
             let parts: Vec<&str> = item.split(':').collect();
-            let &[id, claim, record] = parts.as_slice() else { panic!("{item}") };
-            let digest = digest_of(&format!("source:{id}"));
+            // Optional fourth field: the record label, so two contributors can share one record.
+            let (id, claim, record, label) = match parts.as_slice() {
+                &[id, claim, record] => (id, claim, record, id),
+                &[id, claim, record, label] => (id, claim, record, label),
+                _ => panic!("{item}"),
+            };
+            let digest = digest_of(&format!("source:{label}"));
             let source = if claim == "none" {
                 None
             } else {
@@ -70,7 +76,11 @@ fn decode(cols: &[&str]) -> Row {
             };
             if claim != "none" && record != "absent" {
                 let (kind, origin) = facts(if record == "same" { claim } else { record });
-                entries.push((digest, RecordFacts::Source { kind, origin }));
+                let f = RecordFacts::Source { kind, origin };
+                match entries.iter().find(|e: &&(Digest, RecordFacts)| e.0 == digest) {
+                    Some(e) => assert_eq!(e.1, f, "{item}: a shared record has one kind"),
+                    None => entries.push((digest, f)),
+                }
             }
             contributor_sources.push(ContributorSource { input_id: id.to_owned(), source });
         }
@@ -219,6 +229,16 @@ fn parts_for(o: &AssignOutput, sources: Vec<SourceRef>) -> StatementParts {
             digest: digest_of("um:bore-diameter@1.2.0"),
         });
         p.sources = sources;
+        p.contributors = o
+            .contributor_ids()
+            .iter()
+            .map(|id| Contributor {
+                input_id: id.clone(),
+                sensitivity: Some(1.0),
+                u_contrib: 1.0e-7,
+                variance_share: 0.5,
+            })
+            .collect();
     }
     if p.method == Some(Method::Declared) {
         p.provenance.principal = Some("person:alice".to_owned());
@@ -304,13 +324,19 @@ fn unverified_source_cannot_be_written_as_characterized() {
     let o = run(&row("modelled_lpu_one_record_absent")).unwrap();
     assert_eq!(o.class(), EvidenceClass::Uec1);
     let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "b"), src(SourceKind::Dcc, "c")];
+    assert_eq!(o.statement(parts_for(&o, sources)), Err(AssignError::SourceNotVerified));
+    // Leaving the unverified input out hides it, so that is refused too.
+    let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "c")];
     assert_eq!(
         o.statement(parts_for(&o, sources)),
         Err(AssignError::LabelDropped { field: "rests_on_uncharacterized_input" })
     );
-    // A declared input must stay visible as declared.
+    // A declared input must stay visible as declared: re-labelled it is not a verified
+    // claim, left out it drops the label.
     let o = run(&row("modelled_lpu_one_declared")).unwrap();
     let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::InstrumentModel, "b"), src(SourceKind::Dcc, "c")];
+    assert_eq!(o.statement(parts_for(&o, sources)), Err(AssignError::SourceNotVerified));
+    let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "c")];
     assert_eq!(
         o.statement(parts_for(&o, sources)),
         Err(AssignError::LabelDropped { field: "rests_on_declared_input" })
@@ -371,9 +397,95 @@ fn error_codes_are_stable() {
         (AssignError::InvalidInput { field: "x" }, "invalid_input"),
         (AssignError::Inconsistent { field: "x" }, "inconsistent_input"),
         (AssignError::LabelDropped { field: "x" }, "label_dropped"),
+        (AssignError::SourceNotVerified, "source_not_verified"),
+        (AssignError::ContributorMismatch, "contributor_mismatch"),
     ];
     for (e, code) in cases {
         assert_eq!(e.code(), code);
         assert!(e.to_string().starts_with(code));
     }
+}
+
+#[test]
+fn forged_source_is_refused_even_when_every_claim_is_verified() {
+    let o = run(&row("modelled_lpu_all_dcc")).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec2);
+    let ok = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "b"), src(SourceKind::Dcc, "c")];
+    o.statement(parts_for(&o, ok.clone())).unwrap();
+    // An extra source nobody claimed.
+    let mut forged = ok.clone();
+    forged.push(src(SourceKind::Dcc, "z"));
+    assert_eq!(o.statement(parts_for(&o, forged)), Err(AssignError::SourceNotVerified));
+    // A claimed digest under another kind.
+    let mut forged = ok.clone();
+    forged[1] = SourceRef { kind: SourceKind::TypeA, ..forged[1].clone() };
+    assert_eq!(o.statement(parts_for(&o, forged)), Err(AssignError::SourceNotVerified));
+    // A citable kind with a digest that was never claimed.
+    let mut forged = ok;
+    forged[2].digest = digest_of("source:forged");
+    assert_eq!(o.statement(parts_for(&o, forged)), Err(AssignError::SourceNotVerified));
+}
+
+#[test]
+fn contributors_must_be_exactly_the_assigned_ones() {
+    let o = run(&row("modelled_lpu_all_dcc")).unwrap();
+    assert_eq!(o.contributor_ids(), ["a", "b", "c"]);
+    let ok = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "b"), src(SourceKind::Dcc, "c")];
+    let extra = Contributor { input_id: "d".to_owned(), sensitivity: None, u_contrib: 0.0, variance_share: 0.0 };
+    let mut p = parts_for(&o, ok.clone());
+    p.contributors.pop();
+    assert_eq!(o.statement(p), Err(AssignError::ContributorMismatch));
+    let mut p = parts_for(&o, ok.clone());
+    p.contributors.push(extra.clone());
+    assert_eq!(o.statement(p), Err(AssignError::ContributorMismatch));
+    let mut p = parts_for(&o, ok.clone());
+    p.contributors[0].input_id = "d".to_owned();
+    assert_eq!(o.statement(p), Err(AssignError::ContributorMismatch));
+    // Order does not matter.
+    let mut p = parts_for(&o, ok);
+    p.contributors.reverse();
+    o.statement(p).unwrap();
+    // A claimed basis carries no contributors.
+    let o = run(&row("declared_dcc_source")).unwrap();
+    assert!(o.contributor_ids().is_empty());
+    let mut p = parts_for(&o, vec![]);
+    p.contributors.push(extra);
+    assert_eq!(o.statement(p), Err(AssignError::ContributorMismatch));
+}
+
+#[test]
+fn shared_records() {
+    // Two contributors citing one record of the claimed kind: both verified, one citation.
+    let o = run(&row("modelled_lpu_shared_record_same_kind")).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec2);
+    assert_eq!(o.citable_sources().len(), 1);
+    let shared = SourceRef { kind: SourceKind::Dcc, id: "s".to_owned(), digest: digest_of("source:s") };
+    o.statement(parts_for(&o, vec![shared.clone()])).unwrap();
+    // One record, two claims of different kinds: only the matching claim is citable.
+    let o = run(&row("modelled_lpu_shared_record_other_kind")).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec1);
+    assert_eq!(o.downgrade().unwrap().reason, DowngradeReason::UnverifiedSource);
+    let typed = SourceRef { kind: SourceKind::TypeA, ..shared };
+    assert_eq!(o.statement(parts_for(&o, vec![typed])), Err(AssignError::SourceNotVerified));
+}
+
+#[test]
+fn uec2_and_uec3_statements_are_sealed_to_class() {
+    let o = run(&row("iso15530_4_all_dcc")).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec3);
+    let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "b"), src(SourceKind::Dcc, "c")];
+    let mut p = parts_for(&o, sources.clone());
+    p.class = EvidenceClass::Uec3;
+    assert_eq!(UncertaintyStatement::new(p.clone()), Err(StmtError::ClassRequiresAssignment));
+    p.class = EvidenceClass::Uec2;
+    assert_eq!(UncertaintyStatement::new(p), Err(StmtError::ClassRequiresAssignment));
+    // Built through CLASS, the statement re-reads from its canonical bytes.
+    let s = o.statement(parts_for(&o, sources)).unwrap();
+    let back = UncertaintyStatement::parse_canonical(s.canonical_json()).unwrap();
+    assert_eq!(back, s);
+    // UEC-0 and UEC-1 stay publicly constructible.
+    let o = run(&row("modelled_lpu_one_declared")).unwrap();
+    let mut p = parts_for(&o, vec![src(SourceKind::Dcc, "a"), src(SourceKind::Declared, "b")]);
+    p.class = EvidenceClass::Uec1;
+    UncertaintyStatement::new(p).unwrap();
 }

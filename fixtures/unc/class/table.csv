@@ -87,6 +87,10 @@ iso15530_4_validation_wrong_kind,iso15530_4,true,true,a:dcc:same;b:type_a:same,w
 iso15530_4_declared_no_validation,iso15530_4,true,true,a:dcc:same;b:declared:same,-,UEC-1,-,unsourced_contributor,b,false,true,true,-
 modelled_lpu_with_validation,modelled_lpu,true,true,a:dcc:same,ok,-,-,-,-,-,-,-,inconsistent_input:validation_record
 modelled_mcm_with_validation,modelled_mcm,true,true,a:dcc:same,ok,-,-,-,-,-,-,-,inconsistent_input:validation_record
+modelled_lpu_shared_record_same_kind,modelled_lpu,true,true,a:dcc:same:s;b:dcc:same:s,-,UEC-2,-,-,-,false,false,false,-
+modelled_lpu_shared_record_other_kind,modelled_lpu,true,true,a:dcc:same:s;b:type_a:dcc:s,-,UEC-1,-,unverified_source,b,false,false,true,-
+iso15530_3_shared_record_same_kind,iso15530_3,true,true,a:dcc:same:s;b:dcc:same:s,ok,UEC-3,-,-,-,false,false,false,-
+iso15530_3_shared_record_other_kind,iso15530_3,true,true,a:dcc:same:s;b:type_a:dcc:s,ok,UEC-1,-,unverified_source,b,false,false,true,-
 unknown_basis_modelled,modelled,true,true,a:dcc:same,-,-,-,-,-,-,-,-,unknown_basis
 unknown_basis_case,MODELLED_MCM,true,true,a:dcc:same,-,-,-,-,-,-,-,-,unknown_basis
 duplicate_input,modelled_mcm,true,true,a:dcc:absent;b:dcc:same;a:type_a:absent,-,-,-,-,-,-,-,-,duplicate_input
