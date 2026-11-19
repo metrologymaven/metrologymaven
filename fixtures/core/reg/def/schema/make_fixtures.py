@@ -10,9 +10,10 @@ spec/core/reg/def/schema/NODE.md; nothing is produced by the Rust code.
 - catalogue/geo_frame_units.json: the GEO.FRAME.UNITS catalogue in the canonical form,
   typed by hand from the factors pinned in spec/geo/frame/units/NODE.md (AC-3), and
   catalogue/geo_frame_units.sha256, its SHA-256 computed here with hashlib (AC-4).
-- catalogue/one_unit_changed.json: the same with one factor changed (thou = 127/500000).
+- catalogue/one_unit_changed.json: the same with one factor changed (thou = 127/500000);
+  from_json refuses it (REQ-004).
 - catalogue/with_time.json: TEST DATA ONLY, not a published catalogue: the GEO.FRAME.UNITS
-  catalogue plus an invented `time` kind, to show the facade serves any catalogue its owner
+  catalogue plus an invented `time` kind, to show the facade serves an extension its owner
   publishes. The registry itself defines no unit.
 
 Run from anywhere: python fixtures/core/reg/def/schema/make_fixtures.py [--check]
@@ -114,7 +115,7 @@ VALID = {
                 "x-quantity": "length",
                 "x-unit": "mm",
                 "exclusiveMinimum": 0,
-                "x-standards-ref": "ISO 10360-2:2009 cl. 6.2",
+                "x-standards-ref": "ISO-10360-2:2009 cl. 6.2",
             },
             "tilt": {"type": "number", "x-quantity": "angle", "x-unit": "deg", "default": 0},
             "label": {"type": "string", "maxLength": 128, "x-untrusted": True},
@@ -193,7 +194,7 @@ INVALID = {
     ),
     # REQ-007: designator, edition and clause only; the trailing words are invented text.
     "standards_ref_with_text": (
-        wrap({"type": "string", "x-standards-ref": "ISO 1101:2017 cl. 8.2 the zone is limited by two lines"}),
+        wrap({"type": "string", "x-standards-ref": "ISO-1101:2017 cl. 8.2 the zone is limited by two lines"}),
         "bad_standards_ref",
         "/properties/a/x-standards-ref",
     ),

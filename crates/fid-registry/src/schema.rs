@@ -18,7 +18,7 @@ use crate::validate::{
     TYPES,
 };
 use fid_canon::CValue;
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap};
 use std::fmt;
 
 /// Largest accepted schema document, in bytes (1 MiB): the raw bytes for
@@ -32,8 +32,12 @@ pub const MAX_ISSUES: usize = 10_000;
 pub const REGISTRY_KEYWORDS_VERSION: u32 = 1;
 /// `$id` of the meta-schema.
 pub const REGISTRY_KEYWORDS_ID: &str = "https://metrologymaven.io/schemas/registry-keywords.schema.json";
-/// The `x-standards-ref` pattern (REQ-007); at most 58 characters by construction.
-pub const STANDARDS_REF_PATTERN: &str = "^[A-Z][A-Z0-9 /.-]{1,31}:[0-9]{4}( cl\\. [0-9.]{1,16})?$";
+/// The `x-standards-ref` pattern (REQ-007): an identifier-like designator (a letter, then
+/// letters, digits, `.` and `-`; at most 16 characters, no space or colon), `:`, a
+/// four-digit edition year and an optional clause; at most 42 characters by construction.
+pub const STANDARDS_REF_PATTERN: &str = "^[A-Za-z][A-Za-z0-9.-]{0,15}:[0-9]{4}( cl\\. [0-9.]{1,16})?$";
+/// Longest designator of an `x-standards-ref`.
+pub const MAX_DESIGNATOR: usize = 16;
 /// Longest `x-standards-ref`.
 pub const MAX_STANDARDS_REF: usize = 64;
 
@@ -364,7 +368,7 @@ pub fn check_schema(doc: &CValue, catalogue: &dyn QuantityCatalogue) -> Vec<Sche
     let CValue::Obj(root) = doc else {
         return vec![issue(String::new(), SchemaCode::BadSchema, "the schema root must be an object".to_string())];
     };
-    let mut c = Checker { catalogue, issues: Vec::new(), refs: Vec::new(), deep: false };
+    let mut c = Checker { catalogue, issues: BinaryHeap::new(), overflow: false, refs: Vec::new(), deep: false };
     c.walk(root);
     for (target, at) in std::mem::take(&mut c.refs) {
         if resolve(doc, &target) != Some(Kind::Schema) {
@@ -428,17 +432,17 @@ fn str_len(s: &str) -> usize {
         .sum::<usize>()
 }
 
-/// Whether `s` matches [`STANDARDS_REF_PATTERN`]: designator `[A-Z][A-Z0-9 /.-]{1,31}`, `:`,
-/// a four-digit edition year, then optionally ` cl. ` and a clause `[0-9.]{1,16}`.
+/// Whether `s` matches [`STANDARDS_REF_PATTERN`]: designator `[A-Za-z][A-Za-z0-9.-]{0,15}`,
+/// `:`, a four-digit edition year, then optionally ` cl. ` and a clause `[0-9.]{1,16}`.
 pub fn is_standards_ref(s: &str) -> bool {
     if s.len() > MAX_STANDARDS_REF || !s.is_ascii() {
         return false;
     }
     let Some((designator, rest)) = s.split_once(':') else { return false };
     let mut d = designator.bytes();
-    let designator_ok = (2..=32).contains(&designator.len())
-        && d.next().is_some_and(|c| c.is_ascii_uppercase())
-        && d.all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || matches!(c, b' ' | b'/' | b'.' | b'-'));
+    let designator_ok = designator.len() <= MAX_DESIGNATOR
+        && d.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && d.all(|c| c.is_ascii_alphanumeric() || matches!(c, b'.' | b'-'));
     let (edition, clause) = match rest.split_at_checked(4) {
         Some(parts) => parts,
         None => return false,
@@ -543,9 +547,37 @@ fn order(a: &SchemaIssue, b: &SchemaIssue) -> std::cmp::Ordering {
     ))
 }
 
+/// An issue ordered by [`order`], so a max-heap keeps the largest on top.
+struct Ranked(SchemaIssue);
+
+impl PartialEq for Ranked {
+    fn eq(&self, other: &Self) -> bool {
+        order(&self.0, &other.0).is_eq()
+    }
+}
+
+impl Eq for Ranked {}
+
+impl PartialOrd for Ranked {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Ranked {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        order(&self.0, &other.0)
+    }
+}
+
 struct Checker<'c> {
     catalogue: &'c dyn QuantityCatalogue,
-    issues: Vec<SchemaIssue>,
+    /// The [`MAX_ISSUES`] smallest issues so far in [`order`] (a max-heap: the largest kept
+    /// issue is on top and is evicted by any smaller one), so memory stays bounded and the
+    /// kept set does not depend on the order issues are found in.
+    issues: BinaryHeap<Ranked>,
+    /// Whether an issue was dropped because [`MAX_ISSUES`] were already kept.
+    overflow: bool,
     /// Local `$ref` pointers (after `#`) and where they are, resolved after the walk.
     refs: Vec<(String, String)>,
     /// Whether `schema_too_deep` was reported (once per document).
@@ -554,20 +586,26 @@ struct Checker<'c> {
 
 impl Checker<'_> {
     fn push(&mut self, pointer: String, code: SchemaCode, message: String) {
-        if self.issues.len() <= MAX_ISSUES {
-            self.issues.push(issue(pointer, code, message));
+        let new = Ranked(issue(pointer, code, message));
+        if self.issues.len() < MAX_ISSUES {
+            self.issues.push(new);
+            return;
+        }
+        self.overflow = true;
+        if self.issues.peek().is_some_and(|top| new < *top) {
+            self.issues.pop();
+            self.issues.push(new);
         }
     }
 
-    fn finish(mut self) -> Vec<SchemaIssue> {
-        self.issues.sort_by(order);
-        if self.issues.len() > MAX_ISSUES {
-            self.issues.truncate(MAX_ISSUES);
+    fn finish(self) -> Vec<SchemaIssue> {
+        let mut out: Vec<SchemaIssue> = self.issues.into_sorted_vec().into_iter().map(|r| r.0).collect();
+        if self.overflow {
             let msg = format!("more than {MAX_ISSUES} issues; the rest are not reported");
-            self.issues.push(issue(String::new(), SchemaCode::TooManyIssues, msg));
-            self.issues.sort_by(order);
+            out.push(issue(String::new(), SchemaCode::TooManyIssues, msg));
+            out.sort_by(order);
         }
-        self.issues
+        out
     }
 
     /// Pre-order walk with an explicit stack; containers deeper than [`SCHEMA_MAX_DEPTH`] are
@@ -1037,26 +1075,37 @@ mod tests {
 
     #[test]
     fn standards_refs() {
-        for ok in ["ISO 1101:2017", "ISO 1101:2017 cl. 8.2", "ASME Y14.5:2018", "ISO/IEC GUIDE 98-3:2008 cl. 4.1.2"] {
+        for ok in [
+            "ISO1101:2017",
+            "ISO-1101:2017 cl. 8.2",
+            "ASME-Y14.5:2018",
+            "iso.14405-1:2016",
+            "V:2020",
+            "ISO-GUM-98-3:2008 cl. 4.1.2",
+        ] {
             assert!(is_standards_ref(ok), "{ok}");
         }
         for bad in [
             "",
-            "iso 1101:2017",
-            "I:2017",
-            "ISO 1101:17",
-            "ISO 1101:2017 clause 8",
-            "ISO 1101:2017 cl. ",
-            "ISO 1101:2017 cl. 8.2 and some text",
-            "ISO 1101:2017 cl. 12345678901234567",
-            "ISO 1101",
-            "ISO 1101:2017:2018",
-            "ISO 1101:20á7",
+            "ISO 1101:2017",
+            "ISO/IEC-98:2008",
+            "1SO-1101:2017",
+            "-ISO:2017",
+            ":2017",
+            "ISO_1101:2017",
+            "ISO-1101:17",
+            "ISO-1101:2017 clause 8",
+            "ISO-1101:2017 cl. ",
+            "ISO-1101:2017 cl. 8.2 and some text",
+            "ISO-1101:2017 cl. 12345678901234567",
+            "ISO-1101",
+            "ISO-1101:2017:2018",
+            "ISO-1101:20\u{e1}7",
         ] {
             assert!(!is_standards_ref(bad), "{bad}");
         }
-        assert!(is_standards_ref(&format!("A{}:2017 cl. {}", "B".repeat(31), "1".repeat(16))));
-        assert!(!is_standards_ref(&format!("A{}:2017", "B".repeat(32))));
+        assert!(is_standards_ref(&format!("A{}:2017 cl. {}", "B".repeat(15), "1".repeat(16))));
+        assert!(!is_standards_ref(&format!("A{}:2017", "B".repeat(16))));
     }
 
     #[test]

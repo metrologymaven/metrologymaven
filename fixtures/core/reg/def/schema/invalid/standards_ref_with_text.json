@@ -8,7 +8,7 @@
     "properties": {
       "a": {
         "type": "string",
-        "x-standards-ref": "ISO 1101:2017 cl. 8.2 the zone is limited by two lines"
+        "x-standards-ref": "ISO-1101:2017 cl. 8.2 the zone is limited by two lines"
       }
     }
   }

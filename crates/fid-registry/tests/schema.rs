@@ -202,7 +202,9 @@ fn ac3_length_units_one_for_one() {
 // ------------------------------------------------------------------ AC-4
 
 /// AC-4 / REQ-005: the digest is stable, equals the SHA-256 computed independently by
-/// `make_fixtures.py`, and changes when one unit changes.
+/// `make_fixtures.py`, and changes when the catalogue changes. The one-unit change of
+/// `one_unit_changed.json` is refused by `from_json` (REQ-004); its digest change is tested
+/// on the test-only unchecked path in `catalogue.rs`.
 #[test]
 fn ac4_digest_stable_and_sensitive() {
     let a = geo();
@@ -214,10 +216,12 @@ fn ac4_digest_stable_and_sensitive() {
     assert_eq!(to_canonical_bytes(&a.to_value()).unwrap(), fixture_bytes.strip_suffix(b"\n").unwrap());
     let want = String::from_utf8(bytes("catalogue/geo_frame_units.sha256")).unwrap();
     assert_eq!(a.digest().as_str(), want.trim());
-    let changed = Catalogue::from_json(&bytes("catalogue/one_unit_changed.json")).unwrap();
-    assert_ne!(changed.digest(), a.digest());
-    assert_eq!(changed.kind("angle"), a.kind("angle"));
-    assert_ne!(changed.kind("length"), a.kind("length"));
+    let timed = Catalogue::from_json(&bytes("catalogue/with_time.json")).unwrap();
+    assert_ne!(timed.digest(), a.digest());
+    assert_eq!(
+        Catalogue::from_json(&bytes("catalogue/one_unit_changed.json")),
+        Err(CatalogueError::GeoKindAltered("length"))
+    );
 }
 
 // ------------------------------------------------------------------ catalogue facade
@@ -278,48 +282,91 @@ fn shape_err(text: &str) -> CatalogueError {
     Catalogue::from_json(text.as_bytes()).unwrap_err()
 }
 
-fn cat_text(kinds: &str) -> String {
-    format!(
-        r#"{{"format":"fid-quantity-catalogue/1","pi_hex":"c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22","kinds":[{kinds}]}}"#
-    )
+/// The GEO.FRAME.UNITS catalogue document as text (canonical, no newline).
+fn geo_text() -> String {
+    String::from_utf8(bytes("catalogue/geo_frame_units.json")).unwrap().trim_end().to_string()
 }
 
-/// Catalogue documents are refused, not repaired: every pinned rule fails closed.
+/// The GEO.FRAME.UNITS catalogue with `extra` appended to its kinds (kinds after `length`).
+fn cat_text(extra: &str) -> String {
+    geo_text().replacen("]}],\"pi_hex\"", &format!("]}},{extra}],\"pi_hex\""), 1)
+}
+
+/// REQ-004: a catalogue document must carry every GEO.FRAME.UNITS kind and Π unchanged; it
+/// may only add kinds. Each alteration is refused with its typed error.
+#[test]
+fn catalogue_must_extend_geo_frame_units() {
+    let geo = geo_text();
+    assert!(Catalogue::from_json(geo.as_bytes()).is_ok());
+    let inch = r#"{"den":"5000","num":"127","pi":false,"symbol":"in"}"#;
+    let nm = r#"{"den":"1000000000","num":"1","pi":false,"symbol":"nm"}"#;
+    let thou = r#",{"den":"5000000","num":"127","pi":false,"symbol":"thou"}"#;
+    let pm = r#",{"den":"1000000000000","num":"1","pi":false,"symbol":"pm"}"#;
+    let pi = "c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22";
+    for needle in [inch, nm, thou, pi] {
+        assert_eq!(geo.matches(needle).count(), 1, "{needle}");
+    }
+    let altered = CatalogueError::GeoKindAltered("length");
+    let cases: Vec<(&str, String, CatalogueError)> = vec![
+        ("in = 1/39", geo.replace(inch, r#"{"den":"39","num":"1","pi":false,"symbol":"in"}"#), altered.clone()),
+        ("an extra length unit", geo.replace(nm, &format!("{nm}{pm}")), altered.clone()),
+        ("a dropped unit", geo.replace(thou, ""), altered.clone()),
+        (
+            "another canonical unit",
+            geo.replace(r#""canonical":"m""#, r#""canonical":"mm""#),
+            CatalogueError::Shape(String::new()),
+        ),
+        ("a changed pi", geo.replace(pi, &pi.replace("9b22", "9b23")), CatalogueError::PiAltered),
+        (
+            "an extra field in a GEO kind",
+            geo.replacen(r#""kinds":[{"canonical":"rad""#, r#""kinds":[{"canonical":"rad","x":1"#, 1),
+            CatalogueError::Shape(String::new()),
+        ),
+    ];
+    for (why, text, want) in cases {
+        let got = shape_err(&text);
+        match want {
+            CatalogueError::Shape(_) => assert_eq!(got.code(), "bad_catalogue", "{why}: {got}"),
+            want => assert_eq!(got, want, "{why}"),
+        }
+        assert!(got.to_string().is_ascii(), "{why}");
+    }
+    // A whole kind missing.
+    let start = geo.find(r#"{"canonical":"rad""#).unwrap();
+    let end = geo.find(r#"{"canonical":"m""#).unwrap();
+    let no_angle = format!("{}{}", &geo[..start], &geo[end..]);
+    assert_eq!(shape_err(&no_angle), CatalogueError::GeoKindMissing("angle"));
+    assert_eq!(shape_err(&no_angle).code(), "geo_kind_missing");
+    // A new kind is fine; its symbols may not reuse a GEO.FRAME.UNITS symbol.
+    let time = r#"{"canonical":"s","kind":"time","units":[{"den":"1","num":"1","pi":false,"symbol":"s"}]}"#;
+    assert!(Catalogue::from_json(cat_text(time).as_bytes()).is_ok());
+    let reuse = r#"{"canonical":"s","kind":"time","units":[{"den":"60","num":"1","pi":false,"symbol":"m"},{"den":"1","num":"1","pi":false,"symbol":"s"}]}"#;
+    assert_eq!(shape_err(&cat_text(reuse)).code(), "bad_catalogue");
+}
+
+/// Catalogue documents are refused, not repaired: every pinned shape rule fails closed.
 #[test]
 fn catalogue_refusals() {
-    let unit = |sym: &str, n: &str, d: &str| format!(r#"{{"symbol":"{sym}","num":"{n}","den":"{d}","pi":false}}"#);
+    let unit = |sym: &str, n: &str, d: &str| format!(r#"{{"den":"{d}","num":"{n}","pi":false,"symbol":"{sym}"}}"#);
     let kind = |name: &str, canonical: &str, units: &[String]| {
-        format!(r#"{{"kind":"{name}","canonical":"{canonical}","units":[{}]}}"#, units.join(","))
+        format!(r#"{{"canonical":"{canonical}","kind":"{name}","units":[{}]}}"#, units.join(","))
     };
-    let ok = cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("mm", "1", "1000")]));
-    assert!(Catalogue::from_json(ok.as_bytes()).is_ok());
+    let ok = cat_text(&kind("time", "s", &[unit("ms", "1", "1000"), unit("s", "1", "1")]));
+    assert!(Catalogue::from_json(ok.as_bytes()).is_ok(), "{ok}");
     let cases: Vec<(&str, String)> = vec![
-        ("unsorted units", cat_text(&kind("length", "m", &[unit("mm", "1", "1000"), unit("m", "1", "1")]))),
-        ("not lowest terms", cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("in", "254", "10000")]))),
-        ("leading zero", cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("mm", "1", "01000")]))),
-        ("zero factor", cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("z", "0", "1")]))),
-        (
-            "u64 overflow",
-            cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("z", "1", "18446744073709551616")])),
-        ),
-        ("case-only symbol twin", cat_text(&kind("length", "m", &[unit("M", "1000", "1"), unit("m", "1", "1")]))),
-        ("two factor-1 units", cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("x", "1", "1")]))),
-        ("canonical mismatch", cat_text(&kind("length", "mm", &[unit("m", "1", "1"), unit("mm", "1", "1000")]))),
-        ("no units", cat_text(&kind("length", "m", &[]))),
-        ("bad kind name", cat_text(&kind("Length", "m", &[unit("m", "1", "1")]))),
-        ("non-ascii symbol", cat_text(&kind("length", "m", &[unit("m", "1", "1"), unit("\u{b5}m", "1", "1000000")]))),
-        (
-            "unsorted kinds",
-            cat_text(&format!(
-                "{},{}",
-                kind("time", "s", &[unit("s", "1", "1")]),
-                kind("length", "m", &[unit("m", "1", "1")])
-            )),
-        ),
-        (
-            "symbol shared by two kinds",
-            cat_text(&format!("{},{}", kind("a", "m", &[unit("m", "1", "1")]), kind("b", "m", &[unit("m", "1", "1")]))),
-        ),
+        ("unsorted units", cat_text(&kind("time", "s", &[unit("s", "1", "1"), unit("ms", "1", "1000")]))),
+        ("not lowest terms", cat_text(&kind("time", "s", &[unit("ms", "2", "2000"), unit("s", "1", "1")]))),
+        ("leading zero", cat_text(&kind("time", "s", &[unit("ms", "1", "01000"), unit("s", "1", "1")]))),
+        ("zero factor", cat_text(&kind("time", "s", &[unit("s", "1", "1"), unit("z", "0", "1")]))),
+        ("u64 overflow", cat_text(&kind("time", "s", &[unit("s", "1", "1"), unit("z", "1", "18446744073709551616")]))),
+        ("case-only symbol twin", cat_text(&kind("time", "s", &[unit("S", "1000", "1"), unit("s", "1", "1")]))),
+        ("two factor-1 units", cat_text(&kind("time", "s", &[unit("s", "1", "1"), unit("x", "1", "1")]))),
+        ("canonical mismatch", cat_text(&kind("time", "ms", &[unit("ms", "1", "1000"), unit("s", "1", "1")]))),
+        ("no units", cat_text(&kind("time", "s", &[]))),
+        ("bad kind name", cat_text(&kind("tIme", "s", &[unit("s", "1", "1")]))),
+        ("non-ascii symbol", cat_text(&kind("time", "s", &[unit("s", "1", "1"), unit("\u{b5}s", "1", "1000000")]))),
+        ("unsorted kinds", cat_text(&kind("aaa", "s", &[unit("s", "1", "1")]))),
+        ("duplicate kind", cat_text(&kind("length", "s", &[unit("s", "1", "1")]))),
         ("extra field", ok.replacen(r#""format""#, r#""extra":1,"format""#, 1)),
         ("wrong format", ok.replace("fid-quantity-catalogue/1", "fid-quantity-catalogue/2")),
         ("bad pi_hex", ok.replace("c90fdaa2", "C90FDAA2")),
@@ -432,9 +479,9 @@ fn project_keyword_values() {
     }
     assert_eq!(check_text(r#"{"x-selector":"all"}"#), one("bad_keyword_value", "/x-selector"));
     assert_eq!(check_text(r#"{"x-ui":"slider"}"#), one("bad_keyword_value", "/x-ui"));
-    assert_eq!(check_text(r#"{"x-standards-ref":"ASME Y14.5:2018 cl. 7"}"#), vec![]);
-    assert_eq!(check_text(r#"{"x-standards-ref":["ASME Y14.5:2018"]}"#), one("bad_standards_ref", "/x-standards-ref"));
-    let long = format!(r#"{{"x-standards-ref":"ISO 1101:2017 cl. {}"}}"#, "1".repeat(17));
+    assert_eq!(check_text(r#"{"x-standards-ref":"ASME-Y14.5:2018 cl. 7"}"#), vec![]);
+    assert_eq!(check_text(r#"{"x-standards-ref":["ASME-Y14.5:2018"]}"#), one("bad_standards_ref", "/x-standards-ref"));
+    let long = format!(r#"{{"x-standards-ref":"ISO-1101:2017 cl. {}"}}"#, "1".repeat(17));
     assert_eq!(check_text(&long), one("bad_standards_ref", "/x-standards-ref"));
     // x-ui never changes validation: a schema inside it is data.
     assert_eq!(check_text(r#"{"x-ui":{"schema":{"type":"bogus","x-foo":1}}}"#), vec![]);
@@ -555,15 +602,45 @@ fn byte_refusals() {
     assert_eq!(r("[]"), one("bad_schema", ""));
 }
 
-/// At most 10,000 issues plus one `too_many_issues`; the output is sorted and the same for
-/// the same input.
+/// At most 10,000 issues plus one `too_many_issues`: exactly the sorted first 10,000,
+/// whatever order the walk finds them in; the output is sorted and the same for the same
+/// input.
 #[test]
 fn issue_cap_and_order() {
-    let m: BTreeMap<String, CValue> = (0..MAX_ISSUES + 50).map(|i| (format!("x-k{i:06}"), CValue::Null)).collect();
-    let got = check_schema(&CValue::Obj(m), &geo());
+    let mut m: BTreeMap<String, CValue> = (0..MAX_ISSUES + 50).map(|i| (format!("x-k{i:06}"), CValue::Null)).collect();
+    let got = check_schema(&CValue::Obj(m.clone()), &geo());
     assert_eq!(got.len(), MAX_ISSUES + 1);
     assert_eq!(got[0].code, SchemaCode::TooManyIssues);
     assert_eq!(got[0].pointer, "");
+    assert_eq!(got[1].pointer, "/x-k000000");
+    assert_eq!(got[MAX_ISSUES].pointer, format!("/x-k{:06}", MAX_ISSUES - 1));
+
+    // Found last (references resolve after the walk) but sorted first: it must be kept, and
+    // the largest unknown keyword is the one evicted.
+    m.insert("properties".into(), json(r##"{"a":{"$ref":"#/nowhere"}}"##));
+    let got = check_schema(&CValue::Obj(m), &geo());
+    assert_eq!(got.len(), MAX_ISSUES + 1);
+    assert_eq!(
+        codes(&got[..2]),
+        vec![("too_many_issues", String::new()), ("unwalked_ref", "/properties/a/$ref".into())]
+    );
+    assert_eq!(got[MAX_ISSUES].pointer, format!("/x-k{:06}", MAX_ISSUES - 2));
+
+    // Found in reverse pointer order: "/a" (and its child) is walked before "/a!", but
+    // "/a!..." sorts first; with more than the cap, the kept set is still the sorted first.
+    let mut rev: BTreeMap<String, CValue> = BTreeMap::new();
+    rev.insert("properties".into(), {
+        let mut p: BTreeMap<String, CValue> = BTreeMap::new();
+        p.insert("a".into(), json(r#"{"x-zzz":1}"#));
+        for i in 0..MAX_ISSUES {
+            p.insert(format!("a!{i:05}"), json(r#"{"x-q":1}"#));
+        }
+        CValue::Obj(p)
+    });
+    let got = check_schema(&CValue::Obj(rev), &geo());
+    assert_eq!(got.len(), MAX_ISSUES + 1);
+    assert!(got.iter().all(|i| i.pointer != "/properties/a/x-zzz"));
+    assert_eq!(got[MAX_ISSUES].pointer, format!("/properties/a!{:05}/x-q", MAX_ISSUES - 1));
     let doc = json(
         r##"{"x-b":1,"properties":{"z":{"x-unit":"mm","$ref":"x.json"},"a":{"x-ref":"no"}},"x-a":2,"type":"bad"}"##,
     );

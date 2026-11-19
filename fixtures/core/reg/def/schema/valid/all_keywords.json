@@ -34,7 +34,7 @@
       "x-quantity": "length",
       "x-unit": "mm",
       "exclusiveMinimum": 0,
-      "x-standards-ref": "ISO 10360-2:2009 cl. 6.2"
+      "x-standards-ref": "ISO-10360-2:2009 cl. 6.2"
     },
     "tilt": {
       "type": "number",

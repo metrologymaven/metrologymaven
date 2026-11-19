@@ -5,8 +5,10 @@
 //! built either from the tables `fid-geo-frame` publishes ([`Catalogue::geo_frame`], kinds
 //! `length` and `angle`) or from a catalogue document in the canonical form below
 //! ([`Catalogue::from_json`]), which is how a catalogue with more kinds (`time`,
-//! `temperature`, ...) is served once its owner publishes one. Both paths go through the
-//! same checks, so a malformed table is refused rather than served.
+//! `temperature`, ...) is served once its owner publishes one. A document must carry every
+//! `GEO.FRAME.UNITS` kind and Π exactly as `fid-geo-frame` publishes them and may only add
+//! kinds (REQ-004). Both paths go through the same shape checks, so a malformed table is
+//! refused rather than served.
 //!
 //! Canonical form (RFC 8785 via `fid-canon`; its SHA-256 is [`QuantityCatalogue::digest`]):
 //!
@@ -155,15 +157,26 @@ pub enum CatalogueError {
     Json(&'static str),
     /// The document or table does not have the pinned shape.
     Shape(String),
+    /// A kind of `GEO.FRAME.UNITS` is absent (REQ-004: the facade removes nothing).
+    GeoKindMissing(&'static str),
+    /// A kind of `GEO.FRAME.UNITS` has a unit added, dropped, renamed or with another factor,
+    /// or another canonical unit (REQ-004: the facade adds or alters nothing).
+    GeoKindAltered(&'static str),
+    /// `pi_hex` is not the Π of `GEO.FRAME.UNITS`.
+    PiAltered,
 }
 
 impl CatalogueError {
-    /// Stable code: `catalogue_too_large`, the `fid-canon` code, or `bad_catalogue`.
+    /// Stable code: `catalogue_too_large`, the `fid-canon` code, `bad_catalogue`,
+    /// `geo_kind_missing`, `geo_kind_altered` or `pi_altered`.
     pub fn code(&self) -> &'static str {
         match self {
             CatalogueError::TooLarge => "catalogue_too_large",
             CatalogueError::Json(c) => c,
             CatalogueError::Shape(_) => "bad_catalogue",
+            CatalogueError::GeoKindMissing(_) => "geo_kind_missing",
+            CatalogueError::GeoKindAltered(_) => "geo_kind_altered",
+            CatalogueError::PiAltered => "pi_altered",
         }
     }
 }
@@ -172,6 +185,8 @@ impl fmt::Display for CatalogueError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CatalogueError::Shape(s) => write!(f, "bad_catalogue: {s}"),
+            CatalogueError::GeoKindMissing(k) => write!(f, "geo_kind_missing: {k}"),
+            CatalogueError::GeoKindAltered(k) => write!(f, "geo_kind_altered: {k}"),
             other => f.write_str(other.code()),
         }
     }
@@ -243,10 +258,40 @@ impl Catalogue {
         Catalogue::new(table, pi_hex)
     }
 
-    /// A catalogue from its canonical-form document (whitespace and key order are free; the
-    /// arrays must already be sorted). Strict: unknown or missing fields, unsorted or
-    /// duplicate entries, non-canonical numbers and every rule of [`Catalogue::new`] refuse it.
+    /// A catalogue document that extends `GEO.FRAME.UNITS` (REQ-004): every kind of
+    /// [`Catalogue::geo_frame`] must be present and equal to it (same canonical unit, same
+    /// units with the same factors, nothing added or dropped) and `pi_hex` must be its Π;
+    /// only new kinds may be added. Refusals: [`CatalogueError::GeoKindMissing`],
+    /// [`CatalogueError::GeoKindAltered`], [`CatalogueError::PiAltered`], after the shape
+    /// checks (whitespace and key order are free; the
+    /// arrays must already be sorted; unknown or missing fields, unsorted or duplicate
+    /// entries and non-canonical numbers refuse it).
     pub fn from_json(bytes: &[u8]) -> Result<Catalogue, CatalogueError> {
+        let cat = Catalogue::parse_json(bytes)?;
+        let geo = Catalogue::geo_frame()?;
+        if cat.pi_hex != geo.pi_hex {
+            return Err(CatalogueError::PiAltered);
+        }
+        for (name, kind) in &geo.kinds {
+            let fixed = geo_kind_name(name);
+            match cat.kinds.get(name) {
+                None => return Err(CatalogueError::GeoKindMissing(fixed)),
+                Some(k) if k != kind => return Err(CatalogueError::GeoKindAltered(fixed)),
+                Some(_) => {}
+            }
+        }
+        Ok(cat)
+    }
+
+    /// Any catalogue document in the pinned shape, without the `GEO.FRAME.UNITS` check.
+    /// Test only: a served catalogue must come from [`Catalogue::geo_frame`] or
+    /// [`Catalogue::from_json`].
+    #[cfg(test)]
+    pub(crate) fn from_json_unchecked(bytes: &[u8]) -> Result<Catalogue, CatalogueError> {
+        Catalogue::parse_json(bytes)
+    }
+
+    fn parse_json(bytes: &[u8]) -> Result<Catalogue, CatalogueError> {
         if bytes.len() > MAX_CATALOGUE_BYTES {
             return Err(CatalogueError::TooLarge);
         }
@@ -297,7 +342,7 @@ impl Catalogue {
     /// ASCII lowercasing; each kind has 1 to 64 units, exactly one of them with factor 1,
     /// which is `canonical`; at most 64 kinds; `pi_hex` is 64 lowercase hex digits with the
     /// top bit set (Π · 2^254 lies in [2^255, 2^256)).
-    pub fn new(table: Vec<KindInfo>, pi_hex: String) -> Result<Catalogue, CatalogueError> {
+    fn new(table: Vec<KindInfo>, pi_hex: String) -> Result<Catalogue, CatalogueError> {
         if table.len() > MAX_KINDS {
             return Err(shape(format!("more than {MAX_KINDS} kinds")));
         }
@@ -392,6 +437,15 @@ impl Catalogue {
     }
 }
 
+/// The `'static` name of a `GEO.FRAME.UNITS` kind, for errors (never input text).
+fn geo_kind_name(name: &str) -> &'static str {
+    [Unit::Length(LengthUnit::M), Unit::Angle(AngleUnit::Rad)]
+        .into_iter()
+        .map(unit_kind)
+        .find(|k| *k == name)
+        .unwrap_or("unknown")
+}
+
 /// The fields of an object, which must be exactly `names`.
 fn fields<'v>(v: &'v CValue, names: &[&str], what: &str) -> Result<&'v BTreeMap<String, CValue>, CatalogueError> {
     let CValue::Obj(m) = v else { return Err(shape(format!("{what} must be an object"))) };
@@ -442,6 +496,7 @@ impl QuantityKinds for Catalogue {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
 
@@ -452,6 +507,27 @@ mod tests {
         assert_eq!(Rational::new(0, 1), None);
         assert_eq!(Rational::new(1, 0), None);
         assert_eq!(Rational::reduced(0, 3), None);
+    }
+
+    fn fixture(name: &str) -> Vec<u8> {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/reg/def/schema/catalogue");
+        std::fs::read(dir.join(name)).unwrap_or_default()
+    }
+
+    /// AC-4: a one-unit change in the catalogue fixture changes the digest. Such a catalogue
+    /// is refused by `from_json` (REQ-004), so the digest is taken on the unchecked path.
+    #[test]
+    fn ac4_one_unit_change_changes_the_digest() {
+        let geo = Catalogue::geo_frame().unwrap_or_else(|e| panic!("{e}"));
+        let same = Catalogue::from_json_unchecked(&fixture("geo_frame_units.json")).unwrap_or_else(|e| panic!("{e}"));
+        let changed =
+            Catalogue::from_json_unchecked(&fixture("one_unit_changed.json")).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(same.digest(), geo.digest());
+        assert_ne!(changed.digest(), geo.digest());
+        assert_eq!(
+            Catalogue::from_json(&fixture("one_unit_changed.json")),
+            Err(CatalogueError::GeoKindAltered("length"))
+        );
     }
 
     #[test]
