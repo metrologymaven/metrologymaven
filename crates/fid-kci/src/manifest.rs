@@ -152,8 +152,9 @@ pub enum ManifestError {
     BadHex(&'static str),
     /// A list is not strictly increasing; `index` is the first entry out of order.
     Unsorted { list: &'static str, index: usize },
-    /// The claimed `core_digest` differs from the digest of the core.
-    CoreDigestMismatch { claimed: Digest, computed: Digest },
+    /// The claimed `core_digest` differs from the digest of the core (boxed to keep the
+    /// error small).
+    CoreDigestMismatch { claimed: Box<Digest>, computed: Box<Digest> },
 }
 
 impl ManifestError {
@@ -388,8 +389,11 @@ impl KernelManifest {
             .iter()
             .map(|a| obj(vec![("role", s(&a.role)), ("sha256", d(&a.sha256)), ("target", s(&a.target))]))
             .collect();
-        let canonical =
-            canonical(&obj(vec![("artifacts", Json::Arr(arts)), ("core", core.to_json()), ("core_digest", d(&core_digest))]))?;
+        let canonical = canonical(&obj(vec![
+            ("artifacts", Json::Arr(arts)),
+            ("core", core.to_json()),
+            ("core_digest", d(&core_digest)),
+        ]))?;
         Ok(KernelManifest { core, core_digest, artifacts, canonical })
     }
 
@@ -410,7 +414,7 @@ impl KernelManifest {
         validate_artifacts(&artifacts)?;
         let computed = core.core_digest()?;
         if computed != claimed {
-            return Err(ManifestError::CoreDigestMismatch { claimed, computed });
+            return Err(ManifestError::CoreDigestMismatch { claimed: Box::new(claimed), computed: Box::new(computed) });
         }
         Self::assemble(core, computed, artifacts)
     }

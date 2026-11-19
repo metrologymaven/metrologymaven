@@ -84,7 +84,11 @@ fn ac1_sort_rules_use_the_id_total_order() {
     let arts: Vec<(&str, &str)> = m.artifacts().iter().map(|a| (a.role.as_str(), a.target.as_str())).collect();
     assert_eq!(
         arts,
-        [("native", "aarch64-apple-darwin"), ("native", "x86_64-unknown-linux-gnu"), ("wasm", "wasm32-unknown-unknown")]
+        [
+            ("native", "aarch64-apple-darwin"),
+            ("native", "x86_64-unknown-linux-gnu"),
+            ("wasm", "wasm32-unknown-unknown")
+        ]
     );
 }
 
@@ -144,10 +148,7 @@ fn input_over_4_mib_is_too_large() {
     exact.resize(MAX_INPUT_BYTES, b' ');
     assert_eq!(KernelManifest::parse(&exact).unwrap().canonical_json(), &base_bytes()[..]);
     exact.push(b' ');
-    assert_eq!(
-        KernelManifest::parse(&exact),
-        Err(ManifestError::TooLarge { what: "input", limit: MAX_INPUT_BYTES })
-    );
+    assert_eq!(KernelManifest::parse(&exact), Err(ManifestError::TooLarge { what: "input", limit: MAX_INPUT_BYTES }));
 }
 
 // ---------------------------------------------------------------- bounds (same limits as the schema check)
@@ -179,7 +180,8 @@ fn list_bounds_match_the_schema() {
     assert_eq!(over, ManifestError::TooLarge { what: "core.algorithms", limit: MAX_ALGORITHMS });
 
     let m = base();
-    let art = |i: usize| Artifact { role: "native".into(), target: format!("t{i:04}"), sha256: m.artifacts()[0].sha256 };
+    let art =
+        |i: usize| Artifact { role: "native".into(), target: format!("t{i:04}"), sha256: m.artifacts()[0].sha256 };
     let ok = KernelManifest::new(m.core().clone(), (0..MAX_ARTIFACTS).map(art).collect()).unwrap();
     assert_eq!(KernelManifest::parse(ok.canonical_json()).unwrap(), ok);
     let too_many = KernelManifest::new(m.core().clone(), (0..=MAX_ARTIFACTS).map(art).collect());
