@@ -439,6 +439,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-fixes"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-gdt"
 version = "0.0.1"
 dependencies = [
@@ -517,6 +525,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-las"
+version = "0.0.1"
+dependencies = [
+ "fid-io-reg",
+]
+
+[[package]]
 name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
@@ -577,6 +592,14 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "toml",
+]
+
+[[package]]
+name = "fid-mig"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
 ]
 
 [[package]]
@@ -759,6 +782,7 @@ version = "0.0.1"
 dependencies = [
  "fid-accept",
  "fid-canon",
+ "fid-mig",
  "fid-types",
  "fid-uuid",
  "sha2 0.10.9",

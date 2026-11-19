@@ -8,6 +8,8 @@ fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
+# IO.CLOUD.LAS.HDR fixtures: binary LAS files, a stored ZIP and expected output compared by --check.
+fixtures/io/cloud/las/hdr/** -text
 # DMIS lexer fixtures (IO.DMIS.PARSE.LEX): CRLF, tabs and non-UTF-8 bytes are part of the test.
 fixtures/io/dmis/parse/lex/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.
@@ -68,6 +70,8 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
 fixtures/outr/launch/gate/** -text
+# MIG.LADDER.DEF fixtures: written by make_fixtures.py, which --check compares byte for byte.
+fixtures/mig/ladder/def/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
 # AGENT.REDTEAM.PRED fixtures: tar archives and digested suites compared byte for byte by make_pred.py --check.
@@ -78,3 +82,9 @@ tools/tests/fixtures/rfc/** -text
 fixtures/outr/bench/recipe/** -text
 # ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
 fixtures/block/** -text
+# KRN.SOLV.CONIC.VEND: hand-written trees, patches and reports, digested and compared byte for byte
+# by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
+fixtures/solv/vend/** -text
+vendor/fid-clarabel/** -text
+# FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
+fixtures/flow/fixes/** -text

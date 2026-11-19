@@ -53,6 +53,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
+const MIG_LADDER_USAGE: &str =
+    "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -79,6 +81,8 @@ fn main() -> ExitCode {
             fid_platform(&args, "plat-deploy")
         }
         Some("pins") => pins::cli(&args[1..]),
+        Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
+        Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -93,7 +97,63 @@ fn main() -> ExitCode {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
+            eprintln!("{MIG_LADDER_USAGE}");
+            eprintln!("{}", fid_xtask::conic_audit::USAGE);
             ExitCode::from(2)
+        }
+    }
+}
+
+/// MIG.LADDER.DEF: `mig ladder-check`. Prints the schema, version and digest of the ladder
+/// when it passes, otherwise one line per finding (`LADDER-SCHEMA`, `LADDER-FORWARD`,
+/// `LADDER-MISSING-CMD`, `LADDER-BASIS`). Exit 0: pass; 1: findings; 2: usage error or an
+/// unreadable file. Offline; reads only.
+fn mig_ladder_check(args: &[String]) -> ExitCode {
+    let (mut ladder, mut manifest) = (None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--ladder", Some(v)) => ladder = Some(PathBuf::from(v)),
+            ("--manifest", Some(v)) => manifest = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{MIG_LADDER_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(ladder), Some(manifest)) = (ladder, manifest) else {
+        eprintln!("mig ladder-check: --ladder and --manifest are required\n{MIG_LADDER_USAGE}");
+        return ExitCode::from(2);
+    };
+    let read = |p: &Path, limit: usize| -> Result<Vec<u8>, String> {
+        let file = std::fs::File::open(p).map_err(|e| format!("{}: {e}", p.display()))?;
+        let mut bytes = Vec::new();
+        // One byte over the limit is enough for the parser to report the input as too large.
+        let cap = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
+        file.take(cap).read_to_end(&mut bytes).map_err(|e| format!("{}: {e}", p.display()))?;
+        Ok(bytes)
+    };
+    let inputs = read(&ladder, fid_mig::ladder::def::MAX_LADDER_BYTES)
+        .and_then(|l| read(&manifest, fid_mig::ladder::def::MAX_MANIFEST_BYTES).map(|m| (l, m)));
+    let (ladder_bytes, manifest_bytes) = match inputs {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("mig ladder-check: cannot read {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let report = fid_mig::ladder::def::check(&ladder_bytes, &manifest_bytes);
+    for f in &report.findings {
+        println!("{f}");
+    }
+    match &report.ladder {
+        Some(l) if report.findings.is_empty() => {
+            println!("ladder-check: ok {} version {} digest {}", l.schema(), l.version(), l.digest());
+            ExitCode::SUCCESS
+        }
+        _ => {
+            println!("ladder-check: {} findings", report.findings.len());
+            ExitCode::from(1)
         }
     }
 }

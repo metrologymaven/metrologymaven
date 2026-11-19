@@ -5,6 +5,10 @@ on:
     branches: [main]
 permissions:
   contents: read
+# A newer push to the same PR cancels the older run; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   fmt:
     runs-on: ubuntu-latest
@@ -70,6 +74,9 @@ jobs:
       - name: XML reader fuzz harness compiles on stable (IO.QIF.XML.PARSE AC-5)
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-xml/fuzz/Cargo.toml
+      - name: LAS reader fuzz harness compiles on stable (IO.CLOUD.LAS.HDR AC-5)
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-io-las/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
@@ -150,6 +157,38 @@ jobs:
         run: |
           cargo xtask rel keys-check
           cargo xtask rel keys-check --keys fixtures/rel/guide/keys --doc fixtures/rel/guide/docs/KEYS.md
+      - name: Vendored solver audit via cargo xtask (KRN.SOLV.CONIC.VEND AC-1 to AC-5)
+        shell: bash
+        run: |
+          v=fixtures/solv/vend
+          out=$(cargo xtask conic-audit --dir $v/ok)
+          test "$out" = "conic-audit: ok"
+          set +e; out=$(cargo xtask conic-audit --dir $v/drift); code=$?; set -e
+          test "$code" = 1 && grep -q '^AUDIT-PATCH-DRIFT crate/src/lib.rs: ' <<< "$out"
+          set +e; out=$(cargo xtask conic-audit --dir $v/digest); code=$?; set -e
+          test "$code" = 1 && grep -q '^AUDIT-DIGEST upstream/: ' <<< "$out"
+          set +e; out=$(cargo xtask conic-audit --dir $v/update --previous $v/ok/AUDIT.toml); code=$?; set -e
+          test "$code" = 1 && grep -q '^AUDIT-PATCH-MISSING 0002: ' <<< "$out"
+          cargo xtask conic-audit --dir $v/update --audit $v/update/AUDIT-dropped.toml --previous $v/ok/AUDIT.toml
+          set +e
+          out=$(cargo xtask conic-audit --dir $v/ok --report $v/lint/unwaived-pow.json --audit $v/lint/AUDIT-unwaived-pow.toml)
+          code=$?
+          set -e
+          test "$code" = 1 && test "$out" = 'AUDIT-LINT crate/src/x.rs:6:14: unwaived KNP1-POW finding'
+          # The real vendored tree, once it exists (see the leaf's Open questions). vendor/ may
+          # hold only the audited real directory fid-clarabel; anything else, a symbolic link
+          # (dangling or not, where `[ -e ]` alone is false) or vendor/ being a link fails.
+          if [ -L vendor ]; then echo "::error::vendor/ is a symbolic link"; exit 1; fi
+          if [ -e vendor ]; then
+            if [ ! -d vendor ]; then echo "::error::vendor is not a directory"; exit 1; fi
+            shopt -s nullglob dotglob
+            for e in vendor/*; do
+              if [ -L "$e" ] || [ "$e" != vendor/fid-clarabel ] || [ ! -d "$e" ]; then
+                echo "::error::$e is not an audited vendored directory"; exit 1
+              fi
+            done
+            if [ -d vendor/fid-clarabel ]; then cargo xtask conic-audit; fi
+          fi
       - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
         run: cargo xtask plat-matrix lint-tiers
       - name: Study task list and protocol check via cargo xtask (FLOW.STUDY.PROTO AC-1, AC-3)
@@ -187,14 +226,17 @@ jobs:
           python tools/check_command_defs.py
           python fixtures/core/reg/def/guide/make_fixtures.py --check
           python tools/check_entries.py
-          python tools/check_knp1_findings.py
+          python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
+          python fixtures/solv/vend/make_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
           python fixtures/io/e57/phys/make_fixtures.py --check
+          python fixtures/io/cloud/las/hdr/make_fixtures.py --check
           python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/flow/pkg/make_fixtures.py --check
           python fixtures/flow/journey/make_fixtures.py --check
+          python fixtures/flow/fixes/make_fixtures.py --check
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/outr/bench/recipe/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
@@ -203,6 +245,7 @@ jobs:
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
+          python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
