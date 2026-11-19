@@ -546,9 +546,7 @@ fn ac1_nist_strd_local() {
     let known = ["misra1a", "chwirut", "danwood", "lanczos3", "kirby2", "misra1d", "roszman1", "mgh17"];
     let mut ran = 0;
     for path in paths.iter().filter(|p| p.extension().is_some_and(|e| e == "txt")) {
-        let text = std::fs::read_to_string(path).unwrap().replace("
-", "
-");
+        let text = load(path.to_str().unwrap());
         let (_, probs) = blocks(&text);
         for b in &probs {
             let prob = curve(b);
