@@ -403,7 +403,10 @@ fn number_strings_match_oracle() {
         let (hex, want) = line.split_once(' ').unwrap();
         let v = f64_hex(hex);
         assert_eq!(es_number(v).as_deref(), Some(want), "{hex}");
-        assert_eq!(es_number(-v).as_deref().map(|s| s.trim_start_matches('-')), Some(want), "-{hex}");
+        // The sign is only a prefix: the magnitude's string is the same for -v.
+        let magnitude = want.trim_start_matches('-');
+        assert_eq!(es_number(-v).as_deref().map(|s| s.trim_start_matches('-')), Some(magnitude), "-{hex}");
+        assert_eq!(es_number(-v).is_some_and(|s| s.starts_with('-')), v > 0.0, "sign of -{hex}");
         n += 1;
     }
     assert_eq!(n, 26);
