@@ -415,11 +415,20 @@ name = "fid-eval-harness"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-eval-pred",
  "fid-types",
  "fid-uuid",
  "getrandom",
  "libc",
  "sha2 0.10.9",
+]
+
+[[package]]
+name = "fid-eval-pred"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
 ]
 
 [[package]]
@@ -435,6 +444,7 @@ name = "fid-eval-suite"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-eval-pred",
  "fid-types",
 ]
 

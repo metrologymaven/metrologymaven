@@ -25,6 +25,8 @@ fixtures/plat/gpu/known-bad-*.toml -text
 fixtures/knp1/graph/** -text
 # IO.CORP.HOSTILE fixtures: binary inputs and digested manifests; never convert line endings.
 fixtures/io/corp/hostile/** -text
+# AGENT.HARNESS.SAFETY archived runs: regenerated and compared byte for byte by make_runs.py --check.
+fixtures/agent/harness/runs/** -text
 # PLAT.DEPLOY.NOADMIN.LAYOUT fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/deploy/layout-*.toml -text
 
