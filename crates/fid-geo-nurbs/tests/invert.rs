@@ -2,8 +2,8 @@
 //! error paths.
 //!
 //! Expected values come from outside the Rust code: the GEO.NURBS.REF fixtures
-//! `fixtures/geo/nurbs/ref_set_v1.json` and `multi_minima.json` (dense grid search plus
-//! 60-digit Newton), `fixtures/geo/nurbs/invert/fuzz_set.json` (the same oracle on extra hard
+//! `fixtures/geo/nurbs/ref_set_v2.json` and `multi_minima.json` (dense grid search plus
+//! 60-digit Newton, every reference certified global by `tools/fixtures/nurbs_cert.py`), `fixtures/geo/nurbs/invert/fuzz_set.json` (the same oracle on extra hard
 //! cases, written by `make_invert_fixtures.py`), closed forms for the circle and the spheres,
 //! and `fixtures/geo/nurbs/invert/digests-v1.txt` (the bit-exact Python model of the pinned
 //! algorithm, `invert_model.py`).
@@ -27,7 +27,7 @@ const TOL: f64 = 1e-12;
 /// 1 / |1 - kappa d| as the query approaches the centre of curvature. Measured worst: 1.5e-12 m
 /// (ellipse-q0010).
 const HARD_FOOT_TOL: f64 = 1e-11;
-const FILES: [&str; 3] = ["ref_set_v1.json", "multi_minima.json", "invert/fuzz_set.json"];
+const FILES: [&str; 3] = ["ref_set_v2.json", "multi_minima.json", "invert/fuzz_set.json"];
 
 // ---------------------------------------------------------------- minimal JSON reader
 
@@ -508,17 +508,17 @@ fn cusp_tip(run: &Run, q: &J) -> bool {
 
 // ---------------------------------------------------------------- acceptance tests
 
-/// AC-1 and REQ-001: all 5 000 ref_set_v1 queries (including those near several local minima)
+/// AC-1 and REQ-001: all 5 000 ref_set_v2 queries (including those near several local minima)
 /// give the global closest point: foot and distance within 1e-12 m of the GEO.NURBS.REF
-/// reference, certified (REQ-002), with the tie flag exactly on tied queries. sphere-q0121 is excluded from the REF comparison (GEO.NURBS.REF follow-up fixes it) and is a known defect of the
-/// REF fixture (its reference is a local, not the global, minimum; the radial projection is
-/// 2.7e-6 m closer), so the sphere is checked against its closed form.
+/// reference, certified (REQ-002), with the tie flag exactly on tied queries. The sphere is
+/// also checked against its closed form (ref_set_v1's sphere-q0121 was a non-global reference;
+/// ref_set_v2 fixes it).
 #[test]
 fn ac1_ref_set_global_closest_points() {
     let mut worst = (0.0_f64, 0.0_f64);
     let mut n = 0;
     let mut bad = Vec::new();
-    for run in runs().iter().filter(|r| r.file == "ref_set_v1.json") {
+    for run in runs().iter().filter(|r| r.file == "ref_set_v2.json") {
         for (q, r, _) in &run.rows {
             let id = q.get("id").str();
             let r = r.as_ref().unwrap_or_else(|e| panic!("{id}: {e}"));
@@ -530,7 +530,7 @@ fn ac1_ref_set_global_closest_points() {
             }
         }
     }
-    eprintln!("ref_set_v1: {n} queries, worst foot error {:e} m, worst distance error {:e} m", worst.0, worst.1);
+    eprintln!("ref_set_v2: {n} queries, worst foot error {:e} m, worst distance error {:e} m", worst.0, worst.1);
     assert_eq!(n, 5000);
     assert!(bad.is_empty(), "{bad:#?}");
 }
@@ -567,7 +567,7 @@ fn ac2_ties_choose_smallest_parameters() {
 
 /// AC-3: whenever the closest point lies on a boundary edge, the boundary parameter is exactly
 /// the domain limit (bit for bit the reference's), and on_boundary is set exactly then
-/// (ref_set_v1 and multi_minima; the fuzz set checks the flag in `fuzz_set_against_oracle`).
+/// (ref_set_v2 and multi_minima; the fuzz set checks the flag in `fuzz_set_against_oracle`).
 #[test]
 fn ac3_boundary_parameters_exact() {
     let mut n = 0;
@@ -618,7 +618,7 @@ fn ac4_cusp_is_non_convergence_with_finite_best() {
 }
 
 /// AC-5 and REQ-006: the results (parameters, foot, distance and flags, bit for bit) of
-/// ref_set_v1, multi_minima and the fuzz set equal the bit-exact Python model of the pinned
+/// ref_set_v2, multi_minima and the fuzz set equal the bit-exact Python model of the pinned
 /// algorithm (per-entity, per-file and total SHA-256 in digests-v1.txt). CI runs this on
 /// x86-64 Linux and Windows, ARM64 macOS and wasm32-wasip1.
 #[test]
