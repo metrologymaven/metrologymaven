@@ -1,0 +1,29 @@
+[package]
+name = "fid-qif"
+description = "Metrology Maven QIF support: the qif-norm@1 normaliser, comparator and round-trip harness (spec node IO.QIF.NORM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "qif-roundtrip"
+path = "src/bin/qif-roundtrip.rs"
+
+[dependencies]
+# The hardened XML pull reader (IO.QIF.XML.PARSE): no DTDs, no entities, bounded. The
+# normaliser never parses XML itself.
+fid-xml = { path = "../fid-xml" }
+# Budgets, positions and untrusted text of the reader harness (IO.REG.LIMITS).
+fid-io-reg = { path = "../fid-io-reg" }
+# Shared `sha256:` digest type (AGENTS.md rule 14) for the rule-file lock.
+fid-types = { path = "../fid-types" }
+# SHA-256 of the rule file for the version check; already in the graph through fid-canon.
+sha2 = "0.10"
+# Reads the rule file and corpus manifests as untyped tables (no serde derive), as
+# fid-io-corp and fid-knp1-lint do; already in the graph.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

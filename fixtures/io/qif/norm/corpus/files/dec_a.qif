@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3">
+  <Nominal id="1">
+    <Value>1.50</Value>
+  </Nominal>
+</QIFDocument>

@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<!DOCTYPE QIFDocument [<!ENTITY x "expanded">]>
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3"><Value>&x;</Value></QIFDocument>
