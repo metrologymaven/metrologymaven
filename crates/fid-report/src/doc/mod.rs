@@ -51,5 +51,5 @@ pub use replay::{replay_exact, ReplayRun, MAX_REPLAY_EVENTS};
 pub use text::{must_escape, Text, Untrusted, MAX_TEXT_BYTES};
 pub use value::{
     check_value_binding, is_pointer, resolve_pointer, BindingFault, MAX_POINTER_BYTES, MAX_VALUE_FIELDS,
-    VALUE_BINDING_SCHEMA,
+    VALUE_BINDING_SCHEMA, VALUE_TEXT_SCHEMA,
 };

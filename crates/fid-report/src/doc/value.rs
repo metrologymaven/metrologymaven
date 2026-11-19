@@ -24,6 +24,11 @@
 //!   `value_text@1` included) is a literal: `report.value_literal_refused`;
 //! - an object tagged `value_binding@1` that breaks the shape is
 //!   `report.value_binding_invalid`, with the reason.
+//!
+//! Undeclared places are checked too: the whole payload is walked, and an object tagged
+//! `value_text@1` anywhere is `report.value_literal_refused` (`value_text`), while an
+//! object tagged `value_binding@1` at a pointer that is not a declared value field is
+//! `report.value_binding_invalid` (`undeclared_binding`).
 
 use super::error::ReportError;
 use super::kind::{BlockKind, PayloadError};
@@ -34,6 +39,8 @@ use fid_project::Uuid;
 
 /// Schema tag of a value binding.
 pub const VALUE_BINDING_SCHEMA: &str = "value_binding@1";
+/// Schema tag of FMT value text, which a stored payload may never hold anywhere.
+pub const VALUE_TEXT_SCHEMA: &str = "value_text@1";
 /// Most value fields one block may declare.
 pub const MAX_VALUE_FIELDS: usize = 4096;
 /// Longest pointer (a declared value field, or a binding's `field`), in bytes.
@@ -122,7 +129,8 @@ pub fn resolve_pointer<'a>(root: &'a CValue, pointer: &str) -> Option<&'a CValue
 }
 
 /// The value rule for one block: every declared value field exists and holds a
-/// `value_binding@1`.
+/// `value_binding@1`, no `value_text@1` appears anywhere, and no binding sits outside a
+/// declared value field.
 pub(crate) fn check_block_values(kind: &dyn BlockKind, payload: &CanonicalJson) -> Result<(), ReportError> {
     let fields = kind.value_fields(payload).map_err(ReportError::InvalidBlockPayload)?;
     if fields.len() > MAX_VALUE_FIELDS {
@@ -138,6 +146,45 @@ pub(crate) fn check_block_values(kind: &dyn BlockKind, payload: &CanonicalJson) 
             BindingFault::Literal => ReportError::ValueLiteralRefused(PayloadError::new(f, "literal")),
             BindingFault::Invalid(r) => ReportError::ValueBindingInvalid(PayloadError::new(f, r)),
         })?;
+    }
+    check_undeclared(payload.value(), &fields)
+}
+
+/// RFC 6901 escaping of one reference token (`~` to `~0`, `/` to `~1`).
+fn escape_token(t: &str) -> String {
+    t.replace('~', "~0").replace('/', "~1")
+}
+
+/// Walks the whole payload (iteratively; the payload is already within
+/// [`super::MAX_PAYLOAD_BYTES`] and [`super::MAX_PAYLOAD_DEPTH`]). Anywhere in it, an object
+/// whose `schema` is `value_text@1` is `report.value_literal_refused` (`value_text`), and an
+/// object whose `schema` is `value_binding@1` at a pointer that is not a declared value
+/// field is `report.value_binding_invalid` (`undeclared_binding`). Objects are visited in
+/// key order and arrays in index order, so the first offence reported is deterministic.
+fn check_undeclared(root: &CValue, declared: &[String]) -> Result<(), ReportError> {
+    let mut stack: Vec<(&CValue, String)> = vec![(root, String::new())];
+    while let Some((v, at)) = stack.pop() {
+        match v {
+            CValue::Obj(o) => {
+                if let Some(CValue::Str(schema)) = o.get("schema") {
+                    if schema == VALUE_TEXT_SCHEMA {
+                        return Err(ReportError::ValueLiteralRefused(PayloadError::new(&at, "value_text")));
+                    }
+                    if schema == VALUE_BINDING_SCHEMA && !declared.iter().any(|d| *d == at) {
+                        return Err(ReportError::ValueBindingInvalid(PayloadError::new(&at, "undeclared_binding")));
+                    }
+                }
+                for (k, c) in o.iter().rev() {
+                    stack.push((c, format!("{at}/{}", escape_token(k))));
+                }
+            }
+            CValue::Arr(a) => {
+                for (i, c) in a.iter().enumerate().rev() {
+                    stack.push((c, format!("{at}/{i}")));
+                }
+            }
+            _ => {}
+        }
     }
     Ok(())
 }

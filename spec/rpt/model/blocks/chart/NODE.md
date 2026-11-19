@@ -9,7 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-004, REQ-RPT.MODEL.BLOCKS-010, REQ-RPT.MODEL.BLOCKS-011]
+satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-004]
 covers: [GOM.RPT.05, PCD.RPT.03, SA.RPT.02]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND.RESOLVE, RPT.STATS.TREND]
 side_effect: W2
@@ -38,6 +38,7 @@ The `chart` block kind: places a trend chart, histogram, control chart or vector
 - **REQ-RPT.MODEL.BLOCKS.CHART-002** When resolved, the block shall obtain the `ChartSeries` for its reference at the generation head and place it in the resolved block unchanged, and the resolver shall perform no arithmetic on series values.
 - **REQ-RPT.MODEL.BLOCKS.CHART-003** If the referenced series' chart type differs from the block's chart type, then `report.set_chart_block@1` shall fail with error `report.chart_type_mismatch` and journal nothing.
 - **REQ-RPT.MODEL.BLOCKS.CHART-004** If no series provider is installed for the chart type, then generation shall fail with error `report.series_unavailable` naming the block.
+- **REQ-RPT.MODEL.BLOCKS.CHART-005** Every number printed in a chart (data labels, axis tick values, limit lines, annotations and legends) shall be value text produced by `RPT.MODEL.FMT` from the series bindings of REQ-RPT.MODEL.BIND-001, shown with that value's own labels and markers; the chart block shall format no number itself.
 
 ## Acceptance criteria
 
@@ -45,6 +46,7 @@ The `chart` block kind: places a trend chart, histogram, control chart or vector
 - **AC-2** (error path) Given S of type trend, when `--type histogram` is set, then it fails with `report.chart_type_mismatch`.
 - **AC-3** (error path) Given a `vector_group` block and no LVM provider installed, when generated, then it fails with `report.series_unavailable`.
 - **AC-4** (static check) Given the crate, when the KRN.NUM float-lint rule set runs on the resolver module, then it reports no arithmetic on series values.
+- **AC-5** Given series S whose points rest on fid-kunc statement `fixtures/unc/stmt/valid/uec1_declared.json` (claimed, declared input), when the chart is generated with data labels and axis values, then every printed number equals the canonical or display string of an FMT `ValueText` for its series binding, each data label shows the `Claimed` and `DeclaredInput` labels, and a test stub that formats a number in the chart code fails the AC-4 static check.
 
 ## Design
 
@@ -61,7 +63,7 @@ The `chart` block kind: places a trend chart, histogram, control chart or vector
 
 ## Build prompt
 
-> In crate `fid-report`, add the `chart` block kind (payload v1: chart type `trend|histogram|control|vector_group`, `SeriesRef`, untrusted title and axis labels up to 128 bytes, legend flag), a `SeriesProvider` registry keyed by chart type, and a `BlockResolver` that copies the provider's `ChartSeries` (contract from `RPT.STATS.TREND`) unchanged into the resolved block. Command `report.set_chart_block@1` (W2; CLI `fid report set-chart-block --json`); type mismatch -> `report.chart_type_mismatch`; missing provider at generation -> `report.series_unavailable`. No arithmetic on series values. Acceptance: AC-1..AC-4 in `spec/rpt/model/blocks/chart/NODE.md`. Constraints: CONSTITUTION C1, C6, §8.
+> In crate `fid-report`, add the `chart` block kind (payload v1: chart type `trend|histogram|control|vector_group`, `SeriesRef`, untrusted title and axis labels up to 128 bytes, legend flag), a `SeriesProvider` registry keyed by chart type, and a `BlockResolver` that copies the provider's `ChartSeries` (contract from `RPT.STATS.TREND`) unchanged into the resolved block. Command `report.set_chart_block@1` (W2; CLI `fid report set-chart-block --json`); type mismatch -> `report.chart_type_mismatch`; missing provider at generation -> `report.series_unavailable`. No arithmetic on series values. Acceptance: AC-1..AC-5 in `spec/rpt/model/blocks/chart/NODE.md`. Constraints: CONSTITUTION C1, C6, §8.
 
 ## Open questions
 

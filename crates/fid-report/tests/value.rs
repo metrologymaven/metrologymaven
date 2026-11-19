@@ -327,3 +327,40 @@ fn pointers_resolve_per_rfc_6901() {
         assert_eq!(resolve_pointer(&v, bad), None, "{bad}");
     }
 }
+
+#[test]
+fn undeclared_places_cannot_hold_value_text_or_bindings() {
+    let cases = parse(&read("fixtures/rpt/model/doc/payload_cases.json")).unwrap();
+    let mut n = 0;
+    for case in arr(get(&cases, "cases")) {
+        let name = str_of(get(case, "name"));
+        let expect = str_of(get(case, "expect"));
+        let mut w = World::new();
+        let before = w.backend.clone();
+        match w.add("measurement", get(case, "payload").clone()) {
+            Ok(_) => assert_eq!(expect, "ok", "{name}"),
+            Err(e) => {
+                assert_eq!(e.code(), expect, "{name}");
+                assert_eq!(get(&e.to_value(), "field"), get(case, "field"), "{name}");
+                assert_eq!(get(&e.to_value(), "reason"), get(case, "reason"), "{name}");
+                assert_eq!(w.backend, before, "{name}: journal and store unchanged");
+            }
+        }
+        n += 1;
+    }
+    assert_eq!(n, 9);
+    // A kind without value fields still checks its own schema first; a bare binding as the
+    // whole payload of a kind whose field is /U names the missing field.
+    let mut w = World::new();
+    let e = w.add("text", obj([("text", s("x")), ("b", binding())])).unwrap_err();
+    assert_eq!(e.code(), "report.invalid_block_payload");
+    let e = execute(
+        ADD_BLOCK,
+        &obj([("report", s(&w.report)), ("page", s(&w.page)), ("kind", s("measurement")), ("payload", binding())]),
+        &mut w.backend,
+        &w.kinds,
+        &mut w.ids,
+    )
+    .unwrap_err();
+    assert_eq!((e.code(), get(&e.to_value(), "reason")), ("report.value_binding_invalid", &s("missing")));
+}

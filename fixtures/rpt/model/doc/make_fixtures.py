@@ -150,6 +150,29 @@ def binding_cases():
     return {"licence": "CC-BY-4.0", "source": "authored in-project for RPT.MODEL.DOC (value bindings)", "cases": out}
 
 
+def payload_cases():
+    """Hand-labelled whole payloads for the test kind `measurement` (declared value field /U):
+    "ok", or the error code, the pointer it names and the reason. Undeclared places are
+    walked: value_text@1 anywhere and value_binding@1 outside /U are refused."""
+    text = {"schema": "value_text@1", "canonical": "0.002", "digits_added": "0", "formatter": "fmt.length@1",
+            "unit": "mm", "markers": [], "labels": []}
+    lit = "report.value_literal_refused"
+    bad = "report.value_binding_invalid"
+    cases = [
+        ("binding_only", {"U": vb()}, "ok", "", ""),
+        ("free_text_elsewhere", {"U": vb(), "caption": "0.002 mm", "notes": ["see 4.2"]}, "ok", "", ""),
+        ("value_text_nested", {"U": vb(), "notes": [{"v": text}]}, lit, "/notes/0/v", "value_text"),
+        ("value_text_top_key", {"U": vb(), "shown": text}, lit, "/shown", "value_text"),
+        ("value_text_inside_binding_sibling", {"U": vb(), "a/b~c": {"x": text}}, lit, "/a~1b~0c/x", "value_text"),
+        ("binding_undeclared", {"U": vb(), "V": vb()}, bad, "/V", "undeclared_binding"),
+        ("binding_nested_undeclared", {"U": vb(), "rows": [{"cell": vb()}]}, bad, "/rows/0/cell", "undeclared_binding"),
+        ("binding_escaped_key", {"U": vb(), "a/b~c": vb()}, bad, "/a~1b~0c", "undeclared_binding"),
+        ("first_offence_in_key_order", {"U": vb(), "a": vb(), "b": text}, bad, "/a", "undeclared_binding"),
+    ]
+    out = [{"name": n, "payload": p, "expect": e, "field": f, "reason": r} for n, p, e, f, r in cases]
+    return {"licence": "CC-BY-4.0", "source": "authored in-project for RPT.MODEL.DOC (whole-payload walk)", "cases": out}
+
+
 def binding_report():
     """A report titled "values" whose one block (kind `measurement`, test kind with value
     field /U) holds a well-formed binding: the exact stored bytes."""
@@ -203,6 +226,7 @@ def outputs():
         MODEL / "hostile_strings" / "strings.json": jcs(hostile()),
         HERE / "binding_cases.json": jcs(binding_cases()),
         HERE / "binding-report-text.json": jcs(binding_report()),
+        HERE / "payload_cases.json": jcs(payload_cases()),
         MODEL / "empty_project" / "project.json": jcs(empty_project()),
     }
 
