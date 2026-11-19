@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kunc]
+built_pr: 221
 satisfies: [REQ-UNC.UEC-001, REQ-UNC.UEC-004]
 covers: []
 depends_on: [KRN]
@@ -76,10 +78,20 @@ Defines the `EvidenceClass` enumeration and the `UncertaintyStatement` value typ
 - **Determinism:** D0. No floating-point arithmetic; only bit-pattern serialization.
 - **Performance budget:** serialize and digest 100,000 statements in under 1 s on reference hardware [unverified until measured].
 - **Crate:** `fid-kunc` (kernel side; no I/O; KNP-1 applies).
+- **Pinned choices (build, value-affecting):**
+  - Wire schema tag `uncertainty_statement@1` in member `schema`. Member names: `class`, `uec0_reason`, `method`, `unit`, `u_std`, `expanded {U, k}`, `interval {low, high, p, kind}`, `model {id, semver, digest}`, `sources [{kind, id, digest}]`, `contributors [{input_id, sensitivity, u_contrib, variance_share}]`, `lpu_validated_by_mc`, `nonlinearity {version, outcome, v1, v2, ratio, probed_inputs, probed_pairs, cross_terms_truncated, reason}`, `selection_rule`, `estimate_convention`, `provenance {rule_sets, principal, principal_kind, proposal, adopted_by, supersedes}`. Enum wire names: `UEC-0..UEC-3`; the six method tags; `shortest`, `prob_symmetric`; `dcc`, `qualification`, `type_a`, `declared`, `instrument_model`; `linear_adequate`, `second_order_needed`, `use_mcm`; `human`, `agent`.
+  - Written with the kernel writer `fid_kci::kci::json` (strings, arrays, objects only). Every scalar is a string: f64 as exactly 16 lowercase hex digits of its bits (no prefix), booleans `"true"`/`"false"`, counts as plain decimal `u32`, digests `sha256:<64 hex>`. Absent optional members are omitted; `sources`, `contributors`, `provenance`, `provenance.proposal` and `provenance.rule_sets` are always written. Digest = SHA-256 (kernel `fid_kci`) of the canonical bytes, no trailing newline.
+  - The parser accepts only the canonical bytes of a valid statement: anything else that is a valid statement fails `non_canonical`. Input at most 1 MiB, nesting at most 8, strings printable ASCII without escapes; other input fails `malformed{detail}`. Vectors at most 10 000 entries; text fields 1..256 printable ASCII bytes without space, `"` or `\`.
+  - Numbers (bit tests and comparisons only): NaN, infinities and negative zero always fail. `u_std`, `U`, `k` strictly positive (a zero uncertainty is never valid; an absent one is UEC-0). `p` in the open interval (0, 1); `low < high` strictly; `u_contrib`, `v1`, `v2`, `ratio` non-negative; `variance_share` in [0, 1]; `sensitivity` any finite value.
+  - Validation order: class (UEC-0 carries none of `method`, `u_std`, `expanded`, `interval`, non-empty `contributors`, `lpu_validated_by_mc`, `nonlinearity` -> `uec0_has_value{field}`; UEC-1..3 with a `uec0_reason` -> `class_mismatch`), numbers, completeness (UEC-0: `uec0_reason`; UEC-1..3: `method`, `unit`, `coverage`, `model`), text fields and unique IDs (`invalid_field{field}`), class consistency (`class_mismatch{field}`). In the canonical parser, parse-stage errors (`malformed{detail}`, `unknown_method`, `invalid_field` for a bad scalar encoding, enum value or digest, `statement_incomplete{class}`) take priority over this order; `non_canonical` is checked last.
+  - Class consistency (maintainer rule: claimed values never look measured): `DECLARED` and `SPEC_DERIVED` only with UEC-1; UEC-3 only with `ISO15530-3`/`ISO15530-4` (REQ-UNC.UEC-006); UEC-2 and UEC-3 need at least one source and only `dcc`, `qualification` or `type_a` sources (REQ-UNC.UEC-005). A claimed method (`DECLARED`, `SPEC_DERIVED`) carries no evaluation output: non-empty `contributors`, `lpu_validated_by_mc` or `nonlinearity` fail `class_mismatch{field}`. `lpu_validated_by_mc` is allowed only with method `LPU`. Every UEC-1..3 statement whose method is not `DECLARED` carries at least one source (`SPEC_DERIVED` cites its specification), else `class_mismatch{sources}`, so a bare number never shows as an evaluated value. This is a type guard; `UNC.UEC.CLASS` still chooses the class. Provenance: `principal` and `principal_kind` set together; `DECLARED` requires a `principal` (`class_mismatch{provenance.principal}`); an agent principal or an `adopted_by` requires `proposal = true` (CONSTITUTION C5).
+  - Labelling obligation for surfaces (`UNC.UEC.EXPL`, `RPT`): `is_claimed()` (method `DECLARED` or `SPEC_DERIVED`: stated or taken from a specification, not evaluated from measurement data), `rests_on_declared_input()` (any source of kind `declared`) and `rests_on_uncharacterized_input()` (any source that is not `dcc`, `qualification` or `type_a`, so `declared` or `instrument_model`) must each be shown as a label next to the value.
+  - Unit: closed set `si:m`, `si:rad`, `si:1` (dimensionless); anything else fails `invalid_field{unit}`. `u_std`, `U`, the interval ends `low`/`high` and every `u_contrib` are in that coherent SI unit (CONSTITUTION §4); display units are a formatter concern. Model ID `um:<name>`; semver `MAJOR.MINOR.PATCH`, 1..9 digits each, no leading zeros. `sources`, `contributors` and `provenance.rule_sets` sorted by byte order of the ID; duplicates fail.
+  - `Nonlinearity.lpu_reportable()` is derived from the outcome (`linear_adequate` only) rather than stored, so it cannot disagree with it.
 
 ## Test fixtures
 
-Hand-written JSON statements under `fixtures/unc/stmt/` (CC-BY-4.0, authored in this project): one valid file per class and method, invalid files per error code, and a digests file generated once on the WASM reference build and checked in. A seeded generator in the test module creates the property cases.
+Hand-written JSON statements under `fixtures/unc/stmt/` (CC-BY-4.0, authored in this project): one valid file per class and method, invalid files per error code, and a digests file written by the independent stdlib Python reference `fixtures/unc/stmt/make_fixtures.py` (checked with `--check` in CI) and verified by the tests on wasm32, x86-64 and ARM64. A seeded generator in the test module creates the property cases.
 
 ## Build prompt
 
