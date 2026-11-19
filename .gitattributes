@@ -51,3 +51,5 @@ fixtures/plat/matrix/expected-escape-page.md -text
 docs/platform/support-matrix.md -text
 # FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
 fixtures/flow/journey/** -text
+# ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
+tools/tests/fixtures/claims/** -text

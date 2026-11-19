@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [tools/tests/fixtures/claims]
 satisfies: [REQ-ECO.COMM-003, REQ-ECO.COMM-004]
 covers: []
 depends_on: [ECO.COMM.SCOPE]
