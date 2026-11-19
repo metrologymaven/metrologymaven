@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid report save-template, fid report apply-template, fid report show-template, fid report list-template]
 mcp: [report_save_template, report_apply_template, report_show_template, report_list_template]
 journal: [report.save_template@1, report.apply_template@1, report.show_template@1, report.list_template@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.TMPL.VER: Template versions, immutability and template commands
@@ -41,6 +41,7 @@ Saving a report as a template, versioning it, and creating reports from it. Each
 - **REQ-RPT.MODEL.TMPL.VER-005** If saving would store bytes identical to the latest version of that ID, then the command shall return that version without creating a new one and journal nothing.
 - **REQ-RPT.MODEL.TMPL.VER-006** `report.list_template@1` shall list built-in and project templates sorted by ID then version, marking locked ones; `report.show_template@1` shall return one version's canonical document.
 - **REQ-RPT.MODEL.TMPL.VER-007** Agents and scripts shall pass template files only as import-root handles, and a raw path from them shall fail with error `raw_path_forbidden`.
+- **REQ-RPT.MODEL.TMPL.VER-008** When `report.save_template@1` or `report.apply_template@1` runs, the system shall check every block of the template against the block-kind registry (registered kind and kind version, else `report.unknown_block_kind`), validate its payload with that kind (else `report.invalid_block_payload`) and apply the value-field rule of `RPT.MODEL.DOC` (else `report.value_literal_refused` or `report.value_binding_invalid`), and on any failure shall journal nothing; the template file format (`RPT.MODEL.TMPL.FORMAT`) checks kind IDs for shape only and relies on these checks.
 
 ## Acceptance criteria
 
