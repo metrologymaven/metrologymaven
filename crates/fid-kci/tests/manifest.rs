@@ -119,8 +119,7 @@ fn strict_mode_accepts_only_the_canonical_bytes() {
     assert_eq!(KernelManifest::parse_canonical(&escaped), Err(ManifestError::NonCanonical { offset: at }));
     // A trailing newline is not canonical either.
     let mut nl = base_bytes();
-    nl.push(b'
-');
+    nl.push(b'\n');
     assert_eq!(KernelManifest::parse_canonical(&nl), Err(ManifestError::NonCanonical { offset: base_bytes().len() }));
     // Errors other than formatting are reported as in the lenient mode.
     assert_eq!(KernelManifest::parse_canonical(&fixture("core-edited.json")).unwrap_err().code(), "core_digest_mismatch");
