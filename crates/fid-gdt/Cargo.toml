@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), the resolver commands (GDT.RES.RESOLVE) and ResultRecord assembly (GDT.CHAR.RECORD)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

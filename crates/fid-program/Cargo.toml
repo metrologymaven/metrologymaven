@@ -1,6 +1,6 @@
 [package]
 name = "fid-program"
-description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (AUTO.PROG.FMT); expression grammar and parser (AUTO.PROG.EXPR.GRAMMAR)"
+description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (AUTO.PROG.FMT); expression grammar and parser (AUTO.PROG.EXPR.GRAMMAR); part-family parameters and binding validation (AUTO.PROG.FAMILY)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,9 +9,13 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# Quantity kinds and units (AUTO.PROG.FAMILY): the registry's QuantityCatalogue facade and EntityType.
+fid-registry = { path = "../fid-registry" }
 fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
+# Test-only: cross-check of the family decimal grammar against GEO.FRAME.UNITS (tests/family.rs).
+fid-geo-frame = { path = "../fid-geo-frame" }
 # Test-only: counting global allocator for the peak-memory test (tests/alloc_peak.rs).
 # The workspace forbids `unsafe`, so the test cannot implement GlobalAlloc itself.
 cap = { version = "0.1.2", features = ["stats"] }

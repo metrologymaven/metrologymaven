@@ -601,6 +601,7 @@ dependencies = [
 name = "fid-geo-frame"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-types",
  "fid-kci",
  "fid-num",
  "fid-types",
@@ -727,6 +728,8 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-io-reg",
+ "fid-kunc",
+ "fid-project",
  "fid-replay",
  "fid-types",
 ]
@@ -865,6 +868,8 @@ version = "0.0.1"
 dependencies = [
  "cap",
  "fid-canon",
+ "fid-geo-frame",
+ "fid-registry",
  "fid-types",
 ]
 
@@ -895,6 +900,17 @@ dependencies = [
  "fid-types",
  "sha2 0.10.9",
  "toml",
+]
+
+[[package]]
+name = "fid-rdl"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-replay",
+ "fid-surface",
+ "fid-types",
 ]
 
 [[package]]
