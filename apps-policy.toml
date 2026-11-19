@@ -1,0 +1,5 @@
+# ECO.APPS.POLICY configuration (`cargo xtask apps-policy`). Set by CORE.REG.DEF.MACRO: the
+# crate that holds the command-declaration macros, and the markers that declare a command.
+# An app-layer crate may not depend on the macro crate or declare commands itself.
+macro_crates = ["fid-registry-macros"]
+declaration_markers = ["#[fid_command", "fid_command(", "fid_commands!"]

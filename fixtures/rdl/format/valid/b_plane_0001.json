@@ -1,0 +1,31 @@
+{
+  "schema": "rdl-dataset/v1",
+  "id": "rdl:B/fit.plane.mz/sealed/0001",
+  "tier": "B",
+  "aim": "fit.plane.mz",
+  "inputs": [
+    {
+      "digest": "sha256:99134a63b3b994692e6b44569969390b4846c58e82953304e79de14b70ac69fb",
+      "unit": "mm",
+      "role": "points"
+    }
+  ],
+  "reference": {
+    "outputs": [
+      {
+        "name": "flatness",
+        "kind": "length",
+        "value_hex": "0x3ecd5c31593e5fb7",
+        "test_uncertainty_hex": "0x3e112e0be826d695"
+      }
+    ],
+    "precision_digits": 30
+  },
+  "cross_check": [],
+  "provenance": {
+    "source": "synthetic blind stand-in",
+    "method": "sealed"
+  },
+  "licence": "LicenseRef-Synthetic-Blind",
+  "visibility": "blind"
+}

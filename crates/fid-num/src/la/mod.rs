@@ -1,6 +1,7 @@
 //! Dense linear algebra. Spec nodes `KRN.NUM.LA.MAT` (this base) and `KRN.NUM.LA.QR`
 //! (Householder QR, column pivoting and least squares: [`qr`], [`qr_pivoted`], [`lstsq`]; the
-//! pinned rules are in the `qr` module source).
+//! pinned rules are in the `qr` module source), plus the pivoted Cholesky factor
+//! [`chol_pivoted`] used by `UNC.MODEL.DIST` (rules pinned in the `chol` module source).
 //!
 //! Row-major `f64` matrices with checked construction ([`Mat`]), products routed through
 //! [`crate::red::dot`] ([`mat_vec`], [`mat_t_vec`], [`mat_mul`]), triangular solves
@@ -45,11 +46,13 @@
 //! first offending (row-major) index; an overflow is [`NumError::Infinite`] naming the first
 //! output element (in computation order) that overflowed. The `op` is `la.<function>`.
 
+mod chol;
 mod cond;
 mod mat;
 mod qr;
 mod tri;
 
+pub use chol::{chol_pivoted, CholPivoted};
 pub use cond::{cond_triangular, ITERATIONS as COND_ITERATIONS};
 pub use mat::{mat_mul, mat_t_vec, mat_vec, Mat, MAX_DIM, MAX_MAT_BYTES};
 pub use qr::{lstsq, qr, qr_pivoted, LstsqResult, Qr};

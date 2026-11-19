@@ -126,7 +126,12 @@ fn complete(class: EvidenceClass, method: Method) -> StatementParts {
     p.expanded = Some(Expanded { value: 2e-6, k: 2.0 });
     p.model = Some(model());
     if method != Method::Declared {
-        p.sources.push(SourceRef { kind: SourceKind::Dcc, id: "dcc:1".into(), digest: digest_of("dcc:1") });
+        p.sources.push(SourceRef {
+            kind: SourceKind::Dcc,
+            id: "dcc:1".into(),
+            digest: digest_of("dcc:1"),
+            unverified: false,
+        });
     }
     if method == Method::Declared {
         p.provenance.principal = Some("person:qa".into());
@@ -182,7 +187,7 @@ fn req003_first_missing_field_in_declaration_order() {
     assert_eq!(err(q), StmtError::InvalidNumber { field: "u_std" });
     // UEC-2 also needs characterized sources.
     assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "sources" });
-    p.sources.push(SourceRef { kind: SourceKind::TypeA, id: "ta".into(), digest: digest_of("ta") });
+    p.sources.push(SourceRef { kind: SourceKind::TypeA, id: "ta".into(), digest: digest_of("ta"), unverified: false });
     // Valid in every other respect, so only the assignment seal remains.
     assert_eq!(err(p), StmtError::ClassRequiresAssignment);
 }
@@ -266,7 +271,7 @@ fn claimed_values_never_look_measured() {
     // A declared or instrument-model source keeps a statement at UEC-1.
     for kind in [SourceKind::Declared, SourceKind::InstrumentModel] {
         let mut p = complete(EvidenceClass::Uec2, Method::Mcm);
-        p.sources.push(SourceRef { kind, id: "z".into(), digest: digest_of("z") });
+        p.sources.push(SourceRef { kind, id: "z".into(), digest: digest_of("z"), unverified: false });
         assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "sources" });
         p.class = EvidenceClass::Uec1;
         let s = UncertaintyStatement::new(p).unwrap();
@@ -547,7 +552,8 @@ impl Gen {
             let kind = self.pick(source_kinds);
             let id = self.token(&format!("{i}"));
             let digest = self.digest();
-            p.sources.push(SourceRef { kind, id, digest });
+            let unverified = class <= EvidenceClass::Uec1 && self.coin();
+            p.sources.push(SourceRef { kind, id, digest, unverified });
         }
         if class == EvidenceClass::Uec0 || self.coin() {
             if self.coin() {

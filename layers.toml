@@ -22,6 +22,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # through fid-canon (model) and sha2, which the kernel graph (KNP-1, zero dependencies) cannot reach.
 "fid-gps" = "model"
 "fid-registry" = "model"
+# Declaration macros (CORE.REG.DEF.MACRO): proc-macro crate used through fid-registry.
+"fid-registry-macros" = "model"
 "fid-store" = "model"
 "fid-journal" = "model"
 "fid-trust-canon" = "model"
@@ -57,6 +59,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-ctrl" = "services"
 "fid-gdt" = "services"
 "fid-mig" = "services"
+# RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
+"fid-rdl" = "services"
 "fid-cli" = "app"
 "fid-kernel-wasm" = "app"
 "fid-xtask" = "tool"

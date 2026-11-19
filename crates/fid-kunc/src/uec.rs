@@ -52,13 +52,26 @@
 //! [`AssignOutput::rests_on_uncharacterized_input`] (any contributor not a verified
 //! characterized source). [`AssignOutput::statement`] builds the statement and refuses one
 //! that would drop any of them, so a claimed or unverified value never looks measured.
+//!
+//! # Honest UEC-1 statements over unverified claims
+//!
+//! A contributor whose claim no record confirmed cannot be cited as a plain source, and
+//! leaving it out drops a label. A UEC-0/1 statement cites it instead as a source marked
+//! `unverified` (see [`AssignOutput::unverified_claims`]), with the claimed kind or, when a
+//! source record of another kind exists, the record's kind (so a `dcc` claim whose record
+//! says `declared` can carry the declared label). Such a source counts as uncharacterized.
+//! The mark is refused on UEC-2/3, by [`AssignOutput::statement`] and by `UNC.UEC.STMT`'s
+//! validation (constructor and parser alike). A contributor with no claim at all has no
+//! digest to cite, so its statement still fails `label_dropped` unless another cited source
+//! carries the uncharacterized label.
 
 use std::fmt;
 
 use fid_types::Digest;
 
 use crate::statement::{
-    is_token, EvidenceClass, Method, SourceKind, StatementParts, StmtError, Uec0Reason, UncertaintyStatement, MAX_ITEMS,
+    is_token, EvidenceClass, Method, SourceKind, SourceRef, StatementParts, StmtError, Uec0Reason,
+    UncertaintyStatement, MAX_ITEMS,
 };
 
 /// Rule-set version recorded in `provenance.rule_sets` (REQ-UNC.UEC.CLASS-006).
@@ -314,6 +327,10 @@ pub struct AssignOutput {
     uncharacterized_input: bool,
     /// Claims confirmed by their record, as (kind, digest); sorted, unique.
     verified: Vec<(SourceKind, Digest)>,
+    /// Claims no record confirmed, as (claimed kind, digest) and, when a source record
+    /// exists for the digest, also (record kind, digest); sorted, unique. Citable only as
+    /// `unverified` sources of a UEC-0/1 statement.
+    unverified: Vec<(SourceKind, Digest)>,
     /// Contributor input IDs of an evaluated basis, sorted; empty for other bases.
     inputs: Vec<String>,
 }
@@ -360,6 +377,12 @@ impl AssignOutput {
     pub fn citable_sources(&self) -> &[(SourceKind, Digest)] {
         &self.verified
     }
+    /// The sources a UEC-0/1 statement may cite with `unverified: true`: every claim no
+    /// record confirmed, as (claimed kind, digest), plus (record kind, digest) when a source
+    /// record of another kind exists for that digest; sorted and unique. Empty for UEC-2/3.
+    pub fn unverified_claims(&self) -> &[(SourceKind, Digest)] {
+        &self.unverified
+    }
     /// The contributor input IDs the statement must carry (sorted; empty unless the basis
     /// is evaluated, since a claim carries no contributors).
     pub fn contributor_ids(&self) -> &[String] {
@@ -371,7 +394,8 @@ impl AssignOutput {
     /// `provenance.rule_sets` (REQ-UNC.UEC.CLASS-006) and validates like
     /// [`UncertaintyStatement::new`]. Refused, in order: a `method` other than the basis's
     /// (`inconsistent_input{method}`); a source whose (kind, digest) is not one of
-    /// [`Self::citable_sources`] (`source_not_verified`); contributor input IDs other than
+    /// [`Self::citable_sources`], or, for a source marked `unverified`, not one of
+    /// [`Self::unverified_claims`] or on an assignment above UEC-1 (`source_not_verified`); contributor input IDs other than
     /// [`Self::contributor_ids`] (`contributor_mismatch`); any statement error
     /// (`statement_refused`); a statement whose labels are weaker than this assignment's
     /// (`label_dropped{is_claimed | rests_on_declared_input |
@@ -380,7 +404,15 @@ impl AssignOutput {
         if parts.method != self.basis.method() {
             return Err(AssignError::Inconsistent { field: "method" });
         }
-        if !parts.sources.iter().all(|s| self.verified.binary_search(&(s.kind, s.digest)).is_ok()) {
+        let low_class = matches!(self.class, EvidenceClass::Uec0 | EvidenceClass::Uec1);
+        let citable = |s: &SourceRef| {
+            if s.unverified {
+                low_class && self.unverified.binary_search(&(s.kind, s.digest)).is_ok()
+            } else {
+                self.verified.binary_search(&(s.kind, s.digest)).is_ok()
+            }
+        };
+        if !parts.sources.iter().all(citable) {
             return Err(AssignError::SourceNotVerified);
         }
         let mut ids: Vec<&str> = parts.contributors.iter().map(|c| c.input_id.as_str()).collect();
@@ -489,10 +521,17 @@ enum Status {
 /// Checks one claim against its record. The record confirms or refutes the claim; it never
 /// replaces it. A claim that could never be characterized reports its own weakness whatever
 /// the record says; only a claim of a characterized kind needs the record to count.
+/// The confirmation rule shared by [`assign`] and
+/// [`UncertaintyStatement::parse_canonical_verified`]: a record exists for `digest` and says
+/// exactly this kind and origin.
+pub(crate) fn confirms(records: &dyn SourceRecords, kind: SourceKind, origin: Option<Origin>, digest: &Digest) -> bool {
+    records.lookup(digest) == Some(RecordFacts::Source { kind, origin })
+}
+
 fn verify(claim: Option<&SourceClaim>, records: &dyn SourceRecords) -> (Status, bool, bool) {
     let Some(c) = claim else { return (Status::Unsourced, false, false) };
     let record = records.lookup(&c.digest);
-    let confirmed = record == Some(RecordFacts::Source { kind: c.kind, origin: c.origin });
+    let confirmed = confirms(records, c.kind, c.origin, &c.digest);
     let declared = c.kind == SourceKind::Declared
         || matches!(record, Some(RecordFacts::Source { kind: SourceKind::Declared, .. }));
     let status = match (c.kind, c.origin) {
@@ -546,6 +585,7 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
         declared_input: false,
         uncharacterized_input: false,
         verified: Vec::new(),
+        unverified: Vec::new(),
         inputs: Vec::new(),
     };
 
@@ -590,8 +630,15 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
     for c in &sorted {
         let (status, declared, confirmed) = verify(c.source.as_ref(), records);
         out.declared_input |= declared;
-        if let (true, Some(s)) = (confirmed, &c.source) {
-            out.verified.push((s.kind, s.digest));
+        if let Some(s) = &c.source {
+            if confirmed {
+                out.verified.push((s.kind, s.digest));
+            } else {
+                out.unverified.push((s.kind, s.digest));
+                if let Some(RecordFacts::Source { kind, .. }) = records.lookup(&s.digest) {
+                    out.unverified.push((kind, s.digest));
+                }
+            }
         }
         if status != Status::Characterized {
             out.uncharacterized_input = true;
@@ -603,6 +650,8 @@ pub fn assign(input: &AssignInput, records: &dyn SourceRecords) -> Result<Assign
 
     out.verified.sort_unstable();
     out.verified.dedup();
+    out.unverified.sort_unstable();
+    out.unverified.dedup();
 
     if basis.is_claimed() {
         out.class = EvidenceClass::Uec1;

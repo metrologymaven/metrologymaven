@@ -248,7 +248,7 @@ fn parts_for(o: &AssignOutput, sources: Vec<SourceRef>) -> StatementParts {
 }
 
 fn src(kind: SourceKind, id: &str) -> SourceRef {
-    SourceRef { kind, id: id.to_owned(), digest: digest_of(&format!("source:{id}")) }
+    SourceRef { kind, id: id.to_owned(), digest: digest_of(&format!("source:{id}")), unverified: false }
 }
 
 #[test]
@@ -331,6 +331,71 @@ fn unverified_source_cannot_be_written_as_characterized() {
         o.statement(parts_for(&o, sources)),
         Err(AssignError::LabelDropped { field: "rests_on_uncharacterized_input" })
     );
+    // The UEC-2 attempt: an unverified mark never rides on a UEC-2/3 statement, neither
+    // through CLASS (an assignment above UEC-1 cites no unverified claim) nor through the
+    // public constructor or the parser (class_mismatch{sources.unverified}).
+    let o2 = run(&row("modelled_lpu_all_dcc")).unwrap();
+    assert_eq!(o2.class(), EvidenceClass::Uec2);
+    assert!(o2.unverified_claims().is_empty());
+    let sources = vec![src(SourceKind::Dcc, "a"), unverified(src(SourceKind::Dcc, "b")), src(SourceKind::Dcc, "c")];
+    assert_eq!(o2.statement(parts_for(&o2, sources.clone())), Err(AssignError::SourceNotVerified));
+    let mut p = parts_for(&o2, sources);
+    p.class = EvidenceClass::Uec2;
+    p.provenance.rule_sets.push(RULE_SET.to_owned());
+    assert_eq!(UncertaintyStatement::new(p), Err(StmtError::ClassMismatch { field: "sources.unverified" }));
+    let good = o2.statement(parts_for(&o2, vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "c")]));
+    let text = String::from_utf8(good.unwrap().canonical_json().to_vec()).unwrap();
+    let forged = text.replacen("\"kind\":\"dcc\"}", "\"kind\":\"dcc\",\"unverified\":\"true\"}", 1);
+    assert_ne!(forged, text);
+    assert_eq!(
+        UncertaintyStatement::parse_canonical(forged.as_bytes()),
+        Err(StmtError::ClassMismatch { field: "sources.unverified" })
+    );
+}
+
+fn unverified(s: SourceRef) -> SourceRef {
+    SourceRef { unverified: true, ..s }
+}
+
+#[test]
+fn unverified_source_is_written_as_an_honest_uec1_statement() {
+    // The same downgrade, written honestly: the unverified claim is cited with the mark, and
+    // the statement carries the uncharacterized label and uec-assign@1 provenance.
+    let o = run(&row("modelled_lpu_one_record_absent")).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec1);
+    assert_eq!(o.unverified_claims(), [(SourceKind::Dcc, digest_of("source:b"))]);
+    let sources = vec![src(SourceKind::Dcc, "a"), unverified(src(SourceKind::Dcc, "b")), src(SourceKind::Dcc, "c")];
+    let s = o.statement(parts_for(&o, sources)).unwrap();
+    assert_eq!(s.class(), EvidenceClass::Uec1);
+    assert!(s.rests_on_uncharacterized_input() && !s.rests_on_declared_input());
+    assert_eq!(s.provenance().rule_sets, vec![RULE_SET.to_owned()]);
+    let back = UncertaintyStatement::parse_canonical(s.canonical_json()).unwrap();
+    assert_eq!(back, s);
+    // Only the offending contributor may be marked: a verified claim marked unverified, or
+    // a mark on a digest nobody claimed, is refused.
+    let sources = vec![unverified(src(SourceKind::Dcc, "a")), unverified(src(SourceKind::Dcc, "b"))];
+    assert_eq!(o.statement(parts_for(&o, sources)), Err(AssignError::SourceNotVerified));
+    let sources = vec![unverified(src(SourceKind::Dcc, "b")), unverified(src(SourceKind::Dcc, "z"))];
+    assert_eq!(o.statement(parts_for(&o, sources)), Err(AssignError::SourceNotVerified));
+    // ... and under its claimed kind (or its record's kind), not any other.
+    let sources = vec![unverified(src(SourceKind::TypeA, "b"))];
+    assert_eq!(o.statement(parts_for(&o, sources)), Err(AssignError::SourceNotVerified));
+
+    // A dcc claim whose record says declared: cited under the record's kind it carries the
+    // declared label too; under the claimed kind it would drop that label.
+    let o = run(&row("modelled_lpu_dcc_claim_declared_record")).unwrap();
+    assert!(o.rests_on_declared_input());
+    let sources = vec![src(SourceKind::Dcc, "a"), unverified(src(SourceKind::Dcc, "b")), src(SourceKind::Dcc, "c")];
+    assert_eq!(
+        o.statement(parts_for(&o, sources)),
+        Err(AssignError::LabelDropped { field: "rests_on_declared_input" })
+    );
+    let sources =
+        vec![src(SourceKind::Dcc, "a"), unverified(src(SourceKind::Declared, "b")), src(SourceKind::Dcc, "c")];
+    let s = o.statement(parts_for(&o, sources)).unwrap();
+    assert!(s.rests_on_declared_input() && s.rests_on_uncharacterized_input());
+    assert_eq!(s.class(), EvidenceClass::Uec1);
+
     // A declared input must stay visible as declared: re-labelled it is not a verified
     // claim, left out it drops the label.
     let o = run(&row("modelled_lpu_one_declared")).unwrap();
@@ -345,6 +410,46 @@ fn unverified_source_cannot_be_written_as_characterized() {
     let s = o.statement(parts_for(&o, sources)).unwrap();
     assert!(s.rests_on_declared_input() && s.rests_on_uncharacterized_input());
     assert_eq!(s.class(), EvidenceClass::Uec1);
+}
+
+#[test]
+fn verified_parse_rechecks_uec2_and_uec3_sources_against_records() {
+    assert_eq!(StmtError::SourceNotVerified.code(), "source_not_verified");
+    let r = row("iso15530_4_all_dcc");
+    let o = run(&r).unwrap();
+    assert_eq!(o.class(), EvidenceClass::Uec3);
+    let sources = vec![src(SourceKind::Dcc, "a"), src(SourceKind::Dcc, "b"), src(SourceKind::Dcc, "c")];
+    let s = o.statement(parts_for(&o, sources)).unwrap();
+    let bytes = s.canonical_json();
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(bytes, &r.records).unwrap(), s);
+    // The same bytes against a store that lacks one record, or holds it under another
+    // kind, are refused even though they name uec-assign@1.
+    let d_b = digest_of("source:b");
+    let dcc = RecordFacts::Source { kind: SourceKind::Dcc, origin: None };
+    let missing = RecordTable::new(vec![(digest_of("source:a"), dcc), (digest_of("source:c"), dcc)]).unwrap();
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(bytes, &missing), Err(StmtError::SourceNotVerified));
+    let other_kind = RecordTable::new(vec![
+        (digest_of("source:a"), dcc),
+        (d_b, RecordFacts::Source { kind: SourceKind::TypeA, origin: None }),
+        (digest_of("source:c"), dcc),
+    ])
+    .unwrap();
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(bytes, &other_kind), Err(StmtError::SourceNotVerified));
+    let with_origin = RecordTable::new(vec![
+        (digest_of("source:a"), dcc),
+        (d_b, RecordFacts::Source { kind: SourceKind::Dcc, origin: Some(Origin::Iemps) }),
+        (digest_of("source:c"), dcc),
+    ])
+    .unwrap();
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(bytes, &with_origin), Err(StmtError::SourceNotVerified));
+    // Parse errors come first and are unchanged.
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(b"{}", &r.records).unwrap_err().code(), "malformed");
+    // UEC-0/1 statements are returned as parsed, whatever the records say.
+    let o = run(&row("modelled_lpu_one_record_absent")).unwrap();
+    let sources = vec![src(SourceKind::Dcc, "a"), unverified(src(SourceKind::Dcc, "b")), src(SourceKind::Dcc, "c")];
+    let s = o.statement(parts_for(&o, sources)).unwrap();
+    let empty = RecordTable::new(vec![]).unwrap();
+    assert_eq!(UncertaintyStatement::parse_canonical_verified(s.canonical_json(), &empty).unwrap(), s);
 }
 
 #[test]
@@ -459,7 +564,8 @@ fn shared_records() {
     let o = run(&row("modelled_lpu_shared_record_same_kind")).unwrap();
     assert_eq!(o.class(), EvidenceClass::Uec2);
     assert_eq!(o.citable_sources().len(), 1);
-    let shared = SourceRef { kind: SourceKind::Dcc, id: "s".to_owned(), digest: digest_of("source:s") };
+    let shared =
+        SourceRef { kind: SourceKind::Dcc, id: "s".to_owned(), digest: digest_of("source:s"), unverified: false };
     o.statement(parts_for(&o, vec![shared.clone()])).unwrap();
     // One record, two claims of different kinds: only the matching claim is citable.
     let o = run(&row("modelled_lpu_shared_record_other_kind")).unwrap();

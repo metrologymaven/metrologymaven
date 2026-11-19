@@ -255,6 +255,7 @@ jobs:
           python fixtures/io/reg/env/report/make_fixtures.py --check
           python fixtures/io/reg/detect/make_fixtures.py --check
           python fixtures/io/reg/prov/make_cases.py --check
+          python fixtures/io/res/trans/model/make_fixtures.py --check
           python fixtures/io/cad/worker/proto/make_digests.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
@@ -262,6 +263,7 @@ jobs:
           python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/def/macro/make_golden.py --check
           python fixtures/core/reg/manifest/make_fixtures.py --check
           python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check
@@ -302,6 +304,7 @@ jobs:
           python fixtures/man/check_manifest_schema.py
           python fixtures/man/wasm/make_fixtures.py --check
           python fixtures/man/make_implclosure_fixtures.py --check
+          python fixtures/rdl/format/make_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
           python fixtures/num/fmt/make_ang_fixtures.py --check
@@ -314,6 +317,7 @@ jobs:
           python tools/fixtures/geo_sel_sets.py --check
           python tools/fixtures/geo_units_cases.py --check
           python tools/fixtures/geo_xform_cases.py --check
+          python tools/fixtures/geo_apply_cases.py --check
           python tools/fixtures/geo_tree_cases.py --check
           python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
           python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
@@ -327,6 +331,7 @@ jobs:
           python fixtures/unc/stmt/make_fixtures.py --check
           python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/unc/class/make_table.py --check
+          python fixtures/unc/dist/make_fixtures.py --check
           python fixtures/viz/viewstate-samples/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
@@ -458,7 +463,7 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
-      - name: Unit conversion, transform and frame-tree cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1; GEO.FRAME.TREE AC-1, AC-5)
+      - name: Unit conversion, transform and frame-tree cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1; GEO.FRAME.TREE AC-1, AC-5; GEO.FRAME.APPLY AC-1, AC-2)
         run: cargo test --target wasm32-wasip1 -p fid-geo-frame
       - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
@@ -472,6 +477,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-view
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
+      - name: RDL dataset digests, public views and replay on wasm32-wasip1 (UNC.RDL.FORMAT AC-1)
+        run: cargo test --target wasm32-wasip1 -p fid-rdl
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
         # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
         # wasmtime). The reference module registers no algorithm until fid-kernel exists; a
