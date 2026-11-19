@@ -1,0 +1,13 @@
+{
+  "format": "journey-map@1",
+  "map_id": "j1",
+  "subject": "JOB.ACC.01",
+  "kind": "job",
+  "revision": 1,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": [
+    "JOB.PER.02"
+  ],
+  "steps": []
+}

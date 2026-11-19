@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-accept]
 satisfies: [REQ-FLOW.PERSONA-003, REQ-FLOW.PERSONA-005]
 covers: []
 depends_on: [CORE.JRN.CANON]

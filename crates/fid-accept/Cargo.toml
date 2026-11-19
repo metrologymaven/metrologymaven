@@ -1,6 +1,6 @@
 [package]
 name = "fid-accept"
-description = "Metrology Maven acceptance tooling: persona definitions file and its check (FLOW.PERSONA.PERS), study task list and its check (FLOW.STUDY.PROTO), and acceptance-job package format and validator (FLOW.RUNNER.PKG)"
+description = "Metrology Maven acceptance tooling: journey-map format and validator (FLOW.PERSONA.SCHEMA), persona definitions file and its check (FLOW.PERSONA.PERS), study task list and its check (FLOW.STUDY.PROTO), and acceptance-job package format and validator (FLOW.RUNNER.PKG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

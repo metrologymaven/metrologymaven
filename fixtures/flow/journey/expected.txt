@@ -1,0 +1,34 @@
+# Expected findings per fixture, labelled by hand from REQ-FLOW.PERSONA.SCHEMA-001..005.
+# Format: <fixture><TAB><CODE> <map_id> [step <position>] <field>, in the validator's order
+# (code, map ID, step, field). `ok` means no findings. `-` as map ID: missing or malformed;
+# `-` as field: the map or step as a whole.
+valid-job.json	ok
+valid-persona.json	ok
+agent-humanonly.json	MAP-AGENT-HUMANONLY j1 step 4 actor
+gap.json	MAP-STEP-ORDER j1 step 3 n
+both.json	MAP-SCHEMA j1 step 3 -
+neither.json	MAP-SCHEMA j1 step 5 -
+unknown-field.json	MAP-SCHEMA j1 owner_note
+unknown-field.json	MAP-SCHEMA j1 step 2 note
+bad-handoff.json	MAP-STEP-ORDER j1 step 6 handoff
+bad-handoff.json	MAP-STEP-ORDER j1 step 12 handoff
+duplicate-n.json	MAP-STEP-ORDER j1 step 6 handoff
+duplicate-n.json	MAP-STEP-ORDER j1 step 7 n
+bad-fields.json	MAP-SCHEMA j1 format
+bad-fields.json	MAP-SCHEMA j1 kind
+bad-fields.json	MAP-SCHEMA j1 phase
+bad-fields.json	MAP-SCHEMA j1 revision
+bad-fields.json	MAP-SCHEMA j1 step 1 command
+bad-fields.json	MAP-SCHEMA j1 step 2 owner
+bad-fields.json	MAP-SCHEMA j1 step 3 actor
+bad-fields.json	MAP-SCHEMA j1 step 5 human_only
+bad-fields.json	MAP-SCHEMA j1 step 8 phase
+kind-subject.json	MAP-SCHEMA j1 subject
+exercised-on-job.json	MAP-SCHEMA j1 exercised_by
+persona-no-exercised.json	MAP-SCHEMA demo-persona exercised_by
+persona-subject-missing.json	MAP-SCHEMA demo-persona personas
+unknown-persona.json	MAP-SCHEMA j1 step 4 handoff
+dup-persona.json	MAP-SCHEMA j1 personas[1]
+empty-steps.json	MAP-SCHEMA j1 steps
+bad-map-id.json	MAP-SCHEMA - map_id
+dup-key.json	MAP-SCHEMA - -
