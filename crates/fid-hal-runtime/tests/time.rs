@@ -246,9 +246,9 @@ fn hostile_inputs_are_typed_errors() {
     p[11].1 = p[10].1 - 50;
     let m = estimate(&p, src).unwrap();
     assert_eq!(m.n, 20);
-    assert!((m.drift - 0.007_556_390_977_443_609).abs() < 1e-12, "drift {}", m.drift);
-    assert!((m.offset_ns - 2_815.714_285_714_286).abs() < 1e-6, "offset {}", m.offset_ns);
-    assert!((m.sigma_ns - 353.663_692_678_223_64).abs() < 1e-6, "sigma {}", m.sigma_ns);
+    assert!((m.drift - 0.007556390977443609).abs() < 1e-12, "drift {}", m.drift);
+    assert!((m.offset_ns - 2815.714285714286).abs() < 1e-6, "offset {}", m.offset_ns);
+    assert!((m.sigma_ns - 353.66369267822364).abs() < 1e-6, "sigma {}", m.sigma_ns);
 
     // A device gap beyond 2^53 ns.
     let mut p = clean(20);
