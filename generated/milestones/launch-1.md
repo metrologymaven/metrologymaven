@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**121** of **1336** leaves built in code ([B]).
+**123** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 71 built)
+### Wave 1 (125 leaves, 72 built)
 
 - [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [B] [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -88,7 +88,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [KRN.MAN.CARD](../../spec/krn/man/card/NODE.md) Algorithm IDs and spec-card registry (S, P0)
 - [B] [KRN.NUM.ERR](../../spec/krn/num/err/NODE.md) Numeric error type and FP-environment checks (S, P0)
 - [B] [KRN.NUM.LINT.FIND](../../spec/krn/num/lint/find/NODE.md) Lint findings model, report schema and waivers (M, P0)
-- [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
+- [B] [KRN.SOLV.CONIC.VEND](../../spec/krn/solv/conic/vend/NODE.md) Vendored solver tree, source digest and audit record check (S, P0)
 - [OUTR.BENCH.RUN.RECIPE](../../spec/outr/bench/run/recipe/NODE.md) Benchmark recipe format and validator (S, P1a)
 - [B] [OUTR.BRAND.ASSET.ATTR](../../spec/outr/brand/asset/attr/NODE.md) Outreach attribution and font-origin check (S, P0)
 - [B] [OUTR.BRAND.COPY](../../spec/outr/brand/copy/NODE.md) Copied-text policy guard (D-013 option C) (S, P0)
