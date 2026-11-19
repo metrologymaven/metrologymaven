@@ -260,8 +260,7 @@ fn mcp_name_skipped_for_command_not_on_mcp() {
     assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
     let idx = load(&edition);
     let names = obj(&idx, "names");
-    let pages =
-        ["ref/cli/demo.move_axis@1.html", "ref/mcp/demo.move_axis@1.html", "ref/python/demo.move_axis@1.html"];
+    let pages = ["ref/cli/demo.move_axis@1.html", "ref/mcp/demo.move_axis@1.html", "ref/python/demo.move_axis@1.html"];
     for key in ["demo.move_axis", "demo.move_axis@1", "fid demo move-axis"] {
         assert_eq!(strs(names.get(key).unwrap()), pages, "{key}");
     }

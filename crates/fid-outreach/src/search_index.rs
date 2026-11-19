@@ -638,8 +638,8 @@ pub fn names_table(rels: &[String], mcp_unavailable: &BTreeSet<String>) -> BTree
             .entry(id.major())
             .or_insert_with(|| (id.as_str().to_string(), BTreeMap::new(), false));
         // Two spellings of one major (`x@1`, `x@01`): the first in byte order wins per surface.
-        if !entry.1.contains_key(&rank) {
-            entry.1.insert(rank, url_of(rel));
+        if let std::collections::btree_map::Entry::Vacant(slot) = entry.1.entry(rank) {
+            slot.insert(url_of(rel));
             if rank == MCP_RANK && mcp_unavailable.contains(rel) {
                 entry.2 = true;
             }
@@ -672,7 +672,9 @@ pub fn names_table(rels: &[String], mcp_unavailable: &BTreeSet<String>) -> BTree
 pub enum Built {
     Index(Index),
     /// Stopped early: the index would be at least this many bytes, over the budget.
-    OverBudget { at_least: u64 },
+    OverBudget {
+        at_least: u64,
+    },
 }
 
 /// Bytes every index file has besides its contents: the assignment, the four top-level keys and
