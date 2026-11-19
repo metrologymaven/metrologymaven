@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-ECO.REPO-003]
 covers: []
 depends_on: [ECO.REPO.LAYERS]

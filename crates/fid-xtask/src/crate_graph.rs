@@ -221,12 +221,12 @@ impl Allowlist {
     }
 }
 
-fn pkg_name<'a>(g: &'a Graph, id: &'a str) -> &'a str {
+pub(crate) fn pkg_name<'a>(g: &'a Graph, id: &'a str) -> &'a str {
     g.names.get(id).map(String::as_str).unwrap_or(id)
 }
 
 /// Shipped dependency edges (dev-only edges dropped), each list in (name, ID) order.
-fn product_edges(g: &Graph) -> BTreeMap<&str, Vec<&str>> {
+pub(crate) fn product_edges(g: &Graph) -> BTreeMap<&str, Vec<&str>> {
     let mut adj = BTreeMap::new();
     for (from, edges) in &g.edges {
         let mut to: Vec<&str> = edges.iter().filter(|e| !e.dev_only).map(|e| e.to.as_str()).collect();

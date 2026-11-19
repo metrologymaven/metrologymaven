@@ -63,6 +63,8 @@ jobs:
             --tests "$RUNNER_TEMP/test-inventory.txt" --check docs/dmis
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: Kernel-graph dependency allowlist (ECO.REPO.ALLOW)
+        run: cargo xtask kernel-allow
       - name: Fuzz harness compiles on stable (AUTO.PROG.FMT AC-6)
         # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
         if: runner.os == 'Linux'

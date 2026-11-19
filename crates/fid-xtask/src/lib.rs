@@ -37,11 +37,16 @@
 //!
 //! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
 //! [`conic_audit`].
+//!
+//! `kernel-allow`: the kernel-graph third-party dependency allowlist (spec node
+//! `ECO.REPO.ALLOW`), in [`kernel_allow`]; it reuses the layer map and the resolved graph
+//! built here.
 
 pub mod apps_policy;
 pub mod bots;
 pub mod conic_audit;
 pub mod crate_graph;
+pub mod kernel_allow;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
@@ -137,6 +142,8 @@ pub struct Graph {
     members: BTreeSet<String>,
     /// Package ID to package name.
     names: BTreeMap<String, String>,
+    /// Package ID to its resolved version, as `cargo metadata` prints it.
+    versions: BTreeMap<String, String>,
     /// Package ID to its dependency edges.
     edges: BTreeMap<String, Vec<Edge>>,
     /// Package ID to its `Cargo.toml` path, when `cargo metadata` gives one.
@@ -193,6 +200,9 @@ impl Graph {
                     set.insert((n.clone(), dev));
                 }
                 g.declared.insert(id.clone(), set);
+            }
+            if let Some(CValue::Str(v)) = p.get("version") {
+                g.versions.insert(id.clone(), v.clone());
             }
             g.names.insert(id, as_str(field(p, "name")?)?.to_string());
         }
