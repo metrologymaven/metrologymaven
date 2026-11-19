@@ -361,6 +361,47 @@ fn reaches_any(path: &[String], pat: &[&str]) -> bool {
     (0..path.len()).any(|k| path.get(k..).is_some_and(|rest| reaches(rest, pat)))
 }
 
+/// Built-in attributes whose arguments are not scanned for banned names passed bare (their
+/// arguments are lint names, cfg predicates, derives or literals, not callees).
+pub const BUILTIN_ATTRIBUTES: [&str; 36] = [
+    "allow",
+    "automatically_derived",
+    "cfg",
+    "cfg_attr",
+    "cold",
+    "crate_name",
+    "crate_type",
+    "deny",
+    "deprecated",
+    "derive",
+    "diagnostic",
+    "doc",
+    "expect",
+    "forbid",
+    "ignore",
+    "inline",
+    "macro_export",
+    "macro_use",
+    "must_use",
+    "no_implicit_prelude",
+    "no_std",
+    "non_exhaustive",
+    "path",
+    "proc_macro",
+    "proc_macro_attribute",
+    "proc_macro_derive",
+    "recursion_limit",
+    "repr",
+    "rustfmt",
+    "should_panic",
+    "target_feature",
+    "test",
+    "track_caller",
+    "type_length_limit",
+    "warn",
+    "clippy",
+];
+
 /// The built-in roots a re-export can expose (`pub use std;`).
 const BUILTIN_ROOTS: [&str; 3] = ["std", "core", "alloc"];
 
@@ -1249,8 +1290,10 @@ impl<'a> Scan<'a> {
                 }
                 let prev = i.checked_sub(1).and_then(|p| self.kind(p));
                 let after_fn = i.checked_sub(1).is_some_and(|p| self.keyword(p, "fn"));
-                let callee = self.is(i + 2, &Kind::Bang)
-                    || (self.is(i + 2, &Kind::Open(Delim::Paren)) && !after_fn)
+                // `$d m`, where `$d` expands to `$`, is the escaped metavariable `$m`: test `m`.
+                let at = if self.ident(i + 2).is_some() { i + 3 } else { i + 2 };
+                let callee = self.is(at, &Kind::Bang)
+                    || (self.is(at, &Kind::Open(Delim::Paren)) && !after_fn)
                     || matches!(prev, Some(Kind::Dot | Kind::PathSep));
                 if callee {
                     self.hit(
@@ -1300,6 +1343,37 @@ impl<'a> Scan<'a> {
                     *b = true;
                 }
             }
+            // A `macro_rules!` inside a `macro_rules! name { … }` body defines macros from macro
+            // input (`$d m! $d a`): never waivable.
+            if self.keyword(i, "macro_rules")
+                && self.is(i + 1, &Kind::Bang)
+                && self.ident(i + 2).is_some()
+                && matches!(self.kind(i + 3), Some(Kind::Open(_)))
+            {
+                let close = self.partner.get(i + 3).copied().unwrap_or(usize::MAX).min(n);
+                for k in i + 4..close {
+                    if self.keyword(k, "macro_rules") {
+                        self.hit(
+                            k,
+                            &Rule::Parse,
+                            "macro-defining macro: a `macro_rules!` inside a macro body".to_string(),
+                        );
+                    }
+                }
+            }
+            // Arguments of an attribute that is not a pinned built-in (`#[my_attr(env)]`).
+            if self.is(i, &Kind::Pound) {
+                let open = if self.is(i + 1, &Kind::Bang) { i + 2 } else { i + 1 };
+                if self.is(open, &Kind::Open(Delim::Bracket)) {
+                    let close = self.partner.get(open).copied().unwrap_or(usize::MAX).min(n);
+                    let builtin = self.ident(open + 1).is_some_and(|a| BUILTIN_ATTRIBUTES.contains(&a));
+                    if !builtin {
+                        for b in in_args.iter_mut().take(close).skip(open + 2) {
+                            *b = true;
+                        }
+                    }
+                }
+            }
         }
         for (i, inside) in in_args.iter().enumerate() {
             if !inside {
@@ -1308,12 +1382,16 @@ impl<'a> Scan<'a> {
             let Some(name) = self.ident(i) else { continue };
             let prev = i.checked_sub(1).and_then(|p| self.kind(p));
             let next = self.kind(i + 1);
-            let bare = !matches!(prev, Some(Kind::Dot | Kind::PathSep | Kind::Dollar))
-                && !matches!(next, Some(Kind::PathSep | Kind::Bang | Kind::Open(Delim::Paren)));
-            if !bare {
-                continue;
-            }
+            let after_ok = !matches!(prev, Some(Kind::Dot | Kind::PathSep | Kind::Dollar));
+            let bare = after_ok && !matches!(next, Some(Kind::PathSep | Kind::Bang | Kind::Open(Delim::Paren)));
+            // Macro names count whatever follows them (`inner!(env ("X"))`), except `!` (a call,
+            // checked as a macro already).
+            let macro_name = after_ok && !matches!(next, Some(Kind::Bang));
             for kind in [P::Call, P::Method, P::FloatMethod, P::Macro, P::IncludeMacro] {
+                let applies = if matches!(kind, P::Macro | P::IncludeMacro) { macro_name } else { bare };
+                if !applies {
+                    continue;
+                }
                 for (rule, pat) in patterns(kind) {
                     if pat == name {
                         let m = format!("`{name}` passed bare to a macro: the macro may call it");
@@ -1387,7 +1465,7 @@ impl<'a> Scan<'a> {
                 self.libm(i, format!("`<…>::{name}` (float transcendental)"));
             }
             if let Some(rule) = other_call_rule(name) {
-                if !self.qualified_any(i - 2, is_int_type) {
+                if !self.qualified_int(i - 2) {
                     self.hit(i, rule, format!("`<…>::{name}`"));
                 }
             }
@@ -1540,9 +1618,9 @@ impl<'a> Scan<'a> {
 
     /// `<…>` ending at the `>` at `gt`: true when it mentions `f32`/`f64` or a metavariable,
     /// or is too long to check.
-    /// `<…>` ending at the `>` at `gt`: true when an identifier in it satisfies `pred`
-    /// (false when the `<` is not found within the lookahead cap).
-    fn qualified_any(&self, gt: usize, pred: fn(&str) -> bool) -> bool {
+    /// `<…>` ending at `gt` names an integer type: an integer type name that is not a type or
+    /// `use` alias, or an alias whose every target ends in an integer type.
+    fn qualified_int(&self, gt: usize) -> bool {
         let mut depth = 0usize;
         let mut k = gt;
         for _ in 0..MAX_OPERAND_TOKENS {
@@ -1551,7 +1629,12 @@ impl<'a> Scan<'a> {
                 Some(Kind::Lt) => {
                     depth = depth.saturating_sub(1);
                     if depth == 0 {
-                        return (k..gt).any(|j| self.ident(j).is_some_and(pred));
+                        return (k..gt).any(|j| {
+                            self.ident(j).is_some_and(|name| {
+                                let (rs, _) = self.resolve(&[name.to_string()], false);
+                                !rs.is_empty() && rs.iter().all(|r| r.last().is_some_and(|l| is_int_type(l)))
+                            })
+                        });
                     }
                 }
                 None => return false,
