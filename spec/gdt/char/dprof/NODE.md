@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gdt]
+built_pr: 220
 satisfies: [REQ-GDT.CHAR-004]
 covers: []
 depends_on: [CORE.JRN, CORE.STO]
@@ -17,7 +19,7 @@ determinism: D0
 cli: [fid gdt publish-defaults-profile, fid gdt repoint-defaults-profile]
 mcp: [gdt_publish_defaults_profile, gdt_repoint_defaults_profile]
 journal: [gdt.publish_defaults_profile@1, gdt.repoint_defaults_profile@1]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.CHAR.DPROF: Defaults profiles: immutable versioned objects
@@ -59,6 +61,17 @@ A defaults profile names the default choices that apply under one dialect and ed
 - **Determinism:** D0.
 - **Performance budget:** publish < 50 ms for a 1 MB profile [unverified].
 - **Crate:** `fid-gdt`.
+- **Pinned choices (as built in `fid-gdt`, module `chars::dprof`):**
+  - *Document:* `{schema: "fid.defaults-profile/1", dialect, edition, version, keys}`, every field required and no other; JSON with no duplicate key, at most 2 MiB and nesting depth 3. The digest is SHA-256 over the RFC 8785 form of the whole document.
+  - *Values:* string (at most 280 characters), boolean, integer with magnitude at most 2^53 - 1, or a flat list of at most 256 of these. Every number must be written as an integer literal in the source text (an optional minus and digits; no `.` and no exponent), so `1.0`, `1e2` and `7.0000000000000001` are `malformed_profile{bad_number}` even though their values are integral. The same check applies to store snapshots. The magnitude is checked on the RFC 8785 text, with no float arithmetic. Null, objects and nested lists are `malformed_profile`. At most 4096 keys.
+  - *Keys:* grammar `[a-z0-9][a-z0-9_.:/+@-]{0,127}`; the allowed set is passed in by the caller (`KeyVocabulary`) until `GDT.RES.SCHEMA` publishes it. All structure is checked before the vocabulary; the first unknown key in byte order is named in `unknown_key`.
+  - *Grammars:* dialect `asme` or `iso`; edition 1 to 32 bytes of `[a-z0-9.-]`, alphanumeric at both ends, no two separators in a row; version `x.y.z`, each part `0` or up to nine digits without a leading zero, no pre-release or build suffix; the dialect ends at the first `-` of the reference.
+  - *Uniqueness (per branch, C5):* each branch holds at most one digest per (dialect, edition, version). An agent publish never blocks or changes anything on the working branch. An identical re-publish on the same branch is a no-op with no event.
+  - *Branches:* a human writes the working branch. Agents and scripts write the agent branch, which holds profiles with the author as provenance plus an overlay of characteristic bindings. The agent branch can also select working-branch profiles; the working branch can select only its own. `adopt` (human only, otherwise `human_only`) copies an agent-branch profile onto the working branch, keeping its agent provenance and marking it `adopted`. It is refused with `adopt_conflict` when the working branch already holds that version with a different digest; if the working branch holds the identical profile, nothing changes.
+  - *Re-point:* checks run in this order and all run before any change: list (`bad_request`: empty, more than 10 000, bad ID, duplicate), reference (`bad_profile_ref`, then `defaults_profile_unknown` on the principal's branch, digest included), then each characteristic in ID order (`char_unknown`, `dialect_mismatch`). The event lists every named characteristic sorted by ID, including any already on the target.
+  - *Events:* canonical JSON without the profile content; replay fetches content by digest and compares re-derived event bytes (`IDENTICAL` / `DIVERGENT` / `NOT_REPLAYABLE`), stopping at the first step that is not identical.
+  - *Snapshot:* the writer refuses output over the loader's 64 MiB limit with `store_invalid{too_large}`, so every snapshot it writes can be loaded again.
+  - *Added error codes:* `adopt_conflict`, `bad_profile_ref`, `bad_request`, `char_unknown`, `char_exists`, `human_only`, `bad_vocabulary`, `store_invalid` and `event_invalid`, plus the import-handle codes of `fid-io-reg`.
 
 ## Test fixtures
 

@@ -1,0 +1,2 @@
+{"schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017","version":"1.0.0",
+ "keys":{"dmt:iso/flatness/none@1":"variant-a","placeholder.synthetic":true,"placeholder.note":"caf\u00e9 \"quoted\" tab\t"}}
