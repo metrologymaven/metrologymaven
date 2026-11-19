@@ -489,8 +489,11 @@ fn address_limits() {
     let n = Distribution::normal(one(0.0), one(1.0)).unwrap();
     assert_eq!(n.sample_at(1, STREAM_LIMIT, 0), Err(DistError::InvalidParameter { name: "stream" }));
     assert!(n.sample_at(1, STREAM_LIMIT - 1, u64::MAX).is_ok());
-    assert_eq!(n.sample(1, 0, 5..4), Err(DistError::InvalidParameter { name: "index" }));
-    assert_eq!(n.sample(1, 0, 4..4), Ok(vec![]));
+    assert_eq!(
+        n.sample(1, 0, core::ops::Range { start: 5, end: 4 }),
+        Err(DistError::InvalidParameter { name: "index" })
+    );
+    assert_eq!(n.sample(1, 0, core::ops::Range { start: 4, end: 4 }), Ok(vec![]));
     let t = Distribution::scaled_t(one(0.0), one(1.0), one(5.0)).unwrap();
     assert!(t.sample_at(1, 0, MAX_GAMMA_INDEX).is_ok());
     assert_eq!(t.sample_at(1, 0, MAX_GAMMA_INDEX + 1), Err(DistError::InvalidParameter { name: "index" }));
