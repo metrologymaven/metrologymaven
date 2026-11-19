@@ -157,6 +157,11 @@ def scan(xs):
     return None
 
 
+def tag(name, err):
+    """dot names the slice an input NaN or infinity came from (a is scanned before b)."""
+    return err and (err[0], err[1], (name, err[2]))
+
+
 def scan_products(ps):
     for i, p in enumerate(ps):
         if not finite(p):
@@ -171,7 +176,7 @@ def model(op, a, b):
         if len(a) != len(b):
             return ("err", "LengthMismatch", (len(a), len(b)))
         ps = [x * y for x, y in zip(a, b)]
-        return scan(a) or scan(b) or scan_products(ps) or model_fixed_sum(ps)
+        return tag("a", scan(a)) or tag("b", scan(b)) or scan_products(ps) or model_fixed_sum(ps)
     if op == "sum_sq":
         ps = [x * x for x in a]
         return scan(a) or scan_products(ps) or model_fixed_sum(ps)
@@ -182,11 +187,14 @@ def model(op, a, b):
         m = max((abs(x) for x in a), default=0.0)
         if m == 0:
             return ("ok", 0.0)
-        r = model_fixed_sum([(x / m) * (x / m) for x in a])
+        e = math.frexp(m)[1] - 1  # 2^e <= m < 2^(e+1), subnormals included
+        p2 = Fraction(2) ** e
+        ys = [float(Fraction(x) / p2) for x in a]  # one correctly rounded scaling
+        r = model_fixed_sum([y * y for y in ys])
         if r[0] == "err":
             return r
-        y = m * math.sqrt(r[1])
-        return ("ok", y) if finite(y) else ("err", "Infinite", None)
+        y = exact_round(Fraction(math.sqrt(r[1])) * p2)
+        return ("ok", y) if y is not None else ("err", "Infinite", None)
     if op == "mean":
         if not a:
             return ("err", "EmptyInput", None)
@@ -214,7 +222,7 @@ def oracle(op, a, b):
 
 
 # Accuracy bounds of the model against the oracle, in ulps (adjacent-double steps).
-BOUND = {"sum": 2, "dot": 2, "sum_sq": 2, "mean": 2, "norm2": 3}
+BOUND = {"sum": 2, "dot": 2, "sum_sq": 2, "mean": 2, "norm2": 2}
 
 # ---------------------------------------------------------------- ill-conditioned sums
 
@@ -395,6 +403,18 @@ def edge_cases():
     add("norm2", "nan", [NAN])
     add("norm2", "random_1000", r1000)
     add("norm2", "ones_1000", [1.0] * 1000)
+    add("norm2", "power_of_two_max", [4.0, 3.0, -1.0])
+    add("norm2", "just_below_power_of_two", [fb(bits(4.0) - 1), 1.0])
+    add("norm2", "top_binade_with_small", [MAX, 2.0 ** 1023, 1.0, 1e-300, TINY])
+    add("norm2", "top_binade_tiny_only", [2.0 ** 1023, -TINY])
+    add("norm2", "min_subnormal_max", [TINY, -TINY, 0.0])
+    add("norm2", "binade_below_normal", [2.0 ** -1023, 2.0 ** -1024, TINY])
+    add("norm2", "just_below_min_normal", [fb(bits(sys.float_info.min) - 1), TINY * 5])
+    add("norm2", "subnormal_result_rounds", [TINY * 3, TINY * 3, TINY])
+    add("norm2", "random_1000_huge", [x * 1e260 for x in r1000])
+    add("norm2", "random_1000_tiny", [x * 1e-300 for x in r1000])
+    for k in range(6):
+        add("norm2", f"random_mixed_{k}", rand_list(rng, 50 + 97 * k, -600, 600))
     # mean
     add("mean", "empty", [])
     add("mean", "neg_zero", [-0.0, -0.0])
@@ -427,6 +447,8 @@ def expect_str(r):
         return f"err:LengthMismatch:{idx[0]}:{idx[1]}"
     if kind == "EmptyInput":
         return "err:EmptyInput"
+    if isinstance(idx, tuple):
+        return f"err:{kind}:{idx[0]}:{idx[1]}"
     return f"err:{kind}:{'none' if idx is None else idx}"
 
 

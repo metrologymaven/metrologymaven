@@ -34,26 +34,30 @@ fn ulp_dist(a: f64, b: f64) -> u128 {
     (ordered(a) - ordered(b)).unsigned_abs()
 }
 
-/// Same notation as the fixture's `expect` column.
+/// Same notation as the fixture's `expect` column. `dot` names the slice of an input NaN or
+/// infinity in the operation (`red.dot.a`, `red.dot.b`); the fixture writes it before the index.
 fn show(r: Result<f64, NumError>, op: &str) -> String {
-    let idx = |i: Option<usize>| i.map_or("none".to_string(), |i| i.to_string());
-    let check_op = |o: &str| assert_eq!(o, format!("red.{op}"), "op name");
+    let base = format!("red.{op}");
+    let at = |o: &str, i: Option<usize>| {
+        let i = i.map_or("none".to_string(), |i| i.to_string());
+        if o == base {
+            i
+        } else if op == "dot" && (o == "red.dot.a" || o == "red.dot.b") {
+            format!("{}:{i}", &o[8..])
+        } else {
+            panic!("op name {o} for {op}")
+        }
+    };
     match r {
         Ok(x) => format!("ok:{:016x}", x.to_bits()),
-        Err(NumError::NotANumber { op: o, index }) => {
-            check_op(o);
-            format!("err:NotANumber:{}", idx(index))
-        }
-        Err(NumError::Infinite { op: o, index }) => {
-            check_op(o);
-            format!("err:Infinite:{}", idx(index))
-        }
+        Err(NumError::NotANumber { op: o, index }) => format!("err:NotANumber:{}", at(o, index)),
+        Err(NumError::Infinite { op: o, index }) => format!("err:Infinite:{}", at(o, index)),
         Err(NumError::LengthMismatch { op: o, a, b }) => {
-            check_op(o);
+            assert_eq!(o, base);
             format!("err:LengthMismatch:{a}:{b}")
         }
         Err(NumError::EmptyInput { op: o }) => {
-            check_op(o);
+            assert_eq!(o, base);
             "err:EmptyInput".to_string()
         }
         Err(e) => panic!("unexpected error {e:?}"),
@@ -198,7 +202,7 @@ fn edge_fixture() {
         }
         n += 1;
     }
-    assert!(n >= 80, "fixture too small: {n}");
+    assert!(n >= 96, "fixture too small: {n}");
 }
 
 /// AC-3: on 10^6 elements the result equals the test-side reimplementation bit for bit, and
@@ -233,6 +237,14 @@ fn ac4_error_paths() {
         Err(NumError::LengthMismatch { op: "red.dot", a: 3, b: 4 })
     );
     assert_eq!(red::mean(&[]), Err(NumError::EmptyInput { op: "red.mean" }));
+    // dot names the slice: all of a is scanned before b.
+    assert_eq!(red::dot(&[1.0, 2.0], &[f64::NAN, 1.0]), Err(NumError::NotANumber { op: "red.dot.b", index: Some(0) }));
+    assert_eq!(
+        red::dot(&[1.0, f64::NEG_INFINITY], &[f64::NAN, 1.0]),
+        Err(NumError::Infinite { op: "red.dot.a", index: Some(1) })
+    );
+    // An overflowing product is reported with its index under the plain operation name.
+    assert_eq!(red::dot(&[1.0, 1e200], &[1.0, 1e200]), Err(NumError::Infinite { op: "red.dot", index: Some(1) }));
     xs[9] = f64::NAN;
     assert_eq!(red::sum_sq(&xs), Err(NumError::NotANumber { op: "red.sum_sq", index: Some(9) }));
     assert_eq!(red::norm2(&xs), Err(NumError::NotANumber { op: "red.norm2", index: Some(9) }));
