@@ -54,9 +54,21 @@ fixtures/plat/matrix/escape.toml -text
 fixtures/plat/matrix/expected-page.md -text
 fixtures/plat/matrix/expected-escape-page.md -text
 docs/platform/support-matrix.md -text
+# PLAT.DEPLOY.OFFLINE.BUNDLE fixtures and exported schemas: digested and compared byte for byte
+# (written by fixtures/plat/deploy/make_bundles.py); never convert line endings.
+fixtures/plat/deploy/bundle-*/** -text
+fixtures/plat/deploy/install-tree/** -text
+fixtures/plat/deploy/install-manifest-*.json -text
+fixtures/plat/deploy/pkg-plan.json -text
+platform/offline-bundle.schema.json -text
+platform/install-manifest.schema.json -text
 # GDT.RES.ROWFLOW.ROSTER fixtures: hand-labelled rosters and a digest compared byte for byte by make_digest.py --check.
 fixtures/gdt/rowflow/** -text
 # FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
 fixtures/flow/journey/** -text
+# OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
+fixtures/outr/launch/gate/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
+# ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
+tools/tests/fixtures/rfc/** -text

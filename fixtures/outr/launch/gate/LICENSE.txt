@@ -1,0 +1,7 @@
+Synthetic test fixtures for spec node OUTR.LAUNCH.GATE (CC-BY-4.0).
+They are not the project's launch plan, spec tree, parity reports or roster: node IDs, seeds,
+handles, roles, releases and the 2099 dates are made up for the tests. Expected results are
+hand-labelled from the spec's rules in crates/fid-outreach/tests/launch_gate.rs; nothing here was
+produced by running the Rust code.
+ready/ is the complete AC-1 fixture. Every other directory holds only the files it changes; the
+tests take any input it lacks from ready/.
