@@ -501,7 +501,6 @@ fn build_refuses_bad_meshes_with_typed_errors() {
     edge[0][1][0] = COORD_LIMIT;
     edge[0][2][0] = -COORD_LIMIT;
     assert!(b(&edge, &[0], 1).is_ok(), "the limit itself is accepted");
-
 }
 
 #[test]
@@ -548,7 +547,15 @@ fn tmin(a: f64, b: f64) -> f64 {
 #[allow(clippy::needless_range_loop)]
 fn brute(b: &Aabb, q: &Query) -> bool {
     let (lo, hi) = (b.min(), b.max());
-    let gap = |c: f64, l: f64, h: f64| if c < l { l - c } else if c > h { c - h } else { 0.0 };
+    let gap = |c: f64, l: f64, h: f64| {
+        if c < l {
+            l - c
+        } else if c > h {
+            c - h
+        } else {
+            0.0
+        }
+    };
     match *q {
         Query::Box(qlo, qhi) => (0..3).all(|k| lo[k] <= qhi[k] && qlo[k] <= hi[k]),
         Query::Sphere(c, r) => {
