@@ -244,9 +244,7 @@ pub fn merge_catalogues(sources: &[QuantitySource]) -> Result<Catalogue, BuildEr
             }
             match kinds.get(&name) {
                 Some((have, _)) if *have == value => {}
-                Some((_, first)) => {
-                    return Err(BuildError::KindConflict { kind: name, first: *first, second: src.krate })
-                }
+                Some(&(_, first)) => return Err(BuildError::KindConflict { kind: name, first, second: src.krate }),
                 None => {
                     kinds.insert(name, (value, src.krate));
                 }

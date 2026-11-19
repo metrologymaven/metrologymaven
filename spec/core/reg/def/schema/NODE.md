@@ -86,7 +86,7 @@ Hand-written schemas under `fixtures/core/reg/def/schema/`; the catalogue fixtur
 
 ## Open questions
 
-- The catalogue in `GEO.FRAME.UNITS` today holds length and angle only; REQ-CORE.REG-004 needs more kinds (time, temperature, dimensionless, count, force). Until GEO.FRAME extends it, `x-quantity` cannot name those kinds (cross-domain request). The facade is ready for them: `Catalogue::from_json` serves any catalogue in the pinned form, so adding kinds needs no registry change; which node publishes that document (GEO.FRAME or a shared catalogue owner) is still open.
+- REQ-CORE.REG-004 also names `temperature`, `count` and `force`, which no crate publishes yet: no owner has been chosen for them. How kinds beyond `GEO.FRAME.UNITS` are published is resolved (domain fragments merged by `fid-registry-build`; see `CORE.REG.MAN` Design "Domain quantity catalogues", where `fid-jobs` publishes `time` and `dimensionless`), so the owning domain adds such a kind with a fragment and no registry change.
 - Whether `x-untrusted: false` should be allowed at all, or only `true`, is left to `AUTO.MCP.TAINT`; this leaf accepts both.
 
 ## Children

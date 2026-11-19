@@ -179,6 +179,44 @@ fn merge_order_gives_a_stable_digest() {
     assert_eq!(merge_catalogues(&[]).unwrap(), geo());
 }
 
+fn time_h_3601() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"s","kind":"time","units":[{"den":"1","num":"3601","pi":false,"symbol":"h"},{"den":"1","num":"60","pi":false,"symbol":"min"},{"den":"1000","num":"1","pi":false,"symbol":"ms"},{"den":"1","num":"1","pi":false,"symbol":"s"}]}]}"#
+}
+
+fn time_in_ms() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"ms","kind":"time","units":[{"den":"1","num":"3600000","pi":false,"symbol":"h"},{"den":"1","num":"60000","pi":false,"symbol":"min"},{"den":"1","num":"1","pi":false,"symbol":"ms"},{"den":"1","num":"1000","pi":false,"symbol":"s"}]}]}"#
+}
+
+fn with_pi_hex() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"K","kind":"temperature","units":[{"den":"1","num":"1","pi":false,"symbol":"K"}]}],"pi_hex":"c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22"}"#
+}
+
+/// Same units and symbols, one SI factor differs (h = 3601 s); or the same kind with
+/// another canonical unit: both are a different definition.
+#[test]
+fn one_differing_factor_or_canonical_unit_is_a_conflict() {
+    for f in [time_h_3601 as fn() -> &'static str, time_in_ms] {
+        let err = merge_catalogues(&[QUANTITY_SOURCES[0], src("fid-other", f)]).unwrap_err();
+        assert_eq!(err, BuildError::KindConflict { kind: "time".into(), first: "fid-jobs", second: "fid-other" });
+    }
+}
+
+#[test]
+fn a_fragment_carrying_pi_hex_is_refused() {
+    let err = merge_catalogues(&[src("fid-pi", with_pi_hex)]).unwrap_err();
+    assert_eq!(err, BuildError::Catalogue { krate: "fid-pi", catalogue_code: "bad_catalogue" });
+}
+
+/// The merged workspace catalogue's digest, pinned: SHA-256 of `WORKSPACE_CATALOGUE`,
+/// computed independently with Python `hashlib` (and by the #259 reviewer).
+#[test]
+fn the_workspace_catalogue_digest_is_pinned() {
+    assert_eq!(
+        workspace_catalogue().unwrap().digest().to_string(),
+        "sha256:8c5b179d22187a8f7a85b7ad1acce2babe6a7cbd41ff7da18e9b9761a13a5ad4"
+    );
+}
+
 fn without_jobs() -> Vec<Source> {
     SOURCES.iter().copied().filter(|s| s.krate != "fid-jobs").collect()
 }
