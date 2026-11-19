@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-frame]
+built_pr: 217
 satisfies: [REQ-GEO.FRAME-007]
 covers: []
 depends_on: [KRN.NUM]
