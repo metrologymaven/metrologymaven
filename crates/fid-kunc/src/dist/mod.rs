@@ -14,11 +14,12 @@
 //! # Validation (REQ-UNC.MODEL.DIST-002)
 //!
 //! Constructors check, in this order: every parameter in declaration order for a finite
-//! value and its unit (location and scale parameters share the unit of the first
-//! parameter; `nu` and `beta` must be [`UnitCode::One`]); then the relations in the order
-//! `sigma > 0`, `b > a`, `b - a` finite (named `b`), `a <= c <= b`, `s > 0`, `nu > 2`,
-//! `0 <= beta <= 1`. The first failure is [`DistError::InvalidParameter`] naming that
-//! parameter.
+//! value, its unit (location and scale parameters share the unit of the first parameter;
+//! `nu` and `beta` must be [`UnitCode::One`]) and `|x| <=` [`PARAM_BOUND`] `= 2^510`; then
+//! the relations in the order `sigma > 0`, `b > a`, `b - a <= 2^510` (named `b`),
+//! `a <= c <= b`, `s > 0`, `nu > 2`, `0 <= beta <= 1`. The first failure is
+//! [`DistError::InvalidParameter`] naming that parameter. A `beta` of `-0.0` is stored as
+//! `+0.0`.
 //!
 //! # Moments (REQ-UNC.MODEL.DIST-003)
 //!
@@ -42,6 +43,11 @@ pub use sample::{
 use core::fmt;
 use core::ops::Range;
 use fid_num::{f, red, NumError};
+
+/// Largest magnitude of any parameter and of the width `b - a`: `2^510`. With every
+/// location, scale and width at most `2^510` (and `nu <= 2^510`), no intermediate of the
+/// moments or the samplers can overflow (for example `(u * w) * (c - a) <= 2^1020`).
+pub const PARAM_BOUND: f64 = f64::from_bits((1023 + 510) << 52);
 
 /// The unit of a distribution parameter: the coherent SI units of the kernel
 /// (CONSTITUTION §4), spelled as in [`crate::statement::UNITS`].
@@ -201,18 +207,18 @@ fn bad(name: &'static str) -> DistError {
     DistError::InvalidParameter { name }
 }
 
-/// Per-parameter check: finite value and the required unit.
+/// Per-parameter check: finite value, the required unit and `|x| <= PARAM_BOUND`.
 fn param(name: &'static str, q: Quantity, unit: UnitCode) -> Result<f64, DistError> {
-    if q.value.is_finite() && q.unit == unit {
+    if q.value.is_finite() && q.unit == unit && q.value.abs() <= PARAM_BOUND {
         Ok(q.value)
     } else {
         Err(bad(name))
     }
 }
 
-/// `b > a` and a finite width, both named `b`.
+/// `b > a` and `b - a <= PARAM_BOUND`, both named `b`.
 fn interval(a: f64, b: f64) -> Result<(), DistError> {
-    if b > a && (b - a).is_finite() {
+    if b > a && b - a <= PARAM_BOUND {
         Ok(())
     } else {
         Err(bad("b"))
@@ -282,6 +288,8 @@ impl Distribution {
         if !(0.0..=1.0).contains(&beta) {
             return Err(bad("beta"));
         }
+        // Canonical zero: -0.0 and +0.0 are the same distribution, so store +0.0.
+        let beta = if beta == 0.0 { 0.0 } else { beta };
         Ok(Distribution { params: Params::Trap { a, b, beta }, unit: u })
     }
 

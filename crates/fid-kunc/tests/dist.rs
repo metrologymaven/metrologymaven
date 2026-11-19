@@ -11,7 +11,7 @@
 
 use fid_kunc::dist::{
     ppnd16, validate_correlation, Correlation, DistError, Distribution, Kind, MvNormal, Params, Quantity, UnitCode,
-    AS241_A, AS241_B, AS241_C, AS241_D, AS241_E, AS241_F, MAX_GAMMA_INDEX, STREAM_LIMIT,
+    AS241_A, AS241_B, AS241_C, AS241_D, AS241_E, AS241_F, MAX_GAMMA_INDEX, PARAM_BOUND, STREAM_LIMIT,
 };
 use fid_num::red;
 
@@ -173,10 +173,33 @@ fn ac4_invalid_parameter_sets_name_the_parameter() {
             .filter(|i| !c[2 + 2 * i].is_empty())
             .map(|i| Quantity::new(num(&c[2 + 2 * i]), unit(&c[3 + 2 * i])))
             .collect();
+        if c[8] == "ok" {
+            // A valid set at the 2^510 bound: moments and draws must not overflow.
+            let d = build(&c[1], &q).unwrap_or_else(|e| panic!("{}: {e}", c[0]));
+            d.expectation().unwrap_or_else(|e| panic!("{}: {e}", c[0]));
+            d.std_uncertainty().unwrap_or_else(|e| panic!("{}: {e}", c[0]));
+            d.sample(SEED, 0, 0..2000).unwrap_or_else(|e| panic!("{}: {e}", c[0]));
+            if let Params::Trap { beta, .. } = d.params() {
+                assert!(beta.is_sign_positive(), "{}: beta must be canonical", c[0]);
+            }
+            continue;
+        }
         let e = build(&c[1], &q).unwrap_err();
         assert_eq!(e, DistError::InvalidParameter { name: Box::leak(c[8].clone().into_boxed_str()) }, "{}", c[0]);
         assert_eq!(e.code(), "invalid_parameter");
     }
+}
+
+#[test]
+fn parameter_bound_is_two_to_the_510() {
+    assert_eq!(PARAM_BOUND, 2.0_f64.powi(510));
+    let m = |v| Quantity::new(v, UnitCode::Metre);
+    let mu = [m(PARAM_BOUND)];
+    let corr = Correlation::new(1, vec![1.0]).unwrap();
+    assert!(MvNormal::new(&mu, &[m(PARAM_BOUND)], corr.clone()).is_ok());
+    let up = f64::from_bits(PARAM_BOUND.to_bits() + 1);
+    assert_eq!(MvNormal::new(&[m(-up)], &[m(1.0)], corr.clone()), Err(DistError::InvalidParameter { name: "mu" }));
+    assert_eq!(MvNormal::new(&mu, &[m(up)], corr), Err(DistError::InvalidParameter { name: "sigma" }));
 }
 
 // ------------------------------------------------------------------ AC-5
@@ -359,16 +382,14 @@ fn ac2_ac3(kind: &str) {
         assert_eq!(xs.len(), N as usize);
         // AC-2 statistics; see the Design for which scaled-t rows are tested.
         let (m, sd) = mean_sd(&xs);
+        // Mean: finite variance (every kind; scaled-t nu > 2). Sd: finite fourth moment
+        // (scaled-t nu > 4, where the kurtosis in moments.csv is finite).
+        let se_mean = r.sd / n.sqrt();
+        eprintln!("{} z_mean {:.3}", r.id, (m - r.mean) / se_mean);
+        assert!((m - r.mean).abs() <= 5.0 * se_mean, "{}: mean {m} vs {} (5 SE = {})", r.id, r.mean, 5.0 * se_mean);
         if r.kurt.is_finite() {
-            let se_mean = r.sd / n.sqrt();
-            assert!((m - r.mean).abs() <= 5.0 * se_mean, "{}: mean {m} vs {} (5 SE = {})", r.id, r.mean, 5.0 * se_mean);
-        }
-        let nu_ok = match r.dist.params() {
-            Params::ScaledT { nu, .. } => nu > 8.0,
-            _ => true,
-        };
-        if nu_ok {
             let se_sd = r.sd * ((r.kurt - 1.0) / (4.0 * n)).sqrt();
+            eprintln!("{} z_sd {:.3}", r.id, (sd - r.sd) / se_sd);
             assert!((sd - r.sd).abs() <= 5.0 * se_sd, "{}: sd {sd} vs {} (5 SE = {})", r.id, r.sd, 5.0 * se_sd);
         }
         let d = digest(&xs);

@@ -11,7 +11,8 @@ moments.csv       40 univariate parameter sets with 50-significant-digit referen
                   crate uses; arcsine, normal and scaled-t use textbook moments in exact
                   rationals. The square root is decimal.Decimal at 80 digits.
 invalid.csv       hand-labelled invalid parameter sets and the parameter each must name
-                  (REQ-UNC.MODEL.DIST-002, AC-4).
+                  (REQ-UNC.MODEL.DIST-002, AC-4), plus the 2^510 parameter-bound rows; rows
+                  labelled "ok" are valid boundary sets that must construct.
 corr_valid.json   correlation matrices that must pass; corr_invalid.json ones that must fail
                   with the hand-labelled reason (AC-5). Every label is confirmed here by an
                   exact rational test: min eigenvalue >= -1e-12 * n iff C + (1e-12 * n) I is
@@ -175,6 +176,53 @@ def moments_csv():
 
 # --------------------------------------------------------------------------- invalid sets
 
+# Parameter bound (maintainer decision for #260): every parameter and the width b - a must
+# have magnitude <= 2^510. B is exactly 2^510, UP the next double above it, MAX the largest
+# double. Rows labelled "ok" must construct (the boundary itself is valid); a trapezoid with
+# beta = -0.0 is valid and is stored as +0.0.
+B = r(2.0**510)
+UP = r(math.nextafter(2.0**510, math.inf))
+MAX = r(sys.float_info.max)
+NB, NUP, NMAX = "-" + B, "-" + UP, "-" + MAX
+M, ONE = "si:m", "si:1"
+BOUND_ROWS = [
+    ("normal", ((UP, M), ("1.0", M)), "mu"),
+    ("normal", ((NMAX, M), ("1.0", M)), "mu"),
+    ("normal", (("0.0", M), (UP, M)), "sigma"),
+    ("normal", (("0.0", M), (MAX, M)), "sigma"),
+    ("normal", ((B, M), (B, M)), "ok"),
+    ("normal", ((NB, M), (B, M)), "ok"),
+    ("rect", ((NUP, M), ("0.0", M)), "a"),
+    ("rect", (("0.0", M), (MAX, M)), "b"),
+    ("rect", ((NB, M), (B, M)), "b"),
+    ("rect", (("0.0", M), (B, M)), "ok"),
+    ("rect", ((NB, M), ("0.0", M)), "ok"),
+    ("tri", (("0.0", M), (B, M), (UP, M)), "c"),
+    ("tri", (("0.0", M), (B, M), (MAX, M)), "c"),
+    ("tri", ((NB, M), (B, M), ("0.0", M)), "b"),
+    ("tri", (("0.0", M), (UP, M), ("1.0", M)), "b"),
+    ("tri", (("0.0", M), (B, M), (B, M)), "ok"),
+    ("tri", ((NB, M), ("0.0", M), (NB, M)), "ok"),
+    ("arcsine", ((NMAX, M), ("0.0", M)), "a"),
+    ("arcsine", (("0.0", M), (UP, M)), "b"),
+    ("arcsine", ((NB, M), (B, M)), "b"),
+    ("arcsine", ((NB, M), ("0.0", M)), "ok"),
+    ("t", ((UP, M), ("1.0", M), ("5.0", ONE)), "mu"),
+    ("t", ((NMAX, M), ("1.0", M), ("5.0", ONE)), "mu"),
+    ("t", (("0.0", M), (UP, M), ("5.0", ONE)), "s"),
+    ("t", (("0.0", M), (MAX, M), ("5.0", ONE)), "s"),
+    ("t", (("0.0", M), ("1.0", M), (UP, ONE)), "nu"),
+    ("t", (("0.0", M), ("1.0", M), (MAX, ONE)), "nu"),
+    ("t", ((NB, M), (B, M), (B, ONE)), "ok"),
+    ("t", ((B, M), (B, M), ("2.5", ONE)), "ok"),
+    ("trap", ((NUP, M), ("0.0", M), ("0.5", ONE)), "a"),
+    ("trap", (("0.0", M), (MAX, M), ("0.5", ONE)), "b"),
+    ("trap", ((NB, M), (B, M), ("0.5", ONE)), "b"),
+    ("trap", (("0.0", M), (B, M), ("0.5", ONE)), "ok"),
+    ("trap", (("0.0", M), ("1.0", M), ("-0.0", ONE)), "ok"),
+]
+
+
 # kind, ((value, unit), ...), expected parameter name; labelled by hand from REQ-002 and the
 # check order pinned in the NODE.md Design (per parameter in order: finite, unit; then the
 # relations).
@@ -188,7 +236,8 @@ INVALID = [
     ("rect", (("2.0", "si:m"), ("1.0", "si:m")), "b"),
     ("rect", (("0.0", "si:m"), ("-inf", "si:m")), "b"),
     ("rect", (("0.0", "si:m"), ("1.0", "si:1")), "b"),
-    ("rect", (("-1.7976931348623157e308", "si:m"), ("1.7976931348623157e308", "si:m")), "b"),
+    # Since the 2^510 parameter bound, a = -MAX fails on its own (before the width check).
+    ("rect", (("-1.7976931348623157e308", "si:m"), ("1.7976931348623157e308", "si:m")), "a"),
     ("tri", (("0.0", "si:m"), ("1.0", "si:m"), ("1.5", "si:m")), "c"),
     ("tri", (("0.0", "si:m"), ("1.0", "si:m"), ("-0.5", "si:m")), "c"),
     ("tri", (("1.0", "si:m"), ("0.0", "si:m"), ("0.5", "si:m")), "b"),
@@ -210,7 +259,7 @@ INVALID = [
     ("trap", (("0.0", "si:m"), ("1.0", "si:m"), ("0.5", "si:m")), "beta"),
     ("trap", (("1.0", "si:m"), ("1.0", "si:m"), ("0.5", "si:1")), "b"),
     ("trap", (("0.0", "si:m"), ("1.0", "si:m"), ("NaN", "si:1")), "beta"),
-]
+] + BOUND_ROWS
 
 
 def invalid_csv():

@@ -34,7 +34,7 @@
 //! `x[perm[p]] = mu[perm[p]] + sigma[perm[p]] * red::dot(L[p][0..r], z[0..r])`.
 
 use super::sample::{self, MV_SHIFT};
-use super::{DistError, Kind, Quantity, UnitCode};
+use super::{DistError, Kind, Quantity, UnitCode, PARAM_BOUND};
 use core::ops::Range;
 use fid_num::la::{chol_pivoted, CholPivoted, Mat, MAX_DIM};
 use fid_num::red;
@@ -139,8 +139,8 @@ fn bad_param(name: &'static str) -> DistError {
 impl MvNormal {
     /// multivariate-normal(mu, sigma, R). Check order: `mu` empty (`mu`), `sigma` length
     /// (`sigma`), `R` dimension (`corr`); then per component in index order `mu[i]` finite
-    /// (`mu`), `sigma[i]` finite with the unit of `mu[i]` (`sigma`), `sigma[i] > 0`
-    /// (`sigma`).
+    /// with `|mu[i]| <= 2^510` (`mu`), `sigma[i]` finite with the unit of `mu[i]`,
+    /// `0 < sigma[i] <= 2^510` (`sigma`).
     pub fn new(mu: &[Quantity], sigma: &[Quantity], corr: Correlation) -> Result<MvNormal, DistError> {
         let n = mu.len();
         if n == 0 {
@@ -159,10 +159,10 @@ impl MvNormal {
         s.try_reserve_exact(n).map_err(|_| DistError::Allocation)?;
         u.try_reserve_exact(n).map_err(|_| DistError::Allocation)?;
         for (q, sq) in mu.iter().zip(sigma) {
-            if !q.value.is_finite() {
+            if !q.value.is_finite() || q.value.abs() > PARAM_BOUND {
                 return Err(bad_param("mu"));
             }
-            if !sq.value.is_finite() || sq.unit != q.unit || sq.value <= 0.0 {
+            if !sq.value.is_finite() || sq.unit != q.unit || sq.value <= 0.0 || sq.value > PARAM_BOUND {
                 return Err(bad_param("sigma"));
             }
             m.push(q.value);
