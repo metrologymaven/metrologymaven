@@ -13,10 +13,9 @@ use super::model::{
     check_block, is_v7, obj, parse_canonical_uuid, BlockId, BlockKindId, CanonicalJson, PageId, Report, ReportId,
 };
 use super::text::{Text, Untrusted};
-use super::value::{labels_from_value, ValueLabel};
 use fid_canon::CValue;
 use fid_project::{uuid_v7, ObservationSource, Uuid};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 // ------------------------------------------------------------------ params
 
@@ -43,7 +42,7 @@ pub struct RemovePage {
 }
 
 /// `report.add_block@1` parameters: `{report, page, after?: block | null, kind: string,
-/// labels?: [label] = [], payload: json}`. A kind string that is not a well-formed kind ID is kept as `None` and
+/// payload: json}`. A kind string that is not a well-formed kind ID is kept as `None` and
 /// fails as `report.unknown_block_kind`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddBlock {
@@ -51,7 +50,6 @@ pub struct AddBlock {
     pub page: Uuid,
     pub after: Option<Uuid>,
     pub kind: Option<BlockKindId>,
-    pub labels: BTreeSet<ValueLabel>,
     pub payload: CValue,
 }
 
@@ -124,13 +122,7 @@ impl RemovePage {
 
 impl AddBlock {
     pub fn from_value(v: &CValue) -> Result<AddBlock, ReportError> {
-        let o = params(v, &["report", "page", "after", "kind", "labels", "payload"])?;
-        let labels = match o.get("labels") {
-            None => BTreeSet::new(),
-            Some(l) => {
-                labels_from_value(l).ok_or(ReportError::BadParams("labels are not known, ascending label names"))?
-            }
-        };
+        let o = params(v, &["report", "page", "after", "kind", "payload"])?;
         let kind = match o.get("kind") {
             Some(CValue::Str(s)) => BlockKindId::new(s),
             Some(_) => return Err(ReportError::BadParams("kind is not a string")),
@@ -142,7 +134,6 @@ impl AddBlock {
             page: id_param(o, "page")?,
             after: opt_id_param(o, "after")?,
             kind,
-            labels,
             payload,
         })
     }
@@ -257,7 +248,7 @@ pub fn remove_page(backend: &mut dyn ReportBackend, kinds: &KindRegistry, p: &Re
 
 /// `report.add_block@1` (REQ-002, REQ-007): returns the new block ID. Checks, in order:
 /// report, page, `after` on that page, kind, payload bounds, payload check, value rule
-/// (value fields hold `value_text@1`; labels equal the required labels).
+/// (every declared value field holds a `value_binding@1`).
 pub fn add_block(
     backend: &mut dyn ReportBackend,
     kinds: &KindRegistry,
@@ -277,7 +268,7 @@ pub fn add_block(
     let (kind_version, _) = kinds.get(&kind).ok_or_else(|| ReportError::UnknownBlockKind(Some(kind.clone())))?;
     let payload = CanonicalJson::new(&p.payload)
         .ok_or_else(|| ReportError::InvalidBlockPayload(PayloadError::new("", "payload_bounds")))?;
-    check_block(kinds, &kind, kind_version, &payload, &p.labels)?;
+    check_block(kinds, &kind, kind_version, &payload)?;
     let block = BlockId::new(draw(ids)?).ok_or(ReportError::IdUnavailable("bad_id"))?;
     let op = Op::AddBlock {
         report: report_id(&p.report)?,
@@ -286,7 +277,6 @@ pub fn add_block(
         block,
         kind,
         kind_version,
-        labels: p.labels.clone(),
         payload,
     };
     commit(backend, kinds, Some(r), op)?;

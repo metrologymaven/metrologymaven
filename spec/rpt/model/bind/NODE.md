@@ -51,6 +51,7 @@ The engine that turns a report or template plus a journal head into a `ResolvedR
 - **REQ-RPT.MODEL.BIND-007** A resolved report shall record the journal head hash, template ID and version, kernel version and every formatter ID and version it used.
 - **REQ-RPT.MODEL.BIND-008** Generation into scratch shall be side-effect class R1 and journal nothing; storing a resolved report in the project shall be the separate W2 command `report.save_report@1`.
 - **REQ-RPT.MODEL.BIND-009** Generation of a 500-characteristic, three-stage report shall complete in under 2 s on reference hardware [unverified].
+- **REQ-RPT.MODEL.BIND-010** When generation resolves a `value_binding@1`, the system shall read the bound record and its fid-kunc uncertainty statement from the project store, recompute both SHA-256 digests, and fail with error `report.binding_digest_mismatch` naming the binding if either differs from `record_digest` or `statement_digest`; values and labels shall come only from the stored record and statement, never from the block or the caller.
 
 ## Interfaces
 
@@ -70,6 +71,6 @@ RESOLVE (binding lookup against a journal head), EXPAND (repetition and multi-st
 
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
-| RPT.MODEL.BIND.RESOLVE | Block binding and resolution of stable IDs against a journal head (leaf) | 001 004 005 | GOM.RPT.07 |
+| RPT.MODEL.BIND.RESOLVE | Block binding and resolution of stable IDs against a journal head (leaf) | 001 004 005 010 | GOM.RPT.07 |
 | RPT.MODEL.BIND.EXPAND | Slot, repetition and multi-stage expansion (leaf) | 006 | GOM.RPT.07 |
 | RPT.MODEL.BIND.GEN | Report generation, resolved document, provenance and digest (leaf) | 002 003 007 008 009 | none |

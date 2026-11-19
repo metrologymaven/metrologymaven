@@ -3,10 +3,9 @@
 
 use super::kind::PayloadError;
 use super::model::BlockKindId;
-use super::value::{labels_value, ValueLabel};
 use fid_canon::CValue;
 use fid_project::Uuid;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fmt;
 
 /// Why a user string was refused (`report.text_invalid`).
@@ -40,12 +39,12 @@ pub enum ReportError {
     /// `report.invalid_block_payload`: the payload fails the kind's check or the payload
     /// bounds (REQ-007).
     InvalidBlockPayload(PayloadError),
-    /// `report.value_text_invalid`: a declared value field does not hold a `value_text@1`
-    /// (`field` is the value field's JSON pointer).
-    ValueTextInvalid(PayloadError),
-    /// `report.value_label_mismatch`: the block's labels are not exactly the labels its
-    /// values require; a claimed value can never be stored unlabelled.
-    ValueLabelMismatch { missing: BTreeSet<ValueLabel>, extra: BTreeSet<ValueLabel> },
+    /// `report.value_literal_refused`: a declared value field holds a literal (number,
+    /// string, value text, anything but a `value_binding@1`); `field` is its pointer.
+    ValueLiteralRefused(PayloadError),
+    /// `report.value_binding_invalid`: a declared value field is missing or holds a
+    /// malformed `value_binding@1`.
+    ValueBindingInvalid(PayloadError),
     /// `report.text_invalid`: a user string is too long or holds NUL (REQ-010).
     TextInvalid(TextFault),
     /// `report.bad_params`: parameters of the wrong shape (unknown key, missing field, wrong
@@ -73,8 +72,8 @@ impl ReportError {
             ReportError::PageNotEmpty(_) => "report.page_not_empty",
             ReportError::UnknownBlockKind(_) => "report.unknown_block_kind",
             ReportError::InvalidBlockPayload(_) => "report.invalid_block_payload",
-            ReportError::ValueTextInvalid(_) => "report.value_text_invalid",
-            ReportError::ValueLabelMismatch { .. } => "report.value_label_mismatch",
+            ReportError::ValueLiteralRefused(_) => "report.value_literal_refused",
+            ReportError::ValueBindingInvalid(_) => "report.value_binding_invalid",
             ReportError::TextInvalid(_) => "report.text_invalid",
             ReportError::BadParams(_) => "report.bad_params",
             ReportError::IdCollision(_) => "report.id_collision",
@@ -100,13 +99,11 @@ impl ReportError {
             }
             ReportError::UnknownBlockKind(Some(k)) => put("kind", st(k.as_str().to_string())),
             ReportError::UnknownBlockKind(None) => {}
-            ReportError::InvalidBlockPayload(p) | ReportError::ValueTextInvalid(p) => {
+            ReportError::InvalidBlockPayload(p)
+            | ReportError::ValueLiteralRefused(p)
+            | ReportError::ValueBindingInvalid(p) => {
                 put("field", st(p.field().to_string()));
                 put("reason", st(p.reason().to_string()));
-            }
-            ReportError::ValueLabelMismatch { missing, extra } => {
-                put("missing", labels_value(missing));
-                put("extra", labels_value(extra));
             }
             ReportError::TextInvalid(f) => put("reason", st(f.as_str().to_string())),
             ReportError::BadParams(r)
@@ -127,12 +124,10 @@ impl fmt::Display for ReportError {
             }
             ReportError::UnknownBlockKind(Some(k)) => write!(f, "{}: {}", self.code(), k.as_str()),
             ReportError::UnknownBlockKind(None) => f.write_str(self.code()),
-            ReportError::InvalidBlockPayload(p) | ReportError::ValueTextInvalid(p) => {
+            ReportError::InvalidBlockPayload(p)
+            | ReportError::ValueLiteralRefused(p)
+            | ReportError::ValueBindingInvalid(p) => {
                 write!(f, "{}: {}: {}", self.code(), p.field(), p.reason())
-            }
-            ReportError::ValueLabelMismatch { missing, extra } => {
-                let names = |s: &BTreeSet<ValueLabel>| s.iter().map(|l| l.as_str()).collect::<Vec<_>>().join(",");
-                write!(f, "{}: missing [{}] extra [{}]", self.code(), names(missing), names(extra))
             }
             ReportError::TextInvalid(t) => write!(f, "{}: {}", self.code(), t.as_str()),
             ReportError::BadParams(r)

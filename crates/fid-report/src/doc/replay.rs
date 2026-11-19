@@ -7,7 +7,7 @@
 //! - `NOT_REPLAYABLE`: an event cannot be read, or names a block kind (or kind version)
 //!   that the replaying registry does not have;
 //! - `DIVERGENT`: a `create_report` event names another project than the one replayed,
-//!   an operation fails on replay (including the value-label rule), or a replayed digest
+//!   an operation fails on replay (including the value-binding rule), or a replayed digest
 //!   differs;
 //! - `IDENTICAL`: every event replays to its recorded digest.
 //!

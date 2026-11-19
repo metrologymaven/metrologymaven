@@ -7,9 +7,7 @@
 use super::kind::{BlockKind, PayloadError};
 use super::model::{BlockKindId, CanonicalJson};
 use super::text::Text;
-use super::value::ValueLabel;
 use fid_canon::CValue;
-use std::collections::BTreeSet;
 
 /// The `text` stub kind.
 #[derive(Debug, Clone, Copy, Default)]
@@ -33,10 +31,6 @@ impl BlockKind for TextStub {
             Some(CValue::Str(s)) => Text::new(s).map(|_| ()).map_err(|_| PayloadError::new("/text", "text_invalid")),
             _ => Err(PayloadError::new("/text", "not_string")),
         }
-    }
-
-    fn required_labels(&self, _payload: &CanonicalJson) -> Result<BTreeSet<ValueLabel>, PayloadError> {
-        Ok(BTreeSet::new())
     }
 
     fn value_fields(&self, _payload: &CanonicalJson) -> Result<Vec<String>, PayloadError> {
@@ -66,10 +60,6 @@ impl BlockKind for ImageStub {
             Some(CValue::Str(s)) if fid_types::Digest::is_valid(s) => Ok(()),
             _ => Err(PayloadError::new("/blob", "not_digest")),
         }
-    }
-
-    fn required_labels(&self, _payload: &CanonicalJson) -> Result<BTreeSet<ValueLabel>, PayloadError> {
-        Ok(BTreeSet::new())
     }
 
     fn value_fields(&self, _payload: &CanonicalJson) -> Result<Vec<String>, PayloadError> {

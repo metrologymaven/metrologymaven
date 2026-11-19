@@ -52,8 +52,8 @@ The standard block kinds a report is built from, each with a versioned payload s
 - **REQ-RPT.MODEL.BLOCKS-007** An `image` block shall store its image by content digest, and an image larger than 50 MiB [unverified limit] shall be rejected with error `report.image_too_large`.
 - **REQ-RPT.MODEL.BLOCKS-008** `header` and `footer` blocks shall offer page number, page count, report ID and resolved-report digest fields.
 - **REQ-RPT.MODEL.BLOCKS-009** A `text` block's bound fields shall be resolved only through `RPT.MODEL.FMT` and shall never evaluate user text as an expression or instruction (CONSTITUTION C6).
-- **REQ-RPT.MODEL.BLOCKS-010** A block kind whose payload holds values shall implement `required_labels` by calling `ValueLabel::required_by` on the fid-kunc uncertainty statement each value rests on (`is_claimed()`, `rests_on_declared_input()`, `rests_on_uncharacterized_input()`), so that `RPT.MODEL.DOC` refuses the block unless it carries those labels.
-- **REQ-RPT.MODEL.BLOCKS-011** A block kind whose payload holds values shall declare every value field in `value_fields`, and each such field shall hold a `value_text@1` produced by `RPT.MODEL.FMT`; a kind shall never store a value as a bare number or pre-formatted string.
+- **REQ-RPT.MODEL.BLOCKS-010** A block kind whose payload holds values shall declare every value field in `value_fields`, and each such field shall hold a `value_binding@1` (record ID, record digest, field pointer, statement digest) and never a literal value, number or pre-formatted value text (`RPT.MODEL.DOC` refuses one with `report.value_literal_refused`).
+- **REQ-RPT.MODEL.BLOCKS-011** When a block renders a bound value, it shall show the value text produced by `RPT.MODEL.FMT` from the resolved binding together with that value's own labels (`Claimed`, `DeclaredInput`, `UncharacterizedInput`) and markers, and shall never drop, merge or move a label from one value to another.
 
 ## Interfaces
 

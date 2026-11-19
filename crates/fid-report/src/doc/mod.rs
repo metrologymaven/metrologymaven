@@ -14,11 +14,11 @@
 //! - [`replay`]: exact replay ([`replay_exact`], AC-7).
 //! - [`defs`]: the registry definitions ([`command_defs`]).
 //!
-//! - [`value`]: value provenance labels and the `value_text@1` shape every declared value
-//!   field must hold, so a claimed value can never be stored unlabelled or pre-formatted.
+//! - [`value`]: declared value fields hold `value_binding@1` references, never literal
+//!   values; DOC never formats, computes or trusts a value or its labels.
 //!
-//! The model formats no numbers of its own: values are produced by `RPT.MODEL.FMT` and
-//! placed by the block kinds; this module only refuses blocks that break the value rule.
+//! Binding resolution belongs to `RPT.MODEL.BIND`; value text, its per-value labels and
+//! its side belong to `RPT.MODEL.FMT`.
 
 pub mod backend;
 pub mod command;
@@ -50,6 +50,6 @@ pub use model::{
 pub use replay::{replay_exact, ReplayRun, MAX_REPLAY_EVENTS};
 pub use text::{must_escape, Text, Untrusted, MAX_TEXT_BYTES};
 pub use value::{
-    check_value_text, resolve_pointer, ValueLabel, MAX_LABEL_VALUE_BYTES, MAX_POINTER_BYTES, MAX_VALUE_FIELDS,
-    MAX_VALUE_TEXT_ITEMS, VALUE_TEXT_SCHEMA,
+    check_value_binding, is_pointer, resolve_pointer, BindingFault, MAX_POINTER_BYTES, MAX_VALUE_FIELDS,
+    VALUE_BINDING_SCHEMA,
 };

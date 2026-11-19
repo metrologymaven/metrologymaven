@@ -49,7 +49,7 @@ def untrusted(s: str) -> dict:
 
 
 def block(bid: str, kind: str, payload) -> dict:
-    return {"id": bid, "kind": kind, "kind_version": "1", "labels": [], "payload": {"untrusted": True, "value": payload}}
+    return {"id": bid, "kind": kind, "kind_version": "1", "payload": {"untrusted": True, "value": payload}}
 
 
 def report(rid, pages, retired=()):
@@ -89,63 +89,74 @@ def ac2():
     for bid, t in zip(b, texts):
         state[0][1].append(block(bid, "text", {"text": t}))
         emit({"type": "report.add_block@1", "page": p1, "after": None, "block": bid, "kind": "text",
-              "kind_version": "1", "labels": [], "payload": {"untrusted": True, "value": {"text": t}}})
+              "kind_version": "1", "payload": {"untrusted": True, "value": {"text": t}}})
     state.append((p2, []))
     emit({"type": "report.add_page@1", "after": None, "page": p2})
     state[1][1].append(block(img, "image", {"blob": IMAGE_BLOB}))
     emit({"type": "report.add_block@1", "page": p2, "after": None, "block": img, "kind": "image",
-          "kind_version": "1", "labels": [], "payload": {"untrusted": True, "value": {"blob": IMAGE_BLOB}}})
+          "kind_version": "1", "payload": {"untrusted": True, "value": {"blob": IMAGE_BLOB}}})
     return summary, report(rid, state), events
 
 
-def vt(canonical="0.002", markers=(), labels=(), **over):
-    """A value_text@1 (spec/rpt/model/doc/NODE.md Design, "Values")."""
-    v = {"schema": "value_text@1", "canonical": canonical, "digits_added": "0", "formatter": "fmt.length@1",
-         "unit": "mm", "markers": list(markers), "labels": list(labels)}
+REC = "019a9a9a-0004-7000-8000-000000000004"
+D1 = "sha256:" + "11" * 32
+D2 = "sha256:" + "22" * 32
+
+
+def vb(**over):
+    """A value_binding@1 (spec/rpt/model/doc/NODE.md Design, "Values")."""
+    v = {"schema": "value_binding@1", "record": REC, "record_digest": D1, "field": "/value",
+         "statement_digest": D2}
     v.update(over)
     return v
 
 
-def value_cases():
-    """Hand-labelled value_text@1 cases: expect "ok" with the value labels found, or the
-    reason word of report.value_text_invalid."""
-    claimed = {"kind": "claimed"}
-    gauge = {"kind": "gauge", "value": "G-17"}
+def binding_cases():
+    """Hand-labelled contents of a declared value field: "ok", or the error code and reason
+    the document model must give."""
+    lit = ("report.value_literal_refused", "literal")
+    bad = "report.value_binding_invalid"
+    text = {"schema": "value_text@1", "canonical": "0.002", "digits_added": "0", "formatter": "fmt.length@1",
+            "unit": "mm", "markers": [], "labels": [{"kind": "claimed"}]}
     cases = [
-        ("plain", vt(), "ok", []),
-        ("negative_long", vt("-12.3400000000"), "ok", []),
-        ("claimed_and_gauge", vt(labels=[claimed, gauge]), "ok", ["claimed"]),
-        ("all_value_labels", vt(labels=[{"kind": "claimed"}, {"kind": "declared_input"},
-                                        {"kind": "uncharacterized_input"}]), "ok",
-         ["claimed", "declared_input", "uncharacterized_input"]),
-        ("nonconf_tie", vt(markers=["nonconformance", "tie_at_max_precision"]), "ok", []),
-        ("bare_string", "0.002", "not_value_text", []),
-        ("bare_number", 0.002, "not_value_text", []),
-        ("missing_key", {k: v for k, v in vt().items() if k != "unit"}, "value_text_keys", []),
-        ("extra_key", vt(side="upper"), "value_text_keys", []),
-        ("wrong_schema", vt(schema="value_text@2"), "value_text_schema", []),
-        ("leading_zero", vt("00.002"), "canonical", []),
-        ("exponent", vt("2e-3"), "canonical", []),
-        ("trailing_dot", vt("0."), "canonical", []),
-        ("plus_sign", vt("+0.002"), "canonical", []),
-        ("digits_added_256", vt(digits_added="256"), "digits_added", []),
-        ("formatter_no_major", vt(formatter="fmt.length"), "formatter", []),
-        ("formatter_not_fmt", vt(formatter="my.length@1"), "formatter", []),
-        ("unit_space", vt(unit="m m"), "unit", []),
-        ("tie_without_nonconf", vt(markers=["tie_at_max_precision"]), "marker_without_nonconformance", []),
-        ("undecidable_without_nonconf", vt(markers=["undecidable_side"]), "marker_without_nonconformance", []),
-        ("unknown_marker", vt(markers=["looks_fine"]), "markers", []),
-        ("markers_unsorted", vt(markers=["tie_at_max_precision", "nonconformance"]), "markers", []),
-        ("unknown_label", vt(labels=[{"kind": "measured"}]), "labels", []),
-        ("claimed_with_value", vt(labels=[{"kind": "claimed", "value": "x"}]), "labels", []),
-        ("gauge_without_value", vt(labels=[{"kind": "gauge"}]), "labels", []),
-        ("gauge_bidi", vt(labels=[{"kind": "gauge", "value": "G‮17"}]), "labels", []),
-        ("labels_unsorted", vt(labels=[gauge, claimed]), "labels", []),
+        ("binding", vb(), "ok", ""),
+        ("binding_whole_record", vb(field=""), "ok", ""),
+        ("binding_escaped_pointer", vb(field="/a~1b/~0c/0"), "ok", ""),
+        ("hand_typed_number", 0.002, *lit),
+        ("hand_typed_number_string", "0.002", *lit),
+        ("hand_typed_exponent_string", "2e-3", *lit),
+        ("plain_string", "OK", *lit),
+        ("boolean", True, *lit),
+        ("null", None, *lit),
+        ("array", [vb()], *lit),
+        ("literal_value_text", text, *lit),
+        ("object_without_schema", {k: v for k, v in vb().items() if k != "schema"}, *lit),
+        ("binding_v2", vb(schema="value_binding@2"), *lit),
+        ("missing_statement_digest", {k: v for k, v in vb().items() if k != "statement_digest"}, bad, "binding_keys"),
+        ("extra_value_key", vb(value="0.002"), bad, "binding_keys"),
+        ("extra_labels_key", vb(labels=["claimed"]), bad, "binding_keys"),
+        ("record_uppercase", vb(record=REC.upper()), bad, "record"),
+        ("record_nil", vb(record="00000000-0000-0000-0000-000000000000"), bad, "record"),
+        ("record_number", vb(record=4), bad, "record"),
+        ("record_digest_short", vb(record_digest="sha256:11"), bad, "record_digest"),
+        ("record_digest_md5", vb(record_digest="md5:" + "11" * 16), bad, "record_digest"),
+        ("statement_digest_upper", vb(statement_digest="sha256:" + "AA" * 32), bad, "statement_digest"),
+        ("field_relative", vb(field="value"), bad, "field"),
+        ("field_bad_tilde", vb(field="/a~2"), bad, "field"),
+        ("field_bidi", vb(field="/va‮lue"), bad, "field"),
+        ("field_too_long", vb(field="/" + "a" * 256), bad, "field"),
     ]
-    out = []
-    for name, value, expect, found in cases:
-        out.append({"name": name, "value": value, "expect": expect, "labels": found})
-    return {"licence": "CC-BY-4.0", "source": "authored in-project for RPT.MODEL.DOC (value rule)", "cases": out}
+    out = [{"name": n, "value": v, "expect": e, "reason": r} for n, v, e, r in cases]
+    return {"licence": "CC-BY-4.0", "source": "authored in-project for RPT.MODEL.DOC (value bindings)", "cases": out}
+
+
+def binding_report():
+    """A report titled "values" whose one block (kind `measurement`, test kind with value
+    field /U) holds a well-formed binding: the exact stored bytes."""
+    rid, p1, b = v7(0), v7(1), v7(2)
+    r = report(rid, [(p1, [block(b, "measurement", {"U": vb()})])])
+    r["title"] = untrusted("values")
+    return r
 
 
 def hostile():
@@ -190,7 +201,8 @@ def outputs():
         HERE / "ac2-events-text.json": jcs(events),
         HERE / "digests.txt": ("\n".join(lines) + "\n").encode("ascii"),
         MODEL / "hostile_strings" / "strings.json": jcs(hostile()),
-        HERE / "value_cases.json": jcs(value_cases()),
+        HERE / "binding_cases.json": jcs(binding_cases()),
+        HERE / "binding-report-text.json": jcs(binding_report()),
         MODEL / "empty_project" / "project.json": jcs(empty_project()),
     }
 

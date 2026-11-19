@@ -10,7 +10,7 @@
 //! report.create_report@1  {type, report, page, project, title, report_digest}
 //! report.add_page@1       {type, report, after, page, report_digest}
 //! report.remove_page@1    {type, report, page, force, report_digest}
-//! report.add_block@1      {type, report, page, after, block, kind, kind_version, labels, payload, report_digest}
+//! report.add_block@1      {type, report, page, after, block, kind, kind_version, payload, report_digest}
 //! report.remove_block@1   {type, report, block, report_digest}
 //! ```
 
@@ -21,11 +21,10 @@ use super::model::{
     BlockKindId, CanonicalJson, PageId, Report, ReportId, MAX_REPORT_BYTES,
 };
 use super::text::{Text, Untrusted};
-use super::value::{labels_from_value, labels_value, ValueLabel};
 use fid_canon::CValue;
 use fid_project::Uuid;
 use fid_types::Digest;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 pub const CREATE_REPORT: &str = "report.create_report@1";
 pub const ADD_PAGE: &str = "report.add_page@1";
@@ -61,7 +60,6 @@ pub enum Op {
         block: BlockId,
         kind: BlockKindId,
         kind_version: u32,
-        labels: BTreeSet<ValueLabel>,
         payload: CanonicalJson,
     },
     RemoveBlock {
@@ -106,9 +104,9 @@ impl Op {
             Op::CreateReport { .. } => {}
             Op::AddPage { after, page, .. } => r.insert_page(after.map(|a| a.uuid()).as_ref(), *page)?,
             Op::RemovePage { page, force, .. } => r.remove_page(&page.uuid(), *force)?,
-            Op::AddBlock { page, after, block, kind, kind_version, labels, payload, .. } => {
-                check_block(kinds, kind, *kind_version, payload, labels)?;
-                let b = Block::new(*block, kind.clone(), *kind_version, labels.clone(), payload.clone());
+            Op::AddBlock { page, after, block, kind, kind_version, payload, .. } => {
+                check_block(kinds, kind, *kind_version, payload)?;
+                let b = Block::new(*block, kind.clone(), *kind_version, payload.clone());
                 r.insert_block(&page.uuid(), after.map(|a| a.uuid()).as_ref(), b)?;
             }
             Op::RemoveBlock { block, .. } => r.remove_block(&block.uuid())?,
@@ -172,8 +170,7 @@ impl ReportEvent {
                 put("page", id(page.uuid()));
                 put("force", CValue::Bool(*force));
             }
-            Op::AddBlock { page, after, block, kind, kind_version, labels, payload, .. } => {
-                put("labels", labels_value(labels));
+            Op::AddBlock { page, after, block, kind, kind_version, payload, .. } => {
                 put("page", id(page.uuid()));
                 put("after", opt(after.map(|a| a.uuid())));
                 put("block", id(block.uuid()));
@@ -205,18 +202,9 @@ impl ReportEvent {
             CREATE_REPORT => &["type", "report", "page", "project", "title", "report_digest"],
             ADD_PAGE => &["type", "report", "after", "page", "report_digest"],
             REMOVE_PAGE => &["type", "report", "page", "force", "report_digest"],
-            ADD_BLOCK => &[
-                "type",
-                "report",
-                "page",
-                "after",
-                "block",
-                "kind",
-                "kind_version",
-                "labels",
-                "payload",
-                "report_digest",
-            ],
+            ADD_BLOCK => {
+                &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
+            }
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
         };
@@ -256,7 +244,6 @@ impl ReportEvent {
                     block: block()?,
                     kind,
                     kind_version: u32_value(field(o, "kind_version")?)?,
-                    labels: labels_from_value(field(o, "labels")?).ok_or(ReportError::StoreInvalid("labels"))?,
                     payload: payload_from_value(field(o, "payload")?)?,
                 }
             }

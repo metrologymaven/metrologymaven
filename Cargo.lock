@@ -864,7 +864,6 @@ name = "fid-report"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
- "fid-kunc",
  "fid-project",
  "fid-registry",
  "fid-replay",

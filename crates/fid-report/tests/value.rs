@@ -1,21 +1,20 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-//! The value rule of RPT.MODEL.DOC (review of #232): claimed values carry labels, value
-//! fields hold FMT's `value_text@1`, escaping covers every Cf and default-ignorable
-//! character, duplicate keys are refused, and replay checks the project.
-//! Expected outcomes are hand-labelled in fixtures/rpt/model/doc/value_cases.json and
-//! fixtures/unc/stmt/valid (UNC.UEC.STMT).
+//! The value rule of RPT.MODEL.DOC (reviews of #232): declared value fields hold
+//! `value_binding@1` references only, never literal values; escaping covers every Cf and
+//! default-ignorable character; duplicate keys are refused; replay checks the project.
+//! Expected outcomes and bytes are hand-labelled by fixtures/rpt/model/doc/make_fixtures.py
+//! (binding_cases.json, binding-report-text.json).
 
 use fid_canon::{digest_bytes, parse, to_canonical_bytes, CValue};
-use fid_kunc::UncertaintyStatement;
 use fid_project::{Bits, IdError, ObservationSource, Uuid};
 use fid_replay::ReplayOutcome;
 use fid_report::doc::stub::{ImageStub, TextStub};
 use fid_report::doc::*;
-use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 const PROJECT: &str = "019a9a9a-0000-7000-8000-00000000c0de";
 
+/// The deterministic ID source of make_fixtures.py: draw k gives ms BASE + k, R = k + 1.
 struct Counter(u64);
 
 impl ObservationSource for Counter {
@@ -67,16 +66,11 @@ fn arr(v: &CValue) -> &Vec<CValue> {
     }
 }
 
-fn statement(name: &str) -> String {
-    String::from_utf8(read(&format!("fixtures/unc/stmt/valid/{name}.json"))).unwrap()
-}
+/// A permissive value kind: accepts any payload and declares `/U` as its value field. The
+/// value rule alone must keep literal values out.
+struct Measurement;
 
-/// A permissive value kind: accepts any object payload, declares `/U` as its value field
-/// and computes required labels from the uncertainty statement held in `/statement`
-/// (canonical statement JSON, as text).
-struct Permissive;
-
-impl BlockKind for Permissive {
+impl BlockKind for Measurement {
     fn id(&self) -> BlockKindId {
         BlockKindId::new("measurement").unwrap()
     }
@@ -89,17 +83,29 @@ impl BlockKind for Permissive {
         Ok(())
     }
 
-    fn required_labels(&self, payload: &CanonicalJson) -> Result<BTreeSet<ValueLabel>, PayloadError> {
-        let Some(CValue::Str(stmt)) = resolve_pointer(payload.value(), "/statement") else {
-            return Err(PayloadError::new("/statement", "missing"));
-        };
-        let stmt = UncertaintyStatement::parse_canonical(stmt.as_bytes())
-            .map_err(|_| PayloadError::new("/statement", "not_statement"))?;
-        Ok(ValueLabel::required_by(&stmt))
+    fn value_fields(&self, _payload: &CanonicalJson) -> Result<Vec<String>, PayloadError> {
+        Ok(vec!["/U".to_string()])
+    }
+}
+
+/// A kind that declares a malformed value-field pointer.
+struct BadPointer;
+
+impl BlockKind for BadPointer {
+    fn id(&self) -> BlockKindId {
+        BlockKindId::new("bad_pointer").unwrap()
+    }
+
+    fn version(&self) -> u32 {
+        1
+    }
+
+    fn validate(&self, _payload: &CanonicalJson) -> Result<(), PayloadError> {
+        Ok(())
     }
 
     fn value_fields(&self, _payload: &CanonicalJson) -> Result<Vec<String>, PayloadError> {
-        Ok(vec!["/U".to_string()])
+        Ok(vec!["U".to_string()])
     }
 }
 
@@ -107,20 +113,14 @@ fn kinds() -> KindRegistry {
     let mut k = KindRegistry::new();
     k.register(Box::new(TextStub)).unwrap();
     k.register(Box::new(ImageStub)).unwrap();
-    k.register(Box::new(Permissive)).unwrap();
+    k.register(Box::new(Measurement)).unwrap();
+    k.register(Box::new(BadPointer)).unwrap();
     k
 }
 
-fn value_text(labels: &[CValue]) -> CValue {
-    obj([
-        ("schema", s("value_text@1")),
-        ("canonical", s("0.002")),
-        ("digits_added", s("0")),
-        ("formatter", s("fmt.length@1")),
-        ("unit", s("mm")),
-        ("markers", CValue::Arr(Vec::new())),
-        ("labels", CValue::Arr(labels.to_vec())),
-    ])
+fn binding() -> CValue {
+    let cases = parse(&read("fixtures/rpt/model/doc/binding_cases.json")).unwrap();
+    get(&arr(get(&cases, "cases"))[0], "value").clone()
 }
 
 struct World {
@@ -143,146 +143,106 @@ impl World {
         World { backend, kinds, ids, report, page }
     }
 
-    fn add(&mut self, payload: CValue, labels: &[&str]) -> Result<CValue, ReportError> {
-        let p = obj([
-            ("report", s(&self.report)),
-            ("page", s(&self.page)),
-            ("kind", s("measurement")),
-            ("labels", CValue::Arr(labels.iter().map(|l| s(l)).collect())),
-            ("payload", payload),
-        ]);
+    fn add(&mut self, kind: &str, payload: CValue) -> Result<CValue, ReportError> {
+        let p = obj([("report", s(&self.report)), ("page", s(&self.page)), ("kind", s(kind)), ("payload", payload)]);
         execute(ADD_BLOCK, &p, &mut self.backend, &self.kinds, &mut self.ids)
     }
-}
 
-fn labels(names: &[&str]) -> BTreeSet<ValueLabel> {
-    names.iter().map(|n| ValueLabel::parse(n).unwrap()).collect()
-}
-
-#[test]
-fn required_by_follows_fid_kunc() {
-    let cases = [
-        ("uec1_declared", &["claimed", "declared_input", "uncharacterized_input"][..]),
-        ("uec1_spec_derived", &["claimed", "uncharacterized_input"][..]),
-        ("uec1_mcm", &["declared_input", "uncharacterized_input"][..]),
-        ("uec2_lpu", &[][..]),
-        ("uec3_iso15530_3", &[][..]),
-    ];
-    for (name, want) in cases {
-        let stmt = UncertaintyStatement::parse_canonical(statement(name).as_bytes()).unwrap();
-        assert_eq!(ValueLabel::required_by(&stmt), labels(want), "{name}");
+    fn rid(&self) -> ReportId {
+        ReportId::new(Uuid::parse(&self.report).unwrap()).unwrap()
     }
 }
 
 #[test]
-fn permissive_value_kind_cannot_store_an_unlabelled_claimed_value() {
-    let mut w = World::new();
-    let declared = statement("uec1_declared");
-    let before = w.backend.clone();
-
-    // The review's case: a bare `{"U": "0.002"}` from a claimed statement.
-    let e = w.add(obj([("U", s("0.002")), ("statement", s(&declared))]), &[]).unwrap_err();
-    assert_eq!(e.code(), "report.value_text_invalid");
-    assert_eq!(get(&e.to_value(), "field"), &s("/U"));
-    assert_eq!(get(&e.to_value(), "reason"), &s("not_value_text"));
-
-    // FMT-shaped, but unlabelled: refused, naming every missing label.
-    let e = w.add(obj([("U", value_text(&[])), ("statement", s(&declared))]), &[]).unwrap_err();
-    assert_eq!(
-        e,
-        ReportError::ValueLabelMismatch {
-            missing: labels(&["claimed", "declared_input", "uncharacterized_input"]),
-            extra: BTreeSet::new()
-        }
-    );
-    assert_eq!(e.code(), "report.value_label_mismatch");
-    assert_eq!(
-        get(&e.to_value(), "missing"),
-        &CValue::Arr(vec![s("claimed"), s("declared_input"), s("uncharacterized_input")])
-    );
-
-    // Partly labelled: still refused.
-    let e = w.add(obj([("U", value_text(&[])), ("statement", s(&declared))]), &["claimed"]).unwrap_err();
-    assert_eq!(e.code(), "report.value_label_mismatch");
-    assert_eq!(w.backend, before);
-
-    // Fully labelled: stored, and shown with its labels.
-    let all = ["claimed", "declared_input", "uncharacterized_input"];
-    w.add(obj([("U", value_text(&[])), ("statement", s(&declared))]), &all).unwrap();
-    let shown = execute(SHOW_REPORT, &obj([("report", s(&w.report))]), &mut w.backend, &w.kinds, &mut w.ids).unwrap();
-    let block = &arr(get(&arr(get(&shown, "pages"))[0], "blocks"))[0];
-    assert_eq!(get(block, "labels"), &CValue::Arr(all.iter().map(|l| s(l)).collect()));
-}
-
-#[test]
-fn labels_must_be_exact_and_value_text_labels_count() {
-    let mut w = World::new();
-    let evaluated = statement("uec2_lpu");
-    // A measured value may not be labelled claimed.
-    let e = w.add(obj([("U", value_text(&[])), ("statement", s(&evaluated))]), &["claimed"]).unwrap_err();
-    assert_eq!(e, ReportError::ValueLabelMismatch { missing: BTreeSet::new(), extra: labels(&["claimed"]) });
-    // A value text that says claimed makes the block require the label.
-    let claimed_text = value_text(&[obj([("kind", s("claimed"))])]);
-    let e = w.add(obj([("U", claimed_text.clone()), ("statement", s(&evaluated))]), &[]).unwrap_err();
-    assert_eq!(e, ReportError::ValueLabelMismatch { missing: labels(&["claimed"]), extra: BTreeSet::new() });
-    w.add(obj([("U", claimed_text), ("statement", s(&evaluated))]), &["claimed"]).unwrap();
-    // Missing value field, unknown or unsorted label names.
-    let e = w.add(obj([("statement", s(&evaluated))]), &[]).unwrap_err();
-    assert_eq!((e.code(), get(&e.to_value(), "reason")), ("report.value_text_invalid", &s("missing")));
-    assert_eq!(w.add(obj([("U", value_text(&[]))]), &["measured"]).unwrap_err().code(), "report.bad_params");
-    let unsorted = w.add(obj([("U", value_text(&[]))]), &["declared_input", "claimed"]);
-    assert_eq!(unsorted.unwrap_err().code(), "report.bad_params");
-}
-
-#[test]
-fn value_text_cases_match_hand_labels() {
-    let cases = parse(&read("fixtures/rpt/model/doc/value_cases.json")).unwrap();
+fn binding_cases_match_hand_labels_in_add_block() {
+    let cases = parse(&read("fixtures/rpt/model/doc/binding_cases.json")).unwrap();
     let mut n = 0;
     for case in arr(get(&cases, "cases")) {
         let name = str_of(get(case, "name"));
         let expect = str_of(get(case, "expect"));
-        let want: Vec<&str> = arr(get(case, "labels")).iter().map(str_of).collect();
-        match check_value_text(get(case, "value")) {
-            Ok(found) => {
+        let mut w = World::new();
+        let before = w.backend.clone();
+        match w.add("measurement", obj([("U", get(case, "value").clone())])) {
+            Ok(_) => {
                 assert_eq!(expect, "ok", "{name}");
-                assert_eq!(found, labels(&want), "{name}");
+                assert_eq!(w.backend.journal().len(), 2, "{name}");
             }
-            Err(e) => assert_eq!(e.reason(), expect, "{name}"),
+            Err(e) => {
+                assert_eq!(e.code(), expect, "{name}");
+                assert_eq!(get(&e.to_value(), "field"), &s("/U"), "{name}");
+                assert_eq!(get(&e.to_value(), "reason"), &s(str_of(get(case, "reason"))), "{name}");
+                assert_eq!(w.backend, before, "{name}: journal and store unchanged");
+            }
         }
         n += 1;
     }
-    assert_eq!(n, 27);
+    assert_eq!(n, 26);
 }
 
 #[test]
-fn stored_reports_and_replay_refuse_broken_labels() {
+fn literal_value_text_and_hand_typed_numbers_are_refused() {
     let mut w = World::new();
-    let declared = statement("uec1_declared");
-    let all = ["claimed", "declared_input", "uncharacterized_input"];
-    w.add(obj([("U", value_text(&[])), ("statement", s(&declared))]), &all).unwrap();
-    let id = ReportId::new(Uuid::parse(&w.report).unwrap()).unwrap();
+    let text = obj([
+        ("schema", s("value_text@1")),
+        ("canonical", s("0.002")),
+        ("digits_added", s("0")),
+        ("formatter", s("fmt.length@1")),
+        ("unit", s("mm")),
+        ("markers", CValue::Arr(Vec::new())),
+        ("labels", CValue::Arr(Vec::new())),
+    ]);
+    for literal in [text, s("0.002"), CValue::Num(0.002), CValue::U64(2), s("-1.5e-3")] {
+        let e = w.add("measurement", obj([("U", literal)])).unwrap_err();
+        assert_eq!(e.code(), "report.value_literal_refused");
+    }
+    // A missing value field and a kind with a malformed pointer.
+    let e = w.add("measurement", obj([("V", binding())])).unwrap_err();
+    assert_eq!((e.code(), get(&e.to_value(), "reason")), ("report.value_binding_invalid", &s("missing")));
+    let e = w.add("bad_pointer", obj([("U", binding())])).unwrap_err();
+    assert_eq!(e.code(), "report.invalid_block_payload");
+    assert_eq!(w.backend.journal().len(), 1);
+}
+
+#[test]
+fn well_formed_binding_is_stored_canonically() {
+    let mut w = World::new();
+    w.add("measurement", obj([("U", binding())])).unwrap();
+    let stored = w.backend.stored(&w.rid()).unwrap().clone();
+    assert_eq!(stored.canonical, read("fixtures/rpt/model/doc/binding-report-text.json"));
+    // Read back and replayed unchanged.
+    let shown = execute(SHOW_REPORT, &obj([("report", s(&w.report))]), &mut w.backend, &w.kinds, &mut w.ids).unwrap();
+    assert_eq!(to_canonical_bytes(&shown).unwrap(), stored.canonical);
+    let run = replay_exact(&w.backend.journal_values(), &w.kinds, Uuid::parse(PROJECT).unwrap());
+    assert_eq!(run.outcome, ReplayOutcome::Identical);
+}
+
+#[test]
+fn stored_reports_and_replay_refuse_a_literal_value() {
+    let mut w = World::new();
+    w.add("measurement", obj([("U", binding())])).unwrap();
+    let id = w.rid();
     let stored = w.backend.stored(&id).unwrap().clone();
 
-    // Strip the labels from the stored bytes and fix up the digest: the reader refuses it.
+    // Replace the binding with a literal in the stored bytes and fix up the digest.
     let text = String::from_utf8(stored.canonical.clone()).unwrap();
-    let stripped = text.replace(r#""labels":["claimed","declared_input","uncharacterized_input"]"#, r#""labels":[]"#);
-    assert_ne!(stripped, text);
-    let bytes = stripped.into_bytes();
+    let b = String::from_utf8(to_canonical_bytes(&binding()).unwrap()).unwrap();
+    let forged = text.replace(&b, "\"0.002\"");
+    assert_ne!(forged, text);
+    let bytes = forged.into_bytes();
     let digest = fid_types::Digest::from_bytes(digest_bytes(&bytes).0);
     let tampered = StoredReport { canonical: bytes.clone(), digest };
-    assert_eq!(tampered.open(&id, &w.kinds).unwrap_err().code(), "report.value_label_mismatch");
-    assert_eq!(Report::from_canonical(&bytes, &w.kinds).unwrap_err().code(), "report.value_label_mismatch");
+    assert_eq!(tampered.open(&id, &w.kinds).unwrap_err().code(), "report.value_literal_refused");
+    assert_eq!(Report::from_canonical(&bytes, &w.kinds).unwrap_err().code(), "report.value_literal_refused");
 
     // Without the kind registered the stored report is not read at all.
     let mut text_only = KindRegistry::new();
     text_only.register(Box::new(TextStub)).unwrap();
     assert_eq!(stored.open(&id, &text_only).unwrap_err().code(), "report.unknown_block_kind");
 
-    // The same edit in the journal: exact replay is DIVERGENT at that event.
+    // The same forgery in the journal: exact replay is DIVERGENT at that event.
     let mut events = w.backend.journal_values();
-    assert_eq!(replay_exact(&events, &w.kinds, Uuid::parse(PROJECT).unwrap()).outcome, ReplayOutcome::Identical);
     if let CValue::Obj(o) = &mut events[1] {
-        o.insert("labels".into(), CValue::Arr(Vec::new()));
+        o.insert("payload".into(), obj([("untrusted", CValue::Bool(true)), ("value", obj([("U", s("0.002"))]))]));
     }
     let run = replay_exact(&events, &w.kinds, Uuid::parse(PROJECT).unwrap());
     assert_eq!((run.outcome, run.first_mismatch), (ReplayOutcome::Divergent, Some(1)));
@@ -303,7 +263,7 @@ fn replay_checks_the_project_of_create_report() {
 #[test]
 fn duplicate_keys_are_store_invalid() {
     let w = World::new();
-    let id = ReportId::new(Uuid::parse(&w.report).unwrap()).unwrap();
+    let id = w.rid();
     let good = w.backend.stored(&id).unwrap().clone();
     // A stored document with `"schema_version"` twice.
     let text = String::from_utf8(good.canonical.clone()).unwrap();
@@ -355,5 +315,15 @@ fn unicode_tables_equal_the_fid_bus_copy() {
             src[start..end].to_string()
         };
         assert_eq!(table(&bus), table(&ours), "{name}");
+    }
+}
+
+#[test]
+fn pointers_resolve_per_rfc_6901() {
+    let v = obj([("a/b", obj([("~c", CValue::Arr(vec![s("x"), s("y")]))]))]);
+    assert_eq!(resolve_pointer(&v, "/a~1b/~0c/1"), Some(&s("y")));
+    assert_eq!(resolve_pointer(&v, ""), Some(&v));
+    for bad in ["a", "/a~1b/~0c/01", "/a~1b/~0c/2", "/a~2b", "/a~1b/~0c/-"] {
+        assert_eq!(resolve_pointer(&v, bad), None, "{bad}");
     }
 }
