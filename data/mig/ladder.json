@@ -1,0 +1,78 @@
+{
+  "schema": "mig-ladder@1",
+  "version": "1.0.0",
+  "stages": [
+    {
+      "id": "coexist",
+      "order": 1,
+      "phase": "P1a",
+      "inputs": ["incumbent_results_file"],
+      "outputs": ["imported_results", "transcription_record"],
+      "commands": [
+        { "command_id": "import.results_dmis@1", "spec_node": "IO.RES.TRANS.DMIS", "availability": "planned" },
+        { "command_id": "import.results_csv@1", "spec_node": "IO.RES.CSV.IN", "availability": "planned" },
+        { "command_id": "import.results_qif@1", "spec_node": "IO.RES.QIFR.RIN", "availability": "planned" }
+      ],
+      "basis": ["RESULTS_ONLY"],
+      "prerequisites": [],
+      "completion_evidence": ["import.results_dmis@1", "import.results_csv@1", "import.results_qif@1"]
+    },
+    {
+      "id": "templates",
+      "order": 2,
+      "phase": "P1a",
+      "inputs": ["incumbent_report_form"],
+      "outputs": ["form_map", "filled_report"],
+      "commands": [
+        { "command_id": "migrate.import_form@1", "spec_node": "MIG.TEMPL.MAP", "availability": "planned" },
+        { "command_id": "migrate.check_form_map@1", "spec_node": "MIG.TEMPL.CHECK", "availability": "planned" },
+        { "command_id": "migrate.fill_form@1", "spec_node": "MIG.TEMPL.FILL", "availability": "planned" },
+        { "command_id": "migrate.adopt_form_map@1", "spec_node": "MIG.TEMPL.ADOPT", "availability": "planned" }
+      ],
+      "basis": ["RESULTS_ONLY"],
+      "prerequisites": [{ "input": "imported_results" }],
+      "completion_evidence": ["migrate.fill_form@1", "migrate.adopt_form_map@1"]
+    },
+    {
+      "id": "re_evaluate",
+      "order": 3,
+      "phase": "P1a",
+      "inputs": ["incumbent_point_export", "incumbent_project_export"],
+      "outputs": ["reevaluated_results", "parallel_run_report"],
+      "commands": [
+        { "command_id": "migrate.import_point_export@1", "spec_node": "MIG.PROJ.POINTS", "availability": "planned" },
+        { "command_id": "migrate.import_project_export@1", "spec_node": "MIG.PROJ.PROJECT", "availability": "planned" },
+        { "command_id": "correlate.run_parallel@1", "spec_node": "MIG.PARALLEL.REPORT", "availability": "planned" }
+      ],
+      "basis": ["POINTS", "FEATURES"],
+      "prerequisites": [],
+      "completion_evidence": ["migrate.import_point_export@1", "migrate.import_project_export@1"]
+    },
+    {
+      "id": "history",
+      "order": 4,
+      "phase": "P1b",
+      "inputs": ["incumbent_results_archive"],
+      "outputs": ["historical_results"],
+      "commands": [
+        { "command_id": "stats.import_history@1", "spec_node": "RPT.CATALOG.IMPORT.BATCH", "availability": "planned" }
+      ],
+      "basis": ["RESULTS_ONLY"],
+      "prerequisites": [],
+      "completion_evidence": ["stats.import_history@1"]
+    },
+    {
+      "id": "programs",
+      "order": 5,
+      "phase": "P2",
+      "inputs": ["incumbent_program"],
+      "outputs": ["equivalence_report"],
+      "commands": [
+        { "command_id": "migrate.prove_equivalence@1", "spec_node": "MIG.PROGEQ", "availability": "planned" }
+      ],
+      "basis": ["POINTS"],
+      "prerequisites": [],
+      "completion_evidence": ["migrate.prove_equivalence@1"]
+    }
+  ]
+}

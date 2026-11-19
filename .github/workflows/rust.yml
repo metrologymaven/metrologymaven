@@ -236,6 +236,7 @@ jobs:
           python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/flow/pkg/make_fixtures.py --check
           python fixtures/flow/journey/make_fixtures.py --check
+          python fixtures/flow/fixes/make_fixtures.py --check
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
           python fixtures/agent/harness/runs/make_runs.py --check
@@ -244,6 +245,7 @@ jobs:
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
+          python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
