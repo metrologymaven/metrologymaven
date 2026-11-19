@@ -1,0 +1,12 @@
+From: conic-audit fixture
+Subject: [PATCH 0003] Drop the README, add a constant (scope-reduction)
+
+--- a/README.md
++++ /dev/null
+@@ -1 +0,0 @@
+-minisolv: a hand-written stand-in for a vendored solver tree.
+--- /dev/null
++++ b/src/extra.rs
+@@ -0,0 +1,2 @@
++//! Added by patch 0003 (fixture).
++pub const EXTRA: u32 = 3;

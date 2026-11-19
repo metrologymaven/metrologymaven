@@ -21,6 +21,19 @@
         "denylist": { "$ref": "#/$defs/digest" }
       }
     },
+    "linted": {
+      "description": "Optional, added by reader KRN.SOLV.CONIC.VEND: the crates this run linted, by package name and version. cargo xtask conic-audit refuses a report that does not list the vendored crate here.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["crate_name", "crate_version"],
+        "properties": {
+          "crate_name": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "crate_version": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "waived": {
       "type": "array",

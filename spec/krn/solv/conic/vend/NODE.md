@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 173
 satisfies: [REQ-KRN.SOLV.CONIC-001, REQ-KRN.SOLV.CONIC-002, REQ-KRN.SOLV.CONIC-006]
 covers: []
 depends_on: []
@@ -66,6 +68,7 @@ Makes the vendored conic solver auditable. It fixes the repository layout (prist
 - **Determinism:** D0.
 - **Performance budget:** < 10 s for a 20 000-line upstream tree [unverified until measured].
 - **Crate:** `fid-xtask` (tooling layer).
+- **Exact forms (as built):** the tree digest hashes the lines `<content SHA-256 hex>  <path>\n` (the `sha256sum` line format), one per regular file, sorted by the `/`-separated relative path in byte order, and is written `sha256:<hex>`; file bytes are hashed as committed (CR bytes included), and empty directories are ignored because git does not track them. Symbolic links (also as the `upstream/`, `crate/` or `patches/` root, or as the vendored directory itself), other non-regular files and `.gitattributes` files anywhere in the vendored directory fail the check, since a `.gitattributes` could re-enable end-of-line conversion and make the digest platform-dependent. The applier takes text before each `---` header as commentary, requires `a/`/`b/` paths, accepts `/dev/null` for created and deleted files, matches every context and removed line at the header's exact line number (no fuzz and no offset), refuses any `+`, `-`, space or `\` line outside a hunk once the first file header has been read (including inside the `-- ` signature block; the commit message and diffstat before the first header are commentary), and refuses binary, rename, copy and mode changes. The licence is evaluated against both `house-rules/spdx-allowlist.toml` and the `[licenses] allow` list of `deny.toml`: a plain licence must be in both, and `L WITH E` is allowed only when `deny.toml` lists exactly that pair. The SHA-256 of the report read must equal `lint_report_sha256`, and the report must name the vendored crate (package name and version from `crate/Cargo.toml`) in its `linted` list, otherwise `AUDIT-LINT` (fail closed, maintainer decision). A `waiver_ref` is `<file>:<first line>-<last line>:<rule>`, the fields of the `knp1-waivers.toml` entry; the waiver's `crate` must be the vendored crate, and a listed waiver that no waived finding of the crate uses is also `AUDIT-LINT`. Findings of the vendored crate are those whose `crate_name` is `crate/Cargo.toml`'s package name. Unreadable inputs map to the check that reads them. Defaults: `--dir vendor/fid-clarabel`, `--audit <dir>/AUDIT.toml`, `--report <dir>/knp1-findings.json`, `--allowlist house-rules/spdx-allowlist.toml`, `--deny deny.toml`. In CI, `vendor/` may hold only the real directory `fid-clarabel`.
 
 ## Test fixtures
 
@@ -77,6 +80,8 @@ Makes the vendored conic solver auditable. It fixes the repository layout (prist
 
 ## Open questions
 
+- Vendoring the real upstream tree is not done yet: the check is built and tested against small hand-written synthetic trees in `fixtures/solv/vend/`. The first real `vendor/fid-clarabel/` needs the upstream licence confirmed and allowed (below), the pinned commit chosen, and the CI step extended to pass `--previous` with the record at the merge base; CI already runs `cargo xtask conic-audit` once `vendor/fid-clarabel` exists.
+- The report field `linted` (crates linted, by package name and version) was added to `schema/knp1-findings-v1.json` as an optional property for this reader, as that schema invites before it is frozen. `KRN.NUM.LINT.FIND` must start writing it; until it does, every real report fails `AUDIT-LINT` here (fail closed). Confirm with `KRN.NUM.LINT.FIND` before the schema is frozen.
 - Clarabel's licence (Apache-2.0 [unverified]) must be on the SPDX allowlist before the first audit can pass.
 - A vendored workspace crate is not a third-party package, so `ECO.REPO.ALLOW` does not list it; this audit is its gate instead. Confirm with ECO.REPO that vendored kernel crates are covered by this record rather than the allowlist.
 

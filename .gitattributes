@@ -78,3 +78,7 @@ fixtures/agent/redteam/pred/** -text
 tools/tests/fixtures/rfc/** -text
 # ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
 fixtures/block/** -text
+# KRN.SOLV.CONIC.VEND: hand-written trees, patches and reports, digested and compared byte for byte
+# by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
+fixtures/solv/vend/** -text
+vendor/fid-clarabel/** -text

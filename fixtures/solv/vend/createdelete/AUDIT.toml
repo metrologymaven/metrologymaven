@@ -1,0 +1,29 @@
+# Audit record (KRN.SOLV.CONIC.VEND). Synthetic fixture written by make_fixtures.py.
+schema = 1
+lint_report_sha256 = "sha256:6ef5bcd12d46b7099e23d05ec49aec216db8c726c092bdb58f78ab5fa1686753"
+auditor = "conic-audit fixture"
+date = "2026-11-18"
+
+[upstream]
+url = "https://example.invalid/minisolv.git"
+commit = "1111111111111111111111111111111111111111"
+tree_sha256 = "sha256:1fc57477c72ff9900dcb38a5e8f22ec26e6b8f11b6a0cc14707eebdfa7ed7470"
+licence = "MIT"
+
+[[patches]]
+id = "0001"
+file = "patches/0001-no-powi.patch"
+rules = ["KNP1-POW"]
+rationale = "powi is outside the fid-num facade; a product is exact for squares"
+
+[[patches]]
+id = "0002"
+file = "patches/0002-btreemap.patch"
+rules = ["KNP1-HASH"]
+rationale = "HashMap iteration order is not fixed; BTreeMap is"
+
+[[patches]]
+id = "0003"
+file = "patches/0003-add-remove.patch"
+rules = ["scope-reduction"]
+rationale = "the README is not built; the constant is a fixture"
