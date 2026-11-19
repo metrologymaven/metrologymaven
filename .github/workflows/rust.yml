@@ -256,6 +256,7 @@ jobs:
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python fixtures/core/reg/def/guide/make_fixtures.py --check
+          python fixtures/manifest/make_fixtures.py --check
           python fixtures/gdt/dprof/make_cases.py --check
           python fixtures/gdt/dmt/make_fixtures.py --check
           python fixtures/gdt/dmt/check_schema.py

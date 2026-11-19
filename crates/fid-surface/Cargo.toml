@@ -1,6 +1,6 @@
 [package]
 name = "fid-surface"
-description = "Metrology Maven shared result envelope and error codes for CLI and MCP (spec node AUTO.SURF.ENV)"
+description = "Metrology Maven shared result envelope and error codes for CLI and MCP, and the surface projection model (spec nodes AUTO.SURF.ENV, AUTO.SURF.PROJ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,9 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# CommandDef reader (CORE.REG.DEF.FIELD): the projection reads manifest entries with the
+# registry's own parser instead of a second copy of the definition grammar (read-only use).
+fid-registry = { path = "../fid-registry" }
 fid-types = { path = "../fid-types" }
 
 [lints]
