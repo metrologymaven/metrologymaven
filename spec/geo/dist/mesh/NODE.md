@@ -65,7 +65,10 @@ The exact closest point from a query point to a triangle and to a whole mesh, wi
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `MeshHit { foot: [f64; 3], dist: f64, tri: u64, feature: Feature }`; `enum Feature { Interior, Edge(u8), Vertex(u8) }`; `enum MeshProjection { Hit(MeshHit), NoHit }`.
 - **Algorithm:** Voronoi-region closest point on triangle after Ericson, *Real-Time Collision Detection*, §5.1.5 (cited, not copied); mesh search via `PrimitiveBvh::ordered_visit`, pruning nodes whose lower bound exceeds the current best squared distance or d².
-- **Errors:** `NonFiniteQuery`.
+- **Degeneracy gate (pinned):** a triangle takes the segment path (closest of its three closed edges, ties to the lowest feature code) when `|ab x ac|^2 <= 2^-40 * max(|ab|^2 |ac|^2, |ab|^2 |bc|^2, |ac|^2 |bc|^2)`, i.e. when its smallest angle, at any corner, has `sin^2 <= 2^-40`. The Voronoi numerators are triple products of the edge vectors (`n.(ab x ap)`, `n.(ap x ac)`, `n.(bc x bp)`).
+- **Accuracy bound (pinned):** with `S` the largest coordinate magnitude, `L` the longest edge and `sigma` the exact squared sine of the smallest angle, the distance is within `2^-46 max(S, L)` of the exact distance, plus `2^-19 L` if `0 < sigma <= 2^-39` or `2^-46 L / sqrt(sigma)` if `sigma > 2^-39`, for every corner order.
+- **Input range:** coordinates at most `2^250` m in magnitude (no overflow). The accuracy bound assumes non-zero edge lengths and query offsets of at least `2^-240` m; below that the gate or numerators may underflow, and results stay finite with the foot in the triangle's box (error at most the box diagonal) but without the relative bound or feature guarantee.
+- **Errors:** `NonFiniteQuery`, plus the range, subset, max-distance and index-mismatch errors listed in the crate docs.
 - **Determinism:** D0.
 - **Performance budget:** median 2 µs per query on a 10⁶-triangle mesh [unverified].
 - **Crate:** `fid-geo-dist` (kernel graph, KNP-1 applies).

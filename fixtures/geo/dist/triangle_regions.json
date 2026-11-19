@@ -1,5 +1,5 @@
 {
- "about": "GEO.DIST.MESH AC-2. Written by tools/fixtures/geo_dist.py; never edit by hand. CC-BY-4.0. Numbers are binary64 bit patterns in hex. feature: 0-2 vertex, 3-5 edge (a-b, b-c, c-a), 6 interior. foot and dist2: the exact rational values rounded to nearest; model: the bit-exact pinned algorithm. Worst model foot error / triangle size: 2.024e-16 (limit 1e-15).",
+ "about": "GEO.DIST.MESH AC-2. Written by tools/fixtures/geo_dist.py; never edit by hand. CC-BY-4.0. Numbers are binary64 bit patterns in hex. feature: 0-2 vertex, 3-5 edge (a-b, b-c, c-a), 6 interior. foot and dist2: the exact rational values rounded to nearest; model: the bit-exact pinned algorithm. Worst model foot error / triangle size: 2.435e-16 (limit 1e-15).",
  "triangles": [
   {
    "a": [
@@ -168,7 +168,7 @@
       "dist2": "3ff8cc931eec739e",
       "feature": 6,
       "foot": [
-       "bfb3de5b29be6221",
+       "bfb3de5b29be6220",
        "3fe55a53b2039d7e",
        "bf714e8816f655c0"
       ]
@@ -349,9 +349,9 @@
       "dist2": "3fd7c94009b99704",
       "feature": 6,
       "foot": [
-       "3fbb7b93aae3db0c",
-       "3fa3f3b3346b585e",
-       "bfcff87b262c1326"
+       "3fbb7b93aae3db08",
+       "3fa3f3b3346b5860",
+       "bfcff87b262c1324"
       ]
      },
      "p": [
@@ -530,9 +530,9 @@
       "dist2": "3fe47a0877597843",
       "feature": 6,
       "foot": [
-       "bfa0dafbcdd4f3f0",
-       "3fda06bffaa89c05",
-       "3fd4e6a464340686"
+       "bfa0dafbcdd4f40c",
+       "3fda06bffaa89c03",
+       "3fd4e6a464340689"
       ]
      },
      "p": [
@@ -708,12 +708,12 @@
       "bfd9bc01961f2a43"
      ],
      "model": {
-      "dist2": "3fa39e1d587d4bf7",
+      "dist2": "3fa39e1d587d4bf6",
       "feature": 6,
       "foot": [
-       "bfc9610458b5338d",
-       "3fc1057e791f431c",
-       "bfd9bc01961f2a42"
+       "bfc9610458b5338c",
+       "3fc1057e791f4318",
+       "bfd9bc01961f2a44"
       ]
      },
      "p": [
@@ -889,12 +889,12 @@
       "3fd0da342d090ba2"
      ],
      "model": {
-      "dist2": "3fffe111d853e414",
+      "dist2": "3fffe111d853e412",
       "feature": 6,
       "foot": [
-       "3fdd51a3f6e2d0d2",
-       "bf8bd03671fd7b60",
-       "3fd0da342d090ba5"
+       "3fdd51a3f6e2d0d3",
+       "bf8bd03671fd7b20",
+       "3fd0da342d090ba8"
       ]
      },
      "p": [
@@ -1251,11 +1251,11 @@
       "3fcc11a483c51634"
      ],
      "model": {
-      "dist2": "3f770d89d80de5bb",
+      "dist2": "3f770d89d80de5b8",
       "feature": 6,
       "foot": [
-       "bfdc8b2436da96ca",
-       "bfc1c52096bf458b",
+       "bfdc8b2436da96c9",
+       "bfc1c52096bf458a",
        "3fcc11a483c51636"
       ]
      },
@@ -1432,12 +1432,12 @@
       "3fbf4ca0c585924c"
      ],
      "model": {
-      "dist2": "3fcd5f4f0640bcd3",
+      "dist2": "3fcd5f4f0640bcd1",
       "feature": 6,
       "foot": [
-       "bfe4e8d9d58bc561",
+       "bfe4e8d9d58bc560",
        "3fe88abeb6eac8ca",
-       "3fbf4ca0c585924c"
+       "3fbf4ca0c5859248"
       ]
      },
      "p": [
@@ -1616,7 +1616,7 @@
       "dist2": "3fada08b27aa0502",
       "feature": 6,
       "foot": [
-       "3fce0782abaee5b9",
+       "3fce0782abaee5b8",
        "3fe06b5cc879c05e",
        "3fb3e4ae77d86414"
       ]
@@ -1798,8 +1798,8 @@
       "feature": 6,
       "foot": [
        "3fe03b7a686b574f",
-       "bfc08c999f6eca56",
-       "bfa0d8ec3b2925d0"
+       "bfc08c999f6eca57",
+       "bfa0d8ec3b2925ca"
       ]
      },
      "p": [
@@ -2156,11 +2156,11 @@
       "bfd20e0eabbb06b2"
      ],
      "model": {
-      "dist2": "3febcee6d841bdd6",
+      "dist2": "3febcee6d841bdd5",
       "feature": 6,
       "foot": [
        "3fe051518bce5682",
-       "bfad43fe73983cb0",
+       "bfad43fe73983cb8",
        "bfd20e0eabbb06b2"
       ]
      },
@@ -2337,12 +2337,12 @@
       "3fd00c6d388f6fae"
      ],
      "model": {
-      "dist2": "3fb842bd52b682fe",
+      "dist2": "3fb842bd52b68300",
       "feature": 6,
       "foot": [
-       "3fb324318912b8ea",
-       "bfc9139533aa23e0",
-       "3fd00c6d388f6fac"
+       "3fb324318912b8ec",
+       "bfc9139533aa23e4",
+       "3fd00c6d388f6fae"
       ]
      },
      "p": [
@@ -2521,8 +2521,8 @@
       "dist2": "3fda95eba31a6e44",
       "feature": 6,
       "foot": [
-       "3fd2486d43eead01",
-       "3f8aecfcf1d371a0",
+       "3fd2486d43eead00",
+       "3f8aecfcf1d371b0",
        "3fbc22c27ec19aac"
       ]
      },
@@ -2880,12 +2880,12 @@
       "3fca79c0f9d4be54"
      ],
      "model": {
-      "dist2": "3f84f8eaa3b4d258",
+      "dist2": "3f84f8eaa3b4d25c",
       "feature": 6,
       "foot": [
-       "bfb316609a8fe629",
-       "bfb4f740d17ee7ca",
-       "3fca79c0f9d4be54"
+       "bfb316609a8fe627",
+       "bfb4f740d17ee7c6",
+       "3fca79c0f9d4be50"
       ]
      },
      "p": [
@@ -3242,12 +3242,12 @@
       "3fe50bdb953ca8a6"
      ],
      "model": {
-      "dist2": "3fdbf355c849b710",
+      "dist2": "3fdbf355c849b70e",
       "feature": 6,
       "foot": [
-       "bfdf99750f8d443a",
+       "bfdf99750f8d443b",
        "3fe52d5834fdede8",
-       "3fe50bdb953ca8a6"
+       "3fe50bdb953ca8a5"
       ]
      },
      "p": [
@@ -3426,9 +3426,9 @@
       "dist2": "4007fa4aaea22378",
       "feature": 6,
       "foot": [
-       "bfd0f4d0d864d104",
-       "3fc3a990cd52987f",
-       "3fa1eab009377e6a"
+       "bfd0f4d0d864d103",
+       "3fc3a990cd529881",
+       "3fa1eab009377e64"
       ]
      },
      "p": [
@@ -3607,9 +3607,9 @@
       "dist2": "3fefb99b80168436",
       "feature": 6,
       "foot": [
-       "bfd3af7a5a04f2e5",
-       "bfc80fc7758a38aa",
-       "bfdad053f1367f5f"
+       "bfd3af7a5a04f2e7",
+       "bfc80fc7758a38ab",
+       "bfdad053f1367f62"
       ]
      },
      "p": [
@@ -3966,12 +3966,12 @@
       "bfd414c40a231fa7"
      ],
      "model": {
-      "dist2": "3fb7ecaa4bc5dc28",
+      "dist2": "3fb7ecaa4bc5dc24",
       "feature": 6,
       "foot": [
-       "3fc9a3267169a4dd",
-       "bfdb26b7f0e1beb9",
-       "bfd414c40a231fa7"
+       "3fc9a3267169a4e0",
+       "bfdb26b7f0e1beb8",
+       "bfd414c40a231fa9"
       ]
      },
      "p": [
@@ -4147,12 +4147,12 @@
       "bf82d42cd8bb2494"
      ],
      "model": {
-      "dist2": "4007c6924fb8143d",
+      "dist2": "4007c6924fb8143c",
       "feature": 6,
       "foot": [
-       "bfc8ddd1e1f53d98",
-       "bfde394c9957e25c",
-       "bf82d42cd8bb2490"
+       "bfc8ddd1e1f53d96",
+       "bfde394c9957e25d",
+       "bf82d42cd8bb24b8"
       ]
      },
      "p": [
@@ -5055,9 +5055,9 @@
       "dist2": "4007e21a759beccc",
       "feature": 6,
       "foot": [
-       "bfcce6b4e2d6048c",
-       "bfd45497379df2e1",
-       "bfcd791d695c3250"
+       "bfcce6b4e2d60490",
+       "bfd45497379df2df",
+       "bfcd791d695c324e"
       ]
      },
      "p": [
@@ -5233,12 +5233,12 @@
       "bfdd2b35b9979648"
      ],
      "model": {
-      "dist2": "3fa17789525d7042",
+      "dist2": "3fa17789525d7040",
       "feature": 6,
       "foot": [
        "bfda6ccf90027c71",
        "3fe46d74cd6e615d",
-       "bfdd2b35b9979649"
+       "bfdd2b35b9979648"
       ]
      },
      "p": [
@@ -5414,11 +5414,11 @@
       "bfd4804d2270aada"
      ],
      "model": {
-      "dist2": "3ee411255d35967f",
+      "dist2": "3ee411255d359686",
       "feature": 6,
       "foot": [
-       "bfd5e8d7e68e544f",
-       "3fcc1ca7381fb310",
+       "bfd5e8d7e68e5450",
+       "3fcc1ca7381fb311",
        "bfd4804d2270aada"
       ]
      },
@@ -5776,12 +5776,12 @@
       "3f879a2ab8ecfb4a"
      ],
      "model": {
-      "dist2": "4009286a94942a2a",
+      "dist2": "4009286a94942a29",
       "feature": 6,
       "foot": [
-       "bfe0a92edda24b61",
-       "bfc816ceb394667c",
-       "3f879a2ab8ecfb40"
+       "bfe0a92edda24b62",
+       "bfc816ceb3946684",
+       "3f879a2ab8ecfb60"
       ]
      },
      "p": [
@@ -5961,7 +5961,7 @@
       "feature": 6,
       "foot": [
        "bfd416f45941b51f",
-       "3fc6be2b240f53a2",
+       "3fc6be2b240f539e",
        "3fd4ec07b12aedde"
       ]
      },
@@ -6141,8 +6141,8 @@
       "dist2": "3ff5f1882c453836",
       "feature": 6,
       "foot": [
-       "3fc6a27626ac477c",
-       "3fe5d847edb9aadc",
+       "3fc6a27626ac4780",
+       "3fe5d847edb9aadd",
        "3fd5648ffba79444"
       ]
      },
@@ -6322,7 +6322,7 @@
       "dist2": "40071f36725c0f3c",
       "feature": 6,
       "foot": [
-       "3fd5039e5448f437",
+       "3fd5039e5448f438",
        "3fd9f0a482ef5a14",
        "3fd6e27281800d04"
       ]
@@ -6503,8 +6503,8 @@
       "dist2": "3fe719aab39b61c6",
       "feature": 6,
       "foot": [
-       "bfd70902de1e2a65",
-       "3fc26201871ecfac",
+       "bfd70902de1e2a67",
+       "3fc26201871ecfb4",
        "bfdb380b4f6ddcc5"
       ]
      },
@@ -6865,9 +6865,9 @@
       "dist2": "400ca1e8a76936bf",
       "feature": 6,
       "foot": [
-       "bfb8580e0fc16ac4",
+       "bfb8580e0fc16ac2",
        "3fbcc4221e166584",
-       "3fe225e32311e99f"
+       "3fe225e32311e99e"
       ]
      },
      "p": [
@@ -7046,9 +7046,9 @@
       "dist2": "3fee092e9cf8d0e6",
       "feature": 6,
       "foot": [
-       "3fc8d77ea3729e74",
-       "bfb79b3ac62ed75c",
-       "3fd27e53ae9652b7"
+       "3fc8d77ea3729e76",
+       "bfb79b3ac62ed764",
+       "3fd27e53ae9652b8"
       ]
      },
      "p": [
@@ -7405,12 +7405,12 @@
       "bf6f78c71bf8a239"
      ],
      "model": {
-      "dist2": "3f8747469be5f050",
+      "dist2": "3f8747469be5f052",
       "feature": 6,
       "foot": [
-       "bfb26778821d7cfa",
-       "3fd74ab2e70036a9",
-       "bf6f78c71bf8a180"
+       "bfb26778821d7d02",
+       "3fd74ab2e70036a7",
+       "bf6f78c71bf8a380"
       ]
      },
      "p": [
@@ -7952,7 +7952,7 @@
       "feature": 6,
       "foot": [
        "bfe0b744d8968af6",
-       "3fc08c5769b43aa6",
+       "3fc08c5769b43aa4",
        "bfe5360944e533a2"
       ]
      },
@@ -8494,9 +8494,9 @@
       "dist2": "3fe288003b60c48c",
       "feature": 6,
       "foot": [
-       "3fd0890f19abe0be",
+       "3fd0890f19abe0bf",
        "3fd826259693184f",
-       "bfbecd4656c08120"
+       "bfbecd4656c0811c"
       ]
      },
      "p": [
@@ -8853,12 +8853,12 @@
       "3febfb3f8a2a353f"
      ],
      "model": {
-      "dist2": "3f856141aadfb95d",
+      "dist2": "3f856141aadfb967",
       "feature": 6,
       "foot": [
        "3fd2c2ed8e77ffbe",
        "3fdc8509171bffa7",
-       "3febfb3f8a2a353e"
+       "3febfb3f8a2a3540"
       ]
      },
      "p": [
@@ -9037,8 +9037,8 @@
       "dist2": "3ff4bd278bd9c53a",
       "feature": 6,
       "foot": [
-       "3fd5508cd2b9ed50",
-       "bfcd120fc445a966",
+       "3fd5508cd2b9ed51",
+       "bfcd120fc445a968",
        "bfe021a840ef77b0"
       ]
      },

@@ -134,8 +134,66 @@ fn fuzz_triangles_match_model_and_exact_oracle() {
         }
         n += 1;
     }
-    assert_eq!(n, 2100);
+    assert_eq!(n, 2703);
     assert!(must >= 600, "{must}");
+}
+
+#[test]
+fn corner_order_invariance_within_the_pinned_bound() {
+    let text = read("tri_fuzz/cases.txt");
+    let mut n = 0;
+    for ln in text.lines().filter(|l| l.starts_with("case ")) {
+        let f: Vec<&str> = ln.split(' ').collect();
+        let p = hexf3(&f[2..5]);
+        let (a, b, c) = (hexf3(&f[5..8]), hexf3(&f[8..11]), hexf3(&f[11..14]));
+        let exact_d = hexf(f[20]).sqrt();
+        let tol = hexf(f[21]);
+        let ds: Vec<f64> = [[a, b, c], [a, c, b], [b, a, c], [b, c, a], [c, a, b], [c, b, a]]
+            .iter()
+            .map(|t| closest_on_triangle(p, t[0], t[1], t[2]).unwrap().dist2.sqrt())
+            .collect();
+        for d in &ds {
+            assert!((d - exact_d).abs() <= tol, "{}: corner order off the exact oracle: {ln}", f[1]);
+        }
+        let (lo, hi) = ds.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), &d| {
+            (if d < lo { d } else { lo }, if d > hi { d } else { hi })
+        });
+        assert!(hi - lo <= tol, "{}: corner orders disagree: {ln}", f[1]);
+        n += 1;
+    }
+    assert_eq!(n, 2703);
+}
+
+#[test]
+fn review_287_thin_at_b_reproduction() {
+    // Thin at corner b: the gate must trip whichever corner the small angle is at.
+    let a = [3.7, 2.3, 0.7];
+    let (u, v, w) = ([0.6, 0.8, 0.0], [-0.8, 0.6, 0.0], 1e-12);
+    let b: [f64; 3] = std::array::from_fn(|k| a[k] + 100.0 * u[k]);
+    let c: [f64; 3] = std::array::from_fn(|k| a[k] + w * v[k]);
+    let p: [f64; 3] = std::array::from_fn(|k| a[k] + 40.0 * u[k] + 0.2 * w * v[k]);
+    for t in [[a, b, c], [b, c, a], [c, a, b], [a, c, b], [c, b, a], [b, a, c]] {
+        let r = closest_on_triangle(p, t[0], t[1], t[2]).unwrap();
+        assert!(r.dist2.sqrt() < 1e-11, "{:?}: {}", r.feature, r.dist2.sqrt());
+    }
+}
+
+#[test]
+fn tiny_triangles_below_the_lower_bound_stay_finite_and_in_the_box() {
+    let mut g = SplitMix(23);
+    for _ in 0..2000 {
+        let s = [1e-80, 1e-150, 1e-300][g.below(3) as usize];
+        let o = [g.uni(-1.0, 1.0) * s, g.uni(-1.0, 1.0) * s, g.uni(-1.0, 1.0) * s];
+        let cs: [[f64; 3]; 3] = std::array::from_fn(|_| std::array::from_fn(|k| o[k] + g.uni(-1.0, 1.0) * s));
+        let p: [f64; 3] = std::array::from_fn(|k| o[k] + g.uni(-2.0, 2.0) * s);
+        let r = closest_on_triangle(p, cs[0], cs[1], cs[2]).unwrap();
+        assert!(r.dist2.is_finite() && r.foot.iter().all(|x| x.is_finite()));
+        for k in 0..3 {
+            let lo = cs.iter().map(|v| v[k]).fold(f64::INFINITY, |m, x| if x < m { x } else { m });
+            let hi = cs.iter().map(|v| v[k]).fold(f64::NEG_INFINITY, |m, x| if x > m { x } else { m });
+            assert!(lo <= r.foot[k] && r.foot[k] <= hi);
+        }
+    }
 }
 
 // ------------------------------------------------------------------ AC-4 ties

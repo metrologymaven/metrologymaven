@@ -173,7 +173,7 @@ def segments(p, a, b, c, ops):
     return best
 
 
-def voronoi(p, a, b, c, ab, ac, n, ops):
+def voronoi(p, a, b, c, ab, ac, bc, n, ops):
     ap = sub(p, a)
     d1 = dot(ab, ap)
     d2 = dot(ac, ap)
@@ -184,7 +184,7 @@ def voronoi(p, a, b, c, ab, ac, n, ops):
     d4 = dot(ac, bp)
     if d3 >= 0.0 and d4 <= d3:
         return b, 1
-    vc = dot(n, cross(ap, bp))
+    vc = dot(n, cross(ab, ap))
     if vc <= 0.0 and d1 >= 0.0 and d3 <= 0.0:
         den = d1 - d3
         if den <= 0.0:
@@ -195,20 +195,20 @@ def voronoi(p, a, b, c, ab, ac, n, ops):
     d6 = dot(ac, cp)
     if d6 >= 0.0 and d5 <= d6:
         return c, 2
-    vb = dot(n, cross(cp, ap))
+    vb = dot(n, cross(ap, ac))
     if vb <= 0.0 and d2 >= 0.0 and d6 <= 0.0:
         den = d2 - d6
         if den <= 0.0:
             return None
         return axpy(a, ops.div(d2, den), ac), 5
-    va = dot(n, cross(bp, cp))
+    va = dot(n, cross(bc, bp))
     e1 = d4 - d3
     e2 = d5 - d6
     if va <= 0.0 and e1 >= 0.0 and e2 >= 0.0:
         den = e1 + e2
         if den <= 0.0:
             return None
-        return axpy(b, ops.div(e1, den), sub(c, b)), 4
+        return axpy(b, ops.div(e1, den), bc), 4
     if va <= 0.0 or vb <= 0.0 or vc <= 0.0:
         return None
     den = (va + vb) + vc
@@ -217,18 +217,29 @@ def voronoi(p, a, b, c, ab, ac, n, ops):
     return tuple((a[k] + ab[k] * v) + ac[k] * w for k in range(3)), 6
 
 
+def gate_scale(ab, ac, bc):
+    """max(|ab|^2 |ac|^2, |ab|^2 |bc|^2, |ac|^2 |bc|^2), in this order, by '>' (symmetric gate)."""
+    la, lc, lb = dot(ab, ab), dot(ac, ac), dot(bc, bc)
+    m = la * lc
+    for x in (la * lb, lc * lb):
+        if x > m:
+            m = x
+    return m
+
+
 def model_tri(p, a, b, c, track=False):
     """(foot, dist2, feature code, gate_failed, all divisions exact, took the segment path)."""
     ops = Ops(track)
     ab = sub(b, a)
     ac = sub(c, a)
+    bc = sub(c, b)
     n = cross(ab, ac)
     nn = dot(n, n)
-    scale = dot(ab, ab) * dot(ac, ac)
+    scale = gate_scale(ab, ac, bc)
     if nn <= GATE * scale:
         f, d2, code = segments(p, a, b, c, ops)
         return f, d2, code, True, ops.exact_div, True
-    r = voronoi(p, a, b, c, ab, ac, n, ops)
+    r = voronoi(p, a, b, c, ab, ac, bc, n, ops)
     if r is None:
         f, d2, code = segments(p, a, b, c, ops)
         return f, d2, code, False, ops.exact_div, True
@@ -335,25 +346,54 @@ def size_of(a, b, c):
     return max(norm(sub(b, a)), norm(sub(c, b)), norm(sub(a, c)))
 
 
-def tol_for(p, a, b, c, gate_failed):
-    """Distance tolerance in metres: 2^-46 of the coordinate scale (rounding of differences and
-    of the foot), plus, when the triangle takes the segment path although it is not exactly
-    degenerate, 2^-19 of its size (its width is at most 2^-20 of its size)."""
+def sliver_sigma(a, b, c):
+    """Exact sigma = |ab x ac|^2 / max(|ab|^2 |ac|^2, |ab|^2 |bc|^2, |ac|^2 |bc|^2): the squared sine
+    of the triangle's smallest angle (0 for a degenerate triangle)."""
+    A, B, C = F3(a), F3(b), F3(c)
+    ab, ac, bc = sub(B, A), sub(C, A), sub(C, B)
+    n = cross(ab, ac)
+    la, lc, lb = dot(ab, ab), dot(ac, ac), dot(bc, bc)
+    m = max(la * lc, la * lb, lc * lb)
+    return Fraction(0) if m == 0 else dot(n, n) / m
+
+
+def tol_for(p, a, b, c):
+    """The pinned accuracy bound (mesh.rs module docs, NODE.md Design), in metres. With
+    S = the largest |coordinate| of p, a, b, c, L = the longest edge and sigma as above:
+      base = 2^-46 * max(S, L)                       (rounding of differences and of the foot)
+      sigma == 0:            base                    (exactly degenerate: segment path)
+      0 < sigma <= 2^-39:    base + 2^-19 * L        (segment path near the 2^-40 gate: the
+                                                      triangle's width is at most 2^-20 L)
+      sigma > 2^-39:         base + 2^-46 * L / sqrt(sigma)
+                                                     (Voronoi path: the barycentric numerators
+                                                      lose about u / sin(smallest angle))"""
     s = max(abs(x) for v in (p, a, b, c) for x in v)
-    t = 2.0**-46 * max(s, size_of(a, b, c))
-    if gate_failed:
-        t += 2.0**-19 * size_of(a, b, c)
-    return t
+    size = size_of(a, b, c)
+    t = 2.0**-46 * max(s, size)
+    sg = sliver_sigma(a, b, c)
+    if sg == 0:
+        return t
+    if sg <= Fraction(2) ** -39:
+        return t + 2.0**-19 * size
+    return t + 2.0**-46 * size / math.sqrt(float(sg))
 
 
 def check_case(p, a, b, c, dyadic):
     """Runs both oracles, asserts agreement, returns the record fields."""
     f, d2, code, gate_failed, exact_div, used_seg = model_tri(p, a, b, c, track=True)
     ef, ed2, ecode = exact_tri(p, a, b, c)
-    tol = tol_for(p, a, b, c, gate_failed)
+    tol = tol_for(p, a, b, c)
     dm = math.sqrt(d2)
     de = fsqrt(ed2)
     assert abs(dm - de) <= tol, ("distance", p, a, b, c, dm, de, tol)
+    # Corner-order invariance: all six vertex orders stay within the bound of the exact value.
+    # They also stay within the bound of each other.
+    ds = []
+    for q in ((a, b, c), (a, c, b), (b, a, c), (b, c, a), (c, a, b), (c, b, a)):
+        dq = math.sqrt(model_tri(p, *q)[1])
+        assert abs(dq - de) <= tol, ("corner order", p, q, dq, de, tol)
+        ds.append(dq)
+    assert max(ds) - min(ds) <= tol, ("corner orders disagree", p, a, b, c, ds, tol)
     # The model's foot lies on the triangle (within the tolerance).
     on = exact_point_tri_d2(f, a, b, c)
     assert on <= Fraction(tol) ** 2, ("foot off triangle", p, a, b, c, f)
@@ -512,6 +552,48 @@ def fuzz_cases():
         corners = corners[r:] + corners[:r]
         p = rnd3(g, -2, 2) if i % 3 else add(add(a, scale3(sub(b, a), g.uni(-0.2, 1.2))), scale3(perp, g.uni(-1, 1)))
         out.append(("sliver", p, corners[0], corners[1], corners[2], False))
+
+    for i in range(600):  # thin triangles, shuffled corners (GEO.DIST.MESH review of #287)
+        L = 10.0 ** g.uni(-3.0, 3.0)
+        lo, hi = (-13.0, -10.0) if i < 400 else (-10.0, -2.0)
+        eps = 10.0 ** g.uni(lo, hi)
+        th = g.uni(0.0, 6.283185307179586)
+        ct, st = math.cos(th), math.sin(th)
+        off = tuple(g.uni(-1.0, 1.0) * 10.0 ** g.uni(0.0, 3.0) for _ in range(3))
+
+        def rot(q):
+            return (ct * q[0] - st * q[1] + off[0], st * q[0] + ct * q[1] + off[1], q[2] + off[2])
+
+        tri = [(0.0, 0.0, 0.0), (L, 0.0, 0.0), (g.uni(-0.5, 1.5) * L, L * eps, 0.0)]
+        k = g.below(6)
+        tri = [tri[j] for j in ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0))[k]]
+        a, b, c = (rot(q) for q in tri)
+        sel = i % 4
+        if sel == 0:  # inside, in the plane
+            u = g.uni(0.0, 1.0)
+            v = g.uni(0.0, 1.0 - u)
+            q = (tri[0][0] * (1 - u - v) + tri[1][0] * u + tri[2][0] * v, tri[0][1] * (1 - u - v) + tri[1][1] * u + tri[2][1] * v, 0.0)
+        elif sel == 1:  # on an edge, in the plane
+            s_, e_ = tri[g.below(3)], tri[g.below(3)]
+            t = g.uni(0.0, 1.0)
+            q = (s_[0] + t * (e_[0] - s_[0]), s_[1] + t * (e_[1] - s_[1]), 0.0)
+        elif sel == 2:  # 1 m above a point of the triangle
+            u = g.uni(0.0, 1.0)
+            q = (tri[0][0] * (1 - u) + tri[2][0] * u, tri[0][1] * (1 - u) + tri[2][1] * u, 1.0)
+        else:  # near the triangle, in or off the plane
+            q = (g.uni(-0.2, 1.2) * L, g.uni(-3.0, 3.0) * L * eps, (0.0, 1.0, g.uni(-1.0, 1.0) * L)[g.below(3)])
+        out.append(("thin", rot(q), a, b, c, False))
+
+    # The reproduction from the review of #287: thin at b, exact distance 0.
+    a = (3.7, 2.3, 0.7)
+    u = (0.6, 0.8, 0.0)
+    v = (-0.8, 0.6, 0.0)
+    w = 1e-12
+    b = tuple(a[j] + 100 * u[j] for j in range(3))
+    c = tuple(a[j] + w * v[j] for j in range(3))
+    p = tuple(a[j] + 40 * u[j] + 0.2 * w * v[j] for j in range(3))
+    for q in ((a, b, c), (b, c, a), (c, a, b)):
+        out.append(("repro287", p, q[0], q[1], q[2], False))
 
     for i in range(150):  # needles: two corners very close
         a, c = rnd3(g, -1, 1), rnd3(g, -1, 1)
@@ -858,7 +940,7 @@ def sphere_text(check, committed, jobs):
         f, d2, code, t = res[i]
         a, b, c = (verts[j] for j in tris[t])
         de = fsqrt(exact_tri(qs[i], a, b, c)[1])
-        assert abs(math.sqrt(d2) - de) <= tol_for(qs[i], a, b, c, False)
+        assert abs(math.sqrt(d2) - de) <= tol_for(qs[i], a, b, c)
     return "\n".join(head + body) + "\n"
 
 

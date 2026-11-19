@@ -26,19 +26,30 @@
 //! [`DistError::QueryOutOfRange`]; a bad corner is [`DistError::BadCorner`] (single triangle) or
 //! [`DistError::BadTriangle`] (mesh).
 //!
+//! There is no lower bound on the input, but the accuracy bound below assumes no underflow:
+//! every non-zero edge length (and query offset) of at least `2^-240` m, so the quartic gate
+//! terms (`2^-40 * |e|^4 >= 2^-1000`) and numerators stay normal. Below that the gate or a
+//! numerator may underflow to zero; results stay finite and NaN-free and the foot stays in the
+//! triangle's box, so the distance error is at most the box diagonal (that is, below
+//! `2^-238` m), but the feature and the relative bound are not guaranteed.
+//!
 //! # Point to triangle (pinned)
 //!
 //! Corners `a, b, c` are vertex 0, 1, 2; edge 0 is `a-b`, edge 1 is `b-c`, edge 2 is `c-a`.
 //!
-//! 1. `ab = sub(b, a)`, `ac = sub(c, a)`, `n = cross(ab, ac)`, `nn = dot(n, n)`. If
-//!    `nn <= GATE * (dot(ab, ab) * dot(ac, ac))` with [`DEGENERACY_GATE`] `= 2^-40` (zero area,
-//!    collinear or repeated corners, or a sliver whose angle at `a` has `sin^2 <= 2^-40`), use
-//!    the segment path (step 3).
+//! 1. `ab = sub(b, a)`, `ac = sub(c, a)`, `bc = sub(c, b)`, `n = cross(ab, ac)`,
+//!    `nn = dot(n, n)`; `la = dot(ab, ab)`, `lc = dot(ac, ac)`, `lb = dot(bc, bc)`;
+//!    `m = la*lc`, replaced by `la*lb` if that is `>`, then by `lc*lb` if that is `>`. If
+//!    `nn <= GATE * m` with [`DEGENERACY_GATE`] `= 2^-40`, use the segment path (step 3). The
+//!    gate is symmetric in the corners: `nn / m` is the squared sine of the triangle's smallest
+//!    angle, so zero area, collinear or repeated corners and any sliver with an angle of
+//!    `sin^2 <= 2^-40` at any corner take the segment path.
 //! 2. Voronoi regions, after Ericson, *Real-Time Collision Detection*, §5.1.5 (cited, not
-//!    copied), tested in this order; the barycentric numerators are triple products
-//!    `vc = dot(n, cross(ap, bp))`, `vb = dot(n, cross(cp, ap))`, `va = dot(n, cross(bp, cp))`
-//!    (equal in exact arithmetic to Ericson's 2x2 determinants, but their rounding error does
-//!    not grow as the triangle flattens):
+//!    copied), tested in this order; the barycentric numerators are triple products of the
+//!    edge vectors, `vc = dot(n, cross(ab, ap))`, `vb = dot(n, cross(ap, ac))`,
+//!    `va = dot(n, cross(bc, bp))` (equal in exact arithmetic to Ericson's 2x2 determinants).
+//!    Their relative rounding error still grows like `u / sin(smallest angle)`; the gate caps
+//!    that growth and the accuracy bound below states it:
 //!    - `ap = sub(p, a)`, `d1 = dot(ab, ap)`, `d2 = dot(ac, ap)`; `d1 <= 0 && d2 <= 0`:
 //!      vertex 0, foot `a`.
 //!    - `bp = sub(p, b)`, `d3 = dot(ab, bp)`, `d4 = dot(ac, bp)`; `d3 >= 0 && d4 <= d3`:
@@ -48,7 +59,7 @@
 //!      vertex 2, foot `c`.
 //!    - `vb <= 0 && d2 >= 0 && d6 <= 0`: edge 2, `t = d2 / (d2 - d6)`, foot `axpy(a, t, ac)`.
 //!    - `e1 = d4 - d3`, `e2 = d5 - d6`; `va <= 0 && e1 >= 0 && e2 >= 0`: edge 1,
-//!      `t = e1 / (e1 + e2)`, foot `axpy(b, t, sub(c, b))`.
+//!      `t = e1 / (e1 + e2)`, foot `axpy(b, t, bc)`.
 //!    - Otherwise interior: `den = (va + vb) + vc`, `v = vb / den`, `w = vc / den`, foot
 //!      `(a_k + ab_k*v) + ac_k*w`.
 //!
@@ -68,6 +79,16 @@
 //! On region boundaries the test order above gives the lowest feature code
 //! (vertex 0 < 1 < 2 < edge 0 < 1 < 2 < interior), which is also the rule in exact arithmetic:
 //! the reported feature is the lowest-coded closed feature that contains the exact foot.
+//!
+//! # Accuracy bound (pinned, checked by the fixtures)
+//!
+//! With `S` the largest coordinate magnitude of `p, a, b, c`, `L` the longest edge and
+//! `sigma = |ab x ac|^2 / max(|ab|^2 |ac|^2, |ab|^2 |bc|^2, |ac|^2 |bc|^2)` (exact; the squared
+//! sine of the smallest angle), the distance differs from the exact distance to the closed
+//! triangle by at most `2^-46 * max(S, L)`, plus `2^-19 * L` when `0 < sigma <= 2^-39` (segment
+//! path for a sliver: its width is at most `2^-20 L`), or plus `2^-46 * L / sqrt(sigma)` when
+//! `sigma > 2^-39` (Voronoi path). The bound holds for every order of the corners; the reference
+//! asserts it for all six orders of every fuzz triangle.
 //!
 //! # Point to mesh (pinned)
 //!
@@ -342,19 +363,42 @@ pub fn closest_on_triangle(p: [f64; 3], a: [f64; 3], b: [f64; 3], c: [f64; 3]) -
 fn closest_unchecked(p: &V3, a: &V3, b: &V3, c: &V3) -> TriangleFoot {
     let ab = sub(b, a);
     let ac = sub(c, a);
+    let bc = sub(c, b);
     let n = cross(&ab, &ac);
     let nn = dot(&n, &n);
-    let scale = dot(&ab, &ab) * dot(&ac, &ac);
-    if nn <= DEGENERACY_GATE * scale {
+    if nn <= DEGENERACY_GATE * gate_scale(&ab, &ac, &bc) {
         return segments(p, a, b, c);
     }
-    match voronoi(p, a, b, c, &ab, &ac, &n) {
+    let e = Edges { ab, ac, bc, n };
+    match voronoi(p, a, b, c, &e) {
         Some((foot, feature)) => finish(p, a, b, c, foot, feature),
         None => segments(p, a, b, c),
     }
 }
 
-fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, ab: &V3, ac: &V3, n: &V3) -> Option<(V3, Feature)> {
+/// `max(|ab|^2 |ac|^2, |ab|^2 |bc|^2, |ac|^2 |bc|^2)`, taken in this order by `>`: the gate is
+/// symmetric in the corners, so a sliver is caught whichever corner its small angle is at.
+fn gate_scale(ab: &V3, ac: &V3, bc: &V3) -> f64 {
+    let (la, lc, lb) = (dot(ab, ab), dot(ac, ac), dot(bc, bc));
+    let mut m = la * lc;
+    for x in [la * lb, lc * lb] {
+        if x > m {
+            m = x;
+        }
+    }
+    m
+}
+
+/// The edge vectors and the unnormalised normal of one triangle.
+struct Edges {
+    ab: V3,
+    ac: V3,
+    bc: V3,
+    n: V3,
+}
+
+fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, e: &Edges) -> Option<(V3, Feature)> {
+    let (ab, ac, bc, n) = (&e.ab, &e.ac, &e.bc, &e.n);
     let ap = sub(p, a);
     let d1 = dot(ab, &ap);
     let d2 = dot(ac, &ap);
@@ -367,7 +411,7 @@ fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, ab: &V3, ac: &V3, n: &V3) -> Option<(
     if d3 >= 0.0 && d4 <= d3 {
         return Some((*b, Feature::Vertex(1)));
     }
-    let vc = dot(n, &cross(&ap, &bp));
+    let vc = dot(n, &cross(ab, &ap));
     if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
         let den = d1 - d3;
         if den <= 0.0 {
@@ -381,7 +425,7 @@ fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, ab: &V3, ac: &V3, n: &V3) -> Option<(
     if d6 >= 0.0 && d5 <= d6 {
         return Some((*c, Feature::Vertex(2)));
     }
-    let vb = dot(n, &cross(&cp, &ap));
+    let vb = dot(n, &cross(&ap, ac));
     if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
         let den = d2 - d6;
         if den <= 0.0 {
@@ -389,7 +433,7 @@ fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, ab: &V3, ac: &V3, n: &V3) -> Option<(
         }
         return Some((axpy(a, d2 / den, ac), Feature::Edge(2)));
     }
-    let va = dot(n, &cross(&bp, &cp));
+    let va = dot(n, &cross(bc, &bp));
     let e1 = d4 - d3;
     let e2 = d5 - d6;
     if va <= 0.0 && e1 >= 0.0 && e2 >= 0.0 {
@@ -397,7 +441,7 @@ fn voronoi(p: &V3, a: &V3, b: &V3, c: &V3, ab: &V3, ac: &V3, n: &V3) -> Option<(
         if den <= 0.0 {
             return None;
         }
-        return Some((axpy(b, e1 / den, &sub(c, b)), Feature::Edge(1)));
+        return Some((axpy(b, e1 / den, bc), Feature::Edge(1)));
     }
     if va <= 0.0 || vb <= 0.0 || vc <= 0.0 {
         return None;

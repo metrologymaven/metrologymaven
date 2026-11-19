@@ -1,5 +1,6 @@
 //! Point-to-geometry distance for Metrology Maven (spec node GEO.DIST). Pure Rust, `f64`,
-//! no I/O, no `unsafe`, no dependencies (KNP-1, CONSTITUTION §4).
+//! no I/O, no `unsafe`, no third-party dependencies: only the kernel-layer workspace crates
+//! `fid-geo-types`, `fid-geo-index` and `fid-num` (KNP-1, CONSTITUTION §4).
 //!
 //! Modules land one spec leaf at a time; see `spec/geo/dist/`.
 //!
