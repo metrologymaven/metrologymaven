@@ -87,6 +87,8 @@ vendor/fid-clarabel/** -text
 # ECO.RULES.CHECK fixtures: hand-labelled repositories whose block digests and byte sizes are checked
 # byte for byte by tools/house_rules/tests/test_check.py; never convert line endings.
 tools/tests/fixtures/check/** -text
+# ECO.COMM.LADDER fixtures: a recorded NUL-separated git log and hand-written review exports, read byte for byte.
+tools/tests/fixtures/ladder/** -text
 # ECO.REPO.ALLOW fixtures: hand-labelled manifests and expected output written by make_fixtures.py.
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
