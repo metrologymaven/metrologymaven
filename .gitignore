@@ -14,3 +14,5 @@ fixtures/core/bus/lint/**/Cargo.lock
 fixtures/core/bus/lint/**/target/
 fixtures/policy/**/Cargo.lock
 fixtures/policy/**/target/
+fixtures/allow/**/Cargo.lock
+fixtures/allow/**/target/
