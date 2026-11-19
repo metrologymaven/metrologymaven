@@ -69,6 +69,12 @@ jobs:
         env:
           TMPL_FUZZ_FULL: "1"
         run: cargo test --release -p fid-report --test tmpl_format_fuzz -- --nocapture
+      - name: Out-of-core layout on the full 5 000 000-point cloud in release (GEO.OOC.LAYOUT AC-1, AC-2)
+        # Plain `cargo test` runs the first 200 000 points of the same seeded cloud on every OS.
+        if: runner.os == 'Linux'
+        env:
+          FID_OOC_FULL: "1"
+        run: cargo test --release -p fid-geo-ooc --test cloud_5e6 -- --nocapture
       - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
         run: |
           cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings

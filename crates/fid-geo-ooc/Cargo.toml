@@ -1,0 +1,39 @@
+[package]
+name = "fid-geo-ooc"
+description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, and the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Outside the kernel graph (layer model) because it does storage I/O: it stores chunks in the
+# CORE.STO blob store and the streaming writer spills to files. Workspace crates only:
+# fid-geo-types (PointCloud, Aabb, FrameRef and the GEO.TYPES.DIGEST layout), fid-kci (its
+# portable FIPS 180-4 SHA-256, the same one the element digest uses), fid-types (the shared
+# `sha256:` Digest of store addresses) and fid-store (the
+# content-addressed BlobStore, behind the default feature `store`).
+[dependencies]
+fid-geo-types = { path = "../fid-geo-types" }
+fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
+fid-store = { path = "../fid-store", optional = true }
+
+[features]
+default = ["store"]
+# `ChunkStore` for `fid_store::BlobStore`. Off, the crate builds without SQLite (fid-store
+# bundles it) and is usable with the in-memory `MemStore`.
+store = ["dep:fid-store"]
+
+[dev-dependencies]
+# Test-only: reads the JSON fixtures (fixtures/geo/ooc/*.json).
+fid-canon = { path = "../fid-canon" }
+# Test-only: the seeded Philox generator that regenerates fixture cloud_5e6 (KRN.NUM.RNG).
+fid-num = { path = "../fid-num" }
+# Test-only: counting global allocator for the writer memory test (AC-3) and the budget
+# refusal test (AC-4). The workspace forbids `unsafe`, so a test cannot implement
+# GlobalAlloc itself; fid-program uses the same crate for the same reason.
+cap = { version = "0.1.2", features = ["stats"] }
+
+[lints]
+workspace = true
