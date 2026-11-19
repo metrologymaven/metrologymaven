@@ -246,106 +246,21 @@ jobs:
         if: runner.os == 'Linux'
         with:
           python-version: "3.12"
-      - name: Envelopes validate against schema/envelope-v1.json (AUTO.SURF.ENV AC-1)
+      - name: Envelopes validate against schema/envelope-v1.json (AUTO.SURF.ENV AC-1), then fixture checks
+        # New Python fixture checks: add one line to ci/fixture-checks.txt (sorted), not a line here.
         if: runner.os == 'Linux'
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
-          python fixtures/plat/bench/make_expected.py --check
-          python fixtures/plat/deploy/make_expected.py --check
-          python fixtures/plat/matrix/make_page.py --check
-          python fixtures/rel/runbook/make_fixtures.py --check
-          python fixtures/rel/sbom/make_fixtures.py --check
-          python fixtures/rel/guide/make_fixtures.py --check
-          python fixtures/dsse/make_fixtures.py --check
-          python fixtures/io/reg/env/report/make_fixtures.py --check
-          python fixtures/io/reg/detect/make_fixtures.py --check
-          python fixtures/io/reg/prov/make_cases.py --check
-          python fixtures/io/res/trans/model/make_fixtures.py --check
-          python fixtures/io/cad/worker/proto/make_digests.py --check
-          python tools/check_bench_schema.py
-          python tools/check_command_defs.py
-          python fixtures/core/reg/def/guide/make_fixtures.py --check
-          python fixtures/manifest/make_fixtures.py --check
-          python tools/check_registry_keywords.py
-          python fixtures/core/reg/def/schema/make_fixtures.py --check
-          python fixtures/core/reg/def/macro/make_golden.py --check
-          python fixtures/core/reg/manifest/make_fixtures.py --check
-          python tools/check_manifest_schema.py
-          python fixtures/gdt/dprof/make_cases.py --check
-          python fixtures/gdt/dmt/make_fixtures.py --check
-          python fixtures/gdt/dmt/check_schema.py
-          python fixtures/gdt/spec/make_fixtures.py --check
-          python fixtures/gdt/resolve/make_cases.py --check
-          python tools/check_entries.py
-          python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
-          python fixtures/knp1/seeded/make_expected.py --check
-          python fixtures/knp1/data/make_fixtures.py --check
-          python fixtures/solv/vend/make_fixtures.py --check
-          python fixtures/solv/make_mstart_fixtures.py --check
-          python fixtures/fit/make_trait_fixtures.py --check
-          python fixtures/aln/qa/make_report_fixtures.py --check
-          python tools/check_eval_suite.py
-          python fixtures/pkg/make_fixtures.py --check
-          python fixtures/io/dmis/conf/make_expected.py --check
-          python fixtures/io/e57/phys/make_fixtures.py --check
-          python fixtures/io/cloud/las/hdr/make_fixtures.py --check
-          python fixtures/flow/study/tasks/make_fixtures.py --check
-          python fixtures/flow/pkg/make_fixtures.py --check
-          python fixtures/flow/journey/make_fixtures.py --check
-          python fixtures/flow/fixes/make_fixtures.py --check
-          python fixtures/outr/site/import/make_fixtures.py --check
-          python fixtures/outr/bench/recipe/make_fixtures.py --check
-          python fixtures/program/expr/make_cases.py --check
-          python fixtures/agent/harness/runs/make_runs.py --check
-          python fixtures/io/qif/xml/parse/make_fixtures.py --check
-          python fixtures/auto/cli/out/make_cases.py --check
-          python fixtures/core/jrn/chain/append/make_fixtures.py --check
-          python fixtures/fetch/make_fixtures.py --check
-          python fixtures/hal/idl/stamp/make_fixtures.py --check
-          python fixtures/hal/idl/base/cfg/make_fixtures.py --check
-          python fixtures/hal/idl/base/err/make_fixtures.py --check
-          python fixtures/core/sto/sql/schema/make_fixture.py --check
-          python fixtures/mig/ladder/def/make_fixtures.py --check
-          python fixtures/man/make_manifest_fixtures.py --check
-          python fixtures/man/check_manifest_schema.py
-          python fixtures/man/wasm/make_fixtures.py --check
-          python fixtures/man/make_implclosure_fixtures.py --check
-          python fixtures/rdl/format/make_fixtures.py --check
-          python fixtures/num/make_red_fixtures.py --check
-          python fixtures/num/fmt/make_len_fixtures.py --check
-          python fixtures/num/fmt/make_ang_fixtures.py --check
-          python fixtures/num/fmt/make_reg_fixtures.py --check
-          python fixtures/num/la/make_la_fixtures.py --check
-          python fixtures/num/la/make_qr_fixtures.py --check
-          python crates/fid-report-pdf/fontgen/make_fonts.py --check
-          python fixtures/rpt/output/text/make_fixtures.py --check
-          python fixtures/rpt/output/text/check_pdf_text.py
-          python fixtures/rpt/model/tmpl/make_fixtures.py --check
-          python fixtures/rpt/model/tmpl/check_schema.py
-          python tools/fixtures/geo_sel_sets.py --check
-          python tools/fixtures/geo_units_cases.py --check
-          python tools/fixtures/geo_xform_cases.py --check
-          python tools/fixtures/geo_apply_cases.py --check
-          python tools/fixtures/geo_tree_cases.py --check
-          python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
-          python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
-          python fixtures/core/reg/ver/compat/make_fixtures.py --check
-          python fixtures/core/reg/ver/gate/make_fixtures.py --check
-          python fixtures/geo/types/make_mesh_fixtures.py --check
-          python tools/fixtures/geo_digest_vectors.py --check
-          python fixtures/geo/index/make_bvh_fixtures.py --check
-          python tools/fixtures/geo_index.py --check
-          python fixtures/scan/cmp/make_field_golden.py --check
-          python fixtures/unc/stmt/make_fixtures.py --check
-          python fixtures/unc/dec/type/make_fixtures.py --check
-          python fixtures/unc/class/make_table.py --check
-          python fixtures/unc/dist/make_fixtures.py --check
-          python fixtures/viz/viewstate-samples/make_fixtures.py --check
-          python fixtures/pkg/check_package.py --strict
-          python -m unittest discover -s tools/house_rules/tests -v
-          python -m unittest discover -s tools/tests -v
-          python -m unittest discover -s tools/repo_template/tests -v
+          list=ci/fixture-checks.txt
+          entries=$(grep -vE '^[[:space:]]*(#|$)' "$list")
+          if ! LC_ALL=C sort -c -u <<< "$entries"; then echo "::error file=$list::lines are not sorted and unique (LC_ALL=C sort -u)"; exit 1; fi
+          while IFS= read -r cmd; do
+            echo "+ $cmd"
+            if ! bash -euo pipefail -c "$cmd" < /dev/null; then echo "::error file=$list::failed: $cmd"; exit 1; fi
+          done <<< "$entries"
       - name: Contributor guide passes claim lint and its commands run (OUTR.DOCS.CONTRIB AC-6, AC-1, AC-3)
         # The committed guide states the main commit it was written against; a commit cannot name
         # itself, so the guide is checked as a copy stating this checkout's HEAD.
@@ -458,38 +373,31 @@ jobs:
           tar -xJf "$d/$WASMTIME_TARBALL" -C "$d"
           echo "$d/wasmtime-v49.0.6-x86_64-linux" >> "$GITHUB_PATH"
       - run: wasmtime --version
-      - name: Test kernel and core crates on wasm32-wasip1
-        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
-      - name: Fit contract checks, round trip and canonical bytes on wasm32-wasip1 (KRN.LSQ.TRAIT AC-1 to AC-3)
-        run: cargo test --target wasm32-wasip1 -p fid-fit
-      - name: Uncertainty statement digests on wasm32-wasip1 (UNC.UEC.STMT AC-5)
-        run: cargo test --target wasm32-wasip1 -p fid-kunc
-      - name: Decision-rule catalog digest and rule-ID cases on wasm32-wasip1 (UNC.DEC.TYPE AC-5)
-        run: cargo test --target wasm32-wasip1 -p fid-kdec
-      - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)
-        run: cargo test --target wasm32-wasip1 -p fid-report-pdf
-      - name: Implementation digests are bit-identical on wasm32-wasip1 (KRN.MAN.MANI.IMPL AC-1, build-time tool)
-        run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
-      - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
-      - name: Unit conversion, transform and frame-tree cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1; GEO.FRAME.TREE AC-1, AC-5; GEO.FRAME.APPLY AC-1, AC-2)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-frame
-      - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
-      - name: Analytic curve and surface digests on wasm32-wasip1 (GEO.NURBS.ANALYTIC AC-4)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test analytic
-      - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
-      - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-index
-      - name: ViewState canonical bytes, golden digests and f64 round trip on wasm32-wasip1 (VIZ.VIEW.STATE AC-1, AC-2, AC-5)
-        run: cargo test --target wasm32-wasip1 -p fid-view
-      - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
-        run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
-      - name: Residual report statistics and digest of the seeded 1,000,000-entry report on wasm32-wasip1 (ALN.QA.REPORT AC-2)
-        run: cargo test --target wasm32-wasip1 -p fid-align-solve
-      - name: RDL dataset digests, public views and replay on wasm32-wasip1 (UNC.RDL.FORMAT AC-1)
-        run: cargo test --target wasm32-wasip1 -p fid-rdl
+      - name: Crates tested on wasm32-wasip1 (one cargo test per line of ci/wasm32-crates.txt)
+        # New wasm32 crates: add one line to ci/wasm32-crates.txt (sorted), not a new step here.
+        # Line format: <crate> [extra cargo test arguments]. Every run is attempted; the step
+        # fails if any run fails, the list is unsorted, or it names a crate not in the workspace.
+        shell: bash
+        run: |
+          set -euo pipefail
+          list=ci/wasm32-crates.txt
+          entries=$(grep -vE '^[[:space:]]*(#|$)' "$list")
+          if ! LC_ALL=C sort -c -u <<< "$entries"; then echo "::error file=$list::lines are not sorted and unique (LC_ALL=C sort -u)"; exit 1; fi
+          members=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json, sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
+          missing=0
+          while read -r crate _; do
+            if ! grep -qxF -- "$crate" <<< "$members"; then echo "::error file=$list::$crate is not a workspace crate"; missing=1; fi
+          done <<< "$entries"
+          test "$missing" = 0
+          failed=()
+          while read -r crate args; do
+            echo "::group::cargo test --target wasm32-wasip1 -p $crate $args"
+            # $args is word-split on purpose: it holds extra cargo test arguments.
+            if ! cargo test --target wasm32-wasip1 -p "$crate" $args < /dev/null; then failed+=("$crate $args"); fi
+            echo "::endgroup::"
+          done <<< "$entries"
+          if [ "${#failed[@]}" -ne 0 ]; then printf '::error::wasm32 tests failed: %s\n' "${failed[@]}"; exit 1; fi
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
         # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
         # wasmtime). The reference module registers no algorithm until fid-kernel exists; a

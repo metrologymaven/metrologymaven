@@ -1,0 +1,22 @@
+[package]
+name = "fid-geo-cad"
+description = "Metrology Maven CAD boundary representation: B-rep arena, typed stable IDs, builder with topology checks and the canonical binary encoding with its SHA-256 digest (spec node GEO.CAD.TOPO.MODEL)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only workspace crates of the num and
+# kernel layers: fid-geo-nurbs (the NURBS and analytic curve and surface types the faces and
+# edges hold), fid-kci (its portable FIPS 180-4 SHA-256 for the body digest and the encoding
+# trailer) and fid-types (the shared `sha256:` Digest wire form). UUIDv5 needs SHA-1, which
+# no kernel crate offers and fid-uuid (model layer, RustCrypto `sha1`) cannot provide to a
+# kernel crate, so a private FIPS 180-4 SHA-1 lives in `topo::uuid`.
+[dependencies]
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
+fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
