@@ -211,7 +211,7 @@ impl RecordTable {
         if entries.len() > MAX_RECORDS {
             return Err(AssignError::InvalidInput { field: "records" });
         }
-        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries.sort_by_key(|e| e.0);
         if entries.windows(2).any(|w| matches!(w, [a, b] if a.0 == b.0)) {
             return Err(AssignError::DuplicateRecord);
         }
