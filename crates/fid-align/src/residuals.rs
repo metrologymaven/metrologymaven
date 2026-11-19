@@ -31,7 +31,8 @@
 //! The summary always carries the report digest: `{"digest", "max_abs", "max_entry",
 //! "n_entries", "n_rejected", "n_used", "report", "rms", "weighted", "weighted_rms"}`, where a
 //! length is `{"unit": "m", "value": <number>}` and absent statistics are `null`. An entry is
-//! `{"index", "input", "item", "kind", "reason", "residual", "used", "vector", "weight"}`;
+//! `{"index", "input", "item", "kind", "reason", "residual", "used", "vector", "weight"}`, with
+//! `weight` (dimensionless) as `"0x"` + 16 hex digits of its bits or `null`;
 //! `input` indexes the alignment's `inputs` (command order).
 
 use crate::element::{id_value, obj, parse_id};
@@ -252,7 +253,7 @@ pub fn entry_value(e: &EntryView<'_>) -> CValue {
         ("residual", length(Some(e.residual))),
         ("used", CValue::Bool(e.used)),
         ("vector", vector),
-        ("weight", e.weight.map_or(CValue::Null, CValue::Num)),
+        ("weight", e.weight.map_or(CValue::Null, |w| CValue::Str(format!("0x{:016x}", w.to_bits())))),
     ])
 }
 
@@ -388,14 +389,7 @@ pub fn result_schema() -> CValue {
             ("residual", length_schema(false)),
             ("used", obj([("type", text("boolean"))])),
             ("vector", vector),
-            (
-                "weight",
-                obj([
-                    ("type", texts(&["number", "null"])),
-                    ("exclusiveMinimum", num(0)),
-                    ("x-quantity", text("dimensionless")),
-                ]),
-            ),
+            ("weight", obj([("type", texts(&["string", "null"])), ("pattern", text(BITS_PATTERN))])),
         ],
     );
     let page = closed(
@@ -414,6 +408,11 @@ pub fn result_schema() -> CValue {
         ("properties", obj([("alignment", id), ("page", page), ("summary", summary)])),
     ])
 }
+
+/// A bit-exact float: `0x` and 16 lowercase hex digits of the IEEE 754 bits. Weights are
+/// written this way because they are dimensionless and the registry's quantity catalogue has
+/// no dimensionless kind outside `fid-jobs`, so a weight cannot be a JSON number field.
+pub const BITS_PATTERN: &str = "^0x[0-9a-f]{16}$";
 
 /// The rejection reason grammar of `fid-align-solve`.
 pub const REASON_PATTERN: &str = "^[a-z][a-z0-9_]*$";

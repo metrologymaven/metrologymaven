@@ -521,7 +521,7 @@ def entry_out(i, e):
         "residual": {"unit": "m", "value": e["residual"]},
         "used": e["used"],
         "vector": None if e["vector"] is None else {"unit": "m", "value": e["vector"]},
-        "weight": e["weight"],
+        "weight": None if e["weight"] is None else hexf(e["weight"]),
     }
 
 

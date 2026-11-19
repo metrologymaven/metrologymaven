@@ -498,6 +498,7 @@ fn residual_cli_options_fail_closed() {
 const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
 const REASON_PATTERN: &str = "^[a-z][a-z0-9_]*$";
+const BITS_PATTERN: &str = "^0x[0-9a-f]{16}$";
 
 fn is_hex(c: u8) -> bool {
     c.is_ascii_digit() || (b'a'..=b'f').contains(&c)
@@ -561,6 +562,7 @@ fn validate(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
                 let ok = match s(rule) {
                     ID_PATTERN => is_lower_uuid(t),
                     DIGEST_PATTERN => t.len() == 71 && t.starts_with("sha256:") && t.bytes().skip(7).all(is_hex),
+                    BITS_PATTERN => t.len() == 18 && t.starts_with("0x") && t.bytes().skip(2).all(is_hex),
                     REASON_PATTERN => {
                         let mut b = t.bytes();
                         matches!(b.next(), Some(c) if c.is_ascii_lowercase())
@@ -724,7 +726,8 @@ fn results_and_params_validate_against_the_published_schemas() {
         set(&page, &["page", "entries", "0", "residual"], CValue::Null),
         set(&page, &["page", "entries", "0", "residual", "unit"], CValue::Str("um".into())),
         set(&page, &["page", "entries", "0", "vector", "value"], CValue::Arr(vec![CValue::Num(0.0); 2])),
-        set(&page, &["page", "entries", "0", "weight"], CValue::Num(0.0)),
+        set(&page, &["page", "entries", "0", "weight"], CValue::Num(2.0)),
+        set(&page, &["page", "entries", "0", "weight"], CValue::Str("0x40".into())),
         set(&page, &["page", "entries", "0", "reason"], CValue::Str("Outlier".into())),
         set(&page, &["page", "entries", "0", "input"], CValue::Num(-1.0)),
         set(&page, &["page", "entries", "0", "used"], CValue::Str("yes".into())),
