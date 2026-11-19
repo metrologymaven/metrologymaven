@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-frame]
+built_pr: 240
 satisfies: [REQ-GEO.FRAME-001, REQ-GEO.FRAME-002]
 covers: []
 depends_on: [GEO.FRAME.XFORM]
