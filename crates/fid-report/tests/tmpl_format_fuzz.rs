@@ -206,9 +206,31 @@ fn seeds() -> Vec<CValue> {
 #[test]
 fn ac4_structure_aware_fuzz_never_panics_and_fails_typed() {
     let seeds = seeds();
-    let mut r = Rng(SEED);
+    // The iterations are split over SHARDS fixed SplitMix64 streams (stream k starts at
+    // SEED + k), each run on its own thread; the inputs do not depend on the thread count.
+    let per = ITERATIONS / SHARDS;
+    let totals: Vec<[u32; 3]> = std::thread::scope(|sc| {
+        let handles: Vec<_> = (0..SHARDS)
+            .map(|k| {
+                let seeds = &seeds;
+                sc.spawn(move || run_shard(seeds, SEED + u64::from(k), per))
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    let [ok, invalid, unsupported] = totals.iter().fold([0u32; 3], |a, t| [a[0] + t[0], a[1] + t[1], a[2] + t[2]]);
+    println!("fuzz seed {SEED}: {ITERATIONS} iterations, {ok} ok, {invalid} invalid, {unsupported} unsupported");
+    assert_eq!(ok + invalid + unsupported, ITERATIONS);
+    // The generator reaches all three outcomes.
+    assert!(ok > 1000 && invalid > 1000 && unsupported > 0);
+}
+
+const SHARDS: u32 = 8;
+
+fn run_shard(seeds: &[CValue], seed: u64, n: u32) -> [u32; 3] {
+    let mut r = Rng(seed);
     let (mut ok, mut invalid, mut unsupported) = (0u32, 0u32, 0u32);
-    for _ in 0..ITERATIONS {
+    for _ in 0..n {
         let mut v = seeds[r.below(seeds.len())].clone();
         for _ in 0..1 + r.below(3) {
             mutate_tree(&mut v, &mut r);
@@ -236,8 +258,5 @@ fn ac4_structure_aware_fuzz_never_panics_and_fails_typed() {
             }
         }
     }
-    println!("fuzz seed {SEED}: {ITERATIONS} iterations, {ok} ok, {invalid} invalid, {unsupported} unsupported");
-    assert_eq!(ok + invalid + unsupported, ITERATIONS);
-    // The generator reaches all three outcomes.
-    assert!(ok > 1000 && invalid > 1000 && unsupported > 0);
+    [ok, invalid, unsupported]
 }

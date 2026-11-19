@@ -74,7 +74,7 @@ Defines the exchanged template file: a versioned, canonical-JSON document that i
   - *API.* `parse_template(&[u8]) -> Result<Template, TemplateError>`; `serialise(&Template) -> Result<CanonicalBytes, TemplateError>` (a `Result` because the canonical writer is fallible; it cannot fail for a parsed template, which holds no number); `migrate(&CValue, u32) -> Result<CValue, TemplateError>`; `TemplateJson::new(&CValue, pointer)`.
   - *JSON Schema.* `schemas/report-template.v1.json` (draft 2020-12) states the v1 structure, the no-number and no-value-tag rule for template json, and `x-untrusted: true` on every untrusted wrapper; its description lists the rules JSON Schema cannot express (budgets, distinct IDs, u32 range, continuation targets, duplicate keys).
   - *Fixtures.* `fixtures/rpt/model/tmpl/`: `valid_v1.json` (non-canonical spelling, hostile strings) and its canonical bytes, `v0_sample.json` and its migrated bytes, `deep.json`, `unknown_field.json`, `bad_continuation.json`, and `invalid_cases.json` (hand-labelled code, pointer, reason and schema verdict). The 17 MiB file of AC-2 is built in the test (trailing whitespace after `valid_v1.json`) rather than committed.
-  - *Fuzz.* AC-4 runs as an ordinary test: SplitMix64 seed 3, 1 000 000 inputs, each a fixture with one to three tree mutations and, one time in three, a byte mutation; every success must round-trip byte-identically.
+  - *Fuzz.* AC-4 runs as an ordinary test: 1 000 000 inputs from SplitMix64 seed 3, split over 8 fixed streams (stream k seeded 3 + k, run on parallel threads; the inputs do not depend on the thread count), each a fixture with one to three tree mutations and, one time in three, a byte mutation; every success must round-trip byte-identically.
 
 ## Test fixtures
 
