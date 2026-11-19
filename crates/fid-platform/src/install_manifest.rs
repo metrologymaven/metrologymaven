@@ -1215,6 +1215,84 @@ const LOADING_TAGS: [&str; 16] = [
 ];
 const LOADING_ATTRS: [&str; 5] = ["src", "href", "xlink:href", "poster", "data"];
 const SRCSET_ATTRS: [&str; 2] = ["srcset", "imagesrcset"];
+/// Tags whose legacy `background` attribute loads an image.
+const BACKGROUND_TAGS: [&str; 4] = ["body", "table", "td", "th"];
+/// Named character references decoded in attribute values: the ones that can spell a URL
+/// scheme, separator or the whitespace browsers strip. Others are kept as written.
+const NAMED_REFS: [(&str, char); 19] = [
+    ("amp", '&'),
+    ("apos", '\''),
+    ("bsol", '\\'),
+    ("colon", ':'),
+    ("comma", ','),
+    ("lpar", '('),
+    ("lt", '<'),
+    ("gt", '>'),
+    ("NewLine", '\n'),
+    ("nbsp", '\u{a0}'),
+    ("num", '#'),
+    ("period", '.'),
+    ("quot", '"'),
+    ("rpar", ')'),
+    ("semi", ';'),
+    ("sol", '/'),
+    ("Tab", '\t'),
+    ("lowbar", '_'),
+    ("hyphen", '-'),
+];
+
+/// Decodes HTML character references in an attribute value: decimal `&#104;` and hex
+/// `&#x68;` (the `;` optional, as browsers accept; zero, surrogates and values above U+10FFFF
+/// become U+FFFD) and the named references in [`NAMED_REFS`] (with `;`). Bounded: one pass,
+/// at most 8 digits per reference.
+pub fn decode_char_refs(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(pos) = rest.find('&') {
+        out.push_str(rest.get(..pos).unwrap_or(""));
+        let after = rest.get(pos + 1..).unwrap_or("");
+        if let Some((ch, used)) = numeric_ref(after).or_else(|| named_ref(after)) {
+            out.push(ch);
+            rest = after.get(used..).unwrap_or("");
+        } else {
+            out.push('&');
+            rest = after;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// `#104;` or `#x68;` after the `&`: (char, bytes used).
+fn numeric_ref(s: &str) -> Option<(char, usize)> {
+    let b = s.as_bytes();
+    if b.first() != Some(&b'#') {
+        return None;
+    }
+    let hex = matches!(b.get(1), Some(b'x' | b'X'));
+    let start = if hex { 2 } else { 1 };
+    let digits =
+        b.get(start..)?.iter().take_while(|c| if hex { c.is_ascii_hexdigit() } else { c.is_ascii_digit() }).count();
+    if digits == 0 {
+        return None;
+    }
+    let text = s.get(start..start + digits)?;
+    let value = if digits > 8 { None } else { u32::from_str_radix(text, if hex { 16 } else { 10 }).ok() };
+    let ch = value.filter(|v| *v != 0).and_then(char::from_u32).unwrap_or('\u{fffd}');
+    let mut used = start + digits;
+    if b.get(used) == Some(&b';') {
+        used += 1;
+    }
+    Some((ch, used))
+}
+
+/// `colon;` after the `&`: (char, bytes used). Named references need their `;`.
+fn named_ref(s: &str) -> Option<(char, usize)> {
+    NAMED_REFS.iter().find_map(|(name, ch)| {
+        let rest = s.strip_prefix(name)?;
+        rest.starts_with(';').then_some((*ch, name.len() + 1))
+    })
+}
 
 /// The URL of a refresh `content` value such as `0; url=https://x`, if any.
 fn refresh_url(content: &str) -> Option<&str> {
@@ -1246,7 +1324,7 @@ fn scan_html(text: &str, out: &mut Vec<String>) {
         if name.is_empty() {
             continue;
         }
-        let mut attrs: Vec<(&str, &str)> = Vec::new();
+        let mut attrs: Vec<(&str, String)> = Vec::new();
         loop {
             while i < len && (lb[i].is_ascii_whitespace() || lb[i] == b'/') {
                 i += 1;
@@ -1290,11 +1368,20 @@ fn scan_html(text: &str, out: &mut Vec<String>) {
                     value = text.get(vs..i).unwrap_or("");
                 }
             }
-            attrs.push((attr, value));
+            // Browsers decode character references in attribute values before using them, so
+            // `https&colon;//` and `&#104;ttps://` must be seen as `https://`.
+            attrs.push((attr, decode_char_refs(value)));
         }
         for (attr, value) in &attrs {
             if *attr == "style" {
                 scan_css(value, out);
+            }
+        }
+        if BACKGROUND_TAGS.contains(&name) {
+            for (attr, value) in &attrs {
+                if *attr == "background" {
+                    push_if_remote(value, out);
+                }
             }
         }
         if LOADING_TAGS.contains(&name) {

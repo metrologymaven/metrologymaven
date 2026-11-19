@@ -7,9 +7,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_platform::install_manifest::{
-    check_bundle, check_bundles, check_relpath, check_roles, is_remote, json_schema_files, make_install_manifest,
-    parse_bundle, parse_install_manifest, parse_plan, scan_docs_file, tier1_combinations, BundleError, FileEntry,
-    InstallKind, InstallManifest, PackagePlan, Role, SetFinding, BUNDLE_FILE, MAX_BYTES, MAX_ENTRIES, MAX_SIZE,
+    check_bundle, check_bundles, check_relpath, check_roles, decode_char_refs, is_remote, json_schema_files,
+    make_install_manifest, parse_bundle, parse_install_manifest, parse_plan, scan_docs_file, tier1_combinations,
+    BundleError, FileEntry, InstallKind, InstallManifest, PackagePlan, Role, SetFinding, BUNDLE_FILE, MAX_BYTES,
+    MAX_ENTRIES, MAX_SIZE,
 };
 use fid_platform::matrix::{Arch, OsFamily, Tier};
 use std::path::{Path, PathBuf};
@@ -480,6 +481,45 @@ fn docs_scan_meta_refresh() {
     // Not a refresh: a description that mentions a URL.
     let desc = r#"<meta name="description" content="0; url=https://x.example/">"#;
     assert!(scan_docs_file("docs/a.html", desc.as_bytes()).is_empty());
+}
+
+// Re-review: character references in attribute values and the legacy background attribute.
+
+#[test]
+fn docs_scan_decodes_named_char_refs() {
+    let html = r#"<img src="https&colon;//x.example/a.png">"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/a.png"]);
+    let sol = r#"<script src="&sol;&sol;x.example/s.js"></script>"#;
+    assert_eq!(scan_docs_file("docs/a.html", sol.as_bytes()), ["//x.example/s.js"]);
+    // Unknown names, and named references without `;`, stay as written.
+    assert_eq!(decode_char_refs("a&colon b&unknown;c&amp;d"), "a&colon b&unknown;c&d");
+}
+
+#[test]
+fn docs_scan_decodes_decimal_char_refs() {
+    let html = r#"<img src="&#104;ttps://x.example/a.png">"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/a.png"]);
+    let no_semi = r#"<iframe src="&#104&#116tps://x.example/">"#;
+    assert_eq!(scan_docs_file("docs/a.html", no_semi.as_bytes()), ["https://x.example/"]);
+    assert_eq!(decode_char_refs("&#0;&#99999999999;&#55296;"), "\u{fffd}\u{fffd}\u{fffd}");
+}
+
+#[test]
+fn docs_scan_decodes_hex_char_refs() {
+    let html = r#"<link rel="stylesheet" href="&#x68;ttps&#X3A;//x.example/a.css">"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/a.css"]);
+    let style = r#"<div style="background:url(&#x68;ttps://x.example/b.png)">"#;
+    assert_eq!(scan_docs_file("docs/a.html", style.as_bytes()), ["https://x.example/b.png"]);
+}
+
+#[test]
+fn docs_scan_legacy_background_attribute() {
+    for tag in ["body", "table", "td", "TH"] {
+        let html = format!(r#"<{tag} background="https://x.example/bg.png">"#);
+        assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/bg.png"], "{tag}");
+    }
+    assert!(scan_docs_file("docs/a.html", br#"<body background="img/bg.png">"#).is_empty());
+    assert!(scan_docs_file("docs/a.html", br#"<div background="https://x.example/bg.png">"#).is_empty());
 }
 
 // Review item 2: Tier 1 coverage over a set of bundles.
