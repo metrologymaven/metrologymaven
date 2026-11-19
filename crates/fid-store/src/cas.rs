@@ -480,7 +480,8 @@ impl BlobStore {
             return Ok(true);
         }
         let bytes = self.read_blob(digest, MAX_OBJECT_MANIFEST_BYTES)?;
-        let Ok(manifest) = ChunkManifest::parse_with_limits(&bytes, MAX_OBJECT_MANIFEST_BYTES, MAX_OBJECT_CHUNKS) else {
+        let Ok(manifest) = ChunkManifest::parse_with_limits(&bytes, MAX_OBJECT_MANIFEST_BYTES, MAX_OBJECT_CHUNKS)
+        else {
             // A plain blob that merely starts like a manifest.
             return Ok(true);
         };

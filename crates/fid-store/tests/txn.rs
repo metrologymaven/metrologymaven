@@ -222,7 +222,9 @@ fn ac3_fault_on_second_blob_flush() {
     assert_eq!((count(&store, "entries"), count(&store, "entry_blobs")), (0, 0));
     assert!(store.blobs().has_blob(&a.digest()).unwrap(), "first blob was put durably");
     let refs: i64 = store
-        .read(|c| c.query_row("SELECT count(*) FROM entry_blobs WHERE digest = ?1", [a.digest().as_str()], |r| r.get(0)))
+        .read(|c| {
+            c.query_row("SELECT count(*) FROM entry_blobs WHERE digest = ?1", [a.digest().as_str()], |r| r.get(0))
+        })
         .unwrap();
     assert_eq!(refs, 0);
 }
@@ -605,7 +607,8 @@ fn crash_child() {
         }
         _ => {}
     }
-    let start: i64 = store.read(|c| c.query_row("SELECT coalesce(max(seq), 0) FROM entries", [], |r| r.get(0))).unwrap();
+    let start: i64 =
+        store.read(|c| c.query_row("SELECT coalesce(max(seq), 0) FROM entries", [], |r| r.get(0))).unwrap();
     {
         let mut out = std::io::stdout().lock();
         writeln!(out, "READY {start}").unwrap();
@@ -709,8 +712,9 @@ fn check_after_crash(root: &Path, acked: i64) -> i64 {
         }
     }
     if n > 0 {
-        let head: String =
-            store.read(|c| c.query_row("SELECT entry_hash FROM heads WHERE branch = 'main'", [], |r| r.get(0))).unwrap();
+        let head: String = store
+            .read(|c| c.query_row("SELECT entry_hash FROM heads WHERE branch = 'main'", [], |r| r.get(0)))
+            .unwrap();
         assert_eq!(head, digest_of(&format!("crash-{n}")));
     } else {
         assert_eq!(count(&store, "heads"), 0);

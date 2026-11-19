@@ -402,7 +402,8 @@ fn set_durability(conn: &Connection) -> Result<(), TxnError> {
             Ok(())
         };
         set().map_err(|e| fail(e.to_string()))?;
-        let got: i64 = conn.query_row(&format!("PRAGMA {pragma}"), [], |r| r.get(0)).map_err(|e| fail(e.to_string()))?;
+        let got: i64 =
+            conn.query_row(&format!("PRAGMA {pragma}"), [], |r| r.get(0)).map_err(|e| fail(e.to_string()))?;
         if got != want {
             return Err(fail(format!("is {got}, expected {want}")));
         }
