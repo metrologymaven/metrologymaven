@@ -98,9 +98,9 @@ impl fmt::Display for TimeError {
                 write!(f, "{}: {n} pairs, at least {MIN_PAIRS} needed", self.code())
             }
             TimeError::TooManyPairs { n } => write!(f, "{}: {n} pairs", self.code()),
-            TimeError::Duplicate { index }
-            | TimeError::NonMonotonic { index }
-            | TimeError::SpanTooLarge { index } => write!(f, "{} at pair {index}", self.code()),
+            TimeError::Duplicate { index } | TimeError::NonMonotonic { index } | TimeError::SpanTooLarge { index } => {
+                write!(f, "{} at pair {index}", self.code())
+            }
             TimeError::MapSpanTooLarge => write!(f, "{}: more than {MAX_SPAN_NS} ns from reference", self.code()),
             TimeError::Overflow { what } | TimeError::InvalidInput { what } | TimeError::NotFinite { what } => {
                 write!(f, "{}: {what}", self.code())
