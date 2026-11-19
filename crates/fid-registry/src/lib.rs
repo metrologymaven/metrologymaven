@@ -2,11 +2,16 @@
 //! [`def::CommandDef`]; the CLI, MCP tools, Python bindings and docs are generated from it
 //! (CONSTITUTION C3). Modules land one spec leaf at a time; see `spec/core/reg/`.
 
+pub mod compat;
 pub mod def;
 pub mod guide;
 pub mod lifecycle;
 pub mod pred;
 
+pub use compat::{
+    classify, diff, Change, CommandRef, Kind, LifecycleChange, Manifest, ManifestDiff, ManifestError, Reason,
+    MAX_SCHEMA_DEPTH,
+};
 pub use def::{
     command_def_schema, CommandDef, DefError, Determinism, FsEffect, Idempotency, Network, Precondition, Projection,
     SideEffect, Surface, Undo, Web, MAX_PRECONDITION_BOUND,

@@ -1,0 +1,2 @@
+{"dir": "agent_to_server", "msg": {"id": 1, "jsonrpc": "2.0", "method": "tools/call", "params": {"arguments": {}, "name": "branch_promote"}}, "t_ms": 10}
+{"dir": "server_to_agent", "msg": {"error": "policy", "id": 1, "jsonrpc": "2.0"}, "t_ms": 15}
