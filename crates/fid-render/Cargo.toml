@@ -1,0 +1,18 @@
+[package]
+name = "fid-render"
+description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (spec node VIZ.RENDER.SCENE.IDTAB)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer. No GPU, windowing or UI-toolkit crate (C2, checked by fid-shlint REQ-003).
+[dependencies]
+# Entity IDs are UUIDs (CONSTITUTION §5); `fid_uuid::Uuid` is the workspace's UUID value type,
+# the same one fid-project's ID service hands out. No third-party dependency is added.
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true
