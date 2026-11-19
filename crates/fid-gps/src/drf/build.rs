@@ -45,6 +45,9 @@
 //!   normal is parallel to `z` never constrains `rz`.
 //! - **`tx`, `ty`, `tz`** (each translation `e` still free): a plane constrains it when
 //!   `|u.e| >= ANGLE_TOL`; an axis when `|e - (e.u) u| >= ANGLE_TOL` (it does not run along `e`).
+//!   A plane that sets the clocking (below) constrains `ty` by its `rz` decision itself, since
+//!   its normal's component along `y` is exactly the `|w|` tested there; so at the boundary
+//!   rounding in `y` cannot separate the two decisions.
 //! - `rx`, `ry` are always constrained by the primary.
 //!
 //! "Parallel" and "perpendicular" are decided only by these pinned tolerances: [`ANGLE_TOL`]
@@ -425,10 +428,6 @@ fn add_scaled(a: V3, b: V3, s: f64) -> V3 {
     [a[0] + s * b[0], a[1] + s * b[1], a[2] + s * b[2]]
 }
 
-fn scale(a: V3, s: f64) -> V3 {
-    [a[0] * s, a[1] * s, a[2] * s]
-}
-
 /// `a - (a.u) u`.
 fn reject(a: V3, u: V3) -> V3 {
     add_scaled(a, u, -dot(a, u))
@@ -461,7 +460,7 @@ impl Ctx<'_> {
 
     fn unit(&self, a: V3) -> Result<V3, DrfError> {
         let n = self.norm(a)?;
-        let v = scale(a, 1.0 / n);
+        let v = [a[0] / n, a[1] / n, a[2] / n];
         if finite3(v) {
             Ok(v)
         } else {
@@ -588,11 +587,15 @@ pub fn build_drf(datums: &[SimulatedDatum]) -> Result<Drf, DrfError> {
     for (i, f) in feats.iter().enumerate().skip(1) {
         let ctx = Ctx { label: f.label };
         let mut c = DofSet::EMPTY;
+        // A plane that sets the clocking constrains ty by the same |w| >= ANGLE_TOL decision
+        // (its normal's component along y is |w|), so rounding in y cannot split the two.
+        let mut plane_clock = false;
         if free.contains(Dof::Rz) {
             let w = reject(f.u, z);
             let nw = ctx.norm(w)?;
             if nw >= ANGLE_TOL {
                 c = c.with(Dof::Rz);
+                plane_clock = f.kind == DatumKind::Plane;
                 let w = ctx.unit(w)?;
                 clock = Some(match f.kind {
                     DatumKind::Plane => (cross(w, z), w),
@@ -618,7 +621,8 @@ pub fn build_drf(datums: &[SimulatedDatum]) -> Result<Drf, DrfError> {
         };
         let mut dirs: Vec<V3> = Vec::new();
         for (dof, e) in [(Dof::Tx, x), (Dof::Ty, y), (Dof::Tz, z)] {
-            if free.contains(dof) && moved_by_translation(f, e, &ctx)? {
+            let moved = (plane_clock && dof == Dof::Ty) || moved_by_translation(f, e, &ctx)?;
+            if free.contains(dof) && moved {
                 c = c.with(dof);
                 dirs.push(e);
             }

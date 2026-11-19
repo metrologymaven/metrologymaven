@@ -286,6 +286,33 @@ fn angular_tolerance_is_pinned() {
     assert_eq!(drf.datums()[1].constrained, DofSet::of(&[Dof::Tx, Dof::Ty, Dof::Rz]));
 }
 
+/// The largest f64 below the tolerance.
+fn just_below(t: f64) -> f64 {
+    f64::from_bits(t.to_bits() - 1)
+}
+
+#[test]
+fn exact_angular_boundary() {
+    // At exactly ANGLE_TOL the secondary plane counts as not parallel: {ty, rz}.
+    let a = plane("A", [0.0; 3], [0.0, 0.0, 1.0]);
+    let drf = build_drf(&[a.clone(), plane("B", [0.0; 3], [ANGLE_TOL, 0.0, 1.0])]).unwrap();
+    assert_eq!(drf.datums()[1].constrained, DofSet::of(&[Dof::Ty, Dof::Rz]));
+    // One ulp below: parallel, refused.
+    let e = build_drf(&[a, plane("B", [0.0; 3], [just_below(ANGLE_TOL), 0.0, 1.0])]).unwrap_err();
+    assert_eq!(e, DrfError::DegenerateDatumPair { first: "A".into(), second: "B".into() });
+}
+
+#[test]
+fn exact_coaxial_boundary() {
+    // At exactly COAXIAL_TOL the parallel axis counts as offset: {rz}.
+    let a = axis("A", [0.0; 3], [0.0, 0.0, 1.0]);
+    let drf = build_drf(&[a.clone(), axis("B", [COAXIAL_TOL, 0.0, 0.3], [0.0, 0.0, 1.0])]).unwrap();
+    assert_eq!(drf.datums()[1].constrained, DofSet::of(&[Dof::Rz]));
+    // One ulp below: coaxial, refused.
+    let e = build_drf(&[a, axis("B", [just_below(COAXIAL_TOL), 0.0, 0.3], [0.0, 0.0, 1.0])]).unwrap_err();
+    assert_eq!(e, DrfError::DegenerateDatumPair { first: "A".into(), second: "B".into() });
+}
+
 #[test]
 fn coaxial_tolerance_is_pinned() {
     let a = axis("A", [0.0; 3], [0.0, 0.0, 1.0]);
