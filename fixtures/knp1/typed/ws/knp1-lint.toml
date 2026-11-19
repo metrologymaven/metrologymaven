@@ -1,0 +1,15 @@
+# KRN.NUM.LINT.TYPED end-to-end fixture. Paths are relative to this file.
+[graph]
+workspace = "."
+roots = ["typed-alias", "typed-bypass", "typed-clean", "typed-facade", "typed-macro", "typed-minmax-var", "typed-nowasm"]
+
+[typed]
+# The test replaces this pin with the version of the toolchain that runs it.
+clippy_version = "0.0.0"
+targets = ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
+
+[[syn.facade_files]]
+crate = "typed-facade"
+version = "0.0.1"
+file = "src/f.rs"
+reason = "fixture facade implementation file"

@@ -433,7 +433,7 @@ impl Config {
             .map(|(p, f)| (p.join("::"), f.reason.as_str()))
     }
 
-    fn facade_file(&self, crate_name: &str, version: &str, file: &str) -> Option<&str> {
+    pub fn facade_file(&self, crate_name: &str, version: &str, file: &str) -> Option<&str> {
         self.facade_files
             .iter()
             .find(|f| f.crate_name == crate_name && f.version == version && f.file == file)

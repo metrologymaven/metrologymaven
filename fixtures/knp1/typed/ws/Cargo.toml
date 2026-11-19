@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["alias", "bypass", "clean", "facade", "macro", "minmax-var", "nowasm"]

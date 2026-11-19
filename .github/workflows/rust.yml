@@ -31,6 +31,8 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+          # KRN.NUM.LINT.TYPED lints the kernel crates for these targets (cargo clippy --target).
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,wasm32-unknown-unknown
       - name: Cargo.lock up to date
         # Blocking: a PR that adds a crate or dependency must update Cargo.lock in the same PR
         # (lockfile workflow, or exact hand-added entries). Main's lock went stale twice while this
@@ -258,6 +260,7 @@ jobs:
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/knp1/seeded/make_expected.py --check
+          python fixtures/knp1/typed/make_expected.py --check
           python fixtures/solv/vend/make_fixtures.py --check
           python fixtures/solv/make_mstart_fixtures.py --check
           python tools/check_eval_suite.py

@@ -6,11 +6,13 @@
 //! - [`graph`]: kernel dependency closure, allowlist and licence check (`KRN.NUM.LINT.GRAPH`).
 //! - [`flags`]: kernel build-configuration and emitted-code FMA check (`KRN.NUM.LINT.FLAGS`).
 //! - [`syn_scan`]: syntax-level banned-API scan over the kernel closure (`KRN.NUM.LINT.SYN`).
+//! - [`typed`]: type-aware banned-API check on expanded workspace code (`KRN.NUM.LINT.TYPED`).
 
 pub mod findings;
 pub mod flags;
 pub mod graph;
 pub mod syn_scan;
+pub mod typed;
 
 /// Short alias of [`findings`] (the leaf `KRN.NUM.LINT.FIND`).
 pub use findings as find;

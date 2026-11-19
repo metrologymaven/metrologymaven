@@ -55,10 +55,11 @@ const FIXED: [(&str, &str); 14] = [
 ];
 
 /// Rule families with a free suffix, their prefixes and descriptions.
-const FAMILIES: [(&str, &str); 3] = [
+const FAMILIES: [(&str, &str); 4] = [
     ("KNP1-FLAG-", "kernel build configuration (target CPU, FMA feature, codegen units, toolchain pin)"),
     ("KNP1-ALLOW-", "dependency allowlist or SPDX licence check"),
     ("KNP1-DATA-", "reference-dataset denylist match"),
+    ("KNP1-TYPED-", "type-aware check could not lint a crate for a target (never waivable)"),
 ];
 
 /// A KNP-1 rule with a stable string ID (`KNP1-…`).
@@ -87,6 +88,8 @@ pub enum Rule {
     Allow(String),
     /// `KNP1-DATA-<suffix>`.
     Data(String),
+    /// `KNP1-TYPED-<suffix>` (KRN.NUM.LINT.TYPED).
+    Typed(String),
 }
 
 impl Rule {
@@ -117,6 +120,7 @@ impl Rule {
             Rule::Flag(s) => format!("{}{s}", FAMILIES[0].0),
             Rule::Allow(s) => format!("{}{s}", FAMILIES[1].0),
             Rule::Data(s) => format!("{}{s}", FAMILIES[2].0),
+            Rule::Typed(s) => format!("{}{s}", FAMILIES[3].0),
             fixed => {
                 fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(id, _)| (*id).to_string()).unwrap_or_default()
             }
@@ -129,6 +133,7 @@ impl Rule {
             Rule::Flag(_) => FAMILIES[0].1,
             Rule::Allow(_) => FAMILIES[1].1,
             Rule::Data(_) => FAMILIES[2].1,
+            Rule::Typed(_) => FAMILIES[3].1,
             fixed => fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(_, d)| *d).unwrap_or_default(),
         }
     }
@@ -136,9 +141,12 @@ impl Rule {
     /// False for rules no waiver may cover: the `KNP1-FLAG-WASM*` findings all sit at line 1 of
     /// a binary module, so one waiver would hide every future hit (KRN.NUM.LINT.FLAGS), and a
     /// `KNP1-PARSE` file was not scanned at all, so a waiver would hide everything in it
-    /// (KRN.NUM.LINT.SYN).
+    /// (KRN.NUM.LINT.SYN), and a `KNP1-TYPED-*` crate was not linted for that target
+    /// (KRN.NUM.LINT.TYPED).
     pub fn is_waivable(&self) -> bool {
-        !matches!(self, Rule::Flag(s) if s.starts_with("WASM")) && *self != Rule::Parse
+        !matches!(self, Rule::Flag(s) if s.starts_with("WASM"))
+            && *self != Rule::Parse
+            && !matches!(self, Rule::Typed(_))
     }
 
     /// Parses a rule ID. Family suffixes are `A-Z0-9` segments joined by single `-`, at most 48 bytes.
@@ -155,7 +163,8 @@ impl Rule {
                 return Some(match k {
                     0 => Rule::Flag(s),
                     1 => Rule::Allow(s),
-                    _ => Rule::Data(s),
+                    2 => Rule::Data(s),
+                    _ => Rule::Typed(s),
                 });
             }
         }
