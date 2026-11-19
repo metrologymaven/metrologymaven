@@ -25,6 +25,8 @@ mod tenant;
 
 use std::fmt;
 
+use unicode_normalization::{is_nfc_quick, IsNormalized, UnicodeNormalization};
+
 pub use doc::{instantiate, CanonicalProfile};
 pub use tenant::TenantParams;
 
@@ -45,8 +47,10 @@ pub const REGULATED_MANDATORY_MEANING: &str = "APPROVED";
 pub const MEANING_CODE_PATTERN: &str = "^[A-Z][A-Z0-9_]{1,31}$";
 /// Syntax of a tenant-defined meaning code: a meaning code starting with `X_`.
 pub const TENANT_CODE_PATTERN: &str = "^X_[A-Z0-9_]{0,30}$";
-/// Labels and descriptions: no C0 or C1 control character and no DEL.
-pub const TEXT_PATTERN: &str = "^[^\\u0000-\\u001f\\u007f-\\u009f]*$";
+/// Labels and descriptions: no C0 or C1 control character, no DEL and no bidirectional
+/// embedding, override or isolate control (U+202A to U+202E, U+2066 to U+2069). Text must
+/// also be in Unicode Normalization Form C, which a pattern cannot express.
+pub const TEXT_PATTERN: &str = "^[^\\u0000-\\u001f\\u007f-\\u009f\\u202a-\\u202e\\u2066-\\u2069]*$";
 /// Longest `required_meanings` list: a signature sequence holds at most 8 signatures
 /// (REQ-TRUST.ESIG.MULTI-001).
 pub const MAX_REQUIRED_MEANINGS: usize = 8;
@@ -269,6 +273,22 @@ fn is_control(c: char) -> bool {
     u < 0x20 || (0x7f..=0x9f).contains(&u)
 }
 
+/// Bidirectional embedding, override and isolate controls: text that looks the same on
+/// screen could otherwise yield a different digest, or reorder what a signer sees.
+fn is_bidi_control(c: char) -> bool {
+    let u = u32::from(c);
+    (0x202a..=0x202e).contains(&u) || (0x2066..=0x2069).contains(&u)
+}
+
+/// Whether `s` is in NFC: the quick check, then a full comparison when it is inconclusive.
+fn is_nfc(s: &str) -> bool {
+    match is_nfc_quick(s.chars()) {
+        IsNormalized::Yes => true,
+        IsNormalized::No => false,
+        IsNormalized::Maybe => s.nfc().eq(s.chars()),
+    }
+}
+
 /// At most 40 characters of hostile text, for error messages.
 pub(crate) fn cut(s: &str) -> String {
     s.chars().take(40).collect()
@@ -284,6 +304,12 @@ fn check_text(key: &'static str, s: &str, max: usize) -> Result<(), ProfileError
     }
     if s.chars().any(is_control) {
         return Err(ProfileError::invalid(key, "contains a control character"));
+    }
+    if s.chars().any(is_bidi_control) {
+        return Err(ProfileError::invalid(key, "contains a bidirectional control character"));
+    }
+    if !is_nfc(s) {
+        return Err(ProfileError::invalid(key, "is not in Unicode Normalization Form C"));
     }
     Ok(())
 }
@@ -505,6 +531,35 @@ mod tests {
         assert!(TenantMeaning::new("X_A", "a\u{7f}b", "d").is_err());
         assert!(TenantMeaning::new("X_A", "a\u{a0}b", "d").is_ok());
         assert!(TenantMeaning::new("X_A", "l", "").is_err());
+    }
+
+    #[test]
+    fn bidi_controls_are_refused() {
+        let bidi = [
+            '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+        ];
+        for c in bidi {
+            let t = format!("QA{c}release");
+            let e = TenantMeaning::new("X_A", &t, "d").err().map(|e| e.code());
+            assert_eq!(e, Some("profile.param_invalid"), "{c:?}");
+            assert!(TenantMeaning::new("X_A", "l", &t).is_err(), "{c:?}");
+        }
+        // Neighbours of the ranges are ordinary text.
+        for c in ['\u{2029}', '\u{202f}', '\u{2065}', '\u{206a}'] {
+            assert!(TenantMeaning::new("X_A", &format!("a{c}b"), "d").is_ok(), "{c:?}");
+        }
+    }
+
+    #[test]
+    fn text_must_be_nfc() {
+        // U+00E4 (composed) is NFC; "a" + U+0308 (decomposed) is not.
+        assert!(TenantMeaning::new("X_A", "Qualit\u{e4}t", "d").is_ok());
+        let e = TenantMeaning::new("X_A", "Qualita\u{308}t", "d").err().map(|e| e.code());
+        assert_eq!(e, Some("profile.param_invalid"));
+        assert!(TenantMeaning::new("X_A", "l", "Qualita\u{308}t").is_err());
+        // U+212B ANGSTROM SIGN normalises to U+00C5.
+        assert!(TenantMeaning::new("X_A", "\u{212b}", "d").is_err());
+        assert!(TenantMeaning::new("X_A", "\u{c5}", "d").is_ok());
     }
 
     #[test]

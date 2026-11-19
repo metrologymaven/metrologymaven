@@ -203,5 +203,25 @@
     "file": "bad-not-json.json",
     "profile": "regulated",
     "expect": "profile.malformed"
+  },
+  {
+    "file": "nonascii.json",
+    "profile": "lean",
+    "expect": "ok"
+  },
+  {
+    "file": "bad-tenant-label-bidi.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-description-bidi.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-label-nfd.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
   }
 ]

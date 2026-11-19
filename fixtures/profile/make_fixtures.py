@@ -33,6 +33,7 @@ Run:  python fixtures/profile/make_fixtures.py          (write)
 """
 
 import hashlib
+import unicodedata
 import json
 import sys
 from pathlib import Path
@@ -159,6 +160,13 @@ def xqa_document():
     return document("regulated", params)
 
 
+NONASCII = {
+    "code": "X_QS_FREIGABE",
+    "label": "Qualit\u00e4tsfreigabe \u2713",
+    "description": "Die Qualit\u00e4tssicherung hat den Datensatz freigegeben (\u54c1\u8cea, \u00c5ngstr\u00f6m, \U0001d6c0).",
+}
+
+
 def meaning(code, label="Site meaning", description="A meaning defined by the site."):
     return {"code": code, "label": label, "description": description}
 
@@ -211,6 +219,11 @@ TENANT_FILES = {
     ),
     "bad-not-object.json": b"[]\n",
     "bad-not-json.json": b"{\"tenant_meanings\": [\n",
+    # Non-ASCII text (NFC): UTF-8 bytes pass through canonicalisation unescaped.
+    "nonascii.json": pretty({"tenant_meanings": [NONASCII]}),
+    "bad-tenant-label-bidi.json": pretty({"tenant_meanings": [meaning("X_QA", "QA\u202erelease")]}),
+    "bad-tenant-description-bidi.json": pretty({"tenant_meanings": [meaning("X_QA", "QA", "Isolated \u2067text\u2069.")]}),
+    "bad-tenant-label-nfd.json": pretty({"tenant_meanings": [meaning("X_QA", "Qualita\u0308tsfreigabe")]}),
 }
 
 # Expected outcome per (file, profile): "ok" or the error code, hand-labelled from
@@ -258,6 +271,10 @@ CASES = [
     ("bad-duplicate-key-nested.json", "lean", "profile.malformed"),
     ("bad-not-object.json", "lean", "profile.malformed"),
     ("bad-not-json.json", "regulated", "profile.malformed"),
+    ("nonascii.json", "lean", "ok"),
+    ("bad-tenant-label-bidi.json", "lean", "profile.param_invalid"),
+    ("bad-tenant-description-bidi.json", "regulated", "profile.param_invalid"),
+    ("bad-tenant-label-nfd.json", "lean", "profile.param_invalid"),
 ]
 
 
@@ -281,6 +298,11 @@ def outputs():
         b = canonical(document(profile, params))
         files["expected/%s-two-meanings.json" % profile] = b
         digests["%s-two-meanings" % profile] = digest(b)
+    params = dict(BUILTIN["lean"])
+    params["tenant_meanings"] = [NONASCII]
+    b = canonical(document("lean", params))
+    files["expected/lean-nonascii.json"] = b
+    digests["lean-nonascii"] = digest(b)
     files["digests.json"] = pretty(digests)
     for fname, raw in TENANT_FILES.items():
         files["tenant/" + fname] = raw
@@ -289,6 +311,11 @@ def outputs():
 
 
 def sanity(files, digests):
+    for field in ("label", "description"):
+        assert unicodedata.is_normalized("NFC", NONASCII[field])
+        assert any(ord(c) > 0x7F for c in NONASCII[field])
+    assert any(ord(c) > 0xFFFF for c in NONASCII["description"])
+    assert not unicodedata.is_normalized("NFC", "Qualita\u0308tsfreigabe")
     assert len(set(digests.values())) == len(digests), "digests must differ"
     for f, _, _ in CASES:
         assert ("tenant/" + f) in files or f == "../regulated-with-xqa.json", f
@@ -330,7 +357,8 @@ def schema_check(files):
     for f in ("bad-software-keys.json", "bad-unknown-key.json", "bad-tenant-code-syntax.json",
               "bad-tenant-code-no-prefix.json", "bad-tenant-code-too-long.json", "bad-tenant-extra-member.json",
               "bad-tenant-missing-label.json", "bad-tenant-empty-label.json", "bad-tenant-label-too-long.json",
-              "bad-tenant-label-control.json", "bad-tenant-description-too-long.json", "bad-tenant-too-many.json",
+              "bad-tenant-label-control.json", "bad-tenant-label-bidi.json", "bad-tenant-description-bidi.json",
+              "bad-tenant-description-too-long.json", "bad-tenant-too-many.json",
               "bad-repeated-code.json", "bad-sequence-too-long.json", "bad-empty-sequence.json",
               "bad-lowercase-code.json", "bad-not-object.json"):
         assert list(tenant_v.iter_errors(json.loads(files["tenant/" + f]))), "schema accepts " + f

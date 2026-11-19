@@ -1,0 +1,1 @@
+{"name":"lean","params":{"agent_writes":"branch","allow_software_keys":true,"program_release_by_other":"agent_authored","release_requires_signatures":false,"required_meanings":[],"tenant_meanings":[{"code":"X_QS_FREIGABE","description":"Die Qualitätssicherung hat den Datensatz freigegeben (品質, Ångström, 𝛀).","label":"Qualitätsfreigabe ✓"}]},"version":1}

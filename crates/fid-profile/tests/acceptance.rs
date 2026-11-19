@@ -228,11 +228,44 @@ fn read_accepts_every_expected_document() {
         "expected/regulated-with-xqa.json",
         "expected/lean-two-meanings.json",
         "expected/assistive_only-two-meanings.json",
+        "expected/lean-nonascii.json",
     ] {
         let b = bytes(rel);
         let got = CanonicalProfile::read(&b).unwrap_or_else(|e| panic!("{rel}: {e}"));
         assert_eq!(got.bytes(), b.as_slice(), "{rel}");
     }
+}
+
+#[test]
+fn nonascii_text_passes_through_unescaped() {
+    let got = instantiate(ProfileName::Lean, Some(&bytes("tenant/nonascii.json"))).unwrap();
+    assert_eq!(got.bytes(), bytes("expected/lean-nonascii.json").as_slice());
+    assert_eq!(got.digest().as_str(), pinned("lean-nonascii"));
+    assert_eq!(got.document().params().tenant_meanings()[0].label(), "Qualit\u{e4}tsfreigabe \u{2713}");
+}
+
+#[test]
+fn bidi_and_non_nfc_text_is_invalid() {
+    for (rel, profile) in [
+        ("tenant/bad-tenant-label-bidi.json", ProfileName::Lean),
+        ("tenant/bad-tenant-description-bidi.json", ProfileName::Regulated),
+        ("tenant/bad-tenant-label-nfd.json", ProfileName::Lean),
+    ] {
+        let e = instantiate(profile, Some(&bytes(rel))).unwrap_err();
+        assert!(matches!(e, ProfileError::ParamInvalid { key: "tenant_meanings", .. }), "{rel}: {e}");
+    }
+    // The same rules hold when a document is read back.
+    let nfd = String::from_utf8(bytes("expected/lean-nonascii.json")).unwrap().replacen("\u{e4}", "a\u{308}", 1);
+    assert_eq!(CanonicalProfile::read(nfd.as_bytes()).unwrap_err().code(), "profile.param_invalid");
+    let bidi = String::from_utf8(bytes("expected/lean-nonascii.json")).unwrap().replacen(" \u{2713}", "\u{202e}", 1);
+    assert_eq!(CanonicalProfile::read(bidi.as_bytes()).unwrap_err().code(), "profile.param_invalid");
+}
+
+#[test]
+fn read_reports_a_bad_sequence_code_under_required_meanings() {
+    let doc = edited("builtin/regulated.json", "[\"AUTHORED\",\"APPROVED\"]", "[\"authored\",\"APPROVED\"]");
+    let e = CanonicalProfile::read(&doc).unwrap_err();
+    assert!(matches!(e, ProfileError::ParamInvalid { key: "required_meanings", .. }), "{e}");
 }
 
 fn edited(rel: &str, from: &str, to: &str) -> Vec<u8> {

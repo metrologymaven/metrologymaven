@@ -15,6 +15,13 @@ repository.workspace = true
 fid-types = { path = "../fid-types" }
 # Verifier-side bounded JSON parser (rejects duplicate keys) and RFC 8785 serialiser (TRUST.CHAIN.CANON, layer model).
 fid-trust-canon = { path = "../fid-trust-canon" }
+# NFC check of tenant labels and descriptions (same text on screen, same digest).
+# MIT OR Apache-2.0; already in the tree (fid-pkg, fid-bus, fid-vocab).
+unicode-normalization = "0.1.24"
+
+[dev-dependencies]
+# Cross-check only: CORE's canonicaliser must give the same bytes. Never linked into the library.
+fid-canon = { path = "../fid-canon" }
 
 [lints]
 workspace = true

@@ -187,7 +187,9 @@ fn read_codes(v: &Value) -> Result<Vec<MeaningCode>, ProfileError> {
         Value::Array(items) if items.len() <= super::MAX_REQUIRED_MEANINGS => items
             .iter()
             .map(|i| match i {
-                Value::String(s) => MeaningCode::new(s),
+                Value::String(s) => MeaningCode::new(s).map_err(|_| {
+                    ProfileError::invalid("required_meanings", format!("{:?} is not a meaning code", super::cut(s)))
+                }),
                 _ => Err(ProfileError::invalid("required_meanings", "entries must be strings")),
             })
             .collect(),
