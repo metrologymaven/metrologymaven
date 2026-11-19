@@ -618,7 +618,18 @@ impl Default for SessionTable {
 impl SessionTable {
     /// An empty table with a process-unique number.
     pub fn new() -> Self {
-        let id = NEXT_TABLE.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1)).ok();
+        // Compare-and-swap rather than `fetch_add`, so the counter never wraps and reuses a
+        // number (`fetch_update` is deprecated on newer toolchains).
+        let mut current = NEXT_TABLE.load(Ordering::Relaxed);
+        let id = loop {
+            let Some(next) = current.checked_add(1) else {
+                break None;
+            };
+            match NEXT_TABLE.compare_exchange_weak(current, next, Ordering::Relaxed, Ordering::Relaxed) {
+                Ok(_) => break Some(current),
+                Err(actual) => current = actual,
+            }
+        };
         SessionTable { id, next: 1, rows: BTreeMap::new() }
     }
 
@@ -671,9 +682,8 @@ impl SessionTable {
         }
         let row = self.rows.get(&grant.number)?;
         let live = row.alive.upgrade()?;
-        let same = Arc::ptr_eq(&live, &grant.alive)
-            && row.channel == kind
-            && identity.os_user.as_ref() == Some(&row.os_user);
+        let same =
+            Arc::ptr_eq(&live, &grant.alive) && row.channel == kind && identity.os_user.as_ref() == Some(&row.os_user);
         same.then_some(&row.os_user)
     }
 
