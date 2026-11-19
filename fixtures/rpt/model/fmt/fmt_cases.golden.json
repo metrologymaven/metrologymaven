@@ -1,0 +1,167 @@
+{
+ "ac2_side_rule": {
+  "canonical": "0.05000000000000001",
+  "decimals": 3,
+  "digits_added": 14,
+  "display_de": "0,05000000000000001",
+  "display_en": "0.05000000000000001",
+  "formatter": "fmt.length@1",
+  "side": "above",
+  "tie": false,
+  "unit": "mm"
+ },
+ "ac4_guard_band": {
+  "canonical": "0.04800001",
+  "decimals": 3,
+  "digits_added": 5,
+  "display_de": "0,04800001",
+  "display_en": "0.04800001",
+  "formatter": "fmt.length@1",
+  "side": "above",
+  "tie": false,
+  "unit": "mm"
+ },
+ "ang_deg_auth4": {
+  "canonical": "28.6479",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "28,6479",
+  "display_en": "28.6479",
+  "formatter": "fmt.angle@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "deg"
+ },
+ "ang_deg_default_within": {
+  "canonical": "45.0000",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "45,0000",
+  "display_en": "45.0000",
+  "formatter": "fmt.angle@1",
+  "side": "within",
+  "tie": false,
+  "unit": "deg"
+ },
+ "ang_rad_default": {
+  "canonical": "0.123457",
+  "decimals": 6,
+  "digits_added": 0,
+  "display_de": "0,123457",
+  "display_en": "0.123457",
+  "formatter": "fmt.angle@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "rad"
+ },
+ "len_in_auth4_conforms": {
+  "canonical": "1.2346",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "1,2346",
+  "display_en": "1.2346",
+  "formatter": "fmt.length@1",
+  "side": "within",
+  "tie": false,
+  "unit": "in"
+ },
+ "len_m_auth4": {
+  "canonical": "1.2346",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "1,2346",
+  "display_en": "1.2346",
+  "formatter": "fmt.length@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "m"
+ },
+ "len_mm_auth3_conforms": {
+  "canonical": "12.346",
+  "decimals": 3,
+  "digits_added": 0,
+  "display_de": "12,346",
+  "display_en": "12.346",
+  "formatter": "fmt.length@1",
+  "side": "within",
+  "tie": false,
+  "unit": "mm"
+ },
+ "len_mm_default_nolimits": {
+  "canonical": "25.000",
+  "decimals": 3,
+  "digits_added": 0,
+  "display_de": "25,000",
+  "display_en": "25.000",
+  "formatter": "fmt.length@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "mm"
+ },
+ "len_mm_grouping": {
+  "canonical": "1234567.800",
+  "decimals": 3,
+  "digits_added": 0,
+  "display_de": "1.234.567,800",
+  "display_en": "1,234,567.800",
+  "formatter": "fmt.length@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "mm"
+ },
+ "len_mm_negative_below": {
+  "canonical": "-0.012",
+  "decimals": 3,
+  "digits_added": 0,
+  "display_de": "-0,012",
+  "display_en": "-0.012",
+  "formatter": "fmt.length@1",
+  "side": "below",
+  "tie": false,
+  "unit": "mm"
+ },
+ "len_um_default": {
+  "canonical": "12.3",
+  "decimals": 1,
+  "digits_added": 0,
+  "display_de": "12,3",
+  "display_en": "12.3",
+  "formatter": "fmt.length@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "um"
+ },
+ "scalar_auth2": {
+  "canonical": "0.99",
+  "decimals": 2,
+  "digits_added": 0,
+  "display_de": "0,99",
+  "display_en": "0.99",
+  "formatter": "fmt.scalar@1",
+  "side": "not_applicable",
+  "tie": false,
+  "unit": "1"
+ },
+ "scalar_default_conforms": {
+  "canonical": "3.1416",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "3,1416",
+  "display_en": "3.1416",
+  "formatter": "fmt.scalar@1",
+  "side": "within",
+  "tie": false,
+  "unit": "1"
+ },
+ "scalar_tie_at_cap": {
+  "canonical": "0.30000000000000005",
+  "decimals": 2,
+  "digits_added": 15,
+  "display_de": "0,30000000000000005",
+  "display_en": "0.30000000000000005",
+  "formatter": "fmt.scalar@1",
+  "side": "above",
+  "tie": true,
+  "unit": "1"
+ }
+}

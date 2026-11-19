@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL-005, REQ-RPT.MODEL-006, REQ-RPT.MODEL-007, REQ-RPT.MODEL-008, REQ-RPT.MODEL-009]
 covers: []
 depends_on: [KRN.NUM.FMT.REG, KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.KDEC, UNC.DEC.TYPE, UNC.UEC.CLASS, IO.RES.TRANS.MODEL, GDT.CHAR.RECORD, CORE.STO.SET]
