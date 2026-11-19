@@ -94,7 +94,7 @@ const I100: &str = "iso_placeholder_1.0.0.json";
 fn canonical_form_and_digest_match_the_python_reference() {
     for (file, (r, canonical)) in expected() {
         let doc = parse_profile(&read(&file), &vocab()).unwrap();
-        assert_eq!(String::from_utf8(doc.canonical.clone()).unwrap(), canonical, "{file}");
+        assert_eq!(String::from_utf8(doc.canonical().to_vec()).unwrap(), canonical, "{file}");
         assert_eq!(doc.reference().to_string(), r, "{file}");
         assert_eq!(rf(&r), doc.reference());
     }
@@ -136,7 +136,7 @@ fn ac2_same_version_different_digest_is_profile_immutable_and_journals_nothing()
     // branch without touching the working branch, but not twice with different content.
     let agent = publish(&mut st, Principal::Agent, A100_MOD).unwrap();
     assert_eq!((agent.status, agent.branch), (PublishStatus::Created, Branch::Agent));
-    assert_eq!(st.get(Branch::Working, &agent.reference.id).unwrap().reference().to_string(), exp_ref(A100));
+    assert_eq!(st.get(Branch::Working, agent.reference.id()).unwrap().reference().to_string(), exp_ref(A100));
     assert_eq!(publish(&mut st, Principal::Agent, A100).unwrap_err().code(), "profile_immutable");
     // Its adoption conflicts with the working branch's 1.0.0 and changes nothing.
     let before = st.clone();
@@ -249,7 +249,7 @@ fn repoint_error_paths() {
     assert_eq!(code(&mut st, &["c1", "c9"], &to).code(), "char_unknown");
     assert_eq!(code(&mut st, &["c1"], "dp:asme-y14.5-2018@1.1.0").code(), "bad_profile_ref");
     // A well-formed reference with a wrong digest is unknown.
-    let wrong = format!("{}#{}", r110.id, r100.digest.as_str());
+    let wrong = format!("{}#{}", r110.id(), r100.digest().as_str());
     assert_eq!(code(&mut st, &["c1"], &wrong).code(), "defaults_profile_unknown");
     let many: Vec<String> = (0..10_001).map(|i| format!("c{i}")).collect();
     let many: Vec<&str> = many.iter().map(String::as_str).collect();
@@ -272,10 +272,10 @@ fn ac6_agent_publish_lands_on_agent_branch_until_a_human_adopts_it() {
     let Some(DprofEvent::Publish(e)) = &p.event else { panic!("event") };
     assert_eq!(e.principal, Principal::Agent);
     assert_eq!(e.branch, Branch::Agent);
-    let stored = st.get(Branch::Agent, &p.reference.id).unwrap();
+    let stored = st.get(Branch::Agent, p.reference.id()).unwrap();
     assert_eq!(stored.author, Principal::Agent);
     assert_eq!(stored.branch, Branch::Agent);
-    assert!(st.get(Branch::Working, &p.reference.id).is_none());
+    assert!(st.get(Branch::Working, p.reference.id()).is_none());
     // gdt.set_governing_spec@1 (GDT.CHAR.SPEC) resolves through DprofState::resolve.
     let err = st.resolve(Branch::Working, &p.reference).unwrap_err();
     assert_eq!(err.code(), "defaults_profile_unknown");
@@ -292,7 +292,7 @@ fn ac6_agent_publish_lands_on_agent_branch_until_a_human_adopts_it() {
     assert_eq!(st.adopt(Principal::Script, &p.reference).unwrap_err().code(), "human_only");
     st.adopt(Principal::Human, &p.reference).unwrap();
     assert!(st.resolve(Branch::Working, &p.reference).is_ok());
-    let adopted = st.get(Branch::Working, &p.reference.id).unwrap();
+    let adopted = st.get(Branch::Working, p.reference.id()).unwrap();
     assert_eq!((adopted.author, adopted.adopted), (Principal::Agent, true));
     // Adopting again changes nothing; after adoption the version is taken on the working
     // branch, so a different human 1.0.0 is immutable there.
@@ -357,7 +357,7 @@ fn ac7_exact_replay_of_ac1_and_ac4_is_identical() {
     let r = st.repoint(Principal::Human, &["c1", "c2"], &r110.to_string(), false).unwrap();
     journal.push(r.event.unwrap().canonical_bytes().unwrap());
     let content: BTreeMap<Digest, Vec<u8>> =
-        [A100, A110].iter().map(|f| (parse_profile(&read(f), &vocab()).unwrap().digest, read(f))).collect();
+        [A100, A110].iter().map(|f| (*parse_profile(&read(f), &vocab()).unwrap().digest(), read(f))).collect();
 
     // AC-1's event from an empty store.
     let out = replay(&DprofState::new(), &journal[..1], &content, &vocab());
@@ -387,7 +387,7 @@ fn replay_detects_divergence_and_missing_content() {
     assert_eq!(out.outcome, ReplayOutcome::NotReplayable);
     // Content whose digest differs from the recorded reference.
     let wrong: BTreeMap<Digest, Vec<u8>> =
-        [(parse_profile(&read(A110), &vocab()).unwrap().digest, read(A100))].into_iter().collect();
+        [(*parse_profile(&read(A110), &vocab()).unwrap().digest(), read(A100))].into_iter().collect();
     let out = replay(&start, &journal[1..], &wrong, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Divergent);
     // A tampered event.
@@ -567,8 +567,8 @@ fn reference_grammar() {
     let r = rf(&ok);
     assert_eq!(r.to_string(), ok);
     assert_eq!(r.dialect(), Dialect::Asme);
-    assert_eq!(r.id.edition.as_str(), "y14.5-2018");
-    assert_eq!(r.id.version, SemVer { major: 1, minor: 10, patch: 0 });
+    assert_eq!(r.id().edition().as_str(), "y14.5-2018");
+    assert_eq!(r.id().version(), SemVer::new(1, 10, 0).unwrap());
     for bad in [
         format!("dp:asme-y14.5-2018@1.0#sha256:{d}"),
         format!("dp:asme-y14.5-2018@1.0.0.0#sha256:{d}"),
@@ -593,7 +593,7 @@ fn reference_grammar() {
     assert!(Edition::parse("2017.").is_none());
     assert!(Edition::parse(&"a".repeat(33)).is_none());
     assert!(SemVer::parse("999999999.0.0").is_some());
-    assert!(SemVer { major: 1, minor: 2, patch: 0 } < SemVer { major: 1, minor: 10, patch: 0 });
+    assert!(SemVer::new(1, 2, 0).unwrap() < SemVer::new(1, 10, 0).unwrap());
     assert!(CharId::parse("qpid:5f0e-AB_1.x").is_some());
     assert!(CharId::parse("-c1").is_none());
     assert!(CharId::parse(&"c".repeat(129)).is_none());
@@ -640,7 +640,7 @@ fn schema_vocabulary_comes_from_the_dmt_table() {
         r#"{"dmt:asme/position/none@1":"axis","dmt:asme/size/none@1":"local","unc.decision_rule_hint":"dr.synthetic.default@1"}"#,
     );
     let parsed = parse_profile(ok.as_bytes(), &v).unwrap();
-    assert_eq!(parsed.profile.keys.len(), 3);
+    assert_eq!(parsed.profile().keys().len(), 3);
 
     let err = |t: &str| parse_profile(t.as_bytes(), &v).unwrap_err();
     // A key outside the schema vocabulary.

@@ -139,7 +139,7 @@ fn ac1_create_copies_the_plan_default_and_journals_inherited_from_plan() {
     assert_eq!(bytes(e), exp(&["ac1_event"]));
     // The profile store binds the new characteristic (the DPROF `bind` hook) and the gate passes.
     assert_eq!(dp.binding(Branch::Working, &cid("flat-1")).unwrap().to_string(), asme_ref());
-    assert!(st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap().same_rules(&plan_default));
+    assert!(st.require_governing_spec(H, "flat-1", &dp).unwrap().same_rules(&plan_default));
     // --json result.
     let json = String::from_utf8(fid_canon::to_canonical_bytes(&c.to_cvalue()).unwrap()).unwrap();
     assert!(json.starts_with(r#"{"branch":"working","char":"flat-1","dry_run":false,"governing_spec":{"#));
@@ -156,7 +156,7 @@ fn ac2_explicit_set_replaces_the_spec_and_journals_old_and_new() {
     assert_eq!(bytes(r.event().unwrap()), exp(&["ac2_event"]));
     assert_eq!(r.old().unwrap().dialect(), Dialect::Asme);
     assert_eq!(r.new_spec().inherited_from(), InheritedFrom::Explicit);
-    let now = st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap();
+    let now = st.require_governing_spec(H, "flat-1", &dp).unwrap();
     assert_eq!(now.dialect(), Dialect::Iso);
     assert_eq!(now.defaults_profile().to_string(), iso_ref());
     assert_eq!(dp.binding(Branch::Working, &cid("flat-1")).unwrap().to_string(), iso_ref());
@@ -191,7 +191,7 @@ fn ac4_evaluation_without_a_governing_spec_names_dialect_and_emits_no_result() {
     let (st, dp) = load("no_spec.fidproj");
     let mut results: Vec<&str> = Vec::new();
     let e = st
-        .evaluate(Branch::Working, "c-flat-1", &dp, |_| {
+        .evaluate(H, "c-flat-1", &dp, |_| {
             results.push("ResultRecord");
         })
         .unwrap_err();
@@ -199,7 +199,7 @@ fn ac4_evaluation_without_a_governing_spec_names_dialect_and_emits_no_result() {
     assert_eq!(e.to_string(), "governing_spec_missing{dialect}");
     assert!(results.is_empty());
     // The agent branch sees the same characteristic and refuses it the same way.
-    assert_eq!(st.require_governing_spec(Branch::Agent, "c-flat-1", &dp).unwrap_err().reason(), Some("dialect"));
+    assert_eq!(st.require_governing_spec(A, "c-flat-1", &dp).unwrap_err().reason(), Some("dialect"));
 }
 
 #[test]
@@ -226,14 +226,14 @@ fn incomplete_specs_name_the_first_missing_field() {
 fn ac5_a_digest_that_differs_from_the_stored_profile_is_refused_by_the_gate() {
     let (st, dp) = load("digest_mismatch.fidproj");
     let mut results = 0;
-    let e = st.evaluate(Branch::Working, "c-flat-1", &dp, |_| results += 1).unwrap_err();
+    let e = st.evaluate(H, "c-flat-1", &dp, |_| results += 1).unwrap_err();
     assert_eq!(e.code(), "defaults_profile_digest_mismatch");
     assert_eq!(e.to_string(), format!("defaults_profile_digest_mismatch{{{}}}", asme_mod_ref()));
     assert_eq!(results, 0);
     // The characteristic stays fixable: an explicit set with the stored profile clears it.
     let (mut st, mut dp) = (st, dp);
     set(&mut st, &mut dp, H, "c-flat-1", "ASME", &[ASME_STD], &asme_ref()).unwrap();
-    assert!(st.require_governing_spec(Branch::Working, "c-flat-1", &dp).is_ok());
+    assert!(st.require_governing_spec(H, "c-flat-1", &dp).is_ok());
 }
 
 #[test]
@@ -242,15 +242,15 @@ fn the_gate_checks_the_store_it_is_given() {
     // A store holding the modified 1.0.0: same version, other digest.
     let mut other = DprofState::new();
     publish_doc(&mut other, H, &read("dprof", "asme_placeholder_1.0.0_modified.json"));
-    let e = st.require_governing_spec(Branch::Working, "flat-1", &other).unwrap_err();
+    let e = st.require_governing_spec(H, "flat-1", &other).unwrap_err();
     assert_eq!(e.code(), "defaults_profile_digest_mismatch");
     // A store without that version at all.
-    let e = st.require_governing_spec(Branch::Working, "flat-1", &DprofState::new()).unwrap_err();
+    let e = st.require_governing_spec(H, "flat-1", &DprofState::new()).unwrap_err();
     assert_eq!(e.code(), "defaults_profile_unknown");
     // A store holding the right profile but not bound to the characteristic.
     let mut unbound = DprofState::new();
     publish_doc(&mut unbound, H, &read("dprof", "asme_placeholder_1.0.0.json"));
-    let e = st.require_governing_spec(Branch::Working, "flat-1", &unbound).unwrap_err();
+    let e = st.require_governing_spec(H, "flat-1", &unbound).unwrap_err();
     assert_eq!(e, SpecError::DefaultsProfileBindingMismatch { char: "flat-1".into() });
 }
 
@@ -261,7 +261,7 @@ fn ac6_changing_the_plan_default_leaves_existing_characteristics_unchanged() {
     let (mut st, mut dp, _) = ac1();
     let iso = spec_of(Dialect::Iso, &[ISO_STD], &iso_ref(), InheritedFrom::Explicit);
     st.set_plan_default(&dp, H, "plan-1", Some(iso.clone())).unwrap();
-    let still = st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap();
+    let still = st.require_governing_spec(H, "flat-1", &dp).unwrap();
     assert_eq!(still.dialect(), Dialect::Asme);
     assert_eq!(still.defaults_profile().to_string(), asme_ref());
     // A characteristic created afterwards copies the new default.
@@ -281,7 +281,7 @@ fn req005_changing_the_tenant_default_leaves_existing_characteristics_unchanged(
     assert_eq!(e.plan().unwrap().as_str(), "plan-2");
     let iso = spec_of(Dialect::Iso, &[ISO_STD], &iso_ref(), InheritedFrom::Explicit);
     st.set_tenant_default(&dp, H, Some(iso)).unwrap();
-    assert_eq!(st.require_governing_spec(Branch::Working, "t-1", &dp).unwrap().dialect(), Dialect::Asme);
+    assert_eq!(st.require_governing_spec(H, "t-1", &dp).unwrap().dialect(), Dialect::Asme);
     // The plan default wins over the tenant default.
     let c = st.create_characteristic(&mut dp, H, "plan-1", "p-1", false).unwrap();
     assert_eq!(c.spec().unwrap().inherited_from(), InheritedFrom::Plan);
@@ -294,11 +294,11 @@ fn req004_no_default_means_no_governing_spec_and_no_event() {
     assert!(c.spec().is_none() && c.event().is_none());
     assert_eq!(st.governing_spec(Branch::Working, &cid("bare-1")), Some(None));
     assert_eq!(dp.binding(Branch::Working, &cid("bare-1")), None);
-    let e = st.require_governing_spec(Branch::Working, "bare-1", &dp).unwrap_err();
+    let e = st.require_governing_spec(H, "bare-1", &dp).unwrap_err();
     assert_eq!(e.reason(), Some("dialect"));
     // An explicit set then makes it evaluable.
     set(&mut st, &mut dp, H, "bare-1", "ISO", &[ISO_STD], &iso_ref()).unwrap();
-    assert!(st.require_governing_spec(Branch::Working, "bare-1", &dp).is_ok());
+    assert!(st.require_governing_spec(H, "bare-1", &dp).is_ok());
 }
 
 // ------------------------------------------------------------------ AC-7
@@ -309,7 +309,7 @@ fn ac7_exact_replay_of_ac1_and_ac2_is_identical() {
     let (mut st, mut dp, mut journal) = ac1();
     let r = set(&mut st, &mut dp, H, "flat-1", "ISO", &[ISO_STD], &iso_ref()).unwrap();
     journal.push(r.event().unwrap().canonical_bytes().unwrap());
-    let out = replay(&start_st, &start_dp, &journal);
+    let out = replay(&start_st, &start_dp, &journal, &start_dp, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Identical);
     assert_eq!(out.steps, vec![ReplayOutcome::Identical; 2]);
     assert_eq!(out.spec, st);
@@ -326,14 +326,14 @@ fn replay_detects_divergence_and_unreadable_events() {
     // Changing the plan default before replay makes the inherited copy differ.
     let iso = spec_of(Dialect::Iso, &[ISO_STD], &iso_ref(), InheritedFrom::Explicit);
     start_st.set_plan_default(&start_dp, H, "plan-1", Some(iso)).unwrap();
-    let out = replay(&start_st, &start_dp, &journal);
+    let out = replay(&start_st, &start_dp, &journal, &start_dp, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Divergent);
     assert_eq!(out.steps.len(), 1);
     let (st0, dp0) = load("plan_asme.fidproj");
-    let out = replay(&st0, &dp0, &[b"{}".to_vec()]);
+    let out = replay(&st0, &dp0, &[b"{}".to_vec()], &dp0, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::NotReplayable);
     // The explicit event alone fails: the characteristic does not exist yet.
-    let out = replay(&st0, &dp0, &journal[1..]);
+    let out = replay(&st0, &dp0, &journal[1..], &dp0, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Divergent);
 }
 
@@ -352,8 +352,8 @@ fn dprof_ac6_agent_profiles_are_refused_on_the_working_branch_until_adopted() {
     let a = set(&mut st, &mut dp, A, "flat-1", "ASME", &[ASME_STD], &r).unwrap();
     assert_eq!(a.branch(), Branch::Agent);
     assert_eq!(a.event().unwrap().branch(), Branch::Agent);
-    assert_eq!(st.require_governing_spec(Branch::Agent, "flat-1", &dp).unwrap().defaults_profile(), &agent_ref);
-    let w = st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap();
+    assert_eq!(st.require_governing_spec(A, "flat-1", &dp).unwrap().defaults_profile(), &agent_ref);
+    let w = st.require_governing_spec(H, "flat-1", &dp).unwrap();
     assert_eq!(w.defaults_profile().to_string(), asme_ref());
     assert_eq!(dp.binding(Branch::Working, &cid("flat-1")).unwrap().to_string(), asme_ref());
     // A human cannot set a plan default to it either; after adoption, both work.
@@ -377,8 +377,8 @@ fn agent_work_never_changes_or_blocks_the_working_branch() {
     let c = st.create_characteristic(&mut dp, A, "plan-1", "agent-1", false).unwrap();
     assert_eq!(c.branch(), Branch::Agent);
     assert_eq!(c.event().unwrap().branch(), Branch::Agent);
-    assert_eq!(st.require_governing_spec(Branch::Working, "agent-1", &dp).unwrap_err().code(), "char_unknown");
-    assert!(st.require_governing_spec(Branch::Agent, "agent-1", &dp).is_ok());
+    assert_eq!(st.require_governing_spec(H, "agent-1", &dp).unwrap_err().code(), "char_unknown");
+    assert!(st.require_governing_spec(A, "agent-1", &dp).is_ok());
     assert_eq!(dp.binding(Branch::Working, &cid("agent-1")), None);
     let after: Vec<_> = st.characteristics(Branch::Working).map(|(c, s)| (c.clone(), s.cloned())).collect();
     assert_eq!(after, w_st);
@@ -388,8 +388,8 @@ fn agent_work_never_changes_or_blocks_the_working_branch() {
     // The agent may not re-create a working characteristic.
     assert_eq!(st.create_characteristic(&mut dp, A, "plan-1", "flat-1", false).unwrap_err().code(), "char_exists");
     // Seen from the agent branch, `agent-1` and `AGENT-1` now collide: refused, not guessed.
-    assert_eq!(st.require_governing_spec(Branch::Agent, "AGENT-1", &dp).unwrap_err().code(), "char_case_conflict");
-    assert!(st.require_governing_spec(Branch::Working, "AGENT-1", &dp).is_ok());
+    assert_eq!(st.require_governing_spec(A, "AGENT-1", &dp).unwrap_err().code(), "char_case_conflict");
+    assert!(st.require_governing_spec(H, "AGENT-1", &dp).is_ok());
     // Defaults are human-only.
     assert_eq!(st.set_plan_default(&dp, A, "plan-1", None).unwrap_err(), SpecError::HumanOnly);
     assert_eq!(st.set_tenant_default(&dp, Principal::Script, None).unwrap_err(), SpecError::HumanOnly);
@@ -404,7 +404,7 @@ fn case_only_duplicates_are_refused() {
     assert_eq!(e, SpecError::CharCaseConflict { char: "Flat-1".into() });
     let e = set(&mut st, &mut dp, H, "FLAT-1", "ASME", &[ASME_STD], &asme_ref()).unwrap_err();
     assert_eq!(e.code(), "char_case_conflict");
-    assert_eq!(st.require_governing_spec(Branch::Working, "FLAT-1", &dp).unwrap_err().code(), "char_case_conflict");
+    assert_eq!(st.require_governing_spec(H, "FLAT-1", &dp).unwrap_err().code(), "char_case_conflict");
     assert_eq!(st.create_characteristic(&mut dp, H, "plan-1", "flat-1", false).unwrap_err().code(), "char_exists");
     let e = st.create_characteristic(&mut dp, H, "PLAN-1", "x-1", false).unwrap_err();
     assert_eq!(e, SpecError::BadRequest { reason: "plan_case_conflict" });
@@ -610,9 +610,9 @@ fn repoint_moves_bindings_and_governing_specs_together() {
     let r = st.repoint_defaults_profile(&mut dp, H, &["flat-1"], &to.to_string(), false).unwrap();
     let Some(DprofEvent::Repoint(e)) = &r.event else { panic!("repoint event") };
     assert_eq!(e.changes.len(), 1);
-    let s1 = st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap();
-    assert_eq!((s1.defaults_profile(), s1.inherited_from()), (&to, InheritedFrom::Plan));
-    let s2 = st.require_governing_spec(Branch::Working, "flat-2", &dp).unwrap();
+    let s1 = st.require_governing_spec(H, "flat-1", &dp).unwrap();
+    assert_eq!((s1.defaults_profile(), s1.inherited_from()), (&to, InheritedFrom::Explicit));
+    let s2 = st.require_governing_spec(H, "flat-2", &dp).unwrap();
     assert_eq!(s2.defaults_profile().to_string(), asme_ref());
     // A target whose edition none of the standards name is refused before anything moves.
     let y2009 = publish_doc(&mut dp, H, ASME_2009.as_bytes());
@@ -636,7 +636,7 @@ fn a_repoint_behind_the_specs_back_is_caught_by_the_gate_and_the_writer() {
     let (st, mut dp, _) = ac1();
     let to = publish_doc(&mut dp, H, &read("dprof", "asme_placeholder_1.1.0.json"));
     dp.repoint(H, &["flat-1"], &to.to_string(), false).unwrap();
-    let e = st.require_governing_spec(Branch::Working, "flat-1", &dp).unwrap_err();
+    let e = st.require_governing_spec(H, "flat-1", &dp).unwrap_err();
     assert_eq!(e.to_string(), "defaults_profile_binding_mismatch{flat-1}");
     assert_eq!(project_bytes(&st, &dp).unwrap_err().reason(), Some("bindings_out_of_sync"));
 }
@@ -758,7 +758,96 @@ fn the_gate_is_total_on_hostile_ids() {
     let (st, dp, _) = ac1();
     let long = "a".repeat(10_000);
     for id in ["", " ", "é", "\0", "flat-1\n", long.as_str(), "../flat-1"] {
-        let e = st.require_governing_spec(Branch::Working, id, &dp).unwrap_err();
+        let e = st.require_governing_spec(H, id, &dp).unwrap_err();
         assert!(matches!(e.code(), "bad_request" | "char_unknown"), "{id:?}: {e}");
     }
+}
+
+// ------------------------------------------------------------------ review of #241
+
+#[test]
+fn invalid_profile_identities_cannot_be_built() {
+    use fid_gdt::chars::dprof::{Edition, ProfileId, SemVer};
+    // SemVer parts are capped at nine digits, as the parser caps them.
+    assert!(SemVer::new(1_000_000_000, 0, 0).is_none());
+    assert!(SemVer::new(0, 1_000_000_000, 0).is_none());
+    assert!(SemVer::new(0, 0, u32::MAX).is_none());
+    let max = SemVer::new(999_999_999, 999_999_999, 999_999_999).unwrap();
+    assert_eq!(SemVer::parse(&max.to_string()), Some(max));
+    // Editions only through the parser.
+    for bad in ["", "Y14.5-2018", "y14..5", "-y", &"a".repeat(33)] {
+        assert!(Edition::parse(bad).is_none(), "{bad:?}");
+    }
+    // The widest reference the parts allow still round-trips through its text.
+    let edition = Edition::parse(&"a".repeat(32)).unwrap();
+    let digest = *rf(&asme_ref()).digest();
+    for dialect in [Dialect::Asme, Dialect::Iso] {
+        let r = ProfileRef::new(ProfileId::new(dialect, edition.clone(), max), digest);
+        assert_eq!(ProfileRef::parse(&r.to_string()).as_ref(), Some(&r));
+    }
+    // Every constructible reference is accepted by GoverningSpec::new on the round-trip rule;
+    // the rule is checked first.
+    let r = ProfileRef::new(ProfileId::new(Dialect::Asme, Edition::parse("y14.5-2018").unwrap(), max), digest);
+    let stds = Standards::new(vec![StdRef::parse(ASME_STD).unwrap()]).unwrap();
+    let s = GoverningSpec::new(Dialect::Asme, stds, r.clone(), InheritedFrom::Explicit).unwrap();
+    assert_eq!(s.defaults_profile(), &r);
+    // Parsed documents carry a digest that holds over their canonical bytes.
+    for f in ["asme_placeholder_1.0.0.json", "asme_placeholder_1.1.0.json", "iso_placeholder_1.0.0.json"] {
+        let doc = parse_profile(&read("dprof", f), &vocab()).unwrap();
+        assert!(doc.digest_holds(), "{f}");
+        assert_eq!(doc.reference().id(), &doc.profile().id());
+    }
+}
+
+#[test]
+fn mixed_journal_of_create_publish_repoint_and_set_replays_identical() {
+    use fid_types::Digest;
+    use std::collections::BTreeMap;
+    let (start_st, start_dp) = load("plan_asme.fidproj");
+    let (mut st, mut dp) = (start_st.clone(), start_dp.clone());
+    let mut journal: Vec<Vec<u8>> = Vec::new();
+    for c in ["flat-1", "flat-2"] {
+        let e = st.create_characteristic(&mut dp, H, "plan-1", c, false).unwrap();
+        journal.push(e.event().unwrap().canonical_bytes().unwrap());
+    }
+    let a110 = read("dprof", "asme_placeholder_1.1.0.json");
+    let doc = parse_profile(&a110, &vocab()).unwrap();
+    let p = dp.publish(doc, H, "root://imports/asme_placeholder_1.1.0.json", false).unwrap();
+    journal.push(p.event.unwrap().canonical_bytes().unwrap());
+    let r = st.repoint_defaults_profile(&mut dp, H, &["flat-1"], &p.reference.to_string(), false).unwrap();
+    journal.push(r.event.unwrap().canonical_bytes().unwrap());
+    // After the re-point the spec no longer follows the plan default.
+    let s1 = st.require_governing_spec(H, "flat-1", &dp).unwrap();
+    assert_eq!((s1.inherited_from(), s1.defaults_profile()), (InheritedFrom::Explicit, &p.reference));
+    assert_eq!(st.require_governing_spec(H, "flat-2", &dp).unwrap().inherited_from(), InheritedFrom::Plan);
+    let s = set(&mut st, &mut dp, H, "flat-2", "ISO", &[ISO_STD], &iso_ref()).unwrap();
+    journal.push(s.event().unwrap().canonical_bytes().unwrap());
+    // A later set on the re-pointed characteristic records the explicit origin as old.
+    let s = set(&mut st, &mut dp, H, "flat-1", "ASME", &[ASME_STD], &asme_ref()).unwrap();
+    assert_eq!(s.old().unwrap().inherited_from(), InheritedFrom::Explicit);
+    journal.push(s.event().unwrap().canonical_bytes().unwrap());
+
+    let content: BTreeMap<Digest, Vec<u8>> = [(*p.reference.digest(), a110.clone())].into_iter().collect();
+    let out = replay(&start_st, &start_dp, &journal, &content, &vocab());
+    assert_eq!(out.steps, vec![ReplayOutcome::Identical; journal.len()]);
+    assert_eq!(out.outcome, ReplayOutcome::Identical);
+    assert_eq!((out.spec, out.dprof), (st, dp));
+    // Without the published content the publish step is not replayable.
+    let none: BTreeMap<Digest, Vec<u8>> = BTreeMap::new();
+    let out = replay(&start_st, &start_dp, &journal, &none, &vocab());
+    assert_eq!(out.steps.last(), Some(&ReplayOutcome::NotReplayable));
+    // Dropping the publish makes the re-point diverge.
+    let mut skipped = journal.clone();
+    skipped.remove(2);
+    let out = replay(&start_st, &start_dp, &skipped, &content, &vocab());
+    assert_eq!(out.outcome, ReplayOutcome::Divergent);
+}
+
+#[test]
+fn the_gate_takes_its_branch_from_the_principal() {
+    let (mut st, mut dp, _) = ac1();
+    set(&mut st, &mut dp, A, "flat-1", "ISO", &[ISO_STD], &iso_ref()).unwrap();
+    assert_eq!(st.require_governing_spec(H, "flat-1", &dp).unwrap().dialect(), Dialect::Asme);
+    assert_eq!(st.require_governing_spec(A, "flat-1", &dp).unwrap().dialect(), Dialect::Iso);
+    assert_eq!(st.require_governing_spec(Principal::Script, "flat-1", &dp).unwrap().dialect(), Dialect::Iso);
 }

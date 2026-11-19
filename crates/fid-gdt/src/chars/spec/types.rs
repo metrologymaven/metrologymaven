@@ -201,7 +201,8 @@ pub struct GoverningSpec {
 }
 
 impl GoverningSpec {
-    /// Builds a spec. Checks, in order: each standard's body against `dialect`
+    /// Builds a spec. Checks, in order: the profile reference round-trips through its text
+    /// and [`ProfileRef::parse`] (`bad_profile_ref`), each standard's body against `dialect`
     /// (`dialect_mismatch{<std>}`, first in sorted order), the profile's dialect
     /// (`dialect_mismatch{<ref>}`), the profile's edition
     /// (`defaults_profile_edition_mismatch{<ref>}`).
@@ -211,13 +212,16 @@ impl GoverningSpec {
         defaults_profile: ProfileRef,
         inherited_from: InheritedFrom,
     ) -> Result<GoverningSpec, SpecError> {
+        if ProfileRef::parse(&defaults_profile.to_string()).as_ref() != Some(&defaults_profile) {
+            return Err(SpecError::BadProfileRef);
+        }
         if let Some(s) = standards.0.iter().find(|s| s.body != dialect) {
             return Err(SpecError::DialectMismatch { item: s.to_string() });
         }
         if defaults_profile.dialect() != dialect {
             return Err(SpecError::DialectMismatch { item: echo(&defaults_profile.to_string()) });
         }
-        let edition = defaults_profile.id.edition.as_str();
+        let edition = defaults_profile.id().edition().as_str();
         if !standards.0.iter().any(|s| s.profile_edition() == edition) {
             return Err(SpecError::DefaultsProfileEditionMismatch { reference: echo(&defaults_profile.to_string()) });
         }
@@ -249,9 +253,10 @@ impl GoverningSpec {
         GoverningSpec { inherited_from: from, ..self.clone() }
     }
 
-    /// The same spec naming another defaults profile, re-checked (the re-point path).
+    /// The same spec naming another defaults profile, re-checked, with origin `explicit`
+    /// (the re-point path: the characteristic no longer follows any default).
     pub(crate) fn with_profile(&self, r: &ProfileRef) -> Result<GoverningSpec, SpecError> {
-        GoverningSpec::new(self.dialect, self.standards.clone(), r.clone(), self.inherited_from)
+        GoverningSpec::new(self.dialect, self.standards.clone(), r.clone(), InheritedFrom::Explicit)
     }
 
     /// Whether both name the same rulebook (dialect, standards, profile), whatever their origin.

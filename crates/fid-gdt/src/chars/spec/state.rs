@@ -144,8 +144,8 @@ pub fn check_profile(store: &DprofState, branch: Branch, r: &ProfileRef) -> Resu
     if store.resolve(branch, r).is_ok() {
         return Ok(());
     }
-    let same_version = store.get(Branch::Working, &r.id).is_some()
-        || (branch == Branch::Agent && store.get(Branch::Agent, &r.id).is_some());
+    let same_version = store.get(Branch::Working, r.id()).is_some()
+        || (branch == Branch::Agent && store.get(Branch::Agent, r.id()).is_some());
     let reference = echo(&r.to_string());
     if same_version {
         Err(SpecError::DefaultsProfileDigestMismatch { reference })
@@ -427,17 +427,20 @@ impl SpecState {
         Ok(())
     }
 
-    /// The gate every `check.eval_*` command calls before computing (REQ-003). Checks, in
+    /// The gate every `check.eval_*` command calls before computing (REQ-003). The branch is
+    /// the principal's ([`Branch::for_principal`]): a human sees the working branch only, an
+    /// agent or script its overlay over it. Checks, in
     /// order: `bad_request{bad_char_id}`, `char_case_conflict`, `char_unknown`, no spec
     /// (`governing_spec_missing{dialect}`), the profile in `store` on `branch`
     /// (`defaults_profile_digest_mismatch`, `defaults_profile_unknown`), the store's binding
     /// (`defaults_profile_binding_mismatch`). Returns the spec to evaluate under.
     pub fn require_governing_spec(
         &self,
-        branch: Branch,
+        principal: Principal,
         char: &str,
         store: &DprofState,
     ) -> Result<&GoverningSpec, SpecError> {
+        let branch = Branch::for_principal(principal);
         let (id, spec) = self.lookup(branch, char)?;
         let spec = spec.ok_or_else(|| SpecError::missing("dialect"))?;
         check_profile(store, branch, spec.defaults_profile())?;
@@ -451,12 +454,12 @@ impl SpecState {
     /// passes; on refusal `eval` never runs, so no ResultRecord exists.
     pub fn evaluate<R>(
         &self,
-        branch: Branch,
+        principal: Principal,
         char: &str,
         store: &DprofState,
         eval: impl FnOnce(&GoverningSpec) -> R,
     ) -> Result<R, SpecError> {
-        self.require_governing_spec(branch, char, store).map(eval)
+        self.require_governing_spec(principal, char, store).map(eval)
     }
 
     /// `gdt.repoint_defaults_profile@1` of `GDT.CHAR.DPROF`, keeping governing specs in step:
@@ -464,7 +467,8 @@ impl SpecState {
     /// characteristic has a governing spec visible on the principal's branch
     /// (`char_case_conflict`, `char_unknown`, `governing_spec_missing{dialect}`) whose
     /// standards fit the target's edition (`defaults_profile_edition_mismatch`), and only then
-    /// re-points and writes each spec, with its origin unchanged, on the principal's branch.
+    /// re-points and writes each spec on the principal's branch with origin `explicit` (the
+    /// characteristic no longer follows the plan or tenant default).
     /// Returns the re-point result and its `gdt.repoint_defaults_profile@1` event.
     pub fn repoint_defaults_profile(
         &mut self,
