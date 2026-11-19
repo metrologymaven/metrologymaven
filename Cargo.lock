@@ -405,6 +405,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-align"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-dep",
+ "fid-geo-frame",
+ "fid-kci",
+ "fid-project",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-brand-lint"
 version = "0.0.1"
 dependencies = [

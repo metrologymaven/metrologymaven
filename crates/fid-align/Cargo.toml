@@ -1,0 +1,33 @@
+[package]
+name = "fid-align"
+description = "Metrology Maven alignment element: type, solver contract, content digest, dependency registration and read commands (ALN.MODEL.ELEM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON and SHA-256 for the element form, the content digest and command
+# payloads (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Dependency edges from inputs and parent to each alignment, and the dependents walk of a
+# recompute (CORE.DEP.EDGE). Layer engine, the same layer as this crate.
+fid-dep = { path = "../fid-dep" }
+# Rigid and similarity transforms and authored quantities with one-rounding SI conversion
+# (GEO.FRAME.XFORM, GEO.FRAME.UNITS). Layer kernel.
+fid-geo-frame = { path = "../fid-geo-frame" }
+# The kernel's algorithm ID `module.feature.method@major.minor.patch` (KRN.MAN.CARD). Layer kernel.
+fid-kci = { path = "../fid-kci" }
+# UUIDv7 assignment through the recorded observation source (CORE.PRJ.CONT). Layer model.
+fid-project = { path = "../fid-project" }
+# Command definitions of the two read commands, built through the registry's field rules
+# (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Entity IDs (CONSTITUTION §5). Layer model.
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true
