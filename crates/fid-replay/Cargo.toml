@@ -1,6 +1,6 @@
 [package]
 name = "fid-replay"
-description = "Metrology Maven replay: outcome classification, first-divergence search and attribution (spec nodes CORE.RPL.CLASS, CORE.RPL.BISECT)"
+description = "Metrology Maven replay: outcome classification, first-divergence search and attribution (spec nodes CORE.RPL.CLASS, CORE.RPL.BISECT, CORE.RPL.EXEC.SUBST)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,11 @@ repository.workspace = true
 fid-types = { path = "../fid-types" }
 # Canonical JSON for the bisect report fragment; fid-canon sits below fid-replay in layers.toml.
 fid-canon = { path = "../fid-canon" }
+# CORE.RPL.EXEC.SUBST: commitment salts are served through fid-journal's SaltSource (REQ-004),
+# and command reachability reuses fid-registry's lifecycle and migrator checks (REQ-005).
+# Both sit below fid-replay in layers.toml (model < engine).
+fid-journal = { path = "../fid-journal" }
+fid-registry = { path = "../fid-registry" }
 
 [lints]
 workspace = true

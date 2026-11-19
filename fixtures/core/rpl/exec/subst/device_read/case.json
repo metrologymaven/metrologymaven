@@ -1,0 +1,96 @@
+{
+ "decls": [
+  {
+   "command": "probe.read@1",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  }
+ ],
+ "expect": {
+  "deleted_blob": "sha256:2f6ff96fcb2be7e33521582a3b06007cdb02a1f0d863697b02760361c2c43ace",
+  "outcomes": {
+   "1": "IDENTICAL",
+   "2": "IDENTICAL"
+  },
+  "outcomes_without_blob": {
+   "1": "NOT_REPLAYABLE",
+   "2": "IDENTICAL"
+  },
+  "preflight": [],
+  "preflight_without_blob": [
+   {
+    "id": "sha256:2f6ff96fcb2be7e33521582a3b06007cdb02a1f0d863697b02760361c2c43ace",
+    "kind": "blob",
+    "steps": [
+     1
+    ]
+   }
+  ]
+ },
+ "handler": {
+  "1": {
+   "args": {
+    "feature": "P1",
+    "probe": "T1"
+   },
+   "args_commit": "sha256:b36ea38983c72cff9718ea625881e5fe230f3c40f20880a0282c92fee50924fd",
+   "output": "sha256:569f005daec6d3b047ecbadab5565853e35199351f938921f3d00ddc731f2c65"
+  },
+  "2": {
+   "args": {
+    "feature": "P2",
+    "probe": "T1"
+   },
+   "args_commit": "sha256:bdf5184035b5d9e92539962d32218fd62de5c488ae8cabaf714bd3de6cb8a31f",
+   "output": "sha256:cd019fc9111b8da400a20d178277c25b80c7dfea28d5eabd57c809c0dee09c9f"
+  }
+ },
+ "kernels": [
+  "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f"
+ ],
+ "migrators": [],
+ "span": {
+  "steps": [
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:7b17c55f55d9981c9a962319229c43f3a794e2c35542adf24355fa1d5da7ccf7",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:2f6ff96fcb2be7e33521582a3b06007cdb02a1f0d863697b02760361c2c43ace",
+      "kind": "device",
+      "storage": "blob"
+     }
+    ],
+    "payload": {
+     "inline": {},
+     "salts": {
+      "args": "426ff691e1f6def078a38155f1f3705d"
+     }
+    },
+    "seq": 1
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:14b9384a55d2b52a5f6656515e6417cd04cd26905d2f8b6d878d58ebaf9b2368",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:1129295997b8e1639d7e7b3efc173fd93da53122b4399a07a6a17b4e2f8e4549",
+      "kind": "device",
+      "storage": "blob"
+     }
+    ],
+    "payload": {
+     "inline": {},
+     "salts": {
+      "args": "94144c82b824c5b0e246469240e99a08"
+     }
+    },
+    "seq": 2
+   }
+  ]
+ }
+}

@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kci]
+built_pr: 193
 satisfies: [REQ-KRN.MAN.MANI-001, REQ-KRN.MAN.MANI-002]
 covers: []
 depends_on: [KRN.MAN.KCI]
@@ -33,7 +35,7 @@ The data type of the kernel's identity. It defines the `KernelManifest` and its 
 
 ## Requirements
 
-- **REQ-KRN.MAN.MANI.SCHEMA-001** The schema shall contain every field listed in Scope, with all digests as lowercase hex SHA-256 strings and all numbers as strings (the `KRN.MAN.KCI` convention), and `native_gate` restricted to `measured-only` or `gating`.
+- **REQ-KRN.MAN.MANI.SCHEMA-001** The schema shall contain every field listed in Scope, with all digests as lowercase hex SHA-256 strings in the shared `fid_types::Digest` wire form `sha256:<64 lowercase hex>` (AGENTS rule 14) and all numbers as strings (the `KRN.MAN.KCI` convention), and `native_gate` restricted to `measured-only` or `gating`.
 - **REQ-KRN.MAN.MANI.SCHEMA-002** `manifest_digest()` shall be SHA-256 over the RFC 8785 canonical JSON of the full manifest, and `core_digest()` the same over `ManifestCore`; encoding the same value twice shall give identical bytes on every target.
 - **REQ-KRN.MAN.MANI.SCHEMA-003** The parser shall reject unknown fields, duplicate keys, unsorted algorithm or artifact lists, a `core_digest` that does not match the core, and input over 4 MiB, each with a typed error.
 - **REQ-KRN.MAN.MANI.SCHEMA-004** Parsing a canonical manifest and writing it again shall reproduce the input bytes exactly.
@@ -47,8 +49,15 @@ The data type of the kernel's identity. It defines the `KernelManifest` and its 
 ## Design
 
 - **Registry command(s):** none.
-- **Data structures:** as in Scope; `ManifestError::{UnknownField, DuplicateKey, Unsorted, CoreDigestMismatch, TooLarge, BadHex, BadValue}`.
-- **Algorithm:** hand-written bounded JSON reader for this schema; canonical writer and SHA-256 from `KRN.MAN.KCI`.
+- **Data structures:** as in Scope; `ManifestError::{UnknownField, DuplicateKey, Unsorted, CoreDigestMismatch, TooLarge, BadHex, BadValue, Syntax, MissingField, NonCanonical}`. `Syntax` covers malformed JSON, invalid UTF-8, a BOM and trailing data; `MissingField` names an absent required member; `NonCanonical` is returned only by the strict mode.
+- **Digest wire form:** every digest field (`*_digest`, `card_digest`, `impl_digest`, `config_digest`, `core_digest`, artifact `sha256`) is `sha256:` followed by exactly 64 lowercase hex digits, the shared `fid_types::Digest` (AGENTS rule 14); anything else is `BadHex`.
+- **schema_version:** the JSON string constant `"1"`; it is not a stored field. The writer always emits it, and the reader refuses any other string or a number (`BadValue`).
+- **Value formats:** `name`, `numeric_profile` and artifact `role` match `^[a-z][a-z0-9_-]{0,63}$`; artifact `target` matches `^[a-z0-9][a-z0-9_.-]{0,63}$`; `semver` and `replay_runtime.version` are SemVer 2.0.0 `MAJOR.MINOR.PATCH` with an optional pre-release and **no build metadata** (build metadata does not affect precedence, so it would give one version two identities), at most 64 bytes; algorithm IDs follow `KRN.MAN.CARD` (u32 version parts) and are at most 128 bytes.
+- **List caps:** at most 4096 algorithms and 256 artifacts (`TooLarge` beyond); empty lists are allowed.
+- **Ordering:** algorithms strictly increasing by the `AlgorithmId` total order (module, feature, method, then numeric version), artifacts strictly increasing by `(role, target)`; because the order is strict, a repeated entry is `Unsorted`.
+- **Canonical bytes:** RFC 8785 output of the `KRN.MAN.KCI` writer with no trailing newline; fixture files holding them are marked `-text`.
+- **Reading modes:** `KernelManifest::parse` is lenient about formatting (whitespace, member order, escapes) and every digest it reports is taken over the canonical re-encoding, never over the input bytes. `KernelManifest::parse_canonical` additionally requires the input bytes to equal `canonical_json()` and fails with `NonCanonical` otherwise; verifiers and `TRUST` shall use the strict mode.
+- **Algorithm:** hand-written bounded JSON reader for this schema; canonical writer and SHA-256 from `KRN.MAN.KCI`. A drift test in `fid-canon` checks that `CORE.JRN.CANON` gives the same bytes and digests for the fixture.
 - **Determinism:** D0.
 - **Performance budget:** 1 000-algorithm manifest parse and digest < 5 ms [unverified until measured].
 - **Crate:** `fid-kci` (module `manifest`), plus `schemas/kernel-manifest.schema.json`.
@@ -63,7 +72,7 @@ The data type of the kernel's identity. It defines the `KernelManifest` and its 
 
 ## Open questions
 
-- None.
+- The performance budget (1 000-algorithm parse and digest < 5 ms) has not been measured; the tests only exercise a 1 000-algorithm manifest without timing it.
 
 ## Children
 
