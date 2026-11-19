@@ -214,8 +214,9 @@ def samples():
     )
     clips64 = []
     for i in range(64):
-        a = i * 2.0 * math.pi / 64.0
-        clips64.append({"id": 63 - i, "normal": unit(math.cos(a), math.sin(a), 0.25), "offset_m": i * 0.001})
+        # Only +, *, / and sqrt (all correctly rounded in IEEE 754), never libm cos/sin, whose
+        # last bits differ between platforms and would make the fixture platform-dependent.
+        clips64.append({"id": 63 - i, "normal": unit(i - 31.5, float((i * 7) % 13 - 6), 0.25), "offset_m": i * 0.001})
     s.append(("06-sixty-four-clips", base(clips=clips64)))
     s.append(
         (
