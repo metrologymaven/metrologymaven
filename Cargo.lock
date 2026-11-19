@@ -682,7 +682,9 @@ name = "fid-journal"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-journal",
  "fid-kci",
+ "fid-store",
  "fid-types",
  "getrandom",
 ]

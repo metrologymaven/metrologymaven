@@ -1,8 +1,21 @@
 //! The semantic journal of Metrology Maven (spec node `CORE.JRN`): an append-only,
 //! hash-chained record of commands (CONSTITUTION §6). Modules land one spec leaf at a
 //! time; see `spec/core/jrn/`.
+//!
+//! Feature `store` adds module `append` (`CORE.JRN.CHAIN.APPEND`), which writes through
+//! `fid-store`; without it the crate is the storage-free entry model.
 
+#[cfg(feature = "store")]
+pub mod append;
 pub mod entry;
+
+#[cfg(feature = "test-hooks")]
+pub use append::FaultHook;
+#[cfg(feature = "store")]
+pub use append::{
+    utc_order, Append, AppendRequest, CrashPoint, Durability, EntryHash, Journal, JournalError, Tail, MAX_BATCH,
+    MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE, ROLE_PAYLOAD, ROLE_REF, SYNCHRONOUS_FULL,
+};
 
 pub use entry::{
     build, commitment, parse_digest, session_start, validate_header_value, verify_commitment, verify_header_value,

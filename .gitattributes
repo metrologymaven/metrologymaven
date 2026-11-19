@@ -158,3 +158,5 @@ fixtures/core/bus/principal/** -text
 fixtures/io/reg/detect/** -text
 # UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
 fixtures/unc/stmt/** -text
+# CORE.JRN.CHAIN.APPEND fixtures: reference hashes and digests compared byte for byte by make_fixtures.py --check.
+fixtures/core/jrn/chain/append/** -text

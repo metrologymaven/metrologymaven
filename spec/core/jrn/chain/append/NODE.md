@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal]
 satisfies: [REQ-CORE.JRN.CHAIN-001, REQ-CORE.JRN.CHAIN-002, REQ-CORE.JRN.CHAIN-003, REQ-CORE.JRN.CHAIN-004, REQ-CORE.JRN.CHAIN-009]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.STO.SQL, CORE.STO.CAS]
@@ -58,10 +59,23 @@ The single write path into the chained streams (Record Journal, and in P1b the A
 - **Determinism:** D0 for hashes given the draft; arrival order across concurrent writers is observed and fixed by the sequence numbers.
 - **Performance budget:** REQ-007.
 - **Crate:** `fid-journal` (module `append`).
+- **Pinned build choices (fid-journal `append`, feature `store`):**
+  - **Feature gate.** The module sits behind cargo feature `store` (optional dependency `fid-store`), so the entry model stays storage-free for `fid-replay` and other users built for wasm32. `fid-journal` reaches SQLite only through `fid-store` (the storage writer), never through `rusqlite` directly.
+  - **API.** `Journal::open(ProjectLocation, Locked, stream) -> Journal` (keeps the write lock); `Journal::append(AppendRequest) -> Result<EntryHash, JournalError>`; `AppendRequest { draft, blobs: [Digest], expected_prev: Option<Digest>, salts: Option<RecordedSalts> }`. The injection seam is trait `Append { fn append(&self, AppendRequest) -> Result<EntryHash, JournalError> }`, `Send + Sync`, implemented for `Journal`, `Arc<T>` and `&T`. No update or delete operation exists.
+  - **Schema v1 mapping.** `entries(seq, hash, stream, branch, kind, prev_hash, header)`: `header` is the RFC 8785 header with `hash`; `prev_hash` is always set, to 64 zeros at sequence 1. Schema v1 has no `payloads` table: the payload (salts and committed values, RFC 8785) is a content-addressed blob, referenced from `entry_blobs` with role `payload`; referenced blobs get role `ref`. Schema v1 keys `entries` by `seq` alone, so one project database holds one chained stream, the one the journal is opened for: a draft for another stream is `schema`, a database holding another stream is `chain_invalid`. The Access Ledger (P1b) needs a `(stream, seq)` key first.
+  - **Sequence and link.** One chain per stream over append order, whatever the branch. The tail row is verified before every batch (header hash, columns against the header, stream, and the genesis rule: a zero `prev` exactly at sequence 1, which settles the Open question below); a tail that fails is `chain_invalid`. Open also checks that sequences are 1..n without gaps.
+  - **Time order.** An entry whose `time.utc` instant is earlier than the chain tail's is refused with `time_regressed` and nothing is appended; an equal instant is accepted. Instants are compared as instants (`...:00Z` equals `...:00.000Z` and is earlier than `...:00.5Z`); `mono_ns` is not compared because it restarts with the host. The bus stamps a `principal_upgrade` at confirm time and commits it later (#222), so the guard sits here; such a refusal is the bus's `conflict/head_moved` case.
+  - **Concurrency.** Appends are serialised in arrival order. With `expected_prev` set, a request whose expected tail hash (64 zeros for an empty chain) is no longer the tail fails with `head_moved` (the bus catalogue's `conflict/head_moved`) and appends nothing; without it the request links to the tail at its turn.
+  - **Group commit.** Requests that arrive while a commit is in flight are taken, at most 256 in arrival order, into the next transaction; each runs in its own SAVEPOINT, so one refusal does not affect the others. A failed COMMIT fails the whole batch with `append_failed`.
+  - **Atomicity and durability.** Per append: tail read inside `BEGIN IMMEDIATE`; referenced blobs checked (`missing_blob`; a chunk manifest needs every chunk) and flushed (`sync_all` on the file, its two fan-out directories and `sha256/`); payload put with `PutOpts::durable`; `entries` and `entry_blobs` inserted; COMMIT. The connection runs WAL with `synchronous=FULL`, `fullfsync=ON` and `checkpoint_fullfsync=ON` (`F_FULLFSYNC` on macOS), set and read back at open. The COMMIT is the only point where an entry becomes visible; every failure before it rolls back, leaving at most an unreferenced payload blob, and nothing after it can fail the call.
+  - **Errors.** `append_failed`, `missing_blob`, `schema`, plus `head_moved`, `time_regressed`, `chain_invalid` (stored chain does not verify at its tail or holds another stream) and `input_limit` (header over 1 MiB, payload over 8 MiB, more than 4096 referenced blobs).
+  - **Bounds.** At most 1024 queued requests (later callers wait), 256 per transaction; no panics (lock poisoning is recovered, sequence overflow is `append_failed`).
+  - **Crash harness (AC-2).** 20 numbered points in `CrashPoint`, listed with their hand-labelled outcomes in `fixtures/core/jrn/chain/append/crash/points.json`. The test re-runs its own binary as a child that exits the process (no destructors, no SQLite close) at each point, then reopens and verifies the whole chain and every blob reference. The same points inject in-process failures (`append_failed`, chain at the old head). The hook exists only with feature `test-hooks`.
+  - **Benchmark (AC-5).** `bench_append` is an ignored test (10,000 W2 entries of about 2 KiB, 4 writers on different branches); the 1,000 entries/s budget stays [unverified until measured].
 
 ## Test fixtures
 
-`fixtures/core/jrn/chain/append/crash`: a crash-injection harness with numbered injection points, run in CI on Linux and Windows; CC-BY-4.0.
+`fixtures/core/jrn/chain/append/crash`: a crash-injection harness with numbered injection points, run in CI on Linux, Windows and macOS; CC-BY-4.0. `chain.json` (100 W2 entries with expected hashes and payload digests) and `time_order.json` come from the independent stdlib Python reference `make_fixtures.py` next to them (`--check` in CI).
 
 ## Build prompt
 
