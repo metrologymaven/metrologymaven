@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"a decomposed (non-NFC) name","reason":"bad_path"}

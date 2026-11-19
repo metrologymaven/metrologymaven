@@ -1,0 +1,85 @@
+//! Entry-name rules beyond `PkgPath` (which already refuses absolute paths, `.` and `..`
+//! segments, backslashes, NUL, drive prefixes, non-NFC text and over-long names).
+//!
+//! The reader never writes files, but the names it accepts are handed to verifiers, shown to
+//! people and may be extracted by other tools. So it also refuses:
+//!
+//! - `control_char`: C0 controls, DEL and C1 controls;
+//! - `lookalike`: a character whose compatibility decomposition (NFKC) contains `/`, `\`,
+//!   `.` or `:` (fullwidth dots and solidi, one-dot leaders, ...), a slash-like symbol that
+//!   has no such decomposition (division slash, fraction slash, big solidus, set minus, ...),
+//!   or an invisible formatting character (zero-width spaces and joiners, bidirectional
+//!   overrides and isolates, the byte-order mark, soft hyphen).
+//!
+//! Case-colliding names are refused separately, over the whole entry set (`case_collision`,
+//! `path_conflict` in the parent module).
+
+use unicode_normalization::char::decompose_compatible;
+
+/// Slash- and dot-like symbols without a compatibility decomposition to ASCII.
+const SLASH_LIKE: [char; 9] =
+    ['\u{2044}', '\u{2215}', '\u{2216}', '\u{2571}', '\u{2572}', '\u{29F5}', '\u{29F8}', '\u{29F9}', '\u{3033}'];
+
+/// Invisible formatting characters.
+fn invisible(c: char) -> bool {
+    matches!(c,
+        '\u{00AD}' | '\u{034F}' | '\u{061C}' | '\u{115F}' | '\u{1160}' | '\u{17B4}' | '\u{17B5}' | '\u{180E}'
+        | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2060}'..='\u{2064}' | '\u{2066}'..='\u{206F}'
+        | '\u{3164}' | '\u{FE00}'..='\u{FE0F}' | '\u{FEFF}' | '\u{FFA0}' | '\u{FFF9}'..='\u{FFFB}')
+}
+
+/// Checks one entry name; the error is the reason tag.
+pub(crate) fn check_name(name: &str) -> Result<(), &'static str> {
+    for c in name.chars() {
+        if c.is_control() {
+            return Err("control_char");
+        }
+        if c.is_ascii() {
+            continue;
+        }
+        if SLASH_LIKE.contains(&c) || invisible(c) {
+            return Err("lookalike");
+        }
+        let mut hit = false;
+        decompose_compatible(c, |d| hit |= matches!(d, '/' | '\\' | '.' | ':'));
+        if hit {
+            return Err("lookalike");
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepted() {
+        for ok in ["results/records.json", "results/caf\u{e9} \u{fc}\u{df}er.json", "\u{65e5}\u{672c}/x", "a:b"] {
+            assert_eq!(check_name(ok), Ok(()), "{ok:?}");
+        }
+    }
+
+    #[test]
+    fn refused() {
+        for (name, why) in [
+            ("a\u{1}b", "control_char"),
+            ("a\u{7f}", "control_char"),
+            ("a\u{85}", "control_char"),
+            ("a\u{ff0e}\u{ff0e}", "lookalike"),
+            ("a\u{ff0f}b", "lookalike"),
+            ("a\u{fe68}b", "lookalike"),
+            ("a\u{2215}b", "lookalike"),
+            ("a\u{2044}b", "lookalike"),
+            ("a\u{2024}", "lookalike"),
+            ("a\u{2488}", "lookalike"),
+            ("a\u{ff1a}", "lookalike"),
+            ("a\u{202e}b", "lookalike"),
+            ("a\u{200b}", "lookalike"),
+            ("\u{feff}a", "lookalike"),
+        ] {
+            assert_eq!(check_name(name), Err(why), "{name:?}");
+        }
+    }
+}

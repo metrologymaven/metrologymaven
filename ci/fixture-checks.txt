@@ -64,6 +64,7 @@ python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check
 python fixtures/pkg/check_package.py --strict
 python fixtures/pkg/make_fixtures.py --check
+python fixtures/pkg/make_reader_fixtures.py --check
 python fixtures/plat/bench/make_expected.py --check
 python fixtures/plat/deploy/make_expected.py --check
 python fixtures/plat/matrix/make_page.py --check

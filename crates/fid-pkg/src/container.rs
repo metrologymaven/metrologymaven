@@ -365,7 +365,12 @@ const fn crc_table() -> [u32; 256] {
 
 /// CRC-32 (ISO-HDLC, reflected polynomial `0xEDB88320`) as used by ZIP.
 pub fn crc32(data: &[u8]) -> u32 {
-    let mut c = !0u32;
+    crc32_update(0, data)
+}
+
+/// Continues a CRC-32: `crc32_update(crc32(a), b) == crc32(a ++ b)`.
+pub(crate) fn crc32_update(crc: u32, data: &[u8]) -> u32 {
+    let mut c = !crc;
     for &b in data {
         c = CRC_TABLE[((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8);
     }

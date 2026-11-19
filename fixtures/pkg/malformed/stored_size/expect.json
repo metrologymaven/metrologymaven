@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"a stored entry whose compressed and uncompressed sizes differ","reason":"stored_size"}

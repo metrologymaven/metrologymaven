@@ -859,6 +859,7 @@ name = "fid-pkg"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-registry",
  "fid-types",
  "sha2 0.10.9",
  "unicode-normalization",

@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"the local header says stored, the directory deflate","reason":"local_mismatch"}

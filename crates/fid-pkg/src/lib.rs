@@ -15,11 +15,16 @@
 //! the compression method chosen from the media type alone.
 //!
 //! Errors are one enum, [`PkgError`], with stable codes `pkg.*`.
+//!
+//! Reading a package from untrusted bytes goes through [`reader`] (spec node
+//! `TRUST.PKG.READER`): the bounded, fail-closed [`reader::PackageReader`], its error type
+//! [`reader::ReadError`] and the read-only command `verify.inspect_package@1`.
 
 pub mod container;
 mod error;
 pub mod manifest;
 mod path;
+pub mod reader;
 mod version;
 
 pub use container::{

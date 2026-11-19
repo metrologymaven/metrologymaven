@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"the directory offset is one byte too far","reason":"cd_bounds"}

@@ -324,6 +324,38 @@ jobs:
             if offline curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
           fi
           offline "$py" tools/verify_guide.py --tag "${{ matrix.tag }}"
+  fuzz-pkg-reader:
+    # TRUST.PKG.READER AC-4: the cargo-fuzz target runs for 10 minutes, seeded with the reader
+    # corpus, with no crash, no input over 5 s and no out-of-memory. Runs on main, and on pull
+    # requests that touch the fid-pkg crate or the package fixtures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Decide whether to run
+        id: scope
+        shell: bash
+        run: |
+          run=true
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if ! git diff --name-only "$base"...HEAD | grep -qE '^(crates/fid-pkg/|fixtures/pkg/)'; then run=false; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          toolchain: nightly
+      - name: Install cargo-fuzz
+        if: steps.scope.outputs.run == 'true'
+        run: cargo install cargo-fuzz --locked
+      - name: Fuzz the package reader for 10 minutes
+        if: steps.scope.outputs.run == 'true'
+        working-directory: crates/fid-pkg/fuzz
+        run: |
+          mkdir -p corpus/reader
+          cargo fuzz run reader corpus/reader ../../../fixtures/pkg/malformed ../../../fixtures/pkg/reader/valid             ../../../fixtures/pkg/golden -- -max_total_time=600 -timeout=5 -rss_limit_mb=2048
   msrv:
     # rust-version = 1.89 (Cargo.toml). Cargo 1.89 honours the [resolver] key in
     # .cargo/config.toml; the stable and lockfile jobs resolve MSRV-aware too.

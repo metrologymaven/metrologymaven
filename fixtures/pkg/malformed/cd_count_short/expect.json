@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"the end record counts 2 entries but the directory holds 5","reason":"cd_size"}

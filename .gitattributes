@@ -193,3 +193,6 @@ fixtures/unc/class/** -text
 fixtures/gdt/spec/** -text
 # VIZ.VIEW.STATE fixtures: canonical bytes are compared and hashed; lenient inputs keep their CRLF.
 fixtures/viz/viewstate-samples/** -text
+# TRUST.PKG.READER fixtures: hostile and valid ZIP packages and expected results, byte for byte.
+fixtures/pkg/malformed/** -text
+fixtures/pkg/reader/** -text
