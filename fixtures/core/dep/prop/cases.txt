@@ -1,0 +1,408 @@
+# CORE.DEP.PROP propagation cases (hand-labelled from the leaf's Design rules; CC-BY-4.0).
+# Every expected line below was written by hand. make_prop_fixtures.py --check re-derives
+# each case with a separate stdlib reference and fails on any difference.
+#
+# `elem <name> <id>` names an element for all cases (c < b on purpose; z is never in a graph).
+# A case runs from `case <name>` to `end`:
+#   edge <input> <element>     an edge input -> element (both become known)
+#   state <name> <state>       current | outdated | failed | not_computed
+#   changed <names...>         elements the commit changed
+#   recomputed <names...>      elements the commit recomputed in this pass
+#   mode auto | manual
+# Expected, for a pass that succeeds:
+#   order <names...>           region in propagation order (topological, ties by ascending ID)
+#   pending <names...>         stale elements, propagation order
+#   marked <names...>          elements moved to outdated, propagation order
+#   event <names...>           the dep.elements_marked@1 list, ascending ID (bare `event`: no event)
+#   submit <names...>          the recompute submitted after the commit, ascending ID (bare: none)
+# Expected, for a pass that is refused (nothing changes):
+#   error <code> <reason> <names...>
+elem a 00000000-0000-7000-8000-000000000001
+elem c 00000000-0000-7000-8000-000000000002
+elem b 00000000-0000-7000-8000-000000000003
+elem d 00000000-0000-7000-8000-000000000004
+elem e 00000000-0000-7000-8000-000000000005
+elem f 00000000-0000-7000-8000-000000000006
+elem x 00000000-0000-7000-8000-000000000009
+elem y 00000000-0000-7000-8000-00000000000a
+elem z 00000000-0000-7000-8000-00000000000f
+
+# AC-1: diamond, manual. c precedes b because its ID is smaller.
+case diamond_manual
+edge a b
+edge a c
+edge b d
+edge c d
+state a current
+state b current
+state c current
+state d current
+changed a
+mode manual
+order a c b d
+pending c b d
+marked c b d
+event c b d
+submit
+end
+
+# AC-2: diamond, auto: one recompute of exactly {b, c, d}.
+case diamond_auto
+edge a b
+edge a c
+edge b d
+edge c d
+state a current
+state b current
+state c current
+state d current
+changed a
+mode auto
+order a c b d
+pending c b d
+marked c b d
+event c b d
+submit c b d
+end
+
+# AC-3: d is not_computed and stays so; it is still stale and not resubmitted.
+case diamond_d_not_computed
+edge a b
+edge a c
+edge b d
+edge c d
+state a current
+state b current
+state c current
+state d not_computed
+changed a
+mode auto
+order a c b d
+pending c b d
+marked c b
+event c b
+submit c b
+end
+
+# Marking passes through a not_computed element to its current dependent.
+case not_computed_passes_through
+edge a b
+edge b e
+state a current
+state b not_computed
+state e current
+changed a
+mode manual
+order a b e
+pending b e
+marked e
+event e
+submit
+end
+
+# failed -> outdated; an already outdated element is pending but not marked again.
+case failed_and_outdated
+edge a b
+edge a c
+edge a d
+state a current
+state b failed
+state c outdated
+state d current
+changed a
+mode auto
+order a c b d
+pending c b d
+marked b d
+event b d
+submit b d
+end
+
+# A recompute commit: b, c, d recomputed against fresh inputs stay; only e is stale.
+case recompute_pass_all_fresh
+edge a b
+edge a c
+edge b d
+edge c d
+edge d e
+state a current
+state b current
+state c current
+state d current
+state e current
+changed b c d
+recomputed b c d
+mode manual
+order c b d e
+pending e
+marked e
+event e
+submit
+end
+
+# d was recomputed, but one of its inputs (c) is outdated and outside the pass: d read a
+# stale value, so it is pending and marked, and so is e.
+case recompute_stale_outside_input
+edge a b
+edge a c
+edge b d
+edge c d
+edge d e
+state a current
+state b current
+state c outdated
+state d current
+state e current
+changed b d
+recomputed d
+mode manual
+order b d e
+pending d e
+marked d e
+event d e
+submit
+end
+
+# c was recomputed, but b (its input) was not recomputed in this pass: c is pending too.
+# The event is ascending by ID (c before b), the marked list in propagation order.
+case recomputed_behind_pending
+edge a b
+edge b c
+state a current
+state b current
+state c current
+changed a
+recomputed c
+mode manual
+order a b c
+pending b c
+marked b c
+event c b
+submit
+end
+
+# A changed element downstream of another changed element is not trusted as fresh.
+case changed_downstream_of_changed
+edge a b
+state a current
+state b current
+changed a b
+mode manual
+order a b
+pending b
+marked b
+event b
+submit
+end
+
+# Two seeds: ties are broken by ID across seeds (c is ready after a and precedes b).
+case two_seeds_tie_break
+edge a c
+edge b d
+state a current
+state b current
+state c current
+state d current
+changed a b
+mode auto
+order a c b d
+pending c d
+marked c d
+event c d
+submit c d
+end
+
+# Nothing depends on the changed element: no event, nothing submitted even in auto mode.
+case no_dependents
+edge a b
+state a current
+state b current
+changed b
+mode auto
+order b
+pending
+marked
+event
+submit
+end
+
+# Review of #243: a changed root that read a stale input is not fresh. As
+# recompute_pass_all_fresh, but a (outside the pass) is outdated: c and b were computed
+# from it, so they are pending and marked, and so is everything below.
+case recompute_pass_stale_root_input
+edge a b
+edge a c
+edge b d
+edge c d
+edge d e
+state a outdated
+state b current
+state c current
+state d current
+state e current
+changed b c d
+recomputed b c d
+mode manual
+order c b d e
+pending c b d e
+marked c b d e
+event c b d e
+submit
+end
+
+# Diamond with b already outdated: d is changed and recomputed alone, but reads b.
+case diamond_root_reads_outdated_input
+edge a b
+edge a c
+edge b d
+edge c d
+state a current
+state b outdated
+state c current
+state d current
+changed d
+recomputed d
+mode auto
+order d
+pending d
+marked d
+event d
+submit d
+end
+
+# x -> b -> c with x failed: b (changed, recomputed) read a failed input; c follows.
+case root_reads_failed_input
+edge x b
+edge b c
+state x failed
+state b current
+state c current
+changed b
+recomputed b c
+mode manual
+order b c
+pending b c
+marked b c
+event c b
+submit
+end
+
+# The same with x not_computed.
+case root_reads_not_computed_input
+edge x b
+edge b c
+state x not_computed
+state b current
+state c current
+changed b
+recomputed b c
+mode manual
+order b c
+pending b c
+marked b c
+event c b
+submit
+end
+
+# Cycle b <-> c behind a: refused, cycle starts at its smallest ID (c).
+case cycle_two
+edge a b
+edge b c
+edge c b
+edge c d
+state a current
+state b current
+state c current
+state d current
+changed a
+mode auto
+error cycle cycle c b
+end
+
+# A self-edge is a cycle of one.
+case self_loop
+edge a b
+edge b b
+state a current
+state b current
+changed a
+mode manual
+error cycle cycle b
+end
+
+# The smallest unordered element (c) sits behind the cycle e <-> f, not on it.
+case cycle_behind_dependent
+edge a e
+edge e f
+edge f e
+edge f c
+state a current
+state c current
+state e current
+state f current
+changed a
+mode manual
+error cycle cycle e f
+end
+
+case unknown_changed
+edge a b
+state a current
+state b current
+changed z
+mode manual
+error not_found unknown_element z
+end
+
+case duplicate_changed
+edge a b
+state a current
+state b current
+changed a a
+mode manual
+error duplicate_element duplicate_element a
+end
+
+case unknown_recomputed
+edge a b
+state a current
+state b current
+changed a
+recomputed z
+mode manual
+error not_found unknown_element z
+end
+
+# y is known but not changed or downstream of a changed element.
+case recomputed_not_in_pass
+edge a b
+edge x y
+state a current
+state b current
+state x current
+state y current
+changed a
+recomputed y
+mode manual
+error not_in_pass not_in_pass y
+end
+
+case missing_state
+edge a b
+state a current
+changed a
+mode manual
+error not_found missing_state b
+end
+
+# b is recomputed, so its input x outside the pass must be read; x has no state.
+case missing_state_outside_input
+edge a b
+edge x b
+state a current
+state b current
+changed a
+recomputed b
+mode manual
+error not_found missing_state x
+end

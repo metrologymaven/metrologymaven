@@ -1,0 +1,15 @@
+{
+  "expect": {
+    "code": "bad_standards_ref",
+    "pointer": "/properties/a/x-standards-ref"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "string",
+        "x-standards-ref": "ISO-1101:2017 cl. 8.2 the zone is limited by two lines"
+      }
+    }
+  }
+}

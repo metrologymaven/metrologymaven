@@ -1,0 +1,19 @@
+# CORE.DEP.PROP fixture `diamond` (hand-labelled; CC-BY-4.0).
+# Test-kit element type `num` (value = sum of inputs, registered only in tests).
+# `elem <name> <id>` names an element. IDs are chosen so that c < b: the tie between b and c
+# in propagation order is then broken by ID, not by name or insertion order.
+# `create <name> <input names...>` is one committed `testkit.num_set@1` command creating <name>.
+# `state <name> <state>` is the element's state after loading.
+# Result: a -> b, a -> c, b -> d, c -> d; all `current`.
+elem a 00000000-0000-7000-8000-000000000001
+elem c 00000000-0000-7000-8000-000000000002
+elem b 00000000-0000-7000-8000-000000000003
+elem d 00000000-0000-7000-8000-000000000004
+create a
+create b a
+create c a
+create d b c
+state a current
+state b current
+state c current
+state d current
