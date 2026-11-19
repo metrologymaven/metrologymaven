@@ -16,10 +16,12 @@ fid-uuid = { path = "../fid-uuid" }
 # Scene projection (VIZ.RENDER.SCENE.PROJ), all workspace crates of lower layers, no third-party
 # dependency: the frame ID of GEO.FRAME.TREE (fid-geo-frame), the f64 bounding box of GEO.TYPES
 # (fid-geo-types), the shared `sha256:` digest (fid-types) and the portable SHA-256 of fid-kci
-# for derived-node and graph digests.
+# for derived-node and graph digests; the kernel decision outcome of UNC.DEC (fid-kdec), carried
+# unchanged in the display status.
 fid-geo-frame = { path = "../fid-geo-frame" }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-kci = { path = "../fid-kci" }
+fid-kdec = { path = "../fid-kdec" }
 fid-types = { path = "../fid-types" }
 
 [lints]

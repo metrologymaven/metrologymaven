@@ -6,10 +6,11 @@
 
 use fid_geo_frame::{Frame, FrameId, FrameKind, FrameTree, Transform};
 use fid_geo_types::Aabb;
+use fid_kdec::{NotDecidableReason, Outcome as KernelOutcome};
 use fid_render::scene::idtab::{DerivedId, EntityId, IdError, Identity, RenderId, ViewOp};
 use fid_render::scene::proj::{
-    derived_digest, ChangeBatch, Diagnostic, DisplayStatus, Document, ElementKind, ElementView, NodeDraw, NodeKind,
-    NodeSink, ProjError, Projector, ProjectorRegistry, SceneError, SceneGraph, StyleToken,
+    derived_digest, ChangeBatch, Diagnostic, DisplayStatus, Document, ElementKind, ElementView, KernelStatus, NodeDraw,
+    NodeKind, NodeSink, ProjError, Projector, ProjectorRegistry, SceneError, SceneGraph, StatusCode, StyleToken,
 };
 use fid_types::Digest;
 use std::path::PathBuf;
@@ -44,7 +45,7 @@ fn parse_doc(text: &str) -> Vec<ElementView> {
                 entity: uuid(f[0]),
                 kind: ElementKind::new(f[1]).unwrap(),
                 frame: FrameId::parse(f[2]).unwrap(),
-                status: DisplayStatus::from_name(f[3]).unwrap(),
+                status: DisplayStatus::parse(f[3]).unwrap(),
                 data_digest: Digest::parse(f[4]).unwrap(),
                 origin_m: [n[0], n[1], n[2]],
                 bounds_m: Aabb::new([n[3], n[4], n[5]], [n[6], n[7], n[8]]).unwrap(),
@@ -219,7 +220,7 @@ fn ac5_reopened_project_regenerates_every_derived_node() {
         .elements()
         .iter()
         .map(|e| {
-            let mut s = format!("{} {} {} {} {}", e.entity, e.kind, e.frame, e.status.name(), e.data_digest.as_str());
+            let mut s = format!("{} {} {} {} {}", e.entity, e.kind, e.frame, e.status, e.data_digest.as_str());
             for v in e.origin_m.iter().chain(e.bounds_m.min().iter()).chain(e.bounds_m.max().iter()) {
                 s.push_str(&format!(" {v:?}"));
             }
@@ -343,7 +344,8 @@ fn projector_failure_draws_error_node_and_continues() {
         // Exactly one node for the mesh, marked error, never dropped; nothing partial kept.
         assert_eq!(g.render_ids(mesh), &[rid(2)]);
         let n = g.get(rid(2)).unwrap();
-        assert_eq!(n.status, DisplayStatus::Error);
+        assert_eq!(n.status, d.get(mesh).unwrap().status);
+        assert_eq!(n.proj_error, Some(expected));
         assert_eq!(n.style.as_str(), "error");
         assert_eq!(n.data_digest, d.get(mesh).unwrap().data_digest);
         assert_eq!(g.len(), 40);
@@ -432,7 +434,7 @@ fn large_scene_reprojects_only_dirty_nodes() {
                 let mut e = base.clone();
                 e.entity = EntityId::from_u128(0x1000_0000 + i);
                 if changed && i % 300 == 7 {
-                    e.status = DisplayStatus::Stale;
+                    e.status = DisplayStatus::Error(StatusCode::new("eval_failed").unwrap());
                 }
                 e
             })
@@ -448,4 +450,198 @@ fn large_scene_reprojects_only_dirty_nodes() {
     assert_eq!(out.batch.updated.len(), 100);
     assert!(out.batch.added.is_empty() && out.batch.retired.is_empty());
     assert!(out.batch.updated.windows(2).all(|w| w[0] < w[1]));
+}
+
+#[test]
+fn kernel_statuses_round_trip_unchanged() {
+    // Hand-labelled from the kdec outcomes: nothing is lost or upgraded.
+    let cases = [
+        (
+            "kernel:INDETERMINATE:---",
+            KernelStatus {
+                outcome: KernelOutcome::Indeterminate,
+                claimed: false,
+                declared_input: false,
+                uncharacterized_input: false,
+            },
+        ),
+        (
+            "kernel:NOT_DECIDABLE(u_missing):---",
+            KernelStatus {
+                outcome: KernelOutcome::NotDecidable(NotDecidableReason::UMissing),
+                claimed: false,
+                declared_input: false,
+                uncharacterized_input: false,
+            },
+        ),
+        (
+            "kernel:NOT_DECIDABLE(pdf_unavailable):-du",
+            KernelStatus {
+                outcome: KernelOutcome::NotDecidable(NotDecidableReason::PdfUnavailable),
+                claimed: false,
+                declared_input: true,
+                uncharacterized_input: true,
+            },
+        ),
+        (
+            "kernel:CONFORMS:c--",
+            KernelStatus {
+                outcome: KernelOutcome::Conforms,
+                claimed: true,
+                declared_input: false,
+                uncharacterized_input: false,
+            },
+        ),
+        (
+            "kernel:NONCONFORMS:cdu",
+            KernelStatus {
+                outcome: KernelOutcome::Nonconforms,
+                claimed: true,
+                declared_input: true,
+                uncharacterized_input: true,
+            },
+        ),
+    ];
+    let base = parse_doc(&fixture("doc.txt"))[4].clone(); // a characteristic
+    for (text, kernel) in cases {
+        let status = DisplayStatus::Kernel(kernel);
+        assert_eq!(DisplayStatus::parse(text), Ok(status.clone()), "{text}");
+        assert_eq!(status.to_string(), text);
+        // Through projection: every node of the element carries the status verbatim, and the
+        // serialised line parses back to the same status.
+        let mut el = base.clone();
+        el.status = status.clone();
+        let (g, _) = SceneGraph::project(&registry(), &Document::new(vec![el]).unwrap()).unwrap();
+        assert_eq!(g.len(), 3);
+        for n in g.nodes() {
+            assert_eq!(n.status, status);
+            let line = n.to_string();
+            let field = line.split(' ').nth(14).unwrap();
+            assert_eq!(DisplayStatus::parse(field), Ok(status.clone()));
+        }
+    }
+    for text in ["not_evaluated", "error:eval_failed"] {
+        assert_eq!(DisplayStatus::parse(text).unwrap().to_string(), text);
+    }
+}
+
+#[test]
+fn error_node_keeps_the_kernel_status() {
+    // Every characteristic projector fails; c01 is NONCONFORMS and must stay visible as such.
+    let mut r = ProjectorRegistry::new();
+    for k in ["part", "mesh", "point_set"] {
+        r.register(Box::new(Geom(k))).unwrap();
+    }
+    r.register(Box::new(Bad("characteristic", 4))).unwrap();
+    let d = doc("doc.txt");
+    let (g, out) = SceneGraph::project(&r, &d).unwrap();
+    assert_eq!(out.diagnostics.len(), 12);
+    let c01 = uuid("00000000-0000-4000-8000-00000000000b");
+    let n = g.get(rid(5)).unwrap();
+    assert_eq!(n.identity, Identity::Entity(c01));
+    assert_eq!(n.status, DisplayStatus::parse("kernel:NONCONFORMS:---").unwrap());
+    assert_eq!(n.proj_error, Some(ProjError::Failed { reason: "no tessellation" }));
+    assert_eq!(n.style.as_str(), "error");
+    assert!(n.to_string().contains(" kernel:NONCONFORMS:--- ProjectorFailed sha256:"));
+    for n in g.nodes().filter(|n| n.proj_error.is_some()) {
+        assert_eq!(n.status, d.get(n.identity.entity()).unwrap().status);
+    }
+}
+
+/// A small seeded generator (64-bit LCG, high bits), so the property test needs no dependency.
+struct Lcg(u64);
+
+impl Lcg {
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+        self.0 >> 33
+    }
+    fn below(&mut self, n: usize) -> usize {
+        usize::try_from(self.next()).unwrap() % n
+    }
+}
+
+/// The graph's content keyed by identity, without render IDs (a fresh session numbers nodes
+/// differently).
+fn content(g: &SceneGraph) -> std::collections::BTreeMap<Identity, String> {
+    g.nodes().map(|n| (n.identity, n.to_string().split_once(' ').unwrap().1.to_owned())).collect()
+}
+
+#[test]
+fn incremental_reprojection_equals_full_rebuild() {
+    let statuses = [
+        "not_evaluated",
+        "error:eval_failed",
+        "kernel:CONFORMS:---",
+        "kernel:CONFORMS:c--",
+        "kernel:NONCONFORMS:--u",
+        "kernel:INDETERMINATE:-d-",
+        "kernel:NOT_DECIDABLE(rule_missing):---",
+    ];
+    let kinds = ["part", "mesh", "point_set", "characteristic", "note", "broken"];
+    let mut r = registry();
+    r.register(Box::new(Bad("broken", 4))).unwrap();
+    let template = parse_doc(&fixture("doc.txt"));
+    for seed in 0..300u64 {
+        let mut rng = Lcg(seed);
+        let mut els = template.clone();
+        let (mut g, _) = SceneGraph::project(&r, &Document::new(els.clone()).unwrap()).unwrap();
+        let mut fresh = 0x9000u128;
+        for _step in 0..12 {
+            let mut dirty: Vec<EntityId> = Vec::new();
+            for _ in 0..1 + rng.below(4) {
+                let op = rng.below(7);
+                if els.is_empty() || op == 0 {
+                    // Insert a new element of a random kind at a random position.
+                    let mut e = template[rng.below(template.len())].clone();
+                    fresh += 1;
+                    e.entity = EntityId::from_u128(fresh);
+                    e.kind = ElementKind::new(kinds[rng.below(kinds.len())]).unwrap();
+                    let at = rng.below(els.len() + 1);
+                    dirty.push(e.entity);
+                    els.insert(at, e);
+                    continue;
+                }
+                let i = rng.below(els.len());
+                dirty.push(els[i].entity);
+                match op {
+                    1 => {
+                        els.remove(i);
+                    }
+                    2 => els[i].status = DisplayStatus::parse(statuses[rng.below(statuses.len())]).unwrap(),
+                    3 => els[i].data_digest = fid_kci::kci::sha256_digest(&rng.next().to_le_bytes()),
+                    4 => els[i].origin_m[2] += 0.001 * (rng.below(5) as f64),
+                    5 => els[i].kind = ElementKind::new(kinds[rng.below(kinds.len())]).unwrap(),
+                    _ => {} // dirty but unchanged
+                }
+            }
+            // Extra clean entities, a duplicate and an unknown entity in the dirty set.
+            for _ in 0..rng.below(3) {
+                if !els.is_empty() {
+                    dirty.push(els[rng.below(els.len())].entity);
+                }
+            }
+            if let Some(&first) = dirty.first() {
+                dirty.push(first);
+            }
+            dirty.push(EntityId::from_u128(0xdead_0000 + u128::from(seed)));
+            let d = Document::new(els.clone()).unwrap();
+            let out = g.reproject(&r, &d, &dirty).unwrap();
+            let (rebuilt, _) = SceneGraph::project(&r, &d).unwrap();
+            assert_eq!(content(&g), content(&rebuilt), "seed {seed}");
+            // The batch is ascending and consistent with the table.
+            for list in [&out.batch.added, &out.batch.updated, &out.batch.retired] {
+                assert!(list.windows(2).all(|w| w[0] < w[1]), "seed {seed}");
+            }
+            for id in out.batch.added.iter().chain(&out.batch.updated) {
+                assert!(g.get(*id).is_some(), "seed {seed}");
+            }
+            for id in &out.batch.retired {
+                assert!(g.get(*id).is_none(), "seed {seed}");
+            }
+            for n in g.nodes() {
+                assert_eq!(g.ids().render_id_of(n.identity), Some(n.id), "seed {seed}");
+            }
+        }
+    }
 }

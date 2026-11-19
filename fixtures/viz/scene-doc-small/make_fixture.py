@@ -7,8 +7,8 @@ each characteristic shown with a label and a leader line. This script writes, ne
 - doc.txt: the document state, one element per line in tree order:
   `<entity uuid> <kind> <frame id> <status> <data digest> ox oy oz minx miny minz maxx maxy maxz`
   (floats as Python `repr`, which round-trips exactly);
-- doc-changed.txt: the same document with characteristic c05 changed (new data digest, new
-  kernel status, origin moved 1 mm in z);
+- doc-changed.txt: the same document with characteristic c05 changed (new data digest, kernel
+  status CONFORMS -> NONCONFORMS with the uncharacterized-input flag, origin moved 1 mm in z);
 - dirty.txt: the dirty set CORE publishes for that change, one entity per line: c05 and the
   second point set (dirty, but its data is unchanged);
 - expect-full.txt / expect-full.digest: the serialised scene graph of doc.txt and its digest;
@@ -21,13 +21,17 @@ pinned in `crates/fid-render/src/scene/proj.rs` (module docs), restated here:
 - Render IDs are dense from 1 in registration order: elements in tree order, and within an
   element the nodes in the order its projector emits them (IDTAB REQ-001).
 - A node line is
-  `<rid> <identity> <kind> <frame> <ox> <oy> <oz> <minx> <miny> <minz> <maxx> <maxy> <maxz> <style> <status> <digest>`
+  `<rid> <identity> <kind> <frame> <ox> <oy> <oz> <minx> <miny> <minz> <maxx> <maxy> <maxz> <style> <status> <proj error> <digest>`
   with identity `e:<uuid>` or `d:<uuid>:<op>`, kind `element:<kind>` or `derived:<op>`, the
   frame as 32 lowercase hex digits and every f64 as the 16 lowercase hex digits of its
   big-endian IEEE 754 bits. Lines are ascending by render ID and end in `\\n`.
 - A primary node's data digest is the element's data digest. A derived node's data digest is
   SHA-256( b"FIDSCN" || 0x01 || source digest (32 bytes) || view-operation code (1 byte) ).
-- Frame and status of every node are the element's (kernel-supplied, constitution C2).
+- Frame and status of every node are the element's (kernel-supplied, constitution C2),
+  copied verbatim. Status text: `kernel:<OUTCOME>:<flags>` (NOT_DECIDABLE written
+  `NOT_DECIDABLE(<reason>)`; flags `c`, `d`, `u` or `-` for claimed, declared input,
+  uncharacterized input), `not_evaluated` or `error:<code>`. The proj-error field is `-` for
+  every node here (no projector fails).
 - The graph digest is `sha256:` + SHA-256 of the serialised lines.
 - A change batch lists added, updated and retired render IDs, each ascending. A dirty node
   whose regenerated line equals the old one is not listed.
@@ -84,21 +88,30 @@ def element(n, kind, status, name, version, origin, lo, hi):
 
 def document(changed):
     els = [
-        element(1, "part", "none", "part", 1, (0.0, 0.0, 0.0), (-0.06, -0.04, -0.01), (0.06, 0.04, 0.035)),
-        element(2, "mesh", "none", "mesh", 1, (0.0, 0.0, 0.0125), (-0.06, -0.04, -0.01), (0.06, 0.04, 0.035)),
-        element(3, "point_set", "none", "ps1", 1, (-0.02, 0.01, 0.03), (-0.045, -0.03, 0.029), (0.004, 0.035, 0.031)),
-        element(4, "point_set", "none", "ps2", 1, (0.03, -0.015, 0.0), (0.012, -0.033, -0.002), (0.047, 0.004, 0.002)),
+        element(1, "part", "not_evaluated", "part", 1, (0.0, 0.0, 0.0), (-0.06, -0.04, -0.01), (0.06, 0.04, 0.035)),
+        element(2, "mesh", "not_evaluated", "mesh", 1, (0.0, 0.0, 0.0125), (-0.06, -0.04, -0.01), (0.06, 0.04, 0.035)),
+        element(3, "point_set", "not_evaluated", "ps1", 1, (-0.02, 0.01, 0.03), (-0.045, -0.03, 0.029), (0.004, 0.035, 0.031)),
+        element(4, "point_set", "not_evaluated", "ps2", 1, (0.03, -0.015, 0.0), (0.012, -0.033, -0.002), (0.047, 0.004, 0.002)),
     ]
-    statuses = ["conforming", "nonconforming", "none", "conforming"]
+    # Kernel statuses (fid-kdec outcomes with the claimed / declared-input /
+    # uncharacterized-input flags), cycled over the characteristics.
+    statuses = [
+        "kernel:CONFORMS:---",
+        "kernel:NONCONFORMS:---",
+        "kernel:INDETERMINATE:--u",
+        "kernel:CONFORMS:c--",
+        "kernel:NOT_DECIDABLE(u_missing):-d-",
+    ]
     for i in range(1, 13):
         x = -0.055 + 0.01 * i
         y = 0.03 - 0.0045 * i
         z = 0.035 if i % 2 else -0.01
-        status = statuses[i % 4]
+        status = statuses[i % 5]
         version = 1
         if changed and i == 5:
             z = z + 0.001
-            status = "nonconforming"
+            assert status == "kernel:CONFORMS:---"
+            status = "kernel:NONCONFORMS:--u"
             version = 2
         p = (x, y, z)
         els.append(element(10 + i, "characteristic", status, "c%02d" % i, version, p, p, p))
@@ -139,7 +152,7 @@ def project(e):
 def node_line(rid, node, e):
     identity, kind, o, lo, hi, style, digest = node
     floats = [bits(v) for v in list(o) + list(lo) + list(hi)]
-    return " ".join([str(rid), identity, kind, e["frame"]] + floats + [style, e["status"], digest])
+    return " ".join([str(rid), identity, kind, e["frame"]] + floats + [style, e["status"], "-", digest])
 
 
 def full_projection(els):

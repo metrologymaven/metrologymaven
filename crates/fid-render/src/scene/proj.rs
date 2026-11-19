@@ -33,12 +33,17 @@
 //! - **Missing projector** (REQ-006). The element is skipped (no node; on re-projection its
 //!   old nodes are retired) and a [`Diagnostic::NoProjector`] naming the kind is recorded.
 //! - **Projector failure.** If the projector returns a [`ProjError`], the element is drawn
-//!   as one primary node with status [`DisplayStatus::Error`], style `error`, the element's
-//!   origin, bounds and digest, and a [`Diagnostic::ProjectorFailed`] is recorded. It is
-//!   never dropped silently.
+//!   as one primary node with style `error`, the element's origin, bounds, digest and
+//!   **kernel status unchanged** (so a nonconforming element is never hidden behind the
+//!   failure), [`SceneNode::proj_error`] set, and a [`Diagnostic::ProjectorFailed`] is
+//!   recorded. It is never dropped silently.
+//! - **Status** (C2). [`DisplayStatus`] carries the kdec outcome (including `INDETERMINATE`
+//!   and `NOT_DECIDABLE(reason)`) with the claimed, declared-input and
+//!   uncharacterized-input flags; it is copied, never mapped, so no fact is lost or upgraded.
 //! - **Serialised form** (AC-1, AC-3). One line per node, ascending by render ID:
 //!   `<rid> <identity> <kind> <frame> <ox> <oy> <oz> <minx> <miny> <minz> <maxx> <maxy> <maxz>
-//!   <style> <status> <digest>\n`, identity `e:<uuid>` or `d:<uuid>:<op>`, kind
+//!   <style> <status> <proj error> <digest>\n`, status as in [`DisplayStatus`], proj error
+//!   `-` or the [`ProjError::code`], identity `e:<uuid>` or `d:<uuid>:<op>`, kind
 //!   `element:<kind>` or `derived:<op>`, frame as 32 lowercase hex digits, each f64 as the 16
 //!   lowercase hex digits of its IEEE 754 bits. The graph digest is the SHA-256 of that text.
 //!
@@ -59,6 +64,7 @@ use std::fmt::Write as _;
 use fid_geo_frame::{FrameId, FrameTree};
 use fid_geo_types::Aabb;
 use fid_kci::kci::Sha256;
+use fid_kdec::Outcome as KernelOutcome;
 use fid_types::Digest;
 
 use super::idtab::{DerivedId, EntityId, IdError, IdTable, Identity, RenderId, ViewOp, MAX_IDS_PER_ENTITY};
@@ -157,46 +163,117 @@ impl fmt::Display for StyleToken {
     }
 }
 
-/// The display status of a node, supplied by the kernel through the element (C2). `Error`
-/// is also set here for an element whose projector failed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum DisplayStatus {
-    /// No verdict (plain geometry).
-    None,
-    /// The kernel evaluated it as conforming.
-    Conforming,
-    /// The kernel evaluated it as nonconforming.
-    Nonconforming,
-    /// An upstream input changed; awaiting recompute (`VIZ.RENDER.SCENE.STALE`).
-    Stale,
-    /// Evaluation or projection failed.
-    Error,
+/// What the kernel decided for an element, with every fact of its evidence basis that a
+/// display must not lose (`fid_kdec::Decision` and `EvidenceBasis`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct KernelStatus {
+    /// The outcome, including `INDETERMINATE` and `NOT_DECIDABLE(reason)`.
+    pub outcome: KernelOutcome,
+    /// The value was declared or derived from a specification, not evaluated.
+    pub claimed: bool,
+    /// The value rests on at least one declared input.
+    pub declared_input: bool,
+    /// The value rests on at least one uncharacterized input.
+    pub uncharacterized_input: bool,
 }
 
-impl DisplayStatus {
-    /// Every status, in declaration order.
-    pub const ALL: [DisplayStatus; 5] = [
-        DisplayStatus::None,
-        DisplayStatus::Conforming,
-        DisplayStatus::Nonconforming,
-        DisplayStatus::Stale,
-        DisplayStatus::Error,
-    ];
+/// The display status of a node, supplied by the kernel through the element (C2). The
+/// shape is the one pinned by `VIZ.RENDER.SCENE.STALE` minus its `Stale` variant, which that
+/// leaf adds. Nothing here upgrades or drops a kernel fact.
+///
+/// Serialised (pinned): `kernel:<OUTCOME>:<flags>` where `<OUTCOME>` is the kdec wire name and
+/// `NOT_DECIDABLE` is written `NOT_DECIDABLE(<reason>)`, and `<flags>` is three characters,
+/// `c` (claimed), `d` (declared input), `u` (uncharacterized input), each `-` when unset;
+/// `not_evaluated`; `error:<code>` with a token code.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DisplayStatus {
+    /// A kernel decision.
+    Kernel(KernelStatus),
+    /// Nothing evaluated (plain geometry, or no decision yet).
+    NotEvaluated,
+    /// Evaluation failed in the kernel, with its error code.
+    Error(StatusCode),
+}
 
-    /// The pinned lowercase name.
-    pub const fn name(self) -> &'static str {
-        match self {
-            DisplayStatus::None => "none",
-            DisplayStatus::Conforming => "conforming",
-            DisplayStatus::Nonconforming => "nonconforming",
-            DisplayStatus::Stale => "stale",
-            DisplayStatus::Error => "error",
+/// A kernel error code carried by [`DisplayStatus::Error`]: a token (`[a-z][a-z0-9_.]*`, at
+/// most [`MAX_TOKEN_BYTES`] bytes).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StatusCode(String);
+
+impl StatusCode {
+    /// The code with this name, or [`SceneError::BadToken`].
+    pub fn new(name: &str) -> Result<StatusCode, SceneError> {
+        if is_token(name) {
+            Ok(StatusCode(name.to_owned()))
+        } else {
+            Err(SceneError::BadToken)
         }
     }
 
-    /// The status with this exact name, or `None`.
-    pub fn from_name(name: &str) -> Option<DisplayStatus> {
-        DisplayStatus::ALL.into_iter().find(|s| s.name() == name)
+    /// The name.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Longest serialised [`DisplayStatus`] accepted by [`DisplayStatus::parse`].
+pub const MAX_STATUS_BYTES: usize = 128;
+
+impl DisplayStatus {
+    /// Parses the serialised form (case-sensitive). Fails with [`SceneError::BadStatus`].
+    pub fn parse(s: &str) -> Result<DisplayStatus, SceneError> {
+        if s.len() > MAX_STATUS_BYTES {
+            return Err(SceneError::BadStatus);
+        }
+        if s == "not_evaluated" {
+            return Ok(DisplayStatus::NotEvaluated);
+        }
+        if let Some(code) = s.strip_prefix("error:") {
+            return StatusCode::new(code).map(DisplayStatus::Error).map_err(|_| SceneError::BadStatus);
+        }
+        let rest = s.strip_prefix("kernel:").ok_or(SceneError::BadStatus)?;
+        let (outcome, flags) = rest.rsplit_once(':').ok_or(SceneError::BadStatus)?;
+        let outcome = match outcome.strip_prefix("NOT_DECIDABLE(") {
+            Some(r) => {
+                let reason = r.strip_suffix(')').ok_or(SceneError::BadStatus)?;
+                KernelOutcome::from_wire("NOT_DECIDABLE", Some(reason))
+            }
+            None => KernelOutcome::from_wire(outcome, None),
+        }
+        .map_err(|_| SceneError::BadStatus)?;
+        let flag = |i: usize, set: u8| match flags.as_bytes().get(i) {
+            Some(&c) if c == set => Ok(true),
+            Some(b'-') => Ok(false),
+            _ => Err(SceneError::BadStatus),
+        };
+        if flags.len() != 3 {
+            return Err(SceneError::BadStatus);
+        }
+        Ok(DisplayStatus::Kernel(KernelStatus {
+            outcome,
+            claimed: flag(0, b'c')?,
+            declared_input: flag(1, b'd')?,
+            uncharacterized_input: flag(2, b'u')?,
+        }))
+    }
+}
+
+impl fmt::Display for DisplayStatus {
+    /// The serialised form.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DisplayStatus::Kernel(k) => {
+                f.write_str("kernel:")?;
+                match k.outcome.reason() {
+                    Some(r) => write!(f, "{}({})", k.outcome.wire(), r.wire())?,
+                    None => f.write_str(k.outcome.wire())?,
+                }
+                let c = |on: bool, ch: char| if on { ch } else { '-' };
+                write!(f, ":{}{}{}", c(k.claimed, 'c'), c(k.declared_input, 'd'), c(k.uncharacterized_input, 'u'))
+            }
+            DisplayStatus::NotEvaluated => f.write_str("not_evaluated"),
+            DisplayStatus::Error(code) => write!(f, "error:{}", code.as_str()),
+        }
     }
 }
 
@@ -237,6 +314,8 @@ pub struct SceneNode {
     pub style: StyleToken,
     /// Kernel-supplied display status.
     pub status: DisplayStatus,
+    /// Why the projector failed, for the error node drawn in its place; `None` otherwise.
+    pub proj_error: Option<ProjError>,
     /// SHA-256 digest of the data the node displays.
     pub data_digest: Digest,
 }
@@ -257,6 +336,7 @@ impl SceneNode {
             && bits3(self.bounds_m.max()) == bits3(p.bounds_m.max())
             && self.style == p.style
             && self.status == p.status
+            && self.proj_error == p.proj_error
             && self.data_digest == p.data_digest
     }
 }
@@ -277,7 +357,12 @@ impl fmt::Display for SceneNode {
         for v in self.origin_m.iter().chain(self.bounds_m.min().iter()).chain(self.bounds_m.max().iter()) {
             write!(f, " {:016x}", v.to_bits())?;
         }
-        write!(f, " {} {} {}", self.style, self.status.name(), self.data_digest.as_str())
+        write!(f, " {} {} ", self.style, self.status)?;
+        match self.proj_error {
+            Some(e) => f.write_str(e.code())?,
+            None => f.write_str("-")?,
+        }
+        write!(f, " {}", self.data_digest.as_str())
     }
 }
 
@@ -378,6 +463,7 @@ struct Planned {
     bounds_m: Aabb64,
     style: StyleToken,
     status: DisplayStatus,
+    proj_error: Option<ProjError>,
     data_digest: Digest,
 }
 
@@ -392,6 +478,7 @@ impl Planned {
             bounds_m: self.bounds_m,
             style: self.style,
             status: self.status,
+            proj_error: self.proj_error,
             data_digest: self.data_digest,
         }
     }
@@ -453,7 +540,8 @@ impl<'a> NodeSink<'a> {
             origin_m: d.origin_m,
             bounds_m: d.bounds_m,
             style: d.style,
-            status: self.el.status,
+            status: self.el.status.clone(),
+            proj_error: None,
             data_digest,
         });
         Ok(())
@@ -597,6 +685,8 @@ impl fmt::Display for Diagnostic {
 pub enum SceneError {
     /// A kind or style token is not 1..=64 bytes of `[a-z][a-z0-9_.]*`.
     BadToken,
+    /// A serialised display status does not parse.
+    BadStatus,
     /// The document or dirty set has more than [`MAX_ELEMENTS`] entries.
     TooManyElements,
     /// Two elements share an entity ID.
@@ -625,6 +715,7 @@ impl SceneError {
     pub const fn code(&self) -> &'static str {
         match self {
             SceneError::BadToken => "BadToken",
+            SceneError::BadStatus => "BadStatus",
             SceneError::TooManyElements => "TooManyElements",
             SceneError::DuplicateEntity(_) => "DuplicateEntity",
             SceneError::NonFiniteOrigin(_) => "NonFiniteOrigin",
@@ -930,7 +1021,8 @@ fn plan_element(
                 origin_m: el.origin_m,
                 bounds_m: el.bounds_m,
                 style: StyleToken::error(),
-                status: DisplayStatus::Error,
+                status: el.status.clone(),
+                proj_error: Some(error),
                 data_digest: el.data_digest,
             });
             Ok(nodes)
@@ -955,10 +1047,23 @@ mod tests {
     }
 
     #[test]
-    fn status_names_round_trip() {
-        for s in DisplayStatus::ALL {
-            assert_eq!(DisplayStatus::from_name(s.name()), Some(s));
+    fn status_text_is_strict() {
+        for bad in [
+            "",
+            "none",
+            "kernel:CONFORMS",
+            "kernel:CONFORMS:---x",
+            "kernel:CONFORMS:dcu",
+            "kernel:conforms:---",
+            "kernel:NOT_DECIDABLE:---",
+            "kernel:NOT_DECIDABLE(nope):---",
+            "kernel:INDETERMINATE(u_missing):---",
+            "error:",
+            "error:Bad",
+            "Not_evaluated",
+        ] {
+            assert_eq!(DisplayStatus::parse(bad), Err(SceneError::BadStatus), "{bad}");
         }
-        assert_eq!(DisplayStatus::from_name("Conforming"), None);
+        assert_eq!(DisplayStatus::parse(&"x".repeat(MAX_STATUS_BYTES + 1)), Err(SceneError::BadStatus));
     }
 }

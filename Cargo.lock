@@ -900,6 +900,7 @@ dependencies = [
  "fid-geo-frame",
  "fid-geo-types",
  "fid-kci",
+ "fid-kdec",
  "fid-types",
  "fid-uuid",
 ]
