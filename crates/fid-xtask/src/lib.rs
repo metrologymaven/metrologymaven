@@ -37,11 +37,16 @@
 //!
 //! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
 //! [`conic_audit`].
+//!
+//! `kernel-allow`: the kernel-graph third-party dependency allowlist (spec node
+//! `ECO.REPO.ALLOW`), in [`kernel_allow`]; it reuses the layer map and the resolved graph
+//! built here.
 
 pub mod apps_policy;
 pub mod bots;
 pub mod conic_audit;
 pub mod crate_graph;
+pub mod kernel_allow;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
@@ -137,6 +142,8 @@ pub struct Graph {
     members: BTreeSet<String>,
     /// Package ID to package name.
     names: BTreeMap<String, String>,
+    /// Package ID to its resolved version, as `cargo metadata` prints it.
+    versions: BTreeMap<String, String>,
     /// Package ID to its dependency edges.
     edges: BTreeMap<String, Vec<Edge>>,
     /// Package ID to its `Cargo.toml` path, when `cargo metadata` gives one.
@@ -194,6 +201,9 @@ impl Graph {
                 }
                 g.declared.insert(id.clone(), set);
             }
+            if let Some(CValue::Str(v)) = p.get("version") {
+                g.versions.insert(id.clone(), v.clone());
+            }
             g.names.insert(id, as_str(field(p, "name")?)?.to_string());
         }
         let known = |g: &Graph, id: &str| {
@@ -241,10 +251,24 @@ impl Graph {
     /// Like [`Graph::load`]; with `all_features`, passes `--all-features` so optional
     /// (feature-gated) dependencies are part of the resolved graph.
     pub fn load_with(dir: &Path, all_features: bool) -> Result<Graph, String> {
+        Graph::load_metadata(dir, all_features, Some(host_triple()?))
+    }
+
+    /// Like [`Graph::load_with`], but without `--filter-platform`: dependencies of every
+    /// target (including `[target.'cfg(...)'.dependencies]` for other platforms) are part of
+    /// the graph. Offline, this needs them in the local registry cache (`cargo fetch` with no
+    /// `--target` downloads them all).
+    pub fn load_all_targets(dir: &Path, all_features: bool) -> Result<Graph, String> {
+        Graph::load_metadata(dir, all_features, None)
+    }
+
+    fn load_metadata(dir: &Path, all_features: bool, platform: Option<String>) -> Result<Graph, String> {
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-        let host = host_triple()?;
         let mut cmd = Command::new(cargo);
-        cmd.args(["metadata", "--format-version", "1", "--offline", "--filter-platform", &host]);
+        cmd.args(["metadata", "--format-version", "1", "--offline"]);
+        if let Some(p) = platform {
+            cmd.args(["--filter-platform", &p]);
+        }
         if all_features {
             cmd.arg("--all-features");
         }
