@@ -14,8 +14,7 @@
 
 use crate::names::{derive, DerivedNames};
 use fid_canon::{digest as canon_digest, digest_bytes, parse_with_limits, to_canonical_bytes, CValue};
-use fid_registry::def::{CommandDef, DefError, Projection as DeclaredProjection};
-use fid_types::{CommandId, Determinism, Digest, SideEffect};
+use fid_types::{CommandId, CommandName, Determinism, Digest, SideEffect};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -82,6 +81,38 @@ impl McpProjection {
             McpProjection::Exposed | McpProjection::Named => DeclaredProjection::Exposed,
             McpProjection::RequestOnly => DeclaredProjection::RequestOnly,
             McpProjection::None => DeclaredProjection::Never,
+        }
+    }
+}
+
+/// The registry's declared `mcp_projection` (CORE.REG.DEF.FIELD wire values).
+///
+/// Read here rather than through `fid-registry`: surface crates link `fid-surface` and may not
+/// reach a CORE crate (`lint-allowlist.toml`, `[surfaces]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum DeclaredProjection {
+    Never,
+    RequestOnly,
+    Exposed,
+}
+
+impl DeclaredProjection {
+    /// The wire string.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DeclaredProjection::Never => "never",
+            DeclaredProjection::RequestOnly => "request_only",
+            DeclaredProjection::Exposed => "exposed",
+        }
+    }
+
+    /// Parses the wire string.
+    pub fn parse(s: &str) -> Option<DeclaredProjection> {
+        match s {
+            "never" => Some(DeclaredProjection::Never),
+            "request_only" => Some(DeclaredProjection::RequestOnly),
+            "exposed" => Some(DeclaredProjection::Exposed),
+            _ => None,
         }
     }
 }
@@ -333,17 +364,128 @@ fn params_of(schema: &CValue, command: &str) -> Result<Vec<ParamSpec>, ProjError
     Ok(out)
 }
 
+/// Every field a CORE.REG.DEF.FIELD definition may carry.
+const DEF_FIELDS: [&str; 22] = [
+    "id",
+    "major",
+    "title",
+    "description",
+    "params_schema",
+    "result_schema",
+    "side_effect",
+    "mcp_projection",
+    "determinism",
+    "idempotency",
+    "fs_effect",
+    "undo",
+    "preconditions",
+    "effects",
+    "algorithms",
+    "exposure",
+    "lifecycle",
+    "human_only",
+    "network",
+    "web",
+    "web_note",
+    "cli_bare",
+];
+
+/// The fields CORE.REG.DEF.FIELD requires (the rest have defaults or are conditional).
+const DEF_REQUIRED: [&str; 18] = [
+    "id",
+    "major",
+    "title",
+    "description",
+    "params_schema",
+    "result_schema",
+    "side_effect",
+    "mcp_projection",
+    "determinism",
+    "idempotency",
+    "fs_effect",
+    "undo",
+    "preconditions",
+    "effects",
+    "algorithms",
+    "exposure",
+    "lifecycle",
+    "web",
+];
+
+/// The part of a definition the projection reads. Full declaration validation is CORE.REG's;
+/// this reader checks the field set and the type of every field it uses, and refuses the rest.
+struct Def {
+    title: String,
+    description: String,
+    params_schema: CValue,
+    result_schema: CValue,
+    side_effect: SideEffect,
+    mcp_projection: DeclaredProjection,
+    determinism: Determinism,
+    human_only: bool,
+}
+
+impl Def {
+    /// The projection MCP clients get: `human_only` caps it at `request_only` (D-031).
+    fn effective_projection(&self) -> DeclaredProjection {
+        if self.human_only && self.mcp_projection > DeclaredProjection::RequestOnly {
+            DeclaredProjection::RequestOnly
+        } else {
+            self.mcp_projection
+        }
+    }
+}
+
 /// One parsed manifest entry, before projection.
 struct Entry {
     id: CommandId,
-    def: CommandDef,
+    def: Def,
 }
 
-fn def_err(index: usize, e: DefError) -> ProjError {
-    match e {
-        DefError::BadId(id) => ProjError::BadCommandId { command: id, detail: "not a command name".to_string() },
-        other => parse_err(format!("commands[{index}]: {other}")),
+/// Reads one definition (without `definition_digest`) into its command ID and [`Def`].
+fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, ProjError> {
+    let at = |m: &str| parse_err(format!("commands[{index}]: {m}"));
+    if let Some(k) = o.keys().find(|k| !DEF_FIELDS.contains(&k.as_str())) {
+        return Err(at(&format!("unknown field {k:?}")));
     }
+    if let Some(k) = DEF_REQUIRED.iter().find(|k| !o.contains_key(**k)) {
+        return Err(at(&format!("missing field {k:?}")));
+    }
+    let mut text = |k: &str| match o.remove(k) {
+        Some(CValue::Str(s)) => Ok(s),
+        _ => Err(at(&format!("{k} must be a string"))),
+    };
+    let name = text("id")?;
+    let title = text("title")?;
+    let description = text("description")?;
+    let side_effect = text("side_effect")?;
+    let mcp_projection = text("mcp_projection")?;
+    let determinism = text("determinism")?;
+    if !CommandName::is_valid(&name) {
+        return Err(ProjError::BadCommandId { command: name, detail: "not a command name".to_string() });
+    }
+    let major = match o.remove("major") {
+        Some(CValue::Num(n)) if n.fract() == 0.0 && (0.0..=f64::from(u32::MAX)).contains(&n) => n as u32,
+        _ => return Err(at("major must be an integer 0..2^32")),
+    };
+    let id = CommandId::parse(&format!("{name}@{major}")).map_err(|_| ProjError::BadCommandId {
+        command: format!("{name}@{major}"),
+        detail: "major has more than 5 digits".to_string(),
+    })?;
+    let side_effect = SideEffect::parse(&side_effect).map_err(|_| at("bad side_effect"))?;
+    let mcp_projection = DeclaredProjection::parse(&mcp_projection).ok_or_else(|| at("bad mcp_projection"))?;
+    let determinism = Determinism::parse(&determinism).map_err(|_| at("bad determinism"))?;
+    let human_only = match o.remove("human_only") {
+        None => false,
+        Some(CValue::Bool(b)) => b,
+        Some(_) => return Err(at("human_only must be a boolean")),
+    };
+    let (Some(params_schema), Some(result_schema)) = (o.remove("params_schema"), o.remove("result_schema")) else {
+        return Err(at("missing schema"));
+    };
+    let def =
+        Def { title, description, params_schema, result_schema, side_effect, mcp_projection, determinism, human_only };
+    Ok(Entry { id, def })
 }
 
 /// Parses and checks the manifest envelope and every definition.
@@ -396,12 +538,10 @@ fn read_manifest(manifest: &[u8]) -> Result<Vec<Entry>, ProjError> {
         if actual.0 != stated.to_bytes() {
             return Err(parse_err(format!("commands[{index}].definition_digest does not match the definition")));
         }
-        let def = CommandDef::from_value(rest).map_err(|e| def_err(index, e))?;
-        let id = CommandId::parse(&format!("{}@{}", def.id, def.major)).map_err(|_| ProjError::BadCommandId {
-            command: format!("{}@{}", def.id, def.major),
-            detail: "major has more than 5 digits".to_string(),
-        })?;
-        out.push(Entry { id, def });
+        let CValue::Obj(obj) = rest else {
+            return Err(parse_err(format!("commands[{index}] must be an object")));
+        };
+        out.push(read_def(index, obj)?);
     }
     // Byte order of the name, then numeric major (REQ-008).
     out.sort_by(|a, b| a.id.name().as_bytes().cmp(b.id.name().as_bytes()).then(a.id.major().cmp(&b.id.major())));

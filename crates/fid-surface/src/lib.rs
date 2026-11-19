@@ -12,7 +12,9 @@ pub mod names;
 pub mod projection;
 
 pub use names::{derive as derive_names, DerivedNames, MCP_NAME_MAX};
-pub use projection::{project, DocText, McpProjection, NameKind, ParamSpec, ProjError, Projection, SurfaceProjection};
+pub use projection::{
+    project, DeclaredProjection, DocText, McpProjection, NameKind, ParamSpec, ProjError, Projection, SurfaceProjection,
+};
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_types::{CommandId, Digest};
