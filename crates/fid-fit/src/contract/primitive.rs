@@ -275,11 +275,12 @@ impl FittedFeature {
     /// [`normalize_direction`] (unit length, sign-normalised); the cone and paraboloid axes,
     /// whose sign is part of the geometry, through [`unit_direction`] (unit length only).
     /// Every value must be finite ([`FitError::Num`] otherwise). Out-of-range values are
-    /// [`FitError::InvalidParams`] naming the field (`feature.<name>`): a radius `r <= 0`;
-    /// a negative `major_r`, `minor_r`, `length`, `width`, `b` or `focal`; an ellipse with
-    /// `a < b`; a cone `half_angle` outside the open interval `(0, pi/2)`; a spline with
+    /// [`FitError::InvalidParams`] naming the field (`feature.<name>`): a radius `r`, torus
+    /// `major_r` or `minor_r`, ellipse `b`, rectangle `width` or paraboloid `focal` that is not
+    /// strictly positive; a negative slot `length` or `width` (`-0.0` becomes `+0.0`); an
+    /// ellipse with `a < b` or a rectangle with `length < width`; a cone `half_angle` outside the open interval `(0, pi/2)`; a spline with
     /// `degree == 0`, fewer than `degree + 1` control points, or a knot count other than
-    /// `control + degree + 1`. Values are copied unchanged otherwise.
+    /// `control + degree + 1` (checked arithmetic, so an overflowing degree is refused). Values are copied unchanged otherwise.
     pub fn canonical(&self) -> Result<FittedFeature, FitError> {
         use FittedFeature as F;
         let nd = normalize_direction;
@@ -303,8 +304,8 @@ impl FittedFeature {
             F::Torus { c, n, major_r, minor_r } => F::Torus {
                 c: fin3(c)?,
                 n: nd(*n)?,
-                major_r: nonneg("feature.major_r", *major_r)?,
-                minor_r: nonneg("feature.minor_r", *minor_r)?,
+                major_r: pos("feature.major_r", *major_r)?,
+                minor_r: pos("feature.minor_r", *minor_r)?,
             },
             F::Slot { c, n, d, length, width } => F::Slot {
                 c: fin3(c)?,
@@ -313,15 +314,16 @@ impl FittedFeature {
                 length: nonneg("feature.length", *length)?,
                 width: nonneg("feature.width", *width)?,
             },
-            F::Rectangle { c, n, d, length, width } => F::Rectangle {
-                c: fin3(c)?,
-                n: nd(*n)?,
-                d: nd(*d)?,
-                length: nonneg("feature.length", *length)?,
-                width: nonneg("feature.width", *width)?,
-            },
+            F::Rectangle { c, n, d, length, width } => {
+                let width = pos("feature.width", *width)?;
+                let length = fin(*length)?;
+                if length < width {
+                    return Err(FitError::InvalidParams { field: "feature.length" });
+                }
+                F::Rectangle { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, length, width }
+            }
             F::Ellipse { c, n, d, a, b } => {
-                let b = nonneg("feature.b", *b)?;
+                let b = pos("feature.b", *b)?;
                 let a = fin(*a)?;
                 if a < b {
                     return Err(FitError::InvalidParams { field: "feature.a" });
@@ -329,7 +331,7 @@ impl FittedFeature {
                 F::Ellipse { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, a, b }
             }
             F::Paraboloid { apex, d, focal } => {
-                F::Paraboloid { apex: fin3(apex)?, d: ud(*d)?, focal: nonneg("feature.focal", *focal)? }
+                F::Paraboloid { apex: fin3(apex)?, d: ud(*d)?, focal: pos("feature.focal", *focal)? }
             }
             F::Polyline { vertices } => F::Polyline { vertices: copy_points(vertices)? },
             F::Spline { degree, knots, control } => {
@@ -357,11 +359,12 @@ fn pos(field: &'static str, x: f64) -> Result<f64, FitError> {
     }
 }
 
-/// Finite and not negative (`-0.0` counts as zero), else [`FitError::InvalidParams`].
+/// Finite and not negative, else [`FitError::InvalidParams`]. Returns `x + 0.0`, so `-0.0`
+/// becomes `+0.0` and both zeros encode identically.
 fn nonneg(field: &'static str, x: f64) -> Result<f64, FitError> {
     let x = fin(x)?;
     if x >= 0.0 {
-        Ok(x)
+        Ok(x + 0.0)
     } else {
         Err(FitError::InvalidParams { field })
     }
@@ -370,17 +373,22 @@ fn nonneg(field: &'static str, x: f64) -> Result<f64, FitError> {
 /// Counts of a B-spline of degree `p`: `p >= 1`, at least `p + 1` control points `m`, and
 /// exactly `m + p + 1` knots. (Knot order is the fitting method's concern.)
 fn spline_counts(degree: u32, knots: usize, control: usize) -> Result<(), FitError> {
-    let p = degree as usize;
+    let bad = |field| Err(FitError::InvalidParams { field });
     if degree == 0 {
-        return Err(FitError::InvalidParams { field: "feature.degree" });
+        return bad("feature.degree");
     }
-    if control < p + 1 {
-        return Err(FitError::InvalidParams { field: "feature.control" });
+    // Checked arithmetic: a degree near `u32::MAX` must not overflow (on 32-bit targets
+    // `usize` is 32 bits), it is refused.
+    let Some(order) = usize::try_from(degree).ok().and_then(|p| p.checked_add(1)) else {
+        return bad("feature.degree");
+    };
+    if control < order {
+        return bad("feature.control");
     }
-    if knots != control + p + 1 {
-        return Err(FitError::InvalidParams { field: "feature.knots" });
+    match control.checked_add(order) {
+        Some(k) if k == knots => Ok(()),
+        _ => bad("feature.knots"),
     }
-    Ok(())
 }
 
 fn fin2(v: &V2) -> Result<V2, FitError> {

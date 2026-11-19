@@ -619,24 +619,33 @@ fn degeneracy_on_large_inputs_spans_several_blocks() {
 
 #[test]
 fn tiny_third_spread_is_coplanar_not_a_stall() {
-    // Points on a 20 x 20 grid of 1 m with z spread `eps` (alternating sign pattern): the
-    // third singular value is about eps relative, whose square underflows for eps <= 1e-160.
-    for eps in [1e-200, 1e-300, 1e-160, 1e-100] {
-        let mut xyz = Vec::new();
-        for i in 0..400u32 {
-            let x = f64::from(i % 20) / 20.0;
-            let y = f64::from(i / 20) / 20.0;
-            let z = if (i * 7 + i / 3) % 2 == 0 { eps } else { -eps };
-            xyz.extend_from_slice(&[x, y, z]);
+    // Regression for the Jacobi stall: a 20 x 20 grid of 1 m with a pseudo-random z spread of
+    // `eps` (`z = eps * w / 50`, `w` in [-50, 50]). For eps <= ~1e-160 the squared third column
+    // norm underflows; the old tolerance `sqrt(a) * sqrt(b)` became 0 and the sweep loop
+    // returned NotConverged. Every case must be rank 2: Coplanar for a sphere.
+    let mut cases = 0;
+    for a in 1..=20i64 {
+        for k in (160..=300).step_by(10) {
+            let eps: f64 = format!("1e-{k}").parse().unwrap();
+            let mut xyz = Vec::new();
+            for i in 0..400i64 {
+                let x = (i % 20) as f64 / 20.0;
+                let y = (i / 20) as f64 / 20.0;
+                let w = ((i * a * 37 + i / 7) % 101) - 50;
+                xyz.extend_from_slice(&[x, y, eps * (w as f64 / 50.0)]);
+            }
+            let v = PointsView::new(&xyz, None).unwrap();
+            match check_points(Primitive::Sphere, &v, &Thresholds::default()) {
+                Err(FitError::Coplanar { n: 400, rank: 2, .. }) => {}
+                other => panic!("a {a}, eps 1e-{k}: {other:?}"),
+            }
+            let (_, d) = check_points(Primitive::Plane, &v, &Thresholds::default())
+                .unwrap_or_else(|e| panic!("a {a}, eps 1e-{k}: {e:?}"));
+            assert_eq!(d.rank, 2, "a {a}, eps 1e-{k}");
+            cases += 1;
         }
-        let v = PointsView::new(&xyz, None).unwrap();
-        match check_points(Primitive::Sphere, &v, &Thresholds::default()) {
-            Err(FitError::Coplanar { n: 400, rank: 2, cond }) => assert!(cond > 1e9, "eps {eps:e}: cond {cond:e}"),
-            other => panic!("eps {eps:e}: {other:?}"),
-        }
-        let (_, d) = check_points(Primitive::Plane, &v, &Thresholds::default()).unwrap();
-        assert_eq!(d.rank, 2, "eps {eps:e}");
     }
+    assert_eq!(cases, 20 * 15);
 }
 
 #[test]
@@ -661,6 +670,12 @@ fn canonical_refuses_out_of_range_values() {
     bad(F::Rectangle { c: v, n: z, d: x, length: -1.0, width: 1.0 }, "feature.length");
     bad(F::Rectangle { c: v, n: z, d: x, length: 1.0, width: -1.0 }, "feature.width");
     bad(F::Paraboloid { apex: v, d: z, focal: -0.25 }, "feature.focal");
+    bad(F::Paraboloid { apex: v, d: z, focal: 0.0 }, "feature.focal");
+    bad(F::Torus { c: v, n: z, major_r: 0.0, minor_r: 0.5 }, "feature.major_r");
+    bad(F::Torus { c: v, n: z, major_r: 1.0, minor_r: 0.0 }, "feature.minor_r");
+    bad(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: 0.0 }, "feature.b");
+    bad(F::Rectangle { c: v, n: z, d: x, length: 1.0, width: 0.0 }, "feature.width");
+    bad(F::Rectangle { c: v, n: z, d: x, length: 1.0, width: 2.0 }, "feature.length");
     bad(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: 2.0 }, "feature.a");
     bad(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: -0.5 }, "feature.b");
     for h in [0.0, -0.1, core::f64::consts::FRAC_PI_2, 2.0] {
@@ -673,6 +688,22 @@ fn canonical_refuses_out_of_range_values() {
     // Boundary values that are in range.
     assert!(F::Spline { degree: 3, knots: vec![0.0; 8], control: vec![v; 4] }.canonical().is_ok());
     assert!(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: 1.0 }.canonical().is_ok());
-    assert!(F::Torus { c: v, n: z, major_r: 0.0, minor_r: 0.0 }.canonical().is_ok());
+    assert!(F::Torus { c: v, n: z, major_r: 1e-3, minor_r: 1e-3 }.canonical().is_ok());
+    assert!(F::Rectangle { c: v, n: z, d: x, length: 1.0, width: 1.0 }.canonical().is_ok());
+    // A slot's -0.0 length becomes +0.0, so both zeros encode identically.
+    let F::Slot { length, width, .. } = F::Slot { c: v, n: z, d: x, length: -0.0, width: 1.0 }.canonical().unwrap()
+    else {
+        panic!()
+    };
+    assert_eq!((length.to_bits(), width), (0, 1.0));
+    // A degree near u32::MAX must not overflow the count arithmetic.
+    for degree in [u32::MAX, u32::MAX - 1] {
+        let got = F::Spline { degree, knots: vec![0.0; 4], control: vec![v; 2] }.canonical().unwrap_err();
+        assert!(
+            got == FitError::InvalidParams { field: "feature.degree" }
+                || got == FitError::InvalidParams { field: "feature.control" },
+            "{got:?}"
+        );
+    }
     assert!(F::Cone { apex: v, d: z, half_angle: 1.5 }.canonical().is_ok());
 }
