@@ -1,0 +1,19 @@
+[package]
+name = "fid-cad-proto"
+description = "Metrology Maven CAD worker protocol: length-prefixed frames, typed requests and responses, bounded decoding and record validation (spec node IO.CAD.WORKER.PROTO)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The reader harness: Budget, BoundedSource, IoError, UntrustedText (IO.REG.LIMITS).
+fid-io-reg = { path = "../fid-io-reg" }
+
+[dev-dependencies]
+# SHA-256 of encoded frames for the committed AC-1 digests (already in the graph through fid-canon).
+sha2 = "0.10"
+
+[lints]
+workspace = true
