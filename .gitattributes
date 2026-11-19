@@ -16,6 +16,8 @@ fixtures/io/dmis/parse/lex/** -text
 fixtures/flow/pkg/** -text
 # IO.RES.CSV.MAP fixtures: digests and RFC 4180 records are compared byte for byte (CR, LF, tabs).
 fixtures/io/res/csv/map/** -text
+# IO.RES.CSV.OUT golden tables are compared byte for byte (CRLF maps, quoted LF, tabs).
+fixtures/io/res/csv/out/** -text
 # PLAT.GPU.POLICY fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text

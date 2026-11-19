@@ -1,0 +1,15 @@
+characteristic_id,characteristic_name,nominal,actual,deviation,lower_limit,upper_limit,unit,status,evaluation_basis,uec,decision_rule,record_status,source_software,source_version,part_id,timestamp_text,comment
+C1,Ø 10 bore,10.000,10.012,0.012,-0.020,0.020,mm,CONFORMS,POINTS,UEC-2,ISO14253-1.default,evaluated,,,P1,2026-11-18T09:00:00Z,
+C1,Ø 10 bore,10.000,9.9875,-0.0125,-0.020,0.020,mm,CONFORMS,POINTS,UEC-2,ISO14253-1.default,evaluated,,,P2,2026-11-18T09:30:00Z,"first line
+second, ""quoted"""
+C1,Ø 10 bore,10.000,10.004,0.004,-0.020,0.020,mm,CONFORMS,RESULTS_ONLY,UEC-0,,transcribed,VendorX,4.2,P3,2026-11-17T14:05:00Z,
+C2,'+Z height,25.4,25.41,0.01,-0.05,0.05,mm,CONFORMS,FEATURES,UEC-1,simple.acceptance,evaluated,,,P1,2026-11-18T09:00:00Z,'@sum(A1:A3)
+C2,'+Z height,25.4,25.46,0.06,-0.05,0.05,mm,NONCONFORMS,FEATURES,UEC-1,simple.acceptance,evaluated,,,P2,2026-11-18T09:30:00Z,re-check; fixture moved
+C2,'+Z height,25.4,25.39,-0.01,-0.05,0.05,mm,CONFORMS,RESULTS_ONLY,UEC-0,,transcribed,VendorX,4.2,P3,2026-11-17T14:05:00Z,'=cmd|' /C calc'!A0
+C3,"'=HYPERLINK(""http://example.invalid"",""x"")",1.5e-3,1.2E-3,-3e-4,,2.0e-3,mm,CONFORMS,POINTS,UEC-2,ISO14253-1.default,evaluated,,,P1,2026-11-18T09:00:00Z,
+C3,"'=HYPERLINK(""http://example.invalid"",""x"")",1.5e-3,2.4E-3,+9e-4,,2.0e-3,mm,INDETERMINATE,POINTS,UEC-2,ISO14253-1.default,evaluated,,,P2,2026-11-18T09:30:00Z,
+C4,'-X face offset,0.000,-0.012,-0.012,-0.0100,0.0100,mm,NONCONFORMS,FEATURES,UEC-3,guard.band.10pct,evaluated,,,P1,2026-11-18T09:00:00Z,'	tab-led note
+C4,'-X face offset,0.000,0.0100,0.0100,-0.0100,0.0100,mm,NOT_DECIDABLE,FEATURES,UEC-0,guard.band.10pct,evaluated,,,P2,2026-11-18T09:30:00Z,"edge, ""at limit"""
+C5,Angle 45°,45,45.02,0.02,-0.1,0.1,deg,CONFORMS,DIRECT_READING,UEC-1,simple.acceptance,evaluated,,,P1,2026-11-18T09:00:00Z,日本語のコメント
+C5,Angle 45°,45,44.97,-0.03,-0.1,0.1,deg,CONFORMS,DIRECT_READING,UEC-1,simple.acceptance,evaluated,,,P2,2026-11-18T09:30:00Z,
+C6,Profile A-B,0,0.031,,,0.050,mm,CONFORMS,RESULTS_ONLY,UEC-0,,transcribed,VendorX,4.2,P3,2026-11-17T14:05:00Z,'-from vendor report
