@@ -43,9 +43,10 @@ fn function_indices_and_descriptors_are_kept() {
 
 #[test]
 fn sealed_clock_passes_as_trapped_and_unsealed_is_denied() {
-    let allow =
-        Allowlist::parse(&std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../fid-kernel-wasm/wasm-imports.allow")).unwrap())
-            .unwrap();
+    let allow = Allowlist::parse(
+        &std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../fid-kernel-wasm/wasm-imports.allow")).unwrap(),
+    )
+    .unwrap();
     let unsealed = allow::check(&module::parse(&read("modules/clock-call.wasm")).unwrap(), &allow);
     assert!(!unsealed.passed());
     assert!(unsealed.lines().contains(&"DENIED wasi_snapshot_preview1 clock_time_get (func)".to_string()));

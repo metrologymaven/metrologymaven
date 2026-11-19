@@ -150,10 +150,11 @@ impl Allowlist {
         &self.entries
     }
 
-    /// Whether `import` is allowed: a function import with an entry.
+    /// Whether `import` is allowed: a function import with an entry, or a sealed clock import.
     pub fn allows(&self, import: &Import) -> bool {
-        import.kind == ImportKind::Func
-            && self.entries.iter().any(|e| e.module == import.module && e.name == import.name)
+        is_trapped(&import.module, &import.name, import.kind)
+            || (import.kind == ImportKind::Func
+                && self.entries.iter().any(|e| e.module == import.module && e.name == import.name))
     }
 }
 

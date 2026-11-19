@@ -4,9 +4,7 @@
 //! Design rules.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_wasm_check::runner::{
-    classify, last_cause, parse_cases, version_matches, Outcome, RESOURCE_CAUSES, TRAP_EXIT,
-};
+use fid_wasm_check::runner::{classify, last_cause, parse_cases, version_matches, Outcome, RESOURCE_CAUSES, TRAP_EXIT};
 use fid_wasm_check::runtime::{RuntimeConfig, RuntimeError};
 use std::path::Path;
 
@@ -144,7 +142,8 @@ fn ac3_outcome_classification() {
         assert_eq!(classify(Some(125), b"", stderr.as_bytes()), Outcome::Trap);
     }
     // A sealed clock import that is called traps like any unknown import.
-    let unknown = b"Error: failed to run main module\n\nCaused by:\n    0: unknown import: `fid_trap::clock_time_get`\n";
+    let unknown =
+        b"Error: failed to run main module\n\nCaused by:\n    0: unknown import: `fid_trap::clock_time_get`\n";
     let t = classify(Some(TRAP_EXIT), b"", unknown);
     assert_eq!((t.exit_code(), t.stdout()), (4, b"NOT_REPLAYABLE(trap)".as_slice()));
     assert_eq!(classify(None, b"", b""), Outcome::Trap);
