@@ -1,0 +1,54 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:2b3f01f269188f9d6ddcadb22af331b89e674bc211903631e9660fb38bf143a3",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:8104a85660ce2c1af8a341e9432441f5cb51f65d642604a21b8f31b2079e9546",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:51954ee81e50ea6456459b748565dd581333a12c2c6858bf919358729fabbf8c",
+      "command": "branch.promote@1",
+      "class": "W3",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "source": "agent/run-1",
+        "target": "main",
+        "requester": "agent:fixture"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}
