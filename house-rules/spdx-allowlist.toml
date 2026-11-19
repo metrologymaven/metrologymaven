@@ -1,0 +1,58 @@
+# SPDX licence allowlist (spec node ECO.RULES.SPDX), read by ECO.CI.LIC and its checks.
+#
+# licences        SPDX licence IDs a dependency may carry.
+# exceptions      SPDX exception IDs allowed after `WITH` in a dependency licence expression.
+# asset_licences  SPDX licence IDs a third-party asset listed in ATTRIBUTION.md may carry.
+# asset_paths     Glob patterns of the paths that hold assets.
+# [basis]         One short reason per ID used in the lists above.
+#
+# `licences` and `exceptions` must stay equal to the `[licenses] allow` list of deny.toml
+# (maintainer decision 2026-11-18: this list is no wider than deny.toml); the test
+# tools/tests/test_spdx_allowlist.py fails on drift in either direction.
+#
+# Change rule (REQ-ECO.RULES.SPDX-004): change this file only in its own PR, approved by a
+# maintainer other than the author, with the reason stated in the PR description. Never add a
+# GPL, LGPL, AGPL, SSPL or non-commercial licence.
+
+licences = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+
+exceptions = [
+    "LLVM-exception",
+]
+
+asset_licences = [
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "OFL-1.1",
+    "MIT",
+    "Apache-2.0",
+]
+
+asset_paths = [
+    "assets/**",
+    "crates/*/assets/**",
+]
+
+[basis]
+"MIT" = "project licence (D-001); permissive"
+"Apache-2.0" = "project licence (D-001); permissive with a patent grant"
+"BSD-2-Clause" = "permissive; attribution only; in deny.toml allow"
+"BSD-3-Clause" = "permissive; attribution and no-endorsement only; in deny.toml allow"
+"ISC" = "permissive, MIT-equivalent; in deny.toml allow"
+"Zlib" = "permissive; in deny.toml allow"
+"CC0-1.0" = "public-domain dedication; in deny.toml allow; also allowed for assets"
+"Unicode-3.0" = "permissive Unicode data licence used by Unicode table crates; in deny.toml allow"
+"Unicode-DFS-2016" = "permissive Unicode data licence (older form of Unicode-3.0); in deny.toml allow"
+"LLVM-exception" = "relaxes Apache-2.0 attribution for compiled output; in deny.toml allow as Apache-2.0 WITH LLVM-exception"
+"CC-BY-4.0" = "assets: attribution licence; licence of the project's original assets (OUTR.BRAND)"
+"OFL-1.1" = "assets: SIL Open Font License for bundled fonts"

@@ -19,3 +19,8 @@ repos = ["metrologymaven"]
 id = "python"
 file = "python.md"
 repos = ["metrologymaven"]
+
+# Data files distributed with the rules (not rendered as blocks).
+[[data]]
+id = "spdx-allowlist"
+file = "spdx-allowlist.toml"

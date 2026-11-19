@@ -20,6 +20,8 @@ pub enum CorpError {
     Io { format: String, entry: String, detail: String },
     /// A `url` entry could not be fetched (network outcome, class `N`; fails closed).
     FetchFailed { format: String, entry: String, detail: String },
+    /// `corpus-hostile` would write more than its output cap (IO.CORP.HOSTILE).
+    LimitExceeded { detail: String },
 }
 
 impl CorpError {
@@ -32,6 +34,7 @@ impl CorpError {
             CorpError::Malformed { .. } => "malformed",
             CorpError::Io { .. } => "io",
             CorpError::FetchFailed { .. } => "fetch_failed",
+            CorpError::LimitExceeded { .. } => "limit_exceeded",
         }
     }
 
@@ -55,6 +58,7 @@ impl fmt::Display for CorpError {
                 write!(f, "{code}{{{format}: {entry}}}: expected {expected}, got {actual}")
             }
             CorpError::Malformed { at, detail } => write!(f, "{code}{{{at}}}: {detail}"),
+            CorpError::LimitExceeded { detail } => write!(f, "{code}: {detail}"),
             CorpError::Io { format, entry, detail } | CorpError::FetchFailed { format, entry, detail } => {
                 write!(f, "{code}{{{format}: {entry}}}: {detail}")
             }

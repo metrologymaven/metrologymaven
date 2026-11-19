@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" versionQIF="3.0.0" idMax="2">
+  <FileUnits>
+    <PrimaryUnits>
+      <LinearUnit><SIUnitName>meter</SIUnitName><UnitName>mm</UnitName><SIUnitConversion>0.001</SIUnitConversion></LinearUnit>
+    </PrimaryUnits>
+  </FileUnits>
+  <Features>
+    <FeatureItems n="1">
+      <PointFeatureItem id="2"><FeatureNominalId>1</FeatureNominalId></PointFeatureItem>
+    </FeatureItems>
+  </Features>
+</QIFDocument>

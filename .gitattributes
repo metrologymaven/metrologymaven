@@ -17,6 +17,8 @@ fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text
+# IO.CORP.HOSTILE fixtures: binary inputs and digested manifests; never convert line endings.
+fixtures/io/corp/hostile/** -text
 # PLAT.DEPLOY.NOADMIN.LAYOUT fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/deploy/layout-*.toml -text
 
