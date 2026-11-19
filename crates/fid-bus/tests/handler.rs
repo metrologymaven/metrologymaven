@@ -47,7 +47,7 @@ fn arr<'a>(o: &'a Obj, k: &str) -> &'a [CValue] {
     }
 }
 
-fn obj<'a>(v: &'a CValue) -> &'a Obj {
+fn obj(v: &CValue) -> &Obj {
     match v {
         CValue::Obj(o) => o,
         other => panic!("not an object: {other:?}"),
