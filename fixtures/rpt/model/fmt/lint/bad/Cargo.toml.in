@@ -1,0 +1,13 @@
+# Manifest of the bad fixture crate, copied to a temporary directory as Cargo.toml by
+# `tools/rpt_float_lint.py --clippy-selftest` (kept as .in so the repository has no stray
+# package). Standalone: its own empty workspace, no dependencies.
+[package]
+name = "rpt-float-rule-bad-fixture"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[workspace]

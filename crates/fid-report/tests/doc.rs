@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! Acceptance tests of RPT.MODEL.DOC (AC-1..AC-7) and the pinned Design rules. Expected
 //! bytes and digests come from fixtures/rpt/model/doc/make_fixtures.py, never from this crate.
 

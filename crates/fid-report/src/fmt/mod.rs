@@ -2,9 +2,12 @@
 //!
 //! The single place in RPT where a value of record becomes text. It holds no float-to-text
 //! code of its own: every numeric string is the `Reported.value` of a kernel formatter call
-//! through [`fid_num::fmt::format`] (`fmt.length@1`, `fmt.angle@1`, `fmt.scalar@1`), and
-//! `tools/rpt_float_lint.py` (CI, `ci/fixture-checks.txt`) fails the build on float
-//! formatting anywhere in the `fid-report*` crates (REQ-RPT.MODEL.FMT-002).
+//! through [`fid_num::fmt::format`] (`fmt.length@1`, `fmt.angle@1`, `fmt.scalar@1`). Outside
+//! this module (and the JSON-number boundary `json_num`) no `fid-report*` code may name a
+//! float type (clippy `disallowed_types`, `crates/fid-report*/clippy.toml`) or hold a float
+//! literal; values travel as [`SiValue`], which has no `Display`. `tools/rpt_float_lint.py`
+//! adds a token scan for float formatting and proves the clippy rule in CI
+//! (REQ-RPT.MODEL.FMT-002; see the leaf's Open questions for what neither layer sees).
 //!
 //! # [`fmt_value`]
 //!
@@ -34,7 +37,8 @@
 //! must come from the formatter asked for, in the unit asked for (`formatter_mismatch`).
 //! The [`Side`] is the formatter's; a `NONCONFORMS` value whose side is not `above`,
 //! `below` or `undecidable` is refused (`nonconforms_not_beyond_limit`), so it can never
-//! print inside its limits.
+//! print inside its limits; a `CONFORMS` value whose side is `above` or `below` is refused
+//! too (`conforms_beyond_limit`): the inputs disagree and no text could be honest.
 //!
 //! Markers: [`Marker::Tie`] with warning `report.display_tie` when the formatter set
 //! `tie_at_max_precision`; [`Marker::UndecidableSide`] with warning
@@ -51,6 +55,10 @@
 //! `is_claimed()`, `rests_on_declared_input()` and `rests_on_uncharacterized_input()` are
 //! true (REQ-012). A claimed or transcribed value therefore never looks measured.
 
+// The one module of fid-report (with the JSON boundary `json_num`) where a float may exist;
+// see crates/fid-report/clippy.toml.
+#![allow(clippy::disallowed_types)]
+
 mod catalog;
 mod locale;
 mod model;
@@ -59,8 +67,8 @@ pub use catalog::{Catalog, CatalogError, MAX_TEXT_BYTES, MESSAGES};
 pub use locale::{LocaleError, LocaleRules, MAX_LOCALE_ID_BYTES, MAX_MINUS_CHARS};
 pub use model::{
     Characteristic, DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LabelText, LimitSet, LimitUnit, Marker,
-    MarkerText, OutcomeText, Shown, Side, UnitOverride, ValueKind, ValueRecord, ValueText, Warning, WARN_DISPLAY_TIE,
-    WARN_DISPLAY_UNDECIDABLE,
+    MarkerText, OutcomeText, Shown, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, Warning,
+    WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
 };
 
 use fid_gdt::chars::record::EvaluationBasis;
@@ -102,7 +110,8 @@ fn fmt_value_inner(
 ) -> Result<ValueText, FmtError> {
     let rid = record.id.as_str();
     let kind = ch.kind.ok_or_else(|| unformattable(rid, "no_formatter_kind"))?;
-    if !record.value.is_finite() {
+    let value = record.value.get();
+    if !value.is_finite() {
         return Err(unformattable(rid, "non_finite"));
     }
     let labels = labels(record)?;
@@ -111,10 +120,13 @@ fn fmt_value_inner(
     let outcome = record.decision.outcome();
     let limits = decision_limits(record, ch)?.map(|l| to_kernel(rid, kind, unit, l)).transpose()?;
     let spec = FormatSpec { formatter: kind.formatter(), unit, precision: Precision::Decimals(decimals), limits };
-    let rep = call(rid, formatter, record.value, &spec)?;
+    let rep = call(rid, formatter, value, &spec)?;
     let side = side_of(rep.side);
     if outcome == Outcome::Nonconforms && !matches!(side, Side::Above | Side::Below | Side::Undecidable) {
         return Err(unformattable(rid, "nonconforms_not_beyond_limit"));
+    }
+    if outcome == Outcome::Conforms && matches!(side, Side::Above | Side::Below) {
+        return Err(unformattable(rid, "conforms_beyond_limit"));
     }
     let mut markers = Vec::new();
     let mut warnings = Vec::new();
@@ -139,7 +151,7 @@ fn fmt_value_inner(
 pub fn fmt_requirement(ch: &Characteristic, ctx: &FmtContext<'_>) -> Result<ValueText, FmtError> {
     let cid = ch.id.as_str();
     let kind = ch.kind.ok_or_else(|| unformattable(cid, "no_formatter_kind"))?;
-    let nominal = ch.nominal.ok_or_else(|| unformattable(cid, "no_nominal"))?;
+    let nominal = ch.nominal.ok_or_else(|| unformattable(cid, "no_nominal"))?.get();
     if !nominal.is_finite() {
         return Err(unformattable(cid, "non_finite"));
     }

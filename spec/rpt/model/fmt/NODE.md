@@ -9,8 +9,6 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-built_in: [fid-report]
-built_pr: 285
 satisfies: [REQ-RPT.MODEL-005, REQ-RPT.MODEL-006, REQ-RPT.MODEL-007, REQ-RPT.MODEL-008, REQ-RPT.MODEL-009]
 covers: []
 depends_on: [KRN.NUM.FMT.REG, KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.KDEC, UNC.DEC.TYPE, UNC.UEC.CLASS, IO.RES.TRANS.MODEL, GDT.CHAR.RECORD, CORE.STO.SET]
@@ -113,6 +111,7 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - Guard-banded rules: this leaf assumes the decision record carries the acceptance limits it used [unverified against `UNC.DEC.EVAL`]; if not, UNC must add them or RPT can only pass spec limits.
 - Cross-domain: `I18N.LOCALE` owns the render transform but is an L3 runtime, so RPT re-applies the same rules from the published data file and proves equivalence with I18N's golden corpus. Moving the pure render transform into an L0 library would remove the duplication; raise at the `I18N.LOCALE` expansion.
 - The `report.default_decimals` initial values are [unverified]; a maintainer may change them as data.
+- **REQ-RPT.MODEL.FMT-002 partly met (#285).** The float rule is enforced by clippy `disallowed_types` (f32, f64) in every `fid-report*` crate, allowed only in `fid_report::fmt` and the JSON-number boundary `fid_report::json_num`, plus the token scan `tools/rpt_float_lint.py`. Neither layer sees a float that reaches other code purely by inference from another crate's API (no float type named, no literal), for example a `CValue::Num(f)` binding or a foreign accessor returning `f64` passed straight to `format!`. Closing it needs a type-aware lint (a custom lint on expression types) or keeping float-bearing foreign types out of RPT. Until then this leaf is not marked built.
 
 ## Children
 

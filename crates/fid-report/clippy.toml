@@ -1,0 +1,11 @@
+# RPT float rule (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002): in the fid-report* crates
+# a float may exist only in module `fid_report::fmt` (which turns values into text through
+# the kernel formatters) and in the listed boundary module `fid_report::json_num`; both
+# carry `#![allow(clippy::disallowed_types)]`. Anywhere else, naming f32 or f64 (a
+# parameter, field, alias, cast or path) fails CI's `cargo clippy -- -D warnings`.
+# tools/rpt_float_lint.py checks that no other module allows this lint, and that this file
+# is present in every fid-report* crate; its --clippy-selftest proves the rule fires.
+disallowed-types = [
+    { path = "f32", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+    { path = "f64", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+]

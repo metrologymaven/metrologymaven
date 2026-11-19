@@ -9,4 +9,5 @@
 
 pub mod doc;
 pub mod fmt;
+mod json_num;
 pub mod tmpl;

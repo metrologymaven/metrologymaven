@@ -108,3 +108,4 @@ python tools/fixtures/geo_tree_cases.py --check
 python tools/fixtures/geo_units_cases.py --check
 python tools/fixtures/geo_xform_cases.py --check
 python tools/rpt_float_lint.py
+python tools/rpt_float_lint.py --clippy-selftest

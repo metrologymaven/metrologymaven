@@ -112,9 +112,22 @@ def parse_dec(s: str) -> Fraction:
     return Fraction(s)
 
 
-def fmt_exact(v: Fraction, p: int, upper: Fraction | None, lower: Fraction | None):
-    """Display value v (exact), decimals p, limits in display units. Returns
-    (canonical, digits_added, tie, side)."""
+def render_dms(neg: bool, q: int, p: int) -> str:
+    """q counts 10^-p seconds: split exactly into D:MM:SS[.s...]."""
+    unit = 10**p
+    d, rest = divmod(q, 3600 * unit)
+    m, sec = divmod(rest, 60 * unit)
+    whole, frac = divmod(sec, unit)
+    out = f"{d}:{m:02d}:{whole:02d}"
+    if p > 0:
+        out += "." + str(frac).rjust(p, "0")
+    return ("-" if neg and q != 0 else "") + out
+
+
+def fmt_exact(v: Fraction, p: int, upper: Fraction | None, lower: Fraction | None, dms: bool = False):
+    """Display value v (exact; seconds for dms), decimals p, limits in the same unit.
+    Returns (canonical, digits_added, tie, side)."""
+    show = render_dms if dms else render
     neg = v < 0
     if upper is not None and v > upper:
         violated, side = "upper", "above"
@@ -123,34 +136,45 @@ def fmt_exact(v: Fraction, p: int, upper: Fraction | None, lower: Fraction | Non
     else:
         violated = None
         side = "none" if upper is None and lower is None else "within"
-    q = round_half_even(v, p)
     if violated is None:
-        return render(neg, q, p), 0, False, side
+        return show(neg, round_half_even(v, p), p), 0, False, side
     k = floor_log10(v) if v != 0 else 0
     added = 0
     while True:
         q = round_half_even(v, p)
         out = Fraction(-q if neg else q, 10**p)
         if (violated == "upper" and out > upper) or (violated == "lower" and out < lower):
-            return render(neg, q, p), added, False, side
+            return show(neg, q, p), added, False, side
         if k + 1 + p >= SIG_CAP:
             t = v * 10**p
             w = -floor_frac(-t) if violated == "upper" else floor_frac(t)
-            return render(w < 0, abs(w), p), added, True, side
+            return show(w < 0, abs(w), p), added, True, side
         p += 1
         added += 1
 
 
-def fmt_degrees(x: Fraction, p: int, upper: Fraction | None, lower: Fraction | None):
-    """Degrees with a pi bracket: both ends must give the same output and the same side."""
-    ends = []
-    for pi in (PI_HI, PI_LO):
-        ends.append(fmt_exact(x * 180 / pi, p, upper, lower))
+def fmt_angle(x: Fraction, unit: str, p: int, upper: Fraction | None, lower: Fraction | None):
+    """deg or dms with a pi bracket: both ends must give the same result (limits in degrees,
+    compared in seconds for dms)."""
+    c, scale = (180, 1) if unit == "deg" else (648000, 3600)
+    up = upper * scale if upper is not None else None
+    lo = lower * scale if lower is not None else None
+    ends = [fmt_exact(x * c / pi, p, up, lo, unit == "dms") for pi in (PI_HI, PI_LO)]
     if ends[0] != ends[1]:
-        raise SystemExit(f"degree case not decided by the 60-digit bracket: {ends}")
-    if ends[0][1] != 0:
-        raise SystemExit("degree cases with a violated limit are not modelled here")
+        raise SystemExit(f"angle case not decided by the 60-digit bracket: {ends}")
     return ends[0]
+
+
+def next_down(x: float) -> float:
+    return -next_up(-x)
+
+
+def first_above(x: float, deg_limit: Fraction) -> float:
+    """The first double at or after x whose degree value lies strictly above deg_limit,
+    decided with the pi bracket at both ends."""
+    while not Fraction(x) * 180 / PI_HI > deg_limit:
+        x = next_up(x)
+    return x
 
 
 # --------------------------------------------------------------------------- locales
@@ -159,6 +183,9 @@ LOCALES = {
     "en": {"decimal": ".", "group": ",", "primary": 3, "secondary": 3, "minus": "-"},
     "de": {"decimal": ",", "group": ".", "primary": 3, "secondary": 3, "minus": "-"},
     "en-IN": {"decimal": ".", "group": ",", "primary": 3, "secondary": 2, "minus": "-"},
+    # Arabic-style right-to-left presentation: ARABIC DECIMAL SEPARATOR, ARABIC THOUSANDS
+    # SEPARATOR, and ARABIC LETTER MARK before the hyphen-minus.
+    "ar": {"decimal": "\u066b", "group": "\u066c", "primary": 3, "secondary": 3, "minus": "\u061c-"},
 }
 
 
@@ -237,6 +264,43 @@ CASES = [
     dict(name="scalar_tie_at_cap", kind="scalar", unit="1", decimals=2, value=0.1 + 0.2,
          limits=lim(None, "0.30000000000000004"), acceptance=None, outcome="NONCONFORMS",
          rule="dr:simple-acceptance@1"),
+
+    # Just outside a limit in every unit: the side rule must print strictly beyond it.
+    dict(name="nc_in_just_above", kind="length", unit="in", decimals=4, value=next_up(0.0254),
+         limits=lim(None, "0.0254"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_um_just_above", kind="length", unit="um", decimals=1, value=next_up(1e-5),
+         limits=lim(None, "0.00001"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_m_just_above", kind="length", unit="m", decimals=3, value=next_up(0.5),
+         limits=lim(None, "0.5"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_rad_just_above", kind="angle", unit="rad", decimals=None, value=0.1,
+         limits=lim(None, "0.1"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_deg_just_above", kind="angle", unit="deg", decimals=4, value=first_above(0.5235987755982988, Fraction(30)),
+         limits=lim(None, "30", "deg"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_dms_just_above", kind="angle", unit="dms", decimals=0, value=first_above(0.5235987755982988, Fraction(30)),
+         limits=lim(None, "30", "deg"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_one_just_above", kind="scalar", unit="1", decimals=2, value=next_up(1.0),
+         limits=lim(None, "1"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    # Below the lower limit by one ulp: digits are added on the low side.
+    dict(name="nc_mm_just_below", kind="length", unit="mm", decimals=3, value=next_down(1e-5),
+         limits=lim("0.00001", None), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    # Angles near the 0/360 wrap: the formatter never wraps, and rounding carries into 360.
+    dict(name="wrap_deg_360", kind="angle", unit="deg", decimals=4, value=6.283185307179586,
+         limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
+    dict(name="wrap_dms_360", kind="angle", unit="dms", decimals=0, value=6.283185307179586,
+         limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
+    dict(name="wrap_deg_below_zero", kind="angle", unit="deg", decimals=4, value=-1e-9,
+         limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
+    dict(name="wrap_dms_below_zero", kind="angle", unit="dms", decimals=1, value=-1e-9,
+         limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
+] + [
+    # Precision sweep 0..9: plain rounding, and the side rule from every starting precision.
+    dict(name=f"sweep_mm_d{d}", kind="length", unit="mm", decimals=d, value=0.0123456789012,
+         limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None)
+    for d in range(10)
+] + [
+    dict(name=f"sweep_nc_mm_d{d}", kind="length", unit="mm", decimals=d, value=next_up(1.25e-5),
+         limits=lim(None, "0.0000125"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1")
+    for d in range(10)
 ]
 
 
@@ -249,13 +313,17 @@ def expected(case: dict) -> dict:
     if lims is not None:
         lower = parse_dec(lims["lower"]) if lims["lower"] is not None else None
         upper = parse_dec(lims["upper"]) if lims["upper"] is not None else None
-    if unit == "deg":
-        canonical, added, tie, side = fmt_degrees(x, p, upper, lower)
+    if unit in ("deg", "dms"):
+        canonical, added, tie, side = fmt_angle(x, unit, p, upper, lower)
     else:
         f = FACTOR[unit]
         canonical, added, tie, side = fmt_exact(
             x * f, p, upper * f if upper is not None else None, lower * f if lower is not None else None
         )
+    if case["outcome"] == "NONCONFORMS":
+        assert side in ("above", "below"), case["name"]
+    if case["outcome"] == "CONFORMS":
+        assert side == "within", case["name"]
     side_name = {"none": "not_applicable"}.get(side, side)
     return {
         "canonical": canonical,

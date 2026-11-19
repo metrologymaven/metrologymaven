@@ -1,37 +1,49 @@
 #!/usr/bin/env python3
-"""RPT float-to-text lint (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002, AC-7).
+"""RPT float rule, second layer (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002, AC-7).
 
 RPT turns a value of record into text in one place only: module `fmt` of crate
 `fid-report`, which calls the kernel formatters (`fid_num::fmt::format`) and holds no
-float-to-decimal code of its own. This lint fails the build when the non-test source of any
-`fid-report*` crate converts a float to text itself.
+float-to-decimal code of its own. The rule is enforced in two layers:
 
-Scope: every `*.rs` file under `crates/fid-report*/src/` (all of them, the `fmt` module
-included: it formats nothing itself either). Integration tests (`tests/`), benches and
-examples are not shipped and are not scanned. A crate directory may be given instead with
-`--crate DIR` (used by the tests on fixture crates).
+1. Types (first layer, compiler-checked). Every `crates/fid-report*` crate has a
+   `clippy.toml` with `disallowed-types = [f32, f64]`, so CI's
+   `cargo clippy --workspace --all-targets -- -D warnings` fails wherever a float type is
+   named. Only `fid_report::fmt` and the listed boundary module `fid_report::json_num`
+   carry `#![allow(clippy::disallowed_types)]`; outside them values travel as
+   `fmt::SiValue` (no `Display`, `Debug` shows bits) or kernel types.
+2. This scan (token level, stdlib only). Over every `*.rs` file under
+   `crates/fid-report*/src/` it reports:
 
-The scan is token-level (stdlib only, no type information). Comments and the contents of
-string literals are not code; format strings are inspected only as the first argument of a
-formatting macro. Rules:
+   - RPT-FLOAT-TYPE / RPT-FLOAT-LITERAL: the identifier `f32` or `f64`, or a float
+     literal (`1.5`, `1e3`, `2f64`), outside the allowed files (ALLOWED_FLOAT_FILES), so a
+     float cannot be created from a literal either, which clippy does not see;
+   - RPT-LINT-ALLOW: an `allow`/`expect`/`warn` attribute naming `warnings`, `clippy::all`,
+     `clippy::style`, `clippy::disallowed_types` or `clippy::disallowed_methods` outside
+     the allowed files (it would switch layer 1 off);
+   - RPT-FLOAT-SPEC: a formatting macro's format string with a precision (`{:.3}`,
+     `{x:>8.2}`, `{:.*}`) or an exponent type (`{:e}`, `{:E}`), anywhere, `fmt` included;
+   - RPT-FLOAT-ARG: a float literal or `f32`/`f64` among a formatting macro's arguments;
+   - RPT-FLOAT-TOSTRING: `.to_string()` on a float literal or on a group mentioning one or
+     `f32`/`f64`, or `f32::to_string` / `f64::to_string`;
+   - RPT-FLOAT-TRAIT: `LowerExp` or `UpperExp`;
+   - RPT-FLOAT-CRATE: a path through a float-printing crate (`ryu`, `dtoa`, ...);
+   - RPT-LEX: a file the lexer cannot read (fail closed);
+   - RPT-CONFIG: a `fid-report*` crate without a `clippy.toml` that disallows both `f32`
+     and `f64`.
 
-- RPT-FLOAT-SPEC: a formatting macro's format string has a placeholder whose spec sets a
-  precision (`{:.3}`, `{x:>8.2}`, `{:.*}`) or an exponent type (`{:e}`, `{:E}`). A precision
-  on a string argument is refused too (false positive by design: fail closed).
-- RPT-FLOAT-ARG: a formatting macro's arguments contain a float literal (`1.5`, `1e3`,
-  `2f64`, `1.5_f64`) or the identifier `f32` or `f64` (a cast, a suffix, a path).
-- RPT-FLOAT-TOSTRING: `.to_string()` on a float literal, on a group mentioning a float
-  literal or `f32`/`f64` (`(x as f64).to_string()`), or a path `f32::to_string` /
-  `f64::to_string`.
-- RPT-FLOAT-TRAIT: the identifiers `LowerExp` or `UpperExp` (float-only formatting traits).
-- RPT-FLOAT-CRATE: a path through a float-printing crate (`ryu`, `dtoa`, `lexical`,
-  `lexical_core`, `float_pretty_print`, `pretty_dtoa`).
-- RPT-LEX: a file the lexer cannot read (bad UTF-8, an unterminated literal or comment).
-  Fail closed: an unreadable file is a finding, never a pass.
+   Comments and string contents are not code. Integration tests are not shipped and not
+   scanned (they may name floats, with `#![allow(clippy::disallowed_types)]`).
 
-Known limit: without types, a float reached through an inferred binding
-(`let u = stmt.u_std(); format!("{u:?}")`) is not seen. Review covers that case; the rule
-of the crate is that values reach text only through `fmt::fmt_value`.
+`--clippy-selftest` proves layer 1 in CI: it copies the fixture crate
+`fixtures/rpt/model/fmt/lint/bad` (whose `src/lib.rs` holds the reviewed bypass cases)
+with `crates/fid-report/clippy.toml` into a temporary directory, runs
+`cargo clippy -- -D clippy::disallowed_types` on it, and requires a `disallowed_types`
+error on every line annotated `clippy` in the fixture. It fails if clippy is missing.
+
+Known limit of both layers: a float that reaches code outside `fmt` purely by inference
+from another crate's API, with no float type named and no literal (for example a binding
+`CValue::Num(f)` or `stmt.u_std()` passed straight to `format!`), is not seen. That case
+is recorded as an open question of RPT.MODEL.FMT.
 
 Exit status: 0 when there is no finding, 1 when there is at least one (each printed as
 `path:line:col: RULE message`), 2 on a usage error.
@@ -47,6 +59,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CRATE_GLOB = "fid-report*"
+# Files (repository-relative, `/`-separated prefixes) where a float may be named.
+ALLOWED_FLOAT_FILES = ("crates/fid-report/src/fmt/", "crates/fid-report/src/json_num.rs")
+CLIPPY_FIXTURE = "fixtures/rpt/model/fmt/lint/bad"
+LINT_SWITCHES = frozenset(["warnings", "all", "style", "disallowed_types", "disallowed_methods"])
 
 FORMAT_MACROS = frozenset(
     """format format_args write writeln print println eprint eprintln panic assert assert_eq
@@ -290,15 +306,34 @@ def floaty(tokens: list[Tok]) -> Tok | None:
     return None
 
 
+def float_allowed(path: str) -> bool:
+    return path.startswith(ALLOWED_FLOAT_FILES)
+
+
 def scan_tokens(path: str, toks: list[Tok]) -> list[Finding]:
     out: list[Finding] = []
+    allowed = float_allowed(path)
 
     def add(t: Tok, rule: str, msg: str) -> None:
         out.append(Finding(path, t.line, t.col, rule, msg))
 
     for k, t in enumerate(toks):
+        if not allowed and t.kind == "float":
+            add(t, "RPT-FLOAT-LITERAL", f"float literal `{t.text}` outside fid_report::fmt")
         if t.kind != "ident":
             continue
+        nxt0 = toks[k + 1] if k + 1 < len(toks) else None
+        if not allowed and t.text in FLOAT_TYPES:
+            add(t, "RPT-FLOAT-TYPE", f"`{t.text}` outside fid_report::fmt")
+        if not allowed and t.text in ("allow", "expect", "warn") and nxt0 is not None and nxt0.text == "(":
+            c = match_close(toks, k + 1)
+            for j in range(k + 2, c):
+                g = toks[j]
+                if g.kind != "ident" or g.text not in LINT_SWITCHES:
+                    continue
+                is_clippy = j >= 2 and toks[j - 1].text == "::" and toks[j - 2].text == "clippy"
+                if g.text == "warnings" or is_clippy:
+                    add(g, "RPT-LINT-ALLOW", f"`{t.text}` of `{g.text}` would switch off the float type rule")
         nxt = toks[k + 1] if k + 1 < len(toks) else None
         prev = toks[k - 1] if k > 0 else None
         # Formatting macro invocation: name ! ( ... )
@@ -382,19 +417,127 @@ def scan_crate(crate: Path, base: Path) -> list[Finding]:
     return out
 
 
+def check_config(root: Path) -> list[Finding]:
+    """Every fid-report* crate has a clippy.toml disallowing f32 and f64."""
+    import tomllib
+
+    out: list[Finding] = []
+    for c in crate_dirs(root):
+        rel = (c / "clippy.toml").relative_to(root).as_posix()
+        try:
+            cfg = tomllib.loads((c / "clippy.toml").read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            out.append(Finding(rel, 1, 1, "RPT-CONFIG", f"unreadable: {e.__class__.__name__}"))
+            continue
+        paths = set()
+        for entry in cfg.get("disallowed-types", []):
+            paths.add(entry["path"] if isinstance(entry, dict) else entry)
+        missing = sorted(FLOAT_TYPES - paths)
+        if missing:
+            out.append(Finding(rel, 1, 1, "RPT-CONFIG", f"disallowed-types lacks {', '.join(missing)}"))
+    return out
+
+
 def run(root: Path, crates: list[Path] | None = None) -> list[Finding]:
     targets = crates if crates is not None else crate_dirs(root)
     out: list[Finding] = []
     for c in targets:
         out.extend(scan_crate(c, root))
+    if crates is None:
+        out.extend(check_config(root))
     return sorted(out, key=lambda f: (f.path, f.line, f.col, f.rule))
+
+
+def annotated(src: str, tag: str) -> dict[int, list[str]]:
+    """Lines annotated `// expect: RULE ...` (tag `expect`) or carrying the word `clippy`
+    after `// expect:` (tag `clippy`), 1-based."""
+    out: dict[int, list[str]] = {}
+    for n, line in enumerate(src.splitlines(), 1):
+        m = re.search(r"// expect:(.*)$", line)
+        if not m:
+            continue
+        words = m.group(1).split()
+        if tag == "clippy":
+            if "clippy" in words:
+                out[n] = ["clippy"]
+        else:
+            rules = sorted(w for w in words if w.startswith("RPT-"))
+            if rules:
+                out[n] = rules
+    return out
+
+
+def clippy_selftest(root: Path) -> int:
+    import json
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+
+    fixture = root / CLIPPY_FIXTURE
+    src = (fixture / "src" / "lib.rs").read_text(encoding="utf-8")
+    want = set(annotated(src, "clippy"))
+    if not want:
+        print("clippy-selftest: the fixture has no `clippy` annotation", file=sys.stderr)
+        return 1
+    with tempfile.TemporaryDirectory() as d:
+        crate = Path(d) / "crate"
+        (crate / "src").mkdir(parents=True)
+        shutil.copyfile(fixture / "Cargo.toml.in", crate / "Cargo.toml")
+        shutil.copyfile(fixture / "src" / "lib.rs", crate / "src" / "lib.rs")
+        shutil.copyfile(root / "crates" / "fid-report" / "clippy.toml", crate / "clippy.toml")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("CARGO_", "CLIPPY_", "RUSTFLAGS"))}
+        env["CARGO_TARGET_DIR"] = str(Path(d) / "target")
+        try:
+            p = subprocess.run(
+                ["cargo", "clippy", "--offline", "--quiet", "--message-format=json", "--", "-D", "clippy::disallowed_types"],
+                cwd=crate, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=600,
+            )
+        except (OSError, subprocess.TimeoutExpired) as e:
+            print(f"clippy-selftest: cannot run cargo clippy: {e}", file=sys.stderr)
+            return 1
+    got: set[int] = set()
+    other: list[str] = []
+    for line in p.stdout.splitlines():
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue
+        if msg.get("reason") != "compiler-message":
+            continue
+        m = msg["message"]
+        code = (m.get("code") or {}).get("code")
+        for sp in m.get("spans", []):
+            if sp.get("is_primary") and sp.get("file_name", "").endswith("lib.rs"):
+                if code == "clippy::disallowed_types":
+                    got.add(sp["line_start"])
+                elif m.get("level") == "error" and code not in (None, "clippy::disallowed_types"):
+                    other.append(m.get("rendered", ""))
+    if p.returncode == 0:
+        print("clippy-selftest: clippy passed the bad fixture; the float type rule is not active", file=sys.stderr)
+        return 1
+    if not got:
+        print("clippy-selftest: no disallowed_types diagnostic; stderr:\n" + p.stderr[-4000:], file=sys.stderr)
+        return 1
+    missed = sorted(want - got)
+    for n in missed:
+        print(f"{CLIPPY_FIXTURE}/src/lib.rs:{n}: expected clippy::disallowed_types, none reported", file=sys.stderr)
+    for r in other:
+        print(f"clippy-selftest: unexpected error:\n{r}", file=sys.stderr)
+    if missed or other:
+        return 1
+    print(f"clippy-selftest: disallowed_types fired on all {len(want)} annotated lines", file=sys.stderr)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--root", type=Path, default=ROOT, help="repository root (default: this checkout)")
     ap.add_argument("--crate", type=Path, action="append", help="scan this crate directory instead of crates/fid-report*")
+    ap.add_argument("--clippy-selftest", action="store_true", help="prove the clippy layer on the bad fixture crate")
     a = ap.parse_args(argv)
+    if a.clippy_selftest:
+        return clippy_selftest(a.root.resolve())
     crates = [c.resolve() for c in a.crate] if a.crate else None
     if crates is None and not crate_dirs(a.root):
         print(f"rpt_float_lint: no {CRATE_GLOB} crate under {a.root / 'crates'}", file=sys.stderr)

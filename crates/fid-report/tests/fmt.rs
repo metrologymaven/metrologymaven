@@ -4,7 +4,7 @@
 //! Expected strings, digit counts, sides and tie flags come from the independent reference
 //! `fixtures/rpt/model/fmt/make_cases.py` (exact rationals, stdlib Python). Labels, markers,
 //! warnings and error reasons below are hand-labelled from the leaf's requirements.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -20,8 +20,8 @@ use fid_num::kdec::Decimal;
 use fid_project::{IdService, ReplaySource, Uuid};
 use fid_report::fmt::{
     fmt_outcome, fmt_requirement, fmt_value, fmt_value_with, labels, Catalog, CatalogError, Characteristic,
-    DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LimitSet, LimitUnit, LocaleError, LocaleRules, Marker, Side,
-    UnitOverride, ValueKind, ValueRecord, ValueText, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
+    DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LimitSet, LimitUnit, LocaleError, LocaleRules, Marker,
+    SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
 };
 
 // ------------------------------------------------------------------ helpers
@@ -143,7 +143,7 @@ fn ch(id: &str, kind: ValueKind, unit: Unit, decimals: Option<u8>, l: Option<Lim
 fn rec<'a>(id: &str, value: f64, d: &'a Decision, st: &'a UncertaintyStatement) -> ValueRecord<'a> {
     ValueRecord {
         id: id.to_owned(),
-        value,
+        value: SiValue::new(value),
         basis: EvaluationBasis::Points,
         decision: d,
         statement: st,
@@ -242,7 +242,7 @@ fn format_case(c: &Case, locale: LocaleRules) -> ValueText {
 fn ac1_fixture_cases_match_the_golden_file() {
     let golden = json("fixtures/rpt/model/fmt/fmt_cases.golden.json");
     let all = cases();
-    assert_eq!(all.len(), 15);
+    assert_eq!(all.len(), 47);
     let mut units = BTreeSet::new();
     let mut authored = [false, false];
     for c in &all {
@@ -266,7 +266,7 @@ fn ac1_fixture_cases_match_the_golden_file() {
         assert!(!v.has_marker(Marker::UndecidableSide), "{}", c.name);
         assert_ne!(v.side(), Side::Undecidable, "{}", c.name);
     }
-    for u in ["mm", "in", "deg", "1"] {
+    for u in ["mm", "in", "um", "m", "rad", "deg", "dms", "1"] {
         assert!(units.contains(u), "fixture lacks unit {u}");
     }
     assert_eq!(authored, [true, true], "records with and without authored decimals");
@@ -316,7 +316,7 @@ fn ac10_sides_of_conforming_values_and_requirements() {
     let cat = Catalog::english();
     let mut req =
         ch("ch-req", ValueKind::Length, Unit::Mm, Some(3), Some(limits(None, Some("0.00005"), LimitUnit::Si)));
-    req.nominal = Some(0.025);
+    req.nominal = Some(SiValue::new(0.025));
     let v = fmt_requirement(&req, &ctx(en(), &cat)).unwrap();
     assert_eq!(v.side(), Side::NotApplicable);
     assert_eq!(v.text().canonical, "25.000");
@@ -531,7 +531,7 @@ fn ac6_locale_changes_only_separators_and_stays_injective() {
     let golden = json("fixtures/rpt/model/fmt/locale_corpus.golden.json");
     let corpus: Vec<&str> = arr(get(&doc, "canonical")).iter().map(s).collect();
     let CValue::Obj(locales) = get(&doc, "locales") else { panic!() };
-    assert!(locales.contains_key("de"));
+    assert!(locales.contains_key("de") && locales.contains_key("ar"));
     for (id, v) in locales {
         let rules = rules_of(id, v);
         let want: Vec<&str> = arr(get(&golden, id)).iter().map(s).collect();
@@ -539,9 +539,14 @@ fn ac6_locale_changes_only_separators_and_stays_injective() {
         for (canonical, want) in corpus.iter().zip(&want) {
             let shown = rules.render(canonical).unwrap();
             assert_eq!(&shown, want, "{id}: {canonical}");
-            // Same digits in the same order, trailing zeros kept.
-            let d = |t: &str| t.chars().filter(char::is_ascii_digit).collect::<String>();
-            assert_eq!(d(&shown), d(canonical), "{id}: {canonical}");
+            // Byte-identical digits (and dms colons) once the locale's separators and minus
+            // sign, and the canonical `.` and `-`, are stripped: nothing re-rounded, every
+            // trailing zero kept.
+            let strip = |t: &str, drop: &[char]| t.chars().filter(|c| !drop.contains(c)).collect::<String>();
+            let mut seps: Vec<char> = s(get(v, "minus")).chars().collect();
+            seps.extend(s(get(v, "decimal")).chars());
+            seps.extend(s(get(v, "group")).chars());
+            assert_eq!(strip(&shown, &seps).as_bytes(), strip(canonical, &['-', '.']).as_bytes(), "{id}: {canonical}");
             assert!(seen.insert(shown), "{id}: {canonical} renders like another string");
         }
         // No two distinct canonical strings of the corpus (distinct under kdec or not) render alike.
@@ -566,6 +571,9 @@ fn locale_rules_that_could_collide_are_refused() {
     assert_eq!(bad('.', Some(','), 3, 3, "\u{2212}0"), LocaleError::InvalidRules("minus"));
     assert_eq!(bad('-', Some(','), 3, 3, "\u{2212}"), LocaleError::InvalidRules("decimal"));
     assert_eq!(LocaleRules::new("", "r", '.', None, 3, 3, "-").unwrap_err(), LocaleError::InvalidRules("id"));
+    // Arabic-style: U+066B decimal, U+066C group, U+061C letter mark before the minus.
+    let ar = LocaleRules::new("ar", "r", '\u{066b}', Some('\u{066c}'), 3, 3, "\u{061c}-").unwrap();
+    assert_eq!(ar.render("-1234.50").unwrap(), "\u{061c}-1\u{066c}234\u{066b}50");
     // A Unicode minus and narrow no-break space grouping are fine.
     let fr = LocaleRules::new("fr", "r", ',', Some('\u{202f}'), 3, 3, "\u{2212}").unwrap();
     assert_eq!(fr.render("-1234567.50").unwrap(), "\u{2212}1\u{202f}234\u{202f}567,50");
@@ -622,6 +630,14 @@ fn inputs_that_disagree_are_refused() {
     let open = ch("C2", ValueKind::Length, Unit::Mm, Some(3), None);
     assert_eq!(unformattable(fmt_value(&rec("r", 5.1e-5, &sa, &st), &open, &x)), "nonconforms_not_beyond_limit");
     assert_eq!(unformattable(fmt_value(&rec("r", 4.0e-5, &sa, &st), &c, &x)), "nonconforms_not_beyond_limit");
+    // CONFORMS printed beyond its own limit: the inputs disagree, so no text.
+    let ok = decision(Some("dr:simple-acceptance@1"), Outcome::Conforms, &st);
+    assert_eq!(unformattable(fmt_value(&rec("r", 5.1e-5, &ok, &st), &c, &x)), "conforms_beyond_limit");
+    let low = ch("C1", ValueKind::Length, Unit::Mm, Some(3), Some(limits(Some("0.00001"), None, LimitUnit::Si)));
+    assert_eq!(unformattable(fmt_value(&rec("r", 0.9e-5, &ok, &st), &low, &x)), "conforms_beyond_limit");
+    assert_eq!(fmt_value(&rec("r", 4.9e-5, &ok, &st), &c, &x).unwrap().side(), Side::Within);
+    // SiValue shows bits, never decimal text.
+    assert_eq!(format!("{:?}", SiValue::new(1.0)), "SiValue(0x3ff0000000000000)");
     // Units of another kind, and angle limits in the wrong unit.
     let nd = decision(None, Outcome::NotDecidable(NotDecidableReason::RuleMissing), &st);
     let wrong = ch("C3", ValueKind::Length, Unit::Deg, Some(3), None);

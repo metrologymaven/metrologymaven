@@ -6,7 +6,7 @@
 
 pub struct Holder<'a> {
     pub text: &'a str,
-    pub value: f64, // a float field is fine; formatting it is not
+    pub value: u32,
 }
 
 pub fn ok(h: &Holder<'_>, n: u32, t: ((u8, u8), u8)) -> String {
@@ -15,8 +15,8 @@ pub fn ok(h: &Holder<'_>, n: u32, t: ((u8, u8), u8)) -> String {
     let raw = r#"format!("{}", 1.5)"#;
     let s = "{:.3} is only text outside a macro";
     let _ = (0..10).len() + (t.0).1 as usize + t.1 as usize;
-    assert!(h.value > 1.0, "value must exceed one");
-    debug_assert!(h.value < 2.0);
+    assert!(h.value > 1, "value must exceed one");
+    debug_assert!(h.value < 2);
     format!("{quote}{tick}{raw}{s}{}{:>8}{:?}{:#x}{:08}", h.text, n, n, n, n)
 }
 

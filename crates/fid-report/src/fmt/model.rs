@@ -86,7 +86,38 @@ pub struct Characteristic {
     /// The specification limits, if any.
     pub limits: Option<LimitSet>,
     /// The nominal value in SI units, if any (shown by [`super::fmt_requirement`]).
-    pub nominal: Option<f64>,
+    pub nominal: Option<SiValue>,
+}
+
+/// A value in SI units (m, rad or 1) on its way to the formatter. It has no `Display`,
+/// no accessor that returns the float outside this module, and its `Debug` shows the
+/// IEEE-754 bits, so outside `fmt` a value can travel but never become decimal text
+/// (RPT float rule, REQ-RPT.MODEL.FMT-002). NaN and infinities are kept so that formatting
+/// can refuse them (`report.unformattable`).
+#[derive(Clone, Copy, PartialEq)]
+pub struct SiValue(f64);
+
+impl SiValue {
+    /// Wraps an SI value.
+    pub const fn new(x: f64) -> SiValue {
+        SiValue(x)
+    }
+
+    /// The value of a GDT ResultRecord quantity (`GDT.CHAR.RECORD`).
+    pub fn of_quantity(q: fid_gdt::chars::record::Quantity) -> SiValue {
+        SiValue(q.value())
+    }
+
+    pub(crate) const fn get(self) -> f64 {
+        self.0
+    }
+}
+
+impl fmt::Debug for SiValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bits = self.0.to_bits();
+        write!(f, "SiValue(0x{bits:016x})")
+    }
 }
 
 /// A gauge ID cited by a `DIRECT_READING` result: 1 to [`GaugeId::MAX_BYTES`] bytes, no
@@ -120,7 +151,7 @@ pub struct ValueRecord<'a> {
     /// The record ID (named in warnings and errors).
     pub id: String,
     /// The value in SI units (m, rad or 1).
-    pub value: f64,
+    pub value: SiValue,
     /// The evaluation basis.
     pub basis: EvaluationBasis,
     /// The decision.

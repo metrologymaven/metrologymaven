@@ -38,6 +38,13 @@
   "45.0000"
  ],
  "locales": {
+  "ar": {
+   "decimal": "\u066b",
+   "group": "\u066c",
+   "minus": "\u061c-",
+   "primary": 3,
+   "secondary": 3
+  },
   "de": {
    "decimal": ",",
    "group": ".",
