@@ -892,6 +892,7 @@ dependencies = [
  "fid-canon",
  "fid-geo-frame",
  "fid-kci",
+ "fid-registry-macros",
  "fid-types",
 ]
 
@@ -905,6 +906,15 @@ dependencies = [
  "fid-jobs",
  "fid-registry",
  "fid-report",
+]
+
+[[package]]
+name = "fid-registry-macros"
+version = "0.0.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]

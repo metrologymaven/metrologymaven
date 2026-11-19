@@ -1,0 +1,1 @@
+{"additionalProperties":false,"properties":{"applied":{"type":"number","x-quantity":"length","x-unit":"mm"},"revision":{"maximum":4294967295,"minimum":0,"type":"integer"}},"required":["applied","revision"],"type":"object"}

@@ -4,6 +4,7 @@
 
 pub mod catalogue;
 pub mod compat;
+pub mod decl;
 pub mod def;
 pub mod guide;
 pub mod lifecycle;
@@ -19,10 +20,13 @@ pub use compat::{
     classify, diff, Change, CommandRef, Kind, LifecycleChange, Manifest, ManifestDiff, ManifestError, Reason,
     MAX_SCHEMA_DEPTH,
 };
+pub use decl::{FidSchema, HandlerRef};
 pub use def::{
     command_def_schema, CommandDef, DefError, Determinism, FsEffect, Idempotency, Network, Precondition, Projection,
     SideEffect, Surface, Undo, Web, MAX_PRECONDITION_BOUND,
 };
+/// The declaration macros (CORE.REG.DEF.MACRO); `FidSchema` is both the derive and the trait.
+pub use fid_registry_macros::{fid_command, fid_commands, FidSchema};
 pub use guide::{
     check_guides, guides_from_value, guides_to_value, task_guide_schema, GuideError, GuideStep, TaskGuide,
 };

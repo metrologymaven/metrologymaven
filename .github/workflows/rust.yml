@@ -262,6 +262,7 @@ jobs:
           python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/def/macro/make_golden.py --check
           python fixtures/core/reg/manifest/make_fixtures.py --check
           python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check

@@ -1,0 +1,1 @@
+{"additionalProperties":false,"description":"Status of the demo store.","properties":{"features":{"description":"Number of features in the store.","maximum":4294967295,"minimum":0,"type":"integer"},"label":{"type":"string"},"mode":{"enum":["idle","measuring","off_line"],"type":"string"}},"required":["features","mode"],"type":"object"}
