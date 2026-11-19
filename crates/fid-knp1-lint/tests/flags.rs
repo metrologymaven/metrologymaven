@@ -401,8 +401,9 @@ fn fma_cpu_overrides() {
     let e = parse_config("[flags]\nallowed_target_cpus = [\"znver4\"]\n", dir).unwrap_err();
     assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
     assert!(e.message.contains("implies FMA"));
-    let e = parse_config("[flags]\nallowed_target_cpus = [\"haswell\"]\n[flags.fma_cpu_overrides]\nhaswell = \" \"\n", dir)
-        .unwrap_err();
+    let e =
+        parse_config("[flags]\nallowed_target_cpus = [\"haswell\"]\n[flags.fma_cpu_overrides]\nhaswell = \" \"\n", dir)
+            .unwrap_err();
     assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
     let e = parse_config("[flags]\n[flags.fma_cpu_overrides]\nhaswell = \"why\"\n", dir).unwrap_err();
     assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
