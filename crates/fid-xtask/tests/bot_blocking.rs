@@ -120,15 +120,12 @@ fn input_errors_fail_closed() {
     assert!(r.unwrap_err().starts_with("register: BOTS-SCHEMA x "));
     // A register without bots would make every thread advisory.
     let no_bots = dir.join("bots-none.toml");
-    std::fs::write(&no_bots, "# no bots
-").unwrap();
+    std::fs::write(&no_bots, "# no bots\n").unwrap();
     let r = check(&fx("threads-blocking.json"), &no_bots, &fx("maintainers.txt"));
     assert_eq!(r.unwrap_err(), "register: no bots");
     // Maintainer handles that differ only in case.
     let twice = dir.join("maintainers-twice.txt");
-    std::fs::write(&twice, "ada-quill
-Ada-Quill
-").unwrap();
+    std::fs::write(&twice, "ada-quill\nAda-Quill\n").unwrap();
     assert!(check(&fx("threads-blocking.json"), &fx("bots.toml"), &twice).is_err());
 }
 
@@ -153,12 +150,9 @@ fn accounts_ignore_case() {
     let register_path = dir.join("bots.toml");
     std::fs::write(&register_path, register).unwrap();
     let maintainers = dir.join("maintainers.txt");
-    std::fs::write(&maintainers, "ADA-QUILL
-boris-penn
-").unwrap();
+    std::fs::write(&maintainers, "ADA-QUILL\nboris-penn\n").unwrap();
     let report = check(&fx("threads-blocking.json"), &register_path, &maintainers).unwrap();
-    let lines: String = report.lines().iter().map(|l| format!("{l}
-")).collect();
+    let lines: String = report.lines().iter().map(|l| format!("{l}\n")).collect();
     assert_eq!(lines, expected("blocking"));
 }
 
