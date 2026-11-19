@@ -365,10 +365,7 @@ fn reaches_any(path: &[String], pat: &[&str]) -> bool {
 const BUILTIN_ROOTS: [&str; 3] = ["std", "core", "alloc"];
 
 fn is_int_type(seg: &str) -> bool {
-    matches!(
-        seg,
-        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "usize"
-    )
+    matches!(seg, "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "usize")
 }
 
 fn is_float_type(seg: &str) -> bool {
@@ -1268,7 +1265,11 @@ impl<'a> Scan<'a> {
                     || (i + 2..close).any(|k| self.is(k, &Kind::PathSep))
                     || (close + 1..close + 4).any(|k| self.is(k, &Kind::PathSep));
                 if unclassifiable {
-                    self.hit(i, &Rule::Parse, "macro repetition builds a path: the scan cannot classify it".to_string());
+                    self.hit(
+                        i,
+                        &Rule::Parse,
+                        "macro repetition builds a path: the scan cannot classify it".to_string(),
+                    );
                 }
             }
         }
@@ -1292,7 +1293,8 @@ impl<'a> Scan<'a> {
                     self.check_facade_shadow(i + 1, name);
                 }
             }
-            if self.ident(i).is_some() && self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_))) {
+            if self.ident(i).is_some() && self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_)))
+            {
                 let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX).min(n);
                 for b in in_args.iter_mut().take(close).skip(i + 3) {
                     *b = true;
