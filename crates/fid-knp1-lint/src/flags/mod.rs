@@ -513,9 +513,7 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
             t.strip_prefix("-C").filter(|r| !r.is_empty())
         };
         match opt.and_then(|o| o.split_once('=')) {
-            Some((k, v)) => {
-                out.push(Codegen { key: k.to_string(), value: v.to_string(), needle: format!("{k}={v}") })
-            }
+            Some((k, v)) => out.push(Codegen { key: k.to_string(), value: v.to_string(), needle: format!("{k}={v}") }),
             None if opt.is_none() && t.contains("fp-contract") => {
                 out.push(Codegen { key: "llvm-args".to_string(), value: t.to_string(), needle: t.to_string() })
             }
@@ -532,12 +530,8 @@ fn llvm_args_contract(v: &str) -> bool {
     let mut rest = v;
     while let Some(i) = rest.find("fp-contract") {
         let after = rest.get(i + "fp-contract".len()..).unwrap_or("");
-        let value: String = after
-            .strip_prefix('=')
-            .unwrap_or("")
-            .chars()
-            .take_while(|c| !c.is_whitespace() && *c != ',')
-            .collect();
+        let value: String =
+            after.strip_prefix('=').unwrap_or("").chars().take_while(|c| !c.is_whitespace() && *c != ',').collect();
         if value != "off" {
             return true;
         }
@@ -563,7 +557,7 @@ fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: Place<
                     format!("`-C {}` lets the compiler use the host's FMA", o.needle),
                 );
             }
-            "target-cpu" if !sink.cfg.allowed_target_cpus.iter().any(|c| *c == o.value) => {
+            "target-cpu" if !sink.cfg.allowed_target_cpus.contains(&o.value) => {
                 let (pos, text) = place(&o.needle);
                 sink.push(
                     "CPU",
