@@ -103,8 +103,8 @@ pub struct PutOpts {
 /// What [`BlobStore::check_stored`] found under a digest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Stored {
-    /// Nothing, or a manifest whose chunk is missing.
-    Missing,
+    /// Nothing is stored under this digest (the blob itself, or a chunk its manifest lists).
+    Missing(Digest),
     /// This blob or chunk does not hash to its address (or has the wrong length).
     Corrupt(Digest),
     /// Sound; these blobs (the blob, then its chunks) are to be flushed.
@@ -478,7 +478,7 @@ impl BlobStore {
         let len = match fs::symlink_metadata(self.path_of(digest)) {
             Ok(m) if m.is_file() => m.len(),
             Ok(_) => return Err(not_regular()),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Stored::Missing),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Stored::Missing(*digest)),
             Err(e) => return Err(e.into()),
         };
         // No blob this store writes is longer than a manifest; a longer file is not the
@@ -503,7 +503,7 @@ impl BlobStore {
         };
         for (i, chunk) in manifest.chunks.iter().enumerate() {
             if !self.has_blob(chunk)? {
-                return Ok(Stored::Missing);
+                return Ok(Stored::Missing(*chunk));
             }
             if !self.existing_matches(chunk, manifest.chunk_len(i), true)? {
                 return Ok(Stored::Corrupt(*chunk));

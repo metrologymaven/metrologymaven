@@ -14,8 +14,8 @@ pub use append::FaultHook;
 #[cfg(feature = "store")]
 pub use append::{
     utc_instant, utc_order, Append, AppendRequest, Clock, CrashPoint, Durability, EntryHash, Journal, JournalError,
-    SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE, ROLE_PAYLOAD, ROLE_REF,
-    SYNCHRONOUS_FULL,
+    SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BATCH_BYTES, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE,
+    ROLE_PAYLOAD, ROLE_REF, SYNCHRONOUS_FULL,
 };
 
 pub use entry::{

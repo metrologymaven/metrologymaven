@@ -613,6 +613,32 @@ fn stored_object_chunks_are_checked() {
     }
 }
 
+/// `Txn::check_blob` runs the commit's blob check early and writes nothing: a pending blob and a
+/// sound stored object pass, an absent blob is dangling_blob, a damaged chunk corrupt_blob and a
+/// missing chunk dangling_blob naming that chunk.
+#[test]
+fn check_blob_runs_the_commit_check_early() {
+    let big: Vec<u8> = (0..fid_store::cas::CHUNK_SIZE + 1000).map(|i| (i % 251) as u8).collect();
+    let (_t, root) = new_project("check");
+    let store = open_write(&root);
+    let addr = store.blobs().put_bytes(&big, Default::default()).unwrap();
+    let fid_store::Address::Object(o) = addr else { panic!("not chunked") };
+    let chunks = store.blobs().manifest(&o).unwrap().chunks;
+    let mut txn = store.transaction();
+    let pending = txn.put_blob(b"pending only".to_vec()).unwrap().digest();
+    txn.check_blob(&pending).unwrap();
+    txn.check_blob(&o.manifest_digest).unwrap();
+    let absent = address_of(b"never stored").unwrap().digest();
+    assert!(matches!(txn.check_blob(&absent), Err(TxnError::DanglingBlob(x)) if x == absent));
+    let last = store.blobs().path_of(&chunks[1]);
+    std::fs::write(&last, vec![7u8; 1000]).unwrap();
+    assert!(matches!(txn.check_blob(&o.manifest_digest), Err(TxnError::CorruptBlob(x)) if x == chunks[1]));
+    std::fs::remove_file(&last).unwrap();
+    assert!(matches!(txn.check_blob(&o.manifest_digest), Err(TxnError::DanglingBlob(x)) if x == chunks[1]));
+    txn.abort();
+    assert!(!store.blobs().has_blob(&pending).unwrap(), "check_blob or abort wrote a pending blob");
+}
+
 // ------------------------------------------------------------------ crash safety
 
 const CRASH_ROOT_ENV: &str = "FID_TXN_CRASH_ROOT";
