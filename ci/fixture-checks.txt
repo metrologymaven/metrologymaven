@@ -35,6 +35,7 @@ python fixtures/geo/cad/topo/make_topo_fixtures.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
 python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
 python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+python fixtures/geo/ooc/make_layout_fixtures.py --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check

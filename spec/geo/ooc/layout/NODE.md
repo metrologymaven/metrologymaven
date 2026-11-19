@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-ooc]
 satisfies: [REQ-GEO.OOC-001, REQ-GEO.OOC-007]
 covers: []
 depends_on: [GEO.TYPES.POINTS, GEO.TYPES.DIGEST, CORE.STO]

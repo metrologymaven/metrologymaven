@@ -30,6 +30,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-registry-macros" = "model"
 "fid-store" = "model"
 "fid-journal" = "model"
+# Out-of-core point clouds (GEO.OOC.LAYOUT): model, not kernel, because it stores chunks in the
+# CORE.STO blob store (fid-store, model) and spills to files.
+"fid-geo-ooc" = "model"
 "fid-trust-canon" = "model"
 "fid-sign-core" = "model"
 "fid-project" = "model"

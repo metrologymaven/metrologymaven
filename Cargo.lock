@@ -637,6 +637,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-ooc"
+version = "0.0.1"
+dependencies = [
+ "cap",
+ "fid-canon",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
+ "fid-store",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-geo-sel"
 version = "0.0.1"
 dependencies = [
