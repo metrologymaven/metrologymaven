@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-io-res]
+built_pr: 255
 satisfies: [REQ-IO.RES.TRANS-001, REQ-IO.RES.TRANS-002, REQ-IO.RES.TRANS-003, REQ-IO.RES.TRANS-004]
 covers: []
 depends_on: [CORE.PRJ.TREE, CORE.PRJ.CONT, CORE.JRN.CANON]
