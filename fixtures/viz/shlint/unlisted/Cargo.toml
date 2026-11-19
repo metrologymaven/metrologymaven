@@ -1,0 +1,12 @@
+# Fixture crate for fid-shlint (VIZ.RENDER.FRAME.SHLINT). Never built: the lint reads its
+# sources, its shader manifest and the hand-written metadata.json next to this file.
+[package]
+name = "fid-render"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[dependencies]
+wgpu = "26"
+
+[workspace]

@@ -1,0 +1,27 @@
+[package]
+name = "fid-shlint"
+description = "Shader manifest, readback lint and toolkit-free check for fid-render (spec node VIZ.RENDER.FRAME.SHLINT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-shlint"
+path = "src/main.rs"
+
+[dependencies]
+# Strict JSON reader for `cargo metadata --format-version 1` output (duplicate keys, size and
+# depth limits are enforced by the parser).
+fid-canon = { path = "../fid-canon" }
+# Reads shaders/manifest.toml as an untyped table (no serde derive); duplicate keys are
+# rejected by the parser. Already used by fid-knp1-lint, fid-xtask and others.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+# The WGSL front end named by the leaf's Design ("parse WGSL with naga front end for
+# bindings"). Front end only: no GPU, driver or backend code is pulled in.
+naga = { version = "26", features = ["wgsl-in"] }
+
+[lints]
+workspace = true
