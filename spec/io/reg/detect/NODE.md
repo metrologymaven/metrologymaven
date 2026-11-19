@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-reg]
+built_pr: 225
 satisfies: [REQ-IO.REG-001, REQ-IO.REG-002, REQ-IO.REG-003]
 covers: []
 depends_on: [CORE.REG]
@@ -66,7 +68,22 @@ The in-memory registry of format descriptors (first-party and plugin), the two R
 - **Errors:** `format_unknown`, `format_ambiguous`, `format_mismatch`, `format_duplicate` (variants of the `IO.REG.LIMITS` taxonomy).
 - **Determinism:** D0; no hashing, sorted output.
 - **Performance budget:** detection < 1 ms per file for 100 registered formats [unverified until measured].
-- **Crate:** `fid-io-reg`.
+- **Crate:** `fid-io-reg`, module `detect` (listing commands in `detect::list`).
+
+### Pinned build choices
+
+- **Direction:** the descriptor direction reuses `fid_io_reg::Direction` (`Import` = `read`, `Export` = `write` on the wire). Only `read` descriptors take part in detection and in the extension cross-check.
+- **Signatures:** `offset` (u32), `priority` (u8, higher wins) and exactly one matcher: `bytes` (1..=256 bytes at the offset), `contains` (needle of 1..=32 bytes anywhere in `[offset, offset + window)`, window 1..=1024 and at least the needle length) or `predicate`. Everything a signature tests must lie in the first 64 KiB, checked at registration. At most 8 signatures per descriptor. In JSON, byte strings are lowercase hex.
+- **Predicates:** a closed enum of pure first-party functions; today only `stl_binary_size` (prefix holds 84 bytes and total length = 84 + 50 * u32le at byte 80). Predicate signatures take offset 0. Plugins pick predicate names; they never supply code. Nothing in a descriptor is executed, resolved or fetched.
+- **Detection input:** `detect(prefix, total_len, file_name, named)` uses only `prefix[..65536]`; `read_prefix` reads through `Read::take(65536)`, so a source is never asked for more. `total_len` smaller than the prefix fails `malformed` (inconsistent call).
+- **Named format:** when `named` is given, it is returned if it is a registered reader, otherwise `format_unknown`; the file is not read and the extension is not checked.
+- **Ranking:** a descriptor's match priority is the highest priority among its matching signatures. Matches are sorted by (priority descending, ID ascending), so registration order never changes the outcome. Two or more at the top priority fail `format_ambiguous` with the tied priority and the tied IDs sorted ascending.
+- **Extension:** taken lexically from the last path component (split on `/` and `\`): the text after the last `.`, non-empty stem, 1..=16 ASCII letters or digits, lowercased. The name is never opened or resolved. If some reader declares that extension and the detected format is not among those readers, detection fails `format_mismatch` carrying the detected ID, the extension and every reader ID declaring it (sorted). An extension no reader declares is ignored.
+- **Errors:** `DetectError` carries the payloads (candidates, both formats, duplicate key) and maps onto the payload-free `IoError` variants of `IO.REG.LIMITS` (`format_unknown`, `format_ambiguous`, `format_mismatch`, `format_duplicate`); invalid descriptors or registry documents map to `malformed` with a static reason; read failures map to `io`.
+- **Descriptor fields:** extensions are lowercase letters and digits without the dot, at most 16 of up to 16 bytes, stored sorted, repeats refused. Version range = two opaque tokens `min`, `max` (1..=32 bytes of letters, digits, `.`, `-`, `+`, or `*`), never interpreted. Phase `P0`..`P9`. Options schema: a JSON object of at most 64 KiB canonical bytes.
+- **Registry documents:** `Registry::from_json` reads `{"formats": [descriptor, ...]}` through `fid-canon` (1 MiB, depth 32, duplicate keys refused), refuses unknown fields and non-integer numbers, and registers in document order (so a repeat fails `format_duplicate`). At most 4,096 descriptors per registry.
+- **Listing output:** the result array of descriptor objects with keys `id`, `versions{min,max}`, `signatures`, `extensions`, `options_schema`, `phase`, `origin`, `direction`, sorted by ID, wrapped in the `fid-surface` `computed` envelope and encoded as RFC 8785 JSON. The journal record is `{"command", "params": {"origin"}, "result_sha256"}`; exact replay recomputes the listing: same digest `IDENTICAL`, otherwise `DIVERGENT`; a non-listing command `NOT_REPLAYABLE`.
+- **Test registry IDs:** `mesh.stl` (binary, predicate, priority 20), `mesh.stl-ascii` (`solid`, priority 10), `mesh.ply`, `qif.xml` (`contains` `<QIFDocument` within 1,024 bytes), `cloud.e57`. Both STL descriptors declare `stl`. These are test IDs; the format leaves set the real ones.
 
 ## Test fixtures
 
