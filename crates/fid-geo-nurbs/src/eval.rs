@@ -282,12 +282,12 @@ fn homogeneous(ctrl: &[[f64; 3]], weights: Option<&[f64]>, i: usize) -> Result<[
     }
 }
 
-/// `acc[c] = acc[c] + b * pw[c]` for c = 0..4.
+/// `acc[c] = acc[c] + b * pw[c]` for c = 0..4 (a rounded product, then a rounded sum).
 fn accumulate(acc: &mut [f64; 4], b: f64, pw: [f64; 4]) {
-    acc[0] = acc[0] + b * pw[0];
-    acc[1] = acc[1] + b * pw[1];
-    acc[2] = acc[2] + b * pw[2];
-    acc[3] = acc[3] + b * pw[3];
+    acc[0] += b * pw[0];
+    acc[1] += b * pw[1];
+    acc[2] += b * pw[2];
+    acc[3] += b * pw[3];
 }
 
 fn xyz(a: [f64; 4]) -> [f64; 3] {
@@ -315,7 +315,8 @@ impl Curve for NurbsCurve {
         let p = self.degree();
         let ctrl = self.ctrl();
         let (s, nb) = span_basis(self.knots().as_slice(), p, ctrl.len(), t, order)?;
-        let first = s - p; // s >= p (find_span)
+        // s >= p (find_span), so this cannot underflow.
+        let first = s - p;
         // A[d] = sum_{j = 0..=p, increasing} N^(d)_j * Pw[s - p + j], from 0.0.
         let mut a = [[0.0_f64; 4]; MAX_ORDER + 1];
         for (d, acc) in a.iter_mut().enumerate().take(order + 1) {
