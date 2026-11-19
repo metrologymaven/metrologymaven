@@ -177,9 +177,12 @@ fn req003_first_missing_field_in_declaration_order() {
     UncertaintyStatement::new(p).unwrap();
 }
 
+/// A change applied to statement parts.
+type Edit = fn(&mut StatementParts);
+
 #[test]
 fn req006_numbers_are_checked_on_bits() {
-    let cases: [(fn(&mut StatementParts), &str); 9] = [
+    let cases: [(Edit, &str); 9] = [
         (|p| p.expanded = Some(Expanded { value: f64::INFINITY, k: 2.0 }), "expanded.U"),
         (|p| p.expanded = Some(Expanded { value: -0.0, k: 2.0 }), "expanded.U"),
         (|p| p.expanded = Some(Expanded { value: 1e-6, k: 0.0 }), "expanded.k"),
@@ -303,7 +306,7 @@ fn every_field_changes_the_digest() {
         variance_share: 1.0,
     });
     let d0 = UncertaintyStatement::new(base.clone()).unwrap().digest();
-    let edits: [fn(&mut StatementParts); 8] = [
+    let edits: [Edit; 8] = [
         |p| p.method = Some(Method::Mcm),
         |p| p.unit = Some("unit:mm".into()),
         |p| p.u_std = Some(1e-6),
