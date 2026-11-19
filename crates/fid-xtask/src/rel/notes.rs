@@ -188,7 +188,9 @@ fn read_bounded(path: &Path, max: u64) -> Result<Option<Vec<u8>>, NotesError> {
         Err(e) => return Err(parse_err(format!("cannot read {}: {e}", path.display()))),
     };
     let mut bytes = Vec::new();
-    file.take(max + 1).read_to_end(&mut bytes).map_err(|e| parse_err(format!("cannot read {}: {e}", path.display())))?;
+    file.take(max + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| parse_err(format!("cannot read {}: {e}", path.display())))?;
     if bytes.len() as u64 > max {
         return Err(parse_err(format!("{} is larger than {max} bytes", path.display())));
     }
@@ -311,10 +313,7 @@ pub fn parse_export(bytes: &[u8], tag: &str, channel: Channel) -> Result<Export,
 
 /// Index into [`GROUPS`] of the first of `labels` in group order, or `GROUPS.len()` for Other.
 pub fn group_of(labels: &[String]) -> usize {
-    GROUPS
-        .iter()
-        .position(|(name, _)| labels.iter().any(|l| l.eq_ignore_ascii_case(name)))
-        .unwrap_or(GROUPS.len())
+    GROUPS.iter().position(|(name, _)| labels.iter().any(|l| l.eq_ignore_ascii_case(name))).unwrap_or(GROUPS.len())
 }
 
 /// Whether a character could break the line or reorder how it displays.
@@ -336,8 +335,7 @@ pub fn escape_title(raw: &str) -> String {
         return "(no title)".to_string();
     }
     let mut out = String::with_capacity(clean.len().min(4 * MAX_TITLE_CHARS) + 16);
-    let mut count = 0;
-    for c in clean.chars() {
+    for (count, c) in clean.chars().enumerate() {
         if count == MAX_TITLE_CHARS {
             out.push_str(TRUNCATED);
             return out;
@@ -346,7 +344,6 @@ pub fn escape_title(raw: &str) -> String {
             out.push('\\');
         }
         out.push(c);
-        count += 1;
     }
     out
 }
