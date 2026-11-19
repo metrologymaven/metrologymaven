@@ -6,8 +6,9 @@ use fid_bus::error::{InternalReason, UnauthenticatedReason, UpgradeRefusedReason
 use fid_bus::principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, HumanPresence, IdError, Identity, JournalAppend, OsUser,
     PresenceOutcome, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted, SessionId, SessionKey, SessionTable,
-    UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS,
-    MAX_UPGRADED_SESSIONS, UPGRADE_DEADLINE,
+    UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, BLANK_CHARS, DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES,
+    MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS, PRIVATE_USE_RANGES, UNASSIGNED_RANGES,
+    UPGRADE_DEADLINE,
 };
 use fid_bus::{BusError, Code, Detail, Untrusted};
 use fid_canon::{parse, CValue, Digest};
@@ -273,6 +274,19 @@ fn ctx() -> UpgradeContext {
     UpgradeContext { stream: "record".into(), branch: "main".into(), manifests: manifests() }
 }
 
+/// The three upgrade steps in a row: prepare (`&self`), confirm (no table borrow), commit.
+fn upgrade_with(
+    table: &mut SessionTable,
+    ch: &dyn Channel,
+    presence: &dyn HumanPresence,
+    journal: &mut dyn JournalAppend,
+    clock: &mut FakeClock,
+) -> Result<UpgradeGrant, BusError> {
+    let pending = table.prepare_upgrade(ch)?;
+    let confirmed = pending.confirm(presence, clock)?;
+    table.commit_upgrade(confirmed, journal, &ctx())
+}
+
 /// Upgrade with a prompt that takes 1 ms.
 fn upgrade(
     table: &mut SessionTable,
@@ -280,7 +294,7 @@ fn upgrade(
     presence: &FakePresence,
     journal: &mut dyn JournalAppend,
 ) -> Result<UpgradeGrant, BusError> {
-    table.upgrade_session(ch, presence, journal, &mut FakeClock::prompt_takes(1), &ctx())
+    upgrade_with(table, ch, presence, journal, &mut FakeClock::prompt_takes(1))
 }
 
 /// The pipeline stand-in for AC-4 and AC-7: derive the principal from the channel, then
@@ -474,8 +488,7 @@ fn ac4_confirmed_upgrade_journals_then_runs_as_human() {
     let mut journal = MemJournal::default();
     let mut ch = cli(&mut table, "cli-1", "alice");
     let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    let grant =
-        table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(4000), &ctx()).unwrap();
+    let grant = upgrade_with(&mut table, &ch, &presence, &mut journal, &mut FakeClock::prompt_takes(4000)).unwrap();
     assert_eq!(presence.calls.get(), 1);
     assert_eq!(presence.deadline.get(), Some(Duration::from_secs(120)));
     let req = presence.seen.borrow().clone().unwrap();
@@ -523,12 +536,13 @@ fn ac4_confirmed_upgrade_journals_then_runs_as_human() {
     let later = cli(&mut table, "cli-2", "alice");
     assert!(later.session.number() > ch.session.number());
     assert_eq!(kind_of(&table, &later), PrincipalKind::Script);
-    // Ending the session revokes the grant even though the channel still holds it.
+    // Ending the session revokes the grant even though the channel still holds it. The key
+    // is consumed, so an ended key can be neither ended again nor presented again.
     assert!(table.is_upgraded(&ch.session));
-    assert!(table.end_session(&ch.session));
-    assert!(!table.end_session(&ch.session));
-    assert_eq!(kind_of(&table, &ch), PrincipalKind::Script);
+    let TestChannel { session, grant, .. } = ch;
+    assert!(table.end_session(session));
     assert!(table.is_empty());
+    assert!(grant.is_some());
 }
 
 #[test]
@@ -689,7 +703,7 @@ fn ac5_presence_outcomes_as_labelled() {
         let mut journal = MemJournal::default();
         let mut ch = cli(&mut table, "cli-5", os_user);
         let mut clock = FakeClock::prompt_takes(elapsed_ms(case));
-        let got = table.upgrade_session(&ch, &presence, &mut journal, &mut clock, &ctx());
+        let got = upgrade_with(&mut table, &ch, &presence, &mut journal, &mut clock);
         assert_eq!(presence.calls.get(), 1, "{name}");
         match st(case, "expect") {
             "ok" => {
@@ -843,7 +857,11 @@ fn identifiers_follow_the_labelled_cases() {
     let fx = fixture("ids.json");
     assert_eq!(st(&fx, "license"), "CC-BY-4.0");
     let cases = arr(&fx, "cases");
-    assert_eq!(cases.len(), 28);
+    assert_eq!(cases.len(), 44);
+    // Every character outside printable ASCII is written as a \uXXXX escape, as the note says.
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/bus/principal/ids.json");
+    let raw = std::fs::read(path).unwrap();
+    assert!(raw.iter().all(|b| (0x20..0x7f).contains(b) || *b == b'\n'), "ids.json is printable ASCII");
     for case in cases {
         let name = st(case, "name");
         let text = st(case, "text");
@@ -887,7 +905,7 @@ fn session_numbers_are_monotonic_and_never_reused() {
         let k = table.open_session(sid("same-label")).unwrap();
         assert!(k.number() > last);
         last = k.number();
-        assert!(!table.end_session(&k));
+        assert!(!table.end_session(k));
     }
 }
 
@@ -911,6 +929,193 @@ fn session_table_is_bounded() {
     assert_eq!(journal.0, MAX_UPGRADED_SESSIONS);
     // Closing a session frees a row.
     let first = held.remove(0);
-    assert!(table.end_session(&first.session));
+    assert!(table.end_session(first.session));
     upgrade(&mut table, &extra, &presence, &mut journal).unwrap();
+}
+
+#[test]
+fn unicode_tables_are_sorted_and_pinned_to_16_0() {
+    let tables = [FORMAT_RANGES, UNASSIGNED_RANGES, DEFAULT_IGNORABLE_RANGES, PRIVATE_USE_RANGES, BLANK_CHARS];
+    for t in tables {
+        assert!(!t.is_empty());
+        for &(lo, hi) in t {
+            assert!(lo <= hi && hi <= 0x10_FFFF);
+        }
+        for w in t.windows(2) {
+            assert!(w[0].1 < w[1].0, "sorted and non-overlapping");
+        }
+    }
+    let has = |t: &[(u32, u32)], u: u32| t.iter().any(|&(lo, hi)| lo <= u && u <= hi);
+    // Hand-checked against the Unicode 16.0 character database.
+    assert!(!has(UNASSIGNED_RANGES, 0x1C89), "U+1C89 CYRILLIC CAPITAL LETTER TJE is new in 16.0");
+    assert!(!has(UNASSIGNED_RANGES, 0x0897), "U+0897 ARABIC PEPET is new in 16.0");
+    assert!(has(UNASSIGNED_RANGES, 0x1C8B));
+    assert!(has(UNASSIGNED_RANGES, 0xFFFE) && has(UNASSIGNED_RANGES, 0x10_FFFF), "noncharacters are Cn");
+    assert!(!has(UNASSIGNED_RANGES, 0xE000) && !has(UNASSIGNED_RANGES, 0xD7A3));
+    for u in [0x034F, 0x115F, 0x1160, 0x17B4, 0x180F, 0x2065, 0x3164, 0xFE00, 0xFFA0, 0xE0000, 0xE0FFF] {
+        assert!(has(DEFAULT_IGNORABLE_RANGES, u), "U+{u:04X} is Default_Ignorable_Code_Point");
+    }
+    for u in [0x0020, 0x00A0, 0x0600, 0xFFF9, 0x13430, 0x2800] {
+        assert!(!has(DEFAULT_IGNORABLE_RANGES, u), "U+{u:04X} is not Default_Ignorable_Code_Point");
+    }
+    // Every Zs character of Unicode 16.0 except U+0020, plus U+2800, is a blank.
+    let zs = [0x00A0, 0x1680, 0x2000, 0x2005, 0x200A, 0x202F, 0x205F, 0x3000, 0x2800];
+    for u in zs {
+        assert!(has(BLANK_CHARS, u), "U+{u:04X}");
+    }
+    assert!(!has(BLANK_CHARS, 0x0020) && !has(BLANK_CHARS, 0x200B));
+    assert_eq!(IdError::BlankChar.code(), "blank_char");
+    assert_eq!(IdError::DefaultIgnorable.code(), "default_ignorable");
+    assert_eq!(IdError::Unassigned.code(), "unassigned");
+}
+
+// ------------------------------------------------------------------ upgrade without a held borrow
+
+/// A presence provider that, while the person is being asked, runs `hook` against the
+/// shared table. That compiles and runs only because no table borrow is held during the
+/// prompt.
+type Hook<'a> = Box<dyn FnOnce(&mut SessionTable) + 'a>;
+
+struct DuringPrompt<'a> {
+    table: &'a RefCell<SessionTable>,
+    hook: RefCell<Option<Hook<'a>>>,
+    answer: FakePresence,
+}
+
+impl<'a> DuringPrompt<'a> {
+    fn new(table: &'a RefCell<SessionTable>, hook: impl FnOnce(&mut SessionTable) + 'a) -> Self {
+        let answer = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
+        DuringPrompt { table, hook: RefCell::new(Some(Box::new(hook))), answer }
+    }
+}
+
+impl HumanPresence for DuringPrompt<'_> {
+    fn confirm(&self, req: &UpgradeRequest, deadline: Duration) -> PresenceOutcome {
+        let hook = self.hook.borrow_mut().take();
+        if let Some(hook) = hook {
+            hook(&mut self.table.borrow_mut());
+        }
+        self.answer.confirm(req, deadline)
+    }
+}
+
+#[test]
+fn the_table_stays_usable_while_a_person_is_asked() {
+    let table = RefCell::new(SessionTable::new());
+    let mut journal = MemJournal::default();
+    let mut ch = cli(&mut table.borrow_mut(), "cli-1", "alice");
+    let opened = Cell::new(0);
+    let pending = table.borrow().prepare_upgrade(&ch).unwrap();
+    assert_eq!(pending.request().session_number, ch.session.number());
+    let presence = DuringPrompt::new(&table, |t| {
+        // Other connections open and close while the prompt is up.
+        let k = t.open_session(sid("cli-2")).unwrap();
+        opened.set(k.number());
+        assert!(!t.end_session(k));
+    });
+    let confirmed = pending.confirm(&presence, &mut FakeClock::prompt_takes(30_000)).unwrap();
+    assert_eq!(presence.answer.calls.get(), 1);
+    drop(presence);
+    assert!(opened.get() > ch.session.number());
+    assert_eq!(confirmed.session_number(), ch.session.number());
+    ch.grant = Some(table.borrow_mut().commit_upgrade(confirmed, &mut journal, &ctx()).unwrap());
+    assert_eq!(journal.entries.len(), 1);
+    assert_eq!(kind_of(&table.borrow(), &ch), PrincipalKind::Human);
+}
+
+#[test]
+fn a_session_ended_mid_prompt_is_not_upgraded() {
+    let table = RefCell::new(SessionTable::new());
+    let mut journal = MemJournal::default();
+    let ch = cli(&mut table.borrow_mut(), "cli-1", "alice");
+    let pending = table.borrow().prepare_upgrade(&ch).unwrap();
+    let TestChannel { session, .. } = ch;
+    // The channel closes while the person is being asked.
+    let presence = DuringPrompt::new(&table, move |t| assert!(!t.end_session(session)));
+    let confirmed = pending.confirm(&presence, &mut FakeClock::prompt_takes(1)).unwrap();
+    assert_eq!(presence.answer.calls.get(), 1, "the person did confirm");
+    let e = table.borrow_mut().commit_upgrade(confirmed, &mut journal, &ctx()).unwrap_err();
+    assert_eq!(code_reason(&e), "conflict/head_moved");
+    assert!(journal.entries.is_empty(), "journal unchanged");
+    assert!(table.borrow().is_empty(), "no grant");
+}
+
+#[test]
+fn a_session_whose_key_is_dropped_mid_prompt_is_not_upgraded() {
+    let table = RefCell::new(SessionTable::new());
+    let mut journal = MemJournal::default();
+    let ch = cli(&mut table.borrow_mut(), "cli-1", "alice");
+    let pending = table.borrow().prepare_upgrade(&ch).unwrap();
+    let presence = DuringPrompt::new(&table, move |_| drop(ch));
+    let confirmed = pending.confirm(&presence, &mut FakeClock::prompt_takes(1)).unwrap();
+    let e = table.borrow_mut().commit_upgrade(confirmed, &mut journal, &ctx()).unwrap_err();
+    assert_eq!(code_reason(&e), "conflict/head_moved");
+    assert!(journal.entries.is_empty());
+    assert!(table.borrow().is_empty());
+}
+
+#[test]
+fn a_competing_upgrade_mid_prompt_leaves_the_slower_one_uncommitted() {
+    let table = RefCell::new(SessionTable::new());
+    let journal = RefCell::new(MemJournal::default());
+    let mut ch = cli(&mut table.borrow_mut(), "cli-1", "alice");
+    let won: RefCell<Option<UpgradeGrant>> = RefCell::new(None);
+    let pending = table.borrow().prepare_upgrade(&ch).unwrap();
+    {
+        let quick = FakePresence::confirms("alice", ConfirmMethod::OsPresence);
+        // A second request for the same session is prepared, confirmed and committed while
+        // the first one's person is still being asked.
+        let presence = DuringPrompt::new(&table, |t| {
+            let g = upgrade(t, &ch, &quick, &mut *journal.borrow_mut()).unwrap();
+            *won.borrow_mut() = Some(g);
+        });
+        let confirmed = pending.confirm(&presence, &mut FakeClock::prompt_takes(1)).unwrap();
+        let e = table.borrow_mut().commit_upgrade(confirmed, &mut *journal.borrow_mut(), &ctx()).unwrap_err();
+        assert_eq!(code_reason(&e), "conflict/head_moved");
+        assert_eq!(quick.calls.get(), 1);
+    }
+    // Only the competing upgrade was journalled and granted.
+    let j = journal.borrow();
+    assert_eq!(j.entries.len(), 1);
+    let HeaderBody::PrincipalUpgrade(u) = &j.entries[0].header.body else { panic!("upgrade body") };
+    assert_eq!(u.method, ConfirmMethod::OsPresence);
+    ch.grant = won.into_inner();
+    assert_eq!(kind_of(&table.borrow(), &ch), PrincipalKind::Human);
+    assert_eq!(table.borrow().len(), 1);
+}
+
+#[test]
+fn a_confirmation_commits_only_in_the_table_that_prepared_it() {
+    let mut a = SessionTable::new();
+    let mut b = SessionTable::new();
+    let mut journal = MemJournal::default();
+    let ch = cli(&mut a, "cli-1", "alice");
+    let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
+    let confirmed = a.prepare_upgrade(&ch).unwrap().confirm(&presence, &mut FakeClock::prompt_takes(1)).unwrap();
+    let e = b.commit_upgrade(confirmed, &mut journal, &ctx()).unwrap_err();
+    assert_eq!(code_reason(&e), "internal/invariant_violated");
+    assert!(journal.entries.is_empty());
+    assert!(a.is_empty() && b.is_empty());
+}
+
+#[test]
+fn the_table_is_rechecked_for_room_at_commit() {
+    let mut table = SessionTable::new();
+    let mut journal = CountingJournal::default();
+    let presence = FakePresence::confirms("alice", ConfirmMethod::OsPresence);
+    let late = cli(&mut table, "late", "alice");
+    // Prepared while the table still has room...
+    let pending = table.prepare_upgrade(&late).unwrap();
+    let mut held = Vec::new();
+    for i in 0..MAX_UPGRADED_SESSIONS {
+        let mut ch = cli(&mut table, &format!("s-{i}"), "alice");
+        ch.grant = Some(upgrade(&mut table, &ch, &presence, &mut journal).unwrap());
+        held.push(ch);
+    }
+    // ...but it filled up during the prompt.
+    let confirmed = pending.confirm(&presence, &mut FakeClock::prompt_takes(1)).unwrap();
+    let e = table.commit_upgrade(confirmed, &mut journal, &ctx()).unwrap_err();
+    assert_eq!(code_reason(&e), "internal/storage");
+    assert_eq!(journal.0, MAX_UPGRADED_SESSIONS);
+    assert!(!table.is_upgraded(&late.session));
 }
