@@ -8,7 +8,8 @@
 use fid_types::Digest;
 use fid_view::state::{
     parse, parse_canonical, Camera, ClipPlane, EntityId, LegendLayoutRef, Projection, References, TransparencyEntry,
-    ViewState, ViewStateError, Viewport, VisibilityRule, MAX_CLIP_PLANES, MAX_ENTRIES, MAX_INPUT_BYTES, SCHEMA_VERSION,
+    ViewState, ViewStateError, Viewport, VisibilityRule, MAX_CLIP_PLANES, MAX_ENTRIES, MAX_INPUT_BYTES, MAX_SEPARATORS,
+    SCHEMA_VERSION,
 };
 use std::path::PathBuf;
 
@@ -154,7 +155,10 @@ fn input_size_and_entry_limits_fail_closed() {
 
     // Bare commas inside an array are counted before any tree is built.
     let commas = format!("[{}]", "0,".repeat(500_000) + "0");
-    assert_eq!(parse(commas.as_bytes()).unwrap_err().code(), "limit_exceeded");
+    match parse(commas.as_bytes()) {
+        Err(ViewStateError::LimitExceeded { limit, .. }) => assert_eq!(limit, MAX_SEPARATORS),
+        other => panic!("expected the separator limit, got {other:?}"),
+    }
 
     let mut vs = sample_state();
     vs.transparency =
@@ -398,13 +402,13 @@ fn gen_state(r: &mut Rng) -> ViewState {
     }
     let visibility = (0..r.below(6))
         .map(|_| VisibilityRule {
-            entity: EntityId::from_u128(u128::from(r.next()) << 64 | u128::from(r.next())),
+            entity: EntityId::from_u128((u128::from(r.next()) << 64) | u128::from(r.next())),
             visible: r.below(2) == 0,
         })
         .collect();
     let transparency = (0..r.below(6))
         .map(|_| TransparencyEntry {
-            entity: EntityId::from_u128(u128::from(r.next()) << 64 | u128::from(r.next())),
+            entity: EntityId::from_u128((u128::from(r.next()) << 64) | u128::from(r.next())),
             alpha: r.unit01(),
         })
         .collect();

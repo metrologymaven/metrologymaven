@@ -59,6 +59,8 @@ fn canon_error(e: &CanonError) -> ViewStateError {
     match e {
         // The pre-scan reports these with a field; kept as a fallback.
         CanonError::NonFiniteNumber => ViewStateError::NonFiniteNumber { field: "$".to_string() },
+        // `parse` checks the input size (MAX_INPUT_BYTES) before calling fid-canon, so the only
+        // limit fid-canon can still hit is nesting depth: report MAX_DEPTH.
         CanonError::InputLimit => ViewStateError::LimitExceeded { field: "$".to_string(), limit: MAX_DEPTH },
         CanonError::DuplicateKey(k) => {
             ViewStateError::Malformed { field: "$".to_string(), reason: format!("duplicate key {k:?}") }
@@ -146,7 +148,7 @@ fn prescan(input: &[u8]) -> Result<(), ViewStateError> {
             b',' => {
                 commas += 1;
                 if commas > MAX_SEPARATORS {
-                    return Err(ViewStateError::LimitExceeded { field: path(&stack), limit: MAX_ENTRIES });
+                    return Err(ViewStateError::LimitExceeded { field: path(&stack), limit: MAX_SEPARATORS });
                 }
                 match stack.last_mut() {
                     Some(Frame::Arr(n)) => *n += 1,

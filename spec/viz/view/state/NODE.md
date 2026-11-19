@@ -45,7 +45,7 @@ The single serialisable description of what a viewport shows: f64 camera pose an
 ## Acceptance criteria
 
 - **AC-1** Given fixture `fixtures/viz/viewstate-samples` (20 hand-written ViewStates), when each is parsed and re-serialised, then the output bytes equal the input bytes.
-- **AC-2** (property) Given 10 000 generated ViewStates (seed 3) with random f64 values including subnormals and ±0, when serialised and parsed, then every f64 has the identical bit pattern.
+- **AC-2** (property) Given 10 000 generated ViewStates (seed 3) with random f64 values including subnormals and ±0, when serialised and parsed, then every f64 has the identical bit pattern, except −0.0, which reads back as +0.0 (see Design).
 - **AC-3** Given two ViewStates built with the same clip planes inserted in different orders, then their canonical bytes and digests are identical.
 - **AC-4** (error path) Given a ViewState with a NaN camera coordinate, when parsed, then it fails with `NonFiniteNumber`; given 65 clip planes, it fails with `LimitExceeded`.
 - **AC-5** Given a ViewState of schema version 1, then its digest matches the stored golden digest in the fixture.

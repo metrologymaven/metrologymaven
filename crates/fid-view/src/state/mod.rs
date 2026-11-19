@@ -40,7 +40,7 @@ mod error;
 mod json;
 
 pub use error::ViewStateError;
-pub use json::{parse, parse_canonical};
+pub use json::{parse, parse_canonical, MAX_SEPARATORS};
 
 use fid_canon::CValue;
 use fid_types::Digest;
