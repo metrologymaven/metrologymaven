@@ -1,0 +1,24 @@
+[package]
+name = "fid-manifest-gen"
+description = "Metrology Maven build-time kernel manifest generator: per-algorithm implementation digests over the crate closure (spec node KRN.MAN.MANI.IMPL)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Build-time tool (layer `tool`): never linked into the kernel artifact; it may read files.
+[dependencies]
+# Bounded, duplicate-key-rejecting JSON reader for the `cargo metadata` file (model layer).
+fid-canon = { path = "../fid-canon" }
+# The kernel's SHA-256, canonical JSON writer, AlgorithmId and strict manifest reader
+# (KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA), reused so digests are computed by the kernel's own code.
+fid-kci = { path = "../fid-kci" }
+# Reads the workspace Cargo.lock (each closure crate's entry is hashed). The same toml 0.8 with the
+# same feature set that fid-xtask and fid-knp1-lint already use, so no new crate enters the graph;
+# it rejects duplicate keys.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true
