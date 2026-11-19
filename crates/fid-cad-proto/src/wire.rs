@@ -4,10 +4,18 @@ use crate::error::{EncodeError, ProtoError};
 use fid_io_reg::{Budget, Position};
 
 /// Nominal tracked-allocation cost of one decoded scalar (`f64` or index). Costs are
-/// fixed numbers, not `size_of`, so a limit trips at the same input on every platform.
+/// fixed numbers, not `size_of`, so a limit trips at the same input on every platform;
+/// each is at least the `size_of` of what it stands for on 64-bit targets (checked by the
+/// unit test `costs_cover_real_sizes`), so tracked allocation never under-counts.
 pub(crate) const COST_SCALAR: u64 = 8;
-/// Nominal tracked-allocation cost of one decoded record or vector slot.
+/// Nominal cost of one text or `WireText` slot (a boxed `str`), on top of its bytes.
 pub(crate) const COST_SLOT: u64 = 64;
+/// Nominal cost of one decoded [`crate::Record`] in a `Records` batch (the `Vec` is
+/// allocated at its exact final capacity, so there is no growth on top).
+pub(crate) const COST_RECORD: u64 = 160;
+/// Nominal cost of one entry of a session's record table (`Vec<RecordKind>` grown by
+/// doubling: at most two bytes per entry).
+pub(crate) const COST_TABLE_ENTRY: u64 = 8;
 
 /// Appends little-endian primitives to a payload.
 #[derive(Debug, Default)]
@@ -199,5 +207,26 @@ impl<'a, 'b> Decoder<'a, 'b> {
         } else {
             Err(self.invalid("trailing_bytes"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{COST_RECORD, COST_SCALAR, COST_SLOT, COST_TABLE_ENTRY};
+    use crate::{Record, RecordKind, WireText};
+    use std::mem::size_of;
+
+    fn size(n: usize) -> u64 {
+        n as u64
+    }
+
+    #[test]
+    fn costs_cover_real_sizes() {
+        assert!(COST_SCALAR >= size(size_of::<f64>()));
+        assert!(COST_SCALAR >= size(size_of::<u32>()));
+        assert!(COST_SLOT >= size(size_of::<WireText>()));
+        assert!(COST_SLOT >= size(size_of::<Option<WireText>>()));
+        assert!(COST_RECORD >= size(size_of::<Record>()), "size_of::<Record>() = {}", size_of::<Record>());
+        assert!(COST_TABLE_ENTRY >= 2 * size(size_of::<RecordKind>()));
     }
 }

@@ -4,7 +4,7 @@
 use crate::error::ProtoError;
 use crate::frame::{FrameReader, ProtoLimits};
 use crate::msg::{ProtoVersion, Record, RecordBody, RecordKind, Response};
-use crate::wire::COST_SCALAR;
+use crate::wire::COST_TABLE_ENTRY;
 use fid_io_reg::{Budget, IoError, LimitKind, Position};
 use std::io::Read;
 
@@ -134,19 +134,16 @@ impl<R: Read> HostSession<R> {
                 return Err(ProtoError::InvalidMessage { frame, detail: "instance_self_reference" });
             }
         }
-        for (index, allowed) in r.body.references() {
-            let kind = usize::try_from(index).ok().and_then(|i| self.table.get(i));
-            match kind {
-                None => return Err(ProtoError::InvalidMessage { frame, detail: "index_out_of_range" }),
-                Some(k) if !allowed.contains(k) => {
-                    return Err(ProtoError::InvalidMessage { frame, detail: "index_wrong_kind" })
-                }
-                Some(_) => {}
-            }
-        }
+        let table = &self.table;
+        r.body.try_for_each_reference(|index, allowed| match usize::try_from(index).ok().and_then(|i| table.get(i)) {
+            None => Err(ProtoError::InvalidMessage { frame, detail: "index_out_of_range" }),
+            Some(k) if !allowed.contains(k) => Err(ProtoError::InvalidMessage { frame, detail: "index_wrong_kind" }),
+            Some(_) => Ok(()),
+        })?;
         let budget = self.reader.budget_mut();
         budget.charge_elements(1, at)?;
-        budget.charge_alloc(COST_SCALAR, at)?;
+        // The table grows by doubling: at most two bytes per entry, charged as eight.
+        budget.charge_alloc(COST_TABLE_ENTRY, at)?;
         self.table.try_reserve(1).map_err(|_| IoError::Io { kind: std::io::ErrorKind::OutOfMemory, at })?;
         self.table.push(r.body.kind());
         Ok(())

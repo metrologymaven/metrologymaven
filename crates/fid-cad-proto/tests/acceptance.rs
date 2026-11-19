@@ -361,6 +361,24 @@ fn req002_allocation_is_charged_to_the_budget() {
 }
 
 #[test]
+fn req002_decoded_records_are_charged_at_least_their_real_size() {
+    // The smallest record (8 bytes on the wire) decodes to a whole `Record`; tracked
+    // allocation must cover the in-memory size, not the wire size.
+    let n = 1000usize;
+    let skipped = Record {
+        source: SourceRef::Iges(1),
+        name: None,
+        body: RecordBody::Skipped { reason: fid_cad_proto::SkipReason::Filtered },
+    };
+    let frame = records(0, vec![skipped; n]);
+    let mut b = budget();
+    let resp = Response::decode(kind::RECORDS, &frame[HEADER_LEN..], 0, Position::byte(0), &mut b).unwrap();
+    assert!(matches!(&resp, Response::Records { records, .. } if records.len() == n));
+    let real = (n * std::mem::size_of::<Record>()) as u64;
+    assert!(b.alloc_used() >= real, "charged {} < real {real}", b.alloc_used());
+}
+
+#[test]
 fn req002_record_cap_is_limit_exceeded() {
     let stream = [hello_ack(V1), records(0, good_brep())].concat();
     let mut s = HostSession::new(std::io::Cursor::new(stream), budget(), ProtoLimits::DEFAULT.records_max(3), V1);

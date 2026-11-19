@@ -2,7 +2,7 @@
 
 use crate::error::{EncodeError, ProtoError};
 use crate::frame::Frame;
-use crate::wire::{Decoder, Writer, COST_SLOT};
+use crate::wire::{Decoder, Writer, COST_RECORD, COST_SLOT};
 use fid_io_reg::{Budget, Position, UntrustedText};
 use std::fmt;
 
@@ -276,8 +276,13 @@ impl RecordBody {
         }
     }
 
-    /// Every index field with the kinds it may point at, in wire order.
-    pub fn references(&self) -> Vec<(u32, &'static [RecordKind])> {
+    /// Calls `f` on every index field with the kinds it may point at, in wire order,
+    /// stopping at the first error. Allocates nothing, so validating a record costs no
+    /// memory beyond the record itself.
+    pub fn try_for_each_reference<E>(
+        &self,
+        mut f: impl FnMut(u32, &'static [RecordKind]) -> Result<(), E>,
+    ) -> Result<(), E> {
         const SURFACE: &[RecordKind] = &[RecordKind::Surface];
         const CURVE: &[RecordKind] = &[RecordKind::Curve];
         const PCURVE: &[RecordKind] = &[RecordKind::Pcurve];
@@ -290,33 +295,38 @@ impl RecordBody {
         const BODY: &[RecordKind] = &[RecordKind::Body];
         const PRODUCT: &[RecordKind] = &[RecordKind::Product];
         const PMI_TARGET: &[RecordKind] = &[RecordKind::Face, RecordKind::Edge, RecordKind::Vertex];
-        let all = |v: &[u32], k: &'static [RecordKind]| v.iter().map(|&i| (i, k)).collect::<Vec<_>>();
         match self {
             RecordBody::Surface { .. }
             | RecordBody::Curve { .. }
             | RecordBody::Vertex { .. }
             | RecordBody::IgesEntity { .. }
-            | RecordBody::Skipped { .. } => Vec::new(),
-            RecordBody::Pcurve { surface, .. } => vec![(*surface, SURFACE)],
-            RecordBody::Edge { curve, start, end } => vec![(*curve, CURVE), (*start, VERTEX), (*end, VERTEX)],
+            | RecordBody::Skipped { .. } => Ok(()),
+            RecordBody::Pcurve { surface, .. } => f(*surface, SURFACE),
+            RecordBody::Edge { curve, start, end } => {
+                f(*curve, CURVE)?;
+                f(*start, VERTEX)?;
+                f(*end, VERTEX)
+            }
             RecordBody::Coedge { edge, pcurve, .. } => {
-                let mut v = vec![(*edge, EDGE)];
-                if let Some(p) = pcurve {
-                    v.push((*p, PCURVE));
+                f(*edge, EDGE)?;
+                match pcurve {
+                    Some(p) => f(*p, PCURVE),
+                    None => Ok(()),
                 }
-                v
             }
-            RecordBody::Loop { coedges } => all(coedges, COEDGE),
+            RecordBody::Loop { coedges } => coedges.iter().try_for_each(|&i| f(i, COEDGE)),
             RecordBody::Face { surface, loops, .. } => {
-                let mut v = vec![(*surface, SURFACE)];
-                v.extend(all(loops, LOOP));
-                v
+                f(*surface, SURFACE)?;
+                loops.iter().try_for_each(|&i| f(i, LOOP))
             }
-            RecordBody::Shell { faces, .. } => all(faces, FACE),
-            RecordBody::Body { shells } => all(shells, SHELL),
-            RecordBody::Product { bodies } => all(bodies, BODY),
-            RecordBody::Instance { parent, child, .. } => vec![(*parent, PRODUCT), (*child, PRODUCT)],
-            RecordBody::PmiItem { targets, .. } => all(targets, PMI_TARGET),
+            RecordBody::Shell { faces, .. } => faces.iter().try_for_each(|&i| f(i, FACE)),
+            RecordBody::Body { shells } => shells.iter().try_for_each(|&i| f(i, SHELL)),
+            RecordBody::Product { bodies } => bodies.iter().try_for_each(|&i| f(i, BODY)),
+            RecordBody::Instance { parent, child, .. } => {
+                f(*parent, PRODUCT)?;
+                f(*child, PRODUCT)
+            }
+            RecordBody::PmiItem { targets, .. } => targets.iter().try_for_each(|&i| f(i, PMI_TARGET)),
         }
     }
 }
@@ -646,7 +656,7 @@ impl Response {
                 let seq = d.u32()?;
                 // The smallest record is 8 bytes: tag, source tag, 4-byte IGES source,
                 // name tag and a 1-byte body (`Skipped`).
-                let n = d.count(8, COST_SLOT)?;
+                let n = d.count(8, COST_RECORD)?;
                 let mut records = Vec::with_capacity(n);
                 for _ in 0..n {
                     records.push(record(&mut d)?);

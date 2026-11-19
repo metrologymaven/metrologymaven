@@ -78,7 +78,7 @@ Seeded message generator and committed encoding digests under `fixtures/io/cad/w
 
 ## Open questions
 
-- None.
+- Assembly cycles: the session accepts only indices to earlier records and rejects an `Instance` whose parent is its own child, but two `Instance` records can still form a cycle (A in B, then B in A). Whether such a graph is rejected, and where, belongs to `IO.CAD.STEP` (assembly structure); this leaf does not detect it.
 
 ## Children
 

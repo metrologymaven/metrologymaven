@@ -117,8 +117,9 @@ impl Default for ProtoLimits {
 
 /// Reads frames from a pipe through a [`BoundedSource`]. The declared length is checked
 /// against both caps before any payload byte is read or any buffer grows, and the
-/// payload buffer then grows only as bytes actually arrive, so a lying header costs at
-/// most one chunk. One payload buffer is reused for every frame. After the first error
+/// payload buffer then grows only as bytes actually arrive (capacity at most doubles),
+/// so a lying header costs at most about twice the bytes actually sent, and never more
+/// than the frame cap. One payload buffer is reused for every frame. After the first error
 /// every later call returns that error again.
 #[derive(Debug)]
 pub struct FrameReader<R> {
