@@ -1,6 +1,6 @@
 [package]
 name = "fid-num"
-description = "Metrology Maven kernel numerics (KNP-1): error type, FP-environment probe, transcendentals and total-order ops, fixed-order reductions, RNG"
+description = "Metrology Maven kernel numerics (KNP-1): error type, FP-environment probe, transcendentals and total-order ops, fixed-order reductions, RNG, exact decimals and number formatters"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
