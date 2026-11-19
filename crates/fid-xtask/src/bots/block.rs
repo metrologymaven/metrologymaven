@@ -202,9 +202,11 @@ fn parse_thread(i: usize, v: &CValue) -> Result<(String, Thread), String> {
         _ => return Err(format!("{ctx}: resolved must be a boolean")),
     };
     let comments: Vec<Comment> = match field(o, "comments", &ctx)? {
-        CValue::Arr(a) if !a.is_empty() => {
-            a.iter().enumerate().map(|(j, c)| parse_comment(c, &format!("{ctx} comment {j}"))).collect::<Result<_, _>>()?
-        }
+        CValue::Arr(a) if !a.is_empty() => a
+            .iter()
+            .enumerate()
+            .map(|(j, c)| parse_comment(c, &format!("{ctx} comment {j}")))
+            .collect::<Result<_, _>>()?,
         _ => return Err(format!("{ctx}: comments must be a non-empty array")),
     };
     Ok((id, Thread { path, line, resolved, comments }))
