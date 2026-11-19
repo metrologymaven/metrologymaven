@@ -1,0 +1,28 @@
+# cargo-fuzz harness for fid-cad-proto (IO.CAD.WORKER.PROTO AC-5). Not a workspace member:
+# it needs nightly and libFuzzer. Run from crates/fid-cad-proto:
+#   cargo +nightly fuzz run cad_proto_session -- -max_total_time=600 -rss_limit_mb=2048 -timeout=10
+[package]
+name = "fid-cad-proto-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-cad-proto = { path = ".." }
+fid-io-reg = { path = "../../fid-io-reg" }
+
+[[bin]]
+name = "cad_proto_session"
+path = "fuzz_targets/cad_proto_session.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this crate out of the parent workspace.
+[workspace]
+members = ["."]

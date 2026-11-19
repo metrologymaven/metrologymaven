@@ -1,5 +1,7 @@
 //! Metrology Maven outreach tooling (domain OUTR).
 //!
+//! - [`bench::recipe`]: benchmark recipe format `bench-recipe@1` and its validator, with the kind
+//!   validator hook (spec node `OUTR.BENCH.RUN.RECIPE`).
 //! - [`asset_check`]: outreach attribution and font-origin check (spec node
 //!   `OUTR.BRAND.ASSET.ATTR`).
 //! - [`metrics::def`]: adoption metric definitions, source list and no-telemetry guard (spec node
@@ -27,6 +29,7 @@
 //!   website (spec node `OUTR.SITE.GEN.IMPORT`).
 
 pub mod asset_check;
+pub mod bench;
 pub mod copy_guard;
 pub mod doc_run;
 pub mod guide_check;

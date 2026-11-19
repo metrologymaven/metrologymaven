@@ -1,0 +1,7 @@
+{
+  "budgets": {"core_bytes": 3072, "agents_md_bytes": 10240},
+  "block": [
+    {"id": "core", "file": "core.md", "repos": ["fix-spec", "fix-code"]},
+    {"id": "rust", "file": "rust.md", "repos": ["fix-code"]}
+  ]
+}
