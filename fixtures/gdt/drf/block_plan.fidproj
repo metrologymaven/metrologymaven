@@ -1,0 +1,55 @@
+{
+  "schema": "fid.gdt-datum-plan/1",
+  "plan": "block-1",
+  "faces": [
+    "face:12",
+    "face:13",
+    "face:14"
+  ],
+  "features": {
+    "f1": {
+      "type": "plane",
+      "faces": [
+        "face:12"
+      ]
+    },
+    "f2": {
+      "type": "plane",
+      "faces": [
+        "face:13"
+      ]
+    },
+    "f3": {
+      "type": "plane",
+      "faces": [
+        "face:14"
+      ]
+    }
+  },
+  "geometry": {
+    "pt:1": {
+      "kind": "point",
+      "face": "face:12"
+    },
+    "pt:2": {
+      "kind": "point",
+      "face": "face:12"
+    },
+    "pt:3": {
+      "kind": "point",
+      "face": "face:13"
+    },
+    "ln:1": {
+      "kind": "line",
+      "face": "face:12"
+    },
+    "ar:1": {
+      "kind": "area",
+      "face": "face:12"
+    }
+  },
+  "datums": {
+    "working": {},
+    "agent": {}
+  }
+}

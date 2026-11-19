@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gdt]
+built_pr: 265
 satisfies: [REQ-GDT.DRF-001]
 covers: [GOM.GDT.14, SA.GDT.03]
 depends_on: [GDT.CHAR.MODEL]
@@ -48,7 +50,7 @@ Lets a user (or an adopted PMI proposal) declare a datum: its label, the datum f
 
 ## Design
 
-- **Registry command(s):** `gdt.define_datum@1`, W2, `--json`, `--dry-run`. Params: `label: String` (1–3 characters, validated against a per-dialect pattern from the defaults profile), `feature: FeatureRef`, `faces: [FaceId]`, `type: DatumFeatureType`, `targets: [DatumTargetRef]`, `replace: bool`.
+- **Registry command(s):** `gdt.define_datum@1`, W2, `--json`, `--dry-run`. Params: `label: String` (1–3 characters, validated against a per-dialect pattern from the defaults profile), `feature: FeatureRef`, `faces: [FaceId]`, `feature_type: DatumFeatureType` (CLI flag `--type`), `targets: [DatumTargetRef]`, `replace: bool`. The MCP parameter object and the stored, journaled and returned `DatumDefinition` use the same key names (`label`, `feature`, `faces`, `feature_type`, `targets`), so a definition read back validates against the parameter schema's definition fields.
 - **Data structures:** `DatumDefinition`, `DatumTargetRef { Point | Line | Area }` (geometry references only).
 - **Algorithm:** validate references and type, check label uniqueness, write, journal.
 - **Errors:** `datum_label_exists`, `unsupported_datum_feature_type`, `reference_missing{id}`, `bad_label`.
