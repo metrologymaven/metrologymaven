@@ -1,0 +1,31 @@
+[package]
+name = "fid-kernel-wasm"
+description = "Kernel WASM reference artifact: a wasm32-wasip1 command that reads one canonical KernelCall on stdin, calls fid_kci::evaluate and writes the result (spec node KRN.MAN.WASM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-kernel-wasm"
+path = "src/main.rs"
+
+[features]
+# Registers the stand-in test algorithms (echo, stack recursion, allocation) used by the
+# fixtures. Off for the reference artifact; CI builds a second module with it for AC-2/AC-3.
+test-algorithms = []
+
+# The shim sits outside the kernel graph and depends only on the kernel call interface.
+[dependencies]
+fid-kci = { path = "../fid-kci" }
+
+# Native tests of the stand-in algorithms: `cargo test -p fid-kernel-wasm --features test-algorithms`
+# (a CI step runs it on every OS).
+[[test]]
+name = "shim"
+required-features = ["test-algorithms"]
+
+[lints]
+workspace = true

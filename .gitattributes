@@ -125,6 +125,8 @@ fixtures/geo/types/** -text
 fixtures/core/rpl/exec/subst/** -text
 # CORE.STO.SQL.TXN hand-labelled commit cases: read byte for byte, never convert line endings.
 fixtures/core/sto/sql/txn/** -text
+# KRN.NUM.LA.MAT fixtures: result bits and digests are compared byte for byte by --check.
+fixtures/num/la/** -text
 # KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
 # of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
 fixtures/man/implclosure-ws-v1/** -text
@@ -132,3 +134,8 @@ fixtures/man/implclosure-ws-v1/** -text
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
+# KRN.MAN.WASM: hand-encoded wasm modules, canonical calls and manifests, and the pinned runtime
+# settings whose SHA-256 is the manifest's replay_runtime.config_digest; compared byte for byte.
+fixtures/man/wasm/** -text
+crates/fid-kernel-wasm/wasm-runtime.toml -text
+crates/fid-kernel-wasm/wasm-imports.allow -text

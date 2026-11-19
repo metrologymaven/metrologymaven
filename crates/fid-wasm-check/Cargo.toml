@@ -1,0 +1,21 @@
+[package]
+name = "fid-wasm-check"
+description = "CI tool for the kernel WASM reference artifact: import allowlist check, pinned runtime settings, runner and manifest cross-check (spec node KRN.MAN.WASM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-wasm-check"
+path = "src/main.rs"
+
+# No third-party dependencies: the WebAssembly reader, the allowlist and settings readers are
+# hand-written and bounded. fid-kci supplies SHA-256 and the kernel manifest reader.
+[dependencies]
+fid-kci = { path = "../fid-kci" }
+
+[lints]
+workspace = true
