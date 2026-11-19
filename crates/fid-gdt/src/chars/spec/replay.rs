@@ -72,22 +72,22 @@ fn dprof_step(
 ) -> ReplayOutcome {
     let derived = match e {
         DprofEvent::Publish(p) => {
-            let bytes = match content.content(p.reference.digest()) {
+            let bytes = match content.content(p.reference().digest()) {
                 Some(b) => b,
                 None => return ReplayOutcome::NotReplayable,
             };
             match parse_profile(bytes, vocab) {
-                Ok(doc) if doc.reference() == p.reference => {
-                    dprof.publish(doc, p.principal, &p.file, false).ok().and_then(|r| r.event)
+                Ok(doc) if &doc.reference() == p.reference() => {
+                    dprof.publish(doc, p.principal(), p.file(), false).ok().and_then(|r| r.into_event())
                 }
                 _ => None,
             }
         }
         DprofEvent::Repoint(r) => {
-            let chars: Vec<&str> = r.changes.iter().map(|c| c.char.as_str()).collect();
-            spec.repoint_defaults_profile(dprof, r.principal, &chars, &r.to.to_string(), false)
+            let chars: Vec<&str> = r.changes().iter().map(|c| c.char().as_str()).collect();
+            spec.repoint_defaults_profile(dprof, r.principal(), &chars, &r.to().to_string(), false)
                 .ok()
-                .and_then(|x| x.event)
+                .and_then(|x| x.into_event())
         }
     };
     same(derived.and_then(|d| d.canonical_bytes().ok()), recorded)

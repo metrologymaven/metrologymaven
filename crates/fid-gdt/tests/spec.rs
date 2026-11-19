@@ -110,7 +110,7 @@ fn bytes(e: &SpecEvent) -> String {
 /// Publishes a profile document (text) on `p`'s branch.
 fn publish_doc(dp: &mut DprofState, p: Principal, doc: &[u8]) -> ProfileRef {
     let doc = parse_profile(doc, &vocab()).unwrap();
-    dp.publish(doc, p, "root://imports/test.json", false).unwrap().reference
+    dp.publish(doc, p, "root://imports/test.json", false).unwrap().reference().clone()
 }
 
 /// AC-1 state: plan_asme.fidproj with `flat-1` created by a human in `plan-1`.
@@ -608,8 +608,8 @@ fn repoint_moves_bindings_and_governing_specs_together() {
     st.create_characteristic(&mut dp, H, "plan-1", "flat-2", false).unwrap();
     let to = publish_doc(&mut dp, H, &read("dprof", "asme_placeholder_1.1.0.json"));
     let r = st.repoint_defaults_profile(&mut dp, H, &["flat-1"], &to.to_string(), false).unwrap();
-    let Some(DprofEvent::Repoint(e)) = &r.event else { panic!("repoint event") };
-    assert_eq!(e.changes.len(), 1);
+    let Some(DprofEvent::Repoint(e)) = &r.event() else { panic!("repoint event") };
+    assert_eq!(e.changes().len(), 1);
     let s1 = st.require_governing_spec(H, "flat-1", &dp).unwrap();
     assert_eq!((s1.defaults_profile(), s1.inherited_from()), (&to, InheritedFrom::Explicit));
     let s2 = st.require_governing_spec(H, "flat-2", &dp).unwrap();
@@ -667,7 +667,14 @@ fn project_loader_is_strict() {
     let base = text("plan_asme.fidproj");
     let bad = |t: &str| load_text(t).map(|_| ()).unwrap_err();
     let pi = |r: &'static str| SpecError::ProjectInvalid { reason: r };
-    assert_eq!(bad(&base.replace("fid.gdt-spec-project/1", "fid.gdt-spec-project/2")), pi("bad_schema"));
+    assert_eq!(bad(&base.replace("fid.gdt-spec-project/2", "fid.gdt-spec-project/1")), pi("bad_schema"));
+    // The embedded store pins the vocabulary each profile was published under (from the
+    // Python reference); a loader given another vocabulary refuses rather than re-checking.
+    assert!(base.contains(&exp(&["vocabulary"])));
+    assert_eq!(exp(&["vocabulary"]), vocab().digest().as_str());
+    let other = KeyVocabulary::new(["placeholder.synthetic"]).unwrap();
+    let e = load_project(base.as_bytes(), &other).map(|_| ()).unwrap_err();
+    assert_eq!(e.reason(), Some("vocabulary_unknown"));
     assert_eq!(bad(&base.replacen("{\n", "{\n \"extra\": 1,\n", 1)), pi("bad_keys"));
     assert_eq!(bad(&base.replace("\"tenant_default\": null,\n", "")), pi("bad_keys"));
     assert_eq!(bad(&base.replace("\"plan_defaults\": {", "\"plan_defaults\": [1], \"x\": {")), pi("bad_keys"));
@@ -813,12 +820,12 @@ fn mixed_journal_of_create_publish_repoint_and_set_replays_identical() {
     let a110 = read("dprof", "asme_placeholder_1.1.0.json");
     let doc = parse_profile(&a110, &vocab()).unwrap();
     let p = dp.publish(doc, H, "root://imports/asme_placeholder_1.1.0.json", false).unwrap();
-    journal.push(p.event.unwrap().canonical_bytes().unwrap());
-    let r = st.repoint_defaults_profile(&mut dp, H, &["flat-1"], &p.reference.to_string(), false).unwrap();
-    journal.push(r.event.unwrap().canonical_bytes().unwrap());
+    journal.push(p.event().unwrap().canonical_bytes().unwrap());
+    let r = st.repoint_defaults_profile(&mut dp, H, &["flat-1"], &p.reference().to_string(), false).unwrap();
+    journal.push(r.event().unwrap().canonical_bytes().unwrap());
     // After the re-point the spec no longer follows the plan default.
     let s1 = st.require_governing_spec(H, "flat-1", &dp).unwrap();
-    assert_eq!((s1.inherited_from(), s1.defaults_profile()), (InheritedFrom::Explicit, &p.reference));
+    assert_eq!((s1.inherited_from(), s1.defaults_profile()), (InheritedFrom::Explicit, p.reference()));
     assert_eq!(st.require_governing_spec(H, "flat-2", &dp).unwrap().inherited_from(), InheritedFrom::Plan);
     let s = set(&mut st, &mut dp, H, "flat-2", "ISO", &[ISO_STD], &iso_ref()).unwrap();
     journal.push(s.event().unwrap().canonical_bytes().unwrap());
@@ -827,7 +834,7 @@ fn mixed_journal_of_create_publish_repoint_and_set_replays_identical() {
     assert_eq!(s.old().unwrap().inherited_from(), InheritedFrom::Explicit);
     journal.push(s.event().unwrap().canonical_bytes().unwrap());
 
-    let content: BTreeMap<Digest, Vec<u8>> = [(*p.reference.digest(), a110.clone())].into_iter().collect();
+    let content: BTreeMap<Digest, Vec<u8>> = [(*p.reference().digest(), a110.clone())].into_iter().collect();
     let out = replay(&start_st, &start_dp, &journal, &content, &vocab());
     assert_eq!(out.steps, vec![ReplayOutcome::Identical; journal.len()]);
     assert_eq!(out.outcome, ReplayOutcome::Identical);

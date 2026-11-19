@@ -35,6 +35,8 @@ pub const MAX_TEXT_CHARS: usize = 280;
 pub const MAX_LIST_LEN: usize = 256;
 /// Most keys in one vocabulary.
 pub const MAX_VOCABULARY_KEYS: usize = 65_536;
+/// `schema` value of a vocabulary's canonical form (the input of [`KeyVocabulary::digest`]).
+pub const VOCABULARY_SCHEMA: &str = "fid.dprof-vocabulary/1";
 /// Largest integer magnitude accepted (2^53 - 1).
 pub const MAX_SAFE_INT: i64 = 9_007_199_254_740_991;
 
@@ -79,10 +81,39 @@ enum ValueRule {
 /// the DMT schema (`GDT.RES.SCHEMA`, `fid_gps::dmt::profile_keys`) and is built with
 /// [`KeyVocabulary::from_dmt_table`]; [`KeyVocabulary::new`] builds an explicit key list that
 /// accepts any value (tests and tools that check a key subset).
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+///
+/// Every vocabulary has a digest ([`KeyVocabulary::digest`]): SHA-256 over the RFC 8785
+/// canonical JSON of
+/// `{"schema": "fid.dprof-vocabulary/1", "dialect": "asme"|"iso"|null,
+///   "keys": {"<key>": "any" | "text" | ["<variant>", ...]}}` (variants ascending). A parsed
+/// profile records the digest of the vocabulary it was checked against
+/// ([`ProfileDoc::vocabulary`]), and the store snapshot keeps it, so a reload re-checks each
+/// profile against exactly that vocabulary.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyVocabulary {
     keys: BTreeMap<String, ValueRule>,
     dialect: Option<Dialect>,
+    digest: Digest,
+}
+
+/// Where a store or project loader finds the vocabulary a profile was published under, by
+/// its digest. A single [`KeyVocabulary`] answers for its own digest only; a
+/// `BTreeMap<Digest, KeyVocabulary>` answers for each of its entries.
+pub trait VocabularySource {
+    /// The vocabulary with this digest, if known.
+    fn vocabulary(&self, digest: &Digest) -> Option<&KeyVocabulary>;
+}
+
+impl VocabularySource for KeyVocabulary {
+    fn vocabulary(&self, digest: &Digest) -> Option<&KeyVocabulary> {
+        (self.digest == *digest).then_some(self)
+    }
+}
+
+impl VocabularySource for BTreeMap<Digest, KeyVocabulary> {
+    fn vocabulary(&self, digest: &Digest) -> Option<&KeyVocabulary> {
+        self.get(digest).filter(|v| v.digest == *digest)
+    }
 }
 
 impl KeyVocabulary {
@@ -93,7 +124,7 @@ impl KeyVocabulary {
         for k in keys {
             KeyVocabulary::add(&mut map, k, ValueRule::Any)?;
         }
-        Ok(KeyVocabulary { keys: map, dialect: None })
+        KeyVocabulary::sealed(map, None)
     }
 
     /// The DMT schema's vocabulary (`fid.dmt-profile-keys/1`) for profiles of `dialect`
@@ -114,7 +145,35 @@ impl KeyVocabulary {
             };
             KeyVocabulary::add(&mut map, &k, rule)?;
         }
-        Ok(KeyVocabulary { keys: map, dialect: Some(dialect) })
+        KeyVocabulary::sealed(map, Some(dialect))
+    }
+
+    /// Computes the digest over the canonical form described on the type.
+    fn sealed(keys: BTreeMap<String, ValueRule>, dialect: Option<Dialect>) -> Result<KeyVocabulary, DprofError> {
+        let rules = keys
+            .iter()
+            .map(|(k, r)| {
+                let v = match r {
+                    ValueRule::Any => CValue::Str("any".to_owned()),
+                    ValueRule::Text => CValue::Str("text".to_owned()),
+                    ValueRule::Variant(names) => CValue::Arr(names.iter().map(|n| CValue::Str(n.clone())).collect()),
+                };
+                (k.clone(), v)
+            })
+            .collect();
+        let mut top = BTreeMap::new();
+        top.insert("schema".to_owned(), CValue::Str(VOCABULARY_SCHEMA.to_owned()));
+        top.insert("dialect".to_owned(), dialect.map_or(CValue::Null, |d| CValue::Str(d.as_str().to_owned())));
+        top.insert("keys".to_owned(), CValue::Obj(rules));
+        let bytes = fid_canon::to_canonical_bytes(&CValue::Obj(top))
+            .map_err(|_| DprofError::BadVocabulary { reason: "encode" })?;
+        let digest = Digest::from_bytes(fid_canon::digest_bytes(&bytes).0);
+        Ok(KeyVocabulary { keys, dialect, digest })
+    }
+
+    /// The vocabulary digest (see the type documentation).
+    pub fn digest(&self) -> &Digest {
+        &self.digest
     }
 
     fn add(map: &mut BTreeMap<String, ValueRule>, k: &str, rule: ValueRule) -> Result<(), DprofError> {
@@ -194,8 +253,9 @@ impl DefaultsProfile {
     }
 }
 
-/// A profile together with its canonical bytes and digest. Fields are private: values are
-/// made only by the strict parser, and [`ProfileDoc::digest_holds`] re-checks the digest.
+/// A profile together with its canonical bytes, its digest and the digest of the key
+/// vocabulary it was checked against. Fields are private: values are made only by the strict
+/// parser, and [`ProfileDoc::digest_holds`] re-checks the digest.
 ///
 /// ```compile_fail
 /// fn forge(d: fid_gdt::chars::dprof::ProfileDoc) -> fid_gdt::chars::dprof::ProfileDoc {
@@ -207,6 +267,7 @@ pub struct ProfileDoc {
     profile: DefaultsProfile,
     canonical: Vec<u8>,
     digest: Digest,
+    vocabulary: Digest,
 }
 
 impl ProfileDoc {
@@ -228,6 +289,13 @@ impl ProfileDoc {
     /// SHA-256 of [`ProfileDoc::canonical`].
     pub fn digest(&self) -> &Digest {
         &self.digest
+    }
+
+    /// The digest of the key vocabulary this profile was checked against when parsed
+    /// ([`KeyVocabulary::digest`]). It is not part of the profile digest: the same document
+    /// keeps its reference whichever vocabulary admitted it.
+    pub fn vocabulary(&self) -> &Digest {
+        &self.vocabulary
     }
 
     /// Whether the digest is the SHA-256 of the canonical bytes.
@@ -335,7 +403,12 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
     }
     let canonical = fid_canon::to_canonical_bytes(v).map_err(|e| malformed(e.code()))?;
     let digest = Digest::from_bytes(fid_canon::digest_bytes(&canonical).0);
-    Ok(ProfileDoc { profile: DefaultsProfile { dialect, edition, version, keys }, canonical, digest })
+    Ok(ProfileDoc {
+        profile: DefaultsProfile { dialect, edition, version, keys },
+        canonical,
+        digest,
+        vocabulary: vocab.digest,
+    })
 }
 
 /// Whether every number literal in the JSON text `bytes` is an integer literal (an optional

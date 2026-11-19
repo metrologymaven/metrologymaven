@@ -479,12 +479,12 @@ impl SpecState {
         dry_run: bool,
     ) -> Result<Repointed, SpecError> {
         let planned = dprof.repoint(principal, chars, to, true)?;
-        let branch = planned.branch;
-        let mut updates = Vec::with_capacity(planned.changes.len());
-        for ch in &planned.changes {
-            let (id, spec) = self.lookup(branch, ch.char.as_str())?;
+        let branch = planned.branch();
+        let mut updates = Vec::with_capacity(planned.changes().len());
+        for ch in planned.changes() {
+            let (id, spec) = self.lookup(branch, ch.char().as_str())?;
             let spec = spec.ok_or_else(|| SpecError::missing("dialect"))?;
-            updates.push((id, spec.with_profile(&ch.new)?));
+            updates.push((id, spec.with_profile(ch.new_ref())?));
         }
         if dry_run {
             return Ok(planned);

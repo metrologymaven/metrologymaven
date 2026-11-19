@@ -6,7 +6,8 @@
 //! - [`profile`]: the `fid.defaults-profile/1` document, its strict bounded parser, the
 //!   key vocabulary it is checked against (`unknown_key`), and the digest: SHA-256 over
 //!   the RFC 8785 canonical JSON of the whole document. The vocabulary comes from the DMT
-//!   schema (`GDT.RES.SCHEMA`) through [`KeyVocabulary::from_dmt_table`].
+//!   schema (`GDT.RES.SCHEMA`) through [`KeyVocabulary::from_dmt_table`]; each parsed
+//!   profile records the vocabulary's digest, and the store keeps it (pinned at publish).
 //! - [`store`]: the project-local profile store and per-characteristic profile bindings,
 //!   with the two W2 commands `gdt.publish_defaults_profile@1` (REQ-002, 003, 004, 006)
 //!   and `gdt.repoint_defaults_profile@1` (REQ-005), human adoption of agent-branch
@@ -27,7 +28,7 @@ pub mod store;
 
 pub use event::{Change, DprofEvent, PublishEvent, RepointEvent};
 pub use ident::{CharId, Edition, ProfileId, ProfileRef, SemVer};
-pub use profile::{parse_profile, DefaultsProfile, KeyVocabulary, ProfileDoc, ProfileValue};
+pub use profile::{parse_profile, DefaultsProfile, KeyVocabulary, ProfileDoc, ProfileValue, VocabularySource};
 pub use replay::{replay, ProfileContent, Replayed};
 pub use store::{Branch, DprofState, PublishStatus, Published, Repointed, StoredProfile};
 

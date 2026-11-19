@@ -1,0 +1,197 @@
+{
+  "note": "Resolver inputs; written by make_cases.py; synthetic, CC0.",
+  "cases": [
+    {
+      "name": "flatness_asme",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "unknown_modifier",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [
+        "lmc"
+      ],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "unsupported_concentricity",
+      "dialect": "asme",
+      "characteristic": "concentricity",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "unsupported_with_override",
+      "dialect": "asme",
+      "characteristic": "concentricity",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": "median"
+    },
+    {
+      "name": "partial_perpendicularity",
+      "dialect": "asme",
+      "characteristic": "perpendicularity",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "partial_position_cz_mmc",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [
+        "mmc",
+        "cz"
+      ],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "position_profile_axis",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/position/none@1": "axis"
+      },
+      "override": null
+    },
+    {
+      "name": "position_override_surface",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/position/none@1": "axis"
+      },
+      "override": "surface"
+    },
+    {
+      "name": "position_row_default",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/position/mmc@1": "axis"
+      },
+      "override": null
+    },
+    {
+      "name": "position_override_median",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {},
+      "override": "median"
+    },
+    {
+      "name": "position_profile_unknown",
+      "dialect": "asme",
+      "characteristic": "position",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/position/none@1": "variant-b"
+      },
+      "override": null
+    },
+    {
+      "name": "wrong_edition",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2009"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "extra_edition",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018",
+        "y14.5.1-2019"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "iso_flatness",
+      "dialect": "iso",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "1101-2017"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "iso_angularity",
+      "dialect": "iso",
+      "characteristic": "angularity",
+      "modifiers": [],
+      "editions": [
+        "1101-2017"
+      ],
+      "profile": {},
+      "override": null
+    },
+    {
+      "name": "size_profile_global",
+      "dialect": "asme",
+      "characteristic": "size",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/size/none@1": "global"
+      },
+      "override": null
+    }
+  ]
+}

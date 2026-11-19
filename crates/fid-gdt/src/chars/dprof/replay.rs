@@ -31,7 +31,7 @@ impl ProfileContent for BTreeMap<Digest, Vec<u8>> {
 impl ProfileContent for DprofState {
     fn content(&self, digest: &Digest) -> Option<&[u8]> {
         // Linear in the profile count, which is bounded by `MAX_PROFILES`.
-        self.profiles().find(|p| p.doc.digest() == digest).map(|p| p.doc.canonical())
+        self.profiles().find(|p| p.doc().digest() == digest).map(|p| p.doc().canonical())
     }
 }
 
@@ -53,20 +53,20 @@ fn step(state: &mut DprofState, recorded: &[u8], content: &dyn ProfileContent, v
     };
     let derived = match &event {
         DprofEvent::Publish(e) => {
-            let bytes = match content.content(e.reference.digest()) {
+            let bytes = match content.content(e.reference().digest()) {
                 Some(b) => b,
                 None => return ReplayOutcome::NotReplayable,
             };
             match parse_profile(bytes, vocab) {
-                Ok(doc) if doc.reference() == e.reference => {
-                    state.publish(doc, e.principal, &e.file, false).ok().and_then(|p| p.event)
+                Ok(doc) if &doc.reference() == e.reference() => {
+                    state.publish(doc, e.principal(), e.file(), false).ok().and_then(|p| p.into_event())
                 }
                 _ => None,
             }
         }
         DprofEvent::Repoint(e) => {
-            let chars: Vec<&str> = e.changes.iter().map(|c| c.char.as_str()).collect();
-            state.repoint(e.principal, &chars, &e.to.to_string(), false).ok().and_then(|r| r.event)
+            let chars: Vec<&str> = e.changes().iter().map(|c| c.char().as_str()).collect();
+            state.repoint(e.principal(), &chars, &e.to().to_string(), false).ok().and_then(|r| r.into_event())
         }
     };
     match derived.map(|d| d.canonical_bytes()) {
