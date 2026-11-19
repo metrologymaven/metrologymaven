@@ -1,0 +1,1 @@
+{"command":"settings.set_admin_value@1","key":"net.allowed_roots","principal":"human","scope":"machine","value":["/data/exports"]}

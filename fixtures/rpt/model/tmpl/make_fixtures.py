@@ -93,7 +93,8 @@ def valid_v1():
         "sort": {"direction": "asc", "key": "characteristic_id"},
     }
     tag_spec = {"repeat": {"kind": "page_group", "pages": [v7(5)]},
-                "rule": {"tags": {"any_of": ["ʼtag‮", PROMPT]}},
+                # Tag lists are distinct and in ascending UTF-8 byte order (RPT.MODEL.TMPL.SLOT).
+                "rule": {"tags": {"any_of": sorted(["ʼtag‮", PROMPT], key=lambda t: t.encode("utf-8"))}},
                 "sort": {"direction": "desc", "key": "balloon_number"}}
     p1 = [
         block(v7(2), "text", {"text": "Characteristic table é中"}),
@@ -128,7 +129,13 @@ def v0_sample():
         "pages": [{"id": v7(21), "blocks": [
             {"id": v7(22), "kind": "text", "version": 1, "data": {"text": "Deviation summary"}},
             {"id": v7(23), "kind": "table", "version": 2, "data": {"columns": [{"key": "dev", "label": "Dev."}]},
-             "slot": {"kind": "characteristics", "rule": {"outcome": "fail"}}, "repeat_header": 2},
+             # The v0 `rule` moves unchanged into the v1 `spec`, so it is written in the slot
+             # language of RPT.MODEL.TMPL.SLOT and the migrated template passes slot validation.
+             "slot": {"kind": "characteristics",
+                      "rule": {"repeat": {"kind": "row"},
+                               "rule": {"characteristics": "all", "outcome": ["nonconforms"]},
+                               "sort": None}},
+             "repeat_header": 2},
         ]}],
     }
 

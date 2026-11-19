@@ -1,0 +1,4 @@
+# SCAN.POLY.QUAL fixture mesh_empty: no vertices, no triangles.
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00

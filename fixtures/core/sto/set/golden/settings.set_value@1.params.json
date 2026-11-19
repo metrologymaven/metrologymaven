@@ -1,0 +1,1 @@
+{"additionalProperties":false,"properties":{"key":{"maxLength":128,"pattern":"^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$","type":"string"},"scope":{"enum":["project","user","machine"],"type":"string"},"value":{"description":"A JSON value; checked against the declared schema of the key."}},"required":["key","scope","value"],"type":"object"}

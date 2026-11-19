@@ -948,6 +948,7 @@ dependencies = [
  "fid-jobs",
  "fid-registry",
  "fid-report",
+ "fid-store",
 ]
 
 [[package]]
@@ -1014,6 +1015,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-mesh"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-num",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-shlint"
 version = "0.0.1"
 dependencies = [
@@ -1046,6 +1056,7 @@ name = "fid-store"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "rusqlite",
@@ -1058,6 +1069,15 @@ name = "fid-surface"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-surface-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-surface",
  "fid-types",
 ]
 

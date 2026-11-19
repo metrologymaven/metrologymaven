@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_bowtie_renumbered.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_bowtie_renumbered
+threshold 1e-18
+triangles 4
+vertices 7
+edges 10
+boundary_edges 8
+boundary_loops 2
+nonmanifold_edges 0
+nonmanifold_vertices 1
+components 2
+degenerate 0
+angle_count 4
+angle_min 0.7853981633974484
+angle_p1 0.7853981633974484
+angle_p5 0.7853981633974484
+angle_median 0.7853981633974484
+canonical {"boundary_edges":"8","boundary_loops":"2","components":"2","degenerate":"0","edges":"10","min_angle":{"count":"4","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"1","triangles":"4","vertices":"7"}

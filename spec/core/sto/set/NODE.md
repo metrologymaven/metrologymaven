@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-store]
+built_pr: 275
 satisfies: [REQ-CORE.STO-009, REQ-CORE.STO-010]
 covers: []
 depends_on: [CORE.REG.DEF.SCHEMA, CORE.REG.DEF.MACRO, CORE.STO.LAYOUT]
@@ -17,7 +19,7 @@ determinism: D0
 cli: [fid settings list-values, fid settings set-value, fid settings reset-value, fid settings set-admin-value]
 mcp: [settings_list_values, settings_set_value, settings_reset_value]
 journal: [settings.set_value@1, settings.reset_value@1, settings.set_admin_value@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.STO.SET: Settings model, scopes and settings commands
@@ -81,6 +83,15 @@ One typed settings system for the whole platform. Each setting is declared by it
 - **Resolved (where non-project changes are journaled):** a per-user settings journal (REQ-008). `CORE.JRN.STREAM` and `CORE.JRN.CHAIN` must accept a journal store that lives in the user configuration directory rather than in a project (cross-node follow-up).
 - `CORE.STO.PRIV` classes `settings.set_telemetry_consent@1` as W3, while CONSTITUTION §3.1 (D-031) says a user's own consent is W2, journaled; PRIV should be reconciled (not this node's file).
 - Machine-scope files may need OS administrator rights to write; this leaf reports `scope_not_writable` and leaves elevation to `PLAT.DEPLOY.MCONF`.
+- **Applied (#275 review, maintainer decisions):**
+  - `settings_current` has no branch column and serves the working branch only. A project-scope change on any other branch (an agent's `agent/<client>/<n>`) is journaled on that branch but never staged into `settings_current`, so it never changes what a person on the working branch reads. **Limit:** until per-branch reads exist (`CORE.JRN.BR`), an agent cannot read back its own project overrides, and such a change reports no `previous` value.
+  - A setting declared `admin: true` may not allow `project` scope (`admin_project_scope` at declaration). A stored project row for a key that does not allow project scope, admin keys included, is ignored with a `scope_not_allowed` warning.
+  - Values are validated in their wire form (RFC 8785 bytes parsed back), and the wire form is what is committed, so a typed 64-bit value is judged as its decimal or hex string. An `integer` must be below 2^53 in magnitude.
+  - `settings.set_admin_value@1` is accepted only from the CLI and the GUI surfaces (defence in depth beside `human_only` and projection `never`).
+- **Wiring (follow-up to #275):**
+  - The four commands are collected by `fid-registry-build` (`SOURCES` entry `fid-store`) and appear in the workspace Registry Manifest. They use only `GEO.FRAME.UNITS` kinds, so `fid-store` publishes no quantity-catalogue fragment and the workspace catalogue digest is unchanged. A test reads the exported manifest and asserts `settings.set_admin_value@1` has surfaces `cli`, `gui` only, projection `never` and `human_only`, and that no A0 command is projected to MCP.
+  - **Bus error codes:** the closed bus set (`CORE.BUS.PIPE.ERR`, frozen `bus-errors.v1`) has no settings reasons, so `SettingsError::bus_code` maps each code to the nearest existing pair: `admin_setting` → `policy/class_forbidden`, `policy` → `policy/agent_write_forbidden`, `scope_not_allowed` → `validation/schema`, `scope_not_writable` → `precondition/capability_missing`, `unknown_key` → `validation/bad_reference`, `validation` → `validation/schema`, `journal_unavailable` and `storage` → `internal/` of the same name. The settings code stays `SettingsError::code` and belongs at the start of the bus detail, which surfaces display but never parse. **Open:** `admin_setting`, `scope_not_allowed`, `scope_not_writable` and `unknown_key` are therefore not machine-distinguishable on the bus; adding them as reasons needs a `bus-errors.v2` baseline (add-only, REQ-CORE.BUS.PIPE.ERR-003) in a `CORE.BUS.PIPE.ERR` change. The adapter from `SettingsError` to `fid_bus::BusError` belongs with the bus dispatch of these commands (`fid-store` is below `fid-bus`), not yet built.
+  - **CLI and MCP surfaces:** pending. The generated surfaces (`AUTO.SURF.GEN`, `AUTO.CLI.TREE`, `AUTO.MCP.PROJ`) are not built on main, so `fid settings ...` and the three MCP tools exist only as manifest entries; check them against the frontmatter `cli:` and `mcp:` lists when those leaves land.
 
 ## Children
 

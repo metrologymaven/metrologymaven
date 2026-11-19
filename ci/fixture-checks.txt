@@ -8,13 +8,16 @@ python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
+python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
+python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
 python fixtures/core/reg/def/macro/make_golden.py --check
 python fixtures/core/reg/def/schema/make_fixtures.py --check
 python fixtures/core/reg/manifest/make_fixtures.py --check
 python fixtures/core/reg/ver/compat/make_fixtures.py --check
 python fixtures/core/reg/ver/gate/make_fixtures.py --check
+python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
@@ -26,6 +29,7 @@ python fixtures/flow/study/tasks/make_fixtures.py --check
 python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
+python fixtures/gdt/drf/build/make_cases.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
@@ -33,6 +37,8 @@ python fixtures/geo/cad/topo/make_topo_fixtures.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
 python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
 python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+python fixtures/geo/nurbs/invert/make_invert_fixtures.py --check
+python fixtures/geo/nurbs/invert/make_invert_fixtures.py --fuzz --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
@@ -76,9 +82,11 @@ python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/check_schema.py
 python fixtures/rpt/model/tmpl/make_fixtures.py --check
+python fixtures/rpt/model/tmpl/make_slot_fixtures.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
+python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check

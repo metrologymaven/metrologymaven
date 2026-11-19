@@ -3,11 +3,18 @@
 //! time; see `spec/core/jrn/`.
 //!
 //! Feature `store` adds module `append` (`CORE.JRN.CHAIN.APPEND`), which writes through
-//! `fid-store`; without it the crate is the storage-free entry model.
+//! `fid-store`, and the head cache and checkpoint table of module `checkpoint`
+//! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
+//! checkpoint record and its verifier.
 
 #[cfg(feature = "store")]
 pub mod append;
+pub mod checkpoint;
 pub mod entry;
+
+#[cfg(feature = "store")]
+pub use checkpoint::{BranchHead, HeadsRebuilt, StoredCheckpoint};
+pub use checkpoint::{Checkpoint, CheckpointError, Coverage, LedgerHead, Link, Verified};
 
 #[cfg(feature = "test-hooks")]
 pub use append::FaultHook;
