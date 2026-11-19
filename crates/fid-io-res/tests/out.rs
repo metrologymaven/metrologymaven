@@ -424,7 +424,7 @@ fn never_panics_on_odd_rows() {
                 .with(Field::PartId, t)
                 .with(Field::Comment, t)
                 .with(Field::SourceSoftware, t);
-            if let Ok(r) = render(&[row.clone()], map) {
+            if let Ok(r) = render(std::slice::from_ref(&row), map) {
                 let table = read_table(&r.bytes, map).unwrap();
                 assert!(!table.is_empty());
                 check_marked(&r.bytes, map, &[row]).unwrap();
