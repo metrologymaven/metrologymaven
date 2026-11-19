@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kernel-wasm, fid-wasm-check]
+built_pr: 206
 satisfies: [REQ-KRN.MAN-005]
 covers: []
 depends_on: [KRN.MAN.KCI]
