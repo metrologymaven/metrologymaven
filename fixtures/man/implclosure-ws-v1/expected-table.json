@@ -1,0 +1,1 @@
+[{"algorithm":"fit.plane.lsq@1.10.0","impl_digest":"sha256:9b33af3afbd8ede9f207db4c196dd9f1c5f8ee159f4e6a5ec02a9675f2c147c5"},{"algorithm":"geo.point.dist@1.2.0","impl_digest":"sha256:08842a3a188ad7d2bf845b8f1036f2c733e6d0fc6603c40adfa463cc2ed8b0da"},{"algorithm":"stat.mean.basic@2.0.0","impl_digest":"sha256:aa5eef97ce21a6bd2a8ad2dbff20ccddba93c4b3ac0c83a87ff333d2da2068a2"}]
