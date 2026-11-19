@@ -72,8 +72,8 @@ fn ac1_every_rule_and_repetition_kind_validates_and_round_trips() {
         assert!(slots.iter().any(|(_, s)| s.kind() == k), "{k:?}");
     }
     assert!(slots.iter().any(|(_, s)| *s.repeat() == RepetitionRule::Row));
-    assert!(slots.iter().any(|(_, s)| matches!(s.repeat(), RepetitionRule::Column { .. })));
-    assert!(slots.iter().any(|(_, s)| matches!(s.repeat(), RepetitionRule::PageGroup { .. })));
+    assert!(slots.iter().any(|(_, s)| matches!(s.repeat(), RepetitionRule::Column(_))));
+    assert!(slots.iter().any(|(_, s)| matches!(s.repeat(), RepetitionRule::PageGroup(_))));
     // Validating the template's own slot of each block gives the same typed slot.
     let pages = t.pages().iter().map(|p| p.id()).collect();
     for b in t.pages().iter().flat_map(|p| p.blocks()) {
@@ -107,9 +107,9 @@ fn ac1_typed_model_matches_the_hand_labelled_fixture() {
     // 2: type selector and column repetition keeping the written column order.
     let Selector::Characteristics(CharacteristicSelector::Type(ty)) = s(2).rule().selector() else { panic!() };
     assert_eq!(ty.as_str(), "PositionCharacteristic");
-    let RepetitionRule::Column { max_columns_per_group, repeat_columns } = s(2).repeat() else { panic!() };
-    assert_eq!(*max_columns_per_group, 8);
-    let cols: Vec<&str> = repeat_columns.as_ref().unwrap().iter().map(|c| c.as_str()).collect();
+    let RepetitionRule::Column(col) = s(2).repeat() else { panic!() };
+    assert_eq!(col.max_columns_per_group(), 8);
+    let cols: Vec<&str> = col.repeat_columns().unwrap().iter().map(|c| c.as_str()).collect();
     assert_eq!(cols, ["nominal", "char_id"]);
     // 8: all four outcomes in code-point order.
     assert_eq!(s(8).rule().outcome().unwrap(), &Outcome::ALL[..]);
@@ -118,7 +118,8 @@ fn ac1_typed_model_matches_the_hand_labelled_fixture() {
     let Selector::FieldTable(ft) = s(10).rule().selector() else { panic!() };
     assert_eq!(ft.as_str(), "form3_rows");
     // 12: page group over both pages, stored ascending.
-    let RepetitionRule::PageGroup { pages } = s(12).repeat() else { panic!() };
+    let RepetitionRule::PageGroup(group) = s(12).repeat() else { panic!() };
+    let pages = group.pages();
     assert_eq!(pages.len(), 2);
     assert!(pages[0] < pages[1]);
 }
@@ -162,7 +163,16 @@ fn ac2_each_invalid_case_fails_naming_its_block() {
     for c in cases {
         let name = text(field(c, "name"));
         let bytes = to_canonical_bytes(field(c, "template")).unwrap();
-        // The format layer accepts every case: the fault is the slot's.
+        if text(field(c, "code")) == "report.template_invalid" {
+            // Refused by the format layer before any slot rule runs (pointer is absolute).
+            let e = parse_template(&bytes).expect_err(name);
+            assert_eq!(e.code(), "report.template_invalid", "{name}");
+            assert_eq!(e.pointer(), Some(text(field(c, "pointer"))), "{name}");
+            assert_eq!(e.reason(), Some(text(field(c, "reason"))), "{name}");
+            continue;
+        }
+        assert_eq!(text(field(c, "code")), "report.slot_invalid", "{name}");
+        // The format layer accepts every other case: the fault is the slot's.
         let t = parse_template(&bytes).unwrap_or_else(|e| panic!("{name}: format rejected: {e}"));
         let err = validate_template(&t).expect_err(name);
         assert_eq!(err.code(), "report.slot_invalid", "{name}");
@@ -392,19 +402,173 @@ fn ac4_hostile_tags_are_kept_and_matched_by_bytes_only() {
     assert!(TagName::new(&"x".repeat(MAX_ID_BYTES + 1)).is_none());
 }
 
+// ------------------------------------------------------------------ checked constructors
+
+/// The canonical bytes of a template holding one table block whose slot is
+/// `{"kind": kind, "spec": {"untrusted": true, "value": spec}}`, built from the first
+/// AC-2 case's template (pages `p0`, `p1`).
+fn template_with(kind: &str, spec: CValue) -> Vec<u8> {
+    let cases = json("slots_invalid.json");
+    let mut t = field(&arr(field(&cases, "cases"))[0], "template").clone();
+    let CValue::Obj(root) = &mut t else { panic!() };
+    let CValue::Arr(pages) = root.get_mut("pages").unwrap() else { panic!() };
+    let CValue::Obj(page) = &mut pages[0] else { panic!() };
+    let CValue::Arr(blocks) = page.get_mut("blocks").unwrap() else { panic!() };
+    let CValue::Obj(block) = &mut blocks[0] else { panic!() };
+    block.insert("kind".into(), CValue::Str("table".into()));
+    let CValue::Obj(slot) = block.get_mut("slot").unwrap() else { panic!() };
+    slot.insert("kind".into(), CValue::Str(kind.into()));
+    let CValue::Obj(wrapper) = slot.get_mut("spec").unwrap() else { panic!() };
+    wrapper.insert("value".into(), spec);
+    to_canonical_bytes(&t).unwrap()
+}
+
+/// The reason `validate` gives for a slot spec, as `Err(reason)`.
+fn validate_spec(kind: &str, spec: CValue) -> Result<Slot, &'static str> {
+    let t = parse_template(&template_with(kind, spec)).unwrap();
+    validate_template(&t).map(|mut v| v.remove(0).1).map_err(|e| e.reason())
+}
+
+fn spec_of(repeat: &str, rule: &str) -> CValue {
+    parse(format!(r#"{{"repeat":{repeat},"rule":{rule},"sort":null}}"#).as_bytes()).unwrap()
+}
+
+fn strs(items: &[String]) -> String {
+    let quoted: Vec<String> = items.iter().map(|s| format!("\"{s}\"")).collect();
+    format!("[{}]", quoted.join(","))
+}
+
+/// `n` distinct IDs of one to three printable ASCII bytes (no quote or backslash), in byte order,
+/// short enough that 10 001 of them stay within the format's payload bound.
+fn short_ids(n: usize) -> Vec<String> {
+    let alphabet: Vec<char> = (0x21u8..0x7f).map(char::from).filter(|c| *c != '"' && *c != '\\').collect();
+    let mut ids: Vec<String> = alphabet.iter().map(|a| a.to_string()).collect();
+    for a in &alphabet {
+        for b in &alphabet {
+            ids.push(format!("{a}{b}"));
+        }
+    }
+    'outer: for a in &alphabet {
+        for b in &alphabet {
+            for c in &alphabet {
+                if ids.len() >= n {
+                    break 'outer;
+                }
+                ids.push(format!("{a}{b}{c}"));
+            }
+        }
+    }
+    ids.truncate(n);
+    ids.sort();
+    ids
+}
+
+fn page_ids() -> (fid_report::doc::PageId, fid_report::doc::PageId) {
+    let t =
+        parse_template(&template_with("characteristics", spec_of(r#"{"kind":"row"}"#, r#"{"characteristics":"all"}"#)))
+            .unwrap();
+    (t.pages()[0].id(), t.pages()[1].id())
+}
+
+/// Every checked constructor refuses what `validate` refuses, with the same reason word.
 #[test]
-fn builders_normalise_lists() {
-    let l = IdList::new(vec![id("b"), id("a"), id("b")]).unwrap();
-    assert_eq!(l.as_slice().iter().map(|i| i.untrusted_str()).collect::<Vec<_>>(), ["a", "b"]);
-    assert!(IdList::new(vec![]).is_none());
-    assert!(BindingRule::new(Selector::Stages(IdSelector::All), Some(vec![])).is_none());
-    let r = BindingRule::new(Selector::Stages(IdSelector::All), Some(vec![Outcome::NotDecidable, Outcome::Conforms]))
-        .unwrap();
-    assert_eq!(r.outcome().unwrap(), &[Outcome::Conforms, Outcome::NotDecidable]);
-    let s = Slot::new(r, None, RepetitionRule::Row);
-    assert_eq!(s.kind(), SlotKind::Stages);
+fn constructors_refuse_what_validate_refuses() {
+    let row = r#"{"kind":"row"}"#;
+    // ID lists.
+    let lists: Vec<Vec<String>> = vec![
+        vec![],
+        vec!["b".into(), "a".into()],
+        vec!["a".into(), "a".into()],
+        short_ids(MAX_LISTED_IDS + 1),
+        vec!["\u{ff61}".into(), "\u{1F600}".into(), "a".into()],
+    ];
+    for l in &lists {
+        let built = IdList::new(l.iter().map(|s| id(s)).collect()).unwrap_err().reason();
+        let json = format!(r#"{{"characteristics":{{"ids":{}}}}}"#, strs(l));
+        let checked = validate_spec("characteristics", spec_of(row, &json)).unwrap_err();
+        assert_eq!(built, checked, "{l:?}");
+        let tags = TagList::new(l.iter().map(|s| TagName::new(s).unwrap()).collect()).unwrap_err().reason();
+        assert_eq!(tags, built);
+    }
+    // Outcome filters.
+    use Outcome::*;
+    for o in [vec![], vec![Conforms, Conforms], vec![NotDecidable, Conforms]] {
+        let built = BindingRule::new(Selector::Stages(IdSelector::All), Some(o.clone())).unwrap_err().reason();
+        let words: Vec<String> = o.iter().map(|x| x.as_str().to_string()).collect();
+        let json = format!(r#"{{"outcome":{},"stages":"all"}}"#, strs(&words));
+        assert_eq!(validate_spec("stages", spec_of(row, &json)).unwrap_err(), built, "{o:?}");
+    }
+    // Column rules.
+    let col = |s: &str| ColumnKey::new(s).unwrap();
+    let many: Vec<String> = (0..=MAX_REPEAT_COLUMNS).map(|k| format!("c{k}")).collect();
+    let column_cases: Vec<(u8, Option<Vec<String>>)> = vec![
+        (0, None),
+        (MAX_COLUMNS_PER_GROUP + 1, None),
+        (2, Some(vec![])),
+        (2, Some(many.clone())),
+        (2, Some(vec!["a".into(), "b".into(), "a".into()])),
+    ];
+    for (max, cols) in column_cases {
+        let built =
+            ColumnRule::new(max, cols.as_ref().map(|c| c.iter().map(|s| col(s)).collect())).unwrap_err().reason();
+        let cols_json = cols.as_ref().map_or("null".to_string(), |c| strs(c));
+        let rep = format!(r#"{{"kind":"column","max_columns_per_group":"{max}","repeat_columns":{cols_json}}}"#);
+        let checked = validate_spec("characteristics", spec_of(&rep, r#"{"characteristics":"all"}"#)).unwrap_err();
+        assert_eq!(built, checked, "{max} {cols:?}");
+    }
+    // Page groups.
+    let (p0, p1) = page_ids();
+    for pages in [vec![], vec![p1, p0], vec![p0, p0]] {
+        let built = PageGroupRule::new(pages.clone()).unwrap_err().reason();
+        let ids: Vec<String> = pages.iter().map(|p| p.uuid().to_string()).collect();
+        let rep = format!(r#"{{"kind":"page_group","pages":{}}}"#, strs(&ids));
+        let checked = validate_spec("characteristics", spec_of(&rep, r#"{"characteristics":"all"}"#)).unwrap_err();
+        assert_eq!(built, checked, "{pages:?}");
+    }
+    // Slot::new refuses a spec over the format's payload bound, which the loader refuses too.
+    let long: Vec<String> = (0..MAX_LISTED_IDS).map(|k| format!("characteristic-{k:05}")).collect();
+    let rule = BindingRule::new(
+        Selector::Characteristics(CharacteristicSelector::Ids(
+            IdList::new(long.iter().map(|s| id(s)).collect()).unwrap(),
+        )),
+        None,
+    )
+    .unwrap();
+    assert_eq!(Slot::new(rule, None, RepetitionRule::Row).unwrap_err().reason(), "value_too_large");
+    let json = format!(r#"{{"characteristics":{{"ids":{}}}}}"#, strs(&long));
+    match parse_template(&template_with("characteristics", spec_of(row, &json))) {
+        Err(e) => assert_eq!(e.reason(), Some("value_too_large")),
+        Ok(_) => panic!("loader accepted an over-size slot"),
+    }
+}
+
+/// What the constructors accept, `to_format` carries and `validate` accepts unchanged.
+#[test]
+fn constructed_slots_validate() {
+    let (p0, p1) = page_ids();
+    let rule =
+        BindingRule::new(Selector::Stages(IdSelector::All), Some(vec![Outcome::Conforms, Outcome::NotDecidable]))
+            .unwrap();
+    let repeats = [
+        RepetitionRule::Row,
+        RepetitionRule::Column(
+            ColumnRule::new(64, Some(vec![ColumnKey::new("z").unwrap(), ColumnKey::new("a").unwrap()])).unwrap(),
+        ),
+        RepetitionRule::PageGroup(PageGroupRule::new(vec![p0, p1]).unwrap()),
+    ];
+    for repeat in repeats {
+        let sort = Some(SortKey { field: SortField::StageOrder, direction: Direction::Desc });
+        let s = Slot::new(rule.clone(), sort, repeat).unwrap();
+        let envelope = s.to_format().unwrap();
+        assert_eq!(envelope.kind(), SlotKind::Stages);
+        let back = validate_spec("stages", envelope.spec().value().clone()).unwrap();
+        assert_eq!(back, s);
+    }
+    let s = Slot::new(rule, None, RepetitionRule::Row).unwrap();
     assert_eq!(
         to_canonical_bytes(&s.to_value()).unwrap(),
         br#"{"repeat":{"kind":"row"},"rule":{"outcome":["conforms","not_decidable"],"stages":"all"},"sort":null}"#
     );
+    let ok = IdList::new(vec![id("a"), id("b")]).unwrap();
+    assert!(ok.contains(&id("b")) && !ok.contains(&id("B")));
 }

@@ -36,9 +36,10 @@ mod read;
 
 pub use error::{SlotError, MAX_SLOT_POINTER_BYTES};
 pub use model::{
-    BindingRule, CharacteristicSelector, CharacteristicType, ColumnKey, Direction, FieldTableId, IdList, IdSelector,
-    Outcome, RepetitionRule, SavedQueryId, Selector, Slot, SortField, SortKey, SortedList, StableId, TagList, TagName,
-    TagSelector, MAX_COLUMNS_PER_GROUP, MAX_ID_BYTES, MAX_LISTED_IDS, MAX_REPEAT_COLUMNS, MAX_TOKEN_BYTES, TABLE_KIND,
+    BindingRule, BuildError, CharacteristicSelector, CharacteristicType, ColumnKey, ColumnRule, Direction,
+    FieldTableId, IdList, IdSelector, Outcome, PageGroupRule, RepetitionRule, SavedQueryId, Selector, Slot, SortField,
+    SortKey, SortedList, StableId, TagList, TagName, TagSelector, MAX_COLUMNS_PER_GROUP, MAX_ID_BYTES, MAX_LISTED_IDS,
+    MAX_REPEAT_COLUMNS, MAX_TOKEN_BYTES, TABLE_KIND,
 };
 pub use order::{compare, order, Item, SortValue};
 

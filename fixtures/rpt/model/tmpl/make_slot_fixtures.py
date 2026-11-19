@@ -15,7 +15,7 @@ Outputs (all in this folder):
   slots_valid.canonical.json  its RFC 8785 bytes
   slots_valid.expected.json   per slot block: block ID, kind, effective sort, and the
                               canonical bytes of the slot member (as a JSON string)
-  slots_invalid.json          AC-2 cases: a template, the block, pointer and reason
+  slots_invalid.json          AC-2 cases: a template, the block, code, pointer and reason
   order_cases.json            ordering contract cases with the expected ID order
 
 Run:   python fixtures/rpt/model/tmpl/make_slot_fixtures.py          (write)
@@ -195,11 +195,11 @@ def ten_thousand_and_one():
 CASES = []
 
 
-def case(name, mutate, pointer, reason, block_kind="table"):
+def case(name, mutate, pointer, reason, block_kind="table", code="report.slot_invalid"):
     s = base_slot()
     mutate(s)
     t = template(I_TID, [(IP0, [block(IB, block_kind, s)]), (IP1, [])])
-    CASES.append({"block": IB, "name": name, "pointer": pointer, "reason": reason, "template": t})
+    CASES.append({"block": IB, "code": code, "name": name, "pointer": pointer, "reason": reason, "template": t})
 
 
 def spec(s):
@@ -309,6 +309,10 @@ def build_cases():
          block_kind="text")
     case("page_not_v7", setrepeat({"kind": "page_group", "pages": [v4(3)]}), REPEAT + "/pages/0", "bad_id",
          block_kind="text")
+    # A JSON number inside a spec value: the format's template json refuses it before any
+    # slot rule runs, so the error is report.template_invalid with an absolute pointer.
+    case("number_in_spec", setrepeat({"kind": "column", "max_columns_per_group": 8, "repeat_columns": None}),
+         "/pages/0/blocks/0/slot" + REPEAT + "/max_columns_per_group", "number", code="report.template_invalid")
     # Check order: `repeat` is read before `rule` (code-point key order).
     case("repeat_before_rule", lambda s: (setrepeat({"kind": "cell"})(s), setrule({"characteristics": "x"})(s)),
          REPEAT + "/kind", "unknown_value")

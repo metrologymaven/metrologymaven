@@ -7,9 +7,9 @@
 
 use super::error::child;
 use super::model::{
-    id_fault, BindingRule, CharacteristicSelector, CharacteristicType, ColumnKey, Direction, FieldTableId, IdSelector,
-    Outcome, RepetitionRule, SavedQueryId, Selector, Slot, SortField, SortKey, SortedList, StableId, TagName,
-    TagSelector, MAX_COLUMNS_PER_GROUP, MAX_LISTED_IDS, MAX_REPEAT_COLUMNS,
+    id_fault, BindingRule, CharacteristicSelector, CharacteristicType, ColumnKey, ColumnRule, Direction, FieldTableId,
+    IdSelector, Outcome, PageGroupRule, RepetitionRule, SavedQueryId, Selector, Slot, SortField, SortKey, SortedList,
+    StableId, TagName, TagSelector, MAX_COLUMNS_PER_GROUP, MAX_LISTED_IDS, MAX_REPEAT_COLUMNS,
 };
 use crate::doc::{is_v7, PageId};
 use crate::tmpl::format::SlotKind;
@@ -60,6 +60,9 @@ fn get<'a>(o: &'a Obj, at: &str, k: &str) -> Result<(&'a CValue, String), Fault>
 fn string<'a>(v: &'a CValue, at: &str) -> Result<&'a str, Fault> {
     match v {
         CValue::Str(s) => Ok(s.as_str()),
+        // Unreachable through the format, whose template json holds no number; named like
+        // the format's reason all the same.
+        CValue::Num(_) | CValue::I64(_) | CValue::U64(_) | CValue::F64Bits(_) => bad(at, "number"),
         _ => bad(at, "wrong_type"),
     }
 }
@@ -134,7 +137,9 @@ fn untrusted_list<T: Ord>(v: &CValue, at: &str, make: fn(&str) -> Option<T>) -> 
     Ok(SortedList::checked(out))
 }
 
-/// `{"ids": [...]}`, or with `allow_type` also `{"type": <name>}`; exactly one member.
+/// A selector object holding exactly one member from `keys`: an unknown key (first in
+/// code-point order) is `unknown_field`, no member `missing_field` at the object, a second
+/// member `conflicting_fields` at the later key. Returns the key, its value and pointer.
 fn one_of<'a>(v: &'a CValue, at: &str, keys: &[&str]) -> Result<(&'a str, &'a CValue, String), Fault> {
     let CValue::Obj(o) = v else { return bad(at, "wrong_type") };
     if let Some(k) = o.keys().find(|k| !keys.contains(&k.as_str())) {
@@ -326,12 +331,12 @@ fn repeat(v: &CValue, at: &str, on_table: bool, present: &BTreeSet<PageId>) -> R
             let repeat_columns = columns(c, &cp)?;
             // `max` is at most 64, so the conversion cannot fail.
             let max_columns_per_group = u8::try_from(max).unwrap_or(MAX_COLUMNS_PER_GROUP);
-            Ok(RepetitionRule::Column { max_columns_per_group, repeat_columns })
+            Ok(RepetitionRule::Column(ColumnRule { max_columns_per_group, repeat_columns }))
         }
         "page_group" => {
             let o = exact(v, at, &["kind", "pages"])?;
             let (p, pp) = get(o, at, "pages")?;
-            Ok(RepetitionRule::PageGroup { pages: pages(p, &pp, present)? })
+            Ok(RepetitionRule::PageGroup(PageGroupRule { pages: pages(p, &pp, present)? }))
         }
         _ => bad(&kp, "unknown_value"),
     }

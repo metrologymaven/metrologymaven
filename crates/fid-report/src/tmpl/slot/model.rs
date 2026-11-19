@@ -147,12 +147,59 @@ impl SavedQueryId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SortedList<T>(Vec<T>);
 
+/// Why a checked constructor refused its input. The reason words are the ones
+/// [`super::validate`] gives for the same fault in a template.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BuildError {
+    reason: &'static str,
+}
+
+impl BuildError {
+    pub(crate) fn new(reason: &'static str) -> BuildError {
+        BuildError { reason }
+    }
+
+    /// The fixed reason word (`empty_list`, `too_many_ids`, `not_sorted`, `duplicate`,
+    /// `out_of_range`, `too_many_columns`, `value_too_large`).
+    pub fn reason(&self) -> &'static str {
+        self.reason
+    }
+}
+
+impl std::fmt::Display for BuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "report.slot_invalid: {}", self.reason)
+    }
+}
+
+impl std::error::Error for BuildError {}
+
+/// `items` hold 1 to `max` entries in strictly ascending order, or the reason they do not
+/// (`too_many` past `max`).
+fn check_ascending<T: Ord>(items: &[T], max: usize, too_many: &'static str) -> Result<(), BuildError> {
+    if items.is_empty() {
+        return Err(BuildError::new("empty_list"));
+    }
+    if items.len() > max {
+        return Err(BuildError::new(too_many));
+    }
+    for w in items.windows(2) {
+        match w[0].cmp(&w[1]) {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => return Err(BuildError::new("duplicate")),
+            std::cmp::Ordering::Greater => return Err(BuildError::new("not_sorted")),
+        }
+    }
+    Ok(())
+}
+
 impl<T: Ord> SortedList<T> {
-    /// Sorts and de-duplicates `items`; `None` if the result is empty or too long.
-    pub fn new(mut items: Vec<T>) -> Option<SortedList<T>> {
-        items.sort();
-        items.dedup();
-        (!items.is_empty() && items.len() <= MAX_LISTED_IDS).then_some(SortedList(items))
+    /// Checks and wraps `items`, which must already be distinct and in ascending byte
+    /// order (as the template must spell them): `empty_list`, `too_many_ids`, `duplicate`
+    /// or `not_sorted` otherwise.
+    pub fn new(items: Vec<T>) -> Result<SortedList<T>, BuildError> {
+        check_ascending(&items, MAX_LISTED_IDS, "too_many_ids")?;
+        Ok(SortedList(items))
     }
 
     /// Wraps a list already checked by the reader.
@@ -284,20 +331,13 @@ pub struct BindingRule {
 }
 
 impl BindingRule {
-    /// A rule; the outcome list is sorted and de-duplicated, and an empty one is refused.
-    pub fn new(selector: Selector, outcome: Option<Vec<Outcome>>) -> Option<BindingRule> {
-        let outcome = match outcome {
-            None => None,
-            Some(mut o) => {
-                o.sort();
-                o.dedup();
-                if o.is_empty() {
-                    return None;
-                }
-                Some(o)
-            }
-        };
-        Some(BindingRule { selector, outcome })
+    /// A rule. The outcome list, if any, must be non-empty, distinct and ascending
+    /// (`empty_list`, `duplicate`, `not_sorted`), as in a template.
+    pub fn new(selector: Selector, outcome: Option<Vec<Outcome>>) -> Result<BindingRule, BuildError> {
+        if let Some(o) = &outcome {
+            check_ascending(o, usize::MAX, "duplicate")?;
+        }
+        Ok(BindingRule { selector, outcome })
     }
 
     pub fn selector(&self) -> &Selector {
@@ -389,12 +429,71 @@ impl Default for SortKey {
 pub enum RepetitionRule {
     /// One table row per item; only on a `table` block.
     Row,
-    /// One column (group) per item, at most `max_columns_per_group` (1 to 64) item columns
-    /// per group, each group repeating `repeat_columns` (in the listed order) first.
-    Column { max_columns_per_group: u8, repeat_columns: Option<Vec<ColumnKey>> },
-    /// One copy of the listed pages per item. Stored in ascending ID order; copies follow
-    /// the pages' document order at expansion.
-    PageGroup { pages: Vec<PageId> },
+    /// One column (group) per item.
+    Column(ColumnRule),
+    /// One copy of a page group per item.
+    PageGroup(PageGroupRule),
+}
+
+/// Column repetition: at most `max_columns_per_group` (1 to 64) item columns per group,
+/// each group repeating `repeat_columns` (in the listed order) first.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ColumnRule {
+    pub(crate) max_columns_per_group: u8,
+    pub(crate) repeat_columns: Option<Vec<ColumnKey>>,
+}
+
+impl ColumnRule {
+    /// Checks the bounds: `out_of_range` unless 1 to 64 columns per group;
+    /// `repeat_columns` 1 to 64 distinct keys (`empty_list`, `too_many_columns`,
+    /// `duplicate`), order kept.
+    pub fn new(max_columns_per_group: u8, repeat_columns: Option<Vec<ColumnKey>>) -> Result<ColumnRule, BuildError> {
+        if !(1..=MAX_COLUMNS_PER_GROUP).contains(&max_columns_per_group) {
+            return Err(BuildError::new("out_of_range"));
+        }
+        if let Some(c) = &repeat_columns {
+            if c.is_empty() {
+                return Err(BuildError::new("empty_list"));
+            }
+            if c.len() > MAX_REPEAT_COLUMNS {
+                return Err(BuildError::new("too_many_columns"));
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            if !c.iter().all(|k| seen.insert(k)) {
+                return Err(BuildError::new("duplicate"));
+            }
+        }
+        Ok(ColumnRule { max_columns_per_group, repeat_columns })
+    }
+
+    pub fn max_columns_per_group(&self) -> u8 {
+        self.max_columns_per_group
+    }
+
+    pub fn repeat_columns(&self) -> Option<&[ColumnKey]> {
+        self.repeat_columns.as_deref()
+    }
+}
+
+/// Page-group repetition: the pages to copy, in ascending ID order. Copies follow the
+/// pages' document order at expansion. Whether each page exists in the template is checked
+/// by [`super::validate`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageGroupRule {
+    pub(crate) pages: Vec<PageId>,
+}
+
+impl PageGroupRule {
+    /// Checks the list: 1 to 10 000 distinct IDs in ascending order (`empty_list`,
+    /// `too_many_ids`, `duplicate`, `not_sorted`).
+    pub fn new(pages: Vec<PageId>) -> Result<PageGroupRule, BuildError> {
+        check_ascending(&pages, MAX_LISTED_IDS, "too_many_ids")?;
+        Ok(PageGroupRule { pages })
+    }
+
+    pub fn pages(&self) -> &[PageId] {
+        &self.pages
+    }
 }
 
 /// A validated slot: binding rule, sort key (`None` when the template leaves the default)
@@ -407,10 +506,14 @@ pub struct Slot {
 }
 
 impl Slot {
-    /// A slot from parts. Bounds that need the template (pages present, table block) are
-    /// checked by [`super::validate`].
-    pub fn new(rule: BindingRule, sort: Option<SortKey>, repeat: RepetitionRule) -> Slot {
-        Slot { rule, sort, repeat }
+    /// A slot from checked parts. Refuses a slot whose spec value exceeds the format's
+    /// payload bound (`value_too_large`), so [`Slot::to_format`] always succeeds. Rules that
+    /// need the template (pages present, `row` only on a table block) are checked by
+    /// [`super::validate`].
+    pub fn new(rule: BindingRule, sort: Option<SortKey>, repeat: RepetitionRule) -> Result<Slot, BuildError> {
+        let slot = Slot { rule, sort, repeat };
+        TemplateJson::new(&slot.to_value(), "/spec/value").map_err(|_| BuildError::new("value_too_large"))?;
+        Ok(slot)
     }
 
     /// The slot kind (the envelope's `kind`).
@@ -445,9 +548,9 @@ impl Slot {
         ])
     }
 
-    /// The slot as `RPT.MODEL.TMPL.FORMAT` carries it. Fails only if the spec value
-    /// exceeds the format's payload bound (`value_too_large`), which a slot read from a
-    /// template never does.
+    /// The slot as `RPT.MODEL.TMPL.FORMAT` carries it. Every constructor keeps the spec
+    /// value within the format's payload bound, so this does not fail in practice; it stays
+    /// a `Result` because the format's checked constructor is fallible.
     pub fn to_format(&self) -> Result<format::Slot, TemplateError> {
         let spec = TemplateJson::new(&self.to_value(), "/spec/value")?;
         Ok(format::Slot { kind: self.kind(), spec })
@@ -518,7 +621,7 @@ fn sort_value(k: Option<SortKey>) -> CValue {
 fn repeat_value(r: &RepetitionRule) -> CValue {
     match r {
         RepetitionRule::Row => obj(vec![("kind", s("row"))]),
-        RepetitionRule::Column { max_columns_per_group, repeat_columns } => obj(vec![
+        RepetitionRule::Column(ColumnRule { max_columns_per_group, repeat_columns }) => obj(vec![
             ("kind", s("column")),
             ("max_columns_per_group", s(&max_columns_per_group.to_string())),
             (
@@ -529,7 +632,7 @@ fn repeat_value(r: &RepetitionRule) -> CValue {
                 },
             ),
         ]),
-        RepetitionRule::PageGroup { pages } => obj(vec![
+        RepetitionRule::PageGroup(PageGroupRule { pages }) => obj(vec![
             ("kind", s("page_group")),
             ("pages", CValue::Arr(pages.iter().map(|p| s(&p.uuid().to_string())).collect())),
         ]),
