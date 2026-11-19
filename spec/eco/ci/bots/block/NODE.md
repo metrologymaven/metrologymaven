@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-xtask]
+built_pr: 171
 satisfies: [REQ-ECO.CI.BOTS-002]
 covers: []
 depends_on: []
