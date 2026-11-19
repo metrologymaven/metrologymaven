@@ -461,36 +461,80 @@ fn ac5_killed_writer_leaves_old_target_and_stale_temp_is_swept() {
     AtomicWriter::create(target(&t.set(), "other.stl"), WriteOptions::default()).unwrap().cancel();
     assert_eq!(temps(&root), left);
 
-    // Older than an hour: the next writer in that folder removes it. A fresh temp file and
-    // an old file without the prefix stay.
+    // An old modification time alone is not enough: its UUIDv7 timestamp is young.
     let over = STALE_AFTER + Duration::from_secs(60);
     age(&root.join(&left[0]), over);
-    fs::write(root.join(".fid-tmp-fresh"), b"x").unwrap();
+    AtomicWriter::create(target(&t.set(), "other.stl"), WriteOptions::default()).unwrap().cancel();
+    assert_eq!(temps(&root), left);
+
+    // An hour later (simulated: the same temp file under its name back-dated by more than
+    // an hour, mtime old too) the next writer in that folder removes it. A young temp
+    // file and an old file without the prefix stay.
+    let stale = back_dated(&left[0], over);
+    fs::rename(root.join(&left[0]), root.join(&stale)).unwrap();
+    age(&root.join(&stale), over);
+    let young = v7_name(now_ms(), "7abc-8def-0123456789ab");
+    fs::write(root.join(&young), b"x").unwrap();
     fs::write(root.join("keep.bin"), b"x").unwrap();
     age(&root.join("keep.bin"), over);
     AtomicWriter::create(target(&t.set(), "other.stl"), WriteOptions::default()).unwrap().cancel();
-    assert_eq!(temps(&root), [".fid-tmp-fresh"]);
+    assert_eq!(temps(&root), [young]);
     assert!(root.join("keep.bin").exists());
     assert_eq!(fs::read(&out).unwrap(), OLD);
 }
 
+fn now_ms() -> u64 {
+    SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64
+}
+
+/// `.fid-tmp-` + a UUIDv7 text with 48-bit time `ms` and the given last three groups.
+fn v7_name(ms: u64, tail: &str) -> String {
+    format!("{TMP_PREFIX}{:08x}-{:04x}-{tail}", ms >> 16, ms & 0xFFFF)
+}
+
+/// The same temp name with its UUIDv7 time moved `by` into the past.
+fn back_dated(name: &str, by: Duration) -> String {
+    let u = name.strip_prefix(TMP_PREFIX).unwrap();
+    let ms = u64::from_str_radix(&format!("{}{}", &u[..8], &u[9..13]), 16).unwrap();
+    v7_name(ms - by.as_millis() as u64, &u[14..])
+}
+
 #[test]
-fn stale_sweep_is_per_folder_and_keeps_folders() {
+fn stale_sweep_is_per_folder_and_needs_both_ages() {
     let t = Tmp::new("sweep");
     let root = t.root();
     fs::create_dir_all(root.join("a")).unwrap();
-    fs::create_dir_all(root.join(".fid-tmp-folder")).unwrap();
     let over = STALE_AFTER + Duration::from_secs(60);
-    fs::write(root.join(".fid-tmp-top"), b"x").unwrap();
-    age(&root.join(".fid-tmp-top"), over);
-    fs::write(root.join("a").join(".fid-tmp-sub"), b"x").unwrap();
-    age(&root.join("a").join(".fid-tmp-sub"), over);
+    let old_ms = now_ms() - over.as_millis() as u64;
+    let old_name = |tail: &str| v7_name(old_ms, tail);
+    // Old by both name and mtime: removed by a writer in its own folder only.
+    let top = old_name("7000-8000-000000000001");
+    let sub = old_name("7000-8000-000000000002");
+    // A folder with a stale-looking name is never removed.
+    let folder = old_name("7000-8000-000000000003");
+    fs::create_dir_all(root.join(&folder)).unwrap();
+    // A user file with the prefix but no UUIDv7, old mtime: kept.
+    let notes = ".fid-tmp-notes.txt".to_string();
+    // Old UUIDv7 time but a young mtime (still being written): kept.
+    let busy = old_name("7000-8000-000000000004");
+    // Young UUIDv7 time but an old mtime: kept.
+    let young = v7_name(now_ms(), "7000-8000-000000000005");
+    for n in [&top, &notes, &busy, &young] {
+        fs::write(root.join(n), b"x").unwrap();
+    }
+    fs::write(root.join("a").join(&sub), b"x").unwrap();
+    for p in [root.join(&top), root.join(&notes), root.join(&young), root.join("a").join(&sub)] {
+        age(&p, over);
+    }
     // A writer in `a` sweeps `a` only.
     AtomicWriter::create(target(&t.set(), "a/x.stl"), WriteOptions::default()).unwrap().cancel();
     assert!(temps(&root.join("a")).is_empty());
-    assert_eq!(temps(&root), [".fid-tmp-folder", ".fid-tmp-top"]);
+    let mut want = vec![top.clone(), notes.clone(), busy.clone(), young.clone(), folder.clone()];
+    want.sort();
+    assert_eq!(temps(&root), want);
     AtomicWriter::create(target(&t.set(), "x.stl"), WriteOptions::default()).unwrap().cancel();
-    assert_eq!(temps(&root), [".fid-tmp-folder"]);
+    want.retain(|n| *n != top);
+    assert_eq!(temps(&root), want);
 }
 
 // ------------------------------------------------------------------ links, folders, read-only
@@ -686,5 +730,33 @@ fn reader_holding_the_target_open() {
         assert_receipt(&r.unwrap(), "abc");
         assert_eq!(fs::read(&out).unwrap(), b"abc");
     }
+    assert!(temps(&t.root()).is_empty());
+}
+
+// ------------------------------------------------------------------ no hard links: fail closed
+
+/// Without `overwrite`, a hard-link failure other than "exists" (as on a file system
+/// without hard links) fails the commit with that error; there is no replacing rename,
+/// so a target created during the write is untouched and no temp file remains.
+#[test]
+fn hard_link_failure_without_overwrite_fails_closed() {
+    let t = Tmp::new("nolink");
+    let out = t.root().join("out.stl");
+    let s = t.set();
+    let mut w = AtomicWriter::create(target(&s, "out.stl"), WriteOptions::default()).unwrap();
+    w.write_bytes(b"abc").unwrap();
+    w.fail_hard_link();
+    fs::write(&out, OLD).unwrap();
+    let e = w.commit().unwrap_err();
+    assert_eq!(io_kind(&e), io::ErrorKind::Unsupported);
+    assert_eq!(fs::read(&out).unwrap(), OLD);
+    assert!(temps(&t.root()).is_empty());
+
+    // With no target at all the commit fails the same way and creates nothing.
+    let mut w = AtomicWriter::create(target(&s, "new.stl"), WriteOptions::default()).unwrap();
+    w.write_bytes(b"abc").unwrap();
+    w.fail_hard_link();
+    assert_eq!(io_kind(&w.commit().unwrap_err()), io::ErrorKind::Unsupported);
+    assert!(!t.root().join("new.stl").exists());
     assert!(temps(&t.root()).is_empty());
 }

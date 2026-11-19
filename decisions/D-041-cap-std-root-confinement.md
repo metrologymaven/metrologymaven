@@ -65,3 +65,12 @@ export root, given that CONSTITUTION §8 forbids `unsafe` outside named exceptio
 
 - IO.REG.ROOTS Design references this record instead of an `[unverified]` licence marker.
 - `cargo deny` continues to gate licences and advisories for the transitive set.
+
+## Notes
+
+- **2026-11-19, IO.REG.WRITE (PR #195):** on Windows, cap-std's `Dir::rename` and
+  `Dir::hard_link` rebuild full paths from the folder handle and call std's path-based
+  `fs::rename` and `fs::hard_link`, instead of the fd-relative calls (`renameat`, `linkat`)
+  used on POSIX. Confinement of these two operations on Windows may therefore be weaker
+  than on POSIX: a folder swapped between the path lookup and the call could redirect them.
+  [unverified: read from cap-primitives 3.4 source, not tested against a swap race.]

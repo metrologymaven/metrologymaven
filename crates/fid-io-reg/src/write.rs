@@ -11,20 +11,25 @@
 //!    reparse point, or a folder, fails `io{InvalidInput}`; a read-only file fails
 //!    `io{PermissionDenied}` on every platform (POSIX would replace it, Windows would not;
 //!    one rule keeps the outcome platform-independent).
-//! 2. **Sweep**: stale `.fid-tmp-*` regular files in the folder whose modification time
-//!    is at least [`STALE_AFTER`] old are removed (best effort, at most
-//!    [`MAX_STALE_SCAN`] folder entries looked at).
+//! 2. **Sweep**: stale temp files in the folder are removed (best effort, at most
+//!    [`MAX_STALE_SCAN`] folder entries looked at). Only regular files (not links) named
+//!    exactly `.fid-tmp-<lowercase UUIDv7>` qualify, and only when both the UUIDv7
+//!    timestamp and the modification time are at least [`STALE_AFTER`] old; a user file
+//!    such as `.fid-tmp-notes.txt` is never touched.
 //! 3. **Write**: bytes go to `.fid-tmp-<uuidv7>` in the target's folder, created
 //!    exclusively, while SHA-256 and the byte count are taken. More than
 //!    [`WriteOptions::max_bytes`] bytes fail `limit_exceeded` (`bytes`). The first error
 //!    poisons the writer; [`AtomicWriter::commit`] then returns it.
 //! 4. **Commit**: flush, `sync_all` on the temp file (an error fails the commit), close,
 //!    then move into place: without `overwrite` by a hard link, which fails `target_exists`
-//!    if a target appeared meanwhile (no clobbering; on a file system without hard links,
-//!    a re-check then a rename); with `overwrite` by a rename, which replaces the folder
-//!    entry and never writes through it. On Windows a rename refused for a sharing or lock
-//!    violation is retried for at most [`RENAME_RETRY_MS`] in total, then fails `io`.
-//!    After the move, the folder is synced on POSIX (best effort, as the spec says).
+//!    if a target appeared meanwhile (no clobbering). Any other hard-link error fails the
+//!    commit with that error's kind (fail closed: a file system without hard links gets
+//!    no replacing rename as a fallback). With `overwrite` the move is a rename, which
+//!    replaces the folder entry and never writes through it. On Windows a rename refused
+//!    for a sharing or lock violation is retried for at most [`RENAME_RETRY_MS`] in total,
+//!    then fails `io`. After the move, the folder is synced on POSIX (best effort, as the
+//!    spec says). On Windows the rename is std's (no `MOVEFILE_WRITE_THROUGH`) and there
+//!    is no folder sync: durability of the new entry is best effort, which the spec allows.
 //! 5. **Cleanup**: on any error, on [`AtomicWriter::cancel`] and on drop before commit,
 //!    the temp file is closed and removed; the target is never touched before the final
 //!    move (REQ-IO.REG.WRITE-002, -003).
@@ -142,6 +147,7 @@ pub struct AtomicWriter {
     opts: WriteOptions,
     failed: Option<IoError>,
     done: bool,
+    fail_hard_link: bool,
 }
 
 impl fmt::Debug for AtomicWriter {
@@ -181,6 +187,7 @@ impl AtomicWriter {
             opts,
             failed: None,
             done: false,
+            fail_hard_link: false,
         })
     }
 
@@ -207,6 +214,14 @@ impl AtomicWriter {
         if let Some(out) = self.out.as_mut() {
             out.get_mut().fail_after = Some(n);
         }
+    }
+
+    /// Test seam: the hard link of a commit without `overwrite` fails `Unsupported`, as on
+    /// a file system without hard links. Exists only with the `test-hooks` feature.
+    #[cfg(any(test, feature = "test-hooks"))]
+    #[doc(hidden)]
+    pub fn fail_hard_link(&mut self) {
+        self.fail_hard_link = true;
     }
 
     fn fail(&mut self, e: IoError) -> IoError {
@@ -285,7 +300,12 @@ impl AtomicWriter {
             check_target(&self.dir, &self.target, true)?;
             return rename(&self.dir, &self.tmp, &self.target).map_err(|e| self.io_at(&e));
         }
-        match self.dir.hard_link(&self.tmp, &self.dir, &self.target) {
+        let linked = if self.fail_hard_link {
+            Err(io::Error::from(io::ErrorKind::Unsupported))
+        } else {
+            self.dir.hard_link(&self.tmp, &self.dir, &self.target)
+        };
+        match linked {
             Ok(()) => {
                 // The target is complete; a temp name left behind (removal refused) is a
                 // second link to it and is swept once stale.
@@ -293,11 +313,10 @@ impl AtomicWriter {
                 Ok(())
             }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Err(IoError::TargetExists),
-            Err(_) => {
-                // No hard links on this file system: re-check, then rename.
-                check_target(&self.dir, &self.target, false)?;
-                rename(&self.dir, &self.tmp, &self.target).map_err(|e| self.io_at(&e))
-            }
+            // Fail closed: a file system without hard links (FAT, exFAT, some network or
+            // FUSE mounts) gets no no-replace move; a rename could clobber a target created
+            // meanwhile. See the leaf's open questions.
+            Err(e) => Err(self.io_at(&e)),
         }
     }
 
@@ -398,7 +417,11 @@ fn sweep_stale(dir: &Dir, now: SystemTime) {
             Ok(entry) => entry.file_name(),
             Err(_) => continue,
         };
-        if !name.as_encoded_bytes().starts_with(TMP_PREFIX.as_bytes()) {
+        let born = match tmp_name_unix_ms(name.as_encoded_bytes()) {
+            Some(ms) => UNIX_EPOCH + Duration::from_millis(ms),
+            None => continue,
+        };
+        if !now.duration_since(born).is_ok_and(|age| age >= STALE_AFTER) {
             continue;
         }
         let m = match dir.symlink_metadata(&name) {
@@ -412,6 +435,40 @@ fn sweep_stale(dir: &Dir, now: SystemTime) {
         if stale {
             let _ = dir.remove_file(&name);
         }
+    }
+}
+
+/// The UUIDv7 timestamp (Unix ms) of a name of the exact form `.fid-tmp-<lowercase
+/// hyphenated UUIDv7>`; `None` for any other name.
+fn tmp_name_unix_ms(name: &[u8]) -> Option<u64> {
+    let u = name.strip_prefix(TMP_PREFIX.as_bytes())?;
+    if u.len() != 36 {
+        return None;
+    }
+    let mut ms = 0u64;
+    for (i, &b) in u.iter().enumerate() {
+        if matches!(i, 8 | 13 | 18 | 23) {
+            if b != b'-' {
+                return None;
+            }
+            continue;
+        }
+        let v = match b {
+            b'0'..=b'9' => b - b'0',
+            b'a'..=b'f' => b - b'a' + 10,
+            _ => return None,
+        };
+        if i < 13 {
+            // The first 12 hex digits (8, then 4 after the hyphen) are the 48-bit time.
+            ms = (ms << 4) | u64::from(v);
+        }
+    }
+    let version_ok = u[14] == b'7';
+    let variant_ok = matches!(u[19], b'8' | b'9' | b'a' | b'b');
+    if version_ok && variant_ok {
+        Some(ms)
+    } else {
+        None
     }
 }
 
@@ -536,6 +593,28 @@ mod tests {
         assert_eq!(uuid_text(&b), "ffffffff-ffff-7fff-bfff-ffffffffffff");
         let b = uuid_v7_bytes(0, 0, 0);
         assert_eq!(uuid_text(&b), "00000000-0000-7000-8000-000000000000");
+    }
+
+    #[test]
+    fn temp_name_timestamps() {
+        let t = |s: &str| tmp_name_unix_ms(s.as_bytes());
+        assert_eq!(t(".fid-tmp-017f22e2-79b0-7cc3-98c4-dc0c0c07398f"), Some(0x017F_22E2_79B0));
+        assert_eq!(t(".fid-tmp-00000000-0000-7000-8000-000000000000"), Some(0));
+        for bad in [
+            ".fid-tmp-notes.txt",
+            ".fid-tmp-",
+            "fid-tmp-017f22e2-79b0-7cc3-98c4-dc0c0c07398f",
+            ".fid-tmp-017F22E2-79B0-7CC3-98C4-DC0C0C07398F",
+            ".fid-tmp-017f22e2-79b0-4cc3-98c4-dc0c0c07398f",
+            ".fid-tmp-017f22e2-79b0-7cc3-c8c4-dc0c0c07398f",
+            ".fid-tmp-017f22e2-79b0-7cc3-98c4-dc0c0c07398f.bak",
+            ".fid-tmp-017f22e2079b0-7cc3-98c4-dc0c0c07398f",
+            ".fid-tmp-017f22e2-79b0-7cc3-98c4-dc0c0c07398g",
+        ] {
+            assert_eq!(t(bad), None, "{bad}");
+        }
+        let fresh = uuid_v7_text();
+        assert!(t(&format!("{TMP_PREFIX}{fresh}")).is_some());
     }
 
     #[test]
