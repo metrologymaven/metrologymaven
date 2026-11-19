@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-cad-proto]
+built_pr: 180
 satisfies: [REQ-IO.CAD.WORKER-003, REQ-IO.CAD.WORKER-004]
 covers: []
 depends_on: [IO.REG.LIMITS]
