@@ -202,11 +202,10 @@ fn escape_and_truncate_rules() {
 /// Every control and format (Cf) character is unsafe; ordinary letters, marks and spaces are not.
 #[test]
 fn unsafe_characters() {
-    for c in [
-        '\u{0}', '\u{1B}', '\u{7F}', '\u{85}', '\u{AD}', '\u{61C}', '\u{180E}', '\u{200B}', '\u{200C}',
-        '\u{200D}', '\u{200E}', '\u{2028}', '\u{2029}', '\u{202E}', '\u{2060}', '\u{2064}', '\u{2066}',
-        '\u{FEFF}', '\u{FFF9}', '\u{E0000}', '\u{E0001}', '\u{E007F}',
-    ] {
+    let unsafe_chars = "\u{0}\u{1B}\u{7F}\u{85}\u{AD}\u{61C}\u{180E}\u{200B}\u{200C}\u{200D}\u{200E}\u{2028}\u{2029}\
+                        \u{202E}\u{2060}\u{2064}\u{2066}\u{FEFF}\u{FFF9}\u{E0000}\u{E0001}\u{E007F}";
+    assert_eq!(unsafe_chars.chars().count(), 22);
+    for c in unsafe_chars.chars() {
         assert!(is_unsafe_char(c), "{c:?}");
     }
     for c in ['a', 'é', ' ', '`', '\u{301}', '\u{2065}', '\u{E0080}', '\u{4E2D}'] {
