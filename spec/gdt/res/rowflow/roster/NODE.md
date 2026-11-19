@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 165
 satisfies: [REQ-GDT.RES.ROWFLOW-002]
 covers: []
 depends_on: [CORE.JRN.CANON]
