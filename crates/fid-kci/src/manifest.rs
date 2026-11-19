@@ -414,8 +414,9 @@ impl KernelManifest {
     pub fn parse_canonical(input: &[u8]) -> Result<KernelManifest, ManifestError> {
         let m = Self::parse(input)?;
         if m.canonical.as_slice() != input {
-            let offset =
-                m.canonical.iter().zip(input).position(|(a, b)| a != b).unwrap_or(m.canonical.len().min(input.len()));
+            // Where the bytes first differ, else the shorter length (one is a prefix of the other).
+            let shorter = if input.len() < m.canonical.len() { input.len() } else { m.canonical.len() };
+            let offset = m.canonical.iter().zip(input).position(|(a, b)| a != b).unwrap_or(shorter);
             return Err(ManifestError::NonCanonical { offset });
         }
         Ok(m)
