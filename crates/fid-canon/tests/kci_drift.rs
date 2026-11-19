@@ -64,3 +64,25 @@ fn fid_canon_matches_kernel_canonical_json_vectors() {
     }
     assert_eq!((checked, skipped), (69, 2));
 }
+
+/// KRN.MAN.MANI.SCHEMA: the kernel manifest fixture, canonical bytes written by Python and
+/// round-tripped by fid-kci's writer, is also fid-canon's canonical form, with the same
+/// manifest and core digests (`fixtures/man/manifest-v1-digests.txt`).
+#[test]
+fn fid_canon_matches_the_kernel_manifest_fixture() {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/man/");
+    let bytes = std::fs::read(format!("{dir}manifest-v1.json")).unwrap();
+    let digests = std::fs::read_to_string(format!("{dir}manifest-v1-digests.txt")).unwrap();
+    let expected = |name: &str| {
+        digests.lines().find_map(|l| l.strip_prefix(name).and_then(|r| r.strip_prefix('\t'))).unwrap().to_string()
+    };
+    assert_eq!(fid_canon::canonicalize(&bytes).unwrap(), bytes);
+    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), expected("manifest_digest"));
+    let value = fid_canon::parse(&bytes).unwrap();
+    let CValue::Obj(top) = &value else { panic!("manifest is not an object") };
+    let core = top.get("core").unwrap();
+    assert_eq!(fid_canon::digest(core).unwrap().to_string(), expected("core_digest"));
+    // A reformatted copy canonicalises to the same bytes as well.
+    let pretty = std::fs::read(format!("{dir}manifest/ok-whitespace.json")).unwrap();
+    assert_eq!(fid_canon::canonicalize(&pretty).unwrap(), bytes);
+}

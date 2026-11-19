@@ -1,0 +1,24 @@
+# KRN.SOLV.MSTART AC-1 fixture (CC-BY-4.0), written by make_mstart_fixtures.py; do not edit.
+# Double well split at x = 1/8: left (x+1)^2+y^2 (min 0 at (-1,0)), right (x-1)^2+y^2+1/2
+# (min 1/2 at (1,0)). Toy solver: 60 halvings towards the well minimiser; see the script.
+# Floats are hex IEEE-754 bit patterns. starts_digest: SHA-256 of the LE f64 of every start,
+# start-major. outcome_digest: SHA-256 of LE f64 objective then params, per start in order.
+primary 3fe3333333333333 3fd3333333333333
+half_widths 4000000000000000 3ff0000000000000
+count 8
+seed 42
+stream 0
+tolerances 3e112e0be826d695 3e112e0be826d695
+start 0 3fe3333333333333 3fd3333333333333 well right objective 3fe0000000000000 params 3ff0000000000000 3c13333333333333
+start 1 3fde5bafa2035156 bfa77cb26e72f9e8 well right objective 3fe0000000000000 params 3ff0000000000000 bbe77cb26e72f9e8
+start 2 3ff3bb710c8e749a 3fe4855d04884b5a well right objective 3fe0000000000000 params 3ff0000000000000 3c24855d04884b5a
+start 3 3fff4c8546ee7da2 bfbcf1c78e91ff84 well right objective 3fe0000000000000 params 3ff0000000000000 bbfcf1c78e91ff84
+start 4 3ff9292a242807e6 3fbdbd65d78447cc well right objective 3fe0000000000000 params 3ff0000000000000 3bfdbd65d78447cc
+start 5 bfeb9a06e706a7a5 3fb7b1c20d552b1c well left objective 38018b626276add3 params bff0000000000000 3bf7b1c20d552b1c
+start 6 3ff41eefb9fb2d10 3fc641d1e7ba30de well right objective 3fe0000000000000 params 3ff0000000000000 3c0641d1e7ba30de
+start 7 bfe6ab5a639c13b9 3fcfc63b759ea28e well left objective 382f8cdf34216178 params bff0000000000000 3c0fc63b759ea28e
+starts_digest sha256:832f7a4991e933d10db2a7587fe440388688d9f39062a1c1b36ade6bc4caa984
+outcome_digest sha256:d747119ce5f4a167c3676c015ce124705e48616f6fb2ec63e2a5205e35c0869a
+best_index 5
+agreement false
+local_optimum_only true

@@ -1,0 +1,261 @@
+{
+ "name": "param_ref",
+ "rule": "changed x-ref: breaking",
+ "old": {
+  "id": "demo.measure",
+  "major": 1,
+  "title": "Measure a feature",
+  "description": "Measures one feature against a tolerance.",
+  "params_schema": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "feature",
+    "tol"
+   ],
+   "properties": {
+    "feature": {
+     "type": "string",
+     "x-ref": "feature",
+     "description": "Feature to measure."
+    },
+    "tol": {
+     "type": "number",
+     "x-quantity": "length",
+     "x-unit": "mm",
+     "minimum": 0,
+     "maximum": 10
+    },
+    "mode": {
+     "type": "string",
+     "enum": [
+      "fast",
+      "precise"
+     ],
+     "default": "fast"
+    },
+    "samples": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 1000,
+     "default": 25,
+     "x-ui": {
+      "widget": "slider"
+     }
+    },
+    "points": {
+     "type": "array",
+     "maxItems": 100,
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "x"
+      ],
+      "properties": {
+       "x": {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       }
+      }
+     }
+    },
+    "label": {
+     "type": "string",
+     "maxLength": 64,
+     "pattern": "^[a-z]+$"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "deviation",
+    "status"
+   ],
+   "properties": {
+    "deviation": {
+     "type": "number",
+     "x-quantity": "length",
+     "x-unit": "mm"
+    },
+    "status": {
+     "type": "string",
+     "enum": [
+      "ok",
+      "fail"
+     ]
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "head_move",
+  "preconditions": [
+   {
+    "expr": "params.tol >= 0.0",
+    "bound": 100,
+    "message_key": "demo.tol_negative"
+   }
+  ],
+  "effects": [],
+  "algorithms": [
+   "geo.fit.lsq@1.0.0"
+  ],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "human_only": false,
+  "network": "none",
+  "web": "partial",
+  "web_note": "No probe access in the browser.",
+  "cli_bare": false
+ },
+ "new": {
+  "id": "demo.measure",
+  "major": 1,
+  "title": "Measure a feature",
+  "description": "Measures one feature against a tolerance.",
+  "params_schema": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "feature",
+    "tol"
+   ],
+   "properties": {
+    "feature": {
+     "type": "string",
+     "x-ref": "datum",
+     "description": "Feature to measure."
+    },
+    "tol": {
+     "type": "number",
+     "x-quantity": "length",
+     "x-unit": "mm",
+     "minimum": 0,
+     "maximum": 10
+    },
+    "mode": {
+     "type": "string",
+     "enum": [
+      "fast",
+      "precise"
+     ],
+     "default": "fast"
+    },
+    "samples": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 1000,
+     "default": 25,
+     "x-ui": {
+      "widget": "slider"
+     }
+    },
+    "points": {
+     "type": "array",
+     "maxItems": 100,
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "x"
+      ],
+      "properties": {
+       "x": {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       }
+      }
+     }
+    },
+    "label": {
+     "type": "string",
+     "maxLength": 64,
+     "pattern": "^[a-z]+$"
+    }
+   }
+  },
+  "result_schema": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "deviation",
+    "status"
+   ],
+   "properties": {
+    "deviation": {
+     "type": "number",
+     "x-quantity": "length",
+     "x-unit": "mm"
+    },
+    "status": {
+     "type": "string",
+     "enum": [
+      "ok",
+      "fail"
+     ]
+    },
+    "note": {
+     "type": "string"
+    }
+   }
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "head_move",
+  "preconditions": [
+   {
+    "expr": "params.tol >= 0.0",
+    "bound": 100,
+    "message_key": "demo.tol_negative"
+   }
+  ],
+  "effects": [],
+  "algorithms": [
+   "geo.fit.lsq@1.0.0"
+  ],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "human_only": false,
+  "network": "none",
+  "web": "partial",
+  "web_note": "No probe access in the browser.",
+  "cli_bare": false
+ },
+ "expect": [
+  {
+   "command": "demo.measure",
+   "major": 1,
+   "pointer": "/params_schema/properties/feature/x-ref",
+   "old_digest": "sha256:1ff4393bcd872405377779cd81a787a54906f836cdd1d316ed2c5710d98d925b",
+   "new_digest": "sha256:222f82ae026c8e78f6774bbb1d07ba5ee99632858a15131e385c772bd99fccac",
+   "kind": "breaking",
+   "reason": "ref_changed"
+  }
+ ]
+}

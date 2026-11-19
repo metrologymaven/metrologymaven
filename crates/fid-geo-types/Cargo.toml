@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-types"
-description = "Metrology Maven geometry element types: element envelope, kind tags, bounding boxes, point sets and clouds with attributes, point sources (spec node GEO.TYPES)"
+description = "Metrology Maven geometry element types: element envelope, kind tags, bounding boxes, point sets and clouds with attributes, point sources, indexed triangle meshes with topology facts, canonical element digests (spec node GEO.TYPES)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,11 +8,14 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies; only the num-layer crates fid-types
-# (`sha256:` digests) and fid-num (the KNP-1 `sqrt` for normal lengths, GEO.TYPES.POINTS).
-# fid-num's seeded generator is also used by the tests to cross-check fixture provenance.
+# (`sha256:` digests) and fid-num (the KNP-1 `sqrt` for normal lengths, GEO.TYPES.POINTS),
+# and the kernel-layer crate fid-kci for its portable FIPS 180-4 SHA-256 (element digests,
+# GEO.TYPES.DIGEST). fid-num's seeded generator is also used by the tests to cross-check
+# fixture provenance.
 [dependencies]
 fid-types = { path = "../fid-types" }
 fid-num = { path = "../fid-num" }
+fid-kci = { path = "../fid-kci" }
 
 [lints]
 workspace = true

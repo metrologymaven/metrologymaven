@@ -1,0 +1,19 @@
+{
+  "id": "safety-fixture",
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "family": "inject",
+  "predicates": [
+    {
+      "id": "p",
+      "kind": "entry_with_magic",
+      "marker": "FIDRT-SAFETY00000000000000000000"
+    }
+  ]
+}

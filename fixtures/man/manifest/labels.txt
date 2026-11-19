@@ -1,0 +1,54 @@
+# KRN.MAN.MANI.SCHEMA AC-2: hand-labelled outcomes of the mutated manifests (CC-BY-4.0).
+# Format: <file><TAB><rust><TAB><detail><TAB><schema>
+#   rust:   ok, or the ManifestError code fid_kci::manifest::KernelManifest::parse must return
+#   detail: the error's field path, key, or list[index]; - when there is none
+#   schema: valid | invalid under schemas/kernel-manifest.schema.json, or unparseable when a
+#           strict JSON load (UTF-8, no BOM, no duplicate keys, no raw control characters) fails
+# A schema-invalid or unparseable file must be rejected by Rust; a Rust ok must be schema-valid.
+# Rows labelled rust!=ok and schema=valid are the rules JSON Schema cannot state (sort order,
+# core digest); see the schema's $comment.
+manifest-v1.json	ok	-	valid
+ok-whitespace.json	ok	-	valid
+ok-escaped.json	ok	-	valid
+ok-u32-max.json	ok	-	valid
+unknown-field-top.json	unknown_field	extra	invalid
+unknown-field-core.json	unknown_field	comment	invalid
+unknown-field-algorithm.json	unknown_field	note	invalid
+duplicate-key-core.json	duplicate_key	name	unparseable
+duplicate-key-escaped.json	duplicate_key	name	unparseable
+duplicate-key-artifact.json	duplicate_key	role	unparseable
+unsorted-algorithms.json	unsorted	core.algorithms[1]	valid
+unsorted-algorithms-numeric.json	unsorted	core.algorithms[2]	valid
+unsorted-algorithms-method.json	unsorted	core.algorithms[4]	valid
+duplicate-algorithm.json	unsorted	core.algorithms[1]	invalid
+unsorted-artifacts.json	unsorted	artifacts[1]	valid
+core-digest-mismatch.json	core_digest_mismatch	-	valid
+core-edited.json	core_digest_mismatch	-	valid
+bad-hex-upper.json	bad_hex	core.lockfile_digest	invalid
+bad-hex-short.json	bad_hex	core.lockfile_digest	invalid
+bad-hex-long.json	bad_hex	core.lockfile_digest	invalid
+bad-hex-bare.json	bad_hex	core.lockfile_digest	invalid
+bad-hex-newline.json	bad_hex	core.lockfile_digest	invalid
+bad-hex-algorithm.json	bad_hex	core.algorithms[].impl_digest	invalid
+bad-hex-artifact.json	bad_hex	artifacts[].sha256	invalid
+bad-native-gate.json	bad_value	core.native_gate	invalid
+bad-schema-version-number.json	bad_value	core.schema_version	invalid
+bad-schema-version.json	bad_value	core.schema_version	invalid
+bad-null.json	bad_value	core.name	invalid
+bad-type-algorithms.json	bad_value	core.algorithms	invalid
+bad-semver.json	bad_value	core.semver	invalid
+bad-semver-build.json	bad_value	core.semver	invalid
+bad-runtime-version.json	bad_value	core.replay_runtime.version	invalid
+bad-algorithm-id.json	bad_value	core.algorithms[].id	invalid
+bad-algorithm-id-u32.json	bad_value	core.algorithms[].id	invalid
+bad-name-newline.json	bad_value	core.name	invalid
+bad-name-upper.json	bad_value	core.name	invalid
+bad-name-long.json	bad_value	core.name	invalid
+bad-target.json	bad_value	artifacts[].target	invalid
+missing-field.json	missing_field	core.facade_selftest_digest	invalid
+missing-core-digest.json	missing_field	core_digest	invalid
+syntax-trailing-comma.json	syntax	-	unparseable
+syntax-trailing-data.json	syntax	-	unparseable
+syntax-truncated.json	syntax	-	unparseable
+syntax-bom.json	syntax	-	unparseable
+syntax-raw-control.json	syntax	-	unparseable

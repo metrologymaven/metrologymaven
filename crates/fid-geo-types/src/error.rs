@@ -28,6 +28,12 @@ pub enum GeoTypeError {
     ScanOrigin { scanner_id: u32 },
     /// A bounding box has `min > max` (IEEE 754 totalOrder) on `axis` (0 = x, 1 = y, 2 = z).
     InvertedAabb { axis: u8 },
+    /// Construction would allocate `needed` working bytes, more than the caller's budget
+    /// `limit` (GEO.TYPES.MESH). `needed` is `u64::MAX` if the size overflows.
+    AllocationBudget { needed: u64, limit: u64 },
+    /// A working allocation of construction failed; `needed` is the total working size
+    /// in bytes (GEO.TYPES.MESH). Nothing is created.
+    AllocationFailed { needed: u64 },
 }
 
 impl GeoTypeError {
@@ -43,6 +49,8 @@ impl GeoTypeError {
             GeoTypeError::GridShape { .. } => "grid_shape",
             GeoTypeError::ScanOrigin { .. } => "scan_origin",
             GeoTypeError::InvertedAabb { .. } => "inverted_aabb",
+            GeoTypeError::AllocationBudget { .. } => "allocation_budget",
+            GeoTypeError::AllocationFailed { .. } => "allocation_failed",
         }
     }
 }
@@ -69,6 +77,12 @@ impl fmt::Display for GeoTypeError {
                 write!(f, "scan origin of scanner {scanner_id} is non-finite, repeated or out of order")
             }
             GeoTypeError::InvertedAabb { axis } => write!(f, "bounding box has min > max on axis {axis}"),
+            GeoTypeError::AllocationBudget { needed, limit } => {
+                write!(f, "mesh construction needs {needed} working bytes, budget is {limit}")
+            }
+            GeoTypeError::AllocationFailed { needed } => {
+                write!(f, "could not allocate {needed} working bytes for mesh construction")
+            }
         }
     }
 }

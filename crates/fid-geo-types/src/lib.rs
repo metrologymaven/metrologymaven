@@ -5,8 +5,10 @@
 //! [`ElementKind`] set, [`FrameRef`], [`Aabb`], [`CadBodyRef`], the shared
 //! [`GeoTypeError`], the two sanctioned kind conversions and the [`PointSource`] trait)
 //! and `GEO.TYPES.POINTS` ([`PointBuffer`], [`AttributeSet`] and the validated
-//! [`PointSet`] and [`PointCloud`], see [`points`]). [`Mesh`] holds only the minimal
-//! fields the envelope needs; `GEO.TYPES.MESH` extends it.
+//! [`PointSet`] and [`PointCloud`], see [`points`]) and `GEO.TYPES.MESH` (the validated
+//! indexed triangle [`Mesh`] with its [`TopologyFacts`], see [`mesh`]) and
+//! `GEO.TYPES.DIGEST` (the canonical byte layout and the SHA-256 [`ElementDigest`] of every
+//! element, see [`digest`](mod@digest)).
 //!
 //! # Compile-time guarantees (AC-5)
 //!
@@ -27,7 +29,7 @@
 //!     (p, q)
 //! }
 //! let frame = FrameRef::from_bytes([7; 16]);
-//! let mesh = Mesh::new(frame, &[[0.0, 0.0, 0.0]], &[]).unwrap();
+//! let mesh = Mesh::from_points(frame, &[[0.0, 0.0, 0.0]], &[]).unwrap();
 //! let cloud = PointCloud::from_points(frame, &[[1.0, 2.0, 3.0]]).unwrap();
 //! let (p, q) = convert(mesh, cloud);
 //! assert_eq!((p.frame(), q.frame()), (frame, frame));
@@ -105,6 +107,21 @@
 //! let m = Mesh::default();
 //! ```
 //!
+//! A mesh cannot be built without its frame (GEO.TYPES.MESH; the control block is the
+//! same call with the frame):
+//!
+//! ```
+//! use fid_geo_types::{AttributeSet, FrameRef, Mesh, PointBuffer};
+//! let frame = FrameRef::from_bytes([3; 16]);
+//! let m = Mesh::new(frame, PointBuffer::default(), AttributeSet::default(), Vec::new()).unwrap();
+//! assert_eq!(m.frame(), frame);
+//! ```
+//!
+//! ```compile_fail,E0061
+//! use fid_geo_types::{AttributeSet, Mesh, PointBuffer};
+//! let m = Mesh::new(PointBuffer::default(), AttributeSet::default(), Vec::new());
+//! ```
+//!
 //! ```compile_fail,E0599
 //! use fid_geo_types::CadBodyRef;
 //! let c = CadBodyRef::default();
@@ -115,14 +132,18 @@
 //! let f = FrameRef::default();
 //! ```
 
+pub mod digest;
 pub mod envelope;
 pub mod error;
 pub mod mesh;
 pub mod points;
 pub mod source;
 
+pub use digest::{
+    digest, digest_cad_body, digest_mesh, digest_point_cloud, digest_point_set, write_layout, ElementDigest,
+};
 pub use envelope::{Aabb, CadBodyRef, ElementKind, FrameRef, GeometryElement};
 pub use error::GeoTypeError;
-pub use mesh::Mesh;
+pub use mesh::{IndexWidth, Mesh, MeshOptions, TopologyFacts, TriangleAttrs};
 pub use points::{is_unit_normal, AttributeSet, PointBuffer, PointCloud, PointSet, NORMAL_TOLERANCE};
 pub use source::{Channel, InMemorySource, PointBlock, PointSource};

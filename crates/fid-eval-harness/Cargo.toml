@@ -16,10 +16,13 @@ name = "fid-eval-harness"
 path = "src/main.rs"
 
 # Tooling layer (D-034): reads files only. It may not link another tool crate (layers check),
-# so it reads the fields of task.json it needs itself instead of using fid-eval-suite.
+# so it reads the fields of task.json it needs itself instead of using fid-eval-suite; the
+# predicate schema comes from the shared library fid-eval-pred.
 [dependencies]
 # Pure L0 libraries (D-035): bounded JSON parsing and SHA-256 of whole files; `sha256:` digests.
 fid-canon = { path = "../fid-canon" }
+# Predicate schema and parser shared with fid-eval-suite (AGENT.REDTEAM.PRED).
+fid-eval-pred = { path = "../fid-eval-pred" }
 fid-types = { path = "../fid-types" }
 # UUID value type for the UUIDv7 run ID.
 fid-uuid = { path = "../fid-uuid" }

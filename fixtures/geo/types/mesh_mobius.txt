@@ -1,0 +1,16 @@
+# GEO.TYPES.MESH fixture: a Moebius strip of six triangles (one half twist).
+# Hand-labelled: 6 boundary edges, 1 misoriented pair, 1 component, not oriented.
+# CC-BY-4.0. Vertices `v x y z` (metres) and triangles `t a b c`, in index order.
+frame 0123456789abcdef0123456789abcdef
+v 0 0 0
+v 1 0 0
+v 2 0 0
+v 0 1 0
+v 1 1 0
+v 2 1 1
+t 0 3 1
+t 3 4 1
+t 1 4 2
+t 4 5 2
+t 2 5 3
+t 5 0 3
