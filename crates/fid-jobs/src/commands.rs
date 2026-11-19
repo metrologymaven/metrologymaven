@@ -754,7 +754,7 @@ struct Owners {
 /// The job command handlers over a [`Jobs`] scheduler.
 ///
 /// Jobs are submitted only through [`JobService::submit_as`], which records the owning
-/// principal. The scheduler itself is not handed out; [`JobService::record`] and
+/// principal. The scheduler itself is never handed out; [`JobService::record`] and
 /// [`JobService::is_cancel_requested`] are read-only views. A job without a recorded owner
 /// (only possible inside this crate) is visible and cancellable only by a human.
 pub struct JobService<T: Send + 'static> {
@@ -783,16 +783,7 @@ impl<T: Send + 'static> JobService<T> {
             (Some(rule), true) => rule,
             _ => return Err(invariant("job.cancel_job@1 must declare exactly one precondition")),
         };
-        Ok(JobService {
-            jobs,
-            owners: Mutex::new(Owners { map: BTreeMap::new(), sweep_at: MIN_OWNER_SWEEP }),
-            rule,
-        })
-    }
-
-    /// The scheduler, for this crate only.
-    pub(crate) fn jobs(&self) -> &Jobs<T> {
-        &self.jobs
+        Ok(JobService { jobs, owners: Mutex::new(Owners { map: BTreeMap::new(), sweep_at: MIN_OWNER_SWEEP }), rule })
     }
 
     /// Read-only: the scheduler's record of a job, without any access check (for the bus and
@@ -967,7 +958,7 @@ mod tests {
             Err(crate::HandlerError::Cancelled)
         };
         let exec = Execution::new(CommandId::parse("test.sleep@1").unwrap(), handler);
-        let id = svc.jobs().submit(exec, JobOpts::default()).unwrap();
+        let id = svc.jobs.submit(exec, JobOpts::default()).unwrap();
         assert_eq!(svc.owner(id), None);
         for kind in [PrincipalKind::Script, PrincipalKind::Agent] {
             let who = Caller::new(kind, PrincipalId::parse("s").unwrap());

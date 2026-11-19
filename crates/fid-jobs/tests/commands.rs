@@ -905,9 +905,8 @@ fn cancelled_wait_returns_promptly() {
     let token = call.cancel_token();
     let started = Instant::now();
     let result = std::thread::scope(|scope| {
-        let waiter = scope.spawn(|| {
-            svc.wait_job(&s_, &WaitParams { job: id, timeout: Duration::from_secs(600) }, &token)
-        });
+        let waiter =
+            scope.spawn(|| svc.wait_job(&s_, &WaitParams { job: id, timeout: Duration::from_secs(600) }, &token));
         std::thread::sleep(Duration::from_millis(50));
         call.cancel();
         waiter.join().unwrap()
