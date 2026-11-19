@@ -57,3 +57,5 @@ fixtures/plat/deploy/install-manifest-*.json -text
 fixtures/plat/deploy/pkg-plan.json -text
 platform/offline-bundle.schema.json -text
 platform/install-manifest.schema.json -text
+# FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
+fixtures/flow/journey/** -text
