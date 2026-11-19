@@ -322,10 +322,13 @@ fn overflowing_mean_is_non_finite() {
 
 // ------------------------------------------------------------------ provenance domain
 
+/// A parameter name and the edit that puts it out of its domain.
+type Edit = (&'static str, fn(&mut FieldProvenance));
+
 #[test]
 fn invalid_provenance_is_refused() {
     let base = sample_provenance();
-    let cases: [(&str, fn(&mut FieldProvenance)); 11] = [
+    let cases: [Edit; 11] = [
         ("max_distance_m", |p| p.max_distance_m = 0.0),
         ("max_distance_m", |p| p.max_distance_m = -0.0),
         ("max_distance_m", |p| p.max_distance_m = -1e-3),
@@ -373,7 +376,7 @@ fn empty_field() {
 #[test]
 fn huge_point_count_fails_allocation() {
     let e = FieldBuilder::new(usize::MAX, sample_provenance()).unwrap_err();
-    let needed = (usize::MAX as u64).checked_mul(10).unwrap_or(u64::MAX);
+    let needed = (usize::MAX as u64).saturating_mul(10);
     assert_eq!(e, FieldError::AllocationFailed { needed });
     assert_eq!(e.code(), "scan.cmp.allocation_failed");
 }

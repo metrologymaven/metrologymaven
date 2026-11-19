@@ -335,7 +335,7 @@ impl FieldBuilder {
     /// allocated.
     pub(crate) fn new(n: usize, provenance: FieldProvenance) -> Result<FieldBuilder, FieldError> {
         let provenance_json = provenance.canonical_json()?;
-        let needed = (n as u64).checked_mul(10).unwrap_or(u64::MAX);
+        let needed = (n as u64).saturating_mul(10);
         let fail = |_| FieldError::AllocationFailed { needed };
         let mut values: Vec<f64> = Vec::new();
         values.try_reserve_exact(n).map_err(fail)?;
