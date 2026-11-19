@@ -1,0 +1,14 @@
+{
+  "version": "dmt-reviewers/v1",
+  "entries": [
+    {
+      "id": "rev-alpha",
+      "display_name": "Alpha Example (fictional reviewer)",
+      "email": "alpha@example.invalid",
+      "principals": ["human:fictional-alpha"],
+      "dialects": ["asme"],
+      "basis": "paid_author",
+      "valid_from": "2026-01-01"
+    }
+  ]
+}

@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**114** of **1336** leaves built in code ([B]).
+**117** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 44 built)
+### Wave 2 (121 leaves, 47 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -178,7 +178,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
 - [CORE.STO.SQL.SCHEMA](../../spec/core/sto/sql/schema/NODE.md) Database schema, append-only triggers and forward migrations (M, P0)
 - [ECO.CI.LINT](../../spec/eco/ci/lint/NODE.md) Format and never-crash lint gate (M, P0)
-- [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
+- [B] [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
 - [ECO.COMM.GROW](../../spec/eco/comm/grow/NODE.md) Cross-platform tree-growth driver (S, P0)
 - [ECO.COMM.LADDER](../../spec/eco/comm/ladder/NODE.md) Maintainer-eligibility report (M, P0)
 - [ECO.COMM.RFC](../../spec/eco/comm/rfc/NODE.md) RFC comment-period tooling (M, P0)
@@ -199,10 +199,10 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
 - [B] [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
 - [B] [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
-- [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
+- [B] [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
 - [B] [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
 - [B] [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
-- [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
+- [B] [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
 - [B] [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
 - [B] [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
 - [B] [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)

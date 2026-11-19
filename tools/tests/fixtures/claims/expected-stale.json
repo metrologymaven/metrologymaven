@@ -1,0 +1,9 @@
+{
+  "stale": [
+    {
+      "claimed_at": "2026-11-11T09:00:00Z",
+      "claimed_by": "alice",
+      "id": "A"
+    }
+  ]
+}
