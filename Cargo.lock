@@ -501,6 +501,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-sel"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-kci",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-geo-types"
 version = "0.0.1"
 dependencies = [

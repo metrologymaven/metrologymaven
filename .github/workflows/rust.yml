@@ -280,6 +280,7 @@ jobs:
           python fixtures/man/make_implclosure_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
+          python tools/fixtures/geo_sel_sets.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
@@ -394,5 +395,7 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
+      - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
