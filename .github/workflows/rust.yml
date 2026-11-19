@@ -323,6 +323,7 @@ jobs:
           python fixtures/rpt/output/text/check_pdf_text.py
           python fixtures/rpt/model/tmpl/make_fixtures.py --check
           python fixtures/rpt/model/tmpl/check_schema.py
+          python fixtures/rpt/model/tmpl/make_slot_fixtures.py --check
           python tools/fixtures/geo_sel_sets.py --check
           python tools/fixtures/geo_units_cases.py --check
           python tools/fixtures/geo_xform_cases.py --check

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL.TMPL-002, REQ-RPT.MODEL.TMPL-003, REQ-RPT.MODEL.TMPL-004, REQ-RPT.MODEL.TMPL-009]
 covers: []
 depends_on: [RPT.MODEL.TMPL.FORMAT]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.TMPL.SLOT: Slot, binding-rule and repetition-rule language
@@ -56,10 +57,21 @@ Defines what a slot may say: a binding rule that selects items (characteristics,
 - **Determinism:** D0; total order defined here.
 - **Performance budget:** order 100 000 items in under 50 ms [unverified until measured].
 - **Crate:** `fid-report` (module `tmpl::slot`).
+- **Pinned at build** (fid-report `tmpl::slot`; each rule has a test in `crates/fid-report/tests/tmpl_slot.rs`; fixtures and expected bytes, pointers, reasons and orders from `fixtures/rpt/model/tmpl/make_slot_fixtures.py`, checked in CI with `--check`):
+  - *Envelope.* `RPT.MODEL.TMPL.FORMAT` stores a slot as `{"kind": <slot kind>, "spec": {"untrusted": true, "value": <object>}}`. This leaf defines the object, read at pointer `/spec/value`. It has exactly the keys `repeat`, `rule`, `sort`. As in the format, integers are canonical decimal strings, and the object holds no JSON number. Unknown members are refused everywhere, so a slot cannot carry an expression.
+  - *Rule.* `rule` is `{<the envelope kind>: <selector>}` plus an optional `outcome` member. The selector key must equal the envelope kind; any other slot-kind word is `kind_mismatch`, and any other key is `unknown_field`. Selectors: `characteristics` is `"all"`, `{"ids": [...]}` or `{"type": <QIF characteristic type token>}`. `elements`, `stages` and `runs` are `"all"` or `{"ids": [...]}`. `tags` is `{"any_of": [...]}` or `{"all_of": [...]}`. `saved_query` is `{"id": <UUIDv7>}` (`SavedQueryId`). `field_table` is `{"table": <table ID>}`. A selector object holds exactly one member: an empty one is `missing_field` at the selector, and a second member is `conflicting_fields` at the later key. `outcome` is a non-empty list of `conforms`, `indeterminate`, `nonconforms`, `not_decidable` (CONSTITUTION §5) in strictly ascending code-point order. An absent `outcome` means no filter; `null` is not a spelling of it.
+  - *Identifiers.* Every selector refers only by ID. A stable ID or tag name is untrusted content (C6): 1 to 256 bytes of UTF-8 with no NUL (`empty_id`, `id_too_long`, `id_nul`), otherwise kept exactly as written. It is never normalised, case-folded or interpreted, and it is compared byte for byte. Matching a tag selector compares bytes only. ID, tag and page lists hold 1 to 10 000 entries (`empty_list`, `too_many_ids`) in strictly ascending UTF-8 byte order (`duplicate`, `not_sorted`), so each slot has exactly one spelling. A table ID and a column key match `^[a-z][a-z0-9_]{0,63}$` (`bad_table_id`, `bad_column_key`). A characteristic type matches `^[A-Z][A-Za-z0-9]{0,63}$` (`bad_type_name`); this leaf checks only the shape, and membership in the QIF type list (`GDT.CHAR.MODEL.TYPES`) is checked at expansion. A saved query ID or page ID is canonical lowercase UUIDv7 text (`bad_id`).
+  - *Sort.* `sort` is `null` (the default: ascending `characteristic_id`) or `{"direction": "asc" | "desc", "key": <field>}`. The fields are `characteristic_id`, `characteristic_name`, `balloon_number`, `element_id`, `stage_order` and `run_start_time`; any other value is `unknown_value`. A parsed slot keeps `null` as written, so it round-trips byte for byte, and `Slot::sort()` returns the effective key.
+  - *Repeat.* `repeat` reads its `kind` tag first (`missing_field`, `unknown_value`), then its key set. `{"kind": "row"}` is allowed only on a block of kind `table` (`row_needs_table` at `/spec/value/repeat/kind`). The column form is `{"kind": "column", "max_columns_per_group": "1".."64", "repeat_columns": null | [...]}`. Its count is a canonical decimal (`bad_integer`, `out_of_range`). `repeat_columns` holds 1 to 64 distinct column keys (`empty_list`, `too_many_columns`, `duplicate`) and keeps the written display order. The page-group form is `{"kind": "page_group", "pages": [...]}`. Its page IDs are in ascending order, and each must be a page of the template (`page_not_found`). Copies follow the pages' document order at expansion.
+  - *Order of checks.* Validation follows the format's rule. In each object it checks the key set first: the first unknown key in code-point order, then the first missing key. It then reads the members in code-point key order (`repeat`, `rule`, `sort`), depth first. List entries are read in index order, and each entry is checked for shape, then order, then (for pages) presence. `validate_template` visits blocks in document order and returns the first error.
+  - *Error.* `report.slot_invalid { block, pointer, reason }`. `pointer` is RFC 6901, relative to the block's `slot` member, and is cut to 1024 bytes. In `--json` form the pointer is marked untrusted, and in the human form it is escaped like `Untrusted::escaped`. The reason words are the ones named above, plus `wrong_type`, `unknown_field` and `missing_field`.
+  - *Ordering contract.* `compare(a, b, sort)` / `order(items, sort)` sort an `Item { id: StableId, value: SortValue }`, where `SortValue` is `Int(i64) | Text | Missing` and is supplied by EXPAND for the slot's field. The rules: (1) an item with a value comes before a `Missing` one, in both directions; (2) values compare in the slot's direction, `Int` by number and `Text` by UTF-8 bytes, with every `Int` before every `Text`; (3) ties fall back to ascending stable ID by UTF-8 bytes, in both directions. That is the one collation: code-point order, with no locale, no normalisation and no case folding (UTF-16 order is not used). Items that compare equal are identical, so the result depends only on the input multiset. The algorithm is a stable `sort_by`, O(n log n).
+  - *API.* `validate(&format::Slot, &TemplateBlock, &BTreeSet<PageId>) -> Result<Slot, SlotError>` returns the typed slot rather than `()`. The other entry points are `validate_template(&Template) -> Result<Vec<(BlockId, Slot)>, SlotError>`, `Slot::{to_value, to_envelope_value, to_format}` and `order` / `compare`. `BindingRule` is a struct `{ selector: Selector, outcome }` whose `Selector` enum holds the seven kinds.
+  - *Fixtures.* These live in `fixtures/rpt/model/tmpl/`. `slots_valid.json` is one template with 13 slots, one of each rule and repetition kind, including hostile IDs and tags. Its canonical bytes are in `slots_valid.canonical.json`, and the per-slot canonical bytes and effective sort are in `slots_valid.expected.json`. `slots_invalid.json` holds 46 cases with hand-labelled block, pointer and reason. `order_cases.json` holds 45 ordering cases with the expected order from an independent Python comparator. AC-3 uses SplitMix64 with seed 9: 10 000 lists, each with one shared sort value, checked against a plain byte sort of the IDs and against a Fisher-Yates shuffle.
 
 ## Test fixtures
 
-`fixtures/rpt/model/tmpl/slots_valid.json`, `slots_invalid.json` (hand-written, CC-BY-4.0); seeded property test.
+`fixtures/rpt/model/tmpl/slots_valid.json`, `slots_invalid.json`, `order_cases.json` (synthetic, CC-BY-4.0, written by `make_slot_fixtures.py`; reasons and pointers hand-labelled); seeded property test.
 
 ## Build prompt
 
