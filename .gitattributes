@@ -123,6 +123,8 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
+fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
 # VIZ.RENDER.FRAME.SHLINT fixture crates: hand-labelled sources and metadata; never convert line endings.
