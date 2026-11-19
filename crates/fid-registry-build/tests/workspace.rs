@@ -270,3 +270,84 @@ fn a_failing_crate_is_named() {
     let CValue::Obj(o) = err.to_value() else { panic!() };
     assert_eq!(o.get("crate"), Some(&CValue::Str("fid-broken".into())));
 }
+
+/// The commands of the exported workspace manifest, keyed `id@major`, as parsed back from its
+/// exact bytes.
+fn workspace_commands() -> Vec<(String, std::collections::BTreeMap<String, CValue>)> {
+    let export = build_workspace(&workspace_catalogue().unwrap()).unwrap();
+    let CValue::Obj(top) = parse(&export.bytes).unwrap() else { panic!() };
+    let Some(CValue::Arr(commands)) = top.get("commands") else { panic!() };
+    commands
+        .iter()
+        .map(|c| {
+            let CValue::Obj(o) = c else { panic!() };
+            let (Some(CValue::Str(id)), Some(CValue::Num(m))) = (o.get("id"), o.get("major")) else { panic!() };
+            (format!("{id}@{m}"), o.clone())
+        })
+        .collect()
+}
+
+fn strs(v: Option<&CValue>) -> Vec<String> {
+    let Some(CValue::Arr(a)) = v else { panic!("{v:?}") };
+    a.iter()
+        .map(|x| match x {
+            CValue::Str(s) => s.clone(),
+            other => panic!("{other:?}"),
+        })
+        .collect()
+}
+
+/// Whether a manifest command is projected to MCP: `mcp` among its surfaces and a projection
+/// other than `never`. Read from the manifest only.
+fn on_mcp(o: &std::collections::BTreeMap<String, CValue>) -> bool {
+    strs(o.get("exposure")).iter().any(|s| s == "mcp")
+        && !matches!(o.get("mcp_projection"), Some(CValue::Str(p)) if p == "never")
+}
+
+/// CORE.STO.SET's four commands are collected into the workspace manifest (hand-labelled
+/// from spec/core/sto/set/NODE.md, Design).
+#[test]
+fn the_settings_commands_are_in_the_workspace_manifest() {
+    let commands = workspace_commands();
+    let mut settings: Vec<(String, String)> = commands
+        .iter()
+        .filter(|(id, _)| id.starts_with("settings."))
+        .map(|(id, o)| match o.get("side_effect") {
+            Some(CValue::Str(c)) => (id.clone(), c.clone()),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    settings.sort();
+    let expected = [
+        ("settings.list_values@1", "R0"),
+        ("settings.reset_value@1", "W2"),
+        ("settings.set_admin_value@1", "A0"),
+        ("settings.set_value@1", "W2"),
+    ];
+    let expected: Vec<(String, String)> = expected.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
+    assert_eq!(settings, expected);
+}
+
+/// REQ-CORE.STO.SET-006 / AC-5, read from the exported manifest itself: the admin command has
+/// no MCP exposure (surfaces cli and gui only, projection `never`, `human_only`), the only
+/// settings tools an MCP client can see are the three ordinary ones, and no A0 command of the
+/// workspace is projected to MCP.
+#[test]
+fn set_admin_value_has_no_mcp_exposure_in_the_exported_manifest() {
+    let commands = workspace_commands();
+    let (_, admin) = commands.iter().find(|(id, _)| id == "settings.set_admin_value@1").expect("collected");
+    assert_eq!(strs(admin.get("exposure")), ["cli", "gui"]);
+    assert_eq!(admin.get("mcp_projection"), Some(&CValue::Str("never".into())));
+    assert_eq!(admin.get("human_only"), Some(&CValue::Bool(true)));
+    assert_eq!(admin.get("side_effect"), Some(&CValue::Str("A0".into())));
+    assert!(!on_mcp(admin));
+    let settings_on_mcp: Vec<&str> =
+        commands.iter().filter(|(id, o)| id.starts_with("settings.") && on_mcp(o)).map(|(id, _)| id.as_str()).collect();
+    assert_eq!(settings_on_mcp, ["settings.list_values@1", "settings.reset_value@1", "settings.set_value@1"]);
+    let a0_on_mcp: Vec<&str> = commands
+        .iter()
+        .filter(|(_, o)| on_mcp(o) && matches!(o.get("side_effect"), Some(CValue::Str(c)) if c == "A0"))
+        .map(|(id, _)| id.as_str())
+        .collect();
+    assert!(a0_on_mcp.is_empty(), "{a0_on_mcp:?}");
+}

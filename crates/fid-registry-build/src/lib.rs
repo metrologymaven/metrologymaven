@@ -53,13 +53,20 @@ fn registry_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(vec![fid_registry::manifest::command_def()?])
 }
 
+/// The four settings commands of `CORE.STO.SET`, declared with the registry macros (whose
+/// definitions are built at compile time and cannot fail); VAL still checks them at export.
+fn store_defs() -> Result<Vec<CommandDef>, DefError> {
+    Ok(fid_store::settings::declarations().into_iter().map(|d| d.def).collect())
+}
+
 /// Every crate on main that declares commands, sorted by crate name.
-pub const SOURCES: [Source; 5] = [
+pub const SOURCES: [Source; 6] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },
+    Source { krate: "fid-store", defs: store_defs },
 ];
 
 /// A crate's quantity-catalogue fragment function.

@@ -179,6 +179,38 @@ impl SettingsError {
         }
     }
 
+    /// The `(code, reason)` of the closed bus error set (`CORE.BUS.PIPE.ERR`, published as
+    /// `schema/bus-errors.json`) this error is reported as on the bus. The bus set is closed
+    /// and has no settings-specific reasons, so the nearest existing reason is used; the
+    /// settings code stays [`code`](Self::code) and belongs at the start of the bus detail.
+    /// The tests check every pair against the published catalogue.
+    ///
+    /// | settings code | bus code | bus reason |
+    /// |---|---|---|
+    /// | `admin_setting` | `policy` | `class_forbidden`: a W2 command on an A0-only key |
+    /// | `policy` | `policy` | `agent_write_forbidden` (REQ-009) |
+    /// | `scope_not_allowed` | `validation` | `schema`: scope outside the key's declared set |
+    /// | `scope_not_writable` | `precondition` | `capability_missing` |
+    /// | `unknown_key` | `validation` | `bad_reference` |
+    /// | `validation` | `validation` | `schema` |
+    /// | `journal_unavailable` | `internal` | `journal_unavailable` |
+    /// | `storage` | `internal` | `storage` |
+    ///
+    /// `policy` also covers the surface and human-principal checks of `set_admin_value`, which
+    /// are defence in depth behind the bus's own `not_on_mcp` and `human_only` refusals.
+    pub fn bus_code(&self) -> (&'static str, &'static str) {
+        match self {
+            SettingsError::AdminSetting(_) => ("policy", "class_forbidden"),
+            SettingsError::Policy(_) => ("policy", "agent_write_forbidden"),
+            SettingsError::ScopeNotAllowed(_) => ("validation", "schema"),
+            SettingsError::ScopeNotWritable(_) => ("precondition", "capability_missing"),
+            SettingsError::UnknownKey(_) => ("validation", "bad_reference"),
+            SettingsError::Validation(_) => ("validation", "schema"),
+            SettingsError::Journal(_) => ("internal", "journal_unavailable"),
+            SettingsError::Storage(_) => ("internal", "storage"),
+        }
+    }
+
     /// The detail text (display-safe: never echoes a setting value).
     pub fn detail(&self) -> &str {
         match self {
