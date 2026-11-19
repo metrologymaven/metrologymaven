@@ -1,0 +1,283 @@
+{
+  "cases": [
+    {
+      "expect": "invalid_rule",
+      "name": "p_min_0_4",
+      "param": "p_min",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "0.4"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "r_minus_1",
+      "param": "r",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "guard_band",
+        "params": {
+          "r": "-1"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "kind_label_only",
+      "param": "kind",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "label_only",
+        "params": {},
+        "pdf_source": "none",
+        "risk_reporting": "none",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "p_min_0_5_open",
+      "param": "p_min",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "0.5"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "p_min_1_open",
+      "param": "p_min",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "1"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "p_min_non_canonical",
+      "param": "p_min",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "0.950"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "p_min_missing",
+      "param": "p_min",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "kind_unknown",
+      "param": "kind",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "bayesian",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "guard_band_r_missing",
+      "param": "r",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "guard_band",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "guard_band_r_exponent",
+      "param": "r",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "guard_band",
+        "params": {
+          "r": "1e-1"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "simple_with_param",
+      "param": "params",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "simple_acceptance",
+        "params": {
+          "r": "1"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "probability_with_r",
+      "param": "params",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "0.9",
+          "r": "1"
+        },
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "builtin_id",
+      "param": "id",
+      "rule": {
+        "id": "dr:simple-acceptance",
+        "kind": "simple_acceptance",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "version_zero",
+      "param": "version",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "simple_acceptance",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "0"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "pdf_source_none",
+      "param": "pdf_source",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "conformance_probability",
+        "params": {
+          "p_min": "0.9"
+        },
+        "pdf_source": "none",
+        "risk_reporting": "specific",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "risk_unknown",
+      "param": "risk_reporting",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "simple_acceptance",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "all",
+        "standards_ref": "none",
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "standards_prose",
+      "param": "standards_ref",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "simple_acceptance",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": {
+          "clause": "the measured value shall",
+          "designator": "ISO 14253-1",
+          "edition": "2017"
+        },
+        "version": "1"
+      }
+    },
+    {
+      "expect": "invalid_rule",
+      "name": "standards_lowercase",
+      "param": "standards_ref",
+      "rule": {
+        "id": "dr:customer/acme/bore",
+        "kind": "simple_acceptance",
+        "params": {},
+        "pdf_source": "mc_or_validated_normal",
+        "risk_reporting": "specific",
+        "standards_ref": {
+          "clause": "5",
+          "designator": "iso 14253-1",
+          "edition": "2017"
+        },
+        "version": "1"
+      }
+    }
+  ]
+}

@@ -717,6 +717,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-kdec"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-kunc",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-kernel-wasm"
 version = "0.0.1"
 dependencies = [

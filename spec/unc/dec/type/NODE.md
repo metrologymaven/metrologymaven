@@ -9,15 +9,16 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kdec]
 satisfies: [REQ-UNC.DEC-001, REQ-UNC.DEC-002]
 covers: []
-depends_on: [KRN]
+depends_on: [KRN, UNC.UEC.STMT]
 side_effect: R0
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # UNC.DEC.TYPE: Decision rule type and built-in catalog
@@ -66,6 +67,24 @@ Defines the `DecisionRule` value type, the rule-ID grammar, the four-valued `Out
 - **Determinism:** D0.
 - **Performance budget:** negligible.
 - **Crate:** `fid-kdec`.
+- **Pinned choices (build, value-affecting):**
+  - **Rule-ID grammar** (hand-written, no regex): `ref = id "@" version`, at most 256 bytes, checked first; `version = [1-9][0-9]{0,8}` (1..999 999 999), checked before the ID (text after the last `@`); `id` is one of `dr:iso14253-1:2017/default`, `dr:simple-acceptance`, `dr:guard-band` (the catalog template, `r` unbound), `dr:guard-band(r=<decimal>)` (an instance), `dr:customer/<seg>/<seg>` with `seg = [a-z0-9][a-z0-9_-]{0,63}`, `dr:as-reported-by-source`. Every accepted string is canonical (`parse(s).to_string() == s`), so two strings never name one rule.
+  - **Decimals** (`p_min`, `r`, in IDs and JSON): `-?(0|[1-9][0-9]{0,19})(\.[0-9]{0,19}[1-9])?`, not `-0`: no exponent, no `+`, no leading zeros, no trailing fractional zeros. Stored as the canonical text plus an exact `fid_num::kdec::Decimal`; range checks are exact (`cmp_dec`), never in binary64. A negative `r` matches the grammar and fails `invalid_rule{r}` (in an ID too); everything else outside the grammar is `invalid_rule_id`.
+  - **Scope vs. catalog:** Scope lists the ID `dr:guard-band(r=<decimal>)` while REQ-003 names the catalog rule `dr:guard-band@1`. Both are accepted: the catalog holds the template `dr:guard-band@1` (no `r`), and `Catalog::resolve` turns an instance `dr:guard-band(r=x)@v` into the template of version `v` with `r = x` bound (`not_in_catalog` if the template version is absent). Customer references and absent rules resolve to `not_in_catalog` (customer resolution is `UNC.DEC.DEFAULT`).
+  - **ID parse result** (the `ids.csv` columns): built-in IDs give the kind they imply; a customer ID gives kind `customer` (its kind lives in the rule object) and params `tenant=<t>;id=<n>`; a guard-band instance gives params `r=<decimal>`.
+  - **Kind and params** are one Rust enum (`RuleParams`) so a kind never carries another kind's parameter; `kind()` is derived from it.
+  - **`pdf_source`** (not defined upstream; chosen here): `mc_or_validated_normal` (MC samples when available, otherwise the normal approximation under REQ-UNC.DEC-006), `mc_only`, `none`. `none` exactly for `label_only`.
+  - **`risk_reporting`** (not defined upstream; chosen here): `none`, `specific`, `specific_and_global`. `label_only` requires `none`.
+  - **Standards references** hold designator, edition and clause in closed grammars that admit no prose: designator 2..32 bytes of `A-Z 0-9 . / -` with single inner spaces, starting with a letter; edition four digits; clause 1..5 dot-separated parts, the first `1..999` or one capital letter (annex), the rest `0..999` without leading zeros. Contractual rules: `"none"`.
+  - **Built-in catalog `dr-catalog@1`**: `dr:iso14253-1:2017/default@1` (`conformance_probability`, `p_min` 0.95, ISO 14253-1 / 2017 / clause 5 [unverified: clause number]), `dr:simple-acceptance@1` (JCGM 106 / 2012 / clause 8.2 [unverified: clause number]), `dr:guard-band@1` (template, JCGM 106 / 2012 / clause 8.3 [unverified: clause number]), all three `mc_or_validated_normal` and `specific`; `dr:as-reported-by-source@1` (`label_only`, standards `none`, pdf `none`, risk `none`).
+  - **Canonical JSON** (kernel writer `fid_kci::kci::json`, RFC 8785, every scalar a string): rule `{id, version, kind, params, standards_ref, pdf_source, risk_reporting}` with the ID without `@version`, the version as plain decimal, params `{}` / `{"p_min":..}` / `{"r":..}`, `standards_ref` `"none"` or `{clause, designator, edition}`. Catalog `{"catalog":"dr-catalog@1","rules":[...]}`, rules sorted by (ID bytes, version), no trailing newline. Digest = SHA-256 (`fid_kci`) of those bytes, written `sha256:<hex>`.
+  - **Embedding:** instead of a build script, the canonical catalog bytes are a constant in the crate and the digest a second constant; `Catalog::builtin()` parses and validates them on every call and refuses a digest mismatch, and a test asserts both equal the fixture files the Python reference writes.
+  - **Validation order** (first error wins): unknown/missing JSON member (`malformed{unknown_member|missing_member}`), id (`invalid_rule_id`; `invalid_rule{id}` for the wrong family: customer rules need `dr:customer/...`, catalog rules a built-in template ID), version, kind (unknown, `label_only` for a customer, or not the kind the built-in ID implies), params (unknown key `invalid_rule{params}`, then `p_min` / `r`), standards_ref, pdf_source, risk_reporting; all `invalid_rule{<name>}`. `p_min` must lie strictly inside (0.5, 1); `r >= 0` and required in a customer guard-band rule. Hand-built `RuleId` / `RuleRef` values are re-parsed from their text before use, so a value outside the grammar is refused, never trusted.
+  - **Catalog parse order:** size (64 KiB), JSON shape, tag (`malformed{catalog_tag}`), at most 256 rules, each rule, duplicates (`duplicate_rule`), then byte equality with the canonical form (`non_canonical`).
+  - **Outcome parse boundary** `Outcome::from_wire(name, reason)`: `unknown_outcome`, then `NOT_DECIDABLE` without a reason `reason_required`, then `unknown_reason`, then a reason on another outcome `unexpected_reason`. At the type level `NOT_DECIDABLE` is `Outcome::NotDecidable(NotDecidableReason)` (compile-fail doctest).
+  - **Decision record** (addition, so downstream leaves cannot lose the evidence facts): `Decision { rule: Option<RuleRef>, outcome, basis: Option<EvidenceBasis> }`. `EvidenceBasis::of(&UncertaintyStatement)` (fid-kunc, `UNC.UEC.STMT`) is the only source of the basis and copies class, method, `is_claimed`, `rests_on_declared_input`, `rests_on_uncharacterized_input` and the statement digest; it refuses NaN, infinite and subnormal `u_std`, `U`, `k`, interval ends and `p` (`invalid_number{field}`). `Decision::new` checks, in order (`outcome_mismatch{field}`): `rule_missing` iff no rule; `label_only` rule iff `NOT_DECIDABLE(label_only)`; `u_missing` only without a basis or on UEC-0; `CONFORMS`/`NONCONFORMS`/`INDETERMINATE` need a UEC-1..3 basis (`basis`; simple acceptance too, since REQ-UNC.DEC-007 reports U); `pdf_unavailable` only under `conformance_probability`. A claimed basis stays visible on every outcome: a claimed value never looks measured.
+  - **Contract for `UNC.DEC.EVAL` / `UNC.DEC.RISK`** (this leaf compares nothing): every comparison of a value against a limit uses the side-preserving rule of `KRN.NUM.FMT` (exact `fid_num::kdec::cmp`, or the formatter's `side`), reads the `side` value and never a printed string, and treats `SideOutcome::Undecidable` as undecided (`INDETERMINATE`), never as pass or fail. Parameters are converted to binary64 once, by `ParamDecimal::to_f64`, which refuses infinite, NaN, subnormal and underflowed results.
+  - **Bounds:** rule references 256 bytes; JSON documents 64 KiB, nesting 8, 1024 items per container; catalog 256 rules. No recursion beyond the nesting bound, no panics.
 
 ## Test fixtures
 
