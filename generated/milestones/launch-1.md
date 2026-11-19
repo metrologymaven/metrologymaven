@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**112** of **1336** leaves built in code ([B]).
+**114** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 42 built)
+### Wave 2 (121 leaves, 44 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -238,7 +238,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.DOCS.FRAME.ED](../../spec/outr/docs/frame/ed/NODE.md) Release editions, version list and latest alias (S, P0)
 - [B] [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
 - [OUTR.LAUNCH.ANN](../../spec/outr/launch/ann/NODE.md) Announcement plan and drafts (M, P0)
-- [OUTR.LAUNCH.GATE](../../spec/outr/launch/gate/NODE.md) Milestone gate check and report (M, P0)
+- [B] [OUTR.LAUNCH.GATE](../../spec/outr/launch/gate/NODE.md) Milestone gate check and report (M, P0)
 - [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)
 - [OUTR.LAUNCH.REVIEW](../../spec/outr/launch/review/NODE.md) Post-launch reviews (S, P0)
 - [PLAT.DEPLOY.KIOSK.GUIDE](../../spec/plat/deploy/kiosk/guide/NODE.md) Per-OS kiosk deployment guides and guide lint (M, P1a)
