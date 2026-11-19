@@ -1,6 +1,6 @@
 [package]
 name = "fid-platform"
-description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE); the generated support matrix page and its drift check (PLAT.MATRIX.PAGE); the hardware profile file and validator (PLAT.HW.PROFILE); the benchmark suite manifest and result schema (PLAT.HW.SCHEMA); the reference kiosk display file (PLAT.DEPLOY.KIOSK.DISPLAY); the GPU backend policy and known-bad driver list (PLAT.GPU.POLICY); the per-user install layout and allowed write locations (PLAT.DEPLOY.NOADMIN.LAYOUT)"
+description = "Metrology Maven platform support: the support matrix schema, validator and tier lookup (spec node PLAT.MATRIX.FILE); the generated support matrix page and its drift check (PLAT.MATRIX.PAGE); the hardware profile file and validator (PLAT.HW.PROFILE); the benchmark suite manifest and result schema (PLAT.HW.SCHEMA); the reference kiosk display file (PLAT.DEPLOY.KIOSK.DISPLAY); the GPU backend policy and known-bad driver list (PLAT.GPU.POLICY); the per-user install layout and allowed write locations (PLAT.DEPLOY.NOADMIN.LAYOUT); the offline bundle layout, install manifest and bundle check (PLAT.DEPLOY.OFFLINE.BUNDLE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -21,6 +21,11 @@ toml = { version = "0.8", default-features = false, features = ["parse"] }
 # fid-types supplies the shared `sha256:` digest type (AGENTS.md rule 14).
 fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
+# PLAT.DEPLOY.OFFLINE.BUNDLE: the shared per-segment relative-path rule (`RelPath`, services
+# layer, already in the workspace) and streaming SHA-256 of bundled files (the same sha2 0.10
+# that fid-canon and fid-xtask already use, so no new crate in the graph).
+fid-io-reg = { path = "../fid-io-reg" }
+sha2 = "0.10"
 
 [lints]
 workspace = true
