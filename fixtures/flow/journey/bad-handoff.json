@@ -1,0 +1,111 @@
+{
+  "format": "journey-map@1",
+  "map_id": "j1",
+  "subject": "JOB.ACC.01",
+  "kind": "job",
+  "revision": 1,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": [
+    "JOB.PER.02"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "import.cad_step@1",
+      "owner": "IO.CAD.STEP.READ",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "import.cad_pmi@1",
+      "owner": "IO.CAD.STEP.PMI",
+      "handoff": 3,
+      "human_only": false
+    },
+    {
+      "n": 3,
+      "actor": "human",
+      "command": "gdt.propose_characteristics_from_pmi@1",
+      "owner": "GDT.PMI.PROPOSE",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "gdt.adopt_characteristics@1",
+      "owner": "GDT.PMI.ADOPT",
+      "decision": "Which proposed characteristics to adopt as they are",
+      "handoff": 5,
+      "human_only": true
+    },
+    {
+      "n": 5,
+      "actor": "human",
+      "command": "import.mesh_stl@1",
+      "owner": "IO.MESH.STL",
+      "handoff": 6,
+      "human_only": false
+    },
+    {
+      "n": 6,
+      "actor": "human",
+      "command": "align.run_bestfit@1",
+      "owner": "ALIGN.BESTFIT.RUN",
+      "handoff": 9,
+      "human_only": false
+    },
+    {
+      "n": 7,
+      "actor": "human",
+      "command": "compare.surface_cad@1",
+      "owner": "CMP.SURF.CAD",
+      "handoff": 8,
+      "human_only": false
+    },
+    {
+      "n": 8,
+      "actor": "human",
+      "command": "compare.point_create@1",
+      "owner": "CMP.POINT.CREATE",
+      "handoff": 9,
+      "human_only": false
+    },
+    {
+      "n": 9,
+      "actor": "human",
+      "command": "compare.point_evaluate@1",
+      "owner": "CMP.POINT.EVAL",
+      "handoff": 10,
+      "human_only": false
+    },
+    {
+      "n": 10,
+      "actor": "human",
+      "command": "view.set_colormap@1",
+      "owner": "VIEW.MAP.COLOR",
+      "handoff": 11,
+      "human_only": false
+    },
+    {
+      "n": 11,
+      "actor": "human",
+      "command": "report.export_pdf@1",
+      "owner": "RPT.EXPORT.PDF",
+      "handoff": 12,
+      "human_only": false
+    },
+    {
+      "n": 12,
+      "actor": "human",
+      "command": "program.from_journal@1",
+      "owner": "PROG.REC.JOURNAL",
+      "handoff": 13,
+      "human_only": false
+    }
+  ]
+}

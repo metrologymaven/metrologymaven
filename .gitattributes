@@ -49,3 +49,5 @@ fixtures/plat/matrix/escape.toml -text
 fixtures/plat/matrix/expected-page.md -text
 fixtures/plat/matrix/expected-escape-page.md -text
 docs/platform/support-matrix.md -text
+# FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
+fixtures/flow/journey/** -text
