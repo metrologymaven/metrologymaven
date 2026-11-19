@@ -1,0 +1,289 @@
+{
+ "description": "capped cylinder with seam, NURBS seam curve and line pcurves",
+ "license": "CC-BY-4.0",
+ "body_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+ "vertices": [
+  {
+   "point": [
+    0.5,
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "point": [
+    0.5,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     -0.0,
+     0.0
+    ],
+    "radius": 0.5
+   }
+  },
+  {
+   "start": 1,
+   "end": 0,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": {
+    "type": "nurbs",
+    "degree": 1,
+    "knots": [
+     0.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "ctrl": [
+     [
+      0.5,
+      0.0,
+      0.0
+     ],
+     [
+      0.5,
+      0.0,
+      1.0
+     ]
+    ],
+    "weights": null,
+    "periodic": false
+   }
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     -0.0,
+     0.0
+    ],
+    "radius": 0.5
+   }
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     6.283185307179586,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     1.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null
+  },
+  {
+   "edge": 2,
+   "sense": "reversed",
+   "pcurve": null
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    4
+   ],
+   "outer": true
+  },
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true
+  },
+  {
+   "coedges": [
+    5
+   ],
+   "outer": true
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ]
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.5
+   },
+   "sense": "same",
+   "loops": [
+    1
+   ]
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    2
+   ]
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    1,
+    0,
+    2
+   ],
+   "closed": true
+  }
+ ]
+}
