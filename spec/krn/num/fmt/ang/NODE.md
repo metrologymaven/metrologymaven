@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 213
 satisfies: [REQ-KRN.NUM.FMT-004, REQ-KRN.NUM.FMT-005, REQ-KRN.NUM.FMT-006]
 covers: []
 depends_on: [KRN.NUM.FMT.LEN, KRN.NUM.KDEC, KRN.NUM.ERR]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # KRN.NUM.FMT.ANG: Angle formatters with a rational enclosure of pi
@@ -77,10 +79,23 @@ Angles are held in radians, but drawings give angular limits in degrees. Convert
 - **Determinism:** D0; integer arithmetic only.
 - **Performance budget:** < 20 microseconds per call with the first enclosure, < 2 ms when the tightest is needed [unverified until measured].
 - **Crate:** `fid-num` (module `fmt::ang`).
+- **Pinned details** (every output string depends on them; any implementation must match string for string; the oracle `fixtures/num/fmt/make_ang_fixtures.py` models exactly these):
+  - **Formatter and units:** `fmt.angle@1` (`FormatterId::ANGLE_V1`). `rad` is the `fmt.scalar@1` rule of LEN with factor 1 and limits in radians (`exact_conversion` rad -> rad, `"1"`, no enclosure). `deg` prints w = |x| * 180 / pi with `Decimals(0..=20)` or `SigDigits(1..=17)`. `dms` rounds w = |x| * 648000 / pi (seconds) once at `Decimals(p)`, p being the decimals of the seconds field (0..=20); `SigDigits` is rejected for dms. Limits for deg and dms are decimal degrees (`kdec::Decimal`). There is no gon unit: it is not in this node's scope.
+  - **Ladder:** `PI_LADDER` = three rungs lo = floor(pi * 10^d) / 10^d, hi = lo + 10^-d, d = 50, 200, 1000, stored as `3.<d decimals>` strings and parsed into the big integer per call. lo < pi < hi strictly; each rung lies inside the one before. At rung i the value interval is [|x| * c / hi_i, |x| * c / lo_i] (c = 180 or 648000), two exact rationals; the sign is applied after rounding, so the ends need no swap.
+  - **Decisions:** a decision is taken at the first rung, from the current one upward, at which both ends agree; the current rung then moves there (nesting makes the result the one the exact value gives). The decisions of a call, in order: (1) the requested half-even rounding (equal `(q, p)` at both ends; with significant digits each end uses its own decimal exponent, sound because rounding is monotone and equal outputs have equal `(q, p)`); (2) the side of the upper limit, then of the lower limit only if the upper one is not violated; (3) only with a violated limit and decimals, the decimal exponent k of w (k = 0 for zero); (4) each rounding of LEN's side loop. If (1), (3) or (4) is decided at no rung, the call returns `UndecidableRounding` and no string.
+  - **Side test:** exact when x and L differ in sign or either is zero (only x = 0 with L = 0 is on a limit); else |x| * 180 >= |L| * hi_i is above, <= |L| * lo_i is below. If no rung decides, the current rung becomes the last, `side = SideOutcome::Undecidable`, the lower limit is not tested, and the output is the requested rounding with `digits_added = 0` and no tie flag; it says nothing about the side. Consumers (`KRN.NUM.FMT.REG`, `RPT`, `UNC`) must read `side` before relying on which side of a limit the string shows: with `Undecidable` the string is the plain rounding and may equal the limit.
+  - **Side-preserving rule:** LEN's loop and flags, unchanged (same code): one digit at a time, zero outputs skipped at once (skipped steps are not decisions), cap 17 significant digits of w (k + 1 + p >= 17 for decimals, w in degrees for deg and in seconds for dms), directed rounding toward the violated side at the cap with `tie_at_max_precision = true`. The output is compared with the limit exactly and without pi: degrees against L, or seconds against 3600 * L.
+  - **dms rendering:** with q the rounded count of 10^-p seconds, D = q div (3600 * 10^p), M = (q mod 3600 * 10^p) div (60 * 10^p), S the rest; printed `[-]D:MM:SS[.s...]`, D unpadded, MM and the integer part of SS two digits, p decimals. Rounding the total once is the single rounding of the seconds field followed by the carry (59.96 s at one decimal gives `11:00:00.0` from 10:59:59.96).
+  - **Sign:** `-` only when x is negative and q is not zero, as LEN.
+  - **Record:** `Reported` gains `side: SideOutcome` (`NoLimits`, `Within`, `AboveUpper`, `BelowLower`, `Undecidable`; LEN sets the first four) and `Conversion` gains `pi_enclosure: Option<u8>`: for deg and dms the final current rung, which is the smallest ladder index at which every decision of the call is decided (factor string `180/pi`); `None` for exact factors.
+  - **Error order:** `UnitNotSupported` (a formatter other than `fmt.angle@1`, op `fmt`; a unit other than rad, deg, dms, op `fmt.angle@1`), `PrecisionOutOfRange`, `LimitsInverted`, `NonFinite`, then `UndecidableRounding` (detail `undecidable_rounding`).
+  - **Test hook:** the hidden `format_with_ladder` takes another ladder (the tests use enclosures of 3, 6 and 10 decimals). Before the error checks above it refuses, with `FmtError::InvalidLadder` (detail `invalid_ladder`) and no string, any rung that is malformed, does not contain the tightest built-in rung (so does not enclose pi), or is not nested inside the rung before it. `format` never reaches this error.
+  - **Capacity:** the big integer is LEN's `kdec` type made generic over its limb count; this module uses 192 limbs (6144 bits). The largest intermediates are the side test (|L| = 2^128 * 10^400 against a subnormal at the 1000-digit rung, 5854 bits) and roundings of the largest double in seconds (below 4600 bits), so `big_integer_capacity` cannot occur.
+  - **Rung use in practice:** the 50-digit rung decides almost every call; values above about 10^30 degrees printed to whole units need the 200- or 1000-digit rung (`f64::MAX` at 0 decimals needs 1000). An undecidable outcome needs an angle within about 10^-1000 relative of a rounding boundary or a limit and has not been observed; the tests exercise both with a coarse ladder of 3, 6 and 10 decimals.
 
 ## Test fixtures
 
-`fixtures/num/fmt/ang-golden-v1`: generated by a committed offline script using arbitrary-precision arithmetic (for example Python `mpmath` at 2000 digits), CC-BY-4.0. The pi digit strings in source are a mathematical constant, not reference-dataset content.
+`fixtures/num/fmt/ang-golden-v1.txt` (with `ang-ac-v1.txt`, the coarse-ladder cases `ang-ladder-v1.txt` and pi to 2100 decimals in `ang-pi-v1.txt`): generated by the committed offline script `fixtures/num/fmt/make_ang_fixtures.py` with the standard library only (pi from the Chudnovsky series in integers, exact rationals, and a second path through the `decimal` module at 2300 digits), CC-BY-4.0. The script asserts the side-safety property on every case. The pi digit strings in source are a mathematical constant, not reference-dataset content.
 
 ## Build prompt
 

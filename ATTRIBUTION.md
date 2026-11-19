@@ -40,3 +40,22 @@ that adds the asset.
 - **RFC 8785 (JSON Canonicalization Scheme) sample** in
   `fixtures/core/jrn/canon/vectors.json`. Terms of IETF document text and code
   components: [unverified], pending D-038.
+
+## Fonts
+
+The report fonts bundled in `crates/fid-report-pdf/assets/fonts/` (spec node
+`RPT.OUTPUT.PDF.TEXT`, REQ-005) are **not** third-party: their outlines are original work
+of the project, generated from the stroke skeletons in
+`crates/fid-report-pdf/fontgen/make_fonts.py` with the Python standard library. They are
+listed here because the spec requires every bundled font to appear in this file with its
+licence. No third-party font, font tool or outline was used.
+
+| File | Family | SPDX licence |
+|---|---|---|
+| `MavenReportSans-Regular.ttf` | Maven Report Sans, weight 400 | `MIT OR Apache-2.0` |
+| `MavenReportSans-Bold.ttf` | Maven Report Sans, weight 700 | `MIT OR Apache-2.0` |
+| `MavenReportMono-Regular.ttf` | Maven Report Mono, weight 400 | `MIT OR Apache-2.0` |
+| `MavenReportMono-Bold.ttf` | Maven Report Mono, weight 700 | `MIT OR Apache-2.0` |
+
+The test fonts `fixtures/rpt/output/text/script-test.ttf` and `composite-test.ttf` come
+from the same script and carry the same licence.

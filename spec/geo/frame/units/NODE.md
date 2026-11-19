@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-frame]
+built_pr: 217
 satisfies: [REQ-GEO.FRAME-007]
 covers: []
 depends_on: [KRN.NUM]
@@ -66,6 +68,14 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
 - **Determinism:** D0; integer arithmetic only.
 - **Performance budget:** 1 µs per conversion [unverified].
 - **Crate:** `fid-geo-frame` (kernel graph, KNP-1 applies; no float parsing from std is used for authored values).
+- **Pinned choices (build, value-affecting):**
+  - Symbols, ASCII and case-sensitive: `m`, `mm`, `um`, `nm`, `in`, `ft`, `thou`, `rad`, `deg`, `arcmin`, `arcsec`, `gon` (`um` as in `fid-num`'s formatters).
+  - Exact factors to SI: m 1, mm 1/1000, um 1/10^6, nm 1/10^9, in 127/5000, ft 381/1250, thou 127/5000000; rad 1, deg Π/180, arcmin Π/10800, arcsec Π/648000, gon Π/200, with Π = P / 2^254 and P the integer nearest π·2^254 (`0xc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22`, in [2^255, 2^256)).
+  - Grammar `[+-] digits [ "." digits ] [ (e|E) [+-] digits ]`, ASCII, no whitespace or grouping (same as `fid-num` KDEC). Checks in order: more than 1024 bytes `TooManyDigits`; `nan`/`inf`/`infinity` in any case after an optional sign `NonFinite`; any other grammar failure `NotDecimal`; more than 40 significant digits, counted from the first non-zero digit to the last digit written, `TooManyDigits`; exact value at least 2^1024 − 2^970 `Overflow`. No exponent limit beyond that (written exponents saturate at ±10^9); results below half the smallest subnormal round to zero like any other value.
+  - One rounding to nearest, ties to even, subnormals included. The sign of the result, zero included, is the sign written (`-0` and `-1e-400` give −0.0).
+  - Display: `q = round_half_even(|x| / factor · 10^n)` on the exact binary value `x`, printed with exactly `n` digits after the point (none when `n = 0`), `-` only when `x` is negative and `q ≠ 0`; `n` ≤ 20 (`fid-num` `MAX_DECIMALS`), else `DigitsOutOfRange`; non-finite `x` is `NonFinite`. `format` therefore returns `Result<String, UnitsError>`.
+  - Conversion record: RFC 8785 canonical JSON `{"si_hex":"<16 lowercase hex digits>","text":"<as written>","unit":"<symbol>"}`.
+  - Errors add `DigitsOutOfRange` (format) and `Capacity` (internal big integer exhausted; unreachable within the limits, reported rather than computed wrongly).
 
 ## Test fixtures
 

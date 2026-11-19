@@ -544,6 +544,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-frame"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+]
+
+[[package]]
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
@@ -807,6 +814,15 @@ dependencies = [
  "fid-journal",
  "fid-registry",
  "fid-types",
+]
+
+[[package]]
+name = "fid-report-pdf"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+ "fid-types",
+ "sha2 0.10.9",
 ]
 
 [[package]]
