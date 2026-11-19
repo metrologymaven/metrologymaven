@@ -78,6 +78,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-corp" = "tool"
 "fid-eval-suite" = "tool"
 "fid-qif-gen" = "tool"
+# Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
+"fid-surface-gen" = "tool"
 "fid-agent" = "tool"
 "fid-timeline" = "tool"
 "fid-outreach" = "tool"

@@ -1,0 +1,21 @@
+[package]
+name = "fid-surface-gen"
+description = "Metrology Maven surface generator framework: the SurfaceEmitter trait, do-not-edit headers with the manifest digest, per-surface command indexes and deterministic atomic writes behind `cargo xtask gen-surfaces` (spec node AUTO.SURF.GEN)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Build-time tool (layer `tool`): an xtask library, never linked into an app.
+[dependencies]
+# RFC 8785 writer and reader for `surface-index.json` (model layer).
+fid-canon = { path = "../fid-canon" }
+# The command-surface projection every emitter consumes (AUTO.SURF.PROJ, services layer).
+fid-surface = { path = "../fid-surface" }
+# Shared command ID and `sha256:` digest types.
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
