@@ -116,7 +116,10 @@ fn ac3_self_diff_empty() {
         };
         let d = diff(&m, &m);
         assert!(d.is_empty(), "{name}: {d:?}");
-        assert_eq!(d.to_canonical_bytes().unwrap(), b"{\"added\":[],\"changed\":[],\"lifecycle_changed\":[],\"removed\":[]}");
+        assert_eq!(
+            d.to_canonical_bytes().unwrap(),
+            b"{\"added\":[],\"changed\":[],\"lifecycle_changed\":[],\"removed\":[]}"
+        );
         n += 1;
     }
     assert!(n >= 2);

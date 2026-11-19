@@ -332,8 +332,18 @@ fn keyword_rule(k: &str) -> Rule {
         "properties" => Rule::Properties,
         "required" => Rule::Required,
         "items" => Rule::Items,
-        "const" | "pattern" | "format" | "multipleOf" | "uniqueItems" | "additionalProperties" | "x-selector"
-        | "x-standards-ref" | "x-untrusted" | "$schema" | "$comment" | "examples" => Rule::Constraint,
+        "const"
+        | "pattern"
+        | "format"
+        | "multipleOf"
+        | "uniqueItems"
+        | "additionalProperties"
+        | "x-selector"
+        | "x-standards-ref"
+        | "x-untrusted"
+        | "$schema"
+        | "$comment"
+        | "examples" => Rule::Constraint,
         _ => Rule::Unknown,
     }
 }
@@ -389,10 +399,7 @@ fn enum_reason(old: Option<&CValue>, new: Option<&CValue>) -> Option<Reason> {
 }
 
 /// `properties` as a map; absent is empty, anything else but an object is `None`.
-fn props_of<'a>(
-    v: Option<&'a CValue>,
-    empty: &'a BTreeMap<String, CValue>,
-) -> Option<&'a BTreeMap<String, CValue>> {
+fn props_of<'a>(v: Option<&'a CValue>, empty: &'a BTreeMap<String, CValue>) -> Option<&'a BTreeMap<String, CValue>> {
     match v {
         None => Some(empty),
         Some(CValue::Obj(m)) => Some(m),
