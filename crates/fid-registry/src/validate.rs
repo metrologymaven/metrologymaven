@@ -40,13 +40,13 @@ pub const MAX_MAJOR: u32 = 99_999;
 /// Most errors reported by one run; beyond it the run ends with `too_many_errors`.
 pub const MAX_ERRORS: usize = 10_000;
 /// Largest integer accepted for a count keyword (`minLength` and so on): 2^53.
-const MAX_COUNT: f64 = 9_007_199_254_740_992.0;
+pub(crate) const MAX_COUNT: f64 = 9_007_199_254_740_992.0;
 /// Longest input text echoed into an error, in bytes.
 const KEEP: usize = 128;
 /// Longest `field` pointer, in bytes.
 const KEEP_POINTER: usize = 512;
 /// Longest message, in bytes.
-const KEEP_MESSAGE: usize = 512;
+pub(crate) const KEEP_MESSAGE: usize = 512;
 
 /// The fields REQ-001 names, in its order; all are also required by the DEF record.
 pub const REQ001_FIELDS: [&str; 7] =
@@ -56,7 +56,7 @@ pub const REQ001_FIELDS: [&str; 7] =
 const OPTIONAL_FIELDS: [&str; 4] = ["human_only", "network", "web_note", "cli_bare"];
 
 /// JSON Schema type names.
-const TYPES: [&str; 7] = ["array", "boolean", "integer", "null", "number", "object", "string"];
+pub(crate) const TYPES: [&str; 7] = ["array", "boolean", "integer", "null", "number", "object", "string"];
 
 macro_rules! rule_codes {
     ($($variant:ident => $s:literal),+ $(,)?) => {
@@ -392,7 +392,7 @@ pub fn validate_json(
 /// One pass over the bytes before parsing: bracket depth outside strings, and every number
 /// literal must be finite and must not underflow (a non-zero mantissa giving zero or a
 /// subnormal). Malformed text is left to the parser.
-fn prescan(b: &[u8], max_depth: usize) -> Result<(), InputError> {
+pub(crate) fn prescan(b: &[u8], max_depth: usize) -> Result<(), InputError> {
     let (mut depth, mut in_str, mut esc) = (0usize, false, false);
     let mut i = 0;
     while let Some(&c) = b.get(i) {
@@ -518,7 +518,7 @@ fn order(a: &ValidationError, b: &ValidationError) -> std::cmp::Ordering {
 }
 
 /// Copies at most `max` bytes of `s`, cut at a char boundary.
-fn cut(s: &str, max: usize) -> String {
+pub(crate) fn cut(s: &str, max: usize) -> String {
     if s.len() <= max {
         return s.to_string();
     }
@@ -545,7 +545,7 @@ fn escape(s: &str) -> String {
 
 /// Hostile text as it may appear in a message: cut to 128 bytes, escaped, then quoted with
 /// `{:?}` (which also escapes `"` and `\`).
-fn quote(s: &str) -> String {
+pub(crate) fn quote(s: &str) -> String {
     format!("{:?}", escape(&cut(s, KEEP)))
 }
 
@@ -776,7 +776,7 @@ enum Kind {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Seg<'a> {
+pub(crate) enum Seg<'a> {
     Key(&'a str),
     Idx(usize),
 }
@@ -795,7 +795,7 @@ struct Frame<'a> {
 /// A display-safe JSON pointer: RFC 6901 (`~0`, `~1`) for printable ASCII keys, with every
 /// other character written as `\u{..}`. Each segment is escaped first and then cut to 128
 /// bytes, the whole to 512; a cut never splits an escape (`~0`, `~1`, `\u{..}`).
-fn pointer(path: &[Seg<'_>]) -> String {
+pub(crate) fn pointer(path: &[Seg<'_>]) -> String {
     let mut out = String::new();
     for seg in path {
         if out.len() >= KEEP_POINTER {
@@ -936,7 +936,7 @@ const EXACT_INT: u64 = 1 << 53;
 
 /// A numeric value as `f64`. `I64`/`U64` beyond 2^53 in magnitude would round, so they are
 /// not numbers here (the caller reports them); nothing is converted inexactly.
-fn number(v: &CValue) -> Option<f64> {
+pub(crate) fn number(v: &CValue) -> Option<f64> {
     match v {
         CValue::Num(n) | CValue::F64Bits(n) => Some(*n),
         CValue::I64(i) if i.unsigned_abs() <= EXACT_INT => Some(*i as f64),
@@ -996,7 +996,7 @@ fn check_name(ctx: &mut Ctx<'_>, name: &str, field: String) {
 pub const SCHEMA_DIALECT: &str = "https://json-schema.org/draft/2020-12/schema";
 
 /// Keywords of earlier drafts whose subschemas the walk would not check.
-const OLD_DRAFT_KEYWORDS: [&str; 3] = ["$recursiveAnchor", "$recursiveRef", "dependencies"];
+pub(crate) const OLD_DRAFT_KEYWORDS: [&str; 3] = ["$recursiveAnchor", "$recursiveRef", "dependencies"];
 
 /// An array of distinct strings, each a valid name; anything else is `bad_schema`.
 fn name_list(ctx: &mut Ctx<'_>, v: &CValue, field: String, what: &str) {

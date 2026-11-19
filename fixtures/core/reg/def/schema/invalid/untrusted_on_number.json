@@ -1,0 +1,16 @@
+{
+  "expect": {
+    "code": "untrusted_on_non_string",
+    "pointer": "/properties/a/x-untrusted"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "x-quantity": "length",
+        "x-untrusted": true
+      }
+    }
+  }
+}
