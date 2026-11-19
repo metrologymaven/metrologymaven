@@ -138,10 +138,7 @@ fn unknown_and_missing_fields_are_named() {
         let e = entry("rev-a", "human:a", &format!(r#","{key}":"x""#));
         assert_eq!(err(&doc(&[e])), format!("roster_invalid{{{key}}}"));
     }
-    assert_eq!(
-        err(br#"{"version":"dmt-reviewers/v1","entries":[],"credentials":[]}"#),
-        "roster_invalid{credentials}"
-    );
+    assert_eq!(err(br#"{"version":"dmt-reviewers/v1","entries":[],"credentials":[]}"#), "roster_invalid{credentials}");
     for key in ["id", "display_name", "principals", "dialects", "basis", "valid_from"] {
         let full = entry("rev-a", "human:a", "");
         let mut v = parse(full.as_bytes()).unwrap();

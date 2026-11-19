@@ -131,7 +131,8 @@ impl ReviewerId {
         }
         let b = s.as_bytes();
         let first_ok = matches!(b.first(), Some(c) if c.is_ascii_lowercase() || c.is_ascii_digit());
-        let rest_ok = b.iter().all(|&c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'.' | b'_' | b'-'));
+        let rest_ok =
+            b.iter().all(|&c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'.' | b'_' | b'-'));
         if !first_ok || !rest_ok {
             return Err(invalid("id"));
         }
@@ -266,7 +267,8 @@ fn days_in_month(year: u16, month: u8) -> u8 {
 impl Date {
     /// A validated date, or `None` if it does not exist.
     pub fn new(year: u16, month: u8, day: u8) -> Option<Date> {
-        let ok = (1..=9999).contains(&year) && (1..=12).contains(&month) && (1..=days_in_month(year, month)).contains(&day);
+        let ok =
+            (1..=9999).contains(&year) && (1..=12).contains(&month) && (1..=days_in_month(year, month)).contains(&day);
         if ok {
             Some(Date { year, month, day })
         } else {
@@ -550,7 +552,10 @@ fn normalised(entries: &BTreeMap<ReviewerId, Entry>) -> CValue {
             CValue::Arr(e.dialects.iter().map(|d| CValue::Str(d.as_str().to_string())).collect()),
         );
         o.insert("display_name".to_string(), CValue::Str(e.display_name.clone()));
-        o.insert("principals".to_string(), CValue::Arr(e.principals.iter().map(|p| CValue::Str(p.0.clone())).collect()));
+        o.insert(
+            "principals".to_string(),
+            CValue::Arr(e.principals.iter().map(|p| CValue::Str(p.0.clone())).collect()),
+        );
         o.insert("valid_from".to_string(), CValue::Str(e.valid_from.to_string()));
         if let Some(u) = e.valid_until {
             o.insert("valid_until".to_string(), CValue::Str(u.to_string()));
@@ -570,7 +575,18 @@ mod tests {
     #[test]
     fn dates_parse_strictly() {
         assert_eq!(Date::parse("2024-02-29").map(|d| d.to_string()), Some("2024-02-29".to_string()));
-        for bad in ["2026-02-29", "1900-02-29", "0000-01-01", "2026-13-01", "2026-00-10", "2026-04-31", "2026-1-01", "2026/01/01", "+026-01-01", "2026-01-01 "] {
+        for bad in [
+            "2026-02-29",
+            "1900-02-29",
+            "0000-01-01",
+            "2026-13-01",
+            "2026-00-10",
+            "2026-04-31",
+            "2026-1-01",
+            "2026/01/01",
+            "+026-01-01",
+            "2026-01-01 ",
+        ] {
             assert_eq!(Date::parse(bad), None, "{bad}");
         }
         assert!(Date::parse("2000-02-29").is_some());
