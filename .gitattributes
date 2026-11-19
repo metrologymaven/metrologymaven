@@ -6,6 +6,8 @@ fixtures/hal/idl/stamp/** -text
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
+# CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
+fixtures/core/job/cmd/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
 # IO.CLOUD.LAS.HDR fixtures: binary LAS files, a stored ZIP and expected output compared by --check.

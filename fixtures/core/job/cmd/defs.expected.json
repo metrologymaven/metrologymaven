@@ -1,0 +1,65 @@
+{
+  "description": "CORE.JOB.CMD: hand-labelled policy fields of the four job commands, from the leaf's Requirements and Design (REQ-001, REQ-002) and CONSTITUTION 3.1 (cancel a job is W1). Idempotency natural: a repeated call has no further effect. CC-BY-4.0.",
+  "commands": {
+    "job.list_jobs@1": {
+      "side_effect": "R0",
+      "determinism": "N",
+      "idempotency": "natural",
+      "undo": "not_undoable",
+      "mcp_projection": "exposed",
+      "fs_effect": "none",
+      "network": "none",
+      "human_only": false,
+      "exposure": ["cli", "mcp"],
+      "effects": [],
+      "preconditions": [],
+      "params_required": [],
+      "params_properties": ["state"]
+    },
+    "job.show_status@1": {
+      "side_effect": "R0",
+      "determinism": "N",
+      "idempotency": "natural",
+      "undo": "not_undoable",
+      "mcp_projection": "exposed",
+      "fs_effect": "none",
+      "network": "none",
+      "human_only": false,
+      "exposure": ["cli", "mcp"],
+      "effects": [],
+      "preconditions": [],
+      "params_required": ["job"],
+      "params_properties": ["job"]
+    },
+    "job.wait_job@1": {
+      "side_effect": "R0",
+      "determinism": "N",
+      "idempotency": "natural",
+      "undo": "not_undoable",
+      "mcp_projection": "exposed",
+      "fs_effect": "none",
+      "network": "none",
+      "human_only": false,
+      "exposure": ["cli", "mcp"],
+      "effects": [],
+      "preconditions": [],
+      "params_required": ["job"],
+      "params_properties": ["job", "timeout"]
+    },
+    "job.cancel_job@1": {
+      "side_effect": "W1",
+      "determinism": "N",
+      "idempotency": "natural",
+      "undo": "not_undoable",
+      "mcp_projection": "exposed",
+      "fs_effect": "none",
+      "network": "none",
+      "human_only": false,
+      "exposure": ["cli", "mcp"],
+      "effects": ["job.cancel_job@1"],
+      "preconditions": ["job.not_job_owner"],
+      "params_required": ["job"],
+      "params_properties": ["job"]
+    }
+  }
+}

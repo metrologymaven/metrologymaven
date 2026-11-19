@@ -309,6 +309,13 @@ impl Progress {
         self.shared.cancelled.store(true, Ordering::Release);
     }
 
+    /// Requests cancellation and returns whether this call set the flag, i.e. no
+    /// cancellation had been requested before. Atomic: of any number of concurrent callers,
+    /// exactly one gets `true`.
+    pub fn request_cancel(&self) -> bool {
+        !self.shared.cancelled.swap(true, Ordering::AcqRel)
+    }
+
     /// True once [`Progress::cancel`] has been called.
     pub fn is_cancel_requested(&self) -> bool {
         self.shared.cancelled.load(Ordering::Acquire)

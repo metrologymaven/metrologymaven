@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-jobs]
+built_pr: 196
 satisfies: [REQ-CORE.JOB-008]
 covers: []
 depends_on: [CORE.JOB.SCHED]
@@ -75,6 +77,10 @@ Test sleep handlers from `fixtures/core/job/sched/` and `job-status.schema.json`
 ## Open questions
 
 - Cancelling a terminal job commits nothing, so `job.cancel_job@1` can return without a Record Journal entry; confirm with `CORE.BUS.PIPE` that a W1 command may legitimately commit zero events.
+- Build (PR #196): the CLI `fid job *` and MCP `job_*` surfaces are not wired yet. They are to be generated from the four `CommandDef`s once the registry generator exists; until then the acceptance tests drive `JobService::invoke_json` directly.
+- Build (PR #196): the job's owning principal (kind and ID) is kept in an owner table in the `commands` module, outside `sched`, because `JobRecord` carries only the principal kind. Moving the ID into the scheduler's job model is a change to `CORE.JOB.SCHED`.
+- Build (PR #196): `job.show_status@1` and `job.wait_job@1` apply the same owner-or-human rule as cancel (`policy/not_job_owner` otherwise). This is stricter than the Requirements, which do not say who may read another principal's job; confirm or relax.
+- Build (PR #196): timestamps in results are wall-clock UTC in RFC 3339 form with milliseconds (`submitted_at`, `started_at`, `ended_at`), for display. Lists are ordered by the scheduler's monotonic submission time, then job ID, never by the wall-clock fields, so ordering stays deterministic when the system clock steps.
 
 ## Children
 

@@ -597,7 +597,9 @@ dependencies = [
 name = "fid-jobs"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-registry",
  "fid-types",
  "fid-uuid",
 ]
