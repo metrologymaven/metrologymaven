@@ -108,7 +108,7 @@ fn the_shipped_allowlist_parses_and_excludes_random_get() {
         assert_eq!(e.module, "wasi_snapshot_preview1");
         assert!(e.justification.len() >= 20, "{}: justification too short", e.name);
     }
-    for forbidden in ["random_get", "clock_time_get", "path_open", "sock_accept", "sched_yield"] {
+    for forbidden in ["random_get", "path_open", "sock_accept", "sched_yield", "poll_oneoff"] {
         assert!(!allow.entries().iter().any(|e| e.name == forbidden), "{forbidden} must not be allowlisted");
     }
 }

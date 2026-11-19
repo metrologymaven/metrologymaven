@@ -86,6 +86,36 @@ fn ac4_the_only_kernel_function_the_shim_calls_is_evaluate() {
     assert_eq!(code_only(&src("shim.rs")).matches("evaluate(").count(), 1);
 }
 
+fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            rust_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            out.push(path);
+        }
+    }
+}
+
+/// The allowlist admits `clock_time_get` because wasi-libc's timed waits under std's locks
+/// link it. The compensating gate: no code in the crates the module is built from (the shim
+/// and the kernel graph it links, fid-kci, fid-num, fid-types) names a clock API.
+#[test]
+fn no_clock_api_in_the_module_sources() {
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let mut files = Vec::new();
+    for c in ["fid-kernel-wasm", "fid-kci", "fid-num", "fid-types"] {
+        rust_files(&crates.join(c).join("src"), &mut files);
+    }
+    assert!(files.len() > 10);
+    for f in &files {
+        let code = code_only(&std::fs::read_to_string(f).unwrap());
+        for api in ["std::time", "core::time", "Instant", "SystemTime", "clock_gettime", "clock_time_get"] {
+            assert!(!code.contains(api), "{} uses {api}", f.display());
+        }
+    }
+}
+
 #[test]
 fn the_scanner_sees_what_it_should() {
     assert_eq!(
