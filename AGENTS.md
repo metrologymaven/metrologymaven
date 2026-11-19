@@ -55,7 +55,7 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
 ## Dependencies (CONSTITUTION §2.1, D-034)
 
 - Depend on specific nodes (level 2 or 3), not whole domains, and only on the same or lower layers.
-- When a leaf is implemented, its PR adds `built_in: [crate]` (or a repo path such as `tools/<package>` for non-crate code) (and `built_pr: N`) to the leaf's frontmatter and commits the regenerated `generated/` files, including `scope.py milestone milestones/launch-1.md`.
+- When a leaf is implemented, its PR adds `built_in: [crate]` (or a repo path such as `tools/<package>` for non-crate code) (and `built_pr: N`) to the leaf's frontmatter and runs `python tools/scope.py check` to confirm 0 errors. It does not commit the regenerated `generated/` files; those are refreshed on main by a regeneration PR (D-042).
 - If you only read a file or format another node publishes (a test suite, manifest, report, token file), use `uses_artifacts: [NODE.ID]` instead of `depends_on`. Never leave a dependency as a prose "interface note".
 - Mark adoption commands and manual readings `human_only: true` in their Design (D-031).
 

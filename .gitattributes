@@ -8,6 +8,8 @@ fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
+# IO.CLOUD.LAS.HDR fixtures: binary LAS files, a stored ZIP and expected output compared by --check.
+fixtures/io/cloud/las/hdr/** -text
 # DMIS lexer fixtures (IO.DMIS.PARSE.LEX): CRLF, tabs and non-UTF-8 bytes are part of the test.
 fixtures/io/dmis/parse/lex/** -text
 # FLOW.RUNNER.PKG fixtures are digested byte for byte: never convert line endings.

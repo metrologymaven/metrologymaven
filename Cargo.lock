@@ -525,6 +525,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-las"
+version = "0.0.1"
+dependencies = [
+ "fid-io-reg",
+]
+
+[[package]]
 name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
