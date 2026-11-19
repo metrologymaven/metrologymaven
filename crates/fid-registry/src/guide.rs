@@ -376,6 +376,9 @@ pub fn guides_to_value(guides: &[TaskGuide]) -> CValue {
     CValue::Arr(sorted.into_iter().map(TaskGuide::to_value).collect())
 }
 
+/// A definition of the build and its lifecycle state, or why that state cannot be read.
+type Indexed<'a> = (&'a CommandDef, Result<State, String>);
+
 /// Checks the guides of one registry build against its command definitions
 /// (REQ-001..REQ-003). For each guide in the given order: its own shape
 /// ([`TaskGuide::validate`]; a guide that fails it is not looked up further), then each step
@@ -391,7 +394,7 @@ pub fn guides_to_value(guides: &[TaskGuide]) -> CValue {
 /// Last, one `guide_duplicate` per guide ID declared more than once, in ID order. Empty
 /// means the guides pass.
 pub fn check_guides(guides: &[TaskGuide], defs: &[CommandDef]) -> Vec<GuideError> {
-    let mut index: BTreeMap<(&str, u32), (&CommandDef, Result<State, String>)> = BTreeMap::new();
+    let mut index: BTreeMap<(&str, u32), Indexed<'_>> = BTreeMap::new();
     for d in defs {
         let state = LifecycleDecl::from_def(d).map(|l| l.lifecycle.state).map_err(|e| e.to_string());
         index.entry((d.id.as_str(), d.major)).or_insert((d, state));
