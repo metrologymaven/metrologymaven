@@ -10,7 +10,8 @@ Writes, from the leaf's Design rules and the synthetic GDT.CHAR.DPROF placeholde
   (AC-4).
 - digest_mismatch.fidproj: the ASME placeholder and characteristic `c-flat-1` whose spec names
   ASME 1.0.0 with the digest of the *modified* placeholder (AC-5).
-- expected.json: the profile references, the RFC 8785 canonical bytes of the AC-1 and AC-2
+- expected.json: the profile references, the digest of the explicit test key vocabulary
+  (pinned with each stored profile), the RFC 8785 canonical bytes of the AC-1 and AC-2
   journal events, and the canonical form of plan_asme.fidproj.
 
 The RFC 8785 (JCS) serializer here is this script's own (not the Rust code under test). It
@@ -90,12 +91,25 @@ def ref_of(doc):
     return f"dp:{doc['dialect']}-{doc['edition']}@{doc['version']}#sha256:{digest}"
 
 
+def vocabulary_digest():
+    """Digest of the explicit test vocabulary (`../dprof/vocabulary.json`, every key accepting
+    any value, no dialect), per the GDT.CHAR.DPROF vocabulary canonical form:
+    `{"schema": "fid.dprof-vocabulary/1", "dialect": null, "keys": {"<key>": "any"}}`."""
+    text = (DPROF / "vocabulary.json").read_text(encoding="utf-8")
+    keys = json.loads(text, object_pairs_hook=no_dupes)["keys"]
+    assert len(set(keys)) == len(keys)
+    doc = {"schema": "fid.dprof-vocabulary/1", "dialect": None, "keys": {k: "any" for k in keys}}
+    return "sha256:" + hashlib.sha256(jcs(doc).encode("utf-8")).hexdigest()
+
+
 def store(*docs):
+    vocab = vocabulary_digest()
     entries = [
-        {"ref": ref_of(d), "branch": "working", "author": "human", "adopted": False, "profile": d}
+        {"ref": ref_of(d), "branch": "working", "author": "human", "adopted": False, "vocabulary": vocab,
+         "profile": d}
         for d in docs
     ]
-    return {"schema": "fid.dprof-store/1", "profiles": entries, "bindings": {"working": {}, "agent": {}}}
+    return {"schema": "fid.dprof-store/2", "profiles": entries, "bindings": {"working": {}, "agent": {}}}
 
 
 def spec(dialect, standards, profile, origin):
@@ -104,7 +118,7 @@ def spec(dialect, standards, profile, origin):
 
 def project(store_v, tenant, plans, working, agent=None):
     return {
-        "schema": "fid.gdt-spec-project/1",
+        "schema": "fid.gdt-spec-project/2",
         "profile_store": store_v,
         "tenant_default": tenant,
         "plan_defaults": plans,
@@ -142,6 +156,7 @@ def build():
     expected = {
         "note": "Written by make_fixtures.py from the GDT.CHAR.SPEC Design rules; synthetic, CC0.",
         "refs": {"asme_1.0.0": r_asme, "asme_1.0.0_modified": r_asme_mod, "iso_1.0.0": r_iso},
+        "vocabulary": vocabulary_digest(),
         "ac1_event": jcs(ac1),
         "ac2_event": jcs(ac2),
         "plan_asme_canonical": jcs(plan_asme),
