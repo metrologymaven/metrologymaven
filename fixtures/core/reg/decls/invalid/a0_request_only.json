@@ -1,0 +1,52 @@
+{
+ "expect": "projection_too_loose",
+ "decls": [
+  {
+   "id": "settings.set_admin_value",
+   "major": 1,
+   "title": "Fixture settings.set_admin_value@1",
+   "description": "Fixture declaration for side-effect class A0.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "A0",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ]
+}
