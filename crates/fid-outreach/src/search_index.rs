@@ -766,10 +766,8 @@ pub fn run(edition: &Path, budget: &Path) -> Result<Outcome, SearchError> {
     };
     if !outcome.over_budget() {
         let path = edition.join(INDEX_FILE);
-        std::fs::write(&path, &script).map_err(|e| SearchError::IndexUnwritable {
-            path: path.display().to_string(),
-            reason: e.to_string(),
-        })?;
+        std::fs::write(&path, &script)
+            .map_err(|e| SearchError::IndexUnwritable { path: path.display().to_string(), reason: e.to_string() })?;
         outcome.written = true;
     }
     Ok(outcome)
