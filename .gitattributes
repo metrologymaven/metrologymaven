@@ -72,5 +72,7 @@ fixtures/outr/launch/gate/** -text
 tools/tests/fixtures/claims/** -text
 # ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
 tools/tests/fixtures/rfc/** -text
+# ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
+fixtures/block/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
