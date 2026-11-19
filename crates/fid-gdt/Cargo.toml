@@ -1,0 +1,19 @@
+[package]
+name = "fid-gdt"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (spec node GDT.RES.ROWFLOW.ROSTER)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# RFC 8785 canonical JSON parser and writer plus SHA-256 (CORE.JRN.CANON): strict roster
+# parsing (duplicate keys, size and depth limits) and the roster digest.
+fid-canon = { path = "../fid-canon" }
+# Shared `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
