@@ -1,0 +1,13 @@
+# AGENTS.md
+
+<!-- house-rules:begin block=core source=metrologymaven@1111111111111111111111111111111111111111 sha256=453ec154253a8620c8d7ad7b8352e9eca5ba8c9bd5062e162b7b3b77075526ec -->
+## House rules (core)
+
+1. A person is accountable for everything an agent opens.
+2. Check, then maybe claim.
+3. Report only what ran.
+<!-- house-rules:end block=core -->
+
+## Repo-local
+
+Repo-local notes go here.
