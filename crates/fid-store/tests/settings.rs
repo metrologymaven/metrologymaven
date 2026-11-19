@@ -547,7 +547,7 @@ fn a_reset_project_row_falls_through_to_user() {
     env.set(HUMAN, MAIN, LENGTH, Scope::Project, num(0.2)).unwrap();
     env.set(HUMAN, MAIN, LENGTH, Scope::User, num(0.5)).unwrap();
     let r = env.reset(HUMAN, MAIN, LENGTH, Scope::Project).unwrap();
-    assert_eq!(r.to_owned(), parse(br#"{"key":"probe.approach_distance","previous":0.2,"scope":"project"}"#).unwrap());
+    assert_eq!(r, parse(br#"{"key":"probe.approach_distance","previous":0.2,"scope":"project"}"#).unwrap());
     assert_eq!(env.project.0.borrow().get(LENGTH).unwrap(), b"{}");
     assert_eq!(canonical(&env.list(HUMAN, MAIN)), canonical(&expected("expected/list_ac2_outside.json")));
 }

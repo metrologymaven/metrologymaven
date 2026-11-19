@@ -117,9 +117,8 @@ impl FileStore {
         if loaded.unreadable {
             out.push(SettingWarning { key: None, scope, reason: WarningReason::Unreadable });
         }
-        for _ in 0..loaded.malformed_keys {
-            out.push(SettingWarning { key: None, scope, reason: WarningReason::UnknownKey });
-        }
+        let malformed = SettingWarning { key: None, scope, reason: WarningReason::UnknownKey };
+        out.extend(std::iter::repeat_n(malformed, loaded.malformed_keys));
         for k in loaded.values.keys().filter(|k| !declared(k)) {
             out.push(SettingWarning { key: Some(k.clone()), scope, reason: WarningReason::UnknownKey });
         }
