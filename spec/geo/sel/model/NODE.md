@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-sel]
 satisfies: [REQ-GEO.SEL-001, REQ-GEO.SEL-004]
 covers: []
 depends_on: [GEO.TYPES.DIGEST]
@@ -66,6 +67,14 @@ The data model of a selection: either a compact, digested set of indexes into on
 - **Determinism:** D0.
 - **Performance budget:** building from 10⁷ unsorted indexes under 1 s [unverified].
 - **Crate:** `fid-geo-sel` (kernel graph, KNP-1 applies).
+- **Pinned value-affecting choices** (as built in `fid-geo-sel`):
+  - Domain bytes: points 1, triangles 2, faces 3, edges 4. Digest preimage `"FIDSEL" | 0x01 | domain u8 | target element digest [32] | count u64 | (start u64, end u64)*`, all little-endian; `count` is the number of members; ranges are half-open, non-empty, ascending and coalesced (touching ranges merge); the range count is not written. SHA-256 is the portable FIPS 180-4 code of `fid-kci`; the target digest is the GEO.TYPES.DIGEST `ElementDigest` from `fid-geo-types`.
+  - Input lists may be in any order and may repeat an index; a repeat is one member (set semantics), not an error. The empty set is valid. Explicit ranges must have `start < end` (`InvalidRange`).
+  - Bounds: every constructor takes the element's count in the domain; an index `>= count` is `IndexOutOfRange { index, count }` (the first offending index in input order; for an explicit range, `end - 1`). From an element: points of a point set or cloud and mesh vertices are `Points`; mesh triangles are `Triangles`; `Faces` and `Edges` exist only on a CAD body handle and their count comes from GEO.CAD topology (not in GEO.TYPES), so those sets are built with an explicit count. Any other pairing is `DomainMismatch`.
+  - `apply` checks, in order: query body (`NotIndexSet`, queries are GEO.SEL.QUERY's), element digest (`StaleSelection { expected, found }`), domain (`DomainMismatch`), bound (`IndexOutOfRange`; a decoded selection is first bound-checked here). For CAD faces and edges only digest and domain are checked.
+  - `EntityId` is carried as its 16 bytes (the CORE UUID type is above the kernel layer). The query body is opaque canonical bytes, at most 64 KiB.
+  - Serialised selection: `"FIDSLC" | 0x01 | target [16] | target_digest [32] | body tag u8`, then for tag 1 `domain u8 | n_ranges u64 | ranges`, for tag 2 `len u32 | query bytes`. Decoding rejects non-canonical ranges, unknown tags, truncation and trailing bytes, and bounds `n_ranges` by the input length before allocating.
+  - Conversion to an explicit list takes a caller limit (`TooManyIndices`). The builder merges ascending runs as they arrive, so memory is O(ranges) for run-ordered input; stored sets are shrunk to fit.
 
 ## Test fixtures
 
