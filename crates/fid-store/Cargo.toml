@@ -1,6 +1,6 @@
 [package]
 name = "fid-store"
-description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store, evictable cache (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS, CORE.STO.CACHE)"
+description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store, evictable cache, project database schema (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS, CORE.STO.CACHE, CORE.STO.SQL.SCHEMA)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,12 @@ fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
 # Incremental SHA-256 while verifying chunks; already in the tree through fid-canon.
 sha2 = "0.10"
+# SQLite binding for project.db (CORE.STO.SQL). Exact pin and scope: decisions/D-043.
+# `bundled` compiles SQLite (public domain) from the C source shipped in libsqlite3-sys, so every
+# platform runs the same SQLite version. Default features off: no statement cache (hashlink) and
+# no wasm32-unknown-unknown backend (sqlite-wasm-rs). 0.40.2 is the newest release whose
+# toolchain needs fit the workspace MSRV 1.87 (0.41+ declares rust-version 1.89).
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }
 
 [target.'cfg(unix)'.dependencies]
 # Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),
