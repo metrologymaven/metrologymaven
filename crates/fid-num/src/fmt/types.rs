@@ -135,7 +135,8 @@ pub struct Reported {
     pub formatter: FormatterId,
     /// Digits added by the side-preserving rule (0 when no limit is violated).
     pub digits_added: u16,
-    /// True when a violated limit could not be shown strictly at 17 significant digits.
+    /// True when half-even rounding could not show a violated limit strictly at 17
+    /// significant digits, so the last digit was rounded toward the violated side instead.
     pub tie_at_max_precision: bool,
 }
 

@@ -12,3 +12,5 @@ ac6_sig18 3f50624dd2f1a9fc length mm s18 - - err:precision_out_of_range
 ac6_inverted 3f50624dd2f1a9fc length mm d3 0.002 0.001 err:limits_inverted
 ac8_no_minus bd719799812dea11 length mm d3 - - ok:0.000:0:0
 ac8_lower_zero bd719799812dea11 length mm d3 0 - ok:-0.000000001:6:0
+ac9_directed_at_cap 3fe032096787ce96 length in s15 - 0.506108 ok:19.925511811023623:2:1
+ac9_directed_lower bfe032096787ce96 length in s15 -0.506108 - ok:-19.925511811023623:2:1

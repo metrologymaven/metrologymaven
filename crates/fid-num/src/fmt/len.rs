@@ -37,8 +37,12 @@
 //! one if `kdec::cmp(x, lower)` is `Less`; if neither, the output is the requested one with
 //! `digits_added = 0` even when it equals a limit. Otherwise, starting at the requested
 //! precision: if the output, converted back exactly to SI units (`q * 10^-p * f(u)`), is
-//! strictly beyond the violated limit, stop. Else, if the output is at the cap, stop with
-//! `tie_at_max_precision = true`. Else add one digit (`p + 1` decimals, or `n + 1`
+//! strictly beyond the violated limit, stop. Else, if the output is at the cap, replace it by
+//! the value rounded at the same precision toward the violated side (toward +infinity for an
+//! upper limit, toward -infinity for a lower one: the last digit moves away from the limit)
+//! and stop with `tie_at_max_precision = true`. That output is at least as far beyond the
+//! limit as `x` itself, so a printed value is never on the wrong side of a violated limit
+//! and never equal to it. Else add one digit (`p + 1` decimals, or `n + 1`
 //! significant digits), count it in `digits_added`, and repeat. The cap is `n = 17` for
 //! significant digits and `k + 1 + p >= 17` for decimals (`k` as above; `k = 0` for zero),
 //! so a request that already shows 17 or more digits is never extended. Decimals added by
@@ -126,6 +130,17 @@ struct Exact {
     k: i32,
 }
 
+/// How the magnitude `|v| * 10^p` is turned into an integer.
+#[derive(Clone, Copy)]
+enum Rnd {
+    /// Round half to even (every output except a capped side-rule output).
+    HalfEven,
+    /// Away from zero (ceiling of the magnitude).
+    Up,
+    /// Toward zero (floor of the magnitude).
+    Down,
+}
+
 /// A rounded output `(-1)^neg * q * 10^-p`.
 struct Out {
     q: Big,
@@ -152,7 +167,7 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
     }
     let v = exact(op, x, &fac)?;
     let mut prec = prec;
-    let mut out = round_at(op, &v, prec)?;
+    let mut out = round_at(op, &v, prec, Rnd::HalfEven)?;
 
     let mut side = None;
     if let Some(hi) = &limits.upper {
@@ -182,7 +197,12 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
                     Prec::Dec(skip_to.min(SIG_CAP - 1 - v.k))
                 }
                 _ => {
+                    // At the cap: round the last digit toward the violated side instead
+                    // (REQ-005). Away from zero for an upper limit and a positive value or
+                    // a lower limit and a negative value, toward zero otherwise.
                     tie = true;
+                    let dir = if (want == Ordering::Greater) != v.neg { Rnd::Up } else { Rnd::Down };
+                    out = round_at(op, &v, prec, dir)?;
                     break;
                 }
             };
@@ -192,7 +212,7 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
             };
             digits_added = digits_added.saturating_add(u16::try_from(added).unwrap_or(u16::MAX));
             prec = next;
-            out = round_at(op, &v, prec)?;
+            out = round_at(op, &v, prec, Rnd::HalfEven)?;
         }
     }
     Ok(Reported {
@@ -267,8 +287,9 @@ fn decimal_exponent(op: &'static str, n: &Big, d: &Big) -> Result<i32, NumError>
     Err(capacity(op))
 }
 
-/// One half-even rounding of `|v|` at the given precision (step 3).
-fn round_at(op: &'static str, v: &Exact, prec: Prec) -> Result<Out, NumError> {
+/// One rounding of `|v|` at the given precision (step 3): half-even, or directed at the
+/// side-rule cap.
+fn round_at(op: &'static str, v: &Exact, prec: Prec, rnd: Rnd) -> Result<Out, NumError> {
     let mut p = match prec {
         Prec::Dec(p) => p,
         Prec::Sig(n) => n - 1 - v.k,
@@ -284,9 +305,10 @@ fn round_at(op: &'static str, v: &Exact, prec: Prec) -> Result<Out, NumError> {
     let (mut q, r) = n.div_rem(&d).ok_or_else(|| capacity(op))?;
     let mut twice = r;
     twice.shl(1);
-    match twice.cmp_mag(&d) {
-        Ordering::Greater => q.add_small(1),
-        Ordering::Equal if q.is_odd() => q.add_small(1),
+    match (rnd, twice.cmp_mag(&d)) {
+        (Rnd::HalfEven, Ordering::Greater) => q.add_small(1),
+        (Rnd::HalfEven, Ordering::Equal) if q.is_odd() => q.add_small(1),
+        (Rnd::Up, _) if !r.is_zero() => q.add_small(1),
         _ => {}
     }
     if let Prec::Sig(digits) = prec {

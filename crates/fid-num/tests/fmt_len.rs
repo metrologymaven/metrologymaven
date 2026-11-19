@@ -152,8 +152,8 @@ fn canonical_form() {
 }
 
 /// Step 5 of the Design under `kdec::cmp_dec`: wherever the output in metres fits a
-/// `Decimal`, a violated limit that is not a tie is shown strictly on its side, and a tie
-/// is not.
+/// `Decimal`, a violated limit is shown strictly on its side, also when the cap was reached
+/// (REQ-005: directed rounding at the cap).
 #[test]
 fn side_rule_agrees_with_cmp_dec() {
     let (cases, _) = golden();
@@ -172,7 +172,7 @@ fn side_rule_agrees_with_cmp_dec() {
         };
         match side {
             Some((l, want)) => {
-                assert_eq!(kdec::cmp_dec(&out, &l) == want, !rep.tie_at_max_precision, "{:?} {}", c.spec, rep.value);
+                assert_eq!(kdec::cmp_dec(&out, &l), want, "{:?} {}", c.spec, rep.value);
                 checked += 1;
             }
             None => assert_eq!((rep.digits_added, rep.tie_at_max_precision), (0, false)),
@@ -334,4 +334,21 @@ fn reported_record_and_ids() {
     assert_eq!((r.exact_conversion.from, r.exact_conversion.to), (Unit::One, Unit::One));
     let r = format(2.5, &spec).unwrap();
     assert_eq!(r.value, "2", "half-even");
+}
+
+/// AC-9 (review of #200): half-even at the cap would print 19.925511811023622 in, below the
+/// violated upper limit 0.506108 m; the capped output is rounded toward the violated side.
+#[test]
+fn ac9_directed_rounding_at_cap() {
+    let inch = dec("0.0254");
+    for (name, lim, want) in [
+        ("ac9_directed_at_cap", "0.506108", Ordering::Greater),
+        ("ac9_directed_lower", "-0.506108", Ordering::Less),
+    ] {
+        let (_, r) = ac(name);
+        let v = r.unwrap();
+        assert!(v.tie_at_max_precision, "{name}");
+        let metres = dec(&v.value).mul(&inch).unwrap();
+        assert_eq!(kdec::cmp_dec(&metres, &dec(lim)), want, "{name}: {}", v.value);
+    }
 }

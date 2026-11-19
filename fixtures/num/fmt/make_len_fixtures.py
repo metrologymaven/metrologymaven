@@ -15,7 +15,13 @@ The oracle never runs the Rust code and uses only the standard library:
    `Decimal(x)`, `scaleb`, then `quantize` or a context of `n` digits with
    ROUND_HALF_EVEN) printed with `format(d, "f")`. Its string must equal path 1 for every
    case, or the script fails before writing anything.
-3. A round-trip assertion: for unit m and unit 1 with 17 significant digits,
+3. A third, integer-only path for inches: `Decimal(x)` as c * 10^e, times 10^4, exact
+   division by 254, and the rounding decided on the integer remainder. Its string must
+   equal path 1 for every inch case.
+4. At the side-rule cap the oracle rounds toward the violated side (signed ceiling for an
+   upper limit, floor for a lower one), and it asserts for every case with a violated limit
+   that the printed decimal, converted back exactly, lies strictly beyond that limit.
+5. A round-trip assertion: for unit m and unit 1 with 17 significant digits,
    `float(output) == x` bit for bit (except -0.0, whose sign is not printed by rule).
 
 The rules modelled are the ones pinned in spec/krn/num/fmt/len/NODE.md, section Design.
@@ -35,7 +41,7 @@ import math
 import random
 import struct
 import sys
-from decimal import ROUND_HALF_EVEN, Context, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Context, Decimal
 from fractions import Fraction
 from pathlib import Path
 
@@ -87,10 +93,14 @@ def value_exp(v):
     return 0 if v == 0 else dexp(abs(v))
 
 
-def round_at(v, mode, n, k):
-    """(q, p): q = round_half_even(v * 10^p), the output is q * 10^-p."""
+def round_at(v, mode, n, k, rnd="he"):
+    """(q, p): q = v * 10^p rounded to an integer, the output is q * 10^-p.
+
+    rnd: "he" round half to even; "ceil" toward +infinity; "floor" toward -infinity
+    (signed, unlike the Rust code, which rounds the magnitude up or down)."""
     p = n if mode == "d" else n - 1 - k
-    q = round(v * Fraction(10) ** p)
+    t = v * Fraction(10) ** p
+    q = {"he": round, "ceil": math.ceil, "floor": math.floor}[rnd](t)
     if mode == "s" and abs(q) == 10**n:
         q = q // 10
         p -= 1
@@ -148,11 +158,21 @@ def oracle(x, formatter, unit, prec, lower, upper):
             if (which == "upper" and out_m > lim) or (which == "lower" and out_m < lim):
                 break
             if at_cap(mode, n, k):
+                # REQ-005: at the cap, round toward the violated side instead.
                 tie = 1
+                q, p = round_at(v, mode, n, k, "ceil" if which == "upper" else "floor")
                 break
             n += 1
             added += 1
             q, p = round_at(v, mode, n, k)
+    if side is not None:
+        # The printed decimal is never on the wrong side of a violated limit: it is beyond
+        # it or (never, under this rule) equal to it.
+        which, lim = side
+        out_m = Fraction(q, 1) / Fraction(10) ** p / SCALE[unit]
+        ok = out_m >= lim if which == "upper" else out_m <= lim
+        if not ok or out_m == lim:
+            raise SystemExit(f"side violated: {hx(x)} {unit} {mode}{n} {which} {lim} -> {render(neg, q, p)}")
     return f"ok:{render(neg, q, p)}:{added}:{tie}"
 
 
@@ -161,14 +181,14 @@ def oracle(x, formatter, unit, prec, lower, upper):
 # ---------------------------------------------------------------------------------------------
 
 
-def decimal_path(x, unit, mode, n):
+def decimal_path(x, unit, mode, n, rounding=ROUND_HALF_EVEN):
     d = BIG_CTX.scaleb(Decimal(x), DEC_SHIFT[unit])
     if mode == "d":
-        r = d.quantize(Decimal(1).scaleb(-n), context=BIG_CTX)
+        r = d.quantize(Decimal(1).scaleb(-n), rounding=rounding, context=BIG_CTX)
     elif d == 0:
         r = Decimal(0).quantize(Decimal(1).scaleb(-(n - 1)), context=BIG_CTX)
     else:
-        r = Context(prec=n, rounding=ROUND_HALF_EVEN, Emin=-999999, Emax=999999).plus(d)
+        r = Context(prec=n, rounding=rounding, Emin=-999999, Emax=999999).plus(d)
         # plus() does not pad an exact short value with zeros; quantize (exact here) does.
         r = r.quantize(Decimal(1).scaleb(r.adjusted() - n + 1), context=BIG_CTX)
     s = format(r, "f")
@@ -177,14 +197,69 @@ def decimal_path(x, unit, mode, n):
     return s
 
 
+# ---------------------------------------------------------------------------------------------
+# Path 3: integers only, for inches (Decimal(x) * 10^4, exact division by 254)
+# ---------------------------------------------------------------------------------------------
+
+
+def inch_path(x, mode, n, rounding):
+    """x as an exact decimal c * 10^e, v = c * 10^(e+4) / 254, then integer division with
+    the rounding decided on the remainder. Shares no code with paths 1 and 2."""
+    sign, digs, e = Decimal(x).as_tuple()
+    c = int("".join(map(str, digs)) or "0")
+    num, den = c, 254
+    if e + 4 >= 0:
+        num *= 10 ** (e + 4)
+    else:
+        den *= 10 ** (-(e + 4))
+    if mode == "d":
+        p = n
+    elif num == 0:
+        p = n - 1
+    else:
+        s = max(0, len(str(den)) - len(str(num)) + 2)
+        k = len(str(num * 10**s // den)) - 1 - s
+        p = n - 1 - k
+
+    def div(p):
+        a, b = (num * 10**p, den) if p >= 0 else (num, den * 10 ** (-p))
+        q, r = divmod(a, b)
+        up_mag = (rounding == "ceil" and not sign) or (rounding == "floor" and sign)
+        if rounding == "he":
+            if 2 * r > b or (2 * r == b and q % 2 == 1):
+                q += 1
+        elif up_mag and r:
+            q += 1
+        return q
+
+    q = div(p)
+    if mode == "s" and q == 10**n:
+        q, p = 10 ** (n - 1), p - 1
+    digits = str(q)
+    out = digits + "0" * (-p) if p <= 0 and q else digits
+    if p > 0:
+        digits = digits.rjust(p + 1, "0")
+        out = digits[:-p] + "." + digits[-p:]
+    return ("-" if sign and q else "") + out
+
+
 def cross_check(x, formatter, unit, prec, lower, upper, expect):
     if not expect.startswith("ok:"):
         return
-    value, added, _ = expect[3:].rsplit(":", 2)
+    value, added, tie = expect[3:].rsplit(":", 2)
     mode, n = prec
     n += int(added)
-    if unit != "in":
-        alt = decimal_path(x, unit, mode, n)
+    rnd = "he"
+    if tie == "1":
+        X = Fraction(x)
+        rnd = "ceil" if upper is not None and X > Fraction(Decimal(upper)) else "floor"
+    if unit == "in":
+        alt = inch_path(x, mode, n, rnd)
+        if alt != value:
+            raise SystemExit(f"inch path disagrees: {hx(x)} {mode}{n} {rnd}: {alt} != {value}")
+    else:
+        dec_rnd = {"he": ROUND_HALF_EVEN, "ceil": ROUND_CEILING, "floor": ROUND_FLOOR}[rnd]
+        alt = decimal_path(x, unit, mode, n, dec_rnd)
         if alt != value:
             raise SystemExit(f"decimal path disagrees: {hx(x)} {unit} {mode}{n}: {alt} != {value}")
     if unit in ("m", "1") and mode == "s" and n == MAX_SIG and x != 0:
@@ -459,6 +534,10 @@ def ac_cases():
         ("ac6_inverted", (1e-3, "length", "mm", ("d", 3), "0.002", "0.001")),
         ("ac8_no_minus", (-1e-12, "length", "mm", ("d", 3), None, None)),
         ("ac8_lower_zero", (-1e-12, "length", "mm", ("d", 3), "0", None)),
+        # Review of #200: half-even at 17 digits lands below the upper limit; the capped
+        # output is rounded up instead (REQ-005, AC-9).
+        ("ac9_directed_at_cap", (0.506108, "length", "in", ("s", 15), None, "0.506108")),
+        ("ac9_directed_lower", (-0.506108, "length", "in", ("s", 15), "-0.506108", None)),
     ]
     lines = [
         "# KRN.NUM.FMT.LEN acceptance examples v1 (CC-BY-4.0). Generated by make_len_fixtures.py.",
