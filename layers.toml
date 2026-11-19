@@ -19,7 +19,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-scan-cmp" = "kernel"
 # Mesh quality report (SCAN.POLY.QUAL), reused by SCAN.MESHOP: KNP-1, only fid-geo-types and fid-num.
 "fid-scan-mesh" = "kernel"
-# B-rep model (GEO.CAD.TOPO.MODEL): L0 library code, KNP-1; only fid-geo-nurbs, fid-kci, fid-types.
+# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
+# fid-kci, fid-types.
 "fid-geo-cad" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest.
 "fid-align-solve" = "kernel"
