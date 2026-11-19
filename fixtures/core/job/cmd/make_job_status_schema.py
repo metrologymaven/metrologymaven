@@ -20,12 +20,30 @@ UUID = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 COMMAND_ID = "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$"
 
 
-def time_field(nullable):
+# Wall-clock UTC, RFC 3339 with exactly three fractional digits (milliseconds).
+TIMESTAMP = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$"
+
+SUBMITTED_AT_DOC = (
+    "Wall-clock time (UTC, RFC 3339, milliseconds) when the job was submitted. "
+    "For display only: job lists are ordered by the scheduler's monotonic submission time, then job ID, "
+    "never by this field."
+)
+STARTED_AT_DOC = (
+    "Wall-clock time (UTC, RFC 3339, milliseconds) when the job started running; "
+    "null while it is queued or if it never ran."
+)
+ENDED_AT_DOC = (
+    "Wall-clock time (UTC, RFC 3339, milliseconds) when the job reached a terminal "
+    "state; null until then."
+)
+
+
+def time_field(nullable, description):
     return {
-        "type": ["number", "null"] if nullable else "number",
-        "minimum": 0,
-        "x-quantity": "time",
-        "x-unit": "s",
+        "type": ["string", "null"] if nullable else "string",
+        "format": "date-time",
+        "pattern": TIMESTAMP,
+        "description": description,
     }
 
 
@@ -53,9 +71,9 @@ SCHEMA = {
         "progress": {"type": "number", "minimum": 0, "maximum": 1},
         # CORE.JOB.PROG keeps at most 128 characters of a stage label.
         "stage": {"type": "string", "maxLength": 128},
-        "submitted_at": time_field(False),
-        "started_at": time_field(True),
-        "ended_at": time_field(True),
+        "submitted_at": time_field(False, SUBMITTED_AT_DOC),
+        "started_at": time_field(True, STARTED_AT_DOC),
+        "ended_at": time_field(True, ENDED_AT_DOC),
         "error": {"enum": ["timeout", "cancelled", "handler_failed", "not_found", "queue_full", None]},
     },
 }

@@ -11,11 +11,11 @@
 use fid_bus::BusError;
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_jobs::{
-    command_defs, context_types, job_status_schema, Caller, CancelToken, Clock, Execution, HandlerError, JobClass,
-    JobErrorCode, JobId, JobOpts, JobParams, JobRecord, JobService, JobState, JobStatus, Jobs, JobsConfig,
-    JournalEffect, ManualClock, NullLifecycleSink, PrincipalId, PrincipalKind, ProgressSink, ProgressSnapshot,
-    WaitParams, WaitResult, CANCEL_JOB, CANCEL_PRECONDITION, DEFAULT_WAIT_TIMEOUT, LIST_JOBS, MAX_PARAMS_BYTES,
-    SHOW_STATUS, WAIT_JOB,
+    command_defs, context_types, format_rfc3339, job_status_schema, Caller, CancelToken, Clock, Execution,
+    HandlerError, JobClass, JobErrorCode, JobId, JobOpts, JobParams, JobRecord, JobService, JobState, JobStatus, Jobs,
+    JobsConfig, JournalEffect, ManualClock, NullLifecycleSink, PrincipalId, PrincipalKind, Progress, ProgressSink,
+    ProgressSnapshot, SystemClock, WaitParams, WaitResult, CANCEL_JOB, CANCEL_PRECONDITION, DEFAULT_WAIT_TIMEOUT,
+    LIST_JOBS, MAX_PARAMS_BYTES, SHOW_STATUS, TIMESTAMP_PATTERN, WAIT_CANCEL_POLL, WAIT_JOB,
 };
 use fid_registry::compile_command;
 use fid_types::CommandId;
@@ -162,7 +162,12 @@ fn eventually(what: &str, mut cond: impl FnMut() -> bool) {
 }
 
 fn state_of(svc: &JobService<String>, id: JobId) -> JobState {
-    svc.jobs().status(id).unwrap().state
+    svc.record(id).unwrap().state
+}
+
+/// A call token nobody cancels (the bus token of an ordinary call).
+fn quiet() -> CancelToken {
+    Progress::new(Arc::new(SystemClock::new())).cancel_token()
 }
 
 /// Record Journal stub, written only by the test bus from reported commits.
@@ -185,7 +190,7 @@ fn run(
     command: &str,
     params: &str,
 ) -> Result<CValue, BusError> {
-    let inv = svc.invoke_json(who, command, params.as_bytes())?;
+    let inv = svc.invoke_json(who, command, params.as_bytes(), &quiet())?;
     if let Some(c) = inv.commit {
         journal.entries.lock().unwrap().push(c);
     }
@@ -217,6 +222,20 @@ fn is_lower_uuid(t: &str) -> bool {
         })
 }
 
+/// `YYYY-MM-DDTHH:MM:SS.mmmZ`, checked character by character.
+fn is_timestamp(t: &str) -> bool {
+    let b = t.as_bytes();
+    b.len() == 24
+        && b.iter().enumerate().all(|(i, &c)| match i {
+            4 | 7 => c == b'-',
+            10 => c == b'T',
+            13 | 16 => c == b':',
+            19 => c == b'.',
+            23 => c == b'Z',
+            _ => c.is_ascii_digit(),
+        })
+}
+
 fn is_type(v: &CValue, t: &str) -> bool {
     match t {
         "object" => matches!(v, CValue::Obj(_)),
@@ -242,7 +261,12 @@ fn validate(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
     let CValue::Obj(sch) = schema else { return Err(format!("{at}: schema is not an object")) };
     for (k, rule) in sch {
         match k.as_str() {
-            "$schema" | "$id" | "title" | "x-quantity" | "x-unit" => {}
+            "$schema" | "$id" | "title" | "description" | "x-quantity" | "x-unit" => {}
+            "format" => {
+                if s(rule) != "date-time" {
+                    return Err(format!("{at}: format {} not supported by the test checker", s(rule)));
+                }
+            }
             "type" => {
                 let ok = match rule {
                     CValue::Str(t) => is_type(v, t),
@@ -263,6 +287,7 @@ fn validate(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
                 let ok = match s(rule) {
                     p if p == fid_jobs::JOB_ID_PATTERN => is_lower_uuid(t),
                     p if p == CommandId::PATTERN => CommandId::is_valid(t),
+                    p if p == TIMESTAMP_PATTERN => is_timestamp(t),
                     p => return Err(format!("{at}: pattern {p} not supported by the test checker")),
                 };
                 if !ok {
@@ -353,6 +378,9 @@ fn record(state: JobState) -> JobRecord {
         submitted_at: Duration::ZERO,
         started_at: None,
         ended_at: None,
+        submitted_wall: Duration::ZERO,
+        started_wall: None,
+        ended_wall: None,
         error: None,
         error_detail: None,
     }
@@ -366,6 +394,9 @@ fn status_json_matches_fixtures() {
         submitted_at: Duration::from_millis(1500),
         started_at: Some(Duration::from_secs(2)),
         ended_at: Some(Duration::from_millis(2250)),
+        submitted_wall: Duration::from_millis(1_700_000_000_500),
+        started_wall: Some(Duration::from_millis(1_700_000_002_000)),
+        ended_wall: Some(Duration::from_millis(1_700_000_002_250)),
         error: Some(JobErrorCode::Timeout),
         error_detail: Some("handler text is not part of the contract".to_string()),
         ..record(JobState::Failed)
@@ -383,6 +414,8 @@ fn status_json_matches_fixtures() {
         progress: ProgressSnapshot { fraction: 0.5, stage: "scan".to_string(), report_seq: 1 },
         submitted_at: Duration::from_millis(1),
         started_at: Some(Duration::from_millis(125)),
+        submitted_wall: Duration::from_millis(1_700_000_000_001),
+        started_wall: Some(Duration::from_millis(1_700_000_000_125)),
         ..record(JobState::Running)
     };
     let waited = WaitResult { status: JobStatus::from_record(&running), timed_out: true };
@@ -456,7 +489,7 @@ fn ac1_show_status_running() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
     let gate = Arc::new(Gate::default());
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let id = svc.submit_as(&s_, held(&gate), opts()).unwrap();
     eventually("job running", || state_of(&svc, id) == JobState::Running);
     let out = run(&svc, &journal, &s_, SHOW_STATUS, &job_param(id)).unwrap();
@@ -475,7 +508,7 @@ fn ac2_cancel_own_job() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
     let gate = Arc::new(Gate::default());
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let id = svc.submit_as(&s_, held(&gate), opts()).unwrap();
     eventually("job running", || state_of(&svc, id) == JobState::Running);
 
@@ -506,7 +539,7 @@ fn cancel_twice_while_running_commits_once() {
         }
         Ok("late".to_string())
     });
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let id = svc.submit_as(&s_, deaf, opts()).unwrap();
     eventually("job running", || state_of(&svc, id) == JobState::Running);
     let first = svc.cancel_job(&s_, &JobParams { job: id }).unwrap();
@@ -515,7 +548,7 @@ fn cancel_twice_while_running_commits_once() {
     assert_eq!(second.commit, None);
     assert_eq!(second.status.state, JobState::Running);
     gate.open();
-    let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }).unwrap();
+    let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }, &quiet()).unwrap();
     assert_eq!(end.status.state, JobState::Cancelled, "cancellation wins over a late result");
 }
 
@@ -525,7 +558,7 @@ fn cancel_queued_job() {
     let svc = service(1, None);
     let journal = RecordJournal::default();
     let gate = Arc::new(Gate::default());
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let _first = svc.submit_as(&s_, held(&gate), opts()).unwrap();
     let queued = svc.submit_as(&s_, held(&gate), opts()).unwrap();
     assert_eq!(state_of(&svc, queued), JobState::Queued);
@@ -541,13 +574,13 @@ fn ac3_agent_cannot_cancel_human_job() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
     let gate = Arc::new(Gate::default());
-    let h = caller(PrincipalKind::Human, "H");
-    let a = caller(PrincipalKind::Agent, "A");
+    let h = caller(PrincipalKind::Human, "h");
+    let a = caller(PrincipalKind::Agent, "a");
     let id = svc.submit_as(&h, held(&gate), opts()).unwrap();
     eventually("job running", || state_of(&svc, id) == JobState::Running);
     assert_err(run(&svc, &journal, &a, CANCEL_JOB, &job_param(id)), "policy", "not_job_owner");
     assert_eq!(state_of(&svc, id), JobState::Running);
-    assert!(!svc.jobs().progress(id).unwrap().is_cancel_requested(), "no cancellation was requested");
+    assert!(!svc.is_cancel_requested(id).unwrap(), "no cancellation was requested");
     assert!(journal.entries().is_empty());
     // The agent cannot read it either (fail closed), but its owner can.
     assert_err(run(&svc, &journal, &a, SHOW_STATUS, &job_param(id)), "policy", "not_job_owner");
@@ -563,24 +596,33 @@ fn cancel_rule_matrix() {
     let svc = service(64, None);
     let gate = Arc::new(Gate::default());
     for (i, case) in arr(get(&cases, "cases")).iter().enumerate() {
-        let id = match get(case, "owner") {
-            CValue::Null => svc.jobs().submit(held(&gate), opts()).unwrap(),
-            owner => svc.submit_as(&caller_of(owner), held(&gate), opts()).unwrap(),
-        };
+        let id = svc.submit_as(&caller_of(get(case, "owner")), held(&gate), opts()).unwrap();
         eventually("job running", || state_of(&svc, id) == JobState::Running);
-        let who = caller_of(get(case, "caller"));
-        let allowed = *get(case, "allowed") == CValue::Bool(true);
+        let c = get(case, "caller");
+        let expect = s(get(case, "expect"));
+        if expect == "rejected" {
+            // A non-lowercase (or otherwise malformed) ID never becomes a caller.
+            let e = PrincipalId::parse(s(get(c, "id"))).unwrap_err();
+            assert_eq!((e.code().as_str(), e.reason()), ("validation", "name"), "case {i}");
+            assert!(!svc.is_cancel_requested(id).unwrap(), "case {i}: job was touched");
+            continue;
+        }
+        let who = caller_of(c);
         let shown = svc.show_status(&who, &JobParams { job: id });
         let cancelled = svc.cancel_job(&who, &JobParams { job: id });
-        if allowed {
-            assert!(shown.is_ok(), "case {i}: status refused");
-            let out = cancelled.unwrap_or_else(|e| panic!("case {i}: cancel refused: {e}"));
-            assert_eq!(out.commit, Some(JournalEffect { event_type: CANCEL_JOB, job: id }), "case {i}");
-        } else {
-            for e in [shown.map(|_| ()).unwrap_err(), cancelled.map(|_| ()).unwrap_err()] {
-                assert_eq!((e.code().as_str(), e.reason()), ("policy", "not_job_owner"), "case {i}");
+        match expect {
+            "allowed" => {
+                assert!(shown.is_ok(), "case {i}: status refused");
+                let out = cancelled.unwrap_or_else(|e| panic!("case {i}: cancel refused: {e}"));
+                assert_eq!(out.commit, Some(JournalEffect { event_type: CANCEL_JOB, job: id }), "case {i}");
             }
-            assert!(!svc.jobs().progress(id).unwrap().is_cancel_requested(), "case {i}: job was touched");
+            "denied" => {
+                for e in [shown.map(|_| ()).unwrap_err(), cancelled.map(|_| ()).unwrap_err()] {
+                    assert_eq!((e.code().as_str(), e.reason()), ("policy", "not_job_owner"), "case {i}");
+                }
+                assert!(!svc.is_cancel_requested(id).unwrap(), "case {i}: job was touched");
+            }
+            other => panic!("case {i}: unknown expectation {other}"),
         }
     }
     gate.open();
@@ -592,7 +634,7 @@ fn cancel_rule_matrix() {
 fn ac4_wait_timeout_and_terminal() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let id = svc.submit_as(&s_, sleeper(2000), opts()).unwrap();
 
     let start = Instant::now();
@@ -655,7 +697,7 @@ fn list_ties_ordered_by_id() {
     let clock = Arc::new(ManualClock::new());
     let svc = service(1, Some(clock));
     let gate = Arc::new(Gate::default());
-    let h = caller(PrincipalKind::Human, "H");
+    let h = caller(PrincipalKind::Human, "h");
     let mut ids: Vec<JobId> = (0..20).map(|_| svc.submit_as(&h, held(&gate), opts()).unwrap()).collect();
     ids.sort();
     let got: Vec<JobId> = svc.list_jobs(&h, &Default::default()).unwrap().jobs.iter().map(|j| j.id).collect();
@@ -668,7 +710,7 @@ fn list_ties_ordered_by_id() {
 fn ac6_unknown_job_not_found() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
-    for who in [caller(PrincipalKind::Script, "S"), caller(PrincipalKind::Human, "H")] {
+    for who in [caller(PrincipalKind::Script, "s"), caller(PrincipalKind::Human, "h")] {
         for command in [SHOW_STATUS, WAIT_JOB, CANCEL_JOB] {
             assert_err(
                 run(&svc, &journal, &who, command, &format!("{{\"job\":\"{UNKNOWN}\"}}")),
@@ -678,7 +720,7 @@ fn ac6_unknown_job_not_found() {
         }
     }
     // list_jobs takes no job ID; an empty scheduler lists nothing.
-    let out = run(&svc, &journal, &caller(PrincipalKind::Human, "H"), LIST_JOBS, "{}").unwrap();
+    let out = run(&svc, &journal, &caller(PrincipalKind::Human, "h"), LIST_JOBS, "{}").unwrap();
     assert!(arr(get(&out, "jobs")).is_empty());
     assert!(journal.entries().is_empty());
 }
@@ -689,15 +731,16 @@ fn ac6_unknown_job_not_found() {
 fn cancel_terminal_job_commits_nothing() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
-    let s_ = caller(PrincipalKind::Script, "S");
+    let s_ = caller(PrincipalKind::Script, "s");
     let id = svc.submit_as(&s_, sleeper(0), opts()).unwrap();
-    let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }).unwrap();
+    let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }, &quiet()).unwrap();
     assert_eq!(end.status.state, JobState::Succeeded);
     let before = run(&svc, &journal, &s_, SHOW_STATUS, &job_param(id)).unwrap();
     let out = run(&svc, &journal, &s_, CANCEL_JOB, &job_param(id)).unwrap();
     assert_eq!(out, before);
     assert!(journal.entries().is_empty());
-    assert_eq!(svc.jobs().take_result(id), Some("slept".to_string()), "the result is untouched");
+    assert_eq!(svc.record(id).unwrap().state, JobState::Succeeded, "the job is untouched");
+    assert!(!svc.is_cancel_requested(id).unwrap());
 }
 
 // ------------------------------------------------------------------ fail closed
@@ -706,7 +749,7 @@ fn cancel_terminal_job_commits_nothing() {
 fn invalid_params_are_refused() {
     let svc = service(2, None);
     let journal = RecordJournal::default();
-    let h = caller(PrincipalKind::Human, "H");
+    let h = caller(PrincipalKind::Human, "h");
     let cases = fixture("params_invalid.json");
     for (i, case) in arr(get(&cases, "cases")).iter().enumerate() {
         let r = run(&svc, &journal, &h, s(get(case, "command")), s(get(case, "params")));
@@ -746,13 +789,16 @@ fn wait_timeout_bounds_and_default() {
 
 #[test]
 fn principal_ids_are_bounded_and_case_insensitive() {
-    let long = "x".repeat(257);
-    for bad in ["", "a b", "caf\u{e9}", "tab\there", long.as_str()] {
+    let long = "x".repeat(129);
+    for bad in ["", "a b", "caf\u{e9}", "tab\there", "S", "Jo@example.org", "jo@Example.org", long.as_str()] {
         let e = PrincipalId::parse(bad).unwrap_err();
         assert_eq!((e.code().as_str(), e.reason()), ("validation", "name"), "{bad:?}");
     }
-    assert!(PrincipalId::parse(&"x".repeat(256)).is_ok());
-    assert_eq!(PrincipalId::parse("Jo@Example.ORG").unwrap(), PrincipalId::parse("jo@example.org").unwrap());
+    assert!(PrincipalId::parse(&"x".repeat(128)).is_ok());
+    // Exact comparison: no folding happens, so equal IDs are byte-equal.
+    let id = PrincipalId::parse("jo@example.org").unwrap();
+    assert_eq!(id.as_str(), "jo@example.org");
+    assert_ne!(id, PrincipalId::parse("jo@example.org.").unwrap());
 }
 
 /// The job's principal kind is the submitting caller's.
@@ -760,9 +806,9 @@ fn principal_ids_are_bounded_and_case_insensitive() {
 fn submit_as_records_owner_and_kind() {
     let svc = service(1, None);
     let gate = Arc::new(Gate::default());
-    let a = caller(PrincipalKind::Agent, "A");
+    let a = caller(PrincipalKind::Agent, "a");
     let id = svc.submit_as(&a, held(&gate), JobOpts { principal: PrincipalKind::Human, ..opts() }).unwrap();
-    assert_eq!(svc.jobs().status(id).unwrap().principal_kind, PrincipalKind::Agent);
+    assert_eq!(svc.record(id).unwrap().principal_kind, PrincipalKind::Agent);
     assert_eq!(svc.owner(id), Some(a));
     gate.open();
 }
@@ -773,8 +819,8 @@ fn list_thousand_jobs() {
     let clock = Arc::new(ManualClock::new());
     let svc = service(1, Some(Arc::clone(&clock)));
     let gate = Arc::new(Gate::default());
-    let s_ = caller(PrincipalKind::Script, "S");
-    let t = caller(PrincipalKind::Script, "T");
+    let s_ = caller(PrincipalKind::Script, "s");
+    let t = caller(PrincipalKind::Script, "t");
     let mut mine = Vec::new();
     for i in 0..1000 {
         clock.advance(Duration::from_millis(1));
@@ -788,7 +834,165 @@ fn list_thousand_jobs() {
     let listed = svc.list_jobs(&s_, &Default::default()).unwrap();
     println!("list of 1000 jobs took {:?}", start.elapsed());
     assert_eq!(listed.jobs.iter().map(|j| j.id).collect::<Vec<_>>(), mine);
-    let all = svc.list_jobs(&caller(PrincipalKind::Human, "H"), &Default::default()).unwrap();
+    let all = svc.list_jobs(&caller(PrincipalKind::Human, "h"), &Default::default()).unwrap();
     assert_eq!(all.jobs.len(), 1000);
+    gate.open();
+}
+
+// ------------------------------------------------------------------ review follow-ups
+
+/// Wall-clock timestamps against `rfc3339.json`.
+#[test]
+fn rfc3339_matches_fixture() {
+    let fx = fixture("rfc3339.json");
+    for (i, case) in arr(get(&fx, "cases")).iter().enumerate() {
+        let ms = number(get(case, "ms")).unwrap() as u64;
+        assert_eq!(format_rfc3339(Duration::from_millis(ms)), s(get(case, "text")), "case {i}");
+    }
+    // Sub-millisecond parts are cut off; the largest durations clamp.
+    assert_eq!(format_rfc3339(Duration::from_micros(1_999)), "1970-01-01T00:00:00.001Z");
+    assert_eq!(format_rfc3339(Duration::MAX), "9999-12-31T23:59:59.999Z");
+}
+
+/// Results carry wall-clock times; lists still order by the monotonic submission time even
+/// when the wall clock steps backwards between submissions.
+#[test]
+fn wall_clock_display_monotonic_order() {
+    struct Steps(Mutex<Vec<u64>>);
+    impl fid_jobs::WallClock for Steps {
+        fn unix_time(&self) -> Duration {
+            let mut v = self.0.lock().unwrap();
+            Duration::from_millis(if v.len() > 1 { v.remove(0) } else { v[0] })
+        }
+    }
+    let clock = Arc::new(ManualClock::new());
+    // Submission wall times: 2023-11-14T22:13:20.500Z, then 1970-01-01T00:00:00.000Z.
+    let wall = Arc::new(Steps(Mutex::new(vec![1_700_000_000_500, 0])));
+    let config = JobsConfig {
+        max_running: 1,
+        timer_poll: None,
+        clock: Arc::clone(&clock) as Arc<dyn Clock>,
+        wall_clock: wall,
+        ..JobsConfig::default()
+    };
+    let svc = JobService::new(Jobs::new(config, Arc::new(NullLifecycleSink)).unwrap()).unwrap();
+    let gate = Arc::new(Gate::default());
+    let h = caller(PrincipalKind::Human, "h");
+    clock.advance(Duration::from_millis(1));
+    let first = svc.submit_as(&h, held(&gate), opts()).unwrap();
+    clock.advance(Duration::from_millis(1));
+    let second = svc.submit_as(&h, held(&gate), opts()).unwrap();
+    let listed = svc.list_jobs(&h, &Default::default()).unwrap();
+    assert_eq!(listed.jobs.iter().map(|j| j.id).collect::<Vec<_>>(), vec![first, second]);
+    let out = listed.to_value();
+    let jobs = arr(get(&out, "jobs"));
+    assert_eq!(s(get(&jobs[0], "submitted_at")), "2023-11-14T22:13:20.500Z");
+    assert_eq!(s(get(&jobs[1], "submitted_at")), "1970-01-01T00:00:00.000Z");
+    for j in jobs {
+        assert_valid_status(j);
+    }
+    gate.open();
+}
+
+/// A wait whose own call token is cancelled returns `cancelled/requested` promptly.
+#[test]
+fn cancelled_wait_returns_promptly() {
+    let svc = service(2, None);
+    let gate = Arc::new(Gate::default());
+    let s_ = caller(PrincipalKind::Script, "s");
+    let id = svc.submit_as(&s_, held(&gate), opts()).unwrap();
+    let call = Progress::new(Arc::new(SystemClock::new()));
+    let token = call.cancel_token();
+    let started = Instant::now();
+    let result = std::thread::scope(|scope| {
+        let waiter = scope.spawn(|| {
+            svc.wait_job(&s_, &WaitParams { job: id, timeout: Duration::from_secs(600) }, &token)
+        });
+        std::thread::sleep(Duration::from_millis(50));
+        call.cancel();
+        waiter.join().unwrap()
+    });
+    let took = started.elapsed();
+    let e = result.unwrap_err();
+    assert_eq!((e.code().as_str(), e.reason()), ("cancelled", "requested"));
+    assert!(took < Duration::from_secs(5), "wait returned only after {took:?} (poll {WAIT_CANCEL_POLL:?})");
+    // Cancelling the wait does not cancel the job.
+    assert_eq!(state_of(&svc, id), JobState::Running);
+    assert!(!svc.is_cancel_requested(id).unwrap());
+    // An already-cancelled call token returns at once.
+    let e = svc.wait_job(&s_, &WaitParams { job: id, timeout: Duration::from_secs(600) }, &token).unwrap_err();
+    assert_eq!(e.reason(), "requested");
+    gate.open();
+}
+
+/// Many concurrent cancels of one running job: exactly one reports a commit.
+#[test]
+fn concurrent_cancels_commit_once() {
+    for _round in 0..20 {
+        let svc = service(2, None);
+        let gate = Arc::new(Gate::default());
+        let s_ = caller(PrincipalKind::Script, "s");
+        let h = caller(PrincipalKind::Human, "h");
+        let id = svc.submit_as(&s_, held(&gate), opts()).unwrap();
+        eventually("job running", || state_of(&svc, id) == JobState::Running);
+        let start = std::sync::Barrier::new(8);
+        let commits: usize = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|n| {
+                    let who = if n % 2 == 0 { &s_ } else { &h };
+                    let start = &start;
+                    let svc = &svc;
+                    scope.spawn(move || {
+                        start.wait();
+                        svc.cancel_job(who, &JobParams { job: id }).unwrap().commit.is_some()
+                    })
+                })
+                .collect();
+            handles.into_iter().map(|t| usize::from(t.join().unwrap())).sum()
+        });
+        assert_eq!(commits, 1);
+        let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }, &quiet()).unwrap();
+        assert_eq!(end.status.state, JobState::Cancelled);
+    }
+}
+
+/// Cancel racing the job's own completion: a commit is reported exactly when the job ends
+/// `cancelled`; a job that finished first commits nothing.
+#[test]
+fn cancel_racing_completion_commits_iff_cancelled() {
+    let svc = service(4, None);
+    let s_ = caller(PrincipalKind::Script, "s");
+    let (mut committed, mut finished) = (0, 0);
+    for round in 0..200u64 {
+        let id = svc.submit_as(&s_, sleeper(round % 3), opts()).unwrap();
+        let out = svc.cancel_job(&s_, &JobParams { job: id }).unwrap();
+        let end = svc.wait_job(&s_, &WaitParams { job: id, timeout: LONG }, &quiet()).unwrap();
+        assert_eq!(out.commit.is_some(), end.status.state == JobState::Cancelled, "round {round}: {end:?}");
+        if out.commit.is_some() {
+            committed += 1;
+        } else {
+            finished += 1;
+        }
+    }
+    println!("cancel won {committed} times, completion won {finished} times");
+}
+
+/// The cancel request and its "newly requested" flag are decided by the scheduler itself.
+#[test]
+fn scheduler_cancel_request_is_atomic() {
+    let config = JobsConfig { max_running: 1, timer_poll: None, ..JobsConfig::default() };
+    let jobs: Jobs<String> = Jobs::new(config, Arc::new(NullLifecycleSink)).unwrap();
+    let gate = Arc::new(Gate::default());
+    let running = jobs.submit(held(&gate), opts()).unwrap();
+    let queued = jobs.submit(held(&gate), opts()).unwrap();
+    let q = jobs.cancel_request(queued).unwrap();
+    assert_eq!((q.state, q.newly_requested), (JobState::Cancelled, true));
+    let q = jobs.cancel_request(queued).unwrap();
+    assert_eq!((q.state, q.newly_requested), (JobState::Cancelled, false));
+    eventually("job running", || jobs.status(running).unwrap().state == JobState::Running);
+    let r = jobs.cancel_request(running).unwrap();
+    assert!(r.newly_requested);
+    let r = jobs.cancel_request(running).unwrap();
+    assert!(!r.newly_requested);
     gate.open();
 }

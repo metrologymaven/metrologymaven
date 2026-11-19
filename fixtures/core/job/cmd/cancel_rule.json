@@ -1,19 +1,18 @@
 {
-  "description": "CORE.JOB.CMD REQ-002 and CONSTITUTION 3.1: who may cancel (and see) a job. Owner null is a job submitted without a recorded owner. Hand-labelled: allowed only for the job's own principal (same kind and ID, IDs compared ASCII-case-insensitively) or a human. CC-BY-4.0.",
+  "description": "CORE.JOB.CMD REQ-002 and CONSTITUTION 3.1: who may cancel (and see) a job. Allowed only for the job's own principal (same kind and exactly the same ID) or a human. Principal IDs must already be lowercase (decision of #165): an ID with an upper-case letter is rejected with validation/name before any rule runs. A job without a recorded owner is crate-internal only and covered by a unit test. Hand-labelled. CC-BY-4.0.",
   "cases": [
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "S" }, "allowed": true },
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "s" }, "allowed": true },
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "T" }, "allowed": false },
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "agent", "id": "S" }, "allowed": false },
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
-    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "human", "id": "H" }, "allowed": true },
-    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
-    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "script", "id": "H" }, "allowed": false },
-    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "human", "id": "H2" }, "allowed": true },
-    { "owner": { "kind": "agent", "id": "A" }, "caller": { "kind": "agent", "id": "A" }, "allowed": true },
-    { "owner": { "kind": "agent", "id": "A" }, "caller": { "kind": "agent", "id": "B" }, "allowed": false },
-    { "owner": null, "caller": { "kind": "script", "id": "S" }, "allowed": false },
-    { "owner": null, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
-    { "owner": null, "caller": { "kind": "human", "id": "H" }, "allowed": true }
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "script", "id": "s" }, "expect": "allowed" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "script", "id": "S" }, "expect": "rejected" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "script", "id": "t" }, "expect": "denied" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "agent", "id": "s" }, "expect": "denied" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "agent", "id": "a" }, "expect": "denied" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "human", "id": "h" }, "expect": "allowed" },
+    { "owner": { "kind": "script", "id": "s" }, "caller": { "kind": "script", "id": "s " }, "expect": "rejected" },
+    { "owner": { "kind": "human", "id": "h" }, "caller": { "kind": "agent", "id": "a" }, "expect": "denied" },
+    { "owner": { "kind": "human", "id": "h" }, "caller": { "kind": "script", "id": "h" }, "expect": "denied" },
+    { "owner": { "kind": "human", "id": "h" }, "caller": { "kind": "human", "id": "h2" }, "expect": "allowed" },
+    { "owner": { "kind": "agent", "id": "a" }, "caller": { "kind": "agent", "id": "a" }, "expect": "allowed" },
+    { "owner": { "kind": "agent", "id": "a" }, "caller": { "kind": "agent", "id": "b" }, "expect": "denied" },
+    { "owner": { "kind": "agent", "id": "jo@example.org" }, "caller": { "kind": "agent", "id": "Jo@example.org" }, "expect": "rejected" }
   ]
 }

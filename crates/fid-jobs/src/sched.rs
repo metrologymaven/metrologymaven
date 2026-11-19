@@ -48,6 +48,25 @@ pub const DEFAULT_TIMER_POLL: Duration = Duration::from_millis(5);
 pub const MAX_ERROR_DETAIL_CHARS: usize = 256;
 
 const MIN_TIMER_POLL: Duration = Duration::from_millis(1);
+/// Longest time [`Jobs::wait_cancellable`] sleeps before it looks at the caller's token again.
+pub const WAIT_CANCEL_POLL: Duration = Duration::from_millis(5);
+
+/// Wall-clock time source: time since the Unix epoch (UTC). Used only for the timestamps
+/// shown to people; ordering and timeouts use the monotonic [`Clock`].
+pub trait WallClock: Send + Sync {
+    /// Time since 1970-01-01T00:00:00Z; zero if the system clock is before the epoch.
+    fn unix_time(&self) -> Duration;
+}
+
+/// The system's real-time clock.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SystemWallClock;
+
+impl WallClock for SystemWallClock {
+    fn unix_time(&self) -> Duration {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO)
+    }
+}
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -281,6 +300,8 @@ pub struct JobsConfig {
     /// Polling interval of the background timeout thread (at least 1 ms); `None` starts no
     /// thread, and timeouts fire only when [`Jobs::check_timeouts`] is called.
     pub timer_poll: Option<Duration>,
+    /// Wall-clock source for the `*_wall` timestamps of records.
+    pub wall_clock: Arc<dyn WallClock>,
 }
 
 impl Default for JobsConfig {
@@ -291,6 +312,7 @@ impl Default for JobsConfig {
             retain_ended: DEFAULT_RETAIN_ENDED,
             clock: Arc::new(SystemClock::new()),
             timer_poll: Some(DEFAULT_TIMER_POLL),
+            wall_clock: Arc::new(SystemWallClock),
         }
     }
 }
@@ -324,14 +346,30 @@ pub struct JobRecord {
     pub state: JobState,
     /// Latest accepted progress report.
     pub progress: ProgressSnapshot,
-    /// Clock time of submission.
+    /// Clock time of submission (monotonic; the ordering key).
     pub submitted_at: Duration,
     pub started_at: Option<Duration>,
     pub ended_at: Option<Duration>,
+    /// Wall-clock time of submission, since the Unix epoch (UTC); for display only.
+    pub submitted_wall: Duration,
+    /// Wall-clock time of the start, since the Unix epoch (UTC).
+    pub started_wall: Option<Duration>,
+    /// Wall-clock time of the end, since the Unix epoch (UTC).
+    pub ended_wall: Option<Duration>,
     /// Set when the state is `failed` or `cancelled`.
     pub error: Option<JobErrorCode>,
     /// The handler's failure message, for `handler_failed`.
     pub error_detail: Option<String>,
+}
+
+/// What [`Jobs::cancel_request`] did, decided under the scheduler's lock.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CancelRequest {
+    /// The job's state afterwards.
+    pub state: JobState,
+    /// True only when this call cancelled a queued job or set the cancellation flag of a
+    /// running one; false for an ended job or a running job already asked to cancel.
+    pub newly_requested: bool,
 }
 
 /// One job state change (REQ-CORE.JOB.SCHED-008).
@@ -404,6 +442,7 @@ struct Inner<T> {
     changed: Condvar,
     sink: Arc<dyn LifecycleSink>,
     clock: Arc<dyn Clock>,
+    wall_clock: Arc<dyn WallClock>,
     max_running: usize,
     queue_cap: usize,
     retain_ended: usize,
@@ -429,13 +468,16 @@ impl<T: Send + 'static> Inner<T> {
     fn transition(&self, ended: &mut VecDeque<JobId>, entry: &mut Entry<T>, to: JobState, error: Option<JobErrorCode>) {
         let from = entry.record.state;
         let now = self.clock.now();
+        let wall = self.wall_clock.unix_time();
         entry.record.state = to;
         entry.record.error = error;
         if to == JobState::Running {
             entry.record.started_at = Some(now);
+            entry.record.started_wall = Some(wall);
         }
         if to.is_terminal() {
             entry.record.ended_at = Some(now);
+            entry.record.ended_wall = Some(wall);
             ended.push_back(entry.record.id);
         }
         self.emit(&entry.record, Some(from), now);
@@ -628,6 +670,7 @@ impl<T: Send + 'static> Jobs<T> {
             changed: Condvar::new(),
             sink,
             clock: config.clock,
+            wall_clock: config.wall_clock,
             max_running: config.max_running.max(1),
             queue_cap: config.queue_cap,
             retain_ended: config.retain_ended.max(1),
@@ -686,6 +729,9 @@ impl<T: Send + 'static> Jobs<T> {
             submitted_at: now,
             started_at: None,
             ended_at: None,
+            submitted_wall: self.inner.wall_clock.unix_time(),
+            started_wall: None,
+            ended_wall: None,
             error: None,
             error_detail: None,
         };
@@ -723,6 +769,14 @@ impl<T: Send + 'static> Jobs<T> {
     /// (REQ-CORE.JOB.SCHED-007). A running job has its [`CancelToken`] set and becomes
     /// `cancelled` when its handler returns. An ended job is left as it is.
     pub fn cancel(&self, id: JobId) -> Result<JobState, JobErrorCode> {
+        self.cancel_request(id).map(|r| r.state)
+    }
+
+    /// [`Jobs::cancel`], also reporting whether this call newly requested the cancellation.
+    /// Decided atomically under the scheduler's lock (and, for a running job, by an atomic
+    /// swap of its cancellation flag), so of any number of concurrent requests at most one
+    /// reports `newly_requested`, and an ended job never does.
+    pub fn cancel_request(&self, id: JobId) -> Result<CancelRequest, JobErrorCode> {
         let mut st = lock(&self.inner.state);
         let st = &mut *st;
         let entry = st.jobs.get_mut(&id).ok_or(JobErrorCode::NotFound)?;
@@ -737,13 +791,13 @@ impl<T: Send + 'static> Jobs<T> {
                 }
                 self.inner.prune(st);
                 self.inner.changed.notify_all();
-                Ok(JobState::Cancelled)
+                Ok(CancelRequest { state: JobState::Cancelled, newly_requested: true })
             }
             JobState::Running => {
-                entry.progress.cancel();
-                Ok(JobState::Running)
+                let newly_requested = entry.progress.request_cancel();
+                Ok(CancelRequest { state: JobState::Running, newly_requested })
             }
-            ended => Ok(ended),
+            ended => Ok(CancelRequest { state: ended, newly_requested: false }),
         }
     }
 
@@ -760,6 +814,29 @@ impl<T: Send + 'static> Jobs<T> {
             }
             let (next, _) =
                 self.inner.changed.wait_timeout(st, deadline - elapsed).unwrap_or_else(PoisonError::into_inner);
+            st = next;
+        }
+    }
+
+    /// [`Jobs::wait`] that also returns, within [`WAIT_CANCEL_POLL`], once `call` is
+    /// cancelled (the caller's own request was cancelled). The record is returned either
+    /// way; the caller checks `call` and the state.
+    pub fn wait_cancellable(
+        &self,
+        id: JobId,
+        deadline: Duration,
+        call: &CancelToken,
+    ) -> Result<JobRecord, JobErrorCode> {
+        let start = Instant::now();
+        let mut st = lock(&self.inner.state);
+        loop {
+            let record = st.jobs.get(&id).map(Entry::view).ok_or(JobErrorCode::NotFound)?;
+            let elapsed = start.elapsed();
+            if record.state.is_terminal() || elapsed >= deadline || call.is_cancelled() {
+                return Ok(record);
+            }
+            let slice = (deadline - elapsed).min(WAIT_CANCEL_POLL);
+            let (next, _) = self.inner.changed.wait_timeout(st, slice).unwrap_or_else(PoisonError::into_inner);
             st = next;
         }
     }

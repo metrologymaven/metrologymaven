@@ -18,26 +18,35 @@
 //! - `list_jobs` returns the caller's own jobs, or every job for a human principal, sorted by
 //!   submission time and then job ID, optionally filtered by state (REQ-003);
 //! - `wait_job` returns at the terminal state, or at the timeout with `timed_out: true`
-//!   (REQ-005);
+//!   (REQ-005), and returns `cancelled/requested` within [`crate::WAIT_CANCEL_POLL`] once the
+//!   caller's own call token is cancelled;
 //! - `cancel_job` runs only when the caller is the job's own principal or a human: the
 //!   precondition is an FPL expression in the definition ([`CANCEL_PRECONDITION`]), compiled
 //!   and evaluated with the registry's evaluator, and refused as `policy/not_job_owner`
-//!   (REQ-002). It reports a journal commit only when this call newly requested the
-//!   cancellation; a job already terminal (REQ-007) or already asked to cancel is returned
-//!   unchanged with nothing to commit, so a repeated call has no further effect (`natural`);
-//! - an unknown job ID gives `not_found/unknown_job` for each command (REQ-006).
+//!   (REQ-002). It reports a journal commit only when the scheduler says, atomically under
+//!   its own lock, that this call newly requested the cancellation
+//!   ([`Jobs::cancel_request`]); a job already terminal (REQ-007) or already asked to cancel
+//!   is returned unchanged with nothing to commit, so a repeated call has no further effect
+//!   (`natural`);
+//! - an unknown job ID gives `not_found/unknown_job` for each command (REQ-006);
+//! - timestamps are wall-clock UTC in RFC 3339 form with milliseconds; ordering never uses
+//!   them, only the scheduler's monotonic submission time and then the job ID.
 //!
 //! Fail closed: parameters are read from at most [`MAX_PARAMS_BYTES`] bytes, unknown fields
-//! and duplicate keys are refused, the wait timeout is bounded by [`MAX_WAIT_TIMEOUT`], a job
-//! with no recorded owner is visible and cancellable only by a human, and `show_status` and
-//! `wait_job` apply the same owner-or-human rule as `cancel_job`.
+//! and duplicate keys are refused, the wait timeout is bounded by [`MAX_WAIT_TIMEOUT`],
+//! principal IDs must already be lowercase (no case folding), a job with no recorded owner is
+//! visible and cancellable only by a human, and `show_status` and `wait_job` apply the same
+//! owner-or-human rule as `cancel_job`.
 //!
 //! The handlers never write the Record Journal: [`CancelOutcome::commit`] tells the bus what
-//! to commit. Lock order is `cancel` -> `owners` -> the scheduler's own lock; nothing here
-//! takes `owners` while the scheduler's lock is held.
+//! to commit. Lock order is `owners` -> the scheduler's own lock; nothing here takes
+//! `owners` while the scheduler's lock is held.
 
+use crate::progress::CancelToken;
 use crate::sched::{Execution, JobErrorCode, JobId, JobOpts, JobRecord, JobState, Jobs, PrincipalKind};
-use fid_bus::err::{InternalReason, NotFoundReason, PolicyReason, PreconditionReason, ValidationReason};
+use fid_bus::err::{
+    CancelledReason, InternalReason, NotFoundReason, PolicyReason, PreconditionReason, ValidationReason,
+};
 use fid_bus::{BusError, Detail};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue, CanonError};
 use fid_registry::{
@@ -70,8 +79,8 @@ pub const MAX_WAIT_TIMEOUT: Duration = Duration::from_secs(3600);
 pub const MAX_PARAMS_BYTES: usize = 4096;
 /// Deepest accepted nesting of a parameter document.
 pub const MAX_PARAMS_DEPTH: usize = 4;
-/// Longest principal ID, in bytes.
-pub const MAX_PRINCIPAL_ID_BYTES: usize = 256;
+/// Longest principal ID, in bytes (same bound as the roster's principal identities, #165).
+pub const MAX_PRINCIPAL_ID_BYTES: usize = 128;
 
 /// The cancel precondition, in FPL: the caller is a human, or the caller is the job's own
 /// principal (same kind and ID). Same rule as the leaf's
@@ -83,6 +92,11 @@ pub const CANCEL_PRECONDITION: &str =
 pub const CANCEL_PRECONDITION_BOUND: u32 = 64;
 /// Message key of [`CANCEL_PRECONDITION`] when it is false.
 pub const NOT_JOB_OWNER_KEY: &str = "job.not_job_owner";
+
+/// JSON Schema pattern of a timestamp: RFC 3339 UTC with exactly three fractional digits.
+pub const TIMESTAMP_PATTERN: &str = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$";
+/// Latest instant [`format_rfc3339`] renders, in ms since the epoch: 9999-12-31T23:59:59.999Z.
+const MAX_RFC3339_MILLIS: u64 = 253_402_300_799_999;
 
 /// JSON Schema pattern of a job ID: a lowercase hyphenated UUID.
 pub const JOB_ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
@@ -142,22 +156,30 @@ fn canon_error(e: CanonError) -> BusError {
 
 // ------------------------------------------------------------------ principals
 
-/// A principal ID as the bus derived it from the channel. ASCII graphic characters only,
-/// 1..=[`MAX_PRINCIPAL_ID_BYTES`] bytes; kept ASCII-lowercased, because logins and email
-/// addresses compare case-insensitively.
+/// A principal ID as the bus derived it from the channel: 1..=[`MAX_PRINCIPAL_ID_BYTES`]
+/// printable ASCII characters with no spaces and no upper-case letters. As decided for the
+/// roster's principal identities (#165), an ID that is not already lowercase is refused
+/// rather than folded, so case variants of one identity can never pass as separate
+/// principals; IDs then compare exactly.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PrincipalId(String);
 
 impl PrincipalId {
-    /// Parses and normalises a principal ID; anything else is `validation/name`.
+    /// Parses a principal ID; anything else is `validation/name`.
     pub fn parse(s: &str) -> Result<PrincipalId, BusError> {
-        if s.is_empty() || s.len() > MAX_PRINCIPAL_ID_BYTES || !s.bytes().all(|b| b.is_ascii_graphic()) {
-            return Err(validation(ValidationReason::Name, "principal ID must be 1..=256 ASCII graphic characters"));
+        let ok = !s.is_empty()
+            && s.len() <= MAX_PRINCIPAL_ID_BYTES
+            && s.bytes().all(|b| b.is_ascii_graphic() && !b.is_ascii_uppercase());
+        if !ok {
+            return Err(validation(
+                ValidationReason::Name,
+                "principal ID must be 1..=128 printable ASCII characters, no spaces, no upper case",
+            ));
         }
-        Ok(PrincipalId(s.to_ascii_lowercase()))
+        Ok(PrincipalId(s.to_string()))
     }
 
-    /// The normalised ID.
+    /// The ID.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -222,8 +244,9 @@ pub fn context_types() -> ContextTypes {
 
 /// The job-status contract every surface maps onto (`job-status.schema.json`).
 ///
-/// Times are seconds on the scheduler's monotonic clock (the [`crate::Clock`] it was built
-/// with), not wall-clock time.
+/// Times are wall-clock instants (time since the Unix epoch, UTC), written as RFC 3339 with
+/// milliseconds ([`format_rfc3339`]). They are for display only: lists are ordered by the
+/// scheduler's monotonic submission time, then job ID.
 #[derive(Debug, Clone, PartialEq)]
 pub struct JobStatus {
     pub id: JobId,
@@ -240,12 +263,34 @@ pub struct JobStatus {
     pub error: Option<JobErrorCode>,
 }
 
-fn seconds(d: Duration) -> CValue {
-    CValue::Num(d.as_secs_f64())
+/// Formats a time since the Unix epoch as RFC 3339 UTC with milliseconds, e.g.
+/// `2023-11-14T22:13:20.500Z`. Sub-millisecond parts are cut off; instants after
+/// 9999-12-31T23:59:59.999Z are shown as that instant.
+pub fn format_rfc3339(since_epoch: Duration) -> String {
+    let ms = u64::try_from(since_epoch.as_millis()).unwrap_or(u64::MAX).min(MAX_RFC3339_MILLIS);
+    let (secs, milli) = (ms / 1000, ms % 1000);
+    let (days, rem) = (secs / 86_400, secs % 86_400);
+    let (hh, mm, ss) = (rem / 3600, rem % 3600 / 60, rem % 60);
+    // Days since 1970-01-01 to a proleptic Gregorian date (H. Hinnant's civil_from_days),
+    // in unsigned arithmetic: every intermediate is non-negative for days >= 0.
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + u64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}T{hh:02}:{mm:02}:{ss:02}.{milli:03}Z")
 }
 
-fn opt_seconds(d: Option<Duration>) -> CValue {
-    d.map_or(CValue::Null, seconds)
+fn timestamp(d: Duration) -> CValue {
+    CValue::Str(format_rfc3339(d))
+}
+
+fn opt_timestamp(d: Option<Duration>) -> CValue {
+    d.map_or(CValue::Null, timestamp)
 }
 
 fn text(s: &str) -> CValue {
@@ -266,9 +311,9 @@ impl JobStatus {
             state: r.state,
             progress,
             stage: r.progress.stage.clone(),
-            submitted_at: r.submitted_at,
-            started_at: r.started_at,
-            ended_at: r.ended_at,
+            submitted_at: r.submitted_wall,
+            started_at: r.started_wall,
+            ended_at: r.ended_wall,
             error: r.error,
         }
     }
@@ -280,9 +325,9 @@ impl JobStatus {
         o.insert("state".to_string(), text(self.state.as_str()));
         o.insert("progress".to_string(), CValue::Num(self.progress));
         o.insert("stage".to_string(), text(&self.stage));
-        o.insert("submitted_at".to_string(), seconds(self.submitted_at));
-        o.insert("started_at".to_string(), opt_seconds(self.started_at));
-        o.insert("ended_at".to_string(), opt_seconds(self.ended_at));
+        o.insert("submitted_at".to_string(), timestamp(self.submitted_at));
+        o.insert("started_at".to_string(), opt_timestamp(self.started_at));
+        o.insert("ended_at".to_string(), opt_timestamp(self.ended_at));
         o.insert("error".to_string(), self.error.map_or(CValue::Null, |e| text(e.code())));
         o
     }
@@ -486,10 +531,23 @@ fn num(n: f64) -> CValue {
     CValue::Num(n)
 }
 
-fn time_field(nullable: bool) -> CValue {
-    let ty = if nullable { strs(&["number", "null"]) } else { text("number") };
-    obj([("type", ty), ("minimum", num(0.0)), ("x-quantity", text("time")), ("x-unit", text("s"))])
+fn time_field(nullable: bool, description: &str) -> CValue {
+    let ty = if nullable { strs(&["string", "null"]) } else { text("string") };
+    obj([
+        ("type", ty),
+        ("format", text("date-time")),
+        ("pattern", text(TIMESTAMP_PATTERN)),
+        ("description", text(description)),
+    ])
 }
+
+const SUBMITTED_AT_DOC: &str = "Wall-clock time (UTC, RFC 3339, milliseconds) when the job was submitted. \
+    For display only: job lists are ordered by the scheduler's monotonic submission time, then job ID, \
+    never by this field.";
+const STARTED_AT_DOC: &str = "Wall-clock time (UTC, RFC 3339, milliseconds) when the job started running; \
+    null while it is queued or if it never ran.";
+const ENDED_AT_DOC: &str = "Wall-clock time (UTC, RFC 3339, milliseconds) when the job reached a terminal \
+    state; null until then.";
 
 fn status_properties() -> BTreeMap<String, CValue> {
     let states: Vec<&str> = JOB_STATES.iter().map(|s| s.as_str()).collect();
@@ -504,9 +562,9 @@ fn status_properties() -> BTreeMap<String, CValue> {
         "stage".to_string(),
         obj([("type", text("string")), ("maxLength", num(crate::progress::MAX_STAGE_CHARS as f64))]),
     );
-    p.insert("submitted_at".to_string(), time_field(false));
-    p.insert("started_at".to_string(), time_field(true));
-    p.insert("ended_at".to_string(), time_field(true));
+    p.insert("submitted_at".to_string(), time_field(false, SUBMITTED_AT_DOC));
+    p.insert("started_at".to_string(), time_field(true, STARTED_AT_DOC));
+    p.insert("ended_at".to_string(), time_field(true, ENDED_AT_DOC));
     p.insert("error".to_string(), obj([("enum", CValue::Arr(errors))]));
     p
 }
@@ -695,13 +753,13 @@ struct Owners {
 
 /// The job command handlers over a [`Jobs`] scheduler.
 ///
-/// Submit through [`JobService::submit_as`] so the job's owning principal is recorded. A job
-/// submitted directly on [`JobService::jobs`] has no recorded owner: only a human sees or
-/// cancels it.
+/// Jobs are submitted only through [`JobService::submit_as`], which records the owning
+/// principal. The scheduler itself is not handed out; [`JobService::record`] and
+/// [`JobService::is_cancel_requested`] are read-only views. A job without a recorded owner
+/// (only possible inside this crate) is visible and cancellable only by a human.
 pub struct JobService<T: Send + 'static> {
     jobs: Jobs<T>,
     owners: Mutex<Owners>,
-    cancel: Mutex<()>,
     rule: Predicate,
 }
 
@@ -728,14 +786,24 @@ impl<T: Send + 'static> JobService<T> {
         Ok(JobService {
             jobs,
             owners: Mutex::new(Owners { map: BTreeMap::new(), sweep_at: MIN_OWNER_SWEEP }),
-            cancel: Mutex::new(()),
             rule,
         })
     }
 
-    /// The scheduler.
-    pub fn jobs(&self) -> &Jobs<T> {
+    /// The scheduler, for this crate only.
+    pub(crate) fn jobs(&self) -> &Jobs<T> {
         &self.jobs
+    }
+
+    /// Read-only: the scheduler's record of a job, without any access check (for the bus and
+    /// the committer, not a command result).
+    pub fn record(&self, id: JobId) -> Result<JobRecord, JobErrorCode> {
+        self.jobs.status(id)
+    }
+
+    /// Read-only: whether cancellation of the job has been requested.
+    pub fn is_cancel_requested(&self, id: JobId) -> Result<bool, JobErrorCode> {
+        self.jobs.progress(id).map(|p| p.is_cancel_requested())
     }
 
     /// Submits `exec` on behalf of `caller` and records `caller` as the job's owner. The
@@ -807,45 +875,57 @@ impl<T: Send + 'static> JobService<T> {
         self.authorised(caller, params.job).map(|r| JobStatus::from_record(&r))
     }
 
-    /// `job.wait_job@1` (R0). Blocks the calling thread for at most `params.timeout`.
-    pub fn wait_job(&self, caller: &Caller, params: &WaitParams) -> Result<WaitResult, BusError> {
+    /// `job.wait_job@1` (R0). Blocks the calling thread for at most `params.timeout`, and
+    /// returns `cancelled/requested` within [`crate::WAIT_CANCEL_POLL`] once `call` (the bus
+    /// token of this call) is cancelled.
+    pub fn wait_job(&self, caller: &Caller, params: &WaitParams, call: &CancelToken) -> Result<WaitResult, BusError> {
         self.authorised(caller, params.job)?;
-        let record = self.jobs.wait(params.job, params.timeout).map_err(|e| sched_error(params.job, e))?;
+        let record =
+            self.jobs.wait_cancellable(params.job, params.timeout, call).map_err(|e| sched_error(params.job, e))?;
+        if call.is_cancelled() && !record.state.is_terminal() {
+            return Err(BusError::Cancelled(
+                CancelledReason::Requested,
+                Detail::new(&format!("wait for job {} was cancelled by its caller", params.job)),
+            ));
+        }
         Ok(WaitResult { timed_out: !record.state.is_terminal(), status: JobStatus::from_record(&record) })
     }
 
     /// `job.cancel_job@1` (W1).
     pub fn cancel_job(&self, caller: &Caller, params: &JobParams) -> Result<CancelOutcome, BusError> {
         let id = params.job;
-        // One cancel at a time, so "newly requested" is decided once per request.
-        let _serial = lock(&self.cancel);
         let before = self.authorised(caller, id)?;
         if before.state.is_terminal() {
             return Ok(CancelOutcome { status: JobStatus::from_record(&before), commit: None });
         }
-        let already = self.jobs.progress(id).map_err(|e| sched_error(id, e))?.is_cancel_requested();
-        let after = self.jobs.cancel(id).map_err(|e| sched_error(id, e))?;
-        // A job that ended on its own (or timed out) in between gets no cancellation.
-        let committed = !already && matches!(after, JobState::Running | JobState::Cancelled);
+        // The scheduler decides "newly requested" atomically under its own lock; a job that
+        // ended in between (on its own or by timeout) reports false and commits nothing.
+        let request = self.jobs.cancel_request(id).map_err(|e| sched_error(id, e))?;
         let record = match self.jobs.status(id) {
             Ok(r) => r,
-            // Dropped by the retention cap just now: report the state `cancel` returned.
-            Err(_) => JobRecord { state: after, ..before },
+            // Dropped by the retention cap just now: report the state the request returned.
+            Err(_) => JobRecord { state: request.state, ..before },
         };
         Ok(CancelOutcome {
             status: JobStatus::from_record(&record),
-            commit: committed.then_some(JournalEffect { event_type: CANCEL_JOB, job: id }),
+            commit: request.newly_requested.then_some(JournalEffect { event_type: CANCEL_JOB, job: id }),
         })
     }
 
-    /// Runs one job command from its JSON parameters. An unknown command is
-    /// `not_found/unknown_command`.
-    pub fn invoke(&self, caller: &Caller, command: &str, params: &CValue) -> Result<Invocation, BusError> {
+    /// Runs one job command from its JSON parameters; `call` is the bus token of this call
+    /// (only `job.wait_job@1` blocks on it). An unknown command is `not_found/unknown_command`.
+    pub fn invoke(
+        &self,
+        caller: &Caller,
+        command: &str,
+        params: &CValue,
+        call: &CancelToken,
+    ) -> Result<Invocation, BusError> {
         let plain = |result: CValue| Invocation { result, commit: None };
         match command {
             LIST_JOBS => Ok(plain(self.list_jobs(caller, &ListJobsParams::from_value(params)?)?.to_value())),
             SHOW_STATUS => Ok(plain(self.show_status(caller, &JobParams::from_value(params)?)?.to_value())),
-            WAIT_JOB => Ok(plain(self.wait_job(caller, &WaitParams::from_value(params)?)?.to_value())),
+            WAIT_JOB => Ok(plain(self.wait_job(caller, &WaitParams::from_value(params)?, call)?.to_value())),
             CANCEL_JOB => {
                 let out = self.cancel_job(caller, &JobParams::from_value(params)?)?;
                 Ok(Invocation { result: out.status.to_value(), commit: out.commit })
@@ -856,8 +936,51 @@ impl<T: Send + 'static> JobService<T> {
 
     /// [`JobService::invoke`] from raw JSON bytes: at most [`MAX_PARAMS_BYTES`] bytes and
     /// [`MAX_PARAMS_DEPTH`] levels; duplicate keys are refused.
-    pub fn invoke_json(&self, caller: &Caller, command: &str, params: &[u8]) -> Result<Invocation, BusError> {
+    pub fn invoke_json(
+        &self,
+        caller: &Caller,
+        command: &str,
+        params: &[u8],
+        call: &CancelToken,
+    ) -> Result<Invocation, BusError> {
         let value = parse_with_limits(params, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH).map_err(canon_error)?;
-        self.invoke(caller, command, &value)
+        self.invoke(caller, command, &value, call)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::sched::{JobsConfig, NullLifecycleSink};
+    use std::sync::Arc;
+
+    /// A job submitted straight to the scheduler (no recorded owner) is open only to a human.
+    #[test]
+    fn ownerless_job_is_human_only() {
+        let config = JobsConfig { max_running: 1, timer_poll: None, ..JobsConfig::default() };
+        let svc: JobService<()> = JobService::new(Jobs::new(config, Arc::new(NullLifecycleSink)).unwrap()).unwrap();
+        let handler = |_: &crate::ProgressSink, t: &CancelToken| {
+            while !t.is_cancelled() {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            Err(crate::HandlerError::Cancelled)
+        };
+        let exec = Execution::new(CommandId::parse("test.sleep@1").unwrap(), handler);
+        let id = svc.jobs().submit(exec, JobOpts::default()).unwrap();
+        assert_eq!(svc.owner(id), None);
+        for kind in [PrincipalKind::Script, PrincipalKind::Agent] {
+            let who = Caller::new(kind, PrincipalId::parse("s").unwrap());
+            for e in [
+                svc.show_status(&who, &JobParams { job: id }).map(|_| ()).unwrap_err(),
+                svc.cancel_job(&who, &JobParams { job: id }).map(|_| ()).unwrap_err(),
+            ] {
+                assert_eq!((e.code().as_str(), e.reason()), ("policy", "not_job_owner"));
+            }
+        }
+        let h = Caller::new(PrincipalKind::Human, PrincipalId::parse("h").unwrap());
+        assert!(svc.show_status(&h, &JobParams { job: id }).is_ok());
+        let out = svc.cancel_job(&h, &JobParams { job: id }).unwrap();
+        assert_eq!(out.commit, Some(JournalEffect { event_type: CANCEL_JOB, job: id }));
     }
 }

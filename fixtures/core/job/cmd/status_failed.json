@@ -1,1 +1,1 @@
-{"command":"test.sleep@1","ended_at":2.25,"error":"timeout","id":"01890a5d-ac96-774b-bcce-b302099a8057","progress":0.25,"stage":"probing","started_at":2,"state":"failed","submitted_at":1.5}
+{"command":"test.sleep@1","ended_at":"2023-11-14T22:13:22.250Z","error":"timeout","id":"01890a5d-ac96-774b-bcce-b302099a8057","progress":0.25,"stage":"probing","started_at":"2023-11-14T22:13:22.000Z","state":"failed","submitted_at":"2023-11-14T22:13:20.500Z"}

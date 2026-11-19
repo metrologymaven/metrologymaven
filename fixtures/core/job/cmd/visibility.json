@@ -1,24 +1,24 @@
 {
-  "description": "CORE.JOB.CMD AC-5 and REQ-003: five held test jobs submitted 1 ms apart in this order with a concurrency limit of 2, so jobs 0 and 1 run and 2, 3, 4 stay queued. Each case lists the expected job indices in submission order. Hand-labelled from the rule: own jobs, or all jobs for a human. CC-BY-4.0.",
+  "description": "CORE.JOB.CMD AC-5 and REQ-003: five held test jobs submitted 1 ms apart in this order with a concurrency limit of 2, so jobs 0 and 1 run and 2, 3, 4 stay queued. Each case lists the expected job indices in submission order. Hand-labelled from the rule: own jobs (same kind and exact ID), or all jobs for a human. CC-BY-4.0.",
   "limit": 2,
   "jobs": [
-    { "kind": "script", "id": "S" },
-    { "kind": "script", "id": "T" },
-    { "kind": "script", "id": "S" },
-    { "kind": "script", "id": "T" },
-    { "kind": "script", "id": "S" }
+    { "kind": "script", "id": "s" },
+    { "kind": "script", "id": "t" },
+    { "kind": "script", "id": "s" },
+    { "kind": "script", "id": "t" },
+    { "kind": "script", "id": "s" }
   ],
   "cases": [
-    { "caller": { "kind": "script", "id": "S" }, "state": null, "expect": [0, 2, 4] },
     { "caller": { "kind": "script", "id": "s" }, "state": null, "expect": [0, 2, 4] },
-    { "caller": { "kind": "script", "id": "T" }, "state": null, "expect": [1, 3] },
-    { "caller": { "kind": "human", "id": "H" }, "state": null, "expect": [0, 1, 2, 3, 4] },
-    { "caller": { "kind": "agent", "id": "A" }, "state": null, "expect": [] },
-    { "caller": { "kind": "agent", "id": "S" }, "state": null, "expect": [] },
-    { "caller": { "kind": "human", "id": "H" }, "state": "running", "expect": [0, 1] },
-    { "caller": { "kind": "human", "id": "H" }, "state": "queued", "expect": [2, 3, 4] },
-    { "caller": { "kind": "script", "id": "S" }, "state": "queued", "expect": [2, 4] },
-    { "caller": { "kind": "script", "id": "T" }, "state": "running", "expect": [1] },
-    { "caller": { "kind": "human", "id": "H" }, "state": "succeeded", "expect": [] }
+    { "caller": { "kind": "script", "id": "t" }, "state": null, "expect": [1, 3] },
+    { "caller": { "kind": "script", "id": "s2" }, "state": null, "expect": [] },
+    { "caller": { "kind": "human", "id": "h" }, "state": null, "expect": [0, 1, 2, 3, 4] },
+    { "caller": { "kind": "agent", "id": "a" }, "state": null, "expect": [] },
+    { "caller": { "kind": "agent", "id": "s" }, "state": null, "expect": [] },
+    { "caller": { "kind": "human", "id": "h" }, "state": "running", "expect": [0, 1] },
+    { "caller": { "kind": "human", "id": "h" }, "state": "queued", "expect": [2, 3, 4] },
+    { "caller": { "kind": "script", "id": "s" }, "state": "queued", "expect": [2, 4] },
+    { "caller": { "kind": "script", "id": "t" }, "state": "running", "expect": [1] },
+    { "caller": { "kind": "human", "id": "h" }, "state": "succeeded", "expect": [] }
   ]
 }
