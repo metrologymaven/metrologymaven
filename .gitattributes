@@ -165,6 +165,8 @@ fixtures/geo/nurbs/eval/** -text
 fixtures/io/reg/detect/** -text
 # UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
 fixtures/unc/stmt/** -text
+# CORE.JRN.CHAIN.APPEND fixtures: reference hashes and digests compared byte for byte by make_fixtures.py --check.
+fixtures/core/jrn/chain/append/** -text
 # CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/core/dep/** -text

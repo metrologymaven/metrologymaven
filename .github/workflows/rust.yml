@@ -278,6 +278,7 @@ jobs:
           python fixtures/agent/harness/runs/make_runs.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
+          python fixtures/core/jrn/chain/append/make_fixtures.py --check
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
