@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-geo-types]
+built_pr: 198
 satisfies: [REQ-GEO.TYPES-002, REQ-GEO.TYPES-005]
 covers: []
 depends_on: [GEO.TYPES.ENV, GEO.TYPES.POINTS, GEO.TYPES.MESH]
@@ -32,7 +34,7 @@ A content digest for every geometric element, computed over a documented canonic
 - The canonical layout (version 1) for `PointSet`, `PointCloud`, `Mesh` and `CadBodyRef`
 - SHA-256 over that layout, streamed so no full copy of the element is made
 - `ElementDigest` type with hex display
-- Normalisation rules (signed zero)
+- Normalisation rules (signed zero in f64 and f32 fields; NaN canonicalised to one quiet NaN per width, so the digest never fails)
 
 **Out:**
 - Journal entry hashing (owned by `CORE.JRN`)
@@ -59,11 +61,35 @@ A content digest for every geometric element, computed over a documented canonic
 
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `pub struct ElementDigest(pub [u8; 32])`; `pub fn digest(e: &GeometryElement) -> ElementDigest`.
-- **Algorithm:** a streaming writer feeds SHA-256 in 64 KiB blocks. Layout v1: `"FIDGEO" | 0x01 | kind | frame[16] | n_points u64 | x[] | y[] | z[] | n_tris u64 | tris[] | n_channels u64 | for each channel by name: name_len u16 | name bytes | type byte | values`. `CadBodyRef` hashes `body[16] | source_digest[32]`. The layout is documented in the crate docs and pinned by the test vectors.
+- **Algorithm:** a streaming writer feeds SHA-256 through one fixed 64 KiB block buffer (no copy of the element). The encoding below is permanent for layout version 1; any change needs a new version byte.
+- **Layout v1** (every integer little-endian; every variable-length part is prefixed by its own count):
+  - Header: `"FIDGEO" | 0x01 | kind u8 | frame[16]`. Kind bytes: point set 1, point cloud 2, mesh 3, CAD body handle 4.
+  - Point set, point cloud, mesh: `n_points u64 | x[n_points] f64 | y[n_points] f64 | z[n_points] f64 | n_tris u64 | n_tris × (a u64, b u64, c u64) | n_channels u64 | channels`. Point kinds write `n_tris = 0`. Triangle indexes are always written as u64, whatever the storage width.
+  - Each channel, in ascending name-byte order: `name_len u16 | name (ASCII) | type u8 | n_records u64 | records`. A channel present with zero records is written and differs from an absent one.
+  - CAD body handle: header, then `body[16] | source_digest[32 raw bytes]`.
+- **Channels:**
+
+  | name | type byte | records | written when |
+  |---|---|---|---|
+  | `colour` | 3 `u8x3` (r, g, b) | one per point | present |
+  | `grid` | 7 `u64` | two: rows, cols | a grid is declared |
+  | `intensity` | 2 `f32` | one per point | present |
+  | `normal` | 8 `f64x3col` (all x, then all y, then all z) | one per point | present |
+  | `quality` | 4 `u16` | one per point | present |
+  | `scan_origins` | 9 `origin` (scanner ID u32, then x, y, z f64) | one per origin | at least one origin |
+  | `scanner_id` | 5 `u32` | one per point | present |
+  | `timestamp_ns` | 6 `i64` (two's complement) | one per point | present |
+  | `triangle_quality` | 4 `u16` | one per triangle (meshes) | present |
+  | `triangle_scanner_id` | 5 `u32` | one per triangle (meshes) | present |
+
+  Type byte 1 (`f64`) is reserved for a scalar f64 channel; none uses it yet.
+- **Floats:** every f64 is written as its IEEE 754 bits, except -0.0 → +0.0 and any NaN → `0x7ff8000000000000`. Every f32 likewise: -0.0 → +0.0, any NaN → `0x7fc00000`; infinities keep their bits. The rules act on bit patterns, never on float arithmetic. Valid elements hold no NaN or infinity in f64 fields (constructors reject them), so the f64 NaN rule exists only so the function is total; f32 intensity is not validated today, so its NaN rule is live (maintainer decision: keep canonicalisation).
+- **Not hashed:** topology facts (derived from the triangles) and the import-time AABB of a CAD body handle.
+- **Interfaces:** `ElementDigest` displays as 64 lowercase hex and converts to the shared `fid_types::Digest` (`sha256:` form); `write_layout` streams the layout for consumers that must reproduce it (GEO.OOC).
 - **Errors:** none; every valid element can be digested.
 - **Determinism:** D0. Integer and byte operations only.
 - **Performance budget:** at least 500 MB/s of layout bytes on reference hardware [unverified].
-- **Crate:** `fid-geo-types`, using `sha2` (MIT OR Apache-2.0, kernel allowlist to confirm in ECO.RULES).
+- **Crate:** `fid-geo-types`, using the portable FIPS 180-4 SHA-256 of the first-party kernel crate `fid-kci` (no third-party dependency; the kernel allowlist stays empty).
 
 ## Test fixtures
 
@@ -71,11 +97,12 @@ A content digest for every geometric element, computed over a documented canonic
 
 ## Build prompt
 
-> In crate `fid-geo-types` (pure Rust, no I/O, kernel graph), add module `digest` with `ElementDigest([u8;32])` and `digest(&GeometryElement) -> ElementDigest`, computing SHA-256 (crate `sha2`) over this streamed layout v1: ASCII `FIDGEO`, version byte 0x01, kind byte, 16-byte frame ID, u64 LE point count, x column, y column, z column as LE f64 bits with -0.0 normalised to +0.0, u64 LE triangle count and indexes as u64 LE (regardless of storage width), u64 LE channel count, then channels in ascending name-byte order as `name_len u16 | name | type byte | values`. `CadBodyRef` hashes body ID and source digest. Stream in 64 KiB blocks, extra memory ≤ 1 MiB. Acceptance: test vectors in `digest_vectors.json` match on x86-64, ARM64 and wasm32; one-ULP change alters the digest; ±0.0 give equal digests; u32/u64 storage equal; different frame gives a different digest. Also write the independent Python generator `tools/fixtures/geo_digest_vectors.py` (hashlib) used to produce the vectors. Constraints: CONSTITUTION §8 (no panic, no `unsafe`), KNP-1 (no std HashMap/HashSet). Files: `crates/fid-geo-types/src/digest.rs`, `tests/digest.rs`, `fixtures/geo/types/digest_vectors.json`, `tools/fixtures/geo_digest_vectors.py`.
+> In crate `fid-geo-types` (pure Rust, no I/O, kernel graph), add module `digest` with `ElementDigest([u8;32])` and `digest(&GeometryElement) -> ElementDigest`, computing SHA-256 (`fid_kci::kci::Sha256`, first-party kernel crate) over this streamed layout v1: ASCII `FIDGEO`, version byte 0x01, kind byte, 16-byte frame ID, u64 LE point count, x column, y column, z column as LE f64 bits with -0.0 normalised to +0.0, u64 LE triangle count and indexes as u64 LE (regardless of storage width), u64 LE channel count, then channels in ascending name-byte order as `name_len u16 | name | type byte | n_records u64 | records` (channel table and float rules as in Design: -0.0 → +0.0 and NaN canonicalised for f64 and f32). `CadBodyRef` hashes body ID and source digest. Stream in 64 KiB blocks, extra memory ≤ 1 MiB. Acceptance: test vectors in `digest_vectors.json` match on x86-64, ARM64 and wasm32; one-ULP change alters the digest; ±0.0 give equal digests; u32/u64 storage equal; different frame gives a different digest. Also write the independent Python generator `tools/fixtures/geo_digest_vectors.py` (hashlib) used to produce the vectors. Constraints: CONSTITUTION §8 (no panic, no `unsafe`), KNP-1 (no std HashMap/HashSet). Files: `crates/fid-geo-types/src/digest.rs`, `tests/digest.rs`, `fixtures/geo/types/digest_vectors.json`, `tools/fixtures/geo_digest_vectors.py`.
 
 ## Open questions
 
 - Whether CORE.STO's blob digest and this element digest should coincide for elements stored as one blob; currently they are independent.
+- Whether GEO.TYPES.POINTS should reject non-finite intensity values at construction, as it does for coordinates and normals. Until it does, the f32 NaN canonicalisation above is what keeps such elements digestible and platform-stable.
 
 ## Children
 

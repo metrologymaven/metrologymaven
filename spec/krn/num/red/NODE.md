@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 188
 satisfies: [REQ-KRN.NUM-001, REQ-KRN.NUM-004, REQ-KRN.NUM-007]
 covers: []
 depends_on: [KRN.NUM.ERR, KRN.NUM.FN]
@@ -49,8 +51,16 @@ Summation, dot product, Euclidean norm and mean whose result depends only on the
 
 - **Registry command(s):** none; module `fid_num::red`.
 - **Data structures:** free functions over `&[f64]`; `const BLOCK: usize = 256`.
-- **Algorithm:** Neumaier (improved Kahan-Babuska) summation within each block; pairwise combination of `(sum, compensation)` pairs in a fixed tree (left-to-right, recursive halves); `norm2` uses scaled sum of squares (scale = total-order max of |x|) then `fid_num::f::sqrt`.
-- **Errors:** `NotANumber`, `Infinite`, `LengthMismatch`, `EmptyInput`.
+- **Algorithm:** Neumaier (improved Kahan-Babuska) summation within each block; pairwise combination of `(sum, compensation)` pairs in a fixed tree (left-to-right, recursive halves); `norm2` uses a scaled sum of squares (scale = a power of two taken from the total-order max of |x|) then `fid_num::f::sqrt`. Pinned details (values of record depend on every one; any implementation must match bit for bit):
+  - **Block start:** each block starts from `(s, c) = (-0.0, -0.0)`; per element `t = s + x`, `c = c + ((s - t) + x)` if `|s| >= |x|` else `c = c + ((x - t) + s)`, then `s = t`.
+  - **Tree split:** a range of `k >= 2` blocks splits into a left half of `floor(k/2)` blocks and a right half of `k - floor(k/2)` blocks, each reduced recursively, left before right.
+  - **Pair combine:** `s = s1 + s2`; `e = (s1 - s) + s2` if `|s1| >= |s2|` else `(s2 - s) + s1`; `c = (c1 + c2) + e`, in exactly that order.
+  - **Final step:** the result is `s` if `c == 0`, else `s + c`. Together with the `-0.0` start this gives the IEEE sign of zero: `-0.0` exactly when the input is non-empty and all `-0.0`, `+0.0` for every other zero result and for the empty input. (`s + c` alone would turn an all-`-0.0` sum into `+0.0`, because the compensation of such a block is `+0.0`.)
+  - **Products:** `dot` and `sum_sq` sum the plain products `a[i] * b[i]` / `x[i] * x[i]`, each computed once.
+  - **`norm2` scaling:** with `e` such that `2^e <= max|x| < 2^(e+1)` (subnormals included), each element is multiplied by `2^-e` (in two power-of-two factors when `2^-e` is not a normal number), the squares are summed by the rule above, and the result is `sqrt(sum) * 2^e` (for `e < -1022` as `* 2^(e+1022)` then `* 2^-1022`). Scaling up is exact; a scaled-down element can round only below `2^-1022`, where its square underflows to zero anyway, so the only roundings are the squares, the sum, the square root and, for a subnormal result, the final scaling. Accuracy against the correctly rounded exact norm: at most 2 ulp on every fixture case (bound asserted by the oracle script).
+  - **`mean`:** `sum / n`, one correctly rounded division.
+  - **Overflow:** if the accumulation overflows anywhere (an intermediate infinity), the result is `Infinite { index: None }`, even when the exact result is finite (e.g. `[MAX, MAX, -MAX]`); likewise `mean` is an error when its sum overflows (e.g. `mean([MAX, MAX])`). An overflowing product gives `Infinite { index: Some(i) }` for the first such `i`.
+- **Errors:** `NotANumber`, `Infinite`, `LengthMismatch`, `EmptyInput`. Check order: `dot` length first; then input NaN/infinity scans (first offending index; `dot` scans all of `a`, then all of `b`, and names the slice in the operation as `red.dot.a` or `red.dot.b`); then product overflow; then accumulation overflow. Empty input gives `+0.0` except `mean` (`EmptyInput`).
 - **Determinism:** D0.
 - **Performance budget:** 1 M-element `sum` < 3 ms on reference hardware [unverified until measured].
 - **Crate:** `fid-num` (module `red`).
@@ -61,11 +71,11 @@ Summation, dot product, Euclidean norm and mean whose result depends only on the
 
 ## Build prompt
 
-> In crate `fid-num`, create module `red` with `pub fn sum(&[f64]) -> Result<f64, NumError>`, `dot(&[f64], &[f64])`, `sum_sq`, `norm2`, `mean`. Rule: split into consecutive 256-element blocks; Neumaier-compensated sum inside each block in index order; combine block (sum, comp) pairs by a fixed pairwise tree over block index; return sum + comp. Products are plain `a * b` (no `mul_add`). `norm2` scales by the total-order max |x| and uses `fid_num::f::sqrt`. Errors from module `err`: NaN/inf with index, length mismatch, empty mean. Tests: `fixtures/num/red-illcond-v1` (exact sums known by construction) within 2 ulp; bit-identical results on x86-64, ARM64, wasm32 (wasmtime); an independent test-side reimplementation must agree bit for bit on 10^6 elements. KNP-1: no FMA, no `f64::min`/`max`, no HashMap/HashSet, no SIMD dispatch, no `unsafe`, no I/O; deny `unwrap`/`expect`/`panic`. Acceptance: AC-1..AC-4 of spec node KRN.NUM.RED.
+> In crate `fid-num`, create module `red` with `pub fn sum(&[f64]) -> Result<f64, NumError>`, `dot(&[f64], &[f64])`, `sum_sq`, `norm2`, `mean`. Rule: split into consecutive 256-element blocks; Neumaier-compensated sum inside each block in index order; combine block (sum, comp) pairs by a fixed pairwise tree over block index; return sum + comp. Products are plain `a * b` (no `mul_add`). `norm2` scales by the power of two `2^e` with `2^e <= max|x| < 2^(e+1)` (max in total order) and uses `fid_num::f::sqrt`. Errors from module `err`: NaN/inf with index, length mismatch, empty mean. Tests: `fixtures/num/red-illcond-v1` (exact sums known by construction) within 2 ulp; bit-identical results on x86-64, ARM64, wasm32 (wasmtime); an independent test-side reimplementation must agree bit for bit on 10^6 elements. KNP-1: no FMA, no `f64::min`/`max`, no HashMap/HashSet, no SIMD dispatch, no `unsafe`, no I/O; deny `unwrap`/`expect`/`panic`. Acceptance: AC-1..AC-4 of spec node KRN.NUM.RED.
 
 ## Open questions
 
-- None.
+- The performance budget (1 M-element `sum` < 3 ms on reference hardware) is not yet measured; CI runs debug builds only. It stays `[unverified]` until a release-build benchmark on reference hardware exists.
 
 ## Children
 
