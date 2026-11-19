@@ -686,7 +686,8 @@ fn walk(dir: &Path, depth: usize, out: &mut BTreeMap<String, PathBuf>) -> Result
     }
     for entry in std::fs::read_dir(dir).map_err(io)? {
         let path = entry.map_err(io)?.path();
-        let meta = std::fs::metadata(&path).map_err(|e| InputError::Io { file: show(&path), message: e.to_string() })?;
+        let meta =
+            std::fs::metadata(&path).map_err(|e| InputError::Io { file: show(&path), message: e.to_string() })?;
         if meta.is_dir() {
             walk(&path, depth + 1, out)?;
         } else if path.extension().is_some_and(|x| x == "toml") {

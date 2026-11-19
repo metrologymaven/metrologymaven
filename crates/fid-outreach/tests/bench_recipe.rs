@@ -23,11 +23,7 @@ fn cli(case: &str, args: &[&str], json: bool) -> (i32, String, String) {
         cmd.arg("--json");
     }
     let out = cmd.output().unwrap();
-    (
-        out.status.code().unwrap(),
-        String::from_utf8(out.stdout).unwrap(),
-        String::from_utf8(out.stderr).unwrap(),
-    )
+    (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap(), String::from_utf8(out.stderr).unwrap())
 }
 
 #[test]
@@ -109,7 +105,8 @@ fn ac7_report_is_byte_identical_whatever_the_argument_order() {
     let c = cli("dup-id", &["recipes"], true);
     assert_eq!(a, b);
     assert_eq!(a, c);
-    let files = ["recipes/performance.toml", "recipes/fidelity.toml", "recipes/comparison.toml", "recipes/accuracy.toml"];
+    let files =
+        ["recipes/performance.toml", "recipes/fidelity.toml", "recipes/comparison.toml", "recipes/accuracy.toml"];
     let mut rev = files;
     rev.reverse();
     let x = cli("ok", &files, true);
@@ -169,7 +166,8 @@ tolerance_kind = "abs"
 "#;
 
 fn run_with(text: &str, registry: &Registry) -> Vec<(Code, Option<String>)> {
-    let cat = parse_catalogue(&format!("[[dataset]]\nid = \"demo-data\"\nsha256 = \"sha256:{DIGEST}\"\n"), "c").unwrap();
+    let cat =
+        parse_catalogue(&format!("[[dataset]]\nid = \"demo-data\"\nsha256 = \"sha256:{DIGEST}\"\n"), "c").unwrap();
     let r = check(&cat, &[("r.toml".to_string(), text.to_string())], registry).unwrap();
     if r.findings.is_empty() {
         assert_eq!(r.recipes.len(), 1);
@@ -230,7 +228,8 @@ fn req002_unknown_dataset() {
 
 #[test]
 fn req003_source_types_and_programs() {
-    let release = "type = \"release_numbers\"\nselector = \"/results/demo.case\"\njournal_selector = \"/journals/demo.case\"\n";
+    let release =
+        "type = \"release_numbers\"\nselector = \"/results/demo.case\"\njournal_selector = \"/journals/demo.case\"\n";
     let command = |argv: &str, outputs: &str| {
         BASE.replace(release, &format!("type = \"command\"\nargv = {argv}\noutputs = {outputs}\n"))
     };
@@ -273,7 +272,10 @@ fn req004_tolerance_and_direction() {
             "{bad}"
         );
     }
-    assert_eq!(run(&BASE.replace("tolerance = \"1.5\"", "tolerance = 1.5")), one(Code::FieldMalformed, "fields.err.tolerance"));
+    assert_eq!(
+        run(&BASE.replace("tolerance = \"1.5\"", "tolerance = 1.5")),
+        one(Code::FieldMalformed, "fields.err.tolerance")
+    );
     assert_eq!(run(&BASE.replace("\"abs\"", "\"pct\"")), one(Code::FieldMalformed, "fields.err.tolerance_kind"));
     for good in ["higher", "equal"] {
         assert_eq!(run(&BASE.replace("\"lower\"", &format!("\"{good}\""))), vec![]);
