@@ -9,5 +9,6 @@ pub mod facade_impl;
 pub mod literals;
 pub mod macros;
 pub mod minmax;
+pub mod review;
 pub mod misc;
 pub mod shadow;

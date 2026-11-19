@@ -176,7 +176,7 @@ fn ac4_syntax_error_is_an_unwaivable_parse_finding() {
 #[test]
 fn ac5_clean_code_has_no_findings_and_reports_its_facade_uses() {
     let cfg = cfg_file("syn/clean/knp1-lint.toml");
-    let out = scan(vec![entry("knp1-syn-clean", "0.0.1", "syn/clean")], &cfg);
+    let out = scan(vec![entry("knp1-syn-clean", "0.0.1", "syn/clean"), facade_stub()], &cfg);
     assert!(out.findings.is_empty(), "{:#?}", out.findings);
     assert_eq!(short(&out.notes), ["KNP1-LIBM@3:17", "KNP1-LIBM@9:29", "KNP1-LIBM@9:54"]);
     for n in &out.notes {
@@ -227,7 +227,12 @@ fn markers(src: &str) -> (Pos, Pos) {
 }
 
 fn keyed(fs: &[Finding], file: &str) -> Pos {
-    fs.iter().filter(|f| f.file == file).map(|f| (f.line, f.column, f.rule.id())).collect()
+    fs.iter().filter(|f| f.crate_name == "knp1-syn-cases" && f.file == file).map(|f| (f.line, f.column, f.rule.id())).collect()
+}
+
+/// The facade crate the `[syn.facade_paths]` entries of the fixtures name.
+fn facade_stub() -> CrateEntry {
+    entry("fid-num", "0.1.0", "syn/fid-num-stub")
 }
 
 #[test]
@@ -236,8 +241,8 @@ fn hand_labelled_cases_match_exactly() {
     let e = entry("knp1-syn-cases", "0.0.1", "syn/cases");
     let files = e.files.clone();
     let root = e.root.clone();
-    assert!(files.len() >= 9, "{files:?}");
-    let out = scan(vec![e], &cfg);
+    assert!(files.len() >= 10, "{files:?}");
+    let out = scan(vec![e, facade_stub()], &cfg);
     let mut total = 0;
     for file in &files {
         let src = String::from_utf8(read(&root.join(file))).unwrap();
@@ -247,7 +252,7 @@ fn hand_labelled_cases_match_exactly() {
         assert_eq!(keyed(&out.notes, file), want_notes, "notes of {file}");
     }
     assert_eq!(out.findings.len(), total);
-    assert!(total >= 50, "{total}");
+    assert!(total >= 90, "{total}");
 }
 
 // ------------------------------------------------------------------ end to end
@@ -297,17 +302,30 @@ fn unreadable_listed_file_is_fatal() {
 
 #[test]
 fn facade_file_outside_the_closure_is_a_config_error() {
-    let cfg = parse_config("[[syn.facade_files]]\ncrate = \"x\"\nfile = \"src/a.rs\"\nreason = \"r\"\n").unwrap();
+    for text in [
+        "[[syn.facade_files]]\ncrate = \"x\"\nversion = \"0.0.1\"\nfile = \"src/a.rs\"\nreason = \"r\"\n",
+        // Right crate and file, wrong version.
+        "[[syn.facade_files]]\ncrate = \"seeded-knp1-fma\"\nversion = \"9.9.9\"\nfile = \"src/lib.rs\"\nreason = \"r\"\n",
+        // A facade path whose crate is not in the closure, or not at that version.
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"fid-num\", version = \"0.1.0\", reason = \"r\" }\n",
+        "[syn.facade_paths]\n\"seeded_knp1_fma::f\" = { crate = \"seeded-knp1-fma\", version = \"0.0.2\", reason = \"r\" }\n",
+    ] {
+        let cfg = parse_config(text).unwrap();
+        let e = entry("seeded-knp1-fma", "0.0.1", "seeded/KNP1-FMA");
+        let err = scan_closure(&Closure { crates: vec![e] }, &cfg).unwrap_err();
+        assert_eq!(err.code, SynErrorCode::ConfigInvalid, "{text}");
+    }
+    // The same facade file at the right version is accepted.
+    let ok = "[[syn.facade_files]]\ncrate = \"seeded-knp1-fma\"\nversion = \"0.0.1\"\nfile = \"src/lib.rs\"\nreason = \"r\"\n";
     let e = entry("seeded-knp1-fma", "0.0.1", "seeded/KNP1-FMA");
-    let err = scan_closure(&Closure { crates: vec![e] }, &cfg).unwrap_err();
-    assert_eq!(err.code, SynErrorCode::ConfigInvalid);
+    assert!(scan_closure(&Closure { crates: vec![e] }, &parse_config(ok).unwrap()).is_ok());
 }
 
 #[test]
 fn config_is_validated() {
     assert_eq!(parse_config("[graph]\nroots = [\"a\"]\n").unwrap(), Config::default());
     let ok = parse_config(
-        "[syn.facade_paths]\n\"fid_num::f\" = \"facade\"\n[[syn.facade_files]]\ncrate = \"fid-num\"\nfile = \"src/f/mod.rs\"\nreason = \"impl\"\n",
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"fid-num\", version = \"0.1.0\", reason = \"facade\" }\n[[syn.facade_files]]\ncrate = \"fid-num\"\nversion = \"0.1.0\"\nfile = \"src/f/mod.rs\"\nreason = \"impl\"\n",
     )
     .unwrap();
     assert_eq!(ok.facade_paths.len(), 1);
@@ -329,6 +347,11 @@ fn config_is_validated() {
         "[[syn.facade_files]]\ncrate = \"a\"\nfile = \"src/a.rs\"\nreason = \"r\"\nextra = 1\n",
         "[[syn.facade_files]]\ncrate = \"a\"\nfile = \"src/a.rs\"\nreason = \"r\"\n[[syn.facade_files]]\ncrate = \"a\"\nfile = \"src/a.rs\"\nreason = \"s\"\n",
         "[syn.facade_paths]\n\"a\" = \"r\"\n\"a\" = \"s\"\n",
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"other\", version = \"1\", reason = \"r\" }\n",
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"fid-num\", reason = \"r\" }\n",
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"fid-num\", version = \"1\", reason = \"\" }\n",
+        "[syn.facade_paths]\n\"fid_num::f\" = { crate = \"fid-num\", version = \"1\", reason = \"r\", x = 1 }\n",
+        "[[syn.facade_files]]\ncrate = \"a\"\nfile = \"src/a.rs\"\nreason = \"r\"\n",
     ] {
         let e = parse_config(bad).unwrap_err();
         assert_eq!(e.code, SynErrorCode::ConfigInvalid, "{bad}");
@@ -390,7 +413,7 @@ fn deep_nesting_and_long_inputs_do_not_crash() {
     let use_deep = "{".repeat(40) + "a" + &"}".repeat(40);
     let out = one(&format!("use x::{use_deep};"));
     assert_eq!(out.findings.len(), 1);
-    assert_eq!(out.findings[0].rule, Rule::Parse);
+    assert_eq!(out.findings[0].rule, Rule::ParseResolve);
 }
 
 #[test]
@@ -405,14 +428,27 @@ fn crlf_bom_and_shebang_keep_positions() {
     assert_eq!(short(&shebang.findings), ["KNP1-LIBM@2:25"]);
     let inner_attr = one("#![forbid(unsafe_code)]\nfn f() {}\n");
     assert!(inner_attr.findings.is_empty(), "{:?}", inner_attr.findings);
+    // rustc's rule: whitespace and non-doc comments between `#!` and `[` keep it an attribute.
+    for src in [
+        "#!/**/[allow(unused)] fn f(x: f64) -> f64 { x.mul_add(1.0, 2.0) }\n",
+        "#! // c\n /* d /* e */ */ [allow(unused)] fn f(x: f64) -> f64 { x.mul_add(1.0, 2.0) }\n",
+        "#!\n\n[allow(unused)] fn f(x: f64) -> f64 { x.mul_add(1.0, 2.0) }\n",
+    ] {
+        let out = one(src);
+        assert!(out.findings.iter().any(|f| f.rule == Rule::Fma), "{src:?}: {:?}", out.findings);
+    }
+    // A doc comment after `#!` makes it a shebang line, as in rustc: only that line is dropped.
+    let doc = one("#!/// doc [x.mul_add(1.0, 2.0)]\nfn f(x: f64) -> f64 { x.sqrt() }\n");
+    assert_eq!(short(&doc.findings), ["KNP1-LIBM@2:25"]);
 }
 
 #[test]
 fn alias_cycles_and_unreadable_use_trees_fail_closed() {
     let out = one("use a as b;\nuse b as a;\nfn f() { a::x(); }\n");
-    assert!(out.findings.iter().any(|f| f.rule == Rule::Parse && f.line == 3), "{:?}", out.findings);
+    assert!(out.findings.iter().any(|f| f.rule == Rule::ParseResolve && f.line == 3), "{:?}", out.findings);
+    assert!(Rule::ParseResolve.is_waivable());
     let out = one("macro_rules! m { ($($x:ident),*) => { use a::{$($x),*}; } }\n");
-    assert_eq!(out.findings.iter().filter(|f| f.rule == Rule::Parse).count(), 1, "{:?}", out.findings);
+    assert_eq!(out.findings.iter().filter(|f| f.rule == Rule::ParseResolve).count(), 1, "{:?}", out.findings);
     // `use a::a;` refers to the module `a`, not to itself: no cycle.
     assert!(one("use a::a;\nfn f() { a::x(); }\n").findings.is_empty());
 }
@@ -444,6 +480,23 @@ fn include_and_path_targets_must_be_listed_source() {
     assert_eq!(s("#[path = \"/abs/gen.rs\"] mod g;"), ["KNP1-IO-FS@1:3"]);
     assert_eq!(s("#[cfg_attr(x, path = \"bin/x.rs\")] mod g;"), ["KNP1-IO-FS@1:15"]);
     assert_eq!(s("include!(env!(\"OUT_DIR\"));"), ["KNP1-IO-FS@1:1", "KNP1-ENV@1:10"]);
+}
+
+#[test]
+fn coarse_performance() {
+    // 20 000 lines of mixed code; the NODE.md budget (300 000 lines < 10 s, release) is not
+    // measured here. This only guards against quadratic blow-ups, with a generous debug bound.
+    let mut src = String::new();
+    for i in 0..20_000 {
+        src.push_str(&format!(
+            "    let v{i} = a.max(b) + c::d::e(x, y) + s.iter().map(|z| z + 1.0).sum::<f64>() + w[{i}].len().min(3);\n"
+        ));
+    }
+    let src = format!("fn f() {{\n{src}}}\n");
+    let t = std::time::Instant::now();
+    let out = one(&src);
+    assert!(out.findings.is_empty(), "{:?}", out.findings.first());
+    assert!(t.elapsed().as_secs() < 120, "{:?}", t.elapsed());
 }
 
 #[test]

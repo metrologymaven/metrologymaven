@@ -13,9 +13,10 @@
 //! - A file the lexer cannot classify (bad UTF-8, an unterminated literal or comment, an
 //!   unbalanced delimiter, a non-ASCII identifier, a stray character, too many tokens, larger
 //!   than [`MAX_FILE_BYTES`]) yields one `KNP1-PARSE` finding. `KNP1-PARSE` cannot be waived.
-//! - A `use` declaration the scan cannot take apart, or an alias chain that is cyclic, deeper
-//!   than [`MAX_ALIAS_DEPTH`] or has more than [`MAX_RESOLUTIONS`] targets, is `KNP1-PARSE` at
-//!   that token.
+//! - A `use` declaration the scan cannot take apart, an alias chain that is cyclic, deeper
+//!   than [`MAX_ALIAS_DEPTH`] or has more than [`MAX_RESOLUTIONS`] targets, and macro code whose
+//!   meaning the caller picks (`$x.$f()`, `f64::$f`, `$($p)::*::read`) are `KNP1-PARSE-RESOLVE`
+//!   at that token: waivable only through a reviewed waiver, whose justification is reported.
 //! - A macro metavariable (`$x`) in a path is a wildcard that matches any segment, and as a
 //!   receiver or operand of `.min`/`.max`/`.clamp` it counts as a float.
 //! - An I/O error reading a listed file is fatal (`KNP1-READ`): the run produces no findings.
@@ -43,10 +44,11 @@
 //!
 //! ```toml
 //! [syn.facade_paths]
-//! "fid_num::f" = "KNP-1 facade: correctly rounded pure-Rust transcendentals (KRN.NUM.FN)"
+//! "fid_num::f" = { crate = "fid-num", version = "0.1.0", reason = "KNP-1 facade (KRN.NUM.FN)" }
 //!
 //! [[syn.facade_files]]
 //! crate = "fid-num"
+//! version = "0.1.0"
 //! file = "src/f/mod.rs"
 //! reason = "implements the facade on top of IEEE sqrt and the vendored routines"
 //! ```
@@ -74,7 +76,7 @@ pub const MAX_PATH_SEGMENTS: usize = 64;
 pub const MAX_USE_DEPTH: usize = 32;
 /// Most tokens looked at when checking the receiver or arguments of `.min`/`.max`/`.clamp`
 /// or the `<…>` before `::min`; past this the operand counts as a float (fail closed).
-pub const MAX_OPERAND_TOKENS: usize = 4096;
+pub const MAX_OPERAND_TOKENS: usize = 512;
 /// Largest config file read, in bytes.
 pub const MAX_CONFIG_BYTES: u64 = 16 * 1024 * 1024;
 
@@ -94,7 +96,8 @@ pub enum PatternKind {
     IdentContains,
     /// A call-like use of a name that is too common to ban as a bare identifier: the last
     /// segment of a path of two or more segments, of a path whose first segment is a `use`
-    /// alias, of a `use` leaf, or a single identifier directly followed by `(`.
+    /// alias, of a `use` leaf, a name after `>::` (`<f64>::sin`, `Libm::<f64>::exp`), or a
+    /// single identifier directly followed by `(`.
     Call,
     /// A method call `.name(` or `.name::`.
     Method,
@@ -113,6 +116,8 @@ pub enum PatternKind {
     /// `name = …` inside an attribute unless the value is a plain string literal naming a
     /// relative `.rs` file that the scan lists (the `#[path]` attribute).
     Attr,
+    /// An identifier equal to the pattern inside an attribute (`#[no_mangle]`).
+    AttrName,
     /// The keyword (not a raw identifier). For `extern` only when not followed by `crate`.
     Keyword,
 }
@@ -120,7 +125,7 @@ pub enum PatternKind {
 use PatternKind as P;
 
 /// Number of rows in [`RULE_TABLE`].
-pub const RULE_TABLE_LEN: usize = 113;
+pub const RULE_TABLE_LEN: usize = 144;
 
 /// The pinned rule table of this leaf: `(rule, pattern kind, pattern)`. Mirrored in the
 /// leaf's NODE.md Design; changing it is a spec change.
@@ -154,9 +159,12 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Fma, P::Ident, "algebraic_mul"),
     (Rule::Fma, P::Ident, "algebraic_div"),
     (Rule::Fma, P::Ident, "algebraic_rem"),
+    (Rule::Fma, P::Ident, "simd_fma"),
+    (Rule::Fma, P::Ident, "simd_relaxed_fma"),
     // KNP1-POW
     (Rule::Pow, P::IdentFloat, "powi"),
     (Rule::Pow, P::IdentSuffixed, "pow"),
+    (Rule::Pow, P::Call, "pow"),
     // KNP1-LIBM: names that are banned as any identifier.
     (Rule::Libm, P::IdentFloat, "sqrt"),
     (Rule::Libm, P::IdentFloat, "cbrt"),
@@ -184,6 +192,9 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Libm, P::IdentFloat, "tgamma"),
     (Rule::Libm, P::IdentFloat, "erf"),
     (Rule::Libm, P::IdentFloat, "erfc"),
+    (Rule::Libm, P::IdentFloat, "sincos"),
+    (Rule::Libm, P::IdentFloat, "lgamma_r"),
+    (Rule::Libm, P::Ident, "lgammaf_r"),
     // KNP1-LIBM: short names, banned in call position, as methods and with a float suffix.
     (Rule::Libm, P::Call, "sin"),
     (Rule::Libm, P::Call, "cos"),
@@ -192,6 +203,13 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Libm, P::Call, "ln"),
     (Rule::Libm, P::Call, "log"),
     (Rule::Libm, P::Call, "gamma"),
+    (Rule::Libm, P::Call, "exp10"),
+    (Rule::Libm, P::Call, "j0"),
+    (Rule::Libm, P::Call, "j1"),
+    (Rule::Libm, P::Call, "jn"),
+    (Rule::Libm, P::Call, "y0"),
+    (Rule::Libm, P::Call, "y1"),
+    (Rule::Libm, P::Call, "yn"),
     (Rule::Libm, P::Method, "sin"),
     (Rule::Libm, P::Method, "cos"),
     (Rule::Libm, P::Method, "tan"),
@@ -199,6 +217,13 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Libm, P::Method, "ln"),
     (Rule::Libm, P::Method, "log"),
     (Rule::Libm, P::Method, "gamma"),
+    (Rule::Libm, P::Method, "exp10"),
+    (Rule::Libm, P::Method, "j0"),
+    (Rule::Libm, P::Method, "j1"),
+    (Rule::Libm, P::Method, "jn"),
+    (Rule::Libm, P::Method, "y0"),
+    (Rule::Libm, P::Method, "y1"),
+    (Rule::Libm, P::Method, "yn"),
     (Rule::Libm, P::IdentSuffixed, "sin"),
     (Rule::Libm, P::IdentSuffixed, "cos"),
     (Rule::Libm, P::IdentSuffixed, "tan"),
@@ -206,6 +231,13 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Libm, P::IdentSuffixed, "ln"),
     (Rule::Libm, P::IdentSuffixed, "log"),
     (Rule::Libm, P::IdentSuffixed, "gamma"),
+    (Rule::Libm, P::IdentSuffixed, "exp10"),
+    (Rule::Libm, P::IdentSuffixed, "j0"),
+    (Rule::Libm, P::IdentSuffixed, "j1"),
+    (Rule::Libm, P::IdentSuffixed, "jn"),
+    (Rule::Libm, P::IdentSuffixed, "y0"),
+    (Rule::Libm, P::IdentSuffixed, "y1"),
+    (Rule::Libm, P::IdentSuffixed, "yn"),
     // KNP1-MINMAX
     (Rule::MinMax, P::FloatMethod, "min"),
     (Rule::MinMax, P::FloatMethod, "max"),
@@ -233,6 +265,9 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::Unsafe, P::Macro, "global_asm"),
     (Rule::Unsafe, P::Macro, "naked_asm"),
     (Rule::Unsafe, P::Macro, "llvm_asm"),
+    (Rule::Unsafe, P::AttrName, "no_mangle"),
+    (Rule::Unsafe, P::AttrName, "export_name"),
+    (Rule::Unsafe, P::AttrName, "link_section"),
     // KNP1-IO-FS (and source the scan would not see)
     (Rule::IoFs, P::Module, "std::fs"),
     (Rule::IoFs, P::IncludeMacro, "include"),
@@ -243,6 +278,7 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
     (Rule::IoNet, P::Module, "std::net"),
     (Rule::Clock, P::Module, "std::time"),
     (Rule::Env, P::Module, "std::env"),
+    (Rule::Env, P::Module, "core::env"),
     (Rule::Env, P::Macro, "env"),
     (Rule::Env, P::Macro, "option_env"),
     (Rule::Thread, P::Module, "std::thread"),
@@ -285,6 +321,11 @@ fn is_libm_name(name: &str) -> bool {
     RULE_TABLE.iter().any(|(rule, kind, pat)| {
         *rule == Rule::Libm && (name_matches(*kind, pat, name) || (matches!(kind, P::Call | P::Method) && name == *pat))
     })
+}
+
+/// The rule of a non-`KNP1-LIBM` `Call` pattern equal to `name`.
+fn other_call_rule(name: &str) -> Option<&'static Rule> {
+    RULE_TABLE.iter().find(|(r, k, p)| *k == P::Call && *r != Rule::Libm && *p == name).map(|(r, _, _)| r)
 }
 
 fn patterns(kind: PatternKind) -> impl Iterator<Item = (&'static Rule, &'static str)> {
@@ -360,17 +401,27 @@ fn invalid(m: impl Into<String>) -> SynError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FacadeFile {
     pub crate_name: String,
+    pub version: String,
     /// Path relative to the crate root, `/` separated.
     pub file: String,
+    pub reason: String,
+}
+
+/// One `[syn.facade_paths]` entry: the crate (name and exact version) whose library the path
+/// prefix names, and the reason.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FacadePath {
+    pub crate_name: String,
+    pub version: String,
     pub reason: String,
 }
 
 /// The `[syn]` table of `knp1-lint.toml`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Config {
-    /// Facade path prefix (segments) -> reason.
-    pub facade_paths: BTreeMap<Vec<String>, String>,
-    /// Facade implementation files, sorted by (crate, file).
+    /// Facade path prefix (segments) -> crate, version and reason.
+    pub facade_paths: BTreeMap<Vec<String>, FacadePath>,
+    /// Facade implementation files, sorted by (crate, version, file).
     pub facade_files: Vec<FacadeFile>,
 }
 
@@ -379,11 +430,14 @@ impl Config {
         self.facade_paths
             .iter()
             .find(|(p, _)| path.len() >= p.len() && path.iter().zip(p.iter()).all(|(a, b)| a == b))
-            .map(|(p, r)| (p.join("::"), r.as_str()))
+            .map(|(p, f)| (p.join("::"), f.reason.as_str()))
     }
 
-    fn facade_file(&self, crate_name: &str, file: &str) -> Option<&str> {
-        self.facade_files.iter().find(|f| f.crate_name == crate_name && f.file == file).map(|f| f.reason.as_str())
+    fn facade_file(&self, crate_name: &str, version: &str, file: &str) -> Option<&str> {
+        self.facade_files
+            .iter()
+            .find(|f| f.crate_name == crate_name && f.version == version && f.file == file)
+            .map(|f| f.reason.as_str())
     }
 }
 
@@ -392,8 +446,8 @@ fn plain_ident(s: &str) -> bool {
     cs.next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_') && cs.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
-fn reason(v: &toml::Value, what: &str) -> Result<String, SynError> {
-    match v.as_str().map(str::trim) {
+fn reason(v: Option<&toml::Value>, what: &str) -> Result<String, SynError> {
+    match v.and_then(toml::Value::as_str).map(str::trim) {
         Some(r) if !r.is_empty() && r.len() <= 4096 => Ok(r.to_string()),
         _ => Err(invalid(format!("knp1-lint.toml: {what} must be a non-empty reason (at most 4096 bytes)"))),
     }
@@ -410,9 +464,32 @@ fn valid_relpath(p: &str) -> bool {
         && p.split('/').all(|seg| !seg.is_empty() && seg != ".." && seg != ".")
 }
 
+/// A table with exactly `keys`, each a non-empty string; `what` names it in errors.
+fn string_table(v: &toml::Value, keys: &[&str], what: &str) -> Result<BTreeMap<String, String>, SynError> {
+    let toml::Value::Table(t) = v else {
+        return Err(invalid(format!("knp1-lint.toml: {what} must be a table with {}", keys.join(", "))));
+    };
+    if let Some(k) = t.keys().find(|k| !keys.contains(&k.as_str())) {
+        return Err(invalid(format!("knp1-lint.toml: {what}: unknown key {k:?}")));
+    }
+    let mut out = BTreeMap::new();
+    for k in keys {
+        let val = if *k == "reason" {
+            reason(t.get(*k), &format!("{what} reason"))?
+        } else {
+            match t.get(*k).and_then(toml::Value::as_str) {
+                Some(x) if !x.is_empty() && x.len() <= 128 && !x.chars().any(char::is_control) => x.to_string(),
+                _ => return Err(invalid(format!("knp1-lint.toml: {what}: missing or bad `{k}`"))),
+            }
+        };
+        out.insert((*k).to_string(), val);
+    }
+    Ok(out)
+}
+
 /// Parses the `[syn]` table of the config text; other tables are ignored. No `[syn]` table
-/// means no opt-outs. Unknown keys, empty reasons, reserved facade roots and duplicate facade
-/// files are rejected with `KNP1-CONFIG-INVALID`.
+/// means no opt-outs. Unknown keys, empty reasons, reserved facade roots, a facade path whose
+/// root is not its crate, and duplicate facade files are rejected with `KNP1-CONFIG-INVALID`.
 pub fn parse_config(text: &str) -> Result<Config, SynError> {
     let table: toml::Table =
         text.parse().map_err(|e: toml::de::Error| invalid(format!("knp1-lint.toml: {}", e.to_string().trim_end())))?;
@@ -427,9 +504,9 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
         match k.as_str() {
             "facade_paths" => {
                 let toml::Value::Table(paths) = v else {
-                    return Err(invalid("knp1-lint.toml: syn.facade_paths must be a table \"a::b\" = \"<reason>\""));
+                    return Err(invalid("knp1-lint.toml: syn.facade_paths must be a table of \"a::b\" = { … }"));
                 };
-                for (p, why) in paths {
+                for (p, entry) in paths {
                     let segs: Vec<String> = p.split("::").map(str::to_string).collect();
                     if !segs.iter().all(|s| plain_ident(s)) {
                         return Err(invalid(format!("knp1-lint.toml: syn.facade_paths key {p:?} is not a Rust path")));
@@ -439,8 +516,16 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                             "knp1-lint.toml: syn.facade_paths key {p:?} starts at a built-in root and cannot be a facade"
                         )));
                     }
-                    let r = reason(why, &format!("syn.facade_paths.{p:?}"))?;
-                    cfg.facade_paths.insert(segs, r);
+                    let mut e = string_table(entry, &["crate", "version", "reason"], &format!("syn.facade_paths.{p:?}"))?;
+                    let crate_name = e.remove("crate").unwrap_or_default();
+                    if segs.first().map(String::as_str) != Some(crate_name.replace('-', "_").as_str()) {
+                        return Err(invalid(format!(
+                            "knp1-lint.toml: syn.facade_paths key {p:?} does not start at crate {crate_name:?}"
+                        )));
+                    }
+                    let version = e.remove("version").unwrap_or_default();
+                    let reason = e.remove("reason").unwrap_or_default();
+                    cfg.facade_paths.insert(segs, FacadePath { crate_name, version, reason });
                 }
             }
             "facade_files" => {
@@ -449,45 +534,27 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                 };
                 let mut seen = BTreeSet::new();
                 for (i, item) in items.iter().enumerate() {
-                    let n = i + 1;
-                    let toml::Value::Table(e) = item else {
-                        return Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n} is not a table")));
-                    };
-                    for key in e.keys() {
-                        if !["crate", "file", "reason"].contains(&key.as_str()) {
-                            return Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n}: unknown key {key:?}")));
-                        }
-                    }
-                    let s = |key: &str| -> Result<String, SynError> {
-                        match e.get(key).and_then(toml::Value::as_str) {
-                            Some(x) if !x.is_empty() => Ok(x.to_string()),
-                            _ => {
-                                Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n}: missing or empty `{key}`")))
-                            }
-                        }
-                    };
-                    let crate_name = s("crate")?;
-                    if crate_name.len() > 128 || crate_name.chars().any(char::is_control) {
-                        return Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n}: bad `crate`")));
-                    }
-                    let file = s("file")?;
+                    let what = format!("syn.facade_files #{}", i + 1);
+                    let mut e = string_table(item, &["crate", "version", "file", "reason"], &what)?;
+                    let crate_name = e.remove("crate").unwrap_or_default();
+                    let version = e.remove("version").unwrap_or_default();
+                    let file = e.remove("file").unwrap_or_default();
                     if !valid_relpath(&file) {
                         return Err(invalid(format!(
-                            "knp1-lint.toml: syn.facade_files #{n}: `file` must be a '/'-separated path relative to the crate root"
+                            "knp1-lint.toml: {what}: `file` must be a '/'-separated path relative to the crate root"
                         )));
                     }
-                    let why = reason(
-                        e.get("reason").unwrap_or(&toml::Value::Boolean(false)),
-                        &format!("syn.facade_files #{n} reason"),
-                    )?;
-                    if !seen.insert((crate_name.clone(), file.clone())) {
+                    if !seen.insert((crate_name.clone(), version.clone(), file.clone())) {
                         return Err(invalid(format!(
-                            "knp1-lint.toml: syn.facade_files lists {crate_name} {file} twice"
+                            "knp1-lint.toml: syn.facade_files lists {crate_name} {version} {file} twice"
                         )));
                     }
-                    cfg.facade_files.push(FacadeFile { crate_name, file, reason: why });
+                    let reason = e.remove("reason").unwrap_or_default();
+                    cfg.facade_files.push(FacadeFile { crate_name, version, file, reason });
                 }
-                cfg.facade_files.sort_by(|a, b| (&a.crate_name, &a.file).cmp(&(&b.crate_name, &b.file)));
+                cfg.facade_files.sort_by(|a, b| {
+                    (&a.crate_name, &a.version, &a.file).cmp(&(&b.crate_name, &b.version, &b.file))
+                });
             }
             other => return Err(invalid(format!("knp1-lint.toml: unknown key syn.{other}"))),
         }
@@ -603,7 +670,7 @@ impl<'a> Scan<'a> {
             toks,
             lines,
             crate_ident: f.crate_name.replace('-', "_"),
-            facade_file: cfg.facade_file(f.crate_name, f.file),
+            facade_file: cfg.facade_file(f.crate_name, f.crate_version, f.file),
             partner: vec![usize::MAX; n],
             in_use: vec![false; n],
             in_attr: vec![false; n],
@@ -685,12 +752,17 @@ impl<'a> Scan<'a> {
                 }
             }
         }
+        self.collect_type_aliases();
         for l in &leaves {
             match l.glob {
                 Some(star) => self.check_glob(l, star),
-                None => self.check_path(&l.segs, &l.toks, l.absolute, false, true),
+                None => {
+                    self.check_path(&l.segs, &l.toks, l.absolute, false, true);
+                    self.check_binding(l);
+                }
             }
         }
+        self.check_metavariables();
         for i in 0..self.toks.len() {
             if let Some((segs, toks, absolute, end)) = self.path_at(i) {
                 let call = self.is(end, &Kind::Open(Delim::Paren));
@@ -801,7 +873,7 @@ impl<'a> Scan<'a> {
     }
 
     fn parse_hit(&mut self, i: usize, what: &str) {
-        self.hit(i, &Rule::Parse, what.to_string());
+        self.hit(i, &Rule::ParseResolve, what.to_string());
     }
 
     /// One path segment at `i` (an identifier, or a metavariable `$name`) and the next index.
@@ -953,10 +1025,29 @@ impl<'a> Scan<'a> {
                 out.push(p);
                 continue;
             };
-            if root == "crate" || root == "$crate" {
-                let mut n = vec![self.crate_ident.clone()];
-                n.extend(p.iter().skip(1).cloned());
-                out.push(n);
+            if root == "crate" || root == "$crate" || root == "self" || root == "super" {
+                // The segment after `crate`/`self`/`super` may be a binding of this file (or of
+                // the module it names): resolve it through the alias map too (fail closed).
+                let rest: Vec<String> = p
+                    .iter()
+                    .skip_while(|x| *x == "self" || *x == "super")
+                    .skip(usize::from(root == "crate" || root == "$crate"))
+                    .cloned()
+                    .collect();
+                if root == "crate" || root == "$crate" {
+                    let mut n = vec![self.crate_ident.clone()];
+                    n.extend(rest.iter().cloned());
+                    out.push(n);
+                } else {
+                    out.push(p.clone());
+                }
+                if rest.first().is_some_and(|r| self.aliases.contains_key(r)) {
+                    if d < MAX_ALIAS_DEPTH {
+                        work.push((rest, d + 1));
+                    } else {
+                        overflow = true;
+                    }
+                }
                 continue;
             }
             let targets = if absolute && d == 0 { None } else { self.aliases.get(root) };
@@ -1036,6 +1127,15 @@ impl<'a> Scan<'a> {
                 }
             }
         }
+        // Other call-position rules (`pow`).
+        if segs.len() >= 2 || aliased || is_use || call {
+            for r in &rs {
+                if let Some(rule) = r.last().and_then(|l| other_call_rule(l)) {
+                    let at = if segs.last() == r.last() { last } else { first };
+                    self.hit(at, rule, format!("`{shown}` calls `{}`", r.join("::")));
+                }
+            }
+        }
         // Name rules reached only through an alias.
         if aliased {
             for r in &rs {
@@ -1048,6 +1148,71 @@ impl<'a> Scan<'a> {
                             self.hit(first, rule, format!("`{shown}` resolves to `{}` (`{pat}`)", r.join("::")));
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /// A `use` leaf or `extern crate … as …`: a renamed binding whose target can reach a
+    /// `Module` pattern is reported for that rule, because a later `b::fs` in another file is
+    /// not seen; a leaf naming a `Macro` or `IncludeMacro` pattern is reported like a call of it.
+    fn check_binding(&mut self, l: &UseLeaf) {
+        let (Some(&last), Some(lastseg)) = (l.toks.last(), l.segs.last()) else {
+            return;
+        };
+        let (rs, _) = self.resolve(&l.segs, l.absolute);
+        let shown = l.segs.join("::");
+        if l.binding.as_ref().is_some_and(|b| b != lastseg) {
+            for (rule, pat) in patterns(P::Module) {
+                let p: Vec<&str> = pat.split("::").collect();
+                if rs.iter().any(|r| reaches(r, &p)) {
+                    self.hit(last, rule, format!("`{shown}` is renamed; the binding can reach `{pat}`"));
+                }
+            }
+        }
+        for kind in [P::Macro, P::IncludeMacro] {
+            for (rule, pat) in patterns(kind) {
+                if rs.iter().any(|r| r.last().is_some_and(|x| x == pat)) {
+                    self.hit(last, rule, format!("`{shown}` imports the built-in macro `{pat}!`"));
+                }
+            }
+        }
+    }
+
+    /// `type F = a::b;` adds `F` to the alias map (so `type F = f64; F::max` is seen).
+    fn collect_type_aliases(&mut self) {
+        for i in 0..self.toks.len() {
+            if !self.keyword(i, "type") || !self.is(i + 2, &Kind::Eq) {
+                continue;
+            }
+            let Some(name) = self.ident(i + 1) else { continue };
+            if let Some((segs, _, _, _)) = self.path_at(i + 3) {
+                self.aliases.entry(name.to_string()).or_default().push(segs);
+            }
+        }
+    }
+
+    /// Macro code the scan cannot classify (`KNP1-PARSE-RESOLVE`): a method name that is a
+    /// metavariable (`.$f(`), a metavariable after a float type (`f64::$f`, `$t::$f`), and a
+    /// `$(…)` repetition used as a path prefix (`$($p)::*::read`).
+    fn check_metavariables(&mut self) {
+        for i in 0..self.toks.len() {
+            let meta = self.is(i, &Kind::Dollar) && self.ident(i + 1).is_some();
+            if meta && i > 0 && self.is(i - 1, &Kind::Dot) {
+                self.parse_hit(i, "method name is a macro metavariable: the scan cannot classify the call");
+            }
+            if meta && i >= 2 && self.is(i - 1, &Kind::PathSep) {
+                let prev = self.ident(i - 2);
+                let float_ty = prev.is_some_and(is_float_type)
+                    || (prev != Some("crate") && i >= 3 && self.is(i - 3, &Kind::Dollar));
+                if float_ty {
+                    self.parse_hit(i, "item name after a float type is a macro metavariable: the scan cannot classify it");
+                }
+            }
+            if self.is(i, &Kind::Dollar) && self.is(i + 1, &Kind::Open(Delim::Paren)) {
+                let close = self.partner.get(i + 1).copied().unwrap_or(usize::MAX);
+                if close == usize::MAX || (close + 1..close + 4).any(|k| self.is(k, &Kind::PathSep)) {
+                    self.parse_hit(i, "macro repetition used as a path: the scan cannot classify the path");
                 }
             }
         }
@@ -1106,8 +1271,34 @@ impl<'a> Scan<'a> {
         if prev_sep && prev_gt && patterns(P::FloatMethod).any(|(_, p)| p == name) && self.qualified_float(i - 2) {
             self.hit(i, &Rule::MinMax, format!("`<…>::{name}` on a float type is not total-order"));
         }
+        // `<f64>::sin`, `<f64 as Float>::cos`, `Libm::<f64>::exp`: like a path of two segments.
+        if prev_sep && prev_gt {
+            if is_libm_name(name) {
+                self.libm(i, format!("`<…>::{name}` (float transcendental)"));
+            }
+            if let Some(rule) = other_call_rule(name) {
+                self.hit(i, rule, format!("`<…>::{name}`"));
+            }
+        }
         if self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_))) {
-            self.check_macro(i, name);
+            // A renamed built-in macro (`use core::include_str as t; t!(…)`) counts as the macro.
+            let mut names = vec![name.to_string()];
+            if self.aliases.contains_key(name) {
+                let (rs, _) = self.resolve(&[name.to_string()], false);
+                names.extend(rs.into_iter().filter_map(|r| r.last().cloned()));
+            }
+            names.sort();
+            names.dedup();
+            for n in &names {
+                self.check_macro(i, n);
+            }
+        }
+        if self.in_attr.get(i).copied().unwrap_or(false) {
+            for (rule, pat) in patterns(P::AttrName) {
+                if pat == name {
+                    self.hit(i, rule, format!("attribute `{name}`: exported or placed symbol"));
+                }
+            }
         }
         if name == "path" && self.in_attr.get(i).copied().unwrap_or(false) && self.is(i + 1, &Kind::Eq) {
             for (rule, pat) in patterns(P::Attr) {
@@ -1174,21 +1365,43 @@ impl<'a> Scan<'a> {
 
     /// `.min(`/`.max(`/`.clamp(` at identifier `i`: true when the receiver or an argument is a float.
     fn float_method_operands(&self, i: usize) -> bool {
-        // Arguments.
+        // Arguments. `f64::min`/`max` take one and `clamp` two: an empty list is another method
+        // (`Iterator::max()`).
         if self.is(i + 1, &Kind::Open(Delim::Paren)) {
             let close = self.partner.get(i + 1).copied().unwrap_or(usize::MAX);
+            if close == i + 2 {
+                return false;
+            }
             if close == usize::MAX || self.floaty(i + 2, close) {
                 return true;
             }
         }
-        // Receiver: the token before the `.`.
-        let Some(r) = i.checked_sub(2) else { return false };
+        // Receiver: the token before the `.`, walking back over `(…)`, `[…]` and `{…}` groups
+        // to the callee or indexed expression before them (`f64::from(a)`, `[1.0][0]`).
+        let Some(mut r) = i.checked_sub(2) else { return false };
+        for _ in 0..MAX_PATH_SEGMENTS {
+            match self.kind(r) {
+                Some(Kind::Close(_)) => {
+                    let open = self.partner.get(r).copied().unwrap_or(usize::MAX);
+                    if open == usize::MAX || self.floaty(open + 1, r) {
+                        return true;
+                    }
+                    match open.checked_sub(1) {
+                        Some(p) if matches!(self.kind(p), Some(Kind::Ident { .. } | Kind::Close(_) | Kind::Gt)) => r = p,
+                        _ => return false,
+                    }
+                }
+                Some(Kind::Gt) => return self.qualified_float(r),
+                _ => return self.receiver_float(r),
+            }
+        }
+        true
+    }
+
+    /// The receiver token `r` (not a group): a float literal, or a path through `f32`/`f64`.
+    fn receiver_float(&self, r: usize) -> bool {
         match self.kind(r) {
             Some(Kind::Lit { kind: LitKind::Float, .. }) => true,
-            Some(Kind::Close(Delim::Paren)) => {
-                let open = self.partner.get(r).copied().unwrap_or(usize::MAX);
-                open == usize::MAX || self.floaty(open + 1, r)
-            }
             Some(Kind::Ident { .. }) => {
                 // Walk back over `a::b::c` and look for a float type or a metavariable.
                 let mut k = r;
@@ -1251,11 +1464,29 @@ fn read_bounded(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
 /// facade file is not part of the closure.
 pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError> {
     for ff in &cfg.facade_files {
-        let known = closure.crates.iter().any(|c| c.name == ff.crate_name && c.files.contains(&ff.file));
+        let known = closure
+            .crates
+            .iter()
+            .any(|c| c.name == ff.crate_name && c.version == ff.version && c.files.contains(&ff.file));
         if !known {
             return Err(invalid(format!(
-                "knp1-lint.toml: syn.facade_files entry {} {} is not a scanned file of the kernel closure",
-                ff.crate_name, ff.file
+                "knp1-lint.toml: syn.facade_files entry {} {} {} is not a scanned file of the kernel closure",
+                ff.crate_name, ff.version, ff.file
+            )));
+        }
+    }
+    for (p, fp) in &cfg.facade_paths {
+        // The path names the crate by its library name, so it must be that one crate at that
+        // exact version, and no other crate of the closure may share the library name.
+        let ident = fp.crate_name.replace('-', "_");
+        let same: Vec<&graph::CrateEntry> = closure.crates.iter().filter(|c| c.name.replace('-', "_") == ident).collect();
+        let exact = same.len() == 1 && same.iter().all(|c| c.name == fp.crate_name && c.version == fp.version);
+        if !exact {
+            return Err(invalid(format!(
+                "knp1-lint.toml: syn.facade_paths {:?} names {} {}, which is not exactly one crate of the kernel closure",
+                p.join("::"),
+                fp.crate_name,
+                fp.version
             )));
         }
     }

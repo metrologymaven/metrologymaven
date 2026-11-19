@@ -168,16 +168,11 @@ fn err(line: u32, col: u32, message: impl Into<String>) -> LexError {
 pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     let chars: Vec<char> = src.chars().collect();
     let mut cur = Cur { c: &chars, i: 0, line: 1, col: 1 };
-    // Shebang line: `#!` not followed (after spaces) by `[`.
-    if cur.peek(0) == Some('#') && cur.peek(1) == Some('!') {
-        let mut k = 2;
-        while cur.peek(k).is_some_and(|c| c == ' ' || c == '\t') {
-            k += 1;
-        }
-        if cur.peek(k) != Some('[') {
-            while cur.peek(0).is_some_and(|c| c != '\n') {
-                cur.bump();
-            }
+    // Shebang line (rustc's rule): `#!` is a shebang unless the first thing after it, skipping
+    // whitespace and non-doc comments, is `[` (then it starts an inner attribute).
+    if cur.peek(0) == Some('#') && cur.peek(1) == Some('!') && !attribute_follows(&chars) {
+        while cur.peek(0).is_some_and(|c| c != '\n') {
+            cur.bump();
         }
     }
     let mut toks: Vec<Token> = Vec::new();
@@ -294,6 +289,51 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
         return Err(err(*l, *c, "unclosed delimiter"));
     }
     Ok(toks)
+}
+
+/// After a leading `#!`: true when, skipping whitespace and non-doc comments, `[` follows.
+/// An unterminated comment counts as an attribute (fail closed: the text is lexed, not dropped).
+fn attribute_follows(c: &[char]) -> bool {
+    let at = |k: usize| c.get(k).copied();
+    let mut k = 2;
+    loop {
+        match (at(k), at(k + 1), at(k + 2), at(k + 3)) {
+            (Some(x), ..) if is_ws(x) => k += 1,
+            (Some('/'), Some('/'), third, fourth) => {
+                let doc = third == Some('!') || (third == Some('/') && fourth != Some('/'));
+                if doc {
+                    return false;
+                }
+                while at(k).is_some_and(|x| x != '\n') {
+                    k += 1;
+                }
+            }
+            (Some('/'), Some('*'), third, fourth) => {
+                let doc = third == Some('!') || (third == Some('*') && !matches!(fourth, Some('*' | '/')));
+                if doc {
+                    return false;
+                }
+                let mut depth = 1usize;
+                k += 2;
+                while depth > 0 {
+                    match (at(k), at(k + 1)) {
+                        (None, _) => return true,
+                        (Some('/'), Some('*')) => {
+                            depth += 1;
+                            k += 2;
+                        }
+                        (Some('*'), Some('/')) => {
+                            depth -= 1;
+                            k += 2;
+                        }
+                        _ => k += 1,
+                    }
+                }
+            }
+            (Some('['), ..) => return true,
+            _ => return false,
+        }
+    }
 }
 
 fn block_comment(cur: &mut Cur<'_>, line: u32, col: u32) -> Result<(), LexError> {

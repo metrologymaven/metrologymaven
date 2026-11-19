@@ -7,9 +7,10 @@ third_party_kind = "vendored"
 exclude = ["tests/**", "benches/**", "examples/**", "src/bin/**"]
 
 [syn.facade_paths]
-"fid_num::f" = "KNP-1 facade (KRN.NUM.FN)"
+"fid_num::f" = { crate = "fid-num", version = "0.1.0", reason = "KNP-1 facade (KRN.NUM.FN)" }
 
 [[syn.facade_files]]
 crate = "fid-num"
+version = "0.1.0"
 file = "src/f/mod.rs"
 reason = "implements the facade on IEEE sqrt"

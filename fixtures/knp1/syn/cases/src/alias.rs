@@ -1,9 +1,9 @@
 use std::fs as files; //~ KNP1-IO-FS=fs
-use std as s;
+use std as s; //~ KNP1-SIMD=std KNP1-IO-FS=std KNP1-IO-NET=std KNP1-CLOCK=std KNP1-ENV=std KNP1-THREAD=std
 use std::{env, net::TcpStream}; //~ KNP1-ENV=env KNP1-IO-NET=net
 use std::primitive::f64 as F;
 use std::collections::{self as c, HashMap as Map}; //~ KNP1-HASH=HashMap
-extern crate std as stdlib;
+extern crate std as stdlib; //~ KNP1-SIMD=std KNP1-IO-FS=std KNP1-IO-NET=std KNP1-CLOCK=std KNP1-ENV=std KNP1-THREAD=std
 use libm::sin as sine; //~ KNP1-LIBM=sin
 use std::*; //~ KNP1-SIMD=* KNP1-IO-FS=* KNP1-IO-NET=* KNP1-CLOCK=* KNP1-ENV=* KNP1-THREAD=*
 
