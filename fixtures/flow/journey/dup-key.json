@@ -1,0 +1,4 @@
+{"format": "journey-map@1", "map_id": "j1", "subject": "JOB.ACC.01", "kind": "job",
+ "revision": 1, "app": "inspect", "app": "report", "phase": "P1b", "personas": [],
+ "steps": [{"n": 1, "actor": "human", "command": "import.cad_step@1",
+            "owner": "IO.CAD.STEP.READ", "handoff": "done", "human_only": false}]}

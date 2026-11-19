@@ -1,0 +1,39 @@
+{
+  "format": "journey-map@1",
+  "map_id": "j1",
+  "subject": "JOB.ACC.01",
+  "kind": "job",
+  "revision": 1,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": [
+    "JOB.PER.02"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "human",
+      "command": "import.cad_step@1",
+      "owner": "IO.CAD.STEP.READ",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "human",
+      "command": "import.cad_pmi@1",
+      "owner": "IO.CAD.STEP.PMI",
+      "handoff": 4,
+      "human_only": false
+    },
+    {
+      "n": 4,
+      "actor": "human",
+      "command": "gdt.adopt_characteristics@1",
+      "owner": "GDT.PMI.ADOPT",
+      "decision": "Which proposed characteristics to adopt as they are",
+      "handoff": "Adopted characteristics go on to alignment",
+      "human_only": true
+    }
+  ]
+}

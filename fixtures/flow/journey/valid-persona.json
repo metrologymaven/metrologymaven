@@ -1,0 +1,44 @@
+{
+  "format": "journey-map@1",
+  "map_id": "demo-persona",
+  "subject": "JOB.PER.03",
+  "kind": "persona",
+  "revision": 2,
+  "app": "inspect",
+  "phase": "P1b",
+  "personas": [
+    "JOB.PER.03",
+    "JOB.PER.02"
+  ],
+  "exercised_by": [
+    "JOB.ACC.05"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "actor": "operator",
+      "screen": "SCR.KIOSK.LOGIN",
+      "owner": "UX.SCREENS.KIOSK",
+      "handoff": 2,
+      "human_only": false
+    },
+    {
+      "n": 2,
+      "actor": "operator",
+      "command": "run.start_program@1",
+      "owner": "CMM.EXEC.RUN",
+      "decision": "Whether the part on the table matches the serial shown",
+      "handoff": 3,
+      "human_only": false,
+      "phase": "P2"
+    },
+    {
+      "n": 3,
+      "actor": "system",
+      "screen": "SCR.KIOSK.RESULT",
+      "owner": "UX.SCREENS.KIOSK",
+      "handoff": "A part that did not pass goes to JOB.PER.02 for review",
+      "human_only": false
+    }
+  ]
+}

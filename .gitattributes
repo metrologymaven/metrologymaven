@@ -41,6 +41,8 @@ fixtures/core/reg/def/guide/** -text
 fixtures/io/qif/norm/** -text
 crates/fid-qif/qif-norm.toml -text
 crates/fid-qif/qif-norm.lock -text
+# OUTR.DOCS.SEARCH.INDEX fixtures: hand-labelled index compared byte for byte.
+fixtures/outr/docs/search/** -text
 # PLAT.MATRIX.PAGE: hand-written escape fixture, reference-rendered golden pages and the generated
 # project page are compared byte for byte (the page header carries the matrix file's SHA-256).
 fixtures/plat/matrix/escape.toml -text
@@ -49,3 +51,5 @@ fixtures/plat/matrix/expected-escape-page.md -text
 docs/platform/support-matrix.md -text
 # GDT.RES.ROWFLOW.ROSTER fixtures: hand-labelled rosters and a digest compared byte for byte by make_digest.py --check.
 fixtures/gdt/rowflow/** -text
+# FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
+fixtures/flow/journey/** -text
