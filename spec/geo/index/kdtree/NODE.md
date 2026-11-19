@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-index]
+built_pr: 238
 satisfies: [REQ-GEO.INDEX-001, REQ-GEO.INDEX-002, REQ-GEO.INDEX-003, REQ-GEO.INDEX-004]
 covers: []
 depends_on: [GEO.TYPES.POINTS, KRN.NUM]
