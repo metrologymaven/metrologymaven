@@ -306,6 +306,7 @@ jobs:
           python fixtures/geo/types/make_mesh_fixtures.py --check
           python tools/fixtures/geo_digest_vectors.py --check
           python fixtures/geo/index/make_bvh_fixtures.py --check
+          python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
@@ -440,7 +441,7 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
-      - name: BVH hierarchy and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3)
+      - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
         run: cargo test --target wasm32-wasip1 -p fid-geo-index
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib

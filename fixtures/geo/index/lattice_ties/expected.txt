@@ -1,0 +1,16 @@
+# GEO.INDEX.KDTREE fixture lattice_ties: written by tools/fixtures/geo_index.py; do not edit.
+# result <kind> <block>: SHA-256 over queries block*100 .. block*100+99 of the
+# per-query encodings (count u64 LE, then per hit index u64 LE and dist2 bits u64 LE; box: index only).
+points 125000 a9f07eea928bcce37bd1f871617c14ee083c392362cac614c2eee98f2cdd1ad6
+queries 500 529ad95ffc59e9c684f09c8f16c4366900c4785635c60afeaee354aa544ef6e6
+index depth 13 6cbaed5a34b535f5db208e52ddc8b2ed92a14f4a13f8a1c1df2be8101db4c221
+result knn26 0 914d29fc67467d34b62320f445120ffe25ec5be2285d5aaab8183a00bd248411
+result knn26 1 27b4b5ea99f4e1a4d3246500c4b7f1d8b1465decaaca506118b19be9687b348d
+result knn26 2 fa71a04da2bd4de4d4b7573bfb7440418fadb44c572e32cb4263af202357dc25
+result knn26 3 41c2fa4cec825a76e69a43375000392cd840b8d45797e27b9ebd2f79e77daa00
+result knn26 4 bd8fe274267db151fe8c9050176d40ebab638f9a563f92b96774433b5d062351
+result radius 0 e42a3033468b7e20e13c0242b31c0fad4efcf7e381549062cd2ca22950fae742
+result radius 1 f828c7d0aa50d7691394859360cc304f327f36706a9ebacf723ef8014e6f39b0
+result radius 2 4c75e0a46025b6e3e1c69bb25749b99d89c3c0c3104d1ab7aec93324fe676eaf
+result radius 3 9a3b7315c5aa34f5bfd6331a5c43d3adef31c0f12dfce8016a2e0ff76709a687
+result radius 4 e1d0b7d8ca91157d6a4128a9e2315dac8e7fce5625db5900f216b1e872e5f20e
