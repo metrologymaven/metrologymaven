@@ -154,12 +154,9 @@ crates/fid-report-pdf/assets/fonts/*.ttf binary
 fixtures/rpt/output/text/** -text
 # CORE.BUS.PRIN fixtures: hand-labelled channel descriptors, presence outcomes and identifier cases; never convert line endings.
 fixtures/core/bus/principal/** -text
-<<<<<<< HEAD
 # GEO.NURBS.EVAL fixtures: digests compared byte for byte by make_eval_fixtures.py --check and the tests.
 fixtures/geo/nurbs/eval/** -text
-=======
 # IO.REG.DETECT fixtures: binary STL, random bytes and canonical JSON compared byte for byte.
 fixtures/io/reg/detect/** -text
->>>>>>> origin/main
 # UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
 fixtures/unc/stmt/** -text
