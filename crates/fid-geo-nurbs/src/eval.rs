@@ -324,23 +324,13 @@ impl Curve for NurbsCurve {
                 accumulate(acc, b, homogeneous(ctrl, self.weights(), first + j)?);
             }
         }
-        let c = if self.weights().is_some() {
-            quotient_curve(&a, order)
-        } else {
-            [xyz(a[0]), xyz(a[1]), xyz(a[2])]
-        };
+        let c = if self.weights().is_some() { quotient_curve(&a, order) } else { [xyz(a[0]), xyz(a[1]), xyz(a[2])] };
         for v in c.iter().take(order + 1) {
             check(v)?;
         }
         let (d1, d2) = (c[1], c[2]);
         let regularity = if order >= 1 { Some(curve_regularity(d1)?.0) } else { None };
-        Ok(CurveDerivs {
-            t,
-            p: c[0],
-            d1: (order >= 1).then_some(d1),
-            d2: (order >= 2).then_some(d2),
-            regularity,
-        })
+        Ok(CurveDerivs { t, p: c[0], d1: (order >= 1).then_some(d1), d2: (order >= 2).then_some(d2), regularity })
     }
 }
 
