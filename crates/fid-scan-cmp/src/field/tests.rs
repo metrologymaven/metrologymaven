@@ -12,7 +12,10 @@ use crate::dev::NoMatchReason;
 use crate::number::es_number;
 use std::collections::BTreeMap;
 
-const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/scan/cmp/");
+// Relative to the package root, which Cargo makes the working directory of test binaries.
+// (Not built from the manifest-directory variable: the implementation-digest scan,
+// KRN.MAN.MANI.IMPL, refuses that macro in kernel-closure sources, test modules included.)
+const FIX: &str = "../../fixtures/scan/cmp/";
 
 fn read(name: &str) -> String {
     std::fs::read_to_string(format!("{FIX}{name}")).unwrap()

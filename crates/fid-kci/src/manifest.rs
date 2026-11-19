@@ -530,8 +530,8 @@ impl<'k> Members<'k> {
     }
 }
 
-fn need<T>(v: Option<T>, path: &'static str) -> Result<T, ManifestError> {
-    v.ok_or(ManifestError::MissingField(path))
+fn need<T>(v: Option<T>, field_path: &'static str) -> Result<T, ManifestError> {
+    v.ok_or(ManifestError::MissingField(field_path))
 }
 
 struct Reader<'a> {
@@ -630,32 +630,32 @@ impl Reader<'_> {
         char::from_u32(cp).ok_or_else(|| self.syntax())
     }
 
-    /// The error for an unexpected value: `BadValue(path)` when a JSON value of another type
+    /// The error for an unexpected value: `BadValue(field_path)` when a JSON value of another type
     /// starts here, a syntax error when no JSON value does (end of input, a stray comma, a BOM).
-    fn wrong_type(&self, path: &'static str) -> ManifestError {
+    fn wrong_type(&self, field_path: &'static str) -> ManifestError {
         match self.peek() {
-            Some(b'{' | b'[' | b'"' | b'-' | b'0'..=b'9' | b't' | b'f' | b'n') => ManifestError::BadValue(path),
+            Some(b'{' | b'[' | b'"' | b'-' | b'0'..=b'9' | b't' | b'f' | b'n') => ManifestError::BadValue(field_path),
             _ => self.syntax(),
         }
     }
 
-    /// A member value that must be a string; any other JSON type is `BadValue(path)` (see [`Self::wrong_type`]).
-    fn str_value(&mut self, path: &'static str) -> Result<String, ManifestError> {
+    /// A member value that must be a string; any other JSON type is `BadValue(field_path)` (see [`Self::wrong_type`]).
+    fn str_value(&mut self, field_path: &'static str) -> Result<String, ManifestError> {
         if self.peek() != Some(b'"') {
-            return Err(self.wrong_type(path));
+            return Err(self.wrong_type(field_path));
         }
         self.string()
     }
 
-    fn digest_value(&mut self, path: &'static str) -> Result<Digest, ManifestError> {
-        let text = self.str_value(path)?;
-        Digest::parse(&text).map_err(|_| ManifestError::BadHex(path))
+    fn digest_value(&mut self, field_path: &'static str) -> Result<Digest, ManifestError> {
+        let text = self.str_value(field_path)?;
+        Digest::parse(&text).map_err(|_| ManifestError::BadHex(field_path))
     }
 
     /// Opens a container: `open` must be next, else the value has the wrong type.
-    fn open(&mut self, open: u8, path: &'static str) -> Result<(), ManifestError> {
+    fn open(&mut self, open: u8, field_path: &'static str) -> Result<(), ManifestError> {
         if self.peek() != Some(open) {
-            return Err(self.wrong_type(path));
+            return Err(self.wrong_type(field_path));
         }
         self.pos += 1;
         self.ws();
@@ -666,11 +666,11 @@ impl Reader<'_> {
     /// value. A trailing comma, a missing colon or anything else out of place is a syntax error.
     fn object(
         &mut self,
-        path: &'static str,
+        field_path: &'static str,
         members: &mut Members<'_>,
         mut member: impl FnMut(&mut Self, usize) -> Result<(), ManifestError>,
     ) -> Result<(), ManifestError> {
-        self.open(b'{', path)?;
+        self.open(b'{', field_path)?;
         if self.peek() == Some(b'}') {
             self.pos += 1;
             return members.check_complete();
@@ -698,11 +698,11 @@ impl Reader<'_> {
     /// Iterates an array of at most `limit` items, calling `item` for each.
     fn array(
         &mut self,
-        path: &'static str,
+        field_path: &'static str,
         limit: usize,
         mut item: impl FnMut(&mut Self) -> Result<(), ManifestError>,
     ) -> Result<(), ManifestError> {
-        self.open(b'[', path)?;
+        self.open(b'[', field_path)?;
         if self.peek() == Some(b']') {
             self.pos += 1;
             return Ok(());
@@ -711,7 +711,7 @@ impl Reader<'_> {
         loop {
             n += 1;
             if n > limit {
-                return Err(ManifestError::TooLarge { what: path, limit });
+                return Err(ManifestError::TooLarge { what: field_path, limit });
             }
             self.ws();
             item(self)?;
@@ -835,7 +835,7 @@ impl Reader<'_> {
         let mut gate = None;
         let mut m = Members::new(&CORE_KEYS, &PATHS);
         self.object("core", &mut m, |r, i| {
-            let path = PATHS.get(i).copied().unwrap_or("core");
+            let field_path = PATHS.get(i).copied().unwrap_or("core");
             // Slot of each digest member in `digests`, in key order.
             let digest_slot = match i {
                 1 => Some(0),
@@ -848,7 +848,7 @@ impl Reader<'_> {
                 _ => None,
             };
             if let Some(slot) = digest_slot.and_then(|j| digests.get_mut(j)) {
-                *slot = Some(r.digest_value(path)?);
+                *slot = Some(r.digest_value(field_path)?);
                 return Ok(());
             }
             match i {
@@ -860,17 +860,20 @@ impl Reader<'_> {
                         _ => 2,
                     };
                     if let Some(slot) = strings.get_mut(j) {
-                        *slot = Some(r.str_value(path)?);
+                        *slot = Some(r.str_value(field_path)?);
                     }
                 }
-                4 => gate = Some(NativeGate::parse(&r.str_value(path)?).ok_or(ManifestError::BadValue(path))?),
+                4 => {
+                    let text = r.str_value(field_path)?;
+                    gate = Some(NativeGate::parse(&text).ok_or(ManifestError::BadValue(field_path))?);
+                }
                 8 => runtime = Some(r.replay_runtime()?),
                 9 => {
-                    if r.str_value(path)? != SCHEMA_VERSION {
-                        return Err(ManifestError::BadValue(path));
+                    if r.str_value(field_path)? != SCHEMA_VERSION {
+                        return Err(ManifestError::BadValue(field_path));
                     }
                 }
-                _ => return Err(ManifestError::BadValue(path)),
+                _ => return Err(ManifestError::BadValue(field_path)),
             }
             Ok(())
         })?;
