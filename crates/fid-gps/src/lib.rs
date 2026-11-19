@@ -10,13 +10,15 @@
 //!   `UNSUPPORTED`, and the exact row lookup of `gdt.get_dmt_row@1`.
 //! - [`zone`] (`GDT.ZONE.ZTYPE`): the tolerance-zone shapes and their fixed-pose usage and
 //!   driving point, in closed form.
+//! - [`drf`] (`GDT.DRF.BUILD`): DRF construction from simulated datums and DoF bookkeeping.
 //!
 //! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
-//! [`zone`], written in KNP-1 style (pinned evaluation order, no fused multiply-add, no
+//! [`zone`] and [`drf`], written in KNP-1 style (pinned evaluation order, no fused multiply-add, no
 //! `f64::min`/`f64::max`, square root through `fid-num`, NaN rejected), so its results are
 //! bit-identical on every platform including wasm32.
 
 pub mod dmt;
+pub mod drf;
 pub mod resolve;
 pub mod zone;

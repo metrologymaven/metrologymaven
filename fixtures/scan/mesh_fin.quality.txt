@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_fin.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_fin
+threshold 1e-18
+triangles 3
+vertices 5
+edges 7
+boundary_edges 6
+boundary_loops 1
+nonmanifold_edges 1
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 3
+angle_min 0.7853981633974484
+angle_p1 0.7853981633974484
+angle_p5 0.7853981633974484
+angle_median 0.7853981633974484
+canonical {"boundary_edges":"6","boundary_loops":"1","components":"1","degenerate":"0","edges":"7","min_angle":{"count":"3","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"1","nonmanifold_vertices":"0","triangles":"3","vertices":"5"}

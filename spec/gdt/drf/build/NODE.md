@@ -70,6 +70,7 @@ Synthetic simulated-datum sets (analytic planes and axes) generated in-repo, CC0
 
 ## Open questions
 
+- Partly built (PR #273): the pure builder `fid_gps::drf::build::build_drf` covers REQ-001 to REQ-005 and AC-1, AC-2, AC-3 (refusal), AC-4. Still to build before this leaf is marked `built_in`: (1) `gdt.build_drf@1` (W2, dry-run R1; CLI `fid gdt build-drf`; MCP `gdt_build_drf`) with label resolution (`datum_undefined{label}`, `unsupported_datum_type_p1a`) and its journal event, plus AC-3's "journals nothing"; (2) `gdt.get_drf@1` (R0; CLI `fid gdt get-drf`; MCP `gdt_get_drf`) and the canonical JSON of a `Drf` (AC-5); (3) exact replay of AC-1 (AC-7). These need simulated datums from datum labels, which waits on `GDT.DRF.SIM.FIT` and `KRN.ENV.TAN` (neither built). AC-6 / REQ-006 (ORS-DRF cases) is not met and waits on `UNC.ORS`.
 - The DOF sets in REQ-003 are rigid-body geometry, not a dialect interpretation; if an expert finds a dialect-specific exception (for example customized DRFs), it enters as a DMT row option and a later version of this command.
 
 ## Children

@@ -17,6 +17,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-solv" = "kernel"
 "fid-fit" = "kernel"
 "fid-scan-cmp" = "kernel"
+# Mesh quality report (SCAN.POLY.QUAL), reused by SCAN.MESHOP: KNP-1, only fid-geo-types and fid-num.
+"fid-scan-mesh" = "kernel"
 # B-rep model (GEO.CAD.TOPO.MODEL): L0 library code, KNP-1; only fid-geo-nurbs, fid-kci, fid-types.
 "fid-geo-cad" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest.
@@ -81,6 +83,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-corp" = "tool"
 "fid-eval-suite" = "tool"
 "fid-qif-gen" = "tool"
+# Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
+"fid-surface-gen" = "tool"
 "fid-agent" = "tool"
 "fid-timeline" = "tool"
 "fid-outreach" = "tool"

@@ -1,0 +1,16 @@
+# SCAN.POLY.QUAL fixture mesh_mobius: six-triangle Moebius strip.
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 0 0 0
+v 1 0 0
+v 2 0 0
+v 0 1 0
+v 1 1 0
+v 2 1 1
+t 0 3 1
+t 3 4 1
+t 1 4 2
+t 4 5 2
+t 2 5 3
+t 5 0 3
