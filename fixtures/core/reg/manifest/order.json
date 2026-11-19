@@ -1,0 +1,346 @@
+{
+ "decls": [
+  {
+   "id": "zeta.show_item",
+   "major": 1,
+   "title": "Zeta show item",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "python",
+    "mcp",
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "alpha.check_item",
+   "major": 3,
+   "title": "Alpha check item",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [
+    {
+     "expr": "true",
+     "bound": 10,
+     "message_key": "alpha.not_ready"
+    }
+   ],
+   "effects": [],
+   "algorithms": [
+    "fit.plane.ls@1.0.0"
+   ],
+   "exposure": [
+    "gui",
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": true,
+   "network": "none",
+   "cli_bare": false
+  },
+  {
+   "id": "alpha.check_item",
+   "major": 1,
+   "title": "Alpha check item v1",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "control",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ]
+}

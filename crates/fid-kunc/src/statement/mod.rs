@@ -33,6 +33,13 @@
 //!    `principal_kind` together; `DECLARED` needs a `principal`; an agent principal or an
 //!    adopter implies a proposal (CONSTITUTION C5).
 //!
+//! 6. **Assignment seal**, with `class_requires_assignment`: only `UNC.UEC.CLASS` grants
+//!    UEC-2 or UEC-3. [`UncertaintyStatement::new`] refuses a UEC-2/3 statement that passed
+//!    every other check; the only constructor that accepts one is
+//!    [`crate::uec::AssignOutput::statement`]. [`UncertaintyStatement::parse_canonical`]
+//!    re-reads stored UEC-2/3 bytes only when `provenance.rule_sets` names the assignment
+//!    rule set (`uec-assign@1`); whether stored bytes are genuine is owned by `TRUST`.
+//!
 //! Parse-stage errors of [`UncertaintyStatement::parse_canonical`] (`malformed`,
 //! `unknown_method`, `invalid_field` for a bad scalar encoding, enum or digest, and
 //! `statement_incomplete{class}`) come before all of the above; `non_canonical` comes last.
@@ -368,6 +375,8 @@ pub enum StmtError {
     Malformed { detail: &'static str },
     /// The input is a valid statement but not its canonical bytes.
     NonCanonical,
+    /// A UEC-2 or UEC-3 statement was not built through `UNC.UEC.CLASS`.
+    ClassRequiresAssignment,
 }
 
 impl StmtError {
@@ -382,6 +391,7 @@ impl StmtError {
             StmtError::ClassMismatch { .. } => "class_mismatch",
             StmtError::Malformed { .. } => "malformed",
             StmtError::NonCanonical => "non_canonical",
+            StmtError::ClassRequiresAssignment => "class_requires_assignment",
         }
     }
 
@@ -394,7 +404,7 @@ impl StmtError {
             | StmtError::InvalidField { field }
             | StmtError::ClassMismatch { field } => Some(field),
             StmtError::Malformed { detail } => Some(detail),
-            StmtError::UnknownMethod | StmtError::NonCanonical => None,
+            StmtError::UnknownMethod | StmtError::NonCanonical | StmtError::ClassRequiresAssignment => None,
         }
     }
 }
@@ -419,28 +429,46 @@ pub struct UncertaintyStatement {
 }
 
 impl UncertaintyStatement {
-    /// Validates `parts` (see the module documentation for the order) and builds the
-    /// statement. `sources` are sorted by `id`, `contributors` by `input_id` and
-    /// `provenance.rule_sets` by value (byte order) before the duplicate check.
-    pub fn new(mut parts: StatementParts) -> Result<UncertaintyStatement, StmtError> {
+    /// Validates `parts` (see the module documentation for the order) and builds a UEC-0 or
+    /// UEC-1 statement. `sources` are sorted by `id`, `contributors` by `input_id` and
+    /// `provenance.rule_sets` by value (byte order) before the duplicate check. A UEC-2 or
+    /// UEC-3 statement that passes every check is refused with `class_requires_assignment`:
+    /// build it with [`crate::uec::AssignOutput::statement`].
+    pub fn new(parts: StatementParts) -> Result<UncertaintyStatement, StmtError> {
+        UncertaintyStatement::build(parts, false)
+    }
+
+    /// The constructor of `UNC.UEC.CLASS`: like [`Self::new`], but UEC-2 and UEC-3 are
+    /// accepted (the caller has assigned the class).
+    pub(crate) fn new_assigned(parts: StatementParts) -> Result<UncertaintyStatement, StmtError> {
+        UncertaintyStatement::build(parts, true)
+    }
+
+    fn build(mut parts: StatementParts, assigned: bool) -> Result<UncertaintyStatement, StmtError> {
         parts.sources.sort_by(|a, b| a.id.as_bytes().cmp(b.id.as_bytes()));
         parts.contributors.sort_by(|a, b| a.input_id.as_bytes().cmp(b.input_id.as_bytes()));
         parts.provenance.rule_sets.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
         validate(&parts)?;
+        if !assigned && matches!(parts.class, EvidenceClass::Uec2 | EvidenceClass::Uec3) {
+            return Err(StmtError::ClassRequiresAssignment);
+        }
         let canonical = wire::to_canonical(&parts)?;
         let digest = fid_kci::kci::sha256_digest(&canonical);
         Ok(UncertaintyStatement { parts, canonical, digest })
     }
 
     /// Parses canonical statement bytes. Anything that is not exactly the canonical form
-    /// of a valid statement is refused (`non_canonical` when only the bytes differ).
+    /// of a valid statement is refused (`non_canonical` when only the bytes differ). A
+    /// UEC-2 or UEC-3 statement is accepted only when `provenance.rule_sets` names
+    /// `uec-assign@1` (else `class_requires_assignment`).
     pub fn parse_canonical(input: &[u8]) -> Result<UncertaintyStatement, StmtError> {
         if input.len() > MAX_INPUT_BYTES {
             return Err(StmtError::Malformed { detail: "too_large" });
         }
         let json = reader::read(input)?;
         let parts = wire::from_json(json)?;
-        let stmt = UncertaintyStatement::new(parts)?;
+        let assigned = parts.provenance.rule_sets.iter().any(|r| r == crate::uec::RULE_SET);
+        let stmt = UncertaintyStatement::build(parts, assigned)?;
         if stmt.canonical != input {
             return Err(StmtError::NonCanonical);
         }

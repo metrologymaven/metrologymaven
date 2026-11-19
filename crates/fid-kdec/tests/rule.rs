@@ -408,7 +408,10 @@ fn decision_outcomes_must_fit_rule_and_basis() {
 
 #[test]
 fn subnormal_statement_numbers_are_refused() {
-    let base = statement("uec2_lpu").to_parts();
+    // UEC-2/3 statements are built only by UNC.UEC.CLASS, so the edited copies are UEC-1;
+    // the subnormal check does not depend on the class.
+    let mut base = statement("uec2_lpu").to_parts();
+    base.class = EvidenceClass::Uec1;
     let sub = f64::from_bits(1);
     let mut cases: Vec<(&str, fid_kunc::StatementParts)> = Vec::new();
     let mut p = base.clone();

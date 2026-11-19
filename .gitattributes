@@ -186,6 +186,8 @@ fixtures/core/dep/** -text
 fixtures/rpt/model/** -text
 # UNC.DEC.TYPE fixtures: the catalog is digested and every file is compared byte for byte.
 fixtures/unc/dec/type/** -text
+# UNC.UEC.CLASS decision table: written by make_table.py, which --check compares byte for byte.
+fixtures/unc/class/** -text
 # GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/gdt/spec/** -text
