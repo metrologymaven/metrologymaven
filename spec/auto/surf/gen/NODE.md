@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-surface-gen]
+built_pr: 278
 satisfies: [REQ-AUTO.SURF-001, REQ-AUTO.SURF-004]
 covers: []
 depends_on: [AUTO.SURF.PROJ]
