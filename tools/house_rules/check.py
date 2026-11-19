@@ -7,22 +7,48 @@ Standard library only. Usage::
 
 Reads ``<target>/AGENTS.md`` and ``<target>/CLAUDE.md`` and the manifest (ECO.RULES.SRC format:
 ``manifest.toml``, or a JSON file with the same data). It never writes a file (REQ-006). With
-``--source-repo`` it runs the local, read-only ``git merge-base --is-ancestor``; it never uses
-the network.
+``--source-repo`` it runs local, read-only git commands (see *Git hardening*); it never uses the
+network.
 
 Output lines, sorted, on stdout; any line not starting with ``warn`` is a failure (exit 1)::
 
     RULES-EDITED AGENTS.md <block>          body does not match its recorded digest
     RULES-MISSING <block>                   block assigned to --repo-id is absent
+    RULES-SOURCE AGENTS.md <block> <repo>   block names a source other than the canonical repo
     RULES-UNKNOWN-REV <block> <rev>         --source-repo: recorded rev not in the current history
     RULES-CLAUDE-MD CLAUDE.md <why>         why: missing, symlink, not-exact
     RULES-PARSE <input> <why>               unreadable or malformed input
-    RULES-USAGE <why>                       bad arguments
+    RULES-USAGE <why>                       bad arguments or unusable --source-repo
     warn RULES-STALE <block>                recorded revision differs from --current-rev
     warn RULES-SIZE <name> <bytes> > <budget>   name: core (block body) or AGENTS.md
 
-Sizes are UTF-8 bytes after normalising CRLF to LF. Inputs larger than :data:`MAX_INPUT_BYTES`
-and symbolic links are refused.
+The canonical repository ID is the manifest's optional ``source_repo`` (default
+``metrologymaven``, as in ``tools/repo_template``). Sizes are UTF-8 bytes after normalising CRLF
+to LF. Inputs larger than :data:`MAX_INPUT_BYTES` and symbolic links are refused. A body that was
+rewritten together with a recomputed digest passes: the digest detects accidental edits, it is
+not a signature (the spec asks for no more).
+
+Git hardening (copy this into any tool that runs git on a repository it does not control)
+------------------------------------------------------------------------------------------
+A repository's own ``.git/config`` can name programs that git runs (``uploadpack``, hooks,
+``core.fsmonitor``) and can make a plain read such as ``cat-file`` start a lazy fetch from a
+promisor remote. Every git call in this module therefore:
+
+* runs with a minimal environment built from scratch, not inherited: ``PATH``, ``HOME`` and
+  ``USERPROFILE``, ``SYSTEMROOT`` on Windows, ``LC_ALL=C``, plus ``GIT_NO_LAZY_FETCH=1``,
+  ``GIT_CONFIG_NOSYSTEM=1``, ``GIT_CONFIG_GLOBAL=<os.devnull>``, ``GIT_TERMINAL_PROMPT=0`` and
+  ``GIT_OPTIONAL_LOCKS=0``. So ``GIT_DIR``, ``GIT_WORK_TREE``, ``GIT_OBJECT_DIRECTORY``,
+  ``GIT_ALTERNATE_OBJECT_DIRECTORIES``, ``GIT_CONFIG_*``, ``GIT_NAMESPACE`` and the rest never
+  reach git;
+* passes ``-c protocol.allow=never -c core.fsmonitor=false -c core.hooksPath=<os.devnull>``
+  before the subcommand, so no transport can run even if a fetch were attempted;
+* has stdin closed (or fed only our own revision list), output captured, and a timeout;
+* never sets ``safe.directory``: git's refusal of a repository owned by someone else is kept, and
+  any git error fails closed (``RULES-USAGE ... not a readable git repository``).
+
+Revisions are validated as 40 lowercase hex digits before they reach git, so they can never be
+read as options. ``--current-rev`` and all recorded revisions are looked up in one
+``cat-file --batch-check`` call; each distinct recorded revision is then tested for ancestry once.
 """
 
 from __future__ import annotations
@@ -30,6 +56,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -37,11 +64,13 @@ from pathlib import Path
 
 from .block import BlockError, find_blocks, is_valid_block_id, is_valid_repo_id, is_valid_rev
 
-__all__ = ["MAX_INPUT_BYTES", "Finding", "InputError", "check", "load_manifest", "main"]
+__all__ = ["DEFAULT_SOURCE_REPO", "MAX_INPUT_BYTES", "Finding", "InputError", "check", "git_env", "load_manifest", "main"]
 
 MAX_INPUT_BYTES = 1 << 20  # 1 MiB: AGENTS.md is budgeted at 10 KiB, so this is generous.
 GIT_TIMEOUT_S = 30
 CLAUDE_OK = (b"@AGENTS.md", b"@AGENTS.md\n", b"@AGENTS.md\r\n")
+DEFAULT_SOURCE_REPO = "metrologymaven"
+_SAFE_KEY = re.compile(r"[A-Za-z0-9_.-]{1,64}", re.ASCII)
 
 
 class InputError(Exception):
@@ -100,10 +129,21 @@ def _budget(v: object, name: str) -> int:
     return v
 
 
-def load_manifest(path: Path) -> tuple[dict[str, list[str]], int, int]:
-    """Parse a manifest: ``({block id: [repo ids]}, core_bytes, agents_md_bytes)``.
+def _no_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    out: dict[str, object] = {}
+    for k, v in pairs:
+        if k in out:
+            shown = f" {k}" if _SAFE_KEY.fullmatch(k) else ""
+            raise InputError(f"RULES-PARSE manifest duplicate key{shown}")
+        out[k] = v
+    return out
 
-    The format is ECO.RULES.SRC's ``manifest.toml``; a ``.json`` file holds the same data.
+
+def load_manifest(path: Path) -> tuple[dict[str, list[str]], int, int, str]:
+    """Parse a manifest: ``({block id: [repo ids]}, core_bytes, agents_md_bytes, source_repo)``.
+
+    The format is ECO.RULES.SRC's ``manifest.toml``; a ``.json`` file holds the same data and
+    may not repeat a key. ``source_repo`` is optional (default :data:`DEFAULT_SOURCE_REPO`).
     """
     try:
         data = _read(path, "manifest")
@@ -116,18 +156,23 @@ def load_manifest(path: Path) -> tuple[dict[str, list[str]], int, int]:
                 import tomllib
             except ImportError:
                 raise InputError("RULES-PARSE manifest .toml needs Python >= 3.11; use manifest.json") from None
-            m = tomllib.loads(data.decode("utf-8"))
+            m = tomllib.loads(data.decode("utf-8"))  # TOML itself forbids duplicate keys
         elif suffix == ".json":
-            m = json.loads(data.decode("utf-8"))
+            m = json.loads(data.decode("utf-8"), object_pairs_hook=_no_duplicate_keys)
         else:
             raise InputError("RULES-PARSE manifest must be .toml or .json")
     except UnicodeDecodeError:
         raise InputError("RULES-PARSE manifest not UTF-8") from None
+    except RecursionError:
+        raise InputError("RULES-PARSE manifest nested too deeply") from None
     except ValueError as e:  # json.JSONDecodeError and tomllib.TOMLDecodeError
         first = str(e).splitlines()[0] if str(e) else "syntax error"
         raise InputError(f"RULES-PARSE manifest syntax ({first})") from None
     if not isinstance(m, dict):
         raise InputError("RULES-PARSE manifest not a table")
+    source_repo = m.get("source_repo", DEFAULT_SOURCE_REPO)
+    if not isinstance(source_repo, str) or not is_valid_repo_id(source_repo):
+        raise InputError("RULES-PARSE manifest source_repo is not a valid repository ID")
     budgets = m.get("budgets")
     if not isinstance(budgets, dict):
         raise InputError("RULES-PARSE manifest budgets missing")
@@ -147,37 +192,86 @@ def load_manifest(path: Path) -> tuple[dict[str, list[str]], int, int]:
         if not isinstance(repos, list) or not all(isinstance(r, str) and is_valid_repo_id(r) for r in repos):
             raise InputError(f"RULES-PARSE manifest block {bid} has invalid repos")
         out[bid] = list(repos)
-    return out, core, agents
+    return out, core, agents, source_repo
 
 
-def _git_ok(source_repo: Path, *args: str) -> bool | None:
-    """Run a read-only local git command; True on exit 0, False on 1, None on anything else."""
-    env = dict(os.environ)
-    env.update({"GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "LC_ALL": "C"})
+# --------------------------------------------------------------------------------------------
+# Git (see "Git hardening" in the module docstring)
+
+
+def git_env() -> dict[str, str]:
+    """The minimal, non-inherited environment for every git call."""
+    env: dict[str, str] = {}
+    keep = ["PATH", "HOME", "USERPROFILE"] + (["SYSTEMROOT"] if os.name == "nt" else [])
+    for k in keep:
+        v = os.environ.get(k)
+        if v is not None:
+            env[k] = v
+    env.update(
+        {
+            "LC_ALL": "C",
+            "GIT_NO_LAZY_FETCH": "1",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_OPTIONAL_LOCKS": "0",
+        }
+    )
+    return env
+
+
+def _git_args(source_repo: Path, *args: str) -> list[str]:
+    return [
+        "git",
+        "-c",
+        "protocol.allow=never",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        f"core.hooksPath={os.devnull}",
+        "-C",
+        str(source_repo),
+        *args,
+    ]
+
+
+def _run_git(source_repo: Path, args: list[str], stdin: bytes | None = None) -> tuple[int, bytes] | None:
+    """Run hardened git; return (exit code, stdout) or None if it could not run."""
     try:
         r = subprocess.run(
-            ["git", "-C", str(source_repo), *args],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
+            _git_args(source_repo, *args),
+            input=stdin if stdin is not None else b"",
+            stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            env=env,
+            env=git_env(),
             timeout=GIT_TIMEOUT_S,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, ValueError):
         return None
-    if r.returncode in (0, 1):
-        return r.returncode == 0
-    return None
+    return r.returncode, r.stdout
 
 
-def _has_commit(source_repo: Path, rev: str) -> bool | None:
-    r = _git_ok(source_repo, "cat-file", "-e", f"{rev}^{{commit}}")
-    if r is None:
-        # cat-file -e exits 128 for an unknown object; tell that apart from a broken repo.
-        ok = _git_ok(source_repo, "rev-parse", "--git-dir")
-        return False if ok else None
-    return r
+def _existing_commits(source_repo: Path, revs: list[str]) -> set[str] | None:
+    """Which of ``revs`` name commits in ``source_repo`` (one git call); None if git fails."""
+    query = "".join(f"{r}^{{commit}}\n" for r in revs).encode("ascii")
+    res = _run_git(source_repo, ["cat-file", "--batch-check=%(objectname)"], query)
+    if res is None or res[0] != 0:
+        return None
+    lines = res[1].decode("ascii", "replace").splitlines()
+    if len(lines) != len(revs):
+        return None
+    return {rev for rev, line in zip(revs, lines) if line.strip() == rev}
+
+
+def _is_ancestor(source_repo: Path, rev: str, current: str) -> bool | None:
+    res = _run_git(source_repo, ["merge-base", "--is-ancestor", rev, current])
+    if res is None or res[0] not in (0, 1):
+        return None
+    return res[0] == 0
+
+
+# --------------------------------------------------------------------------------------------
 
 
 def check(
@@ -202,7 +296,7 @@ def check(
         if not source_repo.is_dir():
             return ["RULES-USAGE --source-repo is not a directory"]
     try:
-        assignment, core_budget, agents_budget = load_manifest(manifest)
+        assignment, core_budget, agents_budget, canonical = load_manifest(manifest)
     except InputError as e:
         return [e.line]
     required = sorted(b for b, repos in assignment.items() if repo_id in repos)
@@ -239,6 +333,7 @@ def check(
         return sorted(out)
 
     seen: set[str] = set()
+    stale: list[tuple[str, str]] = []  # (block id, recorded rev), revs differing from current
     for b in blocks:
         if b.id in seen:
             out.add(f"RULES-PARSE AGENTS.md duplicate block {b.id} at line {b.begin_line}")
@@ -250,23 +345,37 @@ def check(
             core_size = len(b.body.replace("\r\n", "\n").encode("utf-8"))
             if core_size > core_budget:
                 out.add(f"warn RULES-SIZE core {core_size} > {core_budget}")
+        if b.source_repo != canonical:
+            # A revision of some other repository says nothing about the canonical history.
+            out.add(f"RULES-SOURCE AGENTS.md {b.id} {b.source_repo}")
+            continue
         if b.source_rev != current_rev:
-            out.update(_check_rev(b.id, b.source_rev, current_rev, source_repo))
+            stale.append((b.id, b.source_rev))
     out.update(f"RULES-MISSING {b}" for b in required if b not in seen)
+    if stale:
+        out.update(_check_revs(stale, current_rev, source_repo))
     return sorted(out)
 
 
-def _check_rev(block_id: str, rev: str, current: str, source_repo: Path | None) -> list[str]:
+def _check_revs(stale: list[tuple[str, str]], current: str, source_repo: Path | None) -> list[str]:
     if source_repo is None:
-        return [f"warn RULES-STALE {block_id}"]
-    have_current = _has_commit(source_repo, current)
-    if have_current is None:
+        return [f"warn RULES-STALE {bid}" for bid, _ in stale]
+    distinct = sorted({rev for _, rev in stale})
+    existing = _existing_commits(source_repo, [current] + distinct)
+    if existing is None:
         return ["RULES-USAGE --source-repo is not a readable git repository"]
-    if not have_current:
+    if current not in existing:
         return ["RULES-USAGE --current-rev is not a commit in --source-repo"]
-    if _has_commit(source_repo, rev) and _git_ok(source_repo, "merge-base", "--is-ancestor", rev, current):
-        return [f"warn RULES-STALE {block_id}"]
-    return [f"RULES-UNKNOWN-REV {block_id} {rev}"]
+    ancestor: dict[str, bool] = {}
+    for rev in distinct:
+        if rev not in existing:
+            ancestor[rev] = False
+            continue
+        r = _is_ancestor(source_repo, rev, current)
+        if r is None:
+            return ["RULES-USAGE --source-repo is not a readable git repository"]
+        ancestor[rev] = r
+    return [f"warn RULES-STALE {bid}" if ancestor[rev] else f"RULES-UNKNOWN-REV {bid} {rev}" for bid, rev in stale]
 
 
 def _check_claude(target: Path) -> list[str]:

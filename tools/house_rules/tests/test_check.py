@@ -16,12 +16,14 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from house_rules import render  # noqa: E402
-from house_rules.check import MAX_INPUT_BYTES, check  # noqa: E402
+import house_rules.check as check_mod  # noqa: E402
+from house_rules.check import MAX_INPUT_BYTES, check, git_env  # noqa: E402
 
 FIX = ROOT / "tools" / "tests" / "fixtures" / "check"
 MANIFEST = FIX / "manifest.json"
@@ -227,12 +229,37 @@ class Rules(unittest.TestCase):
             ('{"block": []}', "RULES-PARSE manifest budgets missing"),
             ('{"budgets": {"core_bytes": true, "agents_md_bytes": 1}, "block": []}', "RULES-PARSE manifest budgets.core_bytes"),
             ('{"budgets": {"core_bytes": 1, "agents_md_bytes": 1}, "block": [{"id": "X"}]}', "RULES-PARSE manifest block with invalid id"),
+            ('{"budgets": {"core_bytes": 1, "agents_md_bytes": 1}, "block": [], "block": []}',
+             "RULES-PARSE manifest duplicate key block"),
+            ('{"budgets": {"core_bytes": 1, "core_bytes": 2, "agents_md_bytes": 1}, "block": []}',
+             "RULES-PARSE manifest duplicate key core_bytes"),
+            ('{"source_repo": "-bad", "budgets": {"core_bytes": 1, "agents_md_bytes": 1}, "block": []}',
+             "RULES-PARSE manifest source_repo is not a valid repository ID"),
+            ("[" * 100000 + "]" * 100000, "RULES-PARSE manifest"),
         ]
         for text, prefix in cases:
             [line] = check(FIX / "ok", "fix-spec", self.manifest(text), REV)
             self.assertTrue(line.startswith(prefix), (text, line))
         [line] = check(FIX / "ok", "fix-spec", Path(self.tmp) / "absent.json", REV)
         self.assertEqual(line, "RULES-PARSE manifest missing")
+
+    def test_source_repo_must_be_canonical(self):
+        # Maintainer decision: a block's source repository must be the manifest's canonical one.
+        m = self.manifest(
+            '{"source_repo": "fid-contrib", "budgets": {"core_bytes": 3072, "agents_md_bytes": 10240},'
+            ' "block": [{"id": "core", "file": "core.md", "repos": ["fix-spec"]}]}'
+        )
+        self.assertEqual(check(FIX / "ok", "fix-spec", m, REV), ["RULES-SOURCE AGENTS.md core metrologymaven"])
+        self.assertEqual(check(FIX / "ok", "fix-spec", m, OTHER), ["RULES-SOURCE AGENTS.md core metrologymaven"])
+        d = copy_fixture("ok", self.tmp)
+        (d / "AGENTS.md").write_text("# AGENTS.md\n\n" + render("core", "someone/else", REV, "rules"), encoding="utf-8")
+        self.assertEqual(check(d, "fix-spec", MANIFEST, REV), ["RULES-SOURCE AGENTS.md core someone/else"])
+
+    def test_rewritten_body_with_recomputed_digest_passes(self):
+        # Documented limit: the digest detects edits, it is not a signature.
+        d = copy_fixture("ok", self.tmp)
+        (d / "AGENTS.md").write_text("# AGENTS.md\n\n" + render("core", "metrologymaven", REV, "other rules"), encoding="utf-8")
+        self.assertEqual(check(d, "fix-spec", MANIFEST, REV), [])
 
     def test_usage_errors_exit_1_without_traceback(self):
         for args, want in [
@@ -322,6 +349,92 @@ class SourceRepo(unittest.TestCase):
         d = self.target_at(OTHER)
         code, out, err = run_check(d, rev=self.rev_b, extra=("--source-repo", str(self.src)))
         self.assertEqual((code, out, err), (1, [f"RULES-UNKNOWN-REV core {OTHER}"], ""))
+
+
+    def test_200_stale_blocks_one_lookup_per_rev(self):
+        d = Path(tempfile.mkdtemp(dir=self.tmp))
+        parts = ["# AGENTS.md\n\n", render("core", "metrologymaven", self.rev_b, "rules")]
+        ids = [f"b{i:03d}" for i in range(200)]
+        for i, bid in enumerate(ids):
+            parts.append(render(bid, "metrologymaven", self.rev_a if i % 2 == 0 else OTHER, f"body {i}"))
+        (d / "AGENTS.md").write_text("".join(parts), encoding="utf-8")
+        (d / "CLAUDE.md").write_bytes(b"@AGENTS.md\n")
+        want = sorted(
+            [f"warn RULES-STALE {bid}" for bid in ids[0::2]] + [f"RULES-UNKNOWN-REV {bid} {OTHER}" for bid in ids[1::2]]
+        )
+        calls = []
+        real = check_mod._run_git
+
+        def counting(*a, **k):
+            calls.append(a[1][0])
+            return real(*a, **k)
+
+        with mock.patch.object(check_mod, "_run_git", counting):
+            t = time.perf_counter()
+            got = check(d, "fix-spec", MANIFEST, self.rev_b, self.src)
+            elapsed = time.perf_counter() - t
+        self.assertEqual([line for line in got if "RULES-SIZE" not in line], want)
+        # One batch lookup for the current rev and both recorded revs; one ancestry test for rev_a.
+        self.assertEqual(calls, ["cat-file", "merge-base"])
+        self.assertLess(elapsed, 1.0)
+
+    def test_git_env_is_minimal(self):
+        hostile = {
+            "GIT_DIR": "/nonexistent", "GIT_WORK_TREE": "/x", "GIT_OBJECT_DIRECTORY": "/x",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES": "/x", "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "a.b",
+            "GIT_CONFIG_VALUE_0": "c", "GIT_CONFIG_PARAMETERS": "'a.b=c'", "GIT_NAMESPACE": "x",
+            "GIT_EXEC_PATH": "/x", "SOMETHING_ELSE": "1",
+        }
+        with mock.patch.dict(os.environ, hostile):
+            env = git_env()
+        allowed = {"PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "LC_ALL", "GIT_NO_LAZY_FETCH", "GIT_CONFIG_NOSYSTEM",
+                   "GIT_CONFIG_GLOBAL", "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS"}
+        self.assertLessEqual(set(env), allowed)
+        self.assertEqual(env["GIT_NO_LAZY_FETCH"], "1")
+        self.assertEqual(env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(env["GIT_CONFIG_GLOBAL"], os.devnull)
+        self.assertEqual(env["GIT_TERMINAL_PROMPT"], "0")
+
+    def test_inherited_git_dir_is_ignored(self):
+        # GIT_DIR points at an empty repository that lacks rev_a and rev_b; the check must still
+        # read --source-repo.
+        other = Path(tempfile.mkdtemp(dir=self.tmp))
+        subprocess.run(["git", "-C", str(other), "init", "-q"], check=True, capture_output=True)
+        d = self.target_at(self.rev_a)
+        with mock.patch.dict(os.environ, {"GIT_DIR": str(other / ".git"), "GIT_OBJECT_DIRECTORY": str(other / ".git" / "objects")}):
+            self.assertEqual(check(d, "fix-spec", MANIFEST, self.rev_b, self.src), ["warn RULES-STALE core"])
+
+    def test_promisor_uploadpack_does_not_run(self):
+        """A hostile --source-repo with a promisor remote whose uploadpack runs a command."""
+        victim = Path(tempfile.mkdtemp(dir=self.tmp)) / "victim"
+        marker = Path(self.tmp) / "uploadpack-ran"
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+                    "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z"})
+
+        def git(*a, check=True):
+            return subprocess.run(
+                ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-C", str(victim), *a],
+                check=check, capture_output=True, text=True, env=env,
+            )
+
+        victim.mkdir()
+        git("init", "-q")
+        git("commit", "-q", "--allow-empty", "-m", "v")
+        head = git("rev-parse", "HEAD").stdout.strip()
+        git("config", "core.repositoryformatversion", "1")
+        git("config", "extensions.partialclone", "origin")
+        git("config", "remote.origin.url", str(self.src))
+        git("config", "remote.origin.promisor", "true")
+        git("config", "remote.origin.uploadpack", f"touch '{marker}'; false")
+        # Control: without the hardening, reading a missing object runs the attacker's command.
+        git("cat-file", "-e", f"{OTHER}^{{commit}}", check=False)
+        if not marker.exists():
+            self.skipTest("this git does not lazy-fetch here, so the attack cannot be reproduced")
+        marker.unlink()
+        d = self.target_at(OTHER)
+        self.assertEqual(check(d, "fix-spec", MANIFEST, head, victim), [f"RULES-UNKNOWN-REV core {OTHER}"])
+        self.assertFalse(marker.exists(), "the source repository's uploadpack command ran")
 
 
 if __name__ == "__main__":
