@@ -1,6 +1,6 @@
 {
   "packages": [
-    {"name": "fid-render", "version": "0.0.1", "id": "path+file:///w/fid-render#0.0.1", "source": null},
+    {"name": "fid-render", "version": "0.0.1", "id": "path+file:///w/fid-render#0.0.1", "source": null, "manifest_path": "Cargo.toml"},
     {"name": "wgpu", "version": "26.0.1", "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu@26.0.1", "source": "registry+https://github.com/rust-lang/crates.io-index"},
     {"name": "raw-window-handle", "version": "0.6.2", "id": "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2", "source": "registry+https://github.com/rust-lang/crates.io-index"},
     {"name": "log", "version": "0.4.28", "id": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.28", "source": "registry+https://github.com/rust-lang/crates.io-index"}

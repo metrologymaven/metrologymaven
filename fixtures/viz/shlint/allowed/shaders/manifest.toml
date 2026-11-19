@@ -1,0 +1,42 @@
+# Shader manifest of the fixture crate (VIZ.RENDER.FRAME.SHLINT, REQ-001).
+schema = 1
+
+[[module]]
+path = "shaders/depth_resolve.wgsl"
+
+[[module.binding]]
+group = 0
+binding = 0
+name = "depth_in"
+class = "input"
+
+[[module.binding]]
+group = 0
+binding = 1
+name = "depth_out"
+class = "depth"
+
+[[module]]
+path = "shaders/points.wgsl"
+
+[[module.binding]]
+group = 0
+binding = 0
+name = "camera"
+class = "input"
+
+[[module.binding]]
+group = 0
+binding = 1
+name = "points"
+class = "input"
+
+# The buffer the ID attachment of the points pass is copied into for picking.
+[[target]]
+name = "id_readback"
+class = "id"
+
+# Accepted on purpose; still reported as an informational finding.
+[[allow]]
+crate = "winit"
+reason = "fixture: window hosting is under review"

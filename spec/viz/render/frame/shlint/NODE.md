@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # VIZ.RENDER.FRAME.SHLINT: Shader manifest, readback lint and toolkit-free check
@@ -50,9 +50,13 @@ Enforce C2 mechanically: every shader module is listed in a manifest with its de
 ## Design
 
 - **Registry command(s):** none; CI tool `fid-shlint` (tooling layer, reads source and `cargo metadata` output only).
-- **Data structures:** `ShaderManifest { modules: Vec<{ path, bindings: Vec<{ group, binding, class }> }> }`.
+- **Data structures:** `ShaderManifest { modules: Vec<{ path, bindings: Vec<{ group, binding, name, class }> }>, targets: Vec<{ name, class }>, allows: Vec<{ crate, reason }> }`. In `shaders/manifest.toml` these are `schema = 1`, `[[module]]` with `[[module.binding]]`, `[[target]]` and `[[allow]]`. A `[[target]]` declares a readback target that is not a shader binding, such as the copy buffer of a colour, depth or ID attachment; its class is `colour`, `depth` or `id`, never `input`. An `[[allow]]` names one crate from the UI-toolkit denylist with a one-line reason. The lint still reports that crate, as an informational finding (`SHLINT-003/toolkit-allowed`) carrying the reason, never silently, and the finding does not fail the run.
 - **Algorithm:** parse WGSL with `naga` front end for bindings; scan Rust sources for `map_async`/`slice(..).map_async` with a target name matched against the manifest; walk the dependency graph from `cargo metadata --format-version 1`.
-- **Errors:** findings as above; `ManifestMalformed`.
+  - Receivers are matched by their **last identifier only**: `self.frame.id_readback.slice(..)` matches the name `id_readback`. A name that any `input` binding uses is denied. A receiver that is not a plain name, or a call through `self` or a path, is an `unresolved-readback` finding.
+  - wgpu readback helpers that bypass `map_async` attribution (`wgpu::util::DownloadBuffer`, `read_buffer`) are always `unresolved-readback` findings.
+  - Shader text that bypasses the manifest is an `unmanifested-shader` finding. This covers inline strings in `ShaderSource::Wgsl(..)`, a `ShaderSource::Wgsl(..)` without an include macro, other `ShaderSource` variants, `include_spirv!`, and `include_str!`/`include_bytes!`/`include_wgsl!` of anything but a listed `.wgsl` module (the path is resolved relative to the source file).
+  - The metadata must describe the crate being linted: the package's `manifest_path` must lie in `--crate-dir`, otherwise the run exits 2. CI must produce the metadata in the same job with `cargo metadata --format-version 1 --all-features --locked`, without `--filter-platform`, so that every feature and target platform is in the graph.
+- **Errors:** findings as above; `ManifestMalformed`; `MetadataMalformed`; `MetadataMismatch` (exit 2). Exit codes: 0 when there are no findings other than informational ones, 1 when there are findings, and 2 when an input cannot be read or parsed.
 - **Determinism:** D0.
 - **Performance budget:** under 10 s on CI.
 - **Crate:** `fid-shlint` (tool).
@@ -67,7 +71,8 @@ Enforce C2 mechanically: every shader module is listed in a manifest with its de
 
 ## Open questions
 
-- None.
+- No CI step runs `fid-shlint` on a real crate until `fid-render` exists. The CI wiring (metadata command above, then `fid-shlint --crate-dir crates/fid-render --metadata <file>`) lands with the first `fid-render` PR, and until then only the fixtures exercise the tool.
+- The toolkit match is by name prefix (`<toolkit>-`/`<toolkit>_`, plus `epaint`, `emath`, `ecolor` and `i-slint-*`), so unrelated crates that share a prefix match too, for example `iced-x86`. Such a crate needs an `[[allow]]` entry with a reason, which keeps it visible as an informational finding. Maintainers may later replace the prefix rule with an explicit sub-crate list.
 
 ## Children
 

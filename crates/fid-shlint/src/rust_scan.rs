@@ -23,6 +23,9 @@ use crate::{Finding, Rule, ShlintError, MANIFEST_PATH};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tok {
     Ident(String),
+    /// A plain `"..."` string literal; the text between the quotes, escapes not decoded.
+    Str(String),
+    /// Any other literal (numbers, characters, byte, C and raw strings).
     Lit,
     Punct(u8),
 }
@@ -57,8 +60,12 @@ pub fn lex(src: &str) -> Result<Vec<Token>, (u32, String)> {
                 i = skip_block_comment(b, i, &mut line)?;
             }
             b'"' => {
-                i = skip_string(b, i + 1, &mut line, start_line)?;
-                out.push(Token { tok: Tok::Lit, line: start_line });
+                let end = skip_string(b, i + 1, &mut line, start_line)?;
+                let text = src
+                    .get(i + 1..end.saturating_sub(1))
+                    .ok_or_else(|| (start_line, "string literal is not on a character boundary".to_string()))?;
+                out.push(Token { tok: Tok::Str(text.to_string()), line: start_line });
+                i = end;
             }
             b'\'' => {
                 i = lex_quote(b, i, &mut out, start_line)?;
@@ -401,6 +408,16 @@ fn skip_scope(toks: &[Token], partner: &[Option<usize>], mut k: usize) -> usize 
     k
 }
 
+/// wgpu helpers that read a buffer back without a `map_async` call this scan can attribute
+/// (`wgpu::util::DownloadBuffer::read_buffer`).
+pub const READBACK_HELPERS: [&str; 2] = ["DownloadBuffer", "read_buffer"];
+
+/// Macros that embed a file's text or bytes; only a listed `.wgsl` module may be embedded.
+const INCLUDE_MACROS: [&str; 3] = ["include_str", "include_bytes", "include_wgsl"];
+
+/// Macros that embed SPIR-V, which never goes through the WGSL manifest.
+const SPIRV_MACROS: [&str; 2] = ["include_spirv", "include_spirv_raw"];
+
 /// Rust keywords that cannot name a mapped buffer.
 const KEYWORDS: [&str; 12] =
     ["self", "Self", "super", "crate", "await", "match", "if", "else", "return", "move", "in", "as"];
@@ -413,6 +430,16 @@ pub fn scan(rel: &str, src: &str, manifest: &ShaderManifest) -> Result<Vec<Findi
     let partner = match_brackets(&toks).map_err(parse_err)?;
     let mut findings = Vec::new();
     for (k, t) in toks.iter().enumerate() {
+        if let Tok::Ident(s) = &t.tok {
+            if READBACK_HELPERS.contains(&s.as_str()) {
+                findings.push(Finding {
+                    location: format!("{rel}:{}", t.line),
+                    rule: Rule::UnresolvedReadback,
+                    message: format!("uses wgpu readback helper `{s}`; cannot tell which target is read"),
+                });
+                continue;
+            }
+        }
         if !matches!(&t.tok, Tok::Ident(s) if s == "map_async") {
             continue;
         }
@@ -512,5 +539,126 @@ fn receiver(toks: &[Token], partner: &[Option<usize>], mut j: usize, valid: bool
             }
             _ => return None,
         }
+    }
+}
+
+/// Shader text that bypasses the manifest (REQ-001, fail closed), in non-test code:
+///
+/// - `include_str!`, `include_bytes!` or `include_wgsl!` whose argument is not one plain string
+///   literal, names a file that is not `.wgsl`, or resolves (relative to the source file) to a
+///   `.wgsl` path that the manifest does not list;
+/// - `include_spirv!` and `include_spirv_raw!`;
+/// - `ShaderSource::<variant>` other than `Wgsl`;
+/// - `ShaderSource::Wgsl(..)` whose argument holds a string literal outside an include macro,
+///   or no include macro at all (a variable or computed text cannot be tied to a module).
+pub fn scan_shader_sources(rel: &str, src: &str, manifest: &ShaderManifest) -> Result<Vec<Finding>, ShlintError> {
+    let parse_err = |(line, reason): (u32, String)| ShlintError::RustParse { path: rel.to_string(), line, reason };
+    let toks = lex(src).map_err(parse_err)?;
+    let toks = strip_cfg_test(&toks).map_err(parse_err)?;
+    let partner = match_brackets(&toks).map_err(parse_err)?;
+    let mut findings = Vec::new();
+    let mut push = |line: u32, message: String| {
+        findings.push(Finding { location: format!("{rel}:{line}"), rule: Rule::UnmanifestedShader, message });
+    };
+    for (k, t) in toks.iter().enumerate() {
+        let Tok::Ident(name) = &t.tok else {
+            continue;
+        };
+        let is_macro = is_punct(toks.get(k + 1), b'!');
+        if is_macro && SPIRV_MACROS.contains(&name.as_str()) {
+            push(t.line, format!("{name}! embeds SPIR-V, which bypasses {MANIFEST_PATH}"));
+        } else if is_macro && INCLUDE_MACROS.contains(&name.as_str()) {
+            if let Some(m) = check_include(rel, name, &toks, k, manifest) {
+                push(t.line, m);
+            }
+        } else if name == "ShaderSource" && is_punct(toks.get(k + 1), b':') && is_punct(toks.get(k + 2), b':') {
+            let Some(Token { tok: Tok::Ident(variant), .. }) = toks.get(k + 3) else {
+                continue;
+            };
+            if variant != "Wgsl" {
+                push(t.line, format!("ShaderSource::{variant} bypasses {MANIFEST_PATH}"));
+                continue;
+            }
+            let open = k + 4;
+            let close = if is_punct(toks.get(open), b'(') { partner.get(open).copied().flatten() } else { None };
+            let Some(close) = close else {
+                push(t.line, "ShaderSource::Wgsl is not called with an argument".to_string());
+                continue;
+            };
+            if let Some(m) = check_wgsl_arg(&toks, open + 1, close) {
+                push(t.line, m);
+            }
+        }
+    }
+    Ok(findings)
+}
+
+/// The string literal argument of the macro at `k` (`name ! ( "..." )`), if it is exactly one.
+fn macro_string_arg(toks: &[Token], k: usize) -> Option<&str> {
+    let delimited = is_punct(toks.get(k + 2), b'(') && is_punct(toks.get(k + 4), b')');
+    match toks.get(k + 3) {
+        Some(Token { tok: Tok::Str(s), .. }) if delimited => Some(s.as_str()),
+        _ => None,
+    }
+}
+
+fn check_include(rel: &str, name: &str, toks: &[Token], k: usize, manifest: &ShaderManifest) -> Option<String> {
+    let Some(arg) = macro_string_arg(toks, k) else {
+        return Some(format!("{name}! argument is not one plain string literal; cannot tie it to a listed module"));
+    };
+    if arg.contains('\\') || !arg.ends_with(".wgsl") {
+        return Some(format!("{name}! of `{arg}`, which is not a .wgsl module listed in {MANIFEST_PATH}"));
+    }
+    match resolve_relative(rel, arg) {
+        Some(path) if manifest.module(&path).is_some() => None,
+        Some(path) => Some(format!("{name}! of `{arg}` ({path}), which is not listed in {MANIFEST_PATH}")),
+        None => Some(format!("{name}! of `{arg}` points outside the crate")),
+    }
+}
+
+/// `arg` resolved against the folder of `rel`, normalised; `None` when it leaves the crate.
+pub fn resolve_relative(rel: &str, arg: &str) -> Option<String> {
+    let mut parts: Vec<&str> = rel.split('/').collect();
+    parts.pop();
+    if arg.starts_with('/') {
+        return None;
+    }
+    for seg in arg.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            s => parts.push(s),
+        }
+    }
+    Some(parts.join("/"))
+}
+
+/// A `ShaderSource::Wgsl(..)` argument is accepted only when it contains an include macro and
+/// every string literal in it is that macro's argument.
+fn check_wgsl_arg(toks: &[Token], from: usize, close: usize) -> Option<String> {
+    let mut has_include = false;
+    for k in from..close {
+        match toks.get(k).map(|t| &t.tok) {
+            Some(Tok::Ident(n)) if INCLUDE_MACROS.contains(&n.as_str()) && is_punct(toks.get(k + 1), b'!') => {
+                has_include = true;
+            }
+            Some(Tok::Str(_)) => {
+                let in_macro = k >= 3
+                    && is_punct(toks.get(k - 1), b'(')
+                    && is_punct(toks.get(k - 2), b'!')
+                    && matches!(toks.get(k - 3), Some(Token { tok: Tok::Ident(n), .. }) if INCLUDE_MACROS.contains(&n.as_str()));
+                if !in_macro {
+                    return Some("ShaderSource::Wgsl holds inline WGSL text, which bypasses the manifest".to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    if has_include {
+        None
+    } else {
+        Some("ShaderSource::Wgsl argument is not an include of a listed .wgsl module".to_string())
     }
 }

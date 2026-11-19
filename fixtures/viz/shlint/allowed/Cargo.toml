@@ -1,0 +1,14 @@
+# Fixture crate for fid-shlint (VIZ.RENDER.FRAME.SHLINT). Never built: the lint reads its
+# sources, its shader manifest and the hand-written metadata.json next to this file.
+[package]
+name = "fid-render"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[dependencies]
+wgpu = "26"
+# A window-hosting helper that pulls in winit (see metadata.json): the AC-4 error path (allowed in the manifest of the `allowed` fixture).
+fid-window-host = { path = "../fid-window-host" }
+
+[workspace]

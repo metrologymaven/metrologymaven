@@ -16,12 +16,18 @@
 //! [[target]]                        # optional: a read-back target that is not a shader binding,
 //! name = "id_readback"              # e.g. the buffer a colour, depth or ID attachment is copied to
 //! class = "id"                      # colour | depth | id
+//!
+//! [[allow]]                         # optional: a UI-toolkit crate accepted on purpose; it is
+//! crate = "winit"                   # still reported, as an informational finding with the
+//! reason = "why it is needed"       # reason (each crate name is allowed individually)
 //! ```
 //!
-//! Parsing fails closed: unknown keys, wrong types, duplicate modules, slots, names or keys,
+//! Parsing fails closed: an `[[allow]]` crate that is not on the denylist, an empty reason,
+//! unknown keys, wrong types, duplicate modules, slots, names or keys,
 //! unsafe paths and unknown classes are all [`crate::ShlintError::ManifestMalformed`].
 
-use std::collections::BTreeSet;
+use crate::deps::{is_toolkit, normalise};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Classification of a binding or read-back target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -94,11 +100,13 @@ pub enum ReadbackClass {
     Unknown,
 }
 
-/// The parsed manifest (`ShaderManifest { modules, targets }`).
+/// The parsed manifest (`ShaderManifest { modules, targets, allows }`).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ShaderManifest {
     pub modules: Vec<Module>,
     pub targets: Vec<Target>,
+    /// Allowed UI-toolkit crates: normalised crate name (lowercase, `_` as `-`) to reason.
+    pub allows: BTreeMap<String, String>,
 }
 
 type Table = toml::Table;
@@ -107,7 +115,7 @@ impl ShaderManifest {
     /// Parses and validates the manifest text.
     pub fn parse(text: &str) -> Result<ShaderManifest, String> {
         let table: Table = text.parse().map_err(|e: toml::de::Error| e.to_string().trim_end().to_string())?;
-        only_keys(&table, &["schema", "module", "target"], "the top level")?;
+        only_keys(&table, &["schema", "module", "target", "allow"], "the top level")?;
         match table.get("schema") {
             Some(toml::Value::Integer(1)) => {}
             Some(_) => return Err("`schema` must be the integer 1".to_string()),
@@ -159,6 +167,21 @@ impl ShaderManifest {
                 return Err(format!("{at}: target `{name}` is listed twice"));
             }
             out.targets.push(Target { name, class });
+        }
+        for (i, t) in tables(&table, "allow")?.into_iter().enumerate() {
+            let at = format!("allow #{}", i + 1);
+            only_keys(t, &["crate", "reason"], &at)?;
+            let name = string(t, "crate", &at)?;
+            let reason = string(t, "reason", &at)?;
+            if !is_toolkit(&name) {
+                return Err(format!("{at}: crate `{name}` is not on the UI-toolkit denylist"));
+            }
+            if reason.trim().is_empty() || reason.contains(['\n', '\r']) {
+                return Err(format!("{at}: `reason` must be one non-empty line"));
+            }
+            if out.allows.insert(normalise(&name), reason).is_some() {
+                return Err(format!("{at}: crate `{name}` is allowed twice"));
+            }
         }
         Ok(out)
     }

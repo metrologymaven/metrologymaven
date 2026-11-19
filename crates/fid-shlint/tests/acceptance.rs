@@ -67,8 +67,34 @@ fn ac4_transitive_winit_exits_1_naming_the_crate_path() {
 }
 
 #[test]
+fn allowed_toolkit_is_reported_but_passes() {
+    let out = lint("allowed");
+    assert_eq!(out.stderr, "");
+    assert_eq!(
+        out.stdout,
+        "fid-render -> fid-window-host -> winit: [SHLINT-003/toolkit-allowed] fid-render depends on UI-toolkit \
+         crate winit, allowed in shaders/manifest.toml: fixture: window hosting is under review\n\
+         fid-shlint: ok (1 informational)\n"
+    );
+    assert_eq!(out.code, 0);
+}
+
+#[test]
+fn metadata_for_another_crate_dir_exits_2() {
+    let out = run(&[
+        "--crate-dir".to_string(),
+        fixture("ok").to_string_lossy().into_owned(),
+        "--metadata".to_string(),
+        fixture("toolkit").join("metadata.json").to_string_lossy().into_owned(),
+    ]);
+    assert_eq!(out.code, 2);
+    assert_eq!(out.stdout, "");
+    assert!(out.stderr.starts_with("fid-shlint: error: MetadataMismatch: manifest_path Cargo.toml is not in --crate-dir "), "{}", out.stderr);
+}
+
+#[test]
 fn output_is_deterministic() {
-    for name in ["ok", "unlisted", "readback", "toolkit"] {
+    for name in ["ok", "unlisted", "readback", "toolkit", "allowed"] {
         assert_eq!(lint(name), lint(name), "{name}");
     }
 }

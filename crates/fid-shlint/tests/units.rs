@@ -4,7 +4,8 @@
 
 use fid_shlint::deps::{self, is_toolkit};
 use fid_shlint::manifest::ReadbackClass;
-use fid_shlint::rust_scan::{lex, scan, strip_cfg_test, Tok};
+use fid_shlint::rust_scan::{lex, resolve_relative, scan, scan_shader_sources, strip_cfg_test, Tok};
+use std::collections::BTreeMap;
 use fid_shlint::{check_shaders, wgsl, BindingClass, Finding, Rule, ShaderManifest, ShlintError};
 
 const MANIFEST: &str = r#"
@@ -339,7 +340,7 @@ fn toolkit_denylist() {
 
 fn meta(packages: &[(&str, Vec<&str>)]) -> String {
     let pkgs: Vec<String> =
-        packages.iter().map(|(n, _)| format!("{{\"name\":\"{n}\",\"version\":\"1.0.0\",\"id\":\"{n}-id\"}}")).collect();
+        packages.iter().map(|(n, _)| format!("{{\"name\":\"{n}\",\"version\":\"1.0.0\",\"id\":\"{n}-id\",\"manifest_path\":\"/w/{n}/Cargo.toml\"}}")).collect();
     let nodes: Vec<String> = packages
         .iter()
         .map(|(n, deps)| {
@@ -364,7 +365,7 @@ fn toolkit_paths_are_shortest_and_sorted() {
         ("epaint", vec![]),
         ("winit", vec![]),
     ]);
-    let f = deps::check(m.as_bytes(), "fid-render").unwrap();
+    let f = deps::check(m.as_bytes(), "fid-render", &BTreeMap::new()).unwrap().findings;
     let got: Vec<String> = f.iter().map(|f| f.location.clone()).collect();
     assert_eq!(got, ["fid-render -> alpha -> winit", "fid-render -> egui", "fid-render -> egui -> epaint"]);
 }
@@ -372,7 +373,9 @@ fn toolkit_paths_are_shortest_and_sorted() {
 #[test]
 fn clean_graph_and_cycles() {
     let m = meta(&[("fid-render", vec!["a"]), ("a", vec!["b"]), ("b", vec!["a", "fid-render"])]);
-    assert!(deps::check(m.as_bytes(), "fid-render").unwrap().is_empty());
+    let r = deps::check(m.as_bytes(), "fid-render", &BTreeMap::new()).unwrap();
+    assert!(r.findings.is_empty());
+    assert_eq!(r.manifest_path, "/w/fid-render/Cargo.toml");
 }
 
 #[test]
@@ -387,11 +390,118 @@ fn malformed_metadata_fails_closed() {
         good.replace("\"pkg\":\"a-id\"", "\"pkg\":\"ghost-id\""),
         meta(&[("fid-render", vec!["a"])]),
         good.replace("\"deps\":[]", "\"other\":[]"),
+        good.replace(",\"manifest_path\":\"/w/fid-render/Cargo.toml\"", ""),
+        good.replace("\"manifest_path\":\"/w/fid-render/Cargo.toml\"", "\"manifest_path\":7"),
     ];
     for c in &cases {
-        match deps::check(c.as_bytes(), "fid-render") {
+        match deps::check(c.as_bytes(), "fid-render", &BTreeMap::new()) {
             Err(ShlintError::MetadataMalformed { .. }) => {}
             other => panic!("{c}: {other:?}"),
         }
     }
+}
+
+#[test]
+fn allowed_toolkit_is_informational_with_reason() {
+    let m = meta(&[("fid-render", vec!["winit", "egui"]), ("winit", vec![]), ("egui", vec![])]);
+    let manifest =
+        ShaderManifest::parse("schema = 1\n[[allow]]\ncrate = \"Winit\"\nreason = \"window host, D-xyz\"\n").unwrap();
+    let f = deps::check(m.as_bytes(), "fid-render", &manifest.allows).unwrap().findings;
+    assert_eq!(
+        f.iter().map(|f| (f.location.as_str(), f.rule)).collect::<Vec<_>>(),
+        [("fid-render -> egui", Rule::Toolkit), ("fid-render -> winit", Rule::ToolkitAllowed)]
+    );
+    assert_eq!(
+        f[1].to_string(),
+        "fid-render -> winit: [SHLINT-003/toolkit-allowed] fid-render depends on UI-toolkit crate winit, \
+         allowed in shaders/manifest.toml: window host, D-xyz"
+    );
+    assert!(Rule::Toolkit.is_error());
+    assert!(!Rule::ToolkitAllowed.is_error());
+}
+
+#[test]
+fn allow_entries_are_validated() {
+    let cases: &[(&str, &str)] = &[
+        ("schema = 1\n[[allow]]\ncrate = \"wgpu\"\nreason = \"x\"", "is not on the UI-toolkit denylist"),
+        ("schema = 1\n[[allow]]\ncrate = \"winit\"\nreason = \" \"", "must be one non-empty line"),
+        ("schema = 1\n[[allow]]\ncrate = \"winit\"", "`reason` is missing"),
+        (
+            "schema = 1\n[[allow]]\ncrate = \"egui_extras\"\nreason = \"a\"\n[[allow]]\ncrate = \"EGUI-extras\"\nreason = \"b\"",
+            "is allowed twice",
+        ),
+        ("schema = 1\n[[allow]]\ncrate = \"winit\"\nreason = \"a\"\nscope = \"all\"", "unknown key `scope`"),
+    ];
+    for (text, want) in cases {
+        match ShaderManifest::parse(text) {
+            Ok(m) => panic!("accepted {text:?}: {m:?}"),
+            Err(e) => assert!(e.contains(want), "{text:?}: got {e:?}, want {want:?}"),
+        }
+    }
+}
+
+#[test]
+fn readback_helpers_are_unresolved() {
+    let src = "use wgpu::util::DownloadBuffer;\nfn a() {\n    DownloadBuffer::read_buffer(&d, &q, &s, cb);\n}";
+    let f = scan("src/h.rs", src, &manifest()).unwrap();
+    assert_eq!(
+        rules(&f),
+        vec![
+            ("src/h.rs:1".to_string(), Rule::UnresolvedReadback),
+            ("src/h.rs:3".to_string(), Rule::UnresolvedReadback),
+            ("src/h.rs:3".to_string(), Rule::UnresolvedReadback),
+        ]
+    );
+    assert_eq!(
+        f[2].to_string(),
+        "src/h.rs:3: [SHLINT-002/unresolved-readback] uses wgpu readback helper `read_buffer`; cannot tell which target is read"
+    );
+}
+
+#[test]
+fn shader_sources_from_listed_modules_are_clean() {
+    let src = "fn m(d: &wgpu::Device) {
+    let a = wgpu::ShaderSource::Wgsl(include_str!(\"../shaders/a.wgsl\").into());
+    let b = wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(\"../shaders/./a.wgsl\")));
+    let c = wgpu::include_wgsl!(\"../shaders/a.wgsl\");
+    let label = Some(\"not a shader\");
+}
+#[cfg(test)]
+mod t { const S: &str = include_str!(\"fixture.txt\"); }";
+    assert!(scan_shader_sources("src/p.rs", src, &manifest()).unwrap().is_empty());
+}
+
+#[test]
+fn shader_text_outside_the_manifest_is_flagged() {
+    let src = "fn m() {
+    let a = ShaderSource::Wgsl(\"@fragment fn f() {}\".into());
+    let b = ShaderSource::Wgsl(text.into());
+    let c = ShaderSource::Glsl { shader: s, stage: v, defines: d };
+    let d = include_str!(\"../shaders/a.txt\");
+    let e = include_str!(\"../shaders/other.wgsl\");
+    let f = include_bytes!(concat!(env!(\"OUT_DIR\"), \"/a.wgsl\"));
+    let g = wgpu::include_spirv!(\"a.spv\");
+    let h = include_str!(\"../../outside.wgsl\");
+    let i = ShaderSource::Wgsl(Cow::Owned(format!(\"{}\", include_str!(\"../shaders/a.wgsl\"))));
+}";
+    let f = scan_shader_sources("src/p.rs", src, &manifest()).unwrap();
+    let lines: Vec<&str> = f.iter().map(|f| f.location.as_str()).collect();
+    assert_eq!(
+        lines,
+        ["src/p.rs:2", "src/p.rs:3", "src/p.rs:4", "src/p.rs:5", "src/p.rs:6", "src/p.rs:7", "src/p.rs:8", "src/p.rs:9", "src/p.rs:10"]
+    );
+    assert!(f.iter().all(|f| f.rule == Rule::UnmanifestedShader));
+    assert_eq!(
+        f[4].to_string(),
+        "src/p.rs:6: [SHLINT-001/unmanifested-shader] include_str! of `../shaders/other.wgsl` (shaders/other.wgsl), \
+         which is not listed in shaders/manifest.toml"
+    );
+}
+
+#[test]
+fn relative_include_paths() {
+    assert_eq!(resolve_relative("src/a/b.rs", "../../shaders/x.wgsl").as_deref(), Some("shaders/x.wgsl"));
+    assert_eq!(resolve_relative("build.rs", "shaders/x.wgsl").as_deref(), Some("shaders/x.wgsl"));
+    assert_eq!(resolve_relative("src/b.rs", "../../x.wgsl"), None);
+    assert_eq!(resolve_relative("src/b.rs", "/abs/x.wgsl"), None);
 }

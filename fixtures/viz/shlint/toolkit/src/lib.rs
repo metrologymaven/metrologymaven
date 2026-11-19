@@ -2,6 +2,7 @@
 //! Mentions of points.slice(..).map_async(wgpu::MapMode::Read, ..) in comments do not count.
 
 mod frame;
+mod pipeline;
 
 pub use frame::Frame;
 

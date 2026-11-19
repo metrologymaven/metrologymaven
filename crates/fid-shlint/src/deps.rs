@@ -6,7 +6,7 @@
 //! reported once with its shortest, deterministic crate path. Every dependency kind (normal,
 //! build and dev) and every target platform counts: the check fails closed.
 
-use crate::{Finding, Rule, ShlintError};
+use crate::{Finding, Rule, ShlintError, MANIFEST_PATH};
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -24,10 +24,24 @@ pub const MAX_PACKAGES: usize = 100_000;
 /// itself, the toolkit name followed by `-` or `_`, or a listed sub-crate. Names compare
 /// ASCII-case-insensitively with `_` and `-` treated alike, as crates.io does.
 pub fn is_toolkit(name: &str) -> bool {
-    let n = name.to_ascii_lowercase().replace('_', "-");
+    let n = normalise(name);
     TOOLKITS.iter().any(|t| n == *t || n.strip_prefix(*t).is_some_and(|rest| rest.starts_with('-')))
         || TOOLKIT_SUBCRATES.contains(&n.as_str())
         || n.starts_with(SLINT_INTERNAL_PREFIX)
+}
+
+/// A crate name as crates.io compares it: ASCII lowercase, `_` written as `-`.
+pub fn normalise(name: &str) -> String {
+    name.to_ascii_lowercase().replace('_', "-")
+}
+
+/// Result of the toolkit check.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DepsReport {
+    /// Toolkit findings (errors) and allowed-toolkit findings (informational), sorted.
+    pub findings: Vec<Finding>,
+    /// `manifest_path` of the checked package, as written in the metadata.
+    pub manifest_path: String,
 }
 
 fn bad(reason: impl Into<String>) -> ShlintError {
@@ -55,8 +69,9 @@ fn string<'a>(v: Option<&'a CValue>, what: &str) -> Result<&'a str, ShlintError>
     }
 }
 
-/// Runs REQ-003 on a metadata document for `package`.
-pub fn check(metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError> {
+/// Runs REQ-003 on a metadata document for `package`. `allows` maps normalised crate names
+/// to the reason the manifest gives for allowing them.
+pub fn check(metadata: &[u8], package: &str, allows: &BTreeMap<String, String>) -> Result<DepsReport, ShlintError> {
     let doc = fid_canon::parse(metadata).map_err(|e| bad(format!("not usable JSON ({})", e.code())))?;
     let top = obj(&doc, "the document")?;
     match top.get("version") {
@@ -69,10 +84,17 @@ pub fn check(metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError
         return Err(bad(format!("more than {MAX_PACKAGES} packages")));
     }
     let mut names: BTreeMap<&str, &str> = BTreeMap::new();
+    let mut manifest_paths: BTreeMap<&str, Option<&str>> = BTreeMap::new();
     for p in packages {
         let p = obj(p, "a package")?;
         let id = string(p.get("id"), "package `id`")?;
         let name = string(p.get("name"), "package `name`")?;
+        let mp = match p.get("manifest_path") {
+            Some(CValue::Str(s)) => Some(s.as_str()),
+            None => None,
+            Some(_) => return Err(bad("package `manifest_path` must be a string")),
+        };
+        manifest_paths.insert(id, mp);
         if names.insert(id, name).is_some() {
             return Err(bad(format!("package id {id} is listed twice")));
         }
@@ -92,6 +114,12 @@ pub fn check(metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError
         [] => return Err(bad(format!("package {package} is not a workspace member"))),
         _ => return Err(bad(format!("package {package} names more than one workspace member"))),
     };
+    let manifest_path = manifest_paths
+        .get(root)
+        .copied()
+        .flatten()
+        .ok_or_else(|| bad(format!("package {package} has no `manifest_path`")))?
+        .to_string();
 
     let resolve = match top.get("resolve") {
         Some(v @ CValue::Obj(_)) => obj(v, "`resolve`")?,
@@ -148,17 +176,27 @@ pub fn check(metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError
             }
             parent.insert(dep, id);
             if is_toolkit(name) {
-                findings.push(Finding {
-                    location: crate_path(&names, &parent, root, dep),
-                    rule: Rule::Toolkit,
-                    message: format!("{package} depends on UI-toolkit crate {name}"),
+                let location = crate_path(&names, &parent, root, dep);
+                findings.push(match allows.get(&normalise(name)) {
+                    Some(reason) => Finding {
+                        location,
+                        rule: Rule::ToolkitAllowed,
+                        message: format!(
+                            "{package} depends on UI-toolkit crate {name}, allowed in {MANIFEST_PATH}: {reason}"
+                        ),
+                    },
+                    None => Finding {
+                        location,
+                        rule: Rule::Toolkit,
+                        message: format!("{package} depends on UI-toolkit crate {name}"),
+                    },
                 });
             }
             queue.push_back(dep);
         }
     }
     findings.sort();
-    Ok(findings)
+    Ok(DepsReport { findings, manifest_path })
 }
 
 /// `root -> .. -> id` by package names, following `parent` links.

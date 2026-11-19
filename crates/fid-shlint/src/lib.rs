@@ -13,12 +13,21 @@
 //! 2. **Readback** (REQ-002): every `map_async` call in non-test Rust source (`src/**.rs` and
 //!    `build.rs`, minus items under `#[cfg(test)]`) that is not a write mapping must map a
 //!    receiver whose name the manifest classifies as a colour, depth or ID target.
+//!    Receivers are matched by their last identifier only (`self.frame.id_readback` is
+//!    `id_readback`). wgpu readback helpers (`DownloadBuffer`, `read_buffer`) cannot be
+//!    attributed and are always findings. Shader text that bypasses the manifest (inline
+//!    `ShaderSource::Wgsl(..)` strings, other `ShaderSource` variants, SPIR-V macros, and
+//!    `include_str!`/`include_bytes!` of anything but a listed `.wgsl` module) is a finding.
 //! 3. **Toolkit** (REQ-003): the package must not reach, directly or transitively, a crate of
-//!    the UI-toolkit denylist in the `cargo metadata` resolve graph.
+//!    the UI-toolkit denylist in the `cargo metadata` resolve graph. A crate named in a
+//!    manifest `[[allow]]` entry is reported as an informational finding with its reason,
+//!    never silently. The metadata must describe the crate under `--crate-dir`: the package's
+//!    `manifest_path` must sit in that folder, or the run fails with exit 2.
 //!
 //! Every finding names its file and line, file, or crate path and the rule broken (REQ-004).
-//! Exit 0: no findings; 1: findings; 2: anything that cannot be read or parsed (fail closed),
-//! an input over its size limit, or wrong usage.
+//! Exit 0: no findings other than informational ones; 1: findings; 2: anything that cannot be
+//! read or parsed (fail closed), metadata for another crate, an input over its size limit, or
+//! wrong usage.
 
 pub mod deps;
 pub mod manifest;
@@ -64,8 +73,12 @@ pub enum Rule {
     Readback,
     /// A `map_async` call whose mapped target cannot be determined (REQ-002, fail closed).
     UnresolvedReadback,
+    /// Shader text that does not come from a listed `.wgsl` module (REQ-001, fail closed).
+    UnmanifestedShader,
     /// The package reaches a UI-toolkit crate (REQ-003).
     Toolkit,
+    /// The package reaches a UI-toolkit crate that the manifest allows (informational).
+    ToolkitAllowed,
 }
 
 impl Rule {
@@ -79,8 +92,15 @@ impl Rule {
             Rule::BindingName => "SHLINT-001/binding-name",
             Rule::Readback => "SHLINT-002/readback",
             Rule::UnresolvedReadback => "SHLINT-002/unresolved-readback",
+            Rule::UnmanifestedShader => "SHLINT-001/unmanifested-shader",
             Rule::Toolkit => "SHLINT-003/toolkit",
+            Rule::ToolkitAllowed => "SHLINT-003/toolkit-allowed",
         }
+    }
+
+    /// False only for informational rules, which never make the run fail.
+    pub fn is_error(self) -> bool {
+        !matches!(self, Rule::ToolkitAllowed)
     }
 }
 
@@ -109,6 +129,8 @@ pub enum ShlintError {
     ManifestMalformed { reason: String },
     /// The `cargo metadata` document cannot be used.
     MetadataMalformed { reason: String },
+    /// The metadata describes a package whose `manifest_path` is not in `--crate-dir`.
+    MetadataMismatch { reason: String },
     /// A file or folder cannot be read, is not UTF-8, or is a symbolic link.
     Unreadable { path: String, reason: String },
     /// A file is larger than its limit, or a walk exceeds [`MAX_FILES`] or [`MAX_DEPTH`].
@@ -126,6 +148,7 @@ impl ShlintError {
             ShlintError::Usage(_) => "Usage",
             ShlintError::ManifestMalformed { .. } => "ManifestMalformed",
             ShlintError::MetadataMalformed { .. } => "MetadataMalformed",
+            ShlintError::MetadataMismatch { .. } => "MetadataMismatch",
             ShlintError::Unreadable { .. } => "Unreadable",
             ShlintError::Limit { .. } => "Limit",
             ShlintError::WgslParse { .. } => "WgslParse",
@@ -140,6 +163,7 @@ impl fmt::Display for ShlintError {
             ShlintError::Usage(m) => write!(f, "Usage: {m}\n{USAGE}"),
             ShlintError::ManifestMalformed { reason } => write!(f, "ManifestMalformed: {MANIFEST_PATH}: {reason}"),
             ShlintError::MetadataMalformed { reason } => write!(f, "MetadataMalformed: {reason}"),
+            ShlintError::MetadataMismatch { reason } => write!(f, "MetadataMismatch: {reason}"),
             ShlintError::Unreadable { path, reason } => write!(f, "Unreadable: {path}: {reason}"),
             ShlintError::Limit { path, reason } => write!(f, "Limit: {path}: {reason}"),
             ShlintError::WgslParse { path, line: Some(l), reason } => write!(f, "WgslParse: {path}:{l}: {reason}"),
@@ -162,17 +186,23 @@ pub struct Output {
 /// Runs the command line (arguments without the program name).
 pub fn run(args: &[String]) -> Output {
     match run_inner(args) {
-        Ok(findings) if findings.is_empty() => {
-            Output { code: 0, stdout: "fid-shlint: ok\n".to_string(), stderr: String::new() }
-        }
         Ok(findings) => {
+            let errors = findings.iter().filter(|f| f.rule.is_error()).count();
+            let info = findings.len() - errors;
             let mut stdout = String::new();
             for f in &findings {
                 stdout.push_str(&f.to_string());
                 stdout.push('\n');
             }
-            stdout.push_str(&format!("fid-shlint: {} finding(s)\n", findings.len()));
-            Output { code: 1, stdout, stderr: String::new() }
+            let summary = match (errors, info) {
+                (0, 0) => "fid-shlint: ok".to_string(),
+                (0, i) => format!("fid-shlint: ok ({i} informational)"),
+                (e, 0) => format!("fid-shlint: {e} finding(s)"),
+                (e, i) => format!("fid-shlint: {e} finding(s), {i} informational"),
+            };
+            stdout.push_str(&summary);
+            stdout.push('\n');
+            Output { code: u8::from(errors > 0), stdout, stderr: String::new() }
         }
         Err(e) => Output { code: 2, stdout: String::new(), stderr: format!("fid-shlint: error: {e}\n") },
     }
@@ -201,18 +231,29 @@ fn run_inner(args: &[String]) -> Result<Vec<Finding>, ShlintError> {
     let crate_dir = crate_dir.ok_or_else(|| ShlintError::Usage("--crate-dir is required".to_string()))?;
     let metadata = metadata.ok_or_else(|| ShlintError::Usage("--metadata is required".to_string()))?;
     let package = package.unwrap_or(DEFAULT_PACKAGE);
-    let meta_bytes = read_bounded(Path::new(metadata), metadata, MAX_METADATA_BYTES)?;
-    check(Path::new(crate_dir), &meta_bytes, package)
+    let meta_path = Path::new(metadata);
+    let meta_bytes = read_bounded(meta_path, metadata, MAX_METADATA_BYTES)?;
+    let meta_dir = match meta_path.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p,
+        _ => Path::new("."),
+    };
+    check(Path::new(crate_dir), &meta_bytes, meta_dir, package)
 }
 
-/// Runs all three checks on a crate directory and a `cargo metadata` document. Findings are
-/// sorted and free of duplicates.
-pub fn check(crate_dir: &Path, metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError> {
+/// Runs all three checks on a crate directory and a `cargo metadata` document. `metadata_dir`
+/// is the folder of the metadata file: a relative `manifest_path` (only in hand-written
+/// fixtures; cargo always writes absolute paths) is resolved against it. Findings are sorted
+/// and free of duplicates.
+pub fn check(crate_dir: &Path, metadata: &[u8], metadata_dir: &Path, package: &str) -> Result<Vec<Finding>, ShlintError> {
     let manifest_bytes = read_bounded(&crate_dir.join(MANIFEST_PATH), MANIFEST_PATH, MAX_FILE_BYTES)
         .map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
     let manifest_text =
         utf8(MANIFEST_PATH, manifest_bytes).map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
     let manifest = ShaderManifest::parse(&manifest_text).map_err(|reason| ShlintError::ManifestMalformed { reason })?;
+
+    // REQ-003 first: metadata for another crate stops the run before anything is reported.
+    let report = deps::check(metadata, package, &manifest.allows)?;
+    same_crate(crate_dir, metadata_dir, &report.manifest_path)?;
 
     let files = walk(crate_dir)?;
     let mut wgsl_files = Vec::new();
@@ -242,12 +283,29 @@ pub fn check(crate_dir: &Path, metadata: &[u8], package: &str) -> Result<Vec<Fin
         let bytes = read_bounded(&crate_dir.join(rel), rel, MAX_FILE_BYTES)?;
         let text = utf8(rel, bytes)?;
         findings.extend(rust_scan::scan(rel, &text, &manifest)?);
+        findings.extend(rust_scan::scan_shader_sources(rel, &text, &manifest)?);
     }
 
-    // REQ-003.
-    findings.extend(deps::check(metadata, package)?);
-
+    findings.extend(report.findings);
     Ok(findings.into_iter().collect())
+}
+
+/// Fails unless the folder holding `manifest_path` is `crate_dir` (both canonicalised).
+fn same_crate(crate_dir: &Path, metadata_dir: &Path, manifest_path: &str) -> Result<(), ShlintError> {
+    let mismatch = |reason: String| ShlintError::MetadataMismatch { reason };
+    let mp = Path::new(manifest_path);
+    let mp = if mp.is_absolute() { mp.to_path_buf() } else { metadata_dir.join(mp) };
+    let Some(pkg_dir) = mp.parent() else {
+        return Err(mismatch(format!("manifest_path {manifest_path} has no parent folder")));
+    };
+    let pkg_dir = std::fs::canonicalize(pkg_dir)
+        .map_err(|e| mismatch(format!("cannot resolve the folder of manifest_path {manifest_path}: {e}")))?;
+    let dir = std::fs::canonicalize(crate_dir)
+        .map_err(|e| ShlintError::Unreadable { path: crate_dir.display().to_string(), reason: e.to_string() })?;
+    if pkg_dir != dir {
+        return Err(mismatch(format!("manifest_path {manifest_path} is not in --crate-dir {}", crate_dir.display())));
+    }
+    Ok(())
 }
 
 /// REQ-001 on in-memory data: `wgsl_files` are all WGSL paths found in the crate, `sources`
