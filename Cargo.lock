@@ -812,6 +812,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-render"
+version = "0.0.1"
+dependencies = [
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-replay"
 version = "0.0.1"
 dependencies = [
