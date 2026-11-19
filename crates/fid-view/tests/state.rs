@@ -173,9 +173,12 @@ fn unsupported_schema_is_reported_on_write_too() {
     assert_eq!(SCHEMA_VERSION, 1);
 }
 
+/// A change to a valid ViewState.
+type Mutation = Box<dyn Fn(&mut ViewState)>;
+
 #[test]
 fn in_memory_validation_names_the_field() {
-    let cases: Vec<(Box<dyn Fn(&mut ViewState)>, &str, &str)> = vec![
+    let cases: Vec<(Mutation, &str, &str)> = vec![
         (Box::new(|v| v.camera.up = [0.0, 0.0, 0.0]), "degenerate_camera", "camera.up"),
         (Box::new(|v| v.camera.target_m = v.camera.eye_m), "degenerate_camera", "camera.target_m"),
         (Box::new(|v| v.camera.near_m = v.camera.far_m), "degenerate_camera", "camera.far_m"),
