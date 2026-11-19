@@ -16,6 +16,9 @@ use fid_canon::{to_canonical_bytes, CValue};
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// Integers must be smaller than this in magnitude (2^53): JSON numbers are exact only below it.
+pub const MAX_EXACT_INTEGER: f64 = 9_007_199_254_740_992.0;
+
 /// Deepest accepted setting schema (the root object is level 1).
 pub const MAX_SCHEMA_DEPTH: usize = 16;
 
@@ -148,11 +151,11 @@ pub fn check_setting_schema(schema: &CValue) -> Result<(), ValueError> {
 
 // ------------------------------------------------------------------ value validation
 
+/// A JSON number. Only `Num`: values are checked in wire form, where `I64`, `U64` and
+/// `F64Bits` are strings, and schemas are parsed JSON.
 fn as_number(v: &CValue) -> Option<f64> {
     match v {
-        CValue::Num(n) | CValue::F64Bits(n) => Some(*n),
-        CValue::I64(n) => Some(*n as f64),
-        CValue::U64(n) => Some(*n as f64),
+        CValue::Num(n) => Some(*n),
         _ => None,
     }
 }
@@ -165,11 +168,8 @@ fn is_type(v: &CValue, t: &str) -> bool {
         "array" => matches!(v, CValue::Arr(_)),
         "object" => matches!(v, CValue::Obj(_)),
         "number" => as_number(v).is_some_and(f64::is_finite),
-        "integer" => match v {
-            CValue::I64(_) | CValue::U64(_) => true,
-            CValue::Num(n) | CValue::F64Bits(n) => n.is_finite() && n.fract() == 0.0,
-            _ => false,
-        },
+        // Values are checked in wire form, where I64, U64 and F64Bits are strings.
+        "integer" => matches!(v, CValue::Num(n) if n.is_finite() && n.fract() == 0.0 && n.abs() < MAX_EXACT_INTEGER),
         _ => false,
     }
 }
@@ -181,8 +181,25 @@ fn usize_as_f64(n: usize) -> f64 {
 /// Validates `value` against a setting schema that passed [`check_setting_schema`]. Returns
 /// the first failure in a fixed order (keywords by name, array items and object members in
 /// order). A non-finite number anywhere fails.
+///
+/// The value is judged in its wire form: it is written as RFC 8785 canonical bytes and parsed
+/// back first ([`wire_form`]), so a typed `I64`, `U64` or `F64Bits` value is checked as the
+/// decimal or hex string the journal and the files store, and a value that passes here reads
+/// back as the same value.
 pub fn validate_value(schema: &CValue, value: &CValue) -> Result<(), ValueError> {
-    validate_at(schema, value, "", 1)
+    let wire = wire_form(value)?;
+    validate_at(schema, &wire, "", 1)
+}
+
+/// `value` as it is stored: its canonical bytes parsed back. `Err` when it has no canonical
+/// form (a non-finite number).
+pub fn wire_form(value: &CValue) -> Result<CValue, ValueError> {
+    let bytes = to_canonical_bytes(value)
+        .map_err(|e| ValueError { pointer: String::new(), message: format!("no canonical form ({})", e.code()) })?;
+    fid_canon::parse_with_limits(&bytes, fid_canon::MAX_INPUT_BYTES, fid_canon::MAX_DEPTH).map_err(|e| ValueError {
+        pointer: String::new(),
+        message: format!("canonical form does not read back ({})", e.code()),
+    })
 }
 
 fn validate_at(schema: &CValue, value: &CValue, ptr: &str, depth: usize) -> Result<(), ValueError> {

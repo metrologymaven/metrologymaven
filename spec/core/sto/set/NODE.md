@@ -83,6 +83,11 @@ One typed settings system for the whole platform. Each setting is declared by it
 - **Resolved (where non-project changes are journaled):** a per-user settings journal (REQ-008). `CORE.JRN.STREAM` and `CORE.JRN.CHAIN` must accept a journal store that lives in the user configuration directory rather than in a project (cross-node follow-up).
 - `CORE.STO.PRIV` classes `settings.set_telemetry_consent@1` as W3, while CONSTITUTION §3.1 (D-031) says a user's own consent is W2, journaled; PRIV should be reconciled (not this node's file).
 - Machine-scope files may need OS administrator rights to write; this leaf reports `scope_not_writable` and leaves elevation to `PLAT.DEPLOY.MCONF`.
+- **Applied (#275 review, maintainer decisions):**
+  - `settings_current` has no branch column and serves the working branch only. A project-scope change on any other branch (an agent's `agent/<client>/<n>`) is journaled on that branch but never staged into `settings_current`, so it never changes what a person on the working branch reads. **Limit:** until per-branch reads exist (`CORE.JRN.BR`), an agent cannot read back its own project overrides, and such a change reports no `previous` value.
+  - A setting declared `admin: true` may not allow `project` scope (`admin_project_scope` at declaration). A stored project row for a key that does not allow project scope, admin keys included, is ignored with a `scope_not_allowed` warning.
+  - Values are validated in their wire form (RFC 8785 bytes parsed back), and the wire form is what is committed, so a typed 64-bit value is judged as its decimal or hex string. An `integer` must be below 2^53 in magnitude.
+  - `settings.set_admin_value@1` is accepted only from the CLI and the GUI surfaces (defence in depth beside `human_only` and projection `never`).
 
 ## Children
 

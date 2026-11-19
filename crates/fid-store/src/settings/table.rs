@@ -6,6 +6,13 @@
 //! is derived from journal entries and rebuildable. It is written only by
 //! [`stage_project_value`], in the same transaction as the journal entry, from a
 //! [`ChangeEntry`] the settings commands built.
+//!
+//! **Working branch only.** The v1 table has no branch column: it holds the values of one
+//! branch, the working branch it serves ([`ProjectValues::working_branch`]). A project change
+//! committed on any other branch (an agent's `agent/<client>/<n>`) stays in the journal only:
+//! [`stage_project_value`] stages no row for it ([`Staged::JournalOnly`]), so it never changes
+//! what a person on the working branch reads (maintainer decision on #275). Until per-branch
+//! reads exist, an agent cannot read back its own project overrides.
 
 use super::commands::ChangeEntry;
 use super::{Scope, SettingsError, MAX_VALUE_BYTES};
@@ -23,6 +30,9 @@ const MAX_RECORD_DEPTH: usize = 64;
 /// Read access to the project-scope values of the branch a call reads. The project store
 /// implements it ([`ProjectTable`]); tests and other hosts may too.
 pub trait ProjectValues {
+    /// The branch whose values this source holds (the working branch).
+    fn working_branch(&self) -> &str;
+
     /// The stored record of `key` (see [`encode_record`]), `Ok(None)` when there is none.
     /// `Err` holds a display-safe reason.
     fn record(&self, key: &str) -> Result<Option<Vec<u8>>, String>;
@@ -32,15 +42,21 @@ pub trait ProjectValues {
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectTable<'s> {
     store: &'s Store,
+    working_branch: &'s str,
 }
 
 impl<'s> ProjectTable<'s> {
-    pub fn new(store: &'s Store) -> ProjectTable<'s> {
-        ProjectTable { store }
+    /// The table of `store`, serving `working_branch`.
+    pub fn new(store: &'s Store, working_branch: &'s str) -> ProjectTable<'s> {
+        ProjectTable { store, working_branch }
     }
 }
 
 impl ProjectValues for ProjectTable<'_> {
+    fn working_branch(&self) -> &str {
+        self.working_branch
+    }
+
     fn record(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
         self.store
             .read(|c| {
@@ -73,11 +89,30 @@ pub fn decode_record(bytes: &[u8]) -> Result<Option<CValue>, ()> {
     }
 }
 
+/// What [`stage_project_value`] did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Staged {
+    /// The row is staged in the transaction.
+    Row,
+    /// The entry is on another branch than the working branch: journal only, no row.
+    JournalOnly,
+}
+
 /// Stages the `settings_current` row of a project-scope change in `txn`, the transaction that
-/// appends `entry` as Record Journal entry `entry_hash`. Refuses an entry of another scope.
-pub fn stage_project_value(txn: &mut Txn<'_>, entry: &ChangeEntry, entry_hash: &str) -> Result<(), SettingsError> {
+/// appends `entry` as Record Journal entry `entry_hash`, when the entry is on
+/// `working_branch`, the branch the table serves; otherwise stages nothing and returns
+/// [`Staged::JournalOnly`]. Refuses an entry of another scope.
+pub fn stage_project_value(
+    txn: &mut Txn<'_>,
+    entry: &ChangeEntry,
+    entry_hash: &str,
+    working_branch: &str,
+) -> Result<Staged, SettingsError> {
     if entry.scope() != Scope::Project {
         return Err(SettingsError::Validation("only project-scope changes go to settings_current".into()));
+    }
+    if entry.branch() != Some(working_branch) {
+        return Ok(Staged::JournalOnly);
     }
     let record = encode_record(entry.value())?;
     txn.upsert(
@@ -85,5 +120,5 @@ pub fn stage_project_value(txn: &mut Txn<'_>, entry: &ChangeEntry, entry_hash: &
         &[("key", Value::from(entry.key()))],
         &[("value", Value::Blob(record)), ("entry_hash", Value::from(entry_hash))],
     );
-    Ok(())
+    Ok(Staged::Row)
 }

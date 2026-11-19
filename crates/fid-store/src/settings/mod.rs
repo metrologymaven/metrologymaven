@@ -28,7 +28,7 @@
 //! | `settings.list_values@1` | R0 | exposed | sorted by key (REQ-007) |
 //! | `settings.set_value@1` | W2 | exposed | refuses admin keys with `admin_setting` (REQ-005) |
 //! | `settings.reset_value@1` | W2 | exposed | as set |
-//! | `settings.set_admin_value@1` | A0 | never | `human_only`; human principal, never MCP (REQ-006) |
+//! | `settings.set_admin_value@1` | A0 | never | `human_only`; human principal, CLI or GUI only (REQ-006) |
 //!
 //! Every change is one [`ChangeEntry`] handed to the [`SettingsJournal`] seam: project scope to
 //! the project's Record Journal, user and machine scope to the per-user settings journal
@@ -47,7 +47,10 @@ pub mod files;
 pub mod resolve;
 pub mod table;
 
-pub use check::{check_setting_schema, validate_value, ValueError, MAX_SCHEMA_DEPTH, SUPPORTED_KEYWORDS};
+pub use check::{
+    check_setting_schema, validate_value, wire_form, ValueError, MAX_EXACT_INTEGER, MAX_SCHEMA_DEPTH,
+    SUPPORTED_KEYWORDS,
+};
 pub use commands::{
     declarations, invoke, is_agent_branch, list_to_value, list_values, replay_outcome, reset_value, set_admin_value,
     set_value, Caller, ChangeEntry, Invocation, JournalTarget, ListValuesParams, ListedValue, PrincipalKind,
@@ -57,7 +60,7 @@ pub use commands::{
 pub use decl::{DeclError, SettingDecl, SettingSource, SettingsRegistry, MANIFEST_FORMAT};
 pub use files::{machine_config_dir, user_config_dir, FileStore, FILE_FORMAT, MAX_FILE_BYTES, SETTINGS_FILE};
 pub use resolve::{resolve, Resolved, Sources};
-pub use table::{decode_record, encode_record, stage_project_value, ProjectTable, ProjectValues};
+pub use table::{decode_record, encode_record, stage_project_value, ProjectTable, ProjectValues, Staged};
 
 use fid_registry::FidSchema;
 use std::fmt;

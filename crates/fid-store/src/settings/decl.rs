@@ -8,7 +8,7 @@
 //! the set (REQ-001); the first problem of each declaration is reported, all declarations are
 //! checked, and errors are sorted by key.
 
-use super::check::{check_setting_schema, validate_value};
+use super::check::{check_setting_schema, validate_value, wire_form};
 use super::{is_valid_key, Scope, MAX_KEY_BYTES, MAX_SETTINGS, MAX_VALUE_BYTES};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_registry::{check_schema, Catalogue, QuantityCatalogue, SCHEMA_MAX_BYTES};
@@ -178,6 +178,12 @@ impl SettingDecl {
         if set.len() != scopes.len() {
             return Err(DeclError::new(key, "duplicate_scope", "a scope is listed twice"));
         }
+        // Admin settings are machine or user configuration; a project value could be changed
+        // through a project's journal and travel with the project (maintainer decision, #275).
+        if admin && set.contains(&Scope::Project) {
+            return Err(DeclError::new(key, "admin_project_scope", "an admin setting cannot allow project scope"));
+        }
+        let default = wire_form(&default).map_err(|e| DeclError::new(key, "bad_default", e.message))?;
         Ok(SettingDecl { key: key.to_string(), owner: owner.to_string(), schema, default, scopes: set, admin })
     }
 

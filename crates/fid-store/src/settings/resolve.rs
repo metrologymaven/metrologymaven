@@ -91,10 +91,9 @@ pub(crate) fn resolve_one(
     let mut found = None;
     for scope in Scope::ALL {
         let allowed = decl.allows(scope);
-        // Disallowed project rows are not read; disallowed file values are reported.
-        if !allowed && scope == Scope::Project {
-            continue;
-        }
+        // A value stored in a scope the key does not allow (a crafted project row or file
+        // entry, e.g. for an admin key, which never allows project scope) is never used and is
+        // reported.
         let warn = |reason| SettingWarning { key: Some(decl.key().to_string()), scope, reason };
         match lookup(decl, scope, sources, loads) {
             Lookup::Absent => {}

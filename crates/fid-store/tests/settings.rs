@@ -73,6 +73,10 @@ fn registry() -> SettingsRegistry {
 struct MemProject(RefCell<BTreeMap<String, Vec<u8>>>);
 
 impl ProjectValues for MemProject {
+    fn working_branch(&self) -> &str {
+        "main"
+    }
+
     fn record(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
         Ok(self.0.borrow().get(key).cloned())
     }
@@ -95,8 +99,12 @@ impl SettingsJournal for Journal<'_> {
         if self.rec.fail {
             return Err("journal offline".into());
         }
-        if let JournalTarget::Project { .. } = target {
-            self.project.0.borrow_mut().insert(entry.key().to_string(), encode_record(entry.value()).unwrap());
+        // As `stage_project_value`: a row only for the working branch the table serves.
+        if let JournalTarget::Project { branch } = target {
+            assert_eq!(entry.branch(), Some(branch.as_str()));
+            if branch == self.project.working_branch() {
+                self.project.0.borrow_mut().insert(entry.key().to_string(), encode_record(entry.value()).unwrap());
+            }
         }
         let bytes = to_canonical_bytes(&entry.to_value()).unwrap();
         self.rec.entries.borrow_mut().push((target.clone(), bytes, entry.clone()));
@@ -129,13 +137,17 @@ type Proj<'a> = Option<(&'a str, bool)>;
 
 impl Env {
     fn new(tag: &str) -> Env {
+        Env::with_registry(tag, registry())
+    }
+
+    fn with_registry(tag: &str, registry: SettingsRegistry) -> Env {
         let dir = TempDir::new(tag);
         let user = FileStore::new(Scope::User, dir.0.join("user").join("fiducial").join("settings.json")).unwrap();
         let machine =
             FileStore::new(Scope::Machine, dir.0.join("machine").join("fiducial").join("settings.json")).unwrap();
         Env {
             _dir: dir,
-            registry: registry(),
+            registry,
             user,
             machine,
             project: MemProject::default(),
@@ -305,7 +317,7 @@ fn ac4_set_admin_value_by_a_human_cli_session_commits_one_a0_entry() {
 fn ac4_set_admin_value_is_human_only_and_never_from_mcp() {
     let env = Env::new("ac4pol");
     for c in every_caller() {
-        let allowed = c.kind == PrincipalKind::Human && c.surface != Surface::Mcp;
+        let allowed = c.kind == PrincipalKind::Human && matches!(c.surface, Surface::Cli | Surface::Gui);
         if allowed {
             continue;
         }
@@ -360,7 +372,96 @@ fn ac5_agent_changes_project_values_only_on_its_branch() {
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].0, JournalTarget::Project { branch: "agent/claude/1".into() });
     assert_eq!(entries[0].2.principal(), PrincipalKind::Agent);
+    drop(entries);
     assert!(!env.user.path().exists());
+    // Journal only: the working branch's store is unchanged.
+    assert!(env.project.0.borrow().is_empty());
+}
+
+/// Maintainer decision on #275: an agent's project change never changes what a person on the
+/// working branch reads.
+#[test]
+fn agent_project_change_does_not_reach_the_person_on_main() {
+    let env = Env::new("agentmain");
+    env.set(HUMAN, MAIN, LENGTH, Scope::Project, num(0.2)).unwrap();
+    let agent_cli = caller(PrincipalKind::Agent, Surface::Cli);
+    let r = env.set(agent_cli, AGENT_BRANCH, LENGTH, Scope::Project, num(3.0)).unwrap();
+    // No previous value is readable on the agent branch.
+    assert_eq!(r, parse(br#"{"key":"probe.approach_distance","scope":"project","value":3}"#).unwrap());
+    let r = env.reset(AGENT, AGENT_BRANCH, LENGTH, Scope::Project).unwrap();
+    assert_eq!(r, parse(br#"{"key":"probe.approach_distance","scope":"project"}"#).unwrap());
+    assert_eq!(env.journaled(), 3);
+    let rows = env.list(HUMAN, MAIN);
+    let CValue::Arr(rows) = rows else { panic!() };
+    let CValue::Obj(row) = &rows[1] else { panic!() };
+    assert_eq!((row.get("value"), row.get("source_scope")), (Some(&num(0.2)), Some(&CValue::Str("project".into()))));
+}
+
+/// Maintainer decision on #275: a project row for a key that does not allow project scope (an
+/// admin key, which never can) is ignored with a warning.
+#[test]
+fn crafted_project_row_for_an_admin_key_is_ignored() {
+    let env = Env::new("craft");
+    env.project.0.borrow_mut().insert(ROOTS.into(), encode_record(Some(&roots())).unwrap());
+    env.project.0.borrow_mut().insert(TIPS.into(), encode_record(Some(&CValue::Bool(false))).unwrap());
+    assert_eq!(canonical(&env.list(HUMAN, MAIN)), canonical(&expected("expected/list_fresh.json")));
+    let w = |key: &str| SettingWarning {
+        key: Some(key.into()),
+        scope: Scope::Project,
+        reason: WarningReason::ScopeNotAllowed,
+    };
+    assert_eq!(*env.log.0.borrow(), vec![w(ROOTS), w(TIPS)]);
+}
+
+fid_settings! {
+    fn typed_settings;
+    {
+        key: "probe.retries",
+        owner: "probe",
+        schema: r#"{"type": "integer", "minimum": 0}"#,
+        default: "3",
+        scopes: [User],
+        admin: false,
+    }
+    {
+        key: "probe.label",
+        owner: "probe",
+        schema: r#"{"type": "string"}"#,
+        default: r#""a""#,
+        scopes: [User],
+        admin: false,
+    }
+}
+
+/// Maintainer decision on #275: values are judged in their wire form, so what is validated is
+/// what is committed and read back; typed 64-bit values are strings on the wire.
+#[test]
+fn typed_values_are_judged_in_wire_form() {
+    let env = Env::with_registry("wire", SettingsRegistry::build(&typed_settings()).unwrap());
+    // An I64 is the string "3" on the wire: refused up front for an integer setting.
+    assert_eq!(env.set(HUMAN, None, "probe.retries", Scope::User, CValue::I64(3)).unwrap_err().code(), "validation");
+    assert_eq!(env.set(HUMAN, None, "probe.retries", Scope::User, CValue::U64(3)).unwrap_err().code(), "validation");
+    // Integers at or above 2^53 in magnitude are refused.
+    for n in [9_007_199_254_740_992.0, -9_007_199_254_740_992.0, 1e300] {
+        assert_eq!(env.set(HUMAN, None, "probe.retries", Scope::User, num(n)).unwrap_err().code(), "validation");
+    }
+    assert_eq!(env.journaled(), 0);
+    env.set(HUMAN, None, "probe.retries", Scope::User, num(9_007_199_254_740_991.0)).unwrap();
+    // On a string setting the I64 is accepted as its wire string, and reads back the same.
+    let r = env.set(HUMAN, None, "probe.label", Scope::User, CValue::I64(3)).unwrap();
+    assert_eq!(r, parse(br#"{"key":"probe.label","scope":"user","value":"3"}"#).unwrap());
+    let rows = env.run(HUMAN, None, |ctx| list_values(ctx, ListValuesParams::default()).unwrap());
+    assert_eq!((rows[0].value.0.clone(), rows[0].source_scope.as_str()), (CValue::Str("3".into()), "user"));
+    assert!(env.log.0.borrow().is_empty());
+    // And replays identically.
+    let recorded: Vec<Vec<u8>> = env.rec.entries.borrow().iter().map(|e| e.1.clone()).collect();
+    let fresh = Env::with_registry("wire2", SettingsRegistry::build(&typed_settings()).unwrap());
+    for bytes in &recorded {
+        let inv = Invocation::from_entry(&parse(bytes).unwrap()).unwrap();
+        fresh.run(caller(inv.principal, Surface::Cli), None, |ctx| invoke(ctx, &inv)).unwrap();
+    }
+    let replayed: Vec<Vec<u8>> = fresh.rec.entries.borrow().iter().map(|e| e.1.clone()).collect();
+    assert_eq!(replay_outcome(&recorded, &replayed), ReplayOutcome::Identical);
 }
 
 #[test]
@@ -501,6 +602,8 @@ fn a_failed_journal_commit_changes_nothing() {
     assert_eq!(env.set(HUMAN, MAIN, LENGTH, Scope::User, num(1.0)).unwrap_err().code(), "journal_unavailable");
     assert_eq!(env.set(HUMAN, MAIN, LENGTH, Scope::Project, num(1.0)).unwrap_err().code(), "journal_unavailable");
     assert!(!env.user.path().exists());
+    // The directories the writability probe created are removed again.
+    assert!(!env.user.path().parent().unwrap().exists());
     assert!(env.project.0.borrow().is_empty());
 }
 
@@ -694,6 +797,20 @@ fn req001_declarations_are_checked() {
     assert_eq!(decl_error(b, "tru", "ui.tips", "ui", user), "bad_default");
     assert_eq!(decl_error(b, "true", "ui.tips", "ui", &[]), "no_scopes");
     assert_eq!(decl_error(b, "true", "ui.tips", "ui", &[Scope::User, Scope::User]), "duplicate_scope");
+    let admin = |scopes: &'static [Scope]| {
+        let src = fid_store::settings::SettingSource {
+            key: "net.limit",
+            owner: "net",
+            schema: r#"{"type": "boolean"}"#,
+            default: "true",
+            scopes,
+            admin: true,
+        };
+        SettingsRegistry::build(&[src]).map(|_| ()).map_err(|e| e[0].code)
+    };
+    assert_eq!(admin(&[Scope::Project]), Err("admin_project_scope"));
+    assert_eq!(admin(&[Scope::User, Scope::Project]), Err("admin_project_scope"));
+    assert_eq!(admin(&[Scope::User, Scope::Machine]), Ok(()));
     assert_eq!(decl_error(r#"{"type": "number"}"#, "1", "ui.size", "ui", user), "unsupported_schema");
     assert_eq!(decl_error(r#"{"type": "number", "x-quantity": "lenght"}"#, "1", "ui.size", "ui", user), "bad_schema");
     assert_eq!(
@@ -715,6 +832,9 @@ fn value_validator_cases() {
     let cases: &[(&str, &str, bool)] = &[
         (r#"{"type": "integer"}"#, "3", true),
         (r#"{"type": "integer"}"#, "3.5", false),
+        (r#"{"type": "integer"}"#, "9007199254740991", true),
+        (r#"{"type": "integer"}"#, "9007199254740992", false),
+        (r#"{"type": "integer"}"#, "-9007199254740992", false),
         (r#"{"type": ["string", "null"]}"#, "null", true),
         (r#"{"type": ["string", "null"]}"#, "1", false),
         (r#"{"enum": ["a", "b"]}"#, r#""b""#, true),
@@ -748,6 +868,11 @@ fn value_validator_cases() {
         deep = CValue::Arr(vec![deep]);
     }
     assert!(validate_value(&parse(br#"{"type": "array"}"#).unwrap(), &deep).is_ok());
+    // Typed 64-bit values are judged as their wire strings.
+    let int = parse(br#"{"type": "integer"}"#).unwrap();
+    assert!(validate_value(&int, &CValue::I64(3)).is_err());
+    assert!(validate_value(&parse(br#"{"type": "string"}"#).unwrap(), &CValue::U64(3)).is_ok());
+    assert!(validate_value(&int, &CValue::F64Bits(1.0)).is_err());
 }
 
 #[test]

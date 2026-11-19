@@ -10,7 +10,8 @@
 //! 1. the key is declared (`unknown_key`);
 //! 2. the admin flag: a W2 command on an admin key is `admin_setting` whatever the principal;
 //!    the A0 command on an ordinary key is `validation`;
-//! 3. surface and principal: the A0 command only for a `human` principal and never from MCP;
+//! 3. surface and principal: the A0 command only for a `human` principal and only from the CLI
+//!    or the GUI (never MCP, Python or the control channel);
 //!    an agent (an `agent` principal, or any MCP caller) may change only project values, and
 //!    only on its agent branch `agent/<client>/<n>` (`policy`);
 //! 4. the scope is allowed for the key (`scope_not_allowed`);
@@ -24,9 +25,9 @@
 //! transaction ([`super::stage_project_value`]); for file scopes the file is written after the
 //! commit.
 
-use super::check::validate_value;
+use super::check::{validate_value, wire_form};
 use super::decl::SettingsRegistry;
-use super::files::{value_bytes, FileStore};
+use super::files::{remove_created, value_bytes, FileStore};
 use super::resolve::{lookup, resolve, Loads, Lookup, Sources};
 use super::table::ProjectValues;
 use super::{is_valid_key, ActivityLog, Scope, SettingsError, Source, KEY_PATTERN, MAX_KEY_BYTES};
@@ -516,7 +517,7 @@ fn change(
     key: &str,
     scope: Scope,
     value: Option<&CValue>,
-) -> Result<Option<CValue>, SettingsError> {
+) -> Result<(Option<CValue>, Option<CValue>), SettingsError> {
     // 1. Declared key.
     let decl = ctx.registry.get(key).ok_or_else(|| SettingsError::UnknownKey(format!("no setting {key}")))?;
     // 2. Admin flag (REQ-005, REQ-006).
@@ -532,8 +533,10 @@ fn change(
     // 3. Surface and principal (REQ-006, REQ-009).
     let caller = ctx.caller;
     if admin_command {
-        if caller.surface == Surface::Mcp {
-            return Err(SettingsError::Policy(format!("{SET_ADMIN_VALUE} is never on MCP")));
+        // Only the CLI and the desktop GUI (defence in depth: MCP, Python and the control
+        // channel never reach the A0 command; maintainer decision on #275).
+        if !matches!(caller.surface, Surface::Cli | Surface::Gui) {
+            return Err(SettingsError::Policy(format!("{SET_ADMIN_VALUE} is available only from the CLI and the GUI")));
         }
         if caller.kind != PrincipalKind::Human {
             return Err(SettingsError::Policy(format!("{SET_ADMIN_VALUE} commits only for a human principal")));
@@ -550,13 +553,20 @@ fn change(
     if !decl.allows(scope) {
         return Err(SettingsError::ScopeNotAllowed(format!("{key} cannot be set in scope {scope}")));
     }
-    // 5. The value against the key's schema.
-    if let Some(v) = value {
-        value_bytes(v).map_err(SettingsError::Validation)?;
-        validate_value(decl.schema(), v)
-            .map_err(|e| SettingsError::Validation(format!("value fails the schema of {key} {e}")))?;
-    }
+    // 5. The value against the key's schema, in its wire form: what is validated is exactly
+    //    what is committed and read back.
+    let value = match value {
+        None => None,
+        Some(v) => {
+            value_bytes(v).map_err(SettingsError::Validation)?;
+            let wire = wire_form(v).map_err(|e| SettingsError::Validation(e.message))?;
+            validate_value(decl.schema(), &wire)
+                .map_err(|e| SettingsError::Validation(format!("value fails the schema of {key} {e}")))?;
+            Some(wire)
+        }
+    };
     // 6. Writable store (REQ-010).
+    let mut created = Vec::new();
     let target = match scope {
         Scope::Project => match &ctx.project {
             None => return Err(SettingsError::ScopeNotWritable("no project is open".into())),
@@ -566,20 +576,25 @@ fn change(
             Some(p) => JournalTarget::Project { branch: p.branch.clone() },
         },
         Scope::User | Scope::Machine => {
-            ctx.file(scope).ok_or_else(|| invalid("no file store"))?.check_writable()?;
+            created = ctx.file(scope).ok_or_else(|| invalid("no file store"))?.check_writable()?;
             JournalTarget::UserSettings
         }
     };
+    // The previous value is what this scope's store holds. The project store holds only the
+    // working branch, so a change on another branch (an agent branch) has no readable
+    // previous value.
     let sources = ctx.sources();
+    let off_working_branch = matches!((&target, sources.project),
+        (JournalTarget::Project { branch }, Some(p)) if branch != p.working_branch());
     let previous = match lookup(decl, scope, &sources, &Loads::new(&sources)) {
-        Lookup::Valid(v) => Some(v),
-        Lookup::Absent | Lookup::Unusable(_) => None,
+        Lookup::Valid(v) if !off_working_branch => Some(v),
+        Lookup::Valid(_) | Lookup::Absent | Lookup::Unusable(_) => None,
     };
     let entry = ChangeEntry {
         command,
         key: key.to_string(),
         scope,
-        value: value.cloned(),
+        value: value.clone(),
         previous: previous.clone(),
         principal: caller.kind,
         branch: match &target {
@@ -587,11 +602,14 @@ fn change(
             JournalTarget::UserSettings => None,
         },
     };
-    ctx.journal.commit(&target, &entry).map_err(SettingsError::Journal)?;
-    if let Some(file) = ctx.file(scope) {
-        file.write_value(key, value)?;
+    if let Err(e) = ctx.journal.commit(&target, &entry) {
+        remove_created(&created);
+        return Err(SettingsError::Journal(e));
     }
-    Ok(previous)
+    if let Some(file) = ctx.file(scope) {
+        file.write_value(key, value.as_ref())?;
+    }
+    Ok((previous, value))
 }
 
 // ------------------------------------------------------------------ commands
@@ -664,13 +682,9 @@ pub fn list_values(ctx: &SettingsCtx<'_>, params: ListValuesParams) -> Result<Ve
     web = Available,
 )]
 pub fn set_value(ctx: &SettingsCtx<'_>, params: SetValueParams) -> Result<SetValueResult, SettingsError> {
-    let previous = change(ctx, SET_VALUE, &params.key, params.scope, Some(&params.value.0))?;
-    Ok(SetValueResult {
-        key: params.key,
-        scope: params.scope,
-        value: params.value,
-        previous: previous.map(SettingValue),
-    })
+    let (previous, value) = change(ctx, SET_VALUE, &params.key, params.scope, Some(&params.value.0))?;
+    let value = SettingValue(value.unwrap_or(params.value.0));
+    Ok(SetValueResult { key: params.key, scope: params.scope, value, previous: previous.map(SettingValue) })
 }
 
 #[fid_command(
@@ -692,7 +706,7 @@ pub fn set_value(ctx: &SettingsCtx<'_>, params: SetValueParams) -> Result<SetVal
     web = Available,
 )]
 pub fn reset_value(ctx: &SettingsCtx<'_>, params: ResetValueParams) -> Result<ResetValueResult, SettingsError> {
-    let previous = change(ctx, RESET_VALUE, &params.key, params.scope, None)?;
+    let (previous, _) = change(ctx, RESET_VALUE, &params.key, params.scope, None)?;
     Ok(ResetValueResult { key: params.key, scope: params.scope, previous: previous.map(SettingValue) })
 }
 
@@ -717,13 +731,9 @@ pub fn reset_value(ctx: &SettingsCtx<'_>, params: ResetValueParams) -> Result<Re
     web_note = "Desktop only.",
 )]
 pub fn set_admin_value(ctx: &SettingsCtx<'_>, params: SetValueParams) -> Result<SetValueResult, SettingsError> {
-    let previous = change(ctx, SET_ADMIN_VALUE, &params.key, params.scope, Some(&params.value.0))?;
-    Ok(SetValueResult {
-        key: params.key,
-        scope: params.scope,
-        value: params.value,
-        previous: previous.map(SettingValue),
-    })
+    let (previous, value) = change(ctx, SET_ADMIN_VALUE, &params.key, params.scope, Some(&params.value.0))?;
+    let value = SettingValue(value.unwrap_or(params.value.0));
+    Ok(SetValueResult { key: params.key, scope: params.scope, value, previous: previous.map(SettingValue) })
 }
 
 fid_commands![list_values, set_value, reset_value, set_admin_value];

@@ -8,7 +8,7 @@ use fid_registry::{Catalogue, Surface};
 use fid_store::settings::{
     decode_record, list_values, reset_value, set_value, ActivityLog, Caller, ChangeEntry, FileStore, JournalTarget,
     ListValuesParams, PrincipalKind, ProjectScope, ProjectTable, ProjectValues, ResetValueParams, Scope,
-    SetValueParams, SettingValue, SettingWarning, SettingsCtx, SettingsJournal, SettingsRegistry, Source,
+    SetValueParams, SettingValue, SettingWarning, SettingsCtx, SettingsJournal, SettingsRegistry, Source, Staged,
 };
 use fid_store::{OpenMode, ProjectLocation, Store, Value};
 use sha2::{Digest as _, Sha256};
@@ -42,6 +42,14 @@ impl Drop for TempDir {
 struct DbJournal<'s> {
     store: &'s Store,
     seq: RefCell<u32>,
+    staged: RefCell<Vec<Staged>>,
+}
+
+/// The working branch `settings_current` serves.
+const WORKING: &str = "main";
+
+fn count(store: &Store, sql: &str) -> i64 {
+    store.read(|c| c.query_row(sql, [], |r| r.get(0))).unwrap()
 }
 
 impl SettingsJournal for DbJournal<'_> {
@@ -65,16 +73,19 @@ impl SettingsJournal for DbJournal<'_> {
                 ("header", Value::Blob(b"header".to_vec())),
             ],
         );
-        fid_store::settings::stage_project_value(&mut txn, entry, &hash).map_err(|e| e.to_string())?;
+        let staged =
+            fid_store::settings::stage_project_value(&mut txn, entry, &hash, WORKING).map_err(|e| e.to_string())?;
+        self.staged.borrow_mut().push(staged);
         txn.commit().map(|_| ()).map_err(|e| e.code().to_string())
     }
 }
 
-struct NoLog;
+#[derive(Default)]
+struct Log(RefCell<Vec<SettingWarning>>);
 
-impl ActivityLog for NoLog {
+impl ActivityLog for Log {
     fn warn(&self, w: &SettingWarning) {
-        panic!("unexpected warning {w}");
+        self.0.borrow_mut().push(w.clone());
     }
 }
 
@@ -90,13 +101,14 @@ fn project_values_round_trip_through_settings_current() {
     let (_loc, lock) = ProjectLocation::create(&root).unwrap();
     drop(lock);
     let store = Store::open(&root, OpenMode::Write).unwrap();
-    let table = ProjectTable::new(&store);
+    let table = ProjectTable::new(&store, WORKING);
     assert_eq!(table.record(KEY).unwrap(), None);
 
     let reg = registry();
     let user = FileStore::new(Scope::User, t.0.join("u").join("settings.json")).unwrap();
     let machine = FileStore::new(Scope::Machine, t.0.join("m").join("settings.json")).unwrap();
-    let journal = DbJournal { store: &store, seq: RefCell::new(0) };
+    let journal = DbJournal { store: &store, seq: RefCell::new(0), staged: RefCell::new(Vec::new()) };
+    let log = Log::default();
     let ctx = SettingsCtx {
         registry: &reg,
         caller: Caller { kind: PrincipalKind::Human, surface: Surface::Gui },
@@ -104,7 +116,7 @@ fn project_values_round_trip_through_settings_current() {
         user: &user,
         machine: &machine,
         journal: &journal,
-        log: &NoLog,
+        log: &log,
     };
     set_value(&ctx, SetValueParams { key: KEY.into(), scope: Scope::Project, value: SettingValue(CValue::Num(0.2)) })
         .unwrap();
@@ -133,6 +145,99 @@ fn project_values_round_trip_through_settings_current() {
     let rows = list_values(&ctx, ListValuesParams { prefix: Some("probe.".into()), scope: None }).unwrap();
     assert_eq!((rows[0].value.0.clone(), rows[0].source_scope), (CValue::Num(2.0), Source::Default));
     assert!(!user.path().exists());
+    assert!(log.0.borrow().is_empty());
+    assert_eq!(*journal.staged.borrow(), [Staged::Row, Staged::Row]);
+}
+
+/// Maintainer decision on #275: an agent's project change is journaled on its branch but never
+/// staged into `settings_current`, which serves the working branch.
+#[test]
+fn agent_branch_changes_stay_in_the_journal() {
+    let t = TempDir::new("agent");
+    let root = t.0.join("p");
+    let (_loc, lock) = ProjectLocation::create(&root).unwrap();
+    drop(lock);
+    let store = Store::open(&root, OpenMode::Write).unwrap();
+    let table = ProjectTable::new(&store, WORKING);
+    let reg = registry();
+    let user = FileStore::new(Scope::User, t.0.join("u").join("settings.json")).unwrap();
+    let machine = FileStore::new(Scope::Machine, t.0.join("m").join("settings.json")).unwrap();
+    let journal = DbJournal { store: &store, seq: RefCell::new(0), staged: RefCell::new(Vec::new()) };
+    let log = Log::default();
+    let ctx = |kind, surface, branch: &str| SettingsCtx {
+        registry: &reg,
+        caller: Caller { kind, surface },
+        project: Some(ProjectScope { values: &table, branch: branch.into(), writable: true }),
+        user: &user,
+        machine: &machine,
+        journal: &journal,
+        log: &log,
+    };
+    let set = |c: &SettingsCtx<'_>, v: f64| {
+        set_value(c, SetValueParams { key: KEY.into(), scope: Scope::Project, value: SettingValue(CValue::Num(v)) })
+    };
+    set(&ctx(PrincipalKind::Human, Surface::Gui, WORKING), 0.2).unwrap();
+    set(&ctx(PrincipalKind::Agent, Surface::Mcp, "agent/claude/1"), 3.0).unwrap();
+    assert_eq!(*journal.staged.borrow(), [Staged::Row, Staged::JournalOnly]);
+    assert_eq!(count(&store, "SELECT count(*) FROM entries WHERE branch = 'agent/claude/1'"), 1);
+    assert_eq!(count(&store, "SELECT count(*) FROM settings_current"), 1);
+    assert_eq!(table.record(KEY).unwrap().unwrap(), br#"{"v":0.2}"#);
+    let human = ctx(PrincipalKind::Human, Surface::Gui, WORKING);
+    let rows = list_values(&human, ListValuesParams { prefix: Some("probe.".into()), scope: None }).unwrap();
+    assert_eq!((rows[0].value.0.clone(), rows[0].source_scope), (CValue::Num(0.2), Source::Project));
+    assert!(log.0.borrow().is_empty());
+}
+
+/// Maintainer decision on #275: a crafted `settings_current` row for an admin key (admin keys
+/// never allow project scope) is ignored with a warning.
+#[test]
+fn crafted_admin_row_in_project_db_is_ignored() {
+    let t = TempDir::new("craft");
+    let root = t.0.join("p");
+    let (_loc, lock) = ProjectLocation::create(&root).unwrap();
+    drop(lock);
+    let store = Store::open(&root, OpenMode::Write).unwrap();
+    let hash = format!("sha256:{}", "ab".repeat(32));
+    let mut txn = store.transaction();
+    txn.insert(
+        "entries",
+        &[
+            ("hash", Value::from(hash.as_str())),
+            ("stream", Value::from("s")),
+            ("branch", Value::from(WORKING)),
+            ("kind", Value::from("crafted")),
+            ("header", Value::Blob(b"header".to_vec())),
+        ],
+    );
+    txn.upsert(
+        "settings_current",
+        &[("key", Value::from("net.allowed_roots"))],
+        &[("value", Value::Blob(br#"{"v":["/"]}"#.to_vec())), ("entry_hash", Value::from(hash.as_str()))],
+    );
+    txn.commit().unwrap();
+    let table = ProjectTable::new(&store, WORKING);
+    let reg = registry();
+    let user = FileStore::new(Scope::User, t.0.join("u").join("settings.json")).unwrap();
+    let machine = FileStore::new(Scope::Machine, t.0.join("m").join("settings.json")).unwrap();
+    let journal = DbJournal { store: &store, seq: RefCell::new(0), staged: RefCell::new(Vec::new()) };
+    let log = Log::default();
+    let ctx = SettingsCtx {
+        registry: &reg,
+        caller: Caller { kind: PrincipalKind::Human, surface: Surface::Gui },
+        project: Some(ProjectScope { values: &table, branch: WORKING.into(), writable: true }),
+        user: &user,
+        machine: &machine,
+        journal: &journal,
+        log: &log,
+    };
+    let rows = list_values(&ctx, ListValuesParams { prefix: Some("net.".into()), scope: None }).unwrap();
+    assert_eq!((rows[0].value.0.clone(), rows[0].source_scope), (CValue::Arr(Vec::new()), Source::Default));
+    let w = SettingWarning {
+        key: Some("net.allowed_roots".into()),
+        scope: Scope::Project,
+        reason: fid_store::settings::WarningReason::ScopeNotAllowed,
+    };
+    assert_eq!(*log.0.borrow(), vec![w]);
 }
 
 #[test]

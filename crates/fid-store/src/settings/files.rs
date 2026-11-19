@@ -127,17 +127,37 @@ impl FileStore {
 
     /// Checks, without changing the file, that this process can replace it: the file is
     /// readable as a whole (or absent) and a temporary file can be created next to it.
-    pub(crate) fn check_writable(&self) -> Result<(), SettingsError> {
+    ///
+    /// Missing directories are created for the probe and returned, deepest first, so the caller
+    /// removes them again ([`remove_created`]) if the change does not go ahead; on a refusal
+    /// they are removed here.
+    pub(crate) fn check_writable(&self) -> Result<Vec<PathBuf>, SettingsError> {
         let not_writable = |why: &str| SettingsError::ScopeNotWritable(format!("{} settings file: {why}", self.scope));
         if self.load().unreadable {
             return Err(not_writable("the file is unreadable; repair or remove it by hand"));
         }
         let dir = self.path.parent().ok_or_else(|| not_writable("no parent directory"))?;
-        fs::create_dir_all(dir).map_err(|e| not_writable(&format!("cannot create the directory ({})", e.kind())))?;
-        let (tmp, file) = temp_file(dir).map_err(|e| not_writable(&format!("cannot write ({})", e.kind())))?;
-        drop(file);
-        fs::remove_file(&tmp).map_err(|e| not_writable(&format!("cannot remove a probe file ({})", e.kind())))?;
-        Ok(())
+        let mut created = Vec::new();
+        let mut at = Some(dir);
+        while let Some(d) = at {
+            if d.as_os_str().is_empty() || fs::symlink_metadata(d).is_ok() {
+                break;
+            }
+            created.push(d.to_path_buf());
+            at = d.parent();
+        }
+        let probe = fs::create_dir_all(dir)
+            .map_err(|e| format!("cannot create the directory ({})", e.kind()))
+            .and_then(|()| temp_file(dir).map_err(|e| format!("cannot write ({})", e.kind())))
+            .and_then(|(tmp, file)| {
+                drop(file);
+                fs::remove_file(&tmp).map_err(|e| format!("cannot remove a probe file ({})", e.kind()))
+            });
+        if let Err(why) = probe {
+            remove_created(&created);
+            return Err(not_writable(&why));
+        }
+        Ok(created)
     }
 
     /// Sets (`Some`) or removes (`None`) `key`, keeping every other value, by temp file and
@@ -172,6 +192,14 @@ impl FileStore {
         }
         sync_dir(dir);
         Ok(())
+    }
+}
+
+/// Removes directories [`FileStore::check_writable`] created, deepest first; only empty ones
+/// are removed (best effort).
+pub(crate) fn remove_created(created: &[PathBuf]) {
+    for d in created {
+        let _ = fs::remove_dir(d);
     }
 }
 
