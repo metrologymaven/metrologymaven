@@ -468,7 +468,7 @@ fn standard_keyword_values() {
     for (doc, code, at) in cases {
         assert_eq!(check_text(doc), one(code, at), "{doc}");
     }
-    assert_eq!(check_text(r#"{"properties":{"​id":{}}}"#), one("bad_property_name", "/properties"));
+    assert_eq!(check_text(r#"{"properties":{"\u200bid":{}}}"#), one("bad_property_name", "/properties"));
     assert_eq!(check_text(r#"{"dependentRequired":{"a":["b","b"]}}"#), one("bad_schema", "/dependentRequired/a"));
     assert_eq!(check_text(r#"{"properties":{"a":{},"A":{}}}"#), one("duplicate_key", "/properties"));
     assert_eq!(check_text(r#"{"patternProperties":{"^a$":{},"^A$":{}}}"#), vec![]);
