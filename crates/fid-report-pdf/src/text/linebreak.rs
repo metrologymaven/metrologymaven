@@ -14,6 +14,9 @@
 //! No break is ever offered at a no-break space (U+00A0, U+202F) or a thin space (U+2009),
 //! which digit grouping uses, so a formatted value is never split.
 
+use super::error::TextError;
+use super::MAX_TEXT_BYTES;
+
 fn is_space(c: char) -> bool {
     c == ' ' || c == '\t'
 }
@@ -27,7 +30,11 @@ fn is_cjk(c: char) -> bool {
 }
 
 /// Byte offsets at which a line may break (before the character at that offset), ascending.
-pub fn break_opportunities(text: &str) -> Vec<usize> {
+/// Input longer than [`MAX_TEXT_BYTES`] fails with `report.text_limit`, as shaping does.
+pub fn break_opportunities(text: &str) -> Result<Vec<usize>, TextError> {
+    if text.len() > MAX_TEXT_BYTES {
+        return Err(TextError::Limit { what: "text longer than MAX_TEXT_BYTES" });
+    }
     let chars: Vec<(usize, char)> = text.char_indices().collect();
     let mut out = Vec::new();
     for i in 1..chars.len() {
@@ -40,5 +47,5 @@ pub fn break_opportunities(text: &str) -> Vec<usize> {
             out.push(pos);
         }
     }
-    out
+    Ok(out)
 }

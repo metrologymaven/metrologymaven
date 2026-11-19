@@ -7,7 +7,7 @@
 
 use fid_num::fmt::{len::format, FormatSpec, FormatterId, Precision, Unit};
 use fid_report_pdf::text::pdf::{
-    escape_literal, escape_name, fmt_milli, milli_points, single_page, text_object, PlacedRun,
+    escape_literal, escape_name, fmt_milli, milli_points, single_page, text_object, PlacedRun, MAX_CONTENT_BYTES,
 };
 use fid_report_pdf::text::{
     break_opportunities, bundled_font_bytes, bundled_font_file, bundled_manifest, check_licences, spdx_ids,
@@ -20,6 +20,7 @@ use sha2::{Digest as _, Sha256};
 const STRINGS_EXPECTED: &str = include_str!("../../../fixtures/rpt/output/text/expected-shapes.txt");
 const SUBSETS_EXPECTED: &str = include_str!("../../../fixtures/rpt/output/text/expected-subsets.txt");
 const SCRIPT_FONT: &[u8] = include_bytes!("../../../fixtures/rpt/output/text/script-test.ttf");
+const SHARED_2048_FONT: &[u8] = include_bytes!("../../../fixtures/rpt/output/text/shared-2048-test.ttf");
 const COMPOSITE_FONT: &[u8] = include_bytes!("../../../fixtures/rpt/output/text/composite-test.ttf");
 const AC4_TEXT_OBJECT: &[u8] = include_bytes!("../../../fixtures/rpt/output/text/ac4-text-object.txt");
 const AC4_CMAP: &[u8] = include_bytes!("../../../fixtures/rpt/output/text/ac4-tounicode.cmap");
@@ -32,6 +33,7 @@ const ATTRIBUTION: &str = include_str!("../../../ATTRIBUTION.md");
 /// Digests of the test fonts (written by hand from `sha256sum`; `make_fonts.py --check`
 /// keeps the files stable).
 const SCRIPT_SHA: &str = "sha256:7cd8b1b46f6221ada7e99fcd2952837d47a589e59bc9a488a956382b504e38c7";
+const SHARED_2048_SHA: &str = "sha256:9d306daea3ef9705bf917ec02a4dfa9236541e7750553612ad345a9356b40544";
 const COMPOSITE_SHA: &str = "sha256:06625ffd9b653667da6e07f1be4fd6731397c989c542d813f195e2b335257edb";
 
 const SIZE_UM: i64 = 3528;
@@ -134,7 +136,9 @@ fn ac1_shaping_matches_reference() {
                 }
                 "warn" => {
                     let w = &got.warnings[warn_i];
-                    let TextWarning::GlyphMissing { code_point, cluster, font: wf } = w;
+                    let TextWarning::GlyphMissing { code_point, cluster, font: wf } = w else {
+                        panic!("{name}: unexpected warning {w}");
+                    };
                     assert_eq!(*code_point, u32::from_str_radix(f[1], 16).unwrap(), "{name}: warning {warn_i}");
                     assert_eq!(*cluster, f[2].parse::<u32>().unwrap(), "{name}: warning {warn_i}");
                     assert_eq!(wf, &font);
@@ -557,9 +561,12 @@ fn pdf_numbers_and_escaping() {
     assert_eq!(fmt_milli(72_000), "72.000");
     assert_eq!(fmt_milli(-500), "-0.500");
     assert_eq!(fmt_milli(5), "0.005");
-    assert_eq!(escape_name("F1"), "/F1");
-    assert_eq!(escape_name("A B/(x)#"), "/A#20B#2F#28x#29#23");
-    assert_eq!(escape_name("\u{e9}"), "/#C3#A9");
+    assert_eq!(escape_name("F1").unwrap(), "/F1");
+    assert_eq!(escape_name("A B/(x)#").unwrap(), "/A#20B#2F#28x#29#23");
+    assert_eq!(escape_name("\u{e9}").unwrap(), "/#C3#A9");
+    assert_eq!(escape_name("\u{1}").unwrap(), "/#01");
+    assert_eq!(escape_name("F\u{0}1").unwrap_err(), TextError::PdfNameInvalid);
+    assert_eq!(escape_name("\u{0}").unwrap_err().code(), "report.pdf_name_invalid");
     assert_eq!(escape_literal("a(b)\\c"), "(a\\(b\\)\\\\c)");
     assert_eq!(escape_literal("x\ny\u{e9}"), "(x\\012y\\303\\251)");
     assert_eq!(escape_literal(") Tj ET q"), "(\\) Tj ET q)");
@@ -582,15 +589,74 @@ fn text_object_and_page_limits() {
 
 #[test]
 fn line_break_opportunities() {
-    assert_eq!(break_opportunities("Flatness 0.012 mm"), vec![9, 15]);
-    assert_eq!(break_opportunities("-0,050"), Vec::<usize>::new());
-    assert_eq!(break_opportunities("a  b"), vec![3]);
-    assert_eq!(break_opportunities("Mess-Ergebnis"), vec![5]);
-    assert_eq!(break_opportunities("10-20"), Vec::<usize>::new());
-    assert_eq!(break_opportunities("12\u{202f}345 x"), vec![9]);
-    assert_eq!(break_opportunities("9\u{2009}876"), Vec::<usize>::new());
+    assert_eq!(break_opportunities("Flatness 0.012 mm").unwrap(), vec![9, 15]);
+    assert_eq!(break_opportunities("-0,050").unwrap(), Vec::<usize>::new());
+    assert_eq!(break_opportunities("a  b").unwrap(), vec![3]);
+    assert_eq!(break_opportunities("Mess-Ergebnis").unwrap(), vec![5]);
+    assert_eq!(break_opportunities("10-20").unwrap(), Vec::<usize>::new());
+    assert_eq!(break_opportunities("12\u{202f}345 x").unwrap(), vec![9]);
+    assert_eq!(break_opportunities("9\u{2009}876").unwrap(), Vec::<usize>::new());
     // 日本語 (3 bytes each): breaks before 本 and 語.
-    assert_eq!(break_opportunities("\u{65e5}\u{672c}\u{8a9e}"), vec![3, 6]);
-    assert_eq!(break_opportunities(" a"), vec![1]);
-    assert_eq!(break_opportunities("a "), Vec::<usize>::new());
+    assert_eq!(break_opportunities("\u{65e5}\u{672c}\u{8a9e}").unwrap(), vec![3, 6]);
+    assert_eq!(break_opportunities(" a").unwrap(), vec![1]);
+    assert_eq!(break_opportunities("a ").unwrap(), Vec::<usize>::new());
+    let long = " ".repeat(MAX_TEXT_BYTES + 1);
+    assert_eq!(break_opportunities(&long).unwrap_err().code(), "report.text_limit");
+}
+
+#[test]
+fn content_stream_is_bounded() {
+    // 1 MiB of text is the largest run; placed again and again it must hit MAX_CONTENT_BYTES
+    // (64 MiB) with report.text_limit instead of growing without bound.
+    let set = FontSet::bundled().unwrap();
+    let text = "a".repeat(MAX_TEXT_BYTES);
+    let shaped = set.shape(&id("sans-regular"), &text, SIZE_UM).unwrap();
+    let mut b = SubsetBuilder::new(&set, &id("sans-regular")).unwrap();
+    b.add_run(&shaped.runs[0]).unwrap();
+    let sub = b.finish().unwrap();
+    let one = PlacedRun { run: &shaped.runs[0], x_um: 0, y_um: 0 };
+    // 15 objects of 4 MiB + overhead fit; the 16th would pass 64 MiB.
+    assert!(single_page(A4.0, A4.1, &[&sub], &[one; 15]).is_ok());
+    let err = single_page(A4.0, A4.1, &[&sub], &[one; 16]).unwrap_err();
+    assert_eq!(err, TextError::Limit { what: "content stream longer than MAX_CONTENT_BYTES" });
+    assert_eq!(MAX_CONTENT_BYTES, 64 * 1024 * 1024);
+}
+
+#[test]
+fn shared_glyph_and_upem_2048_hand_labelled() {
+    // shared-2048-test.ttf (make_fonts.py): units per em 2048; glyph 0 .notdef advance 1000,
+    // glyph 1 a bar with advance 1229 that both 'A' (U+0041) and Greek Alpha (U+0391) map to;
+    // head bbox (20, -40, 480, 1400); hhea ascender 950, descender -250.
+    let m = FontManifest {
+        fonts: vec![entry("shared-test", "Maven Shared Test", "MavenSharedTest-Regular", SHARED_2048_SHA)],
+        fallback: vec![],
+    };
+    let set = FontSet::load(&m, &[("shared-test", SHARED_2048_FONT)]).unwrap();
+    let shaped = set.shape(&id("shared-test"), "A\u{391}A", 2048).unwrap();
+    // Advance 1229 units at an em of 2048 um is 1229 um.
+    let got: Vec<(u16, i64)> = shaped.runs[0].glyphs.iter().map(|g| (g.glyph, g.advance_um)).collect();
+    assert_eq!(got, vec![(1, 1229); 3]);
+    let mut b = SubsetBuilder::new(&set, &id("shared-test")).unwrap();
+    b.add_run(&shaped.runs[0]).unwrap();
+    let s = b.finish().unwrap();
+    // PDF glyph space is 1/1000 em, rounded half to even:
+    // 1000*1000/2048 = 488.28 -> 488; 1229*1000/2048 = 600.10 -> 600.
+    assert_eq!(s.widths(), &[488, 600]);
+    // 20000/2048 = 9.77 -> 10; -40000/2048 = -19.53 -> -20; 480000/2048 = 234.375 -> 234;
+    // 1400000/2048 = 683.59 -> 684.
+    assert_eq!(s.bbox(), [10, -20, 234, 684]);
+    // 950000/2048 = 463.87 -> 464; -250000/2048 = -122.07 -> -122.
+    assert_eq!((s.ascent(), s.descent()), (464, -122));
+    // One ToUnicode entry per glyph: the lower code point is kept and the other reported.
+    assert_eq!(s.to_unicode.entries(), &[(1, 'A')]);
+    let want = vec![TextWarning::GlyphShared { font: id("shared-test"), glyph: 1, kept: 0x41, dropped: 0x391 }];
+    assert_eq!(s.warnings, want);
+    assert_eq!(s.warnings[0].code(), "report.glyph_shared");
+    assert_eq!(read_back(&shaped, &[&s]), "AAA");
+    // The PDF says the same.
+    let placed = [PlacedRun { run: &shaped.runs[0], x_um: 0, y_um: 0 }];
+    let pdf = single_page(A4.0, A4.1, &[&s], &placed).unwrap();
+    let text = String::from_utf8_lossy(&pdf);
+    assert!(text.contains("/W [0 [488 600]]"));
+    assert!(text.contains("/FontBBox [10 -20 234 684] /ItalicAngle 0 /Ascent 464 /Descent -122 /CapHeight 464"));
 }

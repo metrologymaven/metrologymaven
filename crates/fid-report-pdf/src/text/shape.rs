@@ -245,6 +245,11 @@ impl FontSet {
     /// `round_half_even(advance_units * size_um / units_per_em)`, integer arithmetic only,
     /// so every platform gives the same result. Characters are never changed: the runs'
     /// texts concatenate to `text`.
+    ///
+    /// Limit of REQ-RPT.OUTPUT.PDF.TEXT-006: a character with no glyph in any font is shown as
+    /// `.notdef`, which has no ToUnicode entry, so text extraction cannot return it (it is
+    /// reported as `report.glyph_missing`). Characters that share one glyph extract as the
+    /// lowest of them (`report.glyph_shared` from the subset).
     pub fn shape(&self, font: &FontId, text: &str, size_um: i64) -> Result<Shaped, TextError> {
         if text.len() > MAX_TEXT_BYTES {
             return Err(TextError::Limit { what: "text longer than MAX_TEXT_BYTES" });

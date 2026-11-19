@@ -31,6 +31,8 @@ pub enum TextError {
         /// Which bound.
         what: &'static str,
     },
+    /// `report.pdf_name_invalid`: a PDF name would contain a NUL byte, which PDF forbids.
+    PdfNameInvalid,
     /// `report.glyph_not_in_subset`: a run uses a glyph that the subset does not contain.
     GlyphNotInSubset {
         /// The font of the subset.
@@ -47,6 +49,7 @@ impl TextError {
             TextError::FontInvalid { .. } | TextError::ManifestInvalid { .. } => "report.font_invalid",
             TextError::FontUnknown { .. } => "report.font_unknown",
             TextError::Limit { .. } => "report.text_limit",
+            TextError::PdfNameInvalid => "report.pdf_name_invalid",
             TextError::GlyphNotInSubset { .. } => "report.glyph_not_in_subset",
         }
     }
@@ -63,6 +66,7 @@ impl fmt::Display for TextError {
             TextError::ManifestInvalid { reason } => write!(f, "{}: manifest: {reason}", self.code()),
             TextError::FontUnknown { font } => write!(f, "{}: {font}", self.code()),
             TextError::Limit { what } => write!(f, "{}: {what}", self.code()),
+            TextError::PdfNameInvalid => write!(f, "{}: NUL byte in a PDF name", self.code()),
             TextError::GlyphNotInSubset { font, glyph } => write!(f, "{}: font {font}: glyph {glyph}", self.code()),
         }
     }
@@ -83,6 +87,19 @@ pub enum TextWarning {
         /// The selected font, whose `.notdef` was used.
         font: FontId,
     },
+    /// `report.glyph_shared`: two or more characters use the same glyph of a subset, and a
+    /// ToUnicode map holds one character per glyph, so extracting text returns `kept` where
+    /// `dropped` was shown.
+    GlyphShared {
+        /// The subset's font.
+        font: FontId,
+        /// The original glyph ID.
+        glyph: u16,
+        /// The character the ToUnicode map keeps (the lowest code point).
+        kept: u32,
+        /// A character that extracts as `kept`.
+        dropped: u32,
+    },
 }
 
 impl TextWarning {
@@ -90,6 +107,7 @@ impl TextWarning {
     pub fn code(&self) -> &'static str {
         match self {
             TextWarning::GlyphMissing { .. } => "report.glyph_missing",
+            TextWarning::GlyphShared { .. } => "report.glyph_shared",
         }
     }
 }
@@ -100,6 +118,12 @@ impl fmt::Display for TextWarning {
             TextWarning::GlyphMissing { code_point, cluster, font } => {
                 write!(f, "{}: U+{code_point:04X} at byte {cluster} (font {})", self.code(), font.as_str())
             }
+            TextWarning::GlyphShared { font, glyph, kept, dropped } => write!(
+                f,
+                "{}: U+{dropped:04X} extracts as U+{kept:04X} (glyph {glyph}, font {})",
+                self.code(),
+                font.as_str()
+            ),
         }
     }
 }

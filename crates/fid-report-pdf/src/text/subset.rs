@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use sha2::{Digest as _, Sha256};
 
 use super::cmap::CMap;
-use super::error::TextError;
+use super::error::{TextError, TextWarning};
 use super::manifest::FontId;
 use super::round_half_even;
 use super::sfnt::{components, rd16};
@@ -30,8 +30,8 @@ const MAX_COMPONENT_DEPTH: usize = 16;
 #[derive(Debug, Clone)]
 pub struct SubsetBuilder<'a> {
     font: &'a LoadedFont,
-    /// Original glyph ID -> the character it shows (lowest code point on a conflict).
-    used: BTreeMap<u16, Option<char>>,
+    /// Original glyph ID -> the characters it shows (the lowest goes into ToUnicode).
+    used: BTreeMap<u16, BTreeSet<char>>,
 }
 
 /// An embeddable font subset with its ToUnicode map.
@@ -45,6 +45,9 @@ pub struct Subset {
     pub bytes: Vec<u8>,
     /// The ToUnicode map, keyed by subset glyph ID.
     pub to_unicode: CMap,
+    /// `report.glyph_shared` warnings: characters that share a glyph with a lower code point
+    /// and so extract as that code point. Sorted by glyph, then character.
+    pub warnings: Vec<TextWarning>,
     postscript_name: String,
     /// Original glyph IDs in subset order (index = subset glyph ID).
     originals: Vec<u16>,
@@ -61,7 +64,7 @@ impl<'a> SubsetBuilder<'a> {
     pub fn new(set: &'a FontSet, font: &FontId) -> Result<SubsetBuilder<'a>, TextError> {
         let font = set.font(font).ok_or_else(|| TextError::FontUnknown { font: font.as_str().to_string() })?;
         let mut used = BTreeMap::new();
-        used.insert(0u16, None);
+        used.insert(0u16, BTreeSet::new());
         Ok(SubsetBuilder { font, used })
     }
 
@@ -77,18 +80,18 @@ impl<'a> SubsetBuilder<'a> {
         Ok(())
     }
 
-    /// Adds one glyph, optionally with the character it shows. When two characters share a
-    /// glyph, the lower code point is kept.
+    /// Adds one glyph, optionally with the character it shows. When several characters share
+    /// a glyph, the ToUnicode map keeps the lowest code point and [`Subset::warnings`] gets a
+    /// `report.glyph_shared` warning for each other one (a ToUnicode map has one entry per
+    /// glyph).
     pub fn add_glyph(&mut self, glyph: u16, c: Option<char>) -> Result<(), TextError> {
         if glyph >= self.font.glyph_count() {
             return Err(TextError::GlyphNotInSubset { font: self.font.entry().id.as_str().to_string(), glyph });
         }
-        let c = if glyph == 0 { None } else { c };
-        let slot = self.used.entry(glyph).or_insert(None);
-        *slot = match (*slot, c) {
-            (Some(a), Some(b)) => Some(a.min(b)),
-            (a, b) => a.or(b),
-        };
+        let slot = self.used.entry(glyph).or_default();
+        if let (Some(c), true) = (c, glyph != 0) {
+            slot.insert(c);
+        }
         Ok(())
     }
 
@@ -201,9 +204,19 @@ impl<'a> SubsetBuilder<'a> {
 
         // ToUnicode, keyed by subset glyph ID
         let mut entries = Vec::new();
-        for (g, c) in &self.used {
-            if let (Some(c), Some(&ng)) = (c, new_id.get(g)) {
-                entries.push((ng, *c));
+        let mut warnings = Vec::new();
+        for (g, chars) in &self.used {
+            let mut it = chars.iter();
+            if let (Some(&kept), Some(&ng)) = (it.next(), new_id.get(g)) {
+                entries.push((ng, kept));
+                for &dropped in it {
+                    warnings.push(TextWarning::GlyphShared {
+                        font: id.clone(),
+                        glyph: *g,
+                        kept: u32::from(kept),
+                        dropped: u32::from(dropped),
+                    });
+                }
             }
         }
         let to_unicode = CMap::build(entries);
@@ -217,6 +230,7 @@ impl<'a> SubsetBuilder<'a> {
             tag,
             bytes,
             to_unicode,
+            warnings,
             postscript_name: font.entry().postscript_name.clone(),
             originals,
             widths,

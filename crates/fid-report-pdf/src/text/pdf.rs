@@ -20,6 +20,12 @@ use super::{round_half_even, MAX_SIZE_UM};
 pub const MAX_PAGE_FONTS: usize = 64;
 /// Most runs in one [`single_page`] document.
 pub const MAX_PAGE_RUNS: usize = 100_000;
+/// Largest content stream of one [`single_page`] document (64 MiB). Checked before each text
+/// object is written, so the whole document is bounded by this plus at most
+/// [`MAX_PAGE_FONTS`] subsets, each no larger than its (bounded) source font.
+pub const MAX_CONTENT_BYTES: usize = 64 * 1024 * 1024;
+/// Upper bound on the bytes of one text object besides its glyph IDs.
+const TEXT_OBJECT_OVERHEAD: usize = 128;
 /// Largest coordinate or page size accepted, in micrometres (10 m).
 pub const MAX_COORD_UM: i64 = 10_000_000;
 
@@ -36,10 +42,14 @@ pub fn fmt_milli(v: i64) -> String {
 }
 
 /// A PDF name object for `s`, with the leading `/`. Bytes outside `!`..`~`, `#` and the PDF
-/// delimiters are written as `#XX` (PDF 32000-1 §7.3.5). An empty name becomes `/`.
-pub fn escape_name(s: &str) -> String {
+/// delimiters are written as `#XX` (PDF 32000-1 §7.3.5). An empty name becomes `/`. A NUL
+/// byte cannot appear in a PDF name in any form, so it fails with `report.pdf_name_invalid`.
+pub fn escape_name(s: &str) -> Result<String, TextError> {
     let mut out = String::from("/");
     for &b in s.as_bytes() {
+        if b == 0 {
+            return Err(TextError::PdfNameInvalid);
+        }
         let plain = (0x21..=0x7E).contains(&b) && !b"#()<>[]{}/%".contains(&b);
         if plain {
             out.push(char::from(b));
@@ -47,7 +57,7 @@ pub fn escape_name(s: &str) -> String {
             out.push_str(&format!("#{b:02X}"));
         }
     }
-    out
+    Ok(out)
 }
 
 /// A PDF literal string for `s` (UTF-8 bytes), with the parentheses: `\`, `(` and `)` are
@@ -104,10 +114,13 @@ pub fn text_object(
     let ids = subset.encode_run(run)?;
     let mut s = String::with_capacity(48 + 4 * ids.len());
     s.push_str("BT\n");
-    s.push_str(&format!("{} {} Tf\n", escape_name(resource), fmt_milli(milli_points(run.size_um))));
+    s.push_str(&format!("{} {} Tf\n", escape_name(resource)?, fmt_milli(milli_points(run.size_um))));
     s.push_str(&format!("{} {} Td\n<", fmt_milli(milli_points(x_um)), fmt_milli(milli_points(y_um))));
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
     for g in ids {
-        s.push_str(&format!("{g:04X}"));
+        for shift in [12u16, 8, 4, 0] {
+            s.push(char::from(HEX[usize::from((g >> shift) & 0xF)]));
+        }
     }
     s.push_str("> Tj\nET\n");
     Ok(s.into_bytes())
@@ -174,6 +187,10 @@ pub fn single_page(
             .iter()
             .position(|s| s.font == pr.run.font)
             .ok_or_else(|| TextError::FontUnknown { font: pr.run.font.as_str().to_string() })?;
+        let bound = TEXT_OBJECT_OVERHEAD.saturating_add(pr.run.glyphs.len().saturating_mul(4));
+        if content.len().saturating_add(bound) > MAX_CONTENT_BYTES {
+            return Err(TextError::Limit { what: "content stream longer than MAX_CONTENT_BYTES" });
+        }
         content.extend_from_slice(&text_object(&format!("F{}", k + 1), subsets[k], pr.run, pr.x_um, pr.y_um)?);
     }
 
@@ -192,7 +209,7 @@ pub fn single_page(
     d.stream("", &content);
     for (k, s) in subsets.iter().enumerate() {
         let i = 5 + 5 * k;
-        let base = escape_name(&s.base_font());
+        let base = escape_name(&s.base_font())?;
         d.obj(
             format!("<< /Type /Font /Subtype /Type0 /BaseFont {base} /Encoding /Identity-H /DescendantFonts [{} 0 R] /ToUnicode {} 0 R >>", i + 1, i + 4)
                 .as_bytes(),

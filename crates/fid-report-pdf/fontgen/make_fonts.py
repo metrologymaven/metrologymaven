@@ -690,7 +690,7 @@ def cmap_table(mapping, with12):
     return head + recs + data
 
 
-def build_font(family, ps_name, style, bold, mono, glyphs, with12=False, composite=None):
+def build_font(family, ps_name, style, bold, mono, glyphs, with12=False, composite=None, upem=UPEM, extra_map=()):
     """glyphs: list of (code point or None for .notdef, advance, glyf bytes, xmin)."""
     n = len(glyphs)
     glyf = b""
@@ -712,7 +712,7 @@ def build_font(family, ps_name, style, bold, mono, glyphs, with12=False, composi
     loca.append(len(glyf))
     hmtx = b"".join(struct.pack(">Hh", adv, lsb) for _, adv, _, lsb in glyphs)
     head = struct.pack(
-        ">IIIIHHqqhhhhHHhhh", 0x00010000, 0x00010000, 0, 0x5F0F3CF5, 0x000B, UPEM, 0, 0,
+        ">IIIIHHqqhhhhHHhhh", 0x00010000, 0x00010000, 0, 0x5F0F3CF5, 0x000B, upem, 0, 0,
         xmin, ymin, xmax, ymax, 1 if bold else 0, 8, 2, 1, 0)
     advs = [g[1] for g in glyphs]
     hhea = struct.pack(
@@ -721,7 +721,7 @@ def build_font(family, ps_name, style, bold, mono, glyphs, with12=False, composi
     comp_pts, comp_ctr, comp_elems, comp_depth = composite or (0, 0, 0, 0)
     maxp = struct.pack(">IHHHHHHHHHHHHHH", 0x00010000, n, max_pts, max_ctr, comp_pts, comp_ctr,
                        2, 0, 0, 0, 0, 0, 0, comp_elems, comp_depth)
-    mapping = sorted((cp, gid) for gid, (cp, _, _, _) in enumerate(glyphs) if cp is not None)
+    mapping = sorted([(cp, gid) for gid, (cp, _, _, _) in enumerate(glyphs) if cp is not None] + list(extra_map))
     first = min(cp for cp, _ in mapping)
     last = min(max(cp for cp, _ in mapping), 0xFFFF)
     avg = sum(a for a in advs if a) // max(1, len([a for a in advs if a]))
@@ -814,6 +814,16 @@ def make_script_test_font():
     return build_font("Maven Script Test", "MavenScriptTest-Regular", "Regular", False, False, glyphs, with12=True)
 
 
+def make_shared_2048_test_font():
+    """upem 2048; 'A' (U+0041) and Greek Alpha (U+0391) share glyph 1 (a vertical bar)."""
+    h = 40
+    nd, nd_lsb = outline(notdef(h), h)
+    bar, bar_lsb = outline([L((100, 0), (100, 1400))], h)
+    glyphs = [(None, 1000, nd, nd_lsb), (0x41, 1229, bar, bar_lsb)]
+    return build_font("Maven Shared Test", "MavenSharedTest-Regular", "Regular", False, False, glyphs,
+                      upem=2048, extra_map=[(0x391, 1)])
+
+
 def make_composite_test_font():
     """.notdef, 'A', 'B' (simple) and 'C' = 'A' + 'B' shifted (composite, args as words)."""
     h = 40
@@ -844,6 +854,7 @@ def outputs():
         ASSETS / "MavenReportMono-Bold.ttf": make_family_font("Maven Report Mono", "MavenReportMono-Bold", "Bold", True, True),
         FIXT / "script-test.ttf": make_script_test_font(),
         FIXT / "composite-test.ttf": make_composite_test_font(),
+        FIXT / "shared-2048-test.ttf": make_shared_2048_test_font(),
     }
 
 
