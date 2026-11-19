@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [tools/house_rules]
+built_pr: 184
 satisfies: [REQ-ECO.RULES-003, REQ-ECO.RULES-004, REQ-ECO.RULES-005, REQ-ECO.RULES-006, REQ-ECO.RULES-008]
 covers: []
 depends_on: [ECO.RULES.SRC, ECO.RULES.BLOCK]
