@@ -1,0 +1,16 @@
+From: conic-audit fixture
+Subject: [PATCH 0002] Use BTreeMap instead of HashMap (KNP1-HASH)
+
+--- a/src/x.rs
++++ b/src/x.rs
+@@ -1,7 +1,7 @@
+-use std::collections::HashMap;
++use std::collections::BTreeMap;
+ 
+-pub fn count(keys: &[u32]) -> HashMap<u32, usize> {
+-    let mut m = HashMap::new();
++pub fn count(keys: &[u32]) -> BTreeMap<u32, usize> {
++    let mut m = BTreeMap::new();
+     for k in keys {
+         *m.entry(*k).or_insert(0) += 1;
+     }

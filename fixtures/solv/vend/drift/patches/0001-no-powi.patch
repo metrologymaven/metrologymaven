@@ -1,0 +1,14 @@
+From: conic-audit fixture
+Subject: [PATCH 0001] Replace powi with a product (KNP1-POW)
+
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -4,7 +4,7 @@
+ pub fn norm2(v: &[f64]) -> f64 {
+     let mut s = 0.0;
+     for x in v {
+-        s += x.powi(2);
++        s += x * x;
+     }
+     s
+ }
