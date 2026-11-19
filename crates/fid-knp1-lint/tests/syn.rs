@@ -486,6 +486,37 @@ fn include_and_path_targets_must_be_listed_source() {
 }
 
 #[test]
+fn proc_macro_crates_are_parse_findings_whatever_the_spelling() {
+    // `[lib] crate-type = ["proc-macro"]` with no entry-point attribute (review 5).
+    let out = scan(vec![entry("knp1-syn-pm-crate-type", "0.0.1", "syn/procmacro-crate-type")], &Config::default());
+    assert_eq!(lines(&out.findings), ["KNP1-PARSE knp1-syn-pm-crate-type 0.0.1 Cargo.toml:1:1"]);
+    assert!(out.findings[0].message.contains("proc-macro crate"), "{}", out.findings[0].message);
+    // An entry-point attribute is reported whatever the manifest says.
+    for (src, col) in [
+        (
+            "#[proc_macro]
+pub fn a(i: TokenStream) -> TokenStream { i }
+",
+            3,
+        ),
+        (
+            "#[proc_macro_derive(X)]
+pub fn a(i: TokenStream) -> TokenStream { i }
+",
+            3,
+        ),
+        (
+            "#[cfg_attr(all(), proc_macro_attribute)]
+pub fn a(a: TokenStream, i: TokenStream) -> TokenStream { i }
+",
+            19,
+        ),
+    ] {
+        assert_eq!(short(&one(src).findings), [format!("KNP1-PARSE@1:{col}")], "{src:?}");
+    }
+}
+
+#[test]
 fn coarse_performance() {
     // 20 000 lines of mixed code; the NODE.md budget (300 000 lines < 10 s, release) is not
     // measured here. This only guards against quadratic blow-ups, with a generous debug bound.
