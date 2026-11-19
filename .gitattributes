@@ -58,3 +58,5 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
 fixtures/outr/launch/gate/** -text
+# ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
+tools/tests/fixtures/claims/** -text

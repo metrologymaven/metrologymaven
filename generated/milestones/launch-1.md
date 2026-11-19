@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**116** of **1336** leaves built in code ([B]).
+**117** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 46 built)
+### Wave 2 (121 leaves, 47 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -178,7 +178,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.STO.CAS](../../spec/core/sto/cas/NODE.md) Content-addressed blob store with chunking and integrity (M, P0)
 - [CORE.STO.SQL.SCHEMA](../../spec/core/sto/sql/schema/NODE.md) Database schema, append-only triggers and forward migrations (M, P0)
 - [ECO.CI.LINT](../../spec/eco/ci/lint/NODE.md) Format and never-crash lint gate (M, P0)
-- [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
+- [B] [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
 - [ECO.COMM.GROW](../../spec/eco/comm/grow/NODE.md) Cross-platform tree-growth driver (S, P0)
 - [ECO.COMM.LADDER](../../spec/eco/comm/ladder/NODE.md) Maintainer-eligibility report (M, P0)
 - [ECO.COMM.RFC](../../spec/eco/comm/rfc/NODE.md) RFC comment-period tooling (M, P0)

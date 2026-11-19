@@ -1,0 +1,1 @@
+{"number": 12, "title": "Add a solver", "body": "Implements the solver from ALN.RPS.ITER, but without the trace line.\n", "head_ref": "build/solver", "labels": [], "state": "OPEN"}
