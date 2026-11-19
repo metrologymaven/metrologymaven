@@ -31,10 +31,6 @@ use fid_num::rng::{Address, Cursor};
 /// The largest accepted start count, so a run's cost and output size are bounded.
 pub const MAX_STARTS: u32 = 1024;
 
-/// Agreement tolerance used for every parameter when [`StartSpec::tolerances`] is empty:
-/// the spec's default for both lengths (1e-9 m) and angles (1e-9 rad) [unverified].
-pub const DEFAULT_TOLERANCE: f64 = 1e-9;
-
 /// What the solve closure returns for one start: the solver's value, the objective and the
 /// final parameter vector (same length as the start).
 pub type SolveResult<T, E> = Result<(T, f64, Vec<f64>), E>;
@@ -50,8 +46,9 @@ pub struct StartSpec {
     pub count: u32,
     pub seed: u64,
     pub stream: u64,
-    /// Per-parameter agreement tolerances (finite, not negative; length `n`), or empty for
-    /// [`DEFAULT_TOLERANCE`] on every parameter.
+    /// Per-parameter agreement tolerances (finite, not negative; length `n`). Required: there
+    /// is no default, because the module does not know each parameter's quantity kind; callers
+    /// pass unit-aware values (an empty list is [`SpecError::NoTolerances`]).
     pub tolerances: Vec<f64>,
 }
 
@@ -62,6 +59,8 @@ pub enum SpecError {
     NoParameters,
     /// `count` is 0, or there are no listed starts.
     NoStarts,
+    /// The tolerance list is empty (fail closed: no silent default).
+    NoTolerances,
     /// More starts than [`MAX_STARTS`].
     TooManyStarts { count: usize, max: u32 },
     /// A vector's length differs from the parameter count. `field` names it; for a listed
@@ -81,6 +80,7 @@ impl fmt::Display for SpecError {
         match self {
             SpecError::NoParameters => write!(f, "mstart: no parameters"),
             SpecError::NoStarts => write!(f, "mstart: no starts"),
+            SpecError::NoTolerances => write!(f, "mstart: no agreement tolerances given"),
             SpecError::TooManyStarts { count, max } => write!(f, "mstart: {count} starts (at most {max})"),
             SpecError::LengthMismatch { field, start, expected, got } => {
                 write!(f, "mstart: {field}{} has length {got}, expected {expected}", at(start))
@@ -220,14 +220,13 @@ fn check_count(count: usize) -> Result<(), SpecError> {
     Ok(())
 }
 
-/// The tolerances in effect: the caller's, or [`DEFAULT_TOLERANCE`] for each parameter.
-fn effective_tolerances(tolerances: &[f64], n: usize) -> Result<Vec<f64>, SpecError> {
+/// Validates the caller's tolerances: required (fail closed), length `n`, finite, not negative.
+fn check_tolerances(tolerances: &[f64], n: usize) -> Result<(), SpecError> {
     if tolerances.is_empty() {
-        return Ok(vec![DEFAULT_TOLERANCE; n]);
+        return Err(SpecError::NoTolerances);
     }
     check_vec("tolerances", tolerances, n, None)?;
-    check_non_negative("tolerances", tolerances)?;
-    Ok(tolerances.to_vec())
+    check_non_negative("tolerances", tolerances)
 }
 
 /// The `count` starts of `spec`, in index order (REQ-001). Validates the spec.
@@ -267,8 +266,8 @@ where
     F: FnMut(&[f64]) -> SolveResult<T, E>,
 {
     let starts = generate_starts(spec)?;
-    let tolerances = effective_tolerances(&spec.tolerances, spec.primary.len())?;
-    run_starts(starts, &tolerances, StartOrigin::Seeded { seed: spec.seed, stream: spec.stream }, solve)
+    check_tolerances(&spec.tolerances, spec.primary.len())?;
+    run_starts(starts, &spec.tolerances, StartOrigin::Seeded { seed: spec.seed, stream: spec.stream }, solve)
 }
 
 /// Runs `solve` from caller-listed starts, in list order. All starts must have the same,
@@ -289,8 +288,8 @@ where
     for (i, s) in starts.iter().enumerate() {
         check_vec("start", s, n, Some(i as u32))?;
     }
-    let tolerances = effective_tolerances(tolerances, n)?;
-    run_starts(starts.to_vec(), &tolerances, StartOrigin::Listed, solve)
+    check_tolerances(tolerances, n)?;
+    run_starts(starts.to_vec(), tolerances, StartOrigin::Listed, solve)
 }
 
 /// Lexicographic total order on two equal-length parameter vectors.

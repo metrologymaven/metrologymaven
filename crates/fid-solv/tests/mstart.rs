@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use fid_num::NumError;
 use fid_solv::mstart::{
     generate_starts, run, run_listed, MultiStartError, SpecError, StartError, StartOrigin, StartSpec, StartSummary,
-    DEFAULT_TOLERANCE, MAX_STARTS,
+    MAX_STARTS,
 };
 use fid_testkit::Sha256Hasher;
 
@@ -160,7 +160,7 @@ fn ac2_convex_quadratic_agrees() {
         count: 8,
         seed: 7,
         stream: 3,
-        tolerances: vec![],
+        tolerances: vec![1e-9, 1e-9],
     };
     let out = run(&spec, solve).unwrap();
     assert!(out.agreement);
@@ -206,19 +206,19 @@ fn ac5_tie_break_is_deterministic() {
         assert_eq!(out.origin, StartOrigin::Listed);
     }
     // Total order puts -0.0 below +0.0, in objectives and in parameters.
-    let out = run_listed(&[vec![0.0], vec![1.0]], &[], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
+    let out = run_listed(&[vec![0.0], vec![1.0]], &[1e-9], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
         Ok(((), 0.0, vec![if s[0] == 0.0 { 0.0 } else { -0.0 }]))
     })
     .unwrap();
     assert_eq!(out.best_index, 1);
     assert!(out.agreement, "-0.0 and +0.0 are within any tolerance");
-    let out = run_listed(&[vec![0.0], vec![1.0]], &[], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
+    let out = run_listed(&[vec![0.0], vec![1.0]], &[1e-9], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
         Ok(((), if s[0] == 0.0 { 0.0 } else { -0.0 }, vec![5.0]))
     })
     .unwrap();
     assert_eq!(out.best_index, 1);
     // A lower objective wins over a lower parameter vector.
-    let out = run_listed(&[vec![0.0], vec![1.0]], &[], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
+    let out = run_listed(&[vec![0.0], vec![1.0]], &[1e-9], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
         Ok(((), if s[0] == 0.0 { 2.0 } else { 1.0 }, vec![10.0 - s[0]]))
     })
     .unwrap();
@@ -277,7 +277,7 @@ fn solve_runs_in_index_order() {
 #[test]
 fn non_finite_outcomes_are_start_errors() {
     let starts: Vec<Vec<f64>> = (0..4).map(|i| vec![f64::from(i)]).collect();
-    let out = run_listed(&starts, &[], |s: &[f64]| -> Result<(u32, f64, Vec<f64>), ()> {
+    let out = run_listed(&starts, &[1e-9], |s: &[f64]| -> Result<(u32, f64, Vec<f64>), ()> {
         match s[0] as u32 {
             0 => Ok((0, f64::NAN, vec![0.0])),
             1 => Ok((1, 3.0, vec![1.0])),
@@ -298,7 +298,8 @@ fn non_finite_outcomes_are_start_errors() {
         out.per_start[3],
         StartSummary::Failed(StartError::Numeric(NumError::Infinite { op: "mstart.params", index: Some(0) }))
     );
-    let r = run_listed(&starts, &[], |_s: &[f64]| -> Result<((), f64, Vec<f64>), ()> { Ok(((), f64::NAN, vec![0.0])) });
+    let all_nan = |_s: &[f64]| -> Result<((), f64, Vec<f64>), ()> { Ok(((), f64::NAN, vec![0.0])) };
+    let r = run_listed(&starts, &[1e-9], all_nan);
     match r {
         Err(MultiStartError::AllFailed(errs)) => {
             assert_eq!(errs, vec![StartError::Numeric(nan); 4]);
@@ -310,15 +311,15 @@ fn non_finite_outcomes_are_start_errors() {
 /// A parameter vector of the wrong length is that start's error.
 #[test]
 fn wrong_param_length_is_start_error() {
-    let out = run_listed(&[vec![0.0, 0.0], vec![1.0, 1.0]], &[], |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
+    let short_first = |s: &[f64]| -> Result<((), f64, Vec<f64>), ()> {
         Ok(((), 0.0, if s[0] == 0.0 { vec![0.0] } else { s.to_vec() }))
-    })
-    .unwrap();
+    };
+    let out = run_listed(&[vec![0.0, 0.0], vec![1.0, 1.0]], &[1e-9, 1e-9], short_first).unwrap();
     assert_eq!(out.best_index, 1);
     assert_eq!(out.per_start[0], StartSummary::Failed(StartError::ParamLength { expected: 2, got: 1 }));
 }
 
-/// REQ-004: tolerances are per parameter; empty means DEFAULT_TOLERANCE.
+/// REQ-004: tolerances are per parameter and required.
 #[test]
 fn agreement_uses_tolerances() {
     let agree = |offset: f64, tol: &[f64]| {
@@ -328,8 +329,8 @@ fn agreement_uses_tolerances() {
         .unwrap()
         .agreement
     };
-    assert!(agree(DEFAULT_TOLERANCE * 0.5, &[]));
-    assert!(!agree(2e-9, &[]));
+    assert!(agree(5e-10, &[1e-9, 1e-9]));
+    assert!(!agree(2e-9, &[1e-9, 1e-9]));
     assert!(agree(2e-9, &[3e-9, 0.0]));
     assert!(!agree(2e-9, &[1e-9, 1.0]));
     assert!(agree(0.0, &[0.0, 0.0]));
@@ -344,7 +345,7 @@ fn invalid_specs_are_rejected() {
         count: 8,
         seed: 1,
         stream: 0,
-        tolerances: vec![],
+        tolerances: vec![1e-9, 1e-9],
     };
     let check = |spec: StartSpec, want: SpecError| {
         let r = run(&spec, |_s: &[f64]| -> Result<((), f64, Vec<f64>), ()> { panic!("solve ran") });
@@ -417,9 +418,28 @@ fn single_start() {
         count: 1,
         seed: 0,
         stream: 0,
-        tolerances: vec![],
+        tolerances: vec![1e-9, 1e-9],
     };
     let out = run(&spec, double_well_solve).unwrap();
     assert_eq!((out.best, out.best_index, out.agreement), ("right", 0, true));
     assert_eq!(out.starts, vec![vec![0.6, 0.3]]);
+}
+
+/// Maintainer decision on PR #187: an empty tolerance list fails closed, before any solve.
+#[test]
+fn empty_tolerances_fail_closed() {
+    let never = |_s: &[f64]| -> Result<((), f64, Vec<f64>), ()> { panic!("solve ran") };
+    let spec = StartSpec {
+        primary: vec![0.6, 0.3],
+        half_widths: vec![1.0, 1.0],
+        count: 8,
+        seed: 42,
+        stream: 0,
+        tolerances: vec![],
+    };
+    assert_eq!(run(&spec, never), Err(MultiStartError::InvalidSpec(SpecError::NoTolerances)));
+    assert_eq!(
+        run_listed(&[vec![0.0], vec![1.0]], &[], never),
+        Err(MultiStartError::InvalidSpec(SpecError::NoTolerances))
+    );
 }
