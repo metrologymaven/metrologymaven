@@ -1,0 +1,8 @@
+# KRN.MAN.WASM manifest cross-check labels, against modules/ok-wasi.wasm, ../test.allow and
+# crates/fid-kernel-wasm/wasm-runtime.toml. Format: <file><TAB><ok | error code>. CC-BY-4.0.
+ok.json	ok
+artifact-missing.json	artifact_missing
+artifact-digest.json	artifact_digest_mismatch
+config-digest.json	config_digest_mismatch
+runtime-version.json	runtime_version_mismatch
+non-canonical.json	manifest:non_canonical

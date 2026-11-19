@@ -130,3 +130,8 @@ fixtures/man/implclosure-ws-v1/** -text
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
+# KRN.MAN.WASM: hand-encoded wasm modules, canonical calls and manifests, and the pinned runtime
+# settings whose SHA-256 is the manifest's replay_runtime.config_digest; compared byte for byte.
+fixtures/man/wasm/** -text
+crates/fid-kernel-wasm/wasm-runtime.toml -text
+crates/fid-kernel-wasm/wasm-imports.allow -text

@@ -641,6 +641,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-kernel-wasm"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+]
+
+[[package]]
 name = "fid-knp1-lint"
 version = "0.0.1"
 dependencies = [
@@ -851,6 +858,13 @@ dependencies = [
  "regex",
  "toml",
  "unicode-normalization",
+]
+
+[[package]]
+name = "fid-wasm-check"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
 ]
 
 [[package]]
