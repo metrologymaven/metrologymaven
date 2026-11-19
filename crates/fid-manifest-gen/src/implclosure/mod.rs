@@ -10,25 +10,35 @@
 //!   ([`Metadata`]): normal (`kind: null`) and `build` edges, whatever their `target` gate;
 //!   `dev` edges are skipped. Every crate in the closure, the registering crate included, must
 //!   be on the allowlist, else [`ImplError::NotAllowlisted`] (REQ-KRN.MAN.MANI.IMPL-004).
-//! - **Files.** Per crate, every regular file below `<crate>/src/` (any extension) plus the
-//!   build script, as committed bytes with no line-ending conversion. Paths are relative to the
-//!   crate directory and `/`-separated (`src/lib.rs`, `build.rs`), so they do not depend on the
-//!   checkout path or the operating system. `tests/`, `benches/` and `examples/` lie outside
-//!   `src/` and are not read; a lib or bin target whose source lies outside `src/` is
-//!   `MetadataInvalid` rather than silently left out.
+//! - **Hashed set.** Only git-tracked files ([`TrackedFiles`]), read as committed bytes with
+//!   no line-ending conversion. Per crate: its `Cargo.toml` and every file below `<crate>/src/`
+//!   (any extension); paths are relative to the crate directory and `/`-separated
+//!   (`Cargo.toml`, `src/lib.rs`), so they do not depend on the checkout path or the operating
+//!   system. Per workspace: the root `Cargo.toml` and `.cargo/config.toml` and `.cargo/config`
+//!   when present (an untracked one on disk is an error). Per crate, its `Cargo.lock` entry
+//!   (name, version, source, checksum; absent fields as `""`). `tests/`, `benches/` and
+//!   `examples/` lie outside `src/` and are not read.
+//! - **Nothing escapes the hashed set** (fail closed, `MetadataInvalid`): a lib or bin target
+//!   whose source lies outside `src/`; a build script or proc-macro target anywhere in the
+//!   closure; in any hashed `.rs` file (and in any file it `include!`s), an `include!`,
+//!   `include_str!`, `include_bytes!` or attribute `path = ..` whose argument is not one plain
+//!   string literal, or whose path, resolved against the including file's directory, is not a
+//!   hashed file of the same crate. An untracked file below `src/` is an `Io` error.
 //! - **Encoding.** One object per crate,
-//!   `{"features":[..],"files":[{"path":..,"sha256":"sha256:<hex>"},..],"name":..,"version":..}`,
+//!   `{"features":[..],"files":[{"path":..,"sha256":"sha256:<hex>"},..],`
+//!   `"lock":{"checksum":..,"name":..,"source":..,"version":..},"name":..,"version":..}`,
 //!   features sorted and unique, files sorted by the UTF-8 bytes of their path (so `src/a-b.rs`
 //!   < `src/a.rs` < `src/a/b.rs`), crates sorted by (name, version) bytes with ties broken by
 //!   the crate object's canonical bytes. The digest is SHA-256 over the RFC 8785 canonical
-//!   JSON of the array of these objects, written by the kernel's canonical JSON writer
-//!   (`fid_kci::kci::json`) and hashed by the kernel's SHA-256 (`fid_kci::kci::sha256`), so the
-//!   digest is computed over canonical bytes only (REQ-KRN.MAN.MANI.IMPL-001).
+//!   JSON of `{"crates":[..],"workspace":[{"path":..,"sha256":..},..]}` (workspace files sorted
+//!   by path), written by the kernel's canonical JSON writer (`fid_kci::kci::json`) and hashed
+//!   by the kernel's SHA-256 (`fid_kci::kci::sha256`), so the digest is computed over canonical
+//!   bytes only (REQ-KRN.MAN.MANI.IMPL-001).
 //! - **Table.** [`ImplDigestTable`], sorted by the [`AlgorithmId`] total order; its own
 //!   canonical form is `[{"algorithm":"<id>","impl_digest":"sha256:<hex>"},..]` in that order.
 //! - **Errors,** checked in this order: allowlist and registration input
 //!   (`InputInvalid`), a registration for an algorithm not in the table (`UnknownAlgorithm`,
-//!   first in ID order), then per algorithm in ID order: no registration or no such crate
+//!   first in ID order), the lockfile and the workspace files, then per algorithm in ID order: no registration or no such crate
 //!   (`NoRegisteringCrate`), the closure's first crate in (name, version) order missing from
 //!   the allowlist (`NotAllowlisted`), then layout and file errors (`MetadataInvalid`, `Io`).
 //!
@@ -36,7 +46,9 @@
 //! [`KernelManifest::parse_canonical`] and checks that its implementation digests are the
 //! table's, so a stale manifest is caught by the same code that computes the digests.
 
+mod lockfile;
 mod metadata;
+mod scan;
 mod tree;
 
 use std::cmp::Ordering;
@@ -51,7 +63,13 @@ use fid_kci::manifest::{KernelManifest, ManifestError};
 use fid_kci::AlgorithmId;
 
 pub use metadata::{Metadata, Package, MAX_METADATA_BYTES};
-pub use tree::{FsTree, SourceTree, MAX_DIR_DEPTH, MAX_FILES_PER_DIR, MAX_FILE_BYTES};
+pub use tree::{
+    git_tracked_files, FsTree, SourceTree, TrackedFiles, MAX_DIR_DEPTH, MAX_FILES_PER_DIR, MAX_FILE_BYTES,
+    MAX_TRACKED_FILES,
+};
+
+use lockfile::Lockfile;
+use scan::RefKind;
 
 /// Which crate registers an algorithm (the algorithm table's registration data).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,6 +94,10 @@ pub enum IoKind {
     TooLarge,
     TooManyFiles,
     TooDeep,
+    /// A file on disk below a hashed directory, or a Cargo configuration file, is not tracked.
+    Untracked,
+    /// `git ls-files` could not be run or its output is malformed.
+    Git,
 }
 
 impl IoKind {
@@ -93,6 +115,8 @@ impl IoKind {
             IoKind::TooLarge => "too_large",
             IoKind::TooManyFiles => "too_many_files",
             IoKind::TooDeep => "too_deep",
+            IoKind::Untracked => "untracked",
+            IoKind::Git => "git",
         }
     }
 }
@@ -218,37 +242,111 @@ struct CrateEntry {
     bytes: Vec<u8>,
 }
 
-fn crate_entry(md: &Metadata, p: &Package, tree: &dyn SourceTree) -> Result<CrateEntry, ImplError> {
-    let layout = md.layout(p)?;
-    let mut files: Vec<(String, Vec<u8>)> = tree
-        .files_under(&join(&layout.dir, "src"))?
-        .into_iter()
-        .map(|(rel, bytes)| (format!("src/{rel}"), bytes))
-        .collect();
-    if let Some(bs) = &layout.build_script {
-        if !bs.starts_with("src/") {
-            files.push((bs.clone(), tree.read_file(&join(&layout.dir, bs))?));
+fn file_list(files: &[(String, Vec<u8>)]) -> Json {
+    Json::Arr(
+        files
+            .iter()
+            .map(|(path, bytes)| {
+                Json::Obj(vec![("path".to_string(), s(path)), ("sha256".to_string(), s(sha256_digest(bytes).as_str()))])
+            })
+            .collect(),
+    )
+}
+
+/// `lit` resolved against the directory of `file` (both relative to the crate directory);
+/// `None` when it is absolute, uses `\` or `:`, or climbs out of the crate directory.
+fn resolve(file: &str, lit: &str) -> Option<String> {
+    if lit.starts_with('/') || lit.contains('\\') || lit.contains(':') {
+        return None;
+    }
+    let mut parts: Vec<&str> = file.split('/').collect();
+    parts.pop();
+    for c in lit.split('/') {
+        match c {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            c => parts.push(c),
         }
     }
-    files.sort_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
-    if files.windows(2).any(|w| w[0].0 == w[1].0) {
-        return Err(ImplError::MetadataInvalid { reason: "duplicate_file" });
+    Some(parts.join("/"))
+}
+
+/// Checks that no hashed source of one crate makes the compiler read a file outside the
+/// crate's hashed files: every `.rs` file is scanned, and so is every file reached through
+/// `include!` (it is compiled as Rust whatever its extension).
+fn check_escapes(files: &BTreeMap<String, Vec<u8>>) -> Result<(), ImplError> {
+    let bad = |reason: &'static str| ImplError::MetadataInvalid { reason };
+    let mut queue: Vec<&str> = files.keys().map(String::as_str).filter(|p| p.ends_with(".rs")).collect();
+    let mut seen: BTreeSet<&str> = queue.iter().copied().collect();
+    while let Some(file) = queue.pop() {
+        let bytes = files.get(file).ok_or_else(|| bad("include_outside_hashed_set"))?;
+        let text = std::str::from_utf8(bytes).map_err(|_| bad("source_not_utf8"))?;
+        for (kind, lit) in scan::references(text).map_err(bad)? {
+            let target = resolve(file, &lit).filter(|t| files.contains_key(t.as_str()));
+            let Some(target) = target else {
+                return Err(bad(match kind {
+                    RefKind::ModPath => "path_attr_outside_hashed_set",
+                    RefKind::Code | RefKind::Data => "include_outside_hashed_set",
+                }));
+            };
+            if kind == RefKind::Code {
+                if let Some((key, _)) = files.get_key_value(target.as_str()) {
+                    if seen.insert(key.as_str()) {
+                        queue.push(key.as_str());
+                    }
+                }
+            }
+        }
     }
-    let files = files
-        .iter()
-        .map(|(path, bytes)| {
-            Json::Obj(vec![("path".to_string(), s(path)), ("sha256".to_string(), s(sha256_digest(bytes).as_str()))])
-        })
-        .collect();
+    Ok(())
+}
+
+fn crate_entry(md: &Metadata, lock: &Lockfile, p: &Package, tree: &dyn SourceTree) -> Result<CrateEntry, ImplError> {
+    let layout = md.layout(p)?;
+    let mut files: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    files.insert("Cargo.toml".to_string(), tree.read_file(&join(&layout.dir, "Cargo.toml"))?);
+    for (rel, bytes) in tree.files_under(&join(&layout.dir, "src"))? {
+        if files.insert(format!("src/{rel}"), bytes).is_some() {
+            return Err(ImplError::MetadataInvalid { reason: "duplicate_file" });
+        }
+    }
+    check_escapes(&files)?;
+    // BTreeMap<String, _> iterates in byte order of the path.
+    let files: Vec<(String, Vec<u8>)> = files.into_iter().collect();
+    let entry = lock.get(p.name(), p.version(), p.source())?;
+    let lock_json = Json::Obj(vec![
+        ("checksum".to_string(), s(&entry.checksum)),
+        ("name".to_string(), s(&entry.name)),
+        ("source".to_string(), s(&entry.source)),
+        ("version".to_string(), s(&entry.version)),
+    ]);
     let features = md.features(p.id())?.iter().map(|f| s(f)).collect();
     let json = Json::Obj(vec![
         ("features".to_string(), Json::Arr(features)),
-        ("files".to_string(), Json::Arr(files)),
+        ("files".to_string(), file_list(&files)),
+        ("lock".to_string(), lock_json),
         ("name".to_string(), s(p.name())),
         ("version".to_string(), s(p.version())),
     ]);
     let bytes = canonical(&json)?;
     Ok(CrateEntry { json, bytes })
+}
+
+/// Workspace-level files that change how every crate builds: the root manifest (profiles,
+/// patches) and the Cargo configuration (source replacement, rustflags), sorted by path.
+const WORKSPACE_FILES: [(&str, bool); 3] = [(".cargo/config", false), (".cargo/config.toml", false), ("Cargo.toml", true)];
+
+fn workspace_files(tree: &dyn SourceTree) -> Result<Json, ImplError> {
+    let mut files = Vec::new();
+    for (path, required) in WORKSPACE_FILES {
+        let bytes = if required { Some(tree.read_file(path)?) } else { tree.read_optional(path)? };
+        if let Some(bytes) = bytes {
+            files.push((path.to_string(), bytes));
+        }
+    }
+    Ok(file_list(&files))
 }
 
 /// Crate names that differ only in ASCII case or `-` versus `_` name the same crate to Cargo's
@@ -290,6 +388,8 @@ pub fn impl_digests(
         }
     }
 
+    let lock = Lockfile::parse(&tree.read_file("Cargo.lock")?)?;
+    let workspace = workspace_files(tree)?;
     let mut cache: BTreeMap<String, CrateEntry> = BTreeMap::new();
     let mut entries = Vec::with_capacity(algs.len());
     for alg in algs {
@@ -306,7 +406,7 @@ pub fn impl_digests(
         }
         for p in &crates {
             if let Entry::Vacant(slot) = cache.entry(p.id().to_string()) {
-                slot.insert(crate_entry(metadata, p, tree)?);
+                slot.insert(crate_entry(metadata, &lock, p, tree)?);
             }
         }
         let mut items: Vec<(&Package, &CrateEntry)> = Vec::with_capacity(crates.len());
@@ -319,7 +419,10 @@ pub fn impl_digests(
                 .cmp(&(b.0.name().as_bytes(), b.0.version().as_bytes()))
                 .then_with(|| a.1.bytes.cmp(&b.1.bytes))
         });
-        let list = Json::Arr(items.iter().map(|(_, e)| e.json.clone()).collect());
+        let list = Json::Obj(vec![
+            ("crates".to_string(), Json::Arr(items.iter().map(|(_, e)| e.json.clone()).collect())),
+            ("workspace".to_string(), workspace.clone()),
+        ]);
         entries.push(ImplDigestEntry {
             algorithm: alg.clone(),
             impl_digest: sha256_digest(&canonical(&list)?),
@@ -333,11 +436,13 @@ pub fn impl_digests(
 }
 
 /// Reads the metadata file at `metadata_file` (bounded) and computes [`impl_digests`] over the
-/// workspace checked out at `workspace`. Paths in the metadata are taken relative to its
-/// `workspace_root`, so `workspace` may be any checkout of the same sources.
+/// workspace checked out at `workspace`, whose git-tracked files are `tracked` (from
+/// [`git_tracked_files`]). Paths in the metadata are taken relative to its `workspace_root`, so
+/// `workspace` may be any checkout of the same sources.
 pub fn impl_digests_from_files(
     metadata_file: &Path,
     workspace: &Path,
+    tracked: TrackedFiles,
     algorithms: &[AlgorithmId],
     registrations: &[Registration],
     allowlist: &[String],
@@ -345,7 +450,7 @@ pub fn impl_digests_from_files(
     let shown = metadata_file.display().to_string();
     let bytes = tree::read_bounded(metadata_file, &shown, MAX_METADATA_BYTES as u64)?;
     let md = Metadata::parse(&bytes)?;
-    impl_digests(&md, algorithms, registrations, allowlist, &FsTree::new(workspace))
+    impl_digests(&md, algorithms, registrations, allowlist, &FsTree::new(workspace, tracked))
 }
 
 /// Why a manifest disagrees with an implementation-digest table.

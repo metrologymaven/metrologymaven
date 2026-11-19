@@ -3,20 +3,24 @@
 
 Independent reference for the Rust `fid_manifest_gen::implclosure` module. Nothing here runs or
 imports the Rust code: the crate closures come from a breadth-first walk over the `cargo
-metadata` file written below, file digests and implementation digests from `hashlib`, and
-canonical JSON from Python's `json` module (sorted keys, no whitespace; every value is an ASCII
-string, where that equals RFC 8785). The closures are also hand-labelled (HAND_CLOSURES) and the
-script refuses to write anything if its own walk disagrees with the labels.
+metadata` file written below, lockfile entries from `tomllib`, file digests and implementation
+digests from `hashlib`, and canonical JSON from Python's `json` module (sorted keys, no
+whitespace; every value is an ASCII string, where that equals RFC 8785). The closures and the
+AC-2 change sets are also hand-labelled, and the script refuses to write anything if its own
+results disagree with the labels.
 
 The toy workspace (5 crates, 3 algorithms):
 
-    knum   0.1.0  features [std]           src/ with a nested module and a binary file; tests/
-    kgeo   0.2.0  -> knum (normal)         build.rs at the crate root; CRLF source; benches/
-    kfit   0.3.0  -> kgeo, knum            features [default, fast]; examples/;
-                  (knum: normal + build)   src/a-b.rs, src/a.rs, src/a/b.rs (byte-order sort)
+    knum   0.1.0  features [std]           include_bytes! of a file under src/; #[path] module;
+                                           nested module; a binary file; tests/
+    kgeo   0.2.0  -> knum (normal)         CRLF source; benches/
+    kfit   0.3.0  -> kgeo, knum            features [default, fast]; examples/; include!-like text
+                  (knum: normal + build)   in a comment and a string (not code); src/a-b.rs,
+                                           src/a.rs, src/a/b.rs (byte-order sort)
     kstat  0.1.0  -> knum (normal)         dev-dependency on kfit (not in the kernel graph);
-                  -> vext (build, wasm32)  a build-only, platform-gated edge (in the graph)
-    vext   1.4.2  vendored at vendor/vext  third party, must be allowlisted
+                  -> vext (normal, wasm32) a platform-gated edge (in the graph)
+    vext   1.4.2  crates.io, vendored at vendor/vext through .cargo/config.toml source
+                  replacement; its Cargo.lock entry has a source and a checksum
 
     fit.plane.lsq@1.10.0   registered by kfit   closure kfit, kgeo, knum
     geo.point.dist@1.2.0   registered by kgeo   closure kgeo, knum
@@ -24,7 +28,9 @@ The toy workspace (5 crates, 3 algorithms):
 
 Written files (under fixtures/man/implclosure-ws-v1/):
 
-    ws/**                  the toy sources (no Cargo.toml: the tool reads only metadata.json)
+    ws/**                  the toy workspace: root Cargo.toml, Cargo.lock, .cargo/config.toml,
+                           each crate's Cargo.toml and sources
+    tracked-files.txt      the files of ws/ as `git ls-files` lists them (one per line, sorted)
     metadata.json          `cargo metadata --format-version 1` output for the toy workspace,
                            with the fake workspace root /toy/ws
     inputs.json            algorithm table, registrations and allowlist (AC-1..AC-3)
@@ -32,11 +38,14 @@ Written files (under fixtures/man/implclosure-ws-v1/):
     expected-table.json    canonical ImplDigestTable, no trailing newline (AC-1)
 
 Digest rule (spec node KRN.MAN.MANI.IMPL, Design): for each algorithm, SHA-256 over the canonical
-JSON array of one object per crate in the closure,
-    {"features": [sorted], "files": [{"path": "src/..", "sha256": "sha256:<hex>"}, ..],
-     "name": <name>, "version": <version>}
-with crates sorted by (name, version) and files by the UTF-8 bytes of their path relative to the
-crate directory; files are every regular file under src/ plus the build script.
+JSON of
+    {"crates": [crate, ..], "workspace": [{"path": .., "sha256": ..}, ..]}
+where "workspace" holds the root Cargo.toml and .cargo/config.toml / .cargo/config when tracked,
+and each crate (sorted by name, version) is
+    {"features": [sorted], "files": [{"path": "Cargo.toml" | "src/..", "sha256": "sha256:<hex>"}],
+     "lock": {"checksum": .., "name": .., "source": .., "version": ..}, "name": .., "version": ..}
+with files sorted by the UTF-8 bytes of their path relative to the crate directory, only
+git-tracked files, and an absent lockfile `source` or `checksum` written as "".
 
 Run:    python fixtures/man/make_implclosure_fixtures.py
 Check:  python fixtures/man/make_implclosure_fixtures.py --check
@@ -45,41 +54,95 @@ Check:  python fixtures/man/make_implclosure_fixtures.py --check
 import hashlib
 import json
 import sys
+import tomllib
 from pathlib import Path
 
 HERE = Path(__file__).parent
 OUT = HERE / "implclosure-ws-v1"
 ROOT = "/toy/ws"
+CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
+VEXT_CHECKSUM = hashlib.sha256(b"vext-1.4.2.crate (stand-in)").hexdigest()
+
+
+def manifest(name, version, deps="", features=""):
+    text = '[package]\nname = "%s"\nversion = "%s"\nedition = "2021"\n' % (name, version)
+    if features:
+        text += "\n[features]\n" + features
+    if deps:
+        text += "\n" + deps
+    return text.encode("ascii")
+
 
 # ---------------------------------------------------------------------------------------------
 # The toy sources. Byte strings: CRLF and binary content are part of the test.
 
 FILES = {
-    "crates/knum/src/lib.rs": b"pub mod ops;\n\npub fn one() -> u32 {\n    1\n}\n",
-    "crates/knum/src/ops/mod.rs": b"pub mod add;\n",
+    "Cargo.toml": b'[workspace]\nmembers = ["crates/*"]\nresolver = "2"\n\n[profile.release]\nopt-level = 3\n',
+    ".cargo/config.toml": (
+        b'[source.crates-io]\nreplace-with = "vendored-sources"\n\n'
+        b'[source.vendored-sources]\ndirectory = "vendor"\n'
+    ),
+    "Cargo.lock": (
+        "# This file is automatically @generated by Cargo.\n"
+        "# It is not intended for manual editing.\n"
+        "version = 4\n\n"
+        '[[package]]\nname = "kfit"\nversion = "0.3.0"\ndependencies = [\n "kgeo",\n "knum",\n]\n\n'
+        '[[package]]\nname = "kgeo"\nversion = "0.2.0"\ndependencies = [\n "knum",\n]\n\n'
+        '[[package]]\nname = "knum"\nversion = "0.1.0"\n\n'
+        '[[package]]\nname = "kstat"\nversion = "0.1.0"\ndependencies = [\n "kfit",\n "knum",\n "vext",\n]\n\n'
+        '[[package]]\nname = "vext"\nversion = "1.4.2"\nsource = "%s"\nchecksum = "%s"\n'
+        % (CRATES_IO, VEXT_CHECKSUM)
+    ).encode("ascii"),
+    "crates/knum/Cargo.toml": manifest("knum", "0.1.0", features='std = []\n'),
+    "crates/knum/src/lib.rs": (
+        b"pub mod ops;\n\npub static TABLE: &[u8] = include_bytes!(\"table.bin\");\n\n"
+        b"pub fn one() -> u32 {\n    1\n}\n"
+    ),
+    "crates/knum/src/ops/mod.rs": b"#[path = \"add.rs\"]\npub mod add;\n",
     "crates/knum/src/ops/add.rs": b"pub fn add(a: u32, b: u32) -> u32 {\n    a + b\n}\n",
     "crates/knum/src/table.bin": b"\x00\x01\r\n\xff\xfe",
     "crates/knum/tests/num.rs": b"#[test]\nfn one() {\n    assert_eq!(knum::one(), 1);\n}\n",
-    "crates/kgeo/build.rs": b"fn main() {}\n",
+    "crates/kgeo/Cargo.toml": manifest("kgeo", "0.2.0", deps='[dependencies]\nknum = { path = "../knum" }\n'),
     "crates/kgeo/src/lib.rs": b"pub fn dist(a: u32, b: u32) -> u32 {\r\n    a.abs_diff(b)\r\n}\r\n",
     "crates/kgeo/benches/b.rs": b"fn main() {}\n",
-    "crates/kfit/src/lib.rs": b"mod a;\n\npub fn fit() -> u32 {\n    a::b::two()\n}\n",
+    "crates/kfit/Cargo.toml": manifest(
+        "kfit", "0.3.0",
+        deps='[dependencies]\nkgeo = { path = "../kgeo" }\nknum = { path = "../knum" }\n\n'
+             '[build-dependencies]\nknum = { path = "../knum" }\n',
+        features='default = ["fast"]\nfast = []\n',
+    ),
+    "crates/kfit/src/lib.rs": (
+        b"mod a;\n\n"
+        b"// include_str!(\"../../outside.txt\") in a comment is not code.\n"
+        b"/* nor in a /* nested */ block: include!(\"../x.rs\") */\n"
+        b"pub const NOTE: &str = \"include!(\\\"../x.rs\\\") in a string is not code\";\n"
+        b"pub const RAW: &str = r#\"#[path = \"../x.rs\"]\"#;\n\n"
+        b"pub fn first<'a>(s: &'a str) -> char {\n    s.chars().next().unwrap_or('\"')\n}\n\n"
+        b"pub fn fit() -> u32 {\n    a::b::two()\n}\n"
+    ),
     "crates/kfit/src/a.rs": b"pub mod b;\n",
     "crates/kfit/src/a/b.rs": b"pub fn two() -> u32 {\n    2\n}\n",
     "crates/kfit/src/a-b.rs": b"// not a module: still under src/, so still hashed\n",
     "crates/kfit/examples/e.rs": b"fn main() {}\n",
+    "crates/kstat/Cargo.toml": manifest(
+        "kstat", "0.1.0",
+        deps='[dependencies]\nknum = { path = "../knum" }\n\n'
+             "[target.'cfg(target_arch = \"wasm32\")'.dependencies]\nvext = \"1.4\"\n\n"
+             '[dev-dependencies]\nkfit = { path = "../kfit" }\n',
+    ),
     "crates/kstat/src/lib.rs": b"pub fn mean(a: u32, b: u32) -> u32 {\n    (a + b) / 2\n}\n",
     "crates/kstat/tests/mean.rs": b"#[test]\nfn mean() {}\n",
+    "vendor/vext/Cargo.toml": manifest("vext", "1.4.2"),
     "vendor/vext/src/lib.rs": b"pub const EXT: u32 = 7;\n",
 }
 
-# name, version, directory, features, targets (kind, path relative to the crate directory)
+# name, version, directory, source, features, targets (kind, path relative to the crate directory)
 PACKAGES = [
-    ("knum", "0.1.0", "crates/knum", ["std"], [("lib", "src/lib.rs"), ("test", "tests/num.rs")]),
-    ("kgeo", "0.2.0", "crates/kgeo", [], [("lib", "src/lib.rs"), ("bench", "benches/b.rs"), ("custom-build", "build.rs")]),
-    ("kfit", "0.3.0", "crates/kfit", ["default", "fast"], [("lib", "src/lib.rs"), ("example", "examples/e.rs")]),
-    ("kstat", "0.1.0", "crates/kstat", [], [("lib", "src/lib.rs"), ("test", "tests/mean.rs")]),
-    ("vext", "1.4.2", "vendor/vext", [], [("lib", "src/lib.rs")]),
+    ("knum", "0.1.0", "crates/knum", None, ["std"], [("lib", "src/lib.rs"), ("test", "tests/num.rs")]),
+    ("kgeo", "0.2.0", "crates/kgeo", None, [], [("lib", "src/lib.rs"), ("bench", "benches/b.rs")]),
+    ("kfit", "0.3.0", "crates/kfit", None, ["default", "fast"], [("lib", "src/lib.rs"), ("example", "examples/e.rs")]),
+    ("kstat", "0.1.0", "crates/kstat", None, [], [("lib", "src/lib.rs"), ("test", "tests/mean.rs")]),
+    ("vext", "1.4.2", "vendor/vext", CRATES_IO, [], [("lib", "src/lib.rs")]),
 ]
 MEMBERS = ["kfit", "kgeo", "knum", "kstat"]
 
@@ -89,7 +152,7 @@ EDGES = [
     ("kfit", "kgeo", [(None, None)]),
     ("kfit", "knum", [(None, None), ("build", None)]),
     ("kstat", "knum", [(None, None)]),
-    ("kstat", "vext", [("build", 'cfg(target_arch = "wasm32")')]),
+    ("kstat", "vext", [(None, 'cfg(target_arch = "wasm32")')]),
     ("kstat", "kfit", [("dev", None)]),
 ]
 
@@ -108,8 +171,24 @@ HAND_CLOSURES = {
     "stat.mean.basic@2.0.0": ["knum", "kstat", "vext"],
 }
 
+# Hand-labelled AC-2 change sets: file changed -> algorithms whose digest changes (FIT, GEO, STAT).
+HAND_CHANGES = {
+    "crates/kfit/src/a/b.rs": ["fit.plane.lsq@1.10.0"],
+    "crates/kfit/Cargo.toml": ["fit.plane.lsq@1.10.0"],
+    "crates/knum/src/table.bin": ["fit.plane.lsq@1.10.0", "geo.point.dist@1.2.0", "stat.mean.basic@2.0.0"],
+    "crates/kstat/src/lib.rs": ["stat.mean.basic@2.0.0"],
+    "vendor/vext/src/lib.rs": ["stat.mean.basic@2.0.0"],
+    "Cargo.toml": ["fit.plane.lsq@1.10.0", "geo.point.dist@1.2.0", "stat.mean.basic@2.0.0"],
+    ".cargo/config.toml": ["fit.plane.lsq@1.10.0", "geo.point.dist@1.2.0", "stat.mean.basic@2.0.0"],
+    "crates/knum/tests/num.rs": [],
+    "crates/kgeo/benches/b.rs": [],
+    "crates/kfit/examples/e.rs": [],
+}
 
-def pkg_id(name, version, directory):
+
+def pkg_id(name, version, directory, source):
+    if source:
+        return "%s#%s@%s" % (source, name, version)
     return "path+file://%s/%s#%s@%s" % (ROOT, directory, name, version)
 
 
@@ -118,32 +197,31 @@ def metadata():
 
     def idof(name):
         p = by_name[name]
-        return pkg_id(p[0], p[1], p[2])
+        return pkg_id(p[0], p[1], p[2], p[3])
 
     packages = []
-    for name, version, directory, features, targets in PACKAGES:
+    for name, version, directory, source, features, targets in PACKAGES:
         deps = []
         for frm, to, kinds in EDGES:
             if frm != name:
                 continue
             for kind, target in kinds:
                 deps.append({
-                    "name": to, "source": None, "req": "*", "kind": kind, "rename": None,
+                    "name": to, "source": by_name[to][3], "req": "*", "kind": kind, "rename": None,
                     "optional": False, "uses_default_features": True, "features": [],
                     "target": target, "registry": None, "path": "%s/%s" % (ROOT, by_name[to][2]),
                 })
         tgts = []
         for kind, path in targets:
             tgts.append({
-                "kind": [kind], "crate_types": ["bin" if kind != "lib" else "lib"],
-                "name": name if kind != "custom-build" else "build-script-build",
+                "kind": [kind], "crate_types": ["bin" if kind != "lib" else "lib"], "name": name,
                 "src_path": "%s/%s/%s" % (ROOT, directory, path),
-                "edition": "2021", "doc": kind == "lib", "doctest": kind == "lib", "test": kind != "custom-build",
+                "edition": "2021", "doc": kind == "lib", "doctest": kind == "lib", "test": True,
             })
         feats = {f: [] for f in features}
         packages.append({
-            "name": name, "version": version, "id": pkg_id(name, version, directory),
-            "license": None, "license_file": None, "description": None, "source": None,
+            "name": name, "version": version, "id": idof(name),
+            "license": None, "license_file": None, "description": None, "source": source,
             "dependencies": deps, "targets": tgts, "features": feats,
             "manifest_path": "%s/%s/Cargo.toml" % (ROOT, directory),
             "metadata": None, "publish": None, "authors": [], "categories": [], "keywords": [],
@@ -151,10 +229,10 @@ def metadata():
             "edition": "2021", "links": None, "default_run": None, "rust_version": None,
         })
     nodes = []
-    for name, version, directory, features, _ in sorted(PACKAGES, key=lambda p: pkg_id(p[0], p[1], p[2])):
+    for name, version, directory, source, features, _ in sorted(PACKAGES, key=lambda p: idof(p[0])):
         out = [(to, kinds) for frm, to, kinds in EDGES if frm == name]
         nodes.append({
-            "id": pkg_id(name, version, directory),
+            "id": idof(name),
             "dependencies": sorted(idof(to) for to, _ in out),
             "deps": [
                 {"name": to, "pkg": idof(to),
@@ -182,7 +260,7 @@ def inputs(allowlist):
 
 
 # ---------------------------------------------------------------------------------------------
-# The oracle: reads metadata.json and the sources, never the Rust code.
+# The oracle: reads metadata.json, Cargo.lock and the sources, never the Rust code.
 
 
 def canon(value):
@@ -211,13 +289,19 @@ def alg_key(i):
     return (tuple(name.split(".")), tuple(int(x) for x in version.split(".")))
 
 
+def file_list(files, names):
+    return [{"path": n, "sha256": sha(files[n])} for n in sorted(names, key=lambda n: n.encode("utf-8"))]
+
+
 class NotAllowlisted(Exception):
     pass
 
 
 def oracle(meta_bytes, inputs_bytes, files):
+    """`files` maps tracked paths (relative to the workspace root) to their bytes."""
     meta = json.loads(meta_bytes)
     inp = json.loads(inputs_bytes)
+    lock = tomllib.loads(files["Cargo.lock"].decode("utf-8"))
     root = meta["workspace_root"]
     pkgs = {p["id"]: p for p in meta["packages"]}
     edges = {}
@@ -226,24 +310,28 @@ def oracle(meta_bytes, inputs_bytes, files):
             [d["pkg"] for d in node["deps"] if any(k["kind"] in (None, "build") for k in d["dep_kinds"])],
             node["features"],
         )
-    reg = {a: c for a, c in ((r["algorithm"], r["crate"]) for r in inp["registrations"])}
+    reg = {r["algorithm"]: r["crate"] for r in inp["registrations"]}
     allow = set(inp["allowlist"])
+    workspace = file_list(files, [n for n in files if n in ("Cargo.toml", ".cargo/config.toml", ".cargo/config")])
+
+    def lock_entry(p):
+        found = [e for e in lock["package"]
+                 if (e["name"], e["version"], e.get("source")) == (p["name"], p["version"], p["source"])]
+        assert len(found) == 1
+        e = found[0]
+        return {"checksum": e.get("checksum", ""), "name": e["name"], "source": e.get("source", ""),
+                "version": e["version"]}
 
     def entry(pid):
         p = pkgs[pid]
         crate_dir = p["manifest_path"][len(root) + 1:-len("/Cargo.toml")]
-        listed = []
-        for rel, data in files.items():
-            if rel.startswith(crate_dir + "/src/"):
-                listed.append((rel[len(crate_dir) + 1:], data))
-        for t in p["targets"]:
-            if "custom-build" in t["kind"]:
-                rel = t["src_path"][len(root) + 1:]
-                listed.append((rel[len(crate_dir) + 1:], files[rel]))
-        listed.sort(key=lambda f: f[0].encode("utf-8"))
+        names = [rel[len(crate_dir) + 1:] for rel in files
+                 if rel == crate_dir + "/Cargo.toml" or rel.startswith(crate_dir + "/src/")]
+        local = {n: files[crate_dir + "/" + n] for n in names}
         return {
             "features": sorted(edges[pid][1]),
-            "files": [{"path": path, "sha256": sha(data)} for path, data in listed],
+            "files": file_list(local, names),
+            "lock": lock_entry(p),
             "name": p["name"],
             "version": p["version"],
         }
@@ -268,14 +356,22 @@ def oracle(meta_bytes, inputs_bytes, files):
             if pkgs[pid]["name"] not in allow:
                 raise NotAllowlisted(pkgs[pid]["name"])
         closures[alg] = [pkgs[pid]["name"] for pid in crates]
-        table.append({"algorithm": alg, "impl_digest": sha(canon([entry(pid) for pid in crates]))})
+        doc = {"crates": [entry(pid) for pid in crates], "workspace": workspace}
+        table.append({"algorithm": alg, "impl_digest": sha(canon(doc))})
     return table, closures
+
+
+def flip(data):
+    b = bytearray(data)
+    b[len(b) // 2] ^= 1
+    return bytes(b)
 
 
 def build():
     out = {}
     for rel, data in FILES.items():
         out["ws/" + rel] = data
+    out["tracked-files.txt"] = "".join(n + "\n" for n in sorted(FILES)).encode("utf-8")
     meta = metadata()
     out["metadata.json"] = meta
     out["inputs.json"] = inputs(ALLOWLIST)
@@ -287,15 +383,18 @@ def build():
         raise AssertionError("inputs-unlisted.json must fail")
     except NotAllowlisted as e:
         assert str(e) == "vext", e
-    # Hand-labelled AC-2 expectations, checked against the oracle itself.
+    # The hand-labelled AC-2 change sets, checked against the oracle itself.
+    for rel, expected in HAND_CHANGES.items():
+        mutated = dict(FILES)
+        mutated[rel] = flip(FILES[rel])
+        after, _ = oracle(meta, out["inputs.json"], mutated)
+        changed = [a["algorithm"] for a, b in zip(table, after) if a != b]
+        assert changed == expected, (rel, changed)
+    # A different lockfile checksum for vext changes only STAT.
     mutated = dict(FILES)
-    mutated["crates/kfit/src/a/b.rs"] = FILES["crates/kfit/src/a/b.rs"].replace(b"2", b"3")
-    table2, _ = oracle(meta, out["inputs.json"], mutated)
-    changed = [a["algorithm"] for a, b in zip(table, table2) if a != b]
-    assert changed == ["fit.plane.lsq@1.10.0"], changed
-    mutated = dict(FILES)
-    mutated["crates/knum/tests/num.rs"] = b"\n"
-    assert oracle(meta, out["inputs.json"], mutated)[0] == table
+    mutated["Cargo.lock"] = FILES["Cargo.lock"].replace(VEXT_CHECKSUM.encode(), b"0" * 64)
+    after, _ = oracle(meta, out["inputs.json"], mutated)
+    assert [a["algorithm"] for a, b in zip(table, after) if a != b] == ["stat.mean.basic@2.0.0"]
     out["expected-table.json"] = canon(table)
     return out
 

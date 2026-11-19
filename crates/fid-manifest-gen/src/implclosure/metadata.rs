@@ -1,7 +1,7 @@
 //! Bounded, fail-closed reader for the `cargo metadata --format-version 1` file.
 //!
 //! Only the fields the closure needs are read: `version` (must be `1`), `workspace_root`,
-//! each package's `id`, `name`, `version`, `manifest_path` and `targets` (`kind`, `src_path`),
+//! each package's `id`, `name`, `version`, `source`, `manifest_path` and `targets` (`kind`, `src_path`),
 //! and the resolved graph `resolve.nodes[]` (`id`, `features`, `deps[].pkg`,
 //! `deps[].dep_kinds[].kind`). Other fields are ignored, because Cargo adds fields over time.
 //! A missing `resolve` (`--no-deps`), a dangling package ID, a duplicate package or node ID,
@@ -23,11 +23,14 @@ pub const MAX_METADATA_BYTES: usize = fid_canon::MAX_INPUT_BYTES;
 
 /// Target kinds whose sources must lie under the crate's `src/` directory: they are what
 /// the crate builds into, so a source outside `src/` would escape the digest.
-const BUILT_KINDS: [&str; 7] = ["lib", "rlib", "dylib", "cdylib", "staticlib", "proc-macro", "bin"];
+const BUILT_KINDS: [&str; 6] = ["lib", "rlib", "dylib", "cdylib", "staticlib", "bin"];
 /// Target kinds that are not part of the built crate (REQ-KRN.MAN.MANI.IMPL-002).
 const IGNORED_KINDS: [&str; 3] = ["test", "bench", "example"];
-/// The build-script target kind.
+/// A build script runs arbitrary code at build time and can read any file or the
+/// environment, so no crate in a kernel closure may have one (REQ-KRN.MAN.MANI.IMPL-001).
 const BUILD_KIND: &str = "custom-build";
+/// A procedural-macro crate also runs code at build time; refused for the same reason.
+const PROC_MACRO_KIND: &str = "proc-macro";
 
 fn invalid(reason: &'static str) -> ImplError {
     ImplError::MetadataInvalid { reason }
@@ -46,6 +49,8 @@ pub struct Package {
     id: String,
     name: String,
     version: String,
+    /// `source` (`None` for a path crate).
+    source: Option<String>,
     /// `manifest_path` with `/` separators.
     manifest_path: String,
     targets: Vec<Target>,
@@ -66,6 +71,11 @@ impl Package {
     pub fn id(&self) -> &str {
         &self.id
     }
+
+    /// The package source (`None` for a path crate).
+    pub fn source(&self) -> Option<&str> {
+        self.source.as_deref()
+    }
 }
 
 /// The parts of a crate's layout the digest needs.
@@ -73,8 +83,6 @@ impl Package {
 pub(crate) struct Layout {
     /// The crate directory relative to the workspace root, `/`-separated, `""` for the root.
     pub dir: String,
-    /// The build script relative to the crate directory, if the crate has one.
-    pub build_script: Option<String>,
 }
 
 /// A node of the resolved graph.
@@ -150,10 +158,16 @@ fn parse_package(v: &CValue) -> Result<Package, ImplError> {
             src_path: slashes(&string(t.get("src_path"), "target_src_path")?),
         });
     }
+    let source = match m.get("source") {
+        Some(CValue::Null) => None,
+        Some(CValue::Str(s)) => Some(s.clone()),
+        _ => return Err(invalid("package_source")),
+    };
     Ok(Package {
         id: string(m.get("id"), "package_id")?,
         name: string(m.get("name"), "package_name")?,
         version: string(m.get("version"), "package_version")?,
+        source,
         manifest_path: slashes(&string(m.get("manifest_path"), "package_manifest_path")?),
         targets,
     })
@@ -270,14 +284,12 @@ impl Metadata {
         Ok(seen)
     }
 
-    /// Where package `p` lives and what its build script is. Fails closed: the crate must lie
-    /// inside the workspace root, every built target (lib, bin, ...) must have its source under
-    /// `src/`, the build script must lie inside the crate directory, and an unknown target kind
-    /// is an error.
+    /// Where package `p` lives. Fails closed: the crate must lie inside the workspace root,
+    /// every built target (lib, bin, ...) must have its source under `src/`, a build script or
+    /// a proc-macro target is refused, and an unknown target kind is an error.
     pub(crate) fn layout(&self, p: &Package) -> Result<Layout, ImplError> {
         let crate_abs = p.manifest_path.strip_suffix("/Cargo.toml").ok_or_else(|| invalid("manifest_path"))?;
         let dir = relative(crate_abs, &self.workspace_root).ok_or_else(|| invalid("package_outside_workspace"))?;
-        let mut build_script = None;
         for t in &p.targets {
             if t.kinds.is_empty() {
                 return Err(invalid("target_kind"));
@@ -290,16 +302,15 @@ impl Metadata {
                         _ => return Err(invalid("target_outside_src")),
                     }
                 } else if k == BUILD_KIND {
-                    let r = relative(&t.src_path, crate_abs).ok_or_else(|| invalid("build_script_outside_crate"))?;
-                    if r.is_empty() || build_script.replace(r).is_some() {
-                        return Err(invalid("build_script"));
-                    }
+                    return Err(invalid("build_script_in_closure"));
+                } else if k == PROC_MACRO_KIND {
+                    return Err(invalid("proc_macro_in_closure"));
                 } else if !IGNORED_KINDS.contains(&k) {
                     return Err(invalid("target_kind"));
                 }
             }
         }
-        Ok(Layout { dir, build_script })
+        Ok(Layout { dir })
     }
 }
 
