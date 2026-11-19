@@ -9,7 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-004]
+satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-004, REQ-RPT.MODEL.BLOCKS-012]
 covers: [GOM.RPT.05, PCD.RPT.03, SA.RPT.02]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND.RESOLVE, RPT.STATS.TREND]
 side_effect: W2
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid report set-chart-block]
 mcp: [report_set_chart_block]
 journal: [report.set_chart_block@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.BLOCKS.CHART: Chart block referencing ChartSeries

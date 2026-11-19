@@ -27,7 +27,8 @@
 //!    `SPEC_DERIVED`) only with UEC-1, so a claimed value never looks measured; UEC-3 only
 //!    with `ISO15530-3` or `ISO15530-4` (REQ-UNC.UEC-006); UEC-2 and UEC-3 need at least one
 //!    source and only characterized ones (`dcc`, `qualification`, `type_a`;
-//!    REQ-UNC.UEC-005). UEC-1..3 with any method but `DECLARED` need at least one source
+//!    REQ-UNC.UEC-005) none of them marked `unverified` (`class_mismatch{sources.unverified}`).
+//!    UEC-1..3 with any method but `DECLARED` need at least one source
 //!    (`SPEC_DERIVED` cites its specification). A claimed method carries no `contributors`, `lpu_validated_by_mc`
 //!    or `nonlinearity`; `lpu_validated_by_mc` only with `LPU`. Provenance: `principal` and
 //!    `principal_kind` together; `DECLARED` needs a `principal`; an agent principal or an
@@ -38,7 +39,10 @@
 //!    every other check; the only constructor that accepts one is
 //!    [`crate::uec::AssignOutput::statement`]. [`UncertaintyStatement::parse_canonical`]
 //!    re-reads stored UEC-2/3 bytes only when `provenance.rule_sets` names the assignment
-//!    rule set (`uec-assign@1`); whether stored bytes are genuine is owned by `TRUST`.
+//!    rule set (`uec-assign@1`). That marker is self-asserted, so bytes from outside this
+//!    process go through [`UncertaintyStatement::parse_canonical_verified`], which also
+//!    checks every UEC-2/3 source against the caller's records (`source_not_verified`);
+//!    whether stored bytes and records are genuine is owned by `TRUST`.
 //!
 //! Parse-stage errors of [`UncertaintyStatement::parse_canonical`] (`malformed`,
 //! `unknown_method`, `invalid_field` for a bad scalar encoding, enum or digest, and
@@ -249,6 +253,11 @@ pub struct SourceRef {
     pub id: String,
     /// Content digest of the source record.
     pub digest: Digest,
+    /// True when this cites a producer's claim that no record confirmed (wire member
+    /// `unverified`, written only when true). Allowed on UEC-0 and UEC-1 only; the source then
+    /// counts as uncharacterized whatever its `kind`
+    /// ([`UncertaintyStatement::rests_on_uncharacterized_input`]).
+    pub unverified: bool,
 }
 
 /// One uncertainty contributor (data supplied by `UNC.PROP`).
@@ -377,6 +386,9 @@ pub enum StmtError {
     NonCanonical,
     /// A UEC-2 or UEC-3 statement was not built through `UNC.UEC.CLASS`.
     ClassRequiresAssignment,
+    /// A source of a UEC-2 or UEC-3 statement is not confirmed by the caller's records
+    /// ([`UncertaintyStatement::parse_canonical_verified`]).
+    SourceNotVerified,
 }
 
 impl StmtError {
@@ -392,6 +404,7 @@ impl StmtError {
             StmtError::Malformed { .. } => "malformed",
             StmtError::NonCanonical => "non_canonical",
             StmtError::ClassRequiresAssignment => "class_requires_assignment",
+            StmtError::SourceNotVerified => "source_not_verified",
         }
     }
 
@@ -404,7 +417,10 @@ impl StmtError {
             | StmtError::InvalidField { field }
             | StmtError::ClassMismatch { field } => Some(field),
             StmtError::Malformed { detail } => Some(detail),
-            StmtError::UnknownMethod | StmtError::NonCanonical | StmtError::ClassRequiresAssignment => None,
+            StmtError::UnknownMethod
+            | StmtError::NonCanonical
+            | StmtError::ClassRequiresAssignment
+            | StmtError::SourceNotVerified => None,
         }
     }
 }
@@ -461,6 +477,10 @@ impl UncertaintyStatement {
     /// of a valid statement is refused (`non_canonical` when only the bytes differ). A
     /// UEC-2 or UEC-3 statement is accepted only when `provenance.rule_sets` names
     /// `uec-assign@1` (else `class_requires_assignment`).
+    ///
+    /// That marker is self-asserted: anyone can write it. Use this function only for bytes
+    /// this process wrote itself or already verified; bytes from outside (files, network,
+    /// other processes) go through [`Self::parse_canonical_verified`].
     pub fn parse_canonical(input: &[u8]) -> Result<UncertaintyStatement, StmtError> {
         if input.len() > MAX_INPUT_BYTES {
             return Err(StmtError::Malformed { detail: "too_large" });
@@ -471,6 +491,26 @@ impl UncertaintyStatement {
         let stmt = UncertaintyStatement::build(parts, assigned)?;
         if stmt.canonical != input {
             return Err(StmtError::NonCanonical);
+        }
+        Ok(stmt)
+    }
+
+    /// [`Self::parse_canonical`] for untrusted bytes. A UEC-2 or UEC-3 statement is
+    /// accepted only when every source's (kind, digest) is confirmed by `records` under the
+    /// rule of `UNC.UEC.CLASS`: a record exists for the digest and says exactly that kind
+    /// (with no origin, since UEC-2/3 sources are `dcc`, `qualification` or `type_a`);
+    /// otherwise `source_not_verified`. The first unconfirmed source in `id` order fails.
+    /// UEC-0 and UEC-1 statements are returned as parsed. Whether `records` and the stored
+    /// bytes are genuine (signatures) is owned by `TRUST`.
+    pub fn parse_canonical_verified(
+        input: &[u8],
+        records: &dyn crate::uec::SourceRecords,
+    ) -> Result<UncertaintyStatement, StmtError> {
+        let stmt = UncertaintyStatement::parse_canonical(input)?;
+        if matches!(stmt.parts.class, EvidenceClass::Uec2 | EvidenceClass::Uec3)
+            && !stmt.parts.sources.iter().all(|s| crate::uec::confirms(records, s.kind, None, &s.digest))
+        {
+            return Err(StmtError::SourceNotVerified);
         }
         Ok(stmt)
     }
@@ -514,9 +554,10 @@ impl UncertaintyStatement {
         self.parts.sources.iter().any(|s| s.kind == SourceKind::Declared)
     }
     /// True when any source is not characterized (`declared` or `instrument_model`; see
-    /// [`SourceKind::is_characterized`]). Surfaces (`UNC.UEC.EXPL`, `RPT`) must label it.
+    /// [`SourceKind::is_characterized`]) or is marked `unverified`. Surfaces
+    /// (`UNC.UEC.EXPL`, `RPT`) must label it.
     pub fn rests_on_uncharacterized_input(&self) -> bool {
-        self.parts.sources.iter().any(|s| !s.kind.is_characterized())
+        self.parts.sources.iter().any(|s| s.unverified || !s.kind.is_characterized())
     }
     /// The unit (`si:m`, `si:rad` or `si:1`).
     pub fn unit(&self) -> Option<&str> {
@@ -791,6 +832,8 @@ fn check_consistency(p: &StatementParts) -> Result<(), StmtError> {
     }
     if matches!(p.class, EvidenceClass::Uec2 | EvidenceClass::Uec3) {
         mismatch(!p.sources.is_empty() && p.sources.iter().all(|s| s.kind.is_characterized()), "sources")?;
+        // An unverified claim never stands behind a UEC-2/3 value.
+        mismatch(p.sources.iter().all(|s| !s.unverified), "sources.unverified")?;
     }
     let pv = &p.provenance;
     mismatch(pv.principal.is_some() == pv.principal_kind.is_some(), "provenance.principal_kind")?;

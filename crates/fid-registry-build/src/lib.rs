@@ -11,14 +11,19 @@
 //! `duplicate_command` / `tool_name_collision` inside `declarations_invalid`.
 //!
 //! The quantity catalogue is an input: the registry defines no kind or unit
-//! (REQ-CORE.REG.DEF-003). With the `GEO.FRAME.UNITS` catalogue alone the workspace does not
-//! export today, because `fid-jobs` declares `x-quantity: "time"` and a `number` field
-//! without `x-quantity`; that is reported as typed VAL errors, never skipped (see the leaf's
-//! Open questions).
+//! (REQ-CORE.REG.DEF-003). A crate that needs kinds beyond `GEO.FRAME.UNITS` (`length`,
+//! `angle`) publishes them as a quantity-catalogue fragment through one function next to its
+//! declarations ([`QUANTITY_SOURCES`]). [`merge_catalogues`] adds the fragments to
+//! `Catalogue::geo_frame()` in that fixed crate order, add-only, through
+//! `Catalogue::from_json`, and refuses with a typed error a fragment that redefines a GEO kind
+//! (`geo_kind_redefined`), a kind two crates define differently (`quantity_kind_conflict`)
+//! and anything the catalogue checks refuse (`catalogue_invalid`). [`workspace_catalogue`] is
+//! the merged catalogue whose digest the workspace manifest carries.
 
 use fid_canon::CValue;
+use fid_registry::catalogue::{is_kind_name, MAX_CATALOGUE_BYTES};
 use fid_registry::manifest::{export_with, Export, ManifestError, ManifestInForce};
-use fid_registry::{Catalogue, CommandDecl, CommandDef, DefError};
+use fid_registry::{Catalogue, CommandDecl, CommandDef, DefError, QuantityCatalogue};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -57,6 +62,32 @@ pub const SOURCES: [Source; 5] = [
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },
 ];
 
+/// A crate's quantity-catalogue fragment function.
+pub type KindsFn = fn() -> &'static str;
+
+/// One crate that publishes quantity kinds beyond `GEO.FRAME.UNITS`.
+#[derive(Clone, Copy)]
+pub struct QuantitySource {
+    /// The crate name, for errors.
+    pub krate: &'static str,
+    /// Its fragment document: `{"format": "fid-quantity-kinds/1", "kinds": [...]}`, the kinds
+    /// in the `CORE.REG.DEF.SCHEMA` catalogue form, sorted strictly by name.
+    pub kinds: KindsFn,
+}
+
+impl fmt::Debug for QuantitySource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("QuantitySource").field("krate", &self.krate).finish_non_exhaustive()
+    }
+}
+
+/// The `format` of a quantity-catalogue fragment.
+pub const KINDS_FORMAT: &str = "fid-quantity-kinds/1";
+
+/// Every crate on main that publishes quantity kinds, sorted by crate name; the merge order.
+pub const QUANTITY_SOURCES: [QuantitySource; 1] =
+    [QuantitySource { krate: "fid-jobs", kinds: fid_jobs::quantity_catalogue }];
+
 /// Why the build failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BuildError {
@@ -64,29 +95,56 @@ pub enum BuildError {
     Declaration { krate: &'static str, code: &'static str },
     /// The export (validation included) failed.
     Manifest(ManifestError),
+    /// A fragment names a `GEO.FRAME.UNITS` kind (`geo_kind_redefined`); `kind` comes from
+    /// the GEO table, never from input.
+    GeoKindRedefined { krate: &'static str, kind: String },
+    /// Two crates define one kind differently (`quantity_kind_conflict`). `kind` has passed
+    /// the kind-name check (`^[a-z][a-z0-9_]{0,31}$`).
+    KindConflict { kind: String, first: &'static str, second: &'static str },
+    /// A fragment is malformed, or the catalogue with its kinds added is refused
+    /// (`catalogue_invalid`); `catalogue_code` is `bad_catalogue` or the `CatalogueError` code.
+    Catalogue { krate: &'static str, catalogue_code: &'static str },
 }
 
 impl BuildError {
-    /// Stable code: `declaration_build_failed` or the manifest error's code.
+    /// Stable code: `declaration_build_failed`, `geo_kind_redefined`,
+    /// `quantity_kind_conflict`, `catalogue_invalid` or the manifest error's code.
     pub fn code(&self) -> &'static str {
         match self {
             BuildError::Declaration { .. } => "declaration_build_failed",
             BuildError::Manifest(e) => e.code(),
+            BuildError::GeoKindRedefined { .. } => "geo_kind_redefined",
+            BuildError::KindConflict { .. } => "quantity_kind_conflict",
+            BuildError::Catalogue { .. } => "catalogue_invalid",
         }
     }
 
-    /// JSON report: the manifest error's form, or `{"code", "crate", "def_code"}`.
+    /// JSON report: the manifest error's form, or `{"code", "crate", ...}` with
+    /// `def_code`, `kind`, `crates` or `catalogue_code`.
     pub fn to_value(&self) -> CValue {
+        let s = |x: &str| CValue::Str(x.to_string());
+        let mut o = BTreeMap::new();
+        o.insert("code".to_string(), s(self.code()));
         match self {
-            BuildError::Manifest(e) => e.to_value(),
+            BuildError::Manifest(e) => return e.to_value(),
             BuildError::Declaration { krate, code } => {
-                let mut o = BTreeMap::new();
-                o.insert("code".to_string(), CValue::Str(self.code().to_string()));
-                o.insert("crate".to_string(), CValue::Str((*krate).to_string()));
-                o.insert("def_code".to_string(), CValue::Str((*code).to_string()));
-                CValue::Obj(o)
+                o.insert("crate".to_string(), s(krate));
+                o.insert("def_code".to_string(), s(code));
+            }
+            BuildError::GeoKindRedefined { krate, kind } => {
+                o.insert("crate".to_string(), s(krate));
+                o.insert("kind".to_string(), s(kind));
+            }
+            BuildError::KindConflict { kind, first, second } => {
+                o.insert("crates".to_string(), CValue::Arr(vec![s(first), s(second)]));
+                o.insert("kind".to_string(), s(kind));
+            }
+            BuildError::Catalogue { krate, catalogue_code } => {
+                o.insert("catalogue_code".to_string(), s(catalogue_code));
+                o.insert("crate".to_string(), s(krate));
             }
         }
+        CValue::Obj(o)
     }
 }
 
@@ -95,6 +153,13 @@ impl fmt::Display for BuildError {
         match self {
             BuildError::Declaration { krate, code } => write!(f, "declaration_build_failed: {krate}: {code}"),
             BuildError::Manifest(e) => e.fmt(f),
+            BuildError::GeoKindRedefined { krate, kind } => write!(f, "geo_kind_redefined: {krate}: {kind}"),
+            BuildError::KindConflict { kind, first, second } => {
+                write!(f, "quantity_kind_conflict: {kind}: {first}, {second}")
+            }
+            BuildError::Catalogue { krate, catalogue_code } => {
+                write!(f, "catalogue_invalid: {krate}: {catalogue_code}")
+            }
         }
     }
 }
@@ -109,6 +174,94 @@ pub fn declarations(sources: &[Source]) -> Result<Vec<CommandDecl>, BuildError> 
         out.extend(defs.iter().map(CommandDecl::from_def));
     }
     Ok(out)
+}
+
+/// The kinds of one fragment, as (name, kind object), in document order. The fragment is
+/// exactly `{"format", "kinds"}` with `format` [`KINDS_FORMAT`], at most 1 MiB and 5 levels
+/// deep, no duplicate key; each kind an object whose `kind` passes the kind-name check, names
+/// strictly ascending (byte order). The kind objects themselves are checked by
+/// `Catalogue::from_json` once added.
+fn fragment_kinds(src: &QuantitySource) -> Result<Vec<(String, CValue)>, BuildError> {
+    let bad = |catalogue_code: &'static str| BuildError::Catalogue { krate: src.krate, catalogue_code };
+    let bytes = (src.kinds)().as_bytes();
+    if bytes.len() > MAX_CATALOGUE_BYTES {
+        return Err(bad("catalogue_too_large"));
+    }
+    let v = fid_canon::parse_with_limits(bytes, MAX_CATALOGUE_BYTES, 5).map_err(|e| bad(e.code()))?;
+    let CValue::Obj(root) = v else { return Err(bad("bad_catalogue")) };
+    let format_ok = matches!(root.get("format"), Some(CValue::Str(f)) if f == KINDS_FORMAT);
+    let Some(CValue::Arr(kinds)) = root.get("kinds") else { return Err(bad("bad_catalogue")) };
+    if root.len() != 2 || !format_ok {
+        return Err(bad("bad_catalogue"));
+    }
+    let mut out: Vec<(String, CValue)> = Vec::with_capacity(kinds.len());
+    for k in kinds {
+        let name = match k {
+            CValue::Obj(o) => match o.get("kind") {
+                Some(CValue::Str(n)) if is_kind_name(n) => n.clone(),
+                _ => return Err(bad("bad_catalogue")),
+            },
+            _ => return Err(bad("bad_catalogue")),
+        };
+        if out.last().is_some_and(|(prev, _)| *prev >= name) {
+            return Err(bad("bad_catalogue"));
+        }
+        out.push((name, k.clone()));
+    }
+    Ok(out)
+}
+
+/// `Catalogue::geo_frame()` with the kinds of `sources` added, in source order, add-only.
+///
+/// A fragment kind named like a GEO kind is `geo_kind_redefined` (even when identical); a kind
+/// an earlier crate defined with another value is `quantity_kind_conflict` (an identical
+/// definition is accepted once); after each crate the whole catalogue is re-read with
+/// `Catalogue::from_json`, so its shape rules, the GEO check and symbol uniqueness across
+/// kinds apply, and a refusal is `catalogue_invalid` naming that crate. The result does not
+/// depend on the order of non-conflicting sources: the catalogue is sorted by kind name.
+pub fn merge_catalogues(sources: &[QuantitySource]) -> Result<Catalogue, BuildError> {
+    let geo = Catalogue::geo_frame()
+        .map_err(|e| BuildError::Catalogue { krate: "fid-geo-frame", catalogue_code: e.code() })?;
+    let geo_names: Vec<String> = geo.kind_names().into_iter().map(str::to_string).collect();
+    let CValue::Obj(mut doc) = geo.to_value() else {
+        return Err(BuildError::Catalogue { krate: "fid-geo-frame", catalogue_code: "bad_catalogue" });
+    };
+    let mut kinds: BTreeMap<String, (CValue, &'static str)> = BTreeMap::new();
+    if let Some(CValue::Arr(base)) = doc.get("kinds") {
+        for k in base {
+            if let CValue::Obj(o) = k {
+                if let Some(CValue::Str(n)) = o.get("kind") {
+                    kinds.insert(n.clone(), (k.clone(), "fid-geo-frame"));
+                }
+            }
+        }
+    }
+    let mut merged = geo;
+    for src in sources {
+        for (name, value) in fragment_kinds(src)? {
+            if let Some(g) = geo_names.iter().find(|g| **g == name) {
+                return Err(BuildError::GeoKindRedefined { krate: src.krate, kind: g.clone() });
+            }
+            match kinds.get(&name) {
+                Some((have, _)) if *have == value => {}
+                Some(&(_, first)) => return Err(BuildError::KindConflict { kind: name, first, second: src.krate }),
+                None => {
+                    kinds.insert(name, (value, src.krate));
+                }
+            }
+        }
+        doc.insert("kinds".to_string(), CValue::Arr(kinds.values().map(|(v, _)| v.clone()).collect()));
+        let bad = |catalogue_code: &'static str| BuildError::Catalogue { krate: src.krate, catalogue_code };
+        let bytes = fid_canon::to_canonical_bytes(&CValue::Obj(doc.clone())).map_err(|e| bad(e.code()))?;
+        merged = Catalogue::from_json(&bytes).map_err(|e| bad(e.code()))?;
+    }
+    Ok(merged)
+}
+
+/// [`merge_catalogues`] over [`QUANTITY_SOURCES`]: the catalogue the workspace manifest is
+/// validated against and whose digest it carries.
+pub fn workspace_catalogue() -> Result<Catalogue, BuildError> {
+    merge_catalogues(&QUANTITY_SOURCES)
 }
 
 /// Collects, validates and exports `sources` against `catalogue`.

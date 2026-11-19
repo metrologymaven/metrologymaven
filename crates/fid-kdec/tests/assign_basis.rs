@@ -35,7 +35,12 @@ fn parts(method: Method, sources: &[(&str, SourceKind)]) -> StatementParts {
     p.model = Some(ModelRef { id: "um:m".to_owned(), semver: "1.0.0".to_owned(), digest: digest_of("um:m") });
     p.sources = sources
         .iter()
-        .map(|(id, kind)| SourceRef { kind: *kind, id: (*id).to_owned(), digest: digest_of(&format!("source:{id}")) })
+        .map(|(id, kind)| SourceRef {
+            kind: *kind,
+            id: (*id).to_owned(),
+            digest: digest_of(&format!("source:{id}")),
+            unverified: false,
+        })
         .collect();
     if method == Method::Declared {
         p.provenance.principal = Some("person:alice".to_owned());

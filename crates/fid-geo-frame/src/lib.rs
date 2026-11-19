@@ -10,13 +10,21 @@
 //!   quaternion, axis-angle, 12 Euler sequences intrinsic and extrinsic) (`GEO.FRAME.XFORM`).
 //! - [`tree`]: the frame tree with one world root, cycle-free edits, chain resolution through
 //!   the lowest common ancestor in a pinned order, and the tree digest (`GEO.FRAME.TREE`).
+//! - [`apply`]: moving a point set, cloud or mesh into another frame (points and scan
+//!   origins by the full transform, normals by the rotation only), and the frame-mismatch
+//!   guard every binary geometric operation calls (`GEO.FRAME.APPLY`).
 
+pub mod apply;
 mod bigint;
 pub mod rotation;
 pub mod tree;
 pub mod units;
 pub mod xform;
 
+pub use apply::{
+    require_same_frame, require_same_frame_ref, transform_element, transform_element_with_provenance, GeoError,
+    TransformProvenance, Transformed,
+};
 pub use rotation::{AxisAngle, Euler, EulerKind, EulerSeq, Quaternion};
 pub use tree::{Frame, FrameError, FrameId, FrameKind, FrameTree};
 pub use units::{AngleUnit, AuthoredQuantity, LengthUnit, Unit, UnitsError};

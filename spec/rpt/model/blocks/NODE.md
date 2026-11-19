@@ -16,7 +16,7 @@ uses_artifacts: [VIZ.VIEW.NAMED, VIZ.CAPTURE.SHOT]
 cli: [fid report set-table-block, fid report set-chart-block, fid report set-view-block, fid report set-text-block, fid report set-image-block]
 mcp: [report_set_table_block, report_set_chart_block, report_set_view_block, report_set_text_block, report_set_image_block]
 journal: [report.set_table_block@1, report.set_chart_block@1, report.set_view_block@1, report.set_text_block@1, report.set_image_block@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.BLOCKS: Content block types
@@ -54,6 +54,7 @@ The standard block kinds a report is built from, each with a versioned payload s
 - **REQ-RPT.MODEL.BLOCKS-009** A `text` block's bound fields shall be resolved only through `RPT.MODEL.FMT` and shall never evaluate user text as an expression or instruction (CONSTITUTION C6).
 - **REQ-RPT.MODEL.BLOCKS-010** A block kind whose payload holds values shall declare every value field in `value_fields`, and each such field shall hold a `value_binding@1` (record ID, record digest, field pointer, statement digest) and never a literal value, number or pre-formatted value text (`RPT.MODEL.DOC` refuses one with `report.value_literal_refused`). Chart blocks are out of this rule: their numbers come through series bindings (REQ-RPT.MODEL.BLOCKS.CHART-005).
 - **REQ-RPT.MODEL.BLOCKS-011** When a block renders a bound value, it shall show the value text produced by `RPT.MODEL.FMT` from the resolved binding together with that value's own labels (`Claimed`, `DeclaredInput`, `UncharacterizedInput`) and markers, and shall never drop, merge or move a label from one value to another.
+- **REQ-RPT.MODEL.BLOCKS-012** Block payloads shall hold no JSON numbers; integers shall be decimal strings (REQ-CORE.JRN-003), and a payload holding a JSON number shall be rejected by the registry.
 
 ## Interfaces
 
@@ -74,7 +75,7 @@ TABLE (table block and column model), CHART (chart block), VIEW (view block and 
 
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
-| RPT.MODEL.BLOCKS.TABLE | Characteristic table block with column and row customisation (leaf) | 001 002 003 010 011 | GOM.RPT.04, PW.RPT.03, SA.RPT.04 |
-| RPT.MODEL.BLOCKS.CHART | Chart block referencing ChartSeries (leaf, P1b) | 001 004 | GOM.RPT.05, PCD.RPT.03, SA.RPT.02 |
-| RPT.MODEL.BLOCKS.VIEW | Restorable 3D view block (leaf) | 001 005 006 | GOM.RPT.03, PW.RPT.03 |
-| RPT.MODEL.BLOCKS.TEXT | Text, image, header and footer blocks (leaf) | 001 007 008 009 010 011 | PCD.RPT.03 |
+| RPT.MODEL.BLOCKS.TABLE | Characteristic table block with column and row customisation (leaf) | 001 002 003 010 011 012 | GOM.RPT.04, PW.RPT.03, SA.RPT.04 |
+| RPT.MODEL.BLOCKS.CHART | Chart block referencing ChartSeries (leaf, P1b) | 001 004 012 | GOM.RPT.05, PCD.RPT.03, SA.RPT.02 |
+| RPT.MODEL.BLOCKS.VIEW | Restorable 3D view block (leaf) | 001 005 006 012 | GOM.RPT.03, PW.RPT.03 |
+| RPT.MODEL.BLOCKS.TEXT | Text, image, header and footer blocks (leaf) | 001 007 008 009 010 011 012 | PCD.RPT.03 |

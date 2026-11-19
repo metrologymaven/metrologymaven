@@ -56,6 +56,13 @@ def src(kind, ident):
     return {"kind": kind, "id": ident, "digest": d("source:" + ident)}
 
 
+def unverified(s):
+    """A source citing a claim no record confirmed: member "unverified":"true" (UEC-0/1 only)."""
+    t = dict(s)
+    t["unverified"] = "true"
+    return t
+
+
 def stmt(cls, **kw):
     s = {"schema": "uncertainty_statement@1", "class": cls, "sources": [], "contributors": [], "provenance": PROV}
     s.update(kw)
@@ -107,6 +114,20 @@ VALID = {
                       "cross_terms_truncated": "false"},
         selection_rule="unc-select@1",
         estimate_convention="est-policy@1",
+    ),
+    # Honest UEC-1 over an unverified claim: the dcc claim of probe_cal has no confirming
+    # record, so it is cited with "unverified":"true" and counts as uncharacterized.
+    "uec1_lpu_unverified": stmt(
+        "UEC-1",
+        method="LPU",
+        unit=UNIT,
+        expanded={"U": h(3e-6), "k": h(2.0)},
+        model=MODEL,
+        sources=[src("dcc", "dcc:ring-gauge-25"), unverified(src("dcc", "dcc:probe-cal-7"))],
+        contributors=[
+            {"input_id": "probe_cal", "sensitivity": h(1.0), "u_contrib": h(1.2e-6), "variance_share": h(0.64)},
+            {"input_id": "ref_cal", "sensitivity": h(1.0), "u_contrib": h(0.9e-6), "variance_share": h(0.36)},
+        ],
     ),
     "uec1_mcm": stmt(
         "UEC-1",
@@ -229,6 +250,15 @@ INVALID = {
     "uec2_declared_source": (canon(withv(V["uec2_lpu"], sources=sorted(
         V["uec2_lpu"]["sources"] + [src("declared", "decl:guess")], key=lambda x: x["id"]))),
         "class_mismatch", "sources"),
+    "uec2_unverified_source": (canon(withv(V["uec2_lpu"], sources=[
+        unverified(x) if x["id"] == "dcc:ring-gauge-25" else x for x in V["uec2_lpu"]["sources"]])),
+        "class_mismatch", "sources.unverified"),
+    "unverified_false": (canon(withv(V["uec1_lpu"], sources=[
+        withv(x, unverified="false") if x["id"] == "dcc:ring-gauge-25" else x for x in V["uec1_lpu"]["sources"]])),
+        "non_canonical", "-"),
+    "unverified_bad_value": (canon(withv(V["uec1_lpu_unverified"], sources=[
+        withv(x, unverified="yes") if "unverified" in x else x for x in V["uec1_lpu_unverified"]["sources"]])),
+        "invalid_field", "sources.unverified"),
     "uec2_no_source": (canon(withv(V["uec2_mcm"], sources=[])), "class_mismatch", "sources"),
     "uec1_with_reason": (canon(withv(V["uec1_lpu"], uec0_reason="u_missing")), "class_mismatch", "uec0_reason"),
     "agent_not_proposal": (canon(withv(V["uec1_spec_derived"], provenance=withv(

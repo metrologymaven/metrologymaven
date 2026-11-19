@@ -52,13 +52,21 @@ pub enum AlignError {
     Edge(EdgeError),
     /// The ID service refused.
     Id(IdError),
+    /// A residual page larger than the cap (ALN.QA.REPORT REQ-006). Holds the asked limit.
+    PageTooLarge(u64),
+    /// A residual page offset past the end of the report.
+    InvalidCursor { offset: u64, len: u64 },
+    /// The caller paged from a report digest that is no longer the alignment's report.
+    ReportChanged,
+    /// A residual page after the first (`offset > 0`) without the report `digest` it pages.
+    CursorUnpinned,
     /// A fault that cannot be the caller's mistake.
     Internal(&'static str),
 }
 
 impl AlignError {
     /// Stable code. `method_unavailable`, `input_missing` and `not_found` are the codes the
-    /// leaf spec names; solver codes pass through unchanged; the rest refuse malformed input.
+    /// leaf spec names (`page_too_large` and `not_found` for ALN.QA.REPORT); solver codes pass through unchanged; the rest refuse malformed input.
     pub fn code(&self) -> &str {
         match self {
             AlignError::MethodUnavailable(_) => "method_unavailable",
@@ -79,6 +87,10 @@ impl AlignError {
             AlignError::InputLimit(_) => "input_limit",
             AlignError::Edge(e) => e.code(),
             AlignError::Id(e) => e.code(),
+            AlignError::PageTooLarge(_) => "page_too_large",
+            AlignError::InvalidCursor { .. } => "invalid_cursor",
+            AlignError::ReportChanged => "report_changed",
+            AlignError::CursorUnpinned => "cursor_unpinned",
             AlignError::Internal(_) => "internal",
         }
     }
@@ -114,7 +126,12 @@ impl fmt::Display for AlignError {
             AlignError::BadQuantity(e) => write!(f, ": {e}"),
             AlignError::Edge(e) => write!(f, ": {e}"),
             AlignError::Id(e) => write!(f, ": {e}"),
-            AlignError::Solver(_) | AlignError::DigestMismatch => Ok(()),
+            AlignError::PageTooLarge(n) => write!(f, ": limit {n}"),
+            AlignError::InvalidCursor { offset, len } => write!(f, ": offset {offset} past {len} entries"),
+            AlignError::Solver(_)
+            | AlignError::DigestMismatch
+            | AlignError::ReportChanged
+            | AlignError::CursorUnpinned => Ok(()),
         }
     }
 }

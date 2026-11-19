@@ -14,7 +14,7 @@
 //! `provenance.proposal` and `provenance.rule_sets` are always written (arrays may be
 //! empty). Member names: `schema`, `class`, `uec0_reason`, `method`, `unit`, `u_std`,
 //! `expanded` `{U, k}`, `interval` `{low, high, p, kind}`, `model` `{id, semver, digest}`,
-//! `sources` `[{kind, id, digest}]`, `contributors` `[{input_id, sensitivity, u_contrib,
+//! `sources` `[{kind, id, digest, unverified}]` (`unverified` only when `"true"`), `contributors` `[{input_id, sensitivity, u_contrib,
 //! variance_share}]`, `lpu_validated_by_mc`, `nonlinearity` `{version, outcome, v1, v2,
 //! ratio, probed_inputs, probed_pairs, cross_terms_truncated, reason}`, `selection_rule`,
 //! `estimate_convention`, `provenance` `{rule_sets, principal, principal_kind, proposal,
@@ -88,11 +88,14 @@ pub(crate) fn to_canonical(p: &StatementParts) -> Result<Vec<u8>, StmtError> {
         .sources
         .iter()
         .map(|x| {
-            Json::Obj(vec![
-                ("kind".into(), s(x.kind.wire())),
-                ("id".into(), s(&x.id)),
-                ("digest".into(), s(x.digest.as_str())),
-            ])
+            let mut o = Members::new();
+            put(&mut o, "kind", s(x.kind.wire()));
+            put(&mut o, "id", s(&x.id));
+            put(&mut o, "digest", s(x.digest.as_str()));
+            if x.unverified {
+                put(&mut o, "unverified", boolean(true));
+            }
+            Json::Obj(o)
         })
         .collect();
     put(&mut m, "sources", Json::Arr(sources));
@@ -282,8 +285,11 @@ pub(crate) fn from_json(j: Json) -> Result<StatementParts, StmtError> {
             let kind = wire_of(e.need("kind")?, "sources.kind", SourceKind::from_wire)?;
             let id = string(e.need("id")?)?;
             let digest = digest_of(e.need("digest")?, "sources.digest")?;
+            // Absent means false; a written `"false"` re-serializes without the member and
+            // so fails `non_canonical`.
+            let unverified = opt(e.take("unverified"), |v| bool_of(v, "sources.unverified"))?.unwrap_or(false);
             e.finish()?;
-            Ok(SourceRef { kind, id, digest })
+            Ok(SourceRef { kind, id, digest, unverified })
         })
         .collect::<Result<_, StmtError>>()?;
     p.contributors = array(o.need("contributors")?)?

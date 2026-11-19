@@ -33,11 +33,14 @@ uec0_with_method.json uec0_has_value method
 uec1_with_reason.json class_mismatch uec0_reason
 uec2_declared_source.json class_mismatch sources
 uec2_no_source.json class_mismatch sources
+uec2_unverified_source.json class_mismatch sources.unverified
 uec3_lpu.json class_mismatch method
 unit_not_si.json invalid_field unit
 unknown_member.json malformed unknown_member
 unknown_method.json unknown_method -
 unsorted_sources.json non_canonical -
+unverified_bad_value.json invalid_field sources.unverified
+unverified_false.json non_canonical -
 uppercase_hex.json invalid_field expanded.U
 wrong_schema.json malformed schema
 zero_U.json invalid_number expanded.U

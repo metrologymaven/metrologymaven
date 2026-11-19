@@ -1,0 +1,41 @@
+{
+  "schema_version": 0,
+  "pages": [
+    {
+      "id": "019a9ec0-6415-7000-8000-000000000016",
+      "blocks": [
+        {
+          "version": 1,
+          "kind": "text",
+          "id": "019a9ec0-6416-7000-8000-000000000017",
+          "data": {
+            "text": "Deviation summary"
+          }
+        },
+        {
+          "version": 2,
+          "slot": {
+            "rule": {
+              "outcome": "fail"
+            },
+            "kind": "characteristics"
+          },
+          "repeat_header": 2,
+          "kind": "table",
+          "id": "019a9ec0-6417-7000-8000-000000000018",
+          "data": {
+            "columns": [
+              {
+                "label": "Dev.",
+                "key": "dev"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "name": "Legacy deviation summary",
+  "id": "019a9ec0-6414-7000-8000-000000000015",
+  "format": "fid.report-template"
+}
