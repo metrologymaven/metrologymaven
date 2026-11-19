@@ -1,0 +1,25 @@
+//! KRN.NUM.LINT.DATA AC-2..AC-4: forms of the planted reference value 0.123456789012. A `//~`
+//! marker names each expected finding as RULE=token; other lines must yield nothing.
+pub const A: f64 = 0.123_456_789_012; //~ KNP1-DATA-VALUE=0.123_456_789_012
+pub const B: f64 = 0.123456789012f64; //~ KNP1-DATA-VALUE=0.123456789012f64
+pub const C: f64 = f64::from_bits(0x3fbf9add37469512); //~ KNP1-DATA-HEX=0x3fbf9add37469512
+pub const D: f64 = 0.12345679; // AC-3: 8 significant digits and other bits
+pub const E: f64 = 1.23456789012e-1; //~ KNP1-DATA-VALUE=1.23456789012e-1
+pub const F: f64 = -0.123456789012; //~ KNP1-DATA-VALUE=0.123456789012
+pub const G: f64 = 0.1234567890120; //~ KNP1-DATA-VALUE=0.1234567890120
+pub const H: f64 = 0.12345678901199999555; //~ KNP1-DATA-HEX=0.12345678901199999555
+pub const I: u64 = 4593560419847017746; //~ KNP1-DATA-HEX=4593560419847017746
+pub const J: f64 = 1.0;
+pub const K: &str = "data/TRACIM-LSQ-CIRCLE-007.JSON"; //~ KNP1-DATA-FILE="data
+pub const L: &str = "tracim.lsq.circle.007"; //~ KNP1-DATA-ID="tracim
+pub const M: &str = concat!("tracim-lsq-", "circle-007.json"); //~ KNP1-DATA-FILE="tracim
+pub const N: &str = "tracim\x2dlsq-circle-007.json"; //~ KNP1-DATA-FILE="tracim
+pub const O: &[u8] = br"tracim-lsq-circle-007.json"; //~ KNP1-DATA-FILE=br"
+pub const P: f64 = 1234.567_890_123_45; //~ KNP1-DATA-VALUE=1234.567_890_123_45
+pub const Q: f32 = 0.123456789012f32; //~ KNP1-DATA-VALUE=0.123456789012f32
+pub const R: f64 = 0.987654321098;
+macro_rules! planted {
+    () => {
+        0.123456789012 //~ KNP1-DATA-VALUE=0.123456789012
+    };
+}
