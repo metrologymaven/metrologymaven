@@ -1,0 +1,123 @@
+{
+  "license": "CC-BY-4.0",
+  "node": "CORE.BUS.PRIN",
+  "note": "Hand-labelled from REQ-002..008, REQ-012 and AC-1, AC-2, AC-7. Synthetic identities. session is the surface label only; the bus issues the session key. The params of each call are what a client sent; they must have no effect.",
+  "channels": [
+    {
+      "name": "gui",
+      "kind": "gui",
+      "session": "desk-1",
+      "identity": { "subject": "alice", "os_user": "alice" },
+      "params": {},
+      "expect": { "kind": "human", "id": "alice", "on_behalf_of": null }
+    },
+    {
+      "name": "cli",
+      "kind": "cli",
+      "session": "cli-1",
+      "identity": { "subject": "alice", "os_user": "alice" },
+      "params": {},
+      "expect": { "kind": "script", "id": "alice", "on_behalf_of": null }
+    },
+    {
+      "name": "python",
+      "kind": "python",
+      "session": "py-1",
+      "identity": { "subject": "alice", "os_user": "alice" },
+      "params": {},
+      "expect": { "kind": "script", "id": "alice", "on_behalf_of": null }
+    },
+    {
+      "name": "control",
+      "kind": "control",
+      "session": "ctl-1",
+      "identity": { "subject": "alice", "os_user": "alice" },
+      "params": {},
+      "expect": { "kind": "script", "id": "alice", "on_behalf_of": null }
+    },
+    {
+      "name": "mcp",
+      "kind": "mcp",
+      "session": "mcp-1",
+      "identity": {
+        "subject": "mcp-client:desktop-assistant",
+        "os_user": "alice",
+        "client_id": "desktop-assistant",
+        "self_asserted": { "client_name": "Trusted Human Console", "model_name": "human" }
+      },
+      "params": { "principal": { "kind": "human" } },
+      "expect": { "kind": "agent", "id": "mcp-client:desktop-assistant", "on_behalf_of": null }
+    },
+    {
+      "name": "server_mcp",
+      "kind": "server_mcp",
+      "session": "smcp-1",
+      "identity": { "subject": "server-mcp:token-9", "client_id": "remote-agent" },
+      "params": { "actor": "server-user:carol", "on_behalf_of": "server-user:carol" },
+      "expect": { "kind": "agent", "id": "server-mcp:token-9", "on_behalf_of": null }
+    },
+    {
+      "name": "service",
+      "kind": "service",
+      "session": "svc-1",
+      "identity": { "subject": "svc:nightly-backup" },
+      "params": { "principal": { "kind": "system" } },
+      "expect": { "kind": "service", "id": "svc:nightly-backup", "on_behalf_of": null }
+    },
+    {
+      "name": "device",
+      "kind": "device",
+      "session": "dev-1",
+      "identity": { "subject": "device:cmm-01" },
+      "params": {},
+      "expect": { "kind": "device", "id": "device:cmm-01", "on_behalf_of": null }
+    },
+    {
+      "name": "internal",
+      "kind": "internal",
+      "session": "core-1",
+      "identity": { "subject": "core:recompute", "acting_for": { "kind": "human", "id": "alice" } },
+      "params": {},
+      "expect": { "kind": "system", "id": "core:recompute", "on_behalf_of": { "kind": "human", "id": "alice" } }
+    },
+    {
+      "name": "server_session",
+      "kind": "server_session",
+      "session": "web-7f3a",
+      "identity": { "subject": "server-session:7f3a", "acting_for": { "kind": "human", "id": "server-user:carol" } },
+      "params": { "principal": { "kind": "human", "id": "server-user:carol" } },
+      "expect": { "kind": "script", "id": "server-session:7f3a", "on_behalf_of": { "kind": "human", "id": "server-user:carol" } }
+    },
+    {
+      "name": "server_service",
+      "kind": "server_service",
+      "session": "ssvc-1",
+      "identity": { "subject": "server-service:ci-bot" },
+      "params": {},
+      "expect": { "kind": "service", "id": "server-service:ci-bot", "on_behalf_of": null }
+    }
+  ],
+  "acting_for_ignored": [
+    {
+      "name": "mcp_acting_for",
+      "kind": "mcp",
+      "session": "mcp-2",
+      "identity": { "subject": "mcp-client:x", "acting_for": { "kind": "human", "id": "alice" } },
+      "expect": { "kind": "agent", "id": "mcp-client:x", "on_behalf_of": null }
+    },
+    {
+      "name": "cli_acting_for",
+      "kind": "cli",
+      "session": "cli-2",
+      "identity": { "subject": "alice", "os_user": "alice", "acting_for": { "kind": "human", "id": "root" } },
+      "expect": { "kind": "script", "id": "alice", "on_behalf_of": null }
+    }
+  ],
+  "unauthenticated": [
+    { "name": "cli_no_identity", "kind": "cli", "session": "cli-9", "identity": null },
+    { "name": "mcp_no_identity", "kind": "mcp", "session": "mcp-9", "identity": null },
+    { "name": "gui_no_identity", "kind": "gui", "session": "desk-9", "identity": null },
+    { "name": "server_session_no_user", "kind": "server_session", "session": "web-9", "identity": { "subject": "server-session:9" } },
+    { "name": "internal_no_trigger", "kind": "internal", "session": "core-9", "identity": { "subject": "core:replay" } }
+  ]
+}

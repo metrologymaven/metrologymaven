@@ -417,6 +417,9 @@ name = "fid-bus"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-journal",
+ "fid-types",
+ "unicode-normalization",
 ]
 
 [[package]]

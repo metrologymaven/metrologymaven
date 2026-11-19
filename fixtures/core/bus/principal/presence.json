@@ -1,0 +1,17 @@
+{
+  "license": "CC-BY-4.0",
+  "node": "CORE.BUS.PRIN",
+  "note": "Hand-labelled scripted outcomes of a fake HumanPresence for a CLI session of OS user alice (REQ-009, REQ-010, AC-4, AC-5). elapsed_ms is the monotonic time between asking and the answer; the deadline is 120000 ms inclusive.",
+  "session_os_user": "alice",
+  "cases": [
+    { "name": "confirmed_gui_prompt", "outcome": { "result": "confirmed", "os_user": "alice", "method": "gui_prompt" }, "elapsed_ms": 4000, "expect": "ok" },
+    { "name": "confirmed_os_presence", "outcome": { "result": "confirmed", "os_user": "alice", "method": "os_presence" }, "elapsed_ms": 1500, "expect": "ok" },
+    { "name": "confirmed_at_deadline", "outcome": { "result": "confirmed", "os_user": "alice", "method": "gui_prompt" }, "elapsed_ms": 120000, "expect": "ok" },
+    { "name": "declined", "outcome": { "result": "declined" }, "elapsed_ms": 3000, "expect": "upgrade_refused/declined" },
+    { "name": "timed_out", "outcome": { "result": "timed_out" }, "elapsed_ms": 120000, "expect": "upgrade_refused/timeout" },
+    { "name": "confirmed_after_deadline", "outcome": { "result": "confirmed", "os_user": "alice", "method": "gui_prompt" }, "elapsed_ms": 120001, "expect": "upgrade_refused/timeout" },
+    { "name": "other_user", "outcome": { "result": "confirmed", "os_user": "mallory", "method": "gui_prompt" }, "elapsed_ms": 2000, "expect": "upgrade_refused/user_mismatch" },
+    { "name": "case_only_other_user", "outcome": { "result": "confirmed", "os_user": "Alice", "method": "os_presence" }, "elapsed_ms": 2000, "expect": "upgrade_refused/user_mismatch" },
+    { "name": "clock_went_backwards", "outcome": { "result": "confirmed", "os_user": "alice", "method": "gui_prompt" }, "elapsed_ms": -1, "expect": "upgrade_refused/timeout" }
+  ]
+}

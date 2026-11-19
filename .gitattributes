@@ -127,6 +127,9 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# KRN.NUM.FMT.ANG fixtures: pi digits and golden outputs whose SHA-256 is checked byte for byte by
+# make_ang_fixtures.py --check and the tests; never convert line endings.
+fixtures/num/fmt/ang-*.txt -text
 # KRN.NUM.LA.MAT fixtures: result bits and digests are compared byte for byte by --check.
 fixtures/num/la/** -text
 # KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
@@ -149,5 +152,7 @@ crates/fid-kernel-wasm/wasm-imports.allow -text
 # RPT.OUTPUT.PDF.TEXT: fonts and byte-compared golden outputs (PDFs, CMap, text objects).
 crates/fid-report-pdf/assets/fonts/*.ttf binary
 fixtures/rpt/output/text/** -text
+# CORE.BUS.PRIN fixtures: hand-labelled channel descriptors, presence outcomes and identifier cases; never convert line endings.
+fixtures/core/bus/principal/** -text
 # UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
 fixtures/unc/stmt/** -text

@@ -1,0 +1,35 @@
+{
+  "license": "CC-BY-4.0",
+  "node": "CORE.BUS.PRIN",
+  "note": "Hand-labelled identifier cases. Rules: 1 to 256 bytes; no character of general category Cc (control_char), Zl or Zp (separator), Co (private_use) or Cf (format_char), checked in that order per character; then NFC (not_nfc). Characters are written as JSON escapes so the bytes are unambiguous.",
+  "cases": [
+    { "name": "plain", "text": "alice", "expect": "ok" },
+    { "name": "prefixed", "text": "server-user:carol", "expect": "ok" },
+    { "name": "space_is_zs", "text": "a b", "expect": "ok" },
+    { "name": "nfc_e_acute", "text": "émile", "expect": "ok" },
+    { "name": "greek", "text": "Ωmega", "expect": "ok" },
+    { "name": "empty", "text": "", "expect": "empty" },
+    { "name": "nul", "text": "ali\u0000ce", "expect": "control_char" },
+    { "name": "newline", "text": "alice\n", "expect": "control_char" },
+    { "name": "nel_c1", "text": "a\u0085b", "expect": "control_char" },
+    { "name": "delete", "text": "bob\u007f", "expect": "control_char" },
+    { "name": "rlo_bidi_override", "text": "alice‮", "expect": "format_char" },
+    { "name": "lri_bidi_isolate", "text": "⁦x", "expect": "format_char" },
+    { "name": "zero_width_space", "text": "a​b", "expect": "format_char" },
+    { "name": "zero_width_joiner", "text": "a‍b", "expect": "format_char" },
+    { "name": "bom", "text": "﻿alice", "expect": "format_char" },
+    { "name": "soft_hyphen", "text": "a­b", "expect": "format_char" },
+    { "name": "word_joiner", "text": "a⁠b", "expect": "format_char" },
+    { "name": "tag_language", "text": "x󠀁", "expect": "format_char" },
+    { "name": "tag_space", "text": "x󠀠", "expect": "format_char" },
+    { "name": "line_separator", "text": "a b", "expect": "separator" },
+    { "name": "paragraph_separator", "text": "a b", "expect": "separator" },
+    { "name": "private_use_bmp_first", "text": "a", "expect": "private_use" },
+    { "name": "private_use_bmp_last", "text": "", "expect": "private_use" },
+    { "name": "private_use_plane_15", "text": "a󰀀", "expect": "private_use" },
+    { "name": "private_use_plane_16", "text": "a􀀀", "expect": "private_use" },
+    { "name": "nfd_e_acute", "text": "émile", "expect": "not_nfc" },
+    { "name": "a_combining_ring", "text": "Å", "expect": "not_nfc" },
+    { "name": "angstrom_sign", "text": "Å", "expect": "not_nfc" }
+  ]
+}
