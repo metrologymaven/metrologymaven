@@ -82,6 +82,7 @@ macro_rules! rule_codes {
 
 rule_codes! {
     BadAlgorithm => "bad_algorithm",
+    BadDialect => "bad_dialect",
     BadEnum => "bad_enum",
     BadId => "bad_id",
     BadNumber => "bad_number",
@@ -121,11 +122,12 @@ pub struct ValidationError {
     /// The declaration's `major` when it is an integer in `0..=u32::MAX`, else 0.
     pub major: u32,
     pub rule: RuleCode,
-    /// RFC 6901 pointer into the declaration, or `None` when the error concerns the
-    /// declaration as a whole. Each segment is cut to 128 bytes and every character outside
-    /// printable ASCII is written as `\u{..}`, so the pointer is printable ASCII (`to_value`
-    /// escapes again, which changes nothing for pointers made here); the whole is cut to 512
-    /// bytes.
+    /// A display-safe pointer into the declaration, or `None` when the error concerns the
+    /// declaration as a whole. It is RFC 6901 (`~0`, `~1`) for printable ASCII keys; every
+    /// other character is written as `\u{..}`, so for such keys it is not an exact RFC 6901
+    /// pointer. Each segment is escaped first and then cut to 128 bytes, the whole to 512, and
+    /// no cut splits an escape. The pointer is printable ASCII (`to_value` escapes again,
+    /// which changes nothing for pointers made here).
     pub field: Option<String>,
     pub message: String,
 }
@@ -434,17 +436,42 @@ fn check_literal(lit: &[u8]) -> Result<(), InputError> {
     let Ok(v) = text.parse::<f64>() else { return Ok(()) };
     let mantissa = text.split(['e', 'E']).next().unwrap_or_default();
     let nonzero = mantissa.bytes().any(|c| matches!(c, b'1'..=b'9'));
-    // An exponent-free integer beyond 2^53 in magnitude would round when parsed; compared as
-    // digit strings, so the comparison itself cannot round.
-    let too_big = !text.contains(['.', 'e', 'E']) && {
-        let digits = text.trim_start_matches('-').trim_start_matches('0');
-        let limit = "9007199254740992";
-        digits.len() > limit.len() || (digits.len() == limit.len() && digits > limit)
-    };
-    if !v.is_finite() || (nonzero && (v == 0.0 || v.is_subnormal())) || too_big {
+    if !v.is_finite() || (nonzero && (v == 0.0 || v.is_subnormal())) || above_2_53(text) {
         return Err(InputError::BadNumber(cut(text, KEEP)));
     }
     Ok(())
+}
+
+/// Whether the exact decimal value of a literal (`-`, digits, optional `.` digits, optional
+/// exponent) exceeds 2^53 in magnitude, in any notation (`9007199254740993`,
+/// `9007199254740993.0`, `9007199254740993e0`, `1e300`). Above 2^53 an integer may round and
+/// a non-integer always does, so all are refused. Decided on digit strings, never through
+/// `f64`. A literal whose exponent does not fit `i64` counts as too big (fail closed).
+fn above_2_53(text: &str) -> bool {
+    const LIMIT: &[u8] = b"9007199254740992";
+    let body = text.trim_start_matches('-');
+    let (mantissa, exp) = match body.find(['e', 'E']) {
+        Some(i) => (body.get(..i).unwrap_or_default(), body.get(i + 1..).unwrap_or_default()),
+        None => (body, "0"),
+    };
+    let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    // Significant digits D and the count of integer digits of D x 10^(exp - frac.len()).
+    let all: Vec<u8> = int.bytes().chain(frac.bytes()).collect();
+    let Some(first) = all.iter().position(|&c| c != b'0') else { return false };
+    let digits = all.get(first..).unwrap_or_default();
+    let Ok(exp) = exp.parse::<i64>() else { return true };
+    let (Ok(n_digits), Ok(n_frac)) = (i64::try_from(digits.len()), i64::try_from(frac.len())) else { return true };
+    let int_len = n_digits.saturating_add(exp).saturating_sub(n_frac);
+    if int_len != 16 {
+        return int_len > 16;
+    }
+    // Exactly 16 integer digits: compare them, then any non-zero fraction digit exceeds.
+    let mut head = [b'0'; 16];
+    for (h, d) in head.iter_mut().zip(digits) {
+        *h = *d;
+    }
+    let rest = digits.get(LIMIT.len()..).unwrap_or_default();
+    head.as_slice() > LIMIT || (head.as_slice() == LIMIT && rest.iter().any(|&c| c != b'0'))
 }
 
 // ------------------------------------------------------------------ error sink
@@ -765,17 +792,46 @@ struct Frame<'a> {
     kids: Kids<'a>,
 }
 
-/// RFC 6901 pointer, each segment cut to 128 bytes and the whole to 512.
+/// A display-safe JSON pointer: RFC 6901 (`~0`, `~1`) for printable ASCII keys, with every
+/// other character written as `\u{..}`. Each segment is escaped first and then cut to 128
+/// bytes, the whole to 512; a cut never splits an escape (`~0`, `~1`, `\u{..}`).
 fn pointer(path: &[Seg<'_>]) -> String {
     let mut out = String::new();
     for seg in path {
-        out.push('/');
-        match seg {
-            Seg::Key(k) => out.push_str(&escape(&cut(k, KEEP)).replace('~', "~0").replace('/', "~1")),
-            Seg::Idx(i) => out.push_str(&i.to_string()),
+        if out.len() >= KEEP_POINTER {
+            break;
         }
-        if out.len() > KEEP_POINTER {
-            return cut(&out, KEEP_POINTER);
+        out.push('/');
+        let seg_start = out.len();
+        let fits = |out: &String, add: usize| out.len() - seg_start + add <= KEEP && out.len() + add <= KEEP_POINTER;
+        match seg {
+            Seg::Key(k) => {
+                for c in k.chars() {
+                    let token = match c {
+                        '~' => "~0".to_string(),
+                        '/' => "~1".to_string(),
+                        ' '..='~' => c.to_string(),
+                        _ => format!("\\u{{{:x}}}", u32::from(c)),
+                    };
+                    if !fits(&out, token.len()) {
+                        break;
+                    }
+                    out.push_str(&token);
+                }
+                // The 512-byte budget ran out before any of a non-empty key fit: stop here.
+                if out.len() == seg_start && !k.is_empty() {
+                    out.pop();
+                    break;
+                }
+            }
+            Seg::Idx(i) => {
+                let token = i.to_string();
+                if !fits(&out, token.len()) {
+                    out.pop();
+                    break;
+                }
+                out.push_str(&token);
+            }
         }
     }
     out
@@ -923,10 +979,38 @@ fn visit(ctx: &mut Ctx<'_>, v: &CValue, kind: Kind, path: &[Seg<'_>]) {
 /// look-alike characters.
 fn name_check(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_>]) {
     for k in m.keys() {
-        if k.is_empty() || !k.bytes().all(|b| (b'!'..=b'~').contains(&b)) {
-            let msg = format!("name {} is not printable ASCII without space", quote(k));
-            ctx.push(RuleCode::BadPropertyName, Some(pointer(path)), msg);
-        }
+        check_name(ctx, k, pointer(path));
+    }
+}
+
+/// One property name (see [`name_check`]); also used for `required` entries and the keys
+/// and entries of `dependentRequired`.
+fn check_name(ctx: &mut Ctx<'_>, name: &str, field: String) {
+    if name.is_empty() || !name.bytes().all(|b| (b'!'..=b'~').contains(&b)) {
+        let msg = format!("name {} is not printable ASCII without space", quote(name));
+        ctx.push(RuleCode::BadPropertyName, Some(field), msg);
+    }
+}
+
+/// The only `$schema` accepted, and only at a schema root.
+pub const SCHEMA_DIALECT: &str = "https://json-schema.org/draft/2020-12/schema";
+
+/// Keywords of earlier drafts whose subschemas the walk would not check.
+const OLD_DRAFT_KEYWORDS: [&str; 3] = ["$recursiveAnchor", "$recursiveRef", "dependencies"];
+
+/// An array of distinct strings, each a valid name; anything else is `bad_schema`.
+fn name_list(ctx: &mut Ctx<'_>, v: &CValue, field: String, what: &str) {
+    let mut seen = BTreeSet::new();
+    let ok = match v {
+        CValue::Arr(items) => items.iter().all(|it| matches!(it, CValue::Str(s) if seen.insert(s.as_str()))),
+        _ => false,
+    };
+    if !ok {
+        ctx.push(RuleCode::BadSchema, Some(field), format!("{what} must be an array of distinct strings"));
+        return;
+    }
+    for name in seen {
+        check_name(ctx, name, field.clone());
     }
 }
 
@@ -1109,18 +1193,46 @@ fn schema_checks(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_
         }
     }
 
-    match m.get("required") {
+    // Names: `required` entries, and `dependentRequired` keys and entries.
+    if let Some(v) = m.get("required") {
+        name_list(ctx, v, kp("required"), "required");
+    }
+    match m.get("dependentRequired") {
         None => {}
-        Some(CValue::Arr(items)) => {
-            let mut seen = BTreeSet::new();
-            if !items.iter().all(|it| matches!(it, CValue::Str(s) if seen.insert(s.as_str()))) {
-                let msg = "required must be an array of distinct strings".to_string();
-                ctx.push(RuleCode::BadSchema, Some(kp("required")), msg);
+        Some(CValue::Obj(dr)) => {
+            for (k, v) in dr {
+                check_name(ctx, k, kp("dependentRequired"));
+                let mut p = path.to_vec();
+                p.push(Seg::Key("dependentRequired"));
+                p.push(Seg::Key(k));
+                name_list(ctx, v, pointer(&p), "a dependentRequired value");
             }
         }
         Some(_) => {
-            let msg = "required must be an array of distinct strings".to_string();
-            ctx.push(RuleCode::BadSchema, Some(kp("required")), msg);
+            let msg = "dependentRequired must be an object of name arrays".to_string();
+            ctx.push(RuleCode::BadSchema, Some(kp("dependentRequired")), msg);
+        }
+    }
+
+    // Dialect: `$schema` only at a schema root and only 2020-12; no keywords of older drafts
+    // whose subschemas (and number fields) the walk would not see.
+    match m.get("$schema") {
+        None => {}
+        Some(CValue::Str(u)) if path.len() == 1 && u == SCHEMA_DIALECT => {}
+        Some(CValue::Str(u)) if path.len() == 1 => {
+            let msg = format!("$schema {} is not {SCHEMA_DIALECT}", quote(u));
+            ctx.push(RuleCode::BadDialect, Some(kp("$schema")), msg);
+        }
+        Some(CValue::Str(_)) => {
+            let msg = "$schema is accepted only at the schema root".to_string();
+            ctx.push(RuleCode::BadDialect, Some(kp("$schema")), msg);
+        }
+        Some(_) => ctx.push(RuleCode::BadDialect, Some(kp("$schema")), "$schema must be a string".to_string()),
+    }
+    for k in OLD_DRAFT_KEYWORDS {
+        if m.contains_key(k) {
+            let msg = format!("{k} belongs to an earlier JSON Schema draft and is not supported");
+            ctx.push(RuleCode::BadDialect, Some(kp(k)), msg);
         }
     }
 }
@@ -1170,5 +1282,64 @@ mod tests {
         assert!(check_literal(b"-0.0").is_ok());
         assert!(check_literal(b"1e400").is_err());
         assert!(check_literal(b"2.5e-3").is_ok());
+    }
+
+    /// Follow-up of #233, item 2: literals above 2^53 in any notation, decided exactly.
+    #[test]
+    fn literal_above_2_53() {
+        for big in [
+            "9007199254740993",
+            "9007199254740993.0",
+            "9007199254740993e0",
+            "9007199254740993E+0",
+            "-9007199254740993.0",
+            "900719925474099.3e1",
+            "90071992547409930e-1",
+            "0.9007199254740993e16",
+            "9007199254740992.5",
+            "9007199254740992.0000000000000001",
+            "9007199254740994.0",
+            "10000000000000000.0",
+            "1e16",
+            "1e300",
+        ] {
+            assert!(above_2_53(big), "{big}");
+            assert!(check_literal(big.as_bytes()).is_err(), "{big}");
+        }
+        for ok in [
+            "9007199254740992",
+            "9007199254740992.0",
+            "9007199254740992.000",
+            "9007199254740992e0",
+            "-9007199254740992.0",
+            "900719925474099.2e1",
+            "90071992547409920e-1",
+            "0.9007199254740992e16",
+            "1e15",
+            "0",
+            "-0.0",
+            "0e999999999999999999999",
+            "0.5",
+            "00009007199254740992",
+            "1.5e-300",
+        ] {
+            assert!(!above_2_53(ok), "{ok}");
+            assert!(check_literal(ok.as_bytes()).is_ok(), "{ok}");
+        }
+    }
+
+    /// Follow-up of #233, item 4: the segment cut applies to the escaped form.
+    #[test]
+    fn pointer_cuts_escaped_segments() {
+        let zw = "\u{200b}".repeat(100);
+        let p = pointer(&[Seg::Key(&zw)]);
+        assert_eq!(p, format!("/{}", "\\u{200b}".repeat(16)));
+        let tildes = "~".repeat(200);
+        assert_eq!(pointer(&[Seg::Key(&tildes)]), format!("/{}", "~0".repeat(64)));
+        let mixed = format!("{}\u{e9}", "a".repeat(125));
+        assert_eq!(pointer(&[Seg::Key(&mixed)]), format!("/{}", "a".repeat(125)));
+        let segs: Vec<Seg<'_>> = (0..10).map(|_| Seg::Key(zw.as_str())).collect();
+        let whole = pointer(&segs);
+        assert!(whole.len() <= KEEP_POINTER && whole.ends_with('}'), "{whole}");
     }
 }
