@@ -103,7 +103,8 @@ fn facts(
     TopologyFacts { degenerate, boundary_edges, nonmanifold_edges, misoriented_pairs, components, closed, oriented }
 }
 
-const FIXTURES: [&str; 4] = ["mesh_cube", "mesh_open_flipped", "mesh_nonmanifold", "mesh_degenerate_dup"];
+const FIXTURES: [&str; 6] =
+    ["mesh_cube", "mesh_open_flipped", "mesh_nonmanifold", "mesh_mobius", "mesh_bowtie", "mesh_degenerate_dup"];
 
 /// Every fixture's facts equal the Python reference's sidecar.
 #[test]
@@ -143,6 +144,23 @@ fn ac2_open_flipped() {
 fn ac3_nonmanifold() {
     let m = build(&mesh_fixture("mesh_nonmanifold"));
     assert_eq!(m.facts().nonmanifold_edges, 1);
+}
+
+/// A six-triangle Moebius strip (hand-labelled, also asserted by the Python reference):
+/// the six rail edges are boundary, the twisted rung is the one misoriented pair, one
+/// component, not oriented.
+#[test]
+fn mobius_strip() {
+    let m = build(&mesh_fixture("mesh_mobius"));
+    assert_eq!(m.facts(), facts(0, 6, 0, 1, 1, false, false));
+}
+
+/// Two triangles sharing only a vertex (hand-labelled, also asserted by the Python
+/// reference): two components; the non-manifold vertex is not a reported fact.
+#[test]
+fn bowtie_two_components() {
+    let m = build(&mesh_fixture("mesh_bowtie"));
+    assert_eq!(m.facts(), facts(0, 6, 0, 0, 2, false, true));
 }
 
 /// AC-4: mesh_cube with triangle 5 referring to vertex 8 fails with that triangle and

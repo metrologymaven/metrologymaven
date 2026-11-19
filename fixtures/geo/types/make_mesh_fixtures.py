@@ -24,6 +24,8 @@ mesh_open_flipped.txt         the cube without triangle 11 and with triangle 0 r
 mesh_open_flipped.facts.json
 mesh_nonmanifold.txt          three triangles on the edge 0-1 (AC-3)
 mesh_nonmanifold.facts.json
+mesh_mobius.txt               a six-triangle Moebius strip (and .facts.json)
+mesh_bowtie.txt               two triangles sharing one vertex (and .facts.json)
 mesh_degenerate_dup.txt       the cube plus a degenerate triangle and a duplicate of triangle 2
 mesh_degenerate_dup.facts.json
 
@@ -57,6 +59,15 @@ def open_flipped():
     return t
 
 
+# Moebius strip: three quads between rails a_i = i and b_i = 3 + i; the last quad joins
+# (a2, b2) to (b0, a0), i.e. with a half twist.
+MOBIUS_V = [(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0), (2, 1, 1)]
+MOBIUS_T = [(0, 3, 1), (3, 4, 1), (1, 4, 2), (4, 5, 2), (2, 5, 3), (5, 0, 3)]
+
+# Bow tie: two triangles meeting only at vertex 0 (a non-manifold vertex, not reported).
+BOWTIE_V = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (-1, 0, 0), (-1, -1, 0)]
+BOWTIE_T = [(0, 1, 2), (0, 3, 4)]
+
 NONMANIFOLD_V = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1)]
 NONMANIFOLD_T = [(0, 1, 2), (1, 0, 3), (0, 1, 4)]
 
@@ -79,6 +90,24 @@ CASES = [
         "00112233445566778899aabbccddeeff",
         NONMANIFOLD_V,
         NONMANIFOLD_T,
+        True,
+    ),
+    (
+        "mesh_mobius",
+        "GEO.TYPES.MESH fixture: a Moebius strip of six triangles (one half twist).\n"
+        "# Hand-labelled: 6 boundary edges, 1 misoriented pair, 1 component, not oriented.",
+        "0123456789abcdef0123456789abcdef",
+        MOBIUS_V,
+        MOBIUS_T,
+        True,
+    ),
+    (
+        "mesh_bowtie",
+        "GEO.TYPES.MESH fixture: two triangles sharing only vertex 0.\n"
+        "# Hand-labelled: 2 components, 6 boundary edges; the non-manifold vertex is not a fact.",
+        "fedcba9876543210fedcba9876543210",
+        BOWTIE_V,
+        BOWTIE_T,
         True,
     ),
     (
@@ -181,6 +210,10 @@ def main():
                           components=1, closed=True, oriented=True),
         "mesh_open_flipped": dict(boundary_edges=3, misoriented_pairs=3, closed=False, oriented=False),
         "mesh_nonmanifold": dict(nonmanifold_edges=1),
+        "mesh_mobius": dict(degenerate=0, boundary_edges=6, nonmanifold_edges=0, misoriented_pairs=1,
+                            components=1, closed=False, oriented=False),
+        "mesh_bowtie": dict(degenerate=0, boundary_edges=6, nonmanifold_edges=0, misoriented_pairs=0,
+                            components=2, closed=False, oriented=True),
     }
     for name, header, frame, verts, tris, write_mesh in CASES:
         outputs = {}

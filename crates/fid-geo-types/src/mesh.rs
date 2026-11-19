@@ -29,10 +29,14 @@
 //! * every other triangle `(a, b, c)` contributes the directed edges `a->b`, `b->c`,
 //!   `c->a`; an undirected edge used once is a boundary edge, more than twice a
 //!   non-manifold edge, exactly twice in the same direction a misoriented pair;
-//! * a duplicated triangle therefore shows up in these edge counts (as misoriented pairs
-//!   when both copies are alone on their edges, as non-manifold edges inside a surface);
+//! * a duplicated triangle shows up in these edge counts only in some cases: a
+//!   same-winding pair alone on its edges gives misoriented pairs, and a copy inside a
+//!   surface gives non-manifold edges; but an isolated pair with opposite winding
+//!   (`[a, b, c]` and `[a, c, b]`) is a valid two-sided sheet and reports `closed` and
+//!   `oriented` with nothing flagged;
 //! * `components` counts the connected classes of non-degenerate triangles that share an
-//!   undirected edge;
+//!   undirected edge, so triangles that meet only at a vertex are separate components;
+//!   a non-manifold vertex (two fans meeting at one vertex) is not reported;
 //! * `closed` is true when there is no boundary and no non-manifold edge and at least one
 //!   non-degenerate triangle; `oriented` is true when there is no misoriented pair and no
 //!   non-manifold edge.
@@ -144,6 +148,11 @@ pub struct MeshOptions {
     /// The most bytes construction may allocate for index storage and the topology
     /// tables ([`Mesh::work_bytes`]). `None` means bounded only by available memory
     /// (REQ-GEO.TYPES-006); every allocation is fallible either way.
+    ///
+    /// On 64-bit targets the working memory is about 164 bytes per triangle (12 for
+    /// `u32` storage, 3 × 48 for half-edges with sort scratch, 8 for union-find), on top
+    /// of the caller's 24-byte `[u64; 3]` input: about 188 bytes per triangle in all,
+    /// 7 to 8 times the index input.
     pub work_budget_bytes: Option<u64>,
 }
 
@@ -199,9 +208,17 @@ impl Mesh {
     /// A mesh in `frame` from `[x, y, z]` vertices and triangles, without attributes.
     pub fn from_points(frame: FrameRef, vertices: &[[f64; 3]], triangles: &[[u64; 3]]) -> Result<Mesh, GeoTypeError> {
         let mut tris = Vec::new();
-        reserve(&mut tris, triangles.len(), count_of(triangles.len()))?;
+        let bytes = count_of(triangles.len()).saturating_mul(size_of::<[u64; 3]>() as u64);
+        reserve(&mut tris, triangles.len(), bytes)?;
         tris.extend_from_slice(triangles);
-        Mesh::new(frame, PointBuffer::from_points(vertices), AttributeSet::default(), tris)
+        let col_bytes = count_of(vertices.len()).saturating_mul(size_of::<f64>() as u64);
+        let mut cols: [Vec<f64>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+        for (k, col) in cols.iter_mut().enumerate() {
+            reserve(col, vertices.len(), col_bytes)?;
+            col.extend(vertices.iter().map(|p| p[k]));
+        }
+        let [x, y, z] = cols;
+        Mesh::new(frame, PointBuffer::new(x, y, z), AttributeSet::default(), tris)
     }
 
     /// [`Mesh::new`] with per-triangle attributes, forced `u64` storage or a working
@@ -367,7 +384,7 @@ fn topology(tris: &TriIndex, degenerate: u64, needed: u64) -> Result<TopologyFac
     let mut scratch: Vec<HalfEdge> = Vec::new();
     reserve(&mut scratch, edges.len(), needed)?;
     scratch.extend_from_slice(&edges);
-    merge_sort(&mut edges, &mut scratch);
+    merge_sort(&mut edges, &mut scratch, needed)?;
     drop(scratch);
 
     let mut parent: Vec<usize> = Vec::new();
@@ -448,13 +465,12 @@ fn union(parent: &mut [usize], a: usize, b: usize) {
 }
 
 /// Stable bottom-up merge sort of `data`, using `scratch` (a copy of `data`, allocated
-/// by the caller) so that nothing allocates here.
-fn merge_sort(data: &mut [HalfEdge], scratch: &mut [HalfEdge]) {
+/// by the caller) so that nothing allocates here. A scratch of the wrong length fails
+/// closed with `AllocationFailed { needed }` rather than allocating.
+fn merge_sort(data: &mut [HalfEdge], scratch: &mut [HalfEdge], needed: u64) -> Result<(), GeoTypeError> {
     let n = data.len();
     if scratch.len() != n {
-        // Callers always pass equal lengths; std's stable sort keeps the result correct.
-        data.sort();
-        return;
+        return Err(GeoTypeError::AllocationFailed { needed });
     }
     let mut width = 1usize;
     let mut in_data = true;
@@ -474,6 +490,7 @@ fn merge_sort(data: &mut [HalfEdge], scratch: &mut [HalfEdge]) {
     if !in_data {
         data.copy_from_slice(scratch);
     }
+    Ok(())
 }
 
 /// Merges sorted `a` and `b` into `out` (`a.len() + b.len() == out.len()`); ties take
@@ -532,9 +549,18 @@ mod tests {
             let mut want = v.clone();
             want.sort();
             let mut scratch = v.clone();
-            merge_sort(&mut v, &mut scratch);
+            merge_sort(&mut v, &mut scratch, 0).unwrap();
             assert_eq!(v, want, "n = {n}");
         }
+    }
+
+    /// A scratch buffer of the wrong length fails closed instead of allocating.
+    #[test]
+    fn merge_sort_rejects_short_scratch() {
+        let mut v: Vec<HalfEdge> = vec![[2, 0, 0], [1, 0, 0]];
+        let mut scratch: Vec<HalfEdge> = vec![[0, 0, 0]];
+        assert_eq!(merge_sort(&mut v, &mut scratch, 7), Err(GeoTypeError::AllocationFailed { needed: 7 }));
+        assert_eq!(v, vec![[2, 0, 0], [1, 0, 0]]);
     }
 
     /// Union-find picks the smallest index as root regardless of union order.
