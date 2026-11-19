@@ -1,6 +1,6 @@
 [package]
 name = "fid-dep"
-description = "Metrology Maven parametric dependency graph: dependency edges, cycle rejection and dependency queries (CORE.DEP.EDGE)"
+description = "Metrology Maven parametric dependency graph: dependency edges, cycle rejection and dependency queries (CORE.DEP.EDGE); change propagation and recompute mode (CORE.DEP.PROP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

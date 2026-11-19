@@ -1,0 +1,8 @@
+# Written by make_prop_fixtures.py from recipe.txt; do not edit.
+# CORE.DEP.PROP AC-4: changed = element 0, every element current, manual mode.
+region 100000
+pending 99999
+marked 99999
+submit 0
+order_digest sha256:98bb93221bd88c0ed81d45c07925d08fc4c21925727c3c880a97101b952f38ca
+event_digest sha256:61e408b39c419d3f16ad590f90e5901daadcea68cd51c417d2507ff97bb125c6
