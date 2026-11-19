@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-render]
 satisfies: [REQ-VIZ.RENDER.SCENE-003, REQ-VIZ.RENDER.SCENE-006, REQ-VIZ.RENDER.SCENE-007]
 covers: []
 depends_on: [VIZ.RENDER.SCENE.IDTAB, CORE.DEP.PROP, CORE.PRJ.TREE, GEO.TYPES.DIGEST, GEO.FRAME.TREE]
