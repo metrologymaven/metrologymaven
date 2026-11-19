@@ -1,0 +1,183 @@
+{
+  "about": "Hand-labelled commit cases for CORE.STO.SQL.TXN. Every expected outcome and count was written by hand from the rules of spec/core/sto/sql/txn/NODE.md and the v1 schema (crates/fid-store/src/schema/v1.sql); none was produced by running the Rust code. Each case runs on a fresh project. Value encoding: a JSON string is TEXT, an integer is INTEGER, null is NULL, {\"bytes\": s} is a BLOB of the UTF-8 bytes of s, {\"blob\": i} is the sha256: address of the i-th put_blob of the case, {\"stored\": i} is the address of the i-th blob stored (non-durably) before the transaction. counts lists every non-empty table after the commit; every table not listed must be empty. CC-BY-4.0.",
+  "cases": [
+    {
+      "name": "entry_only",
+      "why": "one insert commits; Committed.rows counts row operations",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}}
+      ],
+      "expect": "ok",
+      "rows": 1,
+      "counts": {"entries": 1}
+    },
+    {
+      "name": "entry_with_two_pending_blobs",
+      "why": "AC-1 shape: two blobs and rows referencing both; blobs present after commit",
+      "blobs": ["alpha", "beta"],
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": {"blob": 0}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "output", "digest": {"blob": 1}}}
+      ],
+      "expect": "ok",
+      "rows": 3,
+      "counts": {"entries": 1, "entry_blobs": 2},
+      "blobs_present": [0, 1]
+    },
+    {
+      "name": "dangling_zero_digest",
+      "why": "AC-2 / REQ-003: sha256:00..00 is neither pending nor stored",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "expect": "dangling_blob",
+      "counts": {}
+    },
+    {
+      "name": "dangling_writes_no_blob_either",
+      "why": "REQ-003 'write nothing': the dangling check runs before any blob is put, so the pending blob is not stored",
+      "blobs": ["gamma"],
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": {"blob": 0}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "output", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "expect": "dangling_blob",
+      "counts": {},
+      "blobs_absent": [0]
+    },
+    {
+      "name": "reference_to_stored_blob",
+      "why": "REQ-003: a digest already present in the store is not dangling",
+      "stored": ["delta"],
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": {"stored": 0}}}
+      ],
+      "expect": "ok",
+      "rows": 2,
+      "counts": {"entries": 1, "entry_blobs": 1}
+    },
+    {
+      "name": "same_blob_put_twice",
+      "why": "identical content has one address; both references resolve",
+      "blobs": ["alpha", "alpha"],
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": {"blob": 0}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "output", "digest": {"blob": 1}}}
+      ],
+      "expect": "ok",
+      "rows": 3,
+      "counts": {"entries": 1, "entry_blobs": 2},
+      "blobs_present": [0, 1]
+    },
+    {
+      "name": "head_upsert_updates_in_place",
+      "why": "upsert on a mutable table: the second upsert of branch main replaces entry_hash",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "stream": "s", "branch": "main", "kind": "k", "prev_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "header": {"bytes": "h2"}}},
+        {"op": "upsert", "table": "heads", "key": {"branch": "main"}, "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"}},
+        {"op": "upsert", "table": "heads", "key": {"branch": "main"}, "values": {"entry_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"}}
+      ],
+      "expect": "ok",
+      "rows": 4,
+      "counts": {"entries": 2, "heads": 1},
+      "checks": [
+        {"sql": "SELECT entry_hash FROM heads WHERE branch = 'main'", "text": "sha256:2222222222222222222222222222222222222222222222222222222222222222"}
+      ]
+    },
+    {
+      "name": "idempotency_and_settings",
+      "why": "the other two mutable tables accept upserts",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "upsert", "table": "idempotency", "key": {"key": "req-1"}, "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"}},
+        {"op": "upsert", "table": "settings_current", "key": {"key": "units"}, "values": {"value": {"bytes": "mm"}, "entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
+      ],
+      "expect": "ok",
+      "rows": 3,
+      "counts": {"entries": 1, "idempotency": 1, "settings_current": 1}
+    },
+    {
+      "name": "upsert_on_append_only_table",
+      "why": "Design: upsert only on mutable tables",
+      "ops": [
+        {"op": "upsert", "table": "entries", "key": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"}, "values": {"stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}}
+      ],
+      "expect": "invalid_row",
+      "counts": {}
+    },
+    {
+      "name": "duplicate_entry_rolls_back_whole_commit",
+      "why": "REQ-007 and the append-only trigger: the third insert repeats hash 11..11, entries_no_replace aborts, the first two inserts are rolled back",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h2"}}},
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h3"}}}
+      ],
+      "expect": "append_only",
+      "counts": {}
+    },
+    {
+      "name": "foreign_key_failure_leaves_blob_unreferenced",
+      "why": "REQ-005/007: the blob is put before BEGIN, the row fails its foreign key (no entry 99..99), the blob stays but nothing references it",
+      "blobs": ["epsilon"],
+      "ops": [
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "role": "input", "digest": {"blob": 0}}}
+      ],
+      "expect": "sqlite",
+      "counts": {},
+      "blobs_present": [0]
+    },
+    {
+      "name": "check_constraint_failure",
+      "why": "entries.seq must be >= 1",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"seq": 0, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}}
+      ],
+      "expect": "sqlite",
+      "counts": {}
+    },
+    {
+      "name": "unknown_table",
+      "why": "only tables of the schema",
+      "ops": [
+        {"op": "insert", "table": "journal", "values": {"x": 1}}
+      ],
+      "expect": "invalid_row",
+      "counts": {}
+    },
+    {
+      "name": "schema_meta_not_writable",
+      "why": "schema_meta belongs to migrations",
+      "ops": [
+        {"op": "insert", "table": "schema_meta", "values": {"version": 2}}
+      ],
+      "expect": "invalid_row",
+      "counts": {}
+    },
+    {
+      "name": "hostile_column_name",
+      "why": "identifiers are checked, never spliced",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash\" TEXT); DROP TABLE heads; --": "x"}}
+      ],
+      "expect": "invalid_row",
+      "counts": {}
+    },
+    {
+      "name": "malformed_blob_digest",
+      "why": "a blob reference column must hold a sha256: digest",
+      "ops": [
+        {"op": "insert", "table": "entries", "values": {"hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "stream": "s", "branch": "main", "kind": "k", "header": {"bytes": "h1"}}},
+        {"op": "insert", "table": "entry_blobs", "values": {"entry_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "role": "input", "digest": "sha256:XYZ"}}
+      ],
+      "expect": "invalid_row",
+      "counts": {}
+    }
+  ]
+}

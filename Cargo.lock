@@ -570,6 +570,7 @@ dependencies = [
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
+ "fid-num",
  "fid-testkit",
 ]
 
@@ -923,6 +924,7 @@ name = "fid-store"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-store",
  "fid-types",
  "rusqlite",
  "rustix",
