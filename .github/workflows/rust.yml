@@ -73,6 +73,9 @@ jobs:
       - name: CAD worker protocol fuzz harness compiles on stable (IO.CAD.WORKER.PROTO AC-5)
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-cad-proto/fuzz/Cargo.toml
+      - name: LAS reader fuzz harness compiles on stable (IO.CLOUD.LAS.HDR AC-5)
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-io-las/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
@@ -229,6 +232,7 @@ jobs:
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
           python fixtures/io/e57/phys/make_fixtures.py --check
+          python fixtures/io/cloud/las/hdr/make_fixtures.py --check
           python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/flow/pkg/make_fixtures.py --check
           python fixtures/flow/journey/make_fixtures.py --check
