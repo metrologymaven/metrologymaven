@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_empty.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_empty
+threshold 1e-18
+triangles 0
+vertices 0
+edges 0
+boundary_edges 0
+boundary_loops 0
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 0
+degenerate 0
+angle_count 0
+angle_min null
+angle_p1 null
+angle_p5 null
+angle_median null
+canonical {"boundary_edges":"0","boundary_loops":"0","components":"0","degenerate":"0","edges":"0","min_angle":{"count":"0","median":null,"min":null,"p1":null,"p5":null},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"0","vertices":"0"}

@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_tetra.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_tetra
+threshold 1e-18
+triangles 4
+vertices 4
+edges 6
+boundary_edges 0
+boundary_loops 0
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 4
+angle_min 1.0471975511965979
+angle_p1 1.0471975511965979
+angle_p5 1.0471975511965979
+angle_median 1.0471975511965979
+canonical {"boundary_edges":"0","boundary_loops":"0","components":"1","degenerate":"0","edges":"6","min_angle":{"count":"4","median":"1.0471975511965979","min":"1.0471975511965979","p1":"1.0471975511965979","p5":"1.0471975511965979"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"4","vertices":"4"}

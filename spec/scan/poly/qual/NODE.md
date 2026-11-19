@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-mesh]
+built_pr: 276
 satisfies: [REQ-SCAN.POLY-005]
 covers: []
 depends_on: [GEO.TYPES]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # SCAN.POLY.QUAL: Mesh quality report
@@ -59,14 +61,22 @@ A pure kernel function that measures a triangle mesh and returns a fixed-shape q
 - **API:** `pub fn mesh_quality(mesh: &Mesh, degenerate_area: f64) -> Result<MeshQualityReport, QualityError>` in `fid-scan-mesh::quality`. No registry command of its own; the class R1 applies to the pure computation.
 - **Data:** `MeshQualityReport { triangles, vertices, edges, boundary_edges, boundary_loops, nonmanifold_edges, nonmanifold_vertices, components, degenerate, min_angle: AngleStats }` serialised as RFC 8785 canonical JSON.
 - **Algorithm:** build a sorted edge list (vertex-pair keys sorted, no hash maps) to count edge use; boundary loops by walking boundary edges in ascending start-vertex order; vertex fans by union-find over incident triangles sharing an edge; components by union-find over triangles; angles via `fid-num` `acos` on clamped cosines.
-- **Errors:** `scan.mesh.invalid_index`, `scan.mesh.non_finite`.
+- **Metric definitions (pinned at build, PR for `fid-scan-mesh`):**
+  - *Index-degenerate:* a triangle with a repeated vertex index counts in `triangles` and `degenerate` and takes no other part (no edges, component, fan or angle), as in GEO.TYPES.MESH.
+  - *Area and degenerate:* area = 0.5 · sqrt((cx·cx + cy·cy) + cz·cz) with (cx, cy, cz) = (b − a) × (c − a), evaluated in that order without FMA; degenerate when area < threshold (strict). The threshold must be finite and > 0, so a zero-area triangle is always degenerate. A degenerate-by-area triangle leaves only the angle statistics; it keeps its edges, component and fans.
+  - *Edges:* undirected vertex pairs of the non-index-degenerate triangles; each triangle having the edge is one use (duplicate triangles count separately).
+  - *Vertices:* the mesh's vertex count, unreferenced vertices included. A vertex with no triangle has no fan and is never non-manifold; the endpoints of a fin edge form one fan each.
+  - *Boundary loops (fan-aware, numbering-invariant; review of PR 276):* build the fan-split boundary graph, whose nodes are the (vertex, fan) pairs at the ends of boundary edges (a boundary edge has one triangle, so at each end it lies in one fan, from the fan union-find) and whose edges are the boundary edges, undirected (so a Möbius strip closes). Each connected component counts max(1, k), where 2k is its number of odd-degree nodes: the fewest walks that cover it, each walk continuing within the arriving edge's fan and leaving a fan only when the fan has no unused boundary edge. When every fan has zero or two boundary edges at each vertex, every component is a cycle and the count is the number of boundary cycles; a bow tie of two fans gives 2 loops under every vertex numbering. A fin (three boundary edges in one fan at each end of the fin edge) gives 1. The count depends only on the graph, never on vertex or triangle numbering (a greedy smallest-neighbour walk does not have this property at odd-degree nodes, which is why the count is defined on the graph rather than by the walk order).
+  - *Angles:* at each corner in stored order, u and v point to the next and previous corner; cos = dot(u, v) / (sqrt(dot(u, u)) · sqrt(dot(v, v))), dot = (x·x′ + y·y′) + z·z′, clamped to [−1, 1] with `fid-num` `total_clamp`; angle = `fid-num` `acos` (not atan2); the triangle's value is the smallest of the three. Statistics: count, min, nearest-rank p1, p5 and median (rank ceil(p·n/100), 1-based, ascending IEEE total order); all four null when no triangle qualifies. No histogram.
+  - *Canonical JSON:* kernel convention: every number is a string (integers in decimal, angles in the ECMAScript number form of RFC 8785 §3.2.2.3), `null` for an absent statistic, keys sorted, no whitespace.
+- **Errors:** `scan.mesh.invalid_index`, `scan.mesh.non_finite` (a non-finite coordinate, area or cosine, e.g. overflowing squares or a cosine that is ±inf before clamping because an edge length underflowed), `scan.mesh.invalid_threshold` (threshold not finite or not > 0) and `scan.mesh.allocation_failed` (a failed working allocation); the first failure in triangle order is returned.
 - **Determinism:** D0 (sorted structures, fixed-order reductions, KNP-1).
 - **Performance budget:** 10⁸ triangles within 60 s and 16 GiB [unverified].
 - **Crate:** `fid-scan-mesh` (kernel tier).
 
 ## Test fixtures
 
-- `fixtures/scan/mesh_closed_cube`, `mesh_open_cube`, `mesh_bowtie`, `mesh_fin`: hand-written tiny meshes, CC-BY-4.0.
+- `fixtures/scan/mesh_closed_cube`, `mesh_open_cube`, `mesh_bowtie`, `mesh_fin`: hand-written tiny meshes, CC-BY-4.0. Built as `fixtures/scan/<name>.txt` with expected reports `<name>.quality.txt` from the independent reference `fixtures/scan/make_mesh_quality.py`, which also writes `mesh_tetra`, `mesh_open_grid`, `mesh_jitter_grid`, `mesh_mobius`, `mesh_slivers` (two thresholds), `mesh_zero_area`, `mesh_duplicate`, `mesh_empty`, `mesh_bowtie_renumbered` (the review's `t (1,0,2) (1,2,4) (1,3,5) (1,5,6)`) and `mesh_unused_vertex`. Both the reference and the Rust tests check that renumbering vertices (all 5,040 renumberings of the bow tie, 200 pseudo-random ones of every other fixture) never changes the report.
 
 ## Build prompt
 

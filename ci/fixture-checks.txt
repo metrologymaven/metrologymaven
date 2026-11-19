@@ -8,6 +8,8 @@ python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
+python fixtures/auto/surf/gen/make_fixtures.py --check
+python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
@@ -36,6 +38,8 @@ python fixtures/geo/cad/topo/make_topo_fixtures.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
 python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
 python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+python fixtures/geo/nurbs/invert/make_invert_fixtures.py --check
+python fixtures/geo/nurbs/invert/make_invert_fixtures.py --fuzz --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
@@ -81,6 +85,7 @@ python fixtures/rpt/model/tmpl/make_slot_fixtures.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
+python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check
