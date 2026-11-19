@@ -1,0 +1,32 @@
+{
+  "_comment": "Hand-labelled from the rules of spec node AGENT.HARNESS.ADAPT and the crate docs (fid-eval-harness src/adapt.rs); nothing here was produced by running the crate.",
+  "check": {
+    "adapter": "exec-example.json",
+    "task": "fixtures/agent/eval/suite-mini/tasks/mini-inspect-01",
+    "argv": [
+      "example-agent",
+      "--mcp-config",
+      "<run>/agent/mcp-config.json",
+      "--prompt-file",
+      "<run>/agent/prompt.txt",
+      "--workdir",
+      "<run>/project"
+    ]
+  },
+  "bad": {
+    "batch-undeclared.json": ["invalid_adapter"],
+    "empty-argv.json": ["invalid_adapter"],
+    "missing-mcp-config.json": ["missing_placeholder"],
+    "missing-prompt-file.json": ["missing_placeholder"],
+    "oracle-path.json": ["invalid_adapter"],
+    "oracle-placeholder.json": ["invalid_adapter"],
+    "placeholder-program.json": ["invalid_adapter"],
+    "shell-undeclared.json": ["invalid_adapter"],
+    "task-file-path.json": ["invalid_adapter"],
+    "three-problems.json": ["invalid_adapter", "invalid_adapter", "invalid_adapter"],
+    "token-report-path.json": ["invalid_adapter"],
+    "unclosed-brace.json": ["invalid_adapter", "missing_placeholder"],
+    "unknown-field.json": ["invalid_adapter"],
+    "wrong-types.json": ["invalid_adapter", "invalid_adapter"]
+  }
+}
