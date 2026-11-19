@@ -14,6 +14,8 @@ fid-registry = { path = "../fid-registry" }
 fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
+# Test-only: cross-check of the family decimal grammar against GEO.FRAME.UNITS (tests/family.rs).
+fid-geo-frame = { path = "../fid-geo-frame" }
 # Test-only: counting global allocator for the peak-memory test (tests/alloc_peak.rs).
 # The workspace forbids `unsafe`, so the test cannot implement GlobalAlloc itself.
 cap = { version = "0.1.2", features = ["stats"] }

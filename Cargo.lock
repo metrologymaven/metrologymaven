@@ -853,6 +853,7 @@ version = "0.0.1"
 dependencies = [
  "cap",
  "fid-canon",
+ "fid-geo-frame",
  "fid-registry",
  "fid-types",
 ]

@@ -46,8 +46,11 @@ pub const MAX_SIG_DIGITS: usize = 40;
 pub const MAX_BINDING_BYTES: usize = 1024 * 1024;
 /// Deepest nesting accepted by [`binding_from_json`].
 pub const MAX_BINDING_DEPTH: usize = 16;
-/// Largest magnitude an `integer` value may have: 2^53, the exact-integer range of JSON numbers.
-pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_992.0;
+/// Largest magnitude an `integer` value may have: 2^53 - 1 (JavaScript's `MAX_SAFE_INTEGER`).
+/// JSON numbers are parsed to `f64`, so integer text at 2^53 or above may already have been
+/// rounded (`9007199254740993` parses to 2^53); refusing 2^53 itself keeps every accepted
+/// value exactly the integer that was written.
+pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 
 /// Field names of a parameter declaration, sorted.
 pub const DECL_FIELDS: [&str; 6] = ["default", "description", "name", "quantity_kind", "required", "type"];
@@ -745,6 +748,8 @@ mod tests {
     fn integers() {
         assert!(is_integer(4.0) && is_integer(-0.0) && is_integer(MAX_SAFE_INTEGER));
         assert!(!is_integer(4.5) && !is_integer(f64::NAN) && !is_integer(f64::INFINITY));
+        assert!(!is_integer(MAX_SAFE_INTEGER + 1.0) && !is_integer(-MAX_SAFE_INTEGER - 1.0));
+        assert!(is_integer(-MAX_SAFE_INTEGER));
         assert!(!is_integer(MAX_SAFE_INTEGER * 2.0));
     }
 }

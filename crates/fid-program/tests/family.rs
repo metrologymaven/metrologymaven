@@ -359,3 +359,76 @@ fn hostile_shapes_do_not_panic() {
         }
     }
 }
+
+/// `is_decimal` is the `GEO.FRAME.UNITS` authored-decimal grammar (checks 1 to 4). Cross-check
+/// on a shared corpus against `fid-geo-frame`, whose `to_si` applies the same checks and then
+/// converts: a text is in the grammar exactly when `to_si` succeeds or fails only on overflow
+/// (check 5, which FAMILY cannot apply without converting).
+#[test]
+fn decimal_grammar_agrees_with_geo_frame() {
+    use fid_geo_frame::units::to_si;
+    use fid_geo_frame::{LengthUnit, Unit, UnitsError};
+    use fid_program::family::is_decimal;
+    let mut corpus: Vec<String> = [
+        "0",
+        "-0",
+        "+0",
+        "120",
+        "4.724",
+        "-1.5e-3",
+        "+2E+10",
+        "1e999999",
+        "-1e999999",
+        "1e-999999",
+        "0.000",
+        "1.000",
+        "00012",
+        "1e0",
+        "1E-0",
+        "",
+        "+",
+        "-",
+        ".",
+        "1,5",
+        ".5",
+        "1.",
+        "1e",
+        "1e+",
+        " 1",
+        "1 ",
+        "nan",
+        "NaN",
+        "-inf",
+        "Infinity",
+        "--1",
+        "+-1",
+        "0x10",
+        "1.2.3",
+        "1_000",
+        "١",
+        "１",
+        "1e1.5",
+        "e5",
+        "1ee5",
+        "1.e5",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    for n in [39, 40, 41] {
+        corpus.push("7".repeat(n));
+        corpus.push(format!("0.000{}", "3".repeat(n)));
+        corpus.push(format!("{}.{}", "1".repeat(n / 2), "2".repeat(n - n / 2)));
+    }
+    corpus.push("1".repeat(1024));
+    corpus.push("0".repeat(1024));
+    corpus.push("0".repeat(1025));
+    corpus.push(format!("0.{}1", "0".repeat(1021)));
+    for t in &corpus {
+        let geo = match to_si(t, Unit::Length(LengthUnit::M)) {
+            Ok(_) | Err(UnitsError::Overflow) => true,
+            Err(_) => false,
+        };
+        assert_eq!(is_decimal(t), geo, "{t:?}");
+    }
+}

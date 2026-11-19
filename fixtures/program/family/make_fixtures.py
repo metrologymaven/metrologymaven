@@ -56,7 +56,9 @@ def jcs(v):
     if v is False:
         return "false"
     if isinstance(v, int):
-        assert abs(v) <= 2**53
+        # str() is the ECMAScript form only for exactly representable integers; the family
+        # accepts magnitudes up to 2^53 - 1, so canonical fixtures stay within that range.
+        assert abs(v) <= 2**53 - 1
         return str(v)
     if isinstance(v, float):
         # Only values whose shortest repr is already the ECMAScript form are used here.
@@ -267,6 +269,29 @@ BINDINGS = {
     ),
 }
 
+# Binding files written as raw JSON text (not canonical), checked like any binding.
+# Integer limit is 2^53 - 1: 2^53 is refused, and 2^53 + 1 parses (to f64) as 2^53, so it
+# is refused too rather than silently accepted as a different integer.
+SCAN_JSON = jcs_string(SCAN)
+TEXT_BINDINGS = {
+    "count-2p53-minus-1": (
+        '{"hole_count":%d,"hole_spacing":{"unit":"mm","value":"120"},"scan":%s}' % (2**53 - 1, SCAN_JSON),
+        [],
+    ),
+    "count-2p53": (
+        '{"hole_count":%d,"hole_spacing":{"unit":"mm","value":"120"},"scan":%s}' % (2**53, SCAN_JSON),
+        [err("wrong_type", "hole_count")],
+    ),
+    "count-2p53-plus-1": (
+        '{"hole_count":%d,"hole_spacing":{"unit":"mm","value":"120"},"scan":%s}' % (2**53 + 1, SCAN_JSON),
+        [err("wrong_type", "hole_count")],
+    ),
+    "count-negative-2p53": (
+        '{"hole_count":%d,"hole_spacing":{"unit":"mm","value":"120"},"scan":%s}' % (-(2**53), SCAN_JSON),
+        [err("wrong_type", "hole_count")],
+    ),
+}
+
 # Raw binding files that are not valid binding documents: (text, bad_binding reason).
 RAW_BINDINGS = {
     "not-object": ("[1]", "a binding must be a JSON object"),
@@ -283,6 +308,10 @@ def main():
     for name, (binding, errs) in BINDINGS.items():
         write(HERE / "bindings" / f"{name}.json", binding)
         expected["bindings"][name] = errs
+    for name, (text, errs) in TEXT_BINDINGS.items():
+        (HERE / "bindings" / f"{name}.json").write_bytes(text.encode("utf-8"))
+        assert json.loads(text) is not None
+        expected["bindings"][name] = errs
     for name, (text, reason) in RAW_BINDINGS.items():
         (HERE / "bindings" / f"{name}.json").write_bytes(text.encode("utf-8"))
         expected["raw_bindings"][name] = reason
@@ -290,7 +319,7 @@ def main():
     # Sanity: every written file is JSON that Python reads back to the same value.
     for name, (prog, _) in PROGRAMS.items():
         assert json.loads((HERE / f"{name}.json").read_text("utf-8")) == prog
-    print(f"{len(PROGRAMS)} programs, {len(BINDINGS) + len(RAW_BINDINGS)} bindings")
+    print(f"{len(PROGRAMS)} programs, {len(BINDINGS) + len(TEXT_BINDINGS) + len(RAW_BINDINGS)} bindings")
 
 
 if __name__ == "__main__":
