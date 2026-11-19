@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kunc]
+built_pr: 260
 satisfies: [REQ-UNC.MODEL-002, REQ-UNC.MODEL-003]
 covers: []
 depends_on: [KRN]
