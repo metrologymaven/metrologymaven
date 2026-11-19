@@ -1,0 +1,1 @@
+{"channel":"stable","disabled_venues":[],"gates":[{"id":"pkg-plan","notes":[],"reasons":[],"status":"pass"},{"id":"qual-evid","reasons":[],"status":"pass"}],"release":"v1.4.0","verdict":"pass"}
