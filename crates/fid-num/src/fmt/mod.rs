@@ -3,13 +3,16 @@
 //! - [`types`]: the shared formatter types (`KRN.NUM.FMT.LEN`).
 //! - [`len`]: `fmt.length@1` and `fmt.scalar@1` with the side-preserving rule
 //!   (`KRN.NUM.FMT.LEN`).
+//! - [`ang`]: `fmt.angle@1` in rad, deg and dms with a ladder of rational enclosures of pi
+//!   (`KRN.NUM.FMT.ANG`).
 //!
-//! Angle formatters (`KRN.NUM.FMT.ANG`) and the registry with `fmt::format` dispatch
-//! (`KRN.NUM.FMT.REG`) land in their own leaves.
+//! The registry with `fmt::format` dispatch (`KRN.NUM.FMT.REG`) lands in its own leaf.
 
+pub mod ang;
 pub mod len;
 pub mod types;
 
 pub use types::{
-    Conversion, FmtError, FormatSpec, FormatterId, Limits, Precision, Reported, Unit, MAX_DECIMALS, MAX_SIG_DIGITS,
+    Conversion, FmtError, FormatSpec, FormatterId, Limits, Precision, Reported, SideOutcome, Unit, MAX_DECIMALS,
+    MAX_SIG_DIGITS,
 };

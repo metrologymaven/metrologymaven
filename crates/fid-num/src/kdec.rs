@@ -416,20 +416,24 @@ fn ndigits(mut c: u128) -> i32 {
 /// `128 + ceil(400 * log2 10) + 1074 = 128 + 1329 + 1074 = 2531` bits, since
 /// `400 * log2 10 = 1328.77`. The left side is at most `53 + 971 + 1329 = 2353` bits.
 /// 80 limbs of 32 bits = 2560 bits cover both.
-const LIMBS: usize = 80;
+pub(crate) const LIMBS: usize = 80;
 
-/// Fixed-capacity unsigned big integer, little-endian 32-bit limbs, no heap, no recursion.
-/// Shared with `KRN.NUM.FMT`.
+/// The big integer of [`cmp`] and `fmt::len`: [`BigN`] with [`LIMBS`] limbs.
+pub(crate) type Big = BigN<LIMBS>;
+
+/// Fixed-capacity unsigned big integer of `L` little-endian 32-bit limbs, no heap, no
+/// recursion. Shared with `KRN.NUM.FMT`: `fmt::len` uses [`Big`] (80 limbs) and `fmt::ang`
+/// a larger capacity for its 1000-digit enclosures of pi (KRN.NUM.FMT.ANG Design).
 #[derive(Clone, Copy)]
-pub(crate) struct Big {
-    limbs: [u32; LIMBS],
+pub(crate) struct BigN<const L: usize> {
+    limbs: [u32; L],
     len: usize,
     overflow: bool,
 }
 
-impl Big {
-    pub(crate) fn from_u128(mut v: u128) -> Big {
-        let mut b = Big { limbs: [0; LIMBS], len: 0, overflow: false };
+impl<const L: usize> BigN<L> {
+    pub(crate) fn from_u128(mut v: u128) -> Self {
+        let mut b = BigN { limbs: [0; L], len: 0, overflow: false };
         for limb in b.limbs.iter_mut().take(4) {
             if v == 0 {
                 break;
@@ -476,7 +480,7 @@ impl Big {
         }
         let words = (n / 32) as usize;
         let bits = n % 32;
-        let mut out = [0u32; LIMBS];
+        let mut out = [0u32; L];
         for (i, &v) in self.limbs.iter().enumerate().take(self.len) {
             let wide = u64::from(v) << bits;
             for (j, part) in [(i + words, wide as u32), (i + words + 1, (wide >> 32) as u32)] {
@@ -490,7 +494,7 @@ impl Big {
             }
         }
         self.limbs = out;
-        self.len = (self.len + words + 1).min(LIMBS);
+        self.len = (self.len + words + 1).min(L);
         self.trim();
     }
 
@@ -500,7 +504,7 @@ impl Big {
         }
     }
 
-    pub(crate) fn cmp_mag(&self, other: &Big) -> Ordering {
+    pub(crate) fn cmp_mag(&self, other: &Self) -> Ordering {
         self.len.cmp(&other.len).then_with(|| {
             let a = self.limbs.iter().take(self.len).rev();
             let b = other.limbs.iter().take(other.len).rev();
@@ -512,7 +516,7 @@ impl Big {
     // ones above they never allocate, never recurse and report running out of limbs
     // through `overflow` instead of wrapping.
 
-    /// True if an operation ran out of limbs (or [`Big::sub_assign`] was misused); the
+    /// True if an operation ran out of limbs (or [`BigN::sub_assign`] was misused); the
     /// value is then meaningless and the caller must report an error.
     pub(crate) fn overflowed(&self) -> bool {
         self.overflow
@@ -572,7 +576,7 @@ impl Big {
     }
 
     /// `self -= other`; requires `self >= other` (otherwise sets `overflow`).
-    fn sub_assign(&mut self, other: &Big) {
+    pub(crate) fn sub_assign(&mut self, other: &Self) {
         if other.len > self.len {
             self.overflow = true;
             return;
@@ -617,14 +621,14 @@ impl Big {
     /// Bounded long division: `(floor(self / d), self mod d)`, `None` if `d` is zero.
     ///
     /// Restoring binary division, one quotient bit per bit of `self` from the top: at most
-    /// `32 * LIMBS` iterations, each on fixed-size arrays. The quotient is at most `self`
+    /// `32 * L` iterations, each on fixed-size arrays. The quotient is at most `self`
     /// and the remainder below `d`, so neither can exceed the capacity.
-    pub(crate) fn div_rem(&self, d: &Big) -> Option<(Big, Big)> {
+    pub(crate) fn div_rem(&self, d: &Self) -> Option<(Self, Self)> {
         if d.is_zero() {
             return None;
         }
-        let mut q = Big::from_u128(0);
-        let mut r = Big::from_u128(0);
+        let mut q = Self::from_u128(0);
+        let mut r = Self::from_u128(0);
         q.overflow = self.overflow || d.overflow;
         for i in (0..self.bit_len()).rev() {
             r.shl1_with(self.bit(i));
@@ -652,6 +656,79 @@ impl Big {
         }
         self.trim();
         rem as u32
+    }
+
+    // The routines below were added for `KRN.NUM.FMT.ANG` (products with the enclosures of
+    // pi, splitting degrees, minutes and seconds). Same rules: no allocation, no recursion,
+    // running out of limbs sets `overflow`.
+
+    /// `self * other`, schoolbook, into a fresh value of the same capacity.
+    pub(crate) fn mul(&self, other: &Self) -> Self {
+        let mut out = Self::from_u128(0);
+        out.overflow = self.overflow || other.overflow;
+        for (i, &a) in self.limbs.iter().enumerate().take(self.len) {
+            let mut carry: u64 = 0;
+            for (j, &b) in other.limbs.iter().enumerate().take(other.len) {
+                let Some(slot) = out.limbs.get_mut(i + j) else {
+                    out.overflow |= (a != 0 && b != 0) || carry != 0;
+                    carry = 0;
+                    continue;
+                };
+                let t = u64::from(a) * u64::from(b) + u64::from(*slot) + carry;
+                *slot = t as u32;
+                carry = t >> 32;
+            }
+            let mut k = i + other.len;
+            while carry != 0 {
+                match out.limbs.get_mut(k) {
+                    Some(slot) => {
+                        let t = u64::from(*slot) + carry;
+                        *slot = t as u32;
+                        carry = t >> 32;
+                        k += 1;
+                    }
+                    None => {
+                        out.overflow = true;
+                        carry = 0;
+                    }
+                }
+            }
+        }
+        out.len = (self.len + other.len).min(L);
+        out.trim();
+        out
+    }
+
+    /// `self += other` (only the Machin cross-check of `fmt::ang` needs it).
+    #[cfg(test)]
+    pub(crate) fn add_assign(&mut self, other: &Self) {
+        self.overflow |= other.overflow;
+        let n = self.len.max(other.len);
+        let mut carry = 0u64;
+        for (i, limb) in self.limbs.iter_mut().enumerate().take(n) {
+            let t = u64::from(*limb) + u64::from(other.limbs.get(i).copied().unwrap_or(0)) + carry;
+            *limb = t as u32;
+            carry = t >> 32;
+        }
+        self.len = n.min(L);
+        if carry != 0 {
+            match self.limbs.get_mut(n) {
+                Some(l) => {
+                    *l = carry as u32;
+                    self.len = n + 1;
+                }
+                None => self.overflow = true,
+            }
+        }
+        self.trim();
+    }
+
+    /// The value as a `u128`, or `None` if it needs more than 128 bits.
+    pub(crate) fn to_u128(&self) -> Option<u128> {
+        if self.len > 4 || self.overflow {
+            return None;
+        }
+        Some(self.limbs.iter().take(self.len).rev().fold(0u128, |acc, &l| (acc << 32) | u128::from(l)))
     }
 }
 
@@ -717,6 +794,40 @@ mod tests {
         assert_eq!(to_u128(&r), 41);
         assert_eq!(q.len, 1);
         assert_eq!(r.len, 1);
+    }
+
+    #[test]
+    fn big_mul_and_to_u128() {
+        let cases: [(u128, u128); 6] = [
+            (0, 5),
+            (1, u64::MAX as u128),
+            (u64::MAX as u128, u64::MAX as u128),
+            (0xFFFF_FFFF, 0xFFFF_FFFF_FFFF),
+            (1_000_000_007, 998_244_353 * 3),
+            (u128::from(u32::MAX) << 40, 12_345),
+        ];
+        for (a, b) in cases {
+            let p = Big::from_u128(a).mul(&Big::from_u128(b));
+            assert_eq!(p.to_u128(), Some(a * b), "{a} * {b}");
+        }
+        // (2^128 - 1)^2 = 2^256 - 2^129 + 1, checked limb by limb through div_rem.
+        let m = Big::from_u128(u128::MAX);
+        let sq = m.mul(&m);
+        assert_eq!(sq.bit_len(), 256);
+        assert_eq!(sq.to_u128(), None);
+        let (q, r) = sq.div_rem(&m).unwrap();
+        assert_eq!((q.to_u128(), r.is_zero()), (Some(u128::MAX), true));
+        // Running out of limbs is reported, never wrapped.
+        let mut big = Big::from_u128(1);
+        big.shl(32 * 79);
+        assert!(!big.overflowed());
+        assert!(big.mul(&Big::from_u128(1u128 << 40)).overflowed());
+        assert!(!big.mul(&Big::from_u128(1)).overflowed());
+        let mut s = Big::from_u128(u128::MAX);
+        s.add_assign(&Big::from_u128(1));
+        assert_eq!((s.bit_len(), s.to_u128()), (129, None));
+        s.sub_assign(&Big::from_u128(u128::MAX));
+        assert_eq!(s.to_u128(), Some(1));
     }
 
     #[test]

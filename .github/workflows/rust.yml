@@ -285,6 +285,7 @@ jobs:
           python fixtures/man/make_implclosure_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
+          python fixtures/num/fmt/make_ang_fixtures.py --check
           python fixtures/num/la/make_la_fixtures.py --check
           python tools/fixtures/geo_sel_sets.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check

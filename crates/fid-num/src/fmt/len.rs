@@ -63,27 +63,34 @@
 //! finite `x` in um at 20 decimals is about `2^1024 * 10^26`, and for the smallest
 //! subnormal at the 17-digit cap about `2^53 * 10^345`), well inside the 2560-bit `kdec`
 //! big integer, so [`FmtError::Capacity`] cannot occur.
+//!
+//! # Reuse by `fmt::ang`
+//!
+//! The digit engine (`round_at`, `decimal_exponent`, `render`), the side-preserving loop
+//! (`side_rule`) and the exact output-against-limit comparison (`cmp_out`) are generic over
+//! the capacity of the `kdec` big integer, so `KRN.NUM.FMT.ANG` runs the same code on its
+//! larger numbers instead of a copy. `fmt.length@1` and `fmt.scalar@1` use 80 limbs.
 
 use core::cmp::Ordering;
 
-use super::types::{Conversion, FmtError, FormatSpec, FormatterId, Precision, Reported, Unit};
+use super::types::{Conversion, FmtError, FormatSpec, FormatterId, Limits, Precision, Reported, SideOutcome, Unit};
 use super::types::{MAX_DECIMALS, MAX_SIG_DIGITS};
 use crate::err::NumError;
-use crate::kdec::{self, Big, Decimal};
+use crate::kdec::{self, BigN, Decimal, LIMBS};
 
 const SIG_CAP: i32 = MAX_SIG_DIGITS as i32;
 
 /// Exact unit factor data for one display unit.
 #[derive(Clone, Copy)]
-struct Factor {
+pub(crate) struct Factor {
     /// `N` gets `* 10^num_pow10`.
-    num_pow10: u32,
+    pub(crate) num_pow10: u32,
     /// `D` gets `* den`.
-    den: u32,
+    pub(crate) den: u32,
     /// `f(u) = back_coeff * 10^back_exp` (display to SI).
-    back_coeff: u32,
-    back_exp: i64,
-    conv: Conversion,
+    pub(crate) back_coeff: u32,
+    pub(crate) back_exp: i64,
+    pub(crate) conv: Conversion,
 }
 
 fn factor(formatter: FormatterId, unit: Unit) -> Result<(&'static str, Factor), NumError> {
@@ -92,7 +99,7 @@ fn factor(formatter: FormatterId, unit: Unit) -> Result<(&'static str, Factor), 
         den,
         back_coeff,
         back_exp,
-        conv: Conversion { from, to: unit, factor },
+        conv: Conversion { from, to: unit, factor, pi_enclosure: None },
     };
     if formatter == FormatterId::LENGTH_V1 {
         const OP: &str = "fmt.length@1";
@@ -117,22 +124,23 @@ fn factor(formatter: FormatterId, unit: Unit) -> Result<(&'static str, Factor), 
 
 /// Internal precision; decimals may grow past 20 under the side-preserving rule.
 #[derive(Clone, Copy)]
-enum Prec {
+pub(crate) enum Prec {
     Dec(i32),
     Sig(i32),
 }
 
-/// The exact display value `(-1)^neg * n / d` and its decimal exponent `k`.
-struct Exact {
-    neg: bool,
-    n: Big,
-    d: Big,
-    k: i32,
+/// An exact non-negative magnitude `n / d` with its decimal exponent `k`
+/// (`10^k <= n / d < 10^(k+1)`, `k = 0` for zero) and the sign of the value.
+pub(crate) struct Exact<const L: usize> {
+    pub(crate) neg: bool,
+    pub(crate) n: BigN<L>,
+    pub(crate) d: BigN<L>,
+    pub(crate) k: i32,
 }
 
 /// How the magnitude `|v| * 10^p` is turned into an integer.
 #[derive(Clone, Copy)]
-enum Rnd {
+pub(crate) enum Rnd {
     /// Round half to even (every output except a capped side-rule output).
     HalfEven,
     /// Away from zero (ceiling of the magnitude).
@@ -141,19 +149,33 @@ enum Rnd {
     Down,
 }
 
-/// A rounded output `(-1)^neg * q * 10^-p`.
-struct Out {
-    q: Big,
-    p: i32,
+/// A rounded magnitude `q * 10^-p`.
+pub(crate) struct Out<const L: usize> {
+    pub(crate) q: BigN<L>,
+    pub(crate) p: i32,
+}
+
+impl<const L: usize> Out<L> {
+    /// Same printed value: equal `q` and `p` (outputs keep a fixed digit count, so equal
+    /// values have equal `(q, p)`).
+    pub(crate) fn same(&self, other: &Self) -> bool {
+        self.p == other.p && self.q.cmp_mag(&other.q) == Ordering::Equal
+    }
 }
 
 /// Formats `x` (metres for `fmt.length@1`, the plain value for `fmt.scalar@1`) as pinned in
 /// the module documentation (REQ-KRN.NUM.FMT.LEN-001 .. -010).
 pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
     let (op, fac) = factor(spec.formatter, spec.unit)?;
+    format_with(op, &fac, x, spec)
+}
+
+/// Error checks 2 and 3 of the module documentation: the precision (significant digits only
+/// when `allow_sig`), then inverted limits.
+pub(crate) fn check_spec(op: &'static str, spec: &FormatSpec, allow_sig: bool) -> Result<(Prec, Limits), NumError> {
     let prec = match spec.precision {
         Precision::Decimals(p) if p <= MAX_DECIMALS => Prec::Dec(i32::from(p)),
-        Precision::SigDigits(n) if (1..=MAX_SIG_DIGITS).contains(&n) => Prec::Sig(i32::from(n)),
+        Precision::SigDigits(n) if allow_sig && (1..=MAX_SIG_DIGITS).contains(&n) => Prec::Sig(i32::from(n)),
         _ => return Err(FmtError::PrecisionOutOfRange.at(op)),
     };
     let limits = spec.limits.unwrap_or_default();
@@ -162,59 +184,57 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
             return Err(FmtError::LimitsInverted.at(op));
         }
     }
+    Ok((prec, limits))
+}
+
+/// The side outcome before any limit is tested: [`SideOutcome::NoLimits`] when no limit
+/// value is given, else [`SideOutcome::Within`].
+pub(crate) fn initial_outcome(limits: &Limits) -> SideOutcome {
+    if limits.lower.is_none() && limits.upper.is_none() {
+        SideOutcome::NoLimits
+    } else {
+        SideOutcome::Within
+    }
+}
+
+/// The whole formatter after the unit check, for an exact decimal factor: `fmt.length@1`,
+/// `fmt.scalar@1` and the `rad` unit of `fmt.angle@1`.
+pub(crate) fn format_with(op: &'static str, fac: &Factor, x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
+    let (prec, limits) = check_spec(op, spec, true)?;
     if !x.is_finite() {
         return Err(FmtError::NonFinite.at(op));
     }
-    let v = exact(op, x, &fac)?;
-    let mut prec = prec;
-    let mut out = round_at(op, &v, prec, Rnd::HalfEven)?;
+    let v: Exact<LIMBS> = exact(op, x, fac)?;
+    let out = round_at(op, &v, prec, Rnd::HalfEven)?;
 
+    let mut outcome = initial_outcome(&limits);
     let mut side = None;
     if let Some(hi) = &limits.upper {
         if kdec::cmp(x, hi)? == Ordering::Greater {
             side = Some((*hi, Ordering::Greater));
+            outcome = SideOutcome::AboveUpper;
         }
     }
     if side.is_none() {
         if let Some(lo) = &limits.lower {
             if kdec::cmp(x, lo)? == Ordering::Less {
                 side = Some((*lo, Ordering::Less));
+                outcome = SideOutcome::BelowLower;
             }
         }
     }
-    let mut digits_added: u16 = 0;
-    let mut tie = false;
-    if let Some((lim, want)) = side {
-        loop {
-            if cmp_out(op, v.neg, &out, &fac, &lim)? == want {
-                break;
-            }
-            let next = match prec {
-                Prec::Sig(n) if n < SIG_CAP => Prec::Sig(n + 1),
-                Prec::Dec(p) if v.k + 1 + p < SIG_CAP => {
-                    // A zero output stays zero up to p = -k - 2: skip those steps at once.
-                    let skip_to = if out.q.is_zero() { (-v.k - 1).max(p + 1) } else { p + 1 };
-                    Prec::Dec(skip_to.min(SIG_CAP - 1 - v.k))
-                }
-                _ => {
-                    // At the cap: round the last digit toward the violated side instead
-                    // (REQ-005). Away from zero for an upper limit and a positive value or
-                    // a lower limit and a negative value, toward zero otherwise.
-                    tie = true;
-                    let dir = if (want == Ordering::Greater) != v.neg { Rnd::Up } else { Rnd::Down };
-                    out = round_at(op, &v, prec, dir)?;
-                    break;
-                }
-            };
-            let added = match (prec, next) {
-                (Prec::Dec(a), Prec::Dec(b)) | (Prec::Sig(a), Prec::Sig(b)) => b - a,
-                _ => 1,
-            };
-            digits_added = digits_added.saturating_add(u16::try_from(added).unwrap_or(u16::MAX));
-            prec = next;
-            out = round_at(op, &v, prec, Rnd::HalfEven)?;
-        }
-    }
+    let (out, digits_added, tie) = match side {
+        Some((lim, want)) => side_rule(
+            prec,
+            v.k,
+            v.neg,
+            want,
+            out,
+            |p, r| round_at(op, &v, p, r),
+            |o| cmp_out(op, v.neg, o, fac.back_coeff, fac.back_exp, &lim, 1),
+        )?,
+        None => (out, 0, false),
+    };
     Ok(Reported {
         value: render(v.neg, &out),
         unit: spec.unit,
@@ -222,14 +242,64 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
         formatter: spec.formatter,
         digits_added,
         tie_at_max_precision: tie,
+        side: outcome,
     })
+}
+
+/// The side-preserving rule (step 5; REQ-KRN.NUM.FMT.LEN-004, -005), shared with
+/// `fmt::ang`. Starting from `out` at `prec`: stop when `beyond(out)` equals `want`; else at
+/// the cap round toward the violated side once with `round` and set the tie flag; else add
+/// one digit (skipping the steps where a zero output stays zero) and round half-even again.
+/// `k` is the exact decimal exponent of the value; it is read only for decimals.
+/// Returns the output, `digits_added` and `tie_at_max_precision`.
+pub(crate) fn side_rule<const L: usize, R, C>(
+    mut prec: Prec,
+    k: i32,
+    neg: bool,
+    want: Ordering,
+    mut out: Out<L>,
+    mut round: R,
+    mut beyond: C,
+) -> Result<(Out<L>, u16, bool), NumError>
+where
+    R: FnMut(Prec, Rnd) -> Result<Out<L>, NumError>,
+    C: FnMut(&Out<L>) -> Result<Ordering, NumError>,
+{
+    let mut digits_added: u16 = 0;
+    loop {
+        if beyond(&out)? == want {
+            return Ok((out, digits_added, false));
+        }
+        let next = match prec {
+            Prec::Sig(n) if n < SIG_CAP => Prec::Sig(n + 1),
+            Prec::Dec(p) if k + 1 + p < SIG_CAP => {
+                // A zero output stays zero up to p = -k - 2: skip those steps at once.
+                let skip_to = if out.q.is_zero() { (-k - 1).max(p + 1) } else { p + 1 };
+                Prec::Dec(skip_to.min(SIG_CAP - 1 - k))
+            }
+            _ => {
+                // At the cap: round the last digit toward the violated side instead
+                // (REQ-005). Away from zero for an upper limit and a positive value or
+                // a lower limit and a negative value, toward zero otherwise.
+                let dir = if (want == Ordering::Greater) != neg { Rnd::Up } else { Rnd::Down };
+                return Ok((round(prec, dir)?, digits_added, true));
+            }
+        };
+        let added = match (prec, next) {
+            (Prec::Dec(a), Prec::Dec(b)) | (Prec::Sig(a), Prec::Sig(b)) => b - a,
+            _ => 1,
+        };
+        digits_added = digits_added.saturating_add(u16::try_from(added).unwrap_or(u16::MAX));
+        prec = next;
+        out = round(prec, Rnd::HalfEven)?;
+    }
 }
 
 fn capacity(op: &'static str) -> NumError {
     FmtError::Capacity.at(op)
 }
 
-fn check(op: &'static str, b: &Big) -> Result<(), NumError> {
+pub(crate) fn check<const L: usize>(op: &'static str, b: &BigN<L>) -> Result<(), NumError> {
     if b.overflowed() {
         Err(capacity(op))
     } else {
@@ -237,17 +307,24 @@ fn check(op: &'static str, b: &Big) -> Result<(), NumError> {
     }
 }
 
-/// Decomposes `x` and forms `N / D` (step 1 and 2 of the Design algorithm).
-fn exact(op: &'static str, x: f64, fac: &Factor) -> Result<Exact, NumError> {
+/// Splits a finite `x` into sign, integer mantissa `m` and binary exponent `e`:
+/// `x = (-1)^neg * m * 2^e` exactly (step 1).
+pub(crate) fn decompose(x: f64) -> (bool, u64, i32) {
     let bits = x.to_bits();
     let neg = bits >> 63 == 1;
     let bexp = ((bits >> 52) & 0x7ff) as i32;
     let frac = bits & ((1u64 << 52) - 1);
     let (m, e) = if bexp == 0 { (frac, -1074) } else { (frac | (1u64 << 52), bexp - 1075) };
-    let mut n = Big::from_u128(u128::from(m));
+    (neg, m, e)
+}
+
+/// Decomposes `x` and forms `N / D` (step 1 and 2 of the Design algorithm).
+fn exact(op: &'static str, x: f64, fac: &Factor) -> Result<Exact<LIMBS>, NumError> {
+    let (neg, m, e) = decompose(x);
+    let mut n = BigN::<LIMBS>::from_u128(u128::from(m));
     n.shl(e.max(0).unsigned_abs());
     n.mul_pow10(fac.num_pow10);
-    let mut d = Big::from_u128(1);
+    let mut d = BigN::<LIMBS>::from_u128(1);
     d.shl((-e).max(0).unsigned_abs());
     d.mul_small(fac.den);
     check(op, &n)?;
@@ -257,7 +334,7 @@ fn exact(op: &'static str, x: f64, fac: &Factor) -> Result<Exact, NumError> {
 }
 
 /// `N >= D * 10^k`, exactly.
-fn ge_pow10(op: &'static str, n: &Big, d: &Big, k: i32) -> Result<bool, NumError> {
+fn ge_pow10<const L: usize>(op: &'static str, n: &BigN<L>, d: &BigN<L>, k: i32) -> Result<bool, NumError> {
     let (mut l, mut r) = (*n, *d);
     if k >= 0 {
         r.mul_pow10(k.unsigned_abs());
@@ -270,7 +347,7 @@ fn ge_pow10(op: &'static str, n: &Big, d: &Big, k: i32) -> Result<bool, NumError
 }
 
 /// The exact `k` with `10^k <= N / D < 10^(k+1)`, for non-zero `N`.
-fn decimal_exponent(op: &'static str, n: &Big, d: &Big) -> Result<i32, NumError> {
+pub(crate) fn decimal_exponent<const L: usize>(op: &'static str, n: &BigN<L>, d: &BigN<L>) -> Result<i32, NumError> {
     // N / D lies in [2^(b-1), 2^(b+1)) with b = bitlen(N) - bitlen(D), so b * log10(2)
     // (1233 / 4096 = 0.301025..) is within 2 of k; the exact tests below settle it.
     let b = n.bit_len() as i32 - d.bit_len() as i32;
@@ -289,7 +366,7 @@ fn decimal_exponent(op: &'static str, n: &Big, d: &Big) -> Result<i32, NumError>
 
 /// One rounding of `|v|` at the given precision (step 3): half-even, or directed at the
 /// side-rule cap.
-fn round_at(op: &'static str, v: &Exact, prec: Prec, rnd: Rnd) -> Result<Out, NumError> {
+pub(crate) fn round_at<const L: usize>(op: &'static str, v: &Exact<L>, prec: Prec, rnd: Rnd) -> Result<Out<L>, NumError> {
     let mut p = match prec {
         Prec::Dec(p) => p,
         Prec::Sig(n) => n - 1 - v.k,
@@ -312,10 +389,10 @@ fn round_at(op: &'static str, v: &Exact, prec: Prec, rnd: Rnd) -> Result<Out, Nu
         _ => {}
     }
     if let Prec::Sig(digits) = prec {
-        let mut decade = Big::from_u128(1);
+        let mut decade = BigN::<L>::from_u128(1);
         decade.mul_pow10(digits.unsigned_abs());
         if q.cmp_mag(&decade) == Ordering::Equal {
-            q = Big::from_u128(1);
+            q = BigN::<L>::from_u128(1);
             q.mul_pow10((digits - 1).unsigned_abs());
             p -= 1;
         }
@@ -325,10 +402,31 @@ fn round_at(op: &'static str, v: &Exact, prec: Prec, rnd: Rnd) -> Result<Out, Nu
     Ok(Out { q, p })
 }
 
-/// Signed exact comparison of the output, converted back to SI units, with a limit
-/// (step 5). Equivalent to `kdec::cmp_dec` of the output as a `Decimal` against the limit;
-/// done on the big integer because the output coefficient may not fit a `Decimal`.
-fn cmp_out(op: &'static str, neg: bool, out: &Out, fac: &Factor, lim: &Decimal) -> Result<Ordering, NumError> {
+/// Number of decimal digits of `v` (1 for 0).
+fn decimal_digits(mut v: u32) -> i64 {
+    let mut n = 1;
+    while v >= 10 {
+        v /= 10;
+        n += 1;
+    }
+    n
+}
+
+/// Signed exact comparison of the output `(-1)^neg * q * 10^-p`, converted back with
+/// `* back_coeff * 10^back_exp`, against `lim * lim_scale` (step 5). For `fmt.length@1`
+/// (`lim_scale = 1`) this equals `kdec::cmp_dec` of the output as a `Decimal` against the
+/// limit; it runs on the big integer because the output coefficient may not fit a
+/// `Decimal`. `fmt::ang` passes `lim_scale = 3600` to compare seconds with a limit in
+/// degrees.
+pub(crate) fn cmp_out<const L: usize>(
+    op: &'static str,
+    neg: bool,
+    out: &Out<L>,
+    back_coeff: u32,
+    back_exp: i64,
+    lim: &Decimal,
+    lim_scale: u32,
+) -> Result<Ordering, NumError> {
     let sign = |zero: bool, neg: bool| -> i8 {
         match (zero, neg) {
             (true, _) => 0,
@@ -341,16 +439,17 @@ fn cmp_out(op: &'static str, neg: bool, out: &Out, fac: &Factor, lim: &Decimal) 
     if os != ls || os == 0 {
         return Ok(os.cmp(&ls));
     }
-    // |out| = A * 10^a_exp, |lim| = B * 10^b_exp, A and B non-zero integers.
+    // |out| = A * 10^a_exp, |lim| * lim_scale = B * 10^b_exp, A and B non-zero integers.
     let mut a = out.q;
-    a.mul_small(fac.back_coeff);
-    let a_exp = fac.back_exp - i64::from(out.p);
-    let mut b = Big::from_u128(lim.coeff());
+    a.mul_small(back_coeff);
+    let a_exp = back_exp - i64::from(out.p);
+    let mut b = BigN::<L>::from_u128(lim.coeff());
+    b.mul_small(lim_scale);
     let b_exp = i64::from(lim.exp10());
     let mag = if a_exp >= b_exp {
         let diff = a_exp - b_exp;
-        if diff >= 39 {
-            // A >= 1 and B <= u128::MAX < 10^39.
+        if diff >= 39 + decimal_digits(lim_scale) {
+            // A >= 1 and B <= u128::MAX * lim_scale < 10^39 * 10^digits(lim_scale).
             Ordering::Greater
         } else {
             a.mul_pow10(diff as u32);
@@ -369,11 +468,12 @@ fn cmp_out(op: &'static str, neg: bool, out: &Out, fac: &Factor, lim: &Decimal) 
         }
     };
     check(op, &a)?;
+    check(op, &b)?;
     Ok(if os < 0 { mag.reverse() } else { mag })
 }
 
 /// Decimal digits of `q` (most significant first), `"0"` for zero.
-fn digits(q: &Big) -> Vec<u8> {
+pub(crate) fn digits<const L: usize>(q: &BigN<L>) -> Vec<u8> {
     let mut t = *q;
     let mut chunks: Vec<u32> = Vec::new();
     while !t.is_zero() && !t.overflowed() {
@@ -398,7 +498,7 @@ fn digits(q: &Big) -> Vec<u8> {
 }
 
 /// The canonical string (step 4).
-fn render(neg: bool, out: &Out) -> String {
+pub(crate) fn render<const L: usize>(neg: bool, out: &Out<L>) -> String {
     let zero = out.q.is_zero();
     let mut ds = digits(&out.q);
     let mut s = String::with_capacity(ds.len() + out.p.unsigned_abs() as usize + 3);
