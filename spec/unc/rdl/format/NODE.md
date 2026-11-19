@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-rdl]
 satisfies: [REQ-UNC.RDL-001, REQ-UNC.RDL-002]
 covers: []
 depends_on: [KRN]
@@ -63,14 +64,29 @@ Defines the `RdlDataset` record shared by every tier (X external, G generated, O
 - **Registry command(s):** `rdl.list_dataset@1` (R0; filters `tier`, `aim`; returns `Vec<PublicRecord>`), `rdl.show_dataset@1` (R0; `id`; returns `PublicRecord`).
 - **Data structures:** `RdlDataset { id, tier, aim, inputs: Vec<BlobRef{digest, unit, role}>, reference: { outputs: Vec<RefOutput{name, kind, value_hex, test_uncertainty_hex}>, precision_digits }, generator: Option<GeneratorRecord>, cross_check: Vec<CrossCheck>, provenance, licence, visibility }`; reference values stored as IEEE-754 hex plus an optional decimal string with more digits.
 - **Algorithm:** bounded JSON parse (record ≤ 4 MB, depth ≤ 32), validation in field order, canonicalization, digest; blobs stored by digest in the RDL store.
-- **Errors:** `schema_invalid{field}`, `bad_id`, `bad_unit`, `missing_licence`, `missing_provenance`, `missing_test_uncertainty`, `dataset_not_found`.
+- **Errors:** `schema_invalid{field}`, `bad_id`, `bad_unit`, `missing_licence`, `missing_provenance`, `missing_test_uncertainty`, `dataset_not_found`; the command surfaces add `bad_params{field}` for malformed CLI arguments or MCP parameters (envelope code `usage_error`). Every error carries a field path built only from schema field names and array indices (`inputs.0.unit`, `reference.outputs.2.test_uncertainty_hex`, `record` for the whole record) and a static reason; no error, message or envelope detail ever holds a value or key taken from the input.
+- **Pinned format (rdl-dataset/v1):**
+  - Top-level keys, all required unless marked: `schema` (`"rdl-dataset/v1"`), `id`, `tier`, `aim`, `inputs`, `reference`, `generator` (optional; required for tier G), `cross_check` (required, may be empty), `provenance`, `licence`, `visibility`. Unknown keys are refused at every level. Optional fields are absent when unset; `null` is refused, except that a `null` licence, provenance, provenance source or test uncertainty counts as missing.
+  - ID grammar: `rdl:<tier>/<aim>/<case>/<nnnn>`; tier one of `X G O B` (upper case); aim `module.feature.method`, three segments `[a-z][a-z0-9_]*`, at most 128 bytes (the KRN.MAN.CARD algorithm ID without `@version`); case `[a-z0-9][a-z0-9_-]*`, at most 64 bytes; nnnn exactly four ASCII digits. The ID's tier and aim must equal the `tier` and `aim` fields (`bad_id` otherwise).
+  - Input: `{digest, unit, role}`; digest `sha256:` plus 64 lower-case hex digits (fid-types); unit exactly one of `m`, `mm`, `µm` (U+00B5 MICRO SIGN then `m`; `um` and U+03BC are `bad_unit`), `rad`, `deg`; role `[a-z][a-z0-9_]*`, at most 64 bytes; 1 to 256 inputs. Declared conversion to SI: m, mm, µm to m by 1, 1/1000, 1/1000000; rad, deg to rad by 1, pi/180. The conversion is applied where the input is used, not here.
+  - Reference: `{outputs, precision_digits}`; 1 to 256 outputs with unique names; `precision_digits` an integer 1 to 1000. Output: `{name, kind, value_hex, value_dec?, test_uncertainty_hex}`; kind one of `length`, `angle`, `dimensionless` with values in SI (m, rad, 1).
+  - Hex floats: `0x` followed by exactly 16 lower-case hex digits of the IEEE 754 binary64 bits (upper case and short forms refused); NaN and infinities refused; test uncertainty and cross-check deviation must have the sign bit clear (so -0 is refused). `value_dec` matches `-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?`, at most 128 bytes; its agreement with `value_hex` is checked by the producer (GEN, EXT), not here.
+  - Generator: `{id, version, seed}`; id `[a-z][a-z0-9_.-]*` (128 bytes); version `[A-Za-z0-9.+-]+` (64 bytes); seed a decimal u64 string without leading zeros. Cross-check: `{oracle, outcome, max_deviation_hex}`; outcome `agree` or `disagree`; at most 16.
+  - Provenance: `{source, method?}`, printable text without control characters, 1 to 512 bytes; a missing or empty source is `missing_provenance`.
+  - Licence: one SPDX ID `[A-Za-z0-9][A-Za-z0-9.+-]*` or `LicenseRef-[A-Za-z0-9.-]+`, at most 64 bytes; expressions are refused. Redistributable licences are the `[policy] redistributable` list of `datasets.toml` (CC0-1.0, CC-BY-4.0, CC-BY-SA-4.0, MIT, Apache-2.0, BSD-3-Clause, ODbL-1.0, PDDL-1.0), matched exactly; every other licence and every `LicenseRef-*` is treated as not redistributable.
+  - Visibility rules: `blind` if and only if tier B; `public` only with a redistributable licence (otherwise `schema_invalid{visibility}`).
+  - Validation order: the top-level fields in the order listed above (so a record missing both provenance and licence reports provenance), then unknown keys, then the cross-field rules (ID agreement, tier G generator, visibility). The first failure is returned.
+  - Bounds: record at most 4 MiB (4,194,304 bytes); nesting depth at most 32, counting every array and object with the record itself at depth 1; duplicate keys refused.
+  - Digest: SHA-256 over the RFC 8785 canonical bytes (fid-canon) of the record as listed above (the record holds no `digest` key), written `sha256:<hex>`.
+- **Public view (allowlist, fail-closed):** tier B or visibility `blind` gives exactly `{aim, digest, id}`. Visibility `reference_only`, or any licence that is not redistributable, gives `{aim, digest, id, inputs: [{digest}], licence, provenance: {source}, reference_digest, schema, tier, visibility: "reference_only"}`, where `reference_digest` is SHA-256 of the canonical `reference` object; units, roles, outputs, precision, generator, cross-checks and provenance method are dropped. Otherwise the canonical record plus `digest`.
+- **Commands:** results are the shared result envelope (AUTO.SURF.ENV, `computed` or `failed`); `--json` prints its canonical bytes, and the MCP tools return the same envelope. CLI: `fid rdl list-dataset [--tier <X|G|O|B>] [--aim <aim>] [--json]`, `fid rdl show-dataset --id <id> [--json]`. Listing order is ascending ID by bytes. Journaling: per CONSTITUTION §3 and D-031, R0 calls go to the Activity Log, not the Record Journal; each call whose command and parameters parse appends `{command, params, result_sha256, surface}`, where `result_sha256` is SHA-256 of the canonical envelope bytes; exact replay reruns the call and compares that digest (`IDENTICAL` or `DIVERGENT`).
 - **Determinism:** D0.
 - **Performance budget:** list 10,000 records in under 200 ms [unverified until measured].
 - **Crate:** `fid-rdl`.
 
 ## Test fixtures
 
-`fixtures/rdl/format/`: small synthetic records per tier (CC-BY-4.0) and invalid variants. No external data is needed.
+`fixtures/rdl/format/`: small synthetic records per tier (CC-BY-4.0) and invalid variants. No external data is needed. Layout, all written by `make_fixtures.py` (stdlib Python, independent of the Rust code): `valid/*.json` (one record per tier, two for tier G so the ID order is tested), `invalid/<field>--<code>[--<note>].json` (the expected error field and code are in the file name), `digests.txt` (`<file> <digest>`), `expected/*.public.json` (canonical public views) and `expected/list-tier-g.json`, `expected/show-tier-b.json` (canonical envelopes of the AC-5 and AC-3 calls). The X and B records only declare synthetic `LicenseRef-Synthetic-*` licences; no third-party data is used (D-038).
 
 ## Build prompt
 
