@@ -81,6 +81,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f125eb85b84a24c36b02ed1d22c9dd8632f53b3cde6e4d23512f94021030003"
 
 [[package]]
+name = "cap-fs-ext"
+version = "3.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "476f0d0003a760918ed4b1e039a59e11769030416f79c8222551d22785f7f70d"
+dependencies = [
+ "cap-primitives",
+ "cap-std",
+ "io-lifetimes",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "cap-primitives"
 version = "3.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -441,12 +453,17 @@ dependencies = [
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "fid-bus",
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-store",
  "fid-types",
+ "libc",
  "unicode-normalization",
+ "winx",
 ]
 
 [[package]]

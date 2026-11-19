@@ -134,7 +134,7 @@ fn in_ranges(ranges: &[(u32, u32)], u: u32) -> bool {
         .is_ok()
 }
 
-fn forbidden(c: char) -> Option<IdError> {
+pub(crate) fn forbidden(c: char) -> Option<IdError> {
     let u = u32::from(c);
     if c.is_control() {
         Some(IdError::ControlChar)
