@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
 satisfies: [REQ-KRN.NUM.LINT-005, REQ-KRN.NUM.LINT-007]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND, KRN.NUM.LINT.GRAPH]
@@ -65,6 +66,19 @@ Fails the build when kernel source names a reference dataset or embeds one of it
 - **Determinism:** D0.
 - **Performance budget:** 300 000 lines against 100 000 denylisted values < 5 s [unverified until measured].
 - **Crate:** `fid-knp1-lint` (tooling layer).
+
+### Build decisions (fid-knp1-lint `data`)
+
+- **Denylist schema (version 1)**, as `UNC.RDL.LINT`'s Design pins it: an object with exactly `version` (the number 1), `ids` and `files` (unique non-empty strings), `values` (objects with exactly `decimal`, a non-empty list of decimal strings, and `hex`, `0x` plus 16 lowercase hex digits), `excluded` (decimal strings) and `digest`, `sha256:` plus the hex SHA-256 of the RFC 8785 canonical JSON of the object without `digest`. Duplicate keys, unknown keys, a wrong digest, and a missing or unreadable file are fatal `KNP1-DATA-DENYLIST`.
+- **Token walk.** Literals come from the bounded lexer of `KRN.NUM.LINT.SYN` (macro bodies and invocations included); a file it cannot classify is `KNP1-PARSE`; an unreadable listed file is fatal `KNP1-READ`.
+- **IDs and file names (fail closed).** Compared ASCII-case-insensitively as substrings of every string, byte-string and C-string literal, both as written and unescaped (`\x2d`, `\u{…}`, line continuations), and of the concatenation of all string literals of one macro invocation (`concat!("trac", "im-…")`), reported at the first of them.
+- **Values.** Literals are normalised exactly (strip `_` and the type suffix, then digits and a decimal exponent, no float conversion) and compared on magnitude, so `-0.123456789012` matches. Significant digits are counted as written, from the first non-zero digit (trailing zeros count). Hex, octal and binary integers are compared through their decimal value.
+- **Bits.** A float literal is parsed correctly rounded (and also as `f32` when so suffixed) and compared with the sign bit cleared. Any integer literal equal to a denylisted bit pattern is `KNP1-DATA-HEX` wherever it appears, not only as a `from_bits` argument, so a constant passed to `from_bits` indirectly is caught too.
+- **One finding per literal.** A literal that matches both `KNP1-DATA-VALUE` and `KNP1-DATA-HEX` yields `KNP1-DATA-VALUE` only, so the canary yields exactly one finding (AC-1).
+- **Excluded values** never produce a finding: neither their exact decimal value nor their bits.
+- **Config:** `[data] denylist = "<path>"` (required, relative to `knp1-lint.toml`). `run` returns the findings and the verified denylist digest for the report.
+- **Canary (deviation).** `UNC.RDL.LINT` is not built yet, so `fixtures/rdl/lint/` does not exist. `fixtures/knp1/data/make_fixtures.py` stands in for it with the same schema: a denylist from hand-chosen values, IDs and file names, a canary workspace with one planted constant, and the canary with it removed. Re-point AC-1 at `fixtures/rdl/lint/` when that leaf lands.
+- **Performance.** The 300 000-line budget is not measured [unverified].
 
 ## Test fixtures
 

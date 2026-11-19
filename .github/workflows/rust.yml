@@ -262,6 +262,7 @@ jobs:
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/knp1/seeded/make_expected.py --check
+          python fixtures/knp1/data/make_fixtures.py --check
           python fixtures/solv/vend/make_fixtures.py --check
           python fixtures/solv/make_mstart_fixtures.py --check
           python tools/check_eval_suite.py
