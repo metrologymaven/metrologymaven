@@ -123,6 +123,9 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
+# of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
+fixtures/man/implclosure-ws-v1/** -text
 # GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.

@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # KRN.MAN.MANI.GEN: Build-time manifest generator and two-stage embedding
@@ -55,6 +55,13 @@ Fills the manifest from the build and breaks the circle between "the artifact em
 - **Determinism:** D0 over the same inputs.
 - **Performance budget:** both stages excluding the artifact build < 30 s on CI [unverified until measured].
 - **Crate:** `fid-manifest-gen` (binary; build-time tool, outside the shipped kernel artifact, file I/O allowed); generated constant in `fid-kernel`.
+- **Hand-off from `KRN.MAN.MANI.IMPL` (recorded when IMPL was built, PR #204):** `fid_manifest_gen::implclosure::impl_digests_from_files` (or `impl_digests`) takes five inputs, and GEN owns where each comes from:
+  - *Cargo metadata:* GEN shall run `cargo metadata --format-version 1 --locked --offline` itself, in the same run that computes the digests, from the workspace root and scoped to the artifact's own packages and features (the `--features`/`--no-default-features` set and the packages the artifact build uses, with `--filter-platform` left off so every platform's edges count). It shall never read a metadata file produced earlier or elsewhere: enabled features are part of each digest, so a stale or differently scoped file would give digests for a different build. `--locked` makes Cargo fail rather than change `Cargo.lock`; `--offline` keeps resolution to vendored sources.
+  - *Tracked files:* `implclosure::git_tracked_files` on the workspace root (hardened `git ls-files -z --stage`); the CI clean-tree check runs before it.
+  - *Algorithm IDs:* the kernel assembly's `AlgorithmTable::ids()` (`KRN.MAN.KCI`).
+  - *Registrations:* one (algorithm ID, registering crate name) pair per algorithm, emitted by the kernel assembly next to its table (each algorithm crate declares the IDs it registers); GEN must not infer them from crate names.
+  - *Allowlist:* the workspace members whose layer is `num` or `kernel` in `layers.toml`, plus every `name` in `kernel-allowlist.toml` (`ECO.REPO.ALLOW`), read with duplicate keys rejected.
+  GEN then checks the written manifest with `implclosure::check_manifest`, which reads it only through `KernelManifest::parse_canonical`.
 
 ## Test fixtures
 
