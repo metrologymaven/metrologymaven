@@ -209,7 +209,10 @@ fn k<'x>(v: &'x u8) {}
 "####;
     assert_eq!(
         idents(src),
-        ["let", "a", "let", "b", "let", "c", "let", "d", "let", "e", "let", "f", "let", "g", "let", "h", "fn", "k", "x", "v", "x", "u8"]
+        [
+            "let", "a", "let", "b", "let", "c", "let", "d", "let", "e", "let", "f", "let", "g", "let", "h", "fn", "k",
+            "x", "v", "x", "u8"
+        ]
     );
 }
 
@@ -259,8 +262,12 @@ fn inner_cfg_test_removes_the_scope() {
 
 #[test]
 fn cfg_any_test_is_still_scanned() {
-    let f = scan("src/x.rs", "#[cfg(any(test, feature = \"x\"))]\nfn a() { data.map_async(MapMode::Read, cb); }", &manifest())
-        .unwrap();
+    let f = scan(
+        "src/x.rs",
+        "#[cfg(any(test, feature = \"x\"))]\nfn a() { data.map_async(MapMode::Read, cb); }",
+        &manifest(),
+    )
+    .unwrap();
     assert_eq!(rules(&f), vec![("src/x.rs:2".to_string(), Rule::Readback)]);
 }
 
@@ -309,7 +316,20 @@ fn map_async() {}";
 
 #[test]
 fn toolkit_denylist() {
-    for n in ["egui", "eframe", "winit", "iced", "slint", "egui-wgpu", "egui_extras", "iced_wgpu", "slint-build", "i-slint-core", "epaint", "Winit"] {
+    for n in [
+        "egui",
+        "eframe",
+        "winit",
+        "iced",
+        "slint",
+        "egui-wgpu",
+        "egui_extras",
+        "iced_wgpu",
+        "slint-build",
+        "i-slint-core",
+        "epaint",
+        "Winit",
+    ] {
         assert!(is_toolkit(n), "{n}");
     }
     for n in ["wgpu", "raw-window-handle", "eguix", "winitx", "slinter", "fid-render", "naga"] {

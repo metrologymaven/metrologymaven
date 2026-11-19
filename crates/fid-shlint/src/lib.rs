@@ -210,8 +210,8 @@ fn run_inner(args: &[String]) -> Result<Vec<Finding>, ShlintError> {
 pub fn check(crate_dir: &Path, metadata: &[u8], package: &str) -> Result<Vec<Finding>, ShlintError> {
     let manifest_bytes = read_bounded(&crate_dir.join(MANIFEST_PATH), MANIFEST_PATH, MAX_FILE_BYTES)
         .map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
-    let manifest_text = utf8(MANIFEST_PATH, manifest_bytes)
-        .map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
+    let manifest_text =
+        utf8(MANIFEST_PATH, manifest_bytes).map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
     let manifest = ShaderManifest::parse(&manifest_text).map_err(|reason| ShlintError::ManifestMalformed { reason })?;
 
     let files = walk(crate_dir)?;
@@ -354,7 +354,13 @@ pub fn walk(root: &Path) -> Result<Vec<String>, ShlintError> {
     Ok(out)
 }
 
-fn walk_dir(dir: &Path, prefix: &str, depth: usize, visited: &mut usize, out: &mut Vec<String>) -> Result<(), ShlintError> {
+fn walk_dir(
+    dir: &Path,
+    prefix: &str,
+    depth: usize,
+    visited: &mut usize,
+    out: &mut Vec<String>,
+) -> Result<(), ShlintError> {
     let shown = if prefix.is_empty() { ".".to_string() } else { prefix.to_string() };
     if depth > MAX_DEPTH {
         return Err(ShlintError::Limit { path: shown, reason: format!("nested deeper than {MAX_DEPTH} folders") });

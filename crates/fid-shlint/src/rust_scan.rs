@@ -73,7 +73,9 @@ pub fn lex(src: &str) -> Result<Vec<Token>, (u32, String)> {
                 while b.get(i).is_some_and(|&x| x.is_ascii_alphanumeric() || x == b'_' || x >= 0x80) {
                     i += 1;
                 }
-                let text = src.get(s..i).ok_or_else(|| (start_line, "identifier is not on a character boundary".to_string()))?;
+                let text = src
+                    .get(s..i)
+                    .ok_or_else(|| (start_line, "identifier is not on a character boundary".to_string()))?;
                 let tok = if c.is_ascii_digit() { Tok::Lit } else { Tok::Ident(text.to_string()) };
                 out.push(Token { tok, line: start_line });
             }
@@ -356,7 +358,8 @@ fn skip_attrs(toks: &[Token], partner: &[Option<usize>], mut k: usize) -> usize 
 
 /// Skips one item, statement, field or arm starting at `k`; returns the index after it.
 fn skip_item(toks: &[Token], partner: &[Option<usize>], start: usize) -> usize {
-    let keyword_item = matches!(toks.get(start), Some(Token { tok: Tok::Ident(s), .. }) if ITEM_KEYWORDS.contains(&s.as_str()));
+    let keyword_item =
+        matches!(toks.get(start), Some(Token { tok: Tok::Ident(s), .. }) if ITEM_KEYWORDS.contains(&s.as_str()));
     let mut k = start;
     while let Some(t) = toks.get(k) {
         match t.tok {
@@ -399,7 +402,8 @@ fn skip_scope(toks: &[Token], partner: &[Option<usize>], mut k: usize) -> usize 
 }
 
 /// Rust keywords that cannot name a mapped buffer.
-const KEYWORDS: [&str; 12] = ["self", "Self", "super", "crate", "await", "match", "if", "else", "return", "move", "in", "as"];
+const KEYWORDS: [&str; 12] =
+    ["self", "Self", "super", "crate", "await", "match", "if", "else", "return", "move", "in", "as"];
 
 /// Scans one non-test Rust file (path relative to the crate directory) for readbacks.
 pub fn scan(rel: &str, src: &str, manifest: &ShaderManifest) -> Result<Vec<Finding>, ShlintError> {
