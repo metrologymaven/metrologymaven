@@ -73,6 +73,8 @@ struct Truth {
     left: BTreeSet<u32>,
     refused: BTreeSet<u32>,
     accepted_jobs: BTreeSet<String>,
+    /// Some `Accepted` or `Finished` message named the key: the bus took it.
+    taken: bool,
     attempts: u32,
 }
 
@@ -105,14 +107,22 @@ fn run(first: Send, steps: &[Step]) {
             Step::Refuse1 => inbox.push_back(BusEvent::Refused { key, attempt: 1, reason: "busy".into() }),
             Step::Progress => inbox.push_back(BusEvent::Progress { job: j1, fraction: 0.5, stage: "s".into() }),
             Step::ProgressNaN => inbox.push_back(BusEvent::Progress { job: j1, fraction: f64::NAN, stage: "s".into() }),
-            Step::FinishCommitted => inbox.push_back(BusEvent::Finished { key, job: j1, envelope: committed.clone() }),
-            Step::FinishNotRun => {
-                inbox.push_back(BusEvent::Finished { key, job: j1, envelope: Envelope::bare(CMD, Outcome::NotRun) })
+            Step::FinishCommitted => {
+                inbox.push_back(BusEvent::Finished { key, job: j1, envelope: Box::new(committed.clone()) })
             }
-            Step::FinishCancelled => {
-                inbox.push_back(BusEvent::Finished { key, job: j1, envelope: Envelope::bare(CMD, Outcome::Cancelled) })
+            Step::FinishNotRun => inbox.push_back(BusEvent::Finished {
+                key,
+                job: j1,
+                envelope: Box::new(Envelope::bare(CMD, Outcome::NotRun)),
+            }),
+            Step::FinishCancelled => inbox.push_back(BusEvent::Finished {
+                key,
+                job: j1,
+                envelope: Box::new(Envelope::bare(CMD, Outcome::Cancelled)),
+            }),
+            Step::FinishOtherJob => {
+                inbox.push_back(BusEvent::Finished { key, job: j2, envelope: Box::new(committed.clone()) })
             }
-            Step::FinishOtherJob => inbox.push_back(BusEvent::Finished { key, job: j2, envelope: committed.clone() }),
             Step::Disconnect => inbox.push_back(BusEvent::Disconnected),
             Step::Reconnect => inbox.push_back(BusEvent::Reconnected),
             Step::UnknownKey => inbox.push_back(BusEvent::Accepted { key: j2, job: j1 }),
@@ -143,7 +153,18 @@ fn run(first: Send, steps: &[Step]) {
             }
         }
         // Record what this step tells the bus side, before the tracker sees it.
-        let accepted_before = !truth.accepted_jobs.is_empty();
+        let accepted_before = truth.taken;
+        if matches!(
+            step,
+            Step::AcceptJ1
+                | Step::AcceptJ2
+                | Step::FinishCommitted
+                | Step::FinishNotRun
+                | Step::FinishCancelled
+                | Step::FinishOtherJob
+        ) {
+            truth.taken = true;
+        }
         match step {
             Step::AcceptJ1 => {
                 truth.accepted_jobs.insert(j1.to_string());
@@ -188,9 +209,19 @@ fn run(first: Send, steps: &[Step]) {
                 }
             }
         }
-        // Once any acceptance was delivered, the tracker's evidence holds a job.
+        // Once any acceptance was delivered, the tracker's evidence holds a job; once any
+        // acceptance or final message was delivered, the evidence is sticky and no later
+        // step (including a resend that never leaves) can produce `not_run`. A `not_run`
+        // reported before that evidence arrived is not rewritten.
         if !truth.accepted_jobs.is_empty() {
             assert!(t.evidence(id).unwrap().job.is_some(), "{first:?} {ctx:?}");
+        }
+        if truth.taken {
+            assert!(t.evidence(id).unwrap().taken, "{first:?} {ctx:?}");
+            if produced {
+                let out = after.as_ref().map(|r| r.envelope.outcome.clone());
+                assert_ne!(out, Some(Outcome::NotRun), "not_run after the bus took the key: {first:?} {ctx:?}");
+            }
         }
         check(&after, before.as_ref(), &truth, step, ctx);
         assert!(t.transport().sent_with(Purpose::Cancel).len() <= 1, "cancel sent twice: {first:?} {ctx:?}");

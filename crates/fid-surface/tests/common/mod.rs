@@ -83,7 +83,7 @@ impl FakeBus {
         j.result = Some(env.clone());
         let key = j.key;
         self.commits += 1;
-        self.emit(BusEvent::Finished { key, job, envelope: env });
+        self.emit(BusEvent::Finished { key, job, envelope: Box::new(env) });
     }
 
     pub fn job_of(&self, key: Uuid) -> Option<Uuid> {
@@ -140,7 +140,7 @@ impl FakeBus {
                     self.emit(BusEvent::Accepted { key: r.key, job });
                 }
                 if let Some(env) = self.jobs.get(&job).and_then(|j| j.result.clone()) {
-                    self.emit(BusEvent::Finished { key: r.key, job, envelope: env });
+                    self.emit(BusEvent::Finished { key: r.key, job, envelope: Box::new(env) });
                 }
             }
             Purpose::Cancel => {
@@ -159,7 +159,7 @@ impl FakeBus {
                             Envelope { job_id: Some(s.clone()), ..Envelope::bare(&j.command, Outcome::Cancelled) };
                         j.result = Some(env.clone());
                         let key = j.key;
-                        self.emit(BusEvent::Finished { key, job, envelope: env });
+                        self.emit(BusEvent::Finished { key, job, envelope: Box::new(env) });
                     }
                 }
             }
@@ -172,7 +172,7 @@ impl FakeBus {
                 };
                 let job = Uuid::parse(&s).unwrap();
                 if let Some((key, Some(env))) = self.jobs.get(&job).map(|j| (j.key, j.result.clone())) {
-                    self.emit(BusEvent::Finished { key, job, envelope: env });
+                    self.emit(BusEvent::Finished { key, job, envelope: Box::new(env) });
                 }
             }
         }

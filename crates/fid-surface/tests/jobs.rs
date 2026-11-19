@@ -305,14 +305,16 @@ fn classify_is_exhaustively_honest() {
                 continue; // refusals are only recorded for attempts that left
             }
             for job in [None, Some(j)] {
-                let e = Evidence { left, refused, job };
-                let want = match job {
-                    Some(j) => Verdict::NoReply(Some(j)),
-                    None if left == refused => Verdict::NotRun,
-                    None => Verdict::NoReply(None),
-                };
-                assert_eq!(classify(&e), want, "{e:?}");
-                assert_eq!(e.never_accepted(), want == Verdict::NotRun);
+                for taken in [false, true] {
+                    let e = Evidence { left, refused, job, taken };
+                    let want = match job {
+                        Some(j) => Verdict::NoReply(Some(j)),
+                        None if left == refused && !taken => Verdict::NotRun,
+                        None => Verdict::NoReply(None),
+                    };
+                    assert_eq!(classify(&e), want, "{e:?}");
+                    assert_eq!(e.never_accepted(), want == Verdict::NotRun);
+                }
             }
         }
     }
@@ -512,7 +514,7 @@ fn finish_before_accept_is_no_reply() {
     let (mut t, _clock) = setup(bus);
     let id = submit(&mut t);
     let key = t.key(id).unwrap();
-    t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: committed(CMD) });
+    t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: Box::new(committed(CMD)) });
     t.pump(&mut ());
     let r = t.report(id).unwrap();
     assert_eq!(r.reason, Reason::ProtocolViolation(Violation::FinishBeforeAccept));
@@ -538,7 +540,7 @@ fn bad_final_envelopes_are_no_reply() {
         let id = submit(&mut t);
         let key = t.key(id).unwrap();
         t.transport_mut().inbox.push_back(BusEvent::Accepted { key, job: job_id(1) });
-        t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: env });
+        t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: Box::new(env) });
         t.pump(&mut ());
         let r = t.report(id).unwrap();
         assert_eq!(r.reason, Reason::ProtocolViolation(Violation::BadFinalEnvelope(why)));
@@ -761,4 +763,118 @@ fn events_after_take_are_unmatched() {
     t.transport_mut().progress(job_id(1), 0.5, "x");
     t.pump(&mut ());
     assert_eq!(t.counters().unmatched, 2);
+}
+
+// ------------------------------------------------------------------ review fixes (#284)
+
+/// A final message before any acceptance, then a refusal of the only attempt, then a
+/// resend that never leaves: the bus took the key, so the outcome must not be `not_run`.
+#[test]
+fn finish_before_accept_then_refusal_then_unsent_resend_is_never_not_run() {
+    let mut bus = FakeBus::new();
+    bus.passive = true;
+    let (mut t, clock) = setup(bus);
+    let id = submit(&mut t);
+    let key = t.key(id).unwrap();
+    t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: Box::new(committed(CMD)) });
+    t.pump(&mut ());
+    t.transport_mut().inbox.push_back(BusEvent::Refused { key, attempt: 0, reason: "busy".into() });
+    t.pump(&mut ());
+    assert!(t.evidence(id).unwrap().taken);
+    t.transport_mut().script.push_back(Send::NotSent);
+    t.resend(id, MS200).unwrap();
+    give_up(&mut t, &clock);
+    assert_eq!(outcome(&t, id), Outcome::NoReply);
+    assert_eq!(t.state(id).map(|s| matches!(s, State::Accepted { .. })), Some(false), "REQ-002: no Accepted state");
+}
+
+#[test]
+fn late_final_after_deadline_is_sticky_evidence() {
+    let mut bus = FakeBus::new();
+    bus.passive = true;
+    let (mut t, clock) = setup(bus);
+    let id = submit(&mut t);
+    let key = t.key(id).unwrap();
+    give_up(&mut t, &clock);
+    t.transport_mut().inbox.push_back(BusEvent::Finished { key, job: job_id(1), envelope: Box::new(committed(CMD)) });
+    t.transport_mut().inbox.push_back(BusEvent::Refused { key, attempt: 0, reason: "busy".into() });
+    t.pump(&mut ());
+    t.transport_mut().script.push_back(Send::NotSent);
+    t.resend(id, MS200).unwrap();
+    give_up(&mut t, &clock);
+    assert_eq!(outcome(&t, id), Outcome::NoReply);
+}
+
+#[test]
+fn deferred_cancel_is_sent_when_a_resend_enters_accepted() {
+    let mut bus = FakeBus::new();
+    bus.hold = true;
+    let (mut t, clock) = setup(bus);
+    let id = submit(&mut t);
+    assert_eq!(t.request_cancel(id), Ok(CancelStatus::Deferred));
+    clock.advance(MS200);
+    t.pump(&mut ());
+    assert_eq!(outcome(&t, id), Outcome::NoReply);
+    // The acceptance arrives late: the report stays, the cancel stays deferred.
+    t.transport_mut().deliver_one();
+    t.pump(&mut ());
+    assert_eq!(t.cancel_state(id), Some(CancelState::Deferred));
+    assert!(t.transport().sent_with(Purpose::Cancel).is_empty());
+    t.resend(id, MS200).unwrap();
+    assert_eq!(t.state(id), Some(&State::Accepted { job: job_id(1) }));
+    assert_eq!(t.cancel_state(id), Some(CancelState::Sent));
+    assert_eq!(t.transport().sent_with(Purpose::Cancel).len(), 1);
+}
+
+#[test]
+fn deferred_cancel_is_sent_when_reattach_enters_accepted() {
+    let mut bus = FakeBus::new();
+    bus.hold = true;
+    let (mut t, clock) = setup(bus);
+    let id = submit(&mut t);
+    assert_eq!(t.request_cancel(id), Ok(CancelStatus::Deferred));
+    clock.advance(MS200);
+    t.pump(&mut ());
+    t.transport_mut().deliver_one();
+    t.pump(&mut ());
+    t.reattach(id, MS200).unwrap();
+    assert_eq!(t.cancel_state(id), Some(CancelState::Sent));
+    let c = t.transport().sent_with(Purpose::Cancel);
+    assert_eq!(c.len(), 1);
+    assert_eq!(c[0].command.as_str(), CANCEL_JOB);
+}
+
+#[test]
+fn refused_reason_is_kept_when_a_later_attempt_does_not_leave() {
+    let mut bus = FakeBus::new();
+    bus.refuse = Some("queue_full".into());
+    let (mut t, _clock) = setup(bus);
+    let id = submit(&mut t);
+    t.pump(&mut ());
+    assert_eq!(t.report(id).unwrap().reason, Reason::Refused("queue_full".into()));
+    t.transport_mut().script.push_back(Send::NotSent);
+    t.resend(id, MS200).unwrap();
+    assert_eq!(outcome(&t, id), Outcome::NotRun);
+    assert_eq!(t.report(id).unwrap().reason, Reason::Refused("queue_full".into()));
+}
+
+#[test]
+fn reattach_is_refused_after_a_protocol_violation() {
+    let (mut t, _clock) = setup(FakeBus::new());
+    let id = submit(&mut t);
+    let key = t.key(id).unwrap();
+    t.pump(&mut ());
+    t.transport_mut().inbox.push_back(BusEvent::Finished {
+        key,
+        job: job_id(1),
+        envelope: Box::new(Envelope::bare(CMD, Outcome::NotRun)),
+    });
+    t.pump(&mut ());
+    assert_eq!(t.report(id).unwrap().reason.code(), "protocol_violation");
+    assert_eq!(t.reattach(id, MS200), Err(TrackerError::Untrusted));
+    assert_eq!(TrackerError::Untrusted.code(), "bus_untrusted");
+    assert!(t.transport().sent_with(Purpose::Wait).is_empty());
+    // Still refused after a resend reopens the invocation.
+    t.resend(id, MS200).unwrap();
+    assert_eq!(t.reattach(id, MS200), Err(TrackerError::Untrusted));
 }

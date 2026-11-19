@@ -248,7 +248,7 @@ pub enum BusEvent {
     /// Progress of a job.
     Progress { job: Uuid, fraction: f64, stage: String },
     /// The final state of the job that runs `key`.
-    Finished { key: Uuid, job: Uuid, envelope: Envelope },
+    Finished { key: Uuid, job: Uuid, envelope: Box<Envelope> },
     /// The connection to the bus was lost.
     Disconnected,
     /// The connection to the bus is back.
@@ -297,12 +297,16 @@ pub struct Evidence {
     pub refused: u64,
     /// The job named by the first explicit acceptance.
     pub job: Option<Uuid>,
+    /// Sticky: some `Accepted` or `Finished` message named this key, so the bus took it.
+    /// Kept apart from [`State::Accepted`], which only an explicit acceptance enters
+    /// (REQ-AUTO.SURF.JOBS-002). Once set, `not_run` is unreachable whatever comes later.
+    pub taken: bool,
 }
 
 impl Evidence {
     /// True only when it is certain the bus never accepted the invocation.
     pub fn never_accepted(&self) -> bool {
-        self.job.is_none() && self.left & !self.refused == 0
+        !self.taken && self.job.is_none() && self.left & !self.refused == 0
     }
 }
 
@@ -318,8 +322,8 @@ pub enum Verdict {
 pub fn classify(e: &Evidence) -> Verdict {
     match e.job {
         Some(job) => Verdict::NoReply(Some(job)),
-        None if e.left & !e.refused != 0 => Verdict::NoReply(None),
-        None => Verdict::NotRun,
+        None if e.never_accepted() => Verdict::NotRun,
+        None => Verdict::NoReply(None),
     }
 }
 
@@ -360,7 +364,8 @@ pub enum Reason {
     Deadline,
     /// The connection to the bus was lost.
     TransportClosed,
-    /// The bus broke the protocol; nothing it said after acceptance is trusted.
+    /// The bus broke the protocol for this key. Its final message is not trusted, and
+    /// [`Tracker::reattach`] is refused for the key from then on ([`TrackerError::Untrusted`]).
     ProtocolViolation(Violation),
 }
 
@@ -395,7 +400,7 @@ pub enum State {
     Accepted {
         job: Uuid,
     },
-    Finished(Report),
+    Finished(Box<Report>),
 }
 
 /// Cancellation progress of one invocation.
@@ -435,6 +440,8 @@ pub enum TrackerError {
     AlreadyAccepted,
     /// No job is known for the invocation.
     NoJob,
+    /// The bus broke the protocol for this invocation's key; the tracker will not reattach.
+    Untrusted,
     /// A built-in command ID did not parse (a bug).
     BadCommandId,
     Transport(SendError),
@@ -450,6 +457,7 @@ impl TrackerError {
             TrackerError::AlreadyFinal => "already_final",
             TrackerError::AlreadyAccepted => "already_accepted",
             TrackerError::NoJob => "no_job",
+            TrackerError::Untrusted => "bus_untrusted",
             TrackerError::BadCommandId => "bad_command_id",
             TrackerError::Transport(e) => e.code(),
         }
@@ -498,6 +506,10 @@ struct Inv {
     cancel: CancelState,
     cancel_key: Option<Uuid>,
     cancel_attempts: u32,
+    /// The last refusal reason the bus gave.
+    refusal: Option<String>,
+    /// Sticky: the bus broke the protocol for this key; never reattach to it.
+    violated: bool,
 }
 
 impl Inv {
@@ -514,7 +526,10 @@ impl Inv {
                 ..Envelope::bare(self.command.as_str(), Outcome::NoReply)
             },
         };
-        self.state = State::Finished(Report { envelope, reason });
+        if matches!(reason, Reason::ProtocolViolation(_)) {
+            self.violated = true;
+        }
+        self.state = State::Finished(Box::new(Report { envelope, reason }));
     }
 
     fn reported_not_run(&self) -> bool {
@@ -635,7 +650,7 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
 
     pub fn report(&self, id: InvocationId) -> Option<&Report> {
         match self.state(id) {
-            Some(State::Finished(r)) => Some(r),
+            Some(State::Finished(r)) => Some(r.as_ref()),
             _ => None,
         }
     }
@@ -669,7 +684,7 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
             }
         }
         match inv.state {
-            State::Finished(r) => Some(r),
+            State::Finished(r) => Some(*r),
             _ => None,
         }
     }
@@ -709,6 +724,8 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
                 cancel: CancelState::NotRequested,
                 cancel_key: None,
                 cancel_attempts: 0,
+                refusal: None,
+                violated: false,
             },
         );
         self.by_key.insert(key, id);
@@ -754,17 +771,29 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
         }
         inv.deadline = now.saturating_add(timeout);
         if inv.evidence.never_accepted() {
-            inv.conclude(Reason::NotSent);
+            let reason = match (&inv.refusal, inv.evidence.refused) {
+                (Some(why), r) if r != 0 => Reason::Refused(why.clone()),
+                _ => Reason::NotSent,
+            };
+            inv.conclude(reason);
             return Ok(());
         }
-        inv.state = match inv.evidence.job {
-            Some(job) => State::Accepted { job },
-            None => State::Sent,
-        };
-        if let Some(job) = inv.evidence.job {
-            self.by_job.entry(job).or_insert(id);
+        match inv.evidence.job {
+            Some(job) => self.enter_accepted(id, job),
+            None => inv.state = State::Sent,
         }
         Ok(())
+    }
+
+    /// Moves a waiting invocation to `Accepted { job }` and sends a deferred cancel.
+    fn enter_accepted(&mut self, id: InvocationId, job: Uuid) {
+        let Some(inv) = self.invs.get_mut(&id) else { return };
+        inv.state = State::Accepted { job };
+        self.by_job.entry(job).or_insert(id);
+        if inv.cancel == CancelState::Deferred {
+            // A failed send is kept in the cancel state; the caller may retry.
+            let _ = self.send_cancel(id, job);
+        }
     }
 
     /// Requests cancellation (REQ-AUTO.SURF.JOBS-005): sends `job.cancel_job@1` once for an
@@ -820,11 +849,15 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
 
     /// Re-attaches to the invocation's known job with `job.wait_job@1` (e.g. after a
     /// reconnect) and waits at most `timeout` again. Allowed while accepted or after
-    /// `no_reply` with a job. On a failed send nothing changes.
+    /// `no_reply` with a job, unless the bus ever broke the protocol for this key. Sends a
+    /// deferred cancel. On a failed send nothing changes.
     pub fn reattach(&mut self, id: InvocationId, timeout: Duration) -> Result<(), TrackerError> {
         let cmd = command(WAIT_JOB)?;
         let now = self.now();
         let inv = self.invs.get(&id).ok_or(TrackerError::UnknownInvocation)?;
+        if inv.violated {
+            return Err(TrackerError::Untrusted);
+        }
         let job = inv.evidence.job.ok_or(TrackerError::NoJob)?;
         if let State::Finished(r) = &inv.state {
             if r.envelope.outcome != Outcome::NoReply {
@@ -842,10 +875,9 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
             Err(e) => return Err(TrackerError::Transport(e)),
         }
         if let Some(inv) = self.invs.get_mut(&id) {
-            inv.state = State::Accepted { job };
             inv.deadline = now.saturating_add(timeout);
         }
-        self.by_job.entry(job).or_insert(id);
+        self.enter_accepted(id, job);
         Ok(())
     }
 
@@ -905,6 +937,7 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
             return;
         }
         inv.evidence.refused |= b;
+        inv.refusal = Some(cut(reason, MAX_REASON_CHARS));
         match inv.state {
             State::Created | State::Sent => {
                 if inv.evidence.never_accepted() {
@@ -920,9 +953,11 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
         let Some(id) = self.lookup(key) else { return };
         let owner = self.by_job.get(&job).copied();
         let Some(inv) = self.invs.get_mut(&id) else { return };
+        inv.evidence.taken = true;
         match inv.evidence.job {
             Some(j) if j != job => {
                 bump(&mut self.counters.violations);
+                inv.violated = true;
                 if inv.waiting() {
                     inv.conclude(Reason::ProtocolViolation(Violation::JobMismatch));
                 }
@@ -938,6 +973,7 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
         inv.evidence.job = Some(job);
         if owner.is_some_and(|o| o != id) {
             bump(&mut self.counters.violations);
+            inv.violated = true;
             if inv.waiting() {
                 inv.conclude(Reason::ProtocolViolation(Violation::JobIdReused));
             }
@@ -945,19 +981,14 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
         }
         self.by_job.insert(job, id);
         match inv.state {
-            State::Created | State::Sent => {
-                inv.state = State::Accepted { job };
-                if inv.cancel == CancelState::Deferred {
-                    // A failed send is kept in the cancel state; the caller may retry.
-                    let _ = self.send_cancel(id, job);
-                }
-            }
+            State::Created | State::Sent => self.enter_accepted(id, job),
             State::Accepted { .. } => {}
             State::Finished(_) => {
                 bump(&mut self.counters.late);
                 if inv.reported_not_run() {
                     // The bus contradicted its own refusal; the report cannot be recalled.
                     bump(&mut self.counters.violations);
+                    inv.violated = true;
                 }
             }
         }
@@ -976,9 +1007,11 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
         subscriber.progress(id, &ProgressUpdate { fraction, stage: cut(stage, MAX_STAGE_CHARS) });
     }
 
-    fn on_finished(&mut self, key: Uuid, job: Uuid, envelope: Envelope) {
+    fn on_finished(&mut self, key: Uuid, job: Uuid, envelope: Box<Envelope>) {
         let Some(id) = self.lookup(key) else { return };
         let Some(inv) = self.invs.get_mut(&id) else { return };
+        // Any final message naming the key is evidence the bus took it, even out of order.
+        inv.evidence.taken = true;
         match inv.state {
             State::Finished(_) => bump(&mut self.counters.late),
             State::Created | State::Sent => {
@@ -992,7 +1025,9 @@ impl<T: BusTransport, C: MonotonicClock, K: KeySource> Tracker<T, C, K> {
                     return;
                 }
                 match check_final(&envelope, &inv.command, accepted) {
-                    Ok(()) => inv.state = State::Finished(Report { envelope, reason: Reason::Final }),
+                    Ok(()) => {
+                        inv.state = State::Finished(Box::new(Report { envelope: *envelope, reason: Reason::Final }))
+                    }
                     Err(why) => {
                         bump(&mut self.counters.violations);
                         inv.conclude(Reason::ProtocolViolation(Violation::BadFinalEnvelope(why)));
