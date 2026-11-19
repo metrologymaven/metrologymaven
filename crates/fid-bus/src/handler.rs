@@ -5,11 +5,12 @@
 //! [`HandlerError`] (REQ-001). [`StateView`] has read methods only and every reference it
 //! hands out is shared, so no handler can reach a mutable reference to project state
 //! (REQ-002); `tests/compile_fail/mut_state.rs` is built as a `compile_fail` doctest on
-//! [`Handler`] to prove it (AC-1).
+//! [`Handler`], next to a control that differs only in `&mut`, to prove it (AC-1).
 //!
-//! After the handler returns, [`run_handler`] checks the events against the command's
-//! declared effects ([`effects_check`]) and hands back [`CheckedEvents`], the only value the
-//! commit stage accepts. The checks run in this pinned order, and the first failure is
+//! [`run_handler`] looks the command up in a [`HandlerSet`], which stores each handler with
+//! its command definition, runs it, checks the events against that definition's declared
+//! effects ([`effects_check`]) and hands back [`CheckedEvents`] bound to the command ID and
+//! the call's principal, the only value the commit stage accepts. The checks run in this pinned order, and the first failure is
 //! returned with nothing to commit:
 //!
 //! 1. more than [`MAX_EVENTS`] events: `validation/effect_limit` (REQ-004);
@@ -17,7 +18,8 @@
 //!    `undeclared_effect/undeclared_event_type`, naming the type (REQ-003);
 //! 3. in event order, a body that has no RFC 8785 canonical form: `validation/schema`;
 //! 4. more than [`MAX_EVENT_BODY_BYTES`] of canonical body bytes: `validation/effect_limit`
-//!    (REQ-004).
+//!    (REQ-004). Lengths are counted by [`canonical_len`] without building the bytes, and
+//!    counting stops at the limit.
 //!
 //! The [`HandlerCtx`] principal comes only from [`SessionTable::derive_principal`]
 //! (REQ-CORE.BUS.PRIN-002): [`HandlerCtx::derive`] is its only constructor, and it reads
@@ -28,10 +30,10 @@
 use crate::error::{
     BusError, CancelledReason, Code, Detail, InternalReason, NotFoundReason, UndeclaredEffectReason, ValidationReason,
 };
-use crate::principal::{Channel, Principal, SessionTable};
-use fid_canon::{parse_with_limits, to_canonical_bytes, CValue, CanonError, Digest, MAX_DEPTH, MAX_INPUT_BYTES};
+use crate::principal::{Channel, Principal, PrincipalRef, SessionTable};
+use fid_canon::{parse_with_limits, CValue, CanonError, Digest, MAX_DEPTH, MAX_INPUT_BYTES};
 use fid_registry::CommandDef;
-use fid_types::CommandName;
+use fid_types::{CommandId, CommandName};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -167,14 +169,21 @@ pub trait StateView {
 
 // ------------------------------------------------------------------ inputs
 
-/// Parameters that passed schema validation (`CORE.BUS.PIPE.VALID`). Only the validation
-/// stage should build one; the handler reads it.
+/// Parameters that passed schema validation (`CORE.BUS.PIPE.VALID`). Only this crate builds
+/// one (the validation stage lands in `fid-bus`); the handler reads it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValidParams(CValue);
 
 impl ValidParams {
     /// Wraps parameters the validation stage accepted.
-    pub fn from_validated(value: CValue) -> Self {
+    #[allow(dead_code)] // first caller: CORE.BUS.PIPE.VALID
+    pub(crate) fn from_validated(value: CValue) -> Self {
+        ValidParams(value)
+    }
+
+    /// Test-only constructor for handler tests outside this crate; not part of the API.
+    #[doc(hidden)]
+    pub fn for_tests(value: CValue) -> Self {
         ValidParams(value)
     }
 
@@ -342,14 +351,28 @@ impl Event {
     }
 }
 
-/// Events that passed [`effects_check`]: the only form the commit stage takes.
+/// Events that passed the effects check of one command, bound to that command and to the
+/// principal of the call that produced them: the only form the commit stage takes. Built
+/// only by [`run_handler`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckedEvents {
+    command: CommandId,
+    principal: PrincipalRef,
     events: Vec<Event>,
     body_bytes: u64,
 }
 
 impl CheckedEvents {
+    /// The command whose declared effects the events were checked against.
+    pub fn command(&self) -> &CommandId {
+        &self.command
+    }
+
+    /// The principal of the call that produced the events (`ctx.principal().reference()`).
+    pub fn principal(&self) -> &PrincipalRef {
+        &self.principal
+    }
+
     /// The events, in handler order.
     pub fn events(&self) -> &[Event] {
         &self.events
@@ -360,9 +383,9 @@ impl CheckedEvents {
         self.body_bytes
     }
 
-    /// The events, for the commit stage.
-    pub fn into_events(self) -> Vec<Event> {
-        self.events
+    /// Command, principal and events, for the commit stage.
+    pub fn into_parts(self) -> (CommandId, PrincipalRef, Vec<Event>) {
+        (self.command, self.principal, self.events)
     }
 }
 
@@ -424,38 +447,106 @@ impl From<BusError> for HandlerError {
 /// handle through which it could write state, and it returns events or a typed error.
 ///
 /// AC-1: a handler that asks for `&mut` state does not build
-/// (`tests/compile_fail/mut_state.rs`):
+/// (`tests/compile_fail/mut_state.rs`). Stable rustdoc does not check the error code of a
+/// `compile_fail` block (only nightly does), so the control below is what makes the test
+/// specific: `tests/compile_fail/mut_state_control.rs` is the same file with `&mut` replaced
+/// by `&`, and it builds. A test asserts the two files differ only in that `&mut`.
 ///
-#[doc = "```compile_fail,E0053"]
+#[doc = "```compile_fail"]
 #[doc = include_str!("../tests/compile_fail/mut_state.rs")]
+#[doc = "```"]
+///
+/// Control (the contract's signature):
+///
+#[doc = "```"]
+#[doc = include_str!("../tests/compile_fail/mut_state_control.rs")]
 #[doc = "```"]
 ///
 /// Nor can a shared view be turned into a mutable one:
 ///
-/// ```compile_fail,E0308
+/// ```compile_fail
 /// use fid_bus::handler::StateView;
 /// fn widen(view: &dyn StateView) -> &mut dyn StateView {
 ///     view
 /// }
 /// fn main() {}
 /// ```
-///
-/// The same handler with the contract's signature builds:
-///
-/// ```
-/// use fid_bus::handler::{Event, Handler, HandlerCtx, HandlerError, StateView, ValidParams};
-/// struct Reader;
-/// impl Handler for Reader {
-///     fn run(&self, view: &dyn StateView, _: &ValidParams, _: &HandlerCtx) -> Result<Vec<Event>, HandlerError> {
-///         let _ = view.head();
-///         Ok(Vec::new())
-///     }
-/// }
-/// fn main() {}
-/// ```
 pub trait Handler: Send + Sync {
     /// Runs the command against `view` and returns its events in order.
     fn run(&self, view: &dyn StateView, params: &ValidParams, ctx: &HandlerCtx) -> Result<Vec<Event>, HandlerError>;
+}
+
+// ------------------------------------------------------------------ canonical length
+
+fn add(n: &mut u64, k: usize) {
+    *n = n.saturating_add(u64::try_from(k).unwrap_or(u64::MAX));
+}
+
+/// Canonical length of a string, quotes included (RFC 8785 §3.2.2.2).
+fn str_len(s: &str) -> u64 {
+    let mut n: u64 = 2;
+    for c in s.chars() {
+        let k = match c {
+            '"' | '\\' | '\u{8}' | '\t' | '\n' | '\u{c}' | '\r' => 2,
+            c if u32::from(c) < 0x20 => 6,
+            c => c.len_utf8(),
+        };
+        add(&mut n, k);
+    }
+    n
+}
+
+/// Number of decimal digits of `v`.
+fn digits(mut v: u64) -> u64 {
+    let mut d = 1;
+    while v >= 10 {
+        v /= 10;
+        d += 1;
+    }
+    d
+}
+
+/// The length in bytes of `value`'s RFC 8785 canonical form (as `fid_canon::to_canonical_bytes`
+/// would write it), counted without building it. Counting stops as soon as the length
+/// exceeds `limit`; the result is then some value above `limit`. A non-finite number is
+/// `NonFiniteNumber`. Iterative, so deep values cannot overflow the stack.
+pub fn canonical_len(value: &CValue, limit: u64) -> Result<u64, CanonError> {
+    let mut n: u64 = 0;
+    let mut stack = vec![value];
+    while let Some(v) = stack.pop() {
+        match v {
+            CValue::Null => n = n.saturating_add(4),
+            CValue::Bool(b) => n = n.saturating_add(if *b { 4 } else { 5 }),
+            CValue::Str(s) => n = n.saturating_add(str_len(s)),
+            CValue::I64(i) => n = n.saturating_add(2 + u64::from(*i < 0) + digits(i.unsigned_abs())),
+            CValue::U64(u) => n = n.saturating_add(2 + digits(*u)),
+            CValue::F64Bits(f) => {
+                if !f.is_finite() {
+                    return Err(CanonError::NonFiniteNumber);
+                }
+                // `"0x` + 16 hex digits + `"`.
+                n = n.saturating_add(20);
+            }
+            CValue::Num(f) => add(&mut n, fid_canon::format_number(*f)?.len()),
+            CValue::Arr(items) => {
+                // Brackets and the commas between items.
+                add(&mut n, 2 + items.len().saturating_sub(1));
+                stack.extend(items.iter());
+            }
+            CValue::Obj(map) => {
+                // Braces, commas, and per member the key and a colon.
+                add(&mut n, 2 + map.len().saturating_sub(1));
+                for (k, item) in map {
+                    n = n.saturating_add(str_len(k).saturating_add(1));
+                    stack.push(item);
+                }
+            }
+        }
+        if n > limit {
+            return Ok(n);
+        }
+    }
+    Ok(n)
 }
 
 /// Checks `events` against `def.effects` (REQ-003, REQ-004), in the order given in the
@@ -476,16 +567,16 @@ fn check(def: &CommandDef, events: &[Event]) -> Result<u64, BusError> {
     }
     let mut total: u64 = 0;
     for (i, e) in events.iter().enumerate() {
-        let len = to_canonical_bytes(&e.body)
-            .map_err(|err| schema(&format!("event {i} body has no canonical form: {}", err.code())))?
-            .len();
-        total = total.saturating_add(u64::try_from(len).unwrap_or(u64::MAX));
-        if total > MAX_EVENT_BODY_BYTES {
+        let room = MAX_EVENT_BODY_BYTES - total;
+        let len = canonical_len(&e.body, room)
+            .map_err(|err| schema(&format!("event {i} body has no canonical form: {}", err.code())))?;
+        if len > room {
             return Err(BusError::Validation(
                 ValidationReason::EffectLimit,
                 Detail::new(&format!("event bodies exceed {MAX_EVENT_BODY_BYTES} bytes at index {i}")),
             ));
         }
+        total += len;
     }
     Ok(total)
 }
@@ -496,44 +587,54 @@ pub fn effects_check(def: &CommandDef, events: &[Event]) -> Result<(), BusError>
     check(def, events).map(|_| ())
 }
 
-/// Runs `handler` and checks its events. On success returns [`CheckedEvents`] for the
-/// commit stage; on any failure returns the error and nothing to commit. A cancel
-/// requested by the time the handler returns gives `cancelled/requested`.
+/// Looks up command `id` in `set`, runs its handler and checks the events against that
+/// command's own definition. On success returns [`CheckedEvents`] bound to `id` and to
+/// `ctx`'s principal; on any failure returns the error and nothing to commit. Lookup
+/// errors are those of [`HandlerSet::get`]. A cancel requested by the time the handler
+/// returns gives `cancelled/requested`.
 pub fn run_handler(
-    def: &CommandDef,
-    handler: &dyn Handler,
+    set: &HandlerSet,
+    id: &str,
     view: &dyn StateView,
     params: &ValidParams,
     ctx: &HandlerCtx,
 ) -> Result<CheckedEvents, BusError> {
-    let events = handler.run(view, params, ctx).map_err(HandlerError::into_bus_error)?;
+    let entry = set.entry(id)?;
+    let events = entry.handler.run(view, params, ctx).map_err(HandlerError::into_bus_error)?;
     if ctx.cancel.is_cancelled() {
         return Err(BusError::Cancelled(CancelledReason::Requested, Detail::new("cancel requested during handler")));
     }
-    let body_bytes = check(def, &events)?;
-    Ok(CheckedEvents { events, body_bytes })
+    let body_bytes = check(&entry.def, &events)?;
+    Ok(CheckedEvents { command: entry.id.clone(), principal: ctx.principal.reference(), events, body_bytes })
 }
 
 // ------------------------------------------------------------------ handler set
 
-/// Handlers by command `name@major`. Keys are compared as (name, major); only the canonical
-/// spelling of a major (no leading zero) is accepted.
+struct Entry {
+    id: CommandId,
+    def: CommandDef,
+    handler: Box<dyn Handler>,
+}
+
+/// Handlers, each stored with its command definition, by command `name@major`. Keys are
+/// compared as (name, major); only the canonical spelling of a major (no leading zero) is
+/// accepted.
 #[derive(Default)]
 pub struct HandlerSet {
-    map: BTreeMap<(String, u32), Box<dyn Handler>>,
+    map: BTreeMap<(String, u32), Entry>,
 }
 
 impl fmt::Debug for HandlerSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_set().entries(self.map.keys().map(|(n, m)| format!("{n}@{m}"))).finish()
+        f.debug_set().entries(self.map.values().map(|e| e.id.as_str())).finish()
     }
 }
 
 /// Splits a canonical `name@major`; `None` if malformed or the major has a leading zero.
-fn split_id(id: &str) -> Option<(&str, u32)> {
-    let parsed = fid_types::CommandId::parse(id).ok()?;
+fn split_id(id: &str) -> Option<(CommandId, String, u32)> {
+    let parsed = CommandId::parse(id).ok()?;
     let (name, major) = id.rsplit_once('@')?;
-    (major == parsed.major().to_string()).then_some((name, parsed.major()))
+    (major == parsed.major().to_string()).then(|| (parsed.clone(), name.to_string(), parsed.major()))
 }
 
 impl HandlerSet {
@@ -552,43 +653,52 @@ impl HandlerSet {
         self.map.is_empty()
     }
 
-    /// Binds `handler` to `id` (`name@major`). A malformed ID, a second handler for the same
-    /// ID, or a set already holding [`MAX_HANDLERS`] is `internal/invariant_violated`: these
-    /// are mistakes in building the bus, and the set is unchanged.
-    pub fn register(&mut self, id: &str, handler: Box<dyn Handler>) -> Result<(), BusError> {
-        let Some((name, major)) = split_id(id) else {
-            return Err(invariant("handler id must be a canonical name@major"));
+    /// Binds `handler` to the command `def` defines (`def.id@def.major`) and keeps `def`
+    /// with it, so its events are checked against that definition only. An ID that is not a
+    /// valid `name@major`, a second handler for the same ID, or a set already holding
+    /// [`MAX_HANDLERS`] is `internal/invariant_violated`: these are mistakes in building the
+    /// bus, and the set is unchanged.
+    pub fn register(&mut self, def: CommandDef, handler: Box<dyn Handler>) -> Result<(), BusError> {
+        let Some((id, name, major)) = split_id(&format!("{}@{}", def.id, def.major)) else {
+            return Err(invariant("command definition has no valid name@major"));
         };
-        let key = (name.to_string(), major);
+        let key = (name, major);
         if self.map.contains_key(&key) {
-            return Err(invariant(&format!("a handler for {name}@{major} is already registered")));
+            return Err(invariant(&format!("a handler for {id} is already registered")));
         }
         if self.map.len() >= MAX_HANDLERS {
             return Err(invariant("handler set is full"));
         }
-        self.map.insert(key, handler);
+        self.map.insert(key, Entry { id, def, handler });
         Ok(())
+    }
+
+    fn entry(&self, id: &str) -> Result<&Entry, BusError> {
+        let Some((_, name, major)) = split_id(id) else {
+            return Err(schema("command id must be a canonical name@major"));
+        };
+        let lo = (name, 0);
+        if let Some(e) = self.map.get(&(lo.0.clone(), major)) {
+            return Ok(e);
+        }
+        let hi = (lo.0.clone(), u32::MAX);
+        let detail = format!("no handler for {}", lo.0);
+        if self.map.range(lo..=hi).next().is_some() {
+            Err(BusError::NotFound(NotFoundReason::UnknownMajor, Detail::new(&format!("{detail}@{major}"))))
+        } else {
+            Err(BusError::NotFound(NotFoundReason::UnknownCommand, Detail::new(&detail)))
+        }
     }
 
     /// The handler of `id`. A malformed ID is `validation/schema`; a name with handlers for
     /// other majors only is `not_found/unknown_major`; any other miss is
     /// `not_found/unknown_command`.
     pub fn get(&self, id: &str) -> Result<&dyn Handler, BusError> {
-        let Some((name, major)) = split_id(id) else {
-            return Err(schema("command id must be a canonical name@major"));
-        };
-        if let Some(h) = self.map.get(&(name.to_string(), major)) {
-            return Ok(h.as_ref());
-        }
-        let lo = (name.to_string(), 0);
-        let hi = (name.to_string(), u32::MAX);
-        if self.map.range(lo..=hi).next().is_some() {
-            Err(BusError::NotFound(
-                NotFoundReason::UnknownMajor,
-                Detail::new(&format!("no handler for {name}@{major}")),
-            ))
-        } else {
-            Err(BusError::NotFound(NotFoundReason::UnknownCommand, Detail::new(&format!("no handler for {name}"))))
-        }
+        self.entry(id).map(|e| e.handler.as_ref())
+    }
+
+    /// The definition stored with the handler of `id`; same errors as [`HandlerSet::get`].
+    pub fn def(&self, id: &str) -> Result<&CommandDef, BusError> {
+        self.entry(id).map(|e| &e.def)
     }
 }

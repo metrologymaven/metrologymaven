@@ -14,14 +14,14 @@ use fid_bus::handler::{
     MAX_EVENT_BODY_BYTES, MAX_EVENT_TYPE_BYTES, MAX_HANDLERS, MAX_SETTING_KEY_BYTES,
 };
 use fid_bus::principal::{
-    Channel, ChannelKind, Identity, PrincipalId, PrincipalKind, SessionId, SessionKey, SessionTable,
+    Channel, ChannelKind, Identity, PrincipalId, PrincipalKind, PrincipalRef, SessionId, SessionKey, SessionTable,
 };
-use fid_bus::{bus_errors_digest, BusError, Code, Detail};
-use fid_canon::{parse, CValue, Digest};
+use fid_bus::{bus_errors_digest, BusError, CheckedEvents, Code, Detail};
+use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_registry::CommandDef;
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 type Obj = BTreeMap<String, CValue>;
 
@@ -140,9 +140,27 @@ impl Handler for Failing {
 }
 
 /// The commit stage's stand-in: journals only checked events.
-fn commit(journal: &mut Vec<Event>, r: Result<fid_bus::CheckedEvents, BusError>) -> Result<(), BusError> {
-    journal.extend(r?.into_events());
+fn commit(journal: &mut Vec<Event>, r: Result<CheckedEvents, BusError>) -> Result<(), BusError> {
+    let (command, _principal, events) = r?.into_parts();
+    assert_eq!(command.as_str(), ID);
+    journal.extend(events);
     Ok(())
+}
+
+/// The fixture command's ID.
+const ID: &str = "test.create_element@1";
+
+/// Registers `h` for `def` in a fresh set and runs it as command `def.id@def.major`.
+fn run(
+    def: &CommandDef,
+    h: impl Handler + 'static,
+    view: &dyn StateView,
+    params: &ValidParams,
+    ctx: &HandlerCtx,
+) -> Result<CheckedEvents, BusError> {
+    let mut set = HandlerSet::new();
+    set.register(def.clone(), Box::new(h)).unwrap();
+    run_handler(&set, &format!("{}@{}", def.id, def.major), view, params, ctx)
 }
 
 fn events_of(v: &[CValue]) -> Vec<Event> {
@@ -155,7 +173,7 @@ fn events_of(v: &[CValue]) -> Vec<Event> {
 }
 
 fn params() -> ValidParams {
-    ValidParams::from_validated(CValue::Obj(Obj::new()))
+    ValidParams::for_tests(CValue::Obj(Obj::new()))
 }
 
 fn assert_err(e: &BusError, code: Code, reason: &str) {
@@ -164,16 +182,25 @@ fn assert_err(e: &BusError, code: Code, reason: &str) {
 
 // ------------------------------------------------------------------ AC-1
 
-/// AC-1 is the `compile_fail,E0053` doctest built from this file; this guards that the file
-/// still asks for `&mut` state and is wired into the doctest.
+/// AC-1 is the `compile_fail` doctest built from `mut_state.rs`. Stable rustdoc does not
+/// check the error code, so the control doctest built from `mut_state_control.rs` carries
+/// the proof: this guards that both are wired in and differ only in `&mut` on the view.
 #[test]
-fn ac1_compile_fail_file_asks_for_mut_state() {
+fn ac1_compile_fail_file_differs_from_control_only_in_mut() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let case = std::fs::read_to_string(dir.join("tests/compile_fail/mut_state.rs")).unwrap();
+    let read = |p: &str| std::fs::read_to_string(dir.join(p)).unwrap().replace("\r\n", "\n");
+    let case = read("tests/compile_fail/mut_state.rs");
+    let control = read("tests/compile_fail/mut_state_control.rs");
+    assert_eq!(case.matches("&mut").count(), 1, "exactly one &mut");
     assert!(case.contains("view: &mut dyn StateView"));
-    let src = std::fs::read_to_string(dir.join("src/handler.rs")).unwrap();
-    assert!(src.contains("#[doc = \"```compile_fail,E0053\"]"));
-    assert!(src.contains("include_str!(\"../tests/compile_fail/mut_state.rs\")"));
+    assert_eq!(case.replacen("&mut ", "&", 1), control);
+    assert_ne!(case, control);
+    let diff: Vec<(&str, &str)> = case.lines().zip(control.lines()).filter(|(a, b)| a != b).collect();
+    assert_eq!(diff.len(), 1);
+    assert_eq!(case.lines().count(), control.lines().count());
+    let src = read("src/handler.rs");
+    assert!(src.contains("#[doc = \"```compile_fail\"]\n#[doc = include_str!(\"../tests/compile_fail/mut_state.rs\")]"));
+    assert!(src.contains("#[doc = \"```\"]\n#[doc = include_str!(\"../tests/compile_fail/mut_state_control.rs\")]"));
 }
 
 // ------------------------------------------------------------------ AC-2
@@ -192,7 +219,7 @@ fn ac2_effects_fixture() {
         let events = events_of(arr(case, "events"));
         let expect = obj(case.get("expect").unwrap());
         let mut journal = Vec::new();
-        let r = commit(&mut journal, run_handler(&def, &Fixed(events.clone()), &view, &params(), &c));
+        let r = commit(&mut journal, run(&def, Fixed(events.clone()), &view, &params(), &c));
         let direct = effects_check(&def, &events);
         if expect.contains_key("ok") {
             assert_eq!(r, Ok(()), "{name}");
@@ -240,7 +267,7 @@ fn ac3_too_many_events_is_effect_limit() {
     let (_table, c) = ctx(CancelToken::never());
     let view = MemState::new();
     let mut journal = Vec::new();
-    let r = commit(&mut journal, run_handler(&def, &Fixed(many(MAX_EVENTS + 1)), &view, &params(), &c));
+    let r = commit(&mut journal, run(&def, Fixed(many(MAX_EVENTS + 1)), &view, &params(), &c));
     let e = r.unwrap_err();
     assert_eq!(e.code(), Code::Validation);
     assert_eq!(e.reason(), ValidationReason::EffectLimit.as_str());
@@ -291,7 +318,7 @@ fn checked_events_report_body_bytes() {
     let t = EventType::new("ElementCreated").unwrap();
     // {"id":"e1"} is 11 canonical bytes; null is 4.
     let events = vec![Event::new(t.clone(), parse(br#"{"id":"e1"}"#).unwrap()), Event::new(t, CValue::Null)];
-    let checked = run_handler(&def, &Fixed(events.clone()), &MemState::new(), &params(), &c).unwrap();
+    let checked = run(&def, Fixed(events.clone()), &MemState::new(), &params(), &c).unwrap();
     assert_eq!(checked.body_bytes(), 15);
     assert_eq!(checked.events(), events.as_slice());
 }
@@ -340,7 +367,7 @@ fn handler_errors_map_to_catalogue() {
     ];
     for (handler_error, want) in cases {
         let mut journal = Vec::new();
-        let r = commit(&mut journal, run_handler(&def, &Failing(handler_error), &view, &params(), &c));
+        let r = commit(&mut journal, run(&def, Failing(handler_error), &view, &params(), &c));
         assert_eq!(r, Err(want));
         assert!(journal.is_empty());
     }
@@ -385,7 +412,7 @@ fn cancel_during_handler_commits_nothing() {
     let source = CancelSource::new();
     let (_table, c) = ctx(source.token());
     let mut journal = Vec::new();
-    let r = commit(&mut journal, run_handler(&def, &CancelsDuring(source), &MemState::new(), &params(), &c));
+    let r = commit(&mut journal, run(&def, CancelsDuring(source), &MemState::new(), &params(), &c));
     assert_err(&r.unwrap_err(), Code::Cancelled, "requested");
     assert!(journal.is_empty());
 }
@@ -393,7 +420,7 @@ fn cancel_during_handler_commits_nothing() {
 // ------------------------------------------------------------------ principal and borrows
 
 /// Records the principal, seed and state it saw.
-struct Observer(Mutex<Vec<String>>);
+struct Observer(Arc<Mutex<Vec<String>>>);
 
 impl Handler for Observer {
     fn run(&self, view: &dyn StateView, params: &ValidParams, ctx: &HandlerCtx) -> Result<Vec<Event>, HandlerError> {
@@ -418,11 +445,13 @@ fn principal_comes_from_the_channel_not_the_params() {
     let c = HandlerCtx::derive(&table, &ch, 9, CancelToken::never()).unwrap();
     // Parameters that claim a principal have no effect.
     let p =
-        ValidParams::from_validated(parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap());
-    let h = Observer(Mutex::new(Vec::new()));
-    run_handler(&def, &h, &MemState::new(), &p, &c).unwrap();
+        ValidParams::for_tests(parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let checked = run(&def, Observer(Arc::clone(&seen)), &MemState::new(), &p, &c).unwrap();
     assert_eq!(c.principal().kind(), PrincipalKind::Agent);
-    let seen = h.0.lock().unwrap().clone();
+    assert_eq!(checked.principal(), &c.principal().reference());
+    assert_eq!(checked.principal().id.as_str(), "client-7");
+    let seen = seen.lock().unwrap().clone();
     assert_eq!(
         seen,
         vec!["agent:client-7", "9", "e1=feature.plane", "Some(Str(\"mm\"))", "true"]
@@ -519,21 +548,32 @@ fn boxed() -> Box<dyn Handler> {
     Box::new(Fixed(Vec::new()))
 }
 
+fn def_named(id: &str, major: u32, effects: &[&str]) -> CommandDef {
+    let mut def = effects_fixture().0;
+    def.id = id.to_string();
+    def.major = major;
+    def.effects = effects.iter().map(|e| e.to_string()).collect();
+    def
+}
+
 #[test]
 fn handler_set_refusals() {
+    let (def, _) = effects_fixture();
     let mut set = HandlerSet::new();
     assert!(set.is_empty());
-    set.register("test.create_element@1", boxed()).unwrap();
+    set.register(def.clone(), boxed()).unwrap();
     assert_eq!(set.len(), 1);
-    assert!(set.get("test.create_element@1").is_ok());
+    assert!(set.get(ID).is_ok());
+    assert_eq!(set.def(ID).unwrap(), &def);
     // Unknown command, unknown major, malformed and non-canonical IDs.
     assert_err(&set.get("test.delete_element@1").err().unwrap(), Code::NotFound, "unknown_command");
     assert_err(&set.get("test.create_element@2").err().unwrap(), Code::NotFound, "unknown_major");
     for bad in ["", "test.create_element", "Test.create@1", "test.create_element@01", "x@123456", "x@-1"] {
         assert_err(&set.get(bad).err().unwrap(), Code::Validation, "schema");
+        assert_err(&set.def(bad).unwrap_err(), Code::Validation, "schema");
     }
-    // Duplicate keys: the same ID, or the same (name, major) spelled with a leading zero.
-    let e = set.register("test.create_element@1", boxed()).unwrap_err();
+    // Duplicate keys: a second definition with the same name and major, even with other effects.
+    let e = set.register(def_named("test.create_element", 1, &["ElementDeleted"]), boxed()).unwrap_err();
     assert_eq!(
         e,
         BusError::Internal(
@@ -541,20 +581,131 @@ fn handler_set_refusals() {
             Detail::new("a handler for test.create_element@1 is already registered")
         )
     );
-    assert_err(&set.register("test.create_element@01", boxed()).unwrap_err(), Code::Internal, "invariant_violated");
-    assert_err(&set.register("not an id", boxed()).unwrap_err(), Code::Internal, "invariant_violated");
+    // A definition whose ID is not a valid name@major (fields are public, so not checked yet).
+    assert_err(&set.register(def_named("Not An Id", 1, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
+    assert_err(&set.register(def_named("big", 123_456, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
     assert_eq!(set.len(), 1);
+    assert_eq!(set.def(ID).unwrap().effects, vec!["ElementCreated".to_string()], "first definition kept");
     assert_eq!(format!("{set:?}"), "{\"test.create_element@1\"}");
+}
+
+#[test]
+fn unknown_command_never_runs_a_handler() {
+    let (def, _) = effects_fixture();
+    let (_table, c) = ctx(CancelToken::never());
+    let mut set = HandlerSet::new();
+    set.register(def, boxed()).unwrap();
+    for (id, code, reason) in [
+        ("test.delete_element@1", Code::NotFound, "unknown_command"),
+        ("test.create_element@3", Code::NotFound, "unknown_major"),
+        ("test.create_element@01", Code::Validation, "schema"),
+    ] {
+        assert_err(&run_handler(&set, id, &MemState::new(), &params(), &c).unwrap_err(), code, reason);
+    }
 }
 
 #[test]
 fn handler_set_is_bounded() {
     let mut set = HandlerSet::new();
+    let base = def_named("cmd.c", 1, &[]);
     for i in 0..MAX_HANDLERS {
-        set.register(&format!("cmd.c{i}@1"), boxed()).unwrap();
+        let mut d = base.clone();
+        d.id = format!("cmd.c{i}");
+        set.register(d, boxed()).unwrap();
     }
-    assert_err(&set.register("cmd.extra@1", boxed()).unwrap_err(), Code::Internal, "invariant_violated");
+    assert_err(&set.register(def_named("cmd.extra", 1, &[]), boxed()).unwrap_err(), Code::Internal, "invariant_violated");
     assert_eq!(set.len(), MAX_HANDLERS);
+}
+
+// ------------------------------------------------------------------ binding to command and principal
+
+#[test]
+fn checked_events_are_bound_to_their_command_and_principal() {
+    let created = Event::new(EventType::new("ElementCreated").unwrap(), CValue::Null);
+    let deleted = Event::new(EventType::new("ElementDeleted").unwrap(), CValue::Null);
+    let mut set = HandlerSet::new();
+    set.register(def_named("test.create_element", 1, &["ElementCreated"]), Box::new(Fixed(vec![deleted.clone()])))
+        .unwrap();
+    set.register(def_named("test.delete_element", 1, &["ElementDeleted"]), Box::new(Fixed(vec![deleted.clone()])))
+        .unwrap();
+    set.register(def_named("test.create_element", 2, &["ElementCreated"]), Box::new(Fixed(vec![created.clone()])))
+        .unwrap();
+
+    let mut table = SessionTable::new();
+    let alice = channel(&mut table, ChannelKind::Gui, Some("alice"));
+    let bot = channel(&mut table, ChannelKind::Mcp, Some("bot"));
+    let ca = HandlerCtx::derive(&table, &alice, 1, CancelToken::never()).unwrap();
+    let cb = HandlerCtx::derive(&table, &bot, 1, CancelToken::never()).unwrap();
+
+    // The same events are checked against the definition stored with the handler that ran,
+    // never against another command's effects.
+    let e = run_handler(&set, "test.create_element@1", &MemState::new(), &params(), &ca).unwrap_err();
+    assert_err(&e, Code::UndeclaredEffect, "undeclared_event_type");
+    let ok = run_handler(&set, "test.delete_element@1", &MemState::new(), &params(), &ca).unwrap();
+    assert_eq!(ok.command().as_str(), "test.delete_element@1");
+    assert_eq!(ok.events(), std::slice::from_ref(&deleted));
+
+    // Each result names the principal of the ctx that produced it.
+    let a = run_handler(&set, "test.create_element@2", &MemState::new(), &params(), &ca).unwrap();
+    let b = run_handler(&set, "test.create_element@2", &MemState::new(), &params(), &cb).unwrap();
+    assert_eq!(a.command().as_str(), "test.create_element@2");
+    assert_eq!(a.principal(), &ca.principal().reference());
+    assert_eq!(b.principal(), &cb.principal().reference());
+    assert_eq!(a.principal(), &PrincipalRef { kind: PrincipalKind::Human, id: PrincipalId::new("alice").unwrap() });
+    assert_eq!(b.principal(), &PrincipalRef { kind: PrincipalKind::Agent, id: PrincipalId::new("bot").unwrap() });
+    assert_ne!(a, b);
+    let (command, principal, events) = b.into_parts();
+    assert_eq!((command.as_str(), principal.id.as_str(), events), ("test.create_element@2", "bot", vec![created]));
+}
+
+// ------------------------------------------------------------------ canonical length
+
+#[test]
+fn canonical_len_matches_the_canonical_writer() {
+    let values = [
+        r#"null"#,
+        r#"true"#,
+        r#"false"#,
+        r#""""#,
+        r#""plain""#,
+        r#""q\"b\\s\n\t\r\b\f\u0001\u001f é 😀 \u2028""#,
+        r#"[]"#,
+        r#"{}"#,
+        r#"[1,2.5,-0.0,1e300,-1e-7,123456789012345678901234567890]"#,
+        r#"{"b":[null,{"z":1,"a":"x"}],"a":{},"é":[[],[[]]]}"#,
+    ];
+    let mut all: Vec<CValue> = values.iter().map(|v| parse(v.as_bytes()).unwrap()).collect();
+    all.extend([
+        CValue::I64(0),
+        CValue::I64(-7),
+        CValue::I64(i64::MIN),
+        CValue::I64(i64::MAX),
+        CValue::U64(0),
+        CValue::U64(u64::MAX),
+        CValue::F64Bits(-0.0),
+        CValue::F64Bits(1.5),
+        CValue::Arr(vec![CValue::I64(-1), CValue::U64(10), CValue::F64Bits(f64::MIN_POSITIVE)]),
+    ]);
+    for v in &all {
+        let want = to_canonical_bytes(v).unwrap().len() as u64;
+        assert_eq!(fid_bus::canonical_len(v, u64::MAX), Ok(want), "{v:?}");
+        // Counting stops above the limit, with some value above it.
+        if want > 0 {
+            assert!(fid_bus::canonical_len(v, want - 1).unwrap() > want - 1, "{v:?}");
+        }
+        assert_eq!(fid_bus::canonical_len(v, want), Ok(want), "{v:?}");
+    }
+    for bad in [CValue::Num(f64::NAN), CValue::F64Bits(f64::INFINITY), CValue::Arr(vec![CValue::Num(f64::INFINITY)])] {
+        assert_eq!(fid_bus::canonical_len(&bad, u64::MAX).unwrap_err().code(), "non_finite_number");
+    }
+}
+
+#[test]
+fn canonical_len_stops_early_on_huge_bodies() {
+    // 1,000,000 nulls: counting stops at the first item past the limit.
+    let v = CValue::Arr(vec![CValue::Null; 1_000_000]);
+    let n = fid_bus::canonical_len(&v, 100).unwrap();
+    assert!(n > 100 && n < 1_000_000 * 5, "{n}");
 }
 
 // ------------------------------------------------------------------ catalogue

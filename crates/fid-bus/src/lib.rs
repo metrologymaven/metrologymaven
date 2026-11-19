@@ -15,8 +15,8 @@ pub use error::{
     TRUNCATION_MARKER,
 };
 pub use handler::{
-    effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event, EventType,
-    Handler, HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS,
+    canonical_len, effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event,
+    EventType, Handler, HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS,
     MAX_EVENT_BODY_BYTES,
 };
 pub use principal::{
