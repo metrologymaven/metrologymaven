@@ -227,10 +227,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
 
 /// The one non-empty value of a part-scope field among a part's results.
 /// A disagreeing row fails `wide_part_conflict` naming its input position.
-fn part_value<'a>(
-    by_char: &BTreeMap<&str, (usize, &'a ResultRow)>,
-    field: Field,
-) -> Result<Option<&'a str>, OutError> {
+fn part_value<'a>(by_char: &BTreeMap<&str, (usize, &'a ResultRow)>, field: Field) -> Result<Option<&'a str>, OutError> {
     let mut found: Option<&'a str> = None;
     for &(n, row) in by_char.values() {
         match (found, row.get(field)) {
