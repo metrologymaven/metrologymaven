@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-nurbs]
+built_pr: 247
 satisfies: [REQ-GEO.NURBS-004, REQ-GEO.NURBS-006, REQ-GEO.NURBS-007]
 covers: []
 depends_on: [GEO.NURBS.EVAL, KRN.NUM]
