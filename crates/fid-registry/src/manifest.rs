@@ -155,6 +155,12 @@ pub fn export_with(decls: &[CommandDecl], catalogue: &Catalogue) -> Result<Expor
     if !errors.is_empty() {
         return Err(ManifestError::DeclarationsInvalid(errors));
     }
+    export_validated(decls, catalogue)
+}
+
+/// Steps 3 to 5 of the export. Private: callers reach it only through [`export_with`] or
+/// [`check_manifest`], both of which have just run VAL over the same `decls` without error.
+fn export_validated(decls: &[CommandDecl], catalogue: &Catalogue) -> Result<Export, ManifestError> {
     let mut commands: BTreeMap<(String, u32), CValue> = BTreeMap::new();
     let mut definitions = BTreeMap::new();
     for decl in decls {
@@ -261,7 +267,7 @@ pub fn check_manifest(bytes: &[u8], catalogue: &Catalogue) -> Result<Digest, Man
         )));
     }
     let again =
-        export_with(&decls, catalogue).map_err(|e| ManifestError::Invalid(format!("re-export: {}", e.code())))?;
+        export_validated(&decls, catalogue).map_err(|e| ManifestError::Invalid(format!("re-export: {}", e.code())))?;
     if again.bytes != bytes {
         return Err(bad("a definition is not in normal form"));
     }
@@ -369,7 +375,8 @@ impl ManifestInForce {
 }
 
 /// Parameters of `registry.show_manifest@1`: `full` (default false) and optional `check`,
-/// the text of a manifest to verify instead of showing the one in force.
+/// the text of a manifest to verify instead of showing the one in force. `check` is bounded in
+/// characters, as the schema's `maxLength` is; `check_manifest` bounds its UTF-8 bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ShowParams {
     pub full: bool,
@@ -390,7 +397,9 @@ impl ShowParams {
         };
         let check = match o.get("check") {
             None => None,
-            Some(CValue::Str(s)) if s.len() <= MAX_MANIFEST_BYTES => Some(s.clone()),
+            // JSON Schema `maxLength` counts characters, so this does too; the byte limit is
+            // `check_manifest`'s (`manifest_invalid`).
+            Some(CValue::Str(s)) if s.chars().count() <= MAX_MANIFEST_BYTES => Some(s.clone()),
             Some(CValue::Str(_)) => return Err(ManifestError::BadParams("check is too long")),
             Some(_) => return Err(ManifestError::BadParams("check is not a string")),
         };
@@ -521,7 +530,7 @@ pub fn command_def() -> Result<CommandDef, crate::def::DefError> {
                     obj([
                         ("type", text("string")),
                         ("maxLength", CValue::Num(MAX_MANIFEST_BYTES as f64)),
-                        ("description", text("A manifest to verify instead of showing the one in force.")),
+                        ("description", text("The text of a manifest to verify instead of showing the one in force; at most 67108864 characters (maxLength), and refused as manifest_invalid above 67108864 bytes of UTF-8.")),
                     ]),
                 ),
             ]),

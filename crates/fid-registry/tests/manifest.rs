@@ -366,7 +366,7 @@ fn an_unknown_quantity_kind_is_a_typed_error_until_a_catalogue_holds_it() {
         ),
     ]);
     let job = set(&d[0], "params_schema", time);
-    let err = export(&[job.clone()]).unwrap_err();
+    let err = export(std::slice::from_ref(&job)).unwrap_err();
     assert_eq!(err.code(), "declarations_invalid");
     let CValue::Obj(v) = err.to_value() else { panic!() };
     assert!(matches!(v.get("errors"), Some(CValue::Arr(e)) if e.len() == 1));
