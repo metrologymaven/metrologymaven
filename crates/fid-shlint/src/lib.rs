@@ -244,7 +244,12 @@ fn run_inner(args: &[String]) -> Result<Vec<Finding>, ShlintError> {
 /// is the folder of the metadata file: a relative `manifest_path` (only in hand-written
 /// fixtures; cargo always writes absolute paths) is resolved against it. Findings are sorted
 /// and free of duplicates.
-pub fn check(crate_dir: &Path, metadata: &[u8], metadata_dir: &Path, package: &str) -> Result<Vec<Finding>, ShlintError> {
+pub fn check(
+    crate_dir: &Path,
+    metadata: &[u8],
+    metadata_dir: &Path,
+    package: &str,
+) -> Result<Vec<Finding>, ShlintError> {
     let manifest_bytes = read_bounded(&crate_dir.join(MANIFEST_PATH), MANIFEST_PATH, MAX_FILE_BYTES)
         .map_err(|e| ShlintError::ManifestMalformed { reason: e.to_string() })?;
     let manifest_text =

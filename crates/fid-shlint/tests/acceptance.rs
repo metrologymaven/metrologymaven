@@ -89,7 +89,11 @@ fn metadata_for_another_crate_dir_exits_2() {
     ]);
     assert_eq!(out.code, 2);
     assert_eq!(out.stdout, "");
-    assert!(out.stderr.starts_with("fid-shlint: error: MetadataMismatch: manifest_path Cargo.toml is not in --crate-dir "), "{}", out.stderr);
+    assert!(
+        out.stderr.starts_with("fid-shlint: error: MetadataMismatch: manifest_path Cargo.toml is not in --crate-dir "),
+        "{}",
+        out.stderr
+    );
 }
 
 #[test]

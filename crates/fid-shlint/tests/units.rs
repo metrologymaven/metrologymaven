@@ -5,8 +5,8 @@
 use fid_shlint::deps::{self, is_toolkit};
 use fid_shlint::manifest::ReadbackClass;
 use fid_shlint::rust_scan::{lex, resolve_relative, scan, scan_shader_sources, strip_cfg_test, Tok};
-use std::collections::BTreeMap;
 use fid_shlint::{check_shaders, wgsl, BindingClass, Finding, Rule, ShaderManifest, ShlintError};
+use std::collections::BTreeMap;
 
 const MANIFEST: &str = r#"
 schema = 1
@@ -339,8 +339,14 @@ fn toolkit_denylist() {
 }
 
 fn meta(packages: &[(&str, Vec<&str>)]) -> String {
-    let pkgs: Vec<String> =
-        packages.iter().map(|(n, _)| format!("{{\"name\":\"{n}\",\"version\":\"1.0.0\",\"id\":\"{n}-id\",\"manifest_path\":\"/w/{n}/Cargo.toml\"}}")).collect();
+    let pkgs: Vec<String> = packages
+        .iter()
+        .map(|(n, _)| {
+            format!(
+                "{{\"name\":\"{n}\",\"version\":\"1.0.0\",\"id\":\"{n}-id\",\"manifest_path\":\"/w/{n}/Cargo.toml\"}}"
+            )
+        })
+        .collect();
     let nodes: Vec<String> = packages
         .iter()
         .map(|(n, deps)| {
@@ -488,7 +494,17 @@ fn shader_text_outside_the_manifest_is_flagged() {
     let lines: Vec<&str> = f.iter().map(|f| f.location.as_str()).collect();
     assert_eq!(
         lines,
-        ["src/p.rs:2", "src/p.rs:3", "src/p.rs:4", "src/p.rs:5", "src/p.rs:6", "src/p.rs:7", "src/p.rs:8", "src/p.rs:9", "src/p.rs:10"]
+        [
+            "src/p.rs:2",
+            "src/p.rs:3",
+            "src/p.rs:4",
+            "src/p.rs:5",
+            "src/p.rs:6",
+            "src/p.rs:7",
+            "src/p.rs:8",
+            "src/p.rs:9",
+            "src/p.rs:10"
+        ]
     );
     assert!(f.iter().all(|f| f.rule == Rule::UnmanifestedShader));
     assert_eq!(
