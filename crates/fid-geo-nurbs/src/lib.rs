@@ -9,11 +9,16 @@
 //!   tangent, normal, curvatures and principal directions (`GEO.NURBS.EVAL`).
 //! - [`analytic`]: closed-form lines, circles, ellipses, planes, cylinders, cones, spheres and
 //!   tori behind the same traits, with closed-form inversion (`GEO.NURBS.ANALYTIC`).
+//! - [`invert`]: global closest point on a NURBS curve or surface by Bézier decomposition,
+//!   branch and bound with Bernstein exclusion and uniqueness tests, and bounded Newton
+//!   (`GEO.NURBS.INVERT`).
 
 pub mod analytic;
 mod basis;
+mod bezier;
 pub mod data;
 pub mod eval;
+pub mod invert;
 
 pub use analytic::{
     AnalyticCurve, AnalyticError, AnalyticSurface, Circle, Cone, CurveFoot, Cylinder, Ellipse, Line, Placement,
@@ -25,3 +30,4 @@ pub use eval::{
     curve_geometry, surface_curvature, surface_normal, Curvature, Curve, CurveDerivs, CurveGeometry, EvalError,
     Regularity, Surface, SurfaceDerivs,
 };
+pub use invert::{invert_curve, invert_surface, CurveInversion, Inversion, InvertError, Reason, Status};
