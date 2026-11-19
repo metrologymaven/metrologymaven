@@ -193,6 +193,12 @@ impl std::error::Error for JobErrorCode {}
 pub struct JobId(Uuid);
 
 impl JobId {
+    /// The job ID with this UUID, e.g. one parsed from a command parameter. Only the
+    /// scheduler issues IDs; a UUID it never issued names no job, so lookups give `not_found`.
+    pub fn from_uuid(uuid: Uuid) -> JobId {
+        JobId(uuid)
+    }
+
     /// The UUID.
     pub fn as_uuid(&self) -> Uuid {
         self.0

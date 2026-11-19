@@ -1,0 +1,19 @@
+{
+  "description": "CORE.JOB.CMD REQ-002 and CONSTITUTION 3.1: who may cancel (and see) a job. Owner null is a job submitted without a recorded owner. Hand-labelled: allowed only for the job's own principal (same kind and ID, IDs compared ASCII-case-insensitively) or a human. CC-BY-4.0.",
+  "cases": [
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "S" }, "allowed": true },
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "s" }, "allowed": true },
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "script", "id": "T" }, "allowed": false },
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "agent", "id": "S" }, "allowed": false },
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
+    { "owner": { "kind": "script", "id": "S" }, "caller": { "kind": "human", "id": "H" }, "allowed": true },
+    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
+    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "script", "id": "H" }, "allowed": false },
+    { "owner": { "kind": "human", "id": "H" }, "caller": { "kind": "human", "id": "H2" }, "allowed": true },
+    { "owner": { "kind": "agent", "id": "A" }, "caller": { "kind": "agent", "id": "A" }, "allowed": true },
+    { "owner": { "kind": "agent", "id": "A" }, "caller": { "kind": "agent", "id": "B" }, "allowed": false },
+    { "owner": null, "caller": { "kind": "script", "id": "S" }, "allowed": false },
+    { "owner": null, "caller": { "kind": "agent", "id": "A" }, "allowed": false },
+    { "owner": null, "caller": { "kind": "human", "id": "H" }, "allowed": true }
+  ]
+}
