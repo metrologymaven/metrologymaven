@@ -4,8 +4,10 @@
 //! spec's rules, not produced by this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use fid_outreach::asset_check::parse_allowlist;
 use fid_outreach::bench::recipe::{
-    check, default_registry, parse_catalogue, register, Code, Finding, KindValidator, RecipeContext, Registry,
+    check, default_registry, parse_catalogue, register, Catalogue, Code, Finding, InputError, KindValidator,
+    RecipeContext, Registry, Report, COMPARISON_BLOCKED,
 };
 use std::path::PathBuf;
 use std::process::Command;
@@ -27,17 +29,54 @@ fn cli(case: &str, args: &[&str], json: bool) -> (i32, String, String) {
 }
 
 #[test]
-fn ac1_ok_folder_lists_four_valid_recipes() {
+fn ac1_ok_folder_three_kinds_validated_comparison_flagged() {
     let (code, out, err) = cli("ok", &["recipes"], true);
-    assert_eq!(code, 0, "{out}{err}");
+    assert_eq!(code, 1, "{out}{err}");
     let want = std::fs::read_to_string(fixture("expected/ok.json")).unwrap();
     assert_eq!(out, want);
     let (code, text, _) = cli("ok", &["recipes"], false);
-    assert_eq!(code, 0);
-    assert_eq!(text.lines().filter(|l| l.starts_with("recipe ")).count(), 4, "{text}");
-    for kind in ["accuracy", "fidelity", "performance", "comparison"] {
-        assert!(text.contains(&format!(" {kind} recipes/{kind}.toml")), "{kind}: {text}");
+    assert_eq!(code, 1);
+    assert_eq!(text.lines().filter(|l| l.starts_with("recipe ")).count(), 3, "{text}");
+    for kind in ["accuracy", "fidelity", "performance"] {
+        assert!(text.contains(&format!(" {kind} stub recipes/{kind}.toml\n")), "{kind}: {text}");
     }
+    let blocked: Vec<&str> = text.lines().filter(|l| l.starts_with("kind_blocked ")).collect();
+    assert_eq!(
+        blocked,
+        ["kind_blocked recipes/comparison.toml fixture.comparison-plane comparison: \
+          comparison recipes are blocked until OUTR.BENCH.CMP (D-021)"],
+        "{text}"
+    );
+}
+
+#[test]
+fn catalogue_licence_must_be_on_the_asset_allowlist() {
+    let (code, out, err) = cli("bad-licence", &["recipes"], false);
+    assert_eq!(code, 1, "{out}{err}");
+    let lic: Vec<&str> = out.lines().filter(|l| l.starts_with("dataset_licence ")).collect();
+    assert_eq!(lic.len(), 2, "{out}");
+    assert!(lic[0].starts_with("dataset_licence recipes/plane.toml fixture.licence-plane dataset.id: "), "{out}");
+    assert!(lic[0].contains("LicenseRef-Fictional-NoRedistribution"), "{out}");
+    assert!(lic[1].starts_with("dataset_licence recipes/timing.toml fixture.licence-timing dataset.id: "), "{out}");
+    assert!(lic[1].contains("states no licence"), "{out}");
+    assert!(out.ends_with("bench-recipe check: 0 valid recipe(s), 2 finding(s)\n"), "only the licences: {out}");
+    // An explicit allowlist that does allow the fictional licence leaves only the missing one.
+    let dir = std::env::temp_dir().join(format!("bench-recipe-allow-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let allow = dir.join("allow.toml");
+    std::fs::write(&allow, "asset_licences = [\"LicenseRef-Fictional-NoRedistribution\"]\n").unwrap();
+    let (code, out, _) = cli("bad-licence", &["--allowlist", allow.to_str().unwrap(), "recipes"], false);
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(code, 1);
+    assert_eq!(out.lines().filter(|l| l.starts_with("dataset_licence ")).count(), 1, "{out}");
+    assert!(out.contains("recipe fixture.licence-plane accuracy stub recipes/plane.toml"), "{out}");
+}
+
+#[test]
+fn folder_without_recipes_exits_2() {
+    let (code, out, err) = cli("empty", &["recipes"], false);
+    assert_eq!(code, 2, "{out}{err}");
+    assert!(err.contains("no recipes found"), "{err}");
 }
 
 #[test]
@@ -165,10 +204,18 @@ tolerance_kind = "abs"
 [accuracy]
 "#;
 
+fn catalogue(licence: &str) -> Catalogue {
+    let allow = parse_allowlist("asset_licences = [\"CC-BY-4.0\"]\n", "allow.toml").unwrap();
+    let text = format!("[[dataset]]\nid = \"demo-data\"\nsha256 = \"sha256:{DIGEST}\"\n{licence}");
+    parse_catalogue(&text, "c", allow).unwrap()
+}
+
+fn report_with(text: &str, registry: &Registry) -> Report {
+    check(&catalogue("licence = \"CC-BY-4.0\"\n"), &[("r.toml".to_string(), text.to_string())], registry).unwrap()
+}
+
 fn run_with(text: &str, registry: &Registry) -> Vec<(Code, Option<String>)> {
-    let cat =
-        parse_catalogue(&format!("[[dataset]]\nid = \"demo-data\"\nsha256 = \"sha256:{DIGEST}\"\n"), "c").unwrap();
-    let r = check(&cat, &[("r.toml".to_string(), text.to_string())], registry).unwrap();
+    let r = report_with(text, registry);
     if r.findings.is_empty() {
         assert_eq!(r.recipes.len(), 1);
     } else {
@@ -348,4 +395,61 @@ fn req006_id_pattern() {
             "{bad}"
         );
     }
+}
+
+#[test]
+fn kind_check_says_stub_or_full() {
+    let r = report_with(BASE, &default_registry());
+    assert_eq!(r.recipes.len(), 1);
+    assert_eq!(r.recipes[0].kind_check, "stub");
+    let json = String::from_utf8(r.to_json()).unwrap();
+    assert!(json.contains("\"kind\":\"accuracy\",\"kind_check\":\"stub\""), "{json}");
+    assert!(r.render().contains("recipe demo.case accuracy stub r.toml\n"), "{}", r.render());
+    let mut reg = default_registry();
+    register(&mut reg, Box::new(NeedsMethod));
+    let r = report_with(&format!("{BASE}method = \"plane\"\n"), &reg);
+    assert_eq!(r.recipes.len(), 1);
+    assert_eq!(r.recipes[0].kind_check, "full");
+    assert!(String::from_utf8(r.to_json()).unwrap().contains("\"kind_check\":\"full\""));
+    assert!(r.render().contains("recipe demo.case accuracy full r.toml\n"), "{}", r.render());
+}
+
+#[test]
+fn d021_comparison_fails_closed() {
+    let cmp = BASE.replace("kind = \"accuracy\"", "kind = \"comparison\"").replace("[accuracy]", "[comparison]");
+    let r = report_with(&cmp, &default_registry());
+    assert!(r.recipes.is_empty());
+    assert_eq!(r.findings.len(), 1);
+    assert_eq!(r.findings[0].code, Code::KindBlocked);
+    assert_eq!(r.findings[0].field.as_deref(), Some("comparison"));
+    assert_eq!(r.findings[0].message, COMPARISON_BLOCKED);
+    assert!(COMPARISON_BLOCKED.contains("D-021"));
+    assert_eq!(r.exit_code(), 1);
+}
+
+#[test]
+fn catalogue_licence_rules_in_memory() {
+    let one_file = [("r.toml".to_string(), BASE.to_string())];
+    let reg = default_registry();
+    let codes = |cat: &Catalogue| -> Vec<(Code, Option<String>)> {
+        check(cat, &one_file, &reg).unwrap().findings.into_iter().map(|f| (f.code, f.field)).collect()
+    };
+    assert_eq!(codes(&catalogue("licence = \"CC-BY-4.0\"\n")), vec![]);
+    assert_eq!(codes(&catalogue("licence = \"cc-by-4.0\"\n")), vec![], "SPDX IDs match case-insensitively");
+    assert_eq!(codes(&catalogue("")), one(Code::DatasetLicence, "dataset.id"));
+    assert_eq!(codes(&catalogue("licence = \"LicenseRef-Fictional\"\n")), one(Code::DatasetLicence, "dataset.id"));
+    assert_eq!(codes(&catalogue("licence = \"CC-BY-4.0 OR MIT\"\n")), one(Code::DatasetLicence, "dataset.id"));
+    assert_eq!(codes(&catalogue("licence = 4\n")), one(Code::DatasetLicence, "dataset.id"));
+}
+
+#[test]
+fn duplicate_toml_key_is_an_input_error() {
+    let dup = BASE.replace("title = \"Demo\"\n", "title = \"Demo\"\ntitle = \"Again\"\n");
+    let err = check(&catalogue("licence = \"CC-BY-4.0\"\n"), &[("dup.toml".to_string(), dup)], &default_registry())
+        .unwrap_err();
+    assert!(matches!(err, InputError::Parse { .. }), "{err}");
+    assert_eq!(err.file(), "dup.toml");
+    let dup_in_catalogue = "[[dataset]]\nid = \"a\"\nid = \"b\"\nsha256 = \"sha256:00\"\n";
+    let allow = parse_allowlist("asset_licences = [\"CC-BY-4.0\"]\n", "allow.toml").unwrap();
+    assert!(matches!(parse_catalogue(dup_in_catalogue, "cat.toml", allow), Err(InputError::Parse { .. })));
 }

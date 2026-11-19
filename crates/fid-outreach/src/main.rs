@@ -73,9 +73,10 @@
 //! an `over_budget` finding when the file would exceed `max_bytes` of the budget, and 2 on an
 //! unreadable edition, an unparsable budget, an unwritable index, or bad usage.
 //!
-//! `bench-recipe check --catalogue <file> [--json] <paths>...` (spec node `OUTR.BENCH.RUN.RECIPE`):
-//! validates benchmark recipes (files, or folders walked for `*.toml`) against the dataset
-//! catalogue. Prints one line per finding, one line per valid recipe and a summary, or the
+//! `bench-recipe check --catalogue <file> [--allowlist <file>] [--json] <paths>...` (spec node
+//! `OUTR.BENCH.RUN.RECIPE`): validates benchmark recipes (files, or folders walked for `*.toml`)
+//! against the dataset catalogue and the licence allowlist (default: the nearest
+//! `house-rules/spdx-allowlist.toml` above the catalogue). Prints one line per finding, one line per valid recipe and a summary, or the
 //! canonical JSON report with `--json`. Exits 0 when every recipe is valid, 1 on any finding, and
 //! 2 on unreadable or unparsable input or bad usage.
 
@@ -116,7 +117,7 @@ commands:
   site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>
   site import fetch --site <dir> --release <tag> --base-url <url>
   search-index --edition <dir> --budget <file> [--json]
-  bench-recipe check --catalogue <file> [--json] <paths>...";
+  bench-recipe check --catalogue <file> [--allowlist <file>] [--json] <paths>...";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -865,6 +866,7 @@ fn search_index_cmd(args: &[String]) -> ExitCode {
 
 fn bench_recipe_check(args: &[String]) -> ExitCode {
     let mut catalogue: Option<PathBuf> = None;
+    let mut allowlist: Option<PathBuf> = None;
     let mut paths = Vec::new();
     let mut json = false;
     let mut it = args.iter();
@@ -874,6 +876,12 @@ fn bench_recipe_check(args: &[String]) -> ExitCode {
             "--catalogue" => {
                 let Some(v) = it.next() else { return usage() };
                 if catalogue.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            "--allowlist" => {
+                let Some(v) = it.next() else { return usage() };
+                if allowlist.replace(PathBuf::from(v)).is_some() {
                     return usage();
                 }
             }
@@ -887,7 +895,7 @@ fn bench_recipe_check(args: &[String]) -> ExitCode {
     if paths.is_empty() {
         return usage();
     }
-    match recipe::run(&catalogue, &paths, &recipe::default_registry()) {
+    match recipe::run(&catalogue, allowlist.as_deref(), &paths, &recipe::default_registry()) {
         Ok(report) => {
             if json {
                 emit(&report.to_json());

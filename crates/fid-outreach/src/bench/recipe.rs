@@ -5,12 +5,19 @@
 //! profile, where the numbers come from (`[source]`), the result fields with their regression
 //! tolerances, and one kind section (`[accuracy]`, `[fidelity]`, `[performance]` or
 //! `[comparison]`). This module owns the common part; each kind section is handed to the
-//! [`KindValidator`] registered for its kind (this crate ships accept-anything stubs, see
-//! [`default_registry`]).
+//! [`KindValidator`] registered for its kind (this crate ships accept-anything stubs, and a
+//! blocking validator for `comparison` per D-021, see [`default_registry`]). Reports say per
+//! valid recipe whether its kind section was checked by a real validator (`kind_check` =
+//! `full`) or only by a stub (`stub`).
+//!
+//! The catalogue entry of each recipe's dataset must state a `licence` on the asset licence
+//! allowlist of ECO.RULES.SPDX (`house-rules/spdx-allowlist.toml`, read with
+//! [`crate::asset_check::parse_allowlist`]).
 //!
 //! Determinism D0: input files are read in sorted path order (paths shown with `/`), all maps
 //! are `BTreeMap`s, findings are sorted, and `--json` output is RFC 8785 canonical JSON.
 
+use crate::asset_check::{parse_allowlist, Allowlist};
 use crate::launch_gate::is_release_tag;
 use fid_canon::{to_canonical_bytes, CValue};
 use fid_types::Digest;
@@ -21,6 +28,11 @@ use std::path::{Path, PathBuf};
 
 /// The schema string every recipe states.
 pub const SCHEMA: &str = "bench-recipe@1";
+/// The licence allowlist (ECO.RULES.SPDX), looked up from the catalogue's folder upwards when
+/// `--allowlist` is not given.
+pub const DEFAULT_ALLOWLIST: &str = "house-rules/spdx-allowlist.toml";
+/// Message of the `kind_blocked` finding the `comparison` validator returns (D-021).
+pub const COMPARISON_BLOCKED: &str = "comparison recipes are blocked until OUTR.BENCH.CMP (D-021)";
 /// Largest accepted input file (recipe or catalogue), in bytes.
 pub const MAX_BYTES: usize = 1024 * 1024;
 /// Deepest directory level walked under a path argument.
@@ -59,6 +71,8 @@ pub enum Code {
     KindSectionMissing,
     DuplicateId,
     IdMalformed,
+    DatasetLicence,
+    KindBlocked,
 }
 
 impl Code {
@@ -74,6 +88,8 @@ impl Code {
             Code::KindSectionMissing => "kind_section_missing",
             Code::DuplicateId => "duplicate_id",
             Code::IdMalformed => "id_malformed",
+            Code::DatasetLicence => "dataset_licence",
+            Code::KindBlocked => "kind_blocked",
         }
     }
 }
@@ -136,6 +152,10 @@ pub trait KindValidator {
     fn kind(&self) -> &str;
     /// Findings about `section` (the table named after the kind).
     fn validate(&self, section: &toml::Table, recipe: &RecipeContext<'_>) -> Vec<Finding>;
+    /// True for placeholders that do not check the section; reported as `kind_check = "stub"`.
+    fn is_stub(&self) -> bool {
+        false
+    }
 }
 
 /// Kind validators keyed by kind.
@@ -158,13 +178,44 @@ impl KindValidator for StubValidator {
     fn validate(&self, _section: &toml::Table, _recipe: &RecipeContext<'_>) -> Vec<Finding> {
         Vec::new()
     }
+
+    fn is_stub(&self) -> bool {
+        true
+    }
 }
 
-/// The build-time registry: one [`StubValidator`] per kind in [`KINDS`].
+/// A validator that fails every recipe of its kind closed with `kind_blocked` and a reason.
+#[derive(Debug, Clone, Copy)]
+pub struct BlockedValidator {
+    pub kind: &'static str,
+    pub reason: &'static str,
+}
+
+impl KindValidator for BlockedValidator {
+    fn kind(&self) -> &str {
+        self.kind
+    }
+
+    fn validate(&self, _section: &toml::Table, recipe: &RecipeContext<'_>) -> Vec<Finding> {
+        vec![Finding::new(recipe, Code::KindBlocked, Some(self.kind), self.reason)]
+    }
+
+    fn is_stub(&self) -> bool {
+        true
+    }
+}
+
+/// The build-time registry: a [`StubValidator`] for `accuracy`, `fidelity` and `performance`,
+/// and for `comparison` a [`BlockedValidator`] ([`COMPARISON_BLOCKED`], D-021) until
+/// OUTR.BENCH.CMP registers a real one.
 pub fn default_registry() -> Registry {
     let mut r = Registry::new();
     for k in KINDS {
-        register(&mut r, Box::new(StubValidator(k)));
+        if k == "comparison" {
+            register(&mut r, Box::new(BlockedValidator { kind: k, reason: COMPARISON_BLOCKED }));
+        } else {
+            register(&mut r, Box::new(StubValidator(k)));
+        }
     }
     r
 }
@@ -213,19 +264,29 @@ impl fmt::Display for InputError {
     }
 }
 
-/// The dataset catalogue as this validator needs it: `id` to SHA-256.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct Catalogue {
-    pub entries: BTreeMap<String, Digest>,
+/// One catalogue entry as this validator needs it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogueEntry {
+    pub sha256: Digest,
+    /// The entry's `licence` when it is a string.
+    pub licence: Option<String>,
 }
 
-/// Parses a catalogue file: `[[dataset]]` entries, of which only `id` and `sha256` are read
-/// (other fields belong to ECO.DATA.CAT). `sha256` may be bare hex or `sha256:`-prefixed.
-pub fn parse_catalogue(text: &str, file: &str) -> Result<Catalogue, InputError> {
+/// The dataset catalogue (`id` to entry) and the licence allowlist its entries are held to.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Catalogue {
+    pub entries: BTreeMap<String, CatalogueEntry>,
+    pub allow: Allowlist,
+}
+
+/// Parses a catalogue file: `[[dataset]]` entries, of which only `id`, `sha256` and `licence`
+/// are read (other fields belong to ECO.DATA.CAT). `sha256` may be bare hex or
+/// `sha256:`-prefixed. Licences are checked against `allow` per recipe.
+pub fn parse_catalogue(text: &str, file: &str, allow: Allowlist) -> Result<Catalogue, InputError> {
     let t = parse_table(text, file)?;
     let bad = |message: String| InputError::Parse { file: file.to_string(), message };
     let list = match t.get("dataset") {
-        None => return Ok(Catalogue::default()),
+        None => return Ok(Catalogue { entries: BTreeMap::new(), allow }),
         Some(toml::Value::Array(a)) => a,
         Some(_) => return Err(bad("`dataset` is not an array of tables".to_string())),
     };
@@ -236,11 +297,12 @@ pub fn parse_catalogue(text: &str, file: &str) -> Result<Catalogue, InputError> 
         let (Some(id), Some(digest)) = (id, digest) else {
             return Err(bad(format!("dataset entry #{} has no string `id` and valid `sha256`", n + 1)));
         };
-        if entries.insert(id.to_string(), digest).is_some() {
+        let licence = e.get("licence").and_then(toml::Value::as_str).map(str::to_string);
+        if entries.insert(id.to_string(), CatalogueEntry { sha256: digest, licence }).is_some() {
             return Err(bad(format!("dataset id {id:?} is listed twice")));
         }
     }
-    Ok(Catalogue { entries })
+    Ok(Catalogue { entries, allow })
 }
 
 /// A recipe with no findings.
@@ -249,6 +311,8 @@ pub struct ValidRecipe {
     pub file: String,
     pub id: String,
     pub kind: String,
+    /// `full` when a real kind validator checked the section, `stub` when only a placeholder did.
+    pub kind_check: &'static str,
 }
 
 /// Result of a check over readable, parsable input.
@@ -266,7 +330,8 @@ impl Report {
         u8::from(!self.findings.is_empty())
     }
 
-    /// Text report: one line per finding, one `recipe <id> <kind> <file>` line per valid recipe,
+    /// Text report: one line per finding, one `recipe <id> <kind> <kind_check> <file>` line per
+    /// valid recipe,
     /// and a summary line.
     pub fn render(&self) -> String {
         let mut out = String::new();
@@ -274,7 +339,7 @@ impl Report {
             out.push_str(&format!("{f}\n"));
         }
         for r in &self.recipes {
-            out.push_str(&format!("recipe {} {} {}\n", r.id, r.kind, r.file));
+            out.push_str(&format!("recipe {} {} {} {}\n", r.id, r.kind, r.kind_check, r.file));
         }
         out.push_str(&format!(
             "bench-recipe check: {} valid recipe(s), {} finding(s)\n",
@@ -286,8 +351,14 @@ impl Report {
 
     /// Canonical JSON report: `status` (`ok` or `findings`), `recipes`, `findings`.
     pub fn to_json(&self) -> Vec<u8> {
-        let recipes =
-            self.recipes.iter().map(|r| obj(vec![("file", s(&r.file)), ("id", s(&r.id)), ("kind", s(&r.kind))]));
+        let recipes = self.recipes.iter().map(|r| {
+            obj(vec![
+                ("file", s(&r.file)),
+                ("id", s(&r.id)),
+                ("kind", s(&r.kind)),
+                ("kind_check", s(r.kind_check)),
+            ])
+        });
         let findings = self.findings.iter().map(|f| {
             let mut fields = vec![("code", s(f.code.as_str())), ("file", s(&f.file)), ("message", s(&f.message))];
             if let Some(id) = &f.id {
@@ -306,12 +377,29 @@ impl Report {
     }
 }
 
-/// Reads the catalogue and every recipe under `paths` (files, or folders walked for `*.toml`)
-/// and checks them.
-pub fn run(catalogue: &Path, paths: &[PathBuf], registry: &Registry) -> Result<Report, InputError> {
-    let cat = parse_catalogue(&read_text(catalogue, &show(catalogue))?, &show(catalogue))?;
+/// Reads the licence allowlist (`allowlist`, or [`DEFAULT_ALLOWLIST`] found from the catalogue's
+/// folder upwards), the catalogue and every recipe under `paths` (files, or folders walked for
+/// `*.toml`) and checks them. No recipe file at all is an input error (`no recipes found`).
+pub fn run(
+    catalogue: &Path,
+    allowlist: Option<&Path>,
+    paths: &[PathBuf],
+    registry: &Registry,
+) -> Result<Report, InputError> {
+    let allow_path = match allowlist {
+        Some(p) => p.to_path_buf(),
+        None => find_allowlist(catalogue)?,
+    };
+    let allow = parse_allowlist(&read_text(&allow_path, &show(&allow_path))?, &show(&allow_path))
+        .map_err(|e| InputError::Parse { file: show(&allow_path), message: e.to_string() })?;
+    let cat = parse_catalogue(&read_text(catalogue, &show(catalogue))?, &show(catalogue), allow)?;
+    let files = collect_files(paths)?;
+    if files.is_empty() {
+        let shown: Vec<String> = paths.iter().map(|p| show(p)).collect();
+        return Err(InputError::Io { file: shown.join(" "), message: "no recipes found".to_string() });
+    }
     let mut inputs = Vec::new();
-    for (name, path) in collect_files(paths)? {
+    for (name, path) in files {
         let text = read_text(&path, &name)?;
         inputs.push((name, text));
     }
@@ -338,7 +426,9 @@ pub fn check(catalogue: &Catalogue, inputs: &[(String, String)], registry: &Regi
             ids.entry(id.to_string()).or_default().push(file.to_string());
         }
         if let (true, Some(id), Some(kind)) = (f.is_empty(), id, kind) {
-            candidates.push(ValidRecipe { file: file.to_string(), id: id.to_string(), kind });
+            let stub = registry.get(kind.as_str()).map_or(true, |v| v.is_stub());
+            let kind_check = if stub { "stub" } else { "full" };
+            candidates.push(ValidRecipe { file: file.to_string(), id: id.to_string(), kind, kind_check });
         }
         findings.append(&mut f);
     }
@@ -447,7 +537,21 @@ fn check_recipe(
             if let Some(ds_id) = ds_id {
                 match catalogue.entries.get(ds_id) {
                     None => add(Code::DatasetUnknown, "dataset.id", format!("{ds_id:?} is not in the catalogue")),
-                    Some(want) => {
+                    Some(entry) => {
+                        let want = &entry.sha256;
+                        match &entry.licence {
+                            None => add(
+                                Code::DatasetLicence,
+                                "dataset.id",
+                                format!("catalogue entry {ds_id:?} states no licence"),
+                            ),
+                            Some(l) if !catalogue.allow.allows(l) => add(
+                                Code::DatasetLicence,
+                                "dataset.id",
+                                format!("catalogue entry {ds_id:?} has licence {l:?}, not on the asset licence allowlist"),
+                            ),
+                            Some(_) => {}
+                        }
                         if let Some(got) = digest.filter(|g| g != want) {
                             add(
                                 Code::DatasetDigestMismatch,
@@ -657,6 +761,16 @@ pub fn parse_digest(s: &str) -> Option<Digest> {
     } else {
         Digest::parse(&format!("sha256:{s}")).ok()
     }
+}
+
+/// The nearest [`DEFAULT_ALLOWLIST`] in the catalogue's folder or one of its ancestors.
+fn find_allowlist(catalogue: &Path) -> Result<PathBuf, InputError> {
+    let start = std::fs::canonicalize(catalogue)
+        .map_err(|e| InputError::Io { file: show(catalogue), message: e.to_string() })?;
+    start.ancestors().skip(1).map(|d| d.join(DEFAULT_ALLOWLIST)).find(|p| p.is_file()).ok_or_else(|| InputError::Io {
+        file: DEFAULT_ALLOWLIST.to_string(),
+        message: "no licence allowlist found above the catalogue; pass --allowlist".to_string(),
+    })
 }
 
 /// Path as shown in reports: `/` separators on every platform.

@@ -11,12 +11,16 @@ numbers. Fixture content is CC-BY-4.0.
 
 Layout (each case folder has catalogue.toml and recipes/):
     data/               two synthetic files whose digests the catalogues list
-    ok/                 one valid recipe per kind (AC-1)
+    ok/                 one recipe per kind: three valid (stub kind check), comparison flagged
+                        kind_blocked under D-021 (AC-1)
     missing-tolerance/  a result field without `tolerance` (AC-2: field_malformed)
     bad-digest/         dataset sha256 differs from the catalogue (AC-3: dataset_digest_mismatch)
     other-program/      command source with argv[0] = "python" (AC-4: source_invalid)
     dup-id/             two files stating the same id (AC-5: duplicate_id)
     unparsable/         a recipe that is not TOML (AC-6: exit 2)
+    bad-licence/        catalogue entries with a licence off the asset allowlist and with none
+                        (dataset_licence)
+    empty/              a recipes/ folder holding no *.toml file (exit 2, no recipes found)
     expected/ok.json    report of `bench-recipe check --catalogue catalogue.toml recipes --json`
                         run inside ok/ (AC-1, AC-7)
 """
@@ -52,15 +56,16 @@ def hexdigest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def catalogue():
+def catalogue(licences=("CC-BY-4.0", "CC-BY-4.0")):
     out = "# Stub dataset catalogue for OUTR.BENCH.RUN.RECIPE fixtures (ECO.DATA.CAT layout).\n"
-    for ds_id, name, data in [(PLANE_ID, "plane-points-v1.csv", PLANE), (TIMING_ID, "timing-trace-v1.csv", TIMING)]:
+    entries = [(PLANE_ID, "plane-points-v1.csv", PLANE), (TIMING_ID, "timing-trace-v1.csv", TIMING)]
+    for (ds_id, name, data), licence in zip(entries, licences):
         out += (
             "\n[[dataset]]\n"
             f'id = "{ds_id}"\n'
             f'title = "Synthetic fixture file {name}"\n'
-            'licence = "CC-BY-4.0"\n'
-            f"size_bytes = {len(data)}\n"
+            + (f'licence = "{licence}"\n' if licence else "")
+            +             f"size_bytes = {len(data)}\n"
             f'sha256 = "{hexdigest(data)}"\n'
         )
     return out.encode("utf-8")
@@ -117,7 +122,7 @@ def build():
         "data/plane-points-v1.csv": PLANE,
         "data/timing-trace-v1.csv": TIMING,
     }
-    cases = ["ok", "missing-tolerance", "bad-digest", "other-program", "dup-id", "unparsable"]
+    cases = ["ok", "missing-tolerance", "bad-digest", "other-program", "dup-id", "unparsable", "empty"]
     for case in cases:
         files[f"{case}/catalogue.toml"] = catalogue()
 
@@ -172,10 +177,35 @@ def build():
         b"[source\n"
     )
 
+    # Fictional licence ID off the allowlist for the plane entry; no licence for the timing entry.
+    files["bad-licence/catalogue.toml"] = catalogue(("LicenseRef-Fictional-NoRedistribution", None))
+    files["bad-licence/recipes/plane.toml"] = recipe(
+        "fixture.licence-plane", "accuracy", PLANE_ID, PLANE, release_source("fixture.licence-plane"), [ERR]
+    )
+    files["bad-licence/recipes/timing.toml"] = recipe(
+        "fixture.licence-timing", "performance", TIMING_ID, TIMING, release_source("fixture.licence-timing"), [WALL],
+        profile="recommended",
+    )
+    files["empty/recipes/README.txt"] = b"No recipes here: the check must exit 2 (fixture, CC-BY-4.0).\n"
+
+    # Hand-labelled from the spec rules and D-021: the comparison stub fails closed; the other three
+    # pass a stub kind check.
     report = {
-        "findings": [],
-        "recipes": [{"file": f"recipes/{name}", "id": rid, "kind": kind} for name, (rid, kind) in sorted(ok.items())],
-        "status": "ok",
+        "findings": [
+            {
+                "code": "kind_blocked",
+                "field": "comparison",
+                "file": "recipes/comparison.toml",
+                "id": "fixture.comparison-plane",
+                "message": "comparison recipes are blocked until OUTR.BENCH.CMP (D-021)",
+            }
+        ],
+        "recipes": [
+            {"file": f"recipes/{name}", "id": rid, "kind": kind, "kind_check": "stub"}
+            for name, (rid, kind) in sorted(ok.items())
+            if kind != "comparison"
+        ],
+        "status": "findings",
     }
     # RFC 8785 for this data: ASCII strings, arrays and objects only.
     files["expected/ok.json"] = json.dumps(report, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
