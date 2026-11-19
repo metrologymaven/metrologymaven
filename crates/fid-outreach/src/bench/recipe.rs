@@ -352,12 +352,7 @@ impl Report {
     /// Canonical JSON report: `status` (`ok` or `findings`), `recipes`, `findings`.
     pub fn to_json(&self) -> Vec<u8> {
         let recipes = self.recipes.iter().map(|r| {
-            obj(vec![
-                ("file", s(&r.file)),
-                ("id", s(&r.id)),
-                ("kind", s(&r.kind)),
-                ("kind_check", s(r.kind_check)),
-            ])
+            obj(vec![("file", s(&r.file)), ("id", s(&r.id)), ("kind", s(&r.kind)), ("kind_check", s(r.kind_check))])
         });
         let findings = self.findings.iter().map(|f| {
             let mut fields = vec![("code", s(f.code.as_str())), ("file", s(&f.file)), ("message", s(&f.message))];
@@ -548,7 +543,9 @@ fn check_recipe(
                             Some(l) if !catalogue.allow.allows(l) => add(
                                 Code::DatasetLicence,
                                 "dataset.id",
-                                format!("catalogue entry {ds_id:?} has licence {l:?}, not on the asset licence allowlist"),
+                                format!(
+                                    "catalogue entry {ds_id:?} has licence {l:?}, not on the asset licence allowlist"
+                                ),
                             ),
                             Some(_) => {}
                         }
