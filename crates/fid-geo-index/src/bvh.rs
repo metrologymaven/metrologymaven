@@ -14,9 +14,9 @@
 //! ([`BvhError::EmptyMesh`]); at most [`MAX_TRIANGLES`]; one payload ID per triangle. Then per
 //! triangle in index order, per corner, per axis: the coordinate is finite
 //! ([`BvhError::NonFinitePrimitive`]) and `|x| <= COORD_LIMIT` = 2^500
-//! ([`BvhError::PrimitiveOutOfRange`]); then the triangle is not degenerate: no two corners are
-//! equal on all three axes ([`BvhError::DegenerateTriangle`]; this includes a repeated vertex
-//! index). Collinear triangles with distinct corners are accepted: their boxes are well defined.
+//! ([`BvhError::PrimitiveOutOfRange`]). Degenerate triangles (slivers, collinear or coincident
+//! corners, repeated vertex indexes, common in STL meshes) are accepted: their boxes are well
+//! defined, so they are indexed and returned like any other triangle.
 //!
 //! Queries: every coordinate, radius and ray parameter is finite ([`BvhError::NonFiniteQuery`])
 //! and at most `COORD_LIMIT` in magnitude ([`BvhError::QueryOutOfRange`]), including both ends
@@ -169,11 +169,6 @@ pub enum BvhError {
         /// Axis 0 = x, 1 = y, 2 = z.
         axis: u8,
     },
-    /// Two corners of the triangle are equal on all three axes.
-    DegenerateTriangle {
-        /// Triangle index.
-        triangle: u64,
-    },
     /// A query value is NaN or infinite.
     NonFiniteQuery {
         /// The argument.
@@ -216,7 +211,6 @@ impl BvhError {
             BvhError::PayloadLength { .. } => "payload_length",
             BvhError::NonFinitePrimitive { .. } => "non_finite_primitive",
             BvhError::PrimitiveOutOfRange { .. } => "primitive_out_of_range",
-            BvhError::DegenerateTriangle { .. } => "degenerate_triangle",
             BvhError::NonFiniteQuery { .. } => "non_finite_query",
             BvhError::QueryOutOfRange { .. } => "query_out_of_range",
             BvhError::NegativeRadius => "negative_radius",
@@ -241,7 +235,6 @@ impl fmt::Display for BvhError {
             | BvhError::PrimitiveOutOfRange { triangle, corner, axis } => {
                 write!(f, "{} (triangle {triangle}, corner {corner}, axis {axis})", self.code())
             }
-            BvhError::DegenerateTriangle { triangle } => write!(f, "degenerate_triangle (triangle {triangle})"),
             BvhError::NonFiniteQuery { field } | BvhError::QueryOutOfRange { field } => {
                 write!(f, "{} ({})", self.code(), field.as_str())
             }
@@ -577,9 +570,6 @@ impl PrimitiveBvh {
                 }
             }
             let [a, b, cc] = c;
-            if a == b || b == cc || a == cc {
-                return Err(BvhError::DegenerateTriangle { triangle: t });
-            }
             let lo = [0, 1, 2].map(|k| total_min(total_min(a[k], b[k]), cc[k]));
             let hi = [0, 1, 2].map(|k| total_max(total_max(a[k], b[k]), cc[k]));
             boxes.push(Aabb::new(lo, hi).map_err(|_| BvhError::Inconsistent)?);

@@ -502,15 +502,163 @@ fn build_refuses_bad_meshes_with_typed_errors() {
     edge[0][2][0] = -COORD_LIMIT;
     assert!(b(&edge, &[0], 1).is_ok(), "the limit itself is accepted");
 
-    // Degenerate: two equal corners (also -0.0 against +0.0), and a repeated vertex index.
+}
+
+#[test]
+fn degenerate_triangles_are_accepted_and_found() {
+    let tri = unit_tri(0.0);
+    // Two equal corners (also -0.0 against +0.0), all three corners equal, collinear corners.
     let dup = [[0.0, 0.0, 0.0], [-0.0, 0.0, 0.0], [1.0, 1.0, 1.0]];
-    assert_eq!(b(&[tri, dup], &[0, 1], 1), Err(BvhError::DegenerateTriangle { triangle: 1 }));
-    let mesh = Mesh::from_points(F0, &[[0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], &[[0, 1, 2], [0, 2, 2]]).unwrap();
-    assert_eq!(PrimitiveBvh::build(&mesh, &[7, 8], 1), Err(BvhError::DegenerateTriangle { triangle: 1 }));
-    // Collinear with distinct corners is accepted (its box is well defined).
+    let point = [[3.0, 3.0, 3.0]; 3];
     let line = [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [2.0, 2.0, 2.0]];
-    let bvh = b(&[line], &[9], 1).unwrap();
-    assert_eq!(bvh.sphere([1.0, 1.0, 1.0], 0.0).unwrap(), vec![0]);
+    let bvh = PrimitiveBvh::build_triangles(F0, &[tri, dup, point, line], &[0, 1, 2, 3], 1).unwrap();
+    assert_eq!(bvh.sphere([1.0, 1.0, 1.0], 0.0).unwrap(), vec![1, 3]);
+    assert_eq!(bvh.sphere([3.0, 3.0, 3.0], 0.0).unwrap(), vec![2]);
+    assert_eq!(bvh.ray([3.0, 3.0, -1.0], [0.0, 0.0, 1.0], 0.0, 10.0).unwrap(), vec![2]);
+    assert_eq!(bvh.box_query([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]).unwrap(), vec![1, 3]);
+    // A repeated vertex index in a measured mesh (kept by GEO.TYPES.MESH) is indexed too.
+    let mesh = Mesh::from_points(F0, &[[0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], &[[0, 1, 2], [0, 2, 2]]).unwrap();
+    let bvh = PrimitiveBvh::build(&mesh, &[7, 8], 1).unwrap();
+    assert_eq!(bvh.box_query([0.0, 0.5, 0.0], [0.0, 0.5, 0.0]).unwrap(), vec![0, 1]);
+    assert_eq!(bvh.payload(1), Some(8));
+}
+
+// ------------------------------------------------------------------ brute force through real hierarchies
+
+const C4: f64 = 4.0 * f64::EPSILON;
+const TINY: f64 = f64::MIN_POSITIVE;
+
+fn tmax(a: f64, b: f64) -> f64 {
+    if b.total_cmp(&a).is_gt() {
+        b
+    } else {
+        a
+    }
+}
+
+fn tmin(a: f64, b: f64) -> f64 {
+    if b.total_cmp(&a).is_lt() {
+        b
+    } else {
+        a
+    }
+}
+
+/// Test-local restatement of the pinned per-box tests (NODE.md Design), applied to every box.
+#[allow(clippy::needless_range_loop)]
+fn brute(b: &Aabb, q: &Query) -> bool {
+    let (lo, hi) = (b.min(), b.max());
+    let gap = |c: f64, l: f64, h: f64| if c < l { l - c } else if c > h { c - h } else { 0.0 };
+    match *q {
+        Query::Box(qlo, qhi) => (0..3).all(|k| lo[k] <= qhi[k] && qlo[k] <= hi[k]),
+        Query::Sphere(c, r) => {
+            let g: [f64; 3] = std::array::from_fn(|k| gap(c[k], lo[k], hi[k]));
+            (g[0] * g[0] + g[1] * g[1]) + g[2] * g[2] <= r * r * (1.0 + C4) + TINY
+        }
+        Query::Ray(o, d, t0, t1) => {
+            let up = |t: f64| if t.is_finite() { t + (t.abs() * C4 + TINY) } else { t };
+            let down = |t: f64| if t.is_finite() { t - (t.abs() * C4 + TINY) } else { t };
+            let (mut a, mut z) = (t0, t1);
+            for k in 0..3 {
+                if d[k] == 0.0 {
+                    if !(lo[k]..=hi[k]).contains(&o[k]) {
+                        return false;
+                    }
+                    continue;
+                }
+                let (ta, tb) = ((lo[k] - o[k]) / d[k], (hi[k] - o[k]) / d[k]);
+                let (near, far) = if ta <= tb { (ta, tb) } else { (tb, ta) };
+                a = tmax(a, down(near));
+                z = tmin(z, up(far));
+            }
+            a <= z
+        }
+    }
+}
+
+fn check_against_brute(bvh: &PrimitiveBvh, qs: &[Query]) {
+    let n = bvh.triangle_count();
+    for (i, q) in qs.iter().enumerate() {
+        let want: Vec<u64> = (0..n).filter(|&t| brute(&bvh.triangle_aabb(t).unwrap(), q)).collect();
+        assert_eq!(run(bvh, q), want, "query {i}: {q:?}");
+    }
+}
+
+fn mixed_queries(g: &mut SplitMix, count: usize, span: f64, extra: &[Query]) -> Vec<Query> {
+    let mut qs = extra.to_vec();
+    for i in 0..count {
+        let p = [g.uni(-span, span), g.uni(-span, span), g.uni(-span, span)];
+        let s = g.uni(0.0, span);
+        qs.push(match i % 3 {
+            0 => Query::Sphere(p, s),
+            1 => Query::Box(p.map(|x| x - s), p.map(|x| x + s)),
+            _ => {
+                let mut d = [g.uni(-1.0, 1.0), g.uni(-1.0, 1.0), g.uni(-1.0, 1.0)];
+                if i % 4 == 0 {
+                    d[i % 3] = 0.0;
+                }
+                Query::Ray(p, d, -s, s)
+            }
+        });
+    }
+    qs
+}
+
+#[test]
+fn identical_triangles_match_brute_force() {
+    // 200 copies of one triangle: every split is by triangle index alone.
+    let tris = vec![[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]; 200];
+    let payload: Vec<u64> = (0..200).collect();
+    let bvh = PrimitiveBvh::build_triangles(F0, &tris, &payload, 1).unwrap();
+    assert!(bvh.nodes().len() > 1);
+    let all: Vec<u64> = (0..200).collect();
+    assert_eq!(bvh.sphere([0.25, 0.25, 0.0], 0.0).unwrap(), all);
+    assert_eq!(bvh.nearest_box([5.0, 5.0, 5.0]).unwrap().triangle, 0);
+    let extra = [
+        Query::Ray([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], 0.0, 1.0),
+        Query::Box([1.0, 1.0, 0.0], [2.0, 2.0, 0.0]),
+        Query::Sphere([1.0, 1.0, 1.0], 1.0),
+    ];
+    let mut g = SplitMix(7);
+    check_against_brute(&bvh, &mixed_queries(&mut g, 300, 2.0, &extra));
+}
+
+#[test]
+fn extreme_coordinates_match_brute_force() {
+    let l = COORD_LIMIT;
+    let sub = f64::from_bits(1); // smallest subnormal
+    let mut tris = vec![
+        [[l, l, l], [-l, l, l], [l, -l, -l]],
+        [[-l, -l, -l], [-l, -l, -l], [-l, -l, -l]],
+        [[l, 0.0, 0.0], [l, sub, 0.0], [l, 0.0, sub]],
+        [[0.0, 0.0, 0.0], [sub, 0.0, 0.0], [0.0, sub, 0.0]],
+        [[-sub, -sub, -sub], [0.0, 0.0, 0.0], [sub, sub, sub]],
+        [[TINY, TINY, 0.0], [2.0 * TINY, TINY, 0.0], [TINY, 2.0 * TINY, 0.0]],
+    ];
+    let mut g = SplitMix(11);
+    for _ in 0..60 {
+        let c = [g.uni(-1.0, 1.0), g.uni(-1.0, 1.0), g.uni(-1.0, 1.0)];
+        let e = g.uni(0.0, 0.1);
+        tris.push([c, [c[0] + e, c[1], c[2]], [c[0], c[1] + e, c[2] + e]]);
+    }
+    let payload: Vec<u64> = (0..tris.len() as u64).collect();
+    let bvh = PrimitiveBvh::build_triangles(F0, &tris, &payload, 2).unwrap();
+    let extra = [
+        Query::Sphere([0.0; 3], 0.0),
+        Query::Sphere([sub, sub, sub], 0.0),
+        Query::Sphere([l, l, l], l),
+        Query::Sphere([-l, -l, -l], 0.0),
+        Query::Box([-l, -l, -l], [l, l, l]),
+        Query::Box([sub; 3], [sub; 3]),
+        Query::Box([l, 0.0, 0.0], [l, 0.0, 0.0]),
+        Query::Ray([0.0; 3], [1.0, 1.0, 1.0], -l, l),
+        Query::Ray([-l, 0.0, 0.0], [l, sub, 0.0], 0.0, 2.0),
+        Query::Ray([0.0; 3], [sub, sub, 0.0], 0.0, 1.0),
+        Query::Ray([0.0; 3], [l, sub, sub], -l, l),
+        Query::Ray([l, l, l], [-1.0, 0.0, 0.0], 0.0, l),
+        Query::Ray([TINY, TINY, 0.0], [0.0, 0.0, -sub], -1.0, 1.0),
+    ];
+    check_against_brute(&bvh, &mixed_queries(&mut g, 300, 1.0, &extra));
 }
 
 fn nf<T>(field: QueryField) -> Result<T, BvhError> {
