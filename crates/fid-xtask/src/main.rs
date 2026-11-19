@@ -18,6 +18,7 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask data verify [--cache <dir>]\n       \
                      cargo xtask bots-check --register <toml> --restricted <txt> --today <YYYY-MM-DD> \
                      [--review-export <json>]\n       \
+                     cargo xtask bot-blocking --threads <json> --register <bots.toml> --maintainers <txt>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
@@ -62,6 +63,7 @@ fn main() -> ExitCode {
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("datasets-check" | "data") => datasets_check(&args),
         Some("bots-check") => bots_check(&args[1..]),
+        Some("bot-blocking") => bot_blocking(&args[1..]),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
         Some("plat-hw") => fid_platform(&args, "plat-hw"),
@@ -184,6 +186,45 @@ fn bots_check(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// ECO.CI.BOTS.BLOCK: exit 0 when no blocking bot thread is unresolved, 1 when one is or an
+/// input is missing or malformed (`BLOCK-INPUT`, fail closed), 2 on a usage error.
+fn bot_blocking(args: &[String]) -> ExitCode {
+    let mut opts: BTreeMap<&str, &str> = BTreeMap::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let known = matches!(a.as_str(), "--threads" | "--register" | "--maintainers");
+        match it.next() {
+            Some(v) if known && !opts.contains_key(a.as_str()) => {
+                opts.insert(a.as_str(), v.as_str());
+            }
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(threads), Some(register), Some(maintainers)) =
+        (opts.get("--threads"), opts.get("--register"), opts.get("--maintainers"))
+    else {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    };
+    use fid_xtask::bots::block;
+    match block::check(Path::new(threads), Path::new(register), Path::new(maintainers)) {
+        Ok(report) => {
+            for line in report.lines() {
+                println!("{line}");
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            let e: String = e.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
+            println!("{} {e}", block::INPUT);
+            ExitCode::from(1)
         }
     }
 }

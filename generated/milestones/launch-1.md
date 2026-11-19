@@ -20,13 +20,13 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**120** of **1336** leaves built in code ([B]).
+**122** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
 Every leaf in a wave depends only on leaves in earlier waves, so a wave can be built in parallel.
 
-### Wave 1 (125 leaves, 71 built)
+### Wave 1 (125 leaves, 72 built)
 
 - [B] [AGENT.BOARD.CLAIMS](../../spec/agent/board/claims/NODE.md) Claim register and claim check (S, P1a)
 - [B] [AGENT.EVAL.CORPUS](../../spec/agent/eval/corpus/NODE.md) First evaluation task corpus (M, P1a)
@@ -49,7 +49,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.STO.LAYOUT](../../spec/core/sto/layout/NODE.md) Project directory layout, locking and cross-platform file behaviour (M, P0)
 - [ECO.APPS.HANDOFF.RTRIP](../../spec/eco/apps/handoff/rtrip/NODE.md) Cross-app round-trip suite (M, P1b)
 - [B] [ECO.APPS.POLICY](../../spec/eco/apps/policy/NODE.md) App-policy boundary and cross-app command identity (M, P1a)
-- [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
+- [B] [ECO.CI.BOTS.BLOCK](../../spec/eco/ci/bots/block/NODE.md) Maintainer-marked blocking findings check (S, P0)
 - [B] [ECO.CI.BOTS.REG](../../spec/eco/ci/bots/reg/NODE.md) Bot register and restricted-path exclusion check (S, P0)
 - [ECO.COMM.PARTNER](../../spec/eco/comm/partner/NODE.md) Integrator and support-partner program (S, P1b)
 - [ECO.COMM.SCOPE](../../spec/eco/comm/scope/NODE.md) Spec-tree validator, open-node listing and generated reports (M, P0)
@@ -770,7 +770,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.VIEW.CAMERA.HILITE](../../spec/viz/view/camera/hilite/NODE.md) Highlight and proposal ghost overlays (M, P1a)
 - [VIZ.VIEW.NAMED.EXPORT](../../spec/viz/view/named/export/NODE.md) NamedView package format for reports and web packages (S, P1a)
 
-### Wave 15 (35 leaves, 0 built)
+### Wave 15 (35 leaves, 1 built)
 
 - [AUTO.CLI.ARGS](../../spec/auto/cli/args/NODE.md) Typed and unit-bearing parameter parsing (M, P0)
 - [AUTO.CLI.COMP](../../spec/auto/cli/comp/NODE.md) Generated shell completions (S, P0)
@@ -799,7 +799,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [HAL.ACQ.SESS.LIFE](../../spec/hal/acq/sess/life/NODE.md) Session lifecycle, controlling-writer lock and session context (M, P2)
 - [IO.DMIS.PROG.FEAT](../../spec/io/dmis/prog/feat/NODE.md) DMIS feature definitions to QIF features (M, P2)
 - [IO.RES.AQDEF.OUT](../../spec/io/res/aqdef/out/NODE.md) AQDEF DFQ export (uncertified) (M, P1b)
-- [IO.RES.CSV.OUT](../../spec/io/res/csv/out/NODE.md) Result table export through a column map (M, P1a)
+- [B] [IO.RES.CSV.OUT](../../spec/io/res/csv/out/NODE.md) Result table export through a column map (M, P1a)
 - [IO.RES.QIFR.ROUT](../../spec/io/res/qifr/rout/NODE.md) QIF Results export of ResultRecords (M, P1a)
 - [MIG.COVER.GEN](../../spec/mig/cover/gen/NODE.md) Coverage table generator and drift check (M, P1a)
 - [MIG.PROJ.MAPREP](../../spec/mig/proj/maprep/NODE.md) Mapping report model and classification (S, P1a)
