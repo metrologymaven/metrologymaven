@@ -283,13 +283,15 @@ pub trait CommitProbe: Send + Sync {
 
 /// An open project with its database connection and blob store.
 pub struct Store {
-    location: ProjectLocation,
-    lock: Option<Locked>,
-    blobs: BlobStore,
-    mode: OpenMode,
+    // Fields drop in declaration order: the connection closes (and checkpoints) before the
+    // write lock is released, so no other writer can open the project while it is still open.
     /// The connection. Holding this mutex is what serialises commits (and reads) in-process;
     /// the OS write lock keeps other processes out.
     db: Mutex<Database>,
+    lock: Option<Locked>,
+    location: ProjectLocation,
+    blobs: BlobStore,
+    mode: OpenMode,
     #[cfg(any(test, feature = "test-probe"))]
     probe: Option<Arc<dyn CommitProbe>>,
 }

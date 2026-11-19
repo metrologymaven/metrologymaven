@@ -703,10 +703,18 @@ fn crash_child() {
     }
 }
 
+/// Longest wait for one expected line from a crash child, and for its stdout to close after
+/// the kill. A child that stalls fails the test with what it printed instead of hanging CI.
+const CHILD_WATCHDOG: Duration = Duration::from_secs(120);
+
+/// A crash child. Its stdout is read by a helper thread into a channel, so every wait is
+/// bounded by [`CHILD_WATCHDOG`]. Dropping it (also when a test fails) kills and reaps it.
 struct Child {
     child: std::process::Child,
-    out: BufReader<std::process::ChildStdout>,
+    lines: std::sync::mpsc::Receiver<String>,
+    seen: Vec<String>,
     acked: i64,
+    started: Instant,
 }
 
 impl Child {
@@ -715,24 +723,44 @@ impl Child {
             .args(["crash_child", "--exact", "--ignored", "--nocapture", "--test-threads=1"])
             .env(CRASH_ROOT_ENV, root)
             .env(CRASH_MODE_ENV, mode)
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
             .spawn()
             .unwrap();
         let out = BufReader::new(child.stdout.take().unwrap());
-        let mut c = Child { child, out, acked: 0 };
+        let (tx, lines) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            for line in out.lines() {
+                let Ok(line) = line else { break };
+                if tx.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+        let mut c = Child { child, lines, seen: Vec::new(), acked: 0, started: Instant::now() };
         c.wait_for("READY");
+        eprintln!("[{:?}] child {} ({mode}) ready", c.started.elapsed(), c.child.id());
         c
     }
 
     /// Reads lines until one starts with `prefix`; records every ACK on the way.
     fn wait_for(&mut self, prefix: &str) -> String {
         loop {
-            let mut line = String::new();
-            assert!(self.out.read_line(&mut line).unwrap() > 0, "child exited before {prefix}");
-            self.note(&line);
-            if line.starts_with(prefix) {
-                return line;
+            match self.lines.recv_timeout(CHILD_WATCHDOG) {
+                Ok(line) => {
+                    self.note(&line);
+                    if line.starts_with(prefix) {
+                        return line;
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    panic!("watchdog: no {prefix} from the child within {CHILD_WATCHDOG:?}; it printed {:?}", self.seen)
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    let status = self.child.wait().ok();
+                    panic!("child exited ({status:?}) before {prefix}; it printed {:?}", self.seen)
+                }
             }
         }
     }
@@ -741,22 +769,35 @@ impl Child {
         if let Some(n) = line.strip_prefix("ACK ") {
             self.acked = self.acked.max(n.trim().parse().unwrap());
         }
+        if self.seen.len() < 200 {
+            self.seen.push(line.to_string());
+        }
     }
 
     /// Kills the child (SIGKILL / TerminateProcess), reaps it and returns the last commit it
     /// acknowledged: every ACK line it wrote before dying counts.
     fn kill(mut self) -> i64 {
-        let stdin = self.child.stdin.take();
         self.child.kill().unwrap();
         let status = self.child.wait().unwrap();
         assert!(!status.success(), "child exited on its own");
-        drop(stdin);
-        let mut line = String::new();
-        while self.out.read_line(&mut line).unwrap_or(0) > 0 {
-            let l = std::mem::take(&mut line);
-            self.note(&l);
+        loop {
+            match self.lines.recv_timeout(CHILD_WATCHDOG) {
+                Ok(line) => self.note(&line),
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    panic!("watchdog: the killed child's stdout stayed open for {CHILD_WATCHDOG:?}")
+                }
+            }
         }
+        eprintln!("[{:?}] child {} killed after ACK {}", self.started.elapsed(), self.child.id(), self.acked);
         self.acked
+    }
+}
+
+impl Drop for Child {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
     }
 }
 
