@@ -1,0 +1,8 @@
+{
+  "results": [
+    {"leaf": "SCAN.CMP", "ac": "AC-1", "outcome": "pass"},
+    {"leaf": "SCAN.CMP", "ac": "AC-2", "outcome": "pass"},
+    {"leaf": "SCAN.VIEW", "ac": "AC-1", "outcome": "pass"},
+    {"leaf": "SCAN.LIVE", "ac": "AC-1", "outcome": "fail"}
+  ]
+}
