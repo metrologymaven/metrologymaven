@@ -907,6 +907,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-profile"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-trust-canon",
+ "fid-types",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "fid-program"
 version = "0.0.1"
 dependencies = [

@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-profile]
+built_pr: 290
 satisfies: [REQ-TRUST.PROFILE-001, REQ-TRUST.PROFILE-006]
 covers: []
 depends_on: []
@@ -79,6 +81,14 @@ Defines the three governance profiles as data: a published schema, the parameter
 ## Open questions
 
 - Whether Lean should allow software keys only, or both, is set to "both" (`allow_software_keys` true) pending user feedback.
+- Values not fixed by REQ-TRUST.PROFILE.DEFS-003, as built in `fid-profile` (#290). They are part of every profile digest, so changing one changes the digests:
+  - Lean `agent_writes: branch`: REQ-TRUST.PROFILE.GATE.QUERY-004 makes Lean all-permissive.
+  - Regulated `agent_writes: branch`: GATE.QUERY-004 lists only `require_signature_before_release` and `software_key_signing` as Regulated gates.
+  - Assistive-only `release_requires_signatures: false`, `allow_software_keys: true`, `required_meanings: []`: GATE.QUERY-004 lists only `agent_direct_write: disabled` for Assistive-only.
+  - Lean `required_meanings: []`: signatures are optional in Lean (CONSTITUTION §3, D-035).
+  - Lean and Assistive-only `program_release_by_other: agent_authored`: REQ-CMM.EXEC.TICKET-002 requires a different releasing human for agent-authored programs, or always under Regulated.
+  - `version: 1` for each built-in.
+- Limits chosen by the build (#290), also pinned by the schemas: at most 8 `required_meanings` (REQ-TRUST.ESIG.MULTI-001), at most 32 tenant meanings, labels 1 to 64 and descriptions 1 to 400 Unicode scalar values, tenant file and document at most 128 KiB, JSON nesting depth at most 8. A Regulated sequence may not repeat a code. Labels and descriptions must be NFC and may not hold C0/C1 controls, DEL or bidirectional controls (U+202A to U+202E, U+2066 to U+2069). Tenant meanings are listed in the document sorted by code.
 
 ## Children
 

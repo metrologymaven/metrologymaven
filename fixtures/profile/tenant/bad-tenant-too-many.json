@@ -1,0 +1,169 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_M00",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M01",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M02",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M03",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M04",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M05",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M06",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M07",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M08",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M09",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M10",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M11",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M12",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M13",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M14",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M15",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M16",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M17",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M18",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M19",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M20",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M21",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M22",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M23",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M24",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M25",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M26",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M27",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M28",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M29",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M30",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M31",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_M32",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    }
+  ]
+}

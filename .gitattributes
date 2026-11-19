@@ -200,3 +200,5 @@ fixtures/auto/surf/gen/** -text
 # TRUST.PKG.READER fixtures: hostile and valid ZIP packages and expected results, byte for byte.
 fixtures/pkg/malformed/** -text
 fixtures/pkg/reader/** -text
+# TRUST.PROFILE.DEFS: canonical profile documents compared byte for byte (no trailing newline).
+fixtures/profile/** -text
