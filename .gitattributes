@@ -7,6 +7,8 @@ fixtures/hal/idl/stamp/** -text
 fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
+# HAL.IDL.BASE.ERR fixtures: records are compared byte for byte after a round trip.
+fixtures/hal/idl/base/err/** -text
 schemas/hal/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
@@ -134,6 +136,8 @@ fixtures/man/implclosure-ws-v1/** -text
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
+# VIZ.RENDER.FRAME.SHLINT fixture crates: hand-labelled sources and metadata; never convert line endings.
+fixtures/viz/shlint/** -text
 # KRN.MAN.WASM: hand-encoded wasm modules, canonical calls and manifests, and the pinned runtime
 # settings whose SHA-256 is the manifest's replay_runtime.config_digest; compared byte for byte.
 fixtures/man/wasm/** -text
