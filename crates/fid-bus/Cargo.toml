@@ -18,5 +18,13 @@ fid-registry = { path = "../fid-registry" }
 # CORE.BUS.PIPE.HANDLER keys handlers by command ID `name@major`; was a dev-dependency.
 fid-types = { path = "../fid-types" }
 
+[features]
+# `ValidParams::for_tests` for this crate's integration tests; never enabled by other crates.
+test-support = []
+
+[dev-dependencies]
+# Integration tests build handler parameters through the test-support constructor.
+fid-bus = { path = ".", features = ["test-support"] }
+
 [lints]
 workspace = true

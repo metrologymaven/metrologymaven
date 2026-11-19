@@ -10,13 +10,15 @@
 //! [`run_handler`] looks the command up in a [`HandlerSet`], which stores each handler with
 //! its command definition, runs it, checks the events against that definition's declared
 //! effects ([`effects_check`]) and hands back [`CheckedEvents`] bound to the command ID and
-//! the call's principal, the only value the commit stage accepts. The checks run in this pinned order, and the first failure is
-//! returned with nothing to commit:
+//! the call's full principal, the only value the commit stage accepts. The checks run in
+//! this pinned order, and the first failure is returned with nothing to commit:
 //!
 //! 1. more than [`MAX_EVENTS`] events: `validation/effect_limit` (REQ-004);
 //! 2. in event order, the first event whose type is not in the declared effects:
 //!    `undeclared_effect/undeclared_event_type`, naming the type (REQ-003);
-//! 3. in event order, a body that has no RFC 8785 canonical form: `validation/schema`;
+//! 3. in event order, the first body holding a non-finite number anywhere (no RFC 8785
+//!    canonical form): `validation/schema`. Every body is scanned in full before any
+//!    length is counted, so this beats the size limit;
 //! 4. more than [`MAX_EVENT_BODY_BYTES`] of canonical body bytes: `validation/effect_limit`
 //!    (REQ-004). Lengths are counted by [`canonical_len`] without building the bytes, and
 //!    counting stops at the limit.
@@ -30,7 +32,7 @@
 use crate::error::{
     BusError, CancelledReason, Code, Detail, InternalReason, NotFoundReason, UndeclaredEffectReason, ValidationReason,
 };
-use crate::principal::{Channel, Principal, PrincipalRef, SessionTable};
+use crate::principal::{Channel, Principal, SessionTable};
 use fid_canon::{parse_with_limits, CValue, CanonError, Digest, MAX_DEPTH, MAX_INPUT_BYTES};
 use fid_registry::CommandDef;
 use fid_types::{CommandId, CommandName};
@@ -182,6 +184,9 @@ impl ValidParams {
     }
 
     /// Test-only constructor for handler tests outside this crate; not part of the API.
+    /// Exists only with the `test-support` feature, which only `fid-bus`'s own
+    /// dev-dependency on itself enables.
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn for_tests(value: CValue) -> Self {
         ValidParams(value)
@@ -352,12 +357,12 @@ impl Event {
 }
 
 /// Events that passed the effects check of one command, bound to that command and to the
-/// principal of the call that produced them: the only form the commit stage takes. Built
-/// only by [`run_handler`].
+/// full principal of the call that produced them (kind, identity, `on_behalf_of`, client ID,
+/// upgraded session): the only form the commit stage takes. Built only by [`run_handler`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct CheckedEvents {
     command: CommandId,
-    principal: PrincipalRef,
+    principal: Principal,
     events: Vec<Event>,
     body_bytes: u64,
 }
@@ -368,8 +373,8 @@ impl CheckedEvents {
         &self.command
     }
 
-    /// The principal of the call that produced the events (`ctx.principal().reference()`).
-    pub fn principal(&self) -> &PrincipalRef {
+    /// The principal of the call that produced the events: a clone of `ctx.principal()`.
+    pub fn principal(&self) -> &Principal {
         &self.principal
     }
 
@@ -384,7 +389,7 @@ impl CheckedEvents {
     }
 
     /// Command, principal and events, for the commit stage.
-    pub fn into_parts(self) -> (CommandId, PrincipalRef, Vec<Event>) {
+    pub fn into_parts(self) -> (CommandId, Principal, Vec<Event>) {
         (self.command, self.principal, self.events)
     }
 }
@@ -549,6 +554,24 @@ pub fn canonical_len(value: &CValue, limit: u64) -> Result<u64, CanonError> {
     Ok(n)
 }
 
+/// Whether `value` holds a NaN or infinite number anywhere (no canonical form). Iterative.
+fn has_non_finite(value: &CValue) -> bool {
+    let mut stack = vec![value];
+    while let Some(v) = stack.pop() {
+        match v {
+            CValue::Num(f) | CValue::F64Bits(f) => {
+                if !f.is_finite() {
+                    return true;
+                }
+            }
+            CValue::Arr(items) => stack.extend(items.iter()),
+            CValue::Obj(map) => stack.extend(map.values()),
+            CValue::Null | CValue::Bool(_) | CValue::Str(_) | CValue::I64(_) | CValue::U64(_) => {}
+        }
+    }
+    false
+}
+
 /// Checks `events` against `def.effects` (REQ-003, REQ-004), in the order given in the
 /// module docs. Returns the total canonical body bytes.
 fn check(def: &CommandDef, events: &[Event]) -> Result<u64, BusError> {
@@ -564,6 +587,11 @@ fn check(def: &CommandDef, events: &[Event]) -> Result<u64, BusError> {
             UndeclaredEffectReason::UndeclaredEventType,
             Detail::new(&format!("undeclared event type {} at index {i}", e.type_id)),
         ));
+    }
+    // Every body is scanned in full before any length is counted, so a body with no
+    // canonical form is `schema` even where counting would stop early at the limit.
+    if let Some(i) = events.iter().position(|e| has_non_finite(&e.body)) {
+        return Err(schema(&format!("event {i} body has no canonical form: non_finite_number")));
     }
     let mut total: u64 = 0;
     for (i, e) in events.iter().enumerate() {
@@ -605,7 +633,7 @@ pub fn run_handler(
         return Err(BusError::Cancelled(CancelledReason::Requested, Detail::new("cancel requested during handler")));
     }
     let body_bytes = check(&entry.def, &events)?;
-    Ok(CheckedEvents { command: entry.id.clone(), principal: ctx.principal.reference(), events, body_bytes })
+    Ok(CheckedEvents { command: entry.id.clone(), principal: ctx.principal.clone(), events, body_bytes })
 }
 
 // ------------------------------------------------------------------ handler set

@@ -1,6 +1,7 @@
-// AC-1 of CORE.BUS.PIPE.HANDLER: built as a doctest on `fid_bus::handler::Handler`.
-// This file must not build. `mut_state_control.rs` is the same file with the view taken
-// by shared reference and must build; a test asserts that is their only difference.
+// AC-1 of CORE.BUS.PIPE.HANDLER: one of a pair of doctests on `fid_bus::handler::Handler`.
+// In `mut_state.rs` the handler takes the view by mutable reference and must not build;
+// in `mut_state_control.rs` it takes it by shared reference and must build. A test
+// asserts the two files differ only in that reference.
 use fid_bus::handler::{Event, Handler, HandlerCtx, HandlerError, StateView, ValidParams};
 
 struct Writer;

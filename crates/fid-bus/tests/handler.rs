@@ -323,6 +323,27 @@ fn checked_events_report_body_bytes() {
     assert_eq!(checked.events(), events.as_slice());
 }
 
+/// A non-finite number is `schema` even when the body is over the size limit and length
+/// counting would stop before reaching it.
+#[test]
+fn non_finite_beats_size_limit_within_a_body() {
+    let (def, _) = effects_fixture();
+    let t = EventType::new("ElementCreated").unwrap();
+    let big = || CValue::Str("x".repeat(usize::try_from(MAX_EVENT_BODY_BYTES).unwrap()));
+    // The counter visits the string first and stops there.
+    let body = CValue::Arr(vec![CValue::Num(f64::NAN), big()]);
+    assert!(fid_bus::canonical_len(&body, MAX_EVENT_BODY_BYTES).unwrap() > MAX_EVENT_BODY_BYTES);
+    let events = vec![Event::new(t.clone(), body)];
+    let e = effects_check(&def, &events).unwrap_err();
+    assert_err(&e, Code::Validation, "schema");
+    assert_eq!(e.detail().as_untrusted_str(), "event 0 body has no canonical form: non_finite_number");
+    drop(events);
+    // Across bodies too: an over-limit body before a non-finite one still gives `schema`.
+    let events = vec![Event::new(t.clone(), big()), Event::new(t, CValue::Arr(vec![CValue::F64Bits(f64::INFINITY)]))];
+    let e = effects_check(&def, &events).unwrap_err();
+    assert_eq!(e.detail().as_untrusted_str(), "event 1 body has no canonical form: non_finite_number");
+}
+
 #[test]
 fn body_without_canonical_form_is_schema() {
     let (def, _) = effects_fixture();
@@ -448,8 +469,8 @@ fn principal_comes_from_the_channel_not_the_params() {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let checked = run(&def, Observer(Arc::clone(&seen)), &MemState::new(), &p, &c).unwrap();
     assert_eq!(c.principal().kind(), PrincipalKind::Agent);
-    assert_eq!(checked.principal(), &c.principal().reference());
-    assert_eq!(checked.principal().id.as_str(), "client-7");
+    assert_eq!(checked.principal(), c.principal());
+    assert_eq!(checked.principal().id().as_str(), "client-7");
     let seen = seen.lock().unwrap().clone();
     assert_eq!(
         seen,
@@ -660,13 +681,47 @@ fn checked_events_are_bound_to_their_command_and_principal() {
     let a = run_handler(&set, "test.create_element@2", &MemState::new(), &params(), &ca).unwrap();
     let b = run_handler(&set, "test.create_element@2", &MemState::new(), &params(), &cb).unwrap();
     assert_eq!(a.command().as_str(), "test.create_element@2");
-    assert_eq!(a.principal(), &ca.principal().reference());
-    assert_eq!(b.principal(), &cb.principal().reference());
-    assert_eq!(a.principal(), &PrincipalRef { kind: PrincipalKind::Human, id: PrincipalId::new("alice").unwrap() });
-    assert_eq!(b.principal(), &PrincipalRef { kind: PrincipalKind::Agent, id: PrincipalId::new("bot").unwrap() });
+    assert_eq!(a.principal(), ca.principal());
+    assert_eq!(b.principal(), cb.principal());
+    assert_eq!(
+        a.principal().reference(),
+        PrincipalRef { kind: PrincipalKind::Human, id: PrincipalId::new("alice").unwrap() }
+    );
+    assert_eq!(b.principal().reference(), PrincipalRef { kind: PrincipalKind::Agent, id: PrincipalId::new("bot").unwrap() });
     assert_ne!(a, b);
     let (command, principal, events) = b.into_parts();
-    assert_eq!((command.as_str(), principal.id.as_str(), events), ("test.create_element@2", "bot", vec![created]));
+    assert_eq!((command.as_str(), principal.id().as_str(), events), ("test.create_element@2", "bot", vec![created]));
+}
+
+/// Two server-session calls with the same subject but acting for different users must not
+/// attribute identically: the full principal, `on_behalf_of` included, is kept.
+#[test]
+fn checked_events_keep_on_behalf_of() {
+    let (def, _) = effects_fixture();
+    let mut set = HandlerSet::new();
+    set.register(def, Box::new(Fixed(many(1)))).unwrap();
+    let mut table = SessionTable::new();
+    let mut make = |user: &str| {
+        let mut ch = channel(&mut table, ChannelKind::ServerSession, Some("server-1"));
+        let behalf = PrincipalRef { kind: PrincipalKind::Human, id: PrincipalId::new(user).unwrap() };
+        ch.identity.as_mut().unwrap().acting_for = Some(behalf);
+        ch
+    };
+    let for_alice = make("alice");
+    let for_bob = make("bob");
+    let ca = HandlerCtx::derive(&table, &for_alice, 1, CancelToken::never()).unwrap();
+    let cb = HandlerCtx::derive(&table, &for_bob, 1, CancelToken::never()).unwrap();
+    let a = run_handler(&set, ID, &MemState::new(), &params(), &ca).unwrap();
+    let b = run_handler(&set, ID, &MemState::new(), &params(), &cb).unwrap();
+    // Same kind and subject, so a bare reference would not tell them apart.
+    assert_eq!(a.principal().reference(), b.principal().reference());
+    assert_eq!(a.principal().id().as_str(), "server-1");
+    assert_eq!(a.principal().on_behalf_of().unwrap().id.as_str(), "alice");
+    assert_eq!(b.principal().on_behalf_of().unwrap().id.as_str(), "bob");
+    assert_ne!(a.principal(), b.principal());
+    assert_ne!(a, b);
+    let (_, pa, _) = a.into_parts();
+    assert_eq!(&pa, ca.principal());
 }
 
 // ------------------------------------------------------------------ canonical length
