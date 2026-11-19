@@ -3,6 +3,8 @@
 # Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
 # compare bytes, so no end-of-line conversion.
 fixtures/hal/idl/stamp/** -text
+# KRN.NUM.LINT.FLAGS hand-assembled wasm modules: binary, compared by make_fixtures.py --check.
+fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text

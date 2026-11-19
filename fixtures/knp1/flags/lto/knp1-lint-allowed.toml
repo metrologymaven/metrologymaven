@@ -1,0 +1,3 @@
+[flags]
+profiles = ["kernel", "release"]
+allowed_profile_differences = ["lto"]

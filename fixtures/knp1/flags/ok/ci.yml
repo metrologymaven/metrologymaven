@@ -1,0 +1,4 @@
+env:
+  RUSTFLAGS: "-D warnings"  # knp1-flags: allow KNP1-FLAG-KEYWORD deny warnings only, no codegen flags
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"  # knp1-flags: allow KNP1-FLAG-KEYWORD pins the default to one unit
+  CARGO_TERM_COLOR: always

@@ -1,0 +1,4 @@
+[flags]
+profiles = ["kernel", "release"]
+ci_env_files = ["ci.yml"]
+wasm_module = "kernel.wasm"

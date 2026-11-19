@@ -1,0 +1,66 @@
+# fixtures/knp1/flags
+
+Fixtures for spec node KRN.NUM.LINT.FLAGS (crate `fid-knp1-lint`, module `flags`). Every file is
+written by `make_fixtures.py` (Python stdlib only), the independent reference: config files are
+literal text, the wasm modules are assembled byte by byte from the WebAssembly binary format and
+the SIMD / relaxed-SIMD opcode tables (text form in the `.wat` files next to them), and the expected
+findings (`RULE file:line:column`) are hand-labelled from the spec's rules. Nothing here was
+produced by running the Rust code. `python make_fixtures.py --check` reports drift.
+
+Each directory is a small workspace (`knp1-lint.toml`, `rust-toolchain.toml`, `Cargo.toml`,
+optional `.cargo/config.toml` and CI env files):
+
+- `native/`: `build.rustflags = ["-C", "target-cpu=native"]`. AC-1, `KNP1-FLAG-NATIVE`.
+- `fma/`: `target.x86_64-unknown-linux-gnu.rustflags` with `+avx2,+fma`, a string `rustflags` with
+  `+relaxed-simd`, and `host.rustflags` with the configured feature `+fma4` (its `-fma` is a
+  disable and does not count), plus `build.rustdocflags` with `target_feature=+fma` (underscore
+  option name). AC-2, `KNP1-FLAG-FMA`.
+- `cgu/`: `release` left at Cargo's default of 16 codegen units, a package override of 4, `-C
+  codegen-units=2` in rustflags, and `CARGO_PROFILE_KERNEL_CODEGEN_UNITS: 8` in a CI file. AC-3,
+  `KNP1-FLAG-CGU`.
+- `toolchain/`: `channel = "stable"`. AC-3, `KNP1-FLAG-TOOLCHAIN`.
+- `toolchain-missing/`: no `rust-toolchain.toml`. REQ-004.
+- `toolchain-nocomp/`: `channel = "1.87"` and no `components`. Scope rule.
+- `lto/`: kernel profile sets `lto = "fat"`, `release` keeps the default; `knp1-lint-allowed.toml`
+  allows the difference. `KNP1-FLAG-LTO`.
+- `ci/`: `RUSTFLAGS` and `CARGO_ENCODED_RUSTFLAGS` (with the `\x1f` escape) in a workflow file; a
+  comment line naming `target-cpu=native` is ignored. Also array syntax `["-C", "target-cpu=native"]`,
+  unquoted `RUSTFLAGS=-Ctarget-cpu=native`, `export RUSTFLAGS=-C target-cpu=native`,
+  `export CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=native`, `RUSTUP_TOOLCHAIN` and `cargo +nightly`
+  (`KNP1-FLAG-TOOLCHAIN`), and `-C llvm-args=-fp-contract=fast` (`KNP1-FLAG-FMA`; `=off` passes).
+- `ci2/`: underscore option names (`-C target_cpu=native`, `-Ctarget_feature=+fma`,
+  `-Ccodegen_units=16`, `-Cllvm_args=-fp-contract=fast`); flags glued to `;`, `( )` and YAML flow
+  `{ }`; values split over lines (plain and folded `>-` YAML scalars, a `run: |` block, and a shell
+  `\` continuation in `build.sh`); `cargo --config profile.release.codegen-units=N` (quoted and
+  not; `profile.dev` is not a kernel profile and passes) and `--config build.rustflags=…`; the
+  `\U0000001f` and octal `\037` escapes of 0x1F.
+- `cpu/`: `haswell` and `apple-m1` (built-in FMA CPUs, `KNP1-FLAG-FMA`) and `pentium4` (merely
+  not allowed, `KNP1-FLAG-CPU`) outside `allowed_target_cpus = ["x86-64-v2"]`; the allowed
+  `x86-64-v2` passes. `knp1-lint-override.toml` allows all four, the FMA ones via
+  `[flags.fma_cpu_overrides]` with a reason: no findings.
+- `ci3/`: every bypass from the third review, one per line, in `build.sh` (`:=`, `?=`, `+=`,
+  `${VAR:-…}`, `printf` and `$'…'` escapes, `--config` spacing, table and file forms, `$VAR`,
+  `rustc +nightly`, `rustup run/override/default`, `cargo.exe +`) and `workflow.yml` (value on the
+  next line, YAML list, folded scalar, `--config` split over lines). Also keywords split across
+  lines or spaced out: `-Ctarget-\` + `cpu=native` and `-C tar\` + `get-cpu=native` (shell
+  continuations), `-C target - cpu = native`, and a `>-` folded `target-` / `cpu=native`.
+  `expected-lines.txt` lists the lines that must be reported, computed by the three-pass gate
+  reference in `make_fixtures.py` (raw lines, logical lines, whitespace-free file); every other
+  line must stay clean.
+- `cargo-tables/`: `[alias]`, `[env]` and `[target.*]` values that mention keywords
+  (`KNP1-FLAG-KEYWORD`); harmless keys pass.
+- `cargo-ambiguous/`: both `.cargo/config` and `.cargo/config.toml` (`KNP1-FLAG-AMBIGUOUS`).
+- `profile-flags/`: `[profile.release] rustflags` with `+fma` in `Cargo.toml`, and a
+  `[profile.release.package.fid-num] codegen-units = 8` reached from kernel profile `kernel`
+  through `inherits`.
+- `toolchain-legacy/`: a legacy `rust-toolchain` file next to a pinned `rust-toolchain.toml`.
+- `wasm/`: `relaxed.wasm` (one `f64x2.relaxed_madd`), `clean.wasm` (fixed-width SIMD, with the
+  madd byte pattern `fd 87 02` hidden inside `v128.const`, `i64.const` and `f64.const`
+  immediates), `swizzle.wasm` (one `i8x16.relaxed_swizzle`, not a multiply-add), `truncated.wasm`
+  (`relaxed.wasm` minus its last three bytes). `expected-scan.txt` lists the scan results with the
+  default SIMD policy and with `allowed_simd = [12]`. AC-4.
+- `ok/`: pinned toolchain, `codegen-units = 1`, no FMA flags, a CI file whose two keyword lines
+  carry `knp1-flags: allow KNP1-FLAG-KEYWORD <reason>` markers, and `clean.wasm` as `kernel.wasm`.
+  AC-5: no findings; `expected-notes.txt` lists the two `KNP1-FLAG-OPTOUT` notes.
+
+CC-BY-4.0 project data.
