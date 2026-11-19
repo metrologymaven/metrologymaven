@@ -61,6 +61,12 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Template format fuzz, full 1 000 000 iterations in release (RPT.MODEL.TMPL.FORMAT AC-4)
+        # Plain `cargo test` runs a 20 000-iteration prefix of the same streams on every OS.
+        if: runner.os == 'Linux'
+        env:
+          TMPL_FUZZ_FULL: "1"
+        run: cargo test --release -p fid-report --test tmpl_format_fuzz -- --nocapture
       - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
         run: |
           cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings

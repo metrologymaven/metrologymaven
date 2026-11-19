@@ -70,6 +70,8 @@ python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/model/tmpl/check_schema.py
+python fixtures/rpt/model/tmpl/make_fixtures.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check

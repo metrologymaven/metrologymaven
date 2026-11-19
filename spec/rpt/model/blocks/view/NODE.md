@@ -9,7 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-005, REQ-RPT.MODEL.BLOCKS-006]
+satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-005, REQ-RPT.MODEL.BLOCKS-006, REQ-RPT.MODEL.BLOCKS-012]
 covers: [GOM.RPT.03, PW.RPT.03]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND.RESOLVE, CORE.STO.CAS]
 uses_artifacts: [VIZ.VIEW.NAMED, VIZ.CAPTURE.SHOT]
@@ -18,7 +18,7 @@ determinism: D0
 cli: [fid report set-view-block]
 mcp: [report_set_view_block]
 journal: [report.set_view_block@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.BLOCKS.VIEW: Restorable 3D view block
