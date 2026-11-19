@@ -1,0 +1,18 @@
+[package]
+name = "fid-mig"
+description = "Metrology Maven migration ladder: the `mig-ladder@1` data file, its loader and the stage-independence check (spec node MIG.LADDER.DEF)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Bounded JSON parsing and the RFC 8785 canonical form behind the ladder digest (CORE.JRN.CANON).
+fid-canon = { path = "../fid-canon" }
+# Shared command IDs and the `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

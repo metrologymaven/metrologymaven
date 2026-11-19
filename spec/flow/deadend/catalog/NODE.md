@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-fixes]
+built_pr: 176
 satisfies: [REQ-FLOW.DEADEND-001]
 covers: [JOB.USE.05]
 depends_on: [CORE.JRN.CANON]
@@ -44,9 +46,9 @@ Defines the one data file that maps every unresolved-state reason code to at lea
 ## Requirements
 
 - **REQ-FLOW.DEADEND.CATALOG-001** Each catalogue entry shall hold `reason_code` (`<domain>.<code>`, lowercase), `state_kind` (one of `not_decidable`, `unresolved`, `lint`, `uec0`, `blocked`), `owner` (a spec node ID) and a non-empty `fixes` list.
-- **REQ-FLOW.DEADEND.CATALOG-002** Each fix shall hold `command` (a registry command ID with `@major`), an `args` template whose placeholders are drawn only from the closed set `${entity_id}`, `${characteristic_id}`, `${project_id}`, `${dialect}` and `${reason_detail}`, and a `label_key`.
+- **REQ-FLOW.DEADEND.CATALOG-002** Each fix shall hold `command` (a registry command ID with `@major`), an `args` template (per argument, a string for a scalar parameter or a list of strings for a list-valued parameter such as `chars: Vec<EntityId>`) whose placeholders are drawn only from the closed set `${entity_id}`, `${characteristic_id}`, `${project_id}`, `${dialect}` and `${reason_detail}`, and a `label_key`.
 - **REQ-FLOW.DEADEND.CATALOG-003** If an entry declares `source_table` (for example `uec-fix@1`), then the loader shall expose the entry's fixes in the same order as the referenced table rows it was built from.
-- **REQ-FLOW.DEADEND.CATALOG-004** The initial catalogue shall map `decide.rule_missing` and `gdt.no_rule_bound` to `decide.bind_rule@1` and `decide.set_default_rule@1`, `unc.model_missing` to `unc.bind_model@1`, `unc.instrument_missing` to `unc.bind_instrument_model@1` and `unc.list_profile@1`, and `unc.u_missing` to `unc.propagate_auto@1` and `unc.declare_uncertainty@1`.
+- **REQ-FLOW.DEADEND.CATALOG-004** The initial catalogue shall map `decide.rule_missing` and `gdt.no_rule_bound` to `decide.bind_rule@1` and `decide.set_default_rule@1`, `unc.model_missing` to `unc.bind_model@1`, `unc.instrument_missing` to `unc.bind_instrument_model@1` and `unc.list_profile@1`, and `unc.u_missing` to `unc.propagate_auto@1` and `unc.declare_uncertainty@1`, and `gdt.unc_no_decision` to `unc.propagate_auto@1` [unverified with GDT].
 - **REQ-FLOW.DEADEND.CATALOG-005** If the catalogue file exceeds 4 MiB, contains a duplicate `reason_code`, or fails schema validation, then the loader shall return a typed error and no partial catalogue.
 
 ## Acceptance criteria
@@ -59,12 +61,12 @@ Defines the one data file that maps every unresolved-state reason code to at lea
 ## Design
 
 - **Registry command(s):** none (data file and library).
-- **Data structures:** `FixCatalogue { version: "fix-catalogue@1", entries: Vec<FixEntry> }`; `FixEntry { reason_code, state_kind, owner, fixes: Vec<FixTemplate>, source_table: Option<String> }`; `FixTemplate { command, args: BTreeMap<String, String>, label_key }`. Ordered maps only.
+- **Data structures:** `FixCatalogue { version: "fix-catalogue@1", entries: Vec<FixEntry> }`; `FixEntry { reason_code, state_kind, owner, fixes: Vec<FixTemplate>, source_table: Option<String> }`; `FixTemplate { command, args: BTreeMap<String, ArgTemplate>, label_key }` with `ArgTemplate = Scalar(String) | List(Vec<String>)`. Ordered maps only.
 - **Algorithm:** bounded JSON parse (4 MiB, depth 32), schema validation, sort by `reason_code`, RFC 8785 digest via `CORE.JRN.CANON`.
 - **Errors:** `FIX-SCHEMA`, `FIX-DUP`, `FIX-PLACEHOLDER`, `FIX-SIZE`, `FIX-IO`.
 - **Determinism:** D0 (pure data handling, ordered maps).
 - **Performance budget:** load of 2 000 entries under 50 ms [unverified].
-- **Crate:** `fid-fixes` (L3, FLOW).
+- **Crate:** `fid-fixes` (FLOW; `services` in `layers.toml`, a maintainer decision so VIZ crates in `viewer` can read the catalogue for REQ-FLOW.DEADEND-005).
 
 ## Test fixtures
 
@@ -72,12 +74,14 @@ Hand-written catalogues under `fixtures/flow/fixes/` (project-authored, MIT OR A
 
 ## Build prompt
 
-> Create crate `fid-fixes` (layer L3) with module `catalogue`. Define `fix-catalogue@1`: `{version, entries:[{reason_code, state_kind: not_decidable|unresolved|lint|uec0|blocked, owner, fixes:[{command:"domain.verb_object@N", args:{name: template}, label_key}], source_table?}]}` and publish `schema/fix-catalogue-v1.json` generated from the Rust types (test fails if the checked-in schema differs). Loader: bounded parse (4 MiB, depth 32), schema check, unique `reason_code`, placeholders limited to `${entity_id}`, `${characteristic_id}`, `${project_id}`, `${dialect}`, `${reason_detail}`; sorted output; RFC 8785 + SHA-256 digest using the project's canonical JSON crate. Ship `fix-catalogue.json` with: `decide.rule_missing` and `gdt.no_rule_bound` -> `decide.bind_rule@1`, `decide.set_default_rule@1`; `unc.model_missing` -> `unc.bind_model@1`; `unc.instrument_missing` -> `unc.bind_instrument_model@1`, `unc.list_profile@1`; `unc.u_missing` -> `unc.propagate_auto@1`, `unc.declare_uncertainty@1`; `gdt.unc_no_decision` -> `unc.propagate_auto@1`. Errors `FIX-SCHEMA|FIX-DUP|FIX-PLACEHOLDER|FIX-SIZE|FIX-IO`. Tests for AC-1..AC-4 (spec node FLOW.DEADEND.CATALOG). No `unwrap`/`expect`/`panic`/`unsafe`; no std HashMap.
+> Create crate `fid-fixes` (layer `services`, so viewer crates can use it) with module `catalogue`. Define `fix-catalogue@1`: `{version, entries:[{reason_code, state_kind: not_decidable|unresolved|lint|uec0|blocked, owner, fixes:[{command:"domain.verb_object@N", args:{name: template}, label_key}], source_table?}]}` and publish `schema/fix-catalogue-v1.json` generated from the Rust types (test fails if the checked-in schema differs). Loader: bounded parse (4 MiB, depth 32), schema check, unique `reason_code`, placeholders limited to `${entity_id}`, `${characteristic_id}`, `${project_id}`, `${dialect}`, `${reason_detail}`; sorted output; RFC 8785 + SHA-256 digest using the project's canonical JSON crate. Ship `fix-catalogue.json` with: `decide.rule_missing` and `gdt.no_rule_bound` -> `decide.bind_rule@1`, `decide.set_default_rule@1`; `unc.model_missing` -> `unc.bind_model@1`; `unc.instrument_missing` -> `unc.bind_instrument_model@1`, `unc.list_profile@1`; `unc.u_missing` -> `unc.propagate_auto@1`, `unc.declare_uncertainty@1`; `gdt.unc_no_decision` -> `unc.propagate_auto@1`. Errors `FIX-SCHEMA|FIX-DUP|FIX-PLACEHOLDER|FIX-SIZE|FIX-IO`. Tests for AC-1..AC-4 (spec node FLOW.DEADEND.CATALOG). No `unwrap`/`expect`/`panic`/`unsafe`; no std HashMap.
 
 ## Open questions
 
 - Resolution of the parent's question: the catalogue stays a FLOW-owned file in `fid-fixes`, and per-domain fix tables are referenced, not copied. Moving fixes into each command's manifest entry (better fit for CONSTITUTION C3) would need a `CORE.REG.DEF` field; raise it with CORE if the catalogue drifts.
-- The `gdt.unc_no_decision` fix is a guess at the most useful command [unverified with GDT].
+- The `gdt.unc_no_decision` fix is a guess at the most useful command [unverified with GDT]. Maintainer decision: ship it in the initial catalogue (REQ-004).
+- Argument types: the loader checks argument shape (string or list of strings) and placeholders, and a test checks the shipped arguments against hand-labelled parameter types from the commands' Designs. A machine check of argument names and types against each command's parameter schema needs the registry manifest, so it belongs with `FIX-BAD-ARG` in `FLOW.DEADEND.CHECK`; that check should compare types (array versus scalar) as well as names.
+- Follow-up for `FLOW.DEADEND.CHECK`: REQ-UNC.DEC.DEFAULT-005 names `u_missing` as a reason carried by a `decide.*` command (`decide.explain_decision@1`). Qualified by the declaring command's domain, that becomes `decide.u_missing`, which has no entry here (only `unc.u_missing`), so CHECK will report `FIX-MISSING decide.u_missing`. Either CHECK qualifies a code by its owning domain, or a `decide.u_missing` entry is added once UNC.DEC declares the code.
 
 ## Children
 

@@ -1,0 +1,15 @@
+[package]
+name = "fid-fixes"
+description = "Metrology Maven suggested-fix catalogue: fix-catalogue@1 format, bounded loader and shipped entries (spec node FLOW.DEADEND.CATALOG)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
