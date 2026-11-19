@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 241
 satisfies: [REQ-GDT.CHAR-001, REQ-GDT.CHAR-002, REQ-GDT.CHAR-003]
 covers: [GOM.GDT.17, PCD.DIM.05, PW.GDT.08]
 depends_on: [GDT.CHAR.MODEL, GDT.CHAR.DPROF]
