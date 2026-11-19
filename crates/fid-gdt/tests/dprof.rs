@@ -11,6 +11,7 @@ use fid_gdt::chars::dprof::{
     KeyVocabulary, ProfileRef, PublishStatus, SemVer, VocabularySource,
 };
 use fid_gdt::dmt_flow::roster::Dialect;
+use fid_gps::dmt::DmtTable;
 use fid_io_reg::{Principal, RootAccess, RootId, RootSet};
 use fid_replay::ReplayOutcome;
 use fid_types::Digest;
@@ -107,7 +108,7 @@ fn ac1_publish_returns_the_content_addressed_id_and_one_event() {
     let mut st = DprofState::new();
     let mut journal = Vec::new();
     let p = publish(&mut st, Principal::Human, A100).unwrap();
-    journal.extend(p.event().clone());
+    journal.extend(p.event().cloned());
     assert_eq!(p.reference().to_string(), exp_ref(A100));
     assert!(p.reference().to_string().starts_with("dp:asme-y14.5-2018@1.0.0#sha256:"));
     assert_eq!(p.status(), PublishStatus::Created);
@@ -140,11 +141,11 @@ fn ac2_same_version_different_digest_is_profile_immutable_and_journals_nothing()
     assert_eq!(publish(&mut st, Principal::Agent, A100).unwrap_err().code(), "profile_immutable");
     // Its adoption conflicts with the working branch's 1.0.0 and changes nothing.
     let before = st.clone();
-    let err = st.adopt(Principal::Human, &agent.reference()).unwrap_err();
+    let err = st.adopt(Principal::Human, agent.reference()).unwrap_err();
     assert_eq!(err.code(), "adopt_conflict");
     assert_eq!(err.to_string(), "adopt_conflict{dp:asme-y14.5-2018@1.0.0}");
     assert_eq!(st, before);
-    assert_eq!(st.resolve(Branch::Working, &agent.reference()).unwrap_err().code(), "defaults_profile_unknown");
+    assert_eq!(st.resolve(Branch::Working, agent.reference()).unwrap_err().code(), "defaults_profile_unknown");
 }
 
 #[test]
@@ -156,7 +157,7 @@ fn agent_publish_never_blocks_a_later_human_publish() {
     assert!(human.event().is_some());
     // The agent branch sees both digests of 1.0.0; the working branch only its own.
     assert!(st.resolve(Branch::Agent, &agent).is_ok());
-    assert!(st.resolve(Branch::Agent, &human.reference()).is_ok());
+    assert!(st.resolve(Branch::Agent, human.reference()).is_ok());
     assert!(st.resolve(Branch::Working, &agent).is_err());
 }
 
@@ -277,27 +278,27 @@ fn ac6_agent_publish_lands_on_agent_branch_until_a_human_adopts_it() {
     assert_eq!(stored.branch(), Branch::Agent);
     assert!(st.get(Branch::Working, p.reference().id()).is_none());
     // gdt.set_governing_spec@1 (GDT.CHAR.SPEC) resolves through DprofState::resolve.
-    let err = st.resolve(Branch::Working, &p.reference()).unwrap_err();
+    let err = st.resolve(Branch::Working, p.reference()).unwrap_err();
     assert_eq!(err.code(), "defaults_profile_unknown");
-    let err = st.bind(Principal::Human, &cid("c1"), Dialect::Asme, &p.reference()).unwrap_err();
+    let err = st.bind(Principal::Human, &cid("c1"), Dialect::Asme, p.reference()).unwrap_err();
     assert_eq!(err.code(), "defaults_profile_unknown");
-    assert!(st.resolve(Branch::Agent, &p.reference()).is_ok());
+    assert!(st.resolve(Branch::Agent, p.reference()).is_ok());
     // An identical agent re-publish is a no-op on the agent branch.
     let again = publish(&mut st, Principal::Agent, A100).unwrap();
     assert_eq!((again.status(), again.branch()), (PublishStatus::Existing, Branch::Agent));
     assert!(again.event().is_none());
-    assert!(st.resolve(Branch::Working, &p.reference()).is_err());
+    assert!(st.resolve(Branch::Working, p.reference()).is_err());
     // Adoption is human only.
-    assert_eq!(st.adopt(Principal::Agent, &p.reference()).unwrap_err().code(), "human_only");
-    assert_eq!(st.adopt(Principal::Script, &p.reference()).unwrap_err().code(), "human_only");
-    st.adopt(Principal::Human, &p.reference()).unwrap();
-    assert!(st.resolve(Branch::Working, &p.reference()).is_ok());
+    assert_eq!(st.adopt(Principal::Agent, p.reference()).unwrap_err().code(), "human_only");
+    assert_eq!(st.adopt(Principal::Script, p.reference()).unwrap_err().code(), "human_only");
+    st.adopt(Principal::Human, p.reference()).unwrap();
+    assert!(st.resolve(Branch::Working, p.reference()).is_ok());
     let adopted = st.get(Branch::Working, p.reference().id()).unwrap();
     assert_eq!((adopted.author(), adopted.adopted()), (Principal::Agent, true));
     // Adopting again changes nothing; after adoption the version is taken on the working
     // branch, so a different human 1.0.0 is immutable there.
     let before = st.clone();
-    st.adopt(Principal::Human, &p.reference()).unwrap();
+    st.adopt(Principal::Human, p.reference()).unwrap();
     assert_eq!(st, before);
     assert_eq!(publish(&mut st, Principal::Human, A100_MOD).unwrap_err().code(), "profile_immutable");
     // A working-branch-only reference cannot be adopted.
@@ -356,8 +357,10 @@ fn ac7_exact_replay_of_ac1_and_ac4_is_identical() {
     let (mut st, _, r110, mut journal, start_of_ac4) = three_chars_on_100();
     let r = st.repoint(Principal::Human, &["c1", "c2"], &r110.to_string(), false).unwrap();
     journal.push(r.event().unwrap().canonical_bytes().unwrap());
-    let content: BTreeMap<Digest, Vec<u8>> =
-        [A100, A110].iter().map(|f| (*parse_profile(&read(f), &vocab()).unwrap().digest(), read(f))).collect();
+    let content: BTreeMap<Digest, (Vec<u8>, Digest)> = [A100, A110]
+        .iter()
+        .map(|f| (*parse_profile(&read(f), &vocab()).unwrap().digest(), (read(f), *vocab().digest())))
+        .collect();
 
     // AC-1's event from an empty store.
     let out = replay(&DprofState::new(), &journal[..1], &content, &vocab());
@@ -382,12 +385,14 @@ fn ac7_exact_replay_of_ac1_and_ac4_is_identical() {
 fn replay_detects_divergence_and_missing_content() {
     let (full, _, _, journal, start) = three_chars_on_100();
     // Missing content.
-    let empty: BTreeMap<Digest, Vec<u8>> = BTreeMap::new();
+    let empty: BTreeMap<Digest, (Vec<u8>, Digest)> = BTreeMap::new();
     let out = replay(&start, &journal[1..], &empty, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::NotReplayable);
     // Content whose digest differs from the recorded reference.
-    let wrong: BTreeMap<Digest, Vec<u8>> =
-        [(*parse_profile(&read(A110), &vocab()).unwrap().digest(), read(A100))].into_iter().collect();
+    let wrong: BTreeMap<Digest, (Vec<u8>, Digest)> =
+        [(*parse_profile(&read(A110), &vocab()).unwrap().digest(), (read(A100), *vocab().digest()))]
+            .into_iter()
+            .collect();
     let out = replay(&start, &journal[1..], &wrong, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Divergent);
     // A tampered event.
@@ -403,6 +408,44 @@ fn replay_detects_divergence_and_missing_content() {
     // The store itself serves content by digest.
     let out = replay(&DprofState::new(), &journal, &full, &vocab());
     assert_eq!(out.outcome, ReplayOutcome::Identical);
+}
+
+#[test]
+fn replay_uses_the_vocabulary_each_profile_pins() {
+    // Two profiles published under two vocabularies: the explicit test vocabulary (A100) and
+    // the DMT schema vocabulary (profile_position_axis.json of GDT.RES.RESOLVE).
+    let test_v = vocab();
+    let dmt = DmtTable::load(&std::fs::read(fixtures().join("../dmt/synthetic_table_v1.json")).unwrap()).unwrap();
+    let dmt_v = KeyVocabulary::from_dmt_table(&dmt, Dialect::Asme).unwrap();
+    let axis = std::fs::read(fixtures().join("../resolve/profile_position_axis.json")).unwrap();
+    let mut st = DprofState::new();
+    let mut journal = Vec::new();
+    let a = publish(&mut st, Principal::Human, A100).unwrap();
+    journal.push(a.event().unwrap().canonical_bytes().unwrap());
+    let doc = parse_profile(&axis, &dmt_v).unwrap();
+    let b = st.publish(doc, Principal::Human, "root://imports/axis.json", false).unwrap();
+    journal.push(b.event().unwrap().canonical_bytes().unwrap());
+    let both: BTreeMap<Digest, KeyVocabulary> =
+        [(*test_v.digest(), test_v.clone()), (*dmt_v.digest(), dmt_v.clone())].into();
+    // The store serves each profile with its pin; with both vocabularies replay is identical
+    // and every replayed profile keeps its own pin.
+    let out = replay(&DprofState::new(), &journal, &st, &both);
+    assert_eq!(out.outcome, ReplayOutcome::Identical);
+    assert_eq!(out.state, st);
+    let pins: Vec<Digest> = out.state.profiles().map(|p| *p.doc().vocabulary()).collect();
+    assert!(pins.contains(test_v.digest()) && pins.contains(dmt_v.digest()));
+    // One vocabulary only: the other profile is not replayable, never re-pinned.
+    let out = replay(&DprofState::new(), &journal, &st, &test_v);
+    assert_eq!(out.steps, vec![ReplayOutcome::Identical, ReplayOutcome::NotReplayable]);
+    let out = replay(&DprofState::new(), &journal, &st, &dmt_v);
+    assert_eq!(out.steps, vec![ReplayOutcome::NotReplayable]);
+    // Content claiming another pin than the one the profile was published under: the profile
+    // passes the other vocabulary only if it is admitted there, and then carries that pin, so a
+    // re-pin shows up as a state difference; here the DMT vocabulary refuses A100 outright.
+    let claimed: BTreeMap<Digest, (Vec<u8>, Digest)> =
+        [(*a.reference().digest(), (read(A100), *dmt_v.digest()))].into_iter().collect();
+    let out = replay(&DprofState::new(), &journal[..1], &claimed, &both);
+    assert_eq!(out.outcome, ReplayOutcome::Divergent);
 }
 
 // ------------------------------------------------------------------ events and snapshot

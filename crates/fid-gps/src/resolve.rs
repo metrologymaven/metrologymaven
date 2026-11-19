@@ -17,7 +17,9 @@
 //! **Variant.** An explicit characteristic override first, otherwise the defaults profile's
 //! value under the row's key text, otherwise the row's default. The chosen name and its source
 //! (`override`, `profile`, `row_default`) are part of the result; a name the row does not have
-//! is the error `unknown_variant`, with no chain.
+//! is the error `unknown_variant`, with no chain. A profile row choice (a `dmt:` key) for a row
+//! the table does not have is the error `profile_row_unknown`: the profile was written against
+//! another table, so none of its choices is trusted.
 //!
 //! Pure and D0: no I/O, no floating-point arithmetic, no `HashMap`/`HashSet`, bounded work
 //! (one ordered range scan of the table), and no panics. No interpretation is encoded here:
@@ -109,6 +111,13 @@ pub enum ResolveError {
         /// The key.
         key: String,
     },
+    /// `profile_row_unknown{key}`: the defaults profile holds a row choice (a `dmt:` key) for
+    /// a row the loaded table does not have. The profile was written against another table;
+    /// its choices are refused rather than silently replaced by row defaults.
+    ProfileRowUnknown {
+        /// The key (truncated).
+        key: String,
+    },
     /// `encode_failed`: canonical JSON could not be written (not reachable for valid values).
     Encode,
 }
@@ -122,6 +131,7 @@ impl ResolveError {
             ResolveError::Ambiguous { .. } => "ambiguous_resolution",
             ResolveError::BadDmtKey { .. } => "bad_dmt_key",
             ResolveError::DmtRowUnknown { .. } => "dmt_row_unknown",
+            ResolveError::ProfileRowUnknown { .. } => "profile_row_unknown",
             ResolveError::Encode => "encode_failed",
         }
     }
@@ -146,7 +156,8 @@ impl fmt::Display for ResolveError {
             ResolveError::UnknownVariant { variant: s, .. }
             | ResolveError::Ambiguous { key: s, .. }
             | ResolveError::BadDmtKey { key: s }
-            | ResolveError::DmtRowUnknown { key: s } => write!(f, "{}{{{}}}", self.code(), s.escape_debug()),
+            | ResolveError::DmtRowUnknown { key: s }
+            | ResolveError::ProfileRowUnknown { key: s } => write!(f, "{}{{{}}}", self.code(), s.escape_debug()),
             ResolveError::Encode => f.write_str(self.code()),
         }
     }
@@ -436,11 +447,16 @@ impl Resolution {
     }
 }
 
-/// Resolves `input` against `table`. See the module documentation for the rules. Errors:
-/// `ambiguous_resolution` (two or more rows match), `unknown_variant` (the override or the
-/// profile names a variant the row lacks). The status branch runs before variant selection,
-/// so an `unsupported` row is `UNSUPPORTED` whatever the override says.
+/// Resolves `input` against `table`. See the module documentation for the rules. Errors, in
+/// order: `profile_row_unknown` (a profile key starting `dmt:` names no row of `table`; the
+/// first in byte order is reported), `ambiguous_resolution` (two or more rows match),
+/// `unknown_variant` (the override or the profile names a variant the row lacks). The status
+/// branch runs before variant selection, so an `unsupported` row is `UNSUPPORTED` whatever the
+/// override says.
 pub fn resolve(input: &ResolveInput, table: &DmtTable) -> Result<Resolution, ResolveError> {
+    if let Some(k) = input.profile.keys().find(|k| k.starts_with("dmt:") && table.get(k).is_none()) {
+        return Err(ResolveError::ProfileRowUnknown { key: echo(k) });
+    }
     let key = input.derived_key();
     let dmt_digest = table.digest();
     let unresolved = |key: String| Ok(Resolution::Unresolved(Unresolved { key, dmt_digest }));

@@ -5,7 +5,8 @@ Reads the synthetic DMT table of GDT.RES.SCHEMA (`../dmt/synthetic_table_v1.json
 resolver cases in this script, applies the leaf's rules as written in its NODE.md (derive the
 key `dmt:<dialect>/<characteristic>/<sorted modifiers|none>`, exact lookup over every segment
 but the row version, edition sets must intersect, no near-match fallback, two matches are
-refused, status branch, variant precedence override > profile > row default), and writes:
+refused, profile row choices for rows the table lacks refused, status branch, variant
+precedence override > profile > row default), and writes:
 
 - `cases.json`: the resolver inputs, one per case;
 - `expected/<case>.json`: the RFC 8785 canonical JSON the resolver must print for that case
@@ -115,12 +116,20 @@ CASES = [
     # No dialect fallback: ISO flatness is its own (unsupported) row, ISO angularity has none.
     ("iso_flatness", "iso", "flatness", [], ["1101-2017"], {}, None),
     ("iso_angularity", "iso", "angularity", [], ["1101-2017"], {}, None),
+    # A profile row choice for a row the table lacks is refused, even for another row's lookup.
+    ("profile_row_unknown", "asme", "flatness", [], ED, {"dmt:asme/flatness/lmc@1": "default"}, None),
+    ("profile_row_unknown_bad_key", "asme", "flatness", [], ED, {"dmt:not a key": "x"}, None),
+    # Named (non-row) profile keys are not the resolver's.
+    ("profile_named_key_ignored", "asme", "flatness", [], ED, {"unc.decision_rule_hint": "x"}, None),
     # A single-variant row still honours a profile choice that names its variant.
     ("size_profile_global", "asme", "size", [], ED, {"dmt:asme/size/none@1": "global"}, None),
 ]
 
 
 def resolve(rows, digest, dialect, char, mods, editions, profile, override):
+    keys = {r["key"] for r in rows}
+    if any(k.startswith("dmt:") and k not in keys for k in profile):
+        return {"error": "profile_row_unknown"}
     mods = sorted(mods, key=lambda m: m.encode("utf-8"))
     key = f"dmt:{dialect}/{char}/{'+'.join(mods) if mods else 'none'}"
     cands = [r for r in rows if r["key"].rsplit("@", 1)[0] == key and set(r["editions"]) & set(editions)]

@@ -94,7 +94,7 @@ fn every_case_prints_the_reference_bytes() {
     // macOS in CI, the same committed bytes are matched on each (AC-6).
     let t = table();
     let all = cases();
-    assert_eq!(all.len(), 16);
+    assert_eq!(all.len(), 19);
     for (name, input) in &all {
         let want = read("resolve", &format!("expected/{name}.json"));
         assert_eq!(String::from_utf8(printed(input, &t)).unwrap(), String::from_utf8(want).unwrap(), "case {name}");
@@ -314,6 +314,21 @@ fn input_is_checked() {
         (&["cz".to_owned(), "mmc".to_owned()][..], &["y1".to_owned(), "y2".to_owned()][..], Some("axis"))
     );
     assert_eq!(ok.derived_key(), "dmt:asme/flatness/cz+mmc");
+}
+
+#[test]
+fn profile_choices_for_rows_the_table_lacks_are_refused() {
+    let t = table();
+    let e = resolve(&input("profile_row_unknown"), &t).unwrap_err();
+    assert_eq!(e, ResolveError::ProfileRowUnknown { key: "dmt:asme/flatness/lmc@1".to_owned() });
+    assert_eq!(e.to_string(), "profile_row_unknown{dmt:asme/flatness/lmc@1}");
+    assert_eq!(resolve(&input("profile_row_unknown_bad_key"), &t).unwrap_err().code(), "profile_row_unknown");
+    // Even when the characteristic's own row exists and the stray choice is for another row.
+    let mut p = BTreeMap::new();
+    p.insert("dmt:asme/position/none@2".to_owned(), "axis".to_owned());
+    let pos = ResolveInput::new(Dialect::Asme, "position", &[], &["y14.5-2018"], p, Some("surface")).unwrap();
+    assert_eq!(resolve(&pos, &t).unwrap_err().code(), "profile_row_unknown");
+    assert_eq!(resolve(&input("profile_named_key_ignored"), &t).unwrap().outcome(), "RESOLVED");
 }
 
 #[test]

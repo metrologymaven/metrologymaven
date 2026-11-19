@@ -200,6 +200,25 @@ fn a_non_text_row_choice_in_the_profile_is_refused() {
 }
 
 #[test]
+fn a_profile_choice_for_a_row_the_table_lacks_is_refused() {
+    // Fail closed: the profile was written against another table, so its row choices are not
+    // silently replaced by row defaults.
+    let (mut st, mut dp) = project();
+    let t = table();
+    let vocab = KeyVocabulary::new(["dmt:asme/position/none@9"]).unwrap();
+    let doc = br#"{"schema":"fid.defaults-profile/1","dialect":"asme","edition":"y14.5-2018","version":"4.0.0",
+        "keys":{"dmt:asme/position/none@9":"axis"}}"#;
+    let doc = parse_profile(doc, &vocab).unwrap();
+    let r = dp.publish(doc, H, "root://imports/y.json", false).unwrap().reference().clone();
+    let req = SetRequest { char: "pos-1", dialect: "ASME", standards: &[ASME_STD], defaults_profile: &r.to_string() };
+    st.set_governing_spec(&mut dp, H, &req, false).unwrap();
+    for c in [char_doc("pos-1", "position", &[], None), char_doc("pos-1", "flatness", &[], Some("default"))] {
+        let e = resolve_chain(&st, &dp, H, &c, Some(&t)).unwrap_err();
+        assert_eq!(e.to_string(), "profile_row_unknown{dmt:asme/position/none@9}");
+    }
+}
+
+#[test]
 fn bad_characteristic_fields_reach_the_resolver_checks() {
     let (st, dp) = project();
     let t = table();

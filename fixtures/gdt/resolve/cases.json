@@ -181,6 +181,45 @@
       "override": null
     },
     {
+      "name": "profile_row_unknown",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:asme/flatness/lmc@1": "default"
+      },
+      "override": null
+    },
+    {
+      "name": "profile_row_unknown_bad_key",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "dmt:not a key": "x"
+      },
+      "override": null
+    },
+    {
+      "name": "profile_named_key_ignored",
+      "dialect": "asme",
+      "characteristic": "flatness",
+      "modifiers": [],
+      "editions": [
+        "y14.5-2018"
+      ],
+      "profile": {
+        "unc.decision_rule_hint": "x"
+      },
+      "override": null
+    },
+    {
       "name": "size_profile_global",
       "dialect": "asme",
       "characteristic": "size",

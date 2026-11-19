@@ -834,14 +834,20 @@ fn mixed_journal_of_create_publish_repoint_and_set_replays_identical() {
     assert_eq!(s.old().unwrap().inherited_from(), InheritedFrom::Explicit);
     journal.push(s.event().unwrap().canonical_bytes().unwrap());
 
-    let content: BTreeMap<Digest, Vec<u8>> = [(*p.reference().digest(), a110.clone())].into_iter().collect();
+    let content: BTreeMap<Digest, (Vec<u8>, Digest)> =
+        [(*p.reference().digest(), (a110.clone(), *vocab().digest()))].into_iter().collect();
     let out = replay(&start_st, &start_dp, &journal, &content, &vocab());
     assert_eq!(out.steps, vec![ReplayOutcome::Identical; journal.len()]);
     assert_eq!(out.outcome, ReplayOutcome::Identical);
     assert_eq!((out.spec, out.dprof), (st, dp));
     // Without the published content the publish step is not replayable.
-    let none: BTreeMap<Digest, Vec<u8>> = BTreeMap::new();
+    let none: BTreeMap<Digest, (Vec<u8>, Digest)> = BTreeMap::new();
     let out = replay(&start_st, &start_dp, &journal, &none, &vocab());
+    assert_eq!(out.steps.last(), Some(&ReplayOutcome::NotReplayable));
+    // Without the vocabulary the profile was pinned to, it is not replayable either: replay
+    // never re-pins it to the vocabulary at hand.
+    let other = KeyVocabulary::new(["placeholder.synthetic", "placeholder.count"]).unwrap();
+    let out = replay(&start_st, &start_dp, &journal, &content, &other);
     assert_eq!(out.steps.last(), Some(&ReplayOutcome::NotReplayable));
     // Dropping the publish makes the re-point diverge.
     let mut skipped = journal.clone();

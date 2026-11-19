@@ -65,7 +65,7 @@ pub enum CommandError {
         reason: &'static str,
     },
     /// An error of the resolver (`unknown_variant`, `ambiguous_resolution`, `bad_input`,
-    /// `bad_dmt_key`, `dmt_row_unknown`).
+    /// `profile_row_unknown`, `bad_dmt_key`, `dmt_row_unknown`).
     Resolve(ResolveError),
 }
 
@@ -220,7 +220,8 @@ impl CharacteristicRef {
 /// 4. the resolver input: dialect from the spec, editions `<designator>-<edition>` of each of
 ///    its standards (the defaults-profile edition form, which DMT rows use), type, modifiers
 ///    and override from `ch` (`bad_input{reason}`);
-/// 5. [`fid_gps::resolve::resolve`] (`ambiguous_resolution`, `unknown_variant`).
+/// 5. [`fid_gps::resolve::resolve`] (`profile_row_unknown` when a profile row choice names
+///    a row the loaded table lacks, `ambiguous_resolution`, `unknown_variant`).
 ///
 /// Read-only: neither state is changed.
 pub fn resolve_chain(
