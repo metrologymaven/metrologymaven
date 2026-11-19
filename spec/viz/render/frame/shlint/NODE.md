@@ -37,7 +37,7 @@ Enforce C2 mechanically: every shader module is listed in a manifest with its de
 
 - **REQ-VIZ.RENDER.FRAME.SHLINT-001** Every WGSL module in `fid-render` shall appear in `shaders/manifest.toml` with its bindings classified as input data, colour target, depth target or ID target, and the lint shall fail on any unlisted module or binding.
 - **REQ-VIZ.RENDER.FRAME.SHLINT-002** The lint shall fail if any non-test source maps a GPU buffer or texture for reading other than one declared as a colour, depth or ID target.
-- **REQ-VIZ.RENDER.FRAME.SHLINT-003** The lint shall fail if `cargo metadata` shows `fid-render` depending, directly or transitively, on a crate in the UI-toolkit denylist (`egui`, `eframe`, `winit`, `iced`, `slint` and their sub-crates).
+- **REQ-VIZ.RENDER.FRAME.SHLINT-003** The lint shall fail if `cargo metadata` shows `fid-render` depending, directly or transitively, on a crate in the UI-toolkit denylist (`egui`, `eframe`, `winit`, `iced`, `slint` and their sub-crates), unless that crate is listed under `[[allow]]` in `shaders/manifest.toml` with a reason, in which case the lint shall report it as an informational `SHLINT-003` finding carrying the reason and shall not fail the run.
 - **REQ-VIZ.RENDER.FRAME.SHLINT-004** Each lint failure shall name the file, line or crate path and the rule broken.
 
 ## Acceptance criteria
