@@ -19,6 +19,12 @@
 //! order in the input are free; parsing canonical bytes and writing them again reproduces them
 //! exactly (REQ-KRN.MAN.MANI.SCHEMA-004).
 //!
+//! Two reading modes. [`KernelManifest::parse`] is lenient about formatting and every digest
+//! it reports is over the canonical re-encoding, never over the input bytes.
+//! [`KernelManifest::parse_canonical`] additionally requires the input bytes to be exactly
+//! that re-encoding (`NonCanonical` otherwise), so the digest of the file and the digest of the
+//! manifest coincide; verifiers and `TRUST` use the strict mode.
+//!
 //! `schemas/kernel-manifest.schema.json` states the same rules as a JSON Schema; the
 //! hand-labelled fixtures under `fixtures/man/manifest/` are checked against both.
 
@@ -140,6 +146,9 @@ pub enum ManifestError {
     TooLarge { what: &'static str, limit: usize },
     /// The input is not well-formed JSON (or not UTF-8); `offset` is a byte offset.
     Syntax { offset: usize },
+    /// Strict mode only: the input is a valid manifest but not its canonical bytes; `offset`
+    /// is the first byte that differs (the input length when one is a prefix of the other).
+    NonCanonical { offset: usize },
     /// An object has a member the schema does not define (the key, truncated).
     UnknownField(String),
     /// An object has the same key twice (the key, truncated).
@@ -163,6 +172,7 @@ impl ManifestError {
         match self {
             ManifestError::TooLarge { .. } => "too_large",
             ManifestError::Syntax { .. } => "syntax",
+            ManifestError::NonCanonical { .. } => "non_canonical",
             ManifestError::UnknownField(_) => "unknown_field",
             ManifestError::DuplicateKey(_) => "duplicate_key",
             ManifestError::MissingField(_) => "missing_field",
@@ -179,7 +189,9 @@ impl fmt::Display for ManifestError {
         let code = self.code();
         match self {
             ManifestError::TooLarge { what, limit } => write!(f, "{code}: {what} exceeds {limit}"),
-            ManifestError::Syntax { offset } => write!(f, "{code}: at byte {offset}"),
+            ManifestError::Syntax { offset } | ManifestError::NonCanonical { offset } => {
+                write!(f, "{code}: at byte {offset}")
+            }
             ManifestError::UnknownField(k) | ManifestError::DuplicateKey(k) => write!(f, "{code}: {k:?}"),
             ManifestError::MissingField(p) | ManifestError::BadValue(p) | ManifestError::BadHex(p) => {
                 write!(f, "{code}: {p}")
@@ -397,7 +409,21 @@ impl KernelManifest {
         Ok(KernelManifest { core, core_digest, artifacts, canonical })
     }
 
-    /// Parses a manifest (REQ-KRN.MAN.MANI.SCHEMA-003). Bounded and fail-closed.
+    /// Strict parse for verifiers: [`KernelManifest::parse`], then the input bytes must equal
+    /// [`KernelManifest::canonical_json`] exactly, else `NonCanonical`.
+    pub fn parse_canonical(input: &[u8]) -> Result<KernelManifest, ManifestError> {
+        let m = Self::parse(input)?;
+        if m.canonical.as_slice() != input {
+            let offset =
+                m.canonical.iter().zip(input).position(|(a, b)| a != b).unwrap_or(m.canonical.len().min(input.len()));
+            return Err(ManifestError::NonCanonical { offset });
+        }
+        Ok(m)
+    }
+
+    /// Parses a manifest (REQ-KRN.MAN.MANI.SCHEMA-003). Bounded and fail-closed. Formatting is
+    /// free (whitespace, member order, escapes); the digests are over the canonical
+    /// re-encoding, not over `input`. Use [`KernelManifest::parse_canonical`] to verify a file.
     pub fn parse(input: &[u8]) -> Result<KernelManifest, ManifestError> {
         if input.len() > MAX_INPUT_BYTES {
             return Err(ManifestError::TooLarge { what: "input", limit: MAX_INPUT_BYTES });

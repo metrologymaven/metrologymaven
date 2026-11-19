@@ -100,6 +100,32 @@ fn non_canonical_input_re_encodes_to_the_canonical_bytes() {
     }
 }
 
+#[test]
+fn strict_mode_accepts_only_the_canonical_bytes() {
+    let strict = KernelManifest::parse_canonical(&base_bytes()).unwrap();
+    assert_eq!(strict, base());
+    // ok-whitespace.json: indented, members in reverse order. Its first byte after `{` is a
+    // newline where the canonical form has `"`.
+    let lenient = KernelManifest::parse(&fixture("ok-whitespace.json")).unwrap();
+    assert_eq!(lenient.manifest_digest().as_str(), expected_digest("manifest_digest"));
+    assert_ne!(fid_testkit::sha256_hex(&fixture("ok-whitespace.json")), expected_digest("manifest_digest"));
+    assert_eq!(
+        KernelManifest::parse_canonical(&fixture("ok-whitespace.json")),
+        Err(ManifestError::NonCanonical { offset: 1 })
+    );
+    // ok-escaped.json differs only inside the "name" value.
+    let escaped = fixture("ok-escaped.json");
+    let at = base_bytes().iter().zip(&escaped).position(|(a, b)| a != b).unwrap();
+    assert_eq!(KernelManifest::parse_canonical(&escaped), Err(ManifestError::NonCanonical { offset: at }));
+    // A trailing newline is not canonical either.
+    let mut nl = base_bytes();
+    nl.push(b'
+');
+    assert_eq!(KernelManifest::parse_canonical(&nl), Err(ManifestError::NonCanonical { offset: base_bytes().len() }));
+    // Errors other than formatting are reported as in the lenient mode.
+    assert_eq!(KernelManifest::parse_canonical(&fixture("core-edited.json")).unwrap_err().code(), "core_digest_mismatch");
+}
+
 // ---------------------------------------------------------------- AC-2 and the labelled set
 
 fn detail(e: &ManifestError) -> String {
@@ -108,7 +134,7 @@ fn detail(e: &ManifestError) -> String {
         ManifestError::MissingField(p) | ManifestError::BadValue(p) | ManifestError::BadHex(p) => p.to_string(),
         ManifestError::Unsorted { list, index } => format!("{list}[{index}]"),
         ManifestError::TooLarge { what, .. } => what.to_string(),
-        ManifestError::Syntax { .. } | ManifestError::CoreDigestMismatch { .. } => "-".to_string(),
+        _ => "-".to_string(),
     }
 }
 
