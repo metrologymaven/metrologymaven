@@ -378,6 +378,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-cad-proto"
+version = "0.0.1"
+dependencies = [
+ "fid-io-reg",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-canon"
 version = "0.0.1"
 dependencies = [
@@ -498,6 +506,15 @@ name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
  "fid-testkit",
+]
+
+[[package]]
+name = "fid-geo-sel"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-kci",
+ "fid-types",
 ]
 
 [[package]]
@@ -632,6 +649,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-manifest-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
+ "toml",
+]
+
+[[package]]
 name = "fid-mig"
 version = "0.0.1"
 dependencies = [
@@ -735,6 +761,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-cmp"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-sign-core"
 version = "0.0.1"
 dependencies = [
@@ -831,6 +867,7 @@ dependencies = [
  "fid-accept",
  "fid-canon",
  "fid-mig",
+ "fid-registry",
  "fid-types",
  "fid-uuid",
  "sha2 0.10.9",

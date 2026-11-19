@@ -115,6 +115,8 @@ fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# CORE.REG.VER.GATE fixtures: the baseline digest is over exact bytes; never convert line endings.
+fixtures/core/reg/ver/gate/** -text
 # CORE.STO.SQL.SCHEMA fixture database and its generator: hashed and compared byte for byte.
 fixtures/core/sto/sql/schema/** -text
 # GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
@@ -123,3 +125,10 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
+# of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
+fixtures/man/implclosure-ws-v1/** -text
+# GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
+fixtures/geo/sel/** -text
+# SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
+fixtures/scan/cmp/** -text
