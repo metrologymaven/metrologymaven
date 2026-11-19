@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metrologymaven/metrologymaven/schemas/construct/command-row-1.schema.json",
+  "title": "Construction command data row (KRN.CONS.DECL REQ-006)",
+  "description": "One row declares one construct.<verb_object>@1 registry command as data, so CORE.REG can read it without a crate dependency from the kernel. Produced by fid_construct::contract::CommandRow::to_json (RFC 8785 canonical JSON); checked by CommandRow::new.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["algorithms", "command", "determinism", "dry_run", "params", "result", "row", "side_effect"],
+  "properties": {
+    "algorithms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^construct\\.[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,31}@(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }
+    },
+    "command": { "type": "string", "pattern": "^construct\\.[a-z][a-z0-9_]*@[1-9][0-9]*$" },
+    "determinism": { "enum": ["D0", "D1", "D2", "D3"] },
+    "dry_run": { "const": "R1" },
+    "params": { "$ref": "#/$defs/fields" },
+    "result": { "$ref": "#/$defs/fields" },
+    "row": { "const": "construct.command_row@1" },
+    "side_effect": { "const": "W2" }
+  },
+  "$defs": {
+    "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "required", "type"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{0,63}$" },
+        "required": { "type": "boolean" },
+        "type": { "enum": ["number", "integer", "number_array", "points", "string", "boolean", "element_ref", "element_ref_array"] },
+        "x-quantity": { "enum": ["length", "angle", "dimensionless", "count"] },
+        "x-unit": { "enum": ["m", "rad", "1"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["number", "integer", "number_array", "points"] } } },
+          "then": { "required": ["x-quantity", "x-unit"] },
+          "else": { "not": { "anyOf": [{ "required": ["x-quantity"] }, { "required": ["x-unit"] }] } }
+        },
+        { "if": { "properties": { "x-quantity": { "const": "length" } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "m" } } } },
+        { "if": { "properties": { "x-quantity": { "const": "angle" } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "rad" } } } },
+        { "if": { "properties": { "x-quantity": { "enum": ["dimensionless", "count"] } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "1" } } } }
+      ]
+    }
+  }
+}

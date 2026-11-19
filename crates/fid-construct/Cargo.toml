@@ -1,0 +1,17 @@
+[package]
+name = "fid-construct"
+description = "Metrology Maven kernel construction contract (KNP-1): the Construction trait, element references, dependency declarations as data, construction parameters and digests, typed undefined / ill-conditioned errors, algorithm IDs, the construct.* journal event and command data rows (spec node KRN.CONS.DECL)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-fit = { path = "../fid-fit" }
+fid-kci = { path = "../fid-kci" }
+fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

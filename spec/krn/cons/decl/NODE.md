@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-construct]
 satisfies: [REQ-KRN.CONS-002, REQ-KRN.CONS-003, REQ-KRN.CONS-004, REQ-KRN.CONS-009, REQ-KRN.CONS-010]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.NUM.ERR, KRN.MAN]
