@@ -1,0 +1,43 @@
+{
+  "generator": "make_cases.py",
+  "cases": [
+    {
+      "file": "asme_placeholder_1.0.0.json",
+      "canonical": "{\"dialect\":\"asme\",\"edition\":\"y14.5-2018\",\"keys\":{\"dmt:asme/position/none@1\":\"variant-b\",\"placeholder.assoc.default\":\"assoc-x\",\"placeholder.count\":7,\"placeholder.list\":[\"b\",\"a\"],\"placeholder.synthetic\":true,\"placeholder.variant.flatness\":\"variant-a\"},\"schema\":\"fid.defaults-profile/1\",\"version\":\"1.0.0\"}",
+      "sha256": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "ref": "dp:asme-y14.5-2018@1.0.0#sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc"
+    },
+    {
+      "file": "asme_placeholder_1.0.0_modified.json",
+      "canonical": "{\"dialect\":\"asme\",\"edition\":\"y14.5-2018\",\"keys\":{\"dmt:asme/position/none@1\":\"variant-b\",\"placeholder.assoc.default\":\"assoc-x\",\"placeholder.count\":7,\"placeholder.list\":[\"b\",\"a\"],\"placeholder.synthetic\":true,\"placeholder.variant.flatness\":\"variant-c\"},\"schema\":\"fid.defaults-profile/1\",\"version\":\"1.0.0\"}",
+      "sha256": "sha256:57515224277e4723b8c6501d77c43ddceed35858166a79dca368162df1c80465",
+      "ref": "dp:asme-y14.5-2018@1.0.0#sha256:57515224277e4723b8c6501d77c43ddceed35858166a79dca368162df1c80465"
+    },
+    {
+      "file": "asme_placeholder_1.1.0.json",
+      "canonical": "{\"dialect\":\"asme\",\"edition\":\"y14.5-2018\",\"keys\":{\"dmt:asme/position/none@1\":\"variant-d\",\"placeholder.assoc.default\":\"assoc-y\",\"placeholder.count\":-3,\"placeholder.synthetic\":true,\"placeholder.variant.flatness\":\"variant-a\"},\"schema\":\"fid.defaults-profile/1\",\"version\":\"1.1.0\"}",
+      "sha256": "sha256:3e8afbb9510be9effcd5334cb60a2ce80851080fa7168a66edf18b79a77584aa",
+      "ref": "dp:asme-y14.5-2018@1.1.0#sha256:3e8afbb9510be9effcd5334cb60a2ce80851080fa7168a66edf18b79a77584aa"
+    },
+    {
+      "file": "iso_placeholder_1.0.0.json",
+      "canonical": "{\"dialect\":\"iso\",\"edition\":\"1101-2017\",\"keys\":{\"dmt:iso/flatness/none@1\":\"variant-a\",\"placeholder.note\":\"café \\\"quoted\\\" tab\\t\",\"placeholder.synthetic\":true},\"schema\":\"fid.defaults-profile/1\",\"version\":\"1.0.0\"}",
+      "sha256": "sha256:7eebd00016813701914b86334f28591a9bd965beb5a91734c32305e20c0020e9",
+      "ref": "dp:iso-1101-2017@1.0.0#sha256:7eebd00016813701914b86334f28591a9bd965beb5a91734c32305e20c0020e9"
+    }
+  ],
+  "refused": [
+    {
+      "file": "bad_number_exponent.json",
+      "refused": "bad_number"
+    },
+    {
+      "file": "bad_number_fraction.json",
+      "refused": "bad_number"
+    },
+    {
+      "file": "bad_number_long_fraction.json",
+      "refused": "bad_number"
+    }
+  ]
+}
