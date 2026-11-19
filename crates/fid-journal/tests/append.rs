@@ -7,11 +7,11 @@
 //! the journal API.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_canon::{parse, CValue, Digest};
+use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::{
-    parse_digest, utc_order, verify_header_value, Append, AppendRequest, CrashPoint, DraftBody, EntryDraft, Field,
-    Journal, JournalError, RecordedSalts, Salt, GENESIS_PREV, MAX_BATCH, MAX_BLOBS, MAX_QUEUE, ROLE_PAYLOAD, ROLE_REF,
-    SYNCHRONOUS_FULL,
+    build, parse_digest, utc_instant, utc_order, verify_header_value, Append, AppendRequest, Clock, CrashPoint,
+    DraftBody, EntryDraft, Field, Journal, JournalError, RecordedSalts, Salt, GENESIS_PREV, MAX_AHEAD_SECS, MAX_BATCH,
+    MAX_BLOBS, MAX_QUEUE, ROLE_PAYLOAD, ROLE_REF, SYNCHRONOUS_FULL,
 };
 use fid_store::cas::{BlobStore, PutOpts};
 use fid_store::schema::{is_append_only, open_read, open_write};
@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 use std::sync::{Arc, OnceLock};
+use std::time::Duration;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/core/jrn/chain/append");
 const STREAM: &str = "record";
@@ -49,18 +50,40 @@ impl Drop for TempDir {
     }
 }
 
-/// A new project with an open journal.
-fn new_journal(tag: &str) -> (TempDir, PathBuf, Journal) {
+/// A host clock fixed at a Unix time.
+struct FixedClock(u64);
+
+impl Clock for FixedClock {
+    fn now(&self) -> Duration {
+        Duration::from_secs(self.0)
+    }
+}
+
+/// 2030-01-01T00:00:00Z: after every fixture time, so the time-ahead rule never fires
+/// unless a test sets its own clock.
+const TEST_NOW: u64 = 1_893_456_000;
+
+/// A new project with an open journal whose clock reads `now` (Unix seconds).
+fn new_journal_at(tag: &str, now: u64) -> (TempDir, PathBuf, Journal) {
     let t = TempDir::new(tag);
     let root = t.0.join("p");
     let (loc, lock) = ProjectLocation::create(&root).unwrap();
-    let j = Journal::open(loc, lock, STREAM).unwrap();
+    let j = Journal::open_with_clock(loc, lock, STREAM, Arc::new(FixedClock(now))).unwrap();
     (t, root, j)
 }
 
-fn reopen(root: &Path) -> Journal {
+/// A new project with an open journal.
+fn new_journal(tag: &str) -> (TempDir, PathBuf, Journal) {
+    new_journal_at(tag, TEST_NOW)
+}
+
+fn try_reopen(root: &Path) -> Result<Journal, JournalError> {
     let (loc, lock) = ProjectLocation::open(root, OpenMode::Write).unwrap();
-    Journal::open(loc, lock.unwrap(), STREAM).unwrap()
+    Journal::open_with_clock(loc, lock.unwrap(), STREAM, Arc::new(FixedClock(TEST_NOW)))
+}
+
+fn reopen(root: &Path) -> Journal {
+    try_reopen(root).unwrap()
 }
 
 type Obj = BTreeMap<String, CValue>;
@@ -228,8 +251,9 @@ fn w2(branch: &str, utc: &str, n: u64, pad: usize) -> AppendRequest {
 fn ac1_hundred_w2_entries_chain_from_one() {
     let (_t, root, j) = new_journal("ac1");
     let fx = chain_fixture();
-    assert_eq!(fx.len(), 100);
-    for e in &fx {
+    assert_eq!(fx.len(), 103);
+    for e in &fx[..100] {
+        assert_eq!(st(obj(e.get("draft").unwrap()), "kind"), "command");
         append_fixture(&j, e);
     }
     let stored = verify_chain(&root);
@@ -250,6 +274,20 @@ fn ac1_hundred_w2_entries_chain_from_one() {
     drop(j);
     let j = reopen(&root);
     assert_eq!(j.tail().unwrap().unwrap().seq, 100);
+    // Delegated attribution (on_behalf_of, reason) and a principal upgrade: the stored
+    // header equals the reference header byte for byte.
+    for e in &fx[100..] {
+        append_fixture(&j, e);
+    }
+    let stored = verify_chain(&root);
+    assert_eq!(stored.len(), 103);
+    for (r, e) in stored[100..].iter().zip(&fx[100..]) {
+        assert_eq!(r.header, to_canonical_bytes(e.get("header").unwrap()).unwrap(), "{}", st(e, "name"));
+    }
+    let h100 = obj(fx[100].get("header").unwrap());
+    assert!(obj(h100.get("principal").unwrap()).contains_key("on_behalf_of_commit"));
+    assert!(h100.contains_key("reason_commit"));
+    assert_eq!(st(obj(fx[101].get("draft").unwrap()), "kind"), "principal_upgrade");
 }
 
 #[test]
@@ -383,11 +421,99 @@ fn injected_failures_before_commit_leave_the_old_head() {
         append_fixture(&j, &fx[next]);
         next += 1;
     }
-    // A refusal by the hook after the COMMIT is ignored: the entry is durable and reported.
-    j.set_fault_hook(Some(Arc::new(|q: CrashPoint| q.before_commit())));
+    // Refusals after the COMMIT (other than the simulated COMMIT error) are ignored: the
+    // entry is durable and reported.
+    j.set_fault_hook(Some(Arc::new(|q: CrashPoint| q.before_commit() || q == CrashPoint::Committed)));
     put_blobs(&j, &fx[next]);
     assert_eq!(j.append(request(&fx[next])).unwrap().to_string(), st(&fx[next], "hash"));
     assert_eq!(verify_chain(&root).len(), next + 1);
+}
+
+#[test]
+fn failed_commit_poisons_until_reopen() {
+    let (_t, root, j) = new_journal("commitfail");
+    let fx = chain_fixture();
+    append_fixture(&j, &fx[0]);
+    put_blobs(&j, &fx[1]);
+    // The COMMIT writes its frame, then reports an error: the outcome is unknown.
+    j.set_fault_hook(Some(Arc::new(|q: CrashPoint| q != CrashPoint::Committed)));
+    let err = j.append(request(&fx[1])).unwrap_err();
+    assert_eq!(err.code(), "append_failed");
+    assert!(err.to_string().contains("outcome unknown"), "{err}");
+    assert!(j.is_poisoned());
+    j.set_fault_hook(None);
+    // Every later append and tail fails until a reopen.
+    put_blobs(&j, &fx[2]);
+    let later = j.append(request(&fx[2])).unwrap_err();
+    assert_eq!(later.code(), "append_failed");
+    assert!(later.to_string().contains("poisoned"), "{later}");
+    assert_eq!(j.tail().unwrap_err().code(), "append_failed");
+    drop(j);
+    // The reopen re-reads the durable tail; the caller resolves the outcome from it (here
+    // the simulated failure came after a real commit, so the entry is present).
+    let j = reopen(&root);
+    assert!(!j.is_poisoned());
+    let t = j.tail().unwrap().unwrap();
+    assert_eq!((t.seq, t.hash.to_string()), (2, st(&fx[1], "hash").to_string()));
+    let mut next = request(&fx[2]);
+    next.expected_prev = Some(t.hash);
+    assert_eq!(j.append(next).unwrap().to_string(), st(&fx[2], "hash"));
+    assert_eq!(verify_chain(&root).len(), 3);
+}
+
+/// Raw-inserts a tail row at sequence 4 built from fixture entry 3 with the given `prev`
+/// and `branch` column, bypassing the journal.
+fn insert_raw_tail(root: &Path, prev: Digest, branch_column: Option<&str>) {
+    let e = &chain_fixture()[3];
+    let req = request(e);
+    let entry = build(&req.draft, 4, prev, &mut req.salts.clone().unwrap()).unwrap();
+    let header = to_canonical_bytes(&entry.header.to_value()).unwrap();
+    let (loc, lock) = ProjectLocation::open(root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    let db = open_write(&loc, &lock).unwrap();
+    db.connection()
+        .execute(
+            "INSERT INTO entries (seq, hash, stream, branch, kind, prev_hash, header) VALUES (4, ?1, ?2, ?3, ?4, ?5, ?6)",
+            (
+                entry.header.hash.to_string(),
+                STREAM,
+                branch_column.unwrap_or(entry.header.branch.as_str()),
+                entry.header.kind().as_str(),
+                prev.to_string(),
+                header.as_slice(),
+            ),
+        )
+        .unwrap();
+}
+
+#[test]
+fn forked_tail_is_chain_invalid() {
+    let (_t, root) = prechain_project("fork", 3);
+    let fx = chain_fixture();
+    // Entry 4 links to entry 2 instead of entry 3: a fork, though its own hash verifies.
+    insert_raw_tail(&root, digest(st(&fx[1], "hash")), None);
+    let err = try_reopen(&root).unwrap_err();
+    assert_eq!(err.code(), "chain_invalid");
+    assert!(err.to_string().contains("does not link"), "{err}");
+}
+
+#[test]
+fn tail_columns_must_match_the_header() {
+    let (_t, root) = prechain_project("columns", 3);
+    let fx = chain_fixture();
+    insert_raw_tail(&root, digest(st(&fx[2], "hash")), Some("elsewhere"));
+    let err = try_reopen(&root).unwrap_err();
+    assert_eq!(err.code(), "chain_invalid");
+    assert!(err.to_string().contains("branch"), "{err}");
+}
+
+#[test]
+fn well_linked_raw_tail_is_accepted() {
+    // Control for the two tests above: the same raw insert with the right prev and columns.
+    let (_t, root) = prechain_project("control", 3);
+    let fx = chain_fixture();
+    insert_raw_tail(&root, digest(st(&fx[2], "hash")), None);
+    assert_eq!(reopen(&root).tail().unwrap().unwrap().hash.to_string(), st(&fx[3], "hash"));
 }
 
 // ------------------------------------------------------------------ AC-3
@@ -507,16 +633,28 @@ fn bench_append() {
 
 // ------------------------------------------------------------------ pinned rules
 
+fn time_cases(key: &str) -> Vec<Obj> {
+    let v = load("time_order.json");
+    arr(obj(&v), key).iter().map(|c| obj(c).clone()).collect()
+}
+
+fn accepted(c: &Obj) -> bool {
+    matches!(c.get("accept"), Some(CValue::Bool(true)))
+}
+
 #[test]
 fn time_order_fixture() {
     let v = load("time_order.json");
-    let CValue::Arr(cases) = &v else { panic!("array expected") };
+    assert!(matches!(obj(&v).get("max_ahead_s"), Some(CValue::Num(n)) if *n == MAX_AHEAD_SECS as f64));
+    let cases = time_cases("order");
     assert!(cases.len() >= 15);
-    for c in cases {
-        let c = obj(c);
-        let accept = matches!(c.get("accept"), Some(CValue::Bool(true)));
+    for c in &cases {
         let order = utc_order(st(c, "entry"), st(c, "head")).unwrap();
-        assert_eq!(order != Ordering::Less, accept, "{}", st(c, "name"));
+        assert_eq!(order != Ordering::Less, accepted(c), "{}", st(c, "name"));
+    }
+    for c in &time_cases("validity") {
+        let valid = matches!(c.get("valid"), Some(CValue::Bool(true)));
+        assert_eq!(utc_instant(st(c, "utc")).is_some(), valid, "{}", st(c, "name"));
     }
     for bad in
         ["2026-11-19T10:00:00", "2026-11-19T10:00:00.Z", "2026-11-19T10:00:00.1234567890Z", "2026-11-19 10:00:00Z"]
@@ -526,11 +664,40 @@ fn time_order_fixture() {
 }
 
 #[test]
+fn invalid_calendar_time_is_schema() {
+    for c in &time_cases("validity") {
+        let name = st(c, "name");
+        let (_t, root, j) = new_journal("valid");
+        let got = j.append(w2("main", st(c, "utc"), 0, 0));
+        if matches!(c.get("valid"), Some(CValue::Bool(true))) {
+            assert!(got.is_ok(), "{name}: {got:?}");
+        } else {
+            assert_eq!(got.unwrap_err().code(), "schema", "{name}");
+            assert_eq!(verify_chain(&root).len(), 0);
+        }
+    }
+}
+
+#[test]
+fn time_far_ahead_of_the_clock_is_time_ahead() {
+    for c in &time_cases("ahead") {
+        let name = st(c, "name");
+        let now: u64 = st(c, "clock_unix").parse().unwrap();
+        let (_t, root, j) = new_journal_at("ahead", now);
+        let got = j.append(w2("main", st(c, "entry"), 0, 0));
+        if accepted(c) {
+            assert!(got.is_ok(), "{name}: {got:?}");
+        } else {
+            let err = got.unwrap_err();
+            assert_eq!(err, JournalError::TimeAhead { entry: st(c, "entry").to_string(), now_unix: now }, "{name}");
+            assert_eq!(verify_chain(&root).len(), 0);
+        }
+    }
+}
+
+#[test]
 fn earlier_time_than_the_head_is_time_regressed() {
-    let v = load("time_order.json");
-    let CValue::Arr(cases) = &v else { panic!("array expected") };
-    for c in cases {
-        let c = obj(c);
+    for c in &time_cases("order") {
         let name = st(c, "name");
         let (_t, root, j) = new_journal("time");
         let head = j.append(w2("main", st(c, "head"), 0, 0)).unwrap();
@@ -624,6 +791,7 @@ fn error_codes_are_stable() {
         (JournalError::Schema(String::new()), "schema"),
         (JournalError::HeadMoved { expected: d, found: d }, "head_moved"),
         (JournalError::TimeRegressed { head: String::new(), entry: String::new() }, "time_regressed"),
+        (JournalError::TimeAhead { entry: String::new(), now_unix: 0 }, "time_ahead"),
         (JournalError::ChainInvalid(String::new()), "chain_invalid"),
         (JournalError::InputLimit(String::new()), "input_limit"),
     ];
@@ -655,10 +823,18 @@ fn append_trait_serves_the_bus_shape() {
     let (_t, root, j) = new_journal("seam");
     let j: Arc<dyn Append> = Arc::new(j);
     let mut bus = BusAdapter(Arc::clone(&j));
+    assert_eq!(j.tail().unwrap(), None);
     let req = w2("main", "2026-11-19T10:00:05Z", 0, 0);
     bus.append(&req.draft).unwrap();
+    // The seam exposes the tail, from which a caller builds `expected_prev`.
+    let tail = j.tail().unwrap().unwrap();
+    let mut guarded = w2("main", "2026-11-19T10:00:06Z", 1, 0);
+    guarded.expected_prev = Some(GENESIS_PREV);
+    assert_eq!(j.append(guarded.clone()).unwrap_err().code(), "head_moved");
+    guarded.expected_prev = Some(tail.hash);
+    j.append(guarded).unwrap();
     // An upgrade stamped at confirm time, committed after a later entry: refused here.
     let late = w2("main", "2026-11-19T10:00:04Z", 1, 0);
     assert_eq!(bus.append(&late.draft).unwrap_err(), "time_regressed");
-    assert_eq!(verify_chain(&root).len(), 1);
+    assert_eq!(verify_chain(&root).len(), 2);
 }

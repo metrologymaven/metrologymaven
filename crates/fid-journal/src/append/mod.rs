@@ -12,25 +12,33 @@
 //!
 //! - **Sequence and link (REQ-002).** One physical chain per stream over append order,
 //!   whatever the branch: `seq` is the tail's plus one (1 for an empty chain) and `prev` the
-//!   tail's hash ([`GENESIS_PREV`] for sequence 1). A tail that does not verify, or whose
-//!   stored `prev` breaks the genesis rule (zero `prev` exactly at sequence 1), is
+//!   tail's hash ([`GENESIS_PREV`] for sequence 1). The tail is verified before every batch:
+//!   its header hash, its `seq`, `stream`, `branch`, `kind` and `prev_hash` columns against
+//!   the header, the genesis rule (zero `prev` exactly at sequence 1) and, above sequence 1,
+//!   that its `prev` is the stored hash at sequence - 1 (no fork). A tail that fails is
 //!   `chain_invalid` and nothing is appended.
 //! - **One stream per database.** Schema v1 keys `entries` by `seq` alone, so a project
 //!   database holds one chained stream, the one the [`Journal`] is opened for. A draft for
 //!   another stream is `schema`; a database holding another stream is `chain_invalid`.
+//! - **Time validity.** `time.utc` must be a real calendar instant (month 1-12, a day that
+//!   exists in that month, hour 0-23, minute 0-59, second 0-59, second 60 only at 23:59:60);
+//!   otherwise `schema`.
+//! - **Time ahead.** An entry more than [`MAX_AHEAD_SECS`] after the injected [`Clock`]
+//!   (strictly greater) is refused with `time_ahead`, so one far-future stamp cannot lock the
+//!   chain against every later entry.
 //! - **Time order.** An entry whose `time.utc` instant is earlier than the chain tail's is
 //!   refused with `time_regressed`; an equal instant is accepted. Instants are compared as
-//!   instants ([`utc_order`]), not as text; `mono_ns` is not compared (it restarts with the
-//!   host). The bus stamps a `principal_upgrade` at confirm time and commits it later, so
-//!   the guard sits here, at the one place that knows the tail.
+//!   instants on the Unix time line ([`utc_order`]; 23:59:60 equals the next 00:00:00), not
+//!   as text; `mono_ns` is not compared (it restarts with the host). The bus stamps a
+//!   `principal_upgrade` at confirm time and commits it later, so the guard sits here, at
+//!   the one place that knows the tail.
 //! - **Concurrency.** Appends are serialised in arrival order. A request may carry
 //!   `expected_prev`, the tail hash it was prepared against; if another append landed first
 //!   it fails with `head_moved` (the bus catalogue's `conflict/head_moved`) and appends
 //!   nothing. Without it the request is linked to whatever the tail is when its turn comes.
 //! - **Group commit.** Requests that arrive while a commit is in flight are taken, up to
 //!   [`MAX_BATCH`], in arrival order into the next transaction. Each request runs inside its
-//!   own SAVEPOINT, so one request's refusal does not affect the others; a failed COMMIT
-//!   fails every request of the batch with `append_failed`.
+//!   own SAVEPOINT, so one request's refusal does not affect the others.
 //! - **Atomicity and durability (REQ-003, REQ-004).** Order inside one append: referenced
 //!   blobs are checked present (`missing_blob`) and flushed (file, fan-out directories and
 //!   `sha256/`); the payload is put as a content-addressed blob with `PutOpts::durable`;
@@ -40,6 +48,12 @@
 //!   elsewhere); [`Journal::open`] sets and reads back all three. Every failure before the
 //!   COMMIT rolls back, so after a crash or error the chain is at the old head; at worst an
 //!   unreferenced payload blob remains. Nothing after a successful COMMIT can fail the call.
+//! - **Failed COMMIT: outcome unknown.** A COMMIT that reports an error may still have
+//!   written its commit frame (the WAL fsync can fail after the write), so the batch may
+//!   reappear after a restart. Every request of the batch gets `append_failed`, and the
+//!   journal is poisoned: every later `append` and `tail` returns `append_failed` until the
+//!   project is reopened, which re-reads the durable tail. Callers resolve the outcome after
+//!   the reopen with `tail()` or by retrying with `expected_prev`.
 //! - **Payload.** Schema v1 has no `payloads` table; the payload (salts and committed
 //!   values, RFC 8785) is a content-addressed blob referenced from `entry_blobs` with role
 //!   [`ROLE_PAYLOAD`], so it can be detached later without touching the header
@@ -62,7 +76,9 @@ use fid_types::Digest as StoreDigest;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// The hash of an appended entry.
 pub type EntryHash = Digest;
@@ -81,6 +97,8 @@ pub const ROLE_PAYLOAD: &str = "payload";
 pub const ROLE_REF: &str = "ref";
 /// `PRAGMA synchronous` value for FULL.
 pub const SYNCHRONOUS_FULL: i64 = 2;
+/// Most seconds an entry's `time.utc` may lie after the host clock.
+pub const MAX_AHEAD_SECS: u64 = 300;
 
 // ------------------------------------------------------------------ errors
 
@@ -97,6 +115,8 @@ pub enum JournalError {
     HeadMoved { expected: Digest, found: Digest },
     /// The entry's `time.utc` is earlier than the chain tail's.
     TimeRegressed { head: String, entry: String },
+    /// The entry's `time.utc` is more than [`MAX_AHEAD_SECS`] after the host clock.
+    TimeAhead { entry: String, now_unix: u64 },
     /// The stored chain does not verify at its tail, or holds another stream.
     ChainInvalid(String),
     /// The header, payload or blob list is over its bound.
@@ -112,6 +132,7 @@ impl JournalError {
             JournalError::Schema(_) => "schema",
             JournalError::HeadMoved { .. } => "head_moved",
             JournalError::TimeRegressed { .. } => "time_regressed",
+            JournalError::TimeAhead { .. } => "time_ahead",
             JournalError::ChainInvalid(_) => "chain_invalid",
             JournalError::InputLimit(_) => "input_limit",
         }
@@ -130,6 +151,10 @@ impl fmt::Display for JournalError {
             JournalError::TimeRegressed { head, entry } => {
                 write!(f, "time_regressed: entry time {entry} is earlier than chain head time {head}")
             }
+            JournalError::TimeAhead { entry, now_unix } => write!(
+                f,
+                "time_ahead: entry time {entry} is more than {MAX_AHEAD_SECS} s after the host clock (Unix {now_unix})"
+            ),
             JournalError::ChainInvalid(m) => write!(f, "chain_invalid: {m}"),
             JournalError::InputLimit(m) => write!(f, "input_limit: {m}"),
         }
@@ -179,17 +204,46 @@ impl AppendRequest {
 pub trait Append: Send + Sync {
     /// Appends one entry and returns its hash once it is durable.
     fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError>;
+
+    /// The verified chain tail (`None` for an empty chain), from which a caller builds
+    /// `expected_prev` ([`GENESIS_PREV`] for an empty chain).
+    fn tail(&self) -> Result<Option<Tail>, JournalError>;
 }
 
 impl<T: Append + ?Sized> Append for Arc<T> {
     fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError> {
         (**self).append(req)
     }
+
+    fn tail(&self) -> Result<Option<Tail>, JournalError> {
+        (**self).tail()
+    }
 }
 
 impl<T: Append + ?Sized> Append for &T {
     fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError> {
         (**self).append(req)
+    }
+
+    fn tail(&self) -> Result<Option<Tail>, JournalError> {
+        (**self).tail()
+    }
+}
+
+/// The host clock the time-ahead rule reads.
+pub trait Clock: Send + Sync {
+    /// Time since the Unix epoch.
+    fn now(&self) -> Duration;
+}
+
+/// The system clock. A clock before the Unix epoch reads as the epoch, which refuses every
+/// entry as `time_ahead` (fail closed).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SystemClock;
+
+impl Clock for SystemClock {
+    fn now(&self) -> Duration {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO)
     }
 }
 
@@ -227,7 +281,7 @@ macro_rules! points {
 }
 
 points! {
-    Enqueued => 1, "enqueued";
+    Prechecked => 1, "prechecked";
     BatchTaken => 2, "batch_taken";
     LockVerified => 3, "lock_verified";
     Begun => 4, "begun";
@@ -256,31 +310,66 @@ impl CrashPoint {
     }
 }
 
-/// A test hook called at every [`CrashPoint`]: `true` continues, `false` injects a failure
-/// (honoured only [`CrashPoint::before_commit`]). A crash harness exits the process from it.
+/// A test hook called at every [`CrashPoint`]: `true` continues, `false` injects a failure.
+/// Before the COMMIT the append fails and rolls back. At [`CrashPoint::Committed`] it
+/// simulates a COMMIT that reported an error after writing (outcome unknown: the journal is
+/// poisoned). Later refusals are ignored. A crash harness exits the process from it.
 #[cfg(feature = "test-hooks")]
 pub type FaultHook = Arc<dyn Fn(CrashPoint) -> bool + Send + Sync>;
 
 // ------------------------------------------------------------------ time order
 
-/// `(YYYYMMDDhhmmss, nanoseconds)` of an RFC 3339 UTC instant `YYYY-MM-DDThh:mm:ss[.f]Z`
-/// with 1 to 9 fraction digits; `None` for anything else.
-fn utc_key(s: &str) -> Option<(u64, u32)> {
+/// Days from 1970-01-01 to the given proleptic Gregorian date (H. Hinnant's algorithm).
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe - 719_468
+}
+
+fn days_in_month(y: i64, m: i64) -> i64 {
+    match m {
+        2 if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
+}
+
+/// `(Unix seconds, nanoseconds)` of a valid RFC 3339 UTC instant
+/// `YYYY-MM-DDThh:mm:ss[.f]Z` with 1 to 9 fraction digits: month 1-12, a day that exists in
+/// that month, hour 0-23, minute 0-59, second 0-59, and 60 only at 23:59:60 (a leap second,
+/// which equals the next day's 00:00:00). `None` for anything else.
+pub fn utc_instant(s: &str) -> Option<(i64, u32)> {
     let b = s.as_bytes();
     if b.len() < 20 || b.last() != Some(&b'Z') {
         return None;
     }
-    let mut whole: u64 = 0;
+    let mut parts = [0i64; 6];
+    let mut k = 0;
     for (i, c) in b"dddd-dd-ddTdd:dd:dd".iter().enumerate() {
         let got = *b.get(i)?;
-        if *c == b'd' {
-            if !got.is_ascii_digit() {
+        if *c != b'd' {
+            if got != *c {
                 return None;
             }
-            whole = whole.checked_mul(10)?.checked_add(u64::from(got - b'0'))?;
-        } else if got != *c {
+            k += 1;
+        } else if got.is_ascii_digit() {
+            let slot = parts.get_mut(k)?;
+            *slot = *slot * 10 + i64::from(got - b'0');
+        } else {
             return None;
         }
+    }
+    let [y, mo, d, h, mi, se] = parts;
+    if !(1..=12).contains(&mo) || d < 1 || d > days_in_month(y, mo) {
+        return None;
+    }
+    if h > 23 || mi > 59 || se > 60 || (se == 60 && (h, mi) != (23, 59)) {
+        return None;
     }
     let frac = b.get(19..b.len() - 1)?;
     let mut nanos: u32 = 0;
@@ -290,21 +379,30 @@ fn utc_key(s: &str) -> Option<(u64, u32)> {
             return None;
         }
         for i in 0..9 {
-            let d = match digits.get(i) {
+            let dg = match digits.get(i) {
                 Some(c) if c.is_ascii_digit() => u32::from(c - b'0'),
                 Some(_) => return None,
                 None => 0,
             };
-            nanos = nanos.checked_mul(10)?.checked_add(d)?;
+            nanos = nanos * 10 + dg;
         }
     }
-    Some((whole, nanos))
+    let secs = days_from_civil(y, mo, d) * 86_400 + h * 3600 + mi * 60 + se;
+    Some((secs, nanos))
 }
 
 /// Orders two RFC 3339 UTC instants as instants (`...:00Z` equals `...:00.000Z` and is
-/// earlier than `...:00.5Z`); `None` if either is malformed.
+/// earlier than `...:00.5Z`); `None` if either is not a valid instant ([`utc_instant`]).
 pub fn utc_order(a: &str, b: &str) -> Option<Ordering> {
-    Some(utc_key(a)?.cmp(&utc_key(b)?))
+    Some(utc_instant(a)?.cmp(&utc_instant(b)?))
+}
+
+/// True if `entry` lies more than [`MAX_AHEAD_SECS`] after `now` (time since the epoch).
+fn too_far_ahead(entry: (i64, u32), now: Duration) -> bool {
+    let at = i128::from(entry.0) * 1_000_000_000 + i128::from(entry.1);
+    let now = i128::try_from(now.as_nanos()).unwrap_or(i128::MAX);
+    let limit = now.saturating_add(i128::from(MAX_AHEAD_SECS) * 1_000_000_000);
+    at > limit
 }
 
 // ------------------------------------------------------------------ the journal
@@ -349,6 +447,9 @@ struct Store {
 /// The chained stream of one project database. `Send + Sync`: share it behind an `Arc`.
 pub struct Journal {
     stream: String,
+    clock: Arc<dyn Clock>,
+    /// Set after a COMMIT whose outcome is unknown; cleared only by reopening.
+    poisoned: AtomicBool,
     location: ProjectLocation,
     blobs: BlobStore,
     store: Mutex<Store>,
@@ -384,6 +485,16 @@ impl Journal {
     /// pragmas, and checks the stored chain (sequences 1..n without gaps, one stream, a tail
     /// that verifies). The journal keeps the write lock for its lifetime.
     pub fn open(location: ProjectLocation, lock: Locked, stream: &str) -> Result<Journal, JournalError> {
+        Journal::open_with_clock(location, lock, stream, Arc::new(SystemClock))
+    }
+
+    /// [`Journal::open`] with an injected host clock for the time-ahead rule.
+    pub fn open_with_clock(
+        location: ProjectLocation,
+        lock: Locked,
+        stream: &str,
+        clock: Arc<dyn Clock>,
+    ) -> Result<Journal, JournalError> {
         if !is_ident(stream) {
             return Err(JournalError::Schema(format!("stream {stream:?} is not a lowercase identifier")));
         }
@@ -394,6 +505,8 @@ impl Journal {
             .map_err(|e| failed("durability pragmas", e))?;
         let journal = Journal {
             stream: stream.to_string(),
+            clock,
+            poisoned: AtomicBool::new(false),
             location,
             blobs,
             store: Mutex::new(Store { db, lock }),
@@ -449,6 +562,7 @@ impl Journal {
 
     /// The current chain tail, verified; `None` for an empty chain.
     pub fn tail(&self) -> Result<Option<Tail>, JournalError> {
+        self.check_poison()?;
         let store = guard(&self.store);
         read_tail(&store.db, &self.stream)
     }
@@ -473,19 +587,39 @@ impl Journal {
         *guard(&self.hook) = hook;
     }
 
-    /// Calls the hook at `p`; a refusal before the COMMIT is an injected `append_failed`.
-    fn at(&self, p: CrashPoint) -> Result<(), JournalError> {
+    /// True once a COMMIT's outcome is unknown; only a reopen clears it.
+    pub fn is_poisoned(&self) -> bool {
+        self.poisoned.load(AtomicOrdering::SeqCst)
+    }
+
+    fn check_poison(&self) -> Result<(), JournalError> {
+        if self.is_poisoned() {
+            return Err(JournalError::AppendFailed(
+                "journal poisoned: an earlier COMMIT failed with an unknown outcome; reopen the project".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Calls the hook at `p`: `false` means the hook refused.
+    fn hook_refuses(&self, p: CrashPoint) -> bool {
         #[cfg(feature = "test-hooks")]
         {
             let hook = guard(&self.hook).clone();
             if let Some(h) = hook {
-                if !h(p) && p.before_commit() {
-                    return Err(JournalError::AppendFailed(format!("injected fault at {}", p.as_str())));
-                }
+                return !h(p);
             }
         }
         #[cfg(not(feature = "test-hooks"))]
         let _ = p;
+        false
+    }
+
+    /// Calls the hook at `p`; a refusal before the COMMIT is an injected `append_failed`.
+    fn at(&self, p: CrashPoint) -> Result<(), JournalError> {
+        if self.hook_refuses(p) && p.before_commit() {
+            return Err(JournalError::AppendFailed(format!("injected fault at {}", p.as_str())));
+        }
         Ok(())
     }
 
@@ -512,7 +646,7 @@ impl Journal {
     /// Appends one entry (see the module documentation for the pinned rules).
     pub fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError> {
         self.precheck(&req)?;
-        self.at(CrashPoint::Enqueued)?;
+        self.at(CrashPoint::Prechecked)?;
         let mut q = guard(&self.queue);
         while q.waiting.len() >= MAX_QUEUE {
             q = self.changed.wait(q).unwrap_or_else(PoisonError::into_inner);
@@ -556,6 +690,9 @@ impl Journal {
             batch.iter().map(|p| (p.ticket, Err(e.clone()))).collect()
         };
         let store = guard(&self.store);
+        if let Err(e) = self.check_poison() {
+            return fail_all(&batch, &e);
+        }
         if let Err(e) = self.at(CrashPoint::BatchTaken) {
             return fail_all(&batch, &e);
         }
@@ -608,9 +745,24 @@ impl Journal {
             return Ok(outcomes);
         }
         self.at(CrashPoint::BeforeCommit)?;
-        conn.execute_batch("COMMIT").map_err(|e| failed("commit", e))?;
-        let _ = self.at(CrashPoint::Committed);
-        Ok(outcomes)
+        let committed = conn.execute_batch("COMMIT");
+        // A refusal at `Committed` simulates a COMMIT that wrote its frame and then reported
+        // an error (test hook).
+        let injected = self.hook_refuses(CrashPoint::Committed);
+        match committed {
+            Ok(()) if !injected => Ok(outcomes),
+            other => {
+                // Outcome unknown: the batch may be durable. Poison until a reopen.
+                self.poisoned.store(true, AtomicOrdering::SeqCst);
+                let why = match other {
+                    Err(e) => e.to_string(),
+                    Ok(()) => "injected fault at committed".to_string(),
+                };
+                Err(JournalError::AppendFailed(format!(
+                    "commit failed, outcome unknown until the project is reopened: {why}"
+                )))
+            }
+        }
     }
 
     /// One request inside the batch transaction. Outer `Err`: abort the batch. Inner
@@ -634,14 +786,19 @@ impl Journal {
                 return Ok(Err(JournalError::HeadMoved { expected, found: prev }));
             }
         }
+        let Some(at) = utc_instant(&req.draft.time.utc) else {
+            return Ok(Err(JournalError::Schema(format!(
+                "draft.time.utc {:?} is not a valid RFC 3339 UTC instant",
+                req.draft.time.utc
+            ))));
+        };
+        let now = self.clock.now();
+        if too_far_ahead(at, now) {
+            return Ok(Err(JournalError::TimeAhead { entry: req.draft.time.utc.clone(), now_unix: now.as_secs() }));
+        }
         if let Some(t) = tail {
             match utc_order(&req.draft.time.utc, &t.utc) {
-                None => {
-                    return Ok(Err(JournalError::Schema(format!(
-                        "draft.time.utc {:?} is not an RFC 3339 UTC instant",
-                        req.draft.time.utc
-                    ))))
-                }
+                None => return Ok(Err(JournalError::ChainInvalid(format!("tail time {:?} is not valid", t.utc)))),
                 Some(Ordering::Less) => {
                     return Ok(Err(JournalError::TimeRegressed {
                         head: t.utc.clone(),
@@ -774,6 +931,10 @@ impl Append for Journal {
     fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError> {
         Journal::append(self, req)
     }
+
+    fn tail(&self) -> Result<Option<Tail>, JournalError> {
+        Journal::tail(self)
+    }
 }
 
 /// Reads and verifies the chain tail: the row's columns against its header, the header's
@@ -781,7 +942,7 @@ impl Append for Journal {
 fn read_tail(db: &Database, stream: &str) -> Result<Option<Tail>, JournalError> {
     let conn = db.connection();
     let mut st = conn
-        .prepare("SELECT seq, hash, stream, prev_hash, header FROM entries ORDER BY seq DESC LIMIT 1")
+        .prepare("SELECT seq, hash, stream, branch, kind, prev_hash, header FROM entries ORDER BY seq DESC LIMIT 1")
         .map_err(|e| failed("read tail", e))?;
     let mut rows = st
         .query_map([], |r| {
@@ -789,13 +950,16 @@ fn read_tail(db: &Database, stream: &str) -> Result<Option<Tail>, JournalError> 
                 r.get::<_, i64>(0)?,
                 r.get::<_, String>(1)?,
                 r.get::<_, String>(2)?,
-                r.get::<_, Option<String>>(3)?,
-                r.get::<_, Vec<u8>>(4)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+                r.get::<_, Option<String>>(5)?,
+                r.get::<_, Vec<u8>>(6)?,
             ))
         })
         .map_err(|e| failed("read tail", e))?;
     let Some(row) = rows.next() else { return Ok(None) };
-    let (seq, hash, row_stream, prev, header) = row.map_err(|e| failed("read tail", e))?;
+    let (seq, hash, row_stream, row_branch, row_kind, prev, header) = row.map_err(|e| failed("read tail", e))?;
+    drop(rows);
     let bad = |why: String| JournalError::ChainInvalid(format!("tail entry {seq}: {why}"));
     let seq_u = u64::try_from(seq).map_err(|_| bad("negative sequence".into()))?;
     if row_stream != stream {
@@ -821,12 +985,31 @@ fn read_tail(db: &Database, stream: &str) -> Result<Option<Tail>, JournalError> 
     if text("stream")? != stream {
         return Err(bad("header.stream differs from the row".into()));
     }
+    if text("branch")? != row_branch {
+        return Err(bad("branch column differs from header.branch".into()));
+    }
+    if text("kind")? != row_kind {
+        return Err(bad("kind column differs from header.kind".into()));
+    }
     let header_prev = parse_digest(&text("prev")?).ok_or_else(|| bad("header.prev is not a digest".into()))?;
     if prev.as_deref().and_then(parse_digest) != Some(header_prev) {
         return Err(bad("prev_hash column differs from header.prev".into()));
     }
     if (seq_u == FIRST_SEQ) != (header_prev == GENESIS_PREV) {
         return Err(bad("a zero prev must be exactly at sequence 1".into()));
+    }
+    if seq_u > FIRST_SEQ {
+        // No fork: the tail links to the stored entry just below it (one indexed lookup).
+        let mut below_st = conn.prepare("SELECT hash FROM entries WHERE seq = ?1").map_err(|e| failed("read tail", e))?;
+        let below: Option<String> = below_st
+            .query_map([seq - 1], |r| r.get::<_, String>(0))
+            .map_err(|e| failed("read tail", e))?
+            .next()
+            .transpose()
+            .map_err(|e| failed("read tail", e))?;
+        if below.as_deref().and_then(parse_digest) != Some(header_prev) {
+            return Err(bad(format!("prev does not link to the stored entry {}", seq - 1)));
+        }
     }
     let utc = match o.get("time") {
         Some(CValue::Obj(t)) => match t.get("utc") {
