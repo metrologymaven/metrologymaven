@@ -18,7 +18,7 @@ use fid_bus::principal::{
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::{EntryDraft, EntryTime, Manifests};
 use fid_registry::CommandDef;
-use fid_store::settings::{FileStore, Scope, SettingsRegistry, Sources};
+use fid_store::settings::{encode_record, FileStore, ProjectValues, Scope, SettingsRegistry, Sources};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -250,7 +250,13 @@ impl Tree {
             assert!(self.dirlinks && self.filelinks, "could not create links on Unix");
         }
         #[cfg(windows)]
-        assert!(self.dirlinks, "could not create junctions on Windows");
+        {
+            assert!(self.dirlinks, "could not create junctions on Windows");
+            // In CI the symlink rows must run, never skip silently.
+            if std::env::var_os("CI").is_some() {
+                assert!(self.filelinks, "CI: could not create file symlinks on Windows");
+            }
+        }
     }
 
     fn roots_value(&self) -> CValue {
@@ -547,7 +553,7 @@ fn roots_come_from_the_admin_setting() {
     let machine = FileStore::new(Scope::Machine, machine_path.clone()).unwrap();
     let sources = Sources { project: None, user: &user, machine: &machine };
     // Default: no roots, so every handle is `bad_root`.
-    let (roots, warnings) = Roots::from_settings(&registry, &sources).unwrap();
+    let (roots, warnings) = Roots::from_settings(&sources).unwrap();
     assert!(roots.is_empty() && warnings.is_empty());
 
     let mut values = BTreeMap::new();
@@ -557,7 +563,7 @@ fn roots_come_from_the_admin_setting() {
     doc.insert("values".to_string(), CValue::Obj(values));
     std::fs::create_dir_all(machine_path.parent().unwrap()).unwrap();
     std::fs::write(&machine_path, to_canonical_bytes(&CValue::Obj(doc)).unwrap()).unwrap();
-    let (roots, warnings) = Roots::from_settings(&registry, &sources).unwrap();
+    let (roots, warnings) = Roots::from_settings(&sources).unwrap();
     assert!(warnings.is_empty(), "{warnings:?}");
     assert_eq!(roots.iter().map(|r| r.id().as_str()).collect::<Vec<_>>(), vec!["exports", "imports", "shop"]);
     let mut table = SessionTable::new();
@@ -568,6 +574,44 @@ fn roots_come_from_the_admin_setting() {
         Code::Policy,
         "bad_root",
     );
+}
+
+struct OneProjectRow(Vec<u8>);
+
+impl ProjectValues for OneProjectRow {
+    fn working_branch(&self) -> &str {
+        "main"
+    }
+    fn record(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
+        Ok((key == ROOTS_KEY).then(|| self.0.clone()))
+    }
+}
+
+fn settings_file(path: &Path, value: CValue) {
+    let mut values = BTreeMap::new();
+    values.insert(ROOTS_KEY.to_string(), value);
+    let mut doc = BTreeMap::new();
+    doc.insert("format".to_string(), CValue::Str("fid-settings/1".into()));
+    doc.insert("values".to_string(), CValue::Obj(values));
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, to_canonical_bytes(&CValue::Obj(doc)).unwrap()).unwrap();
+}
+
+/// Roots come only from the admin, machine-scope setting: a `bus.fs_roots` value stored at user
+/// or project scope is ignored with a warning, and no root comes from it.
+#[test]
+fn roots_at_user_or_project_scope_are_ignored() {
+    let tree = Tree::new();
+    let user_path = tree.p("cfg/user/settings.json");
+    settings_file(&user_path, tree.roots_value());
+    let user = FileStore::new(Scope::User, user_path).unwrap();
+    let machine = FileStore::new(Scope::Machine, tree.p("cfg/machine/settings.json")).unwrap();
+    let project = OneProjectRow(encode_record(Some(&tree.roots_value())).unwrap());
+    let sources = Sources { project: Some(&project), user: &user, machine: &machine };
+    let (roots, warnings) = Roots::from_settings(&sources).unwrap();
+    assert!(roots.is_empty(), "{roots:?}");
+    let scopes: Vec<Scope> = warnings.iter().map(|w| w.scope).collect();
+    assert!(scopes.contains(&Scope::User) && scopes.contains(&Scope::Project), "{warnings:?}");
 }
 
 #[test]
@@ -644,11 +688,11 @@ fn swapped_file_is_caught_at_open() {
     assert_reason(read.open_read(), Code::Policy, "outside_root");
 }
 
-/// Unix: a hard link inside the root to a file outside it shares that file's data; a file with
-/// more than one link is refused at resolution and at open.
-#[cfg(unix)]
+/// A hard link inside the root to a file outside it shares that file's data; a file with more
+/// than one link is refused at resolution and at open (Unix `st_nlink`, Windows
+/// `nNumberOfLinks`).
 #[test]
-fn hard_links_are_refused_on_unix() {
+fn hard_links_are_refused() {
     let tree = Tree::new();
     let mut table = SessionTable::new();
     let agent = principal_as(&mut table, PrincipalKind::Agent);
@@ -660,6 +704,42 @@ fn hard_links_are_refused_on_unix() {
     let r = resolve(&agent, &read_def(), "source", "root:imports/later.stl", &tree.roots()).unwrap();
     std::fs::hard_link(tree.p("imports/later.stl"), tree.p("outside/later.stl")).unwrap();
     assert_reason(r.open_read(), Code::Policy, "outside_root");
+}
+
+/// The final component swapped after resolution for a link to another file inside the root
+/// with another extension: the open does not follow it, so the checked name stays
+/// authoritative for the extension rule.
+#[test]
+fn final_component_swapped_for_inside_link_is_refused() {
+    let tree = Tree::new();
+    if !tree.filelinks {
+        return;
+    }
+    let mut table = SessionTable::new();
+    let agent = principal_as(&mut table, PrincipalKind::Agent);
+    file(&tree.p("imports/swapext.stl"), "stl");
+    let read = resolve(&agent, &read_def(), "source", "root:imports/swapext.stl", &tree.roots()).unwrap();
+    std::fs::remove_file(tree.p("imports/swapext.stl")).unwrap();
+    assert!(file_link(&tree.p("imports/swapext.stl"), "notes.txt"));
+    assert_reason(read.open_read(), Code::Policy, "outside_root");
+}
+
+/// Nested `path_like` declarations cannot be checked, so the command is refused.
+#[test]
+fn nested_path_like_is_refused() {
+    let json = r#"{"id":"test.nested","major":1,"title":"Test command","description":"Nested file parameter.",
+"params_schema":{"type":"object","properties":{"opts":{"type":"object","properties":{"file":{"type":"string","path_like":true}}}}},
+"result_schema":{"type":"object"},"side_effect":"R1","mcp_projection":"exposed","determinism":"D0","idempotency":"none",
+"fs_effect":"read_root","undo":"head_move","preconditions":[],"effects":["TestDone"],"algorithms":[],"exposure":["cli"],
+"lifecycle":{"state":"active","since":"2026-01-01"},"web":"available","human_only":false}"#;
+    let def = CommandDef::from_value(parse(json.as_bytes()).unwrap()).unwrap();
+    let mut table = SessionTable::new();
+    let agent = principal_as(&mut table, PrincipalKind::Agent);
+    let mut inner = BTreeMap::new();
+    inner.insert("file".to_string(), CValue::Str("/etc/passwd".into()));
+    let mut params = BTreeMap::new();
+    params.insert("opts".to_string(), CValue::Obj(inner));
+    assert_reason(check_raw_paths(&agent, &def, &CValue::Obj(params)), Code::Internal, "invariant_violated");
 }
 
 /// Unix: a FIFO is not a regular file; it is refused without blocking.

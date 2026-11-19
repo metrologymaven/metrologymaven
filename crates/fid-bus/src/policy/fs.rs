@@ -41,29 +41,33 @@
 //!    expanded in place, and a target that leaves the root, crosses into another volume
 //!    namespace or loops more than [`MAX_LINK_HOPS`] times gives `outside_root`. The resolved
 //!    file (read) or folder (write) is then canonicalised by the OS and checked again, on
-//!    canonical components, to lie below the canonical root. On Unix a file to read with more
-//!    than one hard link gives `outside_root`: a hard link may share its data with a file
-//!    outside the root and cannot be told apart by path.
+//!    canonical components, to lie below the canonical root. A file to read with more than one
+//!    hard link gives `outside_root` (Unix `st_nlink`, Windows `nNumberOfLinks` from the open
+//!    handle): a hard link may share its data with a file outside the root and cannot be told
+//!    apart by path.
 //! 6. **Existence**: a file to read must exist (`precondition/false`) and be a regular file
 //!    (`bad_handle` otherwise). For `write_root` the parent folder must exist
 //!    (`precondition/false`) and the target must not (`would_overwrite`, REQ-005); a link of
 //!    that name counts as existing and is never followed.
 //!
 //! **At open.** The checks are repeated when the handler opens the file
-//! ([`ResolvedPath::open_read`], [`ResolvedPath::create_new`]). Both open through the root
-//! folder held open as a capability (`cap_std::fs::Dir`), which refuses any open that would
-//! leave it (`openat2(RESOLVE_BENEATH)` on Linux, a checked walk elsewhere), so a folder swapped
-//! for an escaping link after resolution makes the open fail with `outside_root` instead of
-//! redirecting it. `open_read` refuses a final component that has become a link and re-checks
-//! the opened file (regular file; on Unix one hard link). `create_new` creates with
-//! `O_EXCL`/`CREATE_NEW`, so a file that appears between resolution and open is never
+//! ([`ResolvedPath::open_read`], [`ResolvedPath::create_new`]); `resolve` itself runs the same
+//! open once for a read. Both open through the root folder held open as a capability
+//! (`cap_std::fs::Dir`), which refuses any open that would leave it (`openat2(RESOLVE_BENEATH)`
+//! on Linux, a checked walk elsewhere), so a folder swapped for an escaping link after
+//! resolution makes the open fail with `outside_root` instead of redirecting it. The final
+//! component is opened without following links (`O_NOFOLLOW` on Unix,
+//! `FILE_FLAG_OPEN_REPARSE_POINT` on Windows, where an opened reparse point is then refused),
+//! so the name whose extension was checked is the file that is opened; the opened file is
+//! re-checked (regular file, one hard link). `create_new` creates with `O_EXCL` /
+//! `CREATE_NEW`, so a file or link that appears between resolution and open is never
 //! overwritten (`would_overwrite`).
 //!
-//! **Residual risk** (documented, not closed here): a link swapped in *inside* the root
-//! between resolution and open still resolves inside the root, so containment holds, but the
-//! opened file may then differ from the one whose extension was checked. On Windows, stable
-//! Rust cannot read a file's hard-link count, so a hard link to a file outside the root is not
-//! detected there; creating one needs write access to the target file. Crash-safe writes are
+//! **Residual risk** (documented, not closed here): an intermediate folder swapped after
+//! resolution for a link that stays inside the root is still followed by the capability open,
+//! so the file opened may lie in another folder of the same root (containment and the
+//! extension rule still hold). On Windows, files that are reparse points for other reasons
+//! (cloud placeholders, deduplicated files) are refused (fail closed). Crash-safe writes are
 //! `CORE.STO`'s job.
 //!
 //! A human's raw path must be absolute. It follows links (the person chose it), but the
@@ -72,10 +76,11 @@
 
 use crate::error::{BusError, Detail, InternalReason, PolicyReason, PreconditionReason};
 use crate::principal::{forbidden, Principal, PrincipalKind};
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::fs::Dir;
 use fid_canon::CValue;
 use fid_registry::{CommandDef, FsEffect};
-use fid_store::settings::{resolve as resolve_settings, SettingWarning, SettingsRegistry, Sources};
+use fid_store::settings::{resolve as resolve_settings, Scope, SettingWarning, SettingsRegistry, Sources};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -479,7 +484,16 @@ impl Roots {
     /// value is refused on any error: unknown field, malformed or duplicate ID, unknown kind, a
     /// path that is not absolute or holds NUL, a malformed, empty or duplicate extension list
     /// (compared case-insensitively), or more than [`MAX_ROOTS`] roots.
+    ///
+    /// Test support only: production code reads roots through [`Roots::from_settings`], so a
+    /// root never comes from anywhere but the admin setting.
+    #[cfg(any(test, feature = "test-support"))]
+    #[doc(hidden)]
     pub fn from_value(v: &CValue) -> Result<Roots, RootsError> {
+        Roots::parse_value(v)
+    }
+
+    fn parse_value(v: &CValue) -> Result<Roots, RootsError> {
         let err = |s: &str| Err(RootsError(s.to_string()));
         let CValue::Arr(items) = v else { return err("must be an array") };
         if items.len() > MAX_ROOTS {
@@ -519,20 +533,22 @@ impl Roots {
     }
 
     /// Reads [`ROOTS_KEY`] through the settings layer (CORE.STO.SET, read only), with the
-    /// warnings of the read. Fails if the key is not declared or not declared as an admin
-    /// setting, or its value is refused by [`Roots::from_value`].
-    pub fn from_settings(
-        registry: &SettingsRegistry,
-        sources: &Sources<'_>,
-    ) -> Result<(Roots, Vec<SettingWarning>), RootsError> {
+    /// warnings of the read. The declaration is this module's own ([`fs_settings`]: admin,
+    /// machine scope only), never one supplied by the caller, so a value stored at user or
+    /// project scope is ignored (with a `scope_not_allowed` warning). Fails if the value is
+    /// malformed (see the parser's rules: unknown field, malformed or duplicate ID, unknown
+    /// kind, a path that is not absolute or holds NUL, a malformed, empty or duplicate
+    /// extension list, more than [`MAX_ROOTS`] roots).
+    pub fn from_settings(sources: &Sources<'_>) -> Result<(Roots, Vec<SettingWarning>), RootsError> {
+        let registry = SettingsRegistry::build(&fs_settings())
+            .map_err(|_| RootsError("the built-in declaration does not build".into()))?;
         match registry.get(ROOTS_KEY) {
-            Some(d) if d.admin() => {}
-            Some(_) => return Err(RootsError("declared without the admin flag".into())),
-            None => return Err(RootsError("not declared".into())),
+            Some(d) if d.admin() && !d.allows(Scope::User) && !d.allows(Scope::Project) => {}
+            _ => return Err(RootsError("the built-in declaration is not an admin machine setting".into())),
         }
-        let (values, warnings) = resolve_settings(registry, sources, |d| d.key() == ROOTS_KEY);
+        let (values, warnings) = resolve_settings(&registry, sources, |d| d.key() == ROOTS_KEY);
         let value = values.into_iter().find(|r| r.key == ROOTS_KEY).ok_or_else(|| RootsError("not resolved".into()))?;
-        Ok((Roots::from_value(&value.value)?, warnings))
+        Ok((Roots::parse_value(&value.value)?, warnings))
     }
 
     /// The root with this ID.
@@ -601,7 +617,31 @@ impl Access {
     }
 }
 
-/// The top-level parameters of `def` declared `"path_like": true`, in key order.
+/// Number of `"path_like": true` keywords anywhere in `v`.
+fn count_path_like(v: &CValue) -> usize {
+    match v {
+        CValue::Obj(o) => {
+            let here = usize::from(o.get(PATH_LIKE_KEYWORD) == Some(&CValue::Bool(true)));
+            here + o.values().map(count_path_like).sum::<usize>()
+        }
+        CValue::Arr(a) => a.iter().map(count_path_like).sum(),
+        _ => 0,
+    }
+}
+
+/// Refuses a command whose parameter schema declares `path_like` anywhere but on a top-level
+/// property: nested file parameters are not supported, so they could not be checked
+/// (`internal/invariant_violated`, fail closed).
+fn no_nested_path_like(def: &CommandDef) -> Result<(), BusError> {
+    if count_path_like(&def.params_schema) == path_like_params(def).len() {
+        Ok(())
+    } else {
+        Err(invariant("the command declares a nested path_like parameter, which the bus cannot check"))
+    }
+}
+
+/// The top-level parameters of `def` declared `"path_like": true`, in key order. Nested
+/// `path_like` declarations are refused by [`check_raw_paths`] and [`resolve`].
 pub fn path_like_params(def: &CommandDef) -> Vec<String> {
     let Some(CValue::Obj(props)) = (match &def.params_schema {
         CValue::Obj(o) => o.get("properties"),
@@ -661,8 +701,10 @@ fn raw_refused(kind: PrincipalKind) -> BusError {
 
 /// REQ-001 for a whole call: every `path_like` parameter present in `params` must hold a string,
 /// and, for any principal but `human`, a handle. Commits nothing; run it before anything else.
-/// Errors: `policy/raw_path_refused`, `policy/bad_handle` (a non-string value).
+/// Errors: `policy/raw_path_refused`, `policy/bad_handle` (a non-string value);
+/// `internal/invariant_violated` for a nested `path_like` declaration.
 pub fn check_raw_paths(principal: &Principal, def: &CommandDef, params: &CValue) -> Result<(), BusError> {
+    no_nested_path_like(def)?;
     let CValue::Obj(values) = params else { return Ok(()) };
     for name in path_like_params(def) {
         match values.get(&name) {
@@ -721,38 +763,16 @@ impl ResolvedPath {
         self.access
     }
 
-    /// Opens the resolved file for reading through the held root folder. Fails with
-    /// `outside_root` if a component now leads outside the root or the file itself has become a
-    /// link (or, on Unix, has more than one hard link), `bad_handle` if it is no longer a regular
-    /// file, `precondition/false` if it is gone. Only for `read_root`.
+    /// Opens the resolved file for reading through the held root folder, without following a
+    /// link at the final component. Fails with `outside_root` if a component now leads outside
+    /// the root, the file itself has become a link or other reparse point, or it has more than
+    /// one hard link; `bad_handle` if it is no longer a regular file; `precondition/false` if
+    /// it is gone. Only for `read_root`.
     pub fn open_read(&self) -> Result<File, BusError> {
         if self.access != Access::Read {
             return Err(invariant("open_read on a write_root path"));
         }
-        let meta = self.dir.symlink_metadata(&self.rel).map_err(|e| io_refusal(&e))?;
-        if meta.file_type().is_symlink() {
-            return Err(outside("the file became a link after resolution"));
-        }
-        if !meta.is_file() {
-            return Err(bad_handle("the handle does not name a regular file"));
-        }
-        let mut opts = cap_std::fs::OpenOptions::new();
-        opts.read(true);
-        #[cfg(unix)]
-        {
-            use cap_std::fs::OpenOptionsExt;
-            // Never block on a FIFO swapped in after the check; never adopt a terminal.
-            opts.custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY);
-        }
-        let file = self.dir.open_with(&self.rel, &opts).map_err(|e| io_refusal(&e))?.into_std();
-        let meta = file.metadata().map_err(|e| storage(&e))?;
-        if !meta.is_file() {
-            return Err(bad_handle("the handle does not name a regular file"));
-        }
-        if self.root.is_some() && hard_linked(&meta) {
-            return Err(outside("the file has more than one hard link"));
-        }
-        Ok(file)
+        open_checked(&self.dir, &self.rel, self.root.is_some())
     }
 
     /// Creates the resolved file for writing through the held root folder. It must not exist:
@@ -765,20 +785,103 @@ impl ResolvedPath {
         }
         let mut opts = cap_std::fs::OpenOptions::new();
         opts.write(true).create_new(true);
-        self.dir.open_with(&self.rel, &opts).map(cap_std::fs::File::into_std).map_err(|e| io_refusal(&e))
+        OpenOptionsFollowExt::follow(&mut opts, FollowSymlinks::No);
+        self.dir.open_with(&self.rel, &opts).map(cap_std::fs::File::into_std).map_err(|e| {
+            // Whatever the error, something now at the target means the create would overwrite.
+            if self.dir.symlink_metadata(&self.rel).is_ok() && !is_escape(&e) {
+                policy(PolicyReason::WouldOverwrite, "the target already exists; write_root never overwrites")
+            } else {
+                io_refusal(&e)
+            }
+        })
     }
 }
 
-#[cfg(unix)]
-fn hard_linked(meta: &std::fs::Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    meta.nlink() > 1
+/// Opens `rel` below `dir` for reading: a regular file, not followed if it is a link
+/// (`O_NOFOLLOW` on Unix; `FILE_FLAG_OPEN_REPARSE_POINT` on Windows, then refused if the opened
+/// file is a reparse point), so the name whose extension was checked is the file opened. With
+/// `root_bound`, a file with more than one hard link is refused (`outside_root`).
+fn open_checked(dir: &Dir, rel: &Path, root_bound: bool) -> Result<File, BusError> {
+    let meta = dir.symlink_metadata(rel).map_err(|e| io_refusal(&e))?;
+    if meta.file_type().is_symlink() {
+        return Err(outside("the file is a link"));
+    }
+    if !meta.is_file() {
+        return Err(bad_handle("the handle does not name a regular file"));
+    }
+    let mut opts = cap_std::fs::OpenOptions::new();
+    opts.read(true);
+    OpenOptionsFollowExt::follow(&mut opts, FollowSymlinks::No);
+    #[cfg(unix)]
+    {
+        use cap_std::fs::OpenOptionsExt;
+        // Never block on a FIFO swapped in after the check; never adopt a terminal.
+        opts.custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY);
+    }
+    let file = match dir.open_with(rel, &opts) {
+        Ok(f) => f.into_std(),
+        Err(e) if is_link_refusal(&e) => return Err(outside("the file became a link")),
+        Err(e) => return Err(io_refusal(&e)),
+    };
+    let meta = file.metadata().map_err(|e| storage(&e))?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return Err(outside("the opened file is not a plain regular file"));
+    }
+    let links = handle_info(&file)?;
+    if links.reparse_point {
+        return Err(outside("the opened file is a reparse point"));
+    }
+    if root_bound && links.count > 1 {
+        return Err(outside("the file has more than one hard link"));
+    }
+    Ok(file)
 }
 
-/// Stable Rust has no hard-link count on Windows; see the module's residual risks.
-#[cfg(not(unix))]
-fn hard_linked(_meta: &std::fs::Metadata) -> bool {
-    false
+/// `ELOOP` (or FreeBSD/NetBSD's `EMLINK`) from an `O_NOFOLLOW` open of a link.
+fn is_link_refusal(e: &io::Error) -> bool {
+    #[cfg(unix)]
+    {
+        matches!(e.raw_os_error(), Some(c) if c == libc::ELOOP || c == libc::EMLINK)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = e;
+        false
+    }
+}
+
+/// What the open handle says about links.
+struct HandleInfo {
+    /// The hard-link count.
+    count: u64,
+    /// The file is a reparse point (Windows); never on Unix.
+    reparse_point: bool,
+}
+
+#[cfg(unix)]
+fn handle_info(file: &File) -> Result<HandleInfo, BusError> {
+    use std::os::unix::fs::MetadataExt;
+    let meta = file.metadata().map_err(|e| storage(&e))?;
+    Ok(HandleInfo { count: meta.nlink(), reparse_point: false })
+}
+
+/// `FILE_ATTRIBUTE_REPARSE_POINT`.
+#[cfg(windows)]
+const FILE_ATTRIBUTE_REPARSE_POINT: u64 = 0x400;
+
+#[cfg(windows)]
+fn handle_info(file: &File) -> Result<HandleInfo, BusError> {
+    let info = winx::winapi_util::file::information(file).map_err(|e| storage(&e))?;
+    Ok(HandleInfo {
+        count: info.number_of_links(),
+        reparse_point: info.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0,
+    })
+}
+
+/// Other platforms: no link count is available, so fail closed.
+#[cfg(not(any(unix, windows)))]
+fn handle_info(_file: &File) -> Result<HandleInfo, BusError> {
+    Err(invariant("file handles are not supported on this platform"))
 }
 
 /// Resolves the value of the `path_like` parameter `param` of the command `def` for
@@ -795,6 +898,7 @@ pub fn resolve(
     value: &str,
     roots: &Roots,
 ) -> Result<ResolvedPath, BusError> {
+    no_nested_path_like(def)?;
     let allowed = param_extensions(def, param)?;
     let kind = principal.kind();
     let access = Access::from_fs_effect(def.fs_effect);
@@ -828,14 +932,9 @@ pub fn resolve(
             if !strictly_below(&full, &root_key) {
                 return Err(outside("the file resolves outside its approved root"));
             }
-            let meta = dir.symlink_metadata(&rel).map_err(|e| io_refusal(&e))?;
-            if !meta.is_file() {
-                return Err(bad_handle("the handle does not name a regular file"));
-            }
-            let file_meta = std::fs::metadata(&full).map_err(|e| io_refusal(&e))?;
-            if hard_linked(&file_meta) {
-                return Err(outside("the file has more than one hard link"));
-            }
+            // The same checks the handler's open repeats: regular file, not a link or reparse
+            // point, one hard link.
+            drop(open_checked(&dir, &rel, true)?);
             Ok(ResolvedPath { dir, rel, root: Some(handle.root), access })
         }
         Access::Write => {

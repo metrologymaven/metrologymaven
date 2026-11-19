@@ -23,10 +23,18 @@ fid-store = { path = "../fid-store" }
 # CORE.BUS.POL.FS opens resolved files through the root folder held as a capability, so an open
 # cannot leave the root (no `unsafe` here; decision D-041, as fid-io-reg). Already in the lock.
 cap-std = "3.4"
+# CORE.BUS.POL.FS opens the final component without following links (`O_NOFOLLOW`,
+# `FILE_FLAG_OPEN_REPARSE_POINT`); the companion crate of cap-std.
+cap-fs-ext = "3.4"
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only (CORE.BUS.POL.FS). Already in the lock.
 libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+# CORE.BUS.POL.FS reads a file's hard-link count and attributes from its handle
+# (`GetFileInformationByHandle`), which stable std does not expose. Already in the lock via cap-std.
+winx = "0.36"
 
 [features]
 # `ValidParams::for_tests` for this crate's integration tests; never enabled by other crates.
