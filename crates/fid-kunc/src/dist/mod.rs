@@ -247,7 +247,7 @@ impl Distribution {
         let u = a.unit;
         let (a, b, c) = (param("a", a, u)?, param("b", b, u)?, param("c", c, u)?);
         interval(a, b)?;
-        if !(a <= c && c <= b) {
+        if !(a..=b).contains(&c) {
             return Err(bad("c"));
         }
         Ok(Distribution { params: Params::Tri { a, b, c }, unit: u })
