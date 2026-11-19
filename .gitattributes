@@ -125,6 +125,9 @@ fixtures/geo/types/** -text
 fixtures/core/rpl/exec/subst/** -text
 # CORE.STO.SQL.TXN hand-labelled commit cases: read byte for byte, never convert line endings.
 fixtures/core/sto/sql/txn/** -text
+# KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
+# of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
+fixtures/man/implclosure-ws-v1/** -text
 # GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.

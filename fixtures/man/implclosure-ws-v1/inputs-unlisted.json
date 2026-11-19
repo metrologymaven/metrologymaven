@@ -1,0 +1,27 @@
+{
+  "algorithms": [
+    "stat.mean.basic@2.0.0",
+    "fit.plane.lsq@1.10.0",
+    "geo.point.dist@1.2.0"
+  ],
+  "registrations": [
+    {
+      "algorithm": "geo.point.dist@1.2.0",
+      "crate": "kgeo"
+    },
+    {
+      "algorithm": "fit.plane.lsq@1.10.0",
+      "crate": "kfit"
+    },
+    {
+      "algorithm": "stat.mean.basic@2.0.0",
+      "crate": "kstat"
+    }
+  ],
+  "allowlist": [
+    "kfit",
+    "kgeo",
+    "knum",
+    "kstat"
+  ]
+}
