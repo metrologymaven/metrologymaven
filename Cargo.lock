@@ -605,6 +605,10 @@ dependencies = [
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-index",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
  "fid-testkit",
 ]
 

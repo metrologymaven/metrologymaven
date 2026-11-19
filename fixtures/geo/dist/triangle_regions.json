@@ -1,0 +1,9055 @@
+{
+ "about": "GEO.DIST.MESH AC-2. Written by tools/fixtures/geo_dist.py; never edit by hand. CC-BY-4.0. Numbers are binary64 bit patterns in hex. feature: 0-2 vertex, 3-5 edge (a-b, b-c, c-a), 6 interior. foot and dist2: the exact rational values rounded to nearest; model: the bit-exact pinned algorithm. Worst model foot error / triangle size: 2.024e-16 (limit 1e-15).",
+ "triangles": [
+  {
+   "a": [
+    "bfc75a309e7b8b08",
+    "bfcca37479afe790",
+    "bfe0541483e695fa"
+   ],
+   "b": [
+    "3fe0e0a17f102d7a",
+    "3feed918f5165918",
+    "3fee3c5209605376"
+   ],
+   "c": [
+    "bfc9a9e2a4ce2c00",
+    "3feb5c6d47580a84",
+    "bfb898bafc85a6f0"
+   ],
+   "queries": [
+    {
+     "dist2": "40024c800520c600",
+     "feature": 0,
+     "foot": [
+      "bfc75a309e7b8b08",
+      "bfcca37479afe790",
+      "bfe0541483e695fa"
+     ],
+     "model": {
+      "dist2": "40024c800520c600",
+      "feature": 0,
+      "foot": [
+       "bfc75a309e7b8b08",
+       "bfcca37479afe790",
+       "bfe0541483e695fa"
+      ]
+     },
+     "p": [
+      "bff31bb59d49e18c",
+      "bff58f1d61d43ee1",
+      "bfe143f9f339df69"
+     ]
+    },
+    {
+     "dist2": "400d7522eef49993",
+     "feature": 1,
+     "foot": [
+      "3fe0e0a17f102d7a",
+      "3feed918f5165918",
+      "3fee3c5209605376"
+     ],
+     "model": {
+      "dist2": "400d7522eef49992",
+      "feature": 1,
+      "foot": [
+       "3fe0e0a17f102d7a",
+       "3feed918f5165918",
+       "3fee3c5209605376"
+      ]
+     },
+     "p": [
+      "3ff374dab63063e9",
+      "3ff90e94b7a6d6ba",
+      "40050dcbaa0974e8"
+     ]
+    },
+    {
+     "dist2": "400a72ec221b2bd4",
+     "feature": 2,
+     "foot": [
+      "bfc9a9e2a4ce2c00",
+      "3feb5c6d47580a84",
+      "bfb898bafc85a6f0"
+     ],
+     "model": {
+      "dist2": "400a72ec221b2bd4",
+      "feature": 2,
+      "foot": [
+       "bfc9a9e2a4ce2c00",
+       "3feb5c6d47580a84",
+       "bfb898bafc85a6f0"
+      ]
+     },
+     "p": [
+      "bffd069ea0e4aeee",
+      "3ffb13a30e8ff774",
+      "bfae72164c8c8630"
+     ]
+    },
+    {
+     "dist2": "4010832964790037",
+     "feature": 3,
+     "foot": [
+      "3fb4cfb82a77e3c9",
+      "3fcbd86dfe73fb41",
+      "3f9f168c8e2d2245"
+     ],
+     "model": {
+      "dist2": "4010832964790037",
+      "feature": 3,
+      "foot": [
+       "3fb4cfb82a77e3d0",
+       "3fcbd86dfe73fb46",
+       "3f9f168c8e2d2280"
+      ]
+     },
+     "p": [
+      "3fe6671f29fe234a",
+      "bff6b27497cdb039",
+      "3ff105f7e5472b40"
+     ]
+    },
+    {
+     "dist2": "3ff936d8c9e94a48",
+     "feature": 4,
+     "foot": [
+      "3fc2f658322564a1",
+      "3fed07f9d4ed899c",
+      "3fd9c24f5b2ec172"
+     ],
+     "model": {
+      "dist2": "3ff936d8c9e94a48",
+      "feature": 4,
+      "foot": [
+       "3fc2f658322564a0",
+       "3fed07f9d4ed899c",
+       "3fd9c24f5b2ec170"
+      ]
+     },
+     "p": [
+      "bfeb3fb8dc5bec16",
+      "3ff487e6dee1e776",
+      "3ff0feb604268baa"
+     ]
+    },
+    {
+     "dist2": "401713c9b7f45d72",
+     "feature": 5,
+     "foot": [
+      "bfc84dcc1b7a704e",
+      "3fcc362d16c87118",
+      "bfd5be4cd6170998"
+     ],
+     "model": {
+      "dist2": "401713c9b7f45d71",
+      "feature": 5,
+      "foot": [
+       "bfc84dcc1b7a704e",
+       "3fcc362d16c87118",
+       "bfd5be4cd6170998"
+      ]
+     },
+     "p": [
+      "c003c259e90f26aa",
+      "3fdd4a04787f4128",
+      "bff0e9acad34ffc5"
+     ]
+    },
+    {
+     "dist2": "3ff8cc931eec739e",
+     "feature": 6,
+     "foot": [
+      "bfb3de5b29be6225",
+      "3fe55a53b2039d7e",
+      "bf714e8816f65642"
+     ],
+     "model": {
+      "dist2": "3ff8cc931eec739e",
+      "feature": 6,
+      "foot": [
+       "bfb3de5b29be6221",
+       "3fe55a53b2039d7e",
+       "bf714e8816f655c0"
+      ]
+     },
+     "p": [
+      "bff0e226bd2a9906",
+      "3fd81cf03ae13860",
+      "3fe6b6c180a2a08d"
+     ]
+    }
+   ],
+   "size": "4000105cc79d17ab"
+  },
+  {
+   "a": [
+    "3fed61c3690813b6",
+    "3fd0cd97e8a905e4",
+    "bfd5fbb73f88eee4"
+   ],
+   "b": [
+    "bfaabab1b983bf20",
+    "bfd22c3f634aecc8",
+    "bfe69233c7b02d66"
+   ],
+   "c": [
+    "3fc122167ee75d30",
+    "3fe075f92fc84f32",
+    "3fe15e0dbc6c0e54"
+   ],
+   "queries": [
+    {
+     "dist2": "400d17ced192ddf5",
+     "feature": 0,
+     "foot": [
+      "3fed61c3690813b6",
+      "3fd0cd97e8a905e4",
+      "bfd5fbb73f88eee4"
+     ],
+     "model": {
+      "dist2": "400d17ced192ddf6",
+      "feature": 0,
+      "foot": [
+       "3fed61c3690813b6",
+       "3fd0cd97e8a905e4",
+       "bfd5fbb73f88eee4"
+      ]
+     },
+     "p": [
+      "40051aa668cbe104",
+      "3fe921c4f5a877fa",
+      "bfef5e3c2dddd666"
+     ]
+    },
+    {
+     "dist2": "3ff08b99b9e3349e",
+     "feature": 1,
+     "foot": [
+      "bfaabab1b983bf20",
+      "bfd22c3f634aecc8",
+      "bfe69233c7b02d66"
+     ],
+     "model": {
+      "dist2": "3ff08b99b9e3349f",
+      "feature": 1,
+      "foot": [
+       "bfaabab1b983bf20",
+       "bfd22c3f634aecc8",
+       "bfe69233c7b02d66"
+      ]
+     },
+     "p": [
+      "bfca2d075a8276cc",
+      "bff49613be5ee015",
+      "bfe8f1e8175741bc"
+     ]
+    },
+    {
+     "dist2": "40165f534f34f65f",
+     "feature": 2,
+     "foot": [
+      "3fc122167ee75d30",
+      "3fe075f92fc84f32",
+      "3fe15e0dbc6c0e54"
+     ],
+     "model": {
+      "dist2": "40165f534f34f65f",
+      "feature": 2,
+      "foot": [
+       "3fc122167ee75d30",
+       "3fe075f92fc84f32",
+       "3fe15e0dbc6c0e54"
+      ]
+     },
+     "p": [
+      "bfe984c3394c6295",
+      "4002ccd9954a3e67",
+      "3ffb51233627b6b0"
+     ]
+    },
+    {
+     "dist2": "3fe236d8a6fe1d05",
+     "feature": 3,
+     "foot": [
+      "3fe01e2b51266f39",
+      "3f9dcf770b2180e2",
+      "bfdfe026a76bb78e"
+     ],
+     "model": {
+      "dist2": "3fe236d8a6fe1d05",
+      "feature": 3,
+      "foot": [
+       "3fe01e2b51266f38",
+       "3f9dcf770b2180e0",
+       "bfdfe026a76bb78e"
+      ]
+     },
+     "p": [
+      "3fe8e24dff360aee",
+      "3f803e938503ab50",
+      "bff3360c7928b256"
+     ]
+    },
+    {
+     "dist2": "40000c5b128cf74f",
+     "feature": 4,
+     "foot": [
+      "3fb72d4935fb51a6",
+      "3fd5069f624fb9e1",
+      "3fd0234b93ecd1a3"
+     ],
+     "model": {
+      "dist2": "40000c5b128cf74e",
+      "feature": 4,
+      "foot": [
+       "3fb72d4935fb51a6",
+       "3fd5069f624fb9e2",
+       "3fd0234b93ecd1a4"
+      ]
+     },
+     "p": [
+      "bff4fc5a80e1a23b",
+      "3fe01bf263e88356",
+      "3fd65b29e8f28bff"
+     ]
+    },
+    {
+     "dist2": "3ff14f6b5ad73ce2",
+     "feature": 5,
+     "foot": [
+      "3fdc4b0eca951f99",
+      "3fda965cc77c4e5a",
+      "3fc8e424e0a5f3c8"
+     ],
+     "model": {
+      "dist2": "3ff14f6b5ad73ce2",
+      "feature": 5,
+      "foot": [
+       "3fdc4b0eca951f99",
+       "3fda965cc77c4e5a",
+       "3fc8e424e0a5f3c8"
+      ]
+     },
+     "p": [
+      "3ff1bee15f0f8888",
+      "3ff1c30a595664be",
+      "3fe2cbc373da4c34"
+     ]
+    },
+    {
+     "dist2": "3fd7c94009b99704",
+     "feature": 6,
+     "foot": [
+      "3fbb7b93aae3db08",
+      "3fa3f3b3346b5862",
+      "bfcff87b262c1323"
+     ],
+     "model": {
+      "dist2": "3fd7c94009b99704",
+      "feature": 6,
+      "foot": [
+       "3fbb7b93aae3db0c",
+       "3fa3f3b3346b585e",
+       "bfcff87b262c1326"
+      ]
+     },
+     "p": [
+      "bfb0d9b3031e4412",
+      "3fe15e33e0df8831",
+      "bfe17a82c76d8bf2"
+     ]
+    }
+   ],
+   "size": "3ff7e4324b59f513"
+  },
+  {
+   "a": [
+    "bfeedf501c8c780e",
+    "bfd45c82e75840a0",
+    "3fee7521d03d5f42"
+   ],
+   "b": [
+    "3fc18083db7f5090",
+    "3fe63c7fd1d1339e",
+    "3fd5f8c12090c800"
+   ],
+   "c": [
+    "bfc6f68ed5801808",
+    "bfd31502f17b8934",
+    "bfb19fe42fc31a20"
+   ],
+   "queries": [
+    {
+     "dist2": "401251a7c3bdcc3e",
+     "feature": 0,
+     "foot": [
+      "bfeedf501c8c780e",
+      "bfd45c82e75840a0",
+      "3fee7521d03d5f42"
+     ],
+     "model": {
+      "dist2": "401251a7c3bdcc3e",
+      "feature": 0,
+      "foot": [
+       "bfeedf501c8c780e",
+       "bfd45c82e75840a0",
+       "3fee7521d03d5f42"
+      ]
+     },
+     "p": [
+      "bfea59e1d57d5220",
+      "bff87b31c648c3ce",
+      "4005adec63478a17"
+     ]
+    },
+    {
+     "dist2": "3fda1e78f8aa08c5",
+     "feature": 1,
+     "foot": [
+      "3fc18083db7f5090",
+      "3fe63c7fd1d1339e",
+      "3fd5f8c12090c800"
+     ],
+     "model": {
+      "dist2": "3fda1e78f8aa08c6",
+      "feature": 1,
+      "foot": [
+       "3fc18083db7f5090",
+       "3fe63c7fd1d1339e",
+       "3fd5f8c12090c800"
+      ]
+     },
+     "p": [
+      "3fe3aecbca529364",
+      "3ff1a34eb3fc097e",
+      "3fdd564d5e80efa4"
+     ]
+    },
+    {
+     "dist2": "3fc35c15138190f6",
+     "feature": 2,
+     "foot": [
+      "bfc6f68ed5801808",
+      "bfd31502f17b8934",
+      "bfb19fe42fc31a20"
+     ],
+     "model": {
+      "dist2": "3fc35c15138190f6",
+      "feature": 2,
+      "foot": [
+       "bfc6f68ed5801808",
+       "bfd31502f17b8934",
+       "bfb19fe42fc31a20"
+      ]
+     },
+     "p": [
+      "3faff06176e7ca3a",
+      "bfe2ba75c4c8ecd2",
+      "bfc5d76ddb3c7f08"
+     ]
+    },
+    {
+     "dist2": "40122b22c07d504a",
+     "feature": 3,
+     "foot": [
+      "bfd959eb9d13a931",
+      "3fca37e8ef6fa91d",
+      "3fe467c07871d049"
+     ],
+     "model": {
+      "dist2": "40122b22c07d5049",
+      "feature": 3,
+      "foot": [
+       "bfd959eb9d13a932",
+       "3fca37e8ef6fa91c",
+       "3fe467c07871d049"
+      ]
+     },
+     "p": [
+      "bffc44dbfce1015f",
+      "3ffd2a95255e4214",
+      "3feb34f65b785821"
+     ]
+    },
+    {
+     "dist2": "4002af08ce14589f",
+     "feature": 4,
+     "foot": [
+      "3f9edb0d4832826d",
+      "3fd70aaa86e7ad90",
+      "3fca27662100fb94"
+     ],
+     "model": {
+      "dist2": "4002af08ce14589f",
+      "feature": 4,
+      "foot": [
+       "3f9edb0d48328278",
+       "3fd70aaa86e7ad92",
+       "3fca27662100fb95"
+      ]
+     },
+     "p": [
+      "3f90731f1e5b1360",
+      "3fee63787b8c523d",
+      "bff349bd1f49fcb2"
+     ]
+    },
+    {
+     "dist2": "400481130379c250",
+     "feature": 5,
+     "foot": [
+      "bfe34a843c5337d3",
+      "bfd3c5975e89170f",
+      "3fded03e0b3a512e"
+     ],
+     "model": {
+      "dist2": "400481130379c250",
+      "feature": 5,
+      "foot": [
+       "bfe34a843c5337d3",
+       "bfd3c5975e89170f",
+       "3fded03e0b3a512f"
+      ]
+     },
+     "p": [
+      "bfc02b9d795e51d8",
+      "bffccb2524671466",
+      "3fea34b233707e5a"
+     ]
+    },
+    {
+     "dist2": "3fe47a0877597844",
+     "feature": 6,
+     "foot": [
+      "bfa0dafbcdd4f40d",
+      "3fda06bffaa89c02",
+      "3fd4e6a464340687"
+     ],
+     "model": {
+      "dist2": "3fe47a0877597843",
+      "feature": 6,
+      "foot": [
+       "bfa0dafbcdd4f3f0",
+       "3fda06bffaa89c05",
+       "3fd4e6a464340686"
+      ]
+     },
+     "p": [
+      "3fe12b3f2edfe592",
+      "3fa7c794d4c6bff8",
+      "3fe83f1441b5385c"
+     ]
+    }
+   ],
+   "size": "3ff9d90427f1e152"
+  },
+  {
+   "a": [
+    "bfed02993a5546be",
+    "3feb05a84f12cc88",
+    "bfd441e92efc9890"
+   ],
+   "b": [
+    "3fb66f2dedfa9fb0",
+    "3fd52b3fa757a4e0",
+    "3f95b90ce2ecdac0"
+   ],
+   "c": [
+    "bfd8a61d41beb988",
+    "bfd34182859828c8",
+    "bfeeec2a97a584fc"
+   ],
+   "queries": [
+    {
+     "dist2": "3fd9e7e8b8d0e417",
+     "feature": 0,
+     "foot": [
+      "bfed02993a5546be",
+      "3feb05a84f12cc88",
+      "bfd441e92efc9890"
+     ],
+     "model": {
+      "dist2": "3fd9e7e8b8d0e417",
+      "feature": 0,
+      "foot": [
+       "bfed02993a5546be",
+       "3feb05a84f12cc88",
+       "bfd441e92efc9890"
+      ]
+     },
+     "p": [
+      "bff45d73429c42b9",
+      "3ff5d40f62a6f396",
+      "bfd59079267d8a2a"
+     ]
+    },
+    {
+     "dist2": "3fe0e4a20828c8d7",
+     "feature": 1,
+     "foot": [
+      "3fb66f2dedfa9fb0",
+      "3fd52b3fa757a4e0",
+      "3f95b90ce2ecdac0"
+     ],
+     "model": {
+      "dist2": "3fe0e4a20828c8d7",
+      "feature": 1,
+      "foot": [
+       "3fb66f2dedfa9fb0",
+       "3fd52b3fa757a4e0",
+       "3f95b90ce2ecdac0"
+      ]
+     },
+     "p": [
+      "3fe2d48e357c852c",
+      "3fd3c8e9179701c2",
+      "3fe18266f5e3c882"
+     ]
+    },
+    {
+     "dist2": "4002f2c7d179600f",
+     "feature": 2,
+     "foot": [
+      "bfd8a61d41beb988",
+      "bfd34182859828c8",
+      "bfeeec2a97a584fc"
+     ],
+     "model": {
+      "dist2": "4002f2c7d179600f",
+      "feature": 2,
+      "foot": [
+       "bfd8a61d41beb988",
+       "bfd34182859828c8",
+       "bfeeec2a97a584fc"
+      ]
+     },
+     "p": [
+      "bff1affa9821f16f",
+      "bff9859c1b0de351",
+      "bfe18d158b3ffca7"
+     ]
+    },
+    {
+     "dist2": "40064de59eee02b3",
+     "feature": 3,
+     "foot": [
+      "bfdcdd3703e6e46c",
+      "3fe37d712db0e240",
+      "bfc4b4b1f50146d7"
+     ],
+     "model": {
+      "dist2": "40064de59eee02b3",
+      "feature": 3,
+      "foot": [
+       "bfdcdd3703e6e46b",
+       "3fe37d712db0e240",
+       "bfc4b4b1f50146d7"
+      ]
+     },
+     "p": [
+      "3fd00139a243c538",
+      "4000dee46fd50a07",
+      "3fac6d3e1f189430"
+     ]
+    },
+    {
+     "dist2": "400bfeb8f47ff38b",
+     "feature": 4,
+     "foot": [
+      "bfc5b0f2404282ac",
+      "bf8a0ed2269173b0",
+      "bfe081937854a190"
+     ],
+     "model": {
+      "dist2": "400bfeb8f47ff38c",
+      "feature": 4,
+      "foot": [
+       "bfc5b0f2404282ac",
+       "bf8a0ed2269173a0",
+       "bfe081937854a190"
+      ]
+     },
+     "p": [
+      "3fafd54c96dd8290",
+      "bff9ff54a840863a",
+      "3fd9e1cc6fbf498d"
+     ]
+    },
+    {
+     "dist2": "3ffe165b1f0ba9d3",
+     "feature": 5,
+     "foot": [
+      "bfe27b34556d6fc8",
+      "3fbf29efe82ab9a6",
+      "bfe73ff738b389d2"
+     ],
+     "model": {
+      "dist2": "3ffe165b1f0ba9d4",
+      "feature": 5,
+      "foot": [
+       "bfe27b34556d6fc8",
+       "3fbf29efe82ab9a8",
+       "bfe73ff738b389d2"
+      ]
+     },
+     "p": [
+      "bffb01d52dd11019",
+      "3fb2643dfbde1cce",
+      "bff87976d83589c6"
+     ]
+    },
+    {
+     "dist2": "3fa39e1d587d4bf7",
+     "feature": 6,
+     "foot": [
+      "bfc9610458b5338c",
+      "3fc1057e791f431a",
+      "bfd9bc01961f2a43"
+     ],
+     "model": {
+      "dist2": "3fa39e1d587d4bf7",
+      "feature": 6,
+      "foot": [
+       "bfc9610458b5338d",
+       "3fc1057e791f431c",
+       "bfd9bc01961f2a42"
+      ]
+     },
+     "p": [
+      "bfb8ec2c9ffd24f7",
+      "3fcfc265e981df6b",
+      "bfe0c51545370659"
+     ]
+    }
+   ],
+   "size": "3ff6a92089ff2308"
+  },
+  {
+   "a": [
+    "3fb8afbf78efc190",
+    "bfe4450fdeee5a30",
+    "bfe07bd3b050ad34"
+   ],
+   "b": [
+    "3feefa17acd0fed4",
+    "3fc454db05ae3b10",
+    "3fdbd4ba374eb430"
+   ],
+   "c": [
+    "bfe52c5fad92e3fe",
+    "3fb5d2de01ec1ea0",
+    "3fe08a17c7de162e"
+   ],
+   "queries": [
+    {
+     "dist2": "401ad94915d1edff",
+     "feature": 0,
+     "foot": [
+      "3fb8afbf78efc190",
+      "bfe4450fdeee5a30",
+      "bfe07bd3b050ad34"
+     ],
+     "model": {
+      "dist2": "401ad94915d1edff",
+      "feature": 0,
+      "foot": [
+       "3fb8afbf78efc190",
+       "bfe4450fdeee5a30",
+       "bfe07bd3b050ad34"
+      ]
+     },
+     "p": [
+      "bfb044acedee7db7",
+      "bff1a25693952ae4",
+      "c008770c4f9a91ec"
+     ]
+    },
+    {
+     "dist2": "40150148bd04f039",
+     "feature": 1,
+     "foot": [
+      "3feefa17acd0fed4",
+      "3fc454db05ae3b10",
+      "3fdbd4ba374eb430"
+     ],
+     "model": {
+      "dist2": "40150148bd04f039",
+      "feature": 1,
+      "foot": [
+       "3feefa17acd0fed4",
+       "3fc454db05ae3b10",
+       "3fdbd4ba374eb430"
+      ]
+     },
+     "p": [
+      "4002d4227e5922e2",
+      "3fff0cf69bdcbf4e",
+      "3fa40997c4391760"
+     ]
+    },
+    {
+     "dist2": "400a3481cd2aab05",
+     "feature": 2,
+     "foot": [
+      "bfe52c5fad92e3fe",
+      "3fb5d2de01ec1ea0",
+      "3fe08a17c7de162e"
+     ],
+     "model": {
+      "dist2": "400a3481cd2aab05",
+      "feature": 2,
+      "foot": [
+       "bfe52c5fad92e3fe",
+       "3fb5d2de01ec1ea0",
+       "3fe08a17c7de162e"
+      ]
+     },
+     "p": [
+      "bff9b59abc1525d4",
+      "bfe6228b4528b3b2",
+      "3ffd9baaac983c66"
+     ]
+    },
+    {
+     "dist2": "3ffde3bd53c01fa6",
+     "feature": 3,
+     "foot": [
+      "3fe071ad0b5ac476",
+      "bfd0413046009bcd",
+      "bfaec9b489462913"
+     ],
+     "model": {
+      "dist2": "3ffde3bd53c01fa6",
+      "feature": 3,
+      "foot": [
+       "3fe071ad0b5ac476",
+       "bfd0413046009bce",
+       "bfaec9b489462918"
+      ]
+     },
+     "p": [
+      "3fe50ace4cd3ed65",
+      "3fe71b87db28a21e",
+      "bff018a8110cf465"
+     ]
+    },
+    {
+     "dist2": "3fed48bbaff37960",
+     "feature": 4,
+     "foot": [
+      "bfb252efd352caa1",
+      "3fbca525d39956c6",
+      "3fdf2dbd4603161c"
+     ],
+     "model": {
+      "dist2": "3fed48bbaff37960",
+      "feature": 4,
+      "foot": [
+       "bfb252efd352caa0",
+       "3fbca525d39956c6",
+       "3fdf2dbd4603161c"
+      ]
+     },
+     "p": [
+      "bf8565cab44ef85c",
+      "bfd0e6c61183d7f4",
+      "3ff5d5bb4397721e"
+     ]
+    },
+    {
+     "dist2": "3ff0979a96673f74",
+     "feature": 5,
+     "foot": [
+      "bfd7bf8a05507bce",
+      "bfc859d78534c158",
+      "3fbf0baeeed63b84"
+     ],
+     "model": {
+      "dist2": "3ff0979a96673f73",
+      "feature": 5,
+      "foot": [
+       "bfd7bf8a05507bce",
+       "bfc859d78534c158",
+       "3fbf0baeeed63b80"
+      ]
+     },
+     "p": [
+      "bff3daa35f7e4db6",
+      "bfe19f99cc787f84",
+      "bfd110d1a6e5150a"
+     ]
+    },
+    {
+     "dist2": "3fffe111d853e412",
+     "feature": 6,
+     "foot": [
+      "3fdd51a3f6e2d0d3",
+      "bf8bd03671fd7b94",
+      "3fd0da342d090ba2"
+     ],
+     "model": {
+      "dist2": "3fffe111d853e414",
+      "feature": 6,
+      "foot": [
+       "3fdd51a3f6e2d0d2",
+       "bf8bd03671fd7b60",
+       "3fd0da342d090ba5"
+      ]
+     },
+     "p": [
+      "3fd755ef5273d8d9",
+      "3ff1bec1542ab1df",
+      "bfe2ca3fa37f447d"
+     ]
+    }
+   ],
+   "size": "3ffa22788c9b91b1"
+  },
+  {
+   "a": [
+    "bfe59f1359c7d6d2",
+    "bfe879c622b9354e",
+    "3fc84f758dd88828"
+   ],
+   "b": [
+    "3fee9274c433337e",
+    "3fa83a62185c6e40",
+    "bfd8d9a5c8fdc8c8"
+   ],
+   "c": [
+    "bfec0b30b36eabe4",
+    "3fe533cdd3f3d4b8",
+    "3fee4c3e033a8f76"
+   ],
+   "queries": [
+    {
+     "dist2": "4015a8a48122f3b0",
+     "feature": 0,
+     "foot": [
+      "bfe59f1359c7d6d2",
+      "bfe879c622b9354e",
+      "3fc84f758dd88828"
+     ],
+     "model": {
+      "dist2": "4015a8a48122f3af",
+      "feature": 0,
+      "foot": [
+       "bfe59f1359c7d6d2",
+       "bfe879c622b9354e",
+       "3fc84f758dd88828"
+      ]
+     },
+     "p": [
+      "bffc6cd8c4a48821",
+      "c006710600e7c6cc",
+      "bf83846e6ce20778"
+     ]
+    },
+    {
+     "dist2": "401dff98a65482be",
+     "feature": 1,
+     "foot": [
+      "3fee9274c433337e",
+      "3fa83a62185c6e40",
+      "bfd8d9a5c8fdc8c8"
+     ],
+     "model": {
+      "dist2": "401dff98a65482bd",
+      "feature": 1,
+      "foot": [
+       "3fee9274c433337e",
+       "3fa83a62185c6e40",
+       "bfd8d9a5c8fdc8c8"
+      ]
+     },
+     "p": [
+      "400d70b2a370fb2c",
+      "bfc81935c266a8ca",
+      "bfe0fe6afe124ac8"
+     ]
+    },
+    {
+     "dist2": "402e86796f033860",
+     "feature": 2,
+     "foot": [
+      "bfec0b30b36eabe4",
+      "3fe533cdd3f3d4b8",
+      "3fee4c3e033a8f76"
+     ],
+     "model": {
+      "dist2": "402e86796f03385f",
+      "feature": 2,
+      "foot": [
+       "bfec0b30b36eabe4",
+       "3fe533cdd3f3d4b8",
+       "3fee4c3e033a8f76"
+      ]
+     },
+     "p": [
+      "c00c0e4ca05183a0",
+      "400c3e03cca8147a",
+      "3ff4a9ac55228e30"
+     ]
+    },
+    {
+     "dist2": "4016c39ccbe8fa0c",
+     "feature": 3,
+     "foot": [
+      "bfcc8f1eec3f2a51",
+      "bfe143b67d8d43e9",
+      "3f9e33e325763bad"
+     ],
+     "model": {
+      "dist2": "4016c39ccbe8fa0b",
+      "feature": 3,
+      "foot": [
+       "bfcc8f1eec3f2a50",
+       "bfe143b67d8d43e9",
+       "3f9e33e325763bb0"
+      ]
+     },
+     "p": [
+      "bfd18591ed81a8ed",
+      "bffdab9c47609751",
+      "bfff5da95ded44b6"
+     ]
+    },
+    {
+     "dist2": "400a0e7a99119f6d",
+     "feature": 4,
+     "foot": [
+      "bfdc78b8c5057004",
+      "3fe0908300f4d4c8",
+      "3fe43bd5a7300027"
+     ],
+     "model": {
+      "dist2": "400a0e7a99119f6e",
+      "feature": 4,
+      "foot": [
+       "bfdc78b8c5057004",
+       "3fe0908300f4d4c8",
+       "3fe43bd5a7300026"
+      ]
+     },
+     "p": [
+      "3fdde70fb4b2be28",
+      "3fff5d127dfebfd4",
+      "3ff380a85e31eb41"
+     ]
+    },
+    {
+     "dist2": "4022e6a819faaece",
+     "feature": 5,
+     "foot": [
+      "bfe7e6f9f83a4f42",
+      "bfd081b100f06d4b",
+      "3fdd5bcf1743be2c"
+     ],
+     "model": {
+      "dist2": "4022e6a819faaece",
+      "feature": 5,
+      "foot": [
+       "bfe7e6f9f83a4f42",
+       "bfd081b100f06d4c",
+       "3fdd5bcf1743be2c"
+      ]
+     },
+     "p": [
+      "bffd85db777ec40a",
+      "bffb8d566e0bf4a2",
+      "40076e00d9fcb656"
+     ]
+    },
+    {
+     "dist2": "4014d47e1d20990a",
+     "feature": 6,
+     "foot": [
+      "3fa69ec78ceaea1e",
+      "bfbb14150a5a6f2d",
+      "3fb1d8aecba37ec2"
+     ],
+     "model": {
+      "dist2": "4014d47e1d20990a",
+      "feature": 6,
+      "foot": [
+       "3fa69ec78ceaea15",
+       "bfbb14150a5a6f28",
+       "3fb1d8aecba37ec6"
+      ]
+     },
+     "p": [
+      "bff0531e2eadfc89",
+      "3fe71221661ae168",
+      "bffc59028391a556"
+     ]
+    }
+   ],
+   "size": "4002ca17f2cdd300"
+  },
+  {
+   "a": [
+    "bfe5f8cce9108596",
+    "bfdda8148971b570",
+    "3fd58da0c709d090"
+   ],
+   "b": [
+    "bfd22b3e983c2268",
+    "bfa2b60a92ed0c60",
+    "3fd4965007f0e878"
+   ],
+   "c": [
+    "bfcf47d358846ff0",
+    "3fdb0405e132a2e8",
+    "bfd51f47cc1476fc"
+   ],
+   "queries": [
+    {
+     "dist2": "3fee6bed9155324c",
+     "feature": 0,
+     "foot": [
+      "bfe5f8cce9108596",
+      "bfdda8148971b570",
+      "3fd58da0c709d090"
+     ],
+     "model": {
+      "dist2": "3fee6bed9155324c",
+      "feature": 0,
+      "foot": [
+       "bfe5f8cce9108596",
+       "bfdda8148971b570",
+       "3fd58da0c709d090"
+      ]
+     },
+     "p": [
+      "bff745895c93f835",
+      "bfb53a2537545240",
+      "3fe9a8eb89b66cc0"
+     ]
+    },
+    {
+     "dist2": "3ffa2886b641fb0c",
+     "feature": 1,
+     "foot": [
+      "bfd22b3e983c2268",
+      "bfa2b60a92ed0c60",
+      "3fd4965007f0e878"
+     ],
+     "model": {
+      "dist2": "3ffa2886b641fb0c",
+      "feature": 1,
+      "foot": [
+       "bfd22b3e983c2268",
+       "bfa2b60a92ed0c60",
+       "3fd4965007f0e878"
+      ]
+     },
+     "p": [
+      "3fea8a55fd33f4e2",
+      "bfd2d5f60107942e",
+      "3feca673c5372bc0"
+     ]
+    },
+    {
+     "dist2": "400f67773b81fba4",
+     "feature": 2,
+     "foot": [
+      "bfcf47d358846ff0",
+      "3fdb0405e132a2e8",
+      "bfd51f47cc1476fc"
+     ],
+     "model": {
+      "dist2": "400f67773b81fba3",
+      "feature": 2,
+      "foot": [
+       "bfcf47d358846ff0",
+       "3fdb0405e132a2e8",
+       "bfd51f47cc1476fc"
+      ]
+     },
+     "p": [
+      "3fb55c60d4301a2e",
+      "3ffd9c7e2beea6ba",
+      "bffa9c42edc60796"
+     ]
+    },
+    {
+     "dist2": "3fe976dd6d071789",
+     "feature": 3,
+     "foot": [
+      "bfe08da2bbc04dd3",
+      "bfd22baedf3d8d75",
+      "3fd525a472aa9b8a"
+     ],
+     "model": {
+      "dist2": "3fe976dd6d071789",
+      "feature": 3,
+      "foot": [
+       "bfe08da2bbc04dd3",
+       "bfd22baedf3d8d74",
+       "3fd525a472aa9b8a"
+      ]
+     },
+     "p": [
+      "3f958c89a7b35f80",
+      "bfe8c1562eb09e3d",
+      "3feb152e00df2fb1"
+     ]
+    },
+    {
+     "dist2": "3ff12781b752c698",
+     "feature": 4,
+     "foot": [
+      "bfd07034793c67e5",
+      "3fd1c06cd9217763",
+      "bfbfd61ac50fd334"
+     ],
+     "model": {
+      "dist2": "3ff12781b752c697",
+      "feature": 4,
+      "foot": [
+       "bfd07034793c67e5",
+       "3fd1c06cd9217763",
+       "bfbfd61ac50fd334"
+      ]
+     },
+     "p": [
+      "3fe871b4e3e36e36",
+      "3fbcb59dc4dfa428",
+      "bfc6e1a6c815a2b6"
+     ]
+    },
+    {
+     "dist2": "3ff7aeb7096fe1f5",
+     "feature": 5,
+     "foot": [
+      "bfda2a6d33cfdb37",
+      "3fb7c319928ed3c3",
+      "bfb5022db30f7656"
+     ],
+     "model": {
+      "dist2": "3ff7aeb7096fe1f4",
+      "feature": 5,
+      "foot": [
+       "bfda2a6d33cfdb37",
+       "3fb7c319928ed3c0",
+       "bfb5022db30f7654"
+      ]
+     },
+     "p": [
+      "bfc9e846be13200c",
+      "bfe628fcefef68d8",
+      "bfef9e148b4047c5"
+     ]
+    },
+    {
+     "dist2": "3f770d89d80de5b4",
+     "feature": 6,
+     "foot": [
+      "bfdc8b2436da96c8",
+      "bfc1c52096bf4588",
+      "3fcc11a483c51634"
+     ],
+     "model": {
+      "dist2": "3f770d89d80de5bb",
+      "feature": 6,
+      "foot": [
+       "bfdc8b2436da96ca",
+       "bfc1c52096bf458b",
+       "3fcc11a483c51636"
+      ]
+     },
+     "p": [
+      "bfd96349da008aee",
+      "bfc7dcf09b781906",
+      "3fc829d0c24fedb3"
+     ]
+    }
+   ],
+   "size": "3ff3185ee1f652a9"
+  },
+  {
+   "a": [
+    "3fd6131c5ef39a94",
+    "3fea2f81ede0cdfa",
+    "3fdcac6b04d70350"
+   ],
+   "b": [
+    "bfedaa5fd0931e9a",
+    "3fe4d72de8ee7720",
+    "3fdce6178351dedc"
+   ],
+   "c": [
+    "bfddc70b0e0b6944",
+    "3feed3ea63b42d3e",
+    "bfe2be9fbc6ad720"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe41f97ebd55f09",
+     "feature": 0,
+     "foot": [
+      "3fd6131c5ef39a94",
+      "3fea2f81ede0cdfa",
+      "3fdcac6b04d70350"
+     ],
+     "model": {
+      "dist2": "3fe41f97ebd55f0a",
+      "feature": 0,
+      "foot": [
+       "3fd6131c5ef39a94",
+       "3fea2f81ede0cdfa",
+       "3fdcac6b04d70350"
+      ]
+     },
+     "p": [
+      "3fe7a8fad89ccda4",
+      "3ff664f4f989d89f",
+      "3fea1b62cff88690"
+     ]
+    },
+    {
+     "dist2": "3fe29d0a1d5a9481",
+     "feature": 1,
+     "foot": [
+      "bfedaa5fd0931e9a",
+      "3fe4d72de8ee7720",
+      "3fdce6178351dedc"
+     ],
+     "model": {
+      "dist2": "3fe29d0a1d5a9481",
+      "feature": 1,
+      "foot": [
+       "bfedaa5fd0931e9a",
+       "3fe4d72de8ee7720",
+       "3fdce6178351dedc"
+      ]
+     },
+     "p": [
+      "bff7f54bb16128b4",
+      "3fd11f0523c4c95c",
+      "3fe9052357aafecf"
+     ]
+    },
+    {
+     "dist2": "3fe2061144cbfdde",
+     "feature": 2,
+     "foot": [
+      "bfddc70b0e0b6944",
+      "3feed3ea63b42d3e",
+      "bfe2be9fbc6ad720"
+     ],
+     "model": {
+      "dist2": "3fe2061144cbfddf",
+      "feature": 2,
+      "foot": [
+       "bfddc70b0e0b6944",
+       "3feed3ea63b42d3e",
+       "bfe2be9fbc6ad720"
+      ]
+     },
+     "p": [
+      "bfe202bebb06a943",
+      "3ff22ac3ce0cbc2d",
+      "bff4f4a3b9ff893c"
+     ]
+    },
+    {
+     "dist2": "3ff5e19b3816d474",
+     "feature": 3,
+     "foot": [
+      "bfc9fd5221e6e728",
+      "3fe7e208cd7c0c2e",
+      "3fdcc54388d3bcf1"
+     ],
+     "model": {
+      "dist2": "3ff5e19b3816d474",
+      "feature": 3,
+      "foot": [
+       "bfc9fd5221e6e728",
+       "3fe7e208cd7c0c2e",
+       "3fdcc54388d3bcf1"
+      ]
+     },
+     "p": [
+      "bfcf750cf501125c",
+      "3ff185ae61476040",
+      "3ff909f51e75bb56"
+     ]
+    },
+    {
+     "dist2": "3fde80735a559ff8",
+     "feature": 4,
+     "foot": [
+      "bfea67e6bbc1e08b",
+      "3fe70b2dccfa0892",
+      "3fcc820ef239c4fc"
+     ],
+     "model": {
+      "dist2": "3fde80735a559ff7",
+      "feature": 4,
+      "foot": [
+       "bfea67e6bbc1e08b",
+       "3fe70b2dccfa0892",
+       "3fcc820ef239c4fa"
+      ]
+     },
+     "p": [
+      "bff5886853ea203c",
+      "3ff29a21d22e027a",
+      "3fbfc5062fbb96db"
+     ]
+    },
+    {
+     "dist2": "3ff1e88fe89edeba",
+     "feature": 5,
+     "foot": [
+      "bfd017ce9d684a0d",
+      "3fed9a472925b7f0",
+      "bfd40728d2b80a04"
+     ],
+     "model": {
+      "dist2": "3ff1e88fe89edeba",
+      "feature": 5,
+      "foot": [
+       "bfd017ce9d684a0c",
+       "3fed9a472925b7f0",
+       "bfd40728d2b80a04"
+      ]
+     },
+     "p": [
+      "3fe06344c8e1fc18",
+      "3fe29b177c48a79b",
+      "bfeeb4d82a8e9df2"
+     ]
+    },
+    {
+     "dist2": "3fcd5f4f0640bcd0",
+     "feature": 6,
+     "foot": [
+      "bfe4e8d9d58bc560",
+      "3fe88abeb6eac8ca",
+      "3fbf4ca0c585924c"
+     ],
+     "model": {
+      "dist2": "3fcd5f4f0640bcd3",
+      "feature": 6,
+      "foot": [
+       "bfe4e8d9d58bc561",
+       "3fe88abeb6eac8ca",
+       "3fbf4ca0c585924c"
+      ]
+     },
+     "p": [
+      "bfe2fa98cb8dd551",
+      "3fd38737e9f2a78b",
+      "3f84d67ebe940fa8"
+     ]
+    }
+   ],
+   "size": "3ff524955aeb4808"
+  },
+  {
+   "a": [
+    "3fc205abdae20400",
+    "3fef4db1b3ce9ccc",
+    "3fe5da646430aac6"
+   ],
+   "b": [
+    "3fe7ce33ee082968",
+    "3fdf90a7b75b8bc8",
+    "bfdcfcfd1ea28604"
+   ],
+   "c": [
+    "3fc47def66b8e928",
+    "3fc8ab80c43d22a8",
+    "bfc99f383cd6d178"
+   ],
+   "queries": [
+    {
+     "dist2": "4010efb3aa02a3f9",
+     "feature": 0,
+     "foot": [
+      "3fc205abdae20400",
+      "3fef4db1b3ce9ccc",
+      "3fe5da646430aac6"
+     ],
+     "model": {
+      "dist2": "4010efb3aa02a3f9",
+      "feature": 0,
+      "foot": [
+       "3fc205abdae20400",
+       "3fef4db1b3ce9ccc",
+       "3fe5da646430aac6"
+      ]
+     },
+     "p": [
+      "3fab29758a734628",
+      "3ff989e6a450840d",
+      "400526371baf9d84"
+     ]
+    },
+    {
+     "dist2": "40057108c83a56bb",
+     "feature": 1,
+     "foot": [
+      "3fe7ce33ee082968",
+      "3fdf90a7b75b8bc8",
+      "bfdcfcfd1ea28604"
+     ],
+     "model": {
+      "dist2": "40057108c83a56bb",
+      "feature": 1,
+      "foot": [
+       "3fe7ce33ee082968",
+       "3fdf90a7b75b8bc8",
+       "bfdcfcfd1ea28604"
+      ]
+     },
+     "p": [
+      "3ffe990dabd687e4",
+      "3fe2ef543417a4b6",
+      "bff986c779ef6343"
+     ]
+    },
+    {
+     "dist2": "400e7109af4288fb",
+     "feature": 2,
+     "foot": [
+      "3fc47def66b8e928",
+      "3fc8ab80c43d22a8",
+      "bfc99f383cd6d178"
+     ],
+     "model": {
+      "dist2": "400e7109af4288fb",
+      "feature": 2,
+      "foot": [
+       "3fc47def66b8e928",
+       "3fc8ab80c43d22a8",
+       "bfc99f383cd6d178"
+      ]
+     },
+     "p": [
+      "bff54194cb1c422a",
+      "bfe3d2f42dccd4a2",
+      "bff2a0ef40abb61c"
+     ]
+    },
+    {
+     "dist2": "3fe27c74a176733a",
+     "feature": 3,
+     "foot": [
+      "3fe31c2ba38940e2",
+      "3fe38effb90da801",
+      "bfc69aeb234d9d68"
+     ],
+     "model": {
+      "dist2": "3fe27c74a176733b",
+      "feature": 3,
+      "foot": [
+       "3fe31c2ba38940e2",
+       "3fe38effb90da800",
+       "bfc69aeb234d9d68"
+      ]
+     },
+     "p": [
+      "3fe716e4522cbe91",
+      "3ff5286b202e76a2",
+      "bfda83179c40125c"
+     ]
+    },
+    {
+     "dist2": "4002251a4f51bbb9",
+     "feature": 4,
+     "foot": [
+      "3fd7ce0e8ffca14a",
+      "3fd3502a8473b6a3",
+      "bfd2ae6d157b0b82"
+     ],
+     "model": {
+      "dist2": "4002251a4f51bbb9",
+      "feature": 4,
+      "foot": [
+       "3fd7ce0e8ffca148",
+       "3fd3502a8473b6a2",
+       "bfd2ae6d157b0b81"
+      ]
+     },
+     "p": [
+      "bfbafd77cb84372c",
+      "3fa810f01c309c30",
+      "bffb285f32eb9138"
+     ]
+    },
+    {
+     "dist2": "3fea5d69b2356d5f",
+     "feature": 5,
+     "foot": [
+      "3fc3e14fa33f2df3",
+      "3fd8c9cfb1f20a9c",
+      "3f9307e4a36d560c"
+     ],
+     "model": {
+      "dist2": "3fea5d69b2356d60",
+      "feature": 5,
+      "foot": [
+       "3fc3e14fa33f2df3",
+       "3fd8c9cfb1f20a9c",
+       "3f9307e4a36d5600"
+      ]
+     },
+     "p": [
+      "bfe7ed8084fd9fb6",
+      "3fd3d6504baf4e20",
+      "3fb152997a8053c8"
+     ]
+    },
+    {
+     "dist2": "3fada08b27aa0502",
+     "feature": 6,
+     "foot": [
+      "3fce0782abaee5b8",
+      "3fe06b5cc879c05e",
+      "3fb3e4ae77d86411"
+     ],
+     "model": {
+      "dist2": "3fada08b27aa0502",
+      "feature": 6,
+      "foot": [
+       "3fce0782abaee5b9",
+       "3fe06b5cc879c05e",
+       "3fb3e4ae77d86414"
+      ]
+     },
+     "p": [
+      "3fd79a1cc2a8992a",
+      "3fd76295b60fe446",
+      "3fcb23d662b54579"
+     ]
+    }
+   ],
+   "size": "3ff5fdd44d3379d4"
+  },
+  {
+   "a": [
+    "bfa4a4f0fe5039e0",
+    "3fe5cf10a884d742",
+    "3fc6aeb637d02778"
+   ],
+   "b": [
+    "3fe2ea5a4b6e1df4",
+    "bfe0e4d6e23cab54",
+    "3f9af73ed1acf680"
+   ],
+   "c": [
+    "3febab525800b5be",
+    "bfc3405719e8c438",
+    "bfd5b6597801604c"
+   ],
+   "queries": [
+    {
+     "dist2": "401f1ec0a575b9f0",
+     "feature": 0,
+     "foot": [
+      "bfa4a4f0fe5039e0",
+      "3fe5cf10a884d742",
+      "3fc6aeb637d02778"
+     ],
+     "model": {
+      "dist2": "401f1ec0a575b9f0",
+      "feature": 0,
+      "foot": [
+       "bfa4a4f0fe5039e0",
+       "3fe5cf10a884d742",
+       "3fc6aeb637d02778"
+      ]
+     },
+     "p": [
+      "c0024b980db80998",
+      "4002840443f3e39c",
+      "bfb4988737ba1fa8"
+     ]
+    },
+    {
+     "dist2": "400866a05b2b210a",
+     "feature": 1,
+     "foot": [
+      "3fe2ea5a4b6e1df4",
+      "bfe0e4d6e23cab54",
+      "3f9af73ed1acf680"
+     ],
+     "model": {
+      "dist2": "400866a05b2b210a",
+      "feature": 1,
+      "foot": [
+       "3fe2ea5a4b6e1df4",
+       "bfe0e4d6e23cab54",
+       "3f9af73ed1acf680"
+      ]
+     },
+     "p": [
+      "3fc73077f787d366",
+      "c001cc8b832c1d40",
+      "3fb369e879011e98"
+     ]
+    },
+    {
+     "dist2": "40106db22c4df666",
+     "feature": 2,
+     "foot": [
+      "3febab525800b5be",
+      "bfc3405719e8c438",
+      "bfd5b6597801604c"
+     ],
+     "model": {
+      "dist2": "40106db22c4df666",
+      "feature": 2,
+      "foot": [
+       "3febab525800b5be",
+       "bfc3405719e8c438",
+       "bfd5b6597801604c"
+      ]
+     },
+     "p": [
+      "3fff6706e0fe0d98",
+      "bfd1577e8c3489d2",
+      "c0004e97409b862a"
+     ]
+    },
+    {
+     "dist2": "3ff182d23e5dd5d0",
+     "feature": 3,
+     "foot": [
+      "3fc0d89092adf4a1",
+      "3fd68a8981b06736",
+      "3fc16c93818a07ef"
+     ],
+     "model": {
+      "dist2": "3ff182d23e5dd5d0",
+      "feature": 3,
+      "foot": [
+       "3fc0d89092adf4a0",
+       "3fd68a8981b06737",
+       "3fc16c93818a07ef"
+      ]
+     },
+     "p": [
+      "bfe924404eceabac",
+      "bfb9537137a212d4",
+      "bfb61c80d72a6dd0"
+     ]
+    },
+    {
+     "dist2": "3ffd821c5ab4643a",
+     "feature": 4,
+     "foot": [
+      "3fe8c60ea09b5a69",
+      "bfd19e3430dc0018",
+      "bfcbf21a36d3c468"
+     ],
+     "model": {
+      "dist2": "3ffd821c5ab4643a",
+      "feature": 4,
+      "foot": [
+       "3fe8c60ea09b5a68",
+       "bfd19e3430dc001a",
+       "bfcbf21a36d3c463"
+      ]
+     },
+     "p": [
+      "3fe8aa9a4ba4419b",
+      "bff37ff9aa8f18c0",
+      "bff31f38d1cbdb63"
+     ]
+    },
+    {
+     "dist2": "3fdcdb9261de3a24",
+     "feature": 5,
+     "foot": [
+      "3fe04b3897d83dc9",
+      "3fc693b8a0e16717",
+      "bfc1751f66d277cd"
+     ],
+     "model": {
+      "dist2": "3fdcdb9261de3a24",
+      "feature": 5,
+      "foot": [
+       "3fe04b3897d83dc9",
+       "3fc693b8a0e16718",
+       "bfc1751f66d277cc"
+      ]
+     },
+     "p": [
+      "3fdf84d88186e868",
+      "3fe08d2dc5124378",
+      "bfe6decddcb456be"
+     ]
+    },
+    {
+     "dist2": "3fe5822fecbce797",
+     "feature": 6,
+     "foot": [
+      "3fe03b7a686b574f",
+      "bfc08c999f6eca51",
+      "bfa0d8ec3b2925cf"
+     ],
+     "model": {
+      "dist2": "3fe5822fecbce797",
+      "feature": 6,
+      "foot": [
+       "3fe03b7a686b574f",
+       "bfc08c999f6eca56",
+       "bfa0d8ec3b2925d0"
+      ]
+     },
+     "p": [
+      "bf9177fcbbcedb40",
+      "bfd50502d4effff8",
+      "bfe4302b0343948f"
+     ]
+    }
+   ],
+   "size": "3ff5f683209ebe4f"
+  },
+  {
+   "a": [
+    "3fda0d8aa3ce7d18",
+    "bfd1a49858e46ae0",
+    "3fc30014e5608a78"
+   ],
+   "b": [
+    "bfde60aa6b39cbd8",
+    "bfe0cbf4aaf52ee8",
+    "3fe8f87fd3f40fac"
+   ],
+   "c": [
+    "3fd9dfa9da5aaa00",
+    "bfef817453485638",
+    "bfe3d815d7eaa786"
+   ],
+   "queries": [
+    {
+     "dist2": "400e57df98d60bb5",
+     "feature": 0,
+     "foot": [
+      "3fda0d8aa3ce7d18",
+      "bfd1a49858e46ae0",
+      "3fc30014e5608a78"
+     ],
+     "model": {
+      "dist2": "400e57df98d60bb5",
+      "feature": 0,
+      "foot": [
+       "3fda0d8aa3ce7d18",
+       "bfd1a49858e46ae0",
+       "3fc30014e5608a78"
+      ]
+     },
+     "p": [
+      "3ffbd5498fcfe1a5",
+      "3ff1b594938db38f",
+      "3fde578af480da25"
+     ]
+    },
+    {
+     "dist2": "401d95184cee2352",
+     "feature": 1,
+     "foot": [
+      "bfde60aa6b39cbd8",
+      "bfe0cbf4aaf52ee8",
+      "3fe8f87fd3f40fac"
+     ],
+     "model": {
+      "dist2": "401d95184cee2352",
+      "feature": 1,
+      "foot": [
+       "bfde60aa6b39cbd8",
+       "bfe0cbf4aaf52ee8",
+       "3fe8f87fd3f40fac"
+      ]
+     },
+     "p": [
+      "c0050c9aaf8f1746",
+      "bfbb429c5b438b8c",
+      "40031154f6f56184"
+     ]
+    },
+    {
+     "dist2": "40040f4672cf6197",
+     "feature": 2,
+     "foot": [
+      "3fd9dfa9da5aaa00",
+      "bfef817453485638",
+      "bfe3d815d7eaa786"
+     ],
+     "model": {
+      "dist2": "40040f4672cf6197",
+      "feature": 2,
+      "foot": [
+       "3fd9dfa9da5aaa00",
+       "bfef817453485638",
+       "bfe3d815d7eaa786"
+      ]
+     },
+     "p": [
+      "3ff4f27ff823980c",
+      "c001a8970d89026e",
+      "bff0f560c2346104"
+     ]
+    },
+    {
+     "dist2": "40077daea8ee28b8",
+     "feature": 3,
+     "foot": [
+      "bfcccc31fe861223",
+      "bfdd13af6d11706f",
+      "3fe33ebc16ac1f13"
+     ],
+     "model": {
+      "dist2": "40077daea8ee28b9",
+      "feature": 3,
+      "foot": [
+       "bfcccc31fe861224",
+       "bfdd13af6d11706f",
+       "3fe33ebc16ac1f13"
+      ]
+     },
+     "p": [
+      "bfe9bbd663272af0",
+      "3ff26167ee24b976",
+      "3fdb3b5065fc23cc"
+     ]
+    },
+    {
+     "dist2": "3fe1d7a9cca27e7f",
+     "feature": 4,
+     "foot": [
+      "bf9149d41d8dc0bb",
+      "bfe8751f1ee0e6db",
+      "3faa14a5b368a356"
+     ],
+     "model": {
+      "dist2": "3fe1d7a9cca27e7f",
+      "feature": 4,
+      "foot": [
+       "bf9149d41d8dc0b0",
+       "bfe8751f1ee0e6db",
+       "3faa14a5b368a350"
+      ]
+     },
+     "p": [
+      "bfe412b8d945be4e",
+      "bff1873668c99088",
+      "bfcc999e20da4aac"
+     ]
+    },
+    {
+     "dist2": "4009a596efdcce80",
+     "feature": 5,
+     "foot": [
+      "3fd9f20339141855",
+      "bfe66edc6b189e61",
+      "bfd403dec0759078"
+     ],
+     "model": {
+      "dist2": "4009a596efdcce80",
+      "feature": 5,
+      "foot": [
+       "3fd9f20339141855",
+       "bfe66edc6b189e60",
+       "bfd403dec0759076"
+      ]
+     },
+     "p": [
+      "3fddb86cc58d7670",
+      "3fe3a83c136aa844",
+      "bff86b011e901120"
+     ]
+    },
+    {
+     "dist2": "3f8d1aeca405e1ae",
+     "feature": 6,
+     "foot": [
+      "bfc25f94cfb0bb6e",
+      "bfe410931a36632c",
+      "3fd51fa71afecef4"
+     ],
+     "model": {
+      "dist2": "3f8d1aeca405e1ae",
+      "feature": 6,
+      "foot": [
+       "bfc25f94cfb0bb72",
+       "bfe410931a36632d",
+       "3fd51fa71afecef5"
+      ]
+     },
+     "p": [
+      "bfb35cf46c22458e",
+      "bfe65f9a5ba1a8c4",
+      "3fd95ddbd6075bfd"
+     ]
+    }
+   ],
+   "size": "3ffb754093b2bf38"
+  },
+  {
+   "a": [
+    "3fc85f30e5829920",
+    "3fd3e0d12a9246e8",
+    "3f72e92146451300"
+   ],
+   "b": [
+    "3fdc10f5282a157c",
+    "3fc87f3d3b8df0c8",
+    "bfe4e123b94c78a0"
+   ],
+   "c": [
+    "3fea61c9179b43ca",
+    "bfe78341fa0b6a80",
+    "3fd0a1145b4ca740"
+   ],
+   "queries": [
+    {
+     "dist2": "3ff64bb42d839927",
+     "feature": 0,
+     "foot": [
+      "3fc85f30e5829920",
+      "3fd3e0d12a9246e8",
+      "3f72e92146451300"
+     ],
+     "model": {
+      "dist2": "3ff64bb42d839928",
+      "feature": 0,
+      "foot": [
+       "3fc85f30e5829920",
+       "3fd3e0d12a9246e8",
+       "3f72e92146451300"
+      ]
+     },
+     "p": [
+      "3fce867f2841e670",
+      "3ff53d5a9356f601",
+      "3fe3455550ed89ea"
+     ]
+    },
+    {
+     "dist2": "400d40191051740c",
+     "feature": 1,
+     "foot": [
+      "3fdc10f5282a157c",
+      "3fc87f3d3b8df0c8",
+      "bfe4e123b94c78a0"
+     ],
+     "model": {
+      "dist2": "400d40191051740c",
+      "feature": 1,
+      "foot": [
+       "3fdc10f5282a157c",
+       "3fc87f3d3b8df0c8",
+       "bfe4e123b94c78a0"
+      ]
+     },
+     "p": [
+      "3fe7303b1295831b",
+      "3fed566496b82312",
+      "c0032feb35bab383"
+     ]
+    },
+    {
+     "dist2": "3fd1eb38247d0b19",
+     "feature": 2,
+     "foot": [
+      "3fea61c9179b43ca",
+      "bfe78341fa0b6a80",
+      "3fd0a1145b4ca740"
+     ],
+     "model": {
+      "dist2": "3fd1eb38247d0b19",
+      "feature": 2,
+      "foot": [
+       "3fea61c9179b43ca",
+       "bfe78341fa0b6a80",
+       "3fd0a1145b4ca740"
+      ]
+     },
+     "p": [
+      "3fe2f3aceb5cf212",
+      "bff3545fbed12d3a",
+      "3fd3837279637cde"
+     ]
+    },
+    {
+     "dist2": "40064e42ee78e0d9",
+     "feature": 3,
+     "foot": [
+      "3fd318c66cbb9484",
+      "3fd08ed1364d6665",
+      "bfd20182fdac6a2f"
+     ],
+     "model": {
+      "dist2": "40064e42ee78e0da",
+      "feature": 3,
+      "foot": [
+       "3fd318c66cbb9484",
+       "3fd08ed1364d6665",
+       "bfd20182fdac6a2f"
+      ]
+     },
+     "p": [
+      "3fede0e9b01ea5a6",
+      "3ffcd6a64614df8e",
+      "bfd4937278c5a0fc"
+     ]
+    },
+    {
+     "dist2": "3fe2dbd152042b30",
+     "feature": 4,
+     "foot": [
+      "3fe14b5f38318f51",
+      "bfab3ea655df3938",
+      "bfda56b82818c789"
+     ],
+     "model": {
+      "dist2": "3fe2dbd152042b30",
+      "feature": 4,
+      "foot": [
+       "3fe14b5f38318f51",
+       "bfab3ea655df3934",
+       "bfda56b82818c78a"
+      ]
+     },
+     "p": [
+      "3ff469d4e6e32200",
+      "3fb4d66d11627e18",
+      "bfe2c0234c3dbc19"
+     ]
+    },
+    {
+     "dist2": "4001ead262838128",
+     "feature": 5,
+     "foot": [
+      "3fe3d303e6a1a8b8",
+      "bfd966b82cc864d8",
+      "3fc6b328f6b0dd73"
+     ],
+     "model": {
+      "dist2": "4001ead262838129",
+      "feature": 5,
+      "foot": [
+       "3fe3d303e6a1a8b8",
+       "bfd966b82cc864d6",
+       "3fc6b328f6b0dd73"
+      ]
+     },
+     "p": [
+      "bfe1f701df336033",
+      "bfedc56f49d87ab0",
+      "3feda2094726f099"
+     ]
+    },
+    {
+     "dist2": "3febcee6d841bdd6",
+     "feature": 6,
+     "foot": [
+      "3fe051518bce5682",
+      "bfad43fe73983cae",
+      "bfd20e0eabbb06b2"
+     ],
+     "model": {
+      "dist2": "3febcee6d841bdd6",
+      "feature": 6,
+      "foot": [
+       "3fe051518bce5682",
+       "bfad43fe73983cb0",
+       "bfd20e0eabbb06b2"
+      ]
+     },
+     "p": [
+      "bfcfb9efb4b62450",
+      "bfe20db3c6d2e806",
+      "bfde7b4a5048ff24"
+     ]
+    }
+   ],
+   "size": "3ff5b293e768db5b"
+  },
+  {
+   "a": [
+    "bfcac2407fd784b8",
+    "3fe95cabaaf70f16",
+    "bfc36b8a3e511ef8"
+   ],
+   "b": [
+    "3f93d1ae780a6500",
+    "bfc8987fe876ab50",
+    "3fe40f73bd59fba6"
+   ],
+   "c": [
+    "3fcff07d104ae7c8",
+    "bfdf8a823c2dc44c",
+    "bfd0064d2bc8ffa8"
+   ],
+   "queries": [
+    {
+     "dist2": "4003d9b2192b75a9",
+     "feature": 0,
+     "foot": [
+      "bfcac2407fd784b8",
+      "3fe95cabaaf70f16",
+      "bfc36b8a3e511ef8"
+     ],
+     "model": {
+      "dist2": "4003d9b2192b75aa",
+      "feature": 0,
+      "foot": [
+       "bfcac2407fd784b8",
+       "3fe95cabaaf70f16",
+       "bfc36b8a3e511ef8"
+      ]
+     },
+     "p": [
+      "bfedda079a3e3b32",
+      "4000d4a436a7981b",
+      "bfe47725ce5de428"
+     ]
+    },
+    {
+     "dist2": "400df55308cfb814",
+     "feature": 1,
+     "foot": [
+      "3f93d1ae780a6500",
+      "bfc8987fe876ab50",
+      "3fe40f73bd59fba6"
+     ],
+     "model": {
+      "dist2": "400df55308cfb814",
+      "feature": 1,
+      "foot": [
+       "3f93d1ae780a6500",
+       "bfc8987fe876ab50",
+       "3fe40f73bd59fba6"
+      ]
+     },
+     "p": [
+      "bfeec17fd81e42e1",
+      "bfef945504c12164",
+      "4000c02630798be1"
+     ]
+    },
+    {
+     "dist2": "4018b7fc97cc6656",
+     "feature": 2,
+     "foot": [
+      "3fcff07d104ae7c8",
+      "bfdf8a823c2dc44c",
+      "bfd0064d2bc8ffa8"
+     ],
+     "model": {
+      "dist2": "4018b7fc97cc6656",
+      "feature": 2,
+      "foot": [
+       "3fcff07d104ae7c8",
+       "bfdf8a823c2dc44c",
+       "bfd0064d2bc8ffa8"
+      ]
+     },
+     "p": [
+      "3f9739af02913140",
+      "c003f8561cd40ef3",
+      "bffb45aeb7e7bcd4"
+     ]
+    },
+    {
+     "dist2": "3ffd8a8fea0d84b6",
+     "feature": 3,
+     "foot": [
+      "bfc4a8fd957ffa1a",
+      "3fe2c9ef2b206998",
+      "3f85e8da4331b20f"
+     ],
+     "model": {
+      "dist2": "3ffd8a8fea0d84b6",
+      "feature": 3,
+      "foot": [
+       "bfc4a8fd957ffa1a",
+       "3fe2c9ef2b206998",
+       "3f85e8da4331b210"
+      ]
+     },
+     "p": [
+      "bfd3d4f68a4108b9",
+      "3ff674cdcaf268c4",
+      "3ff16338f5b999b1"
+     ]
+    },
+    {
+     "dist2": "3ffbcf5c83fd70b2",
+     "feature": 4,
+     "foot": [
+      "3fc021830f046e7b",
+      "bfd5373720dfc797",
+      "3fcc33ebcf0c17f0"
+     ],
+     "model": {
+      "dist2": "3ffbcf5c83fd70b1",
+      "feature": 4,
+      "foot": [
+       "3fc021830f046e7b",
+       "bfd5373720dfc797",
+       "3fcc33ebcf0c17ee"
+      ]
+     },
+     "p": [
+      "bfec6184b80d60f8",
+      "bff2ccf162e14614",
+      "3fcf3109d74e35c7"
+     ]
+    },
+    {
+     "dist2": "3ffd4677ce2ca200",
+     "feature": 5,
+     "foot": [
+      "3fa01aa13975288e",
+      "3fbe5140b47d081f",
+      "bfca0b262291d645"
+     ],
+     "model": {
+      "dist2": "3ffd4677ce2ca202",
+      "feature": 5,
+      "foot": [
+       "3fa01aa139752888",
+       "3fbe5140b47d0828",
+       "bfca0b262291d644"
+      ]
+     },
+     "p": [
+      "bfd04021407955e2",
+      "3fbe3c889d99df1c",
+      "bff8693669689518"
+     ]
+    },
+    {
+     "dist2": "3fb842bd52b682ff",
+     "feature": 6,
+     "foot": [
+      "3fb324318912b8eb",
+      "bfc9139533aa23e1",
+      "3fd00c6d388f6fae"
+     ],
+     "model": {
+      "dist2": "3fb842bd52b682fe",
+      "feature": 6,
+      "foot": [
+       "3fb324318912b8ea",
+       "bfc9139533aa23e0",
+       "3fd00c6d388f6fac"
+      ]
+     },
+     "p": [
+      "3fd73c783f188dfb",
+      "bfb8a344916bbaa2",
+      "3fd2b40a45793a0d"
+     ]
+    }
+   ],
+   "size": "3ff5e494a3c137e4"
+  },
+  {
+   "a": [
+    "3faad3fd83f8b640",
+    "bfcc0abe6ae06338",
+    "bfd603812893adc8"
+   ],
+   "b": [
+    "3fdb1c03792c53e0",
+    "bf940716b1057c00",
+    "3fd8d45a5185ffe4"
+   ],
+   "c": [
+    "3fddd12a3498358c",
+    "3fe02b42a7545d0e",
+    "3fdc54c38ff8ffa0"
+   ],
+   "queries": [
+    {
+     "dist2": "400a283b805da5b4",
+     "feature": 0,
+     "foot": [
+      "3faad3fd83f8b640",
+      "bfcc0abe6ae06338",
+      "bfd603812893adc8"
+     ],
+     "model": {
+      "dist2": "400a283b805da5b4",
+      "feature": 0,
+      "foot": [
+       "3faad3fd83f8b640",
+       "bfcc0abe6ae06338",
+       "bfd603812893adc8"
+      ]
+     },
+     "p": [
+      "bff11c97b65c9627",
+      "bfef93ae4338a030",
+      "bff894b0f5351bd6"
+     ]
+    },
+    {
+     "dist2": "3fecb7548b64b22b",
+     "feature": 1,
+     "foot": [
+      "3fdb1c03792c53e0",
+      "bf940716b1057c00",
+      "3fd8d45a5185ffe4"
+     ],
+     "model": {
+      "dist2": "3fecb7548b64b22b",
+      "feature": 1,
+      "foot": [
+       "3fdb1c03792c53e0",
+       "bf940716b1057c00",
+       "3fd8d45a5185ffe4"
+      ]
+     },
+     "p": [
+      "3ff0dd893422682f",
+      "bfe3473b59891f34",
+      "3fe937e690dfc857"
+     ]
+    },
+    {
+     "dist2": "3fd5ab8637a49cec",
+     "feature": 2,
+     "foot": [
+      "3fddd12a3498358c",
+      "3fe02b42a7545d0e",
+      "3fdc54c38ff8ffa0"
+     ],
+     "model": {
+      "dist2": "3fd5ab8637a49cec",
+      "feature": 2,
+      "foot": [
+       "3fddd12a3498358c",
+       "3fe02b42a7545d0e",
+       "3fdc54c38ff8ffa0"
+      ]
+     },
+     "p": [
+      "3fe59c6703d29309",
+      "3ff01ad9cbbb908a",
+      "3fe4d5f139a9c22e"
+     ]
+    },
+    {
+     "dist2": "400128ac8f305fbe",
+     "feature": 3,
+     "foot": [
+      "3fc48c91c2ac5f21",
+      "bfc49a01d4f560cb",
+      "bfc0bb9a9b523cec"
+     ],
+     "model": {
+      "dist2": "400128ac8f305fbe",
+      "feature": 3,
+      "foot": [
+       "3fc48c91c2ac5f21",
+       "bfc49a01d4f560ca",
+       "bfc0bb9a9b523cec"
+      ]
+     },
+     "p": [
+      "bfe86f3fab646034",
+      "bff0c32f5b66c5c9",
+      "3fe28c6c834d27da"
+     ]
+    },
+    {
+     "dist2": "3fe21a1bc2a7f45c",
+     "feature": 4,
+     "foot": [
+      "3fdbd82de185c862",
+      "3fbf77773d7e8ac8",
+      "3fd9c7b239a0c5d3"
+     ],
+     "model": {
+      "dist2": "3fe21a1bc2a7f45c",
+      "feature": 4,
+      "foot": [
+       "3fdbd82de185c862",
+       "3fbf77773d7e8ac6",
+       "3fd9c7b239a0c5d3"
+      ]
+     },
+     "p": [
+      "3ff0e3e1c1387bc5",
+      "3f9e62b23895f580",
+      "3fea283ad4e25777"
+     ]
+    },
+    {
+     "dist2": "3fee8e03a5f55a6c",
+     "feature": 5,
+     "foot": [
+      "3fd0470eb6f1dbeb",
+      "3fc13d277db9c4a4",
+      "3fa496244361cf3c"
+     ],
+     "model": {
+      "dist2": "3fee8e03a5f55a6d",
+      "feature": 5,
+      "foot": [
+       "3fd0470eb6f1dbeb",
+       "3fc13d277db9c4a2",
+       "3fa496244361cf38"
+      ]
+     },
+     "p": [
+      "bfe384e3f812876e",
+      "3fe2da19df2402e7",
+      "3fb378d3df471518"
+     ]
+    },
+    {
+     "dist2": "3fda95eba31a6e43",
+     "feature": 6,
+     "foot": [
+      "3fd2486d43eead01",
+      "3f8aecfcf1d371dd",
+      "3fbc22c27ec19ab1"
+     ],
+     "model": {
+      "dist2": "3fda95eba31a6e44",
+      "feature": 6,
+      "foot": [
+       "3fd2486d43eead01",
+       "3f8aecfcf1d371a0",
+       "3fbc22c27ec19aac"
+      ]
+     },
+     "p": [
+      "3feb965ad7a7ff1c",
+      "bf6b20b6ab332c90",
+      "bfc6c6b1a75d5a61"
+     ]
+    }
+   ],
+   "size": "3ff2581412f9a20f"
+  },
+  {
+   "a": [
+    "bfe98ac5fcabf19a",
+    "bfd06dacb1319bc4",
+    "3fd4b77a67253b90"
+   ],
+   "b": [
+    "3f7397eb10d6cc00",
+    "3fd7641d1fe70588",
+    "bfe3489b5f56cf0e"
+   ],
+   "c": [
+    "3fd39363e762be74",
+    "3fe257488b2cd8a6",
+    "3fda2105bea8fab4"
+   ],
+   "queries": [
+    {
+     "dist2": "3ff680c8a5934905",
+     "feature": 0,
+     "foot": [
+      "bfe98ac5fcabf19a",
+      "bfd06dacb1319bc4",
+      "3fd4b77a67253b90"
+     ],
+     "model": {
+      "dist2": "3ff680c8a5934905",
+      "feature": 0,
+      "foot": [
+       "bfe98ac5fcabf19a",
+       "bfd06dacb1319bc4",
+       "3fd4b77a67253b90"
+      ]
+     },
+     "p": [
+      "bff8a0ae19bc507b",
+      "bff195f9c0ce3292",
+      "3fe6a752ae9364d2"
+     ]
+    },
+    {
+     "dist2": "3ff7ac22b7baf406",
+     "feature": 1,
+     "foot": [
+      "3f7397eb10d6cc00",
+      "3fd7641d1fe70588",
+      "bfe3489b5f56cf0e"
+     ],
+     "model": {
+      "dist2": "3ff7ac22b7baf406",
+      "feature": 1,
+      "foot": [
+       "3f7397eb10d6cc00",
+       "3fd7641d1fe70588",
+       "bfe3489b5f56cf0e"
+      ]
+     },
+     "p": [
+      "3fe2cf87f23135be",
+      "bf4e2fb2578a5800",
+      "bff9af3178b90b3f"
+     ]
+    },
+    {
+     "dist2": "40057f1f96d8566d",
+     "feature": 2,
+     "foot": [
+      "3fd39363e762be74",
+      "3fe257488b2cd8a6",
+      "3fda2105bea8fab4"
+     ],
+     "model": {
+      "dist2": "40057f1f96d8566c",
+      "feature": 2,
+      "foot": [
+       "3fd39363e762be74",
+       "3fe257488b2cd8a6",
+       "3fda2105bea8fab4"
+      ]
+     },
+     "p": [
+      "3ff4419c8b28c820",
+      "3ff785660a2cf46e",
+      "3ff6370952329a95"
+     ]
+    },
+    {
+     "dist2": "3ff0418b762c4951",
+     "feature": 3,
+     "foot": [
+      "bfc6346ed91d1aa3",
+      "3fcd1a390ffedec4",
+      "bfd968041c875e66"
+     ],
+     "model": {
+      "dist2": "3ff0418b762c4951",
+      "feature": 3,
+      "foot": [
+       "bfc6346ed91d1aa0",
+       "3fcd1a390ffedec6",
+       "bfd968041c875e68"
+      ]
+     },
+     "p": [
+      "3fc0b6fa33777230",
+      "bfe57c7ee8094f65",
+      "bfe796619f9a66f5"
+     ]
+    },
+    {
+     "dist2": "3ff6bf2328f80640",
+     "feature": 4,
+     "foot": [
+      "3fb770e6e3612685",
+      "3fdb38ceff663e62",
+      "bfd3eb73c8660795"
+     ],
+     "model": {
+      "dist2": "3ff6bf2328f80640",
+      "feature": 4,
+      "foot": [
+       "3fb770e6e3612686",
+       "3fdb38ceff663e62",
+       "bfd3eb73c8660794"
+      ]
+     },
+     "p": [
+      "3fee9e8e001a05df",
+      "3ff239b92c7bb2be",
+      "bfe6e62ec493b51c"
+     ]
+    },
+    {
+     "dist2": "40025e6a8b63e3fe",
+     "feature": 5,
+     "foot": [
+      "bfa40357367a367c",
+      "3fd4167b4f6d9e57",
+      "3fd8701d83c0f925"
+     ],
+     "model": {
+      "dist2": "40025e6a8b63e3fe",
+      "feature": 5,
+      "foot": [
+       "bfa40357367a3680",
+       "3fd4167b4f6d9e56",
+       "3fd8701d83c0f925"
+      ]
+     },
+     "p": [
+      "bfe91e792ca0da5e",
+      "3ff3514526fa6cd8",
+      "3ff5a25cac7050a1"
+     ]
+    },
+    {
+     "dist2": "3fa0c88bc1e12d29",
+     "feature": 6,
+     "foot": [
+      "3f9dde0426afa3c4",
+      "3fd807b02bac386f",
+      "bfc44a7c5c873968"
+     ],
+     "model": {
+      "dist2": "3fa0c88bc1e12d2b",
+      "feature": 6,
+      "foot": [
+       "3f9dde0426afa3c0",
+       "3fd807b02bac3870",
+       "bfc44a7c5c873969"
+      ]
+     },
+     "p": [
+      "3fc1ac50aac2dd18",
+      "3fcd8cbd9c1e8a72",
+      "bfc4a3e4cbf13cfc"
+     ]
+    }
+   ],
+   "size": "3ff623d239ed856f"
+  },
+  {
+   "a": [
+    "bfdb6361b7ba5f74",
+    "bfd93347cc8db374",
+    "3fe3dd667f5047aa"
+   ],
+   "b": [
+    "3fe4dfd100b15460",
+    "bf88458ddd570900",
+    "bfbb2bca3041fc30"
+   ],
+   "c": [
+    "3fbfaac096580df0",
+    "3fe5b98c17ef3ad4",
+    "bfe27a5653fdbbb8"
+   ],
+   "queries": [
+    {
+     "dist2": "4012bf52def74b9c",
+     "feature": 0,
+     "foot": [
+      "bfdb6361b7ba5f74",
+      "bfd93347cc8db374",
+      "3fe3dd667f5047aa"
+     ],
+     "model": {
+      "dist2": "4012bf52def74b9c",
+      "feature": 0,
+      "foot": [
+       "bfdb6361b7ba5f74",
+       "bfd93347cc8db374",
+       "3fe3dd667f5047aa"
+      ]
+     },
+     "p": [
+      "bffc4bd1eefa2a1e",
+      "bffa5e90c11e0597",
+      "3ffc4a28155fdb2c"
+     ]
+    },
+    {
+     "dist2": "4019bea139e91a6c",
+     "feature": 1,
+     "foot": [
+      "3fe4dfd100b15460",
+      "bf88458ddd570900",
+      "bfbb2bca3041fc30"
+     ],
+     "model": {
+      "dist2": "4019bea139e91a6c",
+      "feature": 1,
+      "foot": [
+       "3fe4dfd100b15460",
+       "bf88458ddd570900",
+       "bfbb2bca3041fc30"
+      ]
+     },
+     "p": [
+      "4008768880e67423",
+      "3fc45ab399204f9c",
+      "3fe5ce4a91888905"
+     ]
+    },
+    {
+     "dist2": "40075d0353f43958",
+     "feature": 2,
+     "foot": [
+      "3fbfaac096580df0",
+      "3fe5b98c17ef3ad4",
+      "bfe27a5653fdbbb8"
+     ],
+     "model": {
+      "dist2": "40075d0353f43958",
+      "feature": 2,
+      "foot": [
+       "3fbfaac096580df0",
+       "3fe5b98c17ef3ad4",
+       "bfe27a5653fdbbb8"
+      ]
+     },
+     "p": [
+      "3fdeb498c87c1cde",
+      "40008b22ec2873c2",
+      "3fd68a4b78b7f334"
+     ]
+    },
+    {
+     "dist2": "40006628bbde5765",
+     "feature": 3,
+     "foot": [
+      "3fc68fd2f4d2b3e4",
+      "bfc70f31efe746ef",
+      "3fcb6b0a81c5e701"
+     ],
+     "model": {
+      "dist2": "40006628bbde5766",
+      "feature": 3,
+      "foot": [
+       "3fc68fd2f4d2b3e4",
+       "bfc70f31efe746f0",
+       "3fcb6b0a81c5e702"
+      ]
+     },
+     "p": [
+      "3ff0acca2d501daf",
+      "bfe55b7df8aebd32",
+      "3ff3ebb4ed3bc74e"
+     ]
+    },
+    {
+     "dist2": "4000fead9b1597ea",
+     "feature": 4,
+     "foot": [
+      "3fdce8a5ce6d8e1a",
+      "3fd004ef2ec0f935",
+      "bfd23d7b836b0559"
+     ],
+     "model": {
+      "dist2": "4000fead9b1597ea",
+      "feature": 4,
+      "foot": [
+       "3fdce8a5ce6d8e1b",
+       "3fd004ef2ec0f934",
+       "bfd23d7b836b0558"
+      ]
+     },
+     "p": [
+      "3ff1e981a8c0a770",
+      "3ff4a11fda1fa6bb",
+      "3fdf48b64d596507"
+     ]
+    },
+    {
+     "dist2": "3ffb87fb71173987",
+     "feature": 5,
+     "foot": [
+      "bfc7a0c28f475387",
+      "3fb455827a415cf8",
+      "3fb79abe0cabf781"
+     ],
+     "model": {
+      "dist2": "3ffb87fb71173986",
+      "feature": 5,
+      "foot": [
+       "bfc7a0c28f475386",
+       "3fb455827a415cfc",
+       "3fb79abe0cabf780"
+      ]
+     },
+     "p": [
+      "bfd8472842529caa",
+      "3ff16d6c1a0e839f",
+      "3fed0232c438c0ad"
+     ]
+    },
+    {
+     "dist2": "3f84f8eaa3b4d255",
+     "feature": 6,
+     "foot": [
+      "bfb316609a8fe62a",
+      "bfb4f740d17ee7c8",
+      "3fca79c0f9d4be54"
+     ],
+     "model": {
+      "dist2": "3f84f8eaa3b4d258",
+      "feature": 6,
+      "foot": [
+       "bfb316609a8fe629",
+       "bfb4f740d17ee7ca",
+       "3fca79c0f9d4be54"
+      ]
+     },
+     "p": [
+      "bfa9bccb34ec8812",
+      "bf8dc062f805c440",
+      "3fd1d03f3f4b57e2"
+     ]
+    }
+   ],
+   "size": "3ffb33ecfab59aa0"
+  },
+  {
+   "a": [
+    "3fc22fc6074b9d00",
+    "bfc6fd9292614d08",
+    "3fdd86b9453cd158"
+   ],
+   "b": [
+    "3fea4e214fd366ea",
+    "bfc4817abcce38f8",
+    "3fe33dd0be0c9a06"
+   ],
+   "c": [
+    "bfce3f093cc29508",
+    "bfe4bb7a9edd8c40",
+    "bfbb9b6d5cd49ca0"
+   ],
+   "queries": [
+    {
+     "dist2": "400114c3b9e257a4",
+     "feature": 0,
+     "foot": [
+      "3fc22fc6074b9d00",
+      "bfc6fd9292614d08",
+      "3fdd86b9453cd158"
+     ],
+     "model": {
+      "dist2": "400114c3b9e257a4",
+      "feature": 0,
+      "foot": [
+       "3fc22fc6074b9d00",
+       "bfc6fd9292614d08",
+       "3fdd86b9453cd158"
+      ]
+     },
+     "p": [
+      "bfde0cd05b9163fe",
+      "bfe2dedfff3ac434",
+      "3ffb933b4fc2c286"
+     ]
+    },
+    {
+     "dist2": "40120dee52f7e857",
+     "feature": 1,
+     "foot": [
+      "3fea4e214fd366ea",
+      "bfc4817abcce38f8",
+      "3fe33dd0be0c9a06"
+     ],
+     "model": {
+      "dist2": "40120dee52f7e857",
+      "feature": 1,
+      "foot": [
+       "3fea4e214fd366ea",
+       "bfc4817abcce38f8",
+       "3fe33dd0be0c9a06"
+      ]
+     },
+     "p": [
+      "40061959266c79fa",
+      "3fe0aa420aca4590",
+      "3ff2295daa3d60b3"
+     ]
+    },
+    {
+     "dist2": "400aee296aee2fc6",
+     "feature": 2,
+     "foot": [
+      "bfce3f093cc29508",
+      "bfe4bb7a9edd8c40",
+      "bfbb9b6d5cd49ca0"
+     ],
+     "model": {
+      "dist2": "400aee296aee2fc6",
+      "feature": 2,
+      "foot": [
+       "bfce3f093cc29508",
+       "bfe4bb7a9edd8c40",
+       "bfbb9b6d5cd49ca0"
+      ]
+     },
+     "p": [
+      "bff4029d6e1cef22",
+      "bff02ece7c85f2d4",
+      "bff97c4c4ad009ae"
+     ]
+    },
+    {
+     "dist2": "3ff4896f7f50067f",
+     "feature": 3,
+     "foot": [
+      "3fe1eaaf706aed93",
+      "bfc576b585de5fea",
+      "3fe183d445df5e28"
+     ],
+     "model": {
+      "dist2": "3ff4896f7f50067f",
+      "feature": 3,
+      "foot": [
+       "3fe1eaaf706aed93",
+       "bfc576b585de5fea",
+       "3fe183d445df5e28"
+      ]
+     },
+     "p": [
+      "3fd5abcca36833d9",
+      "3fd2b984e22126c7",
+      "3ff8f03d6f66180a"
+     ]
+    },
+    {
+     "dist2": "3ff632ae9c76280f",
+     "feature": 4,
+     "foot": [
+      "3fe2798d4f3daa75",
+      "bfd1782b8d41295c",
+      "3fdbfd4d829a3d47"
+     ],
+     "model": {
+      "dist2": "3ff632ae9c76280f",
+      "feature": 4,
+      "foot": [
+       "3fe2798d4f3daa74",
+       "bfd1782b8d41295c",
+       "3fdbfd4d829a3d46"
+      ]
+     },
+     "p": [
+      "3ff3a9697629bcbb",
+      "bfd0a5b0342f9f6a",
+      "bfe1673a8a317a7d"
+     ]
+    },
+    {
+     "dist2": "3ff40b33111edca0",
+     "feature": 5,
+     "foot": [
+      "3f88bfae8f57dfd4",
+      "bfd5caac78a3a17e",
+      "3fd102c889b90c4c"
+     ],
+     "model": {
+      "dist2": "3ff40b33111edca1",
+      "feature": 5,
+      "foot": [
+       "3f88bfae8f57dfe0",
+       "bfd5caac78a3a17e",
+       "3fd102c889b90c4d"
+      ]
+     },
+     "p": [
+      "bfeecb7735a79e5c",
+      "3fc3da69419b68f7",
+      "3fe02fce3a895bb7"
+     ]
+    },
+    {
+     "dist2": "3f93e8c2ff60d297",
+     "feature": 6,
+     "foot": [
+      "3fca7ddf3cd18acf",
+      "bfda295b74eecf28",
+      "3fcd013db7eecca9"
+     ],
+     "model": {
+      "dist2": "3f93e8c2ff60d299",
+      "feature": 6,
+      "foot": [
+       "3fca7ddf3cd18ace",
+       "bfda295b74eecf28",
+       "3fcd013db7eecca8"
+      ]
+     },
+     "p": [
+      "3fc8605768e04675",
+      "bfe052c452e3af82",
+      "3fd48a72d075bb3b"
+     ]
+    }
+   ],
+   "size": "3ff5d360dcea9767"
+  },
+  {
+   "a": [
+    "bfed1025a548911c",
+    "bfd433cd739c3780",
+    "3fd76bd2f6786ed0"
+   ],
+   "b": [
+    "bfd3e7b3936fcb0c",
+    "3fe76f01b68c50a8",
+    "3fe4ef0f621b194e"
+   ],
+   "c": [
+    "bfe7919c84a714c8",
+    "3feb3a7a6674bc96",
+    "3fe88378f983534a"
+   ],
+   "queries": [
+    {
+     "dist2": "3fede66f33edfc50",
+     "feature": 0,
+     "foot": [
+      "bfed1025a548911c",
+      "bfd433cd739c3780",
+      "3fd76bd2f6786ed0"
+     ],
+     "model": {
+      "dist2": "3fede66f33edfc50",
+      "feature": 0,
+      "foot": [
+       "bfed1025a548911c",
+       "bfd433cd739c3780",
+       "3fd76bd2f6786ed0"
+      ]
+     },
+     "p": [
+      "bfeec1d4b7dacc60",
+      "bff14f7a002f2b63",
+      "3fee7dc98dedae00"
+     ]
+    },
+    {
+     "dist2": "3fee72f092aa0853",
+     "feature": 1,
+     "foot": [
+      "bfd3e7b3936fcb0c",
+      "3fe76f01b68c50a8",
+      "3fe4ef0f621b194e"
+     ],
+     "model": {
+      "dist2": "3fee72f092aa0853",
+      "feature": 1,
+      "foot": [
+       "bfd3e7b3936fcb0c",
+       "3fe76f01b68c50a8",
+       "3fe4ef0f621b194e"
+      ]
+     },
+     "p": [
+      "3fe226e06c79b8db",
+      "3ff241ed539f74b8",
+      "3fe1466f9085a01c"
+     ]
+    },
+    {
+     "dist2": "3fdce4a10bfa2d4f",
+     "feature": 2,
+     "foot": [
+      "bfe7919c84a714c8",
+      "3feb3a7a6674bc96",
+      "3fe88378f983534a"
+     ],
+     "model": {
+      "dist2": "3fdce4a10bfa2d4f",
+      "feature": 2,
+      "foot": [
+       "bfe7919c84a714c8",
+       "3feb3a7a6674bc96",
+       "3fe88378f983534a"
+      ]
+     },
+     "p": [
+      "bfef482e90598941",
+      "3ff489651c821a99",
+      "3fd3f7b84b799098"
+     ]
+    },
+    {
+     "dist2": "3fcced96a4ee85cd",
+     "feature": 3,
+     "foot": [
+      "bfe8e18362c66edc",
+      "bfb619635e327995",
+      "3fdb754142d32805"
+     ],
+     "model": {
+      "dist2": "3fcced96a4ee85cd",
+      "feature": 3,
+      "foot": [
+       "bfe8e18362c66edc",
+       "bfb619635e327994",
+       "3fdb754142d32805"
+      ]
+     },
+     "p": [
+      "bfe236cc631cd1bc",
+      "bfb66821018882f9",
+      "3f5c34a58ce5d800"
+     ]
+    },
+    {
+     "dist2": "3ff0e28d15d1809b",
+     "feature": 4,
+     "foot": [
+      "bfe2c9510f25e2e0",
+      "3fe9e5454d43d4c5",
+      "3fe7419a75e3ae3a"
+     ],
+     "model": {
+      "dist2": "3ff0e28d15d1809a",
+      "feature": 4,
+      "foot": [
+       "bfe2c9510f25e2e0",
+       "3fe9e5454d43d4c5",
+       "3fe7419a75e3ae3a"
+      ]
+     },
+     "p": [
+      "bfde5b35cdda00e0",
+      "3ffb1b9c35828dd6",
+      "3fcbd66000f36e84"
+     ]
+    },
+    {
+     "dist2": "3ff5edc6ce24e31e",
+     "feature": 5,
+     "foot": [
+      "bfe9d0e0fac90143",
+      "3fd7ebea2cd80dbb",
+      "3fe346f6a6be66bf"
+     ],
+     "model": {
+      "dist2": "3ff5edc6ce24e31e",
+      "feature": 5,
+      "foot": [
+       "bfe9d0e0fac90143",
+       "3fd7ebea2cd80dbe",
+       "3fe346f6a6be66bf"
+      ]
+     },
+     "p": [
+      "bff5f39e382324a7",
+      "3fbdd8dee127607c",
+      "3ff9847cdf1cfd3c"
+     ]
+    },
+    {
+     "dist2": "3fdbf355c849b70f",
+     "feature": 6,
+     "foot": [
+      "bfdf99750f8d443a",
+      "3fe52d5834fdede9",
+      "3fe50bdb953ca8a6"
+     ],
+     "model": {
+      "dist2": "3fdbf355c849b710",
+      "feature": 6,
+      "foot": [
+       "bfdf99750f8d443a",
+       "3fe52d5834fdede8",
+       "3fe50bdb953ca8a6"
+      ]
+     },
+     "p": [
+      "bfe2f4858edb5c2e",
+      "3fec5fffab7161b3",
+      "3fa69e3ec2b58900"
+     ]
+    }
+   ],
+   "size": "3ff3ec20347507f1"
+  },
+  {
+   "a": [
+    "3fd7686d26fd6a94",
+    "3fe14b764828bd0c",
+    "bfedb091049c6c68"
+   ],
+   "b": [
+    "bfe60c360228d75c",
+    "3fb995b1104d1570",
+    "3fe795ddb0c20e5e"
+   ],
+   "c": [
+    "bf9e895b042d15c0",
+    "bfc4a64bea953b40",
+    "bfdc8520d6a0939c"
+   ],
+   "queries": [
+    {
+     "dist2": "400b895455870007",
+     "feature": 0,
+     "foot": [
+      "3fd7686d26fd6a94",
+      "3fe14b764828bd0c",
+      "bfedb091049c6c68"
+     ],
+     "model": {
+      "dist2": "400b895455870006",
+      "feature": 0,
+      "foot": [
+       "3fd7686d26fd6a94",
+       "3fe14b764828bd0c",
+       "bfedb091049c6c68"
+      ]
+     },
+     "p": [
+      "3fe6550b298d3865",
+      "3ff82eb09bea5f35",
+      "c003c9a05b358f6c"
+     ]
+    },
+    {
+     "dist2": "402a5ce91f6c252d",
+     "feature": 1,
+     "foot": [
+      "bfe60c360228d75c",
+      "3fb995b1104d1570",
+      "3fe795ddb0c20e5e"
+     ],
+     "model": {
+      "dist2": "402a5ce91f6c252e",
+      "feature": 1,
+      "foot": [
+       "bfe60c360228d75c",
+       "3fb995b1104d1570",
+       "3fe795ddb0c20e5e"
+      ]
+     },
+     "p": [
+      "c00ab70927a06a76",
+      "3fc7b8ce206cf35d",
+      "4009bc323d47de6f"
+     ]
+    },
+    {
+     "dist2": "400c3a6aee98dd7b",
+     "feature": 2,
+     "foot": [
+      "bf9e895b042d15c0",
+      "bfc4a64bea953b40",
+      "bfdc8520d6a0939c"
+     ],
+     "model": {
+      "dist2": "400c3a6aee98dd7b",
+      "feature": 2,
+      "foot": [
+       "bf9e895b042d15c0",
+       "bfc4a64bea953b40",
+       "bfdc8520d6a0939c"
+      ]
+     },
+     "p": [
+      "3ff218d68602ff69",
+      "bffa102e7e2d6c33",
+      "bfd203aaca57bed6"
+     ]
+    },
+    {
+     "dist2": "40063214fae5c6ca",
+     "feature": 3,
+     "foot": [
+      "3fbcb86fb8161709",
+      "3fdbcfd613ad4c93",
+      "bfe0e1e2e1b9dacd"
+     ],
+     "model": {
+      "dist2": "40063214fae5c6cb",
+      "feature": 3,
+      "foot": [
+       "3fbcb86fb8161708",
+       "3fdbcfd613ad4c93",
+       "bfe0e1e2e1b9dacd"
+      ]
+     },
+     "p": [
+      "bff43d6a12635bab",
+      "3ff0b6e44a72fb1c",
+      "bff3d1749c52d244"
+     ]
+    },
+    {
+     "dist2": "401383ff26c5b03f",
+     "feature": 4,
+     "foot": [
+      "bfd4b821d7211a33",
+      "bfa6f3d97d8bdb47",
+      "3fb4eb5666e6953b"
+     ],
+     "model": {
+      "dist2": "401383ff26c5b03f",
+      "feature": 4,
+      "foot": [
+       "bfd4b821d7211a35",
+       "bfa6f3d97d8bdb44",
+       "3fb4eb5666e69548"
+      ]
+     },
+     "p": [
+      "bffdbc21b9efa0f2",
+      "bff8b633ff8008a0",
+      "bfdc4fb665dfaac4"
+     ]
+    },
+    {
+     "dist2": "3ff6bc47d244604a",
+     "feature": 5,
+     "foot": [
+      "3fc2a93a44770c56",
+      "3fc33aad6bad39f8",
+      "bfe51c23b164b834"
+     ],
+     "model": {
+      "dist2": "3ff6bc47d244604a",
+      "feature": 5,
+      "foot": [
+       "3fc2a93a44770c56",
+       "3fc33aad6bad39f6",
+       "bfe51c23b164b834"
+      ]
+     },
+     "p": [
+      "bfafc564b287bf10",
+      "bfdbb05151bee2ca",
+      "bffadb3e2adb792b"
+     ]
+    },
+    {
+     "dist2": "4007fa4aaea22377",
+     "feature": 6,
+     "foot": [
+      "bfd0f4d0d864d105",
+      "3fc3a990cd52987b",
+      "3fa1eab009377e7a"
+     ],
+     "model": {
+      "dist2": "4007fa4aaea22378",
+      "feature": 6,
+      "foot": [
+       "bfd0f4d0d864d104",
+       "3fc3a990cd52987f",
+       "3fa1eab009377e6a"
+      ]
+     },
+     "p": [
+      "bffbdc5b554c8d60",
+      "3fd8a800d8625bb0",
+      "bfead9631ddba547"
+     ]
+    }
+   ],
+   "size": "400027def39a3562"
+  },
+  {
+   "a": [
+    "3fcc0d5aa389f1b0",
+    "3f92141c736c3980",
+    "3fca64dc92d3d2f0"
+   ],
+   "b": [
+    "bfe55334c6d6126a",
+    "bfdba3b76d020838",
+    "bfe2b5c5e9c712e6"
+   ],
+   "c": [
+    "3fda1474abffa9c0",
+    "3fd6f34f50e4b50c",
+    "bfcec6e316468f30"
+   ],
+   "queries": [
+    {
+     "dist2": "4001d4493b5d36b1",
+     "feature": 0,
+     "foot": [
+      "3fcc0d5aa389f1b0",
+      "3f92141c736c3980",
+      "3fca64dc92d3d2f0"
+     ],
+     "model": {
+      "dist2": "4001d4493b5d36b0",
+      "feature": 0,
+      "foot": [
+       "3fcc0d5aa389f1b0",
+       "3f92141c736c3980",
+       "3fca64dc92d3d2f0"
+      ]
+     },
+     "p": [
+      "3ff366d67a1bc732",
+      "bff017107705ad54",
+      "3fe4b6fdda080585"
+     ]
+    },
+    {
+     "dist2": "400a89afabfa78d5",
+     "feature": 1,
+     "foot": [
+      "bfe55334c6d6126a",
+      "bfdba3b76d020838",
+      "bfe2b5c5e9c712e6"
+     ],
+     "model": {
+      "dist2": "400a89afabfa78d4",
+      "feature": 1,
+      "foot": [
+       "bfe55334c6d6126a",
+       "bfdba3b76d020838",
+       "bfe2b5c5e9c712e6"
+      ]
+     },
+     "p": [
+      "c003a034a83efcc0",
+      "bfd5eb8c655dd0dc",
+      "bfeda22746c9423f"
+     ]
+    },
+    {
+     "dist2": "40112edfe3b35076",
+     "feature": 2,
+     "foot": [
+      "3fda1474abffa9c0",
+      "3fd6f34f50e4b50c",
+      "bfcec6e316468f30"
+     ],
+     "model": {
+      "dist2": "40112edfe3b35076",
+      "feature": 2,
+      "foot": [
+       "3fda1474abffa9c0",
+       "3fd6f34f50e4b50c",
+       "bfcec6e316468f30"
+      ]
+     },
+     "p": [
+      "3fe834e87b8cc3b3",
+      "40032a091ff6da04",
+      "bfd97ee3f3d50e7a"
+     ]
+    },
+    {
+     "dist2": "3fbf57a81e6f7a48",
+     "feature": 3,
+     "foot": [
+      "bfc974e8ee59b816",
+      "bfc8e6e02b66ca70",
+      "bfc564f8e80ad809"
+     ],
+     "model": {
+      "dist2": "3fbf57a81e6f7a48",
+      "feature": 3,
+      "foot": [
+       "bfc974e8ee59b816",
+       "bfc8e6e02b66ca70",
+       "bfc564f8e80ad808"
+      ]
+     },
+     "p": [
+      "bfc44d9d69bf8c10",
+      "bfe07407fc9ee93b",
+      "bf9f4bc62c51d104"
+     ]
+    },
+    {
+     "dist2": "3ff4edbd28479b91",
+     "feature": 4,
+     "foot": [
+      "bfc9b47d545ce632",
+      "bfb6d3742e4f7c8b",
+      "bfdbde4ec7ff5574"
+     ],
+     "model": {
+      "dist2": "3ff4edbd28479b90",
+      "feature": 4,
+      "foot": [
+       "bfc9b47d545ce62e",
+       "bfb6d3742e4f7c88",
+       "bfdbde4ec7ff5573"
+      ]
+     },
+     "p": [
+      "bfbda0ee74d1e923",
+      "3fd117edb8669752",
+      "bff84d6f64984cc2"
+     ]
+    },
+    {
+     "dist2": "3fe8f1c67d6ded5a",
+     "feature": 5,
+     "foot": [
+      "3fd25cabc0cba383",
+      "3fc1f54335700ce2",
+      "3fa750c94005ae48"
+     ],
+     "model": {
+      "dist2": "3fe8f1c67d6ded59",
+      "feature": 5,
+      "foot": [
+       "3fd25cabc0cba384",
+       "3fc1f54335700ce2",
+       "3fa750c94005ae44"
+      ]
+     },
+     "p": [
+      "3ff1ecbca46c6a66",
+      "3fa2f6d2e69bb0a8",
+      "3fd45c6225b77531"
+     ]
+    },
+    {
+     "dist2": "3fefb99b80168437",
+     "feature": 6,
+     "foot": [
+      "bfd3af7a5a04f2e7",
+      "bfc80fc7758a38ac",
+      "bfdad053f1367f60"
+     ],
+     "model": {
+      "dist2": "3fefb99b80168436",
+      "feature": 6,
+      "foot": [
+       "bfd3af7a5a04f2e5",
+       "bfc80fc7758a38aa",
+       "bfdad053f1367f5f"
+      ]
+     },
+     "p": [
+      "3fd43278b5e31d43",
+      "bfed18a2e149ecf1",
+      "bfe69de0425baeb6"
+     ]
+    }
+   ],
+   "size": "3ff608eae86c9778"
+  },
+  {
+   "a": [
+    "3fd7034595950e74",
+    "bfabb7c0bd4e71c0",
+    "3fec842cb6c57418"
+   ],
+   "b": [
+    "3fdb6d31186b20c8",
+    "3fd3fefe8e069678",
+    "3feee472eb7476f4"
+   ],
+   "c": [
+    "3fea8a41e871ee9e",
+    "3fc0762b0282daf0",
+    "3fe47621954b651a"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe2ff0e45c30ed0",
+     "feature": 0,
+     "foot": [
+      "3fd7034595950e74",
+      "bfabb7c0bd4e71c0",
+      "3fec842cb6c57418"
+     ],
+     "model": {
+      "dist2": "3fe2ff0e45c30ed0",
+      "feature": 0,
+      "foot": [
+       "3fd7034595950e74",
+       "bfabb7c0bd4e71c0",
+       "3fec842cb6c57418"
+      ]
+     },
+     "p": [
+      "3fc88fddd47709b1",
+      "bfe5495f9b9e3106",
+      "3ff545608aaab024"
+     ]
+    },
+    {
+     "dist2": "3fe0361738869a81",
+     "feature": 1,
+     "foot": [
+      "3fdb6d31186b20c8",
+      "3fd3fefe8e069678",
+      "3feee472eb7476f4"
+     ],
+     "model": {
+      "dist2": "3fe0361738869a80",
+      "feature": 1,
+      "foot": [
+       "3fdb6d31186b20c8",
+       "3fd3fefe8e069678",
+       "3feee472eb7476f4"
+      ]
+     },
+     "p": [
+      "3fd0df6eee132478",
+      "3fead0e6cbf9d168",
+      "3ff6a89548736e0f"
+     ]
+    },
+    {
+     "dist2": "3fb449138b9addd7",
+     "feature": 2,
+     "foot": [
+      "3fea8a41e871ee9e",
+      "3fc0762b0282daf0",
+      "3fe47621954b651a"
+     ],
+     "model": {
+      "dist2": "3fb449138b9addd7",
+      "feature": 2,
+      "foot": [
+       "3fea8a41e871ee9e",
+       "3fc0762b0282daf0",
+       "3fe47621954b651a"
+      ]
+     },
+     "p": [
+      "3ff1656a51ef80d1",
+      "3fb13371b040baa0",
+      "3fe77dc671ea8ceb"
+     ]
+    },
+    {
+     "dist2": "3fb919b382d48410",
+     "feature": 3,
+     "foot": [
+      "3fd826a7afbebd7d",
+      "3fa4aec442703a97",
+      "3fed21093fcc8edc"
+     ],
+     "model": {
+      "dist2": "3fb919b382d48412",
+      "feature": 3,
+      "foot": [
+       "3fd826a7afbebd7d",
+       "3fa4aec442703a96",
+       "3fed21093fcc8edc"
+      ]
+     },
+     "p": [
+      "3fdbb738af229684",
+      "bf9f8c2654b80d7a",
+      "3ff35c78c9ace84f"
+     ]
+    },
+    {
+     "dist2": "3fd67fb44181a3f2",
+     "feature": 4,
+     "foot": [
+      "3fe0a46a6894cc4f",
+      "3fd14f3a868723bb",
+      "3fec82af75c0912e"
+     ],
+     "model": {
+      "dist2": "3fd67fb44181a3f2",
+      "feature": 4,
+      "foot": [
+       "3fe0a46a6894cc4f",
+       "3fd14f3a868723bc",
+       "3fec82af75c0912e"
+      ]
+     },
+     "p": [
+      "3fe194336d3750fe",
+      "3fe9a16891ea0e31",
+      "3fe416b029623df8"
+     ]
+    },
+    {
+     "dist2": "3fd50e5274db7992",
+     "feature": 5,
+     "foot": [
+      "3fe576c4ea9c7a38",
+      "3fb120906f24ce2e",
+      "3fe72e617c0c549f"
+     ],
+     "model": {
+      "dist2": "3fd50e5274db7991",
+      "feature": 5,
+      "foot": [
+       "3fe576c4ea9c7a38",
+       "3fb120906f24ce2e",
+       "3fe72e617c0c549f"
+      ]
+     },
+     "p": [
+      "3fef1ca7ef3c6e66",
+      "bfd5eb5f4526a192",
+      "3fefad67f8af1ed9"
+     ]
+    },
+    {
+     "dist2": "3f7e28f916a8b83e",
+     "feature": 6,
+     "foot": [
+      "3fdf276a74314196",
+      "3fc037f6dbc68a3c",
+      "3febb612a542a95a"
+     ],
+     "model": {
+      "dist2": "3f7e28f916a8b839",
+      "feature": 6,
+      "foot": [
+       "3fdf276a74314196",
+       "3fc037f6dbc68a3c",
+       "3febb612a542a95a"
+      ]
+     },
+     "p": [
+      "3fe10a7ec5664d13",
+      "3fbaa7f730e4eca8",
+      "3fedeb4665c08a7e"
+     ]
+    }
+   ],
+   "size": "3fe207bbe241f507"
+  },
+  {
+   "a": [
+    "bfe02204e6d0d702",
+    "3fec8e566d186c78",
+    "3fd0fa16e07f403c"
+   ],
+   "b": [
+    "3fe131535e121628",
+    "bfe7f9804a7fa888",
+    "bfe73acfb08cc0d6"
+   ],
+   "c": [
+    "bfd80e56e39536e8",
+    "bfbe5878e760dac0",
+    "3fe00e79578e2b9c"
+   ],
+   "queries": [
+    {
+     "dist2": "402f8e058bd21862",
+     "feature": 0,
+     "foot": [
+      "bfe02204e6d0d702",
+      "3fec8e566d186c78",
+      "3fd0fa16e07f403c"
+     ],
+     "model": {
+      "dist2": "402f8e058bd21862",
+      "feature": 0,
+      "foot": [
+       "bfe02204e6d0d702",
+       "3fec8e566d186c78",
+       "3fd0fa16e07f403c"
+      ]
+     },
+     "p": [
+      "bff95dba1d052b61",
+      "4012a740274121e1",
+      "3fec6d474319a363"
+     ]
+    },
+    {
+     "dist2": "400b114c5f8013f5",
+     "feature": 1,
+     "foot": [
+      "3fe131535e121628",
+      "bfe7f9804a7fa888",
+      "bfe73acfb08cc0d6"
+     ],
+     "model": {
+      "dist2": "400b114c5f8013f6",
+      "feature": 1,
+      "foot": [
+       "3fe131535e121628",
+       "bfe7f9804a7fa888",
+       "bfe73acfb08cc0d6"
+      ]
+     },
+     "p": [
+      "3fdf77ef001e8078",
+      "bffdea897549a37f",
+      "c00178a9a1ab0171"
+     ]
+    },
+    {
+     "dist2": "40155756064c96b4",
+     "feature": 2,
+     "foot": [
+      "bfd80e56e39536e8",
+      "bfbe5878e760dac0",
+      "3fe00e79578e2b9c"
+     ],
+     "model": {
+      "dist2": "40155756064c96b4",
+      "feature": 2,
+      "foot": [
+       "bfd80e56e39536e8",
+       "bfbe5878e760dac0",
+       "3fe00e79578e2b9c"
+      ]
+     },
+     "p": [
+      "c003b7457d6046bf",
+      "bff14a86926a9f8e",
+      "3fd233f5a8f3f774"
+     ]
+    },
+    {
+     "dist2": "40109c0e4ad2fa8f",
+     "feature": 3,
+     "foot": [
+      "3fb37351b8ef937c",
+      "bf969b6f0b9b296b",
+      "bfd25c5598860f50"
+     ],
+     "model": {
+      "dist2": "40109c0e4ad2fa8f",
+      "feature": 3,
+      "foot": [
+       "3fb37351b8ef9380",
+       "bf969b6f0b9b2980",
+       "bfd25c5598860f50"
+      ]
+     },
+     "p": [
+      "bfe4b9fb8bdfb291",
+      "3fe35b7f328dfc8c",
+      "c000af6a223225d2"
+     ]
+    },
+    {
+     "dist2": "4008d04803027b05",
+     "feature": 4,
+     "foot": [
+      "3fd6abf77b118270",
+      "bfe3edf9076415e5",
+      "bfdeb5fcd699a13d"
+     ],
+     "model": {
+      "dist2": "4008d04803027b04",
+      "feature": 4,
+      "foot": [
+       "3fd6abf77b11826e",
+       "bfe3edf9076415e4",
+       "bfdeb5fcd699a13b"
+      ]
+     },
+     "p": [
+      "3ff627f1842442ae",
+      "bff6d744fc81c37b",
+      "3fe6669c10b01649"
+     ]
+    },
+    {
+     "dist2": "3ff3d08a126e9a95",
+     "feature": 5,
+     "foot": [
+      "bfdbabc2c016523f",
+      "3fd4e6d237723b5a",
+      "3fd972c49371325a"
+     ],
+     "model": {
+      "dist2": "3ff3d08a126e9a94",
+      "feature": 5,
+      "foot": [
+       "bfdbabc2c016523f",
+       "3fd4e6d237723b5a",
+       "3fd972c49371325a"
+      ]
+     },
+     "p": [
+      "bff7ff2aefdd5ca0",
+      "3fd0d8de0f25a270",
+      "3fe695fe5163167e"
+     ]
+    },
+    {
+     "dist2": "3fb7ecaa4bc5dc25",
+     "feature": 6,
+     "foot": [
+      "3fc9a3267169a4de",
+      "bfdb26b7f0e1beb8",
+      "bfd414c40a231fa7"
+     ],
+     "model": {
+      "dist2": "3fb7ecaa4bc5dc28",
+      "feature": 6,
+      "foot": [
+       "3fc9a3267169a4dd",
+       "bfdb26b7f0e1beb9",
+       "bfd414c40a231fa7"
+      ]
+     },
+     "p": [
+      "3fdd20b081e49404",
+      "bfd6c533f2806a0d",
+      "bfc466f955263479"
+     ]
+    }
+   ],
+   "size": "4001750feca4d9b3"
+  },
+  {
+   "a": [
+    "bfc1f3a56c531da8",
+    "bfe3271136951ba8",
+    "bfdb4dca646de608"
+   ],
+   "b": [
+    "bfdc21673bc15e58",
+    "bfef6d9facf6cbbe",
+    "3fcc86d11d007308"
+   ],
+   "c": [
+    "3fd557154b93f830",
+    "3fef8a45f180225a",
+    "3fa75384b93f1760"
+   ],
+   "queries": [
+    {
+     "dist2": "4005d9ce5d691c46",
+     "feature": 0,
+     "foot": [
+      "bfc1f3a56c531da8",
+      "bfe3271136951ba8",
+      "bfdb4dca646de608"
+     ],
+     "model": {
+      "dist2": "4005d9ce5d691c46",
+      "feature": 0,
+      "foot": [
+       "bfc1f3a56c531da8",
+       "bfe3271136951ba8",
+       "bfdb4dca646de608"
+      ]
+     },
+     "p": [
+      "3fea97888e0d867c",
+      "bff708372e0d3759",
+      "bff775a8f2576583"
+     ]
+    },
+    {
+     "dist2": "402d6a1461498fdf",
+     "feature": 1,
+     "foot": [
+      "bfdc21673bc15e58",
+      "bfef6d9facf6cbbe",
+      "3fcc86d11d007308"
+     ],
+     "model": {
+      "dist2": "402d6a1461498fde",
+      "feature": 1,
+      "foot": [
+       "bfdc21673bc15e58",
+       "bfef6d9facf6cbbe",
+       "3fcc86d11d007308"
+      ]
+     },
+     "p": [
+      "c00035ed92ab410a",
+      "c00f79ec918a3f12",
+      "4000b0db28bdbda1"
+     ]
+    },
+    {
+     "dist2": "4011f3a23e360ec2",
+     "feature": 2,
+     "foot": [
+      "3fd557154b93f830",
+      "3fef8a45f180225a",
+      "3fa75384b93f1760"
+     ],
+     "model": {
+      "dist2": "4011f3a23e360ec2",
+      "feature": 2,
+      "foot": [
+       "3fd557154b93f830",
+       "3fef8a45f180225a",
+       "3fa75384b93f1760"
+      ]
+     },
+     "p": [
+      "4001c018dc073d80",
+      "3ffd299c4e7cc79d",
+      "3fe0e53c3ade7970"
+     ]
+    },
+    {
+     "dist2": "4002f1fcc0b1ade1",
+     "feature": 3,
+     "foot": [
+      "bfd2811cf7745c0c",
+      "bfe94255a842821f",
+      "bfba8144d84dcd35"
+     ],
+     "model": {
+      "dist2": "4002f1fcc0b1ade1",
+      "feature": 3,
+      "foot": [
+       "bfd2811cf7745c0c",
+       "bfe94255a842821e",
+       "bfba8144d84dcd34"
+      ]
+     },
+     "p": [
+      "bfe339116b0fabda",
+      "c000284cdc674154",
+      "bfef295c57ecb5c2"
+     ]
+    },
+    {
+     "dist2": "3fc24879756e6e0f",
+     "feature": 4,
+     "foot": [
+      "bf6e3fdb231fd42c",
+      "3fc04e7e02fe9e57",
+      "3fbf75bc8ee13ab7"
+     ],
+     "model": {
+      "dist2": "3fc24879756e6e0e",
+      "feature": 4,
+      "foot": [
+       "bf6e3fdb231fd480",
+       "3fc04e7e02fe9e58",
+       "3fbf75bc8ee13ab7"
+      ]
+     },
+     "p": [
+      "bfd42cafd50008c2",
+      "3fd0eeb4d086ffb9",
+      "3fd25fe7bb6d1abd"
+     ]
+    },
+    {
+     "dist2": "40109f3c2473dcad",
+     "feature": 5,
+     "foot": [
+      "3f7893f98d4a66de",
+      "bfbc031a92affa24",
+      "bfd1f9462057e3de"
+     ],
+     "model": {
+      "dist2": "40109f3c2473dcad",
+      "feature": 5,
+      "foot": [
+       "3f7893f98d4a66e0",
+       "bfbc031a92affa20",
+       "bfd1f9462057e3de"
+      ]
+     },
+     "p": [
+      "bffb648d0d5e0746",
+      "3fe48f2151dd2533",
+      "bff1472fe0c343d9"
+     ]
+    },
+    {
+     "dist2": "4007c6924fb8143c",
+     "feature": 6,
+     "foot": [
+      "bfc8ddd1e1f53d97",
+      "bfde394c9957e25d",
+      "bf82d42cd8bb2494"
+     ],
+     "model": {
+      "dist2": "4007c6924fb8143d",
+      "feature": 6,
+      "foot": [
+       "bfc8ddd1e1f53d98",
+       "bfde394c9957e25c",
+       "bf82d42cd8bb2490"
+      ]
+     },
+     "p": [
+      "bffc544e35cef3c2",
+      "3fbcd5ec30f81df0",
+      "bfd8f7b4feaf6c3f"
+     ]
+    }
+   ],
+   "size": "4000f8f462f9e341"
+  },
+  {
+   "a": [
+    "3fe4867bafda298e",
+    "3fcf9ab8b9190748",
+    "bfcd2837ed40d030"
+   ],
+   "b": [
+    "3fe401eefd5b2c2a",
+    "3fe0c1b6686befb0",
+    "3fe5456c924b538a"
+   ],
+   "c": [
+    "3fc8632fb6eeb1d0",
+    "bfefc5789e1d965c",
+    "bfe7007b217b74e0"
+   ],
+   "queries": [
+    {
+     "dist2": "400753b518e7edf2",
+     "feature": 0,
+     "foot": [
+      "3fe4867bafda298e",
+      "3fcf9ab8b9190748",
+      "bfcd2837ed40d030"
+     ],
+     "model": {
+      "dist2": "400753b518e7edf3",
+      "feature": 0,
+      "foot": [
+       "3fe4867bafda298e",
+       "3fcf9ab8b9190748",
+       "bfcd2837ed40d030"
+      ]
+     },
+     "p": [
+      "400224aad5af5ddc",
+      "3fd891cef32e0498",
+      "bfe7578162fc8c62"
+     ]
+    },
+    {
+     "dist2": "4020842da7d97422",
+     "feature": 1,
+     "foot": [
+      "3fe401eefd5b2c2a",
+      "3fe0c1b6686befb0",
+      "3fe5456c924b538a"
+     ],
+     "model": {
+      "dist2": "4020842da7d97422",
+      "feature": 1,
+      "foot": [
+       "3fe401eefd5b2c2a",
+       "3fe0c1b6686befb0",
+       "3fe5456c924b538a"
+      ]
+     },
+     "p": [
+      "3fe5aa1c8ec4a129",
+      "4001225411895cdc",
+      "40084fdf19dad742"
+     ]
+    },
+    {
+     "dist2": "402b7ab4187536ea",
+     "feature": 2,
+     "foot": [
+      "3fc8632fb6eeb1d0",
+      "bfefc5789e1d965c",
+      "bfe7007b217b74e0"
+     ],
+     "model": {
+      "dist2": "402b7ab4187536ea",
+      "feature": 2,
+      "foot": [
+       "3fc8632fb6eeb1d0",
+       "bfefc5789e1d965c",
+       "bfe7007b217b74e0"
+      ]
+     },
+     "p": [
+      "3febbbaaa51c58a3",
+      "c01156b36ce85c13",
+      "c0016261fba02dbc"
+     ]
+    },
+    {
+     "dist2": "401a357fe8a2c5a8",
+     "feature": 3,
+     "foot": [
+      "3fe4490fb56a37f2",
+      "3fd802636309dd13",
+      "3fc7c7f6fa403faa"
+     ],
+     "model": {
+      "dist2": "401a357fe8a2c5a9",
+      "feature": 3,
+      "foot": [
+       "3fe4490fb56a37f2",
+       "3fd802636309dd13",
+       "3fc7c7f6fa403fac"
+      ]
+     },
+     "p": [
+      "bfd1dc1d428192f0",
+      "40053c74e5e2ab0b",
+      "bfe13352cdcb092c"
+     ]
+    },
+    {
+     "dist2": "3fed3f34b62d9956",
+     "feature": 4,
+     "foot": [
+      "3fdfec80e9673dca",
+      "3fb52586eeb45bfb",
+      "3fd0ca64784c4db1"
+     ],
+     "model": {
+      "dist2": "3fed3f34b62d9955",
+      "feature": 4,
+      "foot": [
+       "3fdfec80e9673dca",
+       "3fb52586eeb45bfc",
+       "3fd0ca64784c4db1"
+      ]
+     },
+     "p": [
+      "bfd938f1162602f2",
+      "3f9f4cf5f67a26b0",
+      "3fe332c0bd89f729"
+     ]
+    },
+    {
+     "dist2": "3fc3a88b36636f9e",
+     "feature": 5,
+     "foot": [
+      "3fd3371faf561282",
+      "bfe61e3a72ddb832",
+      "bfe32db9a479b056"
+     ],
+     "model": {
+      "dist2": "3fc3a88b36636f9f",
+      "feature": 5,
+      "foot": [
+       "3fd3371faf561282",
+       "bfe61e3a72ddb832",
+       "bfe32db9a479b056"
+      ]
+     },
+     "p": [
+      "3fbe782b703e2520",
+      "bfe043c5b7c233df",
+      "bfeca1ef80ff27c9"
+     ]
+    },
+    {
+     "dist2": "3fb24914c5825f85",
+     "feature": 6,
+     "foot": [
+      "3fdd9a0afd2ef7c7",
+      "bfbd9e2fe0f7635a",
+      "bfacd894c3f47393"
+     ],
+     "model": {
+      "dist2": "3fb24914c5825f85",
+      "feature": 6,
+      "foot": [
+       "3fdd9a0afd2ef7c8",
+       "bfbd9e2fe0f76354",
+       "bfacd894c3f47388"
+      ]
+     },
+     "p": [
+      "3fcbfcf46f1ae6a4",
+      "bf89c8638cf4ee38",
+      "bfb7bd2eeb31f9d8"
+     ]
+    }
+   ],
+   "size": "4000c957f702dd18"
+  },
+  {
+   "a": [
+    "bfed2d213379b862",
+    "3fdd3bfc3dcddd2c",
+    "3fd45676f3d10728"
+   ],
+   "b": [
+    "3fd5c708d095dff0",
+    "3fd00026b1d5c3e4",
+    "3fdff619868c33e8"
+   ],
+   "c": [
+    "bfebfb16c16f1198",
+    "3fea7e93d9c43502",
+    "bfa0ed75ad357880"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe9df37846eaa97",
+     "feature": 0,
+     "foot": [
+      "bfed2d213379b862",
+      "3fdd3bfc3dcddd2c",
+      "3fd45676f3d10728"
+     ],
+     "model": {
+      "dist2": "3fe9df37846eaa98",
+      "feature": 0,
+      "foot": [
+       "bfed2d213379b862",
+       "3fdd3bfc3dcddd2c",
+       "3fd45676f3d10728"
+      ]
+     },
+     "p": [
+      "bff996754e039dbd",
+      "bfba39daea4a7db6",
+      "3fde12a778257632"
+     ]
+    },
+    {
+     "dist2": "4012181afe3ab10f",
+     "feature": 1,
+     "foot": [
+      "3fd5c708d095dff0",
+      "3fd00026b1d5c3e4",
+      "3fdff619868c33e8"
+     ],
+     "model": {
+      "dist2": "4012181afe3ab10e",
+      "feature": 1,
+      "foot": [
+       "3fd5c708d095dff0",
+       "3fd00026b1d5c3e4",
+       "3fdff619868c33e8"
+      ]
+     },
+     "p": [
+      "3ffd3c1d09eb0dcb",
+      "bff27f798236dfa2",
+      "bfb46d15e4639c08"
+     ]
+    },
+    {
+     "dist2": "3ff9692b1864829f",
+     "feature": 2,
+     "foot": [
+      "bfebfb16c16f1198",
+      "3fea7e93d9c43502",
+      "bfa0ed75ad357880"
+     ],
+     "model": {
+      "dist2": "3ff9692b186482a0",
+      "feature": 2,
+      "foot": [
+       "bfebfb16c16f1198",
+       "3fea7e93d9c43502",
+       "bfa0ed75ad357880"
+      ]
+     },
+     "p": [
+      "bff60cc871111246",
+      "3ff29edb679cadb3",
+      "bff236acaf5a9127"
+     ]
+    },
+    {
+     "dist2": "3ffefdb62636d070",
+     "feature": 3,
+     "foot": [
+      "bfb605a741c2cd37",
+      "3fd481a785e37670",
+      "3fdc00f19417e2e0"
+     ],
+     "model": {
+      "dist2": "3ffefdb62636d070",
+      "feature": 3,
+      "foot": [
+       "bfb605a741c2cd38",
+       "3fd481a785e37670",
+       "3fdc00f19417e2e0"
+      ]
+     },
+     "p": [
+      "bfd440fb2142c431",
+      "bff0d470bbaac0d0",
+      "3fddaed9904cb6ba"
+     ]
+    },
+    {
+     "dist2": "40089cf7c42a07da",
+     "feature": 4,
+     "foot": [
+      "bfd22c15ffe64040",
+      "3fe1811bfe76a4a4",
+      "3fcce5feabf2fb4a"
+     ],
+     "model": {
+      "dist2": "40089cf7c42a07d9",
+      "feature": 4,
+      "foot": [
+       "bfd22c15ffe64040",
+       "3fe1811bfe76a4a4",
+       "3fcce5feabf2fb4a"
+      ]
+     },
+     "p": [
+      "3fdd21619620ee82",
+      "40011907f1677d85",
+      "3fd101d4f1e5c824"
+     ]
+    },
+    {
+     "dist2": "3fd50dbb4c81c68f",
+     "feature": 5,
+     "foot": [
+      "bfec53493e176384",
+      "3fe71251746ea264",
+      "3fb16b73ec3e554a"
+     ],
+     "model": {
+      "dist2": "3fd50dbb4c81c68f",
+      "feature": 5,
+      "foot": [
+       "bfec53493e176384",
+       "3fe71251746ea264",
+       "3fb16b73ec3e554c"
+      ]
+     },
+     "p": [
+      "bff22208fb3a8902",
+      "3fd8449d180825da",
+      "bfd47a83fa50f05a"
+     ]
+    },
+    {
+     "dist2": "3fe38ae80f466148",
+     "feature": 6,
+     "foot": [
+      "3fb27ee3d0a0b28f",
+      "3fd5ac4c931600ad",
+      "3fdacacb7503b229"
+     ],
+     "model": {
+      "dist2": "3fe38ae80f466147",
+      "feature": 6,
+      "foot": [
+       "3fb27ee3d0a0b28b",
+       "3fd5ac4c931600ac",
+       "3fdacacb7503b229"
+      ]
+     },
+     "p": [
+      "3fb0ea22ae97e9ca",
+      "bfc9528e9ad538cc",
+      "bfc325934c757df0"
+     ]
+    }
+   ],
+   "size": "3ff725b5ce604eaf"
+  },
+  {
+   "a": [
+    "bfd0f093161e5158",
+    "bfef3ca2455a7a2c",
+    "bfe5dae9146a400e"
+   ],
+   "b": [
+    "bfe14919bc81a096",
+    "3fe9b487dd8aea3c",
+    "bfcfa50a4b94ea80"
+   ],
+   "c": [
+    "bfed1442c177cf34",
+    "bfe6c8f0a7f2d252",
+    "bfcc62e09be13e28"
+   ],
+   "queries": [
+    {
+     "dist2": "401b1e3ec40498a1",
+     "feature": 0,
+     "foot": [
+      "bfd0f093161e5158",
+      "bfef3ca2455a7a2c",
+      "bfe5dae9146a400e"
+     ],
+     "model": {
+      "dist2": "401b1e3ec40498a1",
+      "feature": 0,
+      "foot": [
+       "bfd0f093161e5158",
+       "bfef3ca2455a7a2c",
+       "bfe5dae9146a400e"
+      ]
+     },
+     "p": [
+      "3fea204978153a70",
+      "c006393714141616",
+      "c001c3c5dcce0acd"
+     ]
+    },
+    {
+     "dist2": "4003f379ad1a4aad",
+     "feature": 1,
+     "foot": [
+      "bfe14919bc81a096",
+      "3fe9b487dd8aea3c",
+      "bfcfa50a4b94ea80"
+     ],
+     "model": {
+      "dist2": "4003f379ad1a4aac",
+      "feature": 1,
+      "foot": [
+       "bfe14919bc81a096",
+       "3fe9b487dd8aea3c",
+       "bfcfa50a4b94ea80"
+      ]
+     },
+     "p": [
+      "bff56e6131a5022c",
+      "3ff751375c25843a",
+      "bff71210827ea604"
+     ]
+    },
+    {
+     "dist2": "4017806321a3cd6e",
+     "feature": 2,
+     "foot": [
+      "bfed1442c177cf34",
+      "bfe6c8f0a7f2d252",
+      "bfcc62e09be13e28"
+     ],
+     "model": {
+      "dist2": "4017806321a3cd6e",
+      "feature": 2,
+      "foot": [
+       "bfed1442c177cf34",
+       "bfe6c8f0a7f2d252",
+       "bfcc62e09be13e28"
+      ]
+     },
+     "p": [
+      "c008f53e5177e232",
+      "bff4bcd51a4e7c65",
+      "bff0677bd8dc0d0d"
+     ]
+    },
+    {
+     "dist2": "4014c00074bd7fd8",
+     "feature": 3,
+     "foot": [
+      "bfdceb1c763af8a0",
+      "3fcdcc17c188b2d7",
+      "bfd8c369dd0af5ea"
+     ],
+     "model": {
+      "dist2": "4014c00074bd7fd9",
+      "feature": 3,
+      "foot": [
+       "bfdceb1c763af8a0",
+       "3fcdcc17c188b2d8",
+       "bfd8c369dd0af5ea"
+      ]
+     },
+     "p": [
+      "3ffca09b798fdf64",
+      "3fe031fb2309c713",
+      "bfb60fcdaecd8e30"
+     ]
+    },
+    {
+     "dist2": "3ff2a8195b0bfd3c",
+     "feature": 4,
+     "foot": [
+      "bfe6ddb970c054e3",
+      "3fb61537c4ee1167",
+      "bfce1a53808c4348"
+     ],
+     "model": {
+      "dist2": "3ff2a8195b0bfd3b",
+      "feature": 4,
+      "foot": [
+       "bfe6ddb970c054e3",
+       "3fb61537c4ee1160",
+       "bfce1a53808c4348"
+      ]
+     },
+     "p": [
+      "bffbce4e274dfc3a",
+      "3fd5302dfa52f0d3",
+      "bfde97a0c9a03c34"
+     ]
+    },
+    {
+     "dist2": "40094e34dc8ba248",
+     "feature": 5,
+     "foot": [
+      "bfe10a508a0efb65",
+      "bfebb8db2d4e232a",
+      "bfdf6f7acc44d4f6"
+     ],
+     "model": {
+      "dist2": "40094e34dc8ba249",
+      "feature": 5,
+      "foot": [
+       "bfe10a508a0efb65",
+       "bfebb8db2d4e232a",
+       "bfdf6f7acc44d4f6"
+      ]
+     },
+     "p": [
+      "bff0a08209578508",
+      "c00469a301060669",
+      "bfcde6a06593ae92"
+     ]
+    },
+    {
+     "dist2": "4000c164cea39e4e",
+     "feature": 6,
+     "foot": [
+      "bfe4c290e8fed720",
+      "3fb0ce884162e216",
+      "bfd20265fdc60839"
+     ],
+     "model": {
+      "dist2": "4000c164cea39e4e",
+      "feature": 6,
+      "foot": [
+       "bfe4c290e8fed721",
+       "3fb0ce884162e21d",
+       "bfd20265fdc60838"
+      ]
+     },
+     "p": [
+      "3fc200a874a8547c",
+      "bfbb2e02dd9c217c",
+      "3fed6b3682ba7610"
+     ]
+    }
+   ],
+   "size": "3ffda44d6ef633bd"
+  },
+  {
+   "a": [
+    "3febad282c23d8ca",
+    "bfb9f9ea62ea7390",
+    "bfd6a52d9bba8648"
+   ],
+   "b": [
+    "3fe1a18e80765702",
+    "3fcfc59559584228",
+    "3fdd3288c4708318"
+   ],
+   "c": [
+    "bfe3d473d3d5c6f4",
+    "3fe8b41c3480edc8",
+    "bfea69c953751dea"
+   ],
+   "queries": [
+    {
+     "dist2": "401babad8bee261a",
+     "feature": 0,
+     "foot": [
+      "3febad282c23d8ca",
+      "bfb9f9ea62ea7390",
+      "bfd6a52d9bba8648"
+     ],
+     "model": {
+      "dist2": "401babad8bee261c",
+      "feature": 0,
+      "foot": [
+       "3febad282c23d8ca",
+       "bfb9f9ea62ea7390",
+       "bfd6a52d9bba8648"
+      ]
+     },
+     "p": [
+      "3ffb48ff071e5586",
+      "c0042135caadf3c2",
+      "bfef0ea3c872b924"
+     ]
+    },
+    {
+     "dist2": "4025993aad75aa04",
+     "feature": 1,
+     "foot": [
+      "3fe1a18e80765702",
+      "3fcfc59559584228",
+      "3fdd3288c4708318"
+     ],
+     "model": {
+      "dist2": "4025993aad75aa04",
+      "feature": 1,
+      "foot": [
+       "3fe1a18e80765702",
+       "3fcfc59559584228",
+       "3fdd3288c4708318"
+      ]
+     },
+     "p": [
+      "40006b7ed6263885",
+      "3ffe540233a4cd9b",
+      "4006f7c7f181a78c"
+     ]
+    },
+    {
+     "dist2": "40268ae20d79e4f2",
+     "feature": 2,
+     "foot": [
+      "bfe3d473d3d5c6f4",
+      "3fe8b41c3480edc8",
+      "bfea69c953751dea"
+     ],
+     "model": {
+      "dist2": "40268ae20d79e4f2",
+      "feature": 2,
+      "foot": [
+       "bfe3d473d3d5c6f4",
+       "3fe8b41c3480edc8",
+       "bfea69c953751dea"
+      ]
+     },
+     "p": [
+      "c006b4b05d8b6ac0",
+      "4004ae4187fe2cd2",
+      "c0049a264b972bfb"
+     ]
+    },
+    {
+     "dist2": "3fe027ee457f85d2",
+     "feature": 3,
+     "foot": [
+      "3fe7946f0da24f66",
+      "3fa50fc74683ba42",
+      "bf980d8e522eac6a"
+     ],
+     "model": {
+      "dist2": "3fe027ee457f85d1",
+      "feature": 3,
+      "foot": [
+       "3fe7946f0da24f66",
+       "3fa50fc74683ba44",
+       "bf980d8e522eac60"
+      ]
+     },
+     "p": [
+      "3ff4fd0f46de274c",
+      "3fdd35dfea9798ac",
+      "3f94845b231dd13c"
+     ]
+    },
+    {
+     "dist2": "3ff8f7671b935ce6",
+     "feature": 4,
+     "foot": [
+      "3f993e4c84d96c40",
+      "3fdef4f32a728fbb",
+      "bfbeb8592e49262a"
+     ],
+     "model": {
+      "dist2": "3ff8f7671b935ce6",
+      "feature": 4,
+      "foot": [
+       "3f993e4c84d96c40",
+       "3fdef4f32a728fba",
+       "bfbeb8592e492628"
+      ]
+     },
+     "p": [
+      "bfeb9de2c72031b8",
+      "bfcc9c7f9d8d9998",
+      "3fd9b6ec77729168"
+     ]
+    },
+    {
+     "dist2": "3fe7a6acabb4306e",
+     "feature": 5,
+     "foot": [
+      "3fd95f0d92ff25a5",
+      "3fc64a9b1a813621",
+      "bfe015a1c9c84cea"
+     ],
+     "model": {
+      "dist2": "3fe7a6acabb43070",
+      "feature": 5,
+      "foot": [
+       "3fd95f0d92ff25a3",
+       "3fc64a9b1a813622",
+       "bfe015a1c9c84cea"
+      ]
+     },
+     "p": [
+      "3febfa144f952112",
+      "3fe9af43121017e6",
+      "bfeaf8bdd0efe722"
+     ]
+    },
+    {
+     "dist2": "3fe94b3c7c51a6f5",
+     "feature": 6,
+     "foot": [
+      "3fcd03a8ed5ee769",
+      "3fd392370863af6a",
+      "bfd868612e76f830"
+     ],
+     "model": {
+      "dist2": "3fe94b3c7c51a6f6",
+      "feature": 6,
+      "foot": [
+       "3fcd03a8ed5ee76c",
+       "3fd392370863af6a",
+       "bfd868612e76f830"
+      ]
+     },
+     "p": [
+      "bfd003d01f36c97b",
+      "bfdbaddc9b1843c8",
+      "bfcfad4c33dc2192"
+     ]
+    }
+   ],
+   "size": "3ffd027329575a78"
+  },
+  {
+   "a": [
+    "3feb8d9244d48f4c",
+    "bfef089f9d0054dc",
+    "bfe4cda2e1774fbc"
+   ],
+   "b": [
+    "bfc1373d6ab7bd68",
+    "bfd9a54f25ca5ef8",
+    "bf927310d94e0700"
+   ],
+   "c": [
+    "bfe595798499b3a2",
+    "bf733ba8c65f0900",
+    "bfdc24297ac4acbc"
+   ],
+   "queries": [
+    {
+     "dist2": "3ffcab07871818ea",
+     "feature": 0,
+     "foot": [
+      "3feb8d9244d48f4c",
+      "bfef089f9d0054dc",
+      "bfe4cda2e1774fbc"
+     ],
+     "model": {
+      "dist2": "3ffcab07871818e9",
+      "feature": 0,
+      "foot": [
+       "3feb8d9244d48f4c",
+       "bfef089f9d0054dc",
+       "bfe4cda2e1774fbc"
+      ]
+     },
+     "p": [
+      "3fe199d09972a1e2",
+      "c001f7a34dc13066",
+      "bfed0f28de21600b"
+     ]
+    },
+    {
+     "dist2": "4014bfe5b0446bb9",
+     "feature": 1,
+     "foot": [
+      "bfc1373d6ab7bd68",
+      "bfd9a54f25ca5ef8",
+      "bf927310d94e0700"
+     ],
+     "model": {
+      "dist2": "4014bfe5b0446bb8",
+      "feature": 1,
+      "foot": [
+       "bfc1373d6ab7bd68",
+       "bfd9a54f25ca5ef8",
+       "bf927310d94e0700"
+      ]
+     },
+     "p": [
+      "3fe31e82bf2e7647",
+      "3fea5cb46c03e6b2",
+      "3ffc1e5943089a12"
+     ]
+    },
+    {
+     "dist2": "402a79a6758fa7ba",
+     "feature": 2,
+     "foot": [
+      "bfe595798499b3a2",
+      "bf733ba8c65f0900",
+      "bfdc24297ac4acbc"
+     ],
+     "model": {
+      "dist2": "402a79a6758fa7bb",
+      "feature": 2,
+      "foot": [
+       "bfe595798499b3a2",
+       "bf733ba8c65f0900",
+       "bfdc24297ac4acbc"
+      ]
+     },
+     "p": [
+      "c010b75140a03058",
+      "3fdb6630cacfa650",
+      "bff50ff5833e7811"
+     ]
+    },
+    {
+     "dist2": "40055081c5481805",
+     "feature": 3,
+     "foot": [
+      "3fe1c3682800d6d8",
+      "bfe96ffdcca26d20",
+      "bfdd2cd429cef65a"
+     ],
+     "model": {
+      "dist2": "40055081c5481804",
+      "feature": 3,
+      "foot": [
+       "3fe1c3682800d6d7",
+       "bfe96ffdcca26d20",
+       "bfdd2cd429cef65a"
+      ]
+     },
+     "p": [
+      "3ff9a7c8d9477c20",
+      "bfc3db9f1748cf60",
+      "3fe3d1280f6260eb"
+     ]
+    },
+    {
+     "dist2": "3fe8b6ed522dbf82",
+     "feature": 4,
+     "foot": [
+      "bfe1af7b5004094c",
+      "bfb812ec71a99cac",
+      "bfd60d79dfff610a"
+     ],
+     "model": {
+      "dist2": "3fe8b6ed522dbf82",
+      "feature": 4,
+      "foot": [
+       "bfe1af7b5004094c",
+       "bfb812ec71a99ca8",
+       "bfd60d79dfff610a"
+      ]
+     },
+     "p": [
+      "bff2df8589490a0e",
+      "bfe44ef689c261a3",
+      "bfa955c21ae5d218"
+     ]
+    },
+    {
+     "dist2": "4003733f1941d5db",
+     "feature": 5,
+     "foot": [
+      "bfcfff7a5f31187d",
+      "bfd1606849bb1de4",
+      "bfdfdd2698ceb9d1"
+     ],
+     "model": {
+      "dist2": "4003733f1941d5db",
+      "feature": 5,
+      "foot": [
+       "bfcfff7a5f311878",
+       "bfd1606849bb1de6",
+       "bfdfdd2698ceb9d2"
+      ]
+     },
+     "p": [
+      "3fbce9c75516d27c",
+      "3fe28b902f5d5eea",
+      "bffc0c2e5bf146f0"
+     ]
+    },
+    {
+     "dist2": "4007e21a759beccc",
+     "feature": 6,
+     "foot": [
+      "bfcce6b4e2d60492",
+      "bfd45497379df2de",
+      "bfcd791d695c3250"
+     ],
+     "model": {
+      "dist2": "4007e21a759beccc",
+      "feature": 6,
+      "foot": [
+       "bfcce6b4e2d6048c",
+       "bfd45497379df2e1",
+       "bfcd791d695c3250"
+      ]
+     },
+     "p": [
+      "3fe6945db7a7947e",
+      "3ff20d3dbf94792c",
+      "bfb0aa2d7355ecc0"
+     ]
+    }
+   ],
+   "size": "3ffd3679a8701d12"
+  },
+  {
+   "a": [
+    "3fd7327f3702f080",
+    "3fe544e92870e7aa",
+    "bfb2b45f442bffb0"
+   ],
+   "b": [
+    "bfc32e73b2446d60",
+    "3fea47b2b253be84",
+    "bfe1c1ca0b666f1c"
+   ],
+   "c": [
+    "bfeea8ec4abb575a",
+    "3fe04f9cded31054",
+    "bfe28e8fdff69766"
+   ],
+   "queries": [
+    {
+     "dist2": "401fcbc1e6236024",
+     "feature": 0,
+     "foot": [
+      "3fd7327f3702f080",
+      "3fe544e92870e7aa",
+      "bfb2b45f442bffb0"
+     ],
+     "model": {
+      "dist2": "401fcbc1e6236024",
+      "feature": 0,
+      "foot": [
+       "3fd7327f3702f080",
+       "3fe544e92870e7aa",
+       "bfb2b45f442bffb0"
+      ]
+     },
+     "p": [
+      "4001d3af0ead3a58",
+      "3ff577a0aba07150",
+      "3ffeddeeb3240e65"
+     ]
+    },
+    {
+     "dist2": "3fe4435ca459c1d6",
+     "feature": 1,
+     "foot": [
+      "bfc32e73b2446d60",
+      "3fea47b2b253be84",
+      "bfe1c1ca0b666f1c"
+     ],
+     "model": {
+      "dist2": "3fe4435ca459c1d6",
+      "feature": 1,
+      "foot": [
+       "bfc32e73b2446d60",
+       "3fea47b2b253be84",
+       "bfe1c1ca0b666f1c"
+      ]
+     },
+     "p": [
+      "bfcef9bd3d071ffe",
+      "3ff9c1107160a124",
+      "bfdfe6d500542f23"
+     ]
+    },
+    {
+     "dist2": "401fa09f10a758d9",
+     "feature": 2,
+     "foot": [
+      "bfeea8ec4abb575a",
+      "3fe04f9cded31054",
+      "bfe28e8fdff69766"
+     ],
+     "model": {
+      "dist2": "401fa09f10a758d7",
+      "feature": 2,
+      "foot": [
+       "bfeea8ec4abb575a",
+       "3fe04f9cded31054",
+       "bfe28e8fdff69766"
+      ]
+     },
+     "p": [
+      "c00df1c501626f49",
+      "3fcc5286b94b21c2",
+      "bfeae3d3b205f8bc"
+     ]
+    },
+    {
+     "dist2": "3fe7992459c6706f",
+     "feature": 3,
+     "foot": [
+      "bfa23362baf21ee9",
+      "3fe9297bb6bee6cb",
+      "bfdca22a50ca6a24"
+     ],
+     "model": {
+      "dist2": "3fe7992459c67070",
+      "feature": 3,
+      "foot": [
+       "bfa23362baf21ef0",
+       "3fe9297bb6bee6cb",
+       "bfdca22a50ca6a24"
+      ]
+     },
+     "p": [
+      "3fcd5c5738237a21",
+      "3ff9a5ed844393de",
+      "bfddacbc86a39659"
+     ]
+    },
+    {
+     "dist2": "3ff45fba5c841881",
+     "feature": 4,
+     "foot": [
+      "bfe6218256722e3c",
+      "3fe3992d5736dd2c",
+      "bfe24b097bf198a8"
+     ],
+     "model": {
+      "dist2": "3ff45fba5c841882",
+      "feature": 4,
+      "foot": [
+       "bfe6218256722e3c",
+       "3fe3992d5736dd2c",
+       "bfe24b097bf198a8"
+      ]
+     },
+     "p": [
+      "bfd9004e17d6e33b",
+      "bfba43e0309ee9e0",
+      "bff64204212a16b6"
+     ]
+    },
+    {
+     "dist2": "40011f39a37ad5d5",
+     "feature": 5,
+     "foot": [
+      "bfe2578ef1e11ada",
+      "3fe1c198fd28998f",
+      "bfdba899bfabd2e7"
+     ],
+     "model": {
+      "dist2": "40011f39a37ad5d5",
+      "feature": 5,
+      "foot": [
+       "bfe2578ef1e11ad9",
+       "3fe1c198fd28998f",
+       "bfdba899bfabd2e6"
+      ]
+     },
+     "p": [
+      "bff1a3da7c6d340c",
+      "3fe377a0d526fef4",
+      "3fedc7b9ab435e41"
+     ]
+    },
+    {
+     "dist2": "3fa17789525d7041",
+     "feature": 6,
+     "foot": [
+      "bfda6ccf90027c71",
+      "3fe46d74cd6e615d",
+      "bfdd2b35b9979648"
+     ],
+     "model": {
+      "dist2": "3fa17789525d7042",
+      "feature": 6,
+      "foot": [
+       "bfda6ccf90027c71",
+       "3fe46d74cd6e615d",
+       "bfdd2b35b9979649"
+      ]
+     },
+     "p": [
+      "bfde15bfcf0dd639",
+      "3fe8e70c3d883823",
+      "bfd65e6cbb905ffa"
+     ]
+    }
+   ],
+   "size": "3ff6c47277cf7e46"
+  },
+  {
+   "a": [
+    "3fc1ec83a1dec7f0",
+    "bfa47a7518fd2100",
+    "bfd78c7d07c64d5c"
+   ],
+   "b": [
+    "bfd651ba2d29f098",
+    "3fa9b281722802e0",
+    "bfe0bab9759b9d0e"
+   ],
+   "c": [
+    "bfeab13481babf04",
+    "3fe343a93748e55a",
+    "bfc11747e246c890"
+   ],
+   "queries": [
+    {
+     "dist2": "4011323bfee98ef5",
+     "feature": 0,
+     "foot": [
+      "3fc1ec83a1dec7f0",
+      "bfa47a7518fd2100",
+      "bfd78c7d07c64d5c"
+     ],
+     "model": {
+      "dist2": "4011323bfee98ef6",
+      "feature": 0,
+      "foot": [
+       "3fc1ec83a1dec7f0",
+       "bfa47a7518fd2100",
+       "bfd78c7d07c64d5c"
+      ]
+     },
+     "p": [
+      "4000857fff85933d",
+      "bfe9b86839518a4c",
+      "bfd14fa4057f1e60"
+     ]
+    },
+    {
+     "dist2": "3fd449665075867c",
+     "feature": 1,
+     "foot": [
+      "bfd651ba2d29f098",
+      "3fa9b281722802e0",
+      "bfe0bab9759b9d0e"
+     ],
+     "model": {
+      "dist2": "3fd449665075867c",
+      "feature": 1,
+      "foot": [
+       "bfd651ba2d29f098",
+       "3fa9b281722802e0",
+       "bfe0bab9759b9d0e"
+      ]
+     },
+     "p": [
+      "bfdeae8da8514503",
+      "bfb43c7d74f2795e",
+      "bff0e12081516e88"
+     ]
+    },
+    {
+     "dist2": "3fef19a0b6a0f259",
+     "feature": 2,
+     "foot": [
+      "bfeab13481babf04",
+      "3fe343a93748e55a",
+      "bfc11747e246c890"
+     ],
+     "model": {
+      "dist2": "3fef19a0b6a0f258",
+      "feature": 2,
+      "foot": [
+       "bfeab13481babf04",
+       "3fe343a93748e55a",
+       "bfc11747e246c890"
+      ]
+     },
+     "p": [
+      "bff9b9d07a80e57f",
+      "3fec6c1a145619a4",
+      "3fd9ff5aa25a034d"
+     ]
+    },
+    {
+     "dist2": "3ff83052c8955bc0",
+     "feature": 3,
+     "foot": [
+      "bfb475825231e623",
+      "3f43425f9a39a0fe",
+      "bfdc02223cfb9f68"
+     ],
+     "model": {
+      "dist2": "3ff83052c8955bc0",
+      "feature": 3,
+      "foot": [
+       "bfb475825231e622",
+       "3f43425f9a39a0c0",
+       "bfdc02223cfb9f68"
+      ]
+     },
+     "p": [
+      "3fc54fcf564264a6",
+      "bfe0cc7785ab9e0c",
+      "bff8584262c03916"
+     ]
+    },
+    {
+     "dist2": "3fee126ac2180dda",
+     "feature": 4,
+     "foot": [
+      "bfe2cd26e23ecac7",
+      "3fd496538f8aa314",
+      "bfd533aea40620b4"
+     ],
+     "model": {
+      "dist2": "3fee126ac2180ddb",
+      "feature": 4,
+      "foot": [
+       "bfe2cd26e23ecac6",
+       "3fd496538f8aa314",
+       "bfd533aea40620b4"
+      ]
+     },
+     "p": [
+      "bff409226cf19f90",
+      "3fcd8525363bb425",
+      "bff07f180de5b4f8"
+     ]
+    },
+    {
+     "dist2": "3fd93fe5f73098c0",
+     "feature": 5,
+     "foot": [
+      "bfd4600ba676ad3b",
+      "3fd0c63da320e2ae",
+      "bfd07d2cc1120cfc"
+     ],
+     "model": {
+      "dist2": "3fd93fe5f73098c0",
+      "feature": 5,
+      "foot": [
+       "bfd4600ba676ad39",
+       "3fd0c63da320e2ad",
+       "bfd07d2cc1120cfc"
+      ]
+     },
+     "p": [
+      "bfdb5d2e415d887a",
+      "bfb6e54ff61ffcd8",
+      "3fd01557b05b2d44"
+     ]
+    },
+    {
+     "dist2": "3ee411255d3596a7",
+     "feature": 6,
+     "foot": [
+      "bfd5e8d7e68e544f",
+      "3fcc1ca7381fb311",
+      "bfd4804d2270aada"
+     ],
+     "model": {
+      "dist2": "3ee411255d35967f",
+      "feature": 6,
+      "foot": [
+       "bfd5e8d7e68e544f",
+       "3fcc1ca7381fb310",
+       "bfd4804d2270aada"
+      ]
+     },
+     "p": [
+      "bfd5f968b0cc863d",
+      "3fcbd3b52d41df69",
+      "bfd4614132127814"
+     ]
+    }
+   ],
+   "size": "3ff30a45d9d86e88"
+  },
+  {
+   "a": [
+    "bfef7ff0ecb41ace",
+    "3fcd023e50626c18",
+    "bfef220afb593bd2"
+   ],
+   "b": [
+    "bfe5195f6eac21ec",
+    "bfe0a1b4107054ac",
+    "3fc74eaf41c3e7f0"
+   ],
+   "c": [
+    "3fedac8b04d55f5c",
+    "bfd56d2cb1e0b3e0",
+    "3fd905d966f51598"
+   ],
+   "queries": [
+    {
+     "dist2": "401e1f8d0d9714bf",
+     "feature": 0,
+     "foot": [
+      "bfef7ff0ecb41ace",
+      "3fcd023e50626c18",
+      "bfef220afb593bd2"
+     ],
+     "model": {
+      "dist2": "401e1f8d0d9714be",
+      "feature": 0,
+      "foot": [
+       "bfef7ff0ecb41ace",
+       "3fcd023e50626c18",
+       "bfef220afb593bd2"
+      ]
+     },
+     "p": [
+      "bff6a9ac97500715",
+      "bff02e409c0c99d0",
+      "c00b11b6bcb7036b"
+     ]
+    },
+    {
+     "dist2": "4017d97044cc13eb",
+     "feature": 1,
+     "foot": [
+      "bfe5195f6eac21ec",
+      "bfe0a1b4107054ac",
+      "3fc74eaf41c3e7f0"
+     ],
+     "model": {
+      "dist2": "4017d97044cc13eb",
+      "feature": 1,
+      "foot": [
+       "bfe5195f6eac21ec",
+       "bfe0a1b4107054ac",
+       "3fc74eaf41c3e7f0"
+      ]
+     },
+     "p": [
+      "bffb8c0371f8a0a9",
+      "c0056bdef7024b9c",
+      "3fe34b4417e700ed"
+     ]
+    },
+    {
+     "dist2": "40296548bbf83aad",
+     "feature": 2,
+     "foot": [
+      "3fedac8b04d55f5c",
+      "bfd56d2cb1e0b3e0",
+      "3fd905d966f51598"
+     ],
+     "model": {
+      "dist2": "40296548bbf83aae",
+      "feature": 2,
+      "foot": [
+       "3fedac8b04d55f5c",
+       "bfd56d2cb1e0b3e0",
+       "3fd905d966f51598"
+      ]
+     },
+     "p": [
+      "400a4fa9b1f21370",
+      "3ff23a286bf742d2",
+      "4004ec5e004678ae"
+     ]
+    },
+    {
+     "dist2": "400bbabaca832851",
+     "feature": 3,
+     "foot": [
+      "bfeb7c7c9fa19569",
+      "bfaf6dce9ee5a1e0",
+      "bfe0dee080685956"
+     ],
+     "model": {
+      "dist2": "400bbabaca832852",
+      "feature": 3,
+      "foot": [
+       "bfeb7c7c9fa19569",
+       "bfaf6dce9ee5a1e8",
+       "bfe0dee080685955"
+      ]
+     },
+     "p": [
+      "c0030a7082aca1c0",
+      "3fe2f9c5c96dae61",
+      "3fd4b7c397d5c7aa"
+     ]
+    },
+    {
+     "dist2": "40173c31bbb8cd70",
+     "feature": 4,
+     "foot": [
+      "3fc5e6d1f91b9be6",
+      "bfdb1163fa390ec0",
+      "3fd2a6ac97231e7f"
+     ],
+     "model": {
+      "dist2": "40173c31bbb8cd70",
+      "feature": 4,
+      "foot": [
+       "3fc5e6d1f91b9be4",
+       "bfdb1163fa390ec0",
+       "3fd2a6ac97231e7f"
+      ]
+     },
+     "p": [
+      "3fe12ee500b56eae",
+      "c0055dbd8f765152",
+      "bfdfd48f8a7eb0ea"
+     ]
+    },
+    {
+     "dist2": "40071d77c7aa1bd1",
+     "feature": 5,
+     "foot": [
+      "bfe28862ad35faec",
+      "3fbb8d6dc04922ff",
+      "bfe5e1b4fb0488b9"
+     ],
+     "model": {
+      "dist2": "40071d77c7aa1bd2",
+      "feature": 5,
+      "foot": [
+       "bfe28862ad35faec",
+       "3fbb8d6dc04922fe",
+       "bfe5e1b4fb0488b8"
+      ]
+     },
+     "p": [
+      "3fdd16e71dbceb88",
+      "3fddff269d6c15d2",
+      "bfffbe80c770e9e1"
+     ]
+    },
+    {
+     "dist2": "400ef9fe353c8d89",
+     "feature": 6,
+     "foot": [
+      "bfd00cb2ba65f105",
+      "bfd9322e98b58f66",
+      "3fbfe9ad9aa88b73"
+     ],
+     "model": {
+      "dist2": "400ef9fe353c8d88",
+      "feature": 6,
+      "foot": [
+       "bfd00cb2ba65f100",
+       "bfd9322e98b58f67",
+       "3fbfe9ad9aa88b7c"
+      ]
+     },
+     "p": [
+      "bfe2a57ba31070de",
+      "3ff31014df9943ea",
+      "3ff3e0cce93d6a25"
+     ]
+    }
+   ],
+   "size": "400350ef62dc58f0"
+  },
+  {
+   "a": [
+    "3fca3d7c253cf570",
+    "3fdd19620f68df04",
+    "bfecc4a7fc39d21c"
+   ],
+   "b": [
+    "bfe016e768afc832",
+    "bfe90de7334f5e20",
+    "bfc967fc53470de0"
+   ],
+   "c": [
+    "bfe9ee7556ca697e",
+    "3feb3e5a801ba2d8",
+    "3fe8bf031e6a0ec0"
+   ],
+   "queries": [
+    {
+     "dist2": "40220d8d5287a5ba",
+     "feature": 0,
+     "foot": [
+      "3fca3d7c253cf570",
+      "3fdd19620f68df04",
+      "bfecc4a7fc39d21c"
+     ],
+     "model": {
+      "dist2": "40220d8d5287a5ba",
+      "feature": 0,
+      "foot": [
+       "3fca3d7c253cf570",
+       "3fdd19620f68df04",
+       "bfecc4a7fc39d21c"
+      ]
+     },
+     "p": [
+      "4003c3110ba4be72",
+      "3ff5206601ee82d8",
+      "c005617b6cc18654"
+     ]
+    },
+    {
+     "dist2": "401bf69eb7d40aea",
+     "feature": 1,
+     "foot": [
+      "bfe016e768afc832",
+      "bfe90de7334f5e20",
+      "bfc967fc53470de0"
+     ],
+     "model": {
+      "dist2": "401bf69eb7d40aea",
+      "feature": 1,
+      "foot": [
+       "bfe016e768afc832",
+       "bfe90de7334f5e20",
+       "bfc967fc53470de0"
+      ]
+     },
+     "p": [
+      "bff8874f2942c7bf",
+      "c0095acef34407b2",
+      "bfe5d9a4879c57c0"
+     ]
+    },
+    {
+     "dist2": "402ffd7a67999e05",
+     "feature": 2,
+     "foot": [
+      "bfe9ee7556ca697e",
+      "3feb3e5a801ba2d8",
+      "3fe8bf031e6a0ec0"
+     ],
+     "model": {
+      "dist2": "402ffd7a67999e04",
+      "feature": 2,
+      "foot": [
+       "bfe9ee7556ca697e",
+       "3feb3e5a801ba2d8",
+       "3fe8bf031e6a0ec0"
+      ]
+     },
+     "p": [
+      "c00d42d0bdda3ca4",
+      "40097733343a5b1d",
+      "4002b5d0bba848ea"
+     ]
+    },
+    {
+     "dist2": "3ff10dd1b05283ea",
+     "feature": 3,
+     "foot": [
+      "bf722ba53bb3a067",
+      "3fb6a56a29264bc6",
+      "bfe622958e0f0f8f"
+     ],
+     "model": {
+      "dist2": "3ff10dd1b05283ea",
+      "feature": 3,
+      "foot": [
+       "bf722ba53bb3a020",
+       "3fb6a56a29264bcc",
+       "bfe622958e0f0f90"
+      ]
+     },
+     "p": [
+      "3fd4701a299eb34b",
+      "bfe0e63e239f57e9",
+      "bff7431843658637"
+     ]
+    },
+    {
+     "dist2": "3fff08161b946a0e",
+     "feature": 4,
+     "foot": [
+      "bfe2a5714d712ae6",
+      "bfd6efb5c90be6cc",
+      "3faba2467d967351"
+     ],
+     "model": {
+      "dist2": "3fff08161b946a0e",
+      "feature": 4,
+      "foot": [
+       "bfe2a5714d712ae6",
+       "bfd6efb5c90be6ce",
+       "3faba2467d967348"
+      ]
+     },
+     "p": [
+      "bffc3b0161ccdd5a",
+      "bfec5d8650f9ba10",
+      "3fe22cf8fa8b873c"
+     ]
+    },
+    {
+     "dist2": "400f7c1b10f4ea98",
+     "feature": 5,
+     "foot": [
+      "bfdd1925c84f3dc6",
+      "3fe6cbf052e79c4d",
+      "3fc7ff17bcf669ee"
+     ],
+     "model": {
+      "dist2": "400f7c1b10f4ea99",
+      "feature": 5,
+      "foot": [
+       "bfdd1925c84f3dc6",
+       "3fe6cbf052e79c4c",
+       "3fc7ff17bcf669f0"
+      ]
+     },
+     "p": [
+      "3fd6c61b805aa830",
+      "40042d17deb22d06",
+      "3fd00530b2e62f71"
+     ]
+    },
+    {
+     "dist2": "4009286a94942a29",
+     "feature": 6,
+     "foot": [
+      "bfe0a92edda24b61",
+      "bfc816ceb3946683",
+      "3f879a2ab8ecfb4a"
+     ],
+     "model": {
+      "dist2": "4009286a94942a2a",
+      "feature": 6,
+      "foot": [
+       "bfe0a92edda24b61",
+       "bfc816ceb394667c",
+       "3f879a2ab8ecfb40"
+      ]
+     },
+     "p": [
+      "3fee273b59ec1136",
+      "bfdee2726462d3ea",
+      "3fef06d7eb3eaf46"
+     ]
+    }
+   ],
+   "size": "3ffff09afdcdd6c3"
+  },
+  {
+   "a": [
+    "bfe861d98edb968c",
+    "bfec021a92358246",
+    "3fe3775e22227844"
+   ],
+   "b": [
+    "bfb7119db58e32a0",
+    "3fe00a19938fba6e",
+    "3fe5e028596527dc"
+   ],
+   "c": [
+    "bfba28a642d57ce0",
+    "3fef984d484b03be",
+    "bfe2562328784fd8"
+   ],
+   "queries": [
+    {
+     "dist2": "400a3e5c44c6214c",
+     "feature": 0,
+     "foot": [
+      "bfe861d98edb968c",
+      "bfec021a92358246",
+      "3fe3775e22227844"
+     ],
+     "model": {
+      "dist2": "400a3e5c44c6214c",
+      "feature": 0,
+      "foot": [
+       "bfe861d98edb968c",
+       "bfec021a92358246",
+       "3fe3775e22227844"
+      ]
+     },
+     "p": [
+      "c0030988b95cbdcc",
+      "bff7dc1822b4e308",
+      "3ff242a37c9cfe83"
+     ]
+    },
+    {
+     "dist2": "401d9e4e0583b39b",
+     "feature": 1,
+     "foot": [
+      "bfb7119db58e32a0",
+      "3fe00a19938fba6e",
+      "3fe5e028596527dc"
+     ],
+     "model": {
+      "dist2": "401d9e4e0583b39b",
+      "feature": 1,
+      "foot": [
+       "bfb7119db58e32a0",
+       "3fe00a19938fba6e",
+       "3fe5e028596527dc"
+      ]
+     },
+     "p": [
+      "bfe5c47a61118f0f",
+      "400146b07ec463ff",
+      "4006120b8a8a1a36"
+     ]
+    },
+    {
+     "dist2": "401980eb4d947119",
+     "feature": 2,
+     "foot": [
+      "bfba28a642d57ce0",
+      "3fef984d484b03be",
+      "bfe2562328784fd8"
+     ],
+     "model": {
+      "dist2": "401980eb4d947119",
+      "feature": 2,
+      "foot": [
+       "bfba28a642d57ce0",
+       "3fef984d484b03be",
+       "bfe2562328784fd8"
+      ]
+     },
+     "p": [
+      "3ff8f4076ef54bef",
+      "3ff94e73dd5395a1",
+      "c00308000807c846"
+     ]
+    },
+    {
+     "dist2": "4018443e0b97f3bf",
+     "feature": 3,
+     "foot": [
+      "bfdac14595d41ea9",
+      "bfc5d81b9c724380",
+      "3fe4b317437c4e96"
+     ],
+     "model": {
+      "dist2": "4018443e0b97f3bf",
+      "feature": 3,
+      "foot": [
+       "bfdac14595d41ea9",
+       "bfc5d81b9c724380",
+       "3fe4b317437c4e96"
+      ]
+     },
+     "p": [
+      "c00117c6bef75e04",
+      "3fe296036d36c980",
+      "4001f230844d879a"
+     ]
+    },
+    {
+     "dist2": "3ff913c44eb80bcc",
+     "feature": 4,
+     "foot": [
+      "bfb85b0b3538eaa8",
+      "3fe6847f50813601",
+      "3fc4844bf5a3109c"
+     ],
+     "model": {
+      "dist2": "3ff913c44eb80bcb",
+      "feature": 4,
+      "foot": [
+       "bfb85b0b3538eaa8",
+       "3fe6847f50813601",
+       "3fc4844bf5a3109c"
+      ]
+     },
+     "p": [
+      "3ff26d1b26033418",
+      "3fea043430751f98",
+      "3fc865d89dce1222"
+     ]
+    },
+    {
+     "dist2": "40125954f5e1beb6",
+     "feature": 5,
+     "foot": [
+      "bfd28689c4a4e3c1",
+      "3fdd5a281ab29fd0",
+      "bfce6c648a27d1b2"
+     ],
+     "model": {
+      "dist2": "40125954f5e1beb6",
+      "feature": 5,
+      "foot": [
+       "bfd28689c4a4e3c0",
+       "3fdd5a281ab29fd4",
+       "bfce6c648a27d1b4"
+      ]
+     },
+     "p": [
+      "3fefdc4c80c19100",
+      "bfe8545867b21167",
+      "bff711bd0f23ac7d"
+     ]
+    },
+    {
+     "dist2": "3ffd0fc52811a31e",
+     "feature": 6,
+     "foot": [
+      "bfd416f45941b51e",
+      "3fc6be2b240f53a2",
+      "3fd4ec07b12aedde"
+     ],
+     "model": {
+      "dist2": "3ffd0fc52811a31e",
+      "feature": 6,
+      "foot": [
+       "bfd416f45941b51f",
+       "3fc6be2b240f53a2",
+       "3fd4ec07b12aedde"
+      ]
+     },
+     "p": [
+      "bff83079ad1ce50c",
+      "3fe7fcf83fa3c8ea",
+      "3fe1e8c459a7afec"
+     ]
+    }
+   ],
+   "size": "40026ae6805ba2b9"
+  },
+  {
+   "a": [
+    "3fb1078a845015f0",
+    "3fce208fe3653cc0",
+    "bfbeca87c0083e20"
+   ],
+   "b": [
+    "3fedcb01e8c3c9e4",
+    "3fefe40bbf69c158",
+    "3fcb061703014e78"
+   ],
+   "c": [
+    "bfeafa0271a9d7a0",
+    "3fdd12ddf5808938",
+    "3fe76a1d0cfd7e06"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe22680d585b1a8",
+     "feature": 0,
+     "foot": [
+      "3fb1078a845015f0",
+      "3fce208fe3653cc0",
+      "bfbeca87c0083e20"
+     ],
+     "model": {
+      "dist2": "3fe22680d585b1a8",
+      "feature": 0,
+      "foot": [
+       "3fb1078a845015f0",
+       "3fce208fe3653cc0",
+       "bfbeca87c0083e20"
+      ]
+     },
+     "p": [
+      "3fd50b18a3186e26",
+      "bfdd1d77ca81bc7a",
+      "3f9c6464f1bccf50"
+     ]
+    },
+    {
+     "dist2": "40100bec3ce3805f",
+     "feature": 1,
+     "foot": [
+      "3fedcb01e8c3c9e4",
+      "3fefe40bbf69c158",
+      "3fcb061703014e78"
+     ],
+     "model": {
+      "dist2": "40100bec3ce3805e",
+      "feature": 1,
+      "foot": [
+       "3fedcb01e8c3c9e4",
+       "3fefe40bbf69c158",
+       "3fcb061703014e78"
+      ]
+     },
+     "p": [
+      "400616648ca6169f",
+      "3fe9c4a6ae80f92e",
+      "3ff00acb40b0e528"
+     ]
+    },
+    {
+     "dist2": "4003886616bbf2ab",
+     "feature": 2,
+     "foot": [
+      "bfeafa0271a9d7a0",
+      "3fdd12ddf5808938",
+      "3fe76a1d0cfd7e06"
+     ],
+     "model": {
+      "dist2": "4003886616bbf2ab",
+      "feature": 2,
+      "foot": [
+       "bfeafa0271a9d7a0",
+       "3fdd12ddf5808938",
+       "3fe76a1d0cfd7e06"
+      ]
+     },
+     "p": [
+      "c0024a7706ec3797",
+      "3fe26b13775aba1b",
+      "3ff51637e1cd5ddf"
+     ]
+    },
+    {
+     "dist2": "4012ed64e976550f",
+     "feature": 3,
+     "foot": [
+      "3fd97767e7a1b2ee",
+      "3fe0de8b1e039007",
+      "3f7bae128d8d91e3"
+     ],
+     "model": {
+      "dist2": "4012ed64e9765510",
+      "feature": 3,
+      "foot": [
+       "3fd97767e7a1b2ee",
+       "3fe0de8b1e039007",
+       "3f7bae128d8d91e0"
+      ]
+     },
+     "p": [
+      "3fea80425cd160e0",
+      "3fee5a7d8672fa1b",
+      "c000aaffbe9a8bec"
+     ]
+    },
+    {
+     "dist2": "4014fe4eebe28176",
+     "feature": 4,
+     "foot": [
+      "bfdea90e58360498",
+      "3fe218d876832ca0",
+      "3fe3ff39118ac709"
+     ],
+     "model": {
+      "dist2": "4014fe4eebe28176",
+      "feature": 4,
+      "foot": [
+       "bfdea90e58360494",
+       "3fe218d876832ca0",
+       "3fe3ff39118ac708"
+      ]
+     },
+     "p": [
+      "bfedf3045cc096b0",
+      "4005a7bf7da63f78",
+      "3ff4c7ef5144a4f4"
+     ]
+    },
+    {
+     "dist2": "400e9f7e9de2bdcc",
+     "feature": 5,
+     "foot": [
+      "bfbe0b7a222fc9e1",
+      "3fd1e563d188b1cf",
+      "3faa9bb6dba7f8cf"
+     ],
+     "model": {
+      "dist2": "400e9f7e9de2bdcc",
+      "feature": 5,
+      "foot": [
+       "bfbe0b7a222fc9e0",
+       "3fd1e563d188b1cf",
+       "3faa9bb6dba7f8cc"
+      ]
+     },
+     "p": [
+      "bfe75ddb8a1a44ae",
+      "bff91dbe9e917c8b",
+      "bfc044b8958b0014"
+     ]
+    },
+    {
+     "dist2": "3ff5f1882c453837",
+     "feature": 6,
+     "foot": [
+      "3fc6a27626ac4785",
+      "3fe5d847edb9aadd",
+      "3fd5648ffba79445"
+     ],
+     "model": {
+      "dist2": "3ff5f1882c453836",
+      "feature": 6,
+      "foot": [
+       "3fc6a27626ac477c",
+       "3fe5d847edb9aadc",
+       "3fd5648ffba79444"
+      ]
+     },
+     "p": [
+      "bfd1e1113427b84e",
+      "3ff81360f5b0e273",
+      "bfd74b6675b6b685"
+     ]
+    }
+   ],
+   "size": "3ffed3f5bc33e1e4"
+  },
+  {
+   "a": [
+    "3fea0c4a53d55284",
+    "3fe6c334a1f1d2f6",
+    "3fe9b42608bc81de"
+   ],
+   "b": [
+    "bfb3c87018d40670",
+    "3fe402c27e2b94b0",
+    "3fd86266f64c7560"
+   ],
+   "c": [
+    "3fc138f057948550",
+    "bfe3a1004551d03a",
+    "bfe21defe46331c2"
+   ],
+   "queries": [
+    {
+     "dist2": "4018cbf3c6a2bebf",
+     "feature": 0,
+     "foot": [
+      "3fea0c4a53d55284",
+      "3fe6c334a1f1d2f6",
+      "3fe9b42608bc81de"
+     ],
+     "model": {
+      "dist2": "4018cbf3c6a2bebf",
+      "feature": 0,
+      "foot": [
+       "3fea0c4a53d55284",
+       "3fe6c334a1f1d2f6",
+       "3fe9b42608bc81de"
+      ]
+     },
+     "p": [
+      "400416eab8986c4c",
+      "40041c78935d63da",
+      "3fe14547d684c736"
+     ]
+    },
+    {
+     "dist2": "4010c401c78b4779",
+     "feature": 1,
+     "foot": [
+      "bfb3c87018d40670",
+      "3fe402c27e2b94b0",
+      "3fd86266f64c7560"
+     ],
+     "model": {
+      "dist2": "4010c401c78b4779",
+      "feature": 1,
+      "foot": [
+       "bfb3c87018d40670",
+       "3fe402c27e2b94b0",
+       "3fd86266f64c7560"
+      ]
+     },
+     "p": [
+      "bffd461a39bd74be",
+      "3ff8bdf72a95022e",
+      "3fece4d513dbd033"
+     ]
+    },
+    {
+     "dist2": "3ff7ec406865423b",
+     "feature": 2,
+     "foot": [
+      "3fc138f057948550",
+      "bfe3a1004551d03a",
+      "bfe21defe46331c2"
+     ],
+     "model": {
+      "dist2": "3ff7ec406865423b",
+      "feature": 2,
+      "foot": [
+       "3fc138f057948550",
+       "bfe3a1004551d03a",
+       "bfe21defe46331c2"
+      ]
+     },
+     "p": [
+      "3fd7ece7c74c9eac",
+      "bfdbdf64190e3e28",
+      "bffc08455854d54e"
+     ]
+    },
+    {
+     "dist2": "400a7a32d7933b11",
+     "feature": 3,
+     "foot": [
+      "3fc18b6b3100a17a",
+      "3fe4ac2c3b991db1",
+      "3fdee218603c6c3d"
+     ],
+     "model": {
+      "dist2": "400a7a32d7933b12",
+      "feature": 3,
+      "foot": [
+       "3fc18b6b3100a17c",
+       "3fe4ac2c3b991db1",
+       "3fdee218603c6c3d"
+      ]
+     },
+     "p": [
+      "bfd59ba3e76841aa",
+      "4002267d7be46c48",
+      "3ff2770b01b541be"
+     ]
+    },
+    {
+     "dist2": "3ff33d21e02d01b9",
+     "feature": 4,
+     "foot": [
+      "bf963bd2fdbaf54b",
+      "3fd339c8c09a272b",
+      "3fc0f79489bacfe2"
+     ],
+     "model": {
+      "dist2": "3ff33d21e02d01ba",
+      "feature": 4,
+      "foot": [
+       "bf963bd2fdbaf54a",
+       "3fd339c8c09a272a",
+       "3fc0f79489bacfe1"
+      ]
+     },
+     "p": [
+      "3fb19c6ff610e9cc",
+      "3fef2a3a46f5d61a",
+      "bfe74c1de42e2bf6"
+     ]
+    },
+    {
+     "dist2": "3fdd9707a148129d",
+     "feature": 5,
+     "foot": [
+      "3fd6bea72a194a49",
+      "bfc7672bbbfa0885",
+      "bfbefe7aba016e86"
+     ],
+     "model": {
+      "dist2": "3fdd9707a148129d",
+      "feature": 5,
+      "foot": [
+       "3fd6bea72a194a4a",
+       "bfc7672bbbfa0880",
+       "bfbefe7aba016e80"
+      ]
+     },
+     "p": [
+      "3feed53e120faca9",
+      "bfc7161d9d1f0e9c",
+      "bfdb368f860b72d5"
+     ]
+    },
+    {
+     "dist2": "40071f36725c0f3a",
+     "feature": 6,
+     "foot": [
+      "3fd5039e5448f438",
+      "3fd9f0a482ef5a13",
+      "3fd6e27281800d04"
+     ],
+     "model": {
+      "dist2": "40071f36725c0f3c",
+      "feature": 6,
+      "foot": [
+       "3fd5039e5448f437",
+       "3fd9f0a482ef5a14",
+       "3fd6e27281800d04"
+      ]
+     },
+     "p": [
+      "bfc4fa21dfbff400",
+      "bfe454f6996d2775",
+      "3ff9bc965a120f06"
+     ]
+    }
+   ],
+   "size": "40002ebd9f8b6757"
+  },
+  {
+   "a": [
+    "3fe18d551a48d710",
+    "bfee26ddf860363e",
+    "bfe79655f19a23c4"
+   ],
+   "b": [
+    "bfe6ac48495f15c2",
+    "3fdbfd39caddae88",
+    "bfe728aed4838a66"
+   ],
+   "c": [
+    "bfb94680029ce610",
+    "3f86fba5c72fef00",
+    "3fb8a9d0ef5e0d40"
+   ],
+   "queries": [
+    {
+     "dist2": "4026da7e448e177a",
+     "feature": 0,
+     "foot": [
+      "3fe18d551a48d710",
+      "bfee26ddf860363e",
+      "bfe79655f19a23c4"
+     ],
+     "model": {
+      "dist2": "4026da7e448e177a",
+      "feature": 0,
+      "foot": [
+       "3fe18d551a48d710",
+       "bfee26ddf860363e",
+       "bfe79655f19a23c4"
+      ]
+     },
+     "p": [
+      "3ff2208a4af69b82",
+      "c010dca698511afd",
+      "bff58a63ee341e7d"
+     ]
+    },
+    {
+     "dist2": "4019768bc808c6eb",
+     "feature": 1,
+     "foot": [
+      "bfe6ac48495f15c2",
+      "3fdbfd39caddae88",
+      "bfe728aed4838a66"
+     ],
+     "model": {
+      "dist2": "4019768bc808c6ea",
+      "feature": 1,
+      "foot": [
+       "bfe6ac48495f15c2",
+       "3fdbfd39caddae88",
+       "bfe728aed4838a66"
+      ]
+     },
+     "p": [
+      "bfe0eeaff548921a",
+      "4005c8862a1abfe5",
+      "bffc6f2ad873ade0"
+     ]
+    },
+    {
+     "dist2": "3ff17a8c1ea521d9",
+     "feature": 2,
+     "foot": [
+      "bfb94680029ce610",
+      "3f86fba5c72fef00",
+      "3fb8a9d0ef5e0d40"
+     ],
+     "model": {
+      "dist2": "3ff17a8c1ea521d8",
+      "feature": 2,
+      "foot": [
+       "bfb94680029ce610",
+       "3f86fba5c72fef00",
+       "3fb8a9d0ef5e0d40"
+      ]
+     },
+     "p": [
+      "bfe53c0bf8b80e13",
+      "bfda85bfe79f2190",
+      "3febb5578a098f03"
+     ]
+    },
+    {
+     "dist2": "40151faa77ea8a91",
+     "feature": 3,
+     "foot": [
+      "3fcceb71fdc537c2",
+      "bfe2d2cb4a8ad505",
+      "bfe77a329d63d180"
+     ],
+     "model": {
+      "dist2": "40151faa77ea8a92",
+      "feature": 3,
+      "foot": [
+       "3fcceb71fdc537c4",
+       "bfe2d2cb4a8ad506",
+       "bfe77a329d63d180"
+      ]
+     },
+     "p": [
+      "bff2b676f0c7e0fb",
+      "bffd8d02b71a0c32",
+      "c0007335fe49d4e9"
+     ]
+    },
+    {
+     "dist2": "3fe3f1b177d0aab4",
+     "feature": 4,
+     "foot": [
+      "bfd2f0647a383cd8",
+      "3fc312d9a0a43b0b",
+      "bfc59c911b448f88"
+     ],
+     "model": {
+      "dist2": "3fe3f1b177d0aab5",
+      "feature": 4,
+      "foot": [
+       "bfd2f0647a383cd8",
+       "3fc312d9a0a43b0a",
+       "bfc59c911b448f88"
+      ]
+     },
+     "p": [
+      "bfe7a1922f8d1599",
+      "3fe111a5304edbec",
+      "3fd709d4b5821be7"
+     ]
+    },
+    {
+     "dist2": "4014eae43caa941c",
+     "feature": 5,
+     "foot": [
+      "3fa4de96810a89d3",
+      "bfc8ddd743a91e9d",
+      "bfb5520e520eeb53"
+     ],
+     "model": {
+      "dist2": "4014eae43caa941d",
+      "feature": 5,
+      "foot": [
+       "3fa4de96810a89d0",
+       "bfc8ddd743a91e9c",
+       "bfb5520e520eeb50"
+      ]
+     },
+     "p": [
+      "4000754d1a2060f2",
+      "3fd7d9a7e0abf744",
+      "3feab12cd67be28a"
+     ]
+    },
+    {
+     "dist2": "3fe719aab39b61c6",
+     "feature": 6,
+     "foot": [
+      "bfd70902de1e2a66",
+      "3fc26201871ecfb0",
+      "bfdb380b4f6ddcc4"
+     ],
+     "model": {
+      "dist2": "3fe719aab39b61c6",
+      "feature": 6,
+      "foot": [
+       "bfd70902de1e2a65",
+       "3fc26201871ecfac",
+       "bfdb380b4f6ddcc5"
+      ]
+     },
+     "p": [
+      "3fd056bcc81b6005",
+      "3fe695d9147ff0e1",
+      "bfe2e6b8942d2de2"
+     ]
+    }
+   ],
+   "size": "3ffddcdf8846bdaa"
+  },
+  {
+   "a": [
+    "3f71a07eaebc7500",
+    "bfe3c161fe2f0fa8",
+    "bfd669638b7a1710"
+   ],
+   "b": [
+    "bfeef12a65f8d1f4",
+    "3fefdf956fc8b62c",
+    "bfdb80da4b3487ec"
+   ],
+   "c": [
+    "3fd03c9be13036e0",
+    "3fe91b7867d75066",
+    "3fed4417ba25f274"
+   ],
+   "queries": [
+    {
+     "dist2": "4003a51017a276be",
+     "feature": 0,
+     "foot": [
+      "3f71a07eaebc7500",
+      "bfe3c161fe2f0fa8",
+      "bfd669638b7a1710"
+     ],
+     "model": {
+      "dist2": "4003a51017a276be",
+      "feature": 0,
+      "foot": [
+       "3f71a07eaebc7500",
+       "bfe3c161fe2f0fa8",
+       "bfd669638b7a1710"
+      ]
+     },
+     "p": [
+      "bfa9fdd4b660a9d0",
+      "c00159de1b190c17",
+      "bfe204f849036991"
+     ]
+    },
+    {
+     "dist2": "4017e409889e071b",
+     "feature": 1,
+     "foot": [
+      "bfeef12a65f8d1f4",
+      "3fefdf956fc8b62c",
+      "bfdb80da4b3487ec"
+     ],
+     "model": {
+      "dist2": "4017e409889e071a",
+      "feature": 1,
+      "foot": [
+       "bfeef12a65f8d1f4",
+       "3fefdf956fc8b62c",
+       "bfdb80da4b3487ec"
+      ]
+     },
+     "p": [
+      "c002fadadfbeee94",
+      "4004129434f2e2ba",
+      "bffbc9172ca51f16"
+     ]
+    },
+    {
+     "dist2": "401fa10702a80037",
+     "feature": 2,
+     "foot": [
+      "3fd03c9be13036e0",
+      "3fe91b7867d75066",
+      "3fed4417ba25f274"
+     ],
+     "model": {
+      "dist2": "401fa10702a80037",
+      "feature": 2,
+      "foot": [
+       "3fd03c9be13036e0",
+       "3fe91b7867d75066",
+       "3fed4417ba25f274"
+      ]
+     },
+     "p": [
+      "400473fb69e491fc",
+      "400248a52c8cad66",
+      "3ff81d401f234923"
+     ]
+    },
+    {
+     "dist2": "400bbc2cd1512c35",
+     "feature": 3,
+     "foot": [
+      "bfdcdc313dfe90ef",
+      "3fc1c6cf060fa8e1",
+      "bfd8cc59ea3e5860"
+     ],
+     "model": {
+      "dist2": "400bbc2cd1512c35",
+      "feature": 3,
+      "foot": [
+       "bfdcdc313dfe90ef",
+       "3fc1c6cf060fa8e0",
+       "bfd8cc59ea3e5860"
+      ]
+     },
+     "p": [
+      "3fdbd0cfc6e50608",
+      "3fe30548e1235899",
+      "bfff5f31b7f721a4"
+     ]
+    },
+    {
+     "dist2": "400b0a5379a6ff16",
+     "feature": 4,
+     "foot": [
+      "bfde484122eb04a6",
+      "3fed22e66bdb19d2",
+      "3fbd3353e1f07d4b"
+     ],
+     "model": {
+      "dist2": "400b0a5379a6ff16",
+      "feature": 4,
+      "foot": [
+       "bfde484122eb04a6",
+       "3fed22e66bdb19d2",
+       "3fbd3353e1f07d50"
+      ]
+     },
+     "p": [
+      "3fdb88974ce7866e",
+      "400334a8d05ba9a2",
+      "bfde3243e0fe9775"
+     ]
+    },
+    {
+     "dist2": "3fe206482516b720",
+     "feature": 5,
+     "foot": [
+      "3fc8409e22cf0066",
+      "3fdb1b8424b5f27e",
+      "3fe2d7dce8b314d6"
+     ],
+     "model": {
+      "dist2": "3fe206482516b720",
+      "feature": 5,
+      "foot": [
+       "3fc8409e22cf0067",
+       "3fdb1b8424b5f280",
+       "3fe2d7dce8b314d7"
+      ]
+     },
+     "p": [
+      "bfc084a67cf9c238",
+      "3f3ea18ab4ba3800",
+      "3ff1ee2d0a779cf0"
+     ]
+    },
+    {
+     "dist2": "3fc6b97c7049946b",
+     "feature": 6,
+     "foot": [
+      "bfca08151ed0b05a",
+      "3fe4e91594865bf4",
+      "3fd11805fb7822be"
+     ],
+     "model": {
+      "dist2": "3fc6b97c7049946b",
+      "feature": 6,
+      "foot": [
+       "bfca08151ed0b05c",
+       "3fe4e91594865bf5",
+       "3fd11805fb7822be"
+      ]
+     },
+     "p": [
+      "3fb8742eda57ad00",
+      "3fea481ab7e76adf",
+      "3f969f70e17a4518"
+     ]
+    }
+   ],
+   "size": "3ffe78fd96e7e815"
+  },
+  {
+   "a": [
+    "3fdfc1145a34943c",
+    "3fe889527f4bb2de",
+    "3fdde1745ce77314"
+   ],
+   "b": [
+    "bfdff9ceecd9b3e8",
+    "bfc9b84ae03182c8",
+    "3fed6961c14e7a38"
+   ],
+   "c": [
+    "3fecce9b2b1913ce",
+    "3fe96099f4434bd0",
+    "bfdf4cd523fa0910"
+   ],
+   "queries": [
+    {
+     "dist2": "401c428f62bf6950",
+     "feature": 0,
+     "foot": [
+      "3fdfc1145a34943c",
+      "3fe889527f4bb2de",
+      "3fdde1745ce77314"
+     ],
+     "model": {
+      "dist2": "401c428f62bf694e",
+      "feature": 0,
+      "foot": [
+       "3fdfc1145a34943c",
+       "3fe889527f4bb2de",
+       "3fdde1745ce77314"
+      ]
+     },
+     "p": [
+      "40045521eaf78d0c",
+      "3fe356a8a125daae",
+      "40014095cafcfe9b"
+     ]
+    },
+    {
+     "dist2": "4004e63efa12e79d",
+     "feature": 1,
+     "foot": [
+      "bfdff9ceecd9b3e8",
+      "bfc9b84ae03182c8",
+      "3fed6961c14e7a38"
+     ],
+     "model": {
+      "dist2": "4004e63efa12e79d",
+      "feature": 1,
+      "foot": [
+       "bfdff9ceecd9b3e8",
+       "bfc9b84ae03182c8",
+       "3fed6961c14e7a38"
+      ]
+     },
+     "p": [
+      "3fc780388d3c2ec0",
+      "bff7835bf828742e",
+      "3ffa6c045ce87732"
+     ]
+    },
+    {
+     "dist2": "401be056428cfa43",
+     "feature": 2,
+     "foot": [
+      "3fecce9b2b1913ce",
+      "3fe96099f4434bd0",
+      "bfdf4cd523fa0910"
+     ],
+     "model": {
+      "dist2": "401be056428cfa43",
+      "feature": 2,
+      "foot": [
+       "3fecce9b2b1913ce",
+       "3fe96099f4434bd0",
+       "bfdf4cd523fa0910"
+      ]
+     },
+     "p": [
+      "40012995d597e065",
+      "3ff922851f13b45e",
+      "c00576f68f9762c0"
+     ]
+    },
+    {
+     "dist2": "40020d0038f216ad",
+     "feature": 3,
+     "foot": [
+      "bfbbdaf649e75d50",
+      "3fc6e4b2512a175c",
+      "3fe7bb6c9ecc4170"
+     ],
+     "model": {
+      "dist2": "40020d0038f216ad",
+      "feature": 3,
+      "foot": [
+       "bfbbdaf649e75d48",
+       "3fc6e4b2512a1760",
+       "3fe7bb6c9ecc4170"
+      ]
+     },
+     "p": [
+      "bff288aaf9a20d03",
+      "3ff40dea3a5229c8",
+      "3fe75b8562172891"
+     ]
+    },
+    {
+     "dist2": "4001ea18753c0314",
+     "feature": 4,
+     "foot": [
+      "3fc7b6d43fffa3f1",
+      "3fd243a5f3bf8a37",
+      "3fcd75707061cfa4"
+     ],
+     "model": {
+      "dist2": "4001ea18753c0315",
+      "feature": 4,
+      "foot": [
+       "3fc7b6d43fffa3f0",
+       "3fd243a5f3bf8a36",
+       "3fcd75707061cfa4"
+      ]
+     },
+     "p": [
+      "3fe8ca01cd5a3024",
+      "bff0b4ce8fc399c2",
+      "bfbf5624580cb530"
+     ]
+    },
+    {
+     "dist2": "401b1631b7cd2a09",
+     "feature": 5,
+     "foot": [
+      "3fe2f73c62ec7fb1",
+      "3fe8bcbf50472648",
+      "3fce88369a3f8a0c"
+     ],
+     "model": {
+      "dist2": "401b1631b7cd2a09",
+      "feature": 5,
+      "foot": [
+       "3fe2f73c62ec7fb0",
+       "3fe8bcbf50472648",
+       "3fce88369a3f8a0e"
+      ]
+     },
+     "p": [
+      "4007bc659ec06182",
+      "3ff1a5e75bde4927",
+      "3ff404d0e8c41cf7"
+     ]
+    },
+    {
+     "dist2": "400ca1e8a76936bf",
+     "feature": 6,
+     "foot": [
+      "bfb8580e0fc16ad2",
+      "3fbcc4221e166572",
+      "3fe225e32311e9a0"
+     ],
+     "model": {
+      "dist2": "400ca1e8a76936bf",
+      "feature": 6,
+      "foot": [
+       "bfb8580e0fc16ac4",
+       "3fbcc4221e166584",
+       "3fe225e32311e99f"
+      ]
+     },
+     "p": [
+      "3ff49e7507ab1106",
+      "bff0d9ef674a738c",
+      "3ff1eb6eda557d80"
+     ]
+    }
+   ],
+   "size": "4001c389a37448d1"
+  },
+  {
+   "a": [
+    "bfb64f53993b06d0",
+    "3fcb4b01dabe9258",
+    "3fba6dc1a099bdc0"
+   ],
+   "b": [
+    "3fe07cd0a97a2e44",
+    "bfd6f09438a0e6fc",
+    "3fe6c5653d06743a"
+   ],
+   "c": [
+    "3fda2038e1908e14",
+    "bfdd480accbe8bc8",
+    "3fb78f32e4be88d0"
+   ],
+   "queries": [
+    {
+     "dist2": "3fef17d6f055dcfd",
+     "feature": 0,
+     "foot": [
+      "bfb64f53993b06d0",
+      "3fcb4b01dabe9258",
+      "3fba6dc1a099bdc0"
+     ],
+     "model": {
+      "dist2": "3fef17d6f055dcfd",
+      "feature": 0,
+      "foot": [
+       "bfb64f53993b06d0",
+       "3fcb4b01dabe9258",
+       "3fba6dc1a099bdc0"
+      ]
+     },
+     "p": [
+      "bfa2d58cc28d82b0",
+      "3ff1faa5b42f0455",
+      "bfd15ab4a5f270c6"
+     ]
+    },
+    {
+     "dist2": "3ffb99b1ba5f032b",
+     "feature": 1,
+     "foot": [
+      "3fe07cd0a97a2e44",
+      "bfd6f09438a0e6fc",
+      "3fe6c5653d06743a"
+     ],
+     "model": {
+      "dist2": "3ffb99b1ba5f032c",
+      "feature": 1,
+      "foot": [
+       "3fe07cd0a97a2e44",
+       "bfd6f09438a0e6fc",
+       "3fe6c5653d06743a"
+      ]
+     },
+     "p": [
+      "3ff4e3a42880c3e8",
+      "bfdd39ae15c49d18",
+      "3ffc187f8554f024"
+     ]
+    },
+    {
+     "dist2": "3fd951ff79a0a4a6",
+     "feature": 2,
+     "foot": [
+      "3fda2038e1908e14",
+      "bfdd480accbe8bc8",
+      "3fb78f32e4be88d0"
+     ],
+     "model": {
+      "dist2": "3fd951ff79a0a4a7",
+      "feature": 2,
+      "foot": [
+       "3fda2038e1908e14",
+       "bfdd480accbe8bc8",
+       "3fb78f32e4be88d0"
+      ]
+     },
+     "p": [
+      "3feb459cf26ae9cc",
+      "bfe253632bd290c4",
+      "bfd5a721528f2d11"
+     ]
+    },
+    {
+     "dist2": "3feda04fcfe87c63",
+     "feature": 3,
+     "foot": [
+      "3fcedc743dcab9e8",
+      "bfb929042fd5f77a",
+      "3fdbd2d70460eda9"
+     ],
+     "model": {
+      "dist2": "3feda04fcfe87c64",
+      "feature": 3,
+      "foot": [
+       "3fcedc743dcab9e8",
+       "bfb929042fd5f778",
+       "3fdbd2d70460eda9"
+      ]
+     },
+     "p": [
+      "bfd816f3ebea188e",
+      "3f99d54c87428a00",
+      "3ff2988b1336612f"
+     ]
+    },
+    {
+     "dist2": "3fd5f073fecb4149",
+     "feature": 4,
+     "foot": [
+      "3fdddf407e6b924a",
+      "bfd9d0160359bf7c",
+      "3fdb93e73300fbe4"
+     ],
+     "model": {
+      "dist2": "3fd5f073fecb4149",
+      "feature": 4,
+      "foot": [
+       "3fdddf407e6b924a",
+       "bfd9d0160359bf7c",
+       "3fdb93e73300fbe4"
+      ]
+     },
+     "p": [
+      "3fd8316524dc07f4",
+      "bfef1c503d06585c",
+      "3fe130d7020dd61b"
+     ]
+    },
+    {
+     "dist2": "3fedbfd804ffc563",
+     "feature": 5,
+     "foot": [
+      "3fccc9dff25983fd",
+      "bfcacae2f243dc00",
+      "3fb89f042d002069"
+     ],
+     "model": {
+      "dist2": "3fedbfd804ffc564",
+      "feature": 5,
+      "foot": [
+       "3fccc9dff25983fe",
+       "bfcacae2f243dc02",
+       "3fb89f042d002069"
+      ]
+     },
+     "p": [
+      "3fe3b59773b6646f",
+      "3fb7e170fca5d7e4",
+      "bfe76946c2eae17a"
+     ]
+    },
+    {
+     "dist2": "3fee092e9cf8d0e6",
+     "feature": 6,
+     "foot": [
+      "3fc8d77ea3729e73",
+      "bfb79b3ac62ed75d",
+      "3fd27e53ae9652b6"
+     ],
+     "model": {
+      "dist2": "3fee092e9cf8d0e6",
+      "feature": 6,
+      "foot": [
+       "3fc8d77ea3729e74",
+       "bfb79b3ac62ed75c",
+       "3fd27e53ae9652b7"
+      ]
+     },
+     "p": [
+      "3fee6fb3926c005e",
+      "3fde1e0c0177d6c2",
+      "3fb1746ba7b54c74"
+     ]
+    }
+   ],
+   "size": "3ff0789e379594af"
+  },
+  {
+   "a": [
+    "bfed5c151fe66aee",
+    "bfc97360fb61aff0",
+    "3fd1cd55dcd9b7d4"
+   ],
+   "b": [
+    "bfcb811ff5ae3110",
+    "bfd2d1edf64b5248",
+    "bfa019f0c670eca0"
+   ],
+   "c": [
+    "3fc8dd3f831fb1f0",
+    "bfec4e93793dc84e",
+    "bfc7f0f2612ec958"
+   ],
+   "queries": [
+    {
+     "dist2": "400b6c9a92c3cd69",
+     "feature": 0,
+     "foot": [
+      "bfed5c151fe66aee",
+      "bfc97360fb61aff0",
+      "3fd1cd55dcd9b7d4"
+     ],
+     "model": {
+      "dist2": "400b6c9a92c3cd69",
+      "feature": 0,
+      "foot": [
+       "bfed5c151fe66aee",
+       "bfc97360fb61aff0",
+       "3fd1cd55dcd9b7d4"
+      ]
+     },
+     "p": [
+      "c004b1a9696029ae",
+      "3fc3b2c21b93cb98",
+      "bfdc395e12fcabfc"
+     ]
+    },
+    {
+     "dist2": "3ff478e6d2850dca",
+     "feature": 1,
+     "foot": [
+      "bfcb811ff5ae3110",
+      "bfd2d1edf64b5248",
+      "bfa019f0c670eca0"
+     ],
+     "model": {
+      "dist2": "3ff478e6d2850dca",
+      "feature": 1,
+      "foot": [
+       "bfcb811ff5ae3110",
+       "bfd2d1edf64b5248",
+       "bfa019f0c670eca0"
+      ]
+     },
+     "p": [
+      "bfc40e17ca857e18",
+      "3fd907c8f71fccec",
+      "bfedbf4d5923c3bc"
+     ]
+    },
+    {
+     "dist2": "3fe2fe16087780f1",
+     "feature": 2,
+     "foot": [
+      "3fc8dd3f831fb1f0",
+      "bfec4e93793dc84e",
+      "bfc7f0f2612ec958"
+     ],
+     "model": {
+      "dist2": "3fe2fe16087780f1",
+      "feature": 2,
+      "foot": [
+       "3fc8dd3f831fb1f0",
+       "bfec4e93793dc84e",
+       "bfc7f0f2612ec958"
+      ]
+     },
+     "p": [
+      "3fc68211077f923e",
+      "bff2899d41477d05",
+      "bfed04c2f34cf934"
+     ]
+    },
+    {
+     "dist2": "4002764ae5e1ad21",
+     "feature": 3,
+     "foot": [
+      "bfe594f351ae36f5",
+      "bfcdaadc90fbd96e",
+      "3fc5e51bb14fd60a"
+     ],
+     "model": {
+      "dist2": "4002764ae5e1ad21",
+      "feature": 3,
+      "foot": [
+       "bfe594f351ae36f5",
+       "bfcdaadc90fbd96e",
+       "3fc5e51bb14fd60a"
+      ]
+     },
+     "p": [
+      "bfeafd92574596f0",
+      "3ff0f6b0fd4c9815",
+      "bfe38471e479adcb"
+     ]
+    },
+    {
+     "dist2": "3fc8da6949210748",
+     "feature": 4,
+     "foot": [
+      "bfb9fc55e286fe2e",
+      "bfdd4af87bf2d3dc",
+      "bfb316939dee59ae"
+     ],
+     "model": {
+      "dist2": "3fc8da6949210748",
+      "feature": 4,
+      "foot": [
+       "bfb9fc55e286fe2d",
+       "bfdd4af87bf2d3dc",
+       "bfb316939dee59ae"
+      ]
+     },
+     "p": [
+      "3fd0c9e73507d94a",
+      "bfcad31a512d41ff",
+      "bfae87a1fb82f744"
+     ]
+    },
+    {
+     "dist2": "3fe511a07e8216e8",
+     "feature": 5,
+     "foot": [
+      "bfd262e5236827a4",
+      "bfe2cd52950578e2",
+      "3f8d9a50e9a66d27"
+     ],
+     "model": {
+      "dist2": "3fe511a07e8216e9",
+      "feature": 5,
+      "foot": [
+       "bfd262e5236827a4",
+       "bfe2cd52950578e2",
+       "3f8d9a50e9a66d20"
+      ]
+     },
+     "p": [
+      "bfe3a0705c012a42",
+      "bff496813422e517",
+      "3fd105045116f33b"
+     ]
+    },
+    {
+     "dist2": "3ff699191ace8050",
+     "feature": 6,
+     "foot": [
+      "bfc6c9ed165c9b65",
+      "bfdc1aaf3d68c1e9",
+      "bfa51a93e4eeb59a"
+     ],
+     "model": {
+      "dist2": "3ff699191ace804f",
+      "feature": 6,
+      "foot": [
+       "bfc6c9ed165c9b66",
+       "bfdc1aaf3d68c1e8",
+       "bfa51a93e4eeb598"
+      ]
+     },
+     "p": [
+      "bfe5333a6cbf8634",
+      "bfdf4e3ca2a071ee",
+      "bff2011b1af2c781"
+     ]
+    }
+   ],
+   "size": "3ff62f7e0a7f7076"
+  },
+  {
+   "a": [
+    "bfe1f02447525aac",
+    "bfe711796af33308",
+    "bfe9c5101cc0024e"
+   ],
+   "b": [
+    "bfc391bd80bec1a8",
+    "3fe07f8c24908c80",
+    "bfc7639b4bba8ac8"
+   ],
+   "c": [
+    "3fd80f9fc8b41b64",
+    "3fd93753b1f47314",
+    "3febaae8cbedd230"
+   ],
+   "queries": [
+    {
+     "dist2": "402cedf23b2f8d55",
+     "feature": 0,
+     "foot": [
+      "bfe1f02447525aac",
+      "bfe711796af33308",
+      "bfe9c5101cc0024e"
+     ],
+     "model": {
+      "dist2": "402cedf23b2f8d55",
+      "feature": 0,
+      "foot": [
+       "bfe1f02447525aac",
+       "bfe711796af33308",
+       "bfe9c5101cc0024e"
+      ]
+     },
+     "p": [
+      "c00c86dcee9453c0",
+      "c0069ad692b2ba3a",
+      "bffce8f356d2310b"
+     ]
+    },
+    {
+     "dist2": "3ffc1f219cf195c9",
+     "feature": 1,
+     "foot": [
+      "bfc391bd80bec1a8",
+      "3fe07f8c24908c80",
+      "bfc7639b4bba8ac8"
+     ],
+     "model": {
+      "dist2": "3ffc1f219cf195c9",
+      "feature": 1,
+      "foot": [
+       "bfc391bd80bec1a8",
+       "3fe07f8c24908c80",
+       "bfc7639b4bba8ac8"
+      ]
+     },
+     "p": [
+      "bfe6d8cda0652dc7",
+      "3ffaa6d95d14390f",
+      "bfe0eda1f52618d5"
+     ]
+    },
+    {
+     "dist2": "402510131e637417",
+     "feature": 2,
+     "foot": [
+      "3fd80f9fc8b41b64",
+      "3fd93753b1f47314",
+      "3febaae8cbedd230"
+     ],
+     "model": {
+      "dist2": "402510131e637417",
+      "feature": 2,
+      "foot": [
+       "3fd80f9fc8b41b64",
+       "3fd93753b1f47314",
+       "3febaae8cbedd230"
+      ]
+     },
+     "p": [
+      "bf78f478fbec8000",
+      "3ff13315f075b018",
+      "40100ed615918d20"
+     ]
+    },
+    {
+     "dist2": "4010617e030ab254",
+     "feature": 3,
+     "foot": [
+      "bfda4c26353f0597",
+      "bfd115da27d4e02d",
+      "bfe274b36f646a60"
+     ],
+     "model": {
+      "dist2": "4010617e030ab254",
+      "feature": 3,
+      "foot": [
+       "bfda4c26353f0597",
+       "bfd115da27d4e02e",
+       "bfe274b36f646a60"
+      ]
+     },
+     "p": [
+      "bfffc23311f288be",
+      "3fe5c0382d82051e",
+      "bff6d18842852040"
+     ]
+    },
+    {
+     "dist2": "4003f1582401ecd5",
+     "feature": 4,
+     "foot": [
+      "3fb3dcf4443c889d",
+      "3fdd9b0de96bf05a",
+      "3fd1849a0906fa28"
+     ],
+     "model": {
+      "dist2": "4003f1582401ecd5",
+      "feature": 4,
+      "foot": [
+       "3fb3dcf4443c88a2",
+       "3fdd9b0de96bf05a",
+       "3fd1849a0906fa2b"
+      ]
+     },
+     "p": [
+      "bfbbf9f1969f2980",
+      "40000cefd4432d8b",
+      "3fe1832bbf26b01c"
+     ]
+    },
+    {
+     "dist2": "400e864ef51e19ac",
+     "feature": 5,
+     "foot": [
+      "3fb2651ecbf1a2db",
+      "3fa0607323bb1ea3",
+      "3fd4a1ba8483aa99"
+     ],
+     "model": {
+      "dist2": "400e864ef51e19ad",
+      "feature": 5,
+      "foot": [
+       "3fb2651ecbf1a2e0",
+       "3fa0607323bb1ea0",
+       "3fd4a1ba8483aa98"
+      ]
+     },
+     "p": [
+      "3ffb7c425fc4a2bc",
+      "bfefc08efc4b7380",
+      "3fb5456a4d327100"
+     ]
+    },
+    {
+     "dist2": "3f8747469be5f053",
+     "feature": 6,
+     "foot": [
+      "bfb26778821d7cfc",
+      "3fd74ab2e70036a8",
+      "bf6f78c71bf8a239"
+     ],
+     "model": {
+      "dist2": "3f8747469be5f050",
+      "feature": 6,
+      "foot": [
+       "bfb26778821d7cfa",
+       "3fd74ab2e70036a9",
+       "bf6f78c71bf8a180"
+      ]
+     },
+     "p": [
+      "bfc551973af4c4e7",
+      "3fd7b949776c3337",
+      "3fa6e8155eeee2cf"
+     ]
+    }
+   ],
+   "size": "4001b972498c6ebd"
+  },
+  {
+   "a": [
+    "3fe0a22b1cce3e58",
+    "bfeca6d04815bc84",
+    "3fe5d65e9070e026"
+   ],
+   "b": [
+    "bfd3ded402b9840c",
+    "bfe70894f8014878",
+    "3fea52a0730d4a66"
+   ],
+   "c": [
+    "bfe8c8e7f7c310a2",
+    "bfea3f0d15a8b4e2",
+    "bfe587ec37c7484a"
+   ],
+   "queries": [
+    {
+     "dist2": "402474ac52918c35",
+     "feature": 0,
+     "foot": [
+      "3fe0a22b1cce3e58",
+      "bfeca6d04815bc84",
+      "3fe5d65e9070e026"
+     ],
+     "model": {
+      "dist2": "402474ac52918c35",
+      "feature": 0,
+      "foot": [
+       "3fe0a22b1cce3e58",
+       "bfeca6d04815bc84",
+       "3fe5d65e9070e026"
+      ]
+     },
+     "p": [
+      "400b7f3e7e685104",
+      "3fcb0e97c867add8",
+      "3ff624a938156623"
+     ]
+    },
+    {
+     "dist2": "401f4c206a1ab769",
+     "feature": 1,
+     "foot": [
+      "bfd3ded402b9840c",
+      "bfe70894f8014878",
+      "3fea52a0730d4a66"
+     ],
+     "model": {
+      "dist2": "401f4c206a1ab768",
+      "feature": 1,
+      "foot": [
+       "bfd3ded402b9840c",
+       "bfe70894f8014878",
+       "3fea52a0730d4a66"
+      ]
+     },
+     "p": [
+      "bffc0516a8a6def2",
+      "bffe45a5cbc0be1d",
+      "400750182838d926"
+     ]
+    },
+    {
+     "dist2": "3fc2ec32947ed29d",
+     "feature": 2,
+     "foot": [
+      "bfe8c8e7f7c310a2",
+      "bfea3f0d15a8b4e2",
+      "bfe587ec37c7484a"
+     ],
+     "model": {
+      "dist2": "3fc2ec32947ed29d",
+      "feature": 2,
+      "foot": [
+       "bfe8c8e7f7c310a2",
+       "bfea3f0d15a8b4e2",
+       "bfe587ec37c7484a"
+      ]
+     },
+     "p": [
+      "bfee215a2f6bb02b",
+      "bfe704d55d4c1b1c",
+      "bff010f256c02a9c"
+     ]
+    },
+    {
+     "dist2": "400fd4a2491a4e17",
+     "feature": 3,
+     "foot": [
+      "3fd3d30771e83671",
+      "bfeb3af8d270678e",
+      "3fe6f8da90c787f9"
+     ],
+     "model": {
+      "dist2": "400fd4a2491a4e17",
+      "feature": 3,
+      "foot": [
+       "3fd3d30771e83670",
+       "bfeb3af8d270678e",
+       "3fe6f8da90c787f9"
+      ]
+     },
+     "p": [
+      "3fe04247cd3265ef",
+      "bff6dcfc7af44b1c",
+      "4004eeef10972bb2"
+     ]
+    },
+    {
+     "dist2": "3ff2569d36b657b8",
+     "feature": 4,
+     "foot": [
+      "bfda82d29360a2d0",
+      "bfe7c07b832318d5",
+      "3fdf3ee9e3bd1fd2"
+     ],
+     "model": {
+      "dist2": "3ff2569d36b657b9",
+      "feature": 4,
+      "foot": [
+       "bfda82d29360a2d0",
+       "bfe7c07b832318d5",
+       "3fdf3ee9e3bd1fd2"
+      ]
+     },
+     "p": [
+      "bff6d514d046fb76",
+      "bfebd2f1ecb4f0f8",
+      "3fe9f406b1ac23b2"
+     ]
+    },
+    {
+     "dist2": "3fe7413423e14aba",
+     "feature": 5,
+     "foot": [
+      "3fcd04bbc7291a27",
+      "bfec1b60ff952bdc",
+      "3fd808ae43c98368"
+     ],
+     "model": {
+      "dist2": "3fe7413423e14ab8",
+      "feature": 5,
+      "foot": [
+       "3fcd04bbc7291a28",
+       "bfec1b60ff952bdc",
+       "3fd808ae43c98368"
+      ]
+     },
+     "p": [
+      "3fdfec3b6b709b86",
+      "bffa0bd65e4bda6c",
+      "3fb2f89a01520aa6"
+     ]
+    },
+    {
+     "dist2": "4002d3f365142009",
+     "feature": 6,
+     "foot": [
+      "bfdefec6177f8101",
+      "bfea14ffe3a4ef74",
+      "bfc8ea451844a17b"
+     ],
+     "model": {
+      "dist2": "4002d3f365142009",
+      "feature": 6,
+      "foot": [
+       "bfdefec6177f8100",
+       "bfea14ffe3a4ef74",
+       "bfc8ea451844a178"
+      ]
+     },
+     "p": [
+      "bfc995e0203fa9d0",
+      "3fe5c775a0a412e2",
+      "bfd88855271c495c"
+     ]
+    }
+   ],
+   "size": "3ffe02351957e03d"
+  },
+  {
+   "a": [
+    "bfd14941b03404cc",
+    "bfc1994a82818428",
+    "3fe606b9f07f3350"
+   ],
+   "b": [
+    "bfe9cc5b032e1c20",
+    "bfdf639d6bd5b684",
+    "3fdcbd3aafb8f91c"
+   ],
+   "c": [
+    "bfba407a2eac4510",
+    "bfeaa06d4108cf68",
+    "3fbf8afb0d45fe70"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe072d42150df92",
+     "feature": 0,
+     "foot": [
+      "bfd14941b03404cc",
+      "bfc1994a82818428",
+      "3fe606b9f07f3350"
+     ],
+     "model": {
+      "dist2": "3fe072d42150df92",
+      "feature": 0,
+      "foot": [
+       "bfd14941b03404cc",
+       "bfc1994a82818428",
+       "3fe606b9f07f3350"
+      ]
+     },
+     "p": [
+      "bf90129de9bba348",
+      "3fd41084fa3df100",
+      "3ff2f27da789335e"
+     ]
+    },
+    {
+     "dist2": "3ff055700c07549a",
+     "feature": 1,
+     "foot": [
+      "bfe9cc5b032e1c20",
+      "bfdf639d6bd5b684",
+      "3fdcbd3aafb8f91c"
+     ],
+     "model": {
+      "dist2": "3ff055700c07549a",
+      "feature": 1,
+      "foot": [
+       "bfe9cc5b032e1c20",
+       "bfdf639d6bd5b684",
+       "3fdcbd3aafb8f91c"
+      ]
+     },
+     "p": [
+      "bff6cb2d3bbe22e8",
+      "bf87b9585ee0a200",
+      "bfc86496f8ec147a"
+     ]
+    },
+    {
+     "dist2": "3ffa5c1c9afba3df",
+     "feature": 2,
+     "foot": [
+      "bfba407a2eac4510",
+      "bfeaa06d4108cf68",
+      "3fbf8afb0d45fe70"
+     ],
+     "model": {
+      "dist2": "3ffa5c1c9afba3de",
+      "feature": 2,
+      "foot": [
+       "bfba407a2eac4510",
+       "bfeaa06d4108cf68",
+       "3fbf8afb0d45fe70"
+      ]
+     },
+     "p": [
+      "3fdbadf370d943b5",
+      "bff0aa2c51843f68",
+      "bff0648752f02022"
+     ]
+    },
+    {
+     "dist2": "3fd86e6dfe2c74af",
+     "feature": 3,
+     "foot": [
+      "bfe61c4723bc4fc5",
+      "bfda88773c065d35",
+      "3fe003f978466346"
+     ],
+     "model": {
+      "dist2": "3fd86e6dfe2c74b0",
+      "feature": 3,
+      "foot": [
+       "bfe61c4723bc4fc4",
+       "bfda88773c065d35",
+       "3fe003f978466346"
+      ]
+     },
+     "p": [
+      "bfee62a6b3311cd8",
+      "3fbc7480c6539f9c",
+      "3fd37a22c2c43727"
+     ]
+    },
+    {
+     "dist2": "3fe2e9b2d5c5df91",
+     "feature": 4,
+     "foot": [
+      "bfd7f07de4ea4ec1",
+      "bfe668904b68f100",
+      "3fcfdd424e9fe4fd"
+     ],
+     "model": {
+      "dist2": "3fe2e9b2d5c5df92",
+      "feature": 4,
+      "foot": [
+       "bfd7f07de4ea4ec0",
+       "bfe668904b68f100",
+       "3fcfdd424e9fe4fc"
+      ]
+     },
+     "p": [
+      "bfe34e3492ae0b8c",
+      "bff654e3efe6497e",
+      "3fdeea588fefacee"
+     ]
+    },
+    {
+     "dist2": "3fd9050fb970c217",
+     "feature": 5,
+     "foot": [
+      "bfc9f329cc932962",
+      "bfdaac06f1db6bb9",
+      "3fdd8303b9f400ac"
+     ],
+     "model": {
+      "dist2": "3fd9050fb970c216",
+      "feature": 5,
+      "foot": [
+       "bfc9f329cc932962",
+       "bfdaac06f1db6bb9",
+       "3fdd8303b9f400ac"
+      ]
+     },
+     "p": [
+      "3fda4c95e2ccbd49",
+      "bfd65ae6d5888859",
+      "3fe1ecd343f7d22f"
+     ]
+    },
+    {
+     "dist2": "3fbdb39d1fbb88c9",
+     "feature": 6,
+     "foot": [
+      "bfe400a61b882b66",
+      "bfe08bca39e229b6",
+      "3fda7de0c1ceda85"
+     ],
+     "model": {
+      "dist2": "3fbdb39d1fbb88ca",
+      "feature": 6,
+      "foot": [
+       "bfe400a61b882b66",
+       "bfe08bca39e229b6",
+       "3fda7de0c1ceda85"
+      ]
+     },
+     "p": [
+      "bfe4a8bb76029680",
+      "bfd38d04e097b18f",
+      "3fc2eaaaa4f8bd92"
+     ]
+    }
+   ],
+   "size": "3fed26b78a7f92c7"
+  },
+  {
+   "a": [
+    "bfd47c7b2e6a0e74",
+    "3fe92b1a5ad16df2",
+    "bfe3a7349f2e0f3c"
+   ],
+   "b": [
+    "bfcd86947945d3d8",
+    "bfca870cf417bee0",
+    "bfeb6c00e236a21e"
+   ],
+   "c": [
+    "bfeaa271677875f2",
+    "bfcefdb8668c8f20",
+    "bfe369802ea2f98a"
+   ],
+   "queries": [
+    {
+     "dist2": "40030a7ee458b300",
+     "feature": 0,
+     "foot": [
+      "bfd47c7b2e6a0e74",
+      "3fe92b1a5ad16df2",
+      "bfe3a7349f2e0f3c"
+     ],
+     "model": {
+      "dist2": "40030a7ee458b300",
+      "feature": 0,
+      "foot": [
+       "bfd47c7b2e6a0e74",
+       "3fe92b1a5ad16df2",
+       "bfe3a7349f2e0f3c"
+      ]
+     },
+     "p": [
+      "3fd0ce6627607b1b",
+      "3ffd797fa40921e6",
+      "3fd6495cb9ac6bc8"
+     ]
+    },
+    {
+     "dist2": "3ff12093567781df",
+     "feature": 1,
+     "foot": [
+      "bfcd86947945d3d8",
+      "bfca870cf417bee0",
+      "bfeb6c00e236a21e"
+     ],
+     "model": {
+      "dist2": "3ff12093567781df",
+      "feature": 1,
+      "foot": [
+       "bfcd86947945d3d8",
+       "bfca870cf417bee0",
+       "bfeb6c00e236a21e"
+      ]
+     },
+     "p": [
+      "3fd6d09966eec99a",
+      "bfe2741e9051258b",
+      "bfb6ddc6b1fba048"
+     ]
+    },
+    {
+     "dist2": "400508f983c3c84a",
+     "feature": 2,
+     "foot": [
+      "bfeaa271677875f2",
+      "bfcefdb8668c8f20",
+      "bfe369802ea2f98a"
+     ],
+     "model": {
+      "dist2": "400508f983c3c84a",
+      "feature": 2,
+      "foot": [
+       "bfeaa271677875f2",
+       "bfcefdb8668c8f20",
+       "bfe369802ea2f98a"
+      ]
+     },
+     "p": [
+      "c00222f3c0b172d4",
+      "bfef53c1cd4928bc",
+      "bfe8c32c539413b3"
+     ]
+    },
+    {
+     "dist2": "3feba75454e3891f",
+     "feature": 3,
+     "foot": [
+      "bfd004fb4247e845",
+      "3f86673d102a417e",
+      "bfe9b759d9672885"
+     ],
+     "model": {
+      "dist2": "3feba75454e3891e",
+      "feature": 3,
+      "foot": [
+       "bfd004fb4247e844",
+       "3f86673d102a4140",
+       "bfe9b759d9672885"
+      ]
+     },
+     "p": [
+      "3fe51c1118674ef1",
+      "3fa83267bb4c4018",
+      "bfe3bf4f42840be8"
+     ]
+    },
+    {
+     "dist2": "3ff4795d3ae42b33",
+     "feature": 4,
+     "foot": [
+      "bfe4aa81e0bc8928",
+      "bfcd9b7da419e221",
+      "bfe5e528f5ed8839"
+     ],
+     "model": {
+      "dist2": "3ff4795d3ae42b32",
+      "feature": 4,
+      "foot": [
+       "bfe4aa81e0bc8928",
+       "bfcd9b7da419e221",
+       "bfe5e528f5ed8839"
+      ]
+     },
+     "p": [
+      "bff140e9606898fa",
+      "bfd1150bb63921e0",
+      "bffba96f14ecf681"
+     ]
+    },
+    {
+     "dist2": "40012c17c678764b",
+     "feature": 5,
+     "foot": [
+      "bfe6c02b45448c76",
+      "3f5a68a63e7333cc",
+      "bfe3781f166a9c48"
+     ],
+     "model": {
+      "dist2": "40012c17c678764b",
+      "feature": 5,
+      "foot": [
+       "bfe6c02b45448c76",
+       "3f5a68a63e733400",
+       "bfe3781f166a9c48"
+      ]
+     },
+     "p": [
+      "bfffa085384e34e7",
+      "3fe4215a16d3d57d",
+      "bfefe4c63ee24770"
+     ]
+    },
+    {
+     "dist2": "3fc6b8a23d92feb9",
+     "feature": 6,
+     "foot": [
+      "bfe0b744d8968af7",
+      "3fc08c5769b43aa3",
+      "bfe5360944e533a2"
+     ],
+     "model": {
+      "dist2": "3fc6b8a23d92feb9",
+      "feature": 6,
+      "foot": [
+       "bfe0b744d8968af6",
+       "3fc08c5769b43aa6",
+       "bfe5360944e533a2"
+      ]
+     },
+     "p": [
+      "bfe5ed87babae79a",
+      "3fca92bbed149cf2",
+      "bff0b1e8bb147b9c"
+     ]
+    }
+   ],
+   "size": "3ff262dde7a7c0df"
+  },
+  {
+   "a": [
+    "3fd4fa82a91cf584",
+    "3fe74c72ba52057e",
+    "3fe8acca9cae58da"
+   ],
+   "b": [
+    "3fdeba1a5e0d6efc",
+    "bfb8e10099682440",
+    "bfccddc730ae1130"
+   ],
+   "c": [
+    "bfe6db01f9ea34c6",
+    "3fd31046cc323108",
+    "3fd06aba6b581658"
+   ],
+   "queries": [
+    {
+     "dist2": "3fe9e57a268e21cc",
+     "feature": 0,
+     "foot": [
+      "3fd4fa82a91cf584",
+      "3fe74c72ba52057e",
+      "3fe8acca9cae58da"
+     ],
+     "model": {
+      "dist2": "3fe9e57a268e21cc",
+      "feature": 0,
+      "foot": [
+       "3fd4fa82a91cf584",
+       "3fe74c72ba52057e",
+       "3fe8acca9cae58da"
+      ]
+     },
+     "p": [
+      "3fe662c938d9bc46",
+      "3ff0dc2f139a1b78",
+      "3ff85d2dcd463256"
+     ]
+    },
+    {
+     "dist2": "4000fd2e1f4dd71e",
+     "feature": 1,
+     "foot": [
+      "3fdeba1a5e0d6efc",
+      "bfb8e10099682440",
+      "bfccddc730ae1130"
+     ],
+     "model": {
+      "dist2": "4000fd2e1f4dd71e",
+      "feature": 1,
+      "foot": [
+       "3fdeba1a5e0d6efc",
+       "bfb8e10099682440",
+       "bfccddc730ae1130"
+      ]
+     },
+     "p": [
+      "3ff30a2012ae86b2",
+      "bfc7813b829ffe24",
+      "bff7ec95a26372f6"
+     ]
+    },
+    {
+     "dist2": "4005b965db1cbd49",
+     "feature": 2,
+     "foot": [
+      "bfe6db01f9ea34c6",
+      "3fd31046cc323108",
+      "3fd06aba6b581658"
+     ],
+     "model": {
+      "dist2": "4005b965db1cbd49",
+      "feature": 2,
+      "foot": [
+       "bfe6db01f9ea34c6",
+       "3fd31046cc323108",
+       "3fd06aba6b581658"
+      ]
+     },
+     "p": [
+      "c0015ee9122bffa3",
+      "bfd56f750398fdfa",
+      "3fe63a42bccc684b"
+     ]
+    },
+    {
+     "dist2": "3feed7f52b6100e8",
+     "feature": 3,
+     "foot": [
+      "3fd80a9a6a965476",
+      "3fde00ac5ed71d3b",
+      "3fdd4f52d66cd859"
+     ],
+     "model": {
+      "dist2": "3feed7f52b6100e8",
+      "feature": 3,
+      "foot": [
+       "3fd80a9a6a965476",
+       "3fde00ac5ed71d3a",
+       "3fdd4f52d66cd859"
+      ]
+     },
+     "p": [
+      "3ff5818c689d9aea",
+      "3fdd0e35357c30da",
+      "3fe3c8a0af8ccf41"
+     ]
+    },
+    {
+     "dist2": "3fbba4d3605776b6",
+     "feature": 4,
+     "foot": [
+      "3faa249833e68a54",
+      "3fa6e7327ac4c423",
+      "bfaace62ff8f4b8d"
+     ],
+     "model": {
+      "dist2": "3fbba4d3605776b6",
+      "feature": 4,
+      "foot": [
+       "3faa249833e68a48",
+       "3fa6e7327ac4c428",
+       "bfaace62ff8f4b88"
+      ]
+     },
+     "p": [
+      "bfb6363d0c94b542",
+      "bfcd6e718c9477b4",
+      "bfc59979836c8ac0"
+     ]
+    },
+    {
+     "dist2": "3ff3e433a7bb18c0",
+     "feature": 5,
+     "foot": [
+      "bfd3b7d0fca6687b",
+      "3fddcb8d2235561a",
+      "3fdd40be6795f31b"
+     ],
+     "model": {
+      "dist2": "3ff3e433a7bb18c0",
+      "feature": 5,
+      "foot": [
+       "bfd3b7d0fca6687c",
+       "3fddcb8d2235561a",
+       "3fdd40be6795f31b"
+      ]
+     },
+     "p": [
+      "bfe57e205ba8f29f",
+      "3fc290d90494e8f8",
+      "3ff7613112f4b528"
+     ]
+    },
+    {
+     "dist2": "3f28386a89225f67",
+     "feature": 6,
+     "foot": [
+      "bf909de1426e1350",
+      "3fd231c924d0a044",
+      "3fce575346b86b06"
+     ],
+     "model": {
+      "dist2": "3f28386a89225f40",
+      "feature": 6,
+      "foot": [
+       "bf909de1426e1350",
+       "3fd231c924d0a044",
+       "3fce575346b86b04"
+      ]
+     },
+     "p": [
+      "bf90a7eea814d341",
+      "3fd2dd471479dd6e",
+      "3fcd3b1e340aed25"
+     ]
+    }
+   ],
+   "size": "3ff58e05dbc0e4a6"
+  },
+  {
+   "a": [
+    "bfe5d78d20f00ac6",
+    "3fde24f8949d1b6c",
+    "3f74bd43268e6600"
+   ],
+   "b": [
+    "3fe7b55c3d13ad30",
+    "3fe0ae49e13567fa",
+    "3fcdc627c4bd1d88"
+   ],
+   "c": [
+    "bfd4280c8ad679ac",
+    "bfe6617c4841b236",
+    "bfddddc837332200"
+   ],
+   "queries": [
+    {
+     "dist2": "401fdbeeaf2a12c2",
+     "feature": 0,
+     "foot": [
+      "bfe5d78d20f00ac6",
+      "3fde24f8949d1b6c",
+      "3f74bd43268e6600"
+     ],
+     "model": {
+      "dist2": "401fdbeeaf2a12c2",
+      "feature": 0,
+      "foot": [
+       "bfe5d78d20f00ac6",
+       "3fde24f8949d1b6c",
+       "3f74bd43268e6600"
+      ]
+     },
+     "p": [
+      "c003cbaf3494b9f4",
+      "40033b04069a0670",
+      "bff01040c0b0ff40"
+     ]
+    },
+    {
+     "dist2": "402147f82ab96ffa",
+     "feature": 1,
+     "foot": [
+      "3fe7b55c3d13ad30",
+      "3fe0ae49e13567fa",
+      "3fcdc627c4bd1d88"
+     ],
+     "model": {
+      "dist2": "402147f82ab96ffa",
+      "feature": 1,
+      "foot": [
+       "3fe7b55c3d13ad30",
+       "3fe0ae49e13567fa",
+       "3fcdc627c4bd1d88"
+      ]
+     },
+     "p": [
+      "4006570ca94d4e40",
+      "3fef4274f082987a",
+      "40024d731fe8941a"
+     ]
+    },
+    {
+     "dist2": "401a63ca3299066a",
+     "feature": 2,
+     "foot": [
+      "bfd4280c8ad679ac",
+      "bfe6617c4841b236",
+      "bfddddc837332200"
+     ],
+     "model": {
+      "dist2": "401a63ca32990669",
+      "feature": 2,
+      "foot": [
+       "bfd4280c8ad679ac",
+       "bfe6617c4841b236",
+       "bfddddc837332200"
+      ]
+     },
+     "p": [
+      "bfec06341224ef6e",
+      "c009a59295650eba",
+      "bfdc360e26e9b28c"
+     ]
+    },
+    {
+     "dist2": "3ffe186a1ce8a99d",
+     "feature": 3,
+     "foot": [
+      "bfd68a935b211e60",
+      "3fdee41d0cad9d06",
+      "3fada16ede6e239c"
+     ],
+     "model": {
+      "dist2": "3ffe186a1ce8a99d",
+      "feature": 3,
+      "foot": [
+       "bfd68a935b211e61",
+       "3fdee41d0cad9d06",
+       "3fada16ede6e239b"
+      ]
+     },
+     "p": [
+      "bfdf997e1e067cf7",
+      "3ffb31532783fcd4",
+      "3fe5950624e49189"
+     ]
+    },
+    {
+     "dist2": "3ffea54f1d9ffe21",
+     "feature": 4,
+     "foot": [
+      "3fdd332410e1c705",
+      "3fc899c9aa45f717",
+      "3fa6935bfb4fd3f0"
+     ],
+     "model": {
+      "dist2": "3ffea54f1d9ffe22",
+      "feature": 4,
+      "foot": [
+       "3fdd332410e1c704",
+       "3fc899c9aa45f714",
+       "3fa6935bfb4fd3e8"
+      ]
+     },
+     "p": [
+      "3ff55409ec4eed15",
+      "bfe98ef6ea148ccd",
+      "3fdcccc367c2786e"
+     ]
+    },
+    {
+     "dist2": "3ff9d50650effc05",
+     "feature": 5,
+     "foot": [
+      "bfdd494e6d63fb88",
+      "bfcf636bacbc60f6",
+      "bfd226a150fb9e94"
+     ],
+     "model": {
+      "dist2": "3ff9d50650effc05",
+      "feature": 5,
+      "foot": [
+       "bfdd494e6d63fb88",
+       "bfcf636bacbc60f4",
+       "bfd226a150fb9e93"
+      ]
+     },
+     "p": [
+      "bff4c0fb1bd5d0e5",
+      "bfc04fa817c524b0",
+      "bff3ae7d5ed656b9"
+     ]
+    },
+    {
+     "dist2": "4005df66b496ce23",
+     "feature": 6,
+     "foot": [
+      "bfc97561ce98a79e",
+      "bf6b83776fcee09c",
+      "bfc1a78abb0d03c5"
+     ],
+     "model": {
+      "dist2": "4005df66b496ce23",
+      "feature": 6,
+      "foot": [
+       "bfc97561ce98a79f",
+       "bf6b83776fcee100",
+       "bfc1a78abb0d03c6"
+      ]
+     },
+     "p": [
+      "bfda84bbfd37fff8",
+      "bfe5913315bb6e94",
+      "3ff5ba900c1a2981"
+     ]
+    }
+   ],
+   "size": "3ffc248d2d81035f"
+  },
+  {
+   "a": [
+    "bfced7c42b1e43b8",
+    "bfd8524a6f4f9c48",
+    "bfdbbae09ac5ba6c"
+   ],
+   "b": [
+    "3feb87f777a1ac84",
+    "bfe0589fdc62e9ee",
+    "3fe54d9a7d16c27e"
+   ],
+   "c": [
+    "3fd26206c1b3fa80",
+    "3fe76bc0c3a43008",
+    "bfc61cc2c65dab18"
+   ],
+   "queries": [
+    {
+     "dist2": "40066838c0c6d051",
+     "feature": 0,
+     "foot": [
+      "bfced7c42b1e43b8",
+      "bfd8524a6f4f9c48",
+      "bfdbbae09ac5ba6c"
+     ],
+     "model": {
+      "dist2": "40066838c0c6d052",
+      "feature": 0,
+      "foot": [
+       "bfced7c42b1e43b8",
+       "bfd8524a6f4f9c48",
+       "bfdbbae09ac5ba6c"
+      ]
+     },
+     "p": [
+      "bffbd1205a616a6e",
+      "bfdc239bcde77162",
+      "3fd3edd2663e2ce0"
+     ]
+    },
+    {
+     "dist2": "401c24e0dce85d85",
+     "feature": 1,
+     "foot": [
+      "3feb87f777a1ac84",
+      "bfe0589fdc62e9ee",
+      "3fe54d9a7d16c27e"
+     ],
+     "model": {
+      "dist2": "401c24e0dce85d86",
+      "feature": 1,
+      "foot": [
+       "3feb87f777a1ac84",
+       "bfe0589fdc62e9ee",
+       "3fe54d9a7d16c27e"
+      ]
+     },
+     "p": [
+      "4007c9249c3e9d19",
+      "bffd1e23783484be",
+      "3ff9795967b17fcd"
+     ]
+    },
+    {
+     "dist2": "4011193d3783b6cd",
+     "feature": 2,
+     "foot": [
+      "3fd26206c1b3fa80",
+      "3fe76bc0c3a43008",
+      "bfc61cc2c65dab18"
+     ],
+     "model": {
+      "dist2": "4011193d3783b6cd",
+      "feature": 2,
+      "foot": [
+       "3fd26206c1b3fa80",
+       "3fe76bc0c3a43008",
+       "bfc61cc2c65dab18"
+      ]
+     },
+     "p": [
+      "3fe65f1940c5abdd",
+      "4004ff945e04124a",
+      "bfeca5b27b81724e"
+     ]
+    },
+    {
+     "dist2": "4008eb3ca622111b",
+     "feature": 3,
+     "foot": [
+      "3fdf5aa53b280c0b",
+      "bfdde06f6a966d62",
+      "3fd2f29c5bfb9245"
+     ],
+     "model": {
+      "dist2": "4008eb3ca622111a",
+      "feature": 3,
+      "foot": [
+       "3fdf5aa53b280c0c",
+       "bfdde06f6a966d62",
+       "3fd2f29c5bfb9246"
+      ]
+     },
+     "p": [
+      "bfe55486140130da",
+      "bff457135360f512",
+      "3ff5bf5bbee45e62"
+     ]
+    },
+    {
+     "dist2": "3fe98588b7c997c4",
+     "feature": 4,
+     "foot": [
+      "3fe297ff68a6950d",
+      "3fb8443cc1adbc50",
+      "3fd07488ef9a0b91"
+     ],
+     "model": {
+      "dist2": "3fe98588b7c997c5",
+      "feature": 4,
+      "foot": [
+       "3fe297ff68a6950d",
+       "3fb8443cc1adbc50",
+       "3fd07488ef9a0b90"
+      ]
+     },
+     "p": [
+      "3fd22f474b1eaae4",
+      "3fddeb1d19f0868c",
+      "3ff032e46dca8338"
+     ]
+    },
+    {
+     "dist2": "400478c8a77161c9",
+     "feature": 5,
+     "foot": [
+      "3fc50f9bd5e5a33f",
+      "3fde4faec17a2adb",
+      "bfcddbd30f9d8370"
+     ],
+     "model": {
+      "dist2": "400478c8a77161ca",
+      "feature": 5,
+      "foot": [
+       "3fc50f9bd5e5a33e",
+       "3fde4faec17a2ada",
+       "bfcddbd30f9d8371"
+      ]
+     },
+     "p": [
+      "bff0e80ff359e974",
+      "3ff388d71129bc4d",
+      "bfee4caf3a391e8d"
+     ]
+    },
+    {
+     "dist2": "3fe288003b60c48c",
+     "feature": 6,
+     "foot": [
+      "3fd0890f19abe0bf",
+      "3fd8262596931851",
+      "bfbecd4656c08120"
+     ],
+     "model": {
+      "dist2": "3fe288003b60c48c",
+      "feature": 6,
+      "foot": [
+       "3fd0890f19abe0be",
+       "3fd826259693184f",
+       "bfbecd4656c08120"
+      ]
+     },
+     "p": [
+      "bfd0f37111fd695b",
+      "3fdff9a7518752d4",
+      "3fdac996d65c4f6e"
+     ]
+    }
+   ],
+   "size": "3ff9adde64324876"
+  },
+  {
+   "a": [
+    "3fefa92abee11fd2",
+    "bfe96a9f71888b9e",
+    "bfcad7b5c7666348"
+   ],
+   "b": [
+    "3fe1da74a7cbf8ea",
+    "3feb429745f3b2e0",
+    "bf854876eb6acb80"
+   ],
+   "c": [
+    "bfe4a45aa8ad934a",
+    "bfd62be7eeeb1464",
+    "3fca49822f571ed0"
+   ],
+   "queries": [
+    {
+     "dist2": "4013ad5e7b8b393c",
+     "feature": 0,
+     "foot": [
+      "3fefa92abee11fd2",
+      "bfe96a9f71888b9e",
+      "bfcad7b5c7666348"
+     ],
+     "model": {
+      "dist2": "4013ad5e7b8b393c",
+      "feature": 0,
+      "foot": [
+       "3fefa92abee11fd2",
+       "bfe96a9f71888b9e",
+       "bfcad7b5c7666348"
+      ]
+     },
+     "p": [
+      "4003900a29a081ec",
+      "c00019c51ed0aa0a",
+      "3fedfd171f77e77e"
+     ]
+    },
+    {
+     "dist2": "400a1067ac62aa25",
+     "feature": 1,
+     "foot": [
+      "3fe1da74a7cbf8ea",
+      "3feb429745f3b2e0",
+      "bf854876eb6acb80"
+     ],
+     "model": {
+      "dist2": "400a1067ac62aa24",
+      "feature": 1,
+      "foot": [
+       "3fe1da74a7cbf8ea",
+       "3feb429745f3b2e0",
+       "bf854876eb6acb80"
+      ]
+     },
+     "p": [
+      "3fef9fbd45a3e485",
+      "4004c3ab8246a43b",
+      "bfc8647cbdd6412d"
+     ]
+    },
+    {
+     "dist2": "401414fef3a96378",
+     "feature": 2,
+     "foot": [
+      "bfe4a45aa8ad934a",
+      "bfd62be7eeeb1464",
+      "3fca49822f571ed0"
+     ],
+     "model": {
+      "dist2": "401414fef3a96377",
+      "feature": 2,
+      "foot": [
+       "bfe4a45aa8ad934a",
+       "bfd62be7eeeb1464",
+       "3fca49822f571ed0"
+      ]
+     },
+     "p": [
+      "c006282073327231",
+      "bfed4e966fce4423",
+      "3fe43f5ecd1b713d"
+     ]
+    },
+    {
+     "dist2": "3fd91864e6df0d59",
+     "feature": 3,
+     "foot": [
+      "3feaf85060d9643f",
+      "bfce15148b499980",
+      "bfc22cdc99a4ad9e"
+     ],
+     "model": {
+      "dist2": "3fd91864e6df0d59",
+      "feature": 3,
+      "foot": [
+       "3feaf85060d9643f",
+       "bfce15148b499980",
+       "bfc22cdc99a4ad9e"
+      ]
+     },
+     "p": [
+      "3ff54c49431c8eb0",
+      "bfb075c58e816115",
+      "bfdfabe374d3a364"
+     ]
+    },
+    {
+     "dist2": "4007345f73555dac",
+     "feature": 4,
+     "foot": [
+      "bfd0262319a627fd",
+      "3fa6ed708260f786",
+      "3fc1455d11373873"
+     ],
+     "model": {
+      "dist2": "4007345f73555dab",
+      "feature": 4,
+      "foot": [
+       "bfd0262319a627fc",
+       "3fa6ed708260f790",
+       "3fc1455d11373873"
+      ]
+     },
+     "p": [
+      "bfe9f5001f0b02ae",
+      "3fd48163123996b6",
+      "bff7339bedb784b0"
+     ]
+    },
+    {
+     "dist2": "3fb720674c1c6821",
+     "feature": 5,
+     "foot": [
+      "bfb8f309cf659ee0",
+      "bfdfc62e308bbfc4",
+      "3fb0f93739bef42f"
+     ],
+     "model": {
+      "dist2": "3fb720674c1c681f",
+      "feature": 5,
+      "foot": [
+       "bfb8f309cf659ee0",
+       "bfdfc62e308bbfc4",
+       "3fb0f93739bef430"
+      ]
+     },
+     "p": [
+      "bfc4106bfb805312",
+      "bfe90326a6fc1bfb",
+      "3fc1fbafa5968a70"
+     ]
+    },
+    {
+     "dist2": "3fdaa31c8ec0b7fc",
+     "feature": 6,
+     "foot": [
+      "3fdb5c737f47a202",
+      "3fe075e383743331",
+      "3f4a4f4bac7cf873"
+     ],
+     "model": {
+      "dist2": "3fdaa31c8ec0b7fc",
+      "feature": 6,
+      "foot": [
+       "3fdb5c737f47a202",
+       "3fe075e383743330",
+       "3f4a4f4bac7cf8c0"
+      ]
+     },
+     "p": [
+      "3fd1d28012c2edac",
+      "3fe1a3602993b444",
+      "bfe40696fafaa109"
+     ]
+    }
+   ],
+   "size": "3ffbeaafa0965a37"
+  },
+  {
+   "a": [
+    "3fe670b50837f456",
+    "3fe3843238540032",
+    "3fcdd50869d38440"
+   ],
+   "b": [
+    "3fb76e22d86336f0",
+    "3fc286dc0b795ad8",
+    "3fed0157d69ac76c"
+   ],
+   "c": [
+    "3fdd2a7e95d749ec",
+    "3fe9b553e75e1286",
+    "3fefef0041854744"
+   ],
+   "queries": [
+    {
+     "dist2": "3fff81e1ad2d48af",
+     "feature": 0,
+     "foot": [
+      "3fe670b50837f456",
+      "3fe3843238540032",
+      "3fcdd50869d38440"
+     ],
+     "model": {
+      "dist2": "3fff81e1ad2d48af",
+      "feature": 0,
+      "foot": [
+       "3fe670b50837f456",
+       "3fe3843238540032",
+       "3fcdd50869d38440"
+      ]
+     },
+     "p": [
+      "3fe20571d0ec63f1",
+      "3ff29f93410ea574",
+      "bff0c7d60f592820"
+     ]
+    },
+    {
+     "dist2": "3fe7c2984d4ee1fa",
+     "feature": 1,
+     "foot": [
+      "3fb76e22d86336f0",
+      "3fc286dc0b795ad8",
+      "3fed0157d69ac76c"
+     ],
+     "model": {
+      "dist2": "3fe7c2984d4ee1fa",
+      "feature": 1,
+      "foot": [
+       "3fb76e22d86336f0",
+       "3fc286dc0b795ad8",
+       "3fed0157d69ac76c"
+      ]
+     },
+     "p": [
+      "3fdc784a91af7380",
+      "bfe0db781b49b696",
+      "3ff5091b721c5aaf"
+     ]
+    },
+    {
+     "dist2": "4002e13e4601f7c9",
+     "feature": 2,
+     "foot": [
+      "3fdd2a7e95d749ec",
+      "3fe9b553e75e1286",
+      "3fefef0041854744"
+     ],
+     "model": {
+      "dist2": "4002e13e4601f7ca",
+      "feature": 2,
+      "foot": [
+       "3fdd2a7e95d749ec",
+       "3fe9b553e75e1286",
+       "3fefef0041854744"
+      ]
+     },
+     "p": [
+      "3fe1c04f863f821b",
+      "3fff59a396443c90",
+      "400009e0c3daa7be"
+     ]
+    },
+    {
+     "dist2": "3f991882588b974a",
+     "feature": 3,
+     "foot": [
+      "3fd2919ffb2249fe",
+      "3fd2f5df577bff7a",
+      "3fe5fc8a674a72ce"
+     ],
+     "model": {
+      "dist2": "3f991882588b974e",
+      "feature": 3,
+      "foot": [
+       "3fd2919ffb2249ff",
+       "3fd2f5df577bff7a",
+       "3fe5fc8a674a72ce"
+      ]
+     },
+     "p": [
+      "3fcb452eb6268964",
+      "3fcd164819aad6ab",
+      "3fe23a22dd362d28"
+     ]
+    },
+    {
+     "dist2": "3ffa2a8bf606a4f9",
+     "feature": 4,
+     "foot": [
+      "3fd5551db2fce3ce",
+      "3fe29ff7cfb16132",
+      "3feef30e40eb2f92"
+     ],
+     "model": {
+      "dist2": "3ffa2a8bf606a4fa",
+      "feature": 4,
+      "foot": [
+       "3fd5551db2fce3cf",
+       "3fe29ff7cfb16134",
+       "3feef30e40eb2f92"
+      ]
+     },
+     "p": [
+      "3fe4834a847b15d4",
+      "3fcf78a85a81621e",
+      "40014bd8dda05bba"
+     ]
+    },
+    {
+     "dist2": "3fe2cb9e081ff225",
+     "feature": 5,
+     "foot": [
+      "3fe1aee13f351696",
+      "3fe743e7c312ac94",
+      "3fe646d14a28a9cc"
+     ],
+     "model": {
+      "dist2": "3fe2cb9e081ff225",
+      "feature": 5,
+      "foot": [
+       "3fe1aee13f351696",
+       "3fe743e7c312ac94",
+       "3fe646d14a28a9cc"
+      ]
+     },
+     "p": [
+      "3ff3ccd3e7235358",
+      "3ff0a7a1cb09bd68",
+      "3feac58125d4d8a7"
+     ]
+    },
+    {
+     "dist2": "3f856141aadfb962",
+     "feature": 6,
+     "foot": [
+      "3fd2c2ed8e77ffbe",
+      "3fdc8509171bffa6",
+      "3febfb3f8a2a353f"
+     ],
+     "model": {
+      "dist2": "3f856141aadfb95d",
+      "feature": 6,
+      "foot": [
+       "3fd2c2ed8e77ffbe",
+       "3fdc8509171bffa7",
+       "3febfb3f8a2a353e"
+      ]
+     },
+     "p": [
+      "3fcb38aeb3d33067",
+      "3fdfb5a889814744",
+      "3feac04d68c1aa80"
+     ]
+    }
+   ],
+   "size": "3ff05433f578f0be"
+  },
+  {
+   "a": [
+    "3fdc359a7293e808",
+    "bfdf7ce866a86cec",
+    "bfe9a4b7235561b4"
+   ],
+   "b": [
+    "3fae419d18ff1e80",
+    "3fd0fa5b843e6470",
+    "bfe8075ee95e86c6"
+   ],
+   "c": [
+    "3fdb89b078b0bb80",
+    "bfc7b95ad85eecb0",
+    "3fe904faa75b02f2"
+   ],
+   "queries": [
+    {
+     "dist2": "40055aff93444f02",
+     "feature": 0,
+     "foot": [
+      "3fdc359a7293e808",
+      "bfdf7ce866a86cec",
+      "bfe9a4b7235561b4"
+     ],
+     "model": {
+      "dist2": "40055aff93444f02",
+      "feature": 0,
+      "foot": [
+       "3fdc359a7293e808",
+       "bfdf7ce866a86cec",
+       "bfe9a4b7235561b4"
+      ]
+     },
+     "p": [
+      "3fc41da59972a594",
+      "bffd5e6acd7177f8",
+      "bffafcca47145ef8"
+     ]
+    },
+    {
+     "dist2": "3ff31f0e7a2f7a7e",
+     "feature": 1,
+     "foot": [
+      "3fae419d18ff1e80",
+      "3fd0fa5b843e6470",
+      "bfe8075ee95e86c6"
+     ],
+     "model": {
+      "dist2": "3ff31f0e7a2f7a7e",
+      "feature": 1,
+      "foot": [
+       "3fae419d18ff1e80",
+       "3fd0fa5b843e6470",
+       "bfe8075ee95e86c6"
+      ]
+     },
+     "p": [
+      "bff02ee61b212139",
+      "3fcd8541526dec60",
+      "bfef06b67d93b9a7"
+     ]
+    },
+    {
+     "dist2": "40047bca0e2af40b",
+     "feature": 2,
+     "foot": [
+      "3fdb89b078b0bb80",
+      "bfc7b95ad85eecb0",
+      "3fe904faa75b02f2"
+     ],
+     "model": {
+      "dist2": "40047bca0e2af40c",
+      "feature": 2,
+      "foot": [
+       "3fdb89b078b0bb80",
+       "bfc7b95ad85eecb0",
+       "3fe904faa75b02f2"
+      ]
+     },
+     "p": [
+      "bfe94064f84c8cf3",
+      "bfebfca10861d4c6",
+      "3ff8e334207a0e27"
+     ]
+    },
+    {
+     "dist2": "3fdf06c2886df8bc",
+     "feature": 3,
+     "foot": [
+      "3fd628892ce81169",
+      "bfd37b6e14e4cafb",
+      "bfe93e52c4b73582"
+     ],
+     "model": {
+      "dist2": "3fdf06c2886df8bd",
+      "feature": 3,
+      "foot": [
+       "3fd628892ce81169",
+       "bfd37b6e14e4cafc",
+       "bfe93e52c4b73582"
+      ]
+     },
+     "p": [
+      "3fd3d85b4bb6fb51",
+      "bfd1af7447449d44",
+      "bff7bce73beb1848"
+     ]
+    },
+    {
+     "dist2": "3ff794ac29cf542c",
+     "feature": 4,
+     "foot": [
+      "3fd4a78ee074de21",
+      "bfac0b593438ab24",
+      "3fd59d785a1e18fc"
+     ],
+     "model": {
+      "dist2": "3ff794ac29cf542c",
+      "feature": 4,
+      "foot": [
+       "3fd4a78ee074de21",
+       "bfac0b593438ab20",
+       "3fd59d785a1e18fc"
+      ]
+     },
+     "p": [
+      "bfe09b1e1b982105",
+      "3fe6a97300ffc313",
+      "3fe881faa8cb70f2"
+     ]
+    },
+    {
+     "dist2": "4000fc4451290cd7",
+     "feature": 5,
+     "foot": [
+      "3fdbeb9f67ca6858",
+      "bfd70acdfa39bd64",
+      "bfbebb319f7c68f5"
+     ],
+     "model": {
+      "dist2": "4000fc4451290cd7",
+      "feature": 5,
+      "foot": [
+       "3fdbeb9f67ca6858",
+       "bfd70acdfa39bd64",
+       "bfbebb319f7c68f0"
+      ]
+     },
+     "p": [
+      "3ff73b77b9e68a4e",
+      "bff6267eb052cc24",
+      "3fb5c90123382678"
+     ]
+    },
+    {
+     "dist2": "3ff4bd278bd9c53a",
+     "feature": 6,
+     "foot": [
+      "3fd5508cd2b9ed50",
+      "bfcd120fc445a968",
+      "bfe021a840ef77b0"
+     ],
+     "model": {
+      "dist2": "3ff4bd278bd9c53a",
+      "feature": 6,
+      "foot": [
+       "3fd5508cd2b9ed50",
+       "bfcd120fc445a966",
+       "bfe021a840ef77b0"
+      ]
+     },
+     "p": [
+      "bfe5afcaaa006590",
+      "bfe7c49ecdbd18ca",
+      "bfda4cb93ea5c820"
+     ]
+    }
+   ],
+   "size": "3ffa3e2c0f71c8c1"
+  }
+ ]
+}
