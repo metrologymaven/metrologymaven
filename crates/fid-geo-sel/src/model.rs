@@ -45,8 +45,17 @@
 //! points domain; mesh triangles the triangles domain. Faces and edges belong to CAD body
 //! topology, which `GEO.TYPES` does not expose (it is `GEO.CAD`): on a CAD body handle
 //! their count is unknown here, so faces and edges index sets are built with a count the
-//! caller takes from the topology, and [`apply`] checks only digest and domain for them.
-//! Every other pairing is [`SelError::DomainMismatch`].
+//! caller takes from the topology. Applying them fails closed: [`apply`] returns
+//! [`SelError::TopologyCountRequired`], and [`apply_with_count`] range-checks them against
+//! the caller's topology count. (Open question in NODE.md: replace the caller-supplied
+//! count with real topology once `GEO.CAD` lands.) Every other pairing is
+//! [`SelError::DomainMismatch`].
+//!
+//! # Empty sets
+//!
+//! The empty index set is a valid selection: applying it to its element returns `Ok` with
+//! a set of no members. This model does not reject it; downstream feature code (fitting,
+//! construction, evaluation) must reject a zero-point feature itself.
 
 use core::fmt;
 use fid_geo_types::{digest, ElementDigest, ElementKind, GeometryElement};
@@ -133,6 +142,14 @@ impl fmt::Display for Domain {
 
 /// An opaque 128-bit element ID (CONSTITUTION §5 IDs are UUIDs; the ID type itself lives
 /// in CORE, above this kernel crate, so it is carried here as its 16 bytes).
+///
+/// Byte compatibility with `fid_uuid::Uuid` (layer `model`) is pinned: the 16 bytes are the
+/// UUID's bytes in RFC 9562 network order, the same array `Uuid::from_bytes` takes and
+/// `Uuid::as_bytes` returns, so `EntityId::from_bytes(*uuid.as_bytes())` and
+/// `Uuid::from_bytes(id.to_bytes())` are lossless inverses. No conversion is provided here
+/// and no test links `fid-uuid`: a kernel crate may not depend on a model-layer crate, not
+/// even as a dev-dependency (ECO.REPO.LAYERS counts the root's dev edges). The conversion
+/// and its test belong to a higher layer (open question in NODE.md).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EntityId([u8; 16]);
 
@@ -199,6 +216,9 @@ pub enum SelError {
     QueryTooLarge { len: u64 },
     /// [`apply`] was given a query selection; queries are evaluated by `GEO.SEL.QUERY`.
     NotIndexSet,
+    /// [`apply`] was given a faces or edges selection, whose count only CAD topology knows;
+    /// use [`apply_with_count`] with the topology's count.
+    TopologyCountRequired { domain: Domain },
     /// A working allocation failed; nothing is created.
     AllocationFailed,
     /// A serialised selection is malformed at byte `offset`.
@@ -216,6 +236,7 @@ impl SelError {
             SelError::TooManyIndices { .. } => "too_many_indices",
             SelError::QueryTooLarge { .. } => "query_too_large",
             SelError::NotIndexSet => "not_index_set",
+            SelError::TopologyCountRequired { .. } => "topology_count_required",
             SelError::AllocationFailed => "allocation_failed",
             SelError::Malformed { .. } => "malformed",
         }
@@ -236,6 +257,9 @@ impl fmt::Display for SelError {
             SelError::TooManyIndices { count, limit } => write!(f, "{count} indexes exceed the limit {limit}"),
             SelError::QueryTooLarge { len } => write!(f, "query of {len} bytes exceeds {MAX_QUERY_BYTES}"),
             SelError::NotIndexSet => f.write_str("the selection is a query, not an index set"),
+            SelError::TopologyCountRequired { domain } => {
+                write!(f, "applying a {domain} selection needs the topology count (apply_with_count)")
+            }
             SelError::AllocationFailed => f.write_str("allocation failed"),
             SelError::Malformed { offset, reason } => write!(f, "malformed selection at byte {offset}: {reason}"),
         }
@@ -690,10 +714,33 @@ impl<'a> Reader<'a> {
 /// Applies an index-set selection to `element` (REQ-GEO.SEL.MODEL-003). In order: a query
 /// body fails with [`SelError::NotIndexSet`]; an element whose digest differs from the
 /// stored target digest fails with [`SelError::StaleSelection`]; a domain the element does
-/// not have fails with [`SelError::DomainMismatch`]; a member not less than the element's
-/// count fails with [`SelError::IndexOutOfRange`] (decoded selections are not
-/// bound-checked until here). Otherwise the members are returned.
+/// not have fails with [`SelError::DomainMismatch`]; faces and edges of a CAD body fail
+/// with [`SelError::TopologyCountRequired`] (fail closed: their count is not known here,
+/// see [`apply_with_count`]); a member not less than the element's count fails with
+/// [`SelError::IndexOutOfRange`] (decoded selections are not bound-checked until here).
+/// Otherwise the members are returned; an empty set returns `Ok` with no members.
 pub fn apply<'s>(selection: &'s Selection, element: &GeometryElement) -> Result<&'s IndexSet, SelError> {
+    apply_checked(selection, element, None)
+}
+
+/// [`apply`] for faces and edges of a CAD body: the members are range-checked against
+/// `topology_count`, the face or edge count the caller takes from the body's topology
+/// (`GEO.CAD`). The checks and their order are those of [`apply`]. Where the element
+/// itself defines the count (points, mesh vertices and triangles), the element's count is
+/// authoritative and `topology_count` is not used.
+pub fn apply_with_count<'s>(
+    selection: &'s Selection,
+    element: &GeometryElement,
+    topology_count: u64,
+) -> Result<&'s IndexSet, SelError> {
+    apply_checked(selection, element, Some(topology_count))
+}
+
+fn apply_checked<'s>(
+    selection: &'s Selection,
+    element: &GeometryElement,
+    topology_count: Option<u64>,
+) -> Result<&'s IndexSet, SelError> {
     let set = match &selection.body {
         SelectionBody::IndexSet(s) => s,
         SelectionBody::Query(_) => return Err(SelError::NotIndexSet),
@@ -702,9 +749,11 @@ pub fn apply<'s>(selection: &'s Selection, element: &GeometryElement) -> Result<
     if found != selection.target_digest {
         return Err(SelError::StaleSelection { expected: selection.target_digest, found });
     }
-    if let Some(count) = domain_count(element, set.domain)? {
-        set.check_bound(count)?;
-    }
+    let count = match domain_count(element, set.domain)? {
+        Some(count) => count,
+        None => topology_count.ok_or(SelError::TopologyCountRequired { domain: set.domain })?,
+    };
+    set.check_bound(count)?;
     Ok(set)
 }
 

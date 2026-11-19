@@ -64,7 +64,7 @@ The data model of a selection: either a compact, digested set of indexes into on
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `Domain { Points, Triangles, Faces, Edges }`; `IndexSet { domain, ranges: Vec<(u64, u64)> }`; `Selection`; `SelectionDigest([u8; 32])`.
 - **Algorithm:** sort and deduplicate, then coalesce into ranges; membership by binary search; digest by streaming the canonical encoding.
-- **Errors:** `StaleSelection`, `IndexOutOfRange`, `DomainMismatch`.
+- **Errors** (all ten `SelError` variants, stable codes in brackets): `StaleSelection { expected, found }` (`stale_selection`), `IndexOutOfRange { index, count }` (`index_out_of_range`), `DomainMismatch { domain, kind }` (`domain_mismatch`), `InvalidRange { start, end }` (`invalid_range`), `TooManyIndices { count, limit }` (`too_many_indices`), `QueryTooLarge { len }` (`query_too_large`), `NotIndexSet` (`not_index_set`), `TopologyCountRequired { domain }` (`topology_count_required`), `AllocationFailed` (`allocation_failed`), `Malformed { offset, reason }` (`malformed`).
 - **Determinism:** D0.
 - **Performance budget:** building from 10⁷ unsorted indexes under 1 s [unverified].
 - **Crate:** `fid-geo-sel` (kernel graph, KNP-1 applies).
@@ -72,8 +72,8 @@ The data model of a selection: either a compact, digested set of indexes into on
   - Domain bytes: points 1, triangles 2, faces 3, edges 4. Digest preimage `"FIDSEL" | 0x01 | domain u8 | target element digest [32] | count u64 | (start u64, end u64)*`, all little-endian; `count` is the number of members; ranges are half-open, non-empty, ascending and coalesced (touching ranges merge); the range count is not written. SHA-256 is the portable FIPS 180-4 code of `fid-kci`; the target digest is the GEO.TYPES.DIGEST `ElementDigest` from `fid-geo-types`.
   - Input lists may be in any order and may repeat an index; a repeat is one member (set semantics), not an error. The empty set is valid. Explicit ranges must have `start < end` (`InvalidRange`).
   - Bounds: every constructor takes the element's count in the domain; an index `>= count` is `IndexOutOfRange { index, count }` (the first offending index in input order; for an explicit range, `end - 1`). From an element: points of a point set or cloud and mesh vertices are `Points`; mesh triangles are `Triangles`; `Faces` and `Edges` exist only on a CAD body handle and their count comes from GEO.CAD topology (not in GEO.TYPES), so those sets are built with an explicit count. Any other pairing is `DomainMismatch`.
-  - `apply` checks, in order: query body (`NotIndexSet`, queries are GEO.SEL.QUERY's), element digest (`StaleSelection { expected, found }`), domain (`DomainMismatch`), bound (`IndexOutOfRange`; a decoded selection is first bound-checked here). For CAD faces and edges only digest and domain are checked.
-  - `EntityId` is carried as its 16 bytes (the CORE UUID type is above the kernel layer). The query body is opaque canonical bytes, at most 64 KiB.
+  - `apply` checks, in order: query body (`NotIndexSet`, queries are GEO.SEL.QUERY's), element digest (`StaleSelection { expected, found }`), domain (`DomainMismatch`), bound (`IndexOutOfRange`; a decoded selection is first bound-checked here). CAD faces and edges fail closed: plain `apply` returns `TopologyCountRequired`, and `apply_with_count(selection, element, topology_count)` range-checks them against the caller's topology count (where the element defines the count itself, the element's count wins). Applying an empty set returns `Ok` with no members; downstream feature code must reject zero-point features.
+  - `EntityId` is carried as its 16 bytes, byte-compatible with `fid_uuid::Uuid` (the RFC 9562 network-order array of `Uuid::from_bytes` / `Uuid::as_bytes`); the UUID type is in layer `model`, which a kernel crate may not reach even as a dev-dependency, so the conversion is documented, not linked or tested here. The query body is opaque canonical bytes, at most 64 KiB.
   - Serialised selection: `"FIDSLC" | 0x01 | target [16] | target_digest [32] | body tag u8`, then for tag 1 `domain u8 | n_ranges u64 | ranges`, for tag 2 `len u32 | query bytes`. Decoding rejects non-canonical ranges, unknown tags, truncation and trailing bytes, and bounds `n_ranges` by the input length before allocating.
   - Conversion to an explicit list takes a caller limit (`TooManyIndices`). The builder merges ascending runs as they arrive, so memory is O(ranges) for run-ordered input; stored sets are shrunk to fit.
 
@@ -87,7 +87,8 @@ The data model of a selection: either a compact, digested set of indexes into on
 
 ## Open questions
 
-- None.
+- Faces and edges are range-checked against a caller-supplied topology count (`apply_with_count`). Replace it with the real face and edge counts from CAD topology once `GEO.CAD` lands.
+- `EntityId` ↔ `fid_uuid::Uuid` conversion (and a test of the pinned byte order) belongs in a crate at layer `model` or above, e.g. the GEO command adapter `fid-geo-cmd`; which crate owns it is open.
 
 ## Children
 

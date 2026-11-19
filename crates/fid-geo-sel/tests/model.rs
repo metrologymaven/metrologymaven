@@ -10,8 +10,8 @@ use fid_geo_sel::model::{
     DIGEST_TAG, INDEX_SET_FIELDS, MAX_QUERY_BYTES, QUERY_FIELDS, SELECTION_FIELDS, SELECTION_TAG,
 };
 use fid_geo_sel::{
-    apply, domain_count, Domain, EntityId, IndexSet, IndexSetBuilder, SelError, Selection, SelectionBody,
-    SelectionQuery,
+    apply, apply_with_count, domain_count, Domain, EntityId, IndexSet, IndexSetBuilder, SelError, Selection,
+    SelectionBody, SelectionQuery,
 };
 use fid_geo_types::{
     digest, Aabb, AttributeSet, CadBodyRef, ElementDigest, ElementKind, FrameRef, GeometryElement, Mesh, PointBuffer,
@@ -331,10 +331,10 @@ fn domain_mismatch() {
         Selection::on_element(ID, &cad, Domain::Faces, &[0]),
         Err(SelError::DomainMismatch { domain: Domain::Faces, kind: ElementKind::CadBodyRef })
     );
-    // With a face count from the topology: digest and domain are checked by apply.
+    // With a face count from the topology, only apply_with_count applies it.
     let faces = IndexSet::from_indices(Domain::Faces, &[2, 7], 12).unwrap();
     let sel = Selection::new(ID, digest(&cad), SelectionBody::IndexSet(faces.clone()));
-    assert_eq!(apply(&sel, &cad), Ok(&faces));
+    assert_eq!(apply_with_count(&sel, &cad, 12), Ok(&faces));
     // A points set bound to the CAD body's digest still fails on the domain.
     let pts = IndexSet::from_indices(Domain::Points, &[0], 1).unwrap();
     let sel = Selection::new(ID, digest(&cad), SelectionBody::IndexSet(pts));
@@ -487,4 +487,54 @@ fn error_codes() {
     assert!(e.to_string().contains("0101"));
     assert_eq!(SelError::DomainMismatch { domain: Domain::Faces, kind: ElementKind::Mesh }.code(), "domain_mismatch");
     assert_eq!(SelError::NotIndexSet.code(), "not_index_set");
+}
+
+/// Faces and edges fail closed: plain apply needs the topology count, and apply_with_count
+/// range-checks against it.
+#[test]
+fn faces_and_edges_fail_closed_without_topology_count() {
+    let cad = cad_body();
+    for domain in [Domain::Faces, Domain::Edges] {
+        let set = IndexSet::from_indices(domain, &[0, 4, 9], 10).unwrap();
+        let sel = Selection::new(ID, digest(&cad), SelectionBody::IndexSet(set.clone()));
+        let err = apply(&sel, &cad).unwrap_err();
+        assert_eq!(err, SelError::TopologyCountRequired { domain });
+        assert_eq!(err.code(), "topology_count_required");
+        assert_eq!(apply_with_count(&sel, &cad, 10), Ok(&set));
+        assert_eq!(apply_with_count(&sel, &cad, 9), Err(SelError::IndexOutOfRange { index: 9, count: 9 }));
+        assert_eq!(apply_with_count(&sel, &cad, 0), Err(SelError::IndexOutOfRange { index: 9, count: 0 }));
+        // A decoded (unchecked) set is range-checked too.
+        let decoded = Selection::decode(&sel.encode()).unwrap();
+        assert_eq!(apply_with_count(&decoded, &cad, 5), Err(SelError::IndexOutOfRange { index: 9, count: 5 }));
+        // Staleness is still checked first.
+        let other = Selection::new(ID, ElementDigest([0; 32]), SelectionBody::IndexSet(set));
+        assert!(matches!(apply_with_count(&other, &cad, 10), Err(SelError::StaleSelection { .. })));
+    }
+    // An empty faces set still needs the count, and with it applies to no members.
+    let empty = Selection::new(ID, digest(&cad), SelectionBody::IndexSet(IndexSet::empty(Domain::Faces)));
+    assert_eq!(apply(&empty, &cad), Err(SelError::TopologyCountRequired { domain: Domain::Faces }));
+    assert!(apply_with_count(&empty, &cad, 0).unwrap().is_empty());
+}
+
+/// apply_with_count does not override a count the element defines.
+#[test]
+fn apply_with_count_uses_the_element_count_where_defined() {
+    let element = pointset_small();
+    let sel = Selection::on_element(ID, &element, Domain::Points, &[999]).unwrap();
+    assert_eq!(apply_with_count(&sel, &element, 10).unwrap().max_index(), Some(999));
+    let big = IndexSet::from_indices(Domain::Points, &[1500], 2000).unwrap();
+    let sel = Selection::new(ID, digest(&element), SelectionBody::IndexSet(big));
+    assert_eq!(apply_with_count(&sel, &element, 2000), Err(SelError::IndexOutOfRange { index: 1500, count: 1000 }));
+}
+
+/// An empty selection applies to its element as Ok with no members; rejecting zero-point
+/// features is downstream feature code's job.
+#[test]
+fn empty_selection_applies_to_no_members() {
+    let element = pointset_small();
+    let sel = Selection::on_element(ID, &element, Domain::Points, &[]).unwrap();
+    let set = apply(&sel, &element).unwrap();
+    assert!(set.is_empty());
+    assert_eq!(set.len(), 0);
+    assert_eq!(set.iter().count(), 0);
 }

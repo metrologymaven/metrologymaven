@@ -15,6 +15,6 @@
 pub mod model;
 
 pub use model::{
-    apply, domain_count, Domain, EntityId, IndexSet, IndexSetBuilder, SelError, Selection, SelectionBody,
-    SelectionDigest, SelectionQuery,
+    apply, apply_with_count, domain_count, Domain, EntityId, IndexSet, IndexSetBuilder, SelError, Selection,
+    SelectionBody, SelectionDigest, SelectionQuery,
 };
