@@ -25,8 +25,8 @@ pub use command::{
 };
 pub use error::RdlError;
 pub use record::{
-    aim_ok, licence_ok, licence_redistributable, parse_id, BlobRef, CrossCheck, CrossOutcome, GeneratorRecord, HexF64,
-    Kind, Provenance, RdlDataset, RefOutput, Reference, Tier, Unit, Visibility, MAX_DEPTH, MAX_RECORD_BYTES,
-    REDISTRIBUTABLE, SCHEMA,
+    aim_ok, is_control_or_format, licence_ok, licence_redistributable, parse_id, BlobRef, CrossCheck, CrossOutcome,
+    GeneratorRecord, HexF64, Kind, Provenance, RdlDataset, RefOutput, Reference, Tier, Unit, Visibility, FORMAT_CHARS,
+    MAX_DEPTH, MAX_RECORD_BYTES, REDISTRIBUTABLE, SCHEMA,
 };
 pub use view::{public_view, view_form, ViewForm};

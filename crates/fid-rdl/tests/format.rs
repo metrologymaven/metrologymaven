@@ -80,7 +80,7 @@ fn ac1_digests_match_reference() {
         assert_eq!(rec.digest().as_str(), want, "{name}");
         // The digest is SHA-256 of the canonical bytes, and those are fid-canon's RFC 8785
         // form of the input file (the record round-trips exactly).
-        let bytes = rec.canonical_bytes();
+        let bytes = rec.canonical_bytes().unwrap();
         assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), want, "{name}");
         assert_eq!(bytes, fid_canon::canonicalize(&read(&format!("valid/{name}"))).unwrap(), "{name}");
     }
@@ -90,7 +90,7 @@ fn ac1_digests_match_reference() {
 fn every_public_view_matches_reference() {
     for name in valid_names() {
         let want = read(&format!("expected/{}.public.json", name.trim_end_matches(".json")));
-        assert_eq!(canon(&public_view(&record(&name))), want, "{name}");
+        assert_eq!(canon(&public_view(&record(&name)).unwrap()), want, "{name}");
     }
 }
 
@@ -100,7 +100,7 @@ fn every_public_view_matches_reference() {
 fn ac2_reference_only_view_strips_content_keeps_digests() {
     let rec = record("x_reference_only.json");
     assert_eq!(fid_rdl::view_form(&rec), ViewForm::ReferenceOnly);
-    let view = public_view(&rec);
+    let view = public_view(&rec).unwrap();
     let k = keys(&view);
     assert!(!k.contains(&"reference") && !k.contains(&"generator") && !k.contains(&"cross_check"));
     for want in ["digest", "reference_digest", "licence", "provenance", "inputs", "id", "aim"] {
@@ -242,17 +242,17 @@ fn ac6_replay_identical() {
     invoke_cli(&s, &mut log, &["show-dataset", "--id", "rdl:G/fit.none.ls/x/0001", "--json"]);
     assert_eq!(log.len(), 3);
     for entry in &log {
-        let back = ActivityEntry::from_json(&entry.to_json()).unwrap();
+        let back = ActivityEntry::from_json(&entry.to_json().unwrap()).unwrap();
         assert_eq!(&back, entry);
-        assert_eq!(replay(&back, &s), ReplayOutcome::Identical);
+        assert_eq!(replay(&back, &s).unwrap(), ReplayOutcome::Identical);
     }
     // A store without the circle record diverges for the listing only.
     let mut other = RdlStore::new();
     for n in valid_names().into_iter().filter(|n| n != "g_circle_0001.json") {
         other.load_json(&read(&format!("valid/{n}"))).unwrap();
     }
-    assert_eq!(replay(&log[0], &other), ReplayOutcome::Identical);
-    assert_eq!(replay(&log[1], &other), ReplayOutcome::Divergent);
+    assert_eq!(replay(&log[0], &other).unwrap(), ReplayOutcome::Identical);
+    assert_eq!(replay(&log[1], &other).unwrap(), ReplayOutcome::Divergent);
 }
 
 #[test]
@@ -260,7 +260,7 @@ fn activity_entry_parsing_is_strict() {
     let s = store();
     let mut log = Vec::new();
     invoke_cli(&s, &mut log, &["list-dataset", "--tier", "G"]);
-    let good = String::from_utf8(log[0].to_json()).unwrap();
+    let good = String::from_utf8(log[0].to_json().unwrap()).unwrap();
     for bad in [
         good.replace("rdl.list_dataset@1", "rdl.generate_dataset@1"),
         good.replace("\"cli\"", "\"web\""),
@@ -328,4 +328,50 @@ fn units_and_declared_si_conversion() {
 fn registry_definitions() {
     let defs = command_defs().unwrap();
     assert_eq!(defs.len(), 2);
+}
+
+// ------------------------------------------------------------------ follow-ups of the #257 review
+
+/// Free text refuses every Unicode format character (Cf, pinned table checked against
+/// Python's unicodedata by make_fixtures.py) and every control character (Cc), and accepts
+/// ordinary non-ASCII text.
+#[test]
+fn free_text_refuses_format_and_control_characters() {
+    let base = String::from_utf8(read("valid/o_sphere_0001.json")).unwrap();
+    let source = "open suite stand-in, hand-written";
+    assert!(base.contains(source));
+    let with = |c: char| base.replace(source, &format!("open suite{c}stand-in"));
+    let table = String::from_utf8(read("format-chars.txt")).unwrap();
+    let mut n = 0;
+    for line in table.lines() {
+        let (lo, hi) = line.split_once(' ').unwrap();
+        let (lo, hi) = (u32::from_str_radix(lo, 16).unwrap(), u32::from_str_radix(hi, 16).unwrap());
+        for u in [lo, (lo + hi) / 2, hi] {
+            let c = char::from_u32(u).unwrap();
+            assert!(fid_rdl::is_control_or_format(c), "U+{u:04X}");
+            let e = RdlDataset::from_json(with(c).as_bytes()).unwrap_err();
+            assert_eq!((e.field(), e.code()), ("provenance.source", "schema_invalid"), "U+{u:04X}");
+            n += 1;
+        }
+    }
+    assert_eq!(n, 63);
+    // Control characters, as JSON escapes (raw U+0000..U+001F is not JSON at all).
+    for c in ['\u{0}', '\u{1f}', '\u{7f}', '\u{85}', '\u{9f}'] {
+        let escaped = base.replace(source, &format!("open suite\\u{:04x}stand-in", u32::from(c)));
+        let e = RdlDataset::from_json(escaped.as_bytes()).unwrap_err();
+        assert_eq!(e.field(), "provenance.source", "U+{:04X}", u32::from(c));
+    }
+    // Neighbours of the Cf ranges and ordinary non-ASCII text are fine.
+    for c in ['\u{2029}', '\u{2065}', '\u{00b5}', '\u{00e9}', '\u{fffc}', '\u{1d17b}'] {
+        assert!(RdlDataset::from_json(with(c).as_bytes()).is_ok(), "U+{:04X}", u32::from(c));
+    }
+}
+
+#[test]
+fn hex_float_edge_cases() {
+    let rec = record("o_sphere_0001.json");
+    let sub = rec.reference().outputs.iter().find(|o| o.name == "subnormal_probe").unwrap();
+    assert_eq!(sub.value_hex.bits(), 1);
+    assert_eq!(sub.value_hex.to_wire(), "0x0000000000000001");
+    assert_eq!(sub.test_uncertainty_hex.bits(), 1);
 }

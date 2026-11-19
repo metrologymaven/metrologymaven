@@ -33,6 +33,12 @@
         "kind": "angle",
         "value_hex": "0x3fe0000000000000",
         "test_uncertainty_hex": "0x3ddb7cdfd9d7bdbb"
+      },
+      {
+        "name": "subnormal_probe",
+        "kind": "dimensionless",
+        "value_hex": "0x0000000000000001",
+        "test_uncertainty_hex": "0x0000000000000001"
       }
     ],
     "precision_digits": 20

@@ -6,7 +6,7 @@
   "inputs": [
     {
       "digest": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "unit": "µm",
+      "unit": "\u00b5m",
       "role": "points"
     }
   ],

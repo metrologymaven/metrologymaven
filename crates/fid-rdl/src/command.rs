@@ -13,7 +13,7 @@
 //! SHA-256 of the canonical envelope bytes, failures (`dataset_not_found`) included.
 //! [`replay`] reruns the entry against a store and compares that digest.
 
-use crate::error::{bad_params, invalid, RdlError};
+use crate::error::{bad_params, internal, invalid, RdlError};
 use crate::record::{aim_ok, obj, parse_id, RdlDataset, Tier};
 use crate::view::public_view;
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
@@ -172,20 +172,19 @@ impl ShowParams {
 // ------------------------------------------------------------------ handlers
 
 /// The public views of the matching records, ascending by ID.
-pub fn list_dataset(store: &RdlStore, params: &ListParams) -> CValue {
-    CValue::Arr(
-        store
-            .iter()
-            .filter(|r| params.tier.map_or(true, |t| r.tier() == t))
-            .filter(|r| params.aim.as_deref().map_or(true, |a| r.aim() == a))
-            .map(public_view)
-            .collect(),
-    )
+pub fn list_dataset(store: &RdlStore, params: &ListParams) -> Result<CValue, RdlError> {
+    store
+        .iter()
+        .filter(|r| params.tier.map_or(true, |t| r.tier() == t))
+        .filter(|r| params.aim.as_deref().map_or(true, |a| r.aim() == a))
+        .map(public_view)
+        .collect::<Result<Vec<_>, _>>()
+        .map(CValue::Arr)
 }
 
 /// The public view of one record; `dataset_not_found` if there is none.
 pub fn show_dataset(store: &RdlStore, params: &ShowParams) -> Result<CValue, RdlError> {
-    store.get(&params.id).map(public_view).ok_or(RdlError::DatasetNotFound)
+    public_view(store.get(&params.id).ok_or(RdlError::DatasetNotFound)?)
 }
 
 /// The envelope error code of an error.
@@ -194,6 +193,7 @@ fn error_code(e: &RdlError) -> ErrorCode {
         RdlError::DatasetNotFound => ErrorCode::NotFound,
         RdlError::BadParams { .. } => ErrorCode::UsageError,
         RdlError::BadUnit { .. } => ErrorCode::UnitError,
+        RdlError::Internal { .. } => ErrorCode::InternalError,
         _ => ErrorCode::ValidationError,
     }
 }
@@ -242,7 +242,7 @@ impl Call {
 /// The one handler behind both surfaces: a `computed` or `failed` envelope.
 pub fn run(store: &RdlStore, call: &Call) -> Envelope {
     let result = match call {
-        Call::List(p) => Ok(list_dataset(store, p)),
+        Call::List(p) => list_dataset(store, p),
         Call::Show(p) => show_dataset(store, p),
     };
     match result {
@@ -251,11 +251,12 @@ pub fn run(store: &RdlStore, call: &Call) -> Envelope {
     }
 }
 
-fn envelope_digest(env: &Envelope) -> Digest {
-    // Encoding only fails for an envelope that breaks its own invariants; hash the error
-    // marker then, so replay reports DIVERGENT instead of matching by accident.
-    let bytes = env.encode().unwrap_or_else(|_| b"encode_failed".to_vec());
-    Digest::from_bytes(fid_canon::digest_bytes(&bytes).0)
+fn encode(env: &Envelope) -> Result<Vec<u8>, RdlError> {
+    env.encode().map_err(|_| internal("envelope encoding"))
+}
+
+fn envelope_digest(env: &Envelope) -> Result<Digest, RdlError> {
+    Ok(Digest::from_bytes(fid_canon::digest_bytes(&encode(env)?).0))
 }
 
 // ------------------------------------------------------------------ activity log
@@ -297,9 +298,10 @@ impl ActivityEntry {
         ])
     }
 
-    /// Canonical JSON bytes of [`ActivityEntry::to_value`].
-    pub fn to_json(&self) -> Vec<u8> {
-        to_canonical_bytes(&self.to_value()).unwrap_or_default()
+    /// Canonical JSON bytes of [`ActivityEntry::to_value`]; `internal_error` if encoding
+    /// fails, never empty bytes.
+    pub fn to_json(&self) -> Result<Vec<u8>, RdlError> {
+        to_canonical_bytes(&self.to_value()).map_err(|_| internal("canonical encoding of the activity record"))
     }
 
     /// Parses a record written by [`ActivityEntry::to_json`]. Strict: bounded input, no
@@ -329,21 +331,28 @@ impl ActivityEntry {
     }
 }
 
-/// Runs one parsed call and appends its activity record.
+/// Runs one parsed call and appends its activity record. If the envelope cannot be encoded
+/// (an internal fault), nothing is logged and an `internal_error` envelope is returned.
 pub fn execute(store: &RdlStore, log: &mut Vec<ActivityEntry>, call: Call, surface: Surface) -> Envelope {
     let env = run(store, &call);
-    log.push(ActivityEntry { call, surface, result_sha256: envelope_digest(&env) });
-    env
+    match envelope_digest(&env) {
+        Ok(result_sha256) => {
+            log.push(ActivityEntry { call, surface, result_sha256 });
+            env
+        }
+        Err(e) => failed_envelope(call.command(), &e),
+    }
 }
 
 /// Exact-mode replay of one activity record against `store`: `IDENTICAL` when the rerun
 /// envelope has the recorded digest, `DIVERGENT` otherwise. D0, so no tolerance applies.
-pub fn replay(entry: &ActivityEntry, store: &RdlStore) -> ReplayOutcome {
-    if envelope_digest(&run(store, &entry.call)) == entry.result_sha256 {
+/// An envelope that cannot be encoded is `internal_error`.
+pub fn replay(entry: &ActivityEntry, store: &RdlStore) -> Result<ReplayOutcome, RdlError> {
+    Ok(if envelope_digest(&run(store, &entry.call))? == entry.result_sha256 {
         ReplayOutcome::Identical
     } else {
         ReplayOutcome::Divergent
-    }
+    })
 }
 
 // ------------------------------------------------------------------ surfaces
@@ -361,14 +370,31 @@ pub struct CliOutput {
 }
 
 fn cli_output(env: Envelope, json: bool) -> CliOutput {
-    if json {
-        let stdout = env.encode().unwrap_or_default();
-        return CliOutput { envelope: env, stdout, stderr: String::new() };
-    }
-    let (stdout, stderr) = match (&env.result, &env.error) {
-        (Some(r), _) => (to_canonical_bytes(r).unwrap_or_default(), String::new()),
-        (None, Some(e)) => (Vec::new(), format!("error: {}\n", e.message)),
-        (None, None) => (Vec::new(), String::new()),
+    let printed = if json {
+        encode(&env)
+    } else {
+        match &env.result {
+            Some(r) => to_canonical_bytes(r).map_err(|_| internal("canonical encoding of the result")),
+            None => Ok(Vec::new()),
+        }
+    };
+    let env = match printed {
+        Ok(stdout) => {
+            let stderr = match (&env.error, json) {
+                (Some(e), false) => format!("error: {}\n", e.message),
+                _ => String::new(),
+            };
+            return CliOutput { envelope: env, stdout, stderr };
+        }
+        // Never print silently empty output: report the fault as an internal error.
+        Err(e) => failed_envelope(&env.command_id, &e),
+    };
+    let stderr = format!("error: {}\n", internal("envelope encoding"));
+    // The internal-error envelope holds only fixed text; should even it fail to encode,
+    // stdout stays empty and stderr above still reports the fault.
+    let stdout = match (json, encode(&env)) {
+        (true, Ok(bytes)) => bytes,
+        _ => Vec::new(),
     };
     CliOutput { envelope: env, stdout, stderr }
 }

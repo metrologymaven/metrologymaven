@@ -15,6 +15,7 @@
 //! - **full** (visibility `public` with a redistributable licence): the canonical record
 //!   plus `digest`.
 
+use crate::error::{internal, RdlError};
 use crate::record::{licence_redistributable, obj, RdlDataset, Tier, Visibility};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -43,21 +44,21 @@ fn s(x: &str) -> CValue {
     CValue::Str(x.to_string())
 }
 
-/// The public view of `rec` (see the module documentation for the three forms).
-pub fn public_view(rec: &RdlDataset) -> CValue {
+/// The public view of `rec` (see the module documentation for the three forms). Fails only
+/// with `internal_error` if canonical encoding of the record's own value fails.
+pub fn public_view(rec: &RdlDataset) -> Result<CValue, RdlError> {
     let digest = s(rec.digest().as_str());
-    match view_form(rec) {
+    Ok(match view_form(rec) {
         ViewForm::Blind => obj([("aim", s(rec.aim())), ("digest", digest), ("id", s(rec.id()))]),
         ViewForm::ReferenceOnly => {
             let inputs = rec.inputs().iter().map(|i| obj([("digest", s(i.digest.as_str()))])).collect();
             let reference = match rec.to_value() {
-                CValue::Obj(mut m) => m.remove("reference").unwrap_or(CValue::Null),
-                _ => CValue::Null,
-            };
-            let reference_digest = match fid_canon::digest(&reference) {
-                Ok(d) => s(Digest::from_bytes(d.0).as_str()),
-                Err(_) => CValue::Null,
-            };
+                CValue::Obj(mut m) => m.remove("reference"),
+                _ => None,
+            }
+            .ok_or_else(|| internal("record value has no reference"))?;
+            let d = fid_canon::digest(&reference).map_err(|_| internal("canonical encoding of the reference"))?;
+            let reference_digest = s(Digest::from_bytes(d.0).as_str());
             obj([
                 ("aim", s(rec.aim())),
                 ("digest", digest),
@@ -77,7 +78,7 @@ pub fn public_view(rec: &RdlDataset) -> CValue {
                 m.insert("digest".to_string(), digest);
                 CValue::Obj(m)
             }
-            _ => CValue::Null,
+            _ => return Err(internal("record value is not an object")),
         },
-    }
+    })
 }

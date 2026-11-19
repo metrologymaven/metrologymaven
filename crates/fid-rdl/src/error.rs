@@ -27,6 +27,9 @@ pub enum RdlError {
     DatasetNotFound,
     /// Command parameters (CLI arguments or MCP JSON) do not match the command's shape.
     BadParams { field: String, reason: &'static str },
+    /// A fault that cannot be the caller's mistake, such as canonical encoding failing on a
+    /// value this crate built. Holds a static reason.
+    Internal { reason: &'static str },
 }
 
 impl RdlError {
@@ -41,6 +44,7 @@ impl RdlError {
             RdlError::MissingTestUncertainty { .. } => "missing_test_uncertainty",
             RdlError::DatasetNotFound => "dataset_not_found",
             RdlError::BadParams { .. } => "bad_params",
+            RdlError::Internal { .. } => "internal_error",
         }
     }
 
@@ -55,12 +59,15 @@ impl RdlError {
             | RdlError::BadParams { field, .. } => field,
             RdlError::MissingLicence => "licence",
             RdlError::DatasetNotFound => "id",
+            RdlError::Internal { .. } => "record",
         }
     }
 
     fn reason(&self) -> &'static str {
         match self {
-            RdlError::SchemaInvalid { reason, .. } | RdlError::BadParams { reason, .. } => reason,
+            RdlError::SchemaInvalid { reason, .. }
+            | RdlError::BadParams { reason, .. }
+            | RdlError::Internal { reason } => reason,
             RdlError::BadId { .. } => "not rdl:<tier>/<aim>/<case>/<nnnn> matching tier and aim",
             RdlError::BadUnit { .. } => "unit is not one of m, mm, rad, deg, µm",
             RdlError::MissingLicence => "licence is required",
@@ -81,6 +88,10 @@ impl std::error::Error for RdlError {}
 
 pub(crate) fn invalid(field: impl Into<String>, reason: &'static str) -> RdlError {
     RdlError::SchemaInvalid { field: field.into(), reason }
+}
+
+pub(crate) fn internal(reason: &'static str) -> RdlError {
+    RdlError::Internal { reason }
 }
 
 pub(crate) fn bad_params(field: impl Into<String>, reason: &'static str) -> RdlError {

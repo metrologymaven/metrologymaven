@@ -12,7 +12,8 @@ Writes, next to this script:
 - digests.txt       `<file> <sha256:...>` per valid record;
 - expected/*.public.json        canonical public view of each valid record;
 - expected/list-tier-g.json     canonical envelope of `fid rdl list-dataset --tier G --json`;
-- expected/show-tier-b.json     canonical envelope of `fid rdl show-dataset --id <B id> --json`.
+- expected/show-tier-b.json     canonical envelope of `fid rdl show-dataset --id <B id> --json`;
+- format-chars.txt  the Unicode 16.0 Cf ranges free text refuses (`<lo> <hi>` hex per line).
 
 Expected values follow the rules pinned in spec/unc/rdl/format/NODE.md (Design), computed
 here independently of the Rust code:
@@ -36,6 +37,7 @@ import hashlib
 import json
 import struct
 import sys
+import unicodedata
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -144,6 +146,8 @@ VALID = {
             "outputs": [
                 out("radius", "length", 1.0, 1e-12),
                 out("tilt", "angle", 0.5, 1e-10),
+                # Smallest subnormal (bits 0x0000000000000001): finite, so valid.
+                out("subnormal_probe", "dimensionless", 5e-324, 5e-324),
             ],
             "precision_digits": 20,
         },
@@ -256,6 +260,22 @@ INVALID = {
     "reference.outputs.0.value_hex--schema_invalid--nan": setp(
         ["reference", "outputs", 0, "value_hex"], "0x7ff8000000000000"
     ),
+    "reference.outputs.0.value_hex--schema_invalid--neg_nan_payload": setp(
+        ["reference", "outputs", 0, "value_hex"], "0xfff8000000000001"
+    ),
+    "reference.outputs.0.value_hex--schema_invalid--pos_inf": setp(
+        ["reference", "outputs", 0, "value_hex"], "0x7ff0000000000000"
+    ),
+    "reference.outputs.0.value_hex--schema_invalid--neg_inf": setp(
+        ["reference", "outputs", 0, "value_hex"], "0xfff0000000000000"
+    ),
+    "reference.outputs.0.value_hex--schema_invalid--short": setp(["reference", "outputs", 0, "value_hex"], "0x1"),
+    "reference.outputs.0.value_hex--schema_invalid--upper_prefix": setp(
+        ["reference", "outputs", 0, "value_hex"], "0X3fe3333333333333"
+    ),
+    "reference.outputs.0.test_uncertainty_hex--schema_invalid--neg_zero": setp(
+        ["reference", "outputs", 0, "test_uncertainty_hex"], "0x8000000000000000"
+    ),
     "reference.outputs.0.test_uncertainty_hex--missing_test_uncertainty": delp(
         ["reference", "outputs", 0, "test_uncertainty_hex"]
     ),
@@ -273,6 +293,9 @@ INVALID = {
     "cross_check.0.outcome--schema_invalid": setp(["cross_check", 0, "outcome"], "maybe"),
     "provenance--missing_provenance": delp(["provenance"]),
     "provenance.source--missing_provenance": setp(["provenance"], {"method": "unknown"}),
+    "provenance.source--schema_invalid--bidi_override": setp(["provenance", "source"], "generated \u202egnp.exe"),
+    "provenance.source--schema_invalid--zero_width": setp(["provenance", "source"], "gene\u200brated"),
+    "provenance.source--schema_invalid--control": setp(["provenance", "source"], "line\nbreak"),
     "licence--missing_licence": delp(["licence"]),
     "licence--missing_licence--empty": setp(["licence"], ""),
     "licence--schema_invalid--expression": setp(["licence"], "MIT OR Apache-2.0"),
@@ -292,6 +315,27 @@ RAW_INVALID = {
     "record--schema_invalid--not_json": '{"schema":\n',
     "record--schema_invalid--not_object": "[]\n",
 }
+
+
+# Unicode general category Cf, Unicode 16.0 (pinned in NODE.md and in crate fid-rdl).
+FORMAT_CHARS = [
+    (0x00AD, 0x00AD), (0x0600, 0x0605), (0x061C, 0x061C), (0x06DD, 0x06DD), (0x070F, 0x070F),
+    (0x0890, 0x0891), (0x08E2, 0x08E2), (0x180E, 0x180E), (0x200B, 0x200F), (0x202A, 0x202E),
+    (0x2060, 0x2064), (0x2066, 0x206F), (0xFEFF, 0xFEFF), (0xFFF9, 0xFFFB), (0x110BD, 0x110BD),
+    (0x110CD, 0x110CD), (0x13430, 0x1343F), (0x1BCA0, 0x1BCA3), (0x1D173, 0x1D17A), (0xE0001, 0xE0001),
+    (0xE0020, 0xE007F),
+]
+
+
+def check_format_chars():
+    """Every Cf character this Python's Unicode database knows must be in the pinned table."""
+    pinned = {c for lo, hi in FORMAT_CHARS for c in range(lo, hi + 1)}
+    known = {c for c in range(0x110000) if unicodedata.category(chr(c)) == "Cf"}
+    missing = sorted(known - pinned)
+    if missing:
+        sys.exit(f"Unicode {unicodedata.unidata_version} has Cf characters not pinned: {missing[:8]}")
+    if unicodedata.unidata_version == "16.0.0" and pinned != known:
+        sys.exit("pinned Cf table differs from Unicode 16.0")
 
 
 def pretty(v):
@@ -315,13 +359,16 @@ def files():
     b = next(r for r in by_id if r["tier"] == "B")
     f["expected/show-tier-b.json"] = canon(envelope("rdl.show_dataset@1", views[b["id"]]))
     for name, fn in INVALID.items():
-        f[f"invalid/{name}.json"] = pretty(mutate(fn))
+        # ASCII-escaped, so no raw bidi or zero-width character sits in the repository.
+        f[f"invalid/{name}.json"] = json.dumps(mutate(fn), indent=2, ensure_ascii=True) + "\n"
     for name, text in RAW_INVALID.items():
         f[f"invalid/{name}.json"] = text
+    f["format-chars.txt"] = "".join(f"{lo:x} {hi:x}\n" for lo, hi in FORMAT_CHARS)
     return f
 
 
 def main():
+    check_format_chars()
     check = "--check" in sys.argv[1:]
     bad = 0
     for rel, text in files().items():

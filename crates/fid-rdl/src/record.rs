@@ -5,7 +5,7 @@
 //! only be built by [`RdlDataset::from_json`] or [`RdlDataset::from_value`], so every
 //! [`RdlDataset`] is valid and carries the digest of its own canonical form.
 
-use crate::error::{invalid, RdlError};
+use crate::error::{internal, invalid, RdlError};
 use fid_canon::{CValue, CanonError};
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -465,10 +465,45 @@ fn string<'a>(v: &'a CValue, field: &str) -> Result<&'a str, RdlError> {
     }
 }
 
-/// Printable text: 1..=`max` bytes, no control characters.
+/// Unicode general category Cf (format characters), Unicode 16.0, as inclusive ranges.
+/// Bidi overrides and isolates (U+202A..U+202E, U+2066..U+2069), zero-width characters and
+/// tag characters can make text display differently from its bytes, so free text refuses
+/// them. `fixtures/rdl/format/make_fixtures.py` checks this table against Python's
+/// `unicodedata`.
+pub const FORMAT_CHARS: [(u32, u32); 21] = [
+    (0x00ad, 0x00ad),
+    (0x0600, 0x0605),
+    (0x061c, 0x061c),
+    (0x06dd, 0x06dd),
+    (0x070f, 0x070f),
+    (0x0890, 0x0891),
+    (0x08e2, 0x08e2),
+    (0x180e, 0x180e),
+    (0x200b, 0x200f),
+    (0x202a, 0x202e),
+    (0x2060, 0x2064),
+    (0x2066, 0x206f),
+    (0xfeff, 0xfeff),
+    (0xfff9, 0xfffb),
+    (0x110bd, 0x110bd),
+    (0x110cd, 0x110cd),
+    (0x13430, 0x1343f),
+    (0x1bca0, 0x1bca3),
+    (0x1d173, 0x1d17a),
+    (0xe0001, 0xe0001),
+    (0xe0020, 0xe007f),
+];
+
+/// Whether `c` is a control (Cc) or format (Cf) character.
+pub fn is_control_or_format(c: char) -> bool {
+    let u = u32::from(c);
+    c.is_control() || FORMAT_CHARS.iter().any(|&(lo, hi)| lo <= u && u <= hi)
+}
+
+/// Printable text: 1..=`max` bytes, no control (Cc) or format (Cf) characters.
 fn text(v: &CValue, field: &str, max: usize) -> Result<String, RdlError> {
     let s = string(v, field)?;
-    if s.is_empty() || s.len() > max || s.chars().any(char::is_control) {
+    if s.is_empty() || s.len() > max || s.chars().any(is_control_or_format) {
         return Err(invalid(field, "must be 1 to the maximum bytes of printable text"));
     }
     Ok(s.to_string())
@@ -695,7 +730,7 @@ impl RdlDataset {
             visibility,
             digest: Digest::TOMBSTONE,
         };
-        let d = fid_canon::digest(&rec.to_value()).map_err(|_| invalid("record", "not canonical"))?;
+        let d = fid_canon::digest(&rec.to_value()).map_err(|_| internal("canonical encoding of the record"))?;
         rec.digest = Digest::from_bytes(d.0);
         Ok(rec)
     }
@@ -765,9 +800,11 @@ impl RdlDataset {
         CValue::Obj(m)
     }
 
-    /// RFC 8785 canonical bytes of [`RdlDataset::to_value`] (via `fid-canon`).
-    pub fn canonical_bytes(&self) -> Vec<u8> {
-        fid_canon::to_canonical_bytes(&self.to_value()).unwrap_or_default()
+    /// RFC 8785 canonical bytes of [`RdlDataset::to_value`] (via `fid-canon`). Encoding
+    /// cannot fail for a validated record (it holds only strings and small integers); if it
+    /// ever did, the result is `internal_error`, never empty bytes.
+    pub fn canonical_bytes(&self) -> Result<Vec<u8>, RdlError> {
+        fid_canon::to_canonical_bytes(&self.to_value()).map_err(|_| internal("canonical encoding of the record"))
     }
 
     /// The dataset digest: SHA-256 over the canonical record, which includes the input blob
