@@ -316,12 +316,8 @@ fn reported_record_and_ids() {
     assert_eq!(FormatterId::LENGTH_V1.to_string(), "fmt.length@1");
     assert_eq!(FormatterId::SCALAR_V1.to_string(), "fmt.scalar@1");
     for (u, factor) in [(Unit::M, "1"), (Unit::Mm, "1000"), (Unit::Um, "1000000"), (Unit::In, "1/0.0254")] {
-        let spec = FormatSpec {
-            formatter: FormatterId::LENGTH_V1,
-            unit: u,
-            precision: Precision::SigDigits(3),
-            limits: None,
-        };
+        let spec =
+            FormatSpec { formatter: FormatterId::LENGTH_V1, unit: u, precision: Precision::SigDigits(3), limits: None };
         let r = format(0.0254, &spec).unwrap();
         assert_eq!((r.unit, r.formatter), (u, FormatterId::LENGTH_V1));
         assert_eq!((r.exact_conversion.from, r.exact_conversion.to, r.exact_conversion.factor), (Unit::M, u, factor));
