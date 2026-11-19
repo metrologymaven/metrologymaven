@@ -642,3 +642,24 @@ fn named_surfaces_regularity_and_curvature() {
         assert!((r.get("k2").f() + 100.0).abs() <= 1e-7);
     }
 }
+
+/// GEO.NURBS.EVAL plugged into the harness: the real evaluator (order 0) is within the 1e-12 m
+/// position tolerance at every reference position.
+struct RealEvaluator;
+
+impl PositionEvaluator for RealEvaluator {
+    fn curve(&self, c: &NurbsCurve, t: f64) -> [f64; 3] {
+        fid_geo_nurbs::Curve::eval(c, t, 0).unwrap().p
+    }
+
+    fn surface(&self, s: &NurbsSurface, u: f64, v: f64) -> [f64; 3] {
+        fid_geo_nurbs::Surface::eval(s, u, v, 0).unwrap().p
+    }
+}
+
+#[test]
+fn real_evaluator_passes_the_reference_harness() {
+    let (worst, fails, total) = compare_positions(&RealEvaluator);
+    assert!(total >= 1500, "{total} reference positions");
+    assert_eq!(fails, 0, "{fails} of {total} outside {POS_TOL} m (worst {worst:e})");
+}
