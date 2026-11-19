@@ -1,0 +1,20 @@
+# Kernel-graph dependency allowlist (spec node ECO.REPO.ALLOW, REQ-ECO.REPO-003).
+#
+# Every third-party crate reached, directly or transitively, over normal or build
+# dependency edges from a crate in the `num` or `kernel` layer of layers.toml must be
+# listed here; `cargo xtask kernel-allow` checks it in CI and fails on anything else.
+# Dev-dependencies are not part of the kernel graph.
+#
+# Entry format (all four keys required and non-empty):
+#
+#   [[allow]]
+#   name = "crate-name"
+#   version = "^1.2"            # Cargo version requirement the resolved version must meet
+#   reason = "why the kernel needs it and why no first-party code does instead"
+#   reviewer = "metrologymaven" # who approved the entry
+#
+# Seeded with exactly what the kernel graph uses today: nothing. fid-num, fid-types,
+# fid-kci, fid-geo-dist, fid-geo-nurbs and fid-geo-types have no third-party normal or
+# build dependencies (KNP-1: zero dependencies). Adding an entry is a supply-chain
+# decision that needs maintainer review. deny.toml (licences, advisories, sources)
+# still applies to every crate, listed here or not.

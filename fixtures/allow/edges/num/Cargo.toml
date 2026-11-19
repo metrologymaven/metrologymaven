@@ -1,0 +1,8 @@
+[package]
+name = "fid-num"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+ext-c = { path = "../../_vendor/edges/ext-c" }
