@@ -81,6 +81,7 @@ Defines how a very large point cloud is cut into spatial chunks and stored: an o
 ## Open questions
 
 - The parent asked whether chunks should follow COPC so IO can memory-map files directly. This leaf keeps an own format inside the CORE store, so GEO does not depend on a file format IO owns; IO converts COPC into chunks through `ChunkWriter`. If import time for COPC proves too high, a COPC-backed chunk source can be added later behind the same manifest.
+- Partitioning needs the extent `max - min` of the bounds to be finite on every axis, so a cloud whose extent overflows f64 (coordinates near ±1.5e308 on both sides) is refused with `BoundsTooLarge` by `fid-geo-ooc` (PR #282). Should such clouds be partitioned instead, for example by quantising `v/2 - min/2`? Valid metrology data never comes near this range.
 
 ## Children
 
