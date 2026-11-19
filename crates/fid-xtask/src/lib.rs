@@ -31,7 +31,9 @@
 //! `apps-policy`: the app-policy boundary and cross-app command identity check (spec node
 //! `ECO.APPS.POLICY`), in [`apps_policy`]; it reuses the resolved graph built here.
 //!
-//! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`).
+//! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`), and in
+//! [`bots::block`] the maintainer-marked blocking findings check `bot-blocking` (spec node
+//! `ECO.CI.BOTS.BLOCK`).
 //!
 //! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
 //! [`conic_audit`].

@@ -1,0 +1,22 @@
+# Hand-written fixture for spec node ECO.CI.BOTS.BLOCK (MIT OR Apache-2.0). All names are
+# fictional. Two registered bots; only their review threads can ever block.
+
+[[bot]]
+id = "self-review"
+kind = "self-hosted"
+account = "fid-review[bot]"
+terms = "MIT OR Apache-2.0"
+data_handling = "Runs on the project's CI runners; sends nothing to an external service."
+reviewed_on = 2026-11-17
+approved_by = "ada-quill"
+sends_content = false
+
+[[bot]]
+id = "lint-x"
+kind = "self-hosted"
+account = "lint-x[bot]"
+terms = "MIT"
+data_handling = "Runs on the project's CI runners; sends nothing to an external service."
+reviewed_on = 2026-11-17
+approved_by = "boris-penn"
+sends_content = false
