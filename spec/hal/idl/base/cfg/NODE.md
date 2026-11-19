@@ -74,7 +74,7 @@ Project-authored schemas and configurations under `fixtures/hal/idl/base/cfg/` (
 
 ## Open questions
 
-- None.
+- Binding vendor extensions to the device's own vendor namespace (an `acme.*` setting is accepted only from an `acme` device) is deferred to `HAL.IDL.BASE.DESC`, which owns describe and `DeviceInstance`. This leaf only checks that every `<vendor>.<name>` setting is declared in the schema.
 
 ## Children
 

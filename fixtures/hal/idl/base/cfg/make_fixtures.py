@@ -132,7 +132,14 @@ def config():
 def digested_subset(sch, cfg):
     """REQ-002: acquisition-relevant settings plus every extension (`vendor.name`)."""
     keep = {s["name"] for s in sch["settings"] if s["acquisition_relevant"] or "." in s["name"]}
-    return {k: v for k, v in cfg["values"].items() if k in keep}
+    return {k: plus_zero(v) for k, v in cfg["values"].items() if k in keep}
+
+
+def plus_zero(v):
+    """Maintainer decision (PR 162): a quantity of -0.0 is digested as +0.0."""
+    if isinstance(v, dict) and struct.unpack(">d", bytes.fromhex(v["value"][2:]))[0] == 0.0:
+        return {"unit": v["unit"], "value": f64_bits(0.0)}
+    return v
 
 
 def cfg_digest(sch, cfg):
@@ -161,6 +168,7 @@ def digest_cases():
         ("status_led_changed", "status_led", False),
         # AC-2: acquisition-relevant, digest changes.
         ("exposure_changed", "exposure", qty(5e-4, "s")),
+        ("roi_start_positive_zero", "roi_start", qty(0.0, "m")),
         ("roi_start_negative_zero", "roi_start", qty(-0.0, "m")),
         ("averaging_changed", "averaging", "16"),
         ("trigger_mode_changed", "trigger_mode", "software"),
@@ -173,6 +181,10 @@ def digest_cases():
         c = with_value(key, value)
         d = cfg_digest(schema(), c)
         out.append({"name": name, "config": c, "sha256": d, "same_as_base": d == base})
+    # -0.0 and +0.0 are the same setpoint and give the same digest.
+    by_name = {c["name"]: c["sha256"] for c in out}
+    assert by_name["roi_start_negative_zero"] == by_name["roi_start_positive_zero"]
+    assert f64_bits(-0.0) == "0x8000000000000000"
     # Hand-labelled expectations: the oracle's filter must agree with the leaf's rules.
     expect_same = {"base", "display_name_changed", "status_led_changed"}
     for case in out:

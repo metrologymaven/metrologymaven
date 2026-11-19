@@ -28,7 +28,16 @@
 //! Settings are checked in name order (a schema: in list order), so the first failure is
 //! well defined. Every list and string is bounded and the input is limited to
 //! [`MAX_INPUT_BYTES`] bytes.
+//!
+//! A quantity value of `-0.0` is normalised to `+0.0` when it is read, range-checked,
+//! written and digested: both spell the same setpoint, so they give the same digest
+//! (maintainer decision on PR 162).
+//!
+//! [`validate`], [`digest_canonical_bytes`] and [`config_digest`] are reached through
+//! `fid_hal_idl::base::config::`; only [`config_digest`] and the types are re-exported at the
+//! crate root, because `validate` there is the stamp validator (`stamp::validate`).
 
+use crate::stamp::digest_of;
 use crate::units::{boolean, f64_bits, i64_dec, kept, object, string, take, Obj, Quantity, SiUnit, UnitsError};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -459,7 +468,7 @@ impl SettingValue {
         match self {
             SettingValue::Bool(b) => CValue::Bool(*b),
             SettingValue::Int(i) => CValue::I64(*i),
-            SettingValue::Quantity(q) => q.to_value(),
+            SettingValue::Quantity(q) => plus_zero(*q).to_value(),
             SettingValue::Enum(s) | SettingValue::Text(s) => CValue::Str(s.clone()),
         }
     }
@@ -476,7 +485,8 @@ impl SettingValue {
             },
             SettingType::Int => i64_dec("value", v).map(SettingValue::Int).map_err(|e| units_error(name, &e)),
             SettingType::Quantity(_) => {
-                Quantity::from_value(v).map(SettingValue::Quantity).map_err(|e| units_error(name, &e))
+                let q = Quantity::from_value(v).map_err(|e| units_error(name, &e))?;
+                Ok(SettingValue::Quantity(plus_zero(q)))
             }
             SettingType::Enum(_) => match v {
                 CValue::Str(s) => Ok(SettingValue::Enum(s)),
@@ -487,6 +497,15 @@ impl SettingValue {
                 _ => Err(wrong_type()),
             },
         }
+    }
+}
+
+/// `-0.0` as `+0.0`; every other value unchanged.
+fn plus_zero(q: Quantity) -> Quantity {
+    if q.value() == 0.0 {
+        Quantity::new(0.0, q.unit()).unwrap_or(q)
+    } else {
+        q
     }
 }
 
@@ -512,6 +531,7 @@ fn check_value(setting: &SettingSchema, value: &SettingValue) -> Result<(), Conf
             _ => Ok(()),
         },
         (SettingType::Quantity(unit), SettingValue::Quantity(q)) => {
+            let q = plus_zero(*q);
             if q.unit() != *unit {
                 return bad(ConfigReason::WrongUnit);
             }
@@ -679,7 +699,7 @@ pub fn digest_canonical_bytes(schema: &ConfigSchema, cfg: &Configuration) -> Res
 /// SHA-256 over [`digest_canonical_bytes`] (REQ-002, REQ-003). Validates first.
 pub fn config_digest(schema: &ConfigSchema, cfg: &Configuration) -> Result<ConfigDigest, ConfigError> {
     let bytes = digest_canonical_bytes(schema, cfg)?;
-    Ok(ConfigDigest(Digest::from_bytes(fid_canon::digest_bytes(&bytes).0)))
+    Ok(ConfigDigest(digest_of(&bytes)))
 }
 
 #[cfg(test)]

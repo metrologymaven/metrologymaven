@@ -98,6 +98,23 @@ fn ac2_typed_changes() {
     assert_ne!(config_digest(&s, &cfg).unwrap(), base);
 }
 
+/// Maintainer decision: -0.0 and +0.0 are the same setpoint, with the same digest and the
+/// same written form.
+#[test]
+fn negative_zero_is_normalised() {
+    let s = schema();
+    let digest_with = |v: f64| {
+        let mut cfg = base_config();
+        cfg.values.insert("roi_start".into(), SettingValue::Quantity(Quantity::new(v, SiUnit::Metre).unwrap()));
+        (config_digest(&s, &cfg).unwrap(), fid_canon::to_canonical_bytes(&cfg.to_value()).unwrap())
+    };
+    assert_eq!(digest_with(-0.0), digest_with(0.0));
+    let case = cases("digest_cases.json").into_iter().find(|c| text(c, "name") == "roi_start_negative_zero").unwrap();
+    let read = Configuration::from_value(&s, case["config"].clone()).unwrap();
+    let Some(SettingValue::Quantity(q)) = read.values.get("roi_start") else { panic!("roi_start") };
+    assert_eq!(q.value().to_bits(), 0);
+}
+
 /// AC-3 on the typed API: a declared extension changes the digest.
 #[test]
 fn ac3_extension_changes_digest() {
