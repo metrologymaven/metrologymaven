@@ -28,3 +28,6 @@ err-type-form.wasm	err:bad_type	-
 err-shared-memory.wasm	err:bad_limits	-
 err-limits-max.wasm	err:bad_limits	-
 err-too-many-imports.wasm	err:limit_exceeded	-
+clock-call.wasm	ok:3	fail:wasi_snapshot_preview1 clock_time_get
+clock-call.sealed.wasm	ok:3	pass
+loop.wasm	ok:0	pass

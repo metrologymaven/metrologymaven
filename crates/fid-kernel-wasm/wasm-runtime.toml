@@ -1,3 +1,6 @@
+clock = "trap"
+fuel = 4000000000
+grow_failure = "trap"
 max_memory_size = 1073741824
 max_wasm_stack = 1048576
 nan_canonicalization = true

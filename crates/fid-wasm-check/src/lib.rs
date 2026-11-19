@@ -5,6 +5,7 @@
 //! - [`runtime`]: the pinned wasmtime settings (`wasm-runtime.toml`) and their digest;
 //! - [`runner`]: runs the module under those settings and maps stack or memory exhaustion to
 //!   `NOT_REPLAYABLE(resource)` (AC-2, AC-3);
+//! - [`seal`]: the post-link step that renames clock imports so they trap (`clock = "trap"`);
 //! - [`manifest`]: cross-checks a kernel manifest's WASM artifact digest and replay runtime.
 
 pub mod allow;
@@ -12,3 +13,4 @@ pub mod manifest;
 pub mod module;
 pub mod runner;
 pub mod runtime;
+pub mod seal;

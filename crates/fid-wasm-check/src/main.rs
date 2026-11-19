@@ -1,6 +1,7 @@
 //! `fid-wasm-check`: CI tool for the kernel WASM reference artifact (spec node KRN.MAN.WASM).
 //!
 //! ```text
+//! fid-wasm-check seal <linked.wasm> <sealed.wasm>
 //! fid-wasm-check imports <module.wasm> <allowlist>
 //! fid-wasm-check runtime-digest <wasm-runtime.toml>
 //! fid-wasm-check manifest <manifest.json> <module.wasm> <allowlist> <wasm-runtime.toml>
@@ -8,6 +9,8 @@
 //! fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>
 //! ```
 //!
+//! `seal` writes the sealed module (clock imports renamed so they trap; see
+//! `fid_wasm_check::seal`); it exits 0, or 2 if the module is refused or cannot be written.
 //! Exit codes: `imports`, `runtime-digest`, `manifest` and `golden` exit 0 when the check
 //! passes, 1 when it fails and 2 on a usage or read error. `run` exits with the runner's code
 //! (0, 1 or 2 from the shim; 3 `NOT_REPLAYABLE(resource)`; 4 `NOT_REPLAYABLE(trap)`) and 5
@@ -21,8 +24,10 @@ use fid_wasm_check::manifest::cross_check;
 use fid_wasm_check::module;
 use fid_wasm_check::runner::{self, Outcome};
 use fid_wasm_check::runtime::RuntimeConfig;
+use fid_wasm_check::seal::seal;
 
-const USAGE: &str = "usage: fid-wasm-check imports <module.wasm> <allowlist>\n\
+const USAGE: &str = "usage: fid-wasm-check seal <linked.wasm> <sealed.wasm>\n\
+       fid-wasm-check imports <module.wasm> <allowlist>\n\
        fid-wasm-check runtime-digest <wasm-runtime.toml>\n\
        fid-wasm-check manifest <manifest.json> <module.wasm> <allowlist> <wasm-runtime.toml>\n\
        fid-wasm-check run <wasm-runtime.toml> <allowlist> <module.wasm>\n\
@@ -93,17 +98,20 @@ fn golden(cfg: &RuntimeConfig, module_path: &str, calls_path: &str) -> Result<bo
     }
     let mut failed = 0usize;
     for case in &cases {
-        let got = runner::run(cfg, module_path, &case.call).map_err(|e| e.to_string())?;
+        let run = runner::run(cfg, module_path, &case.call).map_err(|e| e.to_string())?;
+        let got = &run.outcome;
         if got.exit_code() == case.exit && got.stdout() == case.stdout.as_slice() {
             println!("ok {}", case.name);
         } else {
             failed += 1;
             println!(
-                "FAIL {}: exit {} (expected {}), stdout {}",
+                "FAIL {}: exit {} (expected {}), stdout {}; wasmtime exit {:?}, last stderr line {:?}",
                 case.name,
                 got.exit_code(),
                 case.exit,
-                String::from_utf8_lossy(got.stdout())
+                String::from_utf8_lossy(got.stdout()),
+                run.code,
+                run.cause
             );
         }
     }
@@ -126,6 +134,16 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let a: Vec<&str> = args.iter().map(String::as_str).collect();
     match a.as_slice() {
+        ["seal", input, output] => {
+            let r = read(input).and_then(|bytes| seal(&bytes).map_err(|e| format!("{input}: module refused: {e}")));
+            match r.and_then(|sealed| std::fs::write(output, sealed).map_err(|e| format!("{output}: {e}"))) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    ExitCode::from(2)
+                }
+            }
+        }
         ["imports", module_path, allow_path] => verdict(imports(module_path, allow_path).map(|(lines, passed)| {
             for l in lines {
                 println!("{l}");
@@ -154,13 +172,19 @@ fn main() -> ExitCode {
                 return ExitCode::from(5);
             }
             match runner::run(&cfg, module_path, &call) {
-                Ok(outcome) => {
+                Ok(run) => {
+                    let outcome = run.outcome;
                     let mut out = std::io::stdout().lock();
                     if out.write_all(outcome.stdout()).and_then(|()| out.flush()).is_err() {
                         return ExitCode::from(5);
                     }
                     if !matches!(outcome, Outcome::Shim { .. }) {
-                        eprintln!("runner: {}", String::from_utf8_lossy(outcome.stdout()));
+                        eprintln!(
+                            "runner: {} (wasmtime exit {:?}, last stderr line {:?})",
+                            String::from_utf8_lossy(outcome.stdout()),
+                            run.code,
+                            run.cause
+                        );
                     }
                     ExitCode::from(outcome.exit_code())
                 }

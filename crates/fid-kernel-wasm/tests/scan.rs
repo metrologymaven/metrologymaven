@@ -97,9 +97,9 @@ fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     }
 }
 
-/// The allowlist admits `clock_time_get` because wasi-libc's timed waits under std's locks
-/// link it. The compensating gate: no code in the crates the module is built from (the shim
-/// and the kernel graph it links, fid-kci, fid-num, fid-types) names a clock API.
+/// Defence in depth behind `clock = "trap"` (the sealed clock import traps when called): no
+/// code in the crates the module is built from (the shim and the kernel graph it links,
+/// fid-kci, fid-num, fid-types) names a clock API.
 #[test]
 fn no_clock_api_in_the_module_sources() {
     let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");

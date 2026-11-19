@@ -21,5 +21,11 @@ test-algorithms = []
 [dependencies]
 fid-kci = { path = "../fid-kci" }
 
+# Native tests of the stand-in algorithms: `cargo test -p fid-kernel-wasm --features test-algorithms`
+# (a CI step runs it on every OS).
+[[test]]
+name = "shim"
+required-features = ["test-algorithms"]
+
 [lints]
 workspace = true

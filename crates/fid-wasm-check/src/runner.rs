@@ -9,15 +9,19 @@
 //! |---|---|---|
 //! | exit 0, stdout starts `{"algorithm":"`, stderr empty | the shim's stdout | 0 |
 //! | exit 1 or 2, stdout starts `{"error":"`, stderr empty | the shim's stdout | 1 or 2 |
-//! | anything else, stderr has a resource marker | `NOT_REPLAYABLE(resource)` | 3 |
+//! | trap exit code and a resource cause as wasmtime's last stderr line | `NOT_REPLAYABLE(resource)` | 3 |
 //! | anything else | `NOT_REPLAYABLE(trap)` | 4 |
 //!
-//! Resource markers ([`RESOURCE_MARKERS`]): wasmtime's stack-overflow trap text (`call stack
-//! exhausted`); an out-of-bounds memory access, which in a module built from code without
-//! `unsafe` only arises when the shadow stack in linear memory runs past its start; and Rust's
-//! allocation-failure message (`memory allocation of`), printed when `memory.grow` fails at
-//! the configured memory limit. A wasmtime usage or start-up error never looks like a result:
-//! it has no shim-shaped stdout or has stderr output, so it is a trap, not a value.
+//! The guest writes to the same stderr, so a resource verdict is anchored to what only
+//! wasmtime controls: the process exit code is wasmtime's trap exit ([`TRAP_EXIT`]; a guest
+//! cannot `proc_exit` with it, since WASI refuses statuses of 126 and above) and the **last**
+//! non-empty stderr line, after leading spaces and a `<n>: ` cause number are removed, equals
+//! one of [`RESOURCE_CAUSES`] exactly. A guest can write only before it traps, so it cannot
+//! write that last line. Causes: stack overflow, an out-of-bounds access (in a module built
+//! without `unsafe`, only a shadow-stack overrun produces it), fuel exhausted, and a failed
+//! `memory.grow` (trapping because of `-W trap-on-grow-failure=y`). A wasmtime usage or
+//! start-up error never looks like a result: it has no shim-shaped stdout or has stderr
+//! output, so it is a trap, not a value.
 
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -28,9 +32,15 @@ use crate::runtime::RuntimeConfig;
 pub const NOT_REPLAYABLE_RESOURCE: &str = "NOT_REPLAYABLE(resource)";
 /// Runner stdout for any other abnormal end.
 pub const NOT_REPLAYABLE_TRAP: &str = "NOT_REPLAYABLE(trap)";
-/// Stderr substrings that mark stack or memory exhaustion.
-pub const RESOURCE_MARKERS: [&str; 3] =
-    ["call stack exhausted", "out of bounds memory access", "memory allocation of "];
+/// Wasmtime's last stderr line (cause number removed) for a stack, fuel or memory limit.
+pub const RESOURCE_CAUSES: [&str; 4] = [
+    "wasm trap: call stack exhausted",
+    "wasm trap: out of bounds memory access",
+    "wasm trap: all fuel consumed by WebAssembly",
+    "forcing a memory growth failure to be a trap",
+];
+/// The exit code wasmtime uses when the guest traps (128 + SIGABRT on Unix, 3 on Windows).
+pub const TRAP_EXIT: i32 = if cfg!(windows) { 3 } else { 134 };
 
 /// What one run produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,11 +85,21 @@ pub fn classify(code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Outcome {
             return Outcome::Shim { exit: c, stdout: stdout.to_vec() };
         }
     }
-    let err = String::from_utf8_lossy(stderr);
-    if RESOURCE_MARKERS.iter().any(|m| err.contains(m)) {
+    if code == Some(TRAP_EXIT) && RESOURCE_CAUSES.contains(&last_cause(stderr).as_str()) {
         Outcome::Resource
     } else {
         Outcome::Trap
+    }
+}
+
+/// The last non-empty stderr line without leading spaces and without a `<n>: ` cause number.
+pub fn last_cause(stderr: &[u8]) -> String {
+    let text = String::from_utf8_lossy(stderr);
+    let line = text.lines().rev().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
+    let rest = line.trim_start_matches(|c: char| c.is_ascii_digit());
+    match rest.strip_prefix(": ") {
+        Some(cause) if rest.len() < line.len() => cause.to_string(),
+        _ => line.to_string(),
     }
 }
 
@@ -127,8 +147,16 @@ pub fn check_wasmtime(cfg: &RuntimeConfig) -> Result<(), RunnerError> {
     Ok(())
 }
 
+/// What one run produced, with wasmtime's exit code and last stderr cause for the log.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Run {
+    pub outcome: Outcome,
+    pub code: Option<i32>,
+    pub cause: String,
+}
+
 /// Runs one call through `module` under `cfg`. Call [`check_wasmtime`] first.
-pub fn run(cfg: &RuntimeConfig, module: &str, call: &[u8]) -> Result<Outcome, RunnerError> {
+pub fn run(cfg: &RuntimeConfig, module: &str, call: &[u8]) -> Result<Run, RunnerError> {
     let args = cfg.wasmtime_args(module).ok_or(RunnerError::BadModulePath)?;
     let mut child = Command::new("wasmtime")
         .args(&args)
@@ -149,7 +177,11 @@ pub fn run(cfg: &RuntimeConfig, module: &str, call: &[u8]) -> Result<Outcome, Ru
     if feeder.join().is_err() {
         return Err(RunnerError::Io("stdin writer failed".to_string()));
     }
-    Ok(classify(out.status.code(), &out.stdout, &out.stderr))
+    Ok(Run {
+        outcome: classify(out.status.code(), &out.stdout, &out.stderr),
+        code: out.status.code(),
+        cause: last_cause(&out.stderr),
+    })
 }
 
 /// One row of a calls file (`fixtures/man/wasm/calls-v1.txt`).

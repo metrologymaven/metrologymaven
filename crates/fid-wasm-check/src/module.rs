@@ -70,6 +70,8 @@ pub struct Import {
     pub module: String,
     pub name: String,
     pub kind: ImportKind,
+    /// Byte range of the import's descriptor (kind byte and what follows) in the module.
+    pub desc: (usize, usize),
 }
 
 /// What the reader established about a module.
@@ -79,6 +81,8 @@ pub struct Module {
     pub imports: Vec<Import>,
     /// Number of entries in the type section (0 when there is none).
     pub type_count: u32,
+    /// The import section, if any: (offset of its id byte, payload start, payload end).
+    pub import_section: Option<(usize, usize, usize)>,
 }
 
 /// Why a module was refused.
@@ -335,7 +339,7 @@ fn imports(r: &mut Reader<'_>, type_count: u32) -> Result<Vec<Import>, WasmError
             }
             _ => return fail(WasmErrorKind::BadImportKind, at),
         };
-        out.push(Import { module, name, kind });
+        out.push(Import { module, name, kind, desc: (at, r.pos) });
     }
     r.finish()?;
     Ok(out)
@@ -356,6 +360,7 @@ pub fn parse(bytes: &[u8]) -> Result<Module, WasmError> {
     let mut last_rank = 0u8;
     let mut type_count = 0u32;
     let mut found = Vec::new();
+    let mut import_section = None;
     while r.pos < r.end {
         let id_at = r.pos;
         let id = r.byte()?;
@@ -378,13 +383,16 @@ pub fn parse(bytes: &[u8]) -> Result<Module, WasmError> {
             last_rank = k;
             match id {
                 1 => type_count = types(&mut s)?,
-                2 => found = imports(&mut s, type_count)?,
+                2 => {
+                    found = imports(&mut s, type_count)?;
+                    import_section = Some((id_at, start, end));
+                }
                 _ => {}
             }
         }
         r.pos = end;
     }
-    Ok(Module { imports: found, type_count })
+    Ok(Module { imports: found, type_count, import_section })
 }
 
 #[cfg(test)]

@@ -44,7 +44,7 @@ fn ac1_every_labelled_module_parses_and_checks_as_labelled() {
         }
         n += 1;
     }
-    assert_eq!(n, 28);
+    assert_eq!(n, 31);
 }
 
 #[test]
@@ -108,7 +108,7 @@ fn the_shipped_allowlist_parses_and_excludes_random_get() {
         assert_eq!(e.module, "wasi_snapshot_preview1");
         assert!(e.justification.len() >= 20, "{}: justification too short", e.name);
     }
-    for forbidden in ["random_get", "path_open", "sock_accept", "sched_yield", "poll_oneoff"] {
+    for forbidden in ["random_get", "clock_time_get", "clock_res_get", "path_open", "sock_accept", "poll_oneoff"] {
         assert!(!allow.entries().iter().any(|e| e.name == forbidden), "{forbidden} must not be allowlisted");
     }
 }
@@ -117,7 +117,8 @@ fn the_shipped_allowlist_parses_and_excludes_random_get() {
 fn allowlist_format_is_strict() {
     let ok = "# c\n\nwasi_snapshot_preview1 fd_write -- writes bytes\n";
     assert_eq!(Allowlist::parse(ok.as_bytes()).unwrap().entries().len(), 1);
-    let cases: [(&str, AllowError); 12] = [
+    let cases: [(&str, AllowError); 13] = [
+        ("fid_trap clock_time_get -- j\n", AllowError::Syntax { line: 1 }),
         ("m n -- j\r\n", AllowError::BadCharacter { line: 1 }),
         ("m\tn -- j\n", AllowError::BadCharacter { line: 1 }),
         ("\u{feff}m n -- j\n", AllowError::BadCharacter { line: 1 }),

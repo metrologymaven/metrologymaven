@@ -11,7 +11,7 @@
 //!
 //! `main` exits 3 if stdout cannot be written. Nothing is written to stderr.
 
-use fid_kci::{evaluate, AlgorithmTable, CardRegistry};
+use fid_kci::{evaluate, AlgorithmTable};
 
 use crate::call::parse_call;
 
@@ -31,14 +31,17 @@ fn error(code: &str) -> Vec<u8> {
     out
 }
 
-/// The table this build evaluates with: the stand-in test algorithms with the
-/// `test-algorithms` feature, otherwise an empty table until `fid-kernel` exists.
+/// The table this build evaluates with: the stand-in test algorithms (only with the
+/// `test-algorithms` feature).
+#[cfg(feature = "test-algorithms")]
 pub fn reference_table() -> Option<AlgorithmTable> {
-    if cfg!(feature = "test-algorithms") {
-        crate::stand_in::table()
-    } else {
-        AlgorithmTable::new(Vec::new(), CardRegistry::default()).ok()
-    }
+    crate::stand_in::table()
+}
+
+/// The table this build evaluates with: empty until the `fid-kernel` assembly crate exists.
+#[cfg(not(feature = "test-algorithms"))]
+pub fn reference_table() -> Option<AlgorithmTable> {
+    AlgorithmTable::new(Vec::new(), fid_kci::CardRegistry::default()).ok()
 }
 
 /// Stdout bytes and exit code for one call read from stdin.

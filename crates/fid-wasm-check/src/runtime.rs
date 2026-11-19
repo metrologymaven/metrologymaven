@@ -1,10 +1,13 @@
 //! The pinned runtime settings file (`wasm-runtime.toml`, REQ-KRN.MAN.WASM-004).
 //!
 //! The file is a small TOML subset read strictly, and must be in canonical form: exactly these
-//! seven keys, sorted by byte value, one `key = value` per line with single spaces around `=`,
+//! ten keys, sorted by byte value, one `key = value` per line with single spaces around `=`,
 //! LF line endings including after the last line, no comments, blank lines or other bytes:
 //!
 //! ```toml
+//! clock = "trap"
+//! fuel = 10000000000
+//! grow_failure = "trap"
 //! max_memory_size = 1073741824
 //! max_wasm_stack = 1048576
 //! nan_canonicalization = true
@@ -19,8 +22,11 @@
 //! canonical bytes; it is the kernel manifest's `replay_runtime.config_digest`.
 //!
 //! Policy (CONSTITUTION §4, the leaf's Scope) is enforced, never configurable: NaN
-//! canonicalisation on, relaxed SIMD off, threads off, schema `"1"`. The limits must lie in
-//! [`STACK_RANGE`] and [`MEMORY_RANGE`], and the version must be `MAJOR.MINOR.PATCH`.
+//! canonicalisation on, relaxed SIMD off, threads off, schema `"1"`, `clock = "trap"` (clock
+//! imports are sealed to trap, see [`crate::seal`]) and `grow_failure = "trap"` (a failed
+//! `memory.grow` traps in the runtime instead of returning -1 to the guest). The limits must
+//! lie in [`STACK_RANGE`], [`MEMORY_RANGE`] and [`FUEL_RANGE`], and the version must be
+//! `MAJOR.MINOR.PATCH`.
 
 use std::fmt;
 
@@ -32,10 +38,15 @@ pub const MAX_RUNTIME_BYTES: usize = 4096;
 pub const STACK_RANGE: (u64, u64) = (64 * 1024, 16 * 1024 * 1024);
 /// Accepted `max_memory_size`, in bytes (one 64 KiB page to the 4 GiB wasm32 address space).
 pub const MEMORY_RANGE: (u64, u64) = (64 * 1024, 4 * 1024 * 1024 * 1024);
+/// Accepted `fuel` (wasmtime fuel units, about one per wasm instruction).
+pub const FUEL_RANGE: (u64, u64) = (1_000_000, 1_000_000_000_000);
 /// The only schema this module reads.
 pub const SCHEMA: &str = "1";
 
-const KEYS: [&str; 7] = [
+const KEYS: [&str; 10] = [
+    "clock",
+    "fuel",
+    "grow_failure",
     "max_memory_size",
     "max_wasm_stack",
     "nan_canonicalization",
@@ -54,6 +65,8 @@ pub struct RuntimeConfig {
     pub max_wasm_stack: u64,
     /// Largest linear memory, in bytes.
     pub max_memory_size: u64,
+    /// Fuel per run; running out is a resource limit.
+    pub fuel: u64,
     canonical: Vec<u8>,
 }
 
@@ -168,9 +181,10 @@ fn int(vals: &[(String, Value)], key: &'static str, range: (u64, u64)) -> Result
 
 impl RuntimeConfig {
     /// The canonical bytes of these settings.
-    fn render(wasmtime_version: &str, max_wasm_stack: u64, max_memory_size: u64) -> Vec<u8> {
+    fn render(wasmtime_version: &str, max_wasm_stack: u64, max_memory_size: u64, fuel: u64) -> Vec<u8> {
         format!(
-            "max_memory_size = {max_memory_size}\nmax_wasm_stack = {max_wasm_stack}\nnan_canonicalization = true\n\
+            "clock = \"trap\"\nfuel = {fuel}\ngrow_failure = \"trap\"\n\
+             max_memory_size = {max_memory_size}\nmax_wasm_stack = {max_wasm_stack}\nnan_canonicalization = true\n\
              relaxed_simd = false\nschema = \"{SCHEMA}\"\nthreads = false\nwasmtime_version = \"{wasmtime_version}\"\n"
         )
         .into_bytes()
@@ -209,19 +223,27 @@ impl RuntimeConfig {
         boolean(&vals, "nan_canonicalization", true)?;
         boolean(&vals, "relaxed_simd", false)?;
         boolean(&vals, "threads", false)?;
+        for key in ["clock", "grow_failure"] {
+            match get(&vals, key)? {
+                Value::Str(s) if s == "trap" => {}
+                Value::Str(_) => return Err(RuntimeError::Policy(key)),
+                _ => return Err(RuntimeError::BadValue(key)),
+            }
+        }
+        let fuel = int(&vals, "fuel", FUEL_RANGE)?;
         let max_wasm_stack = int(&vals, "max_wasm_stack", STACK_RANGE)?;
         let max_memory_size = int(&vals, "max_memory_size", MEMORY_RANGE)?;
         let wasmtime_version = match get(&vals, "wasmtime_version")? {
             Value::Str(s) if is_version(s) => s.clone(),
             _ => return Err(RuntimeError::BadValue("wasmtime_version")),
         };
-        let canonical = Self::render(&wasmtime_version, max_wasm_stack, max_memory_size);
+        let canonical = Self::render(&wasmtime_version, max_wasm_stack, max_memory_size, fuel);
         if canonical != input {
             let shorter = if input.len() < canonical.len() { input.len() } else { canonical.len() };
             let offset = canonical.iter().zip(input).position(|(a, b)| a != b).unwrap_or(shorter);
             return Err(RuntimeError::NonCanonical { offset });
         }
-        Ok(RuntimeConfig { wasmtime_version, max_wasm_stack, max_memory_size, canonical })
+        Ok(RuntimeConfig { wasmtime_version, max_wasm_stack, max_memory_size, fuel, canonical })
     }
 
     /// The canonical bytes (equal to the file bytes).
@@ -254,6 +276,12 @@ impl RuntimeConfig {
             format!("max-wasm-stack={}", self.max_wasm_stack),
             "-W".to_string(),
             format!("max-memory-size={}", self.max_memory_size),
+            "-W".to_string(),
+            "trap-on-grow-failure=y".to_string(),
+            "-W".to_string(),
+            format!("fuel={}", self.fuel),
+            "-W".to_string(),
+            "unknown-imports-trap=y".to_string(),
             module.to_string(),
         ])
     }

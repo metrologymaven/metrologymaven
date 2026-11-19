@@ -37,9 +37,12 @@ def sha(b):
 
 
 # --- runtime settings (REQ-KRN.MAN.WASM-004) -------------------------------------------------
-# Canonical form: these seven keys, sorted by byte value, one `key = value` per line, LF endings,
+# Canonical form: these ten keys, sorted by byte value, one `key = value` per line, LF endings,
 # no comments or blank lines. The file's SHA-256 is replay_runtime.config_digest.
 RUNTIME = {
+    "clock": '"trap"',  # clock imports are sealed to trap (fid_trap module, unknown imports trap)
+    "fuel": "4000000000",  # wasmtime fuel per run; running out is NOT_REPLAYABLE(resource)
+    "grow_failure": '"trap"',  # a failed memory.grow traps in the runtime
     "max_memory_size": "1073741824",  # 1 GiB of linear memory
     "max_wasm_stack": "1048576",  # 1 MiB of native wasm stack
     "nan_canonicalization": "true",
@@ -111,6 +114,89 @@ CODE = section(10, vec([name(b"\x00\x0b")]))  # body: size 2, no locals, `end`
 CUSTOM = section(0, name(b"producers") + b"\x00")
 OK_BODY = TYPES + imports(FD_WRITE, PROC_EXIT) + FUNCS + MEMORY + EXPORTS + CODE + CUSTOM
 
+
+def sleb(n):
+    """Signed LEB128 (i32.const and i64.const immediates)."""
+    out = bytearray()
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        if (n == 0 and not b & 0x40) or (n == -1 and b & 0x40):
+            out.append(b)
+            return bytes(out)
+        out.append(b | 0x80)
+
+
+def command(types, imps, body, data=b""):
+    """A WASI command: the given types and imports, one exported `_start` (last type), one page
+    of exported memory and an optional active data segment at address 0."""
+    nimp = len(imps)
+    secs = section(1, vec(types)) + (imports(*imps) if imps else b"")
+    secs += section(3, vec([uleb(len(types) - 1)])) + MEMORY
+    secs += section(7, vec([name(b"memory") + b"\x02" + uleb(0), name(b"_start") + b"\x00" + uleb(nimp)]))
+    secs += section(10, vec([name(b"\x00" + body + b"\x0b")]))
+    if data:
+        secs += section(11, vec([b"\x00\x41" + sleb(0) + b"\x0b" + name(data)]))
+    return HEADER + secs
+
+
+CLOCK_MSG = b'{"error":"clock_read"}'
+CLOCK_CALL = command(
+    [functype([I32, 0x7E, I32], [I32]), functype([I32, I32, I32, I32], [I32]), functype([I32], []), functype([], [])],
+    [imp_func(WASI, b"clock_time_get", 0), imp_func(WASI, b"fd_write", 1), imp_func(WASI, b"proc_exit", 2)],
+    # clock_time_get(0, 0, 64); drop; fd_write(1, iov=0, 1, nwritten=72); drop; proc_exit(1)
+    b"\x41" + sleb(0) + b"\x42" + sleb(0) + b"\x41" + sleb(64) + b"\x10\x00\x1a"
+    + b"\x41" + sleb(1) + b"\x41" + sleb(0) + b"\x41" + sleb(1) + b"\x41" + sleb(72) + b"\x10\x01\x1a"
+    + b"\x41" + sleb(1) + b"\x10\x02",
+    # iovec {ptr 16, len} at 0, the message at 16
+    (16).to_bytes(4, "little") + len(CLOCK_MSG).to_bytes(4, "little") + bytes(8) + CLOCK_MSG,
+)
+LOOP = command([functype([], [])], [], b"\x03\x40\x0c\x00\x0b")  # loop br 0 end
+
+
+def seal(module):
+    """Independent seal: rename the module of WASI clock function imports to `fid_trap`,
+    re-encoding the import section with minimal LEB128 lengths and copying the rest."""
+    out, i = bytearray(module[:8]), 8
+
+    def rd(i):
+        v = s = 0
+        while True:
+            b = module[i]
+            i += 1
+            v |= (b & 0x7F) << s
+            s += 7
+            if b < 0x80:
+                return v, i
+
+    while i < len(module):
+        sid = module[i]
+        size, j = rd(i + 1)
+        end = j + size
+        if sid != 2:
+            out += module[i:end]
+        else:
+            n, k = rd(j)
+            entries = []
+            for _ in range(n):
+                l, k = rd(k); mod = module[k:k + l]; k += l
+                l, k = rd(k); fld = module[k:k + l]; k += l
+                kind = module[k]
+                assert kind == 0, "only function imports in these fixtures"
+                _, d_end = rd(k + 1)
+                if mod == WASI and fld in (b"clock_time_get", b"clock_res_get"):
+                    mod = b"fid_trap"
+                entries.append(name(mod) + name(fld) + module[k:d_end])
+                k = d_end
+            assert k == end
+            out += section(2, vec(entries))
+        i = end
+    return bytes(out)
+
+
+assert seal(seal(CLOCK_CALL)) == seal(CLOCK_CALL) != CLOCK_CALL
+assert seal(HEADER + OK_BODY) == HEADER + OK_BODY
+
 # (file, bytes, parse label, check label against test.allow)
 # parse label: ok:<number of imports> | err:<code>; check label: pass | fail:<module name>,... | -
 MODULES = [
@@ -156,6 +242,12 @@ MODULES = [
     ("err-limits-max.wasm",
      HEADER + imports(name(b"env") + name(b"memory") + b"\x02\x01\x05\x01"), "err:bad_limits", "-"),
     ("err-too-many-imports.wasm", HEADER + TYPES + section(2, uleb(4097)), "err:limit_exceeded", "-"),
+    # A command that reads the clock and, only if that returns, writes {"error":"clock_read"} and
+    # exits 1. Unsealed, the import check denies it; sealed, the clock call must trap.
+    ("clock-call.wasm", CLOCK_CALL, "ok:3", "fail:wasi_snapshot_preview1 clock_time_get"),
+    ("clock-call.sealed.wasm", seal(CLOCK_CALL), "ok:3", "pass"),
+    # A command that loops forever: the runner's fuel limit must end it as a resource limit.
+    ("loop.wasm", LOOP, "ok:0", "pass"),
 ]
 labels = ["# KRN.MAN.WASM module labels (hand-labelled from the Design rules). CC-BY-4.0.",
           "# Format: <file><TAB><ok:<imports> | err:<code>><TAB><check against ../test.allow: pass | fail:<module name>,... | ->."]

@@ -4,7 +4,9 @@
 //! Design rules.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_wasm_check::runner::{classify, parse_cases, version_matches, Outcome};
+use fid_wasm_check::runner::{
+    classify, last_cause, parse_cases, version_matches, Outcome, RESOURCE_CAUSES, TRAP_EXIT,
+};
 use fid_wasm_check::runtime::{RuntimeConfig, RuntimeError};
 use std::path::Path;
 
@@ -22,7 +24,7 @@ fn shipped_settings_are_canonical_and_digest_matches_python() {
     .unwrap();
     assert_eq!(cfg.config_digest().as_str(), expected.trim_end());
     assert_eq!(cfg.wasmtime_version, "49.0.6");
-    assert_eq!((cfg.max_wasm_stack, cfg.max_memory_size), (1_048_576, 1_073_741_824));
+    assert_eq!((cfg.max_wasm_stack, cfg.max_memory_size, cfg.fuel), (1_048_576, 1_073_741_824, 4_000_000_000));
 }
 
 #[test]
@@ -44,6 +46,12 @@ fn wasmtime_arguments_are_pinned() {
             "max-wasm-stack=1048576",
             "-W",
             "max-memory-size=1073741824",
+            "-W",
+            "trap-on-grow-failure=y",
+            "-W",
+            "fuel=4000000000",
+            "-W",
+            "unknown-imports-trap=y",
             "k.wasm"
         ]
     );
@@ -61,6 +69,12 @@ fn with(from: &str, to: &str) -> Vec<u8> {
 fn settings_errors_are_typed_and_fail_closed() {
     let cases: Vec<(Vec<u8>, RuntimeError)> = vec![
         (with("relaxed_simd = false", "relaxed_simd = true"), RuntimeError::Policy("relaxed_simd")),
+        (with("clock = \"trap\"", "clock = \"host\""), RuntimeError::Policy("clock")),
+        (with("clock = \"trap\"", "clock = true"), RuntimeError::BadValue("clock")),
+        (with("grow_failure = \"trap\"", "grow_failure = \"fail\""), RuntimeError::Policy("grow_failure")),
+        (with("fuel = 4000000000", "fuel = 0"), RuntimeError::BadValue("fuel")),
+        (with("fuel = 4000000000", "fuel = 1000000000001"), RuntimeError::BadValue("fuel")),
+        (with("clock = \"trap\"\n", ""), RuntimeError::MissingKey("clock")),
         (
             with("nan_canonicalization = true", "nan_canonicalization = false"),
             RuntimeError::Policy("nan_canonicalization"),
@@ -78,20 +92,20 @@ fn settings_errors_are_typed_and_fail_closed() {
         (with("\"49.0.6\"", "\"49.0\""), RuntimeError::BadValue("wasmtime_version")),
         (with("\"49.0.6\"", "\"v49.0.6\""), RuntimeError::BadValue("wasmtime_version")),
         (with("\"49.0.6\"", "\"49.00.6\""), RuntimeError::BadValue("wasmtime_version")),
-        (with("max_wasm_stack = 1048576", "max_wasm_stack = 01048576"), RuntimeError::Syntax { line: 2 }),
-        (with("threads = false\n", "threads = false\r\n"), RuntimeError::Syntax { line: 6 }),
-        (with("threads = false", "threads=false"), RuntimeError::Syntax { line: 6 }),
-        (with("schema", "# pinned\nschema"), RuntimeError::Syntax { line: 5 }),
+        (with("max_wasm_stack = 1048576", "max_wasm_stack = 01048576"), RuntimeError::Syntax { line: 5 }),
+        (with("threads = false\n", "threads = false\r\n"), RuntimeError::Syntax { line: 9 }),
+        (with("threads = false", "threads=false"), RuntimeError::Syntax { line: 9 }),
+        (with("schema", "# pinned\nschema"), RuntimeError::Syntax { line: 8 }),
         (with("threads = false", "threads = false\nthreads = false"), RuntimeError::DuplicateKey("threads".into())),
         (with("threads = false", "threads = false\nsimd = false"), RuntimeError::UnknownKey("simd".into())),
         (with("threads = false\n", ""), RuntimeError::MissingKey("threads")),
-        (with("threads = false\n", "threads = false\n\n"), RuntimeError::NonCanonical { offset: 132 }),
+        (with("threads = false\n", "threads = false\n\n"), RuntimeError::NonCanonical { offset: 187 }),
         (
             with(
                 "max_memory_size = 1073741824\nmax_wasm_stack = 1048576\n",
                 "max_wasm_stack = 1048576\nmax_memory_size = 1073741824\n",
             ),
-            RuntimeError::NonCanonical { offset: 4 },
+            RuntimeError::NonCanonical { offset: 59 },
         ),
         (shipped()[..shipped().len() - 1].to_vec(), RuntimeError::NonCanonical { offset: shipped().len() - 1 }),
         (vec![b'\n'; 4097], RuntimeError::TooLarge),
@@ -109,25 +123,40 @@ fn ac3_outcome_classification() {
     let kerr = br#"{"error":"digest_mismatch"}"#;
     assert_eq!(classify(Some(0), ok, b""), Outcome::Shim { exit: 0, stdout: ok.to_vec() });
     assert_eq!(classify(Some(1), kerr, b""), Outcome::Shim { exit: 1, stdout: kerr.to_vec() });
-    assert_eq!(classify(Some(2), b"{\"error\":\"malformed_call\"}", b"").exit_code(), 2);
+    assert_eq!(classify(Some(2), br#"{"error":"malformed_call"}"#, b"").exit_code(), 2);
     // A wasmtime start-up or usage error is never taken for a shim answer.
     assert_eq!(classify(Some(1), b"", b"Error: unknown option"), Outcome::Trap);
     assert_eq!(classify(Some(2), b"", b"error: unexpected argument"), Outcome::Trap);
     assert_eq!(classify(Some(0), kerr, b""), Outcome::Trap);
     assert_eq!(classify(Some(0), ok, b"warning"), Outcome::Trap);
-    // Stack or memory exhaustion.
-    for stderr in [
-        "Error: failed to run main module\n\nCaused by:\n    wasm trap: call stack exhausted\n",
-        "wasm trap: out of bounds memory access",
-        "memory allocation of 1610612736 bytes failed\nError: wasm trap: wasm `unreachable` instruction executed",
-    ] {
-        let o = classify(Some(134), b"", stderr.as_bytes());
-        assert_eq!(o, Outcome::Resource, "{stderr}");
+    // Stack, fuel or memory exhaustion: wasmtime's trap exit and its last stderr line.
+    for cause in RESOURCE_CAUSES {
+        let stderr = format!(
+            "guest output\nError: failed to run main module `k.wasm`\n\nCaused by:\n    0: failed to invoke command default\n    1: {cause}\n"
+        );
+        let o = classify(Some(TRAP_EXIT), b"", stderr.as_bytes());
+        assert_eq!(o, Outcome::Resource, "{cause}");
         assert_eq!((o.exit_code(), o.stdout()), (3, b"NOT_REPLAYABLE(resource)".as_slice()));
+        // The same text anywhere but last, or with another exit code, is not a resource verdict.
+        let not_last = format!("{cause}\nwasm trap: wasm `unreachable` instruction executed\n");
+        assert_eq!(classify(Some(TRAP_EXIT), b"", not_last.as_bytes()), Outcome::Trap);
+        assert_eq!(classify(Some(1), b"", stderr.as_bytes()), Outcome::Trap);
+        assert_eq!(classify(Some(125), b"", stderr.as_bytes()), Outcome::Trap);
     }
-    let t = classify(Some(134), b"", b"wasm trap: integer divide by zero");
+    // A sealed clock import that is called traps like any unknown import.
+    let unknown = b"Error: failed to run main module\n\nCaused by:\n    0: unknown import: `fid_trap::clock_time_get`\n";
+    let t = classify(Some(TRAP_EXIT), b"", unknown);
     assert_eq!((t.exit_code(), t.stdout()), (4, b"NOT_REPLAYABLE(trap)".as_slice()));
     assert_eq!(classify(None, b"", b""), Outcome::Trap);
+}
+
+#[test]
+fn last_cause_strips_only_a_cause_number() {
+    assert_eq!(last_cause(b"a\n    2: wasm trap: call stack exhausted\n\n"), "wasm trap: call stack exhausted");
+    assert_eq!(last_cause(b"wasm trap: call stack exhausted"), "wasm trap: call stack exhausted");
+    assert_eq!(last_cause(b"12 wasm trap"), "12 wasm trap");
+    assert_eq!(last_cause(b": x"), ": x");
+    assert_eq!(last_cause(b""), "");
 }
 
 #[test]

@@ -12,11 +12,15 @@
 //! UTF-8 with LF line endings (a CR, a tab or a byte-order mark is refused), at most
 //! [`MAX_ALLOW_BYTES`] bytes and [`MAX_ENTRIES`] entries. Two entries for the same
 //! `(module, name)` are refused. Entries allow function imports only: an import of any
-//! other kind (table, memory, global, tag) is denied whatever its name.
+//! other kind (table, memory, global, tag) is denied whatever its name. Entries for the
+//! [`TRAP_MODULE`] module are refused. A function import from [`TRAP_MODULE`] named in
+//! [`crate::seal::CLOCK_IMPORTS`] (what [`crate::seal::seal`] produces) passes as
+//! `trapped`: the runner makes it trap when called, so it never feeds a value.
 
 use std::fmt;
 
 use crate::module::{Import, ImportKind, Module};
+use crate::seal::{is_trapped, TRAP_MODULE};
 
 /// Largest accepted allowlist, in bytes.
 pub const MAX_ALLOW_BYTES: usize = 64 * 1024;
@@ -117,7 +121,7 @@ impl Allowlist {
                 None => return Err(AllowError::Syntax { line }),
             };
             let (module, name) = head.split_once(' ').ok_or(AllowError::Syntax { line })?;
-            if !is_token(module) || !is_token(name) {
+            if !is_token(module) || !is_token(name) || module == TRAP_MODULE {
                 return Err(AllowError::Syntax { line });
             }
             if justification.trim().is_empty() {
@@ -173,14 +177,16 @@ impl ImportReport {
         self.imports.iter().all(|(_, ok)| *ok)
     }
 
-    /// The report lines: `allowed <module> <name>` or `DENIED <module> <name> (<kind>)` per
-    /// import, `unused <module> <name>` per unused entry, then `imports: N, denied: M`.
+    /// The report lines: `allowed <module> <name>`, `trapped <module> <name>` or
+    /// `DENIED <module> <name> (<kind>)` per import, `unused <module> <name>` per unused entry, then `imports: N, denied: M`.
     pub fn lines(&self) -> Vec<String> {
         let mut out: Vec<String> = self
             .imports
             .iter()
             .map(|(i, ok)| {
-                if *ok {
+                if *ok && is_trapped(&i.module, &i.name, i.kind) {
+                    format!("trapped {} {}", i.module, i.name)
+                } else if *ok {
                     format!("allowed {} {}", i.module, i.name)
                 } else {
                     format!("DENIED {} {} ({})", i.module, i.name, i.kind.as_str())

@@ -122,18 +122,12 @@ fn malformed_edges() {
 }
 
 #[test]
-fn without_a_table_or_without_the_feature() {
+fn without_a_table_and_with_the_feature() {
     let good = encode_call(&echo_call());
     assert_eq!(respond(None, &good), (EXIT_KERNEL_ERROR, b"{\"error\":\"table_unavailable\"}".to_vec()));
     let reference = reference_table().unwrap();
-    let (code, out) = respond(Some(&reference), &good);
-    if cfg!(feature = "test-algorithms") {
-        assert_eq!(code, 0);
-    } else {
-        // The reference artifact registers no algorithm until the fid-kernel assembly exists.
-        assert!(reference.ids().is_empty());
-        assert_eq!((code, out), (EXIT_KERNEL_ERROR, b"{\"error\":\"unknown_algorithm\"}".to_vec()));
-    }
+    // With the test-algorithms feature (required by this test file) the stand-ins answer.
+    assert_eq!(respond(Some(&reference), &good).0, 0);
 }
 
 #[test]
