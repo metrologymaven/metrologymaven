@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps, fid-gdt]
+built_pr: 248
 satisfies: [REQ-GDT.RES-001, REQ-GDT.RES-002, REQ-GDT.RES-003, REQ-GDT.RES-004, REQ-GDT.RES-008]
 covers: []
 depends_on: [GDT.RES.SCHEMA]
