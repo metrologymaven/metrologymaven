@@ -268,8 +268,11 @@ fn an_unresolvable_table_path_fails_the_real_driver_run() {
     let opts = Options { cargo: cargo(), scratch: scratch("typed-unresolved") };
     // A path that exists nowhere, and (where the driver words it apart) one of the wrong kind.
     for probe in ["std::knp1_no_such_function", "std::collections::BTreeMap"] {
-        let e = check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[probe.to_string()])
-            .unwrap_err();
+        let e =
+            match check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[probe.to_string()]) {
+                Ok(r) => panic!("probe {probe}: the driver accepted it silently: {r:?}"),
+                Err(e) => e,
+            };
         assert_eq!(e.code, TypedErrorCode::Driver, "{probe}: {e}");
         assert!(e.message.contains(probe.rsplit("::").next().unwrap()), "{probe}: {e}");
     }

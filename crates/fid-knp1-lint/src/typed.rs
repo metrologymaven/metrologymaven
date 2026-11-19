@@ -983,11 +983,13 @@ pub fn pinned_rustc(cargo: &Path) -> Result<PathBuf, TypedError> {
 /// Feature sets each target is linted with: the default features, and all features.
 pub const FEATURE_SETS: [(&str, bool); 2] = [("default features", false), ("all features", true)];
 
+#[allow(clippy::too_many_arguments)]
 fn driver_command(
     opts: &Options,
     rustc: &Path,
     workspace: &Path,
     conf: &Path,
+    target_dir: &Path,
     target: &str,
     all_features: bool,
     members: &[&CrateEntry],
@@ -1020,7 +1022,7 @@ fn driver_command(
         .arg(workspace.join("Cargo.toml"))
         .args(["--locked", "--keep-going", "--message-format=json", "--target", target])
         .arg("--target-dir")
-        .arg(opts.scratch.join("target"));
+        .arg(target_dir);
     if all_features {
         cmd.arg("--all-features");
     }
@@ -1104,9 +1106,17 @@ fn run_with_probe(
         return Ok(CheckRun::default());
     }
     let rustc = pinned_rustc(&opts.cargo)?;
-    let conf = opts.scratch.join("clippy-conf");
+    // The clippy configuration is not part of cargo's fingerprint: a target directory reused
+    // with a different `clippy.toml` would replay stale diagnostics for "fresh" crates. So the
+    // configuration and the target directory live under a directory named by its digest.
+    let toml = clippy_toml_with(probe);
+    let digest = input_digest(toml.as_bytes());
+    let key: String = digest.trim_start_matches("sha256:").chars().take(16).collect();
+    let run_dir = opts.scratch.join(format!("cfg-{key}"));
+    let conf = run_dir.join("clippy-conf");
+    let target_dir = run_dir.join("target");
     std::fs::create_dir_all(&conf).map_err(|e| err(TypedErrorCode::Io, format!("{}: {e}", conf.display())))?;
-    std::fs::write(conf.join("clippy.toml"), clippy_toml_with(probe))
+    std::fs::write(conf.join("clippy.toml"), toml)
         .map_err(|e| err(TypedErrorCode::Io, format!("{}: {e}", conf.display())))?;
     let ctx = MapCtx {
         cwd: canon(workspace),
@@ -1119,7 +1129,7 @@ fn run_with_probe(
     let mut unresolved = BTreeSet::new();
     for target in &cfg.targets {
         for (label, all_features) in FEATURE_SETS {
-            let cmd = driver_command(opts, &rustc, workspace, &conf, target, all_features, &members);
+            let cmd = driver_command(opts, &rustc, workspace, &conf, &target_dir, target, all_features, &members);
             let run_name = format!("{target}, {label}");
             let out = run_bounded(cmd, Duration::from_secs(cfg.timeout_secs))
                 .map_err(|e| driver(format!("cannot run {} clippy: {e}", opts.cargo.display())))?;
