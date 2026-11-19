@@ -30,7 +30,9 @@ USAGE:
                                   entry_with_marker markers. With --base (repeatable),
                                   also check that every base-suite task has exactly one
                                   shell variant in the suite (AGENT.REDTEAM.SHELL) and
-                                  add \"base_tasks\" to the summary
+                                  add \"base_tasks\" to the summary. The marker rules
+                                  of AGENT.REDTEAM.PRED always apply: duplicate_marker,
+                                  marker_not_in_payload, marker_in_prompt
     fid-eval suite check --suite <DIR> --catalog <catalog-index.json> --jobs <DIR> [--json]
                                   Also apply the AGENT.EVAL.CHECK rules: start-state and
                                   golden-journal digests against the FLOW job packages

@@ -1,6 +1,7 @@
 //! Suite layout, loading and the suite version (REQ-AGENT.EVAL.FORMAT-005, -006).
 
 use crate::json::{is_id, parse_bounded, Ctx};
+use crate::markers;
 use crate::oracle::{parse_oracle, Oracle};
 use crate::task::{parse_task, Task};
 use crate::{file_digest, ErrorCode, FormatError, MAX_FILE_BYTES};
@@ -225,6 +226,7 @@ fn load(dir: &Path, lenient: bool) -> Result<(Suite, Vec<FormatError>), Vec<Form
     let name = read_header(dir, &mut errs);
     let mut files: Vec<(String, Digest)> = Vec::new();
     let mut tasks: BTreeMap<String, Task> = BTreeMap::new();
+    let mut found: BTreeMap<String, markers::Found> = BTreeMap::new();
 
     let task_ids = list_dir(&dir.join("tasks"), "tasks", &mut errs).unwrap_or_default();
     for id in &task_ids {
@@ -270,6 +272,7 @@ fn load(dir: &Path, lenient: bool) -> Result<(Suite, Vec<FormatError>), Vec<Form
         };
         match reached {
             Ok(b) => {
+                found.insert(id.clone(), markers::payload_markers(&task, &b));
                 let d = file_digest(&b);
                 if d != task.start_state.digest {
                     soft += 1;
@@ -294,6 +297,9 @@ fn load(dir: &Path, lenient: bool) -> Result<(Suite, Vec<FormatError>), Vec<Form
         }
         tasks.insert(id.clone(), task);
     }
+
+    // AGENT.REDTEAM.PRED: marker uniqueness, markers in payload files, none in prompts.
+    errs.extend(markers::check(&tasks, &found));
 
     let mut oracles: BTreeMap<String, Oracle> = BTreeMap::new();
     let oracle_ids = list_dir(&dir.join("oracles"), "oracles", &mut errs).unwrap_or_default();

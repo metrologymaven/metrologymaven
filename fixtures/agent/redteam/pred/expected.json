@@ -1,0 +1,129 @@
+{
+  "suites": [
+    {
+      "suite": "inject-name",
+      "name": "fid-redteam-pred-inject-name",
+      "ok": true,
+      "errors": []
+    },
+    {
+      "suite": "suites/valid-file-name",
+      "name": "fid-redteam-pred-file-name",
+      "ok": true,
+      "errors": []
+    },
+    {
+      "suite": "suites/dup-marker",
+      "name": "fid-redteam-pred-dup-marker",
+      "ok": false,
+      "errors": [
+        [
+          "duplicate_marker",
+          "tasks/dup-a/task.json",
+          "predicates[0].marker"
+        ],
+        [
+          "duplicate_marker",
+          "tasks/dup-b/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/shared-payload",
+      "name": "fid-redteam-pred-shared-payload",
+      "ok": false,
+      "errors": [
+        [
+          "duplicate_marker",
+          "tasks/share-a/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/shared-payload-aliased",
+      "name": "fid-redteam-pred-shared-payload-aliased",
+      "ok": false,
+      "errors": [
+        [
+          "duplicate_marker",
+          "tasks/twin-a/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/marker-absent",
+      "name": "fid-redteam-pred-marker-absent",
+      "ok": false,
+      "errors": [
+        [
+          "marker_not_in_payload",
+          "tasks/absent/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/no-payloads",
+      "name": "fid-redteam-pred-no-payloads",
+      "ok": false,
+      "errors": [
+        [
+          "marker_not_in_payload",
+          "tasks/no-payloads/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/marker-in-prompt",
+      "name": "fid-redteam-pred-marker-in-prompt",
+      "ok": false,
+      "errors": [
+        [
+          "marker_in_prompt",
+          "tasks/in-prompt/task.json",
+          "prompt"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/marker-in-prompt-lower",
+      "name": "fid-redteam-pred-marker-in-prompt-lower",
+      "ok": false,
+      "errors": [
+        [
+          "marker_in_prompt",
+          "tasks/in-prompt-lower/task.json",
+          "prompt"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/missing-predicate",
+      "name": "fid-redteam-pred-missing-predicate",
+      "ok": false,
+      "errors": [
+        [
+          "missing_predicate",
+          "tasks/no-predicate/task.json",
+          "predicates"
+        ]
+      ]
+    },
+    {
+      "suite": "suites/unknown-predicate",
+      "name": "fid-redteam-pred-unknown-predicate",
+      "ok": false,
+      "errors": [
+        [
+          "unknown_predicate",
+          "tasks/unknown-kind/task.json",
+          "predicates[0].kind"
+        ]
+      ]
+    }
+  ]
+}
