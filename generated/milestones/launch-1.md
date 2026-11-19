@@ -192,7 +192,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REPO.TPL.PROMOTE](../../spec/eco/repo/tpl/promote/NODE.md) Library promotion procedure and tool (M, P0)
 - [ECO.REPO.TPL.SELFTEST](../../spec/eco/repo/tpl/selftest/NODE.md) Template self-test job (S, P0)
 - [ECO.RULES.CHECK](../../spec/eco/rules/check/NODE.md) House-rules check (edited, stale, missing, budgets) (M, P0)
-- [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
+- [B] [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
 - [ECO.RULES.SYNC](../../spec/eco/rules/sync/NODE.md) House-rules sync tool (M, P0)
 - [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
