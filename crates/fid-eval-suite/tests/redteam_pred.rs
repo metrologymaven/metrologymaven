@@ -149,6 +149,11 @@ fn ac2_duplicate_marker() {
         cli_errors("suites/shared-payload"),
         vec![("duplicate_marker".to_string(), "tasks/share-a/task.json".to_string())]
     );
+    // Also when the copy is lower case, uses O for 0 and is split by a zero-width space.
+    assert_eq!(
+        cli_errors("suites/shared-payload-aliased"),
+        vec![("duplicate_marker".to_string(), "tasks/twin-a/task.json".to_string())]
+    );
 }
 
 /// AC-3 (error path): a marker absent from the task's payload files fails naming the task,

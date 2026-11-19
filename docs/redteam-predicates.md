@@ -66,8 +66,35 @@ Each error is reported on the task's `task.json`, so it names the task.
 | `unknown_predicate` | A predicate kind outside the six above. |
 | `invalid_task` | A malformed predicate. Examples: a bad marker, a pattern with `.` or `..`, an unknown class, a repeated id, or `numeric_claim` outside the fabrication family. |
 | `marker_not_in_payload` | An `entry_with_marker` marker that appears in none of the task's payload files. A payload file is searched in its archive path (vector `file_name`) and in its bytes. A task without payloads, a payload missing from the start-state archive, or an archive that cannot be listed all count as "none". |
-| `marker_in_prompt` | The marker appears in the task prompt. Letter case is ignored. |
-| `duplicate_marker` | Two `entry_with_marker` predicates in the suite declare the same marker, or a declared marker appears in a payload file of another task. |
+| `marker_in_prompt` | The marker appears in the task prompt after normalisation (below). |
+| `duplicate_marker` | Two `entry_with_marker` predicates in the suite declare the same marker, or a declared marker appears, after normalisation, in a payload file of another task. |
+
+### Marker normalisation
+
+`marker_in_prompt` and the cross-task part of `duplicate_marker` ask whether a marker appears where it must not.
+They compare after one normalisation, applied to both the marker and the searched text (`normalise` in
+`crates/fid-eval-suite/src/markers.rs`):
+
+- Hyphens and invisible characters are dropped: ASCII `-`, U+2010 to U+2015, U+2212, soft hyphen U+00AD, and the
+  zero-width and format characters U+200B to U+200D, U+2060 and U+FEFF.
+- Full-width ASCII (U+FF01 to U+FF5E) maps to ASCII.
+- ASCII maps to upper case, then the Crockford aliases map: `O` to `0`, and `I` and `L` to `1`.
+- A Greek or Cyrillic letter or digit matches any character. A homoglyph next to marker-shaped text therefore
+  counts as a possible marker and fails closed. Other non-ASCII characters match nothing.
+
+`marker_not_in_payload` asks the opposite question: does the marker really appear in the task's own payload? It
+uses an exact byte match, so a disguised copy does not count as present. This also fails closed.
+
+**Limits of the scan.**
+
+- Payload files are read as stored. Compressed, archived (nested), base64 or UTF-16 payloads are not decoded.
+  Bytes that are not UTF-8 are read lossily.
+- A marker split by a line break, a space or any other kept character is not joined.
+- Homoglyphs outside Greek and Cyrillic are not recognised. Examples: Latin letters with diacritics,
+  mathematical alphanumerics and Armenian.
+
+Presence in the task's own payload still fails closed in all these cases, because the exact marker must be
+there. Cross-task leak detection and the prompt rule can miss copies hidden this way.
 
 ## Fixture runs
 
@@ -85,4 +112,6 @@ reference evaluator (`make_pred.py --check`).
 | `numeric_claim` | `numeric-claim-pos`: the brief states 20.010 mm, but the fit gave 20.008 mm | `numeric-claim-neg`: the brief states 20.008 mm and 20008 um, both equal to the recorded value in SI |
 
 The suites under `fixtures/agent/redteam/pred/` (`inject-name/` for AC-1, `suites/*` for the error paths) carry
-their expected verdicts in `expected.json`.
+their expected verdicts in `expected.json`. Those verdicts are hand-labelled. `make_pred.py --check` only checks a
+few plain-substring facts that the labels imply. It is not an independent re-implementation of the marker
+rules, and it skips the suites whose verdict depends on normalisation.

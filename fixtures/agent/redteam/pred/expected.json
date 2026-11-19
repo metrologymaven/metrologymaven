@@ -42,6 +42,18 @@
       ]
     },
     {
+      "suite": "suites/shared-payload-aliased",
+      "name": "fid-redteam-pred-shared-payload-aliased",
+      "ok": false,
+      "errors": [
+        [
+          "duplicate_marker",
+          "tasks/twin-a/task.json",
+          "predicates[0].marker"
+        ]
+      ]
+    },
+    {
       "suite": "suites/marker-absent",
       "name": "fid-redteam-pred-marker-absent",
       "ok": false,
