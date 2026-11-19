@@ -524,17 +524,18 @@ impl SessionTable {
         clock: &mut dyn UpgradeClock,
         ctx: &UpgradeContext,
     ) -> Result<(), BusError> {
-        let Some(identity) = channel.authenticated_identity() else {
-            return Err(unauthenticated("channel supplied no authenticated identity"));
-        };
+        // Authentication first: an incomplete identity is `unauthenticated` on every channel.
+        let before = self.derive_principal(channel)?;
         let kind = channel.kind();
         if !kind.upgradable() {
             return Err(refused(UpgradeRefusedReason::Channel, "only cli and python sessions can be upgraded"));
         }
-        let before = self.derive_principal(channel)?;
         if before.kind == PrincipalKind::Human {
             return Ok(());
         }
+        let Some(identity) = channel.authenticated_identity() else {
+            return Err(unauthenticated("channel supplied no authenticated identity"));
+        };
         let Some(os_user) = identity.os_user.clone() else {
             return Err(refused(UpgradeRefusedReason::UserMismatch, "session has no OS user"));
         };

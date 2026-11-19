@@ -371,7 +371,9 @@ fn req007_self_asserted_names_never_change_the_principal() {
     };
     let table = SessionTable::new();
     let plain = table.derive_principal(&base(None)).unwrap();
-    for (client, model) in [(Some("human"), Some("human")), (Some("GUI"), None), (None, Some("system")), (Some(""), Some(""))] {
+    for (client, model) in
+        [(Some("human"), Some("human")), (Some("GUI"), None), (None, Some("system")), (Some(""), Some(""))]
+    {
         let p = table.derive_principal(&base(Some(SelfAsserted::untrusted(client, model)))).unwrap();
         assert_eq!(p.kind(), plain.kind());
         assert_eq!(p.id(), plain.id());
