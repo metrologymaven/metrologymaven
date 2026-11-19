@@ -782,3 +782,126 @@ fn five_thousand_declarations() {
     println!("5000 declarations: {took:?}");
     assert!(took < Duration::from_secs(10));
 }
+
+/// Follow-up of #233, item 1: `$schema` only at a schema root and only 2020-12; keywords of
+/// earlier drafts are refused, so no number field can hide behind their semantics.
+#[test]
+fn dialect_is_pinned() {
+    let dialect = fid_registry::validate::SCHEMA_DIALECT;
+    let root = |v: CValue| {
+        let mut d = base();
+        let CValue::Obj(ps) = d.get_mut("params_schema").unwrap() else { panic!() };
+        ps.insert("$schema".into(), v);
+        one(d)
+    };
+    let r = "/params_schema/$schema";
+    assert_eq!(root(s(dialect)), vec![]);
+    assert_eq!(root(s("http://json-schema.org/draft-07/schema#")), at("bad_dialect", r));
+    assert_eq!(root(s("https://json-schema.org/draft/2019-09/schema")), at("bad_dialect", r));
+    assert_eq!(root(s(&format!("{dialect}#"))), at("bad_dialect", r));
+    assert_eq!(root(s("HTTPS://json-schema.org/draft/2020-12/schema")), at("bad_dialect", r));
+    assert_eq!(root(n(1.0)), at("bad_dialect", r));
+    // In result_schema too.
+    let mut d = base();
+    let CValue::Obj(rs) = d.get_mut("result_schema").unwrap() else { panic!() };
+    rs.insert("$schema".into(), s("http://json-schema.org/draft-07/schema#"));
+    assert_eq!(one(d), at("bad_dialect", "/result_schema/$schema"));
+
+    // Below the root even the exact URI is refused.
+    let p = "/params_schema/properties/t";
+    let mut d = base();
+    set_param(&mut d, "t", obj([("$schema", s(dialect)), ("type", s("string"))]));
+    assert_eq!(one(d), at("bad_dialect", &format!("{p}/$schema")));
+
+    // Older-draft keywords, including one hiding an unannotated number field.
+    let hidden = obj([("a", obj([("properties", obj([("x", obj([("type", s("number"))]))]))]))]);
+    for (k, v) in [
+        ("dependencies", hidden),
+        ("dependencies", obj([("a", CValue::Arr(vec![s("b")]))])),
+        ("$recursiveRef", s("#")),
+        ("$recursiveAnchor", CValue::Bool(true)),
+    ] {
+        let mut d = base();
+        set_param(&mut d, "t", schema(vec![("type", s("object")), (k, v.clone())]));
+        assert_eq!(one(d), at("bad_dialect", &format!("{p}/{k}")), "{k}");
+        let mut d = base();
+        let CValue::Obj(ps) = d.get_mut("params_schema").unwrap() else { panic!() };
+        ps.insert(k.to_string(), v);
+        assert_eq!(one(d), at("bad_dialect", &format!("/params_schema/{k}")), "{k} at root");
+    }
+}
+
+/// Follow-up of #233, item 2: a literal above 2^53 is refused whatever its notation; it is
+/// never rounded.
+#[test]
+fn big_literals_in_any_notation_are_refused() {
+    for (lit, ok) in [
+        ("9007199254740992.0", true),
+        ("9007199254740992e0", true),
+        ("9.007199254740992e15", true),
+        ("9007199254740993.0", false),
+        ("9007199254740993e0", false),
+        ("9.007199254740993e15", false),
+        ("-9007199254740993.0", false),
+        ("9007199254740994.0", false),
+        ("1e300", false),
+    ] {
+        let text = format!("{{\"decls\":[{{\"x\":{lit}}}]}}");
+        let got = validate_json(text.as_bytes(), &Limits::default(), &GeoFrameUnits);
+        match got {
+            Err(InputError::BadNumber(echo)) => assert!(!ok && echo == lit, "{lit}: {echo}"),
+            Err(e) => panic!("{lit}: {e}"),
+            Ok(_) => assert!(ok, "{lit} accepted"),
+        }
+    }
+}
+
+/// Follow-up of #233, item 3: `required` entries and `dependentRequired` names are
+/// printable ASCII without space.
+#[test]
+fn required_and_dependent_required_names() {
+    let p = "/params_schema/properties/t";
+    let with = |pairs: Pairs| {
+        let mut d = base();
+        let mut t = vec![("type", s("object"))];
+        t.extend(pairs);
+        set_param(&mut d, "t", schema(t));
+        one(d)
+    };
+    for bad in ["", "a b", "to\u{200b}lerance", "\u{202e}x", "caf\u{e9}"] {
+        assert_eq!(
+            with(vec![("required", CValue::Arr(vec![s(bad)]))]),
+            at("bad_property_name", &format!("{p}/required"))
+        );
+        let key = obj([(bad, CValue::Arr(vec![s("b")]))]);
+        assert_eq!(with(vec![("dependentRequired", key)]), at("bad_property_name", &format!("{p}/dependentRequired")));
+        let entry = obj([("a", CValue::Arr(vec![s(bad)]))]);
+        assert_eq!(
+            with(vec![("dependentRequired", entry)]),
+            at("bad_property_name", &format!("{p}/dependentRequired/a")),
+            "{bad:?}"
+        );
+    }
+    assert_eq!(with(vec![("required", CValue::Arr(vec![s("a"), s("b")]))]), vec![]);
+    assert_eq!(with(vec![("dependentRequired", obj([("a", CValue::Arr(vec![s("b")]))]))]), vec![]);
+    assert_eq!(with(vec![("dependentRequired", obj([("a", CValue::Arr(vec![]))]))]), vec![]);
+    assert_eq!(
+        with(vec![("dependentRequired", CValue::Arr(vec![]))]),
+        at("bad_schema", &format!("{p}/dependentRequired"))
+    );
+    let dup = obj([("a", CValue::Arr(vec![s("b"), s("b")]))]);
+    assert_eq!(with(vec![("dependentRequired", dup)]), at("bad_schema", &format!("{p}/dependentRequired/a")));
+    let mixed = obj([("a", CValue::Arr(vec![n(1.0)]))]);
+    assert_eq!(with(vec![("dependentRequired", mixed)]), at("bad_schema", &format!("{p}/dependentRequired/a")));
+}
+
+/// Follow-up of #233, item 4: a field pointer's segment cut applies to the escaped form.
+#[test]
+fn field_pointer_segments_are_cut_after_escaping() {
+    let key = "\u{200b}".repeat(100);
+    let mut d = base();
+    d.insert(key, CValue::Null);
+    let errors = run(vec![d]);
+    let unknown = errors.iter().find(|e| e.rule == RuleCode::UnknownField).unwrap();
+    assert_eq!(unknown.field.as_deref(), Some(format!("/{}", r"\u{200b}".repeat(16)).as_str()));
+}
