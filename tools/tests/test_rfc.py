@@ -9,6 +9,7 @@ Run from the repository root:  python -m unittest discover -s tools/tests -v
 import contextlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -222,6 +223,99 @@ class TestApproveCheck(RfcTestCase):
         self.assertIn("RFC-INPUT", err)
         code, _, err = self.run_rfc("approve-check", "D-100", "--now", AFTER_CLOSE)
         self.assertIn("RFC-INPUT", err)
+
+
+class TestHostileInput(RfcTestCase):
+    """Review fixes for PR #169: deep JSON, year-9999 overflow, symlinks, odd line breaks, ids."""
+
+    def test_deeply_nested_json(self):
+        self.copy("D-100-app.md")
+        self.assertEqual(self.start()[0], 0)
+        deep = "[" * 100000 + "]" * 100000
+        (self.tmp / "deep.json").write_text(deep)
+        code, _, err = self.run_rfc("approve-check", "D-100", "--approvals", str(self.tmp / "deep.json"),
+                                    "--now", AFTER_CLOSE)
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+        code, _, err = self.run_rfc("start", "D-100", "--now", START, config=str(self.tmp / "deep.json"))
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-CONFIG", err)
+
+    def test_overflow_on_start_leaves_record_untouched(self):
+        path = self.copy("D-100-app.md")
+        before = path.read_bytes()
+        code, _, err = self.start(now="9999-12-30T00:00:00Z")
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_overflow_in_recorded_period(self):
+        (self.tmp / "D-104-far.md").write_bytes(b"---\nid: D-104\nraised_by: founder\n"
+                                                 b"comment_period_start: 9999-12-30T00:00:00Z\n"
+                                                 b"comment_period_days: 7\n---\n")
+        code, out, err = self.run_rfc("status", "--now", AFTER_CLOSE)
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("RFC-INPUT", err)
+        code, _, err = self.approve("approvals-other.json", record="D-104")
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+
+    def _symlink(self, target, link):
+        try:
+            os.symlink(target, link)
+        except (OSError, NotImplementedError):
+            self.skipTest("symbolic links are not available here")
+
+    def test_symlinked_record_refused(self):
+        outside = Path(tempfile.mkdtemp(prefix="rfc-outside-"))
+        self.addCleanup(shutil.rmtree, outside, True)
+        shutil.copyfile(FIX / "D-100-app.md", outside / "D-100-app.md")
+        self._symlink(outside / "D-100-app.md", self.tmp / "D-100-app.md")
+        code, _, err = self.start()
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+        self.assertTrue((self.tmp / "D-100-app.md").is_symlink())
+        self.assertEqual((outside / "D-100-app.md").read_bytes(), (FIX / "D-100-app.md").read_bytes())
+        code, _, err = self.run_rfc("status", "--now", AFTER_CLOSE)
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+
+    def test_symlinked_approvals_and_config_refused(self):
+        self.copy("D-100-app.md")
+        self.assertEqual(self.start()[0], 0)
+        self._symlink(FIX / "approvals-other.json", self.tmp / "link.json")
+        code, _, err = self.run_rfc("approve-check", "D-100", "--approvals", str(self.tmp / "link.json"),
+                                    "--now", AFTER_CLOSE)
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+        self._symlink(FIX / "config.json", self.tmp / "cfg-link.json")
+        code, _, err = self.run_rfc("approve-check", "D-100", "--approvals", str(FIX / "approvals-other.json"),
+                                    "--now", AFTER_CLOSE, config=str(self.tmp / "cfg-link.json"))
+        self.assertEqual(code, 1)
+        self.assertIn("RFC-INPUT", err)
+
+    def test_odd_line_breaks_refused(self):
+        # U+2028 would make scope.parse_front see a line break that bytes.splitlines does not.
+        for sep in (" ", "\x85", "\x0c"):
+            rec = self.tmp / "D-105-odd.md"
+            data = ("---\nid: D-105\nraised_by: founder\ntitle: x" + sep
+                    + "comment_period_start: 2026-12-01T09:00:00Z\n---\n").encode("utf-8")
+            rec.write_bytes(data)
+            code, _, err = self.start("D-105")
+            self.assertEqual(code, 1, repr(sep))
+            self.assertIn("RFC-INPUT", err)
+            self.assertEqual(rec.read_bytes(), data)
+
+    def test_missing_or_wrong_id(self):
+        (self.tmp / "D-106-noid.md").write_bytes(b"---\ntitle: no id\n---\n")
+        (self.tmp / "D-107-wrong.md").write_bytes(b"---\nid: D-999\n---\n")
+        for rid in ("D-106", "D-107"):
+            code, _, err = self.start(rid)
+            self.assertEqual(code, 1, rid)
+            self.assertIn("RFC-INPUT", err)
+        code, out, err = self.run_rfc("status", "--now", AFTER_CLOSE)
+        self.assertEqual((code, out), (1, ""))
+        self.assertEqual(err.count("RFC-INPUT"), 1)  # D-107's id is valid; it just has no period
 
 
 class TestCli(unittest.TestCase):

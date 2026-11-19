@@ -33,6 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from claims import fmt_time  # noqa: E402  (ECO.COMM.CLAIM's UTC formatter)
 from scope import parse_front  # noqa: E402  (reuse the spec-tree frontmatter parser)
 
 DEFAULT_DIR = ROOT / "decisions"
@@ -72,8 +73,12 @@ def parse_time(value: str, what: str) -> datetime:
         raise RfcError("RFC-INPUT", f"{what} is not a valid date and time: {value!r}") from None
 
 
-def fmt_time(t: datetime) -> str:
-    return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+def add_days(start: datetime, days: int, what: str) -> datetime:
+    """`start` plus whole days in UTC; a result past year 9999 is RFC-INPUT."""
+    try:
+        return start + timedelta(days=days)
+    except OverflowError:
+        raise RfcError("RFC-INPUT", f"{what}: {fmt_time(start)} plus {days} days is past year 9999") from None
 
 
 # ---------------------------------------------------------------- files
@@ -81,6 +86,8 @@ def fmt_time(t: datetime) -> str:
 
 def read_bounded(path: Path, limit: int, code: str, what: str) -> bytes:
     try:
+        if path.is_symlink():
+            raise RfcError("RFC-INPUT", f"{what} {path} is a symbolic link; refusing to follow it")
         if not path.is_file():
             raise RfcError(code, f"{what} {path} does not exist or is not a file")
         size = path.stat().st_size
@@ -125,6 +132,8 @@ def load_config(path: Path) -> dict:
         cfg = json.loads(decode(raw, "RFC-CONFIG", f"config {path}"))
     except json.JSONDecodeError as e:
         raise RfcError("RFC-CONFIG", f"config {path} is not valid JSON: {e.msg} at line {e.lineno}") from None
+    except (ValueError, RecursionError):
+        raise RfcError("RFC-CONFIG", f"config {path} is not valid JSON or is nested too deeply") from None
     if not isinstance(cfg, dict):
         raise RfcError("RFC-CONFIG", f"config {path} must be a JSON object")
     unknown = sorted(set(cfg) - CONFIG_KEYS)
@@ -167,7 +176,8 @@ def check_id(record_id: str) -> str:
 
 
 def find_record(directory: Path, record_id: str) -> Path:
-    """The single file `<ID>.md` or `<ID>-*.md` in `directory` whose frontmatter id is the ID."""
+    """The single file `<ID>.md` or `<ID>-*.md` in `directory` (symbolic links included, so that
+    read_record refuses them rather than the ID looking absent). read_record_for checks its id."""
     if not directory.is_dir():
         raise RfcError("RFC-NO-RECORD", f"decision directory {directory} does not exist")
     try:
@@ -176,7 +186,7 @@ def find_record(directory: Path, record_id: str) -> Path:
         raise RfcError("RFC-NO-RECORD", f"cannot list {directory}: {e.strerror or e}") from None
     hits = [directory / n for n in names
             if (n == f"{record_id}.md" or (n.startswith(f"{record_id}-") and n.endswith(".md")))
-            and (directory / n).is_file()]
+            and ((directory / n).is_symlink() or (directory / n).is_file())]
     if not hits:
         raise RfcError("RFC-NO-RECORD", f"no decision record {record_id} in {directory}")
     if len(hits) > 1:
@@ -184,11 +194,32 @@ def find_record(directory: Path, record_id: str) -> Path:
     return hits[0]
 
 
+# Characters str.splitlines (used by scope.parse_front) treats as line breaks but bytes.splitlines
+# (used by insert_fields) does not. A record containing one is refused, so both always agree on
+# where frontmatter lines start and end.
+ODD_LINE_BREAKS = "\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029"
+
+
 def read_record(path: Path) -> tuple[bytes, dict]:
     raw = read_bounded(path, MAX_RECORD_BYTES, "RFC-INPUT", "record")
-    meta, err = parse_front(decode(raw, "RFC-INPUT", f"record {path.name}"))
+    text = decode(raw, "RFC-INPUT", f"record {path.name}")
+    odd = sorted({f"U+{ord(c):04X}" for c in text if c in ODD_LINE_BREAKS})
+    if odd:
+        raise RfcError("RFC-INPUT", f"record {path.name} contains unusual line-break characters "
+                                    f"({', '.join(odd)}); use LF or CRLF only")
+    meta, err = parse_front(text)
     if meta is None:
         raise RfcError("RFC-INPUT", f"record {path.name}: {err}")
+    rid = meta.get("id", "")
+    if not isinstance(rid, str) or not ID_RE.match(rid):
+        raise RfcError("RFC-INPUT", f"record {path.name} has no valid id (like D-123) in its frontmatter")
+    return raw, meta
+
+
+def read_record_for(path: Path, record_id: str) -> tuple[bytes, dict]:
+    raw, meta = read_record(path)
+    if meta["id"] != record_id:
+        raise RfcError("RFC-INPUT", f"record {path.name} has id {meta['id']}, not {record_id}")
     return raw, meta
 
 
@@ -211,7 +242,7 @@ def recorded_period(meta: dict, where: str):
     if not re.fullmatch(r"[0-9]{1,3}", days_s) or not 1 <= int(days_s) <= MAX_DAYS:
         raise RfcError("RFC-INPUT", f"{where}: comment_period_days must be an integer from 1 to {MAX_DAYS}")
     days = int(days_s)
-    return start, days, start + timedelta(days=days)
+    return start, days, add_days(start, days, f"{where}: comment period close")
 
 
 def insert_fields(raw: bytes, fields: list) -> bytes:
@@ -254,7 +285,7 @@ def cmd_start(args, out) -> int:
     now = parse_time(args.now, "--now")
     cfg = load_config(Path(args.config))
     path = find_record(Path(args.dir), record_id)
-    raw, meta = read_record(path)
+    raw, meta = read_record_for(path, record_id)
     where = path.name
     if any(k in meta for k in PERIOD_FIELDS):
         raise RfcError("RFC-ALREADY-STARTED", f"{record_id} already has a comment period recorded")
@@ -269,9 +300,9 @@ def cmd_start(args, out) -> int:
     if kind not in cfg["kinds"]:
         raise RfcError("RFC-INPUT", f"rfc_kind {kind!r} is not one of: {', '.join(cfg['kinds'])}")
     days = cfg["long_days"] if kind in cfg["long_kinds"] else cfg["short_days"]
+    close = add_days(now, days, "--now")  # before writing, so an overflow leaves the record untouched
     fields += [("comment_period_start", fmt_time(now)), ("comment_period_days", str(days))]
     write_atomic(path, insert_fields(raw, fields))
-    close = now + timedelta(days=days)
     out.write(f"{record_id} started {fmt_time(now)} kind={kind} days={days} closes {fmt_time(close)}\n")
     return 0
 
@@ -283,14 +314,14 @@ def cmd_status(args, out) -> int:
         raise RfcError("RFC-NO-RECORD", f"decision directory {directory} does not exist")
     try:
         paths = sorted(p for p in directory.iterdir() if p.name.startswith("D-") and p.name.endswith(".md")
-                       and p.is_file())
+                       and (p.is_symlink() or p.is_file()))
     except OSError as e:
         raise RfcError("RFC-NO-RECORD", f"cannot list {directory}: {e.strerror or e}") from None
     rows, bad = [], []
     for p in paths:
         try:
             _, meta = read_record(p)
-            rid = scalar(meta, "id", p.name)
+            rid = meta["id"]
             period = recorded_period(meta, p.name)
         except RfcError as e:
             bad.append(f"{e.code}: {e.message}")
@@ -312,6 +343,8 @@ def load_approvals(path: Path) -> list:
         data = json.loads(decode(raw, "RFC-INPUT", f"approvals file {path}"))
     except json.JSONDecodeError as e:
         raise RfcError("RFC-INPUT", f"approvals file {path} is not valid JSON: {e.msg} at line {e.lineno}") from None
+    except (ValueError, RecursionError):
+        raise RfcError("RFC-INPUT", f"approvals file {path} is not valid JSON or is nested too deeply") from None
     if not isinstance(data, list):
         raise RfcError("RFC-INPUT", "approvals file must be a JSON list of {actor, state, at} objects")
     out = []
@@ -332,7 +365,7 @@ def cmd_approve_check(args, out) -> int:
         raise RfcError("RFC-INPUT", "approve-check needs --approvals <exported reviews JSON>")
     cfg = load_config(Path(args.config))
     path = find_record(Path(args.dir), record_id)
-    _, meta = read_record(path)
+    _, meta = read_record_for(path, record_id)
     period = recorded_period(meta, path.name)
     if period is None:
         raise RfcError("RFC-PERIOD-OPEN", f"{record_id} has no comment period recorded; run start first")
