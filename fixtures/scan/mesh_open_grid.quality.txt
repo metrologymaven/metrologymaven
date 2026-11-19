@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_open_grid.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_open_grid
+threshold 1e-18
+triangles 12
+vertices 12
+edges 23
+boundary_edges 10
+boundary_loops 1
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 12
+angle_min 0.46364760900080615
+angle_p1 0.46364760900080615
+angle_p5 0.46364760900080615
+angle_median 0.46364760900080615
+canonical {"boundary_edges":"10","boundary_loops":"1","components":"1","degenerate":"0","edges":"23","min_angle":{"count":"12","median":"0.46364760900080615","min":"0.46364760900080615","p1":"0.46364760900080615","p5":"0.46364760900080615"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"12","vertices":"12"}

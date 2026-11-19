@@ -1,0 +1,25 @@
+# SCAN.POLY.QUAL fixture mesh_slivers: slivers: collinear, sub-threshold, needle, repeated index, coincident.
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 0 0 0
+v 1 0 0
+v 0 1 0
+v 2 0 0
+v 3 0 0
+v 4 0 0
+v 0 0 5
+v 1 0 5
+v 0.5 1e-19 5
+v 0 0 10
+v 1 0 10
+v 0.5 1e-06 10
+v 0 0 20
+v 0 0 20
+v 1 0 20
+t 0 1 2
+t 3 4 5
+t 6 7 8
+t 9 10 11
+t 0 0 1
+t 12 13 14

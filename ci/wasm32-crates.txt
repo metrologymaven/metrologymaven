@@ -9,6 +9,7 @@ fid-geo-frame
 fid-geo-index
 fid-geo-nurbs --test analytic
 fid-geo-nurbs --test eval
+fid-geo-nurbs --test invert -- ac5
 fid-geo-sel --test model
 fid-geo-types --test digest
 fid-gps --test zone_shape
@@ -21,6 +22,7 @@ fid-rdl
 fid-replay
 fid-report-pdf
 fid-scan-cmp --lib
+fid-scan-mesh
 fid-sign-core
 fid-solv
 fid-surface
