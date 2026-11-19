@@ -277,6 +277,7 @@ jobs:
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
+          python fixtures/hal/idl/base/err/make_fixtures.py --check
           python fixtures/core/sto/sql/schema/make_fixture.py --check
           python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/man/make_manifest_fixtures.py --check
@@ -285,8 +286,13 @@ jobs:
           python fixtures/man/make_implclosure_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
+          python fixtures/num/fmt/make_ang_fixtures.py --check
           python fixtures/num/la/make_la_fixtures.py --check
+          python crates/fid-report-pdf/fontgen/make_fonts.py --check
+          python fixtures/rpt/output/text/make_fixtures.py --check
+          python fixtures/rpt/output/text/check_pdf_text.py
           python tools/fixtures/geo_sel_sets.py --check
+          python tools/fixtures/geo_units_cases.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
@@ -410,10 +416,14 @@ jobs:
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
+      - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)
+        run: cargo test --target wasm32-wasip1 -p fid-report-pdf
       - name: Implementation digests are bit-identical on wasm32-wasip1 (KRN.MAN.MANI.IMPL AC-1, build-time tool)
         run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
+      - name: Unit conversion cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-frame
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)

@@ -78,6 +78,15 @@ pub enum ConfigErrorCode {
     OutOfRange,
 }
 
+impl From<ConfigErrorCode> for super::error::ErrorCode {
+    fn from(c: ConfigErrorCode) -> super::error::ErrorCode {
+        match c {
+            ConfigErrorCode::ConfigInvalid => super::error::ErrorCode::ConfigInvalid,
+            ConfigErrorCode::OutOfRange => super::error::ErrorCode::OutOfRange,
+        }
+    }
+}
+
 impl ConfigErrorCode {
     /// The wire code: `CONFIG_INVALID` or `OUT_OF_RANGE`.
     pub fn as_str(self) -> &'static str {
