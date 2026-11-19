@@ -199,6 +199,9 @@ pub enum IdError {
     AlreadyRetired(RenderId),
     /// Memory for the new entry could not be reserved.
     AllocationFailed,
+    /// The entity already has [`MAX_IDS_PER_ENTITY`] live render IDs. Unreachable while the
+    /// one-live-ID-per-identity rule holds; it guards that invariant (fail closed).
+    EntityFull(EntityId),
 }
 
 impl IdError {
@@ -211,19 +214,22 @@ impl IdError {
             IdError::DuplicateIdentity(_) => "DuplicateIdentity",
             IdError::AlreadyRetired(_) => "AlreadyRetired",
             IdError::AllocationFailed => "AllocationFailed",
+            IdError::EntityFull(_) => "EntityFull",
         }
     }
 }
 
 impl fmt::Display for IdError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: ", self.code())?;
         match self {
-            IdError::MissingIdentity => write!(f, "MissingIdentity: drawable has neither an entity ID nor a derived ID"),
-            IdError::IdSpaceExhausted => write!(f, "IdSpaceExhausted: no render ID left in this session"),
-            IdError::UnknownRenderId(raw) => write!(f, "UnknownRenderId: {raw} is not an allocated render ID"),
-            IdError::DuplicateIdentity(id) => write!(f, "DuplicateIdentity: identity is already live as render ID {id}"),
-            IdError::AlreadyRetired(id) => write!(f, "AlreadyRetired: render ID {id} is already retired"),
-            IdError::AllocationFailed => write!(f, "AllocationFailed: could not reserve memory for the entry"),
+            IdError::MissingIdentity => write!(f, "drawable has neither an entity ID nor a derived ID"),
+            IdError::IdSpaceExhausted => write!(f, "no render ID left in this session"),
+            IdError::UnknownRenderId(raw) => write!(f, "{raw} is not an allocated render ID"),
+            IdError::DuplicateIdentity(id) => write!(f, "identity is already live as render ID {id}"),
+            IdError::AlreadyRetired(id) => write!(f, "render ID {id} is already retired"),
+            IdError::AllocationFailed => write!(f, "could not reserve memory for the entry"),
+            IdError::EntityFull(e) => write!(f, "entity {e} already has {MAX_IDS_PER_ENTITY} live render IDs"),
         }
     }
 }
@@ -295,7 +301,8 @@ impl IdTable {
     /// Binds a new render ID to `identity`. Fails, allocating nothing and leaving the table
     /// unchanged, with [`IdError::MissingIdentity`] for `None`, [`IdError::DuplicateIdentity`]
     /// if the identity is live already, [`IdError::IdSpaceExhausted`] at the limit, and
-    /// [`IdError::AllocationFailed`] if memory cannot be reserved.
+    /// [`IdError::AllocationFailed`] if memory cannot be reserved ([`IdError::EntityFull`]
+    /// guards the per-entity bound and cannot occur while identities are unique).
     pub fn register(&mut self, identity: Option<Identity>) -> Result<RenderId, IdError> {
         let identity = identity.ok_or(IdError::MissingIdentity)?;
         let entity = identity.entity();
@@ -306,12 +313,12 @@ impl IdTable {
         if self.render_ids(entity).len() >= MAX_IDS_PER_ENTITY {
             // Unreachable while identities are unique (one entity drawable plus one per view
             // operation), kept so a broken invariant fails closed instead of overflowing.
-            return Err(IdError::AllocationFailed);
+            return Err(IdError::EntityFull(entity));
         }
         self.by_render.try_reserve(1).map_err(|_| IdError::AllocationFailed)?;
         // IDs grow monotonically, so appending keeps every list ascending.
         if !self.by_entity.entry(entity).or_default().push(id) {
-            return Err(IdError::AllocationFailed);
+            return Err(IdError::EntityFull(entity));
         }
         self.by_render.push(Slot::Live(identity));
         self.live += 1;

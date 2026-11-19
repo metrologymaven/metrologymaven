@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-render]
+built_pr: 224
 satisfies: [REQ-VIZ.RENDER.SCENE-001, REQ-VIZ.RENDER.SCENE-002, REQ-VIZ.RENDER.SCENE-005]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, CORE.PRJ.TREE]
@@ -66,7 +67,7 @@ Give every drawable a dense, session-local u32 render ID bound to an entity ID o
   - A derived drawable may be registered before, after or without its source entity's own drawable; whether the source exists is `VIZ.RENDER.SCENE.PROJ`'s concern, not the table's.
   - Lookups: `identity(RenderId) -> Result<Slot, IdError>` (`Slot::Retired` for a tombstone, `UnknownRenderId` for an ID never allocated); `resolve(raw: u32)` for ID-buffer values gives `Ok(None)` for 0 and `UnknownRenderId` for any value never allocated (a corrupt read fails closed, it is not a miss); `render_ids(EntityId)` gives the live IDs only (own drawable plus derived), ascending; `render_id_of(Identity)` gives the live ID of one identity. Tombstones keep the identity they were bound to.
   - `retire` returns the retired identity; retiring a tombstone fails `AlreadyRetired`, an unallocated ID `UnknownRenderId`. Tombstones plus no reuse are the generation guard: no separate generation counter is stored.
-  - Errors (`IdError`, with stable `code()`): `MissingIdentity`, `IdSpaceExhausted`, `UnknownRenderId(u32)`, `DuplicateIdentity(RenderId)`, `AlreadyRetired(RenderId)`, `AllocationFailed` (the forward table's `try_reserve` failed). Every failing call leaves the table unchanged. Check order in `register`: missing identity, duplicate, exhaustion, memory.
+  - Errors (`IdError`, with stable `code()`): `MissingIdentity`, `IdSpaceExhausted`, `UnknownRenderId(u32)`, `DuplicateIdentity(RenderId)`, `AlreadyRetired(RenderId)`, `AllocationFailed` (the forward table's `try_reserve` failed), `EntityFull(EntityId)` (an entity already holds `MAX_IDS_PER_ENTITY` = 7 live IDs; unreachable while the one-live-ID-per-identity rule holds, kept as a fail-closed guard of that invariant). Every failing call leaves the table unchanged. Check order in `register`: missing identity, duplicate, exhaustion, entity bound, memory.
   - Fixture `fixtures/viz/scene-ids`: `make_fixture.py` (Python `random.Random(21)`) writes `drawables.txt` (800 drawables in registration order with their expected IDs; distinct (source, op) pairs) and `by_entity.txt` (expected reverse lookups). AC-5 uses SplitMix64 seeded 21 over 10 000 sequences of 1..64 steps on a table limited to 48 IDs, with 4 entities and all 7 identities each.
   - The performance budget is a release-mode bench test (`bench_budget`, ignored in CI: shared runners make wall-clock limits flaky); CI runs 10^6 registrations without a time limit.
 

@@ -376,6 +376,7 @@ fn identity_entity_and_error_texts() {
         (IdError::DuplicateIdentity(rid(1)), "DuplicateIdentity"),
         (IdError::AlreadyRetired(rid(1)), "AlreadyRetired"),
         (IdError::AllocationFailed, "AllocationFailed"),
+        (IdError::EntityFull(e), "EntityFull"),
     ];
     for (err, code) in all {
         assert_eq!(err.code(), code);
