@@ -5,13 +5,13 @@
 //! `decimal` module), never from this crate. CI runs these tests on Linux x86-64, Windows
 //! x86-64, macOS ARM64 and wasm32-wasip1 under wasmtime; the output digest is compared with
 //! the one the oracle wrote, so a pass on every target shows identical outputs (AC-7).
-//! The coarse-ladder cases (`undecidable_rounding`, `undecidable_side`) run as a unit test
-//! in `src/fmt/ang.rs`, because the ladder is not a public input.
+//! The coarse-ladder cases (`undecidable_rounding`, `undecidable_side`) go through the
+//! hidden test hook `format_with_ladder`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use core::cmp::Ordering;
 
-use fid_num::fmt::ang::{format, PiEnclosure, PI_LADDER};
+use fid_num::fmt::ang::{format, format_with_ladder, PiEnclosure, PI_LADDER};
 use fid_num::fmt::{FmtError, FormatSpec, FormatterId, Limits, Precision, Reported, SideOutcome, Unit};
 use fid_num::kdec::{self, Decimal};
 use fid_num::NumError;
@@ -379,4 +379,50 @@ fn reported_record() {
     s.limits = Some(Limits { lower: Some(Decimal::ZERO), upper: Some(Decimal::ZERO) });
     let r = format(-0.0, &s).unwrap();
     assert_eq!((r.value.as_str(), r.side), ("0:00:00", SideOutcome::Within));
+}
+
+fn leak(s: &str) -> &'static str {
+    Box::leak(s.to_string().into_boxed_str())
+}
+
+/// REQ-002 .. -004 off the real ladder: the coarse ladder of `ang-ladder-v1.txt`
+/// (enclosures of 3, 6 and 10 decimals) moves up the ladder, returns `undecidable_rounding`
+/// and reports `undecidable_side` exactly as the oracle says, case by case and by digest.
+#[test]
+fn coarse_ladder_matches_oracle() {
+    let text = read("ang-ladder-v1.txt");
+    let mut rungs = Vec::new();
+    let mut digest = None;
+    let mut h = Sha256Hasher::new();
+    let mut n = 0;
+    let mut seen = [false; 4];
+    for line in text.lines() {
+        if let Some(r) = line.strip_prefix("# rung ") {
+            let (lo, hi) = r.split_once(' ').unwrap();
+            let digits = u16::try_from(lo.len() - 2).unwrap();
+            rungs.push(PiEnclosure { lo: leak(lo), hi: leak(hi), digits });
+            continue;
+        }
+        if let Some(d) = line.strip_prefix("# outputs-sha256: ") {
+            digest = Some(d.to_string());
+            continue;
+        }
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
+        let c = parse_case(&line.split(' ').collect::<Vec<_>>());
+        let got = show(&format_with_ladder(c.x, &c.spec, &rungs), &c.spec);
+        assert_eq!(got, c.expect, "line {line}");
+        seen[0] |= got == "err:undecidable_rounding";
+        seen[1] |= got.contains(":undecidable:");
+        seen[2] |= got.starts_with("ok:") && got.ends_with(":1");
+        seen[3] |= got.starts_with("ok:") && got.ends_with(":2");
+        h.update(got.as_bytes());
+        h.update(b"\n");
+        n += 1;
+    }
+    assert_eq!(rungs.len(), 3);
+    assert_eq!(n, 3000);
+    assert_eq!(seen, [true; 4], "undecidable rounding, undecidable side, rung 1, rung 2");
+    assert_eq!(Some(h.finish()), digest);
 }

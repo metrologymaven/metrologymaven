@@ -200,7 +200,8 @@ pub enum FmtError {
     UndecidableRounding,
     /// The internal big integer ran out of limbs. Unreachable for any finite `f64` within
     /// the precision bounds (see the module documentation of `fmt::len`); kept so that an
-    /// impossible case is an error and never a wrong string.
+    /// impossible case is an error and never a wrong string. `fmt::ang` also reports a
+    /// malformed enclosure of pi this way (only reachable through its test hook).
     Capacity,
 }
 

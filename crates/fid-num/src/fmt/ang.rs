@@ -176,12 +176,19 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
     format_with_ladder(x, spec, &PI_LADDER)
 }
 
-/// [`format`] over a given ladder. Every rung must enclose pi strictly and each must lie
-/// inside the one before; the tests pass a deliberately coarse ladder to exercise moving up
-/// the ladder and both undecidable outcomes.
-pub(crate) fn format_with_ladder(x: f64, spec: &FormatSpec, ladder: &[PiEnclosure]) -> Result<Reported, NumError> {
+/// Test hook: [`format`] over a given ladder, so that the tests can pass a deliberately
+/// coarse ladder and exercise moving up the ladder and both undecidable outcomes. Each rung
+/// must be nested inside the one before (the reported index assumes it). Every rung is
+/// checked to contain the tightest rung of [`PI_LADDER`], so it encloses pi and no ladder
+/// can make an output wrong; a rung that does not, or a malformed one, gives
+/// [`FmtError::Capacity`] (`big_integer_capacity`) and no string.
+#[doc(hidden)]
+pub fn format_with_ladder(x: f64, spec: &FormatSpec, ladder: &[PiEnclosure]) -> Result<Reported, NumError> {
     if spec.formatter != FormatterId::ANGLE_V1 {
         return Err(FmtError::UnitNotSupported.at("fmt"));
+    }
+    if ladder != PI_LADDER.as_slice() {
+        check_encloses_pi(ladder)?;
     }
     let scale = match spec.unit {
         Unit::Rad => return len::format_with(OP, &RAD, x, spec),
@@ -290,6 +297,24 @@ fn parse_pi(s: &str, digits: u16) -> Result<BigA, NumError> {
         return Err(capacity());
     }
     Ok(b)
+}
+
+/// Every rung contains the tightest rung of [`PI_LADDER`] (so it encloses pi).
+fn check_encloses_pi(ladder: &[PiEnclosure]) -> Result<(), NumError> {
+    let Some(tight) = PI_LADDER.last() else { return Err(capacity()) };
+    let (t_lo, t_hi) = (parse_pi(tight.lo, tight.digits)?, parse_pi(tight.hi, tight.digits)?);
+    for r in ladder {
+        let shift = tight.digits.checked_sub(r.digits).ok_or_else(capacity)?;
+        let (mut lo, mut hi) = (parse_pi(r.lo, r.digits)?, parse_pi(r.hi, r.digits)?);
+        lo.mul_pow10(u32::from(shift));
+        hi.mul_pow10(u32::from(shift));
+        check(OP, &lo)?;
+        check(OP, &hi)?;
+        if lo.cmp_mag(&t_lo) == Ordering::Greater || hi.cmp_mag(&t_hi) == Ordering::Less {
+            return Err(capacity());
+        }
+    }
+    Ok(())
 }
 
 /// The two ends of the value interval at one rung, as `fmt::len` magnitudes.
@@ -452,7 +477,7 @@ fn render_dms(neg: bool, out: &Out<ANG_LIMBS>) -> Result<String, NumError> {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use crate::fmt::types::{Limits, Precision};
+    use crate::fmt::types::Precision;
 
     /// pi * 10^digits from Machin's formula, pi = 16 atan(1/5) - 4 atan(1/239), on the
     /// crate's own big integer with `guard` extra decimals; the error is below `10^6`
@@ -541,76 +566,16 @@ mod tests {
         };
         let e = format_with_ladder(1.0, &spec, &[]).unwrap_err();
         assert_eq!(FmtError::of(&e), Some(FmtError::UndecidableRounding));
-    }
-
-    fn show(r: &Result<Reported, NumError>) -> String {
-        match r {
-            Ok(v) => {
-                let enc = v.exact_conversion.pi_enclosure.map_or("-".to_string(), |i| i.to_string());
-                let tie = u8::from(v.tie_at_max_precision);
-                format!("ok:{}:{}:{}:{}:{}", v.value, v.digits_added, tie, v.side.name(), enc)
+        // A rung that does not enclose pi is refused, never used.
+        for (lo, hi) in [("3.15", "3.16"), ("3.13", "3.14"), ("3.1415", "3.1417")] {
+            let bad = [PiEnclosure { lo, hi, digits: (lo.len() - 2) as u16 }];
+            let whole = FormatSpec { precision: Precision::Decimals(0), ..spec };
+            let r = format_with_ladder(1.0, &whole, &bad);
+            let ok = lo == "3.1415";
+            assert_eq!(r.is_ok(), ok, "{lo} {hi}");
+            if !ok {
+                assert_eq!(FmtError::of(&r.unwrap_err()), Some(FmtError::Capacity));
             }
-            Err(e) => format!("err:{}", FmtError::of(e).unwrap().detail()),
         }
-    }
-
-    fn leak(s: &str) -> &'static str {
-        Box::leak(s.to_string().into_boxed_str())
-    }
-
-    /// The coarse ladder of `fixtures/num/fmt/ang-ladder-v1.txt` (enclosures of 3, 6 and 10
-    /// decimals): moving up the ladder, `undecidable_rounding` and `undecidable_side` all
-    /// match the oracle, case by case and by digest.
-    #[test]
-    fn coarse_ladder_matches_oracle() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/num/fmt/ang-ladder-v1.txt");
-        let text = std::fs::read_to_string(path).unwrap();
-        let mut rungs = Vec::new();
-        let mut digest = None;
-        let mut h = fid_testkit::Sha256Hasher::new();
-        let mut n = 0;
-        let mut seen = [false; 4];
-        for line in text.lines() {
-            if let Some(r) = line.strip_prefix("# rung ") {
-                let (lo, hi) = r.split_once(' ').unwrap();
-                let digits = u16::try_from(lo.len() - 2).unwrap();
-                rungs.push(PiEnclosure { lo: leak(lo), hi: leak(hi), digits });
-                continue;
-            }
-            if let Some(d) = line.strip_prefix("# outputs-sha256: ") {
-                digest = Some(d.to_string());
-                continue;
-            }
-            if line.starts_with('#') || line.is_empty() {
-                continue;
-            }
-            let f: Vec<&str> = line.split(' ').collect();
-            assert_eq!(f.len(), 7);
-            let x = f64::from_bits(u64::from_str_radix(f[0], 16).unwrap());
-            let unit = match f[2] {
-                "deg" => Unit::Deg,
-                "dms" => Unit::Dms,
-                u => panic!("unit {u}"),
-            };
-            let num: u8 = f[3][1..].parse().unwrap();
-            let precision = if f[3].starts_with('d') { Precision::Decimals(num) } else { Precision::SigDigits(num) };
-            let lim = |s: &str| (s != "-").then(|| Decimal::parse(s).unwrap());
-            let (lower, upper) = (lim(f[4]), lim(f[5]));
-            let limits = (lower.is_some() || upper.is_some()).then_some(Limits { lower, upper });
-            let spec = FormatSpec { formatter: FormatterId::ANGLE_V1, unit, precision, limits };
-            let got = show(&format_with_ladder(x, &spec, &rungs));
-            assert_eq!(got, f[6], "line {line}");
-            seen[0] |= got == "err:undecidable_rounding";
-            seen[1] |= got.contains(":undecidable:");
-            seen[2] |= got.ends_with(":1") && got.starts_with("ok:");
-            seen[3] |= got.ends_with(":2") && got.starts_with("ok:");
-            h.update(got.as_bytes());
-            h.update(b"\n");
-            n += 1;
-        }
-        assert_eq!(rungs.len(), 3);
-        assert_eq!(n, 3000);
-        assert_eq!(seen, [true; 4], "undecidable rounding, undecidable side, rung 1, rung 2");
-        assert_eq!(Some(h.finish()), digest);
     }
 }
