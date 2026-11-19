@@ -6,8 +6,10 @@
 //! model instead so that encoding is canonical by construction.
 //!
 //! Modules [`projection`] and [`names`] hold the surface projection model and name derivation
-//! (spec node `AUTO.SURF.PROJ`).
+//! (spec node `AUTO.SURF.PROJ`). Module [`jobs`] holds the invocation tracker with progress,
+//! cancellation and honest `not_run` / `no_reply` timeouts (spec node `AUTO.SURF.JOBS`).
 
+pub mod jobs;
 pub mod names;
 pub mod projection;
 
