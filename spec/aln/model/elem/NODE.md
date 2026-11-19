@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-align]
+built_pr: 230
 satisfies: [REQ-ALN.MODEL-001, REQ-ALN.MODEL-002]
 covers: []
 depends_on: [CORE.PRJ, CORE.DEP, GEO.FRAME]
@@ -17,7 +19,7 @@ determinism: D0
 cli: [fid align list-alignments, fid align get-alignment]
 mcp: [align_list_alignments, align_get_alignment]
 journal: [align.list_alignments@1, align.get_alignment@1]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # ALN.MODEL.ELEM: Alignment element type and dependency-graph registration
@@ -72,10 +74,24 @@ Defines the `Alignment` element that every alignment solver produces, the solver
 - **Determinism:** D0; serialisation and digest are canonical, no floating-point work beyond copying values.
 - **Performance budget:** list of 10,000 alignments in under 50 ms on reference hardware [unverified until measured].
 - **Crate:** `fid-align` (document-model layer above the kernel; crate name provisional).
+- **Pinned in implementation (`fid-align`, layer `engine` because it uses `fid-dep`):**
+  - *Types reused:* transform = `fid_geo_frame::Transform` (validated rigid or similarity); parameters = `fid_geo_frame::AuthoredQuantity` (authored text, unit symbol, SI value from one rounding; length and angle units only, an unknown unit symbol is `unknown_kind`); algorithm ID = `fid_kci::AlgorithmId` (`module.feature.method@major.minor.patch`); digests = `fid_types::Digest`; IDs = `fid_uuid::Uuid` drawn as UUIDv7 through `fid_project::IdService`; edges = `fid_dep::EdgeIndex` / `EdgesSet`; command records = `fid_registry::CommandDef`.
+  - *Element form* (RFC 8785, every key always present): `algorithm`, `digest`, `failure` (null, or the error code exactly when `status` is `failed`), `id`, `inputs` (`[{digest, id}]` in command order), `params` (`{name: {si, text, unit}}`, names `^[a-z][a-z0-9_]*$` at most 64 bytes, at most 64 params), `parent` (null or `{digest, id}`), `provenance` (`{kind: human|agent, principal, state: human|proposed|adopted}`), `report` (`{digest, id}`), `status`, `transform` (`{kind: rigid, r: 3x3 row-major, t: [3]}` or `{kind: similarity, r, s, t}`). Every float is `"0x"` + 16 lowercase hex digits of its IEEE 754 bits. Transforms are canonical: every `-0.0` in the rotation and translation is normalised to `+0.0` before digesting (decoding refuses a stored `-0.0` as `bad_element`), and a similarity scale must be a positive normal float (a subnormal scale is `degenerate_transform`). Authored parameter SI values keep their sign. Decoding is strict: exact key set, canonical lowercase IDs (nil and max refused), known enumerations (`unknown_kind` otherwise), parameter names of the pinned grammar (`bad_element`), finite floats (`non_finite`), transform re-validated by its GEO.FRAME constructor (`degenerate_transform`), param text re-converted to the stored SI bits, digest recomputed (`digest_mismatch`), at most 1 MiB and depth 8, duplicate keys refused.
+  - *Content digest* (REQ-003): SHA-256 of canonical `{"algorithm", "inputs": [input digests in command order], "params": {name: SI bits}, "parent": null | {digest, id}, "report": report digest, "transform"}`. Status, failure, provenance, the element ID and input IDs are not hashed.
+  - *Parent reference:* the parent is stored as `{id, digest}` so its digest can be hashed (REQ-003); `list_alignments` summaries show only the parent ID.
+  - *Provenance on creation:* a human principal gives state `human`, an agent gives `proposed` (ALN.MODEL.ADOPT REQ-001/002); an agent can never hold state `human`. Principal IDs: 1..=128 printable ASCII, no space, no upper case.
+  - *Creation order* (all or nothing): budget (65,536 alignments) -> provenance -> inputs (at most 1024; each known to the project and the edge index, else `input_missing`; no repeats, `duplicate_input`) -> solver for exactly the ID and version (`method_unavailable`) -> parent (an alignment, else `not_found`; status `ok`, else `parent_unusable`; the same rule applies to every input that is itself an alignment) -> solve (solver error returned unchanged) -> draw the UUIDv7 (`id_collision` if taken) -> digest -> one `EdgesSet` from the inputs and parent -> insert. Nothing before the solve draws an ID observation. The caller journals the returned element and `EdgesSet`; on error there is nothing to journal.
+  - *Solver contract:* `solve(inputs: &[InputRef], params: &ParamSet, parent_pose: Option<&Transform>) -> Result<SolverOutput, SolverError>`; `SolverOutput.status` is `ok`, `not_converged` or `ambiguous` (only the system sets `failed` and `outdated`); solver error codes match `^[a-z][a-z0-9_]*$`, at most 64 bytes; a nil or max report ID is refused.
+  - *Recompute:* nodes = the changed elements plus everything downstream of any of them, found in one walk over the union and refused with `input_limit` once over 65,536; visited in topological order, ties by ascending ID. A non-alignment element in the pass is pending (CORE.DEP has not recomputed it against this pass, so its digest is stale) when it is not itself in `changed`, or when any of its dependencies is an alignment re-solved in this pass, even if it is in `changed`; a pending node counts as outdated for everything downstream, so no alignment is ever solved against a stale digest. Callers must keep `world` (the element-digest lookup) holding current digests; tracking pending state across passes belongs to CORE.DEP.RECOMP, not this leaf. Per alignment: an upstream node failed, outdated or pending in this pass, or the parent or any input that is an alignment is not `ok` -> `outdated`; the parent gone or an input digest unreadable -> `failed`/`input_missing`; no solver for exactly the stored version -> `failed`/`method_unavailable`; solver error -> `failed`/its code; else inputs (fresh digests), parent digest, transform, report, status and digest are replaced in place, ID, algorithm, params and provenance kept. A `failed` or `outdated` alignment keeps its previous content and digest. The pass is one `RecomputeEntry {changed, items: [{id, status, failure, digest_before, digest_after}]}`, committed only when it completes.
+  - *Commands:* list result sorted by alignment ID; `parent` and `status` filters both apply; params at most 64 KiB and depth 8, unknown keys `bad_params`, unknown status `unknown_kind`. CLI `fid align list-alignments [--parent <id>] [--status <s>] [--json]` and `get-alignment <id> [--json]` and MCP `align_list_alignments` / `align_get_alignment` build the same typed params and call one handler that returns canonical bytes; each call is appended to the caller's Activity Log, never the Record Journal.
+  - *Error codes:* `method_unavailable`, `input_missing`, `not_found`, solver codes unchanged, plus `duplicate_input`, `parent_unusable`, `id_collision`, `bad_params`, `bad_element`, `unknown_kind`, `non_finite`, `degenerate_transform`, `bad_quantity`, `digest_mismatch`, `duplicate_algorithm`, `input_limit`, edge and ID errors passed through, `internal`.
+  - *Parameters and edges (REQ-004):* parameters are values stored inside the alignment, not separate entities, so there is no entity to draw a parameter edge from; a parameter change is an update of the alignment itself, whose dependents CORE.DEP propagates. Edges are drawn from each input and the parent.
 
 ## Test fixtures
 
 `fixtures/aln/model/chain3`: produced by a seeded generator in the test suite (seed 1); one 10,000-triangle synthetic block mesh, three LSQ planes, three alignments chained A0 to A1 to A2 using a stub solver that returns a fixed transform. Project-generated, CC-BY-4.0.
+
+As built: `fixtures/aln/model/make_fixtures.py` (stdlib Python, `--check`) is the independent reference. Seed 1 drives SplitMix64 for the UUIDv7 observations. The mesh is a stand-in element with a content digest, not 10,000 triangles, and the three planes are given by origin and normal (no LSQ fit), because the stub solver reads only input digests and parameters. The stub `aln.stub.fixed` returns R = [[0,-1,0],[1,0,0],[0,0,1]] and t = (tx, ty, tz); version 1.0.0 is rigid (A0, A2), 1.1.0 a similarity with s = 1.5 (A1). The script writes `project.txt`, `expected.txt` (IDs, digests, digests after the 1 mm shift of P1), `get-a2.json` and `list.json` (expected output bytes).
 
 ## Build prompt
 

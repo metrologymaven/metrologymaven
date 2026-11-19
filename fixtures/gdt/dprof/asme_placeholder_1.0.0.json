@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "schema": "fid.defaults-profile/1",
+  "keys": {
+    "placeholder.variant.flatness": "variant-a",
+    "dmt:asme/position/none@1": "variant-b",
+    "placeholder.assoc.default": "assoc-x",
+    "placeholder.synthetic": true,
+    "placeholder.count": 7,
+    "placeholder.list": ["b", "a"]
+  },
+  "dialect": "asme",
+  "edition": "y14.5-2018"
+}

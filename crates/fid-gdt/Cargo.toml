@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (spec node GDT.RES.ROWFLOW.ROSTER)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF) and governing specs (GDT.CHAR.SPEC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,15 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
+# GDT.CHAR.DPROF: profiles are read through approved import handles (agents never pass raw
+# paths, CONSTITUTION §3); the principal type comes from here too. Same layer (services).
+fid-io-reg = { path = "../fid-io-reg" }
+# GDT.RES.SCHEMA: the DMT schema owns the defaults-profile key vocabulary that DPROF checks
+# profiles against, and the label grammar SPEC uses for standard designators and editions
+# (model layer, below services).
+fid-gps = { path = "../fid-gps" }
+# GDT.CHAR.DPROF AC-7: replay outcomes and their aggregation (engine layer, below services).
+fid-replay = { path = "../fid-replay" }
 
 [lints]
 workspace = true

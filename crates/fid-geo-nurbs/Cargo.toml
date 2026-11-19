@@ -1,14 +1,16 @@
 [package]
 name = "fid-geo-nurbs"
-description = "Metrology Maven B-spline and NURBS curves and surfaces: validated data types (spec node GEO.NURBS)"
+description = "Metrology Maven B-spline and NURBS curves and surfaces: validated data types and evaluation (spec node GEO.NURBS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate (KNP-1): no dependencies.
+# Kernel crate (KNP-1): no third-party dependencies. Only fid-num (num layer): the KNP-1
+# correctly rounded `sqrt` for normals, tangents and curvatures (GEO.NURBS.EVAL).
 [dependencies]
+fid-num = { path = "../fid-num" }
 
 # Test-only: SHA-256 of the GEO.NURBS.REF fixtures against their manifest (layer test-support).
 [dev-dependencies]

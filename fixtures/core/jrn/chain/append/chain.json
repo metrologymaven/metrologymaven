@@ -1,0 +1,6898 @@
+{
+ "stream": "record",
+ "entries": [
+  {
+   "name": "w2_000",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": null,
+    "time": {
+     "utc": "2026-11-19T10:00:00Z",
+     "mono_ns": "5000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "0",
+     "args": {
+      "feature": "F-0000",
+      "nominal_um": 12000,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 0
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0000",
+       "digest": "sha256:5c4c31c6bab32020d5675df0e3bf73f8b9e77bf4942840986a6ac404a57959cc"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "07c77df4594f9b17dd7b04ade2cd108b",
+    "args": "0dd8bc0f968249648642fef281c110bf",
+    "events": "cb3b69be5bb77a4c670a5230842f967a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5c4c31c6bab32020d5675df0e3bf73f8b9e77bf4942840986a6ac404a57959cc",
+     "content": "nominal table 0\n"
+    }
+   ],
+   "seq": "1",
+   "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+   "hash": "sha256:a3c64621bec70a8947d70c214eddde7543cff924be658d196d2a4e18c3fed04f",
+   "payload_digest": "sha256:51c16670d111691e5eb4ab1ab495a058659f1a6d83b4909dcfa0ba0b6e700ebf"
+  },
+  {
+   "name": "w2_001",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:f36b45ae818809ee24ae2489edabfe3cf2a12627b6929c07fc7a3b885d414d44",
+    "time": {
+     "utc": "2026-11-19T10:00:01.001Z",
+     "mono_ns": "6000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "1",
+     "args": {
+      "feature": "F-0001",
+      "nominal_um": 12001,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 1
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0001",
+       "digest": "sha256:05a104555e20a624f92a3f7626cabd21a888b9c4d5f72c40d495256b5bb8f376"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "88dcc524663e80cebd0db954e0ea677f",
+    "args": "0bb465bd5e2c27fba7b0d9811f4e9b2a",
+    "events": "4a652e4fd4975fa8ffe7f813beb23b80"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:05a104555e20a624f92a3f7626cabd21a888b9c4d5f72c40d495256b5bb8f376",
+     "content": "nominal table 1\n"
+    }
+   ],
+   "seq": "2",
+   "prev": "sha256:a3c64621bec70a8947d70c214eddde7543cff924be658d196d2a4e18c3fed04f",
+   "hash": "sha256:ca0095607faa97076f5790616160f1395b5f3b625fa1f1bc08eb1cc078ee9aa9",
+   "payload_digest": "sha256:7fef6e8b024a3f96ba706e010ccb468cad8acbf4f1015e8d094c5c88cb8bbb2a"
+  },
+  {
+   "name": "w2_002",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:046977fe25d893edf85927c4a038248b161c4b13431d0b5b9489e8bf179d89ae",
+    "time": {
+     "utc": "2026-11-19T10:00:02Z",
+     "mono_ns": "7000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "2",
+     "args": {
+      "feature": "F-0002",
+      "nominal_um": 12002,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 2
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0002",
+       "digest": "sha256:f14a51e4efdb411c8e9ed03216265f1bf6507fe8b94a7fe449a62d20f5a0350e"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "0b16fd3067527f165c509711e1eaccc6",
+    "args": "1e715c54c36ab55e2eb624555dc4c048",
+    "events": "4ab489ada22658b4090acb1b2d256883"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:f14a51e4efdb411c8e9ed03216265f1bf6507fe8b94a7fe449a62d20f5a0350e",
+     "content": "nominal table 2\n"
+    }
+   ],
+   "seq": "3",
+   "prev": "sha256:ca0095607faa97076f5790616160f1395b5f3b625fa1f1bc08eb1cc078ee9aa9",
+   "hash": "sha256:92bc3e83365af1143909b2ae7675a16c94720bbb1af0dea6ca9ec0f2d545e86b",
+   "payload_digest": "sha256:1a843e04ca351d5570583670dca2ea330ca5a9494b742585a15df0dff4444b7b"
+  },
+  {
+   "name": "w2_003",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:4cefe3f00029ec94bf7071c7ce0fbe939bebdd387c3ff4c80b3dcecee5bd0f0f",
+    "time": {
+     "utc": "2026-11-19T10:00:03Z",
+     "mono_ns": "8000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "3",
+     "args": {
+      "feature": "F-0003",
+      "nominal_um": 12003,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 3
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0003",
+       "digest": "sha256:ef709843350a142deeecb469ce84913e717e42efb2d5b8bf5b54c9c34e03fe22"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3aca1a8b1cf6b54e692da5ad02c352b8",
+    "args": "2eb08a11cf8e59ff993daea2018bc031",
+    "events": "342a45482267cdf0de5b1415303a6643"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ef709843350a142deeecb469ce84913e717e42efb2d5b8bf5b54c9c34e03fe22",
+     "content": "nominal table 3\n"
+    }
+   ],
+   "seq": "4",
+   "prev": "sha256:92bc3e83365af1143909b2ae7675a16c94720bbb1af0dea6ca9ec0f2d545e86b",
+   "hash": "sha256:c4a037b58d6e04b4960dde0589a98f8f64643453f817276f259553f86477b240",
+   "payload_digest": "sha256:1b96a0c7468fdd0d89db2b6802f97c81c0f91e9ed295ee95c79f0927f62f604f"
+  },
+  {
+   "name": "w2_004",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:3e8ceaf68a161f9dabda59e03b5ab8ec86aa5af0f4c2c92a5e633d2a379a6297",
+    "time": {
+     "utc": "2026-11-19T10:00:04.004Z",
+     "mono_ns": "9000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "4",
+     "args": {
+      "feature": "F-0004",
+      "nominal_um": 12004,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 4
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0004",
+       "digest": "sha256:eb6c34a7eb88a6031305b1a21df414b8976742b193148a599509abfb64d4c8d2"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "1c4fc61259988cf509ed6f485b507242",
+    "args": "24036bb47b4435bf0dfddb1f5a757056",
+    "events": "37cb567cfca1934423cde79eb0462394"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:eb6c34a7eb88a6031305b1a21df414b8976742b193148a599509abfb64d4c8d2",
+     "content": "nominal table 4\n"
+    }
+   ],
+   "seq": "5",
+   "prev": "sha256:c4a037b58d6e04b4960dde0589a98f8f64643453f817276f259553f86477b240",
+   "hash": "sha256:c21315be23a4f3702a37be25615881bf7880c2fc4dd55e453e7e4903ab232f9d",
+   "payload_digest": "sha256:8d1601e7e3b89e5ec5fd22a1dc3f750c15e4a0b57826d7b807f6718b616e0922"
+  },
+  {
+   "name": "w2_005",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:ba485f214ab6bfd0d0c84c3a256cdcce13742e0727a8638dd363c7868529511c",
+    "time": {
+     "utc": "2026-11-19T10:00:05Z",
+     "mono_ns": "10000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "5",
+     "args": {
+      "feature": "F-0005",
+      "nominal_um": 12005,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 5
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0005",
+       "digest": "sha256:b81014e7cd89eee13fd2f8dfc4f4a6656ecf12e8eab16d9fea664660159aa6ba"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "288acad9ecdf47b26f2cdb73ce35c40f",
+    "args": "6acc932be5506677a530185c55cea967",
+    "events": "d2e217994fc9b7a552fdcc99588757a4"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:b81014e7cd89eee13fd2f8dfc4f4a6656ecf12e8eab16d9fea664660159aa6ba",
+     "content": "nominal table 5\n"
+    }
+   ],
+   "seq": "6",
+   "prev": "sha256:c21315be23a4f3702a37be25615881bf7880c2fc4dd55e453e7e4903ab232f9d",
+   "hash": "sha256:508beaf84ef00ff6fe41132427649e77c519512083fefec0e24eef6de30bb48e",
+   "payload_digest": "sha256:a1610dca56deb9f5d4e11567d12a30341196d0b6d272359411bbb3b6d9a8201a"
+  },
+  {
+   "name": "w2_006",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:b296f1848231d6b356a5573b66ecc087debbe3e09313d04d838ebaa69e49bbbc",
+    "time": {
+     "utc": "2026-11-19T10:00:06Z",
+     "mono_ns": "11000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "6",
+     "args": {
+      "feature": "F-0006",
+      "nominal_um": 12006,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 6
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0006",
+       "digest": "sha256:1e2c4b4cc76066c3aa83d99ae31d257c150977913adb614db60427383485296e"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "b9148a79b09ef56269eab160193714b2",
+    "args": "1c0dd2828a431cbda0fe3e3db81c38dd",
+    "events": "a040338613524c92b29d399f3695b102"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:1e2c4b4cc76066c3aa83d99ae31d257c150977913adb614db60427383485296e",
+     "content": "nominal table 6\n"
+    }
+   ],
+   "seq": "7",
+   "prev": "sha256:508beaf84ef00ff6fe41132427649e77c519512083fefec0e24eef6de30bb48e",
+   "hash": "sha256:9f86f2566e0a2b26d9f986014a3f737c61c35fb9a1626d0fb311b083dc9987a9",
+   "payload_digest": "sha256:1990654c5c271a94b3677819a20715fae8924984c5aea9534a7b5ecb8e3be3a9"
+  },
+  {
+   "name": "w2_007",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:da75842848e6bef4dda5d1529a354b17b08480fd82a00efef127e09630115b26",
+    "time": {
+     "utc": "2026-11-19T10:00:07.007Z",
+     "mono_ns": "12000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "7",
+     "args": {
+      "feature": "F-0007",
+      "nominal_um": 12007,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 7
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0007",
+       "digest": "sha256:44d35641f41a7b75ffa78a174d6a995247803edf67597370917b07df3fe63779"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "6a46661a0277bbcdf93d46debf76a4cc",
+    "args": "0783c03233c24ec6f24bf9dfdd800a25",
+    "events": "69bb2dbcce0a4a4a699d043ec56ad2d3"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:44d35641f41a7b75ffa78a174d6a995247803edf67597370917b07df3fe63779",
+     "content": "nominal table 7\n"
+    }
+   ],
+   "seq": "8",
+   "prev": "sha256:9f86f2566e0a2b26d9f986014a3f737c61c35fb9a1626d0fb311b083dc9987a9",
+   "hash": "sha256:c20395184ef4bca66a3cf0fad878e7e6607ebb4a70c806aafe0b7affd40ede13",
+   "payload_digest": "sha256:11c77dc53a5524153107c29ad0d96c489e15faf3022d80d1c19b681a780f2b07"
+  },
+  {
+   "name": "w2_008",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:01b526edf5416eaa377ee7aabbf1c6907378fa11bcd1c555ac6f713427e08109",
+    "time": {
+     "utc": "2026-11-19T10:00:08Z",
+     "mono_ns": "13000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "8",
+     "args": {
+      "feature": "F-0008",
+      "nominal_um": 12008,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 8
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0008",
+       "digest": "sha256:a0817260aa77594ecfc1caa269a61e74dde4b2f87bf95f596eeb16f089a1cd14"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "7f09ce4a5902d206e8f51d8f9f1edfb5",
+    "args": "297b7ab88a4017c38cc5a3448ac45a22",
+    "events": "b5872e0419edd4be5fdd24d211dcc725"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:a0817260aa77594ecfc1caa269a61e74dde4b2f87bf95f596eeb16f089a1cd14",
+     "content": "nominal table 8\n"
+    }
+   ],
+   "seq": "9",
+   "prev": "sha256:c20395184ef4bca66a3cf0fad878e7e6607ebb4a70c806aafe0b7affd40ede13",
+   "hash": "sha256:ea403e893aa374e67882b95243960a2fd3aa5b6f8f1e3d50cdb1f7af3c947ebe",
+   "payload_digest": "sha256:c6f09605a9ce1f91bbe64b8c2f28b361717bd0000289d7a92ce00449609f6be6"
+  },
+  {
+   "name": "w2_009",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:2bac621255205680ee306ed9866d9f8244a53944062394eb846d74b90578b64c",
+    "time": {
+     "utc": "2026-11-19T10:00:09Z",
+     "mono_ns": "14000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "9",
+     "args": {
+      "feature": "F-0009",
+      "nominal_um": 12009,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 9
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0009",
+       "digest": "sha256:d71d94fc92bdadd031fb0b32c4d8bc82665281b6ef718330a19e957154bf1e23"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "dc9bfab935b7e94646b7648cbf652b24",
+    "args": "6d08045ff9e850fc7cec78e89d2be7c8",
+    "events": "6d8d89afb03d15eb64195d862b86a42d"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:d71d94fc92bdadd031fb0b32c4d8bc82665281b6ef718330a19e957154bf1e23",
+     "content": "nominal table 9\n"
+    }
+   ],
+   "seq": "10",
+   "prev": "sha256:ea403e893aa374e67882b95243960a2fd3aa5b6f8f1e3d50cdb1f7af3c947ebe",
+   "hash": "sha256:bba3e849b121f0cf0958252ff65668bc9dfc32758a178380782e59af5fca089c",
+   "payload_digest": "sha256:a06a09244bab89ac9621dd626f2024d2128ee98bb678dea4469d2245719dffc7"
+  },
+  {
+   "name": "w2_010",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:37a0b7152d6e0a5c59e1352c5f595aa15e64571c3ba3eed1f19352876daad901",
+    "time": {
+     "utc": "2026-11-19T10:00:10.010Z",
+     "mono_ns": "15000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "10",
+     "args": {
+      "feature": "F-0010",
+      "nominal_um": 12010,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 10
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0010",
+       "digest": "sha256:7d9c449748aeab5b479cbca59917099ded6fd8e5e26907353c7e24afab07549a"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a5b10fa41b3dd588df16b879ae538901",
+    "args": "9e2cc4500bba375cf3bf8ddbdda3218e",
+    "events": "944b0fc8233927feca60ca0bbac40f0b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:7d9c449748aeab5b479cbca59917099ded6fd8e5e26907353c7e24afab07549a",
+     "content": "nominal table 10\n"
+    }
+   ],
+   "seq": "11",
+   "prev": "sha256:bba3e849b121f0cf0958252ff65668bc9dfc32758a178380782e59af5fca089c",
+   "hash": "sha256:e37f3b318f06397128031c768f22014e0bde070980dd31248314dd51bc185e29",
+   "payload_digest": "sha256:3096ace73e6baccb92f83b24ab840caed88a64062019e4aeb529ba37f6e38506"
+  },
+  {
+   "name": "w2_011",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:431c1f143d0be4553f6d1ef192a2396fbf2dac5191cbd4ec760dd194f65d698b",
+    "time": {
+     "utc": "2026-11-19T10:00:11Z",
+     "mono_ns": "16000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "11",
+     "args": {
+      "feature": "F-0011",
+      "nominal_um": 12011,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 11
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0011",
+       "digest": "sha256:bbb01698f130082edb97beec8b2521bb7c14d9f2838ac3b388ab7c8f880719ad"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "206f1b3cd7df92f14236119ddc72504c",
+    "args": "75dab49492cf00bddae82607faa7864b",
+    "events": "9894662532a7bbf67919602ecdfadf57"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:bbb01698f130082edb97beec8b2521bb7c14d9f2838ac3b388ab7c8f880719ad",
+     "content": "nominal table 11\n"
+    }
+   ],
+   "seq": "12",
+   "prev": "sha256:e37f3b318f06397128031c768f22014e0bde070980dd31248314dd51bc185e29",
+   "hash": "sha256:635dbc6ea83e4b8757c1e4bff1bedc5c0a2deb01be7ab58ea1d191f066b3bd52",
+   "payload_digest": "sha256:387e761f5eac866cb4b17a0c68516733c1f23c38224f55e467efb16c9c4c9176"
+  },
+  {
+   "name": "w2_012",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:fc4ea7daaf3355905f1567f55962d200fc65de04968f6808b3d8d7089761822d",
+    "time": {
+     "utc": "2026-11-19T10:00:12Z",
+     "mono_ns": "17000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "12",
+     "args": {
+      "feature": "F-0012",
+      "nominal_um": 12012,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 12
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0012",
+       "digest": "sha256:4546cb7faba1a14743e017da31094b0f1b0d67634cc2656915658a3b413e85b5"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "efdc3ecb01390902a99b961b5b237c29",
+    "args": "aacd93c19997b7c0a68009b4f4d9141f",
+    "events": "b0cdcf0b4d3a08f43d85904dc0b80955"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4546cb7faba1a14743e017da31094b0f1b0d67634cc2656915658a3b413e85b5",
+     "content": "nominal table 12\n"
+    }
+   ],
+   "seq": "13",
+   "prev": "sha256:635dbc6ea83e4b8757c1e4bff1bedc5c0a2deb01be7ab58ea1d191f066b3bd52",
+   "hash": "sha256:0850f9706a7c6ae38db51c699ff72d507b35cd1fe778db4ab80e904227de8394",
+   "payload_digest": "sha256:ecbf3d1db2360760125411741720690642d6a3770566c59d9fbc4ef3eb0a4a9a"
+  },
+  {
+   "name": "w2_013",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:f19df44d8fb5e0686d5a8cd6ec8886143172920a127426c3c1186b1ab97717ac",
+    "time": {
+     "utc": "2026-11-19T10:00:13.013Z",
+     "mono_ns": "18000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "13",
+     "args": {
+      "feature": "F-0013",
+      "nominal_um": 12013,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 13
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0013",
+       "digest": "sha256:9785a9bef464cb4d7ba591a539dc65be2aea165932fe80f676e5abe35b3b6654"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a4ecd5db336f4d84b083c29a54128348",
+    "args": "087859283f5cb5581453171f3c43e8d1",
+    "events": "5f17906552b9b87aacf835255beef7e5"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:9785a9bef464cb4d7ba591a539dc65be2aea165932fe80f676e5abe35b3b6654",
+     "content": "nominal table 13\n"
+    }
+   ],
+   "seq": "14",
+   "prev": "sha256:0850f9706a7c6ae38db51c699ff72d507b35cd1fe778db4ab80e904227de8394",
+   "hash": "sha256:8534fb0c2b6fc27686ba1bb1f2e4529521056e037c99dcb5215ffaaf99e70b00",
+   "payload_digest": "sha256:37190e9dc276a2b1e151146a1bfcc25a250553ddd59325ca174fabb9c4e439ab"
+  },
+  {
+   "name": "w2_014",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:f083145e62cc6a323cf1cd7996c67e6fef8f019cbbc84e5fac21baa5eb396644",
+    "time": {
+     "utc": "2026-11-19T10:00:14Z",
+     "mono_ns": "19000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "14",
+     "args": {
+      "feature": "F-0014",
+      "nominal_um": 12014,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 14
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0014",
+       "digest": "sha256:ac1f02f57ddadebeab979a91a524003256906d889853bad2531b661becadf9f8"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "78974a066987b576efaa80340bf80cca",
+    "args": "813d717bc69815fde1da695947d6039d",
+    "events": "81a3becaa69bc060364107e2d8561a2f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ac1f02f57ddadebeab979a91a524003256906d889853bad2531b661becadf9f8",
+     "content": "nominal table 14\n"
+    }
+   ],
+   "seq": "15",
+   "prev": "sha256:8534fb0c2b6fc27686ba1bb1f2e4529521056e037c99dcb5215ffaaf99e70b00",
+   "hash": "sha256:3a647ad9e531b6a476606bd82e8b27924a35fa1d5951b0f9c473c4de2969e440",
+   "payload_digest": "sha256:5298179ec71a10545ed9caa25a89754ed4709d8ed1a1fb8f4f79c5a8a8704d77"
+  },
+  {
+   "name": "w2_015",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:469856cbd3d04a934fbb47a7cc3813dfbfa3a9850e26e051c5a30c772c693a5a",
+    "time": {
+     "utc": "2026-11-19T10:00:15Z",
+     "mono_ns": "20000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "15",
+     "args": {
+      "feature": "F-0015",
+      "nominal_um": 12015,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 15
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0015",
+       "digest": "sha256:2d70ae6d950d36610ac3fa1e05507eb3a634dc6696b28001f98d76e0b7a2b0d7"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "1e9db1374cecadb06f813090ab2bb685",
+    "args": "6f87d75eac4783a97947d92f361ebd99",
+    "events": "382e23759af49e3990855948837545e9"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:2d70ae6d950d36610ac3fa1e05507eb3a634dc6696b28001f98d76e0b7a2b0d7",
+     "content": "nominal table 15\n"
+    }
+   ],
+   "seq": "16",
+   "prev": "sha256:3a647ad9e531b6a476606bd82e8b27924a35fa1d5951b0f9c473c4de2969e440",
+   "hash": "sha256:d738ef0c07908942d4beaa6309344e8b0709b47cf966e7cfd770cb94ad9b5a23",
+   "payload_digest": "sha256:e4dbdfa9f589d19963c421dbb9cd55b099d31c04858e3a5970aa90278041af50"
+  },
+  {
+   "name": "w2_016",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:4122e9f192853a5902f942088c5cdae7345f8cbb9dcff421f7157264e0891e14",
+    "time": {
+     "utc": "2026-11-19T10:00:16.016Z",
+     "mono_ns": "21000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "16",
+     "args": {
+      "feature": "F-0016",
+      "nominal_um": 12016,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 16
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0016",
+       "digest": "sha256:517933d9623bdae6dc4297ea5abb0433d039e0c212e67ad78a5e9142a8d90031"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "05846e7f1e7537ecdbe0bc9587137741",
+    "args": "0566317ac480c6e7a1ee259f4312ee61",
+    "events": "5fd8d9c891d09954a92cd584047ac3bd"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:517933d9623bdae6dc4297ea5abb0433d039e0c212e67ad78a5e9142a8d90031",
+     "content": "nominal table 16\n"
+    }
+   ],
+   "seq": "17",
+   "prev": "sha256:d738ef0c07908942d4beaa6309344e8b0709b47cf966e7cfd770cb94ad9b5a23",
+   "hash": "sha256:55fb048c9bdb860b6c346adbac7c35c905a1e0c0efb868a778204648da877a79",
+   "payload_digest": "sha256:0dee3128ebad16eeb3c2f20d901ae975e54a9597e4e9f34cf63b85a35482959d"
+  },
+  {
+   "name": "w2_017",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:9a41f2b594e9af6c8fd01dee3815d5beed0352ebb82c1986b8de6f7326478a68",
+    "time": {
+     "utc": "2026-11-19T10:00:17Z",
+     "mono_ns": "22000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "17",
+     "args": {
+      "feature": "F-0017",
+      "nominal_um": 12017,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 17
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0017",
+       "digest": "sha256:09be7a39e908d6e767fc0c07fbf150b96d35746cf405da16b63c2f96477cd693"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e2fd4ed24e132261901f47fab20089bb",
+    "args": "a90f96e5df8c0a854154a5cb3e705f81",
+    "events": "d3c182d9e09ba7397212f13f4b3c96b7"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:09be7a39e908d6e767fc0c07fbf150b96d35746cf405da16b63c2f96477cd693",
+     "content": "nominal table 17\n"
+    }
+   ],
+   "seq": "18",
+   "prev": "sha256:55fb048c9bdb860b6c346adbac7c35c905a1e0c0efb868a778204648da877a79",
+   "hash": "sha256:b56ada4fcb88b30f8393e667c0da5a6ae22274cf8a49b14156acb87597adbb69",
+   "payload_digest": "sha256:3a0d018d2da2109809540b06019bfd92a8c4edf66701fefa55351e8b1c977d28"
+  },
+  {
+   "name": "w2_018",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:bf7c42c25f36f16958b8f86eec005976b6e0b5cdfa1bb2d7105ef256ae910ada",
+    "time": {
+     "utc": "2026-11-19T10:00:18Z",
+     "mono_ns": "23000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "18",
+     "args": {
+      "feature": "F-0018",
+      "nominal_um": 12018,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 18
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0018",
+       "digest": "sha256:b2350c6f697fe96f79baf540636bc1be0080d49e647fb5282691164f72513332"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "7dd1267ed37653e57f8b8c0cbdcc5690",
+    "args": "cba362c97d94fc8d581d4b506648e6d0",
+    "events": "e68d57357b62cf730c448446f6c5c308"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:b2350c6f697fe96f79baf540636bc1be0080d49e647fb5282691164f72513332",
+     "content": "nominal table 18\n"
+    }
+   ],
+   "seq": "19",
+   "prev": "sha256:b56ada4fcb88b30f8393e667c0da5a6ae22274cf8a49b14156acb87597adbb69",
+   "hash": "sha256:58a4dc3730652569b3957050bf775a4013f1f7d787d690c620cd6ddea1f18922",
+   "payload_digest": "sha256:b7794c325196c1f0a0e2913e74fee5e2d96c1949e8a18af51c1f4f7c443923c9"
+  },
+  {
+   "name": "w2_019",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:d4e253aed5ad963d7f106ad9d4f487595a0d6be80229d15a7db82cd93286d414",
+    "time": {
+     "utc": "2026-11-19T10:00:19.019Z",
+     "mono_ns": "24000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "19",
+     "args": {
+      "feature": "F-0019",
+      "nominal_um": 12019,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 19
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0019",
+       "digest": "sha256:917b32e2eb168dcec354185ab667e718e3fe27827bc8db7df645ab0f726a7b93"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "aa11fdd846e0e44720fff39af8ba98af",
+    "args": "913e8e8394922e6225451c3f3fcffcbf",
+    "events": "46f308124af9c53660ed359f2666a9f3"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:917b32e2eb168dcec354185ab667e718e3fe27827bc8db7df645ab0f726a7b93",
+     "content": "nominal table 19\n"
+    }
+   ],
+   "seq": "20",
+   "prev": "sha256:58a4dc3730652569b3957050bf775a4013f1f7d787d690c620cd6ddea1f18922",
+   "hash": "sha256:367f7aa806299b47ff061761dd4c1bb6f86e730438749d9a6aef7fb531c46707",
+   "payload_digest": "sha256:019a89a4e9e71d558a66a97620388f2db6af0c279558f1dcca765f1fdde6f292"
+  },
+  {
+   "name": "w2_020",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:48999e5fffe1e4989286f76df772f9d9c11cf35fb5bc9d9bce784535a1eeae43",
+    "time": {
+     "utc": "2026-11-19T10:00:20Z",
+     "mono_ns": "25000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "20",
+     "args": {
+      "feature": "F-0020",
+      "nominal_um": 12020,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 20
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0020",
+       "digest": "sha256:8e90435092c99fab47239c5bcd77e015ddd0fd64b706ea68efbe11ca16e27b5a"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "13e66a3190a70377cca96211e2b016a3",
+    "args": "0463f9b72c84a59e561bfdfc5211cd14",
+    "events": "78632cb486d0bb43dc61094cfb56ed6c"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8e90435092c99fab47239c5bcd77e015ddd0fd64b706ea68efbe11ca16e27b5a",
+     "content": "nominal table 20\n"
+    }
+   ],
+   "seq": "21",
+   "prev": "sha256:367f7aa806299b47ff061761dd4c1bb6f86e730438749d9a6aef7fb531c46707",
+   "hash": "sha256:438a4355a510590285dfb1034b8c3b668a3ab0dce5a2889e3667e706cb40fe78",
+   "payload_digest": "sha256:fa9ad0976ef41097010948b8add3f64842501643f3c001020e60e3355e635928"
+  },
+  {
+   "name": "w2_021",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:30a9329af653facc3a9da85cc305de867ac4403484224fff67c1c53a0c3db752",
+    "time": {
+     "utc": "2026-11-19T10:00:21Z",
+     "mono_ns": "26000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "21",
+     "args": {
+      "feature": "F-0021",
+      "nominal_um": 12021,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 21
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0021",
+       "digest": "sha256:48535ecf263df39f8df3aefd7b96500c48d55e4a73f6ed76dae68d98ecc0421b"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "9e199a1637f148e830f2d6092c6620a1",
+    "args": "f7978046359d2a49569df19ba4bd9704",
+    "events": "0296990eed283efc5e3f79b58366a4c0"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:48535ecf263df39f8df3aefd7b96500c48d55e4a73f6ed76dae68d98ecc0421b",
+     "content": "nominal table 21\n"
+    }
+   ],
+   "seq": "22",
+   "prev": "sha256:438a4355a510590285dfb1034b8c3b668a3ab0dce5a2889e3667e706cb40fe78",
+   "hash": "sha256:58b9eeacaad34fe1ca5b2590d2f6c196fc04b44645b9b4ec029bf19149bd6b43",
+   "payload_digest": "sha256:52b9d7ab49fdace13705f9397bee8ea8106c514c3dd573c6519769bdbaf945bd"
+  },
+  {
+   "name": "w2_022",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:ba1084d00f639d2fabd845318e14ec2b259dad8c255a932280fa034ad63b48a8",
+    "time": {
+     "utc": "2026-11-19T10:00:22.022Z",
+     "mono_ns": "27000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "22",
+     "args": {
+      "feature": "F-0022",
+      "nominal_um": 12022,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 22
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0022",
+       "digest": "sha256:8eef0c5d11096b1350bceffc1b9498bf58b8666f0722331de5d43775b20329dc"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3bf0f022c14e61a53774e36b8d93dc22",
+    "args": "12a2df017fbd1730da600e0ad59843db",
+    "events": "59cddc06550767553b5a7983b8d1fc4f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8eef0c5d11096b1350bceffc1b9498bf58b8666f0722331de5d43775b20329dc",
+     "content": "nominal table 22\n"
+    }
+   ],
+   "seq": "23",
+   "prev": "sha256:58b9eeacaad34fe1ca5b2590d2f6c196fc04b44645b9b4ec029bf19149bd6b43",
+   "hash": "sha256:079896b2eec65c9d83e4b71ce3ce28805fbcdef8e5950af3163942134d46f1ef",
+   "payload_digest": "sha256:61d42515d003bc6940bb2183bfd1ed35ce476ae5584ef8f3d0a8b5bd2128a601"
+  },
+  {
+   "name": "w2_023",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:18007ba6d654f11851d359db70a78359ea104b85f88a5d2a160a2d00bc325195",
+    "time": {
+     "utc": "2026-11-19T10:00:23Z",
+     "mono_ns": "28000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "23",
+     "args": {
+      "feature": "F-0023",
+      "nominal_um": 12023,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 23
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0023",
+       "digest": "sha256:e97c5e6a208919c22210b118c9a74fcb7703abdadd2b80159a2a400af03254c9"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "066070b59eaa57ee87cffe84bcbd6748",
+    "args": "7f36fef6c3592db87860cd49a436294d",
+    "events": "226b2c9a37c3855fb1963805dcad064b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:e97c5e6a208919c22210b118c9a74fcb7703abdadd2b80159a2a400af03254c9",
+     "content": "nominal table 23\n"
+    }
+   ],
+   "seq": "24",
+   "prev": "sha256:079896b2eec65c9d83e4b71ce3ce28805fbcdef8e5950af3163942134d46f1ef",
+   "hash": "sha256:4ba15bd2114d05133f3f58c8ab75c3d92c319da50253b408eaff9453d1eaf6c7",
+   "payload_digest": "sha256:6426c689a4e4e3922dab08bbc913e83495b178d47a095738e13fdee572550515"
+  },
+  {
+   "name": "w2_024",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:f2c5bdb6501e3fb5867c4d6d620e96f54ad9ab321a035c04742a29dd6279da4d",
+    "time": {
+     "utc": "2026-11-19T10:00:24Z",
+     "mono_ns": "29000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "24",
+     "args": {
+      "feature": "F-0024",
+      "nominal_um": 12024,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 24
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0024",
+       "digest": "sha256:9cd1224a762a4b6d2bc1269d08399c305148901283cec989b85fa5d7266e1d74"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "094d2860b9e89f350e85516bfbb3c192",
+    "args": "1c9fe8ee499b1299fe7e1bbda5167b7b",
+    "events": "c9748918cc23a0a7e3aa112faa151d1b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:9cd1224a762a4b6d2bc1269d08399c305148901283cec989b85fa5d7266e1d74",
+     "content": "nominal table 24\n"
+    }
+   ],
+   "seq": "25",
+   "prev": "sha256:4ba15bd2114d05133f3f58c8ab75c3d92c319da50253b408eaff9453d1eaf6c7",
+   "hash": "sha256:41490f71eb105192061de57c0c029fbfa6e3e03b615346033d75c3edddf29b81",
+   "payload_digest": "sha256:1ba9f0a21e2dd29d2e87c9ca98a48987e26d403edea53616b13f5704edd69867"
+  },
+  {
+   "name": "w2_025",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:0c10d89abae069012fadca2ffa61ad6296a079abff12e1f83114f3438e764d7b",
+    "time": {
+     "utc": "2026-11-19T10:00:25.025Z",
+     "mono_ns": "30000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "25",
+     "args": {
+      "feature": "F-0025",
+      "nominal_um": 12025,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 25
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0025",
+       "digest": "sha256:890f865c935e824de1b39f5228062d1898132a31226a74dc9f45f316b7ed53a8"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "72aac93b11e1d8678f587efe2851223d",
+    "args": "b737b3f33ef69e466cb8684f0a899b46",
+    "events": "be6da30964f16bf9b2a1c65c08496570"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:890f865c935e824de1b39f5228062d1898132a31226a74dc9f45f316b7ed53a8",
+     "content": "nominal table 25\n"
+    }
+   ],
+   "seq": "26",
+   "prev": "sha256:41490f71eb105192061de57c0c029fbfa6e3e03b615346033d75c3edddf29b81",
+   "hash": "sha256:0fa80015176657cd08750f14fe13b98abf0df34aba82709143d11bc8fb5508d6",
+   "payload_digest": "sha256:cde46057260edf2dce8cbd2ff3e878a1da2ae99032485a433b55acd0e01852ce"
+  },
+  {
+   "name": "w2_026",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:8bea21620177e2ed984c9c32014f453989b4e02cbb9e9105ed261280401e98b7",
+    "time": {
+     "utc": "2026-11-19T10:00:26Z",
+     "mono_ns": "31000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "26",
+     "args": {
+      "feature": "F-0026",
+      "nominal_um": 12026,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 26
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0026",
+       "digest": "sha256:45c6accc4953ba26329ad8020ff18a909cdb4e5f72210f1682248c5e1bf233a6"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "174a62c19b62e83cbd9b8507b68ae1f1",
+    "args": "ec6eddaf805b23a837094ebe56c4f889",
+    "events": "616525bea14c465a7dc1fce0969b0da7"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:45c6accc4953ba26329ad8020ff18a909cdb4e5f72210f1682248c5e1bf233a6",
+     "content": "nominal table 26\n"
+    }
+   ],
+   "seq": "27",
+   "prev": "sha256:0fa80015176657cd08750f14fe13b98abf0df34aba82709143d11bc8fb5508d6",
+   "hash": "sha256:aaa7ef7903c8f343a4ffffe87fa4a2baa5117302eff74455a708f3562a1c1ffd",
+   "payload_digest": "sha256:5c9c910dbf70c24416f037e30d4a79124583ef806ccd50310eb0159c2e57496a"
+  },
+  {
+   "name": "w2_027",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:41dde22819e8a29508ea053aa18371e4d52a40bd4a05ccf0224e852679a480f0",
+    "time": {
+     "utc": "2026-11-19T10:00:27Z",
+     "mono_ns": "32000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "27",
+     "args": {
+      "feature": "F-0027",
+      "nominal_um": 12027,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 27
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0027",
+       "digest": "sha256:4e994319ceb68c7b5e93520a02b6bc8af4879cc8947d0cf3c79c1a4e95ecb6dd"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "5ea9f487e59c41b267eb24b187d5d161",
+    "args": "9c55285306b2456c899a37a3d9a4032d",
+    "events": "0bb143069f2c720dcbd02ec410f85c40"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4e994319ceb68c7b5e93520a02b6bc8af4879cc8947d0cf3c79c1a4e95ecb6dd",
+     "content": "nominal table 27\n"
+    }
+   ],
+   "seq": "28",
+   "prev": "sha256:aaa7ef7903c8f343a4ffffe87fa4a2baa5117302eff74455a708f3562a1c1ffd",
+   "hash": "sha256:652f3db6801ace8a1963fdacc1af6a8450e583183451abe2e1f20bebe16bd769",
+   "payload_digest": "sha256:490f609d24ae9dae6d1f24b439b42f395246b3be1a9049d5b2ecbda1cedbd951"
+  },
+  {
+   "name": "w2_028",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:cd0adb170697257e2aee80266f5bccfbd71e74998c72efe0c57e27d90656e322",
+    "time": {
+     "utc": "2026-11-19T10:00:28.028Z",
+     "mono_ns": "33000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "28",
+     "args": {
+      "feature": "F-0028",
+      "nominal_um": 12028,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 28
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0028",
+       "digest": "sha256:b15aaad193744fc4f6afc4e2c90b171ca5780beaa14b37307b34afd9c76ede59"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d429d5d621eb7726a7455cc60743cd50",
+    "args": "b2d52c17e1e709bc891f6a3595b1bb39",
+    "events": "ce959ba811152be12b005af456881f0d"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:b15aaad193744fc4f6afc4e2c90b171ca5780beaa14b37307b34afd9c76ede59",
+     "content": "nominal table 28\n"
+    }
+   ],
+   "seq": "29",
+   "prev": "sha256:652f3db6801ace8a1963fdacc1af6a8450e583183451abe2e1f20bebe16bd769",
+   "hash": "sha256:e76863a095b76b39c2238c6487283a661e20da766d5865325281da4926368552",
+   "payload_digest": "sha256:4f7d4e859558076c0c868b3609dfd4e25b1691a7d688db561d2532e4cfdb4059"
+  },
+  {
+   "name": "w2_029",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:5517dcca7d55face5c36127d7a87e636934fbfe1d532b7c989d83ec41790db0c",
+    "time": {
+     "utc": "2026-11-19T10:00:29Z",
+     "mono_ns": "34000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "29",
+     "args": {
+      "feature": "F-0029",
+      "nominal_um": 12029,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 29
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0029",
+       "digest": "sha256:f2ec01a2e4967ffa6c18d632eedfe0878cad7e52295c12ca811e72fdd412fe97"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "cf21f7aaf27b13d7ada27f4014f8a32d",
+    "args": "d021d35410bea3220aa0faf9a2ae196c",
+    "events": "ee2966d00c43eb941bcf580599bfced2"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:f2ec01a2e4967ffa6c18d632eedfe0878cad7e52295c12ca811e72fdd412fe97",
+     "content": "nominal table 29\n"
+    }
+   ],
+   "seq": "30",
+   "prev": "sha256:e76863a095b76b39c2238c6487283a661e20da766d5865325281da4926368552",
+   "hash": "sha256:4c0a69ef488bb9447c60213811f890cac687399cabc227bb4400de1052ee8ee2",
+   "payload_digest": "sha256:72536115925b208edcee8884a7d438d0e021584fa4e4af8daf96f3958880ccd9"
+  },
+  {
+   "name": "w2_030",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:f3dd18b1d812f3545679878a7b7e6c3b646ceb3aad64b69a3eba1dbe3ef45231",
+    "time": {
+     "utc": "2026-11-19T10:00:30Z",
+     "mono_ns": "35000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "30",
+     "args": {
+      "feature": "F-0030",
+      "nominal_um": 12030,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 30
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0030",
+       "digest": "sha256:dd3f711c2dd02ede4a16a84c736113dd87174da2707b9ba6b6423a10972637e0"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "6e9c5a117c7daea89b099714610aa1d4",
+    "args": "dc8146abdc62ab724b2b0300ccd5a0ad",
+    "events": "a3e03be91a4c9e77ceca125cbb9e2c0e"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:dd3f711c2dd02ede4a16a84c736113dd87174da2707b9ba6b6423a10972637e0",
+     "content": "nominal table 30\n"
+    }
+   ],
+   "seq": "31",
+   "prev": "sha256:4c0a69ef488bb9447c60213811f890cac687399cabc227bb4400de1052ee8ee2",
+   "hash": "sha256:462bacbe2dfa0db49d5826e4926a1feb33615784c8dbfa890878a38959e63dd3",
+   "payload_digest": "sha256:5dffd34a0e5bb6b8e228af3a8fdb4284380a961517438e999a3d0329507720fe"
+  },
+  {
+   "name": "w2_031",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:fb531922f0cfc7c850c8730ffa206a5258c378ab047c848dc5f94fb0a07bd4f6",
+    "time": {
+     "utc": "2026-11-19T10:00:31.031Z",
+     "mono_ns": "36000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "31",
+     "args": {
+      "feature": "F-0031",
+      "nominal_um": 12031,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 31
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0031",
+       "digest": "sha256:e57fa3bf45915f6d18ee6a91d8e066c6f77ceba953d422192303e761e789db8c"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "5616adc37618b5189b886d82dbbbc199",
+    "args": "b52b80205eb8862b9d2263f96259b840",
+    "events": "0cb93d514f65874cc5e31d6f93fb516a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:e57fa3bf45915f6d18ee6a91d8e066c6f77ceba953d422192303e761e789db8c",
+     "content": "nominal table 31\n"
+    }
+   ],
+   "seq": "32",
+   "prev": "sha256:462bacbe2dfa0db49d5826e4926a1feb33615784c8dbfa890878a38959e63dd3",
+   "hash": "sha256:28eb1e59529ecad530260d2af4a0149f672dd1a8a2fedc9bdd25976dac5e0b36",
+   "payload_digest": "sha256:b26eb86a3c3f3fee2d46520f5b19a2541631be30137d4c5cdd09139312bc4c4a"
+  },
+  {
+   "name": "w2_032",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:cf83d19966c36216c54cb681d0e54dc9d44b1e84277e9f070366752f3f95d9c1",
+    "time": {
+     "utc": "2026-11-19T10:00:32Z",
+     "mono_ns": "37000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "32",
+     "args": {
+      "feature": "F-0032",
+      "nominal_um": 12032,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 32
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0032",
+       "digest": "sha256:4a053734cac0fc5950a2defbb61ebc85cee4ead9ad99d291ef17e75c8533b851"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3fc2e7680fac54e2accc9c07ee6c5eec",
+    "args": "515e954e87e195bcfa15ccfbad80bb22",
+    "events": "e9922fc6076f96581d7c95055b72641b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4a053734cac0fc5950a2defbb61ebc85cee4ead9ad99d291ef17e75c8533b851",
+     "content": "nominal table 32\n"
+    }
+   ],
+   "seq": "33",
+   "prev": "sha256:28eb1e59529ecad530260d2af4a0149f672dd1a8a2fedc9bdd25976dac5e0b36",
+   "hash": "sha256:6684c08d04db6f644197452bec22b31c39ad91a732fccb644c36911a9508fa64",
+   "payload_digest": "sha256:09026bd5ab2b274be991211706ccbea1f6c73c4579152723715d9da36519d7f2"
+  },
+  {
+   "name": "w2_033",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:b14f795f8188afa2e5f995f5f6feffa0d6c97058565c31045b355ca29d363b38",
+    "time": {
+     "utc": "2026-11-19T10:00:33Z",
+     "mono_ns": "38000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "33",
+     "args": {
+      "feature": "F-0033",
+      "nominal_um": 12033,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 33
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0033",
+       "digest": "sha256:fb5eb7d707d2d3b1a7e1811d5d954abd17b6d26546230a787b941ac247056cd4"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "5e36547f6ae257f1a92841c962f5a477",
+    "args": "3cc9c770515fa450b79a0e374e944033",
+    "events": "efca389f925aeacb3cfbdb2b37c89f4b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:fb5eb7d707d2d3b1a7e1811d5d954abd17b6d26546230a787b941ac247056cd4",
+     "content": "nominal table 33\n"
+    }
+   ],
+   "seq": "34",
+   "prev": "sha256:6684c08d04db6f644197452bec22b31c39ad91a732fccb644c36911a9508fa64",
+   "hash": "sha256:44da5467c20bac825b5d7b0a152bb234ace37ab370909e569c45bfc24b52d469",
+   "payload_digest": "sha256:3562f450f4f8b38f98e3634ce467c8f586baf5a494e554dcdc88a0824084ca61"
+  },
+  {
+   "name": "w2_034",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:d2bd4f429e948052eaea863ee68a9f671b4010221deb339d7d50f3717e641e60",
+    "time": {
+     "utc": "2026-11-19T10:00:34.034Z",
+     "mono_ns": "39000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "34",
+     "args": {
+      "feature": "F-0034",
+      "nominal_um": 12034,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 34
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0034",
+       "digest": "sha256:063da726aa2e29d4777a7e9e4ac4960700c24702c1db1bb047048ad634078dfa"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "f80cbc9d4722cbdaf2ab914dc9658e44",
+    "args": "83afe3365394aa5d1982fd56b2f9d309",
+    "events": "d6fd32574143f34a7d14fa0177d79f36"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:063da726aa2e29d4777a7e9e4ac4960700c24702c1db1bb047048ad634078dfa",
+     "content": "nominal table 34\n"
+    }
+   ],
+   "seq": "35",
+   "prev": "sha256:44da5467c20bac825b5d7b0a152bb234ace37ab370909e569c45bfc24b52d469",
+   "hash": "sha256:8ab5c38316c6a6b810acc5fc6f27f17fe50fdcb141ce3cb78bda9fd4687aa51d",
+   "payload_digest": "sha256:a905bb6de36f39721fa2f0f04931b562e2e5d335037903cdb23bfb394f2d5da4"
+  },
+  {
+   "name": "w2_035",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:635fba68c95cd0659e35b8486fb150a8d03b6f99a9808d2412eeb69a036877fe",
+    "time": {
+     "utc": "2026-11-19T10:00:35Z",
+     "mono_ns": "40000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "35",
+     "args": {
+      "feature": "F-0035",
+      "nominal_um": 12035,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 35
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0035",
+       "digest": "sha256:ae0e1acf1b0d97156dbda31fbc3be784c1e3965b3be292c5664a069fcc164d1f"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d38735ed15a9fec17a674459b64ca8e7",
+    "args": "1db6332d5911d3f14775afd3bd312e6d",
+    "events": "7c5cd3d8cc1b13d4c61dd8b86821bb3a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ae0e1acf1b0d97156dbda31fbc3be784c1e3965b3be292c5664a069fcc164d1f",
+     "content": "nominal table 35\n"
+    }
+   ],
+   "seq": "36",
+   "prev": "sha256:8ab5c38316c6a6b810acc5fc6f27f17fe50fdcb141ce3cb78bda9fd4687aa51d",
+   "hash": "sha256:9eb7ad98344c142b15526a9abea20b21e690c5d895fc81dbbf928dfa08858bbd",
+   "payload_digest": "sha256:bae64139395c7c095fd1da5a269e4f97c8081ecab9201b039ed2de21a37ee710"
+  },
+  {
+   "name": "w2_036",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:be9f2c03e80691d3afc082bdf14e18efaa27454b6997d4866551597366d74ba1",
+    "time": {
+     "utc": "2026-11-19T10:00:36Z",
+     "mono_ns": "41000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "36",
+     "args": {
+      "feature": "F-0036",
+      "nominal_um": 12036,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 36
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0036",
+       "digest": "sha256:bb5dd16e5eac0d96beac1388b52a879b311e18a98b331cd31e6f7a3909272b58"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "71c7eed7f43d424bbd7e2aa133d20ee1",
+    "args": "ad2c58c62f4e51281558841217cd5a5f",
+    "events": "4118d0682a532daf21ad04ae526768a0"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:bb5dd16e5eac0d96beac1388b52a879b311e18a98b331cd31e6f7a3909272b58",
+     "content": "nominal table 36\n"
+    }
+   ],
+   "seq": "37",
+   "prev": "sha256:9eb7ad98344c142b15526a9abea20b21e690c5d895fc81dbbf928dfa08858bbd",
+   "hash": "sha256:dffcc959cb01a38baeadf6d1b69a848b321d875dab122d6f79534096bda0a6d9",
+   "payload_digest": "sha256:7bbd36549f1203ab89bce586e49e4b9e916f77d4392fd4cec2bda59389a3a5a3"
+  },
+  {
+   "name": "w2_037",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:475c12dfb198283f0e8ec619a8bf2e433b76ea54ae167698416ae920c96cff2f",
+    "time": {
+     "utc": "2026-11-19T10:00:37.037Z",
+     "mono_ns": "42000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "37",
+     "args": {
+      "feature": "F-0037",
+      "nominal_um": 12037,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 37
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0037",
+       "digest": "sha256:52b700ce7b10945e06c0b16a6167a54bb9c8f7718fc41abf79210558c403a038"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "91867573ed859d88fdac9cf134e782d1",
+    "args": "56f0f7a900eb80ab60306037e962964b",
+    "events": "d9406017f87d31bd40e3f6ff34fae73f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:52b700ce7b10945e06c0b16a6167a54bb9c8f7718fc41abf79210558c403a038",
+     "content": "nominal table 37\n"
+    }
+   ],
+   "seq": "38",
+   "prev": "sha256:dffcc959cb01a38baeadf6d1b69a848b321d875dab122d6f79534096bda0a6d9",
+   "hash": "sha256:0a2564a407ffe1e1b0a38c1422602598cee9b5c8ef85f3f4f2d0dad10822105b",
+   "payload_digest": "sha256:54aa307e4338b5deb1448259a611f16cc020be71858692ab8cdac773d214aeba"
+  },
+  {
+   "name": "w2_038",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:dbe08fb5e72d864b862f2ce3d399e1da92cee45bedd0cf4e8ef0f7ef5b7be0f7",
+    "time": {
+     "utc": "2026-11-19T10:00:38Z",
+     "mono_ns": "43000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "38",
+     "args": {
+      "feature": "F-0038",
+      "nominal_um": 12038,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 38
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0038",
+       "digest": "sha256:406bdb9397df8006849dc801ccc890e7dddfe7236c2294f201343da4c21c44db"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "f83dace06bda6013ba30ede6c4427f6b",
+    "args": "dc4b50926624bed95d202f8bd8e54ea5",
+    "events": "a787742f18357834da1677b5aabe3221"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:406bdb9397df8006849dc801ccc890e7dddfe7236c2294f201343da4c21c44db",
+     "content": "nominal table 38\n"
+    }
+   ],
+   "seq": "39",
+   "prev": "sha256:0a2564a407ffe1e1b0a38c1422602598cee9b5c8ef85f3f4f2d0dad10822105b",
+   "hash": "sha256:2ff587f92bd2222278e29bb4968e15fe79d226403b1e3aa17b90be4f6c44d7a9",
+   "payload_digest": "sha256:a876e549bb7da7402bb6b78a3f5ded29dae0341995a96a829c85c5e7fffd7f31"
+  },
+  {
+   "name": "w2_039",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:2086746859bd7eb859efe1683b22da58cf89f116501fa3e09fd1db25244c5c22",
+    "time": {
+     "utc": "2026-11-19T10:00:39Z",
+     "mono_ns": "44000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "39",
+     "args": {
+      "feature": "F-0039",
+      "nominal_um": 12039,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 39
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0039",
+       "digest": "sha256:5f2f4bd50155dc227235029a1e59cef40e5132d2666459820d1ce884a4e78d49"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "841f79998e1bffc0a2405f328b8fbdea",
+    "args": "7aa68ae5a3ea0b20d814699de6453a94",
+    "events": "c7543d3115be875a133bed33218bf289"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5f2f4bd50155dc227235029a1e59cef40e5132d2666459820d1ce884a4e78d49",
+     "content": "nominal table 39\n"
+    }
+   ],
+   "seq": "40",
+   "prev": "sha256:2ff587f92bd2222278e29bb4968e15fe79d226403b1e3aa17b90be4f6c44d7a9",
+   "hash": "sha256:7d737a07aca4f1f13d235640d636713d8d483c095d5d7441f910e4f62e4a0c83",
+   "payload_digest": "sha256:3fcded2d608e601d67b133d57f3cb4d526e48aa4f4f28e62389d0d36976a7a60"
+  },
+  {
+   "name": "w2_040",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:97f76c2e3d4414bb8b99cec00a0df45ce2bafe95b5023add6a4e8ca44ef8ba5b",
+    "time": {
+     "utc": "2026-11-19T10:00:40.040Z",
+     "mono_ns": "45000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "40",
+     "args": {
+      "feature": "F-0040",
+      "nominal_um": 12040,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 40
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0040",
+       "digest": "sha256:db8ff2974b2e53dfa82371eb4c70affdc9f62103b597ec267756334388e37f27"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "ea5b06b45260d81dc78d07eedfa917a3",
+    "args": "ac5601340610e58fe47fb60c53a1d8b2",
+    "events": "a41edef27ed4d42e20d674b406ecf210"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:db8ff2974b2e53dfa82371eb4c70affdc9f62103b597ec267756334388e37f27",
+     "content": "nominal table 40\n"
+    }
+   ],
+   "seq": "41",
+   "prev": "sha256:7d737a07aca4f1f13d235640d636713d8d483c095d5d7441f910e4f62e4a0c83",
+   "hash": "sha256:5a0256a9f3f6cf11aa5f57a746f6d906b694d38104e8117038b71d64f895184f",
+   "payload_digest": "sha256:d1d5dba9a7b2f36701840d162ebdbe2d368575ff312eddcdb1d3552de9eaebff"
+  },
+  {
+   "name": "w2_041",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:8eb89691a6e503cb0dc6c56f142531bca88fadb39f4b9e804faf3345dcc9881b",
+    "time": {
+     "utc": "2026-11-19T10:00:41Z",
+     "mono_ns": "46000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "41",
+     "args": {
+      "feature": "F-0041",
+      "nominal_um": 12041,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 41
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0041",
+       "digest": "sha256:5824ac797390241150dd90fceda00df57522baf5aa4d7b0e56b5cee7eb09ba1e"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "04f69d4e71bb95a692abbcd85a904119",
+    "args": "921d2ae8b2281a3649d5e59ae3603d8f",
+    "events": "7052f52c988a2d7620bd0eb36e9ceb29"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5824ac797390241150dd90fceda00df57522baf5aa4d7b0e56b5cee7eb09ba1e",
+     "content": "nominal table 41\n"
+    }
+   ],
+   "seq": "42",
+   "prev": "sha256:5a0256a9f3f6cf11aa5f57a746f6d906b694d38104e8117038b71d64f895184f",
+   "hash": "sha256:678c51ec339c50d314038301d4b5f67f226f3c996bfc8ac06e4f67ddbfa61f8d",
+   "payload_digest": "sha256:ec512f55f05e888b04c8f2f6e69f17192e9f4a4538aedbb7be20bcb79cd9047b"
+  },
+  {
+   "name": "w2_042",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:317b2f09d9adc114d98a0837e6864f43ece2edfa6c45359affbf704bf92f96c0",
+    "time": {
+     "utc": "2026-11-19T10:00:42Z",
+     "mono_ns": "47000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "42",
+     "args": {
+      "feature": "F-0042",
+      "nominal_um": 12042,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 42
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0042",
+       "digest": "sha256:5dc1dea8496357bc483a92f40a8771ee46dabea5c877acb0b6523dff4caa5c61"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e572c9645e06748b38a2f3f6201df53a",
+    "args": "cf370eab20130c9265991379cc356ef5",
+    "events": "ae411d72707a14ccc2aa80ee45ffb699"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5dc1dea8496357bc483a92f40a8771ee46dabea5c877acb0b6523dff4caa5c61",
+     "content": "nominal table 42\n"
+    }
+   ],
+   "seq": "43",
+   "prev": "sha256:678c51ec339c50d314038301d4b5f67f226f3c996bfc8ac06e4f67ddbfa61f8d",
+   "hash": "sha256:035910eb091ab1aedf24ce081075e60a5ceefbd7a727140f66946cbc18f34040",
+   "payload_digest": "sha256:c4bd350ec2473cc35fc240fa42d9f8b51945db4cf901bcf221cf86f27de89976"
+  },
+  {
+   "name": "w2_043",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:27cace472dd812592eea7271aa1bd6d66f4e90d22b1997948c8fe9e0c983ecbc",
+    "time": {
+     "utc": "2026-11-19T10:00:43.043Z",
+     "mono_ns": "48000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "43",
+     "args": {
+      "feature": "F-0043",
+      "nominal_um": 12043,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 43
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0043",
+       "digest": "sha256:4e3c214b028e6fab69d5896d2a653fbd60ea276a8bb5f86184d6c559ecb70322"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3fae6f6d597c55c7b09935efce7e6462",
+    "args": "fcbd3f4377caab08f08c686e6daf38fb",
+    "events": "e1d54b4d6518897f151db75296130271"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4e3c214b028e6fab69d5896d2a653fbd60ea276a8bb5f86184d6c559ecb70322",
+     "content": "nominal table 43\n"
+    }
+   ],
+   "seq": "44",
+   "prev": "sha256:035910eb091ab1aedf24ce081075e60a5ceefbd7a727140f66946cbc18f34040",
+   "hash": "sha256:382379e26deda89aa68f176b1161cd82ac2f6de7b63a77ae2775a16ffb1a2723",
+   "payload_digest": "sha256:c6f83df9e5a76d453a59950967903f5ff9d7d4f4f6c3d9aedbb2c967dbe748b1"
+  },
+  {
+   "name": "w2_044",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:310ebe56abab75a6c895835f61e82d0209f4aaa75c2444c3770141cd958ce0fb",
+    "time": {
+     "utc": "2026-11-19T10:00:44Z",
+     "mono_ns": "49000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "44",
+     "args": {
+      "feature": "F-0044",
+      "nominal_um": 12044,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 44
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0044",
+       "digest": "sha256:80ccb4b9da043dd3998657e5bdbc303a7fa8c321ce15758370a5f23ef8b43aac"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "0cb406940c44867984abdfebae95ca06",
+    "args": "ed63492e4588ac2cbbfffc0c190cfefc",
+    "events": "b9d0616112081f8bc60682eba2c24c04"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:80ccb4b9da043dd3998657e5bdbc303a7fa8c321ce15758370a5f23ef8b43aac",
+     "content": "nominal table 44\n"
+    }
+   ],
+   "seq": "45",
+   "prev": "sha256:382379e26deda89aa68f176b1161cd82ac2f6de7b63a77ae2775a16ffb1a2723",
+   "hash": "sha256:89bc539a30c9c1c97002feae9e9e85311534c13939d08d2bf0346d36a6563a20",
+   "payload_digest": "sha256:3e82538f4ecaecf444834bc994bb7a772829717e38c8cb46f64db1f482c5998d"
+  },
+  {
+   "name": "w2_045",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:f18b296e1ab6c16e7fbcb2bccad8fddfd45f6df1970d2b7fc21a825e58a56e2e",
+    "time": {
+     "utc": "2026-11-19T10:00:45Z",
+     "mono_ns": "50000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "45",
+     "args": {
+      "feature": "F-0045",
+      "nominal_um": 12045,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 45
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0045",
+       "digest": "sha256:4de3de783d9e7d305921e1f37f6af4883661d4fb0c7f2357af11f90620524672"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "75f7fb9e9001567b4f6c764989c4274d",
+    "args": "7405d3e4c1e990021a055fda3502708d",
+    "events": "7bf301db630b761f947aa369e58f392e"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4de3de783d9e7d305921e1f37f6af4883661d4fb0c7f2357af11f90620524672",
+     "content": "nominal table 45\n"
+    }
+   ],
+   "seq": "46",
+   "prev": "sha256:89bc539a30c9c1c97002feae9e9e85311534c13939d08d2bf0346d36a6563a20",
+   "hash": "sha256:d6cdccf8b2bb7ce31c1b740f85fbd42607b44a50f472f8656bf0a5cf0a3a3793",
+   "payload_digest": "sha256:044db4c4b0487eb5c0b5940d6b8b2153e5c6633b863961679157887fd838f8c6"
+  },
+  {
+   "name": "w2_046",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:a997a9aa46284e57be97d1f421964e973ae0025759c265c9f8be784c72b21a91",
+    "time": {
+     "utc": "2026-11-19T10:00:46.046Z",
+     "mono_ns": "51000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "46",
+     "args": {
+      "feature": "F-0046",
+      "nominal_um": 12046,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 46
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0046",
+       "digest": "sha256:d5e1d77ff5dcc69904abf959b89457c932b0ea0431f1fe773df73926000459a6"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "320eb8b15091ade092fccf54e1da8708",
+    "args": "cf8444bb9350f30d07acadce1f10cbad",
+    "events": "2ddf958c67644ae800099aa9bd0a3d72"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:d5e1d77ff5dcc69904abf959b89457c932b0ea0431f1fe773df73926000459a6",
+     "content": "nominal table 46\n"
+    }
+   ],
+   "seq": "47",
+   "prev": "sha256:d6cdccf8b2bb7ce31c1b740f85fbd42607b44a50f472f8656bf0a5cf0a3a3793",
+   "hash": "sha256:f8b8558967365cab0be9b3a34d9e50e833027d5148c828c92f2b338f3508f15f",
+   "payload_digest": "sha256:300521d3e47ac88306ed1043f4bc57bbb58f900eba90d268a449207fb0cb0d1e"
+  },
+  {
+   "name": "w2_047",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:ca405ec8ff5a843b6014ce4299971d903cf6056b8875ca303918561c4265a0ac",
+    "time": {
+     "utc": "2026-11-19T10:00:47Z",
+     "mono_ns": "52000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "47",
+     "args": {
+      "feature": "F-0047",
+      "nominal_um": 12047,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 47
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0047",
+       "digest": "sha256:01ad05d5c5cf8dd86eff0c9e762e8a3efb7ce00e2c837d2b97e70b6ba70ed774"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "c8102f0984a2c0132e6d3d118d840fb7",
+    "args": "c1789906f60edaadceb688a376616062",
+    "events": "896ffa1dbf1d9c979bd1f83c02d88bf5"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:01ad05d5c5cf8dd86eff0c9e762e8a3efb7ce00e2c837d2b97e70b6ba70ed774",
+     "content": "nominal table 47\n"
+    }
+   ],
+   "seq": "48",
+   "prev": "sha256:f8b8558967365cab0be9b3a34d9e50e833027d5148c828c92f2b338f3508f15f",
+   "hash": "sha256:dc53bce3c23e943990ea13d5ac5e8adf5f727487500f35e0076f557fe798dfd4",
+   "payload_digest": "sha256:a89adc9fdc1b5e577419133177dd4fc8af4c8d6b9b507a2d1f9a1b0471acbd73"
+  },
+  {
+   "name": "w2_048",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:103e0841fa0ffbe847ea08464a6e640636c1b91bc58b8c4182b9fd7927567e34",
+    "time": {
+     "utc": "2026-11-19T10:00:48Z",
+     "mono_ns": "53000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "48",
+     "args": {
+      "feature": "F-0048",
+      "nominal_um": 12048,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 48
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0048",
+       "digest": "sha256:5bd60a186d1f18f7c75017ce062cfaf5637e75e114dce6ee6b7549a830f6cf22"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3720f0561c86b4350abbb656433bd66d",
+    "args": "8b19c2c97756f95768a61046c4058710",
+    "events": "f31659590a376267b3587188f9f9230f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5bd60a186d1f18f7c75017ce062cfaf5637e75e114dce6ee6b7549a830f6cf22",
+     "content": "nominal table 48\n"
+    }
+   ],
+   "seq": "49",
+   "prev": "sha256:dc53bce3c23e943990ea13d5ac5e8adf5f727487500f35e0076f557fe798dfd4",
+   "hash": "sha256:3781abcdd889e27fa208a1c8dcf16ccb8ec77098dbf0b1208ddbda08c2f09724",
+   "payload_digest": "sha256:10dfda98b5d92e3aeecde3f59b0fe2e79f1e66b0ebb6b38017f781d301969b81"
+  },
+  {
+   "name": "w2_049",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:5c23a686761c688be027f5685a7b64f4977d240865768961d4e81d2a7501f912",
+    "time": {
+     "utc": "2026-11-19T10:00:49.049Z",
+     "mono_ns": "54000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "49",
+     "args": {
+      "feature": "F-0049",
+      "nominal_um": 12049,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 49
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0049",
+       "digest": "sha256:ddef639463668ca32c7aab4a059b36c1543a94e25c595bf65deee2aeb0a927fa"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "4dbae11453099a4746d4bb9a24ecccd4",
+    "args": "e53da9b1b73d333963c4fab665f146a3",
+    "events": "3ec2bbd575647b4081aa3b6fd770bf4f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ddef639463668ca32c7aab4a059b36c1543a94e25c595bf65deee2aeb0a927fa",
+     "content": "nominal table 49\n"
+    }
+   ],
+   "seq": "50",
+   "prev": "sha256:3781abcdd889e27fa208a1c8dcf16ccb8ec77098dbf0b1208ddbda08c2f09724",
+   "hash": "sha256:8dd98152593519aedbcc374c838ec400669d08b4815b9d9f1b2fb61f0786e202",
+   "payload_digest": "sha256:9d1c474d8087b599e09b895cdad23ffe9cbc6e47e110f0273b00b0669d8e2112"
+  },
+  {
+   "name": "w2_050",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:f9aade60759b09790c1513b95750fc96d91233007c0c774da6db5eb030eb4f00",
+    "time": {
+     "utc": "2026-11-19T10:00:50Z",
+     "mono_ns": "55000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "50",
+     "args": {
+      "feature": "F-0050",
+      "nominal_um": 12050,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 50
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0050",
+       "digest": "sha256:1891a4df15606c8c6b39a60d396e1eb1e33b31972cd2482f5da7176ae7d44674"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "8e8599df8fceb321a68abd7762e727f8",
+    "args": "a8b352215d08e881fd227a824c18cfc0",
+    "events": "55debd988fefbb6f0148e855b8c46386"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:1891a4df15606c8c6b39a60d396e1eb1e33b31972cd2482f5da7176ae7d44674",
+     "content": "nominal table 50\n"
+    }
+   ],
+   "seq": "51",
+   "prev": "sha256:8dd98152593519aedbcc374c838ec400669d08b4815b9d9f1b2fb61f0786e202",
+   "hash": "sha256:9a869191a63fde8e6db2126681c7e3a07ede1ccf3be7ba13303ed91cf4278cd7",
+   "payload_digest": "sha256:1b8bf422c493de7f5f289e5d7450ba37c5de5ae30fb812579de18a41b685f171"
+  },
+  {
+   "name": "w2_051",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:73747fa23e3df212f46932de0c6f0b7a79ecd04353fa0c6d88b2396825191243",
+    "time": {
+     "utc": "2026-11-19T10:00:51Z",
+     "mono_ns": "56000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "51",
+     "args": {
+      "feature": "F-0051",
+      "nominal_um": 12051,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 51
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0051",
+       "digest": "sha256:ad93c97e34a66c670028ce339af51c12c29c069954fa8e3b10c4f13b57232b24"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e54450f3b918861113e7d97024f558f7",
+    "args": "b41c384f2f4544cac592fd3a5969c424",
+    "events": "c214a935b394823db92aad5dbcb5ef62"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ad93c97e34a66c670028ce339af51c12c29c069954fa8e3b10c4f13b57232b24",
+     "content": "nominal table 51\n"
+    }
+   ],
+   "seq": "52",
+   "prev": "sha256:9a869191a63fde8e6db2126681c7e3a07ede1ccf3be7ba13303ed91cf4278cd7",
+   "hash": "sha256:be60433107de38ae3a321eeb81f614370ffbb4c1d5d1be0814732848d146a2ef",
+   "payload_digest": "sha256:d0109b7505f460ec13df6881666501b25b0ef470b46f7406f48950fe1db318d4"
+  },
+  {
+   "name": "w2_052",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:2220e7d7259e14c25176219184a369ebbd7e13bd8490cbb9823db39462e12d2c",
+    "time": {
+     "utc": "2026-11-19T10:00:52.052Z",
+     "mono_ns": "57000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "52",
+     "args": {
+      "feature": "F-0052",
+      "nominal_um": 12052,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 52
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0052",
+       "digest": "sha256:c954d8b4c25e80b1948957711b9caf66c987075bab4586e8d218aefb6e373dec"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e38ea15540232ccd8cdb2d2cdbc46e3b",
+    "args": "f2a6cd1f0d3f56291e3233488d60dde1",
+    "events": "5ed2f70d5851afdb6b9e7b4123bb629a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:c954d8b4c25e80b1948957711b9caf66c987075bab4586e8d218aefb6e373dec",
+     "content": "nominal table 52\n"
+    }
+   ],
+   "seq": "53",
+   "prev": "sha256:be60433107de38ae3a321eeb81f614370ffbb4c1d5d1be0814732848d146a2ef",
+   "hash": "sha256:9d7016a8e8f5d0aa32bf0d1c1ffef9c73665a36aa3ad911516335e90665cda6f",
+   "payload_digest": "sha256:298754575002136c53c4b4622df284d9bbb1313fa5e3b3a034ec5a42a4c834ac"
+  },
+  {
+   "name": "w2_053",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:00bd4bfe46d39877fbff94cc1f99c31066d9f83493896f4267c36e7df244f2ef",
+    "time": {
+     "utc": "2026-11-19T10:00:53Z",
+     "mono_ns": "58000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "53",
+     "args": {
+      "feature": "F-0053",
+      "nominal_um": 12053,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 53
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0053",
+       "digest": "sha256:3f06527d0b56a1c26874b5d3a234704358884aff7cf9a72d47a24ceda2419caa"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "368fdc526677ff1d3b2f3884b2df06fd",
+    "args": "f0cca0059198315d1573a1b864913331",
+    "events": "3bbc03e90c17ae22b9db7784c85e666f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:3f06527d0b56a1c26874b5d3a234704358884aff7cf9a72d47a24ceda2419caa",
+     "content": "nominal table 53\n"
+    }
+   ],
+   "seq": "54",
+   "prev": "sha256:9d7016a8e8f5d0aa32bf0d1c1ffef9c73665a36aa3ad911516335e90665cda6f",
+   "hash": "sha256:f8de4d153f8f5505360ad842d279714869d06163b3027757c9ec2bfb14a8084c",
+   "payload_digest": "sha256:d7bd52d078d2fc5296679d0eba52b004ec807c7114dd5a0e8ee8ae111bf39d88"
+  },
+  {
+   "name": "w2_054",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:43276735afee3b983d1f6f313680cdc830e54722824f3e2f9a5d3416413b1a55",
+    "time": {
+     "utc": "2026-11-19T10:00:54Z",
+     "mono_ns": "59000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "54",
+     "args": {
+      "feature": "F-0054",
+      "nominal_um": 12054,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 54
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0054",
+       "digest": "sha256:2bfe96cab12718a8769d5ab2502d9a3b39b17abd67bc26bc1e515666f91ccdd9"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d38ae48f5b78ba17a3aba3c1ca8059dd",
+    "args": "fc58106f02cc0e197feb8edbf3448d41",
+    "events": "50ea54833bb86d97593dd3d1151a1761"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:2bfe96cab12718a8769d5ab2502d9a3b39b17abd67bc26bc1e515666f91ccdd9",
+     "content": "nominal table 54\n"
+    }
+   ],
+   "seq": "55",
+   "prev": "sha256:f8de4d153f8f5505360ad842d279714869d06163b3027757c9ec2bfb14a8084c",
+   "hash": "sha256:08a10c2c244eb05ee8fd22b1e869ce1e279a2889b4ba27904155bfcd1eebeb64",
+   "payload_digest": "sha256:87a3e9ba3e9d3b8828a35a99f7d5d7a3452da9fa2168e1aeec39da9fd3b8599c"
+  },
+  {
+   "name": "w2_055",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:5fe98301977b800a997655c7fdae0fb5e6263b10398bb3ce70418bcdd033db68",
+    "time": {
+     "utc": "2026-11-19T10:00:55.055Z",
+     "mono_ns": "60000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "55",
+     "args": {
+      "feature": "F-0055",
+      "nominal_um": 12055,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 55
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0055",
+       "digest": "sha256:5c66cf12ff1bb5eb8018c0fef4f12e1c931394efddf2815cdb41efc3edf7710b"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "f3887fb55fd443508246dcd372fe921e",
+    "args": "d824e87ac37d095c46b91c3f235f83aa",
+    "events": "5863d3ee512b662dd74c8706e4588431"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5c66cf12ff1bb5eb8018c0fef4f12e1c931394efddf2815cdb41efc3edf7710b",
+     "content": "nominal table 55\n"
+    }
+   ],
+   "seq": "56",
+   "prev": "sha256:08a10c2c244eb05ee8fd22b1e869ce1e279a2889b4ba27904155bfcd1eebeb64",
+   "hash": "sha256:36c011bbdea84ced58accbfe54f82f514944d82f6035749154da78c0397135b1",
+   "payload_digest": "sha256:abd4977172761ac8e7b59e82c8df2c69b2b1dd477ea777f207cbcd3471778b3e"
+  },
+  {
+   "name": "w2_056",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:cbde7bf74f7e8f574d1bf0e121bbb4525621e90fc4e2919e2246664014bc06e3",
+    "time": {
+     "utc": "2026-11-19T10:00:56Z",
+     "mono_ns": "61000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "56",
+     "args": {
+      "feature": "F-0056",
+      "nominal_um": 12056,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 56
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0056",
+       "digest": "sha256:0d79c05e88cae6372b8a10f0ed3c4d2d94eda707549124ab3e8fa661e54dea73"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "55d71b132a28a752a8ba5a48eeb5b5af",
+    "args": "7ef07d737eeffb78a296e26e665730f2",
+    "events": "234eeede08f5e83e66a1dc9aae4868b3"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:0d79c05e88cae6372b8a10f0ed3c4d2d94eda707549124ab3e8fa661e54dea73",
+     "content": "nominal table 56\n"
+    }
+   ],
+   "seq": "57",
+   "prev": "sha256:36c011bbdea84ced58accbfe54f82f514944d82f6035749154da78c0397135b1",
+   "hash": "sha256:1e0d5910314b05279e57c3248ae6ae37e2462fa5e14e73da1e9df86e523749e8",
+   "payload_digest": "sha256:949449ace334aafa738b15de9027185e0a2d9c6c7567f5a45344728dfc1897cb"
+  },
+  {
+   "name": "w2_057",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:41de71a2e97bd5cbdb353a8286c529921bfe4fd89b65364f9c222d69c9eedd81",
+    "time": {
+     "utc": "2026-11-19T10:00:57Z",
+     "mono_ns": "62000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "57",
+     "args": {
+      "feature": "F-0057",
+      "nominal_um": 12057,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 57
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0057",
+       "digest": "sha256:b459337f09a70dd52feda41ea1eaf3d7e195731a6ce3897b6dea76ef90e9f726"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "bb5c061785eb8bdb3a777a0c663040d4",
+    "args": "207f09911ed3894a43ad0fcb52fcc1d4",
+    "events": "0542bffea12fa64e2818d8889b718d22"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:b459337f09a70dd52feda41ea1eaf3d7e195731a6ce3897b6dea76ef90e9f726",
+     "content": "nominal table 57\n"
+    }
+   ],
+   "seq": "58",
+   "prev": "sha256:1e0d5910314b05279e57c3248ae6ae37e2462fa5e14e73da1e9df86e523749e8",
+   "hash": "sha256:83160fc8019e84b1d3081380e17929cad93f1866b7b96cab3dac761e0c4cc0c7",
+   "payload_digest": "sha256:dcb70e1a9103035e2ad70a4a8b1e3124bf263867345a436e8ab2f1268bc2e158"
+  },
+  {
+   "name": "w2_058",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:f9cef912b43f3fd5fe16661b29f2a86a48285bbec502d67c817c392b2a1c2f87",
+    "time": {
+     "utc": "2026-11-19T10:00:58.058Z",
+     "mono_ns": "63000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "58",
+     "args": {
+      "feature": "F-0058",
+      "nominal_um": 12058,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 58
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0058",
+       "digest": "sha256:ff4ded9df1c29ad49b3557be1e13b214ea017ffc687e429260fdb2f819d4b31d"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "884e52fe09df8058e018034d3ec3ebdf",
+    "args": "e32590e2dd26eab7b14c65e6c137642c",
+    "events": "817e2fb68da0f4276ede8fe3e34af1e9"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ff4ded9df1c29ad49b3557be1e13b214ea017ffc687e429260fdb2f819d4b31d",
+     "content": "nominal table 58\n"
+    }
+   ],
+   "seq": "59",
+   "prev": "sha256:83160fc8019e84b1d3081380e17929cad93f1866b7b96cab3dac761e0c4cc0c7",
+   "hash": "sha256:294b722d1c240d32ac228c9bd5e87185b88bf8bbb6324e47d0f8e706b26c425a",
+   "payload_digest": "sha256:ed24d52144bd95c474d343fdc6558bd2a9a2c69b0d37128101ac9eccb33e2b55"
+  },
+  {
+   "name": "w2_059",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:348af3da3d9f3a401c22cec6bbee5ef4f91fc7c93af7be75df40abe955c3ef23",
+    "time": {
+     "utc": "2026-11-19T10:00:59Z",
+     "mono_ns": "64000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "59",
+     "args": {
+      "feature": "F-0059",
+      "nominal_um": 12059,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 59
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0059",
+       "digest": "sha256:7b9a71881a7d0a9ff2fe90991226b1b309abcee207b493cc9ed63fb90d816f31"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "6109be9aac5156d4632770011bd11061",
+    "args": "2ed0d6173d758bfd58f3f3c96f083264",
+    "events": "67a20055442465ae29bb118a9fb9bfd6"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:7b9a71881a7d0a9ff2fe90991226b1b309abcee207b493cc9ed63fb90d816f31",
+     "content": "nominal table 59\n"
+    }
+   ],
+   "seq": "60",
+   "prev": "sha256:294b722d1c240d32ac228c9bd5e87185b88bf8bbb6324e47d0f8e706b26c425a",
+   "hash": "sha256:f6514e9096bf35a06e88ec957c1d8f93493d44bc75e1b5a3f88602813276d650",
+   "payload_digest": "sha256:28d59a3f3891b4d96dd4a5c93d91ce84670164a8399df241a1ccbc4b033b5fa1"
+  },
+  {
+   "name": "w2_060",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:4701fea40b8e298a17413750bb57a8f97a2874e828f307e51610fd072eac714b",
+    "time": {
+     "utc": "2026-11-19T10:01:00Z",
+     "mono_ns": "65000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "60",
+     "args": {
+      "feature": "F-0060",
+      "nominal_um": 12060,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 60
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0060",
+       "digest": "sha256:57f45f16d9010bc520cb40fa6ab3888f9a814cc0b4e03fdff3d16074e8e60e6b"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "643dbd51cbb320d3ab9d872d1574e314",
+    "args": "51692db0f10d4c2bdc0da9a73090be1a",
+    "events": "3eb8a06aacd215d3721c35058162c560"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:57f45f16d9010bc520cb40fa6ab3888f9a814cc0b4e03fdff3d16074e8e60e6b",
+     "content": "nominal table 60\n"
+    }
+   ],
+   "seq": "61",
+   "prev": "sha256:f6514e9096bf35a06e88ec957c1d8f93493d44bc75e1b5a3f88602813276d650",
+   "hash": "sha256:1cbb34385405551581e791e5bfc96170d08a8c5548aa1d692925a607dd8d2a68",
+   "payload_digest": "sha256:156920a16c4ebf15d05822107bcee830d220fc803e3e18b5a57445c2ad189cae"
+  },
+  {
+   "name": "w2_061",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:5c509ce714d07aa7130944834110a0f9da35922e6cce7c874bc0fe41c3ed98d5",
+    "time": {
+     "utc": "2026-11-19T10:01:01.061Z",
+     "mono_ns": "66000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "61",
+     "args": {
+      "feature": "F-0061",
+      "nominal_um": 12061,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 61
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0061",
+       "digest": "sha256:1613f4307567309b58aee6807374541cb8e273c2bce97da6ed11b454ee2244db"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e1e7da4f4a439ee6d2a4f4f795eed817",
+    "args": "4bfa70cf2e3de957a5c4e7f82fae4432",
+    "events": "73a027ffce31e8c4cfba52d56ef508fb"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:1613f4307567309b58aee6807374541cb8e273c2bce97da6ed11b454ee2244db",
+     "content": "nominal table 61\n"
+    }
+   ],
+   "seq": "62",
+   "prev": "sha256:1cbb34385405551581e791e5bfc96170d08a8c5548aa1d692925a607dd8d2a68",
+   "hash": "sha256:ba95368be6bb64b73a473424e93e36f88eb7939449ec0d1d39b12a2b99a12eae",
+   "payload_digest": "sha256:559875ba03736179dd834ac836aa9b357ba36818c9e5a9c40d3c50e5cb5969b5"
+  },
+  {
+   "name": "w2_062",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:7ae382ebe29e7c13bece75415f48fdc35140d18b5755df79b6a3ad27905f0ca7",
+    "time": {
+     "utc": "2026-11-19T10:01:02Z",
+     "mono_ns": "67000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "62",
+     "args": {
+      "feature": "F-0062",
+      "nominal_um": 12062,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 62
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0062",
+       "digest": "sha256:4b6918aa0553b33c688dcc919013b03c489591e068f8c8bb17c12f1c7e9287bb"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d563ddeaaf3d1173941f6dd16b46cb27",
+    "args": "e9b7d907fcdb918d4189f17202b59ccc",
+    "events": "f88664c08860791e2391ddb951ab61d0"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4b6918aa0553b33c688dcc919013b03c489591e068f8c8bb17c12f1c7e9287bb",
+     "content": "nominal table 62\n"
+    }
+   ],
+   "seq": "63",
+   "prev": "sha256:ba95368be6bb64b73a473424e93e36f88eb7939449ec0d1d39b12a2b99a12eae",
+   "hash": "sha256:8c04856032edd589fd3ea0ab13b1e07f4e01ea6f9b3a185036b9f0fa934d6c30",
+   "payload_digest": "sha256:7adc25ef885d2139b53ea97800ecddb7149d30a1849a250c4751f50529146ba6"
+  },
+  {
+   "name": "w2_063",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:8b07f20ea671173f4e84e1cc060e12ecfd9f443509fd28c3d3ddaf2a24ea86d6",
+    "time": {
+     "utc": "2026-11-19T10:01:03Z",
+     "mono_ns": "68000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "63",
+     "args": {
+      "feature": "F-0063",
+      "nominal_um": 12063,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 63
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0063",
+       "digest": "sha256:778798bee83cc4efc6bae4c2bf28f5bd5e040b3ba6d22848b1e58eca78ac5c28"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "bd0bd9e9aaf3fb1ffee99e4b7bff6784",
+    "args": "eb018a38d74bf6f3d168717b99af7a88",
+    "events": "77c8fa4ae4a95d1c6c8953bd6e430b0b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:778798bee83cc4efc6bae4c2bf28f5bd5e040b3ba6d22848b1e58eca78ac5c28",
+     "content": "nominal table 63\n"
+    }
+   ],
+   "seq": "64",
+   "prev": "sha256:8c04856032edd589fd3ea0ab13b1e07f4e01ea6f9b3a185036b9f0fa934d6c30",
+   "hash": "sha256:6a9d74846b7dd4a6e1ddb707d7e16a418ce7944977261014604f1b8885feb183",
+   "payload_digest": "sha256:182f6054d7523cab57b1cb23afa68fc458b0d77bdaa3eabdbb75764c0ed212a0"
+  },
+  {
+   "name": "w2_064",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:8ea49b5c3fad7e39662a646c603fd22b6466ffe2039b0b164a83f15d271135a2",
+    "time": {
+     "utc": "2026-11-19T10:01:04.064Z",
+     "mono_ns": "69000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "64",
+     "args": {
+      "feature": "F-0064",
+      "nominal_um": 12064,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 64
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0064",
+       "digest": "sha256:50858a6814a4bf9291d2e2c47740b9dc25011e15d9d467ad4b6a3304471c9f44"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "8ce90ea0be3efefd44c10b21ae737f5a",
+    "args": "4b3a786e7fa2a178634a8b89c30bc6de",
+    "events": "549aabb6715fff3b6a587f28bf125c85"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:50858a6814a4bf9291d2e2c47740b9dc25011e15d9d467ad4b6a3304471c9f44",
+     "content": "nominal table 64\n"
+    }
+   ],
+   "seq": "65",
+   "prev": "sha256:6a9d74846b7dd4a6e1ddb707d7e16a418ce7944977261014604f1b8885feb183",
+   "hash": "sha256:1191c1d7ea0c1b9f0d8ed770f5ee901c3e10debd2259f1935c8b16430df47a03",
+   "payload_digest": "sha256:7fc01203075d67dca6eccd1f7242ab280d0eda712c2437f222fc3c3f5962fd4b"
+  },
+  {
+   "name": "w2_065",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:63a60ffaddccef7689006af139054bef6d95782113d59d89df83217f311d217d",
+    "time": {
+     "utc": "2026-11-19T10:01:05Z",
+     "mono_ns": "70000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "65",
+     "args": {
+      "feature": "F-0065",
+      "nominal_um": 12065,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 65
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0065",
+       "digest": "sha256:7c9b3ce942304f1b81010297603e3992797c35c2aa0789c885326bf66a8a684f"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "5a48d19ab5a19c339b1007c2e309c804",
+    "args": "8f5ba68b4d13e2f116aa1e6e8c1c90d4",
+    "events": "a34aa5ac5d4fc618b05e34707286139c"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:7c9b3ce942304f1b81010297603e3992797c35c2aa0789c885326bf66a8a684f",
+     "content": "nominal table 65\n"
+    }
+   ],
+   "seq": "66",
+   "prev": "sha256:1191c1d7ea0c1b9f0d8ed770f5ee901c3e10debd2259f1935c8b16430df47a03",
+   "hash": "sha256:9c58bf993bb6af965993e4e099deff364b35a96a7b2061bed9400a67dc1df73e",
+   "payload_digest": "sha256:3d80c15c6283e886bdc4bbc61d2e101a271c32a3e7f435719e1acd2e9d5501a9"
+  },
+  {
+   "name": "w2_066",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:bb9fbe68049e99dfa1e2bf73401bcf0c3efcf35a6059bbf1ded40cd789fa85b5",
+    "time": {
+     "utc": "2026-11-19T10:01:06Z",
+     "mono_ns": "71000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "66",
+     "args": {
+      "feature": "F-0066",
+      "nominal_um": 12066,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 66
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0066",
+       "digest": "sha256:6f3b79bbca59c47def6e02178a62e1b30997f975909e7ad3bbf41ad4dbfb81bf"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "e9753a6cde129bb31c9fb1f3b3b09e8f",
+    "args": "80eac1756ebc52ef2a3756383ea24da6",
+    "events": "6ac36b024cdc8e631e27eeb7d6036421"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:6f3b79bbca59c47def6e02178a62e1b30997f975909e7ad3bbf41ad4dbfb81bf",
+     "content": "nominal table 66\n"
+    }
+   ],
+   "seq": "67",
+   "prev": "sha256:9c58bf993bb6af965993e4e099deff364b35a96a7b2061bed9400a67dc1df73e",
+   "hash": "sha256:9671ce33977e99cf29bcf586f79fb58ce24c2b6c0ba23bcfaf489651c73ab532",
+   "payload_digest": "sha256:72b642c381e427b396a42dd949e30cc21ce8baf18011decc5246bee66db5bfa8"
+  },
+  {
+   "name": "w2_067",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:7876e762150fba83aef082b9adacdfebb7da90242585293805bc24e1ddf9f466",
+    "time": {
+     "utc": "2026-11-19T10:01:07.067Z",
+     "mono_ns": "72000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "67",
+     "args": {
+      "feature": "F-0067",
+      "nominal_um": 12067,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 67
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0067",
+       "digest": "sha256:987dd4b12cfefbbdfb31f4119bc12ea61923cf3b0e226a82cc78d1c247022602"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "dfbfd04a2b1c0c181c23be60dad1634b",
+    "args": "ed3db84674809c88668831f40ec754be",
+    "events": "521424358dd8e876dff13c5b01976300"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:987dd4b12cfefbbdfb31f4119bc12ea61923cf3b0e226a82cc78d1c247022602",
+     "content": "nominal table 67\n"
+    }
+   ],
+   "seq": "68",
+   "prev": "sha256:9671ce33977e99cf29bcf586f79fb58ce24c2b6c0ba23bcfaf489651c73ab532",
+   "hash": "sha256:f659b984de9171372957b736ef09ac42a9ff5970b23f4c6df20cfee8de105581",
+   "payload_digest": "sha256:c0190ffad5d4edb3557136aedfff74cb3d0ba1e8f15338680190d8bd21ba0661"
+  },
+  {
+   "name": "w2_068",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:fd6ef29ae53e06238736f519c7f9111b7fae3e54959b9724f946b30b6284aef6",
+    "time": {
+     "utc": "2026-11-19T10:01:08Z",
+     "mono_ns": "73000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "68",
+     "args": {
+      "feature": "F-0068",
+      "nominal_um": 12068,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 68
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0068",
+       "digest": "sha256:8187e06d0711ec0c9d2b15c76b9b772f4c2dede2bb63076b149b10921f0b12b5"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "8892caff2cfcd11da7e9da71b715c804",
+    "args": "eb2aac56a31b8bbda14d2de3a4803b4f",
+    "events": "880c0aa4232b41ebb83f308ef5f27ef7"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8187e06d0711ec0c9d2b15c76b9b772f4c2dede2bb63076b149b10921f0b12b5",
+     "content": "nominal table 68\n"
+    }
+   ],
+   "seq": "69",
+   "prev": "sha256:f659b984de9171372957b736ef09ac42a9ff5970b23f4c6df20cfee8de105581",
+   "hash": "sha256:137fda35fbdbe3df50db49534d6068d7c83c820bbbdd8bc9a30b0253fa9eb181",
+   "payload_digest": "sha256:2f2b9999074079771cb818a7eb98365a903d20c621460f6eb18d6c6b5b6428ee"
+  },
+  {
+   "name": "w2_069",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:68fb4928e6d10fcdc4ce025afae3df647bbe8ad18ad0adb4c1786da8866976c6",
+    "time": {
+     "utc": "2026-11-19T10:01:09Z",
+     "mono_ns": "74000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "69",
+     "args": {
+      "feature": "F-0069",
+      "nominal_um": 12069,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 69
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0069",
+       "digest": "sha256:eb729e9ad8c77b0302030bec1ff1b42a9f1268d5e79838bbd79b9747e62a3de0"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "f0829a86cacb1a5e11aa4f9f4ff47646",
+    "args": "1a433cead9dfa27665c87b73e9a44621",
+    "events": "ca0cdf2772264e24a0f5271ab52d1bd9"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:eb729e9ad8c77b0302030bec1ff1b42a9f1268d5e79838bbd79b9747e62a3de0",
+     "content": "nominal table 69\n"
+    }
+   ],
+   "seq": "70",
+   "prev": "sha256:137fda35fbdbe3df50db49534d6068d7c83c820bbbdd8bc9a30b0253fa9eb181",
+   "hash": "sha256:2fec73d7212b9e6726833cd089cb872a9b59bf55ae91e0f52138bd23984132af",
+   "payload_digest": "sha256:8c70d85ac7c3d2c4114f048e2a5eab47cb95ac9d25747369b14207100e389466"
+  },
+  {
+   "name": "w2_070",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:603d32aa7eae8260b34fac0757fd49f16ebac3bab533e5df8a45dddb5a111eea",
+    "time": {
+     "utc": "2026-11-19T10:01:10.070Z",
+     "mono_ns": "75000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "70",
+     "args": {
+      "feature": "F-0070",
+      "nominal_um": 12070,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 70
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0070",
+       "digest": "sha256:df9606b95ec7d9697e53fdcd8ba600dd3d959e85aa90ad67eb9836309f9aa8e6"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "17ce546dd0818a6888de99334695e3eb",
+    "args": "4ba4c044efd4ce75121df4db00779960",
+    "events": "33a9798933e682ae252540cf312acc33"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:df9606b95ec7d9697e53fdcd8ba600dd3d959e85aa90ad67eb9836309f9aa8e6",
+     "content": "nominal table 70\n"
+    }
+   ],
+   "seq": "71",
+   "prev": "sha256:2fec73d7212b9e6726833cd089cb872a9b59bf55ae91e0f52138bd23984132af",
+   "hash": "sha256:3850e5af36bf34ff0f248ebd81124f99167f1d59380e2a3fb00243470a85cf0f",
+   "payload_digest": "sha256:474604cc71c1272ab13ea145a4795fb934e9cd7b4bd73e350598026474930190"
+  },
+  {
+   "name": "w2_071",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:25e6240063f39de06e90f37e78dab9dc97fc15bbf6263035f9d5125a5a6d0a88",
+    "time": {
+     "utc": "2026-11-19T10:01:11Z",
+     "mono_ns": "76000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "71",
+     "args": {
+      "feature": "F-0071",
+      "nominal_um": 12071,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 71
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0071",
+       "digest": "sha256:5769d4d8b1f9746ef565d0c17d3d8df03b38dc4c1911b262ab4e9d2460857f63"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "c4494438b4409bb431fee73ce5bef5c9",
+    "args": "7df08f30d3a1c69a9a7cef6c503b448e",
+    "events": "7b657bc03a0801f8aa8fc8c173ce5032"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5769d4d8b1f9746ef565d0c17d3d8df03b38dc4c1911b262ab4e9d2460857f63",
+     "content": "nominal table 71\n"
+    }
+   ],
+   "seq": "72",
+   "prev": "sha256:3850e5af36bf34ff0f248ebd81124f99167f1d59380e2a3fb00243470a85cf0f",
+   "hash": "sha256:5c565ddee1a31b1f8eb8da9176895be80d414332f3803ab755539b2954763ae0",
+   "payload_digest": "sha256:cd8ba8e047916dc95aa372878dab15b317f68f610aa68db9edb84ffb119c04bb"
+  },
+  {
+   "name": "w2_072",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:74eebf148a2e7eedf711a8a4704383ed338ecf37fabd17f3f0382b089974970f",
+    "time": {
+     "utc": "2026-11-19T10:01:12Z",
+     "mono_ns": "77000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "72",
+     "args": {
+      "feature": "F-0072",
+      "nominal_um": 12072,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 72
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0072",
+       "digest": "sha256:8dc797116a5eccf153fa08d2ee66d528a280d579b18bbba81c0ce14b830dcc61"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "9447cfb1f8abb846dcf37db35388d532",
+    "args": "ca1605b354828577be3e602f2badca83",
+    "events": "cba97e13f6e6d39b02b11410de79068b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8dc797116a5eccf153fa08d2ee66d528a280d579b18bbba81c0ce14b830dcc61",
+     "content": "nominal table 72\n"
+    }
+   ],
+   "seq": "73",
+   "prev": "sha256:5c565ddee1a31b1f8eb8da9176895be80d414332f3803ab755539b2954763ae0",
+   "hash": "sha256:40570f9c0418f2798ce909c03f1500a763a44afdc4e2345ce0eea8d6f4d2cbe1",
+   "payload_digest": "sha256:3275c2200c948834af344373d7f2c6923be4892876831a3cdc070c1275b2f790"
+  },
+  {
+   "name": "w2_073",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:016ecf43ddb7e0f08d98efeca0008e4964826c63985bcd8fe7e14ebfdef1ea7e",
+    "time": {
+     "utc": "2026-11-19T10:01:13.073Z",
+     "mono_ns": "78000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "73",
+     "args": {
+      "feature": "F-0073",
+      "nominal_um": 12073,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 73
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0073",
+       "digest": "sha256:d12e4c14121bdb2105a821e10756504f725356abbc08d4a4e29d7461c3852c11"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "2e4a0a68a6c5ff9f1fe92529503fff22",
+    "args": "302f429c82493eec335024cda5f68859",
+    "events": "2cbd0e11b9c50e5ccb0343fd284e7e7a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:d12e4c14121bdb2105a821e10756504f725356abbc08d4a4e29d7461c3852c11",
+     "content": "nominal table 73\n"
+    }
+   ],
+   "seq": "74",
+   "prev": "sha256:40570f9c0418f2798ce909c03f1500a763a44afdc4e2345ce0eea8d6f4d2cbe1",
+   "hash": "sha256:0d0bc29fcc4c277a1de0f22aa15b49a3b4305d31729a7d7e7499dafebc7d7c49",
+   "payload_digest": "sha256:3c3459746c27ac91545d280eb2bd29795dc12fa93a3e739e572599c3ca33b6d6"
+  },
+  {
+   "name": "w2_074",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:01daaeabeb1e66123c6d9d82266bf0c6cd54fd67bccaa09728e7f8e5e5647692",
+    "time": {
+     "utc": "2026-11-19T10:01:14Z",
+     "mono_ns": "79000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "74",
+     "args": {
+      "feature": "F-0074",
+      "nominal_um": 12074,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 74
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0074",
+       "digest": "sha256:fdac76724e6b15cdc0ca73bd22c10fb36227532f3fbaa6363789f0d5528344ab"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "fe53722ce51e256e089ab1f127340dcc",
+    "args": "6190cb0ce19ae8fd1bf7d9350af57f17",
+    "events": "62a6057ea64499a2d0dbb94c5e422a2a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:fdac76724e6b15cdc0ca73bd22c10fb36227532f3fbaa6363789f0d5528344ab",
+     "content": "nominal table 74\n"
+    }
+   ],
+   "seq": "75",
+   "prev": "sha256:0d0bc29fcc4c277a1de0f22aa15b49a3b4305d31729a7d7e7499dafebc7d7c49",
+   "hash": "sha256:05881b671ba91ffb24643a64c4847ee201cb6c20baac6bae1d5a420ccac66432",
+   "payload_digest": "sha256:180e83a14bab602416499172ea86b675a34ed87fbe33a51def2fe9756c842e33"
+  },
+  {
+   "name": "w2_075",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:222a0333a1beae44cf13dda36be6230f7f2589eabbef5f08cc6dc5b5a62c6267",
+    "time": {
+     "utc": "2026-11-19T10:01:15Z",
+     "mono_ns": "80000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "75",
+     "args": {
+      "feature": "F-0075",
+      "nominal_um": 12075,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 75
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0075",
+       "digest": "sha256:c062c076a3d49759ae59891181b03f9e8c98e9b19f4249fdfc13ea510c4ebddd"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "edb8b28c642a13d696511e185d5986e7",
+    "args": "8db482e24580af372e5464807064155f",
+    "events": "619b5921bf71cdad47b6075f08ac57d4"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:c062c076a3d49759ae59891181b03f9e8c98e9b19f4249fdfc13ea510c4ebddd",
+     "content": "nominal table 75\n"
+    }
+   ],
+   "seq": "76",
+   "prev": "sha256:05881b671ba91ffb24643a64c4847ee201cb6c20baac6bae1d5a420ccac66432",
+   "hash": "sha256:5ed55c1f6b5af30bc80b1ed8c5b89b96026bd5527687b2b0d78dd40d3f2d570b",
+   "payload_digest": "sha256:6d3581e17808d4b6ce462b1d7c50914dd8d78821931082a787ec8f97518b3e92"
+  },
+  {
+   "name": "w2_076",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:c9a52ff6715bac5390052492040f30df416021679e20d9990c7c1a50a3446986",
+    "time": {
+     "utc": "2026-11-19T10:01:16.076Z",
+     "mono_ns": "81000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "76",
+     "args": {
+      "feature": "F-0076",
+      "nominal_um": 12076,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 76
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0076",
+       "digest": "sha256:901b58499044e6794d0d9611f0befd02104d6b9d1ed649b2e044e4b230a92405"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "4d4b015ec79c7a5468859360a179ff98",
+    "args": "14010b8b193d4fabdd2ae1ee28d74fbb",
+    "events": "45e68c49d48c884ad7e0840c7044eac1"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:901b58499044e6794d0d9611f0befd02104d6b9d1ed649b2e044e4b230a92405",
+     "content": "nominal table 76\n"
+    }
+   ],
+   "seq": "77",
+   "prev": "sha256:5ed55c1f6b5af30bc80b1ed8c5b89b96026bd5527687b2b0d78dd40d3f2d570b",
+   "hash": "sha256:742f8ac12004ffb51f777c8bd540ce1239279bcf5ee0309fe4cdc69a16ca1d72",
+   "payload_digest": "sha256:0e976bff38b9a3331941b6ea004ed8d06a3f350e613f77c859bb13cf9d0a0693"
+  },
+  {
+   "name": "w2_077",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:4b3c23866eb17f109542eee8a6ee86e86158305dac51661c625fdd3eb0cbc29e",
+    "time": {
+     "utc": "2026-11-19T10:01:17Z",
+     "mono_ns": "82000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "77",
+     "args": {
+      "feature": "F-0077",
+      "nominal_um": 12077,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 77
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0077",
+       "digest": "sha256:684aacc483baf7eb12f23470b2f188b57ce07f25509bc5bbc4f0c6316254b433"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "96eb710deba2888686467c0dbad2e85e",
+    "args": "1bee478d47b0a17292e1c3016e4a2877",
+    "events": "5356ebcfcddff114d3ed5a20e8d7c6f8"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:684aacc483baf7eb12f23470b2f188b57ce07f25509bc5bbc4f0c6316254b433",
+     "content": "nominal table 77\n"
+    }
+   ],
+   "seq": "78",
+   "prev": "sha256:742f8ac12004ffb51f777c8bd540ce1239279bcf5ee0309fe4cdc69a16ca1d72",
+   "hash": "sha256:251e6e89b186ea1be175b98b030c15f3a9cd661358f3369d0359af5bcef638df",
+   "payload_digest": "sha256:9268ac4728ff83c63953921812579e9ccf54c129e42c5beffb6c41b116fdeb2f"
+  },
+  {
+   "name": "w2_078",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:04dec847230f9726127a0d51b1526c8ddc283ffee07a39a1dc6b442803cb4700",
+    "time": {
+     "utc": "2026-11-19T10:01:18Z",
+     "mono_ns": "83000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "78",
+     "args": {
+      "feature": "F-0078",
+      "nominal_um": 12078,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 78
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0078",
+       "digest": "sha256:cc566169e02c8eeac9c57ac83750078f1202e807fc8a4f9f2a808de148051c64"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a13cf596bc1de11e66b30fecb762e4f6",
+    "args": "c763fafac482d607ebf2a9aa500064c7",
+    "events": "89e5d4154e84ba2bf9eb5845c367ac37"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:cc566169e02c8eeac9c57ac83750078f1202e807fc8a4f9f2a808de148051c64",
+     "content": "nominal table 78\n"
+    }
+   ],
+   "seq": "79",
+   "prev": "sha256:251e6e89b186ea1be175b98b030c15f3a9cd661358f3369d0359af5bcef638df",
+   "hash": "sha256:5b77df91738e04c4303280fb0416bd5a1ff36e71cedb13ed860439d1930bfe2c",
+   "payload_digest": "sha256:d0fa6f6b0e7bd49f9ec632eeafd9c49502caf8f60b03c1d8c929f1486d71fd3c"
+  },
+  {
+   "name": "w2_079",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:2d90d62bffc4c4dfe0e4110dcb1e89bfa180f160a21ba71caec0113af6dfe49e",
+    "time": {
+     "utc": "2026-11-19T10:01:19.079Z",
+     "mono_ns": "84000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "79",
+     "args": {
+      "feature": "F-0079",
+      "nominal_um": 12079,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 79
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0079",
+       "digest": "sha256:d3801a47a237f09f3877b530c1719563bc34724c2d1c0ec5940ffc290da30832"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "8581744c53cbe5ef0da7e8e0eb6f674d",
+    "args": "314190d4b6530514b5b0bdc559b775d9",
+    "events": "099f3fc87e442e8dbbd159494a5dca34"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:d3801a47a237f09f3877b530c1719563bc34724c2d1c0ec5940ffc290da30832",
+     "content": "nominal table 79\n"
+    }
+   ],
+   "seq": "80",
+   "prev": "sha256:5b77df91738e04c4303280fb0416bd5a1ff36e71cedb13ed860439d1930bfe2c",
+   "hash": "sha256:5750c845243a3ca8de603da0029902536878ab469961944aaaf6b59227494c12",
+   "payload_digest": "sha256:a09bc2af88ca708bfcd97c70d312cdce60c828ad9c18e71e48d0fd7c2bad9ab0"
+  },
+  {
+   "name": "w2_080",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:62023ecb211b84a4f3924472c9efb8c35c34d5046bb09b91c17e92d6de8c9058",
+    "time": {
+     "utc": "2026-11-19T10:01:20Z",
+     "mono_ns": "85000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "80",
+     "args": {
+      "feature": "F-0080",
+      "nominal_um": 12080,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 80
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0080",
+       "digest": "sha256:2ba673dd36c596473809bc30fb2d3a84d26a8dcebcad3f48e098d391f5bde3ce"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "acf2c479612faa9c128e2e03ddb5e4ce",
+    "args": "f57fde8bd25ce6143ea53bee74510447",
+    "events": "da7ec84a442d47d5c727230e85fbab90"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:2ba673dd36c596473809bc30fb2d3a84d26a8dcebcad3f48e098d391f5bde3ce",
+     "content": "nominal table 80\n"
+    }
+   ],
+   "seq": "81",
+   "prev": "sha256:5750c845243a3ca8de603da0029902536878ab469961944aaaf6b59227494c12",
+   "hash": "sha256:e331de2471f32152bae58fe5f563e60bd9bdafd7ae7fe242ad5a7cbfba58685d",
+   "payload_digest": "sha256:fe197ce357d297d595f1d879142e52c5b8a908869a618e891d5c3ac4a8e7930b"
+  },
+  {
+   "name": "w2_081",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:81d6601bd77e220070a3cca8254baf609e91c5aab40b52f1a354548cada896e4",
+    "time": {
+     "utc": "2026-11-19T10:01:21Z",
+     "mono_ns": "86000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "81",
+     "args": {
+      "feature": "F-0081",
+      "nominal_um": 12081,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 81
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0081",
+       "digest": "sha256:5f2c7fe610a741ac0ec9b34ea6cf2cce8bc76fda34ef9a2975ff5ec8cb530565"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "261b43398fb9138915941c0706b29321",
+    "args": "9768a0a37fa6af9b48c5cc03b53c1798",
+    "events": "815190aedc83788a85936842238d8c37"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:5f2c7fe610a741ac0ec9b34ea6cf2cce8bc76fda34ef9a2975ff5ec8cb530565",
+     "content": "nominal table 81\n"
+    }
+   ],
+   "seq": "82",
+   "prev": "sha256:e331de2471f32152bae58fe5f563e60bd9bdafd7ae7fe242ad5a7cbfba58685d",
+   "hash": "sha256:7a07d0374b7887d51533c6d788444d0591e94b8ff8010e1438ce4f501bcc5cba",
+   "payload_digest": "sha256:acfd04149fa7a4bed948c2cb70972339c9b157b13ce5c109b237183157e95793"
+  },
+  {
+   "name": "w2_082",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:7137eb2539ec1fce6d876324a7a8c63ad33b7ed38af77230251c48ecbbaa19a1",
+    "time": {
+     "utc": "2026-11-19T10:01:22.082Z",
+     "mono_ns": "87000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "82",
+     "args": {
+      "feature": "F-0082",
+      "nominal_um": 12082,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 82
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0082",
+       "digest": "sha256:a23dda46998fc04635c4e1513b4db9ea6a1a78211d842b1253d7289b624f6569"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "bf9ca22e5264f066dc7799d0832740a0",
+    "args": "1a99782f7ac23ad39639a0ff3fa8eab0",
+    "events": "70ee41b840f1781cd1ed288efa716c54"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:a23dda46998fc04635c4e1513b4db9ea6a1a78211d842b1253d7289b624f6569",
+     "content": "nominal table 82\n"
+    }
+   ],
+   "seq": "83",
+   "prev": "sha256:7a07d0374b7887d51533c6d788444d0591e94b8ff8010e1438ce4f501bcc5cba",
+   "hash": "sha256:c5f8d2a059e7426d1137ac8d4c6ed6ac25c2b15f3052fd25ef9c1628de45789d",
+   "payload_digest": "sha256:0ef7f0879c0a0772ea43a7c1ddd7caa0e3663a1ffac1a743d0c3e17fa60433a2"
+  },
+  {
+   "name": "w2_083",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:45a558f36880303a2f361b4f5b54de7e72d10bdbd57b30b5e87713822425c73d",
+    "time": {
+     "utc": "2026-11-19T10:01:23Z",
+     "mono_ns": "88000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "83",
+     "args": {
+      "feature": "F-0083",
+      "nominal_um": 12083,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 83
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0083",
+       "digest": "sha256:1d18e5d78aba65b4ca52d305a6aeaf5f004a88eb9b39e4b73c84bca774a47c3f"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "850ca5ebcd080b5224c73dae103ec00a",
+    "args": "b81eb9a68fe01d31f5b0011ad1daa705",
+    "events": "7968c90bef96cac31fde29934b331e8f"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:1d18e5d78aba65b4ca52d305a6aeaf5f004a88eb9b39e4b73c84bca774a47c3f",
+     "content": "nominal table 83\n"
+    }
+   ],
+   "seq": "84",
+   "prev": "sha256:c5f8d2a059e7426d1137ac8d4c6ed6ac25c2b15f3052fd25ef9c1628de45789d",
+   "hash": "sha256:9b51f7498def4e2e193899dedb004134cbce6231bcae2d5b2f3170dba97ba105",
+   "payload_digest": "sha256:d3fa77b38aeab352b89afb6fa824afa841455e18b74bb897bd365792aacd00e0"
+  },
+  {
+   "name": "w2_084",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:8ae8eec0e248186f4cce94842b0d1a61aa4e31b354f51334b52f73fec1116771",
+    "time": {
+     "utc": "2026-11-19T10:01:24Z",
+     "mono_ns": "89000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "84",
+     "args": {
+      "feature": "F-0084",
+      "nominal_um": 12084,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 84
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0084",
+       "digest": "sha256:57882e7c4ceebaa68e2ceff0470daf8ea3699d6786baabdede59888963b63690"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "73600ecc2612fd0a2fd2e5babe9a228e",
+    "args": "dbcfe5397e05e96b268fe8d0abaac7e1",
+    "events": "a15ce6e14b3537bbc7707fb189afa571"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:57882e7c4ceebaa68e2ceff0470daf8ea3699d6786baabdede59888963b63690",
+     "content": "nominal table 84\n"
+    }
+   ],
+   "seq": "85",
+   "prev": "sha256:9b51f7498def4e2e193899dedb004134cbce6231bcae2d5b2f3170dba97ba105",
+   "hash": "sha256:e0c5f3df1dcdf68f59956f14d7c2c500ddb724854fb488e9f5cc025aa02bae36",
+   "payload_digest": "sha256:f0eee2932dd0a4bf0f09c36a6d31cd2f526b8e94f836b24e351202ddc8232bbc"
+  },
+  {
+   "name": "w2_085",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:d4c0c7aa09b4327006ef86c3b6bda368581252fc751f817a32d3d9fc6ce9e584",
+    "time": {
+     "utc": "2026-11-19T10:01:25.085Z",
+     "mono_ns": "90000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "85",
+     "args": {
+      "feature": "F-0085",
+      "nominal_um": 12085,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 85
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0085",
+       "digest": "sha256:4bf9597df296f425affc35519e62c95ddbf8cf70bd7aaf0f1880eb37e031ce1a"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "518adf7bcc308b9198890baafa7af056",
+    "args": "bbb4b678b1dcdc9b72bd712ccdf75db0",
+    "events": "8c8f52cbf13a210715affa25dacf047a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4bf9597df296f425affc35519e62c95ddbf8cf70bd7aaf0f1880eb37e031ce1a",
+     "content": "nominal table 85\n"
+    }
+   ],
+   "seq": "86",
+   "prev": "sha256:e0c5f3df1dcdf68f59956f14d7c2c500ddb724854fb488e9f5cc025aa02bae36",
+   "hash": "sha256:0cfb761b39f8f96cd280c98251bb563ecb151c4f13c56cd69bd981b84caeefe6",
+   "payload_digest": "sha256:e0f23d40db6ec902838f46f6439698915f075030b3060f1e744a0a1cd19602e8"
+  },
+  {
+   "name": "w2_086",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:28013575c735ca8be578c80797db7e05ec6d834d7581edab35029ce78bffe815",
+    "time": {
+     "utc": "2026-11-19T10:01:26Z",
+     "mono_ns": "91000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "86",
+     "args": {
+      "feature": "F-0086",
+      "nominal_um": 12086,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 86
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0086",
+       "digest": "sha256:ea06c6c19c3fc6f24113eeda91bb0ec10dbb73cf0970141ee2c5b461d0a6f231"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "cb5890115c4b510d48207e8141ab4697",
+    "args": "70298cdc7571958d069068b540d78096",
+    "events": "c09bd958e0743a495bf2128c768d441e"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:ea06c6c19c3fc6f24113eeda91bb0ec10dbb73cf0970141ee2c5b461d0a6f231",
+     "content": "nominal table 86\n"
+    }
+   ],
+   "seq": "87",
+   "prev": "sha256:0cfb761b39f8f96cd280c98251bb563ecb151c4f13c56cd69bd981b84caeefe6",
+   "hash": "sha256:9d75164c7607b38c9b2297e259ebf9483f6eb811ad82fe1c5c6a9694979a211b",
+   "payload_digest": "sha256:8374d197ff881df76ed60c952dd8a8cdf5437b732ead131ad23f3b8250123fc2"
+  },
+  {
+   "name": "w2_087",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:5170349e52c526e4bfff603effb5d449e41704bf6edc02a5de2ca515b452b3e6",
+    "time": {
+     "utc": "2026-11-19T10:01:27Z",
+     "mono_ns": "92000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "87",
+     "args": {
+      "feature": "F-0087",
+      "nominal_um": 12087,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 87
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0087",
+       "digest": "sha256:3c9969de514bf08546113a2696dc11d96b5bb87ca2f29d3349d51d9d4f8dae83"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "07c51620ee23b96e1be691ea218ccedc",
+    "args": "8d80c67df692a87e1b6e1ce35c3a6835",
+    "events": "839d2f401ad4731b058b3aa80c466549"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:3c9969de514bf08546113a2696dc11d96b5bb87ca2f29d3349d51d9d4f8dae83",
+     "content": "nominal table 87\n"
+    }
+   ],
+   "seq": "88",
+   "prev": "sha256:9d75164c7607b38c9b2297e259ebf9483f6eb811ad82fe1c5c6a9694979a211b",
+   "hash": "sha256:44f3030d06af538562d9bdb9fd6b3b7c759ea7d2584f69164bef9e28d85e8940",
+   "payload_digest": "sha256:19115833c937cce674db2eae8c13bdc37672de2fdcc251f9f8f085b11005a2a9"
+  },
+  {
+   "name": "w2_088",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:91232f848fcd1ccfafeafa4eead911a49d3685cdd400d7ccd9ae7e0d14edc3e3",
+    "time": {
+     "utc": "2026-11-19T10:01:28.088Z",
+     "mono_ns": "93000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "88",
+     "args": {
+      "feature": "F-0088",
+      "nominal_um": 12088,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 88
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0088",
+       "digest": "sha256:66cbef82de805e338a23b3fd0a12457631e0f0531ea4bd547d7fd5b858042652"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "9d5739f5a31226db0116f8acfcea8de4",
+    "args": "396d88d3b75914fe402ec1bf793b7707",
+    "events": "a44f4217796a14b98b0d0a30916da46e"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:66cbef82de805e338a23b3fd0a12457631e0f0531ea4bd547d7fd5b858042652",
+     "content": "nominal table 88\n"
+    }
+   ],
+   "seq": "89",
+   "prev": "sha256:44f3030d06af538562d9bdb9fd6b3b7c759ea7d2584f69164bef9e28d85e8940",
+   "hash": "sha256:635144e131ab938960d4bc28c6e04351d76ac28f2c1f76411403197c3f49f39e",
+   "payload_digest": "sha256:7ea8dc6720fb6c639e71829ff467aa23fee8fd29c6ffceb55b162b83f6a52272"
+  },
+  {
+   "name": "w2_089",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:3f45720048e9f680de4387131082b2f56eb62877b3c872be12e0046a61859fb5",
+    "time": {
+     "utc": "2026-11-19T10:01:29Z",
+     "mono_ns": "94000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "89",
+     "args": {
+      "feature": "F-0089",
+      "nominal_um": 12089,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 89
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0089",
+       "digest": "sha256:eeb4dfd104100661ea667dd657d1cf4cf8027a4e8c74f0ce636d633d8923ac98"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "b13c08a964045d1259f9be2ec0ee728e",
+    "args": "ca43cf9609b48db2ad3e37069695d39c",
+    "events": "31d8c7eb7d7f7cf7394f7ba581c75089"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:eeb4dfd104100661ea667dd657d1cf4cf8027a4e8c74f0ce636d633d8923ac98",
+     "content": "nominal table 89\n"
+    }
+   ],
+   "seq": "90",
+   "prev": "sha256:635144e131ab938960d4bc28c6e04351d76ac28f2c1f76411403197c3f49f39e",
+   "hash": "sha256:da693ea67d61589eb041bea05ad919be8cc1b2f30cef57fab64e39e76d74c131",
+   "payload_digest": "sha256:46cec8abe5bfed1949f36bf6a1a70a2842e7057699fa0513ec07737aa349a284"
+  },
+  {
+   "name": "w2_090",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:314acc111a47956c4e54f579090ba13e66ac8316e050cb9de208395377e39904",
+    "time": {
+     "utc": "2026-11-19T10:01:30Z",
+     "mono_ns": "95000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "90",
+     "args": {
+      "feature": "F-0090",
+      "nominal_um": 12090,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 90
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0090",
+       "digest": "sha256:bde70b3ac31778695e9e01569089fcea0d701054a763224c4f92b700e425aa58"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "c475aa790a572513014488b399c0a588",
+    "args": "3a88f98a8f4c3b11bdc27d85d59582e4",
+    "events": "e4c04bceb154e6d31275ba46542ef66b"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:bde70b3ac31778695e9e01569089fcea0d701054a763224c4f92b700e425aa58",
+     "content": "nominal table 90\n"
+    }
+   ],
+   "seq": "91",
+   "prev": "sha256:da693ea67d61589eb041bea05ad919be8cc1b2f30cef57fab64e39e76d74c131",
+   "hash": "sha256:223339eebe09c30a6656cade4b523591dfc801bde7e3693b7445ed6b7efcec7a",
+   "payload_digest": "sha256:d58331ad645c1d39bf545bd9db541b9630ec99bf3be6305f492b88fef295c7c5"
+  },
+  {
+   "name": "w2_091",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:6796126b21ac319a4cdf661fb0d2925ed2e4fe7a93f824d993ece9f01df64fbb",
+    "time": {
+     "utc": "2026-11-19T10:01:31.091Z",
+     "mono_ns": "96000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "91",
+     "args": {
+      "feature": "F-0091",
+      "nominal_um": 12091,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 91
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0091",
+       "digest": "sha256:4c7de36d3afad22a95c09d307b94c2303a8adbcf0ed87196c0f3be91dd5bba3e"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "b89c98f5352173a3eb23944c1b6b523a",
+    "args": "8dbc7b584e5e5f5739f01dc83aa2842f",
+    "events": "e62c7cb0cba4a92376b76bf5f6fbf3c2"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4c7de36d3afad22a95c09d307b94c2303a8adbcf0ed87196c0f3be91dd5bba3e",
+     "content": "nominal table 91\n"
+    }
+   ],
+   "seq": "92",
+   "prev": "sha256:223339eebe09c30a6656cade4b523591dfc801bde7e3693b7445ed6b7efcec7a",
+   "hash": "sha256:c066734105806cabce42826b0e6ed55256fb01c06603e33741f3703e244b3ccc",
+   "payload_digest": "sha256:37d05b1f5bf5d3389361cc978ff03bb10fa737fdef2f62f4de4a227b6348dbcd"
+  },
+  {
+   "name": "w2_092",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:5755abab7aceea6858a0da02f2ca4551bb4be3436d7c9e89b5ac80848b2af033",
+    "time": {
+     "utc": "2026-11-19T10:01:32Z",
+     "mono_ns": "97000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "92",
+     "args": {
+      "feature": "F-0092",
+      "nominal_um": 12092,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 92
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0092",
+       "digest": "sha256:b01ef4edd9ff7d4c960e1848009fe731424b725dcd23275ac6caab94b31c1b98"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a9a8b133c241476b2c06dac8826172ac",
+    "args": "f8a05794546d9476c38cc7042973f2e6",
+    "events": "ee6bd029ef9a3a10aa0f95945f4ba2e8"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:b01ef4edd9ff7d4c960e1848009fe731424b725dcd23275ac6caab94b31c1b98",
+     "content": "nominal table 92\n"
+    }
+   ],
+   "seq": "93",
+   "prev": "sha256:c066734105806cabce42826b0e6ed55256fb01c06603e33741f3703e244b3ccc",
+   "hash": "sha256:7b2f5581afdc4d2f3c92a290dc0af882a769a476db814653fa4442d4e3b3bec2",
+   "payload_digest": "sha256:f91cfe63634be8a9c0d1eb960d4c965a72c235253bf5c7d91eda7bd1fd6bd638"
+  },
+  {
+   "name": "w2_093",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:96276e58baa53ee0c051ec5c717d168636dbe6888dd4d0c6fea158f6a97f6f95",
+    "time": {
+     "utc": "2026-11-19T10:01:33Z",
+     "mono_ns": "98000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "93",
+     "args": {
+      "feature": "F-0093",
+      "nominal_um": 12093,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 93
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0093",
+       "digest": "sha256:2a4f64a607aa06c115eef670338fb9f2302936b63aad556d98f5e3cd59c3b890"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d9f9fe9c64c794699095c52b5cf36917",
+    "args": "1909cfd953027a090c8c6d212a031c74",
+    "events": "ceb3cb708c1bdd43485e51da226b679a"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:2a4f64a607aa06c115eef670338fb9f2302936b63aad556d98f5e3cd59c3b890",
+     "content": "nominal table 93\n"
+    }
+   ],
+   "seq": "94",
+   "prev": "sha256:7b2f5581afdc4d2f3c92a290dc0af882a769a476db814653fa4442d4e3b3bec2",
+   "hash": "sha256:98a0b45d2c87ffa27b5105694825580bfb1f0983a0617f23811a5f8af81b3f33",
+   "payload_digest": "sha256:de396abf9da0401269367b092836e0224517163acfd45ba1dfc104594fcce44b"
+  },
+  {
+   "name": "w2_094",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:4541254c1c2fe368e8d23c3bcdd70f5c5b9127a89da20e7cb5aa895fb2ec5142",
+    "time": {
+     "utc": "2026-11-19T10:01:34.094Z",
+     "mono_ns": "99000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "94",
+     "args": {
+      "feature": "F-0094",
+      "nominal_um": 12094,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 94
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0094",
+       "digest": "sha256:8a85554a0a69f4d4d67dcc9d97ef902e1a711ecea9e78d3cf7f5be07d41dd775"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "8af31cba5303e026598aeb422d75035d",
+    "args": "069aff2b33aee0ef13460caaacfe7666",
+    "events": "327a10cc1aac8bc83025ac5d34c901d8"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8a85554a0a69f4d4d67dcc9d97ef902e1a711ecea9e78d3cf7f5be07d41dd775",
+     "content": "nominal table 94\n"
+    }
+   ],
+   "seq": "95",
+   "prev": "sha256:98a0b45d2c87ffa27b5105694825580bfb1f0983a0617f23811a5f8af81b3f33",
+   "hash": "sha256:3afb37d261cb9becb7be92ea6a1536f45fad13c51e80ae6a0eebb9dedf7985eb",
+   "payload_digest": "sha256:d3235abf12ed3d19dc0f877df12f5c49ebb71ec19429f2676495bcde18abf7af"
+  },
+  {
+   "name": "w2_095",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:24656018725985523d3f69fb3230885f35f14fedeb5485022f363940aa27b70d",
+    "time": {
+     "utc": "2026-11-19T10:01:35Z",
+     "mono_ns": "100000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "95",
+     "args": {
+      "feature": "F-0095",
+      "nominal_um": 12095,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 95
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0095",
+       "digest": "sha256:beb12d3768c3ac1855da8e34404c2f2a65afab0650cbc08eb63aa3d82c2c0ebd"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "d2d107aae750970fede302da082b81e6",
+    "args": "a8d5abc44148f61dc4e6d9cbcf293cc7",
+    "events": "2f89d8585d92796c98323b541bf45e08"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:beb12d3768c3ac1855da8e34404c2f2a65afab0650cbc08eb63aa3d82c2c0ebd",
+     "content": "nominal table 95\n"
+    }
+   ],
+   "seq": "96",
+   "prev": "sha256:3afb37d261cb9becb7be92ea6a1536f45fad13c51e80ae6a0eebb9dedf7985eb",
+   "hash": "sha256:d15196c065009c32dc16be5a089a924ce9ccd9ada60f69fbcef959b16d148c1b",
+   "payload_digest": "sha256:b03c9c1c48ba3f2e3299d71d3d507dd6c70699741b44bbf0dfb58f36620ca78e"
+  },
+  {
+   "name": "w2_096",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:2d6faee773cba42e6c252127fcff4c91e55a92af6b646f3f6b70f9e510d6d144",
+    "time": {
+     "utc": "2026-11-19T10:01:36Z",
+     "mono_ns": "101000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "96",
+     "args": {
+      "feature": "F-0096",
+      "nominal_um": 12096,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 96
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0096",
+       "digest": "sha256:84e16d4792331f6f115fead16ebf6b58c6db2002902d0c22ff3049cf04b037d8"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a0d692eb1be1bd048a9c380eaede64fb",
+    "args": "fcaccc7edf0ddd839f619d3f62c2cefd",
+    "events": "d3649a7f3119b5358efa4639da02b20c"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:84e16d4792331f6f115fead16ebf6b58c6db2002902d0c22ff3049cf04b037d8",
+     "content": "nominal table 96\n"
+    }
+   ],
+   "seq": "97",
+   "prev": "sha256:d15196c065009c32dc16be5a089a924ce9ccd9ada60f69fbcef959b16d148c1b",
+   "hash": "sha256:500dbbd039b4b9ee243945a6d2d5839796c10b5c0f217a327fbccf512b8f7a16",
+   "payload_digest": "sha256:b349f91777c4a2259547a5c58f92b113f09d339085b4ab49c2e6dec90b6f769e"
+  },
+  {
+   "name": "w2_097",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:430ff0d49869d651e565d92f197523efa592990b5dc6a458b13844ed72e667c5",
+    "time": {
+     "utc": "2026-11-19T10:01:37.097Z",
+     "mono_ns": "102000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "97",
+     "args": {
+      "feature": "F-0097",
+      "nominal_um": 12097,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 97
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0097",
+       "digest": "sha256:4dc169541b389fab967a1585ed1d1a5a8afba2f26dc09013ec73b8f2c8c00f89"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "5e10928101efd1b9643ae35925462c1d",
+    "args": "1ac2f04c776a10a50660c5ca56c01f8c",
+    "events": "790afb4b02cb538a24309e9addca15f5"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:4dc169541b389fab967a1585ed1d1a5a8afba2f26dc09013ec73b8f2c8c00f89",
+     "content": "nominal table 97\n"
+    }
+   ],
+   "seq": "98",
+   "prev": "sha256:500dbbd039b4b9ee243945a6d2d5839796c10b5c0f217a327fbccf512b8f7a16",
+   "hash": "sha256:c6adadeb3567d990c5604f93199b4d6f7d1f3b82853d318a99443a178fe0ab1b",
+   "payload_digest": "sha256:bb06da3ec81a2ed1305aa8a944af04535c83a0f149016222207c86a806ee2290"
+  },
+  {
+   "name": "w2_098",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:8816bac7a7245a515ee58ff57dcebd7f8e6152e4876801f5bb0f6d199fbf74a2",
+    "time": {
+     "utc": "2026-11-19T10:01:38Z",
+     "mono_ns": "103000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "98",
+     "args": {
+      "feature": "F-0098",
+      "nominal_um": 12098,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 98
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0098",
+       "digest": "sha256:1bad4cbd15859a455ed5bd3c020762e3a057bdb35ebb01fd902494ede69a6936"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "b801ebd73705719ce553492392bf10f0",
+    "args": "a1037d98f448e4c4b04aff87f5aac1cf",
+    "events": "ee636aec4533ac75b03bad30c01614fd"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:1bad4cbd15859a455ed5bd3c020762e3a057bdb35ebb01fd902494ede69a6936",
+     "content": "nominal table 98\n"
+    }
+   ],
+   "seq": "99",
+   "prev": "sha256:c6adadeb3567d990c5604f93199b4d6f7d1f3b82853d318a99443a178fe0ab1b",
+   "hash": "sha256:7d8c6c5ea18b84ad24768bc0926b52edc2e027949e8af2935390dc00dd4eb2d4",
+   "payload_digest": "sha256:98dbd345b7e09f19879eb03ec301936320ffcb4e008fc9258e524f0e56abe3b7"
+  },
+  {
+   "name": "w2_099",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:29978331406e8c2403f43693bf5f4242990a25b5d1ea3c2cd7caef31ca542dfb",
+    "time": {
+     "utc": "2026-11-19T10:01:39Z",
+     "mono_ns": "104000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "human",
+     "identity": {
+      "user": "op-17"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "99",
+     "args": {
+      "feature": "F-0099",
+      "nominal_um": 12099,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 99
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0099",
+       "digest": "sha256:48af05323c2068784e3228ec02d80b8439a849c5003c94a01698662cb93f8009"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "a86002bed62d552a44cc0d6774e10d11",
+    "args": "3ffbbef9a69a7af94f400af0c37e29d9",
+    "events": "e48b93cf5de8c695207e0938fd0cf758"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:48af05323c2068784e3228ec02d80b8439a849c5003c94a01698662cb93f8009",
+     "content": "nominal table 99\n"
+    }
+   ],
+   "seq": "100",
+   "prev": "sha256:7d8c6c5ea18b84ad24768bc0926b52edc2e027949e8af2935390dc00dd4eb2d4",
+   "hash": "sha256:d36990381c63a70acee9721735ac69e17b258773f1b78ec608db047253600f8d",
+   "payload_digest": "sha256:8bed3c510655dd74a38503a8f5cfe137ff33d658a53a09f41d66beaf6a3c0c8e"
+  },
+  {
+   "name": "delegated_100",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:678bb6d3739c21d0d647261068939f3ae95e1a98f2771a380c03ae6a83d3abfe",
+    "time": {
+     "utc": "2026-11-19T10:01:40.100Z",
+     "mono_ns": "105000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "agent",
+     "identity": "claude-code#7",
+     "on_behalf_of": {
+      "id": "op-17",
+      "kind": "human"
+     }
+    },
+    "ai_assistance": "executed",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "100",
+     "args": {
+      "feature": "F-0100",
+      "nominal_um": 12100,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 100
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0100",
+       "digest": "sha256:8d29192a567e2512f15549816488e5ded028864c5de76e52f086cfbbe7fba7be"
+      }
+     ],
+     "algorithms": []
+    },
+    "reason": "re-run after recalibration"
+   },
+   "salts": {
+    "identity": "bd934a2b19a99175fa033303ae6eb3af",
+    "on_behalf_of": "00b7c1bfb7c66f8d138b0fcaa4258b3a",
+    "reason": "c84e9df8b693227fb77463d01b760fe6",
+    "args": "1d67441ebf3b5911c86ec79f726f427c",
+    "events": "ef25c5225bbdc363033f84e8476e5904"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8d29192a567e2512f15549816488e5ded028864c5de76e52f086cfbbe7fba7be",
+     "content": "nominal table 100\n"
+    }
+   ],
+   "seq": "101",
+   "prev": "sha256:d36990381c63a70acee9721735ac69e17b258773f1b78ec608db047253600f8d",
+   "hash": "sha256:a58ebf4e65b0f2e442cd1d53fa311fa43575ec7e3641e7e55e9934fbb087114c",
+   "payload_digest": "sha256:e8d034ff3de3d721db5a46d75136b631dab3ac2ed0d5163d001a10ec7a78a07d",
+   "header": {
+    "schema_version": 1,
+    "kind": "command",
+    "stream": "record",
+    "seq": "101",
+    "prev": "sha256:d36990381c63a70acee9721735ac69e17b258773f1b78ec608db047253600f8d",
+    "branch": "feature/bore-check",
+    "logical_parent": "sha256:678bb6d3739c21d0d647261068939f3ae95e1a98f2771a380c03ae6a83d3abfe",
+    "time": {
+     "utc": "2026-11-19T10:01:40.100Z",
+     "mono_ns": "105000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "agent",
+     "commit": "sha256:2bda0670a08ab079bb27c105f583852d1e12c235841bc55cc503b1506ef16065",
+     "on_behalf_of_commit": "sha256:2cb9421fb4273d55bf4978274f2562a67fb9c6d31da394e3e4befe591f57073d"
+    },
+    "ai_assistance": "executed",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "reason_commit": "sha256:198428655599ff2b15b77a6300d5adc8eeb7dfd7ecc2d9ee8da6ee552e6305dc",
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "100",
+     "args_commit": "sha256:0b0426060f67bbc2c7f0ba4e41a15d57af1a7878fccc2cd92ca2c7a2ce28d763",
+     "events_commit": "sha256:1a3b72e007157c837959f7c6281291fcd91aa02d3ef49fbce17e32d533c05b4d",
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0100",
+       "digest": "sha256:8d29192a567e2512f15549816488e5ded028864c5de76e52f086cfbbe7fba7be"
+      }
+     ],
+     "algorithms": []
+    },
+    "hash": "sha256:a58ebf4e65b0f2e442cd1d53fa311fa43575ec7e3641e7e55e9934fbb087114c"
+   }
+  },
+  {
+   "name": "delegated_101",
+   "draft": {
+    "stream": "record",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:c7103375951f9cb1faac1a608a259cf79de212e25e83d1612d2cdf0112197eb6",
+    "time": {
+     "utc": "2026-11-19T10:01:41Z",
+     "mono_ns": "106000000000",
+     "sync": "synced"
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "kind": "principal_upgrade",
+    "principal": {
+     "kind": "script",
+     "identity": "op-17"
+    },
+    "upgrade": {
+     "session_id": "cli#3",
+     "method": "os_presence",
+     "identity": "op-17",
+     "confirmed_at": "2026-11-19T10:01:41Z"
+    }
+   },
+   "salts": {
+    "identity": "fde36f885a3e5137403ec1f7ebbe72d8",
+    "upgrade_identity": "107a7736f0aa91f752e7f0da87757090"
+   },
+   "blobs": [],
+   "seq": "102",
+   "prev": "sha256:a58ebf4e65b0f2e442cd1d53fa311fa43575ec7e3641e7e55e9934fbb087114c",
+   "hash": "sha256:321e841ac3d690e341842a655954baea99dcf3eb8a59bcf2c74266f122868e8e",
+   "payload_digest": "sha256:5fbda3472c6422281d5b6e1d39fb505538d3eca481b853a4605cc0f0e0afbc9c",
+   "header": {
+    "schema_version": 1,
+    "kind": "principal_upgrade",
+    "stream": "record",
+    "seq": "102",
+    "prev": "sha256:a58ebf4e65b0f2e442cd1d53fa311fa43575ec7e3641e7e55e9934fbb087114c",
+    "branch": "agent/claude-code/3",
+    "logical_parent": "sha256:c7103375951f9cb1faac1a608a259cf79de212e25e83d1612d2cdf0112197eb6",
+    "time": {
+     "utc": "2026-11-19T10:01:41Z",
+     "mono_ns": "106000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "script",
+     "commit": "sha256:fedfd38d8513379da1afa9fe6d25a47df04448c3f19930e0103e5239a0b5373e"
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "upgrade": {
+     "session_id": "cli#3",
+     "method": "os_presence",
+     "identity_commit": "sha256:90caf13edce3b9db9cfbf7629d0d9ac43ff1db08957ec5a7a55dbc3ef2e60343",
+     "confirmed_at": "2026-11-19T10:01:41Z"
+    },
+    "hash": "sha256:321e841ac3d690e341842a655954baea99dcf3eb8a59bcf2c74266f122868e8e"
+   }
+  },
+  {
+   "name": "delegated_102",
+   "draft": {
+    "kind": "command",
+    "stream": "record",
+    "branch": "main",
+    "logical_parent": "sha256:4a270e556baf2018ba877dc05a2facaf44469c229ba47f8950cce7653a87be8a",
+    "time": {
+     "utc": "2026-11-19T10:01:42Z",
+     "mono_ns": "107000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "script",
+     "identity": "fid-cli#3",
+     "on_behalf_of": {
+      "id": "op-17",
+      "kind": "human"
+     }
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "102",
+     "args": {
+      "feature": "F-0102",
+      "nominal_um": 12102,
+      "note": "Ø 12 H7"
+     },
+     "events": [
+      {
+       "type": "feature.nominal_set@1",
+       "n": 102
+      }
+     ],
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0102",
+       "digest": "sha256:8e026bfdfbc71d7aa68e6e62ac185ff7c9201b108805eff4876a7998dd46d933"
+      }
+     ],
+     "algorithms": []
+    }
+   },
+   "salts": {
+    "identity": "3711f3d2838a8bbea50a893f0d6c43de",
+    "on_behalf_of": "5a2aa73f80eb7482d383b4f3d0e5ea8d",
+    "args": "9694f3deef3cea101b504af10a97a05f",
+    "events": "41ac497123f035369ccf783c3e4a6add"
+   },
+   "blobs": [
+    {
+     "digest": "sha256:8e026bfdfbc71d7aa68e6e62ac185ff7c9201b108805eff4876a7998dd46d933",
+     "content": "nominal table 102\n"
+    }
+   ],
+   "seq": "103",
+   "prev": "sha256:321e841ac3d690e341842a655954baea99dcf3eb8a59bcf2c74266f122868e8e",
+   "hash": "sha256:5e6e8ece456e3cf80f1de667e2174d4716c1c510eba3629b82df52b5e6efa9ce",
+   "payload_digest": "sha256:e5154eb17f7cf08c37f1fc044e3b2ea437d7fa125e53cc82bb81d2459575340e",
+   "header": {
+    "schema_version": 1,
+    "kind": "command",
+    "stream": "record",
+    "seq": "103",
+    "prev": "sha256:321e841ac3d690e341842a655954baea99dcf3eb8a59bcf2c74266f122868e8e",
+    "branch": "main",
+    "logical_parent": "sha256:4a270e556baf2018ba877dc05a2facaf44469c229ba47f8950cce7653a87be8a",
+    "time": {
+     "utc": "2026-11-19T10:01:42Z",
+     "mono_ns": "107000000000",
+     "sync": "synced"
+    },
+    "principal": {
+     "kind": "script",
+     "commit": "sha256:f7cf19dd9f2759c3feaa8f9a53e515058339dbe1e391fb5296e2be1a01ed306c",
+     "on_behalf_of_commit": "sha256:e32b74deb997a6eadaff63933ec672160ce432f6f12a32fde72ec924018dd292"
+    },
+    "ai_assistance": "none",
+    "manifests": {
+     "registry": "sha256:5b0dc746bff2e41dc5ce5403f6396a5edf7969b7e427644e6911db06b57be172",
+     "kernel": "sha256:bf0fb2943205c047a50b177f43504e648d77bea4ce0d5917ccb78b02af41c855"
+    },
+    "command": {
+     "id": "feature.set_nominal",
+     "major": 1,
+     "class": "W2",
+     "determinism": "D0",
+     "seed": "102",
+     "args_commit": "sha256:93d8319c4c92522e187cbaa945fc16a76eaffee913d465c6c542e925c69edde7",
+     "events_commit": "sha256:3fdc726c6d6eae84b2fbad175c9da79d33dad1dc1f689e97167585fdba586d8c",
+     "inputs": [],
+     "outputs": [
+      {
+       "entity": "F-0102",
+       "digest": "sha256:8e026bfdfbc71d7aa68e6e62ac185ff7c9201b108805eff4876a7998dd46d933"
+      }
+     ],
+     "algorithms": []
+    },
+    "hash": "sha256:5e6e8ece456e3cf80f1de667e2174d4716c1c510eba3629b82df52b5e6efa9ce"
+   }
+  }
+ ]
+}

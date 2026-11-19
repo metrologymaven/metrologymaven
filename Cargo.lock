@@ -405,6 +405,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-align"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-dep",
+ "fid-geo-frame",
+ "fid-kci",
+ "fid-project",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-brand-lint"
 version = "0.0.1"
 dependencies = [
@@ -416,7 +430,12 @@ dependencies = [
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-types",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -457,6 +476,16 @@ dependencies = [
  "fid-testkit",
  "fid-types",
  "sha2 0.10.9",
+]
+
+[[package]]
+name = "fid-dep"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -533,6 +562,9 @@ name = "fid-gdt"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-gps",
+ "fid-io-reg",
+ "fid-replay",
  "fid-types",
 ]
 
@@ -547,6 +579,18 @@ dependencies = [
 name = "fid-geo-frame"
 version = "0.0.1"
 dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-geo-index"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-kci",
  "fid-num",
 ]
 
@@ -554,6 +598,7 @@ dependencies = [
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
+ "fid-num",
  "fid-testkit",
 ]
 
@@ -572,6 +617,14 @@ version = "0.0.1"
 dependencies = [
  "fid-kci",
  "fid-num",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-gps"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
  "fid-types",
 ]
 
@@ -637,6 +690,8 @@ dependencies = [
  "cap-std",
  "fid-canon",
  "fid-io-reg",
+ "fid-replay",
+ "fid-surface",
  "fid-types",
  "libc",
  "sha2 0.10.9",
@@ -675,7 +730,9 @@ name = "fid-journal"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-journal",
  "fid-kci",
+ "fid-store",
  "fid-types",
  "getrandom",
 ]
@@ -686,6 +743,16 @@ version = "0.0.1"
 dependencies = [
  "fid-num",
  "fid-testkit",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-kdec"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-kunc",
+ "fid-num",
  "fid-types",
 ]
 
@@ -702,6 +769,15 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "toml",
+]
+
+[[package]]
+name = "fid-kunc"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-types",
 ]
 
 [[package]]
@@ -802,8 +878,16 @@ name = "fid-registry"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-geo-frame",
  "fid-kci",
  "fid-types",
+]
+
+[[package]]
+name = "fid-render"
+version = "0.0.1"
+dependencies = [
+ "fid-uuid",
 ]
 
 [[package]]
@@ -813,6 +897,18 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-report"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-project",
+ "fid-registry",
+ "fid-replay",
+ "fid-report",
  "fid-types",
 ]
 
@@ -869,6 +965,7 @@ name = "fid-store"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-store",
  "fid-types",
  "rusqlite",
  "rustix",

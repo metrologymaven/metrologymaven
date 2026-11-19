@@ -253,10 +253,15 @@ jobs:
           python fixtures/rel/guide/make_fixtures.py --check
           python fixtures/dsse/make_fixtures.py --check
           python fixtures/io/reg/env/report/make_fixtures.py --check
+          python fixtures/io/reg/detect/make_fixtures.py --check
           python fixtures/io/cad/worker/proto/make_digests.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python fixtures/core/reg/def/guide/make_fixtures.py --check
+          python fixtures/gdt/dprof/make_cases.py --check
+          python fixtures/gdt/dmt/make_fixtures.py --check
+          python fixtures/gdt/dmt/check_schema.py
+          python fixtures/gdt/spec/make_fixtures.py --check
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/knp1/seeded/make_expected.py --check
@@ -278,6 +283,7 @@ jobs:
           python fixtures/agent/harness/runs/make_runs.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
+          python fixtures/core/jrn/chain/append/make_fixtures.py --check
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
@@ -292,16 +298,24 @@ jobs:
           python fixtures/num/fmt/make_len_fixtures.py --check
           python fixtures/num/fmt/make_ang_fixtures.py --check
           python fixtures/num/la/make_la_fixtures.py --check
+          python fixtures/num/la/make_qr_fixtures.py --check
           python crates/fid-report-pdf/fontgen/make_fonts.py --check
           python fixtures/rpt/output/text/make_fixtures.py --check
           python fixtures/rpt/output/text/check_pdf_text.py
           python tools/fixtures/geo_sel_sets.py --check
           python tools/fixtures/geo_units_cases.py --check
+          python tools/fixtures/geo_xform_cases.py --check
+          python tools/fixtures/geo_tree_cases.py --check
+          python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
           python tools/fixtures/geo_digest_vectors.py --check
+          python fixtures/geo/index/make_bvh_fixtures.py --check
+          python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
+          python fixtures/unc/stmt/make_fixtures.py --check
+          python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -420,16 +434,24 @@ jobs:
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
+      - name: Uncertainty statement digests on wasm32-wasip1 (UNC.UEC.STMT AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-kunc
+      - name: Decision-rule catalog digest and rule-ID cases on wasm32-wasip1 (UNC.DEC.TYPE AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-kdec
       - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-report-pdf
       - name: Implementation digests are bit-identical on wasm32-wasip1 (KRN.MAN.MANI.IMPL AC-1, build-time tool)
         run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
-      - name: Unit conversion cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4)
+      - name: Unit conversion, transform and frame-tree cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1; GEO.FRAME.TREE AC-1, AC-5)
         run: cargo test --target wasm32-wasip1 -p fid-geo-frame
+      - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
+      - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-index
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)

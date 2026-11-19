@@ -1,17 +1,21 @@
 [package]
 name = "fid-geo-frame"
-description = "Metrology Maven coordinate-frame values: authored quantities and exact unit conversion (GEO.FRAME.UNITS)"
+description = "Metrology Maven coordinate-frame values: authored quantities and exact unit conversion (GEO.FRAME.UNITS), rigid and similarity transforms and rotation parameterisations (GEO.FRAME.XFORM), the frame tree and chain resolution (GEO.FRAME.TREE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate (KNP-1): no third-party dependencies. Only fid-num (num layer): its
-# formatter precision cap `MAX_DECIMALS` and, for later GEO.FRAME leaves, its
-# transcendental facade.
+# Kernel crate (KNP-1): no third-party dependencies. Only workspace crates of the num and
+# kernel layers: fid-num (its formatter precision cap `MAX_DECIMALS` and its transcendental
+# facade (sqrt, hypot, sin, cos, atan2) for the rotation conversions), fid-kci (its portable
+# FIPS 180-4 SHA-256, for the frame-tree digest, GEO.FRAME.TREE) and fid-types (the shared
+# `sha256:` Digest wire form).
 [dependencies]
 fid-num = { path = "../fid-num" }
+fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

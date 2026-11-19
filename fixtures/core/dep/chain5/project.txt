@@ -1,0 +1,15 @@
+# CORE.DEP.EDGE fixture `chain5` (hand-labelled; CC-BY-4.0).
+# Test-kit element type `num` (value = sum of inputs, registered only in tests).
+# `elem <name> <id>` names an element; IDs ascend with the names (a < b < c < d < e).
+# `create <name> <input names...>` is one committed `testkit.num_set@1` command creating <name>.
+# Result: the chain a -> b -> c -> d -> e.
+elem a 00000000-0000-7000-8000-00000000000a
+elem b 00000000-0000-7000-8000-00000000000b
+elem c 00000000-0000-7000-8000-00000000000c
+elem d 00000000-0000-7000-8000-00000000000d
+elem e 00000000-0000-7000-8000-00000000000e
+create a
+create b a
+create c b
+create d c
+create e d

@@ -7,6 +7,7 @@ pub mod def;
 pub mod guide;
 pub mod lifecycle;
 pub mod pred;
+pub mod validate;
 
 pub use compat::{
     classify, diff, Change, CommandRef, Kind, LifecycleChange, Manifest, ManifestDiff, ManifestError, Reason,
@@ -26,4 +27,8 @@ pub use lifecycle::{
 pub use pred::{
     compile_command, evaluate, BuildError, ContextTypes, Evaluation, FieldPath, ParamSchema, ParseError, PredContext,
     PredError, Predicate, Type, Value, Verdict,
+};
+pub use validate::{
+    errors_to_value, is_valid_id, max_projection, tool_name, unit_kind, validate, validate_json, validate_with,
+    CommandDecl, GeoFrameUnits, InputError, Limits, QuantityKinds, RuleCode, ValidationError,
 };

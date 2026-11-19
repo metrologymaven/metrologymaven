@@ -1,6 +1,6 @@
 [package]
 name = "fid-solv"
-description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start (spec node KRN.SOLV.MSTART)"
+description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start and nonlinear least squares (spec nodes KRN.SOLV.MSTART, KRN.SOLV.NLLS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

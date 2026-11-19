@@ -1,0 +1,47 @@
+# Written by make_fixtures.py from project.txt; do not edit.
+# query <stage> <element> <direct|transitive> <dependencies|dependents> <names...>
+# reject <stage> update <element> <input names...> cycle <names...>
+# digest <stage> <sha256>; stage load = project.txt, stage ac3 = load then `update c a`.
+query load a direct dependencies
+query load a direct dependents b
+query load a transitive dependencies
+query load a transitive dependents b c d e
+query load b direct dependencies a
+query load b direct dependents c
+query load b transitive dependencies a
+query load b transitive dependents c d e
+query load c direct dependencies b
+query load c direct dependents d
+query load c transitive dependencies a b
+query load c transitive dependents d e
+query load d direct dependencies c
+query load d direct dependents e
+query load d transitive dependencies a b c
+query load d transitive dependents e
+query load e direct dependencies d
+query load e direct dependents
+query load e transitive dependencies a b c d
+query load e transitive dependents
+reject load update a e cycle a b c d e
+digest load sha256:68089afbbdad20e7cca1fc695fad12bd351f8ff8deea52f0215f838ed085d6af
+query ac3 a direct dependencies
+query ac3 a direct dependents b c
+query ac3 a transitive dependencies
+query ac3 a transitive dependents b c d e
+query ac3 b direct dependencies a
+query ac3 b direct dependents
+query ac3 b transitive dependencies a
+query ac3 b transitive dependents
+query ac3 c direct dependencies a
+query ac3 c direct dependents d
+query ac3 c transitive dependencies a
+query ac3 c transitive dependents d e
+query ac3 d direct dependencies c
+query ac3 d direct dependents e
+query ac3 d transitive dependencies a c
+query ac3 d transitive dependents e
+query ac3 e direct dependencies d
+query ac3 e direct dependents
+query ac3 e transitive dependencies a c d
+query ac3 e transitive dependents
+digest ac3 sha256:a104b4b0c823a4b087c63faf57fcf60be22a2974607e3e07200e40533033278a

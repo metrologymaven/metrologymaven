@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set (spec node CORE.BUS.PIPE.ERR)"
+description = "Metrology Maven command bus: closed error code set, principal model and handler contract (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,22 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# CORE.BUS.PRIN builds the `principal_upgrade` entry draft from the journal's entry model.
+fid-journal = { path = "../fid-journal" }
+# CORE.BUS.PRIN refuses identifiers that are not NFC; already in the lock (fid-pkg, fid-vocab).
+unicode-normalization = "0.1.24"
+# CORE.BUS.PIPE.HANDLER checks events against a command definition's declared effects.
+fid-registry = { path = "../fid-registry" }
+# CORE.BUS.PIPE.HANDLER keys handlers by command ID `name@major`; was a dev-dependency.
+fid-types = { path = "../fid-types" }
+
+[features]
+# `ValidParams::for_tests` for this crate's integration tests; never enabled by other crates.
+test-support = []
+
+[dev-dependencies]
+# Integration tests build handler parameters through the test-support constructor.
+fid-bus = { path = ".", features = ["test-support"] }
 
 [lints]
 workspace = true
