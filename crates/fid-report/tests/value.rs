@@ -364,3 +364,38 @@ fn undeclared_places_cannot_hold_value_text_or_bindings() {
     .unwrap_err();
     assert_eq!((e.code(), get(&e.to_value(), "reason")), ("report.value_binding_invalid", &s("missing")));
 }
+
+/// Review of #232: one 30 000-byte key over 16 000 array items (about 62 KB canonical)
+/// cost about 480 MB when the walk built a pointer string per node. The walk's memory must
+/// be bounded by a constant times the payload size.
+#[test]
+fn walk_memory_is_bounded_by_payload_size() {
+    let key = "k".repeat(30_000);
+    let items = CValue::Arr(vec![CValue::Num(0.0); 16_000]);
+    let hostile = CValue::Obj([(key.clone(), items)].into_iter().collect());
+    let payload = CanonicalJson::new(&hostile).unwrap();
+    let bytes = to_canonical_bytes(payload.value()).unwrap().len();
+    assert!(bytes > 60_000 && bytes <= MAX_PAYLOAD_BYTES, "{bytes}");
+    let peak = walk_peak_bytes(&payload);
+    assert!(peak <= 64 * bytes, "walk peak {peak} bytes for a {bytes}-byte payload");
+    assert!(peak < 480_000_000 / 100);
+
+    // The same payload goes through add_block (no binding or value text in it: refused only
+    // because the declared /U is missing), and a value text at the end of it is reported
+    // with a pointer cut to the error-field bound.
+    let mut w = World::new();
+    let e = w.add("measurement", hostile).unwrap_err();
+    assert_eq!((e.code(), get(&e.to_value(), "reason")), ("report.value_binding_invalid", &s("missing")));
+    let text = obj([("schema", s("value_text@1"))]);
+    let mut tail = vec![CValue::Num(0.0); 15_990];
+    tail.push(text);
+    let with_text = obj([("U", binding())]);
+    let CValue::Obj(mut o) = with_text else { panic!() };
+    o.insert(key, CValue::Arr(tail));
+    let e = w.add("measurement", CValue::Obj(o)).unwrap_err();
+    assert_eq!(e.code(), "report.value_literal_refused");
+    let ev = e.to_value();
+    let field = str_of(get(&ev, "field"));
+    assert!(field.starts_with("/kkk") && field.len() <= 128, "{}", field.len());
+    assert_eq!(w.backend.journal().len(), 1);
+}

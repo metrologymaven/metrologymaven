@@ -53,3 +53,4 @@ pub use value::{
     check_value_binding, is_pointer, resolve_pointer, BindingFault, MAX_POINTER_BYTES, MAX_VALUE_FIELDS,
     VALUE_BINDING_SCHEMA, VALUE_TEXT_SCHEMA,
 };
+pub use value::{walk_peak_bytes, MAX_WALK_NODES};

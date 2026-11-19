@@ -136,6 +136,7 @@ pub(crate) fn check_block_values(kind: &dyn BlockKind, payload: &CanonicalJson) 
     if fields.len() > MAX_VALUE_FIELDS {
         return Err(ReportError::InvalidBlockPayload(PayloadError::new("", "too_many_value_fields")));
     }
+    let mut declared: Vec<&CValue> = Vec::with_capacity(fields.len());
     for f in &fields {
         if !is_pointer(f) {
             return Err(ReportError::InvalidBlockPayload(PayloadError::new(f, "bad_value_field_pointer")));
@@ -146,45 +147,146 @@ pub(crate) fn check_block_values(kind: &dyn BlockKind, payload: &CanonicalJson) 
             BindingFault::Literal => ReportError::ValueLiteralRefused(PayloadError::new(f, "literal")),
             BindingFault::Invalid(r) => ReportError::ValueBindingInvalid(PayloadError::new(f, r)),
         })?;
+        declared.push(v);
     }
-    check_undeclared(payload.value(), &fields)
-}
-
-/// RFC 6901 escaping of one reference token (`~` to `~0`, `/` to `~1`).
-fn escape_token(t: &str) -> String {
-    t.replace('~', "~0").replace('/', "~1")
-}
-
-/// Walks the whole payload (iteratively; the payload is already within
-/// [`super::MAX_PAYLOAD_BYTES`] and [`super::MAX_PAYLOAD_DEPTH`]). Anywhere in it, an object
-/// whose `schema` is `value_text@1` is `report.value_literal_refused` (`value_text`), and an
-/// object whose `schema` is `value_binding@1` at a pointer that is not a declared value
-/// field is `report.value_binding_invalid` (`undeclared_binding`). Objects are visited in
-/// key order and arrays in index order, so the first offence reported is deterministic.
-fn check_undeclared(root: &CValue, declared: &[String]) -> Result<(), ReportError> {
-    let mut stack: Vec<(&CValue, String)> = vec![(root, String::new())];
-    while let Some((v, at)) = stack.pop() {
-        match v {
-            CValue::Obj(o) => {
-                if let Some(CValue::Str(schema)) = o.get("schema") {
-                    if schema == VALUE_TEXT_SCHEMA {
-                        return Err(ReportError::ValueLiteralRefused(PayloadError::new(&at, "value_text")));
-                    }
-                    if schema == VALUE_BINDING_SCHEMA && !declared.contains(&at) {
-                        return Err(ReportError::ValueBindingInvalid(PayloadError::new(&at, "undeclared_binding")));
-                    }
-                }
-                for (k, c) in o.iter().rev() {
-                    stack.push((c, format!("{at}/{}", escape_token(k))));
-                }
-            }
-            CValue::Arr(a) => {
-                for (i, c) in a.iter().enumerate().rev() {
-                    stack.push((c, format!("{at}/{i}")));
-                }
-            }
-            _ => {}
+    let mut walk = Walk::default();
+    match walk.run(payload.value(), &declared) {
+        Ok(()) => Ok(()),
+        Err(Offence::ValueText(i)) => {
+            Err(ReportError::ValueLiteralRefused(PayloadError::new(&walk.pointer(i), "value_text")))
         }
+        Err(Offence::UndeclaredBinding(i)) => {
+            Err(ReportError::ValueBindingInvalid(PayloadError::new(&walk.pointer(i), "undeclared_binding")))
+        }
+        Err(Offence::TooManyNodes) => Err(ReportError::InvalidBlockPayload(PayloadError::new("", "too_many_nodes"))),
     }
-    Ok(())
+}
+
+/// Most nodes the undeclared-place walk visits. A canonical payload of at most
+/// [`super::MAX_PAYLOAD_BYTES`] bytes has fewer nodes than bytes, so this never refuses a
+/// payload within bounds; it only makes the walk fail closed if that ever changed.
+pub const MAX_WALK_NODES: usize = super::MAX_PAYLOAD_BYTES;
+
+/// How a node was reached from its parent.
+#[derive(Debug, Clone, Copy)]
+enum Step<'a> {
+    Root,
+    Key(&'a str),
+    Index(usize),
+}
+
+/// One visited node: the node, its parent's index in the trail and the step from it.
+/// Borrowed only: no per-node string is built (review of #232: a 62 KB payload of one
+/// 30 000-byte key over 16 000 array items cost about 480 MB with per-node pointers).
+#[derive(Debug, Clone, Copy)]
+struct Entry<'a> {
+    node: &'a CValue,
+    parent: usize,
+    step: Step<'a>,
+}
+
+enum Offence {
+    ValueText(usize),
+    UndeclaredBinding(usize),
+    TooManyNodes,
+}
+
+/// The undeclared-place walk. Memory is the trail (one [`Entry`] per visited node, at
+/// most [`MAX_WALK_NODES`]) and a stack of trail indices; pointer text is built only for
+/// the one node reported, and cut at [`super::kind::MAX_FIELD_BYTES`].
+#[derive(Default)]
+struct Walk<'a> {
+    trail: Vec<Entry<'a>>,
+    stack: Vec<usize>,
+}
+
+impl<'a> Walk<'a> {
+    /// Visits objects in key order and arrays in index order (depth first), so the first
+    /// offence reported is deterministic. An object whose `schema` is `value_text@1` is an
+    /// offence anywhere; one whose `schema` is `value_binding@1` is an offence unless it is
+    /// (by address) one of the `declared` nodes.
+    fn run(&mut self, root: &'a CValue, declared: &[&CValue]) -> Result<(), Offence> {
+        self.push(Entry { node: root, parent: usize::MAX, step: Step::Root })?;
+        while let Some(i) = self.stack.pop() {
+            let Some(e) = self.trail.get(i).copied() else { return Ok(()) };
+            match e.node {
+                CValue::Obj(o) => {
+                    if let Some(CValue::Str(schema)) = o.get("schema") {
+                        if schema == VALUE_TEXT_SCHEMA {
+                            return Err(Offence::ValueText(i));
+                        }
+                        if schema == VALUE_BINDING_SCHEMA && !declared.iter().any(|d| std::ptr::eq(*d, e.node)) {
+                            return Err(Offence::UndeclaredBinding(i));
+                        }
+                    }
+                    for (k, c) in o.iter().rev() {
+                        self.push(Entry { node: c, parent: i, step: Step::Key(k) })?;
+                    }
+                }
+                CValue::Arr(a) => {
+                    for (j, c) in a.iter().enumerate().rev() {
+                        self.push(Entry { node: c, parent: i, step: Step::Index(j) })?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn push(&mut self, e: Entry<'a>) -> Result<(), Offence> {
+        if self.trail.len() >= MAX_WALK_NODES {
+            return Err(Offence::TooManyNodes);
+        }
+        self.stack.push(self.trail.len());
+        self.trail.push(e);
+        Ok(())
+    }
+
+    /// The RFC 6901 pointer of trail entry `i`, cut once it exceeds
+    /// [`super::kind::MAX_FIELD_BYTES`] (the error field holds no more).
+    fn pointer(&self, i: usize) -> String {
+        let mut steps = Vec::new();
+        let mut at = i;
+        while let Some(e) = self.trail.get(at) {
+            steps.push(e.step);
+            at = e.parent;
+        }
+        let mut out = String::new();
+        for step in steps.iter().rev() {
+            if out.len() > super::kind::MAX_FIELD_BYTES {
+                break;
+            }
+            match step {
+                Step::Root => {}
+                Step::Key(k) => {
+                    out.push('/');
+                    for c in k.chars() {
+                        match c {
+                            '~' => out.push_str("~0"),
+                            '/' => out.push_str("~1"),
+                            c => out.push(c),
+                        }
+                        if out.len() > super::kind::MAX_FIELD_BYTES {
+                            break;
+                        }
+                    }
+                }
+                Step::Index(j) => {
+                    out.push('/');
+                    out.push_str(&j.to_string());
+                }
+            }
+        }
+        out
+    }
+}
+
+/// Peak memory of the undeclared-place walk over `payload`, in bytes: trail and stack
+/// capacity. For tests and audits: it is bounded by a constant times the number of
+/// nodes, never by key lengths times nodes.
+pub fn walk_peak_bytes(payload: &CanonicalJson) -> usize {
+    let mut walk = Walk::default();
+    let _ = walk.run(payload.value(), &[]);
+    walk.trail.capacity() * std::mem::size_of::<Entry<'_>>() + walk.stack.capacity() * std::mem::size_of::<usize>()
 }
