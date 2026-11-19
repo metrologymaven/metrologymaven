@@ -32,3 +32,5 @@ fixtures/core/reg/def/guide/** -text
 fixtures/io/qif/norm/** -text
 crates/fid-qif/qif-norm.toml -text
 crates/fid-qif/qif-norm.lock -text
+# OUTR.DOCS.SEARCH.INDEX fixtures: hand-labelled index compared byte for byte.
+fixtures/outr/docs/search/** -text
