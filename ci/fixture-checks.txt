@@ -9,6 +9,7 @@ python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
 python fixtures/auto/surf/gen/make_fixtures.py --check
+python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
