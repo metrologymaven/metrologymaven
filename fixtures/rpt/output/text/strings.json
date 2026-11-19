@@ -1,0 +1,12 @@
+{
+  "size_um": 3528,
+  "script_font": {"id": "script-test", "family": "Maven Script Test", "postscript_name": "MavenScriptTest-Regular", "file": "script-test.ttf"},
+  "cases": [
+    {"name": "latin", "font": "sans-regular", "text": "Flatness 0.012 mm (Datum A|B)"},
+    {"name": "digits-separators", "font": "mono-regular", "text": "1 234 567,890 / 1,234,567.890 / 12 345,6 / 9 876"},
+    {"name": "german", "font": "sans-bold", "text": "Größe Außendurchmesser Ø 12,5 ±0,05 ≤ ÄÖÜ"},
+    {"name": "japanese", "font": "sans-regular", "text": "日本語のテキスト 1"},
+    {"name": "missing", "font": "sans-regular", "text": "AB"},
+    {"name": "value", "font": "sans-regular", "text": "-0,050"}
+  ]
+}
