@@ -911,6 +911,11 @@ dependencies = [
 name = "fid-render"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-kdec",
+ "fid-types",
  "fid-uuid",
 ]
 
