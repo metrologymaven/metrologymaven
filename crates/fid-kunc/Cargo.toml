@@ -8,13 +8,12 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies; only fid-types (layer num, `sha256:`
-# digests) and fid-kci (layer kernel, the shared RFC 8785 writer and the portable SHA-256).
+# digests), fid-kci (layer kernel, the shared RFC 8785 writer and the portable SHA-256) and
+# fid-num (layer num: transcendentals, reductions, the counter RNG and the pivoted Cholesky
+# used by the `dist` module, UNC.MODEL.DIST).
 [dependencies]
 fid-types = { path = "../fid-types" }
 fid-kci = { path = "../fid-kci" }
-
-# Test-only: the KNP-1 counter-based generator for the seeded property cases (AC-6).
-[dev-dependencies]
 fid-num = { path = "../fid-num" }
 
 [lints]

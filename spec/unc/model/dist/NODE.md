@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kunc]
 satisfies: [REQ-UNC.MODEL-002, REQ-UNC.MODEL-003]
 covers: []
 depends_on: [KRN]
@@ -17,7 +18,7 @@ determinism: D2
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # UNC.MODEL.DIST: Input distributions and correlation
@@ -71,11 +72,26 @@ The probability distributions an input quantity may carry, with parameter valida
 - **Errors:** `invalid_parameter{name}`, `invalid_correlation{reason}`, numeric errors from `fid-num`.
 - **Determinism:** D2 (seeded; bit-identical across targets by KNP-1).
 - **Performance budget:** 10^7 univariate normal samples in under 1 s single-threaded on reference hardware [unverified until measured].
-- **Crate:** `fid-kunc`.
+- **Crate:** `fid-kunc`, module `dist`; the pivoted Cholesky is `fid_num::la::chol_pivoted` (added with this leaf).
+
+### Pinned implementation choices (value-affecting; normative for `fid-kunc::dist`)
+
+- **Types.** `Distribution` holds the six univariate kinds (private validated `Params` plus one `UnitCode`); the multivariate normal is the separate type `MvNormal { mu, sigma, Correlation }` with covariance `(sigma_i * sigma_j) * rho_ij`, so univariate moments cannot be asked of it. `UnitCode` is `si:m`, `si:rad` or `si:1` (the `UNC.UEC.STMT` set); a parameter is `Quantity { value, unit }`. Algorithm IDs: `unc.dist.{normal,rect,tri,arcsine,scaled_t,trap,mv_normal}@1.0.0`.
+- **Validation order.** Each parameter in declaration order: finite, then unit (location and scale share the first parameter's unit; `nu` and `beta` must be `si:1`). Then relations: `sigma > 0`, `b > a`, `b - a` finite (named `b`), `a <= c <= b` (`c`), `s > 0`, `nu > 2`, `0 <= beta <= 1`. First failure is `invalid_parameter{name}`. `MvNormal`: `mu` non-empty, `sigma` length, `corr` dimension, then per component `mu[i]` finite, `sigma[i]` finite with `mu[i]`'s unit and `> 0`.
+- **Moments.** E: `mu`; `0.5*a + 0.5*b` (rect, arcsine, trap); `red::sum([a, b, c]) / 3` (tri). u: `sigma`; `(b-a)/sqrt(12)`; tri `red::norm2([b-a, c-a, b-c]) / 6` (identical to the formula above, evaluated without cancellation); `(b-a)/sqrt(8)`; `s*sqrt(nu/(nu-2))`; `((b-a)*0.5) * sqrt((1 + beta*beta)/6)`. `sqrt` is `fid_num::f::sqrt` (correctly rounded); the 4 ulp bound held for all 40 fixture rows.
+- **RNG addressing.** Every draw is one `fid_num::rng::block(seed, stream, index)` (words w0..w3). User streams are `< 2^62`; the top two stream bits name sub-streams. Primary draw of sample i, stream s: block `(seed, s, i)`, uniform from `(w1, w0)` (the `Cursor::next_u64` value). Gamma sub-stream (scaled-t): attempt `a < 256` of sample i is block `(seed, s | 2^63, i*256 + a)`, normal from `(w1, w0)`, acceptance uniform from `(w3, w2)`; `i < 2^56`. Multivariate sub-stream: normal k of sample i is block `(seed, s | 2^62, i*4096 + k)`, `(w1, w0)`; `i < 2^52`. Out-of-range stream or index is `invalid_parameter{stream|index}`. All 256 gamma attempts rejected is `sampling_exhausted` (probability below 1e-300).
+- **Open uniform.** `x = hi<<32 | lo`, `u = (2*(x >> 12) + 1) * 2^-53`: never 0 or 1, and `1 - u` is exact.
+- **AS241.** Wichura, Algorithm AS 241 `PPND16`, Applied Statistics 37(3), 1988, 477-484; coefficients as the shortest binary64 reprs in `fixtures/unc/dist/as241.csv` (the crate asserts equality). `q = p - 0.5`; `|q| <= 0.425`: `r = 0.180625 - q*q`, `q*A(r)/B(r)`; else `r = sqrt(-ln(min tail))`, `r <= 5`: `C(r-1.6)/D(r-1.6)`, else `E(r-5)/F(r-5)`, sign of `q`. Horner from the top coefficient, `acc*r + c_k`, no FMA. The oracle measured 5.4e-16 worst relative error of this evaluation in binary64 against a 100-digit inverse normal; the crate test bound is 1e-15.
+- **Transforms.** normal `mu + sigma*ppnd16(u)`; rect `a + (b-a)*u`; tri `w = b-a`, `fc = (c-a)/w`, `u < fc`: `a + sqrt((u*w)*(c-a))`, else `b - sqrt(((1-u)*w)*(b-c))`; arcsine `h = (b-a)*0.5`, `m = a+h`, `m - h*cos(pi*u)`; trap `h`, `m` as arcsine, `f1 = (1-beta)/(2*(1+beta))`, `w = (1-beta)*(1+beta)`, `y = -1 + sqrt((2u)*w)` if `u < f1`, `(u-0.5)*(1+beta)` if `u <= 1-f1`, else `1 - sqrt((2(1-u))*w)`, result `m + h*y`; scaled-t `z = ppnd16(u)`, `g` = gamma(`nu*0.5`), `mu + s*(z/sqrt((2g)/nu))`. Gamma (Marsaglia and Tsang 2000): `d = alpha - 1/3`, `c = 1/sqrt(9d)`, `t = 1 + c*x` (reject `t <= 0`), `v = (t*t)*t`, accept `d*v` if `u_b < 1 - 0.0331*(x2*x2)` or `ln(u_b) < 0.5*x2 + d*((1-v) + ln v)`.
+- **Correlation check (eigenvalue tolerance method).** Order: shape (`n = 0`, `n > 4096`, length) `shape`; first non-finite `non_finite`; `C[i][j] != C[j][i]` `asymmetric`; `C[i][i] != 1` `diagonal`; `|C[i][j]| > 1` `off_diagonal_range`. Then `tau = 1e-12*n`, `B = C` with diagonal `1 + tau`; `min eig(C) >= -tau` iff `B` is PSD, decided by `chol_pivoted(B, 0)`: rank `n` passes; otherwise the trailing Schur complement `S` (from `L` and `perm`, `red::dot`) must have every `|S_ij| <= n*2^-50`, else `indefinite`. No eigensolver is needed (`KRN.NUM.LA.EIG` is not built); the decision is exact up to rounding of order `n*2^-52`, far inside `tau`.
+- **Pivoted Cholesky (`fid_num::la::chol_pivoted`).** Lower triangle only; at step k the remaining diagonals `d_j = a(perm j, perm j) - red::sum_sq(L[j][0..k])` are recomputed, the first largest is the pivot, `thr = rel_tol * d_max` at step 0, stop when `d_p <= 0` or `d_p <= thr` (rank = k), swap perm and computed rows, `L[k][k] = sqrt(d_p)`, `L[i][k] = (a(perm i, perm k) - red::dot(L[i][0..k], L[k][0..k])) / L[k][k]`.
+- **Correlated normals.** Factor `chol_pivoted(R, n*2^-52)` with rank r; sample i draws `z[0..r]` from the multivariate sub-stream; `x[perm p] = mu + sigma * red::dot(L[p][0..r], z)`; output row-major per sample.
+- **Statistical test (AC-2).** Standard errors from the reference: `SE(mean) = u/sqrt(N)`, `SE(sd) = u*sqrt((kurtosis - 1)/(4N))`, kurtosis from `moments.csv`. The mean is tested when the kurtosis is finite (all kinds; scaled-t with `nu > 4`), the standard deviation when additionally `nu > 8` for scaled-t (the standard error of a sample standard deviation needs a finite eighth moment). Scaled-t rows with `nu <= 4` are covered by AC-1 and the digests only.
+- **`sample_digests.txt`.** SHA-256 (`fid_kci::kci::sha256_digest`) of the little-endian f64 bytes of samples `0..10^6`, seed `0xD15700001`, stream 0, one line per `moments.csv` row plus `mv_rho12` (AC-6 draw). Produced with `UNC_DIST_PRINT_DIGESTS=1 cargo test -p fid-kunc --test dist -- --nocapture` (first run on x86-64 Windows, no wasm32 toolchain locally) and asserted unchanged by the same test on wasm32-wasip1 under wasmtime (CI job `wasm32`), x86-64 Linux/Windows and ARM64 macOS. A digest is a cross-target identity pin, not a correctness reference.
 
 ## Test fixtures
 
-`fixtures/unc/dist/`: `moments.csv` with references computed by a Python + mpmath script (in the oracle repository, BSD-licensed tooling, data CC-BY-4.0); `invalid.csv`; `corr_valid.json` and `corr_invalid.json`; `sample_digests.txt` generated once on the WASM reference build.
+`fixtures/unc/dist/` (synthetic parameter sets, CC-BY-4.0): `make_fixtures.py` (stdlib only: `fractions` for exact rational moments of the piecewise-linear densities and textbook moments, `decimal` at 80 to 100 digits for square roots and the inverse normal) writes `moments.csv` (40 rows, 50-digit references and kurtosis), `invalid.csv` (hand-labelled), `corr_valid.json` and `corr_invalid.json` (labels confirmed by an exact rational PSD test of `C + tau I`), `as241.csv` and `ppnd.csv`; `--check` compares without writing. `sample_digests.txt` is produced as pinned in the Design.
 
 ## Build prompt
 
@@ -85,7 +101,7 @@ The probability distributions an input quantity may carry, with parameter valida
 
 ## Open questions
 
-- The 4 ulp bound for closed-form moments assumes the `fid-num` sqrt is correctly rounded [unverified].
+- The 4 ulp bound for closed-form moments assumes the `fid-num` sqrt is correctly rounded. **Resolved at build:** `fid_num::f::sqrt` is the IEEE-754 square root, and all 40 fixture rows meet the bound.
 
 ## Children
 
