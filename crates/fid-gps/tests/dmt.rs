@@ -8,8 +8,9 @@
 use fid_canon::CValue;
 use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::{
-    profile_vocabulary, AlgId, Dialect, DmtError, DmtKey, DmtTable, Operator, OperatorChain, OperatorKind, Param,
-    ProfileKeyRule, ReviewState, RowStatus, SemVer, DMT_TABLE_JSON_SCHEMA, NAMED_PROFILE_KEYS,
+    profile_vocabulary, AlgId, ClauseRef, Dialect, DmtError, DmtKey, DmtTable, Operator, OperatorChain, OperatorKind,
+    Param, ProfileKeyRule, ReviewState, Reviewers, RowStatus, SemVer, DMT_TABLE_JSON_SCHEMA, MAX_SEMVER_PART,
+    NAMED_PROFILE_KEYS,
 };
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -554,8 +555,9 @@ fn row_fields_are_typed() {
     assert_eq!(op.params().get("fraction").and_then(Param::as_f64), Some(0.5));
     assert_eq!(r.variant("surface").unwrap().steps()[4].params().get("sign"), Some(&Param::Int(-1)));
     let f = t.get("dmt:asme/flatness/none@1").unwrap();
-    assert_eq!(*f.review(), ReviewState::SignedOff { reviewers: vec!["rev-a".to_owned(), "rev-b".to_owned()] });
-    assert_eq!(f.clauses()[0].designator, "asme-y14.5");
+    let signed = Reviewers::new(vec!["rev-a".to_owned(), "rev-b".to_owned()]).unwrap();
+    assert_eq!(*f.review(), ReviewState::SignedOff(signed));
+    assert_eq!(f.clauses()[0].designator(), "asme-y14.5");
     let stub = t.get("dmt:iso/flatness/none@1").unwrap();
     assert!(stub.variants()[0].steps().is_empty() && stub.ors_cases().is_empty() && stub.notes().is_empty());
     assert!(t.get("dmt:asme/flatness/mmc@1").is_none());
@@ -619,7 +621,10 @@ fn over_limit_operators_and_chains_cannot_be_built() {
     assert_eq!(malformed(&op(one("f", Param::F64Bits(f64::NAN.to_bits()))).unwrap_err()), "bad_param");
     assert_eq!(malformed(&op(one("f", Param::F64Bits(f64::INFINITY.to_bits()))).unwrap_err()), "bad_param");
     assert_eq!(malformed(&op(one("X", Param::Bool(true))).unwrap_err()), "bad_param_name");
-    assert_eq!(op(one(&"n".repeat(33), Param::Bool(true))).unwrap_err(), DmtError::FieldTooLong { field: "param_name" });
+    assert_eq!(
+        op(one(&"n".repeat(33), Param::Bool(true))).unwrap_err(),
+        DmtError::FieldTooLong { field: "param_name" }
+    );
     let ok = op(one("f", Param::F64Bits(0.5f64.to_bits()))).unwrap();
     assert_eq!(ok.params().len(), 1);
     // Chains: at most 64 steps and a grammar-checked name.
@@ -656,4 +661,45 @@ fn over_limit_rows_cannot_be_built_or_inserted() {
     assert_eq!(malformed(&DmtTable::new(t.version(), moved).unwrap_err()), "key_mismatch");
     let v2 = SemVer::parse("2.0.0").unwrap();
     assert_ne!(DmtTable::new(v2, t.rows().clone()).unwrap().digest(), t.digest());
+}
+
+#[test]
+fn versions_are_range_checked_so_a_table_digest_always_reloads() {
+    assert_eq!(MAX_SEMVER_PART, 999_999_999);
+    let top = SemVer::new(MAX_SEMVER_PART, 0, MAX_SEMVER_PART).unwrap();
+    assert_eq!(top.to_string(), "999999999.0.999999999");
+    assert_eq!(SemVer::parse(&top.to_string()), Some(top));
+    assert_eq!((top.major(), top.minor(), top.patch()), (999_999_999, 0, 999_999_999));
+    // Out of range: no `SemVer` exists, so `DmtTable::new` cannot be given one.
+    assert!(SemVer::new(1_000_000_000, 0, 0).is_none());
+    assert!(SemVer::new(0, u32::MAX, 0).is_none());
+    assert!(SemVer::new(0, 0, 1_000_000_000).is_none());
+    assert!(SemVer::parse("1000000000.0.0").is_none());
+    // The largest version builds a table whose canonical form loads back to the same digest.
+    let t = table();
+    let big = DmtTable::new(top, t.rows().clone()).unwrap();
+    assert_eq!(DmtTable::load(big.canonical_bytes()).unwrap().digest(), big.digest());
+}
+
+#[test]
+fn clause_refs_and_reviewers_are_validated_on_construction() {
+    let c = ClauseRef::new("asme-y14.5", "2018", "90.1").unwrap();
+    assert_eq!((c.designator(), c.edition(), c.clause()), ("asme-y14.5", "2018", "90.1"));
+    assert_eq!(malformed(&ClauseRef::new("ASME", "2018", "1").unwrap_err()), "bad_designator");
+    assert_eq!(malformed(&ClauseRef::new("asme", "20..18", "1").unwrap_err()), "bad_edition");
+    assert_eq!(malformed(&ClauseRef::new("asme", "2018", "see fig").unwrap_err()), "bad_clause");
+    let e = ClauseRef::new(&"a".repeat(33), "2018", "1").unwrap_err();
+    assert_eq!(e, DmtError::FieldTooLong { field: "designator" });
+    let e = ClauseRef::new("asme", "2018", &"1".repeat(25)).unwrap_err();
+    assert_eq!(e, DmtError::FieldTooLong { field: "clause" });
+
+    let ids = |v: &[&str]| Reviewers::new(v.iter().map(|s| (*s).to_owned()).collect());
+    assert_eq!(ids(&["rev-a", "rev-b"]).unwrap().as_slice(), ["rev-a".to_owned(), "rev-b".to_owned()]);
+    assert_eq!(malformed(&Reviewers::new(vec![]).unwrap_err()), "bad_count");
+    let seventeen: Vec<String> = (0..17).map(|i| format!("r{i:02}")).collect();
+    assert_eq!(malformed(&Reviewers::new(seventeen).unwrap_err()), "bad_count");
+    assert_eq!(malformed(&ids(&["REV-A", "rev-a"]).unwrap_err()), "bad_reviewer");
+    assert_eq!(malformed(&ids(&["rev-a", "rev-a"]).unwrap_err()), "not_sorted");
+    assert_eq!(malformed(&ids(&["rev-b", "rev-a"]).unwrap_err()), "not_sorted");
+    assert_eq!(ids(&["r".repeat(65).as_str()]).unwrap_err(), DmtError::FieldTooLong { field: "reviewers" });
 }

@@ -70,15 +70,68 @@ const CLAUSE_FIELDS: [&str; 3] = ["clause", "designator", "edition"];
 const CHAIN_FIELDS: [&str; 2] = ["steps", "variant"];
 const OPERATOR_FIELDS: [&str; 3] = ["alg", "kind", "params"];
 
-/// A clause reference: designator, edition and clause number only (REQ-002).
+/// A clause reference: designator, edition and clause number only (REQ-002). Fields are
+/// private; [`ClauseRef::new`] applies the loader's rules.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ClauseRef {
-    /// Standard designator, e.g. `asme-y14.5` ([`is_label`]).
-    pub designator: String,
-    /// Edition, e.g. `2018` ([`is_label`]).
-    pub edition: String,
-    /// Clause number: `[0-9a-z]+(\.[0-9a-z]+)*`, annex letters in lower case.
-    pub clause: String,
+    designator: String,
+    edition: String,
+    clause: String,
+}
+
+impl ClauseRef {
+    /// Builds a clause reference. Designator and edition: [`is_label`] up to 32 bytes; clause:
+    /// `[0-9a-z]+(\.[0-9a-z]+)*` up to 24 bytes. Checked in that order, each length before
+    /// grammar: `field_too_long{field}`, then `malformed_table{bad_designator|bad_edition|bad_clause}`.
+    pub fn new(designator: &str, edition: &str, clause: &str) -> Result<ClauseRef, DmtError> {
+        let label = |s: &str| is_label(s, MAX_LABEL_LEN);
+        check_str(designator, "designator", MAX_LABEL_LEN, &label, "bad_designator")?;
+        check_str(edition, "edition", MAX_LABEL_LEN, &label, "bad_edition")?;
+        check_str(clause, "clause", MAX_CLAUSE_LEN, &is_clause, "bad_clause")?;
+        Ok(ClauseRef { designator: designator.to_owned(), edition: edition.to_owned(), clause: clause.to_owned() })
+    }
+
+    /// Standard designator, e.g. `asme-y14.5`.
+    pub fn designator(&self) -> &str {
+        &self.designator
+    }
+
+    /// Edition, e.g. `2018`.
+    pub fn edition(&self) -> &str {
+        &self.edition
+    }
+
+    /// Clause number.
+    pub fn clause(&self) -> &str {
+        &self.clause
+    }
+}
+
+/// The reviewer list of a sign-off: 1 to 16 reviewer IDs (the roster grammar
+/// `[a-z0-9][a-z0-9._-]{0,63}`), strictly ascending. Private; built by [`Reviewers::new`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reviewers(Vec<String>);
+
+impl Reviewers {
+    /// Builds a reviewer list: `malformed_table{bad_count}` outside 1 to 16 entries, then per
+    /// entry `field_too_long{reviewers}` and `malformed_table{bad_reviewer}`, then
+    /// `malformed_table{not_sorted}` unless strictly ascending (so no duplicates; upper case is
+    /// refused by the grammar, so case-only duplicates cannot occur).
+    pub fn new(ids: Vec<String>) -> Result<Reviewers, DmtError> {
+        if ids.is_empty() || ids.len() > MAX_REVIEWERS {
+            return Err(DmtError::malformed("bad_count"));
+        }
+        for id in &ids {
+            check_str(id, "reviewers", MAX_REVIEWER_LEN, &is_reviewer_id, "bad_reviewer")?;
+        }
+        ascending(&ids, |s| s.as_bytes())?;
+        Ok(Reviewers(ids))
+    }
+
+    /// The IDs, ascending.
+    pub fn as_slice(&self) -> &[String] {
+        &self.0
+    }
 }
 
 /// One canonical operator parameter. Written in JSON as a boolean or a string:
@@ -338,11 +391,8 @@ pub enum ReviewState {
     Draft,
     /// `{"state": "under_review"}`.
     UnderReview,
-    /// `{"state": "signed_off", "reviewers": [...]}`: 1 to 16 reviewer IDs, ascending.
-    SignedOff {
-        /// Reviewer IDs (`[a-z0-9][a-z0-9._-]{0,63}`, the roster grammar).
-        reviewers: Vec<String>,
-    },
+    /// `{"state": "signed_off", "reviewers": [...]}`.
+    SignedOff(Reviewers),
 }
 
 /// One DMT row (REQ-001). Fields are private and read through getters: a row can only be
@@ -487,8 +537,8 @@ impl DmtRow {
         let review = match &self.review {
             ReviewState::Draft => obj([("state", CValue::Str("draft".to_owned()))]),
             ReviewState::UnderReview => obj([("state", CValue::Str("under_review".to_owned()))]),
-            ReviewState::SignedOff { reviewers } => {
-                obj([("reviewers", strs(reviewers)), ("state", CValue::Str("signed_off".to_owned()))])
+            ReviewState::SignedOff(reviewers) => {
+                obj([("reviewers", strs(reviewers.as_slice())), ("state", CValue::Str("signed_off".to_owned()))])
             }
         };
         obj([
@@ -720,7 +770,7 @@ fn parse_clause(v: &CValue) -> Result<ClauseRef, DmtError> {
     let designator = field(o, "designator", MAX_LABEL_LEN, |s| is_label(s, MAX_LABEL_LEN), "bad_designator")?;
     let edition = field(o, "edition", MAX_LABEL_LEN, |s| is_label(s, MAX_LABEL_LEN), "bad_edition")?;
     let clause = field(o, "clause", MAX_CLAUSE_LEN, is_clause, "bad_clause")?;
-    Ok(ClauseRef { designator: designator.to_owned(), edition: edition.to_owned(), clause: clause.to_owned() })
+    ClauseRef::new(designator, edition, clause)
 }
 
 fn parse_review(v: &CValue) -> Result<ReviewState, DmtError> {
@@ -732,7 +782,7 @@ fn parse_review(v: &CValue) -> Result<ReviewState, DmtError> {
         "signed_off" => {
             let reviewers =
                 str_list(o, "reviewers", (1, MAX_REVIEWERS), MAX_REVIEWER_LEN, is_reviewer_id, "bad_reviewer")?;
-            Ok(ReviewState::SignedOff { reviewers })
+            Ok(ReviewState::SignedOff(Reviewers::new(reviewers)?))
         }
         _ => Err(DmtError::malformed("bad_review_state")),
     }

@@ -685,15 +685,15 @@ fn structure_is_checked_before_the_vocabulary_dialect() {
     // Hand-labelled: each fixture is an ISO profile checked against the ASME schema vocabulary
     // (wrong dialect) and is also structurally broken; the structural error wins.
     let v = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Asme).unwrap();
-    for (file, why) in [
-        ("iso_bad_edition_vs_asme_vocab.json", "bad_edition"),
-        ("iso_bad_value_vs_asme_vocab.json", "bad_value"),
-    ] {
+    for (file, why) in
+        [("iso_bad_edition_vs_asme_vocab.json", "bad_edition"), ("iso_bad_value_vs_asme_vocab.json", "bad_value")]
+    {
         let e = parse_profile(&read(file), &v).unwrap_err();
         assert_eq!((e.code(), e.reason()), ("malformed_profile", Some(why)), "{file}");
     }
     // Bad version and a bad key likewise come before the dialect check.
-    let iso = |rest: &str| format!(r#"{{"schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017",{rest}}}"#);
+    let iso =
+        |rest: &str| format!(r#"{{"schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017",{rest}}}"#);
     let e = parse_profile(iso(r#""version":"1.0","keys":{}"#).as_bytes(), &v).unwrap_err();
     assert_eq!(e.reason(), Some("bad_version"));
     let e = parse_profile(iso(r#""version":"1.0.0","keys":{"Bad":"x"}"#).as_bytes(), &v).unwrap_err();

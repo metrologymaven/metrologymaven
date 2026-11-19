@@ -19,9 +19,9 @@ pub mod profile_keys;
 pub mod row;
 pub mod table;
 
-pub use ident::{AlgId, Dialect, DmtKey, OperatorKind, SemVer};
+pub use ident::{AlgId, Dialect, DmtKey, OperatorKind, SemVer, MAX_SEMVER_PART};
 pub use profile_keys::{profile_vocabulary, ProfileKeyRule, NAMED_PROFILE_KEYS, PROFILE_KEYS_SCHEMA};
-pub use row::{ClauseRef, DmtRow, Operator, OperatorChain, Param, ParamKind, ReviewState, RowStatus};
+pub use row::{ClauseRef, DmtRow, Operator, OperatorChain, Param, ParamKind, ReviewState, Reviewers, RowStatus};
 pub use table::{DmtTable, TABLE_SCHEMA};
 
 use std::fmt;

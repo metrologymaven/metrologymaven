@@ -219,16 +219,17 @@ impl fmt::Display for DmtKey {
 }
 
 /// A semantic version `x.y.z` (each part `0` or up to nine digits without a leading zero; no
-/// pre-release or build suffix). Same grammar as `GDT.CHAR.DPROF`.
+/// pre-release or build suffix). Same grammar as `GDT.CHAR.DPROF`. Fields are private, so every
+/// value is in range ([`MAX_SEMVER_PART`]) and its text parses back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SemVer {
-    /// Major.
-    pub major: u32,
-    /// Minor.
-    pub minor: u32,
-    /// Patch.
-    pub patch: u32,
+    major: u32,
+    minor: u32,
+    patch: u32,
 }
+
+/// Largest version part: nine decimal digits.
+pub const MAX_SEMVER_PART: u32 = 999_999_999;
 
 fn semver_part(s: &str) -> Option<u32> {
     let b = s.as_bytes();
@@ -239,6 +240,27 @@ fn semver_part(s: &str) -> Option<u32> {
 }
 
 impl SemVer {
+    /// A version from its parts; `None` when a part exceeds [`MAX_SEMVER_PART`].
+    pub fn new(major: u32, minor: u32, patch: u32) -> Option<SemVer> {
+        let ok = major <= MAX_SEMVER_PART && minor <= MAX_SEMVER_PART && patch <= MAX_SEMVER_PART;
+        ok.then_some(SemVer { major, minor, patch })
+    }
+
+    /// Major.
+    pub fn major(&self) -> u32 {
+        self.major
+    }
+
+    /// Minor.
+    pub fn minor(&self) -> u32 {
+        self.minor
+    }
+
+    /// Patch.
+    pub fn patch(&self) -> u32 {
+        self.patch
+    }
+
     /// Parses `x.y.z`.
     pub fn parse(s: &str) -> Option<SemVer> {
         let mut it = s.split('.');
