@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [house-rules/]
 satisfies: [REQ-ECO.RULES-001]
 covers: []
 depends_on: [ECO.RULES.SRC]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # ECO.RULES.SPDX: SPDX licence allowlist for dependencies and assets
@@ -80,6 +81,8 @@ The project's list of licences that dependencies and third-party assets may carr
 ## Open questions
 
 - **MPL-2.0** (file-level copyleft) is common in the Rust ecosystem and is left out of the proposal; adding it is a maintainer call under D-001 [unverified how many likely dependencies need it].
+- **Narrower than proposed (maintainer decision 2026-11-18).** The built list must not be wider than `deny.toml`'s `[licenses] allow`, so `0BSD`, `MIT-0` and `BSL-1.0` from the Design proposal are left out, and the test keeps `licences`/`exceptions` equal to `deny.toml`. Adding any of them needs a change to both files under REQ-004 [unverified whether any likely dependency needs them].
+- **Exception pairing.** `deny.toml` allows `LLVM-exception` only as `Apache-2.0 WITH LLVM-exception`; the allowlist schema lists exceptions without the licence they pair with, so a consumer reading only this file would accept any allowed licence `WITH LLVM-exception`. Whether the schema should record pairs is open (ECO.CI.LIC).
 - Whether plugins listed by the project may use other licences is ECO.SDK's question, not this list's.
 
 ## Children

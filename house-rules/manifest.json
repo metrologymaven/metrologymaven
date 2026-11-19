@@ -4,5 +4,8 @@
     {"id": "core", "file": "core.md", "repos": ["metrologymaven"]},
     {"id": "rust", "file": "rust.md", "repos": ["metrologymaven"]},
     {"id": "python", "file": "python.md", "repos": ["metrologymaven"]}
+  ],
+  "data": [
+    {"id": "spdx-allowlist", "file": "spdx-allowlist.toml"}
   ]
 }
