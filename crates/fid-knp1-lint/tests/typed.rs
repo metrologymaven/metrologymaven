@@ -266,16 +266,20 @@ fn an_unresolvable_table_path_fails_the_real_driver_run() {
     let mut closure = graph::compute_closure(&gcfg).unwrap();
     closure.crates.retain(|c| c.name == "typed-clean");
     let opts = Options { cargo: cargo(), scratch: scratch("typed-unresolved") };
-    // A path that exists nowhere, and (where the driver words it apart) one of the wrong kind.
-    for probe in ["std::knp1_no_such_function", "std::collections::BTreeMap"] {
-        let e =
-            match check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[probe.to_string()]) {
-                Ok(r) => panic!("probe {probe}: the driver accepted it silently: {r:?}"),
-                Err(e) => e,
-            };
-        assert_eq!(e.code, TypedErrorCode::Driver, "{probe}: {e}");
-        assert!(e.message.contains(probe.rsplit("::").next().unwrap()), "{probe}: {e}");
-    }
+    // A path that exists nowhere fails the run with KNP1-TYPED-DRIVER.
+    let probe = "std::knp1_no_such_function";
+    let e = match check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[probe.to_string()]) {
+        Ok(r) => panic!("probe {probe}: the driver accepted it silently: {r:?}"),
+        Err(e) => e,
+    };
+    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+    assert!(e.message.contains("knp1_no_such_function"), "{e}");
+    // A path of the wrong kind (a type listed as a method) is accepted silently by the driver,
+    // with no wording to detect. Pinned here so a driver change shows up; NODE.md records that
+    // the kinds are guarded by the pinned table and the end-to-end fixtures, not by the driver.
+    let wrong = "std::collections::BTreeMap";
+    let r = check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[wrong.to_string()]);
+    assert!(matches!(&r, Ok(run) if run.outcome.findings.is_empty()), "{wrong}: {r:?}");
     // Probe paths can never relabel or shadow a table entry, nor inject TOML.
     for bad in ["f64::mul_add", "std::x\", reason = \"KNP1-LIBM", ""] {
         let e = check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[bad.to_string()])
