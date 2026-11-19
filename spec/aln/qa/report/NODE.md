@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-align-solve, fid-align]
+built_pr: 267
 satisfies: [REQ-ALN.QA-001, REQ-ALN.QA-005, REQ-ALN.QA-007]
 covers: []
 depends_on: [ALN.MODEL.ELEM, KRN.NUM]
