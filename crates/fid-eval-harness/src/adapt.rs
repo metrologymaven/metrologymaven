@@ -687,27 +687,38 @@ const MAX_SCAN_ENTRIES: usize = 100_000;
 /// Deepest folder [`find_oracle_entries`] descends into before it fails closed.
 const MAX_SCAN_DEPTH: usize = 64;
 
-/// Size and SHA-256 of every regular file below `dir` (not following links), bounded.
-fn file_digests(dir: &Path, out: &mut Vec<(PathBuf, u64, [u8; 32])>, budget: &mut usize, depth: usize) {
-    let Ok(rd) = std::fs::read_dir(dir) else {
-        return;
+/// Size and SHA-256 of every regular file below `dir` (not following links). Fails closed
+/// with the reason when the entry or depth cap is reached or an entry cannot be read; an
+/// absent `dir` holds nothing.
+fn file_digests(
+    dir: &Path,
+    out: &mut Vec<(PathBuf, u64, [u8; 32])>,
+    budget: &mut usize,
+    depth: usize,
+) -> Result<(), String> {
+    let rd = match std::fs::read_dir(dir) {
+        Ok(rd) => rd,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound && depth == 0 => return Ok(()),
+        Err(e) => return Err(format!("{}: {e}", dir.display())),
     };
-    for e in rd.flatten() {
+    for e in rd {
+        let e = e.map_err(|e| format!("{}: {e}", dir.display()))?;
         if *budget == 0 || depth > MAX_SCAN_DEPTH {
-            return;
+            return Err(format!("{}: more than the entry or depth cap", dir.display()));
         }
         *budget -= 1;
         let path = e.path();
         match std::fs::symlink_metadata(&path) {
-            Ok(m) if m.is_dir() => file_digests(&path, out, budget, depth + 1),
+            Ok(m) if m.is_dir() => file_digests(&path, out, budget, depth + 1)?,
             Ok(m) if m.is_file() => {
-                if let Some(d) = sha256_file(&path) {
-                    out.push((path, m.len(), d));
-                }
+                let d = sha256_file(&path).ok_or_else(|| format!("{}: unreadable", path.display()))?;
+                out.push((path, m.len(), d));
             }
-            _ => {}
+            Ok(_) => {}
+            Err(e) => return Err(format!("{}: {e}", path.display())),
         }
     }
+    Ok(())
 }
 
 fn sha256_file(p: &Path) -> Option<[u8; 32]> {
@@ -738,14 +749,23 @@ fn same_bytes<'a>(oracles: &'a [(PathBuf, u64, [u8; 32])], path: &Path, len: u64
 /// whose name starts with `oracle` or `expected` (ASCII case-insensitive), any link that
 /// resolves into the suite folder, and any regular file whose bytes equal a file under the
 /// suite's `oracles/` folder. Links are not followed. More than 100 000 entries or 64 levels
-/// fail closed. An absent `dir` holds nothing.
+/// fail closed: the plan is refused with an `invalid_adapter` problem saying the check could not
+/// finish, both for `dir` and for the suite's `oracles/` folder. An absent `dir` holds nothing.
 pub fn find_oracle_entries(dir: &Path, suite_dir: &Path) -> Vec<SandboxError> {
+    find_oracle_entries_capped(dir, suite_dir, MAX_SCAN_ENTRIES)
+}
+
+/// [`find_oracle_entries`] with an explicit entry cap (for tests of the fail-closed path).
+pub fn find_oracle_entries_capped(dir: &Path, suite_dir: &Path, max_entries: usize) -> Vec<SandboxError> {
     let mut oracles = Vec::new();
-    let mut budget = MAX_SCAN_ENTRIES;
-    file_digests(&suite_dir.join("oracles"), &mut oracles, &mut budget, 0);
+    let mut budget = max_entries;
+    if let Err(why) = file_digests(&suite_dir.join("oracles"), &mut oracles, &mut budget, 0) {
+        let what = "cannot check for oracle data (fail closed)";
+        return vec![invalid(format!("suite oracles: {why}; {what}"))];
+    }
     let forms = suite_forms(suite_dir);
     let mut problems = Vec::new();
-    let mut budget = MAX_SCAN_ENTRIES;
+    let mut budget = max_entries;
     let mut stack = vec![(dir.to_path_buf(), 0usize)];
     while let Some((d, depth)) = stack.pop() {
         let Ok(rd) = std::fs::read_dir(&d) else {
@@ -753,7 +773,7 @@ pub fn find_oracle_entries(dir: &Path, suite_dir: &Path) -> Vec<SandboxError> {
         };
         for e in rd.flatten() {
             if budget == 0 || depth > MAX_SCAN_DEPTH {
-                let what = "too many entries or levels to check for oracle data";
+                let what = "more entries or levels than the cap; cannot check for oracle data (fail closed)";
                 problems.push(invalid(format!("{}: {what}", dir.display())));
                 return problems;
             }

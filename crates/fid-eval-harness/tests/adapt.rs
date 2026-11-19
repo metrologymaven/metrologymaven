@@ -495,3 +495,22 @@ fn symlinks_into_the_suite_are_caught() {
     std::os::unix::fs::symlink(suite_abs.join("tasks"), d2.join("data")).unwrap();
     assert!(plan_in(&d2, &env).unwrap_err().to_string().contains("links into the suite folder"));
 }
+
+#[test]
+fn oracle_scan_fails_closed_at_the_entry_cap() {
+    let d = tmp("cap");
+    for i in 0..20 {
+        std::fs::write(d.join(format!("f{i}.txt")), b"x").unwrap();
+    }
+    // Under the cap: clean.
+    assert!(find_oracle_entries_capped(&d, &suite_dir(), 10_000).is_empty());
+    // A low cap is reached in the working folder: refused, never a quiet stop.
+    let e = find_oracle_entries_capped(&d, &suite_dir(), 8);
+    assert_eq!(e.len(), 1, "{e:?}");
+    assert_eq!(e[0].code, ErrorCode::InvalidAdapter);
+    assert!(e[0].detail.contains("fail closed"), "{e:?}");
+    // A cap lower than the suite's oracle files: refused before the folder is scanned.
+    let e = find_oracle_entries_capped(&d, &suite_dir(), 1);
+    assert_eq!(e.len(), 1, "{e:?}");
+    assert!(e[0].detail.starts_with("suite oracles:"), "{e:?}");
+}
