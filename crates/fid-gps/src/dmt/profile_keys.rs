@@ -43,9 +43,9 @@ pub enum ProfileKeyRule {
 pub fn profile_vocabulary(table: &DmtTable, dialect: Dialect) -> BTreeMap<String, ProfileKeyRule> {
     let mut out: BTreeMap<String, ProfileKeyRule> =
         NAMED_PROFILE_KEYS.iter().map(|(k, _)| ((*k).to_owned(), ProfileKeyRule::Text)).collect();
-    for (key, row) in &table.rows {
-        if key.dialect() == dialect && row.variants.len() >= 2 {
-            let names = row.variants.iter().map(|c| c.variant.clone()).collect();
+    for (key, row) in table.rows() {
+        if key.dialect() == dialect && row.variants().len() >= 2 {
+            let names = row.variants().iter().map(|c| c.variant().to_owned()).collect();
             out.insert(key.as_str().to_owned(), ProfileKeyRule::Variant(names));
         }
     }

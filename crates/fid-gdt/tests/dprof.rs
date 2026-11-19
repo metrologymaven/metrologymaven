@@ -636,7 +636,9 @@ fn schema_vocabulary_comes_from_the_dmt_table() {
     assert!(!v.contains("dmt:iso/flatness/none@1"));
     assert!(!v.contains("placeholder.synthetic"));
 
-    let ok = doc(r#"{"dmt:asme/position/none@1":"axis","dmt:asme/size/none@1":"local","unc.decision_rule_hint":"dr.synthetic.default@1"}"#);
+    let ok = doc(
+        r#"{"dmt:asme/position/none@1":"axis","dmt:asme/size/none@1":"local","unc.decision_rule_hint":"dr.synthetic.default@1"}"#,
+    );
     let parsed = parse_profile(ok.as_bytes(), &v).unwrap();
     assert_eq!(parsed.profile.keys.len(), 3);
 
@@ -676,4 +678,27 @@ fn publish_checks_against_the_schema_vocabulary() {
     let e = publish_defaults_profile(&mut st, &roots(), Principal::Human, &handle(A100), &v, false).unwrap_err();
     assert_eq!(e.code(), "unknown_key");
     assert_eq!(st, DprofState::new());
+}
+
+#[test]
+fn structure_is_checked_before_the_vocabulary_dialect() {
+    // Hand-labelled: each fixture is an ISO profile checked against the ASME schema vocabulary
+    // (wrong dialect) and is also structurally broken; the structural error wins.
+    let v = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Asme).unwrap();
+    for (file, why) in [
+        ("iso_bad_edition_vs_asme_vocab.json", "bad_edition"),
+        ("iso_bad_value_vs_asme_vocab.json", "bad_value"),
+    ] {
+        let e = parse_profile(&read(file), &v).unwrap_err();
+        assert_eq!((e.code(), e.reason()), ("malformed_profile", Some(why)), "{file}");
+    }
+    // Bad version and a bad key likewise come before the dialect check.
+    let iso = |rest: &str| format!(r#"{{"schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017",{rest}}}"#);
+    let e = parse_profile(iso(r#""version":"1.0","keys":{}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("bad_version"));
+    let e = parse_profile(iso(r#""version":"1.0.0","keys":{"Bad":"x"}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("bad_key"));
+    // Structurally sound, wrong dialect: the dialect check fires before the unknown key.
+    let e = parse_profile(iso(r#""version":"1.0.0","keys":{"zz.unknown":"x"}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("vocabulary_dialect"));
 }

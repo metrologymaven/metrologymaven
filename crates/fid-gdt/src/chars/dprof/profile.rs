@@ -244,9 +244,9 @@ fn text<'a>(o: &'a BTreeMap<String, CValue>, k: &str) -> Result<&'a str, DprofEr
 /// Parses a profile from a parsed JSON value. Structure is checked for every key before
 /// the vocabulary, so a malformed document fails `malformed_profile` even when it also
 /// holds an unknown key; among unknown keys the first in byte order is named. A vocabulary
-/// from the DMT schema also refuses a profile of another dialect
-/// (`malformed_profile{vocabulary_dialect}`, checked with the dialect field) and, after the
-/// key check, a value its key does not allow (`malformed_profile{value_not_allowed}`).
+/// from the DMT schema also refuses, after all structural checks and in this order, a profile
+/// of another dialect (`malformed_profile{vocabulary_dialect}`), an unknown key, and a value
+/// its key does not allow (`malformed_profile{value_not_allowed}`).
 pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDoc, DprofError> {
     let o = match v {
         CValue::Obj(o) => o,
@@ -259,9 +259,6 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
         return Err(malformed("bad_schema"));
     }
     let dialect = Dialect::parse(text(o, "dialect")?).ok_or_else(|| malformed("bad_dialect"))?;
-    if vocab.dialect().is_some_and(|d| d != dialect) {
-        return Err(malformed("vocabulary_dialect"));
-    }
     let edition = Edition::parse(text(o, "edition")?).ok_or_else(|| malformed("bad_edition"))?;
     let version = SemVer::parse(text(o, "version")?).ok_or_else(|| malformed("bad_version"))?;
     let raw = match o.get("keys") {
@@ -278,6 +275,10 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
             return Err(malformed("bad_key"));
         }
         keys.insert(k.clone(), value(val)?);
+    }
+    // Vocabulary checks start here, after every structural check.
+    if vocab.dialect().is_some_and(|d| d != dialect) {
+        return Err(malformed("vocabulary_dialect"));
     }
     if let Some(k) = keys.keys().find(|k| !vocab.contains(k)) {
         return Err(DprofError::UnknownKey { key: k.clone() });

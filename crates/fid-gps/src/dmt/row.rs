@@ -128,6 +128,16 @@ impl Param {
         }
     }
 
+    /// Whether the value obeys the schema: a token within 64 bytes and its grammar, a
+    /// finite float. Booleans and integers are always valid.
+    pub fn is_valid(&self) -> bool {
+        match self {
+            Param::Bool(_) | Param::Int(_) => true,
+            Param::F64Bits(b) => (b >> 52) & 0x7ff != 0x7ff,
+            Param::Token(s) => is_token(s),
+        }
+    }
+
     fn parse_str(s: &str) -> Option<Param> {
         let b = s.as_bytes();
         if let Some(hex) = s.strip_prefix("0x") {
@@ -153,11 +163,7 @@ impl Param {
             }
             return s.parse::<i64>().ok().map(Param::Int);
         }
-        let token = !b.is_empty()
-            && b.len() <= MAX_TOKEN_LEN
-            && b[0].is_ascii_lowercase()
-            && b.iter().all(|&c| lower_alnum(c) || matches!(c, b'_' | b'.' | b'-'));
-        token.then(|| Param::Token(s.to_owned()))
+        is_token(s).then(|| Param::Token(s.to_owned()))
     }
 
     fn to_cvalue(&self) -> CValue {
@@ -170,25 +176,65 @@ impl Param {
     }
 }
 
-/// One operator of a chain.
+/// One operator of a chain. Fields are private: an `Operator` can only be built through
+/// [`Operator::new`], which enforces the parameter rules.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Operator {
+    kind: OperatorKind,
+    alg: AlgId,
+    params: BTreeMap<String, Param>,
+}
+
+impl Operator {
+    /// Builds an operator. Fails `malformed_table{too_many_params}` past [`MAX_PARAMS`],
+    /// `field_too_long{param_name}` / `malformed_table{bad_param_name}` on a bad name, and
+    /// `field_too_long{param}` / `malformed_table{bad_param}` on a token over 64 bytes or off
+    /// grammar, or a NaN or infinite float.
+    pub fn new(kind: OperatorKind, alg: AlgId, params: BTreeMap<String, Param>) -> Result<Operator, DmtError> {
+        if params.len() > MAX_PARAMS {
+            return Err(DmtError::malformed("too_many_params"));
+        }
+        for (name, p) in &params {
+            if name.len() > MAX_NAME_LEN {
+                return Err(DmtError::too_long("param_name"));
+            }
+            if !is_name(name, MAX_NAME_LEN) {
+                return Err(DmtError::malformed("bad_param_name"));
+            }
+            if let Param::Token(s) = p {
+                if s.len() > MAX_TOKEN_LEN {
+                    return Err(DmtError::too_long("param"));
+                }
+            }
+            if !p.is_valid() {
+                return Err(DmtError::malformed("bad_param"));
+            }
+        }
+        Ok(Operator { kind, alg, params })
+    }
+
     /// Kind (closed ISO 17450 vocabulary).
-    pub kind: OperatorKind,
+    pub fn kind(&self) -> OperatorKind {
+        self.kind
+    }
+
     /// Algorithm ID.
-    pub alg: AlgId,
-    /// Canonical parameters, by name ([`is_name`]).
-    pub params: BTreeMap<String, Param>,
+    pub fn alg(&self) -> &AlgId {
+        &self.alg
+    }
+
+    /// Canonical parameters, by name.
+    pub fn params(&self) -> &BTreeMap<String, Param> {
+        &self.params
+    }
 }
 
 /// A named operator chain (one variant of a row). An empty chain is allowed (placeholder rows
-/// of `GDT.RES.ROWISO.STUBS`).
+/// of `GDT.RES.ROWISO.STUBS`). Fields are private, so the cached digest cannot go stale.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorChain {
-    /// Variant name ([`is_name`]).
-    pub variant: String,
-    /// The steps, in execution order.
-    pub steps: Vec<Operator>,
+    variant: String,
+    steps: Vec<Operator>,
     canonical: Vec<u8>,
     digest: Digest,
 }
@@ -206,11 +252,22 @@ impl OperatorChain {
         if steps.len() > MAX_STEPS {
             return Err(DmtError::malformed("too_many_steps"));
         }
-        let mut c = OperatorChain { variant: variant.to_owned(), steps, canonical: Vec::new(), digest: Digest::TOMBSTONE };
+        let mut c =
+            OperatorChain { variant: variant.to_owned(), steps, canonical: Vec::new(), digest: Digest::TOMBSTONE };
         let (canonical, digest) = canonical_and_digest(&c.to_cvalue())?;
         c.canonical = canonical;
         c.digest = digest;
         Ok(c)
+    }
+
+    /// Variant name.
+    pub fn variant(&self) -> &str {
+        &self.variant
+    }
+
+    /// The steps, in execution order.
+    pub fn steps(&self) -> &[Operator] {
+        &self.steps
     }
 
     /// The chain as a JSON value: `{steps: [{alg, kind, params}], variant}`.
@@ -288,46 +345,111 @@ pub enum ReviewState {
     },
 }
 
-/// One DMT row (REQ-001).
+/// One DMT row (REQ-001). Fields are private and read through getters: a row can only be
+/// built by [`row_from_value`], so it always obeys the schema and its cached digest is current.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DmtRow {
-    /// The key; dialect, characteristic and modifiers below must agree with it.
-    pub key: DmtKey,
-    /// Dialect.
-    pub dialect: Dialect,
-    /// Edition set, ascending, 1 to [`MAX_EDITIONS`].
-    pub editions: Vec<String>,
-    /// Characteristic type.
-    pub characteristic: String,
-    /// Modifier set, ascending (equal to the key's).
-    pub modifiers: Vec<String>,
-    /// Clause references, ascending by (designator, edition, clause), 1 to [`MAX_CLAUSES`].
-    pub clauses: Vec<ClauseRef>,
-    /// Variants, ascending by name, 1 to [`MAX_VARIANTS`].
-    pub variants: Vec<OperatorChain>,
-    /// Name of the default variant (one of `variants`).
-    pub default_variant: String,
-    /// Actual-value definition ID.
-    pub actual_value: String,
-    /// Decision-rule hint ID.
-    pub decision_rule_hint: String,
-    /// ORS case IDs, ascending (may be empty).
-    pub ors_cases: Vec<String>,
-    /// Status.
-    pub status: RowStatus,
-    /// Limitation codes, ascending (may be empty).
-    pub limitations: Vec<String>,
-    /// Review state.
-    pub review: ReviewState,
-    /// The only free-text field: at most 280 characters, no control characters (may be empty).
-    pub notes: String,
-    /// Whether the row is synthetic test data rather than expert content.
-    pub synthetic: bool,
+    key: DmtKey,
+    dialect: Dialect,
+    editions: Vec<String>,
+    characteristic: String,
+    modifiers: Vec<String>,
+    clauses: Vec<ClauseRef>,
+    variants: Vec<OperatorChain>,
+    default_variant: String,
+    actual_value: String,
+    decision_rule_hint: String,
+    ors_cases: Vec<String>,
+    status: RowStatus,
+    limitations: Vec<String>,
+    review: ReviewState,
+    notes: String,
+    synthetic: bool,
     canonical: Vec<u8>,
     digest: Digest,
 }
 
 impl DmtRow {
+    /// The key; dialect, characteristic and modifiers agree with it.
+    pub fn key(&self) -> &DmtKey {
+        &self.key
+    }
+
+    /// Dialect.
+    pub fn dialect(&self) -> Dialect {
+        self.dialect
+    }
+
+    /// Edition set, ascending.
+    pub fn editions(&self) -> &[String] {
+        &self.editions
+    }
+
+    /// Characteristic type.
+    pub fn characteristic(&self) -> &str {
+        &self.characteristic
+    }
+
+    /// Modifier set, ascending (equal to the key's).
+    pub fn modifiers(&self) -> &[String] {
+        &self.modifiers
+    }
+
+    /// Clause references, ascending by (designator, edition, clause).
+    pub fn clauses(&self) -> &[ClauseRef] {
+        &self.clauses
+    }
+
+    /// Variants, ascending by name.
+    pub fn variants(&self) -> &[OperatorChain] {
+        &self.variants
+    }
+
+    /// Name of the default variant.
+    pub fn default_variant(&self) -> &str {
+        &self.default_variant
+    }
+
+    /// Actual-value definition ID.
+    pub fn actual_value(&self) -> &str {
+        &self.actual_value
+    }
+
+    /// Decision-rule hint ID.
+    pub fn decision_rule_hint(&self) -> &str {
+        &self.decision_rule_hint
+    }
+
+    /// ORS case IDs, ascending.
+    pub fn ors_cases(&self) -> &[String] {
+        &self.ors_cases
+    }
+
+    /// Status.
+    pub fn status(&self) -> RowStatus {
+        self.status
+    }
+
+    /// Limitation codes, ascending.
+    pub fn limitations(&self) -> &[String] {
+        &self.limitations
+    }
+
+    /// Review state.
+    pub fn review(&self) -> &ReviewState {
+        &self.review
+    }
+
+    /// The only free-text field (at most 280 characters).
+    pub fn notes(&self) -> &str {
+        &self.notes
+    }
+
+    /// Whether the row is synthetic test data rather than expert content.
+    pub fn synthetic(&self) -> bool {
+        self.synthetic
+    }
+
     /// The variant with this name.
     pub fn variant(&self, name: &str) -> Option<&OperatorChain> {
         self.variants.iter().find(|c| c.variant == name)
@@ -440,7 +562,13 @@ fn str_of(v: Option<&CValue>) -> Result<&str, DmtError> {
     }
 }
 
-fn check_str(s: &str, name: &'static str, max: usize, ok: &impl Fn(&str) -> bool, bad: &'static str) -> Result<(), DmtError> {
+fn check_str(
+    s: &str,
+    name: &'static str,
+    max: usize,
+    ok: &impl Fn(&str) -> bool,
+    bad: &'static str,
+) -> Result<(), DmtError> {
     if s.len() > max {
         return Err(DmtError::too_long(name));
     }
@@ -450,7 +578,13 @@ fn check_str(s: &str, name: &'static str, max: usize, ok: &impl Fn(&str) -> bool
     Ok(())
 }
 
-fn arr_of<'a>(o: &'a Obj, name: &str, min: usize, max: usize, count_reason: &'static str) -> Result<&'a [CValue], DmtError> {
+fn arr_of<'a>(
+    o: &'a Obj,
+    name: &str,
+    min: usize,
+    max: usize,
+    count_reason: &'static str,
+) -> Result<&'a [CValue], DmtError> {
     let a = match o.get(name) {
         Some(CValue::Arr(a)) => a,
         Some(_) => return Err(DmtError::malformed("wrong_type")),
@@ -490,13 +624,23 @@ fn ascending<T, K: Ord + ?Sized>(items: &[T], key: impl Fn(&T) -> &K) -> Result<
     }
 }
 
+fn is_token(s: &str) -> bool {
+    let b = s.as_bytes();
+    !b.is_empty()
+        && b.len() <= MAX_TOKEN_LEN
+        && b[0].is_ascii_lowercase()
+        && b.iter().all(|&c| lower_alnum(c) || matches!(c, b'_' | b'.' | b'-'))
+}
+
 fn is_clause(s: &str) -> bool {
     !s.is_empty() && s.split('.').all(|p| !p.is_empty() && p.bytes().all(lower_alnum))
 }
 
 fn is_ors(s: &str) -> bool {
     let b = s.as_bytes();
-    !b.is_empty() && lower_alnum(b[0]) && b.iter().all(|&c| lower_alnum(c) || matches!(c, b'.' | b'_' | b':' | b'/' | b'-'))
+    !b.is_empty()
+        && lower_alnum(b[0])
+        && b.iter().all(|&c| lower_alnum(c) || matches!(c, b'.' | b'_' | b':' | b'/' | b'-'))
 }
 
 fn is_limitation(s: &str) -> bool {
@@ -504,7 +648,8 @@ fn is_limitation(s: &str) -> bool {
         Some((c, a)) => (c, Some(a)),
         None => (s, None),
     };
-    is_name(code, 48) && arg.map_or(true, |a| !a.is_empty() && a.len() <= 31 && a.bytes().all(|c| lower_alnum(c) || c == b'_'))
+    is_name(code, 48)
+        && arg.map_or(true, |a| !a.is_empty() && a.len() <= 31 && a.bytes().all(|c| lower_alnum(c) || c == b'_'))
 }
 
 /// The roster's reviewer ID grammar (`GDT.RES.ROWFLOW.ROSTER`): `[a-z0-9][a-z0-9._-]{0,63}`.
@@ -553,7 +698,7 @@ fn parse_operator(v: &CValue) -> Result<Operator, DmtError> {
         };
         params.insert(name.clone(), p);
     }
-    Ok(Operator { kind, alg, params })
+    Operator::new(kind, alg, params)
 }
 
 fn parse_chain(v: &CValue) -> Result<OperatorChain, DmtError> {
@@ -585,7 +730,8 @@ fn parse_review(v: &CValue) -> Result<ReviewState, DmtError> {
         "draft" => Ok(ReviewState::Draft),
         "under_review" => Ok(ReviewState::UnderReview),
         "signed_off" => {
-            let reviewers = str_list(o, "reviewers", (1, MAX_REVIEWERS), MAX_REVIEWER_LEN, is_reviewer_id, "bad_reviewer")?;
+            let reviewers =
+                str_list(o, "reviewers", (1, MAX_REVIEWERS), MAX_REVIEWER_LEN, is_reviewer_id, "bad_reviewer")?;
             Ok(ReviewState::SignedOff { reviewers })
         }
         _ => Err(DmtError::malformed("bad_review_state")),
@@ -606,20 +752,24 @@ pub fn row_from_value(v: &CValue) -> Result<DmtRow, DmtError> {
     let dialect = Dialect::parse(str_of(o.get("dialect"))?).ok_or_else(|| DmtError::malformed("bad_dialect"))?;
     let characteristic =
         field(o, "characteristic", MAX_NAME_LEN, |s| is_name(s, MAX_NAME_LEN), "bad_characteristic")?.to_owned();
-    let modifiers = str_list(o, "modifiers", (0, super::ident::MAX_MODIFIERS), super::ident::MAX_MODIFIER_LEN, is_modifier, "bad_modifier")?;
+    let modifiers = str_list(
+        o,
+        "modifiers",
+        (0, super::ident::MAX_MODIFIERS),
+        super::ident::MAX_MODIFIER_LEN,
+        is_modifier,
+        "bad_modifier",
+    )?;
     if dialect != key.dialect() || characteristic != key.characteristic() || modifiers.as_slice() != key.modifiers() {
         return Err(DmtError::malformed("key_mismatch"));
     }
-    let editions = str_list(o, "editions", (1, MAX_EDITIONS), MAX_LABEL_LEN, |s| is_label(s, MAX_LABEL_LEN), "bad_edition")?;
-    let clauses = arr_of(o, "clauses", 1, MAX_CLAUSES, "bad_count")?
-        .iter()
-        .map(parse_clause)
-        .collect::<Result<Vec<_>, _>>()?;
+    let editions =
+        str_list(o, "editions", (1, MAX_EDITIONS), MAX_LABEL_LEN, |s| is_label(s, MAX_LABEL_LEN), "bad_edition")?;
+    let clauses =
+        arr_of(o, "clauses", 1, MAX_CLAUSES, "bad_count")?.iter().map(parse_clause).collect::<Result<Vec<_>, _>>()?;
     ascending(&clauses, |c| c)?;
-    let variants = arr_of(o, "variants", 1, MAX_VARIANTS, "bad_count")?
-        .iter()
-        .map(parse_chain)
-        .collect::<Result<Vec<_>, _>>()?;
+    let variants =
+        arr_of(o, "variants", 1, MAX_VARIANTS, "bad_count")?.iter().map(parse_chain).collect::<Result<Vec<_>, _>>()?;
     ascending(&variants, |c| c.variant.as_bytes())?;
     let default_variant = field(o, "default_variant", MAX_NAME_LEN, |s| is_name(s, MAX_NAME_LEN), "bad_variant")?;
     if !variants.iter().any(|c| c.variant == default_variant) {

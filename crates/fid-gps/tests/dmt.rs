@@ -6,10 +6,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
+use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::{
-    profile_vocabulary, Dialect, DmtError, DmtKey, DmtTable, OperatorKind, Param, ProfileKeyRule, ReviewState,
-    RowStatus, DMT_TABLE_JSON_SCHEMA, NAMED_PROFILE_KEYS,
+    profile_vocabulary, AlgId, Dialect, DmtError, DmtKey, DmtTable, Operator, OperatorChain, OperatorKind, Param,
+    ProfileKeyRule, ReviewState, RowStatus, SemVer, DMT_TABLE_JSON_SCHEMA, NAMED_PROFILE_KEYS,
 };
+use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -88,27 +90,27 @@ fn malformed(e: &DmtError) -> &'static str {
 #[test]
 fn ac1_synthetic_table_loads_with_the_recorded_digest() {
     let t = table();
-    assert_eq!(t.rows.len(), 20);
-    assert!(t.rows.values().all(|r| r.synthetic));
+    assert_eq!(t.rows().len(), 20);
+    assert!(t.rows().values().all(|r| r.synthetic()));
     let expected = String::from_utf8(read("synthetic_table_v1.digest")).unwrap();
     assert_eq!(t.digest().as_str(), expected.trim_end());
     assert_eq!(fid_canon::digest_bytes(t.canonical_bytes()).to_string(), expected.trim_end());
-    assert_eq!(t.version.to_string(), "1.0.0");
+    assert_eq!(t.version().to_string(), "1.0.0");
 }
 
 #[test]
 fn ac1_row_and_chain_digests_match_the_reference() {
     let t = table();
     let CValue::Obj(per_row) = fid_canon::parse(&read("synthetic_table_v1.rows.json")).unwrap() else { panic!() };
-    assert_eq!(per_row.len(), t.rows.len());
+    assert_eq!(per_row.len(), t.rows().len());
     for (key, exp) in &per_row {
         let r = t.get(key).unwrap();
         let CValue::Obj(exp) = exp else { panic!() };
         assert_eq!(exp.get("row"), Some(&s(r.digest().as_str())), "{key}");
         let Some(CValue::Obj(chains)) = exp.get("chains") else { panic!() };
-        assert_eq!(chains.len(), r.variants.len());
-        for c in &r.variants {
-            assert_eq!(chains.get(&c.variant), Some(&s(c.digest().as_str())), "{key} {}", c.variant);
+        assert_eq!(chains.len(), r.variants().len());
+        for c in r.variants() {
+            assert_eq!(chains.get(c.variant()), Some(&s(c.digest().as_str())), "{key} {}", c.variant());
         }
     }
 }
@@ -186,7 +188,10 @@ fn key_grammar_is_exact() {
     let long_char = "c".repeat(32);
     let at_limit = format!("dmt:asme/{long_char}/{}@1", ["m"; 1].join("+"));
     assert!(DmtKey::parse(&at_limit).is_ok());
-    let too_long = format!("dmt:asme/position/{}@1", (0..8).map(|i| format!("m{i}{}", "x".repeat(13))).collect::<Vec<_>>().join("+"));
+    let too_long = format!(
+        "dmt:asme/position/{}@1",
+        (0..8).map(|i| format!("m{i}{}", "x".repeat(13))).collect::<Vec<_>>().join("+")
+    );
     assert!(too_long.len() > 128);
     assert_eq!(DmtKey::parse(&too_long).unwrap_err().code(), "bad_dmt_key");
     // Built from parts in any order, the key is canonical.
@@ -259,7 +264,11 @@ fn case_only_duplicates_are_refused() {
 #[test]
 fn duplicate_json_member_names_are_refused() {
     let text = String::from_utf8(read("synthetic_table_v1.json")).unwrap();
-    let dup = text.replacen("\"schema\": \"fid.dmt-table/1\",", "\"schema\": \"fid.dmt-table/1\", \"schema\": \"fid.dmt-table/1\",", 1);
+    let dup = text.replacen(
+        "\"schema\": \"fid.dmt-table/1\",",
+        "\"schema\": \"fid.dmt-table/1\", \"schema\": \"fid.dmt-table/1\",",
+        1,
+    );
     assert_ne!(dup, text);
     assert_eq!(malformed(&DmtTable::load(dup.as_bytes()).unwrap_err()), "duplicate_key");
 }
@@ -303,7 +312,8 @@ fn ac6_exported_json_schema_is_2020_12_and_closed() {
     let CValue::Obj(s) = fid_canon::parse(DMT_TABLE_JSON_SCHEMA.as_bytes()).unwrap() else { panic!() };
     assert_eq!(s.get("$schema"), Some(&CValue::Str("https://json-schema.org/draft/2020-12/schema".to_owned())));
     assert_eq!(s.get("additionalProperties"), Some(&CValue::Bool(false)));
-    let file = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("schema/dmt-table-v1.schema.json")).unwrap();
+    let file =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("schema/dmt-table-v1.schema.json")).unwrap();
     assert_eq!(DMT_TABLE_JSON_SCHEMA, file);
     // Validation of the fixtures with an independent validator: fixtures/gdt/dmt/check_schema.py (CI).
 }
@@ -354,7 +364,12 @@ fn grammar_fields_are_length_checked_first() {
     assert_eq!(e, DmtError::FieldTooLong { field: "clause" });
     let e = fail(|d| drop(row(d, 0).insert("actual_value".to_owned(), s(&format!("{}@1", "a".repeat(95))))));
     assert_eq!(e, DmtError::FieldTooLong { field: "actual_value" });
-    let e = fail(|d| drop(op0(d).insert("params".to_owned(), CValue::Obj([("t".to_owned(), s(&"a".repeat(65)))].into_iter().collect()))));
+    let e = fail(|d| {
+        drop(
+            op0(d)
+                .insert("params".to_owned(), CValue::Obj([("t".to_owned(), s(&"a".repeat(65)))].into_iter().collect())),
+        )
+    });
     assert_eq!(e, DmtError::FieldTooLong { field: "param" });
 }
 
@@ -390,16 +405,58 @@ fn malformed_tables() {
     expect("bad_limitation", set("limitations", strs(&["free text here"])));
     expect("not_sorted", set("limitations", strs(&["b", "a"])));
     expect("bad_review_state", set("review", CValue::Obj([("state".to_owned(), s("approved"))].into_iter().collect())));
-    expect("unknown_field", set("review", CValue::Obj([("state".to_owned(), s("draft")), ("reviewers".to_owned(), strs(&["a"]))].into_iter().collect())));
+    expect(
+        "unknown_field",
+        set(
+            "review",
+            CValue::Obj(
+                [("state".to_owned(), s("draft")), ("reviewers".to_owned(), strs(&["a"]))].into_iter().collect(),
+            ),
+        ),
+    );
     expect("missing_field", set("review", CValue::Obj([("state".to_owned(), s("signed_off"))].into_iter().collect())));
-    expect("bad_count", set("review", CValue::Obj([("state".to_owned(), s("signed_off")), ("reviewers".to_owned(), strs(&[]))].into_iter().collect())));
-    expect("not_sorted", set("review", CValue::Obj([("state".to_owned(), s("signed_off")), ("reviewers".to_owned(), strs(&["rev-a", "rev-a"]))].into_iter().collect())));
+    expect(
+        "bad_count",
+        set(
+            "review",
+            CValue::Obj(
+                [("state".to_owned(), s("signed_off")), ("reviewers".to_owned(), strs(&[]))].into_iter().collect(),
+            ),
+        ),
+    );
+    expect(
+        "not_sorted",
+        set(
+            "review",
+            CValue::Obj(
+                [("state".to_owned(), s("signed_off")), ("reviewers".to_owned(), strs(&["rev-a", "rev-a"]))]
+                    .into_iter()
+                    .collect(),
+            ),
+        ),
+    );
     expect("wrong_type", set("synthetic", s("true")));
     expect("wrong_type", set("notes", CValue::Null));
-    expect("bad_param", |d: &mut CValue| drop(op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), CValue::Num(1.5))].into_iter().collect()))));
-    expect("bad_param", |d: &mut CValue| drop(op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), s("0x7ff8000000000000"))].into_iter().collect()))));
-    expect("bad_param", |d: &mut CValue| drop(op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), CValue::Null)].into_iter().collect()))));
-    expect("bad_param_name", |d: &mut CValue| drop(op0(d).insert("params".to_owned(), CValue::Obj([("X".to_owned(), CValue::Bool(true))].into_iter().collect()))));
+    expect("bad_param", |d: &mut CValue| {
+        drop(
+            op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), CValue::Num(1.5))].into_iter().collect())),
+        )
+    });
+    expect("bad_param", |d: &mut CValue| {
+        drop(op0(d).insert(
+            "params".to_owned(),
+            CValue::Obj([("x".to_owned(), s("0x7ff8000000000000"))].into_iter().collect()),
+        ))
+    });
+    expect("bad_param", |d: &mut CValue| {
+        drop(op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), CValue::Null)].into_iter().collect())))
+    });
+    expect("bad_param_name", |d: &mut CValue| {
+        drop(
+            op0(d)
+                .insert("params".to_owned(), CValue::Obj([("X".to_owned(), CValue::Bool(true))].into_iter().collect())),
+        )
+    });
     expect("unknown_field", |d: &mut CValue| drop(op0(d).insert("note".to_owned(), s("x"))));
     expect("unknown_field", |d: &mut CValue| {
         let clauses = arr(row(d, 0).get_mut("clauses").unwrap());
@@ -419,7 +476,13 @@ fn malformed_tables() {
 #[test]
 fn input_limits() {
     // Too deep: a parameter value that is itself an array is one level past the limit.
-    let e = fail(|d| drop(op0(d).insert("params".to_owned(), CValue::Obj([("x".to_owned(), CValue::Arr(vec![]))].into_iter().collect()))));
+    let e =
+        fail(|d| {
+            drop(op0(d).insert(
+                "params".to_owned(),
+                CValue::Obj([("x".to_owned(), CValue::Arr(vec![]))].into_iter().collect()),
+            ))
+        });
     assert_eq!(malformed(&e), "input_limit");
     assert_eq!(malformed(&DmtTable::load(&vec![b' '; 32 * 1024 * 1024 + 1]).unwrap_err()), "too_large");
     assert_eq!(malformed(&DmtTable::load(b"{").unwrap_err()), "syntax");
@@ -454,7 +517,7 @@ fn a_five_thousand_row_table_loads() {
     }
     text.push_str("]}");
     let t = DmtTable::load(text.as_bytes()).unwrap();
-    assert_eq!(t.rows.len(), 5_000);
+    assert_eq!(t.rows().len(), 5_000);
 }
 
 #[test]
@@ -482,19 +545,19 @@ fn hostile_inputs_never_panic() {
 fn row_fields_are_typed() {
     let t = table();
     let r = t.get("dmt:asme/position/cz+mmc@1").unwrap();
-    assert_eq!(r.status, RowStatus::Partial);
-    assert_eq!(r.limitations, ["pattern_size_limited", "zone_def_unsupported:nonuniform"]);
-    assert_eq!(r.review, ReviewState::UnderReview);
-    assert_eq!(r.default_chain().unwrap().variant, "axis");
-    let op = &r.variant("surface").unwrap().steps[3];
-    assert_eq!(op.kind, OperatorKind::Construction);
-    assert_eq!(op.params.get("fraction").and_then(Param::as_f64), Some(0.5));
-    assert_eq!(r.variant("surface").unwrap().steps[4].params.get("sign"), Some(&Param::Int(-1)));
+    assert_eq!(r.status(), RowStatus::Partial);
+    assert_eq!(r.limitations(), ["pattern_size_limited", "zone_def_unsupported:nonuniform"]);
+    assert_eq!(*r.review(), ReviewState::UnderReview);
+    assert_eq!(r.default_chain().unwrap().variant(), "axis");
+    let op = &r.variant("surface").unwrap().steps()[3];
+    assert_eq!(op.kind(), OperatorKind::Construction);
+    assert_eq!(op.params().get("fraction").and_then(Param::as_f64), Some(0.5));
+    assert_eq!(r.variant("surface").unwrap().steps()[4].params().get("sign"), Some(&Param::Int(-1)));
     let f = t.get("dmt:asme/flatness/none@1").unwrap();
-    assert_eq!(f.review, ReviewState::SignedOff { reviewers: vec!["rev-a".to_owned(), "rev-b".to_owned()] });
-    assert_eq!(f.clauses[0].designator, "asme-y14.5");
+    assert_eq!(*f.review(), ReviewState::SignedOff { reviewers: vec!["rev-a".to_owned(), "rev-b".to_owned()] });
+    assert_eq!(f.clauses()[0].designator, "asme-y14.5");
     let stub = t.get("dmt:iso/flatness/none@1").unwrap();
-    assert!(stub.variants[0].steps.is_empty() && stub.ors_cases.is_empty() && stub.notes.is_empty());
+    assert!(stub.variants()[0].steps().is_empty() && stub.ors_cases().is_empty() && stub.notes().is_empty());
     assert!(t.get("dmt:asme/flatness/mmc@1").is_none());
     assert!(t.get("not a key").is_none());
 }
@@ -519,7 +582,10 @@ fn profile_vocabulary_is_named_keys_plus_multi_variant_rows() {
             "unc.decision_rule_hint",
         ]
     );
-    assert_eq!(asme.get("dmt:asme/size/none@1"), Some(&ProfileKeyRule::Variant(vec!["global".to_owned(), "local".to_owned()])));
+    assert_eq!(
+        asme.get("dmt:asme/size/none@1"),
+        Some(&ProfileKeyRule::Variant(vec!["global".to_owned(), "local".to_owned()]))
+    );
     assert_eq!(asme.get("unc.decision_rule_hint"), Some(&ProfileKeyRule::Text));
     let iso = profile_vocabulary(&t, Dialect::Iso);
     assert_eq!(iso.len(), NAMED_PROFILE_KEYS.len());
@@ -530,4 +596,64 @@ fn profile_vocabulary_is_named_keys_plus_multi_variant_rows() {
         assert!(b.len() <= 128 && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit()));
         assert!(b.iter().all(|&c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"_.:/+@-".contains(&c)), "{k}");
     }
+}
+
+// ------------------------------------------------------------------ construction through the API
+
+fn op(params: BTreeMap<String, Param>) -> Result<Operator, DmtError> {
+    Operator::new(OperatorKind::Partition, AlgId::parse("syn.partition.whole_feature@0.1.0").unwrap(), params)
+}
+
+fn one(name: &str, p: Param) -> BTreeMap<String, Param> {
+    [(name.to_owned(), p)].into_iter().collect()
+}
+
+#[test]
+fn over_limit_operators_and_chains_cannot_be_built() {
+    // Operators: every parameter rule of the loader also holds for `Operator::new`.
+    let many: BTreeMap<String, Param> = (0..33).map(|i| (format!("p{i}"), Param::Bool(true))).collect();
+    assert_eq!(malformed(&op(many).unwrap_err()), "too_many_params");
+    assert_eq!(op(one("t", Param::Token("a".repeat(65)))).unwrap_err(), DmtError::FieldTooLong { field: "param" });
+    assert_eq!(malformed(&op(one("t", Param::Token("Bad".to_owned()))).unwrap_err()), "bad_param");
+    assert_eq!(malformed(&op(one("t", Param::Token(String::new()))).unwrap_err()), "bad_param");
+    assert_eq!(malformed(&op(one("f", Param::F64Bits(f64::NAN.to_bits()))).unwrap_err()), "bad_param");
+    assert_eq!(malformed(&op(one("f", Param::F64Bits(f64::INFINITY.to_bits()))).unwrap_err()), "bad_param");
+    assert_eq!(malformed(&op(one("X", Param::Bool(true))).unwrap_err()), "bad_param_name");
+    assert_eq!(op(one(&"n".repeat(33), Param::Bool(true))).unwrap_err(), DmtError::FieldTooLong { field: "param_name" });
+    let ok = op(one("f", Param::F64Bits(0.5f64.to_bits()))).unwrap();
+    assert_eq!(ok.params().len(), 1);
+    // Chains: at most 64 steps and a grammar-checked name.
+    let steps = vec![ok.clone(); 65];
+    assert_eq!(malformed(&OperatorChain::new("default", steps).unwrap_err()), "too_many_steps");
+    assert_eq!(malformed(&OperatorChain::new("Default", vec![]).unwrap_err()), "bad_variant");
+    assert_eq!(OperatorChain::new(&"v".repeat(33), vec![]).unwrap_err(), DmtError::FieldTooLong { field: "variant" });
+    let c = OperatorChain::new("default", vec![ok; 64]).unwrap();
+    assert_eq!(c.steps().len(), 64);
+    assert_eq!(c.digest(), Digest::from_bytes(fid_canon::digest_bytes(c.canonical_bytes()).0));
+}
+
+#[test]
+fn over_limit_rows_cannot_be_built_or_inserted() {
+    // A row exists only through `row_from_value`, which refuses an over-limit row.
+    let mut d = doc();
+    row(&mut d, 0).insert("notes".to_owned(), s(&"x".repeat(281)));
+    let CValue::Arr(rs) = obj(&mut d).remove("rows").unwrap() else { panic!() };
+    assert_eq!(row_from_value(&rs[0]).unwrap_err(), DmtError::FieldTooLong { field: "notes" });
+    let mut d = doc();
+    let variants = arr(row(&mut d, 0).get_mut("variants").unwrap());
+    let steps = arr(obj(&mut variants[0]).get_mut("steps").unwrap());
+    let first = steps[0].clone();
+    steps.resize(65, first);
+    assert_eq!(malformed(&load(&d).unwrap_err()), "too_many_steps");
+
+    // `DmtTable::new` re-validates every row and its placement; valid rows give the same table.
+    let t = table();
+    let again = DmtTable::new(t.version(), t.rows().clone()).unwrap();
+    assert_eq!(again.digest(), t.digest());
+    let mut moved = t.rows().clone();
+    let r = moved.remove(&DmtKey::parse("dmt:asme/flatness/none@1").unwrap()).unwrap();
+    moved.insert(DmtKey::parse("dmt:asme/flatness/mmc@1").unwrap(), r);
+    assert_eq!(malformed(&DmtTable::new(t.version(), moved).unwrap_err()), "key_mismatch");
+    let v2 = SemVer::parse("2.0.0").unwrap();
+    assert_ne!(DmtTable::new(v2, t.rows().clone()).unwrap().digest(), t.digest());
 }

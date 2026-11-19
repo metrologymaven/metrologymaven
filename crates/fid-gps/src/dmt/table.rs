@@ -26,13 +26,12 @@ pub const MAX_ROWS: usize = 10_000;
 
 const TABLE_FIELDS: [&str; 3] = ["rows", "schema", "version"];
 
-/// A loaded, validated DMT table.
+/// A loaded, validated DMT table. Fields are private and read through getters, so the
+/// cached canonical form and digest always match the rows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DmtTable {
-    /// Table version.
-    pub version: SemVer,
-    /// Rows by key.
-    pub rows: BTreeMap<DmtKey, DmtRow>,
+    version: SemVer,
+    rows: BTreeMap<DmtKey, DmtRow>,
     canonical: Vec<u8>,
     digest: Digest,
 }
@@ -75,24 +74,37 @@ impl DmtTable {
         let mut rows = BTreeMap::new();
         for rv in raw {
             let row = row_from_value(rv)?;
-            if rows.contains_key(&row.key) {
-                return Err(DmtError::duplicate_key(row.key.as_str()));
+            if rows.contains_key(row.key()) {
+                return Err(DmtError::duplicate_key(row.key().as_str()));
             }
-            rows.insert(row.key.clone(), row);
+            rows.insert(row.key().clone(), row);
         }
-        DmtTable::new(version, rows)
+        DmtTable::build(version, rows)
     }
 
-    /// Builds a table from already validated rows (each stored under its own key) and
-    /// computes its canonical form and digest. Fails `malformed_table{key_mismatch}` when a
-    /// map key differs from its row's key, and `malformed_table{too_many_rows}`.
+    /// Builds a table from rows (each stored under its own key) and computes its canonical
+    /// form and digest. Every row is re-validated against the full schema rules by parsing
+    /// its JSON form again with [`row_from_value`]; any difference fails
+    /// `malformed_table{row_invalid}` (or the parser's own error). Also fails
+    /// `malformed_table{key_mismatch}` when a map key differs from its row's key, and
+    /// `malformed_table{too_many_rows}`.
     pub fn new(version: SemVer, rows: BTreeMap<DmtKey, DmtRow>) -> Result<DmtTable, DmtError> {
         if rows.len() > MAX_ROWS {
             return Err(DmtError::malformed("too_many_rows"));
         }
-        if rows.iter().any(|(k, r)| *k != r.key) {
-            return Err(DmtError::malformed("key_mismatch"));
+        for (k, r) in &rows {
+            if k != r.key() {
+                return Err(DmtError::malformed("key_mismatch"));
+            }
+            if row_from_value(&r.to_cvalue())? != *r {
+                return Err(DmtError::malformed("row_invalid"));
+            }
         }
+        DmtTable::build(version, rows)
+    }
+
+    /// Computes the canonical form of rows already validated by [`row_from_value`].
+    fn build(version: SemVer, rows: BTreeMap<DmtKey, DmtRow>) -> Result<DmtTable, DmtError> {
         let mut t = DmtTable { version, rows, canonical: Vec::new(), digest: Digest::TOMBSTONE };
         let (canonical, digest) = canonical_and_digest(&t.to_cvalue())?;
         t.canonical = canonical;
@@ -122,6 +134,16 @@ impl DmtTable {
     /// The table digest: SHA-256 of [`DmtTable::canonical_bytes`] (REQ-004).
     pub fn digest(&self) -> Digest {
         self.digest
+    }
+
+    /// Table version.
+    pub fn version(&self) -> SemVer {
+        self.version
+    }
+
+    /// Rows by key.
+    pub fn rows(&self) -> &BTreeMap<DmtKey, DmtRow> {
+        &self.rows
     }
 
     /// The row with this key text, if any.

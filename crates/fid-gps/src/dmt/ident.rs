@@ -28,10 +28,7 @@ pub(crate) fn lower_alnum(c: u8) -> bool {
 /// `[a-z][a-z0-9_]{0,max-1}`: characteristic, variant, parameter and algorithm segment names.
 pub fn is_name(s: &str, max: usize) -> bool {
     let b = s.as_bytes();
-    !b.is_empty()
-        && b.len() <= max
-        && b[0].is_ascii_lowercase()
-        && b.iter().all(|&c| lower_alnum(c) || c == b'_')
+    !b.is_empty() && b.len() <= max && b[0].is_ascii_lowercase() && b.iter().all(|&c| lower_alnum(c) || c == b'_')
 }
 
 /// `[a-z0-9][a-z0-9_]{0,15}` and not `none`: one modifier.
@@ -245,7 +242,11 @@ impl SemVer {
     /// Parses `x.y.z`.
     pub fn parse(s: &str) -> Option<SemVer> {
         let mut it = s.split('.');
-        let v = SemVer { major: semver_part(it.next()?)?, minor: semver_part(it.next()?)?, patch: semver_part(it.next()?)? };
+        let v = SemVer {
+            major: semver_part(it.next()?)?,
+            minor: semver_part(it.next()?)?,
+            patch: semver_part(it.next()?)?,
+        };
         if it.next().is_some() {
             return None;
         }
