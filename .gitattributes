@@ -101,6 +101,8 @@ fixtures/allow/** -text
 fixtures/flow/fixes/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
+# KRN.NUM.RED fixtures: bit patterns and a SHA-256 written by make_red_fixtures.py, which --check compares byte for byte.
+fixtures/num/red-*.txt -text
 # CORE.REG.VER.COMPAT fixtures: hand-labelled pairs and manifests carrying SHA-256 digests; never convert line endings.
 fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
