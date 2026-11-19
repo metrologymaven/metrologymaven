@@ -1,0 +1,105 @@
+{
+  "schema": "config-schema/0",
+  "settings": [
+    {
+      "acquisition_relevant": false,
+      "live_changeable": true,
+      "name": "display_name",
+      "range": null,
+      "type": "text",
+      "unit": null,
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "exposure",
+      "range": {
+        "max": "0x3f847ae147ae147b",
+        "min": "0x3eb0c6f7a0b5ed8d"
+      },
+      "type": "quantity",
+      "unit": "s",
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "line_period",
+      "range": {
+        "max": "0x3fb999999999999a",
+        "min": "0x3f0a36e2eb1c432d"
+      },
+      "type": "quantity",
+      "unit": "s",
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "averaging",
+      "range": {
+        "max": "64",
+        "min": "1"
+      },
+      "type": "int",
+      "unit": null,
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "trigger_mode",
+      "range": null,
+      "type": "enum",
+      "unit": null,
+      "values": [
+        "encoder",
+        "free_run",
+        "software"
+      ]
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "roi_start",
+      "range": {
+        "max": "0x3fa999999999999a",
+        "min": "0x0000000000000000"
+      },
+      "type": "quantity",
+      "unit": "m",
+      "values": null
+    },
+    {
+      "acquisition_relevant": false,
+      "live_changeable": true,
+      "name": "status_led",
+      "range": null,
+      "type": "bool",
+      "unit": null,
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": false,
+      "name": "acme.gain",
+      "range": {
+        "max": "16",
+        "min": "0"
+      },
+      "type": "int",
+      "unit": null,
+      "values": null
+    },
+    {
+      "acquisition_relevant": true,
+      "live_changeable": true,
+      "name": "acme.note",
+      "range": null,
+      "type": "text",
+      "unit": null,
+      "values": null
+    }
+  ]
+}

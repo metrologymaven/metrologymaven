@@ -1,0 +1,23 @@
+{
+  "schema": "configuration/0",
+  "values": {
+    "acme.gain": "4",
+    "acme.note": "Kalibrierlauf \u03a9 \u00b5m",
+    "averaging": "8",
+    "display_name": "Linie 3 \u2013 Einlauf",
+    "exposure": {
+      "unit": "s",
+      "value": "0x3f30624dd2f1a9fc"
+    },
+    "line_period": {
+      "unit": "s",
+      "value": "0x3f50624dd2f1a9fc"
+    },
+    "roi_start": {
+      "unit": "m",
+      "value": "0x3f8999999999999a"
+    },
+    "status_led": true,
+    "trigger_mode": "encoder"
+  }
+}
