@@ -557,7 +557,15 @@ fn status_properties() -> BTreeMap<String, CValue> {
     p.insert("id".to_string(), obj([("type", text("string")), ("pattern", text(JOB_ID_PATTERN))]));
     p.insert("command".to_string(), obj([("type", text("string")), ("pattern", text(CommandId::PATTERN))]));
     p.insert("state".to_string(), obj([("enum", strs(&states))]));
-    p.insert("progress".to_string(), obj([("type", text("number")), ("minimum", num(0.0)), ("maximum", num(1.0))]));
+    p.insert(
+        "progress".to_string(),
+        obj([
+            ("type", text("number")),
+            ("minimum", num(0.0)),
+            ("maximum", num(1.0)),
+            ("x-quantity", text("dimensionless")),
+        ]),
+    );
     p.insert(
         "stage".to_string(),
         obj([("type", text("string")), ("maxLength", num(crate::progress::MAX_STAGE_CHARS as f64))]),
@@ -647,6 +655,34 @@ fn wait_params_schema() -> CValue {
         ("required", strs(&["job"])),
         ("properties", obj([("job", job_param()), ("timeout", timeout)])),
     ])
+}
+
+// ------------------------------------------------------------------ quantity kinds
+
+/// The quantity kinds this crate's command schemas name beyond `GEO.FRAME.UNITS` (which owns
+/// `length` and `angle`), as a quantity-catalogue fragment (`fid-quantity-kinds/1`, the kinds
+/// in the `CORE.REG.DEF.SCHEMA` catalogue form, sorted by name, units by symbol). The registry
+/// defines no kind (REQ-CORE.REG.DEF-003); `fid-registry-build` merges this document add-only
+/// with the GEO.FRAME catalogue.
+///
+/// - `time`, canonical `s`; also `h` (3600), `min` (60) and `ms` (1/1000): the `timeout` of
+///   `job.wait_job@1`, declared in seconds.
+/// - `dimensionless`, canonical unit `1` only: `progress` is a fraction in 0..1 of the work
+///   done, not a step count, so it is dimensionless and no `count` kind is published.
+pub const QUANTITY_CATALOGUE: &str = concat!(
+    r#"{"format":"fid-quantity-kinds/1","kinds":["#,
+    r#"{"canonical":"1","kind":"dimensionless","units":[{"den":"1","num":"1","pi":false,"symbol":"1"}]},"#,
+    r#"{"canonical":"s","kind":"time","units":["#,
+    r#"{"den":"1","num":"3600","pi":false,"symbol":"h"},"#,
+    r#"{"den":"1","num":"60","pi":false,"symbol":"min"},"#,
+    r#"{"den":"1000","num":"1","pi":false,"symbol":"ms"},"#,
+    r#"{"den":"1","num":"1","pi":false,"symbol":"s"}]}]}"#,
+);
+
+/// This crate's quantity-catalogue fragment ([`QUANTITY_CATALOGUE`]), published next to
+/// [`command_defs`].
+pub fn quantity_catalogue() -> &'static str {
+    QUANTITY_CATALOGUE
 }
 
 // ------------------------------------------------------------------ definitions

@@ -68,7 +68,9 @@ SCHEMA = {
         "id": {"type": "string", "pattern": UUID},
         "command": {"type": "string", "pattern": COMMAND_ID},
         "state": {"enum": ["queued", "running", "succeeded", "failed", "cancelled"]},
-        "progress": {"type": "number", "minimum": 0, "maximum": 1},
+        # A fraction of the work done, so dimensionless (fid-jobs publishes that kind in its
+        # quantity-catalogue fragment; CORE.REG.VAL needs x-quantity on every number).
+        "progress": {"type": "number", "minimum": 0, "maximum": 1, "x-quantity": "dimensionless"},
         # CORE.JOB.PROG keeps at most 128 characters of a stage label.
         "stage": {"type": "string", "maxLength": 128},
         "submitted_at": time_field(False, SUBMITTED_AT_DOC),

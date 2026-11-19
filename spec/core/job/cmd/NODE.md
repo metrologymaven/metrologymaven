@@ -60,6 +60,7 @@ The registry commands every surface uses to see and control jobs: list, show sta
   - `job.wait_job@1` R0, N; params `{ job: JobId, timeout: Duration = 30 s }` (`x-quantity: time`); result `JobStatus & { timed_out: bool }`.
   - `job.cancel_job@1` W1, N, undo `not_undoable`; params `{ job: JobId }`; precondition `job.principal == caller || caller.kind == "human"`; result `JobStatus`.
 - **Data structures:** `JobStatus` per `job-status.schema.json` (id, command, state, progress, stage, submitted_at, started_at, ended_at, error).
+- **Quantity of `progress`:** `progress` carries `x-quantity: "dimensionless"` (a fraction in [0, 1]); `fid-jobs` publishes the `dimensionless` and `time` kinds in its quantity-catalogue fragment (`fid_jobs::quantity_catalogue`, see `CORE.REG.MAN`).
 - **Algorithm:** thin handlers over the `sched` API; wait uses the scheduler's completion notification with a deadline.
 - **Errors:** `not_found`, `policy` (from the bus).
 - **Determinism:** N; results reflect live job state.
