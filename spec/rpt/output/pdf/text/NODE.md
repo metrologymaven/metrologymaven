@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report-pdf]
 satisfies: [REQ-RPT.OUTPUT.PDF-001, REQ-RPT.OUTPUT.PDF-002]
 covers: []
 depends_on: [CORE.STO.CAS]
