@@ -1000,7 +1000,8 @@ fn read_tail(db: &Database, stream: &str) -> Result<Option<Tail>, JournalError> 
     }
     if seq_u > FIRST_SEQ {
         // No fork: the tail links to the stored entry just below it (one indexed lookup).
-        let mut below_st = conn.prepare("SELECT hash FROM entries WHERE seq = ?1").map_err(|e| failed("read tail", e))?;
+        let mut below_st =
+            conn.prepare("SELECT hash FROM entries WHERE seq = ?1").map_err(|e| failed("read tail", e))?;
         let below: Option<String> = below_st
             .query_map([seq - 1], |r| r.get::<_, String>(0))
             .map_err(|e| failed("read tail", e))?
