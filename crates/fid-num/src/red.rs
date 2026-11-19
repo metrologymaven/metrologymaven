@@ -157,7 +157,7 @@ fn pow2(k: i32) -> f64 {
 }
 
 /// Exponent `e` with `2^e <= m < 2^(e + 1)`, for finite `m > 0` (subnormals included).
-fn exponent(m: f64) -> i32 {
+pub(crate) fn exponent(m: f64) -> i32 {
     let b = m.to_bits();
     let biased = ((b >> 52) & 0x7FF) as i32;
     if biased == 0 {
@@ -165,6 +165,18 @@ fn exponent(m: f64) -> i32 {
         (63 - b.leading_zeros() as i32) - 1074
     } else {
         biased - 1023
+    }
+}
+
+/// The factors `(d1, d2)` with `d1 * d2 = 2^-e`, each a normal power of two, used as
+/// `(x * d1) * d2` to scale by `2^-e` (shared with `la::cond_triangular`).
+pub(crate) fn pow2_scale_factors(e: i32) -> (f64, f64) {
+    if e > 1022 {
+        (pow2(-1022), pow2(1022 - e))
+    } else if e >= -1022 {
+        (pow2(-e), 1.0)
+    } else {
+        (pow2(1022), pow2(-e - 1022))
     }
 }
 
@@ -187,13 +199,7 @@ pub fn norm2(xs: &[f64]) -> Result<f64, NumError> {
     // Multiply by 2^-e in at most two normal power-of-two factors. Scaling up is exact; a
     // scaled-down element can round only if it lands below 2^-1022, and its square then
     // underflows to zero whatever the rounding, so no value of record changes.
-    let (d1, d2) = if e > 1022 {
-        (pow2(-1022), pow2(1022 - e))
-    } else if e >= -1022 {
-        (pow2(-e), 1.0)
-    } else {
-        (pow2(1022), pow2(-e - 1022))
-    };
+    let (d1, d2) = pow2_scale_factors(e);
     let q = |i: usize| {
         let y = xs[i] * d1 * d2;
         y * y
