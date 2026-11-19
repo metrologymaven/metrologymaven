@@ -201,6 +201,20 @@ fn out_of_range_index_is_refused() {
     assert_eq!(b.finish().unwrap().len(), 2);
 }
 
+/// The range is checked before the value: an out-of-range index with a NaN or infinite
+/// value fails `field_index_out_of_range`, not `non_finite`.
+#[test]
+fn out_of_range_is_checked_before_the_value() {
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let mut b = FieldBuilder::new(2, sample_provenance()).unwrap();
+        assert_eq!(b.set(5, DevResult::Valid(bad)).unwrap_err(), FieldError::IndexOutOfRange { index: 5, len: 2 });
+    }
+    let mut b = FieldBuilder::new(0, sample_provenance()).unwrap();
+    let e = b.set(0, DevResult::Valid(f64::NAN)).unwrap_err();
+    assert_eq!(e.code(), "scan.cmp.field_index_out_of_range");
+    assert!(b.finish().unwrap().is_empty());
+}
+
 /// NaN and infinities in a `VALID` value fail `scan.cmp.non_finite` with the index and
 /// leave the index unset.
 #[test]

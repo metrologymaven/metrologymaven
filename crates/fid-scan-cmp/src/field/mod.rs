@@ -269,8 +269,11 @@ impl DeviationField {
             .map_err(|_| FieldError::AllocationFailed { needed: st.valid.saturating_mul(8) })?;
         vals.extend(self.valid_indexes().filter_map(|i| self.values.get(i).copied()));
         let overflow = |_| FieldError::NonFinite { index: None };
-        let (mut lo, mut hi) = (vals[0], vals[0]);
-        for &v in &vals[1..] {
+        let Some((&first, rest)) = vals.split_first() else {
+            return Ok(st);
+        };
+        let (mut lo, mut hi) = (first, first);
+        for &v in rest {
             lo = fid_num::f::total_min(lo, v).map_err(overflow)?;
             hi = fid_num::f::total_max(hi, v).map_err(overflow)?;
         }
@@ -350,12 +353,15 @@ impl FieldBuilder {
     }
 
     /// Records the result of point `index`. Fails `scan.cmp.field_index_out_of_range` for
-    /// an index not below the count and `scan.cmp.non_finite` for a NaN or infinite
-    /// `VALID` value; in both cases nothing is recorded. Setting an index twice is
+    /// an index not below the count (checked first, whatever the result), then
+    /// `scan.cmp.non_finite` for a NaN or infinite `VALID` value; in both cases nothing is
+    /// recorded. Setting an index twice is
     /// recorded and reported by [`FieldBuilder::finish`].
     pub(crate) fn set(&mut self, index: usize, result: DevResult) -> Result<(), FieldError> {
         let len = self.seen.len();
-        let out_of_range = || FieldError::IndexOutOfRange { index: index as u64, len: len as u64 };
+        if index >= len {
+            return Err(FieldError::IndexOutOfRange { index: index as u64, len: len as u64 });
+        }
         let (status, value) = match result {
             DevResult::Valid(v) if !v.is_finite() => return Err(FieldError::NonFinite { index: Some(index as u64) }),
             // `v == 0.0` holds for both zeros: -0.0 is stored as +0.0.
@@ -363,9 +369,10 @@ impl FieldBuilder {
             DevResult::NoMatch(_) => (DevStatus::NoMatch, 0.0),
             DevResult::Excluded => (DevStatus::Excluded, 0.0),
         };
-        let seen = self.seen.get_mut(index).ok_or_else(out_of_range)?;
-        *seen = if *seen == 0 { 1 } else { 2 };
-        if let (Some(s), Some(v)) = (self.status.get_mut(index), self.values.get_mut(index)) {
+        if let (Some(seen), Some(s), Some(v)) =
+            (self.seen.get_mut(index), self.status.get_mut(index), self.values.get_mut(index))
+        {
+            *seen = if *seen == 0 { 1 } else { 2 };
             *s = status;
             *v = value;
         }
