@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # KRN.SOLV.MSTART: Deterministic seeded multi-start and agreement check
@@ -38,7 +38,7 @@ Non-convex fits can converge to a local optimum. This module runs a solve from a
 - **REQ-KRN.SOLV.MSTART-001** Given a primary start, a parameter perturbation box, a start count k and a seed, the module shall generate the same k starts on every target using only the `fid-num` counter-based RNG.
 - **REQ-KRN.SOLV.MSTART-002** The module shall run the caller's solve closure on each start in index order, single-threaded, and collect each outcome or typed error.
 - **REQ-KRN.SOLV.MSTART-003** The module shall select the successful outcome with the lowest objective, breaking ties by total order on the parameter vector and then by start index.
-- **REQ-KRN.SOLV.MSTART-004** The module shall set `agreement = true` only if every successful outcome's parameters agree with the selected one within the caller-supplied per-parameter tolerances (default length 1e-9 m and angle 1e-9 rad [unverified]), and shall otherwise set `local_optimum_only`.
+- **REQ-KRN.SOLV.MSTART-004** The module shall set `agreement = true` only if every successful outcome's parameters agree with the selected one within the caller-supplied per-parameter tolerances, and shall otherwise set `local_optimum_only`. The caller must supply one tolerance per parameter; an empty list is rejected with `SpecError::NoTolerances` before any solve runs, and unit-aware defaults belong to the calling solver (`KRN.SOLV.NLLS`, `KRN.SOLV.SEQ`), not to this module.
 - **REQ-KRN.SOLV.MSTART-005** If every start fails, then the module shall return a typed error listing each start's error, and no value.
 - **REQ-KRN.SOLV.MSTART-006** The output shall include the seed, the start list and the per-start outcome summary so the caller can journal them.
 
