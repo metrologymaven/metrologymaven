@@ -25,5 +25,13 @@ rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled
 # fstatfs(2) (network file-system check) and uname(2) (host name). Keeps the crate free of `unsafe`.
 rustix = { version = "1", features = ["fs", "system"] }
 
+[features]
+# Compiles the commit probe hook (`txn::CommitProbe`) used by the fault-injection tests. Enabled
+# only by the dev-dependency below, so normal builds have no probe.
+test-probe = []
+
+[dev-dependencies]
+fid-store = { path = ".", features = ["test-probe"] }
+
 [lints]
 workspace = true

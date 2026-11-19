@@ -10,8 +10,10 @@
 //!
 //! 1. refuses a read-only store (`read_only`) and malformed row operations (`invalid_row`);
 //! 2. checks that every blob digest a row references is put in the same transaction or already
-//!    stored, else fails with `dangling_blob` before anything is written (the spec's step 2,
-//!    moved first so that "write nothing" holds for blobs too);
+//!    stored, else fails with `dangling_blob`; an already-stored blob (and, for a chunked
+//!    object, every chunk) is hash-checked, else the commit fails with `corrupt_blob`. Both
+//!    checks run before anything is written (the spec's step 2, moved first so that "write
+//!    nothing" holds for blobs too);
 //! 3. puts every pending blob with `durable: true` (file and directories flushed), then flushes
 //!    every already-stored referenced blob;
 //! 4. runs `BEGIN IMMEDIATE`, the row statements and `COMMIT` on the connection, which runs
@@ -29,14 +31,14 @@
 //!
 //! Rollback on every error path: every statement runs inside a `rusqlite::Transaction` whose
 //! drop rolls back, so an early return, a failed `COMMIT` and an unwinding panic (from a
-//! [`CommitProbe`] or a [`Store::read`] callback) all roll back. No `catch_unwind` is used:
+//! `CommitProbe` or a [`Store::read`] callback) all roll back. No `catch_unwind` is used:
 //! the panic propagates to the caller unchanged. A panic poisons the commit mutex; the next
 //! user of the store clears the poison and, before doing anything else, rolls back any
 //! transaction still open and turns `query_only` off again, so a panic never leaves rows of a
 //! transaction visible or the store unusable. With `panic = "abort"` the process dies and the
 //! WAL discards the uncommitted transaction on the next open (REQ-005).
 
-use crate::cas::{self, Address, BlobStore, CasError, PutOpts};
+use crate::cas::{self, Address, BlobStore, CasError, PutOpts, Stored};
 use crate::layout::{OpenMode, ProjectLocation, StoreError};
 use crate::schema::{self, Database, SchemaError, MUTABLE_TABLES, TABLES};
 use crate::Locked;
@@ -47,7 +49,9 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::io;
 use std::path::Path;
-use std::sync::{Arc, Mutex, MutexGuard};
+#[cfg(any(test, feature = "test-probe"))]
+use std::sync::Arc;
+use std::sync::{Mutex, MutexGuard};
 
 /// Columns whose value is the digest of a blob in the project's blob store. A row in these
 /// columns makes the commit check and flush the blob (REQ-CORE.STO.SQL.TXN-001/003).
@@ -147,6 +151,8 @@ pub struct Committed {
 pub enum TxnError {
     /// A row references a blob that is neither put in the transaction nor stored.
     DanglingBlob(Digest),
+    /// A referenced, already-stored blob (or one of its chunks) does not hash to its address.
+    CorruptBlob(Digest),
     /// The store was opened read-only.
     ReadOnly,
     /// A row operation names an unknown table or a malformed column, upserts an append-only
@@ -158,7 +164,7 @@ pub enum TxnError {
     Busy,
     /// A blob put or flush failed (code of the blob error, `io` for I/O).
     Blob(CasError),
-    /// An I/O failure outside the blob store (also what a [`CommitProbe`] fault injects).
+    /// An I/O failure outside the blob store (also what a `CommitProbe` fault injects).
     Io(io::Error),
     /// Opening the database or applying a connection setting failed.
     Schema(SchemaError),
@@ -173,6 +179,7 @@ impl TxnError {
     pub fn code(&self) -> &'static str {
         match self {
             TxnError::DanglingBlob(_) => "dangling_blob",
+            TxnError::CorruptBlob(_) => "corrupt_blob",
             TxnError::ReadOnly => "read_only",
             TxnError::InvalidRow(_) => "invalid_row",
             TxnError::AppendOnly => schema::APPEND_ONLY,
@@ -190,6 +197,7 @@ impl fmt::Display for TxnError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TxnError::DanglingBlob(d) => write!(f, "dangling_blob: {d} is neither in the transaction nor stored"),
+            TxnError::CorruptBlob(d) => write!(f, "corrupt_blob: content stored under {d} does not match it"),
             TxnError::ReadOnly => write!(f, "read_only: the store was opened read-only"),
             TxnError::InvalidRow(why) => write!(f, "invalid_row: {why}"),
             TxnError::AppendOnly => write!(f, "append_only: rows of this table cannot be changed or removed"),
@@ -249,7 +257,7 @@ impl From<CasError> for TxnError {
     }
 }
 
-/// Steps of a commit reported to a [`CommitProbe`], in the order they happen.
+/// Steps of a commit reported to a `CommitProbe`, in the order they happen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommitEvent {
     /// The durable put of pending blob `index` returned: file and directories are flushed.
@@ -265,9 +273,10 @@ pub enum CommitEvent {
 }
 
 /// Test hook: observes the steps of every commit and can inject a fault (an `Err` fails the
-/// commit at that step as if the step itself had failed) or panic. Not part of the stable API;
-/// production code never installs one.
-#[doc(hidden)]
+/// commit at that step as if the step itself had failed) or panic. Compiled only for this
+/// crate's tests and with the `test-probe` feature, which only the crate's dev-dependency on
+/// itself enables; a normal build has no probe at all.
+#[cfg(any(test, feature = "test-probe"))]
 pub trait CommitProbe: Send + Sync {
     fn on(&self, event: &CommitEvent) -> io::Result<()>;
 }
@@ -281,6 +290,7 @@ pub struct Store {
     /// The connection. Holding this mutex is what serialises commits (and reads) in-process;
     /// the OS write lock keeps other processes out.
     db: Mutex<Database>,
+    #[cfg(any(test, feature = "test-probe"))]
     probe: Option<Arc<dyn CommitProbe>>,
 }
 
@@ -314,7 +324,15 @@ impl Store {
             set_durability(db.connection())?;
         }
         let blobs = BlobStore::for_project(&location)?;
-        Ok(Store { location, lock, blobs, mode, db: Mutex::new(db), probe: None })
+        Ok(Store {
+            location,
+            lock,
+            blobs,
+            mode,
+            db: Mutex::new(db),
+            #[cfg(any(test, feature = "test-probe"))]
+            probe: None,
+        })
     }
 
     /// Whether the store was opened for writing.
@@ -350,8 +368,8 @@ impl Store {
         Ok(out?)
     }
 
-    /// Installs or removes a [`CommitProbe`] (tests only).
-    #[doc(hidden)]
+    /// Installs or removes a `CommitProbe` (tests only).
+    #[cfg(any(test, feature = "test-probe"))]
     pub fn set_commit_probe(&mut self, probe: Option<Arc<dyn CommitProbe>>) {
         self.probe = probe;
     }
@@ -371,11 +389,19 @@ impl Store {
         Ok(guard)
     }
 
+    #[cfg(any(test, feature = "test-probe"))]
     fn report(&self, event: &CommitEvent) -> Result<(), TxnError> {
         match &self.probe {
             Some(p) => p.on(event).map_err(TxnError::Io),
             None => Ok(()),
         }
+    }
+
+    /// Without the `test-probe` feature there is no probe: every step proceeds.
+    #[cfg(not(any(test, feature = "test-probe")))]
+    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
+    fn report(&self, _event: &CommitEvent) -> Result<(), TxnError> {
+        Ok(())
     }
 }
 
@@ -480,11 +506,14 @@ impl Txn<'_> {
         if let Some(lock) = &store.lock {
             lock.verify()?;
         }
-        // Referenced blobs must be pending or stored before anything is written.
-        let existing: Vec<Digest> = referenced.difference(&pending).copied().collect();
-        for d in &existing {
-            if !store.blobs.has_blob(d)? {
-                return Err(TxnError::DanglingBlob(*d));
+        // Referenced blobs must be pending, or stored whole and sound (content and every chunk
+        // hash-checked), before anything is written.
+        let mut existing: Vec<(Digest, Vec<Digest>)> = Vec::new();
+        for d in referenced.difference(&pending) {
+            match store.blobs.check_stored(d)? {
+                Stored::Missing => return Err(TxnError::DanglingBlob(*d)),
+                Stored::Corrupt(bad) => return Err(TxnError::CorruptBlob(bad)),
+                Stored::Sound(flush) => existing.push((*d, flush)),
             }
         }
         // (1) Every pending blob durable.
@@ -501,9 +530,9 @@ impl Txn<'_> {
             store.report(&CommitEvent::BlobDurable { index, digest: got.digest() })?;
         }
         // (2) Already-stored referenced blobs durable too (an earlier put may not have been).
-        for d in &existing {
-            if !store.blobs.make_durable(d)? {
-                return Err(TxnError::DanglingBlob(*d));
+        for (d, flush) in &existing {
+            for f in flush {
+                store.blobs.flush_stored(f)?;
             }
             store.report(&CommitEvent::ExistingBlobDurable { digest: *d })?;
         }

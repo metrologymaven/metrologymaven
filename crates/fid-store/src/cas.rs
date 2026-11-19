@@ -100,6 +100,17 @@ pub struct PutOpts {
     pub durable: bool,
 }
 
+/// What [`BlobStore::check_stored`] found under a digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Stored {
+    /// Nothing, or a manifest whose chunk is missing.
+    Missing,
+    /// This blob or chunk does not hash to its address (or has the wrong length).
+    Corrupt(Digest),
+    /// Sound; these blobs (the blob, then its chunks) are to be flushed.
+    Sound(Vec<Digest>),
+}
+
 /// Typed errors with stable codes.
 #[derive(Debug)]
 pub enum CasError {
@@ -458,44 +469,52 @@ impl BlobStore {
         }
     }
 
-    /// Flushes a blob that is already stored, and the directories above it, to stable storage
-    /// (`CORE.STO.SQL.TXN`: a commit may reference a blob an earlier, non-durable put wrote).
-    /// Returns `false` if nothing is stored under `digest`. If the blob is a chunk manifest
-    /// whose chunks are all present, the chunks are flushed too; a manifest with a missing chunk
-    /// is an incomplete object and also gives `false`. Content is not verified (reads verify).
-    pub(crate) fn make_durable(&self, digest: &Digest) -> Result<bool, CasError> {
+    /// Checks a blob that is already stored before a commit references it
+    /// (`CORE.STO.SQL.TXN`): the file under `digest` must hash to it, and if it is a chunk
+    /// manifest, every chunk must be stored with the listed length and hash to its digest.
+    /// Reads in small pieces (no whole-blob buffer) and writes nothing. On success returns the
+    /// digests to flush with [`BlobStore::flush_stored`]: the blob, then its chunks.
+    pub(crate) fn check_stored(&self, digest: &Digest) -> Result<Stored, CasError> {
         let len = match fs::symlink_metadata(self.path_of(digest)) {
             Ok(m) if m.is_file() => m.len(),
             Ok(_) => return Err(not_regular()),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Stored::Missing),
             Err(e) => return Err(e.into()),
         };
-        self.flush_stored(digest)?;
+        // No blob this store writes is longer than a manifest; a longer file is not the
+        // content of its address and is not hashed.
+        if len > MAX_BLOB_READ || !self.existing_matches(digest, len, true)? {
+            return Ok(Stored::Corrupt(*digest));
+        }
+        let mut flush = vec![*digest];
         if len > MAX_OBJECT_MANIFEST_BYTES {
-            return Ok(true);
+            return Ok(Stored::Sound(flush));
         }
         let mut head = [0u8; 14];
         let n = fill(&mut self.open_blob(digest)?, &mut head)?;
         if head.get(..n) != Some(b"{\"chunk_size\":".as_slice()) {
-            return Ok(true);
+            return Ok(Stored::Sound(flush));
         }
         let bytes = self.read_blob(digest, MAX_OBJECT_MANIFEST_BYTES)?;
         let Ok(manifest) = ChunkManifest::parse_with_limits(&bytes, MAX_OBJECT_MANIFEST_BYTES, MAX_OBJECT_CHUNKS)
         else {
             // A plain blob that merely starts like a manifest.
-            return Ok(true);
+            return Ok(Stored::Sound(flush));
         };
-        for chunk in &manifest.chunks {
+        for (i, chunk) in manifest.chunks.iter().enumerate() {
             if !self.has_blob(chunk)? {
-                return Ok(false);
+                return Ok(Stored::Missing);
             }
-            self.flush_stored(chunk)?;
+            if !self.existing_matches(chunk, manifest.chunk_len(i), true)? {
+                return Ok(Stored::Corrupt(*chunk));
+            }
+            flush.push(*chunk);
         }
-        Ok(true)
+        Ok(Stored::Sound(flush))
     }
 
     /// `sync_all` on a stored blob file and on its two fan-out directories and `sha256/`.
-    fn flush_stored(&self, digest: &Digest) -> Result<(), CasError> {
+    pub(crate) fn flush_stored(&self, digest: &Digest) -> Result<(), CasError> {
         let target = self.path_of(digest);
         // Write access: `FlushFileBuffers` refuses a read-only handle on Windows.
         OpenOptions::new().write(true).open(&target)?.sync_all()?;
@@ -713,14 +732,12 @@ impl BlobStore {
         // its content too when durable; anything else is rewritten below by temp file + rename.
         if self.existing_matches(&digest, bytes.len() as u64, opts.durable)? {
             if opts.durable {
-                // Write access: `FlushFileBuffers` refuses a read-only handle on Windows.
-                OpenOptions::new().write(true).open(&target)?.sync_all()?;
-                sync_dir(&d2)?;
+                self.flush_stored(&digest)?;
             }
             return Ok(blob);
         }
-        let created1 = make_dir(&d1)?;
-        let created2 = make_dir(&d2)?;
+        make_dir(&d1)?;
+        make_dir(&d2)?;
         let tmp = self.root.join(TMP_DIR).join(temp_name());
         if let Err(e) = write_temp(&tmp, bytes, opts.durable) {
             let _ = fs::remove_file(&tmp);
@@ -733,14 +750,12 @@ impl BlobStore {
                 return Err(e.into());
             }
         }
+        // Every level, every time: a directory an earlier non-durable put created may not be
+        // on stable storage yet.
         if opts.durable {
             sync_dir(&d2)?;
-            if created2 {
-                sync_dir(&d1)?;
-            }
-            if created1 {
-                sync_dir(&self.root.join(SHA256_DIR))?;
-            }
+            sync_dir(&d1)?;
+            sync_dir(&self.root.join(SHA256_DIR))?;
         }
         Ok(blob)
     }

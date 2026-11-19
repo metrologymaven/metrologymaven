@@ -123,3 +123,5 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# CORE.STO.SQL.TXN hand-labelled commit cases: read byte for byte, never convert line endings.
+fixtures/core/sto/sql/txn/** -text

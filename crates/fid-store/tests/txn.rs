@@ -532,6 +532,87 @@ fn busy_is_bounded() {
     assert_eq!(count(&store, "entries"), 1);
 }
 
+// ------------------------------------------------------------------ already-stored blobs
+
+/// A commit referencing the stored blob `d` (plus one pending blob); returns the result.
+fn commit_reference(store: &Store, d: Digest) -> Result<(), TxnError> {
+    let h = digest_of("ref");
+    let mut txn = store.transaction();
+    let p = txn.put_blob(b"pending blob of the refused commit".to_vec())?;
+    txn.insert("entries", &entry_values(&h, "main"));
+    for (role, x) in [("stored", d), ("pending", p.digest())] {
+        txn.insert(
+            "entry_blobs",
+            &[("entry_hash", Value::from(h.as_str())), ("role", Value::from(role)), ("digest", Value::from(x))],
+        );
+    }
+    txn.commit().map(|_| ())
+}
+
+fn assert_nothing_written(store: &Store) {
+    assert_eq!((count(store, "entries"), count(store, "entry_blobs")), (0, 0));
+    let p = address_of(b"pending blob of the refused commit").unwrap().digest();
+    assert!(!store.blobs().has_blob(&p).unwrap(), "pending blob written by a refused commit");
+}
+
+/// A truncated or altered stored blob is refused with corrupt_blob before anything is written.
+#[test]
+fn corrupt_stored_blob_is_refused() {
+    for how in ["truncate", "flip"] {
+        let (_t, root) = new_project("corrupt");
+        let store = open_write(&root);
+        let content = b"stored earlier by a non-durable put".to_vec();
+        let d = store.blobs().put_bytes(&content, Default::default()).unwrap().digest();
+        let path = store.blobs().path_of(&d);
+        let damaged = match how {
+            "truncate" => content[..10].to_vec(),
+            _ => content.iter().map(|b| b ^ 0x20).collect(),
+        };
+        std::fs::write(&path, damaged).unwrap();
+        let err = commit_reference(&store, d).unwrap_err();
+        assert_eq!(err.code(), "corrupt_blob", "{how}: {err}");
+        assert!(matches!(err, TxnError::CorruptBlob(x) if x == d));
+        assert_nothing_written(&store);
+    }
+}
+
+/// A stored chunked object is checked chunk by chunk: a sound one commits, a damaged chunk is
+/// corrupt_blob and a missing chunk dangling_blob, both before anything is written.
+#[test]
+fn stored_object_chunks_are_checked() {
+    let big: Vec<u8> = (0..fid_store::cas::CHUNK_SIZE + 1000).map(|i| (i % 251) as u8).collect();
+    for how in ["sound", "damage_chunk", "remove_chunk"] {
+        let (_t, root) = new_project("object");
+        let store = open_write(&root);
+        let addr = store.blobs().put_bytes(&big, Default::default()).unwrap();
+        let fid_store::Address::Object(o) = addr else { panic!("not chunked") };
+        let chunks = store.blobs().manifest(&o).unwrap().chunks;
+        assert_eq!(chunks.len(), 2);
+        let last = store.blobs().path_of(&chunks[1]);
+        match how {
+            "damage_chunk" => std::fs::write(&last, vec![7u8; 1000]).unwrap(),
+            "remove_chunk" => std::fs::remove_file(&last).unwrap(),
+            _ => {}
+        }
+        let result = commit_reference(&store, o.manifest_digest);
+        match how {
+            "sound" => {
+                result.unwrap();
+                assert_eq!(count(&store, "entry_blobs"), 2);
+            }
+            "damage_chunk" => {
+                let err = result.unwrap_err();
+                assert!(matches!(err, TxnError::CorruptBlob(x) if x == chunks[1]), "{err}");
+                assert_nothing_written(&store);
+            }
+            _ => {
+                assert_eq!(result.unwrap_err().code(), "dangling_blob");
+                assert_nothing_written(&store);
+            }
+        }
+    }
+}
+
 // ------------------------------------------------------------------ crash safety
 
 const CRASH_ROOT_ENV: &str = "FID_TXN_CRASH_ROOT";
