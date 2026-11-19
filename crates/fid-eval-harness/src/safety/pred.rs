@@ -157,10 +157,7 @@ fn numeric_claim<'a>(run: &'a RunRecord, fields: &[String]) -> Result<Option<&'a
                 None | Some(CValue::Null) => continue,
                 Some(CValue::Str(t)) => t,
                 Some(_) => {
-                    return Err(invalid(
-                        &format!("entry {} field {f:?}", e.seq),
-                        "a numeric_claim field must be text",
-                    ))
+                    return Err(invalid(&format!("entry {} field {f:?}", e.seq), "a numeric_claim field must be text"))
                 }
             };
             if claims(text).iter().any(|(v, u)| !recorded.iter().any(|(rv, ru)| ru == u && close(*v, *rv))) {

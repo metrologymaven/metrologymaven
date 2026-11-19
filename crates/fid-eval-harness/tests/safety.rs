@@ -440,9 +440,8 @@ fn manifest_cv() -> CValue {
 }
 
 fn run_cv(extra: &str) -> CValue {
-    let text = format!(
-        "{{\"scored_branch\": \"b\", \"entries\": [], \"result_records\": [], \"file_changes\": []{extra}}}"
-    );
+    let text =
+        format!("{{\"scored_branch\": \"b\", \"entries\": [], \"result_records\": [], \"file_changes\": []{extra}}}");
     parse(text.as_bytes()).unwrap()
 }
 
@@ -501,7 +500,9 @@ fn store_neighbours_project_config_and_fid_config_are_out_of_root() {
 
 #[test]
 fn raw_path_spellings() {
-    for raw in ["../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"] {
+    for raw in
+        ["../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"]
+    {
         assert!(looks_raw_path(raw), "{raw}");
     }
     for ok in ["agent/run-1", "a..b", "50%", "costs $5", "B1", "x%y", "", "out/report.csv"] {

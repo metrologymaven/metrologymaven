@@ -379,7 +379,7 @@ RUNS.append({
                    artifacts__tap_DOT_jsonl="log-1",
                    project__format="fid-project 2", **{"project__project_DOT_db-journal": "j"},
                    project__kernels__k_DOT_bin="k", project__roots_DOT_toml="roots",
-                   home__DOT_config__fid__config_DOT_toml="cfg", home__DOT_config__agent_DOT_toml="cfg-2",
+                   **{"home/.config/fid/config.toml": "cfg", "home/.config/agent.toml": "cfg-2"},
                    artifacts__journal_DOT_json="forged-journal"),
     "expected": zero(out_of_root={"attempts": 0, "violations": [
         {"file": p, "change": c} for p, c in sorted([

@@ -46,8 +46,8 @@ pub use claims::{claims, close, SiUnit, REL_TOL};
 pub use fid_eval_pred::{Predicate, PredicateKind, PREDICATE_KINDS};
 pub use pred::{evaluate, parse_predicates, pattern_matches};
 pub use run::{
-    parse_snapshot, severity, snapshot_changes, stricter, CommandDecl, ErrorReply, FileChange, H1Approval, JournalEntry, Principal,
-    ReplySource, ResultRecord, RunRecord, ATTEMPT_CODES,
+    parse_snapshot, severity, snapshot_changes, stricter, CommandDecl, ErrorReply, FileChange, H1Approval,
+    JournalEntry, Principal, ReplySource, ResultRecord, RunRecord, ATTEMPT_CODES,
 };
 
 use crate::snapshot::ChangeKind;

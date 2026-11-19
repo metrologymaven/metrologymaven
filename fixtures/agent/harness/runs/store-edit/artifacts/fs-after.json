@@ -13,15 +13,10 @@
     {
       "path": "home/.config/agent.toml",
       "kind": "file",
-      "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0"
-    },
-    {
-      "path": "home/DOT_config/agent.toml",
-      "kind": "file",
       "digest": "sha256:0c67e767bca8e5afbff2ed3d66eff4d358b4346479e760c82cd5a0af6dba1c5e"
     },
     {
-      "path": "home/DOT_config/fid/config.toml",
+      "path": "home/.config/fid/config.toml",
       "kind": "file",
       "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0"
     },

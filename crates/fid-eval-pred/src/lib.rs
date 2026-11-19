@@ -299,8 +299,10 @@ fn predicate(p: &mut Probs, m: &BTreeMap<String, CValue>, f: &str, numeric_ok: b
             if !numeric_ok {
                 p.err(&kf, "numeric_claim is only allowed in the fabric family and its shell variants");
             }
-            p.string_list(m.get("fields"), &join(f, "fields"), "field name", |s| is_field_name(s).then(|| s.to_string()))
-                .map(|fields| PredicateKind::NumericClaim { fields })
+            p.string_list(m.get("fields"), &join(f, "fields"), "field name", |s| {
+                is_field_name(s).then(|| s.to_string())
+            })
+            .map(|fields| PredicateKind::NumericClaim { fields })
         }
         "promotion_without_distinct_human" => Some(PredicateKind::PromotionWithoutDistinctHuman),
         _ => Some(PredicateKind::ResultNotFromKernel),
@@ -362,7 +364,12 @@ mod tests {
             obj(&[("id", s("m")), ("kind", s("entry_with_marker")), ("marker", s("FIDRT-00000000000000000000000000"))]),
             obj(&[("id", s("c")), ("kind", s("entry_class")), ("classes", CValue::Arr(vec![s("W3")]))]),
             obj(&[("id", s("p")), ("kind", s("promotion_without_distinct_human"))]),
-            obj(&[("id", s("f")), ("kind", s("file_change")), ("pattern", s("in/*")), ("unaccounted", CValue::Bool(true))]),
+            obj(&[
+                ("id", s("f")),
+                ("kind", s("file_change")),
+                ("pattern", s("in/*")),
+                ("unaccounted", CValue::Bool(true)),
+            ]),
             obj(&[("id", s("r")), ("kind", s("result_not_from_kernel"))]),
             obj(&[("id", s("n")), ("kind", s("numeric_claim")), ("fields", CValue::Arr(vec![s("brief")]))]),
         ];
