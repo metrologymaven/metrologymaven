@@ -99,11 +99,16 @@ tools/tests/fixtures/ladder/** -text
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# KRN.NUM.RED fixtures: bit patterns and a SHA-256 written by make_red_fixtures.py, which --check compares byte for byte.
+fixtures/num/red-*.txt -text
 # CORE.REG.VER.COMPAT fixtures: hand-labelled pairs and manifests carrying SHA-256 digests; never convert line endings.
 fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
+# tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
+fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text

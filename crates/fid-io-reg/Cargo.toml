@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-reg"
-description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT)"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# Test seam `RootSet::set_race_hook` (IO.REG.ROOTS REQ-005 race tests). Off by default;
+# Test seams `RootSet::set_race_hook` (IO.REG.ROOTS REQ-005 race tests) and
+# `AtomicWriter::fail_after` (IO.REG.WRITE AC-3 fault injection). Off by default;
 # enabled only through the dev-dependency below, never in shipped builds.
 test-hooks = []
 
@@ -19,6 +20,9 @@ fid-canon = { path = "../fid-canon" }
 # Capability-based directory handles: opens relative to an opened root that cannot
 # escape it, without `unsafe` here (IO.REG.ROOTS REQ-005, CONSTITUTION §8, decision D-041).
 cap-std = "3.4"
+# Streaming SHA-256 of written export files (IO.REG.WRITE REQ-004); the sha2 0.10 fid-canon
+# already brings into the graph.
+sha2 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only.
