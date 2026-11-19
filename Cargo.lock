@@ -1045,6 +1045,7 @@ name = "fid-store"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "rusqlite",
