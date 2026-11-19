@@ -660,6 +660,32 @@ impl MapCtx {
         }
         Some(parts.join("/"))
     }
+
+    /// True when a span of the diagnostic (or of a child, or along an expansion chain) lies
+    /// inside one of the run's crates.
+    fn any_span_in_crates(&self, msg: &CValue) -> bool {
+        let mut pending: Vec<&CValue> = get_arr(msg, "spans").iter().collect();
+        for c in get_arr(msg, "children") {
+            pending.extend(get_arr(c, "spans"));
+        }
+        let mut seen = 0usize;
+        while let Some(s) = pending.pop() {
+            seen += 1;
+            if seen > MAX_EXPANSION_DEPTH * 16 {
+                // Unbounded input: treat as in-crate, which keeps it out of the driver path.
+                return true;
+            }
+            if let Some(f) = get_str(s, "file_name") {
+                if self.crates.iter().any(|c| self.relative(c, f).is_some()) {
+                    return true;
+                }
+            }
+            if let Some(e) = get(s, "expansion").and_then(|e| get(e, "span")) {
+                pending.push(e);
+            }
+        }
+        false
+    }
 }
 
 fn line_digest(root: &Path, file: &str, line: u32, fallback: &str) -> String {
@@ -694,10 +720,17 @@ pub fn unresolved_allowed(path: &str, target: &str) -> bool {
     UNRESOLVED_ALLOWED.iter().any(|(p, archs)| *p == path && !archs.iter().any(|a| target.starts_with(a)))
 }
 
-/// The table path a "does not refer to …" configuration warning names, if the message is one.
-fn unresolved_path(text: &str) -> Option<&str> {
-    // "`p` does not refer to …" (no such item) and "expected a …, found …" (wrong kind).
+/// The table path a driver configuration warning names, if the diagnostic is one: "`p` does not
+/// refer to …" (no such item) or "expected a …, found …" (wrong kind), and only when it carries
+/// no error code and no span inside a linted crate. Ordinary compiler errors use the second
+/// wording too (E0277: "expected an `FnMut(f64)` closure, found `f64`"); they carry a code and a
+/// span in the crate, so they stay compile errors of that crate (`KNP1-TYPED-BUILD`) instead of
+/// aborting the whole check.
+fn unresolved_path<'t>(text: &'t str, msg: &CValue, ctx: &MapCtx) -> Option<&'t str> {
     if !text.contains("does not refer to") && !(text.contains("expected a") && text.contains("found")) {
+        return None;
+    }
+    if get(msg, "code").is_some_and(|c| *c != CValue::Null) || ctx.any_span_in_crates(msg) {
         return None;
     }
     let start = text.find('`')? + 1;
@@ -734,7 +767,7 @@ pub fn parse_messages(stdout: &[u8], target: &str, ctx: &MapCtx) -> Result<Parse
                     return Err(driver(format!("{target}: compiler message without `message`")));
                 };
                 let text = get_str(msg, "message").unwrap_or_default();
-                if let Some(path) = unresolved_path(text) {
+                if let Some(path) = unresolved_path(text, msg, ctx) {
                     if !unresolved_allowed(path, target) {
                         return Err(driver(format!("{target}: the driver cannot resolve a table entry: {text}")));
                     }
@@ -932,15 +965,22 @@ fn run_bounded(mut cmd: Command, timeout: Duration) -> std::io::Result<RunOutput
 
 /// The second word of `cargo clippy --version` (for example `0.1.89`), or `KNP1-TYPED-DRIVER`.
 pub fn driver_version(cargo: &Path) -> Result<String, TypedError> {
+    driver_version_line(cargo).map(|(v, _)| v)
+}
+
+/// `(second word, whole first line)` of `cargo clippy --version`, for example
+/// `("0.1.89", "clippy 0.1.89 (29483883ee 2025-08-04)")`.
+fn driver_version_line(cargo: &Path) -> Result<(String, String), TypedError> {
     let mut cmd = Command::new(cargo);
     cmd.args(["clippy", "--version"]);
     let out = run_bounded(cmd, Duration::from_secs(120))
         .map_err(|e| driver(format!("cannot run {} clippy --version: {e}", cargo.display())))?;
     let text = String::from_utf8_lossy(&out.stdout).to_string();
     let ok = out.status.is_some_and(|s| s.success());
+    let first = text.lines().next().unwrap_or_default().trim().to_string();
     let mut words = text.split_whitespace();
     match (ok, words.next(), words.next()) {
-        (true, Some("clippy"), Some(v)) => Ok(v.to_string()),
+        (true, Some("clippy"), Some(v)) => Ok((v.to_string(), first)),
         _ => Err(driver(format!(
             "`cargo clippy --version` failed or printed no version: {}{}",
             text.trim(),
@@ -1029,11 +1069,91 @@ fn driver_command(
     for c in members {
         cmd.arg("-p").arg(format!("{}@{}", c.name, c.version));
     }
-    cmd.args(["--", "-A", "clippy::all"]);
-    for l in LINTS {
-        cmd.args(["--force-warn", l]);
-    }
+    cmd.arg("--").args(lint_args());
     cmd
+}
+
+/// The lint arguments passed to the driver after `--`: every clippy lint allowed, the three
+/// disallowed-item lints forced to warnings.
+pub fn lint_args() -> Vec<&'static str> {
+    let mut out = vec!["-A", "clippy::all"];
+    for l in LINTS {
+        out.extend(["--force-warn", l]);
+    }
+    out
+}
+
+/// Cache directories (`cfg-…`) kept in the scratch root besides the current one, most recently
+/// used first; older ones are removed.
+pub const KEEP_CACHE_DIRS: usize = 2;
+
+/// File in a cache directory rewritten on every run; its modification time orders the cache
+/// directories for pruning.
+pub const CACHE_STAMP: &str = "last-used";
+
+/// Name of the scratch subdirectory holding the generated `clippy.toml` and the target
+/// directory: `cfg-` and the first 16 hex digits of the SHA-256 over the driver's full version
+/// line, the lint arguments and the configuration. Cargo's fingerprint covers none of the three
+/// reliably (it ignores `clippy.toml`), so a target directory is only ever reused with the same
+/// driver, lints and configuration.
+pub fn cache_dir_name(clippy_version_line: &str, clippy_toml: &str) -> String {
+    let mut key = String::from("fid-knp1-lint typed cache v1\n");
+    key.push_str(&format!("clippy-version {}\n", clippy_version_line.len()));
+    key.push_str(clippy_version_line);
+    let lints = lint_args().join(" ");
+    key.push_str(&format!("\nlints {}\n", lints.len()));
+    key.push_str(&lints);
+    key.push_str(&format!("\nclippy.toml {}\n", clippy_toml.len()));
+    key.push_str(clippy_toml);
+    let digest = input_digest(key.as_bytes());
+    let hex: String = digest.trim_start_matches("sha256:").chars().take(16).collect();
+    format!("cfg-{hex}")
+}
+
+fn is_cache_dir_name(name: &str) -> bool {
+    name.strip_prefix("cfg-")
+        .is_some_and(|h| h.len() == 16 && h.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+}
+
+/// Removes old cache directories from the scratch root and returns their names, sorted. Only
+/// direct children of `scratch` named like [`cache_dir_name`] that are real directories (not
+/// symbolic links or junctions) are candidates; `current` is always kept, and so are the
+/// `keep` most recently used others (by the modification time of their [`CACHE_STAMP`], none
+/// counting as oldest; ties broken by name). Nothing outside the scratch root is touched.
+/// Best effort: an entry that cannot be read or removed is left in place.
+pub fn prune_cache_dirs(scratch: &Path, current: &str, keep: usize) -> Vec<String> {
+    let Ok(root) = std::fs::canonicalize(scratch) else { return Vec::new() };
+    let Ok(entries) = std::fs::read_dir(&root) else { return Vec::new() };
+    let mut dirs: Vec<(std::time::SystemTime, String)> = Vec::new();
+    for e in entries.flatten() {
+        let Some(name) = e.file_name().to_str().map(str::to_string) else { continue };
+        if name == current || !is_cache_dir_name(&name) {
+            continue;
+        }
+        let path = root.join(&name);
+        match std::fs::symlink_metadata(&path) {
+            Ok(m) if m.file_type().is_dir() && !m.file_type().is_symlink() => {}
+            _ => continue,
+        }
+        let used = std::fs::metadata(path.join(CACHE_STAMP))
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        dirs.push((used, name));
+    }
+    // Most recently used first.
+    dirs.sort_by(|a, b| b.cmp(a));
+    let mut removed = Vec::new();
+    for (_, name) in dirs.into_iter().skip(keep) {
+        let path = root.join(&name);
+        // Re-check right before removing: still a real directory directly in the scratch root.
+        let inside = std::fs::canonicalize(&path).is_ok_and(|p| p.parent() == Some(root.as_path()));
+        let real_dir = std::fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_dir());
+        if inside && real_dir && std::fs::remove_dir_all(&path).is_ok() {
+            removed.push(name);
+        }
+    }
+    removed.sort();
+    removed
 }
 
 /// Lints the workspace crates of the closure for every configured target, with the default
@@ -1097,7 +1217,7 @@ fn run_with_probe(
     opts: &Options,
     probe: &[String],
 ) -> Result<CheckRun, TypedError> {
-    let version = driver_version(&opts.cargo)?;
+    let (version, version_line) = driver_version_line(&opts.cargo)?;
     if version != cfg.clippy_version {
         return Err(driver(format!("clippy {version} is not the pinned {}", cfg.clippy_version)));
     }
@@ -1108,16 +1228,18 @@ fn run_with_probe(
     let rustc = pinned_rustc(&opts.cargo)?;
     // The clippy configuration is not part of cargo's fingerprint: a target directory reused
     // with a different `clippy.toml` would replay stale diagnostics for "fresh" crates. So the
-    // configuration and the target directory live under a directory named by its digest.
+    // configuration and the target directory live under a directory named by the digest of the
+    // driver version, the lint arguments and the configuration (`cache_dir_name`).
     let toml = clippy_toml_with(probe);
-    let digest = input_digest(toml.as_bytes());
-    let key: String = digest.trim_start_matches("sha256:").chars().take(16).collect();
-    let run_dir = opts.scratch.join(format!("cfg-{key}"));
+    let dir_name = cache_dir_name(&version_line, &toml);
+    let run_dir = opts.scratch.join(&dir_name);
     let conf = run_dir.join("clippy-conf");
     let target_dir = run_dir.join("target");
-    std::fs::create_dir_all(&conf).map_err(|e| err(TypedErrorCode::Io, format!("{}: {e}", conf.display())))?;
-    std::fs::write(conf.join("clippy.toml"), toml)
-        .map_err(|e| err(TypedErrorCode::Io, format!("{}: {e}", conf.display())))?;
+    let io = |p: &Path, e: std::io::Error| err(TypedErrorCode::Io, format!("{}: {e}", p.display()));
+    std::fs::create_dir_all(&conf).map_err(|e| io(&conf, e))?;
+    std::fs::write(conf.join("clippy.toml"), toml).map_err(|e| io(&conf, e))?;
+    std::fs::write(run_dir.join(CACHE_STAMP), format!("{version_line}\n")).map_err(|e| io(&run_dir, e))?;
+    prune_cache_dirs(&opts.scratch, &dir_name, KEEP_CACHE_DIRS);
     let ctx = MapCtx {
         cwd: canon(workspace),
         crates: members

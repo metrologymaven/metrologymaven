@@ -77,6 +77,20 @@ OUTPUTS = {
     "messages-unresolved.jsonl": line(msg(f"{WS}/macro/Cargo.toml",
                                           "`f64::sin` does not refer to an existing function", None, "warning",
                                           [])) + "\n",
+    # #235 follow-up: an ordinary E0277 error uses the "expected a …, found …" wording of a driver
+    # configuration warning. With a code and a span in the crate it is a compile error of that
+    # crate (KNP1-TYPED-BUILD), not a fatal driver error. The same wording with no code and no
+    # span in a crate (second stream) is still a driver configuration warning.
+    "messages-e0277.jsonl": "".join(line(x) + "\n" for x in [
+        artifact("macro"),
+        msg(f"{WS}/e0277/Cargo.toml", "expected an `FnMut(f64)` closure, found `f64`", "E0277", "error",
+            [span("e0277/src/lib.rs", 6, 27)]),
+        msg(f"{WS}/e0277/Cargo.toml", "aborting due to 1 previous error", None, "error", []),
+        {"reason": "build-finished", "success": False},
+    ]),
+    "messages-wrong-kind.jsonl": line(msg(f"{WS}/macro/Cargo.toml",
+                                          "expected a function, found struct `std::knp1_wrong_kind`", None,
+                                          "warning", [])) + "\n",
 }
 
 

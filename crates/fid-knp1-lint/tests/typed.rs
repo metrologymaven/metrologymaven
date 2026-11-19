@@ -10,9 +10,9 @@ use fid_knp1_lint::find::{Finding, Rule};
 use fid_knp1_lint::graph;
 use fid_knp1_lint::syn_scan;
 use fid_knp1_lint::typed::{
-    check_run, check_run_with_driver_probe, clippy_toml, driver_version, finish, parse_config, parse_messages, run,
-    target_findings, unresolved_allowed, CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS,
-    TYPED_TABLE, TYPED_TABLE_LEN,
+    cache_dir_name, check_run, check_run_with_driver_probe, clippy_toml, driver_version, finish, lint_args,
+    parse_config, parse_messages, prune_cache_dirs, run, target_findings, unresolved_allowed, CrateRef, ItemKind,
+    MapCtx, Options, TypedErrorCode, CACHE_STAMP, DEFAULT_TARGETS, KEEP_CACHE_DIRS, TYPED_TABLE, TYPED_TABLE_LEN,
 };
 use std::path::{Path, PathBuf};
 
@@ -172,6 +172,24 @@ fn unreadable_lines_and_unresolved_table_paths_are_driver_errors() {
     assert_eq!(e.code, TypedErrorCode::Driver);
 }
 
+#[test]
+fn compile_errors_in_driver_wording_are_build_findings_not_driver_errors() {
+    // E0277 says "expected an `FnMut(f64)` closure, found `f64`", the wording of a wrong-kind
+    // configuration warning; with an error code and a span in the crate it is a compile error.
+    let c = ctx(&["e0277", "macro"]);
+    let p = parse_messages(&messages("messages-e0277.jsonl"), "x86_64-unknown-linux-gnu", &c).unwrap();
+    assert!(p.unresolved_allowed.is_empty());
+    assert_eq!(p.errors.keys().cloned().collect::<Vec<_>>(), ["typed-e0277"]);
+    let all = target_findings(&p, &c, "x86_64-unknown-linux-gnu, default features", Some("driver failed"));
+    assert_eq!(lines(&all), ["KNP1-TYPED-BUILD typed-e0277 Cargo.toml:1"]);
+    assert!(all[0].message.contains("compile error: expected an `FnMut(f64)` closure"), "{}", all[0].message);
+    // The same wording with no code and no span in a crate is still a driver configuration
+    // warning naming a path the driver cannot resolve: fatal.
+    let e = parse_messages(&messages("messages-wrong-kind.jsonl"), "x86_64-unknown-linux-gnu", &c).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+    assert!(e.message.contains("knp1_wrong_kind"), "{e}");
+}
+
 /// A disallowed-method diagnostic whose primary span (line 5) sits under `levels` nested
 /// expansions (line 8), the outermost at the call site (line 13).
 fn deep_message(levels: usize) -> Vec<u8> {
@@ -234,6 +252,157 @@ fn facade_files_turn_libm_into_notes_and_targets_are_deduplicated() {
     assert_eq!(lines(&out.findings), ["KNP1-FMA typed-macro src/lib.rs:20"]);
     assert_eq!(lines(&out.notes), ["KNP1-LIBM typed-macro src/lib.rs:5"]);
     assert!(out.notes[0].message.starts_with("opt-out (facade file: r)"));
+}
+
+// ------------------------------------------------------------------ cache directories
+
+#[test]
+fn cache_dir_name_covers_driver_version_lints_and_config() {
+    let v = "clippy 0.1.89 (29483883ee 2025-08-04)";
+    let toml = clippy_toml();
+    let name = cache_dir_name(v, &toml);
+    assert_eq!(name, cache_dir_name(v, &toml));
+    assert!(name.starts_with("cfg-") && name.len() == 20, "{name}");
+    assert!(name[4..].bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)), "{name}");
+    // Another driver build (same second word), another configuration: another directory.
+    assert_ne!(name, cache_dir_name("clippy 0.1.89 (0000000000 2025-08-05)", &toml));
+    assert_ne!(name, cache_dir_name(v, &format!("{toml}# x\n")));
+    // The length prefixes keep the fields apart.
+    assert_ne!(cache_dir_name("a", "b\nc"), cache_dir_name("a\nb", "c"));
+    // The lints the key covers are the ones the driver is given.
+    assert_eq!(
+        lint_args(),
+        [
+            "-A",
+            "clippy::all",
+            "--force-warn",
+            "clippy::disallowed_methods",
+            "--force-warn",
+            "clippy::disallowed_types",
+            "--force-warn",
+            "clippy::disallowed_macros"
+        ]
+    );
+}
+
+#[test]
+fn pruning_keeps_the_current_and_the_most_recent_cache_dirs_inside_the_scratch_root() {
+    assert_eq!(KEEP_CACHE_DIRS, 2);
+    let root = scratch("typed-prune");
+    let _ = std::fs::remove_dir_all(&root);
+    let scratch_root = root.join("scratch");
+    std::fs::create_dir_all(&scratch_root).unwrap();
+    let base = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+    let dir = |i: u64| format!("cfg-{i:016x}");
+    // cfg-…1 is the oldest, cfg-…5 the newest; cfg-…3 is the current one.
+    for i in 1..=5u64 {
+        let d = scratch_root.join(dir(i));
+        std::fs::create_dir_all(d.join("target")).unwrap();
+        std::fs::write(d.join("target").join("x"), b"x").unwrap();
+        let stamp = d.join(CACHE_STAMP);
+        std::fs::write(&stamp, b"clippy").unwrap();
+        let f = std::fs::File::options().write(true).open(&stamp).unwrap();
+        f.set_modified(base + std::time::Duration::from_secs(i * 60)).unwrap();
+    }
+    // Without a stamp: oldest of all.
+    std::fs::create_dir_all(scratch_root.join(dir(6))).unwrap();
+    // Not cache directories: left alone.
+    for other in ["cfg-ABCDEF0123456789", "cfg-0123", "keep-me", "cfg-0123456789abcdeg"] {
+        std::fs::create_dir_all(scratch_root.join(other)).unwrap();
+    }
+    std::fs::write(scratch_root.join("cfg-00000000000000ff"), b"a file").unwrap();
+    // A cache-like directory outside the scratch root is never touched.
+    std::fs::create_dir_all(root.join(dir(7))).unwrap();
+
+    let removed = prune_cache_dirs(&scratch_root, &dir(3), KEEP_CACHE_DIRS);
+    assert_eq!(removed, [dir(1), dir(2), dir(6)]);
+    let mut left: Vec<String> = std::fs::read_dir(&scratch_root)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(
+        left,
+        [
+            "cfg-0000000000000003",
+            "cfg-0000000000000004",
+            "cfg-0000000000000005",
+            "cfg-00000000000000ff",
+            "cfg-0123",
+            "cfg-0123456789abcdeg",
+            "cfg-ABCDEF0123456789",
+            "keep-me"
+        ]
+    );
+    assert!(root.join(dir(7)).is_dir());
+    // Idempotent; a missing scratch root is not an error.
+    assert!(prune_cache_dirs(&scratch_root, &dir(3), KEEP_CACHE_DIRS).is_empty());
+    assert!(prune_cache_dirs(&root.join("missing"), &dir(3), KEEP_CACHE_DIRS).is_empty());
+}
+
+// ------------------------------------------------------------------ the canary (kind guard)
+
+/// `(rule, kind, path)` of each `// row NNN: RULE kind path` comment of the canary, in order.
+fn canary_rows() -> Vec<(String, String, String)> {
+    let src = String::from_utf8(read(&fix("canary/src/lib.rs"))).unwrap();
+    src.lines()
+        .filter_map(|l| l.split_once(" // row ").map(|(_, r)| r))
+        .map(|r| {
+            let w: Vec<&str> = r.split_whitespace().collect();
+            assert_eq!(w.len(), 4, "{r}");
+            (w[1].to_string(), w[2].to_string(), w[3].to_string())
+        })
+        .collect()
+}
+
+#[test]
+fn canary_uses_every_table_row_once() {
+    let kind = |k: ItemKind| match k {
+        ItemKind::Method => "method",
+        ItemKind::Type => "type",
+        ItemKind::Macro => "macro",
+    };
+    let want: Vec<(String, String, String)> =
+        TYPED_TABLE.iter().map(|(r, k, p)| (r.id(), kind(*k).to_string(), (*p).to_string())).collect();
+    assert_eq!(canary_rows(), want);
+}
+
+/// The kind a disallowed-item finding's message names (`method`, `type` or `macro`).
+fn kind_of(message: &str) -> &'static str {
+    ["method", "type", "macro"].into_iter().find(|k| message.contains(&format!("disallowed {k} "))).unwrap_or("?")
+}
+
+#[test]
+fn canary_hits_every_table_row_on_every_target() {
+    // The kind guard: clippy ignores an entry filed under the wrong kind without a word, so
+    // every row must produce exactly its expected hit, per target, as rendered by the
+    // independent make_canary.py.
+    let config = fix("canary/knp1-lint.toml");
+    let text = String::from_utf8(read(&config)).unwrap();
+    let mut cfg = parse_config(&text).unwrap();
+    cfg.clippy_version = driver_version(&cargo()).unwrap();
+    let syn_cfg = syn_scan::parse_config(&text).unwrap();
+    let gcfg = graph::load_config(&config).unwrap();
+    let closure = graph::compute_closure(&gcfg).unwrap();
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-canary") };
+    let mut got = Vec::new();
+    for target in DEFAULT_TARGETS {
+        cfg.targets = vec![target.to_string()];
+        let run = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap();
+        assert!(run.outcome.notes.is_empty(), "{target}: {:#?}", run.outcome.notes);
+        for f in &run.outcome.findings {
+            f.validate().unwrap();
+            assert_eq!((f.crate_name.as_str(), f.file.as_str()), ("typed-canary", "src/lib.rs"), "{target}: {f:?}");
+            got.push(format!("{target} {} {} {}", f.rule, kind_of(&f.message), f.line));
+        }
+    }
+    got.sort();
+    let mut want = text_lines(&fix("canary/expected-hits.txt"));
+    want.sort();
+    let missing: Vec<&String> = want.iter().filter(|w| !got.contains(w)).collect();
+    let extra: Vec<&String> = got.iter().filter(|g| !want.contains(g)).collect();
+    assert!(missing.is_empty() && extra.is_empty(), "missing hits: {missing:#?}\nunexpected hits: {extra:#?}");
+    assert_eq!(got, want);
 }
 
 // ------------------------------------------------------------------ the driver
@@ -311,8 +480,14 @@ fn ac1_to_ac4_end_to_end_on_three_targets() {
     assert_eq!(got, text_lines(&fix("ws/expected-findings.txt")), "{:#?}", out.findings);
     assert_eq!(lines(&out.notes), text_lines(&fix("ws/expected-notes.txt")));
     // AC-4: the build failure names the crate and the target.
-    let b = out.findings.iter().find(|f| f.rule == Rule::Typed("BUILD".into())).unwrap();
+    let b =
+        out.findings.iter().find(|f| f.rule == Rule::Typed("BUILD".into()) && f.crate_name == "typed-nowasm").unwrap();
     assert!(b.message.contains("typed-nowasm") && b.message.contains("wasm32-unknown-unknown"), "{}", b.message);
+    // #235 follow-up: a real E0277 ("expected an `FnMut(f64)` closure, found `f64`") is a build
+    // finding for its crate; it did not abort the run as KNP1-TYPED-DRIVER.
+    let e =
+        out.findings.iter().find(|f| f.rule == Rule::Typed("BUILD".into()) && f.crate_name == "typed-e0277").unwrap();
+    assert!(e.message.contains("compile error"), "{}", e.message);
     // REQ-004: the aliased HashMap is seen.
     let alias: Vec<&Finding> = out.findings.iter().filter(|f| f.crate_name == "typed-alias").collect();
     assert!(!alias.is_empty() && alias.iter().all(|f| f.rule == Rule::Hash), "{alias:#?}");

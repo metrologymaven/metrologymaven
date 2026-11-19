@@ -1,0 +1,1 @@
+{"manifest_path": "@WS@/macro/Cargo.toml", "message": {"children": [], "code": null, "level": "warning", "message": "expected a function, found struct `std::knp1_wrong_kind`", "rendered": "expected a function, found struct `std::knp1_wrong_kind`", "spans": []}, "package_id": "x", "reason": "compiler-message", "target": {"kind": ["lib"]}}
