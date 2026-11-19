@@ -14,9 +14,9 @@ Rules (Design of spec/core/dep/prop/NODE.md):
   mean a cycle: walk from the smallest left-over element to its smallest left-over input
   until an element repeats; that loop, reversed into edge direction and rotated to start
   at its smallest ID, is the reported cycle;
-- an element with an input in the region is downstream; it is pending unless it was
-  recomputed, none of its region inputs is pending and every input outside the region is
-  `current`; changed elements with no region input are never pending;
+- an element with an input in the region is downstream; a downstream element that was not
+  recomputed is pending; any element (changed roots included) with a pending input in the
+  region, or with an input outside the region that is not `current`, is pending;
 - pending elements in state current or failed are marked; the event lists them ascending;
   auto mode submits exactly the marked set (ascending) when it is non-empty.
 - The order digest is SHA-256 of the RFC 8785 JSON array of the order's ID strings; the
@@ -49,6 +49,8 @@ def propagate(nodes, edges, states, changed, recomputed, mode):
     for i, e in edges:
         outs.setdefault(i, set()).add(e)
         ins.setdefault(e, set()).add(i)
+    if len(changed) > 4096:
+        raise Refused("input_limit", "input_limit", [])
     if len(set(changed)) != len(changed):
         raise Refused("duplicate_element", "duplicate_element", [min(x for x in changed if changed.count(x) > 1)])
     if len(set(recomputed)) != len(recomputed):
@@ -92,9 +94,7 @@ def propagate(nodes, edges, states, changed, recomputed, mode):
     pending, pending_set = [], set()
     for x in order:
         region_inputs = ins.get(x, set()) & region
-        if not region_inputs:
-            continue
-        stale = x not in recomputed or any(i in pending_set for i in region_inputs)
+        stale = (bool(region_inputs) and x not in recomputed) or any(i in pending_set for i in region_inputs)
         if not stale:
             for i in sorted(ins.get(x, set()) - region):
                 if i not in states:

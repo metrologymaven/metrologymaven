@@ -13,11 +13,12 @@
 //! 2. **Order.** Kahn's algorithm over the region with an ascending-ID ready queue: a
 //!    topological order whose ties are broken by entity ID. Elements left over sit on or
 //!    behind a cycle; the pass fails with `cycle` and changes nothing.
-//! 3. **Staleness.** In that order, an element downstream of a changed element is
-//!    *pending* (its value is stale) unless the commit itself recomputed it against inputs
-//!    that are all fresh: no pending input in the region and every input outside the region
-//!    `current`. Anything downstream of a pending element is pending. Propagation never
-//!    makes anything `current`; it only decides what must become `outdated`.
+//! 3. **Staleness.** In that order, an element is *pending* (its value is stale) unless the
+//!    commit itself computed it (a changed root, or a recomputed downstream element) from
+//!    inputs that are all fresh: no pending input in the region and every input outside
+//!    the region `current`. Changed roots get the same input check. Anything downstream of
+//!    a pending element is pending. Propagation never makes anything `current`; it only
+//!    decides what must become `outdated`.
 //! 4. **Marking.** Every pending element in state `current` or `failed` is marked.
 //!
 //! Every traversal is iterative; inputs are bounded by [`MAX_CHANGED`],
@@ -156,6 +157,9 @@ pub trait DepGraph {
     fn dependents_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>>;
     /// Direct inputs of `element`; `None` or empty if it has none.
     fn inputs_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>>;
+    /// Every known element, strictly ascending. Propagation numbers elements by their
+    /// position here, so its traversal uses plain vectors instead of per-element maps.
+    fn elements_ascending(&self) -> Vec<EntityId>;
 }
 
 impl DepGraph for EdgeIndex {
@@ -167,6 +171,9 @@ impl DepGraph for EdgeIndex {
     }
     fn inputs_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>> {
         EdgeIndex::inputs_of(self, element)
+    }
+    fn elements_ascending(&self) -> Vec<EntityId> {
+        self.elements().copied().collect()
     }
 }
 
@@ -206,6 +213,9 @@ impl DepGraph for Adjacency {
     }
     fn inputs_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>> {
         self.reverse.get(element)
+    }
+    fn elements_ascending(&self) -> Vec<EntityId> {
+        self.reverse.keys().copied().collect()
     }
 }
 
@@ -378,11 +388,8 @@ fn dense_u32(i: usize) -> Result<u32, PropError> {
     u32::try_from(i).map_err(|_| PropError::InputLimit("elements"))
 }
 
-/// Sorts `list`, refusing more than `limit` entries and any repeat.
-fn sorted_distinct(list: &[EntityId], limit: usize, budget: &'static str) -> Result<Vec<EntityId>, PropError> {
-    if list.len() > limit {
-        return Err(PropError::InputLimit(budget));
-    }
+/// Sorts `list`, refusing any repeat (the smallest repeated ID is reported).
+fn sorted_distinct(list: &[EntityId]) -> Result<Vec<EntityId>, PropError> {
     let mut v = list.to_vec();
     v.sort_unstable();
     for pair in v.windows(2) {
@@ -412,8 +419,15 @@ pub fn plan<G: DepGraph + ?Sized>(
     changed: &[EntityId],
     recomputed: &[EntityId],
 ) -> Result<Marking, PropError> {
-    let changed = sorted_distinct(changed, MAX_CHANGED, "changed")?;
-    let recomputed = sorted_distinct(recomputed, MAX_PASS_ELEMENTS, "recomputed")?;
+    // Both limits first, then duplicates, then unknown elements.
+    if changed.len() > MAX_CHANGED {
+        return Err(PropError::InputLimit("changed"));
+    }
+    if recomputed.len() > MAX_PASS_ELEMENTS {
+        return Err(PropError::InputLimit("recomputed"));
+    }
+    let changed = sorted_distinct(changed)?;
+    let recomputed = sorted_distinct(recomputed)?;
     for id in changed.iter().chain(&recomputed) {
         if !graph.contains(id) {
             return Err(PropError::UnknownElement(*id));
@@ -421,43 +435,50 @@ pub fn plan<G: DepGraph + ?Sized>(
     }
 
     // 1. Region: breadth-first from the changed elements (ascending) over dependents
-    // (ascending): the changed elements and all their transitive dependents. Each element
-    // gets a discovery number the first time it is reached; each edge is recorded once, in
-    // discovery numbers, at the lookup that also marks its target visited.
-    let mut seen: BTreeMap<EntityId, u32> = BTreeMap::new();
-    let mut found: Vec<EntityId> = Vec::with_capacity(changed.len());
+    // (ascending): the changed elements and all their transitive dependents. Elements are
+    // numbered by their position in the graph's ascending element list (`all`), so the
+    // visited check is a vector lookup; each edge is recorded once, in discovery numbers.
+    let all = graph.elements_ascending();
+    if all.windows(2).any(|w| matches!(w, [a, b] if a >= b)) {
+        return Err(PropError::Internal("graph elements are not strictly ascending"));
+    }
+    let global = |id: &EntityId| all.binary_search(id).ok();
+    const UNSEEN: u32 = u32::MAX;
+    let mut local_of: Vec<u32> = vec![UNSEEN; all.len()];
+    let mut found: Vec<u32> = Vec::with_capacity(changed.len());
     for id in &changed {
-        seen.insert(*id, dense_u32(found.len())?);
-        found.push(*id);
+        let g = global(id).ok_or(PropError::UnknownElement(*id))?;
+        let slot = local_of.get_mut(g).ok_or(PropError::Internal("dense index"))?;
+        *slot = dense_u32(found.len())?;
+        found.push(dense_u32(g)?);
     }
     let mut disc = Rows { start: Vec::with_capacity(changed.len() + 1), succ: Vec::new() };
     let mut next = 0usize;
-    while let Some(node) = found.get(next).copied() {
+    while let Some(g) = found.get(next).copied() {
         next += 1;
         disc.start.push(disc.succ.len());
-        for d in graph.dependents_of(&node).into_iter().flatten() {
+        let node = all.get(g as usize).ok_or(PropError::Internal("dense index"))?;
+        for d in graph.dependents_of(node).into_iter().flatten() {
             if disc.succ.len() >= MAX_PASS_EDGES {
                 return Err(PropError::InputLimit("edges"));
             }
-            let k = match seen.get(d) {
-                Some(k) => *k,
-                None => {
-                    if found.len() >= MAX_PASS_ELEMENTS {
-                        return Err(PropError::InputLimit("elements"));
-                    }
-                    let k = dense_u32(found.len())?;
-                    seen.insert(*d, k);
-                    found.push(*d);
-                    k
+            let gd = global(d).ok_or(PropError::Internal("dependent is not a known element"))?;
+            let slot = local_of.get_mut(gd).ok_or(PropError::Internal("dense index"))?;
+            if *slot == UNSEEN {
+                if found.len() >= MAX_PASS_ELEMENTS {
+                    return Err(PropError::InputLimit("elements"));
                 }
-            };
-            disc.succ.push(k);
+                *slot = dense_u32(found.len())?;
+                found.push(dense_u32(gd)?);
+            }
+            disc.succ.push(*slot);
         }
     }
     disc.start.push(disc.succ.len());
-    drop(seen);
+    drop(local_of);
 
-    // Renumber in ascending ID order, so "smaller index" means "smaller ID".
+    // Renumber in ascending ID order, so "smaller index" means "smaller ID". Global
+    // numbers are already in ID order, so sorting by them sorts by ID.
     let n = found.len();
     let mut by_id: Vec<u32> = (0..n).map(dense_u32).collect::<Result<_, _>>()?;
     by_id.sort_unstable_by_key(|k| found.get(*k as usize).copied());
@@ -467,7 +488,8 @@ pub fn plan<G: DepGraph + ?Sized>(
             *slot = dense_u32(r)?;
         }
     }
-    let nodes: Vec<EntityId> = by_id.iter().filter_map(|k| found.get(*k as usize).copied()).collect();
+    let nodes: Vec<EntityId> =
+        by_id.iter().filter_map(|k| found.get(*k as usize).and_then(|g| all.get(*g as usize)).copied()).collect();
     let dense = |id: &EntityId| nodes.binary_search(id).ok();
 
     // Successors in compressed rows, and in-degrees, both in ID order.
@@ -526,10 +548,11 @@ pub fn plan<G: DepGraph + ?Sized>(
     for &i in &order {
         let id = *nodes.get(i).ok_or(PropError::Internal("dense index"))?;
         let downstream = has_input_in_region.get(i).copied().unwrap_or(false);
-        let pending = if !downstream {
-            // A changed element no other changed element feeds: the commit's own new value.
-            false
-        } else if !is_recomputed.get(i).copied().unwrap_or(false) || pending_input.get(i).copied().unwrap_or(true) {
+        // Pending: a downstream element the commit did not recompute, anything with a
+        // pending input in the region, and anything (changed roots included) that read an
+        // input outside the region which is not `current`.
+        let not_recomputed = downstream && !is_recomputed.get(i).copied().unwrap_or(false);
+        let pending = if not_recomputed || pending_input.get(i).copied().unwrap_or(true) {
             true
         } else {
             stale_outside_input(graph, states, &id, &dense)?
@@ -557,8 +580,9 @@ pub fn plan<G: DepGraph + ?Sized>(
     Ok(result)
 }
 
-/// Whether a recomputed element read any input from outside the region that is not
-/// `current`: such a recompute ran on a stale value, so the element stays pending.
+/// Whether an element computed in this commit (a changed root or a recomputed element) read
+/// any input from outside the region that is not `current`: such a value was computed on a
+/// stale input, so the element is pending. An input with no state is `missing_state`.
 fn stale_outside_input<G: DepGraph + ?Sized>(
     graph: &G,
     states: &ElementStates,

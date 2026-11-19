@@ -310,7 +310,7 @@ fn run_case<G: DepGraph>(graph: &G, ids: &BTreeMap<String, EntityId>, c: &Case) 
 #[test]
 fn hand_labelled_cases_on_both_graph_types() {
     let (ids, cases) = cases();
-    assert_eq!(cases.len(), 20);
+    assert_eq!(cases.len(), 24);
     let mut on_index = 0;
     for c in &cases {
         let mut adj = Adjacency::new();
@@ -323,7 +323,7 @@ fn hand_labelled_cases_on_both_graph_types() {
             on_index += 1;
         }
     }
-    assert_eq!(on_index, 17, "every acyclic case also runs on the edge index");
+    assert_eq!(on_index, 21, "every acyclic case also runs on the edge index");
 }
 
 // ------------------------------------------------------------------ AC-4
@@ -579,6 +579,10 @@ fn too_many_changed_elements_is_refused() {
     let err = plan(&g, &ElementStates::new(), &changed, &[]).unwrap_err();
     assert_eq!(err, PropError::InputLimit("changed"));
     let err = plan(&g, &ElementStates::new(), &changed[..1], &vec![id(0); MAX_PASS_ELEMENTS + 1]).unwrap_err();
+    assert_eq!(err, PropError::InputLimit("recomputed"));
+    // Both limits are checked before any duplicate: a repeated changed element does not
+    // mask an oversize recomputed list.
+    let err = plan(&g, &ElementStates::new(), &[id(0), id(0)], &vec![id(1); MAX_PASS_ELEMENTS + 1]).unwrap_err();
     assert_eq!(err, PropError::InputLimit("recomputed"));
 }
 

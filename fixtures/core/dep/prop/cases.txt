@@ -226,6 +226,84 @@ event
 submit
 end
 
+# Review of #243: a changed root that read a stale input is not fresh. As
+# recompute_pass_all_fresh, but a (outside the pass) is outdated: c and b were computed
+# from it, so they are pending and marked, and so is everything below.
+case recompute_pass_stale_root_input
+edge a b
+edge a c
+edge b d
+edge c d
+edge d e
+state a outdated
+state b current
+state c current
+state d current
+state e current
+changed b c d
+recomputed b c d
+mode manual
+order c b d e
+pending c b d e
+marked c b d e
+event c b d e
+submit
+end
+
+# Diamond with b already outdated: d is changed and recomputed alone, but reads b.
+case diamond_root_reads_outdated_input
+edge a b
+edge a c
+edge b d
+edge c d
+state a current
+state b outdated
+state c current
+state d current
+changed d
+recomputed d
+mode auto
+order d
+pending d
+marked d
+event d
+submit d
+end
+
+# x -> b -> c with x failed: b (changed, recomputed) read a failed input; c follows.
+case root_reads_failed_input
+edge x b
+edge b c
+state x failed
+state b current
+state c current
+changed b
+recomputed b c
+mode manual
+order b c
+pending b c
+marked b c
+event c b
+submit
+end
+
+# The same with x not_computed.
+case root_reads_not_computed_input
+edge x b
+edge b c
+state x not_computed
+state b current
+state c current
+changed b
+recomputed b c
+mode manual
+order b c
+pending b c
+marked b c
+event c b
+submit
+end
+
 # Cycle b <-> c behind a: refused, cycle starts at its smallest ID (c).
 case cycle_two
 edge a b
