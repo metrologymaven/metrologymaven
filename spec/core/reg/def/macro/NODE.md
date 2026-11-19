@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-registry-macros, fid-registry]
+built_pr: 262
 satisfies: [REQ-CORE.REG.DEF-006]
 covers: []
 depends_on: [CORE.REG.DEF.FIELD, CORE.REG.DEF.SCHEMA, CORE.REG.DEF.PRED]
