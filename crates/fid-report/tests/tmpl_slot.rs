@@ -124,21 +124,42 @@ fn ac1_typed_model_matches_the_hand_labelled_fixture() {
     assert!(pages[0] < pages[1]);
 }
 
-/// RPT.MODEL.TMPL.FORMAT's own fixture predates this leaf: its row slot is valid, and its
-/// tag slot lists tags out of byte order (U+02BC sorts after "I"), which this leaf refuses
-/// so each slot has one spelling (hand-labelled from the Design).
+/// Every valid template fixture in fixtures/rpt/model/tmpl (RPT.MODEL.TMPL.FORMAT's and
+/// this leaf's, v1 and v0) also passes slot validation. The named ones must parse and hold
+/// at least one slot; any other `.json` there that parses as a template is held to the same
+/// rule, so a future fixture cannot drift from the slot language.
 #[test]
-fn format_fixture_slots_against_this_language() {
+fn every_valid_template_fixture_passes_slot_validation() {
+    let named = [
+        "valid_v1.json",
+        "valid_v1.canonical.json",
+        "v0_sample.json",
+        "v0_sample.migrated.json",
+        "slots_valid.json",
+        "slots_valid.canonical.json",
+    ];
+    for name in named {
+        let t = parse_template(&read(name)).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let slots = validate_template(&t).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert!(!slots.is_empty(), "{name}");
+    }
+    let mut checked = 0;
+    for entry in std::fs::read_dir(dir()).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        if let Ok(t) = parse_template(&std::fs::read(&path).unwrap()) {
+            validate_template(&t).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            checked += 1;
+        }
+    }
+    assert!(checked >= named.len());
+    // The format fixture's slots, typed.
     let t = parse_template(&read("valid_v1.json")).unwrap();
-    let pages = t.pages().iter().map(|p| p.id()).collect();
-    let table = &t.pages()[0].blocks()[1];
-    let s = validate(table.slot().unwrap(), table, &pages).unwrap();
-    assert_eq!(*s.repeat(), RepetitionRule::Row);
-    assert_eq!(s.sort(), SortKey::default());
-    let tagged = &t.pages()[1].blocks()[1];
-    let err = validate(tagged.slot().unwrap(), tagged, &pages).unwrap_err();
-    assert_eq!(err.block(), tagged.id());
-    assert_eq!((err.pointer(), err.reason()), ("/spec/value/rule/tags/any_of/1", "not_sorted"));
+    let slots = validate_template(&t).unwrap();
+    assert_eq!(slots[0].1.sort(), SortKey::default());
+    assert_eq!(slots[1].1.sort(), SortKey { field: SortField::BalloonNumber, direction: Direction::Desc });
 }
 
 #[test]
