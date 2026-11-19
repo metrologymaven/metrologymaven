@@ -413,7 +413,7 @@ pub fn is_time(s: &str) -> bool {
         }
     }
     let [y, mo, d, h, mi, se] = parts;
-    (1..=12).contains(&mo) && d >= 1 && d <= days_in_month(y, mo) && h <= 23 && mi <= 59 && se <= 59
+    (1..=12).contains(&mo) && (1..=days_in_month(y, mo)).contains(&d) && h <= 23 && mi <= 59 && se <= 59
 }
 
 /// The checkpoint time of an instant `unix_secs` seconds after the Unix epoch:

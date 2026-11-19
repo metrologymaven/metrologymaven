@@ -274,7 +274,8 @@ fn ac2_missing_cache_is_rebuilt() {
     assert_eq!((h.seq, h.hash.to_string()), want["main"].clone());
     drop(j);
     let rebuilt = cache(&root);
-    assert_eq!(rebuilt, want.iter().map(|(b, (_, h))| (b.clone(), h.clone())).collect());
+    let want_cache: BTreeMap<String, String> = want.iter().map(|(b, (_, h))| (b.clone(), h.clone())).collect();
+    assert_eq!(rebuilt, want_cache);
     // The cache deleted: rebuilt again before answering.
     raw(&root, "DELETE FROM heads");
     assert!(cache(&root).is_empty());
@@ -352,7 +353,7 @@ fn ac3_empty_stream() {
     assert_eq!(e.code(), "empty_stream");
     assert!(e.to_string().starts_with("empty_stream"));
     assert_eq!(j.last_checkpoint().unwrap(), None);
-    assert_eq!(j.heads().unwrap(), vec![]);
+    assert!(j.heads().unwrap().is_empty());
     drop(j);
     assert!(checkpoint_rows(&root).is_empty());
 }
