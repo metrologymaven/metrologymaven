@@ -7,11 +7,17 @@
 //! `clippy::wildcard_enum_match_arm`, so adding a channel kind fails to build until it is
 //! mapped.
 //!
-//! A CLI or Python session becomes `human` only through [`SessionTable::upgrade_session`]:
-//! a person confirms through a [`HumanPresence`] provider within [`UPGRADE_DEADLINE`], the
-//! confirming OS user equals the session's OS user, and one `principal_upgrade` entry is
-//! appended through [`JournalAppend`] before the session is inserted (REQ-009..011). The
-//! table lives in memory only; a new session or a restart starts as `script`.
+//! Sessions are named by the bus, not by the client: [`SessionTable::open_session`] issues
+//! a [`SessionKey`] per authenticated connection, numbered by an internal monotonic `u64`
+//! that is never reused. A CLI or Python session becomes `human` only through
+//! [`SessionTable::upgrade_session`]: a person confirms through a [`HumanPresence`]
+//! provider within [`UPGRADE_DEADLINE`], the confirming OS user equals the session's OS
+//! user, and one `principal_upgrade` entry is appended through [`JournalAppend`]
+//! (REQ-009..011). The upgrade is returned as an [`UpgradeGrant`]: not `Clone`, private
+//! fields, only built inside this crate. A call derives as `human` only when its channel
+//! presents that grant together with the session key it was issued for. Dropping the
+//! grant or [`SessionTable::end_session`] revokes it. The table lives in memory only; a new
+//! session or a restart starts as `script`.
 
 #![deny(clippy::wildcard_enum_match_arm, clippy::match_wildcard_for_single_variants)]
 
@@ -20,7 +26,10 @@ use fid_canon::CValue;
 use fid_journal::{AiAssistance, DraftBody, EntryDraft, EntryTime, Manifests, PrincipalDraft, UpgradeDraft};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Weak};
 use std::time::Duration;
+use unicode_normalization::is_nfc;
 
 pub use fid_journal::{ConfirmMethod, PrincipalKind};
 
@@ -30,7 +39,7 @@ pub const UPGRADE_DEADLINE: Duration = Duration::from_secs(120);
 pub const MAX_ID_BYTES: usize = 256;
 /// Longest self-asserted client or model name, in characters; longer text is cut.
 pub const MAX_SELF_ASSERTED_CHARS: usize = 256;
-/// Most sessions one [`SessionTable`] holds as upgraded at the same time.
+/// Most live upgrade grants one [`SessionTable`] holds at the same time.
 pub const MAX_UPGRADED_SESSIONS: usize = 4096;
 
 // ------------------------------------------------------------------ identifiers
@@ -42,8 +51,16 @@ pub enum IdError {
     Empty,
     /// The identifier is longer than [`MAX_ID_BYTES`] bytes.
     TooLong,
-    /// The identifier holds a control character.
+    /// A control character (general category Cc).
     ControlChar,
+    /// A format character (Cf): bidi overrides and isolates, zero-width characters, BOM, tags.
+    FormatChar,
+    /// A line or paragraph separator (Zl, Zp).
+    Separator,
+    /// A private-use character (Co). Surrogates (Cs) cannot occur in Rust strings.
+    PrivateUse,
+    /// The identifier is not in Unicode Normalization Form C.
+    NotNfc,
 }
 
 impl IdError {
@@ -53,6 +70,10 @@ impl IdError {
             IdError::Empty => "empty",
             IdError::TooLong => "too_long",
             IdError::ControlChar => "control_char",
+            IdError::FormatChar => "format_char",
+            IdError::Separator => "separator",
+            IdError::PrivateUse => "private_use",
+            IdError::NotNfc => "not_nfc",
         }
     }
 }
@@ -65,16 +86,67 @@ impl fmt::Display for IdError {
 
 impl std::error::Error for IdError {}
 
+/// Code points of general category Cf (format), Unicode 16.0, as inclusive ranges.
+pub const FORMAT_RANGES: &[(u32, u32)] = &[
+    (0x00AD, 0x00AD),
+    (0x0600, 0x0605),
+    (0x061C, 0x061C),
+    (0x06DD, 0x06DD),
+    (0x070F, 0x070F),
+    (0x0890, 0x0891),
+    (0x08E2, 0x08E2),
+    (0x180E, 0x180E),
+    (0x200B, 0x200F),
+    (0x202A, 0x202E),
+    (0x2060, 0x2064),
+    (0x2066, 0x206F),
+    (0xFEFF, 0xFEFF),
+    (0xFFF9, 0xFFFB),
+    (0x110BD, 0x110BD),
+    (0x110CD, 0x110CD),
+    (0x13430, 0x1343F),
+    (0x1BCA0, 0x1BCA3),
+    (0x1D173, 0x1D17A),
+    (0xE0001, 0xE0001),
+    (0xE0020, 0xE007F),
+];
+
+/// Code points of general category Co (private use), as inclusive ranges.
+pub const PRIVATE_USE_RANGES: &[(u32, u32)] = &[(0xE000, 0xF8FF), (0xF0000, 0xFFFFD), (0x10_0000, 0x10_FFFD)];
+
+fn in_ranges(ranges: &[(u32, u32)], u: u32) -> bool {
+    ranges.iter().any(|&(lo, hi)| (lo..=hi).contains(&u))
+}
+
+fn forbidden(c: char) -> Option<IdError> {
+    let u = u32::from(c);
+    if c.is_control() {
+        Some(IdError::ControlChar)
+    } else if u == 0x2028 || u == 0x2029 {
+        Some(IdError::Separator)
+    } else if in_ranges(PRIVATE_USE_RANGES, u) {
+        Some(IdError::PrivateUse)
+    } else if in_ranges(FORMAT_RANGES, u) {
+        Some(IdError::FormatChar)
+    } else {
+        None
+    }
+}
+
 fn check_id(s: &str) -> Result<(), IdError> {
     if s.is_empty() {
-        Err(IdError::Empty)
-    } else if s.len() > MAX_ID_BYTES {
-        Err(IdError::TooLong)
-    } else if s.chars().any(char::is_control) {
-        Err(IdError::ControlChar)
-    } else {
-        Ok(())
+        return Err(IdError::Empty);
     }
+    if s.len() > MAX_ID_BYTES {
+        return Err(IdError::TooLong);
+    }
+    if let Some(e) = s.chars().find_map(forbidden) {
+        return Err(e);
+    }
+    if !is_nfc(s) {
+        return Err(IdError::NotNfc);
+    }
+    Ok(())
 }
 
 macro_rules! id_type {
@@ -84,8 +156,8 @@ macro_rules! id_type {
         pub struct $name(String);
 
         impl $name {
-            /// Checks and wraps `s`: 1 to [`MAX_ID_BYTES`] bytes, no control characters.
-            /// Compared byte for byte; case is significant.
+            /// Checks and wraps `s`: 1 to [`MAX_ID_BYTES`] bytes, NFC, and no character of
+            /// general category Cc, Cf, Zl, Zp or Co. Compared byte for byte.
             pub fn new(s: &str) -> Result<Self, IdError> {
                 check_id(s)?;
                 Ok($name(s.to_string()))
@@ -114,11 +186,12 @@ id_type!(
     ClientId
 );
 id_type!(
-    /// An operating-system account name.
+    /// An operating-system account name, in the canonical spelling the platform reports.
     OsUser
 );
 id_type!(
-    /// A channel session, as the surface that owns the session names it.
+    /// The surface's label for a session, for display and the journal. It grants nothing:
+    /// the bus-issued [`SessionKey`] is the session's identity.
     SessionId
 );
 
@@ -126,6 +199,24 @@ impl From<&OsUser> for PrincipalId {
     /// An OS user as a principal identity: the same text (REQ-009).
     fn from(user: &OsUser) -> Self {
         PrincipalId(user.0.clone())
+    }
+}
+
+/// A principal named by kind and identity, so that `alice` as `script` and `alice` as
+/// `human` stay distinguishable in `on_behalf_of`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PrincipalRef {
+    pub kind: PrincipalKind,
+    pub id: PrincipalId,
+}
+
+impl PrincipalRef {
+    /// `{"id": <id>, "kind": <kind>}`, the journal form.
+    pub fn to_value(&self) -> CValue {
+        let mut o = BTreeMap::new();
+        o.insert("id".to_string(), CValue::Str(self.id.as_str().to_string()));
+        o.insert("kind".to_string(), CValue::Str(self.kind.as_str().to_string()));
+        CValue::Obj(o)
     }
 }
 
@@ -286,10 +377,10 @@ pub struct Identity {
     /// The OS account that owns the local process, when the channel knows it. The session
     /// upgrade compares the confirming person against it.
     pub os_user: Option<OsUser>,
-    /// Who the caller acts for. Read only on `server_session` (the authenticated server
-    /// user) and `internal` (the triggering principal), where it is required; ignored on
-    /// every other channel.
-    pub acting_for: Option<PrincipalId>,
+    /// Who the caller acts for, with kind. Read only on `server_session` (the authenticated
+    /// server user) and `internal` (the triggering principal), where it is required;
+    /// ignored on every other channel.
+    pub acting_for: Option<PrincipalRef>,
     /// The authenticated client identifier, if the channel authenticates clients.
     pub client_id: Option<ClientId>,
     /// What the client says about itself; untrusted.
@@ -303,14 +394,64 @@ impl Identity {
     }
 }
 
+/// The bus's name for one authenticated connection, issued by
+/// [`SessionTable::open_session`]. Its number is an internal monotonic `u64`, never reused
+/// and never taken from the client. Not `Clone`; private fields.
+#[derive(Debug, PartialEq, Eq)]
+pub struct SessionKey {
+    table: u64,
+    number: u64,
+    label: SessionId,
+}
+
+impl SessionKey {
+    /// The bus-issued session number.
+    pub fn number(&self) -> u64 {
+        self.number
+    }
+
+    /// The surface's label, for display.
+    pub fn label(&self) -> &SessionId {
+        &self.label
+    }
+
+    /// The session ID written to the journal: `<label>#<number>`.
+    pub fn journal_id(&self) -> String {
+        format!("{}#{}", self.label, self.number)
+    }
+}
+
+/// Proof that a person confirmed the upgrade of one session (REQ-009). Returned by
+/// [`SessionTable::upgrade_session`]; not `Clone`, private fields, and only this crate can
+/// build one. The channel presents it through [`Channel::upgrade_grant`]. Dropping it, a
+/// newer grant for the same session, or [`SessionTable::end_session`] revokes it.
+#[derive(Debug)]
+pub struct UpgradeGrant {
+    table: u64,
+    number: u64,
+    alive: Arc<u64>,
+}
+
+impl UpgradeGrant {
+    /// The number of the session this grant was issued for.
+    pub fn session_number(&self) -> u64 {
+        self.number
+    }
+}
+
 /// A surface's authenticated channel. Each surface implements it; the bus reads nothing else.
 pub trait Channel {
     /// The channel kind.
     fn kind(&self) -> ChannelKind;
     /// The authenticated identity, or `None` if the channel could not authenticate the caller.
     fn authenticated_identity(&self) -> Option<Identity>;
-    /// The channel's session.
-    fn session(&self) -> SessionId;
+    /// The bus-issued key of this connection.
+    fn session(&self) -> &SessionKey;
+    /// The upgrade grant this connection holds, if any. Only CLI and Python channels ever
+    /// hold one.
+    fn upgrade_grant(&self) -> Option<&UpgradeGrant> {
+        None
+    }
 }
 
 // ------------------------------------------------------------------ principal
@@ -320,10 +461,10 @@ pub trait Channel {
 pub struct Principal {
     kind: PrincipalKind,
     id: PrincipalId,
-    on_behalf_of: Option<PrincipalId>,
+    on_behalf_of: Option<PrincipalRef>,
     client_id: Option<ClientId>,
     self_asserted: Option<Untrusted<SelfAsserted>>,
-    upgraded_session: Option<SessionId>,
+    upgraded_session: Option<u64>,
 }
 
 impl Principal {
@@ -337,8 +478,13 @@ impl Principal {
         &self.id
     }
 
+    /// Kind and identity, for naming this principal in another's `on_behalf_of`.
+    pub fn reference(&self) -> PrincipalRef {
+        PrincipalRef { kind: self.kind, id: self.id.clone() }
+    }
+
     /// The principal this one acts for (server user, or the trigger of an internal call).
-    pub fn on_behalf_of(&self) -> Option<&PrincipalId> {
+    pub fn on_behalf_of(&self) -> Option<&PrincipalRef> {
         self.on_behalf_of.as_ref()
     }
 
@@ -352,17 +498,18 @@ impl Principal {
         self.self_asserted.as_ref()
     }
 
-    /// The upgraded session this `human` principal comes from, if any.
-    pub fn upgraded_session(&self) -> Option<&SessionId> {
-        self.upgraded_session.as_ref()
+    /// The number of the upgraded session this `human` principal comes from, if any.
+    pub fn upgraded_session(&self) -> Option<u64> {
+        self.upgraded_session
     }
 
-    /// The principal as a journal draft: kind, identity and `on_behalf_of` as JSON strings.
+    /// The principal as a journal draft: identity as a JSON string, `on_behalf_of` as
+    /// `{"id", "kind"}`.
     pub fn to_draft(&self) -> PrincipalDraft {
         PrincipalDraft {
             kind: self.kind,
             identity: CValue::Str(self.id.as_str().to_string()),
-            on_behalf_of: self.on_behalf_of.as_ref().map(|p| CValue::Str(p.as_str().to_string())),
+            on_behalf_of: self.on_behalf_of.as_ref().map(PrincipalRef::to_value),
         }
     }
 }
@@ -372,7 +519,10 @@ impl Principal {
 /// What the presence provider is asked to confirm.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeRequest {
+    /// The surface's label of the session.
     pub session: SessionId,
+    /// The bus-issued session number.
+    pub session_number: u64,
     pub channel: ChannelKind,
     pub subject: PrincipalId,
     /// The session's OS user; the person confirming must be this user.
@@ -383,7 +533,7 @@ pub struct UpgradeRequest {
 /// entry, so replay reads it and never prompts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PresenceOutcome {
-    /// A person confirmed, as `os_user`, through `method`.
+    /// A person confirmed, as `os_user` in the platform's canonical spelling, through `method`.
     Confirmed { os_user: OsUser, method: ConfirmMethod },
     /// The person declined.
     Declined,
@@ -392,7 +542,8 @@ pub enum PresenceOutcome {
 }
 
 /// Asks a person to confirm a session upgrade: a prompt in the running desktop app, or an
-/// OS user-presence check when headless. Implemented by the apps and `PLAT`.
+/// OS user-presence check when headless. Implemented by the apps and `PLAT`, which must
+/// report OS users in the platform's canonical spelling (see [`OsUser`]).
 pub trait HumanPresence {
     /// Asks for confirmation; must give up after `deadline`.
     fn confirm(&self, req: &UpgradeRequest, deadline: Duration) -> PresenceOutcome;
@@ -420,10 +571,17 @@ pub struct UpgradeContext {
 
 // ------------------------------------------------------------------ session table
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Upgraded {
+#[derive(Debug, Clone)]
+struct Row {
     channel: ChannelKind,
     os_user: OsUser,
+    alive: Weak<u64>,
+}
+
+impl Row {
+    fn live(&self) -> bool {
+        self.alive.strong_count() > 0
+    }
 }
 
 fn unauthenticated(detail: &str) -> BusError {
@@ -434,48 +592,99 @@ fn refused(reason: UpgradeRefusedReason, detail: &str) -> BusError {
     BusError::UpgradeRefused(reason, Detail::new(detail))
 }
 
-/// Upgraded sessions, in memory only; never persisted, so a restart starts as `script`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+fn invariant(detail: &str) -> BusError {
+    BusError::Internal(InternalReason::InvariantViolated, Detail::new(detail))
+}
+
+/// Process-wide table numbers, so a key or grant of one table never works in another.
+static NEXT_TABLE: AtomicU64 = AtomicU64::new(1);
+
+/// Session keys and upgrade grants, in memory only; never persisted, so a restart starts
+/// every session as `script`.
+#[derive(Debug)]
 pub struct SessionTable {
-    rows: BTreeMap<SessionId, Upgraded>,
+    /// `None` once the process has used up every table number; such a table opens no session.
+    id: Option<u64>,
+    next: u64,
+    rows: BTreeMap<u64, Row>,
+}
+
+impl Default for SessionTable {
+    fn default() -> Self {
+        SessionTable::new()
+    }
 }
 
 impl SessionTable {
-    /// An empty table.
+    /// An empty table with a process-unique number.
     pub fn new() -> Self {
-        SessionTable::default()
+        let id = NEXT_TABLE.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1)).ok();
+        SessionTable { id, next: 1, rows: BTreeMap::new() }
     }
 
-    /// Number of upgraded sessions.
+    /// Issues the key of a new authenticated connection. Numbers are monotonic and never
+    /// reused; the surface's `label` is for display and the journal only.
+    pub fn open_session(&mut self, label: SessionId) -> Result<SessionKey, BusError> {
+        let Some(table) = self.id else {
+            return Err(invariant("session table numbers exhausted"));
+        };
+        let number = self.next;
+        let Some(next) = number.checked_add(1) else {
+            return Err(invariant("session numbers exhausted"));
+        };
+        self.next = next;
+        Ok(SessionKey { table, number, label })
+    }
+
+    /// Number of live upgrade grants.
     pub fn len(&self) -> usize {
-        self.rows.len()
+        self.rows.values().filter(|r| r.live()).count()
     }
 
-    /// Whether no session is upgraded.
+    /// Whether no live upgrade grant exists.
     pub fn is_empty(&self) -> bool {
-        self.rows.is_empty()
+        self.len() == 0
     }
 
-    /// Whether `session` is upgraded.
-    pub fn is_upgraded(&self, session: &SessionId) -> bool {
-        self.rows.contains_key(session)
+    /// Whether `session` holds a live upgrade grant.
+    pub fn is_upgraded(&self, session: &SessionKey) -> bool {
+        self.owns(session) && self.rows.get(&session.number).is_some_and(Row::live)
     }
 
-    /// Ends a session (its channel closed): removes its row. Returns whether it was upgraded.
-    pub fn end_session(&mut self, session: &SessionId) -> bool {
-        self.rows.remove(session).is_some()
+    /// Ends a session (its channel closed): revokes its grant. Returns whether it held a
+    /// live one.
+    pub fn end_session(&mut self, session: &SessionKey) -> bool {
+        self.owns(session) && self.rows.remove(&session.number).is_some_and(|r| r.live())
     }
 
-    /// The confirmed OS user of an upgraded session, if the call comes on the same channel
-    /// kind and from the same OS user as the confirmed one.
-    fn upgraded_user(&self, kind: ChannelKind, session: &SessionId, identity: &Identity) -> Option<&OsUser> {
-        let row = self.rows.get(session)?;
-        (row.channel == kind && identity.os_user.as_ref() == Some(&row.os_user)).then_some(&row.os_user)
+    fn owns(&self, session: &SessionKey) -> bool {
+        self.id == Some(session.table)
+    }
+
+    /// The confirmed OS user when the channel presents a live grant issued by this table
+    /// for this very session key, on the same channel kind, from the same OS user.
+    fn granted_user(&self, kind: ChannelKind, channel: &dyn Channel, identity: &Identity) -> Option<&OsUser> {
+        let grant = channel.upgrade_grant()?;
+        let session = channel.session();
+        if !self.owns(session) || grant.table != session.table || grant.number != session.number {
+            return None;
+        }
+        let row = self.rows.get(&grant.number)?;
+        let live = row.alive.upgrade()?;
+        let same = Arc::ptr_eq(&live, &grant.alive)
+            && row.channel == kind
+            && identity.os_user.as_ref() == Some(&row.os_user);
+        same.then_some(&row.os_user)
     }
 
     /// Derives the principal of a call from its channel alone (REQ-002..008, REQ-012).
     pub fn derive_principal(&self, channel: &dyn Channel) -> Result<Principal, BusError> {
-        let Some(identity) = channel.authenticated_identity() else {
+        let identity = channel.authenticated_identity();
+        self.derive_with(channel, identity.as_ref())
+    }
+
+    fn derive_with(&self, channel: &dyn Channel, identity: Option<&Identity>) -> Result<Principal, BusError> {
+        let Some(identity) = identity else {
             return Err(unauthenticated("channel supplied no authenticated identity"));
         };
         let kind = channel.kind();
@@ -489,15 +698,14 @@ impl SessionTable {
         };
         match kind {
             ChannelKind::Cli | ChannelKind::Python => {
-                let session = channel.session();
-                if let Some(user) = self.upgraded_user(kind, &session, &identity) {
+                if let Some(user) = self.granted_user(kind, channel, identity) {
                     p.kind = PrincipalKind::Human;
                     p.id = PrincipalId::from(user);
-                    p.upgraded_session = Some(session);
+                    p.upgraded_session = Some(channel.session().number);
                 }
             }
-            ChannelKind::ServerSession | ChannelKind::Internal => match identity.acting_for {
-                Some(behalf) => p.on_behalf_of = Some(behalf),
+            ChannelKind::ServerSession | ChannelKind::Internal => match &identity.acting_for {
+                Some(behalf) => p.on_behalf_of = Some(behalf.clone()),
                 None => return Err(unauthenticated("channel supplied no principal it acts for")),
             },
             ChannelKind::Gui
@@ -513,9 +721,9 @@ impl SessionTable {
 
     /// Upgrades a CLI or Python session to `human` once a person confirms through
     /// `presence` (REQ-009..011). On success one `principal_upgrade` entry has been appended
-    /// to `journal` and every later call of the session derives as `human` until
-    /// [`SessionTable::end_session`]. On any error the table and the journal are unchanged.
-    /// An already upgraded session returns `Ok` without prompting or appending.
+    /// to `journal` and the returned grant, presented by the same channel, makes its calls
+    /// derive as `human`. Every request prompts; a confirmed re-upgrade replaces (revokes)
+    /// the session's earlier grant. On any error the table and the journal are unchanged.
     pub fn upgrade_session(
         &mut self,
         channel: &dyn Channel,
@@ -523,27 +731,42 @@ impl SessionTable {
         journal: &mut dyn JournalAppend,
         clock: &mut dyn UpgradeClock,
         ctx: &UpgradeContext,
-    ) -> Result<(), BusError> {
-        // Authentication first: an incomplete identity is `unauthenticated` on every channel.
-        let before = self.derive_principal(channel)?;
+    ) -> Result<UpgradeGrant, BusError> {
+        // One identity fetch; authentication first, so an incomplete identity is
+        // `unauthenticated` on every channel.
+        let fetched = channel.authenticated_identity();
+        let current = self.derive_with(channel, fetched.as_ref())?;
+        let Some(identity) = fetched else {
+            return Err(unauthenticated("channel supplied no authenticated identity"));
+        };
         let kind = channel.kind();
         if !kind.upgradable() {
             return Err(refused(UpgradeRefusedReason::Channel, "only cli and python sessions can be upgraded"));
         }
-        if before.kind == PrincipalKind::Human {
-            return Ok(());
+        let session = channel.session();
+        if !self.owns(session) {
+            return Err(invariant("session key was issued by another session table"));
         }
-        let Some(identity) = channel.authenticated_identity() else {
-            return Err(unauthenticated("channel supplied no authenticated identity"));
-        };
         let Some(os_user) = identity.os_user.clone() else {
             return Err(refused(UpgradeRefusedReason::UserMismatch, "session has no OS user"));
         };
-        let session = channel.session();
-        if self.rows.len() >= MAX_UPGRADED_SESSIONS {
+        self.rows.retain(|_, r| r.live());
+        let others = self.rows.keys().filter(|n| **n != session.number).count();
+        if others >= MAX_UPGRADED_SESSIONS {
             return Err(BusError::Internal(InternalReason::Storage, Detail::new("upgraded-session table is full")));
         }
-        let req = UpgradeRequest { session: session.clone(), channel: kind, subject: identity.subject, os_user };
+        // The entry is written by the session's own, not-upgraded principal.
+        let mut before = current;
+        before.kind = kind.base_kind();
+        before.id = identity.subject.clone();
+        before.upgraded_session = None;
+        let req = UpgradeRequest {
+            session: session.label.clone(),
+            session_number: session.number,
+            channel: kind,
+            subject: identity.subject,
+            os_user,
+        };
         let start = clock.now().mono_ns;
         let outcome = presence.confirm(&req, UPGRADE_DEADLINE);
         let method = match outcome {
@@ -571,7 +794,7 @@ impl SessionTable {
             reason: None,
             human_assertion: None,
             body: DraftBody::PrincipalUpgrade(UpgradeDraft {
-                session_id: session.as_str().to_string(),
+                session_id: session.journal_id(),
                 method,
                 identity: CValue::Str(req.os_user.as_str().to_string()),
                 confirmed_at: time.utc.clone(),
@@ -579,7 +802,8 @@ impl SessionTable {
             time,
         };
         journal.append(&draft)?;
-        self.rows.insert(session, Upgraded { channel: kind, os_user: req.os_user });
-        Ok(())
+        let alive = Arc::new(session.number);
+        self.rows.insert(session.number, Row { channel: kind, os_user: req.os_user, alive: Arc::downgrade(&alive) });
+        Ok(UpgradeGrant { table: session.table, number: session.number, alive })
     }
 }

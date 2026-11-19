@@ -14,6 +14,7 @@ pub use error::{
 };
 pub use principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, HumanPresence, IdError, Identity, JournalAppend, OsUser,
-    PresenceOutcome, Principal, PrincipalId, PrincipalKind, SelfAsserted, SessionId, SessionTable, UpgradeClock,
-    UpgradeContext, UpgradeRequest, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS, UPGRADE_DEADLINE,
+    PresenceOutcome, Principal, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted, SessionId, SessionKey,
+    SessionTable, UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, FORMAT_RANGES, MAX_ID_BYTES,
+    MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS, PRIVATE_USE_RANGES, UPGRADE_DEADLINE,
 };

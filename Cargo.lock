@@ -419,6 +419,7 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-types",
+ "unicode-normalization",
 ]
 
 [[package]]

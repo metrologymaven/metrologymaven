@@ -1,14 +1,15 @@
 //! Acceptance criteria of spec node CORE.BUS.PRIN (AC-1 .. AC-8), with the hand-labelled
-//! fixtures `fixtures/core/bus/principal/{channels,presence}.json`.
+//! fixtures `fixtures/core/bus/principal/{channels,presence,ids}.json`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_bus::error::{InternalReason, UpgradeRefusedReason};
+use fid_bus::error::{InternalReason, UnauthenticatedReason, UpgradeRefusedReason};
 use fid_bus::principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, HumanPresence, IdError, Identity, JournalAppend, OsUser,
-    PresenceOutcome, PrincipalId, PrincipalKind, SelfAsserted, SessionId, SessionTable, UpgradeClock, UpgradeContext,
-    UpgradeRequest, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS, UPGRADE_DEADLINE,
+    PresenceOutcome, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted, SessionId, SessionKey, SessionTable,
+    UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS,
+    MAX_UPGRADED_SESSIONS, UPGRADE_DEADLINE,
 };
-use fid_bus::{BusError, Code, Detail};
+use fid_bus::{BusError, Code, Detail, Untrusted};
 use fid_canon::{parse, CValue, Digest};
 use fid_journal::{
     build, verify_commitment, AiAssistance, CommandDraft, DraftBody, Entry, EntryDraft, EntryKind, EntryTime, Field,
@@ -43,6 +44,13 @@ fn arr<'a>(o: &'a Obj, k: &str) -> Vec<&'a Obj> {
     }
 }
 
+fn ob<'a>(o: &'a Obj, k: &str) -> &'a Obj {
+    match o.get(k) {
+        Some(CValue::Obj(m)) => m,
+        other => panic!("field {k} is {other:?}"),
+    }
+}
+
 fn st<'a>(o: &'a Obj, k: &str) -> &'a str {
     match o.get(k) {
         Some(CValue::Str(s)) => s,
@@ -54,6 +62,18 @@ fn opt_st<'a>(o: &'a Obj, k: &str) -> Option<&'a str> {
     match o.get(k) {
         None | Some(CValue::Null) => None,
         Some(CValue::Str(s)) => Some(s),
+        other => panic!("field {k} is {other:?}"),
+    }
+}
+
+fn pref(o: &Obj) -> PrincipalRef {
+    PrincipalRef { kind: PrincipalKind::parse(st(o, "kind")).unwrap(), id: pid(st(o, "id")) }
+}
+
+fn opt_ref(o: &Obj, k: &str) -> Option<PrincipalRef> {
+    match o.get(k) {
+        None | Some(CValue::Null) => None,
+        Some(CValue::Obj(m)) => Some(pref(m)),
         other => panic!("field {k} is {other:?}"),
     }
 }
@@ -70,13 +90,14 @@ fn user(s: &str) -> OsUser {
     OsUser::new(s).unwrap()
 }
 
-// ------------------------------------------------------------------ test channel
+// ------------------------------------------------------------------ test channels
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct TestChannel {
     kind: ChannelKind,
     identity: Option<Identity>,
-    session: SessionId,
+    session: SessionKey,
+    grant: Option<UpgradeGrant>,
 }
 
 impl Channel for TestChannel {
@@ -86,8 +107,35 @@ impl Channel for TestChannel {
     fn authenticated_identity(&self) -> Option<Identity> {
         self.identity.clone()
     }
-    fn session(&self) -> SessionId {
-        self.session.clone()
+    fn session(&self) -> &SessionKey {
+        &self.session
+    }
+    fn upgrade_grant(&self) -> Option<&UpgradeGrant> {
+        self.grant.as_ref()
+    }
+}
+
+/// A channel that presents somebody else's session key and grant by reference: the most
+/// an in-process forger can do, since neither type can be cloned or built.
+struct Borrowing<'a> {
+    kind: ChannelKind,
+    identity: Identity,
+    session: &'a SessionKey,
+    grant: Option<&'a UpgradeGrant>,
+}
+
+impl Channel for Borrowing<'_> {
+    fn kind(&self) -> ChannelKind {
+        self.kind
+    }
+    fn authenticated_identity(&self) -> Option<Identity> {
+        Some(self.identity.clone())
+    }
+    fn session(&self) -> &SessionKey {
+        self.session
+    }
+    fn upgrade_grant(&self) -> Option<&UpgradeGrant> {
+        self.grant
     }
 }
 
@@ -99,7 +147,7 @@ fn identity_from(v: Option<&CValue>) -> Option<Identity> {
     };
     let mut id = Identity::new(pid(st(o, "subject")));
     id.os_user = opt_st(o, "os_user").map(user);
-    id.acting_for = opt_st(o, "acting_for").map(pid);
+    id.acting_for = opt_ref(o, "acting_for");
     id.client_id = opt_st(o, "client_id").map(|c| ClientId::new(c).unwrap());
     if let Some(CValue::Obj(sa)) = o.get("self_asserted") {
         id.self_asserted = Some(SelfAsserted::untrusted(opt_st(sa, "client_name"), opt_st(sa, "model_name")));
@@ -107,23 +155,27 @@ fn identity_from(v: Option<&CValue>) -> Option<Identity> {
     Some(id)
 }
 
-fn channel_from(o: &Obj) -> TestChannel {
+fn channel_from(table: &mut SessionTable, o: &Obj) -> TestChannel {
     TestChannel {
         kind: ChannelKind::from_wire(st(o, "kind")).unwrap(),
         identity: identity_from(o.get("identity")),
-        session: sid(st(o, "session")),
+        session: table.open_session(sid(st(o, "session"))).unwrap(),
+        grant: None,
     }
 }
 
-fn cli(session: &str, os_user: &str) -> TestChannel {
-    let mut id = Identity::new(pid(os_user));
-    id.os_user = Some(user(os_user));
-    TestChannel { kind: ChannelKind::Cli, identity: Some(id), session: sid(session) }
+fn with_identity(table: &mut SessionTable, kind: ChannelKind, label: &str, id: Identity) -> TestChannel {
+    TestChannel { kind, identity: Some(id), session: table.open_session(sid(label)).unwrap(), grant: None }
 }
 
-fn with_kind(mut ch: TestChannel, kind: ChannelKind) -> TestChannel {
-    ch.kind = kind;
-    ch
+fn local(table: &mut SessionTable, kind: ChannelKind, label: &str, os_user: &str) -> TestChannel {
+    let mut id = Identity::new(pid(os_user));
+    id.os_user = Some(user(os_user));
+    with_identity(table, kind, label, id)
+}
+
+fn cli(table: &mut SessionTable, label: &str, os_user: &str) -> TestChannel {
+    local(table, ChannelKind::Cli, label, os_user)
 }
 
 // ------------------------------------------------------------------ fakes
@@ -221,6 +273,16 @@ fn ctx() -> UpgradeContext {
     UpgradeContext { stream: "record".into(), branch: "main".into(), manifests: manifests() }
 }
 
+/// Upgrade with a prompt that takes 1 ms.
+fn upgrade(
+    table: &mut SessionTable,
+    ch: &dyn Channel,
+    presence: &FakePresence,
+    journal: &mut dyn JournalAppend,
+) -> Result<UpgradeGrant, BusError> {
+    table.upgrade_session(ch, presence, journal, &mut FakeClock::prompt_takes(1), &ctx())
+}
+
 /// The pipeline stand-in for AC-4 and AC-7: derive the principal from the channel, then
 /// journal one W2 test command under it. An error journals nothing.
 fn invoke_w2(table: &SessionTable, ch: &dyn Channel, journal: &mut MemJournal) -> Result<(), BusError> {
@@ -256,6 +318,10 @@ fn code_reason(e: &BusError) -> String {
     format!("{}/{}", e.code().as_str(), e.reason())
 }
 
+fn kind_of(table: &SessionTable, ch: &dyn Channel) -> PrincipalKind {
+    table.derive_principal(ch).unwrap().kind()
+}
+
 // ------------------------------------------------------------------ AC-1
 
 /// AC-1 as written in the spec, in its order: channel -> principal kind.
@@ -279,18 +345,16 @@ fn ac1_every_channel_kind_maps_as_labelled() {
     assert_eq!(st(&fx, "license"), "CC-BY-4.0");
     let channels = arr(&fx, "channels");
     assert_eq!(channels.len(), AC1.len());
-    let table = SessionTable::new();
+    let mut table = SessionTable::new();
     for (o, (kind, expect_kind)) in channels.iter().zip(AC1) {
         assert_eq!(st(o, "kind"), kind, "fixture order follows AC-1");
-        let expect = match o.get("expect") {
-            Some(CValue::Obj(e)) => e,
-            other => panic!("expect is {other:?}"),
-        };
+        let expect = ob(o, "expect");
         assert_eq!(st(expect, "kind"), expect_kind, "fixture label agrees with AC-1 for {kind}");
-        let p = table.derive_principal(&channel_from(o)).unwrap();
+        let ch = channel_from(&mut table, o);
+        let p = table.derive_principal(&ch).unwrap();
         assert_eq!(p.kind(), PrincipalKind::parse(expect_kind).unwrap(), "{kind}");
         assert_eq!(p.id().as_str(), st(expect, "id"), "{kind}");
-        assert_eq!(p.on_behalf_of().map(PrincipalId::as_str), opt_st(expect, "on_behalf_of"), "{kind}");
+        assert_eq!(p.on_behalf_of().cloned(), opt_ref(expect, "on_behalf_of"), "{kind}");
         assert_eq!(p.upgraded_session(), None, "{kind}");
     }
     // One fixture channel per kind, and every kind is covered.
@@ -324,13 +388,11 @@ fn req001_exactly_six_principal_kinds() {
 #[test]
 fn acting_for_is_ignored_outside_server_session_and_internal() {
     let fx = fixture("channels.json");
-    let table = SessionTable::new();
+    let mut table = SessionTable::new();
     for o in arr(&fx, "acting_for_ignored") {
-        let expect = match o.get("expect") {
-            Some(CValue::Obj(e)) => e,
-            other => panic!("expect is {other:?}"),
-        };
-        let p = table.derive_principal(&channel_from(o)).unwrap();
+        let expect = ob(o, "expect");
+        let ch = channel_from(&mut table, o);
+        let p = table.derive_principal(&ch).unwrap();
         assert_eq!(p.kind().as_str(), st(expect, "kind"), "{}", st(o, "name"));
         assert_eq!(p.id().as_str(), st(expect, "id"));
         assert_eq!(p.on_behalf_of(), None, "{}", st(o, "name"));
@@ -345,43 +407,44 @@ fn ac2_params_claiming_human_have_no_effect() {
     let channels = arr(&fx, "channels");
     let mcp = channels.iter().find(|o| st(o, "name") == "mcp").unwrap();
     // The fixture's params really claim `human`.
-    let Some(CValue::Obj(params)) = mcp.get("params") else { panic!("params") };
-    let Some(CValue::Obj(claimed)) = params.get("principal") else { panic!("params.principal") };
-    assert_eq!(st(claimed, "kind"), "human");
+    assert_eq!(st(ob(ob(mcp, "params"), "principal"), "kind"), "human");
     // derive_principal takes the channel only, so params cannot reach it.
-    let table = SessionTable::new();
-    let p = table.derive_principal(&channel_from(mcp)).unwrap();
+    let mut table = SessionTable::new();
+    let ch = channel_from(&mut table, mcp);
+    let p = table.derive_principal(&ch).unwrap();
     assert_eq!(p.kind(), PrincipalKind::Agent);
     assert_eq!(p.to_draft().kind, PrincipalKind::Agent);
     assert_eq!(p.to_draft().identity, CValue::Str("mcp-client:desktop-assistant".into()));
     // Every channel in the fixture carries params; none changes the labelled result
     // (checked in AC-1), and the same channel derives identically on every call.
     for o in &channels {
-        let ch = channel_from(o);
+        let ch = channel_from(&mut table, o);
         assert_eq!(table.derive_principal(&ch).unwrap(), table.derive_principal(&ch).unwrap());
     }
 }
 
 #[test]
 fn req007_self_asserted_names_never_change_the_principal() {
-    let base = |sa| {
+    let mut table = SessionTable::new();
+    let mut mcp = |sa: Option<Untrusted<SelfAsserted>>| {
         let mut id = Identity::new(pid("mcp-client:x"));
         id.self_asserted = sa;
-        TestChannel { kind: ChannelKind::Mcp, identity: Some(id), session: sid("mcp-1") }
+        with_identity(&mut table, ChannelKind::Mcp, "mcp-1", id)
     };
-    let table = SessionTable::new();
-    let plain = table.derive_principal(&base(None)).unwrap();
-    for (client, model) in
-        [(Some("human"), Some("human")), (Some("GUI"), None), (None, Some("system")), (Some(""), Some(""))]
-    {
-        let p = table.derive_principal(&base(Some(SelfAsserted::untrusted(client, model)))).unwrap();
+    let plain_ch = mcp(None);
+    let cases = [(Some("human"), Some("human")), (Some("GUI"), None), (None, Some("system")), (Some(""), Some(""))];
+    let others: Vec<(TestChannel, Option<&str>, Option<&str>)> =
+        cases.iter().map(|&(c, m)| (mcp(Some(SelfAsserted::untrusted(c, m))), c, m)).collect();
+    let plain = table.derive_principal(&plain_ch).unwrap();
+    for (ch, client, model) in &others {
+        let p = table.derive_principal(ch).unwrap();
         assert_eq!(p.kind(), plain.kind());
         assert_eq!(p.id(), plain.id());
         assert_eq!(p.on_behalf_of(), plain.on_behalf_of());
         assert_eq!(p.to_draft(), plain.to_draft());
         let sa = p.self_asserted().unwrap().as_untrusted();
-        assert_eq!(sa.client_name(), client);
-        assert_eq!(sa.model_name(), model);
+        assert_eq!(sa.client_name(), *client);
+        assert_eq!(sa.model_name(), *model);
     }
     // Self-asserted text is bounded: cut to MAX_SELF_ASSERTED_CHARS characters.
     let long = "\u{e9}".repeat(MAX_SELF_ASSERTED_CHARS + 10);
@@ -394,9 +457,10 @@ fn req007_self_asserted_names_never_change_the_principal() {
 
 #[test]
 fn ac3_cli_and_python_without_upgrade_are_script() {
-    let table = SessionTable::new();
+    let mut table = SessionTable::new();
     for kind in [ChannelKind::Cli, ChannelKind::Python, ChannelKind::Control] {
-        let p = table.derive_principal(&with_kind(cli("s-1", "alice"), kind)).unwrap();
+        let ch = local(&mut table, kind, "s-1", "alice");
+        let p = table.derive_principal(&ch).unwrap();
         assert_eq!(p.kind(), PrincipalKind::Script, "{kind}");
         assert_eq!(p.id().as_str(), "alice");
     }
@@ -408,13 +472,19 @@ fn ac3_cli_and_python_without_upgrade_are_script() {
 fn ac4_confirmed_upgrade_journals_then_runs_as_human() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal::default();
-    let ch = cli("cli-1", "alice");
+    let mut ch = cli(&mut table, "cli-1", "alice");
     let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(4000), &ctx()).unwrap();
+    let grant =
+        table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(4000), &ctx()).unwrap();
     assert_eq!(presence.calls.get(), 1);
     assert_eq!(presence.deadline.get(), Some(Duration::from_secs(120)));
     let req = presence.seen.borrow().clone().unwrap();
     assert_eq!((req.session.as_str(), req.channel, req.os_user.as_str()), ("cli-1", ChannelKind::Cli, "alice"));
+    assert_eq!(req.session_number, ch.session.number());
+    assert_eq!(grant.session_number(), ch.session.number());
+    // Until the channel presents the grant, it is still script.
+    assert_eq!(kind_of(&table, &ch), PrincipalKind::Script);
+    ch.grant = Some(grant);
 
     invoke_w2(&table, &ch, &mut journal).unwrap();
     assert_eq!(journal.entries.len(), 2);
@@ -424,7 +494,8 @@ fn ac4_confirmed_upgrade_journals_then_runs_as_human() {
     assert_eq!(up.header.kind(), EntryKind::PrincipalUpgrade);
     assert_eq!(up.header.principal.kind, PrincipalKind::Script, "the request comes from the script session");
     let HeaderBody::PrincipalUpgrade(u) = &up.header.body else { panic!("upgrade body") };
-    assert_eq!(u.session_id, "cli-1");
+    assert_eq!(u.session_id, format!("cli-1#{}", ch.session.number()));
+    assert_eq!(u.session_id, ch.session.journal_id());
     assert_eq!(u.method, ConfirmMethod::GuiPrompt);
     assert_eq!(u.confirmed_at, "2026-11-19T10:00:02Z");
     assert_eq!(up.header.time.utc, u.confirmed_at);
@@ -446,76 +517,135 @@ fn ac4_confirmed_upgrade_journals_then_runs_as_human() {
 
     let p = table.derive_principal(&ch).unwrap();
     assert_eq!(p.kind(), PrincipalKind::Human);
-    assert_eq!(p.upgraded_session().map(SessionId::as_str), Some("cli-1"));
+    assert_eq!(p.upgraded_session(), Some(ch.session.number()));
 
     // A later session of the same process starts as script again.
-    assert_eq!(table.derive_principal(&cli("cli-2", "alice")).unwrap().kind(), PrincipalKind::Script);
-    // Ending the session removes the row; reusing its ID is script.
-    assert!(table.end_session(&sid("cli-1")));
-    assert!(!table.end_session(&sid("cli-1")));
-    assert_eq!(table.derive_principal(&ch).unwrap().kind(), PrincipalKind::Script);
+    let later = cli(&mut table, "cli-2", "alice");
+    assert!(later.session.number() > ch.session.number());
+    assert_eq!(kind_of(&table, &later), PrincipalKind::Script);
+    // Ending the session revokes the grant even though the channel still holds it.
+    assert!(table.is_upgraded(&ch.session));
+    assert!(table.end_session(&ch.session));
+    assert!(!table.end_session(&ch.session));
+    assert_eq!(kind_of(&table, &ch), PrincipalKind::Script);
     assert!(table.is_empty());
-    // A fresh table (a restart) never knows the session.
-    assert_eq!(SessionTable::new().derive_principal(&ch).unwrap().kind(), PrincipalKind::Script);
 }
 
 #[test]
 fn ac4_python_session_upgrades_with_os_presence() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal::default();
-    let ch = with_kind(cli("py-1", "alice"), ChannelKind::Python);
+    let mut ch = local(&mut table, ChannelKind::Python, "py-1", "alice");
     let presence = FakePresence::confirms("alice", ConfirmMethod::OsPresence);
-    table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(10), &ctx()).unwrap();
+    ch.grant = Some(upgrade(&mut table, &ch, &presence, &mut journal).unwrap());
     let HeaderBody::PrincipalUpgrade(u) = &journal.entries[0].header.body else { panic!("upgrade body") };
     assert_eq!(u.method, ConfirmMethod::OsPresence);
-    assert_eq!(table.derive_principal(&ch).unwrap().kind(), PrincipalKind::Human);
+    assert_eq!(kind_of(&table, &ch), PrincipalKind::Human);
 }
 
 #[test]
-fn upgraded_session_is_human_only_for_same_channel_kind_and_os_user() {
+fn guessed_or_reused_session_ids_derive_as_script() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal::default();
-    let ch = cli("s-1", "alice");
+    let mut a = cli(&mut table, "cli-1", "alice");
     let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap();
-    // Another OS user presenting the same session ID stays script.
-    assert_eq!(table.derive_principal(&cli("s-1", "bob")).unwrap().kind(), PrincipalKind::Script);
-    // Same session ID on another channel kind keeps that channel's mapping.
-    let py = with_kind(ch.clone(), ChannelKind::Python);
-    assert_eq!(table.derive_principal(&py).unwrap().kind(), PrincipalKind::Script);
-    let mcp = with_kind(ch.clone(), ChannelKind::Mcp);
-    assert_eq!(table.derive_principal(&mcp).unwrap().kind(), PrincipalKind::Agent);
-    let ctl = with_kind(ch.clone(), ChannelKind::Control);
-    assert_eq!(table.derive_principal(&ctl).unwrap().kind(), PrincipalKind::Script);
-    // A session whose identity has no OS user stays script.
-    let mut no_user = ch.clone();
-    no_user.identity.as_mut().unwrap().os_user = None;
-    assert_eq!(table.derive_principal(&no_user).unwrap().kind(), PrincipalKind::Script);
+    a.grant = Some(upgrade(&mut table, &a, &presence, &mut journal).unwrap());
+    assert_eq!(kind_of(&table, &a), PrincipalKind::Human);
+
+    // A second client of the same OS user names the same session label: it gets its own
+    // bus-issued number and no grant, so it is script.
+    let b = cli(&mut table, "cli-1", "alice");
+    assert_ne!(b.session.number(), a.session.number());
+    assert_eq!(b.session.label(), a.session.label());
+    assert_eq!(kind_of(&table, &b), PrincipalKind::Script);
+    assert!(!table.is_upgraded(&b.session));
+
+    // Even holding a reference to A's grant, B's own key does not match it.
+    let alice = a.identity.clone().unwrap();
+    let forged =
+        Borrowing { kind: ChannelKind::Cli, identity: alice.clone(), session: &b.session, grant: a.grant.as_ref() };
+    assert_eq!(kind_of(&table, &forged), PrincipalKind::Script);
+    // A's key without the grant is script.
+    let keyless = Borrowing { kind: ChannelKind::Cli, identity: alice.clone(), session: &a.session, grant: None };
+    assert_eq!(kind_of(&table, &keyless), PrincipalKind::Script);
+
+    // A key and grant from another table (another process, or a restart) are worthless here.
+    let mut other = SessionTable::new();
+    let mut c = cli(&mut other, "cli-1", "alice");
+    c.grant = Some(upgrade(&mut other, &c, &presence, &mut journal).unwrap());
+    assert_eq!(kind_of(&other, &c), PrincipalKind::Human);
+    assert_eq!(kind_of(&table, &c), PrincipalKind::Script);
+    let mixed = Borrowing { kind: ChannelKind::Cli, identity: alice, session: &a.session, grant: c.grant.as_ref() };
+    assert_eq!(kind_of(&table, &mixed), PrincipalKind::Script);
+    // Upgrading with another table's key is refused before any prompt.
+    let calls = presence.calls.get();
+    let e = upgrade(&mut table, &c, &presence, &mut journal).unwrap_err();
+    assert_eq!(code_reason(&e), "internal/invariant_violated");
+    assert_eq!(presence.calls.get(), calls);
 }
 
 #[test]
-fn second_upgrade_of_an_upgraded_session_neither_prompts_nor_journals() {
+fn dropping_or_replacing_a_grant_revokes_it() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal::default();
-    let ch = cli("s-1", "alice");
-    let first = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    table.upgrade_session(&ch, &first, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap();
-    let second = FakePresence::new(PresenceOutcome::Declined);
-    table.upgrade_session(&ch, &second, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap();
-    assert_eq!(second.calls.get(), 0);
-    assert_eq!(journal.entries.len(), 1);
+    let mut ch = cli(&mut table, "cli-1", "alice");
+    let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
+    ch.grant = Some(upgrade(&mut table, &ch, &presence, &mut journal).unwrap());
+    assert_eq!(table.len(), 1);
+    ch.grant = None; // drops the grant
+    assert_eq!(table.len(), 0);
+    assert!(!table.is_upgraded(&ch.session));
+    assert_eq!(kind_of(&table, &ch), PrincipalKind::Script);
+
+    // Every upgrade prompts and journals; a newer grant revokes the older one.
+    let first = upgrade(&mut table, &ch, &presence, &mut journal).unwrap();
+    let second = upgrade(&mut table, &ch, &presence, &mut journal).unwrap();
+    assert_eq!(presence.calls.get(), 3);
+    assert_eq!(journal.entries.len(), 3);
+    let alice = ch.identity.clone().unwrap();
+    let old = Borrowing { kind: ChannelKind::Cli, identity: alice.clone(), session: &ch.session, grant: Some(&first) };
+    assert_eq!(kind_of(&table, &old), PrincipalKind::Script);
+    let new = Borrowing { kind: ChannelKind::Cli, identity: alice, session: &ch.session, grant: Some(&second) };
+    assert_eq!(kind_of(&table, &new), PrincipalKind::Human);
+    assert_eq!(table.len(), 1);
+}
+
+#[test]
+fn a_grant_counts_only_for_the_same_channel_kind_and_os_user() {
+    let mut table = SessionTable::new();
+    let mut journal = MemJournal::default();
+    let mut ch = cli(&mut table, "s-1", "alice");
+    let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
+    ch.grant = Some(upgrade(&mut table, &ch, &presence, &mut journal).unwrap());
+    let alice = ch.identity.clone().unwrap();
+    let mut bob = Identity::new(pid("bob"));
+    bob.os_user = Some(user("bob"));
+    let mut no_user = alice.clone();
+    no_user.os_user = None;
+    let cases = [
+        (ChannelKind::Cli, bob, PrincipalKind::Script),
+        (ChannelKind::Cli, no_user, PrincipalKind::Script),
+        (ChannelKind::Python, alice.clone(), PrincipalKind::Script),
+        (ChannelKind::Control, alice.clone(), PrincipalKind::Script),
+        (ChannelKind::Mcp, alice.clone(), PrincipalKind::Agent),
+        (ChannelKind::Cli, alice, PrincipalKind::Human),
+    ];
+    for (kind, identity, want) in cases {
+        let b = Borrowing { kind, identity, session: &ch.session, grant: ch.grant.as_ref() };
+        assert_eq!(kind_of(&table, &b), want, "{kind}");
+    }
 }
 
 #[test]
 fn req011_journal_failure_leaves_the_session_script() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal { fail: true, ..MemJournal::default() };
-    let ch = cli("s-1", "alice");
+    let ch = cli(&mut table, "s-1", "alice");
     let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    let e = table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap_err();
+    let e = upgrade(&mut table, &ch, &presence, &mut journal).unwrap_err();
     assert_eq!(code_reason(&e), "internal/journal_unavailable");
     assert!(table.is_empty());
-    assert_eq!(table.derive_principal(&ch).unwrap().kind(), PrincipalKind::Script);
+    assert_eq!(kind_of(&table, &ch), PrincipalKind::Script);
 }
 
 // ------------------------------------------------------------------ AC-5
@@ -554,19 +684,18 @@ fn ac5_presence_outcomes_as_labelled() {
     let mut refused = 0;
     for case in cases {
         let name = st(case, "name");
-        let Some(CValue::Obj(outcome)) = case.get("outcome") else { panic!("{name}: outcome") };
-        let presence = FakePresence::new(outcome_from(outcome));
+        let presence = FakePresence::new(outcome_from(ob(case, "outcome")));
         let mut table = SessionTable::new();
         let mut journal = MemJournal::default();
-        let ch = cli("cli-5", os_user);
+        let mut ch = cli(&mut table, "cli-5", os_user);
         let mut clock = FakeClock::prompt_takes(elapsed_ms(case));
         let got = table.upgrade_session(&ch, &presence, &mut journal, &mut clock, &ctx());
         assert_eq!(presence.calls.get(), 1, "{name}");
         match st(case, "expect") {
             "ok" => {
-                got.unwrap_or_else(|e| panic!("{name}: {e}"));
+                ch.grant = Some(got.unwrap_or_else(|e| panic!("{name}: {e}")));
                 assert_eq!(journal.entries.len(), 1, "{name}");
-                assert_eq!(table.derive_principal(&ch).unwrap().kind(), PrincipalKind::Human, "{name}");
+                assert_eq!(kind_of(&table, &ch), PrincipalKind::Human, "{name}");
             }
             want => {
                 refused += 1;
@@ -575,7 +704,7 @@ fn ac5_presence_outcomes_as_labelled() {
                 assert_eq!(code_reason(&e), want, "{name}");
                 assert!(journal.entries.is_empty(), "{name}: journal unchanged");
                 assert!(table.is_empty(), "{name}");
-                assert_eq!(table.derive_principal(&ch).unwrap().kind(), PrincipalKind::Script, "{name}");
+                assert_eq!(kind_of(&table, &ch), PrincipalKind::Script, "{name}");
             }
         }
     }
@@ -593,10 +722,10 @@ fn ac5_reasons_are_the_closed_upgrade_refused_set() {
 fn session_without_os_user_cannot_upgrade() {
     let mut table = SessionTable::new();
     let mut journal = MemJournal::default();
-    let mut ch = cli("s-1", "alice");
+    let mut ch = cli(&mut table, "s-1", "alice");
     ch.identity.as_mut().unwrap().os_user = None;
     let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-    let e = table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap_err();
+    let e = upgrade(&mut table, &ch, &presence, &mut journal).unwrap_err();
     assert_eq!(code_reason(&e), "upgrade_refused/user_mismatch");
     assert_eq!(presence.calls.get(), 0);
     assert!(journal.entries.is_empty());
@@ -609,16 +738,14 @@ fn ac6_upgrade_on_other_channels_is_refused_without_prompt() {
     let fx = fixture("channels.json");
     let mut checked = BTreeSet::new();
     for o in arr(&fx, "channels") {
-        let ch = channel_from(o);
+        let mut table = SessionTable::new();
+        let ch = channel_from(&mut table, o);
         if ch.kind.upgradable() {
             continue;
         }
-        let mut table = SessionTable::new();
         let mut journal = MemJournal::default();
         let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-        let e = table
-            .upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx())
-            .expect_err(ch.kind.as_str());
+        let e = upgrade(&mut table, &ch, &presence, &mut journal).expect_err(ch.kind.as_str());
         assert_eq!(code_reason(&e), "upgrade_refused/channel", "{}", ch.kind);
         assert_eq!(presence.calls.get(), 0, "{}: no prompt shown", ch.kind);
         assert!(journal.entries.is_empty());
@@ -638,8 +765,8 @@ fn ac7_channel_without_identity_is_unauthenticated_and_journals_nothing() {
     assert_eq!(cases.len(), 5);
     for o in cases {
         let name = st(o, "name");
-        let ch = channel_from(o);
         let mut table = SessionTable::new();
+        let ch = channel_from(&mut table, o);
         let mut journal = MemJournal::default();
         let e = table.derive_principal(&ch).expect_err(name);
         assert_eq!(code_reason(&e), "unauthenticated/no_identity", "{name}");
@@ -647,60 +774,121 @@ fn ac7_channel_without_identity_is_unauthenticated_and_journals_nothing() {
         assert_eq!(e.code(), Code::Unauthenticated, "{name}");
         assert!(journal.entries.is_empty(), "{name}: journals nothing");
         let presence = FakePresence::confirms("alice", ConfirmMethod::GuiPrompt);
-        let e = table
-            .upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx())
-            .expect_err(name);
+        let e = upgrade(&mut table, &ch, &presence, &mut journal).expect_err(name);
         assert_eq!(e.code(), Code::Unauthenticated, "{name}");
         assert_eq!(presence.calls.get(), 0, "{name}");
         assert!(journal.entries.is_empty(), "{name}");
     }
-    let json = String::from_utf8(
-        BusError::Unauthenticated(fid_bus::error::UnauthenticatedReason::NoIdentity, Detail::empty())
-            .to_json()
-            .unwrap(),
-    )
-    .unwrap();
+    let err = BusError::Unauthenticated(UnauthenticatedReason::NoIdentity, Detail::empty());
+    let json = String::from_utf8(err.to_json().unwrap()).unwrap();
     assert_eq!(json, r#"{"code":"unauthenticated","detail":"","reason":"no_identity"}"#);
 }
 
-// ------------------------------------------------------------------ AC-8
+// ------------------------------------------------------------------ AC-8 and attribution
+
+fn recompute_for(table: &mut SessionTable, trigger: PrincipalRef) -> TestChannel {
+    let mut id = Identity::new(pid("core:recompute"));
+    id.acting_for = Some(trigger);
+    with_identity(table, ChannelKind::Internal, "core-1", id)
+}
 
 #[test]
 fn ac8_internal_recompute_names_the_triggering_human() {
-    let table = SessionTable::new();
-    let gui = TestChannel {
-        kind: ChannelKind::Gui,
-        identity: Some({
-            let mut id = Identity::new(pid("alice"));
-            id.os_user = Some(user("alice"));
-            id
-        }),
-        session: sid("desk-1"),
-    };
+    let mut table = SessionTable::new();
+    let gui = local(&mut table, ChannelKind::Gui, "desk-1", "alice");
     let human = table.derive_principal(&gui).unwrap();
     assert_eq!(human.kind(), PrincipalKind::Human);
-    let mut id = Identity::new(pid("core:recompute"));
-    id.acting_for = Some(human.id().clone());
-    let internal = TestChannel { kind: ChannelKind::Internal, identity: Some(id), session: sid("core-1") };
+    let internal = recompute_for(&mut table, human.reference());
     let p = table.derive_principal(&internal).unwrap();
     assert_eq!(p.kind(), PrincipalKind::System);
-    assert_eq!(p.on_behalf_of(), Some(human.id()));
-    assert_eq!(p.to_draft().on_behalf_of, Some(CValue::Str("alice".into())));
+    let behalf = p.on_behalf_of().unwrap();
+    assert_eq!((behalf.kind, behalf.id.as_str()), (PrincipalKind::Human, "alice"));
+    let mut want = BTreeMap::new();
+    want.insert("id".to_string(), CValue::Str("alice".into()));
+    want.insert("kind".to_string(), CValue::Str("human".into()));
+    assert_eq!(p.to_draft().on_behalf_of, Some(CValue::Obj(want)));
+}
+
+#[test]
+fn on_behalf_of_keeps_the_trigger_kind() {
+    // alice as script (CLI) and alice as human (GUI) trigger the same recompute.
+    let mut table = SessionTable::new();
+    let mut journal = MemJournal::default();
+    let cli_ch = local(&mut table, ChannelKind::Cli, "cli-1", "alice");
+    let gui_ch = local(&mut table, ChannelKind::Gui, "desk-1", "alice");
+    let triggers = [table.derive_principal(&cli_ch).unwrap(), table.derive_principal(&gui_ch).unwrap()];
+    assert_eq!(triggers[0].id(), triggers[1].id());
+    let mut drafts = Vec::new();
+    for t in &triggers {
+        let ch = recompute_for(&mut table, t.reference());
+        let p = table.derive_principal(&ch).unwrap();
+        assert_eq!(p.on_behalf_of().map(|r| r.kind), Some(t.kind()));
+        drafts.push(p.to_draft().on_behalf_of.unwrap());
+        invoke_w2(&table, &ch, &mut journal).unwrap();
+    }
+    assert_ne!(drafts[0], drafts[1], "alice-script and alice-human are distinguishable");
+    // The journal commits the object: each verifies against its own value only.
+    for (entry, value) in journal.entries.iter().zip(&drafts) {
+        let salt = entry.payload.salts.get(&Field::OnBehalfOf);
+        verify_commitment(&entry.header, Field::OnBehalfOf, salt, Some(value)).unwrap();
+    }
+    let salt = journal.entries[0].payload.salts.get(&Field::OnBehalfOf);
+    assert!(verify_commitment(&journal.entries[0].header, Field::OnBehalfOf, salt, Some(&drafts[1])).is_err());
 }
 
 // ------------------------------------------------------------------ bounds
+
+#[test]
+fn identifiers_follow_the_labelled_cases() {
+    let fx = fixture("ids.json");
+    assert_eq!(st(&fx, "license"), "CC-BY-4.0");
+    let cases = arr(&fx, "cases");
+    assert_eq!(cases.len(), 28);
+    for case in cases {
+        let name = st(case, "name");
+        let text = st(case, "text");
+        let want = st(case, "expect");
+        let got = [
+            PrincipalId::new(text).map(|_| ()),
+            ClientId::new(text).map(|_| ()),
+            OsUser::new(text).map(|_| ()),
+            SessionId::new(text).map(|_| ()),
+        ];
+        for g in got {
+            let code = match g {
+                Ok(()) => "ok",
+                Err(e) => e.code(),
+            };
+            assert_eq!(code, want, "{name}");
+        }
+    }
+}
 
 #[test]
 fn identifiers_are_bounded_and_case_significant() {
     assert_eq!(PrincipalId::new(""), Err(IdError::Empty));
     assert_eq!(OsUser::new(&"a".repeat(MAX_ID_BYTES + 1)), Err(IdError::TooLong));
     assert!(SessionId::new(&"a".repeat(MAX_ID_BYTES)).is_ok());
-    assert_eq!(ClientId::new("a\nb"), Err(IdError::ControlChar));
-    assert_eq!(OsUser::new("bob\u{7f}"), Err(IdError::ControlChar));
-    assert_eq!(IdError::TooLong.code(), "too_long");
-    // OS user names compare byte for byte: a case-only difference is another user.
+    // 128 two-byte characters are 256 bytes; one more is too long.
+    assert!(OsUser::new(&"\u{e9}".repeat(128)).is_ok());
+    assert_eq!(OsUser::new(&"\u{e9}".repeat(129)), Err(IdError::TooLong));
+    assert_eq!(IdError::NotNfc.code(), "not_nfc");
+    // OS user names compare byte for byte: a case-only difference is another user. The
+    // PLAT provider must report the canonical spelling on case-insensitive platforms.
     assert_ne!(user("Alice"), user("alice"));
     assert_eq!(PrincipalId::from(&user("alice")).as_str(), "alice");
+}
+
+#[test]
+fn session_numbers_are_monotonic_and_never_reused() {
+    let mut table = SessionTable::new();
+    let mut last = 0;
+    for _ in 0..100 {
+        let k = table.open_session(sid("same-label")).unwrap();
+        assert!(k.number() > last);
+        last = k.number();
+        assert!(!table.end_session(&k));
+    }
 }
 
 #[test]
@@ -708,21 +896,21 @@ fn session_table_is_bounded() {
     let mut table = SessionTable::new();
     let mut journal = CountingJournal::default();
     let presence = FakePresence::confirms("alice", ConfirmMethod::OsPresence);
+    let mut held = Vec::new();
     for i in 0..MAX_UPGRADED_SESSIONS {
-        let ch = cli(&format!("s-{i}"), "alice");
-        table.upgrade_session(&ch, &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx()).unwrap();
+        let mut ch = cli(&mut table, &format!("s-{i}"), "alice");
+        ch.grant = Some(upgrade(&mut table, &ch, &presence, &mut journal).unwrap());
+        held.push(ch);
     }
     assert_eq!(table.len(), MAX_UPGRADED_SESSIONS);
     let calls = presence.calls.get();
-    let e = table
-        .upgrade_session(&cli("one-more", "alice"), &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx())
-        .unwrap_err();
+    let extra = cli(&mut table, "one-more", "alice");
+    let e = upgrade(&mut table, &extra, &presence, &mut journal).unwrap_err();
     assert_eq!(code_reason(&e), "internal/storage");
     assert_eq!(presence.calls.get(), calls, "no prompt when the table is full");
     assert_eq!(journal.0, MAX_UPGRADED_SESSIONS);
-    // Ending a session frees a row.
-    assert!(table.end_session(&sid("s-0")));
-    table
-        .upgrade_session(&cli("one-more", "alice"), &presence, &mut journal, &mut FakeClock::prompt_takes(1), &ctx())
-        .unwrap();
+    // Closing a session frees a row.
+    let first = held.remove(0);
+    assert!(table.end_session(&first.session));
+    upgrade(&mut table, &extra, &presence, &mut journal).unwrap();
 }

@@ -1,7 +1,7 @@
 {
   "license": "CC-BY-4.0",
   "node": "CORE.BUS.PRIN",
-  "note": "Hand-labelled from REQ-002..008, REQ-012 and AC-1, AC-2, AC-7. Synthetic identities. The params of each call are what a client sent; they must have no effect.",
+  "note": "Hand-labelled from REQ-002..008, REQ-012 and AC-1, AC-2, AC-7. Synthetic identities. session is the surface label only; the bus issues the session key. The params of each call are what a client sent; they must have no effect.",
   "channels": [
     {
       "name": "gui",
@@ -76,17 +76,17 @@
       "name": "internal",
       "kind": "internal",
       "session": "core-1",
-      "identity": { "subject": "core:recompute", "acting_for": "alice" },
+      "identity": { "subject": "core:recompute", "acting_for": { "kind": "human", "id": "alice" } },
       "params": {},
-      "expect": { "kind": "system", "id": "core:recompute", "on_behalf_of": "alice" }
+      "expect": { "kind": "system", "id": "core:recompute", "on_behalf_of": { "kind": "human", "id": "alice" } }
     },
     {
       "name": "server_session",
       "kind": "server_session",
       "session": "web-7f3a",
-      "identity": { "subject": "server-session:7f3a", "acting_for": "server-user:carol" },
+      "identity": { "subject": "server-session:7f3a", "acting_for": { "kind": "human", "id": "server-user:carol" } },
       "params": { "principal": { "kind": "human", "id": "server-user:carol" } },
-      "expect": { "kind": "script", "id": "server-session:7f3a", "on_behalf_of": "server-user:carol" }
+      "expect": { "kind": "script", "id": "server-session:7f3a", "on_behalf_of": { "kind": "human", "id": "server-user:carol" } }
     },
     {
       "name": "server_service",
@@ -102,14 +102,14 @@
       "name": "mcp_acting_for",
       "kind": "mcp",
       "session": "mcp-2",
-      "identity": { "subject": "mcp-client:x", "acting_for": "alice" },
+      "identity": { "subject": "mcp-client:x", "acting_for": { "kind": "human", "id": "alice" } },
       "expect": { "kind": "agent", "id": "mcp-client:x", "on_behalf_of": null }
     },
     {
       "name": "cli_acting_for",
       "kind": "cli",
       "session": "cli-2",
-      "identity": { "subject": "alice", "os_user": "alice", "acting_for": "root" },
+      "identity": { "subject": "alice", "os_user": "alice", "acting_for": { "kind": "human", "id": "root" } },
       "expect": { "kind": "script", "id": "alice", "on_behalf_of": null }
     }
   ],
