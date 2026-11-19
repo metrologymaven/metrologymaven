@@ -1,0 +1,2 @@
+ALLOW-UNLISTED ext-opt via fid-krn -> fid-mdl -> ext-opt
+ALLOW-UNLISTED ext-pm via fid-krn -> fid-mdl -> ext-pm
