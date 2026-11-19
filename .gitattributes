@@ -7,6 +7,8 @@ fixtures/hal/idl/stamp/** -text
 fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
+# HAL.IDL.BASE.ERR fixtures: records are compared byte for byte after a round trip.
+fixtures/hal/idl/base/err/** -text
 schemas/hal/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
@@ -141,5 +143,8 @@ fixtures/viz/shlint/** -text
 fixtures/man/wasm/** -text
 crates/fid-kernel-wasm/wasm-runtime.toml -text
 crates/fid-kernel-wasm/wasm-imports.allow -text
-# CORE.BUS.PRIN fixtures: hand-labelled channel descriptors and presence outcomes; never convert line endings.
+# RPT.OUTPUT.PDF.TEXT: fonts and byte-compared golden outputs (PDFs, CMap, text objects).
+crates/fid-report-pdf/assets/fonts/*.ttf binary
+fixtures/rpt/output/text/** -text
+# CORE.BUS.PRIN fixtures: hand-labelled channel descriptors, presence outcomes and identifier cases; never convert line endings.
 fixtures/core/bus/principal/** -text
