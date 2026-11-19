@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gdt]
 satisfies: [REQ-GDT.DRF-001]
 covers: [GOM.GDT.14, SA.GDT.03]
 depends_on: [GDT.CHAR.MODEL]
