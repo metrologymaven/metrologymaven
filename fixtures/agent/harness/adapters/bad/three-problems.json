@@ -1,0 +1,1 @@
+{"name": "bad", "version": "1", "prompt": "socket", "model": "m", "settings": {}, "shell": false, "argv": ["agent", "--mcp-config", "{mcp_config}", "{oracle}"], "timeout": 5}
