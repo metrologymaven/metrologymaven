@@ -1,0 +1,326 @@
+{
+ "cases": [
+  {
+   "name": "additive",
+   "baseline": "baseline.json",
+   "current": "additive.json",
+   "exit": 0,
+   "failures": [],
+   "report": "registry-gate: ok\n"
+  },
+  {
+   "name": "type_change",
+   "baseline": "baseline.json",
+   "current": "type_change.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "type_changed",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/params_schema/properties/tol/type"
+    }
+   ],
+   "report": "{\"code\":\"type_changed\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/params_schema/properties/tol/type\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "class_change",
+   "baseline": "baseline.json",
+   "current": "class_change.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "side_effect_changed",
+     "command": "demo.export",
+     "major": 1,
+     "pointer": "/side_effect"
+    }
+   ],
+   "report": "{\"code\":\"side_effect_changed\",\"command\":\"demo.export\",\"major\":1,\"pointer\":\"/side_effect\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "silent_removal",
+   "baseline": "baseline.json",
+   "current": "silent_removal.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "silent_removal",
+     "command": "demo.export",
+     "major": 1,
+     "pointer": ""
+    }
+   ],
+   "report": "{\"code\":\"silent_removal\",\"command\":\"demo.export\",\"major\":1,\"pointer\":\"\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "projection_change",
+   "baseline": "baseline.json",
+   "current": "projection_change.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "human_only_changed",
+     "command": "demo.private",
+     "major": 1,
+     "pointer": "/human_only"
+    },
+    {
+     "code": "mcp_projection_changed",
+     "command": "demo.private",
+     "major": 1,
+     "pointer": "/mcp_projection"
+    }
+   ],
+   "report": "{\"code\":\"human_only_changed\",\"command\":\"demo.private\",\"major\":1,\"pointer\":\"/human_only\"}\n{\"code\":\"mcp_projection_changed\",\"command\":\"demo.private\",\"major\":1,\"pointer\":\"/mcp_projection\"}\nregistry-gate: fail (2)\n"
+  },
+  {
+   "name": "unclassified",
+   "baseline": "baseline.json",
+   "current": "unclassified.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "unclassified_construct",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/params_schema/oneOf"
+    }
+   ],
+   "report": "{\"code\":\"unclassified_construct\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/params_schema/oneOf\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "multi",
+   "baseline": "baseline.json",
+   "current": "multi.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "side_effect_changed",
+     "command": "demo.export",
+     "major": 1,
+     "pointer": "/side_effect"
+    },
+    {
+     "code": "type_changed",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/params_schema/properties/tol/type"
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.private",
+     "major": 1,
+     "pointer": ""
+    }
+   ],
+   "report": "{\"code\":\"side_effect_changed\",\"command\":\"demo.export\",\"major\":1,\"pointer\":\"/side_effect\"}\n{\"code\":\"type_changed\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/params_schema/properties/tol/type\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.private\",\"major\":1,\"pointer\":\"\"}\nregistry-gate: fail (3)\n"
+  },
+  {
+   "name": "lifecycle_legal",
+   "baseline": "baseline.json",
+   "current": "lifecycle_legal.json",
+   "exit": 0,
+   "failures": [],
+   "report": "registry-gate: ok\n"
+  },
+  {
+   "name": "lifecycle_legal_dated",
+   "baseline": "baseline.json",
+   "current": "lifecycle_legal.json",
+   "release_date": "2026-02-01",
+   "exit": 0,
+   "failures": [],
+   "report": "registry-gate: ok\n"
+  },
+  {
+   "name": "lifecycle_wrong_release_date",
+   "baseline": "baseline.json",
+   "current": "lifecycle_legal.json",
+   "release_date": "2026-03-01",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    },
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    },
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.old",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    }
+   ],
+   "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\n{\"code\":\"bad_lifecycle\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\n{\"code\":\"bad_lifecycle\",\"command\":\"demo.old\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\nregistry-gate: fail (3)\n"
+  },
+  {
+   "name": "illegal_transition",
+   "baseline": "baseline.json",
+   "current": "illegal_transition.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "illegal_transition",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"illegal_transition\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "deprecation_too_short",
+   "baseline": "baseline.json",
+   "current": "deprecation_too_short.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "deprecation_too_short",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"deprecation_too_short\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "removal_too_early",
+   "baseline": "baseline.json",
+   "current": "removal_too_early.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "removal_too_early",
+     "command": "demo.old",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"removal_too_early\",\"command\":\"demo.old\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "same_state_change",
+   "baseline": "baseline.json",
+   "current": "same_state_change.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "illegal_transition",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"illegal_transition\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "stale_since",
+   "baseline": "baseline.json",
+   "current": "stale_since.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    }
+   ],
+   "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "bad_lifecycle_new",
+   "baseline": "baseline.json",
+   "current": "bad_lifecycle_new.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.newcmd",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.newcmd\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "drop_removed",
+   "baseline": "baseline_with_removed.json",
+   "current": "baseline.json",
+   "exit": 0,
+   "failures": [],
+   "report": "registry-gate: ok\n"
+  },
+  {
+   "name": "baseline_tampered",
+   "baseline": "baseline_tampered.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_no_sidecar",
+   "baseline": "baseline_nosidecar.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_upper_sidecar",
+   "baseline": "baseline_upper.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_two_line_sidecar",
+   "baseline": "baseline_two_lines.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_duplicate_key",
+   "baseline": "baseline_dupkey.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_bad_lifecycle",
+   "baseline": "baseline_badlife.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_missing",
+   "baseline": "baseline_does_not_exist.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "declarations_bad_digest",
+   "baseline": "baseline.json",
+   "current": "declarations_bad_digest.json",
+   "exit": 2,
+   "code": "declarations_invalid"
+  },
+  {
+   "name": "format_mismatch",
+   "baseline": "baseline.json",
+   "current": "format_mismatch.json",
+   "exit": 2,
+   "code": "format_mismatch"
+  }
+ ]
+}

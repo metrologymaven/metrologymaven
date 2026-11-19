@@ -1,0 +1,338 @@
+{
+ "format": 1,
+ "quantity_catalogue_digest": "sha256:abababababababababababababababababababababababababababababababab",
+ "commands": [
+  {
+   "id": "demo.export",
+   "major": 1,
+   "title": "Demo demo.export",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:225a565b2de798f32c85d8c5401e02901fc62f7129b40e6477a00e8335040141"
+  },
+  {
+   "id": "demo.legacy",
+   "major": 1,
+   "title": "Demo demo.legacy",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "deprecated",
+    "since": "2025-01-15",
+    "replaced_by": "demo.legacy@2"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:34fd1effe05aba13005350b5f8234f30777f8d11a2d8e926780bbbd4cf68da33"
+  },
+  {
+   "id": "demo.legacy",
+   "major": 2,
+   "title": "Demo demo.legacy",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2025-01-15"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:c0eeeae2ec189e052e5673c985db9379db1a1c7416a4972cbc6f7d8c5dd0f5ef"
+  },
+  {
+   "id": "demo.measure",
+   "major": 1,
+   "title": "Demo demo.measure",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "string",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:46c861d3bf7bdc8132c4b8068374986f7fa49a30c7c40f08aa2caadf9a868e80"
+  },
+  {
+   "id": "demo.old",
+   "major": 1,
+   "title": "Demo demo.old",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2025-06-01",
+    "remove_after": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:a9755a6fe7b206f732e543b9a5a2f832ffb18a298cb8352bb95907c57a11cc53"
+  },
+  {
+   "id": "demo.private",
+   "major": 1,
+   "title": "Demo demo.private",
+   "description": "Demo command for the registry gate fixtures.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "tol"
+    ],
+    "properties": {
+     "tol": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "deviation"
+    ],
+    "properties": {
+     "deviation": {
+      "type": "number"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [
+    "geo.fit.lsq@1.0.0"
+   ],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false,
+   "definition_digest": "sha256:7f2c6b6c58ce396ba3e896eda2da59f8e331d3a7ede388e5cea90c89c6cefe45"
+  }
+ ]
+}

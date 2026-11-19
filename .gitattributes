@@ -104,3 +104,5 @@ fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# CORE.REG.VER.GATE fixtures: the baseline digest is over exact bytes; never convert line endings.
+fixtures/core/reg/ver/gate/** -text

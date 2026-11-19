@@ -801,6 +801,7 @@ dependencies = [
  "fid-accept",
  "fid-canon",
  "fid-mig",
+ "fid-registry",
  "fid-types",
  "fid-uuid",
  "sha2 0.10.9",

@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-CORE.REG.VER-005, REQ-CORE.REG.VER-006]
 covers: []
 depends_on: [CORE.REG.VER.COMPAT, CORE.REG.VER.LIFE]
