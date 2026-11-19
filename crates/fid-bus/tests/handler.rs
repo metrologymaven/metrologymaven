@@ -687,7 +687,10 @@ fn checked_events_are_bound_to_their_command_and_principal() {
         a.principal().reference(),
         PrincipalRef { kind: PrincipalKind::Human, id: PrincipalId::new("alice").unwrap() }
     );
-    assert_eq!(b.principal().reference(), PrincipalRef { kind: PrincipalKind::Agent, id: PrincipalId::new("bot").unwrap() });
+    assert_eq!(
+        b.principal().reference(),
+        PrincipalRef { kind: PrincipalKind::Agent, id: PrincipalId::new("bot").unwrap() }
+    );
     assert_ne!(a, b);
     let (command, principal, events) = b.into_parts();
     assert_eq!((command.as_str(), principal.id().as_str(), events), ("test.create_element@2", "bot", vec![created]));
