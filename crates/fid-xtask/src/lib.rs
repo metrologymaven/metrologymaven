@@ -38,6 +38,9 @@
 //! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
 //! [`conic_audit`].
 //!
+//! `registry-gate`: the build gate against the released baseline manifest (spec node
+//! `CORE.REG.VER.GATE`), in [`registry_gate`].
+//!
 //! `kernel-allow`: the kernel-graph third-party dependency allowlist (spec node
 //! `ECO.REPO.ALLOW`), in [`kernel_allow`]; it reuses the layer map and the resolved graph
 //! built here.
@@ -50,6 +53,7 @@ pub mod kernel_allow;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
+pub mod registry_gate;
 pub mod rel;
 
 use fid_canon::{parse, CValue};

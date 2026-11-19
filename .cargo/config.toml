@@ -19,6 +19,7 @@
 # cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] [--protocol <md>]  (FLOW.STUDY.PROTO)
 # cargo xtask mig ladder-check --ladder <json> --manifest <json>  (MIG.LADDER.DEF)
 # cargo xtask conic-audit [--dir <dir>] [--audit <toml>] [--report <json>] [--allowlist <toml>] [--previous <toml>]  (KRN.SOLV.CONIC.VEND)
+# cargo xtask registry-gate --current <declarations.json> [--baseline <json>] [--release-date <date>]  (CORE.REG.VER.GATE)
 xtask = "run -q -p fid-xtask --"
 
 # Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.89).
