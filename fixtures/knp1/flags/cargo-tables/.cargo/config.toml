@@ -1,0 +1,13 @@
+[alias]
+kb = "build --config profile.release.codegen-units=16"
+kn = ["rustc", "--", "-C", "target-cpu=native"]
+ok = "build --release"
+
+[env]
+RUSTUP_TOOLCHAIN = "nightly"
+CARGO_PROFILE_RELEASE_CODEGEN_UNITS = { value = "16", force = true }
+RUST_LOG = "warn"
+
+[target.x86_64-unknown-linux-gnu]
+runner = "rustup run nightly"
+linker = "clang"

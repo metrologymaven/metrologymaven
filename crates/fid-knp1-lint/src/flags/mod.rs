@@ -6,11 +6,14 @@
 //! | Rule | Fires when |
 //! |---|---|
 //! | `KNP1-FLAG-NATIVE` | a flag source sets `-C target-cpu=native` |
-//! | `KNP1-FLAG-CPU` | a flag source sets any other `-C target-cpu` not in `allowed_target_cpus` (named CPUs such as `haswell` imply FMA) |
+//! | `KNP1-FLAG-CPU` | a flag source sets any other `-C target-cpu` not in `allowed_target_cpus`; a CPU on the built-in FMA list ([`BUILTIN_FMA_CPUS`]) is `KNP1-FLAG-FMA` instead |
 //! | `KNP1-FLAG-FMA` | a flag source enables `+fma`, `+relaxed-simd` or a configured `fma_features` entry, or passes `fp-contract` other than `off` to LLVM |
 //! | `KNP1-FLAG-CGU` | a kernel profile resolves (Cargo inheritance, built-in defaults) to `codegen-units` other than 1, or a flag source sets it |
 //! | `KNP1-FLAG-TOOLCHAIN` | `rust-toolchain.toml` is missing, has no exact `channel = "X.Y.Z"`, or no `components` pin; a legacy `rust-toolchain` file exists; a CI env file sets `RUSTUP_TOOLCHAIN` or runs `cargo +<toolchain>` |
 //! | `KNP1-FLAG-LTO` | two kernel profiles resolve to different `opt-level`, `lto`, `debug-assertions`, `overflow-checks` or `panic`, and the key is not in `allowed_profile_differences` |
+//! | `KNP1-FLAG-KEYWORD` | the fail-closed substring gate ([`keywords`]) hits a CI line or a free-form `.cargo/config` value the structured checks do not explain |
+//! | `KNP1-FLAG-AMBIGUOUS` | both `.cargo/config` and `.cargo/config.toml` exist |
+//! | `KNP1-FLAG-OPTOUT` | informational note (in [`Outcome::notes`], never a failure): a line opted out with `knp1-flags: allow <RULE> <reason>` |
 //! | `KNP1-FLAG-WASMFMA` | the wasm reference module contains a relaxed multiply-add opcode |
 //! | `KNP1-FLAG-WASMSIMD` | the wasm reference module contains a SIMD opcode the config does not allow |
 //! | `KNP1-FLAG-WASMPARSE` | the wasm reference module is missing or cannot be parsed (fatal finding) |
@@ -67,6 +70,7 @@
 //! allowed_target_cpus = ["x86-64"]        # target-cpu values allowed (default none)
 //! ```
 
+pub mod keywords;
 pub mod wasm;
 
 use crate::findings::{input_digest, sort_findings, Finding, Rule};
@@ -84,7 +88,68 @@ pub const MAX_INPUT_BYTES: u64 = 16 * 1024 * 1024;
 /// Longest `inherits` chain followed.
 pub const MAX_INHERIT_DEPTH: usize = 64;
 /// Target features that always count as FMA-enabling.
-pub const BUILTIN_FMA_FEATURES: [&str; 2] = ["fma", "relaxed-simd"];
+pub const BUILTIN_FMA_FEATURES: [&str; 3] = ["fma", "fma4", "relaxed-simd"];
+/// Target-feature prefixes that always count as FMA-enabling: every AVX-512 and AVX10 feature
+/// implies AVX512F, which implies FMA in LLVM's x86 feature graph [unverified per LLVM version].
+pub const BUILTIN_FMA_FEATURE_PREFIXES: [&str; 2] = ["avx512", "avx10"];
+/// `target-cpu` names that enable FMA (x86) or name a core whose ISA always has fused
+/// multiply-add (AArch64). Sources are listed in the leaf's NODE.md [unverified per LLVM version].
+pub const BUILTIN_FMA_CPUS: [&str; 42] = [
+    "x86-64-v3",
+    "x86-64-v4",
+    "core-avx2",
+    "haswell",
+    "broadwell",
+    "skylake",
+    "skylake-avx512",
+    "skx",
+    "cascadelake",
+    "cooperlake",
+    "cannonlake",
+    "icelake-client",
+    "icelake-server",
+    "rocketlake",
+    "tigerlake",
+    "sapphirerapids",
+    "emeraldrapids",
+    "graniterapids",
+    "graniterapids-d",
+    "alderlake",
+    "raptorlake",
+    "meteorlake",
+    "arrowlake",
+    "arrowlake-s",
+    "lunarlake",
+    "pantherlake",
+    "gracemont",
+    "sierraforest",
+    "grandridge",
+    "clearwaterforest",
+    "knl",
+    "knm",
+    "bdver1",
+    "bdver2",
+    "bdver3",
+    "bdver4",
+    "a64fx",
+    "carmel",
+    "thunderx2t99",
+    "thunderx3t110",
+    "ampere1",
+    "ampere1a",
+];
+/// `target-cpu` prefixes that enable FMA: AMD Zen (`znver*`) and AArch64 core families.
+pub const BUILTIN_FMA_CPU_PREFIXES: [&str; 6] = ["znver", "apple-", "neoverse-", "cortex-a", "cortex-x", "exynos-"];
+
+/// True when `cpu` is a built-in FMA-implying CPU.
+pub fn is_fma_cpu(cpu: &str) -> bool {
+    BUILTIN_FMA_CPUS.contains(&cpu) || BUILTIN_FMA_CPU_PREFIXES.iter().any(|p| cpu.starts_with(p))
+}
+
+/// True when `feature` (without `+`) is a built-in FMA-enabling target feature.
+pub fn is_builtin_fma_feature(feature: &str) -> bool {
+    BUILTIN_FMA_FEATURES.contains(&feature) || BUILTIN_FMA_FEATURE_PREFIXES.iter().any(|p| feature.starts_with(p))
+}
 /// Profile keys compared between kernel profiles by `KNP1-FLAG-LTO`.
 pub const COMPARED_PROFILE_KEYS: [&str; 5] = ["debug-assertions", "lto", "opt-level", "overflow-checks", "panic"];
 
@@ -204,9 +269,11 @@ pub struct Config {
     pub allowed_profile_differences: Vec<String>,
     /// `-C target-cpu` values that are allowed (never `native`), sorted.
     pub allowed_target_cpus: Vec<String>,
+    /// FMA-implying CPUs explicitly allowed anyway: CPU name -> reason.
+    pub fma_cpu_overrides: BTreeMap<String, String>,
 }
 
-const CONFIG_KEYS: [&str; 8] = [
+const CONFIG_KEYS: [&str; 9] = [
     "workspace",
     "profiles",
     "ci_env_files",
@@ -215,6 +282,7 @@ const CONFIG_KEYS: [&str; 8] = [
     "allowed_simd",
     "allowed_profile_differences",
     "allowed_target_cpus",
+    "fma_cpu_overrides",
 ];
 
 fn str_list(v: &toml::Value, what: &str) -> Result<Vec<String>, FlagsError> {
@@ -309,6 +377,38 @@ pub fn parse_config(text: &str, config_dir: &Path) -> Result<Config, FlagsError>
     if allowed_target_cpus.contains("native") {
         return Err(invalid("knp1-lint.toml: flags.allowed_target_cpus may not contain \"native\""));
     }
+    let mut fma_cpu_overrides = BTreeMap::new();
+    match t.get("fma_cpu_overrides") {
+        None => {}
+        Some(toml::Value::Table(o)) => {
+            for (cpu, why) in o {
+                match why.as_str().map(str::trim) {
+                    Some(r) if !r.is_empty() => {
+                        fma_cpu_overrides.insert(cpu.clone(), r.to_string());
+                    }
+                    _ => {
+                        return Err(invalid(format!(
+                            "knp1-lint.toml: flags.fma_cpu_overrides.{cpu} must be a non-empty reason"
+                        )))
+                    }
+                }
+            }
+        }
+        Some(_) => return Err(invalid("knp1-lint.toml: flags.fma_cpu_overrides must be a table cpu = \"reason\"")),
+    }
+    for cpu in &allowed_target_cpus {
+        if is_fma_cpu(cpu) && !fma_cpu_overrides.contains_key(cpu) {
+            return Err(invalid(format!(
+                "knp1-lint.toml: flags.allowed_target_cpus lists {cpu:?}, which implies FMA; \
+                 add flags.fma_cpu_overrides.{cpu} = \"<reason>\" to allow it anyway"
+            )));
+        }
+    }
+    if let Some(cpu) = fma_cpu_overrides.keys().find(|c| !allowed_target_cpus.contains(*c)) {
+        return Err(invalid(format!(
+            "knp1-lint.toml: flags.fma_cpu_overrides.{cpu} has no matching flags.allowed_target_cpus entry"
+        )));
+    }
     Ok(Config {
         workspace,
         profiles: profiles.into_iter().collect(),
@@ -318,6 +418,7 @@ pub fn parse_config(text: &str, config_dir: &Path) -> Result<Config, FlagsError>
         simd_policy,
         allowed_profile_differences: allowed.into_iter().collect(),
         allowed_target_cpus: allowed_target_cpus.into_iter().collect(),
+        fma_cpu_overrides,
     })
 }
 
@@ -465,7 +566,7 @@ impl Sink<'_> {
     }
 
     fn is_fma_feature(&self, f: &str) -> bool {
-        BUILTIN_FMA_FEATURES.contains(&f) || self.cfg.fma_features.iter().any(|x| x == f)
+        is_builtin_fma_feature(f) || self.cfg.fma_features.iter().any(|x| x == f)
     }
 }
 
@@ -623,6 +724,16 @@ fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: Place<
                     pos,
                     text.as_bytes(),
                     format!("`-C {}` lets the compiler use the host's FMA", o.needle),
+                );
+            }
+            "target-cpu" if !sink.cfg.allowed_target_cpus.contains(&o.value) && is_fma_cpu(&o.value) => {
+                let (pos, text) = place(&o.needle);
+                sink.push(
+                    "FMA",
+                    file,
+                    pos,
+                    text.as_bytes(),
+                    format!("`-C {}` names a CPU whose target features include FMA", o.needle),
                 );
             }
             "target-cpu" if !sink.cfg.allowed_target_cpus.contains(&o.value) => {
@@ -1177,29 +1288,173 @@ pub fn check_wasm(bytes: &[u8], file: &str, policy: &wasm::SimdPolicy) -> Vec<Fi
     }
 }
 
+// ------------------------------------------------------------------ keyword gate
+
+/// The fail-closed substring gate ([`keywords`]) over every line of a CI file: a line with a
+/// keyword hit and no finding from the structured checks gets a `KNP1-FLAG-KEYWORD` finding.
+fn keyword_gate(sink: &mut Sink<'_>, file: &str, text: &str) {
+    let idx = LineIndex::new(text);
+    let flagged: BTreeSet<u32> = sink.out.iter().filter(|f| f.file == file).map(|f| f.line).collect();
+    for (i, raw) in idx.lines.iter().enumerate() {
+        let line = line_no(i);
+        if flagged.contains(&line) {
+            continue;
+        }
+        let (scanned, _) = keywords::split_marker(raw);
+        let hits = keywords::scan(scanned);
+        if let Some((c, _)) = hits.first() {
+            let what: BTreeSet<&str> = hits.iter().map(|(_, k)| k.as_str()).collect();
+            let list: Vec<String> = what.iter().map(|k| format!("`{k}`")).collect();
+            let col = u32::try_from(c + 1).unwrap_or(u32::MAX);
+            sink.at_line(
+                "KEYWORD",
+                file,
+                &idx,
+                (line, col),
+                format!("mentions {}: build flags and toolchain selection must not be set here", list.join(", ")),
+            );
+        }
+    }
+}
+
+fn walk_free_values(t: &toml::Table, path: &mut Vec<String>, out: &mut Vec<(Vec<String>, String)>) {
+    for (k, v) in t {
+        if is_flags_key(k) {
+            continue; // parsed by the structured flag checks
+        }
+        path.push(k.clone());
+        match v {
+            toml::Value::Table(sub) => walk_free_values(sub, path, out),
+            other => {
+                let mut text = path.join(" ");
+                for s in flag_strings_deep(other) {
+                    text.push(' ');
+                    text.push_str(&s);
+                }
+                out.push((path.clone(), text));
+            }
+        }
+        path.pop();
+    }
+}
+
+fn flag_strings_deep(v: &toml::Value) -> Vec<String> {
+    match v {
+        toml::Value::String(s) => vec![s.clone()],
+        toml::Value::Array(a) => a.iter().flat_map(flag_strings_deep).collect(),
+        toml::Value::Table(t) => t.values().flat_map(flag_strings_deep).collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The substring gate over the free-form tables of a Cargo config (`[alias]`, `[env]`, every
+/// `[target.*]`): any key (other than a rustflags key) whose name or string values hit a keyword.
+fn cargo_table_gate(sink: &mut Sink<'_>, file: &str, text: &str, table: &toml::Table) {
+    let idx = LineIndex::new(text);
+    let mut items = Vec::new();
+    for top in ["alias", "env", "target"] {
+        if let Some(toml::Value::Table(t)) = table.get(top) {
+            walk_free_values(t, &mut vec![top.to_string()], &mut items);
+        }
+    }
+    let mut done: BTreeSet<(u32, u32)> = BTreeSet::new();
+    for (path, text) in items {
+        let hits = keywords::scan(&text);
+        if hits.is_empty() {
+            continue;
+        }
+        let pos = idx.locate(&path);
+        if !done.insert(pos) {
+            continue; // one finding per key line (inline tables yield several values)
+        }
+        let what: BTreeSet<&str> = hits.iter().map(|(_, k)| k.as_str()).collect();
+        let list: Vec<String> = what.iter().map(|k| format!("`{k}`")).collect();
+        sink.at_line(
+            "KEYWORD",
+            file,
+            &idx,
+            pos,
+            format!("`{}` mentions {}: build flags and toolchain selection must not be set here", path.join("."), list.join(", ")),
+        );
+    }
+}
+
 // ------------------------------------------------------------------ run
+
+/// Findings of a run plus informational notes (`KNP1-FLAG-OPTOUT`, one per honoured
+/// `knp1-flags: allow` marker). Notes never fail the lint; the CLI shows them to reviewers.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Outcome {
+    pub findings: Vec<Finding>,
+    pub notes: Vec<Finding>,
+}
+
+/// Moves findings whose line carries a matching `knp1-flags: allow <RULE> <reason>` marker into
+/// notes. `texts` maps each text file to its content; wasm findings are never opted out.
+fn apply_markers(findings: Vec<Finding>, texts: &BTreeMap<String, String>) -> Outcome {
+    let mut out = Outcome::default();
+    for f in findings {
+        let marker = texts
+            .get(&f.file)
+            .filter(|_| f.rule.is_waivable())
+            .and_then(|t| t.split('\n').nth((f.line as usize).saturating_sub(1)))
+            .and_then(|l| keywords::split_marker(l.strip_suffix('\r').unwrap_or(l)).1);
+        match marker {
+            Some((rule, reason)) if rule == f.rule.id() => {
+                let note = Finding {
+                    rule: Rule::Flag("OPTOUT".to_string()),
+                    message: format!("line opts out of {rule}: {reason} (was: {})", f.message),
+                    ..f
+                };
+                out.notes.push(note);
+            }
+            _ => out.findings.push(f),
+        }
+    }
+    sort_findings(&mut out.findings);
+    sort_findings(&mut out.notes);
+    out
+}
 
 /// Runs every check of the module against a parsed config. Returns sorted findings.
 pub fn check(cfg: &Config) -> Result<Vec<Finding>, FlagsError> {
+    Ok(check_all(cfg)?.findings)
+}
+
+/// Runs every check and returns findings and opt-out notes.
+pub fn check_all(cfg: &Config) -> Result<Outcome, FlagsError> {
     let mut sink = Sink { cfg, out: Vec::new() };
+    let mut texts: BTreeMap<String, String> = BTreeMap::new();
     check_toolchain(&mut sink)?;
 
-    // .cargo/config.toml (and legacy .cargo/config).
+    // .cargo/config.toml (and legacy .cargo/config); both at once is ambiguous.
     let mut cargo_cfg: Option<(&'static str, String, toml::Table)> = None;
+    let mut present = Vec::new();
     for name in [".cargo/config.toml", ".cargo/config"] {
         if let Some(text) = read_text(&cfg.workspace.join(name), name)? {
             let table = parse_toml(&text, name)?;
             check_cargo_config(&mut sink, name, &text, &table);
+            cargo_table_gate(&mut sink, name, &text, &table);
+            present.push(name);
+            texts.insert(name.to_string(), text.clone());
             if cargo_cfg.is_none() {
                 cargo_cfg = Some((name, text, table));
             }
         }
+    }
+    if present.len() > 1 {
+        sink.whole_file(
+            "AMBIGUOUS",
+            ".cargo/config",
+            "both .cargo/config and .cargo/config.toml exist: which one Cargo reads is ambiguous".to_string(),
+        );
     }
 
     // Profiles: Cargo.toml, overridden by .cargo/config.toml.
     let manifest = read_text(&cfg.workspace.join("Cargo.toml"), "Cargo.toml")?
         .ok_or_else(|| invalid(format!("{}: Cargo.toml not found", cfg.workspace.display())))?;
     let manifest_t = parse_toml(&manifest, "Cargo.toml")?;
+    texts.insert("Cargo.toml".to_string(), manifest.clone());
     // `[profile.*] rustflags` (Cargo's profile-rustflags) and any other rustflags key.
     check_cargo_config(&mut sink, "Cargo.toml", &manifest, &manifest_t);
     let mut sources = vec![ProfileSource {
@@ -1219,6 +1474,8 @@ pub fn check(cfg: &Config) -> Result<Vec<Finding>, FlagsError> {
     for f in &cfg.ci_env_files {
         let text = read_text(&f.path, &f.rel)?.ok_or_else(|| invalid(format!("{}: CI env file not found", f.rel)))?;
         check_ci_file(&mut sink, &f.rel, &text);
+        keyword_gate(&mut sink, &f.rel, &text);
+        texts.insert(f.rel.clone(), text);
     }
 
     if let Some(w) = &cfg.wasm_module {
@@ -1229,12 +1486,15 @@ pub fn check(cfg: &Config) -> Result<Vec<Finding>, FlagsError> {
         }
     }
 
-    let mut out = sink.out;
-    sort_findings(&mut out);
-    Ok(out)
+    Ok(apply_markers(sink.out, &texts))
 }
 
 /// Loads `knp1-lint.toml` at `config_path` and runs [`check`].
 pub fn run(config_path: &Path) -> Result<Vec<Finding>, FlagsError> {
     check(&load_config(config_path)?)
+}
+
+/// Loads `knp1-lint.toml` at `config_path` and runs [`check_all`].
+pub fn run_all(config_path: &Path) -> Result<Outcome, FlagsError> {
+    check_all(&load_config(config_path)?)
 }

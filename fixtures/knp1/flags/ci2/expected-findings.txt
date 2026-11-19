@@ -14,5 +14,6 @@ KNP1-FLAG-NATIVE workflows/kernel.yml:21:27
 KNP1-FLAG-FMA workflows/kernel.yml:24:13
 KNP1-FLAG-CGU workflows/kernel.yml:25:35
 KNP1-FLAG-CGU workflows/kernel.yml:26:36
+KNP1-FLAG-KEYWORD workflows/kernel.yml:27:26
 KNP1-FLAG-NATIVE workflows/kernel.yml:28:60
 KNP1-FLAG-FMA workflows/kernel.yml:29:53

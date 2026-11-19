@@ -34,8 +34,19 @@ optional `.cargo/config.toml` and CI env files):
   `\` continuation in `build.sh`); `cargo --config profile.release.codegen-units=N` (quoted and
   not; `profile.dev` is not a kernel profile and passes) and `--config build.rustflags=…`; the
   `\U0000001f` and octal `\037` escapes of 0x1F.
-- `cpu/`: `target-cpu=haswell` outside `allowed_target_cpus = ["x86-64-v2"]` (`KNP1-FLAG-CPU`);
-  the allowed `x86-64-v2` passes.
+- `cpu/`: `haswell` and `apple-m1` (built-in FMA CPUs, `KNP1-FLAG-FMA`) and `pentium4` (merely
+  not allowed, `KNP1-FLAG-CPU`) outside `allowed_target_cpus = ["x86-64-v2"]`; the allowed
+  `x86-64-v2` passes. `knp1-lint-override.toml` allows all four, the FMA ones via
+  `[flags.fma_cpu_overrides]` with a reason: no findings.
+- `ci3/`: every bypass from the third review, one per line, in `build.sh` (`:=`, `?=`, `+=`,
+  `${VAR:-…}`, `printf` and `$'…'` escapes, `--config` spacing, table and file forms, `$VAR`,
+  `rustc +nightly`, `rustup run/override/default`, `cargo.exe +`) and `workflow.yml` (value on the
+  next line, YAML list, folded scalar, `--config` split over lines). `expected-lines.txt` lists the
+  lines that must be reported, computed by the gate reference in `make_fixtures.py`; every other
+  line must stay clean.
+- `cargo-tables/`: `[alias]`, `[env]` and `[target.*]` values that mention keywords
+  (`KNP1-FLAG-KEYWORD`); harmless keys pass.
+- `cargo-ambiguous/`: both `.cargo/config` and `.cargo/config.toml` (`KNP1-FLAG-AMBIGUOUS`).
 - `profile-flags/`: `[profile.release] rustflags` with `+fma` in `Cargo.toml`, and a
   `[profile.release.package.fid-num] codegen-units = 8` reached from kernel profile `kernel`
   through `inherits`.
@@ -45,7 +56,8 @@ optional `.cargo/config.toml` and CI env files):
   immediates), `swizzle.wasm` (one `i8x16.relaxed_swizzle`, not a multiply-add), `truncated.wasm`
   (`relaxed.wasm` minus its last three bytes). `expected-scan.txt` lists the scan results with the
   default SIMD policy and with `allowed_simd = [12]`. AC-4.
-- `ok/`: pinned toolchain, `codegen-units = 1`, no FMA flags, a clean CI file and `clean.wasm` as
-  `kernel.wasm`. AC-5, no findings.
+- `ok/`: pinned toolchain, `codegen-units = 1`, no FMA flags, a CI file whose two keyword lines
+  carry `knp1-flags: allow KNP1-FLAG-KEYWORD <reason>` markers, and `clean.wasm` as `kernel.wasm`.
+  AC-5: no findings; `expected-notes.txt` lists the two `KNP1-FLAG-OPTOUT` notes.
 
 CC-BY-4.0 project data.

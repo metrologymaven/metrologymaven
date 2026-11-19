@@ -9,3 +9,6 @@ rustflags = ["-Ctarget-feature=-fma,+fma4"]
 
 [build]
 rustdocflags = ["-C", "target_feature=+fma"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+avx512vl"]

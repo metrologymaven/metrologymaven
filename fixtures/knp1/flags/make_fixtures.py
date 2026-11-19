@@ -15,6 +15,7 @@ CC-BY-4.0 project data. Run:  python fixtures/knp1/flags/make_fixtures.py
 Check mode (no writes, exit 1 on drift):  python fixtures/knp1/flags/make_fixtures.py --check
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -59,6 +60,67 @@ def expect(rel: str, rows) -> None:
     """rows: (rule, file, line, column); written in report order (file, line, column, rule)."""
     rows = sorted(rows, key=lambda r: (r[1], r[2], r[3], r[0]))
     put(rel, "".join(f"{r} {f}:{l}:{c}\n" for r, f, l, c in rows))
+
+
+# ---------------------------------------------------------------- keyword gate reference
+# Maintainer decision (third review): every line of a CI file that mentions one of these, after
+# lowercasing, `_` -> `-` and collapsing whitespace, is a finding unless the structured checks
+# already report that line or the line carries `knp1-flags: allow <RULE> <reason>`.
+KEYWORDS = [
+    "target-cpu", "target-feature", "codegen-units", "llvm-args", "fp-contract", "-ctarget",
+    "rustflags", "rustdocflags", "cargo-encoded-rustflags",
+    "rustup run", "rustup override", "rustup default", "rustup-toolchain",
+    "cargo +", "rustc +", "cargo.exe +", "rustc.exe +",
+]
+MARKER = "knp1-flags: allow "
+
+
+def split_marker(line: str):
+    i = line.find(MARKER)
+    if i < 0:
+        return line, None
+    words = line[i + len(MARKER):].split()
+    if len(words) < 2:
+        return line, None
+    return line[:i], (words[0], " ".join(words[1:]))
+
+
+def kw_col(line: str):
+    """1-based column of the first keyword hit in `line` (before any marker), else None."""
+    line, _ = split_marker(line)
+    norm, where = [], []
+    prev_space = False
+    for i, ch in enumerate(line):
+        if ch.isspace():
+            if prev_space:
+                continue
+            prev_space, ch = True, " "
+        else:
+            prev_space = False
+            ch = "-" if ch == "_" else ch.lower()
+        norm.append(ch)
+        where.append(i)
+    n = "".join(norm)
+    hits = [n.find(k) for k in KEYWORDS if k in n]
+    p = n.find("--config")
+    while p >= 0:
+        v = n[p + len("--config"):].lstrip(" =\"'")
+        v = re.split(r"[\s\"']", v, maxsplit=1)[0]
+        if not v or v.startswith(("profile", "build", "target", "$")) or "=" not in v:
+            hits.append(p)
+        p = n.find("--config", p + 1)
+    return where[min(hits)] + 1 if hits else None
+
+
+def with_keywords(text: str, file: str, rows):
+    """Adds the gate's KNP1-FLAG-KEYWORD rows for lines of `text` that no structured row covers."""
+    covered = {r[2] for r in rows if r[1] == file}
+    out = list(rows)
+    for n, line in enumerate(text.split("\n"), start=1):
+        c = kw_col(line)
+        if c is not None and n not in covered:
+            out.append(("KNP1-FLAG-KEYWORD", file, n, c))
+    return out
 
 
 # ---------------------------------------------------------------- wasm assembly
@@ -247,6 +309,9 @@ rustflags = ["-Ctarget-feature=-fma,+fma4"]
 
 [build]
 rustdocflags = ["-C", "target_feature=+fma"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+avx512vl"]
 """
 put("fma/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nfma_features = ["+fma4"]\n')
 put("fma/rust-toolchain.toml", TOOLCHAIN_OK)
@@ -258,6 +323,8 @@ expect("fma/expected-findings.txt", [
     ("KNP1-FLAG-FMA", ".cargo/config.toml", 8, col(FMA_CFG, 8, "target-feature=-fma,+fma4")),
     # rustdocflags, with an underscore option name
     ("KNP1-FLAG-FMA", ".cargo/config.toml", 11, col(FMA_CFG, 11, "target_feature=+fma")),
+    # built-in prefix: every avx512* feature implies AVX512F, which implies FMA
+    ("KNP1-FLAG-FMA", ".cargo/config.toml", 14, col(FMA_CFG, 14, "target-feature=+avx512vl")),
 ])
 
 # AC-3: codegen units. release is left at Cargo's default (16); kernel inherits release but
@@ -286,12 +353,12 @@ put("cgu/rust-toolchain.toml", TOOLCHAIN_OK)
 put("cgu/Cargo.toml", CGU_CARGO)
 put("cgu/.cargo/config.toml", CGU_CFG)
 put("cgu/ci.yml", CGU_CI)
-expect("cgu/expected-findings.txt", [
+expect("cgu/expected-findings.txt", with_keywords(CGU_CI, "ci.yml", [
     ("KNP1-FLAG-CGU", ".cargo/config.toml", 2, col(CGU_CFG, 2, "codegen-units=2")),
     ("KNP1-FLAG-CGU", ".cargo/config.toml", 5, 1),
     ("KNP1-FLAG-CGU", "Cargo.toml", 5, 1),
     ("KNP1-FLAG-CGU", "ci.yml", 2, col(CGU_CI, 2, "CARGO_PROFILE_KERNEL_CODEGEN_UNITS")),
-])
+]))
 
 # AC-3: toolchain channel "stable"
 TC_STABLE = '[toolchain]\nchannel = "stable"\ncomponents = ["rustfmt"]\n'
@@ -345,7 +412,7 @@ put("ci/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nci_env_files = ["work
 put("ci/rust-toolchain.toml", TOOLCHAIN_OK)
 put("ci/Cargo.toml", CARGO_OK)
 put("ci/workflows/kernel.yml", CI_YML)
-expect("ci/expected-findings.txt", [
+expect("ci/expected-findings.txt", with_keywords(CI_YML, "workflows/kernel.yml", [
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 4, col(CI_YML, 4, "target-cpu=native")),
     ("KNP1-FLAG-FMA", "workflows/kernel.yml", 5, col(CI_YML, 5, "target-feature=+relaxed-simd")),
     # array syntax: the comma between "-C" and its value must not hide it
@@ -357,7 +424,7 @@ expect("ci/expected-findings.txt", [
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 14, col(CI_YML, 14, "target-cpu=native")),
     ("KNP1-FLAG-TOOLCHAIN", "workflows/kernel.yml", 15, col(CI_YML, 15, "+nightly")),
     ("KNP1-FLAG-FMA", "workflows/kernel.yml", 16, col(CI_YML, 16, "llvm-args=-fp-contract=fast")),
-])
+]))
 
 
 def at(text: str, line_text: str, needle: str):
@@ -413,7 +480,7 @@ put("ci2/Cargo.toml", CARGO_OK)
 put("ci2/workflows/kernel.yml", CI2_YML)
 put("ci2/build.sh", CI2_SH)
 Y = "workflows/kernel.yml"
-expect("ci2/expected-findings.txt", [
+expect("ci2/expected-findings.txt", with_keywords(CI2_SH, "build.sh", with_keywords(CI2_YML, Y, [
     ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "FLOW:", "target-feature=+avx2,+fma")),
     ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "ENC_U:", "target-cpu=native")),
     ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "ENC_O:", "target-feature=+fma")),
@@ -432,7 +499,7 @@ expect("ci2/expected-findings.txt", [
     ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "build.rustflags=['-C'", "target-cpu=native")),
     ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "+relaxed-simd", "target-feature=+relaxed-simd")),
     ("KNP1-FLAG-NATIVE", "build.sh", 4, 1),
-])
+])))
 
 # target-cpu values outside allowed_target_cpus (haswell implies FMA); the listed one passes.
 CPU_CFG = """[build]
@@ -440,13 +507,30 @@ rustflags = ["-C", "target-cpu=x86-64-v2"]
 
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "target-cpu=haswell"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "target-cpu=apple-m1"]
+
+[target.i686-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=pentium4"]
 """
 put("cpu/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nallowed_target_cpus = ["x86-64-v2"]\n')
+put("cpu/knp1-lint-override.toml", """[flags]
+profiles = ["release"]
+allowed_target_cpus = ["x86-64-v2", "haswell", "apple-m1", "pentium4"]
+
+[flags.fma_cpu_overrides]
+haswell = "reference machine; FMA excluded by the wasm and source checks"
+apple-m1 = "reference machine; FMA excluded by the wasm and source checks"
+""")
 put("cpu/rust-toolchain.toml", TOOLCHAIN_OK)
 put("cpu/Cargo.toml", CARGO_OK)
 put("cpu/.cargo/config.toml", CPU_CFG)
 expect("cpu/expected-findings.txt", [
-    ("KNP1-FLAG-CPU", ".cargo/config.toml", 5, col(CPU_CFG, 5, "target-cpu=haswell")),
+    # haswell and apple-m1 are on the built-in FMA CPU lists; pentium4 is merely not allowed
+    ("KNP1-FLAG-FMA", ".cargo/config.toml", 5, col(CPU_CFG, 5, "target-cpu=haswell")),
+    ("KNP1-FLAG-FMA", ".cargo/config.toml", 8, col(CPU_CFG, 8, "target-cpu=apple-m1")),
+    ("KNP1-FLAG-CPU", ".cargo/config.toml", 11, col(CPU_CFG, 11, "target-cpu=pentium4")),
 ])
 
 # Cargo.toml [profile.*] rustflags, and a package override of codegen-units on the parent of a
@@ -494,7 +578,11 @@ rustflags = ["-C", "debuginfo=0", "-C", "target-feature=-fma"]
 [env]
 RUST_LOG = "warn"
 """
-OK_CI = 'env:\n  RUSTFLAGS: "-D warnings"\n  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"\n'
+OK_CI = """env:
+  RUSTFLAGS: "-D warnings"  # knp1-flags: allow KNP1-FLAG-KEYWORD deny warnings only, no codegen flags
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"  # knp1-flags: allow KNP1-FLAG-KEYWORD pins the default to one unit
+  CARGO_TERM_COLOR: always
+"""
 put("ok/knp1-lint.toml", """[flags]
 profiles = ["kernel", "release"]
 ci_env_files = ["ci.yml"]
@@ -505,6 +593,104 @@ put("ok/Cargo.toml", CARGO_OK)
 put("ok/.cargo/config.toml", OK_CFG)
 put("ok/ci.yml", OK_CI)
 expect("ok/expected-findings.txt", [])
+# The two markers become informational notes (rule KNP1-FLAG-OPTOUT) at the keyword column.
+expect("ok/expected-notes.txt", [
+    ("KNP1-FLAG-OPTOUT", "ci.yml", 2, kw_col(OK_CI.split("\n")[1])),
+    ("KNP1-FLAG-OPTOUT", "ci.yml", 3, kw_col(OK_CI.split("\n")[2])),
+])
+
+# ---------------------------------------------------------------- third review: substring gate
+# Every bypass the third review listed, one per line. Each line that mentions a keyword must be
+# reported (by the structured checks or by the gate); the remaining lines must stay clean.
+CI3_SH = r"""#!/bin/sh
+set -eu
+RUSTFLAGS := -C target-cpu=native
+RUSTFLAGS ?= -Ctarget-cpu=native
+RUSTFLAGS += -Ctarget-feature=+fma
+export RUSTFLAGS="${RUSTFLAGS:--C target-cpu=native}"
+F="${KFLAGS:--Ctarget-cpu=native}"
+export RUSTFLAGS="$(printf '\x2dC\x20target\x2dcpu=native')"
+export CARGO_ENCODED_RUSTFLAGS="$(printf '%s\037%s' -C target-cpu=native)"
+export RUSTFLAGS=$'-C\x20target-cpu=native'
+X=$'\x2dCtarget-cpu=native'
+cargo build --config   profile.release.codegen-units=16
+cargo build --config=profile.release.codegen-units=16
+cargo build --config 'profile.release.codegen-units = 16'
+cargo build --config "profile.release = { codegen-units = 16 }"
+cargo build --config "build = { rustflags = ['-C', 'target-cpu=native'] }"
+cargo build --config ci/kernel-config.toml
+cargo build --config "$KCFG"
+rustc +nightly -O src/lib.rs
+rustup run nightly cargo build
+rustup override set nightly
+rustup default nightly
+cargo.exe +nightly build
+cargo build --config net.retry=2
+cargo build --release
+"""
+CI3_YML = """name: kernel3
+env:
+  RUSTFLAGS:
+    -C target-cpu=native
+  KFLAGS:
+    - -C
+    - target-cpu=native
+  RUSTDOCFLAGS: >
+    -Ctarget-feature=+fma
+  PLAIN: ok
+jobs:
+  build:
+    steps:
+      - run: >-
+          cargo build --config
+          profile.release.codegen-units=16
+      - run: cargo build --release
+"""
+put("ci3/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nci_env_files = ["build.sh", "workflow.yml"]\n')
+put("ci3/rust-toolchain.toml", TOOLCHAIN_OK)
+put("ci3/Cargo.toml", CARGO_OK)
+put("ci3/build.sh", CI3_SH)
+put("ci3/workflow.yml", CI3_YML)
+put(
+    "ci3/expected-lines.txt",
+    "".join(
+        f"{name}:{n}\n"
+        for name, text in (("build.sh", CI3_SH), ("workflow.yml", CI3_YML))
+        for n, line in enumerate(text.split("\n"), start=1)
+        if kw_col(line) is not None
+    ),
+)
+
+# .cargo/config.toml free-form tables: [alias], [env] and [target.*] values go through the gate.
+TABLES_CFG = """[alias]
+kb = "build --config profile.release.codegen-units=16"
+kn = ["rustc", "--", "-C", "target-cpu=native"]
+ok = "build --release"
+
+[env]
+RUSTUP_TOOLCHAIN = "nightly"
+CARGO_PROFILE_RELEASE_CODEGEN_UNITS = { value = "16", force = true }
+RUST_LOG = "warn"
+
+[target.x86_64-unknown-linux-gnu]
+runner = "rustup run nightly"
+linker = "clang"
+"""
+put("cargo-tables/knp1-lint.toml", LINT_BASIC)
+put("cargo-tables/rust-toolchain.toml", TOOLCHAIN_OK)
+put("cargo-tables/Cargo.toml", CARGO_OK)
+put("cargo-tables/.cargo/config.toml", TABLES_CFG)
+expect("cargo-tables/expected-findings.txt", [
+    ("KNP1-FLAG-KEYWORD", ".cargo/config.toml", n, 1) for n in (2, 3, 7, 8, 12)
+])
+
+# Both .cargo/config and .cargo/config.toml: which one Cargo reads is ambiguous.
+put("cargo-ambiguous/knp1-lint.toml", LINT_BASIC)
+put("cargo-ambiguous/rust-toolchain.toml", TOOLCHAIN_OK)
+put("cargo-ambiguous/Cargo.toml", CARGO_OK)
+put("cargo-ambiguous/.cargo/config.toml", "[build]\njobs = 2\n")
+put("cargo-ambiguous/.cargo/config", "[build]\njobs = 4\n")
+expect("cargo-ambiguous/expected-findings.txt", [("KNP1-FLAG-AMBIGUOUS", ".cargo/config", 1, 1)])
 
 if CHECK:
     if DRIFT:

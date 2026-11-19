@@ -1,0 +1,17 @@
+name: kernel3
+env:
+  RUSTFLAGS:
+    -C target-cpu=native
+  KFLAGS:
+    - -C
+    - target-cpu=native
+  RUSTDOCFLAGS: >
+    -Ctarget-feature=+fma
+  PLAIN: ok
+jobs:
+  build:
+    steps:
+      - run: >-
+          cargo build --config
+          profile.release.codegen-units=16
+      - run: cargo build --release

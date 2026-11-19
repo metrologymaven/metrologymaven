@@ -7,10 +7,10 @@
 use fid_knp1_lint::find::{apply_waivers, lines_digest, ErrorCode, Finding, Rule, Waiver};
 use fid_knp1_lint::flags::wasm::SimdPolicy;
 use fid_knp1_lint::flags::{
-    check_wasm, ci_spans, codegen_options, parse_config, run, tokens, FlagsErrorCode, BUILD_CONFIG_CRATE,
-    BUILD_CONFIG_VERSION,
+    check_wasm, ci_spans, codegen_options, is_builtin_fma_feature, is_fma_cpu, keywords, parse_config, run, run_all,
+    tokens, FlagsErrorCode, BUILD_CONFIG_CRATE, BUILD_CONFIG_VERSION,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 fn fix(rel: &str) -> PathBuf {
@@ -218,8 +218,10 @@ fn ci_array_commas_and_env_prefixes_do_not_hide_flags() {
 #[test]
 fn target_cpu_outside_allowlist_is_flagged() {
     let f = assert_dir("cpu");
-    assert_eq!(f[0].rule.id(), "KNP1-FLAG-CPU");
+    assert_eq!(f[0].rule.id(), "KNP1-FLAG-FMA");
     assert!(f[0].message.contains("haswell"));
+    assert_eq!(f[2].rule.id(), "KNP1-FLAG-CPU");
+    assert!(f[2].message.contains("pentium4"));
 }
 
 #[test]
@@ -366,4 +368,61 @@ fn ci_spans_join_continuations() {
         "w",
     ];
     assert_eq!(ci_spans(&lines), [(0, 1), (1, 3), (3, 7), (7, 8), (8, 10), (10, 11), (11, 12)]);
+}
+
+#[test]
+fn ok_markers_become_notes() {
+    let o = run_all(&fix("ok/knp1-lint.toml")).unwrap();
+    assert!(o.findings.is_empty());
+    let notes: Vec<String> = o.notes.iter().map(|f| format!("{} {}:{}:{}", f.rule, f.file, f.line, f.column)).collect();
+    assert_eq!(notes, expected("ok/expected-notes.txt"));
+    assert!(o.notes[0].message.contains("deny warnings only"));
+}
+
+#[test]
+fn third_review_bypasses_are_all_flagged() {
+    let f = run_dir("ci3");
+    let flagged: BTreeSet<String> = f.iter().map(|x| format!("{}:{}", x.file, x.line)).collect();
+    let want: BTreeSet<String> = expected("ci3/expected-lines.txt").into_iter().collect();
+    assert_eq!(flagged, want);
+}
+
+#[test]
+fn cargo_free_tables_and_ambiguous_config() {
+    assert_dir("cargo-tables");
+    assert_dir("cargo-ambiguous");
+}
+
+#[test]
+fn fma_cpu_overrides() {
+    // haswell and apple-m1 are allowed with a reason; pentium4 is plainly allowed.
+    assert!(run(&fix("cpu/knp1-lint-override.toml")).unwrap().is_empty());
+    let dir = Path::new("/ws");
+    let e = parse_config("[flags]\nallowed_target_cpus = [\"znver4\"]\n", dir).unwrap_err();
+    assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
+    assert!(e.message.contains("implies FMA"));
+    let e = parse_config("[flags]\nallowed_target_cpus = [\"haswell\"]\n[flags.fma_cpu_overrides]\nhaswell = \" \"\n", dir)
+        .unwrap_err();
+    assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
+    let e = parse_config("[flags]\n[flags.fma_cpu_overrides]\nhaswell = \"why\"\n", dir).unwrap_err();
+    assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
+    assert!(is_fma_cpu("x86-64-v3") && is_fma_cpu("znver2") && is_fma_cpu("neoverse-v2") && is_fma_cpu("apple-m3"));
+    assert!(!is_fma_cpu("x86-64-v2") && !is_fma_cpu("generic") && !is_fma_cpu("pentium4"));
+    assert!(is_builtin_fma_feature("avx512f") && is_builtin_fma_feature("fma4") && !is_builtin_fma_feature("avx2"));
+}
+
+#[test]
+fn keyword_scan_and_markers() {
+    let cols = |s: &str| -> Vec<usize> { keywords::scan(s).into_iter().map(|(c, _)| c).collect() };
+    assert_eq!(cols("RUSTUP_TOOLCHAIN=nightly"), [0]);
+    assert_eq!(cols("rustup   run nightly"), [0]);
+    assert_eq!(cols("x Cargo  +nightly"), [2]);
+    assert!(cols("cargo build --config net.retry=2").is_empty());
+    assert_eq!(cols("cargo build --config k.toml"), [12]);
+    assert_eq!(cols("cargo build --config"), [12]);
+    let (scanned, m) = keywords::split_marker("RUSTFLAGS: x # knp1-flags: allow KNP1-FLAG-KEYWORD because");
+    assert_eq!(scanned, "RUSTFLAGS: x # ");
+    assert_eq!(m, Some(("KNP1-FLAG-KEYWORD".to_string(), "because".to_string())));
+    // A marker without a reason is no marker.
+    assert_eq!(keywords::split_marker("x # knp1-flags: allow KNP1-FLAG-KEYWORD").1, None);
 }
