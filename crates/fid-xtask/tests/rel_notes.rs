@@ -44,9 +44,11 @@ fn cli(cwd: &Path, args: &[&str]) -> (i32, String) {
 fn notes_for(case: &str, prs: &str, name: &str) -> String {
     let out = tmp_dir(name);
     let out_s = out.to_str().unwrap();
-    let args = ["--tag", "v1.4.0", "--channel", "stable", "--prs", prs, "--reports", "reports/", "--out", out_s];
-    let (code, _) = cli(&fixture(case), &args);
-    assert_eq!(code, 0);
+    // `hostile-title/` has no reports of its own and shares those of `basic/`.
+    let reports = if fixture(case).join("reports").is_dir() { "reports/" } else { "../basic/reports/" };
+    let args = ["--tag", "v1.4.0", "--channel", "stable", "--prs", prs, "--reports", reports, "--out", out_s];
+    let (code, stdout) = cli(&fixture(case), &args);
+    assert_eq!(code, 0, "{stdout}");
     std::fs::read_to_string(out.join("release-notes.md")).unwrap()
 }
 
