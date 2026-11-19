@@ -1,0 +1,7 @@
+{
+  "min_expansions": 5,
+  "alt_min_expansions": 3,
+  "alt_min_reviews": 5,
+  "revert_window_days": 60,
+  "aliases": {"erin@example.net": "erin-dev"}
+}

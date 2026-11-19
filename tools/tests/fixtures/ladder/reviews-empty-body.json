@@ -1,0 +1,7 @@
+[
+  {"pr": 201, "reviewer": "bob", "state": "approved", "body": "", "inline_comments": 0, "at": "2026-10-11T10:00:00Z", "node_ids": ["ALN.RPS.SEED"]},
+  {"pr": 202, "reviewer": "bob", "state": "approved", "body": "", "inline_comments": 0, "at": "2026-10-13T10:00:00Z", "node_ids": ["ALN.RPS.OLD"]},
+  {"pr": 203, "reviewer": "bob", "state": "approved", "body": "", "inline_comments": 0, "at": "2026-10-14T10:00:00Z", "node_ids": ["ALN.BEST.LSQ"]},
+  {"pr": 204, "reviewer": "bob", "state": "approved", "body": null, "inline_comments": [], "at": "2026-10-15T10:00:00Z", "node_ids": ["ALN.BEST.MINMAX"]},
+  {"pr": 205, "reviewer": "bob", "state": "approved", "body": "", "inline_comments": 0, "at": "2026-10-16T10:00:00Z", "node_ids": ["ALN.FIT"]}
+]
