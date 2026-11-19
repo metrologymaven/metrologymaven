@@ -152,10 +152,7 @@ impl PrincipalId {
     /// Parses and normalises a principal ID; anything else is `validation/name`.
     pub fn parse(s: &str) -> Result<PrincipalId, BusError> {
         if s.is_empty() || s.len() > MAX_PRINCIPAL_ID_BYTES || !s.bytes().all(|b| b.is_ascii_graphic()) {
-            return Err(validation(
-                ValidationReason::Name,
-                "principal ID must be 1..=256 ASCII graphic characters",
-            ));
+            return Err(validation(ValidationReason::Name, "principal ID must be 1..=256 ASCII graphic characters"));
         }
         Ok(PrincipalId(s.to_ascii_lowercase()))
     }
@@ -200,7 +197,9 @@ impl PredContext for RuleContext<'_> {
         match parts.as_slice() {
             ["caller", "kind"] => Ok(Value::Str(self.caller.kind.as_str().to_string())),
             ["caller", "id"] => Ok(Value::Str(self.caller.id.as_str().to_string())),
-            ["job", "principal", "kind"] => self.owner.map(|o| Value::Str(o.kind.as_str().to_string())).ok_or_else(missing),
+            ["job", "principal", "kind"] => {
+                self.owner.map(|o| Value::Str(o.kind.as_str().to_string())).ok_or_else(missing)
+            }
             ["job", "principal", "id"] => self.owner.map(|o| Value::Str(o.id.as_str().to_string())).ok_or_else(missing),
             _ => Err(missing()),
         }
@@ -413,10 +412,7 @@ impl Params {
         };
         if let Some(k) = o.keys().find(|k| !allowed.contains(&k.as_str())) {
             // The key is untrusted; only its length is reported.
-            return Err(validation(
-                ValidationReason::Schema,
-                &format!("unknown parameter field ({} bytes)", k.len()),
-            ));
+            return Err(validation(ValidationReason::Schema, &format!("unknown parameter field ({} bytes)", k.len())));
         }
         Ok(Params(o.clone()))
     }

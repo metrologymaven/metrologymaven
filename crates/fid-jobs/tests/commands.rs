@@ -335,7 +335,11 @@ fn schema_file_matches() {
     let mut want = to_canonical_bytes(&job_status_schema()).unwrap();
     want.push(b'\n');
     let have = std::fs::read(root().join("schema/job-status.schema.json")).unwrap();
-    assert!(have == want, "schema/job-status.schema.json differs from job_status_schema():\n{}", String::from_utf8_lossy(&want));
+    assert!(
+        have == want,
+        "schema/job-status.schema.json differs from job_status_schema():\n{}",
+        String::from_utf8_lossy(&want)
+    );
 }
 
 fn record(state: JobState) -> JobRecord {
@@ -666,7 +670,11 @@ fn ac6_unknown_job_not_found() {
     let journal = RecordJournal::default();
     for who in [caller(PrincipalKind::Script, "S"), caller(PrincipalKind::Human, "H")] {
         for command in [SHOW_STATUS, WAIT_JOB, CANCEL_JOB] {
-            assert_err(run(&svc, &journal, &who, command, &format!("{{\"job\":\"{UNKNOWN}\"}}")), "not_found", "unknown_job");
+            assert_err(
+                run(&svc, &journal, &who, command, &format!("{{\"job\":\"{UNKNOWN}\"}}")),
+                "not_found",
+                "unknown_job",
+            );
         }
     }
     // list_jobs takes no job ID; an empty scheduler lists nothing.
