@@ -9,7 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.MODEL.BIND-001, REQ-RPT.MODEL.BIND-004, REQ-RPT.MODEL.BIND-005]
+satisfies: [REQ-RPT.MODEL.BIND-001, REQ-RPT.MODEL.BIND-004, REQ-RPT.MODEL.BIND-005, REQ-RPT.MODEL.BIND-010]
 covers: [GOM.RPT.07]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.TMPL.SLOT, CORE.JRN, CORE.PRJ.CONT, GDT.CHAR.RECORD]
 side_effect: W2
@@ -40,15 +40,18 @@ Two halves of the same contract. `report.bind_block@1` stores in a block only th
 - **REQ-RPT.MODEL.BIND.RESOLVE-004** If a binding names a ResultRecord or characteristic of another project, then resolution shall fail with error `report.cross_project_binding` naming the block and the foreign project ID.
 - **REQ-RPT.MODEL.BIND.RESOLVE-005** Each block kind shall be resolved through the `BlockResolver` registered for its kind ID, and if none is registered then resolution shall fail with error `report.no_resolver` naming the kind.
 - **REQ-RPT.MODEL.BIND.RESOLVE-006** If `report.bind_block@1` names a reference that does not exist at the current head, then it shall fail with error `report.not_found` and journal nothing.
+- **REQ-RPT.MODEL.BIND.RESOLVE-007** `report.bind_block@1` shall write each bound value as a `value_binding@1` (record ID, record digest, field pointer, statement digest; shape pinned in `RPT.MODEL.DOC`), and resolution shall apply REQ-RPT.MODEL.BIND-010: recompute both digests from the stored record and the statement the record references for that field (`report.binding_digest_mismatch`), and refuse a `field` that is not one of the record's value fields (`report.binding_field_not_value`).
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/rpt/model/bracket_3stage` and a `table` block, when `fid report bind-block --block <b> --results r1,r2 --json` runs, then the stored payload contains only the two record IDs and one `report.bind_block@1` event is journaled.
+- **AC-1** Given fixture `fixtures/rpt/model/bracket_3stage` and a `table` block, when `fid report bind-block --block <b> --results r1,r2 --json` runs, then every declared value field of the stored payload holds a `value_binding@1` for r1 or r2 (record ID, record digest, value-field pointer, statement digest), the payload holds no number and no value text, `RPT.MODEL.DOC` accepts it, and one `report.bind_block@1` event is journaled.
 - **AC-2** (error path) Given a payload that carries `"value": 12.003` next to a bound record, when bound, then it fails with `report.binding_has_value`.
 - **AC-3** Given AC-1 and head H0 before record r2 was committed, when resolved at H0, then it fails with `report.unjournaled_record` naming r2; resolved at the current head, it succeeds.
 - **AC-4** (error path) Given fixture `fixtures/rpt/model/two_projects`, when a block binds a record of project B inside project A, then resolution fails with `report.cross_project_binding`.
 - **AC-5** (error path) Given a block of a kind with no registered resolver, when resolved, then it fails with `report.no_resolver`.
 - **AC-6** (replay) Given the journal from AC-1, when replayed in exact mode, then the outcome is `IDENTICAL`.
+- **AC-7** (error path) Given the block from AC-1 with the `record_digest` (and, separately, the `statement_digest`) of r1's binding replaced by another valid `sha256:` digest, when resolved, then it fails with `report.binding_digest_mismatch` naming the binding and produces no value text.
+- **AC-8** (error path) Given a binding whose `field` points at r1's nominal or upper limit instead of its value, when resolved, then it fails with `report.binding_field_not_value`.
 
 ## Design
 
@@ -71,7 +74,7 @@ Two halves of the same contract. `report.bind_block@1` stores in a block only th
 >
 > **Resolver:** `ResolveContext { project, head, stages, runs, sources }`; `BlockResolver` trait plus registry keyed by block kind; `FieldSource` trait (`field(id)`, `rows(table)`) for form data providers (`report.no_resolver` when missing); `Lookup` over journal reads at exactly `head`. Records not committed by `head` -> `report.unjournaled_record`; records or characteristics of another project -> `report.cross_project_binding`. Failures journal nothing.
 >
-> **Acceptance:** AC-1..AC-6 in `spec/rpt/model/bind/resolve/NODE.md`.
+> **Acceptance:** AC-1..AC-8 in `spec/rpt/model/bind/resolve/NODE.md`.
 >
 > **Constraints:** CONSTITUTION C1 (no value is copied or computed here), C6, §5 stable IDs, §8 (no panic, no `unsafe`, deny `unwrap`/`expect`); no std HashMap/HashSet.
 
