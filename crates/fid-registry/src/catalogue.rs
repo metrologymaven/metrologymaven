@@ -426,7 +426,7 @@ impl QuantityCatalogue for Catalogue {
     }
 
     fn digest(&self) -> Digest {
-        self.digest.clone()
+        self.digest
     }
 }
 
