@@ -290,13 +290,19 @@ impl EdgeIndex {
         if outputs.len() > MAX_COMMIT_ELEMENTS {
             return Err(EdgeError::InputLimit("elements"));
         }
-        let mut targets = BTreeSet::new();
-        for out in outputs {
-            if !targets.insert(out.element) {
-                return Err(EdgeError::DuplicateElement(out.element));
+        // Checked in ascending element order, so the reported error does not depend on the
+        // order the caller listed the outputs in.
+        let mut sorted: Vec<Output> = outputs.to_vec();
+        sorted.sort_by_key(|o| (o.element, o.op));
+        for pair in sorted.windows(2) {
+            if let [a, b] = pair {
+                if a.element == b.element {
+                    return Err(EdgeError::DuplicateElement(a.element));
+                }
             }
         }
-        for out in outputs {
+        let targets: BTreeSet<EntityId> = sorted.iter().map(|o| o.element).collect();
+        for out in &sorted {
             match out.op {
                 Op::Create if self.contains(&out.element) => return Err(EdgeError::AlreadyExists(out.element)),
                 Op::Update if !self.contains(&out.element) => return Err(EdgeError::UnknownElement(out.element)),
@@ -305,6 +311,9 @@ impl EdgeIndex {
         }
         let refs = xref::collect(schema, params)?;
         let inputs: BTreeSet<EntityId> = refs.difference(&targets).copied().collect();
+        if inputs.len() > MAX_INPUTS {
+            return Err(EdgeError::InputLimit("inputs"));
+        }
         let sets = targets.iter().map(|e| EdgesSet::from_set(*e, &inputs)).collect::<Result<Vec<_>, _>>()?;
         self.apply(&sets)?;
         Ok(sets)

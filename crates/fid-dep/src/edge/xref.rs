@@ -5,7 +5,7 @@
 //! anywhere else (`anyOf`, `$defs`, `additionalProperties`, a non-string type, ...) is
 //! refused with `unsupported_schema`, so an edge can never be silently missed.
 
-use super::{parse_id, EdgeError, EntityId, MAX_INPUTS, MAX_SCHEMA_DEPTH, MAX_WALK_NODES};
+use super::{parse_id, EdgeError, EntityId, MAX_COMMIT_ELEMENTS, MAX_INPUTS, MAX_SCHEMA_DEPTH, MAX_WALK_NODES};
 use crate::edge::error::kept;
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet};
@@ -13,6 +13,11 @@ use std::collections::{BTreeMap, BTreeSet};
 const XREF: &str = "x-ref";
 
 /// Counts every `x-ref` key anywhere in `schema`, bounded by depth and node budgets.
+///
+/// Every object key named `x-ref` is treated as the `x-ref` annotation, wherever it sits.
+/// That includes a parameter named `x-ref` (a key of a `properties` map): it is counted
+/// here but never reached by [`count_supported`], so such a schema is refused with
+/// `unsupported_schema` (fail closed) rather than having the parameter silently skipped.
 fn count_all(schema: &CValue) -> Result<usize, EdgeError> {
     let mut count = 0usize;
     let mut nodes = 1usize;
@@ -103,7 +108,7 @@ fn child_path(path: &str, segment: &str) -> String {
     format!("{path}/{segment}")
 }
 
-/// The distinct entity IDs that `params` references through `x-ref` positions of
+/// The distinct entity IDs (at most `MAX_INPUTS + MAX_COMMIT_ELEMENTS`) that `params` references through `x-ref` positions of
 /// `schema`, in ascending order. A value at an `x-ref` position must be a canonical
 /// lowercase UUID string (`bad_reference` otherwise). Parameters the schema does not
 /// describe are ignored: validating params against the schema is the bus's job.
@@ -136,8 +141,10 @@ pub(crate) fn collect(schema: &CValue, params: &CValue) -> Result<BTreeSet<Entit
                 return Err(EdgeError::BadReference(kept(&path)));
             };
             out.insert(id);
-            if out.len() > MAX_INPUTS {
-                return Err(EdgeError::InputLimit("inputs"));
+            // References may include the command's own outputs, which are removed later;
+            // MAX_INPUTS itself is enforced on the inputs that remain (EdgesSet::new).
+            if out.len() > MAX_INPUTS + MAX_COMMIT_ELEMENTS {
+                return Err(EdgeError::InputLimit("references"));
             }
             continue;
         }

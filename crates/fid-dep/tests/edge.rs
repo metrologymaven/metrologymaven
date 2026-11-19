@@ -11,7 +11,7 @@
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_dep::{
     command_def, show_dependencies, EdgeError, EdgeIndex, EdgesSet, EntityId, Op, Output, ShowDependencies,
-    EDGES_SET_EVENT, MAX_INPUTS, MAX_SCHEMA_DEPTH, MAX_WALK_NODES, SHOW_DEPENDENCIES,
+    EDGES_SET_EVENT, MAX_COMMIT_ELEMENTS, MAX_INPUTS, MAX_SCHEMA_DEPTH, MAX_WALK_NODES, SHOW_DEPENDENCIES,
 };
 use fid_types::CommandId;
 use fid_uuid::Uuid;
@@ -125,7 +125,8 @@ fn chain5() -> Project {
     for t in read_lines("chain5/project.txt") {
         match t[0].as_str() {
             "elem" => {
-                p.names.insert(t[1].clone(), Uuid::parse(&t[2]).unwrap());
+                let fresh = p.names.insert(t[1].clone(), Uuid::parse(&t[2]).unwrap()).is_none();
+                assert!(fresh, "duplicate elem name {}", t[1]);
             }
             "create" => {
                 let ins: Vec<&str> = t[2..].iter().map(String::as_str).collect();
@@ -642,4 +643,101 @@ fn error_codes_are_stable() {
         EdgeError::Cycle(vec![id(1), id(2)]).to_string(),
         "cycle/cycle: [00000000-0000-7000-8000-000000000001, 00000000-0000-7000-8000-000000000002]"
     );
+}
+
+// ------------------------------------------------------------------ review follow-ups
+
+/// An index of `n` sources `id(1) ..= id(n)` plus `target` (no inputs).
+fn sources(n: u128, target: u128) -> EdgeIndex {
+    let mut x = EdgeIndex::new();
+    let mut sets: Vec<EdgesSet> = (1..=n).map(|i| set(i, &[])).collect();
+    sets.push(set(target, &[]));
+    for chunk in sets.chunks(MAX_COMMIT_ELEMENTS) {
+        x.apply(chunk).unwrap();
+    }
+    x
+}
+
+fn update_params(target: u128, inputs: impl Iterator<Item = u128>) -> CValue {
+    let ins: Vec<EntityId> = inputs.map(id).collect();
+    num_params(Some(id(target)), &ins)
+}
+
+#[test]
+fn input_limit_counts_inputs_after_removing_outputs() {
+    let n = MAX_INPUTS as u128;
+    let target = 1_000_000;
+    let mut x = sources(n + 1, target);
+    let out = [Output { element: id(target), op: Op::Update }];
+    // Exactly MAX_INPUTS real inputs plus a self-reference (the `element` param): accepted.
+    let events = x.commit_command(&num_schema(), &update_params(target, 1..=n), &out).unwrap();
+    assert_eq!(events[0].inputs().len(), MAX_INPUTS);
+    // The self-reference listed among the inputs too: still MAX_INPUTS real inputs.
+    let with_self = update_params(target, (1..=n).chain(std::iter::once(target)));
+    x.commit_command(&num_schema(), &with_self, &out).unwrap();
+    // One real input more: refused, nothing changes.
+    let before = x.clone();
+    let e = x.commit_command(&num_schema(), &update_params(target, 1..=n + 1), &out).unwrap_err();
+    assert_eq!(e, EdgeError::InputLimit("inputs"));
+    assert_eq!(x, before);
+}
+
+#[test]
+fn deep_chain_cycle_is_reported_without_recursion() {
+    const N: u128 = 100_000;
+    let mut x = EdgeIndex::new();
+    x.apply(&[set(1, &[])]).unwrap();
+    for i in 2..=N {
+        x.apply(&[set(i, &[i - 1])]).unwrap();
+    }
+    let before = x.clone();
+    let t = Instant::now();
+    let e = x.apply(&[set(1, &[N])]).unwrap_err();
+    println!("deep chain: {N} elements, cycle check {:?}", t.elapsed());
+    let EdgeError::Cycle(ids) = &e else { panic!("{e:?}") };
+    assert_eq!(ids.len(), N as usize);
+    assert_eq!(*ids, (1..=N).map(id).collect::<Vec<_>>());
+    assert_eq!(x, before);
+    let t = Instant::now();
+    let r = show_dependencies(&x, &ShowDependencies { element: id(1), transitive: true }).unwrap();
+    println!("deep chain: transitive dependents {:?}", t.elapsed());
+    assert_eq!(r.dependents.len(), N as usize - 1);
+}
+
+#[test]
+fn output_errors_do_not_depend_on_listing_order() {
+    let x0 = diamond();
+    let create = |e| Output { element: id(e), op: Op::Create };
+    let update = |e| Output { element: id(e), op: Op::Update };
+    let cases: [(Vec<Output>, EdgeError); 3] = [
+        // Two duplicated elements: the smaller one is reported.
+        (vec![create(9), create(8), create(9), create(8)], EdgeError::DuplicateElement(id(8))),
+        // Create of a known element (3) and update of an unknown one (7): 3 is smaller.
+        (vec![update(7), create(3)], EdgeError::AlreadyExists(id(3))),
+        (vec![create(6), update(5)], EdgeError::UnknownElement(id(5))),
+    ];
+    for (outs, want) in cases {
+        for rev in [false, true] {
+            let mut list = outs.clone();
+            if rev {
+                list.reverse();
+            }
+            let mut x = x0.clone();
+            assert_eq!(x.commit_command(&num_schema(), &num_params(None, &[]), &list).unwrap_err(), want);
+            assert_eq!(x, x0);
+        }
+    }
+}
+
+#[test]
+fn a_parameter_named_x_ref_is_refused_as_an_annotation() {
+    let mut x = diamond();
+    let schema = obj(vec![
+        ("type", s("object")),
+        ("properties", obj(vec![("x-ref", obj(vec![("type", s("string"))]))])),
+    ]);
+    let params = obj(vec![("x-ref", s("plain text"))]);
+    let e = x.commit_command(&schema, &params, &[Output { element: id(6), op: Op::Create }]).unwrap_err();
+    assert_eq!(e.code(), "unsupported_schema");
+    assert_eq!(x, diamond());
 }
