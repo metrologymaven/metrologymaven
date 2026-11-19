@@ -35,7 +35,8 @@
 use crate::cell::{CellCode, Grid, MAX_DEPTH};
 use crate::error::{spill, OocError};
 use crate::format::{
-    encode_chunk, Channel, ChannelSet, Chunk, ChunkEntry, ChunkManifest, ENTRY_BYTES, MAX_MANIFEST_CHUNKS,
+    encode_chunk, intensity_bits, Channel, ChannelSet, Chunk, ChunkEntry, ChunkManifest, ENTRY_BYTES,
+    MAX_MANIFEST_CHUNKS,
 };
 use crate::layout::{check_params, for_each_leaf, push_entry, Key, DEFAULT_MAX_CHUNK_POINTS};
 use crate::store::ChunkStore;
@@ -188,7 +189,8 @@ fn capacities(budget: u64, rec: u64, max: u64) -> Result<(u64, u64, u64), OocErr
     let w = budget - FIXED_OVERHEAD;
     let entries = w / 16;
     let work = w - entries;
-    let push = work / (rec + PUSH_EXTRA);
+    // At most u32::MAX buffered records: the bucket sort indexes them with u32.
+    let push = (work / (rec + PUSH_EXTRA)).min(u64::from(u32::MAX));
     let load = work / per_load;
     let entry_cap = (entries / ENTRY_COST).min(MAX_MANIFEST_CHUNKS);
     if load < max || push == 0 || entry_cap == 0 {
@@ -295,7 +297,7 @@ impl<'s> ChunkWriter<'s> {
 
     /// Adds the next point (original index = number of points pushed before). Validates it
     /// as the element constructors do (finite coordinates, unit normals within 1e-9) and
-    /// refuses a NaN intensity, a point outside the bounds, or a channel set different
+    /// refuses a point outside the bounds or a channel set different
     /// from the header's. A validation error leaves the writer usable; an I/O error does
     /// not.
     pub fn push(&mut self, p: [f64; 3], a: &PointAttrs) -> Result<(), OocError> {
@@ -313,9 +315,6 @@ impl<'s> ChunkWriter<'s> {
             if !is_unit_normal(nrm) {
                 return Err(OocError::Geometry(GeoTypeError::BadNormal { index }));
             }
-        }
-        if a.intensity.is_some_and(f32::is_nan) {
-            return Err(OocError::NaNValue { channel: "intensity", index });
         }
         if !self.grid.inside(p) {
             return Err(OocError::OutOfBounds { index });
@@ -367,7 +366,7 @@ impl<'s> ChunkWriter<'s> {
                 }
                 Channel::Intensity => {
                     let v = a.intensity.unwrap_or_default();
-                    put(&v.to_bits().to_le_bytes());
+                    put(&intensity_bits(v).to_le_bytes());
                     col(&canonical_f32_bits(v).to_le_bytes());
                 }
                 Channel::Normal => {
@@ -873,5 +872,23 @@ impl Drop for ChunkWriter<'_> {
     fn drop(&mut self) {
         self.columns.clear();
         let _ = fs::remove_dir_all(&self.dir);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use super::*;
+
+    #[test]
+    fn push_capacity_fits_the_u32_bucket_sort() {
+        // About 1 PB of budget: unclamped, the push buffer would exceed u32::MAX records.
+        let (push, load, entries) = capacities(1 << 50, 32, 1 << 20).unwrap();
+        assert_eq!(push, u64::from(u32::MAX));
+        assert!(load >= 1 << 20);
+        assert!(entries <= MAX_MANIFEST_CHUNKS);
+        // An ordinary budget is not clamped.
+        let (push, _, _) = capacities(1 << 30, 32, 1 << 20).unwrap();
+        assert!(push < u64::from(u32::MAX));
     }
 }
