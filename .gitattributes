@@ -17,6 +17,8 @@ fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text
+# PLAT.DEPLOY.NOADMIN.LAYOUT fixtures are hand-labelled byte for byte: never convert line endings.
+fixtures/plat/deploy/layout-*.toml -text
 
 # IO.REG.ENV.REPORT golden canonical JSON: compared byte for byte (no trailing newline).
 fixtures/io/reg/env/report/** -text

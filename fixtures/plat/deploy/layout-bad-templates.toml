@@ -1,0 +1,29 @@
+# PLAT.DEPLOY.NOADMIN.LAYOUT error-path fixture (hand-labelled from the template rules in the
+# module documentation). Expected errors, in this order (OS families in name order: macos,
+# ubuntu, windows; within a family install_dir, allowed_writes in list order, registrations):
+#   macos   allowed_writes[0] "{home}/../shared"            -> OutsideProfile { os: macos, entry: allowed_writes[0] }
+#   macos   allowed_writes[1] "{xdg_data}/fiducial"         -> UnknownVariable { os: macos, entry: allowed_writes[1], name: xdg_data }
+#   ubuntu  install_dir       "/opt/fiducial"               -> OutsideProfile { os: ubuntu, entry: install_dir }
+#   ubuntu  allowed_writes[0] "{home}/fiducial"             -> BadTemplate { os: ubuntu, entry: allowed_writes[0] } ({home} is not an XDG dir)
+#   ubuntu  allowed_writes[1] "{xdg_cache}"                 -> BadTemplate { os: ubuntu, entry: allowed_writes[1] } (no subdirectory)
+#   ubuntu  forbidden_registrations lacks scheduled_task    -> MissingRegistration { os: ubuntu, registration: scheduled_task }
+#   windows install_dir       "{home}/Fiducial"             -> OutsideProfile { os: windows, entry: install_dir } (not below {local_app_data})
+#   windows allowed_writes[0] "{program_files}/Fiducial"    -> UnknownVariable { os: windows, entry: allowed_writes[0], name: program_files }
+#   windows forbidden_registrations[1] "autostart"          -> BadField: os.windows.forbidden_registrations[1] ...
+#   windows forbidden_registrations lacks driver            -> MissingRegistration { os: windows, registration: driver }
+schema_version = 1
+
+[os.windows]
+install_dir = "{home}/Fiducial"
+allowed_writes = ["{program_files}/Fiducial", "{tmp}"]
+forbidden_registrations = ["service", "autostart", "machine_assoc", "scheduled_task"]
+
+[os.ubuntu]
+install_dir = "/opt/fiducial"
+allowed_writes = ["{home}/fiducial", "{xdg_cache}", "{tmp}"]
+forbidden_registrations = ["service", "driver", "machine_assoc"]
+
+[os.macos]
+install_dir = "{home}/Applications"
+allowed_writes = ["{home}/../shared", "{xdg_data}/fiducial", "{tmp}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]

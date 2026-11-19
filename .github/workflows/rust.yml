@@ -105,6 +105,18 @@ jobs:
           set +e; out=$(cargo xtask plat-gpu validate --known-bad $g/known-bad-noref.toml); code=$?; set -e
           test "$code" = 1 && grep -qx 'MissingReference { id: fixture-noref }' <<< "$out"
           cargo xtask plat-gpu validate
+      - name: Per-user layout validates via cargo xtask (PLAT.DEPLOY.NOADMIN.LAYOUT AC-1, AC-2, AC-4)
+        shell: bash
+        run: |
+          d=fixtures/plat/deploy
+          m="--matrix fixtures/plat/matrix/valid.toml --phase P1a"
+          out=$(cargo xtask plat-deploy validate-layout $m)
+          test "$out" = "layout: 3 os, 0 errors"
+          set +e; out=$(cargo xtask plat-deploy validate-layout --file $d/layout-programfiles.toml $m); code=$?; set -e
+          test "$code" = 1 && grep -qx 'OutsideProfile { os: windows, entry: install_dir }' <<< "$out"
+          set +e; out=$(cargo xtask plat-deploy validate-layout --file $d/layout-missing-macos.toml $m); code=$?; set -e
+          test "$code" = 1 && grep -qx 'MissingOs { os: macos }' <<< "$out"
+          cargo xtask plat-deploy validate-layout
       - name: Benchmark suite manifest validates via cargo xtask (PLAT.HW.SCHEMA AC-1 to AC-3)
         shell: bash
         run: |

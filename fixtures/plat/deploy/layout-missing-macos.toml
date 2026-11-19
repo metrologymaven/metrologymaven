@@ -1,0 +1,16 @@
+# PLAT.DEPLOY.NOADMIN.LAYOUT AC-4 fixture (hand-labelled).
+# The file itself is valid (2 OS families). Checked against a support matrix with an effective
+# Tier 1 macOS row (fixtures/plat/matrix/valid.toml or the shipped matrix, phase P1a), the only
+# error is
+#   MissingOs { os: macos }
+schema_version = 1
+
+[os.windows]
+install_dir = "{local_app_data}/Programs/Fiducial"
+allowed_writes = ["{local_app_data}/Fiducial", "{app_data}/Fiducial", "{tmp}", "{project_roots}", "{export_roots}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]
+
+[os.ubuntu]
+install_dir = "{home}/.local/share/fiducial/app"
+allowed_writes = ["{xdg_data}/fiducial", "{xdg_cache}/fiducial", "{xdg_config}/fiducial", "{tmp}", "{project_roots}", "{export_roots}"]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]

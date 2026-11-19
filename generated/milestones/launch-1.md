@@ -242,7 +242,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)
 - [OUTR.LAUNCH.REVIEW](../../spec/outr/launch/review/NODE.md) Post-launch reviews (S, P0)
 - [PLAT.DEPLOY.KIOSK.GUIDE](../../spec/plat/deploy/kiosk/guide/NODE.md) Per-OS kiosk deployment guides and guide lint (M, P1a)
-- [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
+- [B] [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
 - [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
 - [PLAT.DEPLOY.UPDATE.KEYROT](../../spec/plat/deploy/update/keyrot/NODE.md) Trusted-key set from key-transition statements (S, P1a)
 - [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)
