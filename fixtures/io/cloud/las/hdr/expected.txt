@@ -1,0 +1,82 @@
+# Expected outcome of reading each fixture with fid-io-las (LasReader::open, then all points).
+# Written by make_fixtures.py from the leaf's rules; do not edit by hand.
+# pdrf_NN.las are the members of pdrf_all.zip.
+pdrf_00.las ok version=1.0 format=0 record_length=20 points=3 vlrs=1 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_00.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id
+pdrf_00.las point 0 xi=-2000000000 yi=-1000 zi=2147483647 intensity=0 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=0 class_flags=0 scan_angle_rank=-90 user_data=0 point_source_id=65535
+pdrf_00.las point 1 xi=-1999876542 yi=-993 zi=2147483644 intensity=4099 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=5 class_flags=1 scan_angle_rank=-83 user_data=37 point_source_id=65534
+pdrf_00.las point 2 xi=-1999753084 yi=-986 zi=2147483641 intensity=8198 return_number=3 number_of_returns=0 scan_direction=0 edge_of_flight_line=1 classification=10 class_flags=2 scan_angle_rank=-76 user_data=74 point_source_id=65533
+pdrf_01.las ok version=1.2 format=1 record_length=38 points=3 vlrs=1 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_01.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id,gps_time,extra:height_mm:i16[1],extra:range:f64[1]
+pdrf_01.las point 0 xi=-1998024688 yi=-888 zi=2147483599 intensity=48 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=16 class_flags=0 scan_angle_rank=22 user_data=80 point_source_id=65519 gps_time=4110001000000010 extra:height_mm=9264 extra:range=0000000000f4431f
+pdrf_01.las point 1 xi=-1997901230 yi=-881 zi=2147483596 intensity=4147 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=21 class_flags=1 scan_angle_rank=29 user_data=117 point_source_id=65518 gps_time=4110001100000011 extra:height_mm=26227 extra:range=0000000001038562
+pdrf_01.las point 2 xi=-1997777772 yi=-874 zi=2147483593 intensity=8246 return_number=3 number_of_returns=0 scan_direction=0 edge_of_flight_line=1 classification=26 class_flags=2 scan_angle_rank=36 user_data=154 point_source_id=65517 gps_time=4110001200000012 extra:height_mm=-22346 extra:range=000000000112c7a5
+pdrf_02.las ok version=1.2 format=2 record_length=26 points=3 vlrs=0 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_02.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id,rgb
+pdrf_02.las point 0 xi=-1996049376 yi=-776 zi=2147483551 intensity=96 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=0 class_flags=0 scan_angle_rank=-47 user_data=160 point_source_id=65503 rgb=8224/65439/32000
+pdrf_02.las point 1 xi=-1995925918 yi=-769 zi=2147483548 intensity=4195 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=5 class_flags=1 scan_angle_rank=-40 user_data=197 point_source_id=65502 rgb=8481/65436/33000
+pdrf_02.las point 2 xi=-1995802460 yi=-762 zi=2147483545 intensity=8294 return_number=3 number_of_returns=0 scan_direction=0 edge_of_flight_line=1 classification=10 class_flags=2 scan_angle_rank=-33 user_data=234 point_source_id=65501 rgb=8738/65433/34000
+pdrf_03.las ok version=1.2 format=3 record_length=34 points=2 vlrs=0 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_03.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id,gps_time,rgb
+pdrf_03.las point 0 xi=-1994074064 yi=-664 zi=2147483503 intensity=144 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=16 class_flags=0 scan_angle_rank=65 user_data=240 point_source_id=65487 gps_time=4110003000000030 rgb=12336/65391/48000
+pdrf_03.las point 1 xi=-1993950606 yi=-657 zi=2147483500 intensity=4243 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=21 class_flags=1 scan_angle_rank=72 user_data=21 point_source_id=65486 gps_time=4110003100000031 rgb=12593/65388/49000
+pdrf_04.las ok version=1.3 format=4 record_length=57 points=3 vlrs=1 evlrs=1 waveform_bytes=40 waveform_points=2
+pdrf_04.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id,gps_time,wave_packet
+pdrf_04.las point 0 xi=-1992098752 yi=-552 zi=2147483455 intensity=192 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=0 class_flags=0 scan_angle_rank=-4 user_data=64 point_source_id=65471 gps_time=4110004000000040 wave_packet=013c00000000000000280000000000803f4000000080000000c0000000
+pdrf_04.las point 1 xi=-1991975294 yi=-545 zi=2147483452 intensity=4291 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=5 class_flags=1 scan_angle_rank=3 user_data=101 point_source_id=65470 gps_time=4110004100000041 wave_packet=006400000000000000280000000000803f4100000082000000c3000000
+pdrf_04.las point 2 xi=-1991851836 yi=-538 zi=2147483449 intensity=8390 return_number=3 number_of_returns=0 scan_direction=0 edge_of_flight_line=1 classification=10 class_flags=2 scan_angle_rank=10 user_data=138 point_source_id=65469 gps_time=4110004200000042 wave_packet=038c00000000000000280000000000803f4200000084000000c6000000
+pdrf_05.las ok version=1.3 format=5 record_length=63 points=2 vlrs=0 evlrs=0 waveform_bytes=0 waveform_points=1
+pdrf_05.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scan_angle_rank,user_data,point_source_id,gps_time,rgb,wave_packet
+pdrf_05.las point 0 xi=-1990123440 yi=-440 zi=2147483407 intensity=240 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=16 class_flags=0 scan_angle_rank=-73 user_data=144 point_source_id=65455 gps_time=4110005000000050 rgb=20560/65295/14464 wave_packet=013c00000000000000280000000000803f50000000a0000000f0000000
+pdrf_05.las point 1 xi=-1989999982 yi=-433 zi=2147483404 intensity=4339 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=21 class_flags=1 scan_angle_rank=-66 user_data=181 point_source_id=65454 gps_time=4110005100000051 rgb=20817/65292/15464 wave_packet=006400000000000000280000000000803f51000000a2000000f3000000
+pdrf_06.las ok version=1.4 format=6 record_length=33 points=4 vlrs=1 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_06.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scanner_channel,scan_angle,user_data,point_source_id,gps_time,extra::raw[3]
+pdrf_06.las point 0 xi=-1988148128 yi=-328 zi=2147483359 intensity=288 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=224 class_flags=0 scanner_channel=0 scan_angle=16655 user_data=224 point_source_id=65439 gps_time=4110006000000060 extra:=203952
+pdrf_06.las point 1 xi=-1988024670 yi=-321 zi=2147483356 intensity=4387 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=253 class_flags=1 scanner_channel=1 scan_angle=17766 user_data=5 point_source_id=65438 gps_time=4110006100000061 extra:=637c95
+pdrf_06.las point 2 xi=-1987901212 yi=-314 zi=2147483353 intensity=8486 return_number=3 number_of_returns=8 scan_direction=0 edge_of_flight_line=1 classification=26 class_flags=2 scanner_channel=2 scan_angle=18877 user_data=42 point_source_id=65437 gps_time=4110006200000062 extra:=a6bfd8
+pdrf_06.las point 3 xi=-1987777754 yi=-307 zi=2147483350 intensity=12585 return_number=4 number_of_returns=11 scan_direction=1 edge_of_flight_line=1 classification=55 class_flags=3 scanner_channel=3 scan_angle=19988 user_data=79 point_source_id=65436 gps_time=4110006300000063 extra:=e9021b
+pdrf_07.las ok version=1.4 format=7 record_length=39 points=3 vlrs=1 evlrs=0 waveform_bytes=0 waveform_points=0
+pdrf_07.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scanner_channel,scan_angle,user_data,point_source_id,gps_time,rgb,extra:rgb_alt:u8[3]
+pdrf_07.las point 0 xi=-1986172816 yi=-216 zi=2147483311 intensity=336 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=176 class_flags=0 scanner_channel=0 scan_angle=-25570 user_data=48 point_source_id=65423 gps_time=4110007000000070 rgb=28784/65199/46464 extra:rgb_alt=80/105/130
+pdrf_07.las point 1 xi=-1986049358 yi=-209 zi=2147483308 intensity=4435 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=205 class_flags=1 scanner_channel=1 scan_angle=-24459 user_data=85 point_source_id=65422 gps_time=4110007100000071 rgb=29041/65196/47464 extra:rgb_alt=147/172/197
+pdrf_07.las point 2 xi=-1985925900 yi=-202 zi=2147483305 intensity=8534 return_number=3 number_of_returns=8 scan_direction=0 edge_of_flight_line=1 classification=234 class_flags=2 scanner_channel=2 scan_angle=-23348 user_data=122 point_source_id=65421 gps_time=4110007200000072 rgb=29298/65193/48464 extra:rgb_alt=214/239/8
+pdrf_08.las ok version=1.4 format=8 record_length=38 points=3 vlrs=0 evlrs=1 waveform_bytes=0 waveform_points=0
+pdrf_08.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scanner_channel,scan_angle,user_data,point_source_id,gps_time,rgb,nir
+pdrf_08.las point 0 xi=-1984197504 yi=-104 zi=2147483263 intensity=384 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=128 class_flags=0 scanner_channel=0 scan_angle=-7794 user_data=128 point_source_id=65407 gps_time=4110008000000080 rgb=32896/65151/62464 nir=3973
+pdrf_08.las point 1 xi=-1984074046 yi=-97 zi=2147483260 intensity=4483 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=157 class_flags=1 scanner_channel=1 scan_angle=-6683 user_data=165 point_source_id=65406 gps_time=4110008100000081 rgb=33153/65148/63464 nir=4004
+pdrf_08.las point 2 xi=-1983950588 yi=-90 zi=2147483257 intensity=8582 return_number=3 number_of_returns=8 scan_direction=0 edge_of_flight_line=1 classification=186 class_flags=2 scanner_channel=2 scan_angle=-5572 user_data=202 point_source_id=65405 gps_time=4110008200000082 rgb=33410/65145/64464 nir=4035
+pdrf_09.las ok version=1.4 format=9 record_length=59 points=2 vlrs=0 evlrs=2 waveform_bytes=64 waveform_points=1
+pdrf_09.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scanner_channel,scan_angle,user_data,point_source_id,gps_time,wave_packet
+pdrf_09.las point 0 xi=-1982222192 yi=8 zi=2147483215 intensity=432 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=80 class_flags=0 scanner_channel=0 scan_angle=9982 user_data=208 point_source_id=65391 gps_time=4110009000000090 wave_packet=013c00000000000000280000000000803f9000000020010000b0010000
+pdrf_09.las point 1 xi=-1982098734 yi=15 zi=2147483212 intensity=4531 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=109 class_flags=1 scanner_channel=1 scan_angle=11093 user_data=245 point_source_id=65390 gps_time=4110009100000091 wave_packet=006400000000000000280000000000803f9100000022010000b3010000
+pdrf_10.las ok version=1.4 format=10 record_length=78 points=3 vlrs=1 evlrs=0 waveform_bytes=0 waveform_points=2
+pdrf_10.las attrs=intensity,return_number,number_of_returns,scan_direction,edge_of_flight_line,classification,class_flags,scanner_channel,scan_angle,user_data,point_source_id,gps_time,rgb,nir,wave_packet,extra:opaque:raw[2],extra:pair_f32:f32[2],extra::raw[1]
+pdrf_10.las point 0 xi=-1980246880 yi=120 zi=2147483167 intensity=480 return_number=1 number_of_returns=2 scan_direction=0 edge_of_flight_line=0 classification=32 class_flags=0 scanner_channel=0 scan_angle=27758 user_data=32 point_source_id=65375 gps_time=411000a0000000a0 rgb=41120/65055/28928 nir=4965 wave_packet=013c00000000000000280000000000803fa000000040010000e0010000 extra:opaque=e0f9 extra:pair_f32=098988cf/098b21e8 extra:=be
+pdrf_10.las point 1 xi=-1980123422 yi=127 zi=2147483164 intensity=4579 return_number=2 number_of_returns=5 scan_direction=1 edge_of_flight_line=0 classification=61 class_flags=1 scanner_channel=1 scan_angle=28869 user_data=69 point_source_id=65374 gps_time=411000a1000000a1 rgb=41377/65052/29928 nir=4996 wave_packet=006400000000000000280000000000803fa100000042010000e3010000 extra:opaque=233c extra:pair_f32=0998cb12/099a642b extra:=01
+pdrf_10.las point 2 xi=-1979999964 yi=134 zi=2147483161 intensity=8678 return_number=3 number_of_returns=8 scan_direction=0 edge_of_flight_line=1 classification=90 class_flags=2 scanner_channel=2 scan_angle=29980 user_data=106 point_source_id=65373 gps_time=411000a2000000a2 rgb=41634/65049/30928 nir=5027 wave_packet=038c00000000000000280000000000803fa200000044010000e6010000 extra:opaque=667f extra:pair_f32=09a80d55/09a9a66e extra:=44
+bad_signature.las malformed signature
+evlr_before_points.las malformed start_of_first_evlr
+evlr_count_past_eof.las malformed number_of_evlrs
+evlr_length_past_eof.las malformed evlr_length
+evlr_past_eof.las malformed start_of_first_evlr
+extra_desc_bad_type.las malformed extra_bytes_descriptor
+extra_desc_partial.las malformed extra_bytes_descriptor
+extra_desc_too_wide.las malformed extra_bytes_descriptor
+extra_desc_zero_width.las malformed extra_bytes_descriptor
+format_11.las malformed point_data_format
+header_cut.las truncated_file 227 100 bytes
+header_size_past_eof.las malformed header_size
+header_size_small.las malformed header_size
+laz_bit.las malformed point_data_format
+legacy_count_mismatch.las malformed legacy_point_count
+long_points.las truncated_file 1000 1001 points
+offset_inside_header.las malformed offset_to_point_data
+offset_past_eof.las malformed offset_to_point_data
+record_too_short.las malformed point_data_record_length
+short_points.las truncated_file 1000 999 points
+too_many_vlrs.las malformed number_of_vlrs
+version_1_5.las las_version_unsupported 1 5
+version_2_0.las las_version_unsupported 2 0
+vlr_past_offset.las malformed vlr_length
+waveform_past_eof_13.las malformed start_of_waveform_data
+waveform_past_eof_14.las malformed start_of_waveform_data

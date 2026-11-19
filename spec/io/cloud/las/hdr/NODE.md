@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-las]
 satisfies: [REQ-IO.CLOUD.LAS-004]
 covers: []
 depends_on: [IO.REG.LIMITS]
