@@ -251,7 +251,8 @@ pub static RULE_TABLE: [(Rule, PatternKind, &str); RULE_TABLE_LEN] = [
 ];
 
 /// Path roots that can never be a facade.
-const RESERVED_ROOTS: [&str; 10] = ["std", "core", "alloc", "proc_macro", "test", "crate", "self", "super", "Self", "$crate"];
+const RESERVED_ROOTS: [&str; 10] =
+    ["std", "core", "alloc", "proc_macro", "test", "crate", "self", "super", "Self", "$crate"];
 
 fn float_suffix(rest: &str) -> bool {
     matches!(rest, "f" | "f16" | "f32" | "f64" | "f128")
@@ -460,7 +461,9 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                     let s = |key: &str| -> Result<String, SynError> {
                         match e.get(key).and_then(toml::Value::as_str) {
                             Some(x) if !x.is_empty() => Ok(x.to_string()),
-                            _ => Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n}: missing or empty `{key}`"))),
+                            _ => {
+                                Err(invalid(format!("knp1-lint.toml: syn.facade_files #{n}: missing or empty `{key}`")))
+                            }
                         }
                     };
                     let crate_name = s("crate")?;
@@ -473,9 +476,14 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                             "knp1-lint.toml: syn.facade_files #{n}: `file` must be a '/'-separated path relative to the crate root"
                         )));
                     }
-                    let why = reason(e.get("reason").unwrap_or(&toml::Value::Boolean(false)), &format!("syn.facade_files #{n} reason"))?;
+                    let why = reason(
+                        e.get("reason").unwrap_or(&toml::Value::Boolean(false)),
+                        &format!("syn.facade_files #{n} reason"),
+                    )?;
                     if !seen.insert((crate_name.clone(), file.clone())) {
-                        return Err(invalid(format!("knp1-lint.toml: syn.facade_files lists {crate_name} {file} twice")));
+                        return Err(invalid(format!(
+                            "knp1-lint.toml: syn.facade_files lists {crate_name} {file} twice"
+                        )));
                     }
                     cfg.facade_files.push(FacadeFile { crate_name, file, reason: why });
                 }
@@ -781,7 +789,10 @@ impl<'a> Scan<'a> {
                     i += 1;
                 }
                 Err(k) => {
-                    self.parse_hit(k.min(self.toks.len().saturating_sub(1)), "`use` declaration the scan cannot take apart");
+                    self.parse_hit(
+                        k.min(self.toks.len().saturating_sub(1)),
+                        "`use` declaration the scan cannot take apart",
+                    );
                     i += 1;
                 }
             }
@@ -1105,7 +1116,6 @@ impl<'a> Scan<'a> {
                 }
             }
         }
-
     }
 
     fn check_macro(&mut self, i: usize, name: &str) {
@@ -1127,7 +1137,8 @@ impl<'a> Scan<'a> {
     /// True when token `i` is a plain string literal naming a `.rs` file that this scan lists
     /// (relative to the current file's directory), and (for a macro) it is the only argument.
     fn safe_include(&self, i: usize, close: Option<usize>) -> bool {
-        let Some(Token { kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false }, text, .. }) = self.t(i)
+        let Some(Token { kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false }, text, .. }) =
+            self.t(i)
         else {
             return false;
         };
@@ -1141,7 +1152,7 @@ impl<'a> Scan<'a> {
         }
         let dir = self.f.file.rsplit_once('/').map_or("", |(d, _)| d);
         let target = if dir.is_empty() { text.clone() } else { format!("{dir}/{text}") };
-        self.f.crate_files.iter().any(|f| *f == target)
+        self.f.crate_files.contains(&target)
     }
 
     /// True when a token range holds a float marker: a float literal, `f32`/`f64`, a
@@ -1240,7 +1251,7 @@ fn read_bounded(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
 /// facade file is not part of the closure.
 pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError> {
     for ff in &cfg.facade_files {
-        let known = closure.crates.iter().any(|c| c.name == ff.crate_name && c.files.iter().any(|f| *f == ff.file));
+        let known = closure.crates.iter().any(|c| c.name == ff.crate_name && c.files.contains(&ff.file));
         if !known {
             return Err(invalid(format!(
                 "knp1-lint.toml: syn.facade_files entry {} {} is not a scanned file of the kernel closure",
@@ -1270,8 +1281,8 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
 /// Loads `knp1-lint.toml` at `config_path` (its `[graph]` and `[syn]` tables), computes the
 /// kernel closure and scans it.
 pub fn run(config_path: &Path) -> Result<Outcome, SynError> {
-    let bytes = read_bounded(config_path, MAX_CONFIG_BYTES)
-        .map_err(|e| invalid(format!("{}: {e}", config_path.display())))?;
+    let bytes =
+        read_bounded(config_path, MAX_CONFIG_BYTES).map_err(|e| invalid(format!("{}: {e}", config_path.display())))?;
     if bytes.len() as u64 > MAX_CONFIG_BYTES {
         return Err(invalid(format!("{}: larger than {MAX_CONFIG_BYTES} bytes", config_path.display())));
     }

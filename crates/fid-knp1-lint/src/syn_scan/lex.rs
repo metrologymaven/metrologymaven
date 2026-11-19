@@ -52,11 +52,16 @@ pub enum LitKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Kind {
     /// An identifier or keyword; `raw` for `r#name` (the text is `name`).
-    Ident { raw: bool },
+    Ident {
+        raw: bool,
+    },
     /// A lifetime or loop label (`'a`).
     Lifetime,
     /// A literal; `suffix` when an identifier suffix follows it (`1f64`, `"x"s`).
-    Lit { kind: LitKind, suffix: bool },
+    Lit {
+        kind: LitKind,
+        suffix: bool,
+    },
     /// `::`
     PathSep,
     /// `.` (not part of `..`)
@@ -141,7 +146,10 @@ impl Cur<'_> {
 
 /// Rust's `Pattern_White_Space`.
 fn is_ws(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{0B}' | '\u{0C}' | '\r' | ' ' | '\u{85}' | '\u{200E}' | '\u{200F}' | '\u{2028}' | '\u{2029}')
+    matches!(
+        c,
+        '\t' | '\n' | '\u{0B}' | '\u{0C}' | '\r' | ' ' | '\u{85}' | '\u{200E}' | '\u{200F}' | '\u{2028}' | '\u{2029}'
+    )
 }
 
 fn is_ident_start(c: char) -> bool {

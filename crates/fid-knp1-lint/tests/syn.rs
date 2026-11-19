@@ -6,7 +6,9 @@
 //! produced by this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_knp1_lint::find::{apply_waivers, lines_digest, Applied, ErrorCode, Finding, InputDigests, Report, Rule, Waiver};
+use fid_knp1_lint::find::{
+    apply_waivers, lines_digest, Applied, ErrorCode, Finding, InputDigests, Report, Rule, Waiver,
+};
 use fid_knp1_lint::graph::{enumerate_files, Closure, CrateEntry, SourceKind};
 use fid_knp1_lint::syn_scan::{
     lex, parse_config, run, scan_closure, scan_file, Config, FileRef, Outcome, PatternKind, SynErrorCode,
@@ -50,7 +52,9 @@ fn scan(entries: Vec<CrateEntry>, cfg: &Config) -> Outcome {
 
 /// `RULE crate version file:line:column`.
 fn lines(fs: &[Finding]) -> Vec<String> {
-    fs.iter().map(|f| format!("{} {} {} {}:{}:{}", f.rule, f.crate_name, f.crate_version, f.file, f.line, f.column)).collect()
+    fs.iter()
+        .map(|f| format!("{} {} {} {}:{}:{}", f.rule, f.crate_name, f.crate_version, f.file, f.line, f.column))
+        .collect()
 }
 
 fn text_lines(p: &Path) -> Vec<String> {
@@ -104,7 +108,8 @@ fn ac1_each_seeded_crate_yields_exactly_its_planted_finding() {
         assert!(out.notes.is_empty(), "{rule}: {:?}", out.notes);
         all.extend(out.findings);
     }
-    let got: Vec<String> = all.iter().map(|f| format!("{} {}", lines(std::slice::from_ref(f))[0], f.excerpt_digest)).collect();
+    let got: Vec<String> =
+        all.iter().map(|f| format!("{} {}", lines(std::slice::from_ref(f))[0], f.excerpt_digest)).collect();
     assert_eq!(got, text_lines(&fix("seeded/expected-findings.txt")));
 }
 
@@ -441,9 +446,9 @@ fn include_and_path_targets_must_be_listed_source() {
 #[test]
 fn never_panics_on_random_input() {
     const PIECES: [&str; 40] = [
-        "fn", " ", "(", ")", "{", "}", "[", "]", "::", ".", "..", "'", "\"", "r#", "#", "!", "$", "<", ">", "=",
-        "use", "as", "*", ",", ";", "std", "fs", "f64", "max", "1.0", "0x", "e", "/*", "*/", "//", "\n", "\\",
-        "b'", "unsafe", "\u{e9}",
+        "fn", " ", "(", ")", "{", "}", "[", "]", "::", ".", "..", "'", "\"", "r#", "#", "!", "$", "<", ">", "=", "use",
+        "as", "*", ",", ";", "std", "fs", "f64", "max", "1.0", "0x", "e", "/*", "*/", "//", "\n", "\\", "b'", "unsafe",
+        "\u{e9}",
     ];
     let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
     let mut next = || {
@@ -510,11 +515,10 @@ fn kind_name(k: PatternKind) -> String {
 #[test]
 fn rule_table_is_pinned_in_node_md() {
     assert_eq!(RULE_TABLE.len(), RULE_TABLE_LEN);
-    let node = String::from_utf8(read(
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../spec/krn/num/lint/syn/NODE.md"),
-    ))
-    .unwrap()
-    .replace('\r', "");
+    let node =
+        String::from_utf8(read(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../spec/krn/num/lint/syn/NODE.md")))
+            .unwrap()
+            .replace('\r', "");
     let mut rows = BTreeSet::new();
     for (rule, kind, pat) in &RULE_TABLE {
         let row = format!("| `{}` | {} | `{}` |", rule.id(), kind_name(*kind), pat);
