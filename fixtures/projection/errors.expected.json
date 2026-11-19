@@ -1,0 +1,1 @@
+{"bad-projection.json":{"commands":["motion.move_axis@1"],"error":"projection_mismatch"},"collision.json":{"commands":["demo.run_fit@2","demo.run_fit_v2@1"],"error":"name_collision"},"long-name.json":{"commands":["demo.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@1"],"error":"name_too_long"}}

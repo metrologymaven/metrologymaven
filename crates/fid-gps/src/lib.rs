@@ -5,8 +5,12 @@
 //!   operator chains in the ISO 17450 operator vocabulary, the versioned table container,
 //!   its strict bounded loader, the row, chain and table digests, the exported JSON Schema
 //!   and the defaults-profile key vocabulary.
+//! - [`resolve`] (`GDT.RES.RESOLVE`): the pure interpretation resolver from a characteristic
+//!   and its context to a DMT row, operator chain and digests, or `UNRESOLVED` /
+//!   `UNSUPPORTED`, and the exact row lookup of `gdt.get_dmt_row@1`.
 //!
 //! Pure: no I/O (callers pass bytes), no floating-point arithmetic, no `HashMap`/`HashSet`,
 //! and nothing here panics on any input: every outcome is a returned `Result`.
 
 pub mod dmt;
+pub mod resolve;

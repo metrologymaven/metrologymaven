@@ -18,10 +18,11 @@
 
 use super::event::{Change, DprofEvent, PublishEvent, RepointEvent};
 use super::ident::{CharId, ProfileId, ProfileRef};
-use super::profile::{profile_from_value, KeyVocabulary, ProfileDoc};
+use super::profile::{profile_from_value, ProfileDoc, VocabularySource};
 use super::{DprofError, MAX_FILE_PARAM_LEN};
 use fid_canon::CValue;
 use fid_io_reg::Principal;
+use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Most profiles one store holds.
@@ -31,7 +32,7 @@ pub const MAX_BINDINGS: usize = 1_000_000;
 /// Most characteristics one re-point may name.
 pub const MAX_REPOINT_CHARS: usize = 10_000;
 /// `schema` value of a store snapshot.
-pub const STORE_SCHEMA: &str = "fid.dprof-store/1";
+pub const STORE_SCHEMA: &str = "fid.dprof-store/2";
 /// Largest snapshot accepted, in bytes.
 pub const MAX_STORE_BYTES: usize = fid_canon::MAX_INPUT_BYTES;
 /// Deepest snapshot nesting: document, `profiles`, entry, profile document, `keys`, list.
@@ -83,21 +84,45 @@ pub fn parse_principal(s: &str) -> Option<Principal> {
     }
 }
 
-/// One stored profile.
+/// One stored profile. Fields are private: entries are made only by the store (publish,
+/// adoption, snapshot loading), so provenance always agrees with the branch.
+///
+/// ```compile_fail
+/// fn forge(p: &mut fid_gdt::chars::dprof::StoredProfile) {
+///     p.adopted = true;
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredProfile {
-    /// The profile, canonical bytes and digest.
-    pub doc: ProfileDoc,
-    /// The branch it was published on.
-    pub branch: Branch,
-    /// Provenance: the principal that published it.
-    pub author: Principal,
-    /// Whether this working-branch entry came from a human adopting an agent-branch
-    /// profile (always `false` on the agent branch).
-    pub adopted: bool,
+    doc: ProfileDoc,
+    branch: Branch,
+    author: Principal,
+    adopted: bool,
 }
 
 impl StoredProfile {
+    /// The profile, canonical bytes, digest and the digest of the key vocabulary it was
+    /// checked against at publish.
+    pub fn doc(&self) -> &ProfileDoc {
+        &self.doc
+    }
+
+    /// The branch it was published on (or adopted onto).
+    pub fn branch(&self) -> Branch {
+        self.branch
+    }
+
+    /// Provenance: the principal that published it.
+    pub fn author(&self) -> Principal {
+        self.author
+    }
+
+    /// Whether this working-branch entry came from a human adopting an agent-branch
+    /// profile (always `false` on the agent branch).
+    pub fn adopted(&self) -> bool {
+        self.adopted
+    }
+
     /// Whether a characteristic on `branch` may select this profile: the agent branch sees
     /// both branches, the working branch only its own entries.
     pub fn selectable_on(&self, branch: Branch) -> bool {
@@ -132,22 +157,48 @@ impl PublishStatus {
     }
 }
 
-/// The result of `gdt.publish_defaults_profile@1`.
+/// The result of `gdt.publish_defaults_profile@1`. Fields are private and read through
+/// getters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Published {
-    /// The profile reference.
-    pub reference: ProfileRef,
-    /// Created or existing.
-    pub status: PublishStatus,
-    /// The branch the profile lives on.
-    pub branch: Branch,
-    /// Whether this was a dry run.
-    pub dry_run: bool,
-    /// The journal event; `None` for an existing profile or a dry run.
-    pub event: Option<DprofEvent>,
+    reference: ProfileRef,
+    status: PublishStatus,
+    branch: Branch,
+    dry_run: bool,
+    event: Option<DprofEvent>,
 }
 
 impl Published {
+    /// The profile reference.
+    pub fn reference(&self) -> &ProfileRef {
+        &self.reference
+    }
+
+    /// Created or existing.
+    pub fn status(&self) -> PublishStatus {
+        self.status
+    }
+
+    /// The branch the profile lives on.
+    pub fn branch(&self) -> Branch {
+        self.branch
+    }
+
+    /// Whether this was a dry run.
+    pub fn dry_run(&self) -> bool {
+        self.dry_run
+    }
+
+    /// The journal event; `None` for an existing profile or a dry run.
+    pub fn event(&self) -> Option<&DprofEvent> {
+        self.event.as_ref()
+    }
+
+    /// The journal event, by value.
+    pub fn into_event(self) -> Option<DprofEvent> {
+        self.event
+    }
+
     /// The `--json` / MCP result.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
@@ -159,20 +210,42 @@ impl Published {
     }
 }
 
-/// The result of `gdt.repoint_defaults_profile@1`.
+/// The result of `gdt.repoint_defaults_profile@1`. Fields are private and read through
+/// getters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Repointed {
-    /// One entry per named characteristic, sorted by characteristic ID.
-    pub changes: Vec<Change>,
-    /// The branch the bindings were changed on.
-    pub branch: Branch,
-    /// Whether this was a dry run.
-    pub dry_run: bool,
-    /// The journal event; `None` for a dry run.
-    pub event: Option<DprofEvent>,
+    changes: Vec<Change>,
+    branch: Branch,
+    dry_run: bool,
+    event: Option<DprofEvent>,
 }
 
 impl Repointed {
+    /// One entry per named characteristic, sorted by characteristic ID.
+    pub fn changes(&self) -> &[Change] {
+        &self.changes
+    }
+
+    /// The branch the bindings were changed on.
+    pub fn branch(&self) -> Branch {
+        self.branch
+    }
+
+    /// Whether this was a dry run.
+    pub fn dry_run(&self) -> bool {
+        self.dry_run
+    }
+
+    /// The journal event; `None` for a dry run.
+    pub fn event(&self) -> Option<&DprofEvent> {
+        self.event.as_ref()
+    }
+
+    /// The journal event, by value.
+    pub fn into_event(self) -> Option<DprofEvent> {
+        self.event
+    }
+
     /// The `--json` / MCP result.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
@@ -341,12 +414,7 @@ impl DprofState {
         if dry_run {
             return Ok(Published { reference, status: PublishStatus::Created, branch, dry_run, event: None });
         }
-        let event = DprofEvent::Publish(PublishEvent {
-            file: file.to_owned(),
-            principal,
-            branch,
-            reference: reference.clone(),
-        });
+        let event = DprofEvent::Publish(PublishEvent::new(file, principal, reference.clone())?);
         self.profiles.insert((branch, id), StoredProfile { doc, branch, author: principal, adopted: false });
         Ok(Published { reference, status: PublishStatus::Created, branch, dry_run, event: Some(event) })
     }
@@ -386,7 +454,7 @@ impl DprofState {
             if old.dialect() != target.dialect() {
                 return Err(DprofError::DialectMismatch { char: c.as_str().to_owned() });
             }
-            changes.push(Change { char: c.clone(), old: old.clone(), new: target.clone() });
+            changes.push(Change::new(c.clone(), old.clone(), target.clone()));
         }
         if dry_run {
             return Ok(Repointed { changes, branch, dry_run, event: None });
@@ -395,14 +463,14 @@ impl DprofState {
             Branch::Working => &mut self.working,
             Branch::Agent => &mut self.agent,
         };
-        let added = changes.iter().filter(|ch| !map.contains_key(&ch.char)).count();
+        let added = changes.iter().filter(|ch| !map.contains_key(ch.char())).count();
         if map.len().saturating_add(added) > MAX_BINDINGS {
             return Err(store_err("too_many_bindings"));
         }
+        let event = DprofEvent::Repoint(RepointEvent::new(principal, target, changes.clone())?);
         for ch in &changes {
-            map.insert(ch.char.clone(), ch.new.clone());
+            map.insert(ch.char().clone(), ch.new_ref().clone());
         }
-        let event = DprofEvent::Repoint(RepointEvent { principal, branch, to: target, changes: changes.clone() });
         Ok(Repointed { changes, branch, dry_run, event: Some(event) })
     }
 
@@ -437,12 +505,13 @@ impl DprofState {
 
     // ------------------------------------------------------------------ snapshot
 
-    /// The store as canonical JSON (`fid.dprof-store/1`):
+    /// The store as canonical JSON (`fid.dprof-store/2`):
     ///
     /// ```json
-    /// { "schema": "fid.dprof-store/1",
+    /// { "schema": "fid.dprof-store/2",
     ///   "profiles": [ { "ref": "dp:..", "branch": "working", "author": "human",
-    ///                   "adopted": false, "profile": { ..the profile document.. } } ],
+    ///                   "adopted": false, "vocabulary": "sha256:..",
+    ///                   "profile": { ..the profile document.. } } ],
     ///   "bindings": { "working": { "<char>": "dp:.." }, "agent": { } } }
     /// ```
     pub fn to_canonical_bytes(&self) -> Result<Vec<u8>, DprofError> {
@@ -462,6 +531,7 @@ impl DprofState {
             m.insert("branch".to_owned(), CValue::Str(p.branch.as_str().to_owned()));
             m.insert("author".to_owned(), CValue::Str(p.author.as_str().to_owned()));
             m.insert("adopted".to_owned(), CValue::Bool(p.adopted));
+            m.insert("vocabulary".to_owned(), CValue::Str(p.doc.vocabulary().to_string()));
             m.insert("profile".to_owned(), doc);
             profiles.push(CValue::Obj(m));
         }
@@ -483,11 +553,14 @@ impl DprofState {
     }
 
     /// Loads a snapshot strictly: every field present and no other, no non-integer number
-    /// literal, each profile re-parsed against `vocab` with its digest re-checked,
+    /// literal, each profile re-parsed against the vocabulary its entry pins (looked up in
+    /// `vocabs` by digest: `store_invalid{bad_vocabulary}` when the field is not a digest,
+    /// `store_invalid{vocabulary_unknown}` when `vocabs` does not hold it, so the result never
+    /// depends on which vocabulary the caller happens to pass) with its digest re-checked,
     /// provenance consistent with its branch, no repeated (branch, profile ID), each
     /// binding resolvable on its branch, all limits held. Fails `store_invalid{reason}`,
     /// or the profile's own error.
-    pub fn from_canonical_bytes(bytes: &[u8], vocab: &KeyVocabulary) -> Result<DprofState, DprofError> {
+    pub fn from_canonical_bytes(bytes: &[u8], vocabs: &dyn VocabularySource) -> Result<DprofState, DprofError> {
         if bytes.len() > MAX_STORE_BYTES {
             return Err(store_err("too_large"));
         }
@@ -508,7 +581,9 @@ impl DprofState {
             return Err(store_err("too_many_profiles"));
         }
         for entry in list {
-            let e = obj(entry, &["adopted", "author", "branch", "profile", "ref"])?;
+            let e = obj(entry, &["adopted", "author", "branch", "profile", "ref", "vocabulary"])?;
+            let pinned = Digest::parse(str_of(e, "vocabulary")?).map_err(|_| store_err("bad_vocabulary"))?;
+            let vocab = vocabs.vocabulary(&pinned).ok_or_else(|| store_err("vocabulary_unknown"))?;
             let doc = profile_from_value(e.get("profile").ok_or_else(|| store_err("bad_keys"))?, vocab)?;
             let r = ProfileRef::parse(str_of(e, "ref")?).ok_or_else(|| store_err("bad_ref"))?;
             if r != doc.reference() {

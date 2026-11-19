@@ -467,6 +467,7 @@ fn req004_closed_taxonomy_with_positions() {
         IoError::Malformed { at, reason: "x" },
         IoError::TruncatedFile { at },
         IoError::UnitRequired,
+        IoError::UnitConflict,
         IoError::FormatUnknown,
         IoError::FormatAmbiguous,
         IoError::FormatMismatch,

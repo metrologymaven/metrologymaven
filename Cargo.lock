@@ -699,7 +699,9 @@ version = "0.0.1"
 dependencies = [
  "cap-std",
  "fid-canon",
+ "fid-geo-frame",
  "fid-io-reg",
+ "fid-journal",
  "fid-replay",
  "fid-surface",
  "fid-types",
