@@ -20,7 +20,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/core/jrn/chain/append");
@@ -461,6 +461,48 @@ fn failed_commit_poisons_until_reopen() {
     assert_eq!(verify_chain(&root).len(), 3);
 }
 
+#[test]
+fn tail_waiting_on_a_failed_commit_is_append_failed() {
+    let (_t, _root, j) = new_journal("tailrace");
+    let fx = chain_fixture();
+    append_fixture(&j, &fx[0]);
+    put_blobs(&j, &fx[1]);
+    // The batch stops before its COMMIT (holding the store lock) until released, then its
+    // COMMIT "fails after writing" (outcome unknown, poison).
+    let (in_commit_tx, in_commit_rx) = std::sync::mpsc::channel::<()>();
+    let (go_tx, go_rx) = std::sync::mpsc::channel::<()>();
+    let (in_commit_tx, go_rx) = (Mutex::new(in_commit_tx), Mutex::new(go_rx));
+    j.set_fault_hook(Some(Arc::new(move |q: CrashPoint| {
+        if q == CrashPoint::BeforeCommit {
+            in_commit_tx.lock().unwrap().send(()).unwrap();
+            go_rx.lock().unwrap().recv().unwrap();
+        }
+        q != CrashPoint::Committed
+    })));
+    let j = Arc::new(j);
+    let req = request(&fx[1]);
+    let writer = {
+        let j = Arc::clone(&j);
+        std::thread::spawn(move || j.append(req))
+    };
+    in_commit_rx.recv().unwrap();
+    assert!(!j.is_poisoned());
+    let reader = {
+        let j = Arc::clone(&j);
+        std::thread::spawn(move || j.tail())
+    };
+    // Time for the reader to pass the first poison check and wait for the store lock. If it
+    // is slower, it meets the poison at the first check: the expected result is the same.
+    std::thread::sleep(Duration::from_millis(300));
+    go_tx.send(()).unwrap();
+    let err = writer.join().unwrap().unwrap_err();
+    assert!(err.to_string().contains("outcome unknown"), "{err}");
+    let got = reader.join().unwrap();
+    assert_eq!(got.as_ref().map_err(JournalError::code), Err("append_failed"), "{got:?}");
+    assert!(got.unwrap_err().to_string().contains("poisoned"));
+    assert!(j.is_poisoned());
+}
+
 /// Raw-inserts a tail row at sequence 4 built from fixture entry 3 with the given `prev`
 /// and `branch` column, bypassing the journal.
 fn insert_raw_tail(root: &Path, prev: Digest, branch_column: Option<&str>) {
@@ -505,6 +547,56 @@ fn tail_columns_must_match_the_header() {
     let err = try_reopen(&root).unwrap_err();
     assert_eq!(err.code(), "chain_invalid");
     assert!(err.to_string().contains("branch"), "{err}");
+}
+
+/// Raw-inserts the entry built from fixture entry `index` at `seq` with the given `prev` and
+/// `kind` column, bypassing the journal; returns its (valid) header hash.
+fn insert_raw(root: &Path, index: usize, seq: u64, prev: Digest, kind_column: Option<&str>) -> Digest {
+    let req = request(&chain_fixture()[index]);
+    let entry = build(&req.draft, seq, prev, &mut req.salts.clone().unwrap()).unwrap();
+    let header = to_canonical_bytes(&entry.header.to_value()).unwrap();
+    let (loc, lock) = ProjectLocation::open(root, OpenMode::Write).unwrap();
+    let lock = lock.unwrap();
+    let db = open_write(&loc, &lock).unwrap();
+    db.connection()
+        .execute(
+            "INSERT INTO entries (seq, hash, stream, branch, kind, prev_hash, header) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            (
+                i64::try_from(seq).unwrap(),
+                entry.header.hash.to_string(),
+                STREAM,
+                entry.header.branch.as_str(),
+                kind_column.unwrap_or(entry.header.kind().as_str()),
+                prev.to_string(),
+                header.as_slice(),
+            ),
+        )
+        .unwrap();
+    entry.header.hash
+}
+
+#[test]
+fn fork_two_rows_deep_is_chain_invalid() {
+    let (_t, root) = prechain_project("fork2", 2);
+    let fx = chain_fixture();
+    // Entry 3 links to entry 1 instead of entry 2 (a fork, though its own hash verifies);
+    // entry 4 links correctly to the forged entry 3, so the tail alone verifies.
+    let forged = insert_raw(&root, 2, 3, digest(st(&fx[0], "hash")), None);
+    insert_raw(&root, 3, 4, forged, None);
+    let err = try_reopen(&root).unwrap_err();
+    assert_eq!(err.code(), "chain_invalid");
+    assert!(err.to_string().contains("entry 3: prev_hash does not link to the hash of entry 2"), "{err}");
+}
+
+#[test]
+fn kind_column_must_match_the_header() {
+    let (_t, root) = prechain_project("kind", 3);
+    let fx = chain_fixture();
+    assert_eq!(st(obj(fx[3].get("draft").unwrap()), "kind"), "command");
+    insert_raw(&root, 3, 4, digest(st(&fx[2], "hash")), Some("principal_upgrade"));
+    let err = try_reopen(&root).unwrap_err();
+    assert_eq!(err.code(), "chain_invalid");
+    assert!(err.to_string().contains("kind column differs from header.kind"), "{err}");
 }
 
 #[test]
