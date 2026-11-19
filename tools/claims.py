@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -25,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scope import parse_front  # noqa: E402  (SCOPE's node parser; ECO.COMM.SCOPE)
 
 STALE_AFTER = timedelta(days=14)
+MAX_INPUT_BYTES = 64 * 1024 * 1024
 OK_STATUSES = {"leaf", "frozen"}
 EXEMPT_LABEL = "no-spec"
 IMPLEMENTS_RE = re.compile(r"^[ \t]*Implements:[ \t]*([A-Z0-9.]+)", re.MULTILINE)
@@ -60,34 +62,63 @@ def fmt_time(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_json(path: str):
+def read_text(path, what: str = "") -> str:
+    """Read a UTF-8 input file of at most MAX_INPUT_BYTES; any failure is CLAIMS-INPUT."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError) as e:
+        if os.path.getsize(path) > MAX_INPUT_BYTES:
+            raise ClaimsError("CLAIMS-INPUT", f"{path}: larger than {MAX_INPUT_BYTES} bytes")
+        with open(path, "rb") as f:
+            return f.read(MAX_INPUT_BYTES + 1).decode("utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise ClaimsError("CLAIMS-INPUT", f"{what or path}: {e}") from e
+
+
+def load_json(path: str):
+    text = read_text(path)
+    try:
+        return json.loads(text)
+    except (ValueError, RecursionError) as e:
         raise ClaimsError("CLAIMS-INPUT", f"{path}: {e}") from e
 
 
-def _text(v) -> str:
-    return v if isinstance(v, str) else ""
+def _text(pr: dict, *keys: str) -> str:
+    """The first present key's value; it must be a string or null."""
+    for k in keys:
+        if k in pr:
+            v = pr[k]
+            if v is None:
+                return ""
+            if not isinstance(v, str):
+                raise ClaimsError("CLAIMS-INPUT", f"PR field {k!r} is not a string")
+            return v
+    return ""
 
 
 def norm_pr(pr) -> dict:
     """Accept both the spec's field names and `gh`'s (headRefName, labels as objects)."""
     if not isinstance(pr, dict):
         raise ClaimsError("CLAIMS-INPUT", "PR entry is not an object")
+    raw_labels = pr.get("labels")
+    if raw_labels is None:
+        raw_labels = []
+    if not isinstance(raw_labels, list):
+        raise ClaimsError("CLAIMS-INPUT", "PR field 'labels' is not a list")
     labels = []
-    for lab in pr.get("labels") or []:
+    for lab in raw_labels:
         name = lab.get("name") if isinstance(lab, dict) else lab
-        if isinstance(name, str):
-            labels.append(name)
+        if not isinstance(name, str):
+            raise ClaimsError("CLAIMS-INPUT", "PR label is neither a string nor an object with a string 'name'")
+        labels.append(name)
+    number = pr.get("number")
+    if number is not None and (isinstance(number, bool) or not isinstance(number, int)):
+        raise ClaimsError("CLAIMS-INPUT", "PR field 'number' is not an integer")
     return {
-        "number": pr.get("number"),
-        "title": _text(pr.get("title")),
-        "body": _text(pr.get("body")),
-        "head_ref": _text(pr.get("head_ref", pr.get("headRefName"))),
+        "number": number,
+        "title": _text(pr, "title"),
+        "body": _text(pr, "body"),
+        "head_ref": _text(pr, "head_ref", "headRefName"),
         "labels": sorted(set(labels)),
-        "state": _text(pr.get("state")) or "OPEN",
+        "state": _text(pr, "state") or "OPEN",
     }
 
 
@@ -99,9 +130,11 @@ def mentions(node_id: str, text: str) -> bool:
 
 def load_tree(tree: Path) -> dict[str, dict]:
     """Map node ID -> {"meta", "path", "text"} for every NODE.md under `tree`."""
+    if not tree.is_dir():
+        raise ClaimsError("CLAIMS-INPUT", f"{tree}: spec tree is not a directory")
     nodes: dict[str, dict] = {}
     for p in sorted(tree.rglob("NODE.md")):
-        text = p.read_text(encoding="utf-8")
+        text = read_text(p)
         meta, _body = parse_front(text)
         if meta is None or not meta.get("id"):
             continue
@@ -122,6 +155,24 @@ def git(repo: Path, *args: str) -> str:
     if r.returncode != 0:
         raise ClaimsError("CLAIMS-GIT", r.stderr.decode("utf-8", "replace").strip())
     return r.stdout.decode("utf-8", "replace")
+
+
+def posix_literal(s: str) -> str:
+    """`s` as a POSIX regex (same meaning in BRE and ERE) matching itself literally."""
+    out = []
+    for ch in s:
+        if ch.isalnum() or ch in " _-@,:/'\"<>=!%&~`#;":
+            out.append(ch)
+        elif ch == "^":
+            out.append("\\^")
+        else:
+            out.append(f"[{ch}]")
+    return "".join(out)
+
+
+def claim_regex(value: str) -> str:
+    """Matches a diff line that sets `claimed_by:` to exactly `value` (cf. git log -G)."""
+    return "^claimed_by:[ \t]*" + posix_literal(value) + "[ \t\r]*$"
 
 
 def claim_value(text: str) -> str:
@@ -145,12 +196,17 @@ def cmd_stale(args) -> int:
     ]
     git(repo, "rev-parse", "--git-dir")
     stale = []
-    for nid, n in sorted(load_tree(repo / args.spec).items()):
+    spec = (repo / args.spec).resolve()
+    if spec != repo and repo not in spec.parents:
+        raise ClaimsError("CLAIMS-INPUT", f"{args.spec}: spec tree is not inside --repo")
+    for nid, n in sorted(load_tree(spec).items()):
         value = claim_value(n["text"])
         if not value:
             continue
-        rel = n["path"].relative_to(repo).as_posix()
-        out = git(repo, "log", "-1", "--format=%cI", f"-Sclaimed_by: {value}", "--", rel).strip()
+        rel = n["path"].resolve().relative_to(repo).as_posix()
+        # -G (not -S): a commit counts only if it adds or removes a line whose whole value is
+        # `value`, so an earlier claim by e.g. "alice2" never dates a later claim by "alice".
+        out = git(repo, "log", "-1", "--format=%cI", "-G", claim_regex(value), "--", rel).strip()
         if not out:
             print(f"warn  {rel}: claim {value!r} not found in history", file=sys.stderr)
             continue

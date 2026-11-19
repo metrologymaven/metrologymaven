@@ -70,6 +70,30 @@ class StaleTest(unittest.TestCase):
         self.assertEqual([s["id"] for s in out["stale"]], ["A", "C", "E"])
         self.assertEqual(out["stale"][2], {"id": "E", "claimed_by": "erin", "claimed_at": "2026-11-17T00:00:00Z"})
 
+    def test_superseded_longer_claim_does_not_date_new_one(self):
+        # F: alice2 on 2026-10-20, then alice on 2026-11-25. A substring pickaxe (-S) would date
+        # the alice claim to 10-20; the claim date must be 11-25 (REQ-ECO.COMM.CLAIM-001).
+        tmp = Path(self.tmp) / "prs-empty2.json"
+        tmp.write_text("[]")
+        out = json.loads(self.stale(prs=tmp, now="2026-12-09T08:00:00Z")[1])
+        self.assertNotIn("F", [s["id"] for s in out["stale"]])
+        out = json.loads(self.stale(prs=tmp, now="2026-12-09T08:00:01Z")[1])
+        self.assertIn({"id": "F", "claimed_by": "alice", "claimed_at": "2026-11-25T08:00:00Z"}, out["stale"])
+
+    def test_missing_or_outside_spec_dir_is_claims_input(self):
+        for spec in ("no-such-dir", str(Path(self.tmp) / "src" / "spec")):
+            code, _out, err = run("stale", "--repo", str(self.repo), "--prs", str(FIX / "prs.json"),
+                                  "--now", NOW, "--spec", spec)
+            self.assertEqual(code, 1, spec)
+            self.assertIn("CLAIMS-INPUT", err)
+            self.assertNotIn("Traceback", err)
+
+    def test_absolute_spec_inside_repo(self):
+        code, out, err = run("stale", "--repo", str(self.repo), "--prs", str(FIX / "prs.json"),
+                             "--now", NOW, "--json", "--spec", str(self.repo / "spec"))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out, (FIX / "expected-stale.json").read_bytes())
+
     def test_bad_json_is_claims_input(self):
         tmp = Path(self.tmp) / "bad.json"
         tmp.write_text("{not json")
@@ -123,7 +147,64 @@ class TraceTest(unittest.TestCase):
         self.assertEqual(doc["codes"], ["TRACE-NOT-LEAF ALN.RPS", "TRACE-UNKNOWN ALN.RPS.NOPE"])
 
 
+class BadInputTest(unittest.TestCase):
+    """Malformed input exits 1 with CLAIMS-INPUT, never a traceback."""
+
+    def check(self, content, mode="trace"):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "in.json"
+            f.write_bytes(content if isinstance(content, bytes) else content.encode("utf-8"))
+            if mode == "trace":
+                code, _out, err = run("trace", "--pr", str(f), "--tree", str(FIX / "tree"))
+            else:
+                code, _out, err = run("stale", "--repo", d, "--prs", str(f), "--now", NOW)
+        self.assertEqual(code, 1, content)
+        self.assertIn("CLAIMS-INPUT", err)
+        self.assertNotIn("Traceback", err)
+
+    def test_malformed_pr_fields(self):
+        cases = [
+            '{"number": 1, "labels": "no-spec", "body": "Implements: ALN.RPS.ITER"}',
+            '{"number": 1, "labels": [1], "body": "Implements: ALN.RPS.ITER"}',
+            '{"number": 1, "labels": [{"name": 2}]}',
+            '{"number": 1, "state": 5, "body": "Implements: ALN.RPS.ITER"}',
+            '{"number": 1, "title": ["x"]}',
+            '{"number": "1", "body": "Implements: ALN.RPS.ITER"}',
+            '[1]',
+            '{not json',
+            b'{"number": 1, "body": "\xff"}',
+            "[" * 100000 + "]" * 100000,
+        ]
+        for c in cases:
+            with self.subTest(c=c[:60]):
+                self.check(c)
+
+    def test_malformed_pr_list(self):
+        for c in ('{"number": 1}', '[{"number": 1, "state": 5}]', '[{"labels": {}}]', b"\xfe\xff"):
+            with self.subTest(c=c):
+                self.check(c, mode="stale")
+
+    def test_oversized_input(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "big.json"
+            with open(f, "wb") as h:
+                h.truncate(claims.MAX_INPUT_BYTES + 1)
+            code, _out, err = run("trace", "--pr", str(f), "--tree", str(FIX / "tree"))
+        self.assertEqual(code, 1)
+        self.assertIn("CLAIMS-INPUT", err)
+
+    def test_missing_tree(self):
+        code, _out, err = run("trace", "--pr", str(FIX / "pr-ok.json"), "--tree", str(FIX / "no-such-tree"))
+        self.assertEqual(code, 1)
+        self.assertIn("CLAIMS-INPUT", err)
+        self.assertNotIn("Traceback", err)
+
+
 class UnitTest(unittest.TestCase):
+    def test_claim_regex(self):
+        self.assertEqual(claims.claim_regex("alice"), "^claimed_by:[ \t]*alice[ \t\r]*$")
+        self.assertEqual(claims.posix_literal("a.b*c^d[e]\\"), "a[.]b[*]c\\^d[[]e[]][\\]")
+
     def test_mentions_word_boundary(self):
         self.assertTrue(claims.mentions("C", "spec(C): leaf"))
         self.assertTrue(claims.mentions("A.B", "fixes A.B."))
