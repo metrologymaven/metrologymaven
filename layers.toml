@@ -17,6 +17,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-solv" = "kernel"
 "fid-fit" = "kernel"
 "fid-scan-cmp" = "kernel"
+# B-rep model (GEO.CAD.TOPO.MODEL): L0 library code, KNP-1; only fid-geo-nurbs, fid-kci, fid-types.
+"fid-geo-cad" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest.
 "fid-align-solve" = "kernel"
 "fid-canon" = "model"
@@ -87,6 +89,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
+"fid-view" = "viewer"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"

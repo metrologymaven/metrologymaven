@@ -4,6 +4,7 @@
 fid-align-solve
 fid-canon
 fid-fit
+fid-geo-cad
 fid-geo-frame
 fid-geo-index
 fid-geo-nurbs --test analytic
@@ -23,3 +24,4 @@ fid-sign-core
 fid-solv
 fid-surface
 fid-types
+fid-view

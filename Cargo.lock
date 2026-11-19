@@ -593,6 +593,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-cad"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-nurbs",
+ "fid-kci",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
@@ -1082,6 +1091,15 @@ name = "fid-uuid"
 version = "0.0.1"
 dependencies = [
  "sha1",
+]
+
+[[package]]
+name = "fid-view"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
