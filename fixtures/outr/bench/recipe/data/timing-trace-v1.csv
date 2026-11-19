@@ -1,0 +1,4 @@
+# Synthetic, fictional workload description for OUTR.BENCH.RUN.RECIPE fixtures (CC-BY-4.0).
+step,points
+load,1000
+fit,1000

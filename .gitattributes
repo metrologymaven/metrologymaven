@@ -78,6 +78,8 @@ tools/tests/fixtures/claims/** -text
 fixtures/agent/redteam/pred/** -text
 # ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
 tools/tests/fixtures/rfc/** -text
+# OUTR.BENCH.RUN.RECIPE fixtures: digested synthetic data and a byte-compared expected report.
+fixtures/outr/bench/recipe/** -text
 # ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
 fixtures/block/** -text
 # KRN.SOLV.CONIC.VEND: hand-written trees, patches and reports, digested and compared byte for byte
