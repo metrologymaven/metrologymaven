@@ -30,6 +30,7 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask plat-gpu invariance --recorded <dir>\n       \
                      cargo xtask plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
                      [--phase <P>]\n       \
+                     cargo xtask plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]\n       \
                      cargo xtask personas-check [--personas <json>] [--apps <toml>]\n       \
                      cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] \
                      [--protocol <md>]\n       \
@@ -60,6 +61,9 @@ fn main() -> ExitCode {
         Some("plat-deploy") if args.get(1).map(String::as_str) == Some("netlist") => plat_deploy_netlist(&args[2..]),
         Some("plat-gpu") if args.get(1).map(String::as_str) == Some("invariance") => plat_gpu_invariance(&args[2..]),
         Some("plat-gpu") if args.get(1).map(String::as_str) == Some("validate") => fid_platform(&args, "plat-gpu"),
+        Some("plat-deploy") if args.get(1).map(String::as_str) == Some("validate-layout") => {
+            fid_platform(&args, "plat-deploy")
+        }
         Some("pins") => pins::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
@@ -172,7 +176,8 @@ fn bots_check(args: &[String]) -> ExitCode {
     }
 }
 
-/// PLAT.MATRIX.FILE, PLAT.HW.PROFILE and PLAT.GPU.POLICY: runs `fid-platform plat-matrix ...`,
+/// PLAT.MATRIX.FILE, PLAT.HW.PROFILE, PLAT.GPU.POLICY and PLAT.DEPLOY.NOADMIN.LAYOUT: runs
+/// `fid-platform plat-matrix ...`, `fid-platform plat-deploy validate-layout ...`,
 /// `fid-platform plat-hw ...` or `fid-platform plat-gpu validate ...` through Cargo, for the same layer reason as `datasets-check`
 /// (`fid-platform` is a `tool` crate).
 fn fid_platform(args: &[String], group: &str) -> ExitCode {
