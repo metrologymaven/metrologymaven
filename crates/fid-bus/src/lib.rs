@@ -3,6 +3,7 @@
 
 pub mod error;
 pub mod handler;
+pub mod policy;
 pub mod principal;
 mod unicode16;
 
@@ -18,6 +19,9 @@ pub use handler::{
     canonical_len, effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event,
     EventType, Handler, HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS,
     MAX_EVENT_BODY_BYTES,
+};
+pub use policy::class::{
+    authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,
 };
 pub use principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, ConfirmedUpgrade, HumanPresence, IdError, Identity, JournalAppend,

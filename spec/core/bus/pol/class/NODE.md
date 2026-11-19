@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-bus]
 satisfies: [REQ-CORE.BUS.POL-001, REQ-CORE.BUS.POL-009]
 covers: []
 depends_on: [CORE.REG.DEF, CORE.BUS.PRIN, CORE.BUS.PIPE.ERR]
@@ -67,6 +68,7 @@ The first check of the authorise stage: a fixed table from (principal kind, side
 ## Open questions
 
 - CONSTITUTION §3 bans only agents from M1, S1, W3 and A0 explicitly. This matrix also refuses them for `script`, `service`, `device` and `system`, following D-012's context (a script cannot release directly; a person upgrades the session) and D-030 (releases on server-held records are made in a desktop app). Replay re-executes W3 entries as `system` through `CORE.RPL`, not through this check. Confirm with `ENT.IAM` and `CORE.RPL.EXEC`.
+- Build: REQ-002 names `agent` and `script` for `human_only`; the build also refuses `service`, `device` and `system` with `human_only` (fail closed: a human-only command is one only a human may run). The class ban is checked first, so a non-human principal invoking a human-only W3 command gets `class_forbidden`. `authorise_cancel` takes the job's recorded owner as `Option<&PrincipalRef>` (kind and identity, so `alice` as agent does not own `alice`'s script job; no recorded owner is open to a human only) instead of `&PrincipalId`. The matrix is published at `schema/policy-matrix.json`. Confirm or relax.
 
 ## Children
 
