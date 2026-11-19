@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-view]
+built_pr: 264
 satisfies: [REQ-VIZ.VIEW-001, REQ-VIZ.VIEW-002]
 covers: []
 depends_on: [CORE.JRN]
