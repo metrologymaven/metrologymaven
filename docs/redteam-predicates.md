@@ -2,9 +2,9 @@
 
 Spec node: `AGENT.REDTEAM.PRED` (`spec/agent/redteam/pred/NODE.md`). Implemented in crate `fid-eval-suite`
 (schema in `crates/fid-eval-suite/src/redteam.rs`, suite-wide marker rules in `src/markers.rs`).
-Predicates are evaluated on runs by `AGENT.HARNESS.SAFETY` (not built yet). Until it exists, the reference
-evaluator `fixtures/agent/redteam/shell/ref_predicates.py` is the test oracle. It delegates the two fabrication
-predicates to `fixtures/agent/redteam/fabric/ref_predicates.py`.
+Predicates are evaluated on runs by `AGENT.HARNESS.SAFETY` (crate `fid-eval-harness`, module `safety`). The
+reference evaluator `fixtures/agent/redteam/shell/ref_predicates.py` remains an independent test oracle. It
+delegates the two fabrication predicates to `fixtures/agent/redteam/fabric/ref_predicates.py`.
 
 A predicate defines, as data, what counts as a successful attack. It reads only:
 

@@ -1,6 +1,8 @@
 //! Evaluation harness of Metrology Maven (`fid-eval`, D-032). Spec nodes
 //! `AGENT.HARNESS.SANDBOX` (the per-run sandbox project and task-scoped roots) and
-//! `AGENT.HARNESS.ADAPT` (the agent adapter contract, see [`Adapter`] and the `adapt` module).
+//! `AGENT.HARNESS.ADAPT` (the agent adapter contract, see [`Adapter`] and the `adapt` module) and
+//! `AGENT.HARNESS.SAFETY` (safety attempt and violation counting, see [`SafetyReport`] and the
+//! `safety` module).
 //!
 //! [`Sandbox::build`] makes a fresh, isolated run directory for one run of one task:
 //!
@@ -36,6 +38,7 @@
 
 mod adapt;
 mod path;
+mod safety;
 mod sandbox;
 mod snapshot;
 mod tar;
@@ -48,6 +51,12 @@ pub use adapt::{
     MAX_TEXT_BYTES, MAX_TOKEN_REPORT_BYTES, MCP_SERVER_NAME, PLACEHOLDERS,
 };
 pub use path::check_rel;
+pub use safety::{
+    claims, close, parse_predicates, parse_snapshot, pattern_matches, safety_report, snapshot_changes, Category,
+    CategoryReport, CommandDecl, ErrorReply, Evidence, H1Approval, FileChange, JournalEntry, Predicate, PredicateKind, Principal,
+    ReplySource, ResultRecord, RunRecord, SafetyReport, SiUnit, Subject, ATTEMPT_CODES, PREDICATE_KINDS, REL_TOL,
+    REPORT_FORMAT,
+};
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
 pub use snapshot::{escape_name, Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};
 pub use task::{AgentTask, TaskSpec};
@@ -84,6 +93,12 @@ pub enum ErrorCode {
     InvalidAdapter,
     /// An adapter's argv lacks a placeholder the agent needs (AGENT.HARNESS.ADAPT).
     MissingPlaceholder,
+    /// A run artifact the safety count needs is absent (AGENT.HARNESS.SAFETY).
+    ArtifactMissing,
+    /// A run artifact is malformed (AGENT.HARNESS.SAFETY).
+    InvalidArtifact,
+    /// A task predicate has a kind outside the closed list (AGENT.HARNESS.SAFETY).
+    UnknownPredicate,
 }
 
 impl ErrorCode {
@@ -102,6 +117,9 @@ impl ErrorCode {
             ErrorCode::Io => "io_error",
             ErrorCode::InvalidAdapter => "invalid_adapter",
             ErrorCode::MissingPlaceholder => "missing_placeholder",
+            ErrorCode::ArtifactMissing => "artifact_missing",
+            ErrorCode::InvalidArtifact => "invalid_artifact",
+            ErrorCode::UnknownPredicate => "unknown_predicate",
         }
     }
 }

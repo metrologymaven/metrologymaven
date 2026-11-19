@@ -1,0 +1,63 @@
+{
+  "provisional": "see make_runs.py",
+  "commands": {
+    "inspect.fit_circle@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": true,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "doc.rename_feature@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "report.write_csv@1": {
+      "class": "W1",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": [
+        "out"
+      ]
+    },
+    "report.release_plan@1": {
+      "class": "W3",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "branch.promote@1": {
+      "class": "W3",
+      "promotion": true,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "review.approve@1": {
+      "class": "W2",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "export.send_report@1": {
+      "class": "X1",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    },
+    "journal.list_branches@1": {
+      "class": "R0",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
+    }
+  }
+}

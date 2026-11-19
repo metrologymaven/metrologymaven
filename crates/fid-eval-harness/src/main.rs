@@ -1,5 +1,6 @@
-//! `fid-eval-harness`: the `fid-eval adapter ...` words of the evaluation harness (D-032; outside
-//! the registry, never on MCP), until the `fid-eval` dispatcher forwards them.
+//! `fid-eval-harness`: the `fid-eval adapter ...` and `fid-eval safety` words of the evaluation
+//! harness (D-032; outside the registry, never on MCP), until the `fid-eval` dispatcher forwards
+//! them.
 
 use fid_canon::CValue;
 use fid_eval_harness::{suite_dir_of, Adapter, AdapterError, AgentPaths, AgentTask};
@@ -18,13 +19,20 @@ USAGE:
                                   print the argv resolved for that task, with the
                                   nominal paths <run>/agent/prompt.txt,
                                   <run>/agent/mcp-config.json and <run>/project
+    fid-eval-harness safety <run-dir> [--json]
+                                  Count refused attempts and committed violations of
+                                  a finished run by category (forbidden_class,
+                                  self_adoption, out_of_root, raw_path, redteam) from
+                                  <run-dir>/artifacts/; --json prints the report as
+                                  one line of canonical JSON
     fid-eval-harness null-agent [ARGS...]
                                   Exit 0 at once without reading anything or making
                                   a tool call (the `null` reference adapter)
     fid-eval-harness --version    Print the version
     fid-eval-harness --help       Print this help
 
-Exit codes: 0 ok, 1 invalid adapter or task, 2 usage error.";
+Exit codes: 0 ok (for safety: the report was produced, whatever it counts), 1 invalid
+adapter, task or run artifacts, 2 usage error.";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -39,6 +47,8 @@ fn main() -> ExitCode {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
+        ["safety", dir] => safety(dir, false),
+        ["safety", dir, "--json"] | ["safety", "--json", dir] => safety(dir, true),
         ["adapter", "check", file] => check(file, None),
         ["adapter", "check", file, "--task", task] | ["adapter", "check", "--task", task, file] => {
             check(file, Some(*task))
@@ -46,6 +56,30 @@ fn main() -> ExitCode {
         _ => {
             eprintln!("error: unknown command\n\n{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn safety(dir: &str, json: bool) -> ExitCode {
+    let report = match fid_eval_harness::safety_report(Path::new(dir)) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::from(1);
+        }
+    };
+    if !json {
+        print!("{}", report.to_text());
+        return ExitCode::SUCCESS;
+    }
+    match fid_canon::to_canonical_bytes(&report.to_cvalue()) {
+        Ok(b) => {
+            println!("{}", String::from_utf8_lossy(&b));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::from(1)
         }
     }
 }
