@@ -62,7 +62,9 @@ pub struct RuntimeConfig {
 pub enum RuntimeError {
     TooLarge,
     /// Not UTF-8, a line that is not `key = value`, or a malformed value; `line` is 1-based.
-    Syntax { line: usize },
+    Syntax {
+        line: usize,
+    },
     UnknownKey(String),
     DuplicateKey(String),
     MissingKey(&'static str),
@@ -71,7 +73,9 @@ pub enum RuntimeError {
     /// A value the policy forbids (for example `relaxed_simd = true`).
     Policy(&'static str),
     /// Valid settings, but not in canonical form; `offset` is the first differing byte.
-    NonCanonical { offset: usize },
+    NonCanonical {
+        offset: usize,
+    },
 }
 
 impl RuntimeError {
@@ -136,11 +140,14 @@ fn is_version(s: &str) -> bool {
     let parts: Vec<&str> = s.split('.').collect();
     parts.len() == 3
         && parts.iter().all(|p| {
-            !p.is_empty() && p.len() <= 9 && p.bytes().all(|c| c.is_ascii_digit()) && (p.len() == 1 || !p.starts_with('0'))
+            !p.is_empty()
+                && p.len() <= 9
+                && p.bytes().all(|c| c.is_ascii_digit())
+                && (p.len() == 1 || !p.starts_with('0'))
         })
 }
 
-fn get(vals: &[(String, Value)], key: &'static str) -> Result<&Value, RuntimeError> {
+fn get<'a>(vals: &'a [(String, Value)], key: &'static str) -> Result<&'a Value, RuntimeError> {
     vals.iter().find(|(k, _)| k == key).map(|(_, v)| v).ok_or(RuntimeError::MissingKey(key))
 }
 

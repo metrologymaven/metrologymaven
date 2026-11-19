@@ -31,7 +31,8 @@ fn ac1_every_labelled_module_parses_and_checks_as_labelled() {
                 let expected = if report.passed() {
                     "pass".to_string()
                 } else {
-                    let denied: Vec<String> = report.denied().iter().map(|i| format!("{} {}", i.module, i.name)).collect();
+                    let denied: Vec<String> =
+                        report.denied().iter().map(|i| format!("{} {}", i.module, i.name)).collect();
                     format!("fail:{}", denied.join(","))
                 };
                 assert_eq!(check, expected, "{file}");
@@ -65,7 +66,11 @@ fn ac1_report_lists_every_import_and_names_the_denied_one() {
     assert_eq!(ok.imports.iter().map(|i| i.kind).collect::<Vec<_>>(), [ImportKind::Func, ImportKind::Func]);
     assert_eq!(
         allow::check(&ok, &test_allow()).lines(),
-        ["allowed wasi_snapshot_preview1 fd_write", "allowed wasi_snapshot_preview1 proc_exit", "imports: 2, denied: 0"]
+        [
+            "allowed wasi_snapshot_preview1 fd_write",
+            "allowed wasi_snapshot_preview1 proc_exit",
+            "imports: 2, denied: 0"
+        ]
     );
 }
 

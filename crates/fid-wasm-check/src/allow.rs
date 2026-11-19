@@ -46,10 +46,18 @@ pub enum AllowError {
     NotUtf8,
     TooManyEntries,
     /// A CR, tab, byte-order mark or other character the format does not allow.
-    BadCharacter { line: usize },
-    Syntax { line: usize },
-    MissingJustification { line: usize },
-    Duplicate { line: usize },
+    BadCharacter {
+        line: usize,
+    },
+    Syntax {
+        line: usize,
+    },
+    MissingJustification {
+        line: usize,
+    },
+    Duplicate {
+        line: usize,
+    },
 }
 
 impl AllowError {
@@ -82,7 +90,9 @@ impl fmt::Display for AllowError {
 impl std::error::Error for AllowError {}
 
 fn is_token(s: &str) -> bool {
-    !s.is_empty() && s.len() <= MAX_TOKEN_BYTES && s.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_')
+    !s.is_empty()
+        && s.len() <= MAX_TOKEN_BYTES
+        && s.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_')
 }
 
 impl Allowlist {
@@ -122,7 +132,11 @@ impl Allowlist {
             if entries.len() == MAX_ENTRIES {
                 return Err(AllowError::TooManyEntries);
             }
-            entries.push(Entry { module: module.to_string(), name: name.to_string(), justification: justification.to_string() });
+            entries.push(Entry {
+                module: module.to_string(),
+                name: name.to_string(),
+                justification: justification.to_string(),
+            });
         }
         Ok(Allowlist { entries })
     }
@@ -134,7 +148,8 @@ impl Allowlist {
 
     /// Whether `import` is allowed: a function import with an entry.
     pub fn allows(&self, import: &Import) -> bool {
-        import.kind == ImportKind::Func && self.entries.iter().any(|e| e.module == import.module && e.name == import.name)
+        import.kind == ImportKind::Func
+            && self.entries.iter().any(|e| e.module == import.module && e.name == import.name)
     }
 }
 
@@ -184,7 +199,9 @@ pub fn check(module: &Module, allow: &Allowlist) -> ImportReport {
     let unused = allow
         .entries()
         .iter()
-        .filter(|e| !module.imports.iter().any(|i| i.kind == ImportKind::Func && i.module == e.module && i.name == e.name))
+        .filter(|e| {
+            !module.imports.iter().any(|i| i.kind == ImportKind::Func && i.module == e.module && i.name == e.name)
+        })
         .cloned()
         .collect();
     ImportReport { imports, unused }

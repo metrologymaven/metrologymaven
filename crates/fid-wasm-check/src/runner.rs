@@ -29,7 +29,8 @@ pub const NOT_REPLAYABLE_RESOURCE: &str = "NOT_REPLAYABLE(resource)";
 /// Runner stdout for any other abnormal end.
 pub const NOT_REPLAYABLE_TRAP: &str = "NOT_REPLAYABLE(trap)";
 /// Stderr substrings that mark stack or memory exhaustion.
-pub const RESOURCE_MARKERS: [&str; 3] = ["call stack exhausted", "out of bounds memory access", "memory allocation of "];
+pub const RESOURCE_MARKERS: [&str; 3] =
+    ["call stack exhausted", "out of bounds memory access", "memory allocation of "];
 
 /// What one run produced.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -34,9 +34,18 @@ pub enum CrossCheckError {
     /// The module has imports the allowlist does not allow (`module name` each).
     ImportsDenied(Vec<String>),
     ArtifactMissing,
-    ArtifactDigestMismatch { claimed: Box<Digest>, computed: Box<Digest> },
-    ConfigDigestMismatch { claimed: Box<Digest>, computed: Box<Digest> },
-    RuntimeVersionMismatch { claimed: String, pinned: String },
+    ArtifactDigestMismatch {
+        claimed: Box<Digest>,
+        computed: Box<Digest>,
+    },
+    ConfigDigestMismatch {
+        claimed: Box<Digest>,
+        computed: Box<Digest>,
+    },
+    RuntimeVersionMismatch {
+        claimed: String,
+        pinned: String,
+    },
 }
 
 impl CrossCheckError {

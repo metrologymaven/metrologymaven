@@ -155,7 +155,8 @@ impl<'a> Reader<'a> {
         if self.pos >= self.end {
             return fail(WasmErrorKind::Truncated, self.pos);
         }
-        let b = self.buf.get(self.pos).copied().ok_or(WasmError { kind: WasmErrorKind::Truncated, offset: self.pos })?;
+        let b =
+            self.buf.get(self.pos).copied().ok_or(WasmError { kind: WasmErrorKind::Truncated, offset: self.pos })?;
         self.pos += 1;
         Ok(b)
     }

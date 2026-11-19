@@ -112,7 +112,8 @@ fn malformed_edges() {
     assert!(parse_call(&good[..good.len() - 1]).is_err(), "truncated");
     let long_id = format!("{{\"algorithm\":\"a.b.{}@1.0.0\",\"inputs\":[],\"params\":\"\"}}", "c".repeat(200));
     assert!(parse_call(long_id.as_bytes()).is_err(), "ID over 128 bytes");
-    let max_seed = b"{\"algorithm\":\"test.echo.identity@1.0.0\",\"inputs\":[],\"params\":\"\",\"seed\":\"18446744073709551615\"}";
+    let max_seed =
+        b"{\"algorithm\":\"test.echo.identity@1.0.0\",\"inputs\":[],\"params\":\"\",\"seed\":\"18446744073709551615\"}";
     assert_eq!(parse_call(max_seed).unwrap().seed, Some(u64::MAX));
     let empty_seed = b"{\"algorithm\":\"test.echo.identity@1.0.0\",\"inputs\":[],\"params\":\"\",\"seed\":\"\"}";
     assert!(parse_call(empty_seed).is_err());

@@ -88,10 +88,9 @@ fn ac4_the_only_kernel_function_the_shim_calls_is_evaluate() {
 
 #[test]
 fn the_scanner_sees_what_it_should() {
-    assert_eq!(kernel_items("use fid_kci::{evaluate, AlgorithmTable};\nlet x = fid_kci::sha256(b);"), [
-        "evaluate",
-        "AlgorithmTable",
-        "sha256"
-    ]);
+    assert_eq!(
+        kernel_items("use fid_kci::{evaluate, AlgorithmTable};\nlet x = fid_kci::sha256(b);"),
+        ["evaluate", "AlgorithmTable", "sha256"]
+    );
     assert_eq!(code_only("// unsafe\nlet a = 1;"), "let a = 1;");
 }

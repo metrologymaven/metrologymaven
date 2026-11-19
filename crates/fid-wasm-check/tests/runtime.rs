@@ -61,7 +61,10 @@ fn with(from: &str, to: &str) -> Vec<u8> {
 fn settings_errors_are_typed_and_fail_closed() {
     let cases: Vec<(Vec<u8>, RuntimeError)> = vec![
         (with("relaxed_simd = false", "relaxed_simd = true"), RuntimeError::Policy("relaxed_simd")),
-        (with("nan_canonicalization = true", "nan_canonicalization = false"), RuntimeError::Policy("nan_canonicalization")),
+        (
+            with("nan_canonicalization = true", "nan_canonicalization = false"),
+            RuntimeError::Policy("nan_canonicalization"),
+        ),
         (with("threads = false", "threads = true"), RuntimeError::Policy("threads")),
         (with("schema = \"1\"", "schema = \"2\""), RuntimeError::Policy("schema")),
         (with("schema = \"1\"", "schema = 1"), RuntimeError::BadValue("schema")),
@@ -84,7 +87,10 @@ fn settings_errors_are_typed_and_fail_closed() {
         (with("threads = false\n", ""), RuntimeError::MissingKey("threads")),
         (with("threads = false\n", "threads = false\n\n"), RuntimeError::NonCanonical { offset: 132 }),
         (
-            with("max_memory_size = 1073741824\nmax_wasm_stack = 1048576\n", "max_wasm_stack = 1048576\nmax_memory_size = 1073741824\n"),
+            with(
+                "max_memory_size = 1073741824\nmax_wasm_stack = 1048576\n",
+                "max_wasm_stack = 1048576\nmax_memory_size = 1073741824\n",
+            ),
             RuntimeError::NonCanonical { offset: 4 },
         ),
         (shipped()[..shipped().len() - 1].to_vec(), RuntimeError::NonCanonical { offset: shipped().len() - 1 }),
@@ -136,10 +142,9 @@ fn wasmtime_version_must_match_exactly() {
 
 #[test]
 fn calls_file_parses() {
-    let text = std::fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/man/wasm/calls-v1.txt"),
-    )
-    .unwrap();
+    let text =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/man/wasm/calls-v1.txt"))
+            .unwrap();
     let cases = parse_cases(&text).unwrap();
     assert_eq!(cases.len(), 43);
     assert_eq!(cases.iter().filter(|c| c.wasm_only).count(), 2);
