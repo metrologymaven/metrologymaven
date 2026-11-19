@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 220
 satisfies: [REQ-GDT.CHAR-004]
 covers: []
 depends_on: [CORE.JRN, CORE.STO]
