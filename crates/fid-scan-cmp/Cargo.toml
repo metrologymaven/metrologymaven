@@ -18,5 +18,9 @@ fid-num = { path = "../fid-num" }
 fid-kci = { path = "../fid-kci" }
 fid-geo-types = { path = "../fid-geo-types" }
 
+[dev-dependencies]
+# Test-support only (never in the kernel graph): the workspace root for fixture paths.
+fid-testkit = { path = "../fid-testkit" }
+
 [lints]
 workspace = true
