@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-res"
-description = "Metrology Maven result exchange: versioned CSV column maps and table dialect (IO.RES.CSV.MAP); result table export (IO.RES.CSV.OUT)"
+description = "Metrology Maven result exchange: versioned CSV column maps and table dialect (IO.RES.CSV.MAP); result table export (IO.RES.CSV.OUT); transcription record model (IO.RES.TRANS.MODEL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,6 +17,8 @@ fid-io-reg = { path = "../fid-io-reg" }
 fid-types = { path = "../fid-types" }
 # Replay outcome classes (CORE.RPL.CLASS) for replaying an export event (IO.RES.CSV.OUT AC-6).
 fid-replay = { path = "../fid-replay" }
+# Entity ID service (CORE.PRJ.CONT.ID): UUIDv5 IDs of transcription records and results.
+fid-project = { path = "../fid-project" }
 
 [lints]
 workspace = true

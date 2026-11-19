@@ -24,6 +24,8 @@ fixtures/flow/pkg/** -text
 fixtures/io/res/csv/map/** -text
 # IO.RES.CSV.OUT golden tables are compared byte for byte (CRLF maps, quoted LF, tabs).
 fixtures/io/res/csv/out/** -text
+# IO.RES.TRANS.MODEL golden canonical JSON: compared byte for byte (no trailing newline).
+fixtures/io/res/trans/model/** -text
 # PLAT.GPU.POLICY fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text

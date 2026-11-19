@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-res]
 satisfies: [REQ-IO.RES.TRANS-001, REQ-IO.RES.TRANS-002, REQ-IO.RES.TRANS-003, REQ-IO.RES.TRANS-004]
 covers: []
 depends_on: [CORE.PRJ.TREE, CORE.PRJ.CONT, CORE.JRN.CANON]
@@ -67,6 +68,17 @@ The one definition of how a third-party result becomes a platform record. A `Tra
 - **Determinism:** D0.
 - **Performance budget:** 10^5 rows in < 200 ms [unverified until measured].
 - **Crate:** `fid-io-res` (module `trans::model`).
+- **Pinned in the build (`fid_io_res::trans::model`):**
+  - *Never measured.* Every result carries status `transcribed`, `uncertainty` `{uec: UEC-0, uec0_reason: u_missing}` (the `uncertainty_statement@1` UEC-0 shape, no value), rule `dr:as-reported-by-source@1`, null `algorithm`, `kernel_version` and `spec_context`, and a `claim` block `{claimed, declared_input, uncharacterized_input}` that is always `true` and has no setter: the value and outcome are the source's claim, resting on a declared, uncharacterized input. A source's own uncertainty, rule and outcome stay `as_reported` text only.
+  - *By reference.* A result names its record as `record: {id, digest}` (digest = SHA-256 of the record's canonical JSON) and its input as `input_digests: [file_sha256]`; `value.text` is the source's decimal text copied byte for byte, never retyped or parsed to a float.
+  - *Outcome.* `pass` → `CONFORMS`, `fail` → `NONCONFORMS`, `undecided` → `INDETERMINATE`, absent or `unrecognized` (status text the importer cannot classify) → `NOT_DECIDABLE`; never a guessed pass or fail.
+  - *Side.* Optional source limits (`lower_limit`, `upper_limit`, decimal text in the row's unit, inclusive) give `side`: `BELOW_LOWER` (checked first), `ABOVE_UPPER`, `INSIDE` (at least one limit, every stated limit decimal and satisfied) or `UNDECIDABLE`. Comparison is exact decimal arithmetic. A violated readable limit is reported even if the other limit is unreadable or the limits are inverted, so a violation is never shown inside the limit. A `pass` with a violated limit becomes `NOT_DECIDABLE` with `decision.source_conflict` `pass_outside_limit`; a `fail` inside the limits stays `NONCONFORMS` (the source's conservative claim).
+  - *Basis.* `POINTS` if the row flags points (also when it flags features), else `FEATURES`, else `RESULTS_ONLY`.
+  - *IDs.* UUIDv5 through `IdService::derive_v5` of `{kind: transcription_record, file_sha256}` and `{kind: transcribed_result, file_sha256, characteristic, part}`.
+  - *Rows, in check order:* characteristic or value missing or whitespace-only → `row_incomplete`; any text field over 4096 bytes → `field_too_long`; value outside `[+-]?d+(.d+)?([eE][+-]?d+)?` (exponent at most 9 significant digits) → `value_not_decimal`; `(characteristic, part)` equal to an earlier row's with ASCII case ignored → `duplicate_row_key` (first wins). Hard errors only for the caller: more than 2^20 rows, or a bad `SourceInfo` (`software` empty or over 4096 bytes, `version` over 4096 bytes, `imported_at` not RFC 3339 UTC `YYYY-MM-DDThh:mm:ss[.f{1,9}]Z`, `format` not `[a-z][a-z0-9_]{0,31}`). A missing or blank version becomes `unknown`.
+  - *Untrusted text.* All source text is a `SourceText` (no `Deref`/`Display`); the only view for people is `escaped()` (the `fid-io-reg` untrusted-text escape), and RFC 8785 escapes control characters in JSON.
+  - *Wire.* Schemas `schemas/io/transcription-record-1.schema.json` and `schemas/io/transcribed-result-1.schema.json`; whole output `transcription@1` = `{record, results, dropped: [{row, reason}]}`; positions are decimal strings; every key always written, absent = `null`. Rows file `transcription-rows@1` (`load_rows`) refuses duplicate keys, case-only duplicate keys, unknown keys, non-string text (a JSON number value) and unknown `status`.
+  - *Element types.* `ELEMENT_TYPES` = `transcription_record` (`transcription-record@1`), `transcribed_result` (`transcribed-result@1`), for `CORE.PRJ.TREE` to register once it is built.
 
 ## Test fixtures
 
