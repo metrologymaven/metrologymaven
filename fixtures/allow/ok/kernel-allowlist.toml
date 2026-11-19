@@ -1,0 +1,6 @@
+# Fixture allowlist for ECO.REPO.ALLOW.
+[[allow]]
+name = "ext-a"
+version = "^1.2"
+reason = "fixture"
+reviewer = "metrologymaven"

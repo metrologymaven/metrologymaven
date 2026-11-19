@@ -37,6 +37,8 @@ jobs:
         if: runner.os == 'Linux'
         continue-on-error: true
         run: cargo metadata --locked --format-version 1 > /dev/null
+      - name: Fetch dependencies for all targets (ECO.REPO.ALLOW checks every platform offline)
+        run: cargo fetch
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
@@ -67,6 +69,8 @@ jobs:
             --tests "$RUNNER_TEMP/test-inventory.txt" --check docs/dmis
       - name: Crate layering (ECO.REPO.LAYERS)
         run: cargo xtask layers
+      - name: Kernel-graph dependency allowlist (ECO.REPO.ALLOW)
+        run: cargo xtask kernel-allow
       - name: Fuzz harness compiles on stable (AUTO.PROG.FMT AC-6)
         # Running it needs nightly (cargo fuzz); this only keeps the target compiling.
         if: runner.os == 'Linux'
@@ -74,6 +78,9 @@ jobs:
       - name: XML reader fuzz harness compiles on stable (IO.QIF.XML.PARSE AC-5)
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-xml/fuzz/Cargo.toml
+      - name: CAD worker protocol fuzz harness compiles on stable (IO.CAD.WORKER.PROTO AC-5)
+        if: runner.os == 'Linux'
+        run: cargo check --manifest-path crates/fid-cad-proto/fuzz/Cargo.toml
       - name: LAS reader fuzz harness compiles on stable (IO.CLOUD.LAS.HDR AC-5)
         if: runner.os == 'Linux'
         run: cargo check --manifest-path crates/fid-io-las/fuzz/Cargo.toml
@@ -222,6 +229,7 @@ jobs:
           python fixtures/rel/guide/make_fixtures.py --check
           python fixtures/dsse/make_fixtures.py --check
           python fixtures/io/reg/env/report/make_fixtures.py --check
+          python fixtures/io/cad/worker/proto/make_digests.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python fixtures/core/reg/def/guide/make_fixtures.py --check

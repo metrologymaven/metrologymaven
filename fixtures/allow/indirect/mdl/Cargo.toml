@@ -1,0 +1,12 @@
+[package]
+name = "fid-mdl"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+renamed = { package = "ext-opt", path = "../../_vendor/indirect/ext-opt", optional = true }
+ext-pm = { path = "../../_vendor/indirect/ext-pm" }
+
+[features]
+extra = ["dep:renamed"]

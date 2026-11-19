@@ -53,6 +53,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
+const KERNEL_ALLOW_USAGE: &str =
+    "usage: cargo xtask kernel-allow [--workspace <dir>] [--map <layers.toml>] [--allowlist <kernel-allowlist.toml>]";
 const MIG_LADDER_USAGE: &str =
     "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
 const LINT_USAGE: &str =
@@ -63,6 +65,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
+        Some("kernel-allow") => kernel_allow(&args[1..]),
         Some("datasets-check" | "data") => datasets_check(&args),
         Some("bots-check") => bots_check(&args[1..]),
         Some("bot-blocking") => bot_blocking(&args[1..]),
@@ -97,6 +100,7 @@ fn main() -> ExitCode {
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
+            eprintln!("{KERNEL_ALLOW_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
@@ -805,6 +809,48 @@ fn layers(args: &[String]) -> ExitCode {
         }
         Ok(findings) => {
             for f in findings {
+                println!("{f}");
+            }
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            println!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// `kernel-allow` (ECO.REPO.ALLOW). Exit 0: every third-party crate in the kernel graph is
+/// allowlisted (warnings may be printed); 1: findings, or a file or metadata error (fail
+/// closed); 2: usage.
+fn kernel_allow(args: &[String]) -> ExitCode {
+    let mut workspace = PathBuf::from(".");
+    let mut map: Option<PathBuf> = None;
+    let mut allowlist: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--workspace", Some(v)) => workspace = PathBuf::from(v),
+            ("--map", Some(v)) => map = Some(PathBuf::from(v)),
+            ("--allowlist", Some(v)) => allowlist = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{KERNEL_ALLOW_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let map = map.unwrap_or_else(|| workspace.join("layers.toml"));
+    let allowlist = allowlist.unwrap_or_else(|| workspace.join(fid_xtask::kernel_allow::ALLOWLIST_FILE));
+    match fid_xtask::kernel_allow::run(&workspace, &map, &allowlist) {
+        Ok(report) => {
+            for w in &report.warnings {
+                println!("{w}");
+            }
+            if report.findings.is_empty() {
+                println!("kernel-allow: ok");
+                return ExitCode::SUCCESS;
+            }
+            for f in &report.findings {
                 println!("{f}");
             }
             ExitCode::from(1)

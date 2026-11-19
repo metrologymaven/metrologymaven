@@ -1,0 +1,1 @@
+ALLOW-UNLISTED ext-b via fid-krn -> ext-a -> ext-b
