@@ -88,3 +88,5 @@ vendor/fid-clarabel/** -text
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# KRN.NUM.RED fixtures: bit patterns and a SHA-256 written by make_red_fixtures.py, which --check compares byte for byte.
+fixtures/num/red-*.txt -text
