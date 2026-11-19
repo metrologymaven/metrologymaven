@@ -34,6 +34,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-hal-runtime" = "engine"
 "fid-surface" = "services"
 "fid-report-pdf" = "services"
+# Report model (RPT.MODEL): document, pages, blocks and report commands.
+"fid-report" = "services"
 "fid-program" = "services"
 "fid-io-reg" = "services"
 "fid-io-dmis" = "services"

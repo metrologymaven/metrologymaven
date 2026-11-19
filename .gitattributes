@@ -161,3 +161,6 @@ fixtures/unc/stmt/** -text
 # CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/core/dep/** -text
+# RPT.MODEL.DOC fixtures: hand-labelled canonical JSON (no trailing newline) and digests compared byte for byte
+# by make_fixtures.py --check and the fid-report tests; never convert line endings.
+fixtures/rpt/model/** -text

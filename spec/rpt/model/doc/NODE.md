@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL-001, REQ-RPT.MODEL-015]
 covers: [GOM.RPT.01]
 depends_on: [CORE.JRN, CORE.STO, CORE.REG]
@@ -71,13 +72,26 @@ The pure-data report document: a report is an ordered list of pages, and each pa
 - **Errors:** `report.not_found`, `report.page_not_empty`, `report.unknown_block_kind`, `report.invalid_block_payload`, `report.text_invalid`.
 - **Determinism:** D0. No floating point; IDs are journaled values; serialisation is canonical.
 - **Performance budget:** add or remove a block in a 500-page, 10 000-block report in under 20 ms on reference hardware [unverified until measured].
-- **Crate:** `fid-report`.
+- **Crate:** `fid-report` (module `doc`).
+- **Pinned at build** (fid-report `doc`; each rule has a test in `crates/fid-report/tests/doc.rs`):
+  - *Stored form.* One RFC 8785 document per report, `schema_version` `"1"`: `{id, pages: [{blocks: [{id, kind, kind_version, payload}], id}], retired_ids, schema_version, template_ref, title}`. Integers (`schema_version`, `kind_version`, template `version`, `block_count`) are decimal strings, so the model holds no JSON numbers; `retired_ids` is ascending; `template_ref` is `null` or `{id, version}`. The reader is strict: unknown or missing keys, a non-UUIDv7 ID, a repeated ID, unsorted `retired_ids`, bytes that are not the canonical form of what they describe, or a stored digest that does not match the bytes are `report.store_invalid`. `show_report` returns exactly the stored document.
+  - *Untrusted text.* `Untrusted<Text>` has no `Display` or `Deref`; its machine form everywhere (storage, `--json`, MCP, events) is `{"text": <string>, "untrusted": true}`, and its schemas carry `x-untrusted: true`. The only human form is `escaped()`: backslash doubled; C0 and C1 controls, DEL, bidi controls and marks, zero-width and invisible format characters, U+2028, U+2029 and U+FFF9..U+FFFC written as `\u{XXXX}`. Payloads are opaque here, so every payload is wrapped as `{"untrusted": true, "value": <json>}`. The 4096-byte check runs before the NUL check.
+  - *Values.* This leaf stores no measured or claimed values and formats no numbers; payloads are opaque. The claimed, declared-input and uncharacterized-input labels (fid-kunc `is_claimed()`, `rests_on_declared_input()`, `rests_on_uncharacterized_input()`), the rule to read `side` when the fid-num formatter returns `SideOutcome::Undecidable` instead of trusting the printed string, and the rule that a violating value prints strictly beyond its limit belong to the kinds that carry values (`RPT.MODEL.BLOCKS`) and to `RPT.MODEL.FMT`, which must enforce them in their payload schemas and `validate`.
+  - *IDs.* Parameters accept any canonical lowercase UUID (another spelling is `report.bad_params`), so a random UUID fails as `report.not_found` naming it. New IDs are UUIDv7 drawn through `fid-project`'s `ObservationSource::draw_v7`; a drawn ID that is the project ID, the report ID, a live ID or a retired ID fails closed with `report.id_collision` (no retry). Report and page IDs are distinct.
+  - *Commands.* Results: create gives `{report_id, title, pages: [{page_id, block_count}], report_digest}`; add page gives `{page_id}`; add block gives `{block_id}`; removals give `{}`; show gives the report. `project` must equal the open project, else `report.not_found`. `add_block` checks report, page, `after` on that same page, kind, payload bounds and payload, in that order. A kind string that is not `^[a-z][a-z0-9_]{0,31}$` is `report.unknown_block_kind` and is not echoed. Removing the last page is allowed. Registry definitions: W2, D0, `idempotency: none`, `undo: head_move`, MCP `exposed`; show is R0, `natural`, `not_undoable`.
+  - *Events.* One per W2 command, holding every ID it created and `report_digest` (the stored digest after the command): `create_report {report, page, project, title}`, `add_page {report, after, page}`, `remove_page {report, page, force}`, `add_block {report, page, after, block, kind, kind_version, payload}`, `remove_block {report, block}`, each with `type` and `report_digest`.
+  - *Exact replay.* Applies each event with its own IDs and compares the replayed digest: an unreadable event or a missing kind or kind version is `NOT_REPLAYABLE`; a failing operation or a different digest is `DIVERGENT`; otherwise `IDENTICAL`. It stops at the first event that is not identical.
+  - *Storage seam.* Handlers hand one stored document and one event to a `ReportBackend`, which commits both or neither; the SQLite store adapter belongs to the bus (CORE.BUS.LINT forbids this crate reaching the SQLite driver). `MemoryBackend` is the in-memory backend.
+  - *Bounds.* Text 4096 bytes; kind ID 32 bytes; payload 65 536 canonical bytes and depth 32; 10 000 pages; 100 000 blocks; 262 144 IDs ever issued per report; 32 MiB per stored report; 256 kinds per registry; 1 000 000 events per replay call. Exceeding one is `report.limit_exceeded` (`report.invalid_block_payload` for a payload).
+  - *Extra error codes.* Besides the five above: `report.bad_params`, `report.id_collision`, `report.id_unavailable`, `report.limit_exceeded`, `report.store_invalid`, `report.backend`.
+  - *Test kinds.* Stub kinds `text` (`{"text": <Text>}`) and `image` (`{"blob": "sha256:..."}`), both version 1, behind the `test-kinds` feature; AC-2 needs `image` as well as `text`.
 
 ## Test fixtures
 
-- `fixtures/rpt/model/empty_project`: a project with one part, revision and plan and no results; generated by the CORE project test builder.
+- `fixtures/rpt/model/empty_project`: a project with one part, revision and plan and no results; generated by the CORE project test builder (until it exists, hand-written by `fixtures/rpt/model/doc/make_fixtures.py`).
 - `fixtures/rpt/model/hostile_strings`: a JSON list of hostile strings written for this test (prompt-injection text, bidi controls, a 5000-byte string, an embedded NUL). Licence CC-BY-4.0, authored in-project.
-- Seeded random sequence (seed 42) generated in the test itself.
+- Seeded random sequence (seed 42, splitmix64) generated in the test itself.
+- `fixtures/rpt/model/doc/*-text.json` and `digests.txt`: hand-labelled canonical bytes and digests of the AC-1 summary, the AC-2 report and its journal, written by `make_fixtures.py` from the rules above with a deterministic ID source (draw k gives `unix_ms = 1763510400000 + k` and random bits `k + 1`).
 
 ## Build prompt
 
