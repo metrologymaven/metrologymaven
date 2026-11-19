@@ -38,15 +38,13 @@ pub(crate) fn check_params(max_chunk_points: u64) -> Result<(), OocError> {
 /// Sorted ascending, keys group by cell in Morton order and by index inside a code.
 pub(crate) type Key = (u64, u64, usize);
 
+/// Callback of [`for_each_leaf`]: a leaf cell and the keys of its points.
+pub(crate) type LeafFn<'a> = dyn FnMut(CellCode, &[Key]) -> Result<(), OocError> + 'a;
+
 /// Calls `f` for every leaf of the subtree rooted at `cell`, in Morton order, with the
 /// keys of its points. `keys` are sorted ascending and all lie in `cell`. A cell is a leaf
 /// when it holds at most `max` points or is at the depth limit; empty cells are skipped.
-pub(crate) fn for_each_leaf(
-    cell: CellCode,
-    keys: &[Key],
-    max: u64,
-    f: &mut dyn FnMut(CellCode, &[Key]) -> Result<(), OocError>,
-) -> Result<(), OocError> {
+pub(crate) fn for_each_leaf(cell: CellCode, keys: &[Key], max: u64, f: &mut LeafFn<'_>) -> Result<(), OocError> {
     let mut stack: Vec<(CellCode, usize, usize)> = vec![(cell, 0, keys.len())];
     while let Some((c, lo, hi)) = stack.pop() {
         let Some(slice) = keys.get(lo..hi) else { continue };

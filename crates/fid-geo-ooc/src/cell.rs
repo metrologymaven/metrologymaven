@@ -128,11 +128,11 @@ impl Grid {
             (Some(&lo), Some(&ext)) => (lo, ext),
             _ => return 0,
         };
-        if !(ext > 0.0) {
+        if ext.is_nan() || ext <= 0.0 {
             return 0;
         }
         let s = ((v - lo) / ext) * GRID_F64;
-        if !(s > 0.0) {
+        if s.is_nan() || s <= 0.0 {
             return 0;
         }
         if s >= QMAX as f64 {
