@@ -316,6 +316,13 @@ impl Store {
         Store::finish_open(location, lock, mode)
     }
 
+    /// Opens the project database for writing with a write lock the caller already holds
+    /// (from [`ProjectLocation::create`] or [`ProjectLocation::open`] in `Write` mode), for
+    /// callers such as `fid-journal` whose API hands over the location and the lock.
+    pub fn open_locked(location: ProjectLocation, lock: Locked) -> Result<Store, TxnError> {
+        Store::finish_open(location, Some(lock), OpenMode::Write)
+    }
+
     fn finish_open(location: ProjectLocation, lock: Option<Locked>, mode: OpenMode) -> Result<Store, TxnError> {
         let db = match (mode, lock.as_ref()) {
             (OpenMode::Write, Some(l)) => schema::open_write(&location, l)?,
@@ -490,6 +497,23 @@ impl Txn<'_> {
         &self.rows
     }
 
+    /// Checks, writing nothing, that `digest` can be referenced by a row of this transaction:
+    /// it is pending in it, or stored whole and sound. This is the check [`Txn::commit`] runs
+    /// on every referenced blob, offered so a caller can refuse one row early instead of the
+    /// whole commit: `dangling_blob` names the missing digest (the blob, or the first missing
+    /// chunk of the object it names), `corrupt_blob` the first one that does not hash to its
+    /// address. The commit checks again and flushes.
+    pub fn check_blob(&self, digest: &Digest) -> Result<(), TxnError> {
+        if self.blobs.iter().any(|b| b.address.digest() == *digest) {
+            return Ok(());
+        }
+        match self.store.blobs.check_stored(digest)? {
+            Stored::Missing(m) => Err(TxnError::DanglingBlob(m)),
+            Stored::Corrupt(bad) => Err(TxnError::CorruptBlob(bad)),
+            Stored::Sound(_) => Ok(()),
+        }
+    }
+
     /// Discards the transaction; nothing was written.
     pub fn abort(self) {}
 
@@ -513,7 +537,7 @@ impl Txn<'_> {
         let mut existing: Vec<(Digest, Vec<Digest>)> = Vec::new();
         for d in referenced.difference(&pending) {
             match store.blobs.check_stored(d)? {
-                Stored::Missing => return Err(TxnError::DanglingBlob(*d)),
+                Stored::Missing(_) => return Err(TxnError::DanglingBlob(*d)),
                 Stored::Corrupt(bad) => return Err(TxnError::CorruptBlob(bad)),
                 Stored::Sound(flush) => existing.push((*d, flush)),
             }
