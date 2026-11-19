@@ -216,7 +216,9 @@ fn principals_must_be_lowercase() {
 
 #[test]
 fn only_human_principals_are_accepted() {
-    for bad in ["agent:fictional-bot", "service:fictional-ci", "fictional-alpha", "human:", "humanfictional", ":human:x"] {
+    for bad in
+        ["agent:fictional-bot", "service:fictional-ci", "fictional-alpha", "human:", "humanfictional", ":human:x"]
+    {
         assert_eq!(err(&doc(&[entry("rev-a", bad, "")])), "roster_invalid{principals}", "{bad}");
     }
     assert!(Roster::load(&doc(&[entry("rev-a", "human:fictional-alpha", "")])).is_ok());
@@ -229,8 +231,18 @@ fn display_names_refuse_format_characters() {
             r#"{{"id":"rev-a","display_name":"{n}","principals":["human:a"],"dialects":["iso"],"basis":"partner","valid_from":"2026-01-01"}}"#
         )])
     };
-    let format_chars =
-        ['\u{202E}', '\u{202A}', '\u{2066}', '\u{200B}', '\u{200C}', '\u{200D}', '\u{2060}', '\u{FEFF}', '\u{00AD}', '\u{E0041}'];
+    let format_chars = [
+        '\u{202E}',
+        '\u{202A}',
+        '\u{2066}',
+        '\u{200B}',
+        '\u{200C}',
+        '\u{200D}',
+        '\u{2060}',
+        '\u{FEFF}',
+        '\u{00AD}',
+        '\u{E0041}',
+    ];
     for c in format_chars {
         let name = format!("Alpha{c}Example");
         assert_eq!(err(&mk(&name)), "roster_invalid{display_name}", "U+{:04X}", u32::from(c));
