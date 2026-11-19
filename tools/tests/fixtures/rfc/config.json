@@ -1,0 +1,8 @@
+{
+  "short_days": 3,
+  "long_days": 7,
+  "long_kinds": ["domain", "app", "process"],
+  "kinds": ["domain", "app", "process", "other"],
+  "maintainers": ["ada-example", "grace-example"],
+  "aliases": {"ada-example": ["founder"]}
+}

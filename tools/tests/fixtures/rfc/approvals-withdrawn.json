@@ -1,0 +1,4 @@
+[
+  {"actor": "grace-example", "state": "APPROVED", "at": "2026-12-08T12:00:00Z"},
+  {"actor": "grace-example", "state": "CHANGES_REQUESTED", "at": "2026-12-08T13:00:00Z"}
+]

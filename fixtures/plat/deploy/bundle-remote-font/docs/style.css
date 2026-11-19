@@ -1,0 +1,3 @@
+@import "theme.css";
+@font-face { font-family: mm; src: url("https://fonts.example.com/mm.woff2") format("woff2"); }
+body { font-family: mm, sans-serif; }
