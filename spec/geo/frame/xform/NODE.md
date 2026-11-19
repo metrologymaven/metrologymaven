@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-frame]
 satisfies: [REQ-GEO.FRAME-004, REQ-GEO.FRAME-005, REQ-GEO.FRAME-006]
 covers: []
 depends_on: [KRN.NUM]
@@ -56,7 +57,7 @@ The transform value types used everywhere a frame relationship is expressed: rig
 - **AC-2** Given 10⁶ seeded random points in a 100 m cube and the 200 transforms, when each point is mapped forward and back, then the maximum error is ≤ 1e-12 m.
 - **AC-3** (error path) Given a matrix with one entry perturbed by 1e-9, when constructed, then it fails with `NotOrthonormal`; a reflection (det −1) fails with `Improper`.
 - **AC-4** Given fixture `fixtures/geo/frame/euler_cases.json` (each of the 24 Euler variants, including gimbal-lock angles), when converted to matrix and back, then the round-trip geodesic error is ≤ 1e-14 rad and gimbal-lock cases return the canonical angles listed in the fixture.
-- **AC-5** (error path) Given quaternion (1, 1e-9, 0, 0), when converted, then it fails with `NotUnit`.
+- **AC-5** (error path) Given quaternion (1, 1e-5, 0, 0), when converted, then it fails with `NotUnit`. (Build note: the original example (1, 1e-9, 0, 0) has norm √(1 + 10⁻¹⁸), within 5·10⁻¹⁹ of 1, and 1 + 10⁻¹⁸ rounds to exactly 1 in binary64, so REQ-006 requires accepting it; the example was changed to one whose norm differs by about 5·10⁻¹¹.)
 
 ## Design
 
@@ -67,6 +68,20 @@ The transform value types used everywhere a frame relationship is expressed: rig
 - **Determinism:** D0 (KNP-1, fixed order, `fid-num` transcendentals).
 - **Performance budget:** apply to 10⁸ points in under 1 s single-threaded on reference hardware [unverified].
 - **Crate:** `fid-geo-frame` (kernel graph, KNP-1 applies).
+- **Pinned choices (build, value-affecting).** The full expressions are in the module docs of `crates/fid-geo-frame/src/xform.rs` and `src/rotation.rs` and are part of this design:
+  - `dot3(a, b) = (a0·b0 + a1·b1) + a2·b2` for every matrix product, `R x` and `Rᵀ x`.
+  - Apply: `y = s·(R x) + t`, with `s = 1` for rigid, which is exact, so the two formulas agree bit for bit. Direction: `R x` only.
+  - Compose `a ∘ b` (b first): `R = Ra Rb`, `t = sa·(Ra tb) + ta`, `s = sa·sb`. The result is rigid only if both inputs are.
+  - Inverse: `Rᵀ`, `s' = 1/s`, `t' = −(s'·(Rᵀ t))`.
+  - Neither compose nor inverse re-checks orthonormality. Both fail with `BadScale` (scale not finite or not positive), else with `NonFinite`.
+  - Residual: `sqrt` of the sum of squares of `RᵀR − I`, in row-major order, through `fid-num`. The determinant uses cofactor expansion along the first row. Checks run in the order `NonFinite`, `NotOrthonormal`, `Improper`.
+  - Quaternion: norm `sqrt(((w² + x²) + y²) + z²)`, with the standard unit-quaternion matrix.
+  - Shepperd branch: the largest of (trace, R00, R11, R22), with a later branch winning only if strictly larger. Output in the hemisphere `w ≥ 0`.
+  - Axis-angle: axis length via `hypot`, and zero length is `ZeroAxis`. The matrix uses Rodrigues with `C = 1 − cos θ`. From a matrix: angle `2·atan2(|v|, w)` in [0, π], and the identity gives axis (1, 0, 0) with angle 0.
+  - Euler: intrinsic `R = (R_a0 R_a1) R_a2`; extrinsic `R = (R_a2 R_a1) R_a0`. Tait-Bryan β is in [−π/2, π/2] and proper β in [0, π], both by `atan2` with `hypot`.
+  - Gimbal lock is `cos β` (Tait-Bryan) or `sin β` (proper) at or below 1e-12. The canonical choice then sets the **third listed angle** to +0 for both intrinsic and extrinsic sequences. Every zero angle is returned as +0.0.
+  - The errors add `Numeric(NumError)`, for a `fid-num` failure; it is unreachable for validated inputs.
+  - AC-2 is run as 10⁶ point-transform pairs: point k uses transform k mod 200. That is 5 000 points per transform, not 10⁶ × 200.
 
 ## Test fixtures
 
