@@ -226,11 +226,7 @@ pub fn load_declarations(path: &Path) -> Result<Manifest, InputError> {
 /// Applies REQ-001..004 to a verified baseline and the current declarations. Pure and
 /// deterministic. `release_date` is the date of the release being gated; it is required
 /// (else `release_date_required`) when any lifecycle state differs from the baseline.
-pub fn gate(
-    baseline: &Manifest,
-    current: &Manifest,
-    release_date: Option<Date>,
-) -> Result<GateReport, InputError> {
+pub fn gate(baseline: &Manifest, current: &Manifest, release_date: Option<Date>) -> Result<GateReport, InputError> {
     let d = diff(baseline, current);
     if release_date.is_none() {
         if let Some(lc) = d.lifecycle_changed.iter().find(|lc| lc.old_state != lc.new_state) {
