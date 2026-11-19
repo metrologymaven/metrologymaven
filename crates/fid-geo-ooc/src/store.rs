@@ -123,7 +123,7 @@ mod blob_store {
     }
 
     /// The store address of content of `size` bytes named `digest`.
-    fn address(digest: [u8; 32], size: u64) -> Address {
+    fn cas_address(digest: [u8; 32], size: u64) -> Address {
         let digest = Digest::from_bytes(digest);
         if size <= STORE_CHUNK_SIZE {
             Address::Blob(BlobRef { digest, size })
@@ -139,7 +139,7 @@ mod blob_store {
         }
 
         fn get_blob(&self, address: &[u8; 32], size: u64) -> Result<Vec<u8>, OocError> {
-            let bytes = self.get(&address(*address, size)).map_err(store_err)?;
+            let bytes = self.get(&cas_address(*address, size)).map_err(store_err)?;
             if bytes.len() as u64 != size {
                 return Err(OocError::Store {
                     code: "integrity",
