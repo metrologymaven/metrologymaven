@@ -72,8 +72,15 @@
 //! writes `search-index.js` at the edition root. Exits 0 after writing, 1 (writing nothing) with
 //! an `over_budget` finding when the file would exceed `max_bytes` of the budget, and 2 on an
 //! unreadable edition, an unparsable budget, an unwritable index, or bad usage.
+//!
+//! `bench-recipe check --catalogue <file> [--json] <paths>...` (spec node `OUTR.BENCH.RUN.RECIPE`):
+//! validates benchmark recipes (files, or folders walked for `*.toml`) against the dataset
+//! catalogue. Prints one line per finding, one line per valid recipe and a summary, or the
+//! canonical JSON report with `--json`. Exits 0 when every recipe is valid, 1 on any finding, and
+//! 2 on unreadable or unparsable input or bad usage.
 
 use fid_outreach::asset_check;
+use fid_outreach::bench::recipe;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
 use fid_outreach::guide_check;
@@ -108,7 +115,8 @@ commands:
   ref-check --records <dir> --manifest <file> --surfaces <file> --ref <dir> [--json]
   site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>
   site import fetch --site <dir> --release <tag> --base-url <url>
-  search-index --edition <dir> --budget <file> [--json]";
+  search-index --edition <dir> --budget <file> [--json]
+  bench-recipe check --catalogue <file> [--json] <paths>...";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -126,6 +134,7 @@ fn main() -> ExitCode {
         (Some(cmd @ ("ref-render" | "ref-check")), _) => ref_pages_cmd(cmd, args.get(1..).unwrap_or(&[])),
         (Some("site"), Some("import")) => site_import_cmd(args.get(2..).unwrap_or(&[])),
         (Some("search-index"), _) => search_index_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("bench-recipe"), Some("check")) => bench_recipe_check(args.get(2..).unwrap_or(&[])),
         _ => usage(),
     }
 }
@@ -849,6 +858,49 @@ fn search_index_cmd(args: &[String]) -> ExitCode {
                 emit(&e.to_json());
             }
             eprintln!("search-index: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn bench_recipe_check(args: &[String]) -> ExitCode {
+    let mut catalogue: Option<PathBuf> = None;
+    let mut paths = Vec::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            "--catalogue" => {
+                let Some(v) = it.next() else { return usage() };
+                if catalogue.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            flag if flag.starts_with("--") => return usage(),
+            path => paths.push(PathBuf::from(path)),
+        }
+    }
+    let Some(catalogue) = catalogue else {
+        return usage();
+    };
+    if paths.is_empty() {
+        return usage();
+    }
+    match recipe::run(&catalogue, &paths, &recipe::default_registry()) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("bench-recipe check: {e}");
             ExitCode::from(2)
         }
     }

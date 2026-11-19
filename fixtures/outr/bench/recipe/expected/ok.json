@@ -1,0 +1,1 @@
+{"findings":[],"recipes":[{"file":"recipes/accuracy.toml","id":"fixture.accuracy-plane","kind":"accuracy"},{"file":"recipes/comparison.toml","id":"fixture.comparison-plane","kind":"comparison"},{"file":"recipes/fidelity.toml","id":"fixture.fidelity-plane","kind":"fidelity"},{"file":"recipes/performance.toml","id":"fixture.performance-fit","kind":"performance"}],"status":"ok"}
