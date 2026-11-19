@@ -603,10 +603,19 @@ impl Reader<'_> {
         char::from_u32(cp).ok_or_else(|| self.syntax())
     }
 
-    /// A member value that must be a string; any other JSON type is `BadValue(path)`.
+    /// The error for an unexpected value: `BadValue(path)` when a JSON value of another type
+    /// starts here, a syntax error when no JSON value does (end of input, a stray comma, a BOM).
+    fn wrong_type(&self, path: &'static str) -> ManifestError {
+        match self.peek() {
+            Some(b'{' | b'[' | b'"' | b'-' | b'0'..=b'9' | b't' | b'f' | b'n') => ManifestError::BadValue(path),
+            _ => self.syntax(),
+        }
+    }
+
+    /// A member value that must be a string; any other JSON type is `BadValue(path)` (see [`Self::wrong_type`]).
     fn str_value(&mut self, path: &'static str) -> Result<String, ManifestError> {
         if self.peek() != Some(b'"') {
-            return Err(ManifestError::BadValue(path));
+            return Err(self.wrong_type(path));
         }
         self.string()
     }
@@ -619,7 +628,7 @@ impl Reader<'_> {
     /// Opens a container: `open` must be next, else the value has the wrong type.
     fn open(&mut self, open: u8, path: &'static str) -> Result<(), ManifestError> {
         if self.peek() != Some(open) {
-            return Err(ManifestError::BadValue(path));
+            return Err(self.wrong_type(path));
         }
         self.pos += 1;
         self.ws();

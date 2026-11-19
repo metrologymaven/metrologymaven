@@ -49,9 +49,9 @@ fn ac1_round_trip_is_byte_identical_and_digests_match() {
     assert_eq!(m.core_digest().as_str(), expected_digest("core_digest"));
     assert_eq!(m.manifest_digest().as_str(), expected_digest("manifest_digest"));
     // Independent SHA-256 over the same bytes.
-    assert_eq!(m.manifest_digest().hex(), fid_testkit::sha256_hex(&bytes));
+    assert_eq!(m.manifest_digest().as_str(), fid_testkit::sha256_hex(&bytes));
     assert_eq!(m.core().core_digest().unwrap(), *m.core_digest());
-    assert_eq!(m.core_digest().hex(), fid_testkit::sha256_hex(&m.core().canonical_json().unwrap()));
+    assert_eq!(m.core_digest().as_str(), fid_testkit::sha256_hex(&m.core().canonical_json().unwrap()));
 }
 
 #[test]
@@ -251,7 +251,7 @@ fn hostile_inputs_fail_closed() {
         [b"", b"[]", b"{", b"{\"core\":", b"\"x\"", b"{\"artifacts\":[,]}", b"\xff", b"{\"a\\ud800\":1}"];
     for bad in bad {
         let e = KernelManifest::parse(bad).unwrap_err();
-        assert!(matches!(e.code(), "syntax" | "bad_value" | "unknown_field"), "{bad:?}: {e}");
+        assert!(matches!(e.code(), "syntax" | "bad_value"), "{bad:?}: {e}");
     }
     // Deep nesting is refused at the first wrong type, without recursion.
     let deep = format!("{{\"artifacts\":{}", "[".repeat(100_000));
