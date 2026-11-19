@@ -1,0 +1,59 @@
+{
+  "schema": "colmap@1",
+  "id": "test.semicolon.comma",
+  "version": "2.1.0",
+  "layout": "long",
+  "dialect": {
+    "delimiter": "semicolon",
+    "decimal_mark": ",",
+    "header": true,
+    "quote": "rfc4180",
+    "encoding": "utf-8",
+    "line_ending": "crlf"
+  },
+  "columns": [
+    {
+      "field": "characteristic_id",
+      "header": "Merkmal",
+      "index": 0,
+      "required": true
+    },
+    {
+      "field": "nominal",
+      "header": "Soll",
+      "required": false
+    },
+    {
+      "field": "actual",
+      "header": "Ist",
+      "index": 2,
+      "required": true
+    },
+    {
+      "field": "unit",
+      "index": 5,
+      "required": true
+    },
+    {
+      "field": "lower_limit",
+      "header": "UGW",
+      "required": false
+    },
+    {
+      "field": "upper_limit",
+      "header": "OGW",
+      "required": false
+    },
+    {
+      "field": "part_id",
+      "header": "Teil",
+      "required": false
+    },
+    {
+      "field": "comment",
+      "header": "=Note",
+      "index": 9,
+      "required": false
+    }
+  ]
+}

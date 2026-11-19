@@ -1,0 +1,38 @@
+{
+  "long": {
+    "bytes": 2099,
+    "golden": "r.golden.csv",
+    "lossy": [],
+    "rows": 13,
+    "sha256": "sha256:91b77cdb17bc9ba61d9432c09ce6c0753f794352a71e0e791cdd938bc74ba26a"
+  },
+  "no_decision_rule": {
+    "bytes": 1900,
+    "golden": "r.no_decision_rule.golden.csv",
+    "lossy": [
+      "decision_rule"
+    ],
+    "rows": 13,
+    "sha256": "sha256:dcfa1833f51d1e7640148833d752b88835fb8f2ad7cca4873557fe00ee246bcb"
+  },
+  "semicolon": {
+    "bytes": 679,
+    "golden": "r.semicolon.golden.csv",
+    "lossy": [
+      "evaluation_basis",
+      "uec",
+      "decision_rule",
+      "record_status",
+      "source_software"
+    ],
+    "rows": 13,
+    "sha256": "sha256:bfc6093ed1c0e1140a7a0cf7743b9b475be7ecea1bacb704ec179d18811d911e"
+  },
+  "wide": {
+    "bytes": 2751,
+    "golden": "r.wide.golden.csv",
+    "lossy": [],
+    "rows": 3,
+    "sha256": "sha256:222ff51c81999c6ded77fa08837f06e5ead6f2353ee79834cd7452254525ece3"
+  }
+}

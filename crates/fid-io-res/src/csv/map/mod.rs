@@ -299,6 +299,8 @@ pub struct ColumnMap {
     layout: Layout,
     dialect: Dialect,
     columns: Vec<Column>,
+    /// Header texts of `columns`, same positions, kept raw for writing tables.
+    headers: Vec<Option<String>>,
     digest: fid_types::Digest,
     origin: Origin,
 }
@@ -339,6 +341,12 @@ impl ColumnMap {
     /// ID, version and digest, for journaling.
     pub fn identity(&self) -> MapIdentity {
         MapIdentity { id: self.id.clone(), version: self.version, digest: self.digest }
+    }
+    /// The header text of the column at `position` in [`ColumnMap::columns`], as written in
+    /// a table's header row (`IO.RES.CSV.OUT`). The map validated it: 1 to
+    /// [`MAX_HEADER_BYTES`] bytes, no control characters, no padding, no U+FEFF.
+    pub fn header_text(&self, position: usize) -> Option<&str> {
+        self.headers.get(position).and_then(|h| h.as_deref())
     }
     /// The column holding `field`, if mapped.
     pub fn column(&self, field: Field) -> Option<&Column> {
@@ -445,9 +453,9 @@ fn from_json(bytes: &[u8], origin: Origin) -> Result<ColumnMap, ColMapError> {
         _ => return Err(invalid("bad_layout")),
     };
     let dialect = parse_dialect(get(top, "dialect", None)?)?;
-    let columns = parse_columns(get(top, "columns", None)?, &dialect, layout)?;
+    let (columns, headers) = parse_columns(get(top, "columns", None)?, &dialect, layout)?;
 
-    Ok(ColumnMap { id: id.to_owned(), version, layout, dialect, columns, digest, origin })
+    Ok(ColumnMap { id: id.to_owned(), version, layout, dialect, columns, headers, digest, origin })
 }
 
 fn parse_dialect(v: &CValue) -> Result<Dialect, ColMapError> {
@@ -469,7 +477,9 @@ fn parse_dialect(v: &CValue) -> Result<Dialect, ColMapError> {
     Dialect::new(delimiter, decimal_mark, header, line_ending).map_err(invalid)
 }
 
-fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Column>, ColMapError> {
+type Columns = (Vec<Column>, Vec<Option<String>>);
+
+fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Columns, ColMapError> {
     let items = match v {
         CValue::Arr(a) => a,
         _ => return Err(invalid("wrong_type")),
@@ -486,6 +496,7 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
     let mut out: Vec<Column> = Vec::with_capacity(items.len());
     // ASCII-lowercased headers of `out`, for the case-insensitive duplicate check.
     let mut folded: Vec<Option<String>> = Vec::with_capacity(items.len());
+    let mut headers: Vec<Option<String>> = Vec::with_capacity(items.len());
     for (n, item) in items.iter().enumerate() {
         let at = Some(n);
         let o = as_obj(item, at)?;
@@ -538,6 +549,7 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
             }
         }
         out.push(Column { header: header.map(UntrustedText::new), index, field, required });
+        headers.push(header.map(str::to_owned));
         folded.push(fold);
     }
     if layout == Layout::Long
@@ -545,7 +557,7 @@ fn parse_columns(v: &CValue, dialect: &Dialect, layout: Layout) -> Result<Vec<Co
     {
         return Err(invalid("no_characteristic_key"));
     }
-    Ok(out)
+    Ok((out, headers))
 }
 
 fn as_index(x: f64) -> Option<u32> {

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-res]
 satisfies: [REQ-IO.RES.CSV-002, REQ-IO.RES.CSV-003]
 covers: [GOM.EXP.02, GOM.EXP.06, PW.EXP.02]
 depends_on: [IO.RES.CSV.MAP, IO.RES.TRANS.VIEW, IO.REG.ENV.EXPORT, IO.REG.WRITE]
