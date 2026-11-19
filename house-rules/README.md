@@ -11,6 +11,7 @@ This directory is the **one canonical source** of the contributor and agent rule
 | `core.md` | Rules for every repository |
 | `rust.md` | Rules for repositories with Rust code |
 | `python.md` | Rules for the spec repository's Python tooling |
+| `spdx-allowlist.toml` | SPDX licence allowlist for dependencies and third-party assets (ECO.RULES.SPDX), read by ECO.CI.LIC; kept equal to `deny.toml`'s allow list; change it only in its own PR with a second maintainer's approval and the reason stated. Test: `tools/tests/test_spdx_allowlist.py` |
 | `restricted-paths.txt` | Path patterns (one per line, glob style) whose content must never be sent to an external service; read by ECO.CI.BOTS |
 
 Repository IDs in the manifest are the IDs of the repository map `repos.toml` (ECO.REPO.TOPO). Every repository in the map that is not archived receives the `core` block; an archived repository is read-only and gets no block.

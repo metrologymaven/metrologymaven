@@ -69,7 +69,7 @@ impl Report {
     }
 }
 
-fn read_capped(path: &Path, max: u64) -> Result<Vec<u8>, String> {
+pub(crate) fn read_capped(path: &Path, max: u64) -> Result<Vec<u8>, String> {
     let f = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut buf = Vec::new();
     f.take(max.saturating_add(1)).read_to_end(&mut buf).map_err(|e| e.to_string())?;
@@ -81,7 +81,7 @@ fn read_capped(path: &Path, max: u64) -> Result<Vec<u8>, String> {
 
 /// `dir/rel` if it is a regular file and neither it nor any directory between `dir` and it is a
 /// symlink, so a manifest path can never lead out of the corpus directory.
-fn regular_file_in(dir: &Path, rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn regular_file_in(dir: &Path, rel: &str) -> Result<PathBuf, String> {
     let mut p = dir.to_path_buf();
     for seg in rel.split('/') {
         p.push(seg);
