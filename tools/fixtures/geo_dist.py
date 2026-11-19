@@ -411,6 +411,10 @@ def check_case(p, a, b, c, dyadic):
 # ------------------------------------------------------------------ AC-2 regions
 
 
+# cos(20 deg) as a literal: math.cos is not correctly rounded on every platform.
+COS20 = 0.9396926207859084
+
+
 def well_shaped(g):
     while True:
         a, b, c = (tuple(g.uni(-1.0, 1.0) for _ in range(3)) for _ in range(3))
@@ -418,7 +422,7 @@ def well_shaped(g):
         for x, y, z in ((a, b, c), (b, c, a), (c, a, b)):
             u, v = sub(y, x), sub(z, x)
             cosang = dot(u, v) / (norm(u) * norm(v))
-            if cosang > math.cos(math.radians(20.0)):
+            if cosang > COS20:
                 ok = False
         if ok and size_of(a, b, c) > 0.5:
             return a, b, c
@@ -554,12 +558,15 @@ def fuzz_cases():
         out.append(("sliver", p, corners[0], corners[1], corners[2], False))
 
     for i in range(600):  # thin triangles, shuffled corners (GEO.DIST.MESH review of #287)
-        L = 10.0 ** g.uni(-3.0, 3.0)
-        lo, hi = (-13.0, -10.0) if i < 400 else (-10.0, -2.0)
-        eps = 10.0 ** g.uni(lo, hi)
-        th = g.uni(0.0, 6.283185307179586)
-        ct, st = math.cos(th), math.sin(th)
-        off = tuple(g.uni(-1.0, 1.0) * 10.0 ** g.uni(0.0, 3.0) for _ in range(3))
+        # Only correctly rounded operations (no libm pow/sin/cos), so the cases are the same
+        # on every platform: powers of two for scales, a sqrt-normalised rotation.
+        L = g.uni(1.0, 2.0) * 2.0 ** (g.below(21) - 10)
+        lo, span = (33, 11) if i < 400 else (7, 26)
+        eps = g.uni(1.0, 2.0) * 2.0 ** -(lo + g.below(span))
+        rx, ry = g.uni(-1.0, 1.0), g.uni(-1.0, 1.0)
+        rn = math.sqrt(rx * rx + ry * ry) or 1.0
+        ct, st = rx / rn, ry / rn
+        off = tuple(g.uni(-1.0, 1.0) * 2.0 ** g.below(11) for _ in range(3))
 
         def rot(q):
             return (ct * q[0] - st * q[1] + off[0], st * q[0] + ct * q[1] + off[1], q[2] + off[2])
