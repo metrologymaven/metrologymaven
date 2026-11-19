@@ -427,6 +427,25 @@ pub const BUILTIN_ATTRIBUTES: &[&str] = &[
 pub const BUILTIN_DERIVES: &[&str] =
     &["Clone", "Copy", "Debug", "Default", "Eq", "Hash", "Ord", "PartialEq", "PartialOrd"];
 
+/// The cfg names kernel code may test (`KNP1-CFG` for any other, `clippy`, `debug_assertions`
+/// and `panic` included, and for custom names a `build.rs` emits).
+pub const CFG_ALLOWED: [&str; 14] = [
+    "doc",
+    "feature",
+    "target_arch",
+    "target_endian",
+    "target_env",
+    "target_family",
+    "target_feature",
+    "target_has_atomic",
+    "target_os",
+    "target_pointer_width",
+    "target_vendor",
+    "test",
+    "unix",
+    "windows",
+];
+
 /// The built-in roots a re-export can expose (`pub use std;`).
 const BUILTIN_ROOTS: [&str; 3] = ["std", "core", "alloc"];
 
@@ -1414,15 +1433,28 @@ impl<'a> Scan<'a> {
     /// `clippy::lint` paths (lint names in `allow`) are not predicates.
     fn check_cfg_pred(&mut self, from: usize, to: usize) {
         for k in from..to {
+            if self.is(k, &Kind::Dollar) {
+                self.hit(
+                    k,
+                    &Rule::Cfg,
+                    "macro metavariable in a cfg predicate: the scan cannot see the cfg".to_string(),
+                );
+                continue;
+            }
             let Some(name) = self.ident(k) else { continue };
-            let path_seg =
-                self.is(k + 1, &Kind::PathSep) || k.checked_sub(1).is_some_and(|p| self.is(p, &Kind::PathSep));
-            if name == "clippy" && !path_seg {
-                self.hit(k, &Rule::Cfg, "`clippy` cfg predicate: code that differs under the lint driver".to_string());
+            if k.checked_sub(1).is_some_and(|p| self.is(p, &Kind::Dollar)) {
+                continue; // the metavariable's name, already reported at its `$`
             }
-            if name == "debug_assertions" {
-                self.hit(k, &Rule::Cfg, "`debug_assertions` cfg predicate: profile-dependent kernel code".to_string());
+            if matches!(name, "all" | "any" | "not" | "true" | "false") && !self.is(k + 1, &Kind::Eq) {
+                continue;
             }
+            let message = match name {
+                "clippy" => "`clippy` cfg: code that differs under the lint driver".to_string(),
+                "debug_assertions" | "panic" => format!("`{name}` cfg: profile-dependent kernel code"),
+                n if CFG_ALLOWED.contains(&n) => continue,
+                n => format!("cfg name `{n}` is not on the kernel allowlist (build-dependent code)"),
+            };
+            self.hit(k, &Rule::Cfg, message);
         }
     }
 
@@ -1517,6 +1549,12 @@ impl<'a> Scan<'a> {
             let macro_name = inside && after_ok && !matches!(next, Some(Kind::Bang));
             // A banned name followed by a metavariable or repetition is called by it.
             let meta_called = matches!(next, Some(Kind::Dollar)) && !matches!(prev, Some(Kind::Dollar));
+            // Banned cfg names passed to a macro may land in a cfg predicate (`m!(not(clippy))`).
+            if inside && after_ok && !matches!(next, Some(Kind::PathSep | Kind::Bang)) {
+                if matches!(name, "clippy" | "debug_assertions" | "panic") {
+                    self.hit(i, &Rule::Cfg, format!("`{name}` passed to a macro: it may become a cfg predicate"));
+                }
+            }
             for kind in [P::Call, P::Method, P::FloatMethod, P::Macro, P::IncludeMacro] {
                 let applies = template
                     || meta_called

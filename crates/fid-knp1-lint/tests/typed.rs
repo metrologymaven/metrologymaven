@@ -10,9 +10,9 @@ use fid_knp1_lint::find::{Finding, Rule};
 use fid_knp1_lint::graph;
 use fid_knp1_lint::syn_scan;
 use fid_knp1_lint::typed::{
-    check_run, clippy_toml, driver_version, finish, parse_config, parse_messages, run, target_findings,
-    unresolved_allowed, CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS, TYPED_TABLE,
-    TYPED_TABLE_LEN,
+    check_run, check_run_with_driver_probe, clippy_toml, driver_version, finish, parse_config, parse_messages, run,
+    target_findings, unresolved_allowed, CrateRef, ItemKind, MapCtx, Options, TypedErrorCode, DEFAULT_TARGETS,
+    TYPED_TABLE, TYPED_TABLE_LEN,
 };
 use std::path::{Path, PathBuf};
 
@@ -247,7 +247,7 @@ fn missing_driver_is_fatal() {
 #[test]
 fn wrong_clippy_version_is_fatal() {
     // The fixture pins 0.0.0, which no toolchain has.
-    let opts = Options { cargo: cargo(), scratch: scratch("typed-version"), extra_methods: Vec::new() };
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-version") };
     let e = run(&fix("ws/knp1-lint.toml"), &opts).unwrap_err();
     assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
 }
@@ -265,14 +265,20 @@ fn an_unresolvable_table_path_fails_the_real_driver_run() {
     let gcfg = graph::load_config(&config).unwrap();
     let mut closure = graph::compute_closure(&gcfg).unwrap();
     closure.crates.retain(|c| c.name == "typed-clean");
-    let opts = Options {
-        cargo: cargo(),
-        scratch: scratch("typed-unresolved"),
-        extra_methods: vec!["std::knp1_no_such_function".to_string()],
-    };
-    let e = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap_err();
-    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
-    assert!(e.message.contains("knp1_no_such_function"), "{e}");
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-unresolved") };
+    // A path that exists nowhere, and (where the driver words it apart) one of the wrong kind.
+    for probe in ["std::knp1_no_such_function", "std::collections::BTreeMap"] {
+        let e = check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[probe.to_string()])
+            .unwrap_err();
+        assert_eq!(e.code, TypedErrorCode::Driver, "{probe}: {e}");
+        assert!(e.message.contains(probe.rsplit("::").next().unwrap()), "{probe}: {e}");
+    }
+    // Probe paths can never relabel or shadow a table entry, nor inject TOML.
+    for bad in ["f64::mul_add", "std::x\", reason = \"KNP1-LIBM", ""] {
+        let e = check_run_with_driver_probe(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts, &[bad.to_string()])
+            .unwrap_err();
+        assert_eq!(e.code, TypedErrorCode::ConfigInvalid, "{bad}: {e}");
+    }
 }
 
 #[test]
@@ -284,7 +290,7 @@ fn ac1_to_ac4_end_to_end_on_three_targets() {
     let syn_cfg = syn_scan::parse_config(&text).unwrap();
     let gcfg = graph::load_config(&config).unwrap();
     let closure = graph::compute_closure(&gcfg).unwrap();
-    let opts = Options { cargo: cargo(), scratch: scratch("typed-ws"), extra_methods: Vec::new() };
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-ws") };
     // The workspace's .cargo/config.toml sets a missing wrapper, a missing rustc and a bad
     // codegen flag: the check must override them, or nothing builds.
     let run = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap();
