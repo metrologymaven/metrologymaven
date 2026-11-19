@@ -724,7 +724,7 @@ impl<const L: usize> BigN<L> {
     }
 
     /// The value as a `u128`, or `None` if it needs more than 128 bits.
-    pub(crate) fn to_u128(&self) -> Option<u128> {
+    pub(crate) fn fit_u128(&self) -> Option<u128> {
         if self.len > 4 || self.overflow {
             return None;
         }
@@ -808,15 +808,15 @@ mod tests {
         ];
         for (a, b) in cases {
             let p = Big::from_u128(a).mul(&Big::from_u128(b));
-            assert_eq!(p.to_u128(), Some(a * b), "{a} * {b}");
+            assert_eq!(p.fit_u128(), Some(a * b), "{a} * {b}");
         }
         // (2^128 - 1)^2 = 2^256 - 2^129 + 1, checked limb by limb through div_rem.
         let m = Big::from_u128(u128::MAX);
         let sq = m.mul(&m);
         assert_eq!(sq.bit_len(), 256);
-        assert_eq!(sq.to_u128(), None);
+        assert_eq!(sq.fit_u128(), None);
         let (q, r) = sq.div_rem(&m).unwrap();
-        assert_eq!((q.to_u128(), r.is_zero()), (Some(u128::MAX), true));
+        assert_eq!((q.fit_u128(), r.is_zero()), (Some(u128::MAX), true));
         // Running out of limbs is reported, never wrapped.
         let mut big = Big::from_u128(1);
         big.shl(32 * 79);
@@ -825,9 +825,9 @@ mod tests {
         assert!(!big.mul(&Big::from_u128(1)).overflowed());
         let mut s = Big::from_u128(u128::MAX);
         s.add_assign(&Big::from_u128(1));
-        assert_eq!((s.bit_len(), s.to_u128()), (129, None));
+        assert_eq!((s.bit_len(), s.fit_u128()), (129, None));
         s.sub_assign(&Big::from_u128(u128::MAX));
-        assert_eq!(s.to_u128(), Some(1));
+        assert_eq!(s.fit_u128(), Some(1));
     }
 
     #[test]

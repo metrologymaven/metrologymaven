@@ -233,15 +233,7 @@ pub(crate) fn format_with_ladder(x: f64, spec: &FormatSpec, ladder: &[PiEnclosur
                 Prec::Dec(_) => lad.exponent()?,
                 Prec::Sig(_) => 0,
             };
-            side_rule(
-                prec,
-                k,
-                neg,
-                want,
-                out,
-                |p, r| lad.round(p, r),
-                |o| cmp_out(OP, neg, o, 1, 0, &lim, lim_scale),
-            )?
+            side_rule(prec, k, neg, want, out, |p, r| lad.round(p, r), |o| cmp_out(OP, neg, o, 1, 0, &lim, lim_scale))?
         }
         None => (out, 0, false),
     };
@@ -438,7 +430,7 @@ fn render_dms(neg: bool, out: &Out<ANG_LIMBS>) -> Result<String, NumError> {
     let (min, sec) = rest.div_rem(&per_minute).ok_or_else(capacity)?;
     check(OP, &deg)?;
     check(OP, &sec)?;
-    let min = min.to_u128().filter(|&v| v < 60).ok_or_else(capacity)?;
+    let min = min.fit_u128().filter(|&v| v < 60).ok_or_else(capacity)?;
     let sec = render(false, &Out { q: sec, p: out.p });
     let mut s = String::with_capacity(sec.len() + 8);
     if neg && !out.q.is_zero() {
@@ -539,7 +531,7 @@ mod tests {
     #[test]
     fn malformed_rungs_are_errors_not_strings() {
         for (s, d) in [("3.14", 3), ("3.1x5", 3), ("3..14", 2), ("", 0)] {
-            assert_eq!(FmtError::of(&parse_pi(s, d).unwrap_err()), Some(FmtError::Capacity), "{s}");
+            assert_eq!(FmtError::of(&parse_pi(s, d).err().unwrap()), Some(FmtError::Capacity), "{s}");
         }
         let spec = FormatSpec {
             formatter: FormatterId::ANGLE_V1,

@@ -355,7 +355,8 @@ fn ac6_errors() {
 /// The rad unit is fmt.scalar@1 with factor 1 and no enclosure; deg and dms name the rung.
 #[test]
 fn reported_record() {
-    let spec = |unit| FormatSpec { formatter: FormatterId::ANGLE_V1, unit, precision: Precision::SigDigits(17), limits: None };
+    let spec =
+        |unit| FormatSpec { formatter: FormatterId::ANGLE_V1, unit, precision: Precision::SigDigits(17), limits: None };
     let r = format(1.0, &spec(Unit::Rad)).unwrap();
     assert_eq!(r.value, "1.0000000000000000");
     assert_eq!(

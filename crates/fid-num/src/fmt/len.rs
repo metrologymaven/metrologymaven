@@ -366,7 +366,12 @@ pub(crate) fn decimal_exponent<const L: usize>(op: &'static str, n: &BigN<L>, d:
 
 /// One rounding of `|v|` at the given precision (step 3): half-even, or directed at the
 /// side-rule cap.
-pub(crate) fn round_at<const L: usize>(op: &'static str, v: &Exact<L>, prec: Prec, rnd: Rnd) -> Result<Out<L>, NumError> {
+pub(crate) fn round_at<const L: usize>(
+    op: &'static str,
+    v: &Exact<L>,
+    prec: Prec,
+    rnd: Rnd,
+) -> Result<Out<L>, NumError> {
     let mut p = match prec {
         Prec::Dec(p) => p,
         Prec::Sig(n) => n - 1 - v.k,
