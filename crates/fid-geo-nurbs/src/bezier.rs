@@ -27,8 +27,10 @@ impl Binom {
         for n in 1..=MAX_BINOM {
             let mut row = vec![1.0; n + 1];
             if let Some(prev) = rows.last() {
-                for k in 1..n {
-                    row[k] = prev[k - 1] + prev[k];
+                for (k, x) in row.iter_mut().enumerate().take(n).skip(1) {
+                    if let (Some(a), Some(b)) = (prev.get(k - 1), prev.get(k)) {
+                        *x = a + b;
+                    }
                 }
             }
             rows.push(row);
@@ -61,13 +63,16 @@ impl Arr {
 
     #[inline]
     pub(crate) fn at(&self, i: usize, j: usize) -> f64 {
-        self.a[i * (self.n + 1) + j]
+        // in range by construction; 0.0 is never read for a well-formed array
+        self.a.get(i * (self.n + 1) + j).copied().unwrap_or(0.0)
     }
 
     #[inline]
     fn set(&mut self, i: usize, j: usize, x: f64) {
         let n = self.n;
-        self.a[i * (n + 1) + j] = x;
+        if let Some(y) = self.a.get_mut(i * (n + 1) + j) {
+            *y = x;
+        }
     }
 
     fn map2(&self, b: &Arr, f: impl Fn(f64, f64) -> f64) -> Arr {
@@ -274,25 +279,29 @@ pub(crate) fn casteljau(pts: &[H], s: f64, nd: usize) -> (H, H, H) {
     let p = pts.len().saturating_sub(1);
     let oms = 1.0 - s;
     let mut c: Vec<H> = pts.to_vec();
-    let mut keep1: [H; 2] = [[0.0; 4]; 2];
-    let mut keep2: [H; 3] = [[0.0; 4]; 3];
+    let z: H = [0.0; 4];
+    let at = |c: &[H], i: usize| c.get(i).copied().unwrap_or(z);
+    let mut keep1: [H; 2] = [z; 2];
+    let mut keep2: [H; 3] = [z; 3];
     if p == 1 {
-        keep1 = [pts[0], pts[1]];
+        keep1 = [at(pts, 0), at(pts, 1)];
     }
     for r in 1..=p {
         if r + 1 == p {
-            keep2 = [c[0], c[1], c[2]];
+            keep2 = [at(&c, 0), at(&c, 1), at(&c, 2)];
         }
         if r == p {
-            keep1 = [c[0], c[1]];
+            keep1 = [at(&c, 0), at(&c, 1)];
         }
         for i in 0..=p - r {
-            let (a, b) = (c[i], c[i + 1]);
-            c[i] = [oms * a[0] + s * b[0], oms * a[1] + s * b[1], oms * a[2] + s * b[2], oms * a[3] + s * b[3]];
+            let (a, b) = (at(&c, i), at(&c, i + 1));
+            if let Some(ci) = c.get_mut(i) {
+                *ci = [oms * a[0] + s * b[0], oms * a[1] + s * b[1], oms * a[2] + s * b[2], oms * a[3] + s * b[3]];
+            }
         }
     }
     let pf = p as f64;
-    let a0 = c[0];
+    let a0 = at(&c, 0);
     let d = |x: f64, y: f64| (y - x) * pf;
     let a1 = [
         d(keep1[0][0], keep1[1][0]),
@@ -385,7 +394,7 @@ pub(crate) fn bez2_pos(net: &Net, s: f64, t: f64) -> [f64; 3] {
 pub(crate) fn insert_all(knots: &[f64], p: usize, polys: &mut [Vec<H>]) -> (Vec<f64>, Vec<f64>) {
     let mut u = knots.to_vec();
     let n = u.len().saturating_sub(p + 1);
-    let (a, b) = (u[p], u[n]);
+    let (Some(&a), Some(&b)) = (u.get(p), u.get(n)) else { return (u, Vec::new()) };
     let mut values: Vec<f64> = Vec::new();
     for &x in &u {
         if a <= x && x <= b && values.last() != Some(&x) {
@@ -402,12 +411,13 @@ pub(crate) fn insert_all(knots: &[f64], p: usize, polys: &mut [Vec<H>]) -> (Vec<
             if k < p {
                 break;
             }
+            let knot = |i: usize| u.get(i).copied().unwrap_or(0.0);
             for poly in polys.iter_mut() {
                 let mut q: Vec<H> = Vec::with_capacity(p - m);
                 for i in (k + 1 - p)..=(k - m) {
-                    let alpha = (x - u[i]) / (u[i + p] - u[i]);
+                    let alpha = (x - knot(i)) / (knot(i + p) - knot(i));
                     let oma = 1.0 - alpha;
-                    let (pi, pm) = (poly[i], poly[i - 1]);
+                    let (Some(&pi), Some(&pm)) = (poly.get(i), poly.get(i - 1)) else { continue };
                     q.push([
                         alpha * pi[0] + oma * pm[0],
                         alpha * pi[1] + oma * pm[1],
@@ -415,7 +425,7 @@ pub(crate) fn insert_all(knots: &[f64], p: usize, polys: &mut [Vec<H>]) -> (Vec<
                         alpha * pi[3] + oma * pm[3],
                     ]);
                 }
-                let tail: Vec<H> = poly[k - m..].to_vec();
+                let tail: Vec<H> = poly.get(k - m..).map(<[H]>::to_vec).unwrap_or_default();
                 poly.truncate(k + 1 - p);
                 poly.extend(q);
                 poly.extend(tail);
@@ -431,8 +441,9 @@ pub(crate) fn segments(u: &[f64], p: usize, values: &[f64]) -> Vec<(usize, f64, 
     values
         .windows(2)
         .filter_map(|w| {
-            let s = u.iter().rposition(|y| *y == w[0])?;
-            Some((s.checked_sub(p)?, w[0], w[1]))
+            let (&x0, &x1) = (w.first()?, w.get(1)?);
+            let s = u.iter().rposition(|y| *y == x0)?;
+            Some((s.checked_sub(p)?, x0, x1))
         })
         .collect()
 }

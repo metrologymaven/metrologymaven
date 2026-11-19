@@ -24,10 +24,11 @@ Stdlib only; shares no code with any Rust crate and never runs the Rust code.
 3. digests-v1.txt: SHA-256 of the model's results per entity and per file (AC-5). Digest
    text, one line per query in file order, every f64 as 16 lowercase hex digits of its bit
    pattern:
-     curve:   c <t> <foot x y z> <distance> <B|I> <U|N> <ok|nc>
-     surface: s <u> <v> <foot x y z> <distance> <B|I> <U|N> <ok|nc>
+     curve:   c <t> <foot x y z> <distance> <B|I> <status>
+     surface: s <u> <v> <foot x y z> <distance> <B|I> <status>
      error:   x <code>
-   (B on the boundary, I inside; U unique, N non-unique; ok certified, nc NonConvergence.)
+   (B on the boundary, I inside; status C0 certified, C1 certified tie, UB / UI / UC
+   unresolved by budget or depth, by a non-converging Newton, or by an uncertified winner.)
 """
 
 import hashlib
@@ -52,7 +53,11 @@ DIGESTS = HERE / "digests-v1.txt"
 FILES = [("ref_set_v1.json", HERE.parent / "ref_set_v1.json"), ("multi_minima.json", HERE.parent / "multi_minima.json"),
          ("invert/fuzz_set.json", FUZZ)]
 SEED = 44
+# query tags whose answer may honestly be Unresolved (degenerate or flat minima); a certified
+# answer must still be the reference
+HARD_TAGS = {"centre", "axis", "curvature_centre", "symmetry", "decoy"}
 TOL = 1e-12
+HARD_FOOT_TOL = 1e-9  # flat minima near curvature centres: the distance is exact, the foot is not
 
 
 def hx(x):
@@ -60,6 +65,17 @@ def hx(x):
 
 
 # ---------------------------------------------------------------- 1. fuzz set (GEO.NURBS.REF oracle)
+
+def unit(rng):
+    """Uniform random unit vector by rejection from the cube: only + - * / and sqrt (correctly
+    rounded everywhere), so the bytes do not depend on the platform's libm."""
+    while True:
+        d = [2.0 * rng.random() - 1.0 for _ in range(3)]
+        n2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
+        if 1e-4 < n2 <= 1.0:
+            n = math.sqrt(n2)
+            return [x / n for x in d]
+
 
 def build_fuzz():
     import nurbs_oracle as O
@@ -77,6 +93,8 @@ def build_fuzz():
         for k, (Pf, tag) in enumerate(queries):
             rec = O.invert(sp, grid, Pf, tag)
             rec = {"id": f"{sp.id}-q{k:04d}", **rec}
+            if tag in HARD_TAGS:
+                rec["allow_unresolved"] = True
             recs.append(rec)
         g["invert"] = recs
         if expect:
@@ -97,8 +115,8 @@ def build_fuzz():
                 base = [float(x) for x in sp.surf_ders(O.Fraction(u), O.Fraction(v), 0, "frac")[(0, 0)]]
             else:
                 base = [float(x) for x in sp.curve_ders(O.Fraction(u), 0, "frac")[0]]
-            d = [rng.gauss(0.0, 1.0) for _ in range(3)]
-            nn = math.sqrt(sum(x * x for x in d))
+            d = unit(rng)
+            nn = 1.0
             mag = mags[k % len(mags)]
             qs.append(([base[i] + mag * d[i] / nn for i in range(3)], "random"))
         return qs
@@ -111,11 +129,16 @@ def build_fuzz():
     qs = [([0.0, 0.0, 0.0], "centre"), ([0.0, 0.0, 0.75], "axis"), ([0.0, 0.0, -0.3], "axis"),
           ([0.0, 0.0, 1e-7], "axis")]
     for k in range(12):
-        th = math.pi * (1e-6 + 0.002 * rng.random()) if k < 6 else math.pi * rng.random()
-        ph = 2 * math.pi * rng.random()
         rr = 0.5 + (0.1 if k % 2 else -0.1) * rng.random()
-        z = -math.cos(th) if k % 3 else math.cos(th)
-        qs.append(([rr * math.sin(th) * math.cos(ph), rr * math.sin(th) * math.sin(ph), rr * z], "radial"))
+        if k < 6:  # near a pole: tilt the axis by up to about 0.006 rad
+            e = 1e-6 + 0.006 * rng.random()
+            a, b = 2.0 * rng.random() - 1.0, 2.0 * rng.random() - 1.0
+            d = [e * a, e * b, -1.0 if k % 3 else 1.0]
+            n = math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2])
+            d = [x / n for x in d]
+        else:
+            d = unit(rng)
+        qs.append(([rr * d[0], rr * d[1], rr * d[2]], "radial"))
     add(sph, qs, 40)
     # polyline (degree 1, every vertex a kink) with queries outside the vertices
     pts = [[0.0, 0.0, 0.0], [0.3, 0.2, 0.0], [0.5, -0.1, 0.05], [0.8, 0.3, 0.0], [1.0, 0.0, 0.1]]
@@ -147,7 +170,9 @@ def build_fuzz():
                    knots_v=Vv, n_u=5, n_v=4)
     add(uns, around(uns, 12, [1e-6, 0.01, 0.1, 0.4], rng), 40)
     # periodic closed cubic (flag set; the geometry is an ordinary unclamped B-spline)
-    ring = [[math.cos(2 * math.pi * k / 6), math.sin(2 * math.pi * k / 6), 0.1 * (k % 2)] for k in range(6)]
+    h3 = math.sqrt(3.0) / 2.0  # exact hexagon: no libm trigonometry (portable bytes)
+    ring = [[c, s_, 0.1 * (k % 2)] for k, (c, s_) in
+            enumerate([(1.0, 0.0), (0.5, h3), (-0.5, h3), (-1.0, 0.0), (-0.5, -h3), (0.5, -h3)])]
     ring += ring[:3]
     per = O.Spline("periodic_c", "closed periodic cubic B-spline", 3, [k / 6.0 - 0.5 for k in range(13)], ring, None)
     add(per, around(per, 12, [1e-5, 0.05, 0.3, 0.9], rng), 200, extra={"periodic": True})
@@ -185,6 +210,47 @@ def build_fuzz():
                       O.height_net(rng, nu, nv), O.random_weights(rng, nu * nv) if rational else None, degree_v=q,
                       knots_v=O.random_knots(rng, q, nv), n_u=nu, n_v=nv)
         add(sp, around(sp, 20, [1e-7, 1e-3, 0.05, 0.3], rng), 24)
+    # review of #271: hard classes (curvature centres, saddles, exact symmetry planes, a decoy)
+    r2 = math.sqrt(0.5)
+    ell = O.Spline("ellipse", "rational quadratic ellipse a = 2, b = 1", 2, [0, 0, 0, .25, .25, .5, .5, .75, .75, 1, 1, 1],
+                   [[2, 0, 0], [2, 1, 0], [0, 1, 0], [-2, 1, 0], [-2, 0, 0], [-2, -1, 0], [0, -1, 0], [2, -1, 0], [2, 0, 0]],
+                   [1, r2, 1, r2, 1, r2, 1, r2, 1])
+    qs = [([1.5, 0.0, 0.0], "curvature_centre"), ([0.0, 0.0, 0.0], "curvature_centre"), ([0.0, -3.0, 0.0], "curvature_centre")]
+    qs += [([1.5, y, 0.0], "curvature_centre") for y in (1e-4, 1e-5, 1e-6, 1e-7, -1e-8)]
+    qs += [([x, 1e-7, 0.0], "curvature_centre") for x in (1.49, 1.499, 1.50001, 1.501)]
+    add(ell, qs, 200)
+    scurve = O.Spline("s_curve", "cubic S-curve (one inflection)", 3, [0, 0, 0, 0, 0.5, 1, 1, 1, 1],
+                      [[0, 0, 0], [0.3, 0.6, 0], [0.5, 0.0, 0], [0.7, -0.6, 0], [1.0, 0, 0]], None)
+    qs = []
+    for t in (0.12, 0.2, 0.33, 0.7, 0.85):
+        C = scurve.curve_ders(O.Fraction(t), 2, "frac")
+        d1 = [float(x) for x in C[1]]
+        d2 = [float(x) for x in C[2]]
+        P0 = [float(x) for x in C[0]]
+        cr = d1[0] * d2[1] - d1[1] * d2[0]
+        sp2 = d1[0] * d1[0] + d1[1] * d1[1]
+        k = cr / (sp2 * math.sqrt(sp2))
+        nrm = [-d1[1] / math.sqrt(sp2), d1[0] / math.sqrt(sp2), 0.0]
+        c = [P0[i] + nrm[i] / k for i in range(3)]
+        qs.append((c, "curvature_centre"))
+        qs.append(([c[0] + 1e-7, c[1], 0.0], "curvature_centre"))
+    add(scurve, qs, 400)
+    sad = O.Spline("saddle", "biquadratic saddle z = x^2 - y^2", 2, [0, 0, 0, 1, 1, 1],
+                   [[-1 + i, -1 + j, [1, -1, 1][i] - [1, -1, 1][j]] for i in range(3) for j in range(3)], None,
+                   degree_v=2, knots_v=[0, 0, 0, 1, 1, 1], n_u=3, n_v=3)
+    qs = [([0.1, 0.0, 0.5], "saddle"), ([0.3, 0.0, 0.5], "saddle"), ([0.1, 0.0, 0.3], "saddle"), ([0.1, 0.05, 0.5], "saddle")]
+    qs += [([x, 0.0, z], "symmetry") for x, z in ((0.2, 0.8), (-0.4, 0.4), (0.0, 0.5), (0.6, -0.2))]
+    qs += [([0.0, y, z], "symmetry") for y, z in ((0.2, -0.8), (0.4, 0.4), (0.0, -0.5))]
+    add(sad, qs, 60)
+    wsym = O.wavy_surface()
+    wsym.id = "wavy_sym"
+    add(wsym, [([0.0, -0.35 + 0.1 * k, 0.05 + 0.03 * k], "symmetry") for k in range(8)], 48)
+    zz = 0.4999999
+    dec = O.Spline("decoy", "quarter circle near its centre plus a decoy segment", 2,
+                   [0, 0, 0, 1 / 3, 1 / 3, 2 / 3, 2 / 3, 1, 1, 1],
+                   [[2, 0, 0], [2, 1, 0], [0, 1, 0], [0.75, 1, zz / 2], [1.5, 1, zz], [1.5, (1 + 1e-5) / 2, zz],
+                    [1.5, 1e-5, zz]], [1, r2, 1, 1, 1, 1, 1])
+    add(dec, [([1.5, y, 0.0], "decoy") for y in (1e-5, 1e-6, 1e-4, 0.0)], 400)
     head = {"format": "fid-nurbs-invert-fuzz/1", "generator": "fixtures/geo/nurbs/invert/make_invert_fixtures.py",
             "oracle": O.ORACLE_VERSION, "seed": SEED, "license": "CC-BY-4.0", "unit": "m"}
     body = json.dumps({**head, "entities": out}, indent=None, separators=(",", ":"))
@@ -237,24 +303,40 @@ def expect_nonunique(q):
     return "tie" in q["tags"]
 
 
-def run_entity(e, worst, problems):
+def run_entity(e, worst, problems, counts):
     ent = IM.Entity(e)
     lines = []
     for q in e["invert"]:
         Q = EM.jf(q["q"])
         try:
             if ent.surface:
-                params, foot, dist, onb, uniq, cert = IM.invert_surface(ent, Q)
+                params, foot, dist, onb, st = IM.invert_surface(ent, Q)
             else:
-                params, foot, dist, onb, uniq, cert = IM.invert_curve(ent, Q)
+                params, foot, dist, onb, st = IM.invert_curve(ent, Q)
         except IM.NonFiniteError:
             lines.append("x NonFinite")
             problems.append(f"{q['id']}: NonFinite")
             continue
         kind = "s" if ent.surface else "c"
         lines.append(" ".join([kind] + [hx(x) for x in params] + [hx(x) for x in foot] + [hx(dist)] +
-                              ["B" if onb else "I", "U" if uniq else "N", "ok" if cert else "nc"]))
+                              ["B" if onb else "I", st]))
+        counts[st] = counts.get(st, 0) + 1
         qid = q["id"]
+        if st.startswith("U"):
+            # an unresolved answer is allowed only where pinned: the cusp tip (convergence) and
+            # the hard degenerate classes; it is never checked for accuracy, only for being a
+            # real point no closer than the reference
+            if expect_nonconvergence(e, q):
+                if st != "UC":
+                    problems.append(f"{qid}: status {st}, expected UC")
+            elif not q.get("allow_unresolved"):
+                problems.append(f"{qid}: status {st}")
+            if dist < EM.jf(q["distance"]) - TOL:
+                problems.append(f"{qid}: unresolved best closer than the reference")
+            if not expect_nonconvergence(e, q):
+                continue
+        elif expect_nonconvergence(e, q):
+            problems.append(f"{qid}: certified at a cusp tip")
         cf = closed_form(e, q)
         if cf is not None and not expect_nonunique(q):
             # closed form: the radial projection (sphere) or the nearest circle point
@@ -269,14 +351,13 @@ def run_entity(e, worst, problems):
                 derr = max(derr, abs(dist - cf[0]))
         worst["foot"] = max(worst["foot"], ferr)
         worst["dist"] = max(worst["dist"], derr)
-        if ferr > TOL or derr > TOL:
-            problems.append(f"{qid}: foot error {ferr:.3e}, distance error {derr:.3e}")
+        ftol = HARD_FOOT_TOL if q.get("allow_unresolved") else TOL
+        if ferr > ftol or derr > TOL:
+            problems.append(f"{qid}: foot error {ferr:.3e}, distance error {derr:.3e} ({st})")
         if onb != expect_on_boundary(e, q, cf):
             problems.append(f"{qid}: on_boundary {onb}")
-        if cert == expect_nonconvergence(e, q):
-            problems.append(f"{qid}: certified {cert}")
-        if (not uniq) != expect_nonunique(q):
-            problems.append(f"{qid}: unique {uniq}")
+        if st.startswith("C") and (st == "C1") != expect_nonunique(q):
+            problems.append(f"{qid}: status {st}")
     return "".join(x + "\n" for x in lines)
 
 
@@ -285,6 +366,7 @@ def digests(only=None):
     total = hashlib.sha256()
     worst = {"foot": 0.0, "dist": 0.0}
     problems = []
+    counts = {}
     for name, path in FILES:
         if only and name not in only:
             continue
@@ -294,13 +376,14 @@ def digests(only=None):
             if not e["invert"]:
                 continue
             t0 = time.time()
-            text = run_entity(e, worst, problems).encode("utf-8")
+            text = run_entity(e, worst, problems, counts).encode("utf-8")
             sys.stderr.write(f"  {name}:{e['id']}: {len(e['invert'])} queries, {time.time() - t0:.1f} s\n")
             ftotal.update(text)
             total.update(text)
             out.append(f"{name}:{e['id']} {hashlib.sha256(text).hexdigest()}")
         out.append(f"{name} {ftotal.hexdigest()}")
     out.append(f"all {total.hexdigest()}")
+    print("statuses:", dict(sorted(counts.items())))
     print(f"model vs references: worst foot error {worst['foot']:.3e} m, worst distance error {worst['dist']:.3e} m")
     if problems:
         for p in problems:

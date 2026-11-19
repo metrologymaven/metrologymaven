@@ -38,7 +38,6 @@ use core::cmp::Reverse;
 use core::fmt;
 use std::collections::BinaryHeap;
 
-use crate::analytic::Uniqueness;
 use crate::bezier::{bez1, bez1_pos, bez2, bez2_pos, g_poly, insert_all, segments, Arr, Binom, Net, H};
 use crate::data::{NurbsCurve, NurbsSurface};
 use crate::eval::{Curve, EvalError, Surface};
@@ -71,6 +70,31 @@ pub const FOOT_SEP: f64 = 1e-9;
 pub const MAX_DEPTH: usize = 60;
 /// Subdivisions per inversion.
 pub const BUDGET: usize = 1024;
+/// Bisection steps in a unique one-parameter node where Newton did not converge.
+pub const MAX_BISECT: usize = 80;
+
+/// Why a result is not certified.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reason {
+    /// A node that could not be pruned against the answer was left by the subdivision budget
+    /// or depth limit (for example a curvature centre, where a continuum of points is closest).
+    Budget,
+    /// A unique node's Newton iteration did not converge and the node could not be halved.
+    Iteration,
+    /// The answer does not meet the convergence criterion (REQ-002), e.g. a cusp tip.
+    Convergence,
+}
+
+/// Whether the answer is the certified global minimum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Status {
+    /// The certified global closest point; `tie` when another closest point (a foot more than
+    /// [`FOOT_SEP`] away, within [`TIE`] of the distance) exists and the lexicographically
+    /// smallest parameters were chosen (REQ-004).
+    Certified { tie: bool },
+    /// The search could not certify the answer; the best known point is returned.
+    Unresolved { reason: Reason },
+}
 
 /// Closest point on a surface.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -82,7 +106,7 @@ pub struct Inversion {
     pub distance: f64,
     /// A parameter equals a limit of its domain.
     pub on_boundary: bool,
-    pub uniqueness: Uniqueness,
+    pub status: Status,
 }
 
 /// Closest point on a curve.
@@ -92,14 +116,15 @@ pub struct CurveInversion {
     pub foot: [f64; 3],
     pub distance: f64,
     pub on_boundary: bool,
-    pub uniqueness: Uniqueness,
+    pub status: Status,
 }
 
 /// Why an inversion has no certified answer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InvertError<I> {
-    /// REQ-003: the best candidate does not meet the convergence criterion (for example a cusp,
-    /// where the tangent vanishes); `best` is that candidate, finite.
+    /// REQ-003: the answer is not certified (`best.status` is `Unresolved` with the reason:
+    /// budget, iteration or convergence, e.g. a cusp tip where the tangent vanishes); `best` is
+    /// the best known point, finite.
     NonConvergence { best: I },
     /// The query point has a NaN or infinite coordinate.
     NonFiniteQuery,
@@ -330,7 +355,7 @@ struct Ctx {
     best: f64,
     cands: Vec<Cand>,
     splits: usize,
-    unresolved: Vec<(f64, Vec<[f64; 3]>)>,
+    unresolved: Vec<(f64, Reason)>,
     seq: u64,
 }
 
@@ -343,6 +368,16 @@ impl Ctx {
         let r = sub3(foot, self.q);
         let d = sqrt(dot(r, r))?;
         self.cands.push(Cand { params, foot, dist: d, pole });
+        if d < self.best {
+            self.best = d;
+        }
+        Ok(())
+    }
+
+    /// A surface point that only lowers the pruning bound; it is never an answer.
+    fn bound(&mut self, foot: [f64; 3]) -> Result<(), Fail> {
+        let r = sub3(foot, self.q);
+        let d = sqrt(dot(r, r))?;
         if d < self.best {
             self.best = d;
         }
@@ -382,20 +417,29 @@ fn select(ctx: &Ctx) -> Option<Cand> {
     Some(win)
 }
 
-/// Ties with a distinct foot, or an unresolved region that may hold one.
-fn nonunique(ctx: &Ctx, w: &Cand) -> bool {
+/// Result status (Design item 8): an unresolved node that could not be pruned against the
+/// winner makes the result unresolved (its reason), else an uncertified winner
+/// (`Convergence`), else certified, with `tie` when a tied candidate's foot is more than
+/// [`FOOT_SEP`] from the winner's.
+fn status(ctx: &Ctx, w: &Cand, cert: bool) -> Status {
     let dmin = w.dist;
-    if ctx.cands.iter().any(|c| c.dist <= dmin + TIE && inf_dist(c.foot, w.foot) > FOOT_SEP) {
-        return true;
+    for (lb, reason) in &ctx.unresolved {
+        if *lb - PRUNE_REL * ctx.m <= dmin + TIE {
+            return Status::Unresolved { reason: *reason };
+        }
     }
-    ctx.unresolved.iter().any(|(lb, pts)| *lb <= dmin + TIE && pts.iter().any(|x| inf_dist(*x, w.foot) > FOOT_SEP))
+    if !cert {
+        return Status::Unresolved { reason: Reason::Convergence };
+    }
+    let tie = ctx.cands.iter().any(|c| c.dist <= dmin + TIE && inf_dist(c.foot, w.foot) > FOOT_SEP);
+    Status::Certified { tie }
 }
 
 // ---------------------------------------------------------------- Newton (box constrained)
 
 /// One-parameter Newton on a one-column Bézier net in `[lo, hi]` from `x0`. After the box
 /// criterion first holds, one further (polishing) step is taken.
-fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail> {
+fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<(f64, bool), Fail> {
     let (q, m) = (ctx.q, ctx.m);
     let mut x = x0;
     let mut it = 0;
@@ -407,14 +451,15 @@ fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail>
         let g = dot(d1, r);
         let e = dot(d1, d1);
         let dist = sqrt(f)?;
-        if dir_ok(x, lo, hi, g, ortho_tol2(e, dist, m)) {
+        let ok = dir_ok(x, lo, hi, g, ortho_tol2(e, dist, m));
+        if ok {
             if polished {
-                return Ok(x);
+                return Ok((x, true));
             }
             polished = true;
         }
         if it == MAX_ITER {
-            return Ok(x);
+            return Ok((x, ok));
         }
         it += 1;
         let h = e + dot(d2, r);
@@ -423,7 +468,7 @@ fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail>
         } else if e > 0.0 {
             -g / e
         } else {
-            return Ok(x);
+            return Ok((x, ok));
         };
         let mut lam = 1.0;
         let fcap = f + slack(dist, m);
@@ -431,7 +476,7 @@ fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail>
         for _ in 0..=MAX_HALVINGS {
             let xt = clamp(x + lam * step, lo, hi);
             if xt == x {
-                return Ok(x);
+                return Ok((x, ok));
             }
             let rt = sub3(bez1_pos(net, xt), q);
             if dot(rt, rt) <= fcap {
@@ -442,7 +487,7 @@ fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail>
         }
         match next {
             Some(xt) => x = xt,
-            None => return Ok(x),
+            None => return Ok((x, ok)),
         }
     }
 }
@@ -450,7 +495,7 @@ fn newton1(net: &Net, lo: f64, hi: f64, x0: f64, ctx: &Ctx) -> Result<f64, Fail>
 /// Two-parameter Newton on a tensor Bézier net in the box `[lo, hi]` from `x0`: the full
 /// Hessian when positive definite, else the first fundamental form, else steepest descent;
 /// active box bounds fix their parameter.
-fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Result<[f64; 2], Fail> {
+fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Result<([f64; 2], bool), Fail> {
     let (q, m) = (ctx.q, ctx.m);
     let [mut u, mut v] = x0;
     let mut it = 0;
@@ -467,14 +512,15 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
         let dist = sqrt(f)?;
         let oku = dir_ok(u, lo[0], hi[0], gu, ortho_tol2(ee, dist, m));
         let okv = dir_ok(v, lo[1], hi[1], gv, ortho_tol2(gg, dist, m));
-        if oku && okv {
+        let ok = oku && okv;
+        if ok {
             if polished {
-                return Ok([u, v]);
+                return Ok(([u, v], true));
             }
             polished = true;
         }
         if it == MAX_ITER {
-            return Ok([u, v]);
+            return Ok(([u, v], ok));
         }
         it += 1;
         let huu = ee + dot(suu, r);
@@ -494,7 +540,7 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
                 if s > 0.0 {
                     (-gu / s, -gv / s)
                 } else {
-                    return Ok([u, v]);
+                    return Ok(([u, v], ok));
                 }
             }
         } else if !au {
@@ -503,7 +549,7 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
             } else if ee > 0.0 {
                 (-gu / ee, 0.0)
             } else {
-                return Ok([u, v]);
+                return Ok(([u, v], ok));
             }
         } else if !av {
             if hvv > 0.0 {
@@ -511,10 +557,10 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
             } else if gg > 0.0 {
                 (0.0, -gv / gg)
             } else {
-                return Ok([u, v]);
+                return Ok(([u, v], ok));
             }
         } else {
-            return Ok([u, v]);
+            return Ok(([u, v], ok));
         };
         let mut lam = 1.0;
         let fcap = f + slack(dist, m);
@@ -523,7 +569,7 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
             let ut = clamp(u + lam * du, lo[0], hi[0]);
             let vt = clamp(v + lam * dv, lo[1], hi[1]);
             if ut == u && vt == v {
-                return Ok([u, v]);
+                return Ok(([u, v], ok));
             }
             let rt = sub3(bez2_pos(net, ut, vt), q);
             if dot(rt, rt) <= fcap {
@@ -537,7 +583,7 @@ fn newton2(net: &Net, lo: [f64; 2], hi: [f64; 2], x0: [f64; 2], ctx: &Ctx) -> Re
                 u = ut;
                 v = vt;
             }
-            None => return Ok([u, v]),
+            None => return Ok(([u, v], ok)),
         }
     }
 }
@@ -582,6 +628,28 @@ fn monotone_1d(g: &Arr, gm: &Arr) -> i32 {
     } else {
         0
     }
+}
+
+/// `dG_s/ds < 0` or `dG_t/dt < 0` on the whole node (every coefficient difference below minus
+/// its margin): a stationary point there has a negative Hessian diagonal and is not a minimum.
+fn neg_diag(gu: &Arr, gum: &Arr, gv: &Arr, gvm: &Arr) -> bool {
+    let mut nu = true;
+    for k in 0..gu.m {
+        for l in 0..=gu.n {
+            if (gu.at(k + 1, l) - gu.at(k, l)) >= -(GAMMA * (gum.at(k + 1, l) + gum.at(k, l))) {
+                nu = false;
+            }
+        }
+    }
+    let mut nv = true;
+    for k in 0..=gv.m {
+        for l in 0..gv.n {
+            if (gv.at(k, l + 1) - gv.at(k, l)) >= -(GAMMA * (gvm.at(k, l + 1) + gvm.at(k, l))) {
+                nv = false;
+            }
+        }
+    }
+    nu || nv
 }
 
 /// The symmetric part of the Jacobian of `(G_s, G_t)` is positive definite on the node:
@@ -718,7 +786,7 @@ fn make_node(net: Net, root: usize, s: (f64, f64), t: (f64, f64), depth: usize, 
 fn split_dir_t(net: &Net) -> bool {
     let p = projected_all(net);
     let (m, n) = (net.m(), net.n());
-    let at = |i: usize, j: usize| p[i * (n + 1) + j];
+    let at = |i: usize, j: usize| p.get(i * (n + 1) + j).copied().unwrap_or([0.0; 3]);
     let (mut ds, mut dt) = (0.0, 0.0);
     for i in 0..=m {
         for j in 0..=n {
@@ -744,21 +812,23 @@ fn split_dir_t(net: &Net) -> bool {
     dt > ds
 }
 
+/// Min-heap keyed by `(lower bound bits, depth, sequence number)`: smallest bound first, then
+/// the wider (shallower) node, then creation order.
 struct Heap {
-    heap: BinaryHeap<Reverse<(u64, u64, usize)>>,
+    heap: BinaryHeap<Reverse<(u64, usize, u64, usize)>>,
     arena: Vec<Option<Node>>,
 }
 
 impl Heap {
     fn push(&mut self, node: Node, ctx: &mut Ctx) {
-        let key = node.lb.to_bits();
+        let key = (node.lb.to_bits(), node.depth);
         self.arena.push(Some(node));
-        self.heap.push(Reverse((key, ctx.seq, self.arena.len() - 1)));
+        self.heap.push(Reverse((key.0, key.1, ctx.seq, self.arena.len() - 1)));
         ctx.seq += 1;
     }
 
     fn pop(&mut self) -> Option<Node> {
-        let Reverse((_, _, idx)) = self.heap.pop()?;
+        let Reverse((_, _, _, idx)) = self.heap.pop()?;
         self.arena.get_mut(idx).and_then(Option::take)
     }
 }
@@ -788,7 +858,7 @@ fn bnb(
             if !(gu.all_finite() && gum.all_finite() && gv.all_finite() && gvm.all_finite()) {
                 return Err(Fail::NonFinite);
             }
-            if signed(&gu, &gum) || signed(&gv, &gvm) {
+            if signed(&gu, &gum) || signed(&gv, &gvm) || neg_diag(&gu, &gum, &gv, &gvm) {
                 continue;
             }
             unique_2d(&gu, &gum, &gv, &gvm)
@@ -805,30 +875,107 @@ fn bnb(
                 mono => mono == 1,
             }
         };
-        let mut ss = lerp(nd.s0, nd.s1, nd.si as f64 / nd.net.m() as f64);
-        let mut st = if two { lerp(nd.t0, nd.t1, nd.sj as f64 / nd.net.n() as f64) } else { 0.0 };
+        let at = |ss: f64, st: f64| {
+            if two {
+                [lerp(root.x.0, root.x.1, ss), lerp(root.y.0, root.y.1, st)]
+            } else {
+                lift(lerp(root.x.0, root.x.1, ss))
+            }
+        };
+        let ss = lerp(nd.s0, nd.s1, nd.si as f64 / nd.net.m() as f64);
+        let st = if two { lerp(nd.t0, nd.t1, nd.sj as f64 / nd.net.n() as f64) } else { 0.0 };
+        let mut reason = Reason::Budget;
         if unique {
             if two {
-                [ss, st] = newton2(&root.net, [nd.s0, nd.t0], [nd.s1, nd.t1], [ss, st], ctx)?;
+                let ([xs, xt], ok) = newton2(&root.net, [nd.s0, nd.t0], [nd.s1, nd.t1], [ss, st], ctx)?;
+                if ok {
+                    let params = at(xs, xt);
+                    ctx.add(params, point(params)?)?;
+                    continue;
+                }
+                reason = Reason::Iteration;
             } else {
-                ss = newton1(&root.net, nd.s0, nd.s1, ss, ctx)?;
+                let (mut x, ok) = newton1(&root.net, nd.s0, nd.s1, ss, ctx)?;
+                if !ok {
+                    x = bisect1(&root.net, nd.s0, nd.s1, ctx.q);
+                }
+                let params = at(x, 0.0);
+                ctx.add(params, point(params)?)?;
+                continue;
             }
-        } else if nd.depth < MAX_DEPTH && ctx.splits < BUDGET {
+        }
+        if nd.depth < MAX_DEPTH && ctx.splits < BUDGET {
             ctx.splits += 1;
             push_children(&mut heap, nd, two, ctx)?;
             continue;
-        } else {
-            ctx.unresolved.push((nd.lb, projected_all(&nd.net)));
         }
-        let params = if two {
-            [lerp(root.x.0, root.x.1, ss), lerp(root.y.0, root.y.1, st)]
-        } else {
-            lift(lerp(root.x.0, root.x.1, ss))
-        };
-        let foot = point(params)?;
-        ctx.add(params, foot)?;
+        // unresolved: its seed point bounds the search, it is never an answer
+        ctx.unresolved.push((nd.lb, reason));
+        ctx.bound(point(at(ss, st))?)?;
     }
     Ok(())
+}
+
+/// Upper bound before any search: Newton over each Bézier piece (in order) from its closest
+/// control point; the evaluated point only lowers the pruning bound.
+fn prebound(
+    roots: &[Root],
+    two: bool,
+    ctx: &mut Ctx,
+    point: &dyn Fn([f64; 2]) -> Result<[f64; 3], EvalError>,
+) -> Result<(), Fail> {
+    for root in roots {
+        let (_, si, sj) = box_lb_seed(&root.net, ctx.q)?;
+        let ss = si as f64 / root.net.m() as f64;
+        let params = if two {
+            let st = sj as f64 / root.net.n() as f64;
+            let ([xs, xt], _) = newton2(&root.net, [0.0, 0.0], [1.0, 1.0], [ss, st], ctx)?;
+            [lerp(root.x.0, root.x.1, xs), lerp(root.y.0, root.y.1, xt)]
+        } else {
+            let (x, _) = newton1(&root.net, 0.0, 1.0, ss, ctx)?;
+            [lerp(root.x.0, root.x.1, x), 0.0]
+        };
+        ctx.bound(point(params)?)?;
+    }
+    Ok(())
+}
+
+fn g1(net: &Net, s: f64, q: [f64; 3]) -> f64 {
+    let (p, d1, _) = bez1(net, s);
+    dot(d1, sub3(p, q))
+}
+
+/// Root of the increasing `g = C'(s) . (C(s) - q)` in `[lo, hi]` by bisection on its sign (a
+/// unique one-parameter node where Newton did not converge): at most [`MAX_BISECT`] halvings,
+/// then the end whose `|g|` is smaller (`lo` on equality).
+fn bisect1(net: &Net, lo: f64, hi: f64, q: [f64; 3]) -> f64 {
+    let (mut lo, mut hi) = (lo, hi);
+    let (mut glo, mut ghi) = (g1(net, lo, q), g1(net, hi, q));
+    if glo >= 0.0 {
+        return lo;
+    }
+    if ghi <= 0.0 {
+        return hi;
+    }
+    for _ in 0..MAX_BISECT {
+        let mid = (lo + hi) * 0.5;
+        if mid == lo || mid == hi {
+            break;
+        }
+        let gm = g1(net, mid, q);
+        if gm > 0.0 {
+            hi = mid;
+            ghi = gm;
+        } else {
+            lo = mid;
+            glo = gm;
+        }
+    }
+    if -glo <= ghi {
+        lo
+    } else {
+        hi
+    }
 }
 
 fn push_children(heap: &mut Heap, nd: Node, two: bool, ctx: &mut Ctx) -> Result<(), Fail> {
@@ -873,15 +1020,14 @@ pub fn invert_curve(c: &NurbsCurve, q: [f64; 3]) -> Result<CurveInversion, Inver
     if !check_query(q) {
         return Err(InvertError::NonFiniteQuery);
     }
-    let (res, cert) = curve_search(c, q)?;
-    if cert {
-        Ok(res)
-    } else {
-        Err(InvertError::NonConvergence { best: res })
+    let res = curve_search(c, q)?;
+    match res.status {
+        Status::Certified { .. } => Ok(res),
+        Status::Unresolved { .. } => Err(InvertError::NonConvergence { best: res }),
     }
 }
 
-fn curve_search(c: &NurbsCurve, q: [f64; 3]) -> Result<(CurveInversion, bool), Fail> {
+fn curve_search(c: &NurbsCurve, q: [f64; 3]) -> Result<CurveInversion, Fail> {
     let (m, l2, x) = scale(c.ctrl(), q);
     let mut ctx = Ctx {
         q,
@@ -915,11 +1061,11 @@ fn curve_search(c: &NurbsCurve, q: [f64; 3]) -> Result<(CurveInversion, bool), F
         }
         let roots: Vec<Root> =
             nets.into_iter().zip(&segs).map(|(net, (_, x0, x1))| Root { net, x: (*x0, *x1), y: (0.0, 0.0) }).collect();
+        prebound(&roots, false, &mut ctx, &|pr| pos(pr[0]))?;
         bnb(&roots, false, &mut ctx, &|pr| pos(pr[0]), &|t| [t, 0.0])?;
     }
     let Some(w) = select(&ctx) else { return Err(Fail::NonFinite) };
     let t = w.params[0];
-    let unique = !nonunique(&ctx, &w) && !degenerate;
     let cert = if degenerate || crease_values(knots, p, &values).contains(&t) {
         true
     } else {
@@ -932,9 +1078,9 @@ fn curve_search(c: &NurbsCurve, q: [f64; 3]) -> Result<(CurveInversion, bool), F
         foot: w.foot,
         distance: w.dist,
         on_boundary: t == lo || t == hi,
-        uniqueness: if unique { Uniqueness::Unique } else { Uniqueness::NonUnique },
+        status: status(&ctx, &w, cert),
     };
-    Ok((res, cert))
+    Ok(res)
 }
 
 // ---------------------------------------------------------------- surfaces
@@ -945,15 +1091,14 @@ pub fn invert_surface(s: &NurbsSurface, q: [f64; 3]) -> Result<Inversion, Invert
     if !check_query(q) {
         return Err(InvertError::NonFiniteQuery);
     }
-    let (res, cert) = surface_search(s, q)?;
-    if cert {
-        Ok(res)
-    } else {
-        Err(InvertError::NonConvergence { best: res })
+    let res = surface_search(s, q)?;
+    match res.status {
+        Status::Certified { .. } => Ok(res),
+        Status::Unresolved { .. } => Err(InvertError::NonConvergence { best: res }),
     }
 }
 
-fn surface_search(s: &NurbsSurface, q: [f64; 3]) -> Result<(Inversion, bool), Fail> {
+fn surface_search(s: &NurbsSurface, q: [f64; 3]) -> Result<Inversion, Fail> {
     let (m, l2, x_ext) = scale(s.ctrl(), q);
     let mut ctx = Ctx {
         q,
@@ -999,6 +1144,7 @@ fn surface_search(s: &NurbsSurface, q: [f64; 3]) -> Result<(Inversion, bool), Fa
     let pos = |pr: [f64; 2]| -> Result<[f64; 3], EvalError> { Ok(s.eval(pr[0], pr[1], 0)?.p) };
     let mut degen_u: Vec<f64> = Vec::new();
     let mut degen_v: Vec<f64> = Vec::new();
+    prebound(&patches, true, &mut ctx, &pos)?;
     // lines: u fixed (start, creases, end), then v fixed
     for along_v in [true, false] {
         let (vals, own, own_seg, other_vals, other_seg) = if along_v {
@@ -1038,8 +1184,6 @@ fn surface_search(s: &NurbsSurface, q: [f64; 3]) -> Result<(Inversion, bool), Fa
     bnb(&patches, true, &mut ctx, &pos, &|t| [t, 0.0])?;
     let Some(w) = select(&ctx) else { return Err(Fail::NonFinite) };
     let [u, v] = w.params;
-    let on_degen = degen_u.contains(&u) || degen_v.contains(&v);
-    let unique = !nonunique(&ctx, &w) && !on_degen;
     let d = s.eval(u, v, 1)?;
     let (su, sv) = (d.su.unwrap_or([0.0; 3]), d.sv.unwrap_or([0.0; 3]));
     let r = sub3(w.foot, q);
@@ -1060,7 +1204,7 @@ fn surface_search(s: &NurbsSurface, q: [f64; 3]) -> Result<(Inversion, bool), Fa
         foot: w.foot,
         distance: w.dist,
         on_boundary: u == ulo || u == uhi || v == vlo || v == vhi,
-        uniqueness: if unique { Uniqueness::Unique } else { Uniqueness::NonUnique },
+        status: status(&ctx, &w, cert),
     };
-    Ok((res, cert))
+    Ok(res)
 }

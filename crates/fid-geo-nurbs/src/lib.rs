@@ -30,4 +30,4 @@ pub use eval::{
     curve_geometry, surface_curvature, surface_normal, Curvature, Curve, CurveDerivs, CurveGeometry, EvalError,
     Regularity, Surface, SurfaceDerivs,
 };
-pub use invert::{invert_curve, invert_surface, CurveInversion, Inversion, InvertError};
+pub use invert::{invert_curve, invert_surface, CurveInversion, Inversion, InvertError, Reason, Status};

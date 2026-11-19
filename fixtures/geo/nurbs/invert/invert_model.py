@@ -33,6 +33,7 @@ DEGEN_REL = 2.0 ** -40   # degenerate (pole) line, times the largest box extent
 FOOT_SEP = 1e-9          # distinct feet, metres (infinity norm)
 MAX_DEPTH = 60           # binary subdivisions below a Bezier piece
 BUDGET = 1024            # subdivisions per inversion
+MAX_BISECT = 80          # bisection steps in a unique one-parameter node
 MAX_BINOM = 75           # 3 * MAX_DEGREE
 
 BINOM = [[1.0]]
@@ -345,6 +346,17 @@ class Ctx:
         if d < self.best:
             self.best = d
 
+    def add_point(self, params, foot):
+        r = sub3(foot, self.q)
+        self.add(params, foot, dot(r, r))
+
+    def bound(self, foot):
+        """A surface point that only lowers the pruning bound."""
+        r = sub3(foot, self.q)
+        d = sqrt(dot(r, r))
+        if d < self.best:
+            self.best = d
+
 
 def scale(ctrl, q):
     M = 0.0
@@ -495,12 +507,13 @@ def newton1(net, lo, hi, x0, ctx):
         g = dot(d1, r)
         e = dot(d1, d1)
         dist = sqrt(f)
-        if dir_ok(x, lo, hi, g, ortho_tol2(e, dist, M)):
+        ok = dir_ok(x, lo, hi, g, ortho_tol2(e, dist, M))
+        if ok:
             if polished:
                 return x, True
             polished = True
         if it == MAX_ITER:
-            return x, False
+            return x, ok
         it += 1
         h = e + dot(d2, r)
         if h > 0.0:
@@ -508,21 +521,21 @@ def newton1(net, lo, hi, x0, ctx):
         elif e > 0.0:
             step = -g / e
         else:
-            return x, False
+            return x, ok
         lam = 1.0
         moved = False
         fcap = f + slack(dist, M)
         for _ in range(MAX_HALVINGS + 1):
             xt = clamp(x + lam * step, lo, hi)
             if xt == x:
-                return x, False
+                return x, ok
             rt = sub3(bez1_pos(net, xt), q)
             if dot(rt, rt) <= fcap:
                 moved = True
                 break
             lam = lam * 0.5
         if not moved:
-            return x, False
+            return x, ok
         x = xt
 
 
@@ -544,12 +557,13 @@ def newton2(net, lo, hi, x0, ctx):
         dist = sqrt(f)
         oku = dir_ok(u, lo[0], hi[0], gu, ortho_tol2(E, dist, M))
         okv = dir_ok(v, lo[1], hi[1], gv, ortho_tol2(G, dist, M))
-        if oku and okv:
+        ok = oku and okv
+        if ok:
             if polished:
                 return (u, v), True
             polished = True
         if it == MAX_ITER:
-            return (u, v), False
+            return (u, v), ok
         it += 1
         huu = E + dot(suu, r)
         huv = F + dot(suv, r)
@@ -571,7 +585,7 @@ def newton2(net, lo, hi, x0, ctx):
                     du = -gu / s
                     dv = -gv / s
                 else:
-                    return (u, v), False
+                    return (u, v), ok
         elif not au:
             dv = 0.0
             if huu > 0.0:
@@ -579,7 +593,7 @@ def newton2(net, lo, hi, x0, ctx):
             elif E > 0.0:
                 du = -gu / E
             else:
-                return (u, v), False
+                return (u, v), ok
         elif not av:
             du = 0.0
             if hvv > 0.0:
@@ -587,9 +601,9 @@ def newton2(net, lo, hi, x0, ctx):
             elif G > 0.0:
                 dv = -gv / G
             else:
-                return (u, v), False
+                return (u, v), ok
         else:
-            return (u, v), False
+            return (u, v), ok
         lam = 1.0
         moved = False
         fcap = f + slack(dist, M)
@@ -597,14 +611,14 @@ def newton2(net, lo, hi, x0, ctx):
             ut = clamp(u + lam * du, lo[0], hi[0])
             vt = clamp(v + lam * dv, lo[1], hi[1])
             if ut == u and vt == v:
-                return (u, v), False
+                return (u, v), ok
             rt = sub3(bez2_pos(net, ut, vt), q)
             if dot(rt, rt) <= fcap:
                 moved = True
                 break
             lam = lam * 0.5
         if not moved:
-            return (u, v), False
+            return (u, v), ok
         u, v = ut, vt
 
 
@@ -617,27 +631,86 @@ def make_node(net, root, s0, s1, t0, t1, depth, G, ctx):
     return n
 
 
+def push(heap, nd, ctx):
+    """Heap key: lower bound, then depth (wider nodes first), then sequence number."""
+    heapq.heappush(heap, (nd.lb, nd.depth, ctx.seq, nd))
+    ctx.seq += 1
+
+
+def g1(net, s, q):
+    p, d1, _ = bez1(net, s)
+    return dot(d1, sub3(p, q))
+
+
+def bisect1(net, lo, hi, q):
+    """Root of the increasing g = C'(s) . (C(s) - q) in [lo, hi] by bisection on its sign
+    (unique 1-D nodes where Newton did not converge): at most MAX_BISECT halvings; the end
+    whose |g| is smaller (lo on equality)."""
+    glo, ghi = g1(net, lo, q), g1(net, hi, q)
+    if glo >= 0.0:
+        return lo
+    if ghi <= 0.0:
+        return hi
+    for _ in range(MAX_BISECT):
+        mid = (lo + hi) * 0.5
+        if mid == lo or mid == hi:
+            break
+        gm = g1(net, mid, q)
+        if gm > 0.0:
+            hi, ghi = mid, gm
+        else:
+            lo, glo = mid, gm
+    return lo if -glo <= ghi else hi
+
+
+def neg_diag(Gu, Gum, Gv, Gvm):
+    """dG_s/ds < 0 or dG_t/dt < 0 on the whole node (every coefficient difference below minus
+    its margin): any stationary point there has a negative Hessian diagonal, not a minimum."""
+    nu = nv = True
+    for k in range(len(Gu) - 1):
+        for l in range(len(Gu[0])):
+            if (Gu[k + 1][l] - Gu[k][l]) >= -(GAMMA * (Gum[k + 1][l] + Gum[k][l])):
+                nu = False
+    for k in range(len(Gv)):
+        for l in range(len(Gv[0]) - 1):
+            if (Gv[k][l + 1] - Gv[k][l]) >= -(GAMMA * (Gvm[k][l + 1] + Gvm[k][l])):
+                nv = False
+    return nu or nv
+
+
+def prebound(roots, dims, ctx, point):
+    """Upper bound before any search: Newton over each Bezier piece (in order) from its closest
+    control point; the evaluated point only lowers the pruning bound, it is never an answer."""
+    for net, (x0, x1), (y0, y1) in roots:
+        _, si, sj = box_lb_seed(projected(net), ctx.q)
+        ss = float(si) / float(len(net) - 1)
+        if dims == 1:
+            x, _ = newton1(net, 0.0, 1.0, ss, ctx)
+            ctx.bound(point(lerp(x0, x1, x)))
+        else:
+            st = float(sj) / float(len(net[0]) - 1)
+            (xs, xt), _ = newton2(net, (0.0, 0.0), (1.0, 1.0), (ss, st), ctx)
+            ctx.bound(point((lerp(x0, x1, xs), lerp(y0, y1, xt))))
+
+
 def bnb(roots, dims, ctx, point, lift):
     """roots: [(net, (x0, x1), (y0, y1))] Bezier pieces in order. point(params) -> foot (the
     GEO.NURBS.EVAL position); candidates are added to ctx."""
     heap = []
     for k, (net, _, _) in enumerate(roots):
-        nd = make_node(net, k, 0.0, 1.0, 0.0, 1.0, 0, None, ctx)
-        heapq.heappush(heap, (nd.lb, ctx.seq, nd))
-        ctx.seq += 1
+        push(heap, make_node(net, k, 0.0, 1.0, 0.0, 1.0, 0, None, ctx), ctx)
     q = ctx.q
     while heap:
-        lb, _, nd = heapq.heappop(heap)
+        lb, _, _, nd = heapq.heappop(heap)
         if lb - PRUNE_REL * ctx.M > ctx.best + TIE:
             break
         rnet, (x0, x1), (y0, y1) = roots[nd.root]
-        if nd.G is None:
-            if dims == 1:
-                nd.G = g_poly(nd.net, q, "s")
-            else:
-                nd.G = g_poly(nd.net, q, "s") + g_poly(nd.net, q, "t")
+
+        def at(ss, st):
+            return lift(lerp(x0, x1, ss)) if dims == 1 else (lerp(x0, x1, ss), lerp(y0, y1, st))
+
         if dims == 1:
-            G, Gm = nd.G
+            G, Gm = g_poly(nd.net, q, "s")
             if signed(G, Gm):
                 continue
             mono = monotone_1d(G, Gm)
@@ -645,28 +718,35 @@ def bnb(roots, dims, ctx, point, lift):
                 continue
             unique = mono == 1
         else:
-            Gu, Gum, Gv, Gvm = nd.G
-            if signed(Gu, Gum) or signed(Gv, Gvm):
+            Gu, Gum = g_poly(nd.net, q, "s")
+            Gv, Gvm = g_poly(nd.net, q, "t")
+            if signed(Gu, Gum) or signed(Gv, Gvm) or neg_diag(Gu, Gum, Gv, Gvm):
                 continue
             unique = unique_2d(Gu, Gum, Gv, Gvm)
         ss = lerp(nd.s0, nd.s1, float(nd.si) / float(len(nd.net) - 1))
-        if dims == 2:
-            st = lerp(nd.t0, nd.t1, float(nd.sj) / float(len(nd.net[0]) - 1))
+        st = lerp(nd.t0, nd.t1, float(nd.sj) / float(len(nd.net[0]) - 1)) if dims == 2 else 0.0
+        reason = "B"
         if unique:
             if dims == 1:
-                ss, _ = newton1(rnet, nd.s0, nd.s1, ss, ctx)
-            else:
-                (ss, st), _ = newton2(rnet, (nd.s0, nd.t0), (nd.s1, nd.t1), (ss, st), ctx)
-        else:
-            if nd.depth < MAX_DEPTH and ctx.splits < BUDGET:
-                ctx.splits += 1
-                push_children(heap, nd, dims, ctx)
+                x, ok = newton1(rnet, nd.s0, nd.s1, ss, ctx)
+                if not ok:
+                    x = bisect1(rnet, nd.s0, nd.s1, q)
+                params = at(x, 0.0)
+                ctx.add_point(params, point(params))
                 continue
-            ctx.unresolved.append((nd.lb, projected(nd.net)))
-        params = lift(lerp(x0, x1, ss)) if dims == 1 else (lerp(x0, x1, ss), lerp(y0, y1, st))
-        foot = point(params)
-        r = sub3(foot, q)
-        ctx.add(params, foot, dot(r, r))
+            (xs, xt), ok = newton2(rnet, (nd.s0, nd.t0), (nd.s1, nd.t1), (ss, st), ctx)
+            if ok:
+                params = at(xs, xt)
+                ctx.add_point(params, point(params))
+                continue
+            reason = "I"
+        if nd.depth < MAX_DEPTH and ctx.splits < BUDGET:
+            ctx.splits += 1
+            push_children(heap, nd, dims, ctx)
+            continue
+        # unresolved: its seed point bounds the search, it is never an answer
+        ctx.unresolved.append((nd.lb, reason))
+        ctx.bound(point(at(ss, st)))
 
 
 def split_dir_t(net):
@@ -700,9 +780,7 @@ def push_children(heap, nd, dims, ctx):
         boxes = ((nd.s0, sm, nd.t0, nd.t1), (sm, nd.s1, nd.t0, nd.t1))
     for side in (0, 1):
         s0, s1, t0, t1 = boxes[side]
-        kid = make_node((L, R)[side], nd.root, s0, s1, t0, t1, nd.depth + 1, None, ctx)
-        heapq.heappush(heap, (kid.lb, ctx.seq, kid))
-        ctx.seq += 1
+        push(heap, make_node((L, R)[side], nd.root, s0, s1, t0, t1, nd.depth + 1, None, ctx), ctx)
 
 
 # ---------------------------------------------------------------- entities
@@ -805,19 +883,21 @@ def inf_dist(a, b):
     return m
 
 
-def nonunique(ctx, w):
-    """Ties with a distinct foot, or an unresolved region that may hold one."""
+def status(ctx, w, cert):
+    """"C0" certified, "C1" certified with a tie (a tied candidate's foot more than FOOT_SEP
+    away), "UB" / "UI" unresolved because a node that could not be pruned against the winner
+    was left by the budget or depth limit (B) or by a non-converging Newton (I), "UC" the
+    winner itself is not certified (convergence)."""
     dmin = w[2]
+    for lb, reason in ctx.unresolved:
+        if lb - PRUNE_REL * ctx.M <= dmin + TIE:
+            return "U" + reason
+    if not cert:
+        return "UC"
     for c in ctx.cands:
         if c[2] <= dmin + TIE and inf_dist(c[1], w[1]) > FOOT_SEP:
-            return True
-    for lb, P in ctx.unresolved:
-        if lb <= dmin + TIE:
-            for row in P:
-                for x in row:
-                    if inf_dist(x, w[1]) > FOOT_SEP:
-                        return True
-    return False
+            return "C1"
+    return "C0"
 
 
 def add_point(ctx, params, foot, pole=False):
@@ -826,7 +906,7 @@ def add_point(ctx, params, foot, pole=False):
 
 
 def invert_curve(ent, q):
-    """Returns ((t,), foot, dist, on_boundary, unique, certified)."""
+    """Returns ((t,), foot, dist, on_boundary, status)."""
     check_query(q)
     M, L2, X = scale(ent.ctrl, q)
     ctx = Ctx(q, M, L2)
@@ -842,18 +922,18 @@ def invert_curve(ent, q):
         for x in values:
             add_point(ctx, (x,), ent.c_pos(x))
         roots = [(net, (x0, x1), (0.0, 0.0)) for net, (_, x0, x1) in zip(nets, segs)]
+        prebound(roots, 1, ctx, ent.c_pos)
         bnb(roots, 1, ctx, lambda pr: ent.c_pos(pr[0]), lambda t: (t,))
     w = select(ctx)
     params, foot, dist, _ = w
     t = params[0]
-    unique = not nonunique(ctx, w) and not degenerate
     if degenerate or t in crease_values(ent.U, p, values):
         cert = True
     else:
         d1 = ent.c_d1(t)
         r = sub3(foot, q)
         cert = final_dir_ok(t, lo, hi, dot(d1, r), dot(d1, d1), dist, M, L2)
-    return (t,), foot, dist, t == lo or t == hi, unique, cert
+    return (t,), foot, dist, t == lo or t == hi, status(ctx, w, cert)
 
 
 def invert_surface(ent, q):
@@ -880,6 +960,7 @@ def invert_surface(ent, q):
     ucre = crease_values(ent.U, p, uvals)
     vcre = crease_values(ent.V, qd, vvals)
     degen_u, degen_v = [], []
+    prebound(patches, 2, ctx, lambda pr: ent.s_pos(pr[0], pr[1]))
     # lines: u fixed (ascending: start, creases, end), then v fixed
     for along_v in (True, False):
         vals = ([ulo] + ucre + [uhi]) if along_v else ([vlo] + vcre + [vhi])
@@ -920,8 +1001,6 @@ def invert_surface(ent, q):
     bnb(patches, 2, ctx, lambda pr: ent.s_pos(pr[0], pr[1]), None)
     w = select(ctx)
     (u, v), foot, dist, _ = w
-    on_degen = u in degen_u or v in degen_v
-    unique = not nonunique(ctx, w) and not on_degen
     su, sv = ent.s_d1(u, v)
     r = sub3(foot, q)
     cert = True
@@ -930,4 +1009,4 @@ def invert_surface(ent, q):
             continue
         if not final_dir_ok(x, lo, hi, dot(d1, r), dot(d1, d1), dist, M, L2):
             cert = False
-    return (u, v), foot, dist, u == ulo or u == uhi or v == vlo or v == vhi, unique, cert
+    return (u, v), foot, dist, u == ulo or u == uhi or v == vlo or v == vhi, status(ctx, w, cert)
