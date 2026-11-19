@@ -298,7 +298,8 @@ mod tests {
 
     #[test]
     fn div_rem_matches_u128() {
-        let cases: [(u128, u64); 5] = [(0, 1), (7, 2), (u128::MAX, 3), (1u128 << 100, 1 << 63), (98_765_432_109_876, 1)];
+        let cases: [(u128, u64); 5] =
+            [(0, 1), (7, 2), (u128::MAX, 3), (1u128 << 100, 1 << 63), (98_765_432_109_876, 1)];
         for (n, d) in cases {
             let nb = Big::from_limbs(&[n as u32, (n >> 32) as u32, (n >> 64) as u32, (n >> 96) as u32]);
             let (q, r) = nb.div_rem(&Big::from_u64(d)).unwrap();

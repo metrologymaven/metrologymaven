@@ -151,8 +151,15 @@ pub enum LengthUnit {
 
 impl LengthUnit {
     /// Every length unit.
-    pub const ALL: [LengthUnit; 7] =
-        [LengthUnit::M, LengthUnit::Mm, LengthUnit::Um, LengthUnit::Nm, LengthUnit::In, LengthUnit::Ft, LengthUnit::Thou];
+    pub const ALL: [LengthUnit; 7] = [
+        LengthUnit::M,
+        LengthUnit::Mm,
+        LengthUnit::Um,
+        LengthUnit::Nm,
+        LengthUnit::In,
+        LengthUnit::Ft,
+        LengthUnit::Thou,
+    ];
 
     /// The ASCII symbol.
     pub const fn symbol(self) -> &'static str {
@@ -198,7 +205,8 @@ pub enum AngleUnit {
 
 impl AngleUnit {
     /// Every angle unit.
-    pub const ALL: [AngleUnit; 5] = [AngleUnit::Rad, AngleUnit::Deg, AngleUnit::Arcmin, AngleUnit::Arcsec, AngleUnit::Gon];
+    pub const ALL: [AngleUnit; 5] =
+        [AngleUnit::Rad, AngleUnit::Deg, AngleUnit::Arcmin, AngleUnit::Arcsec, AngleUnit::Gon];
 
     /// The ASCII symbol.
     pub const fn symbol(self) -> &'static str {
@@ -269,11 +277,9 @@ fn factor(unit: Unit) -> Factor {
         }
         Unit::Angle(u) => match u.per_half_turn() {
             None => Factor { num: Big::from_u64(1), den: Big::from_u64(1), b: 0 },
-            Some(k) => Factor {
-                num: Big::from_limbs(&PI_256),
-                den: Big::from_u64(u64::from(k)),
-                b: -i64::from(PI_256_SHIFT),
-            },
+            Some(k) => {
+                Factor { num: Big::from_limbs(&PI_256), den: Big::from_u64(u64::from(k)), b: -i64::from(PI_256_SHIFT) }
+            }
         },
     }
 }
