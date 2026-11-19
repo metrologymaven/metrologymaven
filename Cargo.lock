@@ -1014,6 +1014,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-mesh"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-num",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-shlint"
 version = "0.0.1"
 dependencies = [

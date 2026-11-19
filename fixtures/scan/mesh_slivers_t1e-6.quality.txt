@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_slivers.txt at threshold 1e-6 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_slivers
+threshold 1e-6
+triangles 6
+vertices 15
+edges 15
+boundary_edges 15
+boundary_loops 5
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 5
+degenerate 5
+angle_count 1
+angle_min 0.7853981633974484
+angle_p1 0.7853981633974484
+angle_p5 0.7853981633974484
+angle_median 0.7853981633974484
+canonical {"boundary_edges":"15","boundary_loops":"5","components":"5","degenerate":"5","edges":"15","min_angle":{"count":"1","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"6","vertices":"15"}

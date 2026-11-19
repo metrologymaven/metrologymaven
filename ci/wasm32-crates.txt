@@ -21,6 +21,7 @@ fid-rdl
 fid-replay
 fid-report-pdf
 fid-scan-cmp --lib
+fid-scan-mesh
 fid-sign-core
 fid-solv
 fid-surface
