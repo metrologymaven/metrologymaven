@@ -323,10 +323,18 @@ CI_YML = """name: kernel
 env:
   RUSTFLAGS: "-D warnings -C target-cpu=native"
   CARGO_ENCODED_RUSTFLAGS: "-C\\x1ftarget-feature=+relaxed-simd"
+  KERNEL_FLAGS: ["-C", "target-cpu=native"]
+  RUSTUP_TOOLCHAIN: stable
 jobs:
   build:
     steps:
       - run: cargo build --profile release
+      - run: RUSTFLAGS=-Ctarget-cpu=native cargo build
+      - run: export RUSTFLAGS=-C target-cpu=native
+      - run: export CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=native
+      - run: cargo +nightly build -Zbuild-std
+      - run: cargo rustc -- -C llvm-args=-fp-contract=fast
+      - run: cargo rustc -- -C llvm-args=-fp-contract=off
 """
 put("ci/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nci_env_files = ["workflows/kernel.yml"]\n')
 put("ci/rust-toolchain.toml", TOOLCHAIN_OK)
@@ -335,7 +343,62 @@ put("ci/workflows/kernel.yml", CI_YML)
 expect("ci/expected-findings.txt", [
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 4, col(CI_YML, 4, "target-cpu=native")),
     ("KNP1-FLAG-FMA", "workflows/kernel.yml", 5, col(CI_YML, 5, "target-feature=+relaxed-simd")),
+    # array syntax: the comma between "-C" and its value must not hide it
+    ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 6, col(CI_YML, 6, "target-cpu=native")),
+    ("KNP1-FLAG-TOOLCHAIN", "workflows/kernel.yml", 7, col(CI_YML, 7, "RUSTUP_TOOLCHAIN")),
+    # unquoted NAME=-Cflag, export NAME=-C flag, export NAME=-Cflag
+    ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 12, col(CI_YML, 12, "target-cpu=native")),
+    ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 13, col(CI_YML, 13, "target-cpu=native")),
+    ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 14, col(CI_YML, 14, "target-cpu=native")),
+    ("KNP1-FLAG-TOOLCHAIN", "workflows/kernel.yml", 15, col(CI_YML, 15, "cargo +nightly")),
+    ("KNP1-FLAG-FMA", "workflows/kernel.yml", 16, col(CI_YML, 16, "llvm-args=-fp-contract=fast")),
 ])
+
+# target-cpu values outside allowed_target_cpus (haswell implies FMA); the listed one passes.
+CPU_CFG = """[build]
+rustflags = ["-C", "target-cpu=x86-64-v2"]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=haswell"]
+"""
+put("cpu/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nallowed_target_cpus = ["x86-64-v2"]\n')
+put("cpu/rust-toolchain.toml", TOOLCHAIN_OK)
+put("cpu/Cargo.toml", CARGO_OK)
+put("cpu/.cargo/config.toml", CPU_CFG)
+expect("cpu/expected-findings.txt", [
+    ("KNP1-FLAG-CPU", ".cargo/config.toml", 5, col(CPU_CFG, 5, "target-cpu=haswell")),
+])
+
+# Cargo.toml [profile.*] rustflags, and a package override of codegen-units on the parent of a
+# custom kernel profile (reached through `inherits`).
+PF_CARGO = """[workspace]
+members = []
+resolver = "2"
+
+[profile.release]
+codegen-units = 1
+rustflags = ["-C", "target-feature=+fma"]
+
+[profile.kernel]
+inherits = "release"
+
+[profile.release.package.fid-num]
+codegen-units = 8
+"""
+put("profile-flags/knp1-lint.toml", '[flags]\nprofiles = ["kernel"]\n')
+put("profile-flags/rust-toolchain.toml", TOOLCHAIN_OK)
+put("profile-flags/Cargo.toml", PF_CARGO)
+expect("profile-flags/expected-findings.txt", [
+    ("KNP1-FLAG-FMA", "Cargo.toml", 7, col(PF_CARGO, 7, "target-feature=+fma")),
+    ("KNP1-FLAG-CGU", "Cargo.toml", 13, 1),
+])
+
+# A legacy rust-toolchain file next to a pinned rust-toolchain.toml.
+put("toolchain-legacy/knp1-lint.toml", LINT_BASIC)
+put("toolchain-legacy/rust-toolchain.toml", TOOLCHAIN_OK)
+put("toolchain-legacy/rust-toolchain", "stable\n")
+put("toolchain-legacy/Cargo.toml", CARGO_OK)
+expect("toolchain-legacy/expected-findings.txt", [("KNP1-FLAG-TOOLCHAIN", "rust-toolchain", 1, 1)])
 
 # AC-4 through a config: the wasm workspace is otherwise clean.
 put("wasm/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nwasm_module = "relaxed.wasm"\n')

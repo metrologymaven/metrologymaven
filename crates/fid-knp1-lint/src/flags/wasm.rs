@@ -6,8 +6,8 @@
 //! that happen to occur inside immediates are never mistaken for instructions. The decoder
 //! knows the core instruction set plus the sign-extension, non-trapping float-to-int,
 //! bulk-memory, reference-types, multi-value, multi-memory, tail-call, fixed-width SIMD and
-//! relaxed-SIMD proposals. Anything else (exception handling, GC, threads, an unknown opcode,
-//! a truncated or over-long section, a body that does not end on its final `end`) fails
+//! relaxed-SIMD proposals. Anything else (exception handling, GC, threads, an unknown or
+//! unassigned opcode, a truncated or over-long section, a body that does not end on its final `end`) fails
 //! closed: the scan returns `KNP1-FLAG-WASMPARSE` and nothing else.
 //!
 //! Relaxed-SIMD opcodes (prefix `0xFD`): `0x100 ..= 0x113`; of these `f32x4.relaxed_madd`
@@ -31,6 +31,13 @@ pub const RELAXED_MADD: [(u32, &str); 4] = [
     (0x106, "f32x4.relaxed_nmadd"),
     (0x107, "f64x2.relaxed_madd"),
     (0x108, "f64x2.relaxed_nmadd"),
+];
+
+/// Sub-opcodes inside `0x00 ..= 0xFF` that the fixed-width SIMD proposal leaves unassigned.
+/// A module using one is malformed and fails closed (`KNP1-FLAG-WASMPARSE`).
+pub const SIMD_UNASSIGNED: [u32; 20] = [
+    0x9a, 0xa2, 0xa5, 0xa6, 0xaf, 0xb0, 0xb2, 0xb3, 0xb4, 0xbb, 0xc2, 0xc5, 0xc6, 0xcf, 0xd0, 0xd2, 0xd3, 0xd4, 0xe2,
+    0xee,
 ];
 
 /// Which SIMD (`0xFD`-prefixed) opcodes the module may contain.
@@ -190,6 +197,9 @@ fn memarg(r: &mut Reader<'_>) -> R<()> {
 /// Decodes one `0xFD` instruction after its prefix; returns the sub-opcode.
 fn simd(r: &mut Reader<'_>) -> R<u32> {
     let sub = r.u32()?;
+    if SIMD_UNASSIGNED.contains(&sub) {
+        return r.err(format!("unassigned SIMD opcode 0xfd {sub:#x}"));
+    }
     match sub {
         0x00..=0x0b | 0x5c | 0x5d => memarg(r)?,
         0x0c | 0x0d => r.skip(16)?,

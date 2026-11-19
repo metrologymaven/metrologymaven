@@ -3,7 +3,15 @@ name: kernel
 env:
   RUSTFLAGS: "-D warnings -C target-cpu=native"
   CARGO_ENCODED_RUSTFLAGS: "-C\x1ftarget-feature=+relaxed-simd"
+  KERNEL_FLAGS: ["-C", "target-cpu=native"]
+  RUSTUP_TOOLCHAIN: stable
 jobs:
   build:
     steps:
       - run: cargo build --profile release
+      - run: RUSTFLAGS=-Ctarget-cpu=native cargo build
+      - run: export RUSTFLAGS=-C target-cpu=native
+      - run: export CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=native
+      - run: cargo +nightly build -Zbuild-std
+      - run: cargo rustc -- -C llvm-args=-fp-contract=fast
+      - run: cargo rustc -- -C llvm-args=-fp-contract=off

@@ -23,7 +23,16 @@ optional `.cargo/config.toml` and CI env files):
 - `lto/`: kernel profile sets `lto = "fat"`, `release` keeps the default; `knp1-lint-allowed.toml`
   allows the difference. `KNP1-FLAG-LTO`.
 - `ci/`: `RUSTFLAGS` and `CARGO_ENCODED_RUSTFLAGS` (with the `\x1f` escape) in a workflow file; a
-  comment line naming `target-cpu=native` is ignored.
+  comment line naming `target-cpu=native` is ignored. Also array syntax `["-C", "target-cpu=native"]`,
+  unquoted `RUSTFLAGS=-Ctarget-cpu=native`, `export RUSTFLAGS=-C target-cpu=native`,
+  `export CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=native`, `RUSTUP_TOOLCHAIN` and `cargo +nightly`
+  (`KNP1-FLAG-TOOLCHAIN`), and `-C llvm-args=-fp-contract=fast` (`KNP1-FLAG-FMA`; `=off` passes).
+- `cpu/`: `target-cpu=haswell` outside `allowed_target_cpus = ["x86-64-v2"]` (`KNP1-FLAG-CPU`);
+  the allowed `x86-64-v2` passes.
+- `profile-flags/`: `[profile.release] rustflags` with `+fma` in `Cargo.toml`, and a
+  `[profile.release.package.fid-num] codegen-units = 8` reached from kernel profile `kernel`
+  through `inherits`.
+- `toolchain-legacy/`: a legacy `rust-toolchain` file next to a pinned `rust-toolchain.toml`.
 - `wasm/`: `relaxed.wasm` (one `f64x2.relaxed_madd`), `clean.wasm` (fixed-width SIMD, with the
   madd byte pattern `fd 87 02` hidden inside `v128.const`, `i64.const` and `f64.const`
   immediates), `swizzle.wasm` (one `i8x16.relaxed_swizzle`, not a multiply-add), `truncated.wasm`

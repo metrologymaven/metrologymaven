@@ -6,32 +6,43 @@
 //! | Rule | Fires when |
 //! |---|---|
 //! | `KNP1-FLAG-NATIVE` | a flag source sets `-C target-cpu=native` |
-//! | `KNP1-FLAG-FMA` | a flag source enables `+fma`, `+relaxed-simd` or a configured `fma_features` entry |
+//! | `KNP1-FLAG-CPU` | a flag source sets any other `-C target-cpu` not in `allowed_target_cpus` (named CPUs such as `haswell` imply FMA) |
+//! | `KNP1-FLAG-FMA` | a flag source enables `+fma`, `+relaxed-simd` or a configured `fma_features` entry, or passes `fp-contract` other than `off` to LLVM |
 //! | `KNP1-FLAG-CGU` | a kernel profile resolves (Cargo inheritance, built-in defaults) to `codegen-units` other than 1, or a flag source sets it |
-//! | `KNP1-FLAG-TOOLCHAIN` | `rust-toolchain.toml` is missing, has no exact `channel = "X.Y.Z"`, or no `components` pin |
+//! | `KNP1-FLAG-TOOLCHAIN` | `rust-toolchain.toml` is missing, has no exact `channel = "X.Y.Z"`, or no `components` pin; a legacy `rust-toolchain` file exists; a CI env file sets `RUSTUP_TOOLCHAIN` or runs `cargo +<toolchain>` |
 //! | `KNP1-FLAG-LTO` | two kernel profiles resolve to different `opt-level`, `lto`, `debug-assertions`, `overflow-checks` or `panic`, and the key is not in `allowed_profile_differences` |
 //! | `KNP1-FLAG-WASMFMA` | the wasm reference module contains a relaxed multiply-add opcode |
 //! | `KNP1-FLAG-WASMSIMD` | the wasm reference module contains a SIMD opcode the config does not allow |
 //! | `KNP1-FLAG-WASMPARSE` | the wasm reference module is missing or cannot be parsed (fatal finding) |
 //!
 //! Flag sources: every key named `rustflags` (any case) or ending in `RUSTFLAGS` anywhere in
-//! `.cargo/config.toml` (and the legacy `.cargo/config`), so `build.rustflags`,
+//! `.cargo/config.toml` (and the legacy `.cargo/config`) and in the workspace `Cargo.toml`
+//! (`[profile.*] rustflags`), so `build.rustflags`,
 //! `target.<triple>.rustflags`, `target.'cfg(..)'.rustflags`, `host.rustflags` and
 //! `env.RUSTFLAGS`/`env.CARGO_ENCODED_RUSTFLAGS` are all covered; and every non-comment line of
 //! each `ci_env_files` entry (a YAML block scalar can carry `RUSTFLAGS` over several lines, so
 //! the whole file is scanned rather than only `RUSTFLAGS:` lines), including
 //! `CARGO_PROFILE_<NAME>_CODEGEN_UNITS` for kernel profiles. Profiles come from `[profile.*]`
-//! of the workspace `Cargo.toml`, overridden key by key by `[profile.*]` of `.cargo/config.toml`.
+//! of the workspace `Cargo.toml`, overridden key by key by `[profile.*]` of `.cargo/config.toml`;
+//! package-level `codegen-units` overrides are checked along the whole `inherits` chain.
 //!
 //! Flags are split into tokens on whitespace, the unit separator `0x1F` (and its escapes
-//! `\x1f`, `\u001f`), quotes and brackets; `-C k=v`, `-Ck=v`, `--codegen k=v` and
-//! `--codegen=k=v` are recognised.
+//! `\x1f`, `\u001f`), quotes and brackets; commas around tokens (array syntax) are dropped and
+//! an environment-assignment prefix (`RUSTFLAGS=-C…`, `export RUSTFLAGS=…`) is split off.
+//! `-C k=v`, `-Ck=v`, `--codegen k=v` and `--codegen=k=v` are recognised, and any token that
+//! mentions `fp-contract` is treated as an LLVM argument.
 //!
 //! Findings carry crate `(build-config)` version `-`, the file relative to the workspace
 //! directory, and the 1-based line and column of the offending text (the section header or
 //! line 1 when nothing more precise exists). The excerpt digest is SHA-256 of that line;
 //! for a missing file, of the message; for a wasm opcode, of the instruction bytes. Wasm
 //! findings are at line 1, column = byte offset + 1. Output is sorted (D0).
+//!
+//! Waivers: `(build-config)` has no [`crate::findings::SourceTree`] mapping, so a waiver naming
+//! it cannot be checked against current source and `apply_waivers` reports it stale
+//! (`KNP1-WAIVER-STALE`, fail closed). `KNP1-FLAG-WASM*` findings are unwaivable outright
+//! ([`crate::findings::Rule::is_waivable`]): they all sit at line 1 of a binary module, so one
+//! waiver would hide every future hit.
 //!
 //! Config (`[flags]`; every path relative to the config file's directory):
 //!
@@ -44,6 +55,7 @@
 //! wasm_module = "target/kernel.wasm"      # optional; when set the file must exist
 //! allowed_simd = [12, 240]                # optional; 0xFD sub-opcodes allowed in the module
 //! allowed_profile_differences = ["debug-assertions"]
+//! allowed_target_cpus = ["x86-64"]        # target-cpu values allowed (default none)
 //! ```
 
 pub mod wasm;
@@ -181,9 +193,11 @@ pub struct Config {
     pub wasm_module: Option<WsFile>,
     pub simd_policy: wasm::SimdPolicy,
     pub allowed_profile_differences: Vec<String>,
+    /// `-C target-cpu` values that are allowed (never `native`), sorted.
+    pub allowed_target_cpus: Vec<String>,
 }
 
-const CONFIG_KEYS: [&str; 7] = [
+const CONFIG_KEYS: [&str; 8] = [
     "workspace",
     "profiles",
     "ci_env_files",
@@ -191,6 +205,7 @@ const CONFIG_KEYS: [&str; 7] = [
     "wasm_module",
     "allowed_simd",
     "allowed_profile_differences",
+    "allowed_target_cpus",
 ];
 
 fn str_list(v: &toml::Value, what: &str) -> Result<Vec<String>, FlagsError> {
@@ -278,6 +293,13 @@ pub fn parse_config(text: &str, config_dir: &Path) -> Result<Config, FlagsError>
             COMPARED_PROFILE_KEYS.join(", ")
         )));
     }
+    let allowed_target_cpus: BTreeSet<String> = match t.get("allowed_target_cpus") {
+        None => BTreeSet::new(),
+        Some(v) => str_list(v, "flags.allowed_target_cpus")?.into_iter().collect(),
+    };
+    if allowed_target_cpus.contains("native") {
+        return Err(invalid("knp1-lint.toml: flags.allowed_target_cpus may not contain \"native\""));
+    }
     Ok(Config {
         workspace,
         profiles: profiles.into_iter().collect(),
@@ -286,6 +308,7 @@ pub fn parse_config(text: &str, config_dir: &Path) -> Result<Config, FlagsError>
         wasm_module,
         simd_policy,
         allowed_profile_differences: allowed.into_iter().collect(),
+        allowed_target_cpus: allowed_target_cpus.into_iter().collect(),
     })
 }
 
@@ -448,36 +471,79 @@ pub struct Codegen {
     pub needle: String,
 }
 
+/// `NAME=rest` with `NAME` a shell/env identifier: returns `rest`.
+fn env_assignment(t: &str) -> Option<&str> {
+    let (name, rest) = t.split_once('=')?;
+    let mut chars = name.chars();
+    let first_ok = chars.next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
+    (first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')).then_some(rest)
+}
+
 /// Splits raw flag text into tokens (whitespace, `0x1F` and its escapes, quotes, brackets).
+/// Commas around a token (array syntax) are dropped, comma-only tokens vanish, and an
+/// environment assignment prefix is split off when what follows is empty or a flag
+/// (`RUSTFLAGS=-Ctarget-cpu=native` gives `-Ctarget-cpu=native`; `-C lto=fat` is untouched).
 pub fn tokens(text: &str) -> Vec<String> {
     let t = text.replace("\\x1f", " ").replace("\\x1F", " ").replace("\\u001f", " ").replace("\\u001F", " ");
     t.split(|c: char| c.is_whitespace() || matches!(c, '\u{1f}' | '"' | '\'' | '[' | ']'))
+        .map(|s| s.trim_matches(','))
+        .map(|s| match env_assignment(s) {
+            Some(rest) if rest.is_empty() || rest.starts_with('-') => rest,
+            _ => s,
+        })
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .collect()
 }
 
 /// Extracts the `-C key=value` options from a token list. Handles `-C k=v`, `-Ck=v`,
-/// `--codegen k=v` and `--codegen=k=v`; a trailing comma left by array syntax is ignored.
+/// `--codegen k=v` and `--codegen=k=v`. Any other token that mentions `fp-contract` (an LLVM
+/// argument split away from its `-C llvm-args=`) is returned as key `llvm-args`.
 pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < tokens.len() {
-        let t = tokens.get(i).map(|s| s.trim_end_matches(',')).unwrap_or("");
+        let t = tokens.get(i).map(String::as_str).unwrap_or("");
         let opt: Option<&str> = if t == "-C" || t == "--codegen" {
             i += 1;
-            tokens.get(i).map(|s| s.trim_end_matches(','))
+            tokens.get(i).map(String::as_str)
         } else if let Some(rest) = t.strip_prefix("--codegen=") {
             Some(rest)
         } else {
             t.strip_prefix("-C").filter(|r| !r.is_empty())
         };
-        if let Some((k, v)) = opt.and_then(|o| o.split_once('=')) {
-            out.push(Codegen { key: k.to_string(), value: v.to_string(), needle: format!("{k}={v}") });
+        match opt.and_then(|o| o.split_once('=')) {
+            Some((k, v)) => {
+                out.push(Codegen { key: k.to_string(), value: v.to_string(), needle: format!("{k}={v}") })
+            }
+            None if opt.is_none() && t.contains("fp-contract") => {
+                out.push(Codegen { key: "llvm-args".to_string(), value: t.to_string(), needle: t.to_string() })
+            }
+            None => {}
         }
         i += 1;
     }
     out
+}
+
+/// True when an LLVM argument string permits floating-point contraction: it mentions
+/// `fp-contract` with any value other than `off` (or with no value).
+fn llvm_args_contract(v: &str) -> bool {
+    let mut rest = v;
+    while let Some(i) = rest.find("fp-contract") {
+        let after = rest.get(i + "fp-contract".len()..).unwrap_or("");
+        let value: String = after
+            .strip_prefix('=')
+            .unwrap_or("")
+            .chars()
+            .take_while(|c| !c.is_whitespace() && *c != ',')
+            .collect();
+        if value != "off" {
+            return true;
+        }
+        rest = after;
+    }
+    false
 }
 
 /// Maps a needle to its (line, column) and the text of that line.
@@ -495,6 +561,26 @@ fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: Place<
                     pos,
                     text.as_bytes(),
                     format!("`-C {}` lets the compiler use the host's FMA", o.needle),
+                );
+            }
+            "target-cpu" if !sink.cfg.allowed_target_cpus.iter().any(|c| *c == o.value) => {
+                let (pos, text) = place(&o.needle);
+                sink.push(
+                    "CPU",
+                    file,
+                    pos,
+                    text.as_bytes(),
+                    format!("`-C {}` is not in allowed_target_cpus; a named CPU can enable FMA", o.needle),
+                );
+            }
+            "llvm-args" if llvm_args_contract(&o.value) => {
+                let (pos, text) = place(&o.needle);
+                sink.push(
+                    "FMA",
+                    file,
+                    pos,
+                    text.as_bytes(),
+                    format!("`{}` lets LLVM contract floating-point operations into FMA", o.needle),
                 );
             }
             "target-feature" => {
@@ -601,6 +687,29 @@ fn check_ci_file(sink: &mut Sink<'_>, file: &str, text: &str) {
             ((line, col_no(raw, b)), (*raw).to_string())
         };
         eval_codegen(sink, file, &opts, &mut place);
+        if let Some(b) = raw.find("RUSTUP_TOOLCHAIN") {
+            sink.at_line(
+                "TOOLCHAIN",
+                file,
+                &idx,
+                (line, col_no(raw, b)),
+                "`RUSTUP_TOOLCHAIN` overrides the pinned rust-toolchain.toml".to_string(),
+            );
+        }
+        for w in toks.windows(2) {
+            if let [cmd, tc] = w {
+                if cmd == "cargo" && tc.starts_with('+') {
+                    let b = raw.find(&format!("cargo {tc}")).or_else(|| raw.find(tc.as_str())).unwrap_or(0);
+                    sink.at_line(
+                        "TOOLCHAIN",
+                        file,
+                        &idx,
+                        (line, col_no(raw, b)),
+                        format!("`cargo {tc}` overrides the pinned rust-toolchain.toml"),
+                    );
+                }
+            }
+        }
         for (prof, var) in &prof_vars {
             if let Some(b) = raw.find(var.as_str()) {
                 let rest = raw.get(b + var.len()..).unwrap_or("");
@@ -630,6 +739,14 @@ fn exact_version(s: &str) -> bool {
 
 fn check_toolchain(sink: &mut Sink<'_>) -> Result<(), FlagsError> {
     const FILE: &str = "rust-toolchain.toml";
+    const LEGACY: &str = "rust-toolchain";
+    if sink.cfg.workspace.join(LEGACY).exists() {
+        sink.whole_file(
+            "TOOLCHAIN",
+            LEGACY,
+            "legacy rust-toolchain file present: rustup prefers it over rust-toolchain.toml".to_string(),
+        );
+    }
     let Some(text) = read_text(&sink.cfg.workspace.join(FILE), FILE)? else {
         sink.whole_file("TOOLCHAIN", FILE, "rust-toolchain.toml is missing: the toolchain is not pinned".to_string());
         return Ok(());
@@ -787,6 +904,33 @@ fn resolve(sources: &[ProfileSource<'_>], prof: &str, key: &str) -> Result<Resol
     }
 }
 
+/// The `inherits` chain of `prof`, starting with `prof` itself (best effort: stops at an
+/// undefined parent or a cycle; those are reported by [`resolve`]).
+fn profile_chain(sources: &[ProfileSource<'_>], prof: &str) -> Vec<String> {
+    let mut chain = vec![prof.to_string()];
+    let mut cur = prof.to_string();
+    while chain.len() <= MAX_INHERIT_DEPTH {
+        let explicit = sources
+            .iter()
+            .rev()
+            .find_map(|s| s.get(&cur).and_then(|t| t.get("inherits")).and_then(toml::Value::as_str))
+            .map(str::to_string);
+        let next = match builtin(&cur) {
+            Some((None, _)) => None,
+            Some((Some(parent), _)) => Some(parent.to_string()),
+            None => explicit,
+        };
+        match next {
+            Some(n) if !chain.contains(&n) => {
+                chain.push(n.clone());
+                cur = n;
+            }
+            _ => break,
+        }
+    }
+    chain
+}
+
 fn check_profiles(sink: &mut Sink<'_>, sources: &[ProfileSource<'_>]) {
     let cfg = sink.cfg;
     let profiles = &cfg.profiles;
@@ -812,25 +956,28 @@ fn check_profiles(sink: &mut Sink<'_>, sources: &[ProfileSource<'_>]) {
                 );
             }
         }
-        for s in sources {
-            let Some(pkgs) = s.get(p).and_then(|t| t.get("package")).and_then(toml::Value::as_table) else {
-                continue;
-            };
-            for (name, v) in pkgs {
-                if let Some(cgu) = v.as_table().and_then(|t| t.get("codegen-units")) {
-                    let val = value_text(cgu);
-                    if val != "1" {
-                        let path: Vec<String> = ["profile", p.as_str(), "package", name.as_str(), "codegen-units"]
-                            .map(str::to_string)
-                            .to_vec();
-                        let pos = s.idx.locate(&path);
-                        sink.at_line(
-                            "CGU",
-                            s.file,
-                            &s.idx,
-                            pos,
-                            format!("kernel profile `{p}` sets codegen-units = {val} for package `{name}`"),
-                        );
+        for q in profile_chain(sources, p) {
+            for s in sources {
+                let Some(pkgs) = s.get(&q).and_then(|t| t.get("package")).and_then(toml::Value::as_table) else {
+                    continue;
+                };
+                for (name, v) in pkgs {
+                    if let Some(cgu) = v.as_table().and_then(|t| t.get("codegen-units")) {
+                        let val = value_text(cgu);
+                        if val != "1" {
+                            let path: Vec<String> = ["profile", q.as_str(), "package", name.as_str(), "codegen-units"]
+                                .map(str::to_string)
+                                .to_vec();
+                            let pos = s.idx.locate(&path);
+                            let via = if q == *p { String::new() } else { format!(" (inherited from `{q}`)") };
+                            sink.at_line(
+                                "CGU",
+                                s.file,
+                                &s.idx,
+                                pos,
+                                format!("kernel profile `{p}` sets codegen-units = {val} for package `{name}`{via}"),
+                            );
+                        }
                     }
                 }
             }
@@ -923,6 +1070,8 @@ pub fn check(cfg: &Config) -> Result<Vec<Finding>, FlagsError> {
     let manifest = read_text(&cfg.workspace.join("Cargo.toml"), "Cargo.toml")?
         .ok_or_else(|| invalid(format!("{}: Cargo.toml not found", cfg.workspace.display())))?;
     let manifest_t = parse_toml(&manifest, "Cargo.toml")?;
+    // `[profile.*] rustflags` (Cargo's profile-rustflags) and any other rustflags key.
+    check_cargo_config(&mut sink, "Cargo.toml", &manifest, &manifest_t);
     let mut sources = vec![ProfileSource {
         file: "Cargo.toml",
         idx: LineIndex::new(&manifest),
