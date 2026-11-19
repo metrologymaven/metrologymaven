@@ -37,6 +37,8 @@ jobs:
         if: runner.os == 'Linux'
         continue-on-error: true
         run: cargo metadata --locked --format-version 1 > /dev/null
+      - name: Fetch dependencies for all targets (ECO.REPO.ALLOW checks every platform offline)
+        run: cargo fetch
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test

@@ -95,3 +95,18 @@ fn repository_kernel_graph_is_allowed() {
     let report = run(&root, &root.join("layers.toml"), &root.join(ALLOWLIST_FILE)).unwrap();
     assert!(report.findings.is_empty() && report.warnings.is_empty(), "{report:?}");
 }
+
+/// Fail closed: no workspace member in the num or kernel layer is an error, not a pass.
+#[test]
+fn no_kernel_roots_fails() {
+    check_fixture("noroots");
+    assert_eq!(cli("noroots"), (1, vec!["ALLOW-NO-ROOTS no workspace member is in layer num or kernel".to_string()]));
+}
+
+/// Through a model-layer member: an optional, renamed dependency enabled by a feature the kernel
+/// crate turns on, and a proc-macro crate, are both reported by package name.
+#[test]
+fn optional_renamed_and_proc_macro_deps_count() {
+    check_fixture("indirect");
+    assert_eq!(cli("indirect").0, 1);
+}

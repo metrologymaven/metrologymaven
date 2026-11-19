@@ -82,3 +82,5 @@ fixtures/block/** -text
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
+# ECO.REPO.ALLOW fixtures: hand-labelled manifests and expected output written by make_fixtures.py.
+fixtures/allow/** -text

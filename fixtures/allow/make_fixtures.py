@@ -103,4 +103,33 @@ crate(ws / "krn", "fid-krn", deps=[("fid-num", "../num")], dev=[("ext-d", "../..
 crate(VENDOR / "edges" / "ext-c", "ext-c", "1.0.0")
 crate(VENDOR / "edges" / "ext-d", "ext-d", "1.0.0")
 
+# No workspace member is in the num or kernel layer, so there is no kernel graph to check; the
+# check fails closed instead of passing on an empty graph.
+ws = workspace("noroots", ["viz"], [("fid-viz", "viewer")], [],
+               ["ALLOW-NO-ROOTS no workspace member is in layer num or kernel"])
+crate(ws / "viz", "fid-viz")
+
+# A kernel crate reaches, through a model-layer member, an optional external dependency that is
+# renamed in the manifest (`package = "ext-opt"`) and enabled only by a feature the kernel crate
+# turns on, plus a proc-macro crate. Both are reported by package name, not by the rename.
+ws = workspace("indirect", ["krn", "mdl"], [("fid-krn", "kernel"), ("fid-mdl", "model")], [],
+               ["ALLOW-UNLISTED ext-opt via fid-krn -> fid-mdl -> ext-opt",
+                "ALLOW-UNLISTED ext-pm via fid-krn -> fid-mdl -> ext-pm"])
+write(ws / "krn" / "Cargo.toml", "\n".join([
+    "[package]", 'name = "fid-krn"', 'version = "0.0.0"', 'edition = "2021"', "publish = false", "",
+    "[dependencies]", 'fid-mdl = { path = "../mdl", features = ["extra"] }', ""]))
+write(ws / "krn" / "src" / "lib.rs", "//! Fixture crate for ECO.REPO.ALLOW.\n")
+write(ws / "mdl" / "Cargo.toml", "\n".join([
+    "[package]", 'name = "fid-mdl"', 'version = "0.0.0"', 'edition = "2021"', "publish = false", "",
+    "[dependencies]",
+    'renamed = { package = "ext-opt", path = "../../_vendor/indirect/ext-opt", optional = true }',
+    'ext-pm = { path = "../../_vendor/indirect/ext-pm" }', "",
+    "[features]", 'extra = ["dep:renamed"]', ""]))
+write(ws / "mdl" / "src" / "lib.rs", "//! Fixture crate for ECO.REPO.ALLOW.\n")
+crate(VENDOR / "indirect" / "ext-opt", "ext-opt", "1.0.0")
+write(VENDOR / "indirect" / "ext-pm" / "Cargo.toml", "\n".join([
+    "[package]", 'name = "ext-pm"', 'version = "1.0.0"', 'edition = "2021"', "publish = false", "",
+    "[lib]", "proc-macro = true", ""]))
+write(VENDOR / "indirect" / "ext-pm" / "src" / "lib.rs", "//! Fixture proc-macro crate for ECO.REPO.ALLOW.\n")
+
 print("ok")

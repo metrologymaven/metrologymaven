@@ -25,10 +25,15 @@
 //!
 //! and warns (without failing) `warn ALLOW-UNUSED <name>` for an entry no kernel crate reaches.
 //!
+//! It also fails `ALLOW-NO-ROOTS` when no workspace member is in the `num` or `kernel` layer:
+//! an empty kernel graph almost always means a wrong `--workspace` or layer map, and passing
+//! it would hide every dependency.
+//!
 //! Paths are the shortest ones found by a breadth-first search from the roots in name order,
-//! visiting dependencies in name order, so the output is deterministic. Like the other graph
-//! checks, the graph is resolved for the host platform (so it works offline); CI runs it on
-//! Linux, Windows and macOS, which together cover the target-gated dependencies.
+//! visiting dependencies in name order, so the output is deterministic. Unlike `layers`, the
+//! graph is resolved for all targets (no `--filter-platform`), so dependencies gated to other
+//! platforms (wasm32, another OS) are checked on every runner. It still runs `--offline`:
+//! run `cargo fetch` (all targets) first, as CI does.
 
 use crate::crate_graph::{pkg_name, product_edges};
 use crate::{parse_layer_map, Graph, LayerMap};
@@ -461,10 +466,10 @@ fn kernel_roots<'g>(map: &LayerMap, g: &'g Graph) -> Vec<&'g str> {
 
 /// Every third-party package ID reached from the kernel roots over normal and build edges,
 /// with the first shortest path to it (crate names).
-fn third_party_closure<'g>(map: &LayerMap, g: &'g Graph) -> BTreeMap<&'g str, Vec<&'g str>> {
+fn third_party_closure<'g>(roots: &[&'g str], g: &'g Graph) -> BTreeMap<&'g str, Vec<&'g str>> {
     let adj = product_edges(g);
     let mut reached: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-    for root in kernel_roots(map, g) {
+    for root in roots.iter().copied() {
         let mut parent: BTreeMap<&str, &str> = BTreeMap::new();
         let mut seen: BTreeSet<&str> = BTreeSet::from([root]);
         let mut queue: VecDeque<&str> = VecDeque::from([root]);
@@ -492,13 +497,20 @@ fn third_party_closure<'g>(map: &LayerMap, g: &'g Graph) -> BTreeMap<&'g str, Ve
 
 /// Checks the kernel graph against the allowlist entries.
 pub fn check(entries: &[Entry], map: &LayerMap, g: &Graph) -> Report {
+    let roots = kernel_roots(map, g);
+    if roots.is_empty() {
+        return Report {
+            findings: vec![format!("ALLOW-NO-ROOTS no workspace member is in layer {}", KERNEL_LAYERS.join(" or "))],
+            warnings: Vec::new(),
+        };
+    }
     let by_name: BTreeMap<&str, &Entry> = entries.iter().map(|e| (e.name.as_str(), e)).collect();
     let mut findings = BTreeSet::new();
     let mut used = BTreeSet::new();
     let mut unlisted: BTreeMap<&str, String> = BTreeMap::new();
     // Order by (name, ID) so that, for a crate reached in two versions, the reported path
     // is the same on every run.
-    let mut reached: Vec<(&str, Vec<&str>)> = third_party_closure(map, g).into_iter().collect();
+    let mut reached: Vec<(&str, Vec<&str>)> = third_party_closure(&roots, g).into_iter().collect();
     reached.sort_by(|(x, _), (y, _)| (pkg_name(g, x), *x).cmp(&(pkg_name(g, y), *y)));
     for (id, path) in reached {
         let name = pkg_name(g, id);
@@ -523,8 +535,8 @@ pub fn check(entries: &[Entry], map: &LayerMap, g: &Graph) -> Report {
     Report { findings: findings.into_iter().collect(), warnings }
 }
 
-/// Reads the layer map and the allowlist, loads the workspace graph offline (all features)
-/// and checks it. A malformed allowlist gives `ALLOW-SCHEMA` findings without loading the
+/// Reads the layer map and the allowlist, loads the workspace graph offline (all features,
+/// all targets) and checks it. A malformed allowlist gives `ALLOW-SCHEMA` findings without loading the
 /// graph. `Err` is an unreadable file, a bad layer map or a metadata failure.
 pub fn run(workspace: &Path, map_file: &Path, allowlist: &Path) -> Result<Report, String> {
     let text = std::fs::read_to_string(allowlist).map_err(|e| format!("ALLOW-FILE {}: {e}", allowlist.display()))?;
@@ -534,7 +546,7 @@ pub fn run(workspace: &Path, map_file: &Path, allowlist: &Path) -> Result<Report
     };
     let map_text = std::fs::read_to_string(map_file).map_err(|e| format!("LAYER-MAP: {}: {e}", map_file.display()))?;
     let map = parse_layer_map(&map_text)?;
-    let g = Graph::load_with(workspace, true)?;
+    let g = Graph::load_all_targets(workspace, true)?;
     Ok(check(&entries, &map, &g))
 }
 

@@ -251,10 +251,24 @@ impl Graph {
     /// Like [`Graph::load`]; with `all_features`, passes `--all-features` so optional
     /// (feature-gated) dependencies are part of the resolved graph.
     pub fn load_with(dir: &Path, all_features: bool) -> Result<Graph, String> {
+        Graph::load_metadata(dir, all_features, Some(host_triple()?))
+    }
+
+    /// Like [`Graph::load_with`], but without `--filter-platform`: dependencies of every
+    /// target (including `[target.'cfg(...)'.dependencies]` for other platforms) are part of
+    /// the graph. Offline, this needs them in the local registry cache (`cargo fetch` with no
+    /// `--target` downloads them all).
+    pub fn load_all_targets(dir: &Path, all_features: bool) -> Result<Graph, String> {
+        Graph::load_metadata(dir, all_features, None)
+    }
+
+    fn load_metadata(dir: &Path, all_features: bool, platform: Option<String>) -> Result<Graph, String> {
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-        let host = host_triple()?;
         let mut cmd = Command::new(cargo);
-        cmd.args(["metadata", "--format-version", "1", "--offline", "--filter-platform", &host]);
+        cmd.args(["metadata", "--format-version", "1", "--offline"]);
+        if let Some(p) = platform {
+            cmd.args(["--filter-platform", &p]);
+        }
         if all_features {
             cmd.arg("--all-features");
         }
