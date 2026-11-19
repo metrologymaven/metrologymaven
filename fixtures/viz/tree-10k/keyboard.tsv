@@ -1,0 +1,50 @@
+# fid-spike-ui keyboard v1: step, key, argument, expected focus, expected selection, focused name
+# start: everything collapsed, no filter, focus 1, empty selection
+1	Down		2131	2131	part 2
+2	Up		1	1	part 1
+3	Right		1	1	part 1
+4	Right		2	2	group 1
+5	Right		2	2	group 1
+6	Right		3	3	group 1
+7	ShiftDown		118	3,118	group 17
+8	ShiftDown		266	3,118,266	group 22
+9	CtrlDown		340	3,118,266	group 33
+10	Space		340	3,118,266,340	group 33
+11	CtrlUp		266	3,118,266,340	group 22
+12	ShiftUp		118	118,266,340	group 17
+13	Left		2	2	group 1
+14	Left		2	2	group 1
+15	Left		1	1	part 1
+16	F2		1	1	part 1
+17	Down		1	1	part 1
+18	Type	Bolt hole A	1	1	part 1
+19	Enter		1	1	Bolt hole A
+20	Down		2	2	group 1
+21	F2		2	2	group 1
+22	Type		2	2	group 1
+23	Enter		2	2	group 1
+24	F2		2	2	group 1
+25	Type	discarded	2	2	group 1
+26	Escape		2	2	group 1
+27	End		4827	4827	part 4
+28	Left		4827	4827	part 4
+29	Home		1	1	Bolt hole A
+30	ExpandAll		1	1	Bolt hole A
+31	End		10000	10000	point 7428
+32	Up		9999	9999	point 5326
+33	Left		9997	9997	characteristic 1705
+34	CollapseAll		4827	9997	part 4
+35	Up		3403	3403	part 3
+36	Filter	CYLINDER 12	2131	3403	part 2
+37	Home		2131	2131	part 2
+38	Down		2132	2132	group 2
+39	Right		2328	2328	group 29
+40	End		7155	7155	cylinder 126
+41	Left		7103	7103	group 8
+42	Filter	no such item	-	7103	-
+43	Down		-	7103	-
+44	Filter		1	7103	Bolt hole A
+45	Down		2131	2131	part 2
+46	Space		2131	-	part 2
+47	Space		2131	2131	part 2
+48	Up		1	1	Bolt hole A

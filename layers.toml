@@ -61,3 +61,5 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"
+# VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
+"fid-spike-ui" = "viewer"

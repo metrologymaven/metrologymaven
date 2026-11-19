@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-spike-ui]
 satisfies: [REQ-VIZ.SHELL-009]
 covers: []
 depends_on: []
