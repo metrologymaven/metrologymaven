@@ -2,12 +2,14 @@
 //! `unsafe`, no floating-point arithmetic in this crate so far; kernel graph, KNP-1.
 //!
 //! Implemented leaves: `UNC.UEC.STMT` (the [`EvidenceClass`] enumeration and the validated
-//! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]).
+//! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]) and
+//! `UNC.UEC.CLASS` (evidence class assignment, rule set `uec-assign@1`, see [`uec`]).
 //!
 //! This crate never computes an uncertainty. It holds what other nodes computed or a
 //! person declared, and refuses any statement that breaks the invariants.
 
 pub mod statement;
+pub mod uec;
 
 pub use statement::{
     Contributor, CoverageInterval, EvidenceClass, Expanded, IntervalKind, Method, ModelRef, NlinVerdict, Nonlinearity,
