@@ -60,7 +60,7 @@ Bot findings are advisory until a maintainer says otherwise. A maintainer marks 
 ## Design
 
 - **Registry command(s):** none; repository tool `cargo xtask bot-blocking --threads <json> --register <bots.toml> --maintainers <txt>`.
-- **Data structures:** thread export `[{id, path, line, resolved, comments: [{author, at, body}]}]`; output lines `blocking <id> <path>:<line> by <maintainer>` (a path with whitespace, `"` or `` is printed in double quotes with `"` and `` backslash-escaped; a null line prints `-`). Accounts are compared ASCII-case-insensitively, as forge logins are.
+- **Data structures:** thread export `[{id, path, line, resolved, comments: [{author, at, body}]}]`; output lines `blocking <id> <path>:<line> by <maintainer>` (a path with whitespace, a double quote or a backslash is printed in double quotes, with each double quote and backslash escaped by a backslash; a null line prints `-`). Accounts are compared ASCII-case-insensitively, as forge logins are.
 - **Algorithm:** for each thread whose root author is a register `account`, scan replies in `at` order and keep the last maintainer mark (a body whose first token is `/blocking` or `/advisory`); blocking and not resolved → report.
 - **Errors:** `BLOCK-INPUT`.
 - **Determinism:** D0; output sorted by thread ID.
