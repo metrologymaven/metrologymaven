@@ -1,14 +1,16 @@
-//! `align.list_alignments@1` and `align.get_alignment@1` (R0, D0): parameters, results,
-//! registry definitions, and the CLI and MCP entry points (REQ-008).
+//! `align.list_alignments@1` and `align.get_alignment@1` (R0, D0; ALN.MODEL.ELEM REQ-008)
+//! and `align.get_residuals@1` (R0, D0; ALN.QA.REPORT REQ-005, in [`crate::residuals`]):
+//! parameters, results, registry definitions, and the CLI and MCP entry points.
 //!
 //! Both surfaces build the same typed parameters and call the same handler, which returns
 //! RFC 8785 canonical bytes, so `fid align list-alignments --json` and the MCP tool
-//! `align_list_alignments` return identical bytes. Every call is recorded in the caller's
+//! `align_list_alignments` return identical bytes (and likewise for every command). Every call is recorded in the caller's
 //! Activity Log; R0 calls never reach the Record Journal (REQ-CORE.JRN-016).
 
 use crate::element::{obj, parse_id, AlignmentStatus};
 use crate::error::{kept, AlignError};
 use crate::model::AlignmentModel;
+use crate::residuals::{self, ResidualStore, ResidualsParams, CLI_RESIDUALS, GET_RESIDUALS, MAX_PAGE, MCP_RESIDUALS};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue, CanonError};
 use fid_registry::{CommandDef, DefError};
 use fid_uuid::Uuid;
@@ -32,7 +34,7 @@ pub const MAX_PARAMS_DEPTH: usize = 8;
 /// Most CLI arguments after `fid align`.
 const MAX_CLI_ARGS: usize = 16;
 const LIFECYCLE_SINCE: &str = "2026-11-19";
-const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+pub(crate) const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 
 /// The surface a call came through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -117,20 +119,40 @@ pub fn get_alignment(model: &AlignmentModel, params: &GetParams) -> Result<CValu
 }
 
 /// The one handler behind both surfaces.
-fn run(model: &AlignmentModel, command: &'static str, params: &CValue) -> Result<Vec<u8>, AlignError> {
+fn run(
+    model: &AlignmentModel,
+    reports: &ResidualStore,
+    command: &'static str,
+    params: &CValue,
+) -> Result<Vec<u8>, AlignError> {
     let result = if command == LIST_ALIGNMENTS {
         list_alignments(model, &ListParams::from_value(params)?)
+    } else if command == GET_RESIDUALS {
+        residuals::get_residuals(model, reports, &ResidualsParams::from_value(params)?)?
     } else {
         get_alignment(model, &GetParams::from_value(params)?)?
     };
     to_canonical_bytes(&result).map_err(|_| AlignError::Internal("canonical json"))
 }
 
-/// Runs an MCP tool call (`align_list_alignments` or `align_get_alignment`) on raw JSON
-/// parameters (at most [`MAX_PARAMS_BYTES`] bytes and [`MAX_PARAMS_DEPTH`] levels; duplicate
-/// keys refused) and returns the canonical result bytes. The call is logged to `log`.
+/// [`invoke_mcp_with`] on a project without residual reports (`align_get_residuals` then
+/// fails `not_found`).
 pub fn invoke_mcp(
     model: &AlignmentModel,
+    log: &mut Vec<ActivityEntry>,
+    tool: &str,
+    params: &[u8],
+) -> Result<Vec<u8>, AlignError> {
+    invoke_mcp_with(model, &ResidualStore::new(), log, tool, params)
+}
+
+/// Runs an MCP tool call (`align_list_alignments`, `align_get_alignment` or
+/// `align_get_residuals`) on raw JSON parameters (at most [`MAX_PARAMS_BYTES`] bytes and
+/// [`MAX_PARAMS_DEPTH`] levels; duplicate keys refused) and returns the canonical result
+/// bytes. The call is logged to `log`.
+pub fn invoke_mcp_with(
+    model: &AlignmentModel,
+    reports: &ResidualStore,
     log: &mut Vec<ActivityEntry>,
     tool: &str,
     params: &[u8],
@@ -138,6 +160,7 @@ pub fn invoke_mcp(
     let command = match tool {
         MCP_LIST => LIST_ALIGNMENTS,
         MCP_GET => GET_ALIGNMENT,
+        MCP_RESIDUALS => GET_RESIDUALS,
         other => return Err(AlignError::UnknownKind(kept(other))),
     };
     log.push(ActivityEntry { command, surface: Surface::Mcp });
@@ -146,13 +169,24 @@ pub fn invoke_mcp(
         CanonError::DuplicateKey(_) => AlignError::BadParams("duplicate key"),
         _ => AlignError::BadParams("params are not valid JSON"),
     })?;
-    run(model, command, &value)
+    run(model, reports, command, &value)
 }
 
-/// Runs `fid align <args>`: `list-alignments [--parent <id>] [--status <status>] [--json]`
-/// or `get-alignment <id> [--json]`. Output is canonical JSON either way. Unknown or
-/// repeated options are refused. The call is logged to `log`.
+/// [`invoke_cli_with`] on a project without residual reports.
 pub fn invoke_cli(model: &AlignmentModel, log: &mut Vec<ActivityEntry>, args: &[&str]) -> Result<Vec<u8>, AlignError> {
+    invoke_cli_with(model, &ResidualStore::new(), log, args)
+}
+
+/// Runs `fid align <args>`: `list-alignments [--parent <id>] [--status <status>] [--json]`,
+/// `get-alignment <id> [--json]` or `get-residuals <alignment> [--summary-only]
+/// [--offset N] [--limit M] [--digest D] [--json]`. Output is canonical JSON either way.
+/// Unknown or repeated options are refused. The call is logged to `log`.
+pub fn invoke_cli_with(
+    model: &AlignmentModel,
+    reports: &ResidualStore,
+    log: &mut Vec<ActivityEntry>,
+    args: &[&str],
+) -> Result<Vec<u8>, AlignError> {
     if args.len() > MAX_CLI_ARGS {
         return Err(AlignError::InputLimit("args"));
     }
@@ -160,9 +194,13 @@ pub fn invoke_cli(model: &AlignmentModel, log: &mut Vec<ActivityEntry>, args: &[
     let command = match *sub {
         CLI_LIST => LIST_ALIGNMENTS,
         CLI_GET => GET_ALIGNMENT,
+        CLI_RESIDUALS => GET_RESIDUALS,
         other => return Err(AlignError::UnknownKind(kept(other))),
     };
     log.push(ActivityEntry { command, surface: Surface::Cli });
+    if command == GET_RESIDUALS {
+        return run(model, reports, command, &residuals::cli_params(rest)?);
+    }
     let mut params = std::collections::BTreeMap::new();
     let mut json = false;
     let mut it = rest.iter();
@@ -184,7 +222,7 @@ pub fn invoke_cli(model: &AlignmentModel, log: &mut Vec<ActivityEntry>, args: &[
             return Err(AlignError::BadParams("repeated option"));
         }
     }
-    run(model, command, &CValue::Obj(params))
+    run(model, reports, command, &CValue::Obj(params))
 }
 
 // ------------------------------------------------------------------ registry definitions
@@ -261,8 +299,9 @@ fn def(
     ]))
 }
 
-/// The registry definitions of `align.get_alignment@1` and `align.list_alignments@1`, in
-/// that (ascending) order, built through [`CommandDef::from_value`].
+/// The registry definitions of `align.get_alignment@1`, `align.get_residuals@1` and
+/// `align.list_alignments@1`, in that (ascending) order, built through
+/// [`CommandDef::from_value`].
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let get_params = obj([
         ("type", text("object")),
@@ -282,6 +321,49 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             ]),
         ),
     ]);
+    let residuals_params = obj([
+        ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", strs(&["alignment"])),
+        (
+            "properties",
+            obj([
+                ("alignment", id_schema("The alignment whose residual report to read.")),
+                (
+                    "digest",
+                    obj([
+                        ("type", text("string")),
+                        ("pattern", text("^sha256:[0-9a-f]{64}$")),
+                        ("description", text("The report digest paging started from; report_changed if it moved.")),
+                    ]),
+                ),
+                (
+                    "limit",
+                    obj([
+                        ("type", text("integer")),
+                        ("minimum", CValue::Num(1.0)),
+                        ("maximum", CValue::Num(MAX_PAGE as f64)),
+                        ("description", text("Entries per page (default 1000).")),
+                    ]),
+                ),
+                (
+                    "offset",
+                    obj([
+                        ("type", text("integer")),
+                        ("minimum", CValue::Num(0.0)),
+                        (
+                            "description",
+                            text("Index of the first entry of the page (default 0); above 0 needs digest."),
+                        ),
+                    ]),
+                ),
+                (
+                    "summary_only",
+                    obj([("type", text("boolean")), ("description", text("Return only the summary with its digest."))]),
+                ),
+            ]),
+        ),
+    ]);
     let list_result = obj([("type", text("array")), ("items", summary_schema())]);
     let get_result = obj([("type", text("object"))]);
     Ok(vec![
@@ -291,6 +373,14 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             "Returns one alignment element with every stored field and its content digest.",
             get_params,
             get_result,
+        )?,
+        def(
+            "align.get_residuals",
+            "Get residuals",
+            "Returns an alignment's residual report: the summary (RMS, weighted RMS, maximum absolute residual, \
+             used and rejected counts, all with units, and the report digest) and optionally one page of entries.",
+            residuals_params,
+            residuals::result_schema(),
         )?,
         def(
             "align.list_alignments",

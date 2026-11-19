@@ -408,6 +408,7 @@ dependencies = [
 name = "fid-align"
 version = "0.0.1"
 dependencies = [
+ "fid-align-solve",
  "fid-canon",
  "fid-dep",
  "fid-geo-frame",
@@ -416,6 +417,16 @@ dependencies = [
  "fid-registry",
  "fid-types",
  "fid-uuid",
+]
+
+[[package]]
+name = "fid-align-solve"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]
@@ -578,6 +589,15 @@ dependencies = [
  "fid-kunc",
  "fid-registry",
  "fid-replay",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-geo-cad"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-nurbs",
+ "fid-kci",
  "fid-types",
 ]
 
@@ -911,6 +931,7 @@ dependencies = [
  "fid-canon",
  "fid-geo-frame",
  "fid-kci",
+ "fid-registry-macros",
  "fid-types",
 ]
 
@@ -924,6 +945,15 @@ dependencies = [
  "fid-jobs",
  "fid-registry",
  "fid-report",
+]
+
+[[package]]
+name = "fid-registry-macros"
+version = "0.0.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -1061,6 +1091,15 @@ name = "fid-uuid"
 version = "0.0.1"
 dependencies = [
  "sha1",
+]
+
+[[package]]
+name = "fid-view"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]

@@ -1,0 +1,1 @@
+{"camera":{"eye_m":[0.5,-0.25,0.75],"far_m":100,"near_m":0.01,"projection":{"fov_y_rad":3.141592653589793,"kind":"perspective"},"target_m":[0,0,0],"up":[0,0,1]},"clips":[],"colormap":null,"labels":null,"legend":null,"schema":1,"transparency":[],"viewport":{"height_px":1080,"width_px":1920},"visibility":[]}
