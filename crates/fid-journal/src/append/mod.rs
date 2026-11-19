@@ -137,6 +137,8 @@ pub enum JournalError {
     ChainInvalid(String),
     /// The header, payload or blob list is over its bound.
     InputLimit(String),
+    /// A checkpoint was asked for a stream with no entries (`CORE.JRN.CHAIN.CKPT`).
+    EmptyStream(String),
 }
 
 impl JournalError {
@@ -151,6 +153,7 @@ impl JournalError {
             JournalError::TimeAhead { .. } => "time_ahead",
             JournalError::ChainInvalid(_) => "chain_invalid",
             JournalError::InputLimit(_) => "input_limit",
+            JournalError::EmptyStream(_) => "empty_stream",
         }
     }
 }
@@ -173,6 +176,7 @@ impl fmt::Display for JournalError {
             ),
             JournalError::ChainInvalid(m) => write!(f, "chain_invalid: {m}"),
             JournalError::InputLimit(m) => write!(f, "input_limit: {m}"),
+            JournalError::EmptyStream(s) => write!(f, "empty_stream: stream {s:?} has no entries"),
         }
     }
 }
@@ -188,7 +192,7 @@ impl From<EntryError> for JournalError {
     }
 }
 
-fn failed(what: &str, e: impl fmt::Display) -> JournalError {
+pub(crate) fn failed(what: &str, e: impl fmt::Display) -> JournalError {
     JournalError::AppendFailed(format!("{what}: {e}"))
 }
 
@@ -457,14 +461,15 @@ struct Queue {
 
 /// The chained stream of one project database. `Send + Sync`: share it behind an `Arc`.
 pub struct Journal {
-    stream: String,
-    clock: Arc<dyn Clock>,
+    pub(crate) stream: String,
+    pub(crate) clock: Arc<dyn Clock>,
     /// Set after a COMMIT whose outcome is unknown; cleared only by reopening.
     poisoned: AtomicBool,
     /// The open project (`fid-store`): connection, write lock and blob store.
-    store: Store,
-    /// The store lock: held by a batch from its tail read to its last COMMIT, and by `tail`.
-    gate: Mutex<()>,
+    pub(crate) store: Store,
+    /// The store lock: held by a batch from its tail read to its last COMMIT, by `tail`, and
+    /// by the checkpoint and head-cache writers (module `checkpoint`).
+    pub(crate) gate: Mutex<()>,
     queue: Mutex<Queue>,
     changed: Condvar,
     #[cfg(feature = "test-hooks")]
@@ -477,7 +482,7 @@ impl fmt::Debug for Journal {
     }
 }
 
-fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(crate) fn guard<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
@@ -610,7 +615,7 @@ impl Journal {
         self.poisoned.load(AtomicOrdering::SeqCst)
     }
 
-    fn check_poison(&self) -> Result<(), JournalError> {
+    pub(crate) fn check_poison(&self) -> Result<(), JournalError> {
         if self.is_poisoned() {
             return Err(JournalError::AppendFailed(
                 "journal poisoned: an earlier COMMIT failed with an unknown outcome; reopen the project".into(),
@@ -989,7 +994,7 @@ type TailRow = (i64, String, String, String, String, Option<String>, Vec<u8>);
 
 /// Reads and verifies the chain tail: the row's columns against its header, the header's
 /// hash, the genesis rule, the link to the entry below, and the stream.
-fn read_tail(store: &Store, stream: &str) -> Result<Option<Tail>, JournalError> {
+pub(crate) fn read_tail(store: &Store, stream: &str) -> Result<Option<Tail>, JournalError> {
     let read = store
         .read(|conn| {
             let mut st = conn.prepare(
