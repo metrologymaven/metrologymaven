@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-reg"
-description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE)"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE), format registry and detection (IO.REG.DETECT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -23,6 +23,11 @@ cap-std = "3.4"
 # Streaming SHA-256 of written export files (IO.REG.WRITE REQ-004); the sha2 0.10 fid-canon
 # already brings into the graph.
 sha2 = "0.10"
+# IO.REG.DETECT: the shared `computed` result envelope of `import.list_formats@1` /
+# `export.list_formats@1` (AUTO.SURF.ENV), and the replay outcome class of AC-7 (CORE.RPL.CLASS).
+# Both are workspace crates at or below the services layer.
+fid-surface = { path = "../fid-surface" }
+fid-replay = { path = "../fid-replay" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only.

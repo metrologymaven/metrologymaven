@@ -642,6 +642,8 @@ dependencies = [
  "cap-std",
  "fid-canon",
  "fid-io-reg",
+ "fid-replay",
+ "fid-surface",
  "fid-types",
  "libc",
  "sha2 0.10.9",
