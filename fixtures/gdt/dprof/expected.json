@@ -25,5 +25,19 @@
       "sha256": "sha256:7eebd00016813701914b86334f28591a9bd965beb5a91734c32305e20c0020e9",
       "ref": "dp:iso-1101-2017@1.0.0#sha256:7eebd00016813701914b86334f28591a9bd965beb5a91734c32305e20c0020e9"
     }
+  ],
+  "refused": [
+    {
+      "file": "bad_number_exponent.json",
+      "refused": "bad_number"
+    },
+    {
+      "file": "bad_number_fraction.json",
+      "refused": "bad_number"
+    },
+    {
+      "file": "bad_number_long_fraction.json",
+      "refused": "bad_number"
+    }
   ]
 }

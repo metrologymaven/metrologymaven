@@ -5,12 +5,16 @@
 //! working branch. Any other principal (agent or script) writes to the agent branch: its
 //! profiles carry its principal as provenance and are not selectable on the working branch
 //! until a human adopts them ([`DprofState::adopt`]); its re-points go to an agent-branch
-//! overlay of the bindings and leave the working bindings untouched.
+//! overlay of the bindings and leave the working bindings untouched. The agent branch sees
+//! the working branch's profiles too.
 //!
-//! **Uniqueness.** One digest per (dialect, edition, version) across both branches: a
-//! version taken on either branch with another digest is `profile_immutable`. An identical
-//! re-publish returns the stored profile unchanged, journals nothing, and never moves a
-//! profile between branches (adoption is a separate human act).
+//! **Uniqueness (per branch, C5).** One digest per (dialect, edition, version) on each
+//! branch: a version taken on the same branch with another digest is `profile_immutable`,
+//! and an agent publish never blocks or changes anything on the working branch. An
+//! identical re-publish on the same branch returns the stored profile unchanged and
+//! journals nothing. Adoption copies an agent-branch profile onto the working branch
+//! (provenance kept) and is refused with `adopt_conflict` when the working branch already
+//! holds that version with another digest.
 
 use super::event::{Change, DprofEvent, PublishEvent, RepointEvent};
 use super::ident::{CharId, ProfileId, ProfileRef};
@@ -88,16 +92,18 @@ pub struct StoredProfile {
     pub branch: Branch,
     /// Provenance: the principal that published it.
     pub author: Principal,
-    /// Whether a human adopted it (meaningful on the agent branch only).
+    /// Whether this working-branch entry came from a human adopting an agent-branch
+    /// profile (always `false` on the agent branch).
     pub adopted: bool,
 }
 
 impl StoredProfile {
-    /// Whether a characteristic on `branch` may select this profile.
+    /// Whether a characteristic on `branch` may select this profile: the agent branch sees
+    /// both branches, the working branch only its own entries.
     pub fn selectable_on(&self, branch: Branch) -> bool {
         match branch {
             Branch::Agent => true,
-            Branch::Working => self.branch == Branch::Working || self.adopted,
+            Branch::Working => self.branch == Branch::Working,
         }
     }
 
@@ -180,7 +186,7 @@ impl Repointed {
 /// Profiles plus per-characteristic bindings on the working branch and the agent overlay.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DprofState {
-    profiles: BTreeMap<ProfileId, StoredProfile>,
+    profiles: BTreeMap<(Branch, ProfileId), StoredProfile>,
     working: BTreeMap<CharId, ProfileRef>,
     agent: BTreeMap<CharId, ProfileRef>,
 }
@@ -204,24 +210,28 @@ impl DprofState {
         self.profiles.len()
     }
 
-    /// Every stored profile, in (dialect, edition, version) order.
+    /// Every stored profile, working branch first, then by (dialect, edition, version).
     pub fn profiles(&self) -> impl Iterator<Item = &StoredProfile> {
         self.profiles.values()
     }
 
-    /// The stored profile with this dialect, edition and version, on any branch.
-    pub fn get(&self, id: &ProfileId) -> Option<&StoredProfile> {
-        self.profiles.get(id)
+    /// The profile stored on `branch` with this dialect, edition and version.
+    pub fn get(&self, branch: Branch, id: &ProfileId) -> Option<&StoredProfile> {
+        self.profiles.get(&(branch, id.clone()))
     }
 
-    /// Resolves a reference for a characteristic on `branch`: the profile must exist with
-    /// exactly this digest and be selectable there, else `defaults_profile_unknown`. This
-    /// is the check `gdt.set_governing_spec@1` (`GDT.CHAR.SPEC`) runs.
+    /// Resolves a reference for a characteristic on `branch`: a profile with exactly this
+    /// ID and digest must be selectable there (the working branch looks at its own
+    /// entries; the agent branch at its own, then the working branch's), else
+    /// `defaults_profile_unknown`. This is the check `gdt.set_governing_spec@1`
+    /// (`GDT.CHAR.SPEC`) runs.
     pub fn resolve(&self, branch: Branch, r: &ProfileRef) -> Result<&StoredProfile, DprofError> {
-        match self.profiles.get(&r.id) {
-            Some(p) if p.doc.digest == r.digest && p.selectable_on(branch) => Ok(p),
-            _ => Err(DprofError::unknown_ref(&r.to_string())),
-        }
+        let found = |b: Branch| self.profiles.get(&(b, r.id.clone())).filter(|p| p.doc.digest == r.digest);
+        let hit = match branch {
+            Branch::Working => found(Branch::Working),
+            Branch::Agent => found(Branch::Agent).or_else(|| found(Branch::Working)),
+        };
+        hit.ok_or_else(|| DprofError::unknown_ref(&r.to_string()))
     }
 
     /// Parses `text` and resolves it on `branch` (`bad_profile_ref`, then as [`Self::resolve`]).
@@ -283,7 +293,8 @@ impl DprofState {
         }
         let id = doc.profile.id();
         let reference = doc.reference();
-        if let Some(existing) = self.profiles.get(&id) {
+        let branch = Branch::for_principal(principal);
+        if let Some(existing) = self.profiles.get(&(branch, id.clone())) {
             if existing.doc.digest != doc.digest {
                 return Err(DprofError::ProfileImmutable { id: id.to_string() });
             }
@@ -298,7 +309,6 @@ impl DprofState {
         if self.profiles.len() >= MAX_PROFILES {
             return Err(store_err("too_many_profiles"));
         }
-        let branch = Branch::for_principal(principal);
         if dry_run {
             return Ok(Published { reference, status: PublishStatus::Created, branch, dry_run, event: None });
         }
@@ -308,7 +318,7 @@ impl DprofState {
             branch,
             reference: reference.clone(),
         });
-        self.profiles.insert(id, StoredProfile { doc, branch, author: principal, adopted: false });
+        self.profiles.insert((branch, id), StoredProfile { doc, branch, author: principal, adopted: false });
         Ok(Published { reference, status: PublishStatus::Created, branch, dry_run, event: Some(event) })
     }
 
@@ -367,22 +377,33 @@ impl DprofState {
         Ok(Repointed { changes, branch, dry_run, event: Some(event) })
     }
 
-    /// Adopts an agent-branch profile so working-branch characteristics may select it.
-    /// Human only (`human_only`); the reference must name a stored profile with that
-    /// digest (`defaults_profile_unknown`). Adopting a working-branch or already adopted
-    /// profile changes nothing. Under D-037 this runs as an item of the H2 release batch,
-    /// which journals it.
+    /// Adopts an agent-branch profile so working-branch characteristics may select it: the
+    /// profile is copied onto the working branch with its agent provenance and
+    /// `adopted: true`. Checks, in order: human only (`human_only`); the reference names
+    /// an agent-branch profile with that digest (`defaults_profile_unknown`); the working
+    /// branch holds that version with another digest (`adopt_conflict`). If the working
+    /// branch already holds the identical profile, nothing changes. Under D-037 this runs
+    /// as an item of the H2 release batch, which journals it.
     pub fn adopt(&mut self, principal: Principal, r: &ProfileRef) -> Result<(), DprofError> {
         if principal != Principal::Human {
             return Err(DprofError::HumanOnly);
         }
-        match self.profiles.get_mut(&r.id) {
-            Some(p) if p.doc.digest == r.digest => {
-                p.adopted = true;
-                Ok(())
+        let agent = match self.profiles.get(&(Branch::Agent, r.id.clone())) {
+            Some(p) if p.doc.digest == r.digest => p.clone(),
+            _ => return Err(DprofError::unknown_ref(&r.to_string())),
+        };
+        if let Some(w) = self.profiles.get(&(Branch::Working, r.id.clone())) {
+            if w.doc.digest == r.digest {
+                return Ok(());
             }
-            _ => Err(DprofError::unknown_ref(&r.to_string())),
+            return Err(DprofError::AdoptConflict { id: r.id.to_string() });
         }
+        if self.profiles.len() >= MAX_PROFILES {
+            return Err(store_err("too_many_profiles"));
+        }
+        let copy = StoredProfile { doc: agent.doc, branch: Branch::Working, author: agent.author, adopted: true };
+        self.profiles.insert((Branch::Working, r.id.clone()), copy);
+        Ok(())
     }
 
     // ------------------------------------------------------------------ snapshot
@@ -396,6 +417,14 @@ impl DprofState {
     ///   "bindings": { "working": { "<char>": "dp:.." }, "agent": { } } }
     /// ```
     pub fn to_canonical_bytes(&self) -> Result<Vec<u8>, DprofError> {
+        self.to_canonical_bytes_capped(MAX_STORE_BYTES)
+    }
+
+    /// As [`Self::to_canonical_bytes`], refusing (`store_invalid{too_large}`) output longer
+    /// than `cap` bytes; `cap` is clamped to [`MAX_STORE_BYTES`], so every snapshot written
+    /// can be loaded by [`Self::from_canonical_bytes`].
+    pub fn to_canonical_bytes_capped(&self, cap: usize) -> Result<Vec<u8>, DprofError> {
+        let cap = cap.min(MAX_STORE_BYTES);
         let mut profiles = Vec::with_capacity(self.profiles.len());
         for p in self.profiles.values() {
             let doc = fid_canon::parse(&p.doc.canonical).map_err(|_| store_err("profile"))?;
@@ -417,18 +446,26 @@ impl DprofState {
         top.insert("schema".to_owned(), CValue::Str(STORE_SCHEMA.to_owned()));
         top.insert("profiles".to_owned(), CValue::Arr(profiles));
         top.insert("bindings".to_owned(), CValue::Obj(bindings));
-        fid_canon::to_canonical_bytes(&CValue::Obj(top)).map_err(|_| store_err("encode"))
+        let out = fid_canon::to_canonical_bytes(&CValue::Obj(top)).map_err(|_| store_err("encode"))?;
+        if out.len() > cap {
+            return Err(store_err("too_large"));
+        }
+        Ok(out)
     }
 
-    /// Loads a snapshot strictly: every field present and no other, each profile re-parsed
-    /// against `vocab` with its digest re-checked, each binding resolvable on its branch
-    /// with matching dialect, no repeated profile ID, all limits held. Fails
-    /// `store_invalid{reason}`, or the profile's own error.
+    /// Loads a snapshot strictly: every field present and no other, no non-integer number
+    /// literal, each profile re-parsed against `vocab` with its digest re-checked,
+    /// provenance consistent with its branch, no repeated (branch, profile ID), each
+    /// binding resolvable on its branch, all limits held. Fails `store_invalid{reason}`,
+    /// or the profile's own error.
     pub fn from_canonical_bytes(bytes: &[u8], vocab: &KeyVocabulary) -> Result<DprofState, DprofError> {
         if bytes.len() > MAX_STORE_BYTES {
             return Err(store_err("too_large"));
         }
         let v = fid_canon::parse_with_limits(bytes, MAX_STORE_BYTES, MAX_STORE_DEPTH).map_err(|_| store_err("json"))?;
+        if !super::profile::integer_literals_only(bytes) {
+            return Err(store_err("bad_number"));
+        }
         let top = obj(&v, &["bindings", "profiles", "schema"])?;
         if str_of(top, "schema")? != STORE_SCHEMA {
             return Err(store_err("bad_schema"));
@@ -450,18 +487,21 @@ impl DprofState {
             }
             let branch = Branch::parse(str_of(e, "branch")?).ok_or_else(|| store_err("bad_branch"))?;
             let author = parse_principal(str_of(e, "author")?).ok_or_else(|| store_err("bad_author"))?;
-            if Branch::for_principal(author) != branch {
-                return Err(store_err("branch_author_mismatch"));
-            }
             let adopted = match e.get("adopted") {
                 Some(CValue::Bool(b)) => *b,
                 _ => return Err(store_err("wrong_type")),
             };
-            if adopted && branch == Branch::Working {
-                return Err(store_err("adopted_on_working"));
+            // Working: a human's own entry, or an adopted agent profile. Agent: never adopted.
+            let author_branch = Branch::for_principal(author);
+            let consistent = match branch {
+                Branch::Working => (author_branch == Branch::Agent) == adopted,
+                Branch::Agent => author_branch == Branch::Agent && !adopted,
+            };
+            if !consistent {
+                return Err(store_err("branch_author_mismatch"));
             }
             let id = doc.profile.id();
-            if state.profiles.insert(id, StoredProfile { doc, branch, author, adopted }).is_some() {
+            if state.profiles.insert((branch, id), StoredProfile { doc, branch, author, adopted }).is_some() {
                 return Err(store_err("duplicate_profile"));
             }
         }

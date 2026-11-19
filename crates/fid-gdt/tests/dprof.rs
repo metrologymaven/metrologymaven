@@ -132,8 +132,32 @@ fn ac2_same_version_different_digest_is_profile_immutable_and_journals_nothing()
     assert_eq!(err.to_string(), "profile_immutable{dp:asme-y14.5-2018@1.0.0}");
     assert_eq!(journal.len(), 1);
     assert_eq!(st, before);
-    // An agent cannot take the version on its branch either.
-    assert_eq!(publish(&mut st, Principal::Agent, A100_MOD).unwrap_err().code(), "profile_immutable");
+    // Uniqueness is per branch (C5): an agent may publish the modified 1.0.0 on its own
+    // branch without touching the working branch, but not twice with different content.
+    let agent = publish(&mut st, Principal::Agent, A100_MOD).unwrap();
+    assert_eq!((agent.status, agent.branch), (PublishStatus::Created, Branch::Agent));
+    assert_eq!(st.get(Branch::Working, &agent.reference.id).unwrap().reference().to_string(), exp_ref(A100));
+    assert_eq!(publish(&mut st, Principal::Agent, A100).unwrap_err().code(), "profile_immutable");
+    // Its adoption conflicts with the working branch's 1.0.0 and changes nothing.
+    let before = st.clone();
+    let err = st.adopt(Principal::Human, &agent.reference).unwrap_err();
+    assert_eq!(err.code(), "adopt_conflict");
+    assert_eq!(err.to_string(), "adopt_conflict{dp:asme-y14.5-2018@1.0.0}");
+    assert_eq!(st, before);
+    assert_eq!(st.resolve(Branch::Working, &agent.reference).unwrap_err().code(), "defaults_profile_unknown");
+}
+
+#[test]
+fn agent_publish_never_blocks_a_later_human_publish() {
+    let mut st = DprofState::new();
+    let agent = publish(&mut st, Principal::Agent, A100_MOD).unwrap().reference;
+    let human = publish(&mut st, Principal::Human, A100).unwrap();
+    assert_eq!((human.status, human.branch), (PublishStatus::Created, Branch::Working));
+    assert!(human.event.is_some());
+    // The agent branch sees both digests of 1.0.0; the working branch only its own.
+    assert!(st.resolve(Branch::Agent, &agent).is_ok());
+    assert!(st.resolve(Branch::Agent, &human.reference).is_ok());
+    assert!(st.resolve(Branch::Working, &agent).is_err());
 }
 
 #[test]
@@ -248,25 +272,38 @@ fn ac6_agent_publish_lands_on_agent_branch_until_a_human_adopts_it() {
     let Some(DprofEvent::Publish(e)) = &p.event else { panic!("event") };
     assert_eq!(e.principal, Principal::Agent);
     assert_eq!(e.branch, Branch::Agent);
-    let stored = st.get(&p.reference.id).unwrap();
+    let stored = st.get(Branch::Agent, &p.reference.id).unwrap();
     assert_eq!(stored.author, Principal::Agent);
     assert_eq!(stored.branch, Branch::Agent);
+    assert!(st.get(Branch::Working, &p.reference.id).is_none());
     // gdt.set_governing_spec@1 (GDT.CHAR.SPEC) resolves through DprofState::resolve.
     let err = st.resolve(Branch::Working, &p.reference).unwrap_err();
     assert_eq!(err.code(), "defaults_profile_unknown");
     let err = st.bind(Principal::Human, &cid("c1"), Dialect::Asme, &p.reference).unwrap_err();
     assert_eq!(err.code(), "defaults_profile_unknown");
     assert!(st.resolve(Branch::Agent, &p.reference).is_ok());
-    // A human re-publish of identical content does not move it to the working branch.
-    let again = publish(&mut st, Principal::Human, A100).unwrap();
+    // An identical agent re-publish is a no-op on the agent branch.
+    let again = publish(&mut st, Principal::Agent, A100).unwrap();
     assert_eq!((again.status, again.branch), (PublishStatus::Existing, Branch::Agent));
+    assert!(again.event.is_none());
     assert!(st.resolve(Branch::Working, &p.reference).is_err());
     // Adoption is human only.
     assert_eq!(st.adopt(Principal::Agent, &p.reference).unwrap_err().code(), "human_only");
     assert_eq!(st.adopt(Principal::Script, &p.reference).unwrap_err().code(), "human_only");
     st.adopt(Principal::Human, &p.reference).unwrap();
     assert!(st.resolve(Branch::Working, &p.reference).is_ok());
-    assert_eq!(st.get(&p.reference.id).unwrap().author, Principal::Agent);
+    let adopted = st.get(Branch::Working, &p.reference.id).unwrap();
+    assert_eq!((adopted.author, adopted.adopted), (Principal::Agent, true));
+    // Adopting again changes nothing; after adoption the version is taken on the working
+    // branch, so a different human 1.0.0 is immutable there.
+    let before = st.clone();
+    st.adopt(Principal::Human, &p.reference).unwrap();
+    assert_eq!(st, before);
+    assert_eq!(publish(&mut st, Principal::Human, A100_MOD).unwrap_err().code(), "profile_immutable");
+    // A working-branch-only reference cannot be adopted.
+    let mut st2 = DprofState::new();
+    let human = publish(&mut st2, Principal::Human, A110).unwrap().reference;
+    assert_eq!(st2.adopt(Principal::Human, &human).unwrap_err().code(), "defaults_profile_unknown");
 }
 
 #[test]
@@ -406,6 +443,60 @@ fn snapshot_round_trips_and_is_checked_on_load() {
     assert_eq!(load(&text.replace("fid.dprof-store/1", "fid.dprof-store/2"), &vocab()).reason(), Some("bad_schema"));
     let small = KeyVocabulary::new(["placeholder.synthetic"]).unwrap();
     assert_eq!(load(&text, &small).code(), "unknown_key");
+    // A non-integer literal anywhere in a snapshot is refused at the source text.
+    assert_eq!(load(&text.replacen("\"adopted\":false", "\"adopted\":1.0", 1), &vocab()).reason(), Some("bad_number"));
+}
+
+#[test]
+fn snapshot_with_adopted_profile_round_trips() {
+    let mut st = DprofState::new();
+    let r = publish(&mut st, Principal::Agent, A100).unwrap().reference;
+    st.adopt(Principal::Human, &r).unwrap();
+    st.bind(Principal::Human, &cid("c1"), Dialect::Asme, &r).unwrap();
+    let bytes = st.to_canonical_bytes().unwrap();
+    assert_eq!(DprofState::from_canonical_bytes(&bytes, &vocab()).unwrap(), st);
+    // An adopted flag on a human's own working entry is inconsistent.
+    let mut human = DprofState::new();
+    publish(&mut human, Principal::Human, A100).unwrap();
+    let text = String::from_utf8(human.to_canonical_bytes().unwrap()).unwrap();
+    let bad = text.replace("\"adopted\":false", "\"adopted\":true");
+    let err = DprofState::from_canonical_bytes(bad.as_bytes(), &vocab()).unwrap_err();
+    assert_eq!(err.reason(), Some("branch_author_mismatch"));
+}
+
+#[test]
+fn snapshot_writer_refuses_what_the_loader_would_refuse() {
+    let (st, _, _, _, _) = three_chars_on_100();
+    let bytes = st.to_canonical_bytes().unwrap();
+    assert!(bytes.len() <= fid_gdt::chars::dprof::store::MAX_STORE_BYTES);
+    assert_eq!(st.to_canonical_bytes_capped(bytes.len()).unwrap(), bytes);
+    let err = st.to_canonical_bytes_capped(bytes.len() - 1).unwrap_err();
+    assert_eq!((err.code(), err.reason()), ("store_invalid", Some("too_large")));
+    // The cap never exceeds the loader's limit.
+    assert_eq!(st.to_canonical_bytes_capped(usize::MAX).unwrap(), bytes);
+}
+
+#[test]
+fn non_integer_literals_are_refused_as_the_python_reference_refuses_them() {
+    let v = fid_canon::parse(&read("expected.json")).unwrap();
+    let CValue::Obj(o) = v else { panic!("expected") };
+    let Some(CValue::Arr(refused)) = o.get("refused") else { panic!("refused") };
+    assert_eq!(refused.len(), 3);
+    for c in refused {
+        let CValue::Obj(c) = c else { panic!("case") };
+        let Some(CValue::Str(file)) = c.get("file") else { panic!("file") };
+        let Some(CValue::Str(why)) = c.get("refused") else { panic!("refused") };
+        let err = parse_profile(&read(file), &vocab()).unwrap_err();
+        assert_eq!((err.code(), err.reason()), ("malformed_profile", Some(why.as_str())), "{file}");
+    }
+    let m = |t: &str| parse_err(&doc(t)).reason();
+    for lit in ["1.0", "1e2", "1E2", "1e+2", "-0.0", "7.0000000000000001", "100e-2"] {
+        assert_eq!(m(&format!(r#"{{"placeholder.count":{lit}}}"#)), Some("bad_number"), "{lit}");
+        assert_eq!(m(&format!(r#"{{"placeholder.list":[1,{lit}]}}"#)), Some("bad_number"), "{lit}");
+    }
+    // Digits, dots and exponents inside strings are not number literals.
+    assert!(parse_profile(doc(r#"{"placeholder.note":"1.0e2 \"2.5\" \\ 3E4"}"#).as_bytes(), &vocab()).is_ok());
+    assert!(parse_profile(doc(r#"{"placeholder.count":-0,"placeholder.list":[10,-20]}"#).as_bytes(), &vocab()).is_ok());
 }
 
 // ------------------------------------------------------------------ profile parsing

@@ -68,6 +68,11 @@ pub enum DprofError {
         /// `dp:<dialect>-<edition>@<version>`.
         id: String,
     },
+    /// `adopt_conflict{id}`: the working branch holds this version with another digest.
+    AdoptConflict {
+        /// `dp:<dialect>-<edition>@<version>`.
+        id: String,
+    },
     /// `dialect_mismatch{char}`: a named characteristic's dialect differs from the target's.
     DialectMismatch {
         /// The characteristic.
@@ -123,6 +128,7 @@ impl DprofError {
             DprofError::Malformed { .. } => "malformed_profile",
             DprofError::UnknownKey { .. } => "unknown_key",
             DprofError::ProfileImmutable { .. } => "profile_immutable",
+            DprofError::AdoptConflict { .. } => "adopt_conflict",
             DprofError::DialectMismatch { .. } => "dialect_mismatch",
             DprofError::DefaultsProfileUnknown { .. } => "defaults_profile_unknown",
             DprofError::BadProfileRef => "bad_profile_ref",
@@ -159,6 +165,7 @@ impl fmt::Display for DprofError {
         match self {
             DprofError::UnknownKey { key: s }
             | DprofError::ProfileImmutable { id: s }
+            | DprofError::AdoptConflict { id: s }
             | DprofError::DialectMismatch { char: s }
             | DprofError::DefaultsProfileUnknown { reference: s }
             | DprofError::CharUnknown { char: s }

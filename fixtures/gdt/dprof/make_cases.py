@@ -28,6 +28,13 @@ PROFILES = [
     "asme_placeholder_1.1.0.json",
     "iso_placeholder_1.0.0.json",
 ]
+# Profiles the format refuses because a number literal is not an integer literal, even
+# where its value is integral (malformed_profile{bad_number}).
+REFUSED = [
+    "bad_number_exponent.json",
+    "bad_number_fraction.json",
+    "bad_number_long_fraction.json",
+]
 SHORT = {'"': '\\"', "\\": "\\\\", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
 
 
@@ -87,9 +94,22 @@ def case(name):
     return {"file": name, "canonical": canonical.decode("utf-8"), "sha256": "sha256:" + digest, "ref": ref}
 
 
+def refused(name):
+    raw = (HERE / name).read_text(encoding="utf-8")
+    try:
+        json.loads(raw, object_pairs_hook=no_dupes, parse_float=refuse_float)
+    except ValueError as e:
+        if "non-integer number" in str(e):
+            return {"file": name, "refused": "bad_number"}
+        raise
+    raise SystemExit(f"{name}: expected a refusal")
+
+
 def build():
     cases = [case(n) for n in PROFILES]
-    return json.dumps({"generator": "make_cases.py", "cases": cases}, indent=2, ensure_ascii=False) + "\n"
+    bad = [refused(n) for n in REFUSED]
+    doc = {"generator": "make_cases.py", "cases": cases, "refused": bad}
+    return json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
 
 
 def main():

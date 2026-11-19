@@ -145,8 +145,9 @@ fn scalar(v: &CValue) -> Result<ProfileValue, DprofError> {
         }
         CValue::Bool(b) => Ok(ProfileValue::Flag(*b)),
         CValue::Num(f) => {
-            // The integer test runs on the RFC 8785 text of the number, not on float
-            // arithmetic: an optional minus and decimal digits only, magnitude <= 2^53 - 1.
+            // The source literal was already checked to be an integer literal
+            // ([`integer_literals_only`]); this checks its value on the RFC 8785 text of the
+            // number, not with float arithmetic: magnitude <= 2^53 - 1.
             let t = fid_canon::format_number(*f).map_err(|_| malformed("bad_number"))?;
             let digits = t.strip_prefix('-').unwrap_or(&t);
             if digits.is_empty() || digits.len() > 16 || !digits.bytes().all(|c| c.is_ascii_digit()) {
@@ -222,14 +223,53 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
     Ok(ProfileDoc { profile: DefaultsProfile { dialect, edition, version, keys }, canonical, digest })
 }
 
+/// Whether every number literal in the JSON text `bytes` is an integer literal (an optional
+/// minus and decimal digits: no `.`, no exponent). Runs on the source text, so `1.0`,
+/// `1e2` and `7.0000000000000001` are refused even though they parse to integral values.
+/// Expects text that already parsed as JSON; string contents are skipped.
+pub fn integer_literals_only(bytes: &[u8]) -> bool {
+    let mut in_str = false;
+    let mut esc = false;
+    let mut in_num = false;
+    for &b in bytes {
+        if in_str {
+            if esc {
+                esc = false;
+            } else if b == b'\\' {
+                esc = true;
+            } else if b == b'"' {
+                in_str = false;
+            }
+            continue;
+        }
+        if in_num {
+            match b {
+                b'0'..=b'9' => continue,
+                b'.' | b'e' | b'E' | b'+' => return false,
+                _ => in_num = false,
+            }
+        }
+        match b {
+            b'"' => in_str = true,
+            b'-' | b'0'..=b'9' => in_num = true,
+            _ => {}
+        }
+    }
+    true
+}
+
 /// Parses profile file bytes: at most [`MAX_PROFILE_BYTES`], UTF-8 JSON with no duplicate
-/// object key and nesting at most [`MAX_PROFILE_DEPTH`], then [`profile_from_value`].
-/// JSON-level failures are `malformed_profile` with the `fid-canon` code as reason.
+/// object key and nesting at most [`MAX_PROFILE_DEPTH`], every number literal an integer
+/// literal (`malformed_profile{bad_number}`), then [`profile_from_value`]. JSON-level
+/// failures are `malformed_profile` with the `fid-canon` code as reason.
 pub fn parse_profile(bytes: &[u8], vocab: &KeyVocabulary) -> Result<ProfileDoc, DprofError> {
     if bytes.len() > MAX_PROFILE_BYTES {
         return Err(malformed("too_large"));
     }
     let v =
         fid_canon::parse_with_limits(bytes, MAX_PROFILE_BYTES, MAX_PROFILE_DEPTH).map_err(|e| malformed(e.code()))?;
+    if !integer_literals_only(bytes) {
+        return Err(malformed("bad_number"));
+    }
     profile_from_value(&v, vocab)
 }
