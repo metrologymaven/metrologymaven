@@ -419,7 +419,13 @@ fn edited_metadata(edit: impl Fn(&mut BTreeMap<String, CValue>)) -> Vec<u8> {
 fn digest_metadata(bytes: &[u8]) -> Result<ImplDigestTable, ImplError> {
     let inp = inputs("inputs.json");
     let md = Metadata::parse(bytes)?;
-    impl_digests(&md, &inp.algorithms, &inp.registrations, &inp.allowlist, &FsTree::new(fixture().join("ws"), tracked()))
+    impl_digests(
+        &md,
+        &inp.algorithms,
+        &inp.registrations,
+        &inp.allowlist,
+        &FsTree::new(fixture().join("ws"), tracked()),
+    )
 }
 
 fn package_mut<'a>(m: &'a mut BTreeMap<String, CValue>, name: &str) -> &'a mut BTreeMap<String, CValue> {
@@ -525,7 +531,8 @@ fn lockfile_errors() {
     let renamed = edit_lock("lock-missing", |t: String| t.replace("name = \"vext\"", "name = \"vext2\""));
     assert_eq!(renamed, bad("not_in_lockfile"));
     assert_eq!(edit_lock("lock-version", |t: String| t.replace("version = 4", "version = 1")), bad("lockfile_version"));
-    let dup_key = edit_lock("lock-dup-key", |t: String| t.replace("name = \"knum\"", "name = \"knum\"\nname = \"knum\""));
+    let dup_key =
+        edit_lock("lock-dup-key", |t: String| t.replace("name = \"knum\"", "name = \"knum\"\nname = \"knum\""));
     assert_eq!(dup_key, bad("lockfile_toml"));
     let dup_entry = "[[package]]\nname = \"knum\"\nversion = \"0.1.0\"\n";
     assert_eq!(edit_lock("lock-dup-entry", |t: String| format!("{t}\n{dup_entry}")), bad("lockfile_duplicate"));
@@ -565,7 +572,7 @@ fn ac5_tracked_lists_are_validated() {
         let err = TrackedFiles::new([bad.to_string()]);
         assert_eq!(err, Err(ImplError::Io { path: bad.into(), kind: IoKind::BadName }), "{bad:?}");
     }
-    let ok = TrackedFiles::from_ls_files_stage(b"100644 0123 0\tsrc/a.rs\0100755 4567 0\tsrc/b.rs\0").unwrap();
+    let ok = TrackedFiles::from_ls_files_stage(b"100644 0123 0\tsrc/a.rs\x00100755 4567 0\tsrc/b.rs\0").unwrap();
     assert_eq!(ok.paths().collect::<Vec<_>>(), ["src/a.rs", "src/b.rs"]);
     assert_eq!(
         TrackedFiles::from_ls_files_stage(b"120000 0123 0\tsrc/link.rs\0"),
@@ -576,7 +583,7 @@ fn ac5_tracked_lists_are_validated() {
         Err(ImplError::Io { path: "vendor/sub".into(), kind: IoKind::NotAFile })
     );
     assert_eq!(
-        TrackedFiles::from_ls_files_stage(b"100644 0123 0\tsrc/A.rs\0100644 4567 0\tsrc/a.rs\0"),
+        TrackedFiles::from_ls_files_stage(b"100644 0123 0\tsrc/A.rs\x00100644 4567 0\tsrc/a.rs\0"),
         Err(ImplError::InputInvalid { reason: "tracked_case_collision" })
     );
 }

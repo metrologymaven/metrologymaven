@@ -336,7 +336,8 @@ fn crate_entry(md: &Metadata, lock: &Lockfile, p: &Package, tree: &dyn SourceTre
 
 /// Workspace-level files that change how every crate builds: the root manifest (profiles,
 /// patches) and the Cargo configuration (source replacement, rustflags), sorted by path.
-const WORKSPACE_FILES: [(&str, bool); 3] = [(".cargo/config", false), (".cargo/config.toml", false), ("Cargo.toml", true)];
+const WORKSPACE_FILES: [(&str, bool); 3] =
+    [(".cargo/config", false), (".cargo/config.toml", false), ("Cargo.toml", true)];
 
 fn workspace_files(tree: &dyn SourceTree) -> Result<Json, ImplError> {
     let mut files = Vec::new();
