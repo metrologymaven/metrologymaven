@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-shlint]
 satisfies: [REQ-VIZ.RENDER.FRAME-005, REQ-VIZ.RENDER.FRAME-006]
 covers: []
 depends_on: []

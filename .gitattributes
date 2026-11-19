@@ -125,3 +125,5 @@ fixtures/geo/types/** -text
 fixtures/core/rpl/exec/subst/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
+# VIZ.RENDER.FRAME.SHLINT fixture crates: hand-labelled sources and metadata; never convert line endings.
+fixtures/viz/shlint/** -text

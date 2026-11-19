@@ -1,0 +1,36 @@
+{
+  "packages": [
+    {"name": "fid-render", "version": "0.0.1", "id": "path+file:///w/fid-render#0.0.1", "source": null},
+    {"name": "wgpu", "version": "26.0.1", "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu@26.0.1", "source": "registry+https://github.com/rust-lang/crates.io-index"},
+    {"name": "raw-window-handle", "version": "0.6.2", "id": "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2", "source": "registry+https://github.com/rust-lang/crates.io-index"},
+    {"name": "log", "version": "0.4.28", "id": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.28", "source": "registry+https://github.com/rust-lang/crates.io-index"}
+  ],
+  "workspace_members": ["path+file:///w/fid-render#0.0.1"],
+  "workspace_default_members": ["path+file:///w/fid-render#0.0.1"],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+file:///w/fid-render#0.0.1",
+        "dependencies": ["registry+https://github.com/rust-lang/crates.io-index#wgpu@26.0.1"],
+        "deps": [{"name": "wgpu", "pkg": "registry+https://github.com/rust-lang/crates.io-index#wgpu@26.0.1", "dep_kinds": [{"kind": null, "target": null}]}],
+        "features": []
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu@26.0.1",
+        "dependencies": ["registry+https://github.com/rust-lang/crates.io-index#log@0.4.28", "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2"],
+        "deps": [
+          {"name": "log", "pkg": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.28", "dep_kinds": [{"kind": null, "target": null}]},
+          {"name": "raw_window_handle", "pkg": "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2", "dep_kinds": [{"kind": null, "target": null}]}
+        ],
+        "features": []
+      },
+      {"id": "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2", "dependencies": [], "deps": [], "features": []},
+      {"id": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.28", "dependencies": [], "deps": [], "features": []}
+    ],
+    "root": "path+file:///w/fid-render#0.0.1"
+  },
+  "target_directory": "/w/target",
+  "version": 1,
+  "workspace_root": "/w",
+  "metadata": null
+}
