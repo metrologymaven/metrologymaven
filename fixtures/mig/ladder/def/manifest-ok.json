@@ -1,0 +1,46 @@
+{
+  "commands": [
+    {
+      "id": "correlate.run_parallel",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "demo.fit_plane",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "demo.scan",
+      "major": 2,
+      "side_effect": "R1"
+    },
+    {
+      "id": "import.results_csv",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "import.results_dmis",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "migrate.fill_form",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "migrate.import_form",
+      "major": 1,
+      "side_effect": "R1"
+    },
+    {
+      "id": "migrate.import_point_export",
+      "major": 1,
+      "side_effect": "R1"
+    }
+  ],
+  "format": 1,
+  "quantity_catalogue_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}
