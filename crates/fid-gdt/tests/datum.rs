@@ -203,7 +203,7 @@ fn ac5_exact_replay_of_ac1_and_ac3_is_identical() {
     assert_eq!(snapshot(&r.model), snapshot(&m));
 
     // AC-3 alone from the fixture: the recorded old definition does not exist, so it diverges.
-    assert_eq!(replay(&start, &[e3.clone()]).outcome, ReplayOutcome::Divergent);
+    assert_eq!(replay(&start, std::slice::from_ref(&e3)).outcome, ReplayOutcome::Divergent);
     // AC-1 twice: the second now fails (label exists).
     let r = replay(&start, &[e1.clone(), e1.clone()]);
     assert_eq!(r.steps, [ReplayOutcome::Identical, ReplayOutcome::Divergent]);
