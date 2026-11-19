@@ -575,8 +575,8 @@ fn check_class(p: &StatementParts) -> Result<(), StmtError> {
         ("lpu_validated_by_mc", p.lpu_validated_by_mc.is_some()),
         ("nonlinearity", p.nonlinearity.is_some()),
     ];
-    match set.iter().find(|(_, s)| *s) {
-        Some((field, _)) => Err(StmtError::Uec0HasValue { field: *field }),
+    match set.into_iter().find(|(_, s)| *s) {
+        Some((field, _)) => Err(StmtError::Uec0HasValue { field }),
         None => Ok(()),
     }
 }
@@ -633,7 +633,9 @@ fn check_complete(p: &StatementParts) -> Result<(), StmtError> {
 /// Text fields are 1..=256 bytes of printable ASCII without space, `"` or `\`, so the
 /// canonical form never needs an escape.
 pub(crate) fn is_token(s: &str) -> bool {
-    !s.is_empty() && s.len() <= MAX_TEXT_BYTES && s.bytes().all(|b| (0x21..=0x7e).contains(&b) && b != b'"' && b != b'\\')
+    !s.is_empty()
+        && s.len() <= MAX_TEXT_BYTES
+        && s.bytes().all(|b| (0x21..=0x7e).contains(&b) && b != b'"' && b != b'\\')
 }
 
 /// `<scheme>:<rest>` with an RFC 3986 scheme and a non-empty rest.
@@ -651,7 +653,10 @@ fn is_semver(s: &str) -> bool {
     let parts: Vec<&str> = s.split('.').collect();
     parts.len() == 3
         && parts.iter().all(|n| {
-            !n.is_empty() && n.len() <= 9 && n.bytes().all(|b| b.is_ascii_digit()) && (n.len() == 1 || !n.starts_with('0'))
+            !n.is_empty()
+                && n.len() <= 9
+                && n.bytes().all(|b| b.is_ascii_digit())
+                && (n.len() == 1 || !n.starts_with('0'))
         })
 }
 
@@ -727,10 +732,7 @@ fn mismatch(ok: bool, field: &'static str) -> Result<(), StmtError> {
 fn check_consistency(p: &StatementParts) -> Result<(), StmtError> {
     if let Some(m) = p.method {
         mismatch(!m.is_claimed() || p.class == EvidenceClass::Uec1, "method")?;
-        mismatch(
-            p.class != EvidenceClass::Uec3 || matches!(m, Method::Iso15530_3 | Method::Iso15530_4),
-            "method",
-        )?;
+        mismatch(p.class != EvidenceClass::Uec3 || matches!(m, Method::Iso15530_3 | Method::Iso15530_4), "method")?;
     }
     if matches!(p.class, EvidenceClass::Uec2 | EvidenceClass::Uec3) {
         mismatch(!p.sources.is_empty() && p.sources.iter().all(|s| s.kind.is_characterized()), "sources")?;

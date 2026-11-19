@@ -185,15 +185,33 @@ fn req006_numbers_are_checked_on_bits() {
         (|p| p.expanded = Some(Expanded { value: 1e-6, k: 0.0 }), "expanded.k"),
         (|p| p.expanded = Some(Expanded { value: 1e-6, k: f64::NAN }), "expanded.k"),
         (|p| p.u_std = Some(f64::NEG_INFINITY), "u_std"),
-        (|p| p.interval = Some(CoverageInterval { low: -0.0, high: 1.0, p: 0.5, kind: IntervalKind::Shortest }), "interval.low"),
-        (|p| p.interval = Some(CoverageInterval { low: 1.0, high: 1.0, p: 0.5, kind: IntervalKind::Shortest }), "interval.high"),
         (
-            |p| p.interval = Some(CoverageInterval { low: 0.0, high: 1.0, p: f64::from_bits(0x3ff0_0000_0000_0000), kind: IntervalKind::Shortest }),
+            |p| p.interval = Some(CoverageInterval { low: -0.0, high: 1.0, p: 0.5, kind: IntervalKind::Shortest }),
+            "interval.low",
+        ),
+        (
+            |p| p.interval = Some(CoverageInterval { low: 1.0, high: 1.0, p: 0.5, kind: IntervalKind::Shortest }),
+            "interval.high",
+        ),
+        (
+            |p| {
+                p.interval = Some(CoverageInterval {
+                    low: 0.0,
+                    high: 1.0,
+                    p: f64::from_bits(0x3ff0_0000_0000_0000),
+                    kind: IntervalKind::Shortest,
+                })
+            },
             "interval.p",
         ),
         (
             |p| {
-                p.contributors.push(Contributor { input_id: "x".into(), sensitivity: Some(-0.0), u_contrib: 0.0, variance_share: 0.0 })
+                p.contributors.push(Contributor {
+                    input_id: "x".into(),
+                    sensitivity: Some(-0.0),
+                    u_contrib: 0.0,
+                    variance_share: 0.0,
+                })
             },
             "contributors.sensitivity",
         ),
@@ -206,8 +224,12 @@ fn req006_numbers_are_checked_on_bits() {
     // The smallest positive values are accepted: positivity is a sign and zero test only.
     let mut p = complete(EvidenceClass::Uec1, Method::Lpu);
     p.expanded = Some(Expanded { value: f64::from_bits(1), k: f64::from_bits(1) });
-    p.interval =
-        Some(CoverageInterval { low: -f64::MAX, high: f64::MAX, p: f64::from_bits(0x3fef_ffff_ffff_ffff), kind: IntervalKind::Shortest });
+    p.interval = Some(CoverageInterval {
+        low: -f64::MAX,
+        high: f64::MAX,
+        p: f64::from_bits(0x3fef_ffff_ffff_ffff),
+        kind: IntervalKind::Shortest,
+    });
     UncertaintyStatement::new(p).unwrap();
 }
 
@@ -255,7 +277,12 @@ fn agent_statements_are_proposals() {
 fn vectors_are_sorted_and_ids_unique() {
     let mut p = complete(EvidenceClass::Uec2, Method::Lpu);
     for id in ["z", "a", "m"] {
-        p.contributors.push(Contributor { input_id: id.into(), sensitivity: None, u_contrib: 1e-7, variance_share: 0.25 });
+        p.contributors.push(Contributor {
+            input_id: id.into(),
+            sensitivity: None,
+            u_contrib: 1e-7,
+            variance_share: 0.25,
+        });
     }
     p.provenance.rule_sets = vec!["uec-assign@1".into(), "est-policy@1".into()];
     let s = UncertaintyStatement::new(p.clone()).unwrap();
@@ -269,7 +296,12 @@ fn vectors_are_sorted_and_ids_unique() {
 #[test]
 fn every_field_changes_the_digest() {
     let mut base = complete(EvidenceClass::Uec1, Method::Lpu);
-    base.contributors.push(Contributor { input_id: "a".into(), sensitivity: Some(1.0), u_contrib: 1e-6, variance_share: 1.0 });
+    base.contributors.push(Contributor {
+        input_id: "a".into(),
+        sensitivity: Some(1.0),
+        u_contrib: 1e-6,
+        variance_share: 1.0,
+    });
     let d0 = UncertaintyStatement::new(base.clone()).unwrap().digest();
     let edits: [fn(&mut StatementParts); 8] = [
         |p| p.method = Some(Method::Mcm),
@@ -322,7 +354,10 @@ fn parser_fails_closed_on_hostile_input() {
     }
     // Deep nesting inside a member is bounded.
     let deep = format!("{{\"schema\":\"{SCHEMA}\",\"class\":{}{}}}", "[".repeat(100_000), "]".repeat(100_000));
-    assert_eq!(UncertaintyStatement::parse_canonical(deep.as_bytes()), Err(StmtError::Malformed { detail: "too_deep" }));
+    assert_eq!(
+        UncertaintyStatement::parse_canonical(deep.as_bytes()),
+        Err(StmtError::Malformed { detail: "too_deep" })
+    );
 }
 
 // ------------------------------------------------------------------ AC-6
@@ -370,7 +405,8 @@ impl Gen {
         f64::from_bits(self.below(ONE + 1))
     }
     fn token(&mut self, prefix: &str) -> String {
-        const CH: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:@/!#$%&'()*+,;<=>?[]^`{|}~";
+        const CH: &[u8] =
+            b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:@/!#$%&'()*+,;<=>?[]^`{|}~";
         let n = 1 + self.below(12) as usize;
         let mut s = prefix.to_owned();
         for _ in 0..n {
@@ -504,7 +540,8 @@ fn ac6_ten_thousand_seeded_statements_round_trip_losslessly() {
     for n in 0..10_000 {
         let parts = g.parts();
         let stmt = UncertaintyStatement::new(parts.clone()).unwrap_or_else(|e| panic!("case {n}: {e}: {parts:?}"));
-        let back = UncertaintyStatement::parse_canonical(stmt.canonical_json()).unwrap_or_else(|e| panic!("case {n}: {e}"));
+        let back =
+            UncertaintyStatement::parse_canonical(stmt.canonical_json()).unwrap_or_else(|e| panic!("case {n}: {e}"));
         assert_eq!(back, stmt, "case {n}");
         assert_eq!(back.digest(), stmt.digest());
         // Bit-level equality of every float (PartialEq alone would equate +0 and -0).

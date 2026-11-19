@@ -78,7 +78,11 @@ pub(crate) fn to_canonical(p: &StatementParts) -> Result<Vec<u8>, StmtError> {
         ])
     });
     put_opt(&mut m, "model", p.model.as_ref(), |x| {
-        Json::Obj(vec![("id".into(), s(&x.id)), ("semver".into(), s(&x.semver)), ("digest".into(), s(x.digest.as_str()))])
+        Json::Obj(vec![
+            ("id".into(), s(&x.id)),
+            ("semver".into(), s(&x.semver)),
+            ("digest".into(), s(x.digest.as_str())),
+        ])
     });
     let sources = p
         .sources
