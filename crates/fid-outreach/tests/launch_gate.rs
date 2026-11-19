@@ -96,7 +96,8 @@ fn states(v: &CValue) -> BTreeMap<String, St> {
         .map(|c| {
             let c = obj(c);
             let CValue::Arr(ps) = &c["problems"] else { panic!("no problems array") };
-            let ps: Vec<(String, String)> = ps.iter().map(|p| (s(obj(p), "reason").to_string(), s(obj(p), "subject").to_string())).collect();
+            let ps: Vec<(String, String)> =
+                ps.iter().map(|p| (s(obj(p), "reason").to_string(), s(obj(p), "subject").to_string())).collect();
             (s(c, "id").to_string(), (s(c, "state").to_string(), ps))
         })
         .collect()
@@ -138,7 +139,8 @@ fn ac1_ready() {
     let nodes: Vec<&str> = ev.iter().map(|e| s(obj(e), "node")).collect();
     assert_eq!(nodes, ["SCAN", "SCAN.CMP", "SCAN.VIEW"]);
     assert_eq!(s(obj(&ev[1]), "ac_total"), "2");
-    assert_eq!(s(obj(&ev[2]), "status"), "leaf"); // quotes stripped like tools/scope.py
+    // Quotes are stripped like tools/scope.py does.
+    assert_eq!(s(obj(&ev[2]), "status"), "leaf");
     // Parity evidence: 41 of 50 against 82 percent (exactly at the threshold).
     let CValue::Arr(ev) = &obj(&cs[2])["evidence"] else { panic!() };
     assert_eq!(s(obj(&ev[0]), "live"), "41");
@@ -355,11 +357,13 @@ fn md_escape_rules() {
 #[test]
 fn pct_is_exact() {
     // live * 100 >= min_pct * in_scope, with min_pct's exact binary value.
-    assert!(meets_pct(41, 50, 82.0)); // 4100 >= 4100
-    assert!(!meets_pct(40, 50, 82.0)); // 4000 < 4100
+    // 4100 >= 4100, and 4000 < 4100.
+    assert!(meets_pct(41, 50, 82.0));
+    assert!(!meets_pct(40, 50, 82.0));
     assert!(meets_pct(0, 10, 0.0));
     assert!(meets_pct(10, 10, 100.0));
-    assert!(meets_pct(1, 3, 33.3)); // the f64 nearest 33.3 is below it: 100 >= 99.89999...
+    // The f64 nearest 33.3 is below it: 100 >= 99.89999...
+    assert!(meets_pct(1, 3, 33.3));
     // The f64 nearest 100/3 is 33.33333333333333570..., so 3 times it exceeds 100.
     assert!(!meets_pct(1, 3, 100.0 / 3.0));
     // The f64 nearest 0.1 is above 0.1: 1000 times it exceeds 100 (floating point says equal).

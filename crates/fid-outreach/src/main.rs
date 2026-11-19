@@ -387,18 +387,8 @@ fn gate_check(args: &[String]) -> ExitCode {
     ) else {
         return usage();
     };
-    let inputs = launch_gate::Inputs {
-        milestone,
-        release,
-        author,
-        criteria,
-        tree,
-        trace,
-        status,
-        tests,
-        signoffs,
-        roster,
-    };
+    let inputs =
+        launch_gate::Inputs { milestone, release, author, criteria, tree, trace, status, tests, signoffs, roster };
     match launch_gate::run(&inputs).and_then(|r| launch_gate::write_report(&r, out).map(|()| r)) {
         Ok(report) => {
             if json {

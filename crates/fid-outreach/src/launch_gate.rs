@@ -40,11 +40,22 @@ pub const MAX_RELEASE_LEN: usize = 64;
 /// Fatal errors (exit 2, nothing written).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GateError {
-    InputUnreadable { path: String, reason: String },
-    InputParse { path: String, reason: String },
-    MilestoneUnknown { milestone: String },
+    InputUnreadable {
+        path: String,
+        reason: String,
+    },
+    InputParse {
+        path: String,
+        reason: String,
+    },
+    MilestoneUnknown {
+        milestone: String,
+    },
     /// The report could not be written to `--out`.
-    OutputUnwritable { path: String, reason: String },
+    OutputUnwritable {
+        path: String,
+        reason: String,
+    },
 }
 
 impl GateError {
@@ -789,12 +800,7 @@ pub fn evaluate(milestone: &Milestone, release: &str, author: &str, data: &Data)
             CriterionResult { id: c.id.clone(), kind, state, problems, evidence }
         })
         .collect();
-    Report {
-        milestone: milestone.id.clone(),
-        release: release.to_string(),
-        author: author.to_string(),
-        criteria,
-    }
+    Report { milestone: milestone.id.clone(), release: release.to_string(), author: author.to_string(), criteria }
 }
 
 type Outcome = (Vec<Problem>, Vec<EvidenceItem>);
@@ -807,7 +813,7 @@ fn node_status(node: &str, statuses: &[String], data: &Data) -> Outcome {
             vec![item(&[("node", node), ("status", "absent"), ("required", wanted.as_str())])],
         ),
         Some(n) => {
-            let ok = statuses.iter().any(|s| *s == n.status);
+            let ok = statuses.contains(&n.status);
             let problems = if ok {
                 Vec::new()
             } else {
@@ -830,11 +836,8 @@ fn phase_done(phase: Phase, scope: &[String], data: &Data) -> Outcome {
             problems.push(Problem::new(Reason::NodeMissing, s.as_str(), "scope node is not in the spec tree"));
         }
     }
-    let considered: Vec<&Node> = data
-        .nodes
-        .values()
-        .filter(|n| n.phase <= phase && scope.iter().any(|s| in_subtree(&n.id, s)))
-        .collect();
+    let considered: Vec<&Node> =
+        data.nodes.values().filter(|n| n.phase <= phase && scope.iter().any(|s| in_subtree(&n.id, s))).collect();
     if considered.is_empty() && problems.is_empty() {
         problems.push(Problem::new(
             Reason::NodeMissing,
@@ -898,11 +901,7 @@ pub fn meets_pct(live: u32, in_scope: u32, min_pct: f64) -> bool {
         return false;
     }
     let k = u32::try_from(-exp).unwrap_or(u32::MAX);
-    let need = if k >= 128 {
-        u128::from(rhs != 0)
-    } else {
-        (rhs >> k) + u128::from(rhs & ((1u128 << k) - 1) != 0)
-    };
+    let need = if k >= 128 { u128::from(rhs != 0) } else { (rhs >> k) + u128::from(rhs & ((1u128 << k) - 1) != 0) };
     lhs >= need
 }
 
