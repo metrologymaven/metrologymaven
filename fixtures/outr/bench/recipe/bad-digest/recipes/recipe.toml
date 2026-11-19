@@ -1,0 +1,23 @@
+# Fictional benchmark recipe (fixture, CC-BY-4.0).
+schema = "bench-recipe@1"
+id = "fixture.bad-digest"
+kind = "accuracy"
+title = "Fixture recipe fixture.bad-digest"
+since_release = "v0.1.0"
+machine_profile = "any"
+dataset = { id = "outr-bench-fixture-plane-v1", sha256 = "sha256:9b180afaacb8157fca0415fe50679afee7a1eb1ef96184d6bc0ac726397b0e3f" }
+
+[source]
+type = "release_numbers"
+selector = "/results/fixture.bad-digest"
+journal_selector = "/journals/fixture.bad-digest"
+
+[[fields]]
+name = "max_abs_error"
+unit = "mm"
+better = "lower"
+tolerance = "0.0005"
+tolerance_kind = "abs"
+
+[accuracy]
+note = "stub section; the kind validator of this kind owns its rules"

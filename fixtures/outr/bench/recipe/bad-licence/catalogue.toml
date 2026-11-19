@@ -1,0 +1,14 @@
+# Stub dataset catalogue for OUTR.BENCH.RUN.RECIPE fixtures (ECO.DATA.CAT layout).
+
+[[dataset]]
+id = "outr-bench-fixture-plane-v1"
+title = "Synthetic fixture file plane-points-v1.csv"
+licence = "LicenseRef-Fictional-NoRedistribution"
+size_bytes = 173
+sha256 = "76f06b9de2c92c60836b79989c2f6059509e12d4791794ace18442aec4f98ef6"
+
+[[dataset]]
+id = "outr-bench-fixture-timing-v1"
+title = "Synthetic fixture file timing-trace-v1.csv"
+size_bytes = 123
+sha256 = "9b180afaacb8157fca0415fe50679afee7a1eb1ef96184d6bc0ac726397b0e3f"

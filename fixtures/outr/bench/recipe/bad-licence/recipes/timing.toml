@@ -1,0 +1,23 @@
+# Fictional benchmark recipe (fixture, CC-BY-4.0).
+schema = "bench-recipe@1"
+id = "fixture.licence-timing"
+kind = "performance"
+title = "Fixture recipe fixture.licence-timing"
+since_release = "v0.1.0"
+machine_profile = "recommended"
+dataset = { id = "outr-bench-fixture-timing-v1", sha256 = "sha256:9b180afaacb8157fca0415fe50679afee7a1eb1ef96184d6bc0ac726397b0e3f" }
+
+[source]
+type = "release_numbers"
+selector = "/results/fixture.licence-timing"
+journal_selector = "/journals/fixture.licence-timing"
+
+[[fields]]
+name = "wall_time"
+unit = "ms"
+better = "lower"
+tolerance = "0.10"
+tolerance_kind = "rel"
+
+[performance]
+note = "stub section; the kind validator of this kind owns its rules"

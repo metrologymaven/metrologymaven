@@ -1,6 +1,7 @@
 """House-rules tooling (spec node ECO.RULES). Standard library only.
 
 - :mod:`house_rules.block`: generated block format and digest library (ECO.RULES.BLOCK).
+- :mod:`house_rules.check`: the house-rules check, ``python -m house_rules check`` (ECO.RULES.CHECK).
 """
 
 from .block import (
