@@ -1,14 +1,19 @@
 {
   "entries": [
     {
+      "path": "artifacts/tap.jsonl",
+      "kind": "file",
+      "digest": "sha256:b8260cf725d5deb6f832dd098154d7f7210228babf6243e7b2324998876a31ea"
+    },
+    {
       "path": "home/.config/agent.toml",
       "kind": "file",
       "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0"
     },
     {
-      "path": "home/DOT_cache/agent.log",
+      "path": "project/blobs/sha256/ab/cd/abcd000000000000000000000000000000000000000000000000000000000000",
       "kind": "file",
-      "digest": "sha256:836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213"
+      "digest": "sha256:fa2c8cc4f28176bbeed4b736df569a34c79cd3723e9ec42f9674b4d46ac6b8b8"
     },
     {
       "path": "project/format",
@@ -19,6 +24,11 @@
       "path": "project/project.db",
       "kind": "file",
       "digest": "sha256:68150cfc45bd62a7a166bb670b0a71ae123ece23eecdfe60aaf0a84e0bcb703d"
+    },
+    {
+      "path": "project/project.db-wal",
+      "kind": "file",
+      "digest": "sha256:27a75a1c9d8f31b0bc4ca4889e25fe6413f00d78d8578a36e4cce1c38c452e45"
     },
     {
       "path": "roots.json",

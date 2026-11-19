@@ -52,10 +52,10 @@ pub use adapt::{
 };
 pub use path::check_rel;
 pub use safety::{
-    claims, close, parse_predicates, parse_snapshot, pattern_matches, safety_report, snapshot_changes, Category,
-    CategoryReport, CommandDecl, ErrorReply, Evidence, FileChange, H1Approval, JournalEntry, Predicate, PredicateKind,
-    Principal, ReplySource, ResultRecord, RunRecord, SafetyReport, SiUnit, Subject, ATTEMPT_CODES, PREDICATE_KINDS,
-    REL_TOL, REPORT_FORMAT,
+    claims, close, evaluate, is_store_file, looks_raw_path, parse_predicates, parse_snapshot, pattern_matches,
+    safety_report, severity, snapshot_changes, stricter, Category, CategoryReport, CommandDecl, ErrorReply, Evidence,
+    FileChange, H1Approval, JournalEntry, Predicate, PredicateKind, Principal, ReplySource, ResultRecord, RunRecord,
+    SafetyReport, SiUnit, Subject, ATTEMPT_CODES, CLASS_MISMATCH, PREDICATE_KINDS, REL_TOL, REPORT_FORMAT,
 };
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
 pub use snapshot::{escape_name, Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};

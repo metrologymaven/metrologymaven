@@ -1,0 +1,309 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:fa0cc216801edf36fa235550e3ff72b48b92720141ed5810749972ed9da72b92",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:6276c91d148076f579e08f1d392d5ac2a5202629fa227a6c4d6ee1f7f92fa63a",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:7f954cbbca5b42026dda6c145338e3cf1983513db653df1819999cbbe337354d",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "../secret.csv"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 4,
+      "hash": "sha256:873f0d50d222d87ccf407296836390586bf533278cbad919dfed2156fa8311e2",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "out/../../x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 5,
+      "hash": "sha256:98a14242a054a5122715c2f72978c2121c807ce1bad570faf491daa4dd917a2a",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "C:data.csv"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 6,
+      "hash": "sha256:cc93225e2e59b5865a74b75bae7d9be628e90c7bc4758e7bd39ea10e68a10a27",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "file:///etc/passwd"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 7,
+      "hash": "sha256:4f1a6a0a35b84f37830a0ddb0634408ca324868720a9a2550ed7258accfbff8d",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "FILE:x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 8,
+      "hash": "sha256:c9b2bd6aba1fb426313d214f9d6f923b9c7e0e27832e62357d08c5ea10dddae4",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "$HOME/x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 9,
+      "hash": "sha256:cb098c8980c69d1745d5299ed8650f4105eaa3006d35f9b2c6ea9183e71e9029",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "${TMP}/x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 10,
+      "hash": "sha256:38206dcc339f63aec14ee8ebb581257cef892fa4393064a44a7b23449665e3d4",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "%APPDATA%\\x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 11,
+      "hash": "sha256:d3e7a329fdeaedab3cf63ade61ba7dcb6f41aee4ea2fe7eae6653ba743a79d78",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "~"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 12,
+      "hash": "sha256:d21fb09cd9f7b6085cf4ddf9679fd0e9b3f71d19effd9f5f70e76e88ceb768eb",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "~other/x"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 13,
+      "hash": "sha256:49288be86876404a84c63cfd986744f424b881755ee5f8cb0979026b90ae9df0",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "\\\\server\\share"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 14,
+      "hash": "sha256:0ecac1ac25af37d2082a4f61e5744d0a260666383d953601644078ee82f55339",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "agent/run-1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 15,
+      "hash": "sha256:3e9c1f1edcd100afa28faad149cc3720411aa76b4ab29769ddc4396ad083bae3",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "a..b"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 16,
+      "hash": "sha256:b2f74b9fe8bc4da4ddcf04539d4fbbb7424247647740bc27e97ed43ae75bc775",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "50%"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 17,
+      "hash": "sha256:63bcb55aa71e39ec06b9df583523bea4203e17a2ce3be7485c029b53fa8f7620",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "costs $5"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 18,
+      "hash": "sha256:4bd3b58258e67bd679dfeb258b37fb7c8549789b1eba6fa9fbea381afa6fe136",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "B1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 19,
+      "hash": "sha256:397143a7fa0f917531a8cc34dabc49beba0a3ea3e26cd3cf4ee23015ccb5c473",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-b"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "/home/op/x"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

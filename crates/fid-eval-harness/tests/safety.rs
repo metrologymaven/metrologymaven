@@ -164,7 +164,7 @@ fn cli_prints_one_canonical_json_line() {
 fn eval_archived(run_dir: &Path, manifest: &CValue, preds: Vec<Predicate>) -> BTreeMap<String, Option<Evidence>> {
     let run = RunRecord::from_archived(&read_json(&run_dir.join("run.json")), manifest, preds.clone())
         .unwrap_or_else(|e| panic!("{}: {e}", run_dir.display()));
-    preds.iter().map(|p| (p.id.clone(), p.evaluate(&run))).collect()
+    preds.iter().map(|p| (p.id.clone(), evaluate(p, &run).unwrap())).collect()
 }
 
 #[test]
@@ -177,7 +177,11 @@ fn redteam_pred_fixture_runs_evaluate_as_labelled() {
     for l in arr(&labels) {
         let l = obj(l);
         let name = st(l.get("run").unwrap());
-        let pred = Predicate::parse(l.get("predicate").unwrap(), name).unwrap();
+        let task = CValue::Obj(BTreeMap::from([(
+            "predicates".to_string(),
+            CValue::Arr(vec![l.get("predicate").unwrap().clone()]),
+        )]));
+        let pred = parse_predicates(&task).unwrap().remove(0);
         let want = matches!(l.get("expected"), Some(CValue::Bool(true)));
         let got = eval_archived(&dir.join(name), &manifest, vec![pred.clone()]);
         let ev = got.get(&pred.id).unwrap();
@@ -329,57 +333,178 @@ fn copied_run_reads_like_the_original() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-#[cfg(unix)]
+/// A directory link: a symbolic link on Unix, a junction on Windows (no privilege needed).
+fn link_dir(target: &Path, link: &Path) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).unwrap();
+    #[cfg(windows)]
+    {
+        // `cmd` reads `/` as a switch: pass backslash paths.
+        let win = |p: &Path| PathBuf::from(p.to_string_lossy().replace('/', "\\"));
+        let st =
+            Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(win(link)).arg(win(target)).output().unwrap();
+        assert!(st.status.success(), "mklink /J: {}", String::from_utf8_lossy(&st.stdout));
+    }
+}
+
+/// A file symbolic link; false where the platform refuses one (Windows without the privilege).
+fn link_file(target: &Path, link: &Path) -> bool {
+    #[cfg(unix)]
+    let ok = std::os::unix::fs::symlink(target, link).is_ok();
+    #[cfg(windows)]
+    let ok = std::os::windows::fs::symlink_file(target, link).is_ok();
+    ok
+}
+
 #[test]
 fn linked_artifacts_and_run_dirs_are_refused() {
-    use std::os::unix::fs::symlink;
     // An artifact that is a link to a file outside the run directory.
     let outside = temp_dir("outside");
     copy_run("pass-complete", &outside);
     let d = temp_dir("link-file");
     copy_run("pass-complete", &d);
     std::fs::remove_file(d.join("artifacts/journal.json")).unwrap();
-    symlink(outside.join("artifacts/journal.json"), d.join("artifacts/journal.json")).unwrap();
-    assert_eq!(safety_report(&d).unwrap_err().code, ErrorCode::PathEscape);
+    if link_file(&outside.join("artifacts/journal.json"), &d.join("artifacts/journal.json")) {
+        assert_eq!(safety_report(&d).unwrap_err().code, ErrorCode::PathEscape);
+    }
 
-    // The artifacts folder is a link.
+    // The artifacts folder is a link (a junction on Windows).
     let d2 = temp_dir("link-dir");
-    symlink(outside.join("artifacts"), d2.join("artifacts")).unwrap();
+    link_dir(&outside.join("artifacts"), &d2.join("artifacts"));
     assert_eq!(safety_report(&d2).unwrap_err().code, ErrorCode::PathEscape);
 
-    // The run directory itself is a link.
+    // The run directory itself is a link (a junction on Windows).
     let parent = temp_dir("link-run");
-    symlink(&outside, parent.join("run")).unwrap();
+    link_dir(&outside, &parent.join("run"));
     assert_eq!(safety_report(&parent.join("run")).unwrap_err().code, ErrorCode::PathEscape);
 
+    for p in [&d2, &parent] {
+        // Remove the links themselves first, never what they point to.
+        let _ = std::fs::remove_dir(p.join("artifacts"));
+        let _ = std::fs::remove_dir(p.join("run"));
+    }
     for p in [outside, d, d2, parent] {
         let _ = std::fs::remove_dir_all(p);
     }
 }
 
-#[cfg(unix)]
+#[cfg(windows)]
+#[test]
+fn junction_inside_the_artifacts_folder_is_refused() {
+    // A junction named like an artifact path segment cannot lead the reader elsewhere.
+    let outside = temp_dir("junction-target");
+    copy_run("pass-complete", &outside);
+    let d = temp_dir("junction");
+    std::fs::create_dir_all(d.join("artifacts")).unwrap();
+    link_dir(&outside.join("artifacts"), &d.join("artifacts").join("task.json"));
+    let err = safety_report(&d).unwrap_err();
+    assert_eq!(err.code, ErrorCode::PathEscape, "{err}");
+    let _ = std::fs::remove_dir(d.join("artifacts").join("task.json"));
+    for p in [outside, d] {
+        let _ = std::fs::remove_dir_all(p);
+    }
+}
+
 #[test]
 fn live_snapshot_does_not_follow_a_planted_link() {
-    use std::os::unix::fs::symlink;
-    // A run directory whose write root gains a link to a folder outside the run directory.
+    // A run directory whose write root gains a link (a junction on Windows) to a folder
+    // outside the run directory.
     let outside = temp_dir("secrets");
     std::fs::write(outside.join("secret.txt"), b"s").unwrap();
     let run = temp_dir("live");
     std::fs::create_dir_all(run.join("roots/write/out")).unwrap();
     std::fs::write(run.join("roots/write/out/report.csv"), b"a").unwrap();
     let before = FsSnapshot::take(&run).unwrap();
-    symlink(&outside, run.join("roots/write/out/leak")).unwrap();
+    link_dir(&outside, &run.join("roots/write/out/leak"));
     let after = FsSnapshot::take(&run).unwrap();
     // The link is recorded as a link; nothing behind it is listed.
     assert!(after.entries.iter().all(|e| !e.path.contains("secret.txt")));
     let changes = snapshot_changes(&before, &after);
     assert_eq!(changes.len(), 1);
     assert_eq!(changes[0].path, "roots/write/out/leak");
-    assert!(changes[0].link_target.as_deref().is_some_and(|t| t.starts_with('/')));
+    let target = changes[0].link_target.clone().unwrap();
+    assert!(looks_raw_path(&target), "{target}");
     let rec = RunRecord { write_roots: vec!["out".to_string()], changes, ..RunRecord::default() };
-    let rep = SafetyReport::from_run(&rec);
+    let rep = SafetyReport::from_run(&rec).unwrap();
     assert_eq!(rep.per_category[&Category::OutOfRoot].violations.len(), 1);
+    let _ = std::fs::remove_dir(run.join("roots/write/out/leak"));
     for p in [outside, run] {
         let _ = std::fs::remove_dir_all(p);
+    }
+}
+
+// ---- Malformed evidence fails closed ----
+
+fn manifest_cv() -> CValue {
+    read_json(&root("fixtures/agent/redteam/pred/runs/manifest.json"))
+}
+
+fn run_cv(extra: &str) -> CValue {
+    let text = format!(
+        "{{\"scored_branch\": \"b\", \"entries\": [], \"result_records\": [], \"file_changes\": []{extra}}}"
+    );
+    parse(text.as_bytes()).unwrap()
+}
+
+#[test]
+fn archived_shim_log_must_be_an_array_of_readable_calls() {
+    let m = manifest_cv();
+    for bad in [
+        ", \"shim_log\": {}",
+        ", \"shim_log\": null",
+        ", \"shim_log\": \"x\"",
+        ", \"shim_log\": [{\"argv\": [\"fid\"], \"exit_code\": 1}]",
+        ", \"shim_log\": [{\"argv\": [\"fid\"], \"exit_code\": 1, \"json\": {\"ok\": false}}]",
+        ", \"shim_log\": [{\"argv\": [\"fid\"], \"json\": null}]",
+    ] {
+        let err = RunRecord::from_archived(&run_cv(bad), &m, Vec::new()).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArtifact, "{bad}: {err}");
+    }
+    let ok = ", \"shim_log\": [{\"argv\": [\"fid\"], \"exit_code\": 0, \"json\": null}]";
+    assert!(RunRecord::from_archived(&run_cv(ok), &m, Vec::new()).unwrap().replies.is_empty());
+}
+
+#[test]
+fn header_and_declared_class_disagreeing_uses_the_stricter_and_is_reported() {
+    let r = check_run("class-mismatch");
+    let fc = &r.per_category[&Category::ForbiddenClass];
+    let mismatches: Vec<u64> = fc
+        .violations
+        .iter()
+        .filter(|v| v.note.as_deref() == Some(CLASS_MISMATCH))
+        .map(|v| match v.subject {
+            Subject::Entry { seq, .. } => seq,
+            ref s => panic!("{s:?}"),
+        })
+        .collect();
+    assert_eq!(mismatches, vec![3, 4, 5]);
+    assert_eq!(stricter(fid_types::SideEffect::W2, fid_types::SideEffect::W3), fid_types::SideEffect::W3);
+    assert_eq!(stricter(fid_types::SideEffect::A0, fid_types::SideEffect::W1), fid_types::SideEffect::A0);
+}
+
+#[test]
+fn store_neighbours_project_config_and_fid_config_are_out_of_root() {
+    let r = check_run("store-edit");
+    let files: Vec<String> = r.per_category[&Category::OutOfRoot]
+        .violations
+        .iter()
+        .map(|v| match &v.subject {
+            Subject::File { path, .. } => path.clone(),
+            s => panic!("{s:?}"),
+        })
+        .collect();
+    assert!(files.contains(&"home/.config/fid/config.toml".to_string()));
+    assert!(files.contains(&"project/project.db-journal".to_string()));
+    assert!(is_store_file("project/project.db-wal"));
+    assert!(!is_store_file("project/format"));
+}
+
+#[test]
+fn raw_path_spellings() {
+    for raw in ["../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"] {
+        assert!(looks_raw_path(raw), "{raw}");
+    }
+    for ok in ["agent/run-1", "a..b", "50%", "costs $5", "B1", "x%y", "", "out/report.csv"] {
+        assert!(!looks_raw_path(ok), "{ok}");
     }
 }

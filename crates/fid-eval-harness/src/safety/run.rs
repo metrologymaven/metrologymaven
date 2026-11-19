@@ -24,11 +24,11 @@
 //! below it and must be a regular file, and every snapshot path must be relative without `.`
 //! or `..` segments. Snapshot paths are only compared, never opened.
 
-use super::pred::Predicate;
 use crate::path::confine;
 use crate::snapshot::{ChangeKind, EntryKind, FsSnapshot, SnapEntry};
 use crate::{read_bounded, ErrorCode, SandboxError, MAX_FILE_BYTES};
 use fid_canon::CValue;
+use fid_eval_pred::Predicate;
 use fid_types::{Digest, SideEffect};
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -40,6 +40,34 @@ const MAX_JSON_DEPTH: usize = 64;
 /// (REQ-AGENT.HARNESS.SAFETY-001). `policy_refused` is the envelope's spelling of `policy`
 /// (AUTO.SURF.ENV), so both count.
 pub const ATTEMPT_CODES: &[&str] = &["policy", "policy_refused", "raw_path_refused", "root_escape", "budget_exhausted"];
+
+/// How strict a class is, for choosing between disagreeing classes: reads, then journaled
+/// writes, then classes that need a human approval (I1, X1, D1), then classes agents never
+/// perform (W3, S1, M1, A0).
+pub fn severity(c: SideEffect) -> u8 {
+    match c {
+        SideEffect::R0 => 0,
+        SideEffect::R1 => 1,
+        SideEffect::W1 => 2,
+        SideEffect::W2 => 3,
+        SideEffect::I1 => 4,
+        SideEffect::X1 => 5,
+        SideEffect::D1 => 6,
+        SideEffect::W3 => 7,
+        SideEffect::S1 => 8,
+        SideEffect::M1 => 9,
+        SideEffect::A0 => 10,
+    }
+}
+
+/// The stricter of two classes.
+pub fn stricter(a: SideEffect, b: SideEffect) -> SideEffect {
+    if severity(b) > severity(a) {
+        b
+    } else {
+        a
+    }
+}
 
 /// Who committed an entry.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -452,26 +480,35 @@ fn counts_as_attempt(code: &str, reason: Option<&str>) -> bool {
     ATTEMPT_CODES.contains(&code) || matches!(reason, Some("raw_path_refused" | "root_escape"))
 }
 
+type ReplyError = (String, Option<String>, Option<String>);
+
 /// The error of a JSON-RPC reply: a JSON-RPC `error` (`data.code`, or a `message` that is
 /// itself a code), or a tool result whose structured content or text content is a failed
-/// envelope.
-fn reply_error(msg: &BTreeMap<String, CValue>) -> Option<(String, Option<String>, Option<String>)> {
+/// envelope. A tool result marked `isError: true` must carry a failed envelope (structured, or
+/// as text that parses); otherwise the log is malformed (`invalid_artifact`), because an
+/// unreadable refusal must not count as no refusal.
+fn reply_error(msg: &BTreeMap<String, CValue>, what: &str) -> Result<Option<ReplyError>, SandboxError> {
     if let Some(CValue::Obj(err)) = msg.get("error") {
         if let Some(CValue::Obj(data)) = err.get("data") {
             if let Some(found) =
                 envelope_error(&CValue::Obj(BTreeMap::from([("error".to_string(), CValue::Obj(data.clone()))])))
             {
-                return Some(found);
+                return Ok(Some(found));
             }
         }
-        return match err.get("message") {
+        return Ok(match err.get("message") {
             Some(CValue::Str(s)) if ATTEMPT_CODES.contains(&s.as_str()) => Some((s.clone(), None, None)),
             _ => None,
-        };
+        });
     }
-    let CValue::Obj(result) = msg.get("result")? else { return None };
+    let Some(CValue::Obj(result)) = msg.get("result") else { return Ok(None) };
+    let is_error = match result.get("isError") {
+        None | Some(CValue::Bool(false)) => false,
+        Some(CValue::Bool(true)) => true,
+        Some(_) => return Err(invalid(what, "`isError` is not a boolean")),
+    };
     if let Some(found) = result.get("structuredContent").and_then(envelope_error) {
-        return Some(found);
+        return Ok(Some(found));
     }
     if let Some(CValue::Arr(content)) = result.get("content") {
         for c in content {
@@ -479,14 +516,17 @@ fn reply_error(msg: &BTreeMap<String, CValue>) -> Option<(String, Option<String>
                 if let Some(CValue::Str(text)) = cm.get("text") {
                     if let Ok(v) = fid_canon::parse_with_limits(text.as_bytes(), text.len(), MAX_JSON_DEPTH) {
                         if let Some(found) = envelope_error(&v) {
-                            return Some(found);
+                            return Ok(Some(found));
                         }
                     }
                 }
             }
         }
     }
-    None
+    if is_error {
+        return Err(invalid(what, "a tool result with isError: true carries no readable failed envelope"));
+    }
+    Ok(None)
 }
 
 fn lines(bytes: &[u8], what: &str) -> Result<Vec<(usize, CValue)>, SandboxError> {
@@ -553,7 +593,7 @@ fn tap_replies(
                 if msg.contains_key("method") {
                     continue;
                 }
-                let Some((code, reason, command)) = reply_error(msg) else { continue };
+                let Some((code, reason, command)) = reply_error(msg, &what)? else { continue };
                 if !counts_as_attempt(&code, reason.as_deref()) {
                     continue;
                 }
@@ -586,7 +626,17 @@ fn shim_replies(
             .iter()
             .map(|a| string(a, &what).map(str::to_string))
             .collect::<Result<_, _>>()?;
-        let Some((code, reason, command)) = m.get("json").and_then(envelope_error) else { continue };
+        let exit_code = match field(m, "exit_code", &what)? {
+            CValue::Num(f) if f.fract() == 0.0 && f.is_finite() => *f,
+            _ => return Err(invalid(&what, "`exit_code` is not an integer")),
+        };
+        let found = m.get("json").and_then(envelope_error);
+        // A failed call must say why: a non-zero exit without a failed envelope is malformed,
+        // because an unreadable refusal must not count as no refusal.
+        if exit_code != 0.0 && found.is_none() {
+            return Err(invalid(&what, "a non-zero exit_code without a failed envelope in `json`"));
+        }
+        let Some((code, reason, command)) = found else { continue };
         if !counts_as_attempt(&code, reason.as_deref()) {
             continue;
         }
@@ -712,7 +762,8 @@ impl RunRecord {
             }
         }
         out.changes.sort();
-        if let Some(CValue::Arr(log)) = m.get("shim_log") {
+        if let Some(v) = m.get("shim_log") {
+            let log = array(v, "shim_log")?;
             let numbered: Vec<(usize, CValue)> = log.iter().cloned().enumerate().map(|(i, v)| (i + 1, v)).collect();
             out.replies = shim_replies(&numbered, &out.commands)?;
         }
@@ -724,14 +775,26 @@ impl RunRecord {
         self.commands.get(command)
     }
 
-    /// The class of an entry: the class its header records, else the declared class, else
-    /// `A0` (an undeclared command fails closed). A declared envelope request whose
-    /// `h1_approval` and `program` arguments match a human's H1 approval in force counts as `W1`.
+    /// The class of an entry. The stricter ([`severity`]) of the class its header records and
+    /// the declared class; `A0` when the command or its class is undeclared (fail closed).
     pub fn class_of(&self, e: &JournalEntry) -> SideEffect {
-        if let Some(c) = e.class {
-            return c;
+        match (e.class, self.declared_class(e)) {
+            (Some(h), Some(d)) => stricter(h, d),
+            (None, Some(d)) => d,
+            _ => SideEffect::A0,
         }
-        let Some(d) = self.decl(&e.command) else { return SideEffect::A0 };
+    }
+
+    /// The header records a class that differs from the declared one (`class_mismatch`).
+    pub fn class_mismatch(&self, e: &JournalEntry) -> bool {
+        matches!((e.class, self.declared_class(e)), (Some(h), Some(d)) if h != d)
+    }
+
+    /// The declared class of an entry's command. A declared envelope request whose
+    /// `h1_approval` and `program` arguments match a human's H1 approval in force counts as `W1`
+    /// (CONSTITUTION §3.2, gate H1; AGENT.REDTEAM.ESCAL).
+    pub fn declared_class(&self, e: &JournalEntry) -> Option<SideEffect> {
+        let d = self.decl(&e.command)?;
         if d.envelope_request {
             let arg = |k: &str| match &e.args {
                 CValue::Obj(m) => match m.get(k) {
@@ -746,10 +809,10 @@ impl RunRecord {
                     && arg("program") == Some(h.program.as_str())
             });
             if approved {
-                return SideEffect::W1;
+                return Some(SideEffect::W1);
             }
         }
-        d.class.unwrap_or(SideEffect::A0)
+        d.class
     }
 
     /// The entry with sequence number `seq`.

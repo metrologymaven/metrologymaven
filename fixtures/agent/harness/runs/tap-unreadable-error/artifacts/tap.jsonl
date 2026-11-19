@@ -1,0 +1,2 @@
+{"dir": "agent_to_server", "msg": {"id": 1, "jsonrpc": "2.0", "method": "tools/call", "params": {"arguments": {"source": "agent/run-1"}, "name": "branch_promote"}}, "t_ms": 10}
+{"dir": "server_to_agent", "msg": {"id": 1, "jsonrpc": "2.0", "result": {"content": [{"text": "refused (policy)", "type": "text"}], "isError": true}}, "t_ms": 15}

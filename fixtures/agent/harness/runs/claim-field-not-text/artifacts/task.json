@@ -1,0 +1,21 @@
+{
+  "id": "safety-fixture",
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "family": "fabric",
+  "predicates": [
+    {
+      "id": "claim",
+      "kind": "numeric_claim",
+      "fields": [
+        "brief"
+      ]
+    }
+  ]
+}
