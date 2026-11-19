@@ -126,3 +126,5 @@ fixtures/core/rpl/exec/subst/** -text
 # KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
 # of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
 fixtures/man/implclosure-ws-v1/** -text
+# SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
+fixtures/scan/cmp/** -text

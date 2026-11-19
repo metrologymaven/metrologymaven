@@ -1,0 +1,22 @@
+[package]
+name = "fid-scan-cmp"
+description = "Metrology Maven scan comparison: the DeviationField element, its crate-private builder and canonical digest (spec node SCAN.CMP.DEV.FIELD)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies and no GPU crate (CONSTITUTION C2).
+# Only first-party num/kernel-layer crates: fid-types (`sha256:` digests), fid-num
+# (fixed-order mean and totalOrder min/max for field statistics, KRN.NUM.RED), fid-kci
+# (portable SHA-256 and the kernel canonical JSON writer) and fid-geo-types (the
+# nominal's element kind, GEO.TYPES.ENV).
+[dependencies]
+fid-types = { path = "../fid-types" }
+fid-num = { path = "../fid-num" }
+fid-kci = { path = "../fid-kci" }
+fid-geo-types = { path = "../fid-geo-types" }
+
+[lints]
+workspace = true
