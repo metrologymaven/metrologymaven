@@ -391,6 +391,8 @@ jobs:
           cargo build -q -p fid-wasm-check
           chk=target/debug/fid-wasm-check
           sha256sum "$ref" "$tst"
+          echo "TMPDUMP-REF $(base64 -w0 "$ref")"
+          echo "TMPDUMP-TST $(base64 -w0 "$tst")"
           $chk runtime-digest $c/wasm-runtime.toml > "$RUNNER_TEMP/runtime-digest.txt"
           cmp "$RUNNER_TEMP/runtime-digest.txt" fixtures/man/wasm/runtime-digest.txt
           # AC-1: the built modules import only allowlisted functions ...
