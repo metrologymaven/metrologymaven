@@ -5,7 +5,8 @@
 //!   (REQ-001), editions, versions and characteristic IDs.
 //! - [`profile`]: the `fid.defaults-profile/1` document, its strict bounded parser, the
 //!   key vocabulary it is checked against (`unknown_key`), and the digest: SHA-256 over
-//!   the RFC 8785 canonical JSON of the whole document.
+//!   the RFC 8785 canonical JSON of the whole document. The vocabulary comes from the DMT
+//!   schema (`GDT.RES.SCHEMA`) through [`KeyVocabulary::from_dmt_table`].
 //! - [`store`]: the project-local profile store and per-characteristic profile bindings,
 //!   with the two W2 commands `gdt.publish_defaults_profile@1` (REQ-002, 003, 004, 006)
 //!   and `gdt.repoint_defaults_profile@1` (REQ-005), human adoption of agent-branch
