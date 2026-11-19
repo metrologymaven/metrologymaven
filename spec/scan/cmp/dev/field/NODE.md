@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-cmp]
 satisfies: [REQ-SCAN.CMP.DEV-003, REQ-SCAN.CMP.DEV-005, REQ-SCAN.CMP.DEV-006]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, GEO.TYPES.ENV, CORE.JRN.CANON]
@@ -61,6 +62,17 @@ The `DeviationField` element that stores a comparison: one value and status per 
 - **Errors:** `scan.cmp.field_incomplete`, `scan.cmp.non_finite` (NaN or infinity in a `VALID` value).
 - **Determinism:** D0.
 - **Crate:** `fid-scan-cmp` (kernel tier, KNP-1). The crate must not depend on any GPU crate; the dependency allowlist check enforces it.
+- **Pinned at build (value-affecting choices; the Python reference `fixtures/scan/cmp/make_field_golden.py` implements exactly these):**
+  - *Layout version 1*, integers little-endian: `"FIDDEV"` | `0x01` | `prov_len` u64 | provenance canonical JSON (`prov_len` bytes) | `n` u64 | `n` × (`status` u8 | `value` f64 IEEE 754 bits). The provenance length prefix makes the layout unambiguous without parsing the JSON. Digest: SHA-256 (`fid-kci`'s portable FIPS 180-4 code) over the layout, written in the `sha256:` wire form (`fid-types::Digest`).
+  - *Status bytes:* `VALID` 1, `NO_MATCH` 2, `EXCLUDED` 3 (0 is never a status).
+  - *Values:* a `VALID` value must be finite (else `scan.cmp.non_finite` at `set`, nothing recorded); `VALID` −0.0 is stored as +0.0; every other value keeps its bits; non-`VALID` points store +0.0. Values are metres, signed as the primitive returns them (positive material-outside, SCAN.CMP.DEV.PRIM); the field never rescales or re-signs.
+  - *Provenance JSON:* the kernel canonical JSON of KRN.MAN.KCI (RFC 8785 restricted to strings, arrays and objects; every number a string), because CORE.JRN.CANON's writer (`fid-canon`) is in the model layer, which a kernel crate may not depend on. Members: `actual_digest`, `actual_selection` (omitted when absent), `algorithm_id` (KRN.MAN.CARD form), `alignment_digest`, `alignment_id`, `kernel_version`, `max_angle_rad`, `max_distance_m`, `method` (`normal` / `shortest`), `nominal_digest`, `nominal_kind` (GEO.TYPES.ENV wire name), `nominal_selection` (omitted when absent). The two numbers are the ECMAScript `Number::toString` of the f64 (RFC 8785 §3.2.2.3 form) inside a JSON string; −0.0 gives `"0"`.
+  - *Provenance domain* (`scan.cmp.invalid_parameter`, the code SCAN.CMP.DEV.PRIM uses): `max_distance_m` finite and > 0; `max_angle_rad` in [0, `f64::consts::PI`] (−0.0 accepted); `alignment_id` and `kernel_version` not empty.
+  - *Builder:* `set(index, DevResult)` with `index ≥ n` fails `scan.cmp.field_index_out_of_range` and records nothing; `finish()` names the lowest index that is unset or set more than once (`scan.cmp.field_incomplete { index, kind: unset | set_twice }`).
+  - *Empty input:* `n = 0` is valid; the field is empty, its digest covers the header and count 0, and its statistics have no values.
+  - *Bounded allocation:* the builder allocates exactly three dense columns, 10 bytes per point, with fallible reservation (`scan.cmp.allocation_failed { needed }`, `needed = 10·n` or `u64::MAX` on overflow) instead of aborting; hashing streams through a fixed 9 KiB block (1 024 points), independent of `n`.
+  - *Statistics* (`stats()`), over `VALID` points only (REQ-004): counts per status; totalOrder min and max (`fid-num::f`); mean by KRN.NUM.RED `mean` (fixed block-and-tree Neumaier sum, one division). An overflowing sum fails `scan.cmp.non_finite` with no index.
+  - *Element kind:* the wire name is `deviation_field`. GEO.TYPES.ENV's `ElementKind` is a closed geometric set in `fid-geo-types`, which cannot depend on this crate; adding the kind there is left to GEO.TYPES.REG.
 
 ## Test fixtures
 
