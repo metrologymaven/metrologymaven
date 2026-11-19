@@ -238,9 +238,14 @@ fn hostile_inputs_are_typed_errors() {
     p[9].0 = p[8].0 - 1;
     assert_eq!(estimate(&p, src), Err(TimeError::NonMonotonic { index: 9 }));
 
+    // Host-time inversion (receive jitter, buffered delivery) is not an error: it still estimates.
     let mut p = clean(20);
     p[4].1 = p[3].1 - 1;
-    assert_eq!(estimate(&p, src), Err(TimeError::HostNonMonotonic { index: 4 }));
+    p[11].1 = p[10].1 - 250;
+    let m = estimate(&p, src).unwrap();
+    assert_eq!(m.n, 20);
+    assert!(m.sigma_ns > 0.0 && m.sigma_ns.is_finite());
+    assert!((m.drift - 7e-6).abs() < 1e-3);
 
     // A device gap beyond 2^53 ns.
     let mut p = clean(20);
@@ -267,7 +272,8 @@ fn hostile_inputs_are_typed_errors() {
     assert_eq!(m.offset_ns, (i128::from(i64::MAX - 20) - i128::from(i64::MIN)) as f64);
     assert_eq!(m.map_to_host(i64::MIN + 3), Ok(i64::MAX - 17));
     assert_eq!(m.map_to_host(i64::MIN + 40).unwrap_err().code(), "time_overflow");
-    assert_eq!(m.map_to_host(0).unwrap_err().code(), "time_span_too_large");
+    assert_eq!(m.map_to_host(0), Err(TimeError::MapSpanTooLarge));
+    assert_eq!(m.map_to_host(0).unwrap_err().code(), "time_map_span_too_large");
 }
 
 /// A noise-free line is recovered exactly, sigma is zero, and mapping is exact.

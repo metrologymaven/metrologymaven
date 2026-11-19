@@ -59,11 +59,12 @@ pub enum TimeError {
     Duplicate { index: usize },
     /// Pair `index` has a device timestamp before the previous one (`time_non_monotonic`).
     NonMonotonic { index: usize },
-    /// Pair `index` has a host timestamp before the previous one (`time_host_non_monotonic`).
-    HostNonMonotonic { index: usize },
-    /// Pair `index` (or the mapped timestamp) lies more than [`MAX_SPAN_NS`] from the
-    /// reference sample (`time_span_too_large`).
+    /// Pair `index` lies more than [`MAX_SPAN_NS`] from the first pair once centred
+    /// (`time_span_too_large`).
     SpanTooLarge { index: usize },
+    /// A timestamp passed to [`ClockModel::map_to_host`] lies more than [`MAX_SPAN_NS`] from
+    /// the model's reference sample (`time_map_span_too_large`).
+    MapSpanTooLarge,
     /// An i64 nanosecond result does not fit (`time_overflow`).
     Overflow { what: &'static str },
     /// A sigma or threshold is NaN, infinite or negative (`time_invalid_input`).
@@ -81,8 +82,8 @@ impl TimeError {
             TimeError::TooManyPairs { .. } => "time_too_many_pairs",
             TimeError::Duplicate { .. } => "time_duplicate",
             TimeError::NonMonotonic { .. } => "time_non_monotonic",
-            TimeError::HostNonMonotonic { .. } => "time_host_non_monotonic",
             TimeError::SpanTooLarge { .. } => "time_span_too_large",
+            TimeError::MapSpanTooLarge => "time_map_span_too_large",
             TimeError::Overflow { .. } => "time_overflow",
             TimeError::InvalidInput { .. } => "time_invalid_input",
             TimeError::NotFinite { .. } => "time_not_finite",
@@ -99,8 +100,8 @@ impl fmt::Display for TimeError {
             TimeError::TooManyPairs { n } => write!(f, "{}: {n} pairs", self.code()),
             TimeError::Duplicate { index }
             | TimeError::NonMonotonic { index }
-            | TimeError::HostNonMonotonic { index }
             | TimeError::SpanTooLarge { index } => write!(f, "{} at pair {index}", self.code()),
+            TimeError::MapSpanTooLarge => write!(f, "{}: more than {MAX_SPAN_NS} ns from reference", self.code()),
             TimeError::Overflow { what } | TimeError::InvalidInput { what } | TimeError::NotFinite { what } => {
                 write!(f, "{}: {what}", self.code())
             }
@@ -185,12 +186,12 @@ pub struct ClockModel {
 impl ClockModel {
     /// Maps a device timestamp to host monotonic (session) time:
     /// `ref_host + dx + round(intercept + drift · dx)` with `dx = t_dev − ref_dev`, rounding
-    /// half away from zero. Fails with `time_span_too_large` when `|dx| > 2^53` and
+    /// half away from zero. Fails with `time_map_span_too_large` when `|dx| > 2^53` and
     /// `time_overflow` when the result leaves i64.
     pub fn map_to_host(&self, t_dev: i64) -> Result<i64, TimeError> {
         let dx = i128::from(t_dev) - i128::from(self.ref_dev_ns);
         if dx.unsigned_abs() > u128::from(MAX_SPAN_NS.unsigned_abs()) {
-            return Err(TimeError::SpanTooLarge { index: 0 });
+            return Err(TimeError::MapSpanTooLarge);
         }
         let corr = self.intercept_ns + self.drift * (dx as f64);
         if !corr.is_finite() {
@@ -214,10 +215,11 @@ impl ClockModel {
 /// Estimates offset, drift and sync uncertainty from `(t_dev, t_host)` pairs by ordinary
 /// least squares on pairs centred at the first sample, sums in index order, no FMA.
 ///
-/// Inputs must have strictly increasing device timestamps, non-decreasing host timestamps,
-/// and stay within [`MAX_SPAN_NS`] of the first pair once centred. Errors are checked in this
+/// Inputs must have strictly increasing device timestamps and stay within [`MAX_SPAN_NS`] of the first pair once centred. Errors are checked in this
 /// order: count (`time_estimate_insufficient`, `time_too_many_pairs`), then each pair in index
-/// order.
+/// order. Host timestamps are not required to be monotonic: host-receive jitter and buffered
+/// delivery can invert neighbouring host times, and OLS absorbs that as residual (maintainer
+/// decision in review of PR #164).
 pub fn estimate(pairs: &[(i64, i64)], source: TimeSource) -> Result<ClockModel, TimeError> {
     let n = pairs.len();
     if n < MIN_PAIRS {
@@ -231,20 +233,17 @@ pub fn estimate(pairs: &[(i64, i64)], source: TimeSource) -> Result<ClockModel, 
     let span = i128::from(MAX_SPAN_NS);
     let mut xs = Vec::with_capacity(n);
     let mut ys = Vec::with_capacity(n);
-    let mut prev: Option<(i64, i64)> = None;
+    let mut prev: Option<i64> = None;
     for (index, &(d, h)) in pairs.iter().enumerate() {
-        if let Some((pd, ph)) = prev {
+        if let Some(pd) = prev {
             if d == pd {
                 return Err(TimeError::Duplicate { index });
             }
             if d < pd {
                 return Err(TimeError::NonMonotonic { index });
             }
-            if h < ph {
-                return Err(TimeError::HostNonMonotonic { index });
-            }
         }
-        prev = Some((d, h));
+        prev = Some(d);
         let x = i128::from(d) - i128::from(d0);
         let y = (i128::from(h) - i128::from(h0)) - x;
         if x > span || y > span || y < -span {
@@ -275,7 +274,9 @@ pub fn estimate(pairs: &[(i64, i64)], source: TimeSource) -> Result<ClockModel, 
         sxy += pxy;
     }
     if !sxx.is_finite() || sxx <= 0.0 {
-        return Err(TimeError::NotFinite { what: "sum of squares of device time" });
+        // Unreachable with >= 16 strictly increasing device times; no spread in device time
+        // means the pairs cannot determine a drift.
+        return Err(TimeError::EstimateInsufficient { n });
     }
     let drift = sxy / sxx;
     let p = drift * mx;

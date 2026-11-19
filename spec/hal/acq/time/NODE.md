@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 
 # HAL.ACQ.TIME: Session timebase, clock offset and drift estimation, sync flag
@@ -64,6 +64,7 @@ Gives every session one timebase and every device a mapping onto it. It anchors 
 - **Data structures:** `SessionTimebase { anchor_utc_ns: i64, anchor_mono_ns: i64 }`, `ClockModel { offset_ns: f64, drift: f64, sigma_ns: f64, source: TimeSource, n: u32 }`, `FusionVerdict { Ok, TimeSyncInsufficient { rss_ns } }`.
 - **Algorithm:** centre the pairs on their first sample to keep magnitudes small; OLS slope and intercept with sums accumulated in index order, no FMA; residual σ with n − 2 degrees of freedom; RSS for fusion.
 - **Errors:** `time_estimate_insufficient`.
+- **Input order (maintainer decision, review of PR #164):** device timestamps must be strictly increasing; host timestamps need not be monotonic, because host-receive jitter and buffered delivery can invert neighbouring host times and OLS absorbs that as residual.
 - **Determinism:** D0 for recorded inputs; no FMA, fixed-order sums, sqrt only through the `fid-num` facade.
 - **Performance budget:** 10 000 pairs in < 1 ms on reference hardware [unverified until measured].
 - **Crate:** `fid-hal-runtime` (module `time`).

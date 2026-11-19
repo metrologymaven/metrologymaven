@@ -51,6 +51,16 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
+
+class CheckFailed(Exception):
+    pass
+
+
+def check(cond, what):
+    """Explicit check that also runs under `python -O` (unlike assert)."""
+    if not cond:
+        raise CheckFailed(repr(what))
+
 # ---------------------------------------------------------------- Philox4x32-10 (KRN.NUM.RNG)
 M0, M1 = 0xD2511F53, 0xCD9E8D57
 W0, W1 = 0x9E3779B9, 0xBB67AE85
@@ -73,7 +83,7 @@ for _ctr, _key, _want in [
     ((0, 0, 0, 0), (0, 0), (0x6627E8D5, 0xE169C58D, 0xBC57AC4C, 0x9B00DBD8)),
     ((MASK,) * 4, (MASK, MASK), (0x408F276D, 0x41C83B0E, 0xA20BC7C6, 0x6D5451FD)),
 ]:
-    assert philox(_ctr, _key) == _want
+    check(philox(_ctr, _key) == _want, 'philox(_ctr, _key) == _want')
 
 
 def uniform(seed, stream, index):
@@ -115,37 +125,37 @@ def rnd(q):
 
 def add(a, b):
     r = rnd(Fraction(a) + Fraction(b))
-    assert struct.pack("<d", r) == struct.pack("<d", a + b) or (r == 0 and a + b == 0), (a, b)
+    check(struct.pack("<d", r) == struct.pack("<d", a + b) or (r == 0 and a + b == 0), (a, b))
     return r
 
 
 def sub(a, b):
     r = rnd(Fraction(a) - Fraction(b))
-    assert r == a - b, (a, b)
+    check(r == a - b, (a, b))
     return r
 
 
 def mul(a, b):
     r = rnd(Fraction(a) * Fraction(b))
-    assert r == a * b, (a, b)
+    check(r == a * b, (a, b))
     return r
 
 
 def div(a, b):
     r = rnd(Fraction(a) / Fraction(b))
-    assert r == a / b, (a, b)
+    check(r == a / b, (a, b))
     return r
 
 
 def sqrt(a):
-    assert a >= 0
+    check(a >= 0, 'a >= 0')
     r = math.sqrt(a)
     if a == 0:
         return r
     # Correct rounding: a lies strictly between the squares of the midpoints around r.
     lo = (Fraction(math.nextafter(r, 0.0)) + Fraction(r)) / 2
     hi = (Fraction(math.nextafter(r, math.inf)) + Fraction(r)) / 2
-    assert lo * lo < Fraction(a) < hi * hi, a
+    check(lo * lo < Fraction(a) < hi * hi, a)
     return r
 
 
@@ -164,7 +174,7 @@ def estimate(pairs):
     xs = [d - d0 for d, _ in pairs]
     ys = [(h - h0) - (d - d0) for d, h in pairs]
     for v in xs + ys:
-        assert abs(v) <= 1 << 53
+        check(abs(v) <= 1 << 53, 'abs(v) <= 1 << 53')
     xs = [float(v) for v in xs]
     ys = [float(v) for v in ys]
     nf = float(n)
@@ -218,7 +228,7 @@ def exact_ols(pairs):
 
 def map_to_host(m, t_dev):
     dx = t_dev - m["ref_dev"]
-    assert abs(dx) <= 1 << 53
+    check(abs(dx) <= 1 << 53, 'abs(dx) <= 1 << 53')
     corr = add(m["intercept"], mul(m["drift"], float(dx)))
     return m["ref_host"] + dx + round_half_away(corr)
 
@@ -244,9 +254,9 @@ def outputs():
     m = estimate(pairs)
     ex = exact_ols(pairs)
     # AC-1 tolerances hold for the reference itself.
-    assert abs(m["offset"] - 3_000_000.0) <= 1_000.0
-    assert abs(m["drift"] - 50e-6) <= 0.5e-6
-    assert abs(m["sigma"] - 200.0) <= 30.0
+    check(abs(m["offset"] - 3_000_000.0) <= 1_000.0, 'abs(m["offset"] - 3_000_000.0) <= 1_000.0')
+    check(abs(m["drift"] - 50e-6) <= 0.5e-6, 'abs(m["drift"] - 50e-6) <= 0.5e-6')
+    check(abs(m["sigma"] - 200.0) <= 30.0, 'abs(m["sigma"] - 200.0) <= 30.0')
     lines = [
         "# HAL.ACQ.TIME AC-1/AC-2 golden values for drift_50ppm.json, from make_fixtures.py.",
         "# <name> <binary64 bits, hex> <decimal>; exact_* are unrounded OLS values (40 digits).",
