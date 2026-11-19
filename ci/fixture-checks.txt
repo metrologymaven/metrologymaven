@@ -1,0 +1,100 @@
+# Python fixture checks run by the Linux test job in .github/workflows/rust.yml.
+# One shell command per line, run in file order from the repository root; the first failure
+# fails the step. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
+python -m unittest discover -s tools/house_rules/tests -v
+python -m unittest discover -s tools/repo_template/tests -v
+python -m unittest discover -s tools/tests -v
+python crates/fid-report-pdf/fontgen/make_fonts.py --check
+python fixtures/agent/harness/runs/make_runs.py --check
+python fixtures/aln/qa/make_report_fixtures.py --check
+python fixtures/auto/cli/out/make_cases.py --check
+python fixtures/core/jrn/chain/append/make_fixtures.py --check
+python fixtures/core/reg/def/guide/make_fixtures.py --check
+python fixtures/core/reg/def/macro/make_golden.py --check
+python fixtures/core/reg/def/schema/make_fixtures.py --check
+python fixtures/core/reg/manifest/make_fixtures.py --check
+python fixtures/core/reg/ver/compat/make_fixtures.py --check
+python fixtures/core/reg/ver/gate/make_fixtures.py --check
+python fixtures/core/sto/sql/schema/make_fixture.py --check
+python fixtures/dsse/make_fixtures.py --check
+python fixtures/fetch/make_fixtures.py --check
+python fixtures/fit/make_trait_fixtures.py --check
+python fixtures/flow/fixes/make_fixtures.py --check
+python fixtures/flow/journey/make_fixtures.py --check
+python fixtures/flow/pkg/make_fixtures.py --check
+python fixtures/flow/study/tasks/make_fixtures.py --check
+python fixtures/gdt/dmt/check_schema.py
+python fixtures/gdt/dmt/make_fixtures.py --check
+python fixtures/gdt/dprof/make_cases.py --check
+python fixtures/gdt/resolve/make_cases.py --check
+python fixtures/gdt/spec/make_fixtures.py --check
+python fixtures/gdt/zone/make_shapes_fixtures.py --check
+python fixtures/geo/cad/topo/make_topo_fixtures.py --check
+python fixtures/geo/index/make_bvh_fixtures.py --check
+python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
+python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+python fixtures/geo/types/make_mesh_fixtures.py --check
+python fixtures/hal/idl/base/cfg/make_fixtures.py --check
+python fixtures/hal/idl/base/err/make_fixtures.py --check
+python fixtures/hal/idl/stamp/make_fixtures.py --check
+python fixtures/io/cad/worker/proto/make_digests.py --check
+python fixtures/io/cloud/las/hdr/make_fixtures.py --check
+python fixtures/io/dmis/conf/make_expected.py --check
+python fixtures/io/e57/phys/make_fixtures.py --check
+python fixtures/io/qif/xml/parse/make_fixtures.py --check
+python fixtures/io/reg/detect/make_fixtures.py --check
+python fixtures/io/reg/env/report/make_fixtures.py --check
+python fixtures/io/reg/prov/make_cases.py --check
+python fixtures/io/res/trans/model/make_fixtures.py --check
+python fixtures/knp1/data/make_fixtures.py --check
+python fixtures/knp1/seeded/make_expected.py --check
+python fixtures/man/check_manifest_schema.py
+python fixtures/man/make_implclosure_fixtures.py --check
+python fixtures/man/make_manifest_fixtures.py --check
+python fixtures/man/wasm/make_fixtures.py --check
+python fixtures/manifest/make_fixtures.py --check
+python fixtures/mig/ladder/def/make_fixtures.py --check
+python fixtures/num/fmt/make_ang_fixtures.py --check
+python fixtures/num/fmt/make_len_fixtures.py --check
+python fixtures/num/fmt/make_reg_fixtures.py --check
+python fixtures/num/la/make_la_fixtures.py --check
+python fixtures/num/la/make_qr_fixtures.py --check
+python fixtures/num/make_red_fixtures.py --check
+python fixtures/outr/bench/recipe/make_fixtures.py --check
+python fixtures/outr/site/import/make_fixtures.py --check
+python fixtures/pkg/check_package.py --strict
+python fixtures/pkg/make_fixtures.py --check
+python fixtures/plat/bench/make_expected.py --check
+python fixtures/plat/deploy/make_expected.py --check
+python fixtures/plat/matrix/make_page.py --check
+python fixtures/program/expr/make_cases.py --check
+python fixtures/rdl/format/make_fixtures.py --check
+python fixtures/rel/guide/make_fixtures.py --check
+python fixtures/rel/runbook/make_fixtures.py --check
+python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/model/tmpl/check_schema.py
+python fixtures/rpt/model/tmpl/make_fixtures.py --check
+python fixtures/rpt/output/text/check_pdf_text.py
+python fixtures/rpt/output/text/make_fixtures.py --check
+python fixtures/scan/cmp/make_field_golden.py --check
+python fixtures/solv/make_mstart_fixtures.py --check
+python fixtures/solv/vend/make_fixtures.py --check
+python fixtures/unc/class/make_table.py --check
+python fixtures/unc/dec/type/make_fixtures.py --check
+python fixtures/unc/dist/make_fixtures.py --check
+python fixtures/unc/stmt/make_fixtures.py --check
+python fixtures/viz/viewstate-samples/make_fixtures.py --check
+python tools/check_bench_schema.py
+python tools/check_command_defs.py
+python tools/check_entries.py
+python tools/check_eval_suite.py
+python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
+python tools/check_manifest_schema.py
+python tools/check_registry_keywords.py
+python tools/fixtures/geo_apply_cases.py --check
+python tools/fixtures/geo_digest_vectors.py --check
+python tools/fixtures/geo_index.py --check
+python tools/fixtures/geo_sel_sets.py --check
+python tools/fixtures/geo_tree_cases.py --check
+python tools/fixtures/geo_units_cases.py --check
+python tools/fixtures/geo_xform_cases.py --check
