@@ -6,7 +6,7 @@ use crate::chars::dprof::CharId;
 use crate::chars::spec::GoverningSpec;
 use fid_canon::CValue;
 use fid_gps::dmt::DmtKey;
-use fid_kdec::{Decision, EvidenceBasis, Outcome, RuleId, RuleRef};
+use fid_kdec::{Decision, EvidenceBasis, NotDecidableReason as UncReason, Outcome, RuleId, RuleRef};
 use fid_kunc::{CoverageInterval, EvidenceClass, Expanded, Method, Uec0Reason, UncertaintyStatement};
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -586,7 +586,9 @@ impl ResultRecordBuilder {
     /// `input_digests`, `journal_entry`, `dmt_row`, `operator_chain_digest`, `dmt_digest`;
     /// `unit_mismatch` when the statement's unit differs from the value's; and
     /// `decision_basis_mismatch` when the UNC decision rests on a statement other than the
-    /// record's. Then the canonical JSON and its digest.
+    /// record's, or rests on none while the record carries one (except `NOT_DECIDABLE` with
+    /// `rule_missing` or `label_only`; GDT's own `no_rule_bound` and `unc_no_decision` carry
+    /// no UNC decision and so no basis). Then the canonical JSON and its digest.
     pub fn finish(self) -> Result<ResultRecord, RecordError> {
         if let Some(e) = self.error {
             return Err(e);
@@ -607,9 +609,20 @@ impl ResultRecordBuilder {
         if uncertainty.unit.as_deref().is_some_and(|u| u != value.unit()) {
             return Err(RecordError::UnitMismatch);
         }
-        if let Some(b) = decision.basis() {
-            if uncertainty.statement != Some(b.statement()) {
-                return Err(RecordError::DecisionBasisMismatch);
+        if let Some(d) = decision.unc() {
+            match d.basis() {
+                Some(b) if uncertainty.statement != Some(b.statement()) => {
+                    return Err(RecordError::DecisionBasisMismatch);
+                }
+                Some(_) => {}
+                // A UNC decision that ignores the record's statement; only the reasons that
+                // need no uncertainty (`rule_missing`, `label_only`) may come without one.
+                None if uncertainty.statement.is_some()
+                    && !matches!(d.outcome(), Outcome::NotDecidable(UncReason::RuleMissing | UncReason::LabelOnly)) =>
+                {
+                    return Err(RecordError::DecisionBasisMismatch);
+                }
+                None => {}
             }
         }
         let mut record = ResultRecord {

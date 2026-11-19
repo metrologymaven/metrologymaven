@@ -28,6 +28,9 @@ fid-replay = { path = "../fid-replay" }
 # UNC statement (kernel layer, below services; no third-party dependencies).
 fid-kdec = { path = "../fid-kdec" }
 fid-kunc = { path = "../fid-kunc" }
+# GDT.CHAR.RECORD: the registry definition of `gdt.get_result@1`, built through the
+# registry's field rules (CORE.REG.DEF), as fid-align does for its reads. Layer model.
+fid-registry = { path = "../fid-registry" }
 
 [lints]
 workspace = true

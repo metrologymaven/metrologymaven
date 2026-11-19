@@ -19,7 +19,9 @@
 //! input, uncharacterized input) in both its `uncertainty` and its `decision.basis`, so a
 //! claimed value never looks measured. [`ResultStore`] holds one record per
 //! (run, characteristic) on the branch derived from the principal (`duplicate_result`,
-//! REQ-006), and [`get_result`] returns its canonical JSON (REQ-007).
+//! REQ-006), and [`get_result`] returns its canonical JSON (REQ-007); [`invoke_cli`] and
+//! [`invoke_mcp`] are its CLI (`fid gdt get-result`) and MCP (`gdt_get_result`) entry
+//! points, and [`command_def`] its registry definition.
 //!
 //! # Wire form (`fid.gdt-result/1`, RFC 8785)
 //!
@@ -63,15 +65,15 @@
 #![doc = include_str!("../../../tests/compile_fail/record_outcome_control.rs")]
 #![doc = "```"]
 //!
-//! Nor can a record decision be written as a literal:
-//!
-//! ```compile_fail
-//! let d = fid_gdt::chars::record::RecordDecision { outcome: fid_kdec::Outcome::Conforms };
-//! ```
+//! [`RecordDecision`] has private fields and no public constructor, so the builder is the
+//! only way a decision enters a record; `tests/record.rs` also scans this crate's sources
+//! for a call of fid-kdec's decision constructor and for a written `CONFORMS`, `NONCONFORMS` or `INDETERMINATE`
+//! outcome, and fails on either.
 //!
 //! Nothing here panics on any input, and every input is bounded.
 
 mod builder;
+mod command;
 pub mod fields;
 mod store;
 
@@ -79,6 +81,7 @@ pub use builder::{
     NotDecidableReason, RecordDecision, ResultRecord, ResultRecordBuilder, Uncertainty, DECISION_SOURCE_GDT,
     DECISION_SOURCE_UNC, RECORD_SCHEMA,
 };
+pub use command::{command_def, invoke_cli, invoke_mcp, GET_RESULT_CLI, GET_RESULT_MCP, MAX_PARAMS_BYTES};
 pub use fields::{AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, Quantity, RunId};
 pub use store::{get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};
 
@@ -127,7 +130,12 @@ pub enum RecordError {
     },
     /// `duplicate_result`: a record for this (run, characteristic) is already committed.
     DuplicateResult,
-    /// `not_found`: no record for this (run, characteristic) on the principal's branch.
+    /// `bad_params{reason}`: CLI arguments or MCP parameters that are not a valid call.
+    BadParams {
+        /// Static reason.
+        reason: &'static str,
+    },
+    /// `not_found`: no record for this (run, characteristic) visible to the principal.
     NotFound,
     /// `store_full`: the store holds [`MAX_RECORDS`] records.
     StoreFull,
@@ -151,6 +159,7 @@ impl RecordError {
             RecordError::DecisionBasisMismatch => "decision_basis_mismatch",
             RecordError::InvalidDecision { .. } => "invalid_decision",
             RecordError::DuplicateResult => "duplicate_result",
+            RecordError::BadParams { .. } => "bad_params",
             RecordError::NotFound => "not_found",
             RecordError::StoreFull => "store_full",
             RecordError::CanonicalEncoding => "canonical_encoding",
@@ -163,7 +172,7 @@ impl RecordError {
             RecordError::IncompleteResult { field }
             | RecordError::FieldChanged { field }
             | RecordError::InvalidField { field } => Some(field),
-            RecordError::InvalidDecision { reason } => Some(reason),
+            RecordError::InvalidDecision { reason } | RecordError::BadParams { reason } => Some(reason),
             _ => None,
         }
     }

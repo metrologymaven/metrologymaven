@@ -10,8 +10,9 @@
 use fid_canon::CValue;
 use fid_gdt::chars::dprof::CharId;
 use fid_gdt::chars::record::{
-    get_result, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, NotDecidableReason, Quantity,
-    RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId, Uncertainty, GET_RESULT_COMMAND,
+    command_def, get_result, invoke_cli, invoke_mcp, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion,
+    Measurand, NotDecidableReason, Quantity, RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId,
+    Uncertainty, GET_RESULT_CLI, GET_RESULT_COMMAND, GET_RESULT_MCP,
 };
 use fid_gdt::chars::spec::{GoverningSpec, SpecError};
 use fid_gps::dmt::DmtKey;
@@ -457,4 +458,163 @@ fn other_fields_cannot_change_either() {
     assert_eq!(b.finish().unwrap_err(), RecordError::FieldChanged { field: "measurand" });
     let b = ac1_builder("").operator_chain_digest(Digest::from_bytes([1; 32]));
     assert_eq!(b.finish().unwrap_err(), RecordError::FieldChanged { field: "operator_chain_digest" });
+}
+
+// ------------------------------------------------------------------ review of #256
+
+#[test]
+fn person_then_agent_is_a_duplicate_and_the_agent_reads_the_persons_result() {
+    let o = inputs();
+    let (run, ch) = (s(&o, "run"), s(&o, "characteristic"));
+    let mut store = ResultStore::new();
+    store.commit(H, ac1_record()).unwrap();
+    // The person's result is visible to agents and scripts ...
+    assert_eq!(get_result(&store, A, run, ch).unwrap(), ac1_record().canonical_json());
+    assert_eq!(get_result(&store, Principal::Script, run, ch).unwrap(), ac1_record().canonical_json());
+    // ... so neither may add a second record for the same (run, characteristic).
+    assert_eq!(store.commit(A, ac1_record()).unwrap_err(), RecordError::DuplicateResult);
+    assert_eq!(store.commit(Principal::Script, ac1_record()).unwrap_err(), RecordError::DuplicateResult);
+    assert_eq!(store.len(), 1);
+}
+
+#[test]
+fn agent_then_person_is_accepted_and_the_agent_record_is_shadowed() {
+    let o = inputs();
+    let (run, ch) = (s(&o, "run"), s(&o, "characteristic"));
+    let mut store = ResultStore::new();
+    // The agent's proposal: same (run, characteristic), different content.
+    let proposal =
+        builder_with(&o, "", Some(Uncertainty::of(&statement("uec2_lpu.json"))), None, None).finish().unwrap();
+    store.commit(A, proposal.clone()).unwrap();
+    assert_eq!(get_result(&store, H, run, ch).unwrap_err(), RecordError::NotFound);
+    store.commit(H, ac1_record()).unwrap();
+    // The person sees only the working record; the agent still sees its own first.
+    assert_eq!(get_result(&store, H, run, ch).unwrap(), ac1_record().canonical_json());
+    assert_eq!(get_result(&store, A, run, ch).unwrap(), proposal.canonical_json());
+    // And the person cannot commit twice.
+    assert_eq!(store.commit(H, ac1_record()).unwrap_err(), RecordError::DuplicateResult);
+    assert_eq!(store.len(), 2);
+}
+
+/// GDT never decides conformance: no source file of this crate builds a UNC decision or
+/// writes an outcome that states a side or INDETERMINATE.
+#[test]
+fn sources_never_construct_a_decision_or_an_outcome() {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                out.push(p);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut files);
+    assert!(files.len() > 10, "scan found too few files");
+    let banned = [
+        "Decision::new(",
+        "Outcome::Conforms",
+        "Outcome::Nonconforms",
+        "Outcome::Indeterminate",
+        "Outcome::from_wire(",
+    ];
+    let mut hits = Vec::new();
+    for f in &files {
+        let text = std::fs::read_to_string(f).unwrap();
+        for (n, line) in text.lines().enumerate() {
+            let flat: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+            for b in banned {
+                if flat.contains(b) {
+                    hits.push(format!("{}:{}: {b}", f.display(), n + 1));
+                }
+            }
+        }
+    }
+    assert!(hits.is_empty(), "{hits:#?}");
+}
+
+#[test]
+fn a_unc_decision_without_basis_cannot_ignore_the_records_statement() {
+    let o = inputs();
+    let rule = stub_rule(&o);
+    let catalog = Catalog::builtin().unwrap();
+    let simple = catalog.resolve(&rule).unwrap();
+    let no_basis = Decision::new(Some(&simple), Outcome::NotDecidable(UncReason::UMissing), None).unwrap();
+    // The record carries an evaluated statement, the decision ignores it.
+    let b =
+        builder_with(&o, "", Some(Uncertainty::of(&statement("uec2_lpu.json"))), Some(&rule), Some(no_basis.clone()));
+    assert_eq!(b.finish().unwrap_err(), RecordError::DecisionBasisMismatch);
+    // Without a statement in the record, the same decision is fine.
+    let r = builder_with(&o, "", Some(Uncertainty::uec0(Uec0Reason::UMissing)), Some(&rule), Some(no_basis))
+        .finish()
+        .unwrap();
+    assert_eq!(r.decision().reason(), Some("u_missing"));
+    // label_only needs no uncertainty: allowed with a statement in the record.
+    let label = RuleRef::parse("dr:as-reported-by-source@1").unwrap();
+    let label_rule = catalog.resolve(&label).unwrap();
+    let d = Decision::new(Some(&label_rule), Outcome::NotDecidable(UncReason::LabelOnly), None).unwrap();
+    let r = builder_with(&o, "", Some(Uncertainty::of(&statement("uec2_lpu.json"))), Some(&label), Some(d))
+        .finish()
+        .unwrap();
+    assert_eq!(r.decision().reason(), Some("label_only"));
+    // GDT's own reasons carry no UNC decision and stay allowed (AC-3, unc_no_decision).
+    let stmt = Some(Uncertainty::of(&statement("uec2_lpu.json")));
+    assert!(builder_with(&o, "", stmt.clone(), None, None).finish().is_ok());
+    assert!(builder_with(&o, "", stmt, Some(&rule), None).finish().is_ok());
+}
+
+#[test]
+fn cli_and_mcp_return_the_stored_bytes() {
+    let o = inputs();
+    let (run, ch) = (s(&o, "run"), s(&o, "characteristic"));
+    let mut store = ResultStore::new();
+    store.commit(H, ac1_record()).unwrap();
+    let want = expected("flatness_conforms");
+    let cli = invoke_cli(&store, H, &[GET_RESULT_CLI, "--run", run, "--char", ch, "--json"]).unwrap();
+    assert_eq!(cli, want);
+    let params = format!(r#"{{"run":"{run}","char":"{ch}"}}"#);
+    assert_eq!(invoke_mcp(&store, H, GET_RESULT_MCP, params.as_bytes()).unwrap(), want);
+    // Agents read the person's result through MCP too.
+    assert_eq!(invoke_mcp(&store, A, GET_RESULT_MCP, params.as_bytes()).unwrap(), want);
+    let code = |r: Result<Vec<u8>, RecordError>| r.unwrap_err().to_string();
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--run", "nope", "--char", ch])), "not_found");
+    assert_eq!(code(invoke_cli(&store, H, &[])), "bad_params{missing subcommand}");
+    assert_eq!(code(invoke_cli(&store, H, &["get-results"])), "bad_params{unknown subcommand}");
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--run", run])), "bad_params{missing parameter}");
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--run"])), "bad_params{option needs a value}");
+    assert_eq!(
+        code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--run", run, "--run", run, "--char", ch])),
+        "bad_params{repeated option}"
+    );
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--json", "--json"])), "bad_params{repeated option}");
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "--x", "1"])), "bad_params{unknown option}");
+    assert_eq!(code(invoke_cli(&store, H, &[GET_RESULT_CLI, "stray"])), "bad_params{unexpected argument}");
+    assert_eq!(code(invoke_cli(&store, H, &["--json"; 9])), "bad_params{too many arguments}");
+    assert_eq!(code(invoke_mcp(&store, H, "gdt_get_results", params.as_bytes())), "bad_params{unknown tool}");
+    assert_eq!(code(invoke_mcp(&store, H, GET_RESULT_MCP, b"[]")), "bad_params{params is not an object}");
+    assert_eq!(code(invoke_mcp(&store, H, GET_RESULT_MCP, br#"{"run":"a","run":"b"}"#)), "bad_params{duplicate key}");
+    assert_eq!(
+        code(invoke_mcp(&store, H, GET_RESULT_MCP, br#"{"run":"a","char":1}"#)),
+        "bad_params{parameter is not a string}"
+    );
+    assert_eq!(
+        code(invoke_mcp(&store, H, GET_RESULT_MCP, br#"{"run":"a","char":"c","x":"y"}"#)),
+        "bad_params{unknown parameter}"
+    );
+    assert_eq!(
+        code(invoke_mcp(&store, H, GET_RESULT_MCP, br#"{"run":"a","char":{"x":1}}"#)),
+        "bad_params{params too large or too deep}"
+    );
+    let big = vec![b' '; 5000];
+    assert_eq!(code(invoke_mcp(&store, H, GET_RESULT_MCP, &big)), "bad_params{params too large or too deep}");
+}
+
+#[test]
+fn command_definition_is_r0_d0_on_cli_and_mcp() {
+    let d = command_def().unwrap();
+    assert_eq!(format!("{}@{}", d.id, d.major), GET_RESULT_COMMAND);
+    assert_eq!(d.side_effect.as_str(), "R0");
+    assert_eq!(d.determinism.as_str(), "D0");
 }

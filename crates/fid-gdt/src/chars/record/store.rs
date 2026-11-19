@@ -14,10 +14,16 @@ pub const GET_RESULT_COMMAND: &str = "gdt.get_result@1";
 /// Most records one store holds.
 pub const MAX_RECORDS: usize = 1_000_000;
 
-/// The committed ResultRecords. A record lives on the branch derived from the committing
-/// principal ([`Branch::for_principal`]: a person's on the working branch, an agent's or a
-/// script's on the agent branch), so agent work never reaches the working branch, and each
-/// branch holds at most one record per (run, characteristic).
+/// The committed ResultRecords, keyed by (branch, run, characteristic). The branch is
+/// derived from the principal ([`Branch::for_principal`]), with the overlay rule of
+/// `chars::dprof`:
+///
+/// - a person commits to and reads from the working branch only, so agent work never
+///   reaches it; a person may commit for a (run, characteristic) an agent already proposed
+///   a record for, and that agent record stays on the agent branch, shadowed;
+/// - an agent or a script commits to the agent branch, refused with `duplicate_result` when
+///   either branch already holds that (run, characteristic); it reads the agent branch
+///   first, then the working branch.
 #[derive(Debug, Clone, Default)]
 pub struct ResultStore {
     records: BTreeMap<(Branch, RunId, CharId), ResultRecord>,
@@ -29,25 +35,37 @@ impl ResultStore {
         ResultStore::default()
     }
 
-    /// Commits `record` on `principal`'s branch and returns its digest. A second record for
-    /// the same (run, characteristic) on that branch is `duplicate_result`
-    /// (REQ-GDT.CHAR.RECORD-006), whatever its content; a full store is `store_full`.
+    /// Commits `record` on `principal`'s branch and returns its digest. `duplicate_result`
+    /// (REQ-GDT.CHAR.RECORD-006), whatever the content, when a record for the same
+    /// (run, characteristic) is visible to the committer: on the working branch for a
+    /// person; on the agent or the working branch for an agent or a script. A full store is
+    /// `store_full`.
     pub fn commit(&mut self, principal: Principal, record: ResultRecord) -> Result<Digest, RecordError> {
-        let key = (Branch::for_principal(principal), record.run().clone(), record.characteristic().clone());
-        if self.records.contains_key(&key) {
+        let branch = Branch::for_principal(principal);
+        if self.lookup(branch, record.run(), record.characteristic()).is_some() {
             return Err(RecordError::DuplicateResult);
         }
         if self.records.len() >= MAX_RECORDS {
             return Err(RecordError::StoreFull);
         }
         let digest = record.digest();
-        self.records.insert(key, record);
+        self.records.insert((branch, record.run().clone(), record.characteristic().clone()), record);
         Ok(digest)
     }
 
-    /// The record of (run, characteristic) on `principal`'s branch (`not_found`).
+    /// The record of (run, characteristic) as `principal` sees it (`not_found`): a person
+    /// reads the working branch only; an agent or a script reads the agent branch, then the
+    /// working branch.
     pub fn get(&self, principal: Principal, run: &RunId, char: &CharId) -> Result<&ResultRecord, RecordError> {
-        self.records.get(&(Branch::for_principal(principal), run.clone(), char.clone())).ok_or(RecordError::NotFound)
+        self.lookup(Branch::for_principal(principal), run, char).ok_or(RecordError::NotFound)
+    }
+
+    fn lookup(&self, branch: Branch, run: &RunId, char: &CharId) -> Option<&ResultRecord> {
+        let found = |b: Branch| self.records.get(&(b, run.clone(), char.clone()));
+        match branch {
+            Branch::Working => found(Branch::Working),
+            Branch::Agent => found(Branch::Agent).or_else(|| found(Branch::Working)),
+        }
     }
 
     /// Number of records on all branches.
@@ -62,7 +80,7 @@ impl ResultStore {
 }
 
 /// `gdt.get_result@1` (R0, REQ-GDT.CHAR.RECORD-007): the stored canonical JSON of the record
-/// of (`run`, `char`) on `principal`'s branch. Errors: `invalid_field{run}`,
+/// of (`run`, `char`) as `principal` sees it ([`ResultStore::get`]). Errors: `invalid_field{run}`,
 /// `invalid_field{char}` for IDs outside their grammar, `not_found`. Read-only.
 pub fn get_result<'s>(
     store: &'s ResultStore,

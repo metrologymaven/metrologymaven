@@ -576,6 +576,7 @@ dependencies = [
  "fid-io-reg",
  "fid-kdec",
  "fid-kunc",
+ "fid-registry",
  "fid-replay",
  "fid-types",
 ]
