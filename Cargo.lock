@@ -894,6 +894,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-registry-build"
+version = "0.0.1"
+dependencies = [
+ "fid-align",
+ "fid-canon",
+ "fid-dep",
+ "fid-jobs",
+ "fid-registry",
+ "fid-report",
+]
+
+[[package]]
 name = "fid-render"
 version = "0.0.1"
 dependencies = [

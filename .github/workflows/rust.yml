@@ -224,6 +224,8 @@ jobs:
         run: cargo xtask study-tasks-check
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
+      - name: Second implementation recomputes the registry manifest digests (CORE.REG.MAN AC-3)
+        run: node fixtures/core/reg/manifest/check_digests.mjs
       - name: CLI smoke test
         shell: bash
         run: |
@@ -258,6 +260,8 @@ jobs:
           python fixtures/core/reg/def/guide/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/manifest/make_fixtures.py --check
+          python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check
           python fixtures/gdt/dmt/make_fixtures.py --check
           python fixtures/gdt/dmt/check_schema.py
