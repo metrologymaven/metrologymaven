@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metrologymaven/metrologymaven/schemas/report-template.v1.json",
+  "title": "Report template, schema version 1 (RPT.MODEL.TMPL.FORMAT, application/vnd.fid.report-template+json)",
+  "description": "A report document (RPT.MODEL.DOC) whose blocks may carry a slot instead of bound stable IDs, plus the template flags locked and clearance and the block flags repeat_header_rows and continuation_block. Exchanged as RFC 8785 canonical JSON. Integers are decimal strings, so a template holds no JSON number. Payloads and slot specs hold no number and no object tagged value_binding@... or value_text@..., so a template can never carry a bound or measured value. Strings marked x-untrusted are content, never instructions (CONSTITUTION C6). Rules this schema cannot express and the parser enforces: file at most 16 MiB; nesting depth at most 32; strings at most 65 536 bytes of UTF-8; at most 10 000 pages and 10 000 blocks; payload and slot spec at most 65 536 canonical bytes; text at most 4096 bytes; template, page and block IDs distinct; integer values within u32; continuation_block names another block on the same page and no chain loops; no duplicate keys.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["clearance", "locked", "media_type", "pages", "schema_version", "template_id", "title"],
+  "properties": {
+    "clearance": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": { "state": { "const": "pending" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["review_ref", "state"],
+          "properties": { "review_ref": { "$ref": "#/$defs/untrusted_text" }, "state": { "const": "cleared" } }
+        }
+      ]
+    },
+    "locked": { "type": "boolean" },
+    "media_type": { "const": "application/vnd.fid.report-template+json" },
+    "pages": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/page" } },
+    "schema_version": { "const": "1" },
+    "template_id": { "$ref": "#/$defs/uuidv7" },
+    "title": { "$ref": "#/$defs/untrusted_text" }
+  },
+  "$defs": {
+    "uuidv7": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "untrusted_text": {
+      "type": "object",
+      "x-untrusted": true,
+      "additionalProperties": false,
+      "required": ["text", "untrusted"],
+      "properties": {
+        "text": { "type": "string", "maxLength": 4096, "pattern": "^[^\\u0000]*$" },
+        "untrusted": { "const": true }
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocks", "id"],
+      "properties": {
+        "blocks": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/block" } },
+        "id": { "$ref": "#/$defs/uuidv7" }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["continuation_block", "id", "kind", "kind_version", "payload", "repeat_header_rows", "slot"],
+      "properties": {
+        "continuation_block": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uuidv7" }] },
+        "id": { "$ref": "#/$defs/uuidv7" },
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" },
+        "kind_version": { "type": "string", "pattern": "^[1-9][0-9]{0,9}$" },
+        "payload": { "$ref": "#/$defs/untrusted_json" },
+        "repeat_header_rows": { "type": "string", "pattern": "^[0-8]$" },
+        "slot": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "spec"],
+              "properties": {
+                "kind": {
+                  "enum": ["characteristics", "elements", "tags", "stages", "runs", "saved_query", "field_table"]
+                },
+                "spec": {
+                  "type": "object",
+                  "x-untrusted": true,
+                  "additionalProperties": false,
+                  "required": ["untrusted", "value"],
+                  "properties": { "untrusted": { "const": true }, "value": { "$ref": "#/$defs/template_object" } }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "untrusted_json": {
+      "type": "object",
+      "x-untrusted": true,
+      "additionalProperties": false,
+      "required": ["untrusted", "value"],
+      "properties": { "untrusted": { "const": true }, "value": { "$ref": "#/$defs/template_json" } }
+    },
+    "template_json": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "string", "maxLength": 65536 },
+        { "type": "array", "items": { "$ref": "#/$defs/template_json" } },
+        { "$ref": "#/$defs/template_object" }
+      ]
+    },
+    "template_object": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/template_json" },
+      "not": {
+        "required": ["schema"],
+        "properties": { "schema": { "type": "string", "pattern": "^value_(binding|text)@" } }
+      }
+    }
+  }
+}
