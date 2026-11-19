@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**106** of **1336** leaves built in code ([B]).
+**107** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 36 built)
+### Wave 2 (121 leaves, 37 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -192,7 +192,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REPO.TPL.PROMOTE](../../spec/eco/repo/tpl/promote/NODE.md) Library promotion procedure and tool (M, P0)
 - [ECO.REPO.TPL.SELFTEST](../../spec/eco/repo/tpl/selftest/NODE.md) Template self-test job (S, P0)
 - [ECO.RULES.CHECK](../../spec/eco/rules/check/NODE.md) House-rules check (edited, stale, missing, budgets) (M, P0)
-- [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
+- [B] [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
 - [ECO.RULES.SYNC](../../spec/eco/rules/sync/NODE.md) House-rules sync tool (M, P0)
 - [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
