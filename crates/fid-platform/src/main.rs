@@ -6,7 +6,8 @@
 //! `fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>]
 //! [--phase <P>]` (spec node `PLAT.GPU.POLICY`) and
 //! `fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]`
-//! (spec node `PLAT.DEPLOY.NOADMIN.LAYOUT`).
+//! (spec node `PLAT.DEPLOY.NOADMIN.LAYOUT`) and
+//! `fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>` (spec node `PLAT.MATRIX.PAGE`).
 //! `cargo xtask plat-matrix ...`, `cargo xtask plat-hw ...`, `cargo xtask plat-gpu validate` and
 //! `cargo xtask plat-deploy validate-layout` run this binary.
 //!
@@ -30,12 +31,18 @@
 //! a layout. It prints any support-matrix diagnostics prefixed `matrix: `, then the layout
 //! diagnostics and `layout: <families> os, <errors> errors`. Exit 0 when there are no errors, 1
 //! when there are, 2 on bad usage or an unreadable file.
+//! `plat-matrix page` validates the matrix (default `platform/support-matrix.toml`) and writes
+//! the generated page to `--out` (exit 0). With `--check` it writes nothing: it prints a unified
+//! diff and exits 1 when the file at `--out` differs from the generated page, and exits 0 when
+//! they are equal. A matrix with validation errors prints them to stderr, writes nothing and
+//! exits 1; bad usage or an unreadable or unwritable file exits 2.
 
-use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix, peruser_layout};
+use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix, page, peruser_layout};
 use std::io::Read;
 use std::process::ExitCode;
 
 const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
+                     fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
                      fid-platform plat-hw validate [--file <path>]\n       \
                      fid-platform plat-hw validate-suite [--file <path>]\n       \
                      fid-platform plat-hw result-schema\n       \
@@ -48,6 +55,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.as_slice() {
         [group, cmd, file] if group == "plat-matrix" && cmd == "validate" => validate(file),
+        [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "page" => page_cmd(rest),
         [group, cmd] if group == "plat-hw" && cmd == "validate" => validate_hw(hw_profile::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-hw" && cmd == "validate" && flag == "--file" => validate_hw(file),
         [group, cmd] if group == "plat-hw" && cmd == "validate-suite" => {
@@ -289,5 +297,83 @@ fn layout_validate(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         ExitCode::from(1)
+    }
+}
+
+/// `plat-matrix page`: see the module documentation for the output and exit codes.
+fn page_cmd(args: &[String]) -> ExitCode {
+    let cmd = "plat-matrix page";
+    let mut check = false;
+    let mut matrix_path = page::DEFAULT_MATRIX.to_string();
+    let mut out: Option<String> = None;
+    let mut seen: Vec<&str> = Vec::new();
+    let mut it = args.iter();
+    while let Some(flag) = it.next() {
+        if seen.contains(&flag.as_str()) {
+            eprintln!("{cmd}: {flag} given twice\n{USAGE}");
+            return ExitCode::from(2);
+        }
+        seen.push(flag.as_str());
+        match flag.as_str() {
+            "--check" => check = true,
+            "--matrix" | "--out" => {
+                let Some(value) = it.next() else {
+                    eprintln!("{cmd}: {flag} needs a value\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if flag == "--matrix" {
+                    matrix_path.clone_from(value);
+                } else {
+                    out = Some(value.clone());
+                }
+            }
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(out) = out else {
+        eprintln!("{cmd}: --out is required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(bytes) = read_capped(&matrix_path, matrix::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let generated = match page::render(&bytes) {
+        Ok(p) => p,
+        Err(v) => {
+            eprint!("{}", v.render());
+            return ExitCode::from(1);
+        }
+    };
+    if !check {
+        return match std::fs::write(&out, generated.as_bytes()) {
+            Ok(()) => {
+                println!("wrote {out}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{cmd}: cannot write {out}: {e}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    let Some(committed) = read_capped(&out, page::MAX_PAGE_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    if committed.len() > page::MAX_PAGE_BYTES {
+        println!("{cmd}: {out} is larger than {} bytes and differs from the generated page", page::MAX_PAGE_BYTES);
+        return ExitCode::from(1);
+    }
+    match page::check(&committed, &generated, &out) {
+        None => {
+            println!("{out} is up to date");
+            ExitCode::SUCCESS
+        }
+        Some(diff) => {
+            print!("{diff}");
+            ExitCode::from(1)
+        }
     }
 }
