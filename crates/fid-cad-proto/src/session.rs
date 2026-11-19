@@ -135,10 +135,14 @@ impl<R: Read> HostSession<R> {
             }
         }
         let table = &self.table;
-        r.body.try_for_each_reference(|index, allowed| match usize::try_from(index).ok().and_then(|i| table.get(i)) {
-            None => Err(ProtoError::InvalidMessage { frame, detail: "index_out_of_range" }),
-            Some(k) if !allowed.contains(k) => Err(ProtoError::InvalidMessage { frame, detail: "index_wrong_kind" }),
-            Some(_) => Ok(()),
+        r.body.try_for_each_reference(|index, allowed| {
+            match usize::try_from(index).ok().and_then(|i| table.get(i)) {
+                None => Err(ProtoError::InvalidMessage { frame, detail: "index_out_of_range" }),
+                Some(k) if !allowed.contains(k) => {
+                    Err(ProtoError::InvalidMessage { frame, detail: "index_wrong_kind" })
+                }
+                Some(_) => Ok(()),
+            }
         })?;
         let budget = self.reader.budget_mut();
         budget.charge_elements(1, at)?;
