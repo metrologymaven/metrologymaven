@@ -378,6 +378,35 @@ case("combo_mixed", "additive and breaking together",
      [("/description", "doc_changed"), (P + "/tol/type", "type_changed"), ("/side_effect", "side_effect_changed")])
 
 
+# ---- review of PR #190 (all hand-labelled from the same rule table)
+case("required_malformed", "required that is not an array of strings: added members are unclassified",
+     both(setp(PS + ["retries"], {"type": "integer", "default": 0}),
+          setp(["params_schema", "required"], ["retries", 5])),
+     [(P + "/retries", "unclassified_construct"), ("/params_schema/required", "unclassified_construct")])
+case("nullable_added", "adding null to the type is a changed JSON type: breaking",
+     setp(PS + ["tol", "type"], ["number", "null"]), [(P + "/tol/type", "type_changed")])
+case("integer_to_number", "integer to number is a changed JSON type: breaking",
+     setp(PS + ["samples", "type"], "number"), [(P + "/samples/type", "type_changed")])
+case("ref_target_changed", "a changed $ref target has no rule",
+     setp(PS + ["feature", "$ref"], "#/$defs/datum"), [(P + "/feature/$ref", "unclassified_construct")],
+     old_mutate=setp(PS + ["feature", "$ref"], "#/$defs/feature"))
+case("open_and_add", "opening the object while adding a parameter: both breaking",
+     both(delp(["params_schema", "additionalProperties"]), setp(PS + ["retries"], {"type": "integer", "default": 0})),
+     [("/params_schema/additionalProperties", "constraint_changed"), (P + "/retries", "param_added_to_open_object")])
+case("optional_plus_default", "required parameter made optional with a new default: breaking",
+     both(setp(PS + ["tol", "default"], 1), setp(["params_schema", "required"], ["feature"])),
+     [(P + "/tol/default", "default_changed"), ("/params_schema/required", "required_changed")])
+case("parent_taints_nested", "an unknown keyword in a parent object taints a nested addition",
+     setp(PS + ["points", "items", "properties", "y"], {"type": "number", "default": 0}),
+     [(P + "/points/items/properties/y", "unclassified_construct")],
+     old_mutate=setp(["params_schema", "patternProperties"], {"^x_": {"type": "string"}}))
+case("doc_beside_unknown", "documentation beside an unknown keyword stays additive",
+     setp(PS + ["feature", "description"], "The feature."), [(P + "/feature/description", "doc_changed")],
+     old_mutate=add_cond)
+case("ui_beside_unknown", "an x-ui hint beside an unknown keyword stays additive",
+     setp(PS + ["samples", "x-ui"], {"widget": "spin"}), [(P + "/samples/x-ui", "ui_hint_changed")],
+     old_mutate=add_cond)
+
 def build_pairs():
     out = {}
     for i, (name, rule, mutate, expect, old_mutate) in enumerate(CASES, 1):

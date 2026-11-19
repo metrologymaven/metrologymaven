@@ -15,9 +15,11 @@
 //!   `additionalProperties: false`. In an open object an old caller may already have sent
 //!   that name, so the addition is not provably additive (`param_added_to_open_object`).
 //!
-//! An additive verdict inside a schema object that uses a keyword without a rule (for
-//! example `if`/`then`/`else`, `oneOf`, `$ref`, `patternProperties`), changed or not, is
-//! turned into `unclassified_construct`: the unknown keyword may constrain the addition.
+//! A new parameter or result field inside a schema object (or below one) that uses a
+//! keyword without a rule (for example `if`/`then`/`else`, `oneOf`, `$ref`,
+//! `patternProperties`), changed or not, is `unclassified_construct`: the unknown keyword
+//! may constrain the addition. Documentation and `x-ui` changes stay additive. If `required`
+//! is not an array of strings, every new member is `unclassified_construct`.
 //!
 //! Lifecycle metadata is not classified here: [`diff`] lists lifecycle changes separately,
 //! and their legality is the job of `CORE.REG.VER.LIFE`.
@@ -482,9 +484,11 @@ fn compare_schema(old: &CValue, new: &CValue, ptr: &str, dir: Dir, depth: usize,
     }
     compare_members(o, n, ptr, dir, depth, out);
     if unknown {
-        // A keyword without a rule may constrain anything in this schema object.
+        // A keyword without a rule may constrain any new member of this schema object or
+        // below it. Documentation and `x-ui` hints never change validation (REQ-001), so
+        // they stay additive.
         for r in out.iter_mut().skip(start) {
-            if r.reason.kind() == Kind::Additive {
+            if matches!(r.reason, Reason::OptionalParamAdded | Reason::ResultFieldAdded) {
                 r.reason = Reason::UnclassifiedConstruct;
             }
         }
@@ -506,7 +510,9 @@ fn compare_members(
     let (op, np) = (o.get("properties"), n.get("properties"));
     match (props_of(op, &empty), props_of(np, &empty)) {
         (Some(op), Some(np)) => {
-            let new_required = names_of(n.get("required")).unwrap_or_default();
+            // `None` when the new `required` is not an array of strings: then no added
+            // member can be shown optional, so each is `unclassified_construct`.
+            let new_required = names_of(n.get("required"));
             let closed = n.get("additionalProperties") == Some(&CValue::Bool(false));
             let names: BTreeSet<&str> = op.keys().chain(np.keys()).map(String::as_str).collect();
             for name in names {
@@ -523,12 +529,13 @@ fn compare_members(
                     }
                     (None, Some(b)) => {
                         added.insert(name);
-                        let r = match dir {
-                            Dir::Output => Reason::ResultFieldAdded,
-                            Dir::Input if new_required.contains(name) => Reason::RequiredParamAdded,
-                            Dir::Input if !has_default(b) => Reason::OptionalParamWithoutDefault,
-                            Dir::Input if !closed => Reason::ParamAddedToOpenObject,
-                            Dir::Input => Reason::OptionalParamAdded,
+                        let r = match (dir, &new_required) {
+                            (_, None) => Reason::UnclassifiedConstruct,
+                            (Dir::Output, _) => Reason::ResultFieldAdded,
+                            (Dir::Input, Some(req)) if req.contains(name) => Reason::RequiredParamAdded,
+                            (Dir::Input, _) if !has_default(b) => Reason::OptionalParamWithoutDefault,
+                            (Dir::Input, _) if !closed => Reason::ParamAddedToOpenObject,
+                            (Dir::Input, _) => Reason::OptionalParamAdded,
                         };
                         push(out, pp, None, Some(b), r);
                     }
@@ -659,6 +666,11 @@ impl fmt::Display for ManifestError {
 }
 
 impl std::error::Error for ManifestError {}
+
+// STOPGAP pending CORE.REG.MAN: `Manifest` and its reader exist only so `diff` can be
+// built and tested before the `manifest` module lands. When CORE.REG.MAN is built, `diff`
+// takes its manifest type and this reader goes away. It does not check the whole-manifest
+// digest or `manifest.schema.json` (see the leaf's Open questions).
 
 /// A Registry Manifest as read for diffing: `{format, quantity_catalogue_digest, commands}`
 /// (`CORE.REG.MAN` REQ-001). Each command is a definition plus its `definition_digest`.

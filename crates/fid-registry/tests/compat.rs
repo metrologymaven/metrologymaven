@@ -223,3 +223,24 @@ fn depth_limit_fails_closed() {
     assert_eq!(got.len(), 1);
     assert_eq!(got[0].reason, Reason::UnclassifiedConstruct);
 }
+
+/// A `required` that is not an array of strings (`["retries", 5]`) is never read as empty:
+/// the new parameter and the `required` change are both `unclassified_construct`.
+#[test]
+fn malformed_required_is_unclassified() {
+    let all = pairs();
+    let (_, p) = all.iter().find(|(n, _)| n.ends_with("-required-malformed.json")).unwrap();
+    let new = def(&p["new"]);
+    let CValue::Obj(ps) = &new.params_schema else { panic!() };
+    let CValue::Arr(req) = &ps["required"] else { panic!() };
+    assert_eq!(req, &[CValue::Str("retries".into()), CValue::Num(5.0)]);
+    let got = classify(&def(&p["old"]), &new);
+    let got: Vec<(&str, Reason)> = got.iter().map(|c| (c.pointer.as_str(), c.reason)).collect();
+    assert_eq!(
+        got,
+        [
+            ("/params_schema/properties/retries", Reason::UnclassifiedConstruct),
+            ("/params_schema/required", Reason::UnclassifiedConstruct),
+        ]
+    );
+}
