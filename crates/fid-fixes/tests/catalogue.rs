@@ -190,7 +190,7 @@ fn made_up_command_has_no_defining_node() {
 /// Hand-labelled parameter types from the commands' Design sections (true = list-valued).
 const PARAM_IS_LIST: [(&str, &str, bool); 4] = [
     ("decide.bind_rule@1", "chars", true), // UNC.DEC.BIND: chars: Vec<EntityId> | plan_default
-    ("unc.bind_model@1", "chars", true), // UNC.MODEL.BIND: chars: Vec<EntityId>
+    ("unc.bind_model@1", "chars", true),   // UNC.MODEL.BIND: chars: Vec<EntityId>
     ("unc.declare_uncertainty@1", "char_id", false), // UNC.UEC.DECL: char_id: EntityId
     ("unc.propagate_auto@1", "result_id", false), // UNC.PROP.SELECT: result_id
 ];
