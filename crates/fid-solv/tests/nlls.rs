@@ -7,9 +7,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_num::{f, NumError};
-use fid_solv::nlls::{
-    solve, Method, NllsConfig, NllsProblem, NllsResult, SolverError, Stage, StopReason, MAX_ITER,
-};
+use fid_solv::nlls::{solve, Method, NllsConfig, NllsProblem, NllsResult, SolverError, Stage, StopReason, MAX_ITER};
 use fid_testkit::Sha256Hasher;
 
 const STRD: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/solv/strd-models-synth-v1.txt");
@@ -523,8 +521,27 @@ fn repeated_runs_are_bit_identical() {
 fn ac5_source_has_no_forbidden_constructs() {
     let sources = [include_str!("../src/nlls/mod.rs"), include_str!("../src/nlls/qr.rs")];
     let forbidden = [
-        "mul_add", "powi", "powf", "f64::min", "f64::max", ".min(", ".max(", "HashMap", "HashSet", "unsafe",
-        "std::thread", "spawn(", "rayon", ".sqrt()", ".exp()", ".ln()", "transpose", "mat_mul", "mat_t_vec", "jtj", "JtJ",
+        "mul_add",
+        "powi",
+        "powf",
+        "f64::min",
+        "f64::max",
+        ".min(",
+        ".max(",
+        "HashMap",
+        "HashSet",
+        "unsafe",
+        "std::thread",
+        "spawn(",
+        "rayon",
+        ".sqrt()",
+        ".exp()",
+        ".ln()",
+        "transpose",
+        "mat_mul",
+        "mat_t_vec",
+        "jtj",
+        "JtJ",
     ];
     for src in sources {
         for word in forbidden {

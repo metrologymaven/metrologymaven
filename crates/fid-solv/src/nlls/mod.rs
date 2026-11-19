@@ -49,6 +49,11 @@
 //! buffer is reserved with `try_reserve_exact`; allocation failure is
 //! [`SolverError::Numeric`], never an abort.
 
+// `SolverError` carries the last diagnostics by value (about 150 bytes). It is returned at most
+// once per solve, never in a loop, and boxing it would add an infallible allocation on the
+// error path, so the size lint is allowed for this module.
+#![allow(clippy::result_large_err)]
+
 mod qr;
 
 use core::fmt;
@@ -241,7 +246,9 @@ impl fmt::Display for SolverError {
             SolverError::RankDeficient { rank, .. } => write!(f, "{OP}: Jacobian rank deficient (rank {rank})"),
             SolverError::IllConditioned { cond: Some(c), .. } => write!(f, "{OP}: Jacobian ill-conditioned ({c:e})"),
             SolverError::IllConditioned { cond: None, .. } => write!(f, "{OP}: Jacobian condition beyond range"),
-            SolverError::NonFinite { stage, index, .. } => write!(f, "{OP}: non-finite value in {stage:?} at {index:?}"),
+            SolverError::NonFinite { stage, index, .. } => {
+                write!(f, "{OP}: non-finite value in {stage:?} at {index:?}")
+            }
             SolverError::InvalidConfig { field, .. } => write!(f, "{OP}: invalid {field}"),
             SolverError::Numeric { error, .. } => write!(f, "{OP}: {error}"),
         }
