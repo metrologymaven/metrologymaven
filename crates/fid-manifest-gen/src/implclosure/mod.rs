@@ -20,10 +20,15 @@
 //!   `examples/` lie outside `src/` and are not read.
 //! - **Nothing escapes the hashed set** (fail closed, `MetadataInvalid`): a lib or bin target
 //!   whose source lies outside `src/`; a build script or proc-macro target anywhere in the
-//!   closure; in any hashed `.rs` file (and in any file it `include!`s), an `include!`,
-//!   `include_str!`, `include_bytes!` or attribute `path = ..` whose argument is not one plain
-//!   string literal, or whose path, resolved against the including file's directory, is not a
-//!   hashed file of the same crate. An untracked file below `src/` is an `Io` error.
+//!   closure; in any hashed `.rs` file (and in any file it `include!`s), any occurrence of the
+//!   identifiers `include`, `include_str`, `include_bytes`, `env`, `option_env` or `path`
+//!   (outside strings and comments) that is not one of the exact allowed shapes: an include
+//!   call with one plain string literal outside any `macro_rules!` body, whose path, resolved
+//!   against the including file's directory, is a hashed file of the same crate; `#[path =
+//!   "lit"]` directly on a `mod name;` item, likewise resolved; `env!`/`option_env!` of
+//!   `CARGO_CRATE_NAME` or a `CARGO_PKG_*` variable. Aliases, macro bodies and `path = ..` as
+//!   macro meta are refused by construction (module `scan`). An untracked file below `src/` is
+//!   an `Io` error.
 //! - **Encoding.** One object per crate,
 //!   `{"features":[..],"files":[{"path":..,"sha256":"sha256:<hex>"},..],`
 //!   `"lock":{"checksum":..,"name":..,"source":..,"version":..},"name":..,"version":..}`,

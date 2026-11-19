@@ -89,7 +89,8 @@ fn path_ok(p: &str) -> bool {
 
 impl TrackedFiles {
     /// A tracked list given by the caller (regular files only). Fails on a malformed path, on
-    /// two paths equal under ASCII case folding and on more than [`MAX_TRACKED_FILES`].
+    /// two paths equal under ASCII case folding (only `A`-`Z` are folded; non-ASCII letters are
+    /// compared as they are) and on more than [`MAX_TRACKED_FILES`].
     pub fn new<I: IntoIterator<Item = String>>(paths: I) -> Result<TrackedFiles, ImplError> {
         let mut set = BTreeSet::new();
         let mut folded: BTreeMap<String, String> = BTreeMap::new();

@@ -1,13 +1,15 @@
-//! Finds the places in Rust source that can make the compiler read a file by path:
-//! `include!`, `include_str!` and `include_bytes!` invocations and `path = ".."` inside an
-//! attribute (`#[path = ".."]`, also inside `cfg_attr`). The caller checks each literal path
-//! against the hashed file set (REQ-KRN.MAN.MANI.IMPL-001: no compiled byte escapes the digest).
+//! Token-level, fail-closed check of the places in Rust source that can make the compiler read
+//! a file or the environment (REQ-KRN.MAN.MANI.IMPL-001: no compiled byte escapes the digest).
 //!
-//! The scan is a small lexer, not a parser. It skips line and nested block comments, string,
-//! byte-string, C-string and raw-string literals and char literals, so text that only looks
-//! like an include is ignored. It fails closed: an include or a `path =` whose argument is not
-//! one plain string literal (a macro argument, `concat!`, `env!`, an escaped string) is an
-//! error, and so is an unterminated literal or comment.
+//! The scan is a small lexer, not a parser, and it deliberately does not follow macro
+//! semantics. It skips line and nested block comments, string, byte-string, C-string and
+//! raw-string literals and char literals. Every remaining occurrence of the identifiers
+//! `include`, `include_str`, `include_bytes`, `env`, `option_env` and `path` must have one exact
+//! allowed shape (see [`references`]); any other occurrence is refused, whatever it means. So
+//! aliases (`use core::include_bytes as ib`), includes inside `macro_rules!` bodies, `path = ..`
+//! passed to a macro or `cfg_attr`, and `env!` of anything but Cargo's package variables are
+//! all errors by construction. An unterminated literal or comment is an error too. The caller
+//! checks each returned literal path against the crate's hashed files.
 
 /// What a reference reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -198,68 +200,135 @@ fn lex(src: &str) -> Result<Vec<Tok>, &'static str> {
     Ok(out)
 }
 
-/// Marks the tokens inside each attribute `#[..]` or `#![..]`.
-fn attribute_mask(t: &[Tok]) -> Vec<bool> {
+/// Index of the delimiter closing the group opened at `open` (any of `(`, `[`, `{`, counted
+/// together), or the last token when the group is unbalanced (fail closed: the rest counts as
+/// inside).
+fn group_end(t: &[Tok], open: usize) -> usize {
+    let mut depth = 0usize;
+    for (j, tok) in t.iter().enumerate().skip(open) {
+        match tok {
+            Tok::Punct(b'(' | b'[' | b'{') => depth += 1,
+            Tok::Punct(b')' | b']' | b'}') => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return j;
+                }
+            }
+            _ => {}
+        }
+    }
+    t.len().saturating_sub(1)
+}
+
+/// Marks every token of every `macro_rules!` definition (from the `macro_rules` identifier to
+/// the end of its body).
+fn macro_rules_mask(t: &[Tok]) -> Vec<bool> {
     let mut mask = vec![false; t.len()];
     let mut k = 0;
     while k < t.len() {
-        if t[k] == Tok::Punct(b'#') {
+        if t[k] == Tok::Ident("macro_rules".to_string()) {
+            // `macro_rules ! name { .. }`; anything malformed marks to the end of the file.
             let mut open = k + 1;
-            if t.get(open) == Some(&Tok::Punct(b'!')) {
+            while open < t.len() && !matches!(t[open], Tok::Punct(b'(' | b'[' | b'{')) {
                 open += 1;
             }
-            if t.get(open) == Some(&Tok::Punct(b'[')) {
-                let mut depth = 0usize;
-                let mut j = open;
-                while j < t.len() {
-                    match t[j] {
-                        Tok::Punct(b'[') => depth += 1,
-                        Tok::Punct(b']') => {
-                            depth -= 1;
-                            if depth == 0 {
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                    mask[j] = true;
-                    j += 1;
-                }
-                k = j;
+            let end = if open < t.len() { group_end(t, open) } else { t.len().saturating_sub(1) };
+            for m in mask.iter_mut().take(end + 1).skip(k) {
+                *m = true;
             }
+            k = end;
         }
         k += 1;
     }
     mask
 }
 
-/// Every file reference in `src`, in source order. Errors are static reason codes.
+/// The identifiers that can make the compiler read a file or the environment.
+const RESTRICTED: [&str; 6] = ["include", "include_str", "include_bytes", "env", "option_env", "path"];
+
+/// Whether `name` is a variable `env!`/`option_env!` may read: Cargo sets these from the
+/// crate's `Cargo.toml`, which is hashed.
+fn env_allowed(name: &str) -> bool {
+    name == "CARGO_CRATE_NAME" || (name.starts_with("CARGO_PKG_") && name.len() > "CARGO_PKG_".len())
+}
+
+/// `name!("lit")` starting at `k` (the identifier): the literal, if the shape is exact.
+fn call_literal(t: &[Tok], k: usize) -> Option<&str> {
+    match (t.get(k + 1), t.get(k + 2), t.get(k + 3), t.get(k + 4)) {
+        (Some(Tok::Punct(b'!')), Some(Tok::Punct(b'(')), Some(Tok::Str(Some(lit))), Some(Tok::Punct(b')'))) => {
+            Some(lit.as_str())
+        }
+        _ => None,
+    }
+}
+
+/// `#[path = "lit"]` around `k` (the `path` identifier), directly on a `mod name;` item (other
+/// outer attributes and a visibility may come between): the literal, if the shape is exact.
+fn mod_path_literal(t: &[Tok], k: usize) -> Option<&str> {
+    if k < 2 || t[k - 2] != Tok::Punct(b'#') || t[k - 1] != Tok::Punct(b'[') {
+        return None;
+    }
+    let lit = match (t.get(k + 1), t.get(k + 2), t.get(k + 3)) {
+        (Some(Tok::Punct(b'=')), Some(Tok::Str(Some(lit))), Some(Tok::Punct(b']'))) => lit.as_str(),
+        _ => return None,
+    };
+    let mut j = k + 4;
+    // Further outer attributes on the same item.
+    while t.get(j) == Some(&Tok::Punct(b'#')) && t.get(j + 1) == Some(&Tok::Punct(b'[')) {
+        j = group_end(t, j + 1) + 1;
+    }
+    // Visibility: `pub` or `pub(..)`.
+    if t.get(j) == Some(&Tok::Ident("pub".to_string())) {
+        j += 1;
+        if t.get(j) == Some(&Tok::Punct(b'(')) {
+            j = group_end(t, j) + 1;
+        }
+    }
+    match (t.get(j), t.get(j + 1), t.get(j + 2)) {
+        (Some(Tok::Ident(m)), Some(Tok::Ident(_)), Some(Tok::Punct(b';'))) if m == "mod" => Some(lit),
+        _ => None,
+    }
+}
+
+/// Every file reference in `src`, in source order. Token-level and fail closed: each
+/// occurrence of a restricted identifier (`include`, `include_str`, `include_bytes`, `env`,
+/// `option_env`, `path`) outside strings and comments must have one exact allowed shape, else
+/// the static reason code is returned. Allowed:
+///
+/// - `include!("lit")`, `include_str!("lit")`, `include_bytes!("lit")`, not inside a
+///   `macro_rules!` definition (an alias such as `use core::include_bytes as ib` is the
+///   identifier in another shape, so it is refused);
+/// - `#[path = "lit"]` directly on a `mod name;` item, not inside `macro_rules!` (so neither
+///   `cfg_attr(.., path = ..)` nor `path = ..` passed to a macro);
+/// - `env!("lit")` / `option_env!("lit")` with `lit` `CARGO_CRATE_NAME` or `CARGO_PKG_*`.
 pub(crate) fn references(src: &str) -> Result<Vec<(RefKind, String)>, &'static str> {
     let t = lex(src)?;
-    let in_attr = attribute_mask(&t);
+    let in_macro = macro_rules_mask(&t);
     let mut refs = Vec::new();
     for (k, tok) in t.iter().enumerate() {
         let Tok::Ident(word) = tok else { continue };
-        let kind = match word.as_str() {
-            "include" => Some(RefKind::Code),
-            "include_str" | "include_bytes" => Some(RefKind::Data),
-            _ => None,
-        };
-        if let Some(kind) = kind {
-            if t.get(k + 1) == Some(&Tok::Punct(b'!')) {
-                match (t.get(k + 2), t.get(k + 3), t.get(k + 4)) {
-                    (
-                        Some(Tok::Punct(b'(' | b'[' | b'{')),
-                        Some(Tok::Str(Some(path))),
-                        Some(Tok::Punct(b')' | b']' | b'}' | b',')),
-                    ) => refs.push((kind, path.clone())),
-                    _ => return Err("include_not_literal"),
+        if !RESTRICTED.contains(&word.as_str()) {
+            continue;
+        }
+        match word.as_str() {
+            "include" | "include_str" | "include_bytes" => {
+                if in_macro[k] {
+                    return Err("include_in_macro_rules");
                 }
+                let lit = call_literal(&t, k).ok_or("include_not_literal")?;
+                let kind = if word == "include" { RefKind::Code } else { RefKind::Data };
+                refs.push((kind, lit.to_string()));
             }
-        } else if word == "path" && in_attr[k] && t.get(k + 1) == Some(&Tok::Punct(b'=')) {
-            match t.get(k + 2) {
-                Some(Tok::Str(Some(path))) => refs.push((RefKind::ModPath, path.clone())),
-                _ => return Err("path_attr_not_literal"),
+            "env" | "option_env" => match call_literal(&t, k) {
+                Some(lit) if env_allowed(lit) => {}
+                _ => return Err("env_not_allowed"),
+            },
+            _ => {
+                if in_macro[k] {
+                    return Err("path_in_macro_rules");
+                }
+                let lit = mod_path_literal(&t, k).ok_or("path_not_mod_attribute")?;
+                refs.push((RefKind::ModPath, lit.to_string()));
             }
         }
     }
@@ -271,10 +340,11 @@ mod tests {
     use super::{references, RefKind};
 
     #[test]
-    fn finds_includes_and_path_attributes() {
+    fn finds_the_allowed_shapes() {
         let src = "#[path = \"x/y.rs\"] mod y;\nconst A: &[u8] = include_bytes!(\"t.bin\");\n\
                    include!(\"gen.rs\");\nconst S: &str = core::include_str!(r#\"s.txt\"#);\n\
-                   #[cfg_attr(unix, path = \"u.rs\")] mod u;\n";
+                   #[path = \"v.rs\"]\n#[allow(dead_code)]\npub(crate) mod v;\n\
+                   const N: &str = env!(\"CARGO_PKG_NAME\");\nconst C: Option<&str> = option_env!(\"CARGO_CRATE_NAME\");\n";
         assert_eq!(
             references(src),
             Ok(vec![
@@ -282,26 +352,45 @@ mod tests {
                 (RefKind::Data, "t.bin".to_string()),
                 (RefKind::Code, "gen.rs".to_string()),
                 (RefKind::Data, "s.txt".to_string()),
-                (RefKind::ModPath, "u.rs".to_string()),
+                (RefKind::ModPath, "v.rs".to_string()),
             ])
         );
     }
 
     #[test]
-    fn ignores_comments_strings_chars_and_plain_identifiers() {
-        let src = "// include!(\"a\")\n/* /* include_str!(\"b\") */ */\nlet s = \"include!(\\\"c\\\")\";\n\
-                   let r = r##\"#[path = \"d\"]\"##; let q = '\"'; let e = b'\\''; fn f<'a>(x: &'a u8) {}\n\
-                   let path = \"not an attribute\"; fn include() {} let include_str = 1;\n";
+    fn ignores_comments_strings_and_chars() {
+        let src = "// include!(\"a\") env!(\"HOME\") path\n/* /* include_str!(\"b\") */ */\n\
+                   let s = \"include!(\\\"c\\\") path env\";\n\
+                   let r = r##\"#[path = \"d\"]\"##; let q = '\"'; let e = b'\\''; fn f<'a>(x: &'a u8) {}\n";
         assert_eq!(references(src), Ok(vec![]));
     }
 
     #[test]
-    fn fails_closed() {
-        assert_eq!(references("include_str!(concat!(env!(\"OUT_DIR\"), \"/x\"))"), Err("include_not_literal"));
-        assert_eq!(references("macro_rules! m { ($p:expr) => { include_bytes!($p) } }"), Err("include_not_literal"));
-        assert_eq!(references("include!(\"a\\\\b.rs\")"), Err("include_not_literal"));
-        assert_eq!(references("include!(b\"a.rs\")"), Err("include_not_literal"));
-        assert_eq!(references("#[path = concat!(\"a\")] mod a;"), Err("path_attr_not_literal"));
+    fn every_other_shape_is_refused() {
+        let cases: [(&str, &str); 17] = [
+            ("include_str!(concat!(env!(\"OUT_DIR\"), \"/x\"))", "include_not_literal"),
+            ("include!(\"a\\\\b.rs\")", "include_not_literal"),
+            ("include!(b\"a.rs\")", "include_not_literal"),
+            ("include!(\"a.rs\",)", "include_not_literal"),
+            ("include_bytes![\"a.bin\"]", "include_not_literal"),
+            ("use core::include_bytes as ib;", "include_not_literal"),
+            ("macro_rules! m { ($p:expr) => { include_bytes!($p) } }", "include_in_macro_rules"),
+            ("macro_rules! m { () => { include_bytes!(\"t.bin\") } }", "include_in_macro_rules"),
+            ("macro_rules! m { () => { #[path = \"x.rs\"] mod x; } }", "path_in_macro_rules"),
+            ("#[path = concat!(\"a\")] mod a;", "path_not_mod_attribute"),
+            ("#[cfg_attr(unix, path = \"u.rs\")] mod u;", "path_not_mod_attribute"),
+            ("p!(path = \"../x.rs\");", "path_not_mod_attribute"),
+            ("#![path = \"x.rs\"]", "path_not_mod_attribute"),
+            ("#[path = \"x.rs\"] fn f() {}", "path_not_mod_attribute"),
+            ("let path = 1;", "path_not_mod_attribute"),
+            ("const H: &str = env!(\"HOME\");", "env_not_allowed"),
+            ("const M: &str = env!(\"CARGO_MANIFEST_DIR\");", "env_not_allowed"),
+        ];
+        for (src, reason) in cases {
+            assert_eq!(references(src), Err(reason), "{src}");
+        }
+        assert_eq!(references("const O: Option<&str> = option_env!(\"OUT_DIR\");"), Err("env_not_allowed"));
+        assert_eq!(references("fn include() {}"), Err("include_not_literal"));
         assert_eq!(references("let s = \"unterminated"), Err("source_lex"));
         assert_eq!(references("/* /* */"), Err("source_lex"));
     }

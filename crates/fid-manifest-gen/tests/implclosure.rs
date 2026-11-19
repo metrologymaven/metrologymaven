@@ -634,13 +634,31 @@ fn ac6_includes_and_path_attributes_must_stay_in_the_hashed_set() {
     // Anything but one plain string literal.
     let src = "pub const P: &str = include_str!(concat!(env!(\"OUT_DIR\"), \"/gen.rs\"));\n";
     assert_eq!(with_source("ac6-concat", src, &[]), bad("include_not_literal"));
-    let src = "macro_rules! m { ($p:expr) => { include_bytes!($p) }; }\n";
-    assert_eq!(with_source("ac6-macro", src, &[]), bad("include_not_literal"));
-    // #[path] out of the crate, and through cfg_attr.
+    // #[path] out of the crate.
     let src = "#[path = \"../../../kgeo/src/lib.rs\"]\nmod g;\n";
     assert_eq!(with_source("ac6-path", src, &[]), bad("path_attr_outside_hashed_set"));
-    let src = "#[cfg_attr(unix, path = \"../../../../outside.rs\")]\nmod g;\n";
-    assert_eq!(with_source("ac6-cfg-attr", src, &[]), bad("path_attr_outside_hashed_set"));
+    // Token-level refusals: each bypass from the review, refused whatever the macro would
+    // expand to (the literal paths here would even resolve inside the crate).
+    let refused = [
+        // A macro_rules! wrapper resolved from the call site.
+        ("ac6-macro-arg", "macro_rules! m { ($p:expr) => { include_bytes!($p) }; }\n", "include_in_macro_rules"),
+        ("ac6-macro-lit", "macro_rules! m { () => { include_bytes!(\"b.rs\") }; }\n", "include_in_macro_rules"),
+        // An alias of the include macro.
+        ("ac6-alias", "use core::include_bytes as ib;\npub const B: &[u8] = ib!(\"b.rs\");\n", "include_not_literal"),
+        // `path =` passed as macro meta, through cfg_attr, and inside macro_rules!.
+        ("ac6-meta", "p!(path = \"b.rs\");\n", "path_not_mod_attribute"),
+        ("ac6-cfg-attr", "#[cfg_attr(unix, path = \"b.rs\")]\nmod g;\n", "path_not_mod_attribute"),
+        ("ac6-macro-path", "macro_rules! n { () => { #[path = \"b.rs\"] mod g; }; }\n", "path_in_macro_rules"),
+        // Environment reads other than Cargo's package variables.
+        ("ac6-env-home", "pub const H: &str = env!(\"HOME\");\n", "env_not_allowed"),
+        ("ac6-env-dir", "pub const D: &str = env!(\"CARGO_MANIFEST_DIR\");\n", "env_not_allowed"),
+        ("ac6-env-out", "pub const O: Option<&str> = option_env!(\"OUT_DIR\");\n", "env_not_allowed"),
+    ];
+    for (name, src, reason) in refused {
+        assert_eq!(with_source(name, src, &[]), bad(reason), "{src}");
+    }
+    let src = "pub const N: &str = env!(\"CARGO_PKG_NAME\");\npub const C: &str = env!(\"CARGO_CRATE_NAME\");\n";
+    assert!(with_source("ac6-env-ok", src, &[]).is_ok());
     // include! compiles its target as Rust whatever the extension, so the target is scanned too.
     let src = "include!(\"gen.inc\");\n";
     let inner: &[u8] = b"pub const S: &str = include_str!(\"../../../../secret.txt\");\n";
