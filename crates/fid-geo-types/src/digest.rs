@@ -419,10 +419,12 @@ pub fn write_layout(e: &GeometryElement, sink: &mut dyn FnMut(&[u8])) {
 /// Runs a layout writer into SHA-256.
 fn hash_with(write: impl FnOnce(&mut Blocks<'_>)) -> ElementDigest {
     let mut h = Sha256::new();
-    let mut feed = |b: &[u8]| h.update(b);
-    let mut w = Blocks::new(&mut feed);
-    write(&mut w);
-    w.flush();
+    {
+        let mut feed = |b: &[u8]| h.update(b);
+        let mut w = Blocks::new(&mut feed);
+        write(&mut w);
+        w.flush();
+    }
     ElementDigest(h.finish())
 }
 
