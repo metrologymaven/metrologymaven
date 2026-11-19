@@ -19,7 +19,7 @@ determinism: D0
 cli: [fid settings list-values, fid settings set-value, fid settings reset-value, fid settings set-admin-value]
 mcp: [settings_list_values, settings_set_value, settings_reset_value]
 journal: [settings.set_value@1, settings.reset_value@1, settings.set_admin_value@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.STO.SET: Settings model, scopes and settings commands
