@@ -1,0 +1,13 @@
+{
+  "schema": "fid.defaults-profile/1",
+  "dialect": "asme",
+  "edition": "y14.5-2018",
+  "version": "1.1.0",
+  "keys": {
+    "placeholder.variant.flatness": "variant-a",
+    "dmt:asme/position/none@1": "variant-d",
+    "placeholder.assoc.default": "assoc-y",
+    "placeholder.synthetic": true,
+    "placeholder.count": -3
+  }
+}
