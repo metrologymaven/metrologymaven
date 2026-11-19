@@ -270,8 +270,10 @@ fn ac1_to_ac4_end_to_end_on_three_targets() {
     assert!(
         run.unresolved_allowed
             .contains(&("wasm32-unknown-unknown".to_string(), "std::is_x86_feature_detected".to_string())),
-        "{:?}",
-        run.unresolved_allowed
+        "{:?}
+{:#?}",
+        run.unresolved_allowed,
+        run.outcome.findings.iter().map(|f| f.message.as_str()).collect::<Vec<_>>()
     );
     let out = run.outcome;
     for f in out.findings.iter().chain(&out.notes) {
