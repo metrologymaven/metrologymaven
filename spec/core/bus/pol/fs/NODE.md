@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-bus]
 satisfies: [REQ-CORE.BUS.POL-005, REQ-CORE.BUS.POL-006]
 covers: []
 depends_on: [CORE.REG.DEF, CORE.BUS.PRIN, CORE.BUS.PIPE.ERR, CORE.STO.SET]
@@ -68,6 +69,12 @@ The bus-side guard for file-system parameters. Agents and scripts never pass raw
 ## Open questions
 
 - A time-of-check to time-of-use gap remains between resolution and the handler's open; `CORE.STO` should open through the resolved directory handle where the platform allows [unverified per platform].
+- **Applied (build, `fid-bus` `policy::fs`):**
+  - `ResolvedPath` holds the canonical root folder open as a capability (`cap-std`) and opens only through it (`open_read`, `create_new`), repeating the link and file-type checks at open; `create_new` is exclusive, so no overwrite race. **Residual:** a link swapped in *inside* the root between resolution and open still resolves inside the root, but the opened file may differ from the one whose extension was checked; on Windows stable Rust cannot read a file's hard-link count, so a hard link to an outside file is detected on Unix only.
+  - Roots are the admin setting `bus.fs_roots` (machine scope, declared with `fid_settings!` in `fid-bus`), `[{id, kind: import|export, path, extensions?}]`, read through `fid_store::settings::resolve`. A malformed value is refused as a whole. **Follow-up:** collect `fid_bus::policy::fs::fs_settings` into the workspace settings manifest (`fid-registry-build`).
+  - The command's extension list is the parameter-schema keyword `x-extensions` next to `"path_like": true`; a `path_like` parameter without it allows no file (fail closed). **Follow-up:** add `x-extensions` (and `path_like`) to the CORE.REG.DEF.SCHEMA keyword vocabulary.
+  - A `..` segment is never resolved (`outside_root`, AC-4), even when it would stay inside the root. Raw paths are refused for every principal kind but `human` (service, device and system too). A human's raw path must be absolute.
+  - A missing file or folder is `precondition/false`; a handle naming a folder or other non-regular file is `bad_handle`; other file-system faults are `internal/storage`.
 
 ## Children
 

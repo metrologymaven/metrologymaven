@@ -441,11 +441,14 @@ dependencies = [
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
+ "cap-std",
  "fid-bus",
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-store",
  "fid-types",
+ "libc",
  "unicode-normalization",
 ]
 
