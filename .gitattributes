@@ -125,3 +125,5 @@ fixtures/geo/types/** -text
 fixtures/core/rpl/exec/subst/** -text
 # CORE.STO.SQL.TXN hand-labelled commit cases: read byte for byte, never convert line endings.
 fixtures/core/sto/sql/txn/** -text
+# SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
+fixtures/scan/cmp/** -text
