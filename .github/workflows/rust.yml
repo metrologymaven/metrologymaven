@@ -266,6 +266,7 @@ jobs:
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
           python tools/fixtures/geo_digest_vectors.py --check
+          python fixtures/scan/cmp/make_field_golden.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -373,3 +374,5 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
+      - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
+        run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib

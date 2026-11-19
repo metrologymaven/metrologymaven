@@ -125,3 +125,5 @@ fixtures/geo/types/** -text
 fixtures/core/rpl/exec/subst/** -text
 # KRN.NUM.LA.MAT fixtures: result bits and digests are compared byte for byte by --check.
 fixtures/num/la/** -text
+# SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
+fixtures/scan/cmp/** -text
