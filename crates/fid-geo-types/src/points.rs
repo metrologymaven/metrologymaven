@@ -177,7 +177,7 @@ impl AttributeSet {
     }
 
     /// Checks 3 to 6 of the module documentation against `count` points.
-    fn validate(&self, count: u64) -> Result<(), GeoTypeError> {
+    pub(crate) fn validate(&self, count: u64) -> Result<(), GeoTypeError> {
         if let Some(n) = &self.normal {
             for col in n {
                 check_len("normal", count, col.len())?;
@@ -347,8 +347,8 @@ impl PointCloud {
 }
 
 impl PointSet {
-    /// Crate-internal constructor from an already validated buffer, without attributes.
-    pub(crate) fn from_validated(frame: FrameRef, buf: PointBuffer) -> PointSet {
-        PointSet { frame, buf, attrs: AttributeSet::default() }
+    /// Crate-internal constructor from an already validated buffer and attributes.
+    pub(crate) fn from_validated(frame: FrameRef, buf: PointBuffer, attrs: AttributeSet) -> PointSet {
+        PointSet { frame, buf, attrs }
     }
 }

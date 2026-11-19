@@ -1,0 +1,20 @@
+{
+  "tag": "v1.4.0",
+  "channel": "stable",
+  "previous_tag": "v1.3.0",
+  "commit": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+  "prs": [
+    {"number": 201, "title": "Add circle fit residual plot", "labels": ["feature"], "merged_at": "2026-10-02T09:15:00Z", "merge_commit": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"},
+    {"number": 187, "title": "Support CSV export of point lists", "labels": ["feature", "docs"], "merged_at": "2026-09-20T14:00:00Z", "merge_commit": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"},
+    {"number": 215, "title": "Fix rounding of angles in report header", "labels": ["fix"], "merged_at": "2026-10-11T08:30:00Z", "merge_commit": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"},
+    {"number": 190, "title": "Fix crash when a probe file is empty", "labels": ["Fix"], "merged_at": "2026-09-22T16:45:00Z", "merge_commit": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"},
+    {"number": 222, "title": "Harden plugin manifest checks", "labels": ["security", "fix"], "merged_at": "2026-10-15T11:00:00Z", "merge_commit": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"},
+    {"number": 230, "title": "Bump verification key length", "labels": ["security"], "merged_at": "2026-10-20T10:10:00Z", "merge_commit": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6"},
+    {"number": 205, "title": "Rename the journal export flag", "labels": ["breaking"], "merged_at": "2026-10-05T13:20:00Z", "merge_commit": "0707070707070707070707070707070707070707"},
+    {"number": 198, "title": "Clarify the install guide", "labels": ["docs"], "merged_at": "2026-09-28T07:55:00Z", "merge_commit": "1818181818181818181818181818181818181818"},
+    {"number": 211, "title": "Speed up CI cache", "labels": ["internal", "ci"], "merged_at": "2026-10-09T18:40:00Z", "merge_commit": "2929292929292929292929292929292929292929"},
+    {"number": 193, "title": "Refactor unit tests", "labels": ["ci"], "merged_at": "2026-09-25T12:00:00Z", "merge_commit": "3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a"},
+    {"number": 226, "title": "Tidy changelog wording", "labels": [], "merged_at": "2026-10-18T09:05:00Z", "merge_commit": "4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b"},
+    {"number": 208, "title": "Update the 3-2-1 alignment example (docs)", "labels": ["docs"], "merged_at": "2026-10-07T15:30:00Z", "merge_commit": "5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c"}
+  ]
+}

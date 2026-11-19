@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.87"
+rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/metrologymaven/metrologymaven"
 
@@ -22,3 +22,6 @@ panic = "deny"
 # not rewrite unrelated crates; a follow-up PR may adopt the newer APIs and drop these.
 manual_is_multiple_of = "allow"
 unnecessary_map_or = "allow"
+# Same for the move from 1.87 to 1.89 (RUSTSEC-2026-0459): `slice::as_chunks` (1.88) makes
+# clippy suggest it over `chunks_exact` with a constant size. Allowed for the same reason.
+chunks_exact_to_as_chunks = "allow"

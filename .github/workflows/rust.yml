@@ -236,6 +236,7 @@ jobs:
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/solv/vend/make_fixtures.py --check
+          python fixtures/solv/make_mstart_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
@@ -248,6 +249,7 @@ jobs:
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/outr/bench/recipe/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
+          python fixtures/agent/harness/runs/make_runs.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
           python fixtures/fetch/make_fixtures.py --check
@@ -255,6 +257,8 @@ jobs:
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
           python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
+          python fixtures/core/reg/ver/compat/make_fixtures.py --check
+          python fixtures/geo/types/make_mesh_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -323,15 +327,15 @@ jobs:
           fi
           offline "$py" tools/verify_guide.py --tag "${{ matrix.tag }}"
   msrv:
-    # rust-version = 1.87 (Cargo.toml). Cargo 1.87 honours the [resolver] key in
+    # rust-version = 1.89 (Cargo.toml). Cargo 1.89 honours the [resolver] key in
     # .cargo/config.toml; the stable and lockfile jobs resolve MSRV-aware too.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: "1.87"
-      - name: Check on MSRV 1.87
+          toolchain: "1.89"
+      - name: Check on MSRV 1.89
         run: cargo check --workspace --all-targets
   deny:
     # Licences, advisories, bans, sources (deny.toml).
@@ -359,4 +363,4 @@ jobs:
           version: "v49.0.6"
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
-        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core
+        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
