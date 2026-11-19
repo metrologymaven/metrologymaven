@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-dep]
+built_pr: 243
 satisfies: [REQ-CORE.DEP-003, REQ-CORE.DEP-008, REQ-CORE.DEP-011]
 covers: []
 depends_on: [CORE.DEP.EDGE, CORE.PRJ.TREE, CORE.BUS]
