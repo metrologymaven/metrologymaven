@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [tools/]
+built_pr: 183
 satisfies: [REQ-ECO.COMM-007]
 covers: []
 depends_on: [ECO.COMM.SCOPE]
@@ -58,6 +60,7 @@ Computes, per domain, which contributors meet the GOVERNANCE.md nomination thres
 - **Registry command(s):** none; repository tool `python tools/ladder.py --repo <dir> --reviews <json> --now <ISO8601> [--config <json>] [--json|--md]`.
 - **Data structures:** expansions from `git log --format=%H%x00%an%x00%ae%x00%cI%x00%s`; subjects matched by `^spec\(([A-Z0-9.]+)\): (split into \d+ children|leaf|blocked on D-\d+)`; reverts matched by `^Revert "spec\(([A-Z0-9.]+)\): split`; reviews `[{pr, reviewer, state, body, inline_comments, at, node_ids[]}]`, domain from the PR's node IDs.
 - **Algorithm:** aggregate counts per (domain, person) with identity normalisation by email via a config alias table; apply thresholds; sort by domain then person.
+- **Reverted splits** (maintainer decision, PR #183 review): a split that a revert commit matches never counts as an expansion, whatever the window, because GOVERNANCE.md counts merged expansions and reverted work is no longer merged. A revert inside `revert_window_days` also blocks the split's author in that domain. A revert is matched by subject (ignoring a squash merge's trailing ` (#N)`), then by node ID. A revert that matches no split fails closed: no other expansion of that node counts, and the report records a finding.
 - **Errors:** `LADDER-GIT`, `LADDER-INPUT`, `LADDER-CONFIG`.
 - **Determinism:** D0 given `--now`.
 - **Performance budget:** under 10 s on 10 000 commits [unverified].
