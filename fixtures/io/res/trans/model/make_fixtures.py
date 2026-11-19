@@ -11,7 +11,12 @@ as pinned in NODE.md Design, re-implemented here:
 - rows_edge.json / rows_edge.out.json: AC-3, AC-4, AC-5 and the pinned rules (features
   flag, both flags, unrecognized status, pass outside a limit, fail inside the limits,
   non-decimal and inverted limits, a case-only duplicate key, a non-decimal value, a
-  field over 4096 bytes, hostile text).
+  field over 4096 bytes, hostile text, a decided status without the source's wording
+  (no_source_status), whitespace-only key differences and blank parts).
+
+Every result embeds the UEC-0 uncertainty_statement@1 written out by hand below in the
+UNC.UEC.STMT wire form, with its SHA-256; the Rust test checks that fid-kunc writes the
+same bytes.
 - the hand-labelled refusal files (bad_*.json) whose reasons the Rust test names.
 
 Exact decimal comparison uses Python's decimal module (not the Rust parser). UUIDv5 uses
@@ -80,8 +85,21 @@ def side(value, lower, upper):
     return "INSIDE"
 
 
+# Unicode White_Space (what Rust's str::trim strips); Python's str.strip() would also strip
+# U+001C..U+001F, so the set is spelled out.
+WS = "\t\n\x0b\x0c\r \x85\xa0\u1680" + "".join(chr(c) for c in range(0x2000, 0x200B)) + "\u2028\u2029\u202f\u205f\u3000"
+
+
 def blank(x):
-    return x is None or x.strip() == ""
+    return x is None or x.strip(WS) == ""
+
+
+# The UEC-0 uncertainty_statement@1 (UNC.UEC.STMT wire form, as in
+# fixtures/unc/stmt/valid/uec0_u_missing.json without model and unit): written out by hand.
+UEC0 = {
+    "class": "UEC-0", "contributors": [], "provenance": {"proposal": "false", "rule_sets": []},
+    "schema": "uncertainty_statement@1", "sources": [], "uec0_reason": "u_missing",
+}
 
 
 def transcribe(doc):
@@ -110,29 +128,32 @@ def transcribe(doc):
         if not is_decimal(g("value")):
             dropped.append({"row": str(n), "reason": "value_not_decimal"})
             continue
-        key =(ascii_lower(g("characteristic")), None if g("part") is None else ascii_lower(g("part")))
+        part = None if blank(g("part")) else g("part")
+        key = (ascii_lower(g("characteristic").strip(WS)), None if part is None else ascii_lower(part.strip(WS)))
         if key in keys:
             dropped.append({"row": str(n), "reason": "duplicate_row_key"})
             continue
         keys.add(key)
         sd = side(g("value"), g("lower_limit"), g("upper_limit"))
         status = g("status")
-        conflict = None
-        if status == "pass":
+        reason = None
+        if status is None or (status in ("pass", "fail", "undecided") and blank(g("status_text"))):
+            outcome, reason = "NOT_DECIDABLE", "no_source_status"
+        elif status == "unrecognized":
+            outcome, reason = "NOT_DECIDABLE", "status_unrecognized"
+        elif status == "pass":
             if sd in ("BELOW_LOWER", "ABOVE_UPPER"):
-                outcome, conflict = "NOT_DECIDABLE", "pass_outside_limit"
+                outcome, reason = "NOT_DECIDABLE", "pass_outside_limit"
             else:
                 outcome = "CONFORMS"
         elif status == "fail":
             outcome = "NONCONFORMS"
-        elif status == "undecided":
-            outcome = "INDETERMINATE"
         else:
-            outcome = "NOT_DECIDABLE"
+            outcome = "INDETERMINATE"
         basis = "POINTS" if g("has_points") else "FEATURES" if g("has_features") else "RESULTS_ONLY"
         rid = uuid.uuid5(NAMESPACE, canonical({
             "kind": "transcribed_result", "file_sha256": fsha,
-            "characteristic": g("characteristic"), "part": g("part"),
+            "characteristic": g("characteristic"), "part": part,
         }).decode())
         results.append({
             "schema": "transcribed-result@1",
@@ -140,13 +161,14 @@ def transcribe(doc):
             "record": {"id": record["id"], "digest": rdigest},
             "source_row": str(n),
             "characteristic": g("characteristic"),
-            "part": g("part"),
+            "part": part,
             "measurand": g("measurand"),
             "evaluation_basis": basis,
             "status": "transcribed",
             "value": {"text": g("value"), "unit": g("unit")},
-            "uncertainty": {"uec": "UEC-0", "uec0_reason": "u_missing"},
-            "decision": {"rule": RULE, "outcome": outcome, "source_conflict": conflict},
+            "uncertainty": UEC0,
+            "uncertainty_digest": sha(canonical(UEC0)),
+            "decision": {"rule": RULE, "outcome": outcome, "reason": reason},
             "side": sd,
             "claim": {"claimed": True, "declared_input": True, "uncharacterized_input": True},
             "spec_context": None,
@@ -194,7 +216,7 @@ EDGE = {
     "schema": "transcription-rows@1",
     "source": source("Vendor‮Y\u0007", "", "rows_edge"),
     "rows": [
-        # 0 AC-3: authored decimal text and unit kept.
+        # 0 AC-3: authored decimal text and unit kept (pass without source wording: NOT_DECIDABLE).
         {"characteristic": "E1", "value": "0.0100", "unit": "mm", "status": "pass",
          "lower_limit": "0", "upper_limit": "0.0100"},
         # 1 AC-4: source uncertainty stays as_reported text; still UEC-0.
@@ -215,17 +237,18 @@ EDGE = {
         {"characteristic": "E9", "value": "10.021", "unit": "mm", "status": "pass", "status_text": "OK",
          "lower_limit": "9.98", "upper_limit": "10.02"},
         # 9 pass but below the lower limit (only a lower limit).
-        {"characteristic": "E10", "value": "-0.001", "unit": "mm", "status": "pass", "lower_limit": "0"},
+        {"characteristic": "E10", "value": "-0.001", "unit": "mm", "status": "pass", "status_text": "OK",
+         "lower_limit": "0"},
         # 10 fail inside the limits stays NONCONFORMS (the source's claim, conservative).
-        {"characteristic": "E11", "value": "10.000", "unit": "mm", "status": "fail",
+        {"characteristic": "E11", "value": "10.000", "unit": "mm", "status": "fail", "status_text": "NOK",
          "lower_limit": "9.98", "upper_limit": "10.02"},
         # 11 pass, upper limit violated, lower limit unreadable: the violation is still shown.
-        {"characteristic": "E12", "value": "50", "unit": "mm", "status": "pass",
+        {"characteristic": "E12", "value": "50", "unit": "mm", "status": "pass", "status_text": "OK",
          "lower_limit": "n/a", "upper_limit": "10"},
         # 12 inverted limits: the violated lower limit is shown; 13 unreadable limit, no violation.
-        {"characteristic": "E13", "value": "5", "unit": "mm", "status": "pass",
+        {"characteristic": "E13", "value": "5", "unit": "mm", "status": "pass", "status_text": "OK",
          "lower_limit": "6", "upper_limit": "4"},
-        {"characteristic": "E13b", "value": "5", "unit": "mm", "status": "pass",
+        {"characteristic": "E13b", "value": "5", "unit": "mm", "status": "pass", "status_text": "OK",
          "lower_limit": "n/a", "upper_limit": "10"},
         # 14 case-only duplicate of E1: dropped.
         {"characteristic": "e1", "value": "0.0100", "unit": "mm", "status": "pass"},
@@ -241,6 +264,15 @@ EDGE = {
         # 20 hostile text kept verbatim, typed, escaped only on display.
         {"characteristic": "E20\u0000‮", "measurand": "</script> \"\\", "value": "+7.25",
          "unit": "m​m", "status": "pass", "status_text": "OK\r\nrm -rf /"},
+        # 21 fail with whitespace-only wording: no_source_status.
+        {"characteristic": "E21", "value": "1", "unit": "mm", "status": "fail", "status_text": " \u3000"},
+        # 22 differs from E6 only by trailing whitespace: duplicate.
+        {"characteristic": "E6 ", "value": "2", "unit": "mm"},
+        # 23 blank part is no part: duplicate of E8 (row 7).
+        {"characteristic": "E8", "part": " ", "value": "2", "unit": "mm"},
+        # 24 blank part is written as null; undecided with wording stays INDETERMINATE.
+        {"characteristic": "E24", "part": "\t", "value": "2", "unit": "mm", "status": "undecided",
+         "status_text": "CHECK"},
     ],
 }
 

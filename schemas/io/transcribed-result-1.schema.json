@@ -2,100 +2,361 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/metrologymaven/metrologymaven/schemas/io/transcribed-result-1.schema.json",
   "title": "Transcribed result (IO.RES.TRANS.MODEL, transcribed-result@1)",
-  "description": "A third-party result as a platform record: the CONSTITUTION section 5 ResultRecord fields with status transcribed, UEC-0, rule dr:as-reported-by-source@1, null algorithm and kernel version. The value and outcome are the source's claim (claim block, always true); what the source said is kept in as_reported as untrusted text. Produced by fid_io_res::trans::model::transcribe; canonical JSON (RFC 8785).",
+  "description": "A third-party result as a platform record: the CONSTITUTION section 5 ResultRecord fields with status transcribed, a fid-kunc UEC-0 uncertainty statement, rule dr:as-reported-by-source@1, null algorithm and kernel version. The value and outcome are the source's claim (claim block, always true); what the source said is kept in as_reported as untrusted text. Produced by fid_io_res::trans::model::transcribe; canonical JSON (RFC 8785).",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema", "id", "record", "source_row", "characteristic", "part", "measurand", "evaluation_basis", "status",
-    "value", "uncertainty", "decision", "side", "claim", "spec_context", "algorithm", "kernel_version",
-    "input_digests", "as_reported"
+    "schema",
+    "id",
+    "record",
+    "source_row",
+    "characteristic",
+    "part",
+    "measurand",
+    "evaluation_basis",
+    "status",
+    "value",
+    "uncertainty",
+    "uncertainty_digest",
+    "decision",
+    "side",
+    "claim",
+    "spec_context",
+    "algorithm",
+    "kernel_version",
+    "input_digests",
+    "as_reported"
   ],
   "properties": {
-    "schema": { "const": "transcribed-result@1" },
-    "id": { "$ref": "#/$defs/uuid" },
+    "schema": {
+      "const": "transcribed-result@1"
+    },
+    "id": {
+      "$ref": "#/$defs/uuid"
+    },
     "record": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "digest"],
-      "properties": { "id": { "$ref": "#/$defs/uuid" }, "digest": { "$ref": "#/$defs/digest" } }
+      "required": [
+        "id",
+        "digest"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
     },
-    "source_row": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
-    "characteristic": { "$ref": "#/$defs/text" },
-    "part": { "$ref": "#/$defs/opt_text" },
-    "measurand": { "$ref": "#/$defs/opt_text" },
-    "evaluation_basis": { "enum": ["RESULTS_ONLY", "POINTS", "FEATURES"] },
-    "status": { "const": "transcribed" },
+    "source_row": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "characteristic": {
+      "$ref": "#/$defs/text"
+    },
+    "part": {
+      "$ref": "#/$defs/opt_text"
+    },
+    "measurand": {
+      "$ref": "#/$defs/opt_text"
+    },
+    "evaluation_basis": {
+      "enum": [
+        "RESULTS_ONLY",
+        "POINTS",
+        "FEATURES"
+      ]
+    },
+    "status": {
+      "const": "transcribed"
+    },
     "value": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["text", "unit"],
+      "required": [
+        "text",
+        "unit"
+      ],
       "properties": {
-        "text": { "type": "string", "pattern": "^[+-]?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$" },
-        "unit": { "$ref": "#/$defs/opt_text" }
+        "text": {
+          "type": "string",
+          "pattern": "^[+-]?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?$"
+        },
+        "unit": {
+          "$ref": "#/$defs/opt_text"
+        }
       }
     },
     "uncertainty": {
+      "description": "The fid-kunc uncertainty_statement@1 (UNC.UEC.STMT) of class UEC-0, uec0_reason u_missing, as fid-kunc writes it.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["uec", "uec0_reason"],
-      "properties": { "uec": { "const": "UEC-0" }, "uec0_reason": { "const": "u_missing" } }
+      "required": [
+        "class",
+        "contributors",
+        "provenance",
+        "schema",
+        "sources",
+        "uec0_reason"
+      ],
+      "properties": {
+        "class": {
+          "const": "UEC-0"
+        },
+        "contributors": {
+          "const": []
+        },
+        "provenance": {
+          "const": {
+            "proposal": "false",
+            "rule_sets": []
+          }
+        },
+        "schema": {
+          "const": "uncertainty_statement@1"
+        },
+        "sources": {
+          "const": []
+        },
+        "uec0_reason": {
+          "const": "u_missing"
+        }
+      }
+    },
+    "uncertainty_digest": {
+      "$ref": "#/$defs/digest",
+      "description": "SHA-256 of the statement's canonical bytes."
     },
     "decision": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["rule", "outcome", "source_conflict"],
+      "required": [
+        "rule",
+        "outcome",
+        "reason"
+      ],
       "properties": {
-        "rule": { "const": "dr:as-reported-by-source@1" },
-        "outcome": { "enum": ["CONFORMS", "NONCONFORMS", "INDETERMINATE", "NOT_DECIDABLE"] },
-        "source_conflict": { "enum": [null, "pass_outside_limit"] }
+        "rule": {
+          "const": "dr:as-reported-by-source@1"
+        },
+        "outcome": {
+          "enum": [
+            "CONFORMS",
+            "NONCONFORMS",
+            "INDETERMINATE",
+            "NOT_DECIDABLE"
+          ]
+        },
+        "reason": {
+          "enum": [
+            null,
+            "no_source_status",
+            "status_unrecognized",
+            "pass_outside_limit"
+          ]
+        }
       }
     },
-    "side": { "enum": ["INSIDE", "BELOW_LOWER", "ABOVE_UPPER", "UNDECIDABLE"] },
+    "side": {
+      "enum": [
+        "INSIDE",
+        "BELOW_LOWER",
+        "ABOVE_UPPER",
+        "UNDECIDABLE"
+      ]
+    },
     "claim": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["claimed", "declared_input", "uncharacterized_input"],
+      "required": [
+        "claimed",
+        "declared_input",
+        "uncharacterized_input"
+      ],
       "properties": {
-        "claimed": { "const": true },
-        "declared_input": { "const": true },
-        "uncharacterized_input": { "const": true }
+        "claimed": {
+          "const": true
+        },
+        "declared_input": {
+          "const": true
+        },
+        "uncharacterized_input": {
+          "const": true
+        }
       }
     },
-    "spec_context": { "const": null },
-    "algorithm": { "const": null },
-    "kernel_version": { "const": null },
-    "input_digests": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/$defs/digest" } },
+    "spec_context": {
+      "const": null
+    },
+    "algorithm": {
+      "const": null
+    },
+    "kernel_version": {
+      "const": null
+    },
+    "input_digests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "$ref": "#/$defs/digest"
+      }
+    },
     "as_reported": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "unit", "status", "uncertainty", "decision_rule", "outcome", "lower_limit", "upper_limit"],
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "uncertainty",
+        "decision_rule",
+        "outcome",
+        "lower_limit",
+        "upper_limit"
+      ],
       "properties": {
-        "value": { "$ref": "#/$defs/text" },
-        "unit": { "$ref": "#/$defs/opt_text" },
-        "status": { "$ref": "#/$defs/opt_text" },
-        "uncertainty": { "$ref": "#/$defs/opt_text" },
-        "decision_rule": { "$ref": "#/$defs/opt_text" },
-        "outcome": { "$ref": "#/$defs/opt_text" },
-        "lower_limit": { "$ref": "#/$defs/opt_text" },
-        "upper_limit": { "$ref": "#/$defs/opt_text" }
+        "value": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "status": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "decision_rule": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "outcome": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "lower_limit": {
+          "$ref": "#/$defs/opt_text"
+        },
+        "upper_limit": {
+          "$ref": "#/$defs/opt_text"
+        }
       }
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "decision": { "properties": { "source_conflict": { "const": "pass_outside_limit" } } } } },
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "outcome": {
+                "const": "NOT_DECIDABLE"
+              }
+            }
+          }
+        }
+      },
       "then": {
         "properties": {
-          "decision": { "properties": { "outcome": { "const": "NOT_DECIDABLE" } } },
-          "side": { "enum": ["BELOW_LOWER", "ABOVE_UPPER"] }
+          "decision": {
+            "properties": {
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "reason": {
+                "const": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "reason": {
+                "const": "pass_outside_limit"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "side": {
+            "enum": [
+              "BELOW_LOWER",
+              "ABOVE_UPPER"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "CONFORMS",
+                  "NONCONFORMS",
+                  "INDETERMINATE"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "as_reported": {
+            "properties": {
+              "status": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            }
+          }
         }
       }
     }
   ],
   "$defs": {
-    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "text": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "Untrusted text from the source." },
-    "opt_text": { "type": ["string", "null"], "maxLength": 4096, "description": "Untrusted text from the source, or null." }
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Untrusted text from the source."
+    },
+    "opt_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4096,
+      "description": "Untrusted text from the source, or null."
+    }
   }
 }

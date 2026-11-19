@@ -8,8 +8,10 @@
 //!
 //! # Pinned rules (NODE.md Design)
 //!
-//! - **Never measured.** Every result has record status `transcribed`, UEC-0 with
-//!   `uec0_reason` `u_missing` and no value, rule `dr:as-reported-by-source@1`, null
+//! - **Never measured.** Every result has record status `transcribed`, a `fid-kunc`
+//!   `uncertainty_statement@1` of class UEC-0 with `uec0_reason` `u_missing` (built by
+//!   `UncertaintyStatement::new`, written by its canonical writer, referenced by digest),
+//!   rule `dr:as-reported-by-source@1`, null
 //!   algorithm and kernel version, and a `claim` block whose three facts (`claimed`,
 //!   `declared_input`, `uncharacterized_input`) are always true: the value and the outcome
 //!   are the source's claim, resting on a declared and uncharacterized input. The facts
@@ -19,15 +21,19 @@
 //!   `record.digest`) and its input by the file digest (`input_digests`); the value text
 //!   is the source's authored text, copied byte for byte, never retyped.
 //! - **Outcome.** pass → `CONFORMS`, fail → `NONCONFORMS`, explicit undecided →
-//!   `INDETERMINATE`, absent or unrecognized status → `NOT_DECIDABLE` (never a guessed
-//!   pass or fail).
+//!   `INDETERMINATE`; never a guessed pass or fail. Every `NOT_DECIDABLE` carries a
+//!   [`NotDecidableReason`], checked in this order: `no_source_status` (no status, or a
+//!   pass, fail or undecided without the source's own non-blank status text, so a
+//!   `CONFORMS` or `NONCONFORMS` always shows the source's word in `as_reported.status`),
+//!   `status_unrecognized`, `pass_outside_limit`. Whether the word matches the class is
+//!   the importer's mapping; the word stays visible verbatim.
 //! - **Side.** The value's side of the source's own limits is computed by exact decimal
 //!   comparison (limits inclusive, in the row's unit): `INSIDE`, `BELOW_LOWER`,
 //!   `ABOVE_UPPER` (the lower limit is checked first), or `UNDECIDABLE` when no limit is
 //!   violated but there is no limit or a stated limit is not decimal text. A violated
 //!   readable limit is reported even if the other limit is unreadable or the limits are
-//!   inverted, so a violation is never shown inside the limit. A pass whose value violates a limit is never
-//!   shown as `CONFORMS`: its outcome is `NOT_DECIDABLE` with `source_conflict`
+//!   inverted, so a violation is never shown inside the limit. A pass whose value violates
+//!   a limit is never shown as `CONFORMS`: its outcome is `NOT_DECIDABLE` with reason
 //!   `pass_outside_limit`, and the side names the violated limit.
 //! - **Basis.** `POINTS` if the row flags points (even if it also flags features),
 //!   else `FEATURES` if it flags features, else `RESULTS_ONLY`.
@@ -37,8 +43,11 @@
 //! - **Rows, in check order:** no characteristic or no value (empty or whitespace-only
 //!   counts as none) → `row_incomplete`; a text field over [`MAX_TEXT_BYTES`] →
 //!   `field_too_long`; a value outside the decimal grammar → `value_not_decimal`; a
-//!   `(characteristic, part)` key equal to an earlier row's, ASCII case ignored →
-//!   `duplicate_row_key` (the first row wins).
+//!   `(characteristic, part)` key equal to an earlier row's once both are trimmed of
+//!   leading and trailing Unicode `White_Space` and ASCII-lowercased → `duplicate_row_key`
+//!   (the first row wins). A blank or whitespace-only part is `None` everywhere (key, ID,
+//!   output); non-blank text is never trimmed, so `C1` and `C1 ` keep different IDs but
+//!   the second is dropped as a duplicate.
 //! - **Untrusted text.** Everything taken from the source is a [`SourceText`]: no
 //!   `Deref`, no `Display`; [`SourceText::escaped`] is the only view for people, and the
 //!   canonical JSON writer escapes control characters (RFC 8785).
@@ -51,6 +60,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt;
 
+use fid_kunc::{EvidenceClass, StatementParts, Uec0Reason, UncertaintyStatement};
 use fid_project::{IdService, Uuid};
 use fid_types::Digest;
 
@@ -218,18 +228,25 @@ impl Side {
     }
 }
 
-/// Why a source contradicts itself.
+/// Why a transcribed outcome is `NOT_DECIDABLE` (`decision.reason`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SourceConflict {
+pub enum NotDecidableReason {
+    /// The source states no status, or a pass, fail or undecided without its own
+    /// non-blank status text.
+    NoSourceStatus,
+    /// The source states a status the importer does not recognize.
+    StatusUnrecognized,
     /// The source says pass but the value lies outside its own limits.
     PassOutsideLimit,
 }
 
-impl SourceConflict {
+impl NotDecidableReason {
     /// Wire name.
     pub fn as_str(self) -> &'static str {
         match self {
-            SourceConflict::PassOutsideLimit => "pass_outside_limit",
+            NotDecidableReason::NoSourceStatus => "no_source_status",
+            NotDecidableReason::StatusUnrecognized => "status_unrecognized",
+            NotDecidableReason::PassOutsideLimit => "pass_outside_limit",
         }
     }
 }
@@ -411,7 +428,7 @@ pub struct AsReported {
 }
 
 /// One transcribed result: the CONSTITUTION §5 fields with status `transcribed`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TranscribedResult {
     id: Uuid,
     record: Uuid,
@@ -423,8 +440,9 @@ pub struct TranscribedResult {
     evaluation_basis: EvaluationBasis,
     value: SourceText,
     unit: Option<SourceText>,
+    uncertainty: UncertaintyStatement,
     outcome: Outcome,
-    source_conflict: Option<SourceConflict>,
+    reason: Option<NotDecidableReason>,
     side: Side,
     input_digest: Digest,
     as_reported: AsReported,
@@ -469,9 +487,9 @@ impl TranscribedResult {
     pub fn status(&self) -> &'static str {
         STATUS_TRANSCRIBED
     }
-    /// Always `UEC-0`.
-    pub fn uec(&self) -> &'static str {
-        "UEC-0"
+    /// The UEC-0 uncertainty statement (`fid-kunc`, `uncertainty_statement@1`).
+    pub fn uncertainty(&self) -> &UncertaintyStatement {
+        &self.uncertainty
     }
     /// Always [`DECISION_RULE`].
     pub fn decision_rule(&self) -> &'static str {
@@ -480,8 +498,9 @@ impl TranscribedResult {
     pub fn outcome(&self) -> Outcome {
         self.outcome
     }
-    pub fn source_conflict(&self) -> Option<SourceConflict> {
-        self.source_conflict
+    /// Why the outcome is `NOT_DECIDABLE`; `None` exactly for the other outcomes.
+    pub fn reason(&self) -> Option<NotDecidableReason> {
+        self.reason
     }
     pub fn side(&self) -> Side {
         self.side
@@ -507,23 +526,35 @@ impl TranscribedResult {
     }
     /// Canonical JSON (`transcribed-result@1`).
     pub fn to_canonical_json(&self) -> Result<Vec<u8>, TransError> {
-        json::bytes_of(&json::result_value(self))
+        json::bytes_of(&json::result_value(self)?)
     }
 }
 
 /// The output of [`transcribe`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Transcription {
-    pub record: TranscriptionRecord,
-    pub results: Vec<TranscribedResult>,
-    pub dropped: Vec<Dropped>,
+    record: TranscriptionRecord,
+    results: Vec<TranscribedResult>,
+    dropped: Vec<Dropped>,
 }
 
 impl Transcription {
+    /// The transcription record of the source file.
+    pub fn record(&self) -> &TranscriptionRecord {
+        &self.record
+    }
+    /// The mapped results, in row order.
+    pub fn results(&self) -> &[TranscribedResult] {
+        &self.results
+    }
+    /// The rows that were not mapped, in row order.
+    pub fn dropped(&self) -> &[Dropped] {
+        &self.dropped
+    }
     /// Canonical JSON (`transcription@1`): the record, the results in row order and the
     /// dropped rows.
     pub fn to_canonical_json(&self) -> Result<Vec<u8>, TransError> {
-        json::bytes_of(&json::transcription_value(self))
+        json::bytes_of(&json::transcription_value(self)?)
     }
 }
 
@@ -569,6 +600,18 @@ fn blank(s: &Option<String>) -> bool {
 
 fn text(s: &Option<String>) -> Option<SourceText> {
     s.as_deref().map(SourceText::new)
+}
+
+/// The UEC-0 statement every transcribed result carries.
+fn uec0_statement() -> Result<UncertaintyStatement, TransError> {
+    let mut parts = StatementParts::new(EvidenceClass::Uec0);
+    parts.uec0_reason = Some(Uec0Reason::UMissing);
+    UncertaintyStatement::new(parts).map_err(|_| TransError::Internal("uncertainty_statement"))
+}
+
+/// Duplicate-key form: trimmed of leading and trailing `White_Space`, ASCII-lowercased.
+fn key_form(s: &str) -> String {
+    s.trim().to_ascii_lowercase()
 }
 
 fn side_of(value: &Decimal, lower: &Option<String>, upper: &Option<String>) -> Side {
@@ -657,6 +700,7 @@ pub fn transcribe(rows: &[SourceRow], source: &SourceInfo, ids: &IdService<'_>) 
     }
     let record = build_record(source, ids)?;
     let record_digest = record.digest()?;
+    let uncertainty = uec0_statement()?;
     let mut keys: BTreeSet<(String, Option<String>)> = BTreeSet::new();
     let mut results = Vec::with_capacity(rows.len());
     let mut dropped = Vec::new();
@@ -678,20 +722,26 @@ pub fn transcribe(rows: &[SourceRow], source: &SourceInfo, ids: &IdService<'_>) 
             dropped.push(drop(DropReason::ValueNotDecimal));
             continue;
         };
-        let key = (characteristic.to_ascii_lowercase(), row.part.as_deref().map(str::to_ascii_lowercase));
+        // A blank part is no part, for the key, the ID and the output alike.
+        let part = row.part.as_deref().filter(|p| !p.trim().is_empty());
+        let key = (key_form(characteristic), part.map(key_form));
         if !keys.insert(key) {
             dropped.push(drop(DropReason::DuplicateRowKey));
             continue;
         }
         let side = side_of(&value, &row.lower_limit, &row.upper_limit);
-        let (outcome, source_conflict) = match row.status {
-            SourceStatus::Pass if side.is_violation() => {
-                (Outcome::NotDecidable, Some(SourceConflict::PassOutsideLimit))
+        let worded = !blank(&row.status_text);
+        let not_decidable = |r| (Outcome::NotDecidable, Some(r));
+        let (outcome, reason) = match row.status {
+            SourceStatus::Absent => not_decidable(NotDecidableReason::NoSourceStatus),
+            SourceStatus::Pass | SourceStatus::Fail | SourceStatus::Undecided if !worded => {
+                not_decidable(NotDecidableReason::NoSourceStatus)
             }
+            SourceStatus::Unrecognized => not_decidable(NotDecidableReason::StatusUnrecognized),
+            SourceStatus::Pass if side.is_violation() => not_decidable(NotDecidableReason::PassOutsideLimit),
             SourceStatus::Pass => (Outcome::Conforms, None),
             SourceStatus::Fail => (Outcome::Nonconforms, None),
             SourceStatus::Undecided => (Outcome::Indeterminate, None),
-            SourceStatus::Unrecognized | SourceStatus::Absent => (Outcome::NotDecidable, None),
         };
         let evaluation_basis = if row.has_points {
             EvaluationBasis::Points
@@ -701,7 +751,7 @@ pub fn transcribe(rows: &[SourceRow], source: &SourceInfo, ids: &IdService<'_>) 
             EvaluationBasis::ResultsOnly
         };
         let id = ids
-            .derive_v5(&json::result_id_inputs(&source.file_sha256, characteristic, row.part.as_deref()))
+            .derive_v5(&json::result_id_inputs(&source.file_sha256, characteristic, part))
             .map_err(|_| TransError::Internal("id_service"))?;
         results.push(TranscribedResult {
             id,
@@ -709,13 +759,14 @@ pub fn transcribe(rows: &[SourceRow], source: &SourceInfo, ids: &IdService<'_>) 
             record_digest,
             source_row: n,
             characteristic: SourceText::new(characteristic),
-            part: text(&row.part),
+            part: part.map(SourceText::new),
             measurand: text(&row.measurand),
             evaluation_basis,
             value: SourceText::new(value_text),
             unit: text(&row.unit),
+            uncertainty: uncertainty.clone(),
             outcome,
-            source_conflict,
+            reason,
             side,
             input_digest: source.file_sha256,
             as_reported: AsReported {

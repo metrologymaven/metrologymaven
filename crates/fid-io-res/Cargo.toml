@@ -19,6 +19,9 @@ fid-types = { path = "../fid-types" }
 fid-replay = { path = "../fid-replay" }
 # Entity ID service (CORE.PRJ.CONT.ID): UUIDv5 IDs of transcription records and results.
 fid-project = { path = "../fid-project" }
+# Uncertainty statement (UNC.UEC.STMT, layer kernel): the UEC-0 statement every transcribed
+# result carries, built and written by fid-kunc itself.
+fid-kunc = { path = "../fid-kunc" }
 
 [lints]
 workspace = true

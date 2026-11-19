@@ -54,9 +54,14 @@ pub(super) fn record_value(r: &TranscriptionRecord) -> CValue {
     ])
 }
 
-pub(super) fn result_value(r: &TranscribedResult) -> CValue {
+/// The statement as `fid-kunc` wrote it, embedded as a JSON object.
+fn uncertainty(r: &TranscribedResult) -> Result<CValue, TransError> {
+    fid_canon::parse(r.uncertainty.canonical_json()).map_err(|_| TransError::Internal("uncertainty_statement"))
+}
+
+pub(super) fn result_value(r: &TranscribedResult) -> Result<CValue, TransError> {
     let a = &r.as_reported;
-    obj([
+    Ok(obj([
         ("schema", s(RESULT_SCHEMA)),
         ("id", s(&r.id.to_string())),
         ("record", obj([("id", s(&r.record.to_string())), ("digest", d(&r.record_digest))])),
@@ -67,13 +72,14 @@ pub(super) fn result_value(r: &TranscribedResult) -> CValue {
         ("evaluation_basis", s(r.evaluation_basis.as_str())),
         ("status", s(STATUS_TRANSCRIBED)),
         ("value", obj([("text", t(&r.value)), ("unit", opt(r.unit.as_ref()))])),
-        ("uncertainty", obj([("uec", s(r.uec())), ("uec0_reason", s("u_missing"))])),
+        ("uncertainty", uncertainty(r)?),
+        ("uncertainty_digest", d(&r.uncertainty.digest())),
         (
             "decision",
             obj([
                 ("rule", s(DECISION_RULE)),
                 ("outcome", s(r.outcome.as_str())),
-                ("source_conflict", r.source_conflict.map_or(CValue::Null, |c| s(c.as_str()))),
+                ("reason", r.reason.map_or(CValue::Null, |c| s(c.as_str()))),
             ]),
         ),
         ("side", s(r.side.as_str())),
@@ -102,14 +108,15 @@ pub(super) fn result_value(r: &TranscribedResult) -> CValue {
                 ("upper_limit", opt(a.upper_limit.as_ref())),
             ]),
         ),
-    ])
+    ]))
 }
 
-pub(super) fn transcription_value(x: &Transcription) -> CValue {
-    obj([
+pub(super) fn transcription_value(x: &Transcription) -> Result<CValue, TransError> {
+    let results = x.results.iter().map(result_value).collect::<Result<Vec<_>, _>>()?;
+    Ok(obj([
         ("schema", s(TRANSCRIPTION_SCHEMA)),
         ("record", record_value(&x.record)),
-        ("results", CValue::Arr(x.results.iter().map(result_value).collect())),
+        ("results", CValue::Arr(results)),
         (
             "dropped",
             CValue::Arr(
@@ -119,7 +126,7 @@ pub(super) fn transcription_value(x: &Transcription) -> CValue {
                     .collect(),
             ),
         ),
-    ])
+    ]))
 }
 
 pub(super) fn bytes_of(v: &CValue) -> Result<Vec<u8>, TransError> {
