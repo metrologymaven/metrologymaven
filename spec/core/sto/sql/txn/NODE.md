@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-store]
 satisfies: [REQ-CORE.STO.SQL-002, REQ-CORE.STO.SQL-003, REQ-CORE.STO.SQL-004]
 covers: []
 depends_on: [CORE.STO.SQL.SCHEMA, CORE.STO.CAS, CORE.STO.LAYOUT]
