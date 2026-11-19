@@ -58,7 +58,7 @@ fn big_report(n: usize) -> ResidualReport {
         let used = (z >> 2) & 15 != 0;
         let weight = 1.0 + ((z >> 6) & 7) as f64 * 0.25;
         let r = ((z >> 11) as f64 * pow2(-53) - 0.5) * 0.002;
-        let vector = (kind == EntryKind::Point).then(|| [r * 0.6, r * 0.8, 0.0]);
+        let vector = (kind == EntryKind::Point).then_some([r * 0.6, r * 0.8, 0.0]);
         let entry = Entry {
             reference: EntryRef { input: (i % 3) as u32, item: i as u64 },
             kind,

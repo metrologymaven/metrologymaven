@@ -325,7 +325,7 @@ fn big_report() -> ResidualReport {
             reference: EntryRef { input: (i % 3) as u32, item: i as u64 },
             kind,
             residual_m: r,
-            vector_m: (kind == EntryKind::Point).then(|| [r * 0.6, r * 0.8, 0.0]),
+            vector_m: (kind == EntryKind::Point).then_some([r * 0.6, r * 0.8, 0.0]),
             weight: Some(1.0 + ((z >> 6) & 7) as f64 * 0.25),
         };
         let d = if (z >> 2) & 15 != 0 { Disposition::Used } else { Disposition::Rejected(outlier.clone()) };
