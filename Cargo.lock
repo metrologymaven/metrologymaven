@@ -947,6 +947,7 @@ dependencies = [
  "fid-jobs",
  "fid-registry",
  "fid-report",
+ "fid-store",
 ]
 
 [[package]]
