@@ -4,10 +4,11 @@
 Everything is recounted from the data, not from tags: degrees from the degree fields, rational from
 the weights, repeated interior knots from the knot values, and the named circle, sphere and cylinder
 from their geometry ids. It fails unless:
-- every manifest file (oracle outputs and the adopted GEO.NURBS.DATA sets) matches its SHA-256;
-- ref_set_v1 has, for every degree 1..25, a non-rational and a rational curve, and contains repeated
+- every manifest file (oracle outputs, the adopted GEO.NURBS.DATA sets and the frozen, superseded
+  ref_set_v1) matches its SHA-256;
+- ref_set_v2 has, for every degree 1..25, a non-rational and a rational curve, and contains repeated
   interior knots (multiplicity >= 2) in both curves and surfaces;
-- ref_set_v1 contains the circle, sphere and cylinder, has at least 5000 inversion queries, and
+- ref_set_v2 contains the circle, sphere and cylinder, has at least 5000 inversion queries, and
   every hex value agrees with its decimal;
 - analytic_set covers the eight analytic types; multi_minima has tied (equidistant) queries.
 
@@ -63,9 +64,9 @@ def main():
         if "sha256:" + hashlib.sha256(raw).hexdigest() != entry["sha256"]:
             problems.append(f"{entry['path']}: SHA-256 does not match the manifest")
         docs[entry["path"]] = json.loads(raw)
-    ref = docs["ref_set_v1.json"]
+    ref = docs["ref_set_v2.json"]
     errors = []
-    walk_f64(ref, errors, "ref_set_v1")
+    walk_f64(ref, errors, "ref_set_v2")
     problems += errors[:10]
     curves = [e for e in ref["entities"] if e["kind"] == "curve"]
     surfaces = [e for e in ref["entities"] if e["kind"] == "surface"]
@@ -92,7 +93,7 @@ def main():
             problems.append(f"named entity {named} missing")
     n_inv = sum(len(e["invert"]) for e in ref["entities"])
     n_eval = sum(len(e["eval"]) for e in ref["entities"])
-    print(f"ref_set_v1: {len(ref['entities'])} entities, {n_eval} evaluations, {n_inv} inversions")
+    print(f"ref_set_v2: {len(ref['entities'])} entities, {n_eval} evaluations, {n_inv} inversions")
     if n_inv < 5000:
         problems.append(f"only {n_inv} inversion queries (need 5000)")
     an = docs["analytic_set.json"]

@@ -1,13 +1,15 @@
-"""GEO.NURBS.REF fixtures: coverage (AC-3) and a fast partial regeneration (part of AC-1).
+"""GEO.NURBS.REF fixtures: coverage (AC-3), a fast partial regeneration (part of AC-1) and the
+global-minimum certificate (oracle 2.0.0).
 
 The full byte-identical regeneration takes minutes (`python tools/fixtures/nurbs_oracle.py
 --out fixtures/geo/nurbs --seed 40 --check`); this test rebuilds the seeded geometry of
-ref_set_v1 and re-evaluates a sample of reference rows exactly, which must reproduce the committed
+ref_set_v2 and re-evaluates a sample of reference rows exactly, which must reproduce the committed
 bytes of those values.
 Run from the repository root:  python -m unittest discover -s tools/tests -v
 """
 
 import json
+import math
 import random
 import subprocess
 import sys
@@ -19,13 +21,14 @@ ROOT = Path(__file__).resolve().parents[2]
 FIX = ROOT / "fixtures" / "geo" / "nurbs"
 sys.path.insert(0, str(ROOT / "tools" / "fixtures"))
 
+import nurbs_cert as cert  # noqa: E402
 import nurbs_oracle as oracle  # noqa: E402
 
 
 class NurbsRefTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ref = json.loads((FIX / "ref_set_v1.json").read_text(encoding="utf-8"))
+        cls.ref = json.loads((FIX / "ref_set_v2.json").read_text(encoding="utf-8"))
 
     def test_coverage_script_passes(self):
         r = subprocess.run([sys.executable, str(ROOT / "tools" / "fixtures" / "nurbs_coverage.py"), str(FIX)],
@@ -61,6 +64,50 @@ class NurbsRefTest(unittest.TestCase):
         for row in circle["eval"]:
             x, y, _ = (Fraction(v) for v in row["p"]["dec"])
             self.assertLessEqual(abs(x * x + y * y - 1), Fraction(2, 10 ** 15))
+
+    # ------------------------------------------------------------ oracle 2.0.0: global minima
+
+    def _sphere(self, name):
+        doc = json.loads((FIX / name).read_text(encoding="utf-8"))
+        return next(e for e in doc["entities"] if e["id"] == "sphere")
+
+    def test_certificate_rejects_v1_sphere_q0121_and_accepts_v2(self):
+        v1, v2 = self._sphere("ref_set_v1.json"), self._sphere("ref_set_v2.json")
+        r1 = next(r for r in v1["invert"] if r["id"] == "sphere-q0121")
+        r2 = next(r for r in v2["invert"] if r["id"] == "sphere-q0121")
+        ec = cert.EntityCert(v2)
+        st = ec.certify(cert.val(r1["q"]), cert.val(r1["distance"]))
+        self.assertEqual(st[0], "witness")
+        self.assertLess(ec.dist2(st[1], cert.val(r1["q"])), cert.val(r1["distance"]) ** 2)
+        self.assertEqual(ec.certify(cert.val(r2["q"]), cert.val(r2["distance"]))[0], "ok")
+        x, y, z = r2["q"]["dec"]
+        self.assertAlmostEqual(r2["distance"]["dec"], abs(math.sqrt(x * x + y * y + z * z) - 0.5), delta=2e-15)
+        self.assertAlmostEqual(r1["distance"]["dec"] - r2["distance"]["dec"], 2.685285e-06, delta=1e-12)
+
+    def test_near_pole_queries_match_the_closed_form(self):
+        """Seeded queries next to both poles at every azimuth: the 2.0.0 search (before the
+        certificate gate) must already find the radial projection."""
+        s = oracle.sphere_surface("sphere", 0.5)
+        grid = oracle.Grid(s, 40)
+        self.assertEqual(grid.collapsed, ([], [0.0, 1.0]))
+        rng = random.Random(7)
+        for k in range(12):
+            phi = 2 * math.pi * rng.random()
+            theta = 10 ** (-6 + 4 * rng.random())  # polar angle from the pole
+            rad = 0.5 + (rng.random() - 0.5) * 2e-4
+            zs = 1 if k % 2 else -1
+            q = [rad * math.sin(theta) * math.cos(phi), rad * math.sin(theta) * math.sin(phi),
+                 zs * rad * math.cos(theta)]
+            rec = oracle.invert(s, grid, q)
+            want = abs(math.sqrt(sum(c * c for c in q)) - 0.5)
+            self.assertAlmostEqual(rec["distance"]["dec"], want, delta=2e-15, msg=str(q))
+
+    def test_v2_keeps_v1_evaluation_rows(self):
+        v1 = json.loads((FIX / "ref_set_v1.json").read_text(encoding="utf-8"))
+        for a, b in zip(v1["entities"], self.ref["entities"]):
+            self.assertEqual({k: v for k, v in a.items() if k != "invert"},
+                             {k: v for k, v in b.items() if k != "invert"}, a["id"])
+            self.assertEqual([r["q"] for r in a["invert"]], [r["q"] for r in b["invert"]], a["id"])
 
 
 if __name__ == "__main__":
