@@ -1,6 +1,6 @@
 [package]
 name = "fid-surface"
-description = "Metrology Maven shared result envelope and error codes for CLI and MCP (spec node AUTO.SURF.ENV)"
+description = "Metrology Maven shared result envelope and error codes for CLI and MCP, and the surface projection model (spec nodes AUTO.SURF.ENV, AUTO.SURF.PROJ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
