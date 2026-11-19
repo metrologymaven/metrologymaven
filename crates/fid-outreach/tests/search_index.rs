@@ -10,11 +10,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const ALIGN: [&str; 3] = [
-    "ref/cli/align.run_bestfit@1.html",
-    "ref/mcp/align.run_bestfit@1.html",
-    "ref/python/align.run_bestfit@1.html",
-];
+const ALIGN: [&str; 3] =
+    ["ref/cli/align.run_bestfit@1.html", "ref/mcp/align.run_bestfit@1.html", "ref/python/align.run_bestfit@1.html"];
 const REGISTRY: [&str; 3] = [
     "ref/cli/registry.show_manifest@1.html",
     "ref/mcp/registry.show_manifest@1.html",
@@ -171,7 +168,9 @@ fn ac2_exact_names_map_to_the_three_pages() {
     for key in ["align.run_bestfit", "align.run_bestfit@1", "fid align run-bestfit", "align_run_bestfit"] {
         assert_eq!(strs(names.get(key).unwrap()), ALIGN, "{key}");
     }
-    for key in ["registry.show_manifest", "registry.show_manifest@1", "fid registry show-manifest", "registry_show_manifest"] {
+    for key in
+        ["registry.show_manifest", "registry.show_manifest@1", "fid registry show-manifest", "registry_show_manifest"]
+    {
         assert_eq!(strs(names.get(key).unwrap()), REGISTRY, "{key}");
     }
     assert_eq!(names.len(), 8, "{:?}", names.keys().collect::<Vec<_>>());
@@ -353,7 +352,12 @@ fn errors_exit_2() {
     assert!(String::from_utf8_lossy(&o.stdout).contains("edition_unreadable"), "{}", show(&o));
 
     let edition = site("errors-budget");
-    for (name, body) in [("bad.toml", "max_bytes = \"5\"\n"), ("zero.toml", "max_bytes = 0\n"), ("none.toml", "x = 1\n"), ("broken.toml", "max_bytes = = 1\n")] {
+    for (name, body) in [
+        ("bad.toml", "max_bytes = \"5\"\n"),
+        ("zero.toml", "max_bytes = 0\n"),
+        ("none.toml", "x = 1\n"),
+        ("broken.toml", "max_bytes = = 1\n"),
+    ] {
         let p = root.join(name);
         std::fs::write(&p, body).unwrap();
         let o = run(&edition, &p, false);
@@ -365,7 +369,15 @@ fn errors_exit_2() {
     for args in [
         vec!["search-index".to_string()],
         vec!["search-index".into(), "--edition".into(), s(&edition)],
-        vec!["search-index".into(), "--edition".into(), s(&edition), "--edition".into(), s(&edition), "--budget".into(), s(&fix("search-budget.toml"))],
+        vec![
+            "search-index".into(),
+            "--edition".into(),
+            s(&edition),
+            "--edition".into(),
+            s(&edition),
+            "--budget".into(),
+            s(&fix("search-budget.toml")),
+        ],
         vec!["search-index".into(), "--bogus".into()],
     ] {
         assert_eq!(bin(&args).status.code(), Some(2), "{args:?}");
