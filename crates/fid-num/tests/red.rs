@@ -242,7 +242,7 @@ fn ac4_error_paths() {
 #[test]
 fn partition_and_repeatability() {
     assert_eq!(BLOCK, 256);
-    let xs = splitmix_values(42, 3 * BLOCK + 5);
+    let xs = splitmix_values(42, 4 * BLOCK + 5);
     let first = red::sum(&xs).unwrap().to_bits();
     for _ in 0..3 {
         assert_eq!(red::sum(&xs.clone()).unwrap().to_bits(), first);
