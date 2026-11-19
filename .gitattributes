@@ -3,6 +3,8 @@
 # Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
 # compare bytes, so no end-of-line conversion.
 fixtures/hal/idl/stamp/** -text
+# HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
+fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
