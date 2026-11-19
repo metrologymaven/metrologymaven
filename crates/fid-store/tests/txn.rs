@@ -662,7 +662,8 @@ impl CommitProbe for HangAt {
     fn on(&self, event: &CommitEvent) -> std::io::Result<()> {
         if (self.0)(event) {
             let mut out = std::io::stdout().lock();
-            writeln!(out, "HANG")?;
+            writeln!(out, "
+HANG")?;
             out.flush()?;
             loop {
                 std::thread::sleep(Duration::from_secs(1));
@@ -691,11 +692,15 @@ fn crash_child() {
     let start: i64 =
         store.read(|c| c.query_row("SELECT coalesce(max(seq), 0) FROM entries", [], |r| r.get(0))).unwrap();
     {
+        // libtest has already written "test crash_child ... " without a line end: start a
+        // fresh line so the marker begins one.
         let mut out = std::io::stdout().lock();
-        writeln!(out, "READY {start}").unwrap();
+        writeln!(out, "
+READY {start}").unwrap();
         out.flush().unwrap();
     }
-    for i in start + 1..start + 100_000 {
+    // Bounded: the parent kills it long before this; a stray child still ends.
+    for i in start + 1..start + 5_000 {
         crash_commit(&store, i).unwrap();
         let mut out = std::io::stdout().lock();
         writeln!(out, "ACK {i}").unwrap();
@@ -750,7 +755,8 @@ impl Child {
             match self.lines.recv_timeout(CHILD_WATCHDOG) {
                 Ok(line) => {
                     self.note(&line);
-                    if line.starts_with(prefix) {
+                    // Markers start a line, but match anywhere in case another writer shares it.
+                    if line.contains(prefix) {
                         return line;
                     }
                 }
@@ -766,8 +772,8 @@ impl Child {
     }
 
     fn note(&mut self, line: &str) {
-        if let Some(n) = line.strip_prefix("ACK ") {
-            self.acked = self.acked.max(n.trim().parse().unwrap());
+        if let Some(at) = line.find("ACK ") {
+            self.acked = self.acked.max(line[at + 4..].trim().parse().unwrap());
         }
         if self.seen.len() < 200 {
             self.seen.push(line.to_string());
