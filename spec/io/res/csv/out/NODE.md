@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-res]
+built_pr: 170
 satisfies: [REQ-IO.RES.CSV-002, REQ-IO.RES.CSV-003]
 covers: [GOM.EXP.02, GOM.EXP.06, PW.EXP.02]
 depends_on: [IO.RES.CSV.MAP, IO.RES.TRANS.VIEW, IO.REG.ENV.EXPORT, IO.REG.WRITE]
@@ -61,7 +63,9 @@ updated: 2026-11-17
 - **Registry command:** `export.results_csv@1` W1 `fs_effect: write_root`; params `run?: RunId`, `stages?: [StageId]`, `characteristics?: [CharRef]`, `map: ColMapRef`, `target: RootHandle`, `overwrite: bool = false`, `dry_run: bool = false`; result `ExportReport` with `lossy`.
 - **Data structures:** none new.
 - **Algorithm:** load records (GDT canonical JSON and transcribed results) → order by characteristic then part → render cells per map → RFC 4180 quoting → atomic write; LF line endings unless the map says CRLF.
-- **Errors:** `colmap_invalid`, `no_results`, envelope errors.
+- **Transcribed results need a status column (maintainer decision, 2026-11-18, consistent with the #142 `ClaimedQuantity` ruling):** claimed or transcribed values must never be indistinguishable from measured ones. When the map has no `record_status` column and the export holds any transcribed result, the export fails `transcription_status_missing` naming the result and writes nothing; it is not merely reported `lossy`. Maps without `record_status` stay usable for evaluated results only.
+- **Wide width cap:** a wide table wider than the dialect's 65,536-field record limit fails `records_invalid{wide_too_many_columns}` before any row is built; the dialect's record encoder enforces the same limit as its decoder.
+- **Errors:** `colmap_invalid`, `no_results`, `records_invalid`, `transcription_status_missing`, `transcription_unmarked`, `target_is_link`, envelope errors (`target_exists`, `io`, root-handle errors).
 - **Determinism:** D0.
 - **Performance budget:** 10^5 rows in < 1 s [unverified until measured].
 - **Crate:** `fid-io-res` (module `csv::out`).
@@ -76,7 +80,12 @@ updated: 2026-11-17
 
 ## Open questions
 
-- None.
+Built in PR #170 as a library (`fid-io-res` `csv::out`); these parts of the design wait on unbuilt dependencies and are follow-ups, so the leaf is not complete until they land:
+
+- **Registry, CLI and MCP registration:** `export.results_csv@1`, `fid export results-csv` and `export_results_csv` are not registered, because the export skeleton `IO.REG.ENV.EXPORT` is not built. AC-1 and AC-6 are tested at library level.
+- **Atomic write through `IO.REG.WRITE`:** not built; `csv::out::write_atomic` is a local stand-in with the same contract (temp file, sync, rename, `target_exists`, link refusal) on a root folder path. Switch to `AtomicWriter` over the `ExportTarget` folder capability when that leaf lands, including its stale-temp cleanup.
+- **Transcription kit through `IO.RES.TRANS.VIEW`:** `trans::view` is not built; `csv::out::check_marked` is the CSV extractor its conformance kit should call. Wire it in when that leaf lands.
+- **Input from GDT ResultRecords:** records are read as flat `results_csv.records@1` rows until a GDT ResultRecord type exists; the `run` and `stages` filters are not offered yet.
 
 ## Children
 
