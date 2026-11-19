@@ -537,7 +537,7 @@ fn check_imported_at(s: &str) -> bool {
         let v = part.iter().fold(0u32, |a, c| a * 10 + u32::from(c - b'0'));
         (min..=max).contains(&v)
     };
-    if b.len() < 20 || b.get(b.len() - 1) != Some(&b'Z') {
+    if b.len() < 20 || b.last() != Some(&b'Z') {
         return false;
     }
     let seps = [(4, b'-'), (7, b'-'), (10, b'T'), (13, b':'), (16, b':')];
