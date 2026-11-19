@@ -1,0 +1,16 @@
+[package]
+name = "fid-io-las"
+description = "Metrology Maven LAS reader and writer, pure Rust: public header, VLRs and EVLRs, point data record formats 0 to 10 with extra bytes (spec node IO.CLOUD.LAS.HDR)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Reader harness (IO.REG.LIMITS): limits and their raise rule, limit kinds, untrusted text.
+fid-io-reg = { path = "../fid-io-reg" }
+
+[lints]
+workspace = true
