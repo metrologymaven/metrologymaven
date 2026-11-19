@@ -47,8 +47,9 @@ pub const STEP_REQUIRED_FIELDS: [&str; 5] = ["n", "actor", "owner", "handoff", "
 pub const STEP_OPTIONAL_FIELDS: [&str; 2] = ["decision", "phase"];
 /// Step target fields: exactly one per step (REQ-002).
 pub const TARGET_FIELDS: [&str; 2] = ["command", "screen"];
-/// Map kinds and the `JOB.*` group their subject must belong to.
-pub const KINDS: [(&str, &str); 3] = [("persona", "PER"), ("job", "ACC"), ("setup", "USE")];
+/// Map kinds and the `JOB.*` groups their subject may belong to. Job maps cover the
+/// acceptance jobs (`JOB.ACC.*`) and the use jobs (`JOB.USE.*`, spec/flow/NODE.md).
+pub const KINDS: [(&str, &[&str]); 3] = [("persona", &["PER"]), ("job", &["ACC", "USE"]), ("setup", &["USE"])];
 /// Step actors (REQ-002).
 pub const ACTORS: [&str; 5] = ["human", "operator", "admin", "agent", "system"];
 
@@ -140,12 +141,12 @@ impl Kind {
         }
     }
 
-    /// The `JOB.*` group the subject of a map of this kind belongs to.
-    pub fn subject_group(self) -> &'static str {
+    /// The `JOB.*` groups the subject of a map of this kind may belong to.
+    pub fn subject_groups(self) -> &'static [&'static str] {
         match self {
-            Kind::Persona => "PER",
-            Kind::Job => "ACC",
-            Kind::Setup => "USE",
+            Kind::Persona => &["PER"],
+            Kind::Job => &["ACC", "USE"],
+            Kind::Setup => &["USE"],
         }
     }
 }
@@ -479,11 +480,13 @@ fn check_value(value: &CValue, ctx: &mut Ctx) -> Option<JourneyMap> {
     };
     let subject = ctx.text(top, "subject", None, is_job_id, "a `JOB.*` seed ID");
     if let (Some(k), Some(s)) = (kind, subject.as_deref()) {
-        if !is_job_id_in(s, k.subject_group()) {
+        let groups = k.subject_groups();
+        if !groups.iter().any(|g| is_job_id_in(s, g)) {
+            let allowed: Vec<String> = groups.iter().map(|g| format!("`JOB.{g}.*`")).collect();
             ctx.schema(
                 None,
                 "subject",
-                format!("a `{}` map's subject must be a `JOB.{}.*` ID", k.as_str(), k.subject_group()),
+                format!("a `{}` map's subject must be a {} ID", k.as_str(), allowed.join(" or ")),
             );
         }
     }
@@ -680,7 +683,9 @@ fn check_step(
                     None => {
                         ctx.push(Code::StepOrder, at, "handoff", format!("names step {h}, but this is the last step"))
                     }
-                    Some(Some(nx)) if nx != h => {
+                    // When the next step is itself misnumbered, MAP-STEP-ORDER is already
+                    // reported on it; the hand-off is not reported a second time.
+                    Some(Some(nx)) if nx == pos + 1 && nx != h => {
                         ctx.push(Code::StepOrder, at, "handoff", format!("names step {h}, but the next step is {nx}"));
                     }
                     _ => {}

@@ -353,12 +353,13 @@ fn published_schema_matches_the_validator() {
     assert_eq!(obj(obj(step_props, "command"), "pattern"), &CValue::Str(fid_types::CommandId::PATTERN.to_string()));
     // Each kind's subject group is stated in the conditional rules.
     let CValue::Arr(rules) = obj(&s, "allOf") else { panic!("no allOf") };
-    for (kind, group) in KINDS {
+    for (kind, groups) in KINDS {
         let rule = rules
             .iter()
             .find(|r| obj(obj(obj(obj(r, "if"), "properties"), "kind"), "const") == &CValue::Str(kind.to_string()))
             .unwrap_or_else(|| panic!("no rule for {kind}"));
         let pattern = obj(obj(obj(obj(rule, "then"), "properties"), "subject"), "pattern");
+        let group = if groups.len() == 1 { groups[0].to_string() } else { format!("({})", groups.join("|")) };
         assert_eq!(pattern, &CValue::Str(format!(r"^JOB\.{group}\.[0-9]{{2}}$")), "{kind}");
     }
 }

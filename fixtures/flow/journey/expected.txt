@@ -12,7 +12,6 @@ unknown-field.json	MAP-SCHEMA j1 owner_note
 unknown-field.json	MAP-SCHEMA j1 step 2 note
 bad-handoff.json	MAP-STEP-ORDER j1 step 6 handoff
 bad-handoff.json	MAP-STEP-ORDER j1 step 12 handoff
-duplicate-n.json	MAP-STEP-ORDER j1 step 6 handoff
 duplicate-n.json	MAP-STEP-ORDER j1 step 7 n
 bad-fields.json	MAP-SCHEMA j1 format
 bad-fields.json	MAP-SCHEMA j1 kind
@@ -32,3 +31,7 @@ dup-persona.json	MAP-SCHEMA j1 personas[1]
 empty-steps.json	MAP-SCHEMA j1 steps
 bad-map-id.json	MAP-SCHEMA - map_id
 dup-key.json	MAP-SCHEMA - -
+job-use-subject.json	ok
+whole-floats.json	ok
+fractions.json	MAP-SCHEMA j1 revision
+fractions.json	MAP-SCHEMA j1 step 2 n

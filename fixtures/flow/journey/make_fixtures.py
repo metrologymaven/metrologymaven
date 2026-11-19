@@ -177,6 +177,21 @@ def bad_map_id(d):
     d["map_id"] = "J1 map"
 
 
+def use_subject(d):
+    d["subject"] = "JOB.USE.02"
+
+
+def whole_floats(d):
+    d["revision"] = 3.0
+    step(d, 2)["n"] = 2.0
+    step(d, 1)["handoff"] = 2.0
+
+
+def fractions(d):
+    d["revision"] = 1.5
+    step(d, 2)["n"] = 2.5
+
+
 FIXTURES = [
     ("valid-job.json", valid_job, None),
     ("valid-persona.json", valid_persona, None),
@@ -196,6 +211,9 @@ FIXTURES = [
     ("dup-persona.json", valid_job, dup_persona),
     ("empty-steps.json", valid_job, empty_steps),
     ("bad-map-id.json", valid_job, bad_map_id),
+    ("job-use-subject.json", valid_job, use_subject),
+    ("whole-floats.json", valid_job, whole_floats),
+    ("fractions.json", valid_job, fractions),
 ]
 
 # A duplicate key cannot be written with json.dumps; this one repeats `app`.
@@ -228,7 +246,7 @@ def emit(name, data):
 
 PHASES = {"P0", "P1a", "P1b", "P2", "P3", "P4", "later"}
 ACTORS = {"human", "operator", "admin", "agent", "system"}
-GROUP = {"persona": "PER", "job": "ACC", "setup": "USE"}
+GROUP = {"persona": {"PER"}, "job": {"ACC", "USE"}, "setup": {"USE"}}
 TOP = {"format", "map_id", "subject", "kind", "revision", "app", "phase", "personas", "steps"}
 STEP_FIELDS = {"n", "actor", "command", "screen", "owner", "handoff", "decision", "human_only", "phase"}
 IDENT = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?")
@@ -244,7 +262,12 @@ def full(rx, s):
 
 
 def count(v):
-    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+    # A non-negative whole number up to 2**53 - 1. `2.0` counts as 2, as in the Rust validator
+    # (fid-canon reads every number as a double) and in JSON Schema's `integer`; RFC 8785
+    # writes both as `2`, so the digest cannot tell them apart either.
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return False
+    return v >= 0 and float(v).is_integer() and v <= 2**53 - 1
 
 
 def text(v):
@@ -287,7 +310,7 @@ def reference_findings(raw):
     m = JOB.fullmatch(subj) if isinstance(subj, str) else None
     if not m:
         bad(1, "subject")
-    elif kind and m.group(1) != GROUP[kind]:
+    elif kind and m.group(1) not in GROUP[kind]:
         bad(1, "subject")
     if not (count(d.get("revision")) and d["revision"] >= 1):
         bad(1, "revision")
@@ -346,7 +369,7 @@ def reference_findings(raw):
         h = s.get("handoff")
         if count(h) and h >= 1:
             nxt = steps[i + 1].get("n") if i + 1 < len(steps) else None
-            if i + 1 >= len(steps) or (count(nxt) and nxt != h):
+            if i + 1 >= len(steps) or (nxt == k + 1 and count(nxt) and nxt != h):
                 out.append((3, mid, k, "handoff"))
         elif not text(h):
             bad(1, "handoff", k)
