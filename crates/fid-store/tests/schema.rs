@@ -710,29 +710,81 @@ fn crafted_wal_that_adds_a_trigger_is_refused_and_not_checkpointed() {
 }
 
 #[test]
-fn wal_with_a_different_page_size_never_yields_other_data() {
+fn wal_with_a_different_page_size_is_schema_invalid() {
     let (t, root) = fixture_project("pagesize");
-    let (_tp, pristine_db) = pristine("pagesize-fx");
-    let want = data_snapshot(&pristine_db);
-    // A WAL written for a 1024-byte-page database (the fixture uses 4096).
+    // A WAL written for a 1024-byte-page database (the fixture uses 4096). Its page 1 frame
+    // describes another database, so the file SQLite sees is not this project's schema (or is
+    // corrupt); either way the open must refuse it as schema_invalid and leave project.db alone.
     let src = t.0.join("small.db");
     let a = Connection::open(&src).unwrap();
     a.execute_batch(
-        "PRAGMA page_size=1024; PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; \
-         CREATE TABLE x (y); INSERT INTO x VALUES (randomblob(5000));",
+        "PRAGMA page_size=1024; PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;          CREATE TABLE x (y); INSERT INTO x VALUES (randomblob(5000));",
     )
     .unwrap();
     std::fs::copy(t.0.join("small.db-wal"), root.join(format!("{DB_FILE}-wal"))).unwrap();
     drop(a);
+    let db = root.join(DB_FILE);
+    let before = sha256_file(&db);
     let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
-    // Either the open fails with a typed error, or it sees exactly the fixture's rows.
-    match open_write(&loc, &lock.unwrap()) {
-        Ok(db) => {
-            assert_eq!(db.version(), SchemaVersion(1));
-            assert_eq!(data_snapshot(db.connection()), want);
-        }
-        Err(e) => assert!(!e.code().is_empty(), "{e}"),
+    let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid", "{err}");
+    assert_eq!(sha256_file(&db), before);
+}
+
+#[test]
+fn hostile_schema_meta_is_refused_before_it_is_read() {
+    // A generated column named `version` whose evaluation fails: reading it would surface an
+    // SQLite "integer overflow" error instead of schema_invalid.
+    let (_t, root) = new_project("genmeta");
+    let c = raw(&root);
+    c.execute_batch(
+        "CREATE TABLE schema_meta (v0 INTEGER PRIMARY KEY, version INTEGER AS (abs(-9223372036854775808)));          INSERT INTO schema_meta (v0) VALUES (1);",
+    )
+    .unwrap();
+    let trap = c.query_row("SELECT max(version) FROM schema_meta", [], |r| r.get::<_, Option<i64>>(0));
+    assert!(trap.unwrap_err().to_string().contains("overflow"), "the trap must be live");
+    let err = read_version(&c).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid");
+    assert!(err.to_string().contains("was not read"), "{err}");
+    drop(c);
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid", "{err}");
+    assert!(!err.to_string().contains("overflow"), "{err}");
+
+    // Virtual tables: rtree and fts5 modules would run on any read of schema_meta.
+    for module in ["rtree(version, lo, hi)", "fts5(version)"] {
+        let (_t, root) = new_project("vtabmeta");
+        raw(&root).execute_batch(&format!("CREATE VIRTUAL TABLE schema_meta USING {module};")).unwrap();
+        let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+        let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+        assert_eq!(err.code(), "schema_invalid", "{module}: {err}");
+        let msg = err.to_string();
+        assert!(msg.contains("no root page") || msg.contains("was not read"), "{module}: {msg}");
+        assert_eq!(open_read(&loc).unwrap_err().code(), "schema_invalid", "{module}");
     }
+}
+
+#[test]
+fn zero_root_page_and_damaged_pages_are_schema_invalid() {
+    tampered_is_refused(
+        "rootpage",
+        "PRAGMA writable_schema=ON; UPDATE sqlite_master SET rootpage = 0 WHERE name = 'heads';          PRAGMA writable_schema=OFF;",
+    );
+    // Garbage over the last page (a b-tree page of the data): quick_check refuses the file.
+    let (_t, root) = fixture_project("damaged");
+    let db = root.join(DB_FILE);
+    let mut bytes = std::fs::read(&db).unwrap();
+    let n = bytes.len();
+    assert!(n >= 8192 && n % 4096 == 0);
+    for b in &mut bytes[n - 4096..] {
+        *b = 0x55;
+    }
+    std::fs::write(&db, &bytes).unwrap();
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid", "{err}");
+    assert_eq!(std::fs::read(&db).unwrap(), bytes);
 }
 
 #[test]

@@ -279,9 +279,11 @@ pub fn open_write(loc: &ProjectLocation, lock: &Locked) -> Result<Database, Sche
 pub fn open_write_with(loc: &ProjectLocation, lock: &Locked, plan: &MigrationPlan) -> Result<Database, SchemaError> {
     plan.validate()?;
     lock.verify()?;
-    let mut conn = connect(loc, OpenMode::Write)?;
+    let (mut conn, root) = connect(loc, OpenMode::Write)?;
     // Nothing is written before the file has passed these checks.
-    let found = checked_version(&conn, plan)?;
+    let found = checked_version(&conn, plan, true)?;
+    // SQLite has now opened any -wal/-shm; check them again (see check_companions).
+    check_companions(&root)?;
     set_wal(&conn)?;
     let version = if found.0 < plan.latest { migrate(&mut conn, plan)? } else { found };
     // Checked: a normal close may now checkpoint the WAL into project.db.
@@ -298,19 +300,63 @@ pub fn open_read(loc: &ProjectLocation) -> Result<Database, SchemaError> {
 /// [`open_read`] checked against an explicit plan.
 pub fn open_read_with(loc: &ProjectLocation, plan: &MigrationPlan) -> Result<Database, SchemaError> {
     plan.validate()?;
-    let conn = connect(loc, OpenMode::Read)?;
-    let version = checked_version(&conn, plan)?;
+    let (conn, root) = connect(loc, OpenMode::Read)?;
+    let version = checked_version(&conn, plan, true)?;
+    check_companions(&root)?;
     Ok(Database { conn, version, mode: OpenMode::Read })
 }
 
-/// Reads the version, refuses a newer one, and checks the schema objects against the plan.
-fn checked_version(conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, SchemaError> {
-    let found = read_version(conn)?;
-    if found.0 > plan.latest {
-        return Err(SchemaError::SchemaTooNew { found: found.0, supported: plan.latest });
+/// The checks every open runs before anything is written, reading only `sqlite_master` until
+/// `schema_meta` is known to be the v1 table: root pages, then the version (whose
+/// `schema_meta` definition [`read_version`] checks first), a newer version refused, then the
+/// full object comparison, then (`integrity`) `PRAGMA quick_check`. A file SQLite reports as
+/// corrupt or not a database is `schema_invalid` too.
+fn checked_version(conn: &Connection, plan: &MigrationPlan, integrity: bool) -> Result<SchemaVersion, SchemaError> {
+    let run = || -> Result<SchemaVersion, SchemaError> {
+        check_root_pages(conn)?;
+        let found = read_version(conn)?;
+        if found.0 > plan.latest {
+            return Err(SchemaError::SchemaTooNew { found: found.0, supported: plan.latest });
+        }
+        verify_schema(conn, plan, found)?;
+        if integrity {
+            quick_check(conn)?;
+        }
+        Ok(found)
+    };
+    run().map_err(|e| match e {
+        SchemaError::Sqlite(ref inner)
+            if matches!(inner.sqlite_error_code(), Some(ErrorCode::DatabaseCorrupt | ErrorCode::NotADatabase)) =>
+        {
+            SchemaError::SchemaInvalid(format!("database is corrupt: {inner}"))
+        }
+        other => other,
+    })
+}
+
+/// Every table and index must have a root page (virtual tables and damaged rows have none).
+fn check_root_pages(conn: &Connection) -> Result<(), SchemaError> {
+    let mut st = conn.prepare("SELECT type, name, rootpage FROM sqlite_master WHERE type IN ('table', 'index')")?;
+    let rows = st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<i64>>(2)?)))?;
+    for row in rows {
+        let (kind, name, root) = row?;
+        if !matches!(root, Some(n) if n > 0) {
+            return Err(SchemaError::SchemaInvalid(format!("{kind} {name} has no root page")));
+        }
     }
-    verify_schema(conn, plan, found)?;
-    Ok(found)
+    Ok(())
+}
+
+/// `PRAGMA quick_check` must answer exactly `ok`.
+fn quick_check(conn: &Connection) -> Result<(), SchemaError> {
+    let mut st = conn.prepare("PRAGMA quick_check")?;
+    let rows = st.query_map([], |r| r.get::<_, String>(0))?;
+    let answers = rows.collect::<Result<Vec<String>, _>>()?;
+    if answers != ["ok"] {
+        let first = answers.first().cloned().unwrap_or_default();
+        return Err(SchemaError::SchemaInvalid(format!("quick_check: {first}")));
+    }
+    Ok(())
 }
 
 /// Checks SQLite's answer to `PRAGMA journal_mode=WAL`.
@@ -330,7 +376,10 @@ fn set_wal(conn: &Connection) -> Result<(), SchemaError> {
 }
 
 /// Refuses companion files that are links or not regular files, and a non-empty rollback
-/// journal (SQLite would roll it back into the database on the first read).
+/// journal (SQLite would roll it back into the database on the first read). Runs before SQLite
+/// opens the database and again once the checks have read it (by then SQLite holds the -wal
+/// and -shm it found). A local process that swaps a file in between is not stopped (see the
+/// leaf's Open questions); the write lock keeps other Metrology Maven writers out.
 fn check_companions(dir: &Path) -> Result<(), SchemaError> {
     for suffix in COMPANIONS {
         let p = dir.join(format!("{DB_FILE}{suffix}"));
@@ -352,8 +401,8 @@ fn check_companions(dir: &Path) -> Result<(), SchemaError> {
     Ok(())
 }
 
-/// Opens a hardened connection to `project.db` of `loc`.
-fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<Connection, SchemaError> {
+/// Opens a hardened connection to `project.db` of `loc`; also returns the canonical root.
+fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<(Connection, PathBuf), SchemaError> {
     // The user's path to the root may contain links (CORE.STO.LAYOUT); below it nothing may.
     let root = std::fs::canonicalize(loc.root()).map_err(StoreError::Io)?;
     let path = root.join(DB_FILE);
@@ -380,7 +429,7 @@ fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<Connection, SchemaEr
     let conn = open_path(&path, flags)?;
     harden(&conn)?;
     conn.busy_timeout(BUSY_TIMEOUT)?;
-    Ok(conn)
+    Ok((conn, root))
 }
 
 fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result<(), SchemaError> {
@@ -435,17 +484,34 @@ fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
 
 /// Reads the schema version: 0 for a database without any schema object, else the largest
 /// version in `schema_meta`, whose rows must be exactly 1..=version.
+///
+/// `schema_meta` is queried only after its `sqlite_master` rows (the table and everything
+/// attached to it) equal, byte for byte, those the v1 DDL creates, so a hostile file cannot
+/// have a virtual table, a generated column or any other construct evaluated by this read.
+/// `schema_meta`'s definition is therefore fixed for all versions.
 pub fn read_version(conn: &Connection) -> Result<SchemaVersion, SchemaError> {
     let objects: i64 = conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get(0))?;
     if objects == 0 {
         return Ok(SchemaVersion(0));
     }
-    let has_meta: i64 =
-        conn.query_row("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_meta'", [], |r| {
-            r.get(0)
-        })?;
-    if has_meta == 0 {
+    let meta_rows = |c: &Connection| -> Result<Vec<SchemaObject>, rusqlite::Error> {
+        let mut st = c.prepare(
+            "SELECT type, name, tbl_name, sql FROM sqlite_master \
+             WHERE name = 'schema_meta' OR tbl_name = 'schema_meta' ORDER BY type, name, tbl_name",
+        )?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?;
+        rows.collect()
+    };
+    let got = meta_rows(conn)?;
+    if got.is_empty() {
         return Err(SchemaError::SchemaInvalid("database has schema objects but no schema_meta table".to_string()));
+    }
+    let mem = Connection::open_in_memory()?;
+    mem.execute_batch(V1_SQL)?;
+    if got != meta_rows(&mem)? {
+        return Err(SchemaError::SchemaInvalid(
+            "schema_meta is not the table the v1 DDL defines; it was not read".to_string(),
+        ));
     }
     let (rows, distinct, min, max): (i64, i64, Option<i64>, Option<i64>) = conn.query_row(
         "SELECT count(*), count(DISTINCT version), min(version), max(version) FROM schema_meta",
@@ -516,7 +582,7 @@ fn migrate(conn: &mut Connection, plan: &MigrationPlan) -> Result<SchemaVersion,
     // Starting the write transaction is not a migration step; its failure is SQLite's.
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate).map_err(SchemaError::Sqlite)?;
     // Re-read under the write transaction: this is the version the migrations start from.
-    let current = checked_version(&tx, plan)?;
+    let current = checked_version(&tx, plan, false)?;
     for m in plan.migrations.iter().filter(|m| m.from >= current.0) {
         tx.execute_batch(m.sql).map_err(|e| fail(m.from, m.to, e.to_string()))?;
         if tx.is_autocommit() {
