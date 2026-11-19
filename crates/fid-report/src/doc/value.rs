@@ -170,7 +170,7 @@ fn check_undeclared(root: &CValue, declared: &[String]) -> Result<(), ReportErro
                     if schema == VALUE_TEXT_SCHEMA {
                         return Err(ReportError::ValueLiteralRefused(PayloadError::new(&at, "value_text")));
                     }
-                    if schema == VALUE_BINDING_SCHEMA && !declared.iter().any(|d| *d == at) {
+                    if schema == VALUE_BINDING_SCHEMA && !declared.contains(&at) {
                         return Err(ReportError::ValueBindingInvalid(PayloadError::new(&at, "undeclared_binding")));
                     }
                 }
