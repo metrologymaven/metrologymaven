@@ -1,0 +1,19 @@
+[package]
+name = "fid-report-pdf"
+description = "Metrology Maven PDF report renderer: bundled fonts, shaping, subsetting and PDF text objects (spec node RPT.OUTPUT.PDF.TEXT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Shared `sha256:` digest type (font manifest digests).
+fid-types = { path = "../fid-types" }
+# The kernel formatter (KRN.NUM.FMT.LEN): measured values are shaped from its output verbatim.
+fid-num = { path = "../fid-num" }
+# SHA-256 of font files and subset glyph lists; already in the graph through fid-canon.
+sha2 = "0.10"
+
+[lints]
+workspace = true
