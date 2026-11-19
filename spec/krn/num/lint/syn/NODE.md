@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-knp1-lint]
+built_pr: 215
 satisfies: [REQ-KRN.NUM.LINT-001, REQ-KRN.NUM.LINT-002, REQ-KRN.NUM.LINT-007]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND, KRN.NUM.LINT.GRAPH]
