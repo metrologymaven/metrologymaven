@@ -16,10 +16,10 @@
 //! PRs are grouped by the first of their labels in the fixed order `feature`, `fix`,
 //! `security`, `breaking`, `docs`, `internal` (labels compare ASCII case-insensitively, as the
 //! code host treats them); a PR with none of these goes to "Other". Within a group PRs are sorted
-//! by number. PR titles and gate notes are untrusted: control and bidirectional formatting
-//! characters become spaces, text over [`MAX_TITLE_CHARS`] characters is cut and marked, and every
-//! ASCII punctuation character is backslash-escaped (CommonMark renders an escaped punctuation
-//! character literally, so no link, emphasis, HTML or heading can be formed).
+//! by number. PR titles and gate notes are untrusted: control and format (Cf) characters become
+//! spaces, text over [`MAX_TITLE_CHARS`] characters is cut and marked, and the text is shown as a
+//! CommonMark code span, so no link, autolink, emphasis, HTML, heading or mention can form (see
+//! [`escape_title`]).
 //!
 //! The tool reads files only: no git, no network, no clock. The output is a pure function of
 //! the input bytes (D0) with LF line endings on every OS; it is written to a temporary file in
@@ -68,8 +68,11 @@ pub const GROUPS: [(&str, &str); 6] = [
 pub const OTHER: &str = "Other";
 /// Longest title (or gate note) shown, in characters; longer ones are cut and marked.
 pub const MAX_TITLE_CHARS: usize = 200;
-/// Appended to a cut title.
-pub const TRUNCATED: &str = "... (truncated)";
+/// Appended after the code span of a cut title.
+pub const TRUNCATED: &str = " ... (truncated)";
+/// Longest gate note accepted in `release-gates.json`, in bytes; a longer note is an `INPUT-PARSE`
+/// error (rendering still cuts notes to [`MAX_TITLE_CHARS`] characters).
+pub const MAX_NOTE_BYTES: usize = 1024;
 /// Largest JSON input read (`prs.json`, `release-gates.json`, the threat summary).
 pub const MAX_JSON_BYTES: u64 = 16 << 20;
 /// Deepest JSON nesting accepted.
@@ -316,34 +319,68 @@ pub fn group_of(labels: &[String]) -> usize {
     GROUPS.iter().position(|(name, _)| labels.iter().any(|l| l.eq_ignore_ascii_case(name))).unwrap_or(GROUPS.len())
 }
 
-/// Whether a character could break the line or reorder how it displays.
-fn is_unsafe_char(c: char) -> bool {
-    c.is_control()
-        || matches!(
-            c,
-            '\u{200E}' | '\u{200F}' | '\u{2028}' | '\u{2029}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
-        )
+/// Unicode general category Cf (format characters), Unicode 15.1, as inclusive ranges. The
+/// tag block is taken whole (U+E0000..U+E007F), as are the Egyptian format controls.
+const FORMAT_CHARS: [(char, char); 21] = [
+    ('\u{00AD}', '\u{00AD}'),
+    ('\u{0600}', '\u{0605}'),
+    ('\u{061C}', '\u{061C}'),
+    ('\u{06DD}', '\u{06DD}'),
+    ('\u{070F}', '\u{070F}'),
+    ('\u{0890}', '\u{0891}'),
+    ('\u{08E2}', '\u{08E2}'),
+    ('\u{180E}', '\u{180E}'),
+    ('\u{200B}', '\u{200F}'),
+    ('\u{202A}', '\u{202E}'),
+    ('\u{2060}', '\u{2064}'),
+    ('\u{2066}', '\u{206F}'),
+    ('\u{FEFF}', '\u{FEFF}'),
+    ('\u{FFF9}', '\u{FFFB}'),
+    ('\u{110BD}', '\u{110BD}'),
+    ('\u{110CD}', '\u{110CD}'),
+    ('\u{13430}', '\u{1343F}'),
+    ('\u{1BCA0}', '\u{1BCA3}'),
+    ('\u{1D173}', '\u{1D17A}'),
+    ('\u{E0000}', '\u{E007F}'),
+    ('\u{2028}', '\u{2029}'),
+];
+
+/// Whether a character could break the line, hide text or reorder how it displays: every
+/// control character, every format character (Cf) and the line and paragraph separators.
+pub fn is_unsafe_char(c: char) -> bool {
+    c.is_control() || FORMAT_CHARS.iter().any(|&(lo, hi)| (lo..=hi).contains(&c))
 }
 
-/// Untrusted text as one line of inert Markdown (REQ-ECO.REL.PROC.NOTES-005): unsafe characters
-/// become spaces, the result is trimmed, cut to [`MAX_TITLE_CHARS`] characters with
-/// [`TRUNCATED`] appended, and every ASCII punctuation character is backslash-escaped.
+/// Untrusted text as one line of inert Markdown (REQ-ECO.REL.PROC.NOTES-005).
+///
+/// Unsafe characters ([`is_unsafe_char`]) become spaces and the result is trimmed (empty text
+/// shows as `(no title)`). Text over [`MAX_TITLE_CHARS`] characters is cut there and
+/// [`TRUNCATED`] follows the code span. The text is then rendered as a CommonMark code span
+/// whose backtick fence is one longer than the longest backtick run inside, padded with one
+/// space on each side when the text starts or ends with a backtick. Nothing inside a code span
+/// is interpreted: no emphasis, link, image, HTML, heading, and no GFM autolink of bare URLs,
+/// `www.` names or e-mail addresses, and no `@mention` or `#123` reference. Backslash escaping
+/// alone would not stop GitHub's autolinking, which is why a code span is used.
 pub fn escape_title(raw: &str) -> String {
     let clean: String = raw.chars().map(|c| if is_unsafe_char(c) { ' ' } else { c }).collect();
     let clean = clean.trim();
     if clean.is_empty() {
         return "(no title)".to_string();
     }
-    let mut out = String::with_capacity(clean.len().min(4 * MAX_TITLE_CHARS) + 16);
-    for (count, c) in clean.chars().enumerate() {
-        if count == MAX_TITLE_CHARS {
-            out.push_str(TRUNCATED);
-            return out;
-        }
-        if c.is_ascii_punctuation() {
-            out.push('\\');
-        }
-        out.push(c);
+    let (text, cut) = match clean.char_indices().nth(MAX_TITLE_CHARS) {
+        Some((i, _)) => (clean.get(..i).unwrap_or(clean), true),
+        None => (clean, false),
+    };
+    let (mut longest, mut run) = (0usize, 0usize);
+    for c in text.chars() {
+        run = if c == '`' { run + 1 } else { 0 };
+        longest = longest.max(run);
+    }
+    let fence = "`".repeat(longest + 1);
+    let pad = if text.starts_with('`') || text.ends_with('`') { " " } else { "" };
+    let mut out = format!("{fence}{pad}{text}{pad}{fence}");
+    if cut {
+        out.push_str(TRUNCATED);
     }
     out
 }
@@ -361,7 +398,9 @@ fn hash_report(dir: &Path, rel: &str) -> Result<Option<Digest>, NotesError> {
 }
 
 /// Parses `release-gates.json`: `{release, channel, verdict, gates: [{id, notes?, ...}], ...}`.
-/// The Tier 2 build failures are the `notes` of gate [`PKG_GATE`].
+/// The Tier 2 build failures are the `notes` of gate [`PKG_GATE`]. Fails closed: exactly one gate
+/// must have that ID (exact match; IDs differing only in case count as duplicates) and it must
+/// carry a `notes` array of strings of at most [`MAX_NOTE_BYTES`] bytes each.
 pub fn parse_gates(bytes: &[u8], tag: &str, channel: Channel) -> Result<Gates, NotesError> {
     const L: &str = GATES_FILE;
     let o = json(bytes, L)?;
@@ -378,7 +417,7 @@ pub fn parse_gates(bytes: &[u8], tag: &str, channel: Channel) -> Result<Gates, N
         return Err(parse_err(format!("{L}: verdict {} must be pass or block", shown(verdict))));
     }
     let mut ids = BTreeSet::new();
-    let mut tier2_failures = Vec::new();
+    let mut tier2_failures: Option<Vec<String>> = None;
     for (i, g) in get_arr(&o, "gates", L, MAX_ITEMS)?.iter().enumerate() {
         let at = format!("{L}: gates[{i}]");
         let CValue::Obj(g) = g else { return Err(parse_err(format!("{at}: not an object"))) };
@@ -386,16 +425,23 @@ pub fn parse_gates(bytes: &[u8], tag: &str, channel: Channel) -> Result<Gates, N
         if !ids.insert(id.to_ascii_lowercase()) {
             return Err(parse_err(format!("{L}: gate {} is listed twice", shown(id))));
         }
-        if id != PKG_GATE || !g.contains_key("notes") {
+        if id != PKG_GATE {
             continue;
         }
+        let at = format!("{L}: gate {PKG_GATE}");
+        let mut notes = Vec::new();
         for n in get_arr(g, "notes", &at, MAX_ITEMS)? {
             match n {
-                CValue::Str(s) => tier2_failures.push(s.clone()),
+                CValue::Str(s) if s.len() <= MAX_NOTE_BYTES => notes.push(s.clone()),
+                CValue::Str(_) => return Err(parse_err(format!("{at}: a note is longer than {MAX_NOTE_BYTES} bytes"))),
                 _ => return Err(parse_err(format!("{at}: every note must be a string"))),
             }
         }
+        tier2_failures = Some(notes);
     }
+    // Fail closed: without the package-build gate the notes cannot claim "no Tier 2 failures".
+    let tier2_failures =
+        tier2_failures.ok_or_else(|| parse_err(format!("{L}: no gate with id {PKG_GATE} (exact, lowercase)")))?;
     Ok(Gates { verdict: verdict.to_string(), tier2_failures })
 }
 

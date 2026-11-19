@@ -5,8 +5,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_xtask::rel::notes::{
-    escape_title, group_of, parse_export, parse_gates, parse_threat_summary, read_reports, render, run, NotesError,
-    GROUPS, MAX_TITLE_CHARS, TRUNCATED,
+    escape_title, group_of, is_unsafe_char, parse_export, parse_gates, parse_threat_summary, read_reports, render, run,
+    NotesError, GROUPS, MAX_NOTE_BYTES, MAX_TITLE_CHARS, TRUNCATED,
 };
 use fid_xtask::rel::version::Channel;
 use std::fmt::Write as _;
@@ -132,26 +132,34 @@ fn missing_reports_all_named() {
     assert!(errs.iter().all(|e| e.exit_code() == 1));
 }
 
-/// AC-3: hostile titles are escaped, flattened to one line and cut; no link, image, HTML or
-/// heading can form.
+/// AC-3: hostile titles are shown as inert code spans, flattened to one line and cut; no link,
+/// autolink, image, HTML, heading or mention can form. Every expected line is hand-labelled.
 #[test]
 fn ac3_hostile_titles() {
     let text = notes_for("hostile-title", "prs.json", "ac3");
-    let cut = format!("- #304 {}{TRUNCATED}", "abcdefghij".repeat(20));
+    let cut = format!("- #304 `{}`{TRUNCATED}", "abcdefghij".repeat(20));
     let want = [
-        r"- #301 Fix \[link\]\(javascript\:x\) and \*bold\*",
-        r"- #302 \<script\>alert\(1\)\<\/script\> \!\[img\]\(x\.png\)",
-        r"- #303 Line one \#\# Injected heading  \| a \| b \|",
+        "- #301 `Fix [link](javascript:x) and *bold*`",
+        "- #302 `<script>alert(1)</script> ![img](x.png)`",
+        "- #303 `Line one ## Injected heading  | a | b |`",
         cut.as_str(),
-        "- #305 Swap  evil  text",
+        "- #305 `Swap  evil  text`",
         "- #306 (no title)",
+        "- #307 `Swap and join ed x y`",
+        "- #308 `See https://evil.example and www.evil.example or ops@evil.example, cc @someone`",
+        "- #309 ``` Use `fid` and ``x`` ```",
     ];
     let section = format!("### Fixes\n\n{}\n\n", want.join("\n"));
     assert!(text.contains(&section), "{text}");
-    let changes = text.split("## Attachments").next().unwrap();
-    assert!(!changes.contains("](") && !changes.contains("<script>") && !changes.contains("*bold*"));
+    // Every title is a code span: outside the spans of the PR lines, nothing of the titles is left.
+    for line in text.lines().filter(|l| l.starts_with("- #30")) {
+        let rest = line.split_once(' ').unwrap().1.split_once(' ').unwrap().1;
+        assert!(rest == "(no title)" || rest.starts_with('`'), "{line}");
+    }
     assert!(!text.contains("THIS-TAIL-IS-CUT"));
-    assert!(!text.contains('\u{202E}') && !text.contains('\r'));
+    for c in ['\u{202E}', '\r', '\u{061C}', '\u{200B}', '\u{00AD}', '\u{2060}', '\u{E0041}'] {
+        assert!(!text.contains(c), "{c:?} survived");
+    }
     assert!(!text.lines().any(|l| l.starts_with("## Injected")));
 }
 
@@ -159,7 +167,7 @@ fn ac3_hostile_titles() {
 #[test]
 fn ac4_tier2_failure_listed() {
     let text = notes_for("tier2-fail", "../basic/prs.json", "ac4");
-    let section = "## Tier 2 build failures\n\n- Tier 2 build failed\\: fid linux\\-aarch64 \\(exit 101\\)\n\n";
+    let section = "## Tier 2 build failures\n\n- `Tier 2 build failed: fid linux-aarch64 (exit 101)`\n\n";
     assert!(text.contains(section), "{text}");
     assert!(text.contains(
         "| [release-gates.json](release-gates.json) | \
@@ -180,12 +188,30 @@ fn header_lines() {
 #[test]
 fn escape_and_truncate_rules() {
     let exact: String = "é".repeat(MAX_TITLE_CHARS);
-    assert_eq!(escape_title(&exact), exact);
+    assert_eq!(escape_title(&exact), format!("`{exact}`"));
     let long = format!("{exact}x");
-    assert_eq!(escape_title(&long), format!("{exact}{TRUNCATED}"));
-    assert_eq!(escape_title("a_b`c~d"), r"a\_b\`c\~d");
-    assert_eq!(escape_title("\u{2028}\t x \u{FEFF}"), "x");
+    assert_eq!(escape_title(&long), format!("`{exact}`{TRUNCATED}"));
+    assert_eq!(escape_title("a_b`c~d"), "``a_b`c~d``");
+    assert_eq!(escape_title("`"), "`` ` ``");
+    assert_eq!(escape_title("x ```` y`"), "````` x ```` y` `````");
+    assert_eq!(escape_title("\u{2028}\t x \u{FEFF}"), "`x`");
     assert_eq!(escape_title(""), "(no title)");
+    assert_eq!(escape_title("\u{180E}\u{200D}\u{E007F}\u{0600}"), "(no title)");
+}
+
+/// Every control and format (Cf) character is unsafe; ordinary letters, marks and spaces are not.
+#[test]
+fn unsafe_characters() {
+    for c in [
+        '\u{0}', '\u{1B}', '\u{7F}', '\u{85}', '\u{AD}', '\u{61C}', '\u{180E}', '\u{200B}', '\u{200C}',
+        '\u{200D}', '\u{200E}', '\u{2028}', '\u{2029}', '\u{202E}', '\u{2060}', '\u{2064}', '\u{2066}',
+        '\u{FEFF}', '\u{FFF9}', '\u{E0000}', '\u{E0001}', '\u{E007F}',
+    ] {
+        assert!(is_unsafe_char(c), "{c:?}");
+    }
+    for c in ['a', 'é', ' ', '`', '\u{301}', '\u{2065}', '\u{E0080}', '\u{4E2D}'] {
+        assert!(!is_unsafe_char(c), "{c:?}");
+    }
 }
 
 #[test]
@@ -254,14 +280,28 @@ fn export_range_and_shape_errors() {
 #[test]
 fn gates_and_threat_errors() {
     let g = |s: &str| parse_gates(s.as_bytes(), "v1.4.0", Channel::Stable);
-    let base = r#"{"release":"v1.4.0","channel":"stable","verdict":"pass","gates":[]}"#;
+    let base = r#"{"release":"v1.4.0","channel":"stable","verdict":"pass","gates":[{"id":"pkg-plan","notes":[]}]}"#;
     assert_eq!(g(base).unwrap().tier2_failures, Vec::<String>::new());
+    let one = base.replace(r#""notes":[]"#, r#""notes":["n"]"#);
+    assert_eq!(g(&one).unwrap().tier2_failures, ["n"]);
+    let long_ok = base.replace(r#""notes":[]"#, &format!(r#""notes":["{}"]"#, "x".repeat(MAX_NOTE_BYTES)));
+    assert_eq!(g(&long_ok).unwrap().tier2_failures[0].len(), MAX_NOTE_BYTES);
+    let gates = |list: &str| base.replace(r#"[{"id":"pkg-plan","notes":[]}]"#, list);
     for (bad, want) in [
+        // Fail closed on the package-build gate: missing, case-different, or without notes.
+        (gates("[]"), "no gate with id pkg-plan"),
+        (gates(r#"[{"id":"qual-evid"}]"#), "no gate with id pkg-plan"),
+        (gates(r#"[{"id":"PKG-PLAN","notes":[]}]"#), "no gate with id pkg-plan"),
+        (gates(r#"[{"id":"Pkg-Plan","notes":["n"]}]"#), "no gate with id pkg-plan"),
+        (gates(r#"[{"id":"pkg-plan"}]"#), "gate pkg-plan: missing `notes`"),
+        (gates(r#"[{"id":"pkg-plan","notes":null}]"#), "gate pkg-plan: `notes` must be an array"),
+        (gates(r#"[{"id":"pkg-plan","notes":[]},{"id":"pkg-plan","notes":[]}]"#), "listed twice"),
+        (base.replace(r#""notes":[]"#, &format!(r#""notes":["{}"]"#, "x".repeat(MAX_NOTE_BYTES + 1))), "longer than"),
         (base.replace("v1.4.0", "v1.3.0"), "verdict is for release"),
         (base.replace("stable", "beta"), "verdict is for channel"),
         (base.replace("pass", "maybe"), "must be pass or block"),
-        (base.replace("[]", r#"[{"id":"pkg-plan"},{"id":"PKG-PLAN"}]"#), "listed twice"),
-        (base.replace("[]", r#"[{"id":"pkg-plan","notes":[1]}]"#), "every note must be a string"),
+        (gates(r#"[{"id":"pkg-plan","notes":[]},{"id":"PKG-PLAN","notes":[]}]"#), "listed twice"),
+        (gates(r#"[{"id":"pkg-plan","notes":[1]}]"#), "every note must be a string"),
     ] {
         let e = g(&bad).unwrap_err().to_string();
         assert!(e.starts_with("INPUT-PARSE: ") && e.contains(want), "{e}");

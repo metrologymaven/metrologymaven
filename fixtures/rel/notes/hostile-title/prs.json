@@ -9,6 +9,9 @@
     {"number": 303, "title": "Line one\n## Injected heading\r\n| a | b |", "labels": ["fix"], "merged_at": "2026-10-03T10:00:00Z", "merge_commit": "8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f"},
     {"number": 304, "title": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijTHIS-TAIL-IS-CUT", "labels": ["fix"], "merged_at": "2026-10-04T10:00:00Z", "merge_commit": "9090909090909090909090909090909090909090"},
     {"number": 305, "title": "Swap ‮evil‬ text", "labels": ["fix"], "merged_at": "2026-10-05T10:00:00Z", "merge_commit": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0"},
-    {"number": 306, "title": "   ", "labels": ["fix"], "merged_at": "2026-10-06T10:00:00Z", "merge_commit": "b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"}
+    {"number": 306, "title": "   ", "labels": ["fix"], "merged_at": "2026-10-06T10:00:00Z", "merge_commit": "b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"},
+    {"number": 307, "title": "Swap\u061Cand\u200Bjoin\u00ADed\u2060x󠁁y", "labels": ["fix"], "merged_at": "2026-10-07T10:00:00Z", "merge_commit": "c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0"},
+    {"number": 308, "title": "See https://evil.example and www.evil.example or ops@evil.example, cc @someone", "labels": ["fix"], "merged_at": "2026-10-08T10:00:00Z", "merge_commit": "d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0"},
+    {"number": 309, "title": "Use `fid` and ``x``", "labels": ["fix"], "merged_at": "2026-10-09T10:00:00Z", "merge_commit": "e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0"}
   ]
 }
