@@ -62,9 +62,9 @@ fn decode(cols: &[&str]) -> Row {
         for item in cols[4].split(';') {
             let parts: Vec<&str> = item.split(':').collect();
             // Optional fourth field: the record label, so two contributors can share one record.
-            let (id, claim, record, label) = match parts.as_slice() {
-                &[id, claim, record] => (id, claim, record, id),
-                &[id, claim, record, label] => (id, claim, record, label),
+            let (id, claim, record, label) = match *parts.as_slice() {
+                [id, claim, record] => (id, claim, record, id),
+                [id, claim, record, label] => (id, claim, record, label),
                 _ => panic!("{item}"),
             };
             let digest = digest_of(&format!("source:{label}"));
