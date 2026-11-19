@@ -257,6 +257,9 @@ impl SplitMix {
     }
 }
 
+/// A grid point `(i, j)`.
+type Point = (usize, usize);
+
 /// A random open quad mesh: 10⁵ of the 340 × 330 unit cells of a grid (seed 3), in shuffled
 /// order with shuffled loop starts; about half of all entities carry labels. Missing cells
 /// leave one-coedge boundary edges and vertices where faces meet only at a corner.
@@ -276,7 +279,7 @@ fn random_body(seed: u64, faces: usize) -> BodyBuilder {
     })
     .unwrap();
     let mut vertex: BTreeMap<(usize, usize), usize> = BTreeMap::new();
-    let mut edge: BTreeMap<((usize, usize), (usize, usize)), usize> = BTreeMap::new();
+    let mut edge: BTreeMap<(Point, Point), usize> = BTreeMap::new();
     let mut face_ix = Vec::with_capacity(faces);
     for (n, &(i, j)) in cells.iter().enumerate() {
         let ring = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)];
@@ -376,11 +379,14 @@ fn ac4_random_body_agrees_with_brute_force() {
     }
 }
 
+/// Per query, the answer list of every argument by dense index.
+type Answers = BTreeMap<&'static str, Vec<Vec<TopologyId>>>;
+
 /// Every query's answer for every argument (by dense index of the argument), by walking
 /// faces, loops, coedges and edges of the arena; each list then sorted and deduplicated.
-fn scan_all(body: &Body) -> BTreeMap<&'static str, Vec<Vec<TopologyId>>> {
+fn scan_all(body: &Body) -> Answers {
     let (nf, ne, nv) = (body.faces().len(), body.edges().len(), body.vertices().len());
-    let mut m: BTreeMap<&'static str, Vec<Vec<TopologyId>>> = BTreeMap::new();
+    let mut m: Answers = BTreeMap::new();
     for (q, k) in QUERIES {
         let n = match k {
             EntityKind::Edge => ne,
