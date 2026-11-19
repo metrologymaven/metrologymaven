@@ -232,6 +232,7 @@ jobs:
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/solv/vend/make_fixtures.py --check
+          python fixtures/solv/make_mstart_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
@@ -353,4 +354,4 @@ jobs:
           version: "v49.0.6"
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
-        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core
+        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
