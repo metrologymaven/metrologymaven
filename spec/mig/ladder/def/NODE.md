@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-mig]
 satisfies: [REQ-MIG.LADDER-001, REQ-MIG.LADDER-002]
 covers: []
 depends_on: [CORE.JRN.CANON]

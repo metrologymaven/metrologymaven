@@ -66,6 +66,8 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
 fixtures/outr/launch/gate/** -text
+# MIG.LADDER.DEF fixtures: written by make_fixtures.py, which --check compares byte for byte.
+fixtures/mig/ladder/def/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
 # ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.

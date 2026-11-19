@@ -579,6 +579,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-mig"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-num"
 version = "0.0.1"
 dependencies = [
@@ -758,6 +766,7 @@ version = "0.0.1"
 dependencies = [
  "fid-accept",
  "fid-canon",
+ "fid-mig",
  "fid-types",
  "fid-uuid",
  "sha2 0.10.9",

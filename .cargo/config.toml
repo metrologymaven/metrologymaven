@@ -16,6 +16,7 @@
 # cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> --apps-status <json> [--config <toml>]  (ECO.APPS.POLICY)
 # cargo xtask personas-check [--personas <json>] [--apps <toml>]  (FLOW.PERSONA.PERS)
 # cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] [--protocol <md>]  (FLOW.STUDY.PROTO)
+# cargo xtask mig ladder-check --ladder <json> --manifest <json>  (MIG.LADDER.DEF)
 xtask = "run -q -p fid-xtask --"
 
 # Resolve dependencies to versions whose rust-version fits the workspace MSRV (1.87).
