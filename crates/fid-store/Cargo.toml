@@ -16,9 +16,9 @@ sha2 = "0.10"
 # SQLite binding for project.db (CORE.STO.SQL). Exact pin and scope: decisions/D-043.
 # `bundled` compiles SQLite (public domain) from the C source shipped in libsqlite3-sys, so every
 # platform runs the same SQLite version. Default features off: no statement cache (hashlink) and
-# no wasm32-unknown-unknown backend (sqlite-wasm-rs). 0.40.2 is the newest release whose
-# toolchain needs fit the workspace MSRV 1.87 (0.41+ declares rust-version 1.89).
-rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }
+# no wasm32-unknown-unknown backend (sqlite-wasm-rs). 0.41.1 resolves libsqlite3-sys 0.39.1
+# (SQLite 3.54.1), which fixes RUSTSEC-2026-0459; earlier releases bundle an affected SQLite.
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }
 
 [target.'cfg(unix)'.dependencies]
 # Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),

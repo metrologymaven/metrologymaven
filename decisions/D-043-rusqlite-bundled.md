@@ -32,8 +32,13 @@ through C FFI (`unsafe` Rust plus compiled C)?
   run the same SQLite version, whatever the system has (or lacks). The append-only triggers,
   `RAISE(ABORT, ...)`, WAL, `trusted_schema` and the `win32-longpath` VFS then behave the same
   on every Tier 1 platform, and the tests run against the SQLite that ships.
-- Version: `rusqlite = "=0.40.2"` (exact), which resolves `libsqlite3-sys` 0.38.x. 0.41.0 and
-  later declare `rust-version = 1.89`, above the workspace MSRV 1.87. `default-features = false`
+- Version: `rusqlite = "=0.41.1"` (exact, the latest 0.41 patch), which resolves
+  `libsqlite3-sys` 0.39.1 bundling SQLite 3.54.1. RUSTSEC-2026-0459 (CVE-2026-119375): SQLite
+  before 3.54.0, bundled by `libsqlite3-sys` 0.6.0 to 0.38.2 (`rusqlite` up to 0.40.x), can return
+  uninitialised page-cache memory when a database is opened with a crafted sibling `-wal` file;
+  `project.db` is hostile input, so `fid-store` is exposed on any older pin. `cargo deny`
+  rejected 0.40.2 on this advisory. `rusqlite` 0.41 declares `rust-version = 1.89`, so the
+  workspace MSRV was raised from 1.87 to 1.89 (#192). `default-features = false`
   drops the statement cache (`hashlink`) and the `wasm32-unknown-unknown` backend
   (`sqlite-wasm-rs`), neither of which `fid-store` uses.
 - Licences (as declared in the crates' manifests on crates.io, 2026-11-18): `rusqlite` and
@@ -55,7 +60,7 @@ through C FFI (`unsafe` Rust plus compiled C)?
 
 | Option | For | Against |
 |---|---|---|
-| A. `rusqlite` `=0.40.2`, `bundled`, default features off | One SQLite version on all platforms; most used binding; no `unsafe` in project code | C compiler needed at build time; SQLite updates arrive through `libsqlite3-sys` releases |
+| A. `rusqlite` `=0.41.1`, `bundled`, default features off | One SQLite version on all platforms; most used binding; no `unsafe` in project code | C compiler needed at build time; SQLite updates arrive through `libsqlite3-sys` releases |
 | B. `rusqlite` linking the system SQLite | No C build step | Version differs per OS (old on some Linux distributions, not reliably present on Windows); WAL and trigger behaviour tested on one version, shipped on another |
 | C. Own `unsafe` FFI wrapper with a §8 named exception | Full control | New unsafe code to write and review; larger risk than A |
 | D. A pure-Rust SQLite reimplementation | No C | Not SQLite: file-format and locking compatibility unproven [unverified]; spec names SQLite |
@@ -64,7 +69,7 @@ through C FFI (`unsafe` Rust plus compiled C)?
 
 **A.**
 
-1. `fid-store` may depend on `rusqlite` `=0.40.2` with `default-features = false` and
+1. `fid-store` may depend on `rusqlite` `=0.41.1` with `default-features = false` and
    `features = ["bundled"]`; the resolved `libsqlite3-sys` and its build dependencies are pinned
    in `Cargo.lock` and reviewed in the diff of any change to them.
 2. This is a named dependency exception under CONSTITUTION §8: `unsafe` and C live only inside
