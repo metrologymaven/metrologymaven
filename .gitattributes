@@ -123,6 +123,8 @@ fixtures/geo/types/** -text
 # CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
 # byte for byte by the tests and make_fixtures.py --check; never convert line endings.
 fixtures/core/rpl/exec/subst/** -text
+# SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
+fixtures/scan/cmp/** -text
 # KRN.MAN.WASM: hand-encoded wasm modules, canonical calls and manifests, and the pinned runtime
 # settings whose SHA-256 is the manifest's replay_runtime.config_digest; compared byte for byte.
 fixtures/man/wasm/** -text

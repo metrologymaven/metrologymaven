@@ -742,6 +742,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-cmp"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-sign-core"
 version = "0.0.1"
 dependencies = [
