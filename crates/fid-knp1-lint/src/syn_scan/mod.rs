@@ -1550,10 +1550,12 @@ impl<'a> Scan<'a> {
             // A banned name followed by a metavariable or repetition is called by it.
             let meta_called = matches!(next, Some(Kind::Dollar)) && !matches!(prev, Some(Kind::Dollar));
             // Banned cfg names passed to a macro may land in a cfg predicate (`m!(not(clippy))`).
-            if inside && after_ok && !matches!(next, Some(Kind::PathSep | Kind::Bang)) {
-                if matches!(name, "clippy" | "debug_assertions" | "panic") {
-                    self.hit(i, &Rule::Cfg, format!("`{name}` passed to a macro: it may become a cfg predicate"));
-                }
+            if inside
+                && after_ok
+                && !matches!(next, Some(Kind::PathSep | Kind::Bang))
+                && matches!(name, "clippy" | "debug_assertions" | "panic")
+            {
+                self.hit(i, &Rule::Cfg, format!("`{name}` passed to a macro: it may become a cfg predicate"));
             }
             for kind in [P::Call, P::Method, P::FloatMethod, P::Macro, P::IncludeMacro] {
                 let applies = template
