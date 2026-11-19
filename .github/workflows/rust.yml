@@ -31,11 +31,11 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Cargo.lock up to date (informational)
-        # Non-blocking: builder PRs may add crates without refreshing Cargo.lock
-        # (refresh via the lockfile workflow). Runs before any build touches the lock.
+      - name: Cargo.lock up to date
+        # Blocking: a PR that adds a crate or dependency must update Cargo.lock in the same PR
+        # (lockfile workflow, or exact hand-added entries). Main's lock went stale twice while this
+        # was informational (#197, #209). Runs before any build touches the lock.
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: cargo metadata --locked --format-version 1 > /dev/null
       - name: Working tree is the committed bytes (KRN.MAN.MANI.IMPL REQ-003)
         # Implementation digests hash git-tracked files as they are in the working tree. Before any
@@ -61,6 +61,10 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
+        run: |
+          cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings
+          cargo test -p fid-kernel-wasm --features test-algorithms
       - name: Site import verify runs with the network cut (OUTR.SITE.GEN.IMPORT AC-7)
         if: runner.os == 'Linux'
         shell: bash
@@ -277,9 +281,11 @@ jobs:
           python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/man/make_manifest_fixtures.py --check
           python fixtures/man/check_manifest_schema.py
+          python fixtures/man/wasm/make_fixtures.py --check
           python fixtures/man/make_implclosure_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
+          python fixtures/num/la/make_la_fixtures.py --check
           python tools/fixtures/geo_sel_sets.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
@@ -385,9 +391,22 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-wasip1
-      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
-        with:
-          version: "v49.0.6"
+      - name: Install wasmtime v49.0.6 (tarball SHA-256 pinned and verified before use)
+        # Same release the bytecodealliance setup action installed; the digest is the one GitHub
+        # records for the release asset. KRN.MAN.WASM pins this version in wasm-runtime.toml.
+        shell: bash
+        env:
+          WASMTIME_TARBALL: wasmtime-v49.0.6-x86_64-linux.tar.xz
+          WASMTIME_SHA256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/wasmtime"
+          mkdir -p "$d"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$WASMTIME_TARBALL" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$WASMTIME_TARBALL"
+          echo "$WASMTIME_SHA256  $d/$WASMTIME_TARBALL" | sha256sum --check --strict -
+          tar -xJf "$d/$WASMTIME_TARBALL" -C "$d"
+          echo "$d/wasmtime-v49.0.6-x86_64-linux" >> "$GITHUB_PATH"
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
@@ -399,3 +418,56 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
+      - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
+        # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
+        # wasmtime). The reference module registers no algorithm until fid-kernel exists; a
+        # second build registers the stand-in test algorithms the fixtures call. The linked
+        # modules are sealed (clock imports renamed to trap); the sealed module is the artifact.
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=crates/fid-kernel-wasm
+          w=fixtures/man/wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm --features test-algorithms --target-dir target/wasm-test
+          cargo build -q -p fid-wasm-check
+          chk=target/debug/fid-wasm-check
+          # The wasmtime options the runner passes exist in this wasmtime (for the record).
+          wasmtime run -W help | grep -E 'nan-canonicalization|relaxed-simd|threads|max-wasm-stack|max-memory-size|trap-on-grow-failure|fuel|unknown-imports-trap' || true
+          ref="$RUNNER_TEMP/fid-kernel-wasm.wasm"
+          tst="$RUNNER_TEMP/fid-kernel-wasm-test.wasm"
+          $chk seal target/wasm32-wasip1/release/fid-kernel-wasm.wasm "$ref"
+          $chk seal target/wasm-test/wasm32-wasip1/release/fid-kernel-wasm.wasm "$tst"
+          sha256sum "$ref" "$tst"
+          # The reference module carries no stand-in test algorithm; the test module does.
+          if grep -q 'test.stack.recurse' "$ref"; then echo "::error::stand-ins in the reference module"; exit 1; fi
+          grep -q 'test.stack.recurse' "$tst"
+          $chk runtime-digest $c/wasm-runtime.toml > "$RUNNER_TEMP/runtime-digest.txt"
+          cmp "$RUNNER_TEMP/runtime-digest.txt" $w/runtime-digest.txt
+          # AC-1: the sealed modules import only allowlisted functions (the clock is `trapped`) ...
+          $chk imports "$ref" $c/wasm-imports.allow
+          $chk imports "$tst" $c/wasm-imports.allow
+          # ... the unsealed link output is refused (its clock import is not allowlisted) ...
+          set +e; $chk imports target/wasm32-wasip1/release/fid-kernel-wasm.wasm $c/wasm-imports.allow; code=$?; set -e
+          test "$code" = 1
+          # ... and a module importing random_get fails, naming the import.
+          set +e; out=$($chk imports $w/modules/bad-random-get.wasm $c/wasm-imports.allow); code=$?; set -e
+          echo "$out"
+          test "$code" = 1 && grep -qx 'DENIED wasi_snapshot_preview1 random_get (func)' <<< "$out"
+          # AC-2 and AC-3: every call through the module under the pinned settings.
+          $chk golden $c/wasm-runtime.toml $c/wasm-imports.allow "$tst" $w/calls-v1.txt
+          # The reference module answers through the same runner (no algorithms registered yet).
+          call='{"algorithm":"test.echo.identity@1.0.0","inputs":[],"params":""}'
+          set +e; out=$(printf '%s' "$call" | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow "$ref"); code=$?; set -e
+          test "$code" = 1 && test "$out" = '{"error":"unknown_algorithm"}'
+          # clock = "trap": a sealed module that calls the clock is NOT_REPLAYABLE(trap) ...
+          $chk seal $w/modules/clock-call.wasm "$RUNNER_TEMP/clock.wasm"
+          cmp "$RUNNER_TEMP/clock.wasm" $w/modules/clock-call.sealed.wasm
+          set +e; out=$(printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow "$RUNNER_TEMP/clock.wasm"); code=$?; set -e
+          test "$code" = 4 && test "$out" = 'NOT_REPLAYABLE(trap)'
+          # ... and the unsealed one is refused before it runs.
+          set +e; printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow $w/modules/clock-call.wasm; code=$?; set -e
+          test "$code" = 5
+          # Fuel: a module that loops forever ends as NOT_REPLAYABLE(resource).
+          set +e; out=$(printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow $w/modules/loop.wasm); code=$?; set -e
+          test "$code" = 3 && test "$out" = 'NOT_REPLAYABLE(resource)'

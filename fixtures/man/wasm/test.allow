@@ -1,0 +1,4 @@
+# Test allowlist for fixtures/man/wasm/modules (format of crates/fid-kernel-wasm/wasm-imports.allow).
+
+wasi_snapshot_preview1 fd_write -- test entry: writes bytes to a file descriptor
+wasi_snapshot_preview1 proc_exit -- test entry: ends the process with an exit code

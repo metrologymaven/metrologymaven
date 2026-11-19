@@ -1,0 +1,33 @@
+# KRN.MAN.WASM module labels (hand-labelled from the Design rules). CC-BY-4.0.
+# Format: <file><TAB><ok:<imports> | err:<code>><TAB><check against ../test.allow: pass | fail:<module name>,... | ->.
+ok-empty.wasm	ok:0	pass
+ok-wasi.wasm	ok:2	pass
+ok-padded-leb.wasm	ok:0	pass
+bad-random-get.wasm	ok:2	fail:wasi_snapshot_preview1 random_get
+bad-memory-import.wasm	ok:1	fail:wasi_snapshot_preview1 fd_write
+bad-env-import.wasm	ok:2	fail:env fd_write
+err-magic.wasm	err:bad_magic	-
+err-version-component.wasm	err:bad_version	-
+err-truncated-header.wasm	err:truncated	-
+err-section-overrun.wasm	err:section_overrun	-
+err-leb-long.wasm	err:bad_leb	-
+err-leb-overflow.wasm	err:bad_leb	-
+err-duplicate-import.wasm	err:section_order	-
+err-order.wasm	err:section_order	-
+err-unknown-section.wasm	err:unknown_section	-
+err-utf8-name.wasm	err:bad_utf8	-
+err-import-kind.wasm	err:bad_import_kind	-
+err-import-trailing.wasm	err:section_size_mismatch	-
+err-import-short.wasm	err:truncated	-
+err-type-index.wasm	err:bad_type_index	-
+err-no-types.wasm	err:bad_type_index	-
+err-custom-name.wasm	err:truncated	-
+err-trailing-byte.wasm	err:truncated	-
+err-valtype.wasm	err:bad_type	-
+err-type-form.wasm	err:bad_type	-
+err-shared-memory.wasm	err:bad_limits	-
+err-limits-max.wasm	err:bad_limits	-
+err-too-many-imports.wasm	err:limit_exceeded	-
+clock-call.wasm	ok:3	fail:wasi_snapshot_preview1 clock_time_get
+clock-call.sealed.wasm	ok:3	pass
+loop.wasm	ok:0	pass
