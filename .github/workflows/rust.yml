@@ -324,6 +324,7 @@ jobs:
           python fixtures/geo/index/make_bvh_fixtures.py --check
           python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
+          python fixtures/geo/cad/topo/make_topo_fixtures.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
           python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/unc/class/make_table.py --check
@@ -469,6 +470,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-index
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
+      - name: B-rep canonical encodings, digests and derived IDs on wasm32-wasip1 (GEO.CAD.TOPO.MODEL AC-1, AC-2, AC-6)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-cad
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
         # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
         # wasmtime). The reference module registers no algorithm until fid-kernel exists; a
