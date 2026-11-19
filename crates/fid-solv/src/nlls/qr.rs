@@ -33,6 +33,9 @@ pub(crate) fn factor(
     v: &mut Vec<f64>,
 ) -> Result<Factored, NumError> {
     let mut perm = super::alloc_usize(n)?;
+    for (k, slot) in perm.iter_mut().enumerate() {
+        *slot = k;
+    }
     for k in 0..n {
         let mut best = k;
         let mut best_norm = red::norm2(&cols[k * rows + k..(k + 1) * rows])?;
