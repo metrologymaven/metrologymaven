@@ -300,6 +300,7 @@ jobs:
           python tools/fixtures/geo_sel_sets.py --check
           python tools/fixtures/geo_units_cases.py --check
           python tools/fixtures/geo_xform_cases.py --check
+          python tools/fixtures/geo_tree_cases.py --check
           python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
@@ -435,7 +436,7 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-manifest-gen
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
-      - name: Unit conversion and transform cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1)
+      - name: Unit conversion, transform and frame-tree cases on wasm32-wasip1 (GEO.FRAME.UNITS AC-1, AC-4; GEO.FRAME.XFORM AC-1; GEO.FRAME.TREE AC-1, AC-5)
         run: cargo test --target wasm32-wasip1 -p fid-geo-frame
       - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
