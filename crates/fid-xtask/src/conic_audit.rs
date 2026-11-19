@@ -547,7 +547,10 @@ fn header_path(rest: &[u8], prefix: &str, line: usize) -> Result<Option<String>,
     }
 }
 
-fn parse_range(s: &str) -> Option<(usize, usize)> {
+/// A hunk side: (first line, line count).
+type LineRange = (usize, usize);
+
+fn parse_range(s: &str) -> Option<LineRange> {
     let num = |t: &str| {
         if !t.is_empty() && t.len() <= 9 && t.bytes().all(|b| b.is_ascii_digit()) {
             t.parse::<usize>().ok()
@@ -562,7 +565,7 @@ fn parse_range(s: &str) -> Option<(usize, usize)> {
 }
 
 /// `@@ -A[,B] +C[,D] @@[ section]` to ((A, B), (C, D)).
-fn parse_hunk_header(l: &[u8], line: usize) -> Result<((usize, usize), (usize, usize)), String> {
+fn parse_hunk_header(l: &[u8], line: usize) -> Result<(LineRange, LineRange), String> {
     let bad = || format!("line {line}: malformed hunk header");
     let text = std::str::from_utf8(l).map_err(|_| bad())?;
     let rest = text.strip_prefix("@@ -").ok_or_else(bad)?;
