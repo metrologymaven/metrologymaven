@@ -575,12 +575,9 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
             t.strip_prefix("-C").filter(|r| !r.is_empty())
         };
         match opt.and_then(|o| o.split_once('=')) {
-            Some((k, v)) => out.push(Codegen {
-                key: norm_key(k),
-                value: v.to_string(),
-                needle: format!("{k}={v}"),
-                profile: None,
-            }),
+            Some((k, v)) => {
+                out.push(Codegen { key: norm_key(k), value: v.to_string(), needle: format!("{k}={v}"), profile: None })
+            }
             None if opt.is_none() && t.contains("fp-contract") => out.push(Codegen {
                 key: "llvm-args".to_string(),
                 value: t.to_string(),
@@ -791,10 +788,8 @@ fn check_ci_file(sink: &mut Sink<'_>, file: &str, text: &str) {
         .map(|p| (p.clone(), format!("CARGO_PROFILE_{}_CODEGEN_UNITS", p.to_ascii_uppercase().replace('-', "_"))))
         .collect();
     for (start, end) in ci_spans(&idx.lines) {
-        let span: Vec<(usize, &str)> = (start..end)
-            .filter_map(|i| idx.lines.get(i).map(|l| (i, *l)))
-            .filter(|(_, l)| !is_comment(l))
-            .collect();
+        let span: Vec<(usize, &str)> =
+            (start..end).filter_map(|i| idx.lines.get(i).map(|l| (i, *l))).filter(|(_, l)| !is_comment(l)).collect();
         let logical: Vec<&str> = span.iter().map(|(_, l)| l.trim_end().trim_end_matches('\\')).collect();
         let toks = tokens(&logical.join(" "));
         let opts = codegen_options(&toks);
