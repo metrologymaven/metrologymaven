@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**109** of **1336** leaves built in code ([B]).
+**110** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 39 built)
+### Wave 2 (121 leaves, 40 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -202,7 +202,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
 - [B] [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
 - [B] [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
-- [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
+- [B] [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
 - [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
 - [B] [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
 - [B] [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)

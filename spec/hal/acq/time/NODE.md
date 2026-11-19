@@ -9,6 +9,7 @@ phase: P2
 size: M
 owners: []
 claimed_by:
+built_in: [fid-hal-runtime]
 satisfies: [REQ-HAL.ACQ-006]
 covers: []
 depends_on: [HAL.IDL.UNITS]

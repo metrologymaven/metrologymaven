@@ -22,6 +22,9 @@ fixtures/io/corp/hostile/** -text
 # PLAT.DEPLOY.NOADMIN.LAYOUT fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/deploy/layout-*.toml -text
 
+# HAL.ACQ.TIME fixtures: integer pairs and golden binary64 bits, compared byte for byte by --check.
+fixtures/hal/acq/time/** -text
+
 # IO.REG.ENV.REPORT golden canonical JSON: compared byte for byte (no trailing newline).
 fixtures/io/reg/env/report/** -text
 # Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are

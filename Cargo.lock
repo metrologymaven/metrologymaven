@@ -474,6 +474,7 @@ name = "fid-hal-runtime"
 version = "0.0.1"
 dependencies = [
  "fid-hal-idl",
+ "fid-num",
  "fid-testkit",
 ]
 
