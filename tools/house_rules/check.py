@@ -40,11 +40,26 @@ promisor remote. Every git call in this module therefore:
   ``GIT_OPTIONAL_LOCKS=0``. So ``GIT_DIR``, ``GIT_WORK_TREE``, ``GIT_OBJECT_DIRECTORY``,
   ``GIT_ALTERNATE_OBJECT_DIRECTORIES``, ``GIT_CONFIG_*``, ``GIT_NAMESPACE`` and the rest never
   reach git;
-* passes ``-c protocol.allow=never -c core.fsmonitor=false -c core.hooksPath=<os.devnull>``
-  before the subcommand, so no transport can run even if a fetch were attempted;
+* passes the top-level option ``--no-lazy-fetch`` (git >= 2.44). This is the primary guard
+  against lazy fetches. Older git does not know the option and exits with an error, so on those
+  versions the check fails closed (see below) instead of running unguarded; the environment
+  variable alone would be silently ignored by older git;
+* passes, before the subcommand, ``-c protocol.allow=never`` and ``-c protocol.<name>.allow=never``
+  for ``file``, ``ext``, ``ssh``, ``git``, ``http`` and ``https``. Command-line ``-c`` outranks the
+  repository's own config, so a hostile ``protocol.file.allow=always`` cannot re-enable a
+  transport. This is the second, independent guard: if a fetch were attempted anyway, it fails
+  before any ``uploadpack`` or ``ext::`` command runs. A protocol not in this list falls back to
+  ``protocol.allow=never``;
+* passes ``-c core.fsmonitor=false -c core.hooksPath=<os.devnull>``;
 * has stdin closed (or fed only our own revision list), output captured, and a timeout;
-* never sets ``safe.directory``: git's refusal of a repository owned by someone else is kept, and
-  any git error fails closed (``RULES-USAGE ... not a readable git repository``).
+* never sets ``safe.directory``: git's refusal of a repository owned by someone else is kept.
+
+Any git failure (unknown option on old git, ownership refusal, not a repository, timeout) fails
+closed as ``RULES-USAGE --source-repo: git failed (...)``. What is guaranteed is therefore: with
+``--source-repo``, either git >= 2.44 runs with lazy fetching disabled and every listed transport
+forbidden, or the check fails. It is not guaranteed that git itself has no other way to run a
+program configured in the repository; the guards above cover the ones known to be reachable from
+``cat-file`` and ``merge-base``.
 
 Revisions are validated as 40 lowercase hex digits before they reach git, so they can never be
 read as options. ``--current-rev`` and all recorded revisions are looked up in one
@@ -220,15 +235,24 @@ def git_env() -> dict[str, str]:
     return env
 
 
+GIT_NO_LAZY_FETCH_OPTION = "--no-lazy-fetch"  # top-level option, git >= 2.44
+GIT_DENIED_PROTOCOLS = ("file", "ext", "ssh", "git", "http", "https")
+GIT_FAILED = "RULES-USAGE --source-repo: git failed (not a readable repository, or git older than 2.44)"
+
+
+def _git_config_args() -> list[str]:
+    out = ["-c", "protocol.allow=never"]
+    for proto in GIT_DENIED_PROTOCOLS:
+        out += ["-c", f"protocol.{proto}.allow=never"]
+    out += ["-c", "core.fsmonitor=false", "-c", f"core.hooksPath={os.devnull}"]
+    return out
+
+
 def _git_args(source_repo: Path, *args: str) -> list[str]:
     return [
         "git",
-        "-c",
-        "protocol.allow=never",
-        "-c",
-        "core.fsmonitor=false",
-        "-c",
-        f"core.hooksPath={os.devnull}",
+        GIT_NO_LAZY_FETCH_OPTION,
+        *_git_config_args(),
         "-C",
         str(source_repo),
         *args,
@@ -363,7 +387,7 @@ def _check_revs(stale: list[tuple[str, str]], current: str, source_repo: Path | 
     distinct = sorted({rev for _, rev in stale})
     existing = _existing_commits(source_repo, [current] + distinct)
     if existing is None:
-        return ["RULES-USAGE --source-repo is not a readable git repository"]
+        return [GIT_FAILED]
     if current not in existing:
         return ["RULES-USAGE --current-rev is not a commit in --source-repo"]
     ancestor: dict[str, bool] = {}
@@ -373,7 +397,7 @@ def _check_revs(stale: list[tuple[str, str]], current: str, source_repo: Path | 
             continue
         r = _is_ancestor(source_repo, rev, current)
         if r is None:
-            return ["RULES-USAGE --source-repo is not a readable git repository"]
+            return [GIT_FAILED]
         ancestor[rev] = r
     return [f"warn RULES-STALE {bid}" if ancestor[rev] else f"RULES-UNKNOWN-REV {bid} {rev}" for bid, rev in stale]
 

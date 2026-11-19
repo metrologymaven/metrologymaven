@@ -404,10 +404,14 @@ class SourceRepo(unittest.TestCase):
         with mock.patch.dict(os.environ, {"GIT_DIR": str(other / ".git"), "GIT_OBJECT_DIRECTORY": str(other / ".git" / "objects")}):
             self.assertEqual(check(d, "fix-spec", MANIFEST, self.rev_b, self.src), ["warn RULES-STALE core"])
 
-    def test_promisor_uploadpack_does_not_run(self):
-        """A hostile --source-repo with a promisor remote whose uploadpack runs a command."""
+    def hostile_repo(self):
+        """A --source-repo with a promisor remote whose uploadpack runs a command, and a repo-level
+        ``protocol.file.allow=always`` that tries to re-enable the file transport.
+
+        Returns (repo, head, marker); skips if this git cannot reproduce the attack unguarded.
+        """
         victim = Path(tempfile.mkdtemp(dir=self.tmp)) / "victim"
-        marker = Path(self.tmp) / "uploadpack-ran"
+        marker = Path(self.tmp) / f"uploadpack-ran-{victim.parent.name}"
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
                     "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z"})
@@ -427,15 +431,63 @@ class SourceRepo(unittest.TestCase):
         git("config", "remote.origin.url", str(self.src))
         git("config", "remote.origin.promisor", "true")
         git("config", "remote.origin.uploadpack", f"touch '{marker}'; false")
+        git("config", "protocol.file.allow", "always")
         # Control: without the hardening, reading a missing object runs the attacker's command.
         git("cat-file", "-e", f"{OTHER}^{{commit}}", check=False)
         if not marker.exists():
             self.skipTest("this git does not lazy-fetch here, so the attack cannot be reproduced")
         marker.unlink()
+        return victim, head, marker
+
+    def test_promisor_uploadpack_does_not_run(self):
+        victim, head, marker = self.hostile_repo()
         d = self.target_at(OTHER)
         self.assertEqual(check(d, "fix-spec", MANIFEST, head, victim), [f"RULES-UNKNOWN-REV core {OTHER}"])
         self.assertFalse(marker.exists(), "the source repository's uploadpack command ran")
 
+    def test_protocol_guard_alone_stops_the_attack(self):
+        # Simulate git < 2.44, where neither --no-lazy-fetch nor GIT_NO_LAZY_FETCH has any effect:
+        # drop both, so only the -c protocol.*.allow=never options stand between the lazy fetch and
+        # the attacker's uploadpack, against the repository's protocol.file.allow=always.
+        victim, head, marker = self.hostile_repo()
+        d = self.target_at(OTHER)
+        real_env = check_mod.git_env
+
+        def env_without_lazy_fetch_guard():
+            env = real_env()
+            del env["GIT_NO_LAZY_FETCH"]
+            return env
+
+        with mock.patch.object(check_mod, "GIT_NO_LAZY_FETCH_OPTION", "--no-pager"),                 mock.patch.object(check_mod, "git_env", env_without_lazy_fetch_guard):
+            got = check(d, "fix-spec", MANIFEST, head, victim)
+        self.assertFalse(marker.exists(), "the source repository's uploadpack command ran")
+        self.assertIn(got, ([f"RULES-UNKNOWN-REV core {OTHER}"], [check_mod.GIT_FAILED]))
+
+    def test_old_git_without_no_lazy_fetch_fails_closed(self):
+        # git < 2.44 rejects the unknown top-level option; simulate that with an option no git knows.
+        d = self.target_at(self.rev_a)
+        with mock.patch.object(check_mod, "GIT_NO_LAZY_FETCH_OPTION", "--no-such-option-for-this-test"):
+            self.assertEqual(check(d, "fix-spec", MANIFEST, self.rev_b, self.src), [check_mod.GIT_FAILED])
+        code, out, err = run_check(d, rev=self.rev_b, extra=("--source-repo", str(self.src)))
+        self.assertEqual((code, out, err), (0, ["warn RULES-STALE core"], ""))
+
+    def test_git_error_exit_maps_to_rules_usage(self):
+        d = self.target_at(self.rev_a)
+        failed = subprocess.CompletedProcess(args=["git"], returncode=129, stdout=b"", stderr=b"")
+        with mock.patch.object(check_mod.subprocess, "run", return_value=failed):
+            self.assertEqual(check(d, "fix-spec", MANIFEST, self.rev_b, self.src), [check_mod.GIT_FAILED])
+        with mock.patch.object(check_mod.subprocess, "run", side_effect=subprocess.TimeoutExpired("git", 30)):
+            self.assertEqual(check(d, "fix-spec", MANIFEST, self.rev_b, self.src), [check_mod.GIT_FAILED])
+
+    def test_every_git_call_carries_the_guards(self):
+        args = check_mod._git_args(self.src, "cat-file")
+        self.assertEqual(args[1], "--no-lazy-fetch")
+        for proto in ("file", "ext", "ssh", "git", "http", "https"):
+            self.assertIn(f"protocol.{proto}.allow=never", args)
+        for opt in ("protocol.allow=never", "core.fsmonitor=false", f"core.hooksPath={os.devnull}"):
+            self.assertIn(opt, args)
+        self.assertLess(args.index("-C"), args.index("cat-file"))
+        self.assertTrue(all(a != "safe.directory=*" and not a.startswith("safe.directory") for a in args))
 
 if __name__ == "__main__":
     unittest.main()
