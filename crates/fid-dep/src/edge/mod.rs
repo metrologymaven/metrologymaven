@@ -218,6 +218,17 @@ impl EdgeIndex {
         Ok(self.forward.get(element).map(|s| s.iter().copied().collect()).unwrap_or_default())
     }
 
+    /// Direct inputs of `element` as a borrowed set, without allocating; `None` if unknown.
+    pub fn inputs_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>> {
+        self.reverse.get(element)
+    }
+
+    /// Direct dependents of `element` as a borrowed set, without allocating; `None` if it
+    /// has none (or is unknown).
+    pub fn dependents_of(&self, element: &EntityId) -> Option<&BTreeSet<EntityId>> {
+        self.forward.get(element)
+    }
+
     /// Every element `element` depends on, directly or not, ascending.
     pub fn transitive_dependencies(&self, element: &EntityId) -> Result<Vec<EntityId>, EdgeError> {
         self.closure(element, &self.reverse)
