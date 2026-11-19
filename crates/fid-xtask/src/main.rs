@@ -33,6 +33,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      [--phase <P>]\n       \
                      cargo xtask plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]\n       \
                      cargo xtask plat-deploy check-bundle --bundle <dir> --plan <package-plan.json>\n       \
+                     cargo xtask plat-deploy check-bundles --plan <package-plan.json> --bundle <dir> \
+                     [--bundle <dir> ...]\n       \
                      cargo xtask plat-deploy make-install-manifest --root <dir> --kind <per_user|machine> \
                      --release <v> --os <os> --arch <arch> [--out <file>]\n       \
                      cargo xtask plat-deploy bundle-schemas\n       \
@@ -69,7 +71,7 @@ fn main() -> ExitCode {
         Some("plat-deploy")
             if matches!(
                 args.get(1).map(String::as_str),
-                Some("validate-layout" | "check-bundle" | "make-install-manifest" | "bundle-schemas")
+                Some("validate-layout" | "check-bundle" | "check-bundles" | "make-install-manifest" | "bundle-schemas")
             ) =>
         {
             fid_platform(&args, "plat-deploy")

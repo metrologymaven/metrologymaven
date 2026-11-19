@@ -9,6 +9,7 @@
 //! (spec node `PLAT.DEPLOY.NOADMIN.LAYOUT`) and
 //! `fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>` (spec node `PLAT.MATRIX.PAGE`)
 //! and `fid-platform plat-deploy check-bundle --bundle <dir> --plan <file>`,
+//! `fid-platform plat-deploy check-bundles --plan <file> --bundle <dir> [--bundle <dir> ...]`,
 //! `fid-platform plat-deploy make-install-manifest --root <dir> --kind <per_user|machine> --release <v>
 //! --os <os> --arch <arch> [--out <file>]` and `fid-platform plat-deploy bundle-schemas` (spec node
 //! `PLAT.DEPLOY.OFFLINE.BUNDLE`).
@@ -42,7 +43,10 @@
 //! exits 1; bad usage or an unreadable or unwritable file exits 2.
 //! `plat-deploy check-bundle` prints one finding per line (e.g. `MissingRole { role: cli }`) and
 //! exits 1 when there are any, or prints `check-bundle: ok` and exits 0; bad usage or
-//! an unreadable or invalid package plan exits 2. `plat-deploy make-install-manifest` writes the
+//! an unreadable or invalid package plan exits 2. `plat-deploy check-bundles` checks every
+//! bundle the same way and also requires one bundle per Tier 1 combination of the plan; each
+//! finding is prefixed with its bundle directory (coverage findings have none); `check-bundles:
+//! ok` and exit 0, or exit 1 on findings, 2 on bad usage. `plat-deploy make-install-manifest` writes the
 //! canonical manifest of the tree to `--out` (or standard output) and exits 0; findings in the
 //! tree (a symbolic link, a bad name) are printed and exit 1; bad usage exits 2.
 //! `plat-deploy bundle-schemas` writes `platform/offline-bundle.schema.json` and
@@ -65,6 +69,7 @@ const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      [--phase <P>]\n       \
                      fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]\n       \
                      fid-platform plat-deploy check-bundle --bundle <dir> --plan <file>\n       \
+                     fid-platform plat-deploy check-bundles --plan <file> --bundle <dir> [--bundle <dir> ...]\n       \
                      fid-platform plat-deploy make-install-manifest --root <dir> --kind <per_user|machine> \
                      --release <v> --os <os> --arch <arch> [--out <file>]\n       \
                      fid-platform plat-deploy bundle-schemas";
@@ -88,6 +93,7 @@ fn main() -> ExitCode {
         [group, cmd, rest @ ..] if group == "plat-gpu" && cmd == "validate" => gpu_validate(rest),
         [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "validate-layout" => layout_validate(rest),
         [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "check-bundle" => check_bundle(rest),
+        [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "check-bundles" => check_bundles(rest),
         [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "make-install-manifest" => make_manifest(rest),
         [group, cmd] if group == "plat-deploy" && cmd == "bundle-schemas" => bundle_schemas(),
         _ => {
@@ -488,7 +494,7 @@ fn make_manifest(args: &[String]) -> ExitCode {
         }
     };
     let written = match flags.get("--out") {
-        Some(out) => std::fs::write(out, &bytes),
+        Some(out) => write_atomically(Path::new(out), &bytes),
         None => std::io::stdout().write_all(&bytes),
     };
     match written {
@@ -517,4 +523,58 @@ fn bundle_schemas() -> ExitCode {
         println!("wrote {path}");
     }
     ExitCode::SUCCESS
+}
+
+/// Writes `bytes` to a temporary file next to `out` and renames it over `out`, so a reader never
+/// sees a half-written manifest; the temporary file is removed on failure.
+fn write_atomically(out: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let name = out.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = out.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
+    let result = std::fs::File::create(&tmp)
+        .and_then(|mut f| f.write_all(bytes).and_then(|()| f.sync_all()))
+        .and_then(|()| std::fs::rename(&tmp, out));
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
+}
+
+/// `plat-deploy check-bundles`: see the module documentation for the output and exit codes.
+fn check_bundles(args: &[String]) -> ExitCode {
+    let cmd = "plat-deploy check-bundles";
+    let mut plan_path: Option<&str> = None;
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    for pair in args.chunks(2) {
+        match pair {
+            [flag, value] if flag == "--bundle" => dirs.push(value.into()),
+            [flag, value] if flag == "--plan" && plan_path.is_none() => plan_path = Some(value),
+            _ => {
+                eprintln!("{cmd}: bad arguments\n{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(plan_path) = plan_path else {
+        eprintln!("{cmd}: --plan is required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(plan_bytes) = read_capped(plan_path, install_manifest::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let plan = match install_manifest::parse_plan(&plan_bytes, plan_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{cmd}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let findings = install_manifest::check_bundles(&dirs, &plan);
+    if findings.is_empty() {
+        println!("check-bundles: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }

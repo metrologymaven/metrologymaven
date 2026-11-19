@@ -26,7 +26,7 @@
 //! own. Nothing here opens a socket or runs a program. Determinism D0: sorted walks, sorted
 //! output, no clocks.
 
-use crate::matrix::{Arch, OsFamily};
+use crate::matrix::{Arch, OsFamily, Tier};
 use fid_canon::{CValue, CanonError};
 use fid_io_reg::RelPath;
 use fid_types::Digest;
@@ -219,6 +219,10 @@ pub enum BundleError {
     Mismatch { file: String, field: &'static str },
     /// The package plan lists no package for the bundle's OS and architecture.
     NotInPlan { os: OsFamily, arch: Arch },
+    /// A Tier 1 combination of the plan has no bundle in the checked set (REQ-001).
+    MissingBundle { os: OsFamily, arch: Arch },
+    /// Two bundles of the checked set are for the same combination.
+    DuplicateBundle { os: OsFamily, arch: Arch },
     /// A file could not be read.
     Io { path: String, msg: String },
 }
@@ -239,6 +243,8 @@ impl BundleError {
             BundleError::RemoteResource { .. } => "RemoteResource",
             BundleError::Mismatch { .. } => "Mismatch",
             BundleError::NotInPlan { .. } => "NotInPlan",
+            BundleError::MissingBundle { .. } => "MissingBundle",
+            BundleError::DuplicateBundle { .. } => "DuplicateBundle",
             BundleError::Io { .. } => "Io",
         }
     }
@@ -269,6 +275,8 @@ impl fmt::Display for BundleError {
             }
             BundleError::Mismatch { file, field } => write!(f, "Mismatch {{ file: {file:?}, field: {field} }}"),
             BundleError::NotInPlan { os, arch } => write!(f, "NotInPlan {{ os: {os}, arch: {arch} }}"),
+            BundleError::MissingBundle { os, arch } => write!(f, "MissingBundle {{ os: {os}, arch: {arch} }}"),
+            BundleError::DuplicateBundle { os, arch } => write!(f, "DuplicateBundle {{ os: {os}, arch: {arch} }}"),
             BundleError::Io { path, msg } => write!(f, "Io {{ path: {path:?}, msg: {msg:?} }}"),
         }
     }
@@ -277,14 +285,18 @@ impl fmt::Display for BundleError {
 // ------------------------------------------------------------------------------------- paths
 
 /// Checks one relative path against the path rules (REQ-003); `Err` carries the reason code
-/// (`empty`, `too_long`, `backslash`, `absolute`, `drive`, `dot_dot`, `dot_segment`,
-/// `empty_segment`, `bad_name`).
+/// (`empty`, `too_long`, `non_ascii`, `backslash`, `absolute`, `drive`, `dot_dot`,
+/// `dot_segment`, `empty_segment`, `bad_name`). Names are ASCII only (maintainer decision on
+/// PR #166): no Unicode normalisation or case-folding differences between file systems.
 pub fn check_relpath(p: &str) -> Result<(), &'static str> {
     if p.is_empty() {
         return Err("empty");
     }
     if p.len() > MAX_PATH_BYTES {
         return Err("too_long");
+    }
+    if !p.is_ascii() {
+        return Err("non_ascii");
     }
     if p.contains('\\') {
         return Err("backslash");
@@ -532,9 +544,20 @@ fn object<const N: usize>(pairs: [(&str, CValue); N]) -> CValue {
     CValue::Obj(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
 }
 
+/// A size as a JSON number. Callers check `v <= MAX_SIZE` first ([`check_sizes`]), so the
+/// conversion is exact.
 fn size_value(v: u64) -> CValue {
-    // At most 2^53 - 1 after validation, so exact as f64.
-    num(v.min(MAX_SIZE) as f64)
+    num(v as f64)
+}
+
+/// Sizes above [`MAX_SIZE`] cannot be written exactly as JSON numbers: an error, never a clamp.
+fn check_sizes<'a>(file: &str, sizes: impl Iterator<Item = (&'a str, u64)>) -> Result<(), BundleError> {
+    for (path, n) in sizes {
+        if n > MAX_SIZE {
+            return Err(parse_err(file, format!("size of {path:?} is above {MAX_SIZE}")));
+        }
+    }
+    Ok(())
 }
 
 impl OfflineBundle {
@@ -564,6 +587,7 @@ impl OfflineBundle {
 
     /// RFC 8785 canonical bytes, checked with [`parse_bundle`] before they are returned.
     pub fn to_json(&self) -> Result<Vec<u8>, BundleError> {
+        check_sizes(BUNDLE_FILE, self.entries.iter().map(|e| (e.path.as_str(), e.size)))?;
         let bytes = fid_canon::to_canonical_bytes(&self.to_value())
             .map_err(|e| parse_err(BUNDLE_FILE, format!("cannot serialise: {}", e.code())))?;
         parse_bundle(&bytes, BUNDLE_FILE)?;
@@ -595,6 +619,7 @@ impl InstallManifest {
     /// before they are returned: the same manifest always gives the same bytes (D0).
     pub fn to_json(&self) -> Result<Vec<u8>, BundleError> {
         let file = "install-manifest.json";
+        check_sizes(file, self.files.iter().map(|f| (f.relpath.as_str(), f.size)))?;
         let bytes = fid_canon::to_canonical_bytes(&self.to_value())
             .map_err(|e| parse_err(file, format!("cannot serialise: {}", e.code())))?;
         parse_install_manifest(&bytes, file)?;
@@ -635,6 +660,10 @@ pub fn walk(root: &Path) -> Result<Vec<(String, PathBuf)>, Vec<BundleError>> {
                 continue;
             };
             let rel = format!("{prefix}{name}");
+            if !name.is_ascii() {
+                errors.push(BundleError::BadPath { path: rel, reason: "non_ascii" });
+                continue;
+            }
             let ft = match item.file_type() {
                 Ok(t) => t,
                 Err(e) => {
@@ -670,12 +699,55 @@ pub fn walk(root: &Path) -> Result<Vec<(String, PathBuf)>, Vec<BundleError>> {
     }
 }
 
+/// Opens a regular file without following a link that replaced it after the walk.
+///
+/// Windows: `FILE_FLAG_OPEN_REPARSE_POINT` opens a symbolic link or junction itself, never its
+/// target, and the handle's type is checked. Unix: the path is checked with `lstat` before
+/// opening and the opened file must have the same device and inode, so a link swapped in
+/// between is refused rather than followed. Either way the handle must be a regular file.
+fn open_no_follow(path: &Path, rel: &str) -> Result<File, BundleError> {
+    let io = |e: std::io::Error| BundleError::Io { path: rel.to_string(), msg: e.to_string() };
+    let bad = |reason: &'static str| BundleError::BadPath { path: rel.to_string(), reason };
+    #[cfg(unix)]
+    let before = {
+        let m = std::fs::symlink_metadata(path).map_err(io)?;
+        if m.file_type().is_symlink() {
+            return Err(bad("symlink"));
+        }
+        m
+    };
+    let mut opts = std::fs::OpenOptions::new();
+    opts.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // FILE_FLAG_OPEN_REPARSE_POINT
+        opts.custom_flags(0x0020_0000);
+    }
+    let file = opts.open(path).map_err(io)?;
+    let after = file.metadata().map_err(io)?;
+    if after.file_type().is_symlink() {
+        return Err(bad("symlink"));
+    }
+    if !after.is_file() {
+        return Err(bad("not_regular"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
+            return Err(bad("changed"));
+        }
+    }
+    Ok(file)
+}
+
 /// SHA-256 and length of a file, streamed. With `keep`, the bytes are also returned (up to
 /// [`MAX_SCAN_BYTES`]; a larger file is `TooLarge`), so a caller uses exactly the bytes it
 /// digested and never reopens the file.
 fn hash_file(path: &Path, rel: &str, keep: bool) -> Result<(Digest, u64, Option<Vec<u8>>), BundleError> {
     let io = |e: std::io::Error| BundleError::Io { path: rel.to_string(), msg: e.to_string() };
-    let mut file = File::open(path).map_err(io)?;
+    let mut file = open_no_follow(path, rel)?;
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; BUFFER_BYTES];
     let mut size: u64 = 0;
@@ -747,6 +819,8 @@ pub struct PlanPackage {
     pub kind: PackageKind,
     pub os: OsFamily,
     pub arch: Arch,
+    /// The combination's support tier, as the plan states it.
+    pub tier: Tier,
     /// The artefact file name; required for `app` packages.
     pub file_name: Option<String>,
 }
@@ -772,7 +846,7 @@ fn plain_file_name(s: &str) -> bool {
     !s.contains('/') && check_relpath(s).is_ok()
 }
 
-/// Parses the package plan: `version`, `packages[] { package, kind, os, arch, file_name }`
+/// Parses the package plan: `version`, `packages[] { package, kind, os, arch, tier, file_name }`
 /// and the optional `runtime_deps[] { os, arch, file_name }`. Bounded like the manifests;
 /// unknown fields are ignored because the plan's schema is owned by `ECO.REL.PKG.PLAN`.
 pub fn parse_plan(bytes: &[u8], file: &str) -> Result<PackagePlan, BundleError> {
@@ -799,6 +873,8 @@ pub fn parse_plan(bytes: &[u8], file: &str) -> Result<PackagePlan, BundleError> 
             _ => return Err(parse_err(file, format!("kind in {at} is not app, cli or verify"))),
         };
         let (os, arch) = os_arch(m, &at, file)?;
+        let tier = Tier::from_name(string(m, "tier", &at, file)?)
+            .ok_or_else(|| parse_err(file, format!("tier in {at} is not tier1, tier2 or tier3")))?;
         let file_name = match m.get("file_name") {
             None => None,
             Some(CValue::Str(n)) if plain_file_name(n) => Some(n.clone()),
@@ -807,7 +883,8 @@ pub fn parse_plan(bytes: &[u8], file: &str) -> Result<PackagePlan, BundleError> 
         if kind == PackageKind::App && file_name.is_none() {
             return Err(parse_err(file, format!("{at} is an app package without file_name")));
         }
-        packages.push(PlanPackage { package: string(m, "package", &at, file)?.to_string(), kind, os, arch, file_name });
+        let package = string(m, "package", &at, file)?.to_string();
+        packages.push(PlanPackage { package, kind, os, arch, tier, file_name });
     }
     let mut runtime_deps = Vec::new();
     if top.contains_key("runtime_deps") {
@@ -834,8 +911,9 @@ fn base_name(path: &str) -> &str {
 }
 
 /// The plan's content rules for the bundle's OS and architecture (REQ-001): one `installer`
-/// per app package (matched by file name), exactly one `cli`, at least one `docs` file and
-/// every named `runtime_dep`; nothing else in those roles. Install manifests are counted per
+/// per app package (matched by file name), exactly one `cli`, a docs tree with an HTML entry
+/// point (`index.html`, `index.htm` or `index.xhtml`, any folder) and every named
+/// `runtime_dep`; nothing else in those roles. Install manifests are counted per
 /// kind by [`check_bundle`] once they are parsed.
 pub fn check_roles(bundle: &OfflineBundle, plan: &PackagePlan) -> Vec<BundleError> {
     let mut errors = Vec::new();
@@ -873,11 +951,18 @@ pub fn check_roles(bundle: &OfflineBundle, plan: &PackagePlan) -> Vec<BundleErro
         errors.push(BundleError::UnexpectedEntry { path: extra.path.clone(), role: Role::Cli });
     }
 
-    // The docs tree: at least one file.
+    // The docs tree: at least one file, and an HTML entry point.
     if of_role(Role::Docs).next().is_none() {
         errors.push(BundleError::MissingRole { role: Role::Docs, name: None });
+    } else if !of_role(Role::Docs).any(|e| is_entry_point(&e.path)) {
+        errors.push(BundleError::MissingRole { role: Role::Docs, name: Some("index.html".to_string()) });
     }
     errors
+}
+
+fn is_entry_point(path: &str) -> bool {
+    let name = base_name(path).to_ascii_lowercase();
+    matches!(name.as_str(), "index.html" | "index.htm" | "index.xhtml")
 }
 
 fn named_role<'a>(
@@ -903,6 +988,7 @@ fn named_role<'a>(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DocsKind {
     Html,
+    Svg,
     Css,
     Js,
 }
@@ -913,6 +999,7 @@ impl DocsKind {
         let ext = base_name(path).rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase())?;
         match ext.as_str() {
             "html" | "htm" | "xhtml" => Some(DocsKind::Html),
+            "svg" => Some(DocsKind::Svg),
             "css" => Some(DocsKind::Css),
             "js" | "mjs" => Some(DocsKind::Js),
             _ => None,
@@ -928,13 +1015,7 @@ impl DocsKind {
 /// unlisted, digest or size mismatch); apply the plan's role rules; then parse only the
 /// install manifests and scan only the docs files whose digests matched.
 pub fn check_bundle(dir: &Path, plan: &PackagePlan) -> Vec<BundleError> {
-    let listing = dir.join(BUNDLE_FILE);
-    let mut bytes = Vec::new();
-    let read = File::open(&listing).and_then(|f| f.take(MAX_BYTES as u64 + 1).read_to_end(&mut bytes));
-    if let Err(e) = read {
-        return vec![BundleError::Io { path: BUNDLE_FILE.to_string(), msg: e.to_string() }];
-    }
-    let bundle = match parse_bundle(&bytes, BUNDLE_FILE) {
+    let bundle = match read_listing(dir) {
         Ok(b) => b,
         Err(e) => return vec![e],
     };
@@ -1019,20 +1100,80 @@ pub fn check_bundle(dir: &Path, plan: &PackagePlan) -> Vec<BundleError> {
     errors
 }
 
+/// A finding of [`check_bundles`]: `bundle` names the bundle directory, or is `None` for a
+/// finding about the set (coverage).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SetFinding {
+    pub bundle: Option<PathBuf>,
+    pub error: BundleError,
+}
+
+impl fmt::Display for SetFinding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.bundle {
+            Some(b) => write!(f, "{}: {}", b.display(), self.error),
+            None => write!(f, "{}", self.error),
+        }
+    }
+}
+
+/// Reads and parses a bundle's `offline-bundle.json` (capped at [`MAX_BYTES`]).
+pub fn read_listing(dir: &Path) -> Result<OfflineBundle, BundleError> {
+    let mut bytes = Vec::new();
+    let read = open_no_follow(&dir.join(BUNDLE_FILE), BUNDLE_FILE).and_then(|f| {
+        f.take(MAX_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|e| BundleError::Io { path: BUNDLE_FILE.to_string(), msg: e.to_string() })
+    });
+    read?;
+    parse_bundle(&bytes, BUNDLE_FILE)
+}
+
+/// The Tier 1 (os, arch) combinations of the plan, sorted.
+pub fn tier1_combinations(plan: &PackagePlan) -> BTreeSet<(OsFamily, Arch)> {
+    plan.packages.iter().filter(|p| p.tier == Tier::Tier1).map(|p| (p.os, p.arch)).collect()
+}
+
+/// Checks a release's set of bundles (REQ-001): every bundle with [`check_bundle`], then one
+/// bundle per Tier 1 combination of the plan (`MissingBundle`) and at most one per combination
+/// (`DuplicateBundle`). Bundles for Tier 2 combinations are checked but not required.
+pub fn check_bundles(dirs: &[PathBuf], plan: &PackagePlan) -> Vec<SetFinding> {
+    let mut out = Vec::new();
+    let mut seen: BTreeSet<(OsFamily, Arch)> = BTreeSet::new();
+    for dir in dirs {
+        for error in check_bundle(dir, plan) {
+            out.push(SetFinding { bundle: Some(dir.clone()), error });
+        }
+        if let Ok(b) = read_listing(dir) {
+            if !seen.insert((b.os, b.arch)) {
+                out.push(SetFinding { bundle: None, error: BundleError::DuplicateBundle { os: b.os, arch: b.arch } });
+            }
+        }
+    }
+    for (os, arch) in tier1_combinations(plan) {
+        if !seen.contains(&(os, arch)) {
+            out.push(SetFinding { bundle: None, error: BundleError::MissingBundle { os, arch } });
+        }
+    }
+    out
+}
+
 // -------------------------------------------------------------------------------- docs scan
 
 /// The remote URLs a browser would load on its own from one docs file, in order of first
-/// appearance, without duplicates. HTML: `src`, `href`, `srcset`, `poster` and `data` of
-/// `link`, `script`, `img`, `iframe`, `frame`, `embed`, `source`, `video`, `audio`, `track`,
-/// `object` and `input`; CSS in `<style>` elements and `style` attributes; JS in `<script>`
-/// elements. CSS: `url(...)` and `@import`, outside comments. JS: any string literal that
-/// starts with `http://`, `https://` or `//host` (conservative: JS can load from any string).
-/// HTML comments are skipped. Files of other kinds give nothing.
+/// appearance, without duplicates. HTML and SVG: `src`, `href`, `xlink:href`, `poster` and
+/// `data` of `link`, `script`, `img`, `iframe`, `frame`, `embed`, `source`, `video`, `audio`,
+/// `track`, `object`, `input`, `base`, `image`, `use` and `feimage`; `srcset` and `imagesrcset`
+/// candidates; the URL of `<meta http-equiv=refresh>`; CSS in `<style>` elements and `style`
+/// attributes; JS in `<script>` elements. CSS: `url(...)`, `@import` and the quoted strings of
+/// `image-set(...)`, outside comments. JS: any string literal that starts with `http://`,
+/// `https://` or `//host` (conservative: JS can load from any string). HTML comments are
+/// skipped. Files of other kinds give nothing.
 pub fn scan_docs_file(path: &str, bytes: &[u8]) -> Vec<String> {
     let text = String::from_utf8_lossy(bytes);
     let mut out = Vec::new();
     match DocsKind::of(path) {
-        Some(DocsKind::Html) => scan_html(&text, &mut out),
+        Some(DocsKind::Html | DocsKind::Svg) => scan_html(&text, &mut out),
         Some(DocsKind::Css) => scan_css(&text, &mut out),
         Some(DocsKind::Js) => scan_js(&text, &mut out),
         None => {}
@@ -1068,9 +1209,23 @@ fn push_if_remote(url: &str, out: &mut Vec<String>) {
     }
 }
 
-const LOADING_TAGS: [&str; 12] =
-    ["link", "script", "img", "iframe", "frame", "embed", "source", "video", "audio", "track", "object", "input"];
-const LOADING_ATTRS: [&str; 4] = ["src", "href", "poster", "data"];
+const LOADING_TAGS: [&str; 16] = [
+    "link", "script", "img", "iframe", "frame", "embed", "source", "video", "audio", "track", "object", "input",
+    "base", "image", "use", "feimage",
+];
+const LOADING_ATTRS: [&str; 5] = ["src", "href", "xlink:href", "poster", "data"];
+const SRCSET_ATTRS: [&str; 2] = ["srcset", "imagesrcset"];
+
+/// The URL of a refresh `content` value such as `0; url=https://x`, if any.
+fn refresh_url(content: &str) -> Option<&str> {
+    let (_, rest) = content.split_once([';', ','])?;
+    let rest = rest.trim_start();
+    let rest = match rest.get(..3) {
+        Some(u) if u.eq_ignore_ascii_case("url") => rest.get(3..)?.trim_start().strip_prefix('=')?.trim_start(),
+        _ => rest,
+    };
+    Some(rest.trim_matches(|c: char| c == '"' || c == '\'' || c <= ' '))
+}
 
 fn scan_html(text: &str, out: &mut Vec<String>) {
     let lower = text.to_ascii_lowercase();
@@ -1146,10 +1301,17 @@ fn scan_html(text: &str, out: &mut Vec<String>) {
             for (attr, value) in &attrs {
                 if LOADING_ATTRS.contains(attr) {
                     push_if_remote(value, out);
-                } else if *attr == "srcset" {
+                } else if SRCSET_ATTRS.contains(attr) {
                     for candidate in value.split(',') {
                         push_if_remote(candidate.split_whitespace().next().unwrap_or(""), out);
                     }
+                }
+            }
+        }
+        if name == "meta" && attrs.iter().any(|(a, v)| *a == "http-equiv" && v.trim().eq_ignore_ascii_case("refresh")) {
+            for (attr, value) in &attrs {
+                if *attr == "content" {
+                    push_if_remote(refresh_url(value).unwrap_or(""), out);
                 }
             }
         }
@@ -1203,6 +1365,27 @@ fn scan_css(text: &str, out: &mut Vec<String>) {
                 push_if_remote(text.get(j..end).unwrap_or(""), out);
                 i = end;
             }
+        } else if rest.starts_with(b"image-set(") {
+            // Bare strings in image-set() are image URLs. Collect them, then continue inside so
+            // `url(...)` candidates are handled by the branch above (duplicates are removed).
+            let mut j = i + 10;
+            let mut depth = 1usize;
+            while j < len && depth > 0 {
+                match lb[j] {
+                    b'(' => depth += 1,
+                    b')' => depth -= 1,
+                    b'"' | b'\'' => {
+                        if let Some((v, after)) = quoted(text, lb, j) {
+                            push_if_remote(v, out);
+                            j = after;
+                            continue;
+                        }
+                    }
+                    _ => {}
+                }
+                j += 1;
+            }
+            i += 10;
         } else if rest.starts_with(b"@import") {
             let j = skip_ws(lb, i + 7);
             match quoted(text, lb, j) {

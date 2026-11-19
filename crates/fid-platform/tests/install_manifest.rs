@@ -7,11 +7,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_platform::install_manifest::{
-    check_bundle, check_relpath, is_remote, json_schema_files, make_install_manifest, parse_bundle,
-    parse_install_manifest, parse_plan, scan_docs_file, BundleError, InstallKind, PackagePlan, Role, BUNDLE_FILE,
-    MAX_BYTES, MAX_ENTRIES,
+    check_bundle, check_bundles, check_relpath, check_roles, is_remote, json_schema_files, make_install_manifest,
+    parse_bundle, parse_install_manifest, parse_plan, scan_docs_file, tier1_combinations, BundleError, FileEntry,
+    InstallKind, InstallManifest, PackagePlan, Role, SetFinding, BUNDLE_FILE, MAX_BYTES, MAX_ENTRIES, MAX_SIZE,
 };
-use fid_platform::matrix::{Arch, OsFamily};
+use fid_platform::matrix::{Arch, OsFamily, Tier};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -430,7 +430,220 @@ fn docs_scan_finds_auto_loaded_remote_resources() {
     assert!(css("url(").is_empty());
     assert_eq!(js("const u = 'https://api.example.com/v';"), ["https://api.example.com/v"]);
     assert!(js("// see https://example.org for details\nconst a = 'it''s';").is_empty());
-    assert!(scan_docs_file("docs/logo.svg", b"<image href=\"https://x.example/i.png\"/>").is_empty());
+    assert!(scan_docs_file("docs/logo.png", b"<image href=\"https://x.example/i.png\"/>").is_empty());
+}
+
+// Review of PR #166, item 1: one test per added case (hand-labelled).
+
+#[test]
+fn docs_scan_base_href() {
+    let html = r#"<head><base href="https://cdn.example.com/docs/"></head>"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://cdn.example.com/docs/"]);
+}
+
+#[test]
+fn docs_scan_svg_image_href() {
+    let svg = r#"<svg xmlns="http://www.w3.org/2000/svg"><image href="https://x.example/i.png"/></svg>"#;
+    assert_eq!(scan_docs_file("docs/logo.svg", svg.as_bytes()), ["https://x.example/i.png"]);
+    // The SVG namespace declaration alone loads nothing.
+    assert!(scan_docs_file("docs/logo.svg", br#"<svg xmlns="http://www.w3.org/2000/svg"></svg>"#).is_empty());
+}
+
+#[test]
+fn docs_scan_svg_use_xlink_href() {
+    let svg = r##"<svg><use xlink:href="https://x.example/sprite.svg#icon"/><use href="#local"/></svg>"##;
+    assert_eq!(scan_docs_file("docs/icons.svg", svg.as_bytes()), ["https://x.example/sprite.svg#icon"]);
+    let inline = r#"<p><svg><use href="//x.example/s.svg#i"></use></svg></p>"#;
+    assert_eq!(scan_docs_file("docs/a.html", inline.as_bytes()), ["//x.example/s.svg#i"]);
+}
+
+#[test]
+fn docs_scan_css_image_set_strings() {
+    let css = r#"a { background-image: image-set("https://x.example/a.png" 1x, "b.png" 2x); }"#;
+    assert_eq!(scan_docs_file("docs/a.css", css.as_bytes()), ["https://x.example/a.png"]);
+    let prefixed = r#"a { background: -webkit-image-set(url(https://x.example/c.png) 1x, 'd.png' 2x) }"#;
+    assert_eq!(scan_docs_file("docs/a.css", prefixed.as_bytes()), ["https://x.example/c.png"]);
+}
+
+#[test]
+fn docs_scan_link_imagesrcset() {
+    let html = r#"<link rel="preload" as="image" imagesrcset="a.png 1x, https://x.example/b.png 2x">"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/b.png"]);
+}
+
+#[test]
+fn docs_scan_meta_refresh() {
+    let html = r#"<meta http-equiv="Refresh" content="0; URL='https://x.example/new'">"#;
+    assert_eq!(scan_docs_file("docs/a.html", html.as_bytes()), ["https://x.example/new"]);
+    let local = r#"<meta http-equiv="refresh" content="0; url=other.html">"#;
+    assert!(scan_docs_file("docs/a.html", local.as_bytes()).is_empty());
+    // Not a refresh: a description that mentions a URL.
+    let desc = r#"<meta name="description" content="0; url=https://x.example/">"#;
+    assert!(scan_docs_file("docs/a.html", desc.as_bytes()).is_empty());
+}
+
+// Review item 2: Tier 1 coverage over a set of bundles.
+
+#[test]
+fn tier1_coverage_over_a_set_of_bundles() {
+    let ok = fixture("bundle-ok");
+    assert_eq!(tier1_combinations(&plan()).into_iter().collect::<Vec<_>>(), [(OsFamily::Windows, Arch::X86_64)]);
+    assert_eq!(check_bundles(std::slice::from_ref(&ok), &plan()), vec![]);
+    assert_eq!(
+        check_bundles(&[], &plan()),
+        vec![SetFinding {
+            bundle: None,
+            error: BundleError::MissingBundle { os: OsFamily::Windows, arch: Arch::X86_64 }
+        }]
+    );
+    assert_eq!(
+        check_bundles(&[ok.clone(), ok.clone()], &plan()),
+        vec![SetFinding {
+            bundle: None,
+            error: BundleError::DuplicateBundle { os: OsFamily::Windows, arch: Arch::X86_64 }
+        }]
+    );
+    // Ubuntu aarch64 promoted to Tier 1: its bundle is now required.
+    let mut p = plan();
+    for x in p.packages.iter_mut().filter(|x| x.os == OsFamily::Ubuntu) {
+        x.tier = Tier::Tier1;
+    }
+    assert_eq!(
+        check_bundles(std::slice::from_ref(&ok), &p),
+        vec![SetFinding {
+            bundle: None,
+            error: BundleError::MissingBundle { os: OsFamily::Ubuntu, arch: Arch::Aarch64 }
+        }]
+    );
+    // Findings of one bundle name it.
+    let missing = fixture("bundle-missing-cli");
+    let found = check_bundles(std::slice::from_ref(&missing), &plan());
+    assert_eq!(
+        found,
+        vec![SetFinding {
+            bundle: Some(missing.clone()),
+            error: BundleError::MissingRole { role: Role::Cli, name: None }
+        }]
+    );
+    let (code, out) = cli(&["check-bundles", "--plan", PLAN, "--bundle", "fixtures/plat/deploy/bundle-ok"]);
+    assert_eq!((code, out.as_str()), (0, "check-bundles: ok\n"));
+    let (code, out) = cli(&["check-bundles", "--plan", PLAN]);
+    assert_eq!((code, out.as_str()), (1, "MissingBundle { os: windows, arch: x86_64 }\n"));
+}
+
+#[test]
+fn plan_tier_is_required() {
+    let text = r#"{"version":"1","packages":[{"package":"fid","kind":"cli","os":"windows","arch":"x86_64"}]}"#;
+    assert!(matches!(parse_plan(text.as_bytes(), "p.json"), Err(BundleError::Parse { .. })));
+    let text = text.replacen(r#""arch":"x86_64""#, r#""arch":"x86_64","tier":"tier9""#, 1);
+    assert!(matches!(parse_plan(text.as_bytes(), "p.json"), Err(BundleError::Parse { .. })));
+}
+
+// Review item 3: non-ASCII names are rejected, in documents and on disk.
+
+#[test]
+fn non_ascii_names_are_bad_paths() {
+    assert_eq!(check_relpath("docs/caf\u{e9}.html"), Err("non_ascii"));
+    assert_eq!(
+        parse_files(&["caf\u{e9}"]),
+        Err(BundleError::BadPath { path: "caf\u{e9}".into(), reason: "non_ascii" })
+    );
+    let copy = TempCopy::of("bundle-ok", "nonascii");
+    std::fs::write(copy.0.join("docs/caf\u{e9}.txt"), b"x").unwrap();
+    assert_eq!(
+        check_bundle(&copy.0, &plan()),
+        vec![BundleError::BadPath { path: "docs/caf\u{e9}.txt".into(), reason: "non_ascii" }]
+    );
+}
+
+// Review item 6: sizes above 2^53 - 1 are an error, never clamped.
+
+#[test]
+fn oversized_size_is_an_error() {
+    let mut m = parse_install_manifest(
+        &read("fixtures/plat/deploy/bundle-ok/install/install-manifest-per_user.json"),
+        "m.json",
+    )
+    .unwrap();
+    m.files[0].size = MAX_SIZE;
+    assert!(m.to_json().is_ok());
+    m.files[0].size = MAX_SIZE + 1;
+    assert!(matches!(m.to_json(), Err(BundleError::Parse { .. })));
+    let digest = m.files[0].sha256;
+    let big =
+        InstallManifest { files: vec![FileEntry { relpath: "a".into(), sha256: digest, size: u64::MAX }], ..m.clone() };
+    assert!(matches!(big.to_json(), Err(BundleError::Parse { .. })));
+}
+
+// Review item 7: the docs tree needs an HTML entry point.
+
+#[test]
+fn docs_need_an_html_entry_point() {
+    let rel = "fixtures/plat/deploy/bundle-ok/offline-bundle.json";
+    let mut b = parse_bundle(&read(rel), rel).unwrap();
+    assert_eq!(check_roles(&b, &plan()), vec![]);
+    b.entries.retain(|e| e.path != "docs/index.html");
+    assert_eq!(
+        check_roles(&b, &plan()),
+        vec![BundleError::MissingRole { role: Role::Docs, name: Some("index.html".into()) }]
+    );
+    b.entries.retain(|e| e.role != Role::Docs);
+    assert_eq!(check_roles(&b, &plan()), vec![BundleError::MissingRole { role: Role::Docs, name: None }]);
+}
+
+// Review item 4: a Windows junction is reported, never followed.
+
+#[cfg(windows)]
+#[test]
+fn windows_junction_is_reported_not_followed() {
+    let copy = TempCopy::of("bundle-ok", "junction");
+    let link = copy.0.join("docs-junction");
+    let target = copy.0.join("docs");
+    let status = Command::new("cmd").args(["/C", "mklink", "/J"]).arg(&link).arg(&target).output().unwrap();
+    assert!(status.status.success(), "mklink /J failed: {}", String::from_utf8_lossy(&status.stderr));
+    let expected = vec![BundleError::BadPath { path: "docs-junction".into(), reason: "symlink" }];
+    assert_eq!(check_bundle(&copy.0, &plan()), expected);
+    let err =
+        make_install_manifest(&copy.0, InstallKind::Machine, "0.1.0", OsFamily::Windows, Arch::X86_64).unwrap_err();
+    assert_eq!(err, expected);
+    // Remove the junction itself (not its target) before the copy is deleted.
+    std::fs::remove_dir(&link).unwrap();
+}
+
+// Review item 8: make-install-manifest --out replaces the file whole and leaves no temporary.
+
+#[test]
+fn make_manifest_out_is_atomic() {
+    let dir = std::env::temp_dir().join(format!("fid-bundle-test-{}-atomic", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("install-manifest.json");
+    std::fs::write(&out, b"old contents").unwrap();
+    let out_s = out.to_str().unwrap();
+    let args = [
+        "make-install-manifest",
+        "--root",
+        "fixtures/plat/deploy/install-tree",
+        "--kind",
+        "machine",
+        "--release",
+        "0.1.0",
+        "--os",
+        "windows",
+        "--arch",
+        "x86_64",
+        "--out",
+        out_s,
+    ];
+    assert_eq!(cli(&args).0, 0);
+    assert_eq!(
+        std::fs::read(&out).unwrap(),
+        read("fixtures/plat/deploy/bundle-ok/install/install-manifest-machine.json")
+    );
+    let names: Vec<String> =
+        std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    assert_eq!(names, ["install-manifest.json"]);
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
