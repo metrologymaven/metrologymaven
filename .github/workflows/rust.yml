@@ -341,6 +341,7 @@ jobs:
           python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/unc/class/make_table.py --check
           python fixtures/unc/dist/make_fixtures.py --check
+          python fixtures/viz/viewstate-samples/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -481,6 +482,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
         run: cargo test --target wasm32-wasip1 -p fid-geo-index
+      - name: ViewState canonical bytes, golden digests and f64 round trip on wasm32-wasip1 (VIZ.VIEW.STATE AC-1, AC-2, AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-view
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
       - name: Residual report statistics and digest of the seeded 1,000,000-entry report on wasm32-wasip1 (ALN.QA.REPORT AC-2)
