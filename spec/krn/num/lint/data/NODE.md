@@ -77,7 +77,7 @@ Fails the build when kernel source names a reference dataset or embeds one of it
 - **One finding per literal.** A literal that matches both `KNP1-DATA-VALUE` and `KNP1-DATA-HEX` yields `KNP1-DATA-VALUE` only, so the canary yields exactly one finding (AC-1).
 - **Excluded values** never produce a finding: neither their exact decimal value nor their bits.
 - **Config:** `[data] denylist = "<path>"` (required, relative to `knp1-lint.toml`). `run` returns the findings and the verified denylist digest for the report.
-- **Canary (deviation).** `UNC.RDL.LINT` is not built yet, so `fixtures/rdl/lint/` does not exist. `fixtures/knp1/data/make_fixtures.py` stands in for it with the same schema: a denylist from hand-chosen values, IDs and file names, a canary workspace with one planted constant, and the canary with it removed. Re-point AC-1 at `fixtures/rdl/lint/` when that leaf lands.
+- **Canary (deviation).** `UNC.RDL.LINT` is not built yet, so `fixtures/rdl/lint/` does not exist. `fixtures/knp1/data/make_fixtures.py` stands in for it with the same schema: a denylist from hand-chosen values, IDs and file names, a canary workspace with one planted constant, and the canary with it removed. This stand-in is replaced when `UNC.RDL.LINT` is built: AC-1 then runs on `fixtures/rdl/lint/canary_crate/` with `fixtures/rdl/lint/expected_denylist.json`, and the stand-in denylist and canary are removed (maintainer decision).
 - **Performance.** The 300 000-line budget is not measured [unverified].
 
 ## Test fixtures
