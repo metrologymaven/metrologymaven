@@ -15,7 +15,8 @@ expected value is computed here from the rules pinned in spec/aln/model/elem/NOD
   input digests joined by newlines;
 - SI values are the authored decimals converted with one correctly rounded division
   (Fraction -> float rounds to nearest, ties to even);
-- floats are written as "0x" + 16 lowercase hex digits of their IEEE 754 bits;
+- floats are written as "0x" + 16 lowercase hex digits of their IEEE 754 bits; transforms
+  hold +0.0 only (-0.0 is normalised; none occurs in chain3);
 - canonical JSON is RFC 8785; every value here is an ASCII string, null, array or object,
   so json.dumps with sorted keys and no whitespace is exactly RFC 8785.
 

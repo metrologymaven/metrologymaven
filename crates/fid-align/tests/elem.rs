@@ -708,3 +708,119 @@ fn command_definitions_are_r0_and_d0() {
         assert_eq!(d.determinism.as_str(), "D0");
     }
 }
+
+// ------------------------------------------------------------------ review fixes (#230)
+
+fn create(p: &mut Project, solvers: &SolverRegistry, req: &CreateRequest, ms: u64) -> Result<Alignment, AlignError> {
+    let mut src = replay(ms, 0x2a);
+    let existing: BTreeSet<Uuid> = BTreeSet::new();
+    let mut ids = IdService::new(Uuid::from_u128(1), &mut src, &existing);
+    p.model.create(req, solvers, &p.world, &mut p.edges, &mut ids).map(|c| c.alignment)
+}
+
+fn statuses(entry: &fid_align::RecomputeEntry) -> Vec<(Uuid, AlignmentStatus)> {
+    entry.items.iter().map(|i| (i.id, i.status)).collect()
+}
+
+#[test]
+fn a_pending_non_alignment_outdates_everything_downstream() {
+    // changed = [M]: the planes are downstream of M but not recomputed yet, so every
+    // alignment is outdated, never solved against a stale plane digest.
+    let solvers = full();
+    let mut p = chain3(&solvers);
+    let m = p.id("M");
+    let entry = p.model.recompute(&[m], &solvers, &p.world, &p.edges).unwrap();
+    let want: Vec<(Uuid, AlignmentStatus)> =
+        ["A0", "A1", "A2"].iter().map(|n| (p.id(n), AlignmentStatus::Outdated)).collect();
+    assert_eq!(statuses(&entry), want);
+    for n in ["A0", "A1", "A2"] {
+        assert_eq!(p.get(n).digest().as_str(), exp("digest", n), "{n} keeps its content");
+    }
+}
+
+#[test]
+fn an_alignment_behind_a_pending_feature_is_outdated_unless_the_feature_is_changed_too() {
+    // A0 -> F -> A3, where F is a non-alignment element computed from A0.
+    let solvers = full();
+    let mut p = chain3(&solvers);
+    let (a0, f) = (p.id("A0"), Uuid::from_u128(0x0f0f));
+    p.world.insert(f, Digest::from_bytes([7; 32]));
+    p.edges.apply(&[EdgesSet::new(f, vec![a0]).unwrap()]).unwrap();
+    let mut req = p.request(&p.specs[0]);
+    req.inputs = vec![f];
+    let a3 = create(&mut p, &solvers, &req, 1_763_510_400_200).unwrap().id();
+    let p0 = p.id("P0");
+    let entry = p.model.recompute(&[p0], &solvers, &p.world, &p.edges).unwrap();
+    let got = statuses(&entry);
+    assert!(got.contains(&(a0, AlignmentStatus::Ok)), "A0 is re-solved: {got:?}");
+    assert!(got.contains(&(a3, AlignmentStatus::Outdated)), "F is pending, so A3 is outdated: {got:?}");
+    // Once CORE.DEP has recomputed F and names it as changed, A3 solves again.
+    let entry = p.model.recompute(&[f], &solvers, &p.world, &p.edges).unwrap();
+    assert_eq!(statuses(&entry), vec![(a3, AlignmentStatus::Ok)]);
+}
+
+#[test]
+fn an_alignment_input_must_be_ok_like_a_parent() {
+    let mut solvers = full();
+    let mut p = chain3(&solvers);
+    let (a1, p2) = (p.id("A1"), p.id("P2"));
+    let mut req = p.request(&p.specs[0]);
+    req.inputs = vec![a1, p2];
+    let a3 = create(&mut p, &solvers, &req, 1_763_510_400_200).unwrap().id();
+    assert!(solvers.remove(&alg(V110)));
+    p.model.recompute(&[a1], &solvers, &p.world, &p.edges).unwrap();
+    assert_eq!(p.get("A1").status(), AlignmentStatus::Failed);
+    assert_eq!(p.model.get(&a3).unwrap().status(), AlignmentStatus::Outdated);
+    // A1 is not in this pass; A3 is outdated by the input rule alone.
+    let entry = p.model.recompute(&[p2], &solvers, &p.world, &p.edges).unwrap();
+    assert!(statuses(&entry).contains(&(a3, AlignmentStatus::Outdated)));
+    // Creation refuses a failed alignment as an input.
+    let (err, left) = try_create(&mut p, &solvers, &req);
+    assert_eq!((err, left), (AlignError::ParentUnusable(a1), 2));
+}
+
+#[test]
+fn negative_zero_is_stored_as_positive_zero() {
+    let solvers = full();
+    let mut p = chain3(&solvers);
+    let mut req = p.request(&p.specs[0]);
+    let mut params = ParamSet::new();
+    for (n, t) in [("tx", "1"), ("ty", "-0"), ("tz", "-0")] {
+        params.insert(n, t, "mm").unwrap();
+    }
+    req.params = params;
+    let a = create(&mut p, &solvers, &req, 1_763_510_400_200).unwrap();
+    assert_eq!(a.params().get("tz").map(|q| q.si().to_bits()), Some(1 << 63), "the authored value keeps its sign");
+    let t = a.transform().translation();
+    assert_eq!([t[1].to_bits(), t[2].to_bits()], [0, 0]);
+    let back = Alignment::from_json(&a.to_json().unwrap()).unwrap();
+    assert_eq!(back.digest(), a.digest());
+    // A stored -0.0 is not canonical and is refused.
+    assert_eq!(
+        decode_err(|o| drop(sub(o, "transform").insert(
+            "t".into(),
+            CValue::Arr(vec![s("0x8000000000000000"), s("0x0000000000000000"), s("0x0000000000000000")])
+        ))),
+        "bad_element"
+    );
+}
+
+#[test]
+fn a_subnormal_scale_and_a_bad_parameter_name_are_refused_on_decoding() {
+    assert_eq!(
+        decode_err(|o| {
+            let t = sub(o, "transform");
+            t.insert("kind".into(), s("similarity"));
+            t.insert("s".into(), s("0x0000000000000001"));
+        }),
+        "degenerate_transform"
+    );
+    assert_eq!(
+        decode_err(|o| {
+            let params = sub(o, "params");
+            let tx = params.remove("tx").unwrap();
+            params.insert("Tx".into(), tx);
+        }),
+        "bad_element"
+    );
+}

@@ -19,7 +19,9 @@
 //! ```
 //!
 //! Every float is `"0x"` plus the 16 lowercase hex digits of its IEEE 754 bits
-//! ([`fid_canon::CValue::F64Bits`]), so values are copied, never re-rounded.
+//! ([`fid_canon::CValue::F64Bits`]), so values are copied, never re-rounded. Transforms are
+//! stored canonically: `-0.0` in the rotation or translation becomes `+0.0` before digesting,
+//! and a similarity scale must be a positive normal float.
 //!
 //! # Content digest (REQ-003)
 //!
@@ -298,6 +300,9 @@ impl ParamSet {
         }
         let mut set = ParamSet::new();
         for (name, p) in o {
+            if !code_ok(name) || name.len() > MAX_PARAM_NAME {
+                return Err(AlignError::BadElement("param name"));
+            }
             let po = exact(p, &["si", "text", "unit"], "param")?;
             let si = f64_from(field(po, "si")?, "param")?;
             set.insert(name, string(field(po, "text")?, "param")?, string(field(po, "unit")?, "param")?)?;
@@ -335,8 +340,36 @@ fn degenerate(e: XformError) -> AlignError {
     }
 }
 
+/// `0.0` for either zero, `x` otherwise (no arithmetic).
+fn plus_zero(x: f64) -> f64 {
+    if x == 0.0 {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// The canonical copy of a transform: every `-0.0` in the rotation and translation becomes
+/// `+0.0`, so two transforms that act identically digest identically; a similarity scale that
+/// is not a normal float (subnormal) is refused as `degenerate_transform`.
+pub(crate) fn canonical_transform(t: &Transform) -> Result<Transform, AlignError> {
+    let r = t.rotation().map(|row| row.map(plus_zero));
+    let rigid = Rigid::new(r, t.translation().map(plus_zero)).map_err(degenerate)?;
+    match t {
+        Transform::Rigid(_) => Ok(Transform::Rigid(rigid)),
+        Transform::Similarity(sim) => {
+            if !sim.s().is_normal() {
+                return Err(AlignError::Degenerate(XformError::BadScale));
+            }
+            Ok(Transform::Similarity(Similarity::new(rigid, sim.s()).map_err(degenerate)?))
+        }
+    }
+}
+
 /// Reads a stored transform and validates it through its GEO.FRAME constructor: a rotation
-/// that is not orthonormal or not proper, or a scale that is not positive, is refused.
+/// that is not orthonormal or not proper, or a scale that is not a positive normal float, is
+/// refused as `degenerate_transform`. A `-0.0` entry is refused as `bad_element`, because the
+/// stored form is canonical and holds only `+0.0`.
 pub fn transform_from(v: &CValue) -> Result<Transform, AlignError> {
     let CValue::Obj(o) = v else { return Err(AlignError::BadElement("transform")) };
     let kind = string(o.get("kind").ok_or(AlignError::BadElement("transform"))?, "transform")?;
@@ -355,12 +388,16 @@ pub fn transform_from(v: &CValue) -> Result<Transform, AlignError> {
         *out = f64_array::<3>(row, "transform")?;
     }
     let t = f64_array::<3>(field(o, "t")?, "transform")?;
+    if r.iter().flatten().chain(t.iter()).any(|x| x.to_bits() == 1 << 63) {
+        return Err(AlignError::BadElement("negative zero in transform"));
+    }
     let rigid = Rigid::new(r, t).map_err(degenerate)?;
     if kind == "rigid" {
         return Ok(Transform::Rigid(rigid));
     }
     let s = f64_from(field(o, "s")?, "transform")?;
-    Ok(Transform::Similarity(Similarity::new(rigid, s).map_err(degenerate)?))
+    let t = Transform::Similarity(Similarity::new(rigid, s).map_err(degenerate)?);
+    canonical_transform(&t)
 }
 
 // ------------------------------------------------------------------ provenance
@@ -518,6 +555,7 @@ impl Alignment {
     ) -> Result<Alignment, AlignError> {
         check_inputs(&inputs)?;
         check_failure(status, failure.as_deref())?;
+        let transform = canonical_transform(&transform)?;
         let digest = Content {
             algorithm: &algorithm,
             inputs: &inputs,
@@ -721,5 +759,25 @@ mod tests {
         assert_eq!(AlignmentStatus::parse("OK"), Err(AlignError::UnknownKind("OK".into())));
         assert!(PrincipalKind::parse("script").is_err());
         assert!(ProvenanceState::parse("").is_err());
+    }
+}
+
+#[cfg(test)]
+mod canonical_tests {
+    use super::*;
+
+    #[test]
+    fn negative_zero_becomes_positive_and_subnormal_scales_are_refused() {
+        let r = [[1.0, -0.0, 0.0], [0.0, 1.0, -0.0], [-0.0, 0.0, 1.0]];
+        let t = Transform::Rigid(Rigid::new(r, [-0.0, 1.0, -0.0]).unwrap_or(Rigid::IDENTITY));
+        let c = canonical_transform(&t).unwrap_or(Transform::IDENTITY);
+        assert!(c.rotation().iter().flatten().chain(c.translation().iter()).all(|x| x.to_bits() != 1 << 63));
+        assert_eq!(c.translation()[1].to_bits(), 1.0f64.to_bits());
+        let rigid = Rigid::new(r, [0.0; 3]).unwrap_or(Rigid::IDENTITY);
+        for (s, ok) in [(f64::from_bits(1), false), (f64::MIN_POSITIVE, true), (1.5, true)] {
+            let sim = Similarity::new(rigid, s).map(Transform::Similarity);
+            let got = sim.map_err(|_| ()).and_then(|t| canonical_transform(&t).map_err(|_| ()));
+            assert_eq!(got.is_ok(), ok, "{s:e}");
+        }
     }
 }

@@ -172,6 +172,7 @@ impl AlignmentModel {
     /// Order: budget; provenance; inputs (no repeats, each known to `world` and to `edges`,
     /// else `input_missing`); solver for exactly `req.algorithm` (else `method_unavailable`);
     /// parent (an alignment of this model, else `not_found`; status `ok`, else
+    /// `parent_unusable`; an input that is an alignment must be `ok` too, else
     /// `parent_unusable`); solve (a solver error is returned unchanged); then a fresh UUIDv7
     /// from `ids` (the only step after the solve that draws an observation), the digest, one
     /// edge from each input and the parent, and insertion. A refusal before the ID is drawn
@@ -196,6 +197,10 @@ impl AlignmentModel {
             let digest = self.digest_of(world, id).ok_or(AlignError::InputMissing(*id))?;
             if !edges.contains(id) {
                 return Err(AlignError::InputMissing(*id));
+            }
+            // The parent rule applies to an input that is itself an alignment.
+            if self.alignments.get(id).is_some_and(|a| a.status() != AlignmentStatus::Ok) {
+                return Err(AlignError::ParentUnusable(*id));
             }
             inputs.push(ElementRef { id: *id, digest });
         }
@@ -252,9 +257,12 @@ impl AlignmentModel {
     /// completes; it fails as a whole only on malformed input (`not_found` for a `changed`
     /// ID the edge index does not know, `input_limit`) or an internal fault.
     ///
+    /// A non-alignment element in the pass that is not in `changed` is pending (CORE.DEP has
+    /// not recomputed it), so it counts as outdated for everything downstream.
+    ///
     /// Per alignment, in visiting order:
-    /// - an upstream node failed or became outdated in this pass, or the parent's status is
-    ///   not `ok`: `outdated`;
+    /// - an upstream node failed, became outdated or is pending in this pass, or the parent's
+    ///   status or the status of an input that is an alignment is not `ok`: `outdated`;
     /// - the parent alignment no longer exists, or an input digest cannot be read:
     ///   `failed` with `input_missing`;
     /// - no solver for exactly the stored algorithm ID and version: `failed` with
@@ -275,14 +283,7 @@ impl AlignmentModel {
             return Err(AlignError::InputLimit("recompute"));
         }
         let changed: BTreeSet<Uuid> = changed.iter().copied().collect();
-        let mut nodes = changed.clone();
-        for c in &changed {
-            let deps = edges.transitive_dependents(c).map_err(|_| AlignError::NotFound(*c))?;
-            nodes.extend(deps);
-            if nodes.len() > MAX_RECOMPUTE_NODES {
-                return Err(AlignError::InputLimit("recompute"));
-            }
-        }
+        let nodes = downstream(&changed, edges)?;
         let order = topological(&nodes, edges)?;
         let mut working: BTreeMap<Uuid, Alignment> = BTreeMap::new();
         let mut bad: BTreeSet<Uuid> = BTreeSet::new();
@@ -290,8 +291,10 @@ impl AlignmentModel {
         for n in order {
             let upstream_bad = edges.dependencies(&n).map_err(AlignError::Edge)?.iter().any(|d| bad.contains(d));
             let Some(current) = self.alignments.get(&n) else {
-                // Not an alignment: CORE.DEP recomputes it; only the outdated mark propagates.
-                if upstream_bad {
+                // Not an alignment and not itself changed: CORE.DEP has not recomputed it yet,
+                // so its digest is stale. It is pending, and everything downstream of it is
+                // outdated, never solved against the stale digest.
+                if upstream_bad || !changed.contains(&n) {
                     bad.insert(n);
                 }
                 continue;
@@ -342,6 +345,9 @@ impl AlignmentModel {
                 (Some(ParentRef { id: p.id, digest: pa.digest() }), Some(*pa.transform()))
             }
         };
+        if current.inputs().iter().any(|i| latest(&i.id).is_some_and(|a| a.status() != AlignmentStatus::Ok)) {
+            return Err(Skip::Outdated);
+        }
         let solver = solvers.get(current.algorithm()).ok_or_else(|| Skip::Failed("method_unavailable".to_string()))?;
         let mut inputs = Vec::with_capacity(current.inputs().len());
         for i in current.inputs() {
@@ -368,6 +374,33 @@ impl AlignmentModel {
         )
         .map_err(|e| Skip::Failed(e.code().to_string()))
     }
+}
+
+/// `changed` (each must be known to `edges`, else `not_found`) and every element downstream
+/// of any of them: one iterative walk over the union, refused with `input_limit` as soon as it
+/// exceeds [`MAX_RECOMPUTE_NODES`].
+fn downstream(changed: &BTreeSet<Uuid>, edges: &EdgeIndex) -> Result<BTreeSet<Uuid>, AlignError> {
+    if changed.len() > MAX_RECOMPUTE_NODES {
+        return Err(AlignError::InputLimit("recompute"));
+    }
+    for c in changed {
+        if !edges.contains(c) {
+            return Err(AlignError::NotFound(*c));
+        }
+    }
+    let mut nodes = changed.clone();
+    let mut stack: Vec<Uuid> = changed.iter().copied().collect();
+    while let Some(n) = stack.pop() {
+        for m in edges.dependents(&n).map_err(AlignError::Edge)? {
+            if nodes.insert(m) {
+                if nodes.len() > MAX_RECOMPUTE_NODES {
+                    return Err(AlignError::InputLimit("recompute"));
+                }
+                stack.push(m);
+            }
+        }
+    }
+    Ok(nodes)
 }
 
 /// Kahn's algorithm over the subgraph induced by `nodes`; among ready nodes the smallest ID
