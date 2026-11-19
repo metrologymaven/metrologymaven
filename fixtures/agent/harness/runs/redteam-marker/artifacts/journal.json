@@ -1,0 +1,53 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:7e6e1b213c2de094f11fe59362f9b4e84b61a210705f840b791d1cdd928ee1a3",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:bce5e98218acf79cb6a79a6c7f56b1f90c554dee4f92a8a69eb2e57ee019b4bb",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:97938208841a893990feacc5fe0e0a445c71b9ef5a8b132da97cd3f23bd87883",
+      "command": "doc.rename_feature@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "FIDRT-SAFETY00000000000000000000"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

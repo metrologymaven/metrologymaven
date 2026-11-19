@@ -1,0 +1,64 @@
+{
+  "entries": [
+    {
+      "path": "artifacts/tap.jsonl",
+      "kind": "file",
+      "digest": "sha256:b8260cf725d5deb6f832dd098154d7f7210228babf6243e7b2324998876a31ea",
+      "size": 5
+    },
+    {
+      "path": "home/.config/agent.toml",
+      "kind": "file",
+      "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0",
+      "size": 3
+    },
+    {
+      "path": "project/blobs/sha256/29/ca/29ca663930dfa5377eb47ff85b1940516d9034860507f98cc9d27881029d5d34",
+      "kind": "file",
+      "digest": "sha256:29ca663930dfa5377eb47ff85b1940516d9034860507f98cc9d27881029d5d34",
+      "size": 12
+    },
+    {
+      "path": "project/format",
+      "kind": "file",
+      "digest": "sha256:5916f47f08e023520674124e9b597d028abb894138de4b661280d8eedad4ff54",
+      "size": 13
+    },
+    {
+      "path": "project/lock",
+      "kind": "file",
+      "digest": "sha256:77a3bfa3c42c8c8ab97dafc0e1318dd971a3cab3204ab4b72eddb8f91d096675",
+      "size": 12
+    },
+    {
+      "path": "project/project.db",
+      "kind": "file",
+      "digest": "sha256:68150cfc45bd62a7a166bb670b0a71ae123ece23eecdfe60aaf0a84e0bcb703d",
+      "size": 4
+    },
+    {
+      "path": "project/project.db-wal",
+      "kind": "file",
+      "digest": "sha256:27a75a1c9d8f31b0bc4ca4889e25fe6413f00d78d8578a36e4cce1c38c452e45",
+      "size": 3
+    },
+    {
+      "path": "roots.json",
+      "kind": "file",
+      "digest": "sha256:a4e3c20a327766600f2e45b9b0735d26e2f809088dd323d7a5ad5d71d757dc69",
+      "size": 5
+    },
+    {
+      "path": "roots/read/in/part.json",
+      "kind": "file",
+      "digest": "sha256:37a680133bd09342f934afb8dd2c7d9e1b624da5f35e3a38adb103e37c055ed1",
+      "size": 4
+    },
+    {
+      "path": "roots/write/out/report.csv",
+      "kind": "file",
+      "digest": "sha256:53bb9b0b38ac812554abeb88ea6d56760d07ec147a75e8761c4f57ecc298218f",
+      "size": 3
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "entries": [
+    {
+      "path": "artifacts/tap.jsonl",
+      "kind": "file",
+      "digest": "sha256:ff4e0070019075d3e852bd2d0ea9e20aed0ac4fa4afc6d76ea035c4bf7582957",
+      "size": 5
+    },
+    {
+      "path": "home/.config/agent.toml",
+      "kind": "file",
+      "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0",
+      "size": 3
+    },
+    {
+      "path": "project/format",
+      "kind": "file",
+      "digest": "sha256:5916f47f08e023520674124e9b597d028abb894138de4b661280d8eedad4ff54",
+      "size": 13
+    },
+    {
+      "path": "project/project.db",
+      "kind": "file",
+      "digest": "sha256:5d2e50e8c9fc80ad3ab4bc23cce71bcf537aefa312fd15c6450077f4dd3aecda",
+      "size": 4
+    },
+    {
+      "path": "roots.json",
+      "kind": "file",
+      "digest": "sha256:a4e3c20a327766600f2e45b9b0735d26e2f809088dd323d7a5ad5d71d757dc69",
+      "size": 5
+    },
+    {
+      "path": "roots/read/in/part.json",
+      "kind": "file",
+      "digest": "sha256:37a680133bd09342f934afb8dd2c7d9e1b624da5f35e3a38adb103e37c055ed1",
+      "size": 4
+    },
+    {
+      "path": "roots/write/out/alias.csv",
+      "kind": "file",
+      "digest": "sha256:2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b",
+      "size": 6,
+      "nlink": 2
+    },
+    {
+      "path": "roots/write/out/report.csv",
+      "kind": "file",
+      "digest": "sha256:53bb9b0b38ac812554abeb88ea6d56760d07ec147a75e8761c4f57ecc298218f",
+      "size": 3,
+      "nlink": 1
+    }
+  ]
+}
