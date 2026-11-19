@@ -3,7 +3,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::to_canonical_bytes;
-use fid_fixes::{catalogue_schema, load, load_path, shipped, FixError, StateKind, MAX_BYTES};
+use fid_fixes::{catalogue_schema, load, load_path, shipped, ArgTemplate, FixError, StateKind, MAX_BYTES};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 fn root() -> PathBuf {
@@ -105,32 +106,112 @@ fn req3_source_table_order_kept() {
     assert!(cat.get("decide.rule_missing").unwrap().source_table.is_none());
 }
 
-/// Every reason code, owner and command in the shipped catalogue is defined in the spec tree:
-/// the owner node exists, its NODE.md names the code, and some NODE.md names the command.
-#[test]
-fn shipped_references_exist_in_spec() {
+/// The `journal:` frontmatter list of every NODE.md under `spec/`, except the FLOW.DEADEND
+/// subtree (whose catalogue nodes name every command they reference, so searching them would
+/// make the check vacuous). Keyed by node path relative to `spec/`.
+fn journal_lists() -> BTreeMap<String, Vec<String>> {
     let spec = root().join("spec");
-    let mut all = String::new();
+    let skip = spec.join("flow").join("deadend");
+    let mut out = BTreeMap::new();
     let mut stack = vec![spec.clone()];
     while let Some(dir) = stack.pop() {
+        if dir == skip {
+            continue;
+        }
         for e in std::fs::read_dir(&dir).unwrap() {
             let p = e.unwrap().path();
             if p.is_dir() {
                 stack.push(p);
             } else if p.file_name().is_some_and(|n| n == "NODE.md") {
-                all.push_str(&std::fs::read_to_string(&p).unwrap());
+                let text = std::fs::read_to_string(&p).unwrap();
+                let front = text.split("---").nth(1).unwrap_or_default();
+                let Some(line) = front.lines().find_map(|l| l.trim().strip_prefix("journal:")) else {
+                    continue;
+                };
+                let items = line.trim().trim_start_matches('[').trim_end_matches(']');
+                let list = items.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
+                let rel = p.parent().unwrap().strip_prefix(&spec).unwrap().to_string_lossy().replace('\\', "/");
+                out.insert(rel, list);
             }
         }
     }
+    out
+}
+
+/// The spec nodes (paths under `spec/`) whose `journal:` frontmatter declares `command`.
+fn defining_nodes(journals: &BTreeMap<String, Vec<String>>, command: &str) -> Vec<String> {
+    journals.iter().filter(|(_, l)| l.iter().any(|c| c == command)).map(|(n, _)| n.clone()).collect()
+}
+
+/// Hand-labelled from each command's Design section: the node that defines it.
+const DEFINED_IN: [(&str, &str); 7] = [
+    ("decide.bind_rule@1", "unc/dec/bind"),
+    ("decide.set_default_rule@1", "unc/dec/bind"),
+    ("unc.bind_model@1", "unc/model/bind"),
+    ("unc.bind_instrument_model@1", "unc/inst/schema"),
+    ("unc.list_profile@1", "unc/inst/lib/format"),
+    ("unc.propagate_auto@1", "unc/prop/select"),
+    ("unc.declare_uncertainty@1", "unc/uec/decl"),
+];
+
+/// Every reason code, owner and command in the shipped catalogue is defined in the spec tree:
+/// the owner node exists and its NODE.md names the code, and each command is declared in the
+/// `journal:` frontmatter of the node that defines it (FLOW.DEADEND nodes excluded).
+#[test]
+fn shipped_references_exist_in_spec() {
+    let spec = root().join("spec");
+    let journals = journal_lists();
+    let defined: BTreeMap<&str, &str> = DEFINED_IN.into_iter().collect();
     for e in shipped().unwrap().entries() {
         let node = e.owner.split('.').fold(spec.clone(), |p, s| p.join(s.to_ascii_lowercase()));
         let text = std::fs::read_to_string(node.join("NODE.md")).unwrap_or_else(|_| panic!("no node {}", e.owner));
         let (_, code) = e.reason_code.split_once('.').unwrap();
         assert!(text.contains(&format!("`{code}`")), "{} does not name {}", e.owner, code);
         for f in &e.fixes {
-            assert!(all.contains(&format!("`{}`", f.command)), "no spec node names {}", f.command);
+            let cmd = f.command.as_str();
+            let want = defined.get(cmd).unwrap_or_else(|| panic!("{cmd} has no hand-labelled defining node"));
+            let found = defining_nodes(&journals, cmd);
+            assert!(found.iter().any(|n| n == want), "{cmd}: not declared by spec/{want} (found {found:?})");
         }
     }
+}
+
+/// The command check is not vacuous: a made-up command (CHECK's AC-3 example, which only the
+/// FLOW.DEADEND nodes mention) and a wrong major have no defining node.
+#[test]
+fn made_up_command_has_no_defining_node() {
+    let journals = journal_lists();
+    assert!(!journals.is_empty());
+    assert_eq!(defining_nodes(&journals, "decide.bind_rule@1"), ["unc/dec/bind"]);
+    assert!(defining_nodes(&journals, "decide.bind_rules@1").is_empty());
+    assert!(defining_nodes(&journals, "decide.bind_rule@2").is_empty());
+}
+
+/// Hand-labelled parameter types from the commands' Design sections (true = list-valued).
+const PARAM_IS_LIST: [(&str, &str, bool); 4] = [
+    ("decide.bind_rule@1", "chars", true), // UNC.DEC.BIND: chars: Vec<EntityId> | plan_default
+    ("unc.bind_model@1", "chars", true), // UNC.MODEL.BIND: chars: Vec<EntityId>
+    ("unc.declare_uncertainty@1", "char_id", false), // UNC.UEC.DECL: char_id: EntityId
+    ("unc.propagate_auto@1", "result_id", false), // UNC.PROP.SELECT: result_id
+];
+
+/// Every pre-filled argument of the shipped catalogue has the shape its command's parameter
+/// has: a list template for a list parameter, a string for a scalar one.
+#[test]
+fn shipped_argument_types_match_command_params() {
+    let types: BTreeMap<(&str, &str), bool> = PARAM_IS_LIST.into_iter().map(|(c, a, l)| ((c, a), l)).collect();
+    for e in shipped().unwrap().entries() {
+        for f in &e.fixes {
+            for (name, t) in &f.args {
+                let key = (f.command.as_str(), name.as_str());
+                let want = types.get(&key).unwrap_or_else(|| panic!("{key:?} has no hand-labelled type"));
+                assert_eq!(t.is_list(), *want, "{} {key:?}", e.reason_code);
+            }
+        }
+    }
+    let rule = shipped().unwrap();
+    let chars = &rule.get("decide.rule_missing").unwrap().fixes[0].args["chars"];
+    assert_eq!(chars, &ArgTemplate::List(vec!["${characteristic_id}".to_string()]));
 }
 
 #[test]
@@ -145,7 +226,21 @@ fn schema_is_generated() {
     );
 }
 
-const ONE: &str = r#"{"version":"fix-catalogue@1","entries":[{"reason_code":"decide.rule_missing","state_kind":"not_decidable","owner":"UNC.DEC.DEFAULT","fixes":[{"command":"decide.bind_rule@1","args":{"chars":"${characteristic_id}"},"label_key":"fix.decide.rule_missing.bind_rule"}]}]}"#;
+const ONE: &str = r#"{"version":"fix-catalogue@1","entries":[{"reason_code":"decide.rule_missing","state_kind":"not_decidable","owner":"UNC.DEC.DEFAULT","fixes":[{"command":"decide.bind_rule@1","args":{"chars":["${characteristic_id}"]},"label_key":"fix.decide.rule_missing.bind_rule"}]}]}"#;
+
+#[test]
+fn list_and_scalar_templates() {
+    let bad = ONE.replace("[\"${characteristic_id}\"]", "[\"${characteristic_id}\",\"${path}\"]");
+    let err = load(bad.as_bytes()).unwrap_err();
+    assert_eq!(err.to_string(), "FIX-PLACEHOLDER decide.rule_missing decide.bind_rule@1 chars: ${path}");
+    let scalar = ONE.replace("[\"${characteristic_id}\"]", "\"${characteristic_id}\"");
+    let cat = load(scalar.as_bytes()).unwrap();
+    let args = &cat.entries()[0].fixes[0].args;
+    assert_eq!(args["chars"], ArgTemplate::Scalar("${characteristic_id}".to_string()));
+    assert_ne!(cat.digest(), load(ONE.as_bytes()).unwrap().digest());
+    let empty = ONE.replace("[\"${characteristic_id}\"]", "[]");
+    assert_eq!(load(empty.as_bytes()).unwrap().entries()[0].fixes[0].args["chars"], ArgTemplate::List(vec![]));
+}
 
 #[test]
 fn inline_minimal_loads() {
@@ -172,7 +267,11 @@ fn schema_errors() {
     assert!(schema_err(&renamed).contains("missing required property `label_key`"));
     let extra = ONE.replace("\"label_key\":", "\"extra\":\"x\",\"label_key\":");
     assert!(schema_err(&extra).contains("unknown property `extra`"));
-    assert!(schema_err(&ONE.replace("\"${characteristic_id}\"", "1")).contains("expected a string"));
+    assert!(schema_err(&ONE.replace("\"${characteristic_id}\"", "1")).contains("chars[0]: expected a string"));
+    let scalar_number = ONE.replace("[\"${characteristic_id}\"]", "1");
+    assert!(schema_err(&scalar_number).contains("expected a string or an array of strings"));
+    let nested = ONE.replace("[\"${characteristic_id}\"]", "[[\"${characteristic_id}\"]]");
+    assert!(schema_err(&nested).contains("chars[0]: expected a string"));
     let no_fixes = r#"{"version":"fix-catalogue@1","entries":[{"reason_code":"decide.rule_missing","state_kind":"not_decidable","owner":"UNC.DEC.DEFAULT","fixes":[]}]}"#;
     assert!(schema_err(no_fixes).contains("at least one fix"));
     assert!(schema_err(&ONE.replace("\"fixes\":", "\"source_table\":\"UEC\",\"fixes\":")).contains("source_table"));

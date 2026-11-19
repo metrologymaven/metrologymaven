@@ -60,7 +60,7 @@ VALID = {
             "state_kind": "not_decidable",
             "owner": "GDT.CHAR.RECORD",
             "fixes": [
-                fix("decide.bind_rule@1", "fix.gdt.no_rule_bound.bind_rule", chars="${characteristic_id}"),
+                fix("decide.bind_rule@1", "fix.gdt.no_rule_bound.bind_rule", chars=["${characteristic_id}"]),
                 fix("decide.set_default_rule@1", "fix.gdt.no_rule_bound.set_default_rule"),
             ],
         },
@@ -80,7 +80,7 @@ VALID = {
             "state_kind": "not_decidable",
             "owner": "UNC.DEC.DEFAULT",
             "fixes": [
-                fix("decide.bind_rule@1", "fix.decide.rule_missing.bind_rule", chars="${characteristic_id}"),
+                fix("decide.bind_rule@1", "fix.decide.rule_missing.bind_rule", chars=["${characteristic_id}"]),
                 fix("decide.set_default_rule@1", "fix.decide.rule_missing.set_default_rule"),
             ],
         },
@@ -89,7 +89,7 @@ VALID = {
             "state_kind": "uec0",
             "owner": "UNC.UEC.EXPL",
             "source_table": UEC,
-            "fixes": [fix("unc.bind_model@1", "fix.unc.model_missing.bind_model", chars="${characteristic_id}")],
+            "fixes": [fix("unc.bind_model@1", "fix.unc.model_missing.bind_model", chars=["${characteristic_id}"])],
         },
         {
             "reason_code": "gdt.unc_no_decision",
@@ -106,7 +106,7 @@ DUP["entries"].append(copy.deepcopy(VALID["entries"][3]))
 
 # A placeholder outside the closed set: expected FIX-PLACEHOLDER.
 BADPH = copy.deepcopy(VALID)
-BADPH["entries"][3]["fixes"][0]["args"]["chars"] = "${path}"
+BADPH["entries"][3]["fixes"][0]["args"]["chars"] = ["${path}"]
 
 # Hand-labelled from REQ-FLOW.DEADEND.CATALOG-004 and the leaf's build prompt.
 REQ004 = {
@@ -119,14 +119,39 @@ REQ004 = {
 }
 
 
+# Hand-labelled parameter types from the commands' Design sections: "list" for Vec<...>,
+# "scalar" otherwise. Every argument the shipped catalogue pre-fills must be listed here with
+# the matching JSON shape (array for list, string for scalar).
+PARAM_TYPES = {
+    ("decide.bind_rule@1", "chars"): "list",  # UNC.DEC.BIND: chars: Vec<EntityId> | plan_default
+    ("unc.bind_model@1", "chars"): "list",  # UNC.MODEL.BIND: chars: Vec<EntityId>
+    ("unc.bind_instrument_model@1", "target"): "scalar",  # UNC.INST.SCHEMA: target: DeviceId | Project
+    ("unc.declare_uncertainty@1", "char_id"): "scalar",  # UNC.UEC.DECL: char_id: EntityId
+    ("unc.propagate_auto@1", "result_id"): "scalar",  # UNC.PROP.SELECT: result_id
+}
+
+
+def type_problems(doc):
+    out = []
+    for e in doc["entries"]:
+        for f in e["fixes"]:
+            for name, v in f["args"].items():
+                want = PARAM_TYPES.get((f["command"], name))
+                got = "list" if isinstance(v, list) else "scalar"
+                if want != got:
+                    out.append("%s %s %s: want %s, got %s" % (e["reason_code"], f["command"], name, want, got))
+    return out
+
+
 def reference_error(doc):
     """Independent reading of the placeholder and duplicate rules; returns the expected error."""
     for e in doc["entries"]:
         for f in e["fixes"]:
-            for t in f["args"].values():
-                for name in re.findall(r"\$\{([^}]*)\}", t):
-                    if name not in PLACEHOLDERS:
-                        return "FIX-PLACEHOLDER"
+            for v in f["args"].values():
+                for t in v if isinstance(v, list) else [v]:
+                    for name in re.findall(r"\$\{([^}]*)\}", t):
+                        if name not in PLACEHOLDERS:
+                            return "FIX-PLACEHOLDER"
     codes = sorted(e["reason_code"] for e in doc["entries"])
     for a, b in zip(codes, codes[1:]):
         if a == b:
@@ -171,6 +196,8 @@ def main():
     got = {e["reason_code"]: [f["command"] for f in e["fixes"]] for e in shipped["entries"]}
     if got != REQ004:
         PROBLEMS.append("crates/fid-fixes/fix-catalogue.json does not match REQ-004: %r" % got)
+    PROBLEMS.extend(type_problems(shipped))
+    PROBLEMS.extend(type_problems(VALID))
     if reference_error(shipped) is not None:
         PROBLEMS.append("shipped catalogue fails the reference rules: " + reference_error(shipped))
 

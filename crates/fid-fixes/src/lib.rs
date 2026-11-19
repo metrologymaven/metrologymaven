@@ -11,6 +11,6 @@
 pub mod catalogue;
 
 pub use catalogue::{
-    catalogue_schema, load, load_path, shipped, FixCatalogue, FixEntry, FixError, FixTemplate, StateKind,
+    catalogue_schema, load, load_path, shipped, ArgTemplate, FixCatalogue, FixEntry, FixError, FixTemplate, StateKind,
     CATALOGUE_VERSION, MAX_BYTES, MAX_DEPTH, PLACEHOLDERS, SHIPPED_JSON,
 };

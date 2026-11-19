@@ -31,7 +31,9 @@
         {
           "command": "decide.bind_rule@1",
           "args": {
-            "chars": "${characteristic_id}"
+            "chars": [
+              "${characteristic_id}"
+            ]
           },
           "label_key": "fix.gdt.no_rule_bound.bind_rule"
         },
@@ -70,7 +72,9 @@
         {
           "command": "decide.bind_rule@1",
           "args": {
-            "chars": "${path}"
+            "chars": [
+              "${path}"
+            ]
           },
           "label_key": "fix.decide.rule_missing.bind_rule"
         },
@@ -90,7 +94,9 @@
         {
           "command": "unc.bind_model@1",
           "args": {
-            "chars": "${characteristic_id}"
+            "chars": [
+              "${characteristic_id}"
+            ]
           },
           "label_key": "fix.unc.model_missing.bind_model"
         }

@@ -79,13 +79,38 @@ impl fmt::Display for StateKind {
     }
 }
 
+/// One argument template: a single string, or a list of strings for a list-valued parameter
+/// (for example `chars: Vec<EntityId>`). Every string may use only the [`PLACEHOLDERS`].
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ArgTemplate {
+    /// A scalar parameter, e.g. `"${entity_id}"`.
+    Scalar(String),
+    /// A list parameter, e.g. `["${characteristic_id}"]`; may be empty, never nested.
+    List(Vec<String>),
+}
+
+impl ArgTemplate {
+    /// Whether this template produces a list.
+    pub fn is_list(&self) -> bool {
+        matches!(self, ArgTemplate::List(_))
+    }
+
+    /// The template strings, in order (one for a scalar).
+    pub fn parts(&self) -> &[String] {
+        match self {
+            ArgTemplate::Scalar(s) => std::slice::from_ref(s),
+            ArgTemplate::List(v) => v,
+        }
+    }
+}
+
 /// One suggested fix: a registry command with its major, an argument template and a label key.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FixTemplate {
     /// Registry command ID with `@major`, e.g. `decide.bind_rule@1`.
     pub command: CommandId,
     /// Argument name to template; templates use only the [`PLACEHOLDERS`].
-    pub args: BTreeMap<String, String>,
+    pub args: BTreeMap<String, ArgTemplate>,
     /// UX label key; the wording itself is owned by UX.
     pub label_key: String,
 }
@@ -345,15 +370,29 @@ fn fix(v: &CValue, path: &str) -> Result<FixTemplate, FixError> {
         if !is_ident(name) {
             return Err(schema_err(&p, format!("argument name does not match {ARG_NAME_PATTERN}")));
         }
-        args.insert(name.clone(), as_str(t, &p)?.to_string());
+        args.insert(name.clone(), arg_template(t, &p)?);
     }
     let label_key = patterned(m, path, "label_key", is_label_key, LABEL_KEY_PATTERN)?.to_string();
     Ok(FixTemplate { command, args, label_key })
 }
 
+/// A string, or an array of strings (list-valued parameter); anything else is a schema error.
+fn arg_template(v: &CValue, path: &str) -> Result<ArgTemplate, FixError> {
+    match v {
+        CValue::Str(t) => Ok(ArgTemplate::Scalar(t.clone())),
+        CValue::Arr(items) => items
+            .iter()
+            .enumerate()
+            .map(|(i, x)| as_str(x, &format!("{path}[{i}]")).map(str::to_string))
+            .collect::<Result<_, _>>()
+            .map(ArgTemplate::List),
+        _ => Err(schema_err(path, "expected a string or an array of strings")),
+    }
+}
+
 fn check_placeholders(e: &FixEntry) -> Result<(), FixError> {
     for f in &e.fixes {
-        for (arg, template) in &f.args {
+        for (arg, template) in f.args.iter().flat_map(|(a, t)| t.parts().iter().map(move |p| (a, p))) {
             if let Some(placeholder) = bad_placeholder(template) {
                 return Err(FixError::Placeholder {
                     reason_code: e.reason_code.clone(),
@@ -457,9 +496,16 @@ fn entry_value(e: &FixEntry) -> CValue {
 fn fix_value(f: &FixTemplate) -> CValue {
     obj([
         ("command", s(f.command.as_str())),
-        ("args", CValue::Obj(f.args.iter().map(|(k, v)| (k.clone(), s(v))).collect())),
+        ("args", CValue::Obj(f.args.iter().map(|(k, v)| (k.clone(), arg_value(v))).collect())),
         ("label_key", s(&f.label_key)),
     ])
+}
+
+fn arg_value(t: &ArgTemplate) -> CValue {
+    match t {
+        ArgTemplate::Scalar(v) => s(v),
+        ArgTemplate::List(v) => CValue::Arr(v.iter().map(|x| CValue::Str(x.clone())).collect()),
+    }
 }
 
 /// The JSON Schema of `fix-catalogue@1`, generated from the constants the loader enforces and
@@ -484,12 +530,22 @@ pub fn catalogue_schema() -> CValue {
                         (
                             "description",
                             s(&format!(
-                                "Argument name to template. Templates may use only the placeholders {}.",
+                                "Argument name to template: a string for a scalar parameter, an array of \
+                                 strings for a list parameter. Templates may use only the placeholders {}.",
                                 placeholders.join(", ")
                             )),
                         ),
                         ("propertyNames", obj([("pattern", s(ARG_NAME_PATTERN))])),
-                        ("additionalProperties", obj([("type", s("string"))])),
+                        (
+                            "additionalProperties",
+                            obj([(
+                                "oneOf",
+                                CValue::Arr(vec![
+                                    obj([("type", s("string"))]),
+                                    obj([("type", s("array")), ("items", obj([("type", s("string"))]))]),
+                                ]),
+                            )]),
+                        ),
                     ]),
                 ),
                 ("label_key", pattern(LABEL_KEY_PATTERN)),
