@@ -25,6 +25,10 @@ pub const V: f64 = 1e9999999999; //~ KNP1-PARSE=1e9999999999
 pub const W: &str = concat!("tracim-lsq-circle-00", 7, ".json"); //~ KNP1-DATA-FILE="tracim
 pub const X: &str = concat!("tracim-lsq-circle-007", '.', "json"); //~ KNP1-DATA-FILE="tracim
 pub const Y: &str = concat!("tracim.lsq.circle.", 0, 0, 7); //~ KNP1-DATA-ID="tracim
+pub const Z1: &str = "tracim-lsq-circle-007\u{2_________e}json"; //~ KNP1-DATA-FILE="tracim
+pub const Z2: &str = "tracim\u{0_0_0_0_2_e}lsq\u{2e}circle.007"; //~ KNP1-DATA-ID="tracim
+pub const Z3: &str = "tracim-lsq-circle-007.json \u{110000}"; //~ KNP1-PARSE="tracim
+pub const Z4: char = '\u{d800}'; //~ KNP1-PARSE='
 macro_rules! planted {
     () => {
         0.123456789012 //~ KNP1-DATA-VALUE=0.123456789012

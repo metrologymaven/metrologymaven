@@ -338,7 +338,12 @@ impl Matcher {
 // ------------------------------------------------------------------ literals
 
 /// Unescapes a (non-raw) string literal body; unknown escapes are kept as written.
-fn unescape(body: &str) -> String {
+/// Unescapes a (non-raw) string or character literal body as rustc does. `None` for an escape
+/// rustc would reject: `\x` without two hex digits, `\u` without `{`, without `}`, with no or
+/// more than six hex digits (`_` allowed and not counted), or naming a value outside
+/// `0..=0x10FFFF` or a surrogate; and any other unknown escape. The scan reports such a
+/// literal as `KNP1-PARSE`; it is never matched as written.
+fn unescape(body: &str) -> Option<String> {
     let mut out = String::new();
     let mut it = body.chars().peekable();
     while let Some(c) = it.next() {
@@ -346,61 +351,55 @@ fn unescape(body: &str) -> String {
             out.push(c);
             continue;
         }
-        match it.next() {
-            Some('n') => out.push('\n'),
-            Some('r') => out.push('\r'),
-            Some('t') => out.push('\t'),
-            Some('0') => out.push('\0'),
-            Some('\\') => out.push('\\'),
-            Some('\'') => out.push('\''),
-            Some('"') => out.push('"'),
-            Some('x') => {
+        match it.next()? {
+            'n' => out.push('\n'),
+            'r' => out.push('\r'),
+            't' => out.push('\t'),
+            '0' => out.push('\0'),
+            '\\' => out.push('\\'),
+            '\'' => out.push('\''),
+            '"' => out.push('"'),
+            'x' => {
                 let h: String = it.by_ref().take(2).collect();
-                match u8::from_str_radix(&h, 16) {
-                    Ok(b) => out.push(char::from(b)),
-                    Err(_) => {
-                        out.push_str("\\x");
-                        out.push_str(&h);
-                    }
+                if h.len() != 2 || !h.chars().all(|d| d.is_ascii_hexdigit()) {
+                    return None;
                 }
+                out.push(char::from(u8::from_str_radix(&h, 16).ok()?));
             }
-            Some('u') => {
+            'u' => {
+                if it.next()? != '{' {
+                    return None;
+                }
                 let mut code = String::new();
-                if it.peek() == Some(&'{') {
-                    it.next();
-                    for d in it.by_ref() {
-                        if d == '}' || code.len() > 8 {
-                            break;
-                        }
-                        code.push(d);
+                loop {
+                    match it.next()? {
+                        '}' => break,
+                        '_' => {}
+                        d if d.is_ascii_hexdigit() && code.len() < 6 => code.push(d),
+                        _ => return None,
                     }
                 }
-                let ch = u32::from_str_radix(&code.replace('_', ""), 16).ok().and_then(char::from_u32);
-                match ch {
-                    Some(ch) => out.push(ch),
-                    None => out.push_str(&format!("\\u{{{code}}}")),
+                if code.is_empty() {
+                    return None;
                 }
+                out.push(char::from_u32(u32::from_str_radix(&code, 16).ok()?)?);
             }
-            Some('\n') => {
+            '\n' => {
                 while it.peek().is_some_and(|w| w.is_whitespace()) {
                     it.next();
                 }
             }
-            Some(o) => {
-                out.push('\\');
-                out.push(o);
-            }
-            None => out.push('\\'),
+            _ => return None,
         }
     }
-    out
+    Some(out)
 }
 
 /// The text of a string-like literal as written and unescaped.
 fn string_texts(t: &Token) -> Option<(String, String)> {
     match t.kind {
         Kind::Lit { kind: LitKind::Str | LitKind::ByteStr | LitKind::CStr, .. } => {
-            Some((t.text.clone(), unescape(&t.text)))
+            Some((t.text.clone(), unescape(&t.text).unwrap_or_default()))
         }
         Kind::Lit { kind: LitKind::RawStr | LitKind::RawByteStr | LitKind::RawCStr, .. } => {
             Some((t.text.clone(), t.text.clone()))
@@ -515,6 +514,14 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
     }
     let mut parse_hits: Vec<&Token> = Vec::new();
     for t in &toks {
+        let escaped = matches!(
+            t.kind,
+            Kind::Lit { kind: LitKind::Str | LitKind::ByteStr | LitKind::CStr | LitKind::Char | LitKind::Byte, .. }
+        );
+        if escaped && unescape(&t.text).is_none() {
+            parse_hits.push(t);
+            continue;
+        }
         if let Some((raw, unesc)) = string_texts(t) {
             let mut rules = m.text_rules(&raw);
             rules.extend(m.text_rules(&unesc));
@@ -573,8 +580,10 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
     let mut out: Vec<Finding> = hits.into_values().collect();
     for t in parse_hits {
         let excerpt = lines.get((t.line as usize).saturating_sub(1)).copied().unwrap_or_default();
-        let msg =
-            format!("numeric literal `{}` cannot be normalised exactly", t.text.chars().take(80).collect::<String>());
+        let msg = format!(
+            "literal `{}` cannot be normalised or unescaped exactly",
+            t.text.chars().take(80).collect::<String>()
+        );
         out.push(parse_finding(&f, t.line, t.col, excerpt, msg));
     }
     sort_findings(&mut out);
@@ -588,7 +597,7 @@ fn concat_text(t: &Token) -> Option<String> {
         return Some(u);
     }
     match &t.kind {
-        Kind::Lit { kind: LitKind::Char | LitKind::Byte, .. } => Some(unescape(&t.text)),
+        Kind::Lit { kind: LitKind::Char | LitKind::Byte, .. } => Some(unescape(&t.text).unwrap_or_default()),
         Kind::Lit { kind: LitKind::Int, .. } => {
             let (v, dec) = int_value(&t.text);
             Some(v.map_or(dec, |v| v.to_string()))
