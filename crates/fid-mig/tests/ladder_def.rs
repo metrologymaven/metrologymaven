@@ -10,6 +10,9 @@ use fid_mig::ladder::def::{
 };
 use std::path::{Path, PathBuf};
 
+/// One edit of the base ladder.
+type Edit = Box<dyn FnOnce(&mut CValue)>;
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -144,7 +147,10 @@ fn req2_forward_command_and_allowed_cases() {
 #[test]
 fn ac3_missing_built_command() {
     let r = check(&fixture("ladder-ok.json"), &fixture("manifest-missing.json"));
-    assert_eq!(r.findings, vec![Finding::MissingCmd { command_id: "migrate.import_form@1".into(), stage: "templates".into() }]);
+    assert_eq!(
+        r.findings,
+        vec![Finding::MissingCmd { command_id: "migrate.import_form@1".into(), stage: "templates".into() }]
+    );
     assert!(r.findings[0].to_string().starts_with("LADDER-MISSING-CMD migrate.import_form@1"));
 }
 
@@ -184,9 +190,18 @@ fn req4_basis_rules_for_stages_1_and_3() {
         })
     };
     let m = fixture("manifest-ok.json");
-    assert_eq!(codes(&check(&set_basis(0, &["RESULTS_ONLY", "FEATURES"]), &m).findings), vec!["LADDER-BASIS coexist FEATURES"]);
-    assert_eq!(codes(&check(&set_basis(2, &["DIRECT_READING"]), &m).findings), vec!["LADDER-BASIS re_evaluate DIRECT_READING"]);
-    assert_eq!(codes(&check(&set_basis(2, &["RESULTS_ONLY"]), &m).findings), vec!["LADDER-BASIS re_evaluate RESULTS_ONLY"]);
+    assert_eq!(
+        codes(&check(&set_basis(0, &["RESULTS_ONLY", "FEATURES"]), &m).findings),
+        vec!["LADDER-BASIS coexist FEATURES"]
+    );
+    assert_eq!(
+        codes(&check(&set_basis(2, &["DIRECT_READING"]), &m).findings),
+        vec!["LADDER-BASIS re_evaluate DIRECT_READING"]
+    );
+    assert_eq!(
+        codes(&check(&set_basis(2, &["RESULTS_ONLY"]), &m).findings),
+        vec!["LADDER-BASIS re_evaluate RESULTS_ONLY"]
+    );
     assert!(check(&set_basis(2, &["FEATURES"]), &m).is_ok());
     assert!(check(&set_basis(1, &["POINTS", "DIRECT_READING"]), &m).is_ok());
     assert!(check(&set_basis(4, &["FEATURES"]), &m).is_ok());
@@ -223,43 +238,77 @@ fn schema_wrong_stage_count_and_order() {
         }
     });
     let f = schema_findings(&swapped);
-    assert!(f.contains(&"LADDER-SCHEMA stages[0].order: must be 1 (stages are listed in order 1 to 5)".to_string()), "{f:?}");
+    assert!(
+        f.contains(&"LADDER-SCHEMA stages[0].order: must be 1 (stages are listed in order 1 to 5)".to_string()),
+        "{f:?}"
+    );
     assert!(f.contains(&"LADDER-SCHEMA stages[0].id: must be coexist".to_string()), "{f:?}");
 }
 
 #[test]
 fn schema_field_rules() {
-    let cases: Vec<(Box<dyn FnOnce(&mut CValue)>, &str)> = vec![
-        (Box::new(|v: &mut CValue| {
-            obj(v).insert("schema".into(), CValue::Str("mig-ladder@2".into()));
-        }), "LADDER-SCHEMA schema: must be mig-ladder@1"),
-        (Box::new(|v: &mut CValue| {
-            obj(v).insert("version".into(), CValue::Str("1.0".into()));
-        }), "LADDER-SCHEMA version: must be MAJOR.MINOR.PATCH"),
-        (Box::new(|v: &mut CValue| {
-            obj(v).insert("extra".into(), CValue::Null);
-        }), "LADDER-SCHEMA ladder: unknown field extra"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 0).remove("phase");
-        }), "LADDER-SCHEMA stages[0]: missing field phase"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 0).insert("phase".into(), CValue::Str("phase one".into()));
-        }), "LADDER-SCHEMA stages[0].phase: must be a phase tag such as P1a"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 1).insert("outputs".into(), CValue::Arr(vec![]));
-        }), "LADDER-SCHEMA stages[1].outputs: must not be empty"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 1).insert("inputs".into(), CValue::Arr(vec![CValue::Str("Form".into())]));
-        }), "LADDER-SCHEMA stages[1].inputs[0]: must be a lowercase snake_case identifier"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 3).insert("basis".into(), CValue::Arr(vec![CValue::Str("GUESS".into())]));
-        }), "LADDER-SCHEMA stages[3].basis[0]: must be one of POINTS, FEATURES, RESULTS_ONLY, DIRECT_READING"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 4).insert("completion_evidence".into(), CValue::Arr(vec![CValue::Str("migrate.fill_form@1".into())]));
-        }), "LADDER-SCHEMA stages[4].completion_evidence[0]: migrate.fill_form@1 is not one of this stage's commands"),
-        (Box::new(|v: &mut CValue| {
-            stage_mut(v, 4).insert("prerequisites".into(), CValue::Arr(vec![CValue::Str("x".into())]));
-        }), "LADDER-SCHEMA stages[4].prerequisites[0]: must be {\"input\": <kind>} or {\"command\": <id>}"),
+    let cases: Vec<(Edit, &str)> = vec![
+        (
+            Box::new(|v: &mut CValue| {
+                obj(v).insert("schema".into(), CValue::Str("mig-ladder@2".into()));
+            }),
+            "LADDER-SCHEMA schema: must be mig-ladder@1",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                obj(v).insert("version".into(), CValue::Str("1.0".into()));
+            }),
+            "LADDER-SCHEMA version: must be MAJOR.MINOR.PATCH",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                obj(v).insert("extra".into(), CValue::Null);
+            }),
+            "LADDER-SCHEMA ladder: unknown field extra",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 0).remove("phase");
+            }),
+            "LADDER-SCHEMA stages[0]: missing field phase",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 0).insert("phase".into(), CValue::Str("phase one".into()));
+            }),
+            "LADDER-SCHEMA stages[0].phase: must be a phase tag such as P1a",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 1).insert("outputs".into(), CValue::Arr(vec![]));
+            }),
+            "LADDER-SCHEMA stages[1].outputs: must not be empty",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 1).insert("inputs".into(), CValue::Arr(vec![CValue::Str("Form".into())]));
+            }),
+            "LADDER-SCHEMA stages[1].inputs[0]: must be a lowercase snake_case identifier",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 3).insert("basis".into(), CValue::Arr(vec![CValue::Str("GUESS".into())]));
+            }),
+            "LADDER-SCHEMA stages[3].basis[0]: must be one of POINTS, FEATURES, RESULTS_ONLY, DIRECT_READING",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 4)
+                    .insert("completion_evidence".into(), CValue::Arr(vec![CValue::Str("migrate.fill_form@1".into())]));
+            }),
+            "LADDER-SCHEMA stages[4].completion_evidence[0]: migrate.fill_form@1 is not one of this stage's commands",
+        ),
+        (
+            Box::new(|v: &mut CValue| {
+                stage_mut(v, 4).insert("prerequisites".into(), CValue::Arr(vec![CValue::Str("x".into())]));
+            }),
+            "LADDER-SCHEMA stages[4].prerequisites[0]: must be {\"input\": <kind>} or {\"command\": <id>}",
+        ),
     ];
     for (edit, want) in cases {
         let f = schema_findings(&mutated(edit));
@@ -286,11 +335,17 @@ fn schema_command_entries() {
         )
     };
     let f = schema_findings(&bad(entry("stats.import_history", "RPT.CATALOG.IMPORT.BATCH", "planned")));
-    assert!(f.contains(&"LADDER-SCHEMA stages[3].commands[0].command_id: not a command ID (name@major)".to_string()), "{f:?}");
+    assert!(
+        f.contains(&"LADDER-SCHEMA stages[3].commands[0].command_id: not a command ID (name@major)".to_string()),
+        "{f:?}"
+    );
     let f = schema_findings(&bad(entry("stats.import_history@1", "rpt.catalog", "planned")));
     assert!(f.iter().any(|l| l.starts_with("LADDER-SCHEMA stages[3].commands[0].spec_node")), "{f:?}");
     let f = schema_findings(&bad(entry("stats.import_history@1", "RPT.CATALOG.IMPORT.BATCH", "soon")));
-    assert!(f.contains(&"LADDER-SCHEMA stages[3].commands[0].availability: must be built or planned".to_string()), "{f:?}");
+    assert!(
+        f.contains(&"LADDER-SCHEMA stages[3].commands[0].availability: must be built or planned".to_string()),
+        "{f:?}"
+    );
 }
 
 /// Bounded parsing: invalid JSON, duplicate keys, oversize and over-deep input are schema

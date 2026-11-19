@@ -52,7 +52,10 @@ impl SemVer {
         let mut parts = s.split('.');
         let mut next = || -> Option<u64> {
             let p = parts.next()?;
-            if p.is_empty() || p.len() > 19 || !p.bytes().all(|b| b.is_ascii_digit()) || (p.len() > 1 && p.starts_with('0'))
+            if p.is_empty()
+                || p.len() > 19
+                || !p.bytes().all(|b| b.is_ascii_digit())
+                || (p.len() > 1 && p.starts_with('0'))
             {
                 return None;
             }
@@ -83,8 +86,12 @@ pub enum EvaluationBasis {
 
 impl EvaluationBasis {
     /// Every basis, in declaration order.
-    pub const ALL: [EvaluationBasis; 4] =
-        [EvaluationBasis::Points, EvaluationBasis::Features, EvaluationBasis::ResultsOnly, EvaluationBasis::DirectReading];
+    pub const ALL: [EvaluationBasis; 4] = [
+        EvaluationBasis::Points,
+        EvaluationBasis::Features,
+        EvaluationBasis::ResultsOnly,
+        EvaluationBasis::DirectReading,
+    ];
 
     /// The wire form, e.g. `RESULTS_ONLY`.
     pub fn as_str(self) -> &'static str {
@@ -297,7 +304,10 @@ fn is_phase(s: &str) -> bool {
     let b = s.as_bytes();
     let digits = b.iter().skip(1).take_while(|c| c.is_ascii_digit()).count();
     let rest = b.len().saturating_sub(1 + digits);
-    b.first() == Some(&b'P') && (1..=2).contains(&digits) && rest <= 1 && b[1 + digits..].iter().all(u8::is_ascii_lowercase)
+    b.first() == Some(&b'P')
+        && (1..=2).contains(&digits)
+        && rest <= 1
+        && b[1 + digits..].iter().all(u8::is_ascii_lowercase)
 }
 
 fn exact_keys(obj: &BTreeMap<String, CValue>, keys: &[&str], at: &str, out: &mut Vec<Finding>) -> bool {
@@ -414,9 +424,8 @@ fn bases(v: Option<&CValue>, at: &str, out: &mut Vec<Finding>) -> Vec<Evaluation
             CValue::Str(s) => match EvaluationBasis::parse(s) {
                 Some(b) if got.contains(&b) => out.push(schema(format!("{at}[{i}]: duplicate {s}"))),
                 Some(b) => got.push(b),
-                None => out.push(schema(format!(
-                    "{at}[{i}]: must be one of POINTS, FEATURES, RESULTS_ONLY, DIRECT_READING"
-                ))),
+                None => out
+                    .push(schema(format!("{at}[{i}]: must be one of POINTS, FEATURES, RESULTS_ONLY, DIRECT_READING"))),
             },
             _ => out.push(schema(format!("{at}[{i}]: must be a string"))),
         }
@@ -431,7 +440,9 @@ fn prerequisites(v: Option<&CValue>, at: &str, out: &mut Vec<Finding>) -> Vec<Pr
         let p = match item {
             CValue::Obj(o) if o.len() == 1 => match o.iter().next() {
                 Some((k, CValue::Str(s))) if k == "input" && is_ident(s) => Some(Prereq::Input(s.clone())),
-                Some((k, v)) if k == "command" => command_id(Some(v), &format!("{here}.command"), out).map(Prereq::Command),
+                Some((k, v)) if k == "command" => {
+                    command_id(Some(v), &format!("{here}.command"), out).map(Prereq::Command)
+                }
                 _ => {
                     out.push(schema(format!("{here}: must be {{\"input\": <kind>}} or {{\"command\": <id>}}")));
                     None

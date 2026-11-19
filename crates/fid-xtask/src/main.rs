@@ -52,7 +52,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
-const MIG_LADDER_USAGE: &str = "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
+const MIG_LADDER_USAGE: &str =
+    "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 

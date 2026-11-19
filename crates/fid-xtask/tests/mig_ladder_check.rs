@@ -43,10 +43,7 @@ fn ac1_ok() {
 fn ac2_forward() {
     let (code, out) = run("forward.json", "manifest-ok.json");
     assert_eq!(code, 1, "{out}");
-    assert_eq!(
-        out,
-        "LADDER-FORWARD templates re_evaluate input:incumbent_point_export\nladder-check: 1 findings\n"
-    );
+    assert_eq!(out, "LADDER-FORWARD templates re_evaluate input:incumbent_point_export\nladder-check: 1 findings\n");
 }
 
 /// AC-3: exits 1 with `LADDER-MISSING-CMD migrate.import_form@1`.
