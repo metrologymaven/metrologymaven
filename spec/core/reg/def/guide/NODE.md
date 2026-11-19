@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-registry]
+built_pr: 157
 satisfies: [REQ-CORE.REG.DEF-010]
 covers: []
 depends_on: [CORE.REG.DEF.FIELD]
@@ -66,6 +68,7 @@ Lets a domain declare, next to its commands, a **task guide**: a named, ordered 
 
 ## Open questions
 
+- Stopgap (PR #157): `fid-registry-macros` and `fid_commands!` do not exist yet, so the build ships a declarative `fid_guides!` in `fid-registry`. When `CORE.REG.DEF.MACRO` lands, its `guides` arm should expand to `TaskGuide::new` and `fid_guides!` should be retired. Likewise `check_guides` takes `&[CommandDef]` until `CommandDecl` exists.
 - `CORE.REG.MAN` must add a `task_guides` array (sorted by ID) to the manifest so `AUTO.MCP.SKILLS` can read it; until then the guides exist only in the build.
 
 ## Children

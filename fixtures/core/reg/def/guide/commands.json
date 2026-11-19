@@ -1,0 +1,362 @@
+[
+ {
+  "id": "demo.load_scan",
+  "major": 1,
+  "title": "Fixture command demo.load_scan",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.fit_alignment",
+  "major": 1,
+  "title": "Fixture command demo.fit_alignment",
+  "description": "Fixture definition of class R1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R1",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.apply_alignment",
+  "major": 1,
+  "title": "Fixture command demo.apply_alignment",
+  "description": "Fixture definition of class W2 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "W2",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "head_move",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.export_report",
+  "major": 1,
+  "title": "Fixture command demo.export_report",
+  "description": "Fixture definition of class X1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "X1",
+  "mcp_projection": "request_only",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.move_axis",
+  "major": 1,
+  "title": "Fixture command demo.move_axis",
+  "description": "Fixture definition of class M1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "M1",
+  "mcp_projection": "request_only",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.sign_report",
+  "major": 1,
+  "title": "Fixture command demo.sign_report",
+  "description": "Fixture definition of class S1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "S1",
+  "mcp_projection": "request_only",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.set_safety_limits",
+  "major": 1,
+  "title": "Fixture command demo.set_safety_limits",
+  "description": "Fixture definition of class A0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "A0",
+  "mcp_projection": "request_only",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.old_import",
+  "major": 1,
+  "title": "Fixture command demo.old_import",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "removed",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.legacy_fit",
+  "major": 1,
+  "title": "Fixture command demo.legacy_fit",
+  "description": "Fixture definition of class R1 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R1",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "deprecated",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.retired_export",
+  "major": 1,
+  "title": "Fixture command demo.retired_export",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "hidden",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.broken_life",
+  "major": 1,
+  "title": "Fixture command demo.broken_life",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "active",
+   "since": "2026-02-30"
+  },
+  "web": "available"
+ },
+ {
+  "id": "demo.odd_state",
+  "major": 1,
+  "title": "Fixture command demo.odd_state",
+  "description": "Fixture definition of class R0 for the task-guide tests.",
+  "params_schema": {
+   "type": "object"
+  },
+  "result_schema": {
+   "type": "object"
+  },
+  "side_effect": "R0",
+  "mcp_projection": "exposed",
+  "determinism": "D0",
+  "idempotency": "natural",
+  "fs_effect": "none",
+  "undo": "not_undoable",
+  "preconditions": [],
+  "effects": [],
+  "algorithms": [],
+  "exposure": [
+   "cli",
+   "mcp"
+  ],
+  "lifecycle": {
+   "state": "paused",
+   "since": "2026-01-01"
+  },
+  "web": "available"
+ }
+]
