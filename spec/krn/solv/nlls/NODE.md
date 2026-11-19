@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
+built_pr: 218
 satisfies: [REQ-KRN.SOLV-001, REQ-KRN.SOLV-002, REQ-KRN.SOLV-009]
 covers: []
 depends_on: [KRN.NUM.LA, KRN.NUM.RED, KRN.NUM.ERR]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # KRN.SOLV.NLLS: Nonlinear least-squares driver
@@ -50,17 +52,19 @@ The deterministic nonlinear least-squares engine that every orthogonal-distance 
 
 ## Design
 
-- **Registry command(s):** none; library API `fid_solv::nlls::{solve, NllsProblem, NllsConfig, NllsResult, SolverError}`.
-- **Data structures:** `trait NllsProblem { fn n_params(&self) -> usize; fn n_resid(&self) -> usize; fn eval(&self, p: &[f64], r: &mut [f64], j: &mut Mat) -> Result<(), NumError>; }`; `NllsConfig { method, max_iter, tol_grad, tol_step, tol_cost, cond_limit, lm_tau }` with explicit `Default` values recorded in the result.
+- **Registry command(s):** none; library API `fid_solv::nlls::{solve, NllsProblem, NllsConfig, NllsResult, SolverError, Diagnostics, Method, StopReason, Stage}`.
+- **Data structures:** `trait NllsProblem { fn n_params(&self) -> usize; fn n_resid(&self) -> usize; fn eval(&self, p: &[f64], r: &mut [f64], j: &mut [f64]) -> Result<(), NumError>; }` with `j` row-major m x n (a caller buffer, so the callback fills it in place; `fid_num::la::Mat` has no mutable access and caps rows at 4096); `NllsConfig { method, max_iter, tol_grad, tol_step, tol_cost, cond_limit, rank_tol, lm_tau }` with explicit `Default` values echoed in the result.
+- **Defaults (pinned):** method LM, max_iter 200, tol_grad 1e-10, tol_step 1e-12, tol_cost 1e-14, cond_limit 1e12, rank_tol 1e-12, lm_tau 1e-3. Bounds: max_iter <= 1 000 000; tolerances finite and >= 0; cond_limit finite and >= 1; rank_tol in [0, 1); lm_tau finite and > 0; 1 <= n <= 4096; m >= n; (m + n) n <= 2^24. Out of range is `InvalidConfig { field }`; a non-finite p0 is `NonFinite { stage: Start }`.
 - **Algorithm:** Gauss-Newton step from QR least-squares solve of J dp = -r. LM: solve the augmented system [J; sqrt(lambda) D] dp = [-r; 0] by QR, with D the column norms of J (Moré 1978, "The Levenberg-Marquardt algorithm: implementation and theory"); gain ratio rho decides acceptance; lambda update by the fixed factors (x1/3 on rho > 0.75, x2 on rho < 0.25, documented).
-- **Errors:** `SolverError::{IterationLimit, RankDeficient, IllConditioned, NonFinite, InvalidConfig}`, each with last diagnostics.
+- **Pinned rules (normative; `fixtures/solv/make_nlls_fixtures.py` models them bit for bit).** cost = `red::sum_sq(r)` (no factor 1/2). Each iterate is assessed: (1) d_j = `red::norm2` of Jacobian column j (1.0 if zero), Js = J / d column by column; (2) column-pivoted Householder QR of Js with right-hand side -r, following the KRN.NUM.LA.QR rules (norms of the trailing columns recomputed with `red::norm2` at every step, strict total-order maximum so ties go to the lowest index, whole-column swaps, beta = -xnorm if a_kk > 0 else +xnorm, v = [1, x[1..] / (alpha - beta)], tau = (beta - alpha) / beta, reflection c -= (tau * `red::dot`(v, c)) * v applied to later columns in ascending order and then to the right-hand side); rank = first k with |r_kk| <= rank_tol * max |r_jj| (else n); cond = `la::cond_triangular(R, 0)`, absent if not estimable; rank < n is `RankDeficient`, cond absent or > cond_limit is `IllConditioned`, checked at every iterate including the returned one; (3) stop tests in order: a pending stop returns; cost == 0 is `ZeroResidual`; max_j |`red::dot`(Js col j, r)| <= tol_grad * `red::norm2`(r) is `Gradient`; max_iter accepted steps is `IterationLimit`. Step: GN solves Js z = -r from the same factor by `la::solve_upper` (rel_tol 0) and un-permutes; LM starts at lambda = lm_tau (the scaled cross-product has unit diagonal) and each trial factors [Js; `f::sqrt`(lambda) I] with right-hand side [-r; 0] afresh, at most 64 trials per accepted step. Trial: p_t = p + z / d; pred = `red::sum_sq`(Js z) + (2 lambda) `red::sum_sq`(z) (lambda = 0 for GN); act = cost - cost_t. GN accepts every trial; LM, if pred > 0, sets rho = act / pred, accepts iff rho > 1e-4, divides lambda by 3 if rho > 0.75, multiplies it by 2 if rho < 0.25, clamped to [1e-200, 1e200]; pred == 0 rejects and keeps lambda. After an accepted trial, `red::norm2`(z) <= tol_step (`red::norm2`(d * p_new) + tol_step) sets pending `Step`; then, after any trial with no pending stop, pred <= tol_cost cost and |act| <= tol_cost cost (pre-trial cost) sets pending `Cost`. 64 rejected trials without a stop is `IterationLimit`. `iterations` counts accepted steps, `evaluations` callback calls.
+- **Errors:** `SolverError::{IterationLimit, RankDeficient { rank, cond }, IllConditioned { cond }, NonFinite { stage, index }, InvalidConfig { field }, Numeric { error }}`, each with last `Diagnostics` (iterations, evaluations, cost, grad_norm, rank, cond, lambda; unreached fields absent) and no p. `Numeric` covers a callback `Err`, an allocation failure (all buffers reserved with `try_reserve_exact`) and an internal overflow.
 - **Determinism:** D0; fixed-path QR, fixed-order reductions, no threads.
 - **Performance budget:** 10 000-point cylinder-sized problem (5 parameters) converging in 10 iterations < 20 ms on reference hardware [unverified until measured].
-- **Crate:** `fid-solv` (module `nlls`).
+- **Crate:** `fid-solv` (module `nlls`). The QR step is private to the module (`nlls::qr`) until `KRN.NUM.LA.QR` is built in `fid-num`; it already follows that leaf's pinned rules so the move should not change values, but any change is re-checked against the fixtures.
 
 ## Test fixtures
 
-`fixtures/solv/nist-strd-nls-v1`: NIST Statistical Reference Datasets, nonlinear regression (US government work, public domain [unverified]); converted to JSON by a committed script. `fixtures/solv/circle-synth-v1`: seeded synthetic generator, CC-BY-4.0.
+`fixtures/solv/nist-strd-nls-v1`: NIST Statistical Reference Datasets, nonlinear regression (US government work, public domain [unverified]); converted by the committed `convert.py` for local runs only, because D-038 keeps third-party reference data out of the repository until its terms are settled. CI uses `fixtures/solv/strd-models-synth-v1.txt` instead: seeded data on eight StRD model forms (Misra1a, Chwirut, DanWood, Lanczos3 of lower difficulty; Kirby2, Misra1d, Roszman1, MGH17 of average difficulty) with two starts each and 50-digit reference solutions, CC-BY-4.0. `fixtures/solv/circle-synth-v1`: seeded synthetic generator, CC-BY-4.0.
 
 ## Build prompt
 
