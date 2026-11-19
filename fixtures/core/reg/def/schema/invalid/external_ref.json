@@ -1,0 +1,14 @@
+{
+  "expect": {
+    "code": "external_ref",
+    "pointer": "/properties/a/$ref"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "$ref": "https://example.com/other.schema.json"
+      }
+    }
+  }
+}
