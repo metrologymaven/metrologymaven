@@ -1,0 +1,13 @@
+{
+  "note": "Synthetic placeholder key vocabulary standing in for the DMT schema's defaults-profile key set (GDT.RES.SCHEMA, not yet built). No standards content. CC0.",
+  "keys": [
+    "dmt:asme/position/none@1",
+    "dmt:iso/flatness/none@1",
+    "placeholder.assoc.default",
+    "placeholder.count",
+    "placeholder.list",
+    "placeholder.note",
+    "placeholder.synthetic",
+    "placeholder.variant.flatness"
+  ]
+}

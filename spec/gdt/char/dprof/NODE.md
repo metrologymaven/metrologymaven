@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gdt]
 satisfies: [REQ-GDT.CHAR-004]
 covers: []
 depends_on: [CORE.JRN, CORE.STO]
@@ -17,7 +18,7 @@ determinism: D0
 cli: [fid gdt publish-defaults-profile, fid gdt repoint-defaults-profile]
 mcp: [gdt_publish_defaults_profile, gdt_repoint_defaults_profile]
 journal: [gdt.publish_defaults_profile@1, gdt.repoint_defaults_profile@1]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.CHAR.DPROF: Defaults profiles: immutable versioned objects
@@ -59,6 +60,16 @@ A defaults profile names the default choices that apply under one dialect and ed
 - **Determinism:** D0.
 - **Performance budget:** publish < 50 ms for a 1 MB profile [unverified].
 - **Crate:** `fid-gdt`.
+- **Pinned choices (as built in `fid-gdt`, module `chars::dprof`):**
+  - *Document:* `{schema: "fid.defaults-profile/1", dialect, edition, version, keys}`, every field required and no other; JSON with no duplicate key, at most 2 MiB and nesting depth 3. The digest is SHA-256 over the RFC 8785 form of the whole document.
+  - *Values:* string (at most 280 characters), boolean, integer with magnitude at most 2^53 - 1 (tested on the RFC 8785 text of the number, no float arithmetic), or a flat list of at most 256 of these. Null, objects, nested lists and non-integer numbers are `malformed_profile`. At most 4096 keys.
+  - *Keys:* grammar `[a-z0-9][a-z0-9_.:/+@-]{0,127}`; the allowed set is passed in by the caller (`KeyVocabulary`) until `GDT.RES.SCHEMA` publishes it. All structure is checked before the vocabulary; the first unknown key in byte order is named in `unknown_key`.
+  - *Grammars:* dialect `asme` or `iso`; edition 1 to 32 bytes of `[a-z0-9.-]`, alphanumeric at both ends, no two separators in a row; version `x.y.z`, each part `0` or up to nine digits without a leading zero, no pre-release or build suffix; the dialect ends at the first `-` of the reference.
+  - *Uniqueness:* one digest per (dialect, edition, version) across both branches.
+  - *Branches:* a human writes the working branch; agents and scripts write the agent branch (profiles with the author as provenance, and an overlay of characteristic bindings). An agent-branch profile becomes selectable on the working branch only through `adopt` by a human (`human_only` otherwise). An identical re-publish never moves a profile between branches.
+  - *Re-point:* checks run in this order and all run before any change: list (`bad_request`: empty, more than 10 000, bad ID, duplicate), reference (`bad_profile_ref`, then `defaults_profile_unknown` on the principal's branch, digest included), then each characteristic in ID order (`char_unknown`, `dialect_mismatch`). The event lists every named characteristic sorted by ID, including any already on the target.
+  - *Events:* canonical JSON without the profile content; replay fetches content by digest and compares re-derived event bytes (`IDENTICAL` / `DIVERGENT` / `NOT_REPLAYABLE`), stopping at the first step that is not identical.
+  - *Added error codes:* `bad_profile_ref`, `bad_request`, `char_unknown`, `char_exists`, `human_only`, `bad_vocabulary`, `store_invalid`, `event_invalid`, plus the import-handle codes of `fid-io-reg`.
 
 ## Test fixtures
 
