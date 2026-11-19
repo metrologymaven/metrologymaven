@@ -31,6 +31,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-bus" = "engine"
 "fid-jobs" = "engine"
 "fid-dep" = "engine"
+# Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
+"fid-align" = "engine"
 "fid-hal-runtime" = "engine"
 "fid-surface" = "services"
 "fid-report-pdf" = "services"
