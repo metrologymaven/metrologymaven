@@ -1,0 +1,1 @@
+[{"admin":true,"allowed_scopes":["machine"],"default":[],"key":"net.allowed_roots","source_scope":"default","value":[]},{"admin":false,"allowed_scopes":["project","user"],"default":2,"key":"probe.approach_distance","source_scope":"default","value":2},{"admin":false,"allowed_scopes":["user"],"default":true,"key":"ui.show_tips","source_scope":"default","value":true}]

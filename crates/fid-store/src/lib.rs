@@ -4,6 +4,7 @@ pub mod cache;
 pub mod cas;
 pub mod layout;
 pub mod schema;
+pub mod settings;
 pub mod txn;
 
 pub use cache::{Cache, CacheConfig, CacheKey, CacheMode, CacheWarning};

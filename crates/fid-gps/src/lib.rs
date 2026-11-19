@@ -8,9 +8,15 @@
 //! - [`resolve`] (`GDT.RES.RESOLVE`): the pure interpretation resolver from a characteristic
 //!   and its context to a DMT row, operator chain and digests, or `UNRESOLVED` /
 //!   `UNSUPPORTED`, and the exact row lookup of `gdt.get_dmt_row@1`.
+//! - [`zone`] (`GDT.ZONE.ZTYPE`): the tolerance-zone shapes and their fixed-pose usage and
+//!   driving point, in closed form.
 //!
-//! Pure: no I/O (callers pass bytes), no floating-point arithmetic, no `HashMap`/`HashSet`,
-//! and nothing here panics on any input: every outcome is a returned `Result`.
+//! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
+//! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
+//! [`zone`], written in KNP-1 style (pinned evaluation order, no fused multiply-add, no
+//! `f64::min`/`f64::max`, square root through `fid-num`, NaN rejected), so its results are
+//! bit-identical on every platform including wasm32.
 
 pub mod dmt;
 pub mod resolve;
+pub mod zone;

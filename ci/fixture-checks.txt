@@ -15,6 +15,7 @@ python fixtures/core/reg/def/schema/make_fixtures.py --check
 python fixtures/core/reg/manifest/make_fixtures.py --check
 python fixtures/core/reg/ver/compat/make_fixtures.py --check
 python fixtures/core/reg/ver/gate/make_fixtures.py --check
+python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
@@ -28,6 +29,7 @@ python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
+python fixtures/gdt/zone/make_shapes_fixtures.py --check
 python fixtures/geo/cad/topo/make_topo_fixtures.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
 python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check

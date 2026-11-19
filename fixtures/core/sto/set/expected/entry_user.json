@@ -1,0 +1,1 @@
+{"command":"settings.set_value@1","key":"probe.approach_distance","principal":"script","scope":"user","value":0.5}
