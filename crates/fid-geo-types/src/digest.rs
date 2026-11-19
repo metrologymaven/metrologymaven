@@ -146,10 +146,9 @@ pub const fn canonical_f64_bits(v: f64) -> u64 {
     let b = v.to_bits();
     if b == 1 << 63 {
         0
-    } else if
-    // Only for totality: element constructors reject non-finite f64 values, so a valid
-    // element never reaches this branch.
-    b & 0x7ff0_0000_0000_0000 == 0x7ff0_0000_0000_0000 && b & 0x000f_ffff_ffff_ffff != 0 {
+    } else if b & 0x7ff0_0000_0000_0000 == 0x7ff0_0000_0000_0000 && b & 0x000f_ffff_ffff_ffff != 0 {
+        // Only for totality: element constructors reject non-finite f64 values, so a
+        // valid element never reaches this branch.
         NAN64
     } else {
         b
