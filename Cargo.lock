@@ -550,6 +550,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-fit"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-solv",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-fixes"
 version = "0.0.1"
 dependencies = [
@@ -689,7 +699,9 @@ version = "0.0.1"
 dependencies = [
  "cap-std",
  "fid-canon",
+ "fid-geo-frame",
  "fid-io-reg",
+ "fid-journal",
  "fid-replay",
  "fid-surface",
  "fid-types",
@@ -884,9 +896,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-registry-build"
+version = "0.0.1"
+dependencies = [
+ "fid-align",
+ "fid-canon",
+ "fid-dep",
+ "fid-jobs",
+ "fid-registry",
+ "fid-report",
+]
+
+[[package]]
 name = "fid-render"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-kdec",
+ "fid-types",
  "fid-uuid",
 ]
 

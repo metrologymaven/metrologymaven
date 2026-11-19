@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF) and governing specs (GDT.CHAR.SPEC)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC) and the resolver commands (GDT.RES.RESOLVE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,8 +18,8 @@ fid-types = { path = "../fid-types" }
 # paths, CONSTITUTION §3); the principal type comes from here too. Same layer (services).
 fid-io-reg = { path = "../fid-io-reg" }
 # GDT.RES.SCHEMA: the DMT schema owns the defaults-profile key vocabulary that DPROF checks
-# profiles against, and the label grammar SPEC uses for standard designators and editions
-# (model layer, below services).
+# profiles against, and the label grammar SPEC uses for standard designators and editions;
+# GDT.RES.RESOLVE: the pure resolver its commands wrap (model layer, below services).
 fid-gps = { path = "../fid-gps" }
 # GDT.CHAR.DPROF AC-7: replay outcomes and their aggregation (engine layer, below services).
 fid-replay = { path = "../fid-replay" }

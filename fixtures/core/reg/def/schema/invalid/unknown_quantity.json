@@ -1,0 +1,15 @@
+{
+  "expect": {
+    "code": "unknown_quantity",
+    "pointer": "/properties/a/x-quantity"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "x-quantity": "lenght"
+      }
+    }
+  }
+}

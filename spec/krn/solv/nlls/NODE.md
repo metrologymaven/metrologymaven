@@ -60,7 +60,7 @@ The deterministic nonlinear least-squares engine that every orthogonal-distance 
 - **Errors:** `SolverError::{IterationLimit, RankDeficient { rank, cond }, IllConditioned { cond }, NonFinite { stage, index }, InvalidConfig { field }, Numeric { error }}`, each with last `Diagnostics` (iterations, evaluations, cost, grad_norm, rank, cond, lambda; unreached fields absent) and no p. `Numeric` covers a callback `Err`, an allocation failure (all buffers reserved with `try_reserve_exact`) and an internal overflow.
 - **Determinism:** D0; fixed-path QR, fixed-order reductions, no threads.
 - **Performance budget:** 10 000-point cylinder-sized problem (5 parameters) converging in 10 iterations < 20 ms on reference hardware [unverified until measured].
-- **Crate:** `fid-solv` (module `nlls`). The QR step is private to the module (`nlls::qr`) until `KRN.NUM.LA.QR` is built in `fid-num`; it already follows that leaf's pinned rules so the move should not change values, but any change is re-checked against the fixtures.
+- **Crate:** `fid-solv` (module `nlls`). The QR step stays private to the module (`nlls::qr`). `KRN.NUM.LA.QR` is built in `fid-num`, and the unit test `nlls::qr::tests::matches_public_qr_pivoted` proves the private factor bit-identical to `fid_num::la::qr_pivoted` plus `Qr::apply_qt` (R, permutation and the first n entries of Q^T b). Follow-up: move the driver onto the public QR once `fid-num` offers a workspace-based entry point (caller-owned buffers reused across iterations, no per-call allocation) without the 4096-row `Mat` cap; until then the private step is kept, and any change to it is re-checked against that test and the fixtures.
 
 ## Test fixtures
 

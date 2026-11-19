@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 246
 satisfies: [REQ-KRN.NUM.FMT-001, REQ-KRN.NUM.FMT-006]
 covers: []
 depends_on: [KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.ERR]
@@ -42,7 +44,7 @@ The identity layer of the kernel formatters. It lists every `fmt.<kind>@<major>`
 
 ## Requirements
 
-- **REQ-KRN.NUM.FMT.REG-001** The registry shall list every formatter as `FormatterDescriptor { id, kind, major, units, precision_bounds, corpus_digest }`, sorted by id, with no two entries sharing an id.
+- **REQ-KRN.NUM.FMT.REG-001** The registry shall list every formatter as `FormatterDescriptor { id, kind, major, units, precision_bounds, corpus_digest }`, sorted by `(kind, numeric major)` (byte order of the kind, then the major as a number, so `@9` precedes `@10`), with no two entries sharing an id.
 - **REQ-KRN.NUM.FMT.REG-002** When `fmt::format` receives a `FormatterId` not in the registry, it shall return a typed `unknown_formatter` error naming the id.
 - **REQ-KRN.NUM.FMT.REG-003** When CI runs, the version guard shall recompute the SHA-256 of each formatter's outputs over its frozen golden corpus and shall fail if that digest differs from the registry's `corpus_digest` for an unchanged major.
 - **REQ-KRN.NUM.FMT.REG-004** `fmt.hexbits@1` shall render any f64, including -0.0 and subnormals, as `0x` followed by the 16 lowercase hex digits of its bits, and shall return a typed error for NaN and infinities.
@@ -51,7 +53,7 @@ The identity layer of the kernel formatters. It lists every `fmt.<kind>@<major>`
 
 ## Acceptance criteria
 
-- **AC-1** Given the built crate, when `fmt::registry()` is listed, then it contains `fmt.length@1`, `fmt.scalar@1`, `fmt.angle@1` and `fmt.hexbits@1`, sorted, with non-empty corpus digests.
+- **AC-1** Given the built crate, when `fmt::registry()` is listed, then it contains `fmt.length@1`, `fmt.scalar@1`, `fmt.angle@1` and `fmt.hexbits@1`, sorted by `(kind, numeric major)`, with non-empty corpus digests.
 - **AC-2** (version guard) Given a deliberately altered rounding in a test build of `fmt.length@1` with the major unchanged, when the guard runs over `fixtures/num/fmt/len-golden-v1`, then it fails naming `fmt.length@1`.
 - **AC-3** (error path) Given `FormatterId { kind: "length", major: 9 }`, when `fmt::format` runs, then it returns `unknown_formatter` naming `fmt.length@9`.
 - **AC-4** Given `fixtures/core/jrn/canon/vectors.json` (f64 entries), when `fmt.hexbits@1` renders each value, then every string equals the vector; 0.0 gives `0x0000000000000000` and -0.0 gives `0x8000000000000000`.
@@ -61,7 +63,7 @@ The identity layer of the kernel formatters. It lists every `fmt.<kind>@<major>`
 
 - **Registry command(s):** none; library API `fid_num::fmt::{registry, format, hexbits, FormatterDescriptor}`. `KRN.MAN.MANI` reads `registry()` at build time.
 - **Data structures:** `FormatterDescriptor { id: FormatterId, units: &'static [Unit], precision_bounds: (u8, u8, u8), corpus_digest: &'static str }`, a static sorted array.
-- **Algorithm:** dispatch by match on (kind, major). The guard is a test binary that streams each corpus through `format`, hashes outputs in corpus order with SHA-256 (test-only dependency), and compares with the descriptor. A changed digest requires a new major entry; the old major stays listed while any supported release uses it.
+- **Algorithm:** look up the registry descriptor of the id first (an id with no entry is `UnknownFormatter`), then dispatch by match on (kind, major). The guard is a test binary that streams each corpus through `format`, hashes outputs in corpus order with SHA-256 (test-only dependency), and compares with the descriptor. A changed digest requires a new major entry; the old major stays listed while any supported release uses it.
 - **Errors:** `FmtError::{UnknownFormatter, NonFinite}` in `NumError`.
 - **Determinism:** D0.
 - **Performance budget:** dispatch overhead < 50 ns [unverified until measured].
@@ -77,7 +79,7 @@ The golden corpora owned by LEN and ANG; the f64 vectors in `fixtures/core/jrn/c
 
 ## Open questions
 
-- `CORE.JRN.CANON` already encodes f64 bits as hex for hashing. This leaf keeps `fmt.hexbits@1` because FMT's scope lists hex rendering for hashed forms and reports may show it; if maintainers prefer, it can call the CANON encoding instead, but CANON is L0 too so either direction is layer-legal.
+- `CORE.JRN.CANON` already encodes f64 bits as hex for hashing. This leaf keeps `fmt.hexbits@1` because FMT's scope lists hex rendering for hashed forms and reports may show it; the encoding cannot call CANON instead, because in the crate layer model (`layers.toml`) `fid-canon` is layer `model` and `fid-num` is layer `num`, below it. The legal direction is the reverse: CANON may call `fmt::hexbits`, and the two encodings are pinned byte-identical by REQ-005 either way.
 
 ## Children
 

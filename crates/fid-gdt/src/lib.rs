@@ -8,9 +8,12 @@
 //!   exact replay;
 //! - [`chars::spec`] (`GDT.CHAR.SPEC`): the governing spec of a characteristic (dialect,
 //!   standard designators with editions, defaults profile), `gdt.set_governing_spec@1`,
-//!   creation-time inheritance from plan and tenant defaults, and the evaluation gate.
+//!   creation-time inheritance from plan and tenant defaults, and the evaluation gate;
+//! - [`resolve`] (`GDT.RES.RESOLVE`): the commands `gdt.resolve_chain@1` and
+//!   `gdt.get_dmt_row@1` over the pure resolver of `fid-gps`, behind the governing-spec gate.
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
 pub mod chars;
 pub mod dmt_flow;
+pub mod resolve;

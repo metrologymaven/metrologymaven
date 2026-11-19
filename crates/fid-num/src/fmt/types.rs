@@ -1,6 +1,7 @@
 //! Shared formatter types. Spec node `KRN.NUM.FMT.LEN` (reused by `KRN.NUM.FMT.ANG` and
 //! `KRN.NUM.FMT.REG`; `KRN.NUM.FMT.ANG` added [`SideOutcome`], [`Conversion::pi_enclosure`],
-//! [`FormatterId::ANGLE_V1`] and [`FmtError::UndecidableRounding`]).
+//! [`FormatterId::ANGLE_V1`] and [`FmtError::UndecidableRounding`]; `KRN.NUM.FMT.REG` added
+//! [`FormatterId::HEXBITS_V1`], [`FmtError::UnknownFormatter`] and [`FmtError::Alloc`]).
 
 use core::fmt;
 
@@ -30,6 +31,9 @@ impl FormatterId {
     pub const SCALAR_V1: FormatterId = FormatterId { kind: "scalar", major: 1 };
     /// `fmt.angle@1`: angles in radians shown in rad, deg or dms (`KRN.NUM.FMT.ANG`).
     pub const ANGLE_V1: FormatterId = FormatterId { kind: "angle", major: 1 };
+    /// `fmt.hexbits@1`: the IEEE-754 bits of an SI value as `0x` plus 16 lowercase hex digits
+    /// (`KRN.NUM.FMT.REG`).
+    pub const HEXBITS_V1: FormatterId = FormatterId { kind: "hexbits", major: 1 };
 }
 
 impl fmt::Display for FormatterId {
@@ -184,7 +188,9 @@ pub struct Reported {
 
 /// Why a format call failed. Carried in [`NumError::Domain`] as `detail` (see
 /// [`FmtError::detail`] and [`FmtError::of`]); the `op` is the formatter ID, for example
-/// `fmt.length@1`, or `fmt` for an unknown formatter.
+/// `fmt.length@1`, or `fmt` when `fmt::len` or `fmt::ang` is called directly with a formatter
+/// it does not implement. [`FmtError::UnknownFormatter`] alone is carried in
+/// [`NumError::UnknownFormatter`], which names the refused ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FmtError {
     /// The value is NaN or infinite.
@@ -201,6 +207,11 @@ pub enum FmtError {
     /// `fmt::ang` test hook only: a given ladder rung is malformed, does not enclose pi
     /// (it must contain the tightest built-in rung) or is not nested in the rung before it.
     InvalidLadder,
+    /// `fmt::format`: the formatter ID is not in the registry (`fmt::registry`). No other
+    /// version or kind is substituted (REQ-KRN.NUM.FMT.REG-002).
+    UnknownFormatter,
+    /// An output string could not be allocated.
+    Alloc,
     /// The internal big integer ran out of limbs. Unreachable for any finite `f64` within
     /// the precision bounds (see the module documentation of `fmt::len`); kept so that an
     /// impossible case is an error and never a wrong string.
@@ -217,14 +228,21 @@ impl FmtError {
             FmtError::UnitNotSupported => "unit_not_supported",
             FmtError::UndecidableRounding => "undecidable_rounding",
             FmtError::InvalidLadder => "invalid_ladder",
+            FmtError::UnknownFormatter => "unknown_formatter",
+            FmtError::Alloc => "allocation_failed",
             FmtError::Capacity => "big_integer_capacity",
         }
     }
 
     /// Recovers the kind from a [`NumError`] produced by a formatter (an `op` equal to
-    /// `fmt` or starting with `fmt.`); `None` for any other error.
+    /// `fmt` or starting with `fmt.`, or [`NumError::UnknownFormatter`]); `None` for any
+    /// other error.
     pub fn of(e: &NumError) -> Option<FmtError> {
-        let NumError::Domain { op, detail } = e else { return None };
+        let (op, detail) = match e {
+            NumError::Domain { op, detail } => (op, detail),
+            NumError::UnknownFormatter { .. } => return Some(FmtError::UnknownFormatter),
+            _ => return None,
+        };
         if *op != "fmt" && !op.starts_with("fmt.") {
             return None;
         }
@@ -235,6 +253,8 @@ impl FmtError {
             FmtError::UnitNotSupported,
             FmtError::UndecidableRounding,
             FmtError::InvalidLadder,
+            FmtError::UnknownFormatter,
+            FmtError::Alloc,
             FmtError::Capacity,
         ]
         .into_iter()

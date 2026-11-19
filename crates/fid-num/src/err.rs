@@ -3,6 +3,8 @@
 use core::fmt;
 use core::hint::black_box;
 
+use crate::fmt::FormatterId;
+
 /// The one error type of the numeric kernel (REQ-KRN.NUM.ERR-001).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumError {
@@ -20,6 +22,9 @@ pub enum NumError {
     LengthMismatch { op: &'static str, a: usize, b: usize },
     /// The floating-point environment is not IEEE 754 round-to-nearest-even with subnormals.
     FpEnvironment { probe: &'static str },
+    /// `fmt::format` was given a formatter ID that is not in the registry; `id` is the
+    /// refused ID, displayed `fmt.<kind>@<major>` (REQ-KRN.NUM.FMT.REG-002).
+    UnknownFormatter { id: FormatterId },
 }
 
 impl fmt::Display for NumError {
@@ -33,6 +38,7 @@ impl fmt::Display for NumError {
             NumError::EmptyInput { op } => write!(f, "{op}: empty input"),
             NumError::LengthMismatch { op, a, b } => write!(f, "{op}: length mismatch ({a} vs {b})"),
             NumError::FpEnvironment { probe } => write!(f, "floating-point environment check failed: {probe}"),
+            NumError::UnknownFormatter { id } => write!(f, "fmt: unknown_formatter: {id}"),
         }
     }
 }
