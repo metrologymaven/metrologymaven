@@ -574,6 +574,9 @@ dependencies = [
  "fid-canon",
  "fid-gps",
  "fid-io-reg",
+ "fid-kdec",
+ "fid-kunc",
+ "fid-registry",
  "fid-replay",
  "fid-types",
 ]
@@ -715,6 +718,8 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-io-reg",
+ "fid-kunc",
+ "fid-project",
  "fid-replay",
  "fid-types",
 ]
@@ -853,6 +858,8 @@ version = "0.0.1"
 dependencies = [
  "cap",
  "fid-canon",
+ "fid-geo-frame",
+ "fid-registry",
  "fid-types",
 ]
 
@@ -921,6 +928,11 @@ dependencies = [
 name = "fid-render"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-kdec",
+ "fid-types",
  "fid-uuid",
 ]
 

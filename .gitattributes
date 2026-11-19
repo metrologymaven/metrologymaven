@@ -24,6 +24,8 @@ fixtures/flow/pkg/** -text
 fixtures/io/res/csv/map/** -text
 # IO.RES.CSV.OUT golden tables are compared byte for byte (CRLF maps, quoted LF, tabs).
 fixtures/io/res/csv/out/** -text
+# IO.RES.TRANS.MODEL golden canonical JSON: compared byte for byte (no trailing newline).
+fixtures/io/res/trans/model/** -text
 # PLAT.GPU.POLICY fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
@@ -184,6 +186,8 @@ fixtures/core/dep/** -text
 fixtures/rpt/model/** -text
 # UNC.DEC.TYPE fixtures: the catalog is digested and every file is compared byte for byte.
 fixtures/unc/dec/type/** -text
+# UNC.UEC.CLASS decision table: written by make_table.py, which --check compares byte for byte.
+fixtures/unc/class/** -text
 # GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/gdt/spec/** -text

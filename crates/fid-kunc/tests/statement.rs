@@ -47,9 +47,14 @@ fn ac1_ac5_valid_fixtures_round_trip_byte_exact_with_reference_digests() {
         let stmt = UncertaintyStatement::parse_canonical(&bytes).unwrap_or_else(|e| panic!("{file}: {e}"));
         assert_eq!(stmt.canonical_json(), bytes.as_slice(), "{file}: re-serialized bytes differ");
         assert_eq!(stmt.digest().as_str(), digest, "{file}: digest");
-        // Rebuilding from the parts gives the same bytes again.
-        let again = UncertaintyStatement::new(stmt.to_parts()).unwrap();
-        assert_eq!(again, stmt);
+        // Rebuilding from the parts gives the same bytes again (UEC-0/1); UEC-2/3 are
+        // sealed to UNC.UEC.CLASS and refused by the public constructor.
+        if stmt.class() >= EvidenceClass::Uec2 {
+            assert_eq!(UncertaintyStatement::new(stmt.to_parts()), Err(StmtError::ClassRequiresAssignment), "{file}");
+        } else {
+            let again = UncertaintyStatement::new(stmt.to_parts()).unwrap();
+            assert_eq!(again, stmt);
+        }
         classes.push(stmt.class());
         methods.extend(stmt.method());
     }
@@ -121,7 +126,12 @@ fn complete(class: EvidenceClass, method: Method) -> StatementParts {
     p.expanded = Some(Expanded { value: 2e-6, k: 2.0 });
     p.model = Some(model());
     if method != Method::Declared {
-        p.sources.push(SourceRef { kind: SourceKind::Dcc, id: "dcc:1".into(), digest: digest_of("dcc:1") });
+        p.sources.push(SourceRef {
+            kind: SourceKind::Dcc,
+            id: "dcc:1".into(),
+            digest: digest_of("dcc:1"),
+            unverified: false,
+        });
     }
     if method == Method::Declared {
         p.provenance.principal = Some("person:qa".into());
@@ -177,8 +187,9 @@ fn req003_first_missing_field_in_declaration_order() {
     assert_eq!(err(q), StmtError::InvalidNumber { field: "u_std" });
     // UEC-2 also needs characterized sources.
     assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "sources" });
-    p.sources.push(SourceRef { kind: SourceKind::TypeA, id: "ta".into(), digest: digest_of("ta") });
-    UncertaintyStatement::new(p).unwrap();
+    p.sources.push(SourceRef { kind: SourceKind::TypeA, id: "ta".into(), digest: digest_of("ta"), unverified: false });
+    // Valid in every other respect, so only the assignment seal remains.
+    assert_eq!(err(p), StmtError::ClassRequiresAssignment);
 }
 
 /// A change applied to statement parts.
@@ -250,16 +261,17 @@ fn claimed_values_never_look_measured() {
         }
     }
     for m in [Method::Lpu, Method::Mcm] {
-        assert!(!UncertaintyStatement::new(complete(EvidenceClass::Uec2, m)).unwrap().is_claimed());
+        assert!(!UncertaintyStatement::new(complete(EvidenceClass::Uec1, m)).unwrap().is_claimed());
+        assert_eq!(err(complete(EvidenceClass::Uec2, m)), StmtError::ClassRequiresAssignment);
         assert_eq!(err(complete(EvidenceClass::Uec3, m)), StmtError::ClassMismatch { field: "method" });
     }
     for m in [Method::Iso15530_3, Method::Iso15530_4] {
-        UncertaintyStatement::new(complete(EvidenceClass::Uec3, m)).unwrap();
+        assert_eq!(err(complete(EvidenceClass::Uec3, m)), StmtError::ClassRequiresAssignment);
     }
     // A declared or instrument-model source keeps a statement at UEC-1.
     for kind in [SourceKind::Declared, SourceKind::InstrumentModel] {
         let mut p = complete(EvidenceClass::Uec2, Method::Mcm);
-        p.sources.push(SourceRef { kind, id: "z".into(), digest: digest_of("z") });
+        p.sources.push(SourceRef { kind, id: "z".into(), digest: digest_of("z"), unverified: false });
         assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "sources" });
         p.class = EvidenceClass::Uec1;
         let s = UncertaintyStatement::new(p).unwrap();
@@ -301,7 +313,32 @@ fn claimed_values_never_look_measured() {
     }
     let mut p = complete(EvidenceClass::Uec2, Method::Lpu);
     p.lpu_validated_by_mc = Some(false);
-    UncertaintyStatement::new(p).unwrap();
+    assert_eq!(err(p), StmtError::ClassRequiresAssignment);
+}
+
+#[test]
+fn uec2_and_uec3_need_the_assignment() {
+    assert_eq!(StmtError::ClassRequiresAssignment.code(), "class_requires_assignment");
+    // Stored UEC-2/3 bytes re-read only when they name the assignment rule set.
+    let mut seen = 0;
+    for row in table("valid/digests.txt") {
+        let bytes = read(&format!("valid/{}", row[0]));
+        let stmt = UncertaintyStatement::parse_canonical(&bytes).unwrap();
+        if stmt.class() < EvidenceClass::Uec2 {
+            continue;
+        }
+        let text = String::from_utf8(bytes).unwrap();
+        assert_eq!(text.matches("\"uec-assign@1\"").count(), 1, "{}", row[0]);
+        let other = text.replace("\"uec-assign@1\"", "\"uec-assign@2\"");
+        assert_eq!(
+            UncertaintyStatement::parse_canonical(other.as_bytes()),
+            Err(StmtError::ClassRequiresAssignment),
+            "{}",
+            row[0]
+        );
+        seen += 1;
+    }
+    assert!(seen >= 2);
 }
 
 fn nlin() -> Nonlinearity {
@@ -344,7 +381,7 @@ fn agent_statements_are_proposals() {
 
 #[test]
 fn vectors_are_sorted_and_ids_unique() {
-    let mut p = complete(EvidenceClass::Uec2, Method::Lpu);
+    let mut p = complete(EvidenceClass::Uec1, Method::Lpu);
     for id in ["z", "a", "m"] {
         p.contributors.push(Contributor {
             input_id: id.into(),
@@ -515,7 +552,8 @@ impl Gen {
             let kind = self.pick(source_kinds);
             let id = self.token(&format!("{i}"));
             let digest = self.digest();
-            p.sources.push(SourceRef { kind, id, digest });
+            let unverified = class <= EvidenceClass::Uec1 && self.coin();
+            p.sources.push(SourceRef { kind, id, digest, unverified });
         }
         if class == EvidenceClass::Uec0 || self.coin() {
             if self.coin() {
@@ -610,8 +648,32 @@ impl Gen {
 fn ac6_ten_thousand_seeded_statements_round_trip_losslessly() {
     let mut g = Gen(Cursor::new(Address { seed: 0x5EED_0001, stream: 0 }, 0));
     for n in 0..10_000 {
-        let parts = g.parts();
-        let stmt = UncertaintyStatement::new(parts.clone()).unwrap_or_else(|e| panic!("case {n}: {e}: {parts:?}"));
+        let mut parts = g.parts();
+        let class = parts.class;
+        let (stmt, bytes) = if class >= EvidenceClass::Uec2 {
+            // UEC-2/3 are sealed to UNC.UEC.CLASS: the public constructor refuses them, and
+            // stored bytes re-read when they name `uec-assign@1`. The bytes are those of the
+            // same parts at UEC-1 with the class member rewritten.
+            if !parts.provenance.rule_sets.iter().any(|r| r == "uec-assign@1") {
+                parts.provenance.rule_sets.push("uec-assign@1".into());
+            }
+            let e = UncertaintyStatement::new(parts.clone()).unwrap_err();
+            assert_eq!(e, StmtError::ClassRequiresAssignment, "case {n}: {parts:?}");
+            let mut lower = parts.clone();
+            lower.class = EvidenceClass::Uec1;
+            let one = UncertaintyStatement::new(lower).unwrap_or_else(|e| panic!("case {n}: {e}: {parts:?}"));
+            let text = String::from_utf8(one.canonical_json().to_vec()).unwrap();
+            assert_eq!(text.matches("\"class\":\"UEC-1\"").count(), 1);
+            let bytes = text.replace("\"class\":\"UEC-1\"", &format!("\"class\":\"{class}\"")).into_bytes();
+            let stmt = UncertaintyStatement::parse_canonical(&bytes).unwrap_or_else(|e| panic!("case {n}: {e}"));
+            assert_eq!(stmt.class(), class);
+            (stmt, bytes)
+        } else {
+            let stmt = UncertaintyStatement::new(parts.clone()).unwrap_or_else(|e| panic!("case {n}: {e}: {parts:?}"));
+            let bytes = stmt.canonical_json().to_vec();
+            (stmt, bytes)
+        };
+        assert_eq!(stmt.canonical_json(), bytes.as_slice(), "case {n}");
         let back =
             UncertaintyStatement::parse_canonical(stmt.canonical_json()).unwrap_or_else(|e| panic!("case {n}: {e}"));
         assert_eq!(back, stmt, "case {n}");

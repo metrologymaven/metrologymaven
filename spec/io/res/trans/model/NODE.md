@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-res]
+built_pr: 255
 satisfies: [REQ-IO.RES.TRANS-001, REQ-IO.RES.TRANS-002, REQ-IO.RES.TRANS-003, REQ-IO.RES.TRANS-004]
 covers: []
 depends_on: [CORE.PRJ.TREE, CORE.PRJ.CONT, CORE.JRN.CANON]
@@ -67,6 +69,17 @@ The one definition of how a third-party result becomes a platform record. A `Tra
 - **Determinism:** D0.
 - **Performance budget:** 10^5 rows in < 200 ms [unverified until measured].
 - **Crate:** `fid-io-res` (module `trans::model`).
+- **Pinned in the build (`fid_io_res::trans::model`):**
+  - *Never measured.* Every result carries status `transcribed`; `uncertainty`, a real `fid-kunc` `uncertainty_statement@1` of class UEC-0 with `uec0_reason` `u_missing` and no value, built by `UncertaintyStatement::new` (from `StatementParts::new(EvidenceClass::Uec0)`; fid-kunc has no separate UEC-0 constructor) and embedded exactly as fid-kunc's canonical writer emits it, plus `uncertainty_digest`; rule `dr:as-reported-by-source@1`; null `algorithm`, `kernel_version` and `spec_context`; and a `claim` block `{claimed, declared_input, uncharacterized_input}` that is always `true` and has no setter. The value and outcome are the source's claim, resting on a declared, uncharacterized input. The source's own uncertainty, rule and outcome stay `as_reported` text only.
+  - *By reference.* A result names its record as `record: {id, digest}` (digest = SHA-256 of the record's canonical JSON) and its input as `input_digests: [file_sha256]`; `value.text` is the source's decimal text copied byte for byte, never retyped or parsed to a float.
+  - *Outcome.* `pass` → `CONFORMS`, `fail` → `NONCONFORMS`, `undecided` → `INDETERMINATE`; never a guessed pass or fail. **Fail closed on missing wording:** a `pass`, `fail` or `undecided` whose `status_text` is missing or blank (Unicode `White_Space` only) is `NOT_DECIDABLE`, so a `CONFORMS` or `NONCONFORMS` always shows the source's own word in `as_reported.status`. Whether that word matches the importer's class (Pass with "FAIL") is the importer's mapping and is not checked here; the verbatim word stays visible. Every `NOT_DECIDABLE` carries `decision.reason` (null for the other outcomes), checked in this order: `no_source_status` (no status, or a status without wording), `status_unrecognized` (status text the importer cannot classify), `pass_outside_limit`. An explicit undecided status is `INDETERMINATE` (REQ-004), not a `NOT_DECIDABLE` reason.
+  - *Side.* Optional source limits (`lower_limit`, `upper_limit`, decimal text in the row's unit, inclusive) give `side`: `BELOW_LOWER` (checked first), `ABOVE_UPPER`, `INSIDE` (at least one limit, every stated limit decimal and satisfied) or `UNDECIDABLE`. Comparison is exact decimal arithmetic. A violated readable limit is reported even if the other limit is unreadable or the limits are inverted, so a violation is never shown inside the limit. A `pass` with a violated limit becomes `NOT_DECIDABLE` with `decision.reason` `pass_outside_limit`; a `fail` inside the limits stays `NONCONFORMS` (the source's conservative claim).
+  - *Basis.* `POINTS` if the row flags points (also when it flags features), else `FEATURES`, else `RESULTS_ONLY`.
+  - *IDs.* UUIDv5 through `IdService::derive_v5` of `{kind: transcription_record, file_sha256}` and `{kind: transcribed_result, file_sha256, characteristic, part}`, with the characteristic and part text untrimmed and a blank or whitespace-only part as `null`.
+  - *Rows, in check order:* characteristic or value missing or whitespace-only → `row_incomplete`; any text field over 4096 bytes → `field_too_long`; value outside `[+-]?d+(.d+)?([eE][+-]?d+)?` (exponent at most 9 significant digits) → `value_not_decimal`; `(characteristic, part)` equal to an earlier row's after trimming leading and trailing Unicode `White_Space` and ASCII-lowercasing → `duplicate_row_key` (first wins). A blank or whitespace-only part is `None` before this check, for the ID and in the output. Non-blank text is never trimmed, so `C1` and `C1 ` would get different IDs, and the second is therefore dropped as a duplicate. Hard errors only for the caller: more than 2^20 rows, or a bad `SourceInfo` (`software` empty or over 4096 bytes, `version` over 4096 bytes, `imported_at` not RFC 3339 UTC `YYYY-MM-DDThh:mm:ss[.f{1,9}]Z`, `format` not `[a-z][a-z0-9_]{0,31}`). A missing or blank version becomes `unknown`.
+  - *Untrusted text.* All source text is a `SourceText` (no `Deref`/`Display`); the only view for people is `escaped()` (the `fid-io-reg` untrusted-text escape), and RFC 8785 escapes control characters in JSON.
+  - *Wire.* Schemas `schemas/io/transcription-record-1.schema.json` and `schemas/io/transcribed-result-1.schema.json`; whole output `transcription@1` = `{record, results, dropped: [{row, reason}]}` (a `Transcription` with private fields and `record()`, `results()`, `dropped()` getters); positions are decimal strings; every key always written, absent = `null`. Rows file `transcription-rows@1` (`load_rows`) refuses duplicate keys, case-only duplicate keys, unknown keys, non-string text (a JSON number value) and unknown `status`.
+  - *Element types.* `ELEMENT_TYPES` = `transcription_record` (`transcription-record@1`), `transcribed_result` (`transcribed-result@1`), for `CORE.PRJ.TREE` to register once it is built.
 
 ## Test fixtures
 
@@ -80,6 +93,7 @@ The one definition of how a third-party result becomes a platform record. A `Tra
 
 - **Revise for D-035 (accepted 2026-11-17):** use the L0 ResultRecord schema crate instead of defining a local transcribed variant.
 - **Cross-domain:** the ResultRecord type is owned by `GDT.CHAR.RECORD`, a later L2 domain than IO, so IO may not depend on it. This leaf defines the transcribed variant in IO and only reads GDT's published canonical JSON as an artifact. A shared ResultRecord schema in CORE (L1) would remove the duplication; GDT should publish `result-record` as a versioned schema file.
+- **Reconcile with UNC.DEC.TYPE (#255 review).** `fid-kdec` treats the label-only rule `dr:as-reported-by-source` as `NOT_DECIDABLE(label_only)` and refuses `CONFORMS`/`NONCONFORMS` on a UEC-0 basis. REQ-IO.RES.TRANS-004 and REQ-IO.RES.TRANS.MODEL-004 map the source's worded pass and fail to `CONFORMS`/`NONCONFORMS`, and that requirement wins here, so a transcribed decision is not a `fid_kdec::Decision`; it is marked as the source's claim by the `claim` block and the rule ID. One of the two nodes should change so that both describe the transcribed decision the same way (for example, a kdec decision kind for as-reported outcomes, or IO.RES.TRANS keeping the source outcome only in `as_reported`).
 
 ## Children
 

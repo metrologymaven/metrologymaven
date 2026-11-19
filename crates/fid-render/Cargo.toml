@@ -1,6 +1,6 @@
 [package]
 name = "fid-render"
-description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (spec node VIZ.RENDER.SCENE.IDTAB)"
+description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (VIZ.RENDER.SCENE.IDTAB), view-model projection and dirty-set re-projection (VIZ.RENDER.SCENE.PROJ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,16 @@ publish = false
 # Entity IDs are UUIDs (CONSTITUTION §5); `fid_uuid::Uuid` is the workspace's UUID value type,
 # the same one fid-project's ID service hands out. No third-party dependency is added.
 fid-uuid = { path = "../fid-uuid" }
+# Scene projection (VIZ.RENDER.SCENE.PROJ), all workspace crates of lower layers, no third-party
+# dependency: the frame ID of GEO.FRAME.TREE (fid-geo-frame), the f64 bounding box of GEO.TYPES
+# (fid-geo-types), the shared `sha256:` digest (fid-types) and the portable SHA-256 of fid-kci
+# for derived-node and graph digests; the kernel decision outcome of UNC.DEC (fid-kdec), carried
+# unchanged in the display status.
+fid-geo-frame = { path = "../fid-geo-frame" }
+fid-geo-types = { path = "../fid-geo-types" }
+fid-kci = { path = "../fid-kci" }
+fid-kdec = { path = "../fid-kdec" }
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true
