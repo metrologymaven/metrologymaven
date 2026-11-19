@@ -1,0 +1,11 @@
+[package]
+name = "fid-krn"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+fid-num = { path = "../num" }
+
+[dev-dependencies]
+ext-d = { path = "../../_vendor/edges/ext-d" }

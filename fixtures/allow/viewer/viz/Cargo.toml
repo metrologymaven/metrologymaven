@@ -1,0 +1,8 @@
+[package]
+name = "fid-viz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ext-v = { path = "../../_vendor/viewer/ext-v" }
