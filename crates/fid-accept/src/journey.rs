@@ -301,8 +301,8 @@ pub fn persona_mentions(text: &str) -> Vec<&str> {
     while let Some(i) = text.get(from..).and_then(|t| t.find(PREFIX)) {
         let start = from + i;
         let end = start + PREFIX.len() + 2;
-        let before_ok = start == 0
-            || text.as_bytes().get(start - 1).is_some_and(|c| !c.is_ascii_alphanumeric() && *c != b'.');
+        let before_ok =
+            start == 0 || text.as_bytes().get(start - 1).is_some_and(|c| !c.is_ascii_alphanumeric() && *c != b'.');
         let after_ok = text.as_bytes().get(end).is_none_or(|c| !c.is_ascii_alphanumeric());
         if let Some(id) = text.get(start..end) {
             if before_ok && after_ok && is_job_id_in(id, "PER") {
@@ -353,7 +353,14 @@ impl Ctx {
     }
 
     /// A list of unique IDs accepted by `ok`, at most `max` long.
-    fn id_list(&mut self, o: &Obj, key: &str, max: usize, ok: impl Fn(&str) -> bool, what: &str) -> Option<Vec<String>> {
+    fn id_list(
+        &mut self,
+        o: &Obj,
+        key: &str,
+        max: usize,
+        ok: impl Fn(&str) -> bool,
+        what: &str,
+    ) -> Option<Vec<String>> {
         let arr = match o.get(key) {
             None => {
                 self.schema(None, key, "missing");
@@ -473,7 +480,11 @@ fn check_value(value: &CValue, ctx: &mut Ctx) -> Option<JourneyMap> {
     let subject = ctx.text(top, "subject", None, is_job_id, "a `JOB.*` seed ID");
     if let (Some(k), Some(s)) = (kind, subject.as_deref()) {
         if !is_job_id_in(s, k.subject_group()) {
-            ctx.schema(None, "subject", format!("a `{}` map's subject must be a `JOB.{}.*` ID", k.as_str(), k.subject_group()));
+            ctx.schema(
+                None,
+                "subject",
+                format!("a `{}` map's subject must be a `JOB.{}.*` ID", k.as_str(), k.subject_group()),
+            );
         }
     }
     let revision = match top.get("revision") {
@@ -491,8 +502,7 @@ fn check_value(value: &CValue, ctx: &mut Ctx) -> Option<JourneyMap> {
     };
     let app = ctx.text(top, "app", None, is_ident, "a lowercase identifier (a-z, 0-9, inner `-`, at most 64)");
     let phase = ctx.text(top, "phase", None, phase_ok, "a phase (P0, P1a, P1b, P2, P3, P4, later)");
-    let personas =
-        ctx.id_list(top, "personas", MAX_PERSONAS, |s| is_job_id_in(s, "PER"), "a `JOB.PER.*` persona ID");
+    let personas = ctx.id_list(top, "personas", MAX_PERSONAS, |s| is_job_id_in(s, "PER"), "a `JOB.PER.*` persona ID");
     if let (Some(Kind::Persona), Some(s), Some(p)) = (kind, subject.as_deref(), personas.as_ref()) {
         if !p.iter().any(|x| x == s) {
             ctx.schema(None, "personas", format!("must include the subject `{s}`"));
@@ -566,7 +576,13 @@ fn check_steps(top: &Obj, personas: Option<&[String]>, ctx: &mut Ctx) -> Option<
     good.then_some(out)
 }
 
-fn check_step(v: &CValue, pos: u64, next: Option<Option<u64>>, personas: Option<&[String]>, ctx: &mut Ctx) -> Option<Step> {
+fn check_step(
+    v: &CValue,
+    pos: u64,
+    next: Option<Option<u64>>,
+    personas: Option<&[String]>,
+    ctx: &mut Ctx,
+) -> Option<Step> {
     let at = Some(pos);
     let CValue::Obj(o) = v else {
         ctx.schema(at, "-", "step is not an object");
@@ -586,7 +602,12 @@ fn check_step(v: &CValue, pos: u64, next: Option<Option<u64>>, personas: Option<
         Some(v) => match as_count(v) {
             Some(n) if n >= 1 => {
                 if n != pos {
-                    ctx.push(Code::StepOrder, at, "n", format!("declares n = {n} at position {pos}; steps are numbered 1, 2, 3, ... in order"));
+                    ctx.push(
+                        Code::StepOrder,
+                        at,
+                        "n",
+                        format!("declares n = {n} at position {pos}; steps are numbered 1, 2, 3, ... in order"),
+                    );
                 }
                 Some(n)
             }
@@ -637,7 +658,11 @@ fn check_step(v: &CValue, pos: u64, next: Option<Option<u64>>, personas: Option<
         (None, Some(sc)) => match sc {
             CValue::Str(s) if ScreenId::is_valid(s) => Some(StepTarget::Screen(ScreenId(s.clone()))),
             _ => {
-                ctx.schema(at, "screen", "must be a screen ID (a letter, then letters, digits, `.`, `_`, `-`; at most 128)");
+                ctx.schema(
+                    at,
+                    "screen",
+                    "must be a screen ID (a letter, then letters, digits, `.`, `_`, `-`; at most 128)",
+                );
                 None
             }
         },
@@ -650,9 +675,11 @@ fn check_step(v: &CValue, pos: u64, next: Option<Option<u64>>, personas: Option<
         }
         Some(CValue::Str(s)) if is_text(s) => Some(Handoff::Text(s.clone())),
         Some(v @ CValue::Num(_)) => match as_count(v) {
-            Some(h) => {
+            Some(h) if h >= 1 => {
                 match next {
-                    None => ctx.push(Code::StepOrder, at, "handoff", format!("names step {h}, but this is the last step")),
+                    None => {
+                        ctx.push(Code::StepOrder, at, "handoff", format!("names step {h}, but this is the last step"))
+                    }
                     Some(Some(nx)) if nx != h => {
                         ctx.push(Code::StepOrder, at, "handoff", format!("names step {h}, but the next step is {nx}"));
                     }
@@ -660,7 +687,7 @@ fn check_step(v: &CValue, pos: u64, next: Option<Option<u64>>, personas: Option<
                 }
                 Some(Handoff::Step(h))
             }
-            None => {
+            _ => {
                 ctx.schema(at, "handoff", "must be text or the next step's number");
                 None
             }

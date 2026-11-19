@@ -344,7 +344,7 @@ def reference_findings(raw):
         if not (full(NODE, s.get("owner")) and len(s["owner"]) <= 128):
             bad(1, "owner", k)
         h = s.get("handoff")
-        if count(h):
+        if count(h) and h >= 1:
             nxt = steps[i + 1].get("n") if i + 1 < len(steps) else None
             if i + 1 >= len(steps) or (count(nxt) and nxt != h):
                 out.append((3, mid, k, "handoff"))

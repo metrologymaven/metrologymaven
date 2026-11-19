@@ -350,10 +350,7 @@ fn published_schema_matches_the_validator() {
     let step_props = obj(step, "properties");
     assert_eq!(strings(obj(obj(step_props, "actor"), "enum")), ACTORS.map(String::from).to_vec());
     assert_eq!(obj(obj(step_props, "screen"), "pattern"), &CValue::Str(ScreenId::PATTERN.to_string()));
-    assert_eq!(
-        obj(obj(step_props, "command"), "pattern"),
-        &CValue::Str(fid_types::CommandId::PATTERN.to_string())
-    );
+    assert_eq!(obj(obj(step_props, "command"), "pattern"), &CValue::Str(fid_types::CommandId::PATTERN.to_string()));
     // Each kind's subject group is stated in the conditional rules.
     let CValue::Arr(rules) = obj(&s, "allOf") else { panic!("no allOf") };
     for (kind, group) in KINDS {
