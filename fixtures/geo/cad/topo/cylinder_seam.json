@@ -1,0 +1,173 @@
+{
+ "description": "uncapped cylinder side: one face closed by a seam edge, open shell",
+ "license": "CC-BY-4.0",
+ "body_id": "5ea45ea45ea45ea45ea45ea45ea45ea4",
+ "vertices": [
+  {
+   "point": [
+    0.5,
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "point": [
+    0.5,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.5
+   }
+  },
+  {
+   "start": 1,
+   "end": 0,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.5,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "#seam"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.5
+   }
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": null
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.5
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "#side"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

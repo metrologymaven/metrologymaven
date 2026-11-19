@@ -7,14 +7,18 @@
 //! typed stable IDs, the [`BodyBuilder`] importers call, and the canonical binary encoding v1
 //! with its SHA-256 [`body_digest`].
 //!
-//! Adjacency (`GEO.CAD.TOPO.ADJ`), pcurve derivation (`GEO.CAD.TOPO.PCURVE`), trim
-//! classification (`GEO.CAD.TOPO.TRIM`), geometric validation (`GEO.CAD.TOPO.VALID`) and the
-//! commands (`GEO.CAD.TOPO.CMD`) are other leaves.
+//! Implemented leaf: `GEO.CAD.TOPO.ADJ` (see [`topo::adj`]): [`Adjacency`], "what touches
+//! what" on a built body, every answer in ascending `TopologyId` order.
+//!
+//! Pcurve derivation (`GEO.CAD.TOPO.PCURVE`), trim classification (`GEO.CAD.TOPO.TRIM`),
+//! geometric validation (`GEO.CAD.TOPO.VALID`) and the commands (`GEO.CAD.TOPO.CMD`) are
+//! other leaves.
 
 pub mod topo;
 
 pub use topo::{
-    body_digest, decode, encode, Body, BodyBuilder, Coedge, CoedgeIx, Curve2, CurveDef, CurveParams, DecodeError, Edge,
-    EdgeIx, EntityIx, EntityKind, Face, FaceIx, Frame, GeomError, IndexPath, Label, Loop, LoopIx, PairingFault, Sense,
-    Shell, ShellIx, SurfaceDef, SurfaceParams, TopoBuildError, TopologyId, Vertex, VertexIx,
+    body_digest, decode, encode, AdjError, Adjacency, Body, BodyBuilder, Coedge, CoedgeIx, Curve2, CurveDef,
+    CurveParams, DecodeError, Edge, EdgeIx, EntityIx, EntityKind, Face, FaceIx, Frame, GeomError, IndexPath, Label,
+    Loop, LoopIx, PairingFault, Sense, Shell, ShellIx, SurfaceDef, SurfaceParams, TopoBuildError, TopologyId, Vertex,
+    VertexIx,
 };
