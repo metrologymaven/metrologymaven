@@ -664,7 +664,7 @@ impl Registry {
 
         if let Some(ext) = file_name.and_then(extension_of) {
             let by_ext: Vec<FormatId> =
-                readers().filter(|d| d.extensions.iter().any(|e| *e == ext)).map(|d| d.id.clone()).collect();
+                readers().filter(|d| d.extensions.contains(&ext)).map(|d| d.id.clone()).collect();
             if !by_ext.is_empty() && !by_ext.contains(first) {
                 return Err(DetectError::Mismatch {
                     detected: first.clone(),
