@@ -38,7 +38,7 @@
 //! * **Minimum angle** of a non-degenerate triangle: at each corner `p` in stored order
 //!   (`a`, `b`, `c`), with `u` and `v` the vectors to the next and the previous corner,
 //!   `cos = dot(u, v) / (sqrt(dot(u, u)) * sqrt(dot(v, v)))` with
-//!   `dot(p, q) = (p.x*q.x + p.y*q.y) + p.z*q.z`, clamped to `[-1, 1]` by comparison, and
+//!   `dot(p, q) = (p.x*q.x + p.y*q.y) + p.z*q.z`, clamped to `[-1, 1]` with `fid_num::f::total_clamp`, and
 //!   the angle is `fid_num::f::acos(cos)` in radians; the smallest of the three (REQ-003).
 //!   `acos` of a clamped cosine is used rather than `atan2(|u × v|, u · v)` because the
 //!   spec's Design names it; for the slivers where the two differ in the last bits the
@@ -375,15 +375,9 @@ fn area(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> Result<f64, fid_num::NumError>
 fn corner_angle(p: [f64; 3], next: [f64; 3], prev: [f64; 3]) -> Result<f64, fid_num::NumError> {
     let u = sub(next, p);
     let v = sub(prev, p);
-    let mut c = dot(u, v) / (fid_num::f::sqrt(dot(u, u))? * fid_num::f::sqrt(dot(v, v))?);
-    // NaN passes both comparisons and is refused by `acos`.
-    if c > 1.0 {
-        c = 1.0;
-    }
-    if c < -1.0 {
-        c = -1.0;
-    }
-    fid_num::f::acos(c)
+    let c = dot(u, v) / (fid_num::f::sqrt(dot(u, u))? * fid_num::f::sqrt(dot(v, v))?);
+    // The KNP-1 clamp: a NaN cosine is an error, not a silent value.
+    fid_num::f::acos(fid_num::f::total_clamp(c, -1.0, 1.0)?)
 }
 
 /// The smallest interior angle, corners in stored order.
