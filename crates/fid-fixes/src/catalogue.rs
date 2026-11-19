@@ -316,7 +316,8 @@ fn entry(v: &CValue, path: &str) -> Result<FixEntry, FixError> {
     let reason_code = patterned(m, path, "reason_code", is_reason_code, REASON_CODE_PATTERN)?.to_string();
     let kind_path = format!("{path}.state_kind");
     let kind = as_str(req(m, path, "state_kind")?, &kind_path)?;
-    let state_kind = StateKind::parse(kind).ok_or_else(|| schema_err(&kind_path, format!("unknown state kind {kind:?}")))?;
+    let state_kind =
+        StateKind::parse(kind).ok_or_else(|| schema_err(&kind_path, format!("unknown state kind {kind:?}")))?;
     let owner = patterned(m, path, "owner", is_node_id, OWNER_PATTERN)?.to_string();
     let source_table = match m.get("source_table") {
         None => None,
@@ -327,7 +328,8 @@ fn entry(v: &CValue, path: &str) -> Result<FixEntry, FixError> {
     if items.is_empty() {
         return Err(schema_err(&fixes_path, "must hold at least one fix"));
     }
-    let fixes = items.iter().enumerate().map(|(i, f)| fix(f, &format!("{fixes_path}[{i}]"))).collect::<Result<_, _>>()?;
+    let fixes =
+        items.iter().enumerate().map(|(i, f)| fix(f, &format!("{fixes_path}[{i}]"))).collect::<Result<_, _>>()?;
     Ok(FixEntry { reason_code, state_kind, owner, fixes, source_table })
 }
 
@@ -504,7 +506,14 @@ pub fn catalogue_schema() -> CValue {
                 ("reason_code", pattern(REASON_CODE_PATTERN)),
                 ("state_kind", obj([("enum", strs(&kinds))])),
                 ("owner", pattern(OWNER_PATTERN)),
-                ("fixes", obj([("type", s("array")), ("minItems", CValue::Num(1.0)), ("items", obj([("$ref", s("#/$defs/fix"))]))])),
+                (
+                    "fixes",
+                    obj([
+                        ("type", s("array")),
+                        ("minItems", CValue::Num(1.0)),
+                        ("items", obj([("$ref", s("#/$defs/fix"))])),
+                    ]),
+                ),
                 ("source_table", pattern(SOURCE_TABLE_PATTERN)),
             ]),
         ),

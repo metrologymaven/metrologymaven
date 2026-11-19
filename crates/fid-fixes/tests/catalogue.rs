@@ -168,7 +168,10 @@ fn schema_errors() {
     assert!(schema_err(&ONE.replace("\"decide.rule_missing\"", "\"rule_missing\"")).contains("reason_code"));
     assert!(schema_err(&ONE.replace("UNC.DEC.DEFAULT", "unc.dec.default")).contains("owner"));
     assert!(schema_err(&ONE.replace("decide.bind_rule@1", "decide.bind_rule")).contains("command"));
-    assert!(schema_err(&ONE.replace("\"label_key\":", "\"label\":")).contains("unknown property"));
+    let renamed = ONE.replace("\"label_key\":", "\"label\":");
+    assert!(schema_err(&renamed).contains("missing required property `label_key`"));
+    let extra = ONE.replace("\"label_key\":", "\"extra\":\"x\",\"label_key\":");
+    assert!(schema_err(&extra).contains("unknown property `extra`"));
     assert!(schema_err(&ONE.replace("\"${characteristic_id}\"", "1")).contains("expected a string"));
     let no_fixes = r#"{"version":"fix-catalogue@1","entries":[{"reason_code":"decide.rule_missing","state_kind":"not_decidable","owner":"UNC.DEC.DEFAULT","fixes":[]}]}"#;
     assert!(schema_err(no_fixes).contains("at least one fix"));
