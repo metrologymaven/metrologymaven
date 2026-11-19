@@ -31,7 +31,7 @@ impl ProfileContent for BTreeMap<Digest, Vec<u8>> {
 impl ProfileContent for DprofState {
     fn content(&self, digest: &Digest) -> Option<&[u8]> {
         // Linear in the profile count, which is bounded by `MAX_PROFILES`.
-        self.profiles().find(|p| p.doc.digest == *digest).map(|p| p.doc.canonical.as_slice())
+        self.profiles().find(|p| p.doc.digest() == digest).map(|p| p.doc.canonical())
     }
 }
 
@@ -53,7 +53,7 @@ fn step(state: &mut DprofState, recorded: &[u8], content: &dyn ProfileContent, v
     };
     let derived = match &event {
         DprofEvent::Publish(e) => {
-            let bytes = match content.content(&e.reference.digest) {
+            let bytes = match content.content(e.reference.digest()) {
                 Some(b) => b,
                 None => return ReplayOutcome::NotReplayable,
             };

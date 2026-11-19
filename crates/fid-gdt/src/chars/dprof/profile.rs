@@ -151,41 +151,88 @@ impl KeyVocabulary {
     }
 }
 
-/// A parsed defaults profile.
+/// A parsed defaults profile. Fields are private: values are made only by the strict
+/// parser ([`parse_profile`], [`profile_from_value`]).
+///
+/// ```compile_fail
+/// fn forge(p: &fid_gdt::chars::dprof::DefaultsProfile) -> usize {
+///     p.keys.len()
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DefaultsProfile {
-    /// Dialect.
-    pub dialect: Dialect,
-    /// Edition.
-    pub edition: Edition,
-    /// Semantic version.
-    pub version: SemVer,
-    /// The default choices, by key.
-    pub keys: BTreeMap<String, ProfileValue>,
+    dialect: Dialect,
+    edition: Edition,
+    version: SemVer,
+    keys: BTreeMap<String, ProfileValue>,
 }
 
 impl DefaultsProfile {
     /// Dialect, edition and version.
     pub fn id(&self) -> ProfileId {
-        ProfileId { dialect: self.dialect, edition: self.edition.clone(), version: self.version }
+        ProfileId::new(self.dialect, self.edition.clone(), self.version)
+    }
+
+    /// Dialect.
+    pub fn dialect(&self) -> Dialect {
+        self.dialect
+    }
+
+    /// Edition.
+    pub fn edition(&self) -> &Edition {
+        &self.edition
+    }
+
+    /// Semantic version.
+    pub fn version(&self) -> SemVer {
+        self.version
+    }
+
+    /// The default choices, by key.
+    pub fn keys(&self) -> &BTreeMap<String, ProfileValue> {
+        &self.keys
     }
 }
 
-/// A profile together with its canonical bytes and digest.
+/// A profile together with its canonical bytes and digest. Fields are private: values are
+/// made only by the strict parser, and [`ProfileDoc::digest_holds`] re-checks the digest.
+///
+/// ```compile_fail
+/// fn forge(d: fid_gdt::chars::dprof::ProfileDoc) -> fid_gdt::chars::dprof::ProfileDoc {
+///     fid_gdt::chars::dprof::ProfileDoc { canonical: Vec::new(), ..d }
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProfileDoc {
-    /// The profile.
-    pub profile: DefaultsProfile,
-    /// RFC 8785 canonical JSON of the whole document.
-    pub canonical: Vec<u8>,
-    /// SHA-256 of [`ProfileDoc::canonical`].
-    pub digest: Digest,
+    profile: DefaultsProfile,
+    canonical: Vec<u8>,
+    digest: Digest,
 }
 
 impl ProfileDoc {
     /// The full reference `dp:<dialect>-<edition>@<version>#sha256:<hex>`.
     pub fn reference(&self) -> ProfileRef {
-        ProfileRef { id: self.profile.id(), digest: self.digest }
+        ProfileRef::new(self.profile.id(), self.digest)
+    }
+
+    /// The profile.
+    pub fn profile(&self) -> &DefaultsProfile {
+        &self.profile
+    }
+
+    /// RFC 8785 canonical JSON of the whole document.
+    pub fn canonical(&self) -> &[u8] {
+        &self.canonical
+    }
+
+    /// SHA-256 of [`ProfileDoc::canonical`].
+    pub fn digest(&self) -> &Digest {
+        &self.digest
+    }
+
+    /// Whether the digest is the SHA-256 of the canonical bytes.
+    pub fn digest_holds(&self) -> bool {
+        Digest::from_bytes(fid_canon::digest_bytes(&self.canonical).0) == self.digest
     }
 }
 

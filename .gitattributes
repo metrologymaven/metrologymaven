@@ -175,3 +175,6 @@ fixtures/core/jrn/chain/append/** -text
 fixtures/core/dep/** -text
 # UNC.DEC.TYPE fixtures: the catalog is digested and every file is compared byte for byte.
 fixtures/unc/dec/type/** -text
+# GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
+# which --check compares byte for byte; never convert line endings.
+fixtures/gdt/spec/** -text

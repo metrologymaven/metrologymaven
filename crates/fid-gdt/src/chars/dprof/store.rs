@@ -226,7 +226,7 @@ impl DprofState {
     /// `defaults_profile_unknown`. This is the check `gdt.set_governing_spec@1`
     /// (`GDT.CHAR.SPEC`) runs.
     pub fn resolve(&self, branch: Branch, r: &ProfileRef) -> Result<&StoredProfile, DprofError> {
-        let found = |b: Branch| self.profiles.get(&(b, r.id.clone())).filter(|p| p.doc.digest == r.digest);
+        let found = |b: Branch| self.profiles.get(&(b, r.id().clone())).filter(|p| p.doc.digest() == r.digest());
         let hit = match branch {
             Branch::Working => found(Branch::Working),
             Branch::Agent => found(Branch::Agent).or_else(|| found(Branch::Working)),
@@ -278,9 +278,35 @@ impl DprofState {
         Ok(())
     }
 
+    /// Sets (or replaces) the binding of `c` on `branch`'s own map. Used by
+    /// `GDT.CHAR.SPEC` (`chars::spec`), which keeps the bindings a mirror of the
+    /// governing specs: after its own checks, when a governing spec is set or inherited,
+    /// and when a project is loaded. The caller has already resolved `r` on `branch`.
+    pub(crate) fn set_binding(&mut self, branch: Branch, c: &CharId, r: &ProfileRef) -> Result<(), DprofError> {
+        let map = match branch {
+            Branch::Working => &mut self.working,
+            Branch::Agent => &mut self.agent,
+        };
+        if !map.contains_key(c) && map.len() >= MAX_BINDINGS {
+            return Err(store_err("too_many_bindings"));
+        }
+        map.insert(c.clone(), r.clone());
+        Ok(())
+    }
+
+    /// The bindings held on `branch` itself (no fallback from the agent overlay to the
+    /// working branch).
+    pub(crate) fn own_bindings(&self, branch: Branch) -> &BTreeMap<CharId, ProfileRef> {
+        match branch {
+            Branch::Working => &self.working,
+            Branch::Agent => &self.agent,
+        }
+    }
+
     /// `gdt.publish_defaults_profile@1` on an already parsed profile. `file` is the
     /// command's `file` parameter as given (recorded in the event). Never changes any
-    /// binding (REQ-004).
+    /// binding (REQ-004). After the `file` check, the document's digest is re-checked
+    /// against its canonical bytes (`malformed_profile{digest_mismatch}`).
     pub fn publish(
         &mut self,
         doc: ProfileDoc,
@@ -291,11 +317,14 @@ impl DprofState {
         if file.is_empty() || file.len() > MAX_FILE_PARAM_LEN {
             return Err(bad_request("bad_file"));
         }
-        let id = doc.profile.id();
+        if !doc.digest_holds() {
+            return Err(DprofError::Malformed { reason: "digest_mismatch" });
+        }
+        let id = doc.profile().id();
         let reference = doc.reference();
         let branch = Branch::for_principal(principal);
         if let Some(existing) = self.profiles.get(&(branch, id.clone())) {
-            if existing.doc.digest != doc.digest {
+            if existing.doc.digest() != doc.digest() {
                 return Err(DprofError::ProfileImmutable { id: id.to_string() });
             }
             return Ok(Published {
@@ -388,21 +417,21 @@ impl DprofState {
         if principal != Principal::Human {
             return Err(DprofError::HumanOnly);
         }
-        let agent = match self.profiles.get(&(Branch::Agent, r.id.clone())) {
-            Some(p) if p.doc.digest == r.digest => p.clone(),
+        let agent = match self.profiles.get(&(Branch::Agent, r.id().clone())) {
+            Some(p) if p.doc.digest() == r.digest() => p.clone(),
             _ => return Err(DprofError::unknown_ref(&r.to_string())),
         };
-        if let Some(w) = self.profiles.get(&(Branch::Working, r.id.clone())) {
-            if w.doc.digest == r.digest {
+        if let Some(w) = self.profiles.get(&(Branch::Working, r.id().clone())) {
+            if w.doc.digest() == r.digest() {
                 return Ok(());
             }
-            return Err(DprofError::AdoptConflict { id: r.id.to_string() });
+            return Err(DprofError::AdoptConflict { id: r.id().to_string() });
         }
         if self.profiles.len() >= MAX_PROFILES {
             return Err(store_err("too_many_profiles"));
         }
         let copy = StoredProfile { doc: agent.doc, branch: Branch::Working, author: agent.author, adopted: true };
-        self.profiles.insert((Branch::Working, r.id.clone()), copy);
+        self.profiles.insert((Branch::Working, r.id().clone()), copy);
         Ok(())
     }
 
@@ -427,7 +456,7 @@ impl DprofState {
         let cap = cap.min(MAX_STORE_BYTES);
         let mut profiles = Vec::with_capacity(self.profiles.len());
         for p in self.profiles.values() {
-            let doc = fid_canon::parse(&p.doc.canonical).map_err(|_| store_err("profile"))?;
+            let doc = fid_canon::parse(p.doc.canonical()).map_err(|_| store_err("profile"))?;
             let mut m = BTreeMap::new();
             m.insert("ref".to_owned(), CValue::Str(p.reference().to_string()));
             m.insert("branch".to_owned(), CValue::Str(p.branch.as_str().to_owned()));
@@ -500,7 +529,7 @@ impl DprofState {
             if !consistent {
                 return Err(store_err("branch_author_mismatch"));
             }
-            let id = doc.profile.id();
+            let id = doc.profile().id();
             if state.profiles.insert((branch, id), StoredProfile { doc, branch, author, adopted }).is_some() {
                 return Err(store_err("duplicate_profile"));
             }
