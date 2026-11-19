@@ -1,0 +1,21 @@
+{
+  "version": "dmt-reviewers/v1",
+  "entries": [
+    {
+      "id": "rev-alpha",
+      "display_name": "Alpha Example (fictional reviewer)",
+      "principals": ["human:fictional-shared"],
+      "dialects": ["asme"],
+      "basis": "paid_author",
+      "valid_from": "2026-01-01"
+    },
+    {
+      "id": "rev-bravo",
+      "display_name": "Bravo Example (fictional reviewer)",
+      "principals": ["human:fictional-bravo", "human:fictional-shared"],
+      "dialects": ["iso"],
+      "basis": "community",
+      "valid_from": "2026-01-01"
+    }
+  ]
+}

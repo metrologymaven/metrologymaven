@@ -1,0 +1,38 @@
+{
+  "comment": "Hand-labelled from REQ-GDT.RES.ROWFLOW.ROSTER-003 against roster_ok.json: a reviewer ID exactly when the principal is bound, the dialect is listed and valid_from <= at < valid_until. All names are fictional.",
+  "roster": "roster_ok.json",
+  "cases": [
+    {"principal": "human:fictional-alpha", "dialect": "asme", "at": "2026-11-20", "expect": "rev-alpha"},
+    {"principal": "human:fictional-alpha", "dialect": "asme", "at": "2026-12-02", "expect": "rev-alpha"},
+    {"principal": "human:fictional-alpha", "dialect": "iso", "at": "2026-11-20", "expect": null},
+    {"principal": "human:fictional-alpha", "dialect": "iso", "at": "2026-12-02", "expect": null},
+    {"principal": "human:fictional-alpha", "dialect": "asme", "at": "2025-12-31", "expect": null},
+    {"principal": "human:fictional-alpha", "dialect": "asme", "at": "2026-01-01", "expect": "rev-alpha"},
+
+    {"principal": "human:fictional-bravo", "dialect": "asme", "at": "2026-11-20", "expect": null},
+    {"principal": "human:fictional-bravo", "dialect": "asme", "at": "2026-12-02", "expect": null},
+    {"principal": "human:fictional-bravo", "dialect": "iso", "at": "2026-11-20", "expect": "rev-bravo"},
+    {"principal": "human:fictional-bravo", "dialect": "iso", "at": "2026-12-02", "expect": "rev-bravo"},
+    {"principal": "human:fictional-bravo-2", "dialect": "iso", "at": "2026-11-20", "expect": "rev-bravo"},
+    {"principal": "human:fictional-bravo-2", "dialect": "iso", "at": "2026-12-02", "expect": "rev-bravo"},
+    {"principal": "human:fictional-bravo-2", "dialect": "asme", "at": "2026-12-02", "expect": null},
+
+    {"principal": "human:fictional-charlie", "dialect": "asme", "at": "2026-11-20", "expect": "rev-charlie"},
+    {"principal": "human:fictional-charlie", "dialect": "asme", "at": "2026-12-02", "expect": null},
+    {"principal": "human:fictional-charlie", "dialect": "iso", "at": "2026-11-20", "expect": "rev-charlie"},
+    {"principal": "human:fictional-charlie", "dialect": "iso", "at": "2026-12-02", "expect": null},
+    {"principal": "human:fictional-charlie", "dialect": "iso", "at": "2026-11-30", "expect": "rev-charlie"},
+    {"principal": "human:fictional-charlie", "dialect": "iso", "at": "2026-12-01", "expect": null},
+    {"principal": "human:fictional-charlie", "dialect": "asme", "at": "2026-05-31", "expect": null},
+    {"principal": "human:fictional-charlie", "dialect": "asme", "at": "2026-06-01", "expect": "rev-charlie"},
+
+    {"principal": "human:fictional-nobody", "dialect": "asme", "at": "2026-11-20", "expect": null},
+    {"principal": "human:fictional-nobody", "dialect": "iso", "at": "2026-12-02", "expect": null},
+    {"principal": "rev-alpha", "dialect": "asme", "at": "2026-11-20", "expect": null}
+  ],
+  "errors": {
+    "roster_dup_id.json": "roster_duplicate{rev-alpha}",
+    "roster_dup_principal.json": "roster_duplicate{human:fictional-shared}",
+    "roster_unknown_email.json": "roster_invalid{email}"
+  }
+}
