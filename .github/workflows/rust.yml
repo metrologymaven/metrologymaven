@@ -261,6 +261,7 @@ jobs:
           python fixtures/man/check_manifest_schema.py
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
+          python fixtures/num/la/make_la_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
