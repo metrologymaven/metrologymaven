@@ -32,6 +32,10 @@ fixtures/knp1/graph/** -text
 # KRN.NUM.LINT.SYN fixtures: findings carry line/column positions and line digests; never convert line endings.
 fixtures/knp1/seeded/** -text
 fixtures/knp1/syn/** -text
+# KRN.NUM.LINT.DATA fixtures: digested denylists and positions, compared byte for byte.
+fixtures/knp1/data/** -text
+# The CRLF fixture's CR bytes are the test, not trailing whitespace.
+fixtures/knp1/data/crlf/** -text -whitespace
 # IO.CORP.HOSTILE fixtures: binary inputs and digested manifests; never convert line endings.
 fixtures/io/corp/hostile/** -text
 # AGENT.HARNESS.SAFETY archived runs: regenerated and compared byte for byte by make_runs.py --check.
