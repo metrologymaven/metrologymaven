@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
 satisfies: [REQ-HAL.IDL.BASE-003, REQ-HAL.IDL.BASE-004]
 covers: []
 depends_on: [HAL.IDL.STAMP]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # HAL.IDL.BASE.ERR: Device error model, untrusted device text and operator hint IDs
@@ -80,10 +81,20 @@ The closed error model shared by every capability package: eleven error codes, e
 - **Determinism:** D0.
 - **Performance budget:** trivial.
 - **Crate:** `fid-hal-idl` (module `base::error`), layer L0.
+- **Pinned choices (as built):**
+  - *Versioning.* The code set and the record share one major version, `ERROR_CODE_SET_VERSION = 1`; the wire tag is `device-error/1`. Adding, removing or renaming a code, or changing any row of the table, is a new major version. `ErrorCode` is not `#[non_exhaustive]`, so an exhaustive match elsewhere stops compiling when a code is added.
+  - *Wire form* (canonical JSON through `fid-canon`, RFC 8785): `{"code", "device_code", "hint", "message": {"bytes", "truncated"}, "schema"}`. Every key is required (absent values are `null`), unknown keys are refused, so there is no guidance field. `code` is the upper-case name of the table, compared byte for byte (no case folding). `device_code` is `Option<i64>`, written as a canonical decimal string (the project integer rule) or `null`. `hint` is the ID or `null`. Parse followed by write gives identical bytes for every record whose message is within the limit.
+  - *Untrusted text.* The stamp module's `UntrustedText` stays the thin `Box<str>` of `stamp/0` (its shape is frozen there); the truncation marker lives in a wrapper `DeviceText { text: UntrustedText, truncated: bool }`, whose wire form is the `{bytes, truncated}` object above. The limit is 4 096 bytes of UTF-8; a longer string is cut at the last char boundary at or below 4 096 and marked `truncated: true`, on construction and on parse alike (never refused). A `truncated: true` on a short string is kept as sent. Text is not normalised, trimmed or case-folded; it is shown only through `UntrustedText::as_display`.
+  - *Hint IDs.* `hal\.[a-z_]+\.[0-9]{3}`, anchored, ASCII only, at most 64 bytes. The middle segment is not checked against the error's code, so one hint may serve several codes.
+  - *Behaviour names.* `retry`, `interrupt`, `stop_streams`, `fail`, `fault`; severities `info < warning < error < critical`.
+  - *Errors.* `error_code_unknown` (a `code` string outside the set) and `hint_id_invalid` (a `hint` string that fails the pattern) as named; every other refusal (bytes `fid-canon` rejects, input over 64 KiB or nesting over 4, a wrong JSON type, an unknown or missing key, a wrong schema tag, a non-canonical `device_code`) is `device_error_invalid`. The error names the top-level field (empty for the document).
+  - *Check order* (so the first failure is well defined): JSON; top level is an object; first unknown key in sorted order; first missing key in sorted order; `schema`; `code`; `device_code`; `hint`; `message`.
+  - *Ordering.* `ErrorCode` orders by table row; `DeviceError` orders by `code`, then `device_code` (`None` first), then `message`, then `hint` (`None` first).
+  - *Config codes.* `HAL.IDL.BASE.CFG`'s `ConfigErrorCode` maps into `ErrorCode` (`From`), so the two leaves share one spelling.
 
 ## Test fixtures
 
-Project-authored JSON under `fixtures/hal/idl/base/err/` (CC-BY-4.0).
+Project-authored JSON under `fixtures/hal/idl/base/err/` (CC-BY-4.0), hand-labelled in `make_fixtures.py`: `all_codes.json` (one canonical record per code and line), `table.json` (the Design table) and `cases.json` (refused inputs with expected code and field).
 
 ## Build prompt
 
