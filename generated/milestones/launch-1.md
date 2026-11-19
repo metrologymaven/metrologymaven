@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**117** of **1336** leaves built in code ([B]).
+**120** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 47 built)
+### Wave 2 (121 leaves, 49 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -770,7 +770,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.VIEW.CAMERA.HILITE](../../spec/viz/view/camera/hilite/NODE.md) Highlight and proposal ghost overlays (M, P1a)
 - [VIZ.VIEW.NAMED.EXPORT](../../spec/viz/view/named/export/NODE.md) NamedView package format for reports and web packages (S, P1a)
 
-### Wave 15 (35 leaves, 0 built)
+### Wave 15 (35 leaves, 1 built)
 
 - [AUTO.CLI.ARGS](../../spec/auto/cli/args/NODE.md) Typed and unit-bearing parameter parsing (M, P0)
 - [AUTO.CLI.COMP](../../spec/auto/cli/comp/NODE.md) Generated shell completions (S, P0)
@@ -799,7 +799,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [HAL.ACQ.SESS.LIFE](../../spec/hal/acq/sess/life/NODE.md) Session lifecycle, controlling-writer lock and session context (M, P2)
 - [IO.DMIS.PROG.FEAT](../../spec/io/dmis/prog/feat/NODE.md) DMIS feature definitions to QIF features (M, P2)
 - [IO.RES.AQDEF.OUT](../../spec/io/res/aqdef/out/NODE.md) AQDEF DFQ export (uncertified) (M, P1b)
-- [IO.RES.CSV.OUT](../../spec/io/res/csv/out/NODE.md) Result table export through a column map (M, P1a)
+- [B] [IO.RES.CSV.OUT](../../spec/io/res/csv/out/NODE.md) Result table export through a column map (M, P1a)
 - [IO.RES.QIFR.ROUT](../../spec/io/res/qifr/rout/NODE.md) QIF Results export of ResultRecords (M, P1a)
 - [MIG.COVER.GEN](../../spec/mig/cover/gen/NODE.md) Coverage table generator and drift check (M, P1a)
 - [MIG.PROJ.MAPREP](../../spec/mig/proj/maprep/NODE.md) Mapping report model and classification (S, P1a)
