@@ -435,8 +435,9 @@ fn payload_from_value(v: &CValue, at: &str) -> Result<StepPayload, SubstError> {
     };
     for (d, hex) in inline {
         let key = Digest::parse(d).map_err(|_| invalid(format!("{at}.inline: key {d:?} is not a digest")))?;
-        let bytes = from_hex(text(hex, &format!("{at}.inline.{d}"))?)
-            .ok_or_else(|| invalid(format!("{at}.inline.{d} must be lowercase hex of at most {MAX_INLINE_BYTES} bytes")))?;
+        let bytes = from_hex(text(hex, &format!("{at}.inline.{d}"))?).ok_or_else(|| {
+            invalid(format!("{at}.inline.{d} must be lowercase hex of at most {MAX_INLINE_BYTES} bytes"))
+        })?;
         payload.inline.insert(key, bytes);
     }
     Ok(payload)
@@ -557,7 +558,9 @@ impl StepObservations<'_> {
         let step = self.step;
         let n = step.observations.len();
         let Some(rec) = step.observations.get(self.next) else {
-            return Err(self.mismatch(format!("observation {} of kind {kind} requested, the recording holds {n}", n + 1)));
+            return Err(
+                self.mismatch(format!("observation {} of kind {kind} requested, the recording holds {n}", n + 1))
+            );
         };
         if !kind.is_valid() || rec.kind != *kind {
             let at = self.next + 1;
@@ -609,7 +612,8 @@ impl StepObservations<'_> {
             return Err(self.mismatch(format!("{} of {n} recorded observations were not consumed", n - self.next)));
         }
         if let Some(p) = &step.payload {
-            let left: Vec<&str> = p.salts.keys().filter(|f| !self.salts_served.contains(f)).map(|f| f.as_str()).collect();
+            let left: Vec<&str> =
+                p.salts.keys().filter(|f| !self.salts_served.contains(f)).map(|f| f.as_str()).collect();
             if !left.is_empty() {
                 return Err(self.mismatch(format!("recorded commitment salts not consumed: {}", left.join(", "))));
             }
@@ -702,9 +706,11 @@ pub fn preflight(
                     }
                 }
                 Storage::Inline => {
-                    let good = step.payload.as_ref().and_then(|p| p.inline.get(&o.digest)).is_some_and(|b| {
-                        Digest::from_bytes(digest_bytes(b).0) == o.digest
-                    });
+                    let good = step
+                        .payload
+                        .as_ref()
+                        .and_then(|p| p.inline.get(&o.digest))
+                        .is_some_and(|b| Digest::from_bytes(digest_bytes(b).0) == o.digest);
                     payload_ok &= good;
                 }
             }
@@ -723,5 +729,8 @@ pub fn preflight(
             }
         }
     }
-    missing.into_iter().map(|((kind, id), steps)| MissingItem { kind, id, steps: steps.into_iter().collect() }).collect()
+    missing
+        .into_iter()
+        .map(|((kind, id), steps)| MissingItem { kind, id, steps: steps.into_iter().collect() })
+        .collect()
 }

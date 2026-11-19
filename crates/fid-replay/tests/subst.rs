@@ -275,10 +275,7 @@ fn ac3_deleted_blob_is_named_and_not_replayable() {
     let deleted = Digest::parse(st(&expect["deleted_blob"])).unwrap();
     let mut blobs = c.blobs.clone();
     assert!(blobs.remove(&deleted).is_some());
-    assert_eq!(
-        preflight(&c.span, &blobs, &c.catalog, &c.kernels),
-        expected_missing(&expect["preflight_without_blob"])
-    );
+    assert_eq!(preflight(&c.span, &blobs, &c.catalog, &c.kernels), expected_missing(&expect["preflight_without_blob"]));
     for (seq, want) in expected_outcomes(&expect["outcomes_without_blob"]) {
         let (got, _, err) = replay_step(&c, seq, &blobs, read);
         assert_eq!(outcome_name(got), want, "step {seq}: {err:?}");
@@ -354,7 +351,10 @@ fn mismatch_on_kind_exhaustion_unconsumed_and_unrecorded_salt() {
 
     let mut s = source.step(1).unwrap();
     let e = s.observe(&ObservationKind::Device).unwrap_err();
-    assert_eq!((e.code(), e.outcome(), e.cause()), ("observation_mismatch", Some(ReplayOutcome::Divergent), Some(Cause::Input)));
+    assert_eq!(
+        (e.code(), e.outcome(), e.cause()),
+        ("observation_mismatch", Some(ReplayOutcome::Divergent), Some(Cause::Input))
+    );
     // After a fault every later request fails with the same fault.
     assert_eq!(s.observe(&ObservationKind::Clock).unwrap_err(), e);
 
@@ -386,7 +386,11 @@ fn detached_payload_is_not_replayable() {
         entry: d("entry"),
         command: None,
         kernel: None,
-        observations: vec![RecordedObservation { kind: ObservationKind::HumanText, digest: d("x"), storage: Storage::Inline }],
+        observations: vec![RecordedObservation {
+            kind: ObservationKind::HumanText,
+            digest: d("x"),
+            storage: Storage::Inline,
+        }],
         payload: None,
     };
     let span = RecordedSpan::new(vec![step]).unwrap();
@@ -394,7 +398,10 @@ fn detached_payload_is_not_replayable() {
     let source = ObservationSource::new(&span, &blobs);
     let mut s = source.step(5).unwrap();
     let e = s.observe(&ObservationKind::HumanText).unwrap_err();
-    assert_eq!(e, SubstError::MissingItem(MissingItem { kind: MissingKind::Payload, id: d("entry").to_string(), steps: vec![5] }));
+    assert_eq!(
+        e,
+        SubstError::MissingItem(MissingItem { kind: MissingKind::Payload, id: d("entry").to_string(), steps: vec![5] })
+    );
     assert_eq!(e.outcome(), Some(ReplayOutcome::NotReplayable));
     let mut s = source.step(5).unwrap();
     assert_eq!(s.commitment_salt(Field::Args).unwrap_err().code(), "missing_item");
@@ -403,7 +410,10 @@ fn detached_payload_is_not_replayable() {
 #[test]
 fn other_kinds_have_one_representation() {
     assert_eq!(ObservationKind::parse("clock").unwrap(), ObservationKind::Clock);
-    assert_eq!(ObservationKind::parse("laser_tracker_weather").unwrap(), ObservationKind::Other("laser_tracker_weather".into()));
+    assert_eq!(
+        ObservationKind::parse("laser_tracker_weather").unwrap(),
+        ObservationKind::Other("laser_tracker_weather".into())
+    );
     assert_eq!(ObservationKind::other("llm_output").unwrap_err().code(), "span_invalid");
     for bad in ["", "Clock", "9x", "a-b", &"a".repeat(65)] {
         assert!(ObservationKind::parse(bad).is_err(), "{bad:?}");
@@ -445,7 +455,8 @@ fn span_parser_fails_closed() {
     let too_many = (0..=MAX_OBSERVATIONS_PER_STEP)
         .map(|_| RecordedObservation { kind: ObservationKind::Clock, digest: d("x"), storage: Storage::Blob })
         .collect();
-    let step = RecordedStep { seq: 1, entry: d("e"), command: None, kernel: None, observations: too_many, payload: None };
+    let step =
+        RecordedStep { seq: 1, entry: d("e"), command: None, kernel: None, observations: too_many, payload: None };
     assert_eq!(RecordedSpan::new(vec![step]).unwrap_err().code(), "span_invalid");
 }
 
@@ -466,7 +477,8 @@ fn catalog_refuses_invalid_registry_records() {
         &parse(br#"{"algorithm": "a.b.mig@1.0.0", "command": "a.b", "from_major": 1, "to_major": 2}"#).unwrap(),
     )
     .unwrap();
-    let e = CommandCatalog::new(&[decl("a.b@1", "removed"), decl("a.b@2", "active")], &[m.clone()]).unwrap_err();
+    let e = CommandCatalog::new(&[decl("a.b@1", "removed"), decl("a.b@2", "active")], std::slice::from_ref(&m))
+        .unwrap_err();
     assert_eq!(e.code(), "catalog_invalid");
     // A valid migrator from a deprecated major: both retained, both reachable.
     let cat = CommandCatalog::new(&[decl("a.b@1", "deprecated"), decl("a.b@2", "active")], &[m]).unwrap();
@@ -499,8 +511,10 @@ fn preflight_is_deterministic_and_measured_over_10000_entries() {
     let mut m = BTreeMap::new();
     m.insert("state".to_string(), CValue::Str("active".into()));
     m.insert("since".to_string(), CValue::Str("2026-01-01".into()));
-    let decls =
-        [LifecycleDecl { command: CommandId::parse("probe.read@1").unwrap(), lifecycle: Lifecycle::from_map(&m).unwrap() }];
+    let decls = [LifecycleDecl {
+        command: CommandId::parse("probe.read@1").unwrap(),
+        lifecycle: Lifecycle::from_map(&m).unwrap(),
+    }];
     let catalog = CommandCatalog::new(&decls, &[]).unwrap();
     let kernels: BTreeSet<Digest> = [kernel].into_iter().collect();
     let start = std::time::Instant::now();
