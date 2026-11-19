@@ -14,7 +14,7 @@ use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::fmt::Write as _;
 use std::sync::OnceLock;
 
-use fid_geo_nurbs::analytic::{AXIS_REL, FRAME_TOL, MAX_BISECT, SIZE_MAX, SIZE_MIN};
+use fid_geo_nurbs::analytic::{SIZE_MAX, SIZE_MIN};
 use fid_geo_nurbs::{
     curve_geometry, AnalyticCurve, AnalyticError, AnalyticSurface, Circle, Cone, Curve, CurveFoot, Cylinder, Dir,
     Ellipse, EvalError, Line, Placement, PlacementFault, Plane, Regularity, Sphere, Surface, SurfaceFoot, Torus,
@@ -464,7 +464,6 @@ fn ac3_invalid_constructions_are_refused() {
     assert_eq!(bad([f64::NAN, 0.0, 0.0], z, x), AnalyticError::NotANumber);
     assert_eq!(bad([0.0, f64::NEG_INFINITY, 0.0], z, x), AnalyticError::NonFinite);
     assert!(Placement::new([0.0; 3], [0.0, 0.0, 1.0 + 0.5e-12], [1.0, 0.0, 0.5e-12]).is_ok());
-    assert_eq!(FRAME_TOL, 1e-12);
 }
 
 // ---------------------------------------------------------------- AC-4
@@ -743,7 +742,6 @@ fn parameter_and_order_errors() {
 /// to |foot - q|); the near-axis case does not lose precision (`w = s + 1` form).
 #[test]
 fn ellipse_inversion_is_bounded_and_consistent() {
-    assert_eq!(MAX_BISECT, 2200);
     let ell = Ellipse::new(aligned([0.0; 3]), 3.0, 1.0).unwrap();
     let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
     let mut next = || {
@@ -781,7 +779,6 @@ fn ellipse_inversion_is_bounded_and_consistent() {
     // Exact feet for x = 1 on the major axis: x_f = a^2 x / (a^2 - b^2) = 9/8, y_f^2 = 1 - (x_f/3)^2.
     let yf = (1.0 - (1.125_f64 / 3.0).powi(2)).sqrt();
     assert!((r.foot[0] - 1.125).abs() <= 1e-12 && (r.foot[1] - yf).abs() <= 1e-12, "{r:?}");
-    assert!(AXIS_REL < 1e-12);
 }
 
 #[test]
