@@ -99,3 +99,5 @@ fixtures/allow/** -text
 fixtures/flow/fixes/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# CORE.STO.SQL.SCHEMA fixture database and its generator: hashed and compared byte for byte.
+fixtures/core/sto/sql/schema/** -text

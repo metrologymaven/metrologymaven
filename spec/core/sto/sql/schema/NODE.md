@@ -41,7 +41,7 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 - **REQ-CORE.STO.SQL.SCHEMA-004** The database shall record its schema version in `schema_meta`, and when a project with an older version is opened for writing, the runner shall apply every later migration in order inside one transaction and record the new version in the same transaction.
 - **REQ-CORE.STO.SQL.SCHEMA-005** If the database's schema version is newer than the build supports, then a write open shall fail with `schema_too_new`, and the runner shall never apply a backward migration.
 - **REQ-CORE.STO.SQL.SCHEMA-006** If a migration fails, then the transaction shall roll back and the database shall remain at its previous version, byte-for-byte readable as before.
-- **REQ-CORE.STO.SQL.SCHEMA-007** At every open the store shall set WAL journal mode and enable foreign keys, and if WAL mode cannot be set, then the write open shall fail with `wal_unavailable`.
+- **REQ-CORE.STO.SQL.SCHEMA-007** At every open the store shall set WAL journal mode and enable foreign keys, and if WAL mode cannot be set, then the write open shall fail with `wal_unavailable`. A read open is read-only and shall leave the journal mode unchanged; it enables foreign keys like every open.
 
 ## Acceptance criteria
 
@@ -55,8 +55,9 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 
 - **Registry command(s):** none; library.
 - **Data structures:** `Migration { from: u32, to: u32, sql: &'static str }` list compiled into the binary; `SchemaVersion(u32)`.
-- **Algorithm:** at open: pragmas (`journal_mode=WAL`, `foreign_keys=ON`); read version; compare; run migrations in a single `BEGIN IMMEDIATE` transaction. Trigger form: `CREATE TRIGGER <t>_no_update BEFORE UPDATE ON <t> BEGIN SELECT RAISE(ABORT, 'append_only'); END;` and likewise for DELETE.
-- **Errors:** `append_only` (from SQLite), `schema_too_new`, `migration_failed`, `wal_unavailable`.
+- **Algorithm:** at open: refuse symbolic-link or non-regular `project.db`, `-wal`, `-shm`, `-journal` and a non-empty `-journal`; open with `SQLITE_OPEN_NOFOLLOW` below the canonical root; harden the connection (`SQLITE_DBCONFIG_DEFENSIVE` on, `trusted_schema` off, `cell_size_check` on, `foreign_keys` on, ATTACH unable to create or write, checkpoint-on-close off until checked; extension loading stays off, since `rusqlite` is built without `load_extension`); read version (`schema_meta` must hold exactly 1..=version); refuse a newer version (`schema_too_new`); compare `sqlite_master` (type, name, table, SQL) with the objects the DDL produces for that version (`schema_invalid` on any missing, changed or extra object); only then set `journal_mode=WAL` (write open) and run migrations in a single `BEGIN IMMEDIATE` transaction, re-checking the result before commit. Trigger form: `CREATE TRIGGER <t>_no_update BEFORE UPDATE ON <t> BEGIN SELECT RAISE(ABORT, 'append_only'); END;` and likewise for DELETE.
+- **Errors:** `append_only` (from SQLite), `schema_too_new`, `migration_failed`, `wal_unavailable`, `schema_invalid`.
+- **Boundary:** the triggers stop data changes (UPDATE, DELETE, replacing INSERT) only. `DROP TRIGGER`, `ALTER`/`DROP TABLE`, `writable_schema` edits, files produced by `VACUUM INTO` or `ATTACH`, a crafted `-wal` and raw byte edits are not stopped by triggers. Schema-level tampering is caught at every open by the schema check (`schema_invalid`, before anything is written), and tampering with row contents by the `CORE.JRN` hash chain.
 - **Determinism:** D0 (DDL fixed in source).
 - **Performance budget:** open with no migration in < 20 ms [unverified until measured].
 - **Crate:** `fid-store` (module `schema`); the SQLite driver crate is on the D-001 allowlist [unverified which binding].

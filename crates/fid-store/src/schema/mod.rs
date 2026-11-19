@@ -9,27 +9,44 @@
 //! out as a delete without firing delete triggers. [`MUTABLE_TABLES`] are the only tables a
 //! writer may change; each is rebuildable from `entries`.
 //!
-//! Versions: `schema_meta` holds one row per schema version the database has reached; the
-//! current version is the largest. A new, empty database is version 0, and migration 0 -> 1
-//! is the v1 DDL ([`V1_SQL`]). A write open applies every pending migration and records each
-//! new version inside one `BEGIN IMMEDIATE` transaction, so a failure leaves the database at
-//! its previous version; it never migrates backwards and refuses a newer database with
-//! `schema_too_new`.
+//! Boundary: triggers stop data changes (DML) only. Schema changes made outside this crate
+//! (`DROP TRIGGER`, `ALTER`/`DROP TABLE`, an extra trigger, `writable_schema` edits, a file
+//! written by `VACUUM INTO` or `ATTACH`, raw byte edits, a crafted `-wal`) are caught at every
+//! open by the schema check: the file's `sqlite_master` must equal, object for object (type,
+//! name, table, SQL text), what this build's DDL produces for the stored version, or the open
+//! fails with `schema_invalid` before anything is written. Changed row contents are the
+//! business of the `CORE.JRN` hash chain, not of this module.
 //!
-//! Every open enables foreign keys and turns `trusted_schema` off (a project file is input
-//! from outside). A write open sets WAL journal mode and fails with `wal_unavailable` if
-//! SQLite does not confirm it. A read open is read-only and leaves the journal mode as found.
+//! Versions: `schema_meta` holds one row per schema version the database has reached, exactly
+//! the versions 1..=current. A new, empty database is version 0, and migration 0 -> 1 is the
+//! v1 DDL ([`V1_SQL`]). A write open applies every pending migration and records each new
+//! version inside one `BEGIN IMMEDIATE` transaction, so a failure leaves the database at its
+//! previous version; it never migrates backwards and refuses a newer database with
+//! `schema_too_new` (a read open does too: a newer schema cannot be checked).
 //!
-//! Locking: a write open needs the project's write lock ([`Locked`], `CORE.STO.LAYOUT`) and
-//! checks that it is still held. `project.db` must be a regular file, not a symbolic link.
-//! Paths: on Windows the database is opened through SQLite's `win32-longpath` VFS with a
-//! `\\?\` path, so project roots up to [`crate::layout::MAX_PATH_CHARS`] characters work as
-//! they do for the rest of the layout. SQLite's Unix VFS limits a path to
-//! [`UNIX_MAX_DB_PATH_BYTES`] bytes [unverified: SQLite `MAX_PATHNAME`]; a longer database
-//! path fails with `path_too_long` before SQLite is called.
+//! Every connection is hardened before it reads anything: `SQLITE_DBCONFIG_DEFENSIVE` on,
+//! `trusted_schema` off, `cell_size_check` on, foreign keys on, `ATTACH` unable to create or
+//! write files, and checkpoint-on-close off until the schema check has passed (so a refused
+//! file, or its `-wal`, is never folded into `project.db`). Extension loading stays off: it is
+//! off by default in SQLite, and this crate builds `rusqlite` without `load_extension`, so no
+//! code path can turn it on. A write open then sets WAL journal mode and fails with
+//! `wal_unavailable` if SQLite does not confirm it. A read open is read-only and leaves the
+//! journal mode unchanged.
+//!
+//! Files: a write open needs the project's write lock ([`Locked`], `CORE.STO.LAYOUT`) and
+//! checks that it is still held. `project.db` must be a regular file and is opened with
+//! `SQLITE_OPEN_NOFOLLOW` below the canonical project root; `project.db-wal`, `-shm` and
+//! `-journal`, when present, must be regular files, not symbolic links, and a non-empty
+//! `-journal` (a WAL-mode project never has one) fails with `schema_invalid` rather than being
+//! rolled back into the database. Paths: on Windows the database is opened through SQLite's
+//! `win32-longpath` VFS with a `\\?\` path, so project roots up to
+//! [`crate::layout::MAX_PATH_CHARS`] characters work. SQLite's Unix VFS limits a path to
+//! [`UNIX_MAX_DB_PATH_BYTES`] bytes [unverified: SQLite `MAX_PATHNAME`]; a longer database path
+//! fails with `path_too_long` before SQLite is called.
 
 use crate::layout::{OpenMode, ProjectLocation, StoreError, DB_FILE};
 use crate::Locked;
+use rusqlite::config::DbConfig;
 use rusqlite::{Connection, ErrorCode, OpenFlags, TransactionBehavior};
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -38,7 +55,7 @@ use std::time::Duration;
 /// The v1 DDL: tables, indexes and append-only triggers (no transaction control).
 pub const V1_SQL: &str = include_str!("v1.sql");
 
-/// Newest schema version this build writes and the newest it can open for writing.
+/// Newest schema version this build writes and the newest it can open.
 pub const LATEST: u32 = 1;
 
 /// All tables of schema v1, in DDL order.
@@ -63,6 +80,9 @@ pub const MUTABLE_TABLES: [&str; 3] = ["heads", "idempotency", "settings_current
 /// Message of the trigger abort on an append-only table.
 pub const APPEND_ONLY: &str = "append_only";
 
+/// Companion files SQLite keeps next to `project.db`.
+pub const COMPANIONS: [&str; 3] = ["-wal", "-shm", "-journal"];
+
 /// Longest database path, in bytes, passed to SQLite's Unix VFS [unverified: SQLite's
 /// `MAX_PATHNAME` is 512 including the terminating NUL].
 pub const UNIX_MAX_DB_PATH_BYTES: usize = 511;
@@ -86,7 +106,7 @@ pub struct SchemaVersion(pub u32);
 /// The migrations compiled into this build: migration `i` goes from version `i` to `i + 1`.
 pub static MIGRATIONS: [Migration; 1] = [Migration { from: 0, to: 1, sql: V1_SQL }];
 
-/// The migration list a write open applies, ending at `latest`.
+/// The migration list an open checks against and a write open applies, ending at `latest`.
 #[derive(Clone, Copy, Debug)]
 pub struct MigrationPlan {
     pub latest: u32,
@@ -129,15 +149,18 @@ impl MigrationPlan {
 pub enum SchemaError {
     /// A trigger refused an UPDATE, DELETE or replacing INSERT on an append-only table.
     AppendOnly,
-    /// The database is newer than this build can write.
+    /// The database is newer than this build can open.
     SchemaTooNew { found: u32, supported: u32 },
     /// A migration failed; the transaction was rolled back.
     MigrationFailed { from: u32, to: u32, detail: String },
     /// WAL journal mode could not be set on a write open (SQLite's answer or error).
     WalUnavailable(String),
-    /// The file is not a project database this code understands (tables but no
-    /// `schema_meta`, an empty `schema_meta`, a version out of range).
+    /// The file is not a project database this build wrote: schema objects differ from the
+    /// DDL of the stored version, `schema_meta` is not exactly 1..=version, tables without
+    /// `schema_meta`, or a leftover rollback journal.
     SchemaInvalid(String),
+    /// A connection safety setting could not be applied or read back.
+    HardeningFailed(String),
     /// The database path cannot be given to SQLite (not valid Unicode).
     PathUnsupported(PathBuf),
     /// A layout-level failure (lock lost, symbolic link, path too long, ...).
@@ -155,6 +178,7 @@ impl SchemaError {
             SchemaError::MigrationFailed { .. } => "migration_failed",
             SchemaError::WalUnavailable(_) => "wal_unavailable",
             SchemaError::SchemaInvalid(_) => "schema_invalid",
+            SchemaError::HardeningFailed(_) => "hardening_failed",
             SchemaError::PathUnsupported(_) => "path_unsupported",
             SchemaError::Store(e) => e.code(),
             SchemaError::Sqlite(_) => "sqlite",
@@ -174,6 +198,7 @@ impl fmt::Display for SchemaError {
             }
             SchemaError::WalUnavailable(why) => write!(f, "wal_unavailable: {why}"),
             SchemaError::SchemaInvalid(why) => write!(f, "schema_invalid: {why}"),
+            SchemaError::HardeningFailed(why) => write!(f, "hardening_failed: {why}"),
             SchemaError::PathUnsupported(p) => write!(f, "path_unsupported: {}", p.display()),
             SchemaError::Store(e) => write!(f, "{e}"),
             SchemaError::Sqlite(e) => write!(f, "sqlite: {e}"),
@@ -213,7 +238,7 @@ pub fn is_append_only(e: &rusqlite::Error) -> bool {
         if f.code == ErrorCode::ConstraintViolation && msg == APPEND_ONLY)
 }
 
-/// An open project database at a known schema version.
+/// An open project database at a known, checked schema version.
 #[derive(Debug)]
 pub struct Database {
     conn: Connection,
@@ -243,8 +268,9 @@ impl Database {
     }
 }
 
-/// Opens `project.db` of a project for writing with this build's [`PLAN`]: sets WAL and
-/// foreign keys, then migrates forward to [`LATEST`] (creating the v1 schema in a new project).
+/// Opens `project.db` of a project for writing with this build's [`PLAN`]: checks the
+/// schema, sets WAL, then migrates forward to [`LATEST`] (creating the v1 schema in a new
+/// project).
 pub fn open_write(loc: &ProjectLocation, lock: &Locked) -> Result<Database, SchemaError> {
     open_write_with(loc, lock, &PLAN)
 }
@@ -253,22 +279,38 @@ pub fn open_write(loc: &ProjectLocation, lock: &Locked) -> Result<Database, Sche
 pub fn open_write_with(loc: &ProjectLocation, lock: &Locked, plan: &MigrationPlan) -> Result<Database, SchemaError> {
     plan.validate()?;
     lock.verify()?;
-    let mut conn = connect(&loc.root().join(DB_FILE), OpenMode::Write)?;
+    let mut conn = connect(loc, OpenMode::Write)?;
+    // Nothing is written before the file has passed these checks.
+    let found = checked_version(&conn, plan)?;
     set_wal(&conn)?;
-    let found = read_version(&conn)?;
-    if found.0 > plan.latest {
-        return Err(SchemaError::SchemaTooNew { found: found.0, supported: plan.latest });
-    }
     let version = if found.0 < plan.latest { migrate(&mut conn, plan)? } else { found };
+    // Checked: a normal close may now checkpoint the WAL into project.db.
+    set_config(&conn, DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, false, "no_ckpt_on_close")?;
     Ok(Database { conn, version, mode: OpenMode::Write })
 }
 
-/// Opens `project.db` read-only. Applies no migration and accepts any version, including one
-/// newer than this build; callers decide what they can read.
+/// Opens `project.db` read-only after the same checks as a write open; applies no migration
+/// and leaves the journal mode unchanged.
 pub fn open_read(loc: &ProjectLocation) -> Result<Database, SchemaError> {
-    let conn = connect(&loc.root().join(DB_FILE), OpenMode::Read)?;
-    let version = read_version(&conn)?;
+    open_read_with(loc, &PLAN)
+}
+
+/// [`open_read`] checked against an explicit plan.
+pub fn open_read_with(loc: &ProjectLocation, plan: &MigrationPlan) -> Result<Database, SchemaError> {
+    plan.validate()?;
+    let conn = connect(loc, OpenMode::Read)?;
+    let version = checked_version(&conn, plan)?;
     Ok(Database { conn, version, mode: OpenMode::Read })
+}
+
+/// Reads the version, refuses a newer one, and checks the schema objects against the plan.
+fn checked_version(conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, SchemaError> {
+    let found = read_version(conn)?;
+    if found.0 > plan.latest {
+        return Err(SchemaError::SchemaTooNew { found: found.0, supported: plan.latest });
+    }
+    verify_schema(conn, plan, found)?;
+    Ok(found)
 }
 
 /// Checks SQLite's answer to `PRAGMA journal_mode=WAL`.
@@ -287,9 +329,35 @@ fn set_wal(conn: &Connection) -> Result<(), SchemaError> {
     check_journal_mode(&answer)
 }
 
-/// Opens a connection with the per-open pragmas (foreign keys on, untrusted schema).
-fn connect(path: &Path, mode: OpenMode) -> Result<Connection, SchemaError> {
-    let meta = match std::fs::symlink_metadata(path) {
+/// Refuses companion files that are links or not regular files, and a non-empty rollback
+/// journal (SQLite would roll it back into the database on the first read).
+fn check_companions(dir: &Path) -> Result<(), SchemaError> {
+    for suffix in COMPANIONS {
+        let p = dir.join(format!("{DB_FILE}{suffix}"));
+        let meta = match std::fs::symlink_metadata(&p) {
+            Ok(m) => m,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(StoreError::Io(e).into()),
+        };
+        if meta.file_type().is_symlink() {
+            return Err(StoreError::SymlinkRefused.into());
+        }
+        if !meta.is_file() {
+            return Err(StoreError::NotRegularFile.into());
+        }
+        if suffix == "-journal" && meta.len() > 0 {
+            return Err(SchemaError::SchemaInvalid(format!("leftover rollback journal {DB_FILE}{suffix}")));
+        }
+    }
+    Ok(())
+}
+
+/// Opens a hardened connection to `project.db` of `loc`.
+fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<Connection, SchemaError> {
+    // The user's path to the root may contain links (CORE.STO.LAYOUT); below it nothing may.
+    let root = std::fs::canonicalize(loc.root()).map_err(StoreError::Io)?;
+    let path = root.join(DB_FILE);
+    let meta = match std::fs::symlink_metadata(&path) {
         Ok(m) => m,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(StoreError::NotAProject(format!("no {DB_FILE}")).into())
@@ -302,20 +370,50 @@ fn connect(path: &Path, mode: OpenMode) -> Result<Connection, SchemaError> {
     if !meta.is_file() {
         return Err(StoreError::NotRegularFile.into());
     }
+    check_companions(&root)?;
     let access = match mode {
         OpenMode::Write => OpenFlags::SQLITE_OPEN_READ_WRITE,
         OpenMode::Read => OpenFlags::SQLITE_OPEN_READ_ONLY,
     };
     // No SQLITE_OPEN_CREATE (layout creates the file) and no SQLITE_OPEN_URI (a path is a path).
-    let flags = access | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-    let conn = open_path(path, flags)?;
+    let flags = access | OpenFlags::SQLITE_OPEN_NO_MUTEX | OpenFlags::SQLITE_OPEN_NOFOLLOW;
+    let conn = open_path(&path, flags)?;
+    harden(&conn)?;
     conn.busy_timeout(BUSY_TIMEOUT)?;
-    conn.execute_batch("PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF;")?;
-    let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0))?;
-    if fk != 1 {
-        return Err(SchemaError::SchemaInvalid("foreign keys could not be enabled".to_string()));
-    }
     Ok(conn)
+}
+
+fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result<(), SchemaError> {
+    let now = conn.set_db_config(what, on).map_err(|e| SchemaError::HardeningFailed(format!("{name}: {e}")))?;
+    if now != on || conn.db_config(what).map_err(|e| SchemaError::HardeningFailed(format!("{name}: {e}")))? != on {
+        return Err(SchemaError::HardeningFailed(format!("{name} did not become {on}")));
+    }
+    Ok(())
+}
+
+/// Connection safety settings, applied before the connection reads the file and read back.
+fn harden(conn: &Connection) -> Result<(), SchemaError> {
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true, "defensive")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false, "trusted_schema")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA, false, "writable_schema")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_CREATE, false, "attach_create")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE, false, "attach_write")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_TRIGGER, true, "enable_trigger")?;
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_FKEY, true, "enable_fkey")?;
+    // A refused file must not be checkpointed into project.db; a write open turns this back
+    // off once the schema check has passed.
+    set_config(conn, DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true, "no_ckpt_on_close")?;
+    conn.execute_batch("PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; PRAGMA cell_size_check=ON;")
+        .map_err(|e| SchemaError::HardeningFailed(e.to_string()))?;
+    for (pragma, want) in [("foreign_keys", 1i64), ("trusted_schema", 0), ("cell_size_check", 1)] {
+        let got: i64 = conn
+            .query_row(&format!("PRAGMA {pragma}"), [], |r| r.get(0))
+            .map_err(|e| SchemaError::HardeningFailed(format!("{pragma}: {e}")))?;
+        if got != want {
+            return Err(SchemaError::HardeningFailed(format!("{pragma} is {got}, expected {want}")));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -336,12 +434,9 @@ fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
 }
 
 /// Reads the schema version: 0 for a database without any schema object, else the largest
-/// version in `schema_meta`.
+/// version in `schema_meta`, whose rows must be exactly 1..=version.
 pub fn read_version(conn: &Connection) -> Result<SchemaVersion, SchemaError> {
-    let objects: i64 =
-        conn.query_row("SELECT count(*) FROM sqlite_master WHERE name NOT LIKE 'sqlite\\_%' ESCAPE '\\'", [], |r| {
-            r.get(0)
-        })?;
+    let objects: i64 = conn.query_row("SELECT count(*) FROM sqlite_master", [], |r| r.get(0))?;
     if objects == 0 {
         return Ok(SchemaVersion(0));
     }
@@ -350,14 +445,68 @@ pub fn read_version(conn: &Connection) -> Result<SchemaVersion, SchemaError> {
             r.get(0)
         })?;
     if has_meta == 0 {
-        return Err(SchemaError::SchemaInvalid("database has tables but no schema_meta".to_string()));
+        return Err(SchemaError::SchemaInvalid("database has schema objects but no schema_meta table".to_string()));
     }
-    let max: Option<i64> = conn.query_row("SELECT max(version) FROM schema_meta", [], |r| r.get(0))?;
-    let Some(max) = max else { return Err(SchemaError::SchemaInvalid("schema_meta is empty".to_string())) };
+    let (rows, distinct, min, max): (i64, i64, Option<i64>, Option<i64>) = conn.query_row(
+        "SELECT count(*), count(DISTINCT version), min(version), max(version) FROM schema_meta",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    )?;
+    let (Some(min), Some(max)) = (min, max) else {
+        return Err(SchemaError::SchemaInvalid("schema_meta is empty".to_string()));
+    };
+    if min != 1 || max != rows || distinct != rows {
+        return Err(SchemaError::SchemaInvalid(format!(
+            "schema_meta must hold exactly the versions 1..={max}: {rows} rows, {distinct} distinct, min {min}"
+        )));
+    }
     match u32::try_from(max) {
-        Ok(v) if v >= 1 => Ok(SchemaVersion(v)),
-        _ => Err(SchemaError::SchemaInvalid(format!("schema version {max} is out of range"))),
+        Ok(v) => Ok(SchemaVersion(v)),
+        Err(_) => Err(SchemaError::SchemaInvalid(format!("schema version {max} is out of range"))),
     }
+}
+
+/// One `sqlite_master` row: type, name, table, SQL text.
+pub type SchemaObject = (String, String, String, Option<String>);
+
+fn schema_objects(conn: &Connection) -> Result<Vec<SchemaObject>, rusqlite::Error> {
+    let mut st = conn.prepare("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name, tbl_name")?;
+    let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?;
+    rows.collect()
+}
+
+/// The schema objects the plan's DDL produces at `version`, built in a private in-memory
+/// database.
+pub fn expected_objects(plan: &MigrationPlan, version: SchemaVersion) -> Result<Vec<SchemaObject>, SchemaError> {
+    let mem = Connection::open_in_memory()?;
+    for m in plan.migrations.iter().filter(|m| m.to <= version.0) {
+        mem.execute_batch(m.sql).map_err(|e| SchemaError::MigrationFailed {
+            from: m.from,
+            to: m.to,
+            detail: format!("building the expected schema: {e}"),
+        })?;
+    }
+    Ok(schema_objects(&mem)?)
+}
+
+/// Checks that the file's schema objects are exactly those of `version` under `plan`.
+pub fn verify_schema(conn: &Connection, plan: &MigrationPlan, version: SchemaVersion) -> Result<(), SchemaError> {
+    let want = expected_objects(plan, version)?;
+    let got = schema_objects(conn)?;
+    if got == want {
+        return Ok(());
+    }
+    let describe = |o: &SchemaObject| format!("{} {} on {}", o.0, o.1, o.2);
+    let detail = if let Some(o) = want.iter().find(|o| !got.iter().any(|g| g.0 == o.0 && g.1 == o.1)) {
+        format!("missing {}", describe(o))
+    } else if let Some(o) = got.iter().find(|o| !want.iter().any(|w| w.0 == o.0 && w.1 == o.1)) {
+        format!("unexpected {}", describe(o))
+    } else if let Some(o) = got.iter().find(|o| !want.contains(o)) {
+        format!("changed {}", describe(o))
+    } else {
+        "schema objects differ".to_string()
+    };
+    Err(SchemaError::SchemaInvalid(format!("{detail} (expected the schema of version {})", version.0)))
 }
 
 /// Applies every migration after the current version in one `BEGIN IMMEDIATE` transaction,
@@ -367,10 +516,7 @@ fn migrate(conn: &mut Connection, plan: &MigrationPlan) -> Result<SchemaVersion,
     // Starting the write transaction is not a migration step; its failure is SQLite's.
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate).map_err(SchemaError::Sqlite)?;
     // Re-read under the write transaction: this is the version the migrations start from.
-    let current = read_version(&tx)?;
-    if current.0 > plan.latest {
-        return Err(SchemaError::SchemaTooNew { found: current.0, supported: plan.latest });
-    }
+    let current = checked_version(&tx, plan)?;
     for m in plan.migrations.iter().filter(|m| m.from >= current.0) {
         tx.execute_batch(m.sql).map_err(|e| fail(m.from, m.to, e.to_string()))?;
         if tx.is_autocommit() {
@@ -384,6 +530,12 @@ fn migrate(conn: &mut Connection, plan: &MigrationPlan) -> Result<SchemaVersion,
     if violations != 0 {
         return Err(fail(current.0, plan.latest, format!("{violations} foreign key violations")));
     }
+    // The result must be exactly the schema of the new version.
+    let reached = read_version(&tx).map_err(|e| fail(current.0, plan.latest, e.to_string()))?;
+    if reached.0 != plan.latest {
+        return Err(fail(current.0, plan.latest, format!("schema_meta reached {}", reached.0)));
+    }
+    verify_schema(&tx, plan, reached).map_err(|e| fail(current.0, plan.latest, e.to_string()))?;
     tx.commit().map_err(|e| fail(current.0, plan.latest, format!("commit: {e}")))?;
     Ok(SchemaVersion(plan.latest))
 }

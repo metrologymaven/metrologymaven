@@ -411,7 +411,14 @@ fn plans_must_be_contiguous_from_zero() {
 #[test]
 fn ac5_version_99_fails_write_open_with_schema_too_new() {
     let (_t, root) = fixture_project("ac5");
-    raw(&root).execute("INSERT INTO schema_meta (version) VALUES (99)", []).unwrap();
+    // A database that has really reached 99: schema_meta holds 1..=99.
+    raw(&root)
+        .execute(
+            "WITH RECURSIVE v(n) AS (SELECT 2 UNION ALL SELECT n + 1 FROM v WHERE n < 99) \
+             INSERT INTO schema_meta (version) SELECT n FROM v",
+            [],
+        )
+        .unwrap();
     let before = sha256_file(&root.join(DB_FILE));
     let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
     let lock = lock.unwrap();
@@ -425,8 +432,8 @@ fn ac5_version_99_fails_write_open_with_schema_too_new() {
     }
     drop(lock);
     assert_eq!(sha256_file(&root.join(DB_FILE)), before);
-    // A read open reports the version and leaves the decision to the caller.
-    assert_eq!(open_read(&loc).unwrap().version(), SchemaVersion(99));
+    // A newer schema cannot be checked, so a read open refuses it too.
+    assert_eq!(open_read(&loc).unwrap_err().code(), "schema_too_new");
 }
 
 // ---------------------------------------------------------------- REQ-007 and hostile files
@@ -443,11 +450,13 @@ fn journal_mode_answers_other_than_wal_are_wal_unavailable() {
 #[test]
 fn wal_that_cannot_be_set_fails_the_write_open() {
     let (_t, root) = new_project("wal");
-    // A raw rollback-journal reader holds a shared lock, so the switch to WAL cannot happen.
+    // A valid v1 database in rollback-journal mode, with a raw reader holding a shared lock:
+    // the schema check passes, but the switch to WAL cannot happen.
     let c = raw(&root);
     let mode: String = c.query_row("PRAGMA journal_mode=DELETE", [], |r| r.get(0)).unwrap();
     assert_eq!(mode, "delete");
-    c.execute_batch("CREATE TABLE t (x); BEGIN; SELECT count(*) FROM t;").unwrap();
+    c.execute_batch(V1_SQL).unwrap();
+    c.execute_batch("INSERT INTO schema_meta (version) VALUES (1); BEGIN; SELECT count(*) FROM entries;").unwrap();
     let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
     let err = open_write(&loc, &lock.unwrap()).unwrap_err();
     assert_eq!(err.code(), "wal_unavailable", "{err}");
@@ -582,4 +591,194 @@ fn unix_database_path_limit_is_reported_as_path_too_long() {
     let long = path_of_len(&t.0, UNIX_MAX_DB_PATH_BYTES);
     let (loc, lock) = ProjectLocation::create(&long).unwrap();
     assert_eq!(open_write(&loc, &lock).unwrap_err().code(), "path_too_long");
+}
+
+// ---------------------------------------------------------------- schema check (hostile files)
+
+/// Applies `sql` to the fixture copy through a raw connection, then expects both opens to fail
+/// with `schema_invalid` and `project.db` to stay byte-identical.
+fn tampered_is_refused(tag: &str, sql: &str) {
+    let (_t, root) = fixture_project(tag);
+    raw(&root).execute_batch(sql).unwrap();
+    let db = root.join(DB_FILE);
+    let before = sha256_file(&db);
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid", "{sql}: {err}");
+    assert_eq!(open_read(&loc).unwrap_err().code(), "schema_invalid", "{sql}");
+    assert_eq!(sha256_file(&db), before, "{sql}");
+}
+
+#[test]
+fn dropped_trigger_is_schema_invalid() {
+    tampered_is_refused("droptrig", "DROP TRIGGER entries_no_update;");
+    tampered_is_refused("droptrig2", "DROP TRIGGER snapshots_no_delete;");
+}
+
+#[test]
+fn extra_trigger_is_schema_invalid() {
+    tampered_is_refused(
+        "extratrig",
+        "CREATE TRIGGER evil AFTER INSERT ON entries BEGIN INSERT INTO heads VALUES ('x', NEW.hash); END;",
+    );
+}
+
+#[test]
+fn altered_or_extra_tables_and_indexes_are_schema_invalid() {
+    tampered_is_refused("alter", "ALTER TABLE heads ADD COLUMN extra TEXT;");
+    tampered_is_refused("droptable", "DROP TABLE idempotency;");
+    tampered_is_refused("extratable", "CREATE TABLE side (x);");
+    tampered_is_refused("extraindex", "CREATE INDEX side_idx ON heads (entry_hash);");
+    // Same names, different text: a trigger that no longer aborts.
+    tampered_is_refused(
+        "swaptrig",
+        "DROP TRIGGER entries_no_delete; \
+         CREATE TRIGGER entries_no_delete BEFORE DELETE ON entries BEGIN SELECT 1; END;",
+    );
+}
+
+#[test]
+fn schema_meta_must_be_exactly_one_to_max() {
+    // Gap: versions 1 and 3.
+    tampered_is_refused("gap", "INSERT INTO schema_meta (version) VALUES (3);");
+    // Rows below 1, inserted past the CHECK constraint.
+    tampered_is_refused("zero", "PRAGMA ignore_check_constraints=ON; INSERT INTO schema_meta (version) VALUES (0);");
+    tampered_is_refused("neg", "PRAGMA ignore_check_constraints=ON; INSERT INTO schema_meta (version) VALUES (-5);");
+    // A lone high version without its history.
+    let (_t, root) = fixture_project("lone");
+    raw(&root).execute("INSERT INTO schema_meta (version) VALUES (99)", []).unwrap();
+    let (loc, _) = ProjectLocation::open(&root, OpenMode::Read).unwrap();
+    assert_eq!(open_read(&loc).unwrap_err().code(), "schema_invalid");
+}
+
+#[test]
+fn connections_are_hardened() {
+    use rusqlite::config::DbConfig;
+    let t = TempDir::new("harden");
+    let (loc, lock) = ProjectLocation::create(&t.0.join("p")).unwrap();
+    let w = open_write(&loc, &lock).unwrap();
+    let r = open_read(&loc).unwrap();
+    for db in [&w, &r] {
+        let c = db.connection();
+        assert!(c.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE).unwrap());
+        assert!(!c.db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA).unwrap());
+        assert!(!c.db_config(DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA).unwrap());
+        assert!(c.db_config(DbConfig::SQLITE_DBCONFIG_ENABLE_TRIGGER).unwrap());
+        for (pragma, want) in [("trusted_schema", 0i64), ("cell_size_check", 1), ("foreign_keys", 1)] {
+            let got: i64 = c.query_row(&format!("PRAGMA {pragma}"), [], |row| row.get(0)).unwrap();
+            assert_eq!(got, want, "{pragma}");
+        }
+        // Extension loading is off (rusqlite is built without `load_extension`).
+        let err = c.query_row("SELECT load_extension('fid_no_such_extension')", [], |row| row.get::<_, i64>(0));
+        assert!(err.unwrap_err().to_string().contains("not authorized"));
+        // ATTACH cannot create a new file.
+        let target = t.0.join("attached.db");
+        let sql = format!("ATTACH DATABASE '{}' AS side", target.to_str().unwrap().replace('\'', "''"));
+        assert!(c.execute_batch(&sql).is_err());
+        assert!(!target.exists());
+    }
+    // Defensive mode: writable_schema cannot be used to edit the schema table.
+    let c = w.connection();
+    let _ = c.execute_batch("PRAGMA writable_schema=ON;");
+    assert!(c.execute("UPDATE sqlite_master SET sql = sql WHERE name = 'entries'", []).is_err());
+}
+
+#[test]
+fn crafted_wal_that_adds_a_trigger_is_refused_and_not_checkpointed() {
+    let (t, root) = fixture_project("craftwal");
+    // The attacker's copy of the same database, with a change left uncheckpointed in its WAL.
+    let src = t.0.join("src.db");
+    std::fs::copy(Path::new(FIXTURES).join("v1.db"), &src).unwrap();
+    let a = Connection::open(&src).unwrap();
+    a.execute_batch(
+        "PRAGMA wal_autocheckpoint=0; \
+         CREATE TRIGGER evil AFTER INSERT ON entries BEGIN DELETE FROM heads; END;",
+    )
+    .unwrap();
+    let wal = root.join(format!("{DB_FILE}-wal"));
+    std::fs::copy(t.0.join("src.db-wal"), &wal).unwrap();
+    drop(a);
+    let db = root.join(DB_FILE);
+    let before = sha256_file(&db);
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    let err = open_write(&loc, &lock.unwrap()).unwrap_err();
+    assert_eq!(err.code(), "schema_invalid", "{err}");
+    assert!(err.to_string().contains("evil"), "{err}");
+    // The refused WAL was not folded into project.db.
+    assert_eq!(sha256_file(&db), before);
+    assert_eq!(open_read(&loc).unwrap_err().code(), "schema_invalid");
+}
+
+#[test]
+fn wal_with_a_different_page_size_never_yields_other_data() {
+    let (t, root) = fixture_project("pagesize");
+    let (_tp, pristine_db) = pristine("pagesize-fx");
+    let want = data_snapshot(&pristine_db);
+    // A WAL written for a 1024-byte-page database (the fixture uses 4096).
+    let src = t.0.join("small.db");
+    let a = Connection::open(&src).unwrap();
+    a.execute_batch(
+        "PRAGMA page_size=1024; PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; \
+         CREATE TABLE x (y); INSERT INTO x VALUES (randomblob(5000));",
+    )
+    .unwrap();
+    std::fs::copy(t.0.join("small.db-wal"), root.join(format!("{DB_FILE}-wal"))).unwrap();
+    drop(a);
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    // Either the open fails with a typed error, or it sees exactly the fixture's rows.
+    match open_write(&loc, &lock.unwrap()) {
+        Ok(db) => {
+            assert_eq!(db.version(), SchemaVersion(1));
+            assert_eq!(data_snapshot(db.connection()), want);
+        }
+        Err(e) => assert!(!e.code().is_empty(), "{e}"),
+    }
+}
+
+#[test]
+fn leftover_rollback_journal_is_refused_and_not_replayed() {
+    let (_t, root) = fixture_project("journal");
+    let db = root.join(DB_FILE);
+    let journal = root.join(format!("{DB_FILE}-journal"));
+    // An empty journal is harmless.
+    std::fs::write(&journal, b"").unwrap();
+    {
+        let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+        assert_eq!(open_write(&loc, &lock.unwrap()).unwrap().version(), SchemaVersion(1));
+    }
+    let before = sha256_file(&db);
+    // A non-empty one (hot-journal header plus junk) is refused before SQLite sees it.
+    let mut bytes = vec![0xd9, 0xd5, 0x05, 0xf9, 0x20, 0xa1, 0x63, 0xd7];
+    bytes.extend_from_slice(&[0xA5u8; 4096]);
+    std::fs::write(&journal, &bytes).unwrap();
+    let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+    assert_eq!(open_write(&loc, &lock.unwrap()).unwrap_err().code(), "schema_invalid");
+    assert_eq!(open_read(&loc).unwrap_err().code(), "schema_invalid");
+    assert_eq!(sha256_file(&db), before);
+    assert_eq!(std::fs::read(&journal).unwrap(), bytes);
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinked_companion_files_are_refused() {
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let (t, root) = fixture_project("complink");
+        let elsewhere = t.0.join("elsewhere");
+        std::fs::write(&elsewhere, b"").unwrap();
+        std::os::unix::fs::symlink(&elsewhere, root.join(format!("{DB_FILE}{suffix}"))).unwrap();
+        let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+        assert_eq!(open_write(&loc, &lock.unwrap()).unwrap_err().code(), "symlink_refused", "{suffix}");
+        assert_eq!(open_read(&loc).unwrap_err().code(), "symlink_refused", "{suffix}");
+        assert_eq!(std::fs::metadata(&elsewhere).unwrap().len(), 0);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn symlink_in_the_path_to_the_root_still_opens() {
+    let (t, root) = fixture_project("rootlink");
+    let link = t.0.join("link");
+    std::os::unix::fs::symlink(&root, &link).unwrap();
+    let (loc, lock) = ProjectLocation::open(&link, OpenMode::Write).unwrap();
+    assert_eq!(open_write(&loc, &lock.unwrap()).unwrap().version(), SchemaVersion(1));
 }
