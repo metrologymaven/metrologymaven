@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-dist]
+built_pr: 287
 satisfies: [REQ-GEO.DIST-001, REQ-GEO.DIST-005, REQ-GEO.DIST-008]
 covers: []
 depends_on: [GEO.INDEX.BVH, GEO.TYPES.MESH, KRN.NUM]
