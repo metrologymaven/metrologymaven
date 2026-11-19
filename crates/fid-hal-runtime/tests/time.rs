@@ -239,13 +239,16 @@ fn hostile_inputs_are_typed_errors() {
     assert_eq!(estimate(&p, src), Err(TimeError::NonMonotonic { index: 9 }));
 
     // Host-time inversion (receive jitter, buffered delivery) is not an error: it still estimates.
-    let mut p = clean(20);
-    p[4].1 = p[3].1 - 1;
-    p[11].1 = p[10].1 - 250;
+    // 1 µs device steps; two host times are 200 ns and 50 ns earlier than their predecessor.
+    // Expected values from make_fixtures.estimate on these pairs (Python reference).
+    let mut p: Vec<(i64, i64)> = (0..20).map(|i| (i * 1_000, 3_000 + i * 1_000)).collect();
+    p[4].1 = p[3].1 - 200;
+    p[11].1 = p[10].1 - 50;
     let m = estimate(&p, src).unwrap();
     assert_eq!(m.n, 20);
-    assert!(m.sigma_ns > 0.0 && m.sigma_ns.is_finite());
-    assert!((m.drift - 7e-6).abs() < 1e-3);
+    assert!((m.drift - 0.007_556_390_977_443_609).abs() < 1e-12, "drift {}", m.drift);
+    assert!((m.offset_ns - 2_815.714_285_714_286).abs() < 1e-6, "offset {}", m.offset_ns);
+    assert!((m.sigma_ns - 353.663_692_678_223_64).abs() < 1e-6, "sigma {}", m.sigma_ns);
 
     // A device gap beyond 2^53 ns.
     let mut p = clean(20);
