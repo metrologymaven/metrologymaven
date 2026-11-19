@@ -36,7 +36,7 @@ version_max = "12"
 arch = "x86_64"
 tier = "tier2"
 since_phase = "P1b"
-notes = "line one\nline two\r\nthree\tfour, café — ok"
+notes = "line one\nline two\r\nthree\tfour, café — ok; nel\u0085c1\u009fls ps end"
 
 [[row]]
 os = "fedora"

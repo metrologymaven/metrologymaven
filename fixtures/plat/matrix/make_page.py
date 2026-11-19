@@ -44,8 +44,8 @@ ENTITIES = {"&": "&amp;", "<": "&lt;", ">": "&gt;"}
 def escape(text):
     out = []
     for ch in text:
-        if ord(ch) < 0x20 or ord(ch) == 0x7F:
-            out.append(" ")  # newlines, tabs and other controls would break the table row
+        if ord(ch) < 0x20 or 0x7F <= ord(ch) <= 0x9F or ch in "\u2028\u2029":
+            out.append(" ")  # C0/C1 controls and line/paragraph separators would break the row
         elif ch in ENTITIES:
             out.append(ENTITIES[ch])
         elif ch in BACKSLASHED:

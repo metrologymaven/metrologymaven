@@ -317,7 +317,7 @@ fn page_cmd(args: &[String]) -> ExitCode {
         match flag.as_str() {
             "--check" => check = true,
             "--matrix" | "--out" => {
-                let Some(value) = it.next() else {
+                let Some(value) = it.next().filter(|v| !v.starts_with("--")) else {
                     eprintln!("{cmd}: {flag} needs a value\n{USAGE}");
                     return ExitCode::from(2);
                 };

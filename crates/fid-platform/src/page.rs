@@ -17,8 +17,9 @@ pub const DEFAULT_PAGE: &str = "docs/platform/support-matrix.md";
 pub const MAX_PAGE_BYTES: usize = 64 * 1024 * 1024;
 /// Context lines around the changed region of a unified diff.
 pub const DIFF_CONTEXT: usize = 3;
-/// Above this many line pairs the diff shows the whole changed region as removed then added
-/// instead of computing a longest common subsequence.
+/// Above this many LCS table cells, `(old lines + 1) * (new lines + 1)`, the diff shows the
+/// whole changed region as removed then added instead of computing a longest common
+/// subsequence.
 pub const MAX_LCS_CELLS: usize = 4_000_000;
 
 /// Section order (Build prompt): windows, macos, ubuntu, debian, fedora, rhel.
@@ -44,14 +45,14 @@ fn tier_title(t: Tier) -> &'static str {
     }
 }
 
-/// Escapes text for one GFM table cell: control characters (including CR, LF and tab, which
-/// would break the row) become a space; `&`, `<` and `>` become HTML entities; and
-/// `` \ ` * _ [ ] | ~ $ `` get a backslash so they render literally.
+/// Escapes text for one GFM table cell: C0 and C1 control characters (including CR, LF, tab
+/// and NEL, which would break the row) and U+2028/U+2029 become a space; `&`, `<` and `>`
+/// become HTML entities; and `` \ ` * _ [ ] | ~ $ `` get a backslash so they render literally.
 pub fn escape_cell(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
         match c {
-            '\u{0}'..='\u{1f}' | '\u{7f}' => out.push(' '),
+            '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{2028}' | '\u{2029}' => out.push(' '),
             '&' => out.push_str("&amp;"),
             '<' => out.push_str("&lt;"),
             '>' => out.push_str("&gt;"),
@@ -197,7 +198,7 @@ pub fn unified_diff(old: &str, new: &str, old_name: &str, new_name: &str) -> Str
 fn middle_ops<'a>(a: &[&'a str], b: &[&'a str]) -> Vec<(char, &'a str)> {
     let (n, m) = (a.len(), b.len());
     let mut ops = Vec::with_capacity(n + m);
-    if n.saturating_mul(m) > MAX_LCS_CELLS {
+    if n == 0 || m == 0 || (n + 1).saturating_mul(m + 1) > MAX_LCS_CELLS {
         ops.extend(a.iter().map(|l| ('-', *l)));
         ops.extend(b.iter().map(|l| ('+', *l)));
         return ops;

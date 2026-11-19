@@ -152,6 +152,9 @@ fn bad_usage_exits_2() {
     assert_eq!(cli(&[os("--matrix"), p(&m)]).0, 2, "--out is required");
     assert_eq!(cli(&[os("--check"), os("--check"), os("--out"), os("x.md")]).0, 2);
     assert_eq!(cli(&[os("--out")]).0, 2);
+    assert_eq!(cli(&[os("--out"), os("--check")]).0, 2, "an option is not an --out value");
+    assert_eq!(cli(&[os("--matrix"), os("--out"), os("x.md")]).0, 2);
+    assert!(!Path::new("--check").exists());
     assert_eq!(cli(&[os("--bogus"), os("--out"), os("x.md")]).0, 2);
     assert!(!Path::new("x.md").exists());
 }
@@ -163,6 +166,7 @@ fn escape_cell_hand_labelled() {
     assert_eq!(escape_cell("<b>&</b>"), "&lt;b&gt;&amp;&lt;/b&gt;");
     assert_eq!(escape_cell("*x* _y_ `z` ~w~ $v$ [l](u) \\"), "\\*x\\* \\_y\\_ \\`z\\` \\~w\\~ \\$v\\$ \\[l\\](u) \\\\");
     assert_eq!(escape_cell("a\nb\r\nc\td\u{7f}e"), "a b  c d e");
+    assert_eq!(escape_cell("a\u{80}b\u{85}c\u{9f}d\u{2028}e\u{2029}f\u{a0}g"), "a b c d e f\u{a0}g");
     assert_eq!(escape_cell("café — ok"), "café — ok");
     assert_eq!(escape_cell(""), "");
 }
@@ -172,6 +176,9 @@ fn unified_diff_hand_labelled() {
     assert_eq!(unified_diff("a\nb\n", "a\nb\n", "o", "n"), "");
     assert_eq!(unified_diff("", "a\n", "o", "n"), "--- o\n+++ n\n@@ -0,0 +1,1 @@\n+a\n");
     assert_eq!(unified_diff("a\n", "", "o", "n"), "--- o\n+++ n\n@@ -1,1 +0,0 @@\n-a\n");
+    // Empty old or new side of the changed region (pure insertion / deletion mid-file).
+    assert_eq!(unified_diff("a\nc\n", "a\nb\nc\n", "o", "n"), "--- o\n+++ n\n@@ -1,2 +1,3 @@\n a\n+b\n c\n");
+    assert_eq!(unified_diff("a\nb\nc\n", "a\nc\n", "o", "n"), "--- o\n+++ n\n@@ -1,3 +1,2 @@\n a\n-b\n c\n");
     // Missing final newline in the committed page.
     assert_eq!(
         unified_diff("x\ny", "x\ny\n", "o", "n"),
