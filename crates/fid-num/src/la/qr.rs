@@ -52,7 +52,8 @@
 //!
 //! # Errors (REQ-KRN.NUM.LA.QR-005)
 //!
-//! Check order, `op` `la.qr`, `la.qr_pivoted`, `la.lstsq`, `la.apply_qt`, `la.apply_q`:
+//! Check order, `op` `la.qr`, `la.qr_pivoted`, `la.lstsq`, `la.apply_qt`, `la.apply_q`,
+//! `la.qr_r` ([`Qr::r`], which can fail only with [`LaError::Allocation`]), `la.thin_q`:
 //!
 //! - `m < n` (and, for `lstsq`, `b.len() != m`): `BadShape`. Entries of `A` are finite by
 //!   construction of [`Mat`].
