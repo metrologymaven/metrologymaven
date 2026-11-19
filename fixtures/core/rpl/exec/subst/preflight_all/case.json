@@ -1,0 +1,170 @@
+{
+ "decls": [
+  {
+   "command": "probe.read@1",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  },
+  {
+   "command": "probe.legacy@1",
+   "lifecycle": {
+    "replaced_by": "probe.legacy@2",
+    "since": "2026-09-01",
+    "state": "removed"
+   }
+  },
+  {
+   "command": "probe.legacy@2",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  }
+ ],
+ "expect": {
+  "preflight": [
+   {
+    "id": "sha256:413d7d512c183939f3468dee1e3a00f6606a5fc5078daf5b7c84f8cabce8e3b2",
+    "kind": "blob",
+    "steps": [
+     2,
+     5
+    ]
+   },
+   {
+    "id": "probe.legacy@1",
+    "kind": "command",
+    "steps": [
+     3
+    ]
+   },
+   {
+    "id": "sha256:3f6ed7d7782ceee466c213e6a4a134dba58e1e3c8d81a570170c4f38fb49518f",
+    "kind": "payload",
+    "steps": [
+     6
+    ]
+   },
+   {
+    "id": "sha256:a2e43d080ea5864bb94e92c9b5b84f268087f4748fe1f4be8de1a63c8018d928",
+    "kind": "payload",
+    "steps": [
+     4
+    ]
+   },
+   {
+    "id": "sha256:3eb8321603cfe8f960ff83ba89b719142bab02de7f243e3a16501cf900b8726e",
+    "kind": "kernel",
+    "steps": [
+     5,
+     6
+    ]
+   }
+  ]
+ },
+ "kernels": [
+  "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f"
+ ],
+ "migrators": [],
+ "span": {
+  "steps": [
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:b4088839de08f3f18d9106f188ebc71ba145697f7901e37a354dc1f8cc982a6a",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:e7d208477f7c71c4a9fb7c6c1719a02b6562b52567f7fbffe1b33d8b885fb351",
+      "kind": "external_file",
+      "storage": "blob"
+     }
+    ],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 1
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:01ac4085f43e4da584b6a2efd04fab2cbd2c7c12f213dad031c9c9ce8f556375",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:413d7d512c183939f3468dee1e3a00f6606a5fc5078daf5b7c84f8cabce8e3b2",
+      "kind": "external_file",
+      "storage": "blob"
+     }
+    ],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 2
+   },
+   {
+    "command": "probe.legacy@1",
+    "entry": "sha256:85cdfb1814c85a0ac17de06db72fca1d8fa1b75fb4909429c8275d6d27e40e42",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 3
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:a2e43d080ea5864bb94e92c9b5b84f268087f4748fe1f4be8de1a63c8018d928",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [
+     {
+      "digest": "sha256:5192dd26759bcf8202ad9fe4c5663ab0125a885556a2add87765e5970cef2c7b",
+      "kind": "human_text",
+      "storage": "inline"
+     }
+    ],
+    "payload": null,
+    "seq": 4
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:5e1b528c666c598667bfa78e01a67e6e1547e0450ad2bbd9c4495cbf9151e40f",
+    "kernel": "sha256:3eb8321603cfe8f960ff83ba89b719142bab02de7f243e3a16501cf900b8726e",
+    "observations": [
+     {
+      "digest": "sha256:413d7d512c183939f3468dee1e3a00f6606a5fc5078daf5b7c84f8cabce8e3b2",
+      "kind": "external_file",
+      "storage": "blob"
+     }
+    ],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 5
+   },
+   {
+    "command": null,
+    "entry": "sha256:3f6ed7d7782ceee466c213e6a4a134dba58e1e3c8d81a570170c4f38fb49518f",
+    "kernel": "sha256:3eb8321603cfe8f960ff83ba89b719142bab02de7f243e3a16501cf900b8726e",
+    "observations": [
+     {
+      "digest": "sha256:ca35165d712841568c937354c89a7db533d128c096fe7f644530121dc108bee7",
+      "kind": "human_text",
+      "storage": "inline"
+     }
+    ],
+    "payload": {
+     "inline": {
+      "sha256:ca35165d712841568c937354c89a7db533d128c096fe7f644530121dc108bee7": "6f70657261746f72206e6f74653a206669787475726520706c61746520736561746564"
+     },
+     "salts": {}
+    },
+    "seq": 6
+   }
+  ]
+ }
+}

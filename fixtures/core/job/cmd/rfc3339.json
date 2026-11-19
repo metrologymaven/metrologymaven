@@ -1,0 +1,16 @@
+{
+  "description": "CORE.JOB.CMD: wall-clock timestamps, milliseconds since the Unix epoch to RFC 3339 UTC with three fractional digits. Expected strings cross-checked with Python's datetime (epoch plus timedelta). Instants after 9999-12-31T23:59:59.999Z are shown as that instant. CC-BY-4.0.",
+  "cases": [
+    { "ms": 0, "text": "1970-01-01T00:00:00.000Z" },
+    { "ms": 68256000, "text": "1970-01-01T18:57:36.000Z" },
+    { "ms": 946684799999, "text": "1999-12-31T23:59:59.999Z" },
+    { "ms": 951782400000, "text": "2000-02-29T00:00:00.000Z" },
+    { "ms": 1582934400000, "text": "2020-02-29T00:00:00.000Z" },
+    { "ms": 1700000000500, "text": "2023-11-14T22:13:20.500Z" },
+    { "ms": 1709251199999, "text": "2024-02-29T23:59:59.999Z" },
+    { "ms": 4107542400000, "text": "2100-03-01T00:00:00.000Z" },
+    { "ms": 13569465600000, "text": "2400-01-01T00:00:00.000Z" },
+    { "ms": 253402300799999, "text": "9999-12-31T23:59:59.999Z" },
+    { "ms": 253402300800000, "text": "9999-12-31T23:59:59.999Z" }
+  ]
+}

@@ -1,6 +1,6 @@
 [package]
 name = "fid-jobs"
-description = "Metrology Maven jobs: progress and cancellation (CORE.JOB.PROG), job scheduler with queue, priorities, limits and timeouts (CORE.JOB.SCHED)"
+description = "Metrology Maven jobs: progress and cancellation (CORE.JOB.PROG), job scheduler with queue, priorities, limits and timeouts (CORE.JOB.SCHED), job commands and the job-status contract (CORE.JOB.CMD)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,14 +8,17 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# Typed bus errors (`not_found/unknown_job`, `policy/not_job_owner`, ...) for the job
+# commands (CORE.JOB.CMD). Same layer (engine); fid-bus does not depend on fid-jobs.
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON for job-status results and bounded parameter parsing. Layer model.
+fid-canon = { path = "../fid-canon" }
+# CommandDef records and the FPL evaluator for the cancel precondition. Layer model.
+fid-registry = { path = "../fid-registry" }
 # Shared command IDs (AGENTS.md rule 14). Layer num, below fid-jobs (engine).
 fid-types = { path = "../fid-types" }
 # UUID value type for job IDs (UUIDv7 built here). Layer model, below fid-jobs.
 fid-uuid = { path = "../fid-uuid" }
-
-[dev-dependencies]
-# Test-only: output digests (AC-2) and the expected-digest fixture. fid-canon sits below fid-jobs in layers.toml.
-fid-canon = { path = "../fid-canon" }
 
 [lints]
 workspace = true

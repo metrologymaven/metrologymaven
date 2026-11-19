@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-store]
+built_pr: 191
 satisfies: [REQ-CORE.STO.SQL-001, REQ-CORE.STO.SQL-006]
 covers: []
 depends_on: [CORE.STO.LAYOUT]
@@ -37,9 +39,9 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 - **REQ-CORE.STO.SQL.SCHEMA-002** The triggers shall reject UPDATE and DELETE issued through a raw SQLite connection that bypasses the storage API.
 - **REQ-CORE.STO.SQL.SCHEMA-003** `heads`, `idempotency` and `settings_current` shall be the only mutable tables, and each shall be rebuildable from the append-only tables.
 - **REQ-CORE.STO.SQL.SCHEMA-004** The database shall record its schema version in `schema_meta`, and when a project with an older version is opened for writing, the runner shall apply every later migration in order inside one transaction and record the new version in the same transaction.
-- **REQ-CORE.STO.SQL.SCHEMA-005** If the database's schema version is newer than the build supports, then a write open shall fail with `schema_too_new`, and the runner shall never apply a backward migration.
+- **REQ-CORE.STO.SQL.SCHEMA-005** If the database's schema version is newer than the build supports, then a write open and a read open shall fail with `schema_too_new` (a read open too, because a newer schema cannot be checked against this build's DDL), and the runner shall never apply a backward migration.
 - **REQ-CORE.STO.SQL.SCHEMA-006** If a migration fails, then the transaction shall roll back and the database shall remain at its previous version, byte-for-byte readable as before.
-- **REQ-CORE.STO.SQL.SCHEMA-007** At every open the store shall set WAL journal mode and enable foreign keys, and if WAL mode cannot be set, then the write open shall fail with `wal_unavailable`.
+- **REQ-CORE.STO.SQL.SCHEMA-007** At every open the store shall set WAL journal mode and enable foreign keys, and if WAL mode cannot be set, then the write open shall fail with `wal_unavailable`. A read open is read-only and shall leave the journal mode unchanged; it enables foreign keys like every open.
 
 ## Acceptance criteria
 
@@ -53,8 +55,9 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 
 - **Registry command(s):** none; library.
 - **Data structures:** `Migration { from: u32, to: u32, sql: &'static str }` list compiled into the binary; `SchemaVersion(u32)`.
-- **Algorithm:** at open: pragmas (`journal_mode=WAL`, `foreign_keys=ON`); read version; compare; run migrations in a single `BEGIN IMMEDIATE` transaction. Trigger form: `CREATE TRIGGER <t>_no_update BEFORE UPDATE ON <t> BEGIN SELECT RAISE(ABORT, 'append_only'); END;` and likewise for DELETE.
-- **Errors:** `append_only` (from SQLite), `schema_too_new`, `migration_failed`, `wal_unavailable`.
+- **Algorithm:** at open: refuse symbolic-link or non-regular `project.db`, `-wal`, `-shm`, `-journal` and a non-empty `-journal`; open with `SQLITE_OPEN_NOFOLLOW` below the canonical root; harden the connection (`SQLITE_DBCONFIG_DEFENSIVE` on, `trusted_schema` off, `cell_size_check` on, `foreign_keys` on, ATTACH unable to create or write, checkpoint-on-close off until checked; extension loading stays off, since `rusqlite` is built without `load_extension`); check from `sqlite_master` alone that every table and index has a non-zero root page and that the `schema_meta` table and the objects attached to it are byte for byte those of the v1 DDL; only then read `schema_meta` (it must hold exactly 1..=version); refuse a newer version (`schema_too_new`); compare all of `sqlite_master` (type, name, table, SQL) with the objects the DDL produces for that version (`schema_invalid` on any missing, changed or extra object); run `PRAGMA quick_check` (anything but `ok`, or a corrupt or non-database file, is `schema_invalid`); check the companion files again; only then set `journal_mode=WAL` (write open) and run migrations in a single `BEGIN IMMEDIATE` transaction, re-checking the result before commit. Trigger form: `CREATE TRIGGER <t>_no_update BEFORE UPDATE ON <t> BEGIN SELECT RAISE(ABORT, 'append_only'); END;` and likewise for DELETE.
+- **Errors:** `append_only` (from SQLite), `schema_too_new`, `migration_failed`, `wal_unavailable`, `schema_invalid`.
+- **Boundary:** the triggers stop data changes (UPDATE, DELETE, replacing INSERT) only. `DROP TRIGGER`, `ALTER`/`DROP TABLE`, `writable_schema` edits, files produced by `VACUUM INTO` or `ATTACH`, a crafted `-wal` and raw byte edits are not stopped by triggers. Schema-level tampering is caught at every open, before anything is written and before any user table is read, by the checks in the order of the Algorithm above: root pages and the `schema_meta` definition from `sqlite_master` alone, then the version, then the full object comparison and `quick_check` (`schema_invalid`). Tampering with row contents is caught by the `CORE.JRN` hash chain.
 - **Determinism:** D0 (DDL fixed in source).
 - **Performance budget:** open with no migration in < 20 ms [unverified until measured].
 - **Crate:** `fid-store` (module `schema`); the SQLite driver crate is on the D-001 allowlist [unverified which binding].
@@ -70,6 +73,8 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 ## Open questions
 
 - The `snapshots` table stores `SnapshotTaken` records for `CORE.RPL.RECON.SNAP`; `settings_current` holds project-scope values for `CORE.STO.SET`.
+- Companion-file race: `-wal`, `-shm` and `-journal` are checked (no links, regular files, no non-empty `-journal`) before SQLite opens the database and again after the checks have read it, but SQLite opens the companions itself, so a local process with write access to the project folder can still swap one in between. The write lock keeps other Metrology Maven writers out; closing the window fully would need SQLite to open companions relative to a directory handle, which its VFS does not offer [unverified].
+- Path length: `CORE.STO.LAYOUT` supports project roots of up to 1,024 characters, but SQLite's Unix VFS accepts a database path of at most about 512 bytes [unverified: SQLite `MAX_PATHNAME`]. On Linux and macOS a write or read open whose `project.db` path is longer than 511 bytes fails with `path_too_long` before SQLite is called, so projects with roots longer than about 500 bytes cannot open their database there. Windows is not affected (the `win32-longpath` VFS with a `\\?\` path). Options: build SQLite with a larger `SQLITE_MAX_PATHLEN`, open through a short alias of the root directory handle, or lower LAYOUT's limit on Unix.
 
 ## Children
 
