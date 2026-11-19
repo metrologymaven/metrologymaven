@@ -1,0 +1,68 @@
+[
+  {
+    "behaviour": "retry",
+    "code": "TRANSIENT",
+    "retryable": true,
+    "severity": "warning"
+  },
+  {
+    "behaviour": "interrupt",
+    "code": "COMM_LOST",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fail",
+    "code": "CONFIG_INVALID",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fail",
+    "code": "OUT_OF_RANGE",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fail",
+    "code": "NOT_QUALIFIED",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fail",
+    "code": "CALIBRATION_EXPIRED",
+    "retryable": false,
+    "severity": "warning"
+  },
+  {
+    "behaviour": "stop_streams",
+    "code": "LIMIT",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "stop_streams",
+    "code": "SAFETY_STOP_OBSERVED",
+    "retryable": false,
+    "severity": "critical"
+  },
+  {
+    "behaviour": "fail",
+    "code": "VENDOR_LICENSE",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fail",
+    "code": "UNSUPPORTED",
+    "retryable": false,
+    "severity": "error"
+  },
+  {
+    "behaviour": "fault",
+    "code": "INTERNAL",
+    "retryable": false,
+    "severity": "critical"
+  }
+]
