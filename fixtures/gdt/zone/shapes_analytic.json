@@ -2,7 +2,9 @@
  "cases": [
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d1c56d220f66d28",
+    "check": "bits",
+    "got_pinned_dec": "1.0",
     "index": 1,
     "size": "0x3ff0000000000000",
     "size_dec": "1.0"
@@ -44,7 +46,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d24130094817baf",
+    "check": "bits",
+    "got_pinned_dec": "2.0",
     "index": 3,
     "size": "0x4000000000000000",
     "size_dec": "2.0"
@@ -91,7 +95,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d1478ecc4ed0e41",
+    "check": "bits",
+    "got_pinned_dec": "0.375",
     "index": 1,
     "size": "0x3fd8000000000000",
     "size_dec": "0.375"
@@ -128,7 +134,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d25adc0117208f5",
+    "check": "bits",
+    "got_pinned_dec": "1.5",
     "index": 1,
     "size": "0x3ff8000000000000",
     "size_dec": "1.5"
@@ -175,7 +183,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d205fe03f61db10",
+    "check": "bits",
+    "got_pinned_dec": "2.0",
     "index": 1,
     "size": "0x4000000000000000",
     "size_dec": "2.0"
@@ -217,7 +227,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d5908147ad91639",
+    "check": "bits",
+    "got_pinned_dec": "2.5",
     "index": 0,
     "size": "0x4004000000000000",
     "size_dec": "2.5"
@@ -259,7 +271,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d222b1905f951bb",
+    "check": "bits",
+    "got_pinned_dec": "1.25",
     "index": 0,
     "size": "0x3ff4000000000000",
     "size_dec": "1.25"
@@ -296,7 +310,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d0143578c155ac4",
+    "check": "bits",
+    "got_pinned_dec": "1.25",
     "index": 0,
     "size": "0x3ff4000000000000",
     "size_dec": "1.25"
@@ -343,7 +359,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d1cf1638d8ae12b",
+    "check": "bits",
+    "got_pinned_dec": "2.5",
     "index": 1,
     "size": "0x4004000000000000",
     "size_dec": "2.5"
@@ -385,7 +403,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cee000000003800",
+    "check": "bits",
+    "got_pinned_dec": "1.75",
     "index": 0,
     "size": "0x3ffc000000000000",
     "size_dec": "1.75"
@@ -427,7 +447,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d16000000002800",
+    "check": "bits",
+    "got_pinned_dec": "10.0",
     "index": 1,
     "size": "0x4024000000000000",
     "size_dec": "10.0"
@@ -469,7 +491,9 @@
     "0x3fe0000000000000"
    ],
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cac000000000c00",
+    "check": "bits",
+    "got_pinned_dec": "0.75",
     "index": 2,
     "size": "0x3fe8000000000000",
     "size_dec": "0.75"
@@ -516,7 +540,9 @@
     "0xbff0000000000000"
    ],
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cbc000000000c00",
+    "check": "bits",
+    "got_pinned_dec": "1.5",
     "index": 0,
     "size": "0x3ff8000000000000",
     "size_dec": "1.5"
@@ -557,7 +583,9 @@
     "0xbfb0000000000000"
    ],
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3c88000000000800",
+    "check": "bits",
+    "got_pinned_dec": "0.125",
     "index": 0,
     "size": "0x3fc0000000000000",
     "size_dec": "0.125"
@@ -590,7 +618,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cf6a09e667f690f",
+    "check": "bits",
+    "got_pinned_dec": "0.0",
     "index": 0,
     "size": "0x0000000000000000",
     "size_dec": "0.0"
@@ -622,7 +652,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d22000000002400",
+    "check": "bits",
+    "got_pinned_dec": "0.0",
     "index": 0,
     "size": "0x0000000000000000",
     "size_dec": "0.0"
@@ -654,7 +686,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x1e80000000001000",
+    "check": "bits",
+    "got_pinned_dec": "0.0",
     "index": 0,
     "size": "0x0000000000000000",
     "size_dec": "0.0"
@@ -686,7 +720,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cf9000000003000",
+    "check": "bits",
+    "got_pinned_dec": "1.0",
     "index": 1,
     "size": "0x3ff0000000000000",
     "size_dec": "1.0"
@@ -733,7 +769,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d09a08d3c422e0d",
+    "check": "bits",
+    "got_pinned_dec": "0.5",
     "index": 0,
     "size": "0x3fe0000000000000",
     "size_dec": "0.5"
@@ -775,7 +813,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3d016b3e9fbb8397",
+    "check": "bits",
+    "got_pinned_dec": "1.375",
     "index": 1,
     "size": "0x3ff6000000000000",
     "size_dec": "1.375"
@@ -817,7 +857,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cf3de32c662acfd",
+    "check": "bits",
+    "got_pinned_dec": "1.25",
     "index": 0,
     "size": "0x3ff4000000000000",
     "size_dec": "1.25"
@@ -864,7 +906,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cee000000003800",
+    "check": "bits",
+    "got_pinned_dec": "1.75",
     "index": 1,
     "size": "0x3ffc000000000000",
     "size_dec": "1.75"
@@ -916,7 +960,9 @@
     "0x3fe0000000000000"
    ],
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cb8000000000800",
+    "check": "bits",
+    "got_pinned_dec": "1.0",
     "index": 1,
     "size": "0x3ff0000000000000",
     "size_dec": "1.0"
@@ -959,7 +1005,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3d1b68721f79e35b",
+    "check": "ulp1",
+    "got_pinned_dec": "2.3600000000000003",
     "index": 0,
     "size": "0x4002e147ae147ae1",
     "size_dec": "2.36"
@@ -1000,7 +1048,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3d0feeea11687b27",
+    "check": "ulp1",
+    "got_pinned_dec": "7.428571428571428",
     "index": 0,
     "size": "0x401db6db6db6db6d",
     "size_dec": "7.428571428571428"
@@ -1041,7 +1091,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3cf8839537fefb6a",
+    "check": "ulp1",
+    "got_pinned_dec": "2.257142857142857",
     "index": 2,
     "size": "0x40020ea0ea0ea0ea",
     "size_dec": "2.257142857142857"
@@ -1087,7 +1139,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3d078adb0537c184",
+    "check": "ulp1",
+    "got_pinned_dec": "2.439471337844178",
     "index": 1,
     "size": "0x400384098c7c8f97",
     "size_dec": "2.439471337844178"
@@ -1128,7 +1182,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3cf849115dda9128",
+    "check": "ulp1",
+    "got_pinned_dec": "2.6411191196312283",
     "index": 0,
     "size": "0x400521030f9d4061",
     "size_dec": "2.641119119631228"
@@ -1169,7 +1225,9 @@
   },
   {
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3ce9f254dab9fc1e",
+    "check": "ulp1",
+    "got_pinned_dec": "1.4966629547095767",
     "index": 0,
     "size": "0x3ff7f254dab9cc3a",
     "size_dec": "1.4966629547095764"
@@ -1215,7 +1273,9 @@
     "0x3fe199999999999a"
    ],
    "expect": {
-    "exact": false,
+    "abs_tol": "0x3cb8000000000800",
+    "check": "ulp1",
+    "got_pinned_dec": "1.0",
     "index": 1,
     "size": "0x3ff0000000000000",
     "size_dec": "1.0"
@@ -1253,6 +1313,259 @@
    "shape": {
     "disposition_shift": "0x3fb999999999999a",
     "kind": "offset"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x3d8f40000000427f",
+    "check": "abs_bound",
+    "got_pinned_dec": "2.000076354998866e-09",
+    "index": 0,
+    "size": "0x3e212e541d34d1d2",
+    "size_dec": "2.0001282658327804e-09"
+   },
+   "name": "hard_cylinder_near_axis_1km",
+   "note": "1e-9 m off an axis, 1 km along it",
+   "points": [
+    [
+     "0x4071dd0750754238",
+     "0x407ac5f15f160501",
+     "0x408acb8af8af7c3e"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x3fd2492492492492",
+     "0x3fdb6db6db6db6db",
+     "0x3feb6db6db6db6db"
+    ],
+    "origin": [
+     "0x3fb999999999999a",
+     "0xbfc999999999999a",
+     "0x3fd3333333333333"
+    ]
+   },
+   "shape": {
+    "kind": "cylinder"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x3cf0000000002000",
+    "check": "abs_bound",
+    "got_pinned_dec": "0.0",
+    "index": 0,
+    "size": "0x1e2708d0f84d3de7",
+    "size_dec": "2e-163"
+   },
+   "name": "hard_cylinder_near_axis_tiny",
+   "note": "squared offset flushes to zero: size reads 0",
+   "points": [
+    [
+     "0x1e1708d0f84d3de7",
+     "0x0000000000000000",
+     "0x3ff0000000000000"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x3ff0000000000000"
+    ],
+    "origin": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   },
+   "shape": {
+    "kind": "cylinder"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x3d1c00402fef8da4",
+    "check": "abs_bound",
+    "got_pinned_dec": "0.003999999957159162",
+    "index": 1,
+    "size": "0x3f70624dd0000001",
+    "size_dec": "0.0039999999571591624"
+   },
+   "name": "hard_planes_origin_at_1e6",
+   "note": "origin and points near 1e6 m",
+   "points": [
+    [
+     "0x412e84800189374c",
+     "0xc13e848000418937",
+     "0x411e849c00000000"
+    ],
+    [
+     "0x412e847ffef9db23",
+     "0xc13e847ffef9db23",
+     "0x411e848000000000"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x3fe3333333333333",
+     "0x3fe999999999999a",
+     "0x0000000000000000"
+    ],
+    "origin": [
+     "0x412e848000000000",
+     "0xc13e848000000000",
+     "0x411e848000000000"
+    ]
+   },
+   "shape": {
+    "kind": "two_planes"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x3e2e848000003e0a",
+    "check": "abs_bound",
+    "got_pinned_dec": "4.997709766030312e-07",
+    "index": 0,
+    "size": "0x3ea0c5a316666667",
+    "size_dec": "4.998451402116189e-07"
+   },
+   "name": "hard_planes_point_at_1e6_near_plane",
+   "note": "2.5e-7 m off the datum plane, 1e6 m from the origin",
+   "points": [
+    [
+     "0x41286a0000000508",
+     "0xc1224f7ffffff94a",
+     "0x0000000000000000"
+    ],
+    [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x412e848000000000"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x3fe3333333333333",
+     "0x3fe999999999999a",
+     "0x0000000000000000"
+    ],
+    "origin": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   },
+   "shape": {
+    "kind": "two_planes"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x3d8f400000004280",
+    "check": "abs_bound",
+    "got_pinned_dec": "2.0002224707081696e-09",
+    "index": 0,
+    "size": "0x3e212e924b122f73",
+    "size_dec": "2.0002387182071793e-09"
+   },
+   "name": "hard_circle_near_centre_1km",
+   "note": "1e-9 m in-plane from the centre, 1 km out of plane",
+   "points": [
+    [
+     "0x409d049249249732",
+     "0x409416db6db6e2cb",
+     "0x4081db6db6db8b2b"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x3fd2492492492492",
+     "0x3fdb6db6db6db6db",
+     "0x3feb6db6db6db6db"
+    ],
+    "origin": [
+     "0x408f400000000000",
+     "0x408f400000000000",
+     "0x408f400000000000"
+    ]
+   },
+   "shape": {
+    "kind": "circle",
+    "plane": [
+     "0x3feb6db6db6db6db",
+     "0x3fd2492492492492",
+     "0xbfdb6db6db6db6db"
+    ]
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x1e800000000010c4",
+    "check": "abs_bound",
+    "got_pinned_dec": "1.999988867151698e-160",
+    "index": 0,
+    "size": "0x1ec67e9c127b6e74",
+    "size_dec": "2e-160"
+   },
+   "name": "hard_sphere_1e_160",
+   "note": "subnormal square",
+   "points": [
+    [
+     "0x1eb67e9c127b6e74",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x3ff0000000000000"
+    ],
+    "origin": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   },
+   "shape": {
+    "kind": "sphere"
+   }
+  },
+  {
+   "expect": {
+    "abs_tol": "0x1e80000000001000",
+    "check": "abs_bound",
+    "got_pinned_dec": "0.0",
+    "index": 0,
+    "size": "0x1e2708d0f84d3de7",
+    "size_dec": "2e-163"
+   },
+   "name": "hard_sphere_1e_163",
+   "note": "square flushes to zero: size 0",
+   "points": [
+    [
+     "0x0000000000000000",
+     "0x9e1708d0f84d3de7",
+     "0x0000000000000000"
+    ]
+   ],
+   "pose": {
+    "direction": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x3ff0000000000000"
+    ],
+    "origin": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   },
+   "shape": {
+    "kind": "sphere"
    }
   },
   {
@@ -1631,7 +1944,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x3cf2000000002000",
+    "check": "bits",
+    "got_pinned_dec": "2.000000000001",
     "index": 0,
     "size": "0x40000000000008cc",
     "size_dec": "2.000000000001"
@@ -2333,7 +2648,9 @@
   },
   {
    "expect": {
-    "exact": true,
+    "abs_tol": "0x7cde7b1f3cacad29",
+    "check": "bits",
+    "got_pinned_dec": "1.6e+308",
     "index": 0,
     "size": "0x7fec7b1f3cac7433",
     "size_dec": "1.6e+308"

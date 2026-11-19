@@ -53,6 +53,38 @@
 //! The expressions take the pose direction and plane normal as given (no renormalisation);
 //! they are accepted only within [`UNIT_TOL`] of unit length.
 //!
+//! # Accuracy
+//!
+//! The result is the pinned expression's bits, not the correctly rounded exact value. Let
+//! `ε = 2^-53`, `S` be the exact value of the usage formula on the given f64 inputs (the
+//! direction and plane normal as given), and `R = max_i |p_i − o|` (Euclidean). Then for the
+//! geometric shapes
+//!
+//! `|size − S| ≤ 32 ε R + 2^-535 m`,
+//!
+//! and for the offset shape `|size − S| ≤ 2 ε max_i |d_i − c|`. Derivation, per point (the
+//! maximum and the exact doubling add nothing): each component of `r` carries one rounding
+//! (`ε |r|` in 2-norm); `dot3` of two vectors errs by at most `γ3 |a| |b|` with
+//! `γ3 = 3ε / (1 − 3ε)`. Planes and lines: `(ε + γ3(1 + ε)) |n| |r| < 5 ε |r|`. Round shapes:
+//! `|q̂ − q| ≤ (ε + 4ε + ε + ε) |r|` (the rounded `r`, the error of `h` times `|a|`, the
+//! product `h·a_k` and the subtraction), then `dot3(q̂, q̂)` and the square root add a
+//! relative `1.5 ε + ε`, below `10 ε |r|` in all, with `|a| ≤ 1 + 1e-12` absorbed. The bound
+//! takes `c = 16` per point (`32` on the size) for margin. The `2^-535` term covers
+//! underflow: below about `1.5e-154 m` (`2^-511`) a squared component is subnormal and loses
+//! relative precision, and below about `1.5e-162 m` it flushes to zero; each square then errs
+//! by at most `2^-1075` absolutely, so a distance errs by at most `sqrt(3 · 2^-1075) < 2^-536`.
+//! A size can therefore read 0 for a point that is not exactly on the zone reference (a
+//! point `1e-163 m` from a sphere centre gives size 0).
+//!
+//! The error is absolute, relative to `R`, not to the size: a point far from the origin but
+//! close to the reference (a near-axis point 1 km along a cylinder axis, a point 1e6 m from
+//! the origin near the datum plane) may be off by many ulps of its small distance. Callers
+//! that need small sizes at large coordinates should put the pose origin near the points.
+//! Above about `1.3e154 m` a squared component overflows and the call returns `overflow`
+//! (typed error, never a wrong finite size). Bit-exact agreement with the exact value holds
+//! only when every intermediate is exact (for instance small dyadic coordinates with axis
+//! directions, the `bits` class of the analytic fixture).
+//!
 //! # Validation order (pinned)
 //!
 //! Each call checks, in this order, and returns the first failure:
@@ -252,6 +284,9 @@ fn sub(p: &P3, o: &P3) -> P3 {
 /// Correctly rounded square root of a sum of squares; `+∞` if the sum overflowed.
 fn root(s: f64) -> f64 {
     if s.is_finite() {
+        // Unreachable fallback: `s` is a finite sum of squares, hence `+0` or positive (never
+        // NaN, never negative, never `-0`), and `fid_num::f::sqrt` fails only on NaN, infinite
+        // or negative arguments. `+∞` keeps the function total without a panic path.
         fid_num::f::sqrt(s).unwrap_or(f64::INFINITY)
     } else {
         f64::INFINITY

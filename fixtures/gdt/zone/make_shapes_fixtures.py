@@ -10,10 +10,19 @@ shapes_analytic.json
     non-dyadic poses and every typed error. Expected sizes are the EXACT mathematical
     value of the leaf's usage formula on the f64 inputs (Fraction arithmetic; square roots
     of exact rationals to 80 significant digits with `decimal`), rounded once to the
-    nearest f64. `exact: true` marks cases whose exact value is itself an f64 (dyadic
-    inputs); the Rust result must then match bit for bit, otherwise within 1 ulp. The
-    driving index is the exact arg-max, lowest index on ties. Expected errors are
-    labelled by the pinned validation order of the leaf's Design, re-implemented here.
+    nearest f64. Each success case carries `check`, the class of agreement it asserts:
+    `bits` (the exact value is itself an f64 and every intermediate is exact: small dyadic
+    coordinates with axis directions; the Rust result must match bit for bit), `ulp1`
+    (the listed non-dyadic cases, for which this script verifies that the pinned
+    expressions land within 1 ulp; NOT a general property) and `abs_bound` (hard cases:
+    near-axis points far along the axis, near-plane points at 1e6 m, distances in the
+    underflow range, where only the documented absolute bound holds). Every success case
+    also carries `abs_tol` = B + 1 ulp of the expected size, where
+    B = 32 eps R + 2^-535 m (R = max |p_i - o|, eps = 2^-53; offset: 2 eps max |d_i - c|)
+    is the accuracy bound of the leaf's Design; this script checks |pinned - exact| <= B
+    exactly (rational arithmetic) for every success case. The driving index is the exact
+    arg-max, lowest index on ties. Expected errors are labelled by the pinned validation
+    order of the leaf's Design, re-implemented here.
 
 shapes_random_v1.json
     AC-5: 1 000 000 points from Philox4x32-10 seed 0x5eed. Point i: x, y, z = 2u - 1
@@ -24,8 +33,12 @@ shapes_random_v1.json
     u32 little-endian). These are computed by re-implementing the leaf's PINNED binary64
     expressions in Python floats (IEEE 754 binary64, no fused multiply-add,
     correctly-rounded math.sqrt), so they fix the exact output bits every platform must
-    produce. As a cross-check, every whole-set size is compared here with the exact value
-    (it must lie within 4 ulp).
+    produce. As a cross-check, every whole-set size is compared with the EXACT maximum over
+    the whole set: by the per-point bound e = 16 eps R + 2^-536 m of the leaf's Design, the
+    exact arg-max can only be a point whose pinned value is within 2e of the pinned
+    maximum, so the exact values of all points within 8e of it (a 4x margin) are computed
+    in rational arithmetic and their maximum is taken. The size must lie within B of
+    twice that maximum (checked exactly) and within 4 ulp of its nearest f64.
 
 All f64 values are written as "0x" + 16 hex digits of their bit pattern.
 
@@ -234,9 +247,10 @@ def OF(shift):
 CASES = []
 
 
-def case(name, shape, origin, direction, points, deviations=None, note=""):
+def case(name, shape, origin, direction, points, deviations=None, note="", hard=False):
     CASES.append(
         {
+            "hard": hard,
             "name": name,
             "shape": shape,
             "pose": (tuple(origin), tuple(direction)),
@@ -304,6 +318,26 @@ case("circle_p6237", CI(P6237), (0.3, 0.2, 0.1), D2367, [(1.0, 1.0, 1.0), (-0.5,
 case("sphere_tenths", SP, (0.1, 0.2, 0.3), EZ, [(0.7, 0.0, -0.1), (-0.4, 0.6, 0.3), (0.2, 0.2, 0.2)])
 case("offset_tenth", OF(0.1), Z, EZ, [Z, Z, Z], [0.3, -0.4, 0.55])
 
+# Hard cases: only the absolute accuracy bound of the Design holds (no ulp claim).
+_O = (0.1, -0.2, 0.3)
+case("hard_cylinder_near_axis_1km", CY, _O, D2367,
+     [tuple(_O[k] + 1000.0 * D2367[k] + 1e-9 * P6237[k] for k in range(3))],
+     note="1e-9 m off an axis, 1 km along it", hard=True)
+case("hard_cylinder_near_axis_tiny", CY, Z, EZ, [(1e-163, 0.0, 1.0)],
+     note="squared offset flushes to zero: size reads 0", hard=True)
+_F = (1e6, -2e6, 5e5)
+case("hard_planes_origin_at_1e6", TP, _F, D68,
+     [(_F[0] + 3e-3, _F[1] - 1e-3, _F[2] + 7.0), (_F[0] - 2e-3, _F[1] + 4e-3, _F[2])],
+     note="origin and points near 1e6 m", hard=True)
+case("hard_planes_point_at_1e6_near_plane", TP, Z, D68,
+     [tuple(1e6 * t + 2.5e-7 * D68[k] for k, t in enumerate((0.8, -0.6, 0.0))), (0.0, 0.0, 1e6)],
+     note="2.5e-7 m off the datum plane, 1e6 m from the origin", hard=True)
+case("hard_circle_near_centre_1km", CI(P6237), (1e3, 1e3, 1e3), D2367,
+     [tuple(1e3 + 1e3 * P6237[k] + 1e-9 * D2367[k] for k in range(3))],
+     note="1e-9 m in-plane from the centre, 1 km out of plane", hard=True)
+case("hard_sphere_1e_160", SP, Z, EZ, [(1e-160, 0.0, 0.0)], note="subnormal square", hard=True)
+case("hard_sphere_1e_163", SP, Z, EZ, [(0.0, -1e-163, 0.0)], note="square flushes to zero: size 0", hard=True)
+
 # AC-4 and the other pinned errors.
 case("err_empty_planes", TP, Z, EZ, [])
 case("err_empty_cylinder", CY, Z, EZ, [])
@@ -347,6 +381,37 @@ case("err_overflow_offset", OF(-1e308), Z, EZ, [Z], [1e308])
 case("big_but_finite", TP, Z, EZ, [(0.0, 0.0, 8e307)], note="2 * 8e307 is finite")
 
 
+EPS = Fraction(1, 2**53)
+
+
+def bound(shape, pose, points, deviations):
+    """The Design's accuracy bound B on the size, as an exact Fraction (upper bound)."""
+    if shape["kind"] == "offset":
+        c = fr(shape["shift"])
+        return 2 * EPS * max(abs(fr(d) - c) for d in deviations)
+    o = pose[0]
+    r2 = max(sum((fr(p[i]) - fr(o[i])) ** 2 for i in range(3)) for p in points)
+    r_up = fr(exact_sqrt_to_f64(r2)) * (1 + Fraction(1, 2**40))  # >= sqrt(r2)
+    return 32 * EPS * r_up + Fraction(1, 2**535)
+
+
+def within(shape, pose, points, deviations, got):
+    """|got - S| <= B, decided exactly (S = exact usage size, possibly irrational)."""
+    b = bound(shape, pose, points, deviations)
+    g = fr(got)
+    kind = shape["kind"]
+    if kind == "offset":
+        c = fr(shape["shift"])
+        s = 2 * max(abs(fr(d) - c) for d in deviations)
+        return abs(g - s) <= b
+    best = max(exact_dist2(shape, pose, p) for p in points)
+    if kind in ("two_planes", "two_lines"):
+        return abs(g - 2 * best) <= b
+    lo = g - b
+    lo2 = lo * lo if lo > 0 else Fraction(0)
+    return lo2 <= 4 * best <= (g + b) * (g + b)
+
+
 def enc_vec(v):
     return [hx(x) for x in v]
 
@@ -376,14 +441,29 @@ def build_analytic():
             rec["expect"] = {"error": got}
         else:
             size, idx, exact = exact_usage(shape, (o, n), c["points"], c["deviations"])
-            # Self-checks: the exact arg-max is the f64 arg-max, and the pinned f64
-            # expressions land on the exact value (dyadic) or within 1 ulp.
+            # Self-checks: the exact arg-max is the f64 arg-max; the pinned f64 expressions
+            # satisfy the Design's absolute bound; and, by class, land on the exact value
+            # (bits) or within 1 ulp of it (ulp1).
             assert got[1] == idx, (c["name"], got, idx)
-            if exact:
+            assert within(shape, (o, n), c["points"], c["deviations"], got[0]), c["name"]
+            if c["hard"]:
+                check = "abs_bound"
+            elif exact:
+                check = "bits"
                 assert got[0] == size, (c["name"], got[0], size)
             else:
+                check = "ulp1"
                 assert ulp_diff(got[0], size) <= 1, (c["name"], got[0], size)
-            rec["expect"] = {"size": hx(size), "size_dec": repr(size), "index": idx, "exact": exact}
+            b = float(bound(shape, (o, n), c["points"], c["deviations"]))
+            tol = b * (1 + 2.0**-40) + math.ulp(size)
+            rec["expect"] = {
+                "size": hx(size),
+                "size_dec": repr(size),
+                "got_pinned_dec": repr(got[0]),
+                "index": idx,
+                "check": check,
+                "abs_tol": hx(tol),
+            }
         out.append(rec)
     return out
 
@@ -440,9 +520,23 @@ def build_random():
             ds = [f64_dist(kind, n, shape.get("plane"), o, p) for p in pts]
         best, idx = f64_max(ds)
         size = 2.0 * best
-        # Cross-check the pinned binary64 result with the exact value.
-        ex_size, _, _ = exact_usage(shape, (o, n), [pts[idx]], [devs[idx]] if kind == "offset" else None)
+        # Cross-check the pinned binary64 result with the exact maximum over the whole set.
+        sub_d = None
+        if kind == "offset":
+            e = 2.0**-53 * best * 2
+        else:
+            r_max = max(math.sqrt(dot3(*(2 * [(p[0] - o[0], p[1] - o[1], p[2] - o[2])]))) for p in pts)
+            e = 16 * 2.0**-53 * r_max * 1.01 + 2.0**-536
+        cand = [i for i in range(N_RANDOM) if ds[i] >= best - 8 * e]
+        assert idx in cand
+        c_pts = [pts[i] for i in cand]
+        if kind == "offset":
+            sub_d = [devs[i] for i in cand]
+        ex_size, ex_idx, _ = exact_usage(shape, (o, n), c_pts, sub_d)
+        assert within(shape, (o, n), c_pts, sub_d, size), kind
         assert ulp_diff(size, ex_size) <= 4, (kind, size, ex_size)
+        print(f"{kind}: {len(cand)} candidates, exact arg-max {cand[ex_idx]}, pinned {idx}, "
+              f"{ulp_diff(size, ex_size)} ulp", file=sys.stderr)
         # And with the full pinned path (validation included).
         full = f64_usage(shape, (o, n), pts, devs if kind == "offset" else None)
         assert full == (size, idx), (kind, full)

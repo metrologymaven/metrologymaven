@@ -135,6 +135,7 @@ fn ac1_ac2_ac4_analytic_fixture() {
     let cases = analytic_cases();
     assert!(cases.len() >= 60);
     let (mut ok, mut err) = (0, 0);
+    let mut classes = Vec::new();
     for c in &cases {
         let got = c.shape.usage(&c.pose, c.input());
         if let Some(code) = c.expect.get("error") {
@@ -146,14 +147,26 @@ fn ac1_ac2_ac4_analytic_fixture() {
         let u = got.unwrap_or_else(|e| panic!("{}: {e}", c.name));
         let want = hf(&c.expect["size"]);
         assert_eq!(u64::from(u.driving_index), int(&c.expect["index"]), "{}", c.name);
-        match &c.expect["exact"] {
-            CValue::Bool(true) => assert_eq!(u.size_m.to_bits(), want.to_bits(), "{}: {} vs {want}", c.name, u.size_m),
-            CValue::Bool(false) => assert!(ulps(u.size_m, want) <= 1, "{}: {} vs {want}", c.name, u.size_m),
-            other => panic!("{}: exact flag {other:?}", c.name),
+        // Every success case: the Design's absolute bound (plus 1 ulp of the expected size).
+        let tol = hf(&c.expect["abs_tol"]);
+        assert!((u.size_m - want).abs() <= tol, "{}: {} vs {want} (tol {tol:e})", c.name, u.size_m);
+        // Stronger agreement only for the fixture classes that have it.
+        match st(&c.expect["check"]) {
+            "bits" => assert_eq!(u.size_m.to_bits(), want.to_bits(), "{}: {} vs {want}", c.name, u.size_m),
+            "ulp1" => assert!(ulps(u.size_m, want) <= 1, "{}: {} vs {want}", c.name, u.size_m),
+            "abs_bound" => {}
+            other => panic!("{}: check class {other}", c.name),
         }
+        classes.push(st(&c.expect["check"]).to_string());
         ok += 1;
     }
     assert!(ok >= 30 && err >= 30, "{ok} ok, {err} err");
+    for class in ["bits", "ulp1", "abs_bound"] {
+        assert!(classes.iter().any(|k| k == class), "{class}");
+    }
+    // The documented underflow: a point 1e-163 m off the reference reads size 0.
+    let tiny = cases.iter().find(|c| c.name == "hard_sphere_1e_163").unwrap();
+    assert_eq!(tiny.shape.usage(&tiny.pose, tiny.input()).unwrap().size_m, 0.0);
     // Every shape is covered by at least one successful and one empty-set case.
     for kind in ["two_planes", "two_lines", "cylinder", "circle", "sphere", "offset"] {
         assert!(cases.iter().any(|c| c.shape.name() == kind && c.expect.contains_key("size")), "{kind}");
@@ -174,7 +187,7 @@ fn ac3_contains_exact_boundary() {
         assert_eq!(c.shape.contains(&c.pose, u.size_m, c.input()), Ok(true), "{}", c.name);
         assert_eq!(c.shape.contains(&c.pose, u.size_m.next_down(), c.input()), Ok(false), "{}", c.name);
         assert_eq!(c.shape.contains(&c.pose, u.size_m.next_up(), c.input()), Ok(true), "{}", c.name);
-        if c.expect["exact"] == CValue::Bool(true) {
+        if st(&c.expect["check"]) == "bits" {
             let want = hf(&c.expect["size"]);
             assert_eq!(c.shape.contains(&c.pose, want, c.input()), Ok(true), "{}", c.name);
             assert_eq!(c.shape.contains(&c.pose, want.next_down(), c.input()), Ok(false), "{}", c.name);
