@@ -99,3 +99,5 @@ fixtures/allow/** -text
 fixtures/flow/fixes/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
+# ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
+fixtures/rel/notes/** -text

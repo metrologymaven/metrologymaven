@@ -1,0 +1,11 @@
+# GEO.TYPES.MESH fixture: two triangles sharing only vertex 0.
+# Hand-labelled: 2 components, 6 boundary edges; the non-manifold vertex is not a fact.
+# CC-BY-4.0. Vertices `v x y z` (metres) and triangles `t a b c`, in index order.
+frame fedcba9876543210fedcba9876543210
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v -1 0 0
+v -1 -1 0
+t 0 1 2
+t 0 3 4
