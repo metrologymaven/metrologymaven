@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-manifest-gen]
 satisfies: [REQ-KRN.MAN.MANI-003]
 covers: []
 depends_on: [KRN.MAN.KCI, KRN.MAN.CARD]
@@ -53,6 +54,15 @@ Gives each algorithm a digest of exactly the source it is built from, so an atte
 - **Determinism:** D0 over committed bytes.
 - **Performance budget:** full kernel workspace < 10 s on CI [unverified until measured].
 - **Crate:** `fid-manifest-gen` (module `implclosure`); build-time tool, outside the shipped kernel artifact, may do file I/O.
+- **Pinned choices (value-affecting, as built):**
+  - *Kernel graph edges:* normal (`kind: null`) and `build` edges of the resolved graph, whatever their platform `target` gate (the digest does not depend on the host); `dev` edges are not followed; any other kind is `MetadataInvalid`. The registering crate is in its own closure and must be allowlisted like every other closure crate.
+  - *Allowlist:* the caller passes every crate name allowed in a kernel closure (the `num`/`kernel`-layer workspace crates of `layers.toml` plus the third-party names of `kernel-allowlist.toml`); names are matched exactly, and a list holding two names that differ only in ASCII case or `-`/`_` is `InputInvalid`.
+  - *Registration data:* (algorithm ID, crate name) pairs; a repeated algorithm is `InputInvalid`, a registration for an ID not in the table is `UnknownAlgorithm`, a table ID without a registration or naming no package is `NoRegisteringCrate`, and a name shared by two packages is `MetadataInvalid`.
+  - *Files:* every regular file below `<crate>/src/` (any extension) plus the `custom-build` target's file, read as bytes with no conversion; paths are relative to the crate directory (the one holding `Cargo.toml`) with `/` separators. A lib/bin/proc-macro target whose source lies outside `src/`, a build script outside the crate, or a crate outside `workspace_root` is `MetadataInvalid`; a symbolic link, special file, non-UTF-8 or `\`-containing name, file over 16 MiB, more than 20 000 files or nesting deeper than 32 is a typed `Io` error. Metadata paths are compared after mapping `\` to `/`, and only their part below `workspace_root` is used, so the checkout path never enters the digest.
+  - *Encoding:* per crate `{"features":[sorted unique],"files":[{"path":..,"sha256":"sha256:<hex>"}],"name":..,"version":..}`, files sorted by the UTF-8 bytes of the path, crates sorted by (name, version) bytes with ties broken by the crate object's canonical bytes; the implementation digest is SHA-256 (`fid_kci::kci::sha256`) over the RFC 8785 canonical JSON (`fid_kci::kci::json`) of the array of crate objects. Only canonical bytes are hashed.
+  - *Table:* `ImplDigestTable` sorted by the `AlgorithmId` total order; canonical form `[{"algorithm":"<id>","impl_digest":"sha256:<hex>"}]`.
+  - *Manifest check:* `check_manifest` reads a manifest only through the strict `KernelManifest::parse_canonical` and reports the first algorithm (ID order) missing on either side or with a different implementation digest.
+  - *Committed bytes:* CI checks, before building, that `git ls-files --eol` shows the same EOL state in the index and the working tree for `crates/` and the fixture and that those paths are clean.
 
 ## Test fixtures
 
