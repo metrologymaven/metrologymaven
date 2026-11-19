@@ -630,7 +630,7 @@ def digest(rows):
     for row in rows:
         for v in row:
             h.update(struct.pack("<d", v))
-    return h.hexdigest()
+    return "sha256:" + h.hexdigest()
 
 
 def run_line(tag, res):
@@ -668,7 +668,7 @@ def build_strd():
             res = solve(prob, s1, one)
             assert not res["ok"] and res["kind"] == "IterationLimit", res
             out.append(f"iterlimit_start1 cost {hx(res['last']['cost'])} evaluations {res['last']['evaluations']}")
-    out.append("digest " + digest(rows))
+    out.insert(4, "digest " + digest(rows))  # preamble, before the first problem block
     return "\n".join(out) + "\n"
 
 

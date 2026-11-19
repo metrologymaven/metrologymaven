@@ -14,9 +14,18 @@ pub(crate) struct Factored {
     pub qtb: Vec<f64>,
 }
 
+impl Factored {
+    /// The workspace for `n` parameters, reserved fallibly once per solve and reused by every
+    /// [`factor`] call (no reallocation: every buffer has exact capacity).
+    pub(crate) fn new(n: usize) -> Result<Factored, NumError> {
+        Ok(Factored { r: Mat::new(n, n, super::zeros(n * n)?)?, perm: super::alloc_usize(n)?, qtb: super::zeros(n)? })
+    }
+}
+
 /// Pivoted Householder QR of the column-major `cols` (`n` columns of length `rows`, `rows >=
 /// n`) applied to `b` (length `rows`). `cols` and `b` are overwritten. `v` is scratch with
-/// capacity of at least `rows` (no reallocation).
+/// capacity of at least `rows` (no reallocation). `ws` is the workspace from [`Factored::new`]
+/// with the same `n`; its buffers are reused for the result.
 ///
 /// For `k = 0..n`: the 2-norms of the trailing parts `cols[j][k..]` (`j >= k`) are recomputed
 /// with `red::norm2`, and the largest (strictly greater, so ties go to the lowest index) is
@@ -31,8 +40,9 @@ pub(crate) fn factor(
     n: usize,
     b: &mut [f64],
     v: &mut Vec<f64>,
+    ws: Factored,
 ) -> Result<Factored, NumError> {
-    let mut perm = super::alloc_usize(n)?;
+    let Factored { r, mut perm, mut qtb } = ws;
     for (k, slot) in perm.iter_mut().enumerate() {
         *slot = k;
     }
@@ -73,14 +83,15 @@ pub(crate) fn factor(
         }
         reflect(&mut b[k..rows], v, tau)?;
     }
-    let mut data = super::alloc(n * n)?;
+    let mut data = r.into_data();
+    data.clear();
     for i in 0..n {
         for j in 0..n {
             data.push(if j >= i { cols[j * rows + i] } else { 0.0 });
         }
     }
     let r = Mat::new(n, n, data)?;
-    let mut qtb = super::alloc(n)?;
+    qtb.clear();
     qtb.extend_from_slice(&b[..n]);
     Ok(Factored { r, perm, qtb })
 }

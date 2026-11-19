@@ -287,7 +287,6 @@ fn first_bad(xs: &[f64]) -> Option<usize> {
 
 /// What one assessment (steps 1-3) found.
 struct Assessment {
-    factor: qr::Factored,
     gmax: f64,
     rnorm: f64,
 }
@@ -313,6 +312,9 @@ struct Run<'a, P: NllsProblem + ?Sized> {
     v: Vec<f64>,
     colbuf: Vec<f64>,
     nbuf: Vec<f64>,
+    /// The QR workspace (R, permutation, Q^T b), allocated once per solve. It holds the factor
+    /// of the last assessment or trial; `None` only transiently while a call uses it.
+    fac: Option<qr::Factored>,
 }
 
 impl<P: NllsProblem + ?Sized> Run<'_, P> {
@@ -368,10 +370,12 @@ impl<P: NllsProblem + ?Sized> Run<'_, P> {
         for (b, &ri) in self.rhs.iter_mut().zip(&self.r) {
             *b = -ri;
         }
-        let factor =
-            qr::factor(&mut self.work[..m * n], m, n, &mut self.rhs[..m], &mut self.v).map_err(|e| self.err_num(e))?;
+        let ws = self.take_fac()?;
+        let factor = qr::factor(&mut self.work[..m * n], m, n, &mut self.rhs[..m], &mut self.v, ws)
+            .map_err(|e| self.err_num(e))?;
         let rank = qr::rank(&factor, self.cfg.rank_tol);
         let cond = qr::cond(&factor).map_err(|e| self.err_num(e))?;
+        self.fac = Some(factor);
         // Gradient: scaled for the test, unscaled for the report.
         let mut gmax = 0.0_f64;
         for c in 0..n {
@@ -402,7 +406,7 @@ impl<P: NllsProblem + ?Sized> Run<'_, P> {
             Some(c) if c <= self.cfg.cond_limit => {}
             _ => return Err(SolverError::IllConditioned { cond, last: self.diag }),
         }
-        Ok(Assessment { factor, gmax, rnorm })
+        Ok(Assessment { gmax, rnorm })
     }
 
     /// The Levenberg-Marquardt trial step for damping `lambda` into `z`.
@@ -424,12 +428,26 @@ impl<P: NllsProblem + ?Sized> Run<'_, P> {
         for x in &mut self.rhs[m..rows] {
             *x = 0.0;
         }
-        let factor = qr::factor(&mut self.work, rows, n, &mut self.rhs, &mut self.v).map_err(|e| self.err_num(e))?;
-        self.solve_into_z(&factor)
+        let ws = self.take_fac()?;
+        let factor =
+            qr::factor(&mut self.work, rows, n, &mut self.rhs, &mut self.v, ws).map_err(|e| self.err_num(e))?;
+        self.fac = Some(factor);
+        self.solve_into_z()
     }
 
-    fn solve_into_z(&mut self, factor: &qr::Factored) -> Result<(), SolverError> {
-        match qr::solve(factor, &mut self.z) {
+    fn take_fac(&mut self) -> Result<qr::Factored, SolverError> {
+        match self.fac.take() {
+            Some(f) => Ok(f),
+            None => Err(self.err_num(alloc_err())),
+        }
+    }
+
+    /// Solves into `z` from the factor held in the workspace.
+    fn solve_into_z(&mut self) -> Result<(), SolverError> {
+        let fac = self.take_fac()?;
+        let res = qr::solve(&fac, &mut self.z);
+        self.fac = Some(fac);
+        match res {
             Ok(()) => Ok(()),
             Err(NumError::Infinite { .. } | NumError::Singular { .. }) => Err(self.non_finite(Stage::Step, None)),
             Err(e) => Err(self.err_num(e)),
@@ -508,7 +526,7 @@ impl<P: NllsProblem + ?Sized> Run<'_, P> {
                 return Err(SolverError::IterationLimit { last: self.diag });
             }
             if gn {
-                self.solve_into_z(&a.factor)?;
+                self.solve_into_z()?;
             }
             let mut accepted = false;
             for _ in 0..(if gn { 1 } else { MAX_TRIALS }) {
@@ -669,6 +687,7 @@ pub fn solve<P: NllsProblem + ?Sized>(prob: &P, p0: &[f64], cfg: &NllsConfig) ->
         v,
         colbuf: alloc(m).map_err(num)?,
         nbuf: zeros(n).map_err(num)?,
+        fac: Some(qr::Factored::new(n).map_err(num)?),
     };
     run.run()
 }
