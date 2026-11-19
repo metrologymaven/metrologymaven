@@ -1,0 +1,7 @@
+[flags]
+profiles = ["release"]
+allowed_target_cpus = ["x86-64-v2", "haswell", "apple-m1", "pentium4"]
+
+[flags.fma_cpu_overrides]
+haswell = "reference machine; FMA excluded by the wasm and source checks"
+apple-m1 = "reference machine; FMA excluded by the wasm and source checks"

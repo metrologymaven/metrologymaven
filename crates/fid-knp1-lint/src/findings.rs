@@ -124,6 +124,12 @@ impl Rule {
         }
     }
 
+    /// False for rules no waiver may cover: the `KNP1-FLAG-WASM*` findings all sit at line 1 of
+    /// a binary module, so one waiver would hide every future hit (KRN.NUM.LINT.FLAGS).
+    pub fn is_waivable(&self) -> bool {
+        !matches!(self, Rule::Flag(s) if s.starts_with("WASM"))
+    }
+
     /// Parses a rule ID. Family suffixes are `A-Z0-9` segments joined by single `-`, at most 48 bytes.
     pub fn parse(id: &str) -> Option<Rule> {
         if let Some(i) = FIXED.iter().position(|(f, _)| *f == id) {
@@ -662,7 +668,8 @@ impl Applied {
 /// occurs there, and with `KNP1-WAIVER-SCHEMA` for a waiver whose crate occurs in more than one
 /// version (in the source tree or among the findings), since waivers carry no version. Otherwise a finding is waived by the first waiver (file order) with the same
 /// crate, file and rule whose range contains its line (REQ-004), and every waiver that waived
-/// nothing yields a `KNP1-WAIVER-UNUSED` warning (REQ-006).
+/// nothing yields a `KNP1-WAIVER-UNUSED` warning (REQ-006). A waiver for a rule that is not
+/// [`Rule::is_waivable`] fails with `KNP1-WAIVER-SCHEMA`, and such findings are never waived.
 pub fn apply_waivers(
     findings: Vec<Finding>,
     waivers: &[Waiver],
@@ -670,6 +677,13 @@ pub fn apply_waivers(
 ) -> Result<Applied, Vec<FindError>> {
     let mut stale = Vec::new();
     for (i, w) in waivers.iter().enumerate() {
+        if !w.rule.is_waivable() {
+            stale.push(FindError::new(
+                ErrorCode::WaiverSchema,
+                format!("{}: rule {} cannot be waived", w.label(i), w.rule),
+            ));
+            continue;
+        }
         // Waivers carry no crate version, so a crate present in more than one version is ambiguous:
         // fail closed rather than waive one version's finding on the other version's digest.
         let mut versions: BTreeSet<String> = sources.versions(&w.crate_name).into_iter().collect();
@@ -705,7 +719,8 @@ pub fn apply_waivers(
     let mut used = vec![false; waivers.len()];
     let mut out = Applied::default();
     for f in findings {
-        match waivers.iter().position(|w| w.matches(&f)) {
+        let hit = if f.rule.is_waivable() { waivers.iter().position(|w| w.matches(&f)) } else { None };
+        match hit {
             Some(i) => {
                 if let Some(u) = used.get_mut(i) {
                     *u = true;

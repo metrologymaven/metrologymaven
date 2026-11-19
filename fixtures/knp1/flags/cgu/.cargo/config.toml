@@ -1,0 +1,5 @@
+[build]
+rustflags = "-C codegen-units=2"
+
+[profile.kernel.package.fid-num]
+codegen-units = 4

@@ -1,0 +1,3 @@
+[flags]
+profiles = ["release"]
+wasm_module = "absent.wasm"

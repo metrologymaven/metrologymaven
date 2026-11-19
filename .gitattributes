@@ -3,6 +3,8 @@
 # Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
 # compare bytes, so no end-of-line conversion.
 fixtures/hal/idl/stamp/** -text
+# KRN.NUM.LINT.FLAGS hand-assembled wasm modules: binary, compared by make_fixtures.py --check.
+fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
@@ -134,6 +136,8 @@ fixtures/man/implclosure-ws-v1/** -text
 fixtures/geo/sel/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
+# VIZ.RENDER.FRAME.SHLINT fixture crates: hand-labelled sources and metadata; never convert line endings.
+fixtures/viz/shlint/** -text
 # KRN.MAN.WASM: hand-encoded wasm modules, canonical calls and manifests, and the pinned runtime
 # settings whose SHA-256 is the manifest's replay_runtime.config_digest; compared byte for byte.
 fixtures/man/wasm/** -text

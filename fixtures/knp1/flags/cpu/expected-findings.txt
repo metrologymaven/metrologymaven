@@ -1,0 +1,3 @@
+KNP1-FLAG-FMA .cargo/config.toml:5:21
+KNP1-FLAG-FMA .cargo/config.toml:8:21
+KNP1-FLAG-CPU .cargo/config.toml:11:21

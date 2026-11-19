@@ -1,0 +1,29 @@
+name: kernel2
+env:
+  FLOW: {RUSTFLAGS: -Ctarget-feature=+avx2,+fma}
+  ENC_U: "-C\U0000001ftarget-cpu=native"
+  ENC_O: "-C\037target-feature=+fma"
+  SPLIT_PLAIN: -C
+    target-cpu=native
+  SPLIT_FOLDED: >-
+    -C
+    target_feature=+fma
+  OK_FLAGS: -C opt-level=3
+jobs:
+  build:
+    steps:
+      - run: cargo rustc -- -C target_cpu=native
+      - run: cargo rustc -- -Ctarget_feature=+fma
+      - run: cargo rustc -- -Ccodegen_units=16
+      - run: cargo rustc -- -Cllvm_args=-fp-contract=fast
+      - run: export RUSTFLAGS=-Ctarget-feature=+fma; cargo build
+      - run: export RUSTFLAGS=-Ctarget-cpu=native; cargo build
+      - run: (RUSTFLAGS=-Ctarget-cpu=native cargo build) && true
+      - run: |
+          cargo rustc -- -C
+            llvm-args=-fp-contract=fast
+      - run: cargo build --config profile.release.codegen-units=8
+      - run: cargo build --config 'profile.release.codegen-units=4'
+      - run: cargo build --config profile.dev.codegen-units=256
+      - run: cargo build --config "build.rustflags=['-C', 'target-cpu=native']"
+      - run: cargo build --config build.rustflags=-Ctarget-feature=+relaxed-simd
