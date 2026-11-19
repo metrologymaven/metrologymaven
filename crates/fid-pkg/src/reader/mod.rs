@@ -127,7 +127,8 @@ const _: () = assert!(
             + 64
 );
 // A name is stored once and folded once; full case folding grows UTF-8 at most three times.
-const _: () = assert!(NAME_COST_FACTOR >= 1 + 3);
+// (one copy of the name plus a folding of up to three times its length)
+const _: () = assert!(NAME_COST_FACTOR >= 4);
 const _: () = assert!(
     MANIFEST_VALUE_COST as usize >= std::mem::size_of::<fid_canon::CValue>() + std::mem::size_of::<String>() + 32
 );
