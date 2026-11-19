@@ -10,10 +10,13 @@
 //!   and the known-bad lookup (`PLAT.GPU.POLICY`).
 //! - [`peruser_layout`]: the per-user install layout and allowed write locations file, its
 //!   validator, template expansion and the write check (`PLAT.DEPLOY.NOADMIN.LAYOUT`).
+//! - [`page`]: the generated support matrix page and its `--check` comparison
+//!   (`PLAT.MATRIX.PAGE`).
 
 pub mod bench_schema;
 pub mod gpu_policy;
 pub mod hw_profile;
 pub mod kiosk_display;
 pub mod matrix;
+pub mod page;
 pub mod peruser_layout;

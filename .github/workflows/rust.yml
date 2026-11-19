@@ -80,6 +80,12 @@ jobs:
           out=$(cargo xtask plat-matrix validate fixtures/plat/matrix/valid.toml)
           test "$out" = "6 rows, 0 errors"
           cargo xtask plat-matrix validate platform/support-matrix.toml
+      - name: Support matrix page is generated and in sync via cargo xtask (PLAT.MATRIX.PAGE AC-1, AC-3)
+        shell: bash
+        run: |
+          cargo xtask plat-matrix page --matrix fixtures/plat/matrix/valid.toml --out "$RUNNER_TEMP/page.md"
+          cmp "$RUNNER_TEMP/page.md" fixtures/plat/matrix/expected-page.md
+          cargo xtask plat-matrix page --check --out docs/platform/support-matrix.md
       - name: Hardware profiles validate via cargo xtask (PLAT.HW.PROFILE AC-1 to AC-5)
         shell: bash
         run: |
@@ -171,6 +177,7 @@ jobs:
           python tools/check_envelopes.py ok.json bad.json
           python fixtures/plat/bench/make_expected.py --check
           python fixtures/plat/deploy/make_expected.py --check
+          python fixtures/plat/matrix/make_page.py --check
           python fixtures/rel/runbook/make_fixtures.py --check
           python fixtures/rel/sbom/make_fixtures.py --check
           python fixtures/rel/guide/make_fixtures.py --check

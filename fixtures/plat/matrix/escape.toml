@@ -1,0 +1,66 @@
+# Test fixture for PLAT.MATRIX.PAGE: Markdown/HTML escaping, the fixed OS family order and the
+# (arch, version_min) row order. Rows are deliberately out of order. Illustrative rows only.
+# MIT OR Apache-2.0 (D-001).
+schema_version = 1
+
+[[row]]
+os = "rhel"
+version_min = "9"
+version_max = "10"
+arch = "x86_64"
+tier = "tier3"
+since_phase = "later"
+notes = ""
+
+[[row]]
+os = "debian"
+version_min = "13"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P2"
+notes = "open-ended | pipe"
+
+[[row]]
+os = "debian"
+version_min = "12"
+version_max = "13"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P1b"
+notes = "a | b & c <script>alert(1)</script> *e* _f_ [g](h) \\ `i` ~j~ $k$ #l !m"
+
+[[row]]
+os = "debian"
+version_min = "11"
+version_max = "12"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P1b"
+notes = "line one\nline two\r\nthree\tfour, café — ok; nel\u0085c1\u009fls ps end"
+
+[[row]]
+os = "fedora"
+version_min = "41"
+version_max = "43"
+arch = "x86_64"
+tier = "tier3"
+since_phase = "later"
+notes = "<!-- not a comment --> &amp; stays literal"
+
+[[row]]
+os = "macos"
+version_min = "14.0.1"
+version_max = "15"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "leading zeros kept: see ubuntu row"
+
+[[row]]
+os = "ubuntu"
+version_min = "22.04"
+version_max = "22.10"
+arch = "x86_64"
+tier = "tier2"
+since_phase = "P0"
+notes = "22.04 must not render as 22.4"
