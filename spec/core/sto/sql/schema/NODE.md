@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-store]
+built_pr: 191
 satisfies: [REQ-CORE.STO.SQL-001, REQ-CORE.STO.SQL-006]
 covers: []
 depends_on: [CORE.STO.LAYOUT]
