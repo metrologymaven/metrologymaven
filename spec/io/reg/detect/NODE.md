@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-io-reg]
+built_pr: 225
 satisfies: [REQ-IO.REG-001, REQ-IO.REG-002, REQ-IO.REG-003]
 covers: []
 depends_on: [CORE.REG]
