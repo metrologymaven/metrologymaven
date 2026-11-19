@@ -1,0 +1,16 @@
+{
+  "name": "null",
+  "version": "1",
+  "argv": [
+    "fid-eval-harness",
+    "null-agent",
+    "--mcp-config",
+    "{mcp_config}",
+    "--prompt-file",
+    "{prompt_file}"
+  ],
+  "prompt": "file",
+  "model": "none (null agent: exits at once, calibrates scoring)",
+  "settings": {},
+  "shell": false
+}

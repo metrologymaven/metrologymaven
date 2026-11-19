@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 161
 satisfies: [REQ-OUTR.DOCS.SEARCH-001, REQ-OUTR.DOCS.SEARCH-003, REQ-OUTR.DOCS.SEARCH-004, REQ-OUTR.DOCS.SEARCH-005]
 covers: []
 depends_on: [OUTR.DOCS.FRAME.NAV]
@@ -52,7 +54,13 @@ Builds, at docs build time, one search index per release edition from that editi
 
 - **Command:** `fid-outreach search-index --edition <dir> --budget <file> [--json]`. Project tooling; nearest class W1 (writes one file into the local edition).
 - **Format:** `window.FID_SEARCH_INDEX = {"v":1,"docs":[{"t":title,"u":url,"h":[headings]}],"terms":{token:[[doc,weight]]},"names":{name:[urls]}};` with keys sorted, compact JSON.
-- **Tokenisation:** lower-case; split on non-alphanumerics except `.`, `_`, `@` and `-` inside identifiers; drop tokens shorter than 2 characters; weights 3 for title, 2 for headings, 1 for body; no stemming.
+- **Tokenisation:** lower-case; split on non-alphanumerics except `.`, `_`, `@` and `-` inside identifiers; drop tokens shorter than 2 characters; weights 3 for title, 2 for headings, 1 for body; no stemming. Exact rules, which `OUTR.DOCS.SEARCH.UI` applies to queries unchanged:
+  - Case: only ASCII `A`-`Z` are lower-cased. No locale, no Unicode case folding, no Unicode normalisation (no NFC/NFD): `Straße` gives `straße`, and `e` + U+0301 stays two code points.
+  - Word characters: ASCII `a-z`, `A-Z`, `0-9`, and every non-ASCII code point outside this fixed separator list: U+0080-U+00BF, U+00D7, U+00F7, U+1680, U+2000-U+206F, U+2E00-U+2E7F, U+3000-U+303F, U+FE10-U+FE1F, U+FE30-U+FE6F, U+FF00-U+FF0F, U+FF1A-U+FF20, U+FF3B-U+FF40, U+FF5B-U+FF65, U+FFFD. All other ASCII characters and the listed code points separate tokens. No Unicode property table is consulted.
+  - Connectors: `.`, `_`, `@` and `-` are kept when the token so far is non-empty and the next character is a word character; otherwise they separate.
+  - Length: tokens of fewer than 2 or more than 64 code points are dropped.
+  - Whitespace (collapsing titles and headings only): U+0009-U+000D, U+0020, U+0085, U+00A0, U+1680, U+2000-U+200A, U+2028, U+2029, U+202F, U+205F, U+3000.
+  - Weight: per page, the highest field weight the token has there. A page without title or heading is listed under its URL, and the URL is not tokenised.
 - **Names:** command IDs come from reference page paths `ref/<surface>/<command_id>@<major>.html`; CLI and MCP forms are derived by CONSTITUTION §3.
 - **Errors:** `EditionUnreadable`, `BudgetParse`, finding `over_budget`.
 - **Determinism:** D0.

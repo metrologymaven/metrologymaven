@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**110** of **1336** leaves built in code ([B]).
+**114** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,10 +154,10 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 40 built)
+### Wave 2 (121 leaves, 44 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
-- [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
+- [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
 - [AGENT.HARNESS.SAFETY](../../spec/agent/harness/safety/NODE.md) Safety attempt and violation counting (M, P0)
 - [B] [AGENT.HARNESS.SANDBOX](../../spec/agent/harness/sandbox/NODE.md) Per-run sandbox project and task-scoped roots (S, P0)
 - [AGENT.REDTEAM.PRED](../../spec/agent/redteam/pred/NODE.md) Violation predicate schema and payload markers (M, P0)
@@ -197,13 +197,13 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
 - [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
-- [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
+- [B] [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
 - [B] [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
 - [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
 - [B] [GEO.TYPES.POINTS](../../spec/geo/types/points/NODE.md) Point sets, point clouds and per-point attributes (M, P0)
 - [B] [HAL.ACQ.CONV](../../spec/hal/acq/conv/NODE.md) Deterministic conversion of declared encodings to f64 SI values (S, P1a)
 - [B] [HAL.ACQ.TIME](../../spec/hal/acq/time/NODE.md) Session timebase, clock offset and drift estimation, sync flag (M, P2)
-- [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
+- [B] [HAL.IDL.BASE.CFG](../../spec/hal/idl/base/cfg/NODE.md) Typed configuration, acquisition-relevant subset and configuration digest (S, P1a)
 - [B] [HAL.IDL.STAMP](../../spec/hal/idl/stamp/NODE.md) AcquisitionBatch, provenance stamp and ExternalClaim schemas (v0) (M, P0)
 - [B] [IO.CAD.STEP.P21](../../spec/io/cad/step/p21/NODE.md) Bounded ISO 10303-21 exchange-structure parser and printer (M, P1b)
 - [IO.CAD.WORKER.PROTO](../../spec/io/cad/worker/proto/NODE.md) CAD worker protocol, framing and message validation (M, P1b)
@@ -236,7 +236,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.CONTENT.VIDEO.CAP](../../spec/outr/content/video/cap/NODE.md) Captions, transcript and caption review check (S, P1b)
 - [OUTR.DOCS.FRAME.BUNDLE](../../spec/outr/docs/frame/bundle/NODE.md) Offline bundle per release (S, P0)
 - [OUTR.DOCS.FRAME.ED](../../spec/outr/docs/frame/ed/NODE.md) Release editions, version list and latest alias (S, P0)
-- [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
+- [B] [OUTR.DOCS.SEARCH.INDEX](../../spec/outr/docs/search/index/NODE.md) Per-edition search index with command-name table (M, P0)
 - [OUTR.LAUNCH.ANN](../../spec/outr/launch/ann/NODE.md) Announcement plan and drafts (M, P0)
 - [OUTR.LAUNCH.GATE](../../spec/outr/launch/gate/NODE.md) Milestone gate check and report (M, P0)
 - [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)

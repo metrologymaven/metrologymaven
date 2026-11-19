@@ -551,7 +551,7 @@ pub fn check_path(p: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
-fn as_count(v: &CValue) -> Option<u64> {
+pub(crate) fn as_count(v: &CValue) -> Option<u64> {
     match v {
         CValue::Num(f) if f.is_finite() && *f >= 0.0 && f.fract() == 0.0 && *f <= 9_007_199_254_740_991.0 => {
             Some(*f as u64)
@@ -560,12 +560,12 @@ fn as_count(v: &CValue) -> Option<u64> {
     }
 }
 
-fn is_text(s: &str) -> bool {
+pub(crate) fn is_text(s: &str) -> bool {
     !s.is_empty() && s.len() <= MAX_TEXT_BYTES && !s.chars().any(char::is_control)
 }
 
 /// A field name as shown in a subject: printable ASCII, at most 64 characters, others `?`.
-fn shown(s: &str) -> String {
+pub(crate) fn shown(s: &str) -> String {
     s.chars().take(64).map(|c| if c.is_ascii_graphic() { c } else { '?' }).collect()
 }
 

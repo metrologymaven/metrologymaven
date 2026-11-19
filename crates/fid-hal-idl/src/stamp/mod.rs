@@ -35,6 +35,8 @@ pub use model::{
 };
 pub use text::UntrustedText;
 
+pub(crate) use model::digest_of;
+
 use fid_canon::CValue;
 use std::fmt;
 

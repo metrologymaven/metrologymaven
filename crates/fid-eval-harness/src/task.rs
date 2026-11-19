@@ -79,3 +79,45 @@ impl TaskSpec {
         Ok(TaskSpec { id, start_archive: task_dir.join(path), start_digest, read_roots, write_roots })
     }
 }
+
+/// What the adapter stage reads from a task (AGENT.HARNESS.ADAPT): the prompt, the MCP server
+/// profile and the budgets. Like [`TaskSpec`], other fields are ignored here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentTask {
+    pub id: String,
+    pub prompt: String,
+    /// The `fid mcp --server` profile; checked by [`crate::check_profile`] before use.
+    pub profile: String,
+    pub wall_s: u64,
+    pub tool_calls: u64,
+}
+
+fn count(v: &CValue, what: &str, file: &str) -> Result<u64, SandboxError> {
+    match v {
+        CValue::Num(f) if *f >= 0.0 && f.fract() == 0.0 && *f <= 9_007_199_254_740_992.0 => Ok(*f as u64),
+        _ => Err(bad(file, format!("`{what}` is not a non-negative integer"))),
+    }
+}
+
+impl AgentTask {
+    /// Reads `<task_dir>/task.json` (a regular file of at most 64 MiB).
+    pub fn read(task_dir: &Path) -> Result<AgentTask, SandboxError> {
+        let bytes = read_bounded(&task_dir.join("task.json"), ErrorCode::InvalidTask)?;
+        AgentTask::parse(&bytes)
+    }
+
+    /// Parses task JSON.
+    pub fn parse(bytes: &[u8]) -> Result<AgentTask, SandboxError> {
+        let file = "task.json";
+        let limit = usize::try_from(MAX_FILE_BYTES).unwrap_or(usize::MAX);
+        let v = fid_canon::parse_with_limits(bytes, limit, 64).map_err(|e| bad(file, e))?;
+        let top = obj(&v, "task", file)?;
+        let id = string(get(top, "id", file)?, "id", file)?.to_string();
+        let prompt = string(get(top, "prompt", file)?, "prompt", file)?.to_string();
+        let profile = string(get(top, "profile", file)?, "profile", file)?.to_string();
+        let budget = obj(get(top, "budget", file)?, "budget", file)?;
+        let wall_s = count(get(budget, "wall_s", file)?, "budget.wall_s", file)?;
+        let tool_calls = count(get(budget, "tool_calls", file)?, "budget.tool_calls", file)?;
+        Ok(AgentTask { id, prompt, profile, wall_s, tool_calls })
+    }
+}
