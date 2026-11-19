@@ -88,8 +88,7 @@ fn ac1_compose_and_inverse_bit_exact() {
 /// the 200 transforms (point k uses transform k mod 200), stay within 1e-12 m.
 #[test]
 fn ac2_forward_and_back_within_1e12() {
-    let ts: Vec<(Transform, Transform)> =
-        transforms().into_iter().map(|(_, t, _)| (t, t.inverse().unwrap())).collect();
+    let ts: Vec<(Transform, Transform)> = transforms().into_iter().map(|(_, t, _)| (t, t.inverse().unwrap())).collect();
     let mut cur = Cursor::new(Address { seed: 11, stream: 2 }, 0);
     let mut worst2 = 0.0f64;
     for k in 0..1_000_000usize {
