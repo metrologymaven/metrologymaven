@@ -13,9 +13,13 @@
 //! 1. `rule_missing`: no rule exactly when the outcome is `NOT_DECIDABLE(rule_missing)`.
 //! 2. `label_only`: a `label_only` rule exactly when the outcome is
 //!    `NOT_DECIDABLE(label_only)` (a transcribed result is never a kernel decision).
-//! 3. `u_missing`: `NOT_DECIDABLE(u_missing)` only without a basis or on a UEC-0 basis.
-//! 4. `basis`: `CONFORMS`, `NONCONFORMS` and `INDETERMINATE` need a basis of class UEC-1..3.
-//! 5. `pdf_unavailable`: `NOT_DECIDABLE(pdf_unavailable)` only under a
+//! 3. Unbound template (error `invalid_rule{r}`): the guard-band template
+//!    `dr:guard-band@v` (`r` unbound) is refused with every outcome except
+//!    `NOT_DECIDABLE(rule_missing | label_only)`, which checks 1 and 2 already refuse for
+//!    it; only a resolved instance `dr:guard-band(r=x)@v` can carry an outcome.
+//! 4. `u_missing`: `NOT_DECIDABLE(u_missing)` only without a basis or on a UEC-0 basis.
+//! 5. `basis`: `CONFORMS`, `NONCONFORMS` and `INDETERMINATE` need a basis of class UEC-1..3.
+//! 6. `pdf_unavailable`: `NOT_DECIDABLE(pdf_unavailable)` only under a
 //!    `conformance_probability` rule.
 //!
 //! [`EvidenceBasis::of`] refuses a statement whose decision-relevant numbers (`u_std`, `U`,
@@ -25,7 +29,7 @@
 use fid_kunc::{EvidenceClass, Method, UncertaintyStatement};
 use fid_types::Digest;
 
-use crate::rule::{DecError, DecisionRule, NotDecidableReason, Outcome, PdfSource, RuleKind, RuleRef};
+use crate::rule::{DecError, DecisionRule, NotDecidableReason, Outcome, PdfSource, RuleKind, RuleParams, RuleRef};
 
 /// The facts of an uncertainty statement that every decision on it carries.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -131,6 +135,15 @@ impl Decision {
             (kind == Some(RuleKind::LabelOnly)) == (outcome == Outcome::NotDecidable(NotDecidableReason::LabelOnly)),
             "label_only",
         )?;
+        // The unbound guard-band template names no guard band, so no outcome under it is
+        // reproducible (checks 1 and 2 already refuse the two `NOT_DECIDABLE` reasons that
+        // would be exempt).
+        let unbound = rule.is_some_and(|r| matches!(r.params(), RuleParams::GuardBand { r: None }));
+        let exempt =
+            matches!(outcome, Outcome::NotDecidable(NotDecidableReason::RuleMissing | NotDecidableReason::LabelOnly));
+        if unbound && !exempt {
+            return Err(DecError::InvalidRule { param: "r" });
+        }
         match outcome {
             Outcome::NotDecidable(NotDecidableReason::UMissing) => mismatch(!has_u, "u_missing")?,
             Outcome::Conforms | Outcome::Nonconforms | Outcome::Indeterminate => mismatch(has_u, "basis")?,

@@ -13,7 +13,7 @@ use fid_types::Digest;
 
 use super::json::{exact_members, member, read};
 use super::wire::{rule_from_json, rule_to_json};
-use super::{DecError, DecisionRule, Origin, RuleId, RuleParams, RuleRef};
+use super::{check_id, check_kind, check_params, DecError, DecisionRule, Origin, RuleId, RuleParams, RuleRef};
 
 /// Catalog tag, the `catalog` member.
 pub const CATALOG_TAG: &str = "dr-catalog@1";
@@ -64,15 +64,20 @@ impl Catalog {
         Ok(c)
     }
 
-    /// Builds a catalog from built-in rules: at most [`MAX_RULES`], no customer rule
-    /// (`invalid_rule{id}`), (ID, version) pairs unique (`duplicate_rule`). Rules are
-    /// sorted by (ID bytes, version).
+    /// Builds a catalog from built-in rules: at most [`MAX_RULES`]; every rule passes the
+    /// same built-in checks as [`Catalog::parse_canonical`] (template ID, kind implied by
+    /// the ID, parameters; so no customer rule and no resolved guard-band instance,
+    /// `invalid_rule{id|kind|r|p_min}`); (ID, version) pairs unique (`duplicate_rule`).
+    /// Rules are sorted by (ID bytes, version). The bytes written are therefore always
+    /// bytes that [`Catalog::parse_canonical`] accepts.
     pub fn new(mut rules: Vec<DecisionRule>) -> Result<Catalog, DecError> {
         if rules.len() > MAX_RULES {
             return Err(bad("too_many_rules"));
         }
-        if rules.iter().any(|r| r.id().is_customer()) {
-            return Err(DecError::InvalidRule { param: "id" });
+        for r in &rules {
+            check_id(r.id(), Origin::Builtin)?;
+            check_kind(r.kind(), r.id(), Origin::Builtin)?;
+            check_params(r.params(), Origin::Builtin)?;
         }
         rules.sort_by_cached_key(|r| (r.id().to_string(), r.version()));
         let dup = rules.windows(2).any(|w| match w {
@@ -150,7 +155,7 @@ impl Catalog {
                 parts.id = rule.id.clone();
                 parts.params = RuleParams::GuardBand { r: Some(r.clone()) };
                 // A bound instance: the customer-side parameter checks apply (r present, r >= 0).
-                super::check_params(&parts.params, Origin::Customer)?;
+                check_params(&parts.params, Origin::Customer)?;
                 Ok(DecisionRule::from_validated_instance(parts))
             }
             id => self.get(id, rule.version).cloned().ok_or(DecError::NotInCatalog),

@@ -444,3 +444,56 @@ fn param_conversion_refuses_nothing_valid_and_is_exact() {
         assert_eq!(dec(s).to_f64("r").map(f64::to_bits), Ok(want.to_bits()), "{s}");
     }
 }
+
+#[test]
+fn unbound_guard_band_template_never_carries_an_outcome() {
+    let c = Catalog::builtin().unwrap();
+    let template = c.get(&RuleId::GuardBand { r: None }, 1).unwrap();
+    let u = EvidenceBasis::of(&statement("uec2_lpu")).unwrap();
+    let u0 = EvidenceBasis::of(&statement("uec0_u_missing")).unwrap();
+    let all = [
+        Outcome::Conforms,
+        Outcome::Nonconforms,
+        Outcome::Indeterminate,
+        Outcome::NotDecidable(NotDecidableReason::UMissing),
+        Outcome::NotDecidable(NotDecidableReason::PdfUnavailable),
+    ];
+    for o in all {
+        for b in [Some(&u), Some(&u0), None] {
+            let got = Decision::new(Some(template), o, b.cloned()).map_err(of).err();
+            assert_eq!(got, Some(err("invalid_rule", Some("r"))), "{o}");
+        }
+    }
+    // The two exempt reasons are refused earlier, by their own checks.
+    let rm = Decision::new(Some(template), Outcome::NotDecidable(NotDecidableReason::RuleMissing), Some(u.clone()));
+    assert_eq!(rm.map_err(of).err(), Some(err("outcome_mismatch", Some("rule_missing"))));
+    let lo = Decision::new(Some(template), Outcome::NotDecidable(NotDecidableReason::LabelOnly), Some(u.clone()));
+    assert_eq!(lo.map_err(of).err(), Some(err("outcome_mismatch", Some("label_only"))));
+    // A resolved instance decides.
+    let inst = c.resolve(&RuleRef::parse("dr:guard-band(r=0.5)@1").unwrap()).unwrap();
+    for o in [Outcome::Conforms, Outcome::Nonconforms, Outcome::Indeterminate] {
+        let d = Decision::new(Some(&inst), o, Some(u.clone())).unwrap();
+        assert_eq!(d.rule().map(ToString::to_string).as_deref(), Some("dr:guard-band(r=0.5)@1"));
+    }
+}
+
+#[test]
+fn catalog_new_writes_only_bytes_that_parse_back() {
+    let c = Catalog::builtin().unwrap();
+    // Round trip: every catalog `new` accepts parses back to itself.
+    let rebuilt = Catalog::new(c.rules().to_vec()).unwrap();
+    assert_eq!(Catalog::parse_canonical(rebuilt.canonical_json()).unwrap(), rebuilt);
+    let subset = Catalog::new(c.rules().iter().take(2).cloned().collect()).unwrap();
+    assert_eq!(Catalog::parse_canonical(subset.canonical_json()).unwrap(), subset);
+    // A resolved guard-band instance is not a template: `new` refuses it like the parser.
+    let inst = c.resolve(&RuleRef::parse("dr:guard-band(r=0.5)@1").unwrap()).unwrap();
+    let mut rules = c.rules().to_vec();
+    rules.push(inst.clone());
+    assert_eq!(Catalog::new(rules).map_err(of).err(), Some(err("invalid_rule", Some("id"))));
+    let bytes = DecisionRule::canonical_json(&inst).unwrap();
+    let doc = format!("{{\"catalog\":\"{CATALOG_TAG}\",\"rules\":[{}]}}", String::from_utf8(bytes).unwrap());
+    assert_eq!(Catalog::parse_canonical(doc.as_bytes()).map_err(of).err(), Some(err("invalid_rule", Some("id"))));
+    // Customer rules likewise.
+    let cust = DecisionRule::customer(customer(RuleParams::SimpleAcceptance)).unwrap();
+    assert_eq!(Catalog::new(vec![cust]).map_err(of).err(), Some(err("invalid_rule", Some("id"))));
+}

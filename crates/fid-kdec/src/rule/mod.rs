@@ -74,7 +74,7 @@ macro_rules! wire_enum {
 wire_enum! {
     /// Kind of a decision rule (REQ-UNC.DEC.TYPE-003).
     RuleKind {
-        /// Conforms when the conformance probability reaches `p_min` (JCGM 106:2012, 7).
+        /// Conforms when the conformance probability reaches `p_min`.
         ConformanceProbability => "conformance_probability",
         /// Acceptance zone equal to the tolerance zone.
         SimpleAcceptance => "simple_acceptance",
