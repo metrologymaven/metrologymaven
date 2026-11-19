@@ -86,3 +86,5 @@ fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
+fixtures/rel/notes/** -text

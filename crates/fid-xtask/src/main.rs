@@ -93,12 +93,14 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("runbook-render") => runbook_render(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("notes") => fid_xtask::rel::notes::cli(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
+            eprintln!("{}", fid_xtask::rel::notes::USAGE);
             ExitCode::from(2)
         }
     }
