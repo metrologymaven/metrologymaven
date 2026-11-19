@@ -662,8 +662,7 @@ impl CommitProbe for HangAt {
     fn on(&self, event: &CommitEvent) -> std::io::Result<()> {
         if (self.0)(event) {
             let mut out = std::io::stdout().lock();
-            writeln!(out, "
-HANG")?;
+            writeln!(out, "\nHANG")?;
             out.flush()?;
             loop {
                 std::thread::sleep(Duration::from_secs(1));
@@ -695,8 +694,7 @@ fn crash_child() {
         // libtest has already written "test crash_child ... " without a line end: start a
         // fresh line so the marker begins one.
         let mut out = std::io::stdout().lock();
-        writeln!(out, "
-READY {start}").unwrap();
+        writeln!(out, "\nREADY {start}").unwrap();
         out.flush().unwrap();
     }
     // Bounded: the parent kills it long before this; a stray child still ends.
