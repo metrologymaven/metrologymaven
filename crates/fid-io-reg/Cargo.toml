@@ -28,6 +28,11 @@ sha2 = "0.10"
 # Both are workspace crates at or below the services layer.
 fid-surface = { path = "../fid-surface" }
 fid-replay = { path = "../fid-replay" }
+# IO.REG.PROV: the length units with their exact ratios, frame IDs, `Frame` and the identity
+# transform (GEO.FRAME, kernel layer), and the journal's principal kind (CORE.JRN.ENTRY, model
+# layer; default features only, so no storage).
+fid-geo-frame = { path = "../fid-geo-frame" }
+fid-journal = { path = "../fid-journal" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only.
