@@ -107,9 +107,7 @@ pub type Exact = (String, i64);
 /// Returns the magnitude and the number of significant digits as written (from the first
 /// non-zero digit to the last digit, trailing zeros included). `None` if it is not a decimal.
 pub fn normalise_decimal(text: &str) -> Option<(Exact, usize)> {
-    if text.len() > MAX_DECIMAL_LEN {
-        return None;
-    }
+    // Normalise first (separators, then zero padding), cap after: padding cannot hide a value.
     let s: String = text.chars().filter(|c| *c != '_').collect();
     let s = s.strip_prefix(['+', '-']).unwrap_or(&s);
     let (mant, exp) = match s.find(['e', 'E']) {
@@ -129,10 +127,14 @@ pub fn normalise_decimal(text: &str) -> Option<(Exact, usize)> {
     let mut e: i64 = 0;
     if s.contains(['e', 'E']) {
         let digits = exp.strip_prefix(['+', '-']).unwrap_or(exp);
-        if digits.is_empty() || digits.len() > 9 || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
             return None;
         }
-        e = digits.parse::<i64>().ok()?;
+        let digits = digits.trim_start_matches('0');
+        if digits.len() > 9 {
+            return None; // exponent beyond ±999 999 999: not representable here (the scan reports it)
+        }
+        e = if digits.is_empty() { 0 } else { digits.parse::<i64>().ok()? };
         if exp.starts_with('-') {
             e = -e;
         }
@@ -143,6 +145,9 @@ pub fn normalise_decimal(text: &str) -> Option<(Exact, usize)> {
     let sig = trimmed.len();
     let stripped = trimmed.trim_end_matches('0');
     let e = e + i64::try_from(trimmed.len() - stripped.len()).ok()?;
+    if stripped.len() > MAX_DECIMAL_LEN {
+        return None;
+    }
     if stripped.is_empty() {
         return Some(((String::new(), 0), 0));
     }
@@ -473,6 +478,9 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
         return vec![parse_finding(&f, 1, 1, &msg, msg.clone())];
     };
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    // As rustc does: CRLF becomes LF before lexing, so `\` + CRLF is a string continuation.
+    let normalised = text.replace("\r\n", "\n");
+    let text = normalised.as_str();
     let lines: Vec<&str> = text.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l)).collect();
     let toks = match lex::lex(text) {
         Ok(t) => t,
@@ -505,6 +513,7 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
             _ => {}
         }
     }
+    let mut parse_hits: Vec<&Token> = Vec::new();
     for t in &toks {
         if let Some((raw, unesc)) = string_texts(t) {
             let mut rules = m.text_rules(&raw);
@@ -517,7 +526,11 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
         match t.kind {
             Kind::Lit { kind: LitKind::Int, .. } => {
                 let (v, dec) = int_value(&t.text);
-                let value = normalise_decimal(&dec).is_some_and(|(e, sig)| m.value_hit(&e, sig));
+                let Some((exact, sig)) = normalise_decimal(&dec) else {
+                    parse_hits.push(t);
+                    continue;
+                };
+                let value = m.value_hit(&exact, sig);
                 if value {
                     push(t, "VALUE", format!("integer literal `{}` equals a reference value", t.text));
                 } else if v.is_some_and(|v| m.int_bits_hit(v)) {
@@ -526,7 +539,11 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
             }
             Kind::Lit { kind: LitKind::Float, .. } => {
                 let (num, sfx) = float_text(&t.text);
-                let value = normalise_decimal(&num).is_some_and(|(e, sig)| m.value_hit(&e, sig));
+                let Some((exact, sig)) = normalise_decimal(&num) else {
+                    parse_hits.push(t);
+                    continue;
+                };
+                let value = m.value_hit(&exact, sig);
                 let bits64 = num.parse::<f64>().ok().map(f64::to_bits);
                 let bits32 = if sfx == "f32" { num.parse::<f32>().ok().map(|x| f64::from(x).to_bits()) } else { None };
                 if value {
@@ -538,14 +555,11 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
             _ => {}
         }
     }
-    // Strings concatenated by one macro invocation (`concat!("trac", "im-…")`).
+    // Literals concatenated by one macro invocation, rendered as `concat!` renders them
+    // (`concat!("tracim-lsq-circle-00", 7, ".json")`).
     for (o, c) in groups {
-        let parts: Vec<(&Token, String)> = toks
-            .get(o + 1..c)
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|t| string_texts(t).map(|(_, u)| (t, u)))
-            .collect();
+        let parts: Vec<(&Token, String)> =
+            toks.get(o + 1..c).unwrap_or_default().iter().filter_map(|t| concat_text(t).map(|u| (t, u))).collect();
         if parts.len() < 2 {
             continue;
         }
@@ -557,8 +571,33 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], m: &Matcher) -> Vec<Finding> {
         }
     }
     let mut out: Vec<Finding> = hits.into_values().collect();
+    for t in parse_hits {
+        let excerpt = lines.get((t.line as usize).saturating_sub(1)).copied().unwrap_or_default();
+        let msg =
+            format!("numeric literal `{}` cannot be normalised exactly", t.text.chars().take(80).collect::<String>());
+        out.push(parse_finding(&f, t.line, t.col, excerpt, msg));
+    }
     sort_findings(&mut out);
     out
+}
+
+/// A literal as `concat!` renders it: strings and characters unescaped, integers as their
+/// decimal value, floats as written (without `_` or suffix), `true`/`false`, a `-` sign.
+fn concat_text(t: &Token) -> Option<String> {
+    if let Some((_, u)) = string_texts(t) {
+        return Some(u);
+    }
+    match &t.kind {
+        Kind::Lit { kind: LitKind::Char | LitKind::Byte, .. } => Some(unescape(&t.text)),
+        Kind::Lit { kind: LitKind::Int, .. } => {
+            let (v, dec) = int_value(&t.text);
+            Some(v.map_or(dec, |v| v.to_string()))
+        }
+        Kind::Lit { kind: LitKind::Float, .. } => Some(float_text(&t.text).0),
+        Kind::Ident { raw: false } if t.text == "true" || t.text == "false" => Some(t.text.clone()),
+        Kind::Other if t.text == "-" => Some("-".to_string()),
+        _ => None,
+    }
 }
 
 fn read_bounded(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {

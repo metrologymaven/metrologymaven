@@ -104,6 +104,9 @@ fn ac5_bad_digest_and_bad_schema_fail_closed() {
         good.replacen("\"hex\": \"0x", "\"hex\": \"0X", 1),
         good.replacen("\"1e9\"", "\"nine\"", 1),
         good.replacen("\"tracim.lsq.circle.007\"", "\"\"", 1),
+        // Unknown keys at the top level and in `values[i]`.
+        good.replacen("{", "{\"extra\": 1, ", 1),
+        good.replacen("\"hex\": \"0x", "\"extra\": 1, \"hex\": \"0x", 1),
         "[]".to_string(),
         "{".to_string(),
     ];
@@ -111,6 +114,16 @@ fn ac5_bad_digest_and_bad_schema_fail_closed() {
         let e = load_denylist(v.as_bytes()).unwrap_err();
         assert_eq!(e.code, DataErrorCode::Denylist, "{v:.80}");
     }
+}
+
+#[test]
+fn crlf_string_continuation_is_seen() {
+    let e = entry("knp1-data-crlf", "crlf");
+    let bytes = read(&e.root.join("src/lib.rs"));
+    assert!(bytes.windows(3).any(|w| w == b"\\\r\n"), "the fixture must keep its CRLF bytes");
+    let out = scan_closure(&Closure { crates: vec![e] }, &denylist()).unwrap();
+    let got: Vec<String> = out.iter().map(|f| format!("{}@{}:{}", f.rule, f.line, f.column)).collect();
+    assert_eq!(got, ["KNP1-DATA-FILE@3:21"]);
 }
 
 #[test]
@@ -122,6 +135,11 @@ fn decimals_normalise_exactly() {
     assert_eq!(n("1200"), (("12".into(), 2), 4));
     assert_eq!(n("0.000"), ((String::new(), 0), 0));
     assert_eq!(n("1."), (("1".into(), 0), 1));
+    // Padding is stripped before any length cap.
+    assert_eq!(n(&format!("1234.56789012345{}", "0".repeat(1100))).0, ("123456789012345".into(), -11));
+    assert_eq!(n(&format!("1234.567{}89012345", "_".repeat(1100))).0, ("123456789012345".into(), -11));
+    assert_eq!(n("1234.56789012345e0000000000").0, ("123456789012345".into(), -11));
+    assert_eq!(n(&format!("{}1.5e-{}3", "0".repeat(2000), "0".repeat(2000))).0, ("15".into(), -4));
     for bad in ["", ".", "e5", "1e", "1.2.3", "0x10", "1e9999999999", "abc"] {
         assert!(normalise_decimal(bad).is_none(), "{bad}");
     }

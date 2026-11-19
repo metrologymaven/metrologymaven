@@ -95,6 +95,15 @@ def forms() -> bytes:
         "pub const P: f64 = 1234.567_890_123_45; //~ KNP1-DATA-VALUE=1234.567_890_123_45",
         "pub const Q: f32 = 0.123456789012f32; //~ KNP1-DATA-VALUE=0.123456789012f32",
         "pub const R: f64 = 0.987654321098;",
+        # Review of #245: padding and long exponents normalise before any length cap.
+        "pub const S: f64 = 1234.56789012345e0000000000; //~ KNP1-DATA-VALUE=1234.56789012345e0",
+        f"pub const T: f64 = 1234.56789012345{'0' * 1100}; //~ KNP1-DATA-VALUE=1234.56789012345000",
+        f"pub const U: f64 = 1234.567{'_' * 1100}89012345; //~ KNP1-DATA-VALUE=1234.567__",
+        "pub const V: f64 = 1e9999999999; //~ KNP1-PARSE=1e9999999999",
+        # `concat!` renders integers, characters, floats and booleans too.
+        "pub const W: &str = concat!(\"tracim-lsq-circle-00\", 7, \".json\"); //~ KNP1-DATA-FILE=\"tracim",
+        "pub const X: &str = concat!(\"tracim-lsq-circle-007\", '.', \"json\"); //~ KNP1-DATA-FILE=\"tracim",
+        "pub const Y: &str = concat!(\"tracim.lsq.circle.\", 0, 0, 7); //~ KNP1-DATA-ID=\"tracim",
         "macro_rules! planted {",
         "    () => {",
         "        0.123456789012 //~ KNP1-DATA-VALUE=0.123456789012",
@@ -122,6 +131,12 @@ def outputs() -> dict:
         ),
         "ws/canary/Cargo.toml": cargo("knp1-data-canary"),
         "ws/canary/src/lib.rs": b"//! Canary: one planted reference constant.\n\npub const R: f64 = 0.123456789012;\n",
+        # A `\` + CRLF continuation inside a string (bytes kept by `-text`).
+        "crlf/Cargo.toml": cargo("knp1-data-crlf"),
+        "crlf/src/lib.rs": (
+            b"//! Review of #245: CRLF line endings; the string continues across a CRLF.\r\n\r\n"
+            b"pub const S: &str = \"tracim-lsq-\\\r\n    circle-007.json\";\r\n"
+        ),
         "clean/Cargo.toml": cargo("knp1-data-canary"),
         "clean/src/lib.rs": b"//! Canary with the planted constant removed.\n\npub const R: f64 = 0.5;\n",
     }
