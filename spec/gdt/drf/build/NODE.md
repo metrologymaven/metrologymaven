@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 273
 satisfies: [REQ-GDT.DRF-001, REQ-GDT.DRF-002, REQ-GDT.DRF-006, REQ-GDT.DRF-007]
 covers: [GOM.GDT.14, PW.GDT.07, SA.GDT.03]
 depends_on: [GDT.DRF.DATUM, GDT.DRF.SIM, GDT.RES.RESOLVE]
