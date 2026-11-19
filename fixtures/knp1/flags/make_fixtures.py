@@ -244,6 +244,9 @@ rustflags = "-C target-feature=+simd128,+relaxed-simd"
 
 [host]
 rustflags = ["-Ctarget-feature=-fma,+fma4"]
+
+[build]
+rustdocflags = ["-C", "target_feature=+fma"]
 """
 put("fma/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nfma_features = ["+fma4"]\n')
 put("fma/rust-toolchain.toml", TOOLCHAIN_OK)
@@ -253,6 +256,8 @@ expect("fma/expected-findings.txt", [
     ("KNP1-FLAG-FMA", ".cargo/config.toml", 2, col(FMA_CFG, 2, "target-feature=+avx2,+fma")),
     ("KNP1-FLAG-FMA", ".cargo/config.toml", 5, col(FMA_CFG, 5, "target-feature=+simd128,+relaxed-simd")),
     ("KNP1-FLAG-FMA", ".cargo/config.toml", 8, col(FMA_CFG, 8, "target-feature=-fma,+fma4")),
+    # rustdocflags, with an underscore option name
+    ("KNP1-FLAG-FMA", ".cargo/config.toml", 11, col(FMA_CFG, 11, "target_feature=+fma")),
 ])
 
 # AC-3: codegen units. release is left at Cargo's default (16); kernel inherits release but
@@ -350,8 +355,83 @@ expect("ci/expected-findings.txt", [
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 12, col(CI_YML, 12, "target-cpu=native")),
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 13, col(CI_YML, 13, "target-cpu=native")),
     ("KNP1-FLAG-NATIVE", "workflows/kernel.yml", 14, col(CI_YML, 14, "target-cpu=native")),
-    ("KNP1-FLAG-TOOLCHAIN", "workflows/kernel.yml", 15, col(CI_YML, 15, "cargo +nightly")),
+    ("KNP1-FLAG-TOOLCHAIN", "workflows/kernel.yml", 15, col(CI_YML, 15, "+nightly")),
     ("KNP1-FLAG-FMA", "workflows/kernel.yml", 16, col(CI_YML, 16, "llvm-args=-fp-contract=fast")),
+])
+
+
+def at(text: str, line_text: str, needle: str):
+    """(line, column) of `needle` on the single line of `text` that contains `line_text`."""
+    rows = [i for i, r in enumerate(text.split("\n")) if line_text in r]
+    assert len(rows) == 1, (line_text, rows)
+    return rows[0] + 1, col(text, rows[0] + 1, needle)
+
+
+# Second CI round: underscore option names (rustc treats `_` like `-`), shell/YAML separators
+# glued to a flag, multi-line values (plain and folded YAML scalars, `run: |` blocks, shell
+# backslash continuations), `cargo --config`, and the YAML/octal escapes of 0x1F.
+CI2_YML = """name: kernel2
+env:
+  FLOW: {RUSTFLAGS: -Ctarget-feature=+avx2,+fma}
+  ENC_U: "-C\\U0000001ftarget-cpu=native"
+  ENC_O: "-C\\037target-feature=+fma"
+  SPLIT_PLAIN: -C
+    target-cpu=native
+  SPLIT_FOLDED: >-
+    -C
+    target_feature=+fma
+  OK_FLAGS: -C opt-level=3
+jobs:
+  build:
+    steps:
+      - run: cargo rustc -- -C target_cpu=native
+      - run: cargo rustc -- -Ctarget_feature=+fma
+      - run: cargo rustc -- -Ccodegen_units=16
+      - run: cargo rustc -- -Cllvm_args=-fp-contract=fast
+      - run: export RUSTFLAGS=-Ctarget-feature=+fma; cargo build
+      - run: export RUSTFLAGS=-Ctarget-cpu=native; cargo build
+      - run: (RUSTFLAGS=-Ctarget-cpu=native cargo build) && true
+      - run: |
+          cargo rustc -- -C
+            llvm-args=-fp-contract=fast
+      - run: cargo build --config profile.release.codegen-units=8
+      - run: cargo build --config 'profile.release.codegen-units=4'
+      - run: cargo build --config profile.dev.codegen-units=256
+      - run: cargo build --config "build.rustflags=['-C', 'target-cpu=native']"
+      - run: cargo build --config build.rustflags=-Ctarget-feature=+relaxed-simd
+"""
+CI2_SH = """#!/bin/sh
+# Shell continuation: -C and its value on separate lines.
+cargo rustc -- -C \\
+target-cpu=native
+cargo rustc -- -C \\
+opt-level=3
+"""
+put("ci2/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nci_env_files = ["workflows/kernel.yml", "build.sh"]\n')
+put("ci2/rust-toolchain.toml", TOOLCHAIN_OK)
+put("ci2/Cargo.toml", CARGO_OK)
+put("ci2/workflows/kernel.yml", CI2_YML)
+put("ci2/build.sh", CI2_SH)
+Y = "workflows/kernel.yml"
+expect("ci2/expected-findings.txt", [
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "FLOW:", "target-feature=+avx2,+fma")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "ENC_U:", "target-cpu=native")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "ENC_O:", "target-feature=+fma")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "    target-cpu=native", "target-cpu=native")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "    target_feature=+fma", "target_feature=+fma")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "-C target_cpu=native", "target_cpu=native")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "-Ctarget_feature=+fma", "target_feature=+fma")),
+    ("KNP1-FLAG-CGU", Y, *at(CI2_YML, "-Ccodegen_units=16", "codegen_units=16")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "-Cllvm_args", "llvm_args=-fp-contract=fast")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "-Ctarget-feature=+fma;", "target-feature=+fma")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "export RUSTFLAGS=-Ctarget-cpu=native;", "target-cpu=native")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "(RUSTFLAGS=", "target-cpu=native")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "    llvm-args=-fp-contract=fast", "llvm-args=-fp-contract=fast")),
+    ("KNP1-FLAG-CGU", Y, *at(CI2_YML, "codegen-units=8", "profile.release.codegen-units=8")),
+    ("KNP1-FLAG-CGU", Y, *at(CI2_YML, "codegen-units=4", "profile.release.codegen-units=4")),
+    ("KNP1-FLAG-NATIVE", Y, *at(CI2_YML, "build.rustflags=['-C'", "target-cpu=native")),
+    ("KNP1-FLAG-FMA", Y, *at(CI2_YML, "+relaxed-simd", "target-feature=+relaxed-simd")),
+    ("KNP1-FLAG-NATIVE", "build.sh", 4, 1),
 ])
 
 # target-cpu values outside allowed_target_cpus (haswell implies FMA); the listed one passes.

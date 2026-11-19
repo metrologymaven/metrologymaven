@@ -6,3 +6,6 @@ rustflags = "-C target-feature=+simd128,+relaxed-simd"
 
 [host]
 rustflags = ["-Ctarget-feature=-fma,+fma4"]
+
+[build]
+rustdocflags = ["-C", "target_feature=+fma"]

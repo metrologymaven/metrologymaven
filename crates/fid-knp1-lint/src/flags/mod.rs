@@ -15,22 +15,31 @@
 //! | `KNP1-FLAG-WASMSIMD` | the wasm reference module contains a SIMD opcode the config does not allow |
 //! | `KNP1-FLAG-WASMPARSE` | the wasm reference module is missing or cannot be parsed (fatal finding) |
 //!
-//! Flag sources: every key named `rustflags` (any case) or ending in `RUSTFLAGS` anywhere in
-//! `.cargo/config.toml` (and the legacy `.cargo/config`) and in the workspace `Cargo.toml`
-//! (`[profile.*] rustflags`), so `build.rustflags`,
+//! Flag sources: every key named `rustflags`/`rustdocflags` (any case) or ending in
+//! `RUSTFLAGS`/`RUSTDOCFLAGS` anywhere in `.cargo/config.toml` (and the legacy `.cargo/config`)
+//! and in the workspace `Cargo.toml` (`[profile.*] rustflags`), so `build.rustflags`,
 //! `target.<triple>.rustflags`, `target.'cfg(..)'.rustflags`, `host.rustflags` and
-//! `env.RUSTFLAGS`/`env.CARGO_ENCODED_RUSTFLAGS` are all covered; and every non-comment line of
-//! each `ci_env_files` entry (a YAML block scalar can carry `RUSTFLAGS` over several lines, so
-//! the whole file is scanned rather than only `RUSTFLAGS:` lines), including
-//! `CARGO_PROFILE_<NAME>_CODEGEN_UNITS` for kernel profiles. Profiles come from `[profile.*]`
+//! `env.RUSTFLAGS`/`env.CARGO_ENCODED_RUSTFLAGS` are all covered; and the whole text of each
+//! `ci_env_files` entry, not only `RUSTFLAGS:` lines. CI files are first grouped into logical
+//! lines ([`ci_spans`]): a line ending in `\` continues on the next, and a line with a non-empty
+//! YAML value (a block scalar `|`/`>-` or a plain multi-line scalar) continues over the
+//! following more-indented lines, so a `-C` split across lines is still paired with its value.
+//! Comment lines are skipped. `CARGO_PROFILE_<NAME>_CODEGEN_UNITS` and
+//! `--config profile.<name>.codegen-units=N` are checked for kernel profiles, and
+//! `--config build.rustflags=…` goes through the same flag checks.
+//! Profiles come from `[profile.*]`
 //! of the workspace `Cargo.toml`, overridden key by key by `[profile.*]` of `.cargo/config.toml`;
 //! package-level `codegen-units` overrides are checked along the whole `inherits` chain.
 //!
-//! Flags are split into tokens on whitespace, the unit separator `0x1F` (and its escapes
-//! `\x1f`, `\u001f`), quotes and brackets; commas around tokens (array syntax) are dropped and
-//! an environment-assignment prefix (`RUSTFLAGS=-C…`, `export RUSTFLAGS=…`) is split off.
-//! `-C k=v`, `-Ck=v`, `--codegen k=v` and `--codegen=k=v` are recognised, and any token that
-//! mentions `fp-contract` is treated as an LLVM argument.
+//! Every flag source goes through one normaliser, [`tokens`] then [`codegen_options`]:
+//! the unit separator `0x1F` and its escapes (`\x1f`, `\u001f`, `\U0000001f`, octal `\037`)
+//! become spaces; text is split on whitespace and on the shell/YAML/TOML separators
+//! `" ' [ ] { } ( ) ; & | < >` and backtick; commas around tokens (array syntax) are dropped;
+//! an assignment prefix (`RUSTFLAGS=-C…`, `export RUSTFLAGS=…`, `build.rustflags=-C…`) is split
+//! off when what follows is a flag. `-C k=v`, `-Ck=v`, `--codegen k=v` and `--codegen=k=v`
+//! are recognised and option names are normalised with `_` → `-` as rustc does
+//! (`-C target_cpu=native` is `target-cpu`). Any other token that mentions `fp-contract` is
+//! treated as an LLVM argument.
 //!
 //! Findings carry crate `(build-config)` version `-`, the file relative to the workspace
 //! directory, and the 1-based line and column of the offending text (the section header or
@@ -462,48 +471,101 @@ impl Sink<'_> {
 
 // ------------------------------------------------------------------ flag tokens
 
-/// One `-C key=value` codegen option found in a flag source.
+/// One codegen option found in a flag source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Codegen {
+    /// Option name with `_` normalised to `-` (`target_cpu` becomes `target-cpu`).
     pub key: String,
     pub value: String,
-    /// The text to look for when placing the finding (`key=value`).
+    /// The text to look for when placing the finding (as written in the source).
     pub needle: String,
+    /// For `--config profile.<name>.codegen-units=N`: the profile it applies to.
+    pub profile: Option<String>,
 }
 
-/// `NAME=rest` with `NAME` a shell/env identifier: returns `rest`.
-fn env_assignment(t: &str) -> Option<&str> {
+/// Escapes of the unit separator `0x1F` that YAML, shells and TOML sources may carry.
+const US_ESCAPES: [&str; 7] = ["\\x1f", "\\x1F", "\\u001f", "\\u001F", "\\U0000001f", "\\U0000001F", "\\037"];
+
+/// True for characters that separate tokens in flag text: whitespace, `0x1F`, and the
+/// shell/YAML/TOML punctuation that can never be part of a codegen option.
+fn is_separator(c: char) -> bool {
+    c.is_whitespace()
+        || matches!(c, '\u{1f}' | '"' | '\'' | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '&' | '|' | '<' | '>' | '`')
+}
+
+/// Normalises raw flag text and splits it into tokens: `0x1F` and its escapes become spaces,
+/// text is split on [`is_separator`] characters, commas around a token (array and flow syntax)
+/// are dropped, and empty tokens vanish. This is the single tokeniser used for every source.
+pub fn tokens(text: &str) -> Vec<String> {
+    let mut t = text.to_string();
+    for e in US_ESCAPES {
+        t = t.replace(e, " ");
+    }
+    t.split(is_separator).map(|s| s.trim_matches(',')).filter(|s| !s.is_empty()).map(str::to_string).collect()
+}
+
+/// `NAME=rest` where `NAME` looks like an environment variable or a Cargo config key
+/// (`RUSTFLAGS`, `build.rustflags`): returns `rest`.
+fn assignment_rest(t: &str) -> Option<&str> {
     let (name, rest) = t.split_once('=')?;
     let mut chars = name.chars();
     let first_ok = chars.next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
-    (first_ok && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')).then_some(rest)
+    (first_ok && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))).then_some(rest)
 }
 
-/// Splits raw flag text into tokens (whitespace, `0x1F` and its escapes, quotes, brackets).
-/// Commas around a token (array syntax) are dropped, comma-only tokens vanish, and an
-/// environment assignment prefix is split off when what follows is empty or a flag
-/// (`RUSTFLAGS=-Ctarget-cpu=native` gives `-Ctarget-cpu=native`; `-C lto=fat` is untouched).
-pub fn tokens(text: &str) -> Vec<String> {
-    let t = text.replace("\\x1f", " ").replace("\\x1F", " ").replace("\\u001f", " ").replace("\\u001F", " ");
-    t.split(|c: char| c.is_whitespace() || matches!(c, '\u{1f}' | '"' | '\'' | '[' | ']'))
-        .map(|s| s.trim_matches(','))
-        .map(|s| match env_assignment(s) {
-            Some(rest) if rest.is_empty() || rest.starts_with('-') => rest,
-            _ => s,
-        })
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-        .collect()
+/// rustc treats `_` and `-` alike in `-C` option names.
+fn norm_key(k: &str) -> String {
+    k.trim().replace('_', "-")
 }
 
-/// Extracts the `-C key=value` options from a token list. Handles `-C k=v`, `-Ck=v`,
-/// `--codegen k=v` and `--codegen=k=v`. Any other token that mentions `fp-contract` (an LLVM
-/// argument split away from its `-C llvm-args=`) is returned as key `llvm-args`.
+/// One `--config` value: `profile.<name>.codegen-units=N` is returned as a profile-scoped
+/// `codegen-units` option; any other value whose right-hand side is a flag
+/// (`build.rustflags=-Ctarget-cpu=native`) is parsed as flags.
+fn cargo_config_override(v: &str, out: &mut Vec<Codegen>) {
+    let Some((k, val)) = v.split_once('=') else { return };
+    let segs: Vec<String> = k.split('.').map(norm_key).collect();
+    if let [p, name, key] = segs.as_slice() {
+        if p == "profile" && key == "codegen-units" {
+            out.push(Codegen {
+                key: "codegen-units".to_string(),
+                value: val.to_string(),
+                needle: v.to_string(),
+                profile: Some(name.clone()),
+            });
+            return;
+        }
+    }
+    if val.starts_with('-') {
+        out.extend(codegen_options(&[val.to_string()]));
+    }
+}
+
+/// Extracts the codegen options from a token list (output of [`tokens`]). Handles `-C k=v`,
+/// `-Ck=v`, `--codegen k=v`, `--codegen=k=v`, Cargo `--config X` / `--config=X`, and an
+/// assignment prefix in front of a flag (`RUSTFLAGS=-C`, `export RUSTFLAGS=-Ctarget-cpu=native`).
+/// Option names are normalised with `_` → `-`. Any other token that mentions `fp-contract`
+/// (an LLVM argument split away from its `-C llvm-args=`) is returned as key `llvm-args`.
 pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < tokens.len() {
-        let t = tokens.get(i).map(String::as_str).unwrap_or("");
+        let mut t = tokens.get(i).map(String::as_str).unwrap_or("");
+        if let Some(rest) = assignment_rest(t).filter(|r| r.is_empty() || r.starts_with('-')) {
+            t = rest;
+        }
+        if t == "--config" {
+            i += 1;
+            if let Some(v) = tokens.get(i) {
+                cargo_config_override(v, &mut out);
+            }
+            i += 1;
+            continue;
+        }
+        if let Some(v) = t.strip_prefix("--config=") {
+            cargo_config_override(v, &mut out);
+            i += 1;
+            continue;
+        }
         let opt: Option<&str> = if t == "-C" || t == "--codegen" {
             i += 1;
             tokens.get(i).map(String::as_str)
@@ -513,10 +575,18 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
             t.strip_prefix("-C").filter(|r| !r.is_empty())
         };
         match opt.and_then(|o| o.split_once('=')) {
-            Some((k, v)) => out.push(Codegen { key: k.to_string(), value: v.to_string(), needle: format!("{k}={v}") }),
-            None if opt.is_none() && t.contains("fp-contract") => {
-                out.push(Codegen { key: "llvm-args".to_string(), value: t.to_string(), needle: t.to_string() })
-            }
+            Some((k, v)) => out.push(Codegen {
+                key: norm_key(k),
+                value: v.to_string(),
+                needle: format!("{k}={v}"),
+                profile: None,
+            }),
+            None if opt.is_none() && t.contains("fp-contract") => out.push(Codegen {
+                key: "llvm-args".to_string(),
+                value: t.to_string(),
+                needle: t.to_string(),
+                profile: None,
+            }),
             None => {}
         }
         i += 1;
@@ -525,9 +595,10 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
 }
 
 /// True when an LLVM argument string permits floating-point contraction: it mentions
-/// `fp-contract` with any value other than `off` (or with no value).
+/// `fp-contract` (or `fp_contract`) with any value other than `off`, or with no value.
 fn llvm_args_contract(v: &str) -> bool {
-    let mut rest = v;
+    let v = v.replace('_', "-");
+    let mut rest = v.as_str();
     while let Some(i) = rest.find("fp-contract") {
         let after = rest.get(i + "fp-contract".len()..).unwrap_or("");
         let value: String =
@@ -597,14 +668,15 @@ fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: Place<
                 }
             }
             "codegen-units" if o.value != "1" => {
+                let msg = match &o.profile {
+                    None => format!("`-C {}`: kernel builds need one codegen unit", o.needle),
+                    Some(p) if sink.cfg.profiles.contains(p) => {
+                        format!("`--config {}` sets codegen-units of kernel profile `{p}`", o.needle)
+                    }
+                    Some(_) => continue,
+                };
                 let (pos, text) = place(&o.needle);
-                sink.push(
-                    "CGU",
-                    file,
-                    pos,
-                    text.as_bytes(),
-                    format!("`-C {}`: kernel builds need one codegen unit", o.needle),
-                );
+                sink.push("CGU", file, pos, text.as_bytes(), msg);
             }
             _ => {}
         }
@@ -624,7 +696,10 @@ fn flag_strings(v: &toml::Value) -> Vec<String> {
 }
 
 fn is_flags_key(k: &str) -> bool {
-    k.eq_ignore_ascii_case("rustflags") || k.ends_with("RUSTFLAGS")
+    k.eq_ignore_ascii_case("rustflags")
+        || k.eq_ignore_ascii_case("rustdocflags")
+        || k.ends_with("RUSTFLAGS")
+        || k.ends_with("RUSTDOCFLAGS")
 }
 
 fn walk_rustflags(t: &toml::Table, path: &mut Vec<String>, out: &mut Vec<(Vec<String>, Vec<String>)>) {
@@ -661,6 +736,52 @@ fn check_cargo_config(sink: &mut Sink<'_>, file: &str, text: &str, table: &toml:
 
 // ------------------------------------------------------------------ CI env files
 
+fn indent_of(line: &str) -> usize {
+    line.len() - line.trim_start().len()
+}
+
+fn is_comment(line: &str) -> bool {
+    line.trim_start().starts_with('#')
+}
+
+/// True when a YAML line has a non-empty value after its key (`key: value`, `- run: |`), or
+/// is not a `key:` line at all; such a line continues over the following more-indented lines.
+fn has_inline_value(line: &str) -> bool {
+    let t = line.trim();
+    let t = t.strip_prefix("- ").unwrap_or(t);
+    if let Some(i) = t.find(": ") {
+        return !t.get(i + 2..).unwrap_or("").trim().is_empty();
+    }
+    !t.ends_with(':')
+}
+
+/// Groups the lines of a CI file into logical lines, as half-open index ranges. A line ending
+/// in `\` continues on the next line; a line with a non-empty value ([`has_inline_value`])
+/// continues over the following lines that are blank or indented more deeply (YAML block
+/// scalars `|`, `>-` and plain multi-line scalars). Comment lines never start a span.
+pub fn ci_spans(lines: &[&str]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let start = i;
+        let first = lines.get(i).copied().unwrap_or("");
+        let base = indent_of(first);
+        let folds = !is_comment(first) && !first.trim().is_empty() && has_inline_value(first);
+        i += 1;
+        while let Some(l) = lines.get(i) {
+            let prev = lines.get(i - 1).copied().unwrap_or("");
+            let continued = prev.trim_end().ends_with('\\') && !is_comment(prev);
+            let deeper = folds && (l.trim().is_empty() || indent_of(l) > base);
+            if !(continued || deeper) {
+                break;
+            }
+            i += 1;
+        }
+        out.push((start, i));
+    }
+    out
+}
+
 fn check_ci_file(sink: &mut Sink<'_>, file: &str, text: &str) {
     let idx = LineIndex::new(text);
     let prof_vars: Vec<(String, String)> = sink
@@ -669,55 +790,75 @@ fn check_ci_file(sink: &mut Sink<'_>, file: &str, text: &str) {
         .iter()
         .map(|p| (p.clone(), format!("CARGO_PROFILE_{}_CODEGEN_UNITS", p.to_ascii_uppercase().replace('-', "_"))))
         .collect();
-    for (i, raw) in idx.lines.iter().enumerate() {
-        if raw.trim_start().starts_with('#') {
-            continue;
-        }
-        let line = line_no(i);
-        let toks = tokens(raw);
+    for (start, end) in ci_spans(&idx.lines) {
+        let span: Vec<(usize, &str)> = (start..end)
+            .filter_map(|i| idx.lines.get(i).map(|l| (i, *l)))
+            .filter(|(_, l)| !is_comment(l))
+            .collect();
+        let logical: Vec<&str> = span.iter().map(|(_, l)| l.trim_end().trim_end_matches('\\')).collect();
+        let toks = tokens(&logical.join(" "));
         let opts = codegen_options(&toks);
+        // Needles are placed on the physical line that holds them; repeats move forward.
+        let mut seen: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+        let mut find = |needle: &str| -> Option<(usize, usize)> {
+            let (from_line, from_byte) = seen.get(needle).copied().unwrap_or((start, 0));
+            for (i, l) in &span {
+                if *i < from_line {
+                    continue;
+                }
+                let skip = if *i == from_line { from_byte } else { 0 };
+                if let Some(b) = l.get(skip..).and_then(|s| s.find(needle)) {
+                    seen.insert(needle.to_string(), (*i, skip + b + 1));
+                    return Some((*i, skip + b));
+                }
+            }
+            None
+        };
         let mut place = |needle: &str| {
-            let b = raw.find(needle).unwrap_or(0);
-            ((line, col_no(raw, b)), (*raw).to_string())
+            let (i, b) = find(needle).unwrap_or((start, 0));
+            let raw = idx.lines.get(i).copied().unwrap_or("");
+            ((line_no(i), col_no(raw, b)), raw.to_string())
         };
         eval_codegen(sink, file, &opts, &mut place);
-        if let Some(b) = raw.find("RUSTUP_TOOLCHAIN") {
-            sink.at_line(
-                "TOOLCHAIN",
-                file,
-                &idx,
-                (line, col_no(raw, b)),
-                "`RUSTUP_TOOLCHAIN` overrides the pinned rust-toolchain.toml".to_string(),
-            );
-        }
         for w in toks.windows(2) {
             if let [cmd, tc] = w {
                 if cmd == "cargo" && tc.starts_with('+') {
-                    let b = raw.find(&format!("cargo {tc}")).or_else(|| raw.find(tc.as_str())).unwrap_or(0);
+                    let (pos, _) = place(tc.as_str());
                     sink.at_line(
                         "TOOLCHAIN",
                         file,
                         &idx,
-                        (line, col_no(raw, b)),
+                        pos,
                         format!("`cargo {tc}` overrides the pinned rust-toolchain.toml"),
                     );
                 }
             }
         }
-        for (prof, var) in &prof_vars {
-            if let Some(b) = raw.find(var.as_str()) {
-                let rest = raw.get(b + var.len()..).unwrap_or("");
-                let val = rest.trim_start_matches([':', '=', ' ', '\t']);
-                let val: String = val.chars().filter(|c| !matches!(c, '"' | '\'')).collect();
-                let val = val.split_whitespace().next().unwrap_or("");
-                if val != "1" {
-                    sink.at_line(
-                        "CGU",
-                        file,
-                        &idx,
-                        (line, col_no(raw, b)),
-                        format!("`{var}` sets codegen-units of kernel profile `{prof}` to {val:?}"),
-                    );
+        for (i, raw) in &span {
+            let line = line_no(*i);
+            if let Some(b) = raw.find("RUSTUP_TOOLCHAIN") {
+                sink.at_line(
+                    "TOOLCHAIN",
+                    file,
+                    &idx,
+                    (line, col_no(raw, b)),
+                    "`RUSTUP_TOOLCHAIN` overrides the pinned rust-toolchain.toml".to_string(),
+                );
+            }
+            for (prof, var) in &prof_vars {
+                if let Some(b) = raw.find(var.as_str()) {
+                    let rest = raw.get(b + var.len()..).unwrap_or("");
+                    let val = rest.trim_start_matches([':', '=', ' ', '\t', '"', '\'']);
+                    let val: String = val.chars().take_while(|c| !is_separator(*c) && *c != ',').collect();
+                    if val != "1" {
+                        sink.at_line(
+                            "CGU",
+                            file,
+                            &idx,
+                            (line, col_no(raw, b)),
+                            format!("`{var}` sets codegen-units of kernel profile `{prof}` to {val:?}"),
+                        );
+                    }
                 }
             }
         }

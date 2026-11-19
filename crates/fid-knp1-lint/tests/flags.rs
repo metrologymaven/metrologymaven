@@ -7,7 +7,8 @@
 use fid_knp1_lint::find::{apply_waivers, lines_digest, ErrorCode, Finding, Rule, Waiver};
 use fid_knp1_lint::flags::wasm::SimdPolicy;
 use fid_knp1_lint::flags::{
-    check_wasm, codegen_options, parse_config, run, tokens, FlagsErrorCode, BUILD_CONFIG_CRATE, BUILD_CONFIG_VERSION,
+    check_wasm, ci_spans, codegen_options, parse_config, run, tokens, FlagsErrorCode, BUILD_CONFIG_CRATE,
+    BUILD_CONFIG_VERSION,
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -308,4 +309,61 @@ fn allowed_target_cpus_rejects_native() {
     assert_eq!(e.code, FlagsErrorCode::ConfigInvalid);
     let c = parse_config("[flags]\nallowed_target_cpus = [\"x86-64\", \"generic\"]\n", dir).unwrap();
     assert_eq!(c.allowed_target_cpus, ["generic", "x86-64"]);
+}
+
+#[test]
+fn ci_underscores_separators_continuations_config_and_escapes() {
+    let f = assert_dir("ci2");
+    // `--config profile.dev...` is not a kernel profile and stays quiet.
+    assert!(!f.iter().any(|x| x.message.contains("profile.dev")));
+}
+
+#[test]
+fn option_names_normalise_underscores() {
+    let keys = |s: &str| -> Vec<(String, String)> {
+        codegen_options(&tokens(s)).into_iter().map(|c| (c.key, c.value)).collect()
+    };
+    assert_eq!(
+        keys("-C target_cpu=native -Ctarget_feature=+fma -Ccodegen_units=16 -Cllvm_args=-fp-contract=fast"),
+        [
+            ("target-cpu".to_string(), "native".to_string()),
+            ("target-feature".to_string(), "+fma".to_string()),
+            ("codegen-units".to_string(), "16".to_string()),
+            ("llvm-args".to_string(), "-fp-contract=fast".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn separators_and_escapes_split_tokens() {
+    let needles = |s: &str| -> Vec<String> { codegen_options(&tokens(s)).into_iter().map(|c| c.needle).collect() };
+    assert_eq!(needles("export RUSTFLAGS=-Ctarget-cpu=native; cargo build"), ["target-cpu=native"]);
+    assert_eq!(needles("{RUSTFLAGS: -Ctarget-feature=+avx2,+fma}"), ["target-feature=+avx2,+fma"]);
+    assert_eq!(needles("(RUSTFLAGS=-Ctarget-cpu=native cargo b) && x | y"), ["target-cpu=native"]);
+    assert_eq!(needles(r"-C\U0000001ftarget-cpu=native"), ["target-cpu=native"]);
+    assert_eq!(needles(r"-C\037target-cpu=native"), ["target-cpu=native"]);
+    assert_eq!(needles("cargo b --config build.rustflags=-Ctarget-cpu=native"), ["target-cpu=native"]);
+    let c = codegen_options(&tokens("cargo b --config 'profile.kernel.codegen-units=8'"));
+    assert_eq!(c.len(), 1);
+    assert_eq!(c[0].key, "codegen-units");
+    assert_eq!(c[0].profile.as_deref(), Some("kernel"));
+}
+
+#[test]
+fn ci_spans_join_continuations() {
+    let lines = [
+        "env:",
+        "  A: -C",
+        "    target-cpu=native",
+        "  B: >-",
+        "    x",
+        "",
+        "    y",
+        "  C: 1",
+        "cargo -C \\",
+        "z",
+        "# comment \\",
+        "w",
+    ];
+    assert_eq!(ci_spans(&lines), [(0, 1), (1, 3), (3, 7), (7, 8), (8, 10), (10, 11), (11, 12)]);
 }

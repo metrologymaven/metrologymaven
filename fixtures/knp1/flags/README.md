@@ -13,7 +13,8 @@ optional `.cargo/config.toml` and CI env files):
 - `native/`: `build.rustflags = ["-C", "target-cpu=native"]`. AC-1, `KNP1-FLAG-NATIVE`.
 - `fma/`: `target.x86_64-unknown-linux-gnu.rustflags` with `+avx2,+fma`, a string `rustflags` with
   `+relaxed-simd`, and `host.rustflags` with the configured feature `+fma4` (its `-fma` is a
-  disable and does not count). AC-2, `KNP1-FLAG-FMA`.
+  disable and does not count), plus `build.rustdocflags` with `target_feature=+fma` (underscore
+  option name). AC-2, `KNP1-FLAG-FMA`.
 - `cgu/`: `release` left at Cargo's default of 16 codegen units, a package override of 4, `-C
   codegen-units=2` in rustflags, and `CARGO_PROFILE_KERNEL_CODEGEN_UNITS: 8` in a CI file. AC-3,
   `KNP1-FLAG-CGU`.
@@ -27,6 +28,12 @@ optional `.cargo/config.toml` and CI env files):
   unquoted `RUSTFLAGS=-Ctarget-cpu=native`, `export RUSTFLAGS=-C target-cpu=native`,
   `export CARGO_ENCODED_RUSTFLAGS=-Ctarget-cpu=native`, `RUSTUP_TOOLCHAIN` and `cargo +nightly`
   (`KNP1-FLAG-TOOLCHAIN`), and `-C llvm-args=-fp-contract=fast` (`KNP1-FLAG-FMA`; `=off` passes).
+- `ci2/`: underscore option names (`-C target_cpu=native`, `-Ctarget_feature=+fma`,
+  `-Ccodegen_units=16`, `-Cllvm_args=-fp-contract=fast`); flags glued to `;`, `( )` and YAML flow
+  `{ }`; values split over lines (plain and folded `>-` YAML scalars, a `run: |` block, and a shell
+  `\` continuation in `build.sh`); `cargo --config profile.release.codegen-units=N` (quoted and
+  not; `profile.dev` is not a kernel profile and passes) and `--config build.rustflags=…`; the
+  `\U0000001f` and octal `\037` escapes of 0x1F.
 - `cpu/`: `target-cpu=haswell` outside `allowed_target_cpus = ["x86-64-v2"]` (`KNP1-FLAG-CPU`);
   the allowed `x86-64-v2` passes.
 - `profile-flags/`: `[profile.release] rustflags` with `+fma` in `Cargo.toml`, and a

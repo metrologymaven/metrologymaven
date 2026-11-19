@@ -5,5 +5,5 @@ KNP1-FLAG-TOOLCHAIN workflows/kernel.yml:7:3
 KNP1-FLAG-NATIVE workflows/kernel.yml:12:26
 KNP1-FLAG-NATIVE workflows/kernel.yml:13:34
 KNP1-FLAG-NATIVE workflows/kernel.yml:14:47
-KNP1-FLAG-TOOLCHAIN workflows/kernel.yml:15:14
+KNP1-FLAG-TOOLCHAIN workflows/kernel.yml:15:20
 KNP1-FLAG-FMA workflows/kernel.yml:16:32
