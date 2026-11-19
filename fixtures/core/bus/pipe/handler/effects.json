@@ -1,0 +1,79 @@
+{
+  "license": "CC-BY-4.0",
+  "node": "CORE.BUS.PIPE.HANDLER",
+  "note": "Hand-labelled from REQ-003, REQ-004, AC-2 and the Design's pinned check order (count, then first undeclared type in event order, then canonical body bytes). The command is a test command declaring only ElementCreated. Each case lists the events its handler returns; expect is either {\"ok\": true, \"journaled\": n} or {code, reason, detail} with nothing journaled.",
+  "command": {
+    "id": "test.create_element",
+    "major": 1,
+    "title": "Test command for the effects check",
+    "description": "Declares one effect, ElementCreated.",
+    "params_schema": { "type": "object" },
+    "result_schema": { "type": "object" },
+    "side_effect": "W1",
+    "mcp_projection": "never",
+    "determinism": "D0",
+    "idempotency": "none",
+    "fs_effect": "none",
+    "undo": "head_move",
+    "preconditions": [],
+    "effects": ["ElementCreated"],
+    "algorithms": [],
+    "exposure": ["cli"],
+    "lifecycle": { "state": "active", "since": "2026-01-01" },
+    "web": "available"
+  },
+  "cases": [
+    {
+      "name": "declared_only",
+      "events": [{ "type": "ElementCreated", "body": { "id": "e1" } }],
+      "expect": { "ok": true, "journaled": 1 }
+    },
+    {
+      "name": "declared_then_undeclared",
+      "events": [
+        { "type": "ElementCreated", "body": { "id": "e1" } },
+        { "type": "ElementDeleted", "body": { "id": "e0" } }
+      ],
+      "expect": {
+        "code": "undeclared_effect",
+        "reason": "undeclared_event_type",
+        "detail": "undeclared event type ElementDeleted at index 1"
+      }
+    },
+    {
+      "name": "first_miss_wins",
+      "events": [
+        { "type": "ElementDeleted", "body": null },
+        { "type": "ElementMoved", "body": null }
+      ],
+      "expect": {
+        "code": "undeclared_effect",
+        "reason": "undeclared_event_type",
+        "detail": "undeclared event type ElementDeleted at index 0"
+      }
+    },
+    {
+      "name": "case_differs",
+      "events": [{ "type": "elementcreated", "body": null }],
+      "expect": {
+        "code": "undeclared_effect",
+        "reason": "undeclared_event_type",
+        "detail": "undeclared event type elementcreated at index 0"
+      }
+    },
+    {
+      "name": "repeated_declared",
+      "events": [
+        { "type": "ElementCreated", "body": { "id": "e1" } },
+        { "type": "ElementCreated", "body": { "id": "e2" } },
+        { "type": "ElementCreated", "body": { "id": "e3" } }
+      ],
+      "expect": { "ok": true, "journaled": 3 }
+    },
+    {
+      "name": "no_events",
+      "events": [],
+      "expect": { "ok": true, "journaled": 0 }
+    }
+  ]
+}

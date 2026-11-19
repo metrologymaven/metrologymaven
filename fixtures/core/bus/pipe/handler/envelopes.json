@@ -1,0 +1,27 @@
+{
+  "license": "CC-BY-4.0",
+  "node": "CORE.BUS.PIPE.HANDLER",
+  "note": "Hand-labelled from the Design's event envelope rules: an object with exactly the fields type (a valid event type: 1..=128 bytes, an ASCII letter first, then ASCII letters, digits, _ . @) and body (any JSON). Each json is the raw serialised envelope, kept as a string so duplicate keys can be written. expect is {\"type\": t} when accepted, else {code, reason}.",
+  "cases": [
+    { "name": "valid", "json": "{\"type\":\"ElementCreated\",\"body\":{\"id\":\"e1\"}}", "expect": { "type": "ElementCreated" } },
+    { "name": "valid_null_body", "json": "{\"body\":null,\"type\":\"align.run_321@1\"}", "expect": { "type": "align.run_321@1" } },
+    { "name": "duplicate_type_key", "json": "{\"type\":\"ElementCreated\",\"type\":\"ElementDeleted\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "duplicate_body_key", "json": "{\"type\":\"ElementCreated\",\"body\":1,\"body\":2}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "duplicate_key_inside_body", "json": "{\"type\":\"ElementCreated\",\"body\":{\"a\":1,\"a\":2}}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "case_only_type_key", "json": "{\"Type\":\"ElementCreated\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "case_only_extra_key", "json": "{\"type\":\"ElementCreated\",\"Type\":\"ElementDeleted\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "escaped_duplicate_type_key", "json": "{\"type\":\"ElementCreated\",\"\\u0074ype\":\"ElementDeleted\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "escaped_duplicate_key_inside_body", "json": "{\"type\":\"ElementCreated\",\"body\":{\"id\":1,\"\\u0069d\":2}}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "missing_type", "json": "{\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "missing_body", "json": "{\"type\":\"ElementCreated\"}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "extra_field", "json": "{\"type\":\"ElementCreated\",\"body\":null,\"principal\":\"mallory\"}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "type_not_string", "json": "{\"type\":7,\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "type_empty", "json": "{\"type\":\"\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "type_starts_with_digit", "json": "{\"type\":\"1Element\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "type_has_space", "json": "{\"type\":\"Element Created\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "type_non_ascii", "json": "{\"type\":\"Elément\",\"body\":null}", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "not_an_object", "json": "[\"ElementCreated\",null]", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "syntax_error", "json": "{\"type\":\"ElementCreated\",\"body\":", "expect": { "code": "validation", "reason": "schema" } },
+    { "name": "empty_input", "json": "", "expect": { "code": "validation", "reason": "schema" } }
+  ]
+}
