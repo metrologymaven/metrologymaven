@@ -7,9 +7,10 @@
 mod samples;
 
 use fid_cad_proto::{
-    kind, negotiate, Cap, CrashReason, CurveKind, EncodeError, FailCode, FrameReader, HostSession, IgesOptions, PmiKind,
-    ProtoError, ProtoLimits, ProtoVersion, RawFrame, Record, RecordBody, RecordKind, Request, Response, SourceRef,
-    StepOptions, SurfaceKind, WireText, DEFAULT_FRAME_MAX, DEFAULT_RECORDS_MAX, DEFAULT_SESSION_MAX, HEADER_LEN,
+    kind, negotiate, Cap, CrashReason, CurveKind, EncodeError, FailCode, FrameReader, HostSession, IgesOptions,
+    PmiKind, ProtoError, ProtoLimits, ProtoVersion, RawFrame, Record, RecordBody, RecordKind, Request, Response,
+    SourceRef, StepOptions, SurfaceKind, WireText, DEFAULT_FRAME_MAX, DEFAULT_RECORDS_MAX, DEFAULT_SESSION_MAX,
+    HEADER_LEN,
 };
 use fid_io_reg::{Budget, IoError, LimitKind, LimitRequest, Position, Principal};
 use samples::{Rng, Sample};
@@ -43,7 +44,7 @@ fn digests() -> Vec<(String, String)> {
         .map(|l| {
             let mut it = l.split(' ');
             let id = it.next().unwrap().to_string();
-            let digest = it.last().unwrap().to_string();
+            let digest = it.next_back().unwrap().to_string();
             (id, digest)
         })
         .collect()

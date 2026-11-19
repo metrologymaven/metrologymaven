@@ -65,8 +65,7 @@ mod wire;
 
 pub use error::{Cap, CrashReason, EncodeError, ProtoError};
 pub use frame::{
-    Frame, FrameReader, ProtoLimits, RawFrame, DEFAULT_FRAME_MAX, DEFAULT_RECORDS_MAX, DEFAULT_SESSION_MAX,
-    HEADER_LEN,
+    Frame, FrameReader, ProtoLimits, RawFrame, DEFAULT_FRAME_MAX, DEFAULT_RECORDS_MAX, DEFAULT_SESSION_MAX, HEADER_LEN,
 };
 pub use msg::{
     kind, CurveKind, FailCode, IgesOptions, PmiKind, ProtoVersion, Record, RecordBody, RecordKind, Request, Response,
