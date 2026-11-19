@@ -194,12 +194,12 @@ impl VersionRange {
     }
 
     /// The lower bound token.
-    pub fn min(&self) -> &str {
+    pub fn min_version(&self) -> &str {
         &self.min
     }
 
     /// The upper bound token.
-    pub fn max(&self) -> &str {
+    pub fn max_version(&self) -> &str {
         &self.max
     }
 }
@@ -553,7 +553,10 @@ impl std::error::Error for DetectError {}
 pub fn extension_of(file_name: &str) -> Option<String> {
     let last = file_name.rsplit(['/', '\\']).next().unwrap_or(file_name);
     let (stem, ext) = last.rsplit_once('.')?;
-    if stem.is_empty() || ext.is_empty() || ext.len() > MAX_EXTENSION_LEN || !ext.bytes().all(|b| b.is_ascii_alphanumeric())
+    if stem.is_empty()
+        || ext.is_empty()
+        || ext.len() > MAX_EXTENSION_LEN
+        || !ext.bytes().all(|b| b.is_ascii_alphanumeric())
     {
         return None;
     }
@@ -663,7 +666,11 @@ impl Registry {
             let by_ext: Vec<FormatId> =
                 readers().filter(|d| d.extensions.iter().any(|e| *e == ext)).map(|d| d.id.clone()).collect();
             if !by_ext.is_empty() && !by_ext.contains(first) {
-                return Err(DetectError::Mismatch { detected: first.clone(), extension: ext, extension_formats: by_ext });
+                return Err(DetectError::Mismatch {
+                    detected: first.clone(),
+                    extension: ext,
+                    extension_formats: by_ext,
+                });
             }
         }
         Ok(first.clone())

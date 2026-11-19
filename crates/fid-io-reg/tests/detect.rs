@@ -328,7 +328,10 @@ fn req003_registration_order_does_not_change_the_outcome() {
         rev.register(d.clone()).unwrap();
     }
     for input in [&b"MAGIC?"[..], b"MAGIC!", b"MAG", b"zzz"] {
-        assert_eq!(reg.detect(input, input.len() as u64, None, None), rev.detect(input, input.len() as u64, None, None));
+        assert_eq!(
+            reg.detect(input, input.len() as u64, None, None),
+            rev.detect(input, input.len() as u64, None, None)
+        );
     }
 }
 

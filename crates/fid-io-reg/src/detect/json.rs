@@ -97,8 +97,8 @@ pub(super) fn signature_value(s: &Signature) -> CValue {
 /// The JSON value of a descriptor (every REQ-001 field).
 pub(super) fn descriptor_value(d: &FormatDescriptor) -> CValue {
     let mut versions = Obj::new();
-    versions.insert("min".into(), str_v(d.versions.min()));
-    versions.insert("max".into(), str_v(d.versions.max()));
+    versions.insert("min".into(), str_v(d.versions.min_version()));
+    versions.insert("max".into(), str_v(d.versions.max_version()));
     let mut o = Obj::new();
     o.insert("id".into(), str_v(d.id.as_str()));
     o.insert("versions".into(), CValue::Obj(versions));
@@ -192,8 +192,8 @@ fn descriptor_from(v: CValue) -> Result<FormatDescriptor, DetectError> {
     let options_schema = take(&mut o, "options_schema")?;
     let phase = Phase::parse(&take_str(&mut o, "phase")?).ok_or_else(|| bad("phase", "must be P0 to P9"))?;
     let origin = Origin::from_wire(&take_str(&mut o, "origin")?).ok_or_else(|| bad("origin", "unknown origin"))?;
-    let direction =
-        direction_from_wire(&take_str(&mut o, "direction")?).ok_or_else(|| bad("direction", "must be read or write"))?;
+    let direction = direction_from_wire(&take_str(&mut o, "direction")?)
+        .ok_or_else(|| bad("direction", "must be read or write"))?;
     no_more(&o, "formats")?;
     FormatDescriptor::new(id, versions, signatures, extensions, options_schema, phase, origin, direction)
 }
