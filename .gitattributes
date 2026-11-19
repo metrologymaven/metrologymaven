@@ -80,3 +80,5 @@ fixtures/block/** -text
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
+# IO.CAD.WORKER.PROTO fixtures: digests compared byte for byte by make_digests.py --check and the tests.
+fixtures/io/cad/worker/proto/** -text

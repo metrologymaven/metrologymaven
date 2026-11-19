@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-cad-proto]
 satisfies: [REQ-IO.CAD.WORKER-003, REQ-IO.CAD.WORKER-004]
 covers: []
 depends_on: [IO.REG.LIMITS]
