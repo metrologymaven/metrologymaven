@@ -12,7 +12,8 @@
 use fid_align::{
     command_defs, invoke_cli, invoke_mcp, ActivityEntry, AlgorithmId, AlignError, Alignment, AlignmentModel,
     AlignmentSolver, AlignmentStatus, CreateRequest, InputRef, ParamSet, PrincipalKind, ProvenanceState, ReportRef,
-    SolveStatus, SolverError, SolverOutput, SolverRegistry, Surface, GET_ALIGNMENT, LIST_ALIGNMENTS, MAX_PARAMS_BYTES,
+    SolveStatus, SolverError, SolverOutput, SolverRegistry, Surface, GET_ALIGNMENT, GET_RESIDUALS, LIST_ALIGNMENTS,
+    MAX_PARAMS_BYTES,
 };
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_dep::{EdgeIndex, EdgesSet};
@@ -702,7 +703,7 @@ fn cli_options_fail_closed() {
 fn command_definitions_are_r0_and_d0() {
     let defs = command_defs().unwrap();
     let ids: Vec<String> = defs.iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
-    assert_eq!(ids, vec![GET_ALIGNMENT.to_string(), LIST_ALIGNMENTS.to_string()]);
+    assert_eq!(ids, vec![GET_ALIGNMENT.to_string(), GET_RESIDUALS.to_string(), LIST_ALIGNMENTS.to_string()]);
     for d in &defs {
         assert_eq!(d.side_effect.as_str(), "R0");
         assert_eq!(d.determinism.as_str(), "D0");

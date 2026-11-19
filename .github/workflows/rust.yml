@@ -263,6 +263,7 @@ jobs:
           python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/def/macro/make_golden.py --check
           python fixtures/core/reg/manifest/make_fixtures.py --check
           python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check
@@ -277,6 +278,7 @@ jobs:
           python fixtures/solv/vend/make_fixtures.py --check
           python fixtures/solv/make_mstart_fixtures.py --check
           python fixtures/fit/make_trait_fixtures.py --check
+          python fixtures/aln/qa/make_report_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
@@ -476,6 +478,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
       - name: B-rep canonical encodings, digests and derived IDs on wasm32-wasip1 (GEO.CAD.TOPO.MODEL AC-1, AC-2, AC-6)
         run: cargo test --target wasm32-wasip1 -p fid-geo-cad
+      - name: Residual report statistics and digest of the seeded 1,000,000-entry report on wasm32-wasip1 (ALN.QA.REPORT AC-2)
+        run: cargo test --target wasm32-wasip1 -p fid-align-solve
       - name: RDL dataset digests, public views and replay on wasm32-wasip1 (UNC.RDL.FORMAT AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-rdl
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
