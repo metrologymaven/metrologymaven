@@ -168,7 +168,7 @@ fn ac3_formula_text_is_neutralised_and_decimals_are_not() {
         ("", ""),
     ] {
         assert_eq!(neutralise(text), want, "{text:?}");
-        if !text.starts_with(''') {
+        if !text.starts_with('\'') {
             assert_eq!(unneutralise(&neutralise(text)), text, "{text:?}");
         }
     }
