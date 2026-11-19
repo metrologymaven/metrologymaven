@@ -82,3 +82,6 @@ fixtures/block/** -text
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
+# ECO.RULES.CHECK fixtures: hand-labelled repositories whose block digests and byte sizes are checked
+# byte for byte by tools/house_rules/tests/test_check.py; never convert line endings.
+tools/tests/fixtures/check/** -text
