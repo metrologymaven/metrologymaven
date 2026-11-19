@@ -1,0 +1,56 @@
+# Metrology Maven per-user install layout and allowed write locations
+# (spec node PLAT.DEPLOY.NOADMIN.LAYOUT; schema in crates/fid-platform, module peruser_layout).
+# Validate with:  cargo xtask plat-deploy validate-layout
+#
+# One [os.<family>] table per support-matrix OS family with an effective Tier 1 row.
+# install_dir: where the per-user installer puts program files (below {local_app_data} on
+#   Windows, below {home} elsewhere).
+# allowed_writes: the only locations the running apps may write to: the per-user data, cache
+#   and configuration directories, {tmp}, {project_roots} and {export_roots}.
+# forbidden_registrations: OS registrations a per-user install must not make.
+#
+# PROVISIONAL: every path below is the node's initial proposal [unverified until
+# PLAT.DEPLOY.NOADMIN.AUDIT runs]. "Fiducial" is the working name (D-002), not a decided
+# product or bundle name. The macOS preferences file name in particular is a placeholder until
+# the macOS package (ECO.REL.PKG.MAC) fixes the bundle identifier.
+schema_version = 1
+
+[os.windows]
+provisional = true
+install_dir = "{local_app_data}/Programs/Fiducial"
+allowed_writes = [
+    "{local_app_data}/Fiducial",
+    "{app_data}/Fiducial",
+    "{tmp}",
+    "{project_roots}",
+    "{export_roots}",
+]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]
+
+[os.ubuntu]
+provisional = true
+install_dir = "{home}/.local/share/fiducial/app"
+allowed_writes = [
+    "{xdg_data}/fiducial",
+    "{xdg_cache}/fiducial",
+    "{xdg_config}/fiducial",
+    "{tmp}",
+    "{project_roots}",
+    "{export_roots}",
+]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]
+
+[os.macos]
+provisional = true
+# Some application allow-listing tools may block installs into ~/Applications [unverified].
+install_dir = "{home}/Applications"
+allowed_writes = [
+    "{home}/Library/Application Support/Fiducial",
+    "{home}/Library/Caches/Fiducial",
+    # The app's own preferences domain only (placeholder name, see above).
+    "{home}/Library/Preferences/Fiducial.plist",
+    "{tmp}",
+    "{project_roots}",
+    "{export_roots}",
+]
+forbidden_registrations = ["service", "driver", "machine_assoc", "scheduled_task"]

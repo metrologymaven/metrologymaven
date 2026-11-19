@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**104** of **1336** leaves built in code ([B]).
+**106** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 34 built)
+### Wave 2 (121 leaves, 36 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -211,7 +211,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.CLOUD.LAS.HDR](../../spec/io/cloud/las/hdr/NODE.md) LAS headers, VLRs and point data record formats 0 to 10 (M, P1b)
 - [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
 - [B] [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
-- [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
+- [B] [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
 - [B] [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)
 - [B] [IO.REG.ENV.REPORT](../../spec/io/reg/env/report/NODE.md) Import and export report types (S, P0)
 - [B] [IO.REG.ROOTS](../../spec/io/reg/roots/NODE.md) Approved import and export root handles (M, P0)
@@ -242,7 +242,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [OUTR.LAUNCH.PLAN.DOC](../../spec/outr/launch/plan/doc/NODE.md) Launch plan document and per-app milestone criteria (M, P0)
 - [OUTR.LAUNCH.REVIEW](../../spec/outr/launch/review/NODE.md) Post-launch reviews (S, P0)
 - [PLAT.DEPLOY.KIOSK.GUIDE](../../spec/plat/deploy/kiosk/guide/NODE.md) Per-OS kiosk deployment guides and guide lint (M, P1a)
-- [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
+- [B] [PLAT.DEPLOY.NOADMIN.LAYOUT](../../spec/plat/deploy/noadmin/layout/NODE.md) Per-user install layout and allowed write locations file (S, P1a)
 - [PLAT.DEPLOY.OFFLINE.BUNDLE](../../spec/plat/deploy/offline/bundle/NODE.md) Offline bundle layout, install manifest format and bundle check (M, P1a)
 - [PLAT.DEPLOY.UPDATE.KEYROT](../../spec/plat/deploy/update/keyrot/NODE.md) Trusted-key set from key-transition statements (S, P1a)
 - [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)

@@ -81,6 +81,10 @@ fn check(file: &str, task_dir: Option<&str>) -> ExitCode {
     let Some(task) = task else {
         return ExitCode::SUCCESS;
     };
+    let Some(suite) = suite else {
+        eprintln!("invalid_task: the task folder is not <suite>/tasks/<id>");
+        return ExitCode::from(1);
+    };
     if let Err(e) = fid_eval_harness::check_profile(&task.profile) {
         eprintln!("{e}");
         return ExitCode::from(1);
@@ -90,7 +94,7 @@ fn check(file: &str, task_dir: Option<&str>) -> ExitCode {
         mcp_config: "<run>/agent/mcp-config.json".to_string(),
         workdir: "<run>/project".to_string(),
     };
-    match adapter.resolve_argv(&paths, &task.prompt, suite.as_deref()) {
+    match adapter.resolve_argv(&paths, &task.prompt, &suite) {
         Ok(argv) => {
             let v = CValue::Arr(argv.into_iter().map(CValue::Str).collect());
             match fid_canon::to_canonical_bytes(&v) {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Self-written QIF-like test document (IO.QIF.NORM AC-1). Not taken from any QIF file. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" idMax="4" versionQIF="3.0.0">
+  <Header>
+    <Author>fixture writer</Author>
+  </Header>
+  <Characteristics n="2">
+    <Nominal id="1" label="D1" xsi:type="DiameterNominalType">
+      <Value>12.50</Value>
+      <Note>keep  two spaces</Note>
+      <Empty/>
+    </Nominal>
+    <Nominal id="2" label="D2">
+      <Value>8.00</Value>
+    </Nominal>
+  </Characteristics>
+</QIFDocument>

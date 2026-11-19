@@ -1,0 +1,19 @@
+# Hand-written manifest for the fail-closed cases of the round-trip harness (IO.QIF.NORM
+# AC-6): a URL-only entry (never fetched: not_local), a path that leaves the manifest's
+# folder (path_outside_root) and a missing file (io).
+format = "qif.xml"
+
+[[entry]]
+url = "https://corpus.example.invalid/qif/remote.qif"
+licence = "CC-BY-4.0"
+tags = ["p0-subset"]
+
+[[entry]]
+path = "../ws_a.qif"
+licence = "CC-BY-4.0"
+tags = ["p0-subset"]
+
+[[entry]]
+path = "files/does_not_exist.qif"
+licence = "CC-BY-4.0"
+tags = ["p0-subset"]

@@ -205,13 +205,13 @@ fn resolved_paths_never_point_at_oracles_or_into_the_suite() {
     let a = Adapter::read(&fixture("adapters/exec-example.json"), None).unwrap();
     let mut p = paths();
     p.mcp_config = "/x/oracles/t1/oracle.json".to_string();
-    assert_eq!(a.resolve_argv(&p, "go", None).unwrap_err().code(), ErrorCode::InvalidAdapter);
+    assert_eq!(a.resolve_argv(&p, "go", &suite_dir()).unwrap_err().code(), ErrorCode::InvalidAdapter);
     let mut p = paths();
     p.workdir = std::path::absolute(task_dir()).unwrap().to_str().unwrap().to_string();
-    assert_eq!(a.resolve_argv(&p, "go", Some(&suite_dir())).unwrap_err().code(), ErrorCode::InvalidAdapter);
+    assert_eq!(a.resolve_argv(&p, "go", &suite_dir()).unwrap_err().code(), ErrorCode::InvalidAdapter);
     let mut p = paths();
     p.prompt_file = "/run/../suite/x".to_string();
-    assert!(a.resolve_argv(&p, "go", None).is_err());
+    assert!(a.resolve_argv(&p, "go", &suite_dir()).is_err());
 }
 
 #[test]
@@ -219,7 +219,7 @@ fn placeholders_are_substituted_without_a_shell() {
     let json =
         adapter_json(&["agent", "--mcp-config={mcp_config}", "$(rm -rf ~); echo {workdir}", "'{prompt_file}'"], "arg");
     let a = Adapter::parse(&json, None).unwrap();
-    let argv = a.resolve_argv(&paths(), "Evaluate PL1; rm -rf /", None).unwrap();
+    let argv = a.resolve_argv(&paths(), "Evaluate PL1; rm -rf /", &suite_dir()).unwrap();
     assert_eq!(
         argv,
         [
@@ -232,12 +232,13 @@ fn placeholders_are_substituted_without_a_shell() {
     );
     let env = vec![("PATH".to_string(), "/bin".to_string())];
     let cwd = tmp("noshell");
+    let suite = suite_dir();
     let input = LaunchInput {
         paths: paths(),
         prompt: "Evaluate PL1; rm -rf /",
         cwd: &cwd,
         env: &env,
-        suite_dir: None,
+        suite_dir: &suite,
         limits: Limits { wall_time: Duration::from_secs(1), output_cap: 16 },
     };
     let plan = a.plan(&input).unwrap();
@@ -247,8 +248,8 @@ fn placeholders_are_substituted_without_a_shell() {
     assert_eq!(args, argv[1..]);
     assert_eq!(plan.stdin, None);
     // An `arg` prompt that would be read as an option is refused.
-    assert!(a.resolve_argv(&paths(), "--yolo", None).is_err());
-    assert!(a.resolve_argv(&paths(), "", None).is_err());
+    assert!(a.resolve_argv(&paths(), "--yolo", &suite_dir()).is_err());
+    assert!(a.resolve_argv(&paths(), "", &suite_dir()).is_err());
 }
 
 #[test]
@@ -294,7 +295,7 @@ fn environment_is_scrubbed_to_the_allowlist() {
         prompt: "go",
         cwd: &cwd,
         env: &env,
-        suite_dir: Some(&suite),
+        suite_dir: &suite,
         limits: Limits { wall_time: Duration::from_secs(1), output_cap: 16 },
     };
     assert_eq!(a.plan(&input).unwrap_err().code(), ErrorCode::InvalidAdapter);
@@ -352,7 +353,7 @@ fn null_adapter_exits_at_once_without_output() {
         prompt: "Evaluate PL1.",
         cwd: &d,
         env: &env,
-        suite_dir: Some(&suite),
+        suite_dir: &suite,
         limits: Limits { wall_time: Duration::from_secs(60), output_cap: DEFAULT_OUTPUT_CAP },
     };
     let mut plan = a.plan(&input).unwrap();
@@ -373,7 +374,9 @@ fn stdin_delivery_and_limits_are_carried_in_the_plan() {
     let env = host_env();
     let cwd = tmp("stdin");
     let limits = Limits { wall_time: Duration::from_millis(1500), output_cap: 4096 };
-    let input = LaunchInput { paths: paths(), prompt: "Evaluate PL1.", cwd: &cwd, env: &env, suite_dir: None, limits };
+    let suite = suite_dir();
+    let input =
+        LaunchInput { paths: paths(), prompt: "Evaluate PL1.", cwd: &cwd, env: &env, suite_dir: &suite, limits };
     let plan = a.plan(&input).unwrap();
     assert_eq!(plan.stdin.as_deref(), Some("Evaluate PL1.".as_bytes()));
     assert_eq!(plan.limits, limits);
@@ -381,4 +384,114 @@ fn stdin_delivery_and_limits_are_carried_in_the_plan() {
     let cmd = plan.command();
     let envs: Vec<_> = cmd.get_envs().map(|(k, _)| k.to_str().unwrap().to_string()).collect();
     assert!(envs.iter().all(|k| ENV_ALLOWLIST.iter().any(|a| a.eq_ignore_ascii_case(k))), "{envs:?}");
+}
+
+fn plan_in(cwd: &Path, env: &[(String, String)]) -> Result<LaunchPlan, AdapterError> {
+    let a = Adapter::read(&fixture("adapters/exec-example.json"), None).unwrap();
+    let suite = suite_dir();
+    let p = AgentPaths::new(&cwd.join("prompt.txt"), &cwd.join("mcp-config.json"), cwd).unwrap();
+    let limits = Limits { wall_time: Duration::from_secs(1), output_cap: 16 };
+    a.plan(&LaunchInput { paths: p, prompt: "go", cwd, env, suite_dir: &suite, limits })
+}
+
+#[test]
+fn duplicate_placeholders_are_refused() {
+    let json = adapter_json(&["agent", "--mcp-config", "{mcp_config}", "--again={mcp_config}"], "stdin");
+    let e = Adapter::parse(&json, None).unwrap_err();
+    assert_eq!(codes(&e), ["invalid_adapter"]);
+    assert!(e.to_string().contains("used 2 times"), "{e}");
+    let json = adapter_json(&["agent", "{mcp_config}", "--workdir", "{workdir}", "{workdir}/x"], "stdin");
+    assert!(Adapter::parse(&json, None).is_err());
+}
+
+#[test]
+fn script_hosts_and_interpreter_one_liners_need_shell_access() {
+    let bad: [&[&str]; 9] = [
+        &["cscript", "agent.vbs"],
+        &["C:/Windows/System32/wscript.exe", "agent.js"],
+        &["mshta", "agent.hta"],
+        &["python3", "-c", "import agent"],
+        &["/usr/bin/python3.12", "-Ic", "import agent"],
+        &["node", "--eval", "require('agent')"],
+        &["perl", "-e", "print 1"],
+        &["ruby.exe", "-e", "puts 1"],
+        &["pwsh", "-Command", "agent"],
+    ];
+    for argv in bad {
+        let mut argv = argv.to_vec();
+        argv.push("{mcp_config}");
+        let e = Adapter::parse(&adapter_json(&argv, "stdin"), None).unwrap_err();
+        assert_eq!(e.code(), ErrorCode::InvalidAdapter, "{argv:?}");
+    }
+    // Running a script file is not a one-liner.
+    Adapter::parse(&adapter_json(&["python3", "-u", "agent.py", "{mcp_config}"], "stdin"), None).unwrap();
+    Adapter::parse(&adapter_json(&["node", "agent.js", "--config={mcp_config}"], "stdin"), None).unwrap();
+}
+
+#[test]
+fn environment_values_naming_oracles_fail_the_plan() {
+    let d = tmp("env-oracle");
+    let env = vec![("TMPDIR".to_string(), "/x/oracles".to_string())];
+    let e = plan_in(&d, &env).unwrap_err();
+    assert_eq!(e.code(), ErrorCode::InvalidAdapter);
+    assert!(e.to_string().contains("TMPDIR"), "{e}");
+    let env = vec![("TMPDIR".to_string(), "/x/tmp".to_string())];
+    plan_in(&d, &env).unwrap();
+}
+
+#[test]
+fn workdir_with_oracle_or_expected_entries_fails_the_plan() {
+    let env = vec![("PATH".to_string(), "/bin".to_string())];
+    // Clean folder: fine.
+    let clean = tmp("wd-clean");
+    std::fs::write(clean.join("README.txt"), b"start state").unwrap();
+    plan_in(&clean, &env).unwrap();
+    // Entries named oracle* or expected*, at any depth and in any case.
+    let cases = [("wd-oracle", "oracle.json"), ("wd-expected", "out/Expected-Results.csv"), ("wd-dir", "in/ORACLES")];
+    for (name, rel) in cases {
+        let d = tmp(name);
+        let p = d.join(rel);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(&p, b"x").unwrap();
+        let e = plan_in(&d, &env).unwrap_err();
+        assert_eq!(e.code(), ErrorCode::InvalidAdapter, "{rel}");
+    }
+    // A renamed copy of a file the suite marks as oracle.
+    let d = tmp("wd-copy");
+    std::fs::create_dir(d.join("in")).unwrap();
+    std::fs::copy(suite_dir().join("oracles/mini-inspect-01/oracle.json"), d.join("in/notes.json")).unwrap();
+    let e = plan_in(&d, &env).unwrap_err();
+    assert!(e.to_string().contains("same bytes"), "{e}");
+    // The same check applies to `{workdir}` when it differs from the working folder.
+    let a = Adapter::read(&fixture("adapters/exec-example.json"), None).unwrap();
+    let suite = suite_dir();
+    let p = AgentPaths::new(&clean.join("prompt.txt"), &clean.join("mcp-config.json"), &d).unwrap();
+    let limits = Limits { wall_time: Duration::from_secs(1), output_cap: 16 };
+    let input = LaunchInput { paths: p, prompt: "go", cwd: &clean, env: &env, suite_dir: &suite, limits };
+    assert!(a.plan(&input).is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinks_into_the_suite_are_caught() {
+    let d = tmp("symlink");
+    let suite_abs = std::fs::canonicalize(suite_dir()).unwrap();
+    let link = d.join("work");
+    std::os::unix::fs::symlink(&suite_abs, &link).unwrap();
+    let a = Adapter::read(&fixture("adapters/exec-example.json"), None).unwrap();
+    // `{workdir}` is a link to the suite folder.
+    let mut p = paths();
+    p.workdir = link.to_str().unwrap().to_string();
+    assert!(a.resolve_argv(&p, "go", &suite_dir()).unwrap_err().to_string().contains("suite folder"));
+    // A not-yet-existing file below the link.
+    let mut p = paths();
+    p.prompt_file = link.join("prompt.txt").to_str().unwrap().to_string();
+    assert!(a.resolve_argv(&p, "go", &suite_dir()).is_err());
+    // The working folder is the link.
+    let env = vec![("PATH".to_string(), "/bin".to_string())];
+    assert!(plan_in(&link, &env).is_err());
+    // A link inside the working folder that points into the suite.
+    let d2 = tmp("symlink-inside");
+    std::os::unix::fs::symlink(suite_abs.join("tasks"), d2.join("data")).unwrap();
+    assert!(plan_in(&d2, &env).unwrap_err().to_string().contains("links into the suite folder"));
 }

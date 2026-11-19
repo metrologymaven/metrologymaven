@@ -8,9 +8,7 @@
     "--prompt-file",
     "{prompt_file}",
     "--workdir",
-    "{workdir}",
-    "--token-report",
-    "{workdir}/tokens.json"
+    "{workdir}"
   ],
   "prompt": "file",
   "token_report": "tokens.json",

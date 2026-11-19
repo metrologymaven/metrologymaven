@@ -1,0 +1,14 @@
+# Hand-written manifest for the digest checks of the round-trip harness (IO.QIF.NORM
+# AC-6): a wrong sha256 and a missing sha256 both fail closed with digest_mismatch.
+format = "qif.xml"
+
+[[entry]]
+path = "files/ws_a.qif"
+licence = "CC-BY-4.0"
+sha256 = "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+tags = ["p0-subset"]
+
+[[entry]]
+path = "files/list_ws.qif"
+licence = "CC-BY-4.0"
+tags = ["p0-subset"]

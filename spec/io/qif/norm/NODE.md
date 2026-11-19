@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-qif]
+built_pr: 156
 satisfies: [REQ-IO.QIF-006, REQ-IO.QIF-007]
 covers: []
 depends_on: [IO.REG.LIMITS]
@@ -75,6 +77,7 @@ Hand-written minimal QIF 3.0 documents under `fixtures/io/qif/norm/` (CC-BY-4.0)
 
 ## Open questions
 
+- The rule-version lock (`crates/fid-qif/qif-norm.lock`) is checked against the rule file in the same tree only; an edited existing lock line would pass. A follow-up CI step (own PR) should check the rule file and lock against the PR's base branch (lock lines append-only, rule-file change implies a new lock line).
 - Is namespace-prefix rewriting needed, or does C14N 1.1 already make prefix choice irrelevant for equality? Kept explicit to make the rule list self-describing.
 
 ## Children

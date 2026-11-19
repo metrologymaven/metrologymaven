@@ -10,9 +10,7 @@
       "--prompt-file",
       "<run>/agent/prompt.txt",
       "--workdir",
-      "<run>/project",
-      "--token-report",
-      "<run>/project/tokens.json"
+      "<run>/project"
     ]
   },
   "bad": {

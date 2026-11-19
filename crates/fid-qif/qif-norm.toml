@@ -1,0 +1,43 @@
+# The qif-norm rule list (spec node IO.QIF.NORM, REQ-IO.QIF.NORM-001, -002).
+#
+# Two QIF-XML documents are equal under a version of qif-norm when their normalised bytes
+# are equal. Any edit to this file must change `version` and add a line to
+# `qif-norm.lock`; the test `rule_file_matches_lock` fails with `norm_version_not_bumped`
+# otherwise. The prose meaning of each rule is in the `fid_qif::norm` module docs.
+
+version = "qif-norm@1"
+
+# Exactly these four rules, in this order:
+#   c14n11          - Canonical XML 1.1 form: UTF-8, no XML declaration, comments removed,
+#                     CDATA replaced by escaped text, empty elements as start/end pairs,
+#                     attributes sorted by (namespace, local name), fixed escaping.
+#   xsd-collapse    - XSD `collapse` of the content of elements and the values of attributes
+#                     listed under [simple_content] (list and non-string atomic types).
+#   drop-ws-text    - whitespace-only text is removed from elements that have child elements.
+#   ns-prefix-table - namespace prefixes rewritten from [prefixes]; other namespaces get
+#                     n1, n2, ... in order of first use; no default namespace.
+rules = ["c14n11", "xsd-collapse", "drop-ws-text", "ns-prefix-table"]
+
+# Fixed prefix table, keyed by namespace name. The QIF 3 namespace name is
+# [unverified] against the published XSDs (not read; decision D-038 is open).
+[prefixes]
+"http://qifstandards.org/xsd/qif3" = "q"
+"http://www.w3.org/2001/XMLSchema" = "xs"
+"http://www.w3.org/2001/XMLSchema-instance" = "xsi"
+
+# Elements and attributes whose content is an XSD list or non-string atomic simple type,
+# as Clark names `{namespace}local` (or `local` for no namespace).
+#
+# INTERIM TABLE: hand-written for the self-written fixtures under fixtures/io/qif/norm/.
+# It is not derived from the QIF XSDs (D-038 open). IO.QIF.GEN replaces it with a table
+# generated from the Schema IR, which will be a new qif-norm version.
+[simple_content]
+elements = [
+    "{http://qifstandards.org/xsd/qif3}Count",
+    "{http://qifstandards.org/xsd/qif3}Value",
+    "{http://qifstandards.org/xsd/qif3}Values",
+]
+attributes = [
+    "id",
+    "n",
+]

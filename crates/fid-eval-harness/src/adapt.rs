@@ -29,7 +29,7 @@
 use crate::path::{check_rel, is_same_or_ancestor};
 use crate::{read_bounded, ErrorCode, SandboxError};
 use fid_canon::CValue;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
@@ -79,24 +79,69 @@ pub const ENV_ALLOWLIST: [&str; 19] = [
     "windir",
 ];
 
-/// Programs that are command interpreters: launching one is shell access.
-const SHELLS: [&str; 15] = [
+/// Programs that are command interpreters: launching one is shell access. This list and
+/// [`interpreter_one_liner`] are a heuristic (no list of interpreters is complete); the
+/// structural guarantee is that the harness itself never runs a command line through a shell.
+const SHELLS: [&str; 18] = [
     "ash",
     "bash",
     "busybox",
     "cmd",
+    "cscript",
     "csh",
     "dash",
     "env",
     "fish",
     "ksh",
+    "mshta",
     "powershell",
     "pwsh",
     "sh",
     "tcsh",
+    "wscript",
     "wsl",
     "zsh",
 ];
+
+/// Interpreters and the options that make them run code given on the command line.
+const ONE_LINERS: [(&str, &[&str]); 9] = [
+    ("python", &["-c"]),
+    ("pythonw", &["-c"]),
+    ("py", &["-c"]),
+    ("node", &["-e", "--eval", "-p", "--print"]),
+    ("nodejs", &["-e", "--eval", "-p", "--print"]),
+    ("perl", &["-e", "-E"]),
+    ("ruby", &["-e"]),
+    ("pwsh", &["-command", "-c", "-encodedcommand", "-ec", "-e"]),
+    ("powershell", &["-command", "-c", "-encodedcommand", "-ec", "-e"]),
+];
+
+/// True when `argv` runs an interpreter on code from the command line (`python -c`,
+/// `node -e`, `perl -e`, `ruby -e`, `pwsh -Command`, ...), including combined short options
+/// such as `python -Ic`. A heuristic, like [`SHELLS`].
+fn interpreter_one_liner(argv: &[String]) -> bool {
+    let Some(program) = argv.first() else {
+        return false;
+    };
+    let base = program.rsplit(['/', '\\']).next().unwrap_or(program).to_ascii_lowercase();
+    let base = base.strip_suffix(".exe").unwrap_or(&base);
+    let base = base.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.');
+    let Some((_, flags)) = ONE_LINERS.iter().find(|(name, _)| *name == base) else {
+        return false;
+    };
+    argv.iter().skip(1).any(|a| {
+        let a = a.to_ascii_lowercase();
+        flags.iter().any(|f| {
+            a == *f
+                || (f.len() == 2
+                    && a.len() > 2
+                    && a.starts_with('-')
+                    && !a.starts_with("--")
+                    && a.bytes().skip(1).all(|c| c.is_ascii_alphabetic())
+                    && a.ends_with(&f[1..]))
+        })
+    })
+}
 
 const FIELDS: [&str; 8] = ["argv", "model", "name", "prompt", "settings", "shell", "token_report", "version"];
 
@@ -225,11 +270,16 @@ fn scan(s: &str) -> (Vec<Piece<'_>>, Vec<String>) {
 /// Why an argument must never reach the agent, if it names oracle data or leaves the sandbox.
 /// Path segments are split on `/`, `\`, `=` and `:` and compared case-insensitively.
 fn oracle_reason(s: &str) -> Option<&'static str> {
+    if s.split(['/', '\\', '=', ':']).any(|seg| seg == "..") {
+        return Some("has a `..` segment, which can leave the sandbox");
+    }
+    oracle_name_reason(s)
+}
+
+/// Why a path names oracle data: a segment starting with `oracle`, or a task file.
+fn oracle_name_reason(s: &str) -> Option<&'static str> {
     for seg in s.split(['/', '\\', '=', ':']) {
         let seg = seg.to_ascii_lowercase();
-        if seg == ".." {
-            return Some("has a `..` segment, which can leave the sandbox");
-        }
         if seg.starts_with("oracle") {
             return Some("names an oracle file or folder; an agent never gets oracle paths");
         }
@@ -283,13 +333,37 @@ fn suite_forms(suite: &Path) -> Vec<String> {
     forms
 }
 
+/// `p` with its deepest existing ancestor resolved through symbolic links and junctions
+/// (`canonicalize`) and the not-yet-existing rest appended; `None` if no ancestor resolves.
+fn real_path(p: &Path) -> Option<PathBuf> {
+    let mut rest: Vec<&std::ffi::OsStr> = Vec::new();
+    let mut cur = p;
+    loop {
+        if let Ok(c) = std::fs::canonicalize(cur) {
+            return Some(rest.iter().rev().fold(c, |acc, seg| acc.join(seg)));
+        }
+        rest.push(cur.file_name()?);
+        cur = cur.parent()?;
+    }
+}
+
 /// True when `s`, or the text after any `=` in it, is an absolute path at or below one of
-/// `forms`.
+/// `forms`, as written or after resolving the links of its existing part.
 fn points_into(s: &str, forms: &[String]) -> bool {
     std::iter::once(s).chain(s.split('=').skip(1)).any(|c| {
         let p = Path::new(c);
         let abs = p.is_absolute() || c.starts_with('/') || c.starts_with('\\');
-        abs && forms.iter().any(|f| is_same_or_ancestor(f.trim_end_matches('/'), norm(p).trim_end_matches('/')))
+        if !abs {
+            return false;
+        }
+        let mut cands = vec![norm(p)];
+        if let Some(real) = real_path(p) {
+            cands.push(norm(&real));
+        }
+        cands.iter().any(|n| {
+            let n = n.trim_end_matches('/');
+            forms.iter().any(|f| is_same_or_ancestor(f.trim_end_matches('/'), n))
+        })
     })
 }
 
@@ -449,7 +523,7 @@ impl Adapter {
             Some(_) => p.push(invalid("`argv` is not an array")),
         }
         let suite_forms = suite_dir.map(suite_forms).unwrap_or_default();
-        let mut used = BTreeSet::new();
+        let mut used: BTreeMap<&str, usize> = BTreeMap::new();
         for (i, a) in argv.iter().enumerate() {
             if a.len() > MAX_ARG_BYTES {
                 p.push(invalid(format!("argv[{i}] is longer than {MAX_ARG_BYTES} bytes")));
@@ -463,7 +537,7 @@ impl Adapter {
             }
             for piece in &pieces {
                 if let Piece::Ph(name) = piece {
-                    used.insert(*name);
+                    *used.entry(*name).or_insert(0) += 1;
                     if i == 0 {
                         p.push(invalid(format!("argv[0] (the program) contains the placeholder `{{{name}}}`")));
                     }
@@ -479,20 +553,29 @@ impl Adapter {
                 p.push(invalid(format!("argv[{i}] is an absolute path into the suite folder")));
             }
         }
+        for (name, n) in &used {
+            if *n > 1 {
+                p.push(invalid(format!("placeholder `{{{name}}}` is used {n} times; each may appear at most once")));
+            }
+        }
         if let Some(program) = argv.first() {
             let (stem, ext) = program_stem(program);
             if !shell && (SHELLS.contains(&stem.as_str()) || ext == "bat" || ext == "cmd") {
                 p.push(invalid(format!(
                     "argv[0] `{program}` runs a command interpreter, but the adapter does not declare shell access"
                 )));
+            } else if !shell && interpreter_one_liner(&argv) {
+                p.push(invalid(format!(
+                    "argv runs `{program}` on command-line code, but the adapter does not declare shell access"
+                )));
             }
-            if !used.contains("mcp_config") {
+            if !used.contains_key("mcp_config") {
                 p.push(SandboxError::new(
                     ErrorCode::MissingPlaceholder,
                     "argv never uses `{mcp_config}`, so the agent would get no MCP server",
                 ));
             }
-            if prompt == Some(PromptMode::File) && !used.contains("prompt_file") {
+            if prompt == Some(PromptMode::File) && !used.contains_key("prompt_file") {
                 p.push(SandboxError::new(
                     ErrorCode::MissingPlaceholder,
                     "prompt delivery is `file` but argv never uses `{prompt_file}`",
@@ -517,15 +600,15 @@ impl Adapter {
 
     /// The launch argv with the placeholders replaced by `paths` and, for prompt delivery
     /// `arg`, the prompt appended. Fails with `invalid_adapter` when a path names oracle data
-    /// or lies in `suite_dir`, or when an `arg` prompt is empty, starts with `-` (it would be
-    /// read as an option) or contains a NUL.
+    /// or lies in `suite_dir` (also through a symbolic link), or when an `arg` prompt is empty,
+    /// starts with `-` (it would be read as an option) or contains a NUL.
     pub fn resolve_argv(
         &self,
         paths: &AgentPaths,
         prompt: &str,
-        suite_dir: Option<&Path>,
+        suite_dir: &Path,
     ) -> Result<Vec<String>, AdapterError> {
-        let forms = suite_dir.map(suite_forms).unwrap_or_default();
+        let forms = suite_forms(suite_dir);
         let mut p = Vec::new();
         for (name, value) in paths.pairs() {
             if let Some(why) = oracle_reason(value) {
@@ -560,18 +643,35 @@ impl Adapter {
     }
 
     /// A launch plan: the resolved argv, no shell, the scrubbed environment and the limits.
+    ///
+    /// Fails with `invalid_adapter` when an environment value names oracle data or points into
+    /// the suite folder, when the working folder lies in the suite folder, or when the working
+    /// folder or `{workdir}` holds oracle or expected-answer entries (see [`find_oracle_entries`]).
     pub fn plan(&self, input: &LaunchInput<'_>) -> Result<LaunchPlan, AdapterError> {
         let mut argv = self.resolve_argv(&input.paths, input.prompt, input.suite_dir)?;
-        let forms = input.suite_dir.map(suite_forms).unwrap_or_default();
+        let forms = suite_forms(input.suite_dir);
         let env = scrub_env(input.env);
         let mut p = Vec::new();
         for (k, v) in &env {
-            if std::env::split_paths(v).any(|x| x.to_str().is_some_and(|s| points_into(s, &forms))) {
-                p.push(invalid(format!("environment variable {k} points into the suite folder")));
+            for x in std::env::split_paths(v) {
+                let s = x.to_string_lossy();
+                if let Some(why) = oracle_name_reason(&s) {
+                    p.push(invalid(format!("environment variable {k} {why}")));
+                } else if points_into(&s, &forms) {
+                    p.push(invalid(format!("environment variable {k} points into the suite folder")));
+                }
             }
         }
         if points_into(&input.cwd.to_string_lossy(), &forms) {
             p.push(invalid("the working folder lies in the suite folder"));
+        }
+        let mut dirs = vec![input.cwd.to_path_buf()];
+        let workdir = PathBuf::from(&input.paths.workdir);
+        if workdir.is_absolute() && real_path(&workdir) != real_path(input.cwd) {
+            dirs.push(workdir);
+        }
+        for d in dirs {
+            p.extend(find_oracle_entries(&d, input.suite_dir));
         }
         if !p.is_empty() {
             return Err(AdapterError { problems: p });
@@ -580,6 +680,108 @@ impl Adapter {
         let stdin = (self.prompt == PromptMode::Stdin).then(|| input.prompt.as_bytes().to_vec());
         Ok(LaunchPlan { program, args: argv, stdin, cwd: input.cwd.to_path_buf(), env, limits: input.limits })
     }
+}
+
+/// Most entries [`find_oracle_entries`] visits before it fails closed.
+const MAX_SCAN_ENTRIES: usize = 100_000;
+/// Deepest folder [`find_oracle_entries`] descends into before it fails closed.
+const MAX_SCAN_DEPTH: usize = 64;
+
+/// Size and SHA-256 of every regular file below `dir` (not following links), bounded.
+fn file_digests(dir: &Path, out: &mut Vec<(PathBuf, u64, [u8; 32])>, budget: &mut usize, depth: usize) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for e in rd.flatten() {
+        if *budget == 0 || depth > MAX_SCAN_DEPTH {
+            return;
+        }
+        *budget -= 1;
+        let path = e.path();
+        match std::fs::symlink_metadata(&path) {
+            Ok(m) if m.is_dir() => file_digests(&path, out, budget, depth + 1),
+            Ok(m) if m.is_file() => {
+                if let Some(d) = sha256_file(&path) {
+                    out.push((path, m.len(), d));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn sha256_file(p: &Path) -> Option<[u8; 32]> {
+    use sha2::{Digest as _, Sha256};
+    let mut f = std::fs::File::open(p).ok()?;
+    let mut h = Sha256::new();
+    let mut buf = [0u8; 65536];
+    loop {
+        let n = f.read(&mut buf).ok()?;
+        if n == 0 {
+            break;
+        }
+        h.update(buf.get(..n)?);
+    }
+    Some(h.finalize().into())
+}
+
+/// The oracle file with the same size and SHA-256 as the file at `path`, if any.
+fn same_bytes<'a>(oracles: &'a [(PathBuf, u64, [u8; 32])], path: &Path, len: u64) -> Option<&'a Path> {
+    if !oracles.iter().any(|(_, l, _)| *l == len) {
+        return None;
+    }
+    let d = sha256_file(path)?;
+    oracles.iter().find(|(_, l, od)| *l == len && *od == d).map(|(o, _, _)| o.as_path())
+}
+
+/// Oracle and expected-answer entries below `dir`, as `invalid_adapter` problems: any entry
+/// whose name starts with `oracle` or `expected` (ASCII case-insensitive), any link that
+/// resolves into the suite folder, and any regular file whose bytes equal a file under the
+/// suite's `oracles/` folder. Links are not followed. More than 100 000 entries or 64 levels
+/// fail closed. An absent `dir` holds nothing.
+pub fn find_oracle_entries(dir: &Path, suite_dir: &Path) -> Vec<SandboxError> {
+    let mut oracles = Vec::new();
+    let mut budget = MAX_SCAN_ENTRIES;
+    file_digests(&suite_dir.join("oracles"), &mut oracles, &mut budget, 0);
+    let forms = suite_forms(suite_dir);
+    let mut problems = Vec::new();
+    let mut budget = MAX_SCAN_ENTRIES;
+    let mut stack = vec![(dir.to_path_buf(), 0usize)];
+    while let Some((d, depth)) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&d) else {
+            continue;
+        };
+        for e in rd.flatten() {
+            if budget == 0 || depth > MAX_SCAN_DEPTH {
+                let what = "too many entries or levels to check for oracle data";
+                problems.push(invalid(format!("{}: {what}", dir.display())));
+                return problems;
+            }
+            budget -= 1;
+            let path = e.path();
+            let name = e.file_name().to_string_lossy().to_ascii_lowercase();
+            if name.starts_with("oracle") || name.starts_with("expected") {
+                problems.push(invalid(format!("{} is an oracle or expected-answer entry", path.display())));
+                continue;
+            }
+            match std::fs::symlink_metadata(&path) {
+                Ok(m) if m.file_type().is_symlink() => {
+                    if points_into(&path.to_string_lossy(), &forms) {
+                        problems.push(invalid(format!("{} links into the suite folder", path.display())));
+                    }
+                }
+                Ok(m) if m.is_dir() => stack.push((path, depth + 1)),
+                Ok(m) if m.is_file() => {
+                    if let Some(o) = same_bytes(&oracles, &path, m.len()) {
+                        let what = format!("has the same bytes as the suite oracle file {}", o.display());
+                        problems.push(invalid(format!("{} {what}", path.display())));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    problems
 }
 
 /// The values of the three placeholders.
@@ -643,8 +845,9 @@ pub struct LaunchInput<'a> {
     pub cwd: &'a Path,
     /// The candidate environment (normally `Sandbox::env`); scrubbed to [`ENV_ALLOWLIST`].
     pub env: &'a [(String, String)],
-    /// The suite folder, which nothing given to the agent may point into.
-    pub suite_dir: Option<&'a Path>,
+    /// The suite folder, which nothing given to the agent may point into (required: there is
+    /// no way to switch these checks off).
+    pub suite_dir: &'a Path,
     pub limits: Limits,
 }
 

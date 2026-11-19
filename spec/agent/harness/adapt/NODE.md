@@ -77,6 +77,9 @@ Project-authored adapters and golden MCP config under `fixtures/agent/harness/`.
 ## Open questions
 
 - MCP clients differ in configuration format [unverified]; adapters may need a config-template field.
+- Enforcing a launch plan's `Limits` (wall time, output cap) and killing the agent's whole process tree when executing the plan is owned by `AGENT.HARNESS.RUN`; this node only carries the limits in the plan, because the library may not start processes (REQ-AGENT.HARNESS.SANDBOX-006).
+- Maintainer review of PR #158: a plan is refused at plan time when the working folder or `{workdir}` holds oracle or expected-answer entries (names starting `oracle` or `expected`, links into the suite folder, or copies of files under the suite's `oracles/`).
+- The red-team adversary's adapters read `{workdir}/.redteam/task.json`, and red-team task files carry predicates; `AGENT.REDTEAM.SCRIPT` owns passing only the non-oracle parts of the task (task ID, roots, `shell` flag, payload markers), so that predicates are never placed in the agent's workdir.
 
 ## Children
 
