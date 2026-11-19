@@ -21,18 +21,42 @@ use std::collections::BTreeMap;
 pub const MAX_EVENT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_EVENT_DEPTH: usize = 3;
 
-/// One characteristic's change in a re-point.
+/// One characteristic's change in a re-point. Fields are private and read through getters.
+///
+/// ```compile_fail
+/// fn forge(c: &mut fid_gdt::chars::dprof::Change, r: fid_gdt::chars::dprof::ProfileRef) {
+///     c.new = r;
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Change {
-    /// The characteristic.
-    pub char: CharId,
-    /// Its reference before.
-    pub old: ProfileRef,
-    /// Its reference after.
-    pub new: ProfileRef,
+    char: CharId,
+    old: ProfileRef,
+    new: ProfileRef,
 }
 
 impl Change {
+    /// A change of `char` from `old` to `new` (every combination of valid parts is one the
+    /// event reader accepts; [`RepointEvent::new`] checks the list).
+    pub fn new(char: CharId, old: ProfileRef, new: ProfileRef) -> Change {
+        Change { char, old, new }
+    }
+
+    /// The characteristic.
+    pub fn char(&self) -> &CharId {
+        &self.char
+    }
+
+    /// Its reference before.
+    pub fn old(&self) -> &ProfileRef {
+        &self.old
+    }
+
+    /// Its reference after.
+    pub fn new_ref(&self) -> &ProfileRef {
+        &self.new
+    }
+
     /// `{ "char": .., "old": .., "new": .. }`.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
@@ -43,30 +67,107 @@ impl Change {
     }
 }
 
-/// The event of one publish that stored a profile.
+/// The event of one publish that stored a profile. Fields are private; [`PublishEvent::new`]
+/// applies the reader's rules.
+///
+/// ```compile_fail
+/// fn forge(e: &mut fid_gdt::chars::dprof::PublishEvent) {
+///     e.branch = fid_gdt::chars::dprof::Branch::Working;
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublishEvent {
-    /// The `file` parameter as given.
-    pub file: String,
-    /// Who published.
-    pub principal: Principal,
-    /// The branch written.
-    pub branch: Branch,
-    /// The stored profile.
-    pub reference: ProfileRef,
+    file: String,
+    principal: Principal,
+    branch: Branch,
+    reference: ProfileRef,
 }
 
-/// The event of one re-point.
+impl PublishEvent {
+    /// Builds a publish event: `file` non-empty and at most 1024 bytes
+    /// (`event_invalid{bad_file}`); the branch derived from the principal, so it cannot
+    /// disagree with it.
+    pub fn new(file: &str, principal: Principal, reference: ProfileRef) -> Result<PublishEvent, DprofError> {
+        if file.is_empty() || file.len() > MAX_FILE_PARAM_LEN {
+            return Err(bad("bad_file"));
+        }
+        Ok(PublishEvent { file: file.to_owned(), principal, branch: Branch::for_principal(principal), reference })
+    }
+
+    /// The `file` parameter as given.
+    pub fn file(&self) -> &str {
+        &self.file
+    }
+
+    /// Who published.
+    pub fn principal(&self) -> Principal {
+        self.principal
+    }
+
+    /// The branch written (derived from the principal).
+    pub fn branch(&self) -> Branch {
+        self.branch
+    }
+
+    /// The stored profile.
+    pub fn reference(&self) -> &ProfileRef {
+        &self.reference
+    }
+}
+
+/// The event of one re-point. Fields are private; [`RepointEvent::new`] applies the reader's
+/// rules.
+///
+/// ```compile_fail
+/// fn forge(e: &mut fid_gdt::chars::dprof::RepointEvent) {
+///     e.changes.clear();
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepointEvent {
+    principal: Principal,
+    branch: Branch,
+    to: ProfileRef,
+    changes: Vec<Change>,
+}
+
+impl RepointEvent {
+    /// Builds a re-point event with the branch derived from the principal. Fails
+    /// `event_invalid{bad_changes}` when `changes` is empty, longer than
+    /// [`super::store::MAX_REPOINT_CHARS`], or names a new reference other than `to`, and
+    /// `event_invalid{unsorted_changes}` unless sorted by strictly ascending characteristic.
+    pub fn new(principal: Principal, to: ProfileRef, changes: Vec<Change>) -> Result<RepointEvent, DprofError> {
+        if changes.is_empty() || changes.len() > super::store::MAX_REPOINT_CHARS {
+            return Err(bad("bad_changes"));
+        }
+        if changes.iter().any(|c| c.new != to) {
+            return Err(bad("bad_changes"));
+        }
+        if changes.windows(2).any(|w| w[0].char >= w[1].char) {
+            return Err(bad("unsorted_changes"));
+        }
+        Ok(RepointEvent { principal, branch: Branch::for_principal(principal), to, changes })
+    }
+
     /// Who re-pointed.
-    pub principal: Principal,
-    /// The branch written.
-    pub branch: Branch,
+    pub fn principal(&self) -> Principal {
+        self.principal
+    }
+
+    /// The branch written (derived from the principal).
+    pub fn branch(&self) -> Branch {
+        self.branch
+    }
+
     /// The target profile.
-    pub to: ProfileRef,
+    pub fn to(&self) -> &ProfileRef {
+        &self.to
+    }
+
     /// Every named characteristic, sorted by ID.
-    pub changes: Vec<Change>,
+    pub fn changes(&self) -> &[Change] {
+        &self.changes
+    }
 }
 
 /// A journal event of this leaf.
@@ -169,17 +270,12 @@ impl DprofEvent {
             if file.is_empty() || file.len() > MAX_FILE_PARAM_LEN {
                 return Err(bad("bad_file"));
             }
-            let (principal, branch) = who(o)?;
-            return Ok(DprofEvent::Publish(PublishEvent {
-                file: file.to_owned(),
-                principal,
-                branch,
-                reference: reference(o, "ref")?,
-            }));
+            let (principal, _) = who(o)?;
+            return Ok(DprofEvent::Publish(PublishEvent::new(file, principal, reference(o, "ref")?)?));
         }
         if command == REPOINT_COMMAND {
             let o = keys(&v, &["branch", "changes", "command", "principal", "to"])?;
-            let (principal, branch) = who(o)?;
+            let (principal, _) = who(o)?;
             let to = reference(o, "to")?;
             let list = match o.get("changes") {
                 Some(CValue::Arr(a)) => a,
@@ -191,11 +287,11 @@ impl DprofEvent {
             let mut changes: Vec<Change> = Vec::with_capacity(list.len());
             for c in list {
                 let c = keys(c, &["char", "new", "old"])?;
-                let ch = Change {
-                    char: CharId::parse(text(c, "char")?).ok_or_else(|| bad("bad_char_id"))?,
-                    old: reference(c, "old")?,
-                    new: reference(c, "new")?,
-                };
+                let ch = Change::new(
+                    CharId::parse(text(c, "char")?).ok_or_else(|| bad("bad_char_id"))?,
+                    reference(c, "old")?,
+                    reference(c, "new")?,
+                );
                 if ch.new != to {
                     return Err(bad("bad_changes"));
                 }
@@ -204,7 +300,12 @@ impl DprofEvent {
                 }
                 changes.push(ch);
             }
-            return Ok(DprofEvent::Repoint(RepointEvent { principal, branch, to, changes }));
+            return Ok(DprofEvent::Repoint(RepointEvent {
+                principal,
+                branch: Branch::for_principal(principal),
+                to,
+                changes,
+            }));
         }
         Err(bad("unknown_command"))
     }

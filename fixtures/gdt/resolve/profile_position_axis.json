@@ -1,0 +1,9 @@
+{
+  "schema": "fid.defaults-profile/1",
+  "dialect": "asme",
+  "edition": "y14.5-2018",
+  "version": "2.0.0",
+  "keys": {
+    "dmt:asme/position/none@1": "axis"
+  }
+}

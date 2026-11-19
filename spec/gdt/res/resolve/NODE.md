@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps, fid-gdt]
+built_pr: 248
 satisfies: [REQ-GDT.RES-001, REQ-GDT.RES-002, REQ-GDT.RES-003, REQ-GDT.RES-004, REQ-GDT.RES-008]
 covers: []
 depends_on: [GDT.RES.SCHEMA]
@@ -55,7 +57,7 @@ The resolver maps (characteristic, context, governing spec, DMT) to (row ID, ope
 - **Registry command(s):** `gdt.resolve_chain@1` (R1; params `char: CharHandle` or inline characteristic, `dmt: TableRef`; result `Resolution = Resolved{row, variant, variant_source, chain, chain_digest, dmt_digest, limitations} | Unresolved{key} | Unsupported{row}`); `gdt.get_dmt_row@1` (R0; params `key`; result `DmtRow`). Both `--json`.
 - **Data structures:** `ResolveInput` (the tuple in REQ-001); `Resolution` enum above.
 - **Algorithm:** derive canonical key; `BTreeMap` exact lookup; status branch; variant precedence override > profile > row default; digests from `GDT.RES.SCHEMA`.
-- **Errors:** `unknown_variant`, `governing_spec_missing` (passed through from the gate in `GDT.CHAR.SPEC`), `dmt_not_loaded`.
+- **Errors:** `unknown_variant`, `governing_spec_missing` (passed through from the gate in `GDT.CHAR.SPEC`), `dmt_not_loaded`. Added by the build (fail closed, never guess): `ambiguous_resolution` (two or more rows match the derived key and edition set), `profile_row_unknown` (the defaults profile holds a `dmt:` row choice for a row the loaded table lacks), `bad_profile_choice` (a `dmt:` profile value that is not text), `bad_input` (an input field breaks its grammar or a limit), `malformed_characteristic` (the inline `fid.gdt-resolve-char/1` document is invalid), `bad_dmt_key` and `dmt_row_unknown` (`gdt.get_dmt_row@1`), `encode_failed` (unreachable for valid values), plus every gate error of `GDT.CHAR.SPEC` passed through unchanged (`char_unknown`, `char_case_conflict`, `defaults_profile_unknown`, `defaults_profile_digest_mismatch`, `defaults_profile_binding_mismatch`, `bad_request`).
 - **Determinism:** D0; no floating-point arithmetic.
 - **Performance budget:** < 50 µs per resolution on a 5 000-row table [unverified].
 - **Crate:** `fid-gps` (module `resolve`).

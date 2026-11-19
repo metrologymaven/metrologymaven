@@ -12,7 +12,7 @@
 //!   [`SpecState::require_governing_spec`] and [`SpecState::evaluate`], and the re-point
 //!   wrapper that keeps governing specs and `GDT.CHAR.DPROF` bindings in step.
 //! - [`event`]: the `gdt.set_governing_spec@1` journal event (canonical JSON, strict reader).
-//! - [`project`]: the `fid.gdt-spec-project/1` project file (`.fidproj`): profile store plus
+//! - [`project`]: the `fid.gdt-spec-project/2` project file (`.fidproj`): profile store plus
 //!   governing specs and defaults.
 //! - [`replay`]: exact replay of the events (`IDENTICAL` when every re-derived event matches
 //!   byte for byte).

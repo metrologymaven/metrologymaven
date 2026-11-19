@@ -256,12 +256,14 @@ jobs:
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
           python fixtures/core/reg/def/guide/make_fixtures.py --check
+          python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
           python fixtures/gdt/dprof/make_cases.py --check
           python fixtures/gdt/dmt/make_fixtures.py --check
           python fixtures/gdt/dmt/check_schema.py
           python fixtures/gdt/spec/make_fixtures.py --check
+          python fixtures/gdt/resolve/make_cases.py --check
           python tools/check_entries.py
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/knp1/seeded/make_expected.py --check

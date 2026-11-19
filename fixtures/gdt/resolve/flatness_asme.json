@@ -1,0 +1,7 @@
+{
+  "schema": "fid.gdt-resolve-char/1",
+  "char": "flat-1",
+  "characteristic": "flatness",
+  "modifiers": [],
+  "override": null
+}

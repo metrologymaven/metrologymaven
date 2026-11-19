@@ -1,9 +1,9 @@
-//! The project file of this leaf, `fid.gdt-spec-project/1` (extension `.fidproj`): the
+//! The project file of this leaf, `fid.gdt-spec-project/2` (extension `.fidproj`): the
 //! project's defaults-profile store plus every governing spec and default.
 //!
 //! ```json
-//! { "schema": "fid.gdt-spec-project/1",
-//!   "profile_store": { ..a fid.dprof-store/1 snapshot whose bindings are both {}.. },
+//! { "schema": "fid.gdt-spec-project/2",
+//!   "profile_store": { ..a fid.dprof-store/2 snapshot whose bindings are both {}.. },
 //!   "tenant_default": { ..spec.. } | null,
 //!   "plan_defaults": { "<plan>": { ..spec.. } },
 //!   "characteristics": { "working": { "<char>": { ..spec.. } | null }, "agent": { } } }
@@ -17,12 +17,12 @@ use super::state::{check_loaded_default, check_profile, SpecState, MAX_CHARS, MA
 use super::types::{GoverningSpec, PlanId};
 use super::SpecError;
 use crate::chars::dprof::profile::integer_literals_only;
-use crate::chars::dprof::{Branch, CharId, DprofState, KeyVocabulary};
+use crate::chars::dprof::{Branch, CharId, DprofState, VocabularySource};
 use fid_canon::{CValue, CanonError};
 use std::collections::BTreeMap;
 
 /// `schema` value of a project file.
-pub const PROJECT_SCHEMA: &str = "fid.gdt-spec-project/1";
+pub const PROJECT_SCHEMA: &str = "fid.gdt-spec-project/2";
 /// Largest project file accepted, in bytes.
 pub const MAX_PROJECT_BYTES: usize = fid_canon::MAX_INPUT_BYTES;
 /// Deepest nesting: document, `profile_store`, `profiles`, entry, profile, `keys`, list.
@@ -60,14 +60,14 @@ fn spec(v: &CValue) -> Result<GoverningSpec, SpecError> {
 /// most 7), integer number literals only (`project_invalid{bad_number}`: so no fraction, no
 /// exponent and therefore no subnormal value; JSON has no NaN or infinity), the five fields
 /// (`bad_keys`, `wrong_type`), `bad_schema`, the profile store (`store_bindings` unless its
-/// bindings are both empty, then the `fid.dprof-store/1` loader against `vocab`), the tenant
+/// bindings are both empty, then the `fid.dprof-store/2` loader with `vocabs`), the tenant
 /// default, the plan defaults (`bad_plan_id`, `case_duplicate`, `too_many_plans`), then each
 /// branch's characteristics (`bad_char_id`, `case_duplicate`, `too_many_chars`). A default
 /// must be `explicit` (`default_not_explicit`) and resolve on the working branch. Specs are
 /// read with [`GoverningSpec::from_cvalue`], so a missing field is
 /// `governing_spec_missing{field}`. Returns the governing specs and the profile store with
 /// its bindings rebuilt.
-pub fn load_project(bytes: &[u8], vocab: &KeyVocabulary) -> Result<(SpecState, DprofState), SpecError> {
+pub fn load_project(bytes: &[u8], vocabs: &dyn VocabularySource) -> Result<(SpecState, DprofState), SpecError> {
     if bytes.len() > MAX_PROJECT_BYTES {
         return Err(bad("too_large"));
     }
@@ -90,7 +90,7 @@ pub fn load_project(bytes: &[u8], vocab: &KeyVocabulary) -> Result<(SpecState, D
         Some(s) => fid_canon::to_canonical_bytes(s).map_err(|_| bad("profile_store"))?,
         None => return Err(bad("bad_keys")),
     };
-    let mut dprof = DprofState::from_canonical_bytes(&store_bytes, vocab)?;
+    let mut dprof = DprofState::from_canonical_bytes(&store_bytes, vocabs)?;
     let mut st = SpecState::new();
 
     st.tenant = match top.get("tenant_default") {
