@@ -482,6 +482,7 @@ dependencies = [
 name = "fid-geo-types"
 version = "0.0.1"
 dependencies = [
+ "fid-kci",
  "fid-num",
  "fid-types",
 ]
@@ -550,6 +551,7 @@ dependencies = [
  "fid-io-reg",
  "fid-types",
  "libc",
+ "sha2 0.10.9",
 ]
 
 [[package]]

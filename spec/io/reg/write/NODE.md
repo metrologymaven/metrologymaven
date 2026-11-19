@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-reg]
+built_pr: 195
 satisfies: [REQ-IO.REG-016, REQ-IO.REG-017]
 covers: []
 depends_on: [IO.REG.ROOTS, IO.REG.LIMITS]
@@ -74,6 +76,7 @@ Temp directories created per test; fault injection through a `Write` wrapper tha
 ## Open questions
 
 - Network-share export roots behave differently on rename; any non-local root is X1 and out of IO's scope until a decision says otherwise.
+- File systems without hard links (FAT, exFAT, some network or FUSE mounts): a commit without `overwrite` fails closed there (`io{kind}` of the hard-link error), since a plain rename could clobber a target created during the write. A no-replace rename (`renameat2(RENAME_NOREPLACE)` on Linux, `renamex_np(RENAME_EXCL)` on macOS, `MoveFileEx` without `MOVEFILE_REPLACE_EXISTING` on Windows) would allow these targets; adopting it needs `unsafe` or a new dependency, so it waits for a decision.
 
 ## Children
 
