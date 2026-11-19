@@ -9,10 +9,10 @@
 mod demo_ok;
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
-use fid_registry::decl::{CommandDecl, FidSchema};
+use fid_registry::decl::CommandDecl;
 use fid_registry::manifest::{ManifestError, MAX_MANIFEST_BYTES};
 use fid_registry::{
-    check_schema, fid_command, validate, Catalogue, CommandDef, Determinism, FsEffect, Idempotency, Network,
+    check_schema, fid_command, validate, Catalogue, CommandDef, Determinism, FidSchema, FsEffect, Idempotency, Network,
     Projection, SideEffect, Surface, Undo, Web,
 };
 use std::collections::BTreeSet;
