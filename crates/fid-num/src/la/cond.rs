@@ -97,11 +97,8 @@ pub fn cond_triangular(r: &Mat, rel_tol: f64) -> Result<f64, NumError> {
     }
 
     let norm_s = estimate(n, |u| upper_mul(n, &s, u), |v| lower_mul(n, &st, v))?;
-    let norm_inv = estimate(
-        n,
-        |u| back_sub(n, &s, u).map_err(|_| overflow()),
-        |v| fwd_sub(n, &st, v).map_err(|_| overflow()),
-    )?;
+    let norm_inv =
+        estimate(n, |u| back_sub(n, &s, u).map_err(|_| overflow()), |v| fwd_sub(n, &st, v).map_err(|_| overflow()))?;
     let c = norm_s * norm_inv;
     if c.is_finite() && c > 0.0 {
         Ok(c)

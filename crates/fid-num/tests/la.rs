@@ -7,8 +7,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_num::la::{
-    cond_triangular, mat_mul, mat_t_vec, mat_vec, rank_by_rule, solve_lower, solve_upper, Factorization, LaError,
-    Mat, COND_ITERATIONS, MAX_DIM, MAX_MAT_BYTES,
+    cond_triangular, mat_mul, mat_t_vec, mat_vec, rank_by_rule, solve_lower, solve_upper, Factorization, LaError, Mat,
+    COND_ITERATIONS, MAX_DIM, MAX_MAT_BYTES,
 };
 use fid_num::NumError;
 use fid_testkit::{sha256_hex, Sha256Hasher};
@@ -244,10 +244,7 @@ fn domain(op: &'static str, k: LaError) -> NumError {
 #[test]
 fn ac3_construction_errors() {
     let op = "la.mat";
-    assert_eq!(
-        Mat::from_rows(&[[1.0, 2.0], [f64::NAN, 4.0]]),
-        Err(NumError::NotANumber { op, index: Some(2) })
-    );
+    assert_eq!(Mat::from_rows(&[[1.0, 2.0], [f64::NAN, 4.0]]), Err(NumError::NotANumber { op, index: Some(2) }));
     assert_eq!(
         Mat::new(2, 2, vec![1.0, f64::NEG_INFINITY, f64::NAN, 0.0]),
         Err(NumError::Infinite { op, index: Some(1) })
