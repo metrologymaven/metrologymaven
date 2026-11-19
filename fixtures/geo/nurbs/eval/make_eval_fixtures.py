@@ -16,7 +16,8 @@ never runs the Rust code. Two independent parts:
    normal, fundamental forms, principal curvatures and directions). CPython floats are IEEE 754
    binary64 with round-to-nearest-even, never fuse a multiply-add, and math.sqrt is correctly
    rounded, so the model's bit patterns are the Rust results on every target. A domain width
-   or a knot window (U[s+p] - U[s-p]) that overflows is NonFinite, as in the Rust code. The digests are
+   or a knot window (U[s+p] - U[s-p]) that overflows is NonFinite, and a weight below
+   f64::MIN_POSITIVE used at the parameter is SubnormalWeight, as in the Rust code. The digests are
    computed from these bits.
 2. Accuracy checks of that model before anything is written, against values that do not come
    from it:
@@ -76,6 +77,19 @@ class OutsideDomain(Exception):
 
 class NonFinite(Exception):
     pass
+
+
+class SubnormalWeight(Exception):
+    pass
+
+
+MIN_POSITIVE = sys.float_info.min  # 2^-1022, f64::MIN_POSITIVE
+
+
+def check_weight(weights, i):
+    """NODE.md item 5: a weight below f64::MIN_POSITIVE used at this parameter is refused."""
+    if weights is not None and weights[i] < MIN_POSITIVE:
+        raise SubnormalWeight(i)
 
 
 def hx(x):
@@ -240,6 +254,7 @@ class Model:
         for d in range(nd + 1):
             acc = [0.0, 0.0, 0.0, 0.0]
             for j in range(p + 1):
+                check_weight(self.w, s - p + j)
                 b, c = N[d][j], self.pw[s - p + j]
                 acc = [acc[0] + b * c[0], acc[1] + b * c[1], acc[2] + b * c[2], acc[3] + b * c[3]]
             A.append(acc)
@@ -264,6 +279,7 @@ class Model:
                 base = (su - p + i) * nv + (sv - q)
                 acc = [0.0] * dim
                 for j in range(q + 1):
+                    check_weight(self.w, base + j)
                     b, c = Nv[l][j], pts[base + j]
                     acc = [acc[x] + b * c[x] for x in range(dim)]
                 rows.append(acc)
@@ -539,6 +555,19 @@ def self_test():
         raise AssertionError("1.000001 should be outside [0, 1]")
     except OutsideDomain:
         pass
+    def enc(x):
+        return {"hex": [enc(y)["hex"] for y in x] if isinstance(x, list) else "0x" + hx(x)}
+
+    # subnormal weights (NODE.md item 5): refused, never a silently wrong (0, 1, 0)
+    bez = {"kind": "curve", "degree": 2, "knots": enc([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
+           "ctrl": enc([[0.3, 0.7, 0.0], [1.0, 1.0, 0.0], [2.0, 0.0, 0.0]])}
+    for w, ok in (([5e-324, 1.0, 5e-324], False), ([MIN_POSITIVE, 1.0, MIN_POSITIVE], True)):
+        try:
+            _, (P,) = Model(dict(bez, weights=enc(w))).curve(0.0, 0)
+            # accepted; x * w may still round into the subnormal range (stated in the PR)
+            assert ok and max(abs(P[0] - 0.3), abs(P[1] - 0.7), abs(P[2])) <= 1e-15, P
+        except SubnormalWeight:
+            assert not ok
     for wide, t in (([-1e308, -1e308, 1e308, 1e308], 0.0), ([-1e308, -1e308, 0.0, 1.0, 1e308, 1e308], 0.5)):
         try:
             p = len(wide) // 2 - 1

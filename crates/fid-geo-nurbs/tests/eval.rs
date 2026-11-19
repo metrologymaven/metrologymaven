@@ -700,6 +700,47 @@ fn overflowing_knot_spans_are_refused() {
     assert_eq!(s.normal(0.5, 0.0), Err(EvalError::NonFinite));
 }
 
+/// Subnormal weights (below `f64::MIN_POSITIVE`) are refused, not evaluated: with weights
+/// [5e-324, 1, 5e-324] the quadratic Bezier at t = 0 would otherwise give (0, 1, 0) instead of
+/// the first control point (0.3, 0.7, 0) (NODE.md item 5).
+#[test]
+fn subnormal_weights_are_refused() {
+    let bezier = |w: f64| {
+        NurbsCurve::new(NurbsCurveParts {
+            degree: 2,
+            knots: vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            ctrl: vec![[0.3, 0.7, 0.0], [1.0, 1.0, 0.0], [2.0, 0.0, 0.0]],
+            weights: Some(vec![w, 1.0, w]),
+            periodic: false,
+        })
+        .unwrap()
+    };
+    let c = bezier(5e-324);
+    assert_eq!(c.eval(0.0, 0), Err(EvalError::SubnormalWeight { index: 0 }));
+    assert_eq!(c.eval(1.0, 2), Err(EvalError::SubnormalWeight { index: 0 }));
+    assert_eq!(c.geometry(0.5).unwrap_err().code(), "SubnormalWeight");
+    assert_eq!(EvalError::SubnormalWeight { index: 2 }.to_string(), "subnormal weight at control point 2");
+    // the smallest normal weight is accepted
+    let p = bezier(f64::MIN_POSITIVE).eval(0.0, 0).unwrap().p;
+    assert!((p[0] - 0.3).abs() <= 1e-15 && (p[1] - 0.7).abs() <= 1e-15 && p[2] == 0.0, "{p:?}");
+    // surfaces: flat row-major index of the first offending control point used
+    let s = NurbsSurface::new(NurbsSurfaceParts {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0.0, 0.0, 1.0, 1.0],
+        knots_v: vec![0.0, 0.0, 1.0, 1.0],
+        n_u: 2,
+        n_v: 2,
+        ctrl: vec![[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]],
+        weights: Some(vec![1.0, 1.0, 1.0, 1e-310]),
+        periodic_u: false,
+        periodic_v: false,
+    })
+    .unwrap();
+    assert_eq!(s.eval(0.5, 0.5, 0), Err(EvalError::SubnormalWeight { index: 3 }));
+    assert_eq!(s.normal(0.0, 0.0), Err(EvalError::SubnormalWeight { index: 3 }));
+}
+
 /// Invalid knot vectors, degrees and weights never reach the evaluator: GEO.NURBS.DATA refuses
 /// them with a typed error at construction.
 #[test]

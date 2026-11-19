@@ -52,6 +52,10 @@ pub enum EvalError {
     /// The data is internally inconsistent. Unreachable for validated curves and surfaces; it
     /// is reported instead of indexing out of bounds.
     Inconsistent,
+    /// The weight of control point `index` (flat row-major index for a surface), used at this
+    /// parameter, is below `f64::MIN_POSITIVE` (subnormal): `x * w` would underflow and give a
+    /// wrong position silently.
+    SubnormalWeight { index: usize },
 }
 
 impl EvalError {
@@ -63,6 +67,7 @@ impl EvalError {
             EvalError::OrderTooHigh { .. } => "OrderTooHigh",
             EvalError::NonFinite => "NonFinite",
             EvalError::Inconsistent => "Inconsistent",
+            EvalError::SubnormalWeight { .. } => "SubnormalWeight",
         }
     }
 }
@@ -79,6 +84,7 @@ impl fmt::Display for EvalError {
             }
             EvalError::NonFinite => write!(f, "evaluation overflowed to a non-finite value"),
             EvalError::Inconsistent => write!(f, "inconsistent curve or surface data"),
+            EvalError::SubnormalWeight { index } => write!(f, "subnormal weight at control point {index}"),
         }
     }
 }
@@ -276,13 +282,17 @@ fn check_order(order: usize) -> Result<(), EvalError> {
     }
 }
 
-/// Homogeneous control point: `[x w, y w, z w, w]`, or `[x, y, z, 1]` without weights.
+/// Homogeneous control point: `[x w, y w, z w, w]`, or `[x, y, z, 1]` without weights. A weight
+/// below `f64::MIN_POSITIVE` is refused with `SubnormalWeight` (NODE.md item 5).
 fn homogeneous(ctrl: &[[f64; 3]], weights: Option<&[f64]>, i: usize) -> Result<[f64; 4], EvalError> {
     let c = ctrl.get(i).ok_or(EvalError::Inconsistent)?;
     match weights {
         None => Ok([c[0], c[1], c[2], 1.0]),
         Some(w) => {
             let w = *w.get(i).ok_or(EvalError::Inconsistent)?;
+            if w < f64::MIN_POSITIVE {
+                return Err(EvalError::SubnormalWeight { index: i });
+            }
             Ok([c[0] * w, c[1] * w, c[2] * w, w])
         }
     }
