@@ -1,0 +1,19 @@
+[package]
+name = "fid-gps"
+description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# RFC 8785 canonical JSON parser and writer plus SHA-256 (CORE.JRN.CANON): strict, bounded
+# table parsing (duplicate JSON keys, size and depth limits) and the row, chain and table digests.
+fid-canon = { path = "../fid-canon" }
+# Shared `sha256:` digest type (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

@@ -17,6 +17,9 @@ fid-types = { path = "../fid-types" }
 # GDT.CHAR.DPROF: profiles are read through approved import handles (agents never pass raw
 # paths, CONSTITUTION §3); the principal type comes from here too. Same layer (services).
 fid-io-reg = { path = "../fid-io-reg" }
+# GDT.RES.SCHEMA: the DMT schema owns the defaults-profile key vocabulary that DPROF checks
+# profiles against (model layer, below services).
+fid-gps = { path = "../fid-gps" }
 # GDT.CHAR.DPROF AC-7: replay outcomes and their aggregation (engine layer, below services).
 fid-replay = { path = "../fid-replay" }
 

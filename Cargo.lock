@@ -536,6 +536,7 @@ name = "fid-gdt"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-gps",
  "fid-io-reg",
  "fid-replay",
  "fid-types",
@@ -577,6 +578,14 @@ version = "0.0.1"
 dependencies = [
  "fid-kci",
  "fid-num",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-gps"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
  "fid-types",
 ]
 

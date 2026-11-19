@@ -608,3 +608,97 @@ fn errors_display_their_code() {
     let e = DprofState::new().resolve_text(Branch::Working, &long).unwrap_err();
     assert_eq!(e.code(), "bad_profile_ref");
 }
+
+// ------------------------------------------------------------------ vocabulary from the DMT schema
+
+fn dmt_table() -> fid_gps::dmt::DmtTable {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gdt/dmt/synthetic_table_v1.json");
+    fid_gps::dmt::DmtTable::load(&std::fs::read(path).unwrap()).unwrap()
+}
+
+fn iso_doc(keys: &str) -> String {
+    let head = r#""schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017","version":"1.0.0""#;
+    format!("{{{head},\"keys\":{keys}}}")
+}
+
+#[test]
+fn schema_vocabulary_comes_from_the_dmt_table() {
+    // Hand-labelled from GDT.RES.SCHEMA's rules: the named keys plus every ASME row of the
+    // synthetic table with two or more variants.
+    let v = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Asme).unwrap();
+    assert_eq!(v.dialect(), Some(Dialect::Asme));
+    for k in fid_gps::dmt::NAMED_PROFILE_KEYS.iter().map(|(k, _)| *k) {
+        assert!(v.contains(k), "{k}");
+    }
+    assert!(v.contains("dmt:asme/position/none@1"));
+    assert!(v.contains("dmt:asme/size/none@1"));
+    assert!(!v.contains("dmt:asme/flatness/none@1"), "one variant: nothing to choose");
+    assert!(!v.contains("dmt:iso/flatness/none@1"));
+    assert!(!v.contains("placeholder.synthetic"));
+
+    let ok = doc(
+        r#"{"dmt:asme/position/none@1":"axis","dmt:asme/size/none@1":"local","unc.decision_rule_hint":"dr.synthetic.default@1"}"#,
+    );
+    let parsed = parse_profile(ok.as_bytes(), &v).unwrap();
+    assert_eq!(parsed.profile.keys.len(), 3);
+
+    let err = |t: &str| parse_profile(t.as_bytes(), &v).unwrap_err();
+    // A key outside the schema vocabulary.
+    let e = err(&doc(r#"{"placeholder.synthetic":true}"#));
+    assert_eq!(e, DprofError::UnknownKey { key: "placeholder.synthetic".to_owned() });
+    let e = err(&doc(r#"{"dmt:asme/flatness/none@1":"default"}"#));
+    assert_eq!(e.code(), "unknown_key");
+    // A key differing only in case is unknown, as is a key with modifiers out of order.
+    assert_eq!(err(&doc(r#"{"UNC.decision_rule_hint":"x"}"#)).code(), "malformed_profile");
+    assert_eq!(err(&doc(r#"{"dmt:asme/position/mmc+cz@1":"axis"}"#)).code(), "unknown_key");
+    // A variant the row lacks, or a non-text value.
+    let m = |t: &str| {
+        let e = err(t);
+        (e.code(), e.reason())
+    };
+    assert_eq!(m(&doc(r#"{"dmt:asme/position/none@1":"median"}"#)), ("malformed_profile", Some("value_not_allowed")));
+    assert_eq!(m(&doc(r#"{"dmt:asme/position/none@1":"Axis"}"#)), ("malformed_profile", Some("value_not_allowed")));
+    assert_eq!(m(&doc(r#"{"dmt:asme/position/none@1":true}"#)), ("malformed_profile", Some("value_not_allowed")));
+    assert_eq!(m(&doc(r#"{"unc.decision_rule_hint":7}"#)), ("malformed_profile", Some("value_not_allowed")));
+    assert_eq!(m(&doc(r#"{"unc.decision_rule_hint":["a"]}"#)), ("malformed_profile", Some("value_not_allowed")));
+    // A profile of another dialect.
+    assert_eq!(m(&iso_doc("{}")), ("malformed_profile", Some("vocabulary_dialect")));
+    // The ISO vocabulary of the synthetic table is the named keys only.
+    let iso = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Iso).unwrap();
+    assert!(parse_profile(iso_doc(r#"{"gdt.datum.label_pattern":"[a-z]"}"#).as_bytes(), &iso).is_ok());
+    let e = parse_profile(iso_doc(r#"{"dmt:iso/flatness/none@1":"placeholder"}"#).as_bytes(), &iso).unwrap_err();
+    assert_eq!(e.code(), "unknown_key");
+}
+
+#[test]
+fn publish_checks_against_the_schema_vocabulary() {
+    // The fixture profiles use placeholder keys, which the schema vocabulary does not hold.
+    let v = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Asme).unwrap();
+    let mut st = DprofState::new();
+    let e = publish_defaults_profile(&mut st, &roots(), Principal::Human, &handle(A100), &v, false).unwrap_err();
+    assert_eq!(e.code(), "unknown_key");
+    assert_eq!(st, DprofState::new());
+}
+
+#[test]
+fn structure_is_checked_before_the_vocabulary_dialect() {
+    // Hand-labelled: each fixture is an ISO profile checked against the ASME schema vocabulary
+    // (wrong dialect) and is also structurally broken; the structural error wins.
+    let v = KeyVocabulary::from_dmt_table(&dmt_table(), Dialect::Asme).unwrap();
+    for (file, why) in
+        [("iso_bad_edition_vs_asme_vocab.json", "bad_edition"), ("iso_bad_value_vs_asme_vocab.json", "bad_value")]
+    {
+        let e = parse_profile(&read(file), &v).unwrap_err();
+        assert_eq!((e.code(), e.reason()), ("malformed_profile", Some(why)), "{file}");
+    }
+    // Bad version and a bad key likewise come before the dialect check.
+    let iso =
+        |rest: &str| format!(r#"{{"schema":"fid.defaults-profile/1","dialect":"iso","edition":"1101-2017",{rest}}}"#);
+    let e = parse_profile(iso(r#""version":"1.0","keys":{}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("bad_version"));
+    let e = parse_profile(iso(r#""version":"1.0.0","keys":{"Bad":"x"}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("bad_key"));
+    // Structurally sound, wrong dialect: the dialect check fires before the unknown key.
+    let e = parse_profile(iso(r#""version":"1.0.0","keys":{"zz.unknown":"x"}"#).as_bytes(), &v).unwrap_err();
+    assert_eq!(e.reason(), Some("vocabulary_dialect"));
+}

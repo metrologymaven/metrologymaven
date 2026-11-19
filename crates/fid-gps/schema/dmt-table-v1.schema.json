@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/gdt/dmt-table-v1.schema.json",
+  "title": "Metrology Maven Dialect Mapping Table (fid.dmt-table/1)",
+  "description": "Structure of a DMT table file (spec node GDT.RES.SCHEMA). The fid-gps loader is stricter: set-valued arrays must be strictly ascending, row fields must agree with the key, keys must be unique and modifiers in a key ascending.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "rows"],
+  "properties": {
+    "schema": { "const": "fid.dmt-table/1" },
+    "version": { "$ref": "#/$defs/semver" },
+    "rows": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/row" } }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "name": { "type": "string", "maxLength": 32, "pattern": "^[a-z][a-z0-9_]{0,31}$" },
+    "modifier": { "type": "string", "maxLength": 16, "pattern": "^[a-z0-9][a-z0-9_]{0,15}$", "not": { "const": "none" } },
+    "label": { "type": "string", "maxLength": 32, "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$" },
+    "versionedId": {
+      "type": "string",
+      "maxLength": 96,
+      "pattern": "^[a-z][a-z0-9_]{0,31}(\\.[a-z][a-z0-9_]{0,31})*@[1-9][0-9]{0,9}$"
+    },
+    "key": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^dmt:(asme|iso)/[a-z][a-z0-9_]{0,31}/(none|[a-z0-9][a-z0-9_]{0,15}(\\+[a-z0-9][a-z0-9_]{0,15}){0,7})@[1-9][0-9]{0,9}$"
+    },
+    "algId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,31}@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "param": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string", "maxLength": 64, "pattern": "^(0x[0-9a-f]{16}|0|-?[1-9][0-9]{0,18}|[a-z][a-z0-9_.-]{0,63})$" }
+      ]
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "alg", "params"],
+      "properties": {
+        "kind": {
+          "enum": ["partition", "extraction", "filtration", "reconstruction", "association", "collection", "construction", "reduction", "evaluation"]
+        },
+        "alg": { "$ref": "#/$defs/algId" },
+        "params": {
+          "type": "object",
+          "maxProperties": 32,
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/param" }
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variant", "steps"],
+      "properties": {
+        "variant": { "$ref": "#/$defs/name" },
+        "steps": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/operator" } }
+      }
+    },
+    "clause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["designator", "edition", "clause"],
+      "properties": {
+        "designator": { "$ref": "#/$defs/label" },
+        "edition": { "$ref": "#/$defs/label" },
+        "clause": { "type": "string", "maxLength": 24, "pattern": "^[0-9a-z]+(\\.[0-9a-z]+)*$" }
+      }
+    },
+    "review": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": { "state": { "enum": ["draft", "under_review"] } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "reviewers"],
+          "properties": {
+            "state": { "const": "signed_off" },
+            "reviewers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": { "type": "string", "maxLength": 64, "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }
+            }
+          }
+        }
+      ]
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key", "dialect", "editions", "characteristic", "modifiers", "clauses", "variants", "default_variant",
+        "actual_value", "decision_rule_hint", "ors_cases", "status", "limitations", "review", "notes", "synthetic"
+      ],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "dialect": { "enum": ["asme", "iso"] },
+        "editions": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "$ref": "#/$defs/label" } },
+        "characteristic": { "$ref": "#/$defs/name" },
+        "modifiers": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "$ref": "#/$defs/modifier" } },
+        "clauses": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/clause" } },
+        "variants": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/chain" } },
+        "default_variant": { "$ref": "#/$defs/name" },
+        "actual_value": { "$ref": "#/$defs/versionedId" },
+        "decision_rule_hint": { "$ref": "#/$defs/versionedId" },
+        "ors_cases": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 96, "pattern": "^[a-z0-9][a-z0-9._:/-]{0,95}$" }
+        },
+        "status": { "enum": ["supported", "partial", "unsupported"] },
+        "limitations": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 80, "pattern": "^[a-z][a-z0-9_]{0,47}(:[a-z0-9_]{1,31})?$" }
+        },
+        "review": { "$ref": "#/$defs/review" },
+        "notes": { "type": "string", "maxLength": 280, "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$" },
+        "synthetic": { "type": "boolean" }
+      }
+    }
+  }
+}
