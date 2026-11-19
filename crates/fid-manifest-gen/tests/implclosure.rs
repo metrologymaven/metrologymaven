@@ -126,11 +126,8 @@ fn ac1_table_equals_expected() {
 #[test]
 fn ac1_closures_are_the_hand_labelled_ones() {
     let t = run(&fixture().join("ws"));
-    let closures: Vec<Vec<String>> = t
-        .entries()
-        .iter()
-        .map(|e| e.closure.iter().map(|c| format!("{}@{}", c.name, c.version)).collect())
-        .collect();
+    let closures: Vec<Vec<String>> =
+        t.entries().iter().map(|e| e.closure.iter().map(|c| format!("{}@{}", c.name, c.version)).collect()).collect();
     assert_eq!(
         closures,
         [
@@ -196,10 +193,10 @@ fn ac2_test_bench_and_example_files_change_nothing() {
     assert_eq!(changed_after("ac2-tests", |ws| flip_one_byte(&ws.join("crates/knum/tests/num.rs"))), [false; 3]);
     assert_eq!(changed_after("ac2-benches", |ws| flip_one_byte(&ws.join("crates/kgeo/benches/b.rs"))), [false; 3]);
     assert_eq!(changed_after("ac2-examples", |ws| flip_one_byte(&ws.join("crates/kfit/examples/e.rs"))), [false; 3]);
-    assert_eq!(changed_after("ac2-new-test", |ws| fs::write(ws.join("crates/kstat/tests/new.rs"), b"x").unwrap()), [
-        false;
-        3
-    ]);
+    assert_eq!(
+        changed_after("ac2-new-test", |ws| fs::write(ws.join("crates/kstat/tests/new.rs"), b"x").unwrap()),
+        [false; 3]
+    );
 }
 
 #[test]
@@ -211,11 +208,15 @@ fn ac2_changes_follow_the_closures() {
     // vext is reached only over kstat's build-only, wasm32-gated edge.
     assert_eq!(changed_after("ac2-vext", |ws| flip_one_byte(&ws.join("vendor/vext/src/lib.rs"))), [false, false, true]);
     // kstat dev-depends on kfit, which does not put kfit in STAT's closure (see the kfit case).
-    assert_eq!(changed_after("ac2-kstat", |ws| flip_one_byte(&ws.join("crates/kstat/src/lib.rs"))), [false, false, true]);
+    assert_eq!(
+        changed_after("ac2-kstat", |ws| flip_one_byte(&ws.join("crates/kstat/src/lib.rs"))),
+        [false, false, true]
+    );
     // A new file anywhere under src/ is part of the crate.
-    assert_eq!(changed_after("ac2-new-src", |ws| fs::write(ws.join("crates/kfit/src/new.rs"), b"").unwrap()), [
-        true, false, false
-    ]);
+    assert_eq!(
+        changed_after("ac2-new-src", |ws| fs::write(ws.join("crates/kfit/src/new.rs"), b"").unwrap()),
+        [true, false, false]
+    );
     // Line endings are bytes: converting the CRLF file to LF changes kgeo's digest.
     assert_eq!(
         changed_after("ac2-eol", |ws| {
@@ -333,7 +334,10 @@ fn digest_metadata(bytes: &[u8]) -> Result<ImplDigestTable, ImplError> {
     impl_digests(&md, &inp.algorithms, &inp.registrations, &inp.allowlist, &FsTree::new(fixture().join("ws")))
 }
 
-fn package_mut<'a>(m: &'a mut std::collections::BTreeMap<String, CValue>, name: &str) -> &'a mut std::collections::BTreeMap<String, CValue> {
+fn package_mut<'a>(
+    m: &'a mut std::collections::BTreeMap<String, CValue>,
+    name: &str,
+) -> &'a mut std::collections::BTreeMap<String, CValue> {
     let Some(CValue::Arr(ps)) = m.get_mut("packages") else { panic!() };
     for p in ps {
         if let CValue::Obj(p) = p {
@@ -357,7 +361,8 @@ fn set_target_path(p: &mut std::collections::BTreeMap<String, CValue>, kind: &st
 
 #[test]
 fn metadata_invalid_fails_closed() {
-    let bad = |reason: &'static str| -> Result<ImplDigestTable, ImplError> { Err(ImplError::MetadataInvalid { reason }) };
+    let bad =
+        |reason: &'static str| -> Result<ImplDigestTable, ImplError> { Err(ImplError::MetadataInvalid { reason }) };
     // Re-serialising the unchanged metadata keeps the table (member order is free).
     assert_eq!(digest_metadata(&edited_metadata(|_| {})).unwrap().canonical_json().unwrap(), expected());
     assert_eq!(digest_metadata(b"{"), bad("json"));
@@ -370,11 +375,19 @@ fn metadata_invalid_fails_closed() {
     assert_eq!(digest_metadata(&set("version", CValue::Num(2.0))), bad("format_version"));
     assert_eq!(digest_metadata(&set("workspace_root", CValue::Str("/other".into()))), bad("package_outside_workspace"));
     assert_eq!(
-        digest_metadata(&edited_metadata(|m| set_target_path(package_mut(m, "kfit"), "lib", "/toy/ws/crates/kfit/lib.rs"))),
+        digest_metadata(&edited_metadata(|m| set_target_path(
+            package_mut(m, "kfit"),
+            "lib",
+            "/toy/ws/crates/kfit/lib.rs"
+        ))),
         bad("target_outside_src")
     );
     assert_eq!(
-        digest_metadata(&edited_metadata(|m| set_target_path(package_mut(m, "kgeo"), "custom-build", "/toy/ws/build.rs"))),
+        digest_metadata(&edited_metadata(|m| set_target_path(
+            package_mut(m, "kgeo"),
+            "custom-build",
+            "/toy/ws/build.rs"
+        ))),
         bad("build_script_outside_crate")
     );
     assert_eq!(

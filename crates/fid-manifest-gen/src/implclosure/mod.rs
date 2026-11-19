@@ -298,7 +298,9 @@ pub fn impl_digests(
         let root = metadata.package_named(&reg.crate_name)?.ok_or_else(none)?;
         let mut crates: Vec<&Package> =
             metadata.closure(root.id())?.into_iter().map(|id| metadata.package(id)).collect::<Result<_, _>>()?;
-        crates.sort_by(|a, b| (a.name().as_bytes(), a.version().as_bytes()).cmp(&(b.name().as_bytes(), b.version().as_bytes())));
+        crates.sort_by(|a, b| {
+            (a.name().as_bytes(), a.version().as_bytes()).cmp(&(b.name().as_bytes(), b.version().as_bytes()))
+        });
         if let Some(p) = crates.iter().find(|p| !allow.contains(p.name())) {
             return Err(ImplError::NotAllowlisted { crate_name: p.name().to_string(), algorithm: alg.clone() });
         }
@@ -399,9 +401,7 @@ pub fn check_manifest(manifest: &[u8], table: &ImplDigestTable) -> Result<Kernel
             (None, Some(t)) => return Err(ManifestCheckError::NotInManifest { algorithm: t.algorithm.clone() }),
             (Some(a), Some(t)) => match a.id.cmp(&t.algorithm) {
                 Ordering::Less => return Err(ManifestCheckError::NotInTable { algorithm: a.id.clone() }),
-                Ordering::Greater => {
-                    return Err(ManifestCheckError::NotInManifest { algorithm: t.algorithm.clone() })
-                }
+                Ordering::Greater => return Err(ManifestCheckError::NotInManifest { algorithm: t.algorithm.clone() }),
                 Ordering::Equal => {
                     if a.impl_digest != t.impl_digest {
                         return Err(ManifestCheckError::ImplDigestMismatch { algorithm: a.id.clone() });
