@@ -1,0 +1,15 @@
+# KNP-1 lint config (KRN.NUM.LINT.SYN end-to-end fixture). Paths are relative to this file.
+[graph]
+workspace = "."
+roots = ["fid-num"]
+third_party_dir = "vendor"
+third_party_kind = "vendored"
+exclude = ["tests/**", "benches/**", "examples/**", "src/bin/**"]
+
+[syn.facade_paths]
+"fid_num::f" = "KNP-1 facade (KRN.NUM.FN)"
+
+[[syn.facade_files]]
+crate = "fid-num"
+file = "src/f/mod.rs"
+reason = "implements the facade on IEEE sqrt"

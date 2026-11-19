@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
 satisfies: [REQ-KRN.NUM.LINT-001, REQ-KRN.NUM.LINT-002, REQ-KRN.NUM.LINT-007]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND, KRN.NUM.LINT.GRAPH]
@@ -71,6 +72,144 @@ Parses every source file of every crate in the kernel closure, third-party and p
 - **Determinism:** D0.
 - **Performance budget:** 300 000 lines scanned < 10 s [unverified until measured].
 - **Crate:** `fid-knp1-lint` (tooling layer).
+
+### Build decisions (fid-knp1-lint `syn_scan`, 2026-11-19)
+
+- **Token-level, not grammar-level.** The scan uses its own bounded, non-recursive lexer (`syn_scan::lex`) instead of `syn`. Every token of a file is matched, including `macro_rules!` bodies, macro invocation arguments and attributes, so no grammar position can hide a banned name, and no grammar gap can make the scan skip code. A file that lexes but would not parse is still fully scanned; `rustc` rejects it if it is ever compiled. Reason: earlier lint reviews found grammar bypasses, and a recursive parser can overflow the stack on hostile nesting. Comments (doc comments included) and string-literal contents are not code and are not matched.
+- **`KNP1-PARSE` (never waivable).** One finding, at the offending position, for: invalid UTF-8; a file larger than 16 MiB; an unterminated string, raw string, character literal or block comment; an unbalanced or mismatched delimiter; nesting deeper than 512; more than 2 000 000 tokens; a non-ASCII identifier (the scan compares ASCII names only); a character that is not Rust punctuation. Also at the token: a `use` declaration the scan cannot take apart, and an alias chain that is cyclic, deeper than 8 or has more than 64 targets. `KNP1-PARSE` joins the FIND rule catalogue (and `schema/knp1-findings-v1.json`) as a fixed rule; `Rule::is_waivable` is false for it.
+- **`KNP1-READ`** is fatal (no findings) when a listed file cannot be read. The `[syn]` config errors are `KNP1-CONFIG-INVALID`, like the other modules.
+- **Aliases** (REQ-004). Every `use` leaf (including `self`, `as`, nested groups) and `extern crate X as Y` adds its binding to one alias map for the whole file; module scopes are merged, so a name bound to several targets is checked against all of them. `crate` and `$crate` resolve to the scanned crate. A path whose first segment is a binding is checked as the full path it stands for and reported at the binding. A glob import (`use std::*`) is reported for every module rule it can reach.
+- **Metavariables.** A `$x` path segment matches any segment (so `$a::fs::read` is `KNP1-IO-FS`); as a receiver or operand of `.min`/`.max`/`.clamp`, or as the type in `$t::max`, it counts as a float.
+- **Opt-outs, all reported.** `[syn.facade_paths] "<path>" = "<reason>"`: a `KNP1-LIBM` name reached through a listed path prefix (after alias resolution, and only if every resolution is a facade path) is a note, not a finding. Built-in roots (`std`, `core`, `alloc`, `proc_macro`, `test`, `crate`, `self`, `super`, `Self`) are rejected as facades. `[[syn.facade_files]] crate, file, reason`: `KNP1-LIBM` does not fire in that file (REQ-003) and every other rule does; each suppressed hit is a note. A facade file that is not in the closure is a config error. Notes are informational (`Outcome::notes`) and never fail the run. Otherwise only reviewed waivers (KRN.NUM.LINT.FIND) apply; there is no inline opt-out marker.
+- **Positions.** Findings carry the crate and version from the closure, the file relative to the crate root, the 1-based line and column (in characters, after a leading BOM is dropped) of the offending token, and the SHA-256 of that line's text without its line ending. Output is sorted (D0).
+- **Rule assignments the spec left open.** `include!`, `include_bytes!` and `include_str!` of anything but a plain string literal naming a relative `.rs` file that the scan itself lists, and `#[path = …]` naming such a file, are `KNP1-IO-FS` (the Scope lists them with the I/O rules; the Build prompt put them under `KNP1-THREAD`). `env!`/`option_env!` are `KNP1-ENV`; `thread_local!` and `std::process` are `KNP1-THREAD`; `extern` (other than `extern crate`) and `asm!`-family macros are `KNP1-UNSAFE`. Fast-math and algebraic float intrinsics (`fadd_fast`, `algebraic_add`, …) are `KNP1-FMA` because they license contraction.
+- **AC-5 wording.** `fid_num::fn::sin` in AC-5 is not a valid path (`fn` is a keyword); the facade is `fid_num::f`, and the clean fixture uses `fid_num::f::sin`.
+
+#### Pinned rule table
+
+`RULE_TABLE` in `crates/fid-knp1-lint/src/syn_scan/mod.rs`; the test `rule_table_is_pinned_in_node_md` checks that this table and the code agree row for row. Kinds: `Ident` an identifier equal to the pattern anywhere; `IdentFloat` equal to it or to it plus a float suffix (`f`, `f16`, `f32`, `f64`, `f128`); `IdentSuffixed` the pattern plus a float suffix only; `IdentContains` an identifier containing it (case-sensitive); `Call` the last segment of a path of two or more segments, of a path through a `use` alias or of a `use` leaf, or a single identifier followed by `(`; `Method` `.name(` or `.name::`; `FloatMethod` `.name(…)` with a float receiver or operand (float literal, `f32`/`f64`, a path or alias through them, a metavariable), a path ending in `f32::name`/`f64::name`, or `<… f32/f64 …>::name`; `Module` a path (aliases resolved) starting with the pattern, or a glob that can reach it; `Macro` `name!(…)`; `IncludeMacro` `name!(…)` unless its only argument names a listed relative `.rs` file; `Attr` `name = …` inside an attribute unless it names such a file; `Keyword` the keyword, not a raw identifier (`extern` only when not followed by `crate`).
+
+| Rule | Kind | Pattern |
+|---|---|---|
+| `KNP1-FMA` | Ident | `mul_add` |
+| `KNP1-FMA` | IdentFloat | `fma` |
+| `KNP1-FMA` | IdentContains | `fmadd` |
+| `KNP1-FMA` | IdentContains | `fmsub` |
+| `KNP1-FMA` | IdentContains | `fnmadd` |
+| `KNP1-FMA` | IdentContains | `fnmsub` |
+| `KNP1-FMA` | IdentContains | `fmuladd` |
+| `KNP1-FMA` | IdentContains | `relaxed_madd` |
+| `KNP1-FMA` | IdentContains | `relaxed_nmadd` |
+| `KNP1-FMA` | IdentContains | `fmla` |
+| `KNP1-FMA` | IdentContains | `fmls` |
+| `KNP1-FMA` | IdentContains | `vfma` |
+| `KNP1-FMA` | IdentContains | `vfms` |
+| `KNP1-FMA` | Ident | `fadd_fast` |
+| `KNP1-FMA` | Ident | `fsub_fast` |
+| `KNP1-FMA` | Ident | `fmul_fast` |
+| `KNP1-FMA` | Ident | `fdiv_fast` |
+| `KNP1-FMA` | Ident | `frem_fast` |
+| `KNP1-FMA` | Ident | `fadd_algebraic` |
+| `KNP1-FMA` | Ident | `fsub_algebraic` |
+| `KNP1-FMA` | Ident | `fmul_algebraic` |
+| `KNP1-FMA` | Ident | `fdiv_algebraic` |
+| `KNP1-FMA` | Ident | `frem_algebraic` |
+| `KNP1-FMA` | Ident | `algebraic_add` |
+| `KNP1-FMA` | Ident | `algebraic_sub` |
+| `KNP1-FMA` | Ident | `algebraic_mul` |
+| `KNP1-FMA` | Ident | `algebraic_div` |
+| `KNP1-FMA` | Ident | `algebraic_rem` |
+| `KNP1-POW` | IdentFloat | `powi` |
+| `KNP1-POW` | IdentSuffixed | `pow` |
+| `KNP1-LIBM` | IdentFloat | `sqrt` |
+| `KNP1-LIBM` | IdentFloat | `cbrt` |
+| `KNP1-LIBM` | IdentFloat | `hypot` |
+| `KNP1-LIBM` | IdentFloat | `exp_m1` |
+| `KNP1-LIBM` | IdentFloat | `expm1` |
+| `KNP1-LIBM` | IdentFloat | `exp2` |
+| `KNP1-LIBM` | IdentFloat | `ln_1p` |
+| `KNP1-LIBM` | IdentFloat | `log1p` |
+| `KNP1-LIBM` | IdentFloat | `log2` |
+| `KNP1-LIBM` | IdentFloat | `log10` |
+| `KNP1-LIBM` | IdentFloat | `asin` |
+| `KNP1-LIBM` | IdentFloat | `acos` |
+| `KNP1-LIBM` | IdentFloat | `atan` |
+| `KNP1-LIBM` | IdentFloat | `atan2` |
+| `KNP1-LIBM` | IdentFloat | `sinh` |
+| `KNP1-LIBM` | IdentFloat | `cosh` |
+| `KNP1-LIBM` | IdentFloat | `tanh` |
+| `KNP1-LIBM` | IdentFloat | `asinh` |
+| `KNP1-LIBM` | IdentFloat | `acosh` |
+| `KNP1-LIBM` | IdentFloat | `atanh` |
+| `KNP1-LIBM` | IdentFloat | `sin_cos` |
+| `KNP1-LIBM` | IdentFloat | `ln_gamma` |
+| `KNP1-LIBM` | IdentFloat | `lgamma` |
+| `KNP1-LIBM` | IdentFloat | `tgamma` |
+| `KNP1-LIBM` | IdentFloat | `erf` |
+| `KNP1-LIBM` | IdentFloat | `erfc` |
+| `KNP1-LIBM` | Call | `sin` |
+| `KNP1-LIBM` | Call | `cos` |
+| `KNP1-LIBM` | Call | `tan` |
+| `KNP1-LIBM` | Call | `exp` |
+| `KNP1-LIBM` | Call | `ln` |
+| `KNP1-LIBM` | Call | `log` |
+| `KNP1-LIBM` | Call | `gamma` |
+| `KNP1-LIBM` | Method | `sin` |
+| `KNP1-LIBM` | Method | `cos` |
+| `KNP1-LIBM` | Method | `tan` |
+| `KNP1-LIBM` | Method | `exp` |
+| `KNP1-LIBM` | Method | `ln` |
+| `KNP1-LIBM` | Method | `log` |
+| `KNP1-LIBM` | Method | `gamma` |
+| `KNP1-LIBM` | IdentSuffixed | `sin` |
+| `KNP1-LIBM` | IdentSuffixed | `cos` |
+| `KNP1-LIBM` | IdentSuffixed | `tan` |
+| `KNP1-LIBM` | IdentSuffixed | `exp` |
+| `KNP1-LIBM` | IdentSuffixed | `ln` |
+| `KNP1-LIBM` | IdentSuffixed | `log` |
+| `KNP1-LIBM` | IdentSuffixed | `gamma` |
+| `KNP1-MINMAX` | FloatMethod | `min` |
+| `KNP1-MINMAX` | FloatMethod | `max` |
+| `KNP1-MINMAX` | FloatMethod | `clamp` |
+| `KNP1-MINMAX` | IdentFloat | `fmin` |
+| `KNP1-MINMAX` | IdentFloat | `fmax` |
+| `KNP1-MINMAX` | IdentFloat | `minnum` |
+| `KNP1-MINMAX` | IdentFloat | `maxnum` |
+| `KNP1-HASH` | IdentContains | `HashMap` |
+| `KNP1-HASH` | IdentContains | `HashSet` |
+| `KNP1-HASH` | Ident | `RandomState` |
+| `KNP1-HASH` | Ident | `DefaultHasher` |
+| `KNP1-SIMD` | IdentContains | `_feature_detected` |
+| `KNP1-SIMD` | Ident | `target_feature` |
+| `KNP1-SIMD` | Ident | `target_clones` |
+| `KNP1-SIMD` | Ident | `multiversion` |
+| `KNP1-SIMD` | Module | `std::arch` |
+| `KNP1-SIMD` | Module | `core::arch` |
+| `KNP1-UNSAFE` | Keyword | `unsafe` |
+| `KNP1-UNSAFE` | Keyword | `extern` |
+| `KNP1-UNSAFE` | Macro | `asm` |
+| `KNP1-UNSAFE` | Macro | `global_asm` |
+| `KNP1-UNSAFE` | Macro | `naked_asm` |
+| `KNP1-UNSAFE` | Macro | `llvm_asm` |
+| `KNP1-IO-FS` | Module | `std::fs` |
+| `KNP1-IO-FS` | IncludeMacro | `include` |
+| `KNP1-IO-FS` | IncludeMacro | `include_bytes` |
+| `KNP1-IO-FS` | IncludeMacro | `include_str` |
+| `KNP1-IO-FS` | Attr | `path` |
+| `KNP1-IO-NET` | Module | `std::net` |
+| `KNP1-CLOCK` | Module | `std::time` |
+| `KNP1-ENV` | Module | `std::env` |
+| `KNP1-ENV` | Macro | `env` |
+| `KNP1-ENV` | Macro | `option_env` |
+| `KNP1-THREAD` | Module | `std::thread` |
+| `KNP1-THREAD` | Module | `std::process` |
+| `KNP1-THREAD` | Macro | `thread_local` |
+
+#### Accepted gaps
+
+- Identifiers built by proc macros from strings or pieces (`paste!`, string input to a proc macro), code generated by `build.rs` into `OUT_DIR` (its `include!` is reported), and calls through a glob import of a non-`std` module (`use libm::*; sin(x)`) are not seen. `KRN.NUM.LINT.TYPED` covers expanded workspace code; the allowlist governs third-party crates that do this.
+- `.min`/`.max`/`.clamp` on float variables with no float marker in sight, and generic `T::max` over a float trait, are left to `KRN.NUM.LINT.TYPED`.
+- A `#[path]` inside an inline module is checked relative to the file's directory, not to the inline module's directory.
 
 ## Test fixtures
 
