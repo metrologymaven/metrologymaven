@@ -15,8 +15,9 @@ pub use error::{
     TRUNCATION_MARKER,
 };
 pub use handler::{
-    effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event, EventType, Handler,
-    HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS, MAX_EVENT_BODY_BYTES,
+    effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event, EventType,
+    Handler, HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS,
+    MAX_EVENT_BODY_BYTES,
 };
 pub use principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, ConfirmedUpgrade, HumanPresence, IdError, Identity, JournalAppend,

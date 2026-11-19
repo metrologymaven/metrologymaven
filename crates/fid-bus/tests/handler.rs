@@ -329,7 +329,10 @@ fn handler_errors_map_to_catalogue() {
                 Detail::new("handler returned pipeline-only code undeclared_effect"),
             ),
         ),
-        (HandlerError::Cancelled, BusError::Cancelled(CancelledReason::Requested, Detail::new("handler stopped on cancel"))),
+        (
+            HandlerError::Cancelled,
+            BusError::Cancelled(CancelledReason::Requested, Detail::new("handler stopped on cancel")),
+        ),
         (
             HandlerError::Failed(Detail::new("disk")),
             BusError::Internal(InternalReason::HandlerFailed, Detail::new("disk")),
@@ -414,9 +417,8 @@ fn principal_comes_from_the_channel_not_the_params() {
     let ch = channel(&mut table, ChannelKind::Mcp, Some("client-7"));
     let c = HandlerCtx::derive(&table, &ch, 9, CancelToken::never()).unwrap();
     // Parameters that claim a principal have no effect.
-    let p = ValidParams::from_validated(
-        parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap(),
-    );
+    let p =
+        ValidParams::from_validated(parse(br#"{"principal":{"kind":"human","id":"mallory"},"as":"mallory"}"#).unwrap());
     let h = Observer(Mutex::new(Vec::new()));
     run_handler(&def, &h, &MemState::new(), &p, &c).unwrap();
     assert_eq!(c.principal().kind(), PrincipalKind::Agent);

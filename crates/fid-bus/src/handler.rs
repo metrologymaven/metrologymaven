@@ -583,7 +583,10 @@ impl HandlerSet {
         let lo = (name.to_string(), 0);
         let hi = (name.to_string(), u32::MAX);
         if self.map.range(lo..=hi).next().is_some() {
-            Err(BusError::NotFound(NotFoundReason::UnknownMajor, Detail::new(&format!("no handler for {name}@{major}"))))
+            Err(BusError::NotFound(
+                NotFoundReason::UnknownMajor,
+                Detail::new(&format!("no handler for {name}@{major}")),
+            ))
         } else {
             Err(BusError::NotFound(NotFoundReason::UnknownCommand, Detail::new(&format!("no handler for {name}"))))
         }
