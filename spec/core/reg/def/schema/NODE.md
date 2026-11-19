@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-registry]
+built_pr: 244
 satisfies: [REQ-CORE.REG.DEF-002, REQ-CORE.REG.DEF-003, REQ-CORE.REG.DEF-004]
 covers: []
 depends_on: [GEO.FRAME.UNITS]
