@@ -901,6 +901,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-report"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-project",
+ "fid-registry",
+ "fid-replay",
+ "fid-report",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-report-pdf"
 version = "0.0.1"
 dependencies = [

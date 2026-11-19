@@ -173,6 +173,9 @@ fixtures/core/jrn/chain/append/** -text
 # CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/core/dep/** -text
+# RPT.MODEL.DOC fixtures: hand-labelled canonical JSON (no trailing newline) and digests compared byte for byte
+# by make_fixtures.py --check and the fid-report tests; never convert line endings.
+fixtures/rpt/model/** -text
 # UNC.DEC.TYPE fixtures: the catalog is digested and every file is compared byte for byte.
 fixtures/unc/dec/type/** -text
 # GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
