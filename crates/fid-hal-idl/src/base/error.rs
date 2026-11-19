@@ -24,7 +24,9 @@
 //! - `message.bytes` is the device's message, at most [`MAX_MESSAGE_BYTES`] bytes of UTF-8,
 //!   kept exactly as sent (not normalised, trimmed or case-folded). A longer message is cut
 //!   at the last UTF-8 boundary at or below the limit and `truncated` is set, on
-//!   construction and on parse alike; it is never refused (REQ-003);
+//!   construction and on parse alike, instead of being refused (REQ-003). The one exception
+//!   is a whole document over [`MAX_INPUT_BYTES`], which parsing refuses with
+//!   `device_error_invalid` before any field is read;
 //! - `hint` matches `hal\.[a-z_]+\.[0-9]{3}` and is at most [`MAX_HINT_BYTES`] bytes
 //!   (REQ-004); its middle segment is not checked against `code`, so one hint may serve
 //!   several codes.
@@ -38,7 +40,6 @@
 //! `schema`; then `code`, `device_code`, `hint` and `message` in that order. Wrong shapes
 //! that are not an unknown code or a bad hint ID fail with `device_error_invalid`.
 
-use super::config::ConfigErrorCode;
 pub use crate::stamp::UntrustedText;
 use crate::units::{boolean, i64_dec, kept, obj, object, string, take, Obj};
 use fid_canon::CValue;
@@ -173,7 +174,7 @@ impl ErrorCode {
         ErrorCode::ALL
             .into_iter()
             .find(|c| c.as_str() == s)
-            .ok_or_else(|| DeviceErrorParseError::new(ParseErrorKind::CodeUnknown, "code", s))
+            .ok_or_else(|| DeviceErrorParseError::new(ParseErrorKind::CodeUnknown, "code"))
     }
 
     /// The severity of the Design table (REQ-002).
@@ -273,15 +274,6 @@ impl fmt::Display for ErrorCode {
     }
 }
 
-impl From<ConfigErrorCode> for ErrorCode {
-    fn from(c: ConfigErrorCode) -> ErrorCode {
-        match c {
-            ConfigErrorCode::ConfigInvalid => ErrorCode::ConfigInvalid,
-            ConfigErrorCode::OutOfRange => ErrorCode::OutOfRange,
-        }
-    }
-}
-
 // ------------------------------------------------------------------ parse errors
 
 /// Why a device error document or one of its parts was refused.
@@ -309,22 +301,24 @@ impl ParseErrorKind {
     }
 }
 
-/// A refused device error document: the kind, the top-level field it concerns (empty for
-/// the document as a whole) and up to 64 bytes of the offending text.
+/// A refused device error document: the kind and the top-level field it concerns (empty
+/// for the document as a whole). The offending value is not kept. The field name is
+/// usually one of the five wire keys, but for an unknown key it is the key as the input
+/// spelled it, so it is [`UntrustedText`] (cut to 64 bytes) and is shown only through
+/// [`UntrustedText::as_display`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DeviceErrorParseError {
     pub kind: ParseErrorKind,
-    pub field: String,
-    pub value: String,
+    pub field: UntrustedText,
 }
 
 impl DeviceErrorParseError {
-    fn new(kind: ParseErrorKind, field: &str, value: &str) -> DeviceErrorParseError {
-        DeviceErrorParseError { kind, field: kept(field), value: kept(value) }
+    fn new(kind: ParseErrorKind, field: &str) -> DeviceErrorParseError {
+        DeviceErrorParseError { kind, field: UntrustedText::new(&kept(field)) }
     }
 
     fn invalid(field: &str) -> DeviceErrorParseError {
-        DeviceErrorParseError::new(ParseErrorKind::Invalid, field, "")
+        DeviceErrorParseError::new(ParseErrorKind::Invalid, field)
     }
 
     /// Stable machine-readable code.
@@ -335,7 +329,7 @@ impl DeviceErrorParseError {
 
 impl fmt::Display for DeviceErrorParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} at field {:?}", self.code(), self.field)
+        write!(f, "{} at field \"{}\"", self.code(), self.field.as_display())
     }
 }
 
@@ -355,7 +349,7 @@ impl OperatorHintId {
         if valid_hint(s) {
             Ok(OperatorHintId(s.to_string()))
         } else {
-            Err(DeviceErrorParseError::new(ParseErrorKind::HintIdInvalid, "hint", s))
+            Err(DeviceErrorParseError::new(ParseErrorKind::HintIdInvalid, "hint"))
         }
     }
 
@@ -513,14 +507,16 @@ impl DeviceError {
         DeviceError::from_value(v)
     }
 
-    /// [`DeviceError::from_json`] for an already parsed value.
+    /// [`DeviceError::from_json`] for an already parsed value. Accepts what
+    /// [`DeviceError::to_value`] writes (an in-memory `I64` device code) as well as the parsed
+    /// wire form (a decimal string).
     pub fn from_value(v: CValue) -> Result<DeviceError, DeviceErrorParseError> {
         let mut o: Obj = match v {
             CValue::Obj(o) => o,
             _ => return Err(DeviceErrorParseError::invalid("")),
         };
         if let Some(k) = o.keys().find(|k| !FIELDS.contains(&k.as_str())) {
-            return Err(DeviceErrorParseError::new(ParseErrorKind::Invalid, k, ""));
+            return Err(DeviceErrorParseError::invalid(k));
         }
         if let Some(k) = FIELDS.iter().find(|k| !o.contains_key(**k)) {
             return Err(DeviceErrorParseError::invalid(k));
@@ -537,7 +533,7 @@ impl DeviceError {
         };
         let device_code = match field(&mut o, "device_code")? {
             CValue::Null => None,
-            v @ CValue::Str(_) => {
+            v @ (CValue::Str(_) | CValue::I64(_)) => {
                 Some(i64_dec("device_code", v).map_err(|_| DeviceErrorParseError::invalid("device_code"))?)
             }
             _ => return Err(DeviceErrorParseError::invalid("device_code")),
@@ -580,7 +576,7 @@ mod tests {
     fn hint_grammar() {
         assert!(valid_hint("hal.comm_lost.001"));
         assert!(valid_hint("hal._.999"));
-        for bad in ["hal..001", "hal.a.01", "hal.a.0001", "Hal.a.001", "hal.a1.001", "hal.a.00١", "hal.a.b.001"] {
+        for bad in ["hal..001", "hal.a.01", "hal.a.0001", "Hal.a.001", "hal.a1.001", "hal.a.0١", "hal.a.b.001"] {
             assert!(!valid_hint(bad), "{bad}");
         }
         let long = format!("hal.{}.001", "a".repeat(MAX_HINT_BYTES));

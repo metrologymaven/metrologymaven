@@ -68,6 +68,15 @@ fn ac1_all_codes_parse_and_round_trip_byte_identically() {
 }
 
 #[test]
+fn ac1_in_memory_value_round_trips() {
+    // `to_value` writes the device code as an in-memory `I64`; `from_value` must take it back.
+    for line in record_lines() {
+        let e = DeviceError::from_json(&line).unwrap();
+        assert_eq!(DeviceError::from_value(e.to_value()).unwrap(), e, "{}", String::from_utf8_lossy(&line));
+    }
+}
+
+#[test]
 fn ac1_hand_labelled_field_values() {
     let lines = record_lines();
     let parse = |i: usize| DeviceError::from_json(&lines[i]).unwrap();
@@ -91,7 +100,7 @@ fn ac2_unknown_code_fails() {
     assert_eq!(ErrorCode::parse("OVERHEAT").unwrap_err().code(), "error_code_unknown");
     let doc = br#"{"code":"OVERHEAT","device_code":null,"hint":null,"message":{"bytes":"","truncated":false},"schema":"device-error/1"}"#;
     let err = DeviceError::from_json(doc).unwrap_err();
-    assert_eq!((err.code(), err.field.as_str(), err.value.as_str()), ("error_code_unknown", "code", "OVERHEAT"));
+    assert_eq!((err.code(), &err.field), ("error_code_unknown", &UntrustedText::new("code")));
 }
 
 /// Exhaustive on purpose: adding a variant to `ErrorCode` without a row here fails the build.
@@ -170,6 +179,28 @@ fn ac4_long_message_is_truncated_on_a_utf8_boundary() {
     assert_eq!(edge.text().len(), MAX_MESSAGE_BYTES);
 }
 
+/// A document of exactly `len` bytes whose message is `len - overhead` ASCII bytes.
+fn document_of_len(len: usize) -> Vec<u8> {
+    let head = br#"{"code":"TRANSIENT","device_code":null,"hint":null,"message":{"bytes":""#;
+    let tail = br#"","truncated":false},"schema":"device-error/1"}"#;
+    let mut doc = head.to_vec();
+    doc.resize(len - tail.len(), b'a');
+    doc.extend_from_slice(tail);
+    assert_eq!(doc.len(), len);
+    doc
+}
+
+#[test]
+fn whole_document_over_the_input_limit_is_refused() {
+    // At the limit: parsed, message cut and marked.
+    let e = DeviceError::from_json(&document_of_len(MAX_INPUT_BYTES)).unwrap();
+    assert!(e.message.truncated());
+    assert_eq!(e.message.text().len(), MAX_MESSAGE_BYTES);
+    // One byte over: refused before any field is read.
+    let err = DeviceError::from_json(&document_of_len(MAX_INPUT_BYTES + 1)).unwrap_err();
+    assert_eq!((err.code(), &err.field), ("device_error_invalid", &UntrustedText::new("")));
+}
+
 #[test]
 fn ac5_free_text_hint_fails() {
     assert_eq!(OperatorHintId::parse("see manual page 4").unwrap_err().code(), "hint_id_invalid");
@@ -186,7 +217,7 @@ fn refused_inputs_fail_with_the_labelled_code_and_field() {
             .err()
             .unwrap_or_else(|| panic!("{name}: accepted"));
         assert_eq!(err.code(), str_of(case, "error"), "{name}");
-        assert_eq!(err.field, str_of(case, "field"), "{name}");
+        assert_eq!(err.field, UntrustedText::new(str_of(case, "field")), "{name}");
     }
 }
 

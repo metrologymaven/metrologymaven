@@ -128,6 +128,11 @@ CASES = [
     ("duplicate_key", '{"code":"TRANSIENT","code":"LIMIT","device_code":null,"hint":null,'
      '"message":{"bytes":"","truncated":false},"schema":"device-error/1"}', "device_error_invalid", ""),
     ("not_json", "{", "device_error_invalid", ""),
+    ("key_differs_in_case", canon(dict(base(), Code="LIMIT")), "device_error_invalid", "Code"),
+    ("duplicate_key_escaped", '{"code":"TRANSIENT","\\u0063ode":"LIMIT","device_code":null,"hint":null,'
+     '"message":{"bytes":"","truncated":false},"schema":"device-error/1"}', "device_error_invalid", ""),
+    ("duplicate_key_in_message", '{"code":"TRANSIENT","device_code":null,"hint":null,'
+     '"message":{"bytes":"a","bytes":"b","truncated":false},"schema":"device-error/1"}', "device_error_invalid", ""),
 ]
 
 

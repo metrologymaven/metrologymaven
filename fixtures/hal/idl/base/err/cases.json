@@ -190,5 +190,23 @@
     "field": "",
     "input": "{",
     "name": "not_json"
+  },
+  {
+    "error": "device_error_invalid",
+    "field": "Code",
+    "input": "{\"Code\":\"LIMIT\",\"code\":\"TRANSIENT\",\"device_code\":\"1\",\"hint\":\"hal.transient.001\",\"message\":{\"bytes\":\"x\",\"truncated\":false},\"schema\":\"device-error/1\"}",
+    "name": "key_differs_in_case"
+  },
+  {
+    "error": "device_error_invalid",
+    "field": "",
+    "input": "{\"code\":\"TRANSIENT\",\"\\u0063ode\":\"LIMIT\",\"device_code\":null,\"hint\":null,\"message\":{\"bytes\":\"\",\"truncated\":false},\"schema\":\"device-error/1\"}",
+    "name": "duplicate_key_escaped"
+  },
+  {
+    "error": "device_error_invalid",
+    "field": "",
+    "input": "{\"code\":\"TRANSIENT\",\"device_code\":null,\"hint\":null,\"message\":{\"bytes\":\"a\",\"bytes\":\"b\",\"truncated\":false},\"schema\":\"device-error/1\"}",
+    "name": "duplicate_key_in_message"
   }
 ]
