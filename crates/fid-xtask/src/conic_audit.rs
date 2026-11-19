@@ -137,7 +137,13 @@ pub struct Options {
 impl Options {
     /// Defaults for a vendored directory.
     pub fn new(dir: impl Into<PathBuf>) -> Options {
-        Options { dir: dir.into(), audit: None, report: None, allowlist: PathBuf::from(DEFAULT_ALLOWLIST), previous: None }
+        Options {
+            dir: dir.into(),
+            audit: None,
+            report: None,
+            allowlist: PathBuf::from(DEFAULT_ALLOWLIST),
+            previous: None,
+        }
     }
 }
 
@@ -268,7 +274,9 @@ fn is_date(s: &str) -> bool {
     if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
         return false;
     }
-    let num = |r: std::ops::Range<usize>| s.get(r).filter(|t| t.bytes().all(|c| c.is_ascii_digit())).and_then(|t| t.parse::<u32>().ok());
+    let num = |r: std::ops::Range<usize>| {
+        s.get(r).filter(|t| t.bytes().all(|c| c.is_ascii_digit())).and_then(|t| t.parse::<u32>().ok())
+    };
     matches!((num(0..4), num(5..7), num(8..10)), (Some(_), Some(m), Some(d)) if (1..=12).contains(&m) && (1..=31).contains(&d))
 }
 
@@ -287,7 +295,9 @@ pub fn is_knp1_rule(s: &str) -> bool {
     ["FLAG-", "ALLOW-", "DATA-"].iter().any(|fam| {
         rest.strip_prefix(fam).is_some_and(|suf| {
             !suf.is_empty()
-                && suf.split('-').all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit()))
+                && suf
+                    .split('-')
+                    .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit()))
         })
     })
 }
@@ -323,7 +333,9 @@ pub fn parse_record(text: &str) -> Result<(AuditRecord, Vec<Finding>), Finding> 
         Some(Value::Table(u)) => {
             f.keys(u, "upstream", &["url", "commit", "tree_sha256", "licence"]);
             r.upstream.url = f.text(u, "url", "upstream");
-            if !r.upstream.url.is_empty() && (!r.upstream.url.starts_with("https://") || r.upstream.url.contains(char::is_whitespace)) {
+            if !r.upstream.url.is_empty()
+                && (!r.upstream.url.starts_with("https://") || r.upstream.url.contains(char::is_whitespace))
+            {
                 f.err("upstream", "`url` must be an https:// URL");
             }
             let commit = f.text(u, "commit", "upstream");
@@ -370,7 +382,10 @@ pub fn parse_record(text: &str) -> Result<(AuditRecord, Vec<Finding>), Finding> 
                 for v in a {
                     match v.as_str() {
                         Some(s) if is_knp1_rule(s) || s == SCOPE_REDUCTION => patch.rules.push(s.to_string()),
-                        _ => f.err(&subject, format!("`rules` entry {v} is neither a KNP-1 rule ID nor `{SCOPE_REDUCTION}`")),
+                        _ => f.err(
+                            &subject,
+                            format!("`rules` entry {v:?} is neither a KNP-1 rule ID nor `{SCOPE_REDUCTION}`"),
+                        ),
                     }
                 }
                 if a.is_empty() {
@@ -533,7 +548,13 @@ fn header_path(rest: &[u8], prefix: &str, line: usize) -> Result<Option<String>,
 }
 
 fn parse_range(s: &str) -> Option<(usize, usize)> {
-    let num = |t: &str| if !t.is_empty() && t.len() <= 9 && t.bytes().all(|b| b.is_ascii_digit()) { t.parse::<usize>().ok() } else { None };
+    let num = |t: &str| {
+        if !t.is_empty() && t.len() <= 9 && t.bytes().all(|b| b.is_ascii_digit()) {
+            t.parse::<usize>().ok()
+        } else {
+            None
+        }
+    };
     match s.split_once(',') {
         Some((a, b)) => Some((num(a)?, num(b)?)),
         None => Some((num(s)?, 1)),
@@ -585,7 +606,10 @@ pub fn apply_patch(files: &mut BTreeMap<String, Vec<u8>>, patch: &[u8]) -> Resul
             continue;
         }
         let old = header_path(&l[4..], "a/", i + 1)?;
-        let plus = lines.get(i + 1).filter(|n| n.starts_with(b"+++ ")).ok_or_else(|| format!("line {}: `---` without `+++`", i + 1))?;
+        let plus = lines
+            .get(i + 1)
+            .filter(|n| n.starts_with(b"+++ "))
+            .ok_or_else(|| format!("line {}: `---` without `+++`", i + 1))?;
         let new = header_path(&plus[4..], "b/", i + 2)?;
         let target = match (old, new) {
             (Some(o), Some(n)) if o == n => Target::Modify(o),
@@ -851,7 +875,10 @@ pub mod spdx {
 
 fn string_set(t: &Table, key: &str) -> Result<BTreeSet<String>, String> {
     match t.get(key) {
-        Some(Value::Array(a)) => a.iter().map(|v| v.as_str().map(str::to_string).ok_or_else(|| format!("`{key}` must list strings"))).collect(),
+        Some(Value::Array(a)) => a
+            .iter()
+            .map(|v| v.as_str().map(str::to_string).ok_or_else(|| format!("`{key}` must list strings")))
+            .collect(),
         _ => Err(format!("`{key}` is missing or not an array")),
     }
 }
@@ -863,7 +890,9 @@ fn check_licence(record: &AuditRecord, allowlist: &Path, out: &mut BTreeSet<Find
         return; // already an AUDIT-SCHEMA finding
     }
     let lists = read_text(allowlist).and_then(|text| {
-        let t: Table = text.parse().map_err(|e: toml::de::Error| format!("{}: {}", allowlist.display(), e.to_string().trim_end()))?;
+        let t: Table = text
+            .parse()
+            .map_err(|e: toml::de::Error| format!("{}: {}", allowlist.display(), e.to_string().trim_end()))?;
         Ok((string_set(&t, "licences")?, string_set(&t, "exceptions")?))
     });
     match lists {
@@ -880,7 +909,11 @@ fn check_licence(record: &AuditRecord, allowlist: &Path, out: &mut BTreeSet<Find
                 ));
             }
             Err(e) => {
-                out.insert(Finding::new(Code::Licence, "upstream.licence", format!("{licence:?} is not an SPDX expression: {e}")));
+                out.insert(Finding::new(
+                    Code::Licence,
+                    "upstream.licence",
+                    format!("{licence:?} is not an SPDX expression: {e}"),
+                ));
             }
         },
     }
@@ -937,7 +970,8 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
             return;
         }
     };
-    let parsed = read_bounded(report, MAX_TEXT_BYTES).and_then(|b| fid_canon::parse(&b).map_err(|e| format!("not JSON: {e}")));
+    let parsed =
+        read_bounded(report, MAX_TEXT_BYTES).and_then(|b| fid_canon::parse(&b).map_err(|e| format!("not JSON: {e}")));
     let result = parsed.and_then(|v| -> Result<Vec<Finding>, String> {
         let r = obj(&v, "the report")?;
         if r.get("schema") != Some(&CValue::Num(1.0)) || s(r, "tool")? != "fid-knp1-lint" {
@@ -947,7 +981,12 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
         for f in arr(r, "findings")? {
             let f = obj(f, "a finding")?;
             if s(f, "crate_name")? == name {
-                let at = format!("crate/{}:{}:{}", s(f, "file")?, pos(f.get("line"), "line")?, pos(f.get("column"), "column")?);
+                let at = format!(
+                    "crate/{}:{}:{}",
+                    s(f, "file")?,
+                    pos(f.get("line"), "line")?,
+                    pos(f.get("column"), "column")?
+                );
                 found.push(Finding::new(Code::Lint, at, format!("unwaived {} finding", s(f, "rule")?)));
             }
         }
@@ -966,7 +1005,8 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
                 _ => return Err("`lines` must be two line numbers".to_string()),
             };
             let waiver_ref = format!("{}:{}-{}:{}", s(wv, "file")?, lines.0, lines.1, s(wv, "rule")?);
-            let at = format!("crate/{}:{}:{}", s(f, "file")?, pos(f.get("line"), "line")?, pos(f.get("column"), "column")?);
+            let at =
+                format!("crate/{}:{}:{}", s(f, "file")?, pos(f.get("line"), "line")?, pos(f.get("column"), "column")?);
             match listed.get(waiver_ref.as_str()) {
                 Some(j) if !j.is_empty() => {
                     used.insert(waiver_ref);
@@ -974,7 +1014,10 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
                 _ => found.push(Finding::new(
                     Code::Lint,
                     at,
-                    format!("waived {} finding: waiver {waiver_ref} is not listed with a justification in AUDIT.toml", s(f, "rule")?),
+                    format!(
+                        "waived {} finding: waiver {waiver_ref} is not listed with a justification in AUDIT.toml",
+                        s(f, "rule")?
+                    ),
                 )),
             }
         }
@@ -1071,7 +1114,10 @@ fn check_tree(record: &AuditRecord, dir: &Path, out: &mut BTreeSet<Finding>) {
 
 /// `AUDIT-PATCH-MISSING` (REQ-005).
 fn check_previous(record: &AuditRecord, previous: &Path, out: &mut BTreeSet<Finding>) {
-    let prev = match read_text(previous).map_err(|e| Finding::new(Code::Schema, "--previous", e)).and_then(|t| parse_record(&t)) {
+    let prev = match read_text(previous)
+        .map_err(|e| Finding::new(Code::Schema, "--previous", e))
+        .and_then(|t| parse_record(&t))
+    {
         Ok((prev, errs)) => {
             for e in errs {
                 out.insert(Finding::new(Code::Schema, format!("--previous {}", e.subject), e.detail));
@@ -1083,7 +1129,10 @@ fn check_previous(record: &AuditRecord, previous: &Path, out: &mut BTreeSet<Find
             return;
         }
     };
-    if prev.upstream.commit.is_empty() || record.upstream.commit.is_empty() || prev.upstream.commit == record.upstream.commit {
+    if prev.upstream.commit.is_empty()
+        || record.upstream.commit.is_empty()
+        || prev.upstream.commit == record.upstream.commit
+    {
         return;
     }
     let present = record.patch_ids();
@@ -1104,7 +1153,8 @@ fn check_previous(record: &AuditRecord, previous: &Path, out: &mut BTreeSet<Find
 pub fn audit(opts: &Options) -> Vec<Finding> {
     let mut out = BTreeSet::new();
     let audit_path = opts.audit.clone().unwrap_or_else(|| opts.dir.join(AUDIT_FILE));
-    let parsed = read_text(&audit_path).map_err(|e| Finding::new(Code::Schema, "AUDIT.toml", e)).and_then(|t| parse_record(&t));
+    let parsed =
+        read_text(&audit_path).map_err(|e| Finding::new(Code::Schema, "AUDIT.toml", e)).and_then(|t| parse_record(&t));
     let record = match parsed {
         Ok((record, errs)) => {
             out.extend(errs);
@@ -1236,7 +1286,9 @@ mod tests {
         for ok in ["KNP1-POW", "KNP1-IO-FS", "KNP1-FLAG-TARGET-CPU", "KNP1-ALLOW-SPDX", "KNP1-DATA-X1"] {
             assert!(is_knp1_rule(ok), "{ok}");
         }
-        for bad in ["KNP1-pow", "KNP1-", "KNP1-FLAG-", "KNP1-FLAG-a", "KNP1-FLAG--X", "POW", "KNP1-NOPE", SCOPE_REDUCTION] {
+        for bad in
+            ["KNP1-pow", "KNP1-", "KNP1-FLAG-", "KNP1-FLAG-a", "KNP1-FLAG--X", "POW", "KNP1-NOPE", SCOPE_REDUCTION]
+        {
             assert!(!is_knp1_rule(bad), "{bad}");
         }
     }

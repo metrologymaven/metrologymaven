@@ -31,7 +31,12 @@ fn run(o: &Options) -> Vec<String> {
 /// Runs `fid-xtask conic-audit <args>` from the workspace root (what `cargo xtask conic-audit`
 /// runs); returns (exit code, stdout).
 fn cli(args: &[&str]) -> (i32, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).current_dir(root()).arg("conic-audit").args(args).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
+        .current_dir(root())
+        .arg("conic-audit")
+        .args(args)
+        .output()
+        .unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap())
 }
 
