@@ -218,7 +218,8 @@ fn facts_independent_of_triangle_order() {
         let want = build(&f).facts();
         f.t.reverse();
         assert_eq!(build(&f).facts(), want, "{name} reversed");
-        f.t.rotate_left(3);
+        let k = 3 % f.t.len();
+        f.t.rotate_left(k);
         assert_eq!(build(&f).facts(), want, "{name} rotated");
     }
 }
