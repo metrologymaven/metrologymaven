@@ -23,3 +23,9 @@ rustup default nightly
 cargo.exe +nightly build
 cargo build --config net.retry=2
 cargo build --release
+cargo rustc -- -Ctarget-\
+cpu=native
+cargo rustc -- -C tar\
+get-cpu=native
+cargo rustc -- -C target - cpu = native
+cargo build --config net.retry=3

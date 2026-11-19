@@ -41,8 +41,11 @@ optional `.cargo/config.toml` and CI env files):
 - `ci3/`: every bypass from the third review, one per line, in `build.sh` (`:=`, `?=`, `+=`,
   `${VAR:-…}`, `printf` and `$'…'` escapes, `--config` spacing, table and file forms, `$VAR`,
   `rustc +nightly`, `rustup run/override/default`, `cargo.exe +`) and `workflow.yml` (value on the
-  next line, YAML list, folded scalar, `--config` split over lines). `expected-lines.txt` lists the
-  lines that must be reported, computed by the gate reference in `make_fixtures.py`; every other
+  next line, YAML list, folded scalar, `--config` split over lines). Also keywords split across
+  lines or spaced out: `-Ctarget-\` + `cpu=native` and `-C tar\` + `get-cpu=native` (shell
+  continuations), `-C target - cpu = native`, and a `>-` folded `target-` / `cpu=native`.
+  `expected-lines.txt` lists the lines that must be reported, computed by the three-pass gate
+  reference in `make_fixtures.py` (raw lines, logical lines, whitespace-free file); every other
   line must stay clean.
 - `cargo-tables/`: `[alias]`, `[env]` and `[target.*]` values that mention keywords
   (`KNP1-FLAG-KEYWORD`); harmless keys pass.

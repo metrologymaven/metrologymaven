@@ -15,3 +15,7 @@ jobs:
           cargo build --config
           profile.release.codegen-units=16
       - run: cargo build --release
+      - run: >-
+          cargo rustc -- -C target-
+          cpu=native
+      - run: cargo build --release

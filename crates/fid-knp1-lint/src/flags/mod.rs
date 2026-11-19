@@ -1290,11 +1290,80 @@ pub fn check_wasm(bytes: &[u8], file: &str, policy: &wasm::SimdPolicy) -> Vec<Fi
 
 // ------------------------------------------------------------------ keyword gate
 
-/// The fail-closed substring gate ([`keywords`]) over every line of a CI file: a line with a
-/// keyword hit and no finding from the structured checks gets a `KNP1-FLAG-KEYWORD` finding.
+/// The fail-closed substring gate ([`keywords`]) over a CI file, in three passes. A hit is
+/// reported as `KNP1-FLAG-KEYWORD` only where no earlier finding covers it.
+///
+/// 1. Each raw line (text before an opt-out marker): finding at the first hit's column.
+/// 2. Each logical line from [`ci_spans`], joined with a space, or with nothing after a
+///    trailing `\` (shell continuation): a hit in a span none of whose lines is covered is
+///    reported at column 1 of the span's first line.
+/// 3. The whole file with every whitespace character removed ([`keywords::compact`]): a hit
+///    none of whose lines is covered is reported at its first character, so spacing tricks
+///    such as `target - cpu` or a keyword folded over two YAML lines are caught.
 fn keyword_gate(sink: &mut Sink<'_>, file: &str, text: &str) {
     let idx = LineIndex::new(text);
-    let flagged: BTreeSet<u32> = sink.out.iter().filter(|f| f.file == file).map(|f| f.line).collect();
+    let mut flagged: BTreeSet<u32> = sink.out.iter().filter(|f| f.file == file).map(|f| f.line).collect();
+    keyword_lines(sink, file, &idx, &mut flagged);
+    keyword_spans(sink, file, &idx, &mut flagged);
+    keyword_compact(sink, file, &idx, &flagged);
+}
+
+fn keyword_message(what: &BTreeSet<String>, how: &str) -> String {
+    let list: Vec<String> = what.iter().map(|k| format!("`{k}`")).collect();
+    format!("mentions {}{how}: build flags and toolchain selection must not be set here", list.join(", "))
+}
+
+fn keyword_spans(sink: &mut Sink<'_>, file: &str, idx: &LineIndex<'_>, flagged: &mut BTreeSet<u32>) {
+    for (start, end) in ci_spans(&idx.lines) {
+        if (start..end).any(|i| flagged.contains(&line_no(i))) {
+            continue;
+        }
+        let mut joined = String::new();
+        for raw in idx.lines.get(start..end).unwrap_or(&[]) {
+            let (piece, _) = keywords::split_marker(raw);
+            if joined.ends_with('\\') {
+                joined.pop();
+            } else if !joined.is_empty() {
+                joined.push(' ');
+            }
+            joined.push_str(piece);
+        }
+        let hits = keywords::scan(&joined);
+        if !hits.is_empty() {
+            let what: BTreeSet<String> = hits.into_iter().map(|(_, k)| k).collect();
+            let line = line_no(start);
+            sink.at_line("KEYWORD", file, idx, (line, 1), keyword_message(&what, " across a logical line"));
+            for i in start..end {
+                flagged.insert(line_no(i));
+            }
+        }
+    }
+}
+
+fn keyword_compact(sink: &mut Sink<'_>, file: &str, idx: &LineIndex<'_>, flagged: &BTreeSet<u32>) {
+    let chars = keywords::compact(&idx.lines);
+    let mut reported: BTreeSet<u32> = BTreeSet::new();
+    for (a, z) in keywords::scan_compact(&chars) {
+        let (Some(first), Some(last)) = (chars.get(a), chars.get(z)) else { continue };
+        let lines = line_no(first.1)..=line_no(last.1);
+        if lines.clone().any(|l| flagged.contains(&l) || reported.contains(&l)) {
+            continue;
+        }
+        let what: String = chars.get(a..=z).unwrap_or(&[]).iter().map(|c| c.0).collect();
+        let col = u32::try_from(first.2 + 1).unwrap_or(u32::MAX);
+        let line = line_no(first.1);
+        sink.at_line(
+            "KEYWORD",
+            file,
+            idx,
+            (line, col),
+            keyword_message(&BTreeSet::from([what]), " once whitespace is removed"),
+        );
+        reported.extend(lines);
+    }
+}
+
+fn keyword_lines(sink: &mut Sink<'_>, file: &str, idx: &LineIndex<'_>, flagged: &mut BTreeSet<u32>) {
     for (i, raw) in idx.lines.iter().enumerate() {
         let line = line_no(i);
         if flagged.contains(&line) {
@@ -1303,16 +1372,10 @@ fn keyword_gate(sink: &mut Sink<'_>, file: &str, text: &str) {
         let (scanned, _) = keywords::split_marker(raw);
         let hits = keywords::scan(scanned);
         if let Some((c, _)) = hits.first() {
-            let what: BTreeSet<&str> = hits.iter().map(|(_, k)| k.as_str()).collect();
-            let list: Vec<String> = what.iter().map(|k| format!("`{k}`")).collect();
             let col = u32::try_from(c + 1).unwrap_or(u32::MAX);
-            sink.at_line(
-                "KEYWORD",
-                file,
-                &idx,
-                (line, col),
-                format!("mentions {}: build flags and toolchain selection must not be set here", list.join(", ")),
-            );
+            let what: BTreeSet<String> = hits.iter().map(|(_, k)| k.clone()).collect();
+            sink.at_line("KEYWORD", file, idx, (line, col), keyword_message(&what, ""));
+            flagged.insert(line);
         }
     }
 }

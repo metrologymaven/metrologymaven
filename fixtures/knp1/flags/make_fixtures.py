@@ -112,14 +112,109 @@ def kw_col(line: str):
     return where[min(hits)] + 1 if hits else None
 
 
+def risky_config(after: str) -> bool:
+    v = after.lstrip(" =\"'")
+    v = re.split(r"[\s\"']", v, maxsplit=1)[0]
+    return not v or v.startswith(("profile", "build", "target", "$")) or "=" not in v
+
+
+def indent(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def is_comment(line: str) -> bool:
+    return line.lstrip().startswith("#")
+
+
+def has_inline_value(line: str) -> bool:
+    t = line.strip()
+    if t.startswith("- "):
+        t = t[2:]
+    i = t.find(": ")
+    if i >= 0:
+        return t[i + 2:].strip() != ""
+    return not t.endswith(":")
+
+
+def ci_spans(lines):
+    """Logical lines: `\\` continuations, and a line with a non-empty value folds the following
+    blank or more deeply indented lines (YAML block and plain multi-line scalars)."""
+    out, i = [], 0
+    while i < len(lines):
+        start, first = i, lines[i]
+        folds = not is_comment(first) and first.strip() != "" and has_inline_value(first)
+        i += 1
+        while i < len(lines):
+            prev, line = lines[i - 1], lines[i]
+            continued = prev.rstrip().endswith("\\") and not is_comment(prev)
+            deeper = folds and (line.strip() == "" or indent(line) > indent(first))
+            if not (continued or deeper):
+                break
+            i += 1
+        out.append((start, i))
+    return out
+
+
+def compact_hits(lines):
+    """Hits of the whitespace-free whole-file view as (first line, first col, last line), 0-based."""
+    chars = []
+    for li, line in enumerate(lines):
+        body, _ = split_marker(line)
+        if body.endswith("\\"):
+            body = body[:-1]
+        for ci, ch in enumerate(body):
+            if ch.isspace():
+                continue
+            chars.append(("-" if ch == "_" else ch.lower(), li, ci))
+    text = "".join(c[0] for c in chars)
+    hits = []
+    for k in KEYWORDS:
+        k = "".join(k.split())
+        p = text.find(k)
+        while p >= 0:
+            hits.append((p, p + len(k) - 1))
+            p = text.find(k, p + len(k))
+    p = text.find("--config")
+    while p >= 0:
+        if risky_config(text[p + len("--config"):]):
+            hits.append((p, p + len("--config") - 1))
+        p = text.find("--config", p + len("--config"))
+    return [(chars[a][1], chars[a][2], chars[z][1]) for a, z in sorted(set(hits))]
+
+
 def with_keywords(text: str, file: str, rows):
-    """Adds the gate's KNP1-FLAG-KEYWORD rows for lines of `text` that no structured row covers."""
+    """Adds the gate's KNP1-FLAG-KEYWORD rows: (1) raw lines, (2) logical lines from ci_spans
+    reported at column 1 of their first line, (3) the whitespace-free whole file reported at the
+    hit's first character; each only where no earlier row covers a line of the hit."""
+    lines = text.split("\n")
     covered = {r[2] for r in rows if r[1] == file}
     out = list(rows)
-    for n, line in enumerate(text.split("\n"), start=1):
+    for n, line in enumerate(lines, start=1):
         c = kw_col(line)
         if c is not None and n not in covered:
             out.append(("KNP1-FLAG-KEYWORD", file, n, c))
+            covered.add(n)
+    for start, end in ci_spans(lines):
+        if any(n + 1 in covered for n in range(start, end)):
+            continue
+        joined = ""
+        for line in lines[start:end]:
+            piece, _ = split_marker(line)
+            if joined.endswith("\\"):
+                joined = joined[:-1]
+            elif joined:
+                joined += " "
+            joined += piece
+        if kw_col(joined) is not None:
+            out.append(("KNP1-FLAG-KEYWORD", file, start + 1, 1))
+            covered.update(range(start + 1, end + 1))
+    reported = set()
+    for first, col0, last in compact_hits(lines):
+        span = set(range(first + 1, last + 2))
+        if span & covered or span & reported:
+            continue
+        out.append(("KNP1-FLAG-KEYWORD", file, first + 1, col0 + 1))
+        reported |= span
     return out
 
 
@@ -627,6 +722,12 @@ rustup default nightly
 cargo.exe +nightly build
 cargo build --config net.retry=2
 cargo build --release
+cargo rustc -- -Ctarget-\
+cpu=native
+cargo rustc -- -C tar\
+get-cpu=native
+cargo rustc -- -C target - cpu = native
+cargo build --config net.retry=3
 """
 CI3_YML = """name: kernel3
 env:
@@ -645,6 +746,10 @@ jobs:
           cargo build --config
           profile.release.codegen-units=16
       - run: cargo build --release
+      - run: >-
+          cargo rustc -- -C target-
+          cpu=native
+      - run: cargo build --release
 """
 put("ci3/knp1-lint.toml", '[flags]\nprofiles = ["release"]\nci_env_files = ["build.sh", "workflow.yml"]\n')
 put("ci3/rust-toolchain.toml", TOOLCHAIN_OK)
@@ -656,8 +761,7 @@ put(
     "".join(
         f"{name}:{n}\n"
         for name, text in (("build.sh", CI3_SH), ("workflow.yml", CI3_YML))
-        for n, line in enumerate(text.split("\n"), start=1)
-        if kw_col(line) is not None
+        for n in sorted({r[2] for r in with_keywords(text, name, [])})
     ),
 )
 

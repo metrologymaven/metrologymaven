@@ -10,6 +10,11 @@
 //! refines the rule and column; a line it does not explain is still reported as
 //! `KNP1-FLAG-KEYWORD`.
 //!
+//! The scan runs in three passes over each CI file (see `keyword_gate` in the parent module):
+//! raw lines, logical lines from `ci_spans` (shell `\` continuations joined without a space),
+//! and the whole file with every whitespace character removed ([`compact`], [`scan_compact`]),
+//! so a keyword split across lines or spaced out (`target - cpu`) is still found.
+//!
 //! A line opts out only with an explicit same-line marker `knp1-flags: allow <RULE> <reason>`
 //! (for example `# knp1-flags: allow KNP1-FLAG-KEYWORD deny warnings only`). The marker
 //! suppresses that one rule on that one line and is itself reported as an informational
@@ -114,6 +119,71 @@ pub fn scan(text: &str) -> Vec<(usize, String)> {
         from = at + "--config".len();
     }
     hits.sort();
+    hits.dedup();
+    hits
+}
+
+/// A character of a whole file with its 0-based line and character column.
+pub type Located = (char, usize, usize);
+
+/// The whole-file, whitespace-free view used by the third gate pass: the lines' scanned parts
+/// (text before any opt-out marker) are joined, a backslash that ends a line is dropped together
+/// with the line break (shell continuation), every whitespace character is removed, and the rest
+/// is lowercased with `_` mapped to `-`. Each kept character remembers where it came from.
+pub fn compact(lines: &[&str]) -> Vec<Located> {
+    let mut out = Vec::new();
+    for (li, line) in lines.iter().enumerate() {
+        let (scanned, _) = split_marker(line);
+        let body = scanned.strip_suffix('\\').unwrap_or(scanned);
+        for (ci, c) in body.chars().enumerate() {
+            if c.is_whitespace() {
+                continue;
+            }
+            let n = match c.to_ascii_lowercase() {
+                '_' => '-',
+                o => o,
+            };
+            out.push((n, li, ci));
+        }
+    }
+    out
+}
+
+/// Keyword hits in a [`compact`] view as `(first index, last index)` into it. Keywords and
+/// selectors are matched with their spaces removed (`rustup run` → `rustuprun`, `cargo +` →
+/// `cargo+`); `--config` is a hit when [`config_value_is_risky`] says so.
+pub fn scan_compact(chars: &[Located]) -> Vec<(usize, usize)> {
+    let text: String = chars.iter().map(|c| c.0).collect();
+    // Byte offset -> index into `chars`.
+    let mut idx_of = vec![0usize; text.len() + 1];
+    let mut b = 0;
+    for (i, (c, _, _)) in chars.iter().enumerate() {
+        for slot in idx_of.iter_mut().skip(b).take(c.len_utf8()) {
+            *slot = i;
+        }
+        b += c.len_utf8();
+    }
+    let at = |byte: usize| idx_of.get(byte).copied().unwrap_or(0);
+    let mut hits = Vec::new();
+    for k in KEYWORDS.iter().chain(SELECTORS.iter()) {
+        let k: String = k.chars().filter(|c| !c.is_whitespace()).collect();
+        let mut from = 0;
+        while let Some(p) = text.get(from..).and_then(|s| s.find(&k)) {
+            let s = from + p;
+            hits.push((at(s), at(s + k.len() - 1)));
+            from = s + k.len();
+        }
+    }
+    let mut from = 0;
+    while let Some(p) = text.get(from..).and_then(|s| s.find("--config")) {
+        let s = from + p;
+        let after = text.get(s + "--config".len()..).unwrap_or("");
+        if config_value_is_risky(after) {
+            hits.push((at(s), at(s + "--config".len() - 1)));
+        }
+        from = s + "--config".len();
+    }
+    hits.sort_unstable();
     hits.dedup();
     hits
 }
