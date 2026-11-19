@@ -166,6 +166,8 @@ fixtures/core/bus/principal/** -text
 fixtures/geo/nurbs/eval/** -text
 # IO.REG.DETECT fixtures: binary STL, random bytes and canonical JSON compared byte for byte.
 fixtures/io/reg/detect/** -text
+# IO.REG.PROV fixtures: SHA-256 and the 96-byte size of cube_mm.xyz are compared byte for byte.
+fixtures/io/reg/prov/** -text
 # UNC.UEC.STMT fixtures: canonical statements (no trailing newline) and digests compared byte for byte.
 fixtures/unc/stmt/** -text
 # CORE.JRN.CHAIN.APPEND fixtures: reference hashes and digests compared byte for byte by make_fixtures.py --check.

@@ -4,7 +4,8 @@
 //! `IO.REG.ENV.REPORT`, the import and export report types ([`report`]),
 //! `IO.REG.WRITE`, the atomic export write path ([`write`], [`AtomicWriter`]), and
 //! `IO.REG.DETECT`, the format registry, its listing commands and the content-signature
-//! detector ([`detect`], [`Registry`]).
+//! detector ([`detect`], [`Registry`]), and `IO.REG.PROV`, source provenance with unit
+//! and frame capture ([`prov`], [`SourceProvenance`], [`HashingSource`], [`resolve_unit`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
@@ -23,6 +24,7 @@ mod budget;
 pub mod detect;
 mod error;
 mod limits;
+pub mod prov;
 pub mod report;
 pub mod roots;
 mod source;
@@ -39,6 +41,11 @@ pub use error::{IoError, Position, CODES};
 pub use limits::{
     LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
     DEFAULT_WALL_MS,
+};
+pub use prov::{
+    resolve_unit, to_metres, Detection, EffectiveOptions, Evidence, FormatSelection, FrameCapture, HashingSource,
+    NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo, SourceDigest, SourceProvenance,
+    UnitResolution, UnitSource, VersionToken,
 };
 pub use report::{
     Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportPos, ReportText,

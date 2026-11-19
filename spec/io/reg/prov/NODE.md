@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-reg]
 satisfies: [REQ-IO.REG-010, REQ-IO.REG-011, REQ-IO.REG-012]
 covers: []
 depends_on: [IO.REG.LIMITS, GEO.FRAME]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # IO.REG.PROV: Source provenance, unit and frame capture
@@ -65,6 +66,34 @@ Builds the `SourceProvenance` record that every import journals (digest, size, f
 - **Determinism:** D0.
 - **Performance budget:** hashing at ≥ 1 GB/s on reference hardware [unverified until measured].
 - **Crate:** `fid-io-reg`.
+
+### Pinned at build (fid-io-reg module `prov`)
+
+These pins were made when the leaf was built. Where one differs from the text above, the pin wins, and the reason is given.
+
+- **Single rounding, done exactly (supersedes "one f64 multiplication").** `0.001`, `0.000001` and `0.0254` are not `f64` values, so `x * fl(0.001)` rounds twice: once for the factor and once for the product. A reference set of 100,000 random values showed this differs from the correctly rounded result in about 14 % of `mm` cases and 26 % of `in` cases. CONSTITUTION §4 requires a single rounding. `to_metres(x, unit)` therefore returns the `f64` nearest to the exact product of the `f64` `x` and the unit's exact rational factor (`LengthUnit::ratio` of `fid-geo-frame`, `GEO.FRAME.UNITS`), ties to even, subnormals included. It uses `u128` integer arithmetic (`m * p * 2^64 / q`, with a sticky remainder), and no float multiply, divide or FMA touches the value. A zero result keeps the sign of `x`. Metres are returned unchanged. NaN and infinity are refused (`NonFiniteLength`). AC-1 and AC-4 hold unchanged: 25.4 mm and 1 in both give `0x3F9A027525460AA6`.
+- **Units.** The `LengthUnit` of `fid-geo-frame` is reused: `m`, `mm`, `um`, `nm`, `in`, `ft` and `thou`, with exact ratios 1, 1/10^3, 1/10^6, 1/10^9, 127/5000, 381/1250 and 127/5000000. The record writes the factor as an exact decimal string: `1`, `0.001`, `0.000001`, `0.000000001`, `0.0254`, `0.3048`, `0.0000254`. Format readers map their own unit words (3MF `millimeter`, STEP contexts) to these units.
+- **Resolution table.** `resolve_unit(declared, given, override_unit)`:
+  - no declared unit, no given unit: `unit_required`, whatever `override_unit` is;
+  - no declared unit, given G: G, source `caller`;
+  - declared D, no given unit, without `override_unit`: D, source `declared`;
+  - declared D, no given unit, with `override_unit`: `unit_required` (the override names no unit);
+  - declared D, given D: D, source `declared`;
+  - declared D, given G different from D, without `override_unit`: `unit_conflict`;
+  - declared D, given G different from D, with `override_unit`: G, source `override`.
+  `unit_overridden` is true exactly when the source is `caller` or `override`, that is, when the unit is not one the file declared. This also meets `IO.CAD.STEP.HDR` AC-4. `unit_conflict` is added to the shared `IoError` taxonomy after `unit_required`.
+- **Hashing.** `HashingSource<R>` wraps a `BoundedSource<R>` and hashes every byte it delivers. `finish()` reads whatever the reader left unread to the end, through the same bounded source and charged to the byte limit. So `sha256` and `bytes` always describe the whole file, never only the part a reader consumed. A file over the byte limit fails `limit_exceeded{bytes}`.
+- **Detector result.** `Detection::detect` wraps `Registry::detect` (`IO.REG.DETECT`) and records `format_selected_by`: `caller` when the caller named the format, `content_signature` otherwise. Detection errors pass through unchanged.
+- **Reader and version.** `reader` is a `ReaderId`, with the `FormatId` alphabet. `reader_version` and `format_version` are version tokens: 1 to 32 bytes of ASCII letters, digits, `.`, `-` and `+`, never `*`. `format_version` is `null` when the reader identified none. Raw header text never goes in a token. It goes in `declared`.
+- **Principal.** The record holds the principal kind only, as the journal's `PrincipalKind` wire name (`human`, `agent`, `script`, `service`, `device`, `system`; `CORE.JRN.ENTRY`). The identity stays in the journal entry's salted commitment and is never copied here.
+- **Evidence: imported data never looks measured.** `evidence` is `uncharacterized` by default. It is `claimed` when the reader records the file's own statement of origin (`origin_claim`, untrusted text). There is no other value: no import makes content measured, attested or characterized.
+- **Untrusted text.** `source_name`, `origin_claim`, `declared` values and a declared frame label are `UntrustedText`. Canonical JSON keeps them exactly, with RFC 8785 string escaping only. The `Display` form shows them only through `as_display()`, inside double quotes with `"` escaped. Text longer than 4,096 bytes (255 bytes for a frame label) is refused with `too_large` and never cut, because the record states exactly what was read.
+- **Keys.** `declared` keys are chosen by the reader: lowercase snake_case segments joined by `.`, at most 64 bytes, at most 256 items. A repeated key is `duplicate_key`. Uppercase is refused, so keys never differ only in case. The effective options must be a JSON object of at most 64 KiB of canonical bytes and depth 32. A key repeated in one object is `duplicate_key`, and keys of one object that are equal after ASCII lowercasing are `case_duplicate_key`, at every depth. A second `origin_claim` is `duplicate_key`.
+- **Frame.** When the format carries a frame, the record holds its ID and label (`frame_origin: declared`). Otherwise the frame ID is the first 16 bytes of SHA-256(`fid.io.reg.prov.source_frame@1` || 0x00 || the 32 digest bytes). Its name is `source:` plus the first 12 hex digits of the digest (`frame_origin: synthesized`). `source_frame()` returns that `Frame` with kind `User` and parent `FrameId::WORLD` at `Transform::IDENTITY`, for `IO.REG.ENV` to insert. The ID is deterministic (D0), so re-importing the same file gives the same frame.
+- **Canonical record (`source_provenance@1`).** An RFC 8785 object whose keys are always all present: `schema`, `sha256` (`sha256:` + 64 hex), `bytes` (decimal string), `source_name` (string or null), `format`, `format_version` (string or null), `format_selected_by`, `reader`, `reader_version`, `principal`, `options` (object), `unit` (symbol), `unit_factor` (decimal string), `unit_source`, `unit_overridden` (bool), `frame` (32 hex), `frame_name` (string or null), `frame_origin`, `evidence`, `origin_claim` (string or null) and `declared` (object of strings). The record has no floats.
+- **Errors.** `ProvError` codes: `duplicate_key`, `case_duplicate_key`, `invalid` and `too_large`. Unit errors are `IoError::UnitRequired` and `IoError::UnitConflict`.
+- **Fixtures.** `fixtures/io/reg/prov/make_cases.py` (stdlib only: `hashlib`, `fractions`, `json`, `random` with a fixed seed) writes `cube_mm.xyz` and `expected.txt`: the digest and size, the converted cube corners, 1,400 conversion cases over all seven units (fixed edge values, random bit patterns and a realistic range), the synthesized frame, and the AC-5 canonical record. CI runs it with `--check`. All data is synthetic.
+- **AC-3 without a 3MF file.** `IO.MESH.TMF` is not built yet, so there is no 3MF reader or test helper. AC-3 is tested at the boundary this leaf owns: declared `mm` (what a 3MF `unit="millimeter"` maps to) and given `in` give `unit_conflict`. No 3MF fixture is committed.
 
 ## Test fixtures
 

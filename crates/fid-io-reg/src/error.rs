@@ -46,6 +46,7 @@ pub const CODES: &[&str] = &[
     "malformed",
     "truncated_file",
     "unit_required",
+    "unit_conflict",
     "format_unknown",
     "format_ambiguous",
     "format_mismatch",
@@ -89,6 +90,9 @@ pub enum IoError {
     },
     /// The format declares no length unit and the caller gave none.
     UnitRequired,
+    /// The format declares a length unit, the caller gave a different one and did not set
+    /// `override_unit` (`IO.REG.PROV`).
+    UnitConflict,
     /// No registered format matches the content.
     FormatUnknown,
     /// More than one registered format matches the content.
@@ -133,6 +137,7 @@ impl IoError {
             IoError::Malformed { .. } => "malformed",
             IoError::TruncatedFile { .. } => "truncated_file",
             IoError::UnitRequired => "unit_required",
+            IoError::UnitConflict => "unit_conflict",
             IoError::FormatUnknown => "format_unknown",
             IoError::FormatAmbiguous => "format_ambiguous",
             IoError::FormatMismatch => "format_mismatch",
