@@ -572,7 +572,8 @@ fn req6_no_network_and_no_process_launch_in_the_library() {
         .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'))
         .map(|l| l.split('=').next().unwrap().trim())
         .collect();
-    assert_eq!(deps, ["fid-canon", "fid-types", "fid-uuid", "getrandom", "sha2"]);
+    // fid-eval-pred: the shared predicate schema (pure parsing, no I/O).
+    assert_eq!(deps, ["fid-canon", "fid-eval-pred", "fid-types", "fid-uuid", "getrandom", "sha2"]);
     let unix_deps: Vec<&str> = manifest
         .split("[target.'cfg(unix)'.dependencies]")
         .nth(1)
