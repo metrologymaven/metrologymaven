@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [house-rules/]
+built_pr: 160
 satisfies: [REQ-ECO.RULES-001]
 covers: []
 depends_on: [ECO.RULES.SRC]
