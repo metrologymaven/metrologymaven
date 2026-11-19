@@ -34,9 +34,13 @@
 //! [`bots`]: the bot register check `bots-check` (spec node `ECO.CI.BOTS.REG`), and in
 //! [`bots::block`] the maintainer-marked blocking findings check `bot-blocking` (spec node
 //! `ECO.CI.BOTS.BLOCK`).
+//!
+//! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
+//! [`conic_audit`].
 
 pub mod apps_policy;
 pub mod bots;
+pub mod conic_audit;
 pub mod crate_graph;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;

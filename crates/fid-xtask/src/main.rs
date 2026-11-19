@@ -82,6 +82,7 @@ fn main() -> ExitCode {
         }
         Some("pins") => pins::cli(&args[1..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
+        Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -97,6 +98,7 @@ fn main() -> ExitCode {
             eprintln!("{LINT_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
             eprintln!("{MIG_LADDER_USAGE}");
+            eprintln!("{}", fid_xtask::conic_audit::USAGE);
             ExitCode::from(2)
         }
     }
