@@ -271,7 +271,11 @@ fn sphere_fixture() -> SphereFixture {
 fn sphere_bvh(threads: usize) -> (PrimitiveBvh, SphereFixture) {
     let fx = sphere_fixture();
     let (verts, tris) = sphere_mesh();
-    assert_eq!(mesh_digest(&verts, &tris), fx.header["mesh_digest"], "pinned mesh generator differs from the reference");
+    assert_eq!(
+        mesh_digest(&verts, &tris),
+        fx.header["mesh_digest"],
+        "pinned mesh generator differs from the reference"
+    );
     assert_eq!(tris.len().to_string(), fx.header["triangles"]);
     let frame = FrameRef::from_bytes(std::array::from_fn(|i| i as u8));
     let mesh = Mesh::from_points(frame, &verts, &tris).unwrap();
@@ -476,7 +480,8 @@ fn unit_tri(dx: f64) -> [[f64; 3]; 3] {
 #[test]
 fn build_refuses_bad_meshes_with_typed_errors() {
     let tri = unit_tri(0.0);
-    let b = |tris: &[[[f64; 3]; 3]], payload: &[u64], threads| PrimitiveBvh::build_triangles(F0, tris, payload, threads);
+    let b =
+        |tris: &[[[f64; 3]; 3]], payload: &[u64], threads| PrimitiveBvh::build_triangles(F0, tris, payload, threads);
     assert_eq!(b(&[tri], &[0], 0), Err(BvhError::ZeroThreads));
     assert_eq!(b(&[], &[], 1), Err(BvhError::EmptyMesh));
     assert_eq!(b(&[tri], &[], 1), Err(BvhError::PayloadLength { expected: 1, found: 0 }));

@@ -478,6 +478,9 @@ fn ray_hits(b: &Aabb, r: &Ray) -> bool {
     a <= z
 }
 
+/// Leaf callback of the best-first traversal: (node index, lower bound, leaf triangles).
+type LeafFn<'a> = dyn FnMut(u32, f64, &[u32]) -> ControlFlow<()> + 'a;
+
 /// Heap key: totalOrder on the lower bound, then node index.
 #[derive(Clone, Copy)]
 struct Key(f64, u32);
@@ -826,12 +829,10 @@ impl PrimitiveBvh {
         F: FnMut(LeafVisit<'_>) -> ControlFlow<()>,
     {
         check_point(&p, QueryField::Point)?;
-        self.visit(&p, &mut |node, lower_bound_sq, triangles| {
-            visitor(LeafVisit { node, lower_bound_sq, triangles })
-        })
+        self.visit(&p, &mut |node, lower_bound_sq, triangles| visitor(LeafVisit { node, lower_bound_sq, triangles }))
     }
 
-    fn visit(&self, p: &[f64; 3], f: &mut dyn FnMut(u32, f64, &[u32]) -> ControlFlow<()>) -> Result<(), BvhError> {
+    fn visit(&self, p: &[f64; 3], f: &mut LeafFn<'_>) -> Result<(), BvhError> {
         let root = self.nodes.first().ok_or(BvhError::Inconsistent)?;
         let mut heap: BinaryHeap<Reverse<Key>> = BinaryHeap::new();
         heap.try_reserve(STACK).map_err(|_| BvhError::AllocationFailed { bytes: bytes_of::<Key>(STACK) })?;
