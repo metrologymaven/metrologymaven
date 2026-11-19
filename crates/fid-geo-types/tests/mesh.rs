@@ -270,10 +270,7 @@ fn validation_errors_and_order() {
     let mut n = [vec![0.0; 6], vec![0.0; 6], vec![1.0; 6]];
     n[2][3] = 2.0;
     let attrs = AttributeSet { normal: Some(n), ..AttributeSet::default() };
-    assert_eq!(
-        Mesh::new(fr, PointBuffer::from_points(&v), attrs, vec![]),
-        Err(GeoTypeError::BadNormal { index: 3 })
-    );
+    assert_eq!(Mesh::new(fr, PointBuffer::from_points(&v), attrs, vec![]), Err(GeoTypeError::BadNormal { index: 3 }));
     // Index check before triangle attributes.
     let opts = MeshOptions {
         triangle_attrs: TriangleAttrs { scanner_id: Some(vec![1]), quality: None },
@@ -308,8 +305,8 @@ fn attributes_and_frame_kept() {
     let attrs = AttributeSet { quality: Some(vec![1, 2, 3, 4, 5, 6]), ..AttributeSet::default() };
     let tattrs = TriangleAttrs { scanner_id: Some(vec![7, 8]), quality: Some(vec![9, 10]) };
     let opts = MeshOptions { triangle_attrs: tattrs.clone(), ..MeshOptions::default() };
-    let m = Mesh::with_options(fr, PointBuffer::from_points(&v), attrs.clone(), vec![[0, 1, 2], [3, 4, 5]], opts)
-        .unwrap();
+    let m =
+        Mesh::with_options(fr, PointBuffer::from_points(&v), attrs.clone(), vec![[0, 1, 2], [3, 4, 5]], opts).unwrap();
     assert_eq!(m.frame(), fr);
     assert_eq!(m.vertex_attrs(), &attrs);
     assert_eq!(m.triangle_attrs(), &tattrs);
