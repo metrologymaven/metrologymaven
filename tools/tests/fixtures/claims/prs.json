@@ -1,0 +1,5 @@
+[
+  {"number": 3, "title": "spec(A): leaf", "body": "Closed attempt.", "head_ref": "spec/a-leaf", "labels": [], "state": "CLOSED"},
+  {"number": 7, "title": "spec(C): leaf", "body": "Finishes the node.", "head_ref": "spec/c-leaf", "labels": [], "state": "OPEN"},
+  {"number": 9, "title": "tools: tidy", "body": "Touches ALPHA and A.X only; also BB.", "head_ref": "tools/tidy", "labels": [{"name": "no-spec"}], "state": "OPEN"}
+]
