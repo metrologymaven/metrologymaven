@@ -4,9 +4,10 @@ use crate::error::kept;
 use std::fmt;
 
 /// Every reason tag [`ReadError::Limit`] uses, sorted.
-pub const LIMIT_REASONS: [&str; 8] = [
+pub const LIMIT_REASONS: [&str; 9] = [
     "buffer_cap",
     "index_budget",
+    "manifest_budget",
     "manifest_size",
     "member_count",
     "member_length",
@@ -16,7 +17,7 @@ pub const LIMIT_REASONS: [&str; 8] = [
 ];
 
 /// Every reason tag [`ReadError::Malformed`] uses, sorted.
-pub const MALFORMED_REASONS: [&str; 41] = [
+pub const MALFORMED_REASONS: [&str; 43] = [
     "archive_comment",
     "bad_path",
     "case_collision",
@@ -49,12 +50,14 @@ pub const MALFORMED_REASONS: [&str; 41] = [
     "no_manifest",
     "overlap",
     "path_conflict",
+    "source_changed",
     "special_file",
     "stored_size",
     "symlink",
     "trailing_data",
     "truncated",
     "version_needed",
+    "windows_name",
     "zip64_extra",
     "zip64_locator",
     "zip64_record",

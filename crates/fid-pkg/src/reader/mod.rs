@@ -16,11 +16,17 @@
 //!   regular-file type (no symlinks, folders, devices or FIFOs), no entry comment, no extra
 //!   field other than a well-formed zip64 one, a UTF-8 name that passes `PkgPath` (no
 //!   absolute paths, `..`, backslashes, drive letters, non-NFC text) and the reader's own
-//!   rules (no control characters, no slash or dot lookalikes, no invisible characters); no
-//!   duplicate names, no names equal up to case, no name that is also a folder of another;
+//!   rules (no control characters, no slash or dot lookalikes, no invisible characters, no
+//!   `:`, no segment ending in `.` or a space, no Windows device name); no duplicate names,
+//!   no names equal after full Unicode case folding, no name that is also a folder of another;
 //!   local headers that repeat the central ones field for field; and entries that tile the
 //!   file from byte 0 to the central directory with no gap and no overlap.
-//! - **Manifest** (TRUST.PKG.MANIFEST): `manifest.json` parses and validates (a different
+//! - **Manifest** (TRUST.PKG.MANIFEST): `manifest.json` is at most
+//!   [`MANIFEST_HEADER_BYTES`] + [`MANIFEST_MEMBER_BYTES`] per container entry (and never
+//!   above [`MAX_MANIFEST_BYTES`]), parses within an element budget of
+//!   [`MANIFEST_HEADER_VALUES`] + [`MANIFEST_VALUES_PER_MEMBER`] per entry (and never above
+//!   [`MAX_MANIFEST_VALUES`]), so a small package cannot make the JSON tree large
+//!   (`pkg.limit` `manifest_size` / `manifest_budget`), and validates (a different
 //!   major version is `pkg.unsupported_version`); every entry other than `manifest.json`,
 //!   `statement.json` and `signatures/*` is listed (`pkg.unlisted_member`); every listed
 //!   member is present (`pkg.malformed` `missing_member`) with the declared length
@@ -36,9 +42,16 @@
 //! consumed so far, stops the member with `pkg.limit` (zip bombs are cut off while
 //! streaming, after at most one 16 KiB chunk, never after the fact).
 //!
-//! The reader never writes to the file system, never panics and keeps its own memory
-//! (index, window and buffers) within [`Limits::max_index_bytes`] plus fixed buffers, plus
-//! the manifest and any member buffer the caller asks for.
+//! **One view of the signed files.** The manifest bytes read at open are kept and served
+//! for every later read of `manifest.json`, and the SHA-256 of `statement.json` is recorded
+//! at open; a later read whose bytes hash differently is `pkg.malformed` `source_changed`.
+//! So the signature check sees exactly the bytes the member digests were checked against,
+//! even if the source changes underneath.
+//!
+//! The reader never writes to the file system, never panics and keeps its own memory within
+//! [`Limits::max_index_bytes`] for the index, fixed decoding buffers, the manifest (at most
+//! [`MAX_MANIFEST_BYTES`] of bytes plus a value tree charged [`MANIFEST_VALUE_COST`] per
+//! element, at most [`MANIFEST_VALUE_BUDGET`]), and any member buffer the caller asks for.
 
 mod command;
 mod error;
@@ -52,9 +65,10 @@ pub use command::{
 };
 pub use error::{ReadError, LIMIT_REASONS, MALFORMED_REASONS};
 
+use crate::casefold::casefold;
 use crate::container::crc32_update;
 use crate::error::PkgError;
-use crate::manifest::{Manifest, Member, MANIFEST_PATH, STATEMENT_PATH};
+use crate::manifest::{hash_bytes, Manifest, Member, MANIFEST_PATH, STATEMENT_PATH};
 use crate::path::PkgPath;
 use fid_types::Digest;
 use inflate::Inflater;
@@ -68,8 +82,29 @@ pub const MAX_PACKAGE_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 pub const MAX_MEMBERS: u64 = 1_000_000;
 /// Longest entry name, in bytes (REQ-001).
 pub const MAX_NAME_BYTES: usize = 4096;
-/// Largest `manifest.json`, uncompressed (REQ-001).
-pub const MAX_MANIFEST_BYTES: u64 = 256 * 1024 * 1024;
+/// Largest `manifest.json`, uncompressed: 16 MiB, pinned well below the spec's 256 MiB
+/// (REQ-001) so the parsed manifest stays within [`MANIFEST_VALUE_BUDGET`] plus its bytes.
+pub const MAX_MANIFEST_BYTES: u64 = 16 * 1024 * 1024;
+/// The spec's manifest limit (REQ-001); [`MAX_MANIFEST_BYTES`] is tighter.
+pub const SPEC_MAX_MANIFEST_BYTES: u64 = 256 * 1024 * 1024;
+/// Manifest bytes allowed besides the member entries (format, version, digests, `created_by`).
+pub const MANIFEST_HEADER_BYTES: u64 = 64 * 1024;
+/// Manifest bytes allowed per container entry: a 4096-byte path plus 512 bytes for the
+/// rest of a member object (keys, media type, length, SHA-256).
+pub const MANIFEST_MEMBER_BYTES: u64 = 4096 + 512;
+/// Bytes charged per parsed manifest element (value or key): at least a `CValue`, a `String`
+/// and the share of a `BTreeMap` node (checked at compile time).
+pub const MANIFEST_VALUE_COST: u64 = 96;
+/// Memory budget of the parsed manifest tree, besides its string bytes.
+pub const MANIFEST_VALUE_BUDGET: u64 = 32 * 1024 * 1024;
+/// Most elements a manifest may parse into: [`MANIFEST_VALUE_BUDGET`] / [`MANIFEST_VALUE_COST`].
+pub const MAX_MANIFEST_VALUES: u64 = MANIFEST_VALUE_BUDGET / MANIFEST_VALUE_COST;
+/// Manifest elements allowed besides the members: the root object and its keys and values.
+pub const MANIFEST_HEADER_VALUES: u64 = 64;
+/// Manifest elements per container entry: a member object, four keys and four values.
+pub const MANIFEST_VALUES_PER_MEMBER: u64 = 9;
+/// Deepest manifest nesting (root, members array, member object, value).
+const MANIFEST_MAX_DEPTH: usize = 8;
 /// Largest decompression ratio of a deflate member (REQ-003).
 pub const MAX_RATIO: u64 = 1000;
 /// Allocation budget of the parsed central directory (REQ-005).
@@ -81,6 +116,22 @@ pub(crate) const ENTRY_FIXED_COST: u64 = 256;
 /// Bytes charged per name byte: the name, its lowercase copy (which can grow up to three
 /// times in UTF-8) in the case-fold map.
 pub(crate) const NAME_COST_FACTOR: u64 = 4;
+
+// The charged costs cover the real sizes (checked when the crate compiles).
+const _: () = assert!(
+    ENTRY_FIXED_COST as usize
+        >= std::mem::size_of::<Entry>()
+            + 2 * std::mem::size_of::<usize>()
+            + std::mem::size_of::<String>()
+            + std::mem::size_of::<&str>()
+            + 64
+);
+// A name is stored once and folded once; full case folding grows UTF-8 at most three times.
+const _: () = assert!(NAME_COST_FACTOR >= 1 + 3);
+const _: () = assert!(
+    MANIFEST_VALUE_COST as usize >= std::mem::size_of::<fid_canon::CValue>() + std::mem::size_of::<String>() + 32
+);
+const _: () = assert!(MAX_MANIFEST_BYTES as usize <= fid_canon::MAX_INPUT_BYTES);
 
 const SIG_LOCAL: u32 = 0x0403_4b50;
 const SIG_CENTRAL: u32 = 0x0201_4b50;
@@ -107,6 +158,7 @@ pub struct Limits {
     pub max_members: u64,
     pub max_name_bytes: usize,
     pub max_manifest_bytes: u64,
+    pub max_manifest_values: u64,
     pub max_ratio: u64,
     pub max_index_bytes: u64,
 }
@@ -118,6 +170,7 @@ impl Default for Limits {
             max_members: MAX_MEMBERS,
             max_name_bytes: MAX_NAME_BYTES,
             max_manifest_bytes: MAX_MANIFEST_BYTES,
+            max_manifest_values: MAX_MANIFEST_VALUES,
             max_ratio: MAX_RATIO,
             max_index_bytes: MAX_INDEX_BYTES,
         }
@@ -204,6 +257,11 @@ pub struct PackageReader<R> {
     /// Sorted by name bytes.
     entries: Vec<Entry>,
     manifest: Manifest,
+    /// The exact `manifest.json` bytes read at open.
+    manifest_bytes: Vec<u8>,
+    manifest_sha256: Digest,
+    /// SHA-256 of `statement.json` as read at open, if present.
+    statement_sha256: Option<Digest>,
 }
 
 impl<R> std::fmt::Debug for PackageReader<R> {
@@ -242,13 +300,35 @@ impl<R: Read + Seek> PackageReader<R> {
         budget.charge(dir.count.saturating_mul(ENTRY_FIXED_COST))?;
         let capacity = usize::try_from(dir.count).map_err(|_| ReadError::limit("member_count", "entry count"))?;
         let mut entries = Vec::with_capacity(capacity);
-        read_central(&mut src, &dir, &limits, &mut budget, &mut entries)?;
+        let manifest_cap = limits
+            .max_manifest_bytes
+            .min(MANIFEST_HEADER_BYTES.saturating_add(MANIFEST_MEMBER_BYTES.saturating_mul(dir.count)));
+        read_central(&mut src, &dir, &limits, manifest_cap, &mut budget, &mut entries)?;
         check_names(&mut entries)?;
         check_layout(&mut src, &dir, &mut entries)?;
 
-        let manifest = load_manifest(&mut src, &entries, &limits)?;
+        let max_values = limits
+            .max_manifest_values
+            .min(MANIFEST_HEADER_VALUES.saturating_add(MANIFEST_VALUES_PER_MEMBER.saturating_mul(dir.count)));
+        let (manifest, manifest_bytes) = load_manifest(&mut src, &entries, &limits, max_values)?;
         cross_check(&entries, &manifest)?;
-        Ok(PackageReader { src, limits, entries, manifest })
+        let manifest_sha256 = hash_bytes(&manifest_bytes);
+        let mut reader =
+            PackageReader { src, limits, entries, manifest, manifest_bytes, manifest_sha256, statement_sha256: None };
+        if let Some(i) = reader.find(STATEMENT_PATH) {
+            reader.statement_sha256 = Some(reader.decode_checked(i, &mut |_| Ok(()))?);
+        }
+        Ok(reader)
+    }
+
+    /// The exact `manifest.json` bytes read and parsed at open.
+    pub fn manifest_bytes(&self) -> &[u8] {
+        &self.manifest_bytes
+    }
+
+    /// SHA-256 of `statement.json` as read at open, if the package has one.
+    pub fn statement_sha256(&self) -> Option<Digest> {
+        self.statement_sha256
     }
 
     /// The parsed, validated manifest.
@@ -284,6 +364,17 @@ impl<R: Read + Seek> PackageReader<R> {
     /// member (length, SHA-256), against the central directory otherwise (length); CRC-32
     /// always.
     fn check_entry(&mut self, i: usize, out: &mut dyn FnMut(&[u8]) -> Result<(), ReadError>) -> Result<(), ReadError> {
+        self.decode_checked(i, out).map(|_| ())
+    }
+
+    /// Decodes and checks entry `i` (see [`PackageReader::check_entry`]); returns its SHA-256.
+    /// `manifest.json` and `statement.json` must also hash to what was read at open
+    /// (`source_changed`), checked before the CRC so a changed source is named as such.
+    fn decode_checked(
+        &mut self,
+        i: usize,
+        out: &mut dyn FnMut(&[u8]) -> Result<(), ReadError>,
+    ) -> Result<Digest, ReadError> {
         let e = self.entries.get(i).ok_or_else(|| malformed("missing_member", "entry index"))?.clone();
         let decoded = decode_entry(&mut self.src, &e, self.limits.max_ratio, out)?;
         match self.listed(&e.name) {
@@ -304,10 +395,18 @@ impl<R: Read + Seek> PackageReader<R> {
                 }
             }
         }
+        let pinned = match e.name.as_str() {
+            MANIFEST_PATH => Some(self.manifest_sha256),
+            STATEMENT_PATH => self.statement_sha256,
+            _ => None,
+        };
+        if pinned.is_some_and(|d| d != decoded.sha256) {
+            return Err(malformed("source_changed", format!("{} differs from the bytes read at open", e.name)));
+        }
         if decoded.crc != e.crc {
             return Err(malformed("crc", e.name));
         }
-        Ok(())
+        Ok(decoded.sha256)
     }
 
     /// The verified bytes of a member (a manifest member, `statement.json` or a
@@ -321,6 +420,10 @@ impl<R: Read + Seek> PackageReader<R> {
         let declared = self.entries.get(i).map_or(0, |e| e.usize);
         if declared > max_bytes {
             return Err(ReadError::limit("buffer_cap", format!("{path}: {declared} bytes, cap {max_bytes}")));
+        }
+        if path == MANIFEST_PATH {
+            // The bytes parsed at open, never a second read.
+            return Ok(Some(self.manifest_bytes.clone()));
         }
         let cap = usize::try_from(declared).map_err(|_| ReadError::limit("buffer_cap", path))?;
         let mut buf: Vec<u8> = Vec::with_capacity(cap);
@@ -488,7 +591,10 @@ fn read_end_records<R: Read + Seek>(src: &mut R, eocd_off: u64) -> Result<Direct
         return Err(malformed("zip64_record", "bad zip64 end record signature"));
     }
     let size = le64(&r, 4);
-    if size < 44 || rec_off.checked_add(12).and_then(|x| x.checked_add(size)) != Some(loc_off) {
+    if size != 44 {
+        return Err(malformed("zip64_record", "the zip64 end record has an extensible data sector"));
+    }
+    if rec_off.checked_add(56) != Some(loc_off) {
         return Err(malformed("zip64_record", "the zip64 end record does not end at the locator"));
     }
     if le32(&r, 16) != 0 || le32(&r, 20) != 0 {
@@ -595,6 +701,7 @@ fn read_central<R: Read + Seek>(
     src: &mut R,
     dir: &Directory,
     limits: &Limits,
+    manifest_cap: u64,
     budget: &mut Budget,
     entries: &mut Vec<Entry>,
 ) -> Result<(), ReadError> {
@@ -649,8 +756,11 @@ fn read_central<R: Read + Seek>(
             Err(other) => return Err(malformed("bad_path", other.to_string())),
         }
         names::check_name(&name).map_err(|why| malformed(why, format!("{name:?}")))?;
-        if name == MANIFEST_PATH && usize > limits.max_manifest_bytes {
-            return Err(ReadError::limit("manifest_size", format!("manifest.json declares {usize} bytes")));
+        if name == MANIFEST_PATH && usize > manifest_cap {
+            return Err(ReadError::limit(
+                "manifest_size",
+                format!("manifest.json declares {usize} bytes, cap {manifest_cap} for {} entries", dir.count),
+            ));
         }
         if method == METHOD_STORED && csize != usize {
             return Err(malformed("stored_size", format!("{name}: stored sizes differ")));
@@ -668,7 +778,8 @@ fn read_central<R: Read + Seek>(
 }
 
 /// Sorts the entries by name and refuses duplicates and names that collide on a
-/// case-insensitive file system (equal up to case, or one a folder of the other up to case).
+/// case-insensitive file system (equal after full Unicode case folding, or one a folder of
+/// the other after folding).
 fn check_names(entries: &mut [Entry]) -> Result<(), ReadError> {
     entries.sort_by(|a, b| a.name.cmp(&b.name));
     for pair in entries.windows(2) {
@@ -680,15 +791,16 @@ fn check_names(entries: &mut [Entry]) -> Result<(), ReadError> {
     }
     let mut folded: BTreeMap<String, &str> = BTreeMap::new();
     for e in entries.iter() {
-        if let Some(other) = folded.insert(e.name.to_lowercase(), &e.name) {
+        if let Some(other) = folded.insert(casefold(&e.name), &e.name) {
             return Err(malformed("case_collision", format!("{other:?} and {:?}", e.name)));
         }
     }
-    for key in folded.keys() {
-        for (i, _) in key.match_indices('/') {
-            if let Some(folder) = key.get(..i).and_then(|k| folded.get(k)) {
-                return Err(malformed("path_conflict", format!("{folder:?} is also a folder")));
-            }
+    // One range query per key: the first key at or after `<key>/` shows whether any key is
+    // below it.
+    for (key, name) in &folded {
+        let below = format!("{key}/");
+        if folded.range(below.clone()..).next().is_some_and(|(k, _)| k.starts_with(&below)) {
+            return Err(malformed("path_conflict", format!("{name:?} is also a folder")));
         }
     }
     Ok(())
@@ -825,7 +937,12 @@ fn decode_entry<R: Read + Seek>(
     Ok(Decoded { length: total, sha256: Digest::from_bytes(hasher.finalize().into()), crc })
 }
 
-fn load_manifest<R: Read + Seek>(src: &mut R, entries: &[Entry], limits: &Limits) -> Result<Manifest, ReadError> {
+fn load_manifest<R: Read + Seek>(
+    src: &mut R,
+    entries: &[Entry],
+    limits: &Limits,
+    max_values: u64,
+) -> Result<(Manifest, Vec<u8>), ReadError> {
     let i = entries
         .binary_search_by(|e| e.name.as_str().cmp(MANIFEST_PATH))
         .map_err(|_| malformed("no_manifest", "no manifest.json"))?;
@@ -847,10 +964,20 @@ fn load_manifest<R: Read + Seek>(src: &mut R, entries: &[Entry], limits: &Limits
     if decoded.crc != e.crc {
         return Err(malformed("crc", MANIFEST_PATH));
     }
-    Manifest::parse(&buf).map_err(|err| match err {
+    let max_elements = usize::try_from(max_values).unwrap_or(usize::MAX);
+    let root = fid_canon::parse_with_budget(&buf, fid_canon::MAX_INPUT_BYTES, MANIFEST_MAX_DEPTH, max_elements)
+        .map_err(|err| match err {
+            fid_canon::CanonError::InputLimit => ReadError::limit(
+                "manifest_budget",
+                format!("manifest.json is deeper than {MANIFEST_MAX_DEPTH} or has more than {max_values} elements"),
+            ),
+            other => malformed("manifest", format!("manifest: {other}")),
+        })?;
+    let manifest = Manifest::from_value(&root).map_err(|err| match err {
         PkgError::UnsupportedVersion(v) => ReadError::UnsupportedVersion(v),
         other => malformed("manifest", other.to_string()),
-    })
+    })?;
+    Ok((manifest, buf))
 }
 
 fn cross_check(entries: &[Entry], manifest: &Manifest) -> Result<(), ReadError> {
@@ -878,18 +1005,6 @@ fn cross_check(entries: &[Entry], manifest: &Manifest) -> Result<(), ReadError> 
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn index_costs_cover_the_real_sizes() {
-        let per_entry = std::mem::size_of::<Entry>()
-            + 2 * std::mem::size_of::<usize>()
-            + std::mem::size_of::<String>()
-            + std::mem::size_of::<&str>()
-            + 64;
-        assert!(ENTRY_FIXED_COST >= per_entry as u64, "{per_entry}");
-        // A name is stored once and lowercased once; lowercasing grows UTF-8 at most 3 times.
-        assert!(NAME_COST_FACTOR >= 4);
-    }
 
     #[test]
     fn budget_refuses_overdraft() {

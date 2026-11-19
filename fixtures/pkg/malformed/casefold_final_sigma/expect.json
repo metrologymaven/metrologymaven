@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"final sigma and sigma fold together (lowercasing keeps them apart)","reason":"case_collision"}

@@ -11,6 +11,13 @@
 //!   or an invisible formatting character (zero-width spaces and joiners, bidirectional
 //!   overrides and isolates, the byte-order mark, soft hyphen).
 //!
+//! - `windows_name`: a name no Windows file system can hold as written, so extraction there
+//!   would rename, merge or redirect it: a `:` anywhere (alternate data streams), a segment
+//!   ending in `.` or a space (silently stripped), or a segment whose stem (the part before
+//!   the first `.`, trailing spaces removed) is a device name in any letter case: `CON`, `PRN`,
+//!   `AUX`, `NUL`, `COM1`..`COM9`, `LPT1`..`LPT9`, `COM` or `LPT` with a superscript one, two
+//!   or three, `CONIN$` and `CONOUT$` (so `nul.json` and `Com1 .txt` are refused too).
+//!
 //! Case-colliding names are refused separately, over the whole entry set (`case_collision`,
 //! `path_conflict` in the parent module).
 
@@ -46,7 +53,28 @@ pub(crate) fn check_name(name: &str) -> Result<(), &'static str> {
             return Err("lookalike");
         }
     }
+    if name.contains(':') {
+        return Err("windows_name");
+    }
+    for seg in name.split('/') {
+        if seg.ends_with('.') || seg.ends_with(' ') || is_device(seg) {
+            return Err("windows_name");
+        }
+    }
     Ok(())
+}
+
+/// Whether a segment's stem is a Windows device name.
+fn is_device(seg: &str) -> bool {
+    let stem = seg.split('.').next().unwrap_or_default().trim_end_matches(' ');
+    let upper = stem.to_ascii_uppercase();
+    match upper.as_str() {
+        "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$" => true,
+        _ => {
+            let rest = upper.strip_prefix("COM").or_else(|| upper.strip_prefix("LPT"));
+            matches!(rest, Some("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "\u{b9}" | "\u{b2}" | "\u{b3}"))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -56,7 +84,18 @@ mod tests {
 
     #[test]
     fn accepted() {
-        for ok in ["results/records.json", "results/caf\u{e9} \u{fc}\u{df}er.json", "\u{65e5}\u{672c}/x", "a:b"] {
+        for ok in [
+            "results/records.json",
+            "results/caf\u{e9} \u{fc}\u{df}er.json",
+            "\u{65e5}\u{672c}/x",
+            "results/console.json",
+            "results/com10.json",
+            "results/lpt0",
+            "results/nul_x.json",
+            "results/a.b.c",
+            "results/.hidden",
+            "results/ a",
+        ] {
             assert_eq!(check_name(ok), Ok(()), "{ok:?}");
         }
     }
@@ -78,6 +117,22 @@ mod tests {
             ("a\u{202e}b", "lookalike"),
             ("a\u{200b}", "lookalike"),
             ("\u{feff}a", "lookalike"),
+            ("a:b", "windows_name"),
+            ("results/x.json:stream", "windows_name"),
+            ("results/x.", "windows_name"),
+            ("results/x ", "windows_name"),
+            ("results/dir./x", "windows_name"),
+            ("results/CON", "windows_name"),
+            ("results/con.json", "windows_name"),
+            ("results/Nul.tar.gz", "windows_name"),
+            ("results/aux", "windows_name"),
+            ("results/prn.txt", "windows_name"),
+            ("results/COM1", "windows_name"),
+            ("results/lpt9.json", "windows_name"),
+            ("results/com\u{b9}.json", "windows_name"),
+            ("results/Com1 .txt", "windows_name"),
+            ("results/conin$", "windows_name"),
+            ("nul/x.json", "windows_name"),
         ] {
             assert_eq!(check_name(name), Err(why), "{name:?}");
         }

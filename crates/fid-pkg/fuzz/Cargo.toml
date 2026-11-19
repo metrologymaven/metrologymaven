@@ -4,7 +4,7 @@
 #   mkdir -p corpus/reader
 #   cargo +nightly fuzz run reader corpus/reader ../../../fixtures/pkg/malformed \
 #     ../../../fixtures/pkg/reader/valid ../../../fixtures/pkg/golden \
-#     -- -max_total_time=600 -timeout=5 -rss_limit_mb=2048
+#     -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
 [package]
 name = "fid-pkg-fuzz"
 version = "0.0.0"

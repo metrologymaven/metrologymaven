@@ -15,6 +15,7 @@
 //! `name` and a `digest` object holding only `sha256`), `predicateType` [`PREDICATE_TYPE`]
 //! and `predicate` [`PackagePredicate`].
 
+use crate::casefold::casefold;
 use crate::error::PkgError;
 use crate::path::PkgPath;
 use crate::version::{check_compatible, SemVer};
@@ -162,7 +163,9 @@ pub fn check_media_type(s: &str) -> Result<(), PkgError> {
 /// no two member paths collide on a case-insensitive file system: paths that differ only by
 /// case, or a path that is a folder of another up to case, are [`PkgError::DuplicatePath`].
 ///
-/// Case folding is Unicode lowercasing (`str::to_lowercase`), applied to the whole path.
+/// Case folding is full Unicode case folding (CaseFolding.txt statuses C and F) from a pinned
+/// table, applied to the whole path, so final and medial sigma, long s and `s`, and sharp s
+/// and `ss` collide.
 pub fn check_members(members: &[Member]) -> Result<(), PkgError> {
     for pair in members.windows(2) {
         if let [a, b] = pair {
@@ -177,15 +180,16 @@ pub fn check_members(members: &[Member]) -> Result<(), PkgError> {
     let mut folded: BTreeMap<String, &str> = BTreeMap::new();
     for m in members {
         let p = m.path.as_str();
-        if let Some(earlier) = folded.insert(p.to_lowercase(), p) {
+        if let Some(earlier) = folded.insert(casefold(p), p) {
             return Err(PkgError::duplicate(earlier));
         }
     }
-    for f in folded.keys() {
-        for (i, _) in f.match_indices('/') {
-            if let Some(folder) = f.get(..i).and_then(|k| folded.get(k)) {
-                return Err(PkgError::duplicate(folder));
-            }
+    // One range query per key: the first key after `<key>/` shows whether `key` is a folder
+    // of another path.
+    for (f, p) in &folded {
+        let below = format!("{f}/");
+        if folded.range(below.clone()..).next().is_some_and(|(k, _)| k.starts_with(&below)) {
+            return Err(PkgError::duplicate(p));
         }
     }
     Ok(())
@@ -259,7 +263,13 @@ impl Manifest {
     /// does not know are ignored, so later minor versions stay readable.
     pub fn parse(bytes: &[u8]) -> Result<Manifest, PkgError> {
         let root = fid_canon::parse(bytes).map_err(|e| PkgError::schema(format!("manifest: {e}")))?;
-        let o = as_obj(&root, "manifest")?;
+        Manifest::from_value(&root)
+    }
+
+    /// [`Manifest::parse`] from an already parsed JSON value (a bounded reader parses with
+    /// its own budget first).
+    pub fn from_value(root: &CValue) -> Result<Manifest, PkgError> {
+        let o = as_obj(root, "manifest")?;
         let format = get_str(o, "format")?;
         if format != FORMAT_NAME {
             return Err(PkgError::schema(format!("format: expected {FORMAT_NAME:?}, got {format:?}")));
@@ -461,6 +471,10 @@ mod tests {
         assert_eq!(code(&["results/Dir", "results/dir/x"]), Err("pkg.duplicate_path"));
         assert_eq!(code(&["results/a", "results/a/b"]), Err("pkg.duplicate_path"));
         assert_eq!(code(&["results/a.json", "results/b.json", "results/c/d.json"]), Ok(()));
+        // Full folding, not lowercasing: final sigma, long s, sharp s.
+        assert_eq!(code(&["results/\u{3c2}", "results/\u{3c3}"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/s", "results/\u{17f}"]), Err("pkg.duplicate_path"));
+        assert_eq!(code(&["results/ss", "results/\u{df}"]), Err("pkg.duplicate_path"));
     }
 
     #[test]

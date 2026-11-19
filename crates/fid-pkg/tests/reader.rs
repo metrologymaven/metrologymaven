@@ -231,6 +231,88 @@ fn ac3_zip_bomb_stops_with_limit() {
     assert_eq!(e.reason(), "member_length");
 }
 
+// ------------------------------------------------------------------ one view of the signed files
+
+/// Serves package `a` until `switch` is set, then package `b` (same length): a source that
+/// changes under the reader.
+struct TwoFaced {
+    a: Vec<u8>,
+    b: Vec<u8>,
+    switch: std::rc::Rc<std::cell::Cell<bool>>,
+    pos: u64,
+}
+
+impl Read for TwoFaced {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let data = if self.switch.get() { &self.b } else { &self.a };
+        let rest = data.get(self.pos as usize..).unwrap_or_default();
+        let n = rest.len().min(buf.len());
+        buf[..n].copy_from_slice(&rest[..n]);
+        self.pos += n as u64;
+        Ok(n)
+    }
+}
+
+impl Seek for TwoFaced {
+    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
+        self.pos = match to {
+            SeekFrom::Start(p) => p,
+            SeekFrom::End(d) => (self.a.len() as u64).saturating_add_signed(d),
+            SeekFrom::Current(d) => self.pos.saturating_add_signed(d),
+        };
+        Ok(self.pos)
+    }
+}
+
+#[test]
+fn signed_files_are_served_as_read_at_open() {
+    let pkg = |result_count: u64, created_by: &str| {
+        let input = PackageInput {
+            created_by: created_by.into(),
+            evidence_tier: EvidenceTier::Results,
+            profile_digest: Digest::parse(&format!("sha256:{}", "a".repeat(64))).unwrap(),
+            kernel_manifest_digest: Digest::parse(&format!("sha256:{}", "b".repeat(64))).unwrap(),
+            result_count,
+            members: vec![MemberInput {
+                path: PkgPath::parse("results/records.json").unwrap(),
+                media_type: "application/json".into(),
+                body: b"[]".to_vec(),
+            }],
+        };
+        build_package(&input).unwrap()
+    };
+    // Same layout; the statements differ in one byte (result_count 2 vs 3) ...
+    let (a, b) = (pkg(2, "writer A"), pkg(3, "writer A"));
+    assert_eq!(a.container.len(), b.container.len());
+    let switch = std::rc::Rc::new(std::cell::Cell::new(false));
+    let src = TwoFaced { a: a.container.clone(), b: b.container.clone(), switch: switch.clone(), pos: 0 };
+    let mut r = PackageReader::open(src).unwrap();
+    assert_eq!(r.manifest_bytes(), &a.manifest_bytes[..]);
+    assert_eq!(r.statement_sha256(), Some(hash_bytes(&a.statement_bytes)));
+    switch.set(true);
+    let e = r.read_member("statement.json", 1 << 20).unwrap_err();
+    assert_eq!((e.code(), e.reason()), ("pkg.malformed", "source_changed"));
+    assert_eq!(r.verify_member("statement.json").unwrap_err().reason(), "source_changed");
+    // ... and manifests that differ in one byte (created_by "writer A" vs "writer B").
+    let (a, b) = (pkg(2, "writer A"), pkg(2, "writer B"));
+    assert_eq!(a.container.len(), b.container.len());
+    let switch = std::rc::Rc::new(std::cell::Cell::new(false));
+    let src = TwoFaced { a: a.container.clone(), b: b.container.clone(), switch: switch.clone(), pos: 0 };
+    let mut r = PackageReader::open(src).unwrap();
+    switch.set(true);
+    // The manifest is served from the bytes parsed at open, never re-read ...
+    assert_eq!(r.read_member("manifest.json", 1 << 20).unwrap().unwrap(), a.manifest_bytes);
+    // ... and re-verifying the container copy notices the change.
+    assert_eq!(r.verify_member("manifest.json").unwrap_err().reason(), "source_changed");
+}
+
+#[test]
+fn zip64_end_record_with_extensible_data_is_refused() {
+    let bytes = read("malformed/zip64_extensible_data/package.zip");
+    assert_eq!(strict(&bytes).unwrap_err().reason(), "zip64_record");
+    strict(&read("reader/valid/minimal.zip64.zip")).unwrap();
+}
+
 // ------------------------------------------------------------------ limits and failing sources
 
 /// A source of `len` zero bytes that never holds them.

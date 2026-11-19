@@ -246,6 +246,72 @@ def bomb_block(w, n_matches, final):
     w.huff(lit[256])
 
 
+def dynamic_block(w, lit_lengths, dist_lengths, body, final):
+    """A dynamic-Huffman block with the given code lengths; `body(w, lit, dist)` writes the
+    symbols. Code lengths are sent with zero runs as 17/18; the code-length code gives
+    length 4 to symbols 0..13, 17 and 18 (a complete code)."""
+    lit_lengths = list(lit_lengths) + [0] * (286 - len(lit_lengths))
+    seq = []
+    lengths = lit_lengths + list(dist_lengths)
+    i = 0
+    while i < len(lengths):
+        if lengths[i] == 0:
+            run = 1
+            while i + run < len(lengths) and lengths[i + run] == 0 and run < 138:
+                run += 1
+            if run >= 11:
+                seq.append((18, run - 11, 7))
+            elif run >= 3:
+                seq.append((17, run - 3, 3))
+            else:
+                seq.extend([(0, 0, 0)] * run)
+            i += run
+        else:
+            assert lengths[i] <= 13
+            seq.append((lengths[i], 0, 0))
+            i += 1
+    cl = {sym: 4 for sym in list(range(14)) + [17, 18]}
+    clc = canonical_codes([cl.get(x, 0) for x in range(19)])
+    w.bits(1 if final else 0, 1)
+    w.bits(2, 2)
+    w.bits(286 - 257, 5)
+    w.bits(len(dist_lengths) - 1, 5)
+    w.bits(19 - 4, 4)
+    for x in CL_ORDER:
+        w.bits(cl.get(x, 0), 3)
+    for sym, extra, nbits in seq:
+        w.huff(clc[sym])
+        if nbits:
+            w.bits(extra, nbits)
+    lit = canonical_codes(lit_lengths)
+    dist = canonical_codes(list(dist_lengths))
+    body(w, lit, dist)
+    w.huff(lit[256])
+
+
+def zeros_array_stream(n):
+    """Deflate for the JSON array `[0,0,...,0]` of 2 + 129 * n zeros (5 + 258 * n bytes):
+    literals `[0,0`, n copies of (length 258, distance 2), literal `]`. Each copy costs 3 bits,
+    so the ratio stays near 688:1, under the 1000:1 cap."""
+    lit_lengths = [0] * 286
+    for sym, length in ((285, 2), (0x30, 2), (0x2C, 3), (256, 3), (0x5B, 3), (0x5D, 3)):
+        lit_lengths[sym] = length
+
+    def body(w, lit, dist):
+        for ch in b"[0,0":
+            w.huff(lit[ch])
+        for _ in range(n):
+            w.huff(lit[285])
+            w.huff(dist[1])
+        w.huff(lit[0x5D])
+
+    w = BitWriter()
+    dynamic_block(w, lit_lengths, [1, 1], body, True)
+    comp = w.finish()
+    plain = b"[0" + b",0" * (1 + 129 * n) + b"]"
+    return checked(comp, plain), plain
+
+
 def stored_blocks(w, data, final):
     chunks = [data[i:i + 65535] for i in range(0, len(data), 65535)] or [b""]
     for k, chunk in enumerate(chunks):
@@ -288,7 +354,8 @@ def get(e, side, key):
     return e.get(side + "_" + key, e[key])
 
 
-def build(entries, zip64_end=False, comment=b"", prefix=b"", gap_after=None, eocd_patch=None, count=None):
+def build(entries, zip64_end=False, comment=b"", prefix=b"", gap_after=None, eocd_patch=None, count=None,
+          eocd64_data=b""):
     """Assembles a ZIP. `gap_after` = (index, bytes) hides bytes after that entry's data.
     `eocd_patch` maps EOCD field names to values; `count` overrides the entry count."""
     out = bytearray(prefix)
@@ -332,8 +399,8 @@ def build(entries, zip64_end=False, comment=b"", prefix=b"", gap_after=None, eoc
     p.update(eocd_patch or {})
     if zip64_end:
         rec = len(out)
-        out += struct.pack("<IQHHIIQQQQ", SIG_EOCD64, 44, 45, 45, 0, 0, p["n_disk"], p["n_total"], p["cd_size"],
-                           p["cd_offset"])
+        out += struct.pack("<IQHHIIQQQQ", SIG_EOCD64, 44 + len(eocd64_data), 45, 45, 0, 0, p["n_disk"],
+                           p["n_total"], p["cd_size"], p["cd_offset"]) + eocd64_data
         out += struct.pack("<IIQI", SIG_LOC64, p["loc_disk"], rec, p["loc_total"])
         out += struct.pack("<IHHHHIIH", SIG_EOCD, p["disk"], p["cd_disk"], U16, U16, U32, U32, len(comment))
     else:
@@ -749,6 +816,64 @@ def malformed_cases():
     comp = mf.stored_deflate(short)
     add("deflate_short", build(replace(base, rec, comp=comp, csize=len(comp))), "pkg.digest_mismatch", "length",
         "the stream inflates to 3 bytes fewer than declared", inventory(rows, statuses={rec: "digest_mismatch"}))
+
+    # ---------------------------------------------------------- Windows names
+    for case, name, note in [
+        ("windows_colon", "results/a:b.json", "a colon (an NTFS alternate data stream)"),
+        ("windows_stream", "results/records.json:evil", "a colon after a member name"),
+        ("windows_trailing_dot", "results/x.", "a segment ending in a dot"),
+        ("windows_trailing_space", "results/x ", "a segment ending in a space"),
+        ("windows_folder_trailing_dot", "results/dir./x.json", "a folder ending in a dot"),
+        ("windows_device_con", "results/CON", "the device name CON"),
+        ("windows_device_nul_ext", "results/nul.json", "the device name NUL with an extension"),
+        ("windows_device_com1_space", "results/Com1 .txt", "COM1 with a space before the extension"),
+        ("windows_device_lpt9", "results/lpt9", "the device name LPT9"),
+        ("windows_device_superscript", "results/COM¹.json", "COM with a superscript one"),
+        ("windows_device_aux_folder", "aux/x.json", "the device name AUX as a folder"),
+        ("windows_device_prn", "results/prn.tar.gz", "the device name PRN with two extensions"),
+    ]:
+        add(case, with_extra([entry(name, b"{}")])[0], "pkg.malformed", "windows_name", note)
+
+    # ---------------------------------------------------------- full case folding
+    add("casefold_final_sigma", with_extra([entry("results/σ.json", b"{}"), entry("results/ς.json", b"{}")])[0],
+        "pkg.malformed", "case_collision", "final sigma and sigma fold together (lowercasing keeps them apart)")
+    add("casefold_long_s", with_extra([entry("results/s.json", b"{}"), entry("results/ſ.json", b"{}")])[0],
+        "pkg.malformed", "case_collision", "long s folds to s")
+    add("casefold_sharp_s", with_extra([entry("results/ss.json", b"{}"), entry("results/ß.json", b"{}")])[0],
+        "pkg.malformed", "case_collision", "sharp s folds to ss")
+    add("casefold_folder", with_extra([entry("results/ſ", b"{}"), entry("results/s/x.json", b"{}")])[0],
+        "pkg.malformed", "path_conflict", "results/ſ folds to the folder results/s")
+
+    # ---------------------------------------------------------- manifest bombs
+    comp, plain = zeros_array_stream(260_111)
+    assert len(plain) > 64 * 1024 * 1024 - 300 and len(comp) < 120_000
+    es = [entry("manifest.json", plain, comp=comp)]
+    add("manifest_bomb_size", build(es), "pkg.limit", "manifest_size",
+        "a ~100 KB package whose manifest.json inflates to 64 MiB of [0,0,...]: above 64 KiB + 4608 bytes per entry")
+    dummies = [entry("results/e%03d" % i, b"") for i in range(300)]
+    comp, plain = zeros_array_stream(5400)
+    assert len(plain) <= 64 * 1024 + 4608 * 301
+    es = [entry("manifest.json", plain, comp=comp)] + dummies
+    add("manifest_bomb_values", build(es), "pkg.limit", "manifest_budget",
+        "301 entries allow a 1.4 MB manifest, but its 696,603 elements exceed 64 + 9 per entry")
+    dummies = [entry("r/%04d" % i, b"", method=0) for i in range(3500)]
+    comp, plain = zeros_array_stream(62_000)
+    assert len(plain) <= min(16 * 1024 * 1024, 64 * 1024 + 4608 * 3501)
+    es = [entry("manifest.json", plain, comp=comp)] + dummies
+    add("manifest_bomb_values_16m", build(es), "pkg.limit", "manifest_budget",
+        "3501 entries allow a 16 MB manifest of [0,0,...]; the element budget stops the parse early")
+    m = manifest_of(rows)
+    m["x"] = [0] * 10_000
+    es, _ = package_entries(manifest_bytes=canon_bytes(m))
+    add("manifest_extra_values", build(es), "pkg.limit", "manifest_budget",
+        "an unknown manifest key holding 10,000 numbers: above 64 + 9 per entry")
+    m = manifest_of(rows)
+    m["x"] = [[[[[[[[0]]]]]]]]
+    es, _ = package_entries(manifest_bytes=canon_bytes(m))
+    add("manifest_deep", build(es), "pkg.limit", "manifest_budget", "a manifest nested deeper than 8")
+    es64, _ = package_entries(zip64=True)
+    add("zip64_extensible_data", build(es64, zip64_end=True, eocd64_data=b"\x01\x00\x00\x00"), "pkg.malformed",
+        "zip64_record", "a zip64 end record with an extensible data sector")
     return cases
 
 

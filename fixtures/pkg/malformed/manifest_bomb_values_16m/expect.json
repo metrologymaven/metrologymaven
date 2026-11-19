@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"3501 entries allow a 16 MB manifest of [0,0,...]; the element budget stops the parse early","reason":"manifest_budget"}

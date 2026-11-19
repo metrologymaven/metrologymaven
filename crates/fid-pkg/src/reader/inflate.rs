@@ -383,7 +383,7 @@ mod tests {
         };
         let mut data = vec![0u8];
         data.extend_from_slice(&[0xff, 0xff, 0, 0]);
-        data.extend(std::iter::repeat(7u8).take(0xffff));
+        data.extend(std::iter::repeat_n(7u8, 0xffff));
         data.extend_from_slice(&[1, 0, 0, 0xff, 0xff]);
         let e = Inflater::new(&data[..]).run(&mut sink).unwrap_err();
         assert_eq!(e.reason(), "member_length");
