@@ -147,9 +147,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
         ("title", text("Show dependencies")),
         (
             "description",
-            text(
-                "Lists an element's dependencies and dependents, direct or transitive, each sorted by entity ID.",
-            ),
+            text("Lists an element's dependencies and dependents, direct or transitive, each sorted by entity ID."),
         ),
         ("params_schema", params_schema()),
         ("result_schema", result_schema()),
