@@ -1,0 +1,9 @@
+name: kernel
+# RUSTFLAGS: "-C target-cpu=native" is banned (comment line, ignored)
+env:
+  RUSTFLAGS: "-D warnings -C target-cpu=native"
+  CARGO_ENCODED_RUSTFLAGS: "-C\x1ftarget-feature=+relaxed-simd"
+jobs:
+  build:
+    steps:
+      - run: cargo build --profile release

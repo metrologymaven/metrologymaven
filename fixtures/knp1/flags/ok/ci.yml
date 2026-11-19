@@ -1,0 +1,3 @@
+env:
+  RUSTFLAGS: "-D warnings"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"

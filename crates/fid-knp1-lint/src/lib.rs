@@ -4,8 +4,10 @@
 //!
 //! - [`findings`] (alias [`find`]): rule catalogue, findings, report and waivers (`KRN.NUM.LINT.FIND`).
 //! - [`graph`]: kernel dependency closure, allowlist and licence check (`KRN.NUM.LINT.GRAPH`).
+//! - [`flags`]: kernel build-configuration and emitted-code FMA check (`KRN.NUM.LINT.FLAGS`).
 
 pub mod findings;
+pub mod flags;
 pub mod graph;
 
 /// Short alias of [`findings`] (the leaf `KRN.NUM.LINT.FIND`).

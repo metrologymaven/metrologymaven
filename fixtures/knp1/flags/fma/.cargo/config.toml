@@ -1,0 +1,8 @@
+# Seeded KNP1-FLAG-FMA (AC-2).
+target.x86_64-unknown-linux-gnu.rustflags = ["-C", "target-feature=+avx2,+fma"]
+
+[target.wasm32-unknown-unknown]
+rustflags = "-C target-feature=+simd128,+relaxed-simd"
+
+[host]
+rustflags = ["-Ctarget-feature=-fma,+fma4"]
