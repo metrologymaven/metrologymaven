@@ -3,6 +3,8 @@
 # Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
 # compare bytes, so no end-of-line conversion.
 fixtures/hal/idl/stamp/** -text
+# KRN.NUM.LINT.FLAGS hand-assembled wasm modules: binary, compared by make_fixtures.py --check.
+fixtures/knp1/flags/**/*.wasm binary
 # HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
 fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
@@ -84,8 +86,8 @@ fixtures/block/** -text
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
-# KRN.NUM.LINT.FLAGS hand-assembled wasm modules: binary, compared by make_fixtures.py --check.
-fixtures/knp1/flags/**/*.wasm binary
+# ECO.COMM.LADDER fixtures: a recorded NUL-separated git log and hand-written review exports, read byte for byte.
+tools/tests/fixtures/ladder/** -text
 # ECO.REPO.ALLOW fixtures: hand-labelled manifests and expected output written by make_fixtures.py.
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
