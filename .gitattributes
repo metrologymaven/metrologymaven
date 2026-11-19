@@ -104,3 +104,6 @@ fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
+# tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
+fixtures/geo/types/** -text
