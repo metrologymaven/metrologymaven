@@ -19,7 +19,8 @@ Stdlib only; shares no code with any Rust crate and never runs the Rust code.
    the references of ref_set_v1.json, multi_minima.json (GEO.NURBS.REF) and fuzz_set.json:
    foot and distance within 1e-12 m, the boundary flag equal, NonUnique exactly on tied
    queries, NonConvergence exactly where the foot is a cusp tip. The worst errors are printed.
-   Known defect of the REF fixture: sphere-q0121 (ref_set_v1) is not the global minimum
+   Known defect of the REF fixture (excluded from the REF comparison; a separate GEO.NURBS.REF
+   fix is coming): sphere-q0121 (ref_set_v1) is not the global minimum
    (the radial projection is 2.7e-6 m closer); it is checked against the closed form instead.
 3. digests-v1.txt: SHA-256 of the model's results per entity and per file (AC-5). Digest
    text, one line per query in file order, every f64 as 16 lowercase hex digits of its bit
@@ -57,7 +58,10 @@ SEED = 44
 # answer must still be the reference
 HARD_TAGS = {"centre", "axis", "curvature_centre", "symmetry", "decoy"}
 TOL = 1e-12
-HARD_FOOT_TOL = 1e-9  # flat minima near curvature centres: the distance is exact, the foot is not
+# Near a centre of curvature the REQ-002 stopping tolerance (tangential residual ~1e-12 d) is
+# amplified by 1 / |1 - kappa d| in the foot, not in the distance; the REF feet themselves are
+# accurate to ~1.6e-14 m. Measured worst 1.5e-12 m (ellipse-q0010).
+HARD_FOOT_TOL = 1e-11
 
 
 def hx(x):

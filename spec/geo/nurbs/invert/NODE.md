@@ -80,7 +80,7 @@ Finds the globally closest point on a single untrimmed NURBS curve or surface to
 
 ## Test fixtures
 
-- `ref_set_v1` and `multi_minima` from GEO.NURBS.REF (references from dense high-precision search). CC-BY-4.0. Known defect: `sphere-q0121` is a local, not the global, minimum (the radial projection is 2.7e-6 m closer); tests check the sphere against its closed form.
+- `ref_set_v1` and `multi_minima` from GEO.NURBS.REF (references from dense high-precision search). CC-BY-4.0. Known defect: `sphere-q0121` is a local, not the global, minimum (the radial projection is 2.7e-6 m closer); it is excluded from the REF comparison and the sphere is checked against its closed form until the GEO.NURBS.REF follow-up fixes the fixture.
 - `fixtures/geo/nurbs/invert/fuzz_set.json` (seed 44): curvature centres and axes, sphere poles, kinks and creases, unclamped and periodic knot vectors, degrees up to 25, near ties and random rational curves and surfaces, referenced by the GEO.NURBS.REF oracle and closed forms; `digests-v1.txt` from the bit-exact model `invert_model.py`; both written by `make_invert_fixtures.py`. CC-BY-4.0.
 
 ## Build prompt
@@ -89,7 +89,7 @@ Finds the globally closest point on a single untrimmed NURBS curve or surface to
 
 ## Open questions
 
-- None.
+- Known limit: extreme weight ratios (about 1e5) combined with clustered knots can exhaust the subdivision budget (`BUDGET = 1024`), as in the review case `hiw2` q2 of #271. The result is then reported `Unresolved { Budget }` with the best known point, never certified wrong. Whether to raise the budget or add a reparametrisation is open.
 
 ## Children
 

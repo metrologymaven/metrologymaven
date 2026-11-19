@@ -21,8 +21,12 @@ use fid_testkit::sha256_hex;
 const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/geo/nurbs/");
 /// AC-1: feet and distances within 1e-12 m.
 const TOL: f64 = 1e-12;
-/// Foot tolerance on the fuzz set's hard classes (flat minima near curvature centres), metres.
-const HARD_FOOT_TOL: f64 = 1e-9;
+/// Foot tolerance on the fuzz set's hard classes (queries near a centre of curvature), metres.
+/// The slack is not oracle error (the REF feet are accurate to about 1.6e-14 m): it is the
+/// REQ-002 stopping tolerance, a tangential residual of about 1e-12 d, amplified by
+/// 1 / |1 - kappa d| as the query approaches the centre of curvature. Measured worst: 1.5e-12 m
+/// (ellipse-q0010).
+const HARD_FOOT_TOL: f64 = 1e-11;
 const FILES: [&str; 3] = ["ref_set_v1.json", "multi_minima.json", "invert/fuzz_set.json"];
 
 // ---------------------------------------------------------------- minimal JSON reader
@@ -506,7 +510,7 @@ fn cusp_tip(run: &Run, q: &J) -> bool {
 
 /// AC-1 and REQ-001: all 5 000 ref_set_v1 queries (including those near several local minima)
 /// give the global closest point: foot and distance within 1e-12 m of the GEO.NURBS.REF
-/// reference, certified (REQ-002), with the tie flag exactly on tied queries. sphere-q0121 is a known defect of the
+/// reference, certified (REQ-002), with the tie flag exactly on tied queries. sphere-q0121 is excluded from the REF comparison (GEO.NURBS.REF follow-up fixes it) and is a known defect of the
 /// REF fixture (its reference is a local, not the global, minimum; the radial projection is
 /// 2.7e-6 m closer), so the sphere is checked against its closed form.
 #[test]
@@ -678,8 +682,8 @@ fn fuzz_set_against_oracle() {
                 continue;
             }
             worst = (worst.0.max(fe), worst.1.max(de));
-            // near a curvature centre the minimum is flat: the distance is exact to 1e-12 m but
-            // the foot only to HARD_FOOT_TOL
+            // near a centre of curvature the REQ-002 stopping tolerance is amplified by
+            // 1 / |1 - kappa d| in the foot (not in the distance): see HARD_FOOT_TOL
             let ftol = if hard { HARD_FOOT_TOL } else { TOL };
             if fe > ftol || de > TOL || r.tie() != tie || r.on_boundary != expect_on_boundary(run, q) {
                 bad.push(format!("{id}: foot {fe:e}, distance {de:e}, status {}", r.status));
