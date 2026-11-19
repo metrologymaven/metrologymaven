@@ -1,0 +1,21 @@
+[package]
+name = "fid-kunc"
+description = "Metrology Maven kernel uncertainty types: evidence classes UEC-0..3 and the validated uncertainty statement with its canonical JSON and digest (spec node UNC.UEC.STMT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies; only fid-types (layer num, `sha256:`
+# digests) and fid-kci (layer kernel, the shared RFC 8785 writer and the portable SHA-256).
+[dependencies]
+fid-types = { path = "../fid-types" }
+fid-kci = { path = "../fid-kci" }
+
+# Test-only: the KNP-1 counter-based generator for the seeded property cases (AC-6).
+[dev-dependencies]
+fid-num = { path = "../fid-num" }
+
+[lints]
+workspace = true
