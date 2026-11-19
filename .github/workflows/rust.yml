@@ -259,6 +259,7 @@ jobs:
           python fixtures/mig/ladder/def/make_fixtures.py --check
           python fixtures/man/make_manifest_fixtures.py --check
           python fixtures/man/check_manifest_schema.py
+          python fixtures/man/wasm/make_fixtures.py --check
           python fixtures/num/make_red_fixtures.py --check
           python fixtures/num/fmt/make_len_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
@@ -372,3 +373,33 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
       - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
+      - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
+        # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
+        # wasmtime). The reference module registers no algorithm until fid-kernel exists; a
+        # second build registers the stand-in test algorithms the fixtures call.
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=crates/fid-kernel-wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm --features test-algorithms --target-dir target/wasm-test
+          ref=target/wasm32-wasip1/release/fid-kernel-wasm.wasm
+          tst=target/wasm-test/wasm32-wasip1/release/fid-kernel-wasm.wasm
+          cargo build -q -p fid-wasm-check
+          chk=target/debug/fid-wasm-check
+          sha256sum "$ref" "$tst"
+          $chk runtime-digest $c/wasm-runtime.toml > "$RUNNER_TEMP/runtime-digest.txt"
+          cmp "$RUNNER_TEMP/runtime-digest.txt" fixtures/man/wasm/runtime-digest.txt
+          # AC-1: the built modules import only allowlisted functions ...
+          $chk imports "$ref" $c/wasm-imports.allow
+          $chk imports "$tst" $c/wasm-imports.allow
+          # ... and a module importing random_get fails, naming the import.
+          set +e; out=$($chk imports fixtures/man/wasm/modules/bad-random-get.wasm $c/wasm-imports.allow); code=$?; set -e
+          echo "$out"
+          test "$code" = 1 && grep -qx 'DENIED wasi_snapshot_preview1 random_get (func)' <<< "$out"
+          # AC-2 and AC-3: every call through the module under the pinned settings.
+          $chk golden $c/wasm-runtime.toml $c/wasm-imports.allow "$tst" fixtures/man/wasm/calls-v1.txt
+          # The reference module answers through the same runner (no algorithms registered yet).
+          call='{"algorithm":"test.echo.identity@1.0.0","inputs":[],"params":""}'
+          set +e; out=$(printf '%s' "$call" | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow "$ref"); code=$?; set -e
+          test "$code" = 1 && test "$out" = '{"error":"unknown_algorithm"}'

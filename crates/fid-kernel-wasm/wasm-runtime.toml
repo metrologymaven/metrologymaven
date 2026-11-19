@@ -1,0 +1,7 @@
+max_memory_size = 1073741824
+max_wasm_stack = 1048576
+nan_canonicalization = true
+relaxed_simd = false
+schema = "1"
+threads = false
+wasmtime_version = "49.0.6"
