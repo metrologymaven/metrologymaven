@@ -27,6 +27,7 @@ use fid_journal::{EntryError, Field, Salt, SaltSource};
 use fid_registry::{check_migrators, retained, LifecycleDecl, MigratorRecord};
 use fid_types::{CommandId, Digest};
 use std::cell::{Cell, RefCell};
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -538,21 +539,18 @@ impl<'a> ObservationSource<'a> {
             self.poisoned.set(true);
             return Err(SubstError::ObservationMismatch { seq, detail: "step state is busy".into() });
         };
-        if states.contains_key(&seq) {
-            states.insert(seq, StepState::Abandoned);
-            self.poisoned.set(true);
-            let detail = "step opened a second time; its recorded inputs are served once".to_string();
-            return Err(SubstError::ObservationMismatch { seq, detail });
+        match states.entry(seq) {
+            Entry::Occupied(mut o) => {
+                o.insert(StepState::Abandoned);
+                self.poisoned.set(true);
+                let detail = "step opened a second time; its recorded inputs are served once".to_string();
+                return Err(SubstError::ObservationMismatch { seq, detail });
+            }
+            Entry::Vacant(v) => {
+                v.insert(StepState::Open);
+            }
         }
-        states.insert(seq, StepState::Open);
-        Ok(StepObservations {
-            source: self,
-            step,
-            next: 0,
-            salts_served: BTreeSet::new(),
-            fault: None,
-            done: false,
-        })
+        Ok(StepObservations { source: self, step, next: 0, salts_served: BTreeSet::new(), fault: None, done: false })
     }
 
     /// Records a step's new state. An abandoned or failed step never becomes clean again.

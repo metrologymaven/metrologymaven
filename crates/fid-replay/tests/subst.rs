@@ -404,15 +404,18 @@ fn mismatch_on_kind_exhaustion_unconsumed_and_unrecorded_salt() {
     // After a fault every later request fails with the same fault.
     assert_eq!(s.observe(&ObservationKind::Clock).unwrap_err(), e);
 
+    let source = ObservationSource::new(&c.span, &c.blobs);
     let mut s = source.step(1).unwrap();
     s.observe(&ObservationKind::Clock).unwrap();
     assert_eq!(s.finish().unwrap_err().code(), "observation_mismatch");
 
+    let source = ObservationSource::new(&c.span, &c.blobs);
     let mut s = source.step(1).unwrap();
     s.observe(&ObservationKind::Clock).unwrap();
     s.observe(&ObservationKind::Salt).unwrap();
     assert_eq!(s.commitment_salt(Field::Reason).unwrap_err().code(), "observation_mismatch");
 
+    let source = ObservationSource::new(&c.span, &c.blobs);
     let mut s = source.step(1).unwrap();
     s.observe(&ObservationKind::Clock).unwrap();
     s.observe(&ObservationKind::Salt).unwrap();
@@ -449,6 +452,7 @@ fn detached_payload_is_not_replayable() {
         SubstError::MissingItem(MissingItem { kind: MissingKind::Payload, id: d("entry").to_string(), steps: vec![5] })
     );
     assert_eq!(e.outcome(), Some(ReplayOutcome::NotReplayable));
+    let source = ObservationSource::new(&span, &blobs);
     let mut s = source.step(5).unwrap();
     assert_eq!(s.commitment_salt(Field::Args).unwrap_err().code(), "missing_item");
 }
