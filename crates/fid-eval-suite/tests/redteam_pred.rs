@@ -45,8 +45,11 @@ fn st(v: &CValue) -> &str {
     }
 }
 
-/// (suite dir relative to FIX, expected ok, expected (code, file, field) errors).
-fn expected() -> Vec<(String, bool, Vec<(String, String, String)>)> {
+/// One labelled error: (code, file, field).
+type Labelled = (String, String, String);
+
+/// (suite dir relative to FIX, expected ok, expected errors).
+fn expected() -> Vec<(String, bool, Vec<Labelled>)> {
     let v = load_json(&root(&format!("{FIX}/expected.json")));
     arr(&obj(&v)["suites"])
         .iter()
@@ -81,7 +84,7 @@ fn suites_get_their_labelled_verdicts() {
         match (ok, got) {
             (true, Ok(_)) => assert!(want.is_empty()),
             (false, Err(errs)) => {
-                let mut got: Vec<(String, String, String)> =
+                let mut got: Vec<Labelled> =
                     errs.iter().map(|e| (e.code.as_str().to_string(), e.file.clone(), e.field.clone())).collect();
                 got.sort();
                 assert_eq!(got, want, "{dir}: {errs:?}");
