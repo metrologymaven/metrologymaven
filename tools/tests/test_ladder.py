@@ -118,7 +118,9 @@ class TestAcceptance(LadderCase):
         rep = report(now=AFTER_70_DAYS)
         self.assertEqual(names(rep), {"GDT": ["alice"], "ALN": ["bob"], "KRN": ["carol"]})
         carol = rep["eligible"]["KRN"][0]
-        self.assertEqual(carol["expansions"], 6)
+        # 6 expansion commits; the reverted KRN.SOLVE split never counts (maintainer decision)
+        self.assertEqual(carol["expansions"], 5)
+        self.assertNotIn("KRN.SOLVE", [c["node"] for c in carol["commits"]])
         # carol's review of PR 208 (2026-12-05) is after the first --now but before this one
         self.assertEqual(carol["reviews"], [{"pr": 208, "at": "2026-12-05T10:00:00Z"}])
 
@@ -259,6 +261,42 @@ class TestHistory(LadderCase):
         rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
         self.assertEqual((rep["eligible"], rep["warnings"]), ({}, []))
 
+    def test_reverted_splits_never_count(self):
+        # all 5 of ann's splits reverted long ago: outside any window, but no longer merged work
+        reverts = "".join(self.line(f"{0xb0 + i:040x}", email="2+ben@users.noreply.github.com",
+                                    when="2026-10-02T00:00:00Z",
+                                    subject=f'Revert "spec(KRN.N{i}): split into 2 children"') for i in range(5))
+        for now in (NOW, "2030-01-01T00:00:00Z"):
+            with self.subTest(now):
+                log = "".join(self.line(f"{i:040x}", email="1+ann@users.noreply.github.com",
+                                        subject=f"spec(KRN.N{i}): split into 2 children") for i in range(5))
+                rep = report(log=self.write("log.txt", log + reverts), reviews=self.write("r.json", "[]"), now=now)
+                self.assertEqual((rep["eligible"], rep["warnings"]), ({}, []))
+        # one revert outside the window: 4 expansions remain, below the threshold of 5
+        rep = self.five_splits_and(self.revert('Revert "spec(KRN.N0): split into 2 children"'))
+        self.assertEqual(report(log=str(self.tmp / "log.txt"), reviews=str(self.tmp / "r.json"),
+                                now="2030-01-01T00:00:00Z")["eligible"], {})
+        cfg = self.config(min_expansions=4)
+        rep = report(log=str(self.tmp / "log.txt"), reviews=str(self.tmp / "r.json"),
+                     now="2030-01-01T00:00:00Z", config=cfg)
+        self.assertEqual(rep["eligible"]["KRN"][0]["expansions"], 4)
+
+    def test_identity_warnings(self):
+        log = "".join(self.line(f"{i:040x}", email=e, subject=f"spec(GDT.N{i}): leaf")
+                      for i, e in enumerate(["1+bob@users.noreply.github.com", "2+bob@users.noreply.github.com",
+                                             "bob@users.noreply.github.com", "local-only", "local-only"]))
+        rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
+        self.assertEqual(rep["warnings"], [
+            "author email 'local-only' has no '@' (2 commit(s)); used as written",
+            "noreply emails with different numeric IDs (1, 2, none) all map to login bob; "
+            "check they are one person or add aliases",
+        ])
+        # an alias for the address silences the warning for that address
+        cfg = self.config(aliases={"2+bob@users.noreply.github.com": "bob",
+                                   "bob@users.noreply.github.com": "bob"})
+        self.assertEqual(len(report(log=str(self.tmp / "log.txt"), reviews=str(self.tmp / "r.json"),
+                                    config=cfg)["warnings"]), 1)
+
     def test_revert_falls_back_to_node_id(self):
         rep = self.five_splits_and(self.revert('Revert "spec(KRN.N2): split into 3 children, reworded"'))
         self.assertEqual(rep["eligible"], {})
@@ -398,6 +436,29 @@ class TestSafety(LadderCase):
             code = ladder.main(["--log", LOG, "--reviews", REVIEWS, "--now", NOW], out=Closed())
         self.assertEqual(code, 1)
         self.assertTrue(err.getvalue().startswith("LADDER-OUTPUT: "), err.getvalue())
+
+    def test_missing_or_closed_stdout(self):
+        class Closed:
+            class buffer:
+                @staticmethod
+                def write(data):
+                    raise ValueError("I/O operation on closed file")
+        for fake in (None, Closed()):
+            with self.subTest(fake=fake):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), mock.patch.object(sys, "stdout", fake):
+                    code = ladder.main(["--log", LOG, "--reviews", REVIEWS, "--now", NOW])
+                self.assertEqual(code, 1)
+                self.assertTrue(err.getvalue().startswith("LADDER-OUTPUT: "), err.getvalue())
+
+    @unittest.skipUnless(os.name == "posix", "needs a POSIX shell to close stdout")
+    def test_cli_with_stdout_closed(self):
+        tool = str(ROOT / "tools" / "ladder.py")
+        cmd = " ".join(f"'{a}'" for a in [sys.executable, tool, "--log", LOG, "--reviews", REVIEWS, "--now", NOW])
+        p = subprocess.run(["sh", "-c", cmd + " >&-"], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertTrue(p.stderr.startswith("LADDER-OUTPUT: "), p.stderr)
+        self.assertNotIn("Traceback", p.stderr)
 
     def test_runs_offline_without_subprocess(self):
         def refuse(*a, **k):

@@ -60,7 +60,7 @@ REVERT_RE = re.compile(r'^Revert "spec\(([A-Z0-9.]+)\): split')
 PR_SUFFIX_RE = re.compile(r" \(#[0-9]+\)$")  # what a squash merge appends to a subject
 EXPLICIT_ZONE_RE = re.compile(r"T.*(?:[Zz]|[+-][0-9]{2}:?[0-9]{2})$")
 SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
-NOREPLY_RE = re.compile(r"^(?:[0-9]+\+)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)@users\.noreply\.github\.com$")
+NOREPLY_RE = re.compile(r"^(?:([0-9]+)\+)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)@users\.noreply\.github\.com$")
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 CONFIG_KEYS = {"min_expansions", "alt_min_expansions", "alt_min_reviews", "revert_window_days",
@@ -188,7 +188,7 @@ def person_for_email(email: str, aliases: dict) -> str:
         return aliases[e]
     m = NOREPLY_RE.match(e)
     if m:
-        return aliases.get(m.group(1), m.group(1))
+        return aliases.get(m.group(2), m.group(2))
     return e
 
 
@@ -223,6 +223,7 @@ def parse_log(text: str, aliases: dict) -> list:
         commits.append({
             "sha": sha,
             "person": person_for_email(email, aliases),
+            "email": email.strip().casefold(),
             "at": parse_time(when, f"log line {n} commit date", "LADDER-GIT"),
             "subject": subject,
         })
@@ -285,6 +286,22 @@ def build_report(commits: list, reviews: list, cfg: dict, now: datetime) -> dict
     except OverflowError:
         raise LadderError("LADDER-INPUT", f"--now {fmt_time(now)} minus the revert window is before year 1") from None
     warnings = []
+    ids_by_login: dict = {}  # noreply login -> numeric IDs seen
+    no_at: dict = {}  # author email without "@" -> commit count
+    for c in commits:
+        if c["at"] > now or c["email"] in cfg["aliases"]:
+            continue
+        m = NOREPLY_RE.match(c["email"])
+        if m:
+            ids_by_login.setdefault(m.group(2), set()).add(m.group(1) or "none")
+        elif "@" not in c["email"]:
+            no_at[c["email"]] = no_at.get(c["email"], 0) + 1
+    for login, ids in sorted(ids_by_login.items()):
+        if len(ids) > 1:
+            warnings.append(f"noreply emails with different numeric IDs ({', '.join(sorted(ids))}) all map "
+                            f"to login {login}; check they are one person or add aliases")
+    for email, n in sorted(no_at.items()):
+        warnings.append(f"author email {email!r} has no '@' ({n} commit(s)); used as written")
     expansions: dict = {}  # (domain, person) -> list of commit refs
     splits_by_subject: dict = {}  # subject without a squash-merge " (#N)" -> [(at, sha, domain, person)]
     splits_by_node: dict = {}  # node ID -> [(at, sha, domain, person)]
@@ -309,10 +326,12 @@ def build_report(commits: list, reviews: list, cfg: dict, now: datetime) -> dict
             others_by_node.setdefault(node, []).append((c["at"], c["sha"]))
 
     # A revert is matched to the split it reverts by subject (ignoring a squash merge's " (#N)" on
-    # either side), else by node ID. One that still matches nothing fails closed: no expansion of
-    # that node counts for anyone, and the report says so.
+    # either side), else by node ID. A matched split never counts as an expansion (reverted work is
+    # no longer merged), and a revert inside the window also blocks the split's author. One that
+    # still matches nothing fails closed: no expansion of that node counts for anyone, and the
+    # report says so.
     blocked: dict = {}  # (domain, person) -> list of revert refs inside the window
-    uncounted: set = set()  # commit hashes of expansions withdrawn by an unattributed revert
+    uncounted: set = set()  # commit hashes of reverted splits and of expansions withdrawn
     for c in past:
         m = REVERT_RE.match(c["subject"])
         if not m:
@@ -332,6 +351,7 @@ def build_report(commits: list, reviews: list, cfg: dict, now: datetime) -> dict
                             f"and {len(withdrawn)} other expansion(s) of {node} are not counted")
             continue
         _, split_sha, domain, person = earlier[-1]
+        uncounted.add(split_sha)  # reverted work is no longer merged, whatever the window
         if c["at"] >= window_start:
             blocked.setdefault((domain, person), []).append(
                 {"revert": c["sha"], "split": split_sha, "at": fmt_time(c["at"])})
@@ -457,14 +477,18 @@ def main(argv=None, out=None) -> int:
     except LadderError as e:
         sys.stderr.write(f"{e.code}: {e.message}\n")
         return 1
-    stream = out if out is not None else sys.stdout.buffer
+    stream = out if out is not None else getattr(sys.stdout, "buffer", None)
+    if stream is None:  # stdout closed (`>&-`) or replaced by an object without a byte buffer
+        sys.stderr.write("LADDER-OUTPUT: cannot write the report: standard output is closed\n")
+        return 1
     try:
         stream.write(text.encode("utf-8"))
         stream.flush()
-    except OSError as e:  # BrokenPipeError included: a closed pipe is an error, not a traceback
+    except (OSError, ValueError) as e:  # BrokenPipeError, or a closed file: an error, not a traceback
         if out is None:
             _silence_stdout()
-        sys.stderr.write(f"LADDER-OUTPUT: cannot write the report: {e.strerror or e}\n")
+        reason = getattr(e, "strerror", None) or e
+        sys.stderr.write(f"LADDER-OUTPUT: cannot write the report: {reason}\n")
         return 1
     return 0
 
@@ -475,7 +499,7 @@ def _silence_stdout() -> None:
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
         os.close(devnull)
-    except (OSError, ValueError):
+    except (OSError, ValueError, AttributeError):
         pass
 
 

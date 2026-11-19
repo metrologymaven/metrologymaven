@@ -12,8 +12,9 @@ the comments below, not by running the tool.
 All names are fictional. Hand labels, with --now 2026-12-01T00:00:00Z and the default config:
   alice: 5 GDT expansions                                  -> eligible in GDT
   bob:   3 ALN expansions (+5 substantive ALN reviews)     -> eligible in ALN; 1 GDT expansion only
-  carol: 6 KRN expansions; her KRN.SOLVE split reverted
-         by dave on 2026-11-21 (10 days before --now)      -> not eligible (eligible at 2027-01-30)
+  carol: 6 KRN expansion commits; her KRN.SOLVE split reverted
+         by dave on 2026-11-21 (10 days before --now), so
+         it never counts and 5 remain                     -> not eligible (eligible at 2027-01-30)
   erin:  3 IO expansions as erin@example.net and 2 as the noreply login erin-dev
                                                            -> eligible in IO only when aliased
   dave:  noise (merge, lower-case ID, malformed ID, a revert of a split not in the log)
