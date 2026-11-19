@@ -437,7 +437,7 @@ pub fn to_si(text: &str, unit: Unit) -> Result<f64, UnitsError> {
         return Ok(signed_zero(d.neg));
     }
     // Here k is in [-385, 330]: N = c * 10^max(k,0) * num < 2^133 * 2^1097 * 2^256 = 2^1486 and
-    // D = 10^max(-k,0) * den < 2^1279 * 2^20.
+    // D = 10^max(-k,0) * den < 2^1279 * 2^30 = 2^1309 (den is at most 10^9 < 2^30, for nm).
     let f = factor(unit);
     let mut n = d.coeff;
     let mut den = f.den;
@@ -453,7 +453,7 @@ pub fn to_si(text: &str, unit: Unit) -> Result<f64, UnitsError> {
 ///
 /// Capacity: with `e = floor(log2 v)` and the unit in the last place `2^u`, `u = max(e - 52,
 /// -1074)`, the scaled operands satisfy `n' / d' < 2^53`. When `n` is shifted, `n' < 2^54 *
-/// d < 2^1353`; when `d` is shifted, `d' <= n / 2^52 < 2^1434`; the remainder is below `d'`.
+/// d < 2^1363`; when `d` is shifted, `d' <= n / 2^52 < 2^1434`; the remainder is below `d'`.
 fn round_rational(neg: bool, n: &Big, d: &Big, b: i64) -> Result<f64, UnitsError> {
     if n.overflowed() || d.overflowed() || d.is_zero() {
         return Err(UnitsError::Capacity);
@@ -530,8 +530,10 @@ pub fn format(si: f64, unit: Unit, digits: u8) -> Result<String, UnitsError> {
     let (m, e2) = if bexp == 0 { (frac, -1074) } else { (frac | (1u64 << 52), bexp - 1075) };
     let f = factor(unit);
     // display = m * 2^e2 * den / (num * 2^b) = m * den * 2^beta / num, beta = e2 - b in
-    // [-1074, 1225]. Capacity: N = m * den * 10^digits * 2^max(beta,0) < 2^(53 + 20 + 67 +
-    // 1225) = 2^1365 and D = num * 2^max(-beta,0) < 2^(256 + 1074) = 2^1330.
+    // [-1074, 1225]. Capacity: N = m * den * 10^digits * 2^max(beta,0). Lengths have b = 0
+    // (beta <= 971) and den <= 10^9 < 2^30 (nm): N < 2^(53 + 30 + 67 + 971) = 2^1121. Angles
+    // have b = -254 (beta <= 1225) and den <= 648000 < 2^20: N < 2^(53 + 20 + 67 + 1225) =
+    // 2^1365. D = num * 2^max(-beta,0) < 2^(256 + 1074) = 2^1330.
     let beta = e2 - f.b;
     let mut n = Big::from_u64(m).mul(&f.den);
     n.mul_pow10(u32::from(digits));

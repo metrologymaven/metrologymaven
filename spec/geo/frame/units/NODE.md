@@ -75,6 +75,8 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
   - One rounding to nearest, ties to even, subnormals included. The sign of the result, zero included, is the sign written (`-0` and `-1e-400` give −0.0).
   - Display: `q = round_half_even(|x| / factor · 10^n)` on the exact binary value `x`, printed with exactly `n` digits after the point (none when `n = 0`), `-` only when `x` is negative and `q ≠ 0`; `n` ≤ 20 (`fid-num` `MAX_DECIMALS`), else `DigitsOutOfRange`; non-finite `x` is `NonFinite`. `format` therefore returns `Result<String, UnitsError>`.
   - Conversion record: RFC 8785 canonical JSON `{"si_hex":"<16 lowercase hex digits>","text":"<as written>","unit":"<symbol>"}`.
+  - `format(si, unit, digits)` does not know whether `si` is a length or an angle: it applies the factor of whichever unit it is given. Callers must match the kind themselves; `GEO.FRAME.CMD`'s `format_in` shall refuse a length value with an angle unit and vice versa.
+  - Still `[unverified]`: that 256 bits of π suffice for every 40-digit input (only the fixture's cases are checked against the true π interval), and the 1 µs per conversion budget (not measured).
   - Errors add `DigitsOutOfRange` (format) and `Capacity` (internal big integer exhausted; unreachable within the limits, reported rather than computed wrongly).
 
 ## Test fixtures
