@@ -129,7 +129,30 @@ def pretty(obj):
     return (json.dumps(obj, indent=2, ensure_ascii=True) + "\n").encode("ascii")
 
 
+def check_jcs_subset(obj):
+    """The stdlib form below equals RFC 8785 only for ASCII strings (key order by code point
+    equals UTF-16 order, no escapes beyond JSON's own) and integers (no float formatting).
+    Fail loudly if a later edit leaves that subset."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            check_jcs_subset(k)
+            check_jcs_subset(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            check_jcs_subset(v)
+    elif isinstance(obj, str):
+        # Printable ASCII without quote or backslash: no escaping differences are possible.
+        assert all(0x20 <= ord(c) < 0x7F and c not in "\"\\" for c in obj), repr(obj)
+    elif isinstance(obj, bool) or obj is None:
+        pass
+    elif isinstance(obj, int):
+        assert -(2**53) < obj < 2**53, obj
+    else:
+        raise AssertionError(f"outside the JCS subset: {obj!r}")
+
+
 def jcs(obj):
+    check_jcs_subset(obj)
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
 

@@ -77,7 +77,7 @@ The migration ladder as data: one versioned file (`mig-ladder@1`) that names the
 
 ## Open questions
 
-- None.
+- Should the ladder check warn (not fail) on a prerequisite that no stage lists as input, output or command? REQ-002 fails only forward references, so such a prerequisite (an external input, or a typo) passes silently today. Maintainer decision on PR #175: keep it passing for now and record the question here.
 
 ## Children
 

@@ -392,6 +392,23 @@ fn semver_parse() {
 /// The production ladder (`data/mig/ladder.json`) loads, passes with an empty manifest (every
 /// command is still planned), and every command is listed in its owning spec node's
 /// `journal:` frontmatter, so command IDs and owners are verified against the spec tree.
+/// Whether a `journal: [a, b, c]` frontmatter line lists `id` as a whole item.
+fn journal_lists(line: &str, id: &str) -> bool {
+    let Some(rest) = line.strip_prefix("journal:") else { return false };
+    let inner = rest.trim().trim_start_matches('[').trim_end_matches(']');
+    inner.split(',').any(|item| item.trim() == id)
+}
+
+#[test]
+fn journal_lists_matches_whole_items_only() {
+    let line = "journal: [migrate.fill_form@10, y.migrate.fill_form@1, migrate.fill_form@1x]";
+    assert!(!journal_lists(line, "migrate.fill_form@1"));
+    assert!(journal_lists("journal: [a.b@2, migrate.fill_form@1]", "migrate.fill_form@1"));
+    assert!(journal_lists("journal: [migrate.fill_form@1]", "migrate.fill_form@1"));
+    assert!(!journal_lists("journal: []", "migrate.fill_form@1"));
+    assert!(!journal_lists("cli: [migrate.fill_form@1]", "migrate.fill_form@1"));
+}
+
 #[test]
 fn production_ladder_matches_spec_tree() {
     let bytes = std::fs::read(root().join("data/mig/ladder.json")).unwrap();
@@ -409,7 +426,7 @@ fn production_ladder_matches_spec_tree() {
             let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
             let journal = text.lines().find(|l| l.starts_with("journal:")).unwrap_or_default();
             assert!(
-                journal.contains(c.command_id.as_str()),
+                journal_lists(journal, c.command_id.as_str()),
                 "{} is not in the journal list of {} ({journal})",
                 c.command_id.as_str(),
                 c.spec_node
