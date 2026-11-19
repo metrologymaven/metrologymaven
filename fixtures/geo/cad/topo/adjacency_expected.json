@@ -664,6 +664,78 @@
      "3d794bb4-51a3-52ba-9e43-eebc71f06f1d"
     ]
    }
+  },
+  "lens_sphere": {
+   "faces_of_body": [
+    "#lune_a",
+    "#lune_b"
+   ],
+   "faces_of_edge": {
+    "#m_east": [
+     "#lune_a",
+     "#lune_b"
+    ],
+    "#m_west": [
+     "#lune_a",
+     "#lune_b"
+    ]
+   },
+   "coedges_of_edge": {
+    "#m_east": [
+     "a0e72317-8881-5b10-8af4-25e5fa62aece",
+     "ec8636b1-3ef7-5d82-a26b-eec418a10a8e"
+    ],
+    "#m_west": [
+     "4baf777b-211c-5823-a4d5-1a9d684230ad",
+     "7821538c-6d2f-5a9f-aa63-ccc114800917"
+    ]
+   },
+   "edges_of_face": {
+    "#lune_a": [
+     "#m_east",
+     "#m_west"
+    ],
+    "#lune_b": [
+     "#m_east",
+     "#m_west"
+    ]
+   },
+   "loops_of_face": {
+    "#lune_a": [
+     "a099eda7-112a-5760-8595-fe84164afbf3"
+    ],
+    "#lune_b": [
+     "8a2fe043-846b-5d27-8fec-6003fb7ae5f6"
+    ]
+   },
+   "face_neighbours": {
+    "#lune_a": [
+     "#lune_b"
+    ],
+    "#lune_b": [
+     "#lune_a"
+    ]
+   },
+   "faces_of_vertex": {
+    "#north": [
+     "#lune_a",
+     "#lune_b"
+    ],
+    "#south": [
+     "#lune_a",
+     "#lune_b"
+    ]
+   },
+   "edges_of_vertex": {
+    "#north": [
+     "#m_east",
+     "#m_west"
+    ],
+    "#south": [
+     "#m_east",
+     "#m_west"
+    ]
+   }
   }
  }
 }

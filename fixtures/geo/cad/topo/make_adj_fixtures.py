@@ -47,7 +47,7 @@ QUERIES = (
     "faces_of_vertex",
     "edges_of_vertex",
 )
-VALID = ("cube_unlabelled", "cylinder_capped", "sphere_hemispheres", "cylinder_seam", "bowtie_vertex")
+VALID = ("cube_unlabelled", "cylinder_capped", "sphere_hemispheres", "cylinder_seam", "bowtie_vertex", "lens_sphere")
 
 
 # ------------------------------------------------------------------ hand-written scripts
@@ -94,6 +94,37 @@ def cylinder_seam():
             }
         ],
         "shells": [{"faces": [0], "closed": False}],
+    }
+
+
+def lens_sphere():
+    """Unit sphere as two half-sphere lunes split by two meridians (x > 0 and x < 0 halves of
+    the y = 0 great circle) running south pole to north pole: the two faces share both
+    meridian edges, so each is the other's neighbour twice over, and both poles touch both."""
+    surf = {"type": "sphere", "origin": [0.0, 0.0, 0.0], "axis": [0.0, 0.0, 1.0], "ref_dir": [1.0, 0.0, 0.0], "radius": 1.0}
+
+    def meridian(ref):
+        return {"type": "circle", "origin": [0.0, 0.0, 0.0], "axis": [0.0, 1.0, 0.0], "ref_dir": ref, "radius": 1.0}
+
+    return {
+        "body_id": "1e051e051e051e051e051e051e051e05",
+        "vertices": [{"point": [0.0, 0.0, -1.0], "label": "#south"}, {"point": [0.0, 0.0, 1.0], "label": "#north"}],
+        "edges": [
+            {"start": 0, "end": 1, "range": [0.0, math.pi], "curve": meridian([0.0, 0.0, -1.0]), "label": "#m_east"},
+            {"start": 0, "end": 1, "range": [0.0, math.pi], "curve": meridian([0.0, 0.0, -1.0]), "label": "#m_west"},
+        ],
+        "coedges": [
+            {"edge": 0, "sense": "same", "pcurve": None},
+            {"edge": 1, "sense": "reversed", "pcurve": None},
+            {"edge": 1, "sense": "same", "pcurve": None},
+            {"edge": 0, "sense": "reversed", "pcurve": None},
+        ],
+        "loops": [{"coedges": [0, 1], "outer": True}, {"coedges": [2, 3], "outer": True}],
+        "faces": [
+            {"surface": surf, "sense": "same", "loops": [0], "label": "#lune_a"},
+            {"surface": dict(surf), "sense": "same", "loops": [1], "label": "#lune_b"},
+        ],
+        "shells": [{"faces": [0, 1], "closed": True}],
     }
 
 
@@ -232,6 +263,7 @@ def build_all():
     for name, script, desc in (
         ("cylinder_seam", cylinder_seam(), "uncapped cylinder side: one face closed by a seam edge, open shell"),
         ("bowtie_vertex", bowtie_vertex(), "two faces in two open shells meeting only at one (non-manifold) vertex"),
+        ("lens_sphere", lens_sphere(), "sphere as two lunes sharing two meridian edges and both pole vertices"),
     ):
         body = {"description": desc, "license": LICENSE}
         body.update(script)
@@ -263,6 +295,11 @@ def build_all():
     seam = expected["fixtures"]["cylinder_seam"]
     assert seam["faces_of_edge"]["#seam"] == ["#side"] and seam["face_neighbours"]["#side"] == []
     assert len(seam["coedges_of_edge"]["#seam"]) == 2
+    lens = expected["fixtures"]["lens_sphere"]
+    assert lens["face_neighbours"] == {"#lune_a": ["#lune_b"], "#lune_b": ["#lune_a"]}
+    for pole in ("#north", "#south"):
+        assert lens["faces_of_vertex"][pole] == ["#lune_a", "#lune_b"]
+        assert lens["edges_of_vertex"][pole] == ["#m_east", "#m_west"]
     bow = expected["fixtures"]["bowtie_vertex"]
     shared = [v for v, fs in bow["faces_of_vertex"].items() if len(fs) == 2]
     assert len(shared) == 1 and len(bow["edges_of_vertex"][shared[0]]) == 4

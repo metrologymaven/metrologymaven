@@ -41,17 +41,11 @@ fn run(adj: &Adjacency<'_>, q: &str, id: &TopologyId) -> Result<Vec<TopologyId>,
     }
 }
 
-const OTHER: [&str; 5] = ["cube_unlabelled", "cylinder_capped", "sphere_hemispheres", "cylinder_seam", "bowtie_vertex"];
+const OTHER: [&str; 6] =
+    ["cube_unlabelled", "cylinder_capped", "sphere_hemispheres", "cylinder_seam", "bowtie_vertex", "lens_sphere"];
 
 fn kind(ix: EntityIx) -> EntityKind {
-    match ix {
-        EntityIx::Shell(_) => EntityKind::Shell,
-        EntityIx::Face(_) => EntityKind::Face,
-        EntityIx::Loop(_) => EntityKind::Loop,
-        EntityIx::Coedge(_) => EntityKind::Coedge,
-        EntityIx::Edge(_) => EntityKind::Edge,
-        EntityIx::Vertex(_) => EntityKind::Vertex,
-    }
+    ix.kind()
 }
 
 /// The text form used by the Python reference: a label verbatim, a derived ID hyphenated.
@@ -220,6 +214,21 @@ fn non_manifold_edge_refused_and_vertex_listed() {
     }
     let loops: Vec<usize> = faces.iter().map(|f| adj.loops_of_face(f).unwrap().len()).collect();
     assert_eq!(loops.iter().copied().collect::<BTreeSet<_>>(), BTreeSet::from([1, 2]));
+}
+
+/// Two lunes sharing two meridian edges: each is the other's only neighbour, listed once,
+/// and both poles touch both faces.
+#[test]
+fn lens_sphere_neighbour_once_poles_touch_both() {
+    let body = build("lens_sphere");
+    let adj = Adjacency::build(&body);
+    let (a, b) = (label("#lune_a"), label("#lune_b"));
+    assert_eq!(adj.face_neighbours(&a).unwrap(), vec![b.clone()]);
+    assert_eq!(adj.face_neighbours(&b).unwrap(), vec![a.clone()]);
+    assert_eq!(adj.edges_of_face(&a).unwrap(), vec![label("#m_east"), label("#m_west")]);
+    for pole in ["#north", "#south"] {
+        assert_eq!(adj.faces_of_vertex(&label(pole)).unwrap(), vec![a.clone(), b.clone()]);
+    }
 }
 
 /// The index is derived: equal bodies (built twice, or decoded from the encoding) give equal

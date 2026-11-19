@@ -178,6 +178,20 @@ pub enum EntityIx {
     Vertex(VertexIx),
 }
 
+impl EntityIx {
+    /// The kind of this entity.
+    pub fn kind(self) -> EntityKind {
+        match self {
+            EntityIx::Shell(_) => EntityKind::Shell,
+            EntityIx::Face(_) => EntityKind::Face,
+            EntityIx::Loop(_) => EntityKind::Loop,
+            EntityIx::Coedge(_) => EntityKind::Coedge,
+            EntityIx::Edge(_) => EntityKind::Edge,
+            EntityIx::Vertex(_) => EntityKind::Vertex,
+        }
+    }
+}
+
 /// A canonical index path: shell `[s]`, face `[s, f]`, loop `[s, f, l]`, coedge
 /// `[s, f, l, c]` (positions within the parent's list); an edge takes the path of the first
 /// coedge that uses it, a vertex that path plus `0` (edge start) or `1` (edge end) of its

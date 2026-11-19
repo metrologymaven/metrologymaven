@@ -67,18 +67,6 @@ impl fmt::Display for AdjError {
 
 impl core::error::Error for AdjError {}
 
-/// Kind of an entity index.
-pub fn kind_of(ix: EntityIx) -> EntityKind {
-    match ix {
-        EntityIx::Shell(_) => EntityKind::Shell,
-        EntityIx::Face(_) => EntityKind::Face,
-        EntityIx::Loop(_) => EntityKind::Loop,
-        EntityIx::Coedge(_) => EntityKind::Coedge,
-        EntityIx::Edge(_) => EntityKind::Edge,
-        EntityIx::Vertex(_) => EntityKind::Vertex,
-    }
-}
-
 /// Sorted, deduplicated `(key, rank)` pairs: `key` a dense index of the queried kind, `rank`
 /// the position of the answer entity in ascending-ID order of its kind. A range of equal keys
 /// is therefore already in ascending-ID order.
@@ -237,7 +225,7 @@ impl<'b> Adjacency<'b> {
     /// Dense index of `id`, which must name an entity of `kind`.
     fn dense(&self, id: &TopologyId, kind: EntityKind) -> Result<u32, AdjError> {
         let ix = self.body.lookup(id).ok_or_else(|| AdjError::UnknownEntity { id: id.clone() })?;
-        let found = kind_of(ix);
+        let found = ix.kind();
         let dense = match ix {
             EntityIx::Face(i) if kind == EntityKind::Face => i.index(),
             EntityIx::Edge(i) if kind == EntityKind::Edge => i.index(),
