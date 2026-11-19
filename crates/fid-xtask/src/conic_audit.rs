@@ -15,25 +15,35 @@
 //! * `AUDIT-DIGEST`: the tree digest of `upstream/` differs from `upstream.tree_sha256`. The
 //!   digest is SHA-256 over the lines `<sha256 hex of file content>  <relative path>\n`, one per
 //!   regular file, sorted by the `/`-separated relative path (byte order); written `sha256:<hex>`.
-//!   This is `sha256sum` output over the sorted file list, so it can be recomputed by hand.
-//!   Symbolic links and other non-regular files are refused.
+//!   This is `sha256sum` output over the sorted file list, so it can be recomputed by hand. File
+//!   bytes are hashed as committed (CR bytes included). Empty directories are ignored, as git
+//!   does not track them. Symbolic links (including `upstream/` itself), other non-regular files
+//!   and `.gitattributes` files are refused: a `.gitattributes` could turn end-of-line conversion
+//!   back on and make the bytes depend on the platform.
 //! * `AUDIT-PATCH-DRIFT`: applying the listed patches in numeric order to a copy of `upstream/`
-//!   with a strict applier (exact line positions: no fuzz and no offset) fails, or the result
-//!   differs from `crate/` in any file (named in the finding).
-//! * `AUDIT-LICENCE`: `upstream.licence` is not an SPDX expression allowed by
-//!   `house-rules/spdx-allowlist.toml` (`licences` and `exceptions`). The expression grammar is a
-//!   local copy of the KNP-1 lint's (`fid-knp1-lint` is a tool crate, so it cannot be a
-//!   dependency), without the legacy `/` separator.
-//! * `AUDIT-LINT`: the KNP-1 report (schema 1 of `KRN.NUM.LINT.FIND`) has an unwaived finding in
-//!   the vendored crate (findings whose `crate_name` is `crate/Cargo.toml`'s package name), a
-//!   waived finding there whose waiver is not listed under `[[waivers]]`, or a listed waiver no
-//!   waived finding uses. A waiver is named `<file>:<first line>-<last line>:<rule>`, its
-//!   `knp1-waivers.toml` fields.
+//!   with a strict applier (exact line positions: no fuzz and no offset; a diff line after a
+//!   complete hunk is an error) fails, or the result differs from `crate/` in any file (named in
+//!   the finding). `crate/` is read like `upstream/`.
+//! * `AUDIT-LICENCE`: `upstream.licence` is not an SPDX expression allowed by both
+//!   `house-rules/spdx-allowlist.toml` and `deny.toml`'s `[licenses] allow` list. A plain
+//!   licence must be in both; `L WITH E` is allowed only when deny.toml lists exactly that pair
+//!   (and the allowlist has `L` and `E`), so the audit is never wider than cargo-deny. The
+//!   expression grammar is a local copy of the KNP-1 lint's (`fid-knp1-lint` is a tool crate, so
+//!   it cannot be a dependency), without the legacy `/` separator.
+//! * `AUDIT-LINT`: the report's SHA-256 differs from `lint_report_sha256`; the KNP-1 report
+//!   (schema 1 of `KRN.NUM.LINT.FIND`) does not name the vendored crate (`crate/Cargo.toml`'s
+//!   package name and version) under `linted` (fail closed: such a report never linted it); or it
+//!   has an unwaived finding in that crate, a waived finding there whose waiver names another
+//!   crate or is not listed under `[[waivers]]`, or a listed waiver no waived finding uses. A
+//!   waiver is named `<file>:<first line>-<last line>:<rule>`, its `knp1-waivers.toml` fields.
 //! * `AUDIT-PATCH-MISSING`: with `--previous` (the record at the merge base) naming another
 //!   upstream commit, an earlier patch ID that is neither in the new record nor under
 //!   `[[dropped]]` with a justification.
-//! * `AUDIT-SCHEMA`: a missing, unknown or malformed field of `AUDIT.toml`, a patch that names
-//!   neither a KNP-1 rule ID nor `scope-reduction`, or a patch file not listed in the record.
+//! * `AUDIT-SCHEMA`: a missing, unknown or malformed field of `AUDIT.toml` (including a duplicate
+//!   patch ID), a patch that names neither a KNP-1 rule ID nor `scope-reduction`, a file in
+//!   `patches/` that is not listed in the record, a symbolic link or non-regular entry in
+//!   `patches/` or at the top of the vendored directory, a vendored directory that is itself a
+//!   symbolic link, or a `.gitattributes` file there.
 //!
 //! Every input is read with a size bound; the output is sorted and deduplicated.
 
@@ -65,13 +75,16 @@ pub const MAX_TEXT_BYTES: u64 = 16 * 1024 * 1024;
 pub const MAX_FILES: usize = 100_000;
 /// Deepest directory nesting in a tree.
 pub const MAX_DEPTH: usize = 48;
+/// Default cargo-deny configuration; its `[licenses] allow` list bounds `WITH` pairs.
+pub const DEFAULT_DENY: &str = "deny.toml";
+const GITATTRIBUTES: &str = ".gitattributes";
 /// The reason class a patch may name instead of a KNP-1 rule ID.
 pub const SCOPE_REDUCTION: &str = "scope-reduction";
 
 /// Usage line of `cargo xtask conic-audit`.
 pub const USAGE: &str = "usage: cargo xtask conic-audit [--dir <vendor dir>] [--audit <AUDIT.toml>] \
                          [--report <knp1-findings.json>] [--allowlist <spdx-allowlist.toml>] \
-                         [--previous <AUDIT.toml>]";
+                         [--deny <deny.toml>] [--previous <AUDIT.toml>]";
 
 /// Error codes of the check, in output order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -130,6 +143,8 @@ pub struct Options {
     pub report: Option<PathBuf>,
     /// The SPDX allowlist.
     pub allowlist: PathBuf,
+    /// The cargo-deny configuration whose `[licenses] allow` list bounds `WITH` pairs.
+    pub deny: PathBuf,
     /// The audit record at the merge base, for the carry-forward check.
     pub previous: Option<PathBuf>,
 }
@@ -142,6 +157,7 @@ impl Options {
             audit: None,
             report: None,
             allowlist: PathBuf::from(DEFAULT_ALLOWLIST),
+            deny: PathBuf::from(DEFAULT_DENY),
             previous: None,
         }
     }
@@ -457,9 +473,25 @@ fn read_text(path: &Path) -> Result<String, String> {
     String::from_utf8(read_bounded(path, MAX_TEXT_BYTES)?).map_err(|_| format!("{} is not UTF-8", path.display()))
 }
 
-/// Every regular file under `root`, keyed by its `/`-separated relative path. Symbolic links,
-/// other non-regular files, non-UTF-8 names and names with a newline are refused.
+/// Fails unless `path` is a real directory (not a symbolic link to one).
+fn real_dir(path: &Path) -> Result<(), String> {
+    let meta = std::fs::symlink_metadata(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    if meta.file_type().is_symlink() {
+        Err(format!("{} is a symbolic link", path.display()))
+    } else if !meta.is_dir() {
+        Err(format!("{} is not a directory", path.display()))
+    } else {
+        Ok(())
+    }
+}
+
+/// Every regular file under `root`, keyed by its `/`-separated relative path. Empty directories
+/// contribute nothing (git does not track them). A root that is a symbolic link, symbolic links
+/// and other non-regular files inside, `.gitattributes` files (they could turn end-of-line
+/// conversion back on and make the bytes depend on the platform), non-UTF-8 names and names
+/// with a newline are refused.
 pub fn read_tree(root: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
+    real_dir(root)?;
     let mut out = BTreeMap::new();
     walk(root, "", 0, &mut out)?;
     Ok(out)
@@ -476,6 +508,9 @@ fn walk(dir: &Path, prefix: &str, depth: usize, out: &mut BTreeMap<String, Vec<u
         let rel = if prefix.is_empty() { name } else { format!("{prefix}/{name}") };
         if rel.contains('\n') {
             return Err(format!("{rel:?}: file name contains a newline"));
+        }
+        if entry.file_name() == GITATTRIBUTES {
+            return Err(format!("{rel}: .gitattributes files are not allowed in the vendored tree"));
         }
         let kind = entry.file_type().map_err(|e| format!("{rel}: {e}"))?;
         if kind.is_symlink() {
@@ -660,6 +695,17 @@ pub fn apply_patch(files: &mut BTreeMap<String, Vec<u8>>, patch: &[u8]) -> Resul
                 }
             }
             hunks.push(Hunk { old_start, old_len, body });
+        }
+        // A hunk is complete once its header's counts are met; a further diff line (other than
+        // the next file header or the `-- ` signature of `git format-patch`) means the counts
+        // are wrong, so refuse it rather than skip it.
+        if let Some(next) = lines.get(i) {
+            let stray = matches!(next.first(), Some(b'+' | b'-' | b' ' | b'\\'))
+                && !next.starts_with(b"--- ")
+                && *next != b"-- ";
+            if stray {
+                return Err(format!("line {}: diff line after a complete hunk (wrong line counts?)", i + 1));
+            }
         }
         if hunks.is_empty() {
             return Err(format!("line {}: file section without hunks", i));
@@ -851,18 +897,20 @@ pub mod spdx {
         }
     }
 
-    fn allowed(e: &Expr, licences: &BTreeSet<String>, exceptions: &BTreeSet<String>) -> bool {
+    fn allowed(e: &Expr, licences: &BTreeSet<String>, pairs: &BTreeSet<(String, String)>) -> bool {
         match e {
             Expr::Licence(id) => licences.contains(id),
-            Expr::With(id, exc) => licences.contains(id) && exceptions.contains(exc),
-            Expr::And(a, b) => allowed(a, licences, exceptions) && allowed(b, licences, exceptions),
-            Expr::Or(a, b) => allowed(a, licences, exceptions) || allowed(b, licences, exceptions),
+            Expr::With(id, exc) => pairs.contains(&(id.clone(), exc.clone())),
+            Expr::And(a, b) => allowed(a, licences, pairs) && allowed(b, licences, pairs),
+            Expr::Or(a, b) => allowed(a, licences, pairs) || allowed(b, licences, pairs),
         }
     }
 
-    /// Parses `text` and evaluates it: `OR` needs one allowed side, `AND` both, `WITH` an allowed
-    /// licence and exception. `Err` carries the parse error.
-    pub fn evaluate(text: &str, licences: &BTreeSet<String>, exceptions: &BTreeSet<String>) -> Result<bool, String> {
+    /// Parses `text` and evaluates it: `OR` needs one allowed side, `AND` both. A licence is
+    /// allowed when it is in `licences`; `L WITH E` only when the pair `(L, E)` is in `pairs`
+    /// (never by combining an allowed licence with an allowed exception). `Err` carries the
+    /// parse error.
+    pub fn evaluate(text: &str, licences: &BTreeSet<String>, pairs: &BTreeSet<(String, String)>) -> Result<bool, String> {
         let toks = lex(text)?;
         if toks.is_empty() {
             return Err("empty expression".to_string());
@@ -872,7 +920,7 @@ pub mod spdx {
         if p.pos != p.toks.len() {
             return Err(format!("unexpected token after position {}", p.pos));
         }
-        Ok(allowed(&e, licences, exceptions))
+        Ok(allowed(&e, licences, pairs))
     }
 }
 
@@ -886,29 +934,63 @@ fn string_set(t: &Table, key: &str) -> Result<BTreeSet<String>, String> {
     }
 }
 
+/// Allowed plain licence IDs and allowed `(licence, exception)` pairs.
+pub type LicenceSets = (BTreeSet<String>, BTreeSet<(String, String)>);
+
+fn read_table(path: &Path) -> Result<Table, String> {
+    read_text(path)?
+        .parse()
+        .map_err(|e: toml::de::Error| format!("{}: {}", path.display(), e.to_string().trim_end().replace('\n', " ")))
+}
+
+/// The allowed licences and `WITH` pairs: the SPDX allowlist intersected with deny.toml's
+/// `[licenses] allow` list, so the audit is never wider than cargo-deny. A pair is allowed only
+/// when deny.toml lists exactly `L WITH E` and the allowlist has both `L` and `E`.
+pub fn allowed_licences(allowlist: &Path, deny: &Path) -> Result<LicenceSets, String> {
+    let a = read_table(allowlist)?;
+    let (licences, exceptions) = (string_set(&a, "licences")?, string_set(&a, "exceptions")?);
+    let d = read_table(deny)?;
+    let allow = d
+        .get("licenses")
+        .and_then(Value::as_table)
+        .ok_or_else(|| format!("{}: no [licenses] table", deny.display()))
+        .and_then(|t| string_set(t, "allow"))?;
+    let mut plain = BTreeSet::new();
+    let mut pairs = BTreeSet::new();
+    for entry in allow {
+        match entry.split_once(" WITH ") {
+            Some((l, e)) => {
+                let (l, e) = (l.trim().to_string(), e.trim().to_string());
+                if licences.contains(&l) && exceptions.contains(&e) {
+                    pairs.insert((l, e));
+                }
+            }
+            None if licences.contains(entry.trim()) => {
+                plain.insert(entry.trim().to_string());
+            }
+            None => {}
+        }
+    }
+    Ok((plain, pairs))
+}
+
 /// `AUDIT-LICENCE` (REQ-003).
-fn check_licence(record: &AuditRecord, allowlist: &Path, out: &mut BTreeSet<Finding>) {
+fn check_licence(record: &AuditRecord, allowlist: &Path, deny: &Path, out: &mut BTreeSet<Finding>) {
     let licence = &record.upstream.licence;
     if licence.is_empty() {
         return; // already an AUDIT-SCHEMA finding
     }
-    let lists = read_text(allowlist).and_then(|text| {
-        let t: Table = text
-            .parse()
-            .map_err(|e: toml::de::Error| format!("{}: {}", allowlist.display(), e.to_string().trim_end()))?;
-        Ok((string_set(&t, "licences")?, string_set(&t, "exceptions")?))
-    });
-    match lists {
+    match allowed_licences(allowlist, deny) {
         Err(e) => {
-            out.insert(Finding::new(Code::Licence, "upstream.licence", format!("cannot read the allowlist: {e}")));
+            out.insert(Finding::new(Code::Licence, "upstream.licence", format!("cannot read the allow lists: {e}")));
         }
-        Ok((licences, exceptions)) => match spdx::evaluate(licence, &licences, &exceptions) {
+        Ok((licences, pairs)) => match spdx::evaluate(licence, &licences, &pairs) {
             Ok(true) => {}
             Ok(false) => {
                 out.insert(Finding::new(
                     Code::Licence,
                     "upstream.licence",
-                    format!("{licence:?} is not allowed by the SPDX allowlist"),
+                    format!("{licence:?} is not allowed by the SPDX allowlist and deny.toml"),
                 ));
             }
             Err(e) => {
@@ -952,35 +1034,67 @@ fn pos(v: Option<&CValue>, key: &str) -> Result<u64, String> {
     }
 }
 
-/// The vendored crate's package name from `crate/Cargo.toml`.
-fn crate_name(dir: &Path) -> Result<String, String> {
-    let text = read_text(&dir.join("crate").join("Cargo.toml"))?;
-    let t: Table = text.parse().map_err(|e: toml::de::Error| format!("not TOML: {}", e.to_string().trim_end()))?;
-    t.get("package")
-        .and_then(Value::as_table)
-        .and_then(|p| p.get("name"))
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .ok_or_else(|| "has no [package] name".to_string())
+/// The vendored crate's package name and version from `crate/Cargo.toml` (both literal strings).
+fn crate_id(dir: &Path) -> Result<(String, String), String> {
+    let t = read_table(&dir.join("crate").join("Cargo.toml"))?;
+    let package = t.get("package").and_then(Value::as_table);
+    let field = |k: &str| {
+        package
+            .and_then(|p| p.get(k))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| format!("has no literal [package] {k}"))
+    };
+    Ok((field("name")?, field("version")?))
 }
 
 /// `AUDIT-LINT` (REQ-004).
 fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSet<Finding>) {
-    let name = match crate_name(dir) {
-        Ok(n) => n,
+    let (name, version) = match crate_id(dir) {
+        Ok(id) => id,
         Err(e) => {
             out.insert(Finding::new(Code::Lint, "crate/Cargo.toml", e));
             return;
         }
     };
-    let parsed =
-        read_bounded(report, MAX_TEXT_BYTES).and_then(|b| fid_canon::parse(&b).map_err(|e| format!("not JSON: {e}")));
+    let bytes = match read_bounded(report, MAX_TEXT_BYTES) {
+        Ok(b) => b,
+        Err(e) => {
+            out.insert(Finding::new(Code::Lint, "report", e));
+            return;
+        }
+    };
+    let actual = sha256(&bytes);
+    if !record.lint_report_sha256.is_empty() && actual.as_str() != record.lint_report_sha256 {
+        out.insert(Finding::new(
+            Code::Lint,
+            "report",
+            format!("SHA-256 is {actual}, AUDIT.toml records lint_report_sha256 = {}", record.lint_report_sha256),
+        ));
+    }
+    let parsed = fid_canon::parse(&bytes).map_err(|e| format!("not JSON: {e}"));
     let result = parsed.and_then(|v| -> Result<Vec<Finding>, String> {
         let r = obj(&v, "the report")?;
         if r.get("schema") != Some(&CValue::Num(1.0)) || s(r, "tool")? != "fid-knp1-lint" {
             return Err("not a fid-knp1-lint report of schema 1".to_string());
         }
         let mut found = Vec::new();
+        // Fail closed: a report that never linted the vendored crate is not clean for it.
+        let mut linted = false;
+        if let Some(list) = r.get("linted") {
+            let CValue::Arr(list) = list else { return Err("`linted` must be an array".to_string()) };
+            for c in list {
+                let c = obj(c, "a `linted` entry")?;
+                linted |= s(c, "crate_name")? == name && s(c, "crate_version")? == version;
+            }
+        }
+        if !linted {
+            found.push(Finding::new(
+                Code::Lint,
+                "report",
+                format!("does not name {name} {version} under `linted`, so it did not lint the vendored crate"),
+            ));
+        }
         for f in arr(r, "findings")? {
             let f = obj(f, "a finding")?;
             if s(f, "crate_name")? == name {
@@ -1010,6 +1124,14 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
             let waiver_ref = format!("{}:{}-{}:{}", s(wv, "file")?, lines.0, lines.1, s(wv, "rule")?);
             let at =
                 format!("crate/{}:{}:{}", s(f, "file")?, pos(f.get("line"), "line")?, pos(f.get("column"), "column")?);
+            if s(wv, "crate")? != name {
+                found.push(Finding::new(
+                    Code::Lint,
+                    at,
+                    format!("waived by waiver {waiver_ref} of crate {:?}, not {name:?}", s(wv, "crate")?),
+                ));
+                continue;
+            }
             match listed.get(waiver_ref.as_str()) {
                 Some(j) if !j.is_empty() => {
                     used.insert(waiver_ref);
@@ -1045,23 +1167,87 @@ fn check_lint(record: &AuditRecord, dir: &Path, report: &Path, out: &mut BTreeSe
 
 // ------------------------------------------------------------------ the check
 
+/// Lists `patches/`: every entry must be a regular file (no symbolic links, directories or
+/// `.gitattributes`) and listed in the record (`AUDIT-SCHEMA` otherwise).
+fn list_patches(
+    patches_dir: &Path,
+    listed: &BTreeSet<&str>,
+    on_disk: &mut BTreeSet<String>,
+    out: &mut BTreeSet<Finding>,
+) -> Result<(), String> {
+    real_dir(patches_dir)?;
+    let entries = std::fs::read_dir(patches_dir).map_err(|e| format!("cannot read: {e}"))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("cannot read: {e}"))?;
+        let name = format!("patches/{}", entry.file_name().to_string_lossy());
+        let kind = entry.file_type().map_err(|e| format!("{name}: {e}"))?;
+        if entry.file_name() == GITATTRIBUTES {
+            out.insert(Finding::new(Code::Schema, name, ".gitattributes files are not allowed in the vendored tree"));
+        } else if kind.is_symlink() {
+            out.insert(Finding::new(Code::Schema, name, "symbolic links are not allowed"));
+        } else if !kind.is_file() {
+            out.insert(Finding::new(Code::Schema, name, "not a regular file"));
+        } else {
+            if !listed.contains(name.as_str()) {
+                out.insert(Finding::new(Code::Schema, name.clone(), "patch file is not listed in AUDIT.toml"));
+            }
+            on_disk.insert(name);
+        }
+    }
+    Ok(())
+}
+
+/// The vendored directory itself: a real directory whose top level holds only real
+/// directories and regular files and no `.gitattributes` (`AUDIT-SCHEMA` otherwise).
+fn check_root(dir: &Path, out: &mut BTreeSet<Finding>) -> bool {
+    if let Err(e) = real_dir(dir) {
+        out.insert(Finding::new(Code::Schema, "vendored directory", e));
+        return false;
+    }
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(e) => {
+            out.insert(Finding::new(Code::Schema, "vendored directory", format!("cannot read: {e}")));
+            return false;
+        }
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                out.insert(Finding::new(Code::Schema, "vendored directory", format!("cannot read: {e}")));
+                return false;
+            }
+        };
+        let name = entry.file_name().to_string_lossy().into_owned();
+        match entry.file_type() {
+            _ if name == GITATTRIBUTES => {
+                out.insert(Finding::new(Code::Schema, name, ".gitattributes files are not allowed in the vendored tree"));
+            }
+            Ok(k) if k.is_symlink() => {
+                out.insert(Finding::new(Code::Schema, name, "symbolic links are not allowed"));
+            }
+            Ok(k) if k.is_dir() || k.is_file() => {}
+            Ok(_) => {
+                out.insert(Finding::new(Code::Schema, name, "not a regular file or directory"));
+            }
+            Err(e) => {
+                out.insert(Finding::new(Code::Schema, name, e.to_string()));
+            }
+        }
+    }
+    true
+}
+
 /// `AUDIT-DIGEST` and `AUDIT-PATCH-DRIFT` (REQ-001, REQ-002), plus patch files not in the record.
 fn check_tree(record: &AuditRecord, dir: &Path, out: &mut BTreeSet<Finding>) {
     let listed: BTreeSet<&str> = record.patches.iter().map(|p| p.file.as_str()).collect();
     let mut on_disk = BTreeSet::new();
-    match std::fs::read_dir(dir.join("patches")) {
-        Ok(entries) => {
-            for e in entries.flatten() {
-                let name = format!("patches/{}", e.file_name().to_string_lossy());
-                if !listed.contains(name.as_str()) {
-                    out.insert(Finding::new(Code::Schema, name.clone(), "patch file is not listed in AUDIT.toml"));
-                }
-                on_disk.insert(name);
-            }
-        }
-        Err(_) if record.patches.is_empty() => {}
-        Err(e) => {
-            out.insert(Finding::new(Code::PatchDrift, "patches/", format!("cannot read: {e}")));
+    let patches_dir = dir.join("patches");
+    let exists = std::fs::symlink_metadata(&patches_dir).is_ok();
+    if exists || !record.patches.is_empty() {
+        if let Err(e) = list_patches(&patches_dir, &listed, &mut on_disk, out) {
+            out.insert(Finding::new(Code::Schema, "patches/", e));
         }
     }
     let upstream = match read_tree(&dir.join("upstream")) {
@@ -1155,6 +1341,9 @@ fn check_previous(record: &AuditRecord, previous: &Path, out: &mut BTreeSet<Find
 /// Runs every check; returns the findings sorted by code, subject and detail (empty: pass).
 pub fn audit(opts: &Options) -> Vec<Finding> {
     let mut out = BTreeSet::new();
+    if !check_root(&opts.dir, &mut out) {
+        return out.into_iter().collect();
+    }
     let audit_path = opts.audit.clone().unwrap_or_else(|| opts.dir.join(AUDIT_FILE));
     let parsed =
         read_text(&audit_path).map_err(|e| Finding::new(Code::Schema, "AUDIT.toml", e)).and_then(|t| parse_record(&t));
@@ -1163,10 +1352,13 @@ pub fn audit(opts: &Options) -> Vec<Finding> {
             out.extend(errs);
             record
         }
-        Err(f) => return vec![f],
+        Err(f) => {
+            out.insert(f);
+            return out.into_iter().collect();
+        }
     };
     check_tree(&record, &opts.dir, &mut out);
-    check_licence(&record, &opts.allowlist, &mut out);
+    check_licence(&record, &opts.allowlist, &opts.deny, &mut out);
     let report = opts.report.clone().unwrap_or_else(|| opts.dir.join(REPORT_FILE));
     check_lint(&record, &opts.dir, &report, &mut out);
     if let Some(prev) = &opts.previous {
@@ -1186,6 +1378,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             ("--audit", Some(v)) => opts.audit = Some(PathBuf::from(v)),
             ("--report", Some(v)) => opts.report = Some(PathBuf::from(v)),
             ("--allowlist", Some(v)) => opts.allowlist = PathBuf::from(v),
+            ("--deny", Some(v)) => opts.deny = PathBuf::from(v),
             ("--previous", Some(v)) => opts.previous = Some(PathBuf::from(v)),
             _ => {
                 eprintln!("{USAGE}");
@@ -1242,6 +1435,13 @@ mod tests {
     }
 
     #[test]
+    fn format_patch_signature_is_not_a_stray_line() {
+        let mut t = tree(&[("f", "a\n")]);
+        apply_patch(&mut t, b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-- \n2.43.0\n").unwrap();
+        assert_eq!(t, tree(&[("f", "b\n")]));
+    }
+
+    #[test]
     fn insertion_hunk_with_zero_old_lines() {
         let mut t = tree(&[("f", "a\nb\n")]);
         apply_patch(&mut t, b"--- a/f\n+++ b/f\n@@ -1,0 +2 @@\n+x\n").unwrap();
@@ -1267,7 +1467,7 @@ mod tests {
     #[test]
     fn malformed_patches_are_refused() {
         let base = tree(&[("f", "a\n")]);
-        let bad: [&[u8]; 9] = [
+        let bad: [&[u8]; 11] = [
             b"",
             b"just text\n",
             b"--- a/f\n+++ b/f\n",
@@ -1277,6 +1477,9 @@ mod tests {
             b"--- a/f\n+++ b/g\n@@ -1 +1 @@\n-a\n+b\n",
             b"diff --git a/f b/f\nGIT binary patch\n",
             b"--- a/missing\n+++ b/missing\n@@ -1 +1 @@\n-a\n+b\n",
+            // Stray diff lines after a complete hunk (wrong counts) are refused, not skipped.
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n+c\n",
+            b"--- a/f\n+++ b/f\n@@ -1 +1 @@\n-a\n+b\n-z\n",
         ];
         for p in bad {
             let mut t = base.clone();
@@ -1299,13 +1502,15 @@ mod tests {
     #[test]
     fn spdx_expressions() {
         let lic: BTreeSet<String> = ["MIT", "Apache-2.0"].iter().map(|s| s.to_string()).collect();
-        let exc: BTreeSet<String> = ["LLVM-exception"].iter().map(|s| s.to_string()).collect();
-        let ev = |t: &str| spdx::evaluate(t, &lic, &exc);
+        let pairs: BTreeSet<(String, String)> = [("Apache-2.0".to_string(), "LLVM-exception".to_string())].into();
+        let ev = |t: &str| spdx::evaluate(t, &lic, &pairs);
         assert_eq!(ev("MIT"), Ok(true));
         assert_eq!(ev("Apache-2.0 WITH LLVM-exception"), Ok(true));
         assert_eq!(ev("GPL-3.0-only OR (MIT AND Apache-2.0)"), Ok(true));
         assert_eq!(ev("MIT AND GPL-3.0-only"), Ok(false));
         assert_eq!(ev("Apache-2.0 WITH Classpath-exception-2.0"), Ok(false));
+        // An allowed licence and an allowed exception do not make an allowed pair.
+        assert_eq!(ev("MIT WITH LLVM-exception"), Ok(false));
         for bad in ["", "MIT/Apache-2.0", "(MIT", "MIT OR", "mit or MIT ;"] {
             assert!(ev(bad).is_err(), "{bad}");
         }

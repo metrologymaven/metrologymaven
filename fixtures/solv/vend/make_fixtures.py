@@ -19,11 +19,26 @@ Expected outcomes, hand-labelled from the leaf's rules (crates/fid-xtask/tests/c
   digest/     one byte changed in upstream/README.md (and crate/ to match)  AUDIT-DIGEST (AC-3)
   update/     --previous ok/AUDIT.toml, record lists only 0001  AUDIT-PATCH-MISSING 0002 (AC-4)
   update/AUDIT-dropped.toml            0002 dropped with a justification, exit 0  (AC-4)
-  lint/unwaived-pow.json   (on ok/)    AUDIT-LINT crate/src/x.rs KNP1-POW          (AC-5)
-  lint/other-crate.json    (on ok/)    exit 0: the finding is in another crate
-  lint/waived.json         (on ok/)    AUDIT-LINT: waived finding not in the record
-  lint/waived.json + lint/AUDIT-waived.toml    exit 0
-  licence/AUDIT-gpl.toml   (on ok/)    AUDIT-LICENCE
+  createdelete/  patch 0003 deletes README.md and creates src/extra.rs   exit 0
+
+  Every tree holds data/crlf.txt with CRLF line ends (the directory is -text), so the recorded
+  digests prove the check hashes bytes exactly as committed.
+
+  Lint cases run on ok/ with --report lint/<name>.json --audit lint/AUDIT-<name>.toml (each record
+  carries the SHA-256 of its report):
+  unwaived-pow             AUDIT-LINT crate/src/x.rs KNP1-POW          (AC-5)
+  other-crate              exit 0: the finding is in another crate
+  waived                   AUDIT-LINT: waived finding not in the record
+  waived-listed            (waived.json) exit 0
+  not-linted               AUDIT-LINT: the report does not name minisolv 0.1.0 as linted
+  wrong-version            AUDIT-LINT: the report linted minisolv 0.0.9
+  waiver-crate             AUDIT-LINT: the waiver names another crate
+  ok/AUDIT.toml with lint/other-crate.json   AUDIT-LINT: lint_report_sha256 does not match
+
+  licence/AUDIT-gpl.toml       (on ok/)  AUDIT-LICENCE
+  licence/AUDIT-or.toml        (on ok/)  exit 0 (GPL-3.0-only OR MIT)
+  licence/AUDIT-mit-with.toml  (on ok/)  AUDIT-LICENCE (MIT WITH LLVM-exception is not a deny.toml pair)
+  licence/AUDIT-apache-with.toml (on ok/) exit 0 (Apache-2.0 WITH LLVM-exception is)
   schema/AUDIT-norule.toml (on ok/)    AUDIT-SCHEMA (patch 0002 names no rule)
   schema/AUDIT-scope.toml  (on ok/)    exit 0 (patch 0002 is a scope-reduction)
 
@@ -128,10 +143,30 @@ Subject: [PATCH 0002] Use BTreeMap instead of HashMap (KNP1-HASH)
     "<SPACE>", " "
 )  # the blank context line is one space; spelled out so editors cannot strip it
 
+PATCH_0003 = """From: conic-audit fixture
+Subject: [PATCH 0003] Drop the README, add a constant (scope-reduction)
+
+--- a/README.md
++++ /dev/null
+@@ -1 +0,0 @@
+-minisolv: a hand-written stand-in for a vendored solver tree.
+--- /dev/null
++++ b/src/extra.rs
+@@ -0,0 +1,2 @@
++//! Added by patch 0003 (fixture).
++pub const EXTRA: u32 = 3;
+"""
+
+EXTRA = "//! Added by patch 0003 (fixture).\npub const EXTRA: u32 = 3;\n"
+
+# CRLF line ends on purpose: the digest must hash the committed bytes.
+CRLF = "row 1\r\nrow 2\r\n"
+
 UPSTREAM_V1 = {
     "Cargo.toml": CARGO_V1,
     "LICENSE": LICENCE,
     "README.md": README_V1,
+    "data/crlf.txt": CRLF,
     "src/lib.rs": LIB,
     "src/x.rs": X_HASH,
 }
@@ -141,6 +176,7 @@ UPSTREAM_V2 = {
     "Cargo.toml": CARGO_V2,
     "LICENSE": LICENCE,
     "README.md": README_V2,
+    "data/crlf.txt": CRLF,
     "src/lib.rs": LIB,
     "src/x.rs": X_BTREE,
 }
@@ -150,9 +186,12 @@ PATCHES_V1 = {
     "patches/0002-btreemap.patch": PATCH_0002,
 }
 PATCHES_V2 = {"patches/0001-no-powi.patch": PATCH_0001}
+PATCHES_V3 = dict(PATCHES_V1, **{"patches/0003-add-remove.patch": PATCH_0003})
 
 EXPECTED_CRATE_V1 = dict(UPSTREAM_V1, **{"src/lib.rs": LIB_PATCHED, "src/x.rs": X_BTREE})
 EXPECTED_CRATE_V2 = dict(UPSTREAM_V2, **{"src/lib.rs": LIB_PATCHED})
+EXPECTED_CRATE_V3 = {k: v for k, v in EXPECTED_CRATE_V1.items() if k != "README.md"}
+EXPECTED_CRATE_V3["src/extra.rs"] = EXTRA
 
 COMMIT_V1 = "1111111111111111111111111111111111111111"
 COMMIT_V2 = "2222222222222222222222222222222222222222"
@@ -176,20 +215,35 @@ def apply_patch(files: dict, patch: str) -> dict:
         if not lines[i + 1].startswith("+++ "):
             raise ValueError("missing +++ line")
         i += 2
-        if not (old.startswith("a/") and new.startswith("b/") and old[2:] == new[2:]):
-            raise ValueError("this reference applier handles modifications only")
-        path = old[2:]
-        src = files[path].split("\n")
-        assert src[-1] == "", "fixture files end with a newline"
-        src = src[:-1]
+        if old == "/dev/null" and new.startswith("b/"):
+            path, kind = new[2:], "create"
+            if path in files:
+                raise ValueError(f"{path} already exists")
+            src = []
+        elif new == "/dev/null" and old.startswith("a/"):
+            path, kind = old[2:], "delete"
+        elif old.startswith("a/") and new.startswith("b/") and old[2:] == new[2:]:
+            path, kind = old[2:], "modify"
+        else:
+            raise ValueError("unsupported header pair")
+        if kind != "create":
+            src = files[path].split("\n")
+            assert src[-1] == "", "fixture files end with a newline"
+            src = src[:-1]
         out, cursor = [], 0
         while i < len(lines) and lines[i].startswith("@@ "):
             head = lines[i].split(" ")
-            o_start, o_len = (int(v) for v in head[1][1:].split(","))
-            n_start, n_len = (int(v) for v in head[2][1:].split(","))
+
+            def rng(t):
+                a, _, b = t[1:].partition(",")
+                return int(a), int(b) if b else 1
+
+            o_start, o_len = rng(head[1])
+            n_start, n_len = rng(head[2])
             i += 1
-            out.extend(src[cursor : o_start - 1])
-            pos, seen_old, seen_new = o_start - 1, 0, 0
+            first = o_start if o_len == 0 else o_start - 1
+            out.extend(src[cursor:first])
+            pos, seen_old, seen_new = first, 0, 0
             while seen_old < o_len or seen_new < n_len:
                 tag, text = lines[i][0], lines[i][1:]
                 if tag in " -":
@@ -204,13 +258,19 @@ def apply_patch(files: dict, patch: str) -> dict:
                     raise ValueError(f"bad hunk line {lines[i]!r}")
                 i += 1
             cursor = pos
-            assert n_start == o_start, "fixture hunks keep their position"
+            assert kind != "modify" or n_start == o_start, "fixture hunks keep their position"
         out.extend(src[cursor:])
-        files[path] = "\n".join(out) + "\n"
+        if kind == "delete":
+            if out:
+                raise ValueError(f"deleting {path} leaves lines")
+            del files[path]
+        else:
+            files[path] = "\n".join(out) + "\n"
     return files
 
 
 def tree_digest(files: dict) -> str:
+    # Hashes the exact bytes (UTF-8, CR kept): "\r\n" in a file stays two bytes.
     text = "".join(f"{hashlib.sha256(files[p].encode()).hexdigest()}  {p}\n" for p in sorted(files))
     return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
 
@@ -236,11 +296,11 @@ def canonical(v) -> str:
     return json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def finding(crate: str, file: str, line: int, rule: str) -> dict:
+def finding(crate: str, file: str, line: int, rule: str, version: str = "0.1.0") -> dict:
     return {
         "rule": rule,
         "crate_name": crate,
-        "crate_version": "0.1.0",
+        "crate_version": version,
         "file": file,
         "line": line,
         "column": 14,
@@ -249,7 +309,7 @@ def finding(crate: str, file: str, line: int, rule: str) -> dict:
     }
 
 
-def report(findings: list, waived: list) -> str:
+def report(findings: list, waived: list, linted=(("minisolv", "0.1.0"),)) -> str:
     by_rule = {}
     for f in findings:
         by_rule[f["rule"]] = by_rule.get(f["rule"], 0) + 1
@@ -259,6 +319,7 @@ def report(findings: list, waived: list) -> str:
             "tool": "fid-knp1-lint",
             "tool_version": "0.0.1",
             "inputs": {"config": sha("config"), "lockfile": sha("lockfile"), "waivers": sha("waivers"), "denylist": sha("denylist")},
+            "linted": [{"crate_name": n, "crate_version": v} for n, v in sorted(linted)],
             "findings": findings,
             "waived": waived,
             "warnings": [],
@@ -268,30 +329,48 @@ def report(findings: list, waived: list) -> str:
 
 
 CLEAN = report([], [])
-UNWAIVED_POW = report([finding("minisolv", "src/x.rs", 6, "KNP1-POW")], [])
-OTHER_CRATE = report([finding("othercrate", "src/x.rs", 6, "KNP1-POW")], [])
-WAIVER = {
-    "crate": "minisolv",
-    "file": "src/lib.rs",
-    "lines": [7, 7],
-    "rule": "KNP1-POW",
-    "justification": "fixture waiver",
-    "reviewer": "fixture",
-    "date": "2026-11-18",
-    "lines_sha256": sha("        s += x * x;\n"),
+CLEAN_V2 = report([], [], linted=[("minisolv", "0.2.0")])
+
+
+def waiver(crate: str) -> dict:
+    return {
+        "crate": crate,
+        "file": "src/lib.rs",
+        "lines": [7, 7],
+        "rule": "KNP1-POW",
+        "justification": "fixture waiver",
+        "reviewer": "fixture",
+        "date": "2026-11-18",
+        "lines_sha256": sha("        s += x * x;\n"),
+    }
+
+
+WAIVED_FINDING = finding("minisolv", "src/lib.rs", 7, "KNP1-POW")
+BOTH = [("minisolv", "0.1.0"), ("othercrate", "0.1.0")]
+WAIVER_REF = [("src/lib.rs:7-7:KNP1-POW", "fixture: waiver kept on purpose")]
+
+# name: (report, waivers listed in the record)
+LINT_CASES = {
+    "unwaived-pow": (report([finding("minisolv", "src/x.rs", 6, "KNP1-POW")], []), ()),
+    "other-crate": (report([finding("othercrate", "src/x.rs", 6, "KNP1-POW")], [], linted=BOTH), ()),
+    "waived": (report([], [{"finding": WAIVED_FINDING, "waiver": waiver("minisolv")}]), ()),
+    "waived-listed": (report([], [{"finding": WAIVED_FINDING, "waiver": waiver("minisolv")}]), WAIVER_REF),
+    "not-linted": (report([], [], linted=[("othercrate", "0.1.0")]), ()),
+    "wrong-version": (report([], [], linted=[("minisolv", "0.0.9")]), ()),
+    "waiver-crate": (report([], [{"finding": WAIVED_FINDING, "waiver": waiver("othercrate")}]), WAIVER_REF),
 }
-WAIVED = report([], [{"finding": finding("minisolv", "src/lib.rs", 7, "KNP1-POW"), "waiver": WAIVER}])
 
 # ----------------------------------------------------------------- audit records
 
 RATIONALE = {
     "0001": "powi is outside the fid-num facade; a product is exact for squares",
     "0002": "HashMap iteration order is not fixed; BTreeMap is",
+    "0003": "the README is not built; the constant is a fixture",
 }
 
 
 def audit(commit, tree, report_text, patches, rules=None, dropped=(), waivers=(), licence="MIT") -> str:
-    rules = rules or {"0001": ["KNP1-POW"], "0002": ["KNP1-HASH"]}
+    rules = rules or {"0001": ["KNP1-POW"], "0002": ["KNP1-HASH"], "0003": ["scope-reduction"]}
     out = [
         "# Audit record (KRN.SOLV.CONIC.VEND). Synthetic fixture written by make_fixtures.py.",
         "schema = 1",
@@ -324,15 +403,16 @@ def build() -> dict:
     out = {}
     crate_v1 = crate_from(UPSTREAM_V1, PATCHES_V1, EXPECTED_CRATE_V1)
     crate_v2 = crate_from(UPSTREAM_V2, PATCHES_V2, EXPECTED_CRATE_V2)
+    crate_v3 = crate_from(UPSTREAM_V1, PATCHES_V3, EXPECTED_CRATE_V3)
     tree_v1 = tree_digest(UPSTREAM_V1)
     ok_audit = audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V1)
 
-    def case(name, upstream, crate, patches, record):
+    def case(name, upstream, crate, patches, record, rep=CLEAN):
         out.update(tree_files(f"{name}/upstream", upstream))
         out.update(tree_files(f"{name}/crate", crate))
         out.update({f"{name}/{k}": v for k, v in patches.items()})
         out[f"{name}/AUDIT.toml"] = record
-        out[f"{name}/knp1-findings.json"] = CLEAN
+        out[f"{name}/knp1-findings.json"] = rep
 
     # AC-1
     case("ok", UPSTREAM_V1, crate_v1, PATCHES_V1, ok_audit)
@@ -345,18 +425,23 @@ def build() -> dict:
     case("digest", dict(UPSTREAM_V1, **{"README.md": readme}), dict(crate_v1, **{"README.md": readme}), PATCHES_V1, ok_audit)
     # AC-4: new upstream commit; only patch 0001 carried forward.
     tree_v2 = tree_digest(UPSTREAM_V2)
-    case("update", UPSTREAM_V2, crate_v2, PATCHES_V2, audit(COMMIT_V2, tree_v2, CLEAN, PATCHES_V2))
-    out["update/AUDIT-dropped.toml"] = audit(COMMIT_V2, tree_v2, CLEAN, PATCHES_V2, dropped=[("0002", "fixed upstream")])
-    # AC-5 and the other lint cases, run against ok/ with --report (and --audit).
-    out["lint/unwaived-pow.json"] = UNWAIVED_POW
-    out["lint/other-crate.json"] = OTHER_CRATE
-    out["lint/waived.json"] = WAIVED
-    out["lint/AUDIT-waived.toml"] = audit(
-        COMMIT_V1, tree_v1, WAIVED, PATCHES_V1, waivers=[("src/lib.rs:7-7:KNP1-POW", "fixture: waiver kept on purpose")]
-    )
+    case("update", UPSTREAM_V2, crate_v2, PATCHES_V2, audit(COMMIT_V2, tree_v2, CLEAN_V2, PATCHES_V2), CLEAN_V2)
+    out["update/AUDIT-dropped.toml"] = audit(COMMIT_V2, tree_v2, CLEAN_V2, PATCHES_V2, dropped=[("0002", "fixed upstream")])
+    # File creation and deletion through the file system.
+    case("createdelete", UPSTREAM_V1, crate_v3, PATCHES_V3, audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V3))
+    # AC-5 and the other lint cases, run against ok/ with --report and --audit.
+    for name, (rep, waivers) in LINT_CASES.items():
+        if name != "waived-listed":
+            out[f"lint/{name}.json"] = rep
+        out[f"lint/AUDIT-{name}.toml"] = audit(COMMIT_V1, tree_v1, rep, PATCHES_V1, waivers=waivers)
     # REQ-003 and REQ-006, run against ok/ with --audit.
-    out["licence/AUDIT-gpl.toml"] = audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V1, licence="GPL-3.0-only")
-    out["licence/AUDIT-or.toml"] = audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V1, licence="GPL-3.0-only OR MIT")
+    for name, lic in [
+        ("gpl", "GPL-3.0-only"),
+        ("or", "GPL-3.0-only OR MIT"),
+        ("mit-with", "MIT WITH LLVM-exception"),
+        ("apache-with", "Apache-2.0 WITH LLVM-exception"),
+    ]:
+        out[f"licence/AUDIT-{name}.toml"] = audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V1, licence=lic)
     out["schema/AUDIT-norule.toml"] = audit(COMMIT_V1, tree_v1, CLEAN, PATCHES_V1, rules={"0001": ["KNP1-POW"], "0002": []})
     out["schema/AUDIT-scope.toml"] = audit(
         COMMIT_V1, tree_v1, CLEAN, PATCHES_V1, rules={"0001": ["KNP1-POW"], "0002": ["scope-reduction"]}
