@@ -824,3 +824,23 @@ fn a_subnormal_scale_and_a_bad_parameter_name_are_refused_on_decoding() {
         "bad_element"
     );
 }
+
+#[test]
+fn a_changed_feature_that_depends_on_a_re_solved_alignment_is_still_pending() {
+    // Re-review repro: P0 shifted, recompute(&[P0, F]). A0 is re-solved in this pass, so F
+    // (computed from A0) is stale even though it is listed as changed; A3 must be outdated.
+    let solvers = full();
+    let mut p = chain3(&solvers);
+    let (a0, p0, f) = (p.id("A0"), p.id("P0"), Uuid::from_u128(0x0f0f));
+    p.world.insert(f, Digest::from_bytes([7; 32]));
+    p.edges.apply(&[EdgesSet::new(f, vec![a0]).unwrap()]).unwrap();
+    let mut req = p.request(&p.specs[0]);
+    req.inputs = vec![f];
+    let a3 = create(&mut p, &solvers, &req, 1_763_510_400_200).unwrap().id();
+    p.world.insert(p0, Digest::from_bytes([9; 32]));
+    let entry = p.model.recompute(&[p0, f], &solvers, &p.world, &p.edges).unwrap();
+    let got = statuses(&entry);
+    assert!(got.contains(&(a0, AlignmentStatus::Ok)), "A0 is re-solved: {got:?}");
+    assert!(got.contains(&(a3, AlignmentStatus::Outdated)), "F is stale behind A0, so A3 is outdated: {got:?}");
+    assert_eq!(p.model.get(&a3).unwrap().status(), AlignmentStatus::Outdated);
+}

@@ -257,8 +257,11 @@ impl AlignmentModel {
     /// completes; it fails as a whole only on malformed input (`not_found` for a `changed`
     /// ID the edge index does not know, `input_limit`) or an internal fault.
     ///
-    /// A non-alignment element in the pass that is not in `changed` is pending (CORE.DEP has
-    /// not recomputed it), so it counts as outdated for everything downstream.
+    /// A non-alignment element in the pass is pending (CORE.DEP has not recomputed it against
+    /// this pass) when it is not in `changed`, or when any of its dependencies is an alignment
+    /// re-solved in this pass even if it is in `changed`; it counts as outdated for everything
+    /// downstream. Callers must keep `world` holding current digests; tracking pending state
+    /// across passes belongs to CORE.DEP.RECOMP.
     ///
     /// Per alignment, in visiting order:
     /// - an upstream node failed, became outdated or is pending in this pass, or the parent's
@@ -289,12 +292,15 @@ impl AlignmentModel {
         let mut bad: BTreeSet<Uuid> = BTreeSet::new();
         let mut items = Vec::new();
         for n in order {
-            let upstream_bad = edges.dependencies(&n).map_err(AlignError::Edge)?.iter().any(|d| bad.contains(d));
+            let deps = edges.dependencies(&n).map_err(AlignError::Edge)?;
+            let upstream_bad = deps.iter().any(|d| bad.contains(d));
             let Some(current) = self.alignments.get(&n) else {
-                // Not an alignment and not itself changed: CORE.DEP has not recomputed it yet,
-                // so its digest is stale. It is pending, and everything downstream of it is
-                // outdated, never solved against the stale digest.
-                if upstream_bad || !changed.contains(&n) {
+                // A non-alignment is pending (its digest is stale: CORE.DEP has not recomputed
+                // it against this pass) when it is not itself changed, or when it depends on an
+                // alignment re-solved in this pass, even if it is in `changed`. Everything
+                // downstream of a pending node is outdated, never solved against its digest.
+                let after_resolve = deps.iter().any(|d| working.contains_key(d));
+                if upstream_bad || after_resolve || !changed.contains(&n) {
                     bad.insert(n);
                 }
                 continue;
