@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-fit]
+built_pr: 242
 satisfies: [REQ-KRN.LSQ-001, REQ-KRN.LSQ-003, REQ-KRN.LSQ-006, REQ-KRN.LSQ-007, REQ-KRN.LSQ-009, REQ-KRN.LSQ-010]
 covers: [PW.CON.01]
 depends_on: [KRN.NUM.ERR, KRN.NUM.RED, KRN.NUM.LA, KRN.SOLV.NLLS, KRN.MAN]
