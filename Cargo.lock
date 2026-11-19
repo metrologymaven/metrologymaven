@@ -574,6 +574,8 @@ dependencies = [
  "fid-canon",
  "fid-gps",
  "fid-io-reg",
+ "fid-kdec",
+ "fid-kunc",
  "fid-replay",
  "fid-types",
 ]
