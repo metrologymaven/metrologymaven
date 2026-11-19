@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-rdl]
+built_pr: 257
 satisfies: [REQ-UNC.RDL-001, REQ-UNC.RDL-002]
 covers: []
 depends_on: [KRN]
