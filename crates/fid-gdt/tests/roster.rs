@@ -198,6 +198,47 @@ fn malformed_values_are_refused() {
     assert_eq!(err(control.as_bytes()), "roster_invalid{display_name}");
 }
 
+// ------------------------------------------------------------------ maintainer decisions (PR #165)
+
+#[test]
+fn principals_must_be_lowercase() {
+    // A case variant of a bound identity cannot be bound as a second principal.
+    let two = [entry("rev-a", "human:fictional-alpha", ""), entry("rev-b", "HUMAN:Fictional-Alpha", "")];
+    assert_eq!(err(&doc(&two)), "roster_invalid{principals}");
+    for bad in ["human:Fictional-alpha", "Human:fictional-alpha", "HUMAN:FICTIONAL-ALPHA"] {
+        assert_eq!(err(&doc(&[entry("rev-a", bad, "")])), "roster_invalid{principals}", "{bad}");
+    }
+    let ok = Roster::load(&doc(&[entry("rev-a", "human:fictional-alpha.2_x", "")])).unwrap();
+    assert!(ok.reviewer_of("human:fictional-alpha.2_x").is_some());
+    // Lookup is exact: an upper-case query never matches.
+    assert_eq!(ok.has_role("HUMAN:FICTIONAL-ALPHA.2_X", Dialect::Asme, date("2026-06-01")), None);
+}
+
+#[test]
+fn only_human_principals_are_accepted() {
+    for bad in ["agent:fictional-bot", "service:fictional-ci", "fictional-alpha", "human:", "humanfictional", ":human:x"] {
+        assert_eq!(err(&doc(&[entry("rev-a", bad, "")])), "roster_invalid{principals}", "{bad}");
+    }
+    assert!(Roster::load(&doc(&[entry("rev-a", "human:fictional-alpha", "")])).is_ok());
+}
+
+#[test]
+fn display_names_refuse_format_characters() {
+    let mk = |n: &str| {
+        doc(&[format!(
+            r#"{{"id":"rev-a","display_name":"{n}","principals":["human:a"],"dialects":["iso"],"basis":"partner","valid_from":"2026-01-01"}}"#
+        )])
+    };
+    let format_chars =
+        ['\u{202E}', '\u{202A}', '\u{2066}', '\u{200B}', '\u{200C}', '\u{200D}', '\u{2060}', '\u{FEFF}', '\u{00AD}', '\u{E0041}'];
+    for c in format_chars {
+        let name = format!("Alpha{c}Example");
+        assert_eq!(err(&mk(&name)), "roster_invalid{display_name}", "U+{:04X}", u32::from(c));
+    }
+    // Ordinary non-ASCII letters are fine.
+    assert!(Roster::load(&mk("Ålpha Ëxample (fictional)")).is_ok());
+}
+
 // ------------------------------------------------------------------ REQ-005 and size bounds
 
 #[test]

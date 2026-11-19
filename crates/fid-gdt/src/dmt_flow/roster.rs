@@ -53,6 +53,8 @@ pub const MAX_DISPLAY_NAME_CHARS: usize = 80;
 pub const MAX_ID_CHARS: usize = 64;
 /// Longest principal identity, in characters.
 pub const MAX_PRINCIPAL_CHARS: usize = 128;
+/// The only principal kind accepted in a reviewer roster.
+pub const PRINCIPAL_KIND: &str = "human:";
 
 /// JSON nesting the format needs: object > array > object > array.
 const MAX_JSON_DEPTH: usize = 4;
@@ -157,8 +159,12 @@ impl Borrow<str> for ReviewerId {
     }
 }
 
-/// A principal identity as authenticated by the bus (`CORE.BUS`); opaque here.
-/// 1 to 128 printable ASCII characters, no spaces.
+/// A human principal identity as authenticated by the bus (`CORE.BUS`).
+///
+/// Maintainer decisions (PR #165): only `human:` principals may hold the reviewer role (D-009
+/// means credentialed people), and identities are lowercase so that case variants of one
+/// identity cannot be bound as separate principals. Form: `human:` followed by 1 or more
+/// printable ASCII characters with no spaces and no upper-case letters; 128 characters at most.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PrincipalIdentity(String);
 
@@ -168,7 +174,11 @@ impl PrincipalIdentity {
         if s.chars().count() > MAX_PRINCIPAL_CHARS {
             return Err(too_long("principals"));
         }
-        if s.is_empty() || !s.bytes().all(|c| c.is_ascii_graphic()) {
+        let ok = match s.strip_prefix(PRINCIPAL_KIND) {
+            Some(rest) => !rest.is_empty() && rest.bytes().all(|c| c.is_ascii_graphic() && !c.is_ascii_uppercase()),
+            None => false,
+        };
+        if !ok {
             return Err(invalid("principals"));
         }
         Ok(PrincipalIdentity(s.to_string()))
@@ -497,10 +507,40 @@ fn parse_display_name(s: &str) -> Result<String, RosterError> {
     if s.chars().count() > MAX_DISPLAY_NAME_CHARS {
         return Err(too_long("display_name"));
     }
-    if s.trim().is_empty() || s.chars().any(char::is_control) {
+    if s.trim().is_empty() || s.chars().any(|c| c.is_control() || is_format_char(c)) {
         return Err(invalid("display_name"));
     }
     Ok(s.to_string())
+}
+
+/// Unicode general category Cf (format characters: bidi overrides and isolates, zero-width
+/// spaces and joiners, the BOM, tag characters and the like), per Unicode 15.1. These can hide
+/// or reorder what a reviewer's name appears to say, so display names refuse them.
+fn is_format_char(c: char) -> bool {
+    matches!(
+        u32::from(c),
+        0x00AD
+            | 0x0600..=0x0605
+            | 0x061C
+            | 0x06DD
+            | 0x070F
+            | 0x0890..=0x0891
+            | 0x08E2
+            | 0x180E
+            | 0x200B..=0x200F
+            | 0x202A..=0x202E
+            | 0x2060..=0x2064
+            | 0x2066..=0x206F
+            | 0xFEFF
+            | 0xFFF9..=0xFFFB
+            | 0x110BD
+            | 0x110CD
+            | 0x13430..=0x1343F
+            | 0x1BCA0..=0x1BCA3
+            | 0x1D173..=0x1D17A
+            | 0xE0001
+            | 0xE0020..=0xE007F
+    )
 }
 
 fn parse_entry(v: &CValue) -> Result<(ReviewerId, Entry), RosterError> {

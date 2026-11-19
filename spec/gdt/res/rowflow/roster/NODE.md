@@ -53,6 +53,7 @@ D-009 requires two credentialed DMT reviewers per row, and D-016 makes the proje
 - **Data structures:** `Roster { version, entries: BTreeMap<ReviewerId, Entry> }`; `Entry { display_name, principals: Vec<PrincipalIdentity>, dialects: Vec<Dialect>, basis, valid_from: Date, valid_until: Option<Date> }`.
 - **Algorithm:** serde with `deny_unknown_fields`; canonical JSON digest; index principals in a `BTreeMap`.
 - **Errors:** `roster_invalid{field}`, `roster_duplicate{id}`, `field_too_long`.
+- **Principals and display names (maintainer decisions, PR #165):** only `human:` principal identities may be bound (D-009 reviewers are credentialed people); identities must be lowercase so case variants of one identity cannot be bound twice; display names refuse control and Unicode format (Cf) characters such as bidi overrides and zero-width characters. Each violation is `roster_invalid{field}`.
 - **Determinism:** D0.
 - **Performance budget:** 1 000 entries load < 10 ms [unverified].
 - **Crate:** `fid-gdt` (module `dmt_flow::roster`).
