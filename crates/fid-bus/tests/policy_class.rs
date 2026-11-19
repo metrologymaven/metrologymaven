@@ -348,6 +348,11 @@ fn ac4_cancel_rule() {
     assert_eq!(a_as_s.id(), s.id());
     assert_policy(authorise_cancel(&a_as_s, Some(&recorded)), "not_job_owner");
 
+    // Spoofs across kinds: a script cancelling an agent's job, an agent cancelling a
+    // human's job.
+    assert_policy(authorise_cancel(&s, Some(&a.reference())), "not_job_owner");
+    assert_policy(authorise_cancel(&a, Some(&h.reference())), "not_job_owner");
+
     // Every non-human kind: own job allowed, another principal's job refused, a job with
     // no recorded owner refused. A human may cancel all three.
     for k in PrincipalKind::ALL {
