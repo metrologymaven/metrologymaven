@@ -72,6 +72,7 @@ The tables of `project.db`, which of them are append-only, the triggers that mak
 ## Open questions
 
 - The `snapshots` table stores `SnapshotTaken` records for `CORE.RPL.RECON.SNAP`; `settings_current` holds project-scope values for `CORE.STO.SET`.
+- Path length: `CORE.STO.LAYOUT` supports project roots of up to 1,024 characters, but SQLite's Unix VFS accepts a database path of at most about 512 bytes [unverified: SQLite `MAX_PATHNAME`]. On Linux and macOS a write or read open whose `project.db` path is longer than 511 bytes fails with `path_too_long` before SQLite is called, so projects with roots longer than about 500 bytes cannot open their database there. Windows is not affected (the `win32-longpath` VFS with a `\\?\` path). Options: build SQLite with a larger `SQLITE_MAX_PATHLEN`, open through a short alias of the root directory handle, or lower LAYOUT's limit on Unix.
 
 ## Children
 

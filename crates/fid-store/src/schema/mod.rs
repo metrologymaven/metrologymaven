@@ -345,11 +345,10 @@ pub fn read_version(conn: &Connection) -> Result<SchemaVersion, SchemaError> {
     if objects == 0 {
         return Ok(SchemaVersion(0));
     }
-    let has_meta: i64 = conn.query_row(
-        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_meta'",
-        [],
-        |r| r.get(0),
-    )?;
+    let has_meta: i64 =
+        conn.query_row("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'schema_meta'", [], |r| {
+            r.get(0)
+        })?;
     if has_meta == 0 {
         return Err(SchemaError::SchemaInvalid("database has tables but no schema_meta".to_string()));
     }

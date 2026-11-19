@@ -108,9 +108,14 @@ fn snapshot(c: &Connection) -> Vec<(String, Vec<String>)> {
     TABLES.iter().map(|t| (t.to_string(), rows(c, t, &columns(c, t)))).collect()
 }
 
-/// Like [`snapshot`], over the columns `v1` has (columns added later are left out).
-fn snapshot_over(c: &Connection, v1: &Connection) -> Vec<(String, Vec<String>)> {
-    TABLES.iter().map(|t| (t.to_string(), rows(c, t, &columns(v1, t)))).collect()
+/// [`snapshot`] without `schema_meta`, which a migration extends by design.
+fn data_snapshot(c: &Connection) -> Vec<(String, Vec<String>)> {
+    snapshot(c).into_iter().filter(|(t, _)| t != "schema_meta").collect()
+}
+
+/// Like [`data_snapshot`], over the columns `v1` has (columns added later are left out).
+fn data_snapshot_over(c: &Connection, v1: &Connection) -> Vec<(String, Vec<String>)> {
+    TABLES.iter().filter(|t| **t != "schema_meta").map(|t| (t.to_string(), rows(c, t, &columns(v1, t)))).collect()
 }
 
 fn expected_counts() -> Vec<(String, i64)> {
@@ -148,7 +153,11 @@ static PLAN_V2: [Migration; 2] = [Migration { from: 0, to: 1, sql: V1_SQL }, V2_
 /// v2 whose second statement fails (no such table).
 static PLAN_V2_FAILING: [Migration; 2] = [
     Migration { from: 0, to: 1, sql: V1_SQL },
-    Migration { from: 1, to: 2, sql: "ALTER TABLE entries ADD COLUMN note TEXT; INSERT INTO no_such_table VALUES (1);" },
+    Migration {
+        from: 1,
+        to: 2,
+        sql: "ALTER TABLE entries ADD COLUMN note TEXT; INSERT INTO no_such_table VALUES (1);",
+    },
 ];
 
 fn plan(migrations: &'static [Migration]) -> MigrationPlan {
@@ -166,8 +175,13 @@ fn ac1_new_project_is_version_1_with_two_triggers_on_each_append_only_table() {
     assert_eq!(db.version(), SchemaVersion(1));
     assert_eq!(db.mode(), OpenMode::Write);
     let c = db.connection();
-    let meta: Vec<i64> =
-        c.prepare("SELECT version FROM schema_meta").unwrap().query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+    let meta: Vec<i64> = c
+        .prepare("SELECT version FROM schema_meta")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
     assert_eq!(meta, [1]);
     for table in TABLES {
         assert!(count(c, table) >= 0, "{table} exists");
@@ -295,7 +309,7 @@ fn hex_sha(s: &str) -> String {
 fn ac3_v1_fixture_migrates_to_v2_with_every_row_intact() {
     let (_t, root) = fixture_project("ac3");
     let (_t2, pristine) = pristine("ac3-fx");
-    let before = snapshot(&pristine);
+    let before = data_snapshot(&pristine);
     let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
     let lock = lock.unwrap();
     {
@@ -311,7 +325,8 @@ fn ac3_v1_fixture_migrates_to_v2_with_every_row_intact() {
             .map(Result::unwrap)
             .collect();
         assert_eq!(meta, [1, 2]);
-        assert_eq!(snapshot_over(c, &pristine), before);
+        // Every v1 row of every data table is intact; schema_meta is checked above ([1, 2]).
+        assert_eq!(data_snapshot_over(c, &pristine), before);
         for (table, n) in expected_counts() {
             assert_eq!(count(c, &table), n, "{table}");
         }
