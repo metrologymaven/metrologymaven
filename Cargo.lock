@@ -570,6 +570,7 @@ dependencies = [
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
+ "fid-num",
  "fid-testkit",
 ]
 
