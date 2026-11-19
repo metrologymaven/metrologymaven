@@ -14,6 +14,7 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-geo-index" = "kernel"
 "fid-kunc" = "kernel"
 "fid-solv" = "kernel"
+"fid-fit" = "kernel"
 "fid-scan-cmp" = "kernel"
 "fid-canon" = "model"
 # GD&T evaluation library (CONSTITUTION §2.1 L0). Model, not kernel: the DMT schema hashes

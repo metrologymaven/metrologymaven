@@ -263,6 +263,7 @@ jobs:
           python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
           python fixtures/solv/vend/make_fixtures.py --check
           python fixtures/solv/make_mstart_fixtures.py --check
+          python fixtures/fit/make_trait_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
@@ -427,6 +428,8 @@ jobs:
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
+      - name: Fit contract checks, round trip and canonical bytes on wasm32-wasip1 (KRN.LSQ.TRAIT AC-1 to AC-3)
+        run: cargo test --target wasm32-wasip1 -p fid-fit
       - name: Uncertainty statement digests on wasm32-wasip1 (UNC.UEC.STMT AC-5)
         run: cargo test --target wasm32-wasip1 -p fid-kunc
       - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)

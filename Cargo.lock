@@ -550,6 +550,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-fit"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-num",
+ "fid-solv",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-fixes"
 version = "0.0.1"
 dependencies = [
