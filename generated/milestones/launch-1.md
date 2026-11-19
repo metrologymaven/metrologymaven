@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**107** of **1336** leaves built in code ([B]).
+**109** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 37 built)
+### Wave 2 (121 leaves, 39 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -248,7 +248,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [PLAT.GPU.FALLBK.TIERS](../../spec/plat/gpu/fallbk/tiers/NODE.md) Fallback tier file, reduced-feature list and software floor check (S, P1a)
 - [B] [PLAT.GPU.POLICY](../../spec/plat/gpu/policy/NODE.md) GPU backend policy and known-bad driver list files (M, P1a)
 - [PLAT.HW.SUITE.DATA](../../spec/plat/hw/suite/data/NODE.md) Suite manifest content, pinned datasets and time budget (S, P1a)
-- [PLAT.MATRIX.PAGE](../../spec/plat/matrix/page/NODE.md) Generated support matrix page and consistency check (S, P0)
+- [B] [PLAT.MATRIX.PAGE](../../spec/plat/matrix/page/NODE.md) Generated support matrix page and consistency check (S, P0)
 - [PLAT.MATRIX.POLICY.EOL](../../spec/plat/matrix/policy/eol/NODE.md) End-of-support list, warning and demotion check (S, P0)
 - [PLAT.MATRIX.POLICY.ROWS](../../spec/plat/matrix/policy/rows/NODE.md) Matrix rows per D-010 and the promotion check (M, P0)
 - [QUAL.EVID.ASSEMBLE](../../spec/qual/evid/assemble/NODE.md) Evidence bundle assembly and completeness gate (M, P1a)
