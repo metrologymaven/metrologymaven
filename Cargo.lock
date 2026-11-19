@@ -592,6 +592,7 @@ dependencies = [
 name = "fid-geo-frame"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-types",
  "fid-kci",
  "fid-num",
  "fid-types",
