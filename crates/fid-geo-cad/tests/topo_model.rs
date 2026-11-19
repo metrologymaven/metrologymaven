@@ -425,8 +425,8 @@ fn ac3_duplicate_id_names_label_and_paths() {
     match err {
         TopoBuildError::DuplicateId { id, first, second } => {
             assert_eq!(id, TopologyId::Imported(Label::new("#12").unwrap()));
-            assert_eq!((first.kind, first.path), (EntityKind::Face, vec![0, 1]));
-            assert_eq!((second.kind, second.path), (EntityKind::Face, vec![0, 4]));
+            assert_eq!((first.kind, first.steps), (EntityKind::Face, vec![0, 1]));
+            assert_eq!((second.kind, second.steps), (EntityKind::Face, vec![0, 4]));
         }
         e => panic!("{e:?}"),
     }
@@ -820,4 +820,52 @@ fn error_types_are_small() {
     assert!(std::mem::size_of::<TopoBuildError>() < 128, "{}", std::mem::size_of::<TopoBuildError>());
     assert!(std::mem::size_of::<DecodeError>() < 128, "{}", std::mem::size_of::<DecodeError>());
     assert!(std::mem::size_of::<fid_geo_cad::GeomError>() < 128);
+}
+
+/// Two vertex records swapped in the raw bytes (IDs and points move together), trailer
+/// resealed: the topology still builds, but the derived IDs no longer match their index paths.
+#[test]
+fn decoder_refuses_swapped_vertex_records() {
+    let good = encode(&build("cylinder_capped"));
+    // The last two records before the trailer: tag 0x00 + 16-byte UUID + 3 f64 = 41 bytes.
+    let end = good.len() - 32;
+    let (a, b) = (end - 82, end - 41);
+    assert_eq!((good[a], good[b]), (0, 0));
+    let mut bytes = good.clone();
+    bytes[a..end].copy_from_slice(&[&good[b..end], &good[a..b]].concat());
+    assert_ne!(bytes, good);
+    reseal(&mut bytes);
+    match decode(&bytes) {
+        Err(DecodeError::Malformed { reason: MalformedReason::NonCanonical, .. }) => {}
+        other => panic!("{other:?}"),
+    }
+}
+
+/// A byte after the last vertex (trailer resealed) is `TrailingBytes`.
+#[test]
+fn decoder_refuses_trailing_bytes() {
+    let mut bytes = header(1, [0; 6]);
+    let at = bytes.len() - 32;
+    bytes.insert(at, 0);
+    reseal(&mut bytes);
+    assert_eq!(decode(&bytes), Err(DecodeError::Malformed { offset: at, reason: MalformedReason::TrailingBytes }));
+    let mut bytes = encode(&build("sphere_hemispheres"));
+    let at = bytes.len() - 32;
+    bytes.insert(at, 7);
+    reseal(&mut bytes);
+    assert_eq!(decode(&bytes), Err(DecodeError::Malformed { offset: at, reason: MalformedReason::TrailingBytes }));
+}
+
+/// A count above `u32::MAX` is `BadCount` at the same offset on 32- and 64-bit targets.
+#[test]
+fn decoder_count_above_u32_is_bad_count_everywhere() {
+    let good = encode(&build("cylinder_capped"));
+    // First shell record at 72: tag, 16-byte UUID, `closed`, then its face count at 90.
+    assert_eq!(good[72], 0);
+    for v in [1u64 << 32, u64::MAX] {
+        let mut bytes = good.clone();
+        bytes[90..98].copy_from_slice(&v.to_le_bytes());
+        reseal(&mut bytes);
+        assert_eq!(decode(&bytes), Err(DecodeError::Malformed { offset: 98, reason: MalformedReason::BadCount }));
+    }
 }

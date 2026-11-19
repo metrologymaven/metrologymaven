@@ -185,14 +185,14 @@ pub enum EntityIx {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IndexPath {
     pub kind: EntityKind,
-    pub path: Vec<u32>,
+    pub steps: Vec<u32>,
 }
 
 impl fmt::Display for IndexPath {
     /// `face[0,3]`.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}[", self.kind.as_str())?;
-        for (i, p) in self.path.iter().enumerate() {
+        for (i, p) in self.steps.iter().enumerate() {
             if i > 0 {
                 f.write_str(",")?;
             }
@@ -950,7 +950,7 @@ impl BodyBuilder {
                     let mut loop_coedges = Vec::with_capacity(bl.coedges.len());
                     for (c_pos, &bc_ix) in bl.coedges.iter().enumerate() {
                         let bc = self.coedges.get(bc_ix).ok_or_else(|| lost(EntityKind::Coedge, bc_ix))?;
-                        let path = [ix32(s_pos), ix32(f_pos), ix32(l_pos), ix32(c_pos)];
+                        let ix_path = [ix32(s_pos), ix32(f_pos), ix32(l_pos), ix32(c_pos)];
                         let slot = edge_new.get_mut(bc.edge).ok_or_else(|| lost(EntityKind::Edge, bc.edge))?;
                         let e_new = match *slot {
                             Some(e) => e,
@@ -958,14 +958,14 @@ impl BodyBuilder {
                                 let e = ix32(edge_order.len());
                                 *slot = Some(e);
                                 edge_order.push(bc.edge);
-                                paths.edges.push(path.to_vec());
+                                paths.edges.push(ix_path.to_vec());
                                 let be = self.edges.get(bc.edge).ok_or_else(|| lost(EntityKind::Edge, bc.edge))?;
                                 for (end, v) in [(0u32, be.start), (1u32, be.end)] {
                                     let vslot = vertex_new.get_mut(v).ok_or_else(|| lost(EntityKind::Vertex, v))?;
                                     if vslot.is_none() {
                                         *vslot = Some(ix32(vertex_order.len()));
                                         vertex_order.push(v);
-                                        let mut p = path.to_vec();
+                                        let mut p = ix_path.to_vec();
                                         p.push(end);
                                         paths.vertices.push(p);
                                     }
@@ -974,7 +974,7 @@ impl BodyBuilder {
                             }
                         };
                         loop_coedges.push(CoedgeIx(ix32(coedges.len())));
-                        paths.coedges.push(path.to_vec());
+                        paths.coedges.push(ix_path.to_vec());
                         coedges.push(Coedge {
                             id: TopologyId::Derived([0; 16]),
                             edge: EdgeIx(e_new),
@@ -1031,15 +1031,15 @@ impl BodyBuilder {
         let mut first_path: BTreeMap<TopologyId, IndexPath> = BTreeMap::new();
         let body_id = self.body_id;
         let mut assign = |kind: EntityKind,
-                          path: &[u32],
+                          ix_path: &[u32],
                           label: Option<&String>,
                           ix: EntityIx|
          -> Result<TopologyId, TopoBuildError> {
             let id = match label.and_then(|l| Label::new(l)) {
                 Some(l) => TopologyId::Imported(l),
-                None => TopologyId::Derived(derive_id(&body_id, kind, path)),
+                None => TopologyId::Derived(derive_id(&body_id, kind, ix_path)),
             };
-            let here = IndexPath { kind, path: path.to_vec() };
+            let here = IndexPath { kind, steps: ix_path.to_vec() };
             if let Some(first) = first_path.get(&id) {
                 return Err(TopoBuildError::DuplicateId { id, first: first.clone(), second: here });
             }
@@ -1097,11 +1097,11 @@ fn ix32(i: usize) -> u32 {
 
 /// UUIDv5 in [`TOPOLOGY_NAMESPACE`] of `body_id | kind code | path`, each path component a
 /// `u32` little-endian (REQ-002).
-pub(crate) fn derive_id(body_id: &[u8; 16], kind: EntityKind, path: &[u32]) -> [u8; 16] {
-    let mut name = Vec::with_capacity(17 + 4 * path.len());
+pub(crate) fn derive_id(body_id: &[u8; 16], kind: EntityKind, steps: &[u32]) -> [u8; 16] {
+    let mut name = Vec::with_capacity(17 + 4 * steps.len());
     name.extend_from_slice(body_id);
     name.push(kind.code());
-    for p in path {
+    for p in steps {
         name.extend_from_slice(&p.to_le_bytes());
     }
     uuid_v5(&TOPOLOGY_NAMESPACE, &name)

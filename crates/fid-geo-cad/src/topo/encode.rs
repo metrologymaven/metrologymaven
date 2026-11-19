@@ -99,7 +99,8 @@ pub enum MalformedReason {
     BadFloat,
     /// A label is not UTF-8 or its length is outside `1..=256`; or a shell has a label.
     BadLabel,
-    /// A count or index does not fit this platform's `usize`, or the counts do not add up.
+    /// A count, index or degree is above `u32::MAX` (on every target), or the counts do not
+    /// add up.
     BadCount,
     /// GEO.NURBS refused a curve or surface.
     Geometry(GeomError),
@@ -421,9 +422,15 @@ impl Reader<'_> {
     fn u64(&mut self) -> R<u64> {
         Ok(u64::from_le_bytes(self.array::<8>()?))
     }
+    /// A count, index or degree. Every valid one is far below `u32::MAX` (at most 10^7
+    /// entities, 2^27 floats in 1 GiB), so anything above `u32::MAX` is `BadCount` at the
+    /// offset after the field on every target, 32-bit `usize` (wasm32) or 64-bit alike.
     fn usize(&mut self) -> R<usize> {
         let v = self.u64()?;
-        usize::try_from(v).map_err(|_| self.bad(MalformedReason::BadCount))
+        match u32::try_from(v) {
+            Ok(x) => usize::try_from(x).map_err(|_| self.bad(MalformedReason::BadCount)),
+            Err(_) => Err(self.bad(MalformedReason::BadCount)),
+        }
     }
     /// A length of `elem`-byte items that must fit the remaining input.
     fn count(&mut self, elem: usize) -> R<usize> {
