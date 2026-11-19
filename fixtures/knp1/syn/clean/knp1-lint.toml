@@ -1,0 +1,3 @@
+# KRN.NUM.LINT.SYN AC-5 fixture: only the [syn] table.
+[syn.facade_paths]
+"fid_num::f" = { crate = "fid-num", version = "0.1.0", reason = "KNP-1 facade: correctly rounded pure-Rust transcendentals (KRN.NUM.FN)" }
