@@ -481,12 +481,23 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
 }
 
 /// Evaluates codegen options of one source. `place` maps a needle to a position and excerpt line.
-fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: &mut dyn FnMut(&str) -> ((u32, u32), String)) {
+fn eval_codegen(
+    sink: &mut Sink<'_>,
+    file: &str,
+    opts: &[Codegen],
+    place: &mut dyn FnMut(&str) -> ((u32, u32), String),
+) {
     for o in opts {
         match o.key.as_str() {
             "target-cpu" if o.value == "native" => {
                 let (pos, text) = place(&o.needle);
-                sink.push("NATIVE", file, pos, text.as_bytes(), format!("`-C {}` lets the compiler use the host's FMA", o.needle));
+                sink.push(
+                    "NATIVE",
+                    file,
+                    pos,
+                    text.as_bytes(),
+                    format!("`-C {}` lets the compiler use the host's FMA", o.needle),
+                );
             }
             "target-feature" => {
                 let bad: Vec<&str> = o
@@ -509,7 +520,13 @@ fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: &mut d
             }
             "codegen-units" if o.value != "1" => {
                 let (pos, text) = place(&o.needle);
-                sink.push("CGU", file, pos, text.as_bytes(), format!("`-C {}`: kernel builds need one codegen unit", o.needle));
+                sink.push(
+                    "CGU",
+                    file,
+                    pos,
+                    text.as_bytes(),
+                    format!("`-C {}`: kernel builds need one codegen unit", o.needle),
+                );
             }
             _ => {}
         }
@@ -688,7 +705,7 @@ fn value_text(v: &toml::Value) -> String {
         toml::Value::String(s) => s.clone(),
         toml::Value::Integer(i) => i.to_string(),
         toml::Value::Boolean(b) => b.to_string(),
-        other => other.to_string(),
+        other => format!("{other:?}"),
     }
 }
 
@@ -790,7 +807,11 @@ fn check_profiles(sink: &mut Sink<'_>, sources: &[ProfileSource<'_>]) {
             }
             Err(e) => {
                 let file = sources.first().map_or("Cargo.toml", |s| s.file);
-                sink.whole_file("CGU", file, format!("kernel profile `{p}`: {e}; codegen-units cannot be shown to be 1"));
+                sink.whole_file(
+                    "CGU",
+                    file,
+                    format!("kernel profile `{p}`: {e}; codegen-units cannot be shown to be 1"),
+                );
             }
         }
         for s in sources {
@@ -801,8 +822,9 @@ fn check_profiles(sink: &mut Sink<'_>, sources: &[ProfileSource<'_>]) {
                 if let Some(cgu) = v.as_table().and_then(|t| t.get("codegen-units")) {
                     let val = value_text(cgu);
                     if val != "1" {
-                        let path: Vec<String> =
-                            ["profile", p.as_str(), "package", name.as_str(), "codegen-units"].map(str::to_string).to_vec();
+                        let path: Vec<String> = ["profile", p.as_str(), "package", name.as_str(), "codegen-units"]
+                            .map(str::to_string)
+                            .to_vec();
                         let pos = s.idx.locate(&path);
                         sink.at_line(
                             "CGU",
