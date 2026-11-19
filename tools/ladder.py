@@ -21,13 +21,15 @@ with the commits and reviews each count is based on. It is information for peopl
 no one and grants no role, permission or access.
 
 Exit codes: 0 success; 1 an input error, printed to stderr as `LADDER-<CODE>: <message>`
-(LADDER-GIT for the recorded log, LADDER-INPUT for the review export and options, LADDER-CONFIG);
+(LADDER-GIT for the recorded log, LADDER-INPUT for the review export and options, LADDER-CONFIG,
+LADDER-OUTPUT when the report cannot be written, e.g. a closed pipe);
 2 a command-line usage error.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta
@@ -39,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from claims import ClaimsError, fmt_time  # noqa: E402  (ECO.COMM.CLAIM's time helpers)
 from claims import parse_time as _claims_parse_time  # noqa: E402
 from rfc import RfcError, decode, read_bounded  # noqa: E402  (ECO.COMM.RFC's bounded readers)
+from scope import ID_RE as NODE_ID_RE  # noqa: E402  (ECO.COMM.SCOPE's node ID rule)
 
 DEFAULT_CONFIG = ROOT / "tools" / "ladder_config.json"
 TOOL = "tools/ladder.py"
@@ -54,7 +57,8 @@ MAX_WINDOW_DAYS = 3660
 
 EXPANSION_RE = re.compile(r"^spec\(([A-Z0-9.]+)\): (split into \d+ children|leaf|blocked on D-\d+)")
 REVERT_RE = re.compile(r'^Revert "spec\(([A-Z0-9.]+)\): split')
-NODE_ID_RE = re.compile(r"^[A-Z0-9]+(?:\.[A-Z0-9]+)*$")
+PR_SUFFIX_RE = re.compile(r" \(#[0-9]+\)$")  # what a squash merge appends to a subject
+EXPLICIT_ZONE_RE = re.compile(r"T.*(?:[Zz]|[+-][0-9]{2}:?[0-9]{2})$")
 SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 NOREPLY_RE = re.compile(r"^(?:[0-9]+\+)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)@users\.noreply\.github\.com$")
 CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
@@ -79,6 +83,9 @@ def parse_time(value, what: str, code: str = "LADDER-INPUT") -> datetime:
     """An ISO 8601 time as aware UTC (claims.parse_time), with every failure as a LadderError."""
     if not isinstance(value, str) or not value.strip():
         raise LadderError(code, f"{what} must be an ISO 8601 time string")
+    if not EXPLICIT_ZONE_RE.search(value.strip()):
+        raise LadderError(code, f"{what} must be a date and time with an explicit Z or UTC offset, "
+                                f"got {value!r}")
     try:
         return _claims_parse_time(value)
     except (ClaimsError, ValueError, OverflowError):
@@ -95,8 +102,17 @@ def read_input(path: str, limit: int, code: str, what: str) -> str:
 
 def load_json(path: str, limit: int, code: str, what: str):
     text = read_input(path, limit, code, what)
+
+    def no_duplicates(pairs):
+        obj = {}
+        for k, v in pairs:
+            if k in obj:
+                raise LadderError(code, f"{what} {path} repeats the key {k!r} in one object")
+            obj[k] = v
+        return obj
+
     try:
-        return json.loads(text)
+        return json.loads(text, object_pairs_hook=no_duplicates)
     except json.JSONDecodeError as e:
         raise LadderError(code, f"{what} {path} is not valid JSON: {e.msg} at line {e.lineno}") from None
     except (ValueError, RecursionError):
@@ -148,6 +164,8 @@ def load_config(path: str) -> dict:
         k = key.strip().casefold()
         if not k or CONTROL_RE.search(k):
             raise LadderError("LADDER-CONFIG", f"aliases key {key!r} must be a non-empty email or login")
+        if k in out["aliases"]:
+            raise LadderError("LADDER-CONFIG", f"aliases keys collide when case and spaces are ignored: {key!r}")
         if not isinstance(person, str) or not person.strip() or CONTROL_RE.search(person):
             raise LadderError("LADDER-CONFIG", f"aliases entry {key!r} must name a person (non-empty string)")
         out["aliases"][k] = person.strip().casefold()
@@ -268,7 +286,9 @@ def build_report(commits: list, reviews: list, cfg: dict, now: datetime) -> dict
         raise LadderError("LADDER-INPUT", f"--now {fmt_time(now)} minus the revert window is before year 1") from None
     warnings = []
     expansions: dict = {}  # (domain, person) -> list of commit refs
-    splits_by_subject: dict = {}  # subject -> [(at, sha, domain, person)]
+    splits_by_subject: dict = {}  # subject without a squash-merge " (#N)" -> [(at, sha, domain, person)]
+    splits_by_node: dict = {}  # node ID -> [(at, sha, domain, person)]
+    others_by_node: dict = {}  # node ID -> [(at, sha)] for leaf and blocked expansions
     past = sorted((c for c in commits if c["at"] <= now), key=lambda c: (c["at"], c["sha"]))
     for c in past:
         m = EXPANSION_RE.match(c["subject"])
@@ -282,23 +302,41 @@ def build_report(commits: list, reviews: list, cfg: dict, now: datetime) -> dict
         expansions.setdefault((domain, c["person"]), []).append(
             {"sha": c["sha"], "node": node, "kind": kind.split(" ", 1)[0], "at": fmt_time(c["at"])})
         if kind.startswith("split"):
-            splits_by_subject.setdefault(c["subject"], []).append((c["at"], c["sha"], domain, c["person"]))
+            ref = (c["at"], c["sha"], domain, c["person"])
+            splits_by_subject.setdefault(PR_SUFFIX_RE.sub("", c["subject"]), []).append(ref)
+            splits_by_node.setdefault(node, []).append(ref)
+        else:
+            others_by_node.setdefault(node, []).append((c["at"], c["sha"]))
 
+    # A revert is matched to the split it reverts by subject (ignoring a squash merge's " (#N)" on
+    # either side), else by node ID. One that still matches nothing fails closed: no expansion of
+    # that node counts for anyone, and the report says so.
     blocked: dict = {}  # (domain, person) -> list of revert refs inside the window
+    uncounted: set = set()  # commit hashes of expansions withdrawn by an unattributed revert
     for c in past:
         m = REVERT_RE.match(c["subject"])
         if not m:
             continue
-        original = c["subject"][len('Revert "'):]
+        node = m.group(1)
+        original = PR_SUFFIX_RE.sub("", c["subject"])[len('Revert "'):]
         original = original[:-1] if original.endswith('"') else original
-        earlier = [s for s in splits_by_subject.get(original, []) if s[0] <= c["at"]]
+        earlier = [s for s in splits_by_subject.get(PR_SUFFIX_RE.sub("", original), []) if s[0] <= c["at"]]
         if not earlier:
-            warnings.append(f"revert {c['sha']} of {m.group(1)} matches no split in the log; not attributed")
+            earlier = [s for s in splits_by_node.get(node, []) if s[0] <= c["at"]]
+            if earlier:
+                warnings.append(f"revert {c['sha']} of {node} matched split {earlier[-1][1]} by node ID only")
+        if not earlier:
+            withdrawn = sorted(sha for at, sha in others_by_node.get(node, []) if at <= c["at"])
+            uncounted.update(withdrawn)
+            warnings.append(f"revert {c['sha']} of {node} matches no split in the log; not attributed, "
+                            f"and {len(withdrawn)} other expansion(s) of {node} are not counted")
             continue
         _, split_sha, domain, person = earlier[-1]
         if c["at"] >= window_start:
             blocked.setdefault((domain, person), []).append(
                 {"revert": c["sha"], "split": split_sha, "at": fmt_time(c["at"])})
+    if uncounted:
+        expansions = {k: [e for e in v if e["sha"] not in uncounted] for k, v in expansions.items()}
 
     review_refs: dict = {}  # (domain, person) -> {pr: earliest substantive review time}
     for r in reviews:
@@ -420,9 +458,25 @@ def main(argv=None, out=None) -> int:
         sys.stderr.write(f"{e.code}: {e.message}\n")
         return 1
     stream = out if out is not None else sys.stdout.buffer
-    stream.write(text.encode("utf-8"))
-    stream.flush()
+    try:
+        stream.write(text.encode("utf-8"))
+        stream.flush()
+    except OSError as e:  # BrokenPipeError included: a closed pipe is an error, not a traceback
+        if out is None:
+            _silence_stdout()
+        sys.stderr.write(f"LADDER-OUTPUT: cannot write the report: {e.strerror or e}\n")
+        return 1
     return 0
+
+
+def _silence_stdout() -> None:
+    """Point stdout at the null device so the interpreter's exit-time flush cannot fail again."""
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        os.close(devnull)
+    except (OSError, ValueError):
+        pass
 
 
 if __name__ == "__main__":

@@ -199,6 +199,11 @@ class TestConfig(LadderCase):
                                       "revert_window_days": 60, "aliases": {"x": 3}}),
             "syntax.json": "{",
             "deep.json": "[" * 100000 + "]" * 100000,
+            "dup-key.json": '{"min_expansions": 5, "min_expansions": 1, "alt_min_expansions": 3, '
+                            '"alt_min_reviews": 5, "revert_window_days": 60}',
+            "alias-case.json": json.dumps({"min_expansions": 5, "alt_min_expansions": 3, "alt_min_reviews": 5,
+                                           "revert_window_days": 60,
+                                           "aliases": {"Erin@Example.net": "erin", "erin@example.NET": "mallory"}}),
         }
         for name, text in cases.items():
             with self.subTest(name):
@@ -215,7 +220,7 @@ class TestHistory(LadderCase):
     SHA = "a" * 40
 
     def line(self, sha=None, email="1+x@users.noreply.github.com", when="2026-10-01T00:00:00Z",
-             subject="spec(GDT.A): leaf"):
+             subject="spec(GDT.AA): leaf"):
         return f"{sha or self.SHA}\x00X\x00{email}\x00{when}\x00{subject}\n"
 
     def test_future_commits_and_reverts_ignored(self):
@@ -234,6 +239,46 @@ class TestHistory(LadderCase):
         rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
         self.assertEqual(rep["eligible"], {})
         self.assertEqual(rep["warnings"], [])
+
+    def five_splits_and(self, *extra):
+        log = "".join(self.line(f"{i:040x}", email="1+ann@users.noreply.github.com",
+                                subject=f"spec(KRN.N{i}): split into 2 children") for i in range(5))
+        log += "".join(extra)
+        return report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
+
+    def revert(self, subject, sha="b" * 40):
+        return self.line(sha, email="2+ben@users.noreply.github.com", when="2026-11-01T00:00:00Z", subject=subject)
+
+    def test_squash_merged_revert_still_blocks(self):
+        rep = self.five_splits_and(self.revert('Revert "spec(KRN.N2): split into 2 children" (#140)'))
+        self.assertEqual((rep["eligible"], rep["warnings"]), ({}, []))
+        # both the split and its revert squash-merged
+        log = "".join(self.line(f"{i:040x}", email="1+ann@users.noreply.github.com",
+                                subject=f"spec(KRN.N{i}): split into 2 children (#{120 + i})") for i in range(5))
+        log += self.revert('Revert "spec(KRN.N2): split into 2 children (#122)" (#140)')
+        rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
+        self.assertEqual((rep["eligible"], rep["warnings"]), ({}, []))
+
+    def test_revert_falls_back_to_node_id(self):
+        rep = self.five_splits_and(self.revert('Revert "spec(KRN.N2): split into 3 children, reworded"'))
+        self.assertEqual(rep["eligible"], {})
+        self.assertEqual(len(rep["warnings"]), 1)
+        self.assertIn("of KRN.N2 matched split " + f"{2:040x}" + " by node ID only", rep["warnings"][0])
+
+    def test_unattributed_revert_fails_closed(self):
+        # ann has 5 KRN expansions; one (KRN.N4) is a leaf. A revert of a KRN.N4 split that is not
+        # in the log cannot be attributed, so KRN.N4's leaf is not counted and ann drops to 4.
+        log = "".join(self.line(f"{i:040x}", email="1+ann@users.noreply.github.com",
+                                subject=f"spec(KRN.N{i}): leaf") for i in range(5))
+        log += self.revert('Revert "spec(KRN.N4): split into 2 children" (#141)')
+        rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", "[]"))
+        self.assertEqual(rep["eligible"], {})
+        self.assertEqual(len(rep["warnings"]), 1)
+        self.assertIn("of KRN.N4 matches no split in the log; not attributed, and 1 other", rep["warnings"][0])
+        # without the revert ann is eligible, so the revert is what withheld her
+        rep = report(log=self.write("log.txt", log.rsplit(self.revert("x")[:40], 1)[0]),
+                     reviews=self.write("r.json", "[]"))
+        self.assertEqual(names(rep), {"KRN": ["ann"]})
 
     def test_crlf_log_and_case_insensitive_email(self):
         log = "".join(self.line(f"{i:040x}", email=("ANN@Example.org" if i % 2 else "ann@example.org"),
@@ -274,7 +319,7 @@ class TestHistory(LadderCase):
 class TestReviews(LadderCase):
     def review(self, **kw):
         r = {"pr": 1, "reviewer": "bob", "state": "approved", "body": "ok", "inline_comments": 0,
-             "at": "2026-10-01T00:00:00Z", "node_ids": ["ALN.A"]}
+             "at": "2026-10-01T00:00:00Z", "node_ids": ["ALN.AA"]}
         r.update(kw)
         return r
 
@@ -289,13 +334,16 @@ class TestReviews(LadderCase):
             "state": [self.review(state=None)],
             "body": [self.review(body=3)],
             "inline": [self.review(inline_comments=-1)],
-            "nodes": [self.review(node_ids="ALN.A")],
+            "nodes": [self.review(node_ids="ALN.AA")],
+            "at-no-zone": [self.review(at="2026-10-01T00:00:00")],
+            "duplicate-key": "DUP",
             "at": [self.review(at="soon")],
             "at-missing": [{k: v for k, v in self.review().items() if k != "at"}],
         }
         for name, data in cases.items():
             with self.subTest(name):
-                code, out, err = run(reviews=self.write("r.json", json.dumps(data)))
+                text = json.dumps(data) if data != "DUP" else '[{"pr": 1, "pr": 2}]'
+                code, out, err = run(reviews=self.write("r.json", text))
                 self.assertEqual((code, out), (1, b""))
                 self.assertTrue(err.startswith("LADDER-INPUT: "), err)
 
@@ -313,7 +361,7 @@ class TestReviews(LadderCase):
         self.assertIn("limit", err)
 
     def test_review_domains_and_ignored_ids(self):
-        rows = [self.review(pr=i, node_ids=["ALN.A", "GDT.B", "bad id", ".X"]) for i in range(1, 6)]
+        rows = [self.review(pr=i, node_ids=["ALN.AA", "GDT.BB", "bad id", ".X", "GDT.B"]) for i in range(1, 6)]
         log = "".join(f"{i:040x}\x00X\x00{i}+bob@users.noreply.github.com\x002026-09-01T00:00:00Z\x00"
                       f"spec(GDT.N{i}): leaf\n" for i in range(3))
         rep = report(log=self.write("log.txt", log), reviews=self.write("r.json", json.dumps(rows)))
@@ -341,6 +389,16 @@ class TestSafety(LadderCase):
                 self.assertTrue(err.startswith(code_name + ": "), err)
                 self.assertIn("symbolic link", err)
 
+    def test_closed_output_is_an_error_not_a_traceback(self):
+        class Closed(io.BytesIO):
+            def write(self, data):
+                raise BrokenPipeError(32, "Broken pipe")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = ladder.main(["--log", LOG, "--reviews", REVIEWS, "--now", NOW], out=Closed())
+        self.assertEqual(code, 1)
+        self.assertTrue(err.getvalue().startswith("LADDER-OUTPUT: "), err.getvalue())
+
     def test_runs_offline_without_subprocess(self):
         def refuse(*a, **k):
             raise AssertionError("ladder.py must not start processes or open sockets")
@@ -351,7 +409,7 @@ class TestSafety(LadderCase):
         self.assertIn(b'"ALN"', out)
 
     def test_bad_now(self):
-        for now in ("tomorrow", "", "0001-01-01T00:00:00Z"):
+        for now in ("tomorrow", "", "0001-01-01T00:00:00Z", "2026-12-01T00:00:00", "2026-12-01"):
             with self.subTest(now):
                 code, _, err = run(now=now)
                 self.assertEqual(code, 1)
