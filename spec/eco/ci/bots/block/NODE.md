@@ -20,7 +20,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # ECO.CI.BOTS.BLOCK: Maintainer-marked blocking findings check
@@ -60,7 +60,7 @@ Bot findings are advisory until a maintainer says otherwise. A maintainer marks 
 ## Design
 
 - **Registry command(s):** none; repository tool `cargo xtask bot-blocking --threads <json> --register <bots.toml> --maintainers <txt>`.
-- **Data structures:** thread export `[{id, path, line, resolved, comments: [{author, at, body}]}]`; output lines `blocking <id> <path>:<line> by <maintainer>`.
+- **Data structures:** thread export `[{id, path, line, resolved, comments: [{author, at, body}]}]`; output lines `blocking <id> <path>:<line> by <maintainer>` (a path with whitespace, `"` or `` is printed in double quotes with `"` and `` backslash-escaped; a null line prints `-`). Accounts are compared ASCII-case-insensitively, as forge logins are.
 - **Algorithm:** for each thread whose root author is a register `account`, scan replies in `at` order and keep the last maintainer mark (a body whose first token is `/blocking` or `/advisory`); blocking and not resolved → report.
 - **Errors:** `BLOCK-INPUT`.
 - **Determinism:** D0; output sorted by thread ID.
@@ -77,6 +77,8 @@ Hand-written thread exports, register and maintainer list under `fixtures/block/
 
 ## Open questions
 
+- Edited or deleted marks: the thread export has no edit or delete information, so a mark counts as its text appears in the export (an edited reply counts with its current text; a deleted one is simply absent). Whether to add an `edited` field to the export, and refuse or flag edited marks, is open (maintainer decision recorded at review of PR #171).
+- Adding `bot-blocking` to the required-check list in `required-checks.toml` is pending ECO.CI.WF.REQSET, which is not built yet; its REQ-001 already makes the name mandatory.
 - The `/blocking` comment itself is a human reply, so it does not affect the PR-timeline clock rule for bots (ECO.COMM.TIMELINE); confirm with that leaf's event kinds.
 
 ## Children

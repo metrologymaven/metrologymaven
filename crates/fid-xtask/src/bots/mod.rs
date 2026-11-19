@@ -336,7 +336,8 @@ pub fn parse_register(text: &str, findings: &mut BTreeSet<Finding>) -> Vec<Bot> 
     for bot in bots {
         if !ids.insert(bot.id.clone()) {
             findings.insert(finding(SCHEMA, bot.id.clone(), "duplicate id"));
-        } else if !accounts.insert(bot.account.clone()) {
+        } else if !accounts.insert(bot.account.to_ascii_lowercase()) {
+            // Forge logins are case-insensitive ASCII: `A[bot]` and `a[bot]` are one account.
             findings.insert(finding(SCHEMA, bot.id.clone(), format!("duplicate account {}", bot.account)));
         } else {
             unique.push(bot);
@@ -598,6 +599,23 @@ mod tests {
         let mut f = BTreeSet::new();
         parse_register("bot = 1\nother = 2\n", &mut f);
         assert_eq!(f.len(), 2, "{f:?}");
+    }
+
+    #[test]
+    fn accounts_differing_only_in_case_are_duplicates() {
+        let entry = |id: &str, account: &str| {
+            format!(
+                "[[bot]]\nid = \"{id}\"\nkind = \"self-hosted\"\naccount = \"{account}\"\nterms = \"MIT\"\n\
+                 data_handling = \"Local.\"\nreviewed_on = 2026-11-17\napproved_by = \"ada-quill\"\n\
+                 sends_content = false\n"
+            )
+        };
+        let text = entry("one", "Fid-Review[bot]") + &entry("two", "fid-review[bot]");
+        let mut f = BTreeSet::new();
+        let bots = parse_register(&text, &mut f);
+        assert_eq!(bots.len(), 1);
+        let f: Vec<String> = f.iter().map(ToString::to_string).collect();
+        assert_eq!(f, ["BOTS-SCHEMA two duplicate account fid-review[bot]"]);
     }
 
     #[test]

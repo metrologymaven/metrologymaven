@@ -66,7 +66,7 @@ impl Report {
         let mut out = Vec::new();
         for b in &self.blocking {
             let line = b.line.map_or_else(|| "-".to_string(), |l| l.to_string());
-            out.push(format!("blocking {} {}:{} by {}", b.id, b.path, line, b.by));
+            out.push(format!("blocking {} {}:{} by {}", b.id, quote_path(&b.path), line, b.by));
         }
         for n in &self.ignored {
             out.push(format!("ignored-mark {} {} by {}", n.id, n.mark, n.author));
@@ -83,6 +83,24 @@ impl Report {
     pub fn exit_code(&self) -> u8 {
         u8::from(!self.blocking.is_empty())
     }
+}
+
+/// The path as printed: unchanged when it has no whitespace, double quote or backslash;
+/// otherwise in double quotes with each double quote and backslash escaped by a backslash, so
+/// every output line splits unambiguously.
+pub fn quote_path(path: &str) -> String {
+    if !path.chars().any(|c| c.is_whitespace() || c == '"' || c == '\\') {
+        return path.to_string();
+    }
+    let mut out = String::from("\"");
+    for c in path.chars() {
+        if c == '"' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
 }
 
 /// The reply's mark: its body's first whitespace-separated token, when that is a mark.
@@ -230,7 +248,9 @@ fn parse_threads(text: &str) -> Result<BTreeMap<String, Thread>, String> {
 }
 
 /// The maintainer handles: one per line, surrounding whitespace removed; blank lines and
-/// lines starting with `#` are skipped. An empty list is an input error (fail closed).
+/// lines starting with `#` are skipped. Forge logins are case-insensitive ASCII, so the
+/// handles are returned lowercased, and two entries that differ only in case are an input
+/// error. An empty list is an input error (fail closed).
 pub fn parse_maintainers(text: &str) -> Result<BTreeSet<String>, String> {
     let mut out = BTreeSet::new();
     for (i, raw) in text.lines().enumerate() {
@@ -241,7 +261,9 @@ pub fn parse_maintainers(text: &str) -> Result<BTreeSet<String>, String> {
         if !valid_token(l) {
             return Err(format!("maintainers line {}: not a single account name", i + 1));
         }
-        out.insert(l.to_string());
+        if !out.insert(l.to_ascii_lowercase()) {
+            return Err(format!("maintainers line {}: {l} is listed twice (ignoring case)", i + 1));
+        }
     }
     if out.is_empty() {
         return Err("maintainers: no accounts".to_string());
@@ -249,28 +271,35 @@ pub fn parse_maintainers(text: &str) -> Result<BTreeSet<String>, String> {
     Ok(out)
 }
 
-/// Evaluates the thread export against the bot accounts and maintainers. `Err` is the
-/// `BLOCK-INPUT` detail.
+/// Evaluates the thread export against the bot accounts and maintainers. Accounts are
+/// compared ASCII-case-insensitively, as forge logins are. `Err` is the `BLOCK-INPUT` detail.
 pub fn evaluate(threads: &str, bots: &BTreeSet<String>, maintainers: &BTreeSet<String>) -> Result<Report, String> {
+    let lower = |set: &BTreeSet<String>| -> BTreeSet<String> { set.iter().map(|a| a.to_ascii_lowercase()).collect() };
+    let (bots, maintainers) = (lower(bots), lower(maintainers));
     let threads = parse_threads(threads)?;
     let mut report = Report::default();
     for (id, t) in threads {
         let mut comments = t.comments.iter();
         let Some(root) = comments.next() else { continue };
         let mut replies: Vec<&Comment> = comments.collect();
+        // The root is the first comment of the export; a reply older than it means the
+        // export is not in thread order, so which comment opened the thread is unknown.
+        if replies.iter().any(|r| r.at < root.at) {
+            return Err(format!("thread {id}: a reply is older than the root comment"));
+        }
         // Stable: replies with equal timestamps keep their export order.
         replies.sort_by_key(|c| c.at);
         let mut last: Option<(&'static str, &str)> = None;
         for r in replies {
             let Some(mark) = mark_of(&r.body) else { continue };
-            if maintainers.contains(&r.author) {
+            if maintainers.contains(&r.author.to_ascii_lowercase()) {
                 last = Some((mark, r.author.as_str()));
             } else {
                 report.ignored.push(IgnoredMark { id: id.clone(), mark, author: r.author.clone() });
             }
         }
         // REQ-004: only threads opened by a registered bot can block.
-        if !bots.contains(&root.author) || t.resolved {
+        if !bots.contains(&root.author.to_ascii_lowercase()) || t.resolved {
             continue;
         }
         if let Some((MARK_BLOCKING, by)) = last {
@@ -288,7 +317,11 @@ pub fn check(threads: &Path, register: &Path, maintainers: &Path) -> Result<Repo
     if let Some(f) = findings.into_iter().next() {
         return Err(format!("register: {f}"));
     }
-    let accounts: BTreeSet<String> = bots.into_iter().map(|b| b.account).collect();
+    let accounts: BTreeSet<String> = bots.into_iter().map(|b| b.account.to_ascii_lowercase()).collect();
+    if accounts.is_empty() {
+        // No bots would make every thread advisory: fail closed, like an empty maintainer list.
+        return Err("register: no bots".to_string());
+    }
     let maintainers = parse_maintainers(&read_bounded(maintainers, MAX_MAINTAINERS_BYTES)?)?;
     let threads = read_bounded(threads, MAX_EXPORT_BYTES)?;
     evaluate(&threads, &accounts, &maintainers)
@@ -336,6 +369,35 @@ mod tests {
         assert_eq!(m, BTreeSet::from(["alice".to_string(), "bob".to_string()]));
         assert!(parse_maintainers("# none\n").is_err());
         assert!(parse_maintainers("two words\n").is_err());
+        assert_eq!(parse_maintainers("Ada-Quill\n").unwrap(), set(&["ada-quill"]));
+        assert!(parse_maintainers("ada-quill\nAda-Quill\n").is_err());
+        assert!(parse_maintainers("ada-quill\nada-quill\n").is_err());
+    }
+
+    #[test]
+    fn accounts_match_ignoring_case() {
+        let json = r#"[{"id":"T1","path":"a.rs","line":3,"resolved":false,"comments":[
+            {"author":"Fid-Review[bot]","at":"2026-01-01T00:00:00Z","body":"finding"},
+            {"author":"ADA-quill","at":"2026-01-01T01:00:00Z","body":"/blocking"}]}]"#;
+        let r = evaluate(json, &set(&["fid-REVIEW[bot]"]), &set(&["Ada-Quill"])).unwrap();
+        assert_eq!(r.lines(), ["blocking T1 a.rs:3 by ADA-quill", "bot-blocking: 1 unresolved blocking thread(s)"]);
+        assert!(r.ignored.is_empty());
+    }
+
+    #[test]
+    fn reply_older_than_root_is_input_error() {
+        let json = r#"[{"id":"T1","path":"a.rs","line":3,"resolved":false,"comments":[
+            {"author":"bot[bot]","at":"2026-01-01T01:00:00Z","body":"finding"},
+            {"author":"alice","at":"2026-01-01T00:00:00Z","body":"/blocking"}]}]"#;
+        let e = evaluate(json, &set(&["bot[bot]"]), &set(&["alice"])).unwrap_err();
+        assert!(e.contains("older than the root"), "{e}");
+    }
+
+    #[test]
+    fn paths_are_quoted_when_ambiguous() {
+        assert_eq!(quote_path("src/a.rs"), "src/a.rs");
+        assert_eq!(quote_path("docs/my file.md"), "\"docs/my file.md\"");
+        assert_eq!(quote_path("a\"b\\c"), "\"a\\\"b\\\\c\"");
     }
 
     fn set(xs: &[&str]) -> BTreeSet<String> {
