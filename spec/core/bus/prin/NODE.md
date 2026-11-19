@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-bus]
+built_pr: 216
 satisfies: [REQ-CORE.BUS-001, REQ-CORE.BUS-002]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.JRN.CHAIN]
