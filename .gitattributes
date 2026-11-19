@@ -189,3 +189,5 @@ fixtures/unc/class/** -text
 # GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/gdt/spec/** -text
+# VIZ.VIEW.STATE fixtures: canonical bytes are compared and hashed; lenient inputs keep their CRLF.
+fixtures/viz/viewstate-samples/** -text

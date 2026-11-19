@@ -1045,6 +1045,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-view"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-vocab"
 version = "0.0.1"
 dependencies = [

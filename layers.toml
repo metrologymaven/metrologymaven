@@ -81,6 +81,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
+"fid-view" = "viewer"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"
