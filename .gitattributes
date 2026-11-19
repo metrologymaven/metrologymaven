@@ -29,6 +29,9 @@ fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text
+# KRN.NUM.LINT.SYN fixtures: findings carry line/column positions and line digests; never convert line endings.
+fixtures/knp1/seeded/** -text
+fixtures/knp1/syn/** -text
 # IO.CORP.HOSTILE fixtures: binary inputs and digested manifests; never convert line endings.
 fixtures/io/corp/hostile/** -text
 # AGENT.HARNESS.SAFETY archived runs: regenerated and compared byte for byte by make_runs.py --check.
@@ -138,7 +141,7 @@ fixtures/num/la/** -text
 # of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
 fixtures/man/implclosure-ws-v1/** -text
 # GEO.FRAME.UNITS and GEO.FRAME.XFORM fixtures: reference-generated cases, compared byte for byte by
-# tools/fixtures/geo_units_cases.py and geo_xform_cases.py --check; never convert line endings.
+# tools/fixtures/geo_units_cases.py, geo_xform_cases.py and geo_tree_cases.py --check; never convert line endings.
 fixtures/geo/frame/** -text
 # GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
 fixtures/geo/sel/** -text
@@ -170,5 +173,11 @@ fixtures/core/jrn/chain/append/** -text
 # CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/core/dep/** -text
+# RPT.MODEL.DOC fixtures: hand-labelled canonical JSON (no trailing newline) and digests compared byte for byte
+# by make_fixtures.py --check and the fid-report tests; never convert line endings.
+fixtures/rpt/model/** -text
 # UNC.DEC.TYPE fixtures: the catalog is digested and every file is compared byte for byte.
 fixtures/unc/dec/type/** -text
+# GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
+# which --check compares byte for byte; never convert line endings.
+fixtures/gdt/spec/** -text

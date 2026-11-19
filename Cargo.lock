@@ -579,7 +579,9 @@ dependencies = [
 name = "fid-geo-frame"
 version = "0.0.1"
 dependencies = [
+ "fid-kci",
  "fid-num",
+ "fid-types",
 ]
 
 [[package]]
@@ -895,6 +897,18 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-report"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-project",
+ "fid-registry",
+ "fid-replay",
+ "fid-report",
  "fid-types",
 ]
 

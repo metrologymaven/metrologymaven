@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-frame]
+built_pr: 240
 satisfies: [REQ-GEO.FRAME-001, REQ-GEO.FRAME-002]
 covers: []
 depends_on: [GEO.FRAME.XFORM]
@@ -66,6 +68,18 @@ The per-document tree of coordinate frames: one world root, every other frame wi
 - **Determinism:** D0.
 - **Performance budget:** resolve on a 1 000-frame tree of depth 20 under 20 µs [unverified].
 - **Crate:** `fid-geo-frame` (kernel graph, KNP-1 applies).
+- **Pinned choices (build, value-affecting).** The full text is in the module docs of `crates/fid-geo-frame/src/tree.rs` and is part of this design:
+  - Chains are left folds from the frame upward (`acc = T(g).compose(acc)`). An empty chain is absent, never an identity multiplied in (that could flip the sign of a zero). `a = b` gives the exact identity; only a's chain: `T_{c←a}`; only b's chain: `inverse(T_{c←b})`; both: `inverse(T_{c←b}).compose(T_{c←a})`.
+  - The world frame created by `new()` has ID `FrameId::WORLD` (16 zero bytes) and name `world`. `FrameId` text is 32 hex digits; upper- and lower-case parse to the same bytes, so case-only variants are the same ID (`DuplicateId`).
+  - Names: 1 to 255 UTF-8 bytes, no control characters, unique after ASCII lower-casing (`BadName`, `DuplicateName`).
+  - Every `to_parent` is re-checked on entry with XFORM's rotation check (composition does not re-check, so a composed chain can drift): not orthonormal or non-finite → `BadTransform`; determinant not +1 → `Handedness` (a reflection would join frames of opposite handedness).
+  - Bounds: depth (edges from world) ≤ 256 (`TooDeep`), at most 2^20 frames (`TooManyFrames`); every walk is an explicit loop bounded by these, scratch vectors use `try_reserve` (`Alloc`).
+  - Edits take `&mut self`, validate fully, then mutate; on any error the tree and its digest are unchanged. `reparent(id, new_parent, to_parent)` takes the new transform, since the old one is relative to the old parent. `Cycle { frames }` (the field is `frames`, not `path`: the kernel implementation-digest scan (KRN.MAN.MANI.IMPL) refuses the identifier `path` in kernel-closure sources) lists the frame, its would-be parent and that frame's ancestors up to the frame (excluded): AC-2 gives `[part_a, align_1]`.
+  - Extra errors beyond the four above: `DuplicateId`, `DuplicateName`, `BadId`, `BadName`, `NoParent`, `SecondWorld`, `WorldCount`, `BadWorld` (for `from_frames`, which rebuilds a tree from frames in any order and checks dangling parents and cycles), `Handedness`, `BadTransform`, `TooDeep`, `TooManyFrames`, `Alloc`, `Xform`, `Corrupt`.
+  - Digest layout version 1: SHA-256 (fid-kci) over `"FIDFRT" | 0x01 | n u64 | world id | per frame in ID order: id | kind u8 | has_parent u8 | parent [16] | name_len u16 | name | xform u8 (1 rigid, 2 similarity) | R 9 f64 | t 3 f64 | s f64`, little-endian, `-0.0` written as `+0.0`; kind bytes world 1, part 2, instrument 3, alignment 4, user 5.
+  - Path round-trip bound (extends XFORM REQ-004 to a path of k rigid edges with residuals ρ_i and translations t_i): `|x' − x| ≤ (Σρ_i)·M + 48·2⁻⁵³·(2k + 4)·M`, `M = |x| + Σ|t_i|`; `FrameTree::path_round_trip_bound` evaluates it, `None` for a path with a similarity edge. Derivation in the module docs; the independent script checks it in exact arithmetic on XFORM's worst-residual rotations. (Build note on REQ-006 and AC-4: as with XFORM REQ-004, the 1e-12 m figure cannot hold for every accepted rotation, since the ρ term alone reaches about 1e-10 m at 100 m; it holds for `tree_7`, whose transforms are orthonormal to rounding.)
+  - AC-4 is run as 10⁵ seeded points in the 100 m cube, point k on ordered pair k mod 49.
+  - REQ-GEO.FRAME-008 (frame-mismatch guard) is not in this leaf: GEO.FRAME's Children table assigns it to APPLY and CMD.
 
 ## Test fixtures
 

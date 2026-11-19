@@ -1,0 +1,9 @@
+# KRN.NUM.LINT.SYN cases fixture: only the [syn] table.
+[syn.facade_paths]
+"fid_num::f" = { crate = "fid-num", version = "0.1.0", reason = "KNP-1 facade: correctly rounded pure-Rust transcendentals (KRN.NUM.FN)" }
+
+[[syn.facade_files]]
+crate = "knp1-syn-cases"
+version = "0.0.1"
+file = "src/facade_impl.rs"
+reason = "fixture facade implementation file"

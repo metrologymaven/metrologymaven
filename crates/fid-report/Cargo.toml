@@ -1,0 +1,34 @@
+[package]
+name = "fid-report"
+description = "Metrology Maven report model: report document, pages, blocks, block-kind registry and report commands (spec node RPT.MODEL.DOC)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 of stored reports and events (CORE.JRN.CANON).
+fid-canon = { path = "../fid-canon" }
+# UUIDv7 construction and the observation sources that record or replay its clock and random
+# bits (CORE.PRJ.CONT.ID); also re-exports the Uuid value type. Layer model.
+fid-project = { path = "../fid-project" }
+# CommandDef records for the six report commands, built through the registry's field rules
+# (CORE.REG). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Replay outcome classes (CORE.RPL.CLASS) for the exact-replay check (AC-7). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[features]
+# Test-only block kinds `text` and `image` (module `doc::stub`). Off by default; enabled only
+# through the dev-dependency below, never in shipped builds. Real kinds are registered by
+# RPT.MODEL.BLOCKS, RPT.BALLOON and RPT.FORMS.
+test-kinds = []
+
+[dev-dependencies]
+fid-report = { path = ".", features = ["test-kinds"] }
+
+[lints]
+workspace = true
