@@ -120,7 +120,7 @@ fn complete(class: EvidenceClass, method: Method) -> StatementParts {
     p.unit = Some("si:m".into());
     p.expanded = Some(Expanded { value: 2e-6, k: 2.0 });
     p.model = Some(model());
-    if class >= EvidenceClass::Uec2 {
+    if method != Method::Declared {
         p.sources.push(SourceRef { kind: SourceKind::Dcc, id: "dcc:1".into(), digest: digest_of("dcc:1") });
     }
     if method == Method::Declared {
@@ -265,7 +265,17 @@ fn claimed_values_never_look_measured() {
         let s = UncertaintyStatement::new(p).unwrap();
         assert!(!s.is_claimed());
         assert_eq!(s.rests_on_declared_input(), kind == SourceKind::Declared);
+        assert!(s.rests_on_uncharacterized_input());
     }
+    let s = UncertaintyStatement::new(complete(EvidenceClass::Uec1, Method::Lpu)).unwrap();
+    assert!(!s.rests_on_declared_input() && !s.rests_on_uncharacterized_input());
+    // Every evaluated or specification-derived statement cites a source; a declaration may not.
+    for m in [Method::Lpu, Method::Mcm, Method::Iso15530_3, Method::Iso15530_4, Method::SpecDerived] {
+        let mut p = complete(EvidenceClass::Uec1, m);
+        p.sources.clear();
+        assert_eq!(err(p), StmtError::ClassMismatch { field: "sources" }, "{m}");
+    }
+    UncertaintyStatement::new(complete(EvidenceClass::Uec1, Method::Declared)).unwrap();
     // A claim carries no evaluation output.
     for m in [Method::Declared, Method::SpecDerived] {
         let mut p = complete(EvidenceClass::Uec1, m);
@@ -498,7 +508,9 @@ impl Gen {
         } else {
             SourceKind::ALL
         };
-        let n_sources = if class >= EvidenceClass::Uec2 { 1 + self.below(4) } else { self.below(4) };
+        let method = if class == EvidenceClass::Uec0 { None } else { Some(self.pick(methods)) };
+        let needs_source = class >= EvidenceClass::Uec2 || (method.is_some() && method != Some(Method::Declared));
+        let n_sources = if needs_source { 1 + self.below(4) } else { self.below(4) };
         for i in 0..n_sources {
             let kind = self.pick(source_kinds);
             let id = self.token(&format!("{i}"));
@@ -516,7 +528,7 @@ impl Gen {
         if class == EvidenceClass::Uec0 {
             p.uec0_reason = Some(self.pick(Uec0Reason::ALL));
         } else {
-            p.method = Some(self.pick(methods));
+            p.method = method;
             p.unit = Some(self.pick(&UNITS).to_owned());
             p.model = Some(ModelRef {
                 id: self.token("um:"),

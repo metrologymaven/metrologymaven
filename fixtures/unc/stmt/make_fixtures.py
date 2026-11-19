@@ -243,6 +243,8 @@ INVALID = {
                           "lpu_validated_by_mc"),
     "declared_no_principal": (canon(withv(V["uec1_declared"], provenance=PROV)), "class_mismatch", "provenance.principal"),
     "unit_not_si": (canon(withv(V["uec1_lpu"], unit="http://qudt.org/vocab/unit/M")), "invalid_field", "unit"),
+    "lpu_no_source": (canon(withv(V["uec1_lpu"], sources=[])), "class_mismatch", "sources"),
+    "spec_derived_no_source": (canon(withv(V["uec1_spec_derived"], sources=[])), "class_mismatch", "sources"),
     "unknown_member": (canon(withv(V["uec1_lpu"], note="x")), "malformed", "unknown_member"),
     "wrong_schema": (canon(withv(V["uec1_lpu"], schema="uncertainty_statement@2")), "malformed", "schema"),
     "number_literal": (canon(V["uec1_declared"]).replace(b'"k":"' + h(2.0).encode() + b'"', b'"k":2'),

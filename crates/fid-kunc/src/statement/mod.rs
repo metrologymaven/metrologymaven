@@ -27,7 +27,8 @@
 //!    `SPEC_DERIVED`) only with UEC-1, so a claimed value never looks measured; UEC-3 only
 //!    with `ISO15530-3` or `ISO15530-4` (REQ-UNC.UEC-006); UEC-2 and UEC-3 need at least one
 //!    source and only characterized ones (`dcc`, `qualification`, `type_a`;
-//!    REQ-UNC.UEC-005). A claimed method carries no `contributors`, `lpu_validated_by_mc`
+//!    REQ-UNC.UEC-005). UEC-1..3 with any method but `DECLARED` need at least one source
+//!    (`SPEC_DERIVED` cites its specification). A claimed method carries no `contributors`, `lpu_validated_by_mc`
 //!    or `nonlinearity`; `lpu_validated_by_mc` only with `LPU`. Provenance: `principal` and
 //!    `principal_kind` together; `DECLARED` needs a `principal`; an agent principal or an
 //!    adopter implies a proposal (CONSTITUTION C5).
@@ -484,6 +485,11 @@ impl UncertaintyStatement {
     pub fn rests_on_declared_input(&self) -> bool {
         self.parts.sources.iter().any(|s| s.kind == SourceKind::Declared)
     }
+    /// True when any source is not characterized (`declared` or `instrument_model`; see
+    /// [`SourceKind::is_characterized`]). Surfaces (`UNC.UEC.EXPL`, `RPT`) must label it.
+    pub fn rests_on_uncharacterized_input(&self) -> bool {
+        self.parts.sources.iter().any(|s| !s.kind.is_characterized())
+    }
     /// The unit (`si:m`, `si:rad` or `si:1`).
     pub fn unit(&self) -> Option<&str> {
         self.parts.unit.as_deref()
@@ -751,6 +757,9 @@ fn check_consistency(p: &StatementParts) -> Result<(), StmtError> {
             mismatch(p.nonlinearity.is_none(), "nonlinearity")?;
         }
         mismatch(p.lpu_validated_by_mc.is_none() || m == Method::Lpu, "lpu_validated_by_mc")?;
+        // Only a person's declaration may stand without a cited source; every other method
+        // (SPEC_DERIVED included, which cites its specification) names at least one.
+        mismatch(m == Method::Declared || !p.sources.is_empty(), "sources")?;
     }
     if matches!(p.class, EvidenceClass::Uec2 | EvidenceClass::Uec3) {
         mismatch(!p.sources.is_empty() && p.sources.iter().all(|s| s.kind.is_characterized()), "sources")?;
