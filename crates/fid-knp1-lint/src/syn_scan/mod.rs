@@ -350,6 +350,27 @@ fn reaches(path: &[String], pat: &[&str]) -> bool {
     path.len() < pat.len() && path.iter().zip(pat).all(|(a, b)| seg_eq(a, b))
 }
 
+/// The first position at which `pat` occurs in `path` (metavariables match any segment).
+fn find_at(path: &[String], pat: &[&str]) -> Option<usize> {
+    (0..path.len()).find(|&k| path.get(k..).is_some_and(|rest| has_prefix(rest, pat)))
+}
+
+/// True when some non-empty suffix of `path` is a proper prefix of `pat`: a glob over `path`,
+/// or a binding of it, can reach `pat`.
+fn reaches_any(path: &[String], pat: &[&str]) -> bool {
+    (0..path.len()).any(|k| path.get(k..).is_some_and(|rest| reaches(rest, pat)))
+}
+
+/// The built-in roots a re-export can expose (`pub use std;`).
+const BUILTIN_ROOTS: [&str; 3] = ["std", "core", "alloc"];
+
+fn is_int_type(seg: &str) -> bool {
+    matches!(
+        seg,
+        "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "u128" | "usize"
+    )
+}
+
 fn is_float_type(seg: &str) -> bool {
     seg == "f32" || seg == "f64" || is_metavar(seg)
 }
@@ -637,6 +658,8 @@ struct UseLeaf {
     toks: Vec<usize>,
     absolute: bool,
     binding: Option<String>,
+    /// Token index of the binding (the name after `as`, else the last segment).
+    bind_tok: Option<usize>,
     /// Token index of the `*` of a glob import.
     glob: Option<usize>,
 }
@@ -763,6 +786,7 @@ impl<'a> Scan<'a> {
             }
         }
         self.check_metavariables();
+        self.check_macro_args_and_mods();
         for i in 0..self.toks.len() {
             if let Some((segs, toks, absolute, end)) = self.path_at(i) {
                 let call = self.is(end, &Kind::Open(Delim::Paren));
@@ -823,18 +847,24 @@ impl<'a> Scan<'a> {
         let mut i = 0;
         while i < self.toks.len() {
             if self.keyword(i, "extern") && self.keyword(i + 1, "crate") {
-                // `extern crate X as Y;`
-                if let (Some(x), true, Some(y)) = (self.ident(i + 2), self.keyword(i + 3, "as"), self.ident(i + 4)) {
-                    if y != "_" {
-                        let leaf = UseLeaf {
-                            segs: vec![x.to_string()],
-                            toks: vec![i + 2],
-                            absolute: true,
-                            binding: Some(y.to_string()),
-                            glob: None,
-                        };
-                        leaves.push(leaf);
-                    }
+                // `extern crate X;` and `extern crate X as Y;`
+                if let Some(x) = self.ident(i + 2) {
+                    let (binding, bind_tok) = if self.keyword(i + 3, "as") {
+                        match self.ident(i + 4) {
+                            Some("_") | None => (None, None),
+                            Some(y) => (Some(y.to_string()), Some(i + 4)),
+                        }
+                    } else {
+                        (Some(x.to_string()), Some(i + 2))
+                    };
+                    leaves.push(UseLeaf {
+                        segs: vec![x.to_string()],
+                        toks: vec![i + 2],
+                        absolute: true,
+                        binding,
+                        bind_tok,
+                        glob: None,
+                    });
                 }
                 i += 1;
                 continue;
@@ -913,6 +943,7 @@ impl<'a> Scan<'a> {
                     toks: ptoks.clone(),
                     absolute,
                     binding: None,
+                    bind_tok: None,
                     glob: Some(*i),
                 });
                 *i += 1;
@@ -954,16 +985,18 @@ impl<'a> Scan<'a> {
                 ptoks.pop();
             }
             let mut binding = prefix.last().cloned();
+            let mut bind_tok = ptoks.last().copied();
             if self.keyword(*i, "as") {
                 match self.ident(*i + 1) {
                     Some(b) => {
                         binding = if b == "_" { None } else { Some(b.to_string()) };
+                        bind_tok = Some(*i + 1);
                         *i += 2;
                     }
                     None => return Err(*i + 1),
                 }
             }
-            out.push(UseLeaf { segs: prefix.clone(), toks: ptoks.clone(), absolute, binding, glob: None });
+            out.push(UseLeaf { segs: prefix.clone(), toks: ptoks.clone(), absolute, binding, bind_tok, glob: None });
             return Ok(());
         }
     }
@@ -1089,10 +1122,10 @@ impl<'a> Scan<'a> {
         // Module rules.
         for (rule, pat) in patterns(P::Module) {
             let p: Vec<&str> = pat.split("::").collect();
-            if has_prefix(segs, &p) {
-                let at = toks.get(p.len() - 1).copied().unwrap_or(first);
+            if let Some(k) = find_at(segs, &p) {
+                let at = toks.get(k + p.len() - 1).copied().unwrap_or(first);
                 self.hit(at, rule, format!("path `{shown}` uses `{pat}`"));
-            } else if let Some(r) = rs.iter().find(|r| has_prefix(r, &p)) {
+            } else if let Some(r) = rs.iter().find(|r| find_at(r, &p).is_some()) {
                 self.hit(first, rule, format!("path `{shown}` resolves to `{}`, which uses `{pat}`", r.join("::")));
             }
         }
@@ -1130,7 +1163,9 @@ impl<'a> Scan<'a> {
         // Other call-position rules (`pow`).
         if segs.len() >= 2 || aliased || is_use || call {
             for r in &rs {
-                if let Some(rule) = r.last().and_then(|l| other_call_rule(l)) {
+                // `i32::pow` and the like are exact integer powers.
+                let int_owner = r.len() >= 2 && r.get(r.len() - 2).is_some_and(|t| is_int_type(t));
+                if let Some(rule) = r.last().and_then(|l| other_call_rule(l)).filter(|_| !int_owner) {
                     let at = if segs.last() == r.last() { last } else { first };
                     self.hit(at, rule, format!("`{shown}` calls `{}`", r.join("::")));
                 }
@@ -1162,12 +1197,21 @@ impl<'a> Scan<'a> {
         };
         let (rs, _) = self.resolve(&l.segs, l.absolute);
         let shown = l.segs.join("::");
-        if l.binding.as_ref().is_some_and(|b| b != lastseg) {
+        let renamed = l.binding.as_ref().is_some_and(|b| b != lastseg);
+        let bare_root = l.segs.len() == 1 && BUILTIN_ROOTS.contains(&lastseg.as_str());
+        if renamed || bare_root {
             for (rule, pat) in patterns(P::Module) {
                 let p: Vec<&str> = pat.split("::").collect();
-                if rs.iter().any(|r| reaches(r, &p)) {
-                    self.hit(last, rule, format!("`{shown}` is renamed; the binding can reach `{pat}`"));
+                if rs.iter().any(|r| reaches_any(r, &p)) {
+                    let why = if bare_root { "exposes a built-in root" } else { "is renamed" };
+                    self.hit(last, rule, format!("`{shown}` {why}; the binding can reach `{pat}`"));
                 }
+            }
+        }
+        if let (Some(b), Some(bt)) = (&l.binding, l.bind_tok) {
+            let is_itself = l.segs.len() == 1 && l.segs.first() == Some(b);
+            if !is_itself {
+                self.check_facade_shadow(bt, b);
             }
         }
         for kind in [P::Macro, P::IncludeMacro] {
@@ -1186,36 +1230,97 @@ impl<'a> Scan<'a> {
                 continue;
             }
             let Some(name) = self.ident(i + 1) else { continue };
+            self.check_facade_shadow(i + 1, name);
             if let Some((segs, _, _, _)) = self.path_at(i + 3) {
                 self.aliases.entry(name.to_string()).or_default().push(segs);
             }
         }
     }
 
-    /// Macro code the scan cannot classify (`KNP1-PARSE-RESOLVE`): a method name that is a
-    /// metavariable (`.$f(`), a metavariable after a float type (`f64::$f`, `$t::$f`), and a
-    /// `$(…)` repetition used as a path prefix (`$($p)::*::read`).
+    /// Macro code the scan cannot classify is `KNP1-PARSE` (never waivable), reported in the
+    /// macro definition: a metavariable in callee position (`$m!`, `$f(`, `.$f(`, `::$f`,
+    /// `>::$f`; not `$crate`, not `fn $f(`), and a `$(…)` repetition that contains `::` or is
+    /// followed by `::`.
     fn check_metavariables(&mut self) {
         for i in 0..self.toks.len() {
-            let meta = self.is(i, &Kind::Dollar) && self.ident(i + 1).is_some();
-            if meta && i > 0 && self.is(i - 1, &Kind::Dot) {
-                self.parse_hit(i, "method name is a macro metavariable: the scan cannot classify the call");
+            if !self.is(i, &Kind::Dollar) {
+                continue;
             }
-            if meta && i >= 2 && self.is(i - 1, &Kind::PathSep) {
-                let prev = self.ident(i - 2);
-                let float_ty = prev.is_some_and(is_float_type)
-                    || (prev != Some("crate") && i >= 3 && self.is(i - 3, &Kind::Dollar));
-                if float_ty {
-                    self.parse_hit(
+            if let Some(name) = self.ident(i + 1) {
+                if name == "crate" {
+                    continue;
+                }
+                let prev = i.checked_sub(1).and_then(|p| self.kind(p));
+                let after_fn = i.checked_sub(1).is_some_and(|p| self.keyword(p, "fn"));
+                let callee = self.is(i + 2, &Kind::Bang)
+                    || (self.is(i + 2, &Kind::Open(Delim::Paren)) && !after_fn)
+                    || matches!(prev, Some(Kind::Dot | Kind::PathSep));
+                if callee {
+                    self.hit(
                         i,
-                        "item name after a float type is a macro metavariable: the scan cannot classify it",
+                        &Rule::Parse,
+                        format!("metavariable `${name}` in callee position: the scan cannot classify the call"),
                     );
                 }
-            }
-            if self.is(i, &Kind::Dollar) && self.is(i + 1, &Kind::Open(Delim::Paren)) {
+            } else if self.is(i + 1, &Kind::Open(Delim::Paren)) {
                 let close = self.partner.get(i + 1).copied().unwrap_or(usize::MAX);
-                if close == usize::MAX || (close + 1..close + 4).any(|k| self.is(k, &Kind::PathSep)) {
-                    self.parse_hit(i, "macro repetition used as a path: the scan cannot classify the path");
+                let unclassifiable = close == usize::MAX
+                    || (i + 2..close).any(|k| self.is(k, &Kind::PathSep))
+                    || (close + 1..close + 4).any(|k| self.is(k, &Kind::PathSep));
+                if unclassifiable {
+                    self.hit(i, &Rule::Parse, "macro repetition builds a path: the scan cannot classify it".to_string());
+                }
+            }
+        }
+    }
+
+    /// A module, binding or type alias named like a facade root (`mod fid_num`,
+    /// `use std::primitive::f64 as fid_num`) could stand in for the facade: `KNP1-LIBM`.
+    fn check_facade_shadow(&mut self, at: usize, name: &str) {
+        if self.cfg.facade_paths.keys().any(|p| p.first().is_some_and(|r| r == name)) {
+            self.hit(at, &Rule::Libm, format!("`{name}` is named like a facade root but is not the facade crate"));
+        }
+    }
+
+    /// `mod <facade root>` and banned names passed bare to a macro (`call!(env, …)`).
+    fn check_macro_args_and_mods(&mut self) {
+        let n = self.toks.len();
+        let mut in_args = vec![false; n];
+        for i in 0..n {
+            if self.keyword(i, "mod") {
+                if let Some(name) = self.ident(i + 1) {
+                    self.check_facade_shadow(i + 1, name);
+                }
+            }
+            if self.ident(i).is_some() && self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_))) {
+                let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX).min(n);
+                for b in in_args.iter_mut().take(close).skip(i + 3) {
+                    *b = true;
+                }
+            }
+        }
+        for (i, inside) in in_args.iter().enumerate() {
+            if !inside {
+                continue;
+            }
+            let Some(name) = self.ident(i) else { continue };
+            let prev = i.checked_sub(1).and_then(|p| self.kind(p));
+            let next = self.kind(i + 1);
+            let bare = !matches!(prev, Some(Kind::Dot | Kind::PathSep | Kind::Dollar))
+                && !matches!(next, Some(Kind::PathSep | Kind::Bang | Kind::Open(Delim::Paren)));
+            if !bare {
+                continue;
+            }
+            for kind in [P::Call, P::Method, P::FloatMethod, P::Macro, P::IncludeMacro] {
+                for (rule, pat) in patterns(kind) {
+                    if pat == name {
+                        let m = format!("`{name}` passed bare to a macro: the macro may call it");
+                        if *rule == Rule::Libm {
+                            self.libm(i, m);
+                        } else {
+                            self.hit(i, rule, m);
+                        }
+                    }
                 }
             }
         }
@@ -1230,10 +1335,10 @@ impl<'a> Scan<'a> {
         let shown = if l.segs.is_empty() { "::".to_string() } else { l.segs.join("::") };
         for (rule, pat) in patterns(P::Module) {
             let p: Vec<&str> = pat.split("::").collect();
-            if has_prefix(&l.segs, &p) {
-                let at = l.toks.get(p.len() - 1).copied().unwrap_or(star);
+            if let Some(k) = find_at(&l.segs, &p) {
+                let at = l.toks.get(k + p.len() - 1).copied().unwrap_or(star);
                 self.hit(at, rule, format!("glob import `{shown}::*` uses `{pat}`"));
-            } else if rs.iter().any(|r| has_prefix(r, &p) || reaches(r, &p)) {
+            } else if rs.iter().any(|r| find_at(r, &p).is_some() || reaches_any(r, &p)) {
                 self.hit(star, rule, format!("glob import `{shown}::*` can reach `{pat}`"));
             }
         }
@@ -1280,7 +1385,9 @@ impl<'a> Scan<'a> {
                 self.libm(i, format!("`<…>::{name}` (float transcendental)"));
             }
             if let Some(rule) = other_call_rule(name) {
-                self.hit(i, rule, format!("`<…>::{name}`"));
+                if !self.qualified_any(i - 2, is_int_type) {
+                    self.hit(i, rule, format!("`<…>::{name}`"));
+                }
             }
         }
         if self.is(i + 1, &Kind::Bang) && matches!(self.kind(i + 2), Some(Kind::Open(_))) {
@@ -1431,6 +1538,31 @@ impl<'a> Scan<'a> {
 
     /// `<…>` ending at the `>` at `gt`: true when it mentions `f32`/`f64` or a metavariable,
     /// or is too long to check.
+    /// `<…>` ending at the `>` at `gt`: true when an identifier in it satisfies `pred`
+    /// (false when the `<` is not found within the lookahead cap).
+    fn qualified_any(&self, gt: usize, pred: fn(&str) -> bool) -> bool {
+        let mut depth = 0usize;
+        let mut k = gt;
+        for _ in 0..MAX_OPERAND_TOKENS {
+            match self.kind(k) {
+                Some(Kind::Gt) => depth += 1,
+                Some(Kind::Lt) => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        return (k..gt).any(|j| self.ident(j).is_some_and(pred));
+                    }
+                }
+                None => return false,
+                _ => {}
+            }
+            match k.checked_sub(1) {
+                Some(p) => k = p,
+                None => return false,
+            }
+        }
+        false
+    }
+
     fn qualified_float(&self, gt: usize) -> bool {
         let mut depth = 0usize;
         let mut k = gt;
