@@ -1,0 +1,13 @@
+[package]
+name = "kstat"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+knum = { path = "../knum" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+vext = "1.4"
+
+[dev-dependencies]
+kfit = { path = "../kfit" }

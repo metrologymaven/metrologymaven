@@ -378,6 +378,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-cad-proto"
+version = "0.0.1"
+dependencies = [
+ "fid-io-reg",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-canon"
 version = "0.0.1"
 dependencies = [
@@ -644,6 +652,15 @@ name = "fid-knp1-lint"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "toml",
+]
+
+[[package]]
+name = "fid-manifest-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
  "toml",
 ]
 
