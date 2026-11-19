@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.ZONE-001]
 covers: []
 depends_on: [KRN.NUM, GEO.FRAME]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.ZONE.ZTYPE: Tolerance-zone shapes and fixed-pose usage
@@ -55,7 +56,19 @@ The geometric vocabulary of the zone engine: each zone shape, given a pose and t
 - **Errors:** `empty_points`, `non_unit_direction`, `nan_input`, `deviation_count_mismatch` (offset).
 - **Determinism:** D0.
 - **Performance budget:** 1 M points per call < 10 ms single-threaded [unverified].
-- **Crate:** `fid-gps` (module `zone::shape`).
+- **Crate:** `fid-gps` (module `zone::shape`). `layers.toml` places `fid-gps` in the model layer, so KNP-1 is not mandatory there; the module is still written to KNP-1 rules (no FMA, no `f64::min`/`f64::max`, square root through `fid-num`, fixed-order reductions, NaN an error) and its tests run on wasm32.
+
+### Pinned choices (as built)
+
+- **Pose.** `Pose { origin: P3, direction: P3 }` in the part frame (SI metres; `P3 = [f64; 3]`), the vector form the usage formulas are written in. `Pose::from_rigid(&Rigid)` takes it from a GEO.FRAME rigid transform (zone local frame to part frame): origin = the translation, direction = the third rotation column (image of local z), copied without arithmetic. Usage is evaluated directly on `r = p − o` in the part frame, not by first mapping points through the inverse transform: the two agree mathematically and the direct form rounds less.
+- **Shape semantics.** Two planes: normal = pose direction, centred on the plane through the origin. Two lines: lines lie in the plane with unit normal `plane`; the pose direction is the in-plane direction across the lines and must satisfy `|n·plane| ≤ 1e-12` (`direction_not_in_plane`); a point's out-of-plane component is ignored. Cylinder: axis through the origin along the pose direction. Circle: centred at the origin in the plane with unit normal `plane`; the pose direction is not used. Sphere: centred at the origin; direction not used. Offset: input is one signed deviation per toleranced point (`ZoneInput::Deviations { points, deviations }`), usage `2·max|d_i − c|`; the pose is not used by the arithmetic. The pose direction is validated for every shape, so a pose is valid or not independently of the shape.
+- **Sizes.** Full width or diameter in metres, never a half-width or radius; always ≥ 0.
+- **Expressions.** `dot3(a, b) = (a0·b0 + a1·b1) + a2·b2`; `r = [p0 − o0, p1 − o1, p2 − o2]`; planes and lines `|dot3(n, r)|`; cylinder (`a = n`) and circle (`a = plane`) `h = dot3(a, r)`, `q_k = r_k − h·a_k`, `sqrt(dot3(q, q))`; sphere `sqrt(dot3(r, r))`; offset `|d_i − c|`. `sqrt` is `fid_num::f::sqrt` (correctly rounded). Directions are used as given (no renormalisation).
+- **Maximum and ties.** Index order from point 0; a value replaces the running maximum only if strictly greater, so the lowest index wins ties; size = `2.0 × max` (exact).
+- **Unit test.** `|sqrt(dot3(d, d)) − 1| ≤ 1e-12` for the pose direction and each plane normal (squared length overflow counts as length +∞).
+- **Validation order** (first failure wins): input kind (`input_kind_mismatch`: Offset takes deviations, every other shape points); deviation count (`deviation_count_mismatch`); `empty_points`; more than 2^32 − 1 points (`too_many_points`, the driving index is a `u32`); any NaN in pose, shape parameters, `contains` size, points or deviations (`nan_input`); any ±∞ in the same (`non_finite_input`); pose direction unit, then plane normal unit (`non_unit_direction`); two lines in-plane check (`direction_not_in_plane`); a non-finite per-point value or doubled maximum (`overflow`, with the point index). `input_kind_mismatch`, `too_many_points`, `non_finite_input` and `direction_not_in_plane` are additions to the error list above, needed to make the enum and the API total.
+- **contains.** `usage(...).size_m <= size`, exact; `size` NaN is `nan_input`, ±∞ is `non_finite_input`; a negative size contains nothing.
+- **Test data.** `fixtures/gdt/zone/make_shapes_fixtures.py` (stdlib Python): `shapes_analytic.json` holds the exact-rational oracle values (rounded once to f64; bit-exact where the exact value is an f64, else ≤ 1 ulp) and the spec-labelled errors; `shapes_random_v1.json` holds, for 1 000 000 Philox4x32-10 points (seed `0x5eed`; point i = `2u − 1` from draws 3i..3i+2 of stream 0, deviation i from draw i of stream 1; pose origin (0.1, −0.2, 0.3), direction (2/7, 3/7, 6/7), plane (6/7, 2/7, −3/7), offset shift 0.1), the whole-set usage and the SHA-256 of the 1 000 chunk usages per shape, from the pinned expressions re-implemented in Python floats. The 10 000-case property test uses seed `0x5eed`, stream 2.
 
 ## Test fixtures
 
