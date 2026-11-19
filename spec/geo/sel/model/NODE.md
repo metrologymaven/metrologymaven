@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-sel]
+built_pr: 201
 satisfies: [REQ-GEO.SEL-001, REQ-GEO.SEL-004]
 covers: []
 depends_on: [GEO.TYPES.DIGEST]
