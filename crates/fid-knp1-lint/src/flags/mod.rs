@@ -1374,7 +1374,11 @@ fn cargo_table_gate(sink: &mut Sink<'_>, file: &str, text: &str, table: &toml::T
             file,
             &idx,
             pos,
-            format!("`{}` mentions {}: build flags and toolchain selection must not be set here", path.join("."), list.join(", ")),
+            format!(
+                "`{}` mentions {}: build flags and toolchain selection must not be set here",
+                path.join("."),
+                list.join(", ")
+            ),
         );
     }
 }
