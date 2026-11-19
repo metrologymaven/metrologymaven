@@ -185,6 +185,7 @@ jobs:
           python fixtures/io/reg/env/report/make_fixtures.py --check
           python tools/check_bench_schema.py
           python tools/check_command_defs.py
+          python fixtures/core/reg/def/guide/make_fixtures.py --check
           python tools/check_entries.py
           python tools/check_knp1_findings.py
           python tools/check_eval_suite.py
