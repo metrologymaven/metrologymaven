@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [tools/]
 satisfies: [REQ-ECO.COMM-007]
 covers: []
 depends_on: [ECO.COMM.SCOPE]
