@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 269
 satisfies: [REQ-GDT.ZONE-001]
 covers: []
 depends_on: [KRN.NUM, GEO.FRAME]
