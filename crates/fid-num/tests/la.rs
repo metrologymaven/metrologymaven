@@ -113,14 +113,15 @@ fn ac1_mat_ops_fixture() {
         ];
         for (op, v) in &results {
             let bytes = bits_of(v);
-            assert_eq!(&sha256_hex(&bytes)[..16], field(op), "case {} {op}", t[1]);
+            let hex = sha256_hex(&bytes);
+            assert_eq!(&hex["sha256:".len()..][..16], field(op), "case {} {op}", t[1]);
             h.update(&bytes);
         }
         n_cases += 1;
     }
     assert_eq!(n_cases, 500);
     assert_eq!(largest, 200);
-    assert_eq!(format!("sha256:{}", h.finish()), digest);
+    assert_eq!(h.finish(), digest);
 }
 
 fn vals(toks: &[&str]) -> Vec<f64> {
@@ -232,7 +233,7 @@ fn ac2_cond_fixture() {
     }
     assert!(cases >= 80, "fixture too small: {cases}");
     assert!(max_cond >= 1e14, "largest condition number {max_cond}");
-    assert_eq!(format!("sha256:{}", h.finish()), digest);
+    assert_eq!(h.finish(), digest);
 }
 
 fn domain(op: &'static str, k: LaError) -> NumError {
