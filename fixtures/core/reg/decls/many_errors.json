@@ -1,7 +1,7 @@
 {
  "expect_errors": [
   [
-   "Bad.Id",
+   "",
    1,
    "bad_id",
    "/id"

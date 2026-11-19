@@ -555,7 +555,7 @@ fn schema_keyword_values() {
         (vec![("required", CValue::Arr(vec![s("a"), s("a")]))], at("bad_schema", &format!("{p}/required"))),
         (vec![("$ref", s("https://example.org/s.json"))], at("external_ref", &format!("{p}/$ref"))),
         (vec![("$ref", s("other.json#/x"))], at("external_ref", &format!("{p}/$ref"))),
-        (vec![("$ref", s("#/$defs/x"))], vec![]),
+        (vec![("$ref", s("#"))], vec![]),
     ];
     for (pairs, want) in cases {
         let mut d = base();
@@ -617,6 +617,150 @@ fn echoed_text_is_bounded() {
         assert!(e.command.len() <= 128, "{}", e.rule);
         assert!(e.field.as_deref().unwrap_or_default().len() <= 512, "{}", e.rule);
         assert!(e.message.len() <= 512, "{}", e.rule);
+    }
+}
+
+fn printable(t: &str) -> bool {
+    t.bytes().all(|b| (0x20..=0x7e).contains(&b))
+}
+
+/// Review of #233, items 2-4: hostile keys and IDs reach messages, fields and `Display`
+/// only escaped (printable ASCII), never raw; an invalid id is not echoed as `command`.
+#[test]
+fn hostile_text_is_escaped() {
+    let evil = "a\n\u{202e}\u{1b}[31m\"\\\u{200b}\u{0}z";
+    let mut d = base();
+    d.insert("id".into(), s(evil));
+    d.insert(evil.to_string(), CValue::Null);
+    d.insert("lifecycle".into(), obj([("state", s("active")), (evil, CValue::Null), ("State", CValue::Null)]));
+    let errors = run(vec![d]);
+    assert!(!errors.is_empty());
+    for e in &errors {
+        assert_eq!(e.command, "", "{}", e.rule);
+        assert!(printable(&e.message), "{:?}", e.message);
+        assert!(printable(e.field.as_deref().unwrap_or_default()), "{:?}", e.field);
+        assert!(printable(&e.to_string()), "{e}");
+        assert!(!e.message.contains('\u{202e}') && !e.message.contains('\u{1b}'));
+    }
+    let unknown = errors.iter().find(|e| e.rule == RuleCode::UnknownField).unwrap();
+    assert_eq!(unknown.field.as_deref(), Some("/a\\u{a}\\u{202e}\\u{1b}[31m\"\\\\u{200b}\\u{0}z"));
+    assert!(unknown.message.contains("\\\\u{202e}"), "{}", unknown.message);
+    let bad_id = errors.iter().find(|e| e.rule == RuleCode::BadId).unwrap();
+    assert_eq!(bad_id.to_string().split('@').next(), Some("\"\""));
+
+    // A hostile key inside a precondition goes through the DEF backstop: fixed message only.
+    let mut d = base();
+    let pre = obj([("expr", s("true")), ("bound", n(1.0)), ("message_key", s("a.b")), (evil, CValue::Null)]);
+    d.insert("preconditions".into(), CValue::Arr(vec![pre]));
+    let errors = run(vec![d]);
+    assert_eq!(codes(&errors), at("bad_precondition", "/preconditions"));
+    assert_eq!(errors[0].message, "a precondition is malformed");
+
+    // Valid ids are echoed and printed quoted.
+    let mut d = base();
+    d.insert("side_effect".into(), s("M1"));
+    let e = &run(vec![d])[0];
+    assert!(e.to_string().starts_with("\"align.run_bestfit\"@1: projection_too_loose"), "{e}");
+}
+
+/// Review of #233, item 1: a local `$ref` must land on a position the walk checks as a schema.
+#[test]
+fn refs_must_land_on_walked_schemas() {
+    let p = "/params_schema/properties/a";
+    let bare = || obj([("type", s("number"))]);
+    let with = |extra: Vec<(&str, CValue)>, r: &str| {
+        let mut d = base();
+        let CValue::Obj(ps) = d.get_mut("params_schema").unwrap() else { panic!() };
+        for (k, v) in extra {
+            ps.insert(k.to_string(), v);
+        }
+        set_param(&mut d, "a", obj([("$ref", s(r))]));
+        one(d)
+    };
+    // The reported hole: a number schema under an unknown keyword.
+    assert_eq!(with(vec![("x-h", bare())], "#/x-h"), at("unwalked_ref", &format!("{p}/$ref")));
+    // Data keywords, maps and missing targets are not schemas.
+    assert_eq!(with(vec![("default", bare())], "#/default"), at("unwalked_ref", &format!("{p}/$ref")));
+    assert_eq!(with(vec![], "#/properties"), at("unwalked_ref", &format!("{p}/$ref")));
+    assert_eq!(with(vec![], "#/$defs/missing"), at("unwalked_ref", &format!("{p}/$ref")));
+    assert_eq!(with(vec![], "#/properties/tolerance/x-unit"), at("unwalked_ref", &format!("{p}/$ref")));
+    // Plain-name anchors and percent-encoded pointers are refused.
+    assert_eq!(with(vec![], "#len"), at("unwalked_ref", &format!("{p}/$ref")));
+    assert_eq!(with(vec![], "#/properties/t%6flerance"), at("unwalked_ref", &format!("{p}/$ref")));
+    // Walked positions are fine, and their numbers are checked where they are defined.
+    let defs = obj([("len", obj([("type", s("number")), ("x-quantity", s("length"))]))]);
+    assert_eq!(with(vec![("$defs", defs.clone())], "#/$defs/len"), vec![]);
+    assert_eq!(with(vec![], "#/properties/tolerance"), vec![]);
+    assert_eq!(with(vec![], "#"), vec![]);
+    let slash = obj([("a/b~c", obj([("type", s("string"))]))]);
+    assert_eq!(with(vec![("$defs", slash)], "#/$defs/a~1b~0c"), vec![]);
+    let all = CValue::Arr(vec![obj([("type", s("string"))])]);
+    assert_eq!(with(vec![("allOf", all.clone())], "#/allOf/0"), vec![]);
+    assert_eq!(with(vec![("allOf", all.clone())], "#/allOf/00"), at("unwalked_ref", &format!("{p}/$ref")));
+    assert_eq!(with(vec![("allOf", all)], "#/allOf/1"), at("unwalked_ref", &format!("{p}/$ref")));
+    // A ref resolves inside its own schema: params cannot reach into result.
+    assert_eq!(with(vec![], "#/properties/angle"), at("unwalked_ref", &format!("{p}/$ref")));
+    // $dynamicRef is refused outright; an embedded $id is refused because it moves the base.
+    let mut d = base();
+    set_param(&mut d, "a", obj([("$dynamicRef", s("#/$defs/len"))]));
+    assert_eq!(one(d), at("unwalked_ref", &format!("{p}/$dynamicRef")));
+    let mut d = base();
+    set_param(&mut d, "a", obj([("$id", s("https://example.org/a")), ("type", s("string"))]));
+    assert_eq!(one(d), at("unwalked_ref", &format!("{p}/$id")));
+}
+
+/// Review of #233, item 6: names under `properties` and `$defs` are printable ASCII
+/// without space.
+#[test]
+fn property_names_are_printable_ascii() {
+    for bad in ["", "a b", "to\u{200b}lerance", "\u{202e}x", "tab\t", "caf\u{e9}"] {
+        let mut d = base();
+        set_param(&mut d, bad, obj([("type", s("string"))]));
+        assert_eq!(one(d), at("bad_property_name", "/params_schema/properties"), "{bad:?}");
+    }
+    let mut d = base();
+    let CValue::Obj(ps) = d.get_mut("params_schema").unwrap() else { panic!() };
+    ps.insert("$defs".into(), obj([("l\u{200d}en", obj([("type", s("string"))]))]));
+    assert_eq!(one(d), at("bad_property_name", "/params_schema/$defs"));
+    // Regex keys of patternProperties are exempt (they are checked as regexes elsewhere).
+    let mut d = base();
+    let CValue::Obj(ps) = d.get_mut("params_schema").unwrap() else { panic!() };
+    ps.insert("patternProperties".into(), obj([("^a b$", obj([("type", s("string"))]))]));
+    assert_eq!(one(d), vec![]);
+}
+
+/// Review of #233, item 5: 64-bit integers are checked exactly, never rounded through f64.
+#[test]
+fn big_integers_are_exact() {
+    let p = "/params_schema/properties/t";
+    let two53: u64 = 1 << 53;
+    for (k, v, ok) in [
+        ("maxLength", CValue::U64(two53), true),
+        ("maxLength", CValue::U64(two53 + 1), false),
+        ("maxLength", CValue::I64(-1), false),
+        ("maxLength", CValue::U64(u64::MAX), false),
+        ("minLength", CValue::I64(i64::MIN), false),
+    ] {
+        let mut d = base();
+        set_param(&mut d, "t", schema(vec![("type", s("string")), (k, v.clone())]));
+        let want = if ok { vec![] } else { at("bad_schema", &format!("{p}/{k}")) };
+        assert_eq!(one(d), want, "{k} {v:?}");
+    }
+    for (v, ok) in
+        [(CValue::I64(-(1 << 53)), true), (CValue::I64(-(1 << 53) - 1), false), (CValue::U64(two53 + 2), false)]
+    {
+        let mut t = length();
+        t.push(("minimum", v.clone()));
+        let mut d = base();
+        set_param(&mut d, "t", schema(t));
+        let want = if ok { vec![] } else { at("bad_schema", &format!("{p}/minimum")) };
+        assert_eq!(one(d), want, "{v:?}");
+    }
+    // Integer literals beyond 2^53 would round when parsed: refused at the byte level.
+    for (lit, ok) in [("9007199254740992", true), ("9007199254740993", false), ("-9007199254740993", false)] {
+        let text = format!("{{\"decls\":[{{\"x\":{lit}}}]}}");
+        let got = validate_json(text.as_bytes(), &Limits::default(), &GeoFrameUnits);
+        assert_eq!(got.is_ok(), ok, "{lit}");
     }
 }
 

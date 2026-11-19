@@ -148,7 +148,8 @@ expect_errors = [
     ["beta.calc", 1, "missing_quantity", "/params_schema/properties/tolerance"],
     ["beta.calc", 1, "unknown_quantity", "/result_schema/properties/angle/x-quantity"],
     ["gamma.dup", 1, "duplicate_command", None],
-    ["Bad.Id", 1, "bad_id", "/id"],
+    # An invalid id is never echoed as the command: command is empty.
+    ["", 1, "bad_id", "/id"],
     ["kappa.write", 0, "bad_id", "/major"],
     ["alpha.read_x", 1, "missing_field", "/determinism"],
     ["alpha.read_x", 1, "missing_field", "/result_schema"],

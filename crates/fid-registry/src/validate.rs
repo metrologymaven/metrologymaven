@@ -86,6 +86,7 @@ rule_codes! {
     BadId => "bad_id",
     BadNumber => "bad_number",
     BadPrecondition => "bad_precondition",
+    BadPropertyName => "bad_property_name",
     BadSchema => "bad_schema",
     BadToolName => "bad_tool_name",
     BadType => "bad_type",
@@ -102,6 +103,7 @@ rule_codes! {
     UnitNotAccepted => "unit_not_accepted",
     UnknownField => "unknown_field",
     UnknownQuantity => "unknown_quantity",
+    UnwalkedRef => "unwalked_ref",
     WebNoteMissing => "web_note_missing",
 }
 
@@ -114,13 +116,16 @@ impl fmt::Display for RuleCode {
 /// One validation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationError {
-    /// The declaration's `id` when it is a string (cut to 128 bytes), else empty.
+    /// The declaration's `id` when it is a valid command ID (REQ-002), else empty.
     pub command: String,
     /// The declaration's `major` when it is an integer in `0..=u32::MAX`, else 0.
     pub major: u32,
     pub rule: RuleCode,
-    /// RFC 6901 pointer into the declaration (segments cut to 128 bytes, whole pointer to
-    /// 512), or `None` when the error concerns the declaration as a whole.
+    /// RFC 6901 pointer into the declaration, or `None` when the error concerns the
+    /// declaration as a whole. Each segment is cut to 128 bytes and every character outside
+    /// printable ASCII is written as `\u{..}`, so the pointer is printable ASCII (`to_value`
+    /// escapes again, which changes nothing for pointers made here); the whole is cut to 512
+    /// bytes.
     pub field: Option<String>,
     pub message: String,
 }
@@ -136,7 +141,7 @@ impl ValidationError {
         o.insert("command".to_string(), CValue::Str(self.command.clone()));
         o.insert("major".to_string(), CValue::Num(f64::from(self.major)));
         o.insert("rule".to_string(), CValue::Str(self.rule.as_str().to_string()));
-        o.insert("field".to_string(), self.field.as_ref().map_or(CValue::Null, |f| CValue::Str(f.clone())));
+        o.insert("field".to_string(), self.field.as_deref().map_or(CValue::Null, |f| CValue::Str(escape(f))));
         o.insert("message".to_string(), CValue::Str(self.message.clone()));
         CValue::Obj(o)
     }
@@ -144,7 +149,7 @@ impl ValidationError {
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}@{}: {}", self.command, self.major, self.rule)?;
+        write!(f, "{:?}@{}: {}", self.command, self.major, self.rule)?;
         if let Some(p) = &self.field {
             write!(f, " at {p:?}")?;
         }
@@ -371,7 +376,7 @@ pub fn validate_json(
         return Err(InputError::BadFile("the file must be an object".to_string()));
     };
     if let Some(k) = root.keys().find(|k| k.as_str() != "decls") {
-        return Err(InputError::BadFile(format!("unknown field {:?}", cut(k, KEEP))));
+        return Err(InputError::BadFile(format!("unknown field {}", quote(k))));
     }
     let Some(CValue::Arr(items)) = root.remove("decls") else {
         return Err(InputError::BadFile("decls must be an array".to_string()));
@@ -429,7 +434,14 @@ fn check_literal(lit: &[u8]) -> Result<(), InputError> {
     let Ok(v) = text.parse::<f64>() else { return Ok(()) };
     let mantissa = text.split(['e', 'E']).next().unwrap_or_default();
     let nonzero = mantissa.bytes().any(|c| matches!(c, b'1'..=b'9'));
-    if !v.is_finite() || (nonzero && (v == 0.0 || v.is_subnormal())) {
+    // An exponent-free integer beyond 2^53 in magnitude would round when parsed; compared as
+    // digit strings, so the comparison itself cannot round.
+    let too_big = !text.contains(['.', 'e', 'E']) && {
+        let digits = text.trim_start_matches('-').trim_start_matches('0');
+        let limit = "9007199254740992";
+        digits.len() > limit.len() || (digits.len() == limit.len() && digits > limit)
+    };
+    if !v.is_finite() || (nonzero && (v == 0.0 || v.is_subnormal())) || too_big {
         return Err(InputError::BadNumber(cut(text, KEEP)));
     }
     Ok(())
@@ -490,6 +502,26 @@ fn cut(s: &str, max: usize) -> String {
     s.get(..end).unwrap_or_default().to_string()
 }
 
+/// Writes every character outside printable ASCII (U+0020..=U+007E) as `\u{..}`. The output
+/// is printable ASCII, and escaping it again changes nothing.
+fn escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if (' '..='~').contains(&c) {
+            out.push(c);
+        } else {
+            out.push_str(&format!("\\u{{{:x}}}", u32::from(c)));
+        }
+    }
+    out
+}
+
+/// Hostile text as it may appear in a message: cut to 128 bytes, escaped, then quoted with
+/// `{:?}` (which also escapes `"` and `\`).
+fn quote(s: &str) -> String {
+    format!("{:?}", escape(&cut(s, KEEP)))
+}
+
 // ------------------------------------------------------------------ one declaration
 
 /// The per-declaration context: identity for errors, limits and the catalogue.
@@ -503,6 +535,18 @@ struct Ctx<'c> {
     deep: BTreeSet<String>,
     /// Whether a structural error (shape, type, enum, ID, number, key) was reported.
     structural: bool,
+    /// Local `$ref`s found by the walk, resolved after it.
+    refs: Vec<PendingRef>,
+}
+
+/// A local `$ref` waiting for resolution.
+struct PendingRef {
+    /// The top-level field holding the schema (`params_schema` or `result_schema`).
+    root: String,
+    /// The JSON pointer after `#`.
+    target: String,
+    /// Where the `$ref` is, for the error.
+    at: String,
 }
 
 impl Ctx<'_> {
@@ -545,12 +589,13 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
         major: 0,
         deep: BTreeSet::new(),
         structural: false,
+        refs: Vec::new(),
     };
     let CValue::Obj(m) = v else {
         ctx.push(RuleCode::BadType, None, "a declaration must be an object".to_string());
         return None;
     };
-    if let Some(CValue::Str(s)) = m.get("id") {
+    if let Some(CValue::Str(s)) = m.get("id").filter(|v| matches!(v, CValue::Str(s) if is_valid_id(s))) {
         ctx.command = cut(s, KEEP);
     }
     if let Some(CValue::Num(n)) = m.get("major").filter(|v| is_int_in(v, 0.0, f64::from(u32::MAX))) {
@@ -559,11 +604,7 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
 
     for k in m.keys() {
         if !FIELDS.contains(&k.as_str()) {
-            ctx.push(
-                RuleCode::UnknownField,
-                Some(pointer(&[Seg::Key(k)])),
-                format!("unknown field {:?}", cut(k, KEEP)),
-            );
+            ctx.push(RuleCode::UnknownField, Some(pointer(&[Seg::Key(k)])), format!("unknown field {}", quote(k)));
         }
     }
     for f in FIELDS {
@@ -575,7 +616,7 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
     let id = match m.get("id") {
         Some(CValue::Str(s)) if is_valid_id(s) => Some(s.clone()),
         Some(CValue::Str(s)) => {
-            let msg = format!("id {:?} does not match ^[a-z][a-z0-9]*\\.[a-z][a-z0-9_]*$", cut(s, KEEP));
+            let msg = format!("id {} does not match ^[a-z][a-z0-9]*\\.[a-z][a-z0-9_]*$", quote(s));
             ctx.at(RuleCode::BadId, "id", msg);
             None
         }
@@ -607,6 +648,13 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
     }
 
     walk(&mut ctx, m);
+    for r in std::mem::take(&mut ctx.refs) {
+        let lands = m.get(&r.root).is_some_and(|root| resolve(root, &r.target) == Some(Kind::Schema));
+        if !lands {
+            let msg = format!("$ref {} does not point at a schema position the validator checks", quote(&r.target));
+            ctx.push(RuleCode::UnwalkedRef, Some(r.at), msg);
+        }
+    }
 
     // REQ-003: the derived tool name.
     if let (Some(id), Some(major)) = (&id, major) {
@@ -630,8 +678,8 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
     // Backstop: everything else the DEF record requires (titles, effects, algorithms, ...).
     if !ctx.structural {
         if let Err(e) = CommandDef::from_value(v.clone()) {
-            let (rule, field) = def_rule(&e);
-            ctx.push(rule, field, e.to_string());
+            let (rule, field, message) = def_rule(&e);
+            ctx.push(rule, field, message.to_string());
         }
     }
     match (id, major) {
@@ -650,7 +698,7 @@ fn enum_field<T>(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, f: &str, parse
         Some(CValue::Str(s)) => {
             let v = parse(s);
             if v.is_none() {
-                ctx.at(RuleCode::BadEnum, f, format!("{f} {:?} is not a known value", cut(s, KEEP)));
+                ctx.at(RuleCode::BadEnum, f, format!("{f} {} is not a known value", quote(s)));
             }
             v
         }
@@ -662,19 +710,23 @@ fn enum_field<T>(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, f: &str, parse
     }
 }
 
-fn def_rule(e: &DefError) -> (RuleCode, Option<String>) {
+/// The rule, field and a fixed message for a DEF error; the error's own text (which may
+/// echo input) is never used.
+fn def_rule(e: &DefError) -> (RuleCode, Option<String>, &'static str) {
     let p = |k: &str| Some(pointer(&[Seg::Key(k)]));
     match e {
-        DefError::UnknownField(k) => (RuleCode::UnknownField, p(k)),
-        DefError::MissingField(k) => (RuleCode::MissingField, p(k)),
-        DefError::BadType { field, .. } => (RuleCode::BadType, p(field)),
-        DefError::BadEnum { field, .. } => (RuleCode::BadEnum, p(field)),
-        DefError::BadId(_) => (RuleCode::BadId, p("id")),
-        DefError::BadAlgorithm(_) => (RuleCode::BadAlgorithm, p("algorithms")),
-        DefError::BadPrecondition(_) => (RuleCode::BadPrecondition, p("preconditions")),
-        DefError::WebMissing => (RuleCode::MissingField, p("web")),
-        DefError::WebNoteMissing => (RuleCode::WebNoteMissing, p("web_note")),
-        DefError::Json(_) => (RuleCode::BadType, None),
+        DefError::UnknownField(_) => (RuleCode::UnknownField, None, "the definition record has an unknown field"),
+        DefError::MissingField(k) => (RuleCode::MissingField, p(k), "the definition record lacks a required field"),
+        DefError::BadType { field, .. } => (RuleCode::BadType, p(field), "a field has the wrong JSON type"),
+        DefError::BadEnum { field, .. } => (RuleCode::BadEnum, p(field), "a field has an unknown value"),
+        DefError::BadId(_) => (RuleCode::BadId, p("id"), "the id is not a valid command name"),
+        DefError::BadAlgorithm(_) => (RuleCode::BadAlgorithm, p("algorithms"), "an algorithm ID is malformed"),
+        DefError::BadPrecondition(_) => (RuleCode::BadPrecondition, p("preconditions"), "a precondition is malformed"),
+        DefError::WebMissing => (RuleCode::MissingField, p("web"), "web is required"),
+        DefError::WebNoteMissing => {
+            (RuleCode::WebNoteMissing, p("web_note"), "web is partial or unavailable but web_note is missing or empty")
+        }
+        DefError::Json(_) => (RuleCode::BadType, None, "the definition record is not valid JSON"),
     }
 }
 
@@ -719,7 +771,7 @@ fn pointer(path: &[Seg<'_>]) -> String {
     for seg in path {
         out.push('/');
         match seg {
-            Seg::Key(k) => out.push_str(&cut(k, KEEP).replace('~', "~0").replace('/', "~1")),
+            Seg::Key(k) => out.push_str(&escape(&cut(k, KEEP)).replace('~', "~0").replace('/', "~1")),
             Seg::Idx(i) => out.push_str(&i.to_string()),
         }
         if out.len() > KEEP_POINTER {
@@ -756,6 +808,27 @@ fn child_kind(parent: Kind, seg: Seg<'_>, child: &CValue) -> Kind {
     }
 }
 
+/// Follows an RFC 6901 pointer (`/a/b`, `~1` and `~0` unescaped) from a schema root and
+/// returns the kind the walk gives the target, or `None` when it does not exist.
+fn resolve(root: &CValue, target: &str) -> Option<Kind> {
+    let (mut cur, mut kind) = (root, Kind::Schema);
+    for raw in target.split('/').skip(1) {
+        let key = raw.replace("~1", "/").replace("~0", "~");
+        let (seg, child) = match cur {
+            CValue::Obj(m) => (Seg::Key(key.as_str()), m.get(&key)?),
+            CValue::Arr(a) => {
+                let canonical = key == "0" || (!key.starts_with('0') && key.bytes().all(|b| b.is_ascii_digit()));
+                let i: usize = if canonical { key.parse().ok()? } else { return None };
+                (Seg::Idx(i), a.get(i)?)
+            }
+            _ => return None,
+        };
+        kind = child_kind(kind, seg, child);
+        cur = child;
+    }
+    Some(kind)
+}
+
 /// Pre-order walk of a declaration with an explicit stack.
 fn walk(ctx: &mut Ctx<'_>, root: &BTreeMap<String, CValue>) {
     let mut path: Vec<Seg<'_>> = Vec::new();
@@ -789,7 +862,7 @@ fn walk(ctx: &mut Ctx<'_>, root: &BTreeMap<String, CValue>) {
                     _ => String::new(),
                 };
                 if ctx.deep.insert(field.clone()) {
-                    let msg = format!("{field} is nested deeper than {} levels", ctx.max_depth);
+                    let msg = format!("{} is nested deeper than {} levels", quote(&field), ctx.max_depth);
                     ctx.at(RuleCode::SchemaTooDeep, &field, msg);
                 }
                 path.pop();
@@ -802,11 +875,16 @@ fn walk(ctx: &mut Ctx<'_>, root: &BTreeMap<String, CValue>) {
     }
 }
 
+/// 2^53: integers up to this magnitude convert to `f64` exactly.
+const EXACT_INT: u64 = 1 << 53;
+
+/// A numeric value as `f64`. `I64`/`U64` beyond 2^53 in magnitude would round, so they are
+/// not numbers here (the caller reports them); nothing is converted inexactly.
 fn number(v: &CValue) -> Option<f64> {
     match v {
         CValue::Num(n) | CValue::F64Bits(n) => Some(*n),
-        CValue::I64(i) => Some(*i as f64),
-        CValue::U64(u) => Some(*u as f64),
+        CValue::I64(i) if i.unsigned_abs() <= EXACT_INT => Some(*i as f64),
+        CValue::U64(u) if *u <= EXACT_INT => Some(*u as f64),
         _ => None,
     }
 }
@@ -827,7 +905,10 @@ fn visit(ctx: &mut Ctx<'_>, v: &CValue, kind: Kind, path: &[Seg<'_>]) {
         }
         (Kind::Schema, CValue::Bool(_)) => {}
         (Kind::Schema, _) => bad_schema(ctx, "a schema must be an object or a boolean"),
-        (Kind::SchemaMap, CValue::Obj(m)) => case_check(ctx, m, path),
+        (Kind::SchemaMap, CValue::Obj(m)) => {
+            case_check(ctx, m, path);
+            name_check(ctx, m, path);
+        }
         (Kind::PatternMap, CValue::Obj(_)) => {}
         (Kind::SchemaMap | Kind::PatternMap, _) => bad_schema(ctx, "must be an object of schemas"),
         (Kind::SchemaList, CValue::Arr(a)) if !a.is_empty() => {}
@@ -837,13 +918,25 @@ fn visit(ctx: &mut Ctx<'_>, v: &CValue, kind: Kind, path: &[Seg<'_>]) {
     }
 }
 
+/// Names under `properties`, `$defs`, `definitions` and `dependentSchemas` are non-empty
+/// and printable ASCII without space (U+0021..=U+007E): no control, format, invisible or
+/// look-alike characters.
+fn name_check(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_>]) {
+    for k in m.keys() {
+        if k.is_empty() || !k.bytes().all(|b| (b'!'..=b'~').contains(&b)) {
+            let msg = format!("name {} is not printable ASCII without space", quote(k));
+            ctx.push(RuleCode::BadPropertyName, Some(pointer(path)), msg);
+        }
+    }
+}
+
 /// Keys of one object that are equal after ASCII lowercasing.
 fn case_check(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_>]) {
     let mut seen: BTreeMap<String, &str> = BTreeMap::new();
     for k in m.keys() {
         let low = k.to_ascii_lowercase();
         if let Some(prev) = seen.get(&low) {
-            let msg = format!("keys {:?} and {:?} differ only in ASCII case", cut(prev, KEEP), cut(k, KEEP));
+            let msg = format!("keys {} and {} differ only in ASCII case", quote(prev), quote(k));
             ctx.push(RuleCode::DuplicateKey, Some(pointer(path)), msg);
         } else {
             seen.insert(low, k);
@@ -891,7 +984,7 @@ fn schema_checks(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_
         None => None,
         Some(CValue::Str(q)) if ctx.kinds.has_kind(q) => Some(q.as_str()),
         Some(CValue::Str(q)) => {
-            let msg = format!("x-quantity {:?} is not a kind of the unit catalogue", cut(q, KEEP));
+            let msg = format!("x-quantity {} is not a kind of the unit catalogue", quote(q));
             ctx.push(RuleCode::UnknownQuantity, Some(kp("x-quantity")), msg);
             None
         }
@@ -909,7 +1002,7 @@ fn schema_checks(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_
         Some(CValue::Str(u)) => match kind {
             Some(k) if ctx.kinds.accepts(k, u) => {}
             Some(k) => {
-                let msg = format!("x-unit {:?} is not an accepted unit of {k}", cut(u, KEEP));
+                let msg = format!("x-unit {} is not an accepted unit of {k}", quote(u));
                 ctx.push(RuleCode::UnitNotAccepted, Some(kp("x-unit")), msg);
             }
             // An invalid x-quantity is already reported.
@@ -922,17 +1015,36 @@ fn schema_checks(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_
         Some(_) => ctx.push(RuleCode::BadSchema, Some(kp("x-unit")), "x-unit must be a string".to_string()),
     }
 
-    // References stay inside the schema, where every subschema is walked.
-    for k in ["$ref", "$dynamicRef"] {
-        match m.get(k) {
-            None => {}
-            Some(CValue::Str(r)) if r.starts_with('#') => {}
-            Some(CValue::Str(r)) => {
-                let msg = format!("{k} {:?} leaves the schema", cut(r, KEEP));
-                ctx.push(RuleCode::ExternalRef, Some(kp(k)), msg);
-            }
-            Some(_) => ctx.push(RuleCode::BadSchema, Some(kp(k)), format!("{k} must be a string")),
+    // References: only `#` or `#/<pointer>` inside the same schema; the pointer is resolved
+    // after the walk and must land on a position the walk checks as a schema.
+    match m.get("$ref") {
+        None => {}
+        Some(CValue::Str(r)) if !r.starts_with('#') => {
+            let msg = format!("$ref {} leaves the schema", quote(r));
+            ctx.push(RuleCode::ExternalRef, Some(kp("$ref")), msg);
         }
+        Some(CValue::Str(r)) if r == "#" => {}
+        Some(CValue::Str(r)) if r.starts_with("#/") && !r.contains('%') => {
+            let root = match path.first() {
+                Some(Seg::Key(k)) => (*k).to_string(),
+                _ => String::new(),
+            };
+            let target = r.get(1..).unwrap_or_default().to_string();
+            ctx.refs.push(PendingRef { root, target, at: kp("$ref") });
+        }
+        Some(CValue::Str(r)) => {
+            let msg = format!("$ref {} is a plain-name or percent-encoded reference", quote(r));
+            ctx.push(RuleCode::UnwalkedRef, Some(kp("$ref")), msg);
+        }
+        Some(_) => ctx.push(RuleCode::BadSchema, Some(kp("$ref")), "$ref must be a string".to_string()),
+    }
+    if m.contains_key("$dynamicRef") {
+        let msg = "$dynamicRef is not supported: its target is resolved at evaluation time".to_string();
+        ctx.push(RuleCode::UnwalkedRef, Some(kp("$dynamicRef")), msg);
+    }
+    if path.len() > 1 && m.contains_key("$id") {
+        let msg = "an embedded $id changes how references resolve".to_string();
+        ctx.push(RuleCode::UnwalkedRef, Some(kp("$id")), msg);
     }
 
     // Numeric bounds: numbers, a positive multipleOf, and a non-empty range.
@@ -941,7 +1053,11 @@ fn schema_checks(ctx: &mut Ctx<'_>, m: &BTreeMap<String, CValue>, path: &[Seg<'_
         Some(v) => match number(v) {
             Some(n) => Some(n),
             None => {
-                ctx.push(RuleCode::BadSchema, Some(kp(k)), format!("{k} must be a number"));
+                ctx.push(
+                    RuleCode::BadSchema,
+                    Some(kp(k)),
+                    format!("{k} must be a number (integers at most 2^53 in magnitude)"),
+                );
                 None
             }
         },
