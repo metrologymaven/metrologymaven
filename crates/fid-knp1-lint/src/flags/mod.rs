@@ -480,13 +480,11 @@ pub fn codegen_options(tokens: &[String]) -> Vec<Codegen> {
     out
 }
 
+/// Maps a needle to its (line, column) and the text of that line.
+type Place<'p> = &'p mut dyn FnMut(&str) -> ((u32, u32), String);
+
 /// Evaluates codegen options of one source. `place` maps a needle to a position and excerpt line.
-fn eval_codegen(
-    sink: &mut Sink<'_>,
-    file: &str,
-    opts: &[Codegen],
-    place: &mut dyn FnMut(&str) -> ((u32, u32), String),
-) {
+fn eval_codegen(sink: &mut Sink<'_>, file: &str, opts: &[Codegen], place: Place<'_>) {
     for o in opts {
         match o.key.as_str() {
             "target-cpu" if o.value == "native" => {
@@ -932,7 +930,7 @@ pub fn check(cfg: &Config) -> Result<Vec<Finding>, FlagsError> {
     }];
     if let Some((name, text, table)) = &cargo_cfg {
         sources.push(ProfileSource {
-            file: *name,
+            file: name,
             idx: LineIndex::new(text),
             profiles: table.get("profile").and_then(toml::Value::as_table),
         });
