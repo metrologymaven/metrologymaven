@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 168
 satisfies: [REQ-OUTR.LAUNCH-003, REQ-OUTR.LAUNCH-004]
 covers: []
 depends_on: [OUTR.LAUNCH.PLAN.FMT]

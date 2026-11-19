@@ -1,0 +1,7 @@
+# Synthetic sign-off record (CC-BY-4.0).
+milestone = "inspect-beta"
+criterion = "INS-B-05"
+release = "v0.5.0-beta.1"
+signer = "bob"
+role = "release-manager"
+date = "2099-05-01"

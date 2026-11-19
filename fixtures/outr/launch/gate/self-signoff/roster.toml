@@ -1,0 +1,4 @@
+# Synthetic roster (CC-BY-4.0): bob holds the role, so only the self sign-off rule applies.
+[[person]]
+handle = "bob"
+roles = ["release-manager"]

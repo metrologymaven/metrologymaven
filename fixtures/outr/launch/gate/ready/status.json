@@ -1,0 +1,6 @@
+{
+  "apps": [
+    {"id": "inspect", "live": 41, "in_scope": 50},
+    {"id": "report", "live": 1, "in_scope": 10}
+  ]
+}

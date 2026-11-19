@@ -77,6 +77,7 @@ use fid_outreach::asset_check;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
 use fid_outreach::guide_check;
+use fid_outreach::launch_gate;
 use fid_outreach::launch_plan;
 use fid_outreach::metrics::def;
 use fid_outreach::moderation;
@@ -96,6 +97,7 @@ commands:
   review-gate --record <file> --release <id> --author <id>... --roster <file> --checklist <file> [--bots <file>] [--json]
   metric-def check --defs <file> --sources <file> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
+  gate-check --milestone <id> --release <tag> --author <handle> --criteria <file> --tree <dir> --trace <file> --status <file> --tests <file> --signoffs <dir> --roster <file> --out <dir> [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
@@ -115,6 +117,7 @@ fn main() -> ExitCode {
         (Some("review-gate"), _) => review_gate_cmd(args.get(1..).unwrap_or(&[])),
         (Some("metric-def"), Some("check")) => metric_def_check(args.get(2..).unwrap_or(&[])),
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
+        (Some("gate-check"), _) => gate_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
@@ -341,6 +344,69 @@ fn plan_check(args: &[String]) -> ExitCode {
                 emit(&fid_canon::to_canonical_bytes(&e.to_cvalue()).unwrap_or_default());
             }
             eprintln!("plan-check: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// `gate-check` (spec node `OUTR.LAUNCH.GATE`): writes `gate-<milestone>-<release>.json` and
+/// `.md` into `--out`. Exits 0 when the milestone is `ready`, 1 when `not_ready`, and 2 (writing
+/// nothing) when an input cannot be read or parsed, the milestone is unknown, or on bad usage.
+fn gate_check(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            flag @ ("--milestone" | "--release" | "--author" | "--criteria" | "--tree" | "--trace" | "--status"
+            | "--tests" | "--signoffs" | "--roster" | "--out") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let get = |k: &str| opts.get(k).copied();
+    let path = |k: &str| get(k).map(Path::new);
+    let (Some(milestone), Some(release), Some(author), Some(out)) =
+        (get("--milestone"), get("--release"), get("--author"), path("--out"))
+    else {
+        return usage();
+    };
+    let (Some(criteria), Some(tree), Some(trace), Some(status), Some(tests), Some(signoffs), Some(roster)) = (
+        path("--criteria"),
+        path("--tree"),
+        path("--trace"),
+        path("--status"),
+        path("--tests"),
+        path("--signoffs"),
+        path("--roster"),
+    ) else {
+        return usage();
+    };
+    let inputs =
+        launch_gate::Inputs { milestone, release, author, criteria, tree, trace, status, tests, signoffs, roster };
+    match launch_gate::run(&inputs).and_then(|r| launch_gate::write_report(&r, out).map(|()| r)) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            if report.ready() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("gate-check: {e}");
             ExitCode::from(2)
         }
     }

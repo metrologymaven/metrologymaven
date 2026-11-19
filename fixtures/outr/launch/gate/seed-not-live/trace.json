@@ -1,0 +1,6 @@
+{
+  "seeds": [
+    {"id": "SEED-INS-001", "state": "live"},
+    {"id": "SEED-INS-002", "state": "pending"}
+  ]
+}
