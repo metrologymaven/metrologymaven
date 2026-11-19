@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-cmp]
+built_pr: 202
 satisfies: [REQ-SCAN.CMP.DEV-003, REQ-SCAN.CMP.DEV-005, REQ-SCAN.CMP.DEV-006]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, GEO.TYPES.ENV, CORE.JRN.CANON]
