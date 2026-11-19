@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-index]
 satisfies: [REQ-GEO.INDEX-001, REQ-GEO.INDEX-002, REQ-GEO.INDEX-003, REQ-GEO.INDEX-004]
 covers: []
 depends_on: [GEO.TYPES.POINTS, KRN.NUM]
@@ -67,6 +68,17 @@ The point index every fit, alignment and scan operation uses for neighbour searc
 - **Determinism:** D0.
 - **Performance budget:** see GEO.INDEX.BENCH; build of 10⁸ points under 30 s on 8 threads [unverified].
 - **Crate:** `fid-geo-index` (kernel graph, KNP-1 applies).
+- **Pinned choices (value-affecting).** The module docs of `crates/fid-geo-index/src/kdtree.rs` repeat these; `tools/fixtures/geo_index.py` models them bit for bit. Conventions shared with `GEO.INDEX.BVH`: breadth-first build, IEEE totalOrder, ties by index, a fixed 64-entry query stack, the 2^500 coordinate limit, sequential build.
+  - **Input domain, first offender wins:** `threads >= 1` (`ZeroThreads`); y and z columns as long as x (`ColumnLength { axis }`); at most 2^32 points (`TooManyPoints`; the permutation is `u32`); then per point in index order, per axis x, y, z: finite (`NonFinitePoint`), then `|x| <= 2^500` (`PointOutOfRange`). Empty buffers, duplicate and coincident points, signed zeros and subnormal coordinates are **accepted**. The index borrows the `PointBuffer` (`PointIndex<'a>`), so it cannot be queried against other coordinates.
+  - **Query domain:** query point per axis finite (`NonFiniteQuery { axis }`), then `|x| <= 2^500` (`QueryOutOfRange { axis }`); then `1 <= k <= 1024` (`BadK`), or radius finite, `>= 0` (`-0.0` accepted) and `<= 2^500` (`BadRadius`). The limit keeps every difference, square and three-term sum finite.
+  - **Squared distance:** `d2 = (dx*dx + dy*dy) + dz*dz`, `dx = p.x - q.x`; every nearest, within and tie decision uses this computed value (REQ-003). Distinct points whose squared differences underflow (`|dx| < 2^-537`) therefore have `d2 = 0` and tie like coincident points; the returned `dist2` shows it.
+  - **Tree shape:** leaf depth `L` = smallest `d >= 0` with `ceil(n / 2^d) <= 16`; a perfect implicit tree with internal nodes `0 .. 2^L - 1` (children `2i + 1`, `2i + 2`) and all `2^L` leaves at depth `L`; a node over `c` points gives the first `c / 2` (floor) to the left child. Leaves hold 8 to 16 points once `n > 16`; for `n <= 16` the root is the only leaf.
+  - **Split rule:** per internal node in index order: extents `max - min` per axis (totalOrder min and max of its points); axis = largest extent, ties x < y < z; points ordered by (coordinate in totalOrder, point index); the first `c / 2` go left; the split value is the coordinate of the first right point. Each leaf's points are then stored in ascending index order, so the permutation does not depend on how the selection algorithm arranges a partition.
+  - **Queries:** `knn(q, k)` returns the `min(k, n)` smallest `(d2, index)` pairs ascending; `radius(q, r)` every point with `d2 <= r*r` (`r*r` rounded once), sorted by `(d2, index)`, so `r = 0` returns the points with `d2 = 0`; `in_box(aabb)` every point with `min_k <= p_k <= max_k` on all axes (numeric, `-0.0 == +0.0`), as point indexes ascending (a box has no query point, so no `dist2`).
+  - **Exact pruning (no inflation):** a subtree is skipped only if `lb = (gx*gx + gy*gy) + gz*gz > ` the current k-th `d2` (or `r*r`), where `g_k` is the largest `fl(|q_k - s|)` over the splits on axis `k` whose far side the subtree is on. For any point in it `|p_k - q_k| >= |s - q_k|` exactly and rounding is monotone, so its computed `d2 >= lb`; a point tying the k-th distance is never pruned. Box descent compares exactly with the split values.
+  - **Memory (REQ-005):** `memory_bytes()` = struct size + permutation capacity x 4 + split capacity x 8 + axis capacity x 1, allocated with `try_reserve_exact`; that is `4n + 9 (2^L - 1)` bytes plus the struct, at most about 5.2 bytes per point for any `n` (4.75 at 10^8).
+  - **Serialisation (`to_bytes`, AC-3):** `FIDKDT01`; point count (u64 LE); `L` and bucket 16 (u32 LE each); split values (f64 bits, u64 LE each); axis bytes; permutation (u32 LE each).
+  - **Bounds:** no recursion; a fixed 64-entry stack (depth <= 28 for 2^32 points); the k-nearest heap holds at most `k + 1` entries; every allocation sized from input is fallible (`AllocationFailed`); nothing panics.
 
 ## Test fixtures
 

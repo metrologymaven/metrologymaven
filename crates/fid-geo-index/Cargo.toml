@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-index"
-description = "Metrology Maven spatial indexes: the deterministic triangle bounding volume hierarchy with conservative sphere, box and ray candidate queries and ordered leaf visits (spec node GEO.INDEX.BVH)"
+description = "Metrology Maven spatial indexes: the deterministic triangle bounding volume hierarchy (spec node GEO.INDEX.BVH) and the point k-d tree with exact k-nearest, radius and box queries (spec node GEO.INDEX.KDTREE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
