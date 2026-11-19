@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metrologymaven/metrologymaven/schemas/fit/command-row-1.schema.json",
+  "title": "Fit command data row (KRN.LSQ.TRAIT REQ-009)",
+  "description": "One row declares one fit.<method>_<primitive>@1 registry command as data, so CORE.REG can read it without a crate dependency from the kernel. Produced by fid_fit::contract::CommandRow::to_json; checked by CommandRow::validate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["row", "command", "algorithm", "side_effect", "dry_run", "determinism", "params", "result"],
+  "properties": {
+    "row": { "const": "fit.command_row@1" },
+    "command": { "type": "string", "pattern": "^fit\\.[a-z][a-z0-9]*_[a-z][a-z0-9]*@1$" },
+    "algorithm": { "type": "string", "pattern": "^fit\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*@(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "side_effect": { "const": "W2" },
+    "dry_run": { "const": "R1" },
+    "determinism": { "enum": ["D0", "D1", "D2", "D3"] },
+    "params": { "$ref": "#/$defs/fields" },
+    "result": { "$ref": "#/$defs/fields" }
+  },
+  "$defs": {
+    "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "required"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
+        "type": { "enum": ["number", "integer", "number_array", "integer_array", "points", "string", "boolean"] },
+        "x-quantity": { "enum": ["length", "angle", "dimensionless", "count"] },
+        "x-unit": { "enum": ["m", "rad", "1"] },
+        "required": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["number", "integer", "number_array", "integer_array", "points"] } } },
+          "then": { "required": ["x-quantity", "x-unit"] },
+          "else": { "not": { "anyOf": [{ "required": ["x-quantity"] }, { "required": ["x-unit"] }] } }
+        },
+        { "if": { "properties": { "x-quantity": { "const": "length" } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "m" } } } },
+        { "if": { "properties": { "x-quantity": { "const": "angle" } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "rad" } } } },
+        { "if": { "properties": { "x-quantity": { "enum": ["dimensionless", "count"] } }, "required": ["x-quantity"] }, "then": { "properties": { "x-unit": { "const": "1" } } } }
+      ]
+    }
+  }
+}
