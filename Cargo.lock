@@ -544,6 +544,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-frame"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+]
+
+[[package]]
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
