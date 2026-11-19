@@ -278,6 +278,7 @@ jobs:
           python fixtures/agent/harness/runs/make_runs.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
+          python fixtures/core/jrn/chain/append/make_fixtures.py --check
           python fixtures/fetch/make_fixtures.py --check
           python fixtures/hal/idl/stamp/make_fixtures.py --check
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
@@ -292,6 +293,7 @@ jobs:
           python fixtures/num/fmt/make_len_fixtures.py --check
           python fixtures/num/fmt/make_ang_fixtures.py --check
           python fixtures/num/la/make_la_fixtures.py --check
+          python fixtures/num/la/make_qr_fixtures.py --check
           python crates/fid-report-pdf/fontgen/make_fonts.py --check
           python fixtures/rpt/output/text/make_fixtures.py --check
           python fixtures/rpt/output/text/check_pdf_text.py
@@ -303,8 +305,11 @@ jobs:
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
           python tools/fixtures/geo_digest_vectors.py --check
+          python fixtures/geo/index/make_bvh_fixtures.py --check
+          python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
+          python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -425,6 +430,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
       - name: Uncertainty statement digests on wasm32-wasip1 (UNC.UEC.STMT AC-5)
         run: cargo test --target wasm32-wasip1 -p fid-kunc
+      - name: Decision-rule catalog digest and rule-ID cases on wasm32-wasip1 (UNC.DEC.TYPE AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-kdec
       - name: Report text shaping and subsetting on wasm32-wasip1 (RPT.OUTPUT.PDF.TEXT AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-report-pdf
       - name: Implementation digests are bit-identical on wasm32-wasip1 (KRN.MAN.MANI.IMPL AC-1, build-time tool)
@@ -437,6 +444,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
+      - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-index
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)

@@ -140,3 +140,50 @@ pub(crate) fn cond(f: &Factored) -> Result<Option<f64>, NumError> {
         Err(_) => Ok(None),
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::{factor, Factored};
+    use fid_num::la::{qr_pivoted, Mat};
+
+    fn bits(v: &[f64]) -> Vec<u64> {
+        v.iter().map(|x| x.to_bits()).collect()
+    }
+
+    /// The private step factor gives the same bits as `fid_num::la::qr_pivoted` plus
+    /// `Qr::apply_qt` (R, permutation and the first n entries of Q^T b), so moving the driver
+    /// onto the public QR (a follow-up: the public `Mat` caps rows at 4096 and allocates per
+    /// call) will not change values.
+    #[test]
+    fn matches_public_qr_pivoted() {
+        let mut s = 0x2545_F491_4F6C_DD1D_u64;
+        let mut draw = || {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            ((s >> 11) as f64 / (1u64 << 53) as f64 - 0.5) * 8.0
+        };
+        let mut cases: Vec<(usize, usize, Vec<f64>)> = Vec::new();
+        for &(rows, n) in &[(1, 1), (5, 3), (12, 12), (40, 7), (9, 4)] {
+            cases.push((rows, n, (0..rows * n).map(|_| draw()).collect()));
+        }
+        // Tied column norms (AC-2 shape), a duplicate column and a zero column.
+        cases.push((4, 3, vec![3.0, 0.0, 4.0, 4.0, 0.0, 0.0, 0.0, 4.0, 3.0, 0.0, 3.0, 0.0]));
+        cases.push((3, 3, vec![1.0, 2.0, 1.0, 3.0, 1.0, 3.0, 2.0, 5.0, 2.0]));
+        cases.push((3, 2, vec![0.0, 1.0, -0.0, 2.0, 0.0, 3.0]));
+        for (rows, n, a) in cases {
+            let b: Vec<f64> = (0..rows).map(|i| 1.0 - 0.25 * i as f64).collect();
+            let q = qr_pivoted(&Mat::new(rows, n, a.clone()).unwrap(), 0.0).unwrap();
+            let qtb = q.apply_qt(&b).unwrap();
+            let r = q.r().unwrap();
+            let mut cols: Vec<f64> = (0..n * rows).map(|k| a[(k % rows) * n + k / rows]).collect();
+            let mut bb = b.clone();
+            let mut v = Vec::with_capacity(rows);
+            let f = factor(&mut cols, rows, n, &mut bb, &mut v, Factored::new(n).unwrap()).unwrap();
+            assert_eq!(bits(f.r.data()), bits(r.data()), "{rows}x{n} R");
+            assert_eq!(f.perm, q.perm(), "{rows}x{n} perm");
+            assert_eq!(bits(&f.qtb), bits(&qtb[..n]), "{rows}x{n} Q^T b");
+        }
+    }
+}

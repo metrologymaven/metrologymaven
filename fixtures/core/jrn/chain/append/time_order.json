@@ -1,0 +1,253 @@
+{
+ "max_ahead_s": 300,
+ "order": [
+  {
+   "name": "later_second",
+   "head": "2026-11-19T10:00:00Z",
+   "entry": "2026-11-19T10:00:01Z",
+   "accept": true
+  },
+  {
+   "name": "equal",
+   "head": "2026-11-19T10:00:00Z",
+   "entry": "2026-11-19T10:00:00Z",
+   "accept": true
+  },
+  {
+   "name": "equal_with_zero_fraction",
+   "head": "2026-11-19T10:00:00Z",
+   "entry": "2026-11-19T10:00:00.000Z",
+   "accept": true
+  },
+  {
+   "name": "equal_fraction_widths",
+   "head": "2026-11-19T10:00:00.1Z",
+   "entry": "2026-11-19T10:00:00.100000000Z",
+   "accept": true
+  },
+  {
+   "name": "one_second_earlier",
+   "head": "2026-11-19T10:00:01Z",
+   "entry": "2026-11-19T10:00:00Z",
+   "accept": false
+  },
+  {
+   "name": "one_nanosecond_earlier",
+   "head": "2026-11-19T10:00:00.000000001Z",
+   "entry": "2026-11-19T10:00:00Z",
+   "accept": false
+  },
+  {
+   "name": "one_nanosecond_later",
+   "head": "2026-11-19T10:00:00Z",
+   "entry": "2026-11-19T10:00:00.000000001Z",
+   "accept": true
+  },
+  {
+   "name": "fraction_after_whole",
+   "head": "2026-11-19T10:00:00Z",
+   "entry": "2026-11-19T10:00:00.5Z",
+   "accept": true
+  },
+  {
+   "name": "whole_after_fraction_textually_greater",
+   "head": "2026-11-19T10:00:00.5Z",
+   "entry": "2026-11-19T10:00:00Z",
+   "accept": false
+  },
+  {
+   "name": "fraction_shorter_but_later",
+   "head": "2026-11-19T10:00:00.09Z",
+   "entry": "2026-11-19T10:00:00.1Z",
+   "accept": true
+  },
+  {
+   "name": "fraction_longer_but_earlier",
+   "head": "2026-11-19T10:00:00.1Z",
+   "entry": "2026-11-19T10:00:00.09999Z",
+   "accept": false
+  },
+  {
+   "name": "previous_day",
+   "head": "2026-11-19T00:00:00Z",
+   "entry": "2026-11-18T23:59:59.999999999Z",
+   "accept": false
+  },
+  {
+   "name": "next_year",
+   "head": "2026-12-31T23:59:59.999Z",
+   "entry": "2027-01-01T00:00:00Z",
+   "accept": true
+  },
+  {
+   "name": "previous_year",
+   "head": "2027-01-01T00:00:00Z",
+   "entry": "2026-12-31T23:59:59.999Z",
+   "accept": false
+  },
+  {
+   "name": "leap_second_after_59",
+   "head": "2016-12-31T23:59:59Z",
+   "entry": "2016-12-31T23:59:60Z",
+   "accept": true
+  },
+  {
+   "name": "minute_earlier_second_later",
+   "head": "2026-11-19T10:01:00Z",
+   "entry": "2026-11-19T10:00:59Z",
+   "accept": false
+  },
+  {
+   "name": "hour_earlier",
+   "head": "2026-11-19T11:00:00Z",
+   "entry": "2026-11-19T10:59:59.999999999Z",
+   "accept": false
+  },
+  {
+   "name": "confirm_stamped_before_head",
+   "head": "2026-11-19T10:00:05Z",
+   "entry": "2026-11-19T10:00:04.9Z",
+   "accept": false
+  }
+ ],
+ "validity": [
+  {
+   "name": "month_13",
+   "utc": "2026-13-01T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "month_00",
+   "utc": "2026-00-10T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "day_00",
+   "utc": "2026-11-00T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "november_31",
+   "utc": "2026-11-31T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "february_29_common_year",
+   "utc": "2026-02-29T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "february_29_1900",
+   "utc": "1900-02-29T00:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "hour_24",
+   "utc": "2026-11-19T24:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "minute_60",
+   "utc": "2026-11-19T10:60:00Z",
+   "valid": false
+  },
+  {
+   "name": "second_61",
+   "utc": "2026-11-19T23:59:61Z",
+   "valid": false
+  },
+  {
+   "name": "second_60_not_at_end_of_day",
+   "utc": "2026-11-19T10:00:60Z",
+   "valid": false
+  },
+  {
+   "name": "no_z",
+   "utc": "2026-11-19T10:00:00",
+   "valid": false
+  },
+  {
+   "name": "offset",
+   "utc": "2026-11-19T10:00:00+00:00",
+   "valid": false
+  },
+  {
+   "name": "empty_fraction",
+   "utc": "2026-11-19T10:00:00.Z",
+   "valid": false
+  },
+  {
+   "name": "ten_fraction_digits",
+   "utc": "2026-11-19T10:00:00.1234567890Z",
+   "valid": false
+  },
+  {
+   "name": "space_separator",
+   "utc": "2026-11-19 10:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "lowercase_t",
+   "utc": "2026-11-19t10:00:00Z",
+   "valid": false
+  },
+  {
+   "name": "february_29_leap_year",
+   "utc": "2028-02-29T00:00:00Z",
+   "valid": true
+  },
+  {
+   "name": "february_29_2000",
+   "utc": "2000-02-29T12:00:00Z",
+   "valid": true
+  },
+  {
+   "name": "leap_second",
+   "utc": "2016-12-31T23:59:60Z",
+   "valid": true
+  },
+  {
+   "name": "nine_fraction_digits",
+   "utc": "2026-11-19T10:00:00.999999999Z",
+   "valid": true
+  }
+ ],
+ "ahead": [
+  {
+   "name": "behind_clock",
+   "clock_unix": "1795082400",
+   "entry": "2026-11-19T09:00:00Z",
+   "accept": true
+  },
+  {
+   "name": "at_clock",
+   "clock_unix": "1795082400",
+   "entry": "2026-11-19T10:00:00Z",
+   "accept": true
+  },
+  {
+   "name": "exactly_300_s_ahead",
+   "clock_unix": "1795082400",
+   "entry": "2026-11-19T10:05:00Z",
+   "accept": true
+  },
+  {
+   "name": "300_s_and_1_ns_ahead",
+   "clock_unix": "1795082400",
+   "entry": "2026-11-19T10:05:00.000000001Z",
+   "accept": false
+  },
+  {
+   "name": "one_day_ahead",
+   "clock_unix": "1795082400",
+   "entry": "2026-11-20T10:00:00Z",
+   "accept": false
+  },
+  {
+   "name": "far_future",
+   "clock_unix": "1795082400",
+   "entry": "9999-12-31T23:59:59Z",
+   "accept": false
+  }
+ ]
+}

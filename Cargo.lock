@@ -405,6 +405,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-align"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-dep",
+ "fid-geo-frame",
+ "fid-kci",
+ "fid-project",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-brand-lint"
 version = "0.0.1"
 dependencies = [
@@ -416,8 +430,10 @@ dependencies = [
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
  "fid-journal",
+ "fid-registry",
  "fid-types",
  "unicode-normalization",
 ]
@@ -567,6 +583,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-index"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
+]
+
+[[package]]
 name = "fid-geo-nurbs"
 version = "0.0.1"
 dependencies = [
@@ -702,7 +728,9 @@ name = "fid-journal"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-journal",
  "fid-kci",
+ "fid-store",
  "fid-types",
  "getrandom",
 ]
@@ -713,6 +741,16 @@ version = "0.0.1"
 dependencies = [
  "fid-num",
  "fid-testkit",
+ "fid-types",
+]
+
+[[package]]
+name = "fid-kdec"
+version = "0.0.1"
+dependencies = [
+ "fid-kci",
+ "fid-kunc",
+ "fid-num",
  "fid-types",
 ]
 
@@ -838,6 +876,7 @@ name = "fid-registry"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-geo-frame",
  "fid-kci",
  "fid-types",
 ]

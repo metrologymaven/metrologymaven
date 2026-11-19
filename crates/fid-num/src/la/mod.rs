@@ -1,4 +1,6 @@
-//! Dense linear algebra base. Spec node `KRN.NUM.LA.MAT`.
+//! Dense linear algebra. Spec nodes `KRN.NUM.LA.MAT` (this base) and `KRN.NUM.LA.QR`
+//! (Householder QR, column pivoting and least squares: [`qr`], [`qr_pivoted`], [`lstsq`]; the
+//! pinned rules are in the `qr` module source).
 //!
 //! Row-major `f64` matrices with checked construction ([`Mat`]), products routed through
 //! [`crate::red::dot`] ([`mat_vec`], [`mat_t_vec`], [`mat_mul`]), triangular solves
@@ -45,10 +47,12 @@
 
 mod cond;
 mod mat;
+mod qr;
 mod tri;
 
 pub use cond::{cond_triangular, ITERATIONS as COND_ITERATIONS};
 pub use mat::{mat_mul, mat_t_vec, mat_vec, Mat, MAX_DIM, MAX_MAT_BYTES};
+pub use qr::{lstsq, qr, qr_pivoted, LstsqResult, Qr};
 pub use tri::{rank_by_rule, solve_lower, solve_upper};
 
 use crate::err::NumError;
@@ -61,7 +65,9 @@ pub struct Factorization {
     /// Number of diagonal values (R diagonal magnitudes or singular values) above
     /// `rel_tol` times the largest, see [`rank_by_rule`].
     pub rank: usize,
-    /// 2-norm condition-number estimate (finite; a rank-deficient factor is an error).
+    /// 2-norm condition-number estimate. [`cond_triangular`] itself is always finite (a
+    /// rank-deficient factor is an error there); a QR factorization reports `f64::INFINITY`
+    /// here when `rank` is below the column count or the estimate is beyond the `f64` range.
     pub cond: f64,
     /// The relative tolerance the rank was computed with, as passed by the caller.
     pub rel_tol: f64,
@@ -90,13 +96,26 @@ pub enum LaError {
         /// Zero-based diagonal index.
         index: usize,
     },
+    /// An input that is not all zeros but whose largest magnitude is subnormal (below
+    /// `2^-1022`): every entry has fewer than 53 significant bits, so a factorization could not
+    /// meet its accuracy bounds (`KRN.NUM.LA.QR`).
+    Subnormal,
+    /// `lstsq`: the numerical rank under `rel_tol` is below the number of columns. Carried as
+    /// [`NumError::Singular`] with op `la.lstsq` and `rank` the rank.
+    RankDeficient {
+        /// The numerical rank.
+        rank: usize,
+    },
 }
 
 const SINGULAR_OPS: [&str; 3] = ["la.solve_upper", "la.solve_lower", "la.cond_triangular"];
 
+/// The operation whose [`NumError::Singular`] is [`LaError::RankDeficient`].
+const RANK_DEFICIENT_OP: &str = "la.lstsq";
+
 impl LaError {
-    /// The `detail` string used in [`NumError::Domain`] (`singular` for the Singular kind,
-    /// which is never carried as a detail).
+    /// The `detail` string used in [`NumError::Domain`] (`singular` and `rank_deficient` for
+    /// the two kinds carried as [`NumError::Singular`], never as a detail).
     pub const fn detail(self) -> &'static str {
         match self {
             LaError::BadShape => "bad_shape",
@@ -105,6 +124,8 @@ impl LaError {
             LaError::BadSpectrum => "bad_spectrum",
             LaError::Allocation => "allocation_failed",
             LaError::Singular { .. } => "singular",
+            LaError::Subnormal => "subnormal_input",
+            LaError::RankDeficient { .. } => "rank_deficient",
         }
     }
 
@@ -113,11 +134,17 @@ impl LaError {
     pub fn of(e: &NumError) -> Option<LaError> {
         match e {
             NumError::Singular { op, rank } if SINGULAR_OPS.contains(op) => Some(LaError::Singular { index: *rank }),
-            NumError::Domain { op, detail } if op.starts_with("la.") => {
-                [LaError::BadShape, LaError::TooLarge, LaError::BadTolerance, LaError::BadSpectrum, LaError::Allocation]
-                    .into_iter()
-                    .find(|k| k.detail() == *detail)
-            }
+            NumError::Singular { op, rank } if *op == RANK_DEFICIENT_OP => Some(LaError::RankDeficient { rank: *rank }),
+            NumError::Domain { op, detail } if op.starts_with("la.") => [
+                LaError::BadShape,
+                LaError::TooLarge,
+                LaError::BadTolerance,
+                LaError::BadSpectrum,
+                LaError::Allocation,
+                LaError::Subnormal,
+            ]
+            .into_iter()
+            .find(|k| k.detail() == *detail),
             _ => None,
         }
     }
@@ -125,6 +152,7 @@ impl LaError {
     pub(crate) fn at(self, op: &'static str) -> NumError {
         match self {
             LaError::Singular { index } => NumError::Singular { op, rank: index },
+            LaError::RankDeficient { rank } => NumError::Singular { op, rank },
             k => NumError::Domain { op, detail: k.detail() },
         }
     }

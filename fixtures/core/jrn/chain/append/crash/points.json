@@ -1,0 +1,106 @@
+{
+ "prechain": 3,
+ "target": 3,
+ "points": [
+  {
+   "n": 1,
+   "name": "prechecked",
+   "after_restart": "absent"
+  },
+  {
+   "n": 2,
+   "name": "batch_taken",
+   "after_restart": "absent"
+  },
+  {
+   "n": 3,
+   "name": "lock_verified",
+   "after_restart": "absent"
+  },
+  {
+   "n": 4,
+   "name": "begun",
+   "after_restart": "absent"
+  },
+  {
+   "n": 5,
+   "name": "tail_read",
+   "after_restart": "absent"
+  },
+  {
+   "n": 6,
+   "name": "head_checked",
+   "after_restart": "absent"
+  },
+  {
+   "n": 7,
+   "name": "built",
+   "after_restart": "absent"
+  },
+  {
+   "n": 8,
+   "name": "blobs_checked",
+   "after_restart": "absent"
+  },
+  {
+   "n": 9,
+   "name": "payload_encoded",
+   "after_restart": "absent"
+  },
+  {
+   "n": 10,
+   "name": "payload_put",
+   "after_restart": "absent"
+  },
+  {
+   "n": 11,
+   "name": "savepoint_opened",
+   "after_restart": "absent"
+  },
+  {
+   "n": 12,
+   "name": "entry_inserted",
+   "after_restart": "absent"
+  },
+  {
+   "n": 13,
+   "name": "payload_ref_inserted",
+   "after_restart": "absent"
+  },
+  {
+   "n": 14,
+   "name": "blob_refs_inserted",
+   "after_restart": "absent"
+  },
+  {
+   "n": 15,
+   "name": "savepoint_released",
+   "after_restart": "absent"
+  },
+  {
+   "n": 16,
+   "name": "batch_built",
+   "after_restart": "absent"
+  },
+  {
+   "n": 17,
+   "name": "before_commit",
+   "after_restart": "absent"
+  },
+  {
+   "n": 18,
+   "name": "committed",
+   "after_restart": "present"
+  },
+  {
+   "n": 19,
+   "name": "results_published",
+   "after_restart": "present"
+  },
+  {
+   "n": 20,
+   "name": "returning",
+   "after_restart": "present"
+  }
+ ]
+}
