@@ -209,6 +209,50 @@ fn block_and_page_budgets() {
     assert_eq!(invalid(&doc_with_pages(&[0; 10_001])), ("/pages/10000".to_string(), "too_many_pages"));
 }
 
+/// One page of `n` blocks: block j continues to j + 1, and the last continues back to
+/// the one before it, so the chain ends in a 2-block loop.
+fn chain_ending_in_loop(n: usize) -> Vec<u8> {
+    let id = |j: usize| uuid(j as u64 + 2);
+    let mut out = String::from("{\"clearance\":null,\"locked\":false,\"media_type\":\"");
+    out.push_str(MEDIA_TYPE);
+    out.push_str("\",\"pages\":[{\"blocks\":[");
+    for j in 0..n {
+        if j > 0 {
+            out.push(',');
+        }
+        let next = if j + 1 < n { j + 1 } else { j - 1 };
+        out.push_str(&format!(
+            "{{\"continuation_block\":\"{}\",\"id\":\"{}\",\"kind\":\"text\",\"kind_version\":\"1\",\
+             \"payload\":{{\"untrusted\":true,\"value\":{{}}}},\"repeat_header_rows\":\"0\",\"slot\":null}}",
+            id(next),
+            id(j)
+        ));
+    }
+    out.push_str(&format!(
+        "],\"id\":\"{}\"}}],\"schema_version\":\"1\",\"template_id\":\"{}\",\
+         \"title\":{{\"text\":\"t\",\"untrusted\":true}}}}",
+        uuid(n as u64 + 2),
+        uuid(1)
+    ));
+    out.into_bytes()
+}
+
+#[test]
+fn continuation_loop_at_the_end_of_a_10_000_block_chain() {
+    // Hand-labelled: blocks 9998 and 9999 form the loop; 9998 is first in page order.
+    let t = std::time::Instant::now();
+    assert_eq!(
+        invalid(&chain_ending_in_loop(10_000)),
+        ("/pages/0/blocks/9998/continuation_block".to_string(), "continuation_cycle")
+    );
+    println!("10 000-block chain: {:?}", t.elapsed());
+    // A loop through every block of a page is named at block 0.
+    assert_eq!(
+        invalid(&chain_ending_in_loop(2)),
+        ("/pages/0/blocks/0/continuation_block".to_string(), "continuation_cycle")
+    );
+}
+
 #[test]
 fn string_budget_counts_decoded_bytes_and_covers_keys() {
     let base = String::from_utf8(read("valid_v1.canonical.json")).unwrap();

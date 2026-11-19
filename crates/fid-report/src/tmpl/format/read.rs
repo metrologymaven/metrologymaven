@@ -178,16 +178,55 @@ fn continuations(blocks: &[TemplateBlock], at: &str) -> Result<(), TemplateError
             None => return Err(bad(&ptr(j), "continuation_not_on_page")),
         }
     }
-    // Each block has at most one successor; a walk longer than the page loops.
+    // Each block has at most one successor, so the flags form a functional graph. One
+    // O(n) pass: walk from each unvisited block, marking blocks on the current path; a walk
+    // that meets its own path has found a loop (the path from that block on). Every block
+    // is walked once. The error names the first block in page order that lies on a loop.
+    const UNSEEN: u8 = 0;
+    const ON_PATH: u8 = 1;
+    const DONE: u8 = 2;
+    let mut state = vec![UNSEEN; blocks.len()];
+    let mut first_on_loop: Option<usize> = None;
+    let mut path: Vec<usize> = Vec::new();
     for start in 0..blocks.len() {
-        let mut at_j = start;
-        for _ in 0..blocks.len() {
-            match next.get(at_j).copied().flatten() {
-                None => break,
-                Some(n) if n == start => return Err(bad(&ptr(start), "continuation_cycle")),
-                Some(n) => at_j = n,
+        if state.get(start) != Some(&UNSEEN) {
+            continue;
+        }
+        path.clear();
+        let mut j = start;
+        loop {
+            match state.get(j).copied() {
+                Some(UNSEEN) => {
+                    if let Some(s) = state.get_mut(j) {
+                        *s = ON_PATH;
+                    }
+                    path.push(j);
+                    match next.get(j).copied().flatten() {
+                        Some(n) => j = n,
+                        None => break,
+                    }
+                }
+                Some(ON_PATH) => {
+                    // `j` is on this walk's path: the loop is the path from `j` on.
+                    let from = path.iter().position(|p| *p == j).unwrap_or(0);
+                    let low = path.get(from..).and_then(|l| l.iter().min().copied());
+                    first_on_loop = match (first_on_loop, low) {
+                        (Some(a), Some(b)) => Some(a.min(b)),
+                        (a, b) => a.or(b),
+                    };
+                    break;
+                }
+                _ => break,
             }
         }
+        for p in &path {
+            if let Some(s) = state.get_mut(*p) {
+                *s = DONE;
+            }
+        }
+    }
+    if let Some(j) = first_on_loop {
+        return Err(bad(&ptr(j), "continuation_cycle"));
     }
     Ok(())
 }

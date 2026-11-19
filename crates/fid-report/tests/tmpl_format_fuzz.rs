@@ -1,19 +1,36 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 //! AC-4 of RPT.MODEL.TMPL.FORMAT: a structure-aware fuzzer (seed 3, 1 000 000 iterations).
 //!
+//! The full 1 000 000 iterations run only with `TMPL_FUZZ_FULL=1` (one dedicated
+//! `--release` Linux CI step); a plain `cargo test` runs the first [`QUICK_ITERATIONS`] of the same
+//! streams, so every OS job stays fast.
+//!
 //! Each input starts from a valid fixture (the v1 template or the v0 sample), gets one to
 //! three tree mutations (replace a node, drop or add a key, grow or shrink an array, nest
 //! deeper, graft a subtree from elsewhere) and, one time in three, a byte mutation of its
 //! JSON text (flip, cut, splice a structural token or an invalid byte, duplicate a run).
 //! The parser must never panic, every failure must be one of the two typed errors with a
-//! bounded pointer, and every success must round-trip byte-identically.
+//! bounded pointer, and every success must round-trip byte-identically; a success whose
+//! input declared schema version `"1"` must also serialise to exactly the canonical form of
+//! its input.
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_report::tmpl::format::*;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-const ITERATIONS: u32 = 1_000_000;
+/// AC-4's iteration count, run with `TMPL_FUZZ_FULL=1`.
+const FULL_ITERATIONS: u32 = 1_000_000;
+/// Iterations of a plain `cargo test`.
+const QUICK_ITERATIONS: u32 = 20_000;
+
+fn iterations() -> u32 {
+    if std::env::var("TMPL_FUZZ_FULL").as_deref() == Ok("1") {
+        FULL_ITERATIONS
+    } else {
+        QUICK_ITERATIONS
+    }
+}
 const SEED: u64 = 3;
 
 /// SplitMix64.
@@ -208,7 +225,8 @@ fn ac4_structure_aware_fuzz_never_panics_and_fails_typed() {
     let seeds = seeds();
     // The iterations are split over SHARDS fixed SplitMix64 streams (stream k starts at
     // SEED + k), each run on its own thread; the inputs do not depend on the thread count.
-    let per = ITERATIONS / SHARDS;
+    let iterations = iterations();
+    let per = iterations / SHARDS;
     let totals: Vec<[u32; 3]> = std::thread::scope(|sc| {
         let handles: Vec<_> = (0..SHARDS)
             .map(|k| {
@@ -219,8 +237,8 @@ fn ac4_structure_aware_fuzz_never_panics_and_fails_typed() {
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
     let [ok, invalid, unsupported] = totals.iter().fold([0u32; 3], |a, t| [a[0] + t[0], a[1] + t[1], a[2] + t[2]]);
-    println!("fuzz seed {SEED}: {ITERATIONS} iterations, {ok} ok, {invalid} invalid, {unsupported} unsupported");
-    assert_eq!(ok + invalid + unsupported, ITERATIONS);
+    println!("fuzz seed {SEED}: {iterations} iterations, {ok} ok, {invalid} invalid, {unsupported} unsupported");
+    assert_eq!(ok + invalid + unsupported, iterations);
     // The generator reaches all three outcomes.
     assert!(ok > 1000 && invalid > 1000 && unsupported > 0);
 }
@@ -242,6 +260,13 @@ fn run_shard(seeds: &[CValue], seed: u64, n: u32) -> [u32; 3] {
         match parse_template(&bytes) {
             Ok(t) => {
                 let s = serialise(&t).unwrap();
+                // A v1 input serialises to exactly its own canonical form.
+                let input = parse(&bytes).unwrap();
+                if let CValue::Obj(o) = &input {
+                    if o.get("schema_version") == Some(&CValue::Str("1".to_string())) {
+                        assert_eq!(s.as_bytes(), to_canonical_bytes(&input).unwrap().as_slice());
+                    }
+                }
                 let t2 = parse_template(s.as_bytes()).unwrap();
                 assert_eq!(t2, t);
                 assert_eq!(serialise(&t2).unwrap(), s);
