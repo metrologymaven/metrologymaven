@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-program]
 satisfies: [REQ-AUTO.PROG-009]
 covers: [PCD.PRG.08]
 depends_on: [AUTO.PROG.FMT, CORE.REG]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # AUTO.PROG.FAMILY: Part-family parameters and binding validation
@@ -59,17 +60,25 @@ Lets one program serve a family of similar parts. A program declares typed param
 
 ## Design
 
-- **Registry command(s):** none.
-- **Data structures:** `ParamDecl { name, ty: RegistryType, quantity_kind: Option<QuantityKind>, required: bool, default: Option<BoundValue>, description }`; `Variant { name, binding: BTreeMap<String, BoundValue> }`.
-- **Algorithm:** ordered iteration over declarations then binding keys; unit lookup in the CORE.REG unit table snapshot from the manifest.
-- **Errors:** `missing_parameter`, `wrong_type`, `wrong_unit`, `unknown_parameter`, `duplicate_variant`.
+- **Registry command(s):** none; library module `fid_program::family`.
+- **Data structures:** `ParamDecl { name, ty: ParamType, quantity_kind: Option<String>, required: bool, default: Option<BoundValue>, description: Option<String> }`; `Variant { name, binding: Binding }` with `Binding = BTreeMap<String, BoundValue>`; `Family { params, variants }`, built only through `Family::from_program` / `Family::from_parts`.
+- **Where it lives in a program:** declarations are the objects of the program's `params` array (opaque to `AUTO.PROG.FMT`). The variant table is a new optional top-level `variants` array of objects in `program-v1` (also opaque to FMT; absent means no table, so every existing program and digest is unchanged). Wire forms, all objects closed (no other field):
+  - declaration `{"default"?, "description"?, "name", "quantity_kind"?, "required", "type"}`; `required` is mandatory.
+  - variant `{"binding": {<param>: <value>}, "name"}`.
+  - value: JSON boolean, number or string, or a quantity `{"unit": "<symbol>", "value": "<decimal text>"}`.
+- **Types (REQ-001):** closed set named after the registry parameter schemas (`CORE.REG.DEF.SCHEMA`): `boolean`, `integer`, `number`, `string` (JSON Schema types); `quantity` (`x-quantity`; any unit of the kind; `quantity_kind` required and present only on quantities, and must be a kind of the catalogue); `ref:<entity>` (`x-ref`, entity from the registry `EntityType` list, e.g. `ref:element`); `data_handle` (input data handle). Value rules: `integer` is a JSON number with no fraction and magnitude at most 2^53; `number` any JSON number; `string` any string; `ref:*` and `data_handle` a non-empty string of at most 4096 bytes with no control character (not resolved here); `quantity` the object form with exactly `unit` and `value` as strings, `value` in the `GEO.FRAME.UNITS` authored-decimal grammar (checks 1 to 4: at most 1024 bytes, `[+-] digits ["." digits] [(e|E) [+-] digits]`, at most 40 significant digits). Any other shape (null, arrays, other objects, a bare number for a quantity, a number in `value`) is `wrong_type`.
+- **Units (REQ-003, REQ-006):** looked up through the registry's `QuantityCatalogue` facade (`fid_registry`); a quantity's unit must be `accepts(kind, unit)` (exact, case-sensitive symbol), else `wrong_unit`. FAMILY defines no unit and converts nothing; bound values keep the authored text and symbol.
+- **Names:** parameter names match `^[A-Za-z_][A-Za-z0-9_]{0,63}$` (the FMT identifier, so expressions can name them) and are unique ignoring ASCII case (`duplicate_parameter`, naming the later one). Variant names match `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` and are unique ignoring ASCII case (`duplicate_variant`, naming the later one; REQ-005). Binding keys match declarations exactly (case-sensitive), so `Hole_spacing` is `unknown_parameter`.
+- **Algorithm:** `check_binding(decls, binding, catalogue)` first runs `check_decls` (names, `quantity_kind` rules, description at most 4096 bytes, every default fits its declaration); if that reports anything, those errors are returned alone. Otherwise, in declaration order: a bound value that does not fit is `wrong_type` or `wrong_unit`; an unbound parameter with `required: true` and no default is `missing_parameter`. Then each binding key, in byte order, that no declaration names is `unknown_parameter`. Defaults are never filled into the binding. `Family::from_parts` decodes declarations (malformed → `bad_declaration`), runs `check_decls`, reports declaration errors in declaration order, then decodes variants in order (malformed → `bad_variant`; duplicate name → `duplicate_variant`); when the declarations are clean, each variant's binding must pass `check_binding` and its errors are wrapped as `InVariant { variant, error }` (code = inner code). Any error fails the whole family closed with the full list. `Family::variant(name)` resolves an exact name or fails with `unknown_variant`.
+- **Bounds:** at most 1024 declarations and 1024 variants (`family_too_large`); the program itself is bounded by FMT. `binding_from_json` (binding files) accepts at most 1 MiB and nesting 16, refuses duplicate keys (`bad_binding` with the `fid-canon` code). Messages echo at most 64 characters of input, escaped. No panics.
+- **Errors:** `missing_parameter`, `wrong_type`, `wrong_unit`, `unknown_parameter`, `duplicate_variant`; also `duplicate_parameter`, `bad_declaration`, `bad_variant`, `unknown_variant`, `bad_binding`, `family_too_large`. Each names its parameter and/or variant.
 - **Determinism:** D0.
 - **Performance budget:** negligible.
-- **Crate:** `fid-program`
+- **Crate:** `fid-program` (module `family`); depends on `fid-registry` for the catalogue and `EntityType`.
 
 ## Test fixtures
 
-`fixtures/program/family/bracket.json` and binding files (project-authored); unit table from `fixtures/manifest/min-classes.json`.
+`fixtures/program/family/bracket.json`, `valid/`, `invalid/` and `bindings/` (project-authored, CC-BY-4.0), written with hand-labelled expected errors in `expected.json` by `fixtures/program/family/make_fixtures.py`. Unit catalogue: `fixtures/core/reg/def/schema/catalogue/with_time.json` (kinds angle, length, time). `fixtures/manifest/min-classes.json` carries only the catalogue digest, not the table.
 
 ## Build prompt
 
