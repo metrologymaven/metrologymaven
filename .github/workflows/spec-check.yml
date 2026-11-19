@@ -3,6 +3,10 @@ on:
   pull_request:
   push:
     branches: [main]
+# A newer push to the same PR cancels the older run; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -15,5 +19,9 @@ jobs:
         run: |
           python tools/scope.py check
           python tools/scope.py milestone milestones/launch-1.md
-      - name: Generated reports are up to date
-        run: git diff --exit-code -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md generated/BUILT.md generated/milestones/launch-1.md
+      # D-042: generated/ reports are refreshed on main by a regeneration PR, not in every
+      # PR. On pull requests this step only reports staleness; on main it is informational
+      # too, so a merge never turns main red before the next regeneration PR lands.
+      - name: Generated reports are up to date (informational, D-042)
+        continue-on-error: true
+        run: git diff --exit-code --stat -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md generated/BUILT.md generated/milestones/launch-1.md

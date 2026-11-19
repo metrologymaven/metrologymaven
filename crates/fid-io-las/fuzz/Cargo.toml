@@ -1,0 +1,29 @@
+# cargo-fuzz harness for the LAS reader and writer (IO.CLOUD.LAS.HDR AC-5). Not a workspace
+# member: it needs nightly and libFuzzer. Run from crates/fid-io-las/fuzz, with a scratch
+# corpus directory first (libFuzzer writes new inputs into the first directory only):
+#   mkdir -p corpus/las_read
+#   cargo +nightly fuzz run las_read corpus/las_read ../../../fixtures/io/cloud/las/hdr -- -max_total_time=300
+[package]
+name = "fid-io-las-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-io-las = { path = ".." }
+
+[[bin]]
+name = "las_read"
+path = "fuzz_targets/las_read.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this crate out of the parent workspace.
+[workspace]
+members = ["."]
