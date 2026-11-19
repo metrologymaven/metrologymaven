@@ -39,8 +39,8 @@
 //! that are not an unknown code or a bad hint ID fail with `device_error_invalid`.
 
 use super::config::ConfigErrorCode;
-use crate::units::{boolean, i64_dec, kept, obj, object, string, take, Obj};
 pub use crate::stamp::UntrustedText;
+use crate::units::{boolean, i64_dec, kept, obj, object, string, take, Obj};
 use fid_canon::CValue;
 use std::fmt;
 
@@ -255,7 +255,9 @@ impl ErrorCode {
                 "The device reports that a safety stop is active. Software observes it only; the reset \
                  happens at the machine (REQ-HAL.IDL.BASE-005)."
             }
-            ErrorCode::VendorLicense => "The device or its vendor software refuses the operation for licensing reasons.",
+            ErrorCode::VendorLicense => {
+                "The device or its vendor software refuses the operation for licensing reasons."
+            }
             ErrorCode::Unsupported => "The device does not offer the requested operation or option.",
             ErrorCode::Internal => {
                 "A fault inside the driver or device that none of the other codes describes; the device \
