@@ -190,9 +190,7 @@ impl<R: Read + Seek> LasReader<R> {
                 unit: CountUnit::Points,
             });
         }
-        let elements = declared
-            .saturating_add(u64::from(header.number_of_vlrs))
-            .saturating_add(evlr_count);
+        let elements = declared.saturating_add(u64::from(header.number_of_vlrs)).saturating_add(evlr_count);
         if elements > limits.elements() {
             return Err(LasError::LimitExceeded {
                 limit: LimitKind::Elements,
