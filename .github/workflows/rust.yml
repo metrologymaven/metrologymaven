@@ -224,6 +224,8 @@ jobs:
         run: cargo xtask study-tasks-check
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
+      - name: Second implementation recomputes the registry manifest digests (CORE.REG.MAN AC-3)
+        run: node fixtures/core/reg/manifest/check_digests.mjs
       - name: CLI smoke test
         shell: bash
         run: |
@@ -260,6 +262,8 @@ jobs:
           python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/manifest/make_fixtures.py --check
+          python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check
           python fixtures/gdt/dmt/make_fixtures.py --check
           python fixtures/gdt/dmt/check_schema.py
@@ -312,6 +316,7 @@ jobs:
           python tools/fixtures/geo_xform_cases.py --check
           python tools/fixtures/geo_tree_cases.py --check
           python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
+          python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
           python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/core/reg/ver/gate/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
@@ -321,6 +326,7 @@ jobs:
           python fixtures/scan/cmp/make_field_golden.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
           python fixtures/unc/dec/type/make_fixtures.py --check
+          python fixtures/unc/class/make_table.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -455,6 +461,8 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-frame
       - name: NURBS evaluation digests on wasm32-wasip1 (GEO.NURBS.EVAL AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test eval
+      - name: Analytic curve and surface digests on wasm32-wasip1 (GEO.NURBS.ANALYTIC AC-4)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-nurbs --test analytic
       - name: Selection index-set digests on wasm32-wasip1 (GEO.SEL.MODEL AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)

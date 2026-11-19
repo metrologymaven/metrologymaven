@@ -7,6 +7,7 @@ pub mod compat;
 pub mod def;
 pub mod guide;
 pub mod lifecycle;
+pub mod manifest;
 pub mod pred;
 pub mod schema;
 pub mod validate;
@@ -28,6 +29,10 @@ pub use guide::{
 pub use lifecycle::{
     check_migrators, check_transition, retained, Date, LifeError, Lifecycle, LifecycleDecl, MigratorRecord, State,
     DEPRECATION_MIN_MONTHS,
+};
+pub use manifest::{
+    check_manifest, export, export_with, manifest_schema, Export, ManifestInForce, MANIFEST_FORMAT, MAX_COMMANDS,
+    MAX_MANIFEST_BYTES,
 };
 pub use pred::{
     compile_command, evaluate, BuildError, ContextTypes, Evaluation, FieldPath, ParamSchema, ParseError, PredContext,

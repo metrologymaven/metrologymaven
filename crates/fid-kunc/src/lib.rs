@@ -2,7 +2,8 @@
 //! `unsafe`; kernel graph, KNP-1 (floating-point work only through `fid-num`).
 //!
 //! Implemented leaves: `UNC.UEC.STMT` (the [`EvidenceClass`] enumeration and the validated
-//! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]);
+//! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]),
+//! `UNC.UEC.CLASS` (evidence class assignment, rule set `uec-assign@1`, see [`uec`]) and
 //! `UNC.MODEL.DIST` (input distributions, moments, seeded sampling and the correlation check,
 //! see [`dist`]).
 //!
@@ -11,6 +12,7 @@
 
 pub mod dist;
 pub mod statement;
+pub mod uec;
 
 pub use statement::{
     Contributor, CoverageInterval, EvidenceClass, Expanded, IntervalKind, Method, ModelRef, NlinVerdict, Nonlinearity,

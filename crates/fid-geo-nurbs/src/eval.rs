@@ -369,7 +369,7 @@ fn quotient_curve(a: &[[f64; 4]; MAX_ORDER + 1], order: usize) -> [[f64; 3]; MAX
 }
 
 /// `cl = sqrt(C'.C')`, degenerate iff `(cl * cl) * cl == 0`. Returns `(regularity, cl, cl^3)`.
-fn curve_regularity(d1: [f64; 3]) -> Result<(Regularity, f64, f64), EvalError> {
+pub(crate) fn curve_regularity(d1: [f64; 3]) -> Result<(Regularity, f64, f64), EvalError> {
     let l2 = dot(d1, d1);
     let cl = sqrt(l2)?;
     let den = (cl * cl) * cl;
@@ -487,7 +487,7 @@ fn quotient_surface(a: &[[[f64; 4]; MAX_ORDER + 1]; MAX_ORDER + 1], order: usize
 
 /// REQ-GEO.NURBS.EVAL-003: degenerate iff `a2 == 0`, `b2 == 0`, `c2 == 0` or
 /// `c2 < DEGEN2 * (a2 * b2)`, with `a2 = Su.Su`, `b2 = Sv.Sv`, `c2 = (Su x Sv).(Su x Sv)`.
-fn surface_regularity(su: [f64; 3], sv: [f64; 3]) -> Result<Regularity, EvalError> {
+pub(crate) fn surface_regularity(su: [f64; 3], sv: [f64; 3]) -> Result<Regularity, EvalError> {
     let (a2, b2) = (dot(su, su), dot(sv, sv));
     let cr = cross(su, sv);
     let c2 = dot(cr, cr);
