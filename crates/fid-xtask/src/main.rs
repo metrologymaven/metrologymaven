@@ -18,6 +18,7 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask data verify [--cache <dir>]\n       \
                      cargo xtask bots-check --register <toml> --restricted <txt> --today <YYYY-MM-DD> \
                      [--review-export <json>]\n       \
+                     cargo xtask bot-blocking --threads <json> --register <bots.toml> --maintainers <txt>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
@@ -189,7 +190,6 @@ fn bots_check(args: &[String]) -> ExitCode {
     }
 }
 
-<<<<<<< HEAD
 /// ECO.CI.BOTS.BLOCK: exit 0 when no blocking bot thread is unresolved, 1 when one is or an
 /// input is missing or malformed (`BLOCK-INPUT`, fail closed), 2 on a usage error.
 fn bot_blocking(args: &[String]) -> ExitCode {
@@ -229,13 +229,9 @@ fn bot_blocking(args: &[String]) -> ExitCode {
     }
 }
 
-/// PLAT.MATRIX.FILE, PLAT.HW.PROFILE, PLAT.GPU.POLICY and PLAT.DEPLOY.NOADMIN.LAYOUT: runs
-/// `fid-platform plat-matrix ...`, `fid-platform plat-deploy validate-layout ...`,
-=======
 /// PLAT.MATRIX.FILE, PLAT.HW.PROFILE, PLAT.GPU.POLICY, PLAT.DEPLOY.NOADMIN.LAYOUT and
 /// PLAT.DEPLOY.OFFLINE.BUNDLE: runs `fid-platform plat-matrix ...`,
 /// `fid-platform plat-deploy validate-layout|check-bundle|make-install-manifest|bundle-schemas ...`,
->>>>>>> origin/main
 /// `fid-platform plat-hw ...` or `fid-platform plat-gpu validate ...` through Cargo, for the same layer reason as `datasets-check`
 /// (`fid-platform` is a `tool` crate).
 fn fid_platform(args: &[String], group: &str) -> ExitCode {
