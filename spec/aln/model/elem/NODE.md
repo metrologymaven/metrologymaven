@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-align]
+built_pr: 230
 satisfies: [REQ-ALN.MODEL-001, REQ-ALN.MODEL-002]
 covers: []
 depends_on: [CORE.PRJ, CORE.DEP, GEO.FRAME]
