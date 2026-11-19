@@ -18,13 +18,17 @@ Expected values come from a bit-exact model of the expressions pinned in the lea
 (and in GEO.FRAME.XFORM): with dot3(a, b) = (a0*b0 + a1*b1) + a2*b2,
 
 * point and scan origin:  y[i] = s * dot3(R[i], x) + t[i];
-* normal:                  m[i] = dot3(R[i], n)   (rotation only, no scale, no renormalisation).
+* normal:                  m[i] = dot3(R[i], n)   (rotation only, no scale), then renormalised:
+                           len = sqrt(dot3(m, m)), n'[i] = m[i] / len (per-component division).
+
+math.sqrt is correctly rounded (IEEE 754), as is fid-num's sqrt.
 
 CPython floats are IEEE binary64 with round-to-nearest-even and never fuse a multiply-add, so
 the model's bits are the Rust results on every target. Every model value is also checked
 against exact rational arithmetic (fractions.Fraction): each coordinate within 1e-13 m of
-s R x + t, each normal component within 1e-15 of R n, and every output normal's length
-within 1e-12 of 1 (checked as | |m|^2 - 1 | <= 2e-12 - 1e-24, exactly). The script also maps
+s R x + t; each normal component within 1e-15 of R n / |R n| (the square root taken with
+60-digit decimal arithmetic), and every output normal's length within 1e-12 of 1 (checked as
+| |n'|^2 - 1 | <= 2e-12 - 1e-24, exactly). The script also maps
 every point back through the model of the pinned inverse (R^T, 1/s, -(s' (R^T t))) and asserts
 the largest coordinate error is at most 1e-12 m (AC-2).
 
@@ -39,6 +43,8 @@ apply_expected.bin layout (little-endian; every f64 is its IEEE 754 bit pattern)
 """
 
 import json
+import math
+from decimal import Decimal, getcontext
 import struct
 import sys
 from fractions import Fraction
@@ -126,6 +132,16 @@ def apply_dir(r, x):
     return [dot3(r[i][0], r[i][1], r[i][2], x[0], x[1], x[2]) for i in range(3)]
 
 
+def unit(m):
+    length = math.sqrt(dot3(m[0], m[1], m[2], m[0], m[1], m[2]))
+    assert math.isfinite(length) and length > 0.0
+    return [m[0] / length, m[1] / length, m[2] / length]
+
+
+def apply_normal(r, n):
+    return unit(apply_dir(r, n))
+
+
 def inverse(r, t, s):
     si = 1.0 / s
     u = [dot3(r[0][i], r[1][i], r[2][i], t[0], t[1], t[2]) for i in range(3)]
@@ -154,8 +170,11 @@ def check_normals(r, ns, ms):
     lim = Fraction(2, 10**12) - Fraction(1, 10**24)
     for n, m in zip(ns, ms):
         e = exact_dir(r, n)
+        sq = sum(v * v for v in e)
+        length = (Decimal(sq.numerator) / Decimal(sq.denominator)).sqrt()
+        length = Fraction(length)
         for k in range(3):
-            assert abs(Fraction(m[k]) - e[k]) <= Fraction(1, 10**15), (n, k)
+            assert abs(Fraction(m[k]) - e[k] / length) <= Fraction(1, 10**15), (n, k)
         sq = sum(Fraction(v) * Fraction(v) for v in m)
         # |m|^2 within 2e-12 - 1e-24 of 1 implies | |m| - 1 | <= 1e-12.
         assert abs(sq - 1) <= lim, n
@@ -204,7 +223,7 @@ def build():
 
     pset, normals = load_pointset()
     pset_out = [apply_point(r, t, s, p) for p in pset]
-    normals_out = [apply_dir(r, n) for n in normals]
+    normals_out = [apply_normal(r, n) for n in normals]
     check_points(r, t, s, pset, pset_out, "pointset")
     check_normals(r, normals, normals_out)
 
@@ -225,6 +244,7 @@ def build():
 
 
 def main():
+    getcontext().prec = 60
     check = "--check" in sys.argv[1:]
     data, worst = build()
     rel = OUT.relative_to(ROOT)

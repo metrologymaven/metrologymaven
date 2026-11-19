@@ -11,8 +11,8 @@ use fid_geo_frame::apply::{
 };
 use fid_geo_frame::xform::{Rigid, Similarity, Transform, IDENTITY};
 use fid_geo_types::{
-    Aabb, AttributeSet, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh, MeshOptions,
-    PointBuffer, PointCloud, PointSet, TriangleAttrs,
+    is_unit_normal, Aabb, AttributeSet, CadBodyRef, ElementKind, FrameRef, GeoTypeError, GeometryElement, Mesh,
+    MeshOptions, PointBuffer, PointCloud, PointSet, TriangleAttrs,
 };
 use fid_types::Digest;
 
@@ -356,7 +356,8 @@ fn ac4_cad_body_refused() {
 // ------------------------------------------------------------------ requirements
 
 /// REQ-002: under every rigid and similarity transform of `xform_cases.json`, normals are
-/// rotated only (no scale) and keep their length within 1e-12; points use the full transform.
+/// rotated only (no scale), then renormalised, so they point along `R n` and are unit within
+/// 1e-12; points use the full transform.
 #[test]
 fn req2_normals_rotation_only_all_transforms() {
     let ps = pointset_small();
@@ -367,8 +368,11 @@ fn req2_normals_rotation_only_all_transforms() {
         for i in 0..ps.len() {
             let n = ps.attributes().normal_at(i).unwrap();
             let m = out.attributes().normal_at(i).unwrap();
-            assert_eq!(bits(&m), bits(&t.apply_dir(&n).unwrap()), "transform {k} normal {i}");
-            assert!((norm(m) - norm(n)).abs() <= 1e-12, "transform {k} normal {i}");
+            let rn = t.apply_dir(&n).unwrap();
+            let l = norm(rn);
+            for (a, b) in m.iter().zip(rn) {
+                assert!((a - b / l).abs() <= 1e-15, "transform {k} normal {i} direction");
+            }
             assert!((norm(m) - 1.0).abs() <= 1e-12, "transform {k} normal {i}");
             let p = ps.point(i).unwrap();
             assert_eq!(bits(&out.point(i).unwrap()), bits(&t.apply_point(&p).unwrap()));
@@ -445,4 +449,63 @@ fn empty_element() {
     let out = transform_element(&GeometryElement::PointSet(ps), &t17(), TARGET).unwrap();
     assert_eq!(out.frame(), TARGET);
     assert!(out.as_point_set().unwrap().is_empty());
+}
+
+/// Decision on #263: a valid input normal at GEO.TYPES' acceptance edge (|n| = 1 ± 0.99e-9,
+/// and the largest accepted length) transforms successfully, and the output is unit within
+/// 1e-12. With the largest accepted length and a rotation stretched by its accepted residual,
+/// the unrenormalised `R n` would fail validation; renormalisation makes it valid.
+#[test]
+fn edge_tolerance_normals_transform() {
+    let frame = FrameRef::from_bytes([6; 16]);
+    // The largest x with [x, 0, 0] accepted by GEO.TYPES (|n| - 1 <= 1e-9).
+    let mut edge = 1.0f64 + 1e-9;
+    while !is_unit_normal([edge, 0.0, 0.0]) {
+        edge = f64::from_bits(edge.to_bits() - 1);
+    }
+    let lens = [1.0 + 0.99e-9, 1.0 - 0.99e-9, edge];
+    let normals: Vec<[f64; 3]> = lens.iter().map(|&l| [l, 0.0, 0.0]).collect();
+    // A rotation stretched along x by 4.9e-13: residual about 9.8e-13, accepted.
+    let d = 1.0 + 4.9e-13;
+    let stretched = Rigid::new([[d, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], [0.0; 3]).unwrap();
+    assert!(!is_unit_normal([edge * d, 0.0, 0.0]), "the edge case must exercise renormalisation");
+    let ts = [Transform::Rigid(stretched), t17(), Transform::IDENTITY];
+    let attrs = AttributeSet {
+        normal: Some([0, 1, 2].map(|k| normals.iter().map(|n| n[k]).collect())),
+        ..AttributeSet::default()
+    };
+    let ps = PointSet::new(frame, PointBuffer::from_points(&[[0.0; 3]; 3]), attrs).unwrap();
+    let e = GeometryElement::PointSet(ps);
+    for t in &ts {
+        let out = transform_element(&e, t, TARGET).unwrap();
+        let out = out.as_point_set().unwrap();
+        for i in 0..3 {
+            let m = out.attributes().normal_at(i).unwrap();
+            assert!((norm(m) - 1.0).abs() <= 1e-12, "normal {i} length {}", norm(m));
+        }
+    }
+}
+
+/// Identity: points and scan origins are bit-exact except that -0.0 becomes +0.0; a normal
+/// whose computed length is exactly 1 is kept.
+#[test]
+fn identity_bit_exact_except_negative_zero() {
+    let frame = FrameRef::from_bytes([8; 16]);
+    let pts = [[-0.0, 1.5, -2.25], [3.0e-300, -0.0, -0.0], [-7.0, 0.0, 1e300]];
+    let attrs = AttributeSet {
+        normal: Some([vec![1.0, 0.0, 0.6], vec![0.0, -1.0, 0.0], vec![0.0, 0.0, 0.8]]),
+        scan_origins: vec![(1, [-0.0, -0.0, 4.0])],
+        ..AttributeSet::default()
+    };
+    let pc = PointCloud::new(frame, PointBuffer::from_points(&pts), attrs).unwrap();
+    let out = transform_element(&GeometryElement::PointCloud(pc), &Transform::IDENTITY, TARGET).unwrap();
+    let out = out.as_point_cloud().unwrap();
+    let plus = |v: f64| if v == 0.0 { 0.0 } else { v };
+    for (i, p) in pts.iter().enumerate() {
+        let want = p.map(plus);
+        assert_eq!(bits(&out.point(i as u64).unwrap()), bits(&want), "point {i}");
+    }
+    assert_eq!(bits(&out.attributes().scan_origins[0].1), bits(&[0.0, 0.0, 4.0]));
+    assert_eq!(out.attributes().normal_at(0), Some([1.0, 0.0, 0.0]));
+    assert_eq!(out.attributes().normal_at(1), Some([0.0, -1.0, 0.0]));
 }

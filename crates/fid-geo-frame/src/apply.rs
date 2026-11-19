@@ -16,11 +16,16 @@
 //! - Normals are mapped by [`Transform::apply_dir`], `m[i] = dot3(R[i], n)`: the rotation
 //!   only, for rigid and similarity transforms alike. The normal transform of `x ↦ s R x + t`
 //!   is `(s R)⁻ᵀ = R / s`, which has the direction of `R`; [`Transform`] has no non-uniform
-//!   scale or shear, so no other inverse-transpose case exists. Normals are **not**
-//!   renormalised: `R` preserves length up to the accepted orthonormality residual
-//!   (‖RᵀR − I‖_F ≤ 1e-12, so |Rn| / |n| lies in [√(1 − 1e-12), √(1 + 1e-12)]) plus rounding
-//!   of one `dot3` per component, which keeps the change in length below 1e-12
-//!   (REQ-GEO.FRAME.APPLY-002).
+//!   scale or shear, so no other inverse-transpose case exists. Each rotated normal is then
+//!   renormalised: `len = fid_num::f::sqrt(dot3(m, m))`, `n'[i] = m[i] / len` (a division per
+//!   component, not a multiplication by `1 / len`). The output is unit within 1e-12
+//!   (REQ-GEO.FRAME.APPLY-002) even when an input normal sits at GEO.TYPES' ±1e-9 acceptance
+//!   edge, so a valid element never fails to transform because rotation rounding pushed a
+//!   normal past that edge. A non-finite or zero length is `BadNormal { index }`
+//!   (unreachable for validated input).
+//! - Identity: under [`Transform::IDENTITY`] (translation +0.0) points and scan origins are
+//!   bit-exact except that −0.0 becomes +0.0 (`x + 0.0`); normals become `n / ‖n‖`, so they
+//!   are bit-exact only when the computed `‖n‖` is exactly 1.
 //! - Every other channel (intensity, colour, scanner ID, timestamp, quality), the grid shape,
 //!   the triangles, the per-triangle attributes and the mesh index width are copied
 //!   unchanged. The new element is built through the validating constructor of its kind
@@ -37,20 +42,23 @@
 //!   non-finite result, possible only on overflow, is `NonFinite { index }`), then normals
 //!   (`BadNormal { index }`), then scan origins (`ScanOrigin { scanner_id }`), then the
 //!   element constructor's own checks, all as [`GeoError::Element`]. Output columns are
-//!   reserved fallibly (`AllocationFailed`).
+//!   reserved fallibly (`AllocationFailed`); copied attribute columns and per-triangle
+//!   attributes use `try_reserve_exact` then `extend_from_slice`, and the triangle list is
+//!   reserved the same way before it is filled, so no copy sized by the input allocates
+//!   infallibly.
 //!
-//! KNP-1: no fused multiply-add, no `f64::min`/`f64::max`, no hash containers, no
-//! transcendental functions; the arithmetic is the pinned GEO.FRAME.XFORM arithmetic, so
+//! KNP-1: no fused multiply-add, no `f64::min`/`f64::max`, no hash containers; the only
+//! non-arithmetic function is the correctly rounded `fid_num::f::sqrt`; the arithmetic is the pinned GEO.FRAME.XFORM arithmetic, so
 //! results are bit-identical on x86-64, ARM64 and wasm32. Nothing here panics.
 
 use core::fmt;
 
 use fid_geo_types::{
     AttributeSet, ElementKind, FrameRef, GeoTypeError, GeometryElement, IndexWidth, Mesh, MeshOptions, PointBuffer,
-    PointCloud, PointSet,
+    PointCloud, PointSet, TriangleAttrs,
 };
 
-use crate::xform::Transform;
+use crate::xform::{dot3, Transform};
 
 /// The shared error of the GEO frame operations: the frame-mismatch guard, refusals and the
 /// element errors of rebuilding a transformed element.
@@ -197,6 +205,39 @@ fn columns(n: usize) -> Result<[Vec<f64>; 3], GeoError> {
     Ok(cols)
 }
 
+/// `m / ‖m‖` with `‖m‖ = sqrt(dot3(m, m))` through `fid-num`, divided per component; `None`
+/// if the length is zero or not finite, or a result is not finite.
+fn unit(m: &[f64; 3]) -> Option<[f64; 3]> {
+    let len = fid_num::f::sqrt(dot3(m[0], m[1], m[2], m[0], m[1], m[2])).ok()?;
+    if !(len.is_finite() && len > 0.0) {
+        return None;
+    }
+    let n = [m[0] / len, m[1] / len, m[2] / len];
+    if n.iter().all(|v| v.is_finite()) {
+        Some(n)
+    } else {
+        None
+    }
+}
+
+/// A fallible copy of a slice (`try_reserve_exact` then `extend_from_slice`).
+fn copy_slice<T: Copy>(v: &[T]) -> Result<Vec<T>, GeoError> {
+    let mut out = Vec::new();
+    out.try_reserve_exact(v.len()).map_err(|_| GeoTypeError::AllocationFailed {
+        needed: index_of(v.len()).saturating_mul(index_of(core::mem::size_of::<T>())),
+    })?;
+    out.extend_from_slice(v);
+    Ok(out)
+}
+
+/// [`copy_slice`] of an optional channel.
+fn copy_opt<T: Copy>(v: Option<&[T]>) -> Result<Option<Vec<T>>, GeoError> {
+    match v {
+        Some(v) => Ok(Some(copy_slice(v)?)),
+        None => Ok(None),
+    }
+}
+
 /// Maps three columns point by point; `on_error(i)` is the error for a non-finite result at
 /// index `i`.
 fn map_columns(
@@ -229,7 +270,7 @@ fn transform_points(
     let normal = match &attrs.normal {
         Some([nx, ny, nz]) => Some(map_columns(
             [nx.as_slice(), ny.as_slice(), nz.as_slice()],
-            |n| t.apply_dir(n).ok(),
+            |n| t.apply_dir(n).ok().and_then(|m| unit(&m)),
             |index| GeoTypeError::BadNormal { index },
         )?),
         None => None,
@@ -244,11 +285,11 @@ fn transform_points(
     }
     let out = AttributeSet {
         normal,
-        intensity: attrs.intensity.clone(),
-        colour: attrs.colour.clone(),
-        scanner_id: attrs.scanner_id.clone(),
-        timestamp_ns: attrs.timestamp_ns.clone(),
-        quality: attrs.quality.clone(),
+        intensity: copy_opt(attrs.intensity.as_deref())?,
+        colour: copy_opt(attrs.colour.as_deref())?,
+        scanner_id: copy_opt(attrs.scanner_id.as_deref())?,
+        timestamp_ns: copy_opt(attrs.timestamp_ns.as_deref())?,
+        quality: copy_opt(attrs.quality.as_deref())?,
         scan_origins,
         grid: attrs.grid,
     };
@@ -264,7 +305,10 @@ fn transform_mesh(m: &Mesh, t: &Transform, target: FrameRef) -> Result<Mesh, Geo
         .map_err(|_| GeoTypeError::AllocationFailed { needed: m.triangle_count().saturating_mul(24) })?;
     tris.extend(m.triangles());
     let options = MeshOptions {
-        triangle_attrs: m.triangle_attrs().clone(),
+        triangle_attrs: TriangleAttrs {
+            scanner_id: copy_opt(m.triangle_attrs().scanner_id.as_deref())?,
+            quality: copy_opt(m.triangle_attrs().quality.as_deref())?,
+        },
         force_u64_indexes: m.index_width() == IndexWidth::U64,
         work_budget_bytes: None,
     };
