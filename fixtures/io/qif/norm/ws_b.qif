@@ -1,0 +1,12 @@
+<QIFDocument versionQIF="3.0.0"   idMax="4"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://qifstandards.org/xsd/qif3"><Header>
+		<Author>fixture writer</Author></Header>
+<Characteristics n=" 2 ">
+<Nominal xsi:type=" DiameterNominalType " label="D1" id="1"><Value>
+  12.50
+</Value><Note>keep  two spaces</Note><Empty></Empty></Nominal>
+	<!-- a comment that the normaliser removes -->
+	<Nominal label="D2" id="2"
+	  ><Value>8.00</Value></Nominal>
+</Characteristics></QIFDocument>
