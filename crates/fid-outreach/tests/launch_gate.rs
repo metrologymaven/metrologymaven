@@ -316,6 +316,62 @@ fn fatal_inputs_exit_2_and_write_nothing() {
 }
 
 #[test]
+fn unknown_milestone_wins_over_bad_inputs() {
+    // bad-status has an unparsable status report; the milestone is resolved first.
+    let out = out_dir("ghostbad");
+    let o = run_with("bad-status", "ghost", RELEASE, &out, true);
+    assert_eq!(o.status.code(), Some(2));
+    assert!(!out.exists());
+    let v = fid_canon::parse(o.stdout.strip_suffix(b"\n").unwrap()).unwrap();
+    assert_eq!(s(obj(&obj(&v)["error"]), "code"), "MilestoneUnknown");
+}
+
+#[test]
+fn report_leaves_no_temporary_files() {
+    let out = out_dir("tmpfiles");
+    let o = run_with("ready", "inspect-beta", RELEASE, &out, true);
+    assert_eq!(o.status.code(), Some(0));
+    let mut names: Vec<String> =
+        std::fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    names.sort();
+    assert_eq!(names, [format!("gate-inspect-beta-{RELEASE}.json"), format!("gate-inspect-beta-{RELEASE}.md")]);
+}
+
+/// A symbolic link anywhere under `--tree` is fatal (fail closed), not skipped.
+#[cfg(unix)]
+#[test]
+fn symlink_in_tree_is_fatal() {
+    let tree = out_dir("symtree");
+    std::fs::create_dir_all(tree.join("GDT")).unwrap();
+    std::fs::copy(fix("ready/spec/GDT/NODE.md"), tree.join("GDT/NODE.md")).unwrap();
+    std::os::unix::fs::symlink(fix("ready/spec/SCAN"), tree.join("SCAN")).unwrap();
+    let out = out_dir("symout");
+    let mut args = vec!["gate-check".to_string()];
+    for (k, v) in [
+        ("--milestone", "inspect-beta".to_string()),
+        ("--release", RELEASE.to_string()),
+        ("--author", "bob".to_string()),
+        ("--criteria", pick("ready", "criteria.toml")),
+        ("--tree", tree.to_string_lossy().into_owned()),
+        ("--trace", pick("ready", "trace.json")),
+        ("--status", pick("ready", "status.json")),
+        ("--tests", pick("ready", "tests.json")),
+        ("--signoffs", pick("ready", "signoffs")),
+        ("--roster", pick("ready", "roster.toml")),
+        ("--out", out.to_string_lossy().into_owned()),
+    ] {
+        args.push(k.to_string());
+        args.push(v);
+    }
+    args.push("--json".into());
+    let o = Command::new(env!("CARGO_BIN_EXE_fid-outreach")).args(&args).output().unwrap();
+    assert_eq!(o.status.code(), Some(2));
+    assert!(!out.exists());
+    let v = fid_canon::parse(o.stdout.strip_suffix(b"\n").unwrap()).unwrap();
+    assert_eq!(s(obj(&obj(&v)["error"]), "code"), "InputParse");
+}
+
+#[test]
 fn release_tag_cannot_leave_the_output_directory() {
     let out = out_dir("badrel");
     let o = run_with("ready", "inspect-beta", "../escape", &out, true);

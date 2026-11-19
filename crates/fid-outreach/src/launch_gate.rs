@@ -477,8 +477,12 @@ fn walk(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) -> Result<(), GateErro
     let entries = std::fs::read_dir(dir).map_err(|e| unreadable(dir, e.to_string()))?;
     for entry in entries {
         let entry = entry.map_err(|e| unreadable(dir, e.to_string()))?;
-        // `DirEntry::file_type` does not follow symbolic links: links are skipped.
+        // `DirEntry::file_type` does not follow symbolic links. A link anywhere in the tree is an
+        // error (fail closed): it could hide or duplicate nodes.
         let ft = entry.file_type().map_err(|e| unreadable(&entry.path(), e.to_string()))?;
+        if ft.is_symlink() {
+            return Err(parse_err(&entry.path(), "symbolic link in the spec tree"));
+        }
         if ft.is_dir() {
             walk(&entry.path(), depth + 1, out)?;
         } else if ft.is_file() && entry.file_name() == "NODE.md" {
@@ -494,6 +498,10 @@ fn walk(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) -> Result<(), GateErro
 /// Reads `id`, `status` and `phase` of every `NODE.md` under `root` (REQ-002). A node without a
 /// valid ID, status or phase, or a duplicate ID, is a parse error (fail closed).
 pub fn read_tree(root: &Path) -> Result<BTreeMap<String, Node>, GateError> {
+    let meta = std::fs::symlink_metadata(root).map_err(|e| unreadable(root, e.to_string()))?;
+    if meta.file_type().is_symlink() {
+        return Err(parse_err(root, "the spec tree root is a symbolic link"));
+    }
     let mut files = Vec::new();
     walk(root, 0, &mut files)?;
     files.sort();
@@ -716,6 +724,13 @@ pub fn run(inp: &Inputs<'_>) -> Result<Report, GateError> {
         return Err(GateError::InputParse { path: "--author".into(), reason: "author must not be empty".into() });
     }
     let criteria = read_criteria(inp.criteria)?;
+    // Resolve the milestone before reading the other inputs, so an unknown milestone is always
+    // reported as MilestoneUnknown.
+    let milestone = criteria
+        .milestones
+        .iter()
+        .find(|m| m.id == inp.milestone)
+        .ok_or_else(|| GateError::MilestoneUnknown { milestone: inp.milestone.to_string() })?;
     let mut data = Data {
         nodes: read_tree(inp.tree)?,
         seeds: read_trace(inp.trace)?,
@@ -727,11 +742,6 @@ pub fn run(inp: &Inputs<'_>) -> Result<Report, GateError> {
     if !inp.signoffs.is_dir() {
         return Err(unreadable(inp.signoffs, "not a directory"));
     }
-    let milestone = criteria
-        .milestones
-        .iter()
-        .find(|m| m.id == inp.milestone)
-        .ok_or_else(|| GateError::MilestoneUnknown { milestone: inp.milestone.to_string() })?;
     for c in &milestone.criteria {
         if let CriterionKind::Signoff { .. } = c.kind {
             // Milestone and criterion IDs passed the parser's ID patterns: no path separators.
@@ -748,7 +758,9 @@ pub fn run(inp: &Inputs<'_>) -> Result<Report, GateError> {
     Ok(evaluate(milestone, inp.release, inp.author, &data))
 }
 
-/// Writes `gate-<milestone>-<release>.json` and `.md` into `out` (created if missing).
+/// Writes `gate-<milestone>-<release>.json` and `.md` into `out` (created if missing). Both are
+/// first written to temporary names in `out` and renamed only after both writes succeeded; on a
+/// failed write the temporary files are removed.
 pub fn write_report(report: &Report, out: &Path) -> Result<(), GateError> {
     let fail = |p: &Path, e: std::io::Error| GateError::OutputUnwritable {
         path: p.display().to_string(),
@@ -757,9 +769,27 @@ pub fn write_report(report: &Report, out: &Path) -> Result<(), GateError> {
     std::fs::create_dir_all(out).map_err(|e| fail(out, e))?;
     let stem = report.file_stem();
     let json = out.join(format!("{stem}.json"));
-    std::fs::write(&json, report.to_json()).map_err(|e| fail(&json, e))?;
     let md = out.join(format!("{stem}.md"));
-    std::fs::write(&md, report.to_markdown().as_bytes()).map_err(|e| fail(&md, e))?;
+    let json_tmp = out.join(format!(".{stem}.json.tmp"));
+    let md_tmp = out.join(format!(".{stem}.md.tmp"));
+    let cleanup = || {
+        let _ = std::fs::remove_file(&json_tmp);
+        let _ = std::fs::remove_file(&md_tmp);
+    };
+    let written = std::fs::write(&json_tmp, report.to_json())
+        .map_err(|e| fail(&json_tmp, e))
+        .and_then(|()| std::fs::write(&md_tmp, report.to_markdown().as_bytes()).map_err(|e| fail(&md_tmp, e)));
+    if let Err(e) = written {
+        cleanup();
+        return Err(e);
+    }
+    let renamed = std::fs::rename(&json_tmp, &json)
+        .map_err(|e| fail(&json, e))
+        .and_then(|()| std::fs::rename(&md_tmp, &md).map_err(|e| fail(&md, e)));
+    if let Err(e) = renamed {
+        cleanup();
+        return Err(e);
+    }
     Ok(())
 }
 
