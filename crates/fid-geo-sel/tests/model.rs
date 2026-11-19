@@ -156,12 +156,7 @@ fn unit_cube_mesh() -> GeometryElement {
 
 fn cad_body() -> GeometryElement {
     let aabb = Aabb::new([0.0; 3], [1.0; 3]).unwrap();
-    GeometryElement::CadBody(CadBodyRef::new(
-        FrameRef::from_bytes([4; 16]),
-        [8; 16],
-        Digest::from_bytes([3; 32]),
-        aabb,
-    ))
+    GeometryElement::CadBody(CadBodyRef::new(FrameRef::from_bytes([4; 16]), [8; 16], Digest::from_bytes([3; 32]), aabb))
 }
 
 // ------------------------------------------------------------------ AC-1
@@ -343,7 +338,10 @@ fn domain_mismatch() {
     // A points set bound to the CAD body's digest still fails on the domain.
     let pts = IndexSet::from_indices(Domain::Points, &[0], 1).unwrap();
     let sel = Selection::new(ID, digest(&cad), SelectionBody::IndexSet(pts));
-    assert_eq!(apply(&sel, &cad), Err(SelError::DomainMismatch { domain: Domain::Points, kind: ElementKind::CadBodyRef }));
+    assert_eq!(
+        apply(&sel, &cad),
+        Err(SelError::DomainMismatch { domain: Domain::Points, kind: ElementKind::CadBodyRef })
+    );
 }
 
 /// apply re-checks the bound: a decoded selection that names the right digest but an
@@ -391,7 +389,17 @@ fn to_indices_is_bounded() {
 #[test]
 fn ac5_serialised_selection_has_no_view_fields() {
     const FORBIDDEN: [&str; 12] = [
-        "camera", "pixel", "screen", "gpu", "viewport", "view", "ray", "lasso", "handle", "texture", "projection",
+        "camera",
+        "pixel",
+        "screen",
+        "gpu",
+        "viewport",
+        "view",
+        "ray",
+        "lasso",
+        "handle",
+        "texture",
+        "projection",
         "cursor",
     ];
     for name in SELECTION_FIELDS.iter().chain(INDEX_SET_FIELDS.iter()).chain(QUERY_FIELDS.iter()) {
@@ -410,7 +418,8 @@ fn ac5_serialised_selection_has_no_view_fields() {
     assert_eq!(&enc[23..55], &sel.target_digest().to_bytes());
     assert_eq!(Selection::decode(&enc).unwrap(), sel);
 
-    let q = Selection::new(ID, sel.target_digest(), SelectionBody::Query(SelectionQuery::from_bytes(vec![7; 5]).unwrap()));
+    let q =
+        Selection::new(ID, sel.target_digest(), SelectionBody::Query(SelectionQuery::from_bytes(vec![7; 5]).unwrap()));
     let enc = q.encode();
     assert_eq!(enc.len(), 6 + 1 + 16 + 32 + 1 + (4 + 5));
     assert_eq!(Selection::decode(&enc).unwrap(), q);

@@ -528,8 +528,8 @@ impl Selection {
         domain: Domain,
         indices: &[u64],
     ) -> Result<Selection, SelError> {
-        let count = domain_count(element, domain)?
-            .ok_or_else(|| SelError::DomainMismatch { domain, kind: element.kind() })?;
+        let count =
+            domain_count(element, domain)?.ok_or_else(|| SelError::DomainMismatch { domain, kind: element.kind() })?;
         let set = IndexSet::from_indices(domain, indices, count)?;
         Ok(Selection { target, target_digest: digest(element), body: SelectionBody::IndexSet(set) })
     }
