@@ -1,0 +1,95 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "h1_approvals": [
+    {
+      "id": "H1-0001",
+      "program": "PRG-1",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-a"
+      }
+    }
+  ],
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:f6617212c4bb98d254070af3cb54979d0ab795b2e4ca8f0d3328f166a8d2d0cd",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:22b0464efb7616bf3e606ea0f10f427d36f37b01a4c62a56cb9579775eab62e3",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:8afa36feef5d4df5c3ea58316c4f50273d5110ac65ec475aca0254ae4a94dd8f",
+      "command": "cmm.request_run@1",
+      "class": "M1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "program": "PRG-1",
+        "h1_approval": "H1-0001"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 4,
+      "hash": "sha256:2f448596a243d0f20ed87c8a848b54602f315a0d7918805822d06442fd07e80b",
+      "command": "cmm.request_run@1",
+      "class": "W1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "program": "PRG-1",
+        "h1_approval": "H1-0001"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 5,
+      "hash": "sha256:38696d12fd814893b9b2d74df2f8a86c63ec92f0f2e2cf8deb410f3d8d5016e0",
+      "command": "cmm.request_run@1",
+      "class": "M1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "program": "PRG-2",
+        "h1_approval": "H1-0001"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

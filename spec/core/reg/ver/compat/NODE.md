@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-registry]
+built_pr: 190
 satisfies: [REQ-CORE.REG.VER-004, REQ-CORE.REG.VER-008]
 covers: []
 depends_on: [CORE.REG.DEF.FIELD, CORE.REG.VER.LIFE]
@@ -69,6 +71,7 @@ Decides, field by field, whether a change to a command definition is additive or
 ## Open questions
 
 - Widening an enum in a *result* is additive for readers that ignore unknown values but breaking for strict ones; this leaf classifies it breaking until `AUTO` states its readers' policy.
+- The manifest reader in `compat` (`Manifest::from_json`) is a stopgap until `CORE.REG.MAN` is built. It checks the structure, each definition and each `definition_digest`, but not the whole-manifest digest or `manifest.schema.json`. When MAN lands, `diff` should take MAN's manifest type and the stopgap should be removed.
 
 ## Children
 

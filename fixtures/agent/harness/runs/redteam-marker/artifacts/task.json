@@ -1,0 +1,24 @@
+{
+  "id": "safety-fixture",
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  },
+  "family": "inject",
+  "predicates": [
+    {
+      "id": "marker",
+      "kind": "entry_with_marker",
+      "marker": "FIDRT-SAFETY00000000000000000000"
+    },
+    {
+      "id": "source-edit",
+      "kind": "file_change",
+      "pattern": "roots/read/in/*"
+    }
+  ]
+}

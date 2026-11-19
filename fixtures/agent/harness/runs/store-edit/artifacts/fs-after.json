@@ -1,0 +1,105 @@
+{
+  "entries": [
+    {
+      "path": "artifacts/journal.json",
+      "kind": "file",
+      "digest": "sha256:599ac6f761cd4a94e98e6b93db8bbcc0597744e2cdaf224e534097de8ce1b88d",
+      "size": 14
+    },
+    {
+      "path": "artifacts/tap.jsonl",
+      "kind": "file",
+      "digest": "sha256:b8260cf725d5deb6f832dd098154d7f7210228babf6243e7b2324998876a31ea",
+      "size": 5
+    },
+    {
+      "path": "home/.config/agent.toml",
+      "kind": "file",
+      "digest": "sha256:0c67e767bca8e5afbff2ed3d66eff4d358b4346479e760c82cd5a0af6dba1c5e",
+      "size": 5
+    },
+    {
+      "path": "home/.config/fid/config.toml",
+      "kind": "file",
+      "digest": "sha256:e67d23e7820c49a8051dac2831f38290f5e72f66c8db5079eeb60d82f14894c0",
+      "size": 3
+    },
+    {
+      "path": "project/blobs/sha256/00/00/ff00000000000000000000000000000000000000000000000000000000000000",
+      "kind": "file",
+      "digest": "sha256:ccdd35168ab474fa5764a526cfb83621351e23682c5075b2e18d56bddf96aa30",
+      "size": 6
+    },
+    {
+      "path": "project/blobs/sha256/29/ca/29ca663930dfa5377eb47ff85b1940516d9034860507f98cc9d27881029d5d34",
+      "kind": "file",
+      "digest": "sha256:29ca663930dfa5377eb47ff85b1940516d9034860507f98cc9d27881029d5d34",
+      "size": 12
+    },
+    {
+      "path": "project/blobs/sha256/df/ec/dfec22473777f0ddaea98d74045c22ae9029a8e3b75aa8fcce941aa29e5b073b",
+      "kind": "file",
+      "digest": "sha256:4ae18df68fbace2084c9c37af0fb35ec2b7140e3ed3ac51a5d973d53fbfca347",
+      "size": 15
+    },
+    {
+      "path": "project/format",
+      "kind": "file",
+      "digest": "sha256:b7db34b8c9354026c24322015faa9a559162ba4e0cc02d10be10073c3abe0577",
+      "size": 13
+    },
+    {
+      "path": "project/kernels/k.bin",
+      "kind": "file",
+      "digest": "sha256:8254c329a92850f6d539dd376f4816ee2764517da5e0235514af433164480d7a",
+      "size": 1
+    },
+    {
+      "path": "project/lock",
+      "kind": "file",
+      "digest": "sha256:a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e",
+      "size": 4096
+    },
+    {
+      "path": "project/project.db",
+      "kind": "file",
+      "digest": "sha256:68150cfc45bd62a7a166bb670b0a71ae123ece23eecdfe60aaf0a84e0bcb703d",
+      "size": 4
+    },
+    {
+      "path": "project/project.db-journal",
+      "kind": "file",
+      "digest": "sha256:189f40034be7a199f1fa9891668ee3ab6049f82d38c68be70f596eab2e1857b7",
+      "size": 1
+    },
+    {
+      "path": "project/project.db-shm",
+      "kind": "file",
+      "digest": "sha256:feecd047de5b7d301b1f66d8cb6e4130ab446c038e3897afe78f5116804069c0",
+      "size": 3
+    },
+    {
+      "path": "project/project.db-wal",
+      "kind": "link",
+      "target": "../../outside/wal"
+    },
+    {
+      "path": "project/roots.toml",
+      "kind": "file",
+      "digest": "sha256:a4e3c20a327766600f2e45b9b0735d26e2f809088dd323d7a5ad5d71d757dc69",
+      "size": 5
+    },
+    {
+      "path": "roots.json",
+      "kind": "file",
+      "digest": "sha256:a4e3c20a327766600f2e45b9b0735d26e2f809088dd323d7a5ad5d71d757dc69",
+      "size": 5
+    },
+    {
+      "path": "roots/read/in/part.json",
+      "kind": "file",
+      "digest": "sha256:37a680133bd09342f934afb8dd2c7d9e1b624da5f35e3a38adb103e37c055ed1",
+      "size": 4
+    }
+  ]
+}

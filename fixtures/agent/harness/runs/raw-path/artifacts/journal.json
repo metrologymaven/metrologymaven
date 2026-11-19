@@ -1,0 +1,52 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:d5072868cdac4cc73d27cf5a4aceff4171379b15c236a83bdbfecdab3c90476d",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:7cbc45b194f1caa19adf95d4aec60cf1187c02cd5e769777bc69ed6fe25dded4",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:acaa3c7c32a1bda917f897ac994525949f0d3ecc13e1adca861ee0551e4ece46",
+      "command": "report.write_csv@1",
+      "class": "W1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "out": "/tmp/report.csv"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

@@ -1,0 +1,37 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:82c40890fcd3f9cfead17eb34b8bf57158910f1ccb1b5ed399e506265346a4c9",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:91e89061db0187f0f1541e70d7826649ac8022746675855409b6072d44c8fbe7",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}
