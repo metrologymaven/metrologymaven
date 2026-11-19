@@ -734,13 +734,19 @@ fn wal_with_a_different_page_size_is_schema_invalid() {
 #[test]
 fn hostile_schema_meta_is_refused_before_it_is_read() {
     // A generated column named `version` whose evaluation fails: reading it would surface an
-    // SQLite "integer overflow" error instead of schema_invalid.
+    // SQLite "integer overflow" error instead of schema_invalid. SQLite evaluates it on INSERT
+    // too, so the row is written first and the column definition swapped in afterwards.
     let (_t, root) = new_project("genmeta");
+    raw(&root)
+        .execute_batch(
+            "CREATE TABLE schema_meta (v0 INTEGER PRIMARY KEY); INSERT INTO schema_meta (v0) VALUES (1); \
+             PRAGMA writable_schema=ON; \
+             UPDATE sqlite_master SET sql = 'CREATE TABLE schema_meta (v0 INTEGER PRIMARY KEY, \
+             version INTEGER AS (abs(-9223372036854775808)))' WHERE name = 'schema_meta'; \
+             PRAGMA writable_schema=OFF;",
+        )
+        .unwrap();
     let c = raw(&root);
-    c.execute_batch(
-        "CREATE TABLE schema_meta (v0 INTEGER PRIMARY KEY, version INTEGER AS (abs(-9223372036854775808)));          INSERT INTO schema_meta (v0) VALUES (1);",
-    )
-    .unwrap();
     let trap = c.query_row("SELECT max(version) FROM schema_meta", [], |r| r.get::<_, Option<i64>>(0));
     assert!(trap.unwrap_err().to_string().contains("overflow"), "the trap must be live");
     let err = read_version(&c).unwrap_err();

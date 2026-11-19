@@ -337,7 +337,8 @@ fn checked_version(conn: &Connection, plan: &MigrationPlan, integrity: bool) -> 
 /// Every table and index must have a root page (virtual tables and damaged rows have none).
 fn check_root_pages(conn: &Connection) -> Result<(), SchemaError> {
     let mut st = conn.prepare("SELECT type, name, rootpage FROM sqlite_master WHERE type IN ('table', 'index')")?;
-    let rows = st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<i64>>(2)?)))?;
+    let rows =
+        st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<i64>>(2)?)))?;
     for row in rows {
         let (kind, name, root) = row?;
         if !matches!(root, Some(n) if n > 0) {
