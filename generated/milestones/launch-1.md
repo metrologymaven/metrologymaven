@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**106** of **1336** leaves built in code ([B]).
+**109** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 36 built)
+### Wave 2 (121 leaves, 39 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -171,7 +171,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [CORE.JOB.SCHED](../../spec/core/job/sched/NODE.md) Job model, queue, priorities, limits and timeouts (M, P0)
 - [B] [CORE.JRN.ENTRY](../../spec/core/jrn/entry/NODE.md) Entry model, salted commitments and session entries (M, P0)
 - [B] [CORE.PRJ.CONT.ID](../../spec/core/prj/cont/id/NODE.md) Entity ID service (S, P0)
-- [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
+- [B] [CORE.REG.DEF.GUIDE](../../spec/core/reg/def/guide/NODE.md) Task-guide declarations (S, P0)
 - [B] [CORE.REG.VER.LIFE](../../spec/core/reg/ver/life/NODE.md) Lifecycle states, retention and migrator records (S, P0)
 - [B] [CORE.RPL.BISECT](../../spec/core/rpl/bisect/NODE.md) First-divergence search and attribution (M, P0)
 - [B] [CORE.STO.CACHE](../../spec/core/sto/cache/NODE.md) Evictable cache store for snapshots and memoised results (M, P0)
@@ -192,7 +192,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REPO.TPL.PROMOTE](../../spec/eco/repo/tpl/promote/NODE.md) Library promotion procedure and tool (M, P0)
 - [ECO.REPO.TPL.SELFTEST](../../spec/eco/repo/tpl/selftest/NODE.md) Template self-test job (S, P0)
 - [ECO.RULES.CHECK](../../spec/eco/rules/check/NODE.md) House-rules check (edited, stale, missing, budgets) (M, P0)
-- [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
+- [B] [ECO.RULES.SPDX](../../spec/eco/rules/spdx/NODE.md) SPDX licence allowlist for dependencies and assets (S, P0)
 - [ECO.RULES.SYNC](../../spec/eco/rules/sync/NODE.md) House-rules sync tool (M, P0)
 - [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
@@ -209,7 +209,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [IO.CAD.WORKER.PROTO](../../spec/io/cad/worker/proto/NODE.md) CAD worker protocol, framing and message validation (M, P1b)
 - [B] [IO.CLOUD.E57.PHYS](../../spec/io/cloud/e57/phys/NODE.md) E57 file header, paged physical layer and page checksums (S, P1b)
 - [IO.CLOUD.LAS.HDR](../../spec/io/cloud/las/hdr/NODE.md) LAS headers, VLRs and point data record formats 0 to 10 (M, P1b)
-- [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
+- [B] [IO.CORP.HOSTILE](../../spec/io/corp/hostile/NODE.md) Hostile corpus generator and expected errors (M, P0)
 - [B] [IO.DMIS.PARSE.LEX](../../spec/io/dmis/parse/lex/NODE.md) Bounded DMIS lexer with continuation, comments and positions (S, P1a)
 - [B] [IO.QIF.NORM](../../spec/io/qif/norm/NODE.md) The qif-norm normaliser and round-trip equality check (M, P0)
 - [B] [IO.QIF.XML.PARSE](../../spec/io/qif/xml/parse/NODE.md) Hardened streaming XML reader (M, P0)

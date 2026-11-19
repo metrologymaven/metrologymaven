@@ -17,6 +17,8 @@ fixtures/plat/gpu/policy-*.toml -text
 fixtures/plat/gpu/known-bad-*.toml -text
 # KRN.NUM.LINT.GRAPH fixtures: hand-written lockfiles, manifests and byte-compared expected output.
 fixtures/knp1/graph/** -text
+# IO.CORP.HOSTILE fixtures: binary inputs and digested manifests; never convert line endings.
+fixtures/io/corp/hostile/** -text
 # PLAT.DEPLOY.NOADMIN.LAYOUT fixtures are hand-labelled byte for byte: never convert line endings.
 fixtures/plat/deploy/layout-*.toml -text
 
@@ -30,6 +32,8 @@ fixtures/agent/harness/adapters/** -text
 fixtures/agent/harness/tokens/** -text
 fixtures/agent/harness/mcp-config.golden.json -text
 crates/fid-eval-harness/adapters/** -text
+# CORE.REG.DEF.GUIDE fixtures: hand-labelled by make_fixtures.py, which --check compares byte for byte.
+fixtures/core/reg/def/guide/** -text
 # qif-norm fixtures (IO.QIF.NORM): hand-written inputs and reference-normaliser output compared
 # byte for byte, and the rule file whose digest is locked in qif-norm.lock.
 fixtures/io/qif/norm/** -text

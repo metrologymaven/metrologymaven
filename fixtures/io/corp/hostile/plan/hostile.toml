@@ -1,0 +1,73 @@
+# Hostile mutator plans for the IO.CORP.HOSTILE fixtures (hand-written; CC-BY-4.0).
+#
+# One [[format]] per format ID. `tags` stand in for the descriptor tags of the format:
+# every format gets truncate, bitflip and inflate_count; `xml` adds nest and billion_laughs,
+# `tree` adds nest, `zip` / `container` add zip_bomb. Expected errors come from the fixed
+# mutator table unless an [[format.override]] names another code with a reason. Every
+# override below is hand-labelled from the reading rules of the format's spec leaf.
+
+[[format]]
+id = "mesh.stl"
+tags = ["binary"]
+header_len = 84
+count = { le = 4, at = 80 }
+# Bytes 81..84 are the high bytes of the facet count; they are zero for any file with fewer
+# than 256 facets, so every flip raises the declared count by at least 256.
+flip = { start = 81, end = 84 }
+# [unverified] The two STL overrides below follow IO.MESH.STL REQ-001/002 as written; no STL
+# reader exists yet to confirm them, and whether an absurd declared count should rather be
+# `limit_exceeded` is an open question on IO.CORP.HOSTILE for the spec owner.
+
+[[format.override]]
+mutator = "bitflip"
+error = "truncated_file"
+reason = "[unverified] IO.MESH.STL REQ-002: the raised facet count makes the length shorter than 84 + 50n and the header is not ASCII STL"
+
+[[format.override]]
+mutator = "inflate_count"
+error = "truncated_file"
+reason = "[unverified] IO.MESH.STL REQ-001/002: the reader detects binary STL by 84 + 50n, so a count of 2^32-1 reads as a truncated file"
+
+[[format]]
+id = "mesh.3mf"
+tags = ["zip"]
+# Both end-of-central-directory entry counts become 0xFFFE (not the ZIP64 marker 0xFFFF),
+# above the 3MF reader limit of 10,000 entries (IO.MESH.TMF).
+count = { zip_entries = true }
+# The local file header signature of the first entry.
+flip = { start = 0, end = 4 }
+
+[[format.override]]
+mutator = "truncate"
+error = "malformed"
+reason = "a ZIP reader finds the end-of-central-directory record at the end of the file; a cut package has none"
+
+[[format]]
+id = "qif.xml"
+tags = ["xml"]
+count = { after = ' n="' }
+# Any change to the root element name breaks the match with its end tag.
+flip = { xml_root_name = true }
+
+[[format]]
+id = "cloud.e57"
+tags = ["binary"]
+header_len = 48
+count = { le = 8, at = 16 }
+# Page payload and checksums after the 48-byte header, so the header checks still pass.
+flip = { start = 48 }
+
+[[format.override]]
+mutator = "bitflip"
+error = "checksum_mismatch"
+reason = "IO.CLOUD.E57.PHYS REQ-001: a flipped bit after the header fails the CRC-32C of its page"
+
+[[format.override]]
+mutator = "inflate_count"
+error = "malformed"
+reason = "IO.CLOUD.E57.PHYS: the header file length is checked against the real length before any page is read"
+
+[[format.override]]
+mutator = "truncate"
+error = "malformed"
+reason = "IO.CLOUD.E57.PHYS: a cut file of at least 48 bytes keeps its header, whose file length no longer matches"

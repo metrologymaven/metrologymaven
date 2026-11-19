@@ -1,0 +1,48 @@
+# Negative fixture of spec node ECO.RULES.SPDX (AC-2): a copy of house-rules/spdx-allowlist.toml
+# with GPL-3.0-only added to `licences` (and a basis note, so only the copyleft guard fires).
+# tools/tests/test_spdx_allowlist.py checks it stays such a copy and that the guard rejects it.
+
+licences = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "GPL-3.0-only",
+]
+
+exceptions = [
+    "LLVM-exception",
+]
+
+asset_licences = [
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "OFL-1.1",
+    "MIT",
+    "Apache-2.0",
+]
+
+asset_paths = [
+    "assets/**",
+    "crates/*/assets/**",
+]
+
+[basis]
+"MIT" = "project licence (D-001); permissive"
+"Apache-2.0" = "project licence (D-001); permissive with a patent grant"
+"BSD-2-Clause" = "permissive; attribution only; in deny.toml allow"
+"BSD-3-Clause" = "permissive; attribution and no-endorsement only; in deny.toml allow"
+"ISC" = "permissive, MIT-equivalent; in deny.toml allow"
+"Zlib" = "permissive; in deny.toml allow"
+"CC0-1.0" = "public-domain dedication; in deny.toml allow; also allowed for assets"
+"Unicode-3.0" = "permissive Unicode data licence used by Unicode table crates; in deny.toml allow"
+"Unicode-DFS-2016" = "permissive Unicode data licence (older form of Unicode-3.0); in deny.toml allow"
+"LLVM-exception" = "relaxes Apache-2.0 attribution for compiled output; in deny.toml allow as Apache-2.0 WITH LLVM-exception"
+"CC-BY-4.0" = "assets: attribution licence; licence of the project's original assets (OUTR.BRAND)"
+"OFL-1.1" = "assets: SIL Open Font License for bundled fonts"
+"GPL-3.0-only" = "fixture only: must be rejected"
