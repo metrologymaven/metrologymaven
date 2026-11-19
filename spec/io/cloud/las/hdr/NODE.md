@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # IO.CLOUD.LAS.HDR: LAS headers, VLRs and point data record formats
@@ -65,6 +65,8 @@ Reads and writes the uncompressed LAS structure for versions 1.0 to 1.4: the pub
 - **Determinism:** D0.
 - **Performance budget:** ≥ 500 MB/s uncompressed read [unverified until measured].
 - **Crate:** `fid-io-las`.
+- **Trailing bytes (maintainer decision, PR 177 review):** bytes after the last EVLR are `malformed{trailing_bytes}`, not silently dropped.
+- **Writer normalisation (known limit of REQ-004):** the writer recomputes the layout fields. For 1.4 output it sets the waveform data offset to the first waveform EVLR, or 0 if there is none, so a 1.4 file whose stored waveform offset points anywhere else (a stray offset) reads back but does not round-trip byte for byte in that header field. Waveform EVLR payloads are counted, not imported, so files carrying them cannot be written back (`malformed{evlr_payload}`).
 
 ## Test fixtures
 

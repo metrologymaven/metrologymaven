@@ -59,6 +59,7 @@ evlr_before_points.las malformed start_of_first_evlr
 evlr_count_past_eof.las malformed number_of_evlrs
 evlr_length_past_eof.las malformed evlr_length
 evlr_past_eof.las malformed start_of_first_evlr
+evlr_trailing_bytes.las malformed trailing_bytes
 extra_desc_bad_type.las malformed extra_bytes_descriptor
 extra_desc_partial.las malformed extra_bytes_descriptor
 extra_desc_too_wide.las malformed extra_bytes_descriptor
@@ -80,3 +81,4 @@ version_2_0.las las_version_unsupported 2 0
 vlr_past_offset.las malformed vlr_length
 waveform_past_eof_13.las malformed start_of_waveform_data
 waveform_past_eof_14.las malformed start_of_waveform_data
+waveform_trailing_13.las malformed trailing_bytes

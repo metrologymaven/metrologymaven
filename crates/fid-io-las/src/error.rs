@@ -33,6 +33,8 @@ pub enum LasField {
     EvlrLength,
     /// The extra-bytes descriptor record.
     ExtraBytesDescriptor,
+    /// Bytes follow the last EVLR.
+    TrailingBytes,
     /// Writer input: a point batch column is missing, unexpected or of the wrong length.
     Column,
     /// Writer input: a decoded value does not fit its bit field.
@@ -60,6 +62,7 @@ impl LasField {
             LasField::NumberOfEvlrs => "number_of_evlrs",
             LasField::EvlrLength => "evlr_length",
             LasField::ExtraBytesDescriptor => "extra_bytes_descriptor",
+            LasField::TrailingBytes => "trailing_bytes",
             LasField::Column => "column",
             LasField::ValueRange => "value_range",
             LasField::PointCount => "point_count",

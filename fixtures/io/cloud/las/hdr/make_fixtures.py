@@ -373,6 +373,10 @@ def error_files():
                                        "malformed evlr_length")
     out["evlr_count_past_eof.las"] = (build(4, 6, simple_records(6, 2), evlrs=e, patch={243: ("I", 2)}),
                                       "malformed number_of_evlrs")
+    # Maintainer decision (PR 177 review): bytes after the last EVLR are malformed, not dropped.
+    out["evlr_trailing_bytes.las"] = (build(4, 6, simple_records(6, 2), evlrs=e) + b"xyz", "malformed trailing_bytes")
+    out["waveform_trailing_13.las"] = (build(3, 4, simple_records(4, 2), evlrs=[evlr(b"LASF_Spec", 65535, bytes(8))])
+                                       + b"!", "malformed trailing_bytes")
     out["waveform_past_eof_13.las"] = (build(3, 4, simple_records(4, 2), patch={227: ("Q", 1 << 33)}),
                                        "malformed start_of_waveform_data")
     out["waveform_past_eof_14.las"] = (build(4, 9, simple_records(9, 2), patch={227: ("Q", 1 << 33)}),

@@ -398,11 +398,6 @@ impl RawPointBatch {
         Ok(())
     }
 
-    /// Total extra bytes per record the batch's extra columns describe.
-    pub(crate) fn extra_width(&self) -> usize {
-        self.attrs.extra.iter().fold(0usize, |acc, c| acc.saturating_add(c.spec.width()))
-    }
-
     /// Encodes point `i` (shape already checked) onto `out`.
     pub(crate) fn encode_record(&self, i: usize, out: &mut Vec<u8>) -> Result<(), LasError> {
         let f = self.format;

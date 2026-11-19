@@ -7,9 +7,10 @@
 //! count, a 64-bit point count and fifteen 64-bit per-return counts ([`HEADER_LEN_1_4`]).
 //! A declared header size larger than the version's block holds user bytes, kept verbatim.
 
-use crate::bytes::{arr, f64_at, u16_at, u32_at, u64_at, u8_at};
+use crate::bytes::{arr, f64_at, u16_at, u32_at, u64_at, u8_at, until_nul};
 use crate::error::{LasError, LasField};
 use crate::format::PointFormat;
+use fid_io_reg::UntrustedText;
 
 /// The file signature.
 pub const SIGNATURE: [u8; 4] = *b"LASF";
@@ -194,6 +195,16 @@ impl LasHeader {
             }
         }
         Ok(h)
+    }
+
+    /// The system identifier as untrusted text (up to its first NUL).
+    pub fn system_identifier_text(&self) -> UntrustedText {
+        UntrustedText::from_utf8_lossy(until_nul(&self.system_identifier))
+    }
+
+    /// The generating software as untrusted text (up to its first NUL).
+    pub fn generating_software_text(&self) -> UntrustedText {
+        UntrustedText::from_utf8_lossy(until_nul(&self.generating_software))
     }
 
     /// The version's header block size, or `None` for an unsupported version.

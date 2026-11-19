@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**123** of **1336** leaves built in code ([B]).
+**124** of **1336** leaves built in code ([B]).
 
 ## Build waves
 

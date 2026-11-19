@@ -12,7 +12,10 @@ use crate::format::PointFormat;
 use crate::header::LasHeader;
 use crate::points::RawPointBatch;
 use crate::reader::LasFile;
-use crate::vlr::{RecordPayload, Vlr, VlrKind, EVLR_HEADER_LEN, VLR_HEADER_LEN};
+use crate::vlr::{
+    extra_layout, ExtraSpec, RecordPayload, Vlr, VlrKind, DEFAULT_MAX_PAYLOAD, EVLR_HEADER_LEN, VLR_HEADER_LEN,
+};
+use fid_io_reg::LimitKind;
 use std::io::Write;
 
 /// Writes a LAS file to a byte sink. The point count is the header's (the 64-bit count
@@ -23,7 +26,7 @@ pub struct LasWriter<W: Write> {
     out: W,
     header: LasHeader,
     format: PointFormat,
-    extra_width: usize,
+    extra: Vec<ExtraSpec>,
     evlrs: Vec<Vlr>,
     declared: u64,
     written: u64,
@@ -35,11 +38,19 @@ fn bad(field: LasField) -> LasError {
     LasError::malformed(field)
 }
 
+fn payload_limit(at: u64) -> LasError {
+    LasError::LimitExceeded { limit: LimitKind::Alloc, value: DEFAULT_MAX_PAYLOAD, at }
+}
+
 impl<W: Write> LasWriter<W> {
     /// Computes the layout, then writes the header block, the VLRs and `vlr_padding`.
     /// `evlrs` are written by [`LasWriter::finish`]; version 1.3 allows at most one (the
     /// waveform data packet record), earlier versions none. An EVLR whose payload was not
-    /// imported cannot be written (`malformed{evlr_payload}`).
+    /// imported cannot be written (`malformed{evlr_payload}`). The extra-bytes descriptors
+    /// among `vlrs` and `evlrs` must fit the record length exactly as the reader requires
+    /// (`malformed{extra_bytes_descriptor}`), and `vlr_padding` and every EVLR payload are
+    /// bounded like the reader's defaults ([`DEFAULT_MAX_PAYLOAD`], `limit_exceeded{alloc}`),
+    /// so the writer never produces a file the reader rejects.
     pub fn new(out: W, header: &LasHeader, vlrs: &[Vlr], vlr_padding: &[u8], evlrs: &[Vlr]) -> Result<Self, LasError> {
         let mut h = header.clone();
         let std_len = h
@@ -64,6 +75,9 @@ impl<W: Write> LasWriter<W> {
             };
             offset += (VLR_HEADER_LEN + usize::from(len)) as u64;
         }
+        if vlr_padding.len() as u64 > DEFAULT_MAX_PAYLOAD {
+            return Err(payload_limit(offset));
+        }
         offset += vlr_padding.len() as u64;
         h.offset_to_point_data = u32::try_from(offset).map_err(|_| bad(LasField::OffsetToPointData))?;
         h.number_of_vlrs = u32::try_from(vlrs.len()).map_err(|_| bad(LasField::NumberOfVlrs))?;
@@ -75,6 +89,9 @@ impl<W: Write> LasWriter<W> {
         for e in evlrs {
             if matches!(e.payload, RecordPayload::NotImported { .. }) {
                 return Err(bad(LasField::EvlrPayload));
+            }
+            if e.payload.len() > DEFAULT_MAX_PAYLOAD {
+                return Err(payload_limit(point_end));
             }
         }
         match h.version_minor {
@@ -107,11 +124,13 @@ impl<W: Write> LasWriter<W> {
             }
         }
 
+        let extra = extra_layout(vlrs, evlrs, usize::from(extra_width))?;
+
         let mut w = LasWriter {
             out,
             header: h,
             format,
-            extra_width: usize::from(extra_width),
+            extra,
             evlrs: evlrs.to_vec(),
             declared,
             written: 0,
@@ -141,8 +160,15 @@ impl<W: Write> LasWriter<W> {
         &self.header
     }
 
+    /// The extra-bytes attributes each record carries, as the reader will decode them; a
+    /// batch's extra columns must have exactly these specs.
+    pub fn extra_layout(&self) -> &[ExtraSpec] {
+        &self.extra
+    }
+
     /// Writes the batch's points. The batch's format and extra columns must match the
-    /// header (`malformed{point_data_format}`, `malformed{column}`), each bit field must
+    /// header and its extra-bytes layout (`malformed{point_data_format}`,
+    /// `malformed{column}`), each bit field must
     /// fit (`malformed{value_range}`), and the total may not pass the header's count
     /// (`malformed{point_count}`). Nothing of the batch is written if any check fails.
     pub fn write_batch(&mut self, batch: &RawPointBatch) -> Result<(), LasError> {
@@ -150,7 +176,9 @@ impl<W: Write> LasWriter<W> {
             return Err(bad(LasField::PointDataFormat));
         }
         batch.check_shape()?;
-        if batch.extra_width() != self.extra_width {
+        let specs_match = batch.attrs.extra.len() == self.extra.len()
+            && batch.attrs.extra.iter().zip(&self.extra).all(|(c, s)| c.spec == *s);
+        if !specs_match {
             return Err(bad(LasField::Column));
         }
         let n = batch.len() as u64;

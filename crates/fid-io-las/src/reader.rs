@@ -216,6 +216,7 @@ impl<R: Read + Seek> LasReader<R> {
             if header_end.saturating_add(len) > data_start {
                 return Err(LasError::malformed(LasField::VlrLength));
             }
+            reader.charge_record(pos)?;
             let payload = reader.read_payload(header_end, len)?;
             reader.vlrs.push(Vlr {
                 reserved: u16_at(&raw, 0),
@@ -238,6 +239,7 @@ impl<R: Read + Seek> LasReader<R> {
             }
             let mut raw = [0u8; EVLR_HEADER_LEN];
             reader.read_at(pos, &mut raw)?;
+            reader.charge_record(pos)?;
             let len = u64_at(&raw, 20);
             if len > file_len - header_end {
                 return Err(LasError::malformed(LasField::EvlrLength));
@@ -256,6 +258,11 @@ impl<R: Read + Seek> LasReader<R> {
             }
             reader.evlrs.push(evlr);
             pos = header_end + len;
+        }
+        // Maintainer decision on review of PR 177: bytes after the last EVLR are an error,
+        // not silently dropped.
+        if evlr_start.is_some() && pos != file_len {
+            return Err(LasError::malformed(LasField::TrailingBytes));
         }
 
         let extra_bytes = usize::from(header.point_data_record_length - format.base_len());
@@ -296,6 +303,15 @@ impl<R: Read + Seek> LasReader<R> {
         let mut v = vec![0u8; n];
         self.read_at(at, &mut v)?;
         Ok(v)
+    }
+
+    /// Charges one kept VLR or EVLR record struct (twice its size, which covers the
+    /// record vector's growth) and reserves its slot, before the record is pushed.
+    fn charge_record(&mut self, at: u64) -> Result<(), LasError> {
+        self.charge(2 * std::mem::size_of::<Vlr>() as u64, at)?;
+        let full = LasError::LimitExceeded { limit: LimitKind::Alloc, value: self.opts.limits.alloc(), at };
+        self.vlrs.try_reserve(1).map_err(|_| full.clone())?;
+        self.evlrs.try_reserve(1).map_err(|_| full)
     }
 
     /// Charges `n` bytes of kept data to the tracked allocation limit.

@@ -5,9 +5,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_io_las::{
-    fuzz_options, read_slice, write_file, CountUnit, ExtraValues, LasError, LasField, LasHeader, LasReader, LasWriter,
-    PointFormat, RawPointBatch, ReaderOptions, VlrKind, DEFAULT_BATCH_POINTS,
+    fuzz_options, read_slice, write_file, CountUnit, ExtraKind, ExtraSpec, ExtraValues, LasError, LasField, LasHeader,
+    LasReader, LasWriter, PointFormat, RawPointBatch, ReaderOptions, Vlr, VlrKind, DEFAULT_BATCH_POINTS,
+    DEFAULT_MAX_PAYLOAD, EVLR_HEADER_LEN, USER_LASF_SPEC,
 };
+use fid_io_reg::UntrustedText;
 use fid_io_reg::{LimitKind, LimitRequest, Limits, Principal};
 use std::fmt::Write as _;
 use std::io::Cursor;
@@ -529,4 +531,132 @@ fn ac5_fuzz_smoke_never_panics() {
         }
     }
     assert!(accepted > 100, "{accepted}");
+}
+
+/// A one-point format-0 batch shaped for `extra`, every extra element set to 1.
+fn one_point_f0(extra: &[ExtraSpec]) -> RawPointBatch {
+    let mut b = RawPointBatch::with_capacity(PointFormat::new(0).unwrap(), extra, 1);
+    b.xi.push(1);
+    b.yi.push(2);
+    b.zi.push(3);
+    let a = &mut b.attrs;
+    a.intensity.push(0);
+    a.return_number.push(1);
+    a.number_of_returns.push(1);
+    a.scan_direction.push(0);
+    a.edge_of_flight_line.push(0);
+    a.classification.push(2);
+    a.class_flags.push(0);
+    a.scan_angle_rank.as_mut().unwrap().push(-5);
+    a.user_data.push(0);
+    a.point_source_id.push(7);
+    for c in &mut a.extra {
+        for _ in 0..c.spec.count {
+            match &mut c.values {
+                ExtraValues::Raw(v) | ExtraValues::U8(v) => v.push(1),
+                ExtraValues::I16(v) => v.push(1),
+                other => panic!("unexpected column {other:?}"),
+            }
+        }
+    }
+    b
+}
+
+/// A 192-byte extra-bytes descriptor of `data_type` named `name`.
+fn descriptor(data_type: u8, name: &[u8]) -> Vec<u8> {
+    let mut d = vec![0u8; 192];
+    d[2] = data_type;
+    d[4..4 + name.len()].copy_from_slice(name);
+    d
+}
+
+/// Review fix 1: the writer applies the reader's extra-bytes rules, and a batch's extra
+/// columns must have exactly the layout the descriptors give.
+#[test]
+fn writer_checks_extra_bytes_layout() {
+    let f0 = PointFormat::new(0).unwrap();
+    let desc = Vlr::new(USER_LASF_SPEC, 4, b"extra bytes", descriptor(4, b"height")).unwrap();
+
+    // An i16 descriptor needs 2 extra bytes; the record has 1.
+    let mut h = LasHeader::new(2, f0, 1);
+    h.legacy_point_count = 1;
+    let err = LasWriter::new(Vec::new(), &h, std::slice::from_ref(&desc), &[], &[]).unwrap_err();
+    assert_eq!(err, LasError::Malformed { field: LasField::ExtraBytesDescriptor });
+
+    let mut h = LasHeader::new(2, f0, 2);
+    h.legacy_point_count = 1;
+    let mut w = LasWriter::new(Vec::new(), &h, std::slice::from_ref(&desc), &[], &[]).unwrap();
+    let layout = w.extra_layout().to_vec();
+    assert_eq!(layout.len(), 1);
+    assert_eq!((layout[0].kind, layout[0].count, layout[0].descriptor), (ExtraKind::I16, 1, Some(0)));
+
+    // Same width, different typing: two raw bytes instead of the described i16.
+    let raw = ExtraSpec { name: UntrustedText::new(""), descriptor: None, kind: ExtraKind::Raw, count: 2 };
+    assert_eq!(w.write_batch(&one_point_f0(&[raw])).unwrap_err(), LasError::Malformed { field: LasField::Column });
+    assert_eq!(w.write_batch(&one_point_f0(&[])).unwrap_err(), LasError::Malformed { field: LasField::Column });
+
+    let b = one_point_f0(&layout);
+    w.write_batch(&b).unwrap();
+    let bytes = w.finish().unwrap();
+    let back = read_slice(&bytes, ReaderOptions::default()).unwrap();
+    assert_eq!(back.points, b);
+    assert_eq!(write_file(&back).unwrap(), bytes);
+}
+
+/// Review fix 4: the writer bounds the VLR padding as the reader does.
+#[test]
+fn writer_bounds_vlr_padding() {
+    let h = LasHeader::default();
+    let padding = vec![0u8; DEFAULT_MAX_PAYLOAD as usize + 1];
+    let err = LasWriter::new(Vec::new(), &h, &[], &padding, &[]).unwrap_err();
+    assert!(
+        matches!(err, LasError::LimitExceeded { limit: LimitKind::Alloc, value: DEFAULT_MAX_PAYLOAD, .. }),
+        "{err:?}"
+    );
+}
+
+/// Review fix 3: header text fields are offered as untrusted text.
+#[test]
+fn header_text_fields_are_untrusted_text() {
+    let (_, bytes) = pdrf_members().remove(0);
+    let r = LasReader::open(Cursor::new(bytes)).unwrap();
+    assert_eq!(r.header().system_identifier_text().as_display().to_string(), "fid-io-las fixture");
+    assert_eq!(r.header().generating_software_text().as_display().to_string(), "make_fixtures.py");
+}
+
+/// A LAS 1.4 file with no points and `count` empty EVLRs.
+fn many_empty_evlrs(count: u32) -> Vec<u8> {
+    let mut h = LasHeader::new(4, PointFormat::FORMAT_6, 0);
+    h.header_size = 375;
+    h.offset_to_point_data = 375;
+    h.start_of_first_evlr = 375;
+    h.number_of_evlrs = count;
+    let mut file = h.to_bytes();
+    file.resize(375 + count as usize * EVLR_HEADER_LEN, 0);
+    file
+}
+
+/// Review fix 2: every kept VLR and EVLR record is charged to the allocation limit, so a
+/// large declared EVLR count cannot use memory beyond it.
+#[test]
+fn record_structs_are_charged_to_the_allocation_limit() {
+    let file = many_empty_evlrs(10_000);
+    let r = LasReader::open(Cursor::new(&file)).unwrap();
+    assert_eq!(r.evlrs().len(), 10_000);
+
+    let limits = Limits::resolve(Principal::Script, &LimitRequest::default().alloc(100_000)).unwrap();
+    let opts = ReaderOptions { limits, ..ReaderOptions::default() };
+    let err = LasReader::open_with(Cursor::new(&file), opts).unwrap_err();
+    assert!(matches!(err, LasError::LimitExceeded { limit: LimitKind::Alloc, value: 100_000, .. }), "{err:?}");
+}
+
+/// Review fix 5 (maintainer decision): bytes after the last EVLR are malformed.
+#[test]
+fn bytes_after_the_last_evlr_are_malformed() {
+    let mut file = many_empty_evlrs(2);
+    assert!(read_slice(&file, ReaderOptions::default()).is_ok());
+    file.push(0);
+    let err = read_slice(&file, ReaderOptions::default()).unwrap_err();
+    assert_eq!(err, LasError::Malformed { field: LasField::TrailingBytes });
+    assert_eq!(err.to_string(), "malformed: field trailing_bytes");
 }
