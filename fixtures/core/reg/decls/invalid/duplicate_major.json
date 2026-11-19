@@ -1,0 +1,99 @@
+{
+ "expect": "duplicate_command",
+ "decls": [
+  {
+   "id": "align.run_bestfit",
+   "major": 1,
+   "title": "Fixture align.run_bestfit@1",
+   "description": "Fixture declaration for side-effect class W2.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "align.run_bestfit",
+   "major": 1,
+   "title": "Again",
+   "description": "Fixture declaration for side-effect class W2.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ]
+}

@@ -1,0 +1,51 @@
+{
+ "expect": "missing_field",
+ "decls": [
+  {
+   "id": "gdt.evaluate_flatness",
+   "major": 1,
+   "title": "Fixture gdt.evaluate_flatness@1",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ]
+}

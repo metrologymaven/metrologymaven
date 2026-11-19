@@ -838,6 +838,7 @@ name = "fid-registry"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-geo-frame",
  "fid-kci",
  "fid-types",
 ]
